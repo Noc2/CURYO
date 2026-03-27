@@ -3,7 +3,7 @@
   "version": "0.0.1",
   "private": true,
   "type": "module",
-  "description": "Official read-only Curyo MCP server",
+  "description": "Official Curyo MCP server with indexed reads and optional scoped write tools",
   "homepage": "https://github.com/Noc2/CURYO/tree/main/packages/mcp-server",
   "repository": {
     "type": "git",
@@ -31,7 +31,10 @@
     "test:watch": "vitest"
   },
   "dependencies": {
+    "@curyo/contracts": "workspace:*",
+    "@curyo/node-utils": "workspace:*",
     "@modelcontextprotocol/sdk": "^1.27.1",
+    "viem": "2.39.0",
     "zod": "^3.25.76"
   },
   "devDependencies": {

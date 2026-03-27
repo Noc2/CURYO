@@ -32,8 +32,8 @@ export function authenticateRequest(request: IncomingMessage, authConfig: HttpAu
   }
 
   const tokenHash = hashToken(token);
-  const matchedTokenHash = authConfig.tokenHashes.find((candidate) => safeEqualHex(candidate, tokenHash));
-  if (!matchedTokenHash) {
+  const matchedToken = authConfig.tokens.find((candidate) => safeEqualHex(candidate.tokenHash, tokenHash));
+  if (!matchedToken) {
     throw new HttpAuthError(
       "Invalid bearer token",
       buildWwwAuthenticateHeader(authConfig, {
@@ -43,15 +43,16 @@ export function authenticateRequest(request: IncomingMessage, authConfig: HttpAu
     );
   }
 
-  const keyId = matchedTokenHash.slice(0, 12);
+  const keyId = matchedToken.tokenHash.slice(0, 12);
 
   return {
     token,
-    clientId: `static-bearer:${keyId}`,
-    scopes: authConfig.scopes,
+    clientId: matchedToken.clientId,
+    scopes: matchedToken.scopes,
     extra: {
       keyId,
       authMode: authConfig.mode,
+      identityId: matchedToken.identityId,
     },
   };
 }

@@ -15,6 +15,8 @@ import {
 import { createDataEnvelope, errorToolResult, jsonToolResult } from "./lib/results.js";
 import { registerPrompts } from "./prompts.js";
 import { registerResources } from "./resources.js";
+import { CuryoWriteService } from "./signer-service.js";
+import { registerWriteTools } from "./write-tools.js";
 
 const addressSchema = z.string().regex(/^0x[0-9a-fA-F]{40}$/i, "Expected a 0x-prefixed address");
 const bigintIdSchema = z.string().regex(/^\d+$/, "Expected an unsigned integer string");
@@ -55,6 +57,9 @@ export function createServer(
 
   registerResources(server, config, ponderClient);
   registerPrompts(server);
+  if (config.write.enabled) {
+    registerWriteTools(server, config, new CuryoWriteService(config.write));
+  }
 
   server.registerTool(
     "search_content",

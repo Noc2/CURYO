@@ -5,6 +5,7 @@ import { createDataEnvelope } from "./lib/results.js";
 import { PROMPT_CATALOG } from "./prompts.js";
 import type { PonderClient } from "./clients/ponder.js";
 import type { ServerConfig } from "./config.js";
+import { WRITE_TOOL_CATALOG } from "./write-tools.js";
 
 const STATIC_RESOURCE_URIS = {
   about: "curyo://about",
@@ -165,6 +166,10 @@ const TOOL_CATALOG: ToolCatalogEntry[] = [
   },
 ];
 
+function getToolCatalog(config: ServerConfig): ToolCatalogEntry[] {
+  return config.write.enabled ? [...TOOL_CATALOG, ...WRITE_TOOL_CATALOG] : TOOL_CATALOG;
+}
+
 function createJsonResourceResult(uri: string, data: Record<string, unknown>): ReadResourceResult {
   return {
     contents: [
@@ -191,14 +196,21 @@ export function registerResources(server: McpServer, config: ServerConfig, ponde
         name: "Curyo MCP Server",
         serverName: config.serverName,
         serverVersion: config.serverVersion,
-        description: "Official read-only Curyo MCP server backed by the indexed Ponder API.",
+        description: config.write.enabled
+          ? "Official Curyo MCP server with indexed reads and scoped hosted write tools."
+          : "Official read-only Curyo MCP server backed by the indexed Ponder API.",
         currentTransport: config.transport,
         supportedTransports: ["stdio", "streamable-http"],
         httpAuth: {
           mode: config.httpAuth.mode,
           protectedPaths: [config.httpPath],
         },
-        tools: TOOL_CATALOG.map(({ name, title }) => ({ name, title })),
+        write: {
+          enabled: config.write.enabled,
+          chainId: config.write.chainId,
+          chainName: config.write.chainName,
+        },
+        tools: getToolCatalog(config).map(({ name, title }) => ({ name, title })),
         prompts: PROMPT_CATALOG.map(({ name, title }) => ({ name, title })),
         resources: Object.values(ALL_RESOURCE_URIS),
       }),
@@ -223,6 +235,7 @@ export function registerResources(server: McpServer, config: ServerConfig, ponde
           mode: config.httpAuth.mode,
           realm: config.httpAuth.realm,
           scopes: config.httpAuth.scopes,
+          configuredTokens: config.httpAuth.tokens.length,
           protectedPaths: [config.httpPath],
         },
         protocol: {
@@ -233,8 +246,14 @@ export function registerResources(server: McpServer, config: ServerConfig, ponde
           baseUrl: config.ponderBaseUrl,
           timeoutMs: config.ponderTimeoutMs,
         },
+        write: {
+          enabled: config.write.enabled,
+          chainId: config.write.chainId,
+          chainName: config.write.chainName,
+          identities: config.write.identities.length,
+        },
         capabilities: {
-          tools: TOOL_CATALOG.length,
+          tools: getToolCatalog(config).length,
           resources: Object.keys(ALL_RESOURCE_URIS).length,
           prompts: PROMPT_CATALOG.length,
         },
@@ -268,7 +287,7 @@ export function registerResources(server: McpServer, config: ServerConfig, ponde
     async (uri) =>
       createJsonResourceResult(uri.toString(), {
         generatedAt: new Date().toISOString(),
-        tools: TOOL_CATALOG,
+        tools: getToolCatalog(config),
         prompts: PROMPT_CATALOG,
       }),
   );

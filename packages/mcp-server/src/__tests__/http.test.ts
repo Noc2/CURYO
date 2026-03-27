@@ -59,6 +59,17 @@ describe("handleStreamableHttpRequest", () => {
       realm: "curyo-mcp",
       tokenHashes: [],
       scopes: ["mcp:read"],
+      tokens: [],
+    },
+    write: {
+      enabled: false,
+      rpcUrl: null,
+      chainId: null,
+      chainName: null,
+      maxGasPerTx: 2_000_000,
+      defaultIdentityId: null,
+      identities: [],
+      contracts: null,
     },
   };
 
@@ -173,6 +184,14 @@ describe("handleStreamableHttpRequest", () => {
         realm: "curyo-mcp",
         tokenHashes: ["8f434346648f6b96df89dda901c5176b10a6d83961fca37f8e1d249d8d68db9d"],
         scopes: ["mcp:read"],
+        tokens: [
+          {
+            tokenHash: "8f434346648f6b96df89dda901c5176b10a6d83961fca37f8e1d249d8d68db9d",
+            clientId: "reader",
+            scopes: ["mcp:read"],
+            identityId: null,
+          },
+        ],
       },
     });
 

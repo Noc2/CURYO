@@ -1,7 +1,8 @@
 # Curyo MCP Server
 
-Official read-only MCP server for Curyo data. It exposes indexed Curyo content, categories, profiles, voter-accuracy
-stats, and platform metrics through MCP tools, prompts, and resources backed by the Ponder API.
+Official Curyo MCP server for indexed reads and optional hosted write flows. It exposes indexed Curyo content,
+categories, profiles, voter-accuracy stats, and platform metrics through MCP tools, prompts, and resources backed by
+the Ponder API, and it can optionally enable scoped write tools for hosted agents.
 
 ## Quick Start
 
@@ -49,7 +50,21 @@ The server reads from the environment at startup.
 | `CURYO_MCP_HTTP_BEARER_TOKEN` | — | Single bearer token for HTTP mode |
 | `CURYO_MCP_HTTP_BEARER_TOKENS` | — | Comma-separated bearer tokens for rotation |
 | `CURYO_MCP_HTTP_AUTH_REALM` | `curyo-mcp` | `WWW-Authenticate` realm |
-| `CURYO_MCP_HTTP_AUTH_SCOPES` | `mcp:read` | Comma-separated scopes attached to validated tokens |
+| `CURYO_MCP_HTTP_AUTH_SCOPES` | `mcp:read` | Default scopes for legacy bearer tokens |
+| `CURYO_MCP_HTTP_TOKENS_JSON` | — | JSON array of scoped bearer tokens, each optionally bound to a write identity |
+| `CURYO_MCP_WRITE_ENABLED` | `0` | Enable hosted write tools |
+| `CURYO_MCP_WRITE_IDENTITIES` | — | JSON array of signer identities (`privateKey` or Foundry keystore credentials) |
+| `CURYO_MCP_WRITE_DEFAULT_IDENTITY` | — | Optional stdio-only fallback identity for local development |
+| `CURYO_MCP_RPC_URL` or `RPC_URL` | — | RPC endpoint used for write-capable tools |
+| `CURYO_MCP_CHAIN_ID` or `CHAIN_ID` | — | Chain ID used for write-capable tools |
+| `CURYO_MCP_CHAIN_NAME` | auto-derived | Optional human-readable chain label for write mode |
+| `CURYO_MCP_MAX_GAS_PER_TX` | `2000000` | Per-transaction gas cap for hosted writes |
+| `CURYO_MCP_CREP_TOKEN_ADDRESS` | auto-derived on supported chains | Fallback cREP token address for write mode |
+| `CURYO_MCP_CONTENT_REGISTRY_ADDRESS` | auto-derived on supported chains | Fallback ContentRegistry address for write mode |
+| `CURYO_MCP_VOTING_ENGINE_ADDRESS` | auto-derived on supported chains | Fallback RoundVotingEngine address for write mode |
+| `CURYO_MCP_VOTER_ID_NFT_ADDRESS` | auto-derived on supported chains | Fallback VoterIdNFT address for write mode |
+| `CURYO_MCP_ROUND_REWARD_DISTRIBUTOR_ADDRESS` | auto-derived on supported chains | Fallback RoundRewardDistributor address for write mode |
+| `CURYO_MCP_FRONTEND_REGISTRY_ADDRESS` | auto-derived on supported chains | Fallback FrontendRegistry address for write mode |
 | `CURYO_MCP_LOG_ENABLED` | enabled | Set to `0` to suppress stderr JSON logs |
 
 Example remote setup:
@@ -62,7 +77,11 @@ CURYO_MCP_HTTP_PORT=3334
 CURYO_MCP_HTTP_PATH=/mcp
 CURYO_MCP_PUBLIC_BASE_URL=https://mcp.example.com
 CURYO_MCP_HTTP_AUTH_MODE=bearer
-CURYO_MCP_HTTP_BEARER_TOKEN=replace-me
+CURYO_MCP_HTTP_TOKENS_JSON='[{"token":"replace-me","clientId":"claude-prod","scopes":["mcp:read","mcp:write:vote","mcp:write:submit_content"],"identityId":"curyo-writer"}]'
+CURYO_MCP_WRITE_ENABLED=1
+CURYO_MCP_RPC_URL=https://forno.celo.org
+CURYO_MCP_CHAIN_ID=42220
+CURYO_MCP_WRITE_IDENTITIES='[{"id":"curyo-writer","privateKey":"0x...","frontendAddress":"0x7777777777777777777777777777777777777777"}]'
 ```
 
 ## Transport Behavior
@@ -74,6 +93,7 @@ In Streamable HTTP mode:
 - readiness is exposed on `/readyz`
 - bearer auth protects the MCP path when `CURYO_MCP_HTTP_AUTH_MODE=bearer`
 - request logs are emitted as JSON to stderr unless disabled
+- scoped write tools remain inaccessible unless the caller has a token with the matching write scope
 
 `/readyz` performs a bounded `get_stats` call against the configured Ponder API, so it reflects upstream availability
 rather than only process liveness.
@@ -91,7 +111,12 @@ rather than only process liveness.
 - `get_stats`: fetch global platform statistics
 - `search_votes`: inspect recent vote activity with conservative pagination caps
 
-All tools are read-only and backed by the Ponder API.
+Optional hosted write tools:
+
+- `vote`: commit a tlock vote with a scoped authenticated identity
+- `submit_content`: reserve and reveal a submission through `ContentRegistry`
+- `claim_reward`: claim voter, submitter, participation, or cancelled-round refund rewards
+- `claim_frontend_fee`: claim round frontend fees and optionally withdraw accumulated registry credits
 
 ### Resources
 
@@ -108,13 +133,15 @@ All tools are read-only and backed by the Ponder API.
 
 ## Security Model
 
-This server is intentionally read-only.
+Read mode remains indexer-backed and side-effect free. When write mode is enabled, the server still stays narrowly
+scoped:
 
-- no wallet integration
-- no signing or transaction submission
+- no arbitrary contract calls
+- no generic calldata passthrough
 - no arbitrary URL fetching
-- no passthrough proxying to untrusted endpoints
-- no write-capable tools
+- no write tools without explicit bearer scopes
+- no write execution without a bound signer identity
+- only `vote`, `submit_content`, `claim_reward`, and `claim_frontend_fee` are exposed
 
 ## Project Structure
 
@@ -125,8 +152,10 @@ src/
 ├── server.ts           # MCP tool registration
 ├── http.ts             # Streamable HTTP transport and health endpoints
 ├── auth.ts             # Optional bearer auth for HTTP mode
+├── signer-service.ts   # Hosted signer/runtime for narrow write tools
 ├── prompts.ts          # MCP prompt catalog
 ├── resources.ts        # MCP resource registration and tool schema docs
+├── write-tools.ts      # Scoped MCP write tool registration
 ├── clients/
 │   └── ponder.ts       # Ponder API client
 ├── lib/
@@ -142,5 +171,5 @@ Primary upstream:
 
 - the Ponder API in `packages/ponder/src/api/index.ts`
 
-The MCP server prefers indexed Ponder data for all current tools. It does not silently mix in write flows or wallet
-actions.
+Read tools prefer indexed Ponder data. Hosted write tools are opt-in, authenticated, and routed through explicit signer
+identities rather than ad hoc wallet state.
