@@ -11,7 +11,6 @@ export const DOCS_NAV = [
     links: [
       { label: "Tokenomics", href: "/docs/tokenomics" },
       { label: "Governance", href: "/docs/governance" },
-      { label: "Curyo & AI", href: "/docs/curyo-and-ai" },
       { label: "Whitepaper", href: "/docs/whitepaper" },
     ],
   },
@@ -19,6 +18,7 @@ export const DOCS_NAV = [
     section: "Technical",
     links: [
       { label: "Smart Contracts", href: "/docs/smart-contracts" },
+      { label: "AI & MCP", href: "/docs/ai" },
       { label: "Frontend Codes", href: "/docs/frontend-codes" },
     ],
   },
