@@ -92,6 +92,7 @@ jobs:
       - name: Build Next.js
         env:
           CURYO_E2E_PRODUCTION_BUILD: "true"
+          NEXT_PUBLIC_CURYO_E2E_PRODUCTION_BUILD: "true"
           DATABASE_URL: file:local.db
           NEXT_PUBLIC_PONDER_URL: http://127.0.0.1:42069
           NEXT_PUBLIC_TARGET_NETWORKS: "31337,11142220"
@@ -101,6 +102,7 @@ jobs:
       - name: Start Next.js (production)
         env:
           CURYO_E2E_PRODUCTION_BUILD: "true"
+          NEXT_PUBLIC_CURYO_E2E_PRODUCTION_BUILD: "true"
           DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:5432/curyo_app
           NEXT_PUBLIC_PONDER_URL: http://127.0.0.1:42069
           NEXT_PUBLIC_TARGET_NETWORKS: "31337,11142220"
@@ -145,6 +147,8 @@ jobs:
         run: ${{ matrix.command }}
         env:
           CI: true
+          CURYO_E2E_PRODUCTION_BUILD: "true"
+          NEXT_PUBLIC_CURYO_E2E_PRODUCTION_BUILD: "true"
           DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:5432/curyo_app
           NEXT_PUBLIC_PONDER_URL: http://127.0.0.1:42069
           NEXT_PUBLIC_TARGET_NETWORKS: "31337,11142220"

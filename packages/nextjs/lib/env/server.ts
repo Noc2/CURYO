@@ -1,5 +1,6 @@
 import "server-only";
 import { RPC_OVERRIDES } from "~~/config/shared";
+import { isLocalE2EProductionBuildEnabled } from "~~/utils/env/e2eProduction";
 import {
   DEFAULT_DEV_TARGET_NETWORKS,
   type SupportedTargetNetwork,
@@ -8,7 +9,7 @@ import {
 
 const isProduction = process.env.NODE_ENV === "production";
 const defaultDevDatabaseUrl = "postgresql://postgres:postgres@127.0.0.1:5432/curyo_app";
-const allowLocalE2EProductionBuild = process.env.CURYO_E2E_PRODUCTION_BUILD === "true";
+const allowLocalE2EProductionBuild = isLocalE2EProductionBuildEnabled();
 
 function readEnv(name: string): string | undefined {
   const value = process.env[name]?.trim();

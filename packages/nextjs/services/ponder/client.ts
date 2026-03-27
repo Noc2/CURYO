@@ -1,6 +1,7 @@
 import type { RoundState } from "@curyo/contracts/protocol";
 
 const isProduction = process.env.NODE_ENV === "production";
+const allowLocalE2EProductionBuild = process.env.NEXT_PUBLIC_CURYO_E2E_PRODUCTION_BUILD === "true";
 const NEXT_PUBLIC_PONDER_URL = process.env.NEXT_PUBLIC_PONDER_URL?.trim() || undefined;
 const DEV_PONDER_URL = "http://localhost:42069";
 
@@ -8,7 +9,11 @@ function isLocalhostHostname(hostname: string): boolean {
   return hostname === "localhost" || hostname === "127.0.0.1" || hostname === "::1";
 }
 
-export function resolvePonderUrl(rawValue: string | undefined, production: boolean): string | null {
+export function resolvePonderUrl(
+  rawValue: string | undefined,
+  production: boolean,
+  allowLocalhostInProduction = false,
+): string | null {
   const normalizedRawValue = rawValue?.trim() || undefined;
   const resolvedValue = normalizedRawValue ?? (!production ? DEV_PONDER_URL : undefined);
 
@@ -23,7 +28,7 @@ export function resolvePonderUrl(rawValue: string | undefined, production: boole
     throw new Error("NEXT_PUBLIC_PONDER_URL must be a valid URL.");
   }
 
-  if (production && isLocalhostHostname(url.hostname)) {
+  if (production && !allowLocalhostInProduction && isLocalhostHostname(url.hostname)) {
     return null;
   }
 
@@ -31,7 +36,7 @@ export function resolvePonderUrl(rawValue: string | undefined, production: boole
 }
 
 function getConfiguredPonderUrl(): string | null {
-  return resolvePonderUrl(NEXT_PUBLIC_PONDER_URL, isProduction);
+  return resolvePonderUrl(NEXT_PUBLIC_PONDER_URL, isProduction, allowLocalE2EProductionBuild);
 }
 
 export function isPonderConfigured(): boolean {
