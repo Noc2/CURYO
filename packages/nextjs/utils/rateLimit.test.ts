@@ -111,11 +111,16 @@ test("resolveRateLimitSubject trusts Vercel forwarded IP headers by default", ()
 
 test("resolveRateLimitSubject falls back to a request fingerprint when no trusted IP is available", () => {
   const subject = rateLimit.resolveRateLimitSubject(
-    makeRequest("/api/watchlist/content", "POST", {
-      "user-agent": "test-agent",
-      "accept-language": "en-US",
-      cookie: "session=abc123",
-    }, "https://curyo.xyz"),
+    makeRequest(
+      "/api/watchlist/content",
+      "POST",
+      {
+        "user-agent": "test-agent",
+        "accept-language": "en-US",
+        cookie: "session=abc123",
+      },
+      "https://curyo.xyz",
+    ),
     { extraKeyParts: ["0xAbC", "watch"] },
   );
 
@@ -125,10 +130,15 @@ test("resolveRateLimitSubject falls back to a request fingerprint when no truste
 
 test("checkRateLimit fails closed in production when no trusted client IP can be derived", async () => {
   const response = await rateLimit.checkRateLimit(
-    makeRequest("/api/watchlist/content", "GET", {
-      "user-agent": "test-agent",
-      "accept-language": "en-US",
-    }, "https://curyo.xyz"),
+    makeRequest(
+      "/api/watchlist/content",
+      "GET",
+      {
+        "user-agent": "test-agent",
+        "accept-language": "en-US",
+      },
+      "https://curyo.xyz",
+    ),
     { limit: 10, windowMs: 60_000 },
   );
 
