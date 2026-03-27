@@ -7,7 +7,7 @@ export interface VoteQueueLayoutInput {
 }
 
 export interface VoteQueueLayout {
-  rows: 1 | 2;
+  rows: 0 | 1 | 2 | 3;
   columns: number;
   pageSize: number;
   cardWidthPx: number;
@@ -25,10 +25,14 @@ const QUEUE_GAP_PX = {
   xl: 10,
 } as const;
 
+const DESKTOP_QUEUE_MIN_VIEWPORT_WIDTH_PX = 1024;
 const TWO_ROW_MIN_COLUMNS = 4;
-const TWO_ROW_MAX_COLUMNS = 5;
+const THREE_ROW_MIN_COLUMNS = 5;
+const MULTI_ROW_MAX_COLUMNS = 5;
 const QUEUE_CARD_BODY_MIN_HEIGHT_REM = 5.5;
+const SINGLE_ROW_EXTRA_CLEARANCE_PX = 28;
 const TWO_ROW_EXTRA_CLEARANCE_PX = 16;
+const THREE_ROW_EXTRA_CLEARANCE_PX = 20;
 
 export function getVoteQueueCardWidthPx(viewportWidth: number, rootFontSize: number) {
   if (viewportWidth >= 1280) return QUEUE_CARD_WIDTH_REM.xl * rootFontSize;
@@ -52,7 +56,41 @@ export function computeVoteQueueLayout({
   const cardThumbnailHeightPx = cardWidthPx * (9 / 16);
   const cardBodyHeightPx = QUEUE_CARD_BODY_MIN_HEIGHT_REM * rootFontSize;
   const cardHeightPx = cardThumbnailHeightPx + cardBodyHeightPx;
+  const requiredSingleRowHeight = cardHeightPx + SINGLE_ROW_EXTRA_CLEARANCE_PX;
   const requiredTwoRowHeight = cardHeightPx * 2 + gapPx + TWO_ROW_EXTRA_CLEARANCE_PX;
+  const requiredThreeRowHeight = cardHeightPx * 3 + gapPx * 2 + THREE_ROW_EXTRA_CLEARANCE_PX;
+
+  if (viewportWidth < DESKTOP_QUEUE_MIN_VIEWPORT_WIDTH_PX) {
+    return {
+      rows: 1,
+      columns: Math.max(1, maxColumnsThatFit),
+      pageSize: Math.max(1, maxColumnsThatFit),
+      cardWidthPx,
+      gapPx,
+    };
+  }
+
+  if (availableHeight < requiredSingleRowHeight) {
+    return {
+      rows: 0,
+      columns: Math.max(1, maxColumnsThatFit),
+      pageSize: 0,
+      cardWidthPx,
+      gapPx,
+    };
+  }
+
+  const supportsThreeRows = maxColumnsThatFit >= THREE_ROW_MIN_COLUMNS && availableHeight >= requiredThreeRowHeight;
+  if (supportsThreeRows) {
+    const columns = Math.max(THREE_ROW_MIN_COLUMNS, Math.min(maxColumnsThatFit, MULTI_ROW_MAX_COLUMNS));
+    return {
+      rows: 3,
+      columns,
+      pageSize: columns * 3,
+      cardWidthPx,
+      gapPx,
+    };
+  }
 
   const supportsTwoRows = maxColumnsThatFit >= TWO_ROW_MIN_COLUMNS && availableHeight >= requiredTwoRowHeight;
 
@@ -66,7 +104,7 @@ export function computeVoteQueueLayout({
     };
   }
 
-  const columns = Math.max(TWO_ROW_MIN_COLUMNS, Math.min(maxColumnsThatFit, TWO_ROW_MAX_COLUMNS));
+  const columns = Math.max(TWO_ROW_MIN_COLUMNS, Math.min(maxColumnsThatFit, MULTI_ROW_MAX_COLUMNS));
   return {
     rows: 2,
     columns,

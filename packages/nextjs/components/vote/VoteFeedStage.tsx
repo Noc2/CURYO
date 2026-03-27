@@ -104,11 +104,13 @@ export function VoteFeedStage({
   const loadMoreRef = useRef<HTMLDivElement | null>(null);
   const lastQueuePrefetchVisibleCountRef = useRef<number | null>(null);
   const lastPreloadedThumbnailRef = useRef<string | null>(null);
-  const [queueRailElement, setQueueRailElement] = useState<HTMLDivElement | null>(null);
-  const queueLayout = useVoteQueueLayout(queueRailElement);
+  const [queueSectionElement, setQueueSectionElement] = useState<HTMLElement | null>(null);
+  const queueLayout = useVoteQueueLayout(queueSectionElement);
+  const hasVisibleQueue = queueLayout.rows > 0;
+  const hasMultiRowQueue = queueLayout.rows > 1;
 
   const queuePages = useMemo(() => {
-    if (queueLayout.rows === 1) {
+    if (queueLayout.rows <= 1) {
       return [visibleFeedItems];
     }
 
@@ -116,12 +118,12 @@ export function VoteFeedStage({
   }, [queueLayout.pageSize, queueLayout.rows, visibleFeedItems]);
 
   const queueGridTemplateColumns = useMemo(() => {
-    if (queueLayout.rows !== 2) return undefined;
+    if (queueLayout.rows <= 1) return undefined;
     return `repeat(${queueLayout.columns}, minmax(0, ${queueLayout.cardWidthPx}px))`;
   }, [queueLayout.cardWidthPx, queueLayout.columns, queueLayout.rows]);
 
   const queuePageWidth = useMemo(() => {
-    if (queueLayout.rows !== 2) return undefined;
+    if (queueLayout.rows <= 1) return undefined;
     return queueLayout.columns * queueLayout.cardWidthPx + (queueLayout.columns - 1) * queueLayout.gapPx;
   }, [queueLayout]);
 
@@ -354,7 +356,10 @@ export function VoteFeedStage({
 
   const handleQueueRailRef = useCallback((node: HTMLDivElement | null) => {
     queueRailRef.current = node;
-    setQueueRailElement(node);
+  }, []);
+
+  const handleQueueSectionRef = useCallback((node: HTMLElement | null) => {
+    setQueueSectionElement(node);
   }, []);
 
   return (
@@ -417,58 +422,61 @@ export function VoteFeedStage({
 
       {visibleFeedItems.length > 0 ? (
         <motion.section
+          ref={handleQueueSectionRef}
           key={primaryItem?.id.toString() ?? "queue-empty"}
-          className="shrink-0"
+          className={hasVisibleQueue ? "shrink-0" : "h-0 overflow-hidden"}
           aria-label="Up next queue"
           initial={{ opacity: 0.82, y: 8 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.18, ease: VOTE_CARD_TRANSITION_EASE }}
         >
-          <div
-            ref={handleQueueRailRef}
-            data-disable-queue-wheel="true"
-            className={`scrollbar-hide min-w-0 overflow-x-auto snap-x snap-mandatory ${
-              queueLayout.rows === 2 ? "flex items-start gap-4 xl:gap-3" : "flex items-stretch gap-3 xl:gap-2.5"
-            }`}
-            aria-label="Content queue"
-          >
-            {queueLayout.rows === 2
-              ? queuePages.map((pageItems, pageIndex) => (
-                  <div
-                    key={`queue-page-${pageIndex}`}
-                    className="grid shrink-0 content-start gap-3 snap-start xl:gap-2.5"
-                    style={{
-                      gridTemplateColumns: queueGridTemplateColumns,
-                      width: queuePageWidth,
-                    }}
-                  >
-                    {pageItems.map(item => (
-                      <FeedQueueCard
-                        key={item.id.toString()}
-                        item={item}
-                        onSelect={onSelectCard}
-                        onNavigate={handleQueueKeyboardNavigate}
-                        queuePosition={queuePositionMap.get(item.id.toString()) ?? 0}
-                        queueStatus={queueStatusByContentId.get(item.id.toString()) ?? null}
-                        hasVoted={votedContentIds.has(item.id.toString())}
-                        selected={item.id === primaryItem?.id}
-                      />
-                    ))}
-                  </div>
-                ))
-              : visibleFeedItems.map(item => (
-                  <FeedQueueCard
-                    key={item.id.toString()}
-                    item={item}
-                    onSelect={onSelectCard}
-                    onNavigate={handleQueueKeyboardNavigate}
-                    queuePosition={queuePositionMap.get(item.id.toString()) ?? 0}
-                    queueStatus={queueStatusByContentId.get(item.id.toString()) ?? null}
-                    hasVoted={votedContentIds.has(item.id.toString())}
-                    selected={item.id === primaryItem?.id}
-                  />
-                ))}
-          </div>
+          {hasVisibleQueue ? (
+            <div
+              ref={handleQueueRailRef}
+              data-disable-queue-wheel="true"
+              className={`scrollbar-hide min-w-0 overflow-x-auto snap-x snap-mandatory ${
+                hasMultiRowQueue ? "flex items-start gap-4 xl:gap-3" : "flex items-stretch gap-3 xl:gap-2.5"
+              }`}
+              aria-label="Content queue"
+            >
+              {hasMultiRowQueue
+                ? queuePages.map((pageItems, pageIndex) => (
+                    <div
+                      key={`queue-page-${pageIndex}`}
+                      className="grid shrink-0 content-start gap-3 snap-start xl:gap-2.5"
+                      style={{
+                        gridTemplateColumns: queueGridTemplateColumns,
+                        width: queuePageWidth,
+                      }}
+                    >
+                      {pageItems.map(item => (
+                        <FeedQueueCard
+                          key={item.id.toString()}
+                          item={item}
+                          onSelect={onSelectCard}
+                          onNavigate={handleQueueKeyboardNavigate}
+                          queuePosition={queuePositionMap.get(item.id.toString()) ?? 0}
+                          queueStatus={queueStatusByContentId.get(item.id.toString()) ?? null}
+                          hasVoted={votedContentIds.has(item.id.toString())}
+                          selected={item.id === primaryItem?.id}
+                        />
+                      ))}
+                    </div>
+                  ))
+                : visibleFeedItems.map(item => (
+                    <FeedQueueCard
+                      key={item.id.toString()}
+                      item={item}
+                      onSelect={onSelectCard}
+                      onNavigate={handleQueueKeyboardNavigate}
+                      queuePosition={queuePositionMap.get(item.id.toString()) ?? 0}
+                      queueStatus={queueStatusByContentId.get(item.id.toString()) ?? null}
+                      hasVoted={votedContentIds.has(item.id.toString())}
+                      selected={item.id === primaryItem?.id}
+                    />
+                  ))}
+            </div>
+          ) : null}
         </motion.section>
       ) : null}
 
