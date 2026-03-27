@@ -12,6 +12,7 @@ import { config } from "./config.js";
 import { createLogger } from "./logger.js";
 import { publicClient, getWalletClient, getAccount, chain } from "./client.js";
 import { resolveRounds, validateKeeperContracts } from "./keeper.js";
+import { claimConfiguredFrontendFees } from "./frontend-fees.js";
 import { RoundVotingEngineAbi } from "@curyo/contracts/abis";
 import {
   startMetricsServer,
@@ -34,6 +35,8 @@ async function main() {
     contentRegistry: config.contracts.contentRegistry,
     intervalMs: config.intervalMs,
     metricsEnabled: config.metricsEnabled,
+    frontendFeesEnabled: config.frontendFees.enabled,
+    frontendFeeAddress: config.frontendFees.frontendAddress ?? account.address,
   });
 
   await validateKeeperContracts(publicClient, config.contracts.votingEngine, config.contracts.contentRegistry);
@@ -108,6 +111,9 @@ async function main() {
       await updateOperationalGauges();
 
       const result = await resolveRounds(publicClient, walletClient, chain, account, logger);
+      const frontendFeeResult = config.frontendFees.enabled
+        ? await claimConfiguredFrontendFees(publicClient, walletClient, chain, account, logger)
+        : null;
       const duration = Date.now() - start;
       recordRun(result, duration);
 
@@ -120,6 +126,14 @@ async function main() {
         result.contentMarkedDormant;
       if (total > 0) {
         logger.info("Run complete", { ...result, durationMs: duration });
+      }
+      if (frontendFeeResult && (frontendFeeResult.roundsClaimed > 0 || frontendFeeResult.withdrawals > 0)) {
+        logger.info("Frontend fee sweep complete", {
+          frontendAddress: frontendFeeResult.frontendAddress,
+          roundsClaimed: frontendFeeResult.roundsClaimed,
+          withdrawals: frontendFeeResult.withdrawals,
+          withdrawnAmount: frontendFeeResult.withdrawnAmount.toString(),
+        });
       }
     } catch (err: any) {
       recordError();

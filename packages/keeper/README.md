@@ -1,6 +1,6 @@
 # Curyo — Keeper (Round Resolution Service)
 
-Stateless service that reveals committed votes via `revealVoteByCommitKey()` after each epoch, settles eligible rounds via `settleRound()`, finalizes `RevealFailed` rounds after the last grace deadline, sweeps unrevealed-vote cleanup via `processUnrevealedVotes()`, cancels expired rounds, and marks dormant content. Designed for horizontal scaling — multiple instances run independently for redundancy.
+Stateless service that reveals committed votes via `revealVoteByCommitKey()` after each epoch, settles eligible rounds via `settleRound()`, finalizes `RevealFailed` rounds after the last grace deadline, sweeps unrevealed-vote cleanup via `processUnrevealedVotes()`, cancels expired rounds, marks dormant content, and can optionally sweep frontend fees for a hosted MCP/frontend operator. Designed for horizontal scaling — multiple instances run independently for redundancy.
 
 ## Quick Start
 
@@ -34,6 +34,8 @@ Only set address vars on unsupported chains.
 | `CHAIN_ID` | — | Network chain ID (required) |
 | `VOTING_ENGINE_ADDRESS` | Auto-derived for supported chains | Fallback RoundVotingEngine address when no shared deployment artifact exists for `CHAIN_ID` |
 | `CONTENT_REGISTRY_ADDRESS` | Auto-derived for supported chains | Fallback ContentRegistry address when no shared deployment artifact exists for `CHAIN_ID` |
+| `ROUND_REWARD_DISTRIBUTOR_ADDRESS` | Auto-derived when frontend-fee sweep is enabled on supported chains | Fallback RoundRewardDistributor address |
+| `FRONTEND_REGISTRY_ADDRESS` | Auto-derived when frontend-fee sweep is enabled on supported chains | Fallback FrontendRegistry address |
 | `CHAIN_NAME` | Auto-derived from `CHAIN_ID` | Optional human-readable chain label |
 | `KEYSTORE_ACCOUNT` | — | Foundry keystore account name (preferred) |
 | `KEYSTORE_PASSWORD` | — | Keystore decryption password |
@@ -48,6 +50,10 @@ Only set address vars on unsupported chains.
 | `DORMANCY_PERIOD` | `2592000` | Dormancy threshold in seconds used for dormant content sweeps |
 | `MIN_GAS_BALANCE_WEI` | `10000000000000000` | Warning threshold for keeper wallet gas balance |
 | `MAX_GAS_PER_TX` | `2000000` | Per-transaction gas cap for keeper writes |
+| `KEEPER_FRONTEND_FEE_ENABLED` | `false` | Enable hosted frontend fee sweep mode |
+| `KEEPER_FRONTEND_ADDRESS` | keeper wallet address | Optional frontend/operator address to claim for |
+| `KEEPER_FRONTEND_FEE_LOOKBACK_ROUNDS` | `8` | Number of recent rounds per content item to inspect for frontend fees |
+| `KEEPER_FRONTEND_FEE_WITHDRAW` | `true` | Withdraw accumulated `FrontendRegistry` fees after claiming round fees |
 
 ## Docker
 
@@ -64,12 +70,15 @@ docker run --env-file packages/keeper/.env.local -p 9090:9090 curyo-keeper
 
 Key metrics: `keeper_is_running` (gauge), `keeper_rounds_settled_total` (counter), `keeper_rounds_cancelled_total` (counter), `keeper_rounds_reveal_failed_finalized_total` (counter), `keeper_unrevealed_cleanup_batches_total` (counter), `keeper_consensus_reserve_wei` (gauge).
 
+When `KEEPER_FRONTEND_FEE_ENABLED=true`, the same worker also scans recent settled rounds for the configured frontend/operator, calls `RoundRewardDistributor.claimFrontendFee(...)` where claimable, and optionally withdraws accumulated `FrontendRegistry.claimFees()` credits.
+
 ## Project Structure
 
 ```
 src/
 ├── index.ts      # Main entry point & event loop
 ├── keeper.ts     # Core logic (reveal, settle, RevealFailed, cleanup, dormancy)
+├── frontend-fees.ts # Optional hosted frontend fee sweeps
 ├── config.ts     # Configuration from environment
 ├── client.ts     # viem public & wallet clients
 ├── keystore.ts   # Foundry keystore decryption
