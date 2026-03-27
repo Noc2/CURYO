@@ -4,8 +4,10 @@ import withBundleAnalyzer from "@next/bundle-analyzer";
 import type { NextConfig } from "next";
 
 const isDev = process.env.NODE_ENV === "development";
+const allowLocalE2EProductionBuild = process.env.CURYO_E2E_PRODUCTION_BUILD === "true";
 const targetNetworks = resolveTargetNetworks(process.env.NEXT_PUBLIC_TARGET_NETWORKS, {
   alchemyApiKey: process.env.NEXT_PUBLIC_ALCHEMY_API_KEY,
+  allowFoundryInProduction: allowLocalE2EProductionBuild,
   production: !isDev,
   fallback: isDev ? DEFAULT_DEV_TARGET_NETWORKS : undefined,
   rpcOverrides: RPC_OVERRIDES,
