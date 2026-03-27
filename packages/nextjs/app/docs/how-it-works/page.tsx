@@ -3,8 +3,11 @@ import type { NextPage } from "next";
 import { RewardSplitChart } from "~~/components/docs/RewardSplitChart";
 import { VotingFlowDiagram } from "~~/components/docs/VotingFlowDiagram";
 import { protocolDocFacts } from "~~/lib/docs/protocolFacts";
+import { getFreeTransactionLimit } from "~~/lib/env/server";
 
 const HowItWorks: NextPage = () => {
+  const freeTransactionLimit = getFreeTransactionLimit();
+
   return (
     <article className="prose max-w-none">
       <h1>How It Works</h1>
@@ -75,6 +78,17 @@ const HowItWorks: NextPage = () => {
         the final revealed up and down stake imbalance. Cancelled, tied, and reveal-failed rounds leave the rating
         unchanged.
       </p>
+
+      <h2 id="transaction-costs">Transaction Costs</h2>
+      <p>
+        After ID verification, Curyo sponsors your first <strong>{freeTransactionLimit}</strong> app transactions. After
+        that, you pay normal Celo network fees from the same wallet you use in Curyo.
+      </p>
+      <p>
+        You only need a small CELO balance for gas on Celo mainnet. cREP is for voting stake, not gas. If you top up
+        from an exchange, withdraw <strong>CELO on the Celo network</strong> to your Curyo wallet address.
+      </p>
+
       <p>
         See <Link href="/docs/tokenomics">Tokenomics</Link> for pool-level payout details and{" "}
         <Link href="/docs/smart-contracts">Smart Contracts</Link> for advanced lifecycle rules.

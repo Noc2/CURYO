@@ -30,6 +30,12 @@ test.describe("Documentation pages", () => {
     await expect(page.locator("h1").first()).toBeVisible({ timeout: 10_000 });
   });
 
+  test("transaction costs docs redirect to how it works", async ({ page }) => {
+    await page.goto("/docs/funding-wallet");
+    await page.waitForURL(/\/docs\/how-it-works#transaction-costs$/);
+    await expect(page.locator("h1").first()).toBeVisible({ timeout: 10_000 });
+  });
+
   test("docs sidebar navigation works", async ({ page }) => {
     await page.goto("/docs");
     await page.waitForLoadState("domcontentloaded");
@@ -66,8 +72,8 @@ test.describe("Documentation pages", () => {
     const conceptsLink = page.getByRole("link", { name: /^Concepts$/i });
     await expect(conceptsLink).toBeVisible({ timeout: 10_000 });
     await conceptsLink.click();
-    await page.waitForURL(/\/docs\/how-it-works$/);
-    await expect(page.getByRole("heading", { name: /^How It Works$/i }).first()).toBeVisible({ timeout: 10_000 });
+    await page.waitForURL(/\/docs\/tokenomics$/);
+    await expect(page.getByRole("heading", { name: /^Tokenomics$/i }).first()).toBeVisible({ timeout: 10_000 });
 
     const technicalLink = page.getByRole("link", { name: /^Technical$/i });
     await expect(technicalLink).toBeVisible({ timeout: 10_000 });
