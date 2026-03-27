@@ -1,7 +1,7 @@
 {
   "name": "Curyo",
   "short_name": "Curyo",
-  "description": "A Better Web, Guided by Human Reputation",
+  "description": "Stake-weighted ratings from verified humans.",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#050607",
