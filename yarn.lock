@@ -533,7 +533,7 @@ __metadata:
   resolution: "@curyo/ponder@workspace:packages/ponder"
   dependencies:
     "@curyo/contracts": "workspace:*"
-    hono: ~4.12.2
+    hono: ~4.12.7
     ponder: ^1.0.0
     typescript: ~5.8.2
     viem: 2.39.0
@@ -14499,10 +14499,10 @@ __metadata:
   languageName: node
   linkType: hard
 
-"hono@npm:~4.12.2":
-  version: 4.12.2
-  resolution: "hono@npm:4.12.2"
-  checksum: 5f137ea2d931041f3b3334e56441cc17e527fa6bbc5ff61d557d1c25d736067d264351069ef697fb7bccde6e4aaef299be9b763df5dd61746ff2dfc4abbf20c8
+"hono@npm:~4.12.7":
+  version: 4.12.9
+  resolution: "hono@npm:4.12.9"
+  checksum: ce06449b5a142157ac63551a01c5d99b611f12f3893bd5193d4fed1e1d48383bd9d5cb1f0be4f5b036a34af844f0570da5bcb89279ad284fade416ca3c029468
   languageName: node
   linkType: hard
 
