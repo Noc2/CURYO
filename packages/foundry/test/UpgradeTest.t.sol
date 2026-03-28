@@ -63,7 +63,7 @@ contract MockVotingEngineForUpgrade is IRoundVotingEngine {
     function transferReward(address, uint256) external override { }
 }
 
-/// @dev Mirrors the legacy ContentRegistry layout so upgrade tests catch slot shifts in dormancy state.
+/// @dev Mirrors the pre-snapshot ContentRegistry layout so upgrade tests catch legacy slot shifts.
 contract LegacyContentRegistryV1 is Initializable {
     enum ContentStatus {
         Active,
@@ -96,8 +96,6 @@ contract LegacyContentRegistryV1 is Initializable {
     mapping(bytes32 => bool) public submissionKeyUsed;
     IVoterIdNFT public voterIdNFT;
     IParticipationPool public participationPool;
-    mapping(uint256 => uint256) public submitterParticipationSnapshotRateBps;
-    mapping(uint256 => address) public submitterParticipationSnapshotPool;
     mapping(uint256 => uint256) public submitterParticipationRewardOwed;
     mapping(uint256 => uint256) public submitterParticipationRewardPaid;
     mapping(uint256 => uint256) public submitterParticipationRewardReserved;
@@ -105,7 +103,7 @@ contract LegacyContentRegistryV1 is Initializable {
     mapping(uint256 => bytes32) internal contentSubmissionKey;
     mapping(uint256 => address) internal contentSubmitterIdentity;
     mapping(uint256 => uint256) internal dormancyAnchorAt;
-    uint256[42] private __gap;
+    uint256[44] private __gap;
 
     constructor() {
         _disableInitializers();
@@ -141,6 +139,19 @@ contract LegacyContentRegistryV1 is Initializable {
 
     function setDormancyAnchor(uint256 contentId, uint256 anchor) external {
         dormancyAnchorAt[contentId] = anchor;
+    }
+
+    function setRewardState(
+        uint256 contentId,
+        uint256 rewardOwed,
+        uint256 rewardPaid,
+        uint256 rewardReserved,
+        address rewardPool
+    ) external {
+        submitterParticipationRewardOwed[contentId] = rewardOwed;
+        submitterParticipationRewardPaid[contentId] = rewardPaid;
+        submitterParticipationRewardReserved[contentId] = rewardReserved;
+        submitterParticipationRewardPool[contentId] = rewardPool;
     }
 }
 
@@ -277,7 +288,7 @@ contract UpgradeTest is Test {
         assertEq(address(contentRegistry.crepToken()), address(crepToken));
     }
 
-    function test_ContentRegistry_LegacyDormancyAnchorPreservedAfterUpgrade() public {
+    function test_ContentRegistry_LegacyRewardAndDormancyStatePreservedAfterUpgrade() public {
         vm.warp(100 days);
 
         LegacyContentRegistryV1 legacyImpl = new LegacyContentRegistryV1();
@@ -290,21 +301,33 @@ contract UpgradeTest is Test {
         ProxyAdmin legacyAdmin = _proxyAdmin(address(legacyProxy));
 
         address submitter = makeAddr("legacy-submitter");
+        address rewardPool = makeAddr("legacy-reward-pool");
         uint256 contentId = 1;
         uint64 submitterStake = uint64(contentRegistry.MIN_SUBMITTER_STAKE());
         uint256 anchor = block.timestamp;
+        uint256 rewardOwed = 17e6;
+        uint256 rewardPaid = 5e6;
+        uint256 rewardReserved = 3e6;
 
         vm.prank(admin);
         crepToken.mint(address(legacyRegistry), submitterStake);
 
         legacyRegistry.seedLegacyContent(contentId, submitter, submitterStake, uint48(anchor), 50);
         legacyRegistry.setDormancyAnchor(contentId, anchor);
+        legacyRegistry.setRewardState(contentId, rewardOwed, rewardPaid, rewardReserved, rewardPool);
 
         ContentRegistry newImpl = new ContentRegistry();
         vm.prank(governance);
         legacyAdmin.upgradeAndCall(_proxy(address(legacyRegistry)), address(newImpl), "");
 
         ContentRegistry upgradedRegistry = ContentRegistry(address(legacyRegistry));
+
+        assertEq(upgradedRegistry.submitterParticipationRewardOwed(contentId), rewardOwed);
+        assertEq(upgradedRegistry.submitterParticipationRewardPaid(contentId), rewardPaid);
+        assertEq(upgradedRegistry.submitterParticipationRewardReserved(contentId), rewardReserved);
+        assertEq(upgradedRegistry.submitterParticipationRewardPool(contentId), rewardPool);
+        assertEq(upgradedRegistry.submitterParticipationSnapshotRateBps(contentId), 0);
+        assertEq(upgradedRegistry.submitterParticipationSnapshotPool(contentId), address(0));
 
         vm.warp(anchor + 1 days);
         vm.prank(attacker);

@@ -101,12 +101,6 @@ contract ContentRegistry is Initializable, AccessControlUpgradeable, PausableUpg
     /// @notice Participation pool for rewarding submitters
     IParticipationPool public participationPool;
 
-    /// @notice Snapshotted participation reward rate captured at the latest successful settlement.
-    mapping(uint256 => uint256) public submitterParticipationSnapshotRateBps;
-
-    /// @notice Snapshotted participation pool captured at the latest successful settlement.
-    mapping(uint256 => address) public submitterParticipationSnapshotPool;
-
     /// @notice Snapshotted submitter participation reward entitlement per content.
     mapping(uint256 => uint256) public submitterParticipationRewardOwed;
 
@@ -136,6 +130,13 @@ contract ContentRegistry is Initializable, AccessControlUpgradeable, PausableUpg
 
     /// @notice Timestamp after which a dormant content key may be publicly released for replacement.
     mapping(uint256 => uint256) public dormantKeyReleasableAt;
+
+    /// @notice Snapshotted participation reward rate captured at the latest successful settlement.
+    /// @dev Appended after the legacy reward and dormancy mappings to preserve proxy-safe storage layout.
+    mapping(uint256 => uint256) public submitterParticipationSnapshotRateBps;
+
+    /// @notice Snapshotted participation pool captured at the latest successful settlement.
+    mapping(uint256 => address) public submitterParticipationSnapshotPool;
 
     /// @dev Stateless helper used to resolve canonical submission keys without bloating the registry runtime.
     SubmissionCanonicalizer internal immutable SUBMISSION_CANONICALIZER;
