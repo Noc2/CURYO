@@ -191,3 +191,32 @@ test("confirm marks the reservation but does not charge quota twice", async () =
   assert.equal(repeatedDecision.summary.used, 1);
   assert.equal(repeatedDecision.summary.remaining, 1);
 });
+
+test("confirm keeps the reservation pending when receipt verification fails", async () => {
+  const initialDecision = await freeTransactions.evaluateFreeTransactionAllowance(buildRequest("0x05") as never);
+  assert.equal(initialDecision.isAllowed, true);
+  if (!initialDecision.isAllowed) {
+    return;
+  }
+
+  freeTransactions.__setFreeTransactionTestOverridesForTests({
+    allTransactionHashesSucceeded: async () => false,
+    resolveVoterIdTokenId: async () => "42",
+  });
+
+  await assert.rejects(
+    freeTransactions.confirmFreeTransactionReservation({
+      address: WALLET,
+      chainId: CHAIN_ID,
+      operationKey: buildOperationKey("0x05"),
+      transactionHashes: [SUCCESS_HASH],
+    }),
+    /could not be verified/i,
+  );
+
+  const quotaRows = await dbModule.dbClient.execute("SELECT free_tx_used FROM free_transaction_quotas");
+  assert.equal(Number(quotaRows.rows[0]?.free_tx_used), 1);
+
+  const reservationRows = await dbModule.dbClient.execute("SELECT status FROM free_transaction_reservations");
+  assert.equal(reservationRows.rows[0]?.status, "pending");
+});

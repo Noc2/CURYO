@@ -446,11 +446,12 @@ async function allTransactionHashesSucceeded(params: {
     receipt => "from" in receipt && receipt.from !== params.walletAddress.toLowerCase(),
   );
   if (hasSenderMismatch) {
-    console.info("[thirdweb-free-tx] confirmed sponsored transaction with non-user sender", {
+    console.warn("[thirdweb-free-tx] rejected sponsored transaction with non-user sender", {
       chainId: params.chainId,
       transactionHashes: params.transactionHashes,
       walletAddress: params.walletAddress,
     });
+    return false;
   }
 
   return receipts.every(receipt => receipt.ok);
