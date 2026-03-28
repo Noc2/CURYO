@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createHash } from "crypto";
 import { dbClient } from "~~/lib/db";
+import { isLocalE2EProductionBuildEnabled } from "~~/utils/env/e2eProduction";
 
 /**
  * Shared fixed-window rate limiter backed by the application database.
@@ -32,7 +33,7 @@ const FORWARDED_FOR_HEADER = "x-forwarded-for";
 const FORWARDED_HEADER = "forwarded";
 const REAL_IP_HEADER = "x-real-ip";
 const LOCAL_HOSTNAMES = new Set(["localhost", "127.0.0.1", "::1"]);
-const DEFAULT_VERCEL_TRUSTED_IP_HEADERS = [FORWARDED_FOR_HEADER, REAL_IP_HEADER] as const;
+const DEFAULT_VERCEL_TRUSTED_IP_HEADERS = [REAL_IP_HEADER] as const;
 const FALLBACK_FINGERPRINT_HEADERS = [
   "user-agent",
   "accept-language",
@@ -119,8 +120,12 @@ function extractIpFromHeader(headerName: string, value: string | null): string |
   return firstValue || null;
 }
 
-function isLocalRequest(request: NextRequest): boolean {
-  return LOCAL_HOSTNAMES.has(request.nextUrl.hostname);
+function isTrustedLocalRequest(request: NextRequest): boolean {
+  if (!LOCAL_HOSTNAMES.has(request.nextUrl.hostname)) {
+    return false;
+  }
+
+  return process.env.NODE_ENV !== "production" || isLocalE2EProductionBuildEnabled();
 }
 
 function getTrustedClientIp(request: NextRequest): string | null {
@@ -130,7 +135,7 @@ function getTrustedClientIp(request: NextRequest): string | null {
     return nextRequest.ip.trim();
   }
 
-  if (process.env.NODE_ENV === "development" || isLocalRequest(request)) {
+  if (isTrustedLocalRequest(request)) {
     return (
       extractIpFromHeader(FORWARDED_FOR_HEADER, request.headers.get(FORWARDED_FOR_HEADER)) ??
       extractIpFromHeader(REAL_IP_HEADER, request.headers.get(REAL_IP_HEADER)) ??
@@ -240,9 +245,13 @@ export async function checkRateLimit(
     }
   } catch (error) {
     console.warn(
-      `[rate-limit] backing store unavailable for ${request.method.toUpperCase()} ${request.nextUrl.pathname}; allowing request`,
+      `[rate-limit] backing store unavailable for ${request.method.toUpperCase()} ${request.nextUrl.pathname}`,
       error,
     );
+
+    if (process.env.NODE_ENV === "production") {
+      return NextResponse.json({ error: "Rate limiting is unavailable" }, { status: 503 });
+    }
   }
 
   return null;
