@@ -614,6 +614,8 @@ contract UpgradeTest is Test {
     function test_RewardDistributor_StatePreservedAfterUpgrade() public {
         assertEq(rewardDistributorAdmin.owner(), governance);
         assertEq(address(rewardDistributor.crepToken()), address(crepToken));
+        uint48 claimTrackingActivatedAt = rewardDistributor.claimTrackingActivatedAt();
+        assertGt(claimTrackingActivatedAt, 0);
 
         RoundRewardDistributor newImpl = new RoundRewardDistributor();
         vm.prank(governance);
@@ -621,6 +623,7 @@ contract UpgradeTest is Test {
 
         assertEq(rewardDistributorAdmin.owner(), governance);
         assertEq(address(rewardDistributor.crepToken()), address(crepToken));
+        assertEq(rewardDistributor.claimTrackingActivatedAt(), claimTrackingActivatedAt);
     }
 
     // =========================================================================
