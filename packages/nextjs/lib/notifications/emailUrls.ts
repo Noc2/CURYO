@@ -9,12 +9,28 @@ interface ResolveNotificationEmailAppUrlOptions {
 
 export function resolveNotificationEmailAppUrl(options: ResolveNotificationEmailAppUrlOptions) {
   const production = options.production ?? process.env.NODE_ENV === "production";
-  const requestAppUrl = resolveAppUrl(options.requestOrigin ?? undefined, production);
-  if (requestAppUrl) {
-    return requestAppUrl;
+  const configuredAppUrl = resolveAppUrl(options.fallbackAppUrl ?? undefined, production);
+  if (configuredAppUrl) {
+    return configuredAppUrl;
   }
 
-  return resolveAppUrl(options.fallbackAppUrl ?? undefined, production);
+  return resolveAppUrl(options.requestOrigin ?? undefined, production);
+}
+
+export function buildNotificationSettingsRedirectUrl(
+  options: ResolveNotificationEmailAppUrlOptions & {
+    status: "verified" | "invalid" | "unsubscribed" | "invalid_unsubscribe";
+  },
+) {
+  const appUrl = resolveNotificationEmailAppUrl(options);
+  if (!appUrl) {
+    return null;
+  }
+
+  const url = new URL("/settings", appUrl);
+  url.searchParams.set("tab", "notifications");
+  url.searchParams.set("email", options.status);
+  return url;
 }
 
 interface NotificationEmailUnsubscribePayload {
