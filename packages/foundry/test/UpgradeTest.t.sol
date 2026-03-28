@@ -8,6 +8,7 @@ import {
 } from "@openzeppelin/contracts/proxy/transparent/TransparentUpgradeableProxy.sol";
 import { ProxyAdmin } from "@openzeppelin/contracts/proxy/transparent/ProxyAdmin.sol";
 import { Initializable } from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
+import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
 import { ContentRegistry } from "../contracts/ContentRegistry.sol";
 import { RoundVotingEngine } from "../contracts/RoundVotingEngine.sol";
@@ -16,8 +17,11 @@ import { ProfileRegistry } from "../contracts/ProfileRegistry.sol";
 import { FrontendRegistry } from "../contracts/FrontendRegistry.sol";
 import { ProtocolConfig } from "../contracts/ProtocolConfig.sol";
 import { CuryoReputation } from "../contracts/CuryoReputation.sol";
+import { ICategoryRegistry } from "../contracts/interfaces/ICategoryRegistry.sol";
+import { IParticipationPool } from "../contracts/interfaces/IParticipationPool.sol";
 import { IProfileRegistry } from "../contracts/interfaces/IProfileRegistry.sol";
 import { IRoundVotingEngine } from "../contracts/interfaces/IRoundVotingEngine.sol";
+import { IVoterIdNFT } from "../contracts/interfaces/IVoterIdNFT.sol";
 import { RoundLib } from "../contracts/libraries/RoundLib.sol";
 
 /// @title Minimal mock for RoundVotingEngine interface (used by FrontendRegistry)
@@ -57,6 +61,87 @@ contract MockVotingEngineForUpgrade is IRoundVotingEngine {
     }
 
     function transferReward(address, uint256) external override { }
+}
+
+/// @dev Mirrors the legacy ContentRegistry layout so upgrade tests catch slot shifts in dormancy state.
+contract LegacyContentRegistryV1 is Initializable {
+    enum ContentStatus {
+        Active,
+        Dormant,
+        Cancelled
+    }
+
+    struct Content {
+        uint64 id;
+        bytes32 contentHash;
+        address submitter;
+        uint64 submitterStake;
+        uint48 createdAt;
+        uint48 lastActivityAt;
+        ContentStatus status;
+        uint8 dormantCount;
+        address reviver;
+        bool submitterStakeReturned;
+        uint8 rating;
+        uint64 categoryId;
+    }
+
+    IERC20 public crepToken;
+    address public votingEngine;
+    ICategoryRegistry public categoryRegistry;
+    address public bonusPool;
+    address public treasury;
+    uint256 public nextContentId;
+    mapping(uint256 => Content) public contents;
+    mapping(bytes32 => bool) public submissionKeyUsed;
+    IVoterIdNFT public voterIdNFT;
+    IParticipationPool public participationPool;
+    mapping(uint256 => uint256) public submitterParticipationSnapshotRateBps;
+    mapping(uint256 => address) public submitterParticipationSnapshotPool;
+    mapping(uint256 => uint256) public submitterParticipationRewardOwed;
+    mapping(uint256 => uint256) public submitterParticipationRewardPaid;
+    mapping(uint256 => uint256) public submitterParticipationRewardReserved;
+    mapping(uint256 => address) public submitterParticipationRewardPool;
+    mapping(uint256 => bytes32) internal contentSubmissionKey;
+    mapping(uint256 => address) internal contentSubmitterIdentity;
+    mapping(uint256 => uint256) internal dormancyAnchorAt;
+    uint256[42] private __gap;
+
+    constructor() {
+        _disableInitializers();
+    }
+
+    function initialize(address, address, address _crepToken) external initializer {
+        crepToken = IERC20(_crepToken);
+        nextContentId = 1;
+    }
+
+    function seedLegacyContent(
+        uint256 contentId,
+        address submitter,
+        uint64 submitterStake,
+        uint48 createdAt,
+        uint8 rating
+    ) external {
+        contents[contentId] = Content({
+            id: uint64(contentId),
+            contentHash: bytes32(0),
+            submitter: submitter,
+            submitterStake: submitterStake,
+            createdAt: createdAt,
+            lastActivityAt: createdAt,
+            status: ContentStatus.Active,
+            dormantCount: 0,
+            reviver: address(0),
+            submitterStakeReturned: false,
+            rating: rating,
+            categoryId: 0
+        });
+    }
+
+    function setDormancyAnchor(uint256 contentId, uint256 anchor) external {
+        dormancyAnchorAt[contentId] = anchor;
+    }
 }
 
 /// @title Transparent Proxy Upgrade Tests for all proxy-backed contracts
@@ -190,6 +275,51 @@ contract UpgradeTest is Test {
         // Verify state preserved
         assertEq(contentRegistryAdmin.owner(), governance);
         assertEq(address(contentRegistry.crepToken()), address(crepToken));
+    }
+
+    function test_ContentRegistry_LegacyDormancyAnchorPreservedAfterUpgrade() public {
+        vm.warp(100 days);
+
+        LegacyContentRegistryV1 legacyImpl = new LegacyContentRegistryV1();
+        TransparentUpgradeableProxy legacyProxy = new TransparentUpgradeableProxy(
+            address(legacyImpl),
+            governance,
+            abi.encodeCall(LegacyContentRegistryV1.initialize, (admin, governance, address(crepToken)))
+        );
+        LegacyContentRegistryV1 legacyRegistry = LegacyContentRegistryV1(address(legacyProxy));
+        ProxyAdmin legacyAdmin = _proxyAdmin(address(legacyProxy));
+
+        address submitter = makeAddr("legacy-submitter");
+        uint256 contentId = 1;
+        uint64 submitterStake = uint64(contentRegistry.MIN_SUBMITTER_STAKE());
+        uint256 anchor = block.timestamp;
+
+        vm.prank(admin);
+        crepToken.mint(address(legacyRegistry), submitterStake);
+
+        legacyRegistry.seedLegacyContent(contentId, submitter, submitterStake, uint48(anchor), 50);
+        legacyRegistry.setDormancyAnchor(contentId, anchor);
+
+        ContentRegistry newImpl = new ContentRegistry();
+        vm.prank(governance);
+        legacyAdmin.upgradeAndCall(_proxy(address(legacyRegistry)), address(newImpl), "");
+
+        ContentRegistry upgradedRegistry = ContentRegistry(address(legacyRegistry));
+
+        vm.warp(anchor + 1 days);
+        vm.prank(attacker);
+        vm.expectRevert("Dormancy period not elapsed");
+        upgradedRegistry.markDormant(contentId);
+
+        vm.warp(anchor + contentRegistry.DORMANCY_PERIOD() + 1);
+        vm.prank(attacker);
+        upgradedRegistry.markDormant(contentId);
+
+        (,,,,,, ContentRegistry.ContentStatus status,,, bool submitterStakeReturned,,) =
+            upgradedRegistry.contents(contentId);
+        assertEq(uint256(status), uint256(ContentRegistry.ContentStatus.Dormant));
+        assertTrue(submitterStakeReturned);
+        assertEq(crepToken.balanceOf(submitter), submitterStake);
     }
 
     // =========================================================================
