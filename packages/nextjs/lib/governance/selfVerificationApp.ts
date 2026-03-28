@@ -2,14 +2,13 @@ import { SelfAppBuilder, getUniversalLink } from "@selfxyz/qrcode";
 import type { SelfApp } from "@selfxyz/qrcode";
 
 export const SELF_VERIFICATION_SCOPE = "curyo-faucet";
-export const SELF_MINIMUM_AGE = 18;
 
 type SupportedSelfVerificationChainId = 42220 | 11142220;
 
 type SelfVerificationEndpointType = "celo" | "staging_celo";
 
 type SelfVerificationDisclosures = {
-  minimumAge: number;
+  minimumAge?: number;
   ofac: true;
   excludedCountries: [];
   issuing_state: false;
@@ -87,7 +86,6 @@ export function buildSelfVerificationAppConfig({
     devMode: chainId === 11142220,
     version: 2,
     disclosures: {
-      minimumAge: SELF_MINIMUM_AGE,
       ofac: true,
       excludedCountries: [],
       issuing_state: false,
