@@ -12292,19 +12292,6 @@ const deployedContracts: GenericContractsDeclaration = {
         },
         {
           type: "function",
-          name: "MINIMUM_AGE",
-          inputs: [],
-          outputs: [
-            {
-              name: "",
-              type: "uint256",
-              internalType: "uint256",
-            },
-          ],
-          stateMutability: "view",
-        },
-        {
-          type: "function",
           name: "PASSPORT_ATTESTATION_ID",
           inputs: [],
           outputs: [
@@ -13247,11 +13234,6 @@ const deployedContracts: GenericContractsDeclaration = {
         {
           type: "error",
           name: "AddressAlreadyClaimed",
-          inputs: [],
-        },
-        {
-          type: "error",
-          name: "AgeTooYoung",
           inputs: [],
         },
         {
@@ -28818,19 +28800,6 @@ const deployedContracts: GenericContractsDeclaration = {
         },
         {
           type: "function",
-          name: "MINIMUM_AGE",
-          inputs: [],
-          outputs: [
-            {
-              name: "",
-              type: "uint256",
-              internalType: "uint256",
-            },
-          ],
-          stateMutability: "view",
-        },
-        {
-          type: "function",
           name: "PASSPORT_ATTESTATION_ID",
           inputs: [],
           outputs: [
@@ -29773,11 +29742,6 @@ const deployedContracts: GenericContractsDeclaration = {
         {
           type: "error",
           name: "AddressAlreadyClaimed",
-          inputs: [],
-        },
-        {
-          type: "error",
-          name: "AgeTooYoung",
           inputs: [],
         },
         {
@@ -45345,19 +45309,6 @@ const deployedContracts: GenericContractsDeclaration = {
         },
         {
           type: "function",
-          name: "MINIMUM_AGE",
-          inputs: [],
-          outputs: [
-            {
-              name: "",
-              type: "uint256",
-              internalType: "uint256",
-            },
-          ],
-          stateMutability: "view",
-        },
-        {
-          type: "function",
           name: "PASSPORT_ATTESTATION_ID",
           inputs: [],
           outputs: [
@@ -46300,11 +46251,6 @@ const deployedContracts: GenericContractsDeclaration = {
         {
           type: "error",
           name: "AddressAlreadyClaimed",
-          inputs: [],
-        },
-        {
-          type: "error",
-          name: "AgeTooYoung",
           inputs: [],
         },
         {

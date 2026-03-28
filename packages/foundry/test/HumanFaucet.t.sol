@@ -393,49 +393,37 @@ contract HumanFaucetTest is Test {
         assertEq(crepToken.balanceOf(user1), TIER_0_AMOUNT);
     }
 
-    // --- Age Verification Tests ---
+    // --- Age Disclosure Handling Tests ---
 
-    function test_Claim_RevertAgeTooYoung_Zero() public {
+    function test_Claim_SuccessWithoutAgeRequirement_Zero() public {
         mockHub.setVerified(user1);
 
-        vm.expectRevert(HumanFaucet.AgeTooYoung.selector);
         mockHub.simulateVerificationWithAge(address(faucet), user1, 0);
+
+        assertEq(crepToken.balanceOf(user1), TIER_0_AMOUNT);
+        assertTrue(faucet.hasClaimed(user1));
     }
 
-    function test_Claim_RevertAgeTooYoung_Seventeen() public {
+    function test_Claim_SuccessWithoutAgeRequirement_Seventeen() public {
         mockHub.setVerified(user1);
 
-        vm.expectRevert(HumanFaucet.AgeTooYoung.selector);
         mockHub.simulateVerificationWithAge(address(faucet), user1, 17);
-    }
-
-    function test_Claim_SuccessExactAge_Eighteen() public {
-        mockHub.setVerified(user1);
-
-        mockHub.simulateVerificationWithAge(address(faucet), user1, 18);
 
         assertEq(crepToken.balanceOf(user1), TIER_0_AMOUNT);
         assertTrue(faucet.hasClaimed(user1));
     }
 
-    function test_Claim_SuccessAboveAge_TwentyOne() public {
-        mockHub.setVerified(user1);
-
-        mockHub.simulateVerificationWithAge(address(faucet), user1, 21);
-
-        assertEq(crepToken.balanceOf(user1), TIER_0_AMOUNT);
-        assertTrue(faucet.hasClaimed(user1));
-    }
-
-    function test_Claim_RevertAgeTooYoung_ViaCustomOutput() public {
+    function test_Claim_SuccessWithoutAgeRequirement_ViaCustomOutput() public {
         ISelfVerificationRoot.GenericDiscloseOutputV2 memory output;
         output.attestationId = PASSPORT_ATTESTATION_ID;
         output.userIdentifier = uint256(uint160(user1));
         output.nullifier = 99999;
         output.olderThan = 15;
 
-        vm.expectRevert(HumanFaucet.AgeTooYoung.selector);
         mockHub.simulateVerificationWithOutput(address(faucet), output);
+
+        assertEq(crepToken.balanceOf(user1), TIER_0_AMOUNT);
+        assertTrue(faucet.hasClaimed(user1));
     }
 
     function test_Claim_SuccessWithBiometricIdCard() public {

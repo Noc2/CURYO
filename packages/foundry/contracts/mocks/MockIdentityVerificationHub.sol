@@ -171,10 +171,10 @@ contract MockIdentityVerificationHub {
         emit VerificationSimulated(targetContract, user);
     }
 
-    /// @notice Simulate verification with a custom age value (for testing age restrictions)
+    /// @notice Simulate verification with a custom age value
     /// @param targetContract The contract to call (e.g., HumanFaucet)
     /// @param user The user address being verified
-    /// @param age The age to set in the output (use < 18 for underage testing)
+    /// @param age The age value to set in the verification output
     function simulateVerificationWithAge(address targetContract, address user, uint256 age) external {
         require(verifiedUsers[user], "User not verified");
         require(userNullifiers[user] != 0, "No nullifier set");
