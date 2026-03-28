@@ -830,5 +830,29 @@ contract DeployCuryo is ScaffoldETHDeploy {
         spotifySubcats[6] = "Sports";
         spotifySubcats[7] = "Culture";
         registry.addApprovedCategory("Spotify Podcasts", "open.spotify.com", spotifySubcats);
+
+        // npm Packages (categoryId: 13)
+        string[] memory npmSubcats = new string[](8);
+        npmSubcats[0] = "Frameworks";
+        npmSubcats[1] = "UI Libraries";
+        npmSubcats[2] = "Developer Tools";
+        npmSubcats[3] = "Build Tooling";
+        npmSubcats[4] = "Testing";
+        npmSubcats[5] = "Backend/Data";
+        npmSubcats[6] = "AI/ML";
+        npmSubcats[7] = "Web3";
+        registry.addApprovedCategory("npm Packages", "npmjs.com", npmSubcats);
+
+        // PyPI Packages (categoryId: 14)
+        string[] memory pypiSubcats = new string[](8);
+        pypiSubcats[0] = "AI/ML";
+        pypiSubcats[1] = "Data Science";
+        pypiSubcats[2] = "Web Frameworks";
+        pypiSubcats[3] = "Automation";
+        pypiSubcats[4] = "Developer Tools";
+        pypiSubcats[5] = "Scientific Computing";
+        pypiSubcats[6] = "Security";
+        pypiSubcats[7] = "LLM/Agents";
+        registry.addApprovedCategory("PyPI Packages", "pypi.org", pypiSubcats);
     }
 }
