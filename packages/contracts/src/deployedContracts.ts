@@ -715,19 +715,19 @@ const deployedContracts: GenericContractsDeclaration = {
       ],
       inheritedFunctions: {
         DEFAULT_ADMIN_ROLE:
-          "lib/openzeppelin-contracts-upgradeable/contracts/access/AccessControlUpgradeable.sol",
+          "lib/openzeppelin-contracts/contracts/access/AccessControl.sol",
         getRoleAdmin:
-          "lib/openzeppelin-contracts-upgradeable/contracts/access/AccessControlUpgradeable.sol",
+          "lib/openzeppelin-contracts/contracts/access/AccessControl.sol",
         grantRole:
-          "lib/openzeppelin-contracts-upgradeable/contracts/access/AccessControlUpgradeable.sol",
+          "lib/openzeppelin-contracts/contracts/access/AccessControl.sol",
         hasRole:
-          "lib/openzeppelin-contracts-upgradeable/contracts/access/AccessControlUpgradeable.sol",
+          "lib/openzeppelin-contracts/contracts/access/AccessControl.sol",
         renounceRole:
-          "lib/openzeppelin-contracts-upgradeable/contracts/access/AccessControlUpgradeable.sol",
+          "lib/openzeppelin-contracts/contracts/access/AccessControl.sol",
         revokeRole:
-          "lib/openzeppelin-contracts-upgradeable/contracts/access/AccessControlUpgradeable.sol",
+          "lib/openzeppelin-contracts/contracts/access/AccessControl.sol",
         supportsInterface:
-          "lib/openzeppelin-contracts-upgradeable/contracts/access/AccessControlUpgradeable.sol",
+          "lib/openzeppelin-contracts/contracts/access/AccessControl.sol",
       },
     },
     ProfileRegistry: {
@@ -25509,19 +25509,19 @@ const deployedContracts: GenericContractsDeclaration = {
       ],
       inheritedFunctions: {
         DEFAULT_ADMIN_ROLE:
-          "lib/openzeppelin-contracts-upgradeable/contracts/access/AccessControlUpgradeable.sol",
+          "lib/openzeppelin-contracts/contracts/access/AccessControl.sol",
         getRoleAdmin:
-          "lib/openzeppelin-contracts-upgradeable/contracts/access/AccessControlUpgradeable.sol",
+          "lib/openzeppelin-contracts/contracts/access/AccessControl.sol",
         grantRole:
-          "lib/openzeppelin-contracts-upgradeable/contracts/access/AccessControlUpgradeable.sol",
+          "lib/openzeppelin-contracts/contracts/access/AccessControl.sol",
         hasRole:
-          "lib/openzeppelin-contracts-upgradeable/contracts/access/AccessControlUpgradeable.sol",
+          "lib/openzeppelin-contracts/contracts/access/AccessControl.sol",
         renounceRole:
-          "lib/openzeppelin-contracts-upgradeable/contracts/access/AccessControlUpgradeable.sol",
+          "lib/openzeppelin-contracts/contracts/access/AccessControl.sol",
         revokeRole:
-          "lib/openzeppelin-contracts-upgradeable/contracts/access/AccessControlUpgradeable.sol",
+          "lib/openzeppelin-contracts/contracts/access/AccessControl.sol",
         supportsInterface:
-          "lib/openzeppelin-contracts-upgradeable/contracts/access/AccessControlUpgradeable.sol",
+          "lib/openzeppelin-contracts/contracts/access/AccessControl.sol",
       },
       deployedOnBlock: 62547279,
     },
@@ -42018,19 +42018,19 @@ const deployedContracts: GenericContractsDeclaration = {
       ],
       inheritedFunctions: {
         DEFAULT_ADMIN_ROLE:
-          "lib/openzeppelin-contracts-upgradeable/contracts/access/AccessControlUpgradeable.sol",
+          "lib/openzeppelin-contracts/contracts/access/AccessControl.sol",
         getRoleAdmin:
-          "lib/openzeppelin-contracts-upgradeable/contracts/access/AccessControlUpgradeable.sol",
+          "lib/openzeppelin-contracts/contracts/access/AccessControl.sol",
         grantRole:
-          "lib/openzeppelin-contracts-upgradeable/contracts/access/AccessControlUpgradeable.sol",
+          "lib/openzeppelin-contracts/contracts/access/AccessControl.sol",
         hasRole:
-          "lib/openzeppelin-contracts-upgradeable/contracts/access/AccessControlUpgradeable.sol",
+          "lib/openzeppelin-contracts/contracts/access/AccessControl.sol",
         renounceRole:
-          "lib/openzeppelin-contracts-upgradeable/contracts/access/AccessControlUpgradeable.sol",
+          "lib/openzeppelin-contracts/contracts/access/AccessControl.sol",
         revokeRole:
-          "lib/openzeppelin-contracts-upgradeable/contracts/access/AccessControlUpgradeable.sol",
+          "lib/openzeppelin-contracts/contracts/access/AccessControl.sol",
         supportsInterface:
-          "lib/openzeppelin-contracts-upgradeable/contracts/access/AccessControlUpgradeable.sol",
+          "lib/openzeppelin-contracts/contracts/access/AccessControl.sol",
       },
       deployedOnBlock: 20996149,
     },

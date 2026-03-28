@@ -8,6 +8,7 @@ import {
 } from "@openzeppelin/contracts/proxy/transparent/TransparentUpgradeableProxy.sol";
 import { ProxyAdmin } from "@openzeppelin/contracts/proxy/transparent/ProxyAdmin.sol";
 import { Initializable } from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
+import { AccessControl } from "@openzeppelin/contracts/access/AccessControl.sol";
 import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
 import { ContentRegistry } from "../contracts/ContentRegistry.sol";
@@ -61,6 +62,121 @@ contract MockVotingEngineForUpgrade is IRoundVotingEngine {
     }
 
     function transferReward(address, uint256) external override { }
+}
+
+/// @dev Mirrors the legacy AccessControl-based ProtocolConfig layout so upgrade tests catch storage regressions.
+contract LegacyProtocolConfigV1 is Initializable, AccessControl {
+    bytes32 public constant CONFIG_ROLE = keccak256("CONFIG_ROLE");
+    bytes32 public constant TREASURY_ROLE = keccak256("TREASURY_ROLE");
+    bytes32 public constant TREASURY_ADMIN_ROLE = keccak256("TREASURY_ADMIN_ROLE");
+
+    error InvalidAddress();
+    error InvalidConfig();
+
+    address public rewardDistributor;
+    address public categoryRegistry;
+    address public frontendRegistry;
+    address public treasury;
+    RoundLib.RoundConfig public config;
+    address public voterIdNFT;
+    address public participationPool;
+    uint256 public revealGracePeriod;
+
+    uint256[50] private __gap;
+
+    constructor() {
+        _disableInitializers();
+    }
+
+    function initialize(address admin, address governance) external initializer {
+        _initialize(admin, governance, governance);
+    }
+
+    function initializeWithTreasury(address admin, address governance, address treasuryAuthority) external initializer {
+        _initialize(admin, governance, treasuryAuthority);
+    }
+
+    function _initialize(address admin, address governance, address treasuryAuthority) internal {
+        if (admin == address(0) || governance == address(0) || treasuryAuthority == address(0)) revert InvalidAddress();
+
+        _grantRole(DEFAULT_ADMIN_ROLE, governance);
+        _grantRole(CONFIG_ROLE, governance);
+        _setRoleAdmin(TREASURY_ROLE, TREASURY_ADMIN_ROLE);
+        _setRoleAdmin(TREASURY_ADMIN_ROLE, TREASURY_ADMIN_ROLE);
+        _grantRole(TREASURY_ADMIN_ROLE, treasuryAuthority);
+        _grantRole(TREASURY_ROLE, treasuryAuthority);
+        if (admin != governance) {
+            _grantRole(CONFIG_ROLE, admin);
+            if (admin != treasuryAuthority) {
+                _grantRole(TREASURY_ROLE, admin);
+            }
+        }
+
+        config = RoundLib.RoundConfig({
+            epochDuration: uint32(20 minutes),
+            maxDuration: uint32(7 days),
+            minVoters: uint16(3),
+            maxVoters: uint16(1000)
+        });
+        revealGracePeriod = 60 minutes;
+    }
+
+    function setRewardDistributor(address value) external onlyRole(CONFIG_ROLE) {
+        if (value == address(0) || rewardDistributor != address(0)) revert InvalidConfig();
+        rewardDistributor = value;
+    }
+
+    function setCategoryRegistry(address value) external onlyRole(CONFIG_ROLE) {
+        if (value == address(0)) revert InvalidAddress();
+        categoryRegistry = value;
+    }
+
+    function setFrontendRegistry(address value) external onlyRole(CONFIG_ROLE) {
+        if (value == address(0)) revert InvalidAddress();
+        frontendRegistry = value;
+    }
+
+    function setTreasury(address value) external onlyRole(TREASURY_ROLE) {
+        if (value == address(0)) revert InvalidAddress();
+        treasury = value;
+    }
+
+    function setVoterIdNFT(address value) external onlyRole(CONFIG_ROLE) {
+        if (value == address(0)) revert InvalidAddress();
+        voterIdNFT = value;
+    }
+
+    function setParticipationPool(address value) external onlyRole(CONFIG_ROLE) {
+        if (value == address(0)) revert InvalidAddress();
+        participationPool = value;
+    }
+
+    function setRevealGracePeriod(uint256 value) external onlyRole(CONFIG_ROLE) {
+        if (value < config.epochDuration) revert InvalidConfig();
+        revealGracePeriod = value;
+    }
+
+    function setConfig(uint256 epochDuration, uint256 maxDuration, uint256 minVoters, uint256 maxVoters)
+        external
+        onlyRole(CONFIG_ROLE)
+    {
+        if (epochDuration < 5 minutes) revert InvalidConfig();
+        if (maxDuration < 1 days || maxDuration > 30 days) revert InvalidConfig();
+        if (maxDuration / epochDuration > 2016) revert InvalidConfig();
+        if (minVoters < 2) revert InvalidConfig();
+        if (maxVoters < minVoters || maxVoters > 10000) revert InvalidConfig();
+
+        if (revealGracePeriod > 0 && revealGracePeriod < epochDuration) {
+            revealGracePeriod = epochDuration;
+        }
+
+        config = RoundLib.RoundConfig({
+            epochDuration: uint32(epochDuration),
+            maxDuration: uint32(maxDuration),
+            minVoters: uint16(minVoters),
+            maxVoters: uint16(maxVoters)
+        });
+    }
 }
 
 /// @dev Mirrors the pre-snapshot ContentRegistry layout so upgrade tests catch legacy slot shifts.
@@ -381,6 +497,59 @@ contract UpgradeTest is Test {
 
         assertEq(protocolConfigAdmin.owner(), governance);
         assertEq(protocolConfig.treasury(), address(1234));
+    }
+
+    function test_ProtocolConfig_LegacyLayoutStateAndRolesPreservedAfterUpgrade() public {
+        LegacyProtocolConfigV1 legacyImpl = new LegacyProtocolConfigV1();
+        TransparentUpgradeableProxy legacyProxy = new TransparentUpgradeableProxy(
+            address(legacyImpl), governance, abi.encodeCall(LegacyProtocolConfigV1.initialize, (admin, governance))
+        );
+        LegacyProtocolConfigV1 legacyConfig = LegacyProtocolConfigV1(address(legacyProxy));
+        ProxyAdmin legacyAdmin = _proxyAdmin(address(legacyProxy));
+
+        address rewardDistributorAddr = address(0xBEEF);
+        address categoryRegistryAddr = address(0xCAFE);
+        address frontendRegistryAddr = address(0xFEE1);
+        address treasuryAddr = address(0x1234);
+        address voterIdNftAddr = address(0x5678);
+        address participationPoolAddr = address(0x9ABC);
+
+        vm.startPrank(governance);
+        legacyConfig.setRewardDistributor(rewardDistributorAddr);
+        legacyConfig.setCategoryRegistry(categoryRegistryAddr);
+        legacyConfig.setFrontendRegistry(frontendRegistryAddr);
+        legacyConfig.setTreasury(treasuryAddr);
+        legacyConfig.setVoterIdNFT(voterIdNftAddr);
+        legacyConfig.setParticipationPool(participationPoolAddr);
+        legacyConfig.setConfig(1 hours, 14 days, 5, 500);
+        legacyConfig.setRevealGracePeriod(2 hours);
+        vm.stopPrank();
+
+        ProtocolConfig newImpl = new ProtocolConfig();
+        vm.prank(governance);
+        legacyAdmin.upgradeAndCall(_proxy(address(legacyConfig)), address(newImpl), "");
+
+        ProtocolConfig upgradedConfig = ProtocolConfig(address(legacyConfig));
+        (uint32 epochDuration, uint32 maxDuration, uint16 minVoters, uint16 maxVoters) = upgradedConfig.config();
+
+        assertEq(legacyAdmin.owner(), governance);
+        assertEq(upgradedConfig.rewardDistributor(), rewardDistributorAddr);
+        assertEq(upgradedConfig.categoryRegistry(), categoryRegistryAddr);
+        assertEq(upgradedConfig.frontendRegistry(), frontendRegistryAddr);
+        assertEq(upgradedConfig.treasury(), treasuryAddr);
+        assertEq(upgradedConfig.voterIdNFT(), voterIdNftAddr);
+        assertEq(upgradedConfig.participationPool(), participationPoolAddr);
+        assertEq(upgradedConfig.revealGracePeriod(), 2 hours);
+        assertEq(epochDuration, 1 hours);
+        assertEq(maxDuration, 14 days);
+        assertEq(minVoters, 5);
+        assertEq(maxVoters, 500);
+        assertTrue(upgradedConfig.hasRole(upgradedConfig.DEFAULT_ADMIN_ROLE(), governance));
+        assertTrue(upgradedConfig.hasRole(upgradedConfig.CONFIG_ROLE(), governance));
+        assertTrue(upgradedConfig.hasRole(upgradedConfig.CONFIG_ROLE(), admin));
+        assertTrue(upgradedConfig.hasRole(upgradedConfig.TREASURY_ROLE(), governance));
+        assertTrue(upgradedConfig.hasRole(upgradedConfig.TREASURY_ADMIN_ROLE(), governance));
+        assertEq(upgradedConfig.getRoleAdmin(upgradedConfig.TREASURY_ROLE()), upgradedConfig.TREASURY_ADMIN_ROLE());
     }
 
     // =========================================================================
