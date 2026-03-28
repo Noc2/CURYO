@@ -137,6 +137,8 @@ contract DeployCuryo is ScaffoldETHDeploy {
         );
         ProtocolConfig protocolConfig = ProtocolConfig(address(protocolConfigProxy));
 
+        // RoundVotingEngine has had storage-breaking voting-system rewrites in this repo's history.
+        // Migrate those versions via fresh proxy deployment, not in-place proxy upgrade.
         TransparentUpgradeableProxy votingEngineProxy = new TransparentUpgradeableProxy(
             address(votingEngineImpl),
             governance,
