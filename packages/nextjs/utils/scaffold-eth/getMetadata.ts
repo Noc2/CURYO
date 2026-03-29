@@ -1,13 +1,17 @@
 import type { Metadata } from "next";
 
-const baseUrl = process.env.VERCEL_PROJECT_PRODUCTION_URL
-  ? `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}`
-  : `http://localhost:${process.env.PORT || 3000}`;
 const titleTemplate = "%s | Curyo";
 const socialImageAlt =
   "Curyo brand banner with the headline Human Reputation at Stake and the subline Stake-Weighted Ratings From Verified Humans";
 
+function resolveMetadataBaseUrl() {
+  return process.env.VERCEL_PROJECT_PRODUCTION_URL
+    ? `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}`
+    : `http://localhost:${process.env.PORT || 3000}`;
+}
+
 export const getMetadata = ({ title, description }: { title: string; description: string }): Metadata => {
+  const baseUrl = resolveMetadataBaseUrl();
   const openGraphImageUrl = `${baseUrl}/og-image.png`;
   const twitterImageUrl = `${baseUrl}/twitter-image.png`;
 
