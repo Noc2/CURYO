@@ -1,4 +1,4 @@
-import { onchainTable, index, relations } from "ponder";
+import { index, onchainTable, relations, sql } from "ponder";
 
 // ============================================================
 // CONTENT
@@ -29,6 +29,14 @@ export const content = onchainTable(
     statusIdx: index().on(table.status),
     ratingIdx: index().on(table.rating),
     createdAtIdx: index().on(table.createdAt),
+    searchIdx: index("content_search_idx").using(
+      "gin",
+      sql`(
+        setweight(to_tsvector('simple', coalesce(${table.title}, '')), 'A') ||
+        setweight(to_tsvector('simple', coalesce(${table.tags}, '')), 'B') ||
+        setweight(to_tsvector('simple', coalesce(${table.description}, '')), 'C')
+      )`,
+    ),
   }),
 );
 
