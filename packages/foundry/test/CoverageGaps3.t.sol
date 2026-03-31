@@ -1218,13 +1218,7 @@ contract RoundSettlementEdgeCase3Test is VotingTestBase {
         for (uint256 i = 0; i < keys.length; i++) {
             RoundLib.Commit memory c = RoundEngineReadHelpers.commit(engine, contentId, roundId, keys[i]);
             if (!c.revealed && c.stakeAmount > 0) {
-                // Reconstruct reveal params from ciphertext (test mode: 65-byte plaintext)
-                bytes memory ct = c.ciphertext;
-                bool isUp = uint8(ct[0]) == 1;
-                bytes32 salt;
-                assembly ("memory-safe") {
-                    salt := mload(add(ct, 33))
-                }
+                (bool isUp, bytes32 salt) = _decodeTestCiphertext(c.ciphertext);
                 try engine.revealVoteByCommitKey(contentId, roundId, keys[i], isUp, salt) { } catch { }
             }
         }

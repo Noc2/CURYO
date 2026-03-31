@@ -67,6 +67,8 @@ abstract contract VotingTestBase is Test, ContentSubmissionTestBase {
     uint64 internal constant DEFAULT_DRAND_GENESIS_TIME = 1;
     uint64 internal constant DEFAULT_DRAND_PERIOD = 3;
     uint256 internal constant DEFAULT_TLOCK_EPOCH_DURATION = 20 minutes;
+    bytes internal constant TEST_DIRECTION_PREFIX = "test-direction=";
+    bytes internal constant TEST_SALT_PREFIX = "test-salt=0x";
     ProtocolConfig internal activeTlockProtocolConfig;
     bytes32 internal activeTlockDrandChainHash = DEFAULT_DRAND_CHAIN_HASH;
     uint64 internal activeTlockDrandGenesisTime = DEFAULT_DRAND_GENESIS_TIME;
@@ -182,6 +184,71 @@ abstract contract VotingTestBase is Test, ContentSubmissionTestBase {
         return keccak256(
             abi.encodePacked(isUp, salt, contentId, targetRound, drandChainHash, keccak256(ciphertext))
         );
+    }
+
+    function _decodeTestCiphertext(bytes memory ciphertext) internal pure returns (bool isUp, bytes32 salt) {
+        isUp = _parseTestDirection(ciphertext);
+        salt = _parseTestSalt(ciphertext);
+    }
+
+    function _parseTestDirection(bytes memory ciphertext) private pure returns (bool) {
+        uint256 directionStart = _findMarker(ciphertext, TEST_DIRECTION_PREFIX);
+        if (directionStart == type(uint256).max) revert("Missing test-direction");
+
+        uint256 valueStart = directionStart + TEST_DIRECTION_PREFIX.length;
+        if (valueStart + 1 < ciphertext.length && ciphertext[valueStart] == "u" && ciphertext[valueStart + 1] == "p") {
+            return true;
+        }
+        if (
+            valueStart + 3 < ciphertext.length && ciphertext[valueStart] == "d" && ciphertext[valueStart + 1] == "o"
+                && ciphertext[valueStart + 2] == "w" && ciphertext[valueStart + 3] == "n"
+        ) {
+            return false;
+        }
+
+        revert("Invalid test-direction");
+    }
+
+    function _parseTestSalt(bytes memory ciphertext) private pure returns (bytes32) {
+        uint256 saltStart = _findMarker(ciphertext, TEST_SALT_PREFIX);
+        if (saltStart == type(uint256).max) revert("Missing test-salt");
+        return _readHexBytes32(ciphertext, saltStart + TEST_SALT_PREFIX.length);
+    }
+
+    function _findMarker(bytes memory haystack, bytes memory needle) private pure returns (uint256) {
+        if (needle.length == 0 || haystack.length < needle.length) return type(uint256).max;
+
+        for (uint256 i = 0; i <= haystack.length - needle.length; i++) {
+            bool matches = true;
+            for (uint256 j = 0; j < needle.length; j++) {
+                if (haystack[i + j] != needle[j]) {
+                    matches = false;
+                    break;
+                }
+            }
+            if (matches) return i;
+        }
+
+        return type(uint256).max;
+    }
+
+    function _readHexBytes32(bytes memory data, uint256 start) private pure returns (bytes32) {
+        if (start + 64 > data.length) revert("Invalid test-salt length");
+
+        uint256 value = 0;
+        for (uint256 i = 0; i < 64; i++) {
+            value = (value << 4) | _hexNibble(data[start + i]);
+        }
+
+        return bytes32(value);
+    }
+
+    function _hexNibble(bytes1 ch) private pure returns (uint256) {
+        uint8 code = uint8(ch);
+        if (code >= uint8(bytes1("0")) && code <= uint8(bytes1("9"))) return code - uint8(bytes1("0"));
+        if (code >= uint8(bytes1("a")) && code <= uint8(bytes1("f"))) return 10 + code - uint8(bytes1("a"));
+        if (code >= uint8(bytes1("A")) && code <= uint8(bytes1("F"))) return 10 + code - uint8(bytes1("A"));
+        revert("Invalid hex nibble");
     }
 
     /// @dev Build commit key: keccak256(abi.encodePacked(voter, commitHash)).

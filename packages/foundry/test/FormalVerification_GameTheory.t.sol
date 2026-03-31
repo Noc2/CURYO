@@ -144,10 +144,7 @@ contract FormalVerification_GameTheoryTest is VotingTestBase {
         for (uint256 i = 0; i < keys.length; i++) {
             RoundLib.Commit memory c = RoundEngineReadHelpers.commit(engine, cid, roundId, keys[i]);
             if (!c.revealed && c.stakeAmount > 0) {
-                bool up = uint8(c.ciphertext[0]) == 1;
-                bytes32 s;
-                bytes memory ct = c.ciphertext;
-                assembly ("memory-safe") { s := mload(add(ct, 33)) }
+                (bool up, bytes32 s) = _decodeTestCiphertext(c.ciphertext);
                 try engine.revealVoteByCommitKey(cid, roundId, keys[i], up, s) { } catch { }
             }
         }
@@ -567,10 +564,7 @@ contract FormalVerification_GameTheoryTest is VotingTestBase {
         bytes32[] memory keys = RoundEngineReadHelpers.commitKeys(engine, cid, rid);
         for (uint256 i = 0; i < keys.length; i++) {
             RoundLib.Commit memory c = RoundEngineReadHelpers.commit(engine, cid, rid, keys[i]);
-            bool up = uint8(c.ciphertext[0]) == 1;
-            bytes32 s;
-            bytes memory ct = c.ciphertext;
-            assembly ("memory-safe") { s := mload(add(ct, 33)) }
+            (bool up, bytes32 s) = _decodeTestCiphertext(c.ciphertext);
             engine.revealVoteByCommitKey(cid, rid, keys[i], up, s);
         }
 
