@@ -11,6 +11,7 @@
 import { ANVIL_ACCOUNTS } from "./anvil-accounts";
 import "./fetch-shim";
 import { PONDER_URL } from "./ponder-url";
+import { deriveAnchoredTlockRuntimeNowMs } from "./tlockRuntime";
 
 const ANVIL_RPC = "http://localhost:8545";
 const DEFAULT_TX_GAS_LIMIT = 2_000_000n;
@@ -223,18 +224,49 @@ async function resolveTlockRuntimeNowMs(
   votingEngineAddress: string,
   tlockEpochDurationSeconds: number,
 ): Promise<() => number> {
-  const [{ epochDuration }, latestBlockTimestamp] = await Promise.all([
+  const [{ epochDuration }, drandPeriodSeconds, latestBlockTimestamp] = await Promise.all([
     readRoundConfig(votingEngineAddress),
+    readDrandPeriodSeconds(votingEngineAddress),
     readLatestBlockTimestampSeconds(),
   ]);
 
   // Local E2E chains can drift behind wall-clock time while Next.js builds or routes warm up.
-  // Anchor the drand target to the chain's next reveal window instead of raw Date.now().
-  const predictedRoundStartSeconds = latestBlockTimestamp + 1;
-  const revealableAfterMs = (predictedRoundStartSeconds + Number(epochDuration)) * 1000;
-  const runtimeNowMs = revealableAfterMs - tlockEpochDurationSeconds * 1000;
+  // Anchor the drand target just inside the next reveal window instead of on its brittle lower bound.
+  const runtimeNowMs = deriveAnchoredTlockRuntimeNowMs({
+    latestBlockTimestampSeconds: latestBlockTimestamp + 1,
+    roundEpochDurationSeconds: Number(epochDuration),
+    tlockEpochDurationSeconds,
+    drandPeriodSeconds,
+  });
 
   return () => runtimeNowMs;
+}
+
+async function readDrandPeriodSeconds(contractAddress: string): Promise<number> {
+  const { decodeFunctionResult, encodeFunctionData } = await import("viem");
+  const abi = [
+    {
+      name: "drandPeriod",
+      type: "function",
+      inputs: [],
+      outputs: [{ name: "", type: "uint256" }],
+      stateMutability: "view",
+    },
+  ] as const;
+  const configAddress = await resolveProtocolConfigAddress(contractAddress);
+  const data = encodeFunctionData({ abi, functionName: "drandPeriod" });
+  const result = await rpcRequest<`0x${string}`>("eth_call", [{ to: configAddress, data }, "latest"]);
+  if (!result) {
+    throw new Error("Failed to read drandPeriod from Anvil");
+  }
+
+  return Number(
+    decodeFunctionResult({
+      abi,
+      functionName: "drandPeriod",
+      data: result,
+    }),
+  );
 }
 
 /**
