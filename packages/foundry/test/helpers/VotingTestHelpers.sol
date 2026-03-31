@@ -3,6 +3,8 @@ pragma solidity ^0.8.20;
 
 import { Test } from "forge-std/Test.sol";
 import { Vm, VmSafe } from "forge-std/Vm.sol";
+import { Base64 } from "@openzeppelin/contracts/utils/Base64.sol";
+import { Strings } from "@openzeppelin/contracts/utils/Strings.sol";
 import { ERC1967Proxy } from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
 import { ContentRegistry } from "../../contracts/ContentRegistry.sol";
 import { ProtocolConfig } from "../../contracts/ProtocolConfig.sol";
@@ -66,8 +68,13 @@ abstract contract VotingTestBase is Test, ContentSubmissionTestBase {
     uint64 internal constant DEFAULT_DRAND_GENESIS_TIME = 1;
     uint64 internal constant DEFAULT_DRAND_PERIOD = 3;
     uint256 internal constant DEFAULT_TLOCK_EPOCH_DURATION = 20 minutes;
+    bytes internal constant TEST_AGE_HEADER_RAW = "-----BEGIN AGE ENCRYPTED FILE-----";
     bytes internal constant TEST_AGE_HEADER = "-----BEGIN AGE ENCRYPTED FILE-----\n";
     bytes internal constant TEST_AGE_FOOTER = "-----END AGE ENCRYPTED FILE-----\n";
+    bytes internal constant TEST_AGE_VERSION = "age-encryption.org/v1\n";
+    bytes internal constant TEST_TLOCK_LINE_PREFIX = "-> tlock ";
+    bytes internal constant TEST_PAYLOAD_LINE_PREFIX = "payload ";
+    bytes internal constant TEST_MAC_LINE = "--- mac\n";
     ProtocolConfig internal activeTlockProtocolConfig;
     bytes32 internal activeTlockDrandChainHash = DEFAULT_DRAND_CHAIN_HASH;
     uint64 internal activeTlockDrandGenesisTime = DEFAULT_DRAND_GENESIS_TIME;
@@ -111,18 +118,64 @@ abstract contract VotingTestBase is Test, ContentSubmissionTestBase {
         activeTlockDrandPeriod = period;
     }
 
-    /// @dev Build a compact fake AGE payload accepted by the contract; it is test-only, not real tlock ciphertext.
-    function _testCiphertext(bool isUp, bytes32 salt, uint256 contentId) internal pure returns (bytes memory) {
+    /// @dev Build a compact fake AGE payload with a valid tlock stanza; it is test-only, not real tlock ciphertext.
+    function _testCiphertext(bool isUp, bytes32 salt, uint256 contentId) internal view returns (bytes memory) {
+        return _testCiphertext(isUp, salt, contentId, _tlockCommitTargetRound(), _tlockDrandChainHash());
+    }
+
+    /// @dev Build a fake AGE payload that embeds caller-supplied tlock metadata for branch tests.
+    function _testCiphertext(bool isUp, bytes32 salt, uint256 contentId, uint64 targetRound, bytes32 drandChainHash)
+        internal
+        pure
+        returns (bytes memory)
+    {
+        return _testCiphertextWithFiller(isUp, salt, contentId, targetRound, drandChainHash, 0);
+    }
+
+    function _testCiphertextWithFiller(
+        bool isUp,
+        bytes32 salt,
+        uint256 contentId,
+        uint64 targetRound,
+        bytes32 drandChainHash,
+        uint256 fillerLength
+    ) internal pure returns (bytes memory ciphertext) {
+        return _armoredTestCiphertext(
+            _testCiphertextPayload(isUp, salt, contentId, targetRound, drandChainHash, fillerLength), true
+        );
+    }
+
+    function _testCiphertextPayload(
+        bool isUp,
+        bytes32 salt,
+        uint256 contentId,
+        uint64 targetRound,
+        bytes32 drandChainHash,
+        uint256 fillerLength
+    ) internal pure returns (bytes memory decodedPayload) {
         contentId; // Content binding lives in the commit hash, so the test payload only needs direction + salt.
 
-        bytes memory ciphertext = new bytes(TEST_AGE_HEADER.length + 2 + 64 + 1 + TEST_AGE_FOOTER.length);
-        uint256 offset = _copyBytes(ciphertext, 0, TEST_AGE_HEADER);
-        ciphertext[offset] = isUp ? bytes1("u") : bytes1("d");
-        ciphertext[offset + 1] = 0x0a;
-        _writeHexBytes32(ciphertext, offset + 2, salt);
-        ciphertext[offset + 66] = 0x0a;
-        _copyBytes(ciphertext, offset + 67, TEST_AGE_FOOTER);
-        return ciphertext;
+        bytes memory targetRoundBytes = bytes(Strings.toString(targetRound));
+        bytes memory chainHashHex = _bytes32Hex(drandChainHash);
+        bytes memory saltHex = _bytes32Hex(salt);
+        bytes memory filler = _filledBytes(fillerLength, bytes1("A"));
+
+        return abi.encodePacked(
+            TEST_AGE_VERSION,
+            TEST_TLOCK_LINE_PREFIX,
+            targetRoundBytes,
+            " ",
+            chainHashHex,
+            "\n",
+            TEST_PAYLOAD_LINE_PREFIX,
+            isUp ? bytes1("u") : bytes1("d"),
+            ":",
+            saltHex,
+            "\n",
+            filler,
+            fillerLength > 0 ? bytes("\n") : bytes(""),
+            TEST_MAC_LINE
+        );
     }
 
     /// @dev Build commit hash bound to the exact ciphertext bytes used at commit time.
@@ -146,6 +199,11 @@ abstract contract VotingTestBase is Test, ContentSubmissionTestBase {
 
     function _tlockTargetRoundAt(uint256 revealableAfter) internal view returns (uint64) {
         return _roundAt(revealableAfter, _tlockDrandGenesisTime(), _tlockDrandPeriod());
+    }
+
+    function _tlockRoundTimestamp(uint64 targetRound) internal view returns (uint256) {
+        if (targetRound == 0) return 0;
+        return uint256(_tlockDrandGenesisTime()) + (uint256(targetRound) - 1) * uint256(_tlockDrandPeriod());
     }
 
     function _tlockDrandChainHash() internal view virtual returns (bytes32) {
@@ -187,11 +245,12 @@ abstract contract VotingTestBase is Test, ContentSubmissionTestBase {
     }
 
     function _decodeTestCiphertext(bytes memory ciphertext) internal pure returns (bool isUp, bytes32 salt) {
-        uint256 minLength = TEST_AGE_HEADER.length + 2 + 64 + 1 + TEST_AGE_FOOTER.length;
-        if (ciphertext.length != minLength) revert("Invalid test ciphertext");
+        bytes memory decodedPayload = _decodeTestAgePayload(ciphertext);
+        uint256 lineStart = _findMarker(decodedPayload, TEST_PAYLOAD_LINE_PREFIX);
+        if (lineStart == type(uint256).max) revert("Missing test-payload");
 
-        uint256 offset = TEST_AGE_HEADER.length;
-        bytes1 direction = ciphertext[offset];
+        uint256 offset = lineStart + TEST_PAYLOAD_LINE_PREFIX.length;
+        bytes1 direction = decodedPayload[offset];
         if (direction == bytes1("u")) {
             isUp = true;
         } else if (direction == bytes1("d")) {
@@ -200,8 +259,37 @@ abstract contract VotingTestBase is Test, ContentSubmissionTestBase {
             revert("Invalid test-direction");
         }
 
-        if (ciphertext[offset + 1] != 0x0a || ciphertext[offset + 66] != 0x0a) revert("Invalid test-direction");
-        salt = _readHexBytes32(ciphertext, offset + 2);
+        if (offset + 66 >= decodedPayload.length || decodedPayload[offset + 1] != bytes1(":")) {
+            revert("Invalid test-direction");
+        }
+        salt = _readHexBytes32(decodedPayload, offset + 2);
+    }
+
+    function _decodeTestAgePayload(bytes memory ciphertext) private pure returns (bytes memory) {
+        if (!_hasPrefix(ciphertext, TEST_AGE_HEADER) || !_hasSuffix(ciphertext, TEST_AGE_FOOTER)) {
+            revert("Invalid test ciphertext");
+        }
+
+        uint256 payloadStart = TEST_AGE_HEADER.length;
+        uint256 payloadEnd = ciphertext.length - TEST_AGE_FOOTER.length;
+        return _decodeBase64(ciphertext, payloadStart, payloadEnd);
+    }
+
+    function _findMarker(bytes memory haystack, bytes memory needle) private pure returns (uint256) {
+        if (needle.length == 0 || haystack.length < needle.length) return type(uint256).max;
+
+        for (uint256 i = 0; i <= haystack.length - needle.length; i++) {
+            bool matches = true;
+            for (uint256 j = 0; j < needle.length; j++) {
+                if (haystack[i + j] != needle[j]) {
+                    matches = false;
+                    break;
+                }
+            }
+            if (matches) return i;
+        }
+
+        return type(uint256).max;
     }
 
     function _readHexBytes32(bytes memory data, uint256 start) private pure returns (bytes32) {
@@ -240,6 +328,116 @@ abstract contract VotingTestBase is Test, ContentSubmissionTestBase {
 
     function _hexChar(uint8 nibble) private pure returns (bytes1) {
         return nibble < 10 ? bytes1(nibble + uint8(bytes1("0"))) : bytes1(nibble + 87);
+    }
+
+    function _bytes32Hex(bytes32 value) private pure returns (bytes memory encoded) {
+        encoded = new bytes(64);
+        _writeHexBytes32(encoded, 0, value);
+    }
+
+    function _filledBytes(uint256 length, bytes1 fill) private pure returns (bytes memory buffer) {
+        buffer = new bytes(length);
+        for (uint256 i = 0; i < length; i++) {
+            buffer[i] = fill;
+        }
+    }
+
+    function _armoredTestCiphertext(bytes memory decodedPayload, bool newlineAfterHeader)
+        internal
+        pure
+        returns (bytes memory)
+    {
+        string memory encodedPayload = Base64.encode(decodedPayload);
+        if (newlineAfterHeader) {
+            return abi.encodePacked(TEST_AGE_HEADER, encodedPayload, "\n", TEST_AGE_FOOTER);
+        }
+        return abi.encodePacked(TEST_AGE_HEADER_RAW, encodedPayload, "\n", TEST_AGE_FOOTER);
+    }
+
+    function _hasPrefix(bytes memory data, bytes memory prefix) private pure returns (bool) {
+        if (data.length < prefix.length) return false;
+        for (uint256 i = 0; i < prefix.length; i++) {
+            if (data[i] != prefix[i]) return false;
+        }
+        return true;
+    }
+
+    function _hasSuffix(bytes memory data, bytes memory suffix) private pure returns (bool) {
+        if (data.length < suffix.length) return false;
+        uint256 start = data.length - suffix.length;
+        for (uint256 i = 0; i < suffix.length; i++) {
+            if (data[start + i] != suffix[i]) return false;
+        }
+        return true;
+    }
+
+    function _decodeBase64(bytes memory data, uint256 start, uint256 end) private pure returns (bytes memory out) {
+        bytes memory clean = _stripBase64Whitespace(data, start, end);
+        if (clean.length == 0 || clean.length % 4 != 0) revert("Invalid test ciphertext");
+
+        uint256 padding = 0;
+        if (clean[clean.length - 1] == "=") padding++;
+        if (clean.length > 1 && clean[clean.length - 2] == "=") padding++;
+
+        out = new bytes((clean.length / 4) * 3 - padding);
+        uint256 outIndex = 0;
+
+        for (uint256 i = 0; i < clean.length; i += 4) {
+            bytes1 third = clean[i + 2];
+            bytes1 fourth = clean[i + 3];
+            if (third == "=" && fourth != "=") revert("Invalid test ciphertext");
+
+            uint24 chunk =
+                (uint24(_base64Value(clean[i])) << 18) | (uint24(_base64Value(clean[i + 1])) << 12);
+            if (third != "=") {
+                chunk |= uint24(_base64Value(third)) << 6;
+            }
+            if (fourth != "=") {
+                chunk |= uint24(_base64Value(fourth));
+            }
+
+            out[outIndex++] = bytes1(uint8(chunk >> 16));
+            if (third != "=") {
+                out[outIndex++] = bytes1(uint8(chunk >> 8));
+            }
+            if (fourth != "=") {
+                out[outIndex++] = bytes1(uint8(chunk));
+            }
+        }
+    }
+
+    function _stripBase64Whitespace(bytes memory data, uint256 start, uint256 end) private pure returns (bytes memory clean) {
+        uint256 cleanLength = 0;
+        for (uint256 i = start; i < end; i++) {
+            bytes1 ch = data[i];
+            if (ch == 0x0a || ch == 0x0d) continue;
+            if (!_isBase64Char(ch) && ch != "=") revert("Invalid test ciphertext");
+            cleanLength++;
+        }
+
+        clean = new bytes(cleanLength);
+        uint256 outIndex = 0;
+        for (uint256 i = start; i < end; i++) {
+            bytes1 ch = data[i];
+            if (ch == 0x0a || ch == 0x0d) continue;
+            clean[outIndex++] = ch;
+        }
+    }
+
+    function _base64Value(bytes1 ch) private pure returns (uint8) {
+        uint8 code = uint8(ch);
+        if (code >= 65 && code <= 90) return code - 65;
+        if (code >= 97 && code <= 122) return 26 + code - 97;
+        if (code >= 48 && code <= 57) return 52 + code - 48;
+        if (code == 43) return 62;
+        if (code == 47) return 63;
+        revert("Invalid test ciphertext");
+    }
+
+    function _isBase64Char(bytes1 ch) private pure returns (bool) {
+        uint8 code = uint8(ch);
+        return (code >= 65 && code <= 90) || (code >= 97 && code <= 122) || (code >= 48 && code <= 57) || code == 43
+            || code == 47;
     }
 
     /// @dev Build commit key: keccak256(abi.encodePacked(voter, commitHash)).

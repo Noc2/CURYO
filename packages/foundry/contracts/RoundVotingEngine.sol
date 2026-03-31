@@ -333,7 +333,7 @@ contract RoundVotingEngine is
         );
         if (commits[contentId][roundId][commitKey].voter != address(0)) revert AlreadyCommitted();
         (uint256 epochEnd, uint8 epochIdx) = _computeCommitEpoch(round, roundCfg);
-        _validateCommitTlockData(ciphertext, targetRound, drandChainHash, epochEnd, roundCfg.epochDuration);
+        _validateCommitTlockData(contentId, roundId, ciphertext, targetRound, drandChainHash, epochEnd, roundCfg.epochDuration);
 
         // Transfer cREP stake after all lightweight validation passes.
         if (!stakeAlreadyTransferred) {
@@ -371,21 +371,25 @@ contract RoundVotingEngine is
     }
 
     function _validateCommitTlockData(
+        uint256 contentId,
+        uint256 roundId,
         bytes memory ciphertext,
         uint64 targetRound,
         bytes32 drandChainHash,
         uint256 epochEnd,
         uint256 epochDuration
     ) internal view {
+        (bytes32 roundDrandChainHash, uint64 roundDrandGenesisTime, uint64 roundDrandPeriod) =
+            _getRoundDrandConfig(contentId, roundId);
         TlockVoteLib.validateCommitData(
             ciphertext,
             targetRound,
             drandChainHash,
-            protocolConfig.drandChainHash(),
+            roundDrandChainHash,
             epochEnd,
             epochDuration,
-            protocolConfig.drandGenesisTime(),
-            protocolConfig.drandPeriod()
+            roundDrandGenesisTime,
+            roundDrandPeriod
         );
     }
 
@@ -527,6 +531,9 @@ contract RoundVotingEngine is
         // Snapshot config at round creation to prevent mid-round governance changes
         roundConfigSnapshot[contentId][roundId] = _currentConfig();
         roundRevealGracePeriodSnapshot[contentId][roundId] = protocolConfig.revealGracePeriod();
+        roundDrandChainHashSnapshot[contentId][roundId] = protocolConfig.drandChainHash();
+        roundDrandGenesisTimeSnapshot[contentId][roundId] = protocolConfig.drandGenesisTime();
+        roundDrandPeriodSnapshot[contentId][roundId] = protocolConfig.drandPeriod();
 
         return roundId;
     }
@@ -879,6 +886,31 @@ contract RoundVotingEngine is
         return gracePeriod;
     }
 
+    function _getRoundDrandConfig(uint256 contentId, uint256 roundId)
+        internal
+        view
+        returns (bytes32 chainHash, uint64 genesisTime, uint64 period)
+    {
+        chainHash = roundDrandChainHashSnapshot[contentId][roundId];
+        genesisTime = roundDrandGenesisTimeSnapshot[contentId][roundId];
+        period = roundDrandPeriodSnapshot[contentId][roundId];
+
+        if (chainHash == bytes32(0) || genesisTime == 0 || period == 0) {
+            chainHash = protocolConfig.drandChainHash();
+            genesisTime = protocolConfig.drandGenesisTime();
+            period = protocolConfig.drandPeriod();
+        }
+    }
+
+    function _targetRoundRevealableAt(uint256 contentId, uint256 roundId, uint64 targetRound)
+        internal
+        view
+        returns (uint256)
+    {
+        (, uint64 genesisTime, uint64 period) = _getRoundDrandConfig(contentId, roundId);
+        return TlockVoteLib.targetRoundTimestamp(targetRound, genesisTime, period);
+    }
+
     function _currentConfig() internal view returns (RoundLib.RoundConfig memory cfg) {
         (cfg.epochDuration, cfg.maxDuration, cfg.minVoters, cfg.maxVoters) = protocolConfig.config();
     }
@@ -950,8 +982,14 @@ contract RoundVotingEngine is
         if (commit.voter == address(0)) revert NoCommit();
         if (commit.revealed) revert AlreadyRevealed();
 
-        // Epoch must have ended — tlock ciphertext decryptable after this time
-        if (block.timestamp < commit.revealableAfter) revert EpochNotEnded();
+        uint256 revealNotBefore = commit.revealableAfter;
+        uint256 targetRoundRevealableAt = _targetRoundRevealableAt(contentId, roundId, commit.targetRound);
+        if (targetRoundRevealableAt > revealNotBefore) {
+            revealNotBefore = targetRoundRevealableAt;
+        }
+
+        // Both the round epoch and the committed drand round must have elapsed.
+        if (block.timestamp < revealNotBefore) revert EpochNotEnded();
 
         // Verify commit hash
         bytes32 expectedHash = TlockVoteLib.buildExpectedCommitHash(
@@ -1016,6 +1054,23 @@ contract RoundVotingEngine is
         return contentHasCommits[contentId];
     }
 
+    function commitRevealAvailableAt(uint256 contentId, uint256 roundId, bytes32 commitKey)
+        external
+        view
+        returns (uint256)
+    {
+        RoundLib.Commit storage commit = commits[contentId][roundId][commitKey];
+        if (commit.voter == address(0)) revert NoCommit();
+
+        uint256 revealNotBefore = commit.revealableAfter;
+        uint256 targetRoundRevealableAt = _targetRoundRevealableAt(contentId, roundId, commit.targetRound);
+        if (targetRoundRevealableAt > revealNotBefore) {
+            revealNotBefore = targetRoundRevealableAt;
+        }
+
+        return revealNotBefore;
+    }
+
     // --- Admin ---
 
     function pause() external onlyRole(PAUSER_ROLE) {
@@ -1043,6 +1098,11 @@ contract RoundVotingEngine is
     // Per-round reveal grace period snapshot for governance consistency across open rounds.
     mapping(uint256 => mapping(uint256 => uint256)) public roundRevealGracePeriodSnapshot;
 
+    // Per-round drand config snapshot so reveal timing stays stable across governance updates.
+    mapping(uint256 => mapping(uint256 => bytes32)) internal roundDrandChainHashSnapshot;
+    mapping(uint256 => mapping(uint256 => uint64)) internal roundDrandGenesisTimeSnapshot;
+    mapping(uint256 => mapping(uint256 => uint64)) internal roundDrandPeriodSnapshot;
+
     // Latest revealableAfter timestamp among all commits in a round.
     mapping(uint256 => mapping(uint256 => uint256)) public lastCommitRevealableAfter;
 
@@ -1056,5 +1116,5 @@ contract RoundVotingEngine is
     mapping(uint256 => bool) internal contentHasSettledRound;
 
     // --- Storage gap reserved for future upgrades ---
-    uint256[50] private __gap;
+    uint256[47] private __gap;
 }

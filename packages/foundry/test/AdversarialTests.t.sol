@@ -1024,37 +1024,23 @@ contract AdversarialTests is VotingTestBase {
         engine.revealVoteByCommitKey(contentId, roundId, commitKey, false, salt); // wrong direction
     }
 
-    /// @notice Fake AGE armor is accepted, and reveal still requires a caller who knows the salt/plaintext pair.
-    function test_RevealTiming_OpaqueCiphertext_AllowsManualReveal() public {
+    /// @notice Fake AGE armor without an embedded tlock stanza is rejected at commit time.
+    function test_RevealTiming_OpaqueCiphertext_RevertsOnCommit() public {
         uint256 contentId = _submitContent();
 
         bytes32 salt = keccak256(abi.encodePacked(voter1, block.timestamp, contentId, "opaque"));
-        bytes memory opaqueCiphertext = _testCiphertext(true, salt, contentId);
+        bytes memory opaqueCiphertext = abi.encodePacked(
+            "-----BEGIN AGE ENCRYPTED FILE-----\n", "opaque-test-payload\n", "-----END AGE ENCRYPTED FILE-----\n"
+        );
         uint64 targetRound = _tlockCommitTargetRound();
         bytes32 drandChainHash = _tlockDrandChainHash();
         bytes32 commitHash = _commitHash(true, salt, contentId, targetRound, drandChainHash, opaqueCiphertext);
 
         vm.startPrank(voter1);
         crepToken.approve(address(engine), STAKE);
+        vm.expectRevert(RoundVotingEngine.InvalidCiphertext.selector);
         engine.commitVote(contentId, targetRound, drandChainHash, commitHash, opaqueCiphertext, STAKE, address(0));
         vm.stopPrank();
-
-        uint256 roundId = RoundEngineReadHelpers.activeRoundId(engine, contentId);
-        bytes32 commitKey = _commitKey(voter1, commitHash);
-
-        RoundLib.Commit memory commit = RoundEngineReadHelpers.commit(engine, contentId, roundId, commitKey);
-        assertEq(commit.ciphertext.length, opaqueCiphertext.length, "opaque bytes should be stored unchanged");
-        assertEq(keccak256(commit.ciphertext), keccak256(opaqueCiphertext), "ciphertext hash mismatch");
-
-        RoundLib.Round memory round = RoundEngineReadHelpers.round(engine, contentId, roundId);
-        vm.warp(round.startTime + EPOCH_DURATION + 1);
-
-        vm.prank(voter1);
-        engine.revealVoteByCommitKey(contentId, roundId, commitKey, true, salt);
-
-        commit = RoundEngineReadHelpers.commit(engine, contentId, roundId, commitKey);
-        assertTrue(commit.revealed, "manual reveal should succeed");
-        assertTrue(commit.isUp, "revealed direction should be stored");
     }
 
     // =========================================================================
