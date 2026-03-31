@@ -1,3 +1,7 @@
+import { getCanonicalUrlParts, getUrlLookupCandidates } from "../urlCanonicalization.js";
+
+export { getCanonicalUrlParts, getUrlLookupCandidates } from "../urlCanonicalization.js";
+
 export const MAX_PAGINATION_OFFSET = 50_000;
 export const MIN_CONTENT_SEARCH_QUERY_LENGTH = 3;
 
@@ -52,42 +56,4 @@ export function normalizeContentSearchQuery(value: string | undefined): string |
   }
 
   return trimmed.toLowerCase();
-}
-
-/**
- * Build exact-match URL candidates for lookup routes.
- * This is intentionally conservative until Curyo stores a canonical URL column.
- */
-export function getUrlLookupCandidates(value: string): string[] | null {
-  const trimmed = value.trim();
-  if (!trimmed) return null;
-
-  let parsed: URL;
-  try {
-    parsed = new URL(trimmed);
-  } catch {
-    return null;
-  }
-
-  if (parsed.protocol !== "http:" && parsed.protocol !== "https:") {
-    return null;
-  }
-
-  parsed.hash = "";
-  parsed.hostname = parsed.hostname.toLowerCase();
-
-  if ((parsed.protocol === "http:" && parsed.port === "80") || (parsed.protocol === "https:" && parsed.port === "443")) {
-    parsed.port = "";
-  }
-
-  const normalized = parsed.toString();
-  const candidates = new Set<string>([trimmed, normalized]);
-
-  // Root URLs are commonly submitted with and without a trailing slash.
-  if (parsed.pathname === "/" && !parsed.search) {
-    candidates.add(`${parsed.protocol}//${parsed.host}`);
-    candidates.add(`${parsed.protocol}//${parsed.host}/`);
-  }
-
-  return [...candidates];
 }

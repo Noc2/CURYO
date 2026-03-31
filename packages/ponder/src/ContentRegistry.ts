@@ -1,10 +1,12 @@
 import { ponder } from "ponder:registry";
 import { content, category, profile, globalStats, ratingChange } from "ponder:schema";
 import { eq } from "ponder";
+import { getCanonicalUrlParts } from "./urlCanonicalization.js";
 
 ponder.on("ContentRegistry:ContentSubmitted", async ({ event, context }) => {
   const { contentId, submitter, contentHash, url, title, description, tags, categoryId } =
     event.args;
+  const canonicalUrl = getCanonicalUrlParts(url);
 
   await context.db
     .insert(content)
@@ -13,6 +15,8 @@ ponder.on("ContentRegistry:ContentSubmitted", async ({ event, context }) => {
       submitter,
       contentHash,
       url,
+      canonicalUrl: canonicalUrl?.canonicalUrl ?? url.trim(),
+      urlHost: canonicalUrl?.urlHost ?? "",
       title,
       description,
       tags,

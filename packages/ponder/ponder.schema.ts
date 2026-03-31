@@ -11,6 +11,8 @@ export const content = onchainTable(
     submitter: t.hex().notNull(),
     contentHash: t.hex().notNull(),
     url: t.text().notNull(),
+    canonicalUrl: t.text().notNull(),
+    urlHost: t.text().notNull(),
     title: t.text().notNull(),
     description: t.text().notNull(),
     tags: t.text().notNull(),
@@ -26,6 +28,8 @@ export const content = onchainTable(
   (table) => ({
     submitterIdx: index().on(table.submitter),
     categoryIdx: index().on(table.categoryId),
+    canonicalUrlIdx: index().on(table.canonicalUrl),
+    urlHostIdx: index().on(table.urlHost),
     statusIdx: index().on(table.status),
     ratingIdx: index().on(table.rating),
     createdAtIdx: index().on(table.createdAt),

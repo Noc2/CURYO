@@ -1,5 +1,5 @@
 import { ROUND_STATE } from "@curyo/contracts/protocol";
-import { and, asc, desc, eq, inArray, sql } from "ponder";
+import { and, asc, desc, eq, inArray, or, sql } from "ponder";
 import { db } from "ponder:api";
 import { category, content, profile, ratingChange, rewardClaim, round, vote } from "ponder:schema";
 import type { ApiApp } from "../shared.js";
@@ -100,8 +100,11 @@ export function registerContentRoutes(app: ApiApp) {
       if (!isValidAddress(submitter)) return c.json({ error: "Invalid submitter address" }, 400);
       conditions.push(eq(content.submitter, submitter.toLowerCase() as `0x${string}`));
     }
-    const searchExpressions = search ? buildContentSearchExpressions(search) : null;
-    if (search) {
+    const urlSearchCandidates = search ? getUrlLookupCandidates(search) : null;
+    const searchExpressions = search && urlSearchCandidates === null ? buildContentSearchExpressions(search) : null;
+    if (urlSearchCandidates) {
+      conditions.push(or(inArray(content.canonicalUrl, urlSearchCandidates), inArray(content.url, urlSearchCandidates)));
+    } else if (search) {
       conditions.push(searchExpressions!.condition);
     }
 
@@ -153,7 +156,7 @@ export function registerContentRoutes(app: ApiApp) {
     const matches = await db
       .select()
       .from(content)
-      .where(inArray(content.url, candidates))
+      .where(or(inArray(content.canonicalUrl, candidates), inArray(content.url, candidates)))
       .orderBy(desc(content.createdAt))
       .limit(5);
 

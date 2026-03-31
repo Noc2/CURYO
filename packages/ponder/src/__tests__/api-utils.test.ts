@@ -1,6 +1,7 @@
 import { describe, it, expect } from "vitest";
 import {
   MAX_PAGINATION_OFFSET,
+  getCanonicalUrlParts,
   getUrlLookupCandidates,
   isLikelyUrlSearchQuery,
   isValidAddress,
@@ -116,6 +117,13 @@ describe("isValidAddress", () => {
 });
 
 describe("getUrlLookupCandidates", () => {
+  it("returns canonical url metadata for valid http urls", () => {
+    expect(getCanonicalUrlParts("https://Example.com:443/path?q=1#frag")).toEqual({
+      canonicalUrl: "https://example.com/path?q=1",
+      urlHost: "example.com",
+    });
+  });
+
   it("returns exact and normalized candidates for valid http urls", () => {
     expect(getUrlLookupCandidates("https://Example.com:443/path?q=1#frag")).toEqual(
       expect.arrayContaining([
@@ -144,6 +152,10 @@ describe("getUrlLookupCandidates", () => {
 
   it("rejects invalid urls", () => {
     expect(getUrlLookupCandidates("not a url")).toBeNull();
+  });
+
+  it("rejects canonicalization for invalid urls", () => {
+    expect(getCanonicalUrlParts("not a url")).toBeNull();
   });
 });
 

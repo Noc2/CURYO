@@ -35,6 +35,7 @@ function mockPonderModules<T>(result: T) {
     inArray: (...args: unknown[]) => ({ kind: "inArray", args }),
     lt: (...args: unknown[]) => ({ kind: "lt", args }),
     notInArray: (...args: unknown[]) => ({ kind: "notInArray", args }),
+    or: (...args: unknown[]) => ({ kind: "or", args }),
     replaceBigInts: (data: unknown, replacer: (value: bigint) => unknown) =>
       JSON.parse(
         JSON.stringify(data, (_key, value) => (typeof value === "bigint" ? replacer(value) : value)),
@@ -53,6 +54,7 @@ function mockPonderModules<T>(result: T) {
       totalVotes: "category.totalVotes",
     },
     content: {
+      canonicalUrl: "content.canonicalUrl",
       id: "content.id",
       categoryId: "content.categoryId",
       createdAt: "content.createdAt",
@@ -64,6 +66,7 @@ function mockPonderModules<T>(result: T) {
       title: "content.title",
       totalVotes: "content.totalVotes",
       url: "content.url",
+      urlHost: "content.urlHost",
     },
     profile: {
       address: "profile.address",
@@ -220,6 +223,24 @@ describe("registerContentRoutes", () => {
 
     const [firstOrderBy] = queryBuilder.orderBy.mock.calls[0] ?? [];
     expect(JSON.stringify(firstOrderBy)).toContain("ts_rank_cd");
+  });
+
+  it("uses canonical url candidates for exact url searches", async () => {
+    const { queryBuilder } = mockPonderModules([{ id: 1n }]);
+    mockSharedModule();
+    const { registerContentRoutes } = await import("../src/api/routes/content-routes.js");
+
+    const app = new Hono();
+    registerContentRoutes(app);
+
+    const response = await app.request("http://localhost/content?search=https://Example.com:443/path?q=1#frag");
+
+    expect(response.status).toBe(200);
+
+    const whereArg = queryBuilder.where.mock.calls[0]?.[0];
+    expect(JSON.stringify(whereArg)).toContain("content.canonicalUrl");
+    expect(JSON.stringify(whereArg)).toContain("content.url");
+    expect(JSON.stringify(whereArg)).not.toContain("websearch_to_tsquery");
   });
 });
 
