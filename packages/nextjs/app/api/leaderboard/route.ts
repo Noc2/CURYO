@@ -1,8 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { isAddress } from "viem";
-import { buildVoterLeaderboardEntries, rankVoterLeaderboardAddresses } from "~~/lib/governance/voterLeaderboard";
+import {
+  getVoterLeaderboardSnapshot,
+  resolveVoterLeaderboardSelection,
+} from "~~/lib/governance/voterLeaderboardSnapshot";
 import { readCRepBalances, readProfileRegistryProfiles } from "~~/lib/profileRegistry/server";
-import { isPonderAvailable, ponderApi } from "~~/services/ponder/client";
+import { isPonderAvailable } from "~~/services/ponder/client";
 import { checkRateLimit } from "~~/utils/rateLimit";
 
 const RATE_LIMIT = { limit: 60, windowMs: 60_000 };
@@ -56,10 +59,26 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    let candidateAddresses: string[];
     try {
-      const holders = await ponderApi.getAllTokenHolders();
-      candidateAddresses = holders.map(holder => holder.address);
+      const snapshot = await getVoterLeaderboardSnapshot();
+      const selection = await resolveVoterLeaderboardSelection(snapshot, {
+        includeAddress,
+        limit,
+      });
+      const profiles = await readProfileRegistryProfiles(selection.selectedAddresses);
+      const entries = selection.selectedAddresses.map(address => ({
+        rank: selection.ranks[address] ?? 0,
+        address,
+        username: profiles[address]?.username ?? null,
+        balance: (selection.balances[address] ?? 0n).toString(),
+      }));
+
+      return NextResponse.json({
+        entries,
+        totalCount: selection.totalCount,
+        source: "ponder",
+        type: "voters",
+      });
     } catch (e) {
       if (canFallbackToIncludedAddress) {
         console.warn("Ponder token-holder discovery failed, using included-address fallback");
@@ -72,34 +91,6 @@ export async function GET(request: NextRequest) {
         { status: 503 },
       );
     }
-
-    if (includeAddress && !candidateAddresses.some(address => address.toLowerCase() === includeAddress)) {
-      candidateAddresses.push(includeAddress);
-    }
-
-    const normalizedAddresses = [...new Set(candidateAddresses.map(address => address.toLowerCase()))];
-    const balances = await readCRepBalances(normalizedAddresses);
-    const { rankedAddresses, selectedAddresses, totalCount } = rankVoterLeaderboardAddresses({
-      candidateAddresses: normalizedAddresses,
-      balances,
-      limit,
-      includeAddress,
-    });
-
-    const profiles = await readProfileRegistryProfiles(selectedAddresses);
-    const { entries } = buildVoterLeaderboardEntries({
-      rankedAddresses,
-      selectedAddresses,
-      balances,
-      profiles,
-    });
-
-    return NextResponse.json({
-      entries,
-      totalCount,
-      source: "ponder",
-      type: "voters",
-    });
   } catch (error) {
     console.error("Error fetching leaderboard data:", error);
     return NextResponse.json({ error: "Failed to fetch leaderboard" }, { status: 500 });
