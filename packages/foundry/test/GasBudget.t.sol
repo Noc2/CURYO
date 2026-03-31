@@ -15,9 +15,9 @@ contract GasBudgetTest is RoundIntegrationTest {
     // and a live CategoryRegistry lookup, so the baseline is higher than the initial
     // pre-extraction measurement.
     uint256 internal constant MAX_SUBMIT_CONTENT_GAS = 700_000;
-    // commitVote now validates tlock metadata and persists the armored ciphertext envelope,
-    // so the baseline is materially higher than the legacy pre-tlock commit path.
-    uint256 internal constant MAX_COMMIT_VOTE_GAS = 1_400_000;
+    // commitVote now validates the full armored AGE envelope and persists the ciphertext payload,
+    // so the post-tlock baseline is materially higher than the earlier pre-parser threshold.
+    uint256 internal constant MAX_COMMIT_VOTE_GAS = 2_500_000;
     uint256 internal constant MAX_REVEAL_VOTE_GAS = 320_000;
     uint256 internal constant MAX_SETTLE_ROUND_GAS = 475_000;
     uint256 internal constant MAX_SETTLE_ROUND_MAX_EPOCH_SCAN_GAS = 5_500_000;
