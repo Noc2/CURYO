@@ -51,7 +51,7 @@ export const EXECUTIVE_SUMMARY: ContentBlock[] = [
   },
   {
     type: "paragraph",
-    text: `Curyo is a decentralized content curation protocol that replaces passive engagement metrics with stake-weighted prediction games. Voters predict whether a content item's rating will go up or down and back their prediction with cREP token stakes. Votes are encrypted via tlock (time-lock encryption) and hidden until each ${protocolDocFacts.blindPhaseDurationLabel} epoch ends, preventing herding. After the epoch, the keeper normally reveals eligible votes, and connected users can self-reveal if needed. The side with the larger epoch-weighted stake wins -- early (blind) voters earn full reward weight, while later voters who saw epoch-1 results earn ${protocolDocFacts.openPhaseWeightLabel} weight, creating a ${protocolDocFacts.earlyVoterAdvantageLabel} incentive to vote early.`,
+    text: `Curyo is a decentralized content curation protocol that replaces passive engagement metrics with stake-weighted prediction games. Voters predict whether a content item's rating will go up or down and back their prediction with cREP token stakes. Votes are encrypted via tlock (time-lock encryption) and hidden until each ${protocolDocFacts.blindPhaseDurationLabel} epoch ends, preventing herding. Commits in the redeployed stack bind explicit drand metadata (targetRound and drandChainHash) and on-chain reject malformed or non-armored ciphertexts, while the keeper/runtime layer still performs deeper stanza checks before reveal. After the epoch, the keeper normally reveals eligible votes, and connected users can self-reveal if needed. The side with the larger epoch-weighted stake wins -- early (blind) voters earn full reward weight, while later voters who saw epoch-1 results earn ${protocolDocFacts.openPhaseWeightLabel} weight, creating a ${protocolDocFacts.earlyVoterAdvantageLabel} incentive to vote early.`,
   },
   {
     type: "paragraph",
@@ -103,7 +103,7 @@ export const SECTIONS: Section[] = [
             items: [
               "Skin in the Game  -- Every vote requires a token stake, aligning incentives. Rewards come from settled losing pools and participation incentives, not passive likes.",
               "Voter ID (Sybil Resistance)  -- Each verified human gets one soulbound Voter ID NFT, limiting stake to 100 cREP per content per round.",
-              `Per-Content Rounds  -- Each content item has independent voting rounds. Votes are encrypted via tlock and hidden until each ${protocolDocFacts.blindPhaseDurationLabel} epoch ends. After each epoch the keeper normally reveals eligible votes in the background, and connected users can self-reveal if needed. Settlement occurs after at least ${protocolDocFacts.minVotersLabel} votes are revealed and the reveal conditions are satisfied.`,
+              `Per-Content Rounds  -- Each content item has independent voting rounds. Votes are encrypted via tlock and hidden until each ${protocolDocFacts.blindPhaseDurationLabel} epoch ends. Commits bind the drand reveal target and chain hash, and the keeper/runtime layer checks the stored stanza metadata before reveal. After each epoch the keeper normally reveals eligible votes in the background, and connected users can self-reveal if needed. Settlement occurs after at least ${protocolDocFacts.minVotersLabel} votes are revealed and the reveal conditions are satisfied.`,
               `Contributor Rewards  -- ${protocolCopy.contributorRewardsOverview}`,
             ],
           },
@@ -114,14 +114,14 @@ export const SECTIONS: Section[] = [
         blocks: [
           {
             type: "paragraph",
-            text: `Voters predict whether content's rating will go up or down and back their prediction with a cREP stake. Votes are encrypted with tlock and hidden until the epoch ends, preventing herding. Voting early in the epoch earns full reward weight (Tier 1), while voting after seeing epoch-1 results earns only ${protocolDocFacts.openPhaseWeightLabel} weight (Tier 2).`,
+            text: `Voters predict whether content's rating will go up or down and back their prediction with a cREP stake. Votes are encrypted with tlock and hidden until the epoch ends, preventing herding. Commits bind the drand metadata used for reveal, and malformed or non-armored ciphertexts are rejected on-chain. Voting early in the epoch earns full reward weight (Tier 1), while voting after seeing epoch-1 results earns only ${protocolDocFacts.openPhaseWeightLabel} weight (Tier 2).`,
           },
           {
             type: "ordered",
             items: [
-              "Commit: Choose up or down, select stake (1-100 cREP per Voter ID). The UI encrypts the vote, encodes (contentId, commitHash, ciphertext, frontendAddress), and submits it through CuryoReputation.transferAndCall(votingEngine, stakeAmount, payload). The vote direction stays hidden until the epoch ends.",
+              "Commit: Choose up or down, select stake (1-100 cREP per Voter ID). The UI encrypts the vote, encodes (contentId, commitHash, ciphertext, frontendAddress, targetRound, drandChainHash), and submits it through CuryoReputation.transferAndCall(votingEngine, stakeAmount, payload). The vote direction stays hidden until the epoch ends.",
               `Accumulate: More voters commit during the ${protocolDocFacts.blindPhaseDurationLabel} epoch. No one can see anyone else's vote direction until the epoch ends.`,
-              "Reveal: After the epoch ends, the keeper normally decrypts eligible ciphertexts off-chain and submits reveals on-chain. Connected users can also self-reveal if they know their vote plaintext. The rating does not change yet -- it updates only when the round later settles.",
+              "Reveal: After the epoch ends, the keeper normally decrypts eligible ciphertexts off-chain, checks the stored drand stanza metadata, and submits reveals on-chain. Connected users can also self-reveal if they know their vote plaintext. The rating does not change yet -- it updates only when the round later settles.",
               `Settle: Once at least ${protocolDocFacts.minVotersLabel} votes are revealed and all past-epoch votes are revealed (or the ${protocolDocFacts.revealGracePeriodLabel} reveal grace period expires), anyone can call settleRound(). The side with the larger epoch-weighted stake wins.`,
               `Claim: Winners receive their original stake back plus an epoch-weighted share of the content-specific voter pool (Tier 1 = ${protocolDocFacts.earlyVoterAdvantageLabel.replace(":1", "x")} reward per cREP vs Tier 2). One-sided rounds receive a consensus subsidy.`,
             ],
@@ -188,13 +188,13 @@ export const SECTIONS: Section[] = [
           },
           {
             type: "paragraph",
-            text: `Curyo uses tlock commit-reveal to prevent herding. Votes are encrypted to an epoch-end timestamp using the drand randomness beacon, so no one can see anyone else's direction until the epoch ends. Each ${protocolDocFacts.blindPhaseDurationLabel} epoch defines a reward tier: Tier 1 (first epoch, blind) earns ${protocolDocFacts.blindPhaseWeightLabel} weight; Tier 2+ (subsequent epochs, informed) earns ${protocolDocFacts.openPhaseWeightLabel} weight.`,
+            text: `Curyo uses tlock commit-reveal to prevent herding. Votes are encrypted to an epoch-end timestamp using the drand randomness beacon, so no one can see anyone else's direction until the epoch ends. Each ${protocolDocFacts.blindPhaseDurationLabel} epoch defines a reward tier: Tier 1 (first epoch, blind) earns ${protocolDocFacts.blindPhaseWeightLabel} weight; Tier 2+ (subsequent epochs, informed) earns ${protocolDocFacts.openPhaseWeightLabel} weight. The redeployed contracts keep the keeper-assisted/self-reveal model, but now bind drand metadata on-chain and reject malformed ciphertexts up front.`,
           },
           {
             type: "ordered",
             items: [
-              "Commit (any time during the round): Choose up or down. The UI encrypts your direction and submits a single transferAndCall transaction carrying (contentId, commitHash, ciphertext, frontendAddress). Your stake is locked; your direction is hidden on-chain until the epoch ends.",
-              `Epoch ends (every ${protocolDocFacts.blindPhaseDurationLabel}): The drand beacon publishes a randomness value. The keeper fetches it, decrypts eligible ciphertexts off-chain, and calls revealVoteByCommitKey() for unrevealed commits.`,
+              "Commit (any time during the round): Choose up or down. The UI encrypts your direction and submits a single transferAndCall transaction carrying (contentId, commitHash, ciphertext, frontendAddress, targetRound, drandChainHash). Your stake is locked; your direction is hidden on-chain until the epoch ends.",
+              `Epoch ends (every ${protocolDocFacts.blindPhaseDurationLabel}): The drand beacon publishes a randomness value. The keeper fetches it, validates the stored AGE/tlock stanza against the commit metadata, decrypts eligible ciphertexts off-chain, and calls revealVoteByCommitKey() for unrevealed commits.`,
               `Settlement: After at least ${protocolDocFacts.minVotersLabel} votes are revealed and all past-epoch votes are revealed (or the ${protocolDocFacts.revealGracePeriodLabel} reveal grace period expires), anyone may call settleRound(contentId, roundId). The side with the larger epoch-weighted stake wins. The content rating is recalculated at settlement from revealed raw stakes.`,
               `Claim: Winners call claimReward(contentId, roundId) to receive their original stake plus an epoch-weighted share of the remaining losing pool. Revealed losers may also call claimReward(contentId, roundId) to recover a fixed ${protocolDocFacts.revealedLoserRefundPercentLabel} rebate. Content submitters may claim a separate submitter reward.`,
             ],
@@ -233,7 +233,7 @@ export const SECTIONS: Section[] = [
                 ],
                 [
                   "Epoch ended",
-                  "Keeper normally reveals votes via drand; users can self-reveal if needed",
+                  "Keeper normally validates the stored tlock stanza and reveals votes via drand; users can self-reveal if needed",
                   `${protocolDocFacts.blindPhaseDurationLabel} per epoch`,
                   "Usually none  -- fallback reveal exists",
                 ],
@@ -642,7 +642,7 @@ export const SECTIONS: Section[] = [
           },
           {
             type: "paragraph",
-            text: `The reveal transaction is open to any caller who knows the plaintext \`(isUp, salt)\` for a commit. In normal operation the keeper derives that plaintext off-chain from the tlock ciphertext after epoch end. Connected users can also self-reveal from the fallback flow. If the keeper is offline, settlement is delayed until an honest party reveals the needed votes or the reveal grace period expires. Below commit quorum the round can still cancel; after commit quorum, missing reveal quorum can end in RevealFailed and unrevealed stakes are forfeited during cleanup. The chain binds each reveal to the exact submitted ciphertext, but it still does not prove on-chain that the ciphertext was honestly decryptable; a future hardening path here would be zk-based reveal proofs.`,
+            text: `The reveal transaction is open to any caller who knows the plaintext \`(isUp, salt)\` for a commit. In normal operation the keeper derives that plaintext off-chain from the tlock ciphertext after epoch end. Connected users can also self-reveal from the fallback flow. If the keeper is offline, settlement is delayed until an honest party reveals the needed votes or the reveal grace period expires. Below commit quorum the round can still cancel; after commit quorum, missing reveal quorum can end in RevealFailed and unrevealed stakes are forfeited during cleanup. The chain binds each reveal to the exact submitted ciphertext and now rejects malformed/non-armored ciphertexts on-chain, but it still does not prove on-chain that the ciphertext was honestly decryptable; a future hardening path here would be zk-based reveal proofs.`,
           },
           {
             type: "sub_heading",
@@ -650,7 +650,7 @@ export const SECTIONS: Section[] = [
           },
           {
             type: "paragraph",
-            text: "The on-chain commitment is commitHash = keccak256(isUp, salt, contentId, keccak256(ciphertext)) where salt is a 32-byte random value chosen by the voter and ciphertext is the exact timelock payload submitted on-chain. Guessing the direction requires finding a preimage of keccak256, which is computationally infeasible. The tlock ciphertext additionally encrypts the direction to the epoch-end timestamp, providing a second layer of confidentiality.",
+            text: "The on-chain commitment is commitHash = keccak256(isUp, salt, contentId, keccak256(ciphertext)) where salt is a 32-byte random value chosen by the voter and ciphertext is the exact timelock payload submitted on-chain. In the redeployed contracts, the commit also binds the target drand round and chain hash so the keeper/runtime stack can validate the reveal metadata before decryption. Guessing the direction requires finding a preimage of keccak256, which is computationally infeasible. The tlock ciphertext additionally encrypts the direction to the epoch-end timestamp, providing a second layer of confidentiality.",
           },
           {
             type: "sub_heading",
@@ -666,7 +666,7 @@ export const SECTIONS: Section[] = [
           },
           {
             type: "paragraph",
-            text: "Not in the normal settlement flow. The contract tracks unrevealed vote counts per epoch, and settlement is blocked during the reveal grace period if any past-epoch votes remain unrevealed. That prevents a caller from revealing only a favorable subset and settling immediately. In practice the keeper reveals all eligible votes within minutes of each epoch ending, and connected users can self-reveal if the keeper appears delayed.",
+            text: "Not in the normal settlement flow. The contract tracks unrevealed vote counts per epoch, and settlement is blocked during the reveal grace period if any past-epoch votes remain unrevealed. That prevents a caller from revealing only a favorable subset and settling immediately. In practice the keeper reveals all eligible votes within minutes of each epoch ending after checking the stored tlock stanza metadata, and connected users can self-reveal if the keeper appears delayed.",
           },
         ],
       },
@@ -801,7 +801,7 @@ export const SECTIONS: Section[] = [
           },
           {
             type: "paragraph",
-            text: "Keepers also perform housekeeping: cancelling expired rounds (rounds that exceed maxDuration without reaching minVoters) and marking dormant content. The drand randomness beacon is public, so anyone can run the off-chain decryption flow, but the current protocol verifies commit consistency rather than proving on-chain that the stored ciphertext was honestly decryptable. In practice the reveal path is a keeper/drand-assisted off-chain flow with a user fallback, not a fully trustless ciphertext proof system. If Curyo later wants to close that trust gap entirely, zk proofs of correct decryption are the most natural upgrade path.",
+            text: "Keepers also perform housekeeping: cancelling expired rounds (rounds that exceed maxDuration without reaching minVoters) and marking dormant content. The drand randomness beacon is public, so anyone can run the off-chain decryption flow, but the current protocol verifies commit consistency and on-chain tlock metadata hygiene rather than proving on-chain that the stored ciphertext was honestly decryptable. In practice the reveal path is a keeper/drand-assisted off-chain flow with a user fallback, not a fully trustless ciphertext proof system. If Curyo later wants to close that trust gap entirely, zk proofs of correct decryption are the most natural upgrade path.",
           },
         ],
       },
@@ -1343,7 +1343,7 @@ export const SECTIONS: Section[] = [
         blocks: [
           {
             type: "paragraph",
-            text: "Although the keeper reveals votes automatically in the background, the protocol-level reveal function can also be called directly by a voter who knows the plaintext `(isUp, salt)` for their commit. The current default UX remains keeper-driven automatic reveal, but the production UI now exposes a small fallback page for connected users. That page decrypts the on-chain ciphertext locally after epoch end rather than persisting reveal secrets in browser storage by default, because long-lived localStorage copies would increase the blast radius of any frontend XSS bug.",
+            text: "Although the keeper reveals votes automatically in the background, the protocol-level reveal function can also be called directly by a voter who knows the plaintext `(isUp, salt)` for their commit. The current default UX remains keeper-driven automatic reveal, but the production UI now exposes a small fallback page for connected users. That page decrypts the on-chain ciphertext locally after epoch end rather than persisting reveal secrets in browser storage by default, because long-lived localStorage copies would increase the blast radius of any frontend XSS bug. The keeper-assisted/self-reveal model still relies on off-chain drand decryption and stanza checks; zk proofs would be the future path if Curyo wants to eliminate that residual trust gap.",
           },
         ],
       },

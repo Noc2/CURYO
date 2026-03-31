@@ -214,7 +214,7 @@ service rather than a replacement for the canonical backend endpoint.
 
 Optional hosted write tools:
 
-- `vote`: commit a tlock vote with a scoped authenticated identity
+- `vote`: commit a tlock vote with a scoped authenticated identity and the redeployed drand metadata bindings
 - `submit_content`: reserve and reveal a submission through `ContentRegistry`
 - `claim_reward`: claim voter, submitter, participation, or cancelled-round refund rewards
 - `claim_frontend_fee`: claim round frontend fees and optionally withdraw accumulated registry credits

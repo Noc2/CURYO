@@ -102,6 +102,9 @@ export const vote = onchainTable(
     contentId: t.bigint().notNull(),
     roundId: t.bigint().notNull(),
     voter: t.hex().notNull(),
+    commitHash: t.hex().notNull(),
+    targetRound: t.bigint().notNull(),
+    drandChainHash: t.hex().notNull(),
     isUp: t.boolean(), // null until revealed
     stake: t.bigint().notNull(),
     epochIndex: t.integer().notNull(), // 0=epoch-1 (100% weight), 1=epoch-2+ (25% weight)
@@ -114,6 +117,7 @@ export const vote = onchainTable(
     contentIdx: index().on(table.contentId),
     roundIdx: index().on(table.roundId),
     contentRoundIdx: index().on(table.contentId, table.roundId),
+    commitHashIdx: index().on(table.commitHash),
     revealedIdx: index().on(table.revealed),
   }),
 );

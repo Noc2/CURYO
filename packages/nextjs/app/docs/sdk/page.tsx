@@ -20,8 +20,8 @@ const SdkPage: NextPage = () => {
           operator records.
         </li>
         <li>
-          <strong>Vote helpers</strong> for stake normalization, frontend-code resolution, tlock commit generation, and
-          transfer payload encoding.
+          <strong>Vote helpers</strong> for stake normalization, frontend-code resolution, tlock commit generation,
+          drand metadata binding, and transfer payload encoding.
         </li>
         <li>
           <strong>Wallet-agnostic output</strong> so the resulting calldata can be passed into wagmi, viem, thirdweb, or
@@ -64,7 +64,9 @@ const frontend = await curyo.read.getFrontend(
       <h2>Vote Integration</h2>
       <p>
         For vote flows, the SDK helps you prepare the same single-transaction payload the reference app uses. The host
-        app still decides how to sign and submit the transaction.
+        app still decides how to sign and submit the transaction. In the redeployed tlock model, commit helpers also
+        thread the reveal target round and drand chain hash through the payload so the contracts can enforce the new
+        metadata bindings on-chain.
       </p>
       <pre className="bg-base-200 p-4 rounded-lg overflow-x-auto">
         <code>{`const commit = await buildCommitVoteParams({

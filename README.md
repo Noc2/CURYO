@@ -26,7 +26,7 @@ Curyo replaces passive likes with **prediction games**. Voters predict whether c
 - **Skin in the Game** — every vote requires a token stake
 - **Sybil Resistant** — one soulbound Voter ID NFT per verified human
 - **Per-Content Rounds** — each content item accumulates votes; rounds settle once the revealed-vote threshold is reached and past-epoch reveal constraints are satisfied
-- **tlock Commit-Reveal** — votes are encrypted with timelock encryption and revealed after each epoch; vote directions stay hidden until reveal, preventing front-running and copycat strategies
+- **tlock Commit-Reveal** — votes are encrypted with timelock encryption, commits bind explicit drand metadata (`targetRound`, `drandChainHash`), and malformed/non-armored ciphertexts are rejected on-chain; the keeper-assisted/self-reveal path still hides vote directions until reveal and keeps zk-style proofing as a future hardening path
 - **Governance-Native Controls** — launch deployments keep upgrades, config, and treasury routing under the governor/timelock, with deployer setup roles renounced after deployment
 
 See the in-app documentation at `/docs` for detailed game theory analysis and security information.
@@ -42,7 +42,7 @@ Curyo is a monorepo with nine packages:
 | `packages/nextjs` | Next.js frontend with in-app documentation at `/docs` |
 | `packages/sdk` | Framework-agnostic frontend SDK for hosted reads, vote helpers, and frontend attribution |
 | `packages/ponder` | Ponder indexer for on-chain event processing and API |
-| `packages/keeper` | Standalone keeper service for trustless round settlement |
+| `packages/keeper` | Standalone keeper service for keeper-assisted round settlement |
 | `packages/bot` | CLI voting bot with pluggable rating strategies |
 | `packages/mcp-server` | Read-only MCP server exposing Curyo data to AI agents |
 | `packages/node-utils` | Shared Node.js utilities used by services and scripts |

@@ -12,7 +12,7 @@ Framework-agnostic frontend SDK foundations for integrating Curyo into existing 
 
 - `createCuryoClient(...)` for shared configuration
 - typed read helpers for indexed/hosted data
-- vote/frontend helpers for building transaction payloads
+- vote/frontend helpers for building transaction payloads, including the redeployed tlock metadata bindings
 - small, wallet-agnostic write helpers
 
 Framework-specific hooks and UI components should live in a follow-up package rather than this core SDK.
@@ -49,6 +49,8 @@ const payload = buildVoteTransferPayload({
   commitHash: commit.commitHash,
   ciphertext: commit.ciphertext,
   frontend: commit.frontend,
+  targetRound: commit.targetRound,
+  drandChainHash: commit.drandChainHash,
 });
 
 const txData = buildVoteTransferAndCallData({
