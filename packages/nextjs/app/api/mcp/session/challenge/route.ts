@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import {
+  type NormalizedMcpSessionRequest,
   getDefaultMcpSessionTtlMs,
   issueMcpSessionChallenge,
   mapMcpSessionAuthError,
@@ -9,22 +10,22 @@ import { checkRateLimit } from "~~/utils/rateLimit";
 
 const RATE_LIMIT = { limit: 20, windowMs: 60_000 };
 
+export function getMcpSessionChallengeRateLimitKeyParts(payload: NormalizedMcpSessionRequest) {
+  return [payload.normalizedAddress, payload.scopes.join(","), payload.clientName ?? undefined];
+}
+
 export async function POST(request: NextRequest) {
   try {
     const body = (await request.json()) as Record<string, unknown>;
     const normalized = normalizeMcpSessionRequest(body);
-    const limited = await checkRateLimit(request, RATE_LIMIT, {
-      extraKeyParts: [
-        typeof body.address === "string" ? body.address : undefined,
-        Array.isArray(body.scopes) ? body.scopes.join(",") : undefined,
-        typeof body.clientName === "string" ? body.clientName : undefined,
-      ],
-    });
-    if (limited) return limited;
-
     if (!normalized.ok) {
       return NextResponse.json({ error: normalized.error }, { status: 400 });
     }
+
+    const limited = await checkRateLimit(request, RATE_LIMIT, {
+      extraKeyParts: getMcpSessionChallengeRateLimitKeyParts(normalized.payload),
+    });
+    if (limited) return limited;
 
     const { challenge, binding } = await issueMcpSessionChallenge(normalized.payload);
     return NextResponse.json({

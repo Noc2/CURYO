@@ -3,6 +3,7 @@ import { verifyMcpSessionToken } from "@curyo/node-utils/mcpSessionToken";
 import assert from "node:assert/strict";
 import { after, before, beforeEach, test } from "node:test";
 import { generatePrivateKey, privateKeyToAccount } from "viem/accounts";
+import { getMcpSessionChallengeRateLimitKeyParts } from "../../app/api/mcp/session/challenge/route";
 
 const env = process.env as Record<string, string | undefined>;
 const originalDatabaseUrl = process.env.DATABASE_URL;
@@ -123,6 +124,32 @@ test("normalizeMcpSessionRequest normalizes and de-duplicates scopes", () => {
       clientName: "Claude Desktop",
     },
   });
+});
+
+test("mcp session challenge rate-limit keys use canonicalized request parts", () => {
+  const first = mcpSessionAuth.normalizeMcpSessionRequest({
+    address: "0x1234567890ABCDEF1234567890ABCDEF12345678",
+    scopes: ["mcp:write:vote", "mcp:read", "mcp:write:vote"],
+    clientName: "  Claude Desktop  ",
+  });
+  const second = mcpSessionAuth.normalizeMcpSessionRequest({
+    address: "0x1234567890abcdef1234567890abcdef12345678",
+    scopes: ["mcp:read", "mcp:write:vote"],
+    clientName: "Claude Desktop",
+  });
+
+  assert.deepEqual(first, second);
+  assert.equal(first.ok, true);
+  assert.equal(second.ok, true);
+  if (!first.ok || !second.ok) {
+    return;
+  }
+
+  assert.deepEqual(getMcpSessionChallengeRateLimitKeyParts(first.payload), [
+    "0x1234567890abcdef1234567890abcdef12345678",
+    "mcp:read,mcp:write:vote",
+    "Claude Desktop",
+  ]);
 });
 
 test("challenge and token routes mint a wallet-bound MCP bearer session", async () => {
