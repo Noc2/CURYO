@@ -38,7 +38,7 @@ export interface Section {
 export const META = {
   title: "Curyo",
   subtitle: "Human Reputation at Stake",
-  deck: "Stake-Weighted Ratings From Verified Humans",
+  deck: "Get Verified, Claim cREP, and Rate With Stake",
   author: "AI",
   version: "0.3",
   date: "March 2026",
@@ -75,7 +75,7 @@ export const SECTIONS: Section[] = [
   // ── 1. Introduction ──
   {
     title: "Introduction",
-    lead: "Stake-Weighted Ratings From Verified Humans",
+    lead: "Get Verified, Claim cREP, and Rate With Stake",
     subsections: [
       {
         heading: "Mission",
