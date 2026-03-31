@@ -13,6 +13,13 @@ test("whitepaper introduction surfaces the updated lead copy", () => {
 });
 
 test("whitepaper executive summary preserves the updated brand framing", () => {
-  assert.match(EXECUTIVE_SUMMARY[1]?.text ?? "", /stake-weighted prediction games/i);
-  assert.match(EXECUTIVE_SUMMARY[1]?.text ?? "", /preventing herding/i);
+  const summaryBlock = EXECUTIVE_SUMMARY[1];
+
+  assert.equal(summaryBlock?.type, "paragraph");
+  if (!summaryBlock || summaryBlock.type !== "paragraph") {
+    throw new Error("Expected executive summary block to be a paragraph");
+  }
+
+  assert.match(summaryBlock.text, /stake-weighted prediction games/i);
+  assert.match(summaryBlock.text, /preventing herding/i);
 });

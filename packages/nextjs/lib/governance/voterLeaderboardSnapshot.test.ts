@@ -6,10 +6,19 @@ import {
 } from "./voterLeaderboardSnapshot";
 import assert from "node:assert/strict";
 import { test } from "node:test";
+import type { PonderTokenHolder } from "~~/services/ponder/client";
 
 const ADDRESS_A = "0x00000000000000000000000000000000000000aa";
 const ADDRESS_B = "0x00000000000000000000000000000000000000bb";
 const ADDRESS_C = "0x00000000000000000000000000000000000000cc";
+const DEFAULT_FIRST_SEEN_AT = "2025-01-01T00:00:00.000Z";
+
+function buildTokenHolder(address: string): PonderTokenHolder {
+  return {
+    address,
+    firstSeenAt: DEFAULT_FIRST_SEEN_AT,
+  };
+}
 
 test("getVoterLeaderboardSnapshot reuses a fresh cached snapshot", async () => {
   __resetVoterLeaderboardSnapshotForTests();
@@ -20,7 +29,7 @@ test("getVoterLeaderboardSnapshot reuses a fresh cached snapshot", async () => {
 
   const listTokenHolders = async () => {
     listCalls += 1;
-    return [{ address: ADDRESS_A }, { address: ADDRESS_B }];
+    return [buildTokenHolder(ADDRESS_A), buildTokenHolder(ADDRESS_B)];
   };
 
   const readBalances = async (addresses: string[]) => {
@@ -55,8 +64,8 @@ test("getVoterLeaderboardSnapshot single-flights concurrent refreshes", async ()
   __resetVoterLeaderboardSnapshotForTests();
 
   let listCalls = 0;
-  let resolveHolders: ((value: Array<{ address: string }>) => void) | null = null;
-  const holdersPromise = new Promise<Array<{ address: string }>>(resolve => {
+  let resolveHolders!: (value: PonderTokenHolder[]) => void;
+  const holdersPromise = new Promise<PonderTokenHolder[]>(resolve => {
     resolveHolders = resolve;
   });
 
@@ -79,7 +88,7 @@ test("getVoterLeaderboardSnapshot single-flights concurrent refreshes", async ()
     readBalances,
   });
 
-  resolveHolders?.([{ address: ADDRESS_A }]);
+  resolveHolders([buildTokenHolder(ADDRESS_A)]);
 
   const [first, second] = await Promise.all([firstPromise, secondPromise]);
 
