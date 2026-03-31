@@ -66,6 +66,9 @@ export async function GET(request: NextRequest) {
       } catch {
         return new NextResponse(null, { status: 502 });
       }
+      if (redirectUrl.protocol !== "https:") {
+        return NextResponse.json({ error: "Only HTTPS URLs allowed" }, { status: 400 });
+      }
       if (!ALLOWED_HOSTS.has(redirectUrl.hostname)) {
         return new NextResponse(null, { status: 403 });
       }
