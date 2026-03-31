@@ -237,7 +237,15 @@ contract RoundVotingEngine is
         address frontend
     ) external nonReentrant whenNotPaused {
         _commitVote(
-            msg.sender, contentId, targetRound, drandChainHash, commitHash, ciphertext, stakeAmount, frontend, false
+            msg.sender,
+            contentId,
+            targetRound,
+            drandChainHash,
+            commitHash,
+            ciphertext,
+            stakeAmount,
+            frontend,
+            false
         );
     }
 
@@ -325,9 +333,7 @@ contract RoundVotingEngine is
         );
         if (commits[contentId][roundId][commitKey].voter != address(0)) revert AlreadyCommitted();
         (uint256 epochEnd, uint8 epochIdx) = _computeCommitEpoch(round, roundCfg);
-        _validateCommitTlockData(
-            contentId, roundId, ciphertext, targetRound, drandChainHash, epochEnd, roundCfg.epochDuration
-        );
+        _validateCommitTlockData(contentId, roundId, ciphertext, targetRound, drandChainHash, epochEnd, roundCfg.epochDuration);
 
         // Transfer cREP stake after all lightweight validation passes.
         if (!stakeAlreadyTransferred) {
@@ -404,17 +410,7 @@ contract RoundVotingEngine is
         bool useTokenIdentity
     ) internal {
         _writeCommitStruct(
-            contentId,
-            roundId,
-            commitKey,
-            voter,
-            stakeAmount64,
-            ciphertext,
-            frontend,
-            epochEnd,
-            targetRound,
-            drandChainHash,
-            epochIdx
+            contentId, roundId, commitKey, voter, stakeAmount64, ciphertext, frontend, epochEnd, targetRound, drandChainHash, epochIdx
         );
         _markFrontendEligibility(contentId, roundId, commitKey, frontend);
         _recordCommitIndexes(contentId, roundId, commitKey, epochEnd, voter, commitHash, voterId, useTokenIdentity);
@@ -447,9 +443,7 @@ contract RoundVotingEngine is
         });
     }
 
-    function _markFrontendEligibility(uint256 contentId, uint256 roundId, bytes32 commitKey, address frontend)
-        internal
-    {
+    function _markFrontendEligibility(uint256 contentId, uint256 roundId, bytes32 commitKey, address frontend) internal {
         IFrontendRegistry currentFrontendRegistry = _getFrontendRegistry();
         if (VotePreflightLib.isFrontendEligible(currentFrontendRegistry, frontend)) {
             frontendEligibleAtCommit[contentId][roundId][commitKey] = true;
@@ -645,7 +639,6 @@ contract RoundVotingEngine is
 
         // Determine winner: weighted majority wins (anti-herding)
         bool upWins = round.weightedUpPool > round.weightedDownPool;
-        bool isFirstSettledRound = !contentHasSettledRound[contentId];
         round.upWins = upWins;
         round.state = RoundLib.RoundState.Settled;
         round.settledAt = block.timestamp.toUint48();
@@ -749,7 +742,7 @@ contract RoundVotingEngine is
             registry,
             currentParticipationPool,
             currentRewardDistributor,
-            isFirstSettledRound,
+            contentHasSettledRound[contentId],
             contentId,
             roundId,
             upWins,
@@ -796,9 +789,8 @@ contract RoundVotingEngine is
     /// @notice Resolve submitter stake once the slash or healthy-return window has elapsed.
     /// @dev Permissionless so idle content cannot bypass the submitter stake policy.
     function resolveSubmitterStake(uint256 contentId) external nonReentrant whenNotPaused {
-        bool hasSettledRound = contentHasSettledRound[contentId];
-        if (!hasSettledRound && _hasOpenRound(contentId)) revert ActiveRoundStillOpen();
-        SubmitterStakeLib.resolve(registry, hasSettledRound, contentId);
+        if (_hasOpenRound(contentId)) revert ActiveRoundStillOpen();
+        SubmitterStakeLib.resolve(registry, contentHasSettledRound[contentId], contentId);
     }
 
     // =========================================================================
