@@ -60,7 +60,7 @@ contract GameTheoryImprovementsTest is VotingTestBase {
             )
         );
 
-        // Initialize engine (ciphertext validation is relaxed on chainid 31337)
+        // Initialize engine; Foundry helpers below use test-only payload bytes.
         engine = RoundVotingEngine(
             address(
                 new ERC1967Proxy(

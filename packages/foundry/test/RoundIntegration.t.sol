@@ -95,7 +95,7 @@ contract RoundIntegrationTest is VotingTestBase {
             )
         );
 
-        // ciphertext validation is relaxed on chainid 31337 (test chains)
+        // Foundry tests use helper payload bytes here rather than real drand/tlock ciphertexts.
         votingEngine = RoundVotingEngine(
             address(
                 new ERC1967Proxy(

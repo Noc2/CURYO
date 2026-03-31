@@ -82,10 +82,11 @@ const FrontendCodes: NextPage = () => {
       <p>
         Without resolution services, votes would never be revealed and rounds would never resolve. Running one alongside
         your frontend ensures a smooth experience for your users and contributes to the health of the network. Since
-        these actions are permissionless, anyone can run a resolution service. Reveal still relies on off-chain drand
-        decryption rather than an on-chain proof that the stored ciphertext was honestly decryptable, so the keeper is a
-        trust-minimized convenience layer rather than a cryptographic gatekeeper. The more independent services running,
-        the more resilient the network becomes.
+        these actions are permissionless, anyone can run a resolution service. Under the current
+        keeper-assisted/self-reveal model, reveal still relies on off-chain drand decryption rather than an on-chain
+        proof that the stored ciphertext was honestly decryptable, so the keeper is a trust-minimized convenience layer
+        rather than a cryptographic gatekeeper. The more independent services running, the more resilient the network
+        becomes.
       </p>
 
       <h2>Running an Indexer / Back-End</h2>

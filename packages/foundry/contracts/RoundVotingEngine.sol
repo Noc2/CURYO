@@ -25,10 +25,12 @@ import { IRoundRewardDistributor } from "./interfaces/IRoundRewardDistributor.so
 
 /// @title RoundVotingEngine
 /// @notice Per-content round-based parimutuel voting with tlock commit-reveal and epoch-weighted rewards.
-/// @dev Flow: commitVote (tlock-encrypted to epoch end) → epoch ends → revealVote (caller supplies plaintext consistent
-///      with the committed ciphertext) → settleRound (≥3 revealed votes) or finalizeRevealFailedRound().
-///      Rounds accumulate votes across 20-minute epochs. After each epoch, tlock ciphertexts
-///      become decryptable via drand and any caller that knows the plaintext can call revealVote().
+/// @dev Flow: commitVote (stores ciphertext bytes + commit hash) → epoch ends → revealVote (caller supplies plaintext
+///      consistent with the committed ciphertext) → settleRound (≥3 revealed votes) or finalizeRevealFailedRound().
+///      Rounds accumulate votes across 20-minute epochs. After each epoch, keepers normally derive reveal plaintext
+///      off-chain from drand/tlock and submit reveals, while voters can also self-reveal if needed.
+///      The contract binds reveals to the exact submitted ciphertext but does not prove on-chain that the ciphertext
+///      itself was honestly decryptable.
 ///      If 1 week passes below commit quorum the round cancels with refunds; once commit quorum exists,
 ///      missing reveal quorum can finalize as RevealFailed only after the round stops accepting votes
 ///      and the final reveal grace deadline has passed.
@@ -464,12 +466,13 @@ contract RoundVotingEngine is
     }
 
     // =========================================================================
-    // REVEAL PHASE (tlock-primary, permissionless)
+    // REVEAL PHASE (keeper-assisted / self-reveal)
     // =========================================================================
 
-    /// @notice Reveal a specific commit by commit key. Permissionless — anyone can call.
-    /// @dev The caller decrypts the tlock ciphertext off-chain using the drand beacon,
-    ///      then submits the plaintext (isUp, salt) here for on-chain verification.
+    /// @notice Reveal a specific commit by commit key. Any caller that knows the plaintext may call.
+    /// @dev In normal operation a keeper decrypts the tlock ciphertext off-chain using drand and submits the plaintext
+    ///      `(isUp, salt)` here. Voters can also self-reveal. The contract verifies consistency against the stored
+    ///      ciphertext hash, but not that the ciphertext was honestly decryptable.
     function revealVoteByCommitKey(uint256 contentId, uint256 roundId, bytes32 commitKey, bool isUp, bytes32 salt)
         external
         nonReentrant

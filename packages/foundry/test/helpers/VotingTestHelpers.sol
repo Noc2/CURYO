@@ -58,7 +58,7 @@ abstract contract ContentSubmissionTestBase {
     }
 }
 
-/// @dev Base contract with shared helpers for tlock commit-reveal test patterns.
+/// @dev Base contract with shared helpers for commit-reveal tests.
 ///      Inherit from this instead of `Test` to get `_testCiphertext`, `_commitHash`, `_commitKey`.
 abstract contract VotingTestBase is Test, ContentSubmissionTestBase {
     function _deployProtocolConfig(address admin) internal returns (ProtocolConfig protocolConfig) {
@@ -69,7 +69,7 @@ abstract contract VotingTestBase is Test, ContentSubmissionTestBase {
         return deployInitializedProtocolConfig(admin, governance);
     }
 
-    /// @dev Build a test ciphertext (65-byte plaintext accepted by contract validation).
+    /// @dev Build a test-only payload accepted by the contract; not a real drand/tlock ciphertext.
     function _testCiphertext(bool isUp, bytes32 salt, uint256 contentId) internal pure returns (bytes memory) {
         return abi.encodePacked(uint8(isUp ? 1 : 0), salt, contentId);
     }

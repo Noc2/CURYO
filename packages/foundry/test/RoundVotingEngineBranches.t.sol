@@ -67,7 +67,7 @@ contract RoundVotingEngineBranchesTest is VotingTestBase {
             )
         );
 
-        // ciphertext validation is plaintext-based on chainid 31337 (65 bytes)
+        // Foundry tests use helper payload bytes here rather than real drand/tlock ciphertexts.
         engine = RoundVotingEngine(
             address(
                 new ERC1967Proxy(

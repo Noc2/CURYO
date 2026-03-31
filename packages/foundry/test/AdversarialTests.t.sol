@@ -994,6 +994,39 @@ contract AdversarialTests is VotingTestBase {
         engine.revealVoteByCommitKey(contentId, roundId, commitKey, false, salt); // wrong direction
     }
 
+    /// @notice Opaque ciphertext bytes are accepted, but reveal still requires a caller who knows the plaintext.
+    function test_RevealTiming_OpaqueCiphertext_AllowsManualReveal() public {
+        uint256 contentId = _submitContent();
+
+        bytes32 salt = keccak256(abi.encodePacked(voter1, block.timestamp, contentId, "opaque"));
+        bytes memory opaqueCiphertext = hex"deadbeef";
+        bytes32 commitHash = _commitHash(true, salt, contentId, opaqueCiphertext);
+
+        assertTrue(opaqueCiphertext.length != 65, "regression setup should not use the helper payload shape");
+
+        vm.startPrank(voter1);
+        crepToken.approve(address(engine), STAKE);
+        engine.commitVote(contentId, commitHash, opaqueCiphertext, STAKE, address(0));
+        vm.stopPrank();
+
+        uint256 roundId = RoundEngineReadHelpers.activeRoundId(engine, contentId);
+        bytes32 commitKey = _commitKey(voter1, commitHash);
+
+        RoundLib.Commit memory commit = RoundEngineReadHelpers.commit(engine, contentId, roundId, commitKey);
+        assertEq(commit.ciphertext.length, opaqueCiphertext.length, "opaque bytes should be stored unchanged");
+        assertEq(keccak256(commit.ciphertext), keccak256(opaqueCiphertext), "ciphertext hash mismatch");
+
+        RoundLib.Round memory round = RoundEngineReadHelpers.round(engine, contentId, roundId);
+        vm.warp(round.startTime + EPOCH_DURATION + 1);
+
+        vm.prank(voter1);
+        engine.revealVoteByCommitKey(contentId, roundId, commitKey, true, salt);
+
+        commit = RoundEngineReadHelpers.commit(engine, contentId, roundId, commitKey);
+        assertTrue(commit.revealed, "manual reveal should succeed");
+        assertTrue(commit.isUp, "revealed direction should be stored");
+    }
+
     // =========================================================================
     // 11. ENGINE BALANCE SOLVENCY — after full cycle engine holds ≥ obligations
     // =========================================================================
