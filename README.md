@@ -33,13 +33,14 @@ See the in-app documentation at `/docs` for detailed game theory analysis and se
 
 ## Architecture
 
-Curyo is a monorepo with eight packages:
+Curyo is a monorepo with nine packages:
 
 | Package | Description |
 |---|---|
 | `packages/contracts` | Shared ABIs and deployed-address metadata consumed by the app and services |
 | `packages/foundry` | Solidity smart contracts, tests, and deployment scripts |
 | `packages/nextjs` | Next.js frontend with in-app documentation at `/docs` |
+| `packages/sdk` | Framework-agnostic frontend SDK for hosted reads, vote helpers, and frontend attribution |
 | `packages/ponder` | Ponder indexer for on-chain event processing and API |
 | `packages/keeper` | Standalone keeper service for trustless round settlement |
 | `packages/bot` | CLI voting bot with pluggable rating strategies |
@@ -50,6 +51,7 @@ Curyo is a monorepo with eight packages:
 foundry    (compile) → deployments + artifacts
 contracts  (shared)  → ABIs + deployed addresses for apps/services
 node-utils (shared)  → keystore and other reusable Node helpers
+sdk        (shared)  → hosted read client + vote/frontend integration helpers
 ponder     (index)   → REST API at localhost:42069
 nextjs     (frontend)→ reads contracts via thirdweb, wagmi, and the Ponder API
 keeper     (service) → settles rounds, finalizes reveal failures, cleans up unrevealed votes, marks dormant content
@@ -210,7 +212,12 @@ In-app documentation is available at `/docs` when running the frontend, covering
 - How It Works
 - Tokenomics
 - Governance
+- SDK
+- Frontend Integrations
 - Smart Contracts
+
+For app integrations, the framework-agnostic SDK lives in `packages/sdk` and provides hosted/indexed reads plus
+vote/frontend helpers for existing websites and apps.
 
 Additional local interfaces:
 
