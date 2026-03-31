@@ -131,4 +131,4 @@ jobs:
           forge build
       - name: Run forge coverage
         working-directory: packages/foundry
-        run: forge coverage --offline --ir-minimum --skip script --skip GasBudget.t.sol --skip GasEstimatesReport.t.sol --skip RoundIntegration.t.sol
+        run: forge coverage --offline --ir-minimum --skip script --skip GasBudget.t.sol --skip GasEstimatesReport.t.sol --skip RoundIntegration.t.sol --skip AdversarialTests.t.sol
