@@ -1,4 +1,7 @@
+import { approveCREP, submitContentDirect, waitForPonderIndexed } from "../helpers/admin-helpers";
 import { ANVIL_ACCOUNTS } from "../helpers/anvil-accounts";
+import { CONTRACT_ADDRESSES } from "../helpers/contracts";
+import { getContentList } from "../helpers/ponder-api";
 import { E2E_BASE_URL } from "../helpers/service-urls";
 import { findVoteableContent, getVisibleConnectedWallet, gotoWithRetry } from "../helpers/wait-helpers";
 import { swapWalletSession } from "../helpers/wallet-session";
@@ -11,6 +14,17 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const ARTIFACTS_DIR = path.resolve(__dirname, "../artifacts/demo");
 const VIEWPORT = { width: 1280, height: 800 };
 const CAPTION_ID = "curyo-demo-caption";
+const SUBMIT_STAKE = BigInt(10e6);
+const VERIFIED_DEMO_WALLETS = [
+  ANVIL_ACCOUNTS.account3,
+  ANVIL_ACCOUNTS.account4,
+  ANVIL_ACCOUNTS.account5,
+  ANVIL_ACCOUNTS.account6,
+  ANVIL_ACCOUNTS.account7,
+  ANVIL_ACCOUNTS.account8,
+  ANVIL_ACCOUNTS.account9,
+  ANVIL_ACCOUNTS.account10,
+] as const;
 
 function timestampSlug(): string {
   return new Date().toISOString().replace(/[:.]/g, "-");
@@ -107,6 +121,67 @@ async function clickTarget(page: Page, target: Locator, pauseAfterMs = 500): Pro
   await pause(page, pauseAfterMs);
 }
 
+async function prepareDemoContent(): Promise<{ searchQuery: string }> {
+  console.log("Preparing deterministic demo content...");
+  const submitter = ANVIL_ACCOUNTS.account10;
+  const uniqueId = Date.now();
+  const title = `Curyo Demo ${uniqueId}`;
+  const demoUrl = `https://www.youtube.com/watch?v=curyo_demo_${uniqueId}`;
+
+  const submissionApproved = await approveCREP(
+    CONTRACT_ADDRESSES.ContentRegistry,
+    SUBMIT_STAKE,
+    submitter.address,
+    CONTRACT_ADDRESSES.CuryoReputation,
+  );
+  if (!submissionApproved) {
+    throw new Error("Failed to approve submission stake for deterministic demo content");
+  }
+
+  const submitted = await submitContentDirect(
+    demoUrl,
+    title,
+    "A dedicated piece of content created only for the Playwright demo recording.",
+    "demo",
+    1,
+    submitter.address,
+    CONTRACT_ADDRESSES.ContentRegistry,
+  );
+  if (!submitted) {
+    throw new Error("Failed to submit deterministic demo content");
+  }
+
+  const indexed = await waitForPonderIndexed(
+    async () => {
+      const { items } = await getContentList({ status: "all", search: title, sortBy: "newest", limit: 5 });
+      return items.some(item => item.title === title);
+    },
+    60_000,
+    2_000,
+    "record-demo:content-search",
+  );
+
+  if (!indexed) {
+    throw new Error("Ponder did not index the deterministic demo content in time");
+  }
+
+  return { searchQuery: title };
+}
+
+async function waitForVoteFeedScene(page: Page, timeout = 30_000): Promise<void> {
+  const indicators = page
+    .getByRole("button", { name: "Vote up" })
+    .or(page.getByRole("button", { name: "Vote down" }))
+    .or(page.getByText(/Voted (Up|Down)/i))
+    .or(page.getByText("Your submission"))
+    .or(page.getByText(/Cooldown/i))
+    .or(page.getByText("Round full"))
+    .or(page.getByText("No content submitted yet"))
+    .or(page.getByText(/No content found/i));
+
+  await indicators.first().waitFor({ state: "visible", timeout });
+}
+
 async function recordFaucetIntro(page: Page): Promise<void> {
   console.log("Recording faucet intro...");
   await page.goto("/", { waitUntil: "domcontentloaded" });
@@ -130,20 +205,31 @@ async function recordFaucetIntro(page: Page): Promise<void> {
   await pause(page, 250);
 }
 
-async function recordVoteScene(page: Page): Promise<void> {
+async function recordVoteScene(page: Page, searchQuery?: string): Promise<void> {
   console.log("Recording vote scene...");
-  await swapWalletSession(page, ANVIL_ACCOUNTS.account3.privateKey);
-  await gotoWithRetry(page, "/vote", {
-    ensureWalletConnected: true,
-    timeout: 60_000,
-  });
-  await ensureWalletVisible(page, ANVIL_ACCOUNTS.account3.address);
-  await page.waitForLoadState("domcontentloaded");
-  await page.waitForLoadState("networkidle").catch(() => undefined);
+  let selectedWallet: (typeof VERIFIED_DEMO_WALLETS)[number] | null = null;
 
-  const hasVoteableContent = await findVoteableContent(page);
-  if (!hasVoteableContent) {
-    throw new Error("No voteable content was visible in the feed for the demo wallet");
+  for (const wallet of VERIFIED_DEMO_WALLETS) {
+    await swapWalletSession(page, wallet.privateKey);
+    const voteUrl = searchQuery ? `/vote?q=${encodeURIComponent(searchQuery)}` : "/vote";
+    await gotoWithRetry(page, voteUrl, {
+      ensureWalletConnected: true,
+      timeout: 60_000,
+    });
+    await ensureWalletVisible(page, wallet.address);
+    await page.waitForLoadState("domcontentloaded");
+    await page.waitForLoadState("networkidle").catch(() => undefined);
+    await waitForVoteFeedScene(page, 30_000);
+
+    const hasVoteableContent = await findVoteableContent(page);
+    if (hasVoteableContent) {
+      selectedWallet = wallet;
+      break;
+    }
+  }
+
+  if (!selectedWallet) {
+    throw new Error("No voteable content was visible for any verified demo wallet");
   }
 
   const voteButton = page.getByRole("button", { name: "Vote up" }).first();
@@ -198,8 +284,10 @@ async function main(): Promise<void> {
   const outputPath =
     process.env.CURYO_DEMO_VIDEO_PATH?.trim() || path.join(ARTIFACTS_DIR, `curyo-demo-${timestampSlug()}.webm`);
   const headless = process.env.CURYO_DEMO_HEADLESS !== "false";
+  const mode = process.env.CURYO_DEMO_MODE?.trim() === "intro" ? "intro" : "full";
 
-  console.log(`Recording demo against ${E2E_BASE_URL}...`);
+  console.log(`Recording ${mode} demo against ${E2E_BASE_URL}...`);
+  const prepared = mode === "full" ? await prepareDemoContent() : null;
   const browser = await chromium.launch({ headless });
   const context = await browser.newContext({
     baseURL: E2E_BASE_URL,
@@ -218,7 +306,11 @@ async function main(): Promise<void> {
 
   try {
     await recordFaucetIntro(page);
-    await recordVoteScene(page);
+    if (mode === "full") {
+      await recordVoteScene(page, prepared?.searchQuery);
+    } else {
+      await pause(page, 400);
+    }
   } finally {
     await hideCaption(page).catch(() => undefined);
     await context.close();
