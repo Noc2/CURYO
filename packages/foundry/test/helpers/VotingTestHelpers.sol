@@ -4,7 +4,6 @@ pragma solidity ^0.8.20;
 import { Test } from "forge-std/Test.sol";
 import { Vm, VmSafe } from "forge-std/Vm.sol";
 import { ERC1967Proxy } from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
-import { Strings } from "@openzeppelin/contracts/utils/Strings.sol";
 import { ContentRegistry } from "../../contracts/ContentRegistry.sol";
 import { ProtocolConfig } from "../../contracts/ProtocolConfig.sol";
 
@@ -67,8 +66,8 @@ abstract contract VotingTestBase is Test, ContentSubmissionTestBase {
     uint64 internal constant DEFAULT_DRAND_GENESIS_TIME = 1;
     uint64 internal constant DEFAULT_DRAND_PERIOD = 3;
     uint256 internal constant DEFAULT_TLOCK_EPOCH_DURATION = 20 minutes;
-    bytes internal constant TEST_DIRECTION_PREFIX = "test-direction=";
-    bytes internal constant TEST_SALT_PREFIX = "test-salt=0x";
+    bytes internal constant TEST_AGE_HEADER = "-----BEGIN AGE ENCRYPTED FILE-----\n";
+    bytes internal constant TEST_AGE_FOOTER = "-----END AGE ENCRYPTED FILE-----\n";
     ProtocolConfig internal activeTlockProtocolConfig;
     bytes32 internal activeTlockDrandChainHash = DEFAULT_DRAND_CHAIN_HASH;
     uint64 internal activeTlockDrandGenesisTime = DEFAULT_DRAND_GENESIS_TIME;
@@ -112,21 +111,18 @@ abstract contract VotingTestBase is Test, ContentSubmissionTestBase {
         activeTlockDrandPeriod = period;
     }
 
-    /// @dev Build a test-only payload accepted by the contract; it is fake AGE armor, not real tlock ciphertext.
+    /// @dev Build a compact fake AGE payload accepted by the contract; it is test-only, not real tlock ciphertext.
     function _testCiphertext(bool isUp, bytes32 salt, uint256 contentId) internal pure returns (bytes memory) {
-        return abi.encodePacked(
-            "-----BEGIN AGE ENCRYPTED FILE-----\n",
-            "test-direction=",
-            isUp ? "up" : "down",
-            "\n",
-            "test-salt=",
-            Strings.toHexString(uint256(salt), 32),
-            "\n",
-            "test-content-id=",
-            Strings.toString(contentId),
-            "\n",
-            "-----END AGE ENCRYPTED FILE-----\n"
-        );
+        contentId; // Content binding lives in the commit hash, so the test payload only needs direction + salt.
+
+        bytes memory ciphertext = new bytes(TEST_AGE_HEADER.length + 2 + 64 + 1 + TEST_AGE_FOOTER.length);
+        uint256 offset = _copyBytes(ciphertext, 0, TEST_AGE_HEADER);
+        ciphertext[offset] = isUp ? bytes1("u") : bytes1("d");
+        ciphertext[offset + 1] = 0x0a;
+        _writeHexBytes32(ciphertext, offset + 2, salt);
+        ciphertext[offset + 66] = 0x0a;
+        _copyBytes(ciphertext, offset + 67, TEST_AGE_FOOTER);
+        return ciphertext;
     }
 
     /// @dev Build commit hash bound to the exact ciphertext bytes used at commit time.
@@ -191,49 +187,21 @@ abstract contract VotingTestBase is Test, ContentSubmissionTestBase {
     }
 
     function _decodeTestCiphertext(bytes memory ciphertext) internal pure returns (bool isUp, bytes32 salt) {
-        isUp = _parseTestDirection(ciphertext);
-        salt = _parseTestSalt(ciphertext);
-    }
+        uint256 minLength = TEST_AGE_HEADER.length + 2 + 64 + 1 + TEST_AGE_FOOTER.length;
+        if (ciphertext.length != minLength) revert("Invalid test ciphertext");
 
-    function _parseTestDirection(bytes memory ciphertext) private pure returns (bool) {
-        uint256 directionStart = _findMarker(ciphertext, TEST_DIRECTION_PREFIX);
-        if (directionStart == type(uint256).max) revert("Missing test-direction");
-
-        uint256 valueStart = directionStart + TEST_DIRECTION_PREFIX.length;
-        if (valueStart + 1 < ciphertext.length && ciphertext[valueStart] == "u" && ciphertext[valueStart + 1] == "p") {
-            return true;
-        }
-        if (
-            valueStart + 3 < ciphertext.length && ciphertext[valueStart] == "d" && ciphertext[valueStart + 1] == "o"
-                && ciphertext[valueStart + 2] == "w" && ciphertext[valueStart + 3] == "n"
-        ) {
-            return false;
+        uint256 offset = TEST_AGE_HEADER.length;
+        bytes1 direction = ciphertext[offset];
+        if (direction == bytes1("u")) {
+            isUp = true;
+        } else if (direction == bytes1("d")) {
+            isUp = false;
+        } else {
+            revert("Invalid test-direction");
         }
 
-        revert("Invalid test-direction");
-    }
-
-    function _parseTestSalt(bytes memory ciphertext) private pure returns (bytes32) {
-        uint256 saltStart = _findMarker(ciphertext, TEST_SALT_PREFIX);
-        if (saltStart == type(uint256).max) revert("Missing test-salt");
-        return _readHexBytes32(ciphertext, saltStart + TEST_SALT_PREFIX.length);
-    }
-
-    function _findMarker(bytes memory haystack, bytes memory needle) private pure returns (uint256) {
-        if (needle.length == 0 || haystack.length < needle.length) return type(uint256).max;
-
-        for (uint256 i = 0; i <= haystack.length - needle.length; i++) {
-            bool matches = true;
-            for (uint256 j = 0; j < needle.length; j++) {
-                if (haystack[i + j] != needle[j]) {
-                    matches = false;
-                    break;
-                }
-            }
-            if (matches) return i;
-        }
-
-        return type(uint256).max;
+        if (ciphertext[offset + 1] != 0x0a || ciphertext[offset + 66] != 0x0a) revert("Invalid test-direction");
+        salt = _readHexBytes32(ciphertext, offset + 2);
     }
 
     function _readHexBytes32(bytes memory data, uint256 start) private pure returns (bytes32) {
@@ -253,6 +221,25 @@ abstract contract VotingTestBase is Test, ContentSubmissionTestBase {
         if (code >= uint8(bytes1("a")) && code <= uint8(bytes1("f"))) return 10 + code - uint8(bytes1("a"));
         if (code >= uint8(bytes1("A")) && code <= uint8(bytes1("F"))) return 10 + code - uint8(bytes1("A"));
         revert("Invalid hex nibble");
+    }
+
+    function _copyBytes(bytes memory target, uint256 offset, bytes memory source) private pure returns (uint256) {
+        for (uint256 i = 0; i < source.length; i++) {
+            target[offset + i] = source[i];
+        }
+        return offset + source.length;
+    }
+
+    function _writeHexBytes32(bytes memory target, uint256 offset, bytes32 value) private pure {
+        for (uint256 i = 0; i < 32; i++) {
+            uint8 byteValue = uint8(value[i]);
+            target[offset + (i * 2)] = _hexChar(byteValue >> 4);
+            target[offset + (i * 2) + 1] = _hexChar(byteValue & 0x0f);
+        }
+    }
+
+    function _hexChar(uint8 nibble) private pure returns (bytes1) {
+        return nibble < 10 ? bytes1(nibble + uint8(bytes1("0"))) : bytes1(nibble + 87);
     }
 
     /// @dev Build commit key: keccak256(abi.encodePacked(voter, commitHash)).
