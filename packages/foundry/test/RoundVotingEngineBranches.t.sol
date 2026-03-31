@@ -116,12 +116,15 @@ contract RoundVotingEngineBranchesTest is VotingTestBase {
         ProtocolConfig(protocolConfigAddress).setRewardDistributor(address(rewardDistributor));
         ProtocolConfig(protocolConfigAddress).setCategoryRegistry(address(mockCategoryRegistry));
         ProtocolConfig(protocolConfigAddress).setTreasury(treasury);
-        ProtocolConfig(protocolConfigAddress).setDrandConfig(
-            DEFAULT_DRAND_CHAIN_HASH, DEFAULT_DRAND_GENESIS_TIME, DEFAULT_DRAND_PERIOD
+        _setTlockDrandConfig(
+            ProtocolConfig(protocolConfigAddress),
+            DEFAULT_DRAND_CHAIN_HASH,
+            DEFAULT_DRAND_GENESIS_TIME,
+            DEFAULT_DRAND_PERIOD
         );
 
         // epochDuration=1h, maxDuration=7d, minVoters=3, maxVoters=1000
-        ProtocolConfig(protocolConfigAddress).setConfig(1 hours, 7 days, 3, 1000);
+        _setTlockRoundConfig(ProtocolConfig(protocolConfigAddress), 1 hours, 7 days, 3, 1000);
 
         mockVoterIdNFT = new MockVoterIdNFT();
 
@@ -1537,7 +1540,7 @@ contract RoundVotingEngineBranchesTest is VotingTestBase {
     function test_Commit_MaxVotersReached_Reverts() public {
         vm.prank(owner);
         // maxVoters=3 — after 3 commits the 4th is rejected
-        ProtocolConfig(protocolConfigAddress).setConfig(1 hours, 7 days, 3, 3);
+        _setTlockRoundConfig(ProtocolConfig(protocolConfigAddress), 1 hours, 7 days, 3, 3);
 
         uint256 contentId = _submitContent();
         _commit(voter1, contentId, true, STAKE);

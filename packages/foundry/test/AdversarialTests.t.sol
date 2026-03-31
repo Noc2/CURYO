@@ -108,10 +108,13 @@ contract AdversarialTests is VotingTestBase {
         ProtocolConfig(address(engine.protocolConfig())).setRewardDistributor(address(distributor));
         ProtocolConfig(address(engine.protocolConfig())).setCategoryRegistry(address(mockCategoryRegistry));
         ProtocolConfig(address(engine.protocolConfig())).setTreasury(treasury);
-        ProtocolConfig(address(engine.protocolConfig())).setDrandConfig(
-            DEFAULT_DRAND_CHAIN_HASH, DEFAULT_DRAND_GENESIS_TIME, DEFAULT_DRAND_PERIOD
+        _setTlockDrandConfig(
+            ProtocolConfig(address(engine.protocolConfig())),
+            DEFAULT_DRAND_CHAIN_HASH,
+            DEFAULT_DRAND_GENESIS_TIME,
+            DEFAULT_DRAND_PERIOD
         );
-        ProtocolConfig(address(engine.protocolConfig())).setConfig(EPOCH_DURATION, 7 days, 2, 200);
+        _setTlockRoundConfig(ProtocolConfig(address(engine.protocolConfig())), EPOCH_DURATION, 7 days, 2, 200);
 
         // Fund consensus reserve
         uint256 reserveAmount = 1_000_000e6;
@@ -591,10 +594,13 @@ contract AdversarialTests is VotingTestBase {
         ProtocolConfig(address(eng2.protocolConfig())).setRewardDistributor(address(dist2));
         ProtocolConfig(address(eng2.protocolConfig())).setCategoryRegistry(address(mockCategoryRegistry));
         ProtocolConfig(address(eng2.protocolConfig())).setTreasury(treasury);
-        ProtocolConfig(address(eng2.protocolConfig())).setDrandConfig(
-            DEFAULT_DRAND_CHAIN_HASH, DEFAULT_DRAND_GENESIS_TIME, DEFAULT_DRAND_PERIOD
+        _setTlockDrandConfig(
+            ProtocolConfig(address(eng2.protocolConfig())),
+            DEFAULT_DRAND_CHAIN_HASH,
+            DEFAULT_DRAND_GENESIS_TIME,
+            DEFAULT_DRAND_PERIOD
         );
-        ProtocolConfig(address(eng2.protocolConfig())).setConfig(EPOCH_DURATION, 7 days, 2, 200);
+        _setTlockRoundConfig(ProtocolConfig(address(eng2.protocolConfig())), EPOCH_DURATION, 7 days, 2, 200);
 
         // NO fundConsensusReserve — reserve is zero
 

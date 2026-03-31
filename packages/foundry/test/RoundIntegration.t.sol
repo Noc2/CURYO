@@ -143,13 +143,16 @@ contract RoundIntegrationTest is VotingTestBase {
         ProtocolConfig(address(votingEngine.protocolConfig())).setRewardDistributor(address(rewardDistributor));
         ProtocolConfig(address(votingEngine.protocolConfig())).setCategoryRegistry(address(mockCategoryRegistry));
         ProtocolConfig(address(votingEngine.protocolConfig())).setTreasury(treasury);
-        ProtocolConfig(address(votingEngine.protocolConfig())).setDrandConfig(
-            DEFAULT_DRAND_CHAIN_HASH, DEFAULT_DRAND_GENESIS_TIME, DEFAULT_DRAND_PERIOD
+        _setTlockDrandConfig(
+            ProtocolConfig(address(votingEngine.protocolConfig())),
+            DEFAULT_DRAND_CHAIN_HASH,
+            DEFAULT_DRAND_GENESIS_TIME,
+            DEFAULT_DRAND_PERIOD
         );
 
         // setConfig(epochDuration, maxDuration, minVoters, maxVoters)
         // Use short 10-minute epochs for tests, minVoters=2 to keep tests lean
-        ProtocolConfig(address(votingEngine.protocolConfig())).setConfig(EPOCH_DURATION, 7 days, 2, 200);
+        _setTlockRoundConfig(ProtocolConfig(address(votingEngine.protocolConfig())), EPOCH_DURATION, 7 days, 2, 200);
 
         // Fund consensus reserve
         uint256 reserveAmount = 1_000_000e6;
@@ -1167,7 +1170,7 @@ contract RoundIntegrationTest is VotingTestBase {
         // Change config: increase minVoters to 10
         ProtocolConfig protoCfg = ProtocolConfig(address(votingEngine.protocolConfig()));
         vm.prank(owner);
-        protoCfg.setConfig(EPOCH_DURATION, 7 days, 10, 200);
+        _setTlockRoundConfig(protoCfg, EPOCH_DURATION, 7 days, 10, 200);
 
         // Snapshot unchanged
         cfg = RoundEngineReadHelpers.roundConfig(votingEngine, contentId, roundId);

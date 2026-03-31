@@ -95,7 +95,7 @@ contract GameTheoryImprovementsTest is VotingTestBase {
         ProtocolConfig(address(engine.protocolConfig())).setTreasury(treasuryAddr);
 
         // Override config: 1-hour epochs, 7-day max, minVoters=3, maxVoters=1000
-        ProtocolConfig(address(engine.protocolConfig())).setConfig(EPOCH_DURATION, MAX_DURATION, MIN_VOTERS, 1000);
+        _setTlockRoundConfig(ProtocolConfig(address(engine.protocolConfig())), EPOCH_DURATION, MAX_DURATION, MIN_VOTERS, 1000);
 
         // Fund consensus reserve
         crepToken.mint(owner, 200_000e6);

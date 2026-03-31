@@ -90,7 +90,7 @@ contract FormalVerification_GameTheoryTest is VotingTestBase {
         ProtocolConfig(address(engine.protocolConfig())).setTreasury(treasuryAddr);
 
         // Config: epochDuration=1h, maxDuration=7d, minVoters=2, maxVoters=200
-        ProtocolConfig(address(engine.protocolConfig())).setConfig(1 hours, MAX_DURATION, MIN_VOTERS, 200);
+        _setTlockRoundConfig(ProtocolConfig(address(engine.protocolConfig())), 1 hours, MAX_DURATION, MIN_VOTERS, 200);
 
         // Fund consensus reserve: 100K cREP
         crepToken.mint(owner, 100_000e6);

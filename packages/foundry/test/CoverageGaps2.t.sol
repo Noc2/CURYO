@@ -1649,7 +1649,7 @@ contract RoundSettlementBranchTest is VotingTestBase {
         ProtocolConfig(address(engine.protocolConfig())).setRewardDistributor(address(distributor));
         ProtocolConfig(address(engine.protocolConfig())).setCategoryRegistry(address(mockCategoryRegistry2));
         ProtocolConfig(address(engine.protocolConfig())).setTreasury(treasury);
-        ProtocolConfig(address(engine.protocolConfig())).setConfig(5 minutes, 7 days, 2, 200);
+        _setTlockRoundConfig(ProtocolConfig(address(engine.protocolConfig())), 5 minutes, 7 days, 2, 200);
 
         crep.mint(owner, 2_000_000e6);
         crep.approve(address(engine), 2_000_000e6);

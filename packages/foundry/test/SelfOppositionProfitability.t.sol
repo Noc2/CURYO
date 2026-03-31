@@ -89,7 +89,7 @@ contract SelfOppositionProfitabilityTest is VotingTestBase {
         ProtocolConfig(address(engine.protocolConfig())).setTreasury(treasuryAddr);
 
         // Config: epochDuration=1h, maxDuration=7d, minVoters=3, maxVoters=200
-        ProtocolConfig(address(engine.protocolConfig())).setConfig(1 hours, 7 days, 3, 200);
+        _setTlockRoundConfig(ProtocolConfig(address(engine.protocolConfig())), 1 hours, 7 days, 3, 200);
 
         // Fund consensus reserve
         crepToken.mint(owner, 100_000e6);

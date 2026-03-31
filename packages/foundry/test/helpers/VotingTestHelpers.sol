@@ -66,7 +66,12 @@ abstract contract VotingTestBase is Test, ContentSubmissionTestBase {
         0x52db9ba70e0cc0f6eaf7803dd07447a1f5477735fd3f661792ba94600c84e971;
     uint64 internal constant DEFAULT_DRAND_GENESIS_TIME = 1;
     uint64 internal constant DEFAULT_DRAND_PERIOD = 3;
+    uint256 internal constant DEFAULT_TLOCK_EPOCH_DURATION = 20 minutes;
     ProtocolConfig internal activeTlockProtocolConfig;
+    bytes32 internal activeTlockDrandChainHash = DEFAULT_DRAND_CHAIN_HASH;
+    uint64 internal activeTlockDrandGenesisTime = DEFAULT_DRAND_GENESIS_TIME;
+    uint64 internal activeTlockDrandPeriod = DEFAULT_DRAND_PERIOD;
+    uint256 internal activeTlockEpochDuration = DEFAULT_TLOCK_EPOCH_DURATION;
 
     function _deployProtocolConfig(address admin) internal returns (ProtocolConfig protocolConfig) {
         return _deployProtocolConfig(admin, admin);
@@ -75,7 +80,30 @@ abstract contract VotingTestBase is Test, ContentSubmissionTestBase {
     function _deployProtocolConfig(address admin, address governance) internal returns (ProtocolConfig protocolConfig) {
         protocolConfig = deployInitializedProtocolConfig(admin, governance);
         activeTlockProtocolConfig = protocolConfig;
-        protocolConfig.setDrandConfig(DEFAULT_DRAND_CHAIN_HASH, DEFAULT_DRAND_GENESIS_TIME, DEFAULT_DRAND_PERIOD);
+        activeTlockEpochDuration = DEFAULT_TLOCK_EPOCH_DURATION;
+        _setTlockDrandConfig(protocolConfig, DEFAULT_DRAND_CHAIN_HASH, DEFAULT_DRAND_GENESIS_TIME, DEFAULT_DRAND_PERIOD);
+    }
+
+    function _setTlockRoundConfig(
+        ProtocolConfig protocolConfig,
+        uint256 epochDuration,
+        uint256 maxDuration,
+        uint256 minVoters,
+        uint256 maxVoters
+    ) internal {
+        protocolConfig.setConfig(epochDuration, maxDuration, minVoters, maxVoters);
+        activeTlockProtocolConfig = protocolConfig;
+        activeTlockEpochDuration = epochDuration;
+    }
+
+    function _setTlockDrandConfig(ProtocolConfig protocolConfig, bytes32 chainHash, uint64 genesisTime, uint64 period)
+        internal
+    {
+        protocolConfig.setDrandConfig(chainHash, genesisTime, period);
+        activeTlockProtocolConfig = protocolConfig;
+        activeTlockDrandChainHash = chainHash;
+        activeTlockDrandGenesisTime = genesisTime;
+        activeTlockDrandPeriod = period;
     }
 
     /// @dev Build a test-only payload accepted by the contract; it is fake AGE armor, not real tlock ciphertext.
@@ -119,34 +147,19 @@ abstract contract VotingTestBase is Test, ContentSubmissionTestBase {
     }
 
     function _tlockDrandChainHash() internal view virtual returns (bytes32) {
-        if (address(activeTlockProtocolConfig) != address(0)) {
-            return activeTlockProtocolConfig.drandChainHash();
-        }
-        return DEFAULT_DRAND_CHAIN_HASH;
+        return activeTlockDrandChainHash;
     }
 
     function _tlockDrandGenesisTime() internal view virtual returns (uint64) {
-        if (address(activeTlockProtocolConfig) != address(0)) {
-            return activeTlockProtocolConfig.drandGenesisTime();
-        }
-        return DEFAULT_DRAND_GENESIS_TIME;
+        return activeTlockDrandGenesisTime;
     }
 
     function _tlockDrandPeriod() internal view virtual returns (uint64) {
-        if (address(activeTlockProtocolConfig) != address(0)) {
-            return activeTlockProtocolConfig.drandPeriod();
-        }
-        return DEFAULT_DRAND_PERIOD;
+        return activeTlockDrandPeriod;
     }
 
     function _tlockEpochDuration() internal view virtual returns (uint256) {
-        if (address(activeTlockProtocolConfig) != address(0)) {
-            (uint32 epochDuration,,,) = activeTlockProtocolConfig.config();
-            if (epochDuration > 0) {
-                return epochDuration;
-            }
-        }
-        return 20 minutes;
+        return activeTlockEpochDuration;
     }
 
     function _roundAt(uint256 timestamp, uint64 genesisTime, uint64 period) internal pure returns (uint64) {

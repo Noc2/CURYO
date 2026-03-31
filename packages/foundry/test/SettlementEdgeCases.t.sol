@@ -100,7 +100,7 @@ contract SettlementEdgeCasesTest is VotingTestBase {
         ProtocolConfig(address(engine.protocolConfig())).setTreasury(treasury);
 
         // epochDuration=1h, maxDuration=7d, minVoters=3, maxVoters=1000
-        ProtocolConfig(address(engine.protocolConfig())).setConfig(1 hours, 7 days, 3, 1000);
+        _setTlockRoundConfig(ProtocolConfig(address(engine.protocolConfig())), 1 hours, 7 days, 3, 1000);
 
         FrontendRegistry frImpl = new FrontendRegistry();
         frontendRegistry = FrontendRegistry(
@@ -506,7 +506,7 @@ contract SettlementEdgeCasesTest is VotingTestBase {
         ProtocolConfig(address(engine2.protocolConfig())).setRewardDistributor(address(dist2));
         ProtocolConfig(address(engine2.protocolConfig())).setCategoryRegistry(address(mockCategoryRegistry));
         ProtocolConfig(address(engine2.protocolConfig())).setTreasury(treasury);
-        ProtocolConfig(address(engine2.protocolConfig())).setConfig(1 hours, 7 days, 3, 1000);
+        _setTlockRoundConfig(ProtocolConfig(address(engine2.protocolConfig())), 1 hours, 7 days, 3, 1000);
 
         // DO NOT fund consensus reserve — leave at 0
         assertEq(engine2.consensusReserve(), 0);

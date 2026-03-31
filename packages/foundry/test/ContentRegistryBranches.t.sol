@@ -90,7 +90,7 @@ contract ContentRegistryBranchesTest is VotingTestBase {
         registry.setTreasury(treasury);
         ProtocolConfig(address(votingEngine.protocolConfig())).setRewardDistributor(address(rewardDistributor));
         ProtocolConfig(address(votingEngine.protocolConfig())).setTreasury(treasury);
-        ProtocolConfig(address(votingEngine.protocolConfig())).setConfig(1 hours, 7 days, 3, 1000);
+        _setTlockRoundConfig(ProtocolConfig(address(votingEngine.protocolConfig())), 1 hours, 7 days, 3, 1000);
 
         mockVoterIdNFT = new MockVoterIdNFT();
         mockCategoryRegistry = new MockCategoryRegistry();

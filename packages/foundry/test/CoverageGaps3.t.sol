@@ -729,7 +729,7 @@ contract RoundSettlementEdgeCase3Test is VotingTestBase {
         ProtocolConfig(address(engine.protocolConfig())).setRewardDistributor(address(distributor));
         ProtocolConfig(address(engine.protocolConfig())).setCategoryRegistry(address(mockCategoryRegistry));
         ProtocolConfig(address(engine.protocolConfig())).setTreasury(treasury);
-        ProtocolConfig(address(engine.protocolConfig())).setConfig(5 minutes, 7 days, 2, 200);
+        _setTlockRoundConfig(ProtocolConfig(address(engine.protocolConfig())), 5 minutes, 7 days, 2, 200);
 
         crep.mint(owner, 2_000_000e6);
         crep.approve(address(engine), 1_000_000e6);
@@ -1078,28 +1078,28 @@ contract RoundSettlementEdgeCase3Test is VotingTestBase {
         ProtocolConfig cfg = ProtocolConfig(address(engine.protocolConfig()));
         vm.prank(owner);
         vm.expectRevert(ProtocolConfig.InvalidConfig.selector);
-        cfg.setConfig(4 minutes, 7 days, 3, 1000); // epochDuration < 5 minutes
+        _setTlockRoundConfig(cfg, 4 minutes, 7 days, 3, 1000); // epochDuration < 5 minutes
     }
 
     function test_SetConfig_MaxDurationTooShort_Reverts() public {
         ProtocolConfig cfg = ProtocolConfig(address(engine.protocolConfig()));
         vm.prank(owner);
         vm.expectRevert(ProtocolConfig.InvalidConfig.selector);
-        cfg.setConfig(5 minutes, 12 hours, 3, 1000); // maxDuration < 1 day
+        _setTlockRoundConfig(cfg, 5 minutes, 12 hours, 3, 1000); // maxDuration < 1 day
     }
 
     function test_SetConfig_MinVotersTooLow_Reverts() public {
         ProtocolConfig cfg = ProtocolConfig(address(engine.protocolConfig()));
         vm.prank(owner);
         vm.expectRevert(ProtocolConfig.InvalidConfig.selector);
-        cfg.setConfig(5 minutes, 7 days, 1, 1000); // minVoters < 2
+        _setTlockRoundConfig(cfg, 5 minutes, 7 days, 1, 1000); // minVoters < 2
     }
 
     function test_SetConfig_MaxVotersLessThanMin_Reverts() public {
         ProtocolConfig cfg = ProtocolConfig(address(engine.protocolConfig()));
         vm.prank(owner);
         vm.expectRevert(ProtocolConfig.InvalidConfig.selector);
-        cfg.setConfig(5 minutes, 7 days, 5, 3); // maxVoters < minVoters
+        _setTlockRoundConfig(cfg, 5 minutes, 7 days, 5, 3); // maxVoters < minVoters
     }
 
     // --- VoterIdNFT integration ---

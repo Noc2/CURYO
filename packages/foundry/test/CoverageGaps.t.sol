@@ -575,7 +575,7 @@ contract RoundSettlementEdgeCaseTest is VotingTestBase {
         ProtocolConfig(protocolConfigAddress).setRewardDistributor(address(distributor));
         ProtocolConfig(protocolConfigAddress).setCategoryRegistry(address(mockCategoryRegistry));
         ProtocolConfig(protocolConfigAddress).setTreasury(treasury);
-        ProtocolConfig(protocolConfigAddress).setConfig(5 minutes, 7 days, 2, 200);
+        _setTlockRoundConfig(ProtocolConfig(protocolConfigAddress), 5 minutes, 7 days, 2, 200);
 
         crep.mint(owner, 1_000_000e6);
         crep.approve(address(engine), 1_000_000e6);
@@ -595,36 +595,36 @@ contract RoundSettlementEdgeCaseTest is VotingTestBase {
     function test_SetConfigEpochDurationTooShort() public {
         vm.prank(owner);
         vm.expectRevert(ProtocolConfig.InvalidConfig.selector);
-        ProtocolConfig(protocolConfigAddress).setConfig(4 minutes, 7 days, 2, 200);
+        _setTlockRoundConfig(ProtocolConfig(protocolConfigAddress), 4 minutes, 7 days, 2, 200);
     }
 
     function test_SetConfigMaxDurationTooShort() public {
         vm.prank(owner);
         vm.expectRevert(ProtocolConfig.InvalidConfig.selector);
-        ProtocolConfig(protocolConfigAddress).setConfig(5 minutes, 23 hours, 2, 200);
+        _setTlockRoundConfig(ProtocolConfig(protocolConfigAddress), 5 minutes, 23 hours, 2, 200);
     }
 
     function test_SetConfigMinVotersTooLow() public {
         vm.prank(owner);
         vm.expectRevert(ProtocolConfig.InvalidConfig.selector);
-        ProtocolConfig(protocolConfigAddress).setConfig(5 minutes, 7 days, 1, 200);
+        _setTlockRoundConfig(ProtocolConfig(protocolConfigAddress), 5 minutes, 7 days, 1, 200);
     }
 
     function test_SetConfigMaxVotersLessThanMin() public {
         vm.prank(owner);
         vm.expectRevert(ProtocolConfig.InvalidConfig.selector);
-        ProtocolConfig(protocolConfigAddress).setConfig(5 minutes, 7 days, 5, 4);
+        _setTlockRoundConfig(ProtocolConfig(protocolConfigAddress), 5 minutes, 7 days, 5, 4);
     }
 
     function test_SetConfigMaxVotersExceedsLimit() public {
         vm.prank(owner);
         vm.expectRevert(ProtocolConfig.InvalidConfig.selector);
-        ProtocolConfig(protocolConfigAddress).setConfig(5 minutes, 7 days, 2, 10001);
+        _setTlockRoundConfig(ProtocolConfig(protocolConfigAddress), 5 minutes, 7 days, 2, 10001);
     }
 
     function test_SetConfigValidBoundary() public {
         vm.prank(owner);
-        ProtocolConfig(protocolConfigAddress).setConfig(1 hours, 14 days, 3, 500);
+        _setTlockRoundConfig(ProtocolConfig(protocolConfigAddress), 1 hours, 14 days, 3, 500);
     }
 
     // --- Zero amount reverts ---
@@ -804,7 +804,7 @@ contract RoundSettlementEdgeCaseTest is VotingTestBase {
         ProtocolConfig(address(engine2.protocolConfig())).setCategoryRegistry(address(mockCategoryRegistry2));
         ProtocolConfig(address(engine2.protocolConfig())).setRewardDistributor(address(dist2));
         ProtocolConfig(address(engine2.protocolConfig())).setTreasury(treasury);
-        ProtocolConfig(address(engine2.protocolConfig())).setConfig(5 minutes, 7 days, 2, 200);
+        _setTlockRoundConfig(ProtocolConfig(address(engine2.protocolConfig())), 5 minutes, 7 days, 2, 200);
 
         vm.stopPrank();
 

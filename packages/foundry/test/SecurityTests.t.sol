@@ -102,8 +102,8 @@ abstract contract SecurityHarnessBase is VotingTestBase {
         ProtocolConfig config = ProtocolConfig(address(votingEngine.protocolConfig()));
         config.setCategoryRegistry(address(mockCategoryRegistry));
         config.setTreasury(treasury);
-        config.setDrandConfig(DEFAULT_DRAND_CHAIN_HASH, DEFAULT_DRAND_GENESIS_TIME, DEFAULT_DRAND_PERIOD);
-        config.setConfig(epochDuration, 7 days, 2, 200);
+        _setTlockDrandConfig(config, DEFAULT_DRAND_CHAIN_HASH, DEFAULT_DRAND_GENESIS_TIME, DEFAULT_DRAND_PERIOD);
+        _setTlockRoundConfig(config, epochDuration, 7 days, 2, 200);
     }
 
     function _fundConsensusReserve(CuryoReputation token, RoundVotingEngine votingEngine, address owner) internal {

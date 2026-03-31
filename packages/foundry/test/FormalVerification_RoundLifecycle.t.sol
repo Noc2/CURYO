@@ -87,7 +87,7 @@ contract FormalVerification_RoundLifecycleTest is VotingTestBase {
         ProtocolConfig(address(engine.protocolConfig())).setTreasury(treasuryAddr);
 
         // Config: epochDuration=5min, maxDuration=7d, minVoters=2, maxVoters=200
-        ProtocolConfig(address(engine.protocolConfig())).setConfig(EPOCH_DURATION, MAX_DURATION, MIN_VOTERS, 200);
+        _setTlockRoundConfig(ProtocolConfig(address(engine.protocolConfig())), EPOCH_DURATION, MAX_DURATION, MIN_VOTERS, 200);
 
         // Fund consensus reserve
         crepToken.mint(owner, 100_000e6);
@@ -437,7 +437,7 @@ contract FormalVerification_RoundLifecycleTest is VotingTestBase {
     function test_RevealFailed_RefundsOnlyRevealedVotes() public {
         ProtocolConfig cfg = ProtocolConfig(address(engine.protocolConfig()));
         vm.prank(owner);
-        cfg.setConfig(EPOCH_DURATION, MAX_DURATION, 3, 200);
+        _setTlockRoundConfig(cfg, EPOCH_DURATION, MAX_DURATION, 3, 200);
 
         uint256 cid = _submit();
 
@@ -505,7 +505,7 @@ contract FormalVerification_RoundLifecycleTest is VotingTestBase {
     function test_RefundFlow_CancelledRound() public {
         ProtocolConfig cfg = ProtocolConfig(address(engine.protocolConfig()));
         vm.prank(owner);
-        cfg.setConfig(EPOCH_DURATION, MAX_DURATION, 4, 200);
+        _setTlockRoundConfig(cfg, EPOCH_DURATION, MAX_DURATION, 4, 200);
 
         uint256 cid = _submit();
 
