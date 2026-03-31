@@ -86,6 +86,12 @@ describe("handleStreamableHttpRequest", () => {
       defaultIdentityId: null,
       identities: [],
       contracts: null,
+      policy: {
+        maxVoteStake: null,
+        allowedSubmissionHosts: [],
+        submissionRevealPollIntervalMs: 500,
+        submissionRevealTimeoutMs: 30000,
+      },
     },
   };
 

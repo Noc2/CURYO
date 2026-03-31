@@ -215,6 +215,12 @@ export function registerResources(server: McpServer, config: ServerConfig, ponde
           enabled: config.write.enabled,
           chainId: config.write.chainId,
           chainName: config.write.chainName,
+          policy: {
+            maxVoteStake: config.write.policy.maxVoteStake?.toString() ?? null,
+            allowedSubmissionHosts: config.write.policy.allowedSubmissionHosts,
+            submissionRevealPollIntervalMs: config.write.policy.submissionRevealPollIntervalMs,
+            submissionRevealTimeoutMs: config.write.policy.submissionRevealTimeoutMs,
+          },
         },
         tools: getToolCatalog(config).map(({ name, title }) => ({ name, title })),
         prompts: PROMPT_CATALOG.map(({ name, title }) => ({ name, title })),
@@ -264,6 +270,12 @@ export function registerResources(server: McpServer, config: ServerConfig, ponde
           chainId: config.write.chainId,
           chainName: config.write.chainName,
           identities: config.write.identities.length,
+          policy: {
+            maxVoteStake: config.write.policy.maxVoteStake?.toString() ?? null,
+            allowedSubmissionHosts: config.write.policy.allowedSubmissionHosts,
+            submissionRevealPollIntervalMs: config.write.policy.submissionRevealPollIntervalMs,
+            submissionRevealTimeoutMs: config.write.policy.submissionRevealTimeoutMs,
+          },
         },
         capabilities: {
           tools: getToolCatalog(config).length,

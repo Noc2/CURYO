@@ -63,6 +63,13 @@ export interface WriteContractsConfig {
   frontendRegistry: Address;
 }
 
+export interface WritePolicyConfig {
+  maxVoteStake: bigint | null;
+  allowedSubmissionHosts: string[];
+  submissionRevealPollIntervalMs: number;
+  submissionRevealTimeoutMs: number;
+}
+
 export interface WriteConfig {
   enabled: boolean;
   rpcUrl: string | null;
@@ -72,6 +79,7 @@ export interface WriteConfig {
   defaultIdentityId: string | null;
   identities: WriteIdentityConfig[];
   contracts: WriteContractsConfig | null;
+  policy: WritePolicyConfig;
 }
 
 interface RawHttpTokenConfig {
@@ -106,6 +114,8 @@ const DEFAULT_HTTP_RATE_LIMIT_WINDOW_MS = 60_000;
 const DEFAULT_HTTP_READ_REQUESTS_PER_WINDOW = 120;
 const DEFAULT_HTTP_WRITE_REQUESTS_PER_WINDOW = 20;
 const DEFAULT_MAX_GAS_PER_TX = 2_000_000;
+const DEFAULT_SUBMISSION_REVEAL_POLL_INTERVAL_MS = 500;
+const DEFAULT_SUBMISSION_REVEAL_TIMEOUT_MS = 30_000;
 
 const KNOWN_CHAIN_NAMES: Record<number, string> = {
   31337: "Foundry",
@@ -245,6 +255,19 @@ function parseOptionalTimestamp(value: string | null | undefined, label: string,
   return new Date(timestamp).toISOString();
 }
 
+function parseOptionalBigInt(value: string | undefined, label: string, errors: string[]): bigint | null {
+  if (value === undefined) {
+    return null;
+  }
+
+  if (!/^\d+$/.test(value)) {
+    errors.push(`${label} must be an unsigned integer string`);
+    return null;
+  }
+
+  return BigInt(value);
+}
+
 function parseAddressValue(value: string, label: string, errors: string[]): Address | null {
   if (!isAddress(value)) {
     errors.push(`${label} must be a valid address`);
@@ -304,6 +327,23 @@ function resolveContractAddress(params: {
 
 function loadWriteConfig(env: NodeJS.ProcessEnv): WriteConfig {
   const enabled = parseBooleanEnv(readEnv(env, "CURYO_MCP_WRITE_ENABLED"), false);
+  const policy: WritePolicyConfig = {
+    maxVoteStake: null,
+    allowedSubmissionHosts: normalizeHeaderNames(parseCsvEnv(readEnv(env, "CURYO_MCP_WRITE_SUBMISSION_HOST_ALLOWLIST"))),
+    submissionRevealPollIntervalMs: parseIntegerEnv(
+      readEnv(env, "CURYO_MCP_WRITE_SUBMISSION_REVEAL_POLL_MS"),
+      DEFAULT_SUBMISSION_REVEAL_POLL_INTERVAL_MS,
+      "CURYO_MCP_WRITE_SUBMISSION_REVEAL_POLL_MS",
+      1,
+    ),
+    submissionRevealTimeoutMs: parseIntegerEnv(
+      readEnv(env, "CURYO_MCP_WRITE_SUBMISSION_REVEAL_TIMEOUT_MS"),
+      DEFAULT_SUBMISSION_REVEAL_TIMEOUT_MS,
+      "CURYO_MCP_WRITE_SUBMISSION_REVEAL_TIMEOUT_MS",
+      1,
+    ),
+  };
+
   if (!enabled) {
     return {
       enabled: false,
@@ -314,11 +354,13 @@ function loadWriteConfig(env: NodeJS.ProcessEnv): WriteConfig {
       defaultIdentityId: null,
       identities: [],
       contracts: null,
+      policy,
     };
   }
 
   const errors: string[] = [];
   const warnings: string[] = [];
+  policy.maxVoteStake = parseOptionalBigInt(readEnv(env, "CURYO_MCP_WRITE_MAX_VOTE_STAKE"), "CURYO_MCP_WRITE_MAX_VOTE_STAKE", errors);
 
   const rpcUrlValue = readEnv(env, "CURYO_MCP_RPC_URL") ?? readEnv(env, "RPC_URL");
   let rpcUrl: string | null = null;
@@ -505,6 +547,7 @@ function loadWriteConfig(env: NodeJS.ProcessEnv): WriteConfig {
     defaultIdentityId,
     identities,
     contracts,
+    policy,
   };
 }
 

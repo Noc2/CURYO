@@ -54,6 +54,12 @@ describe("loadConfig", () => {
         defaultIdentityId: null,
         identities: [],
         contracts: null,
+        policy: {
+          maxVoteStake: null,
+          allowedSubmissionHosts: [],
+          submissionRevealPollIntervalMs: 500,
+          submissionRevealTimeoutMs: 30000,
+        },
       },
     });
   });
@@ -161,6 +167,12 @@ describe("loadConfig", () => {
         frontendAddress: "0x7777777777777777777777777777777777777777",
       }),
     ]);
+    expect(config.write.policy).toEqual({
+      maxVoteStake: null,
+      allowedSubmissionHosts: [],
+      submissionRevealPollIntervalMs: 500,
+      submissionRevealTimeoutMs: 30000,
+    });
     expect(config.write.contracts).toEqual(
       expect.objectContaining({
         votingEngine: expect.stringMatching(/^0x[0-9a-fA-F]{40}$/),
@@ -198,6 +210,32 @@ describe("loadConfig", () => {
       readRequestsPerWindow: 55,
       writeRequestsPerWindow: 7,
       trustedProxyHeaders: ["x-real-ip", "x-forwarded-for"],
+    });
+  });
+
+  it("loads MCP write policy overrides", () => {
+    const config = loadConfig({
+      CURYO_MCP_WRITE_ENABLED: "true",
+      CURYO_MCP_RPC_URL: "https://rpc.celo.example",
+      CURYO_MCP_CHAIN_ID: "11142220",
+      CURYO_MCP_WRITE_IDENTITIES: JSON.stringify([
+        {
+          id: "writer",
+          privateKey: `0x${"11".repeat(32)}`,
+          frontendAddress: "0x7777777777777777777777777777777777777777",
+        },
+      ]),
+      CURYO_MCP_WRITE_MAX_VOTE_STAKE: "5000000000000000000",
+      CURYO_MCP_WRITE_SUBMISSION_HOST_ALLOWLIST: "curyo.xyz,example.com",
+      CURYO_MCP_WRITE_SUBMISSION_REVEAL_POLL_MS: "250",
+      CURYO_MCP_WRITE_SUBMISSION_REVEAL_TIMEOUT_MS: "45000",
+    });
+
+    expect(config.write.policy).toEqual({
+      maxVoteStake: 5000000000000000000n,
+      allowedSubmissionHosts: ["curyo.xyz", "example.com"],
+      submissionRevealPollIntervalMs: 250,
+      submissionRevealTimeoutMs: 45000,
     });
   });
 });
