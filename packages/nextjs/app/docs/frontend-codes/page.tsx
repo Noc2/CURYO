@@ -1,29 +1,83 @@
+import Link from "next/link";
 import type { NextPage } from "next";
 import { protocolDocFacts } from "~~/lib/docs/protocolFacts";
 
 const FrontendCodes: NextPage = () => {
   return (
     <article className="prose max-w-none">
-      <h1>Frontend Codes</h1>
+      <h1>Frontend Integrations</h1>
       <p className="lead text-base-content/60 text-lg">
-        Build interfaces for Curyo and earn cREP frontend fees from votes made through your frontend.
+        Add Curyo to an existing app with the SDK, then register a frontend operator if you want votes from your
+        interface to accrue frontend fees.
       </p>
 
-      <h2>Overview</h2>
+      <h2>Two Tracks</h2>
+      <p>
+        Most teams should think about integration in two layers. First, make the product work well in your app. Second,
+        decide whether you also want to operate a registered frontend address and participate in the protocol&apos;s
+        frontend-fee model.
+      </p>
+
+      <div className="not-prose grid gap-4 sm:grid-cols-2 my-6">
+        <div className="surface-card rounded-xl p-4">
+          <h3 className="mb-1.5 text-base font-semibold">Use the SDK</h3>
+          <p className="text-base text-base-content/60 leading-relaxed">
+            Use <code>@curyo/sdk</code> when you want hosted reads, vote helpers, and frontend attribution support in an
+            existing website or app.
+          </p>
+          <Link href="/docs/sdk" className="link link-primary">
+            Open SDK docs
+          </Link>
+        </div>
+
+        <div className="surface-card rounded-xl p-4">
+          <h3 className="mb-1.5 text-base font-semibold">Register an Operator</h3>
+          <p className="text-base text-base-content/60 leading-relaxed">
+            Register a frontend address when you want votes made through your interface to earn{" "}
+            <strong>{protocolDocFacts.frontendShareLabel}</strong> from settled two-sided rounds.
+          </p>
+          <a href="#register-a-frontend-operator" className="link link-primary">
+            Jump to operator setup
+          </a>
+        </div>
+      </div>
+
+      <h2>Start With the SDK</h2>
+      <p>
+        The SDK is the fastest path for integrating Curyo into an existing codebase. It packages the hosted read client
+        and the vote/frontend helpers that the reference app already relies on.
+      </p>
+      <ul>
+        <li>Use it to fetch indexed content, profiles, rounds, votes, stats, categories, and frontend records.</li>
+        <li>
+          Use it to build vote commit payloads and transfer calldata without copying protocol plumbing into your app.
+        </li>
+        <li>
+          Use <code>frontendCode</code> or <code>defaultFrontendCode</code> when your deployment should attribute votes
+          to a registered frontend operator.
+        </li>
+      </ul>
+      <p>
+        The full implementation guide lives on the{" "}
+        <Link href="/docs/sdk" className="link link-primary">
+          SDK page
+        </Link>
+        .
+      </p>
+
+      <h2 id="register-a-frontend-operator">Register a Frontend Operator</h2>
       <p>
         Frontend operators who build frontends, mobile apps, or integrations receive{" "}
         <strong>{protocolDocFacts.frontendShareLabel}</strong> from settled two-sided rounds on votes made through their
         interface.
       </p>
-
-      <h2>How to Register</h2>
       <ol>
         <li>
           <strong>Stake 1,000 cREP</strong> to the FrontendRegistry contract.
         </li>
         <li>
-          <strong>Integrate:</strong> Include your registered address in the vote payload sent through{" "}
-          <code>CuryoReputation.transferAndCall()</code>.
+          <strong>Integrate:</strong> Include your registered address in the vote payload, or configure it as the
+          default frontend code in the SDK.
         </li>
         <li>
           <strong>Claim:</strong> First call{" "}
@@ -34,7 +88,7 @@ const FrontendCodes: NextPage = () => {
         </li>
       </ol>
 
-      <h2>Integration</h2>
+      <h2>Frontend Attribution</h2>
       <p>Include your frontend address in the payload you send through the single-transaction vote flow:</p>
       <pre className="bg-base-200 p-4 rounded-lg overflow-x-auto">
         <code>{`CuryoReputation.transferAndCall(
@@ -49,14 +103,21 @@ const FrontendCodes: NextPage = () => {
 )`}</code>
       </pre>
       <p>
-        Or set the <code>NEXT_PUBLIC_FRONTEND_CODE</code> environment variable to your address and the SDK will include
-        it automatically.
+        If you are using the SDK or the reference app, set <code>NEXT_PUBLIC_FRONTEND_CODE</code> to your operator
+        address and the vote helpers will include it automatically.
       </p>
 
-      <h2>Running a Resolution Service</h2>
+      <h2>Operator Responsibilities</h2>
       <p>
-        Every frontend operator should also run a <strong>resolution service</strong> &mdash; a background service that
-        keeps the protocol moving. It performs three critical tasks:
+        Registering a frontend operator is more than adding one address to calldata. If you want to run a serious
+        production integration, you should treat fee attribution, round resolution, indexed reads, and moderation as
+        part of the operator surface.
+      </p>
+
+      <h3>Run a Resolution Service</h3>
+      <p>
+        Every frontend operator should also run a <strong>resolution service</strong>, a background service that keeps
+        the protocol moving. It performs three critical tasks:
       </p>
       <ol>
         <li>
@@ -89,7 +150,7 @@ const FrontendCodes: NextPage = () => {
         becomes.
       </p>
 
-      <h2>Running an Indexer / Back-End</h2>
+      <h3>Run an Indexer or Back-End</h3>
       <p>
         For the best user experience, frontend operators should run their own <strong>indexer</strong> and/or{" "}
         <strong>back-end service</strong>. Reading blockchain data directly from an RPC node for every page load is slow
@@ -114,12 +175,12 @@ const FrontendCodes: NextPage = () => {
         (Ponder, The Graph, custom solutions) as long as your frontend can serve data quickly and reliably.
       </p>
 
-      <h2>Content Moderation</h2>
+      <h3>Own Your Moderation Layer</h3>
       <p>
         Frontend operators are allowed and encouraged to implement <strong>client-side content moderation</strong> to
         comply with local regulations and their own platform policies. Because Curyo is a decentralized protocol, there
-        is no protocol-level censorship &mdash; content submitted to the blockchain is permanent. However, each frontend
-        is free to decide what it displays to its users.
+        is no protocol-level censorship, and content submitted to the blockchain is permanent. However, each frontend is
+        free to decide what it displays to its users.
       </p>
       <p>The reference implementation includes a keyword-based blocklist that:</p>
       <ul>
@@ -137,19 +198,18 @@ const FrontendCodes: NextPage = () => {
       <p>Frontend operators can customize and extend their moderation approach in several ways:</p>
       <ul>
         <li>
-          <strong>Keyword filtering</strong> &mdash; Expand or adjust the built-in blocklist of prohibited terms for
-          URLs and text.
+          <strong>Keyword filtering</strong> - Expand or adjust the built-in blocklist of prohibited terms for URLs and
+          text.
         </li>
         <li>
-          <strong>Domain blocklists</strong> &mdash; Maintain a list of domains that should never be displayed or
-          submitted.
+          <strong>Domain blocklists</strong> - Maintain a list of domains that should never be displayed or submitted.
         </li>
         <li>
-          <strong>Third-party moderation APIs</strong> &mdash; Integrate services like content safety classifiers for
-          more sophisticated filtering.
+          <strong>Third-party moderation APIs</strong> - Integrate services like content safety classifiers for more
+          sophisticated filtering.
         </li>
         <li>
-          <strong>Manual review workflows</strong> &mdash; Implement flagging and human review for edge cases.
+          <strong>Manual review workflows</strong> - Implement flagging and human review for edge cases.
         </li>
       </ul>
       <p>
@@ -161,14 +221,24 @@ const FrontendCodes: NextPage = () => {
       <p>Frontend operators are subject to governance control:</p>
       <ul>
         <li>
-          <strong>Slashing</strong> &mdash; Governance can slash staked cREP for abuse and confiscate already accrued
-          frontend fees.
+          <strong>Slashing</strong> - Governance can slash staked cREP for abuse and confiscate already accrued frontend
+          fees.
         </li>
         <li>
-          <strong>Rebonding required</strong> &mdash; After a partial slash, operators must top back up to the full
-          1,000 cREP stake before frontend fees can accrue again.
+          <strong>Rebonding required</strong> - After a partial slash, operators must top back up to the full 1,000 cREP
+          stake before frontend fees can accrue again.
         </li>
       </ul>
+
+      <div className="not-prose mt-8 rounded-xl p-4 surface-card">
+        <p className="text-base-content/60">
+          Start with{" "}
+          <Link href="/docs/sdk" className="link link-primary">
+            SDK
+          </Link>{" "}
+          for implementation details, then come back here when you are ready to run a fee-earning frontend operator.
+        </p>
+      </div>
     </article>
   );
 };

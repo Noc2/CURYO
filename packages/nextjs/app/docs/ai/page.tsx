@@ -84,12 +84,17 @@ https://mcp.curyo.xyz/mcp`}</code>
             </tr>
             <tr>
               <td>Authentication</td>
-              <td>Scoped bearer tokens with optional expiry, session metadata, and identity binding for hosted writes</td>
+              <td>
+                Scoped bearer tokens with optional expiry, session metadata, and identity binding for hosted writes
+              </td>
               <td>Scoped per-user auth for writes, with auditable wallet binding</td>
             </tr>
             <tr>
               <td>Write support</td>
-              <td>Typed write tools in repo: vote, submit_content, claim_reward, claim_frontend_fee, with preflight simulation and policy guards</td>
+              <td>
+                Typed write tools in repo: vote, submit_content, claim_reward, claim_frontend_fee, with preflight
+                simulation and policy guards
+              </td>
               <td>Small typed write surface, not arbitrary contract calls</td>
             </tr>
             <tr>
@@ -208,8 +213,8 @@ https://mcp.curyo.xyz/mcp`}</code>
       </ul>
       <p>
         The in-repo MCP package now includes token expiry metadata, HTTP rate limits, a Prometheus-style metrics
-        surface, and structured write audit events. That is a solid hosted beta foundation, but it is still not the
-        same thing as a fully managed production auth and signer platform.
+        surface, and structured write audit events. That is a solid hosted beta foundation, but it is still not the same
+        thing as a fully managed production auth and signer platform.
       </p>
       <p>
         Delegation already makes sense for voting and submission. Frontend registration itself is still a holder-only
@@ -323,8 +328,12 @@ https://mcp.curyo.xyz/mcp`}</code>
             Smart Contracts
           </Link>
           , and{" "}
+          <Link href="/docs/sdk" className="link link-primary">
+            SDK
+          </Link>
+          , and{" "}
           <Link href="/docs/frontend-codes" className="link link-primary">
-            Frontend Codes
+            Frontend Integrations
           </Link>
           .
         </p>

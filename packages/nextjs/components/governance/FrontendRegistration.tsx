@@ -487,7 +487,7 @@ export function FrontendRegistration() {
       <p className="text-base text-base-content/60">
         Stake 1,000 cREP and earn frontend fees.{" "}
         <Link href="/docs/frontend-codes" className="link link-primary">
-          Learn more →
+          Learn about frontend integrations →
         </Link>
       </p>
 
