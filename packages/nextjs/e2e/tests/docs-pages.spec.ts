@@ -11,6 +11,7 @@ test.describe("Documentation pages", () => {
     "/docs/tokenomics",
     "/docs/governance",
     "/docs/ai",
+    "/docs/sdk",
     "/docs/smart-contracts",
     "/docs/frontend-codes",
     "/docs/whitepaper",
