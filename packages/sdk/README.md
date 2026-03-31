@@ -16,3 +16,8 @@ Framework-agnostic frontend SDK foundations for integrating Curyo into existing 
 - small, wallet-agnostic write helpers
 
 Framework-specific hooks and UI components should live in a follow-up package rather than this core SDK.
+
+## Available Today
+
+- client config normalization via `createCuryoClient(...)`
+- vote/frontend helpers in `@curyo/sdk/vote`

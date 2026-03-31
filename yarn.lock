@@ -467,6 +467,7 @@ __metadata:
   dependencies:
     "@curyo/contracts": "workspace:*"
     "@curyo/node-utils": "workspace:*"
+    "@curyo/sdk": "workspace:*"
     "@heroicons/react": ~2.1.5
     "@next/bundle-analyzer": ^16.1.6
     "@playwright/test": ^1.58.2
@@ -542,7 +543,7 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"@curyo/sdk@workspace:packages/sdk":
+"@curyo/sdk@workspace:*, @curyo/sdk@workspace:packages/sdk":
   version: 0.0.0-use.local
   resolution: "@curyo/sdk@workspace:packages/sdk"
   dependencies:
