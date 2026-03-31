@@ -14,6 +14,7 @@ export interface ServerConfig {
   httpPublicBaseUrl: string | null;
   httpCorsOrigin: string;
   httpAuth: HttpAuthConfig;
+  httpRateLimit: HttpRateLimitConfig;
   write: WriteConfig;
 }
 
@@ -30,6 +31,18 @@ export interface HttpAuthTokenConfig {
   clientId: string;
   scopes: string[];
   identityId: string | null;
+  notBefore: string | null;
+  expiresAt: string | null;
+  subject: string | null;
+  kind: "static" | "session";
+}
+
+export interface HttpRateLimitConfig {
+  enabled: boolean;
+  windowMs: number;
+  readRequestsPerWindow: number;
+  writeRequestsPerWindow: number;
+  trustedProxyHeaders: string[];
 }
 
 export interface WriteIdentityConfig {
@@ -66,6 +79,10 @@ interface RawHttpTokenConfig {
   clientId?: string;
   scopes?: string[];
   identityId?: string | null;
+  notBefore?: string | null;
+  expiresAt?: string | null;
+  subject?: string | null;
+  kind?: "static" | "session";
 }
 
 interface RawWriteIdentityConfig {
@@ -85,6 +102,9 @@ const DEFAULT_HTTP_PATH = "/mcp";
 const DEFAULT_HTTP_CORS_ORIGIN = "http://localhost:3000";
 const DEFAULT_HTTP_AUTH_REALM = "curyo-mcp";
 const DEFAULT_HTTP_AUTH_SCOPES = ["mcp:read"] as const;
+const DEFAULT_HTTP_RATE_LIMIT_WINDOW_MS = 60_000;
+const DEFAULT_HTTP_READ_REQUESTS_PER_WINDOW = 120;
+const DEFAULT_HTTP_WRITE_REQUESTS_PER_WINDOW = 20;
 const DEFAULT_MAX_GAS_PER_TX = 2_000_000;
 
 const KNOWN_CHAIN_NAMES: Record<number, string> = {
@@ -190,6 +210,10 @@ function parseCsvEnv(value: string | undefined): string[] {
     .filter((entry) => entry.length > 0);
 }
 
+function normalizeHeaderNames(headers: string[]): string[] {
+  return headers.map((header) => header.trim().toLowerCase()).filter(Boolean);
+}
+
 function parseJsonEnv<T>(value: string | undefined, label: string): T | null {
   if (!value) {
     return null;
@@ -205,6 +229,20 @@ function parseJsonEnv<T>(value: string | undefined, label: string): T | null {
 
 function hashToken(token: string): string {
   return createHash("sha256").update(token, "utf8").digest("hex");
+}
+
+function parseOptionalTimestamp(value: string | null | undefined, label: string, errors: string[]): string | null {
+  if (value === null || value === undefined || value.trim().length === 0) {
+    return null;
+  }
+
+  const timestamp = Date.parse(value.trim());
+  if (Number.isNaN(timestamp)) {
+    errors.push(`${label} must be a valid ISO 8601 date-time string`);
+    return null;
+  }
+
+  return new Date(timestamp).toISOString();
 }
 
 function parseAddressValue(value: string, label: string, errors: string[]): Address | null {
@@ -488,6 +526,10 @@ function loadHttpAuthConfig(env: NodeJS.ProcessEnv, identityIds: ReadonlySet<str
       clientId: `static-bearer:${tokenHash.slice(0, 12)}`,
       scopes: [...defaultScopes],
       identityId: null,
+      notBefore: null,
+      expiresAt: null,
+      subject: null,
+      kind: "static",
     };
   });
 
@@ -521,12 +563,25 @@ function loadHttpAuthConfig(env: NodeJS.ProcessEnv, identityIds: ReadonlySet<str
       continue;
     }
 
+    const notBefore = parseOptionalTimestamp(rawToken.notBefore, `CURYO_MCP_HTTP_TOKENS_JSON[${index}].notBefore`, tokenErrors);
+    const expiresAt = parseOptionalTimestamp(rawToken.expiresAt, `CURYO_MCP_HTTP_TOKENS_JSON[${index}].expiresAt`, tokenErrors);
+    if (notBefore && expiresAt && Date.parse(notBefore) >= Date.parse(expiresAt)) {
+      tokenErrors.push(`CURYO_MCP_HTTP_TOKENS_JSON[${index}] must have expiresAt after notBefore`);
+      continue;
+    }
+
+    const kind = rawToken.kind === "session" ? "session" : "static";
+
     const tokenHash = hashToken(token);
     configuredTokens.push({
       tokenHash,
       clientId: rawToken.clientId?.trim() || `static-bearer:${tokenHash.slice(0, 12)}`,
       scopes: rawToken.scopes && rawToken.scopes.length > 0 ? rawToken.scopes.map((scope) => scope.trim()).filter(Boolean) : [...defaultScopes],
       identityId,
+      notBefore,
+      expiresAt,
+      subject: rawToken.subject?.trim() || null,
+      kind,
     });
   }
 
@@ -551,6 +606,31 @@ function loadHttpAuthConfig(env: NodeJS.ProcessEnv, identityIds: ReadonlySet<str
   };
 }
 
+function loadHttpRateLimitConfig(env: NodeJS.ProcessEnv): HttpRateLimitConfig {
+  return {
+    enabled: parseBooleanEnv(readEnv(env, "CURYO_MCP_HTTP_RATE_LIMIT_ENABLED"), true),
+    windowMs: parseIntegerEnv(
+      readEnv(env, "CURYO_MCP_HTTP_RATE_LIMIT_WINDOW_MS"),
+      DEFAULT_HTTP_RATE_LIMIT_WINDOW_MS,
+      "CURYO_MCP_HTTP_RATE_LIMIT_WINDOW_MS",
+      1,
+    ),
+    readRequestsPerWindow: parseIntegerEnv(
+      readEnv(env, "CURYO_MCP_HTTP_RATE_LIMIT_READ_LIMIT"),
+      DEFAULT_HTTP_READ_REQUESTS_PER_WINDOW,
+      "CURYO_MCP_HTTP_RATE_LIMIT_READ_LIMIT",
+      0,
+    ),
+    writeRequestsPerWindow: parseIntegerEnv(
+      readEnv(env, "CURYO_MCP_HTTP_RATE_LIMIT_WRITE_LIMIT"),
+      DEFAULT_HTTP_WRITE_REQUESTS_PER_WINDOW,
+      "CURYO_MCP_HTTP_RATE_LIMIT_WRITE_LIMIT",
+      0,
+    ),
+    trustedProxyHeaders: normalizeHeaderNames(parseCsvEnv(readEnv(env, "CURYO_MCP_HTTP_TRUSTED_PROXY_HEADERS"))),
+  };
+}
+
 export function loadConfig(env: NodeJS.ProcessEnv = process.env): ServerConfig {
   const ponderBaseUrl = normalizeBaseUrl(env.CURYO_PONDER_URL ?? env.PONDER_URL ?? DEFAULT_PONDER_URL);
   const transport = parseTransportEnv(env.CURYO_MCP_TRANSPORT);
@@ -569,6 +649,7 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): ServerConfig {
     httpPublicBaseUrl: normalizeOptionalBaseUrl(env.CURYO_MCP_PUBLIC_BASE_URL),
     httpCorsOrigin: env.CURYO_MCP_HTTP_CORS_ORIGIN ?? DEFAULT_HTTP_CORS_ORIGIN,
     httpAuth,
+    httpRateLimit: loadHttpRateLimitConfig(env),
     write,
   };
 }
