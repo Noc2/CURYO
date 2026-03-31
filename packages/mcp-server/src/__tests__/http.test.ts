@@ -316,6 +316,64 @@ describe("handleStreamableHttpRequest", () => {
       limit: 1,
     });
   });
+
+  it("keys anonymous requests by trusted proxy headers instead of the proxy hop", async () => {
+    __resetHttpRateLimitStateForTests();
+
+    const rateLimitedConfig = {
+      ...config,
+      httpRateLimit: {
+        enabled: true,
+        windowMs: 60_000,
+        readRequestsPerWindow: 1,
+        writeRequestsPerWindow: 1,
+        trustedProxyHeaders: ["x-forwarded-for"],
+      },
+    };
+
+    const firstRequest = {
+      url: "/mcp",
+      method: "POST",
+      headers: {
+        host: "127.0.0.1:3334",
+        "x-forwarded-for": "203.0.113.10",
+      },
+      socket: {
+        remoteAddress: "10.0.0.1",
+      },
+    } as unknown as IncomingMessage;
+
+    const secondRequest = {
+      url: "/mcp",
+      method: "POST",
+      headers: {
+        host: "127.0.0.1:3334",
+        "x-forwarded-for": "203.0.113.11",
+      },
+      socket: {
+        remoteAddress: "10.0.0.1",
+      },
+    } as unknown as IncomingMessage;
+
+    const firstResponse = createMockResponse();
+    await handleStreamableHttpRequest(firstRequest, firstResponse, rateLimitedConfig);
+
+    const secondResponse = createMockResponse();
+    await handleStreamableHttpRequest(secondRequest, secondResponse, rateLimitedConfig);
+
+    expect(firstResponse.statusCode).not.toBe(429);
+    expect(secondResponse.statusCode).not.toBe(429);
+
+    const repeatedResponse = createMockResponse();
+    await handleStreamableHttpRequest(firstRequest, repeatedResponse, rateLimitedConfig);
+
+    expect(repeatedResponse.statusCode).toBe(429);
+    expect(JSON.parse(repeatedResponse.body)).toMatchObject({
+      error: "Too many MCP requests in the current window",
+      policy: "read",
+      limit: 1,
+    });
+  });
 });
 
 describe("resolveAdvertisedHttpUrl", () => {

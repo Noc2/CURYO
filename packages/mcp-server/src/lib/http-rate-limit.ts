@@ -1,5 +1,6 @@
 import { createHash } from "node:crypto";
 import type { IncomingMessage } from "node:http";
+import { isIP } from "node:net";
 import type { AuthInfo } from "@modelcontextprotocol/sdk/server/auth/types.js";
 import type { HttpRateLimitConfig } from "../config.js";
 
@@ -125,7 +126,7 @@ function resolveNetworkIdentity(request: IncomingMessage, rateLimitConfig: HttpR
   }
 
   const socketIp = request.socket?.remoteAddress?.trim();
-  if (socketIp) {
+  if (socketIp && !isLikelyProxyHopIp(socketIp)) {
     return `ip:${socketIp}`;
   }
 
@@ -171,6 +172,54 @@ function buildFallbackFingerprint(request: IncomingMessage): string {
 
   const host = Array.isArray(headers.host) ? headers.host[0] ?? "" : headers.host ?? "";
   return hashIdentifier([...parts, host, request.url ?? ""].join("\n"));
+}
+
+function isLikelyProxyHopIp(value: string): boolean {
+  const normalized = value.split("%", 1)[0].trim().toLowerCase();
+  if (!normalized) {
+    return false;
+  }
+
+  if (normalized === "localhost" || normalized === "::1") {
+    return true;
+  }
+
+  if (normalized.startsWith("::ffff:")) {
+    return isLikelyProxyHopIp(normalized.slice("::ffff:".length));
+  }
+
+  const ipVersion = isIP(normalized);
+  if (ipVersion === 4) {
+    const octets = normalized.split(".").map(part => Number.parseInt(part, 10));
+    if (octets.length !== 4 || octets.some(part => !Number.isInteger(part) || part < 0 || part > 255)) {
+      return false;
+    }
+
+    if (octets[0] === 10 || octets[0] === 127) {
+      return true;
+    }
+
+    if (octets[0] === 169 && octets[1] === 254) {
+      return true;
+    }
+
+    if (octets[0] === 192 && octets[1] === 168) {
+      return true;
+    }
+
+    return octets[0] === 172 && octets[1] >= 16 && octets[1] <= 31;
+  }
+
+  if (ipVersion === 6) {
+    return (
+      normalized.startsWith("fc") ||
+      normalized.startsWith("fd") ||
+      normalized.startsWith("fe80:") ||
+      normalized.startsWith("::ffff:127.")
+    );
+  }
+
+  return false;
 }
 
 function hashIdentifier(value: string): string {
