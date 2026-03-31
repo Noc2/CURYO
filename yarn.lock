@@ -542,6 +542,18 @@ __metadata:
   languageName: unknown
   linkType: soft
 
+"@curyo/sdk@workspace:packages/sdk":
+  version: 0.0.0-use.local
+  resolution: "@curyo/sdk@workspace:packages/sdk"
+  dependencies:
+    "@curyo/contracts": "workspace:*"
+    "@types/node": ^20.10.7
+    tsx: ^4.21.0
+    typescript: ~5.8.2
+    viem: 2.39.0
+  languageName: unknown
+  linkType: soft
+
 "@discoveryjs/json-ext@npm:0.5.7":
   version: 0.5.7
   resolution: "@discoveryjs/json-ext@npm:0.5.7"
