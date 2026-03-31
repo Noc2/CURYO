@@ -134,6 +134,7 @@ const DEFAULT_HTTP_WRITE_REQUESTS_PER_WINDOW = 20;
 const DEFAULT_MAX_GAS_PER_TX = 2_000_000;
 const DEFAULT_SUBMISSION_REVEAL_POLL_INTERVAL_MS = 500;
 const DEFAULT_SUBMISSION_REVEAL_TIMEOUT_MS = 30_000;
+const LOCALHOST_HOSTNAMES = new Set(["localhost", "127.0.0.1", "::1"]);
 
 const KNOWN_CHAIN_NAMES: Record<number, string> = {
   31337: "Foundry",
@@ -164,6 +165,15 @@ export function normalizeHttpPath(value: string): string {
 export function normalizeOptionalBaseUrl(value: string | undefined): string | null {
   const trimmed = value?.trim();
   return trimmed ? normalizeBaseUrl(trimmed) : null;
+}
+
+function isLocalhostUrl(value: string): boolean {
+  try {
+    const parsed = new URL(value);
+    return LOCALHOST_HOSTNAMES.has(parsed.hostname);
+  } catch {
+    return false;
+  }
 }
 
 function readEnv(env: NodeJS.ProcessEnv, name: string): string | undefined {
@@ -748,11 +758,49 @@ function loadHttpRateLimitConfig(env: NodeJS.ProcessEnv): HttpRateLimitConfig {
   };
 }
 
+function validateProductionStreamableHttpConfig(params: {
+  env: NodeJS.ProcessEnv;
+  ponderBaseUrl: string;
+  httpCorsOrigin: string;
+  httpRateLimit: HttpRateLimitConfig;
+}): void {
+  if (params.env.NODE_ENV !== "production") {
+    return;
+  }
+
+  if (isLocalhostUrl(params.ponderBaseUrl)) {
+    throw new Error(
+      "CURYO_PONDER_URL or PONDER_URL must not point to localhost in production streamable-http deployments",
+    );
+  }
+
+  if (isLocalhostUrl(params.httpCorsOrigin)) {
+    throw new Error(
+      "CURYO_MCP_HTTP_CORS_ORIGIN must not point to localhost in production streamable-http deployments",
+    );
+  }
+
+  if (params.httpRateLimit.enabled && params.httpRateLimit.trustedProxyHeaders.length === 0) {
+    throw new Error(
+      "CURYO_MCP_HTTP_TRUSTED_PROXY_HEADERS is required in production when CURYO_MCP_TRANSPORT=streamable-http and rate limiting is enabled",
+    );
+  }
+}
+
 export function loadConfig(env: NodeJS.ProcessEnv = process.env): ServerConfig {
   const ponderBaseUrl = normalizeBaseUrl(env.CURYO_PONDER_URL ?? env.PONDER_URL ?? DEFAULT_PONDER_URL);
   const transport = parseTransportEnv(env.CURYO_MCP_TRANSPORT);
   const write = loadWriteConfig(env);
   const httpAuth = loadHttpAuthConfig(env, new Set(write.identities.map((identity) => identity.id)));
+  const httpRateLimit = loadHttpRateLimitConfig(env);
+  const httpCorsOrigin = env.CURYO_MCP_HTTP_CORS_ORIGIN ?? DEFAULT_HTTP_CORS_ORIGIN;
+
+  validateProductionStreamableHttpConfig({
+    env,
+    ponderBaseUrl,
+    httpCorsOrigin,
+    httpRateLimit,
+  });
 
   return {
     ponderBaseUrl,
@@ -764,9 +812,9 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): ServerConfig {
     httpPort: parseIntegerEnv(env.CURYO_MCP_HTTP_PORT, DEFAULT_HTTP_PORT, "CURYO_MCP_HTTP_PORT", 0),
     httpPath: normalizeHttpPath(env.CURYO_MCP_HTTP_PATH ?? DEFAULT_HTTP_PATH),
     httpPublicBaseUrl: normalizeOptionalBaseUrl(env.CURYO_MCP_PUBLIC_BASE_URL),
-    httpCorsOrigin: env.CURYO_MCP_HTTP_CORS_ORIGIN ?? DEFAULT_HTTP_CORS_ORIGIN,
+    httpCorsOrigin,
     httpAuth,
-    httpRateLimit: loadHttpRateLimitConfig(env),
+    httpRateLimit,
     write,
   };
 }

@@ -93,6 +93,53 @@ describe("loadConfig", () => {
     });
   });
 
+  it("rejects production streamable-http deployments that still point at localhost Ponder or CORS defaults", () => {
+    expect(() =>
+      loadConfig({
+        NODE_ENV: "production",
+        CURYO_MCP_TRANSPORT: "streamable-http",
+        CURYO_MCP_HTTP_CORS_ORIGIN: "https://app.curyo.xyz",
+        CURYO_MCP_HTTP_TRUSTED_PROXY_HEADERS: "x-real-ip",
+      }),
+    ).toThrow("CURYO_PONDER_URL or PONDER_URL must not point to localhost in production streamable-http deployments");
+
+    expect(() =>
+      loadConfig({
+        NODE_ENV: "production",
+        CURYO_MCP_TRANSPORT: "streamable-http",
+        CURYO_PONDER_URL: "https://ponder.curyo.xyz",
+        CURYO_MCP_HTTP_TRUSTED_PROXY_HEADERS: "x-real-ip",
+      }),
+    ).toThrow("CURYO_MCP_HTTP_CORS_ORIGIN must not point to localhost in production streamable-http deployments");
+  });
+
+  it("requires trusted proxy headers for production streamable-http rate limiting", () => {
+    expect(() =>
+      loadConfig({
+        NODE_ENV: "production",
+        CURYO_MCP_TRANSPORT: "streamable-http",
+        CURYO_PONDER_URL: "https://ponder.curyo.xyz",
+        CURYO_MCP_HTTP_CORS_ORIGIN: "https://app.curyo.xyz",
+      }),
+    ).toThrow(
+      "CURYO_MCP_HTTP_TRUSTED_PROXY_HEADERS is required in production when CURYO_MCP_TRANSPORT=streamable-http and rate limiting is enabled",
+    );
+  });
+
+  it("allows production streamable-http deployments when Ponder, CORS, and proxy headers are explicit", () => {
+    const config = loadConfig({
+      NODE_ENV: "production",
+      CURYO_MCP_TRANSPORT: "streamable-http",
+      CURYO_PONDER_URL: "https://ponder.curyo.xyz",
+      CURYO_MCP_HTTP_CORS_ORIGIN: "https://app.curyo.xyz",
+      CURYO_MCP_HTTP_TRUSTED_PROXY_HEADERS: "x-real-ip,x-forwarded-for",
+    });
+
+    expect(config.ponderBaseUrl).toBe("https://ponder.curyo.xyz");
+    expect(config.httpCorsOrigin).toBe("https://app.curyo.xyz");
+    expect(config.httpRateLimit.trustedProxyHeaders).toEqual(["x-real-ip", "x-forwarded-for"]);
+  });
+
   it("normalizes an optional public base URL", () => {
     const config = loadConfig({
       CURYO_MCP_TRANSPORT: "streamable-http",
