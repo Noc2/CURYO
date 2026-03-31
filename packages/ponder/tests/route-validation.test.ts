@@ -201,6 +201,26 @@ describe("registerContentRoutes", () => {
       hasMore: false,
     });
   });
+
+  it("uses full-text search conditions and relevance-first ordering", async () => {
+    const { queryBuilder } = mockPonderModules([{ id: 1n }]);
+    mockSharedModule();
+    const { registerContentRoutes } = await import("../src/api/routes/content-routes.js");
+
+    const app = new Hono();
+    registerContentRoutes(app);
+
+    const response = await app.request("http://localhost/content?search=radioactivity%20research&sortBy=relevance");
+
+    expect(response.status).toBe(200);
+
+    const whereArg = queryBuilder.where.mock.calls[0]?.[0];
+    expect(JSON.stringify(whereArg)).toContain("websearch_to_tsquery");
+    expect(JSON.stringify(whereArg)).not.toContain(" like ");
+
+    const [firstOrderBy] = queryBuilder.orderBy.mock.calls[0] ?? [];
+    expect(JSON.stringify(firstOrderBy)).toContain("ts_rank_cd");
+  });
 });
 
 describe("registerLeaderboardRoutes", () => {

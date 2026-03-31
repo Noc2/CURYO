@@ -6,6 +6,59 @@ import type { ApiApp } from "../shared.js";
 import { attachOpenRoundSummary, jsonBig, parseBigIntList } from "../shared.js";
 import { getUrlLookupCandidates, isValidAddress, normalizeContentSearchQuery, safeBigInt, safeLimit, safeOffset } from "../utils.js";
 
+function createContentSearchVector() {
+  return sql`(
+    setweight(to_tsvector('simple', coalesce(${content.title}, '')), 'A') ||
+    setweight(to_tsvector('simple', coalesce(${content.tags}, '')), 'B') ||
+    setweight(to_tsvector('simple', coalesce(${content.description}, '')), 'C')
+  )`;
+}
+
+function buildContentSearchExpressions(search: string) {
+  const vector = createContentSearchVector();
+  const query = sql`websearch_to_tsquery('simple', ${search})`;
+  const rank = sql<number>`ts_rank_cd(${vector}, ${query}, 32)`;
+
+  return {
+    condition: sql<boolean>`${vector} @@ ${query}`,
+    rank,
+  };
+}
+
+function getContentOrderBy(sortBy: string) {
+  switch (sortBy) {
+    case "oldest":
+      return [asc(content.createdAt), asc(content.id)];
+    case "highest_rated":
+      return [desc(content.rating), desc(content.createdAt), desc(content.id)];
+    case "lowest_rated":
+      return [asc(content.rating), desc(content.createdAt), desc(content.id)];
+    case "most_votes":
+      return [desc(content.totalVotes), desc(content.createdAt), desc(content.id)];
+    case "newest":
+    case "relevance":
+    default:
+      return [desc(content.createdAt), desc(content.id)];
+  }
+}
+
+function getSearchOrderBy(searchRank: ReturnType<typeof sql<number>>, sortBy: string) {
+  switch (sortBy) {
+    case "oldest":
+      return [desc(searchRank), asc(content.createdAt), asc(content.id)];
+    case "highest_rated":
+      return [desc(searchRank), desc(content.rating), desc(content.createdAt), desc(content.id)];
+    case "lowest_rated":
+      return [desc(searchRank), asc(content.rating), desc(content.createdAt), desc(content.id)];
+    case "most_votes":
+      return [desc(searchRank), desc(content.totalVotes), desc(content.createdAt), desc(content.id)];
+    case "newest":
+    case "relevance":
+    default:
+      return [desc(searchRank), desc(content.createdAt), desc(content.id)];
+  }
+}
+
 export function registerContentRoutes(app: ApiApp) {
   app.get("/content", async (c) => {
     const categoryId = c.req.query("categoryId");
@@ -47,46 +100,20 @@ export function registerContentRoutes(app: ApiApp) {
       if (!isValidAddress(submitter)) return c.json({ error: "Invalid submitter address" }, 400);
       conditions.push(eq(content.submitter, submitter.toLowerCase() as `0x${string}`));
     }
+    const searchExpressions = search ? buildContentSearchExpressions(search) : null;
     if (search) {
-      const pattern = `%${search}%`;
-      conditions.push(
-        sql<boolean>`(
-          lower(${content.title}) like ${pattern}
-          or lower(${content.description}) like ${pattern}
-          or lower(${content.url}) like ${pattern}
-          or lower(${content.tags}) like ${pattern}
-        )`,
-      );
+      conditions.push(searchExpressions!.condition);
     }
 
     const where = conditions.length > 0 ? and(...conditions) : undefined;
     const queryLimit = search ? limit + 1 : limit;
-
-    let orderBy;
-    switch (sortBy) {
-      case "oldest":
-        orderBy = asc(content.createdAt);
-        break;
-      case "highest_rated":
-        orderBy = desc(content.rating);
-        break;
-      case "lowest_rated":
-        orderBy = asc(content.rating);
-        break;
-      case "most_votes":
-        orderBy = desc(content.totalVotes);
-        break;
-      case "newest":
-      default:
-        orderBy = desc(content.createdAt);
-        break;
-    }
+    const orderByExprs = searchExpressions ? getSearchOrderBy(searchExpressions.rank, sortBy) : getContentOrderBy(sortBy);
 
     const items = await db
       .select()
       .from(content)
       .where(where)
-      .orderBy(orderBy)
+      .orderBy(...orderByExprs)
       .limit(queryLimit)
       .offset(offset);
 

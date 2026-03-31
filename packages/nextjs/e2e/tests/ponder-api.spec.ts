@@ -51,6 +51,19 @@ test.describe("Ponder API endpoints", () => {
     }
   });
 
+  test("GET /content search returns relevance-ranked matches", async () => {
+    const data = await getContentList({
+      status: "all",
+      search: "radioactivity research",
+      sortBy: "relevance",
+      limit: 5,
+    });
+
+    expect(data.items.length).toBeGreaterThan(0);
+    expect(data.items[0]?.title).toContain("Marie Curie");
+    expect(data).toHaveProperty("hasMore");
+  });
+
   test("GET /leaderboard returns ranked list", async () => {
     const data = await ponderGet("/leaderboard?type=voters&limit=10");
     expect(data).toHaveProperty("items");
