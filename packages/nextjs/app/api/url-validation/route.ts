@@ -1,11 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
+import { shouldPerformLiveValidation } from "./liveValidation";
 import { inArray } from "drizzle-orm";
 import { db } from "~~/lib/db";
 import { urlValidations } from "~~/lib/db/schema";
 import { detectPlatform, getThumbnailUrl } from "~~/utils/platforms";
 import { checkRateLimit } from "~~/utils/rateLimit";
 import { resolveEmbed } from "~~/utils/resolveEmbed";
-import { isSafeUrl } from "~~/utils/urlSafety";
 
 const RATE_LIMIT_GET = { limit: 100, windowMs: 60_000 };
 const RATE_LIMIT_POST = { limit: 20, windowMs: 60_000 };
@@ -75,22 +75,30 @@ export async function GET(request: NextRequest) {
   }
 
   const urls = normalizedUrls.filter(isNonNullString);
+  const liveValidationUrls = urls.filter(shouldPerformLiveValidation);
 
   if (urls.length === 0) {
     return NextResponse.json({ results: {} });
   }
 
   let rows: UrlValidationRow[] = [];
-  try {
-    rows = await db.select().from(urlValidations).where(inArray(urlValidations.url, urls));
-  } catch (error) {
-    console.warn("[url-validation] cache read failed, returning uncached results:", error);
+  if (liveValidationUrls.length > 0) {
+    try {
+      rows = await db.select().from(urlValidations).where(inArray(urlValidations.url, liveValidationUrls));
+    } catch (error) {
+      console.warn("[url-validation] cache read failed, returning uncached results:", error);
+    }
   }
 
   const results: Record<string, ValidationResult | null> = {};
   const rowMap = new Map(rows.map(r => [r.url, r]));
 
   for (const url of urls) {
+    if (!shouldPerformLiveValidation(url)) {
+      results[url] = null;
+      continue;
+    }
+
     const row = rowMap.get(url);
     if (row) {
       results[url] = {
@@ -139,13 +147,16 @@ export async function POST(request: NextRequest) {
   }
 
   const urls = normalizedUrls.filter(isNonNullString);
+  const liveValidationUrls = urls.filter(shouldPerformLiveValidation);
 
   // Fetch existing results
   let existing: UrlValidationRow[] = [];
-  try {
-    existing = await db.select().from(urlValidations).where(inArray(urlValidations.url, urls));
-  } catch (error) {
-    console.warn("[url-validation] cache read failed, validating without cache:", error);
+  if (liveValidationUrls.length > 0) {
+    try {
+      existing = await db.select().from(urlValidations).where(inArray(urlValidations.url, liveValidationUrls));
+    } catch (error) {
+      console.warn("[url-validation] cache read failed, validating without cache:", error);
+    }
   }
   const existingMap = new Map(existing.map(r => [r.url, r]));
 
@@ -153,7 +164,7 @@ export async function POST(request: NextRequest) {
   const stale = now.getTime() - STALE_THRESHOLD_MS;
 
   // Find URLs that need (re-)validation
-  const toValidate = urls.filter(url => {
+  const toValidate = liveValidationUrls.filter(url => {
     const row = existingMap.get(url);
     if (!row) return true;
     return getTimestampMs(row.checkedAt) < stale;
@@ -201,7 +212,7 @@ export async function POST(request: NextRequest) {
 
   // Build response
   const allResults: Record<string, ValidationResult> = {};
-  for (const url of urls) {
+  for (const url of liveValidationUrls) {
     const newResult = newResults.get(url);
     if (newResult !== undefined) {
       allResults[url] = { isValid: newResult, checkedAt: now.toISOString() };
@@ -239,34 +250,6 @@ async function validateUrl(url: string): Promise<boolean> {
         const res = await fetch(`https://api.twitch.tv/v5/oembed?url=${encodeURIComponent(url)}`, {
           signal: AbortSignal.timeout(10_000),
         });
-        return res.ok;
-      }
-
-      case "generic": {
-        if (!(await isSafeUrl(url))) return false;
-        // HEAD request with manual redirect handling to prevent SSRF via open redirects
-        const res = await fetch(url, {
-          method: "HEAD",
-          redirect: "manual",
-          signal: AbortSignal.timeout(10_000),
-        });
-        if (res.status >= 300 && res.status < 400) {
-          const location = res.headers.get("location");
-          if (!location) return false;
-          let target: string;
-          try {
-            target = new URL(location, url).toString();
-          } catch {
-            return false;
-          }
-          if (!(await isSafeUrl(target))) return false;
-          const res2 = await fetch(target, {
-            method: "HEAD",
-            redirect: "manual",
-            signal: AbortSignal.timeout(10_000),
-          });
-          return res2.ok || (res2.status >= 300 && res2.status < 400);
-        }
         return res.ok;
       }
 
