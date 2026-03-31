@@ -11,7 +11,6 @@ DEPLOY_JSON="$SCRIPT_DIR/../deployments/31337.json"
 RPC="http://127.0.0.1:8545"
 SUBMITTER_STAKE="10000000" # 10 cREP in 6 decimals (MIN_SUBMITTER_STAKE)
 VOTE_STAKE="5000000" # 5 cREP for votes
-EPOCH_DURATION_SECONDS="${EPOCH_DURATION_SECONDS:-1200}"
 
 # Check if localhost deployment exists
 if [ ! -f "$DEPLOY_JSON" ]; then
@@ -267,8 +266,12 @@ seed_commit() {
   local targetRound
   local drandChainHash
   local artifacts
+
+  cast send "$TOKEN" "approve(address,uint256)" "$VOTING_ENGINE" "$VOTE_STAKE" \
+    --private-key "$privKey" --rpc-url "$RPC" > /dev/null 2>&1
+
   artifacts=$(node "$SCRIPT_DIR/../scripts-js/generateTlockCommit.js" \
-    "$contentId" "$isUp" "0x${salt}" "$EPOCH_DURATION_SECONDS") || {
+    "$RPC" "$VOTING_ENGINE" "$contentId" "$isUp" "0x${salt}") || {
     echo "  (Failed to build tlock ciphertext)"
     return 1
   }
@@ -276,9 +279,6 @@ seed_commit() {
   ciphertext=$(printf '%s\n' "$artifacts" | sed -n '2p')
   targetRound=$(printf '%s\n' "$artifacts" | sed -n '3p')
   drandChainHash=$(printf '%s\n' "$artifacts" | sed -n '4p')
-
-  cast send "$TOKEN" "approve(address,uint256)" "$VOTING_ENGINE" "$VOTE_STAKE" \
-    --private-key "$privKey" --rpc-url "$RPC" > /dev/null 2>&1
 
   cast send "$VOTING_ENGINE" \
     "commitVote(uint256,uint64,bytes32,bytes32,bytes,uint256,address)" \
