@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useMemo, useState } from "react";
-import { buildCommitKey, decryptTlockCiphertext } from "@curyo/contracts/voting";
+import { buildCommitKey, decryptTlockCiphertext, parseTlockCiphertextMetadata } from "@curyo/contracts/voting";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Address, zeroHash } from "viem";
 import { useAccount, usePublicClient, useWalletClient } from "wagmi";
@@ -25,6 +25,8 @@ export interface ManualRevealVote {
   commitHash: `0x${string}`;
   commitKey: `0x${string}`;
   ciphertext: `0x${string}`;
+  targetRound: bigint;
+  drandChainHash: `0x${string}`;
   secondsUntilReveal: number;
   isReady: boolean;
 }
@@ -116,6 +118,8 @@ export function useManualRevealVotes(voter?: Address) {
             commitHash,
             commitKey,
             ciphertext: commit.ciphertext as `0x${string}`,
+            targetRound: commit.targetRound ?? 0n,
+            drandChainHash: commit.drandChainHash ?? zeroHash,
             secondsUntilReveal: 0,
             isReady: false,
           },
@@ -183,6 +187,25 @@ export function useManualRevealVotes(voter?: Address) {
         if (BigInt(now) < latestCommit.revealableAfter) {
           notification.info("That vote is not revealable yet.");
           await refresh();
+          return false;
+        }
+
+        if (latestCommit.targetRound == null || latestCommit.drandChainHash == null) {
+          notification.error("The stored vote is missing tlock metadata and cannot be manually revealed.");
+          return false;
+        }
+
+        const parsedMetadata = parseTlockCiphertextMetadata(latestCommit.ciphertext as `0x${string}`);
+        if (!parsedMetadata) {
+          notification.error("The stored vote ciphertext is malformed and cannot be manually revealed.");
+          return false;
+        }
+
+        if (
+          parsedMetadata.targetRound !== latestCommit.targetRound ||
+          parsedMetadata.drandChainHash !== latestCommit.drandChainHash
+        ) {
+          notification.error("The stored vote ciphertext does not match the committed drand metadata.");
           return false;
         }
 

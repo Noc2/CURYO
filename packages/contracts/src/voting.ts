@@ -5,10 +5,18 @@ import { mainnetClient, roundAt, timelockDecrypt, timelockEncrypt } from "tlock-
 export type VoteSalt = `0x${string}`;
 export type VoteCiphertext = `0x${string}`;
 export type VoteCommitHash = `0x${string}`;
+export type VoteDrandChainHash = `0x${string}`;
+export interface VoteCommitMetadata {
+  targetRound: bigint;
+  drandChainHash: VoteDrandChainHash;
+}
+export interface TlockCiphertextMetadata extends VoteCommitMetadata {}
 export interface VoteTransferPayload {
   contentId: bigint;
   commitHash: VoteCommitHash;
   ciphertext: VoteCiphertext;
+  targetRound?: bigint;
+  drandChainHash?: VoteDrandChainHash;
   frontend: Address;
 }
 export type VoteTlockRuntime = {
@@ -22,8 +30,21 @@ const voteTransferPayloadParams = [
   { name: "contentId", type: "uint256" },
   { name: "commitHash", type: "bytes32" },
   { name: "ciphertext", type: "bytes" },
+  { name: "targetRound", type: "uint64" },
+  { name: "drandChainHash", type: "bytes32" },
   { name: "frontend", type: "address" },
 ] as const;
+
+const legacyVoteTransferPayloadParams = [
+  { name: "contentId", type: "uint256" },
+  { name: "commitHash", type: "bytes32" },
+  { name: "ciphertext", type: "bytes" },
+  { name: "frontend", type: "address" },
+] as const;
+
+const AGE_ARMOR_HEADER = "-----BEGIN AGE ENCRYPTED FILE-----";
+const AGE_ARMOR_FOOTER = "-----END AGE ENCRYPTED FILE-----";
+const TLOCK_STANZA_PREFIX = "-> tlock ";
 
 function saltToBytes(salt: VoteSalt): Uint8Array {
   const hex = salt.startsWith("0x") ? salt.slice(2) : salt;
@@ -63,10 +84,34 @@ export function buildCommitHash(
   salt: VoteSalt,
   contentId: bigint,
   ciphertext: VoteCiphertext,
+): VoteCommitHash;
+export function buildCommitHash(
+  isUp: boolean,
+  salt: VoteSalt,
+  contentId: bigint,
+  targetRound: bigint,
+  drandChainHash: VoteDrandChainHash,
+  ciphertext: VoteCiphertext,
+): VoteCommitHash;
+export function buildCommitHash(
+  isUp: boolean,
+  salt: VoteSalt,
+  contentId: bigint,
+  targetRoundOrCiphertext: bigint | VoteCiphertext,
+  drandChainHashOrCiphertext?: VoteDrandChainHash | VoteCiphertext,
+  ciphertextMaybe?: VoteCiphertext,
 ): VoteCommitHash {
-  return keccak256(
-    encodePacked(["bool", "bytes32", "uint256", "bytes32"], [isUp, salt, contentId, keccak256(ciphertext)]),
-  );
+  if (typeof targetRoundOrCiphertext === "bigint" && typeof drandChainHashOrCiphertext === "string" && ciphertextMaybe != null) {
+    return keccak256(
+      encodePacked(
+        ["bool", "bytes32", "uint256", "uint64", "bytes32", "bytes32"],
+        [isUp, salt, contentId, targetRoundOrCiphertext, drandChainHashOrCiphertext, keccak256(ciphertextMaybe)],
+      ),
+    );
+  }
+
+  const ciphertext = targetRoundOrCiphertext as VoteCiphertext;
+  return keccak256(encodePacked(["bool", "bytes32", "uint256", "bytes32"], [isUp, salt, contentId, keccak256(ciphertext)]));
 }
 
 export function buildCommitKey(voter: Address, commitHash: `0x${string}`): `0x${string}` {
@@ -74,7 +119,18 @@ export function buildCommitKey(voter: Address, commitHash: `0x${string}`): `0x${
 }
 
 export function encodeVoteTransferPayload(payload: VoteTransferPayload): `0x${string}` {
-  return encodeAbiParameters(voteTransferPayloadParams, [
+  if (payload.targetRound != null && payload.drandChainHash != null) {
+    return encodeAbiParameters(voteTransferPayloadParams, [
+      payload.contentId,
+      payload.commitHash,
+      payload.ciphertext,
+      payload.targetRound,
+      payload.drandChainHash,
+      payload.frontend,
+    ]);
+  }
+
+  return encodeAbiParameters(legacyVoteTransferPayloadParams, [
     payload.contentId,
     payload.commitHash,
     payload.ciphertext,
@@ -83,12 +139,98 @@ export function encodeVoteTransferPayload(payload: VoteTransferPayload): `0x${st
 }
 
 export function decodeVoteTransferPayload(data: `0x${string}`): VoteTransferPayload {
-  const [contentId, commitHash, ciphertext, frontend] = decodeAbiParameters(voteTransferPayloadParams, data);
+  try {
+    const [contentId, commitHash, ciphertext, targetRound, drandChainHash, frontend] = decodeAbiParameters(
+      voteTransferPayloadParams,
+      data,
+    );
+    const reencoded = encodeAbiParameters(voteTransferPayloadParams, [
+      contentId,
+      commitHash,
+      ciphertext,
+      targetRound,
+      drandChainHash,
+      frontend,
+    ]);
+    if (reencoded.toLowerCase() !== data.toLowerCase()) {
+      throw new Error("legacy vote transfer payload");
+    }
+    return {
+      contentId,
+      commitHash,
+      ciphertext,
+      targetRound,
+      drandChainHash,
+      frontend,
+    };
+  } catch {
+    const [contentId, commitHash, ciphertext, frontend] = decodeAbiParameters(legacyVoteTransferPayloadParams, data);
+    return {
+      contentId,
+      commitHash,
+      ciphertext,
+      frontend,
+    };
+  }
+}
+
+function decodeAgeArmor(armored: string): string | null {
+  const trimmed = armored.trim();
+  if (!trimmed.startsWith(AGE_ARMOR_HEADER) || !trimmed.endsWith(AGE_ARMOR_FOOTER)) {
+    return null;
+  }
+
+  const payload = trimmed.slice(AGE_ARMOR_HEADER.length, trimmed.length - AGE_ARMOR_FOOTER.length);
+  return Buffer.from(payload, "base64").toString("binary");
+}
+
+export function parseTlockCiphertextMetadata(ciphertext: VoteCiphertext): TlockCiphertextMetadata | null {
+  try {
+    const armored = hexToString(ciphertext);
+    const agePayload = decodeAgeArmor(armored);
+    if (!agePayload) return null;
+
+    const stanzaLine = agePayload
+      .split("\n")
+      .map(line => line.trim())
+      .find(line => line.startsWith(TLOCK_STANZA_PREFIX));
+    if (!stanzaLine) return null;
+
+    const [, type, roundStr, chainHash, ...rest] = stanzaLine.split(" ");
+    if (type !== "tlock" || rest.length > 0 || !roundStr || !chainHash) {
+      return null;
+    }
+
+    if (!/^[0-9]+$/.test(roundStr) || !/^[0-9a-fA-F]{64}$/.test(chainHash)) {
+      return null;
+    }
+
+    return {
+      targetRound: BigInt(roundStr),
+      drandChainHash: `0x${chainHash.toLowerCase()}` as VoteDrandChainHash,
+    };
+  } catch {
+    return null;
+  }
+}
+
+async function createTlockVoteArtifacts(
+  isUp: boolean,
+  salt: VoteSalt,
+  epochDurationSeconds: number,
+  runtime: VoteTlockRuntime = {},
+): Promise<{ ciphertext: VoteCiphertext; targetRound: bigint; drandChainHash: VoteDrandChainHash }> {
+  const client = runtime.client ?? mainnetClient();
+  const now = runtime.now ?? Date.now;
+  const encryptFn = runtime.encryptFn ?? timelockEncrypt;
+  const chainInfo = await client.chain().info();
+  const targetTime = now() + epochDurationSeconds * 1000;
+  const targetRound = roundAt(targetTime, chainInfo);
+  const armored = await encryptFn(targetRound, Buffer.from(encodeVotePlaintext(isUp, salt)), client);
   return {
-    contentId,
-    commitHash,
-    ciphertext,
-    frontend,
+    ciphertext: stringToHex(armored) as VoteCiphertext,
+    targetRound: BigInt(targetRound),
+    drandChainHash: `0x${chainInfo.hash}` as VoteDrandChainHash,
   };
 }
 
@@ -98,14 +240,8 @@ export async function tlockEncryptVote(
   epochDurationSeconds: number,
   runtime: VoteTlockRuntime = {},
 ): Promise<VoteCiphertext> {
-  const client = runtime.client ?? mainnetClient();
-  const now = runtime.now ?? Date.now;
-  const encryptFn = runtime.encryptFn ?? timelockEncrypt;
-  const chainInfo = await client.chain().info();
-  const targetTime = now() + epochDurationSeconds * 1000;
-  const targetRound = roundAt(targetTime, chainInfo);
-  const armored = await encryptFn(targetRound, Buffer.from(encodeVotePlaintext(isUp, salt)), client);
-  return stringToHex(armored) as VoteCiphertext;
+  const { ciphertext } = await createTlockVoteArtifacts(isUp, salt, epochDurationSeconds, runtime);
+  return ciphertext;
 }
 
 export async function decryptTlockCiphertext(
@@ -125,13 +261,26 @@ export async function createTlockVoteCommit(params: {
   salt: VoteSalt;
   contentId: bigint;
   epochDurationSeconds: number;
-}, runtime: VoteTlockRuntime = {}): Promise<{ ciphertext: VoteCiphertext; commitHash: `0x${string}`; commitKey?: `0x${string}` }> {
-  const ciphertext = await tlockEncryptVote(params.isUp, params.salt, params.epochDurationSeconds, runtime);
-  const commitHash = buildCommitHash(params.isUp, params.salt, params.contentId, ciphertext);
+}, runtime: VoteTlockRuntime = {}): Promise<{
+  ciphertext: VoteCiphertext;
+  commitHash: `0x${string}`;
+  targetRound: bigint;
+  drandChainHash: VoteDrandChainHash;
+  commitKey?: `0x${string}`;
+}> {
+  const { ciphertext, targetRound, drandChainHash } = await createTlockVoteArtifacts(
+    params.isUp,
+    params.salt,
+    params.epochDurationSeconds,
+    runtime,
+  );
+  const commitHash = buildCommitHash(params.isUp, params.salt, params.contentId, targetRound, drandChainHash, ciphertext);
 
   return {
     ciphertext,
     commitHash,
+    targetRound,
+    drandChainHash,
     commitKey: params.voter ? buildCommitKey(params.voter, commitHash) : undefined,
   };
 }

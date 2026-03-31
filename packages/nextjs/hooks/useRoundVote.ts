@@ -2,6 +2,7 @@
 
 import { useCallback, useRef, useState } from "react";
 import { CuryoReputationAbi, encodeVoteTransferPayload } from "@curyo/contracts";
+import { buildCommitVoteParams } from "@curyo/sdk/vote";
 import { useQueryClient } from "@tanstack/react-query";
 import { type Hex, encodeFunctionData } from "viem";
 import { useAccount, usePublicClient, useWriteContract } from "wagmi";
@@ -20,7 +21,6 @@ import {
   getWalletDisplaySummaryQueryKey,
   persistWalletDisplaySummarySnapshot,
 } from "~~/hooks/useWalletDisplaySummary";
-import { buildCommitVoteParams } from "~~/lib/contracts/roundVotingEngine";
 import { buildFreeTransactionOperationKey } from "~~/lib/thirdweb/freeTransactionOperation";
 import { isFreeTransactionExhaustedError } from "~~/lib/transactionErrors";
 import { VOTE_COOLDOWN_SECONDS } from "~~/lib/vote/cooldown";
@@ -153,7 +153,7 @@ export function useRoundVote() {
     let freeTransactionOperationKey: Hex | null = null;
 
     try {
-      const { ciphertext, commitHash, frontend, stakeWei } = await buildCommitVoteParams({
+      const { ciphertext, commitHash, targetRound, drandChainHash, frontend, stakeWei } = await buildCommitVoteParams({
         contentId,
         isUp,
         stakeAmount,
@@ -166,6 +166,8 @@ export function useRoundVote() {
         contentId,
         commitHash,
         ciphertext,
+        targetRound,
+        drandChainHash,
         frontend,
       });
       const transferAndCallArgs = [votingEngineInfo.address, stakeWei, payload] as const;

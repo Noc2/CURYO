@@ -169,7 +169,7 @@ export class CuryoWriteService {
     });
 
     const salt = `0x${randomBytes(32).toString("hex")}` as `0x${string}`;
-    const { ciphertext, commitHash } = await createTlockVoteCommit({
+    const { ciphertext, commitHash, targetRound, drandChainHash } = await createTlockVoteCommit({
       isUp: params.direction === "up",
       salt,
       contentId,
@@ -188,6 +188,8 @@ export class CuryoWriteService {
       approvalRequired,
       allowanceBefore: allowance.toString(),
       commitHash,
+      targetRound: targetRound.toString(),
+      drandChainHash,
       ...(params.reason ? { reason: params.reason } : {}),
     };
 
@@ -195,9 +197,9 @@ export class CuryoWriteService {
       if (!approvalRequired) {
         await this.simulateContract(context, {
           address: this.requireContracts().votingEngine,
-          abi: RoundVotingEngineAbi,
+          abi: RoundVotingEngineAbi as any,
           functionName: "commitVote",
-          args: [contentId, commitHash, ciphertext, stakeAmount, frontendAddress],
+          args: [contentId, commitHash, ciphertext, targetRound, drandChainHash, stakeAmount, frontendAddress],
         });
         result.simulation = "commitVote";
       } else {
@@ -221,9 +223,9 @@ export class CuryoWriteService {
 
     const voteRequest = {
       address: this.requireContracts().votingEngine,
-      abi: RoundVotingEngineAbi,
+      abi: RoundVotingEngineAbi as any,
       functionName: "commitVote",
-      args: [contentId, commitHash, ciphertext, stakeAmount, frontendAddress],
+      args: [contentId, commitHash, ciphertext, targetRound, drandChainHash, stakeAmount, frontendAddress],
     } as const;
     await this.simulateContract(context, voteRequest);
     const voteTxHash = await this.writeContract(context, voteRequest);

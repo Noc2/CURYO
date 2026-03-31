@@ -3,6 +3,7 @@ import {
   createTlockVoteCommit,
   encodeVoteTransferPayload,
   type VoteCiphertext,
+  type VoteDrandChainHash,
   type VoteCommitHash,
   type VoteTlockRuntime,
   type VoteTransferPayload,
@@ -12,6 +13,8 @@ import { encodeFunctionData, type Address, type Hex } from "viem";
 export interface CommitVoteParams {
   commitHash: VoteCommitHash;
   ciphertext: VoteCiphertext;
+  targetRound: bigint;
+  drandChainHash: VoteDrandChainHash;
   salt: `0x${string}`;
   stakeWei: bigint;
   frontend: `0x${string}`;
@@ -54,7 +57,7 @@ export async function buildCommitVoteParams(params: {
   const stakeWei = buildStakeAmountWei(params.stakeAmount);
   const frontend = resolveFrontendCode(params.frontendCode, params.defaultFrontendCode);
   const salt = params.salt ?? generateVoteSalt();
-  const { ciphertext, commitHash } = await createTlockVoteCommit(
+  const { ciphertext, commitHash, targetRound, drandChainHash } = await createTlockVoteCommit(
     {
       isUp: params.isUp,
       salt,
@@ -67,6 +70,8 @@ export async function buildCommitVoteParams(params: {
   return {
     commitHash,
     ciphertext,
+    targetRound,
+    drandChainHash,
     salt,
     stakeWei,
     frontend,
