@@ -1,5 +1,6 @@
 import { createHash, timingSafeEqual } from "node:crypto";
 import type { IncomingMessage } from "node:http";
+import { McpSessionTokenError, verifyMcpSessionToken } from "@curyo/node-utils/mcpSessionToken";
 import type { AuthInfo } from "@modelcontextprotocol/sdk/server/auth/types.js";
 import type { HttpAuthConfig } from "./config.js";
 
@@ -33,7 +34,28 @@ export function authenticateRequest(request: IncomingMessage, authConfig: HttpAu
 
   const tokenHash = hashToken(token);
   const matchedToken = authConfig.tokens.find((candidate) => safeEqualHex(candidate.tokenHash, tokenHash));
-  if (!matchedToken) {
+  if (matchedToken) {
+    ensureTokenIsActive(matchedToken, authConfig);
+
+    const keyId = matchedToken.tokenHash.slice(0, 12);
+
+    return {
+      token,
+      clientId: matchedToken.clientId,
+      scopes: matchedToken.scopes,
+      extra: {
+        keyId,
+        authMode: authConfig.mode,
+        identityId: matchedToken.identityId,
+        tokenKind: matchedToken.kind,
+        subject: matchedToken.subject,
+        notBefore: matchedToken.notBefore,
+        expiresAt: matchedToken.expiresAt,
+      },
+    };
+  }
+
+  if (authConfig.sessionKeys.length === 0) {
     throw new HttpAuthError(
       "Invalid bearer token",
       buildWwwAuthenticateHeader(authConfig, {
@@ -43,24 +65,38 @@ export function authenticateRequest(request: IncomingMessage, authConfig: HttpAu
     );
   }
 
-  ensureTokenIsActive(matchedToken, authConfig);
+  try {
+    const { claims, key } = verifyMcpSessionToken(token, {
+      keys: authConfig.sessionKeys,
+    });
 
-  const keyId = matchedToken.tokenHash.slice(0, 12);
-
-  return {
-    token,
-    clientId: matchedToken.clientId,
-    scopes: matchedToken.scopes,
-    extra: {
-      keyId,
-      authMode: authConfig.mode,
-      identityId: matchedToken.identityId,
-      tokenKind: matchedToken.kind,
-      subject: matchedToken.subject,
-      notBefore: matchedToken.notBefore,
-      expiresAt: matchedToken.expiresAt,
-    },
-  };
+    return {
+      token,
+      clientId: claims.clientId,
+      scopes: claims.scopes,
+      extra: {
+        keyId: key.keyId,
+        authMode: authConfig.mode,
+        identityId: claims.identityId,
+        tokenKind: "session",
+        subject: claims.sub,
+        notBefore: new Date(claims.nbf * 1000).toISOString(),
+        expiresAt: new Date(claims.exp * 1000).toISOString(),
+        issuer: claims.iss,
+        audience: claims.aud,
+        sessionId: claims.jti,
+      },
+    };
+  } catch (error) {
+    const description = mapSessionTokenError(error);
+    throw new HttpAuthError(
+      description === "The access token has expired" ? "Bearer token has expired" : "Invalid bearer token",
+      buildWwwAuthenticateHeader(authConfig, {
+        error: "invalid_token",
+        errorDescription: description,
+      }),
+    );
+  }
 }
 
 function ensureTokenIsActive(token: HttpAuthConfig["tokens"][number], authConfig: HttpAuthConfig): void {
@@ -134,4 +170,26 @@ function safeEqualHex(left: string, right: string): boolean {
   }
 
   return timingSafeEqual(leftBuffer, rightBuffer);
+}
+
+function mapSessionTokenError(error: unknown): string {
+  if (!(error instanceof McpSessionTokenError)) {
+    return "The access token is invalid";
+  }
+
+  switch (error.code) {
+    case "TOKEN_EXPIRED":
+      return "The access token has expired";
+    case "TOKEN_NOT_ACTIVE":
+      return "The access token is not active yet";
+    case "INVALID_AUDIENCE":
+    case "INVALID_ISSUER":
+    case "UNKNOWN_KEY":
+    case "INVALID_SIGNATURE":
+    case "INVALID_TOKEN_FORMAT":
+    case "INVALID_HEADER":
+    case "INVALID_PAYLOAD":
+    default:
+      return "The access token is invalid";
+  }
 }

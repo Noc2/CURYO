@@ -37,6 +37,7 @@ describe("loadConfig", () => {
         tokenHashes: [],
         scopes: ["mcp:read"],
         tokens: [],
+        sessionKeys: [],
       },
       httpRateLimit: {
         enabled: true,
@@ -82,6 +83,7 @@ describe("loadConfig", () => {
     expect(config.httpCorsOrigin).toBe("https://chatgpt.com");
     expect(config.ponderTimeoutMs).toBe(2500);
     expect(config.httpAuth.mode).toBe("none");
+    expect(config.httpAuth.sessionKeys).toEqual([]);
     expect(config.httpRateLimit).toEqual({
       enabled: true,
       windowMs: 60_000,
@@ -113,6 +115,7 @@ describe("loadConfig", () => {
     expect(config.httpAuth.tokenHashes).toHaveLength(2);
     expect(config.httpAuth.scopes).toEqual(["mcp:read", "metrics:read"]);
     expect(config.httpAuth.tokens).toHaveLength(2);
+    expect(config.httpAuth.sessionKeys).toEqual([]);
   });
 
   it("requires a bearer token when bearer auth is enabled", () => {
@@ -120,7 +123,9 @@ describe("loadConfig", () => {
       loadConfig({
         CURYO_MCP_HTTP_AUTH_MODE: "bearer",
       }),
-    ).toThrow("CURYO_MCP_HTTP_BEARER_TOKEN, CURYO_MCP_HTTP_BEARER_TOKENS, or CURYO_MCP_HTTP_TOKENS_JSON is required");
+    ).toThrow(
+      "CURYO_MCP_HTTP_BEARER_TOKEN, CURYO_MCP_HTTP_BEARER_TOKENS, CURYO_MCP_HTTP_TOKENS_JSON, or CURYO_MCP_HTTP_SESSION_SECRET(S)_JSON is required",
+    );
   });
 
   it("loads scoped bearer tokens bound to write identities", () => {
@@ -193,6 +198,26 @@ describe("loadConfig", () => {
         ]),
       }),
     ).toThrow('references unknown identity "missing"');
+  });
+
+  it("allows bearer mode with signed session keys and no static bearer tokens", () => {
+    const config = loadConfig({
+      CURYO_MCP_HTTP_AUTH_MODE: "bearer",
+      CURYO_MCP_HTTP_SESSION_SECRET: "super-secret-signing-key",
+      CURYO_MCP_HTTP_SESSION_KEY_ID: "nextjs-prod",
+      CURYO_MCP_HTTP_SESSION_ISSUER: "curyo-nextjs",
+      CURYO_MCP_HTTP_SESSION_AUDIENCE: "curyo-mcp",
+    });
+
+    expect(config.httpAuth.tokens).toEqual([]);
+    expect(config.httpAuth.sessionKeys).toEqual([
+      {
+        keyId: "nextjs-prod",
+        secret: "super-secret-signing-key",
+        issuer: "curyo-nextjs",
+        audience: "curyo-mcp",
+      },
+    ]);
   });
 
   it("loads HTTP rate limit overrides", () => {

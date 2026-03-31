@@ -38,6 +38,7 @@ describe("createServer", () => {
         tokenHashes: [],
         scopes: ["mcp:read"],
         tokens: [],
+        sessionKeys: [],
       },
       httpRateLimit: {
         enabled: true,
@@ -77,6 +78,7 @@ describe("createServer", () => {
           tokenHashes: [],
           scopes: ["mcp:read"],
           tokens: [],
+          sessionKeys: [],
         },
         httpRateLimit: {
           enabled: true,
@@ -165,6 +167,7 @@ describe("createServer", () => {
             kind: "static",
           },
         ],
+        sessionKeys: [],
       },
       httpRateLimit: {
         enabled: true,

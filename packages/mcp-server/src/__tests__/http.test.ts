@@ -70,6 +70,7 @@ describe("handleStreamableHttpRequest", () => {
       tokenHashes: [],
       scopes: ["mcp:read"],
       tokens: [],
+      sessionKeys: [],
     },
     httpRateLimit: {
       enabled: true,
@@ -245,6 +246,7 @@ describe("handleStreamableHttpRequest", () => {
             kind: "static",
           },
         ],
+        sessionKeys: [],
       },
     });
 
@@ -289,6 +291,7 @@ describe("handleStreamableHttpRequest", () => {
             kind: "static" as const,
           },
         ],
+        sessionKeys: [],
       },
       httpRateLimit: {
         enabled: true,

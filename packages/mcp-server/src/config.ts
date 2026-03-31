@@ -24,6 +24,7 @@ export interface HttpAuthConfig {
   tokenHashes: string[];
   scopes: string[];
   tokens: HttpAuthTokenConfig[];
+  sessionKeys: HttpAuthSessionKeyConfig[];
 }
 
 export interface HttpAuthTokenConfig {
@@ -35,6 +36,13 @@ export interface HttpAuthTokenConfig {
   expiresAt: string | null;
   subject: string | null;
   kind: "static" | "session";
+}
+
+export interface HttpAuthSessionKeyConfig {
+  keyId: string;
+  secret: string;
+  issuer: string;
+  audience: string;
 }
 
 export interface HttpRateLimitConfig {
@@ -93,6 +101,13 @@ interface RawHttpTokenConfig {
   kind?: "static" | "session";
 }
 
+interface RawHttpSessionKeyConfig {
+  keyId?: string;
+  secret?: string;
+  issuer?: string | null;
+  audience?: string | null;
+}
+
 interface RawWriteIdentityConfig {
   id: string;
   label?: string | null;
@@ -110,6 +125,9 @@ const DEFAULT_HTTP_PATH = "/mcp";
 const DEFAULT_HTTP_CORS_ORIGIN = "http://localhost:3000";
 const DEFAULT_HTTP_AUTH_REALM = "curyo-mcp";
 const DEFAULT_HTTP_AUTH_SCOPES = ["mcp:read"] as const;
+const DEFAULT_HTTP_SESSION_KEY_ID = "nextjs-default";
+const DEFAULT_HTTP_SESSION_ISSUER = "curyo-nextjs";
+const DEFAULT_HTTP_SESSION_AUDIENCE = "curyo-mcp";
 const DEFAULT_HTTP_RATE_LIMIT_WINDOW_MS = 60_000;
 const DEFAULT_HTTP_READ_REQUESTS_PER_WINDOW = 120;
 const DEFAULT_HTTP_WRITE_REQUESTS_PER_WINDOW = 20;
@@ -587,6 +605,7 @@ function loadHttpAuthConfig(env: NodeJS.ProcessEnv, identityIds: ReadonlySet<str
 
   const configuredTokens: HttpAuthTokenConfig[] = [];
   const tokenErrors: string[] = [];
+  const sessionKeyErrors: string[] = [];
 
   for (const [index, rawToken] of rawTokenConfigs.entries()) {
     if (!rawToken || typeof rawToken !== "object") {
@@ -634,9 +653,63 @@ function loadHttpAuthConfig(env: NodeJS.ProcessEnv, identityIds: ReadonlySet<str
 
   const tokens = [...legacyTokens, ...configuredTokens];
 
-  if (mode === "bearer" && tokens.length === 0) {
+  const sessionKeys: HttpAuthSessionKeyConfig[] = [];
+  const singleSessionSecret = readEnv(env, "CURYO_MCP_HTTP_SESSION_SECRET");
+  if (singleSessionSecret) {
+    sessionKeys.push({
+      keyId: readEnv(env, "CURYO_MCP_HTTP_SESSION_KEY_ID") ?? DEFAULT_HTTP_SESSION_KEY_ID,
+      secret: singleSessionSecret,
+      issuer: readEnv(env, "CURYO_MCP_HTTP_SESSION_ISSUER") ?? DEFAULT_HTTP_SESSION_ISSUER,
+      audience: readEnv(env, "CURYO_MCP_HTTP_SESSION_AUDIENCE") ?? DEFAULT_HTTP_SESSION_AUDIENCE,
+    });
+  }
+
+  const rawSessionKeyConfigs = parseJsonEnv<RawHttpSessionKeyConfig[]>(
+    readEnv(env, "CURYO_MCP_HTTP_SESSION_SECRETS_JSON"),
+    "CURYO_MCP_HTTP_SESSION_SECRETS_JSON",
+  ) ?? [];
+  if (!Array.isArray(rawSessionKeyConfigs) && rawSessionKeyConfigs !== null) {
+    throw new Error("CURYO_MCP_HTTP_SESSION_SECRETS_JSON must be a JSON array");
+  }
+
+  const seenSessionKeyIds = new Set(sessionKeys.map((key) => key.keyId));
+  for (const [index, rawSessionKey] of rawSessionKeyConfigs.entries()) {
+    if (!rawSessionKey || typeof rawSessionKey !== "object") {
+      sessionKeyErrors.push(`CURYO_MCP_HTTP_SESSION_SECRETS_JSON[${index}] must be an object`);
+      continue;
+    }
+
+    const keyId = rawSessionKey.keyId?.trim();
+    const secret = rawSessionKey.secret?.trim();
+    if (!keyId) {
+      sessionKeyErrors.push(`CURYO_MCP_HTTP_SESSION_SECRETS_JSON[${index}].keyId is required`);
+      continue;
+    }
+    if (!secret) {
+      sessionKeyErrors.push(`CURYO_MCP_HTTP_SESSION_SECRETS_JSON[${index}].secret is required`);
+      continue;
+    }
+    if (seenSessionKeyIds.has(keyId)) {
+      sessionKeyErrors.push(`CURYO_MCP_HTTP_SESSION_SECRETS_JSON contains duplicate keyId "${keyId}"`);
+      continue;
+    }
+
+    seenSessionKeyIds.add(keyId);
+    sessionKeys.push({
+      keyId,
+      secret,
+      issuer: rawSessionKey.issuer?.trim() || DEFAULT_HTTP_SESSION_ISSUER,
+      audience: rawSessionKey.audience?.trim() || DEFAULT_HTTP_SESSION_AUDIENCE,
+    });
+  }
+
+  if (sessionKeyErrors.length > 0) {
+    throw new Error(`Invalid MCP HTTP session key configuration:\n- ${sessionKeyErrors.join("\n- ")}`);
+  }
+
+  if (mode === "bearer" && tokens.length === 0 && sessionKeys.length === 0) {
     throw new Error(
-      "CURYO_MCP_HTTP_BEARER_TOKEN, CURYO_MCP_HTTP_BEARER_TOKENS, or CURYO_MCP_HTTP_TOKENS_JSON is required when CURYO_MCP_HTTP_AUTH_MODE=bearer",
+      "CURYO_MCP_HTTP_BEARER_TOKEN, CURYO_MCP_HTTP_BEARER_TOKENS, CURYO_MCP_HTTP_TOKENS_JSON, or CURYO_MCP_HTTP_SESSION_SECRET(S)_JSON is required when CURYO_MCP_HTTP_AUTH_MODE=bearer",
     );
   }
 
@@ -646,6 +719,7 @@ function loadHttpAuthConfig(env: NodeJS.ProcessEnv, identityIds: ReadonlySet<str
     tokenHashes: tokens.map((token) => token.tokenHash),
     scopes: defaultScopes,
     tokens,
+    sessionKeys,
   };
 }
 

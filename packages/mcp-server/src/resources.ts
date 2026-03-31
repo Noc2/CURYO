@@ -204,6 +204,7 @@ export function registerResources(server: McpServer, config: ServerConfig, ponde
         httpAuth: {
           mode: config.httpAuth.mode,
           protectedPaths: [config.httpPath],
+          sessionKeys: config.httpAuth.sessionKeys.map(({ keyId, issuer, audience }) => ({ keyId, issuer, audience })),
         },
         httpRateLimit: {
           enabled: config.httpRateLimit.enabled,
@@ -248,6 +249,7 @@ export function registerResources(server: McpServer, config: ServerConfig, ponde
           realm: config.httpAuth.realm,
           scopes: config.httpAuth.scopes,
           configuredTokens: config.httpAuth.tokens.length,
+          configuredSessionKeys: config.httpAuth.sessionKeys.map(({ keyId, issuer, audience }) => ({ keyId, issuer, audience })),
           protectedPaths: [config.httpPath],
         },
         rateLimit: {
