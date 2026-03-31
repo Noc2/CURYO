@@ -109,7 +109,7 @@ after(() => {
   }
 });
 
-test("reservation consumes quota immediately and release does not refund it", async () => {
+test("pending reservations keep the same operation idempotent without charging quota twice", async () => {
   const firstDecision = await freeTransactions.evaluateFreeTransactionAllowance(buildRequest("0x01") as never);
   assert.equal(firstDecision.isAllowed, true);
   if (!firstDecision.isAllowed) {
@@ -119,19 +119,19 @@ test("reservation consumes quota immediately and release does not refund it", as
   assert.equal(firstDecision.summary.used, 1);
   assert.equal(firstDecision.summary.remaining, 1);
 
-  await freeTransactions.releaseFreeTransactionReservation({
-    address: WALLET,
-    chainId: CHAIN_ID,
-    operationKey: buildOperationKey("0x01"),
-  });
+  const repeatedDecision = await freeTransactions.evaluateFreeTransactionAllowance(buildRequest("0x01") as never);
+  assert.equal(repeatedDecision.isAllowed, true);
+  if (!repeatedDecision.isAllowed) {
+    return;
+  }
 
-  const quotaRowsAfterRelease = await dbModule.dbClient.execute("SELECT free_tx_used FROM free_transaction_quotas");
-  assert.equal(Number(quotaRowsAfterRelease.rows[0]?.free_tx_used), 1);
+  assert.equal(repeatedDecision.summary.used, 1);
+  assert.equal(repeatedDecision.summary.remaining, 1);
 
-  const reservationRowsAfterRelease = await dbModule.dbClient.execute(
+  const reservationRows = await dbModule.dbClient.execute(
     "SELECT status FROM free_transaction_reservations",
   );
-  assert.equal(reservationRowsAfterRelease.rows[0]?.status, "released");
+  assert.equal(reservationRows.rows[0]?.status, "pending");
 
   const secondDecision = await freeTransactions.evaluateFreeTransactionAllowance(buildRequest("0x02") as never);
   assert.equal(secondDecision.isAllowed, true);

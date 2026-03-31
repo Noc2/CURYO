@@ -835,34 +835,3 @@ export async function confirmFreeTransactionReservation(params: {
       .where(eq(freeTransactionQuotas.identityKey, updatedIdentityKey));
   });
 }
-
-export async function releaseFreeTransactionReservation(params: {
-  address: string;
-  chainId: number;
-  operationKey: string;
-}) {
-  await ensureFreeTransactionQuotaTable();
-
-  if (!isAddress(params.address) || !Number.isFinite(params.chainId) || !isHash(params.operationKey)) {
-    throw new Error("Invalid free transaction release payload");
-  }
-
-  const walletAddress = normalizeAddress(params.address);
-  const now = new Date();
-
-  await db
-    .update(freeTransactionReservations)
-    .set({
-      status: "released",
-      releasedAt: now,
-      updatedAt: now,
-    })
-    .where(
-      and(
-        eq(freeTransactionReservations.operationKey, params.operationKey as Hash),
-        eq(freeTransactionReservations.chainId, params.chainId),
-        eq(freeTransactionReservations.walletAddress, walletAddress),
-        eq(freeTransactionReservations.status, "pending"),
-      ),
-    );
-}
