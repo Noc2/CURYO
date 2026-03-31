@@ -2,19 +2,31 @@ import { NextRequest } from "next/server";
 import { GET } from "./route";
 import assert from "node:assert/strict";
 import { after, beforeEach, test } from "node:test";
+import { type QueryResult, type QueryResultRow } from "pg";
+import { type QueryInput } from "~~/lib/db";
 import { __setRateLimitStoreForTests } from "~~/utils/rateLimit";
 
 const originalFetch = globalThis.fetch;
 
+function buildQueryResult(rows: QueryResultRow[]): QueryResult<QueryResultRow> {
+  return {
+    command: "SELECT",
+    rowCount: rows.length,
+    oid: 0,
+    fields: [],
+    rows,
+  };
+}
+
 function setAllowedRateLimitStore() {
   __setRateLimitStoreForTests({
-    execute: async (input: unknown) => {
-      const sql = typeof input === "string" ? input : (input as { sql?: string }).sql ?? "";
+    execute: async (input: QueryInput) => {
+      const sql = typeof input === "string" ? input : ((input as { sql?: string }).sql ?? "");
       if (sql.includes("api_rate_limits")) {
-        return { rows: [{ request_count: 1 }] };
+        return buildQueryResult([{ request_count: 1 }]);
       }
 
-      return { rows: [] };
+      return buildQueryResult([]);
     },
   });
 }

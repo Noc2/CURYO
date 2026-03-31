@@ -10,9 +10,10 @@ import { ContentRegistry } from "../ContentRegistry.sol";
 ///      sees RoundVotingEngine as the caller.
 library SubmitterStakeLib {
     error ContentNotFound();
+    error MilestoneZeroSnapshotMissing();
 
     function resolve(ContentRegistry registry, bool hasSettledRound, uint256 contentId) external {
-        (uint256 existingContentId,,,, uint256 contentCreatedAt,,,,, bool submitterStakeReturned, uint256 rating,) =
+        (uint256 existingContentId,,,, uint256 contentCreatedAt,,,,, bool submitterStakeReturned,,) =
             registry.contents(contentId);
         if (submitterStakeReturned) return;
         if (existingContentId == 0) revert ContentNotFound();
@@ -26,15 +27,17 @@ library SubmitterStakeLib {
             return;
         }
 
-        if (elapsed >= 24 hours && rating < registry.SLASH_RATING_THRESHOLD()) {
+        if (!registry.milestoneZeroSubmitterTermsSnapshotted(contentId)) revert MilestoneZeroSnapshotMissing();
+
+        uint256 milestoneZeroRating = registry.milestoneZeroSubmitterRating(contentId);
+
+        if (elapsed >= 24 hours && milestoneZeroRating < registry.SLASH_RATING_THRESHOLD()) {
             registry.slashSubmitterStake(contentId);
             return;
         }
 
         if (elapsed >= 4 days) {
-            registry.returnSubmitterStakeWithRewardRate(
-                contentId, registry.submitterParticipationSnapshotRateBps(contentId)
-            );
+            registry.returnSubmitterStakeWithMilestoneZeroTerms(contentId);
         }
     }
 }
