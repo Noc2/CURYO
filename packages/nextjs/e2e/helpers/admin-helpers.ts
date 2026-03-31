@@ -146,8 +146,7 @@ async function sendTx(from: string, to: string, data: `0x${string}`): Promise<bo
       const receipt = await publicClient.waitForTransactionReceipt({ hash: txHash });
       return receipt.status === "success";
     } catch (error) {
-      console.error(`[sendTx] Signed tx failed from=${from} to=${to}: ${String(error)}`);
-      return false;
+      console.warn(`[sendTx] Signed tx failed from=${from} to=${to}; falling back to RPC send: ${String(error)}`);
     }
   }
 
@@ -1195,27 +1194,6 @@ export async function commitVoteWithTransferAndCallDirect(
     functionName: "transferAndCall",
     args: [votingEngineAddress as `0x${string}`, stakeAmount, payload],
   });
-
-  const privateKey = ANVIL_PRIVATE_KEYS_BY_ADDRESS.get(fromAddress.toLowerCase());
-  if (privateKey) {
-    try {
-      const [{ createPublicClient, createWalletClient, http }, { privateKeyToAccount }, { foundry }] =
-        await Promise.all([import("viem"), import("viem/accounts"), import("viem/chains")]);
-      const account = privateKeyToAccount(privateKey);
-      const publicClient = createPublicClient({ chain: foundry, transport: http(ANVIL_RPC) });
-      const walletClient = createWalletClient({ account, chain: foundry, transport: http(ANVIL_RPC) });
-      const txHash = await walletClient.sendTransaction({
-        to: tokenAddress as `0x${string}`,
-        data,
-        gas: DEFAULT_TX_GAS_LIMIT,
-      });
-      const receipt = await publicClient.waitForTransactionReceipt({ hash: txHash });
-      return { success: receipt.status === "success", commitKey: ckey!, isUp, salt };
-    } catch (error) {
-      console.error(`[transferAndCall] Signed tx failed from=${fromAddress} to=${tokenAddress}: ${String(error)}`);
-      return { success: false, commitKey: ckey!, isUp, salt };
-    }
-  }
 
   const success = await sendTx(fromAddress, tokenAddress, data);
   return { success, commitKey: ckey!, isUp, salt };
