@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import {
-  type NormalizedMcpSessionRequest,
   getDefaultMcpSessionTtlMs,
+  getMcpSessionChallengeRateLimitKeyParts,
   issueMcpSessionChallenge,
   mapMcpSessionAuthError,
   normalizeMcpSessionRequest,
@@ -9,10 +9,6 @@ import {
 import { checkRateLimit } from "~~/utils/rateLimit";
 
 const RATE_LIMIT = { limit: 20, windowMs: 60_000 };
-
-export function getMcpSessionChallengeRateLimitKeyParts(payload: NormalizedMcpSessionRequest) {
-  return [payload.normalizedAddress, payload.scopes.join(","), payload.clientName ?? undefined];
-}
 
 export async function POST(request: NextRequest) {
   try {

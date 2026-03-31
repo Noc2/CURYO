@@ -1,5 +1,5 @@
 import { NextRequest } from "next/server";
-import { getMcpSessionChallengeRateLimitKeyParts } from "../../app/api/mcp/session/challenge/route";
+import { getMcpSessionChallengeRateLimitKeyParts } from "./mcpSessionAuth";
 import { verifyMcpSessionToken } from "@curyo/node-utils/mcpSessionToken";
 import assert from "node:assert/strict";
 import { after, before, beforeEach, test } from "node:test";

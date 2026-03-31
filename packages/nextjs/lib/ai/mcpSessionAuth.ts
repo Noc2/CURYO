@@ -111,6 +111,10 @@ export function hashMcpSessionPayload(payload: NormalizedMcpSessionRequest): str
   ]);
 }
 
+export function getMcpSessionChallengeRateLimitKeyParts(payload: NormalizedMcpSessionRequest) {
+  return [payload.normalizedAddress, payload.scopes.join(","), payload.clientName ?? undefined];
+}
+
 export function buildMcpSessionChallengeMessage(params: {
   address: `0x${string}`;
   payloadHash: string;
