@@ -1,6 +1,10 @@
 import { Hono } from "hono";
 import { cors } from "hono/cors";
-import { isLoopbackRateLimitIdentifier, resolveRateLimitIdentifier } from "./request-identity.js";
+import {
+  hasTrustedRateLimitHeadersConfigured,
+  isLoopbackRateLimitIdentifier,
+  resolveRateLimitIdentifier,
+} from "./request-identity.js";
 import { RateLimiter } from "./rate-limit.js";
 import { registerContentRoutes } from "./routes/content-routes.js";
 import { registerDataRoutes } from "./routes/data-routes.js";
@@ -23,8 +27,22 @@ app.onError((err, c) => {
 // ============================================================
 
 const rateLimiter = new RateLimiter(120, 60_000, 60_000);
+const isProduction = process.env.NODE_ENV === "production";
+const rateLimitMisconfigured = isProduction && !hasTrustedRateLimitHeadersConfigured();
+
+if (rateLimitMisconfigured) {
+  console.error(
+    "[ponder] FATAL: RATE_LIMIT_TRUSTED_IP_HEADERS is required in production. " +
+    "Set it to the proxy header(s) that carry the client IP. " +
+    "All custom API routes will return 503 until this is fixed.",
+  );
+}
 
 app.use("/*", async (c, next) => {
+  if (rateLimitMisconfigured) {
+    return c.json({ error: "RATE_LIMIT_TRUSTED_IP_HEADERS not configured. Set the env var." }, 503);
+  }
+
   const identifier = resolveRateLimitIdentifier(name => c.req.header(name) ?? undefined, {
     requestUrl: c.req.url,
   });
@@ -57,7 +75,6 @@ app.use("/*", async (c, next) => {
 });
 
 // Enable CORS for frontend access (restrict via CORS_ORIGIN in production, comma-separated)
-const isProduction = process.env.NODE_ENV === "production";
 const DEFAULT_CORS_ORIGINS = ["http://localhost:3000", "http://localhost:3001", "http://127.0.0.1:3000", "http://127.0.0.1:3001"];
 const corsOrigin = process.env.CORS_ORIGIN;
 const corsMisconfigured = isProduction && !corsOrigin;
