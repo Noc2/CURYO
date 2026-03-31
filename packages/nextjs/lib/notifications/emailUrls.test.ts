@@ -6,6 +6,7 @@ import {
   verifyNotificationEmailUnsubscribeToken,
 } from "./emailUrls";
 import assert from "node:assert/strict";
+import { createHmac } from "node:crypto";
 import test from "node:test";
 
 test("resolveNotificationEmailAppUrl prefers the configured app URL in production", () => {
@@ -75,6 +76,34 @@ test("notification email unsubscribe tokens round-trip and reject tampering", ()
   assert.deepEqual(verifyNotificationEmailUnsubscribeToken(token, secret), payload);
   const tamperedToken = `${token.slice(0, -1)}${token.endsWith("A") ? "B" : "A"}`;
   assert.equal(verifyNotificationEmailUnsubscribeToken(tamperedToken, secret), null);
+});
+
+test("notification email unsubscribe tokens reject malformed token segments", () => {
+  const secret = "notification-secret";
+  const payload = {
+    walletAddress: "0x1234567890abcdef1234567890abcdef12345678",
+    email: "alice@example.com",
+  };
+
+  const token = buildNotificationEmailUnsubscribeToken(payload, secret);
+  assert.equal(verifyNotificationEmailUnsubscribeToken(`${token}.extra`, secret), null);
+  assert.equal(verifyNotificationEmailUnsubscribeToken("missing-signature", secret), null);
+});
+
+test("notification email unsubscribe tokens reject signed payloads with invalid fields", () => {
+  const secret = "notification-secret";
+  const invalidPayload = Buffer.from(
+    JSON.stringify({
+      walletAddress: "not-an-address",
+      email: "",
+    }),
+    "utf8",
+  ).toString("base64url");
+  const validlySignedToken = `${invalidPayload}.${createHmac("sha256", secret)
+    .update(`notification-email-unsubscribe:${invalidPayload}`)
+    .digest("base64url")}`;
+
+  assert.equal(verifyNotificationEmailUnsubscribeToken(validlySignedToken, secret), null);
 });
 
 test("buildNotificationEmailUnsubscribeUrl includes the signed token", () => {
