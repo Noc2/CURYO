@@ -138,11 +138,23 @@ contract ContentRegistry is Initializable, AccessControlUpgradeable, PausableUpg
     /// @notice Snapshotted participation pool captured at the latest successful settlement.
     mapping(uint256 => address) public submitterParticipationSnapshotPool;
 
+    /// @notice Whether milestone-0 submitter resolution terms have been frozen for this content.
+    mapping(uint256 => bool) public milestoneZeroSubmitterTermsSnapshotted;
+
+    /// @notice Frozen rating from the first settled round (milestone 0).
+    mapping(uint256 => uint8) public milestoneZeroSubmitterRating;
+
+    /// @notice Frozen participation reward rate from the first settled round (milestone 0).
+    mapping(uint256 => uint256) public milestoneZeroSubmitterParticipationRateBps;
+
+    /// @notice Frozen participation reward pool from the first settled round (milestone 0).
+    mapping(uint256 => address) public milestoneZeroSubmitterParticipationPool;
+
     /// @dev Stateless helper used to resolve canonical submission keys without bloating the registry runtime.
     SubmissionCanonicalizer internal immutable SUBMISSION_CANONICALIZER;
 
     /// @dev Reserved storage gap for future upgrades
-    uint256[40] private __gap;
+    uint256[36] private __gap;
 
     // --- Events ---
     event ContentSubmitted(
@@ -318,9 +330,8 @@ contract ContentRegistry is Initializable, AccessControlUpgradeable, PausableUpg
             require(voterIdNFT.hasVoterId(msg.sender), "Voter ID required");
         }
 
-        SubmissionMetadata memory metadata = SubmissionMetadata({
-            url: url, title: title, description: description, tags: tags, categoryId: categoryId
-        });
+        SubmissionMetadata memory metadata =
+            SubmissionMetadata({ url: url, title: title, description: description, tags: tags, categoryId: categoryId });
         _validateSubmissionMetadata(metadata);
 
         require(address(categoryRegistry) != address(0), "CategoryRegistry not set");
@@ -581,6 +592,15 @@ contract ContentRegistry is Initializable, AccessControlUpgradeable, PausableUpg
         _returnSubmitterStake(contentId, rewardPool, rewardRateBps);
     }
 
+    /// @notice Called by VotingEngine to return submitter stake using frozen milestone-0 reward terms.
+    function returnSubmitterStakeWithMilestoneZeroTerms(uint256 contentId) external {
+        address rewardPool = milestoneZeroSubmitterParticipationPool[contentId];
+        if (rewardPool == address(0)) {
+            rewardPool = address(participationPool);
+        }
+        _returnSubmitterStake(contentId, rewardPool, milestoneZeroSubmitterParticipationRateBps[contentId]);
+    }
+
     /// @notice Called by VotingEngine to snapshot the submitter participation terms at settlement time.
     function snapshotSubmitterParticipationTerms(uint256 contentId, address rewardPool, uint256 rewardRateBps)
         external
@@ -592,6 +612,24 @@ contract ContentRegistry is Initializable, AccessControlUpgradeable, PausableUpg
 
         submitterParticipationSnapshotPool[contentId] = rewardPool;
         submitterParticipationSnapshotRateBps[contentId] = rewardRateBps;
+    }
+
+    /// @notice Called by VotingEngine to freeze milestone-0 submitter resolution terms on the first settled round.
+    function snapshotMilestoneZeroSubmitterTerms(
+        uint256 contentId,
+        uint256 rating,
+        address rewardPool,
+        uint256 rewardRateBps
+    ) external {
+        require(msg.sender == votingEngine, "Only VotingEngine");
+        Content storage c = contents[contentId];
+        require(c.id != 0, "Content does not exist");
+        if (c.submitterStakeReturned || milestoneZeroSubmitterTermsSnapshotted[contentId]) return;
+
+        milestoneZeroSubmitterTermsSnapshotted[contentId] = true;
+        milestoneZeroSubmitterRating[contentId] = rating > 100 ? 100 : uint8(rating);
+        milestoneZeroSubmitterParticipationPool[contentId] = rewardPool;
+        milestoneZeroSubmitterParticipationRateBps[contentId] = rewardRateBps;
     }
 
     /// @notice Called by VotingEngine once the dormancy window elapses without any settled round.

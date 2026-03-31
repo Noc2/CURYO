@@ -14,7 +14,7 @@ library RoundSettlementSideEffectsLib {
         ContentRegistry registry,
         IParticipationPool participationPool,
         address rewardDistributor,
-        bool hasSettledRound,
+        bool isFirstSettledRound,
         uint256 contentId,
         uint256 roundId,
         bool upWins,
@@ -22,22 +22,41 @@ library RoundSettlementSideEffectsLib {
         uint64 downPool
     ) external {
         uint16 newRating = RewardMath.calculateRating(upPool, downPool);
-        try registry.updateRatingDirect(contentId, newRating) { } catch { }
-        try registry.recordMeaningfulActivity(contentId) { } catch { }
+        address participationPoolAddress = address(participationPool);
+        uint256 participationRateBps = 0;
+        bool hasParticipationRate = false;
 
-        if (address(participationPool) != address(0)) {
+        if (participationPoolAddress != address(0)) {
             try participationPool.getCurrentRateBps() returns (uint256 rate) {
-                try registry.snapshotSubmitterParticipationTerms(contentId, address(participationPool), rate) { }
-                    catch { }
-                if (rewardDistributor != address(0)) {
-                    uint256 winningStake = upWins ? upPool : downPool;
-                    try IRoundRewardDistributor(rewardDistributor).snapshotParticipationRewards(
-                        contentId, roundId, address(participationPool), rate, winningStake
-                    ) { } catch { }
-                }
+                participationRateBps = rate;
+                hasParticipationRate = true;
             } catch { }
         }
 
-        try SubmitterStakeLib.resolve(registry, hasSettledRound, contentId) { } catch { }
+        if (isFirstSettledRound) {
+            registry.snapshotMilestoneZeroSubmitterTerms(
+                contentId, newRating, participationPoolAddress, hasParticipationRate ? participationRateBps : 0
+            );
+        }
+
+        try registry.updateRatingDirect(contentId, newRating) { } catch { }
+        try registry.recordMeaningfulActivity(contentId) { } catch { }
+
+        if (participationPoolAddress != address(0) && hasParticipationRate) {
+            try registry.snapshotSubmitterParticipationTerms(
+                contentId, participationPoolAddress, participationRateBps
+            ) { }
+                catch { }
+            if (rewardDistributor != address(0)) {
+                uint256 winningStake = upWins ? upPool : downPool;
+                try IRoundRewardDistributor(rewardDistributor)
+                    .snapshotParticipationRewards(
+                        contentId, roundId, participationPoolAddress, participationRateBps, winningStake
+                    ) { }
+                    catch { }
+            }
+        }
+
+        try SubmitterStakeLib.resolve(registry, true, contentId) { } catch { }
     }
 }
