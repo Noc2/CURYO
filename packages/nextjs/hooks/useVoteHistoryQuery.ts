@@ -87,7 +87,9 @@ export function buildRpcVoteHistory(params: {
       claimType:
         roundState === ROUND_STATE.Settled
           ? "reward"
-          : roundState === ROUND_STATE.Cancelled || roundState === ROUND_STATE.Tied || roundState === ROUND_STATE.RevealFailed
+          : roundState === ROUND_STATE.Cancelled ||
+              roundState === ROUND_STATE.Tied ||
+              roundState === ROUND_STATE.RevealFailed
             ? "refund"
             : null,
       committedAt: event.blockData?.timestamp ? new Date(Number(event.blockData.timestamp) * 1000).toISOString() : null,

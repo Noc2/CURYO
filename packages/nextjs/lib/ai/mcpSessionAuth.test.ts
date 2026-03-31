@@ -1,9 +1,9 @@
 import { NextRequest } from "next/server";
+import { getMcpSessionChallengeRateLimitKeyParts } from "../../app/api/mcp/session/challenge/route";
 import { verifyMcpSessionToken } from "@curyo/node-utils/mcpSessionToken";
 import assert from "node:assert/strict";
 import { after, before, beforeEach, test } from "node:test";
 import { generatePrivateKey, privateKeyToAccount } from "viem/accounts";
-import { getMcpSessionChallengeRateLimitKeyParts } from "../../app/api/mcp/session/challenge/route";
 
 const env = process.env as Record<string, string | undefined>;
 const originalDatabaseUrl = process.env.DATABASE_URL;

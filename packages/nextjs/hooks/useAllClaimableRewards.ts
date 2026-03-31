@@ -5,8 +5,8 @@ import { EPOCH_WEIGHT_BPS, REWARD_SPLIT_BPS, ROUND_STATE } from "@curyo/contract
 import { useAccount, useReadContracts } from "wagmi";
 import { type ClaimableRewardItem } from "~~/hooks/claimableRewards";
 import { useDeployedContractInfo } from "~~/hooks/scaffold-eth";
-import { useRecentUserVotes } from "~~/hooks/useRecentUserVotes";
 import { useClaimableSubmitterRewards } from "~~/hooks/useClaimableSubmitterRewards";
+import { useRecentUserVotes } from "~~/hooks/useRecentUserVotes";
 
 export interface ClaimableItem {
   contentId: bigint;

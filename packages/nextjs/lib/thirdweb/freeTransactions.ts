@@ -127,9 +127,7 @@ function isCallableAbi(abi: Abi) {
   return abi.some(entry => entry.type === "function");
 }
 
-function getContractsByAddress(
-  chainId: number,
-): Map<string, { name: string; address: Address; abi: Abi }> {
+function getContractsByAddress(chainId: number): Map<string, { name: string; address: Address; abi: Abi }> {
   const contracts = getContractsForChain(chainId);
   if (!contracts) {
     return new Map();
@@ -138,7 +136,10 @@ function getContractsByAddress(
   return new Map(
     Object.entries(contracts)
       .filter(([name, contract]) => !name.endsWith("Lib") && isCallableAbi(contract.abi))
-      .map(([name, contract]) => [contract.address.toLowerCase(), { name, address: contract.address, abi: contract.abi }]),
+      .map(([name, contract]) => [
+        contract.address.toLowerCase(),
+        { name, address: contract.address, abi: contract.abi },
+      ]),
   );
 }
 
@@ -417,7 +418,12 @@ function extractOperationCalls(body: ThirdwebVerifierRequest): NormalizedVerifie
   const callDatas = body.userOp?.data?.callDatas;
   const values = body.userOp?.data?.values;
 
-  if (!Array.isArray(targets) || targets.length === 0 || !Array.isArray(callDatas) || callDatas.length !== targets.length) {
+  if (
+    !Array.isArray(targets) ||
+    targets.length === 0 ||
+    !Array.isArray(callDatas) ||
+    callDatas.length !== targets.length
+  ) {
     return null;
   }
 
