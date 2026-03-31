@@ -507,7 +507,9 @@ export type PonderVoterStatsBatch = Record<string, PonderVoterStats>;
 
 const PONDER_PAGE_LIMIT = 200;
 
-async function getAllPages<TItem>(fetchPage: (offset: number) => Promise<{ items: TItem[]; hasMore?: boolean }>): Promise<TItem[]> {
+async function getAllPages<TItem>(
+  fetchPage: (offset: number) => Promise<{ items: TItem[]; hasMore?: boolean }>,
+): Promise<TItem[]> {
   const items: TItem[] = [];
   let offset = 0;
 

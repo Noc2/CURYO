@@ -1,7 +1,8 @@
 import { DEFAULT_ROUND_CONFIG, ROUND_STATE } from "@curyo/contracts/protocol";
+import { RoundData } from "~~/types/votingTypes";
+
 export { buildCommitVoteParams, buildStakeAmountWei, generateVoteSalt, resolveFrontendCode } from "@curyo/sdk/vote";
 export type { CommitVoteParams } from "@curyo/sdk/vote";
-import { RoundData } from "~~/types/votingTypes";
 
 export type RoundPhase = "voting" | "settled" | "cancelled" | "tied" | "revealFailed" | "none";
 

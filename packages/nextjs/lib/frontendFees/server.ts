@@ -447,7 +447,7 @@ async function getClaimableFrontendFeeSnapshot(frontend: `0x${string}`): Promise
   }
 
   const refreshPromise = buildClaimableFrontendFeeSnapshot(frontend)
-    .then((snapshot) => {
+    .then(snapshot => {
       frontendFeeSnapshotCache.set(frontend, snapshot);
       return snapshot;
     })

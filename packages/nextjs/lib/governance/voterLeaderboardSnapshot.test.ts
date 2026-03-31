@@ -1,11 +1,11 @@
-import assert from "node:assert/strict";
-import { test } from "node:test";
 import {
+  type VoterLeaderboardSnapshot,
   __resetVoterLeaderboardSnapshotForTests,
   getVoterLeaderboardSnapshot,
   resolveVoterLeaderboardSelection,
-  type VoterLeaderboardSnapshot,
 } from "./voterLeaderboardSnapshot";
+import assert from "node:assert/strict";
+import { test } from "node:test";
 
 const ADDRESS_A = "0x00000000000000000000000000000000000000aa";
 const ADDRESS_B = "0x00000000000000000000000000000000000000bb";
@@ -56,7 +56,7 @@ test("getVoterLeaderboardSnapshot single-flights concurrent refreshes", async ()
 
   let listCalls = 0;
   let resolveHolders: ((value: Array<{ address: string }>) => void) | null = null;
-  const holdersPromise = new Promise<Array<{ address: string }>>((resolve) => {
+  const holdersPromise = new Promise<Array<{ address: string }>>(resolve => {
     resolveHolders = resolve;
   });
 

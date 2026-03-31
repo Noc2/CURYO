@@ -62,7 +62,9 @@ export interface HostedMcpConfig {
 type McpConfigEnv = Record<string, string | undefined>;
 
 export function buildHostedMcpConfig(env: McpConfigEnv = process.env): HostedMcpConfig {
-  const baseUrl = normalizeBaseUrl(env.NEXT_PUBLIC_CURLYO_MCP_BASE_URL || env.CURYO_MCP_PUBLIC_BASE_URL || DEFAULT_MCP_BASE_URL);
+  const baseUrl = normalizeBaseUrl(
+    env.NEXT_PUBLIC_CURLYO_MCP_BASE_URL || env.CURYO_MCP_PUBLIC_BASE_URL || DEFAULT_MCP_BASE_URL,
+  );
   const siteBaseUrl = normalizeBaseUrl(env.NEXT_PUBLIC_SITE_URL || DEFAULT_SITE_BASE_URL);
   const path = normalizePath(env.NEXT_PUBLIC_CURLYO_MCP_PATH || env.CURYO_MCP_HTTP_PATH || DEFAULT_MCP_PATH);
   const webMcpEnabled = env.NEXT_PUBLIC_ENABLE_WEBMCP_EXPERIMENT === "1";

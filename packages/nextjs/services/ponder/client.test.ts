@@ -1,6 +1,6 @@
+import { fetchPonderJson, ponderApi, resolvePonderUrl } from "./client";
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { fetchPonderJson, ponderApi, resolvePonderUrl } from "./client";
 
 test("resolvePonderUrl uses the local default outside production", () => {
   assert.equal(resolvePonderUrl(undefined, false), "http://localhost:42069");
@@ -41,16 +41,20 @@ test("fetchPonderJson surfaces request timeouts clearly", async () => {
   const abortError = Object.assign(new Error("aborted"), { name: "AbortError" });
 
   await assert.rejects(
-    () => fetchPonderJson("https://ponder.curyo.xyz/content", 1234, async () => { throw abortError; }),
+    () =>
+      fetchPonderJson("https://ponder.curyo.xyz/content", 1234, async () => {
+        throw abortError;
+      }),
     /Ponder request timed out after 1234ms/,
   );
 });
 
 test("fetchPonderJson wraps fetch failures", async () => {
   await assert.rejects(
-    () => fetchPonderJson("https://ponder.curyo.xyz/content", 1000, async () => {
-      throw new Error("socket hang up");
-    }),
+    () =>
+      fetchPonderJson("https://ponder.curyo.xyz/content", 1000, async () => {
+        throw new Error("socket hang up");
+      }),
     /Ponder request failed: socket hang up/,
   );
 });

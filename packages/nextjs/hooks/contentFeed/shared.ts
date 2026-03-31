@@ -139,7 +139,14 @@ export function mergeContentFeedMetadata(
 }
 
 function getSearchTokens(value: string): string[] {
-  return Array.from(new Set(value.split(/\s+/).map(token => token.trim()).filter(Boolean)));
+  return Array.from(
+    new Set(
+      value
+        .split(/\s+/)
+        .map(token => token.trim())
+        .filter(Boolean),
+    ),
+  );
 }
 
 function getRpcRelevanceScore(item: ContentItem, normalizedQuery: string, queryTokens: string[]): number {

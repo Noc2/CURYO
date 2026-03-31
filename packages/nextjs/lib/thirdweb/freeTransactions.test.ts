@@ -128,9 +128,7 @@ test("pending reservations keep the same operation idempotent without charging q
   assert.equal(repeatedDecision.summary.used, 1);
   assert.equal(repeatedDecision.summary.remaining, 1);
 
-  const reservationRows = await dbModule.dbClient.execute(
-    "SELECT status FROM free_transaction_reservations",
-  );
+  const reservationRows = await dbModule.dbClient.execute("SELECT status FROM free_transaction_reservations");
   assert.equal(reservationRows.rows[0]?.status, "pending");
 
   const secondDecision = await freeTransactions.evaluateFreeTransactionAllowance(buildRequest("0x02") as never);

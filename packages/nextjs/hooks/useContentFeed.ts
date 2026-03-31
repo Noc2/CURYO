@@ -179,9 +179,10 @@ export function useContentFeed(voterAddress?: string, options: UseContentFeedOpt
 
   const baseFeed = result?.source === "rpc" ? pagedRpcFeed : (result?.data?.feed ?? pagedRpcFeed);
   const totalContent = result?.source === "rpc" ? rpcTotalContent : (result?.data?.totalContent ?? rpcTotalContent);
-  const hasMore = result?.source === "rpc"
-    ? rpcTotalContent > offset + pagedRpcFeed.length
-    : (result?.data?.hasMore ?? totalContent > offset + baseFeed.length);
+  const hasMore =
+    result?.source === "rpc"
+      ? rpcTotalContent > offset + pagedRpcFeed.length
+      : (result?.data?.hasMore ?? totalContent > offset + baseFeed.length);
   const isLoading = enabled && (ponderLoading || (rpcFallbackActive && eventsLoading && result?.source !== "ponder"));
   const source = result?.source ?? (rpcFallbackActive ? "rpc" : "ponder");
   const { metadataMap, validationMap } = useContentFeedMetadata(baseFeed);

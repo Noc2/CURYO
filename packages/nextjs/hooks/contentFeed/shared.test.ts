@@ -1,6 +1,6 @@
+import { type ContentItem, isContentSearchQueryTooShort, sortRpcFeed } from "./shared";
 import assert from "node:assert/strict";
 import test from "node:test";
-import { isContentSearchQueryTooShort, sortRpcFeed, type ContentItem } from "./shared";
 
 function buildItem(
   id: bigint,

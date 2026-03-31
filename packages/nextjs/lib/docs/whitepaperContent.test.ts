@@ -1,6 +1,6 @@
+import { EXECUTIVE_SUMMARY, META, SECTIONS } from "../../scripts/whitepaper/content";
 import assert from "node:assert/strict";
 import test from "node:test";
-import { EXECUTIVE_SUMMARY, META, SECTIONS } from "../../scripts/whitepaper/content";
 
 test("whitepaper metadata reflects the updated title-case brand deck", () => {
   assert.equal(META.subtitle, "Human Reputation at Stake");

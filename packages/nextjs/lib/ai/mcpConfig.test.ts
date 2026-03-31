@@ -1,6 +1,6 @@
+import { buildHostedMcpConfig } from "./mcpConfig";
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { buildHostedMcpConfig } from "./mcpConfig";
 
 test("buildHostedMcpConfig returns canonical hosted URLs by default", () => {
   const config = buildHostedMcpConfig({});
@@ -26,7 +26,8 @@ test("buildHostedMcpConfig respects environment overrides and enables the WebMCP
     NEXT_PUBLIC_ENABLE_WEBMCP_EXPERIMENT: "1",
     NEXT_PUBLIC_CURLYO_MCP_SERVER_NAME: "curyo-staging",
     CURYO_MCP_HTTP_SESSION_SECRET: "nextjs-session-secret",
-    CURYO_MCP_SESSION_WALLET_BINDINGS: '[{"walletAddress":"0x1111111111111111111111111111111111111111","scopes":["mcp:read"]}]',
+    CURYO_MCP_SESSION_WALLET_BINDINGS:
+      '[{"walletAddress":"0x1111111111111111111111111111111111111111","scopes":["mcp:read"]}]',
     CURYO_MCP_SESSION_TTL_MS: "900000",
   });
 

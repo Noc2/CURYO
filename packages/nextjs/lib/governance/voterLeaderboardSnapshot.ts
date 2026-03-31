@@ -1,8 +1,7 @@
+import { rankVoterLeaderboardAddresses } from "./voterLeaderboard";
 import "server-only";
-
 import { readCRepBalances } from "~~/lib/profileRegistry/server";
 import { ponderApi } from "~~/services/ponder/client";
-import { rankVoterLeaderboardAddresses } from "./voterLeaderboard";
 
 const VOTER_LEADERBOARD_CACHE_TTL_MS = 60_000;
 
@@ -142,7 +141,7 @@ export async function resolveVoterLeaderboardSelection(
 
   const includeBalances = await readBalances([includeAddress]);
   const includeBalance = includeBalances[includeAddress] ?? 0n;
-  const insertIndex = snapshot.rankedAddresses.findIndex((address) => {
+  const insertIndex = snapshot.rankedAddresses.findIndex(address => {
     const candidateBalance = snapshot.balances[address] ?? 0n;
     if (includeBalance > candidateBalance) return true;
     if (includeBalance === candidateBalance && includeAddress.localeCompare(address) < 0) return true;
