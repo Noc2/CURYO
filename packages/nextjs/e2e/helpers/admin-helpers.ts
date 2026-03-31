@@ -14,7 +14,10 @@ import { PONDER_URL } from "./ponder-url";
 import { deriveAnchoredTlockRuntimeNowMs } from "./tlockRuntime";
 
 const ANVIL_RPC = "http://localhost:8545";
-const DEFAULT_TX_GAS_LIMIT = 2_000_000n;
+// Contract gas costs shift as local protocol code evolves, so E2E helpers estimate
+// gas instead of relying on a stale fixed cap for vote/settlement transactions.
+const DEFAULT_TX_GAS_LIMIT = 10_000_000n;
+const ESTIMATED_TX_GAS_BUFFER = 300_000n;
 const ANVIL_PRIVATE_KEYS_BY_ADDRESS = new Map(
   Object.values(ANVIL_ACCOUNTS).map(account => [account.address.toLowerCase(), account.privateKey as `0x${string}`]),
 );
@@ -33,6 +36,15 @@ async function rpcRequest<T = any>(method: string, params: unknown[]): Promise<T
   const json = await res.json();
   if (json.error) return null;
   return (json.result ?? null) as T | null;
+}
+
+async function resolveTxGasLimit(from: string, to: string, data: `0x${string}`): Promise<bigint> {
+  const estimate = await rpcRequest<`0x${string}`>("eth_estimateGas", [{ from, to, data }, "latest"]);
+  if (!estimate) {
+    return DEFAULT_TX_GAS_LIMIT;
+  }
+
+  return BigInt(estimate) + ESTIMATED_TX_GAS_BUFFER;
 }
 
 async function resolveProtocolConfigAddress(contractAddress: string): Promise<string> {
@@ -130,6 +142,7 @@ async function buildSubmissionReservation(
 
 /** Send a raw transaction to the Anvil RPC, return true if it succeeded on-chain. */
 async function sendTx(from: string, to: string, data: `0x${string}`): Promise<boolean> {
+  const gasLimit = await resolveTxGasLimit(from, to, data);
   const privateKey = ANVIL_PRIVATE_KEYS_BY_ADDRESS.get(from.toLowerCase());
   if (privateKey) {
     try {
@@ -141,7 +154,7 @@ async function sendTx(from: string, to: string, data: `0x${string}`): Promise<bo
       const txHash = await walletClient.sendTransaction({
         to: to as `0x${string}`,
         data,
-        gas: DEFAULT_TX_GAS_LIMIT,
+        gas: gasLimit,
       });
       const receipt = await publicClient.waitForTransactionReceipt({ hash: txHash });
       return receipt.status === "success";
@@ -163,7 +176,7 @@ async function sendTx(from: string, to: string, data: `0x${string}`): Promise<bo
     body: JSON.stringify({
       jsonrpc: "2.0",
       method: "eth_sendTransaction",
-      params: [{ from, to, data, gas: `0x${DEFAULT_TX_GAS_LIMIT.toString(16)}` }],
+      params: [{ from, to, data, gas: `0x${gasLimit.toString(16)}` }],
       id: Date.now(),
     }),
   });
