@@ -199,7 +199,7 @@ export class CuryoWriteService {
           address: this.requireContracts().votingEngine,
           abi: RoundVotingEngineAbi as any,
           functionName: "commitVote",
-          args: [contentId, commitHash, ciphertext, targetRound, drandChainHash, stakeAmount, frontendAddress],
+          args: [contentId, targetRound, drandChainHash, commitHash, ciphertext, stakeAmount, frontendAddress],
         });
         result.simulation = "commitVote";
       } else {
@@ -225,7 +225,7 @@ export class CuryoWriteService {
       address: this.requireContracts().votingEngine,
       abi: RoundVotingEngineAbi as any,
       functionName: "commitVote",
-      args: [contentId, commitHash, ciphertext, targetRound, drandChainHash, stakeAmount, frontendAddress],
+      args: [contentId, targetRound, drandChainHash, commitHash, ciphertext, stakeAmount, frontendAddress],
     } as const;
     await this.simulateContract(context, voteRequest);
     const voteTxHash = await this.writeContract(context, voteRequest);

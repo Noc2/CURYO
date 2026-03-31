@@ -280,7 +280,7 @@ describe("resolveRounds integration", () => {
           address: CONTRACTS.roundVotingEngine,
           abi: RoundVotingEngineAbi as any,
           functionName: "commitVote",
-          args: [contentId, commitHash, ciphertext, voter.targetRound, voter.drandChainHash, STAKE, "0x0000000000000000000000000000000000000000"],
+          args: [contentId, voter.targetRound, voter.drandChainHash, commitHash, ciphertext, STAKE, "0x0000000000000000000000000000000000000000"],
         }),
       );
     }

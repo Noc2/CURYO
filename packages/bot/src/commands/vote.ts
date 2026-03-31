@@ -144,7 +144,7 @@ export async function runVote() {
         ...contractConfig.votingEngine,
         abi: contractConfig.votingEngine.abi as any,
         functionName: "commitVote",
-        args: [contentId, commitHash, ciphertext, targetRound, drandChainHash, config.voteStake, frontendAddress],
+        args: [contentId, targetRound, drandChainHash, commitHash, ciphertext, config.voteStake, frontendAddress],
       });
       await publicClient.waitForTransactionReceipt({ hash: voteTx });
       log.info(`Committed vote on content #${item.id} (${Number(config.voteStake) / 1e6} cREP, ${isUp ? "UP" : "DOWN"} — hidden until epoch ends): ${voteTx}`);

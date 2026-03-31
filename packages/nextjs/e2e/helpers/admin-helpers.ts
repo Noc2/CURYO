@@ -984,7 +984,7 @@ export async function commitVoteDirect(
   fromAddress: string,
   contractAddress: string,
   epochDurationSeconds = 1200,
-  ): Promise<{ success: boolean; commitKey: `0x${string}`; isUp: boolean; salt: `0x${string}` }> {
+): Promise<{ success: boolean; commitKey: `0x${string}`; isUp: boolean; salt: `0x${string}` }> {
   const { createTlockVoteCommit } = await import("@curyo/contracts/voting");
   const { encodeFunctionData, encodePacked, keccak256 } = await import("viem");
 
@@ -1017,10 +1017,10 @@ export async function commitVoteDirect(
         type: "function",
         inputs: [
           { name: "contentId", type: "uint256" },
-          { name: "commitHash", type: "bytes32" },
-          { name: "ciphertext", type: "bytes" },
           { name: "targetRound", type: "uint64" },
           { name: "drandChainHash", type: "bytes32" },
+          { name: "commitHash", type: "bytes32" },
+          { name: "ciphertext", type: "bytes" },
           { name: "stakeAmount", type: "uint256" },
           { name: "frontend", type: "address" },
         ],
@@ -1029,7 +1029,7 @@ export async function commitVoteDirect(
       },
     ] as any,
     functionName: "commitVote",
-    args: [BigInt(contentId), chash, ciphertext, targetRound, drandChainHash, stakeAmount, frontend as `0x${string}`],
+    args: [BigInt(contentId), targetRound, drandChainHash, chash, ciphertext, stakeAmount, frontend as `0x${string}`],
   });
 
   const success = await sendTx(fromAddress, contractAddress, data);
