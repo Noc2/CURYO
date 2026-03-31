@@ -72,7 +72,7 @@ https://mcp.curyo.xyz/mcp`}</code>
           <tbody>
             <tr>
               <td>MCP transport</td>
-              <td>Read-only MCP package with stdio and Streamable HTTP transports</td>
+              <td>Read and hosted-write MCP package with stdio and Streamable HTTP transports</td>
               <td>Canonical hosted HTTP endpoint for external AI clients</td>
             </tr>
             <tr>
@@ -84,18 +84,23 @@ https://mcp.curyo.xyz/mcp`}</code>
             </tr>
             <tr>
               <td>Authentication</td>
-              <td>Scoped bearer tokens with optional identity binding for hosted writes</td>
+              <td>Scoped bearer tokens with optional expiry, session metadata, and identity binding for hosted writes</td>
               <td>Scoped per-user auth for writes, with auditable wallet binding</td>
             </tr>
             <tr>
               <td>Write support</td>
-              <td>Typed write tools in repo: vote, submit_content, claim_reward, claim_frontend_fee</td>
+              <td>Typed write tools in repo: vote, submit_content, claim_reward, claim_frontend_fee, with preflight simulation and policy guards</td>
               <td>Small typed write surface, not arbitrary contract calls</td>
             </tr>
             <tr>
               <td>Frontend fee attribution</td>
               <td>Available at protocol level, with configurable frontend attribution in bot and hosted MCP flows</td>
               <td>Hosted vote path includes a registered frontend code by default</td>
+            </tr>
+            <tr>
+              <td>Ops surface</td>
+              <td>HTTP rate limits, `/metrics`, health, readiness, and structured write audit events</td>
+              <td>Managed alerts, dashboards, and policy-backed hosted operations</td>
             </tr>
           </tbody>
         </table>
@@ -113,6 +118,11 @@ https://mcp.curyo.xyz/mcp`}</code>
         <li>Publish one official MCP config for agent clients.</li>
         <li>Rate-limit or token-gate external access as needed without changing the tool surface.</li>
       </ul>
+      <p>
+        The repo now also has the beginnings of that official config shape in <code>/api/mcp/config</code>, which can
+        publish the canonical endpoint URL, health URLs, docs URL, and the current WebMCP experiment flag from one
+        place.
+      </p>
 
       <h2>Phase 2: Hosted Write Rollout</h2>
       <p>
@@ -197,6 +207,11 @@ https://mcp.curyo.xyz/mcp`}</code>
         <li>Do not expose arbitrary contract calls, arbitrary calldata, or generic send-transaction tools.</li>
       </ul>
       <p>
+        The in-repo MCP package now includes token expiry metadata, HTTP rate limits, a Prometheus-style metrics
+        surface, and structured write audit events. That is a solid hosted beta foundation, but it is still not the
+        same thing as a fully managed production auth and signer platform.
+      </p>
+      <p>
         Delegation already makes sense for voting and submission. Frontend registration itself is still a holder-only
         action, so the frontend operator wallet for <code>mcp.curyo.xyz</code> should be treated as infrastructure, not
         reused as the signing key for normal user traffic.
@@ -261,6 +276,40 @@ https://mcp.curyo.xyz/mcp`}</code>
         <li>
           Document auth scopes, wallet models, and write-tool safety limits before enabling external write access.
         </li>
+      </ul>
+
+      <h2>Client Examples</h2>
+      <p>
+        The intended hosted bootstrap flow is: read <code>/api/mcp/config</code>, connect to the published HTTP
+        endpoint, then attach a bearer token with the minimum scopes your client needs.
+      </p>
+      <pre>
+        <code>{`Claude Desktop
+{
+  "mcpServers": {
+    "curyo": {
+      "transport": {
+        "type": "streamable_http",
+        "url": "https://mcp.curyo.xyz/mcp",
+        "headers": {
+          "Authorization": "Bearer \${CURYO_MCP_TOKEN}"
+        }
+      }
+    }
+  }
+}`}</code>
+      </pre>
+
+      <h2>WebMCP</h2>
+      <p>
+        WebMCP still makes sense only as a later browser-native layer on top of the hosted MCP backend. The hosted MCP
+        endpoint should remain the canonical interface for durable reads, auth, and production write policy, while
+        WebMCP stays feature-flagged for in-tab experiments.
+      </p>
+      <ul>
+        <li>Use hosted MCP first for stable read and write workflows.</li>
+        <li>Keep WebMCP behind an explicit feature flag in the web app.</li>
+        <li>Start with read-oriented browser actions before considering browser-mediated writes.</li>
       </ul>
 
       <div className="not-prose mt-8 rounded-xl p-4 surface-card">

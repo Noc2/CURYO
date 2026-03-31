@@ -52,6 +52,11 @@ The server reads from the environment at startup.
 | `CURYO_MCP_HTTP_AUTH_REALM` | `curyo-mcp` | `WWW-Authenticate` realm |
 | `CURYO_MCP_HTTP_AUTH_SCOPES` | `mcp:read` | Default scopes for legacy bearer tokens |
 | `CURYO_MCP_HTTP_TOKENS_JSON` | — | JSON array of scoped bearer tokens, each optionally bound to a write identity |
+| `CURYO_MCP_HTTP_RATE_LIMIT_ENABLED` | `1` | Enable in-memory HTTP request rate limiting |
+| `CURYO_MCP_HTTP_RATE_LIMIT_WINDOW_MS` | `60000` | Shared fixed window used for MCP HTTP rate limits |
+| `CURYO_MCP_HTTP_RATE_LIMIT_READ_LIMIT` | `120` | Max read-oriented MCP HTTP requests per window |
+| `CURYO_MCP_HTTP_RATE_LIMIT_WRITE_LIMIT` | `20` | Max write-capable MCP HTTP requests per window |
+| `CURYO_MCP_HTTP_TRUSTED_PROXY_HEADERS` | — | Comma-separated proxy headers to trust for client IP extraction |
 | `CURYO_MCP_WRITE_ENABLED` | `0` | Enable hosted write tools |
 | `CURYO_MCP_WRITE_IDENTITIES` | — | JSON array of signer identities (`privateKey` or Foundry keystore credentials) |
 | `CURYO_MCP_WRITE_DEFAULT_IDENTITY` | — | Optional stdio-only fallback identity for local development |
@@ -59,6 +64,10 @@ The server reads from the environment at startup.
 | `CURYO_MCP_CHAIN_ID` or `CHAIN_ID` | — | Chain ID used for write-capable tools |
 | `CURYO_MCP_CHAIN_NAME` | auto-derived | Optional human-readable chain label for write mode |
 | `CURYO_MCP_MAX_GAS_PER_TX` | `2000000` | Per-transaction gas cap for hosted writes |
+| `CURYO_MCP_WRITE_MAX_VOTE_STAKE` | — | Optional protocol-side cap for hosted `vote` stake amounts |
+| `CURYO_MCP_WRITE_SUBMISSION_HOST_ALLOWLIST` | — | Optional CSV allowlist for `submit_content` URL hostnames |
+| `CURYO_MCP_WRITE_SUBMISSION_REVEAL_POLL_MS` | `500` | Poll interval while waiting for `submit_content` reveal readiness |
+| `CURYO_MCP_WRITE_SUBMISSION_REVEAL_TIMEOUT_MS` | `30000` | Timeout while waiting for `submit_content` reveal readiness |
 | `CURYO_MCP_CREP_TOKEN_ADDRESS` | auto-derived on supported chains | Fallback cREP token address for write mode |
 | `CURYO_MCP_CONTENT_REGISTRY_ADDRESS` | auto-derived on supported chains | Fallback ContentRegistry address for write mode |
 | `CURYO_MCP_VOTING_ENGINE_ADDRESS` | auto-derived on supported chains | Fallback RoundVotingEngine address for write mode |
@@ -77,11 +86,15 @@ CURYO_MCP_HTTP_PORT=3334
 CURYO_MCP_HTTP_PATH=/mcp
 CURYO_MCP_PUBLIC_BASE_URL=https://mcp.example.com
 CURYO_MCP_HTTP_AUTH_MODE=bearer
-CURYO_MCP_HTTP_TOKENS_JSON='[{"token":"replace-me","clientId":"claude-prod","scopes":["mcp:read","mcp:write:vote","mcp:write:submit_content"],"identityId":"curyo-writer"}]'
+CURYO_MCP_HTTP_TOKENS_JSON='[{"token":"replace-me","clientId":"claude-prod","scopes":["mcp:read","mcp:write:vote","mcp:write:submit_content"],"identityId":"curyo-writer","kind":"session","expiresAt":"2030-01-01T00:00:00.000Z","subject":"0x1234..."}]'
+CURYO_MCP_HTTP_RATE_LIMIT_READ_LIMIT=120
+CURYO_MCP_HTTP_RATE_LIMIT_WRITE_LIMIT=20
 CURYO_MCP_WRITE_ENABLED=1
 CURYO_MCP_RPC_URL=https://forno.celo.org
 CURYO_MCP_CHAIN_ID=42220
 CURYO_MCP_WRITE_IDENTITIES='[{"id":"curyo-writer","privateKey":"0x...","frontendAddress":"0x7777777777777777777777777777777777777777"}]'
+CURYO_MCP_WRITE_MAX_VOTE_STAKE=5000000000000000000
+CURYO_MCP_WRITE_SUBMISSION_HOST_ALLOWLIST=curyo.xyz,github.com
 ```
 
 ## Transport Behavior
@@ -91,12 +104,72 @@ In Streamable HTTP mode:
 - MCP traffic is served on `CURYO_MCP_HTTP_PATH`
 - liveness is exposed on `/healthz`
 - readiness is exposed on `/readyz`
+- Prometheus-style metrics are exposed on `/metrics`
 - bearer auth protects the MCP path when `CURYO_MCP_HTTP_AUTH_MODE=bearer`
+- expiring/session tokens can be modeled through `CURYO_MCP_HTTP_TOKENS_JSON`
+- HTTP rate limits apply before MCP requests reach the transport
 - request logs are emitted as JSON to stderr unless disabled
 - scoped write tools remain inaccessible unless the caller has a token with the matching write scope
+- successful and failed hosted write tools emit structured audit events with action, account, chain, and duration
 
 `/readyz` performs a bounded `get_stats` call against the configured Ponder API, so it reflects upstream availability
 rather than only process liveness.
+
+## Hosted Client Config
+
+The Next.js app exposes a canonical hosted-config JSON at `/api/mcp/config`. It is intended to be the single source of
+truth for the public endpoint URL, health/readiness URLs, docs URL, and the current WebMCP experiment flag.
+
+Example response shape:
+
+```json
+{
+  "serverName": "curyo-readonly",
+  "endpointUrl": "https://mcp.curyo.xyz/mcp",
+  "healthUrl": "https://mcp.curyo.xyz/healthz",
+  "readinessUrl": "https://mcp.curyo.xyz/readyz",
+  "metricsUrl": "https://mcp.curyo.xyz/metrics",
+  "docsUrl": "https://curyo.xyz/docs/ai"
+}
+```
+
+## Client Examples
+
+Claude Desktop:
+
+```json
+{
+  "mcpServers": {
+    "curyo": {
+      "transport": {
+        "type": "streamable_http",
+        "url": "https://mcp.curyo.xyz/mcp",
+        "headers": {
+          "Authorization": "Bearer ${CURYO_MCP_TOKEN}"
+        }
+      }
+    }
+  }
+}
+```
+
+Cursor / editor MCP clients:
+
+```json
+{
+  "name": "curyo",
+  "transport": {
+    "type": "streamable_http",
+    "url": "https://mcp.curyo.xyz/mcp",
+    "headers": {
+      "Authorization": "Bearer ${CURYO_MCP_TOKEN}"
+    }
+  }
+}
+```
+
+For early browser-native experiments, keep WebMCP behind a feature flag and treat it as complementary to the hosted MCP
+service rather than a replacement for the canonical backend endpoint.
 
 ## MCP Surface
 
