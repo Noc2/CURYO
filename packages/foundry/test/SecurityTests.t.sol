@@ -175,8 +175,12 @@ contract SecurityReentrancyTest is SecurityHarnessBase {
         return 1;
     }
 
-    function _commit(address voter, uint256 contentId, bool isUp) internal returns (bytes32 commitKey) {
-        bytes32 salt = keccak256(abi.encodePacked(voter, block.timestamp, contentId));
+    function _recordCommit(bytes32 commitKey, bool isUp, bytes32 salt) private {
+        commitDirections[commitKey] = isUp;
+        commitSalts[commitKey] = salt;
+    }
+
+    function _submitCommit(address voter, uint256 contentId, bool isUp, bytes32 salt) private returns (bytes32) {
         bytes memory ciphertext = _testCiphertext(isUp, salt, contentId);
         uint64 targetRound = _tlockCommitTargetRound();
         bytes32 drandChainHash = _tlockDrandChainHash();
@@ -185,9 +189,14 @@ contract SecurityReentrancyTest is SecurityHarnessBase {
         crepToken.approve(address(votingEngine), STAKE);
         votingEngine.commitVote(contentId, targetRound, drandChainHash, commitHash, ciphertext, STAKE, address(0));
         vm.stopPrank();
-        commitKey = keccak256(abi.encodePacked(voter, commitHash));
-        commitDirections[commitKey] = isUp;
-        commitSalts[commitKey] = salt;
+        return keccak256(abi.encodePacked(voter, commitHash));
+    }
+
+    function _commit(address voter, uint256 contentId, bool isUp) internal returns (bytes32) {
+        bytes32 salt = keccak256(abi.encodePacked(voter, block.timestamp, contentId));
+        bytes32 commitKey = _submitCommit(voter, contentId, isUp, salt);
+        _recordCommit(commitKey, isUp, salt);
+        return commitKey;
     }
 
     /// @notice claimCancelledRoundRefund token transfer cannot trigger re-entry
@@ -258,6 +267,13 @@ contract SecurityReentrancyTest is SecurityHarnessBase {
 // ============================================================================
 
 contract SecurityTransferAndCallTest is SecurityHarnessBase {
+    struct VotePayloadArtifacts {
+        uint64 targetRound;
+        bytes32 drandChainHash;
+        bytes ciphertext;
+        bytes32 commitHash;
+    }
+
     CuryoReputation crepToken;
     ContentRegistry registry;
     RoundVotingEngine votingEngine;
@@ -317,11 +333,18 @@ contract SecurityTransferAndCallTest is SecurityHarnessBase {
         returns (bytes memory payload, bytes32 commitHash, bytes memory ciphertext)
     {
         bytes32 salt = keccak256(abi.encodePacked(voter, block.timestamp, contentId));
-        ciphertext = _testCiphertext(true, salt, contentId);
-        uint64 targetRound = _tlockCommitTargetRound();
-        bytes32 drandChainHash = _tlockDrandChainHash();
-        commitHash = _commitHash(true, salt, contentId, targetRound, drandChainHash, ciphertext);
-        payload = abi.encode(contentId, commitHash, ciphertext, address(0), targetRound, drandChainHash);
+        VotePayloadArtifacts memory artifacts;
+        artifacts.targetRound = _tlockCommitTargetRound();
+        artifacts.drandChainHash = _tlockDrandChainHash();
+        artifacts.ciphertext =
+            _testCiphertext(true, salt, contentId, artifacts.targetRound, artifacts.drandChainHash);
+        artifacts.commitHash =
+            _commitHash(true, salt, contentId, artifacts.targetRound, artifacts.drandChainHash, artifacts.ciphertext);
+        payload = abi.encode(
+            contentId, artifacts.commitHash, artifacts.ciphertext, address(0), artifacts.targetRound, artifacts.drandChainHash
+        );
+        commitHash = artifacts.commitHash;
+        ciphertext = artifacts.ciphertext;
     }
 
     function test_TransferAndCall_RejectsDirectExternalCallback() public {
@@ -440,8 +463,12 @@ contract SecuritySettlementTimingTest is SecurityHarnessBase {
         return 1;
     }
 
-    function _commit(address voter, uint256 contentId, bool isUp) internal returns (bytes32 commitKey) {
-        bytes32 salt = keccak256(abi.encodePacked(voter, block.timestamp, contentId));
+    function _recordCommit(bytes32 commitKey, bool isUp, bytes32 salt) private {
+        commitDirections[commitKey] = isUp;
+        commitSalts[commitKey] = salt;
+    }
+
+    function _submitCommit(address voter, uint256 contentId, bool isUp, bytes32 salt) private returns (bytes32) {
         bytes memory ciphertext = _testCiphertext(isUp, salt, contentId);
         uint64 targetRound = _tlockCommitTargetRound();
         bytes32 drandChainHash = _tlockDrandChainHash();
@@ -450,9 +477,14 @@ contract SecuritySettlementTimingTest is SecurityHarnessBase {
         crepToken.approve(address(votingEngine), STAKE);
         votingEngine.commitVote(contentId, targetRound, drandChainHash, commitHash, ciphertext, STAKE, address(0));
         vm.stopPrank();
-        commitKey = keccak256(abi.encodePacked(voter, commitHash));
-        commitDirections[commitKey] = isUp;
-        commitSalts[commitKey] = salt;
+        return keccak256(abi.encodePacked(voter, commitHash));
+    }
+
+    function _commit(address voter, uint256 contentId, bool isUp) internal returns (bytes32) {
+        bytes32 salt = keccak256(abi.encodePacked(voter, block.timestamp, contentId));
+        bytes32 commitKey = _submitCommit(voter, contentId, isUp, salt);
+        _recordCommit(commitKey, isUp, salt);
+        return commitKey;
     }
 
     function _revealFromCiphertext(uint256 cid, uint256 roundId, bytes32 commitKey) internal {
