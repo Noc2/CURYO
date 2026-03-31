@@ -57,7 +57,39 @@ let cacheExpiry = 0;
 let availabilityPromise: Promise<boolean> | null = null;
 
 const HEALTH_CHECK_TIMEOUT = 2000;
+const PONDER_REQUEST_TIMEOUT = 10_000;
 const CACHE_DURATION = 30_000;
+
+function isAbortError(error: unknown): boolean {
+  return error instanceof Error && error.name === "AbortError";
+}
+
+export async function fetchPonderJson<T>(
+  url: string | URL,
+  timeoutMs = PONDER_REQUEST_TIMEOUT,
+  fetchImpl: typeof fetch = fetch,
+): Promise<T> {
+  let response: Response;
+
+  try {
+    response = await fetchImpl(url.toString(), {
+      signal: AbortSignal.timeout(timeoutMs),
+    });
+  } catch (error) {
+    if (isAbortError(error)) {
+      throw new Error(`Ponder request timed out after ${timeoutMs}ms`);
+    }
+
+    const message = error instanceof Error ? error.message : "Unknown fetch error";
+    throw new Error(`Ponder request failed: ${message}`);
+  }
+
+  if (!response.ok) {
+    throw new Error(`Ponder request failed: ${response.status} ${response.statusText}`);
+  }
+
+  return response.json();
+}
 
 export async function isPonderAvailable(): Promise<boolean> {
   const ponderUrl = getConfiguredPonderUrl();
@@ -107,11 +139,7 @@ export async function ponderGet<T>(path: string, params?: Record<string, string 
       }
     }
   }
-  const res = await fetch(url.toString());
-  if (!res.ok) {
-    throw new Error(`Ponder request failed: ${res.status} ${res.statusText}`);
-  }
-  return res.json();
+  return fetchPonderJson<T>(url);
 }
 
 // ============================================================
