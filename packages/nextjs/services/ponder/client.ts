@@ -378,6 +378,18 @@ export interface PonderTokenHolder {
   firstSeenAt: string;
 }
 
+export interface PonderFrontend {
+  address: string;
+  operator: string;
+  stakedAmount: string;
+  eligible: boolean;
+  slashed: boolean;
+  exitAvailableAt: string | null;
+  totalFeesCredited: string;
+  totalFeesClaimed: string;
+  registeredAt: string;
+}
+
 export interface PonderTokenHoldersResponse {
   items: PonderTokenHolder[];
   total: number;
@@ -609,6 +621,10 @@ export const ponderApi = {
 
   getTokenHolders(params?: { limit?: string; offset?: string }) {
     return ponderGet<PonderTokenHoldersResponse>("/token-holders", params);
+  },
+
+  getFrontend(address: string) {
+    return ponderGet<{ frontend: PonderFrontend }>(`/frontend/${address}`);
   },
 
   async getAllTokenHolders() {
