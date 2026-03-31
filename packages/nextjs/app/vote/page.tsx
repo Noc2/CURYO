@@ -57,7 +57,6 @@ const HomeInner = () => {
     activeSourceIndex,
     address,
     canLoadMore,
-    canNavigateCards,
     canSwipeNavigate,
     categories,
     categoriesLoading,
