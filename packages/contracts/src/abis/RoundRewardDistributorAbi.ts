@@ -19,6 +19,19 @@ export const RoundRewardDistributorAbi = [
   },
   {
     "type": "function",
+    "name": "activateClaimTracking",
+    "inputs": [
+      {
+        "name": "activatedAt",
+        "type": "uint48",
+        "internalType": "uint48"
+      }
+    ],
+    "outputs": [],
+    "stateMutability": "nonpayable"
+  },
+  {
+    "type": "function",
     "name": "backfillParticipationRewards",
     "inputs": [
       {
@@ -139,6 +152,19 @@ export const RoundRewardDistributorAbi = [
     ],
     "outputs": [],
     "stateMutability": "nonpayable"
+  },
+  {
+    "type": "function",
+    "name": "claimTrackingActivatedAt",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "uint48",
+        "internalType": "uint48"
+      }
+    ],
+    "stateMutability": "view"
   },
   {
     "type": "function",
@@ -323,6 +349,30 @@ export const RoundRewardDistributorAbi = [
     ],
     "outputs": [],
     "stateMutability": "nonpayable"
+  },
+  {
+    "type": "function",
+    "name": "legacyRoundClaimsEnabled",
+    "inputs": [
+      {
+        "name": "",
+        "type": "uint256",
+        "internalType": "uint256"
+      },
+      {
+        "name": "",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "",
+        "type": "bool",
+        "internalType": "bool"
+      }
+    ],
+    "stateMutability": "view"
   },
   {
     "type": "function",
@@ -722,6 +772,29 @@ export const RoundRewardDistributorAbi = [
   },
   {
     "type": "function",
+    "name": "setLegacyRoundClaimsEnabled",
+    "inputs": [
+      {
+        "name": "contentId",
+        "type": "uint256",
+        "internalType": "uint256"
+      },
+      {
+        "name": "roundId",
+        "type": "uint256",
+        "internalType": "uint256"
+      },
+      {
+        "name": "enabled",
+        "type": "bool",
+        "internalType": "bool"
+      }
+    ],
+    "outputs": [],
+    "stateMutability": "nonpayable"
+  },
+  {
+    "type": "function",
     "name": "snapshotParticipationRewards",
     "inputs": [
       {
@@ -824,6 +897,19 @@ export const RoundRewardDistributorAbi = [
   },
   {
     "type": "event",
+    "name": "ClaimTrackingActivated",
+    "inputs": [
+      {
+        "name": "activatedAt",
+        "type": "uint48",
+        "indexed": false,
+        "internalType": "uint48"
+      }
+    ],
+    "anonymous": false
+  },
+  {
+    "type": "event",
     "name": "FrontendFeeClaimed",
     "inputs": [
       {
@@ -893,6 +979,31 @@ export const RoundRewardDistributorAbi = [
         "type": "uint64",
         "indexed": false,
         "internalType": "uint64"
+      }
+    ],
+    "anonymous": false
+  },
+  {
+    "type": "event",
+    "name": "LegacyRoundClaimsEnabledSet",
+    "inputs": [
+      {
+        "name": "contentId",
+        "type": "uint256",
+        "indexed": true,
+        "internalType": "uint256"
+      },
+      {
+        "name": "roundId",
+        "type": "uint256",
+        "indexed": true,
+        "internalType": "uint256"
+      },
+      {
+        "name": "enabled",
+        "type": "bool",
+        "indexed": false,
+        "internalType": "bool"
       }
     ],
     "anonymous": false
@@ -1260,6 +1371,11 @@ export const RoundRewardDistributorAbi = [
   },
   {
     "type": "error",
+    "name": "ClaimTrackingAlreadyActivated",
+    "inputs": []
+  },
+  {
+    "type": "error",
     "name": "FrontendFeeNotClaimable",
     "inputs": []
   },
@@ -1270,12 +1386,27 @@ export const RoundRewardDistributorAbi = [
   },
   {
     "type": "error",
+    "name": "InvalidActivationTimestamp",
+    "inputs": []
+  },
+  {
+    "type": "error",
     "name": "InvalidInitialization",
     "inputs": []
   },
   {
     "type": "error",
     "name": "InvalidParticipationSnapshot",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "LegacyClaimTrackingUnconfigured",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "LegacyRoundClaimsUnmigrated",
     "inputs": []
   },
   {
