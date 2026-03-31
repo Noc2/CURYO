@@ -6,6 +6,8 @@ import type { ServerNotification, ServerRequest } from "@modelcontextprotocol/sd
 import { z } from "zod";
 import type { ServerConfig } from "./config.js";
 import { createChainEnvelope, errorToolResult, jsonToolResult } from "./lib/results.js";
+import { logEvent, serializeError } from "./lib/logging.js";
+import { recordWriteToolFailure, recordWriteToolInvocation } from "./metrics.js";
 import { CuryoWriteService, McpWriteServiceError } from "./signer-service.js";
 
 const addressSchema = z.string().regex(/^0x[0-9a-fA-F]{40}$/i, "Expected a 0x-prefixed address");
@@ -185,6 +187,8 @@ async function runWriteTool(
   action: string,
   handler: (identityId: string) => Promise<Record<string, unknown>>,
 ): Promise<CallToolResult> {
+  const startedAt = Date.now();
+  const authClientId = extra.authInfo?.clientId;
   try {
     const warnings: string[] = [];
     const allowDefaultIdentity = !extra.authInfo && config.transport === "stdio" && !!config.write.defaultIdentityId;
@@ -201,6 +205,16 @@ async function runWriteTool(
     const data = await handler(identityId);
     const account = typeof data.account === "string" ? data.account : "unknown";
     const mode = data.mode === "dry-run" ? "simulation" : "transaction";
+    recordWriteToolInvocation(mode);
+    logEvent("info", "mcp_write_tool_succeeded", {
+      action,
+      account,
+      authClientId,
+      identityId,
+      mode,
+      chainId: config.write.chainId,
+      durationMs: Date.now() - startedAt,
+    });
 
     return jsonToolResult(
       createChainEnvelope(
@@ -216,7 +230,15 @@ async function runWriteTool(
       ),
     );
   } catch (error) {
+    recordWriteToolFailure();
     const message = error instanceof Error ? error.message : "Unexpected write tool error";
+    logEvent("warn", "mcp_write_tool_failed", {
+      action,
+      authClientId,
+      chainId: config.write.chainId,
+      durationMs: Date.now() - startedAt,
+      ...serializeError(error),
+    });
     return errorToolResult(message);
   }
 }

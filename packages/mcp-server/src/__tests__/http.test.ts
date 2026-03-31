@@ -1,8 +1,9 @@
-import { describe, expect, it } from "vitest";
+import { beforeEach, describe, expect, it } from "vitest";
 import type { IncomingMessage, ServerResponse } from "node:http";
 import type { PonderClient } from "../clients/ponder.js";
 import { __resetHttpRateLimitStateForTests } from "../lib/http-rate-limit.js";
 import { handleStreamableHttpRequest, resolveAdvertisedHttpUrl } from "../http.js";
+import { __resetMcpMetricsForTests } from "../metrics.js";
 
 interface MockResponse {
   headers: Record<string, string>;
@@ -95,7 +96,10 @@ describe("handleStreamableHttpRequest", () => {
     },
   };
 
-  __resetHttpRateLimitStateForTests();
+  beforeEach(() => {
+    __resetHttpRateLimitStateForTests();
+    __resetMcpMetricsForTests();
+  });
 
   it("returns 404 for unknown paths", async () => {
     const request = {
@@ -186,6 +190,27 @@ describe("handleStreamableHttpRequest", () => {
         ponder: "ok",
       },
     });
+  });
+
+  it("serves Prometheus-style metrics on /metrics", async () => {
+    const request = {
+      url: "/metrics",
+      method: "GET",
+      headers: {
+        host: "127.0.0.1:3334",
+      },
+      socket: {
+        remoteAddress: "127.0.0.1",
+      },
+    } as unknown as IncomingMessage;
+    const response = createMockResponse();
+
+    await handleStreamableHttpRequest(request, response, config);
+
+    expect(response.statusCode).toBe(200);
+    expect(response.headers["Content-Type"]).toContain("text/plain");
+    expect(response.body).toContain("mcp_http_requests_total");
+    expect(response.body).toContain("mcp_write_tool_invocations_total");
   });
 
   it("rejects unauthenticated MCP requests when bearer auth is enabled", async () => {
