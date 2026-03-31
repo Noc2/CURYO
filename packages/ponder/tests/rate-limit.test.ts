@@ -1,5 +1,5 @@
-import { describe, it, expect } from "vitest";
-import { RateLimiter } from "../api/rate-limit.js";
+import { describe, expect, it } from "vitest";
+import { RateLimiter } from "../src/api/rate-limit.js";
 
 describe("RateLimiter", () => {
   it("allows requests under the limit", () => {
@@ -24,16 +24,13 @@ describe("RateLimiter", () => {
   });
 
   it("window slides after time passes", () => {
-    const limiter = new RateLimiter(2, 1000); // 2 requests per 1 second
+    const limiter = new RateLimiter(2, 1000);
     const now = 100_000;
 
     limiter.check("1.2.3.4", now);
     limiter.check("1.2.3.4", now + 100);
 
-    // Should be blocked at now + 200
     expect(limiter.check("1.2.3.4", now + 200).allowed).toBe(false);
-
-    // After window slides past the first request (now + 1001), should be allowed again
     expect(limiter.check("1.2.3.4", now + 1001).allowed).toBe(true);
   });
 
@@ -45,7 +42,6 @@ describe("RateLimiter", () => {
     limiter.check("5.6.7.8", now);
     expect(limiter.size).toBe(2);
 
-    // Cleanup after window expires
     limiter.cleanup(now + 2000);
     expect(limiter.size).toBe(0);
   });

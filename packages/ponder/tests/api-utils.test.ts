@@ -1,4 +1,4 @@
-import { describe, it, expect } from "vitest";
+import { describe, expect, it } from "vitest";
 import {
   MAX_PAGINATION_OFFSET,
   getCanonicalUrlParts,
@@ -9,7 +9,7 @@ import {
   safeBigInt,
   safeLimit,
   safeOffset,
-} from "../api/utils.js";
+} from "../src/api/utils.js";
 
 describe("safeBigInt", () => {
   it("parses valid positive integer", () => {
@@ -33,7 +33,6 @@ describe("safeBigInt", () => {
   });
 
   it("parses empty string as 0n", () => {
-    // BigInt("") returns 0n in JavaScript
     expect(safeBigInt("")).toBe(0n);
   });
 

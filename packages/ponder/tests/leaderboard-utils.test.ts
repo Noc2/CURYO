@@ -4,7 +4,7 @@ import {
   parseAccuracyLeaderboardWindow,
   resolveAccuracyLeaderboardWindow,
   sortAccuracyLeaderboardItems,
-} from "../api/leaderboard-utils.js";
+} from "../src/api/leaderboard-utils.js";
 
 describe("parseAccuracyLeaderboardWindow", () => {
   it("defaults to all when omitted", () => {

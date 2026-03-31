@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { canRoundSettleSoon } from "../api/notification-utils.js";
+import { canRoundSettleSoon } from "../src/api/notification-utils.js";
 
 describe("canRoundSettleSoon", () => {
   it("rejects open rounds below the settlement vote threshold", () => {

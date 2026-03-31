@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { deriveEffectiveVoterStreak, normalizeUtcDateKey, projectStoredVoterStreak } from "../streak-utils.js";
+import { deriveEffectiveVoterStreak, normalizeUtcDateKey, projectStoredVoterStreak } from "../src/streak-utils.js";
 
 describe("normalizeUtcDateKey", () => {
   it("accepts compact and dashed UTC date keys", () => {

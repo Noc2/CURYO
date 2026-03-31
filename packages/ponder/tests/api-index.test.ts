@@ -9,12 +9,12 @@ async function loadApp(env: Record<string, string | undefined>) {
     ...env,
   };
 
-  vi.doMock("../api/routes/content-routes.js", () => ({ registerContentRoutes: vi.fn() }));
-  vi.doMock("../api/routes/data-routes.js", () => ({ registerDataRoutes: vi.fn() }));
-  vi.doMock("../api/routes/discovery-routes.js", () => ({ registerDiscoveryRoutes: vi.fn() }));
-  vi.doMock("../api/routes/leaderboard-routes.js", () => ({ registerLeaderboardRoutes: vi.fn() }));
+  vi.doMock("../src/api/routes/content-routes.js", () => ({ registerContentRoutes: vi.fn() }));
+  vi.doMock("../src/api/routes/data-routes.js", () => ({ registerDataRoutes: vi.fn() }));
+  vi.doMock("../src/api/routes/discovery-routes.js", () => ({ registerDiscoveryRoutes: vi.fn() }));
+  vi.doMock("../src/api/routes/leaderboard-routes.js", () => ({ registerLeaderboardRoutes: vi.fn() }));
 
-  return import("../api/index.js");
+  return import("../src/api/index.js");
 }
 
 afterEach(() => {

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { isLoopbackRateLimitIdentifier, resolveRateLimitIdentifier } from "../api/request-identity.js";
+import { isLoopbackRateLimitIdentifier, resolveRateLimitIdentifier } from "../src/api/request-identity.js";
 
 function makeHeaderGetter(headers: Record<string, string>) {
   const normalized = Object.fromEntries(Object.entries(headers).map(([key, value]) => [key.toLowerCase(), value]));
