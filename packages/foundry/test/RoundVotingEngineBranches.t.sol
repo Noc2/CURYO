@@ -1618,7 +1618,7 @@ contract RoundVotingEngineBranchesTest is VotingTestBase {
         vm.prank(voter1);
         crepToken.approve(address(engine), STAKE);
         vm.prank(voter1);
-        vm.expectRevert(RoundVotingEngine.InvalidCiphertext.selector);
+        vm.expectRevert(RoundVotingEngine.DrandChainHashMismatch.selector);
         engine.commitVote(contentId, targetRound, bytes32(uint256(1)), commitHash, ciphertext, STAKE, address(0));
     }
 
@@ -1635,7 +1635,7 @@ contract RoundVotingEngineBranchesTest is VotingTestBase {
         vm.prank(voter1);
         crepToken.approve(address(engine), STAKE);
         vm.prank(voter1);
-        vm.expectRevert(RoundVotingEngine.InvalidCiphertext.selector);
+        vm.expectRevert(RoundVotingEngine.TargetRoundOutOfWindow.selector);
         engine.commitVote(contentId, badTargetRound, drandChainHash, commitHash, ciphertext, STAKE, address(0));
     }
 
@@ -1652,7 +1652,7 @@ contract RoundVotingEngineBranchesTest is VotingTestBase {
         vm.prank(voter1);
         crepToken.approve(address(engine), STAKE);
         vm.prank(voter1);
-        vm.expectRevert(RoundVotingEngine.InvalidCiphertext.selector);
+        vm.expectRevert(RoundVotingEngine.TargetRoundOutOfWindow.selector);
         engine.commitVote(contentId, badTargetRound, drandChainHash, commitHash, ciphertext, STAKE, address(0));
     }
 
