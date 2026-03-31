@@ -7,6 +7,7 @@ import { PausableUpgradeable } from "@openzeppelin/contracts-upgradeable/utils/P
 import { ReentrancyGuardTransient } from "@openzeppelin/contracts/utils/ReentrancyGuardTransient.sol";
 import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import { SafeERC20 } from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
+import { SafeCast } from "@openzeppelin/contracts/utils/math/SafeCast.sol";
 import { IERC1363Receiver } from "@openzeppelin/contracts/interfaces/IERC1363Receiver.sol";
 
 import { ContentRegistry } from "./ContentRegistry.sol";
@@ -48,6 +49,7 @@ contract RoundVotingEngine is
     ReentrancyGuardTransient
 {
     using SafeERC20 for IERC20;
+    using SafeCast for uint256;
 
     // --- Custom Errors ---
     error InvalidAddress();
@@ -428,7 +430,7 @@ contract RoundVotingEngine is
             stakeAmount: stakeAmount64,
             ciphertext: ciphertext,
             frontend: frontend,
-            revealableAfter: uint48(epochEnd),
+            revealableAfter: epochEnd.toUint48(),
             targetRound: targetRound,
             drandChainHash: drandChainHash,
             revealed: false,
@@ -519,7 +521,7 @@ contract RoundVotingEngine is
         roundId = nextRoundId[contentId];
         currentRoundId[contentId] = roundId;
 
-        rounds[contentId][roundId].startTime = uint48(block.timestamp);
+        rounds[contentId][roundId].startTime = block.timestamp.toUint48();
         rounds[contentId][roundId].state = RoundLib.RoundState.Open;
 
         // Snapshot config at round creation to prevent mid-round governance changes
@@ -531,7 +533,7 @@ contract RoundVotingEngine is
 
     function _markRoundRevealFailed(uint256 contentId, uint256 roundId, RoundLib.Round storage round) internal {
         round.state = RoundLib.RoundState.RevealFailed;
-        round.settledAt = uint48(block.timestamp);
+        round.settledAt = block.timestamp.toUint48();
         emit RoundRevealFailed(contentId, roundId);
     }
 
@@ -623,7 +625,7 @@ contract RoundVotingEngine is
         // Tie: equal weighted pools, no winners
         if (round.weightedUpPool == round.weightedDownPool) {
             round.state = RoundLib.RoundState.Tied;
-            round.settledAt = uint48(block.timestamp);
+            round.settledAt = block.timestamp.toUint48();
             emit RoundTied(contentId, roundId);
             return;
         }
@@ -632,7 +634,7 @@ contract RoundVotingEngine is
         bool upWins = round.weightedUpPool > round.weightedDownPool;
         round.upWins = upWins;
         round.state = RoundLib.RoundState.Settled;
-        round.settledAt = uint48(block.timestamp);
+        round.settledAt = block.timestamp.toUint48();
         contentHasSettledRound[contentId] = true;
 
         // Epoch-weighted winning stake — used for proportional reward distribution
@@ -988,7 +990,7 @@ contract RoundVotingEngine is
         // Track when settlement threshold is first reached
         RoundLib.RoundConfig memory roundCfg = _getRoundConfig(contentId, roundId);
         if (round.revealedCount >= roundCfg.minVoters && round.thresholdReachedAt == 0) {
-            round.thresholdReachedAt = uint48(block.timestamp);
+            round.thresholdReachedAt = block.timestamp.toUint48();
         }
 
         // Aggregate frontend fee data using commit-time eligibility, not reveal-time status.
