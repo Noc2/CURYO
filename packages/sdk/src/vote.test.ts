@@ -26,12 +26,13 @@ test("generateVoteSalt accepts an injected random source", () => {
 });
 
 test("buildVoteTransferPayload round-trips through the contracts codec", () => {
+  const drandChainHash = ("0x" + "22".repeat(32)) as `0x${string}`;
   const payload = buildVoteTransferPayload({
     contentId: 42n,
     commitHash: "0x1111111111111111111111111111111111111111111111111111111111111111",
     ciphertext: "0x1234",
     targetRound: 123n,
-    drandChainHash: "0x" + "22".repeat(32),
+    drandChainHash,
     frontend: "0x2222222222222222222222222222222222222222",
   });
 
@@ -40,7 +41,7 @@ test("buildVoteTransferPayload round-trips through the contracts codec", () => {
     commitHash: "0x1111111111111111111111111111111111111111111111111111111111111111",
     ciphertext: "0x1234",
     targetRound: 123n,
-    drandChainHash: "0x" + "22".repeat(32),
+    drandChainHash,
     frontend: "0x2222222222222222222222222222222222222222",
   });
 });

@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
+import { encodeAbiParameters } from "viem";
 import {
   buildCommitHash,
   createTlockVoteCommit,
@@ -45,15 +46,16 @@ function makeFakeArmoredTlockCiphertext(params: {
 }
 
 test("parseTlockCiphertextMetadata extracts round and chain hash from the armored payload", () => {
+  const drandChainHash = ("0x" + "ab".repeat(32)) as `0x${string}`;
   const ciphertext = makeFakeArmoredTlockCiphertext({
     targetRound: 123n,
-    drandChainHash: "0x" + "ab".repeat(32),
+    drandChainHash,
     plaintextMarker: "1:" + "11".repeat(32),
   });
 
   assert.deepEqual(parseTlockCiphertextMetadata(ciphertext), {
     targetRound: 123n,
-    drandChainHash: "0x" + "ab".repeat(32),
+    drandChainHash,
   });
 });
 
@@ -80,6 +82,44 @@ test("encodeVoteTransferPayload round-trips the redeployed vote shape", () => {
     contentId: 42n,
     commitHash: "0x" + "11".repeat(32),
     ciphertext: "0x1234",
+    targetRound: 123n,
+    drandChainHash: "0x" + "22".repeat(32),
+    frontend: "0x3333333333333333333333333333333333333333",
+  });
+});
+
+test("decodeVoteTransferPayload tolerates the temporary six-field misordering", () => {
+  const payload = encodeAbiParameters(
+    [
+      { name: "contentId", type: "uint256" },
+      { name: "commitHash", type: "bytes32" },
+      { name: "ciphertext", type: "bytes" },
+      { name: "targetRound", type: "uint64" },
+      { name: "drandChainHash", type: "bytes32" },
+      { name: "frontend", type: "address" },
+    ],
+    [
+      42n,
+      ("0x" + "11".repeat(32)) as `0x${string}`,
+      makeFakeArmoredTlockCiphertext({
+        targetRound: 123n,
+        drandChainHash: ("0x" + "22".repeat(32)) as `0x${string}`,
+        plaintextMarker: "1:" + "11".repeat(32),
+      }),
+      123n,
+      ("0x" + "22".repeat(32)) as `0x${string}`,
+      "0x3333333333333333333333333333333333333333",
+    ],
+  );
+
+  assert.deepEqual(decodeVoteTransferPayload(payload), {
+    contentId: 42n,
+    commitHash: "0x" + "11".repeat(32),
+    ciphertext: makeFakeArmoredTlockCiphertext({
+      targetRound: 123n,
+      drandChainHash: ("0x" + "22".repeat(32)) as `0x${string}`,
+      plaintextMarker: "1:" + "11".repeat(32),
+    }),
     targetRound: 123n,
     drandChainHash: "0x" + "22".repeat(32),
     frontend: "0x3333333333333333333333333333333333333333",
