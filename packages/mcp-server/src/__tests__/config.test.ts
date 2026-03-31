@@ -38,6 +38,13 @@ describe("loadConfig", () => {
         scopes: ["mcp:read"],
         tokens: [],
       },
+      httpRateLimit: {
+        enabled: true,
+        windowMs: 60_000,
+        readRequestsPerWindow: 120,
+        writeRequestsPerWindow: 20,
+        trustedProxyHeaders: [],
+      },
       write: {
         enabled: false,
         rpcUrl: null,
@@ -69,6 +76,13 @@ describe("loadConfig", () => {
     expect(config.httpCorsOrigin).toBe("https://chatgpt.com");
     expect(config.ponderTimeoutMs).toBe(2500);
     expect(config.httpAuth.mode).toBe("none");
+    expect(config.httpRateLimit).toEqual({
+      enabled: true,
+      windowMs: 60_000,
+      readRequestsPerWindow: 120,
+      writeRequestsPerWindow: 20,
+      trustedProxyHeaders: [],
+    });
   });
 
   it("normalizes an optional public base URL", () => {
@@ -112,6 +126,9 @@ describe("loadConfig", () => {
           clientId: "claude-prod",
           scopes: ["mcp:read", "mcp:write:vote"],
           identityId: "writer",
+          kind: "session",
+          subject: "0xabc",
+          expiresAt: "2030-01-01T00:00:00.000Z",
         },
       ]),
       CURYO_MCP_WRITE_ENABLED: "true",
@@ -131,6 +148,9 @@ describe("loadConfig", () => {
         clientId: "claude-prod",
         scopes: ["mcp:read", "mcp:write:vote"],
         identityId: "writer",
+        kind: "session",
+        subject: "0xabc",
+        expiresAt: "2030-01-01T00:00:00.000Z",
       }),
     ]);
     expect(config.write.enabled).toBe(true);
@@ -161,6 +181,24 @@ describe("loadConfig", () => {
         ]),
       }),
     ).toThrow('references unknown identity "missing"');
+  });
+
+  it("loads HTTP rate limit overrides", () => {
+    const config = loadConfig({
+      CURYO_MCP_HTTP_RATE_LIMIT_ENABLED: "true",
+      CURYO_MCP_HTTP_RATE_LIMIT_WINDOW_MS: "15000",
+      CURYO_MCP_HTTP_RATE_LIMIT_READ_LIMIT: "55",
+      CURYO_MCP_HTTP_RATE_LIMIT_WRITE_LIMIT: "7",
+      CURYO_MCP_HTTP_TRUSTED_PROXY_HEADERS: "x-real-ip,x-forwarded-for",
+    });
+
+    expect(config.httpRateLimit).toEqual({
+      enabled: true,
+      windowMs: 15000,
+      readRequestsPerWindow: 55,
+      writeRequestsPerWindow: 7,
+      trustedProxyHeaders: ["x-real-ip", "x-forwarded-for"],
+    });
   });
 });
 

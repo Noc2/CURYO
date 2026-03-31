@@ -165,4 +165,18 @@ describe("registerLeaderboardRoutes", () => {
     expect(queryBuilder.offset).toHaveBeenCalledWith(25);
     expect(queryBuilder.limit).not.toHaveBeenCalledWith(1000);
   });
+
+  it("rejects oversized offsets before querying the database", async () => {
+    const { db } = mockPonderModules([]);
+    const { registerLeaderboardRoutes } = await import("../src/api/routes/leaderboard-routes.js");
+
+    const app = new Hono();
+    registerLeaderboardRoutes(app);
+
+    const response = await app.request("http://localhost/token-holders?offset=50001");
+
+    expect(response.status).toBe(400);
+    expect(await response.json()).toEqual({ error: "Invalid offset" });
+    expect(db.select).not.toHaveBeenCalled();
+  });
 });

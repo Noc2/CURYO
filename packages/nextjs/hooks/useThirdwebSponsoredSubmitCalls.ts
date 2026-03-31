@@ -220,14 +220,6 @@ export function useThirdwebSponsoredSubmitCalls() {
         const result = await sendCallsWithWallet(activeWallet, sponsoredSubmitCapabilities);
 
         if (result.status !== "success") {
-          if (operationKey && address) {
-            await postFreeTransactionMutation("/api/transactions/free/release", {
-              address,
-              chainId,
-              operationKey,
-            }).catch(() => undefined);
-          }
-
           const error = new Error("Sponsored calls failed.");
           (error as Error & { callsStatus?: typeof result }).callsStatus = result;
           throw error;
@@ -303,14 +295,6 @@ export function useThirdwebSponsoredSubmitCalls() {
           } catch (fallbackError) {
             error = fallbackError;
           }
-        }
-
-        if (operationKey && address) {
-          await postFreeTransactionMutation("/api/transactions/free/release", {
-            address,
-            chainId,
-            operationKey,
-          }).catch(() => undefined);
         }
 
         throw error;

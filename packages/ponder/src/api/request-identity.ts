@@ -7,11 +7,15 @@ const FALLBACK_FINGERPRINT_HEADERS = ["user-agent", "accept-language", "accept",
 
 let warnedMissingHeaders = false;
 
-function getTrustedRateLimitHeaders(): string[] {
-  const headers = (process.env.RATE_LIMIT_TRUSTED_IP_HEADERS ?? "")
+function parseTrustedRateLimitHeaders(configuredValue = process.env.RATE_LIMIT_TRUSTED_IP_HEADERS): string[] {
+  return (configuredValue ?? "")
     .split(",")
     .map(header => header.trim().toLowerCase())
     .filter(Boolean);
+}
+
+export function getTrustedRateLimitHeaders(configuredValue = process.env.RATE_LIMIT_TRUSTED_IP_HEADERS): string[] {
+  const headers = parseTrustedRateLimitHeaders(configuredValue);
 
   if (headers.length === 0 && !warnedMissingHeaders) {
     warnedMissingHeaders = true;
@@ -22,6 +26,10 @@ function getTrustedRateLimitHeaders(): string[] {
   }
 
   return headers;
+}
+
+export function hasTrustedRateLimitHeadersConfigured(configuredValue = process.env.RATE_LIMIT_TRUSTED_IP_HEADERS): boolean {
+  return parseTrustedRateLimitHeaders(configuredValue).length > 0;
 }
 
 function parseForwardedIp(value: string): string | null {

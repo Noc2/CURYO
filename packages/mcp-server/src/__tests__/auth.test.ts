@@ -15,6 +15,10 @@ const bearerAuthConfig: HttpAuthConfig = {
       clientId: "static-bearer:930bbdc51b6a",
       scopes: ["mcp:read"],
       identityId: null,
+      notBefore: null,
+      expiresAt: null,
+      subject: null,
+      kind: "static",
     },
   ],
   scopes: ["mcp:read"],
@@ -54,7 +58,30 @@ describe("authenticateRequest", () => {
         keyId: "930bbdc51b6a",
         authMode: "bearer",
         identityId: null,
+        tokenKind: "static",
+        subject: null,
       },
     });
+  });
+
+  it("rejects expired bearer tokens", () => {
+    expect(() =>
+      authenticateRequest(
+        {
+          headers: {
+            authorization: "Bearer secret-token",
+          },
+        } as IncomingMessage,
+        {
+          ...bearerAuthConfig,
+          tokens: [
+            {
+              ...bearerAuthConfig.tokens[0],
+              expiresAt: "2020-01-01T00:00:00.000Z",
+            },
+          ],
+        },
+      ),
+    ).toThrow("Bearer token has expired");
   });
 });

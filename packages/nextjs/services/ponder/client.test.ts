@@ -1,6 +1,6 @@
-import { resolvePonderUrl } from "./client";
 import assert from "node:assert/strict";
 import { test } from "node:test";
+import { fetchPonderJson, resolvePonderUrl } from "./client";
 
 test("resolvePonderUrl uses the local default outside production", () => {
   assert.equal(resolvePonderUrl(undefined, false), "http://localhost:42069");
@@ -24,4 +24,33 @@ test("resolvePonderUrl disables localhost URLs in production without crashing mo
 
 test("resolvePonderUrl can allow localhost URLs for local production-style E2E", () => {
   assert.equal(resolvePonderUrl("http://localhost:42069", true, true), "http://localhost:42069");
+});
+
+test("fetchPonderJson returns parsed json responses", async () => {
+  const response = new Response(JSON.stringify({ ok: true }), {
+    status: 200,
+    headers: { "content-type": "application/json" },
+  });
+
+  const result = await fetchPonderJson<{ ok: boolean }>("https://ponder.curyo.xyz/content", 1000, async () => response);
+
+  assert.deepEqual(result, { ok: true });
+});
+
+test("fetchPonderJson surfaces request timeouts clearly", async () => {
+  const abortError = Object.assign(new Error("aborted"), { name: "AbortError" });
+
+  await assert.rejects(
+    () => fetchPonderJson("https://ponder.curyo.xyz/content", 1234, async () => { throw abortError; }),
+    /Ponder request timed out after 1234ms/,
+  );
+});
+
+test("fetchPonderJson wraps fetch failures", async () => {
+  await assert.rejects(
+    () => fetchPonderJson("https://ponder.curyo.xyz/content", 1000, async () => {
+      throw new Error("socket hang up");
+    }),
+    /Ponder request failed: socket hang up/,
+  );
 });

@@ -3,8 +3,10 @@ import { isAddress } from "viem";
 import { normalizeAvatarAccentHex } from "~~/lib/avatar/avatarAccent";
 import { renderOrbitalAvatarSvg } from "~~/lib/avatar/orbitalAvatar";
 import { getReputationAvatarPayload } from "~~/lib/avatar/server";
+import { checkRateLimit } from "~~/utils/rateLimit";
 
 const CACHE_SECONDS = 300;
+const RATE_LIMIT = { limit: 180, windowMs: 60_000 };
 
 function parseRequestedSize(value: string | null): number | undefined {
   if (!value) return undefined;
@@ -13,6 +15,9 @@ function parseRequestedSize(value: string | null): number | undefined {
 }
 
 export async function GET(request: NextRequest) {
+  const limited = await checkRateLimit(request, RATE_LIMIT);
+  if (limited) return limited;
+
   const address = request.nextUrl.searchParams.get("address");
   if (!address || !isAddress(address)) {
     return NextResponse.json({ error: "Missing or invalid address parameter" }, { status: 400 });

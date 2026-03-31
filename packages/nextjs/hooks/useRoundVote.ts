@@ -278,14 +278,6 @@ export function useRoundVote() {
 
       return true;
     } catch (e: any) {
-      if (freeTransactionOperationKey) {
-        await postFreeTransactionMutation("/api/transactions/free/release", {
-          address,
-          chainId: targetNetwork.id,
-          operationKey: freeTransactionOperationKey,
-        }).catch(() => undefined);
-      }
-
       void queryClient.invalidateQueries({ queryKey: FREE_TRANSACTION_ALLOWANCE_QUERY_KEY });
       console.error("Round vote commit failed:", e);
       if (isFreeTransactionExhaustedError(e)) {

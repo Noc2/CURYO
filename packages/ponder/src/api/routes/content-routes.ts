@@ -16,6 +16,7 @@ export function registerContentRoutes(app: ApiApp) {
     const sortBy = c.req.query("sortBy") ?? "newest";
     const limit = safeLimit(c.req.query("limit"), 50, 200);
     const offset = safeOffset(c.req.query("offset"));
+    if (Number.isNaN(offset)) return c.json({ error: "Invalid offset" }, 400);
 
     const conditions = [];
     if (status !== "all") {
@@ -177,6 +178,7 @@ export function registerContentRoutes(app: ApiApp) {
     const stateFilter = c.req.query("state");
     const limit = safeLimit(c.req.query("limit"), 50, 200);
     const offset = safeOffset(c.req.query("offset"));
+    if (Number.isNaN(offset)) return c.json({ error: "Invalid offset" }, 400);
 
     const conditions = [];
     if (contentId) {
@@ -306,6 +308,8 @@ export function registerContentRoutes(app: ApiApp) {
       if (isNaN(parsed)) return c.json({ error: "Invalid status filter" }, 400);
       where = eq(category.status, parsed);
     }
+    const offset = safeOffset(c.req.query("offset"));
+    if (Number.isNaN(offset)) return c.json({ error: "Invalid offset" }, 400);
 
     const items = await db
       .select()
@@ -313,7 +317,7 @@ export function registerContentRoutes(app: ApiApp) {
       .where(where)
       .orderBy(asc(category.name))
       .limit(safeLimit(c.req.query("limit"), 100, 500))
-      .offset(safeOffset(c.req.query("offset")));
+      .offset(offset);
 
     return jsonBig(c, { items });
   });

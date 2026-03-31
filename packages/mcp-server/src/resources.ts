@@ -205,6 +205,12 @@ export function registerResources(server: McpServer, config: ServerConfig, ponde
           mode: config.httpAuth.mode,
           protectedPaths: [config.httpPath],
         },
+        httpRateLimit: {
+          enabled: config.httpRateLimit.enabled,
+          windowMs: config.httpRateLimit.windowMs,
+          readRequestsPerWindow: config.httpRateLimit.readRequestsPerWindow,
+          writeRequestsPerWindow: config.httpRateLimit.writeRequestsPerWindow,
+        },
         write: {
           enabled: config.write.enabled,
           chainId: config.write.chainId,
@@ -237,6 +243,13 @@ export function registerResources(server: McpServer, config: ServerConfig, ponde
           scopes: config.httpAuth.scopes,
           configuredTokens: config.httpAuth.tokens.length,
           protectedPaths: [config.httpPath],
+        },
+        rateLimit: {
+          enabled: config.httpRateLimit.enabled,
+          windowMs: config.httpRateLimit.windowMs,
+          readRequestsPerWindow: config.httpRateLimit.readRequestsPerWindow,
+          writeRequestsPerWindow: config.httpRateLimit.writeRequestsPerWindow,
+          trustedProxyHeaders: config.httpRateLimit.trustedProxyHeaders,
         },
         protocol: {
           latestVersion: LATEST_PROTOCOL_VERSION,

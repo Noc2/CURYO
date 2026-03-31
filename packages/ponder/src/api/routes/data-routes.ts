@@ -222,6 +222,7 @@ export function registerDataRoutes(app: ApiApp) {
     const stateFilter = c.req.query("state");
     const limit = safeLimit(c.req.query("limit"), 50, 200);
     const offset = safeOffset(c.req.query("offset"));
+    if (Number.isNaN(offset)) return c.json({ error: "Invalid offset" }, 400);
 
     const conditions = [];
     if (voterRaw) {
@@ -390,13 +391,15 @@ export function registerDataRoutes(app: ApiApp) {
     } else if (statusFilter === "inactive" || statusFilter === "pending") {
       where = and(eq(frontend.eligible, false), eq(frontend.slashed, false), sql`${frontend.exitAvailableAt} is null`);
     }
+    const offset = safeOffset(c.req.query("offset"));
+    if (Number.isNaN(offset)) return c.json({ error: "Invalid offset" }, 400);
 
     const items = await db
       .select()
       .from(frontend)
       .where(where)
       .limit(safeLimit(c.req.query("limit"), 100, 500))
-      .offset(safeOffset(c.req.query("offset")));
+      .offset(offset);
 
     return jsonBig(c, { items });
   });

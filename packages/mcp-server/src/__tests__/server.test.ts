@@ -33,6 +33,13 @@ describe("createServer", () => {
         scopes: ["mcp:read"],
         tokens: [],
       },
+      httpRateLimit: {
+        enabled: true,
+        windowMs: 60_000,
+        readRequestsPerWindow: 120,
+        writeRequestsPerWindow: 20,
+        trustedProxyHeaders: [],
+      },
       write: disabledWriteConfig,
     });
 
@@ -64,6 +71,13 @@ describe("createServer", () => {
           tokenHashes: [],
           scopes: ["mcp:read"],
           tokens: [],
+        },
+        httpRateLimit: {
+          enabled: true,
+          windowMs: 60_000,
+          readRequestsPerWindow: 120,
+          writeRequestsPerWindow: 20,
+          trustedProxyHeaders: [],
         },
         write: disabledWriteConfig,
       },
@@ -139,8 +153,19 @@ describe("createServer", () => {
             clientId: "writer",
             scopes: ["mcp:read", "mcp:write"],
             identityId: "writer",
+            notBefore: null,
+            expiresAt: null,
+            subject: null,
+            kind: "static",
           },
         ],
+      },
+      httpRateLimit: {
+        enabled: true,
+        windowMs: 60_000,
+        readRequestsPerWindow: 120,
+        writeRequestsPerWindow: 20,
+        trustedProxyHeaders: [],
       },
       write: {
         enabled: true,

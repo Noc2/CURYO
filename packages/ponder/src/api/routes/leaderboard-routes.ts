@@ -107,6 +107,7 @@ export function registerLeaderboardRoutes(app: ApiApp) {
   app.get("/token-holders", async (c) => {
     const limit = safeLimit(c.req.query("limit"), 200, 500);
     const offset = safeOffset(c.req.query("offset"));
+    if (Number.isNaN(offset)) return c.json({ error: "Invalid offset" }, 400);
 
     const items = await db
       .select()
@@ -146,6 +147,7 @@ export function registerLeaderboardRoutes(app: ApiApp) {
     const minVotesParam = c.req.query("minVotes") ?? "3";
     const limit = safeLimit(c.req.query("limit"), 20, 100);
     const offset = safeOffset(c.req.query("offset"));
+    if (Number.isNaN(offset)) return c.json({ error: "Invalid offset" }, 400);
 
     const minVotes = parseInt(minVotesParam);
     if (isNaN(minVotes) || minVotes < 1) return c.json({ error: "Invalid minVotes" }, 400);

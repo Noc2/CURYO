@@ -43,6 +43,8 @@ export function authenticateRequest(request: IncomingMessage, authConfig: HttpAu
     );
   }
 
+  ensureTokenIsActive(matchedToken, authConfig);
+
   const keyId = matchedToken.tokenHash.slice(0, 12);
 
   return {
@@ -53,8 +55,36 @@ export function authenticateRequest(request: IncomingMessage, authConfig: HttpAu
       keyId,
       authMode: authConfig.mode,
       identityId: matchedToken.identityId,
+      tokenKind: matchedToken.kind,
+      subject: matchedToken.subject,
+      notBefore: matchedToken.notBefore,
+      expiresAt: matchedToken.expiresAt,
     },
   };
+}
+
+function ensureTokenIsActive(token: HttpAuthConfig["tokens"][number], authConfig: HttpAuthConfig): void {
+  const now = Date.now();
+
+  if (token.notBefore && now < Date.parse(token.notBefore)) {
+    throw new HttpAuthError(
+      "Bearer token is not active yet",
+      buildWwwAuthenticateHeader(authConfig, {
+        error: "invalid_token",
+        errorDescription: "The access token is not active yet",
+      }),
+    );
+  }
+
+  if (token.expiresAt && now >= Date.parse(token.expiresAt)) {
+    throw new HttpAuthError(
+      "Bearer token has expired",
+      buildWwwAuthenticateHeader(authConfig, {
+        error: "invalid_token",
+        errorDescription: "The access token has expired",
+      }),
+    );
+  }
 }
 
 function extractBearerToken(header: string | string[] | undefined): string | null {

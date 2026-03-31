@@ -2,7 +2,7 @@ import deployedContracts from "@curyo/contracts/deployedContracts";
 import { ROUND_STATE } from "@curyo/contracts/protocol";
 import { type Abi, type Address, createPublicClient, http, isAddress } from "viem";
 import { getPrimaryServerTargetNetwork, getServerRpcOverrides } from "~~/lib/env/server";
-import { type PonderRoundItem, isPonderAvailable, ponderApi } from "~~/services/ponder/client";
+import { type PonderFrontend, type PonderRoundItem, isPonderAvailable, ponderApi } from "~~/services/ponder/client";
 
 type DeployedContractsMap = Record<
   number,
@@ -17,6 +17,7 @@ type DeployedContractsMap = Record<
 
 const MAX_SCAN_BATCH = 100;
 const MAX_SCAN_ROUNDS = 1000;
+const CLAIMABLE_FRONTEND_FEES_CACHE_TTL_MS = 60_000;
 
 const targetNetwork = getPrimaryServerTargetNetwork();
 const contractsForChain = targetNetwork
@@ -57,8 +58,50 @@ export interface ClaimableFrontendFeeResponse {
   totalRounds: number;
 }
 
+interface ClaimableFrontendFeeSnapshot {
+  fetchedAt: number;
+  items: ClaimableFrontendFeeRound[];
+  scannedRounds: number;
+  totalRounds: number;
+}
+
+const emptySnapshot = (): ClaimableFrontendFeeSnapshot => ({
+  fetchedAt: Date.now(),
+  items: [],
+  scannedRounds: 0,
+  totalRounds: 0,
+});
+
+const frontendFeeSnapshotCache = new Map<string, ClaimableFrontendFeeSnapshot>();
+const frontendFeeSnapshotPromises = new Map<string, Promise<ClaimableFrontendFeeSnapshot>>();
+
 function normalizeFrontendAddress(frontend: string): `0x${string}` {
   return frontend.toLowerCase() as `0x${string}`;
+}
+
+function isPonderNotFoundError(error: unknown): boolean {
+  return error instanceof Error && error.message.includes("404");
+}
+
+function hasOutstandingFrontendFees(frontend: PonderFrontend): boolean {
+  return BigInt(frontend.totalFeesCredited) > BigInt(frontend.totalFeesClaimed);
+}
+
+function toClaimableFeePage(
+  snapshot: ClaimableFrontendFeeSnapshot,
+  offset: number,
+  limit: number,
+): ClaimableFrontendFeeResponse {
+  const items = snapshot.items.slice(offset, offset + limit);
+  const nextOffset = offset + items.length;
+
+  return {
+    items,
+    hasMore: nextOffset < snapshot.items.length,
+    nextOffset,
+    scannedRounds: snapshot.scannedRounds,
+    totalRounds: snapshot.totalRounds,
+  };
 }
 
 function isClaimableSnapshot(
@@ -287,45 +330,37 @@ async function readFrontendFeeBatch(frontend: `0x${string}`, rounds: PonderRound
   }
 }
 
-export async function listClaimableFrontendFeeRounds(
-  frontend: string,
-  params: { limit?: number; offset?: number } = {},
-): Promise<ClaimableFrontendFeeResponse> {
-  const limit = Math.min(Math.max(params.limit ?? 10, 1), 50);
-  const initialOffset = Math.max(params.offset ?? 0, 0);
-
-  if (!isAddress(frontend) || !publicClient || !votingEngine || !rewardDistributor) {
-    return {
-      items: [],
-      hasMore: false,
-      nextOffset: initialOffset,
-      scannedRounds: 0,
-      totalRounds: 0,
-    };
-  }
-
+async function buildClaimableFrontendFeeSnapshot(frontend: `0x${string}`): Promise<ClaimableFrontendFeeSnapshot> {
   if (!(await isPonderAvailable())) {
-    return {
-      items: [],
-      hasMore: false,
-      nextOffset: initialOffset,
-      scannedRounds: 0,
-      totalRounds: 0,
-    };
+    return emptySnapshot();
   }
 
-  const normalizedFrontend = normalizeFrontendAddress(frontend);
+  let frontendRecord: PonderFrontend | null = null;
+  try {
+    frontendRecord = (await ponderApi.getFrontend(frontend)).frontend;
+  } catch (error) {
+    if (isPonderNotFoundError(error)) {
+      return emptySnapshot();
+    }
+
+    throw error;
+  }
+
+  if (!frontendRecord || !hasOutstandingFrontendFees(frontendRecord)) {
+    return emptySnapshot();
+  }
+
   const items: ClaimableFrontendFeeRound[] = [];
-  let nextOffset = initialOffset;
+  let scanOffset = 0;
   let scannedRounds = 0;
   let totalRounds = 0;
 
-  while (items.length < limit && scannedRounds < MAX_SCAN_ROUNDS) {
+  while (scannedRounds < MAX_SCAN_ROUNDS) {
     const batchSize = Math.min(MAX_SCAN_BATCH, MAX_SCAN_ROUNDS - scannedRounds);
     const page = await ponderApi.getRounds({
       state: String(ROUND_STATE.Settled),
       limit: String(batchSize),
-      offset: String(nextOffset),
+      offset: String(scanOffset),
     });
 
     totalRounds = page.total;
@@ -333,12 +368,12 @@ export async function listClaimableFrontendFeeRounds(
       break;
     }
 
-    const feeRows = await readFrontendFeeBatch(normalizedFrontend, page.items);
+    const feeRows = await readFrontendFeeBatch(frontend, page.items);
 
     for (let index = 0; index < page.items.length; index++) {
       const round = page.items[index];
       const row = feeRows[index];
-      nextOffset += 1;
+      scanOffset += 1;
       scannedRounds += 1;
 
       if (
@@ -350,7 +385,7 @@ export async function listClaimableFrontendFeeRounds(
           row.alreadyClaimed,
         )
       ) {
-        if (items.length >= limit || scannedRounds >= MAX_SCAN_ROUNDS) break;
+        if (scannedRounds >= MAX_SCAN_ROUNDS) break;
         continue;
       }
 
@@ -364,7 +399,7 @@ export async function listClaimableFrontendFeeRounds(
       );
 
       if (claimableFee <= 0n) {
-        if (items.length >= limit || scannedRounds >= MAX_SCAN_ROUNDS) break;
+        if (scannedRounds >= MAX_SCAN_ROUNDS) break;
         continue;
       }
 
@@ -382,21 +417,66 @@ export async function listClaimableFrontendFeeRounds(
         totalFrontendClaimants: Number(row.totalFrontendClaimants),
       });
 
-      if (items.length >= limit || scannedRounds >= MAX_SCAN_ROUNDS) {
+      if (scannedRounds >= MAX_SCAN_ROUNDS) {
         break;
       }
     }
 
-    if (page.items.length < batchSize || nextOffset >= page.total) {
+    if (page.items.length < batchSize || scanOffset >= page.total) {
       break;
     }
   }
 
   return {
+    fetchedAt: Date.now(),
     items,
-    hasMore: nextOffset < totalRounds,
-    nextOffset,
     scannedRounds,
     totalRounds,
   };
+}
+
+async function getClaimableFrontendFeeSnapshot(frontend: `0x${string}`): Promise<ClaimableFrontendFeeSnapshot> {
+  const cachedSnapshot = frontendFeeSnapshotCache.get(frontend);
+  if (cachedSnapshot && Date.now() - cachedSnapshot.fetchedAt < CLAIMABLE_FRONTEND_FEES_CACHE_TTL_MS) {
+    return cachedSnapshot;
+  }
+
+  const existingPromise = frontendFeeSnapshotPromises.get(frontend);
+  if (existingPromise) {
+    return cachedSnapshot ?? existingPromise;
+  }
+
+  const refreshPromise = buildClaimableFrontendFeeSnapshot(frontend)
+    .then((snapshot) => {
+      frontendFeeSnapshotCache.set(frontend, snapshot);
+      return snapshot;
+    })
+    .finally(() => {
+      frontendFeeSnapshotPromises.delete(frontend);
+    });
+
+  frontendFeeSnapshotPromises.set(frontend, refreshPromise);
+
+  if (cachedSnapshot) {
+    void refreshPromise;
+    return cachedSnapshot;
+  }
+
+  return refreshPromise;
+}
+
+export async function listClaimableFrontendFeeRounds(
+  frontend: string,
+  params: { limit?: number; offset?: number } = {},
+): Promise<ClaimableFrontendFeeResponse> {
+  const limit = Math.min(Math.max(params.limit ?? 10, 1), 50);
+  const initialOffset = Math.max(params.offset ?? 0, 0);
+
+  if (!isAddress(frontend) || !publicClient || !votingEngine || !rewardDistributor) {
+    return toClaimableFeePage(emptySnapshot(), initialOffset, limit);
+  }
+
+  const normalizedFrontend = normalizeFrontendAddress(frontend);
+  const snapshot = await getClaimableFrontendFeeSnapshot(normalizedFrontend);
+  return toClaimableFeePage(snapshot, initialOffset, limit);
 }

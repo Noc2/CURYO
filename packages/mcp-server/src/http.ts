@@ -4,6 +4,7 @@ import { StreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/
 import { authenticateRequest, HttpAuthError } from "./auth.js";
 import { PonderClient, type PonderApiError } from "./clients/ponder.js";
 import type { ServerConfig } from "./config.js";
+import { enforceHttpRateLimit, HttpRateLimitError } from "./lib/http-rate-limit.js";
 import { logEvent, serializeError } from "./lib/logging.js";
 import { createServer as createMcpServer } from "./server.js";
 
@@ -253,6 +254,39 @@ export async function handleStreamableHttpRequest(
         remoteAddress,
         authMode: config.httpAuth.mode,
         ...serializeError(error),
+      });
+      return;
+    }
+
+    throw error;
+  }
+
+  try {
+    enforceHttpRateLimit(request, config.httpRateLimit, authInfo, requestUrl.pathname);
+  } catch (error) {
+    if (error instanceof HttpRateLimitError) {
+      response.setHeader("Retry-After", String(error.retryAfterSeconds));
+      sendJson(
+        response,
+        error.statusCode,
+        {
+          error: error.message,
+          policy: error.policy,
+          limit: error.limit,
+          retryAfterSeconds: error.retryAfterSeconds,
+        },
+        config,
+      );
+      logEvent("warn", "mcp_http_rate_limited", {
+        method,
+        path: requestUrl.pathname,
+        statusCode: error.statusCode,
+        durationMs: Date.now() - startedAt,
+        remoteAddress,
+        authClientId: authInfo?.clientId,
+        policy: error.policy,
+        limit: error.limit,
+        retryAfterSeconds: error.retryAfterSeconds,
       });
       return;
     }

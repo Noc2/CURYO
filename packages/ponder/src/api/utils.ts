@@ -1,3 +1,5 @@
+export const MAX_PAGINATION_OFFSET = 50_000;
+
 /** Safely parse a BigInt from a query/path parameter, returning null on invalid input. */
 export function safeBigInt(value: string): bigint | null {
   try {
@@ -17,7 +19,9 @@ export function safeLimit(value: string | undefined, defaultVal: number, max: nu
 /** Safely parse pagination offset, returning 0 for invalid values. */
 export function safeOffset(value: string | undefined): number {
   const parsed = parseInt(value ?? "0");
-  return isNaN(parsed) || parsed < 0 ? 0 : parsed;
+  if (isNaN(parsed) || parsed < 0) return 0;
+  if (parsed > MAX_PAGINATION_OFFSET) return Number.NaN;
+  return parsed;
 }
 
 /** Validate Ethereum address format (0x + 40 hex chars). */

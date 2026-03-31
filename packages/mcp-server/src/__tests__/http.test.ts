@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import type { IncomingMessage, ServerResponse } from "node:http";
 import type { PonderClient } from "../clients/ponder.js";
+import { __resetHttpRateLimitStateForTests } from "../lib/http-rate-limit.js";
 import { handleStreamableHttpRequest, resolveAdvertisedHttpUrl } from "../http.js";
 
 interface MockResponse {
@@ -10,6 +11,7 @@ interface MockResponse {
   body: string;
   destroyError?: Error;
   setHeader(name: string, value: string): void;
+  writeHead(statusCode: number, headers?: Record<string, string>): void;
   end(body?: string): void;
   once(_event: string, _handler: () => void): void;
   destroy(error?: Error): void;
@@ -24,6 +26,13 @@ function createMockResponse(): ServerResponse<IncomingMessage> & MockResponse {
     destroyError: undefined,
     setHeader(name: string, value: string) {
       response.headers[name] = value;
+    },
+    writeHead(statusCode: number, headers?: Record<string, string>) {
+      response.statusCode = statusCode;
+      for (const [name, value] of Object.entries(headers ?? {})) {
+        response.headers[name] = value;
+      }
+      return response as unknown as ServerResponse<IncomingMessage> & MockResponse;
     },
     end(body?: string) {
       if (body) {
@@ -61,6 +70,13 @@ describe("handleStreamableHttpRequest", () => {
       scopes: ["mcp:read"],
       tokens: [],
     },
+    httpRateLimit: {
+      enabled: true,
+      windowMs: 60_000,
+      readRequestsPerWindow: 120,
+      writeRequestsPerWindow: 20,
+      trustedProxyHeaders: [],
+    },
     write: {
       enabled: false,
       rpcUrl: null,
@@ -72,6 +88,8 @@ describe("handleStreamableHttpRequest", () => {
       contracts: null,
     },
   };
+
+  __resetHttpRateLimitStateForTests();
 
   it("returns 404 for unknown paths", async () => {
     const request = {
@@ -190,6 +208,10 @@ describe("handleStreamableHttpRequest", () => {
             clientId: "reader",
             scopes: ["mcp:read"],
             identityId: null,
+            notBefore: null,
+            expiresAt: null,
+            subject: null,
+            kind: "static",
           },
         ],
       },
@@ -199,6 +221,65 @@ describe("handleStreamableHttpRequest", () => {
     expect(response.headers["WWW-Authenticate"]).toContain('Bearer realm="curyo-mcp"');
     expect(JSON.parse(response.body)).toEqual({
       error: "Missing bearer token",
+    });
+  });
+
+  it("returns 429 when the HTTP rate limit is exceeded", async () => {
+    __resetHttpRateLimitStateForTests();
+
+    const request = {
+      url: "/mcp",
+      method: "POST",
+      headers: {
+        host: "127.0.0.1:3334",
+        authorization: "Bearer secret-token",
+      },
+      socket: {
+        remoteAddress: "127.0.0.1",
+      },
+    } as unknown as IncomingMessage;
+
+    const rateLimitedConfig = {
+      ...config,
+      httpAuth: {
+        mode: "bearer" as const,
+        realm: "curyo-mcp",
+        tokenHashes: ["930bbdc51b6aed5c2a5678fd6e28dee7a05e8a4b643cfc0b4427c3efb86c0d94"],
+        scopes: ["mcp:read"],
+        tokens: [
+          {
+            tokenHash: "930bbdc51b6aed5c2a5678fd6e28dee7a05e8a4b643cfc0b4427c3efb86c0d94",
+            clientId: "reader",
+            scopes: ["mcp:read"],
+            identityId: null,
+            notBefore: null,
+            expiresAt: null,
+            subject: null,
+            kind: "static" as const,
+          },
+        ],
+      },
+      httpRateLimit: {
+        enabled: true,
+        windowMs: 60_000,
+        readRequestsPerWindow: 1,
+        writeRequestsPerWindow: 1,
+        trustedProxyHeaders: [],
+      },
+    };
+
+    const firstResponse = createMockResponse();
+    await handleStreamableHttpRequest(request, firstResponse, rateLimitedConfig);
+
+    const secondResponse = createMockResponse();
+    await handleStreamableHttpRequest(request, secondResponse, rateLimitedConfig);
+
+    expect(secondResponse.statusCode).toBe(429);
+    expect(secondResponse.headers["Retry-After"]).toBeDefined();
+    expect(JSON.parse(secondResponse.body)).toMatchObject({
+      error: "Too many MCP requests in the current window",
+      policy: "read",
+      limit: 1,
     });
   });
 });
