@@ -20,6 +20,7 @@
     "db:studio": "drizzle-kit studio",
     "test": "node ../../scripts/run-node-tests.mjs hooks lib utils",
     "whitepaper": "tsx scripts/whitepaper/generate.tsx",
+    "demo:record": "tsx e2e/scripts/record-demo.ts",
     "e2e": "playwright test --config e2e/playwright.config.ts --project=chromium",
     "e2e:ci:smoke": "playwright test --config e2e/playwright.config.ts --project=ci-smoke",
     "e2e:ci:full": "REQUIRE_E2E_KEEPER=1 playwright test --config e2e/playwright.config.ts --no-deps --project=chromium --project=settlement --project=settlement-keeper --project=round-cancellation --project=content-dormancy --project=mobile-phone --project=mobile-tablet",

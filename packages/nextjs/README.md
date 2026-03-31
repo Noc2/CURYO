@@ -30,6 +30,7 @@ Run these from the monorepo root unless noted otherwise:
 | `yarn workspace @curyo/nextjs db:push`          | Apply migrations to the configured database                     |
 | `yarn workspace @curyo/nextjs db:studio`        | Open the Drizzle studio UI                                      |
 | `yarn workspace @curyo/nextjs whitepaper`       | Generate the whitepaper PDF                                     |
+| `yarn workspace @curyo/nextjs demo:record`      | Record the short Playwright product demo video                  |
 | `yarn e2e`                                      | Run the Playwright smoke suite (Chromium)                       |
 | `yarn workspace @curyo/nextjs e2e:ci:lifecycle` | Run lifecycle suites for settlement, cancellation, and dormancy |
 | `yarn workspace @curyo/nextjs e2e:ci:keeper`    | Run keeper-backed settlement coverage                           |
@@ -37,6 +38,24 @@ Run these from the monorepo root unless noted otherwise:
 | `yarn e2e:ui`                                   | Run E2E tests with interactive Playwright UI                    |
 
 CI runs the smoke, lifecycle, and keeper-backed suites separately, so `yarn e2e` is only the smallest browser pass.
+
+## Demo Recorder
+
+To generate the shortest scripted product walkthrough video, start the local chain, deploy contracts, and run the app stack first:
+
+```bash
+yarn chain
+yarn deploy
+yarn dev:stack
+```
+
+Then record the demo:
+
+```bash
+yarn workspace @curyo/nextjs demo:record
+```
+
+The recorder saves a `.webm` file under `packages/nextjs/e2e/artifacts/demo/`. Set `CURYO_DEMO_HEADLESS=false` if you want to watch the browser while it records, or `CURYO_DEMO_VIDEO_PATH=/absolute/path/demo.webm` to override the output file location.
 
 ## Configuration
 

@@ -146,8 +146,7 @@ async function sendTx(from: string, to: string, data: `0x${string}`): Promise<bo
       const receipt = await publicClient.waitForTransactionReceipt({ hash: txHash });
       return receipt.status === "success";
     } catch (error) {
-      console.error(`[sendTx] Signed tx failed from=${from} to=${to}: ${String(error)}`);
-      return false;
+      console.warn(`[sendTx] Signed tx failed from=${from} to=${to}; falling back to RPC send: ${String(error)}`);
     }
   }
 
