@@ -66,13 +66,16 @@ abstract contract VotingTestBase is Test, ContentSubmissionTestBase {
         0x52db9ba70e0cc0f6eaf7803dd07447a1f5477735fd3f661792ba94600c84e971;
     uint64 internal constant DEFAULT_DRAND_GENESIS_TIME = 1;
     uint64 internal constant DEFAULT_DRAND_PERIOD = 3;
+    ProtocolConfig internal activeTlockProtocolConfig;
 
     function _deployProtocolConfig(address admin) internal returns (ProtocolConfig protocolConfig) {
-        return deployInitializedProtocolConfig(admin, admin);
+        return _deployProtocolConfig(admin, admin);
     }
 
     function _deployProtocolConfig(address admin, address governance) internal returns (ProtocolConfig protocolConfig) {
-        return deployInitializedProtocolConfig(admin, governance);
+        protocolConfig = deployInitializedProtocolConfig(admin, governance);
+        activeTlockProtocolConfig = protocolConfig;
+        protocolConfig.setDrandConfig(DEFAULT_DRAND_CHAIN_HASH, DEFAULT_DRAND_GENESIS_TIME, DEFAULT_DRAND_PERIOD);
     }
 
     /// @dev Build a test-only payload accepted by the contract; it is fake AGE armor, not real tlock ciphertext.
@@ -115,19 +118,34 @@ abstract contract VotingTestBase is Test, ContentSubmissionTestBase {
         return _roundAt(revealableAfter, _tlockDrandGenesisTime(), _tlockDrandPeriod());
     }
 
-    function _tlockDrandChainHash() internal pure virtual returns (bytes32) {
+    function _tlockDrandChainHash() internal view virtual returns (bytes32) {
+        if (address(activeTlockProtocolConfig) != address(0)) {
+            return activeTlockProtocolConfig.drandChainHash();
+        }
         return DEFAULT_DRAND_CHAIN_HASH;
     }
 
-    function _tlockDrandGenesisTime() internal pure virtual returns (uint64) {
+    function _tlockDrandGenesisTime() internal view virtual returns (uint64) {
+        if (address(activeTlockProtocolConfig) != address(0)) {
+            return activeTlockProtocolConfig.drandGenesisTime();
+        }
         return DEFAULT_DRAND_GENESIS_TIME;
     }
 
-    function _tlockDrandPeriod() internal pure virtual returns (uint64) {
+    function _tlockDrandPeriod() internal view virtual returns (uint64) {
+        if (address(activeTlockProtocolConfig) != address(0)) {
+            return activeTlockProtocolConfig.drandPeriod();
+        }
         return DEFAULT_DRAND_PERIOD;
     }
 
     function _tlockEpochDuration() internal view virtual returns (uint256) {
+        if (address(activeTlockProtocolConfig) != address(0)) {
+            (uint32 epochDuration,,,) = activeTlockProtocolConfig.config();
+            if (epochDuration > 0) {
+                return epochDuration;
+            }
+        }
         return 20 minutes;
     }
 
