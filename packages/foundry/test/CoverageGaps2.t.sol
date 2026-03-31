@@ -1765,7 +1765,7 @@ contract RoundSettlementBranchTest is VotingTestBase {
         bytes memory ciphertext = abi.encodePacked(uint8(1), salt, contentId);
         vm.startPrank(voter1);
         vm.expectRevert(RoundVotingEngine.InvalidStake.selector);
-        engine.commitVote(contentId, commitHash, ciphertext, 0, address(0));
+        engine.commitVote(contentId, _tlockCommitTargetRound(), _tlockDrandChainHash(), commitHash, ciphertext, 0, address(0));
         vm.stopPrank();
     }
 
@@ -1956,7 +1956,7 @@ contract RoundSettlementBranchTest is VotingTestBase {
         vm.prank(voter);
         crep.approve(address(engine), amount);
         vm.prank(voter);
-        engine.commitVote(contentId, commitHash, ciphertext, amount, address(0));
+        engine.commitVote(contentId, _tlockCommitTargetRound(), _tlockDrandChainHash(), commitHash, ciphertext, amount, address(0));
         commitKey = keccak256(abi.encodePacked(voter, commitHash));
     }
 

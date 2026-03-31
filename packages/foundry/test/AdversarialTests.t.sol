@@ -37,6 +37,24 @@ contract AdversarialTests is VotingTestBase {
 
     uint256 constant STAKE = 10e6;
     uint256 constant EPOCH_DURATION = 10 minutes;
+    mapping(bytes32 => bool) internal commitDirections;
+    mapping(bytes32 => bytes32) internal commitSalts;
+
+    function _tlockDrandChainHash() internal pure override returns (bytes32) {
+        return DEFAULT_DRAND_CHAIN_HASH;
+    }
+
+    function _tlockDrandGenesisTime() internal pure override returns (uint64) {
+        return DEFAULT_DRAND_GENESIS_TIME;
+    }
+
+    function _tlockDrandPeriod() internal pure override returns (uint64) {
+        return DEFAULT_DRAND_PERIOD;
+    }
+
+    function _tlockEpochDuration() internal pure override returns (uint256) {
+        return EPOCH_DURATION;
+    }
 
     function setUp() public {
         vm.warp(1000);
@@ -90,6 +108,9 @@ contract AdversarialTests is VotingTestBase {
         ProtocolConfig(address(engine.protocolConfig())).setRewardDistributor(address(distributor));
         ProtocolConfig(address(engine.protocolConfig())).setCategoryRegistry(address(mockCategoryRegistry));
         ProtocolConfig(address(engine.protocolConfig())).setTreasury(treasury);
+        ProtocolConfig(address(engine.protocolConfig())).setDrandConfig(
+            DEFAULT_DRAND_CHAIN_HASH, DEFAULT_DRAND_GENESIS_TIME, DEFAULT_DRAND_PERIOD
+        );
         ProtocolConfig(address(engine.protocolConfig())).setConfig(EPOCH_DURATION, 7 days, 2, 200);
 
         // Fund consensus reserve
@@ -133,24 +154,24 @@ contract AdversarialTests is VotingTestBase {
         returns (bytes32 commitKey, bytes32 salt)
     {
         salt = keccak256(abi.encodePacked(voter, block.timestamp, contentId, isUp));
-        bytes32 commitHash = _commitHash(isUp, salt, contentId);
         bytes memory ciphertext = _testCiphertext(isUp, salt, contentId);
+        uint64 targetRound = _tlockCommitTargetRound();
+        bytes32 drandChainHash = _tlockDrandChainHash();
+        bytes32 commitHash = _commitHash(isUp, salt, contentId, targetRound, drandChainHash, ciphertext);
         vm.startPrank(voter);
         crepToken.approve(address(engine), stake);
-        engine.commitVote(contentId, commitHash, ciphertext, stake, address(0));
+        engine.commitVote(contentId, targetRound, drandChainHash, commitHash, ciphertext, stake, address(0));
         vm.stopPrank();
         commitKey = _commitKey(voter, commitHash);
+        commitDirections[commitKey] = isUp;
+        commitSalts[commitKey] = salt;
     }
 
     function _reveal(uint256 contentId, uint256 roundId, bytes32 commitKey) internal {
         RoundLib.Commit memory c = RoundEngineReadHelpers.commit(engine, contentId, roundId, commitKey);
         if (c.revealed || c.stakeAmount == 0) return;
-        bool up = uint8(c.ciphertext[0]) == 1;
-        bytes32 s;
-        bytes memory ct = c.ciphertext;
-        assembly ("memory-safe") {
-            s := mload(add(ct, 33))
-        }
+        bool up = commitDirections[commitKey];
+        bytes32 s = commitSalts[commitKey];
         engine.revealVoteByCommitKey(contentId, roundId, commitKey, up, s);
     }
 
@@ -570,6 +591,9 @@ contract AdversarialTests is VotingTestBase {
         ProtocolConfig(address(eng2.protocolConfig())).setRewardDistributor(address(dist2));
         ProtocolConfig(address(eng2.protocolConfig())).setCategoryRegistry(address(mockCategoryRegistry));
         ProtocolConfig(address(eng2.protocolConfig())).setTreasury(treasury);
+        ProtocolConfig(address(eng2.protocolConfig())).setDrandConfig(
+            DEFAULT_DRAND_CHAIN_HASH, DEFAULT_DRAND_GENESIS_TIME, DEFAULT_DRAND_PERIOD
+        );
         ProtocolConfig(address(eng2.protocolConfig())).setConfig(EPOCH_DURATION, 7 days, 2, 200);
 
         // NO fundConsensusReserve — reserve is zero
@@ -592,7 +616,7 @@ contract AdversarialTests is VotingTestBase {
 
         vm.startPrank(voter1);
         token2.approve(address(eng2), STAKE);
-        eng2.commitVote(1, ch1, ct1, STAKE, address(0));
+        eng2.commitVote(1, _tlockCommitTargetRound(), _tlockDrandChainHash(), ch1, ct1, STAKE, address(0));
         vm.stopPrank();
 
         bytes32 salt2 = keccak256(abi.encodePacked(voter2, block.timestamp, uint256(1)));
@@ -601,7 +625,7 @@ contract AdversarialTests is VotingTestBase {
 
         vm.startPrank(voter2);
         token2.approve(address(eng2), STAKE);
-        eng2.commitVote(1, ch2, ct2, STAKE, address(0));
+        eng2.commitVote(1, _tlockCommitTargetRound(), _tlockDrandChainHash(), ch2, ct2, STAKE, address(0));
         vm.stopPrank();
 
         bytes32 ck1 = _commitKey(voter1, ch1);
@@ -755,7 +779,7 @@ contract AdversarialTests is VotingTestBase {
         bytes memory ciphertext = _testCiphertext(true, salt, contentId);
         vm.startPrank(holder);
         crepToken.approve(address(engine), STAKE);
-        engine.commitVote(contentId, commitHash, ciphertext, STAKE, address(0));
+        engine.commitVote(contentId, _tlockCommitTargetRound(), _tlockDrandChainHash(), commitHash, ciphertext, STAKE, address(0));
         vm.stopPrank();
 
         // Delegate tries to vote immediately on DIFFERENT content (same tokenId → blocked by IdentityAlreadyCommitted
@@ -773,7 +797,7 @@ contract AdversarialTests is VotingTestBase {
         vm.startPrank(delegate);
         crepToken.approve(address(engine), STAKE);
         vm.expectRevert(RoundVotingEngine.CooldownActive.selector);
-        engine.commitVote(contentId, commitHash3, ciphertext3, STAKE, address(0));
+        engine.commitVote(contentId, _tlockCommitTargetRound(), _tlockDrandChainHash(), commitHash3, ciphertext3, STAKE, address(0));
         vm.stopPrank();
     }
 
@@ -828,7 +852,7 @@ contract AdversarialTests is VotingTestBase {
         vm.startPrank(delegate);
         crepToken.approve(address(engine), STAKE);
         vm.expectRevert(RoundVotingEngine.CooldownActive.selector);
-        engine.commitVote(contentId, commitHash2, ciphertext2, STAKE, address(0));
+        engine.commitVote(contentId, _tlockCommitTargetRound(), _tlockDrandChainHash(), commitHash2, ciphertext2, STAKE, address(0));
         vm.stopPrank();
     }
 
@@ -936,7 +960,7 @@ contract AdversarialTests is VotingTestBase {
 
         vm.startPrank(voter1);
         crepToken.approve(address(engine), STAKE);
-        engine.commitVote(contentId, commitHash, ciphertext, STAKE, address(0));
+        engine.commitVote(contentId, _tlockCommitTargetRound(), _tlockDrandChainHash(), commitHash, ciphertext, STAKE, address(0));
         vm.stopPrank();
 
         uint256 roundId = RoundEngineReadHelpers.activeRoundId(engine, contentId);
@@ -957,7 +981,7 @@ contract AdversarialTests is VotingTestBase {
 
         vm.startPrank(voter1);
         crepToken.approve(address(engine), STAKE);
-        engine.commitVote(contentId, commitHash, ciphertext, STAKE, address(0));
+        engine.commitVote(contentId, _tlockCommitTargetRound(), _tlockDrandChainHash(), commitHash, ciphertext, STAKE, address(0));
         vm.stopPrank();
 
         uint256 roundId = RoundEngineReadHelpers.activeRoundId(engine, contentId);
@@ -981,7 +1005,7 @@ contract AdversarialTests is VotingTestBase {
 
         vm.startPrank(voter1);
         crepToken.approve(address(engine), STAKE);
-        engine.commitVote(contentId, commitHash, ciphertext, STAKE, address(0));
+        engine.commitVote(contentId, _tlockCommitTargetRound(), _tlockDrandChainHash(), commitHash, ciphertext, STAKE, address(0));
         vm.stopPrank();
 
         uint256 roundId = RoundEngineReadHelpers.activeRoundId(engine, contentId);
@@ -994,19 +1018,19 @@ contract AdversarialTests is VotingTestBase {
         engine.revealVoteByCommitKey(contentId, roundId, commitKey, false, salt); // wrong direction
     }
 
-    /// @notice Opaque ciphertext bytes are accepted, but reveal still requires a caller who knows the plaintext.
+    /// @notice Fake AGE armor is accepted, and reveal still requires a caller who knows the salt/plaintext pair.
     function test_RevealTiming_OpaqueCiphertext_AllowsManualReveal() public {
         uint256 contentId = _submitContent();
 
         bytes32 salt = keccak256(abi.encodePacked(voter1, block.timestamp, contentId, "opaque"));
-        bytes memory opaqueCiphertext = hex"deadbeef";
-        bytes32 commitHash = _commitHash(true, salt, contentId, opaqueCiphertext);
-
-        assertTrue(opaqueCiphertext.length != 65, "regression setup should not use the helper payload shape");
+        bytes memory opaqueCiphertext = _testCiphertext(true, salt, contentId);
+        uint64 targetRound = _tlockCommitTargetRound();
+        bytes32 drandChainHash = _tlockDrandChainHash();
+        bytes32 commitHash = _commitHash(true, salt, contentId, targetRound, drandChainHash, opaqueCiphertext);
 
         vm.startPrank(voter1);
         crepToken.approve(address(engine), STAKE);
-        engine.commitVote(contentId, commitHash, opaqueCiphertext, STAKE, address(0));
+        engine.commitVote(contentId, targetRound, drandChainHash, commitHash, opaqueCiphertext, STAKE, address(0));
         vm.stopPrank();
 
         uint256 roundId = RoundEngineReadHelpers.activeRoundId(engine, contentId);
@@ -1081,7 +1105,7 @@ contract AdversarialTests is VotingTestBase {
         vm.startPrank(submitter);
         crepToken.approve(address(engine), STAKE);
         vm.expectRevert(RoundVotingEngine.SelfVote.selector);
-        engine.commitVote(contentId, commitHash, ciphertext, STAKE, address(0));
+        engine.commitVote(contentId, _tlockCommitTargetRound(), _tlockDrandChainHash(), commitHash, ciphertext, STAKE, address(0));
         vm.stopPrank();
     }
 
@@ -1100,7 +1124,7 @@ contract AdversarialTests is VotingTestBase {
         vm.startPrank(voter1);
         crepToken.approve(address(engine), 1); // tiny amount
         vm.expectRevert(RoundVotingEngine.InvalidStake.selector);
-        engine.commitVote(contentId, commitHash, ciphertext, 1, address(0));
+        engine.commitVote(contentId, _tlockCommitTargetRound(), _tlockDrandChainHash(), commitHash, ciphertext, 1, address(0));
         vm.stopPrank();
     }
 
@@ -1116,7 +1140,7 @@ contract AdversarialTests is VotingTestBase {
         vm.startPrank(voter1);
         crepToken.approve(address(engine), tooMuch);
         vm.expectRevert(RoundVotingEngine.InvalidStake.selector);
-        engine.commitVote(contentId, commitHash, ciphertext, tooMuch, address(0));
+        engine.commitVote(contentId, _tlockCommitTargetRound(), _tlockDrandChainHash(), commitHash, ciphertext, tooMuch, address(0));
         vm.stopPrank();
     }
 

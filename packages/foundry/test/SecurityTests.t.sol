@@ -70,6 +70,24 @@ contract SecurityReentrancyTest is VotingTestBase {
 
     uint256 constant STAKE = 10e6;
     uint256 constant EPOCH_DURATION = 5 minutes;
+    mapping(bytes32 => bool) internal commitDirections;
+    mapping(bytes32 => bytes32) internal commitSalts;
+
+    function _tlockDrandChainHash() internal pure override returns (bytes32) {
+        return DEFAULT_DRAND_CHAIN_HASH;
+    }
+
+    function _tlockDrandGenesisTime() internal pure override returns (uint64) {
+        return DEFAULT_DRAND_GENESIS_TIME;
+    }
+
+    function _tlockDrandPeriod() internal pure override returns (uint64) {
+        return DEFAULT_DRAND_PERIOD;
+    }
+
+    function _tlockEpochDuration() internal pure override returns (uint256) {
+        return EPOCH_DURATION;
+    }
 
     function setUp() public {
         vm.warp(1000);
@@ -108,6 +126,9 @@ contract SecurityReentrancyTest is VotingTestBase {
         registry.setCategoryRegistry(address(mockCategoryRegistry));
         ProtocolConfig(address(votingEngine.protocolConfig())).setCategoryRegistry(address(mockCategoryRegistry));
         ProtocolConfig(address(votingEngine.protocolConfig())).setTreasury(treasury);
+        ProtocolConfig(address(votingEngine.protocolConfig())).setDrandConfig(
+            DEFAULT_DRAND_CHAIN_HASH, DEFAULT_DRAND_GENESIS_TIME, DEFAULT_DRAND_PERIOD
+        );
         ProtocolConfig(address(votingEngine.protocolConfig())).setConfig(EPOCH_DURATION, 7 days, 2, 200);
 
         uint256 reserveAmount = 1_000_000e6;
@@ -134,12 +155,16 @@ contract SecurityReentrancyTest is VotingTestBase {
     function _commit(address voter, uint256 contentId, bool isUp) internal returns (bytes32 commitKey) {
         bytes32 salt = keccak256(abi.encodePacked(voter, block.timestamp, contentId));
         bytes memory ciphertext = _testCiphertext(isUp, salt, contentId);
-        bytes32 commitHash = _commitHash(isUp, salt, contentId, ciphertext);
+        uint64 targetRound = _tlockCommitTargetRound();
+        bytes32 drandChainHash = _tlockDrandChainHash();
+        bytes32 commitHash = _commitHash(isUp, salt, contentId, targetRound, drandChainHash, ciphertext);
         vm.startPrank(voter);
         crepToken.approve(address(votingEngine), STAKE);
-        votingEngine.commitVote(contentId, commitHash, ciphertext, STAKE, address(0));
+        votingEngine.commitVote(contentId, targetRound, drandChainHash, commitHash, ciphertext, STAKE, address(0));
         vm.stopPrank();
         commitKey = keccak256(abi.encodePacked(voter, commitHash));
+        commitDirections[commitKey] = isUp;
+        commitSalts[commitKey] = salt;
     }
 
     /// @notice claimCancelledRoundRefund token transfer cannot trigger re-entry
@@ -199,12 +224,8 @@ contract SecurityReentrancyTest is VotingTestBase {
     function _revealFromCiphertext(uint256 cid, uint256 roundId, bytes32 commitKey) internal {
         RoundLib.Commit memory c = RoundEngineReadHelpers.commit(votingEngine, cid, roundId, commitKey);
         if (c.revealed || c.stakeAmount == 0) return;
-        bool up = uint8(c.ciphertext[0]) == 1;
-        bytes32 s;
-        bytes memory ct = c.ciphertext;
-        assembly ("memory-safe") {
-            s := mload(add(ct, 33))
-        }
+        bool up = commitDirections[commitKey];
+        bytes32 s = commitSalts[commitKey];
         votingEngine.revealVoteByCommitKey(cid, roundId, commitKey, up, s);
     }
 }
@@ -226,6 +247,22 @@ contract SecurityTransferAndCallTest is VotingTestBase {
 
     uint256 constant STAKE = 10e6;
     uint256 constant EPOCH_DURATION = 5 minutes;
+
+    function _tlockDrandChainHash() internal pure override returns (bytes32) {
+        return DEFAULT_DRAND_CHAIN_HASH;
+    }
+
+    function _tlockDrandGenesisTime() internal pure override returns (uint64) {
+        return DEFAULT_DRAND_GENESIS_TIME;
+    }
+
+    function _tlockDrandPeriod() internal pure override returns (uint64) {
+        return DEFAULT_DRAND_PERIOD;
+    }
+
+    function _tlockEpochDuration() internal pure override returns (uint256) {
+        return EPOCH_DURATION;
+    }
 
     function setUp() public {
         vm.warp(1000);
@@ -264,6 +301,9 @@ contract SecurityTransferAndCallTest is VotingTestBase {
         registry.setCategoryRegistry(address(mockCategoryRegistry));
         ProtocolConfig(address(votingEngine.protocolConfig())).setCategoryRegistry(address(mockCategoryRegistry));
         ProtocolConfig(address(votingEngine.protocolConfig())).setTreasury(treasury);
+        ProtocolConfig(address(votingEngine.protocolConfig())).setDrandConfig(
+            DEFAULT_DRAND_CHAIN_HASH, DEFAULT_DRAND_GENESIS_TIME, DEFAULT_DRAND_PERIOD
+        );
         ProtocolConfig(address(votingEngine.protocolConfig())).setConfig(EPOCH_DURATION, 7 days, 2, 200);
 
         uint256 reserveAmount = 1_000_000e6;
@@ -292,8 +332,10 @@ contract SecurityTransferAndCallTest is VotingTestBase {
     {
         bytes32 salt = keccak256(abi.encodePacked(voter, block.timestamp, contentId));
         ciphertext = _testCiphertext(true, salt, contentId);
-        commitHash = _commitHash(true, salt, contentId, ciphertext);
-        payload = abi.encode(contentId, commitHash, ciphertext, address(0));
+        uint64 targetRound = _tlockCommitTargetRound();
+        bytes32 drandChainHash = _tlockDrandChainHash();
+        commitHash = _commitHash(true, salt, contentId, targetRound, drandChainHash, ciphertext);
+        payload = abi.encode(contentId, commitHash, ciphertext, address(0), targetRound, drandChainHash);
     }
 
     function test_TransferAndCall_RejectsDirectExternalCallback() public {
@@ -365,6 +407,24 @@ contract SecuritySettlementTimingTest is VotingTestBase {
 
     uint256 constant STAKE = 10e6;
     uint256 constant EPOCH_DURATION = 5 minutes;
+    mapping(bytes32 => bool) internal commitDirections;
+    mapping(bytes32 => bytes32) internal commitSalts;
+
+    function _tlockDrandChainHash() internal pure override returns (bytes32) {
+        return DEFAULT_DRAND_CHAIN_HASH;
+    }
+
+    function _tlockDrandGenesisTime() internal pure override returns (uint64) {
+        return DEFAULT_DRAND_GENESIS_TIME;
+    }
+
+    function _tlockDrandPeriod() internal pure override returns (uint64) {
+        return DEFAULT_DRAND_PERIOD;
+    }
+
+    function _tlockEpochDuration() internal pure override returns (uint256) {
+        return EPOCH_DURATION;
+    }
 
     function setUp() public {
         vm.warp(1000);
@@ -403,6 +463,9 @@ contract SecuritySettlementTimingTest is VotingTestBase {
         registry.setCategoryRegistry(address(mockCategoryRegistry));
         ProtocolConfig(address(votingEngine.protocolConfig())).setCategoryRegistry(address(mockCategoryRegistry));
         ProtocolConfig(address(votingEngine.protocolConfig())).setTreasury(treasury);
+        ProtocolConfig(address(votingEngine.protocolConfig())).setDrandConfig(
+            DEFAULT_DRAND_CHAIN_HASH, DEFAULT_DRAND_GENESIS_TIME, DEFAULT_DRAND_PERIOD
+        );
         ProtocolConfig(address(votingEngine.protocolConfig())).setConfig(EPOCH_DURATION, 7 days, 2, 200);
 
         uint256 reserveAmount = 1_000_000e6;
@@ -429,23 +492,23 @@ contract SecuritySettlementTimingTest is VotingTestBase {
     function _commit(address voter, uint256 contentId, bool isUp) internal returns (bytes32 commitKey) {
         bytes32 salt = keccak256(abi.encodePacked(voter, block.timestamp, contentId));
         bytes memory ciphertext = _testCiphertext(isUp, salt, contentId);
-        bytes32 commitHash = _commitHash(isUp, salt, contentId, ciphertext);
+        uint64 targetRound = _tlockCommitTargetRound();
+        bytes32 drandChainHash = _tlockDrandChainHash();
+        bytes32 commitHash = _commitHash(isUp, salt, contentId, targetRound, drandChainHash, ciphertext);
         vm.startPrank(voter);
         crepToken.approve(address(votingEngine), STAKE);
-        votingEngine.commitVote(contentId, commitHash, ciphertext, STAKE, address(0));
+        votingEngine.commitVote(contentId, targetRound, drandChainHash, commitHash, ciphertext, STAKE, address(0));
         vm.stopPrank();
         commitKey = keccak256(abi.encodePacked(voter, commitHash));
+        commitDirections[commitKey] = isUp;
+        commitSalts[commitKey] = salt;
     }
 
     function _revealFromCiphertext(uint256 cid, uint256 roundId, bytes32 commitKey) internal {
         RoundLib.Commit memory c = RoundEngineReadHelpers.commit(votingEngine, cid, roundId, commitKey);
         if (c.revealed || c.stakeAmount == 0) return;
-        bool up = uint8(c.ciphertext[0]) == 1;
-        bytes32 s;
-        bytes memory ct = c.ciphertext;
-        assembly ("memory-safe") {
-            s := mload(add(ct, 33))
-        }
+        bool up = commitDirections[commitKey];
+        bytes32 s = commitSalts[commitKey];
         votingEngine.revealVoteByCommitKey(cid, roundId, commitKey, up, s);
     }
 
@@ -460,12 +523,8 @@ contract SecuritySettlementTimingTest is VotingTestBase {
         // Still before epoch end — reveal should revert
         vm.warp(round.startTime + EPOCH_DURATION - 1);
         RoundLib.Commit memory c = RoundEngineReadHelpers.commit(votingEngine, contentId, roundId, ck1);
-        bool up = uint8(c.ciphertext[0]) == 1;
-        bytes32 s;
-        bytes memory ct = c.ciphertext;
-        assembly ("memory-safe") {
-            s := mload(add(ct, 33))
-        }
+        bool up = commitDirections[ck1];
+        bytes32 s = commitSalts[ck1];
         vm.expectRevert(RoundVotingEngine.EpochNotEnded.selector);
         votingEngine.revealVoteByCommitKey(contentId, roundId, ck1, up, s);
     }

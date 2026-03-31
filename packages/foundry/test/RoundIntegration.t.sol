@@ -48,7 +48,7 @@ contract RevertingParticipationPool {
 /// @title Round-based integration tests for tlock commit-reveal flow with epoch-weighted rewards.
 /// @dev Covers: full lifecycle, multi-voter, concurrent rounds, tied rounds,
 ///      cancelled/expired rounds, consensus settlement, config snapshots.
-///      Uses test ciphertext (chainid 31337): ciphertext = abi.encodePacked(uint8(isUp?1:0), salt, contentId).
+///      Uses fake AGE-armored test ciphertexts, not real drand/tlock payloads.
 contract RoundIntegrationTest is VotingTestBase {
     using stdStorage for StdStorage;
 
@@ -71,6 +71,22 @@ contract RoundIntegrationTest is VotingTestBase {
 
     // Short epoch duration for tests (10 minutes — above the 5-minute minimum)
     uint256 public constant EPOCH_DURATION = 10 minutes;
+
+    function _tlockDrandChainHash() internal pure override returns (bytes32) {
+        return DEFAULT_DRAND_CHAIN_HASH;
+    }
+
+    function _tlockDrandGenesisTime() internal pure override returns (uint64) {
+        return DEFAULT_DRAND_GENESIS_TIME;
+    }
+
+    function _tlockDrandPeriod() internal pure override returns (uint64) {
+        return DEFAULT_DRAND_PERIOD;
+    }
+
+    function _tlockEpochDuration() internal pure override returns (uint256) {
+        return EPOCH_DURATION;
+    }
 
     function setUp() public {
         // Set a predictable start time
@@ -95,7 +111,7 @@ contract RoundIntegrationTest is VotingTestBase {
             )
         );
 
-        // Foundry tests use helper payload bytes here rather than real drand/tlock ciphertexts.
+        // Foundry tests use fake AGE-armored payloads here rather than real drand/tlock ciphertexts.
         votingEngine = RoundVotingEngine(
             address(
                 new ERC1967Proxy(
@@ -127,6 +143,9 @@ contract RoundIntegrationTest is VotingTestBase {
         ProtocolConfig(address(votingEngine.protocolConfig())).setRewardDistributor(address(rewardDistributor));
         ProtocolConfig(address(votingEngine.protocolConfig())).setCategoryRegistry(address(mockCategoryRegistry));
         ProtocolConfig(address(votingEngine.protocolConfig())).setTreasury(treasury);
+        ProtocolConfig(address(votingEngine.protocolConfig())).setDrandConfig(
+            DEFAULT_DRAND_CHAIN_HASH, DEFAULT_DRAND_GENESIS_TIME, DEFAULT_DRAND_PERIOD
+        );
 
         // setConfig(epochDuration, maxDuration, minVoters, maxVoters)
         // Use short 10-minute epochs for tests, minVoters=2 to keep tests lean
@@ -178,7 +197,7 @@ contract RoundIntegrationTest is VotingTestBase {
 
         vm.startPrank(voter);
         crepToken.approve(address(votingEngine), stakeAmount);
-        votingEngine.commitVote(contentId, ch, ct, stakeAmount, address(0));
+        votingEngine.commitVote(contentId, _tlockCommitTargetRound(), _tlockDrandChainHash(), ch, ct, stakeAmount, address(0));
         vm.stopPrank();
 
         // Advance time past epoch boundary so vote becomes revealable
@@ -207,7 +226,7 @@ contract RoundIntegrationTest is VotingTestBase {
 
         vm.startPrank(voter);
         crepToken.approve(address(votingEngine), stakeAmount);
-        votingEngine.commitVote(contentId, ch, ct, stakeAmount, address(0));
+        votingEngine.commitVote(contentId, _tlockCommitTargetRound(), _tlockDrandChainHash(), ch, ct, stakeAmount, address(0));
         vm.stopPrank();
 
         ck = _commitKey(voter, ch);
@@ -236,7 +255,7 @@ contract RoundIntegrationTest is VotingTestBase {
 
             vm.startPrank(voters[i]);
             crepToken.approve(address(votingEngine), stakeAmount);
-            votingEngine.commitVote(contentId, commitHashes[i], ct, stakeAmount, address(0));
+            votingEngine.commitVote(contentId, _tlockCommitTargetRound(), _tlockDrandChainHash(), commitHashes[i], ct, stakeAmount, address(0));
             vm.stopPrank();
 
             commitKeys[i] = _commitKey(voters[i], commitHashes[i]);
@@ -308,7 +327,7 @@ contract RoundIntegrationTest is VotingTestBase {
 
             vm.startPrank(voters[i]);
             crepToken.approve(address(votingEngine), STAKE);
-            votingEngine.commitVote(contentId, commitHashes[i], ct, STAKE, address(0));
+            votingEngine.commitVote(contentId, _tlockCommitTargetRound(), _tlockDrandChainHash(), commitHashes[i], ct, STAKE, address(0));
             vm.stopPrank();
 
             commitKeys[i] = _commitKey(voters[i], commitHashes[i]);
@@ -406,17 +425,17 @@ contract RoundIntegrationTest is VotingTestBase {
 
         vm.startPrank(voter1);
         crepToken.approve(address(votingEngine), 10e6);
-        votingEngine.commitVote(contentId, ch1, _testCiphertext(true, salt1, contentId), 10e6, address(0));
+        votingEngine.commitVote(contentId, _tlockCommitTargetRound(), _tlockDrandChainHash(), ch1, _testCiphertext(true, salt1, contentId), 10e6, address(0));
         vm.stopPrank();
 
         vm.startPrank(voter2);
         crepToken.approve(address(votingEngine), 5e6);
-        votingEngine.commitVote(contentId, ch2, _testCiphertext(true, salt2, contentId), 5e6, address(0));
+        votingEngine.commitVote(contentId, _tlockCommitTargetRound(), _tlockDrandChainHash(), ch2, _testCiphertext(true, salt2, contentId), 5e6, address(0));
         vm.stopPrank();
 
         vm.startPrank(voter3);
         crepToken.approve(address(votingEngine), STAKE);
-        votingEngine.commitVote(contentId, ch3, _testCiphertext(false, salt3, contentId), STAKE, address(0));
+        votingEngine.commitVote(contentId, _tlockCommitTargetRound(), _tlockDrandChainHash(), ch3, _testCiphertext(false, salt3, contentId), STAKE, address(0));
         vm.stopPrank();
 
         uint256 roundId = RoundEngineReadHelpers.activeRoundId(votingEngine, contentId);
@@ -465,12 +484,12 @@ contract RoundIntegrationTest is VotingTestBase {
 
         vm.startPrank(voter1);
         crepToken.approve(address(votingEngine), STAKE);
-        votingEngine.commitVote(contentId1, ch1a, _testCiphertext(true, s1a, contentId1), STAKE, address(0));
+        votingEngine.commitVote(contentId1, _tlockCommitTargetRound(), _tlockDrandChainHash(), ch1a, _testCiphertext(true, s1a, contentId1), STAKE, address(0));
         vm.stopPrank();
 
         vm.startPrank(voter2);
         crepToken.approve(address(votingEngine), STAKE);
-        votingEngine.commitVote(contentId1, ch1b, _testCiphertext(false, s1b, contentId1), STAKE, address(0));
+        votingEngine.commitVote(contentId1, _tlockCommitTargetRound(), _tlockDrandChainHash(), ch1b, _testCiphertext(false, s1b, contentId1), STAKE, address(0));
         vm.stopPrank();
 
         // Commit on content 2
@@ -481,12 +500,12 @@ contract RoundIntegrationTest is VotingTestBase {
 
         vm.startPrank(voter3);
         crepToken.approve(address(votingEngine), STAKE);
-        votingEngine.commitVote(contentId2, ch2a, _testCiphertext(true, s2a, contentId2), STAKE, address(0));
+        votingEngine.commitVote(contentId2, _tlockCommitTargetRound(), _tlockDrandChainHash(), ch2a, _testCiphertext(true, s2a, contentId2), STAKE, address(0));
         vm.stopPrank();
 
         vm.startPrank(voter4);
         crepToken.approve(address(votingEngine), STAKE);
-        votingEngine.commitVote(contentId2, ch2b, _testCiphertext(false, s2b, contentId2), STAKE, address(0));
+        votingEngine.commitVote(contentId2, _tlockCommitTargetRound(), _tlockDrandChainHash(), ch2b, _testCiphertext(false, s2b, contentId2), STAKE, address(0));
         vm.stopPrank();
 
         uint256 round1 = RoundEngineReadHelpers.activeRoundId(votingEngine, contentId1);
@@ -526,17 +545,17 @@ contract RoundIntegrationTest is VotingTestBase {
 
         vm.startPrank(voter1);
         crepToken.approve(address(votingEngine), STAKE);
-        votingEngine.commitVote(contentId1, ch1a, _testCiphertext(true, s1a, contentId1), STAKE, address(0));
+        votingEngine.commitVote(contentId1, _tlockCommitTargetRound(), _tlockDrandChainHash(), ch1a, _testCiphertext(true, s1a, contentId1), STAKE, address(0));
         vm.stopPrank();
 
         vm.startPrank(voter2);
         crepToken.approve(address(votingEngine), STAKE);
-        votingEngine.commitVote(contentId1, ch1b, _testCiphertext(false, s1b, contentId1), STAKE, address(0));
+        votingEngine.commitVote(contentId1, _tlockCommitTargetRound(), _tlockDrandChainHash(), ch1b, _testCiphertext(false, s1b, contentId1), STAKE, address(0));
         vm.stopPrank();
 
         vm.startPrank(voter3);
         crepToken.approve(address(votingEngine), STAKE);
-        votingEngine.commitVote(contentId1, ch1c, _testCiphertext(true, s1c, contentId1), STAKE, address(0));
+        votingEngine.commitVote(contentId1, _tlockCommitTargetRound(), _tlockDrandChainHash(), ch1c, _testCiphertext(true, s1c, contentId1), STAKE, address(0));
         vm.stopPrank();
 
         // Submit content 2 a bit later
@@ -550,12 +569,12 @@ contract RoundIntegrationTest is VotingTestBase {
 
         vm.startPrank(voter4);
         crepToken.approve(address(votingEngine), STAKE);
-        votingEngine.commitVote(contentId2, ch2a, _testCiphertext(true, s2a, contentId2), STAKE, address(0));
+        votingEngine.commitVote(contentId2, _tlockCommitTargetRound(), _tlockDrandChainHash(), ch2a, _testCiphertext(true, s2a, contentId2), STAKE, address(0));
         vm.stopPrank();
 
         vm.startPrank(voter5);
         crepToken.approve(address(votingEngine), STAKE);
-        votingEngine.commitVote(contentId2, ch2b, _testCiphertext(false, s2b, contentId2), STAKE, address(0));
+        votingEngine.commitVote(contentId2, _tlockCommitTargetRound(), _tlockDrandChainHash(), ch2b, _testCiphertext(false, s2b, contentId2), STAKE, address(0));
         vm.stopPrank();
 
         // Reveal both contents after their epochs end.
@@ -604,25 +623,25 @@ contract RoundIntegrationTest is VotingTestBase {
         // voter1 votes UP on content 1
         vm.startPrank(voter1);
         crepToken.approve(address(votingEngine), STAKE);
-        votingEngine.commitVote(contentId1, ch1, _testCiphertext(true, s1, contentId1), STAKE, address(0));
+        votingEngine.commitVote(contentId1, _tlockCommitTargetRound(), _tlockDrandChainHash(), ch1, _testCiphertext(true, s1, contentId1), STAKE, address(0));
         vm.stopPrank();
 
         // voter2 votes DOWN on content 1
         vm.startPrank(voter2);
         crepToken.approve(address(votingEngine), STAKE);
-        votingEngine.commitVote(contentId1, ch2, _testCiphertext(false, s2, contentId1), STAKE, address(0));
+        votingEngine.commitVote(contentId1, _tlockCommitTargetRound(), _tlockDrandChainHash(), ch2, _testCiphertext(false, s2, contentId1), STAKE, address(0));
         vm.stopPrank();
 
         // voter1 votes DOWN on content 2
         vm.startPrank(voter1);
         crepToken.approve(address(votingEngine), STAKE);
-        votingEngine.commitVote(contentId2, ch3, _testCiphertext(false, s3, contentId2), STAKE, address(0));
+        votingEngine.commitVote(contentId2, _tlockCommitTargetRound(), _tlockDrandChainHash(), ch3, _testCiphertext(false, s3, contentId2), STAKE, address(0));
         vm.stopPrank();
 
         // voter3 votes UP on content 2
         vm.startPrank(voter3);
         crepToken.approve(address(votingEngine), STAKE);
-        votingEngine.commitVote(contentId2, ch4, _testCiphertext(true, s4, contentId2), STAKE, address(0));
+        votingEngine.commitVote(contentId2, _tlockCommitTargetRound(), _tlockDrandChainHash(), ch4, _testCiphertext(true, s4, contentId2), STAKE, address(0));
         vm.stopPrank();
 
         // Verify commits are recorded
@@ -670,7 +689,7 @@ contract RoundIntegrationTest is VotingTestBase {
 
         vm.startPrank(voter1);
         crepToken.approve(address(votingEngine), STAKE);
-        votingEngine.commitVote(contentId, ch, _testCiphertext(true, salt, contentId), STAKE, address(0));
+        votingEngine.commitVote(contentId, _tlockCommitTargetRound(), _tlockDrandChainHash(), ch, _testCiphertext(true, salt, contentId), STAKE, address(0));
         vm.stopPrank();
 
         uint256 roundId = RoundEngineReadHelpers.activeRoundId(votingEngine, contentId);
@@ -703,12 +722,12 @@ contract RoundIntegrationTest is VotingTestBase {
 
         vm.startPrank(voter1);
         crepToken.approve(address(votingEngine), STAKE);
-        votingEngine.commitVote(contentId, ch1, _testCiphertext(true, s1, contentId), STAKE, address(0));
+        votingEngine.commitVote(contentId, _tlockCommitTargetRound(), _tlockDrandChainHash(), ch1, _testCiphertext(true, s1, contentId), STAKE, address(0));
         vm.stopPrank();
 
         vm.startPrank(voter2);
         crepToken.approve(address(votingEngine), STAKE);
-        votingEngine.commitVote(contentId, ch2, _testCiphertext(false, s2, contentId), STAKE, address(0));
+        votingEngine.commitVote(contentId, _tlockCommitTargetRound(), _tlockDrandChainHash(), ch2, _testCiphertext(false, s2, contentId), STAKE, address(0));
         vm.stopPrank();
 
         uint256 roundId = RoundEngineReadHelpers.activeRoundId(votingEngine, contentId);
@@ -726,7 +745,7 @@ contract RoundIntegrationTest is VotingTestBase {
 
         vm.startPrank(voter1);
         crepToken.approve(address(votingEngine), STAKE);
-        votingEngine.commitVote(contentId, ch, _testCiphertext(true, salt, contentId), STAKE, address(0));
+        votingEngine.commitVote(contentId, _tlockCommitTargetRound(), _tlockDrandChainHash(), ch, _testCiphertext(true, salt, contentId), STAKE, address(0));
         vm.stopPrank();
 
         uint256 roundId = RoundEngineReadHelpers.activeRoundId(votingEngine, contentId);
@@ -750,7 +769,7 @@ contract RoundIntegrationTest is VotingTestBase {
 
         vm.startPrank(voter1);
         crepToken.approve(address(votingEngine), STAKE);
-        votingEngine.commitVote(contentId, ch, _testCiphertext(true, salt, contentId), STAKE, address(0));
+        votingEngine.commitVote(contentId, _tlockCommitTargetRound(), _tlockDrandChainHash(), ch, _testCiphertext(true, salt, contentId), STAKE, address(0));
         vm.stopPrank();
 
         uint256 round1Id = RoundEngineReadHelpers.activeRoundId(votingEngine, contentId);
@@ -769,7 +788,7 @@ contract RoundIntegrationTest is VotingTestBase {
 
         vm.startPrank(voter2);
         crepToken.approve(address(votingEngine), STAKE);
-        votingEngine.commitVote(contentId, ch2, _testCiphertext(false, salt2, contentId), STAKE, address(0));
+        votingEngine.commitVote(contentId, _tlockCommitTargetRound(), _tlockDrandChainHash(), ch2, _testCiphertext(false, salt2, contentId), STAKE, address(0));
         vm.stopPrank();
 
         assertEq(RoundEngineReadHelpers.activeRoundId(votingEngine, contentId), 2, "New round should be created");
@@ -841,7 +860,7 @@ contract RoundIntegrationTest is VotingTestBase {
 
         vm.startPrank(voter3);
         crepToken.approve(address(votingEngine), STAKE);
-        votingEngine.commitVote(contentId, ch, _testCiphertext(true, salt, contentId), STAKE, address(0));
+        votingEngine.commitVote(contentId, _tlockCommitTargetRound(), _tlockDrandChainHash(), ch, _testCiphertext(true, salt, contentId), STAKE, address(0));
         vm.stopPrank();
 
         assertEq(RoundEngineReadHelpers.activeRoundId(votingEngine, contentId), 2, "Round 2 should be created");
@@ -862,12 +881,12 @@ contract RoundIntegrationTest is VotingTestBase {
 
         vm.startPrank(voter1);
         crepToken.approve(address(votingEngine), STAKE);
-        votingEngine.commitVote(contentId, ch1, _testCiphertext(true, s1, contentId), STAKE, address(0));
+        votingEngine.commitVote(contentId, _tlockCommitTargetRound(), _tlockDrandChainHash(), ch1, _testCiphertext(true, s1, contentId), STAKE, address(0));
         vm.stopPrank();
 
         vm.startPrank(voter2);
         crepToken.approve(address(votingEngine), STAKE);
-        votingEngine.commitVote(contentId, ch2, _testCiphertext(true, s2, contentId), STAKE, address(0));
+        votingEngine.commitVote(contentId, _tlockCommitTargetRound(), _tlockDrandChainHash(), ch2, _testCiphertext(true, s2, contentId), STAKE, address(0));
         vm.stopPrank();
 
         uint256 roundId = RoundEngineReadHelpers.activeRoundId(votingEngine, contentId);
@@ -905,12 +924,12 @@ contract RoundIntegrationTest is VotingTestBase {
 
         vm.startPrank(voter1);
         crepToken.approve(address(votingEngine), STAKE);
-        votingEngine.commitVote(contentId, ch1, _testCiphertext(false, s1, contentId), STAKE, address(0));
+        votingEngine.commitVote(contentId, _tlockCommitTargetRound(), _tlockDrandChainHash(), ch1, _testCiphertext(false, s1, contentId), STAKE, address(0));
         vm.stopPrank();
 
         vm.startPrank(voter2);
         crepToken.approve(address(votingEngine), STAKE);
-        votingEngine.commitVote(contentId, ch2, _testCiphertext(false, s2, contentId), STAKE, address(0));
+        votingEngine.commitVote(contentId, _tlockCommitTargetRound(), _tlockDrandChainHash(), ch2, _testCiphertext(false, s2, contentId), STAKE, address(0));
         vm.stopPrank();
 
         uint256 roundId = RoundEngineReadHelpers.activeRoundId(votingEngine, contentId);
@@ -954,7 +973,7 @@ contract RoundIntegrationTest is VotingTestBase {
 
         vm.startPrank(voter4);
         crepToken.approve(address(votingEngine), STAKE);
-        votingEngine.commitVote(contentId, ch, _testCiphertext(false, salt, contentId), STAKE, address(0));
+        votingEngine.commitVote(contentId, _tlockCommitTargetRound(), _tlockDrandChainHash(), ch, _testCiphertext(false, salt, contentId), STAKE, address(0));
         vm.stopPrank();
 
         assertEq(RoundEngineReadHelpers.activeRoundId(votingEngine, contentId), 2, "Round 2 should be created");
@@ -972,7 +991,7 @@ contract RoundIntegrationTest is VotingTestBase {
 
         vm.startPrank(voter1);
         crepToken.approve(address(votingEngine), STAKE);
-        votingEngine.commitVote(contentId, ch1, _testCiphertext(true, salt1, contentId), STAKE, address(0));
+        votingEngine.commitVote(contentId, _tlockCommitTargetRound(), _tlockDrandChainHash(), ch1, _testCiphertext(true, salt1, contentId), STAKE, address(0));
         vm.stopPrank();
 
         // Warp past 24h cooldown so CooldownActive doesn't fire first
@@ -985,7 +1004,7 @@ contract RoundIntegrationTest is VotingTestBase {
         vm.startPrank(voter1);
         crepToken.approve(address(votingEngine), STAKE);
         vm.expectRevert(RoundVotingEngine.AlreadyCommitted.selector);
-        votingEngine.commitVote(contentId, ch2, _testCiphertext(false, salt2, contentId), STAKE, address(0));
+        votingEngine.commitVote(contentId, _tlockCommitTargetRound(), _tlockDrandChainHash(), ch2, _testCiphertext(false, salt2, contentId), STAKE, address(0));
         vm.stopPrank();
     }
 
@@ -1012,14 +1031,14 @@ contract RoundIntegrationTest is VotingTestBase {
         vm.startPrank(voter1);
         crepToken.approve(address(votingEngine), STAKE);
         vm.expectRevert(RoundVotingEngine.CooldownActive.selector);
-        votingEngine.commitVote(contentId, ch, _testCiphertext(true, salt, contentId), STAKE, address(0));
+        votingEngine.commitVote(contentId, _tlockCommitTargetRound(), _tlockDrandChainHash(), ch, _testCiphertext(true, salt, contentId), STAKE, address(0));
         vm.stopPrank();
 
         // After 25 hours — succeeds
         vm.warp(block.timestamp + 25 hours);
         vm.startPrank(voter1);
         crepToken.approve(address(votingEngine), STAKE);
-        votingEngine.commitVote(contentId, ch, _testCiphertext(true, salt, contentId), STAKE, address(0));
+        votingEngine.commitVote(contentId, _tlockCommitTargetRound(), _tlockDrandChainHash(), ch, _testCiphertext(true, salt, contentId), STAKE, address(0));
         vm.stopPrank();
 
         assertEq(RoundEngineReadHelpers.activeRoundId(votingEngine, contentId), 2, "New round should be created");
@@ -1040,12 +1059,12 @@ contract RoundIntegrationTest is VotingTestBase {
 
         vm.startPrank(voter1);
         crepToken.approve(address(votingEngine), STAKE);
-        votingEngine.commitVote(contentId, ch1, _testCiphertext(true, s1, contentId), STAKE, address(0));
+        votingEngine.commitVote(contentId, _tlockCommitTargetRound(), _tlockDrandChainHash(), ch1, _testCiphertext(true, s1, contentId), STAKE, address(0));
         vm.stopPrank();
 
         vm.startPrank(voter2);
         crepToken.approve(address(votingEngine), STAKE);
-        votingEngine.commitVote(contentId, ch2, _testCiphertext(true, s2, contentId), STAKE, address(0));
+        votingEngine.commitVote(contentId, _tlockCommitTargetRound(), _tlockDrandChainHash(), ch2, _testCiphertext(true, s2, contentId), STAKE, address(0));
         vm.stopPrank();
 
         uint256 roundId = RoundEngineReadHelpers.activeRoundId(votingEngine, contentId);
@@ -1129,12 +1148,12 @@ contract RoundIntegrationTest is VotingTestBase {
 
         vm.startPrank(voter1);
         crepToken.approve(address(votingEngine), STAKE);
-        votingEngine.commitVote(contentId, ch1, _testCiphertext(true, s1, contentId), STAKE, address(0));
+        votingEngine.commitVote(contentId, _tlockCommitTargetRound(), _tlockDrandChainHash(), ch1, _testCiphertext(true, s1, contentId), STAKE, address(0));
         vm.stopPrank();
 
         vm.startPrank(voter2);
         crepToken.approve(address(votingEngine), STAKE);
-        votingEngine.commitVote(contentId, ch2, _testCiphertext(true, s2, contentId), STAKE, address(0));
+        votingEngine.commitVote(contentId, _tlockCommitTargetRound(), _tlockDrandChainHash(), ch2, _testCiphertext(true, s2, contentId), STAKE, address(0));
         vm.stopPrank();
 
         uint256 roundId = RoundEngineReadHelpers.activeRoundId(votingEngine, contentId);
@@ -1183,7 +1202,7 @@ contract RoundIntegrationTest is VotingTestBase {
 
         vm.startPrank(voter1);
         crepToken.approve(address(votingEngine), STAKE);
-        votingEngine.commitVote(contentId, ch, _testCiphertext(true, salt, contentId), STAKE, address(0));
+        votingEngine.commitVote(contentId, _tlockCommitTargetRound(), _tlockDrandChainHash(), ch, _testCiphertext(true, salt, contentId), STAKE, address(0));
         vm.stopPrank();
 
         uint256 roundId = RoundEngineReadHelpers.activeRoundId(votingEngine, contentId);
@@ -1201,7 +1220,7 @@ contract RoundIntegrationTest is VotingTestBase {
 
         vm.startPrank(voter1);
         crepToken.approve(address(votingEngine), STAKE);
-        votingEngine.commitVote(contentId, ch1, _testCiphertext(true, s1, contentId), STAKE, address(0));
+        votingEngine.commitVote(contentId, _tlockCommitTargetRound(), _tlockDrandChainHash(), ch1, _testCiphertext(true, s1, contentId), STAKE, address(0));
         vm.stopPrank();
 
         assertTrue(votingEngine.hasCommits(contentId), "Content should show commit history after first vote");
@@ -1211,7 +1230,7 @@ contract RoundIntegrationTest is VotingTestBase {
 
         vm.startPrank(voter2);
         crepToken.approve(address(votingEngine), STAKE);
-        votingEngine.commitVote(contentId, ch2, _testCiphertext(false, s2, contentId), STAKE, address(0));
+        votingEngine.commitVote(contentId, _tlockCommitTargetRound(), _tlockDrandChainHash(), ch2, _testCiphertext(false, s2, contentId), STAKE, address(0));
         vm.stopPrank();
 
         assertTrue(votingEngine.hasCommits(contentId), "Content should keep commit history after more votes");
@@ -1229,17 +1248,17 @@ contract RoundIntegrationTest is VotingTestBase {
 
         vm.startPrank(voter1);
         crepToken.approve(address(votingEngine), STAKE);
-        votingEngine.commitVote(contentId, ch1, _testCiphertext(true, s1, contentId), STAKE, address(0));
+        votingEngine.commitVote(contentId, _tlockCommitTargetRound(), _tlockDrandChainHash(), ch1, _testCiphertext(true, s1, contentId), STAKE, address(0));
         vm.stopPrank();
 
         vm.startPrank(voter2);
         crepToken.approve(address(votingEngine), STAKE);
-        votingEngine.commitVote(contentId, ch2, _testCiphertext(false, s2, contentId), STAKE, address(0));
+        votingEngine.commitVote(contentId, _tlockCommitTargetRound(), _tlockDrandChainHash(), ch2, _testCiphertext(false, s2, contentId), STAKE, address(0));
         vm.stopPrank();
 
         vm.startPrank(voter3);
         crepToken.approve(address(votingEngine), STAKE);
-        votingEngine.commitVote(contentId, ch3, _testCiphertext(true, s3, contentId), STAKE, address(0));
+        votingEngine.commitVote(contentId, _tlockCommitTargetRound(), _tlockDrandChainHash(), ch3, _testCiphertext(true, s3, contentId), STAKE, address(0));
         vm.stopPrank();
 
         uint256 roundId = RoundEngineReadHelpers.activeRoundId(votingEngine, contentId);
@@ -1275,7 +1294,7 @@ contract RoundIntegrationTest is VotingTestBase {
         vm.startPrank(voter1);
         crepToken.approve(address(votingEngine), 0.5e6);
         vm.expectRevert(RoundVotingEngine.InvalidStake.selector);
-        votingEngine.commitVote(contentId, ch, _testCiphertext(true, salt, contentId), 0.5e6, address(0));
+        votingEngine.commitVote(contentId, _tlockCommitTargetRound(), _tlockDrandChainHash(), ch, _testCiphertext(true, salt, contentId), 0.5e6, address(0));
         vm.stopPrank();
 
         // Above maximum (100 cREP)
@@ -1285,7 +1304,7 @@ contract RoundIntegrationTest is VotingTestBase {
         vm.startPrank(voter1);
         crepToken.approve(address(votingEngine), 101e6);
         vm.expectRevert(RoundVotingEngine.InvalidStake.selector);
-        votingEngine.commitVote(contentId, ch2, _testCiphertext(true, salt2, contentId), 101e6, address(0));
+        votingEngine.commitVote(contentId, _tlockCommitTargetRound(), _tlockDrandChainHash(), ch2, _testCiphertext(true, salt2, contentId), 101e6, address(0));
         vm.stopPrank();
     }
 
@@ -1302,7 +1321,7 @@ contract RoundIntegrationTest is VotingTestBase {
 
         vm.startPrank(voter1);
         crepToken.approve(address(votingEngine), STAKE);
-        votingEngine.commitVote(contentId, ch1, _testCiphertext(true, s1, contentId), STAKE, address(0));
+        votingEngine.commitVote(contentId, _tlockCommitTargetRound(), _tlockDrandChainHash(), ch1, _testCiphertext(true, s1, contentId), STAKE, address(0));
         vm.stopPrank();
 
         uint256 roundId = RoundEngineReadHelpers.activeRoundId(votingEngine, contentId);
@@ -1331,7 +1350,7 @@ contract RoundIntegrationTest is VotingTestBase {
 
         vm.startPrank(voter1);
         crepToken.approve(address(votingEngine), STAKE);
-        votingEngine.commitVote(contentId, ch1, _testCiphertext(true, s1, contentId), STAKE, address(0));
+        votingEngine.commitVote(contentId, _tlockCommitTargetRound(), _tlockDrandChainHash(), ch1, _testCiphertext(true, s1, contentId), STAKE, address(0));
         vm.stopPrank();
 
         // Advance into epoch-2 — use absolute time from round.startTime
@@ -1349,7 +1368,7 @@ contract RoundIntegrationTest is VotingTestBase {
 
         vm.startPrank(voter2);
         crepToken.approve(address(votingEngine), STAKE);
-        votingEngine.commitVote(contentId, ch2, _testCiphertext(false, s2, contentId), STAKE, address(0));
+        votingEngine.commitVote(contentId, _tlockCommitTargetRound(), _tlockDrandChainHash(), ch2, _testCiphertext(false, s2, contentId), STAKE, address(0));
         vm.stopPrank();
 
         bytes32 ck2 = _commitKey(voter2, ch2);
@@ -1388,12 +1407,12 @@ contract RoundIntegrationTest is VotingTestBase {
 
         vm.startPrank(voter1);
         crepToken.approve(address(votingEngine), STAKE);
-        votingEngine.commitVote(contentId, ch1, _testCiphertext(true, s1, contentId), STAKE, address(0));
+        votingEngine.commitVote(contentId, _tlockCommitTargetRound(), _tlockDrandChainHash(), ch1, _testCiphertext(true, s1, contentId), STAKE, address(0));
         vm.stopPrank();
 
         vm.startPrank(voter2);
         crepToken.approve(address(votingEngine), STAKE);
-        votingEngine.commitVote(contentId, ch2, _testCiphertext(false, s2, contentId), STAKE, address(0));
+        votingEngine.commitVote(contentId, _tlockCommitTargetRound(), _tlockDrandChainHash(), ch2, _testCiphertext(false, s2, contentId), STAKE, address(0));
         vm.stopPrank();
 
         uint256 roundId = RoundEngineReadHelpers.activeRoundId(votingEngine, contentId);
@@ -1482,17 +1501,17 @@ contract RoundIntegrationTest is VotingTestBase {
 
         vm.startPrank(voter1);
         crepToken.approve(address(votingEngine), STAKE);
-        votingEngine.commitVote(contentId, ch1, _testCiphertext(true, s1, contentId), STAKE, frontend);
+        votingEngine.commitVote(contentId, _tlockCommitTargetRound(), _tlockDrandChainHash(), ch1, _testCiphertext(true, s1, contentId), STAKE, frontend);
         vm.stopPrank();
 
         vm.startPrank(voter2);
         crepToken.approve(address(votingEngine), STAKE);
-        votingEngine.commitVote(contentId, ch2, _testCiphertext(true, s2, contentId), STAKE, frontend);
+        votingEngine.commitVote(contentId, _tlockCommitTargetRound(), _tlockDrandChainHash(), ch2, _testCiphertext(true, s2, contentId), STAKE, frontend);
         vm.stopPrank();
 
         vm.startPrank(voter3);
         crepToken.approve(address(votingEngine), STAKE);
-        votingEngine.commitVote(contentId, ch3, _testCiphertext(false, s3, contentId), STAKE, frontend);
+        votingEngine.commitVote(contentId, _tlockCommitTargetRound(), _tlockDrandChainHash(), ch3, _testCiphertext(false, s3, contentId), STAKE, frontend);
         vm.stopPrank();
 
         roundId = RoundEngineReadHelpers.activeRoundId(votingEngine, contentId);
@@ -1633,17 +1652,17 @@ contract RoundIntegrationTest is VotingTestBase {
 
         vm.startPrank(voter1);
         crepToken.approve(address(votingEngine), STAKE);
-        votingEngine.commitVote(contentId, ch1, _testCiphertext(true, s1, contentId), STAKE, frontendOp);
+        votingEngine.commitVote(contentId, _tlockCommitTargetRound(), _tlockDrandChainHash(), ch1, _testCiphertext(true, s1, contentId), STAKE, frontendOp);
         vm.stopPrank();
 
         vm.startPrank(voter2);
         crepToken.approve(address(votingEngine), STAKE);
-        votingEngine.commitVote(contentId, ch2, _testCiphertext(true, s2, contentId), STAKE, frontendOp);
+        votingEngine.commitVote(contentId, _tlockCommitTargetRound(), _tlockDrandChainHash(), ch2, _testCiphertext(true, s2, contentId), STAKE, frontendOp);
         vm.stopPrank();
 
         vm.startPrank(voter3);
         crepToken.approve(address(votingEngine), STAKE);
-        votingEngine.commitVote(contentId, ch3, _testCiphertext(false, s3, contentId), STAKE, frontendOp);
+        votingEngine.commitVote(contentId, _tlockCommitTargetRound(), _tlockDrandChainHash(), ch3, _testCiphertext(false, s3, contentId), STAKE, frontendOp);
         vm.stopPrank();
 
         vm.prank(frontendOp);
@@ -1680,17 +1699,17 @@ contract RoundIntegrationTest is VotingTestBase {
 
         vm.startPrank(voter1);
         crepToken.approve(address(votingEngine), STAKE);
-        votingEngine.commitVote(contentId, ch1, _testCiphertext(true, s1, contentId), STAKE, frontendOp);
+        votingEngine.commitVote(contentId, _tlockCommitTargetRound(), _tlockDrandChainHash(), ch1, _testCiphertext(true, s1, contentId), STAKE, frontendOp);
         vm.stopPrank();
 
         vm.startPrank(voter2);
         crepToken.approve(address(votingEngine), STAKE);
-        votingEngine.commitVote(contentId, ch2, _testCiphertext(true, s2, contentId), STAKE, frontendOp);
+        votingEngine.commitVote(contentId, _tlockCommitTargetRound(), _tlockDrandChainHash(), ch2, _testCiphertext(true, s2, contentId), STAKE, frontendOp);
         vm.stopPrank();
 
         vm.startPrank(voter3);
         crepToken.approve(address(votingEngine), STAKE);
-        votingEngine.commitVote(contentId, ch3, _testCiphertext(false, s3, contentId), STAKE, frontendOp);
+        votingEngine.commitVote(contentId, _tlockCommitTargetRound(), _tlockDrandChainHash(), ch3, _testCiphertext(false, s3, contentId), STAKE, frontendOp);
         vm.stopPrank();
 
         vm.startPrank(frontendOp);
@@ -2230,7 +2249,7 @@ contract RoundIntegrationTest is VotingTestBase {
 
         vm.startPrank(voter1);
         crepToken.approve(address(votingEngine), STAKE);
-        votingEngine.commitVote(contentId, ch, _testCiphertext(true, salt, contentId), STAKE, address(0));
+        votingEngine.commitVote(contentId, _tlockCommitTargetRound(), _tlockDrandChainHash(), ch, _testCiphertext(true, salt, contentId), STAKE, address(0));
         vm.stopPrank();
 
         // Round is Open, not Settled

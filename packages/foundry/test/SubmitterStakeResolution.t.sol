@@ -246,7 +246,7 @@ contract SubmitterStakeResolutionTest is VotingTestBase {
 
         vm.startPrank(voter);
         crepToken.approve(address(votingEngine), stake);
-        votingEngine.commitVote(contentId, commitHash, ciphertext, stake, address(0));
+        votingEngine.commitVote(contentId, _tlockCommitTargetRound(), _tlockDrandChainHash(), commitHash, ciphertext, stake, address(0));
         vm.stopPrank();
 
         commitKey = keccak256(abi.encodePacked(voter, commitHash));

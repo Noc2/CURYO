@@ -24,9 +24,12 @@ contract ProtocolConfig is Initializable, AccessControl {
     address public voterIdNFT;
     address public participationPool;
     uint256 public revealGracePeriod;
+    bytes32 public drandChainHash;
+    uint64 public drandGenesisTime;
+    uint64 public drandPeriod;
 
     /// @dev Reserved storage gap for future proxy-safe upgrades.
-    uint256[50] private __gap;
+    uint256[47] private __gap;
 
     event RewardDistributorUpdated(address rewardDistributor);
     event FrontendRegistryUpdated(address frontendRegistry);
@@ -36,6 +39,7 @@ contract ProtocolConfig is Initializable, AccessControl {
     event VoterIdNFTUpdated(address voterIdNFT);
     event ParticipationPoolUpdated(address participationPool);
     event ConfigUpdated(uint256 epochDuration, uint256 maxDuration, uint256 minVoters, uint256 maxVoters);
+    event DrandConfigUpdated(bytes32 drandChainHash, uint64 genesisTime, uint64 period);
 
     /// @custom:oz-upgrades-unsafe-allow constructor
     constructor() {
@@ -75,6 +79,9 @@ contract ProtocolConfig is Initializable, AccessControl {
             maxVoters: uint16(1000)
         });
         revealGracePeriod = 60 minutes;
+        drandChainHash = 0x52db9ba70e0cc0f6eaf7803dd07447a1f5477735fd3f661792ba94600c84e971;
+        drandGenesisTime = 1_692_803_367;
+        drandPeriod = 3;
     }
 
     function setRewardDistributor(address value) external onlyRole(CONFIG_ROLE) {
@@ -110,6 +117,10 @@ contract ProtocolConfig is Initializable, AccessControl {
         onlyRole(CONFIG_ROLE)
     {
         _setConfig(epochDuration, maxDuration, minVoters, maxVoters);
+    }
+
+    function setDrandConfig(bytes32 chainHash, uint64 genesisTime, uint64 period) external onlyRole(CONFIG_ROLE) {
+        _setDrandConfig(chainHash, genesisTime, period);
     }
 
     function _setRewardDistributor(address value) internal {
@@ -175,5 +186,17 @@ contract ProtocolConfig is Initializable, AccessControl {
         });
 
         emit ConfigUpdated(epochDuration, maxDuration, minVoters, maxVoters);
+    }
+
+    function _setDrandConfig(bytes32 chainHash, uint64 genesisTime, uint64 period) internal {
+        if (chainHash == bytes32(0)) revert InvalidConfig();
+        if (genesisTime == 0) revert InvalidConfig();
+        if (period == 0) revert InvalidConfig();
+
+        drandChainHash = chainHash;
+        drandGenesisTime = genesisTime;
+        drandPeriod = period;
+
+        emit DrandConfigUpdated(chainHash, genesisTime, period);
     }
 }

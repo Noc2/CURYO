@@ -451,7 +451,7 @@ contract RoundRewardDistributor is Initializable, AccessControlUpgradeable, Reen
     {
         bytes32 commitHash = votingEngine.voterCommitHash(contentId, roundId, voter);
         if (commitHash == bytes32(0)) {
-            return RoundLib.Commit(address(0), 0, "", address(0), 0, false, false, 0);
+            return RoundLib.Commit(address(0), 0, "", 0, bytes32(0), address(0), 0, false, false, 0);
         }
         bytes32 commitKey = keccak256(abi.encodePacked(voter, commitHash));
         return _readCommit(contentId, roundId, commitKey);
@@ -485,6 +485,8 @@ contract RoundRewardDistributor is Initializable, AccessControlUpgradeable, Reen
             commit.voter,
             commit.stakeAmount,
             commit.ciphertext,
+            commit.targetRound,
+            commit.drandChainHash,
             commit.frontend,
             commit.revealableAfter,
             commit.revealed,

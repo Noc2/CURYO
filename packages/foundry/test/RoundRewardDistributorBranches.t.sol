@@ -109,7 +109,7 @@ contract RoundRewardDistributorBranchesTest is VotingTestBase {
         vm.prank(voter);
         crepToken.approve(address(votingEngine), stake);
         vm.prank(voter);
-        votingEngine.commitVote(contentId, ch, ct, stake, address(0));
+        votingEngine.commitVote(contentId, _tlockCommitTargetRound(), _tlockDrandChainHash(), ch, ct, stake, address(0));
         ck = _commitKey(voter, ch);
     }
 

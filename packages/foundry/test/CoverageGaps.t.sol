@@ -693,7 +693,7 @@ contract RoundSettlementEdgeCaseTest is VotingTestBase {
         vm.startPrank(submitter);
         crep.approve(address(engine), STAKE);
         vm.expectRevert(RoundVotingEngine.SelfVote.selector);
-        engine.commitVote(contentId, commitHash, ciphertext, STAKE, address(0));
+        engine.commitVote(contentId, _tlockCommitTargetRound(), _tlockDrandChainHash(), commitHash, ciphertext, STAKE, address(0));
         vm.stopPrank();
     }
 
@@ -706,7 +706,7 @@ contract RoundSettlementEdgeCaseTest is VotingTestBase {
         vm.startPrank(voter1);
         crep.approve(address(engine), 1);
         vm.expectRevert(RoundVotingEngine.InvalidStake.selector);
-        engine.commitVote(contentId, commitHash, ciphertext, 1, address(0));
+        engine.commitVote(contentId, _tlockCommitTargetRound(), _tlockDrandChainHash(), commitHash, ciphertext, 1, address(0));
         vm.stopPrank();
     }
 
@@ -719,7 +719,7 @@ contract RoundSettlementEdgeCaseTest is VotingTestBase {
         vm.startPrank(voter1);
         crep.approve(address(engine), 101e6);
         vm.expectRevert(RoundVotingEngine.InvalidStake.selector);
-        engine.commitVote(contentId, commitHash, ciphertext, 101e6, address(0));
+        engine.commitVote(contentId, _tlockCommitTargetRound(), _tlockDrandChainHash(), commitHash, ciphertext, 101e6, address(0));
         vm.stopPrank();
     }
 
@@ -822,7 +822,7 @@ contract RoundSettlementEdgeCaseTest is VotingTestBase {
         bytes memory ciphertext1 = abi.encodePacked(uint8(1), salt1, contentId);
         vm.startPrank(voter1);
         crep.approve(address(engine2), STAKE);
-        engine2.commitVote(contentId, commitHash1, ciphertext1, STAKE, address(0));
+        engine2.commitVote(contentId, _tlockCommitTargetRound(), _tlockDrandChainHash(), commitHash1, ciphertext1, STAKE, address(0));
         vm.stopPrank();
 
         bytes32 salt2 = keccak256(abi.encodePacked(voter2, block.timestamp + 1, contentId));
@@ -830,7 +830,7 @@ contract RoundSettlementEdgeCaseTest is VotingTestBase {
         bytes memory ciphertext2 = abi.encodePacked(uint8(1), salt2, contentId);
         vm.startPrank(voter2);
         crep.approve(address(engine2), STAKE);
-        engine2.commitVote(contentId, commitHash2, ciphertext2, STAKE, address(0));
+        engine2.commitVote(contentId, _tlockCommitTargetRound(), _tlockDrandChainHash(), commitHash2, ciphertext2, STAKE, address(0));
         vm.stopPrank();
 
         uint256 roundId = 1;
@@ -916,7 +916,7 @@ contract RoundSettlementEdgeCaseTest is VotingTestBase {
         vm.startPrank(voter1);
         crep.approve(address(engine), STAKE);
         vm.expectRevert(Pausable.EnforcedPause.selector);
-        engine.commitVote(contentId, commitHash, ciphertext, STAKE, address(0));
+        engine.commitVote(contentId, _tlockCommitTargetRound(), _tlockDrandChainHash(), commitHash, ciphertext, STAKE, address(0));
         vm.stopPrank();
     }
 
@@ -1041,7 +1041,7 @@ contract RoundSettlementEdgeCaseTest is VotingTestBase {
         vm.startPrank(voter1);
         crep.approve(address(engine), STAKE);
         vm.expectRevert(RoundVotingEngine.CooldownActive.selector);
-        engine.commitVote(contentId, commitHash2, ciphertext2, STAKE, address(0));
+        engine.commitVote(contentId, _tlockCommitTargetRound(), _tlockDrandChainHash(), commitHash2, ciphertext2, STAKE, address(0));
         vm.stopPrank();
     }
 
@@ -1071,7 +1071,7 @@ contract RoundSettlementEdgeCaseTest is VotingTestBase {
         vm.startPrank(voter1);
         crep.approve(address(engine), STAKE);
         vm.expectRevert(RoundVotingEngine.CooldownActive.selector);
-        engine.commitVote(contentId, commitHash2, ciphertext2, STAKE, address(0));
+        engine.commitVote(contentId, _tlockCommitTargetRound(), _tlockDrandChainHash(), commitHash2, ciphertext2, STAKE, address(0));
         vm.stopPrank();
     }
 
@@ -1111,7 +1111,7 @@ contract RoundSettlementEdgeCaseTest is VotingTestBase {
         vm.prank(voter);
         crep.approve(address(engine), stake);
         vm.prank(voter);
-        engine.commitVote(contentId, commitHash, ciphertext, stake, address(0));
+        engine.commitVote(contentId, _tlockCommitTargetRound(), _tlockDrandChainHash(), commitHash, ciphertext, stake, address(0));
         commitKey = keccak256(abi.encodePacked(voter, commitHash));
     }
 

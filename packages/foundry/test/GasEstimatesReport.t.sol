@@ -99,7 +99,9 @@ contract UserTransactionGasEstimatesTest is RoundIntegrationTest {
         bytes32 salt = keccak256(abi.encodePacked(voter1, contentId, true, uint256(999)));
         bytes32 commitHash = _commitHash(true, salt, contentId);
         bytes memory ciphertext = _testCiphertext(true, salt, contentId);
-        bytes memory payload = abi.encode(contentId, commitHash, ciphertext, address(0));
+        bytes memory payload = abi.encode(
+            contentId, commitHash, ciphertext, address(0), _tlockCommitTargetRound(), _tlockDrandChainHash()
+        );
 
         uint256 gasUsed = _measureCallAs(
             voter1,
@@ -117,7 +119,9 @@ contract UserTransactionGasEstimatesTest is RoundIntegrationTest {
         bytes32 salt = keccak256(abi.encodePacked(voter1, contentId, true, uint256(1002)));
         bytes32 commitHash = _commitHash(true, salt, contentId);
         bytes memory ciphertext = _testCiphertext(true, salt, contentId);
-        bytes memory payload = abi.encode(contentId, commitHash, ciphertext, frontendOp);
+        bytes memory payload = abi.encode(
+            contentId, commitHash, ciphertext, frontendOp, _tlockCommitTargetRound(), _tlockDrandChainHash()
+        );
 
         uint256 gasUsed = _measureCallAs(
             voter1,
@@ -141,7 +145,16 @@ contract UserTransactionGasEstimatesTest is RoundIntegrationTest {
         uint256 gasUsed = _measureCallAs(
             voter1,
             address(votingEngine),
-            abi.encodeCall(RoundVotingEngine.commitVote, (contentId, commitHash, ciphertext, STAKE, address(0)))
+            abi.encodeWithSelector(
+                bytes4(keccak256("commitVote(uint256,uint64,bytes32,bytes32,bytes,uint256,address)")),
+                contentId,
+                _tlockCommitTargetRound(),
+                _tlockDrandChainHash(),
+                commitHash,
+                ciphertext,
+                STAKE,
+                address(0)
+            )
         );
         console2.log("vote_approve_plus_commit_gas", gasUsed);
     }
@@ -152,7 +165,9 @@ contract UserTransactionGasEstimatesTest is RoundIntegrationTest {
         bytes32 salt = keccak256(abi.encodePacked(voter1, contentId, true, uint256(1001)));
         bytes32 commitHash = _commitHash(true, salt, contentId);
         bytes memory ciphertext = _testCiphertext(true, salt, contentId);
-        bytes memory payload = abi.encode(contentId, commitHash, ciphertext, address(0));
+        bytes memory payload = abi.encode(
+            contentId, commitHash, ciphertext, address(0), _tlockCommitTargetRound(), _tlockDrandChainHash()
+        );
 
         vm.startPrank(voter1);
         crepToken.transferAndCall(address(votingEngine), STAKE, payload);

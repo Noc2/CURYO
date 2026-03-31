@@ -938,7 +938,7 @@ contract RoundSettlementEdgeCase3Test is VotingTestBase {
         vm.startPrank(voter1);
         crep.approve(address(engine), 100e6);
         vm.expectRevert(RoundVotingEngine.InvalidStake.selector);
-        engine.commitVote(contentId, commitHash, ciphertext, 0, address(0));
+        engine.commitVote(contentId, _tlockCommitTargetRound(), _tlockDrandChainHash(), commitHash, ciphertext, 0, address(0));
         vm.stopPrank();
     }
 
@@ -951,7 +951,7 @@ contract RoundSettlementEdgeCase3Test is VotingTestBase {
         vm.startPrank(voter1);
         crep.approve(address(engine), STAKE);
         vm.expectRevert(RoundVotingEngine.ContentNotActive.selector);
-        engine.commitVote(999, commitHash, ciphertext, STAKE, address(0));
+        engine.commitVote(999, _tlockCommitTargetRound(), _tlockDrandChainHash(), commitHash, ciphertext, STAKE, address(0));
         vm.stopPrank();
     }
 
@@ -1135,7 +1135,7 @@ contract RoundSettlementEdgeCase3Test is VotingTestBase {
         vm.startPrank(voter1);
         crep.approve(address(engine), STAKE);
         vm.expectRevert(RoundVotingEngine.VoterIdRequired.selector);
-        engine.commitVote(contentId, commitHash, ciphertext, STAKE, address(0));
+        engine.commitVote(contentId, _tlockCommitTargetRound(), _tlockDrandChainHash(), commitHash, ciphertext, STAKE, address(0));
         vm.stopPrank();
     }
 
@@ -1194,7 +1194,7 @@ contract RoundSettlementEdgeCase3Test is VotingTestBase {
         vm.prank(voter);
         crep.approve(address(engine), stake);
         vm.prank(voter);
-        engine.commitVote(contentId, commitHash, ciphertext, stake, address(0));
+        engine.commitVote(contentId, _tlockCommitTargetRound(), _tlockDrandChainHash(), commitHash, ciphertext, stake, address(0));
         commitKey = keccak256(abi.encodePacked(voter, commitHash));
     }
 

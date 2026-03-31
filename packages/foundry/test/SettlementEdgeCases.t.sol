@@ -147,7 +147,7 @@ contract SettlementEdgeCasesTest is VotingTestBase {
         vm.prank(voter);
         crepToken.approve(address(engine), stakeAmt);
         vm.prank(voter);
-        engine.commitVote(contentId, commitHash, ciphertext, stakeAmt, address(0));
+        engine.commitVote(contentId, _tlockCommitTargetRound(), _tlockDrandChainHash(), commitHash, ciphertext, stakeAmt, address(0));
         commitKey = keccak256(abi.encodePacked(voter, commitHash));
     }
 
@@ -532,7 +532,7 @@ contract SettlementEdgeCasesTest is VotingTestBase {
         vm.prank(voter1);
         crepToken2.approve(address(engine2), STAKE);
         vm.prank(voter1);
-        engine2.commitVote(contentId, ch1, ct1, STAKE, address(0));
+        engine2.commitVote(contentId, _tlockCommitTargetRound(), _tlockDrandChainHash(), ch1, ct1, STAKE, address(0));
 
         vm.warp(block.timestamp + 1); // offset for unique salt
         bytes32 s2 = keccak256(abi.encodePacked(voter2, block.timestamp));
@@ -541,7 +541,7 @@ contract SettlementEdgeCasesTest is VotingTestBase {
         vm.prank(voter2);
         crepToken2.approve(address(engine2), STAKE);
         vm.prank(voter2);
-        engine2.commitVote(contentId, ch2, ct2, STAKE, address(0));
+        engine2.commitVote(contentId, _tlockCommitTargetRound(), _tlockDrandChainHash(), ch2, ct2, STAKE, address(0));
 
         vm.warp(block.timestamp + 1);
         bytes32 s3 = keccak256(abi.encodePacked(voter3, block.timestamp));
@@ -550,7 +550,7 @@ contract SettlementEdgeCasesTest is VotingTestBase {
         vm.prank(voter3);
         crepToken2.approve(address(engine2), STAKE);
         vm.prank(voter3);
-        engine2.commitVote(contentId, ch3, ct3, STAKE, address(0));
+        engine2.commitVote(contentId, _tlockCommitTargetRound(), _tlockDrandChainHash(), ch3, ct3, STAKE, address(0));
 
         uint256 roundId = RoundEngineReadHelpers.activeRoundId(engine2, contentId);
         RoundLib.Round memory r0 = RoundEngineReadHelpers.round(engine2, contentId, roundId);

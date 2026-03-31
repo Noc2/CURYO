@@ -124,7 +124,7 @@ contract VotingHandler is VotingTestBase {
 
         vm.startPrank(voter);
         crepToken.approve(address(engine), stakeAmount);
-        try engine.commitVote(contentId, commitHash, ciphertext, stakeAmount, address(0)) {
+        try engine.commitVote(contentId, _tlockCommitTargetRound(), _tlockDrandChainHash(), commitHash, ciphertext, stakeAmount, address(0)) {
             vm.stopPrank();
 
             // Get the round ID that was used/created

@@ -126,7 +126,7 @@ contract ContentRegistryBranchesTest is VotingTestBase {
         bytes memory ciphertext = _testCiphertext(isUp, salt, contentId);
         bytes32 commitHash = _commitHash(isUp, salt, contentId, ciphertext);
         crepToken.approve(address(votingEngine), STAKE);
-        votingEngine.commitVote(contentId, commitHash, ciphertext, STAKE, address(0));
+        votingEngine.commitVote(contentId, _tlockCommitTargetRound(), _tlockDrandChainHash(), commitHash, ciphertext, STAKE, address(0));
         vm.stopPrank();
         commitKey = keccak256(abi.encodePacked(voter, commitHash));
     }
@@ -869,7 +869,7 @@ contract ContentRegistryBranchesTest is VotingTestBase {
         vm.startPrank(voter2);
         crepToken.approve(address(votingEngine), STAKE);
         vm.expectRevert(RoundVotingEngine.DormancyWindowElapsed.selector);
-        votingEngine.commitVote(1, commitHash, ciphertext, STAKE, address(0));
+        votingEngine.commitVote(1, _tlockCommitTargetRound(), _tlockDrandChainHash(), commitHash, ciphertext, STAKE, address(0));
         vm.stopPrank();
     }
 

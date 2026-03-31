@@ -60,7 +60,18 @@ library RoundEngineReadHelpers {
         view
         returns (RoundLib.Commit memory c)
     {
-        (c.voter, c.stakeAmount, c.ciphertext, c.frontend, c.revealableAfter, c.revealed, c.isUp, c.epochIndex) =
+        (
+            c.voter,
+            c.stakeAmount,
+            c.ciphertext,
+            c.targetRound,
+            c.drandChainHash,
+            c.frontend,
+            c.revealableAfter,
+            c.revealed,
+            c.isUp,
+            c.epochIndex
+        ) =
             engine.commits(contentId, roundId, commitKey);
     }
 
