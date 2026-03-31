@@ -4,19 +4,30 @@ import { db } from "ponder:api";
 import { category, content, profile, ratingChange, rewardClaim, round, vote } from "ponder:schema";
 import type { ApiApp } from "../shared.js";
 import { attachOpenRoundSummary, jsonBig, parseBigIntList } from "../shared.js";
-import { getUrlLookupCandidates, isValidAddress, safeBigInt, safeLimit, safeOffset } from "../utils.js";
+import { getUrlLookupCandidates, isValidAddress, normalizeContentSearchQuery, safeBigInt, safeLimit, safeOffset } from "../utils.js";
 
 export function registerContentRoutes(app: ApiApp) {
   app.get("/content", async (c) => {
     const categoryId = c.req.query("categoryId");
     const contentIds = parseBigIntList(c.req.query("contentIds"), 500);
-    const search = c.req.query("search")?.trim().toLowerCase();
+    const rawSearch = c.req.query("search");
+    const requestedSearch = rawSearch?.trim();
+    const search = normalizeContentSearchQuery(rawSearch);
     const status = c.req.query("status") ?? "0";
     const submitter = c.req.query("submitter");
     const sortBy = c.req.query("sortBy") ?? "newest";
     const limit = safeLimit(c.req.query("limit"), 50, 200);
     const offset = safeOffset(c.req.query("offset"));
     if (Number.isNaN(offset)) return c.json({ error: "Invalid offset" }, 400);
+    if (requestedSearch && search === null) {
+      return jsonBig(c, {
+        items: [],
+        total: 0,
+        limit,
+        offset,
+        hasMore: false,
+      });
+    }
 
     const conditions = [];
     if (status !== "all") {
@@ -49,6 +60,7 @@ export function registerContentRoutes(app: ApiApp) {
     }
 
     const where = conditions.length > 0 ? and(...conditions) : undefined;
+    const queryLimit = search ? limit + 1 : limit;
 
     let orderBy;
     switch (sortBy) {
@@ -75,21 +87,28 @@ export function registerContentRoutes(app: ApiApp) {
       .from(content)
       .where(where)
       .orderBy(orderBy)
-      .limit(limit)
+      .limit(queryLimit)
       .offset(offset);
 
-    const itemsWithOpenRound = await attachOpenRoundSummary(items);
-
-    const [countResult] = await db
-      .select({ count: sql<number>`count(*)` })
-      .from(content)
-      .where(where);
+    const hasMore = items.length > limit;
+    const pageItems = hasMore ? items.slice(0, limit) : items;
+    const itemsWithOpenRound = await attachOpenRoundSummary(pageItems);
+    const total =
+      search === null
+        ? (
+            await db
+              .select({ count: sql<number>`count(*)` })
+              .from(content)
+              .where(where)
+          )[0]?.count ?? 0
+        : null;
 
     return jsonBig(c, {
       items: itemsWithOpenRound,
-      total: countResult?.count ?? 0,
+      total,
       limit,
       offset,
+      hasMore,
     });
   });
 

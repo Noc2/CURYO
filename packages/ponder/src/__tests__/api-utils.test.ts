@@ -1,11 +1,13 @@
 import { describe, it, expect } from "vitest";
 import {
   MAX_PAGINATION_OFFSET,
+  getUrlLookupCandidates,
+  isLikelyUrlSearchQuery,
+  isValidAddress,
+  normalizeContentSearchQuery,
   safeBigInt,
   safeLimit,
   safeOffset,
-  isValidAddress,
-  getUrlLookupCandidates,
 } from "../api/utils.js";
 
 describe("safeBigInt", () => {
@@ -142,5 +144,33 @@ describe("getUrlLookupCandidates", () => {
 
   it("rejects invalid urls", () => {
     expect(getUrlLookupCandidates("not a url")).toBeNull();
+  });
+});
+
+describe("isLikelyUrlSearchQuery", () => {
+  it("accepts full urls", () => {
+    expect(isLikelyUrlSearchQuery("https://example.com/path")).toBe(true);
+  });
+
+  it("accepts bare hostnames", () => {
+    expect(isLikelyUrlSearchQuery("example.com/path")).toBe(true);
+  });
+
+  it("rejects plain text", () => {
+    expect(isLikelyUrlSearchQuery("curyo")).toBe(false);
+  });
+});
+
+describe("normalizeContentSearchQuery", () => {
+  it("normalizes valid free-text searches", () => {
+    expect(normalizeContentSearchQuery("  Curyo Search  ")).toBe("curyo search");
+  });
+
+  it("rejects short free-text searches", () => {
+    expect(normalizeContentSearchQuery("ai")).toBeNull();
+  });
+
+  it("keeps short url-like searches", () => {
+    expect(normalizeContentSearchQuery("x.com")).toBe("x.com");
   });
 });

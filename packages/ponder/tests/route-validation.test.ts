@@ -129,9 +129,20 @@ function mockPonderModules<T>(result: T) {
 }
 
 afterEach(() => {
+  vi.unmock("../src/api/shared.js");
   vi.resetModules();
   vi.clearAllMocks();
 });
+
+function mockSharedModule() {
+  vi.doMock("../src/api/shared.js", async () => {
+    const actual = await vi.importActual<any>("../src/api/shared.js");
+    return {
+      ...actual,
+      attachOpenRoundSummary: vi.fn(async (items: unknown[]) => items),
+    };
+  });
+}
 
 describe("registerContentRoutes", () => {
   it("rejects invalid content status filters before querying the database", async () => {
@@ -146,6 +157,49 @@ describe("registerContentRoutes", () => {
     expect(response.status).toBe(400);
     expect(await response.json()).toEqual({ error: "Invalid status filter" });
     expect(db.select).not.toHaveBeenCalled();
+  });
+
+  it("returns empty results for short generic searches without querying the database", async () => {
+    const { db } = mockPonderModules([]);
+    mockSharedModule();
+    const { registerContentRoutes } = await import("../src/api/routes/content-routes.js");
+
+    const app = new Hono();
+    registerContentRoutes(app);
+
+    const response = await app.request("http://localhost/content?search=ai");
+
+    expect(response.status).toBe(200);
+    expect(await response.json()).toEqual({
+      items: [],
+      total: 0,
+      limit: 50,
+      offset: 0,
+      hasMore: false,
+    });
+    expect(db.select).not.toHaveBeenCalled();
+  });
+
+  it("uses bounded search pagination without running an exact count", async () => {
+    const { db, queryBuilder } = mockPonderModules([{ id: 1n }]);
+    mockSharedModule();
+    const { registerContentRoutes } = await import("../src/api/routes/content-routes.js");
+
+    const app = new Hono();
+    registerContentRoutes(app);
+
+    const response = await app.request("http://localhost/content?search=curyo&limit=5&offset=10");
+    const body = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(db.select).toHaveBeenCalledTimes(1);
+    expect(queryBuilder.limit).toHaveBeenCalledWith(6);
+    expect(body).toMatchObject({
+      total: null,
+      limit: 5,
+      offset: 10,
+      hasMore: false,
+    });
   });
 });
 

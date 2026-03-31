@@ -3,6 +3,10 @@
 import { parseTags } from "~~/constants/categories";
 import type { ContentMetadataResult } from "~~/lib/contentMetadata/types";
 
+export const MIN_CONTENT_SEARCH_QUERY_LENGTH = 3;
+
+const LIKELY_URL_SEARCH_PATTERN = /^[a-z0-9.-]+\.[a-z]{2,}(?:[/?#:].*)?$/i;
+
 export interface ContentOpenRoundSummary {
   roundId: bigint;
   voteCount: number;
@@ -153,8 +157,29 @@ export function sortRpcFeed(feed: ContentItem[], sortBy: FeedSort): ContentItem[
   return items;
 }
 
+export function isLikelyUrlSearchQuery(value: string): boolean {
+  const trimmed = value.trim();
+  if (!trimmed) return false;
+
+  if (/^https?:\/\//i.test(trimmed)) {
+    return true;
+  }
+
+  return LIKELY_URL_SEARCH_PATTERN.test(trimmed);
+}
+
+export function isContentSearchQueryTooShort(value: string | undefined): boolean {
+  const trimmed = value?.trim();
+  if (!trimmed) return false;
+
+  return trimmed.length < MIN_CONTENT_SEARCH_QUERY_LENGTH && !isLikelyUrlSearchQuery(trimmed);
+}
+
 export function filterRpcFeed(feed: ContentItem[], options: UseContentFeedOptions): ContentItem[] {
   const { categoryId, contentIds, searchQuery, submitter } = options;
+  if (isContentSearchQueryTooShort(searchQuery)) {
+    return [];
+  }
 
   const normalizedSearch = searchQuery?.trim().toLowerCase();
   const normalizedSubmitter = submitter?.toLowerCase();

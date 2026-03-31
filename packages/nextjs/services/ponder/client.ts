@@ -167,9 +167,10 @@ export interface PonderContentItem {
 
 export interface PonderContentResponse {
   items: PonderContentItem[];
-  total: number;
+  total: number | null;
   limit: number;
   offset: number;
+  hasMore: boolean;
 }
 
 export interface PonderContentQuery {
@@ -506,7 +507,7 @@ export type PonderVoterStatsBatch = Record<string, PonderVoterStats>;
 
 const PONDER_PAGE_LIMIT = 200;
 
-async function getAllPages<TItem>(fetchPage: (offset: number) => Promise<{ items: TItem[] }>): Promise<TItem[]> {
+async function getAllPages<TItem>(fetchPage: (offset: number) => Promise<{ items: TItem[]; hasMore?: boolean }>): Promise<TItem[]> {
   const items: TItem[] = [];
   let offset = 0;
 
@@ -514,7 +515,7 @@ async function getAllPages<TItem>(fetchPage: (offset: number) => Promise<{ items
     const page = await fetchPage(offset);
     items.push(...page.items);
 
-    if (page.items.length < PONDER_PAGE_LIMIT) {
+    if (page.hasMore === false || page.items.length < PONDER_PAGE_LIMIT) {
       break;
     }
 
@@ -544,8 +545,9 @@ export const ponderApi = {
       : PONDER_PAGE_LIMIT;
     const initialOffset = Number(params?.offset ?? 0);
     let offset = Number.isFinite(initialOffset) ? Math.max(0, Math.floor(initialOffset)) : 0;
-    let total = 0;
+    let total: number | null = null;
     const items: PonderContentItem[] = [];
+    let hasMore = false;
 
     while (items.length < safeRequestedLimit) {
       const remaining = safeRequestedLimit - items.length;
@@ -557,9 +559,10 @@ export const ponderApi = {
 
       items.push(...page.items);
       total = page.total;
+      hasMore = page.hasMore;
       offset += page.items.length;
 
-      if (page.items.length === 0 || offset >= page.total) {
+      if (page.items.length === 0 || !page.hasMore) {
         break;
       }
     }
@@ -569,6 +572,7 @@ export const ponderApi = {
       total,
       limit: safeRequestedLimit,
       offset: Number.isFinite(initialOffset) ? Math.max(0, Math.floor(initialOffset)) : 0,
+      hasMore,
     } satisfies PonderContentResponse;
   },
 
