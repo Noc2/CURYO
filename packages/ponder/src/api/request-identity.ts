@@ -14,7 +14,7 @@ function parseTrustedRateLimitHeaders(configuredValue = process.env.RATE_LIMIT_T
     .filter(Boolean);
 }
 
-export function getTrustedRateLimitHeaders(configuredValue = process.env.RATE_LIMIT_TRUSTED_IP_HEADERS): string[] {
+function getTrustedRateLimitHeaders(configuredValue = process.env.RATE_LIMIT_TRUSTED_IP_HEADERS): string[] {
   const headers = parseTrustedRateLimitHeaders(configuredValue);
 
   if (headers.length === 0 && !warnedMissingHeaders) {

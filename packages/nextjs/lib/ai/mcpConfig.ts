@@ -24,7 +24,7 @@ const READ_TOOLS = [
 ] as const;
 const WRITE_TOOLS = ["vote", "submit_content", "claim_reward", "claim_frontend_fee"] as const;
 
-export interface HostedMcpConfig {
+interface HostedMcpConfig {
   serverName: string;
   endpointUrl: string;
   healthUrl: string;

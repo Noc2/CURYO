@@ -263,7 +263,7 @@ export function sortRpcFeed(feed: ContentItem[], sortBy: FeedSort, searchQuery?:
   return items;
 }
 
-export function isLikelyUrlSearchQuery(value: string): boolean {
+function isLikelyUrlSearchQuery(value: string): boolean {
   const trimmed = value.trim();
   if (!trimmed) return false;
 

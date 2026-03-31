@@ -176,5 +176,3 @@ function buildFallbackFingerprint(request: IncomingMessage): string {
 function hashIdentifier(value: string): string {
   return createHash("sha256").update(value).digest("hex");
 }
-
-export const DEFAULT_TRUSTED_PROXY_HEADERS = [FORWARDED_HEADER, FORWARDED_FOR_HEADER, REAL_IP_HEADER] as const;

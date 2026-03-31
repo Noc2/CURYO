@@ -3,7 +3,7 @@ import { getCanonicalUrlParts, getUrlLookupCandidates } from "../urlCanonicaliza
 export { getCanonicalUrlParts, getUrlLookupCandidates } from "../urlCanonicalization.js";
 
 export const MAX_PAGINATION_OFFSET = 50_000;
-export const MIN_CONTENT_SEARCH_QUERY_LENGTH = 3;
+const MIN_CONTENT_SEARCH_QUERY_LENGTH = 3;
 
 const LIKELY_URL_SEARCH_PATTERN = /^[a-z0-9.-]+\.[a-z]{2,}(?:[/?#:].*)?$/i;
 
