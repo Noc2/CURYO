@@ -37,6 +37,8 @@ contract SelfOppositionProfitabilityTest is VotingTestBase {
     // Honest voter (breaks tie, ensures one attacker side wins)
     address honest = address(12);
 
+    uint256 internal constant TIER_TEST_POOL_BALANCE = 1_000_000e6;
+
     uint256 contentNonce;
 
     function setUp() public {
@@ -173,6 +175,20 @@ contract SelfOppositionProfitabilityTest is VotingTestBase {
     /// @dev Set totalDistributed on ParticipationPool via vm.store (slot 1) to simulate tier transitions.
     function _setPoolTotalDistributed(uint256 n) internal {
         vm.store(address(pool), bytes32(uint256(1)), bytes32(n));
+    }
+
+    function _resetParticipationPool(uint256 distributed) internal {
+        vm.startPrank(owner);
+        pool = new ParticipationPool(address(crepToken), owner);
+        pool.setAuthorizedCaller(address(distributor), true);
+
+        crepToken.mint(owner, TIER_TEST_POOL_BALANCE);
+        crepToken.approve(address(pool), TIER_TEST_POOL_BALANCE);
+        pool.depositPool(TIER_TEST_POOL_BALANCE);
+        ProtocolConfig(address(engine.protocolConfig())).setParticipationPool(address(pool));
+        vm.stopPrank();
+
+        if (distributed > 0) _setPoolTotalDistributed(distributed);
     }
 
     // ==================== Test 1: Losing side cannot claim participation ====================
@@ -346,31 +362,41 @@ contract SelfOppositionProfitabilityTest is VotingTestBase {
     // ==================== Test 6: Multi-tier verification ====================
 
     /// @notice Verify the fix holds across participation tiers.
-    function test_AllTiers_OppositionBlocked() public {
-        uint256[4] memory tiers = [uint256(0), uint256(2_000_000e6), uint256(6_000_000e6), uint256(14_000_000e6)];
+    function _assertOppositionBlockedAtTier(uint256 distributed) internal {
+        _resetParticipationPool(distributed);
 
-        for (uint256 t = 0; t < tiers.length; t++) {
-            if (tiers[t] > 0) _setPoolTotalDistributed(tiers[t]);
+        uint256 cid = _submit();
+        _vote(attackerA, cid, true, 100e6);
+        _vote(attackerB, cid, false, 1e6);
+        _vote(honest, cid, true, 50e6);
+        _forceSettle(cid);
 
-            uint256 cid = _submit();
-            _vote(attackerA, cid, true, 100e6);
-            _vote(attackerB, cid, false, 1e6);
-            _vote(honest, cid, true, 50e6);
-            _forceSettle(cid);
+        // Each content has its own round counter starting at 1
+        uint256 rid = 1;
 
-            // Each content has its own round counter starting at 1
-            uint256 rid = 1;
+        // Winner claims fine
+        vm.prank(attackerA);
+        distributor.claimParticipationReward(cid, rid);
 
-            // Winner claims fine
-            vm.prank(attackerA);
-            distributor.claimParticipationReward(cid, rid);
+        // Loser blocked at every tier
+        vm.prank(attackerB);
+        vm.expectRevert(RoundRewardDistributor.NotWinningSide.selector);
+        distributor.claimParticipationReward(cid, rid);
+    }
 
-            // Loser blocked at every tier
-            vm.prank(attackerB);
-            vm.expectRevert(RoundRewardDistributor.NotWinningSide.selector);
-            distributor.claimParticipationReward(cid, rid);
+    function test_Tier0_OppositionBlocked() public {
+        _assertOppositionBlockedAtTier(0);
+    }
 
-            vm.warp(block.timestamp + 24 hours + 1);
-        }
+    function test_Tier1_OppositionBlocked() public {
+        _assertOppositionBlockedAtTier(2_000_000e6);
+    }
+
+    function test_Tier2_OppositionBlocked() public {
+        _assertOppositionBlockedAtTier(6_000_000e6);
+    }
+
+    function test_Tier3_OppositionBlocked() public {
+        _assertOppositionBlockedAtTier(14_000_000e6);
     }
 }
