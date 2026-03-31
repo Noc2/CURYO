@@ -1,5 +1,12 @@
 import { describe, it, expect } from "vitest";
-import { safeBigInt, safeLimit, safeOffset, isValidAddress, getUrlLookupCandidates } from "../api/utils.js";
+import {
+  MAX_PAGINATION_OFFSET,
+  safeBigInt,
+  safeLimit,
+  safeOffset,
+  isValidAddress,
+  getUrlLookupCandidates,
+} from "../api/utils.js";
 
 describe("safeBigInt", () => {
   it("parses valid positive integer", () => {
@@ -73,6 +80,10 @@ describe("safeOffset", () => {
 
   it("returns 0 for NaN", () => {
     expect(safeOffset("abc")).toBe(0);
+  });
+
+  it("returns NaN for offsets above the maximum", () => {
+    expect(Number.isNaN(safeOffset(String(MAX_PAGINATION_OFFSET + 1)))).toBe(true);
   });
 });
 
