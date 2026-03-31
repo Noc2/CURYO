@@ -84,7 +84,7 @@ const currentRoundId = await chainClient.readContract({
   args: [contentId],
 });
 const latestBlock = await chainClient.getBlock({ blockTag: "latest" });
-const commitTimestamp = latestBlock.timestamp + 1n;
+const commitTimestamp = latestBlock.timestamp;
 
 let roundStartTime = commitTimestamp;
 if (currentRoundId > 0n) {
@@ -108,8 +108,16 @@ if (revealableAfter < drandGenesisTime) {
     `Revealable timestamp ${revealableAfter} is before drand genesis ${drandGenesisTime}`
   );
 }
+// Pick a drand round safely inside the accepted reveal window instead of
+// sitting on the lower bound, which is brittle when local block timestamps
+// land on the same second as the preflight query.
+const targetBuffer =
+  epochDuration > 1n
+    ? (drandPeriod > 0n && epochDuration > drandPeriod ? drandPeriod : epochDuration / 2n)
+    : 0n;
+const targetTimestamp = revealableAfter + targetBuffer;
 const targetRound =
-  ((revealableAfter - drandGenesisTime) / drandPeriod) + 1n;
+  ((targetTimestamp - drandGenesisTime) / drandPeriod) + 1n;
 
 const plaintext = Buffer.alloc(33);
 plaintext[0] = isUp ? 1 : 0;
