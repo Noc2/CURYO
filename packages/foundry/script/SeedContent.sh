@@ -249,8 +249,8 @@ for _ in {1..5}; do
 done
 
 # Vote on content items 1, 2, and 3 using commitVote (tlock commit-reveal).
-# commitVote(uint256 contentId, bytes32 commitHash, bytes ciphertext, uint256 stakeAmount, address frontend)
-# commitHash = keccak256(abi.encodePacked(isUp, salt, contentId, keccak256(ciphertext)))
+# commitVote(uint256 contentId, uint64 targetRound, bytes32 drandChainHash, bytes32 commitHash, bytes ciphertext, uint256 stakeAmount, address frontend)
+# commitHash = keccak256(abi.encodePacked(isUp, salt, contentId, targetRound, drandChainHash, keccak256(ciphertext)))
 #
 # Voter 1 (account #9) votes UP on content 1 and 2
 # Voter 2 (account #10) votes DOWN on content 1, UP on content 3
@@ -264,6 +264,8 @@ seed_commit() {
   local privKey="$4"
   local commitHash
   local ciphertext
+  local targetRound
+  local drandChainHash
   local artifacts
   artifacts=$(node "$SCRIPT_DIR/../scripts-js/generateTlockCommit.js" \
     "$contentId" "$isUp" "0x${salt}" "$EPOCH_DURATION_SECONDS") || {
@@ -272,13 +274,15 @@ seed_commit() {
   }
   commitHash=$(printf '%s\n' "$artifacts" | sed -n '1p')
   ciphertext=$(printf '%s\n' "$artifacts" | sed -n '2p')
+  targetRound=$(printf '%s\n' "$artifacts" | sed -n '3p')
+  drandChainHash=$(printf '%s\n' "$artifacts" | sed -n '4p')
 
   cast send "$TOKEN" "approve(address,uint256)" "$VOTING_ENGINE" "$VOTE_STAKE" \
     --private-key "$privKey" --rpc-url "$RPC" > /dev/null 2>&1
 
   cast send "$VOTING_ENGINE" \
-    "commitVote(uint256,bytes32,bytes,uint256,address)" \
-    "$contentId" "$commitHash" "$ciphertext" "$VOTE_STAKE" "$ZERO_ADDR" \
+    "commitVote(uint256,uint64,bytes32,bytes32,bytes,uint256,address)" \
+    "$contentId" "$targetRound" "$drandChainHash" "$commitHash" "$ciphertext" "$VOTE_STAKE" "$ZERO_ADDR" \
     --private-key "$privKey" --rpc-url "$RPC" > /dev/null 2>&1 || { echo "  (Commit may have failed)"; return 1; }
 }
 

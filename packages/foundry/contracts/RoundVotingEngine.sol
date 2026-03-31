@@ -13,15 +13,17 @@ import { ContentRegistry } from "./ContentRegistry.sol";
 import { ProtocolConfig } from "./ProtocolConfig.sol";
 import { RoundLib } from "./libraries/RoundLib.sol";
 import { RewardMath } from "./libraries/RewardMath.sol";
+import { RoundSettlementSideEffectsLib } from "./libraries/RoundSettlementSideEffectsLib.sol";
 import { CategoryFeeLib } from "./libraries/CategoryFeeLib.sol";
 import { SubmitterStakeLib } from "./libraries/SubmitterStakeLib.sol";
+import { TlockVoteLib } from "./libraries/TlockVoteLib.sol";
 import { TokenTransferLib } from "./libraries/TokenTransferLib.sol";
+import { VotePreflightLib } from "./libraries/VotePreflightLib.sol";
 import { IFrontendRegistry } from "./interfaces/IFrontendRegistry.sol";
 import { ICategoryRegistry } from "./interfaces/ICategoryRegistry.sol";
 import { IVoterIdNFT } from "./interfaces/IVoterIdNFT.sol";
 import { IRoundVotingEngine } from "./interfaces/IRoundVotingEngine.sol";
 import { IParticipationPool } from "./interfaces/IParticipationPool.sol";
-import { IRoundRewardDistributor } from "./interfaces/IRoundRewardDistributor.sol";
 
 /// @title RoundVotingEngine
 /// @notice Per-content round-based parimutuel voting with keeper-assisted/self-reveal and epoch-weighted rewards.
@@ -93,8 +95,6 @@ contract RoundVotingEngine is
     uint256 public constant MAX_STAKE = 100e6; // 100 cREP (6 decimals)
     uint256 public constant VOTE_COOLDOWN = 24 hours; // Time-based cooldown per content per voter
     uint256 public constant MAX_CIPHERTEXT_SIZE = 2_048; // 2 KB max ciphertext to prevent storage bloat
-    bytes internal constant AGE_HEADER = "-----BEGIN AGE ENCRYPTED FILE-----";
-    bytes internal constant AGE_FOOTER = "-----END AGE ENCRYPTED FILE-----";
 
     // --- State ---
     IERC20 public crepToken;
@@ -263,7 +263,7 @@ contract RoundVotingEngine is
             uint64 targetRound,
             bytes32 drandChainHash,
             address frontend
-        ) = _decodeCommitPayload(data);
+        ) = TlockVoteLib.decodeCommitPayload(data);
 
         _commitVote(from, contentId, targetRound, drandChainHash, commitHash, ciphertext, value, frontend, true);
         return IERC1363Receiver.onTransferReceived.selector;
@@ -285,34 +285,8 @@ contract RoundVotingEngine is
 
         uint64 stakeAmount64 = uint64(stakeAmount);
         IVoterIdNFT currentVoterIdNft = _getVoterIdNft();
-        bool hasVoterIdNft = address(currentVoterIdNft) != address(0);
-
-        // Voter ID check (if configured)
-        uint256 voterId = 0;
-        if (hasVoterIdNft) {
-            if (!currentVoterIdNft.hasVoterId(voter)) revert VoterIdRequired();
-            voterId = currentVoterIdNft.getTokenId(voter);
-        }
-        bool useTokenIdentity = hasVoterIdNft && voterId != 0;
-
-        // Prevent submitter from voting on own content
-        address effectiveVoter = voter;
-        if (hasVoterIdNft) {
-            address resolved = currentVoterIdNft.resolveHolder(voter);
-            if (resolved != address(0)) effectiveVoter = resolved;
-        }
-        if (effectiveVoter == registry.getSubmitterIdentity(contentId)) revert SelfVote();
-
-        if (!registry.isContentActive(contentId)) revert ContentNotActive();
-
-        // Time-based cooldown (24 hours) — per identity when VoterID is configured
-        if (useTokenIdentity) {
-            uint256 lastVote = lastVoteTimestampByToken[contentId][voterId];
-            if (lastVote > 0 && block.timestamp < lastVote + VOTE_COOLDOWN) revert CooldownActive();
-        } else {
-            uint256 lastVote = lastVoteTimestamp[contentId][voter];
-            if (lastVote > 0 && block.timestamp < lastVote + VOTE_COOLDOWN) revert CooldownActive();
-        }
+        (uint256 voterId, bool useTokenIdentity) =
+            VotePreflightLib.validateVoterAndContent(currentVoterIdNft, registry, voter, contentId);
 
         // Get or create active round
         uint256 currentOpenRoundId = currentRoundId[contentId];
@@ -335,34 +309,32 @@ contract RoundVotingEngine is
         // Round must be Open and not expired
         if (!RoundLib.acceptsVotes(round, roundCfg.maxDuration)) revert RoundNotAccepting();
 
-        _validateTlockCiphertext(ciphertext);
-        if (drandChainHash != protocolConfig.drandChainHash()) revert DrandChainHashMismatch();
-
-        // One vote per voter per round
-        if (voterCommitHash[contentId][roundId][voter] != bytes32(0)) revert AlreadyCommitted();
-
-        // One vote per identity per round (prevents holder + delegate double voting)
-        if (useTokenIdentity) {
-            if (hasTokenIdCommitted[contentId][roundId][voterId]) revert AlreadyCommitted();
-        }
-
-        // Voter cap
-        if (round.voteCount >= roundCfg.maxVoters) revert MaxVotersReached();
-
-        // Per-voter commit key prevents mempool griefing via copied commit hashes
-        bytes32 commitKey = _buildCommitKey(voter, commitHash);
-        if (commits[contentId][roundId][commitKey].voter != address(0)) revert AlreadyCommitted();
-
-        // Check MAX_STAKE per Voter ID per content per round
-        if (useTokenIdentity) {
-            uint256 currentStake = currentVoterIdNft.getEpochContentStake(contentId, roundId, voterId);
-            if (currentStake + stakeAmount > MAX_STAKE) revert InvalidStake();
-        }
-
-        // Compute epoch end time and epoch index for this commit
-        uint256 epochEnd = RoundLib.computeEpochEnd(round, roundCfg.epochDuration, block.timestamp);
-        uint8 epochIdx = RoundLib.computeEpochIndex(round, roundCfg.epochDuration, block.timestamp);
-        _validateTargetRound(targetRound, epochEnd, roundCfg.epochDuration);
+        (bytes32 commitKey, uint256 epochEnd, uint8 epochIdx) = VotePreflightLib.prepareCommit(
+            voterCommitHash,
+            hasTokenIdCommitted,
+            commits,
+            lastVoteTimestamp,
+            lastVoteTimestampByToken,
+            currentVoterIdNft,
+            voter,
+            contentId,
+            roundId,
+            voterId,
+            useTokenIdentity,
+            VOTE_COOLDOWN,
+            MAX_STAKE,
+            stakeAmount,
+            commitHash,
+            ciphertext,
+            targetRound,
+            drandChainHash,
+            protocolConfig.drandChainHash(),
+            protocolConfig.drandGenesisTime(),
+            protocolConfig.drandPeriod(),
+            round,
+            roundCfg,
+            block.timestamp
+        );
 
         // Transfer cREP stake after all lightweight validation passes.
         if (!stakeAlreadyTransferred) {
@@ -384,14 +356,8 @@ contract RoundVotingEngine is
         });
 
         IFrontendRegistry currentFrontendRegistry = _getFrontendRegistry();
-        if (frontend != address(0) && address(currentFrontendRegistry) != address(0)) {
-            try currentFrontendRegistry.isEligible(frontend) returns (bool eligible) {
-                if (eligible) {
-                    frontendEligibleAtCommit[contentId][roundId][commitKey] = true;
-                }
-            } catch {
-                // Frontend registry call failed — treat as ineligible
-            }
+        if (VotePreflightLib.isFrontendEligible(currentFrontendRegistry, frontend)) {
+            frontendEligibleAtCommit[contentId][roundId][commitKey] = true;
         }
 
         // Track for iteration
@@ -666,30 +632,17 @@ contract RoundVotingEngine is
             roundWinningStake[contentId][roundId] = weightedWinningStake;
         }
 
-        // Update content rating using raw revealed pools (accurate crowd opinion)
-        uint16 newRating = RewardMath.calculateRating(round.upPool, round.downPool);
-        try registry.updateRatingDirect(contentId, newRating) { } catch { }
-
-        try registry.recordMeaningfulActivity(contentId) { } catch { }
-
-        // Snapshot participation rate for pull-based claiming
-        if (address(currentParticipationPool) != address(0)) {
-            try currentParticipationPool.getCurrentRateBps() returns (uint256 rate) {
-                try registry.snapshotSubmitterParticipationTerms(contentId, address(currentParticipationPool), rate) { }
-                    catch { }
-                if (currentRewardDistributor != address(0)) {
-                    uint256 winningStake = upWins ? round.upPool : round.downPool;
-                    try IRoundRewardDistributor(currentRewardDistributor)
-                        .snapshotParticipationRewards(
-                            contentId, roundId, address(currentParticipationPool), rate, winningStake
-                        ) { }
-                        catch { }
-                }
-            } catch { }
-        }
-
-        // Check submitter stake return/slash conditions
-        try SubmitterStakeLib.resolve(registry, contentHasSettledRound[contentId], contentId) { } catch { }
+        RoundSettlementSideEffectsLib.recordSettlement(
+            registry,
+            currentParticipationPool,
+            currentRewardDistributor,
+            contentHasSettledRound[contentId],
+            contentId,
+            roundId,
+            upWins,
+            round.upPool,
+            round.downPool
+        );
         emit RoundSettled(contentId, roundId, upWins, losingPool);
     }
 
@@ -887,79 +840,6 @@ contract RoundVotingEngine is
         return roundId != 0 && rounds[contentId][roundId].state == RoundLib.RoundState.Open;
     }
 
-    function _decodeCommitPayload(bytes calldata data)
-        internal
-        pure
-        returns (
-            uint256 contentId,
-            bytes32 commitHash,
-            bytes memory ciphertext,
-            uint64 targetRound,
-            bytes32 drandChainHash,
-            address frontend
-        )
-    {
-        if (data.length < 192) revert InvalidCiphertext();
-        (contentId, commitHash, ciphertext, frontend, targetRound, drandChainHash) =
-            abi.decode(data, (uint256, bytes32, bytes, address, uint64, bytes32));
-    }
-
-    function _validateTlockCiphertext(bytes memory ciphertext) internal pure {
-        if (ciphertext.length == 0) revert InvalidCiphertext();
-        if (ciphertext.length > MAX_CIPHERTEXT_SIZE) revert CiphertextTooLarge();
-        if (ciphertext.length < AGE_HEADER.length + AGE_FOOTER.length + 2) revert InvalidCiphertext();
-
-        for (uint256 i = 0; i < ciphertext.length; i++) {
-            bytes1 ch = ciphertext[i];
-            if (!(ch == 0x0a || ch == 0x0d || (ch >= 0x20 && ch <= 0x7e))) revert InvalidCiphertext();
-        }
-
-        if (!_hasPrefix(ciphertext, AGE_HEADER)) revert InvalidCiphertext();
-
-        uint256 trimmedLength = ciphertext.length;
-        while (trimmedLength > 0) {
-            bytes1 tail = ciphertext[trimmedLength - 1];
-            if (tail != 0x0a && tail != 0x0d) break;
-            trimmedLength--;
-        }
-
-        if (trimmedLength < AGE_FOOTER.length) revert InvalidCiphertext();
-        if (!_hasSuffix(ciphertext, trimmedLength, AGE_FOOTER)) revert InvalidCiphertext();
-    }
-
-    function _validateTargetRound(uint64 targetRound, uint256 revealableAfter, uint256 epochDuration) internal view {
-        uint64 genesisTime = protocolConfig.drandGenesisTime();
-        uint64 period = protocolConfig.drandPeriod();
-        if (period == 0 || targetRound == 0) revert TargetRoundOutOfWindow();
-        if (revealableAfter < genesisTime) revert TargetRoundOutOfWindow();
-
-        uint64 minTargetRound = _roundAt(revealableAfter, genesisTime, period);
-        uint64 maxTargetRound = _roundAt(revealableAfter + epochDuration, genesisTime, period);
-        if (targetRound < minTargetRound || targetRound > maxTargetRound) revert TargetRoundOutOfWindow();
-    }
-
-    function _roundAt(uint256 timestamp, uint64 genesisTime, uint64 period) internal pure returns (uint64) {
-        if (period == 0 || timestamp < genesisTime) return 0;
-        return uint64(((timestamp - genesisTime) / period) + 1);
-    }
-
-    function _hasPrefix(bytes memory data, bytes memory prefix) internal pure returns (bool) {
-        if (data.length < prefix.length) return false;
-        for (uint256 i = 0; i < prefix.length; i++) {
-            if (data[i] != prefix[i]) return false;
-        }
-        return true;
-    }
-
-    function _hasSuffix(bytes memory data, uint256 trimmedLength, bytes memory suffix) internal pure returns (bool) {
-        if (trimmedLength < suffix.length) return false;
-        uint256 start = trimmedLength - suffix.length;
-        for (uint256 i = 0; i < suffix.length; i++) {
-            if (data[start + i] != suffix[i]) return false;
-        }
-        return true;
-    }
-
     function _revealVoteInternal(uint256 contentId, uint256 roundId, bytes32 commitKey, bool isUp, bytes32 salt)
         internal
     {
@@ -975,8 +855,8 @@ contract RoundVotingEngine is
         if (block.timestamp < commit.revealableAfter) revert EpochNotEnded();
 
         // Verify commit hash
-        bytes32 expectedHash = keccak256(
-            abi.encodePacked(isUp, salt, contentId, commit.targetRound, commit.drandChainHash, keccak256(commit.ciphertext))
+        bytes32 expectedHash = TlockVoteLib.buildExpectedCommitHash(
+            isUp, salt, contentId, commit.targetRound, commit.drandChainHash, commit.ciphertext
         );
         if (commitKey != _buildCommitKey(commit.voter, expectedHash)) revert HashMismatch();
 

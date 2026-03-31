@@ -46,11 +46,12 @@ const targetRound = roundAt(
 const armored = await timelockEncrypt(targetRound, plaintext, client);
 
 const ciphertext = `0x${Buffer.from(armored, "utf-8").toString("hex")}`;
+const drandChainHash = `0x${chainInfo.hash}`;
 const commitHash = keccak256(
   encodePacked(
-    ["bool", "bytes32", "uint256", "bytes32"],
-    [isUp, salt, contentId, keccak256(ciphertext)]
+    ["bool", "bytes32", "uint256", "uint64", "bytes32", "bytes32"],
+    [isUp, salt, contentId, BigInt(targetRound), drandChainHash, keccak256(ciphertext)]
   )
 );
 
-process.stdout.write(`${commitHash}\n${ciphertext}\n`);
+process.stdout.write(`${commitHash}\n${ciphertext}\n${targetRound}\n${drandChainHash}\n`);
