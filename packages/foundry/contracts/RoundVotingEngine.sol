@@ -458,9 +458,9 @@ contract RoundVotingEngine is
     ) internal {
         roundCommitHashes[contentId][roundId].push(commitKey);
         epochUnrevealedCount[contentId][roundId][epochEnd]++;
-        if (epochEnd > lastCommitRevealableAfter[contentId][roundId]) {
-            lastCommitRevealableAfter[contentId][roundId] = epochEnd;
-        }
+        // `epochEnd` is derived from the current block timestamp, so for sequential commits in a round
+        // it is monotonic and can be recorded directly as the latest revealable time.
+        lastCommitRevealableAfter[contentId][roundId] = epochEnd;
 
         voterCommitHash[contentId][roundId][voter] = commitHash;
         if (!contentHasCommits[contentId]) {
