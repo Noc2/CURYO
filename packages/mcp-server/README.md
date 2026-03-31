@@ -52,6 +52,11 @@ The server reads from the environment at startup.
 | `CURYO_MCP_HTTP_AUTH_REALM` | `curyo-mcp` | `WWW-Authenticate` realm |
 | `CURYO_MCP_HTTP_AUTH_SCOPES` | `mcp:read` | Default scopes for legacy bearer tokens |
 | `CURYO_MCP_HTTP_TOKENS_JSON` | — | JSON array of scoped bearer tokens, each optionally bound to a write identity |
+| `CURYO_MCP_HTTP_SESSION_SECRET` | — | Shared HMAC secret used to verify wallet-bound MCP bearer sessions minted by Next.js |
+| `CURYO_MCP_HTTP_SESSION_KEY_ID` | `nextjs-default` | Key id expected in wallet-bound MCP bearer session headers |
+| `CURYO_MCP_HTTP_SESSION_ISSUER` | `curyo-nextjs` | Expected issuer claim for wallet-bound MCP bearer sessions |
+| `CURYO_MCP_HTTP_SESSION_AUDIENCE` | `curyo-mcp` | Expected audience claim for wallet-bound MCP bearer sessions |
+| `CURYO_MCP_HTTP_SESSION_SECRETS_JSON` | — | Optional JSON array of multiple verification keys for session rotation |
 | `CURYO_MCP_HTTP_RATE_LIMIT_ENABLED` | `1` | Enable in-memory HTTP request rate limiting |
 | `CURYO_MCP_HTTP_RATE_LIMIT_WINDOW_MS` | `60000` | Shared fixed window used for MCP HTTP rate limits |
 | `CURYO_MCP_HTTP_RATE_LIMIT_READ_LIMIT` | `120` | Max read-oriented MCP HTTP requests per window |
@@ -87,6 +92,10 @@ CURYO_MCP_HTTP_PATH=/mcp
 CURYO_MCP_PUBLIC_BASE_URL=https://mcp.example.com
 CURYO_MCP_HTTP_AUTH_MODE=bearer
 CURYO_MCP_HTTP_TOKENS_JSON='[{"token":"replace-me","clientId":"claude-prod","scopes":["mcp:read","mcp:write:vote","mcp:write:submit_content"],"identityId":"curyo-writer","kind":"session","expiresAt":"2030-01-01T00:00:00.000Z","subject":"0x1234..."}]'
+CURYO_MCP_HTTP_SESSION_SECRET=nextjs-session-secret
+CURYO_MCP_HTTP_SESSION_KEY_ID=nextjs-prod
+CURYO_MCP_HTTP_SESSION_ISSUER=curyo-nextjs
+CURYO_MCP_HTTP_SESSION_AUDIENCE=curyo-mcp
 CURYO_MCP_HTTP_RATE_LIMIT_READ_LIMIT=120
 CURYO_MCP_HTTP_RATE_LIMIT_WRITE_LIMIT=20
 CURYO_MCP_WRITE_ENABLED=1
@@ -129,9 +138,28 @@ Example response shape:
   "healthUrl": "https://mcp.curyo.xyz/healthz",
   "readinessUrl": "https://mcp.curyo.xyz/readyz",
   "metricsUrl": "https://mcp.curyo.xyz/metrics",
-  "docsUrl": "https://curyo.xyz/docs/ai"
+  "docsUrl": "https://curyo.xyz/docs/ai",
+  "auth": {
+    "walletSessions": {
+      "challengeUrl": "https://curyo.xyz/api/mcp/session/challenge",
+      "tokenUrl": "https://curyo.xyz/api/mcp/session/token"
+    }
+  }
 }
 ```
+
+## Wallet-Bound Session Issuance
+
+The Next.js app can now mint short-lived wallet-bound MCP bearer sessions for hosted writes. The high-level flow is:
+
+1. Call `/api/mcp/session/challenge` with a wallet address, requested scopes, and an optional client name.
+2. Sign the returned message with that wallet.
+3. Exchange the signature at `/api/mcp/session/token`.
+4. Send the returned bearer token to the hosted MCP endpoint.
+
+The Next.js app decides which wallets may receive which scopes through `CURYO_MCP_SESSION_WALLET_BINDINGS`. The MCP
+server only verifies the resulting bearer tokens, so its `CURYO_MCP_HTTP_SESSION_*` values must match the issuer’s
+session-signing configuration.
 
 ## Client Examples
 

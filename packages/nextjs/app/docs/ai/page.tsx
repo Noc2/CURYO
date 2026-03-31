@@ -85,7 +85,8 @@ https://mcp.curyo.xyz/mcp`}</code>
             <tr>
               <td>Authentication</td>
               <td>
-                Scoped bearer tokens with optional expiry, session metadata, and identity binding for hosted writes
+                Scoped bearer tokens plus wallet-signed session issuance endpoints for short-lived write-capable MCP
+                sessions
               </td>
               <td>Scoped per-user auth for writes, with auditable wallet binding</td>
             </tr>
@@ -217,6 +218,12 @@ https://mcp.curyo.xyz/mcp`}</code>
         thing as a fully managed production auth and signer platform.
       </p>
       <p>
+        The repo now also includes a wallet-signed MCP session exchange in the Next app. Clients can request a
+        challenge at <code>/api/mcp/session/challenge</code>, sign it with the bound wallet, and exchange that
+        signature at <code>/api/mcp/session/token</code> for a short-lived bearer token that the hosted MCP server can
+        verify with the shared session-signing secret.
+      </p>
+      <p>
         Delegation already makes sense for voting and submission. Frontend registration itself is still a holder-only
         action, so the frontend operator wallet for <code>mcp.curyo.xyz</code> should be treated as infrastructure, not
         reused as the signing key for normal user traffic.
@@ -286,8 +293,18 @@ https://mcp.curyo.xyz/mcp`}</code>
       <h2>Client Examples</h2>
       <p>
         The intended hosted bootstrap flow is: read <code>/api/mcp/config</code>, connect to the published HTTP
-        endpoint, then attach a bearer token with the minimum scopes your client needs.
+        endpoint, mint a wallet-bound bearer token when write access is needed, then attach a bearer token with the
+        minimum scopes your client needs.
       </p>
+      <pre>
+        <code>{`Wallet-bound write session
+1. POST /api/mcp/session/challenge
+   { "address": "0x...", "scopes": ["mcp:read", "mcp:write:vote"], "clientName": "claude-desktop" }
+2. Sign the returned message with the bound wallet
+3. POST /api/mcp/session/token
+   { "address": "0x...", "scopes": ["mcp:read", "mcp:write:vote"], "clientName": "claude-desktop", "challengeId": "...", "signature": "0x..." }
+4. Send Authorization: Bearer <accessToken> to https://mcp.curyo.xyz/mcp`}</code>
+      </pre>
       <pre>
         <code>{`Claude Desktop
 {
@@ -304,6 +321,12 @@ https://mcp.curyo.xyz/mcp`}</code>
   }
 }`}</code>
       </pre>
+      <p>
+        The write-capable wallet bindings live on the Next.js side through <code>CURYO_MCP_SESSION_WALLET_BINDINGS</code>.
+        The hosted MCP server and the Next app must share the same session-signing settings:
+        <code> CURYO_MCP_HTTP_SESSION_SECRET</code>, <code>CURYO_MCP_HTTP_SESSION_KEY_ID</code>,{" "}
+        <code>CURYO_MCP_HTTP_SESSION_ISSUER</code>, and <code>CURYO_MCP_HTTP_SESSION_AUDIENCE</code>.
+      </p>
 
       <h2>WebMCP</h2>
       <p>
