@@ -395,13 +395,12 @@ const SmartContracts: NextPage = () => {
         <li>
           <code>revealVoteByCommitKey(contentId, roundId, commitKey, isUp, salt)</code> &mdash; Reveal a previously
           committed vote after the epoch ends. This remains the keeper-assisted/self-reveal path: the keeper normally
-          performs off-chain drand/tlock decryption after validating the stored stanza metadata and submits the
-          reveal, but any caller that knows the plaintext <code>(isUp, salt)</code> can submit it. The production UI
-          keeps this mostly hidden, but connected users also have a small manual fallback link if an auto-reveal
-          appears delayed. The chain binds the reveal to the exact submitted ciphertext via{" "}
-          <code>keccak256(ciphertext)</code> and now rejects malformed/non-armored commits on-chain, but it still does
-          not prove on-chain that the ciphertext was honestly decryptable. A future hardening path here would be
-          zk-based reveal proofs.
+          performs off-chain drand/tlock decryption after validating the stored stanza metadata and submits the reveal,
+          but any caller that knows the plaintext <code>(isUp, salt)</code> can submit it. The production UI keeps this
+          mostly hidden, but connected users also have a small manual fallback link if an auto-reveal appears delayed.
+          The chain binds the reveal to the exact submitted ciphertext via <code>keccak256(ciphertext)</code> and now
+          rejects malformed/non-armored commits on-chain, but it still does not prove on-chain that the ciphertext was
+          honestly decryptable. A future hardening path here would be zk-based reveal proofs.
         </li>
         <li>
           <code>settleRound(contentId, roundId)</code> &mdash; Settle the current round once at least{" "}

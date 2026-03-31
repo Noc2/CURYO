@@ -147,9 +147,8 @@ const FrontendCodes: NextPage = () => {
         your frontend ensures a smooth experience for your users and contributes to the health of the network. Since
         these actions are permissionless, anyone can run a resolution service. Under the keeper-assisted/self-reveal
         model, reveal still relies on off-chain drand decryption and stanza validation rather than an on-chain proof
-        that the stored ciphertext was honestly decryptable, so the keeper is a trust-minimized convenience layer
-        rather than a cryptographic gatekeeper. The more independent services running, the more resilient the network
-        becomes.
+        that the stored ciphertext was honestly decryptable, so the keeper is a trust-minimized convenience layer rather
+        than a cryptographic gatekeeper. The more independent services running, the more resilient the network becomes.
       </p>
 
       <h3>Run an Indexer or Back-End</h3>
