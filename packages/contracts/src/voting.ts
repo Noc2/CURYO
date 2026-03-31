@@ -53,7 +53,15 @@ const legacyVoteTransferPayloadParams = [
 
 const AGE_ARMOR_HEADER = "-----BEGIN AGE ENCRYPTED FILE-----";
 const AGE_ARMOR_FOOTER = "-----END AGE ENCRYPTED FILE-----";
+const AGE_ARMOR_LINE_CHUNK_SIZE = 64;
+const AGE_VERSION_LINE = "age-encryption.org/v1";
+const AGE_RECIPIENT_PREFIX = "-> ";
+const AGE_MAC_PREFIX = "--- ";
 const TLOCK_STANZA_PREFIX = "-> tlock ";
+const UNPADDED_BASE64_LINE = /^[A-Za-z0-9+/]+$/;
+const AGE_MAC_LENGTH = 32;
+const MIN_TLOCK_STANZA_BODY_LENGTH = 80;
+const MIN_ENCRYPTED_BODY_LENGTH = 65;
 
 function saltToBytes(salt: VoteSalt): Uint8Array {
   const hex = salt.startsWith("0x") ? salt.slice(2) : salt;
@@ -255,14 +263,59 @@ export function decodeVoteTransferPayload(data: `0x${string}`): VoteTransferPayl
   }
 }
 
-function decodeAgeArmor(armored: string): string | null {
+function decodeAgeArmor(armored: string): Buffer | null {
   const trimmed = armored.trim();
   if (!trimmed.startsWith(AGE_ARMOR_HEADER) || !trimmed.endsWith(AGE_ARMOR_FOOTER)) {
     return null;
   }
 
   const payload = trimmed.slice(AGE_ARMOR_HEADER.length, trimmed.length - AGE_ARMOR_FOOTER.length);
-  return Buffer.from(payload, "base64").toString("binary");
+  const lines = payload.split(/\r?\n/);
+  if (lines.some(line => line.length > AGE_ARMOR_LINE_CHUNK_SIZE)) {
+    return null;
+  }
+  if (lines.some(line => line.length > 0 && !/^[A-Za-z0-9+/=]+$/.test(line))) {
+    return null;
+  }
+
+  const lastLine = lines.at(-1) ?? "";
+  if (lastLine.length >= AGE_ARMOR_LINE_CHUNK_SIZE) {
+    return null;
+  }
+
+  return Buffer.from(payload, "base64");
+}
+
+function readAsciiLine(payload: Buffer, cursor: number): { line: string; nextCursor: number } | null {
+  if (cursor >= payload.length) return null;
+
+  let end = cursor;
+  while (end < payload.length && payload[end] !== 0x0a && payload[end] !== 0x0d) {
+    end++;
+  }
+  if (end >= payload.length) {
+    return null;
+  }
+
+  let nextCursor = end + 1;
+  if (payload[end] === 0x0d && nextCursor < payload.length && payload[nextCursor] === 0x0a) {
+    nextCursor++;
+  }
+
+  return {
+    line: payload.subarray(cursor, end).toString("binary"),
+    nextCursor,
+  };
+}
+
+function isValidUnpaddedBase64Line(line: string): boolean {
+  return line.length > 0 && line.length <= AGE_ARMOR_LINE_CHUNK_SIZE && UNPADDED_BASE64_LINE.test(line);
+}
+
+function unpaddedBase64DecodedLength(charLength: number): number | null {
+  const remainder = charLength % 4;
+  if (remainder === 1) return null;
+  return Math.floor(charLength / 4) * 3 + (remainder === 0 ? 0 : remainder - 1);
 }
 
 export function parseTlockCiphertextMetadata(ciphertext: VoteCiphertext): TlockCiphertextMetadata | null {
@@ -271,21 +324,58 @@ export function parseTlockCiphertextMetadata(ciphertext: VoteCiphertext): TlockC
     const agePayload = decodeAgeArmor(armored);
     if (!agePayload) return null;
 
-    const stanzaLine = agePayload
-      .split("\n")
-      .map(line => line.trim())
-      .find(line => line.startsWith(TLOCK_STANZA_PREFIX));
-    if (!stanzaLine) return null;
-
-    const [, type, roundStr, chainHash, ...rest] = stanzaLine.split(" ");
-    if (type !== "tlock" || rest.length > 0 || !roundStr || !chainHash) {
+    const versionLine = readAsciiLine(agePayload, 0);
+    if (!versionLine || versionLine.line !== AGE_VERSION_LINE) {
       return null;
     }
 
-    if (!/^[0-9]+$/.test(roundStr) || !/^[0-9a-fA-F]{64}$/.test(chainHash)) {
+    const stanzaLine = readAsciiLine(agePayload, versionLine.nextCursor);
+    if (!stanzaLine || !stanzaLine.line.startsWith(TLOCK_STANZA_PREFIX)) {
       return null;
     }
 
+    const recipientMatch = /^-> tlock ([0-9]+) ([0-9a-fA-F]{64})$/.exec(stanzaLine.line);
+    if (!recipientMatch) {
+      return null;
+    }
+
+    let cursor = stanzaLine.nextCursor;
+    let stanzaBodyCharLength = 0;
+    while (cursor < agePayload.length) {
+      const bodyLine = readAsciiLine(agePayload, cursor);
+      if (!bodyLine) return null;
+      if (bodyLine.line.startsWith(AGE_MAC_PREFIX)) {
+        break;
+      }
+      if (bodyLine.line.startsWith(AGE_RECIPIENT_PREFIX) || !isValidUnpaddedBase64Line(bodyLine.line)) {
+        return null;
+      }
+
+      stanzaBodyCharLength += bodyLine.line.length;
+      cursor = bodyLine.nextCursor;
+    }
+
+    const decodedStanzaBodyLength = unpaddedBase64DecodedLength(stanzaBodyCharLength);
+    if (decodedStanzaBodyLength == null || decodedStanzaBodyLength < MIN_TLOCK_STANZA_BODY_LENGTH) {
+      return null;
+    }
+
+    const macLine = readAsciiLine(agePayload, cursor);
+    if (!macLine || !macLine.line.startsWith(AGE_MAC_PREFIX)) {
+      return null;
+    }
+
+    const mac = macLine.line.slice(AGE_MAC_PREFIX.length);
+    const decodedMacLength = unpaddedBase64DecodedLength(mac.length);
+    if (!isValidUnpaddedBase64Line(mac) || decodedMacLength !== AGE_MAC_LENGTH) {
+      return null;
+    }
+
+    if (agePayload.length - macLine.nextCursor < MIN_ENCRYPTED_BODY_LENGTH) {
+      return null;
+    }
+
+    const [, roundStr, chainHash] = recipientMatch;
     return {
       targetRound: BigInt(roundStr),
       drandChainHash: `0x${chainHash.toLowerCase()}` as VoteDrandChainHash,

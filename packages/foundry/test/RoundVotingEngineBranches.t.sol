@@ -2,6 +2,8 @@
 pragma solidity ^0.8.20;
 
 import { Test } from "forge-std/Test.sol";
+import { Base64 } from "@openzeppelin/contracts/utils/Base64.sol";
+import { Strings } from "@openzeppelin/contracts/utils/Strings.sol";
 import { ERC1967Proxy } from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
 import { ContentRegistry } from "../contracts/ContentRegistry.sol";
 import { RoundVotingEngine } from "../contracts/RoundVotingEngine.sol";
@@ -83,7 +85,7 @@ contract RoundVotingEngineBranchesTest is VotingTestBase {
             )
         );
 
-        // Foundry tests use fake AGE-armored payload bytes here rather than real drand/tlock ciphertexts.
+        // Foundry tests use structurally valid AGE/tlock envelopes here rather than real decryptable ciphertexts.
         engine = RoundVotingEngine(
             address(
                 new ERC1967Proxy(
@@ -169,15 +171,18 @@ contract RoundVotingEngineBranchesTest is VotingTestBase {
         returns (bytes32 commitKey, bytes32 salt)
     {
         salt = keccak256(abi.encodePacked(voter, block.timestamp));
-        bytes memory ciphertext = _testCiphertext(isUp, salt, contentId);
-        uint64 targetRound = _tlockCommitTargetRound();
-        bytes32 drandChainHash = _tlockDrandChainHash();
-        bytes32 commitHash = _commitHash(isUp, salt, contentId, targetRound, drandChainHash, ciphertext);
-        vm.prank(voter);
-        crepToken.approve(address(engine), stake);
-        vm.prank(voter);
-        engine.commitVote(contentId, targetRound, drandChainHash, commitHash, ciphertext, stake, address(0));
-        commitKey = keccak256(abi.encodePacked(voter, commitHash));
+        commitKey = _commitTestVote(
+            DirectTestCommitRequest({
+                engine: engine,
+                crepToken: crepToken,
+                voter: voter,
+                contentId: contentId,
+                isUp: isUp,
+                stake: stake,
+                frontend: address(0),
+                salt: salt
+            })
+        );
     }
 
     /// @dev Commit via ERC-1363 transferAndCall and return (commitKey, salt).
@@ -186,14 +191,18 @@ contract RoundVotingEngineBranchesTest is VotingTestBase {
         returns (bytes32 commitKey, bytes32 salt)
     {
         salt = keccak256(abi.encodePacked(voter, block.timestamp));
-        bytes memory ciphertext = _testCiphertext(isUp, salt, contentId);
-        uint64 targetRound = _tlockCommitTargetRound();
-        bytes32 drandChainHash = _tlockDrandChainHash();
-        bytes32 commitHash = _commitHash(isUp, salt, contentId, targetRound, drandChainHash, ciphertext);
-        bytes memory payload = abi.encode(contentId, commitHash, ciphertext, frontend, targetRound, drandChainHash);
-        vm.prank(voter);
-        crepToken.transferAndCall(address(engine), stake, payload);
-        commitKey = _commitKey(voter, commitHash);
+        commitKey = _transferAndCallTestVote(
+            TransferAndCallTestCommitRequest({
+                engine: engine,
+                crepToken: crepToken,
+                voter: voter,
+                contentId: contentId,
+                isUp: isUp,
+                stake: stake,
+                frontend: frontend,
+                salt: salt
+            })
+        );
     }
 
     /// @dev Commit with a specific frontend address.
@@ -202,15 +211,18 @@ contract RoundVotingEngineBranchesTest is VotingTestBase {
         returns (bytes32 commitKey, bytes32 salt)
     {
         salt = keccak256(abi.encodePacked(voter, block.timestamp));
-        bytes memory ciphertext = _testCiphertext(isUp, salt, contentId);
-        uint64 targetRound = _tlockCommitTargetRound();
-        bytes32 drandChainHash = _tlockDrandChainHash();
-        bytes32 commitHash = _commitHash(isUp, salt, contentId, targetRound, drandChainHash, ciphertext);
-        vm.prank(voter);
-        crepToken.approve(address(engine), stake);
-        vm.prank(voter);
-        engine.commitVote(contentId, targetRound, drandChainHash, commitHash, ciphertext, stake, frontend);
-        commitKey = keccak256(abi.encodePacked(voter, commitHash));
+        commitKey = _commitTestVote(
+            DirectTestCommitRequest({
+                engine: engine,
+                crepToken: crepToken,
+                voter: voter,
+                contentId: contentId,
+                isUp: isUp,
+                stake: stake,
+                frontend: frontend,
+                salt: salt
+            })
+        );
     }
 
     /// @dev Reveal a vote by commit key. Permissionless — no prank needed.
@@ -223,16 +235,51 @@ contract RoundVotingEngineBranchesTest is VotingTestBase {
         uint64 targetRound = _tlockCommitTargetRound();
         bytes32 drandChainHash = _tlockDrandChainHash();
         bytes32 salt = bytes32(uint256(1));
+        bytes memory bestFit;
+        bytes memory exactMatch;
 
-        for (uint256 filler = 0; filler < totalLength; filler++) {
-            ciphertext = _armoredTestCiphertext(
-                _testCiphertextPayload(true, salt, 0, targetRound, drandChainHash, filler), false
-            );
-            if (ciphertext.length == totalLength) return ciphertext;
-            if (ciphertext.length > totalLength) break;
+        (exactMatch, bestFit) = _searchArmoredCiphertext(totalLength, targetRound, drandChainHash, salt, true);
+        if (exactMatch.length > 0) return exactMatch;
+
+        (exactMatch, ciphertext) = _searchArmoredCiphertext(totalLength, targetRound, drandChainHash, salt, false);
+        if (exactMatch.length > 0) return exactMatch;
+        if (ciphertext.length > bestFit.length) return ciphertext;
+        if (bestFit.length == 0) revert("Unable to build max ciphertext");
+        return bestFit;
+    }
+
+    function _searchArmoredCiphertext(
+        uint256 totalLength,
+        uint64 targetRound,
+        bytes32 drandChainHash,
+        bytes32 salt,
+        bool newlineAfterHeader
+    ) internal view returns (bytes memory exactMatch, bytes memory bestFit) {
+        uint256 coarseStep = 32;
+        uint256 filler = 0;
+
+        while (filler <= totalLength) {
+            bytes memory payload = _testCiphertextPayload(true, salt, 0, targetRound, drandChainHash, filler);
+            bytes memory candidate = _armoredTestCiphertext(payload, newlineAfterHeader);
+            if (candidate.length == totalLength) return (candidate, bestFit);
+            if (candidate.length < totalLength && candidate.length > bestFit.length) {
+                bestFit = candidate;
+            }
+            if (candidate.length > totalLength) break;
+            filler += coarseStep;
         }
 
-        revert("Unable to build max ciphertext");
+        uint256 start = filler > coarseStep ? filler - coarseStep : 0;
+        uint256 end = filler > totalLength ? totalLength : filler;
+
+        for (uint256 fine = start; fine <= end; fine++) {
+            bytes memory payload = _testCiphertextPayload(true, salt, 0, targetRound, drandChainHash, fine);
+            bytes memory candidate = _armoredTestCiphertext(payload, newlineAfterHeader);
+            if (candidate.length == totalLength) return (candidate, bestFit);
+            if (candidate.length < totalLength && candidate.length > bestFit.length) {
+                bestFit = candidate;
+            }
+        }
     }
 
     /// @dev Submit content as `submitter` and return contentId.
@@ -1487,7 +1534,8 @@ contract RoundVotingEngineBranchesTest is VotingTestBase {
         uint256 contentId = _submitContent();
 
         bytes32 salt = keccak256(abi.encodePacked(voter1, block.timestamp));
-        bytes memory maxCiphertext = _maxAgeCiphertext(); // exactly MAX_CIPHERTEXT_SIZE
+        bytes memory maxCiphertext = _maxAgeCiphertext();
+        assertLe(maxCiphertext.length, engine.MAX_CIPHERTEXT_SIZE());
         uint64 targetRound = _tlockCommitTargetRound();
         bytes32 drandChainHash = _tlockDrandChainHash();
         bytes32 commitHash = _commitHash(true, salt, contentId, targetRound, drandChainHash, maxCiphertext);
@@ -1510,6 +1558,53 @@ contract RoundVotingEngineBranchesTest is VotingTestBase {
         vm.prank(voter1);
         vm.expectRevert(RoundVotingEngine.InvalidCiphertext.selector);
         engine.commitVote(contentId, _tlockCommitTargetRound(), _tlockDrandChainHash(), commitHash, malformed, STAKE, address(0));
+    }
+
+    function test_Commit_ShallowPseudoTlockEnvelope_Reverts() public {
+        uint256 contentId = _submitContent();
+        bytes32 salt = bytes32(0);
+        uint64 targetRound = _tlockCommitTargetRound();
+        bytes32 drandChainHash = _tlockDrandChainHash();
+
+        bytes memory shallowPayload = abi.encodePacked(
+            TEST_AGE_VERSION,
+            TEST_TLOCK_LINE_PREFIX,
+            bytes(Strings.toString(targetRound)),
+            " ",
+            _bytes32Hex(drandChainHash),
+            "\n",
+            TEST_PAYLOAD_LINE_PREFIX,
+            "u:",
+            _bytes32Hex(salt),
+            "\n",
+            TEST_MAC_LINE_PREFIX,
+            "bWFj\n"
+        );
+        bytes memory ciphertext = _armoredTestCiphertext(shallowPayload, true);
+        bytes32 commitHash = _commitHash(true, salt, contentId, targetRound, drandChainHash, ciphertext);
+
+        vm.prank(voter1);
+        crepToken.approve(address(engine), STAKE);
+        vm.prank(voter1);
+        vm.expectRevert(RoundVotingEngine.InvalidCiphertext.selector);
+        engine.commitVote(contentId, targetRound, drandChainHash, commitHash, ciphertext, STAKE, address(0));
+    }
+
+    function test_Commit_UnchunkedArmorLine_Reverts() public {
+        uint256 contentId = _submitContent();
+        bytes32 salt = keccak256(abi.encodePacked(voter1, block.timestamp));
+        uint64 targetRound = _tlockCommitTargetRound();
+        bytes32 drandChainHash = _tlockDrandChainHash();
+        bytes memory decodedPayload = _testCiphertextPayload(true, salt, contentId, targetRound, drandChainHash, 0);
+        bytes memory ciphertext =
+            abi.encodePacked(TEST_AGE_HEADER, bytes(Base64.encode(decodedPayload)), "\n", TEST_AGE_FOOTER);
+        bytes32 commitHash = _commitHash(true, salt, contentId, targetRound, drandChainHash, ciphertext);
+
+        vm.prank(voter1);
+        crepToken.approve(address(engine), STAKE);
+        vm.prank(voter1);
+        vm.expectRevert(RoundVotingEngine.InvalidCiphertext.selector);
+        engine.commitVote(contentId, targetRound, drandChainHash, commitHash, ciphertext, STAKE, address(0));
     }
 
     function test_Commit_WrongChainHash_Reverts() public {

@@ -24,6 +24,48 @@ const fakeClient = {
 
 const fakeNow = () => 1677685200 * 1000;
 
+function chunkBase64(input: string, chunkSize = 64): string {
+  const chunks: string[] = [];
+  for (let i = 0; i < input.length; i += chunkSize) {
+    chunks.push(input.slice(i, i + chunkSize));
+  }
+  return chunks.join("\n");
+}
+
+function toUnpaddedBase64(input: Buffer | string): string {
+  return Buffer.from(input).toString("base64").replace(/=+$/u, "");
+}
+
+function makeFakeArmoredTlockCiphertext(targetRound: bigint, drandChainHash: `0x${string}`, plaintextMarker: string): `0x${string}` {
+  const encryptedBody = Buffer.concat([
+    Buffer.from(plaintextMarker, "utf8"),
+    Buffer.alloc(Math.max(0, 65 - Buffer.byteLength(plaintextMarker, "utf8")), 0x58),
+  ]);
+  const recipientBody = chunkBase64(toUnpaddedBase64(Buffer.alloc(128, 0x42)));
+  const mac = toUnpaddedBase64(Buffer.alloc(32, 0x24));
+  const agePayload = Buffer.concat([
+    Buffer.from(
+      [
+        "age-encryption.org/v1",
+        `-> tlock ${targetRound.toString()} ${drandChainHash.slice(2)}`,
+        recipientBody,
+        `--- ${mac}`,
+        "",
+      ].join("\n"),
+      "utf8",
+    ),
+    encryptedBody,
+  ]);
+  const armored = [
+    "-----BEGIN AGE ENCRYPTED FILE-----",
+    chunkBase64(agePayload.toString("base64")),
+    "-----END AGE ENCRYPTED FILE-----",
+    "",
+  ].join("\n");
+
+  return (`0x${Buffer.from(armored, "utf-8").toString("hex")}`) as `0x${string}`;
+}
+
 describe("tlockEncryptVote", () => {
   it("produces a 0x-prefixed hex string", async () => {
     const encryptFn = vi.fn().mockResolvedValue("FAKE-ARMORED-AGE-STRING");
@@ -118,15 +160,23 @@ describe("shared voting helpers", () => {
   });
 
   it("parses tlock ciphertext metadata from the armored payload", () => {
+    const ciphertext = makeFakeArmoredTlockCiphertext(123n, `0x${"ab".repeat(32)}`, "1:" + "11".repeat(32));
+
+    expect(parseTlockCiphertextMetadata(ciphertext)).toEqual({
+      targetRound: 123n,
+      drandChainHash: `0x${"ab".repeat(32)}`,
+    });
+  });
+
+  it("rejects shallow pseudo-tlock envelopes", () => {
     const armored = [
       "-----BEGIN AGE ENCRYPTED FILE-----",
       Buffer.from(
         [
           "age-encryption.org/v1",
           `-> tlock 123 ${"ab".repeat(32)}`,
-          "abc",
-          "--- mac",
-          "1:" + "11".repeat(32),
+          "payload 1:" + "11".repeat(32),
+          "--- bWFj",
         ].join("\n"),
         "binary",
       ).toString("base64"),
@@ -135,9 +185,6 @@ describe("shared voting helpers", () => {
     ].join("\n");
     const ciphertext = (`0x${Buffer.from(armored, "utf-8").toString("hex")}`) as `0x${string}`;
 
-    expect(parseTlockCiphertextMetadata(ciphertext)).toEqual({
-      targetRound: 123n,
-      drandChainHash: `0x${"ab".repeat(32)}`,
-    });
+    expect(parseTlockCiphertextMetadata(ciphertext)).toBeNull();
   });
 });

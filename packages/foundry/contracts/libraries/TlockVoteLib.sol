@@ -10,9 +10,16 @@ library TlockVoteLib {
     error TargetRoundOutOfWindow();
 
     uint256 internal constant MAX_CIPHERTEXT_SIZE = 2_048;
+    uint256 internal constant AGE_LINE_CHUNK_SIZE = 64;
+    uint256 internal constant AGE_MAC_DECODED_LENGTH = 32;
+    uint256 internal constant MIN_TLOCK_STANZA_BODY_LENGTH = 80;
+    uint256 internal constant MIN_ENCRYPTED_BODY_LENGTH = 65;
     bytes internal constant AGE_HEADER = "-----BEGIN AGE ENCRYPTED FILE-----";
     bytes internal constant AGE_FOOTER = "-----END AGE ENCRYPTED FILE-----";
+    bytes internal constant AGE_VERSION_LINE = "age-encryption.org/v1";
+    bytes internal constant AGE_RECIPIENT_PREFIX = "-> ";
     bytes internal constant AGE_RECIPIENT_LINE_PREFIX = "-> tlock ";
+    bytes internal constant AGE_MAC_PREFIX = "--- ";
 
     function decodeCommitPayload(bytes calldata data)
         external
@@ -42,10 +49,10 @@ library TlockVoteLib {
         uint64 period
     ) external pure {
         _validateCiphertext(ciphertext);
-        (uint64 embeddedTargetRound, bytes32 embeddedDrandChainHash) = _extractTlockMetadata(ciphertext);
-        if (embeddedTargetRound != targetRound || embeddedDrandChainHash != drandChainHash) revert InvalidCiphertext();
         if (drandChainHash != expectedDrandChainHash) revert DrandChainHashMismatch();
         _validateTargetRound(targetRound, revealableAfter, epochDuration, genesisTime, period);
+        (uint64 embeddedTargetRound, bytes32 embeddedDrandChainHash) = _extractTlockMetadata(ciphertext);
+        if (embeddedTargetRound != targetRound || embeddedDrandChainHash != drandChainHash) revert InvalidCiphertext();
     }
 
     function targetRoundTimestamp(uint64 targetRound, uint64 genesisTime, uint64 period) external pure returns (uint256) {
@@ -86,6 +93,7 @@ library TlockVoteLib {
 
         if (trimmedLength < AGE_FOOTER.length) revert InvalidCiphertext();
         if (!_hasSuffix(ciphertext, trimmedLength, AGE_FOOTER)) revert InvalidCiphertext();
+        _validateArmoredPayloadLines(ciphertext, AGE_HEADER.length, trimmedLength - AGE_FOOTER.length);
     }
 
     function _validateTargetRound(
@@ -108,16 +116,34 @@ library TlockVoteLib {
         bytes memory decoded =
             _decodeBase64Payload(ciphertext, AGE_HEADER.length, trimmedLength - AGE_FOOTER.length);
 
-        uint256 stanzaStart = _findLinePrefix(decoded, AGE_RECIPIENT_LINE_PREFIX);
-        if (stanzaStart == type(uint256).max) revert InvalidCiphertext();
+        uint256 cursor = 0;
+        (uint256 lineStart, uint256 lineEnd, uint256 nextCursor) = _readLineBounds(decoded, cursor);
+        if (!_lineEquals(decoded, lineStart, lineEnd, AGE_VERSION_LINE)) revert InvalidCiphertext();
 
-        uint256 cursor = stanzaStart + AGE_RECIPIENT_LINE_PREFIX.length;
+        cursor = nextCursor;
+        (lineStart, lineEnd, nextCursor) = _readLineBounds(decoded, cursor);
+        if (!_lineStartsWith(decoded, lineStart, lineEnd, AGE_RECIPIENT_LINE_PREFIX)) revert InvalidCiphertext();
+
+        cursor = lineStart + AGE_RECIPIENT_LINE_PREFIX.length;
         (targetRound, cursor) = _readUint64(decoded, cursor);
-        if (cursor >= decoded.length || decoded[cursor] != 0x20) revert InvalidCiphertext();
+        if (cursor >= lineEnd || decoded[cursor] != 0x20) revert InvalidCiphertext();
         cursor++;
 
         (drandChainHash, cursor) = _readBytes32Hex(decoded, cursor);
-        if (cursor < decoded.length && decoded[cursor] != 0x0a && decoded[cursor] != 0x0d) revert InvalidCiphertext();
+        if (cursor != lineEnd) revert InvalidCiphertext();
+
+        cursor = nextCursor;
+        (uint256 stanzaBodyCharLength, uint256 macCursor) = _consumeStanzaBody(decoded, cursor);
+        uint256 decodedStanzaBodyLength = _unpaddedBase64DecodedLength(stanzaBodyCharLength);
+        if (decodedStanzaBodyLength < MIN_TLOCK_STANZA_BODY_LENGTH) revert InvalidCiphertext();
+
+        (lineStart, lineEnd, nextCursor) = _readLineBounds(decoded, macCursor);
+        if (!_lineStartsWith(decoded, lineStart, lineEnd, AGE_MAC_PREFIX)) revert InvalidCiphertext();
+
+        uint256 macStart = lineStart + AGE_MAC_PREFIX.length;
+        if (!_isValidUnpaddedBase64Slice(decoded, macStart, lineEnd)) revert InvalidCiphertext();
+        if (_unpaddedBase64DecodedLength(lineEnd - macStart) != AGE_MAC_DECODED_LENGTH) revert InvalidCiphertext();
+        if (decoded.length - nextCursor < MIN_ENCRYPTED_BODY_LENGTH) revert InvalidCiphertext();
     }
 
     function _roundAt(uint256 timestamp, uint64 genesisTime, uint64 period) private pure returns (uint64) {
@@ -177,6 +203,31 @@ library TlockVoteLib {
         }
     }
 
+    function _validateArmoredPayloadLines(bytes memory data, uint256 start, uint256 end) private pure {
+        uint256 cursor = start;
+        uint256 lastLineLength = 0;
+
+        while (cursor < end) {
+            uint256 lineEnd = cursor;
+            while (lineEnd < end && data[lineEnd] != 0x0a && data[lineEnd] != 0x0d) {
+                bytes1 ch = data[lineEnd];
+                if (!_isBase64Char(ch) && ch != "=") revert InvalidCiphertext();
+                lineEnd++;
+            }
+
+            lastLineLength = lineEnd - cursor;
+            if (lastLineLength > AGE_LINE_CHUNK_SIZE) revert InvalidCiphertext();
+            if (lineEnd == end) break;
+
+            cursor = lineEnd + 1;
+            if (data[lineEnd] == 0x0d && cursor < end && data[cursor] == 0x0a) {
+                cursor++;
+            }
+        }
+
+        if (lastLineLength >= AGE_LINE_CHUNK_SIZE) revert InvalidCiphertext();
+    }
+
     function _base64Value(bytes1 ch) private pure returns (uint8) {
         uint8 code = uint8(ch);
         if (code >= 65 && code <= 90) return code - 65;
@@ -191,24 +242,6 @@ library TlockVoteLib {
         uint8 code = uint8(ch);
         return (code >= 65 && code <= 90) || (code >= 97 && code <= 122) || (code >= 48 && code <= 57) || code == 43
             || code == 47;
-    }
-
-    function _findLinePrefix(bytes memory data, bytes memory prefix) private pure returns (uint256) {
-        if (prefix.length == 0 || data.length < prefix.length) return type(uint256).max;
-
-        for (uint256 i = 0; i + prefix.length <= data.length; i++) {
-            if (i > 0 && data[i - 1] != 0x0a) continue;
-            bool matches = true;
-            for (uint256 j = 0; j < prefix.length; j++) {
-                if (data[i + j] != prefix[j]) {
-                    matches = false;
-                    break;
-                }
-            }
-            if (matches) return i;
-        }
-
-        return type(uint256).max;
     }
 
     function _readUint64(bytes memory data, uint256 start) private pure returns (uint64 value, uint256 cursor) {
@@ -273,5 +306,82 @@ library TlockVoteLib {
             if (data[start + i] != suffix[i]) return false;
         }
         return true;
+    }
+
+    function _readLineBounds(bytes memory data, uint256 cursor)
+        private
+        pure
+        returns (uint256 lineStart, uint256 lineEnd, uint256 nextCursor)
+    {
+        if (cursor >= data.length) revert InvalidCiphertext();
+
+        lineStart = cursor;
+        lineEnd = cursor;
+        while (lineEnd < data.length && data[lineEnd] != 0x0a && data[lineEnd] != 0x0d) {
+            lineEnd++;
+        }
+        if (lineEnd >= data.length) revert InvalidCiphertext();
+
+        nextCursor = lineEnd + 1;
+        if (data[lineEnd] == 0x0d && nextCursor < data.length && data[nextCursor] == 0x0a) {
+            nextCursor++;
+        }
+    }
+
+    function _lineEquals(bytes memory data, uint256 start, uint256 end, bytes memory expected) private pure returns (bool) {
+        if (end - start != expected.length) return false;
+        for (uint256 i = 0; i < expected.length; i++) {
+            if (data[start + i] != expected[i]) return false;
+        }
+        return true;
+    }
+
+    function _lineStartsWith(bytes memory data, uint256 start, uint256 end, bytes memory prefix)
+        private
+        pure
+        returns (bool)
+    {
+        if (end - start < prefix.length) return false;
+        for (uint256 i = 0; i < prefix.length; i++) {
+            if (data[start + i] != prefix[i]) return false;
+        }
+        return true;
+    }
+
+    function _consumeStanzaBody(bytes memory data, uint256 cursor)
+        private
+        pure
+        returns (uint256 stanzaBodyCharLength, uint256 macCursor)
+    {
+        while (cursor < data.length) {
+            (uint256 lineStart, uint256 lineEnd, uint256 nextCursor) = _readLineBounds(data, cursor);
+            if (_lineStartsWith(data, lineStart, lineEnd, AGE_MAC_PREFIX)) {
+                return (stanzaBodyCharLength, cursor);
+            }
+            if (_lineStartsWith(data, lineStart, lineEnd, AGE_RECIPIENT_PREFIX)) revert InvalidCiphertext();
+            if (!_isValidUnpaddedBase64Slice(data, lineStart, lineEnd)) revert InvalidCiphertext();
+
+            stanzaBodyCharLength += lineEnd - lineStart;
+            cursor = nextCursor;
+        }
+
+        revert InvalidCiphertext();
+    }
+
+    function _isValidUnpaddedBase64Slice(bytes memory data, uint256 start, uint256 end) private pure returns (bool) {
+        uint256 length = end - start;
+        if (length == 0 || length > AGE_LINE_CHUNK_SIZE) return false;
+
+        for (uint256 i = start; i < end; i++) {
+            if (!_isBase64Char(data[i])) return false;
+        }
+
+        return true;
+    }
+
+    function _unpaddedBase64DecodedLength(uint256 charLength) private pure returns (uint256) {
+        uint256 remainder = charLength % 4;
+        if (remainder == 1) revert InvalidCiphertext();
+        return (charLength / 4) * 3 + (remainder == 0 ? 0 : remainder - 1);
     }
 }

@@ -21,23 +21,47 @@ const fakeClient = {
 
 const fakeNow = () => 1692803367 * 1000;
 
+function chunkBase64(input: string, chunkSize = 64): string {
+  const chunks: string[] = [];
+  for (let i = 0; i < input.length; i += chunkSize) {
+    chunks.push(input.slice(i, i + chunkSize));
+  }
+  return chunks.join("\n");
+}
+
+function toUnpaddedBase64(input: Buffer | string): string {
+  return Buffer.from(input).toString("base64").replace(/=+$/u, "");
+}
+
 function makeFakeArmoredTlockCiphertext(params: {
   targetRound: bigint;
   drandChainHash: `0x${string}`;
   plaintextMarker: string;
 }): `0x${string}` {
-  const agePayload = [
-    "age-encryption.org/v1",
-    `-> tlock ${params.targetRound.toString()} ${params.drandChainHash.slice(2)}`,
-    "abc",
-    "--- mac",
-    params.plaintextMarker,
-  ].join("\n");
+  const encryptedBody = Buffer.concat([
+    Buffer.from(params.plaintextMarker, "utf8"),
+    Buffer.alloc(Math.max(0, 65 - Buffer.byteLength(params.plaintextMarker, "utf8")), 0x58),
+  ]);
+  const recipientBody = chunkBase64(toUnpaddedBase64(Buffer.alloc(128, 0x42)));
+  const mac = toUnpaddedBase64(Buffer.alloc(32, 0x24));
+  const agePayload = Buffer.concat([
+    Buffer.from(
+      [
+        "age-encryption.org/v1",
+        `-> tlock ${params.targetRound.toString()} ${params.drandChainHash.slice(2)}`,
+        recipientBody,
+        `--- ${mac}`,
+        "",
+      ].join("\n"),
+      "utf8",
+    ),
+    encryptedBody,
+  ]);
 
   return `0x${Buffer.from(
     [
       "-----BEGIN AGE ENCRYPTED FILE-----",
-      Buffer.from(agePayload, "binary").toString("base64"),
+      chunkBase64(agePayload.toString("base64")),
       "-----END AGE ENCRYPTED FILE-----",
       "",
     ].join("\n"),
@@ -57,6 +81,51 @@ test("parseTlockCiphertextMetadata extracts round and chain hash from the armore
     targetRound: 123n,
     drandChainHash,
   });
+});
+
+test("parseTlockCiphertextMetadata rejects shallow pseudo-tlock envelopes", () => {
+  const ciphertext = `0x${Buffer.from(
+    [
+      "-----BEGIN AGE ENCRYPTED FILE-----",
+      Buffer.from(
+        [
+          "age-encryption.org/v1",
+          `-> tlock 123 ${"ab".repeat(32)}`,
+          "payload 1:" + "11".repeat(32),
+          "--- bWFj",
+        ].join("\n"),
+        "binary",
+      ).toString("base64"),
+      "-----END AGE ENCRYPTED FILE-----",
+      "",
+    ].join("\n"),
+    "utf-8",
+  ).toString("hex")}` as `0x${string}`;
+
+  assert.equal(parseTlockCiphertextMetadata(ciphertext), null);
+});
+
+test("parseTlockCiphertextMetadata rejects unchunked AGE armor lines", () => {
+  const drandChainHash = ("0x" + "ab".repeat(32)) as `0x${string}`;
+  const ciphertext = makeFakeArmoredTlockCiphertext({
+    targetRound: 123n,
+    drandChainHash,
+    plaintextMarker: "1:" + "11".repeat(32),
+  });
+  const armored = Buffer.from(ciphertext.slice(2), "hex").toString("utf8");
+  const lines = armored.trimEnd().split("\n");
+  const decodedPayload = Buffer.from(lines.slice(1, -1).join(""), "base64");
+  const unchunked = `0x${Buffer.from(
+    [
+      "-----BEGIN AGE ENCRYPTED FILE-----",
+      decodedPayload.toString("base64"),
+      "-----END AGE ENCRYPTED FILE-----",
+      "",
+    ].join("\n"),
+    "utf8",
+  ).toString("hex")}` as `0x${string}`;
+
+  assert.equal(parseTlockCiphertextMetadata(unchunked), null);
 });
 
 test("buildCommitHash remains backward-compatible for legacy four-field callers", () => {
@@ -157,14 +226,11 @@ test("createTlockVoteCommit returns the tlock metadata used in the commit hash",
       encryptFn: async (targetRound, payload) => {
         const marker = payload[0] === 1 ? "1" : "0";
         const plaintextMarker = `${marker}:${Buffer.from(payload.slice(1)).toString("hex")}`;
-        const agePayload = [
-          "age-encryption.org/v1",
-          `-> tlock ${targetRound} ${"52db9ba70e0cc0f6eaf7803dd07447a1f5477735fd3f661792ba94600c84e971"}`,
-          "abc",
-          "--- mac",
+        return Buffer.from(makeFakeArmoredTlockCiphertext({
+          targetRound: BigInt(targetRound),
+          drandChainHash: "0x52db9ba70e0cc0f6eaf7803dd07447a1f5477735fd3f661792ba94600c84e971",
           plaintextMarker,
-        ].join("\n");
-        return agePayload;
+        }).slice(2), "hex").toString("utf8");
       },
     },
   );

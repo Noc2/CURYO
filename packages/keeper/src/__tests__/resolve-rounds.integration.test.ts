@@ -80,18 +80,38 @@ function encodeTestCiphertext(params: {
   targetRound: bigint;
   drandChainHash: `0x${string}`;
 }): `0x${string}` {
-  const agePayload = [
-    "age-encryption.org/v1",
-    `-> tlock ${params.targetRound.toString()} ${params.drandChainHash.slice(2)}`,
-    "abc",
-    "--- mac",
-    `${params.isUp ? "1" : "0"}:${params.salt.slice(2)}`,
-  ].join("\n");
+  const chunkBase64 = (input: string, chunkSize = 64): string => {
+    const chunks: string[] = [];
+    for (let i = 0; i < input.length; i += chunkSize) {
+      chunks.push(input.slice(i, i + chunkSize));
+    }
+    return chunks.join("\n");
+  };
+  const toUnpaddedBase64 = (input: Buffer | string): string => Buffer.from(input).toString("base64").replace(/=+$/u, "");
+  const encryptedBody = Buffer.concat([
+    Buffer.from(`${params.isUp ? "1" : "0"}:${params.salt.slice(2)}`, "utf8"),
+    Buffer.alloc(Math.max(0, 65 - Buffer.byteLength(`${params.isUp ? "1" : "0"}:${params.salt.slice(2)}`, "utf8")), 0x58),
+  ]);
+  const recipientBody = chunkBase64(toUnpaddedBase64(Buffer.alloc(128, 0x42)));
+  const mac = toUnpaddedBase64(Buffer.alloc(32, 0x24));
+  const agePayload = Buffer.concat([
+    Buffer.from(
+      [
+        "age-encryption.org/v1",
+        `-> tlock ${params.targetRound.toString()} ${params.drandChainHash.slice(2)}`,
+        recipientBody,
+        `--- ${mac}`,
+        "",
+      ].join("\n"),
+      "utf8",
+    ),
+    encryptedBody,
+  ]);
 
   return stringToHex(
     [
       "-----BEGIN AGE ENCRYPTED FILE-----",
-      Buffer.from(agePayload, "binary").toString("base64"),
+      chunkBase64(agePayload.toString("base64")),
       "-----END AGE ENCRYPTED FILE-----",
       "",
     ].join("\n"),

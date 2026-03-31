@@ -6,8 +6,10 @@ import { Vm, VmSafe } from "forge-std/Vm.sol";
 import { Base64 } from "@openzeppelin/contracts/utils/Base64.sol";
 import { Strings } from "@openzeppelin/contracts/utils/Strings.sol";
 import { ERC1967Proxy } from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
+import { CuryoReputation } from "../../contracts/CuryoReputation.sol";
 import { ContentRegistry } from "../../contracts/ContentRegistry.sol";
 import { ProtocolConfig } from "../../contracts/ProtocolConfig.sol";
+import { RoundVotingEngine } from "../../contracts/RoundVotingEngine.sol";
 
 function deployInitializedProtocolConfig(address admin) returns (ProtocolConfig protocolConfig) {
     return deployInitializedProtocolConfig(admin, admin);
@@ -63,6 +65,36 @@ abstract contract ContentSubmissionTestBase {
 /// @dev Base contract with shared helpers for commit-reveal tests.
 ///      Inherit from this instead of `Test` to get `_testCiphertext`, `_commitHash`, `_commitKey`.
 abstract contract VotingTestBase is Test, ContentSubmissionTestBase {
+    struct TestCommitArtifacts {
+        bytes ciphertext;
+        uint64 targetRound;
+        bytes32 drandChainHash;
+        bytes32 commitHash;
+        bytes32 commitKey;
+    }
+
+    struct DirectTestCommitRequest {
+        RoundVotingEngine engine;
+        CuryoReputation crepToken;
+        address voter;
+        uint256 contentId;
+        bool isUp;
+        uint256 stake;
+        address frontend;
+        bytes32 salt;
+    }
+
+    struct TransferAndCallTestCommitRequest {
+        RoundVotingEngine engine;
+        CuryoReputation crepToken;
+        address voter;
+        uint256 contentId;
+        bool isUp;
+        uint256 stake;
+        address frontend;
+        bytes32 salt;
+    }
+
     bytes32 internal constant DEFAULT_DRAND_CHAIN_HASH =
         0x52db9ba70e0cc0f6eaf7803dd07447a1f5477735fd3f661792ba94600c84e971;
     uint64 internal constant DEFAULT_DRAND_GENESIS_TIME = 1;
@@ -73,8 +105,9 @@ abstract contract VotingTestBase is Test, ContentSubmissionTestBase {
     bytes internal constant TEST_AGE_FOOTER = "-----END AGE ENCRYPTED FILE-----\n";
     bytes internal constant TEST_AGE_VERSION = "age-encryption.org/v1\n";
     bytes internal constant TEST_TLOCK_LINE_PREFIX = "-> tlock ";
+    bytes internal constant TEST_MAC_LINE_PREFIX = "--- ";
     bytes internal constant TEST_PAYLOAD_LINE_PREFIX = "payload ";
-    bytes internal constant TEST_MAC_LINE = "--- mac\n";
+    uint256 internal constant TEST_AGE_LINE_CHUNK_SIZE = 64;
     ProtocolConfig internal activeTlockProtocolConfig;
     bytes32 internal activeTlockDrandChainHash = DEFAULT_DRAND_CHAIN_HASH;
     uint64 internal activeTlockDrandGenesisTime = DEFAULT_DRAND_GENESIS_TIME;
@@ -118,12 +151,12 @@ abstract contract VotingTestBase is Test, ContentSubmissionTestBase {
         activeTlockDrandPeriod = period;
     }
 
-    /// @dev Build a compact fake AGE payload with a valid tlock stanza; it is test-only, not real tlock ciphertext.
+    /// @dev Build a structurally valid AGE/tlock envelope for tests. It is not a real decryptable tlock ciphertext.
     function _testCiphertext(bool isUp, bytes32 salt, uint256 contentId) internal view returns (bytes memory) {
         return _testCiphertext(isUp, salt, contentId, _tlockCommitTargetRound(), _tlockDrandChainHash());
     }
 
-    /// @dev Build a fake AGE payload that embeds caller-supplied tlock metadata for branch tests.
+    /// @dev Build a structurally valid test ciphertext that embeds caller-supplied tlock metadata for branch tests.
     function _testCiphertext(bool isUp, bytes32 salt, uint256 contentId, uint64 targetRound, bytes32 drandChainHash)
         internal
         pure
@@ -159,6 +192,14 @@ abstract contract VotingTestBase is Test, ContentSubmissionTestBase {
         bytes memory chainHashHex = _bytes32Hex(drandChainHash);
         bytes memory saltHex = _bytes32Hex(salt);
         bytes memory filler = _filledBytes(fillerLength, bytes1("A"));
+        bytes memory recipientBody = abi.encodePacked(
+            bytes32(uint256(targetRound)),
+            drandChainHash,
+            bytes16(keccak256(abi.encodePacked(salt, fillerLength, isUp ? bytes1("u") : bytes1("d"))))
+        );
+        bytes memory encodedRecipientBody = _chunkedUnpaddedBase64(recipientBody);
+        bytes memory encodedMac =
+            _unpaddedBase64(abi.encodePacked(keccak256(abi.encodePacked(targetRound, drandChainHash, salt))));
 
         return abi.encodePacked(
             TEST_AGE_VERSION,
@@ -167,14 +208,16 @@ abstract contract VotingTestBase is Test, ContentSubmissionTestBase {
             " ",
             chainHashHex,
             "\n",
+            encodedRecipientBody,
+            TEST_MAC_LINE_PREFIX,
+            encodedMac,
+            "\n",
             TEST_PAYLOAD_LINE_PREFIX,
             isUp ? bytes1("u") : bytes1("d"),
             ":",
             saltHex,
             "\n",
-            filler,
-            fillerLength > 0 ? bytes("\n") : bytes(""),
-            TEST_MAC_LINE
+            filler
         );
     }
 
@@ -191,6 +234,60 @@ abstract contract VotingTestBase is Test, ContentSubmissionTestBase {
         returns (bytes32)
     {
         return _commitHash(isUp, salt, contentId, _tlockCommitTargetRound(), _tlockDrandChainHash(), ciphertext);
+    }
+
+    function _buildTestCommitArtifacts(address voter, bool isUp, bytes32 salt, uint256 contentId)
+        internal
+        view
+        returns (TestCommitArtifacts memory artifacts)
+    {
+        artifacts.ciphertext = _testCiphertext(isUp, salt, contentId);
+        artifacts.targetRound = _tlockCommitTargetRound();
+        artifacts.drandChainHash = _tlockDrandChainHash();
+        artifacts.commitHash =
+            _commitHash(isUp, salt, contentId, artifacts.targetRound, artifacts.drandChainHash, artifacts.ciphertext);
+        artifacts.commitKey = _commitKey(voter, artifacts.commitHash);
+    }
+
+    function _commitTestVote(DirectTestCommitRequest memory request) internal returns (bytes32 commitKey) {
+        TestCommitArtifacts memory artifacts =
+            _buildTestCommitArtifacts(request.voter, request.isUp, request.salt, request.contentId);
+
+        vm.startPrank(request.voter);
+        request.crepToken.approve(address(request.engine), request.stake);
+        request.engine.commitVote(
+            request.contentId,
+            artifacts.targetRound,
+            artifacts.drandChainHash,
+            artifacts.commitHash,
+            artifacts.ciphertext,
+            request.stake,
+            request.frontend
+        );
+        vm.stopPrank();
+
+        return artifacts.commitKey;
+    }
+
+    function _transferAndCallTestVote(TransferAndCallTestCommitRequest memory request)
+        internal
+        returns (bytes32 commitKey)
+    {
+        TestCommitArtifacts memory artifacts =
+            _buildTestCommitArtifacts(request.voter, request.isUp, request.salt, request.contentId);
+        bytes memory payload = abi.encode(
+            request.contentId,
+            artifacts.commitHash,
+            artifacts.ciphertext,
+            request.frontend,
+            artifacts.targetRound,
+            artifacts.drandChainHash
+        );
+
+        vm.prank(request.voter);
+        request.crepToken.transferAndCall(address(request.engine), request.stake, payload);
+
+        return artifacts.commitKey;
     }
 
     function _tlockCommitTargetRound() internal view returns (uint64) {
@@ -330,7 +427,7 @@ abstract contract VotingTestBase is Test, ContentSubmissionTestBase {
         return nibble < 10 ? bytes1(nibble + uint8(bytes1("0"))) : bytes1(nibble + 87);
     }
 
-    function _bytes32Hex(bytes32 value) private pure returns (bytes memory encoded) {
+    function _bytes32Hex(bytes32 value) internal pure returns (bytes memory encoded) {
         encoded = new bytes(64);
         _writeHexBytes32(encoded, 0, value);
     }
@@ -347,11 +444,53 @@ abstract contract VotingTestBase is Test, ContentSubmissionTestBase {
         pure
         returns (bytes memory)
     {
-        string memory encodedPayload = Base64.encode(decodedPayload);
+        bytes memory encodedPayload = _chunkBase64(bytes(Base64.encode(decodedPayload)));
         if (newlineAfterHeader) {
             return abi.encodePacked(TEST_AGE_HEADER, encodedPayload, "\n", TEST_AGE_FOOTER);
         }
         return abi.encodePacked(TEST_AGE_HEADER_RAW, encodedPayload, "\n", TEST_AGE_FOOTER);
+    }
+
+    function _chunkedUnpaddedBase64(bytes memory raw) private pure returns (bytes memory) {
+        return abi.encodePacked(_chunkBase64(_unpaddedBase64(raw)), "\n");
+    }
+
+    function _unpaddedBase64(bytes memory raw) private pure returns (bytes memory encoded) {
+        encoded = bytes(Base64.encode(raw));
+        uint256 trimmedLength = encoded.length;
+        while (trimmedLength > 0 && encoded[trimmedLength - 1] == bytes1("=")) {
+            trimmedLength--;
+        }
+
+        bytes memory trimmed = new bytes(trimmedLength);
+        for (uint256 i = 0; i < trimmedLength; i++) {
+            trimmed[i] = encoded[i];
+        }
+        return trimmed;
+    }
+
+    function _chunkBase64(bytes memory encoded) private pure returns (bytes memory chunked) {
+        if (encoded.length == 0) return bytes("");
+
+        uint256 lineCount = (encoded.length + TEST_AGE_LINE_CHUNK_SIZE - 1) / TEST_AGE_LINE_CHUNK_SIZE;
+        chunked = new bytes(encoded.length + (lineCount - 1));
+
+        uint256 src = 0;
+        uint256 dst = 0;
+        while (src < encoded.length) {
+            uint256 lineLength = encoded.length - src;
+            if (lineLength > TEST_AGE_LINE_CHUNK_SIZE) {
+                lineLength = TEST_AGE_LINE_CHUNK_SIZE;
+            }
+
+            for (uint256 i = 0; i < lineLength; i++) {
+                chunked[dst++] = encoded[src++];
+            }
+
+            if (src < encoded.length) {
+                chunked[dst++] = bytes1("\n");
+            }
+        }
     }
 
     function _hasPrefix(bytes memory data, bytes memory prefix) private pure returns (bool) {
