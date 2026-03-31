@@ -1,13 +1,17 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getNotificationDeliverySecret } from "~~/lib/env/server";
+import { getNotificationDeliverySecret, getOptionalAppUrl } from "~~/lib/env/server";
 import { unsubscribeEmailNotificationSubscription } from "~~/lib/notifications/emailSettings";
-import { verifyNotificationEmailUnsubscribeToken } from "~~/lib/notifications/emailUrls";
+import {
+  buildNotificationSettingsRedirectUrl,
+  verifyNotificationEmailUnsubscribeToken,
+} from "~~/lib/notifications/emailUrls";
 
 function buildRedirect(request: NextRequest, status: "unsubscribed" | "invalid_unsubscribe") {
-  const url = new URL("/settings", request.nextUrl);
-  url.searchParams.set("tab", "notifications");
-  url.searchParams.set("email", status);
-  return url;
+  return buildNotificationSettingsRedirectUrl({
+    requestOrigin: request.nextUrl.origin,
+    fallbackAppUrl: getOptionalAppUrl(),
+    status,
+  });
 }
 
 export async function GET(request: NextRequest) {
@@ -15,14 +19,24 @@ export async function GET(request: NextRequest) {
   const secret = getNotificationDeliverySecret();
 
   if (!token || !secret) {
-    return NextResponse.redirect(buildRedirect(request, "invalid_unsubscribe"));
+    const redirectUrl = buildRedirect(request, "invalid_unsubscribe");
+    return redirectUrl
+      ? NextResponse.redirect(redirectUrl)
+      : NextResponse.json({ ok: false, status: "invalid_unsubscribe" }, { status: 400 });
   }
 
   const payload = verifyNotificationEmailUnsubscribeToken(token, secret);
   if (!payload) {
-    return NextResponse.redirect(buildRedirect(request, "invalid_unsubscribe"));
+    const redirectUrl = buildRedirect(request, "invalid_unsubscribe");
+    return redirectUrl
+      ? NextResponse.redirect(redirectUrl)
+      : NextResponse.json({ ok: false, status: "invalid_unsubscribe" }, { status: 400 });
   }
 
   const result = await unsubscribeEmailNotificationSubscription(payload.walletAddress as `0x${string}`, payload.email);
-  return NextResponse.redirect(buildRedirect(request, result.ok ? "unsubscribed" : "invalid_unsubscribe"));
+  const status = result.ok ? "unsubscribed" : "invalid_unsubscribe";
+  const redirectUrl = buildRedirect(request, status);
+  return redirectUrl
+    ? NextResponse.redirect(redirectUrl)
+    : NextResponse.json({ ok: result.ok, status }, { status: result.ok ? 200 : 400 });
 }

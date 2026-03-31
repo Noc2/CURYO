@@ -48,8 +48,6 @@ contract DeployCuryo is ScaffoldETHDeploy {
     // Self.xyz IdentityVerificationHub addresses
     address constant CELO_MAINNET_HUB = 0xe57F4773bd9c9d8b6Cd70431117d353298B9f5BF;
     address constant CELO_SEPOLIA_HUB = 0x16ECBA51e18a4a7e61fdC417f0d47AFEeDfbed74;
-    uint256 constant SELF_FACET_MINIMUM_AGE = 18;
-
     function run() external ScaffoldEthDeployerRunner {
         // Detect local dev: anvil/hardhat chain IDs
         bool isLocalDev = block.chainid == 31337;
@@ -139,6 +137,8 @@ contract DeployCuryo is ScaffoldETHDeploy {
         );
         ProtocolConfig protocolConfig = ProtocolConfig(address(protocolConfigProxy));
 
+        // RoundVotingEngine has had storage-breaking voting-system rewrites in this repo's history.
+        // Migrate those versions via fresh proxy deployment, not in-place proxy upgrade.
         TransparentUpgradeableProxy votingEngineProxy = new TransparentUpgradeableProxy(
             address(votingEngineImpl),
             governance,
@@ -266,8 +266,8 @@ contract DeployCuryo is ScaffoldETHDeploy {
                 // Set verification config
                 if (!isFaucetMock) {
                     SelfStructs.VerificationConfigV2 memory config = SelfStructs.VerificationConfigV2({
-                        olderThanEnabled: true,
-                        olderThan: SELF_FACET_MINIMUM_AGE,
+                        olderThanEnabled: false,
+                        olderThan: 0,
                         forbiddenCountriesEnabled: false,
                         forbiddenCountriesListPacked: [uint256(0), uint256(0), uint256(0), uint256(0)],
                         ofacEnabled: [true, true, true]
@@ -832,5 +832,29 @@ contract DeployCuryo is ScaffoldETHDeploy {
         spotifySubcats[6] = "Sports";
         spotifySubcats[7] = "Culture";
         registry.addApprovedCategory("Spotify Podcasts", "open.spotify.com", spotifySubcats);
+
+        // npm Packages (categoryId: 13)
+        string[] memory npmSubcats = new string[](8);
+        npmSubcats[0] = "Frameworks";
+        npmSubcats[1] = "UI Libraries";
+        npmSubcats[2] = "Developer Tools";
+        npmSubcats[3] = "Build Tooling";
+        npmSubcats[4] = "Testing";
+        npmSubcats[5] = "Backend/Data";
+        npmSubcats[6] = "AI/ML";
+        npmSubcats[7] = "Web3";
+        registry.addApprovedCategory("npm Packages", "npmjs.com", npmSubcats);
+
+        // PyPI Packages (categoryId: 14)
+        string[] memory pypiSubcats = new string[](8);
+        pypiSubcats[0] = "AI/ML";
+        pypiSubcats[1] = "Data Science";
+        pypiSubcats[2] = "Web Frameworks";
+        pypiSubcats[3] = "Automation";
+        pypiSubcats[4] = "Developer Tools";
+        pypiSubcats[5] = "Scientific Computing";
+        pypiSubcats[6] = "Security";
+        pypiSubcats[7] = "LLM/Agents";
+        registry.addApprovedCategory("PyPI Packages", "pypi.org", pypiSubcats);
     }
 }

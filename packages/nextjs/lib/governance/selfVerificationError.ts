@@ -14,10 +14,6 @@ export function resolveSelfVerificationErrorMessage(error: SelfVerificationError
     return "Use a passport or biometric ID card in Self.";
   }
 
-  if (code.includes("AgeTooYoung")) {
-    return "You must be at least 18 to claim from the faucet.";
-  }
-
   if (code.includes("NullifierAlreadyUsed")) {
     return "This document has already been used to verify. Each passport or biometric ID card can only be used once.";
   }

@@ -467,8 +467,6 @@ __metadata:
   dependencies:
     "@curyo/contracts": "workspace:*"
     "@curyo/node-utils": "workspace:*"
-    "@fontsource/bebas-neue": ^5.2.7
-    "@fontsource/space-grotesk": ^5.2.10
     "@heroicons/react": ~2.1.5
     "@next/bundle-analyzer": ^16.1.6
     "@playwright/test": ^1.58.2
@@ -2682,20 +2680,6 @@ __metadata:
   version: 0.2.11
   resolution: "@floating-ui/utils@npm:0.2.11"
   checksum: e98a2da3e36bd476460b0b85c3ba37c254516790d8c5eafa79ecf67bae7f2230c46d5fabce196aaf08bcd31586828e2df718cd2ccd1d333f18120f8adef66828
-  languageName: node
-  linkType: hard
-
-"@fontsource/bebas-neue@npm:^5.2.7":
-  version: 5.2.7
-  resolution: "@fontsource/bebas-neue@npm:5.2.7"
-  checksum: a5a55525aadddb0d8172e16ec510ea85bf63213e36f8ed08fe4533d363702f352f8c584a38c4114f09d7e5184fcfab27d1083b5e4c419c2c7677f1b3f28b8462
-  languageName: node
-  linkType: hard
-
-"@fontsource/space-grotesk@npm:^5.2.10":
-  version: 5.2.10
-  resolution: "@fontsource/space-grotesk@npm:5.2.10"
-  checksum: 3abdfc820fc256df2b48eca862a76a85e4dc2d9513e293ee373e7d62b72ad0e9d9321fdedfe9646bebea46c82c859e9a46b1133d24920a2807189483c01f6cc0
   languageName: node
   linkType: hard
 

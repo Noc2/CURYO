@@ -37,9 +37,6 @@ contract HumanFaucet is SelfVerificationRoot, Ownable, Pausable {
     /// @notice Referral bonus ratio: 50% of claim amount for both claimant bonus and referrer reward
     uint256 public constant REFERRAL_RATIO_BPS = 5000;
 
-    /// @notice Minimum age required for verification (defense-in-depth, hub also enforces)
-    uint256 public constant MINIMUM_AGE = 18;
-
     /// @notice Allowed Self.xyz attestation IDs
     bytes32 public constant PASSPORT_ATTESTATION_ID = bytes32(uint256(1));
     bytes32 public constant BIOMETRIC_ID_CARD_ATTESTATION_ID = bytes32(uint256(2));
@@ -126,9 +123,6 @@ contract HumanFaucet is SelfVerificationRoot, Ownable, Pausable {
 
     /// @notice Thrown when faucet has insufficient balance
     error InsufficientFaucetBalance();
-
-    /// @notice Thrown when the user does not meet the minimum age requirement (18+)
-    error AgeTooYoung();
 
     /// @notice Thrown when the proof was generated from an unsupported document type
     error UnsupportedDocumentType();
@@ -380,11 +374,6 @@ contract HumanFaucet is SelfVerificationRoot, Ownable, Pausable {
         // Defense-in-depth: allow only passports and biometric ID cards.
         if (!_isSupportedAttestation(output.attestationId)) {
             revert UnsupportedDocumentType();
-        }
-
-        // Defense-in-depth: verify age (hub already enforces this, but double-check for legal safety)
-        if (output.olderThan < MINIMUM_AGE) {
-            revert AgeTooYoung();
         }
 
         // Check nullifier hasn't been used (same passport can't claim twice)

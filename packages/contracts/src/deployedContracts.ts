@@ -715,19 +715,19 @@ const deployedContracts: GenericContractsDeclaration = {
       ],
       inheritedFunctions: {
         DEFAULT_ADMIN_ROLE:
-          "lib/openzeppelin-contracts-upgradeable/contracts/access/AccessControlUpgradeable.sol",
+          "lib/openzeppelin-contracts/contracts/access/AccessControl.sol",
         getRoleAdmin:
-          "lib/openzeppelin-contracts-upgradeable/contracts/access/AccessControlUpgradeable.sol",
+          "lib/openzeppelin-contracts/contracts/access/AccessControl.sol",
         grantRole:
-          "lib/openzeppelin-contracts-upgradeable/contracts/access/AccessControlUpgradeable.sol",
+          "lib/openzeppelin-contracts/contracts/access/AccessControl.sol",
         hasRole:
-          "lib/openzeppelin-contracts-upgradeable/contracts/access/AccessControlUpgradeable.sol",
+          "lib/openzeppelin-contracts/contracts/access/AccessControl.sol",
         renounceRole:
-          "lib/openzeppelin-contracts-upgradeable/contracts/access/AccessControlUpgradeable.sol",
+          "lib/openzeppelin-contracts/contracts/access/AccessControl.sol",
         revokeRole:
-          "lib/openzeppelin-contracts-upgradeable/contracts/access/AccessControlUpgradeable.sol",
+          "lib/openzeppelin-contracts/contracts/access/AccessControl.sol",
         supportsInterface:
-          "lib/openzeppelin-contracts-upgradeable/contracts/access/AccessControlUpgradeable.sol",
+          "lib/openzeppelin-contracts/contracts/access/AccessControl.sol",
       },
     },
     ProfileRegistry: {
@@ -12292,19 +12292,6 @@ const deployedContracts: GenericContractsDeclaration = {
         },
         {
           type: "function",
-          name: "MINIMUM_AGE",
-          inputs: [],
-          outputs: [
-            {
-              name: "",
-              type: "uint256",
-              internalType: "uint256",
-            },
-          ],
-          stateMutability: "view",
-        },
-        {
-          type: "function",
           name: "PASSPORT_ATTESTATION_ID",
           inputs: [],
           outputs: [
@@ -13247,11 +13234,6 @@ const deployedContracts: GenericContractsDeclaration = {
         {
           type: "error",
           name: "AddressAlreadyClaimed",
-          inputs: [],
-        },
-        {
-          type: "error",
-          name: "AgeTooYoung",
           inputs: [],
         },
         {
@@ -25527,19 +25509,19 @@ const deployedContracts: GenericContractsDeclaration = {
       ],
       inheritedFunctions: {
         DEFAULT_ADMIN_ROLE:
-          "lib/openzeppelin-contracts-upgradeable/contracts/access/AccessControlUpgradeable.sol",
+          "lib/openzeppelin-contracts/contracts/access/AccessControl.sol",
         getRoleAdmin:
-          "lib/openzeppelin-contracts-upgradeable/contracts/access/AccessControlUpgradeable.sol",
+          "lib/openzeppelin-contracts/contracts/access/AccessControl.sol",
         grantRole:
-          "lib/openzeppelin-contracts-upgradeable/contracts/access/AccessControlUpgradeable.sol",
+          "lib/openzeppelin-contracts/contracts/access/AccessControl.sol",
         hasRole:
-          "lib/openzeppelin-contracts-upgradeable/contracts/access/AccessControlUpgradeable.sol",
+          "lib/openzeppelin-contracts/contracts/access/AccessControl.sol",
         renounceRole:
-          "lib/openzeppelin-contracts-upgradeable/contracts/access/AccessControlUpgradeable.sol",
+          "lib/openzeppelin-contracts/contracts/access/AccessControl.sol",
         revokeRole:
-          "lib/openzeppelin-contracts-upgradeable/contracts/access/AccessControlUpgradeable.sol",
+          "lib/openzeppelin-contracts/contracts/access/AccessControl.sol",
         supportsInterface:
-          "lib/openzeppelin-contracts-upgradeable/contracts/access/AccessControlUpgradeable.sol",
+          "lib/openzeppelin-contracts/contracts/access/AccessControl.sol",
       },
       deployedOnBlock: 62547279,
     },
@@ -28818,19 +28800,6 @@ const deployedContracts: GenericContractsDeclaration = {
         },
         {
           type: "function",
-          name: "MINIMUM_AGE",
-          inputs: [],
-          outputs: [
-            {
-              name: "",
-              type: "uint256",
-              internalType: "uint256",
-            },
-          ],
-          stateMutability: "view",
-        },
-        {
-          type: "function",
           name: "PASSPORT_ATTESTATION_ID",
           inputs: [],
           outputs: [
@@ -29773,11 +29742,6 @@ const deployedContracts: GenericContractsDeclaration = {
         {
           type: "error",
           name: "AddressAlreadyClaimed",
-          inputs: [],
-        },
-        {
-          type: "error",
-          name: "AgeTooYoung",
           inputs: [],
         },
         {
@@ -42054,19 +42018,19 @@ const deployedContracts: GenericContractsDeclaration = {
       ],
       inheritedFunctions: {
         DEFAULT_ADMIN_ROLE:
-          "lib/openzeppelin-contracts-upgradeable/contracts/access/AccessControlUpgradeable.sol",
+          "lib/openzeppelin-contracts/contracts/access/AccessControl.sol",
         getRoleAdmin:
-          "lib/openzeppelin-contracts-upgradeable/contracts/access/AccessControlUpgradeable.sol",
+          "lib/openzeppelin-contracts/contracts/access/AccessControl.sol",
         grantRole:
-          "lib/openzeppelin-contracts-upgradeable/contracts/access/AccessControlUpgradeable.sol",
+          "lib/openzeppelin-contracts/contracts/access/AccessControl.sol",
         hasRole:
-          "lib/openzeppelin-contracts-upgradeable/contracts/access/AccessControlUpgradeable.sol",
+          "lib/openzeppelin-contracts/contracts/access/AccessControl.sol",
         renounceRole:
-          "lib/openzeppelin-contracts-upgradeable/contracts/access/AccessControlUpgradeable.sol",
+          "lib/openzeppelin-contracts/contracts/access/AccessControl.sol",
         revokeRole:
-          "lib/openzeppelin-contracts-upgradeable/contracts/access/AccessControlUpgradeable.sol",
+          "lib/openzeppelin-contracts/contracts/access/AccessControl.sol",
         supportsInterface:
-          "lib/openzeppelin-contracts-upgradeable/contracts/access/AccessControlUpgradeable.sol",
+          "lib/openzeppelin-contracts/contracts/access/AccessControl.sol",
       },
       deployedOnBlock: 20996149,
     },
@@ -45345,19 +45309,6 @@ const deployedContracts: GenericContractsDeclaration = {
         },
         {
           type: "function",
-          name: "MINIMUM_AGE",
-          inputs: [],
-          outputs: [
-            {
-              name: "",
-              type: "uint256",
-              internalType: "uint256",
-            },
-          ],
-          stateMutability: "view",
-        },
-        {
-          type: "function",
           name: "PASSPORT_ATTESTATION_ID",
           inputs: [],
           outputs: [
@@ -46300,11 +46251,6 @@ const deployedContracts: GenericContractsDeclaration = {
         {
           type: "error",
           name: "AddressAlreadyClaimed",
-          inputs: [],
-        },
-        {
-          type: "error",
-          name: "AgeTooYoung",
           inputs: [],
         },
         {

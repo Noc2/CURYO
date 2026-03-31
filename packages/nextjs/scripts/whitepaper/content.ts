@@ -734,7 +734,7 @@ export const SECTIONS: Section[] = [
         blocks: [
           {
             type: "paragraph",
-            text: "Primary distribution via Self.xyz passport or biometric ID card verification with age verification (18+). Each supported document can claim once, and each wallet can only claim once. Claim amounts decrease as more users join  -- rewarding early adopters who bootstrap the platform with content.",
+            text: "Primary distribution via Self.xyz passport or biometric ID card verification. Each supported document can claim once, and each wallet can only claim once. Claim amounts decrease as more users join  -- rewarding early adopters who bootstrap the platform with content.",
           },
           {
             type: "table",
