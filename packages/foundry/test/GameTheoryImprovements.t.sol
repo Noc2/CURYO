@@ -143,7 +143,7 @@ contract GameTheoryImprovementsTest is VotingTestBase {
     /// @dev Reveal a previously committed vote. Caller must warp past revealableAfter first.
     function _reveal(address voter, uint256 contentId, uint256 roundId, bool isUp) internal {
         bytes32 salt = bytes32(uint256(uint160(voter)) ^ uint256(contentId));
-        bytes32 ch = _commitHash(isUp, salt, contentId);
+        bytes32 ch = engine.voterCommitHash(contentId, roundId, voter);
         bytes32 ck = _commitKey(voter, ch);
 
         vm.prank(voter);
