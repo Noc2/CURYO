@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo } from "react";
+import { ROUND_STATE } from "@curyo/contracts/protocol";
 import { useScaffoldEventHistory } from "~~/hooks/scaffold-eth";
 import { usePageVisibility } from "~~/hooks/usePageVisibility";
 import { usePonderAvailability } from "~~/hooks/usePonderAvailability";
@@ -15,6 +16,85 @@ interface UseVoteHistoryQueryOptions {
 
 export function getVoteHistoryQueryKey(voter?: string) {
   return ["ponder-fallback", "voteHistory", voter] as const;
+}
+
+type VoteHistoryEvent = {
+  args?: {
+    contentId?: bigint;
+    roundId?: bigint;
+    stake?: bigint;
+  };
+  blockData?: {
+    timestamp?: bigint;
+  };
+};
+
+function buildRoundStateMap(params: {
+  settledEvents?: VoteHistoryEvent[];
+  cancelledEvents?: VoteHistoryEvent[];
+  tiedEvents?: VoteHistoryEvent[];
+  revealFailedEvents?: VoteHistoryEvent[];
+}) {
+  const roundStateByKey = new Map<string, number>();
+  const setState = (events: VoteHistoryEvent[] | undefined, roundState: number) => {
+    for (const event of events ?? []) {
+      const args = event.args;
+      if (args?.contentId === undefined || args?.roundId === undefined) {
+        continue;
+      }
+
+      roundStateByKey.set(`${args.contentId.toString()}-${args.roundId.toString()}`, roundState);
+    }
+  };
+
+  setState(params.settledEvents, ROUND_STATE.Settled);
+  setState(params.cancelledEvents, ROUND_STATE.Cancelled);
+  setState(params.tiedEvents, ROUND_STATE.Tied);
+  setState(params.revealFailedEvents, ROUND_STATE.RevealFailed);
+
+  return roundStateByKey;
+}
+
+export function buildRpcVoteHistory(params: {
+  commitEvents?: VoteHistoryEvent[];
+  settledEvents?: VoteHistoryEvent[];
+  cancelledEvents?: VoteHistoryEvent[];
+  tiedEvents?: VoteHistoryEvent[];
+  revealFailedEvents?: VoteHistoryEvent[];
+}) {
+  const roundStateByKey = buildRoundStateMap({
+    settledEvents: params.settledEvents,
+    cancelledEvents: params.cancelledEvents,
+    tiedEvents: params.tiedEvents,
+    revealFailedEvents: params.revealFailedEvents,
+  });
+
+  const votes: VoteHistoryItem[] = [];
+  for (const event of params.commitEvents ?? []) {
+    const args = event.args;
+    if (args?.contentId === undefined || args?.roundId === undefined || args.stake === undefined) {
+      continue;
+    }
+
+    const roundKey = `${args.contentId.toString()}-${args.roundId.toString()}`;
+    const roundState = roundStateByKey.get(roundKey) ?? null;
+    votes.push({
+      contentId: args.contentId,
+      roundId: args.roundId,
+      stake: args.stake,
+      roundState: roundState === null ? null : (roundState as VoteHistoryItem["roundState"]),
+      isSettled: roundState !== null,
+      claimType:
+        roundState === ROUND_STATE.Settled
+          ? "reward"
+          : roundState === ROUND_STATE.Cancelled || roundState === ROUND_STATE.Tied || roundState === ROUND_STATE.RevealFailed
+            ? "refund"
+            : null,
+      committedAt: event.blockData?.timestamp ? new Date(Number(event.blockData.timestamp) * 1000).toISOString() : null,
+    });
+  }
+
+  return votes;
 }
 
 export function useVoteHistoryQuery(voter?: string, options: UseVoteHistoryQueryOptions = {}) {
@@ -40,39 +120,36 @@ export function useVoteHistoryQuery(voter?: string, options: UseVoteHistoryQuery
     enabled: rpcFallbackActive && Boolean(voter) && isPageVisible,
   } as any);
 
+  const { data: cancelledEvents } = useScaffoldEventHistory({
+    contractName: "RoundVotingEngine",
+    eventName: "RoundCancelled",
+    watch: rpcFallbackActive && isPageVisible,
+    enabled: rpcFallbackActive && Boolean(voter) && isPageVisible,
+  } as any);
+
+  const { data: tiedEvents } = useScaffoldEventHistory({
+    contractName: "RoundVotingEngine",
+    eventName: "RoundTied",
+    watch: rpcFallbackActive && isPageVisible,
+    enabled: rpcFallbackActive && Boolean(voter) && isPageVisible,
+  } as any);
+
+  const { data: revealFailedEvents } = useScaffoldEventHistory({
+    contractName: "RoundVotingEngine",
+    eventName: "RoundRevealFailed",
+    watch: rpcFallbackActive && isPageVisible,
+    enabled: rpcFallbackActive && Boolean(voter) && isPageVisible,
+  } as any);
+
   const rpcVotes = useMemo(() => {
-    const settledRoundKeys = new Set(
-      settledEvents
-        ?.map(event => {
-          const args = event.args as { contentId?: bigint; roundId?: bigint } | undefined;
-          if (!args || args.contentId === undefined || args.roundId === undefined) return null;
-          return `${args.contentId.toString()}-${args.roundId.toString()}`;
-        })
-        .filter((key): key is string => Boolean(key)) ?? [],
-    );
-
-    return (
-      commitEvents
-        ?.map(event => {
-          const args = event.args as { contentId?: bigint; roundId?: bigint; stake?: bigint } | undefined;
-          if (!args || args.contentId === undefined || args.roundId === undefined || args.stake === undefined) {
-            return null;
-          }
-
-          const roundKey = `${args.contentId.toString()}-${args.roundId.toString()}`;
-          return {
-            contentId: args.contentId,
-            roundId: args.roundId,
-            stake: args.stake,
-            isSettled: settledRoundKeys.has(roundKey),
-            committedAt: event.blockData?.timestamp
-              ? new Date(Number(event.blockData.timestamp) * 1000).toISOString()
-              : null,
-          } satisfies VoteHistoryItem;
-        })
-        .filter((item): item is VoteHistoryItem => item !== null) ?? []
-    );
-  }, [commitEvents, settledEvents]);
+    return buildRpcVoteHistory({
+      commitEvents,
+      settledEvents,
+      cancelledEvents,
+      tiedEvents,
+      revealFailedEvents,
+    });
+  }, [cancelledEvents, commitEvents, revealFailedEvents, settledEvents, tiedEvents]);
   const rpcTotalVotes = rpcVotes.length;
   const rpcSettledTotal = useMemo(() => rpcVotes.filter(vote => vote.isSettled).length, [rpcVotes]);
   const rpcVisibleVotes = useMemo(() => (limit === undefined ? rpcVotes : rpcVotes.slice(0, limit)), [limit, rpcVotes]);
@@ -91,10 +168,11 @@ export function useVoteHistoryQuery(voter?: string, options: UseVoteHistoryQuery
 
       if (limit !== undefined) {
         const response = await ponderApi.getVotesWindow({ voter, limit: String(limit) });
+        const mappedVotes = response.items.map(mapVoteHistoryItem);
         return {
-          votes: response.items.map(mapVoteHistoryItem),
+          votes: mappedVotes,
           total: response.total,
-          settledTotal: response.settledTotal,
+          settledTotal: mappedVotes.filter(vote => vote.isSettled).length,
         };
       }
 
