@@ -4,6 +4,7 @@ import { useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import type { ContentItem } from "~~/hooks/contentFeed/shared";
 import type { ContentMetadataResult } from "~~/lib/contentMetadata/types";
+import { detectPlatform } from "~~/utils/platforms";
 
 const THUMBNAIL_BATCH_SIZE = 40;
 const VALIDATION_BATCH_SIZE = 10;
@@ -33,6 +34,23 @@ async function fetchThumbnailMetadataBatch(batch: string[]): Promise<Record<stri
   }
 }
 
+export function normalizeValidationBatchResults(
+  batch: string[],
+  results: Record<string, { isValid: boolean }> | undefined,
+): Record<string, boolean> {
+  const normalized = Object.fromEntries(
+    Object.entries(results ?? {}).map(([url, result]) => [url, result.isValid] satisfies [string, boolean]),
+  );
+
+  for (const url of batch) {
+    if (!(url in normalized) && detectPlatform(url).type === "generic") {
+      normalized[url] = false;
+    }
+  }
+
+  return normalized;
+}
+
 async function fetchValidationBatch(batch: string[]): Promise<Record<string, boolean | null>> {
   try {
     const response = await fetch("/api/url-validation", {
@@ -43,9 +61,7 @@ async function fetchValidationBatch(batch: string[]): Promise<Record<string, boo
     if (!response.ok) return {};
 
     const data = (await response.json()) as { results?: Record<string, { isValid: boolean }> };
-    return Object.fromEntries(
-      Object.entries(data.results ?? {}).map(([url, result]) => [url, result.isValid] satisfies [string, boolean]),
-    );
+    return normalizeValidationBatchResults(batch, data.results);
   } catch {
     // Treat failures as unknown validity and keep rendering.
     return {};
