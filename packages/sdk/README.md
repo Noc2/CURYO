@@ -20,4 +20,5 @@ Framework-specific hooks and UI components should live in a follow-up package ra
 ## Available Today
 
 - client config normalization via `createCuryoClient(...)`
+- typed read client for hosted/indexed HTTP routes
 - vote/frontend helpers in `@curyo/sdk/vote`

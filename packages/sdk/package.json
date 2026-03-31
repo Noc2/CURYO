@@ -25,6 +25,7 @@
     "./client": "./src/client.ts",
     "./config": "./src/config.ts",
     "./errors": "./src/errors.ts",
+    "./read": "./src/read.ts",
     "./types": "./src/types.ts",
     "./vote": "./src/vote.ts"
   },
