@@ -225,7 +225,7 @@ library TlockVoteLib {
             }
         }
 
-        if (lastLineLength >= AGE_LINE_CHUNK_SIZE) revert InvalidCiphertext();
+        if (lastLineLength > AGE_LINE_CHUNK_SIZE) revert InvalidCiphertext();
     }
 
     function _base64Value(bytes1 ch) private pure returns (uint8) {

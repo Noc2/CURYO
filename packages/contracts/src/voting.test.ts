@@ -128,6 +128,54 @@ test("parseTlockCiphertextMetadata rejects unchunked AGE armor lines", () => {
   assert.equal(parseTlockCiphertextMetadata(unchunked), null);
 });
 
+test("parseTlockCiphertextMetadata accepts a chunked armor payload whose final line is exactly 64 chars", () => {
+  const drandChainHash = ("0x" + "ab".repeat(32)) as `0x${string}`;
+  const salt = "11".repeat(32);
+  const targetRound = 123n;
+  const recipientBody = Buffer.alloc(80);
+  recipientBody.writeBigUInt64BE(targetRound, 24);
+  Buffer.from(drandChainHash.slice(2), "hex").copy(recipientBody, 32);
+  const mac = toUnpaddedBase64(Buffer.alloc(32, 0x24));
+  const payloadPrefix = [
+    "age-encryption.org/v1",
+    `-> tlock ${targetRound.toString()} ${drandChainHash.slice(2)}`,
+    chunkBase64(toUnpaddedBase64(recipientBody)),
+    `--- ${mac}`,
+  ].join("\n");
+
+  let filler = "";
+  let armoredPayload = "";
+  for (let fillerLength = 0; fillerLength < 64; fillerLength++) {
+    const candidatePayload = Buffer.from(`${payloadPrefix}\npayload u:${salt}\n${"X".repeat(fillerLength)}`, "utf8");
+    const candidateArmoredPayload = candidatePayload.toString("base64");
+    if ((candidateArmoredPayload.length % 64 || 64) === 64) {
+      filler = "X".repeat(fillerLength);
+      armoredPayload = candidateArmoredPayload;
+      break;
+    }
+  }
+
+  assert.notEqual(armoredPayload, "");
+  const finalLineLength = armoredPayload.length % 64 || 64;
+  assert.equal(finalLineLength, 64);
+
+  const ciphertext = `0x${Buffer.from(
+    [
+      "-----BEGIN AGE ENCRYPTED FILE-----",
+      chunkBase64(armoredPayload),
+      "-----END AGE ENCRYPTED FILE-----",
+      "",
+    ].join("\n"),
+    "utf8",
+  ).toString("hex")}` as `0x${string}`;
+
+  assert.deepEqual(parseTlockCiphertextMetadata(ciphertext), {
+    targetRound,
+    drandChainHash,
+  });
+  assert.notEqual(filler, "");
+});
+
 test("buildCommitHash remains backward-compatible for legacy four-field callers", () => {
   const salt = ("0x" + "22".repeat(32)) as `0x${string}`;
   const ciphertext = "0x1234" as `0x${string}`;

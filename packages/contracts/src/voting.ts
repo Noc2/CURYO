@@ -279,7 +279,7 @@ function decodeAgeArmor(armored: string): Buffer | null {
   }
 
   const lastLine = lines.at(-1) ?? "";
-  if (lastLine.length >= AGE_ARMOR_LINE_CHUNK_SIZE) {
+  if (lastLine.length > AGE_ARMOR_LINE_CHUNK_SIZE) {
     return null;
   }
 
