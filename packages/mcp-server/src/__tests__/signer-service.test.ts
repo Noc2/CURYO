@@ -2,6 +2,14 @@ import { describe, expect, it, vi } from "vitest";
 import type { WriteConfig } from "../config.js";
 import { CuryoWriteService } from "../signer-service.js";
 
+const { createTlockVoteCommitMock } = vi.hoisted(() => ({
+  createTlockVoteCommitMock: vi.fn(),
+}));
+
+vi.mock("@curyo/contracts/voting", () => ({
+  createTlockVoteCommit: createTlockVoteCommitMock,
+}));
+
 const baseWriteConfig: WriteConfig = {
   enabled: true,
   rpcUrl: "https://rpc.celo.example",
@@ -114,6 +122,56 @@ describe("CuryoWriteService", () => {
     expect(result).toMatchObject({
       action: "claim_reward",
       txHash: `0x${"aa".repeat(32)}`,
+    });
+  });
+
+  it("simulates vote commits with the updated commitVote argument order", async () => {
+    const { service, internals } = createService();
+    createTlockVoteCommitMock.mockReset();
+    createTlockVoteCommitMock.mockResolvedValue({
+      ciphertext: "0x1234",
+      commitHash: `0x${"aa".repeat(32)}`,
+      targetRound: 123n,
+      drandChainHash: `0x${"bb".repeat(32)}`,
+    });
+    internals.getContext = vi.fn(() => mockContext);
+    internals.readContract = vi
+      .fn()
+      .mockResolvedValueOnce(true)
+      .mockResolvedValueOnce(1_000n)
+      .mockResolvedValueOnce(1_000n)
+      .mockResolvedValueOnce(0n)
+      .mockResolvedValueOnce("0x9999999999999999999999999999999999999999")
+      .mockResolvedValueOnce([1_200n, 0n, 0n, 0n] as const);
+    internals.simulateContract = vi.fn(async () => {});
+
+    const result = await service.vote("writer", {
+      contentId: "1",
+      direction: "up",
+      stakeAmount: "100",
+      dryRun: true,
+    });
+
+    expect(internals.simulateContract).toHaveBeenCalledWith(
+      mockContext,
+      expect.objectContaining({
+        functionName: "commitVote",
+        args: [
+          1n,
+          123n,
+          `0x${"bb".repeat(32)}`,
+          `0x${"aa".repeat(32)}`,
+          "0x1234",
+          100n,
+          mockContext.identity.frontendAddress,
+        ],
+      }),
+    );
+    expect(result).toMatchObject({
+      action: "vote",
+      simulation: "commitVote",
+      targetRound: "123",
+      drandChainHash: `0x${"bb".repeat(32)}`,
     });
   });
 
