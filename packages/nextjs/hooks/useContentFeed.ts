@@ -104,7 +104,10 @@ export function useContentFeed(voterAddress?: string, options: UseContentFeedOpt
       }),
     [categoryId, contentIds, rpcFeed, searchQuery, submitter],
   );
-  const sortedRpcFeed = useMemo(() => sortRpcFeed(filteredRpcFeed, sortBy), [filteredRpcFeed, sortBy]);
+  const sortedRpcFeed = useMemo(
+    () => sortRpcFeed(filteredRpcFeed, sortBy, searchQuery),
+    [filteredRpcFeed, searchQuery, sortBy],
+  );
   const pagedRpcFeed = useMemo(() => {
     if (limit === undefined) return sortedRpcFeed.slice(offset);
     return sortedRpcFeed.slice(offset, offset + limit);

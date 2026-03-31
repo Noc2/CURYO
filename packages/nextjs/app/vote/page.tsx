@@ -9,6 +9,7 @@ import { CategoryFilter } from "~~/components/CategoryFilter";
 import { AppPageShell } from "~~/components/shared/AppPageShell";
 import { StreakCounter } from "~~/components/shared/StreakCounter";
 import { FeedScopeFilter } from "~~/components/vote/FeedScopeFilter";
+import { MIN_CONTENT_SEARCH_QUERY_LENGTH, isContentSearchQueryTooShort } from "~~/hooks/contentFeed/shared";
 import { useCategoryPopularity } from "~~/hooks/useCategoryPopularity";
 import { useCategoryRegistry } from "~~/hooks/useCategoryRegistry";
 import type { ContentItem } from "~~/hooks/useContentFeed";
@@ -58,10 +59,11 @@ const StakeSelector = dynamic(() => import("~~/components/swipe/StakeSelector").
 const ALL_FILTER = DISCOVER_ALL_FILTER;
 const BROKEN_FILTER = DISCOVER_BROKEN_FILTER;
 const slugify = (name: string) => name.toLowerCase().replace(/\s+/g, "-");
-type SortOption = "for_you" | "newest" | "oldest" | "highest_rated" | "lowest_rated";
+type SortOption = "for_you" | "relevance" | "newest" | "oldest" | "highest_rated" | "lowest_rated";
 type SearchSortOption = Exclude<SortOption, "for_you">;
 type ScopeOption = "all" | "watched" | "my_votes" | "my_submissions" | "settling_soon" | "followed_curators";
 const SEARCH_SORT_OPTIONS: { value: SearchSortOption; label: string }[] = [
+  { value: "relevance", label: "Best Match" },
   { value: "newest", label: "Newest" },
   { value: "oldest", label: "Oldest" },
   { value: "highest_rated", label: "Highest Rated" },
@@ -109,8 +111,10 @@ const HomeInner = () => {
   const [navigationDirection, setNavigationDirection] = useState<"previous" | "next">("next");
   const [interactionVersion, setInteractionVersion] = useState(0);
   const [optimisticVotedContentIds, setOptimisticVotedContentIds] = useState<Set<string>>(() => new Set());
-  const isSearchMode = searchQuery.trim().length > 0;
-  const effectiveSearchSortBy: SearchSortOption = sortBy === "for_you" ? "newest" : sortBy;
+  const trimmedSearchQuery = searchQuery.trim();
+  const isSearchMode = trimmedSearchQuery.length > 0;
+  const isShortSearchQuery = isContentSearchQueryTooShort(trimmedSearchQuery);
+  const effectiveSearchSortBy: SearchSortOption = sortBy === "for_you" ? "relevance" : sortBy;
   const { categories: websiteCategories, categoryNameToId, isLoading: categoriesLoading } = useCategoryRegistry();
   const { votes, isLoading: votesLoading } = useVoteHistoryQuery(address);
   const {
@@ -482,6 +486,7 @@ const HomeInner = () => {
         case "oldest":
           items.sort((a, b) => Number(a.id - b.id));
           break;
+        case "relevance":
         case "highest_rated":
         case "lowest_rated":
           return withRequestedItem(items);
@@ -926,8 +931,12 @@ const HomeInner = () => {
       return "This content could not be found.";
     }
 
-    if (searchQuery) {
-      return `No results for "${searchQuery}"`;
+    if (trimmedSearchQuery) {
+      if (isShortSearchQuery) {
+        return `Search terms must be at least ${MIN_CONTENT_SEARCH_QUERY_LENGTH} characters.`;
+      }
+
+      return `No results for "${trimmedSearchQuery}"`;
     }
 
     if (activeScope === "watched") {
@@ -987,7 +996,8 @@ const HomeInner = () => {
     requestedActiveId,
     requestedContentItem,
     requestedContentLoading,
-    searchQuery,
+    isShortSearchQuery,
+    trimmedSearchQuery,
   ]);
 
   const showRequestedContentLoading = requestedActiveId !== null && requestedContentLoading;
@@ -1026,20 +1036,28 @@ const HomeInner = () => {
       {isSearchMode ? (
         <div className="mb-5 flex shrink-0 flex-wrap items-center gap-2 xl:mb-3" data-disable-queue-wheel="true">
           <div className="rounded-full bg-base-200 px-3 py-2 text-sm text-base-content/70">
-            Results for <span className="font-medium text-base-content">&quot;{searchQuery.trim()}&quot;</span>
+            {isShortSearchQuery ? (
+              <span>Keep typing to search. Terms need at least {MIN_CONTENT_SEARCH_QUERY_LENGTH} characters.</span>
+            ) : (
+              <>
+                Results for <span className="font-medium text-base-content">&quot;{trimmedSearchQuery}&quot;</span>
+              </>
+            )}
           </div>
-          <select
-            value={effectiveSearchSortBy}
-            onChange={e => setSortBy(e.target.value as SearchSortOption)}
-            className="select select-sm bg-base-200 text-base font-medium border-none focus:outline-none w-auto"
-            aria-label="Sort search results"
-          >
-            {SEARCH_SORT_OPTIONS.map(opt => (
-              <option key={opt.value} value={opt.value}>
-                {opt.label}
-              </option>
-            ))}
-          </select>
+          {!isShortSearchQuery ? (
+            <select
+              value={effectiveSearchSortBy}
+              onChange={e => setSortBy(e.target.value as SearchSortOption)}
+              className="select select-sm bg-base-200 text-base font-medium border-none focus:outline-none w-auto"
+              aria-label="Sort search results"
+            >
+              {SEARCH_SORT_OPTIONS.map(opt => (
+                <option key={opt.value} value={opt.value}>
+                  {opt.label}
+                </option>
+              ))}
+            </select>
+          ) : null}
         </div>
       ) : null}
 
