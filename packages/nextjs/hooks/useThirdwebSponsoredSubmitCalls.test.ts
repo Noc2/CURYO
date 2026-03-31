@@ -1,5 +1,6 @@
 import {
   isThirdwebSponsorshipDeniedError,
+  shouldAttemptSelfFundedThirdwebFallback,
   shouldExpectSponsoredSubmitCalls,
   shouldPreferSponsoredSubmitCalls,
 } from "./useThirdwebSponsoredSubmitCalls";
@@ -60,4 +61,30 @@ test("detects thirdweb sponsorship denials", () => {
 
 test("ignores unrelated thirdweb submit failures", () => {
   assert.equal(isThirdwebSponsorshipDeniedError(new Error("User rejected the request.")), false);
+});
+
+test("skips self-funded fallback when a reserved free transaction was denied sponsorship", () => {
+  assert.equal(
+    shouldAttemptSelfFundedThirdwebFallback({
+      activeWalletId: "inApp",
+      chainId: 42220,
+      error: new Error('Error executing 7702 transaction: {"reason":"Transaction not sponsored."}'),
+      executionMode: "sponsored_7702",
+      hasReservedFreeTransaction: true,
+    }),
+    false,
+  );
+});
+
+test("allows self-funded fallback when sponsorship denial is unrelated to a reserved free transaction", () => {
+  assert.equal(
+    shouldAttemptSelfFundedThirdwebFallback({
+      activeWalletId: "inApp",
+      chainId: 42220,
+      error: new Error('Error executing 7702 transaction: {"reason":"Transaction not sponsored."}'),
+      executionMode: "sponsored_7702",
+      hasReservedFreeTransaction: false,
+    }),
+    true,
+  );
 });

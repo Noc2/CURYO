@@ -1,6 +1,7 @@
 import deployedContracts from "@curyo/contracts/deployedContracts";
 import assert from "node:assert/strict";
 import { after, before, beforeEach, test } from "node:test";
+import { type Abi, encodeFunctionData } from "viem";
 
 const env = process.env as Record<string, string | undefined>;
 const originalAppEnv = env.APP_ENV;
@@ -20,41 +21,81 @@ type DbTestMemoryModule = typeof import("../db/testMemory");
 type FreeTransactionsModule = typeof import("./freeTransactions");
 type OperationModule = typeof import("./freeTransactionOperation");
 
+type ContractRecord = {
+  address: `0x${string}`;
+  abi: Abi;
+};
+
+type EncodedCall = {
+  data: `0x${string}`;
+  to: `0x${string}`;
+  value?: `0x${string}`;
+};
+
 const CHAIN_ID = 31337;
 const SUCCESS_HASH = `0x${"1".repeat(64)}` as const;
 const WALLET = "0x1234567890abcdef1234567890abcdef12345678" as const;
-const contractsForChain = (deployedContracts as Record<number, Record<string, { address: `0x${string}` }>>)[CHAIN_ID];
-const TARGET_ADDRESS = (contractsForChain.CuryoReputation ?? contractsForChain.ProtocolConfig).address;
+const contractsForChain = (deployedContracts as Record<number, Record<string, ContractRecord>>)[CHAIN_ID];
+const crepContract = contractsForChain.CuryoReputation;
+const contentRegistryContract = contractsForChain.ContentRegistry;
+const categoryRegistryContract = contractsForChain.CategoryRegistry;
+const frontendRegistryContract = contractsForChain.FrontendRegistry;
+const rewardDistributorContract = contractsForChain.RoundRewardDistributor;
+const votingEngineContract = contractsForChain.RoundVotingEngine;
 
 let dbModule: DbModule;
 let dbTestMemory: DbTestMemoryModule;
 let freeTransactions: FreeTransactionsModule;
 let operationModule: OperationModule;
 
-function buildRequest(callData: `0x${string}`) {
+function encodeCall(
+  contract: ContractRecord,
+  functionName: string,
+  args: readonly unknown[] = [],
+  value?: `0x${string}`,
+): EncodedCall {
+  return {
+    data: encodeFunctionData({
+      abi: contract.abi,
+      functionName: functionName as never,
+      args: args as never,
+    }),
+    to: contract.address,
+    ...(value ? { value } : {}),
+  };
+}
+
+function buildRequest(calls: readonly EncodedCall[]) {
   return {
     chainId: CHAIN_ID,
     userOp: {
       sender: WALLET,
       data: {
-        targets: [TARGET_ADDRESS],
-        callDatas: [callData],
-        values: ["0x0"],
+        targets: calls.map(call => call.to),
+        callDatas: calls.map(call => call.data),
+        values: calls.map(call => call.value ?? "0x0"),
       },
     },
   };
 }
 
-function buildOperationKey(callData: `0x${string}`) {
+function buildOperationKey(calls: readonly EncodedCall[]) {
   const operationKey = operationModule.buildFreeTransactionOperationKey({
     chainId: CHAIN_ID,
-    calls: [{ data: callData, to: TARGET_ADDRESS, value: "0x0" }],
+    calls: calls.map(call => ({
+      data: call.data,
+      to: call.to,
+      value: call.value ?? "0x0",
+    })),
     sender: WALLET,
   });
 
   assert.ok(operationKey, "operation key should be derived from the verifier payload");
   return operationKey;
 }
+
+const voteCall = (voteMarker: `0x${string}`) =>
+  encodeCall(crepContract, "transferAndCall", [votingEngineContract.address, 1n, voteMarker]);
 
 before(async () => {
   dbModule = await import("../db");
@@ -109,68 +150,57 @@ after(() => {
   }
 });
 
-test("pending reservations keep the same operation idempotent without charging quota twice", async () => {
-  const firstDecision = await freeTransactions.evaluateFreeTransactionAllowance(buildRequest("0x01") as never);
-  assert.equal(firstDecision.isAllowed, true);
-  if (!firstDecision.isAllowed) {
-    return;
-  }
+test("pending reservations are idempotent and reserve capacity without incrementing confirmed quota", async () => {
+  const firstCalls = [voteCall("0x01")];
+  const secondCalls = [voteCall("0x02")];
+  const thirdCalls = [voteCall("0x03")];
 
+  const firstDecision = await freeTransactions.evaluateFreeTransactionAllowance(buildRequest(firstCalls) as never);
+  assert.equal(firstDecision.isAllowed, true);
+  if (!firstDecision.isAllowed) return;
   assert.equal(firstDecision.summary.used, 1);
   assert.equal(firstDecision.summary.remaining, 1);
 
-  const repeatedDecision = await freeTransactions.evaluateFreeTransactionAllowance(buildRequest("0x01") as never);
-  assert.equal(repeatedDecision.isAllowed, true);
-  if (!repeatedDecision.isAllowed) {
-    return;
-  }
+  const quotaAfterFirst = await dbModule.dbClient.execute("SELECT free_tx_used FROM free_transaction_quotas");
+  assert.equal(Number(quotaAfterFirst.rows[0]?.free_tx_used), 0);
 
+  const repeatedDecision = await freeTransactions.evaluateFreeTransactionAllowance(buildRequest(firstCalls) as never);
+  assert.equal(repeatedDecision.isAllowed, true);
+  if (!repeatedDecision.isAllowed) return;
   assert.equal(repeatedDecision.summary.used, 1);
   assert.equal(repeatedDecision.summary.remaining, 1);
 
-  const reservationRows = await dbModule.dbClient.execute("SELECT status FROM free_transaction_reservations");
-  assert.equal(reservationRows.rows[0]?.status, "pending");
-
-  const secondDecision = await freeTransactions.evaluateFreeTransactionAllowance(buildRequest("0x02") as never);
+  const secondDecision = await freeTransactions.evaluateFreeTransactionAllowance(buildRequest(secondCalls) as never);
   assert.equal(secondDecision.isAllowed, true);
-  if (!secondDecision.isAllowed) {
-    return;
-  }
-
+  if (!secondDecision.isAllowed) return;
   assert.equal(secondDecision.summary.used, 2);
   assert.equal(secondDecision.summary.remaining, 0);
 
-  const deniedDecision = await freeTransactions.evaluateFreeTransactionAllowance(buildRequest("0x03") as never);
+  const deniedDecision = await freeTransactions.evaluateFreeTransactionAllowance(buildRequest(thirdCalls) as never);
   assert.equal(deniedDecision.isAllowed, false);
-  if (deniedDecision.isAllowed) {
-    return;
-  }
-
+  if (deniedDecision.isAllowed) return;
   assert.equal(deniedDecision.debugCode, "free_tx_exhausted");
   assert.equal(deniedDecision.summary?.used, 2);
 });
 
-test("confirm marks the reservation but does not charge quota twice", async () => {
-  const initialDecision = await freeTransactions.evaluateFreeTransactionAllowance(buildRequest("0x04") as never);
+test("confirm increments confirmed quota exactly once", async () => {
+  const calls = [voteCall("0x04")];
+  const initialDecision = await freeTransactions.evaluateFreeTransactionAllowance(buildRequest(calls) as never);
   assert.equal(initialDecision.isAllowed, true);
-  if (!initialDecision.isAllowed) {
-    return;
-  }
-
+  if (!initialDecision.isAllowed) return;
   assert.equal(initialDecision.summary.used, 1);
 
-  const operationKey = buildOperationKey("0x04");
   await freeTransactions.confirmFreeTransactionReservation({
     address: WALLET,
     chainId: CHAIN_ID,
-    operationKey,
+    operationKey: buildOperationKey(calls),
     transactionHashes: [SUCCESS_HASH],
   });
 
   await freeTransactions.confirmFreeTransactionReservation({
     address: WALLET,
     chainId: CHAIN_ID,
-    operationKey,
+    operationKey: buildOperationKey(calls),
     transactionHashes: [SUCCESS_HASH],
   });
 
@@ -180,22 +210,94 @@ test("confirm marks the reservation but does not charge quota twice", async () =
   const reservationRows = await dbModule.dbClient.execute("SELECT status FROM free_transaction_reservations");
   assert.equal(reservationRows.rows[0]?.status, "confirmed");
 
-  const repeatedDecision = await freeTransactions.evaluateFreeTransactionAllowance(buildRequest("0x04") as never);
+  const repeatedDecision = await freeTransactions.evaluateFreeTransactionAllowance(buildRequest(calls) as never);
   assert.equal(repeatedDecision.isAllowed, true);
-  if (!repeatedDecision.isAllowed) {
-    return;
-  }
-
+  if (!repeatedDecision.isAllowed) return;
   assert.equal(repeatedDecision.summary.used, 1);
   assert.equal(repeatedDecision.summary.remaining, 1);
 });
 
-test("confirm keeps the reservation pending when receipt verification fails", async () => {
-  const initialDecision = await freeTransactions.evaluateFreeTransactionAllowance(buildRequest("0x05") as never);
+test("expired pending reservations release held capacity for new operations", async () => {
+  const expiredCalls = [voteCall("0x05")];
+  const freshCalls = [voteCall("0x06")];
+
+  const initialDecision = await freeTransactions.evaluateFreeTransactionAllowance(buildRequest(expiredCalls) as never);
   assert.equal(initialDecision.isAllowed, true);
-  if (!initialDecision.isAllowed) {
-    return;
+
+  await dbModule.dbClient.execute({
+    sql: "UPDATE free_transaction_reservations SET expires_at = ?",
+    args: [new Date(Date.now() - 60_000)],
+  });
+
+  const freshDecision = await freeTransactions.evaluateFreeTransactionAllowance(buildRequest(freshCalls) as never);
+  assert.equal(freshDecision.isAllowed, true);
+  if (!freshDecision.isAllowed) return;
+  assert.equal(freshDecision.summary.used, 1);
+  assert.equal(freshDecision.summary.remaining, 1);
+
+  const quotaRows = await dbModule.dbClient.execute("SELECT free_tx_used FROM free_transaction_quotas");
+  assert.equal(Number(quotaRows.rows[0]?.free_tx_used), 0);
+});
+
+test("supported sponsored operation families are allowlisted", async () => {
+  const supportedCases = [
+    [voteCall("0x07")],
+    [
+      encodeCall(crepContract, "approve", [contentRegistryContract.address, 10n]),
+      encodeCall(contentRegistryContract, "reserveSubmission", [`0x${"1".repeat(64)}`]),
+    ],
+    [
+      encodeCall(crepContract, "approve", [categoryRegistryContract.address, 10n]),
+      encodeCall(categoryRegistryContract, "submitCategory", ["Security", "security.example", ["Smart Contracts"]]),
+    ],
+    [encodeCall(frontendRegistryContract, "register")],
+    [encodeCall(frontendRegistryContract, "claimFees")],
+    [encodeCall(rewardDistributorContract, "claimFrontendFee", [1n, 1n, WALLET])],
+  ] as const;
+
+  for (const calls of supportedCases) {
+    const decision = await freeTransactions.evaluateFreeTransactionAllowance(buildRequest(calls) as never);
+    assert.equal(decision.isAllowed, true);
+
+    await dbModule.dbClient.execute("DELETE FROM free_transaction_reservations");
+    await dbModule.dbClient.execute("DELETE FROM free_transaction_quotas");
   }
+});
+
+test("rejects token approvals to unsupported spenders", async () => {
+  const decision = await freeTransactions.evaluateFreeTransactionAllowance(
+    buildRequest([encodeCall(crepContract, "approve", [WALLET, 10n])]) as never,
+  );
+
+  assert.equal(decision.isAllowed, false);
+  if (decision.isAllowed) return;
+  assert.equal(decision.debugCode, "unsupported_operation");
+});
+
+test("rejects arbitrary token methods even on allowlisted contracts", async () => {
+  const decision = await freeTransactions.evaluateFreeTransactionAllowance(
+    buildRequest([encodeCall(crepContract, "transfer", [WALLET, 10n])]) as never,
+  );
+
+  assert.equal(decision.isAllowed, false);
+  if (decision.isAllowed) return;
+  assert.equal(decision.debugCode, "unsupported_operation");
+});
+
+test("rejects nonzero call values for sponsored operations", async () => {
+  const decision = await freeTransactions.evaluateFreeTransactionAllowance(
+    buildRequest([encodeCall(frontendRegistryContract, "register", [], "0x1")]) as never,
+  );
+
+  assert.equal(decision.isAllowed, false);
+  if (decision.isAllowed) return;
+  assert.equal(decision.debugCode, "unsupported_operation");
+});
+
+test("confirm leaves the reservation pending when receipt verification fails", async () => {
+  const calls = [voteCall("0x08")];
+  const initialDecision = await freeTransactions.evaluateFreeTransactionAllowance(buildRequest(calls) as never);
+  assert.equal(initialDecision.isAllowed, true);
 
   freeTransactions.__setFreeTransactionTestOverridesForTests({
     allTransactionHashesSucceeded: async () => false,
@@ -206,14 +308,14 @@ test("confirm keeps the reservation pending when receipt verification fails", as
     freeTransactions.confirmFreeTransactionReservation({
       address: WALLET,
       chainId: CHAIN_ID,
-      operationKey: buildOperationKey("0x05"),
+      operationKey: buildOperationKey(calls),
       transactionHashes: [SUCCESS_HASH],
     }),
     /could not be verified/i,
   );
 
   const quotaRows = await dbModule.dbClient.execute("SELECT free_tx_used FROM free_transaction_quotas");
-  assert.equal(Number(quotaRows.rows[0]?.free_tx_used), 1);
+  assert.equal(Number(quotaRows.rows[0]?.free_tx_used), 0);
 
   const reservationRows = await dbModule.dbClient.execute("SELECT status FROM free_transaction_reservations");
   assert.equal(reservationRows.rows[0]?.status, "pending");
