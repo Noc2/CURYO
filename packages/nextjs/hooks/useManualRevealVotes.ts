@@ -239,7 +239,7 @@ export function useManualRevealVotes(voter?: Address) {
 
         const hash = await walletClient.writeContract({
           address: engineInfo.address,
-          abi: engineInfo.abi,
+          abi: RoundVotingEngineAbi,
           functionName: "revealVoteByCommitKey",
           args: [vote.contentId, vote.roundId, vote.commitKey, decrypted.isUp, decrypted.salt],
           account: address,
