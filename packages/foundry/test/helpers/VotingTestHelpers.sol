@@ -83,6 +83,10 @@ abstract contract VotingTestBase is Test, ContentSubmissionTestBase {
         protocolConfig = deployInitializedProtocolConfig(admin, governance);
         activeTlockProtocolConfig = protocolConfig;
         activeTlockEpochDuration = DEFAULT_TLOCK_EPOCH_DURATION;
+        (VmSafe.CallerMode mode, address msgSender,) = HEVM.readCallers();
+        if (mode == VmSafe.CallerMode.None && msgSender != governance) {
+            vm.prank(governance);
+        }
         _setTlockDrandConfig(protocolConfig, DEFAULT_DRAND_CHAIN_HASH, DEFAULT_DRAND_GENESIS_TIME, DEFAULT_DRAND_PERIOD);
     }
 
