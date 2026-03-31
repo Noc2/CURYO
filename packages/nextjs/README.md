@@ -67,7 +67,7 @@ Notes:
 - No contract address env vars are needed for supported chains. The frontend reads deployment metadata from `@curyo/contracts` and fails fast if `NEXT_PUBLIC_TARGET_NETWORKS` includes a chain without it.
 - In production, the intended setup is one Railway Postgres service with separate logical databases for Ponder and Next.js.
 - For local development, `yarn dev:db` and `yarn dev:stack` manage a Docker Postgres container when `DATABASE_URL` points to localhost.
-- On Next.js 15, `NextRequest.ip` is not reliably populated. On non-Vercel production hosts you must configure `RATE_LIMIT_TRUSTED_IP_HEADERS` to the header(s) your hosting proxy overwrites. Vercel auto-trusts `x-forwarded-for` and `x-real-ip`. Protected API routes still fail closed when no trusted client IP can be derived.
+- On Next.js 15, `NextRequest.ip` is not reliably populated. On non-Vercel production hosts you must configure `RATE_LIMIT_TRUSTED_IP_HEADERS` to the header(s) your hosting proxy overwrites. Vercel auto-trusts `x-real-ip`, and localhost shortcuts are only enabled for development or explicit local production-style E2E builds. Protected API routes fail closed when no trusted client IP can be derived or when the rate-limit store is unavailable.
 - The free transaction quota is enforced by the thirdweb server verifier route at `/api/thirdweb/verify-transaction`. Configure the same secret in thirdweb’s dashboard and in `THIRDWEB_SERVER_VERIFIER_SECRET`.
 
 ## Project Structure

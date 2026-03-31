@@ -2,12 +2,13 @@
 pragma solidity ^0.8.24;
 
 import { Initializable } from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
-import { AccessControlUpgradeable } from "@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol";
+import { AccessControl } from "@openzeppelin/contracts/access/AccessControl.sol";
 import { RoundLib } from "./libraries/RoundLib.sol";
 
 /// @title ProtocolConfig
 /// @notice Governance-controlled configuration and address book for RoundVotingEngine.
-contract ProtocolConfig is Initializable, AccessControlUpgradeable {
+/// @dev Keeps the legacy AccessControl storage layout so existing proxies can be upgraded safely in place.
+contract ProtocolConfig is Initializable, AccessControl {
     bytes32 public constant CONFIG_ROLE = keccak256("CONFIG_ROLE");
     bytes32 public constant TREASURY_ROLE = keccak256("TREASURY_ROLE");
     bytes32 public constant TREASURY_ADMIN_ROLE = keccak256("TREASURY_ADMIN_ROLE");
@@ -50,7 +51,6 @@ contract ProtocolConfig is Initializable, AccessControlUpgradeable {
     }
 
     function _initialize(address admin, address governance, address treasuryAuthority) internal {
-        __AccessControl_init();
         if (admin == address(0)) revert InvalidAddress();
         if (governance == address(0)) revert InvalidAddress();
         if (treasuryAuthority == address(0)) revert InvalidAddress();

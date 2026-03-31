@@ -62,8 +62,21 @@ jobs:
             packages/foundry/out
           key: forge-${{ hashFiles('packages/foundry/foundry.toml', 'packages/foundry/**/*.sol') }}
       - name: Install Aderyn v0.6.8
+        env:
+          ADERYN_VERSION: 0.6.8
+          ADERYN_ARCHIVE: aderyn-x86_64-unknown-linux-gnu.tar.xz
+          ADERYN_SHA256: ffd6ca658962e211a3ac821c646f69c8e14bf1b1001cbfe091bcd4535a691e46
         run: |
-          curl --proto '=https' --tlsv1.2 -LsSf https://github.com/cyfrin/aderyn/releases/download/aderyn-v0.6.8/aderyn-installer.sh | bash
+          ARCHIVE_URL="https://github.com/cyfrin/aderyn/releases/download/aderyn-v${ADERYN_VERSION}/${ADERYN_ARCHIVE}"
+          ARCHIVE_PATH="$RUNNER_TEMP/${ADERYN_ARCHIVE}"
+          INSTALL_DIR="$RUNNER_TEMP/aderyn"
+
+          curl --proto '=https' --tlsv1.2 -LsSf "$ARCHIVE_URL" -o "$ARCHIVE_PATH"
+          echo "${ADERYN_SHA256}  ${ARCHIVE_PATH}" | sha256sum -c -
+
+          mkdir -p "$INSTALL_DIR" "$HOME/.cargo/bin"
+          tar -xJf "$ARCHIVE_PATH" --strip-components 1 -C "$INSTALL_DIR"
+          install -m 0755 "$INSTALL_DIR/aderyn" "$HOME/.cargo/bin/aderyn"
           echo "$HOME/.cargo/bin" >> $GITHUB_PATH
       - name: Verify Aderyn version
         run: aderyn --version

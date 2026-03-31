@@ -101,12 +101,6 @@ contract ContentRegistry is Initializable, AccessControlUpgradeable, PausableUpg
     /// @notice Participation pool for rewarding submitters
     IParticipationPool public participationPool;
 
-    /// @notice Snapshotted participation reward rate captured at the latest successful settlement.
-    mapping(uint256 => uint256) public submitterParticipationSnapshotRateBps;
-
-    /// @notice Snapshotted participation pool captured at the latest successful settlement.
-    mapping(uint256 => address) public submitterParticipationSnapshotPool;
-
     /// @notice Snapshotted submitter participation reward entitlement per content.
     mapping(uint256 => uint256) public submitterParticipationRewardOwed;
 
@@ -125,16 +119,24 @@ contract ContentRegistry is Initializable, AccessControlUpgradeable, PausableUpg
     /// @notice Canonical submitter identity snapshot (holder address if submitted through a delegate).
     mapping(uint256 => address) internal contentSubmitterIdentity;
 
-    /// @notice Hidden, time-bounded reservations for future content reveals.
-    mapping(bytes32 => PendingSubmission) public pendingSubmissions;
-
     /// @notice Meaningful-activity anchor used for dormancy checks.
     /// @dev Vote commits still update `lastActivityAt` for UI/analytics, but only submission, revival,
     ///      and milestone-0 settlement move the dormancy window forward.
     mapping(uint256 => uint256) internal dormancyAnchorAt;
 
+    /// @notice Hidden, time-bounded reservations for future content reveals.
+    /// @dev Declared after legacy mappings to preserve upgrade-safe storage layout.
+    mapping(bytes32 => PendingSubmission) public pendingSubmissions;
+
     /// @notice Timestamp after which a dormant content key may be publicly released for replacement.
     mapping(uint256 => uint256) public dormantKeyReleasableAt;
+
+    /// @notice Snapshotted participation reward rate captured at the latest successful settlement.
+    /// @dev Appended after the legacy reward and dormancy mappings to preserve proxy-safe storage layout.
+    mapping(uint256 => uint256) public submitterParticipationSnapshotRateBps;
+
+    /// @notice Snapshotted participation pool captured at the latest successful settlement.
+    mapping(uint256 => address) public submitterParticipationSnapshotPool;
 
     /// @dev Stateless helper used to resolve canonical submission keys without bloating the registry runtime.
     SubmissionCanonicalizer internal immutable SUBMISSION_CANONICALIZER;
@@ -317,11 +319,7 @@ contract ContentRegistry is Initializable, AccessControlUpgradeable, PausableUpg
         }
 
         SubmissionMetadata memory metadata = SubmissionMetadata({
-            url: url,
-            title: title,
-            description: description,
-            tags: tags,
-            categoryId: categoryId
+            url: url, title: title, description: description, tags: tags, categoryId: categoryId
         });
         _validateSubmissionMetadata(metadata);
 
@@ -400,8 +398,9 @@ contract ContentRegistry is Initializable, AccessControlUpgradeable, PausableUpg
         internal
         returns (uint256 resolvedCategoryId, bytes32 submissionKey, PendingSubmission memory pending)
     {
-        (resolvedCategoryId, submissionKey) =
-            SUBMISSION_CANONICALIZER.resolveCategoryAndSubmissionKey(categoryRegistry, metadata.url, metadata.categoryId);
+        (resolvedCategoryId, submissionKey) = SUBMISSION_CANONICALIZER.resolveCategoryAndSubmissionKey(
+            categoryRegistry, metadata.url, metadata.categoryId
+        );
         require(!submissionKeyUsed[submissionKey], "URL already submitted");
 
         bytes32 revealCommitment = _computeRevealCommitment(

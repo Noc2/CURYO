@@ -66,18 +66,26 @@ export function createMemoryDatabaseResources(): DatabaseResources {
   const pool = new adapter.Pool() as unknown as Pool;
   const client = createDatabaseClient(pool);
   const database = drizzlePgProxy(
-    async (query, params) => {
+    async (query, params, method) => {
       const result = await pool.query({
         text: query,
         values: params,
       });
 
       return {
-        rows: result.rows,
+        rows: method === "all" ? result.rows.map(row => (Array.isArray(row) ? row : Object.values(row))) : result.rows,
       };
     },
     { schema },
-  ) as unknown as DatabaseResources["database"];
+  ) as unknown as DatabaseResources["database"] & {
+    transaction: <T>(callback: (tx: DatabaseResources["database"]) => Promise<T>) => Promise<T>;
+  };
+
+  (
+    database as unknown as {
+      transaction: <T>(callback: (tx: DatabaseResources["database"]) => Promise<T>) => Promise<T>;
+    }
+  ).transaction = async callback => callback(database as unknown as DatabaseResources["database"]);
 
   return {
     client,

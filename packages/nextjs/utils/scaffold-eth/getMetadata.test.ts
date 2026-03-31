@@ -1,74 +1,138 @@
 import assert from "node:assert/strict";
+import { spawnSync } from "node:child_process";
 import test from "node:test";
 
-async function loadGetMetadataWithEnv(env: { PORT?: string; VERCEL_PROJECT_PRODUCTION_URL?: string }) {
-  const previousPort = process.env.PORT;
-  const previousProductionUrl = process.env.VERCEL_PROJECT_PRODUCTION_URL;
+const socialImageAlt =
+  "Curyo brand banner with the headline Human Reputation at Stake and the subline Stake-Weighted Ratings From Verified Humans";
+
+type MetadataSnapshot = {
+  description?: string | null;
+  manifest?: string | null;
+  metadataBase?: string | null;
+  openGraph?: {
+    description?: string | null;
+    images?: Array<{ alt?: string | null; url?: string | null }>;
+  } | null;
+  title?:
+    | string
+    | {
+        default?: string;
+        template?: string;
+      }
+    | null;
+  twitter?: {
+    images?: Array<{ alt?: string | null; url?: string | null }>;
+  } | null;
+};
+
+function loadMetadataWithEnv(
+  env: { PORT?: string; VERCEL_PROJECT_PRODUCTION_URL?: string },
+  input: { description: string; title: string },
+): MetadataSnapshot {
+  const childEnv = { ...process.env };
 
   if (env.PORT === undefined) {
-    delete process.env.PORT;
+    delete childEnv.PORT;
   } else {
-    process.env.PORT = env.PORT;
+    childEnv.PORT = env.PORT;
   }
 
   if (env.VERCEL_PROJECT_PRODUCTION_URL === undefined) {
-    delete process.env.VERCEL_PROJECT_PRODUCTION_URL;
+    delete childEnv.VERCEL_PROJECT_PRODUCTION_URL;
   } else {
-    process.env.VERCEL_PROJECT_PRODUCTION_URL = env.VERCEL_PROJECT_PRODUCTION_URL;
+    childEnv.VERCEL_PROJECT_PRODUCTION_URL = env.VERCEL_PROJECT_PRODUCTION_URL;
   }
 
-  try {
-    const moduleUrl = new URL(`./getMetadata.ts?test=${Math.random().toString(36).slice(2)}`, import.meta.url);
-    const module = (await import(moduleUrl.href)) as typeof import("./getMetadata");
-    return module.getMetadata;
-  } finally {
-    if (previousPort === undefined) {
-      delete process.env.PORT;
-    } else {
-      process.env.PORT = previousPort;
+  const script = `
+    const imported = await import(${JSON.stringify(new URL("./getMetadata.ts", import.meta.url).href)});
+    const getMetadata =
+      imported.getMetadata ??
+      imported.default?.getMetadata ??
+      imported["module.exports"]?.getMetadata;
+
+    if (typeof getMetadata !== "function") {
+      throw new TypeError("getMetadata export was not found");
     }
 
-    if (previousProductionUrl === undefined) {
-      delete process.env.VERCEL_PROJECT_PRODUCTION_URL;
-    } else {
-      process.env.VERCEL_PROJECT_PRODUCTION_URL = previousProductionUrl;
-    }
+    const metadata = getMetadata(${JSON.stringify(input)});
+    console.log(JSON.stringify({
+      metadataBase: metadata.metadataBase?.toString() ?? null,
+      manifest: metadata.manifest ?? null,
+      title: metadata.title ?? null,
+      description: metadata.description ?? null,
+      openGraph: metadata.openGraph
+        ? {
+            description: metadata.openGraph.description ?? null,
+            images: metadata.openGraph.images?.map(image => ({
+              url: typeof image === "string" ? image : image?.url?.toString() ?? null,
+              alt: typeof image === "string" ? null : image?.alt ?? null,
+            })),
+          }
+        : null,
+      twitter: metadata.twitter
+        ? {
+            images: metadata.twitter.images?.map(image =>
+              typeof image === "string"
+                ? { url: image, alt: null }
+                : { url: image?.url?.toString() ?? null, alt: image?.alt ?? null },
+            ),
+          }
+        : null,
+    }));
+  `;
+
+  const result = spawnSync(process.execPath, ["--import", "tsx", "--eval", script], {
+    cwd: process.cwd(),
+    encoding: "utf8",
+    env: childEnv,
+  });
+
+  if (result.status !== 0) {
+    throw new Error(result.stderr || result.stdout || "Failed to load metadata snapshot");
   }
+
+  return JSON.parse(result.stdout) as MetadataSnapshot;
 }
 
-test("getMetadata uses localhost URLs when no production hostname is configured", async () => {
-  const getMetadata = await loadGetMetadataWithEnv({
-    PORT: "4321",
-    VERCEL_PROJECT_PRODUCTION_URL: undefined,
-  });
+test("getMetadata uses localhost URLs and the updated brand copy when no production hostname is configured", () => {
+  const metadata = loadMetadataWithEnv(
+    {
+      PORT: "4321",
+      VERCEL_PROJECT_PRODUCTION_URL: undefined,
+    },
+    {
+      title: "Curyo — Human Reputation at Stake",
+      description: "Stake-Weighted Ratings From Verified Humans.",
+    },
+  );
 
-  const metadata = getMetadata({
-    title: "Curyo — Human Reputation at Stake",
-    description: "Stake-Weighted Ratings From Verified Humans",
-  });
-
-  assert.equal(metadata.metadataBase?.toString(), "http://localhost:4321/");
+  assert.equal(metadata.metadataBase, "http://localhost:4321/");
   assert.equal(metadata.manifest, "/manifest.json");
+  assert.deepEqual(metadata.title, {
+    default: "Curyo — Human Reputation at Stake",
+    template: "%s | Curyo",
+  });
+  assert.equal(metadata.description, "Stake-Weighted Ratings From Verified Humans.");
+  assert.equal(metadata.openGraph?.description, "Stake-Weighted Ratings From Verified Humans.");
   assert.equal(metadata.openGraph?.images?.[0]?.url, "http://localhost:4321/og-image.png");
   assert.equal(metadata.twitter?.images?.[0]?.url, "http://localhost:4321/twitter-image.png");
-  assert.equal(
-    metadata.openGraph?.images?.[0]?.alt,
-    "Curyo brand banner with the headline Human Reputation at Stake and the subline Stake-Weighted Ratings From Verified Humans",
-  );
+  assert.equal(metadata.openGraph?.images?.[0]?.alt, socialImageAlt);
+  assert.equal(metadata.twitter?.images?.[0]?.alt, socialImageAlt);
 });
 
-test("getMetadata prefers the production hostname for social metadata", async () => {
-  const getMetadata = await loadGetMetadataWithEnv({
-    PORT: "4321",
-    VERCEL_PROJECT_PRODUCTION_URL: "curyo.app",
-  });
+test("getMetadata prefers the production hostname for social metadata", () => {
+  const metadata = loadMetadataWithEnv(
+    {
+      PORT: "4321",
+      VERCEL_PROJECT_PRODUCTION_URL: "curyo.app",
+    },
+    {
+      title: "Curyo — Human Reputation at Stake",
+      description: "Stake-Weighted Ratings From Verified Humans",
+    },
+  );
 
-  const metadata = getMetadata({
-    title: "Curyo — Human Reputation at Stake",
-    description: "Stake-Weighted Ratings From Verified Humans",
-  });
-
-  assert.equal(metadata.metadataBase?.toString(), "https://curyo.app/");
+  assert.equal(metadata.metadataBase, "https://curyo.app/");
   assert.equal(metadata.openGraph?.images?.[0]?.url, "https://curyo.app/og-image.png");
   assert.equal(metadata.twitter?.images?.[0]?.url, "https://curyo.app/twitter-image.png");
   assert.deepEqual(metadata.title, {

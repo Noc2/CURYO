@@ -41,10 +41,13 @@ type ThirdwebVerifierRequest = {
   userOp?: ThirdwebVerifierUserOp;
 };
 
-type FreeTransactionReservationStatus = "pending" | "confirmed" | "released";
-
-type FreeTransactionDbRead = Pick<typeof db, "select">;
 type FreeTransactionDbWrite = Pick<typeof db, "insert" | "select" | "update">;
+type ResolveVoterIdTokenId = (address: `0x${string}`, chainId: number) => Promise<string | null>;
+type CheckTransactionHashesSucceeded = (params: {
+  chainId: number;
+  transactionHashes: Hash[];
+  walletAddress: `0x${string}`;
+}) => Promise<boolean>;
 
 export type FreeTransactionAllowanceSummary = {
   chainId: number;
@@ -85,6 +88,10 @@ const FREE_TRANSACTION_RESERVATION_TTL_MS = 30 * 60_000;
 const FREE_TRANSACTION_IDEMPOTENCY_WINDOW_MS = 2 * 60_000;
 
 let ensureFreeTransactionQuotaTablePromise: Promise<void> | null = null;
+let freeTransactionTestOverrides: {
+  resolveVoterIdTokenId?: ResolveVoterIdTokenId;
+  allTransactionHashesSucceeded?: CheckTransactionHashesSucceeded;
+} | null = null;
 
 function getContractsForChain(chainId: number) {
   return (deployedContracts as unknown as Partial<DeployedContractsMap>)[chainId];
@@ -217,12 +224,11 @@ function buildQuotaSummary(params: {
   chainId: number;
   environment: string;
   freeTxLimit: number;
-  pendingCount: number;
   freeTxUsed: number;
   voterIdTokenId: string;
   walletAddress: `0x${string}`;
 }) {
-  const used = params.freeTxUsed + params.pendingCount;
+  const used = params.freeTxUsed;
 
   return {
     chainId: params.chainId,
@@ -237,32 +243,70 @@ function buildQuotaSummary(params: {
   } satisfies FreeTransactionAllowanceSummary;
 }
 
-async function readActivePendingReservationCount(
-  database: FreeTransactionDbRead,
-  params: {
-    identityKey: string;
-    now: Date;
-    excludeOperationKey?: Hash;
-  },
+function normalizeQuotaRow(
+  row:
+    | {
+        chainId?: number | string | null;
+        chain_id?: number | string | null;
+        chainid?: number | string | null;
+        environment?: string | null;
+        freeTxLimit?: number | string | null;
+        free_tx_limit?: number | string | null;
+        freetxlimit?: number | string | null;
+        freeTxUsed?: number | string | null;
+        free_tx_used?: number | string | null;
+        freetxused?: number | string | null;
+        voterIdTokenId?: string | null;
+        voter_id_token_id?: string | null;
+        voteridtokenid?: string | null;
+      }
+    | null
+    | undefined,
 ) {
-  const conditions = [
-    eq(freeTransactionReservations.identityKey, params.identityKey),
-    eq(freeTransactionReservations.status, "pending" satisfies FreeTransactionReservationStatus),
-    sql`${freeTransactionReservations.expiresAt} > ${params.now}`,
-  ];
-
-  if (params.excludeOperationKey) {
-    conditions.push(sql`${freeTransactionReservations.operationKey} <> ${params.excludeOperationKey}`);
+  if (!row) {
+    return null;
   }
 
-  const [row] = await database
-    .select({
-      count: sql<number>`count(*)`,
-    })
-    .from(freeTransactionReservations)
-    .where(and(...conditions));
+  return {
+    chainId: Number(row.chainId ?? row.chain_id ?? row.chainid),
+    environment: row.environment ?? "",
+    freeTxLimit: Number(row.freeTxLimit ?? row.free_tx_limit ?? row.freetxlimit),
+    freeTxUsed: Number(row.freeTxUsed ?? row.free_tx_used ?? row.freetxused),
+    voterIdTokenId: row.voterIdTokenId ?? row.voter_id_token_id ?? row.voteridtokenid ?? "",
+  };
+}
 
-  return Number(row?.count ?? 0);
+function normalizeReservationRow(
+  row:
+    | {
+        chainId?: number | string | null;
+        chain_id?: number | string | null;
+        chainid?: number | string | null;
+        walletAddress?: string | null;
+        wallet_address?: string | null;
+        walletaddress?: string | null;
+        status?: string | null;
+        confirmedAt?: Date | string | null;
+        confirmed_at?: Date | string | null;
+        confirmedat?: Date | string | null;
+        expiresAt?: Date | string | null;
+        expires_at?: Date | string | null;
+        expiresat?: Date | string | null;
+      }
+    | null
+    | undefined,
+) {
+  if (!row) {
+    return null;
+  }
+
+  return {
+    chainId: Number(row.chainId ?? row.chain_id ?? row.chainid),
+    walletAddress: row.walletAddress ?? row.wallet_address ?? row.walletaddress ?? "",
+    status: row.status ?? "",
+    confirmedAt: row.confirmedAt ?? row.confirmed_at ?? row.confirmedat ?? null,
+    expiresAt: row.expiresAt ?? row.expires_at ?? row.expiresat ?? null,
+  };
 }
 
 async function readQuotaSummary(params: {
@@ -282,20 +326,28 @@ async function readQuotaSummary(params: {
     return null;
   }
 
-  const pendingCount = await readActivePendingReservationCount(db, {
-    identityKey,
-    now: new Date(),
-  });
+  const quotaRow = normalizeQuotaRow(row);
+  if (!quotaRow) {
+    return null;
+  }
 
   return buildQuotaSummary({
-    chainId: row.chainId,
-    environment: row.environment,
-    freeTxLimit: row.freeTxLimit,
-    freeTxUsed: row.freeTxUsed,
-    pendingCount,
-    voterIdTokenId: row.voterIdTokenId,
+    chainId: quotaRow.chainId,
+    environment: quotaRow.environment,
+    freeTxLimit: quotaRow.freeTxLimit,
+    freeTxUsed: quotaRow.freeTxUsed,
+    voterIdTokenId: quotaRow.voterIdTokenId,
     walletAddress: params.walletAddress,
   });
+}
+
+export function __setFreeTransactionTestOverridesForTests(
+  overrides: {
+    resolveVoterIdTokenId?: ResolveVoterIdTokenId;
+    allTransactionHashesSucceeded?: CheckTransactionHashesSucceeded;
+  } | null,
+) {
+  freeTransactionTestOverrides = overrides;
 }
 
 function buildUnverifiedSummary(params: { chainId: number; walletAddress: `0x${string}` | null }) {
@@ -394,11 +446,12 @@ async function allTransactionHashesSucceeded(params: {
     receipt => "from" in receipt && receipt.from !== params.walletAddress.toLowerCase(),
   );
   if (hasSenderMismatch) {
-    console.info("[thirdweb-free-tx] confirmed sponsored transaction with non-user sender", {
+    console.warn("[thirdweb-free-tx] rejected sponsored transaction with non-user sender", {
       chainId: params.chainId,
       transactionHashes: params.transactionHashes,
       walletAddress: params.walletAddress,
     });
+    return false;
   }
 
   return receipts.every(receipt => receipt.ok);
@@ -420,7 +473,10 @@ export async function getFreeTransactionAllowanceSummary(params: { address: stri
   }
 
   const walletAddress = normalizeAddress(params.address);
-  const voterIdTokenId = await resolveVoterIdTokenId(walletAddress, params.chainId);
+  const voterIdTokenId = await (freeTransactionTestOverrides?.resolveVoterIdTokenId ?? resolveVoterIdTokenId)(
+    walletAddress,
+    params.chainId,
+  );
 
   if (!voterIdTokenId) {
     return buildUnverifiedSummary({
@@ -495,7 +551,10 @@ export async function evaluateFreeTransactionAllowance(
   }
 
   const walletAddress = normalizeAddress(sender);
-  const voterIdTokenId = await resolveVoterIdTokenId(walletAddress, body.chainId);
+  const voterIdTokenId = await (freeTransactionTestOverrides?.resolveVoterIdTokenId ?? resolveVoterIdTokenId)(
+    walletAddress,
+    body.chainId,
+  );
 
   if (!voterIdTokenId) {
     return {
@@ -526,7 +585,8 @@ export async function evaluateFreeTransactionAllowance(
       .where(eq(freeTransactionQuotas.identityKey, identityKey))
       .limit(1);
 
-    if (!quotaRow) {
+    const normalizedQuotaRow = normalizeQuotaRow(quotaRow);
+    if (!normalizedQuotaRow) {
       throw new Error("Failed to read free transaction quota.");
     }
 
@@ -535,28 +595,26 @@ export async function evaluateFreeTransactionAllowance(
       .from(freeTransactionReservations)
       .where(eq(freeTransactionReservations.operationKey, operationKey))
       .limit(1);
-
-    const pendingCountExcludingCurrent = await readActivePendingReservationCount(tx, {
-      identityKey,
-      now,
-      excludeOperationKey: operationKey,
-    });
+    const normalizedReservation = normalizeReservationRow(existingReservation);
 
     const idempotentConfirmed =
-      existingReservation?.status === "confirmed" &&
-      existingReservation.confirmedAt &&
-      now.getTime() - getTimestampMs(existingReservation.confirmedAt) <= FREE_TRANSACTION_IDEMPOTENCY_WINDOW_MS;
+      normalizedReservation?.status === "confirmed" &&
+      normalizedReservation.confirmedAt &&
+      now.getTime() - getTimestampMs(normalizedReservation.confirmedAt) <= FREE_TRANSACTION_IDEMPOTENCY_WINDOW_MS;
 
-    if (existingReservation?.status === "pending" && getTimestampMs(existingReservation.expiresAt) > now.getTime()) {
+    if (
+      normalizedReservation?.status === "pending" &&
+      normalizedReservation.expiresAt &&
+      getTimestampMs(normalizedReservation.expiresAt) > now.getTime()
+    ) {
       return {
         isAllowed: true,
         summary: buildQuotaSummary({
-          chainId: quotaRow.chainId,
-          environment: quotaRow.environment,
-          freeTxLimit: quotaRow.freeTxLimit,
-          freeTxUsed: quotaRow.freeTxUsed,
-          pendingCount: pendingCountExcludingCurrent + 1,
-          voterIdTokenId: quotaRow.voterIdTokenId,
+          chainId: normalizedQuotaRow.chainId,
+          environment: normalizedQuotaRow.environment,
+          freeTxLimit: normalizedQuotaRow.freeTxLimit,
+          freeTxUsed: normalizedQuotaRow.freeTxUsed,
+          voterIdTokenId: normalizedQuotaRow.voterIdTokenId,
           walletAddress,
         }),
       };
@@ -566,29 +624,64 @@ export async function evaluateFreeTransactionAllowance(
       return {
         isAllowed: true,
         summary: buildQuotaSummary({
-          chainId: quotaRow.chainId,
-          environment: quotaRow.environment,
-          freeTxLimit: quotaRow.freeTxLimit,
-          freeTxUsed: quotaRow.freeTxUsed,
-          pendingCount: pendingCountExcludingCurrent,
-          voterIdTokenId: quotaRow.voterIdTokenId,
+          chainId: normalizedQuotaRow.chainId,
+          environment: normalizedQuotaRow.environment,
+          freeTxLimit: normalizedQuotaRow.freeTxLimit,
+          freeTxUsed: normalizedQuotaRow.freeTxUsed,
+          voterIdTokenId: normalizedQuotaRow.voterIdTokenId,
           walletAddress,
         }),
       };
     }
 
-    if (quotaRow.freeTxUsed + pendingCountExcludingCurrent >= quotaRow.freeTxLimit) {
+    // Consume quota at reservation time because confirm/release are client-driven
+    // follow-ups and cannot be trusted as the authoritative source of spend.
+    const updatedQuotaRows = await tx
+      .update(freeTransactionQuotas)
+      .set({
+        lastWalletAddress: walletAddress,
+        freeTxUsed: sql`${freeTransactionQuotas.freeTxUsed} + 1`,
+        exhaustedAt: sql`
+          CASE
+            WHEN ${freeTransactionQuotas.freeTxUsed} + 1 >= ${freeTransactionQuotas.freeTxLimit}
+            THEN ${now}
+            ELSE ${freeTransactionQuotas.exhaustedAt}
+          END
+        `,
+        updatedAt: now,
+      })
+      .where(
+        and(
+          eq(freeTransactionQuotas.identityKey, identityKey),
+          sql`${freeTransactionQuotas.freeTxUsed} < ${freeTransactionQuotas.freeTxLimit}`,
+        ),
+      )
+      .returning({
+        identityKey: freeTransactionQuotas.identityKey,
+      });
+
+    if (updatedQuotaRows.length === 0) {
+      const [latestQuotaRow] = await tx
+        .select()
+        .from(freeTransactionQuotas)
+        .where(eq(freeTransactionQuotas.identityKey, identityKey))
+        .limit(1);
+
+      const normalizedLatestQuotaRow = normalizeQuotaRow(latestQuotaRow);
+      if (!normalizedLatestQuotaRow) {
+        throw new Error("Failed to read free transaction quota.");
+      }
+
       return {
         isAllowed: false,
         debugCode: "free_tx_exhausted",
         reason: FREE_TX_EXHAUSTED_REASON,
         summary: buildQuotaSummary({
-          chainId: quotaRow.chainId,
-          environment: quotaRow.environment,
-          freeTxLimit: quotaRow.freeTxLimit,
-          freeTxUsed: quotaRow.freeTxUsed,
-          pendingCount: pendingCountExcludingCurrent,
-          voterIdTokenId: quotaRow.voterIdTokenId,
+          chainId: normalizedLatestQuotaRow.chainId,
+          environment: normalizedLatestQuotaRow.environment,
+          freeTxLimit: normalizedLatestQuotaRow.freeTxLimit,
+          freeTxUsed: normalizedLatestQuotaRow.freeTxUsed,
+          voterIdTokenId: normalizedLatestQuotaRow.voterIdTokenId,
           walletAddress,
         }),
       };
@@ -630,23 +723,14 @@ export async function evaluateFreeTransactionAllowance(
       });
     }
 
-    await tx
-      .update(freeTransactionQuotas)
-      .set({
-        lastWalletAddress: walletAddress,
-        updatedAt: now,
-      })
-      .where(eq(freeTransactionQuotas.identityKey, identityKey));
-
     return {
       isAllowed: true,
       summary: buildQuotaSummary({
-        chainId: quotaRow.chainId,
-        environment: quotaRow.environment,
-        freeTxLimit: quotaRow.freeTxLimit,
-        freeTxUsed: quotaRow.freeTxUsed,
-        pendingCount: pendingCountExcludingCurrent + 1,
-        voterIdTokenId: quotaRow.voterIdTokenId,
+        chainId: normalizedQuotaRow.chainId,
+        environment: normalizedQuotaRow.environment,
+        freeTxLimit: normalizedQuotaRow.freeTxLimit,
+        freeTxUsed: normalizedQuotaRow.freeTxUsed + 1,
+        voterIdTokenId: normalizedQuotaRow.voterIdTokenId,
         walletAddress,
       }),
     };
@@ -671,7 +755,9 @@ export async function confirmFreeTransactionReservation(params: {
   }
 
   const walletAddress = normalizeAddress(params.address);
-  const allSucceeded = await allTransactionHashesSucceeded({
+  const allSucceeded = await (
+    freeTransactionTestOverrides?.allTransactionHashesSucceeded ?? allTransactionHashesSucceeded
+  )({
     chainId: params.chainId,
     transactionHashes: normalizedTransactionHashes,
     walletAddress,
@@ -687,23 +773,24 @@ export async function confirmFreeTransactionReservation(params: {
       .from(freeTransactionReservations)
       .where(eq(freeTransactionReservations.operationKey, params.operationKey as Hash))
       .limit(1);
+    const normalizedReservation = normalizeReservationRow(reservation);
 
-    if (!reservation) {
+    if (!normalizedReservation) {
       return;
     }
 
     if (
-      reservation.chainId !== params.chainId ||
-      reservation.walletAddress.toLowerCase() !== walletAddress.toLowerCase()
+      normalizedReservation.chainId !== params.chainId ||
+      normalizedReservation.walletAddress.toLowerCase() !== walletAddress.toLowerCase()
     ) {
       throw new Error("Sponsored transaction reservation does not match the current wallet");
     }
 
-    if (reservation.status === "confirmed") {
+    if (normalizedReservation.status === "confirmed") {
       return;
     }
 
-    if (reservation.status !== "pending") {
+    if (normalizedReservation.status !== "pending") {
       return;
     }
 
@@ -731,21 +818,21 @@ export async function confirmFreeTransactionReservation(params: {
       return;
     }
 
+    const updatedIdentityKey =
+      updatedReservations[0]?.identityKey ??
+      (updatedReservations[0] as { identity_key?: string; identitykey?: string } | undefined)?.identity_key ??
+      (updatedReservations[0] as { identity_key?: string; identitykey?: string } | undefined)?.identitykey;
+    if (!updatedIdentityKey) {
+      return;
+    }
+
     await tx
       .update(freeTransactionQuotas)
       .set({
         lastWalletAddress: walletAddress,
-        freeTxUsed: sql`${freeTransactionQuotas.freeTxUsed} + 1`,
-        exhaustedAt: sql`
-          CASE
-            WHEN ${freeTransactionQuotas.freeTxUsed} + 1 >= ${freeTransactionQuotas.freeTxLimit}
-            THEN ${now}
-            ELSE ${freeTransactionQuotas.exhaustedAt}
-          END
-        `,
         updatedAt: now,
       })
-      .where(eq(freeTransactionQuotas.identityKey, updatedReservations[0].identityKey));
+      .where(eq(freeTransactionQuotas.identityKey, updatedIdentityKey));
   });
 }
 

@@ -78,6 +78,7 @@ The upgradeable control-plane contracts are deployed behind **transparent upgrad
 `RoundRewardDistributor`, `ProtocolConfig`, `FrontendRegistry`, and `ProfileRegistry`. Token, identity, faucet,
 participation, governance, and helper contracts are intentionally non-upgradeable. For upgradeable implementation
 contracts, storage layout must be preserved across upgrades — never reorder, remove, or change types of existing
-storage variables.
+storage variables. The `RoundVotingEngine` voting-system rewrites are not storage-compatible with legacy deployments;
+when migrating across those rewrites, deploy a fresh proxy instead of upgrading an existing proxy in place.
 
 Compiled ABIs and deployed addresses are generated into `packages/contracts/src/` and consumed via the `@curyo/contracts` workspace package.

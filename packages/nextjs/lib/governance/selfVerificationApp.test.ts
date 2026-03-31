@@ -1,5 +1,4 @@
 import {
-  SELF_MINIMUM_AGE,
   SELF_VERIFICATION_SCOPE,
   buildSelfVerificationApp,
   buildSelfVerificationAppConfig,
@@ -28,7 +27,7 @@ test("buildSelfVerificationAppConfig enables dev mode for Celo Sepolia", () => {
   assert.equal(config.userIdType, "hex");
   assert.equal(config.devMode, true);
   assert.equal(config.version, 2);
-  assert.equal(config.disclosures.minimumAge, SELF_MINIMUM_AGE);
+  assert.equal("minimumAge" in config.disclosures, false);
 });
 
 test("buildSelfVerificationAppConfig keeps production mode on Celo mainnet", () => {
@@ -41,7 +40,7 @@ test("buildSelfVerificationAppConfig keeps production mode on Celo mainnet", () 
   assert.ok(config);
   assert.equal(config.endpointType, "celo");
   assert.equal(config.devMode, false);
-  assert.equal(config.disclosures.minimumAge, 18);
+  assert.equal("minimumAge" in config.disclosures, false);
 });
 
 test("buildSelfVerificationApp creates a mobile universal link that Self can open", () => {
@@ -68,6 +67,7 @@ test("buildSelfVerificationApp creates a mobile universal link that Self can ope
   assert.equal(decodedSelfApp.chainID, 11142220);
   assert.equal(decodedSelfApp.userId, address.slice(2));
   assert.equal(decodedSelfApp.deeplinkCallback, "https://curyo.example/faucet");
+  assert.equal("minimumAge" in decodedSelfApp, false);
 });
 
 test("unsupported chains do not build a Self verification app config", () => {

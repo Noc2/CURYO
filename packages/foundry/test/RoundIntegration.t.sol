@@ -3,7 +3,7 @@ pragma solidity ^0.8.20;
 
 import { VotingTestBase } from "./helpers/VotingTestHelpers.sol";
 import { ERC1967Proxy } from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
-import { Vm } from "forge-std/Test.sol";
+import { Vm, stdStorage, StdStorage } from "forge-std/Test.sol";
 import { ContentRegistry } from "../contracts/ContentRegistry.sol";
 import { RoundVotingEngine } from "../contracts/RoundVotingEngine.sol";
 import { ProtocolConfig } from "../contracts/ProtocolConfig.sol";
@@ -50,6 +50,8 @@ contract RevertingParticipationPool {
 ///      cancelled/expired rounds, consensus settlement, config snapshots.
 ///      Uses test ciphertext (chainid 31337): ciphertext = abi.encodePacked(uint8(isUp?1:0), salt, contentId).
 contract RoundIntegrationTest is VotingTestBase {
+    using stdStorage for StdStorage;
+
     CuryoReputation public crepToken;
     ContentRegistry public registry;
     RoundVotingEngine public votingEngine;
@@ -1790,6 +1792,10 @@ contract RoundIntegrationTest is VotingTestBase {
         rewardDistributor.claimFrontendFee(contentId, roundId, frontendOp);
     }
 
+    function _setClaimTrackingActivatedAt(uint48 activatedAt) internal {
+        stdstore.target(address(rewardDistributor)).sig("claimTrackingActivatedAt()").checked_write(uint256(activatedAt));
+    }
+
     function _confiscateFrontendFee(uint256 contentId, uint256 roundId, address frontendOp) internal {
         vm.prank(owner);
         rewardDistributor.confiscateFrontendFee(contentId, roundId, frontendOp);
@@ -1837,6 +1843,35 @@ contract RoundIntegrationTest is VotingTestBase {
         assertEq(balAfter - balBefore, expectedReward, "Should receive 90% of stake as participation reward");
     }
 
+    function test_ClaimFrontendFee_LegacyRoundRequiresExplicitMigration() public {
+        (FrontendRegistry frontendReg, address frontendOp) = _setupFrontendRegistry();
+        (uint256 contentId, uint256 roundId) = _settleRoundWithFrontend(frontendOp);
+
+        _setClaimTrackingActivatedAt(0);
+
+        vm.prank(frontendOp);
+        vm.expectRevert(RoundRewardDistributor.LegacyClaimTrackingUnconfigured.selector);
+        rewardDistributor.claimFrontendFee(contentId, roundId, frontendOp);
+
+        RoundLib.Round memory round = RoundEngineReadHelpers.round(votingEngine, contentId, roundId);
+        vm.warp(uint256(round.settledAt) + 1);
+
+        vm.prank(owner);
+        rewardDistributor.activateClaimTracking(uint48(block.timestamp));
+
+        vm.prank(frontendOp);
+        vm.expectRevert(RoundRewardDistributor.LegacyRoundClaimsUnmigrated.selector);
+        rewardDistributor.claimFrontendFee(contentId, roundId, frontendOp);
+
+        uint256 feesBefore = frontendReg.getAccumulatedFees(frontendOp);
+        vm.prank(owner);
+        rewardDistributor.setLegacyRoundClaimsEnabled(contentId, roundId, true);
+
+        _claimFrontendFeeAsOperator(contentId, roundId, frontendOp);
+
+        assertGt(frontendReg.getAccumulatedFees(frontendOp) - feesBefore, 0, "reconciled legacy round should pay");
+    }
+
     function test_ClaimParticipationReward_UsesSettledRoundPoolAfterRotation() public {
         ParticipationPool pool1 = new ParticipationPool(address(crepToken), owner);
         ParticipationPool pool2 = new ParticipationPool(address(crepToken), owner);
@@ -1879,6 +1914,36 @@ contract RoundIntegrationTest is VotingTestBase {
 
         assertEq(crepToken.balanceOf(address(pool1)), pool1Before - expectedReward);
         assertEq(crepToken.balanceOf(address(pool2)), pool2Before);
+    }
+
+    function test_ClaimParticipationReward_LegacyRoundRequiresExplicitMigration() public {
+        (uint256 contentId, uint256 roundId) = _settleRoundWithParticipation();
+
+        _setClaimTrackingActivatedAt(0);
+
+        vm.prank(voter1);
+        vm.expectRevert(RoundRewardDistributor.LegacyClaimTrackingUnconfigured.selector);
+        rewardDistributor.claimParticipationReward(contentId, roundId);
+
+        RoundLib.Round memory round = RoundEngineReadHelpers.round(votingEngine, contentId, roundId);
+        vm.warp(uint256(round.settledAt) + 1);
+
+        vm.prank(owner);
+        rewardDistributor.activateClaimTracking(uint48(block.timestamp));
+
+        vm.prank(voter1);
+        vm.expectRevert(RoundRewardDistributor.LegacyRoundClaimsUnmigrated.selector);
+        rewardDistributor.claimParticipationReward(contentId, roundId);
+
+        uint256 balBefore = crepToken.balanceOf(voter1);
+        vm.prank(owner);
+        rewardDistributor.setLegacyRoundClaimsEnabled(contentId, roundId, true);
+
+        vm.prank(voter1);
+        rewardDistributor.claimParticipationReward(contentId, roundId);
+        uint256 balAfter = crepToken.balanceOf(voter1);
+
+        assertEq(balAfter - balBefore, STAKE * 9000 / 10000, "reconciled legacy round should pay");
     }
 
     function test_ClaimParticipationReward_ReservedPortionSurvivesPoolDeauthorization() public {

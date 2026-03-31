@@ -7,6 +7,8 @@ const originalDatabaseUrl = process.env.DATABASE_URL;
 const originalNodeEnv = process.env.NODE_ENV;
 const originalTrustedHeaders = process.env.RATE_LIMIT_TRUSTED_IP_HEADERS;
 const originalVercel = process.env.VERCEL;
+const originalCuryoE2EProductionBuild = process.env.CURYO_E2E_PRODUCTION_BUILD;
+const originalNextPublicCuryoE2EProductionBuild = process.env.NEXT_PUBLIC_CURYO_E2E_PRODUCTION_BUILD;
 
 env.DATABASE_URL = "memory:";
 
@@ -50,6 +52,8 @@ beforeEach(async () => {
   env.NODE_ENV = "production";
   delete env.RATE_LIMIT_TRUSTED_IP_HEADERS;
   delete env.VERCEL;
+  delete env.CURYO_E2E_PRODUCTION_BUILD;
+  delete env.NEXT_PUBLIC_CURYO_E2E_PRODUCTION_BUILD;
   rateLimit.__setRateLimitStoreForTests(null);
   await dbModule.dbClient.execute("DELETE FROM api_rate_limits");
   await dbModule.dbClient.execute("DELETE FROM api_rate_limit_maintenance");
@@ -81,6 +85,18 @@ after(() => {
   } else {
     env.VERCEL = originalVercel;
   }
+
+  if (originalCuryoE2EProductionBuild === undefined) {
+    delete env.CURYO_E2E_PRODUCTION_BUILD;
+  } else {
+    env.CURYO_E2E_PRODUCTION_BUILD = originalCuryoE2EProductionBuild;
+  }
+
+  if (originalNextPublicCuryoE2EProductionBuild === undefined) {
+    delete env.NEXT_PUBLIC_CURYO_E2E_PRODUCTION_BUILD;
+  } else {
+    env.NEXT_PUBLIC_CURYO_E2E_PRODUCTION_BUILD = originalNextPublicCuryoE2EProductionBuild;
+  }
 });
 
 test("resolveRateLimitSubject trusts configured proxy IP headers in production", () => {
@@ -96,12 +112,13 @@ test("resolveRateLimitSubject trusts configured proxy IP headers in production",
   assert.equal(subject, "ip:203.0.113.5");
 });
 
-test("resolveRateLimitSubject trusts Vercel forwarded IP headers by default", () => {
+test("resolveRateLimitSubject trusts Vercel x-real-ip by default", () => {
   env.VERCEL = "1";
 
   const subject = rateLimit.resolveRateLimitSubject(
     makeRequest("/api/watchlist/content", "POST", {
       "x-forwarded-for": "198.51.100.44, 10.0.0.1",
+      "x-real-ip": "198.51.100.44",
       "user-agent": "test-agent",
     }),
   );
@@ -146,7 +163,22 @@ test("checkRateLimit fails closed in production when no trusted client IP can be
   assert.deepEqual(await response?.json(), { error: "Rate limiting is misconfigured" });
 });
 
-test("checkRateLimit accepts localhost production requests without proxy headers", async () => {
+test("checkRateLimit fails closed for localhost production requests without explicit local-e2e mode", async () => {
+  const response = await rateLimit.checkRateLimit(
+    makeRequest("/api/watchlist/content", "GET", {
+      "user-agent": "test-agent",
+      "accept-language": "en-US",
+    }),
+    { limit: 10, windowMs: 60_000 },
+  );
+
+  assert.equal(response?.status, 503);
+  assert.deepEqual(await response?.json(), { error: "Rate limiting is misconfigured" });
+});
+
+test("checkRateLimit accepts localhost production requests in explicit local-e2e mode", async () => {
+  env.CURYO_E2E_PRODUCTION_BUILD = "true";
+
   const response = await rateLimit.checkRateLimit(
     makeRequest("/api/watchlist/content", "GET", {
       "user-agent": "test-agent",
@@ -158,12 +190,13 @@ test("checkRateLimit accepts localhost production requests without proxy headers
   assert.equal(response, null);
 });
 
-test("checkRateLimit accepts Vercel forwarded IP headers without extra env config", async () => {
+test("checkRateLimit accepts Vercel x-real-ip headers without extra env config", async () => {
   env.VERCEL = "1";
 
   const response = await rateLimit.checkRateLimit(
     makeRequest("/api/watchlist/content", "GET", {
       "x-forwarded-for": "203.0.113.99, 10.0.0.1",
+      "x-real-ip": "203.0.113.99",
       "user-agent": "test-agent",
     }),
     { limit: 10, windowMs: 60_000 },
@@ -199,7 +232,7 @@ test("checkRateLimit scopes counters by HTTP method on the same path", async () 
   assert.equal(limited?.status, 429);
 });
 
-test("checkRateLimit fails open when the backing store is unavailable", async () => {
+test("checkRateLimit fails closed when the backing store is unavailable in production", async () => {
   env.RATE_LIMIT_TRUSTED_IP_HEADERS = "x-forwarded-for";
   rateLimit.__setRateLimitStoreForTests({
     execute: async () => {
@@ -214,5 +247,6 @@ test("checkRateLimit fails open when the backing store is unavailable", async ()
     { limit: 1, windowMs: 60_000 },
   );
 
-  assert.equal(response, null);
+  assert.equal(response?.status, 503);
+  assert.deepEqual(await response?.json(), { error: "Rate limiting is unavailable" });
 });
