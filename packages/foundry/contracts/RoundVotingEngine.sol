@@ -309,39 +309,120 @@ contract RoundVotingEngine is
         // Round must be Open and not expired
         if (!RoundLib.acceptsVotes(round, roundCfg.maxDuration)) revert RoundNotAccepting();
 
-        (bytes32 commitKey, uint256 epochEnd, uint8 epochIdx) = VotePreflightLib.prepareCommit(
+        bytes32 commitKey = VotePreflightLib.prepareCommit(
             voterCommitHash,
             hasTokenIdCommitted,
-            commits,
             lastVoteTimestamp,
             lastVoteTimestampByToken,
             currentVoterIdNft,
-            voter,
-            contentId,
-            roundId,
-            voterId,
-            useTokenIdentity,
-            VOTE_COOLDOWN,
-            MAX_STAKE,
-            stakeAmount,
-            commitHash,
-            ciphertext,
-            targetRound,
-            drandChainHash,
-            protocolConfig.drandChainHash(),
-            protocolConfig.drandGenesisTime(),
-            protocolConfig.drandPeriod(),
-            round,
-            roundCfg,
-            block.timestamp
+            VotePreflightLib.CommitPreflightParams({
+                voter: voter,
+                contentId: contentId,
+                roundId: roundId,
+                voterId: voterId,
+                useTokenIdentity: useTokenIdentity,
+                cooldownWindow: VOTE_COOLDOWN,
+                maxStake: MAX_STAKE,
+                stakeAmount: stakeAmount,
+                commitHash: commitHash,
+                roundVoteCount: round.voteCount,
+                maxVoters: roundCfg.maxVoters
+            })
         );
+        if (commits[contentId][roundId][commitKey].voter != address(0)) revert AlreadyCommitted();
+        (uint256 epochEnd, uint8 epochIdx) = _computeCommitEpoch(round, roundCfg);
+        _validateCommitTlockData(ciphertext, targetRound, drandChainHash, epochEnd, roundCfg.epochDuration);
 
         // Transfer cREP stake after all lightweight validation passes.
         if (!stakeAlreadyTransferred) {
             crepToken.safeTransferFrom(voter, address(this), stakeAmount);
         }
 
-        // Store commit with epoch index (determines reward weight)
+        _storeCommittedVote(
+            contentId,
+            roundId,
+            commitKey,
+            voter,
+            stakeAmount64,
+            ciphertext,
+            frontend,
+            epochEnd,
+            targetRound,
+            drandChainHash,
+            epochIdx,
+            commitHash,
+            voterId,
+            useTokenIdentity
+        );
+        _recordCommitAccounting(round, contentId, roundId, voter, voterId, useTokenIdentity, stakeAmount64, stakeAmount);
+
+        emit VoteCommitted(contentId, roundId, voter, commitHash, targetRound, drandChainHash, stakeAmount);
+    }
+
+    function _computeCommitEpoch(RoundLib.Round storage round, RoundLib.RoundConfig memory roundCfg)
+        internal
+        view
+        returns (uint256 epochEnd, uint8 epochIdx)
+    {
+        epochEnd = RoundLib.computeEpochEnd(round, roundCfg.epochDuration, block.timestamp);
+        epochIdx = RoundLib.computeEpochIndex(round, roundCfg.epochDuration, block.timestamp);
+    }
+
+    function _validateCommitTlockData(
+        bytes memory ciphertext,
+        uint64 targetRound,
+        bytes32 drandChainHash,
+        uint256 epochEnd,
+        uint256 epochDuration
+    ) internal view {
+        TlockVoteLib.validateCommitData(
+            ciphertext,
+            targetRound,
+            drandChainHash,
+            protocolConfig.drandChainHash(),
+            epochEnd,
+            epochDuration,
+            protocolConfig.drandGenesisTime(),
+            protocolConfig.drandPeriod()
+        );
+    }
+
+    function _storeCommittedVote(
+        uint256 contentId,
+        uint256 roundId,
+        bytes32 commitKey,
+        address voter,
+        uint64 stakeAmount64,
+        bytes memory ciphertext,
+        address frontend,
+        uint256 epochEnd,
+        uint64 targetRound,
+        bytes32 drandChainHash,
+        uint8 epochIdx,
+        bytes32 commitHash,
+        uint256 voterId,
+        bool useTokenIdentity
+    ) internal {
+        _writeCommitStruct(
+            contentId, roundId, commitKey, voter, stakeAmount64, ciphertext, frontend, epochEnd, targetRound, drandChainHash, epochIdx
+        );
+        _markFrontendEligibility(contentId, roundId, commitKey, frontend);
+        _recordCommitIndexes(contentId, roundId, commitKey, epochEnd, voter, commitHash, voterId, useTokenIdentity);
+    }
+
+    function _writeCommitStruct(
+        uint256 contentId,
+        uint256 roundId,
+        bytes32 commitKey,
+        address voter,
+        uint64 stakeAmount64,
+        bytes memory ciphertext,
+        address frontend,
+        uint256 epochEnd,
+        uint64 targetRound,
+        bytes32 drandChainHash,
+        uint8 epochIdx
+    ) internal {
         commits[contentId][roundId][commitKey] = RoundLib.Commit({
             voter: voter,
             stakeAmount: stakeAmount64,
@@ -354,40 +435,58 @@ contract RoundVotingEngine is
             isUp: false,
             epochIndex: epochIdx
         });
+    }
 
+    function _markFrontendEligibility(uint256 contentId, uint256 roundId, bytes32 commitKey, address frontend) internal {
         IFrontendRegistry currentFrontendRegistry = _getFrontendRegistry();
         if (VotePreflightLib.isFrontendEligible(currentFrontendRegistry, frontend)) {
             frontendEligibleAtCommit[contentId][roundId][commitKey] = true;
         }
+    }
 
-        // Track for iteration
+    function _recordCommitIndexes(
+        uint256 contentId,
+        uint256 roundId,
+        bytes32 commitKey,
+        uint256 epochEnd,
+        address voter,
+        bytes32 commitHash,
+        uint256 voterId,
+        bool useTokenIdentity
+    ) internal {
         roundCommitHashes[contentId][roundId].push(commitKey);
-
-        // Track unrevealed count per epoch (selective revelation prevention)
         epochUnrevealedCount[contentId][roundId][epochEnd]++;
         if (epochEnd > lastCommitRevealableAfter[contentId][roundId]) {
             lastCommitRevealableAfter[contentId][roundId] = epochEnd;
         }
+
         voterCommitHash[contentId][roundId][voter] = commitHash;
         if (!contentHasCommits[contentId]) {
             contentHasCommits[contentId] = true;
         }
-
-        // Mark identity as committed for this round
         if (useTokenIdentity) {
             hasTokenIdCommitted[contentId][roundId][voterId] = true;
         }
+    }
 
-        // Update round counters
+    function _recordCommitAccounting(
+        RoundLib.Round storage round,
+        uint256 contentId,
+        uint256 roundId,
+        address voter,
+        uint256 voterId,
+        bool useTokenIdentity,
+        uint64 stakeAmount64,
+        uint256 stakeAmount
+    ) internal {
         round.voteCount++;
         round.totalStake += stakeAmount64;
 
-        // Record stake against Voter ID
+        IVoterIdNFT currentVoterIdNft = _getVoterIdNft();
         if (useTokenIdentity) {
             currentVoterIdNft.recordStake(contentId, roundId, voterId, stakeAmount);
         }
 
-        // Record cooldown (per identity + per address)
         lastVoteTimestamp[contentId][voter] = block.timestamp;
         if (useTokenIdentity) {
             lastVoteTimestampByToken[contentId][voterId] = block.timestamp;
@@ -395,8 +494,6 @@ contract RoundVotingEngine is
 
         // Vote commits still refresh UI activity timestamps, but not the dormancy anchor.
         registry.updateActivity(contentId);
-
-        emit VoteCommitted(contentId, roundId, voter, commitHash, targetRound, drandChainHash, stakeAmount);
     }
 
     /// @dev Get or create the active round for a content item.
