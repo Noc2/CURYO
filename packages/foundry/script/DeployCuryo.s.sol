@@ -48,6 +48,11 @@ contract DeployCuryo is ScaffoldETHDeploy {
     // Self.xyz IdentityVerificationHub addresses
     address constant CELO_MAINNET_HUB = 0xe57F4773bd9c9d8b6Cd70431117d353298B9f5BF;
     address constant CELO_SEPOLIA_HUB = 0x16ECBA51e18a4a7e61fdC417f0d47AFEeDfbed74;
+
+    function _preBroadcastChecks() internal view override {
+        _resolveHumanFaucetConfig(block.chainid == 31337);
+    }
+
     function run() external ScaffoldEthDeployerRunner {
         // Detect local dev: anvil/hardhat chain IDs
         bool isLocalDev = block.chainid == 31337;
@@ -237,57 +242,47 @@ contract DeployCuryo is ScaffoldETHDeploy {
         // 12c. Deploy and fund HumanFaucet (52,000,000 cREP, Self.xyz identity verification)
         HumanFaucet humanFaucet;
         {
-            address hubAddress;
-            bool isFaucetMock = false;
+            (address hubAddress, bool isFaucetMock) = _resolveHumanFaucetConfig(isLocalDev);
 
-            if (isLocalDev) {
+            if (isFaucetMock) {
                 MockIdentityVerificationHub mockHub = new MockIdentityVerificationHub();
                 hubAddress = address(mockHub);
-                isFaucetMock = true;
                 console.log("MockIdentityVerificationHub deployed at:", hubAddress);
-            } else if (block.chainid == 42220) {
-                hubAddress = CELO_MAINNET_HUB;
-            } else if (block.chainid == 11142220) {
-                hubAddress = CELO_SEPOLIA_HUB;
             }
 
-            if (hubAddress != address(0)) {
-                humanFaucet = new HumanFaucet(address(crepToken), hubAddress, governance);
-                console.log("HumanFaucet deployed at:", address(humanFaucet));
+            humanFaucet = new HumanFaucet(address(crepToken), hubAddress, governance);
+            console.log("HumanFaucet deployed at:", address(humanFaucet));
 
-                // Wire VoterIdNFT
-                voterIdNFT.addMinter(address(humanFaucet));
-                humanFaucet.setVoterIdNFT(address(voterIdNFT));
+            // Wire VoterIdNFT
+            voterIdNFT.addMinter(address(humanFaucet));
+            humanFaucet.setVoterIdNFT(address(voterIdNFT));
 
-                // Fund the faucet with the full remaining launch allocation so launch minting reaches MAX_SUPPLY.
-                crepToken.mint(address(humanFaucet), FAUCET_POOL_AMOUNT);
-                console.log("Minted 52,000,000 cREP to HumanFaucet");
+            // Fund the faucet with the full remaining launch allocation so launch minting reaches MAX_SUPPLY.
+            crepToken.mint(address(humanFaucet), FAUCET_POOL_AMOUNT);
+            console.log("Minted 52,000,000 cREP to HumanFaucet");
 
-                // Set verification config
-                if (!isFaucetMock) {
-                    SelfStructs.VerificationConfigV2 memory config = SelfStructs.VerificationConfigV2({
-                        olderThanEnabled: false,
-                        olderThan: 0,
-                        forbiddenCountriesEnabled: false,
-                        forbiddenCountriesListPacked: [uint256(0), uint256(0), uint256(0), uint256(0)],
-                        ofacEnabled: [true, true, true]
-                    });
-                    bytes32 configId = IIdentityVerificationHubV2(hubAddress).setVerificationConfigV2(config);
-                    humanFaucet.setConfigId(configId);
-                    console.log("Set verification config on HumanFaucet");
-                } else {
-                    bytes32 mockConfigId = MockIdentityVerificationHub(hubAddress).MOCK_CONFIG_ID();
-                    humanFaucet.setConfigId(mockConfigId);
-                    console.log("Set mock configId on HumanFaucet");
-                }
-
-                // Transfer ownership to governance (production only)
-                if (!isLocalDev) {
-                    humanFaucet.transferOwnership(governance);
-                    console.log("HumanFaucet ownership transferred to governance");
-                }
+            // Set verification config
+            if (!isFaucetMock) {
+                SelfStructs.VerificationConfigV2 memory config = SelfStructs.VerificationConfigV2({
+                    olderThanEnabled: false,
+                    olderThan: 0,
+                    forbiddenCountriesEnabled: false,
+                    forbiddenCountriesListPacked: [uint256(0), uint256(0), uint256(0), uint256(0)],
+                    ofacEnabled: [true, true, true]
+                });
+                bytes32 configId = IIdentityVerificationHubV2(hubAddress).setVerificationConfigV2(config);
+                humanFaucet.setConfigId(configId);
+                console.log("Set verification config on HumanFaucet");
             } else {
-                revert UnsupportedHumanFaucetChain(block.chainid);
+                bytes32 mockConfigId = MockIdentityVerificationHub(hubAddress).MOCK_CONFIG_ID();
+                humanFaucet.setConfigId(mockConfigId);
+                console.log("Set mock configId on HumanFaucet");
+            }
+
+            // Transfer ownership to governance (production only)
+            if (!isLocalDev) {
+                humanFaucet.transferOwnership(governance);
+                console.log("HumanFaucet ownership transferred to governance");
             }
         }
 
@@ -443,6 +438,19 @@ contract DeployCuryo is ScaffoldETHDeploy {
         console.log("Local dev:", isLocalDev);
     }
 
+    function _resolveHumanFaucetConfig(bool isLocalDev) internal view returns (address hubAddress, bool isFaucetMock) {
+        if (isLocalDev) {
+            return (address(0), true);
+        }
+        if (block.chainid == 42220) {
+            return (CELO_MAINNET_HUB, false);
+        }
+        if (block.chainid == 11142220) {
+            return (CELO_SEPOLIA_HUB, false);
+        }
+        revert UnsupportedHumanFaucetChain(block.chainid);
+    }
+
     function _verifyLaunchMintAllocation(
         CuryoReputation crepToken,
         address governance,
@@ -454,7 +462,9 @@ contract DeployCuryo is ScaffoldETHDeploy {
         _require(crepToken.MAX_SUPPLY() == TOTAL_SUPPLY_CAP, "cREP max supply constant");
         _require(crepToken.totalSupply() == TOTAL_SUPPLY_CAP, "cREP full launch mint");
         _require(votingEngine.consensusReserve() == CONSENSUS_POOL_AMOUNT, "Consensus reserve launch allocation");
-        _require(crepToken.balanceOf(address(votingEngine)) == CONSENSUS_POOL_AMOUNT, "RoundVotingEngine launch balance");
+        _require(
+            crepToken.balanceOf(address(votingEngine)) == CONSENSUS_POOL_AMOUNT, "RoundVotingEngine launch balance"
+        );
         _require(crepToken.balanceOf(governance) == TREASURY_AMOUNT, "Treasury launch allocation");
         _require(
             crepToken.balanceOf(address(participationPool)) == PARTICIPATION_POOL_AMOUNT,
