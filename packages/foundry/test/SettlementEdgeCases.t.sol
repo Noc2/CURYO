@@ -528,7 +528,7 @@ contract SettlementEdgeCasesTest is VotingTestBase {
         // Commit 3 unanimous votes
         bytes32 s1 = keccak256(abi.encodePacked(voter1, block.timestamp));
         bytes32 ch1 = _commitHash(true, s1, contentId);
-        bytes memory ct1 = abi.encodePacked(uint8(1), s1, contentId);
+        bytes memory ct1 = _testCiphertext(true, s1, contentId);
         vm.prank(voter1);
         crepToken2.approve(address(engine2), STAKE);
         vm.prank(voter1);
@@ -537,7 +537,7 @@ contract SettlementEdgeCasesTest is VotingTestBase {
         vm.warp(block.timestamp + 1); // offset for unique salt
         bytes32 s2 = keccak256(abi.encodePacked(voter2, block.timestamp));
         bytes32 ch2 = _commitHash(true, s2, contentId);
-        bytes memory ct2 = abi.encodePacked(uint8(1), s2, contentId);
+        bytes memory ct2 = _testCiphertext(true, s2, contentId);
         vm.prank(voter2);
         crepToken2.approve(address(engine2), STAKE);
         vm.prank(voter2);
@@ -546,7 +546,7 @@ contract SettlementEdgeCasesTest is VotingTestBase {
         vm.warp(block.timestamp + 1);
         bytes32 s3 = keccak256(abi.encodePacked(voter3, block.timestamp));
         bytes32 ch3 = _commitHash(true, s3, contentId);
-        bytes memory ct3 = abi.encodePacked(uint8(1), s3, contentId);
+        bytes memory ct3 = _testCiphertext(true, s3, contentId);
         vm.prank(voter3);
         crepToken2.approve(address(engine2), STAKE);
         vm.prank(voter3);

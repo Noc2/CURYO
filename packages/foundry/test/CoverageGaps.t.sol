@@ -819,7 +819,7 @@ contract RoundSettlementEdgeCaseTest is VotingTestBase {
         // Both voters commit UP (one-sided consensus)
         bytes32 salt1 = keccak256(abi.encodePacked(voter1, block.timestamp, contentId));
         bytes32 commitHash1 = _commitHash(true, salt1, contentId);
-        bytes memory ciphertext1 = abi.encodePacked(uint8(1), salt1, contentId);
+        bytes memory ciphertext1 = _testCiphertext(true, salt1, contentId);
         vm.startPrank(voter1);
         crep.approve(address(engine2), STAKE);
         engine2.commitVote(contentId, _tlockCommitTargetRound(), _tlockDrandChainHash(), commitHash1, ciphertext1, STAKE, address(0));
@@ -827,7 +827,7 @@ contract RoundSettlementEdgeCaseTest is VotingTestBase {
 
         bytes32 salt2 = keccak256(abi.encodePacked(voter2, block.timestamp + 1, contentId));
         bytes32 commitHash2 = _commitHash(true, salt2, contentId);
-        bytes memory ciphertext2 = abi.encodePacked(uint8(1), salt2, contentId);
+        bytes memory ciphertext2 = _testCiphertext(true, salt2, contentId);
         vm.startPrank(voter2);
         crep.approve(address(engine2), STAKE);
         engine2.commitVote(contentId, _tlockCommitTargetRound(), _tlockDrandChainHash(), commitHash2, ciphertext2, STAKE, address(0));
