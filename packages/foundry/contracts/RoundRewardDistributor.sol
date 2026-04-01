@@ -43,10 +43,6 @@ contract RoundRewardDistributor is Initializable, AccessControlUpgradeable, Reen
     error FrontendFeeNotConfiscatable();
     error ParticipationRewardsOutstanding();
     error ParticipationRewardsAlreadyFinalized();
-    error LegacyClaimTrackingUnconfigured();
-    error LegacyRoundClaimsUnmigrated();
-    error ClaimTrackingAlreadyActivated();
-    error InvalidActivationTimestamp();
 
     enum FrontendFeeDisposition {
         Direct,
@@ -82,8 +78,6 @@ contract RoundRewardDistributor is Initializable, AccessControlUpgradeable, Reen
     mapping(uint256 => mapping(uint256 => uint256)) public roundParticipationRewardPaidTotal;
     mapping(uint256 => mapping(uint256 => uint256)) public roundParticipationRewardFullyClaimedCount;
     mapping(uint256 => mapping(uint256 => bool)) public roundParticipationRewardFinalized;
-    uint48 public claimTrackingActivatedAt;
-    mapping(uint256 => mapping(uint256 => bool)) public legacyRoundClaimsEnabled;
 
     // --- Events ---
     event RewardClaimed(
@@ -122,8 +116,6 @@ contract RoundRewardDistributor is Initializable, AccessControlUpgradeable, Reen
         uint256 indexed contentId, uint256 indexed roundId, address indexed rewardPool, uint256 releasedDust
     );
     event StrandedCrepSwept(address indexed treasury, uint256 amount);
-    event ClaimTrackingActivated(uint48 activatedAt);
-    event LegacyRoundClaimsEnabledSet(uint256 indexed contentId, uint256 indexed roundId, bool enabled);
 
     /// @custom:oz-upgrades-unsafe-allow constructor
     constructor() {
@@ -146,9 +138,6 @@ contract RoundRewardDistributor is Initializable, AccessControlUpgradeable, Reen
         crepToken = IERC20(_crepToken);
         votingEngine = RoundVotingEngine(_votingEngine);
         registry = ContentRegistry(_registry);
-        claimTrackingActivatedAt = uint48(block.timestamp);
-
-        emit ClaimTrackingActivated(claimTrackingActivatedAt);
     }
 
     /// @notice Sweep any cREP accidentally held by the distributor to the protocol treasury.
@@ -163,26 +152,6 @@ contract RoundRewardDistributor is Initializable, AccessControlUpgradeable, Reen
 
         crepToken.safeTransfer(treasury, amount);
         emit StrandedCrepSwept(treasury, amount);
-    }
-
-    /// @notice Activate claim tracking after upgrading from a deployment that pre-dated these storage slots.
-    /// @dev Fresh deployments initialize this automatically. Upgraded proxies fail closed until governance
-    ///      explicitly sets the cutover timestamp and reconciles any historical rounds.
-    function activateClaimTracking(uint48 activatedAt) external onlyRole(DEFAULT_ADMIN_ROLE) {
-        if (claimTrackingActivatedAt != 0) revert ClaimTrackingAlreadyActivated();
-        if (activatedAt == 0) revert InvalidActivationTimestamp();
-
-        claimTrackingActivatedAt = activatedAt;
-        emit ClaimTrackingActivated(activatedAt);
-    }
-
-    /// @notice Allow claims for a legacy round after historical claim state has been reconciled.
-    function setLegacyRoundClaimsEnabled(uint256 contentId, uint256 roundId, bool enabled)
-        external
-        onlyRole(DEFAULT_ADMIN_ROLE)
-    {
-        legacyRoundClaimsEnabled[contentId][roundId] = enabled;
-        emit LegacyRoundClaimsEnabledSet(contentId, roundId, enabled);
     }
 
     // --- Voter Reward Claiming ---
@@ -330,7 +299,7 @@ contract RoundRewardDistributor is Initializable, AccessControlUpgradeable, Reen
     }
 
     /// @notice Backfill or top up participation reward reservations for a settled round.
-    /// @dev Governance can repair legacy rounds or settlements where the snapshot side effect failed.
+    /// @dev Governance can repair settlements where the snapshot side effect failed or top up reservations.
     function backfillParticipationRewards(uint256 contentId, uint256 roundId, address rewardPool, uint256 rewardRateBps)
         external
         onlyRole(DEFAULT_ADMIN_ROLE)
@@ -359,7 +328,6 @@ contract RoundRewardDistributor is Initializable, AccessControlUpgradeable, Reen
 
         RoundLib.Round memory round = _readRound(contentId, roundId);
         if (round.state != RoundLib.RoundState.Settled) revert RoundNotSettled();
-        _requireLegacyRoundClaimsEnabled(contentId, roundId, round);
 
         address rewardPoolAddress = roundParticipationRewardPool[contentId][roundId];
         uint256 rateBps = roundParticipationRewardRateBps[contentId][roundId];
@@ -502,7 +470,6 @@ contract RoundRewardDistributor is Initializable, AccessControlUpgradeable, Reen
     {
         RoundLib.Round memory round = _readRound(contentId, roundId);
         if (round.state != RoundLib.RoundState.Settled) revert RoundNotSettled();
-        _requireLegacyRoundClaimsEnabled(contentId, roundId, round);
         if (frontendFeeClaimed[contentId][roundId][frontend]) revert AlreadyClaimed();
 
         uint256 totalFrontendPool = votingEngine.roundFrontendPool(contentId, roundId);
@@ -523,17 +490,6 @@ contract RoundRewardDistributor is Initializable, AccessControlUpgradeable, Reen
             fee = totalFrontendPool - claimedAmount;
         } else {
             fee = (totalFrontendPool * frontendStake) / totalEligibleStake;
-        }
-    }
-
-    function _requireLegacyRoundClaimsEnabled(uint256 contentId, uint256 roundId, RoundLib.Round memory round)
-        internal
-        view
-    {
-        uint48 activatedAt = claimTrackingActivatedAt;
-        if (activatedAt == 0) revert LegacyClaimTrackingUnconfigured();
-        if (round.settledAt < activatedAt && !legacyRoundClaimsEnabled[contentId][roundId]) {
-            revert LegacyRoundClaimsUnmigrated();
         }
     }
 
