@@ -250,3 +250,22 @@ test("checkRateLimit fails closed when the backing store is unavailable in produ
   assert.equal(response?.status, 503);
   assert.deepEqual(await response?.json(), { error: "Rate limiting is unavailable" });
 });
+
+test("checkRateLimit can fail open for opted-in endpoints when the backing store is unavailable", async () => {
+  env.RATE_LIMIT_TRUSTED_IP_HEADERS = "x-forwarded-for";
+  rateLimit.__setRateLimitStoreForTests({
+    execute: async () => {
+      throw new Error("database offline");
+    },
+  });
+
+  const response = await rateLimit.checkRateLimit(
+    makeRequest("/api/image-proxy", "GET", {
+      "x-forwarded-for": "203.0.113.77",
+    }),
+    { limit: 1, windowMs: 60_000 },
+    { allowOnStoreUnavailable: true },
+  );
+
+  assert.equal(response, null);
+});

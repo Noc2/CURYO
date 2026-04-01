@@ -7,7 +7,7 @@ const RATE_LIMIT = { limit: 60, windowMs: 60_000 };
 const MAX_URLS = 40;
 
 export async function POST(request: NextRequest) {
-  const limited = await checkRateLimit(request, RATE_LIMIT);
+  const limited = await checkRateLimit(request, RATE_LIMIT, { allowOnStoreUnavailable: true });
   if (limited) return limited;
 
   let body: unknown;
