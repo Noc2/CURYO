@@ -2,9 +2,10 @@
 
 import { useCallback, useRef, useState } from "react";
 import { CuryoReputationAbi, encodeVoteTransferPayload } from "@curyo/contracts";
+import { RoundVotingEngineAbi } from "@curyo/contracts/abis";
 import { buildCommitVoteParams } from "@curyo/sdk/vote";
 import { useQueryClient } from "@tanstack/react-query";
-import { type Hex, encodeFunctionData } from "viem";
+import { type Hex, type PublicClient, encodeFunctionData } from "viem";
 import { useAccount, usePublicClient, useWriteContract } from "wagmi";
 import { useOptimisticVote } from "~~/contexts/OptimisticVoteContext";
 import { useTermsAcceptance } from "~~/contexts/TermsAcceptanceContext";
@@ -21,9 +22,11 @@ import {
   getWalletDisplaySummaryQueryKey,
   persistWalletDisplaySummarySnapshot,
 } from "~~/hooks/useWalletDisplaySummary";
+import { parseRound } from "~~/lib/contracts/roundVotingEngine";
 import { buildFreeTransactionOperationKey } from "~~/lib/thirdweb/freeTransactionOperation";
 import { isFreeTransactionExhaustedError } from "~~/lib/transactionErrors";
 import { VOTE_COOLDOWN_SECONDS } from "~~/lib/vote/cooldown";
+import { deriveCommitVoteRuntimeNowMs } from "~~/lib/vote/tlockCommitTiming";
 import scaffoldConfig from "~~/scaffold.config";
 import { getParsedErrorWithAllAbis } from "~~/utils/scaffold-eth/contract";
 
@@ -54,6 +57,9 @@ function normalizeRoundVoteError(message: string) {
   if (message.includes("ContentNotActive")) {
     return "This content is no longer active for voting.";
   }
+  if (message.includes("TargetRoundOutOfWindow") || message.includes("0xe56a7aca")) {
+    return "The voting window moved while your vote was being prepared. Please try again.";
+  }
   if (message.includes("RoundNotAccepting") || message.includes("RoundNotOpen")) {
     return "This round is not accepting votes right now.";
   }
@@ -61,6 +67,46 @@ function normalizeRoundVoteError(message: string) {
     return "Voter ID required. Please verify your identity to vote.";
   }
   return message;
+}
+
+async function resolveRoundVoteRuntime(params: {
+  publicClient: PublicClient;
+  votingEngineAddress: `0x${string}`;
+  contentId: bigint;
+  epochDuration: number;
+}) {
+  const latestBlock = await params.publicClient.getBlock({ blockTag: "latest" });
+  const currentRoundId = await params.publicClient.readContract({
+    address: params.votingEngineAddress,
+    abi: RoundVotingEngineAbi,
+    functionName: "currentRoundId",
+    args: [params.contentId],
+  });
+
+  let roundStartTimeSeconds: number | null = null;
+  if (currentRoundId > 0n) {
+    const round = await params.publicClient.readContract({
+      address: params.votingEngineAddress,
+      abi: RoundVotingEngineAbi,
+      functionName: "rounds",
+      args: [params.contentId, currentRoundId],
+    });
+    const parsedRound = parseRound(round);
+
+    if (parsedRound?.state === 0 && parsedRound.startTime > 0n) {
+      roundStartTimeSeconds = Number(parsedRound.startTime);
+    }
+  }
+
+  const runtimeNowMs = deriveCommitVoteRuntimeNowMs({
+    latestBlockTimestampSeconds: Number(latestBlock.timestamp),
+    epochDurationSeconds: params.epochDuration,
+    roundStartTimeSeconds,
+  });
+
+  return {
+    now: () => runtimeNowMs,
+  };
 }
 
 async function postFreeTransactionMutation(path: string, body: Record<string, unknown>) {
@@ -153,6 +199,23 @@ export function useRoundVote() {
     let freeTransactionOperationKey: Hex | null = null;
 
     try {
+      let runtime;
+      if (publicClient) {
+        try {
+          runtime = await resolveRoundVoteRuntime({
+            publicClient,
+            votingEngineAddress: votingEngineInfo.address as `0x${string}`,
+            contentId,
+            epochDuration,
+          });
+        } catch (runtimeError) {
+          console.warn("[round-vote] failed to anchor tlock target to the active round; using wall clock timing.", {
+            contentId: contentId.toString(),
+            error: runtimeError,
+          });
+        }
+      }
+
       const { ciphertext, commitHash, targetRound, drandChainHash, frontend, stakeWei } = await buildCommitVoteParams({
         contentId,
         isUp,
@@ -160,6 +223,7 @@ export function useRoundVote() {
         epochDuration,
         frontendCode,
         defaultFrontendCode: scaffoldConfig.frontendCode,
+        runtime,
       });
 
       const payload = encodeVoteTransferPayload({
