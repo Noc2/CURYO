@@ -10,6 +10,7 @@ const READ_RATE_LIMIT = { limit: 60, windowMs: 60_000 };
 export async function GET(request: NextRequest) {
   const address = request.nextUrl.searchParams.get("address");
   const limited = await checkRateLimit(request, READ_RATE_LIMIT, {
+    allowOnStoreUnavailable: true,
     extraKeyParts: [typeof address === "string" ? address : undefined],
   });
   if (limited) return limited;
