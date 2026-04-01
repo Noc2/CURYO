@@ -856,6 +856,25 @@ export const HumanFaucetAbi = [
   },
   {
     "type": "event",
+    "name": "RemainingWithdrawn",
+    "inputs": [
+      {
+        "name": "to",
+        "type": "address",
+        "indexed": true,
+        "internalType": "address"
+      },
+      {
+        "name": "amount",
+        "type": "uint256",
+        "indexed": false,
+        "internalType": "uint256"
+      }
+    ],
+    "anonymous": false
+  },
+  {
+    "type": "event",
     "name": "TierChanged",
     "inputs": [
       {

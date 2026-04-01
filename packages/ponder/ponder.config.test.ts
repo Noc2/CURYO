@@ -1,9 +1,18 @@
 import deployedContracts from "@curyo/contracts/deployedContracts";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
+const chain42220 = (deployedContracts as Record<number, Record<string, { address: `0x${string}`; deployedOnBlock?: number }>>)[
+  42220
+];
 const chain11142220 = (deployedContracts as Record<number, Record<string, { address: `0x${string}`; deployedOnBlock?: number }>>)[
   11142220
 ];
+const expectedChain42220StartBlock = Math.min(
+  ...Object.values(chain42220)
+    .map(contract => contract.deployedOnBlock)
+    .filter((value): value is number => Number.isInteger(value) && value >= 0),
+);
+const expectedContentRegistry42220StartBlock = chain42220.ContentRegistry.deployedOnBlock ?? expectedChain42220StartBlock;
 const expectedChainStartBlock = Math.min(
   ...Object.values(chain11142220)
     .map(contract => contract.deployedOnBlock)
@@ -76,6 +85,36 @@ describe("ponder config", () => {
     expect(loadedConfig.contracts.ContentRegistry.network.celoSepolia.startBlock).toBe(
       expectedContentRegistryStartBlock,
     );
+  });
+
+  it("derives Celo mainnet addresses and start blocks from shared deployment artifacts", async () => {
+    const { default: config } = await loadPonderConfig(
+      {
+        PONDER_NETWORK: "celo",
+        PONDER_RPC_URL_42220: "https://forno.celo.org",
+      },
+      [
+        "PONDER_CONTENT_REGISTRY_ADDRESS",
+        "PONDER_ROUND_VOTING_ENGINE_ADDRESS",
+        "PONDER_ROUND_REWARD_DISTRIBUTOR_ADDRESS",
+        "PONDER_CATEGORY_REGISTRY_ADDRESS",
+        "PONDER_PROFILE_REGISTRY_ADDRESS",
+        "PONDER_FRONTEND_REGISTRY_ADDRESS",
+        "PONDER_VOTER_ID_NFT_ADDRESS",
+        "PONDER_CREP_ADDRESS",
+        "PONDER_HUMAN_FAUCET_ADDRESS",
+        "PONDER_PARTICIPATION_POOL_ADDRESS",
+        "PONDER_CONTENT_REGISTRY_START_BLOCK",
+      ],
+    );
+
+    const loadedConfig = config as any;
+
+    expect(loadedConfig.contracts.ContentRegistry.network.celo.address).toBe(chain42220.ContentRegistry.address);
+    expect(loadedConfig.contracts.RoundVotingEngine.network.celo.address).toBe(chain42220.RoundVotingEngine.address);
+    expect(loadedConfig.contracts.CuryoReputation.network.celo.address).toBe(chain42220.CuryoReputation.address);
+    expect(loadedConfig.contracts.HumanFaucet.network.celo.address).toBe(chain42220.HumanFaucet.address);
+    expect(loadedConfig.contracts.ContentRegistry.network.celo.startBlock).toBe(expectedContentRegistry42220StartBlock);
   });
 
   it("ignores stale Ponder env overrides when shared deployment artifacts exist", async () => {

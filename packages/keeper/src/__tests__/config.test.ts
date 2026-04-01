@@ -1,6 +1,7 @@
 import deployedContracts from "@curyo/contracts/deployedContracts";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
+const chain42220 = (deployedContracts as Record<number, Record<string, { address: `0x${string}` }>>)[42220];
 const chain11142220 = (deployedContracts as Record<number, Record<string, { address: `0x${string}` }>>)[11142220];
 const chain31337 = (deployedContracts as Record<number, Record<string, { address: `0x${string}` }>>)[31337];
 const ORIGINAL_ENV = { ...process.env };
@@ -99,6 +100,20 @@ describe("keeper config", () => {
 
     expect(config.contracts.votingEngine).toBe(LOCAL_VOTING_ENGINE);
     expect(config.contracts.contentRegistry).toBe(LOCAL_CONTENT_REGISTRY);
+  });
+
+  it("derives Celo mainnet contract addresses from shared deployment artifacts", async () => {
+    const { config } = await loadKeeperConfig(
+      {
+        CHAIN_ID: "42220",
+      },
+      ["VOTING_ENGINE_ADDRESS", "CONTENT_REGISTRY_ADDRESS"],
+    );
+
+    expect(config.chainId).toBe(42220);
+    expect(config.chainName).toBe("Celo");
+    expect(config.contracts.votingEngine).toBe(chain42220.RoundVotingEngine.address);
+    expect(config.contracts.contentRegistry).toBe(chain42220.ContentRegistry.address);
   });
 
   it("ignores stale local contract env values in favor of shared deployment artifacts", async () => {

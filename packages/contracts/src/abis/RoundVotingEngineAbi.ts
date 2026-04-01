@@ -162,6 +162,35 @@ export const RoundVotingEngineAbi = [
   },
   {
     "type": "function",
+    "name": "commitRevealAvailableAt",
+    "inputs": [
+      {
+        "name": "contentId",
+        "type": "uint256",
+        "internalType": "uint256"
+      },
+      {
+        "name": "roundId",
+        "type": "uint256",
+        "internalType": "uint256"
+      },
+      {
+        "name": "commitKey",
+        "type": "bytes32",
+        "internalType": "bytes32"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
     "name": "commitVote",
     "inputs": [
       {
@@ -273,35 +302,6 @@ export const RoundVotingEngineAbi = [
         "name": "epochIndex",
         "type": "uint8",
         "internalType": "uint8"
-      }
-    ],
-    "stateMutability": "view"
-  },
-  {
-    "type": "function",
-    "name": "commitRevealAvailableAt",
-    "inputs": [
-      {
-        "name": "contentId",
-        "type": "uint256",
-        "internalType": "uint256"
-      },
-      {
-        "name": "roundId",
-        "type": "uint256",
-        "internalType": "uint256"
-      },
-      {
-        "name": "commitKey",
-        "type": "bytes32",
-        "internalType": "bytes32"
-      }
-    ],
-    "outputs": [
-      {
-        "name": "",
-        "type": "uint256",
-        "internalType": "uint256"
       }
     ],
     "stateMutability": "view"
@@ -1838,6 +1838,22 @@ export const RoundVotingEngineAbi = [
     "type": "error",
     "name": "RoundNotSettledOrTied",
     "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "SafeCastOverflowedUintDowncast",
+    "inputs": [
+      {
+        "name": "bits",
+        "type": "uint8",
+        "internalType": "uint8"
+      },
+      {
+        "name": "value",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ]
   },
   {
     "type": "error",

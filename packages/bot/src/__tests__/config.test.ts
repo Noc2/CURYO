@@ -1,6 +1,7 @@
 import deployedContracts from "@curyo/contracts/deployedContracts";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
+const chain42220 = (deployedContracts as Record<number, Record<string, { address: `0x${string}` }>>)[42220];
 const chain11142220 = (deployedContracts as Record<number, Record<string, { address: `0x${string}` }>>)[11142220];
 const ORIGINAL_ENV = { ...process.env };
 const VALID_ENV = {
@@ -152,6 +153,27 @@ describe("bot config", () => {
     expect(config.contracts.votingEngine).toBe(chain11142220.RoundVotingEngine.address);
     expect(config.contracts.voterIdNFT).toBe(chain11142220.VoterIdNFT.address);
     expect(config.contracts.categoryRegistry).toBe(chain11142220.CategoryRegistry.address);
+  });
+
+  it("derives Celo mainnet contract addresses from shared deployment artifacts", async () => {
+    const { config } = await loadBotConfig(
+      {
+        CHAIN_ID: "42220",
+      },
+      [
+        "CREP_TOKEN_ADDRESS",
+        "CONTENT_REGISTRY_ADDRESS",
+        "VOTING_ENGINE_ADDRESS",
+        "VOTER_ID_NFT_ADDRESS",
+        "CATEGORY_REGISTRY_ADDRESS",
+      ],
+    );
+
+    expect(config.contracts.crepToken).toBe(chain42220.CuryoReputation.address);
+    expect(config.contracts.contentRegistry).toBe(chain42220.ContentRegistry.address);
+    expect(config.contracts.votingEngine).toBe(chain42220.RoundVotingEngine.address);
+    expect(config.contracts.voterIdNFT).toBe(chain42220.VoterIdNFT.address);
+    expect(config.contracts.categoryRegistry).toBe(chain42220.CategoryRegistry.address);
   });
 
   it("ignores stale contract env values in favor of shared deployment artifacts", async () => {

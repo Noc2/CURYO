@@ -7,7 +7,7 @@ import type { GenericContractsDeclaration } from "./types";
 const deployedContracts: GenericContractsDeclaration = {
   31337: {
     CategoryFeeLib: {
-      address: "0xac62678d84d0d9789daaa8b31e9ee4e6af45fade",
+      address: "0x6d8576ea4eea7f165e3c23e91127ad73692c4047",
       abi: [
         {
           type: "error",
@@ -24,26 +24,131 @@ const deployedContracts: GenericContractsDeclaration = {
       inheritedFunctions: {},
       deployedOnBlock: 1,
     },
-    SubmitterStakeLib: {
-      address: "0x6bbddec20fa7f1065e6ae3a3b4d546e553ac4cbb",
+    VotePreflightLib: {
+      address: "0x629d41f6d59a345054c031c688346f462040b2fc",
       abi: [
         {
+          type: "function",
+          name: "isFrontendEligible",
+          inputs: [
+            {
+              name: "frontendRegistry",
+              type: "IFrontendRegistry",
+              internalType: "contract IFrontendRegistry",
+            },
+            {
+              name: "frontend",
+              type: "address",
+              internalType: "address",
+            },
+          ],
+          outputs: [
+            {
+              name: "eligible",
+              type: "bool",
+              internalType: "bool",
+            },
+          ],
+          stateMutability: "view",
+        },
+        {
+          type: "function",
+          name: "validateVoterAndContent",
+          inputs: [
+            {
+              name: "voterIdNft",
+              type: "IVoterIdNFT",
+              internalType: "contract IVoterIdNFT",
+            },
+            {
+              name: "registry",
+              type: "ContentRegistry",
+              internalType: "contract ContentRegistry",
+            },
+            {
+              name: "voter",
+              type: "address",
+              internalType: "address",
+            },
+            {
+              name: "contentId",
+              type: "uint256",
+              internalType: "uint256",
+            },
+          ],
+          outputs: [
+            {
+              name: "voterId",
+              type: "uint256",
+              internalType: "uint256",
+            },
+            {
+              name: "useTokenIdentity",
+              type: "bool",
+              internalType: "bool",
+            },
+          ],
+          stateMutability: "view",
+        },
+        {
           type: "error",
-          name: "ContentNotFound",
+          name: "AlreadyCommitted",
+          inputs: [],
+        },
+        {
+          type: "error",
+          name: "ContentNotActive",
+          inputs: [],
+        },
+        {
+          type: "error",
+          name: "CooldownActive",
+          inputs: [],
+        },
+        {
+          type: "error",
+          name: "InvalidStake",
+          inputs: [],
+        },
+        {
+          type: "error",
+          name: "MaxVotersReached",
+          inputs: [],
+        },
+        {
+          type: "error",
+          name: "SelfVote",
+          inputs: [],
+        },
+        {
+          type: "error",
+          name: "VoterIdRequired",
           inputs: [],
         },
       ],
       inheritedFunctions: {},
       deployedOnBlock: 2,
     },
-    RoundSettlementSideEffectsLib: {
-      address: "0x01192e8d221c31b1f1336f1ffb7d36dd031a8984",
-      abi: [],
+    TokenTransferLib: {
+      address: "0x05b7e0e01dd70628ee883eb41fcdaf5cfca1b8ff",
+      abi: [
+        {
+          type: "error",
+          name: "SafeERC20FailedOperation",
+          inputs: [
+            {
+              name: "token",
+              type: "address",
+              internalType: "address",
+            },
+          ],
+        },
+      ],
       inheritedFunctions: {},
       deployedOnBlock: 3,
     },
     TlockVoteLib: {
-      address: "0x839314609d41229fad5eefbe9cfbba0ec0f239f8",
+      address: "0x761cd92bb1724f99287d1335be59780f7879cb88",
       abi: [
         {
           type: "function",
@@ -135,6 +240,35 @@ const deployedContracts: GenericContractsDeclaration = {
         },
         {
           type: "function",
+          name: "targetRoundTimestamp",
+          inputs: [
+            {
+              name: "targetRound",
+              type: "uint64",
+              internalType: "uint64",
+            },
+            {
+              name: "genesisTime",
+              type: "uint64",
+              internalType: "uint64",
+            },
+            {
+              name: "period",
+              type: "uint64",
+              internalType: "uint64",
+            },
+          ],
+          outputs: [
+            {
+              name: "",
+              type: "uint256",
+              internalType: "uint256",
+            },
+          ],
+          stateMutability: "pure",
+        },
+        {
+          type: "function",
           name: "validateCommitData",
           inputs: [
             {
@@ -205,102 +339,26 @@ const deployedContracts: GenericContractsDeclaration = {
       inheritedFunctions: {},
       deployedOnBlock: 4,
     },
-    VotePreflightLib: {
-      address: "0x8a0f47196b50d607de64978b2dc9c9697c40b294",
+    SubmitterStakeLib: {
+      address: "0xb2c7fb497d13b4a4f0c66da2c09d80dbaeaa92f6",
       abi: [
         {
-          type: "function",
-          name: "validateVoterAndContent",
-          inputs: [
-            {
-              name: "voterIdNft",
-              type: "IVoterIdNFT",
-              internalType: "contract IVoterIdNFT",
-            },
-            {
-              name: "registry",
-              type: "ContentRegistry",
-              internalType: "contract ContentRegistry",
-            },
-            {
-              name: "voter",
-              type: "address",
-              internalType: "address",
-            },
-            {
-              name: "contentId",
-              type: "uint256",
-              internalType: "uint256",
-            },
-          ],
-          outputs: [
-            {
-              name: "voterId",
-              type: "uint256",
-              internalType: "uint256",
-            },
-            {
-              name: "useTokenIdentity",
-              type: "bool",
-              internalType: "bool",
-            },
-          ],
-          stateMutability: "view",
-        },
-        {
           type: "error",
-          name: "AlreadyCommitted",
+          name: "ContentNotFound",
           inputs: [],
         },
         {
           type: "error",
-          name: "ContentNotActive",
-          inputs: [],
-        },
-        {
-          type: "error",
-          name: "CooldownActive",
-          inputs: [],
-        },
-        {
-          type: "error",
-          name: "InvalidStake",
-          inputs: [],
-        },
-        {
-          type: "error",
-          name: "MaxVotersReached",
-          inputs: [],
-        },
-        {
-          type: "error",
-          name: "SelfVote",
-          inputs: [],
-        },
-        {
-          type: "error",
-          name: "VoterIdRequired",
+          name: "MilestoneZeroSnapshotMissing",
           inputs: [],
         },
       ],
       inheritedFunctions: {},
       deployedOnBlock: 5,
     },
-    TokenTransferLib: {
-      address: "0x05b7e0e01dd70628ee883eb41fcdaf5cfca1b8ff",
-      abi: [
-        {
-          type: "error",
-          name: "SafeERC20FailedOperation",
-          inputs: [
-            {
-              name: "token",
-              type: "address",
-              internalType: "address",
-            },
-          ],
-        },
-      ],
+    RoundSettlementSideEffectsLib: {
+      address: "0x3e8da6e7328564eb8310734cef5adb706eca9fcb",
+      abi: [],
       inheritedFunctions: {},
       deployedOnBlock: 6,
     },
@@ -2675,6 +2733,82 @@ const deployedContracts: GenericContractsDeclaration = {
         },
         {
           type: "function",
+          name: "milestoneZeroSubmitterParticipationPool",
+          inputs: [
+            {
+              name: "",
+              type: "uint256",
+              internalType: "uint256",
+            },
+          ],
+          outputs: [
+            {
+              name: "",
+              type: "address",
+              internalType: "address",
+            },
+          ],
+          stateMutability: "view",
+        },
+        {
+          type: "function",
+          name: "milestoneZeroSubmitterParticipationRateBps",
+          inputs: [
+            {
+              name: "",
+              type: "uint256",
+              internalType: "uint256",
+            },
+          ],
+          outputs: [
+            {
+              name: "",
+              type: "uint256",
+              internalType: "uint256",
+            },
+          ],
+          stateMutability: "view",
+        },
+        {
+          type: "function",
+          name: "milestoneZeroSubmitterRating",
+          inputs: [
+            {
+              name: "",
+              type: "uint256",
+              internalType: "uint256",
+            },
+          ],
+          outputs: [
+            {
+              name: "",
+              type: "uint8",
+              internalType: "uint8",
+            },
+          ],
+          stateMutability: "view",
+        },
+        {
+          type: "function",
+          name: "milestoneZeroSubmitterTermsSnapshotted",
+          inputs: [
+            {
+              name: "",
+              type: "uint256",
+              internalType: "uint256",
+            },
+          ],
+          outputs: [
+            {
+              name: "",
+              type: "bool",
+              internalType: "bool",
+            },
+          ],
+          stateMutability: "view",
+        },
+        {
+          type: "function",
           name: "nextContentId",
           inputs: [],
           outputs: [
@@ -2833,6 +2967,24 @@ const deployedContracts: GenericContractsDeclaration = {
         },
         {
           type: "function",
+          name: "repairMilestoneZeroSubmitterParticipationTerms",
+          inputs: [
+            {
+              name: "contentId",
+              type: "uint256",
+              internalType: "uint256",
+            },
+            {
+              name: "rewardRateBps",
+              type: "uint256",
+              internalType: "uint256",
+            },
+          ],
+          outputs: [],
+          stateMutability: "nonpayable",
+        },
+        {
+          type: "function",
           name: "reserveSubmission",
           inputs: [
             {
@@ -2875,6 +3027,19 @@ const deployedContracts: GenericContractsDeclaration = {
             },
           ],
           stateMutability: "view",
+        },
+        {
+          type: "function",
+          name: "returnSubmitterStakeWithMilestoneZeroTerms",
+          inputs: [
+            {
+              name: "contentId",
+              type: "uint256",
+              internalType: "uint256",
+            },
+          ],
+          outputs: [],
+          stateMutability: "nonpayable",
         },
         {
           type: "function",
@@ -3020,6 +3185,34 @@ const deployedContracts: GenericContractsDeclaration = {
               internalType: "uint256",
             },
           ],
+          stateMutability: "nonpayable",
+        },
+        {
+          type: "function",
+          name: "snapshotMilestoneZeroSubmitterTerms",
+          inputs: [
+            {
+              name: "contentId",
+              type: "uint256",
+              internalType: "uint256",
+            },
+            {
+              name: "rating",
+              type: "uint256",
+              internalType: "uint256",
+            },
+            {
+              name: "rewardPool",
+              type: "address",
+              internalType: "address",
+            },
+            {
+              name: "rewardRateBps",
+              type: "uint256",
+              internalType: "uint256",
+            },
+          ],
+          outputs: [],
           stateMutability: "nonpayable",
         },
         {
@@ -3446,6 +3639,56 @@ const deployedContracts: GenericContractsDeclaration = {
               type: "uint64",
               indexed: false,
               internalType: "uint64",
+            },
+          ],
+          anonymous: false,
+        },
+        {
+          type: "event",
+          name: "MilestoneZeroSubmitterParticipationRepairNeeded",
+          inputs: [
+            {
+              name: "contentId",
+              type: "uint256",
+              indexed: true,
+              internalType: "uint256",
+            },
+            {
+              name: "rewardPool",
+              type: "address",
+              indexed: true,
+              internalType: "address",
+            },
+          ],
+          anonymous: false,
+        },
+        {
+          type: "event",
+          name: "MilestoneZeroSubmitterParticipationTermsRepaired",
+          inputs: [
+            {
+              name: "contentId",
+              type: "uint256",
+              indexed: true,
+              internalType: "uint256",
+            },
+            {
+              name: "rewardPool",
+              type: "address",
+              indexed: true,
+              internalType: "address",
+            },
+            {
+              name: "rewardRateBps",
+              type: "uint256",
+              indexed: false,
+              internalType: "uint256",
+            },
+            {
+              name: "rewardAmount",
+              type: "uint256",
+              indexed: false,
+              internalType: "uint256",
             },
           ],
           anonymous: false,
@@ -4040,6 +4283,35 @@ const deployedContracts: GenericContractsDeclaration = {
           ],
           outputs: [],
           stateMutability: "nonpayable",
+        },
+        {
+          type: "function",
+          name: "commitRevealAvailableAt",
+          inputs: [
+            {
+              name: "contentId",
+              type: "uint256",
+              internalType: "uint256",
+            },
+            {
+              name: "roundId",
+              type: "uint256",
+              internalType: "uint256",
+            },
+            {
+              name: "commitKey",
+              type: "bytes32",
+              internalType: "bytes32",
+            },
+          ],
+          outputs: [
+            {
+              name: "",
+              type: "uint256",
+              internalType: "uint256",
+            },
+          ],
+          stateMutability: "view",
         },
         {
           type: "function",
@@ -5693,6 +5965,22 @@ const deployedContracts: GenericContractsDeclaration = {
         },
         {
           type: "error",
+          name: "SafeCastOverflowedUintDowncast",
+          inputs: [
+            {
+              name: "bits",
+              type: "uint8",
+              internalType: "uint8",
+            },
+            {
+              name: "value",
+              type: "uint256",
+              internalType: "uint256",
+            },
+          ],
+        },
+        {
+          type: "error",
           name: "SafeERC20FailedOperation",
           inputs: [
             {
@@ -5790,19 +6078,6 @@ const deployedContracts: GenericContractsDeclaration = {
             },
           ],
           stateMutability: "view",
-        },
-        {
-          type: "function",
-          name: "activateClaimTracking",
-          inputs: [
-            {
-              name: "activatedAt",
-              type: "uint48",
-              internalType: "uint48",
-            },
-          ],
-          outputs: [],
-          stateMutability: "nonpayable",
         },
         {
           type: "function",
@@ -5926,19 +6201,6 @@ const deployedContracts: GenericContractsDeclaration = {
           ],
           outputs: [],
           stateMutability: "nonpayable",
-        },
-        {
-          type: "function",
-          name: "claimTrackingActivatedAt",
-          inputs: [],
-          outputs: [
-            {
-              name: "",
-              type: "uint48",
-              internalType: "uint48",
-            },
-          ],
-          stateMutability: "view",
         },
         {
           type: "function",
@@ -6123,30 +6385,6 @@ const deployedContracts: GenericContractsDeclaration = {
           ],
           outputs: [],
           stateMutability: "nonpayable",
-        },
-        {
-          type: "function",
-          name: "legacyRoundClaimsEnabled",
-          inputs: [
-            {
-              name: "",
-              type: "uint256",
-              internalType: "uint256",
-            },
-            {
-              name: "",
-              type: "uint256",
-              internalType: "uint256",
-            },
-          ],
-          outputs: [
-            {
-              name: "",
-              type: "bool",
-              internalType: "bool",
-            },
-          ],
-          stateMutability: "view",
         },
         {
           type: "function",
@@ -6547,29 +6785,6 @@ const deployedContracts: GenericContractsDeclaration = {
         },
         {
           type: "function",
-          name: "setLegacyRoundClaimsEnabled",
-          inputs: [
-            {
-              name: "contentId",
-              type: "uint256",
-              internalType: "uint256",
-            },
-            {
-              name: "roundId",
-              type: "uint256",
-              internalType: "uint256",
-            },
-            {
-              name: "enabled",
-              type: "bool",
-              internalType: "bool",
-            },
-          ],
-          outputs: [],
-          stateMutability: "nonpayable",
-        },
-        {
-          type: "function",
           name: "snapshotParticipationRewards",
           inputs: [
             {
@@ -6672,19 +6887,6 @@ const deployedContracts: GenericContractsDeclaration = {
         },
         {
           type: "event",
-          name: "ClaimTrackingActivated",
-          inputs: [
-            {
-              name: "activatedAt",
-              type: "uint48",
-              indexed: false,
-              internalType: "uint48",
-            },
-          ],
-          anonymous: false,
-        },
-        {
-          type: "event",
           name: "FrontendFeeClaimed",
           inputs: [
             {
@@ -6754,31 +6956,6 @@ const deployedContracts: GenericContractsDeclaration = {
               type: "uint64",
               indexed: false,
               internalType: "uint64",
-            },
-          ],
-          anonymous: false,
-        },
-        {
-          type: "event",
-          name: "LegacyRoundClaimsEnabledSet",
-          inputs: [
-            {
-              name: "contentId",
-              type: "uint256",
-              indexed: true,
-              internalType: "uint256",
-            },
-            {
-              name: "roundId",
-              type: "uint256",
-              indexed: true,
-              internalType: "uint256",
-            },
-            {
-              name: "enabled",
-              type: "bool",
-              indexed: false,
-              internalType: "bool",
             },
           ],
           anonymous: false,
@@ -7146,11 +7323,6 @@ const deployedContracts: GenericContractsDeclaration = {
         },
         {
           type: "error",
-          name: "ClaimTrackingAlreadyActivated",
-          inputs: [],
-        },
-        {
-          type: "error",
           name: "FrontendFeeNotClaimable",
           inputs: [],
         },
@@ -7161,27 +7333,12 @@ const deployedContracts: GenericContractsDeclaration = {
         },
         {
           type: "error",
-          name: "InvalidActivationTimestamp",
-          inputs: [],
-        },
-        {
-          type: "error",
           name: "InvalidInitialization",
           inputs: [],
         },
         {
           type: "error",
           name: "InvalidParticipationSnapshot",
-          inputs: [],
-        },
-        {
-          type: "error",
-          name: "LegacyClaimTrackingUnconfigured",
-          inputs: [],
-        },
-        {
-          type: "error",
-          name: "LegacyRoundClaimsUnmigrated",
           inputs: [],
         },
         {
@@ -13320,18 +13477,18 @@ const deployedContracts: GenericContractsDeclaration = {
           name: "verify",
           inputs: [
             {
-              name: "",
+              name: "baseVerificationInput",
               type: "bytes",
               internalType: "bytes",
             },
             {
-              name: "",
+              name: "userContextData",
               type: "bytes",
               internalType: "bytes",
             },
           ],
           outputs: [],
-          stateMutability: "pure",
+          stateMutability: "nonpayable",
         },
         {
           type: "event",
@@ -14235,6 +14392,25 @@ const deployedContracts: GenericContractsDeclaration = {
         },
         {
           type: "event",
+          name: "RemainingWithdrawn",
+          inputs: [
+            {
+              name: "to",
+              type: "address",
+              indexed: true,
+              internalType: "address",
+            },
+            {
+              name: "amount",
+              type: "uint256",
+              indexed: false,
+              internalType: "uint256",
+            },
+          ],
+          anonymous: false,
+        },
+        {
+          type: "event",
           name: "TierChanged",
           inputs: [
             {
@@ -14452,7 +14628,7 @@ const deployedContracts: GenericContractsDeclaration = {
   },
   42220: {
     CategoryFeeLib: {
-      address: "0x177036a851402dcdd65e05f6eee22861f684cb6a",
+      address: "0x18a618059ed2829a35a59ee1ee2c072583e8f974",
       abi: [
         {
           type: "error",
@@ -14467,7 +14643,7 @@ const deployedContracts: GenericContractsDeclaration = {
         },
       ],
       inheritedFunctions: {},
-      deployedOnBlock: 62547134,
+      deployedOnBlock: 63148177,
     },
     TokenTransferLib: {
       address: "0x05b7e0e01dd70628ee883eb41fcdaf5cfca1b8ff",
@@ -14488,19 +14664,24 @@ const deployedContracts: GenericContractsDeclaration = {
       deployedOnBlock: 62547139,
     },
     SubmitterStakeLib: {
-      address: "0x987226bd082d53977b329aacf4c8c9bfb6b0b20c",
+      address: "0x88e9d7551d3d550600cf8ee01e1a2011e24b813c",
       abi: [
         {
           type: "error",
           name: "ContentNotFound",
           inputs: [],
         },
+        {
+          type: "error",
+          name: "MilestoneZeroSnapshotMissing",
+          inputs: [],
+        },
       ],
       inheritedFunctions: {},
-      deployedOnBlock: 62547144,
+      deployedOnBlock: 63148195,
     },
     TimelockController: {
-      address: "0xfc5555f7b6b54ad973dbed5c6c1751ab2ee5403d",
+      address: "0x52167aacde88a702d9214943d30629eacaee37e8",
       abi: [
         {
           type: "constructor",
@@ -15521,10 +15702,10 @@ const deployedContracts: GenericContractsDeclaration = {
         onERC1155Received:
           "lib/openzeppelin-contracts/contracts/token/ERC1155/utils/ERC1155Holder.sol",
       },
-      deployedOnBlock: 62547150,
+      deployedOnBlock: 63148205,
     },
     CuryoReputation: {
-      address: "0xeDAAf93E072Ec3416FAF2D09B4f4BC49e07a39Bc",
+      address: "0x8f6bcEE41304a42F116348C13218b71722eE8E44",
       abi: [
         {
           type: "constructor",
@@ -17225,10 +17406,10 @@ const deployedContracts: GenericContractsDeclaration = {
         revokeRole:
           "lib/openzeppelin-contracts/contracts/access/AccessControl.sol",
       },
-      deployedOnBlock: 62547157,
+      deployedOnBlock: 63148211,
     },
     CuryoGovernor: {
-      address: "0x5092c81625888bf70e2dc01d10786c92f88e4708",
+      address: "0x47bb0042b622f44aef5ea30e21f859918d72bdb0",
       abi: [
         {
           type: "constructor",
@@ -19212,10 +19393,10 @@ const deployedContracts: GenericContractsDeclaration = {
         updateTimelock:
           "lib/openzeppelin-contracts/contracts/governance/extensions/GovernorTimelockControl.sol",
       },
-      deployedOnBlock: 62547165,
+      deployedOnBlock: 63148217,
     },
     ContentRegistry: {
-      address: "0xD48A541Dc0c32092b894064650028DaB219ECefc",
+      address: "0x1e4e2E725d3A2D03c8099667BF78F165C06D190f",
       abi: [
         {
           type: "constructor",
@@ -19881,6 +20062,82 @@ const deployedContracts: GenericContractsDeclaration = {
         },
         {
           type: "function",
+          name: "milestoneZeroSubmitterParticipationPool",
+          inputs: [
+            {
+              name: "",
+              type: "uint256",
+              internalType: "uint256",
+            },
+          ],
+          outputs: [
+            {
+              name: "",
+              type: "address",
+              internalType: "address",
+            },
+          ],
+          stateMutability: "view",
+        },
+        {
+          type: "function",
+          name: "milestoneZeroSubmitterParticipationRateBps",
+          inputs: [
+            {
+              name: "",
+              type: "uint256",
+              internalType: "uint256",
+            },
+          ],
+          outputs: [
+            {
+              name: "",
+              type: "uint256",
+              internalType: "uint256",
+            },
+          ],
+          stateMutability: "view",
+        },
+        {
+          type: "function",
+          name: "milestoneZeroSubmitterRating",
+          inputs: [
+            {
+              name: "",
+              type: "uint256",
+              internalType: "uint256",
+            },
+          ],
+          outputs: [
+            {
+              name: "",
+              type: "uint8",
+              internalType: "uint8",
+            },
+          ],
+          stateMutability: "view",
+        },
+        {
+          type: "function",
+          name: "milestoneZeroSubmitterTermsSnapshotted",
+          inputs: [
+            {
+              name: "",
+              type: "uint256",
+              internalType: "uint256",
+            },
+          ],
+          outputs: [
+            {
+              name: "",
+              type: "bool",
+              internalType: "bool",
+            },
+          ],
+          stateMutability: "view",
+        },
+        {
+          type: "function",
           name: "nextContentId",
           inputs: [],
           outputs: [
@@ -20039,6 +20296,24 @@ const deployedContracts: GenericContractsDeclaration = {
         },
         {
           type: "function",
+          name: "repairMilestoneZeroSubmitterParticipationTerms",
+          inputs: [
+            {
+              name: "contentId",
+              type: "uint256",
+              internalType: "uint256",
+            },
+            {
+              name: "rewardRateBps",
+              type: "uint256",
+              internalType: "uint256",
+            },
+          ],
+          outputs: [],
+          stateMutability: "nonpayable",
+        },
+        {
+          type: "function",
           name: "reserveSubmission",
           inputs: [
             {
@@ -20081,6 +20356,19 @@ const deployedContracts: GenericContractsDeclaration = {
             },
           ],
           stateMutability: "view",
+        },
+        {
+          type: "function",
+          name: "returnSubmitterStakeWithMilestoneZeroTerms",
+          inputs: [
+            {
+              name: "contentId",
+              type: "uint256",
+              internalType: "uint256",
+            },
+          ],
+          outputs: [],
+          stateMutability: "nonpayable",
         },
         {
           type: "function",
@@ -20226,6 +20514,34 @@ const deployedContracts: GenericContractsDeclaration = {
               internalType: "uint256",
             },
           ],
+          stateMutability: "nonpayable",
+        },
+        {
+          type: "function",
+          name: "snapshotMilestoneZeroSubmitterTerms",
+          inputs: [
+            {
+              name: "contentId",
+              type: "uint256",
+              internalType: "uint256",
+            },
+            {
+              name: "rating",
+              type: "uint256",
+              internalType: "uint256",
+            },
+            {
+              name: "rewardPool",
+              type: "address",
+              internalType: "address",
+            },
+            {
+              name: "rewardRateBps",
+              type: "uint256",
+              internalType: "uint256",
+            },
+          ],
+          outputs: [],
           stateMutability: "nonpayable",
         },
         {
@@ -20658,6 +20974,56 @@ const deployedContracts: GenericContractsDeclaration = {
         },
         {
           type: "event",
+          name: "MilestoneZeroSubmitterParticipationRepairNeeded",
+          inputs: [
+            {
+              name: "contentId",
+              type: "uint256",
+              indexed: true,
+              internalType: "uint256",
+            },
+            {
+              name: "rewardPool",
+              type: "address",
+              indexed: true,
+              internalType: "address",
+            },
+          ],
+          anonymous: false,
+        },
+        {
+          type: "event",
+          name: "MilestoneZeroSubmitterParticipationTermsRepaired",
+          inputs: [
+            {
+              name: "contentId",
+              type: "uint256",
+              indexed: true,
+              internalType: "uint256",
+            },
+            {
+              name: "rewardPool",
+              type: "address",
+              indexed: true,
+              internalType: "address",
+            },
+            {
+              name: "rewardRateBps",
+              type: "uint256",
+              indexed: false,
+              internalType: "uint256",
+            },
+            {
+              name: "rewardAmount",
+              type: "uint256",
+              indexed: false,
+              internalType: "uint256",
+            },
+          ],
+          anonymous: false,
+        },
+        {
+          type: "event",
           name: "Paused",
           inputs: [
             {
@@ -21081,10 +21447,10 @@ const deployedContracts: GenericContractsDeclaration = {
         paused:
           "lib/openzeppelin-contracts-upgradeable/contracts/utils/PausableUpgradeable.sol",
       },
-      deployedOnBlock: 62547271,
+      deployedOnBlock: 63148291,
     },
     RoundVotingEngine: {
-      address: "0xF9AB92Ad64B9B09A9B104F3541a3c673bBD995d4",
+      address: "0x80B94B854aB8C632c0674E2E6CB7b160079d7D60",
       abi: [
         {
           type: "constructor",
@@ -21246,6 +21612,35 @@ const deployedContracts: GenericContractsDeclaration = {
           ],
           outputs: [],
           stateMutability: "nonpayable",
+        },
+        {
+          type: "function",
+          name: "commitRevealAvailableAt",
+          inputs: [
+            {
+              name: "contentId",
+              type: "uint256",
+              internalType: "uint256",
+            },
+            {
+              name: "roundId",
+              type: "uint256",
+              internalType: "uint256",
+            },
+            {
+              name: "commitKey",
+              type: "bytes32",
+              internalType: "bytes32",
+            },
+          ],
+          outputs: [
+            {
+              name: "",
+              type: "uint256",
+              internalType: "uint256",
+            },
+          ],
+          stateMutability: "view",
         },
         {
           type: "function",
@@ -22899,6 +23294,22 @@ const deployedContracts: GenericContractsDeclaration = {
         },
         {
           type: "error",
+          name: "SafeCastOverflowedUintDowncast",
+          inputs: [
+            {
+              name: "bits",
+              type: "uint8",
+              internalType: "uint8",
+            },
+            {
+              name: "value",
+              type: "uint256",
+              internalType: "uint256",
+            },
+          ],
+        },
+        {
+          type: "error",
           name: "SafeERC20FailedOperation",
           inputs: [
             {
@@ -22974,10 +23385,10 @@ const deployedContracts: GenericContractsDeclaration = {
         paused:
           "lib/openzeppelin-contracts-upgradeable/contracts/utils/PausableUpgradeable.sol",
       },
-      deployedOnBlock: 62547287,
+      deployedOnBlock: 63148302,
     },
     RoundRewardDistributor: {
-      address: "0x26aA9104256512440818F2D616422279732cdF2C",
+      address: "0x9d489d7b3BC35C95fE6E15A62387aF52b61beaf7",
       abi: [
         {
           type: "constructor",
@@ -22996,19 +23407,6 @@ const deployedContracts: GenericContractsDeclaration = {
             },
           ],
           stateMutability: "view",
-        },
-        {
-          type: "function",
-          name: "activateClaimTracking",
-          inputs: [
-            {
-              name: "activatedAt",
-              type: "uint48",
-              internalType: "uint48",
-            },
-          ],
-          outputs: [],
-          stateMutability: "nonpayable",
         },
         {
           type: "function",
@@ -23132,19 +23530,6 @@ const deployedContracts: GenericContractsDeclaration = {
           ],
           outputs: [],
           stateMutability: "nonpayable",
-        },
-        {
-          type: "function",
-          name: "claimTrackingActivatedAt",
-          inputs: [],
-          outputs: [
-            {
-              name: "",
-              type: "uint48",
-              internalType: "uint48",
-            },
-          ],
-          stateMutability: "view",
         },
         {
           type: "function",
@@ -23329,30 +23714,6 @@ const deployedContracts: GenericContractsDeclaration = {
           ],
           outputs: [],
           stateMutability: "nonpayable",
-        },
-        {
-          type: "function",
-          name: "legacyRoundClaimsEnabled",
-          inputs: [
-            {
-              name: "",
-              type: "uint256",
-              internalType: "uint256",
-            },
-            {
-              name: "",
-              type: "uint256",
-              internalType: "uint256",
-            },
-          ],
-          outputs: [
-            {
-              name: "",
-              type: "bool",
-              internalType: "bool",
-            },
-          ],
-          stateMutability: "view",
         },
         {
           type: "function",
@@ -23753,29 +24114,6 @@ const deployedContracts: GenericContractsDeclaration = {
         },
         {
           type: "function",
-          name: "setLegacyRoundClaimsEnabled",
-          inputs: [
-            {
-              name: "contentId",
-              type: "uint256",
-              internalType: "uint256",
-            },
-            {
-              name: "roundId",
-              type: "uint256",
-              internalType: "uint256",
-            },
-            {
-              name: "enabled",
-              type: "bool",
-              internalType: "bool",
-            },
-          ],
-          outputs: [],
-          stateMutability: "nonpayable",
-        },
-        {
-          type: "function",
           name: "snapshotParticipationRewards",
           inputs: [
             {
@@ -23878,19 +24216,6 @@ const deployedContracts: GenericContractsDeclaration = {
         },
         {
           type: "event",
-          name: "ClaimTrackingActivated",
-          inputs: [
-            {
-              name: "activatedAt",
-              type: "uint48",
-              indexed: false,
-              internalType: "uint48",
-            },
-          ],
-          anonymous: false,
-        },
-        {
-          type: "event",
           name: "FrontendFeeClaimed",
           inputs: [
             {
@@ -23960,31 +24285,6 @@ const deployedContracts: GenericContractsDeclaration = {
               type: "uint64",
               indexed: false,
               internalType: "uint64",
-            },
-          ],
-          anonymous: false,
-        },
-        {
-          type: "event",
-          name: "LegacyRoundClaimsEnabledSet",
-          inputs: [
-            {
-              name: "contentId",
-              type: "uint256",
-              indexed: true,
-              internalType: "uint256",
-            },
-            {
-              name: "roundId",
-              type: "uint256",
-              indexed: true,
-              internalType: "uint256",
-            },
-            {
-              name: "enabled",
-              type: "bool",
-              indexed: false,
-              internalType: "bool",
             },
           ],
           anonymous: false,
@@ -24352,11 +24652,6 @@ const deployedContracts: GenericContractsDeclaration = {
         },
         {
           type: "error",
-          name: "ClaimTrackingAlreadyActivated",
-          inputs: [],
-        },
-        {
-          type: "error",
           name: "FrontendFeeNotClaimable",
           inputs: [],
         },
@@ -24367,27 +24662,12 @@ const deployedContracts: GenericContractsDeclaration = {
         },
         {
           type: "error",
-          name: "InvalidActivationTimestamp",
-          inputs: [],
-        },
-        {
-          type: "error",
           name: "InvalidInitialization",
           inputs: [],
         },
         {
           type: "error",
           name: "InvalidParticipationSnapshot",
-          inputs: [],
-        },
-        {
-          type: "error",
-          name: "LegacyClaimTrackingUnconfigured",
-          inputs: [],
-        },
-        {
-          type: "error",
-          name: "LegacyRoundClaimsUnmigrated",
           inputs: [],
         },
         {
@@ -24508,10 +24788,10 @@ const deployedContracts: GenericContractsDeclaration = {
         supportsInterface:
           "lib/openzeppelin-contracts-upgradeable/contracts/access/AccessControlUpgradeable.sol",
       },
-      deployedOnBlock: 62547294,
+      deployedOnBlock: 63148308,
     },
     FrontendRegistry: {
-      address: "0x8A596f92420cA97EEB78120230a3Ca9210f9eFD3",
+      address: "0x8dC83BCA5B83D04297C901bE2ADbAE6f2424C238",
       abi: [
         {
           type: "constructor",
@@ -25469,10 +25749,10 @@ const deployedContracts: GenericContractsDeclaration = {
         supportsInterface:
           "lib/openzeppelin-contracts-upgradeable/contracts/access/AccessControlUpgradeable.sol",
       },
-      deployedOnBlock: 62547249,
+      deployedOnBlock: 63148281,
     },
     ProfileRegistry: {
-      address: "0xB4C253d00d9DE4B40eCaf8d5a626e7c7Ae1Cfc2b",
+      address: "0x46E28370eEF9ee79094291Aa81896A740896E0D9",
       abi: [
         {
           type: "constructor",
@@ -26132,10 +26412,10 @@ const deployedContracts: GenericContractsDeclaration = {
         supportsInterface:
           "lib/openzeppelin-contracts-upgradeable/contracts/access/AccessControlUpgradeable.sol",
       },
-      deployedOnBlock: 62547256,
+      deployedOnBlock: 63148286,
     },
     ProtocolConfig: {
-      address: "0x8Bf24D023DC7bfDfa461C60DDCb0Fe189D033b94",
+      address: "0x891a7B1E4d5780b571451A5976b5b7116f0E4989",
       abi: [
         {
           type: "constructor",
@@ -26944,10 +27224,10 @@ const deployedContracts: GenericContractsDeclaration = {
         supportsInterface:
           "lib/openzeppelin-contracts/contracts/access/AccessControl.sol",
       },
-      deployedOnBlock: 62547279,
+      deployedOnBlock: 63148296,
     },
     TransparentUpgradeableProxy: {
-      address: "0x8a596f92420ca97eeb78120230a3ca9210f9efd3",
+      address: "0x8dc83bca5b83d04297c901be2adbae6f2424c238",
       abi: [
         {
           type: "constructor",
@@ -27061,10 +27341,10 @@ const deployedContracts: GenericContractsDeclaration = {
         },
       ],
       inheritedFunctions: {},
-      deployedOnBlock: 62547249,
+      deployedOnBlock: 63148281,
     },
     CategoryRegistry: {
-      address: "0xB7eb3b869eA584859442BE8E9c973c5CB554ba33",
+      address: "0x4879134eb6af78A98Db183360383B6D4c20222D9",
       abi: [
         {
           type: "constructor",
@@ -28211,10 +28491,10 @@ const deployedContracts: GenericContractsDeclaration = {
         supportsInterface:
           "lib/openzeppelin-contracts/contracts/access/AccessControl.sol",
       },
-      deployedOnBlock: 62547304,
+      deployedOnBlock: 63148314,
     },
     VoterIdNFT: {
-      address: "0xe42925f1e4CBc96327f1bA80702f7582a109aB4D",
+      address: "0x7ac2B29e2A1f46B5C9387b8d2cc9ABe1ba3db56E",
       abi: [
         {
           type: "constructor",
@@ -29498,10 +29778,10 @@ const deployedContracts: GenericContractsDeclaration = {
         revokeVoterId: "contracts/interfaces/IVoterIdNFT.sol",
         setDelegate: "contracts/interfaces/IVoterIdNFT.sol",
       },
-      deployedOnBlock: 62547314,
+      deployedOnBlock: 63148326,
     },
     ParticipationPool: {
-      address: "0x15776571f4A32f6fc50346d5ECB4648cDC380339",
+      address: "0x8fc9c70C8C53dcA95b397364aA331e39E598019d",
       abi: [
         {
           type: "constructor",
@@ -30180,10 +30460,10 @@ const deployedContracts: GenericContractsDeclaration = {
         transferOwnership:
           "lib/openzeppelin-contracts/contracts/access/Ownable.sol",
       },
-      deployedOnBlock: 62547530,
+      deployedOnBlock: 63148511,
     },
     HumanFaucet: {
-      address: "0xFc7360647abd07142986a7A7ABC7D4Eb71919546",
+      address: "0xcEFFF3d5a74229813E7c4fE256299e2363af9d47",
       abi: [
         {
           type: "constructor",
@@ -31042,6 +31322,25 @@ const deployedContracts: GenericContractsDeclaration = {
         },
         {
           type: "event",
+          name: "RemainingWithdrawn",
+          inputs: [
+            {
+              name: "to",
+              type: "address",
+              indexed: true,
+              internalType: "address",
+            },
+            {
+              name: "amount",
+              type: "uint256",
+              indexed: false,
+              internalType: "uint256",
+            },
+          ],
+          anonymous: false,
+        },
+        {
+          type: "event",
           name: "TierChanged",
           inputs: [
             {
@@ -31254,7 +31553,310 @@ const deployedContracts: GenericContractsDeclaration = {
           "lib/openzeppelin-contracts/contracts/access/Ownable.sol",
         paused: "lib/openzeppelin-contracts/contracts/utils/Pausable.sol",
       },
-      deployedOnBlock: 62547582,
+      deployedOnBlock: 63148561,
+    },
+    VotePreflightLib: {
+      address: "0xb57257185053fa367eedebb24b7d19bb1a8f6396",
+      abi: [
+        {
+          type: "function",
+          name: "isFrontendEligible",
+          inputs: [
+            {
+              name: "frontendRegistry",
+              type: "IFrontendRegistry",
+              internalType: "contract IFrontendRegistry",
+            },
+            {
+              name: "frontend",
+              type: "address",
+              internalType: "address",
+            },
+          ],
+          outputs: [
+            {
+              name: "eligible",
+              type: "bool",
+              internalType: "bool",
+            },
+          ],
+          stateMutability: "view",
+        },
+        {
+          type: "function",
+          name: "validateVoterAndContent",
+          inputs: [
+            {
+              name: "voterIdNft",
+              type: "IVoterIdNFT",
+              internalType: "contract IVoterIdNFT",
+            },
+            {
+              name: "registry",
+              type: "ContentRegistry",
+              internalType: "contract ContentRegistry",
+            },
+            {
+              name: "voter",
+              type: "address",
+              internalType: "address",
+            },
+            {
+              name: "contentId",
+              type: "uint256",
+              internalType: "uint256",
+            },
+          ],
+          outputs: [
+            {
+              name: "voterId",
+              type: "uint256",
+              internalType: "uint256",
+            },
+            {
+              name: "useTokenIdentity",
+              type: "bool",
+              internalType: "bool",
+            },
+          ],
+          stateMutability: "view",
+        },
+        {
+          type: "error",
+          name: "AlreadyCommitted",
+          inputs: [],
+        },
+        {
+          type: "error",
+          name: "ContentNotActive",
+          inputs: [],
+        },
+        {
+          type: "error",
+          name: "CooldownActive",
+          inputs: [],
+        },
+        {
+          type: "error",
+          name: "InvalidStake",
+          inputs: [],
+        },
+        {
+          type: "error",
+          name: "MaxVotersReached",
+          inputs: [],
+        },
+        {
+          type: "error",
+          name: "SelfVote",
+          inputs: [],
+        },
+        {
+          type: "error",
+          name: "VoterIdRequired",
+          inputs: [],
+        },
+      ],
+      inheritedFunctions: {},
+      deployedOnBlock: 63148184,
+    },
+    TlockVoteLib: {
+      address: "0x761cd92bb1724f99287d1335be59780f7879cb88",
+      abi: [
+        {
+          type: "function",
+          name: "buildExpectedCommitHash",
+          inputs: [
+            {
+              name: "isUp",
+              type: "bool",
+              internalType: "bool",
+            },
+            {
+              name: "salt",
+              type: "bytes32",
+              internalType: "bytes32",
+            },
+            {
+              name: "contentId",
+              type: "uint256",
+              internalType: "uint256",
+            },
+            {
+              name: "targetRound",
+              type: "uint64",
+              internalType: "uint64",
+            },
+            {
+              name: "drandChainHash",
+              type: "bytes32",
+              internalType: "bytes32",
+            },
+            {
+              name: "ciphertext",
+              type: "bytes",
+              internalType: "bytes",
+            },
+          ],
+          outputs: [
+            {
+              name: "",
+              type: "bytes32",
+              internalType: "bytes32",
+            },
+          ],
+          stateMutability: "pure",
+        },
+        {
+          type: "function",
+          name: "decodeCommitPayload",
+          inputs: [
+            {
+              name: "data",
+              type: "bytes",
+              internalType: "bytes",
+            },
+          ],
+          outputs: [
+            {
+              name: "contentId",
+              type: "uint256",
+              internalType: "uint256",
+            },
+            {
+              name: "commitHash",
+              type: "bytes32",
+              internalType: "bytes32",
+            },
+            {
+              name: "ciphertext",
+              type: "bytes",
+              internalType: "bytes",
+            },
+            {
+              name: "targetRound",
+              type: "uint64",
+              internalType: "uint64",
+            },
+            {
+              name: "drandChainHash",
+              type: "bytes32",
+              internalType: "bytes32",
+            },
+            {
+              name: "frontend",
+              type: "address",
+              internalType: "address",
+            },
+          ],
+          stateMutability: "pure",
+        },
+        {
+          type: "function",
+          name: "targetRoundTimestamp",
+          inputs: [
+            {
+              name: "targetRound",
+              type: "uint64",
+              internalType: "uint64",
+            },
+            {
+              name: "genesisTime",
+              type: "uint64",
+              internalType: "uint64",
+            },
+            {
+              name: "period",
+              type: "uint64",
+              internalType: "uint64",
+            },
+          ],
+          outputs: [
+            {
+              name: "",
+              type: "uint256",
+              internalType: "uint256",
+            },
+          ],
+          stateMutability: "pure",
+        },
+        {
+          type: "function",
+          name: "validateCommitData",
+          inputs: [
+            {
+              name: "ciphertext",
+              type: "bytes",
+              internalType: "bytes",
+            },
+            {
+              name: "targetRound",
+              type: "uint64",
+              internalType: "uint64",
+            },
+            {
+              name: "drandChainHash",
+              type: "bytes32",
+              internalType: "bytes32",
+            },
+            {
+              name: "expectedDrandChainHash",
+              type: "bytes32",
+              internalType: "bytes32",
+            },
+            {
+              name: "revealableAfter",
+              type: "uint256",
+              internalType: "uint256",
+            },
+            {
+              name: "epochDuration",
+              type: "uint256",
+              internalType: "uint256",
+            },
+            {
+              name: "genesisTime",
+              type: "uint64",
+              internalType: "uint64",
+            },
+            {
+              name: "period",
+              type: "uint64",
+              internalType: "uint64",
+            },
+          ],
+          outputs: [],
+          stateMutability: "pure",
+        },
+        {
+          type: "error",
+          name: "CiphertextTooLarge",
+          inputs: [],
+        },
+        {
+          type: "error",
+          name: "DrandChainHashMismatch",
+          inputs: [],
+        },
+        {
+          type: "error",
+          name: "InvalidCiphertext",
+          inputs: [],
+        },
+        {
+          type: "error",
+          name: "TargetRoundOutOfWindow",
+          inputs: [],
+        },
+      ],
+      inheritedFunctions: {},
+      deployedOnBlock: 63148189,
+    },
+    RoundSettlementSideEffectsLib: {
+      address: "0x1214b567ad76045f1429b803d88d41bf5e128608",
+      abi: [],
+      inheritedFunctions: {},
+      deployedOnBlock: 63148199,
     },
   },
   11142220: {
@@ -31300,6 +31902,11 @@ const deployedContracts: GenericContractsDeclaration = {
         {
           type: "error",
           name: "ContentNotFound",
+          inputs: [],
+        },
+        {
+          type: "error",
+          name: "MilestoneZeroSnapshotMissing",
           inputs: [],
         },
       ],
@@ -36688,6 +37295,82 @@ const deployedContracts: GenericContractsDeclaration = {
         },
         {
           type: "function",
+          name: "milestoneZeroSubmitterParticipationPool",
+          inputs: [
+            {
+              name: "",
+              type: "uint256",
+              internalType: "uint256",
+            },
+          ],
+          outputs: [
+            {
+              name: "",
+              type: "address",
+              internalType: "address",
+            },
+          ],
+          stateMutability: "view",
+        },
+        {
+          type: "function",
+          name: "milestoneZeroSubmitterParticipationRateBps",
+          inputs: [
+            {
+              name: "",
+              type: "uint256",
+              internalType: "uint256",
+            },
+          ],
+          outputs: [
+            {
+              name: "",
+              type: "uint256",
+              internalType: "uint256",
+            },
+          ],
+          stateMutability: "view",
+        },
+        {
+          type: "function",
+          name: "milestoneZeroSubmitterRating",
+          inputs: [
+            {
+              name: "",
+              type: "uint256",
+              internalType: "uint256",
+            },
+          ],
+          outputs: [
+            {
+              name: "",
+              type: "uint8",
+              internalType: "uint8",
+            },
+          ],
+          stateMutability: "view",
+        },
+        {
+          type: "function",
+          name: "milestoneZeroSubmitterTermsSnapshotted",
+          inputs: [
+            {
+              name: "",
+              type: "uint256",
+              internalType: "uint256",
+            },
+          ],
+          outputs: [
+            {
+              name: "",
+              type: "bool",
+              internalType: "bool",
+            },
+          ],
+          stateMutability: "view",
+        },
+        {
+          type: "function",
           name: "nextContentId",
           inputs: [],
           outputs: [
@@ -36846,6 +37529,24 @@ const deployedContracts: GenericContractsDeclaration = {
         },
         {
           type: "function",
+          name: "repairMilestoneZeroSubmitterParticipationTerms",
+          inputs: [
+            {
+              name: "contentId",
+              type: "uint256",
+              internalType: "uint256",
+            },
+            {
+              name: "rewardRateBps",
+              type: "uint256",
+              internalType: "uint256",
+            },
+          ],
+          outputs: [],
+          stateMutability: "nonpayable",
+        },
+        {
+          type: "function",
           name: "reserveSubmission",
           inputs: [
             {
@@ -36888,6 +37589,19 @@ const deployedContracts: GenericContractsDeclaration = {
             },
           ],
           stateMutability: "view",
+        },
+        {
+          type: "function",
+          name: "returnSubmitterStakeWithMilestoneZeroTerms",
+          inputs: [
+            {
+              name: "contentId",
+              type: "uint256",
+              internalType: "uint256",
+            },
+          ],
+          outputs: [],
+          stateMutability: "nonpayable",
         },
         {
           type: "function",
@@ -37033,6 +37747,34 @@ const deployedContracts: GenericContractsDeclaration = {
               internalType: "uint256",
             },
           ],
+          stateMutability: "nonpayable",
+        },
+        {
+          type: "function",
+          name: "snapshotMilestoneZeroSubmitterTerms",
+          inputs: [
+            {
+              name: "contentId",
+              type: "uint256",
+              internalType: "uint256",
+            },
+            {
+              name: "rating",
+              type: "uint256",
+              internalType: "uint256",
+            },
+            {
+              name: "rewardPool",
+              type: "address",
+              internalType: "address",
+            },
+            {
+              name: "rewardRateBps",
+              type: "uint256",
+              internalType: "uint256",
+            },
+          ],
+          outputs: [],
           stateMutability: "nonpayable",
         },
         {
@@ -37459,6 +38201,56 @@ const deployedContracts: GenericContractsDeclaration = {
               type: "uint64",
               indexed: false,
               internalType: "uint64",
+            },
+          ],
+          anonymous: false,
+        },
+        {
+          type: "event",
+          name: "MilestoneZeroSubmitterParticipationRepairNeeded",
+          inputs: [
+            {
+              name: "contentId",
+              type: "uint256",
+              indexed: true,
+              internalType: "uint256",
+            },
+            {
+              name: "rewardPool",
+              type: "address",
+              indexed: true,
+              internalType: "address",
+            },
+          ],
+          anonymous: false,
+        },
+        {
+          type: "event",
+          name: "MilestoneZeroSubmitterParticipationTermsRepaired",
+          inputs: [
+            {
+              name: "contentId",
+              type: "uint256",
+              indexed: true,
+              internalType: "uint256",
+            },
+            {
+              name: "rewardPool",
+              type: "address",
+              indexed: true,
+              internalType: "address",
+            },
+            {
+              name: "rewardRateBps",
+              type: "uint256",
+              indexed: false,
+              internalType: "uint256",
+            },
+            {
+              name: "rewardAmount",
+              type: "uint256",
+              indexed: false,
+              internalType: "uint256",
             },
           ],
           anonymous: false,
@@ -38053,6 +38845,35 @@ const deployedContracts: GenericContractsDeclaration = {
           ],
           outputs: [],
           stateMutability: "nonpayable",
+        },
+        {
+          type: "function",
+          name: "commitRevealAvailableAt",
+          inputs: [
+            {
+              name: "contentId",
+              type: "uint256",
+              internalType: "uint256",
+            },
+            {
+              name: "roundId",
+              type: "uint256",
+              internalType: "uint256",
+            },
+            {
+              name: "commitKey",
+              type: "bytes32",
+              internalType: "bytes32",
+            },
+          ],
+          outputs: [
+            {
+              name: "",
+              type: "uint256",
+              internalType: "uint256",
+            },
+          ],
+          stateMutability: "view",
         },
         {
           type: "function",
@@ -39706,6 +40527,22 @@ const deployedContracts: GenericContractsDeclaration = {
         },
         {
           type: "error",
+          name: "SafeCastOverflowedUintDowncast",
+          inputs: [
+            {
+              name: "bits",
+              type: "uint8",
+              internalType: "uint8",
+            },
+            {
+              name: "value",
+              type: "uint256",
+              internalType: "uint256",
+            },
+          ],
+        },
+        {
+          type: "error",
           name: "SafeERC20FailedOperation",
           inputs: [
             {
@@ -39803,19 +40640,6 @@ const deployedContracts: GenericContractsDeclaration = {
             },
           ],
           stateMutability: "view",
-        },
-        {
-          type: "function",
-          name: "activateClaimTracking",
-          inputs: [
-            {
-              name: "activatedAt",
-              type: "uint48",
-              internalType: "uint48",
-            },
-          ],
-          outputs: [],
-          stateMutability: "nonpayable",
         },
         {
           type: "function",
@@ -39939,19 +40763,6 @@ const deployedContracts: GenericContractsDeclaration = {
           ],
           outputs: [],
           stateMutability: "nonpayable",
-        },
-        {
-          type: "function",
-          name: "claimTrackingActivatedAt",
-          inputs: [],
-          outputs: [
-            {
-              name: "",
-              type: "uint48",
-              internalType: "uint48",
-            },
-          ],
-          stateMutability: "view",
         },
         {
           type: "function",
@@ -40136,30 +40947,6 @@ const deployedContracts: GenericContractsDeclaration = {
           ],
           outputs: [],
           stateMutability: "nonpayable",
-        },
-        {
-          type: "function",
-          name: "legacyRoundClaimsEnabled",
-          inputs: [
-            {
-              name: "",
-              type: "uint256",
-              internalType: "uint256",
-            },
-            {
-              name: "",
-              type: "uint256",
-              internalType: "uint256",
-            },
-          ],
-          outputs: [
-            {
-              name: "",
-              type: "bool",
-              internalType: "bool",
-            },
-          ],
-          stateMutability: "view",
         },
         {
           type: "function",
@@ -40560,29 +41347,6 @@ const deployedContracts: GenericContractsDeclaration = {
         },
         {
           type: "function",
-          name: "setLegacyRoundClaimsEnabled",
-          inputs: [
-            {
-              name: "contentId",
-              type: "uint256",
-              internalType: "uint256",
-            },
-            {
-              name: "roundId",
-              type: "uint256",
-              internalType: "uint256",
-            },
-            {
-              name: "enabled",
-              type: "bool",
-              internalType: "bool",
-            },
-          ],
-          outputs: [],
-          stateMutability: "nonpayable",
-        },
-        {
-          type: "function",
           name: "snapshotParticipationRewards",
           inputs: [
             {
@@ -40685,19 +41449,6 @@ const deployedContracts: GenericContractsDeclaration = {
         },
         {
           type: "event",
-          name: "ClaimTrackingActivated",
-          inputs: [
-            {
-              name: "activatedAt",
-              type: "uint48",
-              indexed: false,
-              internalType: "uint48",
-            },
-          ],
-          anonymous: false,
-        },
-        {
-          type: "event",
           name: "FrontendFeeClaimed",
           inputs: [
             {
@@ -40767,31 +41518,6 @@ const deployedContracts: GenericContractsDeclaration = {
               type: "uint64",
               indexed: false,
               internalType: "uint64",
-            },
-          ],
-          anonymous: false,
-        },
-        {
-          type: "event",
-          name: "LegacyRoundClaimsEnabledSet",
-          inputs: [
-            {
-              name: "contentId",
-              type: "uint256",
-              indexed: true,
-              internalType: "uint256",
-            },
-            {
-              name: "roundId",
-              type: "uint256",
-              indexed: true,
-              internalType: "uint256",
-            },
-            {
-              name: "enabled",
-              type: "bool",
-              indexed: false,
-              internalType: "bool",
             },
           ],
           anonymous: false,
@@ -41159,11 +41885,6 @@ const deployedContracts: GenericContractsDeclaration = {
         },
         {
           type: "error",
-          name: "ClaimTrackingAlreadyActivated",
-          inputs: [],
-        },
-        {
-          type: "error",
           name: "FrontendFeeNotClaimable",
           inputs: [],
         },
@@ -41174,27 +41895,12 @@ const deployedContracts: GenericContractsDeclaration = {
         },
         {
           type: "error",
-          name: "InvalidActivationTimestamp",
-          inputs: [],
-        },
-        {
-          type: "error",
           name: "InvalidInitialization",
           inputs: [],
         },
         {
           type: "error",
           name: "InvalidParticipationSnapshot",
-          inputs: [],
-        },
-        {
-          type: "error",
-          name: "LegacyClaimTrackingUnconfigured",
-          inputs: [],
-        },
-        {
-          type: "error",
-          name: "LegacyRoundClaimsUnmigrated",
           inputs: [],
         },
         {
@@ -47840,6 +48546,25 @@ const deployedContracts: GenericContractsDeclaration = {
             },
             {
               name: "claimantBonus",
+              type: "uint256",
+              indexed: false,
+              internalType: "uint256",
+            },
+          ],
+          anonymous: false,
+        },
+        {
+          type: "event",
+          name: "RemainingWithdrawn",
+          inputs: [
+            {
+              name: "to",
+              type: "address",
+              indexed: true,
+              internalType: "address",
+            },
+            {
+              name: "amount",
               type: "uint256",
               indexed: false,
               internalType: "uint256",
