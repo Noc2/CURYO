@@ -161,9 +161,11 @@ contract HumanFaucet is SelfVerificationRoot, Ownable, Pausable {
 
     // --- Admin Functions ---
 
-    /// @notice Set the verification config ID (must be created in hub first)
+    /// @notice Set the verification config ID after confirming the hub recognizes it
     /// @param _configId The config ID from the Self.xyz hub
     function setConfigId(bytes32 _configId) external onlyOwner {
+        require(_configId != bytes32(0), "Invalid config");
+        require(_identityVerificationHubV2.verificationConfigV2Exists(_configId), "Unknown config");
         verificationConfigId = _configId;
         emit ConfigIdUpdated(_configId);
     }

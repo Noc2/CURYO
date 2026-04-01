@@ -367,6 +367,27 @@ contract HumanFaucetCoverageTest is Test {
         assertEq(configId, mockHub.MOCK_CONFIG_ID());
     }
 
+    function test_SetConfigId_RejectsZeroConfig() public {
+        vm.prank(admin);
+        vm.expectRevert("Invalid config");
+        faucet.setConfigId(bytes32(0));
+    }
+
+    function test_SetConfigId_RejectsUnknownConfig() public {
+        vm.prank(admin);
+        vm.expectRevert("Unknown config");
+        faucet.setConfigId(keccak256("missing-config"));
+    }
+
+    function test_SetConfigId_AcceptsHubConfig() public {
+        bytes32 configId = mockHub.MOCK_CONFIG_ID();
+
+        vm.prank(admin);
+        faucet.setConfigId(configId);
+
+        assertEq(faucet.verificationConfigId(), configId);
+    }
+
     // =========================================================================
     // 11. REFERRAL ACROSS TIER BOUNDARY
     // =========================================================================

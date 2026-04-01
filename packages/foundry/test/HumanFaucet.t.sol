@@ -371,7 +371,7 @@ contract HumanFaucetTest is Test {
     // --- Admin Function Tests ---
 
     function test_SetConfigId() public {
-        bytes32 newConfigId = keccak256("new-config");
+        bytes32 newConfigId = mockHub.MOCK_CONFIG_ID();
 
         vm.prank(admin);
         faucet.setConfigId(newConfigId);
@@ -380,10 +380,24 @@ contract HumanFaucetTest is Test {
     }
 
     function test_SetConfigId_RevertNotOwner() public {
-        bytes32 newConfigId = keccak256("new-config");
+        bytes32 newConfigId = mockHub.MOCK_CONFIG_ID();
 
         vm.prank(user1);
         vm.expectRevert();
+        faucet.setConfigId(newConfigId);
+    }
+
+    function test_SetConfigId_RevertZeroConfig() public {
+        vm.prank(admin);
+        vm.expectRevert("Invalid config");
+        faucet.setConfigId(bytes32(0));
+    }
+
+    function test_SetConfigId_RevertUnknownConfig() public {
+        bytes32 newConfigId = keccak256("unknown-config");
+
+        vm.prank(admin);
+        vm.expectRevert("Unknown config");
         faucet.setConfigId(newConfigId);
     }
 
