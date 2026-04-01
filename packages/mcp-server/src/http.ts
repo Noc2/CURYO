@@ -9,7 +9,12 @@ import { enforceHttpRateLimit, HttpRateLimitError, HttpRateLimitStoreError } fro
 import { logEvent, serializeError } from "./lib/logging.js";
 import { extractRequestOrigin, isOriginAllowed, normalizeOrigin } from "./lib/origin.js";
 import { getMetricsText, recordHttpAuthFailure, recordHttpRateLimit, recordHttpRequest, recordReadinessCheck } from "./metrics.js";
-import { buildProtectedResourceMetadata, getProtectedResourceMetadataPath, resolveProtectedResourceMetadataUrl } from "./protected-resource-metadata.js";
+import {
+  buildProtectedResourceMetadata,
+  getProtectedResourceMetadataPath,
+  MissingHttpHostHeaderError,
+  resolveProtectedResourceMetadataUrl,
+} from "./protected-resource-metadata.js";
 import { createServer as createMcpServer } from "./server.js";
 
 export interface RunningHttpServer {
@@ -291,11 +296,18 @@ export async function handleStreamableHttpRequest(
 
     try {
       sendJson(response, 200, buildProtectedResourceMetadata(request, config), config);
+      logResponse(200, { route: "oauth-protected-resource" });
+      return;
     } catch (error) {
-      const statusCode = error instanceof Error && error.message.includes("HTTP Host header") ? 400 : 500;
+      if (error instanceof MissingHttpHostHeaderError) {
+        sendJson(response, 400, { error: error.message }, config);
+        logResponse(400, { route: "oauth-protected-resource" });
+        return;
+      }
+
       sendJson(
         response,
-        statusCode,
+        500,
         {
           error: error instanceof Error ? error.message : "Failed to resolve protected resource metadata",
         },
@@ -304,7 +316,7 @@ export async function handleStreamableHttpRequest(
       logEvent("warn", "mcp_http_protected_resource_metadata_failed", {
         method,
         path: requestUrl.pathname,
-        statusCode,
+        statusCode: 500,
         durationMs: Date.now() - startedAt,
         remoteAddress,
         requestId,
@@ -312,8 +324,6 @@ export async function handleStreamableHttpRequest(
       });
       return;
     }
-    logResponse(200, { route: "oauth-protected-resource" });
-    return;
   }
 
   if (requestUrl.pathname !== config.httpPath) {
@@ -357,7 +367,7 @@ export async function handleStreamableHttpRequest(
   try {
     authInfo = authenticateRequest(request, config.httpAuth, {
       requiredScopes: ["mcp:read"],
-      resourceMetadataUrl: maybeResolveProtectedResourceMetadataUrl(request, config),
+      resourceMetadataUrl: resolveAuthChallengeMetadataUrl(request, config),
     });
     if (authInfo && requestId) {
       authInfo = {
@@ -515,14 +525,6 @@ export async function handleStreamableHttpRequest(
   }
 }
 
-function maybeResolveProtectedResourceMetadataUrl(request: IncomingMessage, config: ServerConfig): string | undefined {
-  try {
-    return resolveProtectedResourceMetadataUrl(request, config);
-  } catch {
-    return undefined;
-  }
-}
-
 export function resolveRequestId(request: IncomingMessage): string | null {
   for (const headerName of REQUEST_ID_HEADERS) {
     const value = request.headers[headerName];
@@ -649,6 +651,18 @@ function parseContentLength(header: string | string[] | undefined): number | nul
 
 function isPonderApiError(error: unknown): error is PonderApiError {
   return error instanceof Error && error.name === "PonderApiError";
+}
+
+function resolveAuthChallengeMetadataUrl(request: IncomingMessage, config: ServerConfig): string | undefined {
+  try {
+    return resolveProtectedResourceMetadataUrl(request, config);
+  } catch (error) {
+    if (error instanceof MissingHttpHostHeaderError) {
+      return undefined;
+    }
+
+    throw error;
+  }
 }
 
 function validateMcpRequestOrigin(

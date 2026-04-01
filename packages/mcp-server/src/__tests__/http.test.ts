@@ -318,7 +318,7 @@ describe("handleStreamableHttpRequest", () => {
     });
   });
 
-  it("returns 400 for protected resource metadata requests without a Host header", async () => {
+  it("rejects protected resource metadata requests without a Host header", async () => {
     const request = {
       url: "/.well-known/oauth-protected-resource/mcp",
       method: "GET",
@@ -339,7 +339,7 @@ describe("handleStreamableHttpRequest", () => {
 
     expect(response.statusCode).toBe(400);
     expect(JSON.parse(response.body)).toEqual({
-      error: "Cannot resolve a public MCP base URL without an HTTP Host header",
+      error: "Missing HTTP Host header",
     });
   });
 
@@ -566,7 +566,7 @@ describe("handleStreamableHttpRequest", () => {
     });
   });
 
-  it("still returns a bearer challenge when the MCP request is missing Host", async () => {
+  it("rejects unauthenticated MCP requests without a Host header when bearer auth is enabled", async () => {
     const request = {
       url: "/mcp",
       method: "POST",
@@ -602,6 +602,7 @@ describe("handleStreamableHttpRequest", () => {
 
     expect(response.statusCode).toBe(401);
     expect(response.headers["WWW-Authenticate"]).toContain('Bearer realm="curyo-mcp"');
+    expect(response.headers["WWW-Authenticate"]).toContain('scope="mcp:read"');
     expect(response.headers["WWW-Authenticate"]).not.toContain("resource_metadata=");
     expect(JSON.parse(response.body)).toEqual({
       error: "Missing bearer token",

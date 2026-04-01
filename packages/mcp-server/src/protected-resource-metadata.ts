@@ -11,6 +11,13 @@ const MCP_PROTECTED_RESOURCE_SCOPES = [
   "mcp:write:claim_frontend_fee",
 ] as const;
 
+export class MissingHttpHostHeaderError extends Error {
+  constructor() {
+    super("Missing HTTP Host header");
+    this.name = "MissingHttpHostHeaderError";
+  }
+}
+
 export function getProtectedResourceMetadataPath(httpPath: string): string {
   return httpPath === "/" ? OAUTH_PROTECTED_RESOURCE_WELL_KNOWN_PATH : `${OAUTH_PROTECTED_RESOURCE_WELL_KNOWN_PATH}${httpPath}`;
 }
@@ -68,7 +75,7 @@ function resolveRequestBaseUrl(request: IncomingMessage): string {
   const protocol = forwardedProto?.split(",", 1)[0]?.trim() || "http";
   const host = Array.isArray(request.headers.host) ? request.headers.host[0] : request.headers.host;
   if (!host?.trim()) {
-    throw new Error("Cannot resolve a public MCP base URL without an HTTP Host header");
+    throw new MissingHttpHostHeaderError();
   }
 
   return `${protocol}://${host.trim()}`;
