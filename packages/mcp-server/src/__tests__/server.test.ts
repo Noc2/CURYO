@@ -150,9 +150,36 @@ describe("createServer", () => {
     );
 
     const aboutResource = await internalServer._registeredResources["curyo://about"].readCallback(new URL("curyo://about"), {});
-    expect(aboutResource.contents[0]?.text).toContain("Curyo MCP Server");
-    expect(aboutResource.contents[0]?.text).toContain("rank_candidate_sources");
-    expect(aboutResource.contents[0]?.text).toContain('"mode": "none"');
+    const aboutPayload = JSON.parse(aboutResource.contents[0]?.text ?? "{}");
+    expect(aboutPayload).toMatchObject({
+      name: "Curyo MCP Server",
+      auth: {
+        mode: "none",
+        walletSessionsEnabled: false,
+      },
+    });
+    expect(aboutPayload.prompts).toEqual(
+      expect.arrayContaining([expect.objectContaining({ name: "rank_candidate_sources" })]),
+    );
+    expect(aboutResource.contents[0]?.text).not.toContain("issuer");
+    expect(aboutResource.contents[0]?.text).not.toContain("audience");
+    expect(aboutResource.contents[0]?.text).not.toContain("submissionRevealPollIntervalMs");
+
+    const statusResource = await internalServer._registeredResources["curyo://status"].readCallback(new URL("curyo://status"), {});
+    const statusPayload = JSON.parse(statusResource.contents[0]?.text ?? "{}");
+    expect(statusPayload).toMatchObject({
+      auth: {
+        mode: "none",
+        walletSessionsEnabled: false,
+      },
+      upstream: {
+        source: "ponder",
+        status: "configured",
+      },
+    });
+    expect(statusResource.contents[0]?.text).not.toContain("trustedProxyHeaders");
+    expect(statusResource.contents[0]?.text).not.toContain("baseUrl");
+    expect(statusResource.contents[0]?.text).not.toContain("maxVoteStake");
 
     const categoriesResource = await internalServer._registeredResources["curyo://categories"].readCallback(new URL("curyo://categories"), {});
     expect(categoriesResource.contents[0]?.text).toContain("Articles");
