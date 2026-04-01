@@ -96,6 +96,16 @@
     "node": ">=24 <25"
   },
   "resolutions": {
-    "react-spinners@^0.14.1": "patch:react-spinners@npm%3A0.14.1#./.yarn/patches/react-spinners-npm-0.14.1-545ddaba3f.patch"
+    "react-spinners@^0.14.1": "patch:react-spinners@npm%3A0.14.1#./.yarn/patches/react-spinners-npm-0.14.1-545ddaba3f.patch",
+    "vite@5.0.7": "5.4.21",
+    "rollup@^4.20.0": "4.59.0",
+    "hono@^4.10.3": "4.12.9",
+    "@hono/node-server@1.13.3": "1.19.11",
+    "kysely@^0.26.3": "0.28.14",
+    "path-to-regexp@6.1.0": "6.3.0",
+    "path-to-regexp@8.2.0": "8.4.1",
+    "path-to-regexp@8.3.0": "8.4.1",
+    "path-to-regexp@^8.0.0": "8.4.1",
+    "@xmldom/xmldom@0.9.8": "0.9.9"
   }
 }
