@@ -3,7 +3,7 @@
 import { useCallback, useMemo } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { defineChain, prepareTransaction } from "thirdweb";
-import { useActiveWallet, useSetActiveWallet } from "thirdweb/react";
+import { useActiveWallet, useActiveWalletChain, useSetActiveWallet } from "thirdweb/react";
 import { sendAndConfirmCalls } from "thirdweb/wallets/eip5792";
 import { type Abi, type Hex, encodeFunctionData } from "viem";
 import { useAccount } from "wagmi";
@@ -12,7 +12,11 @@ import {
   useFreeTransactionAllowance,
 } from "~~/hooks/useFreeTransactionAllowance";
 import { useThirdwebWagmiSync } from "~~/hooks/useThirdwebWagmiSync";
-import { type WalletExecutionMode, useWalletExecutionCapabilities } from "~~/hooks/useWalletExecutionCapabilities";
+import {
+  type WalletExecutionMode,
+  resolveWalletExecutionChainId,
+  useWalletExecutionCapabilities,
+} from "~~/hooks/useWalletExecutionCapabilities";
 import { buildFreeTransactionOperationKey } from "~~/lib/thirdweb/freeTransactionOperation";
 import {
   createThirdwebInAppWallet,
@@ -108,11 +112,13 @@ export function shouldAttemptSelfFundedThirdwebFallback(params: {
 export function useThirdwebSponsoredSubmitCalls() {
   const queryClient = useQueryClient();
   const activeWallet = useActiveWallet();
+  const activeWalletChain = useActiveWalletChain();
   const setActiveWallet = useSetActiveWallet();
   const { syncWalletToWagmi } = useThirdwebWagmiSync();
-  const { address, chainId, connector } = useAccount();
+  const { address, chainId: wagmiChainId, connector } = useAccount();
   const freeTransactionAllowance = useFreeTransactionAllowance();
   const { executionMode, hasSendCalls, supportsPaymasterService } = useWalletExecutionCapabilities();
+  const chainId = resolveWalletExecutionChainId(wagmiChainId, activeWalletChain?.id);
 
   const sponsoredSubmitCapabilities = useMemo(
     () =>
