@@ -18,6 +18,35 @@ For remote MCP clients, run the Streamable HTTP transport:
 yarn mcp:start:http
 ```
 
+## Railway Deployment
+
+This package includes a Railway-ready Docker build at `packages/mcp-server/Dockerfile`.
+
+Recommended Railway service settings:
+
+1. Deploy from the monorepo root so workspace dependencies resolve correctly.
+2. Set the service to build with `packages/mcp-server/Dockerfile`.
+3. Configure the healthcheck path as `/healthz` for process health, or `/readyz` if you want deploys gated on Ponder availability.
+4. Attach a public domain and set `CURYO_MCP_PUBLIC_BASE_URL` to that HTTPS origin.
+
+Minimum production variables:
+
+```bash
+CURYO_PONDER_URL=https://ponder.example.com
+CURYO_MCP_PUBLIC_BASE_URL=https://mcp.example.com
+CURYO_MCP_HTTP_CORS_ORIGIN=https://curyo.example.com
+CURYO_MCP_HTTP_TRUSTED_PROXY_HEADERS=x-real-ip
+CURYO_MCP_HTTP_AUTH_MODE=bearer
+CURYO_MCP_HTTP_BEARER_TOKEN=replace-me
+```
+
+Notes:
+
+- The Dockerfile automatically binds the MCP server to `0.0.0.0` and Railway's injected `PORT`.
+- In `NODE_ENV=production`, startup validation rejects `localhost` values for `CURYO_PONDER_URL` and `CURYO_MCP_HTTP_CORS_ORIGIN`.
+- In `NODE_ENV=production`, rate limiting also requires `CURYO_MCP_HTTP_TRUSTED_PROXY_HEADERS` to be set.
+- For hosted wallet sessions, keep the MCP server's `CURYO_MCP_HTTP_SESSION_*` settings aligned with the Next.js issuer configuration.
+
 ## Scripts
 
 | Command | Description |
