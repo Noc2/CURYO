@@ -6,7 +6,7 @@ import { fileURLToPath } from "url";
 import { toString } from "qrcode";
 import { readFileSync } from "fs";
 import { parse } from "toml";
-import { ethers } from "ethers";
+import { createPublicClient, formatEther, http, isAddress } from "viem";
 
 const ALCHEMY_API_KEY = process.env.ALCHEMY_API_KEY;
 
@@ -40,14 +40,16 @@ async function getBalanceForEachNetwork(address) {
       console.log(`\n--${networkName}-- 📡`);
 
       try {
-        const provider = new ethers.providers.JsonRpcProvider(networkUrl);
+        const client = createPublicClient({
+          transport: http(networkUrl),
+        });
 
         // Get balance and format it
-        const balance = await provider.getBalance(address);
-        const formattedBalance = +ethers.utils.formatUnits(balance);
+        const balance = await client.getBalance({ address });
+        const formattedBalance = +formatEther(balance);
 
         console.log("   Balance:", formattedBalance);
-        console.log("   Nonce:", await provider.getTransactionCount(address));
+        console.log("   Nonce:", await client.getTransactionCount({ address }));
       } catch (e) {
         console.log(
           `   ❌ Can't connect to network ${networkName}: ${e.message}`
@@ -79,6 +81,9 @@ async function checkAccountBalance() {
     let address;
     try {
       address = execSync(addressCommand).toString().trim();
+      if (!isAddress(address)) {
+        throw new Error(`Invalid address returned for keystore: ${address}`);
+      }
       console.log("\n💰 Checking balances across networks...");
       console.log("\n");
       await getBalanceForEachNetwork(address);
