@@ -1066,6 +1066,18 @@ export async function getFrontendAccumulatedFees(frontendAddr: string, contractA
 // ROUND VOTING ENGINE — tlock commit-reveal direct contract calls
 // ============================================================
 
+async function resolveVoteCommitEpochDurationSeconds(
+  votingEngineAddress: string,
+  epochDurationSeconds?: number,
+): Promise<number> {
+  if (epochDurationSeconds != null) {
+    return epochDurationSeconds;
+  }
+
+  const { epochDuration } = await readRoundConfig(votingEngineAddress);
+  return Number(epochDuration);
+}
+
 /**
  * Commit a vote directly via contract call (tlock commit-reveal).
  * Encrypts vote direction with drand tlock and computes commitHash/commitKey.
@@ -1080,10 +1092,14 @@ export async function commitVoteDirect(
   frontend: string,
   fromAddress: string,
   contractAddress: string,
-  epochDurationSeconds = 1200,
+  epochDurationSeconds?: number,
 ): Promise<{ success: boolean; commitKey: `0x${string}`; isUp: boolean; salt: `0x${string}` }> {
   const { createTlockVoteCommit } = await import("@curyo/contracts/voting");
   const { encodeFunctionData, encodePacked, keccak256 } = await import("viem");
+  const resolvedEpochDurationSeconds = await resolveVoteCommitEpochDurationSeconds(
+    contractAddress,
+    epochDurationSeconds,
+  );
 
   // Generate deterministic salt from voter + contentId + timestamp
   const salt = keccak256(
@@ -1105,10 +1121,10 @@ export async function commitVoteDirect(
       isUp,
       salt,
       contentId: BigInt(contentId),
-      epochDurationSeconds,
+      epochDurationSeconds: resolvedEpochDurationSeconds,
     },
     {
-      now: await resolveTlockRuntimeNowMs(contractAddress, epochDurationSeconds),
+      now: await resolveTlockRuntimeNowMs(contractAddress, resolvedEpochDurationSeconds),
     },
   );
 
@@ -1150,10 +1166,14 @@ export async function commitVoteWithTransferAndCallDirect(
   fromAddress: string,
   tokenAddress: string,
   votingEngineAddress: string,
-  epochDurationSeconds = 1200,
+  epochDurationSeconds?: number,
 ): Promise<{ success: boolean; commitKey: `0x${string}`; isUp: boolean; salt: `0x${string}` }> {
   const { createTlockVoteCommit, encodeVoteTransferPayload } = await import("@curyo/contracts/voting");
   const { encodeFunctionData, encodePacked, keccak256 } = await import("viem");
+  const resolvedEpochDurationSeconds = await resolveVoteCommitEpochDurationSeconds(
+    votingEngineAddress,
+    epochDurationSeconds,
+  );
 
   const salt = keccak256(
     encodePacked(
@@ -1174,10 +1194,10 @@ export async function commitVoteWithTransferAndCallDirect(
       isUp,
       salt,
       contentId: BigInt(contentId),
-      epochDurationSeconds,
+      epochDurationSeconds: resolvedEpochDurationSeconds,
     },
     {
-      now: await resolveTlockRuntimeNowMs(votingEngineAddress, epochDurationSeconds),
+      now: await resolveTlockRuntimeNowMs(votingEngineAddress, resolvedEpochDurationSeconds),
     },
   );
 

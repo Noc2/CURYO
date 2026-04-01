@@ -113,6 +113,7 @@ export function useNotificationPreferences(address?: string, options?: UseNotifi
     enabled: Boolean(address),
     staleTime: Infinity,
     refetchInterval: false,
+    retry: false,
   });
 
   const preferences = data ?? DEFAULT_NOTIFICATION_PREFERENCES;
