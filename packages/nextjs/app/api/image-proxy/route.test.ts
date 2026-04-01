@@ -92,3 +92,31 @@ test("rejects redirect targets that downgrade to http", async () => {
   assert.deepEqual(await response.json(), { error: "Only HTTPS URLs allowed" });
   assert.deepEqual(calls, ["https://coin-images.coingecko.com/initial.png"]);
 });
+
+test("continues serving images when the rate-limit backing store is unavailable", async () => {
+  __setRateLimitStoreForTests({
+    execute: async () => {
+      throw new Error("database offline");
+    },
+  });
+
+  globalThis.fetch = (async () => {
+    return new Response(new Uint8Array([4, 5, 6]), {
+      headers: {
+        "content-type": "image/png",
+      },
+    });
+  }) as typeof fetch;
+
+  const response = await GET(
+    new NextRequest("http://localhost/api/image-proxy?url=https://coin-images.coingecko.com/initial.png", {
+      headers: {
+        "x-forwarded-for": "203.0.113.77",
+      },
+    }),
+  );
+
+  assert.equal(response.status, 200);
+  assert.equal(response.headers.get("content-type"), "image/png");
+  assert.deepEqual(Array.from(new Uint8Array(await response.arrayBuffer())), [4, 5, 6]);
+});

@@ -56,7 +56,7 @@ function normalizeValidationUrl(value: unknown): string | null {
  * Returns cached validation results from the database.
  */
 export async function GET(request: NextRequest) {
-  const limited = await checkRateLimit(request, RATE_LIMIT_GET);
+  const limited = await checkRateLimit(request, RATE_LIMIT_GET, { allowOnStoreUnavailable: true });
   if (limited) return limited;
 
   const urlsParam = request.nextUrl.searchParams.get("urls");

@@ -1,6 +1,10 @@
 import type { NextPage } from "next";
 import { protocolDocFacts } from "~~/lib/docs/protocolFacts";
 
+const contractsSourceHref = "https://github.com/Noc2/CURYO/tree/main/packages/foundry/contracts";
+const deploymentsSourceHref = "https://github.com/Noc2/CURYO/tree/main/packages/foundry/deployments";
+const tsContractsSourceHref = "https://github.com/Noc2/CURYO/tree/main/packages/contracts";
+
 const SmartContracts: NextPage = () => {
   return (
     <article className="prose max-w-none">
@@ -19,6 +23,21 @@ const SmartContracts: NextPage = () => {
       <p>
         The current production surface also includes one stateless helper contract, <code>SubmissionCanonicalizer</code>
         , plus the protocol libraries used by the registries and voting engine.
+      </p>
+      <p>
+        The Solidity sources live in{" "}
+        <a href={contractsSourceHref} target="_blank" rel="noopener noreferrer" className="link link-primary">
+          packages/foundry/contracts
+        </a>
+        , deployment artifacts live in{" "}
+        <a href={deploymentsSourceHref} target="_blank" rel="noopener noreferrer" className="link link-primary">
+          packages/foundry/deployments
+        </a>
+        , and the shared TypeScript ABIs and address helpers used by the app and SDK live in{" "}
+        <a href={tsContractsSourceHref} target="_blank" rel="noopener noreferrer" className="link link-primary">
+          packages/contracts
+        </a>
+        .
       </p>
       <div className="not-prose overflow-x-auto my-6 rounded-xl bg-base-200">
         <table className="table table-zebra [&_th]:text-base [&_td]:text-base [&_.badge]:text-base [&_th]:bg-base-300">

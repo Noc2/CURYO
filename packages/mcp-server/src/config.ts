@@ -1,6 +1,7 @@
 import { createHash } from "node:crypto";
 import { getSharedDeploymentAddress as getSharedArtifactAddress } from "@curyo/contracts/deployments";
 import { isAddress, type Address } from "viem";
+import { normalizeOrigin } from "./lib/origin.js";
 
 export interface ServerConfig {
   ponderBaseUrl: string;
@@ -13,9 +14,22 @@ export interface ServerConfig {
   httpPath: string;
   httpPublicBaseUrl: string | null;
   httpCorsOrigin: string;
+  httpAllowedOrigins: string[];
+  httpAuthorizationServers: string[];
+  httpResourceDocumentationUrl: string | null;
+  httpServer: HttpServerConfig;
   httpAuth: HttpAuthConfig;
   httpRateLimit: HttpRateLimitConfig;
   write: WriteConfig;
+}
+
+export interface HttpServerConfig {
+  requestTimeoutMs: number;
+  headersTimeoutMs: number;
+  keepAliveTimeoutMs: number;
+  socketTimeoutMs: number;
+  maxHeadersCount: number;
+  maxRequestBodyBytes: number;
 }
 
 export interface HttpAuthConfig {
@@ -128,6 +142,12 @@ const DEFAULT_HTTP_AUTH_SCOPES = ["mcp:read"] as const;
 const DEFAULT_HTTP_SESSION_KEY_ID = "nextjs-default";
 const DEFAULT_HTTP_SESSION_ISSUER = "curyo-nextjs";
 const DEFAULT_HTTP_SESSION_AUDIENCE = "curyo-mcp";
+const DEFAULT_HTTP_REQUEST_TIMEOUT_MS = 30_000;
+const DEFAULT_HTTP_HEADERS_TIMEOUT_MS = 60_000;
+const DEFAULT_HTTP_KEEP_ALIVE_TIMEOUT_MS = 5_000;
+const DEFAULT_HTTP_SOCKET_TIMEOUT_MS = 60_000;
+const DEFAULT_HTTP_MAX_HEADERS_COUNT = 100;
+const DEFAULT_HTTP_MAX_REQUEST_BODY_BYTES = 1_048_576;
 const DEFAULT_HTTP_RATE_LIMIT_WINDOW_MS = 60_000;
 const DEFAULT_HTTP_READ_REQUESTS_PER_WINDOW = 120;
 const DEFAULT_HTTP_WRITE_REQUESTS_PER_WINDOW = 20;
@@ -165,6 +185,10 @@ export function normalizeHttpPath(value: string): string {
 export function normalizeOptionalBaseUrl(value: string | undefined): string | null {
   const trimmed = value?.trim();
   return trimmed ? normalizeBaseUrl(trimmed) : null;
+}
+
+function dedupeStrings(values: string[]): string[] {
+  return [...new Set(values)];
 }
 
 function isLocalhostUrl(value: string): boolean {
@@ -758,10 +782,88 @@ function loadHttpRateLimitConfig(env: NodeJS.ProcessEnv): HttpRateLimitConfig {
   };
 }
 
+function loadHttpServerConfig(env: NodeJS.ProcessEnv): HttpServerConfig {
+  const requestTimeoutMs = parseIntegerEnv(
+    readEnv(env, "CURYO_MCP_HTTP_REQUEST_TIMEOUT_MS"),
+    DEFAULT_HTTP_REQUEST_TIMEOUT_MS,
+    "CURYO_MCP_HTTP_REQUEST_TIMEOUT_MS",
+    1,
+  );
+  const headersTimeoutMs = parseIntegerEnv(
+    readEnv(env, "CURYO_MCP_HTTP_HEADERS_TIMEOUT_MS"),
+    DEFAULT_HTTP_HEADERS_TIMEOUT_MS,
+    "CURYO_MCP_HTTP_HEADERS_TIMEOUT_MS",
+    1,
+  );
+  const keepAliveTimeoutMs = parseIntegerEnv(
+    readEnv(env, "CURYO_MCP_HTTP_KEEP_ALIVE_TIMEOUT_MS"),
+    DEFAULT_HTTP_KEEP_ALIVE_TIMEOUT_MS,
+    "CURYO_MCP_HTTP_KEEP_ALIVE_TIMEOUT_MS",
+    1,
+  );
+  const socketTimeoutMs = parseIntegerEnv(
+    readEnv(env, "CURYO_MCP_HTTP_SOCKET_TIMEOUT_MS"),
+    DEFAULT_HTTP_SOCKET_TIMEOUT_MS,
+    "CURYO_MCP_HTTP_SOCKET_TIMEOUT_MS",
+    1,
+  );
+  const maxHeadersCount = parseIntegerEnv(
+    readEnv(env, "CURYO_MCP_HTTP_MAX_HEADERS_COUNT"),
+    DEFAULT_HTTP_MAX_HEADERS_COUNT,
+    "CURYO_MCP_HTTP_MAX_HEADERS_COUNT",
+    1,
+  );
+  const maxRequestBodyBytes = parseIntegerEnv(
+    readEnv(env, "CURYO_MCP_HTTP_MAX_REQUEST_BODY_BYTES"),
+    DEFAULT_HTTP_MAX_REQUEST_BODY_BYTES,
+    "CURYO_MCP_HTTP_MAX_REQUEST_BODY_BYTES",
+    1,
+  );
+
+  if (headersTimeoutMs <= keepAliveTimeoutMs) {
+    throw new Error("CURYO_MCP_HTTP_HEADERS_TIMEOUT_MS must be greater than CURYO_MCP_HTTP_KEEP_ALIVE_TIMEOUT_MS");
+  }
+
+  return {
+    requestTimeoutMs,
+    headersTimeoutMs,
+    keepAliveTimeoutMs,
+    socketTimeoutMs,
+    maxHeadersCount,
+    maxRequestBodyBytes,
+  };
+}
+
+function loadHttpAllowedOrigins(
+  env: NodeJS.ProcessEnv,
+  httpCorsOrigin: string,
+  httpPublicBaseUrl: string | null,
+): string[] {
+  const configuredOrigins = parseCsvEnv(readEnv(env, "CURYO_MCP_HTTP_ALLOWED_ORIGINS"));
+  if (configuredOrigins.length > 0) {
+    return dedupeStrings(
+      configuredOrigins.map((origin, index) =>
+        normalizeOrigin(origin, `CURYO_MCP_HTTP_ALLOWED_ORIGINS[${index}]`),
+      ),
+    );
+  }
+
+  const derivedOrigins: string[] = [];
+  if (httpCorsOrigin !== "*") {
+    derivedOrigins.push(normalizeOrigin(httpCorsOrigin, "CURYO_MCP_HTTP_CORS_ORIGIN"));
+  }
+  if (httpPublicBaseUrl) {
+    derivedOrigins.push(new URL(httpPublicBaseUrl).origin);
+  }
+
+  return dedupeStrings(derivedOrigins);
+}
+
 function validateProductionStreamableHttpConfig(params: {
   env: NodeJS.ProcessEnv;
   ponderBaseUrl: string;
   httpCorsOrigin: string;
+  httpAllowedOrigins: string[];
   httpRateLimit: HttpRateLimitConfig;
 }): void {
   if (params.env.NODE_ENV !== "production") {
@@ -780,6 +882,18 @@ function validateProductionStreamableHttpConfig(params: {
     );
   }
 
+  if (params.httpAllowedOrigins.length === 0) {
+    throw new Error(
+      "CURYO_MCP_HTTP_ALLOWED_ORIGINS or a non-wildcard CURYO_MCP_HTTP_CORS_ORIGIN/CURYO_MCP_PUBLIC_BASE_URL is required in production streamable-http deployments",
+    );
+  }
+
+  if (params.httpAllowedOrigins.some((origin) => isLocalhostUrl(origin))) {
+    throw new Error(
+      "CURYO_MCP_HTTP_ALLOWED_ORIGINS must not include localhost origins in production streamable-http deployments",
+    );
+  }
+
   if (params.httpRateLimit.enabled && params.httpRateLimit.trustedProxyHeaders.length === 0) {
     throw new Error(
       "CURYO_MCP_HTTP_TRUSTED_PROXY_HEADERS is required in production when CURYO_MCP_TRANSPORT=streamable-http and rate limiting is enabled",
@@ -792,13 +906,21 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): ServerConfig {
   const transport = parseTransportEnv(env.CURYO_MCP_TRANSPORT);
   const write = loadWriteConfig(env);
   const httpAuth = loadHttpAuthConfig(env, new Set(write.identities.map((identity) => identity.id)));
+  const httpServer = loadHttpServerConfig(env);
   const httpRateLimit = loadHttpRateLimitConfig(env);
   const httpCorsOrigin = env.CURYO_MCP_HTTP_CORS_ORIGIN ?? DEFAULT_HTTP_CORS_ORIGIN;
+  const httpPublicBaseUrl = normalizeOptionalBaseUrl(env.CURYO_MCP_PUBLIC_BASE_URL);
+  const httpAllowedOrigins = loadHttpAllowedOrigins(env, httpCorsOrigin, httpPublicBaseUrl);
+  const httpAuthorizationServers = dedupeStrings(
+    parseCsvEnv(readEnv(env, "CURYO_MCP_HTTP_AUTHORIZATION_SERVERS")).map((value) => normalizeBaseUrl(value)),
+  );
+  const httpResourceDocumentationUrl = normalizeOptionalBaseUrl(readEnv(env, "CURYO_MCP_HTTP_RESOURCE_DOCUMENTATION_URL"));
 
   validateProductionStreamableHttpConfig({
     env,
     ponderBaseUrl,
     httpCorsOrigin,
+    httpAllowedOrigins,
     httpRateLimit,
   });
 
@@ -811,8 +933,12 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): ServerConfig {
     httpHost: env.CURYO_MCP_HTTP_HOST ?? DEFAULT_HTTP_HOST,
     httpPort: parseIntegerEnv(env.CURYO_MCP_HTTP_PORT, DEFAULT_HTTP_PORT, "CURYO_MCP_HTTP_PORT", 0),
     httpPath: normalizeHttpPath(env.CURYO_MCP_HTTP_PATH ?? DEFAULT_HTTP_PATH),
-    httpPublicBaseUrl: normalizeOptionalBaseUrl(env.CURYO_MCP_PUBLIC_BASE_URL),
+    httpPublicBaseUrl,
     httpCorsOrigin,
+    httpAllowedOrigins,
+    httpAuthorizationServers,
+    httpResourceDocumentationUrl,
+    httpServer,
     httpAuth,
     httpRateLimit,
     write,

@@ -15,7 +15,7 @@ function parseRequestedSize(value: string | null): number | undefined {
 }
 
 export async function GET(request: NextRequest) {
-  const limited = await checkRateLimit(request, RATE_LIMIT);
+  const limited = await checkRateLimit(request, RATE_LIMIT, { allowOnStoreUnavailable: true });
   if (limited) return limited;
 
   const address = request.nextUrl.searchParams.get("address");

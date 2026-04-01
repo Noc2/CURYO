@@ -1,6 +1,10 @@
 import Link from "next/link";
 import type { NextPage } from "next";
 
+const mcpServerSourceHref = "https://github.com/Noc2/CURYO/tree/main/packages/mcp-server";
+const mcpRoutesSourceHref = "https://github.com/Noc2/CURYO/tree/main/packages/nextjs/app/api/mcp";
+const ponderSourceHref = "https://github.com/Noc2/CURYO/tree/main/packages/ponder";
+
 const AIPage: NextPage = () => {
   return (
     <article className="prose max-w-none">
@@ -63,10 +67,25 @@ https://mcp.curyo.xyz/mcp`}</code>
         The Next.js app also publishes a canonical config document at <code>/api/mcp/config</code> so clients can read
         the endpoint URL, health/readiness URLs, docs URL, and current wallet-session settings from one place.
       </p>
+      <p>
+        The open-source implementation lives in the{" "}
+        <a href={mcpServerSourceHref} target="_blank" rel="noopener noreferrer" className="link link-primary">
+          MCP server package
+        </a>
+        , the{" "}
+        <a href={mcpRoutesSourceHref} target="_blank" rel="noopener noreferrer" className="link link-primary">
+          Next.js MCP routes
+        </a>
+        , and the{" "}
+        <a href={ponderSourceHref} target="_blank" rel="noopener noreferrer" className="link link-primary">
+          Ponder indexer
+        </a>{" "}
+        if you want to inspect or self-host the same stack.
+      </p>
 
       <h2>Service Overview</h2>
       <div className="overflow-x-auto">
-        <table>
+        <table className="table table-zebra [&_th]:bg-base-300 [&_th]:text-base [&_td]:align-top [&_td]:text-base [&_th:first-child]:w-64 [&_td:first-child]:w-64">
           <thead>
             <tr>
               <th>Area</th>
@@ -277,18 +296,6 @@ https://mcp.curyo.xyz/mcp`}</code>
         session-signing settings: <code>CURYO_MCP_HTTP_SESSION_SECRET</code>, <code>CURYO_MCP_HTTP_SESSION_KEY_ID</code>
         , <code>CURYO_MCP_HTTP_SESSION_ISSUER</code>, and <code>CURYO_MCP_HTTP_SESSION_AUDIENCE</code>.
       </p>
-
-      <h2>WebMCP</h2>
-      <p>
-        WebMCP is a browser-native layer that can sit on top of the hosted MCP backend. The hosted MCP endpoint remains
-        the canonical interface for durable reads, auth, and production write policy, while WebMCP stays feature-flagged
-        for in-tab experiments.
-      </p>
-      <ul>
-        <li>Use hosted MCP first for stable read and write workflows.</li>
-        <li>Keep WebMCP behind an explicit feature flag in the web app.</li>
-        <li>Use WebMCP for browser-context actions and read-oriented tab-local workflows.</li>
-      </ul>
 
       <div className="not-prose mt-8 rounded-xl p-4 surface-card">
         <p className="text-base-content/60">

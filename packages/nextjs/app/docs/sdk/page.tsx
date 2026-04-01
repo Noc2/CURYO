@@ -1,6 +1,12 @@
 import Link from "next/link";
 import type { NextPage } from "next";
 
+const sdkSourceHref = "https://github.com/Noc2/CURYO/tree/main/packages/sdk";
+const referenceAppSourceHref = "https://github.com/Noc2/CURYO/tree/main/packages/nextjs";
+const keeperSourceHref = "https://github.com/Noc2/CURYO/tree/main/packages/keeper";
+const ponderSourceHref = "https://github.com/Noc2/CURYO/tree/main/packages/ponder";
+const mcpServerSourceHref = "https://github.com/Noc2/CURYO/tree/main/packages/mcp-server";
+
 const SdkPage: NextPage = () => {
   return (
     <article className="prose max-w-none">
@@ -32,6 +38,11 @@ const SdkPage: NextPage = () => {
       <h2>Install</h2>
       <p>
         The SDK currently lives in the monorepo as <code>packages/sdk</code> and is exposed as <code>@curyo/sdk</code>.
+        Browse the{" "}
+        <a href={sdkSourceHref} target="_blank" rel="noopener noreferrer" className="link link-primary">
+          SDK source on GitHub
+        </a>{" "}
+        if you want to inspect the current implementation or track new helpers as they land.
       </p>
       <pre className="bg-base-200 p-4 rounded-lg overflow-x-auto">
         <code>{`import { createCuryoClient } from "@curyo/sdk";
@@ -63,10 +74,13 @@ const frontend = await curyo.read.getFrontend(
 
       <h2>Vote Integration</h2>
       <p>
-        For vote flows, the SDK helps you prepare the same single-transaction payload the reference app uses. The host
-        app still decides how to sign and submit the transaction. In the redeployed tlock model, commit helpers also
-        thread the reveal target round and drand chain hash through the payload so the contracts can enforce the new
-        metadata bindings on-chain.
+        For vote flows, the SDK helps you prepare the same single-transaction payload the{" "}
+        <a href={referenceAppSourceHref} target="_blank" rel="noopener noreferrer" className="link link-primary">
+          reference app
+        </a>{" "}
+        uses. The host app still decides how to sign and submit the transaction. In the redeployed tlock model, commit
+        helpers also thread the reveal target round and drand chain hash through the payload so the contracts can
+        enforce the new metadata bindings on-chain.
       </p>
       <pre className="bg-base-200 p-4 rounded-lg overflow-x-auto">
         <code>{`const commit = await buildCommitVoteParams({
@@ -112,6 +126,21 @@ const txData = buildVoteTransferAndCallData({
       <p>
         Those pieces matter for production operators, but they are separate concerns from making integration easy for an
         existing web app.
+      </p>
+      <p>
+        If you need the surrounding operator stack, the open-source implementation is split across the{" "}
+        <a href={keeperSourceHref} target="_blank" rel="noopener noreferrer" className="link link-primary">
+          keeper
+        </a>
+        ,{" "}
+        <a href={ponderSourceHref} target="_blank" rel="noopener noreferrer" className="link link-primary">
+          Ponder indexer
+        </a>
+        , and{" "}
+        <a href={mcpServerSourceHref} target="_blank" rel="noopener noreferrer" className="link link-primary">
+          MCP server
+        </a>{" "}
+        packages in the monorepo.
       </p>
 
       <div className="not-prose mt-8 rounded-xl p-4 surface-card">

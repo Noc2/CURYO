@@ -31,6 +31,17 @@ describe("loadConfig", () => {
       httpPath: "/mcp",
       httpPublicBaseUrl: null,
       httpCorsOrigin: "http://localhost:3000",
+      httpAllowedOrigins: ["http://localhost:3000"],
+      httpAuthorizationServers: [],
+      httpResourceDocumentationUrl: null,
+      httpServer: {
+        requestTimeoutMs: 30_000,
+        headersTimeoutMs: 60_000,
+        keepAliveTimeoutMs: 5_000,
+        socketTimeoutMs: 60_000,
+        maxHeadersCount: 100,
+        maxRequestBodyBytes: 1_048_576,
+      },
       httpAuth: {
         mode: "none",
         realm: "curyo-mcp",
@@ -81,6 +92,17 @@ describe("loadConfig", () => {
     expect(config.httpPath).toBe("/rpc");
     expect(config.httpPublicBaseUrl).toBe(null);
     expect(config.httpCorsOrigin).toBe("https://chatgpt.com");
+    expect(config.httpAllowedOrigins).toEqual(["https://chatgpt.com"]);
+    expect(config.httpAuthorizationServers).toEqual([]);
+    expect(config.httpResourceDocumentationUrl).toBe(null);
+    expect(config.httpServer).toEqual({
+      requestTimeoutMs: 30_000,
+      headersTimeoutMs: 60_000,
+      keepAliveTimeoutMs: 5_000,
+      socketTimeoutMs: 60_000,
+      maxHeadersCount: 100,
+      maxRequestBodyBytes: 1_048_576,
+    });
     expect(config.ponderTimeoutMs).toBe(2500);
     expect(config.httpAuth.mode).toBe("none");
     expect(config.httpAuth.sessionKeys).toEqual([]);
@@ -126,6 +148,20 @@ describe("loadConfig", () => {
     );
   });
 
+  it("requires at least one non-localhost allowed origin for production streamable-http deployments", () => {
+    expect(() =>
+      loadConfig({
+        NODE_ENV: "production",
+        CURYO_MCP_TRANSPORT: "streamable-http",
+        CURYO_PONDER_URL: "https://ponder.curyo.xyz",
+        CURYO_MCP_HTTP_CORS_ORIGIN: "*",
+        CURYO_MCP_HTTP_TRUSTED_PROXY_HEADERS: "x-real-ip",
+      }),
+    ).toThrow(
+      "CURYO_MCP_HTTP_ALLOWED_ORIGINS or a non-wildcard CURYO_MCP_HTTP_CORS_ORIGIN/CURYO_MCP_PUBLIC_BASE_URL is required in production streamable-http deployments",
+    );
+  });
+
   it("allows production streamable-http deployments when Ponder, CORS, and proxy headers are explicit", () => {
     const config = loadConfig({
       NODE_ENV: "production",
@@ -137,7 +173,60 @@ describe("loadConfig", () => {
 
     expect(config.ponderBaseUrl).toBe("https://ponder.curyo.xyz");
     expect(config.httpCorsOrigin).toBe("https://app.curyo.xyz");
+    expect(config.httpAllowedOrigins).toEqual(["https://app.curyo.xyz"]);
     expect(config.httpRateLimit.trustedProxyHeaders).toEqual(["x-real-ip", "x-forwarded-for"]);
+  });
+
+  it("allows explicit MCP origin allowlists separate from the CORS response origin", () => {
+    const config = loadConfig({
+      CURYO_MCP_TRANSPORT: "streamable-http",
+      CURYO_MCP_HTTP_CORS_ORIGIN: "*",
+      CURYO_MCP_PUBLIC_BASE_URL: "https://mcp.curyo.xyz/base/",
+      CURYO_MCP_HTTP_ALLOWED_ORIGINS: "https://curyo.xyz,https://www.curyo.xyz",
+    });
+
+    expect(config.httpPublicBaseUrl).toBe("https://mcp.curyo.xyz/base");
+    expect(config.httpAllowedOrigins).toEqual(["https://curyo.xyz", "https://www.curyo.xyz"]);
+  });
+
+  it("loads protected resource metadata config for OAuth discovery", () => {
+    const config = loadConfig({
+      CURYO_MCP_TRANSPORT: "streamable-http",
+      CURYO_MCP_HTTP_AUTHORIZATION_SERVERS: "https://auth.curyo.xyz,https://login.curyo.xyz/issuer/",
+      CURYO_MCP_HTTP_RESOURCE_DOCUMENTATION_URL: "https://curyo.xyz/docs/ai/",
+    });
+
+    expect(config.httpAuthorizationServers).toEqual(["https://auth.curyo.xyz", "https://login.curyo.xyz/issuer"]);
+    expect(config.httpResourceDocumentationUrl).toBe("https://curyo.xyz/docs/ai");
+  });
+
+  it("loads HTTP hardening overrides", () => {
+    const config = loadConfig({
+      CURYO_MCP_HTTP_REQUEST_TIMEOUT_MS: "15000",
+      CURYO_MCP_HTTP_HEADERS_TIMEOUT_MS: "45000",
+      CURYO_MCP_HTTP_KEEP_ALIVE_TIMEOUT_MS: "4000",
+      CURYO_MCP_HTTP_SOCKET_TIMEOUT_MS: "45000",
+      CURYO_MCP_HTTP_MAX_HEADERS_COUNT: "64",
+      CURYO_MCP_HTTP_MAX_REQUEST_BODY_BYTES: "262144",
+    });
+
+    expect(config.httpServer).toEqual({
+      requestTimeoutMs: 15_000,
+      headersTimeoutMs: 45_000,
+      keepAliveTimeoutMs: 4_000,
+      socketTimeoutMs: 45_000,
+      maxHeadersCount: 64,
+      maxRequestBodyBytes: 262_144,
+    });
+  });
+
+  it("requires HTTP headers timeout to exceed the keep-alive timeout", () => {
+    expect(() =>
+      loadConfig({
+        CURYO_MCP_HTTP_HEADERS_TIMEOUT_MS: "5000",
+        CURYO_MCP_HTTP_KEEP_ALIVE_TIMEOUT_MS: "5000",
+      }),
+    ).toThrow("CURYO_MCP_HTTP_HEADERS_TIMEOUT_MS must be greater than CURYO_MCP_HTTP_KEEP_ALIVE_TIMEOUT_MS");
   });
 
   it("normalizes an optional public base URL", () => {

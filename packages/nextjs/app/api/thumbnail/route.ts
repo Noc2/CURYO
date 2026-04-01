@@ -15,7 +15,7 @@ const RATE_LIMIT = { limit: 200, windowMs: 60_000 }; // 200 req/min per IP
  * `symbol`, `stars`, `forks`, and `language` when available.
  */
 export async function GET(request: NextRequest) {
-  const limited = await checkRateLimit(request, RATE_LIMIT);
+  const limited = await checkRateLimit(request, RATE_LIMIT, { allowOnStoreUnavailable: true });
   if (limited) return limited;
 
   const url = request.nextUrl.searchParams.get("url");

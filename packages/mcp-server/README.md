@@ -18,6 +18,37 @@ For remote MCP clients, run the Streamable HTTP transport:
 yarn mcp:start:http
 ```
 
+## Railway Deployment
+
+This package includes a Railway-ready Docker build at `packages/mcp-server/Dockerfile`.
+
+Recommended Railway service settings:
+
+1. Deploy from the monorepo root so workspace dependencies resolve correctly.
+2. Set the service to build with `packages/mcp-server/Dockerfile`.
+3. Configure the healthcheck path as `/healthz` for process health, or `/readyz` if you want deploys gated on Ponder availability.
+4. Attach a public domain and set `CURYO_MCP_PUBLIC_BASE_URL` to that HTTPS origin.
+
+Minimum production variables:
+
+```bash
+CURYO_PONDER_URL=https://ponder.example.com
+CURYO_MCP_PUBLIC_BASE_URL=https://mcp.example.com
+CURYO_MCP_HTTP_CORS_ORIGIN=https://curyo.example.com
+CURYO_MCP_HTTP_ALLOWED_ORIGINS=https://curyo.example.com,https://www.curyo.example.com
+CURYO_MCP_HTTP_TRUSTED_PROXY_HEADERS=x-real-ip
+CURYO_MCP_HTTP_AUTH_MODE=bearer
+CURYO_MCP_HTTP_BEARER_TOKEN=replace-me
+```
+
+Notes:
+
+- The Dockerfile automatically binds the MCP server to `0.0.0.0` and Railway's injected `PORT`.
+- In `NODE_ENV=production`, startup validation rejects `localhost` values for `CURYO_PONDER_URL` and `CURYO_MCP_HTTP_CORS_ORIGIN`.
+- In `NODE_ENV=production`, the MCP HTTP endpoint also requires at least one trusted browser origin, derived from `CURYO_MCP_HTTP_ALLOWED_ORIGINS` or from a non-wildcard `CURYO_MCP_HTTP_CORS_ORIGIN` / `CURYO_MCP_PUBLIC_BASE_URL`.
+- In `NODE_ENV=production`, rate limiting also requires `CURYO_MCP_HTTP_TRUSTED_PROXY_HEADERS` to be set.
+- For hosted wallet sessions, keep the MCP server's `CURYO_MCP_HTTP_SESSION_*` settings aligned with the Next.js issuer configuration.
+
 ## Scripts
 
 | Command | Description |
@@ -46,6 +77,15 @@ The server reads from the environment at startup.
 | `CURYO_MCP_HTTP_PATH` | `/mcp` | MCP HTTP endpoint path |
 | `CURYO_MCP_PUBLIC_BASE_URL` | — | Optional public base URL used in startup logs when binding to wildcard hosts |
 | `CURYO_MCP_HTTP_CORS_ORIGIN` | `http://localhost:3000` | CORS allow-origin header for Streamable HTTP mode |
+| `CURYO_MCP_HTTP_ALLOWED_ORIGINS` | derived | Optional CSV allowlist for browser `Origin` validation on the MCP endpoint |
+| `CURYO_MCP_HTTP_AUTHORIZATION_SERVERS` | — | Optional CSV list of OAuth authorization server issuer URLs advertised via protected resource metadata |
+| `CURYO_MCP_HTTP_RESOURCE_DOCUMENTATION_URL` | — | Optional human-readable documentation URL advertised via protected resource metadata |
+| `CURYO_MCP_HTTP_REQUEST_TIMEOUT_MS` | `30000` | Maximum time to receive and finish an HTTP request before Node aborts it |
+| `CURYO_MCP_HTTP_HEADERS_TIMEOUT_MS` | `60000` | Maximum time to receive request headers; must be greater than keep-alive timeout |
+| `CURYO_MCP_HTTP_KEEP_ALIVE_TIMEOUT_MS` | `5000` | Idle keep-alive timeout for persistent HTTP connections |
+| `CURYO_MCP_HTTP_SOCKET_TIMEOUT_MS` | `60000` | Idle socket timeout applied to HTTP connections |
+| `CURYO_MCP_HTTP_MAX_HEADERS_COUNT` | `100` | Maximum number of incoming request headers accepted by the Node HTTP server |
+| `CURYO_MCP_HTTP_MAX_REQUEST_BODY_BYTES` | `1048576` | Maximum JSON request body size accepted on the MCP endpoint |
 | `CURYO_MCP_HTTP_AUTH_MODE` | `none` | HTTP auth mode: `none` or `bearer` |
 | `CURYO_MCP_HTTP_BEARER_TOKEN` | — | Single bearer token for HTTP mode |
 | `CURYO_MCP_HTTP_BEARER_TOKENS` | — | Comma-separated bearer tokens for rotation |
@@ -90,6 +130,16 @@ CURYO_MCP_HTTP_HOST=0.0.0.0
 CURYO_MCP_HTTP_PORT=3334
 CURYO_MCP_HTTP_PATH=/mcp
 CURYO_MCP_PUBLIC_BASE_URL=https://mcp.example.com
+CURYO_MCP_HTTP_CORS_ORIGIN=https://curyo.example.com
+CURYO_MCP_HTTP_ALLOWED_ORIGINS=https://curyo.example.com,https://www.curyo.example.com
+CURYO_MCP_HTTP_AUTHORIZATION_SERVERS=https://auth.example.com
+CURYO_MCP_HTTP_RESOURCE_DOCUMENTATION_URL=https://curyo.example.com/docs/ai
+CURYO_MCP_HTTP_REQUEST_TIMEOUT_MS=30000
+CURYO_MCP_HTTP_HEADERS_TIMEOUT_MS=60000
+CURYO_MCP_HTTP_KEEP_ALIVE_TIMEOUT_MS=5000
+CURYO_MCP_HTTP_SOCKET_TIMEOUT_MS=60000
+CURYO_MCP_HTTP_MAX_HEADERS_COUNT=100
+CURYO_MCP_HTTP_MAX_REQUEST_BODY_BYTES=1048576
 CURYO_MCP_HTTP_AUTH_MODE=bearer
 CURYO_MCP_HTTP_TOKENS_JSON='[{"token":"replace-me","clientId":"claude-prod","scopes":["mcp:read","mcp:write:vote","mcp:write:submit_content"],"identityId":"curyo-writer","kind":"session","expiresAt":"2030-01-01T00:00:00.000Z","subject":"0x1234..."}]'
 CURYO_MCP_HTTP_SESSION_SECRET=nextjs-session-secret
@@ -111,6 +161,9 @@ CURYO_MCP_WRITE_SUBMISSION_HOST_ALLOWLIST=curyo.xyz,github.com
 In Streamable HTTP mode:
 
 - MCP traffic is served on `CURYO_MCP_HTTP_PATH`
+- browser requests to the MCP path must present an allowed `Origin` header when one is sent
+- bearer challenges advertise OAuth protected resource metadata so remote MCP clients can discover auth requirements
+- Node HTTP server limits are explicit instead of relying on platform defaults
 - liveness is exposed on `/healthz`
 - readiness is exposed on `/readyz`
 - Prometheus-style metrics are exposed on `/metrics`
@@ -124,10 +177,13 @@ In Streamable HTTP mode:
 `/readyz` performs a bounded `get_stats` call against the configured Ponder API, so it reflects upstream availability
 rather than only process liveness.
 
+When bearer auth is enabled, the MCP server also serves OAuth 2.0 protected resource metadata at the well-known path
+derived from `CURYO_MCP_HTTP_PATH`, for example `/.well-known/oauth-protected-resource/mcp`.
+
 ## Hosted Client Config
 
 The Next.js app exposes a canonical hosted-config JSON at `/api/mcp/config`. It is intended to be the single source of
-truth for the public endpoint URL, health/readiness URLs, docs URL, and the current WebMCP experiment flag.
+truth for the public endpoint URL, health/readiness URLs, metrics URL, docs URL, and wallet-session settings.
 
 Example response shape:
 
@@ -195,9 +251,6 @@ Cursor / editor MCP clients:
   }
 }
 ```
-
-For early browser-native experiments, keep WebMCP behind a feature flag and treat it as complementary to the hosted MCP
-service rather than a replacement for the canonical backend endpoint.
 
 ## MCP Surface
 

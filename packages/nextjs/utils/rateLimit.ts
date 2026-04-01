@@ -19,6 +19,8 @@ export interface RateLimitConfig {
 export interface RateLimitOptions {
   /** Additional stable key parts, such as a normalized wallet address */
   extraKeyParts?: Array<string | number | bigint | null | undefined>;
+  /** Allow selected low-risk endpoints to keep serving if the backing store is temporarily offline */
+  allowOnStoreUnavailable?: boolean;
 }
 
 const CLEANUP_INTERVAL_MS = 60_000;
@@ -249,7 +251,7 @@ export async function checkRateLimit(
       error,
     );
 
-    if (process.env.NODE_ENV === "production") {
+    if (process.env.NODE_ENV === "production" && !options.allowOnStoreUnavailable) {
       return NextResponse.json({ error: "Rate limiting is unavailable" }, { status: 503 });
     }
   }

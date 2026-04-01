@@ -16,7 +16,16 @@ export class HttpAuthError extends Error {
   }
 }
 
-export function authenticateRequest(request: IncomingMessage, authConfig: HttpAuthConfig): AuthInfo | undefined {
+interface HttpAuthChallengeOptions {
+  requiredScopes?: string[];
+  resourceMetadataUrl?: string;
+}
+
+export function authenticateRequest(
+  request: IncomingMessage,
+  authConfig: HttpAuthConfig,
+  challengeOptions: HttpAuthChallengeOptions = {},
+): AuthInfo | undefined {
   if (authConfig.mode === "none") {
     return undefined;
   }
@@ -28,6 +37,8 @@ export function authenticateRequest(request: IncomingMessage, authConfig: HttpAu
       buildWwwAuthenticateHeader(authConfig, {
         error: "invalid_token",
         errorDescription: "Missing bearer token",
+        requiredScopes: challengeOptions.requiredScopes,
+        resourceMetadataUrl: challengeOptions.resourceMetadataUrl,
       }),
     );
   }
@@ -35,11 +46,11 @@ export function authenticateRequest(request: IncomingMessage, authConfig: HttpAu
   const tokenHash = hashToken(token);
   const matchedToken = authConfig.tokens.find((candidate) => safeEqualHex(candidate.tokenHash, tokenHash));
   if (matchedToken) {
-    ensureTokenIsActive(matchedToken, authConfig);
+    ensureTokenIsActive(matchedToken, authConfig, challengeOptions);
 
     const keyId = matchedToken.tokenHash.slice(0, 12);
 
-    return {
+    const authInfo: AuthInfo = {
       token,
       clientId: matchedToken.clientId,
       scopes: matchedToken.scopes,
@@ -53,6 +64,9 @@ export function authenticateRequest(request: IncomingMessage, authConfig: HttpAu
         expiresAt: matchedToken.expiresAt,
       },
     };
+
+    ensureRequiredScopes(authInfo, authConfig, challengeOptions);
+    return authInfo;
   }
 
   if (authConfig.sessionKeys.length === 0) {
@@ -61,6 +75,8 @@ export function authenticateRequest(request: IncomingMessage, authConfig: HttpAu
       buildWwwAuthenticateHeader(authConfig, {
         error: "invalid_token",
         errorDescription: "The access token is invalid",
+        requiredScopes: challengeOptions.requiredScopes,
+        resourceMetadataUrl: challengeOptions.resourceMetadataUrl,
       }),
     );
   }
@@ -70,7 +86,7 @@ export function authenticateRequest(request: IncomingMessage, authConfig: HttpAu
       keys: authConfig.sessionKeys,
     });
 
-    return {
+    const authInfo: AuthInfo = {
       token,
       clientId: claims.clientId,
       scopes: claims.scopes,
@@ -87,6 +103,9 @@ export function authenticateRequest(request: IncomingMessage, authConfig: HttpAu
         sessionId: claims.jti,
       },
     };
+
+    ensureRequiredScopes(authInfo, authConfig, challengeOptions);
+    return authInfo;
   } catch (error) {
     const description = mapSessionTokenError(error);
     throw new HttpAuthError(
@@ -94,12 +113,45 @@ export function authenticateRequest(request: IncomingMessage, authConfig: HttpAu
       buildWwwAuthenticateHeader(authConfig, {
         error: "invalid_token",
         errorDescription: description,
+        requiredScopes: challengeOptions.requiredScopes,
+        resourceMetadataUrl: challengeOptions.resourceMetadataUrl,
       }),
     );
   }
 }
 
-function ensureTokenIsActive(token: HttpAuthConfig["tokens"][number], authConfig: HttpAuthConfig): void {
+function ensureRequiredScopes(
+  authInfo: AuthInfo,
+  authConfig: HttpAuthConfig,
+  challengeOptions: HttpAuthChallengeOptions,
+): void {
+  if (!challengeOptions.requiredScopes || challengeOptions.requiredScopes.length === 0) {
+    return;
+  }
+
+  const grantedScopes = new Set(authInfo.scopes ?? []);
+  const hasAllRequiredScopes = challengeOptions.requiredScopes.every((scope) => grantedScopes.has(scope));
+  if (hasAllRequiredScopes) {
+    return;
+  }
+
+  throw new HttpAuthError(
+    "Bearer token lacks the required scope",
+    buildWwwAuthenticateHeader(authConfig, {
+      error: "insufficient_scope",
+      errorDescription: "The access token is missing the required scope",
+      requiredScopes: challengeOptions.requiredScopes,
+      resourceMetadataUrl: challengeOptions.resourceMetadataUrl,
+    }),
+    403,
+  );
+}
+
+function ensureTokenIsActive(
+  token: HttpAuthConfig["tokens"][number],
+  authConfig: HttpAuthConfig,
+  challengeOptions: HttpAuthChallengeOptions,
+): void {
   const now = Date.now();
 
   if (token.notBefore && now < Date.parse(token.notBefore)) {
@@ -108,6 +160,8 @@ function ensureTokenIsActive(token: HttpAuthConfig["tokens"][number], authConfig
       buildWwwAuthenticateHeader(authConfig, {
         error: "invalid_token",
         errorDescription: "The access token is not active yet",
+        requiredScopes: challengeOptions.requiredScopes,
+        resourceMetadataUrl: challengeOptions.resourceMetadataUrl,
       }),
     );
   }
@@ -118,6 +172,8 @@ function ensureTokenIsActive(token: HttpAuthConfig["tokens"][number], authConfig
       buildWwwAuthenticateHeader(authConfig, {
         error: "invalid_token",
         errorDescription: "The access token has expired",
+        requiredScopes: challengeOptions.requiredScopes,
+        resourceMetadataUrl: challengeOptions.resourceMetadataUrl,
       }),
     );
   }
@@ -133,14 +189,24 @@ function extractBearerToken(header: string | string[] | undefined): string | nul
   return match?.[1]?.trim() || null;
 }
 
-function buildWwwAuthenticateHeader(
+export function buildWwwAuthenticateHeader(
   authConfig: HttpAuthConfig,
   options?: {
     error?: string;
     errorDescription?: string;
+    requiredScopes?: string[];
+    resourceMetadataUrl?: string;
   },
 ): string {
   const parts = [`Bearer realm="${authConfig.realm}"`];
+
+  if (options?.resourceMetadataUrl) {
+    parts.push(`resource_metadata="${escapeHeaderValue(options.resourceMetadataUrl)}"`);
+  }
+
+  if (options?.requiredScopes && options.requiredScopes.length > 0) {
+    parts.push(`scope="${escapeHeaderValue(options.requiredScopes.join(" "))}"`);
+  }
 
   if (options?.error) {
     parts.push(`error="${escapeHeaderValue(options.error)}"`);

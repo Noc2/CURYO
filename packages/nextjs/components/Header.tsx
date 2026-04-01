@@ -20,7 +20,6 @@ import { CuryoLogo } from "~~/components/CuryoLogo";
 import { CuryoConnectButton } from "~~/components/scaffold-eth";
 import { AddressInfoDropdown } from "~~/components/scaffold-eth/ConnectButton/AddressInfoDropdown";
 import { DOCS_NAV } from "~~/constants/docsNav";
-import { MIN_CONTENT_SEARCH_QUERY_LENGTH } from "~~/hooks/contentFeed/shared";
 import { useOutsideClick, useTargetNetwork } from "~~/hooks/scaffold-eth";
 import { useVoteSearch } from "~~/hooks/useVoteSearch";
 import { getBlockExplorerAddressLink } from "~~/utils/scaffold-eth";
@@ -256,7 +255,7 @@ const HeaderSearchBar = ({ className }: { className?: string }) => {
       <MagnifyingGlassIcon className="absolute left-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-base-content/45 pointer-events-none" />
       <input
         type="text"
-        placeholder={`Search content (${MIN_CONTENT_SEARCH_QUERY_LENGTH}+ chars)`}
+        placeholder="Search there"
         aria-label="Search content"
         value={inputValue}
         onChange={e => updateSearch(e.target.value)}
@@ -314,7 +313,7 @@ const MobileHeaderSearch = ({ onClose }: { onClose: () => void }) => {
         <MagnifyingGlassIcon className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-base-content/30" />
         <input
           type="text"
-          placeholder={`Search content (${MIN_CONTENT_SEARCH_QUERY_LENGTH}+ chars)`}
+          placeholder="Search there"
           aria-label="Search content"
           value={draftValue}
           onChange={event => setDraftValue(event.target.value)}

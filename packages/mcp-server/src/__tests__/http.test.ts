@@ -1,8 +1,9 @@
-import { beforeEach, describe, expect, it } from "vitest";
+import { Readable } from "node:stream";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { IncomingMessage, ServerResponse } from "node:http";
 import type { PonderClient } from "../clients/ponder.js";
 import { __resetHttpRateLimitStateForTests } from "../lib/http-rate-limit.js";
-import { handleStreamableHttpRequest, resolveAdvertisedHttpUrl } from "../http.js";
+import { configureNodeHttpServer, handleStreamableHttpRequest, resolveAdvertisedHttpUrl } from "../http.js";
 import { __resetMcpMetricsForTests } from "../metrics.js";
 
 interface MockResponse {
@@ -64,6 +65,17 @@ describe("handleStreamableHttpRequest", () => {
     httpPath: "/mcp",
     httpPublicBaseUrl: null,
     httpCorsOrigin: "*",
+    httpAllowedOrigins: [],
+    httpAuthorizationServers: [],
+    httpResourceDocumentationUrl: null,
+    httpServer: {
+      requestTimeoutMs: 30_000,
+      headersTimeoutMs: 60_000,
+      keepAliveTimeoutMs: 5_000,
+      socketTimeoutMs: 60_000,
+      maxHeadersCount: 100,
+      maxRequestBodyBytes: 1_048_576,
+    },
     httpAuth: {
       mode: "none" as const,
       realm: "curyo-mcp",
@@ -102,6 +114,28 @@ describe("handleStreamableHttpRequest", () => {
     __resetMcpMetricsForTests();
   });
 
+  function createStreamingRequest(
+    body: string,
+    options: {
+      url: string;
+      method: string;
+      headers: Record<string, string>;
+      remoteAddress?: string;
+    },
+  ): IncomingMessage {
+    const request = Readable.from([body]) as IncomingMessage;
+    request.url = options.url;
+    request.method = options.method;
+    request.headers = options.headers;
+    Object.defineProperty(request, "socket", {
+      value: {
+        remoteAddress: options.remoteAddress ?? "127.0.0.1",
+      },
+      configurable: true,
+    });
+    return request;
+  }
+
   it("returns 404 for unknown paths", async () => {
     const request = {
       url: "/wrong",
@@ -139,6 +173,87 @@ describe("handleStreamableHttpRequest", () => {
     expect(response.body).toBe("");
   });
 
+  it("allows MCP requests without an Origin header", async () => {
+    const request = {
+      url: "/mcp",
+      method: "OPTIONS",
+      headers: {
+        host: "127.0.0.1:3334",
+      },
+    } as IncomingMessage;
+    const response = createMockResponse();
+
+    await handleStreamableHttpRequest(request, response, {
+      ...config,
+      httpAllowedOrigins: ["https://curyo.xyz"],
+    });
+
+    expect(response.statusCode).toBe(204);
+  });
+
+  it("rejects MCP requests with an invalid Origin header", async () => {
+    const request = {
+      url: "/mcp",
+      method: "OPTIONS",
+      headers: {
+        host: "127.0.0.1:3334",
+        origin: "null",
+      },
+    } as IncomingMessage;
+    const response = createMockResponse();
+
+    await handleStreamableHttpRequest(request, response, {
+      ...config,
+      httpAllowedOrigins: ["https://curyo.xyz"],
+    });
+
+    expect(response.statusCode).toBe(403);
+    expect(JSON.parse(response.body)).toEqual({
+      error: "Invalid Origin header",
+    });
+  });
+
+  it("rejects MCP requests from origins outside the allowlist", async () => {
+    const request = {
+      url: "/mcp",
+      method: "OPTIONS",
+      headers: {
+        host: "127.0.0.1:3334",
+        origin: "https://evil.example",
+      },
+    } as IncomingMessage;
+    const response = createMockResponse();
+
+    await handleStreamableHttpRequest(request, response, {
+      ...config,
+      httpAllowedOrigins: ["https://curyo.xyz"],
+    });
+
+    expect(response.statusCode).toBe(403);
+    expect(JSON.parse(response.body)).toEqual({
+      error: "Origin is not allowed for this MCP endpoint",
+    });
+  });
+
+  it("accepts MCP requests from configured allowed origins", async () => {
+    const request = {
+      url: "/mcp",
+      method: "OPTIONS",
+      headers: {
+        host: "127.0.0.1:3334",
+        origin: "https://curyo.xyz",
+      },
+    } as IncomingMessage;
+    const response = createMockResponse();
+
+    await handleStreamableHttpRequest(request, response, {
+      ...config,
+      httpAllowedOrigins: ["https://curyo.xyz"],
+    });
+
+    expect(response.statusCode).toBe(204);
+  });
+
   it("returns process health on /healthz", async () => {
     const request = {
       url: "/healthz",
@@ -159,6 +274,66 @@ describe("handleStreamableHttpRequest", () => {
       status: "ok",
       transport: "streamable-http",
       mcpPath: "/mcp",
+    });
+  });
+
+  it("serves OAuth protected resource metadata for the MCP endpoint", async () => {
+    const request = {
+      url: "/.well-known/oauth-protected-resource/mcp",
+      method: "GET",
+      headers: {
+        host: "mcp.curyo.xyz",
+        "x-forwarded-proto": "https",
+      },
+      socket: {
+        remoteAddress: "127.0.0.1",
+      },
+    } as unknown as IncomingMessage;
+    const response = createMockResponse();
+
+    await handleStreamableHttpRequest(request, response, {
+      ...config,
+      httpAuth: {
+        ...config.httpAuth,
+        mode: "bearer",
+      },
+      httpAuthorizationServers: ["https://auth.curyo.xyz"],
+      httpResourceDocumentationUrl: "https://curyo.xyz/docs/ai",
+    });
+
+    expect(response.statusCode).toBe(200);
+    expect(JSON.parse(response.body)).toEqual({
+      resource: "https://mcp.curyo.xyz/mcp",
+      authorization_servers: ["https://auth.curyo.xyz"],
+      bearer_methods_supported: ["header"],
+      scopes_supported: ["mcp:read"],
+      resource_name: "curyo-test",
+      resource_documentation: "https://curyo.xyz/docs/ai",
+    });
+  });
+
+  it("rejects protected resource metadata requests without a Host header", async () => {
+    const request = {
+      url: "/.well-known/oauth-protected-resource/mcp",
+      method: "GET",
+      headers: {},
+      socket: {
+        remoteAddress: "127.0.0.1",
+      },
+    } as unknown as IncomingMessage;
+    const response = createMockResponse();
+
+    await handleStreamableHttpRequest(request, response, {
+      ...config,
+      httpAuth: {
+        ...config.httpAuth,
+        mode: "bearer",
+      },
+    });
+
+    expect(response.statusCode).toBe(400);
+    expect(JSON.parse(response.body)).toEqual({
+      error: "Missing HTTP Host header",
     });
   });
 
@@ -214,6 +389,93 @@ describe("handleStreamableHttpRequest", () => {
     expect(response.body).toContain("mcp_write_tool_invocations_total");
   });
 
+  it("requires a metrics scope on /metrics when bearer auth is enabled", async () => {
+    const request = {
+      url: "/metrics",
+      method: "GET",
+      headers: {
+        host: "127.0.0.1:3334",
+        authorization: "Bearer secret-token",
+      },
+      socket: {
+        remoteAddress: "127.0.0.1",
+      },
+    } as unknown as IncomingMessage;
+    const response = createMockResponse();
+
+    await handleStreamableHttpRequest(request, response, {
+      ...config,
+      httpAuth: {
+        mode: "bearer",
+        realm: "curyo-mcp",
+        tokenHashes: ["930bbdc51b6aed5c2a5678fd6e28dee7a05e8a4b643cfc0b4427c3efb86c0d94"],
+        scopes: ["mcp:read"],
+        tokens: [
+          {
+            tokenHash: "930bbdc51b6aed5c2a5678fd6e28dee7a05e8a4b643cfc0b4427c3efb86c0d94",
+            clientId: "reader",
+            scopes: ["mcp:read"],
+            identityId: null,
+            notBefore: null,
+            expiresAt: null,
+            subject: null,
+            kind: "static",
+          },
+        ],
+        sessionKeys: [],
+      },
+    });
+
+    expect(response.statusCode).toBe(403);
+    expect(response.headers["WWW-Authenticate"]).toContain('error="insufficient_scope"');
+    expect(response.headers["WWW-Authenticate"]).toContain('scope="metrics:read"');
+    expect(JSON.parse(response.body)).toEqual({
+      error: "Bearer token lacks the required scope",
+    });
+  });
+
+  it("serves /metrics for bearer tokens with metrics:read", async () => {
+    const request = {
+      url: "/metrics",
+      method: "GET",
+      headers: {
+        host: "127.0.0.1:3334",
+        authorization: "Bearer secret-token",
+      },
+      socket: {
+        remoteAddress: "127.0.0.1",
+      },
+    } as unknown as IncomingMessage;
+    const response = createMockResponse();
+
+    await handleStreamableHttpRequest(request, response, {
+      ...config,
+      httpAuth: {
+        mode: "bearer",
+        realm: "curyo-mcp",
+        tokenHashes: ["930bbdc51b6aed5c2a5678fd6e28dee7a05e8a4b643cfc0b4427c3efb86c0d94"],
+        scopes: ["metrics:read"],
+        tokens: [
+          {
+            tokenHash: "930bbdc51b6aed5c2a5678fd6e28dee7a05e8a4b643cfc0b4427c3efb86c0d94",
+            clientId: "metrics-reader",
+            scopes: ["metrics:read"],
+            identityId: null,
+            notBefore: null,
+            expiresAt: null,
+            subject: null,
+            kind: "static",
+          },
+        ],
+        sessionKeys: [],
+      },
+    });
+
+    expect(response.statusCode).toBe(200);
+    expect(response.headers["Content-Type"]).toContain("text/plain");
+    expect(response.body).toContain("mcp_http_requests_total");
+  });
+
   it("rejects unauthenticated MCP requests when bearer auth is enabled", async () => {
     const request = {
       url: "/mcp",
@@ -252,8 +514,99 @@ describe("handleStreamableHttpRequest", () => {
 
     expect(response.statusCode).toBe(401);
     expect(response.headers["WWW-Authenticate"]).toContain('Bearer realm="curyo-mcp"');
+    expect(response.headers["WWW-Authenticate"]).toContain('resource_metadata="http://127.0.0.1:3334/.well-known/oauth-protected-resource/mcp"');
+    expect(response.headers["WWW-Authenticate"]).toContain('scope="mcp:read"');
     expect(JSON.parse(response.body)).toEqual({
       error: "Missing bearer token",
+    });
+  });
+
+  it("rejects unauthenticated MCP requests without a Host header when bearer auth is enabled", async () => {
+    const request = {
+      url: "/mcp",
+      method: "POST",
+      headers: {},
+      socket: {
+        remoteAddress: "127.0.0.1",
+      },
+    } as unknown as IncomingMessage;
+    const response = createMockResponse();
+
+    await handleStreamableHttpRequest(request, response, {
+      ...config,
+      httpAuth: {
+        mode: "bearer",
+        realm: "curyo-mcp",
+        tokenHashes: ["8f434346648f6b96df89dda901c5176b10a6d83961fca37f8e1d249d8d68db9d"],
+        scopes: ["mcp:read"],
+        tokens: [
+          {
+            tokenHash: "8f434346648f6b96df89dda901c5176b10a6d83961fca37f8e1d249d8d68db9d",
+            clientId: "reader",
+            scopes: ["mcp:read"],
+            identityId: null,
+            notBefore: null,
+            expiresAt: null,
+            subject: null,
+            kind: "static",
+          },
+        ],
+        sessionKeys: [],
+      },
+    });
+
+    expect(response.statusCode).toBe(401);
+    expect(response.headers["WWW-Authenticate"]).toContain('Bearer realm="curyo-mcp"');
+    expect(response.headers["WWW-Authenticate"]).toContain('scope="mcp:read"');
+    expect(response.headers["WWW-Authenticate"]).not.toContain("resource_metadata=");
+    expect(JSON.parse(response.body)).toEqual({
+      error: "Missing bearer token",
+    });
+  });
+
+  it("rejects MCP requests for bearer tokens without mcp:read", async () => {
+    const request = {
+      url: "/mcp",
+      method: "POST",
+      headers: {
+        host: "127.0.0.1:3334",
+        authorization: "Bearer secret-token",
+      },
+      socket: {
+        remoteAddress: "127.0.0.1",
+      },
+    } as unknown as IncomingMessage;
+    const response = createMockResponse();
+
+    await handleStreamableHttpRequest(request, response, {
+      ...config,
+      httpAuth: {
+        mode: "bearer",
+        realm: "curyo-mcp",
+        tokenHashes: ["930bbdc51b6aed5c2a5678fd6e28dee7a05e8a4b643cfc0b4427c3efb86c0d94"],
+        scopes: ["metrics:read"],
+        tokens: [
+          {
+            tokenHash: "930bbdc51b6aed5c2a5678fd6e28dee7a05e8a4b643cfc0b4427c3efb86c0d94",
+            clientId: "metrics-reader",
+            scopes: ["metrics:read"],
+            identityId: null,
+            notBefore: null,
+            expiresAt: null,
+            subject: null,
+            kind: "static",
+          },
+        ],
+        sessionKeys: [],
+      },
+    });
+
+    expect(response.statusCode).toBe(403);
+    expect(response.headers["WWW-Authenticate"]).toContain('error="insufficient_scope"');
+    expect(response.headers["WWW-Authenticate"]).toContain('scope="mcp:read"');
+    expect(response.headers["WWW-Authenticate"]).toContain('resource_metadata="http://127.0.0.1:3334/.well-known/oauth-protected-resource/mcp"');
+    expect(JSON.parse(response.body)).toEqual({
+      error: "Bearer token lacks the required scope",
     });
   });
 
@@ -374,6 +727,63 @@ describe("handleStreamableHttpRequest", () => {
       limit: 1,
     });
   });
+
+  it("returns 413 when an MCP JSON request body exceeds the configured limit", async () => {
+    const request = createStreamingRequest(
+      JSON.stringify({
+        jsonrpc: "2.0",
+        id: 1,
+        method: "tools/list",
+        params: {
+          payload: "x".repeat(256),
+        },
+      }),
+      {
+        url: "/mcp",
+        method: "POST",
+        headers: {
+          host: "127.0.0.1:3334",
+          accept: "application/json, text/event-stream",
+          "content-type": "application/json",
+          authorization: "Bearer secret-token",
+        },
+      },
+    );
+    const response = createMockResponse();
+
+    await handleStreamableHttpRequest(request, response, {
+      ...config,
+      httpServer: {
+        ...config.httpServer,
+        maxRequestBodyBytes: 64,
+      },
+      httpAuth: {
+        mode: "bearer",
+        realm: "curyo-mcp",
+        tokenHashes: ["930bbdc51b6aed5c2a5678fd6e28dee7a05e8a4b643cfc0b4427c3efb86c0d94"],
+        scopes: ["mcp:read"],
+        tokens: [
+          {
+            tokenHash: "930bbdc51b6aed5c2a5678fd6e28dee7a05e8a4b643cfc0b4427c3efb86c0d94",
+            clientId: "reader",
+            scopes: ["mcp:read"],
+            identityId: null,
+            notBefore: null,
+            expiresAt: null,
+            subject: null,
+            kind: "static",
+          },
+        ],
+        sessionKeys: [],
+      },
+    });
+
+    expect(response.statusCode).toBe(413);
+    expect(JSON.parse(response.body)).toEqual({
+      error: "Request body exceeds configured limit",
+      limitBytes: 64,
+    });
+  });
 });
 
 describe("resolveAdvertisedHttpUrl", () => {
@@ -397,5 +807,42 @@ describe("resolveAdvertisedHttpUrl", () => {
         publicBaseUrl: "https://mcp.curyo.xyz/base",
       }),
     ).toBe("https://mcp.curyo.xyz/base/mcp");
+  });
+});
+
+describe("configureNodeHttpServer", () => {
+  it("applies explicit timeout and header limits to the Node server", () => {
+    const destroy = vi.fn();
+    let timeoutMs = 0;
+    let timeoutHandler: ((socket: { destroy: () => void }) => void) | undefined;
+    const server = {
+      requestTimeout: 0,
+      headersTimeout: 0,
+      keepAliveTimeout: 0,
+      maxHeadersCount: 0,
+      setTimeout: vi.fn((value: number, handler: (socket: { destroy: () => void }) => void) => {
+        timeoutMs = value;
+        timeoutHandler = handler;
+      }),
+    } as unknown as Parameters<typeof configureNodeHttpServer>[0];
+
+    configureNodeHttpServer(server, {
+      requestTimeoutMs: 15_000,
+      headersTimeoutMs: 45_000,
+      keepAliveTimeoutMs: 4_000,
+      socketTimeoutMs: 20_000,
+      maxHeadersCount: 64,
+      maxRequestBodyBytes: 262_144,
+    });
+
+    expect(server.requestTimeout).toBe(15_000);
+    expect(server.headersTimeout).toBe(45_000);
+    expect(server.keepAliveTimeout).toBe(4_000);
+    expect(server.maxHeadersCount).toBe(64);
+    expect(timeoutMs).toBe(20_000);
+    expect(timeoutHandler).toBeTypeOf("function");
+
+    timeoutHandler?.({ destroy });
+    expect(destroy).toHaveBeenCalledOnce();
   });
 });

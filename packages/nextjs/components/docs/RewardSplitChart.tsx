@@ -67,9 +67,6 @@ export function RewardSplitChart() {
             </span>
           </div>
         ))}
-        <p className="mt-2 max-w-sm text-xs text-base-content/60">
-          After the loser rebate, the remaining pool is split by bucket.
-        </p>
       </div>
     </div>
   );

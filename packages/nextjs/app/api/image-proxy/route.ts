@@ -30,7 +30,7 @@ const ALLOWED_HOSTS = new Set([
 const MAX_RESPONSE_SIZE = 10 * 1024 * 1024; // 10 MB
 
 export async function GET(request: NextRequest) {
-  const limited = await checkRateLimit(request, RATE_LIMIT);
+  const limited = await checkRateLimit(request, RATE_LIMIT, { allowOnStoreUnavailable: true });
   if (limited) return limited;
 
   const url = request.nextUrl.searchParams.get("url");

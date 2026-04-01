@@ -2,6 +2,12 @@ import Link from "next/link";
 import type { NextPage } from "next";
 import { protocolDocFacts } from "~~/lib/docs/protocolFacts";
 
+const sdkSourceHref = "https://github.com/Noc2/CURYO/tree/main/packages/sdk";
+const referenceAppSourceHref = "https://github.com/Noc2/CURYO/tree/main/packages/nextjs";
+const keeperSourceHref = "https://github.com/Noc2/CURYO/tree/main/packages/keeper";
+const ponderSourceHref = "https://github.com/Noc2/CURYO/tree/main/packages/ponder";
+const contentFilterSourceHref = "https://github.com/Noc2/CURYO/blob/main/packages/nextjs/utils/contentFilter.ts";
+
 const FrontendCodes: NextPage = () => {
   return (
     <article className="prose max-w-none">
@@ -46,6 +52,17 @@ const FrontendCodes: NextPage = () => {
       <p>
         The SDK is the fastest path for integrating Curyo into an existing codebase. It packages the hosted read client
         and the vote/frontend helpers that the reference app already relies on.
+      </p>
+      <p>
+        If you want implementation details, start with the{" "}
+        <a href={sdkSourceHref} target="_blank" rel="noopener noreferrer" className="link link-primary">
+          SDK package
+        </a>{" "}
+        and the{" "}
+        <a href={referenceAppSourceHref} target="_blank" rel="noopener noreferrer" className="link link-primary">
+          reference frontend
+        </a>
+        .
       </p>
       <ul>
         <li>Use it to fetch indexed content, profiles, rounds, votes, stats, categories, and frontend records.</li>
@@ -150,6 +167,13 @@ const FrontendCodes: NextPage = () => {
         that the stored ciphertext was honestly decryptable, so the keeper is a trust-minimized convenience layer rather
         than a cryptographic gatekeeper. The more independent services running, the more resilient the network becomes.
       </p>
+      <p>
+        The reference resolution runtime lives in{" "}
+        <a href={keeperSourceHref} target="_blank" rel="noopener noreferrer" className="link link-primary">
+          packages/keeper
+        </a>
+        .
+      </p>
 
       <h3>Run an Indexer or Back-End</h3>
       <p>
@@ -174,6 +198,13 @@ const FrontendCodes: NextPage = () => {
       <p>
         The reference implementation uses <strong>Ponder</strong> as its indexer. You are free to use any indexing stack
         (Ponder, The Graph, custom solutions) as long as your frontend can serve data quickly and reliably.
+      </p>
+      <p>
+        The current indexing service code lives in{" "}
+        <a href={ponderSourceHref} target="_blank" rel="noopener noreferrer" className="link link-primary">
+          packages/ponder
+        </a>
+        .
       </p>
 
       <h3>Own Your Moderation Layer</h3>
@@ -216,6 +247,13 @@ const FrontendCodes: NextPage = () => {
       <p>
         Each frontend operator is responsible for the content they serve to their audience. The moderation logic lives
         entirely in the frontend codebase and has no effect on the underlying protocol or other frontends.
+      </p>
+      <p>
+        The reference blocklist and helper functions are implemented in{" "}
+        <a href={contentFilterSourceHref} target="_blank" rel="noopener noreferrer" className="link link-primary">
+          packages/nextjs/utils/contentFilter.ts
+        </a>
+        .
       </p>
 
       <h2>Governance Oversight</h2>
