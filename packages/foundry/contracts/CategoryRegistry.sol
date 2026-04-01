@@ -90,7 +90,9 @@ contract CategoryRegistry is ICategoryRegistry, AccessControl, ReentrancyGuardTr
     }
 
     /// @notice Update the governor and timelock references after a governance migration.
-    /// @dev Transfers the permanent timelock roles to the new timelock address.
+    /// @dev Transfers the permanent timelock roles to the new timelock address. Linked category
+    ///      approvals remain recoverable after migration by recreating the identical proposal on
+    ///      the new governor, since proposal IDs are derived from calldata and description hash.
     function updateGovernance(address _governor, address _timelock) external onlyRole(DEFAULT_ADMIN_ROLE) {
         require(_governor != address(0), "Invalid governor");
         require(_timelock != address(0), "Invalid timelock");

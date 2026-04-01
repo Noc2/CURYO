@@ -6,6 +6,7 @@ import { HumanFaucet } from "../contracts/HumanFaucet.sol";
 import { MockIdentityVerificationHub } from "../contracts/mocks/MockIdentityVerificationHub.sol";
 import { CuryoReputation } from "../contracts/CuryoReputation.sol";
 import { Pausable } from "@openzeppelin/contracts/utils/Pausable.sol";
+import { SelfVerificationRoot } from "@selfxyz/contracts/contracts/abstract/SelfVerificationRoot.sol";
 import { ISelfVerificationRoot } from "@selfxyz/contracts/contracts/interfaces/ISelfVerificationRoot.sol";
 
 /// @title HumanFaucet Test Suite
@@ -96,6 +97,80 @@ contract HumanFaucetTest is Test {
         assertTrue(faucet.hasClaimed(user1));
         assertEq(faucet.totalClaimants(), 1);
         assertEq(faucet.totalClaimed(), TIER_0_AMOUNT);
+    }
+
+    function test_VerifySelfProof_Success() public {
+        mockHub.setVerified(user1);
+        bytes memory userContextData = _buildUserContextData(user1, "");
+
+        vm.prank(user1);
+        faucet.verifySelfProof(_buildProofPayload(PASSPORT_ATTESTATION_ID, userContextData), userContextData);
+
+        assertEq(crepToken.balanceOf(user1), TIER_0_AMOUNT);
+        assertTrue(faucet.hasClaimed(user1));
+    }
+
+    function test_VerifySelfProof_WithReferralUserData() public {
+        mockHub.setVerified(user1);
+        bytes memory firstUserContextData = _buildUserContextData(user1, "");
+        vm.prank(user1);
+        faucet.verifySelfProof(_buildProofPayload(PASSPORT_ATTESTATION_ID, firstUserContextData), firstUserContextData);
+
+        mockHub.setVerified(user2);
+        bytes memory userData = abi.encodePacked(user1);
+        bytes memory userContextData = _buildUserContextData(user2, userData);
+
+        vm.prank(user2);
+        faucet.verifySelfProof(_buildProofPayload(PASSPORT_ATTESTATION_ID, userContextData), userContextData);
+
+        assertEq(faucet.referredBy(user2), user1);
+        assertEq(crepToken.balanceOf(user2), TIER_0_AMOUNT + TIER_0_REFERRAL_BONUS);
+        assertEq(faucet.referralEarnings(user1), TIER_0_REFERRER_REWARD);
+    }
+
+    function test_VerifySelfProof_RevertShortProofPayload() public {
+        mockHub.setVerified(user1);
+        bytes memory userContextData = _buildUserContextData(user1, "");
+
+        vm.startPrank(user1);
+        vm.expectRevert(SelfVerificationRoot.InvalidDataFormat.selector);
+        faucet.verifySelfProof(hex"1234", userContextData);
+        vm.stopPrank();
+    }
+
+    function test_VerifySelfProof_RevertShortUserContextData() public {
+        mockHub.setVerified(user1);
+        bytes memory userContextData = abi.encodePacked(bytes32(uint256(block.chainid)));
+
+        vm.prank(user1);
+        (bool success, bytes memory revertData) = address(faucet).call(
+            abi.encodeWithSelector(
+                SelfVerificationRoot.verifySelfProof.selector,
+                _buildProofPayload(PASSPORT_ATTESTATION_ID, _buildUserContextData(user1, "")),
+                userContextData
+            )
+        );
+
+        assertFalse(success);
+        _assertRevertSelector(revertData, SelfVerificationRoot.InvalidDataFormat.selector);
+    }
+
+    function test_VerifySelfProof_RevertMismatchedBoundContext() public {
+        mockHub.setVerified(user1);
+        bytes memory proofContextData = _buildUserContextData(user1, "");
+        bytes memory mismatchedUserContextData = _buildUserContextData(user2, "");
+
+        vm.prank(user1);
+        (bool success, bytes memory revertData) = address(faucet).call(
+            abi.encodeWithSelector(
+                SelfVerificationRoot.verifySelfProof.selector,
+                _buildProofPayload(PASSPORT_ATTESTATION_ID, proofContextData),
+                mismatchedUserContextData
+            )
+        );
+
+        assertFalse(success);
+        _assertRevertReason(revertData, "Invalid user identifier");
     }
 
     function test_Claim_MultipleUsers() public {
@@ -328,7 +403,7 @@ contract HumanFaucetTest is Test {
     // --- Admin Function Tests ---
 
     function test_SetConfigId() public {
-        bytes32 newConfigId = keccak256("new-config");
+        bytes32 newConfigId = mockHub.MOCK_CONFIG_ID();
 
         vm.prank(admin);
         faucet.setConfigId(newConfigId);
@@ -337,10 +412,24 @@ contract HumanFaucetTest is Test {
     }
 
     function test_SetConfigId_RevertNotOwner() public {
-        bytes32 newConfigId = keccak256("new-config");
+        bytes32 newConfigId = mockHub.MOCK_CONFIG_ID();
 
         vm.prank(user1);
         vm.expectRevert();
+        faucet.setConfigId(newConfigId);
+    }
+
+    function test_SetConfigId_RevertZeroConfig() public {
+        vm.prank(admin);
+        vm.expectRevert("Invalid config");
+        faucet.setConfigId(bytes32(0));
+    }
+
+    function test_SetConfigId_RevertUnknownConfig() public {
+        bytes32 newConfigId = keccak256("unknown-config");
+
+        vm.prank(admin);
+        vm.expectRevert("Unknown config");
         faucet.setConfigId(newConfigId);
     }
 
@@ -601,17 +690,38 @@ contract HumanFaucetTest is Test {
 
     function test_WithdrawRemaining() public {
         vm.prank(admin);
-        vm.expectRevert("Withdraw disabled");
+        faucet.pause();
+
+        vm.prank(admin);
         faucet.withdrawRemaining(admin, 1_000_000e6);
+
+        assertEq(crepToken.balanceOf(admin), 1_000_000e6);
+        assertEq(crepToken.balanceOf(address(faucet)), 51_000_000e6);
     }
 
     function test_WithdrawRemainingFullBalance() public {
+        uint256 faucetBalance = crepToken.balanceOf(address(faucet));
+
         vm.prank(admin);
-        vm.expectRevert("Withdraw disabled");
+        faucet.pause();
+
+        vm.prank(admin);
         faucet.withdrawRemaining(admin, type(uint256).max);
+
+        assertEq(crepToken.balanceOf(admin), faucetBalance);
+        assertEq(crepToken.balanceOf(address(faucet)), 0);
+    }
+
+    function test_WithdrawRemainingRequiresPause() public {
+        vm.prank(admin);
+        vm.expectRevert("Pause required");
+        faucet.withdrawRemaining(admin, 1_000_000e6);
     }
 
     function test_WithdrawRemainingOnlyOwner() public {
+        vm.prank(admin);
+        faucet.pause();
+
         vm.prank(user1);
         vm.expectRevert();
         faucet.withdrawRemaining(user1, 1_000e6);
@@ -619,7 +729,10 @@ contract HumanFaucetTest is Test {
 
     function test_WithdrawRemainingRevertsZeroAddress() public {
         vm.prank(admin);
-        vm.expectRevert("Withdraw disabled");
+        faucet.pause();
+
+        vm.prank(admin);
+        vm.expectRevert("Invalid address");
         faucet.withdrawRemaining(address(0), 1_000e6);
     }
 
@@ -649,15 +762,14 @@ contract HumanFaucetTest is Test {
         assertEq(crepToken.balanceOf(user1), TIER_0_AMOUNT);
     }
 
-    function test_Pause_WithdrawRemainsDisabled() public {
+    function test_Pause_AllowsWithdrawRemaining() public {
         vm.prank(admin);
         faucet.pause();
 
         uint256 faucetBalance = crepToken.balanceOf(address(faucet));
         vm.prank(admin);
-        vm.expectRevert("Withdraw disabled");
         faucet.withdrawRemaining(admin, faucetBalance);
-        assertEq(crepToken.balanceOf(address(faucet)), faucetBalance);
+        assertEq(crepToken.balanceOf(address(faucet)), 0);
     }
 
     function test_Pause_OnlyOwner() public {
@@ -690,5 +802,38 @@ contract HumanFaucetTest is Test {
     ///      Storage slot 6 determined via `forge inspect HumanFaucet storage`.
     function _setTotalClaimants(uint256 value) internal {
         vm.store(address(faucet), bytes32(uint256(6)), bytes32(value));
+    }
+
+    function _buildProofPayload(bytes32 attestationId, bytes memory userContextData) internal pure returns (bytes memory) {
+        return abi.encodePacked(attestationId, bytes32(_calculateBoundUserIdentifier(userContextData)));
+    }
+
+    function _buildUserContextData(address user, bytes memory userData) internal view returns (bytes memory) {
+        return abi.encodePacked(bytes32(uint256(block.chainid)), bytes32(uint256(uint160(user))), userData);
+    }
+
+    function _calculateBoundUserIdentifier(bytes memory userContextData) internal pure returns (uint256) {
+        bytes32 sha256Hash = sha256(userContextData);
+        bytes20 ripemdHash = ripemd160(abi.encodePacked(sha256Hash));
+        return uint256(uint160(ripemdHash));
+    }
+
+    function _assertRevertSelector(bytes memory revertData, bytes4 expectedSelector) internal pure {
+        require(revertData.length >= 4, "Missing revert data");
+        bytes4 actualSelector;
+        assembly {
+            actualSelector := mload(add(revertData, 32))
+        }
+        assertEq(actualSelector, expectedSelector);
+    }
+
+    function _assertRevertReason(bytes memory revertData, string memory expectedReason) internal pure {
+        _assertRevertSelector(revertData, bytes4(keccak256("Error(string)")));
+        bytes memory revertReasonData = new bytes(revertData.length - 4);
+        for (uint256 i = 4; i < revertData.length; i++) {
+            revertReasonData[i - 4] = revertData[i];
+        }
+        string memory actualReason = abi.decode(revertReasonData, (string));
+        assertEq(actualReason, expectedReason);
     }
 }

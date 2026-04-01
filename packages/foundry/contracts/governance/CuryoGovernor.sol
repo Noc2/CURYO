@@ -96,7 +96,7 @@ contract CuryoGovernor is
         poolsInitialized = true;
     }
 
-    /// @notice Return the full set of holders excluded from quorum calculations.
+    /// @notice Return the full fixed set of holders excluded from quorum calculations.
     function getExcludedHolders() external view returns (address[] memory) {
         return _excludedHolders;
     }

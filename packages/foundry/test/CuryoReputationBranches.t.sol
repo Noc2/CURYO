@@ -110,6 +110,46 @@ contract CuryoReputationBranchesTest is Test {
         assertEq(crep.balanceOf(mockContentRegistry), 900e6);
     }
 
+    function test_TransferFrom_GovernanceLocked_ThirdPartyToVotingEngine_Reverts() public {
+        address thirdPartySpender = address(100);
+
+        vm.prank(mockGovernor);
+        crep.lockForGovernance(user1, 800e6);
+
+        vm.prank(user1);
+        crep.approve(thirdPartySpender, 900e6);
+
+        vm.prank(thirdPartySpender);
+        vm.expectRevert("Exceeds transferable balance (governance locked)");
+        crep.transferFrom(user1, mockVotingEngine, 900e6);
+    }
+
+    function test_TransferFrom_GovernanceLocked_VotingEnginePull_Succeeds() public {
+        vm.prank(mockGovernor);
+        crep.lockForGovernance(user1, 800e6);
+
+        vm.prank(user1);
+        crep.approve(mockVotingEngine, 900e6);
+
+        vm.prank(mockVotingEngine);
+        crep.transferFrom(user1, mockVotingEngine, 900e6);
+
+        assertEq(crep.balanceOf(mockVotingEngine), 900e6);
+    }
+
+    function test_TransferFrom_GovernanceLocked_ContentRegistryPull_Succeeds() public {
+        vm.prank(mockGovernor);
+        crep.lockForGovernance(user1, 800e6);
+
+        vm.prank(user1);
+        crep.approve(mockContentRegistry, 900e6);
+
+        vm.prank(mockContentRegistry);
+        crep.transferFrom(user1, mockContentRegistry, 900e6);
+
+        assertEq(crep.balanceOf(mockContentRegistry), 900e6);
+    }
+
     function test_Transfer_GovernanceLocked_PartialTransfer_Succeeds() public {
         vm.prank(mockGovernor);
         crep.lockForGovernance(user1, 800e6);

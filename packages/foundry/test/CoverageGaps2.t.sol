@@ -536,7 +536,10 @@ contract HumanFaucetBranchTest is Test {
 
     function test_WithdrawRemainingToZeroAddressReverts() public {
         vm.prank(admin);
-        vm.expectRevert("Withdraw disabled");
+        faucet.pause();
+
+        vm.prank(admin);
+        vm.expectRevert("Invalid address");
         faucet.withdrawRemaining(address(0), 100);
     }
 
@@ -1442,6 +1445,26 @@ contract CuryoReputationCoverageTest is Test {
         vm.prank(user1);
         crep.transfer(contentRegistry, 5_000e6);
         assertEq(crep.balanceOf(contentRegistry), 5_000e6);
+    }
+
+    // --- Third-party transferFrom to content-voting contracts blocked while locked ---
+
+    function test_TransferFromThirdPartyToContentVotingWhenLockedReverts() public {
+        address thirdPartySpender = address(0x66);
+
+        vm.prank(governor);
+        crep.lockForGovernance(user1, 10_000e6);
+
+        vm.prank(user1);
+        crep.approve(thirdPartySpender, 5_000e6);
+
+        vm.prank(thirdPartySpender);
+        vm.expectRevert("Exceeds transferable balance (governance locked)");
+        crep.transferFrom(user1, votingEngine, 5_000e6);
+
+        vm.prank(thirdPartySpender);
+        vm.expectRevert("Exceeds transferable balance (governance locked)");
+        crep.transferFrom(user1, contentRegistry, 5_000e6);
     }
 
     // --- Self-delegation enforcement ---

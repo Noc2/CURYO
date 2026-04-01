@@ -104,16 +104,50 @@ contract MockIdentityVerificationHub {
         });
     }
 
-    /// @notice Mock verify function - not used in testing, simulation is done via simulateVerification
+    function _calculateBoundUserIdentifier(bytes calldata userContextData) internal pure returns (uint256) {
+        bytes memory userContextDataWithoutConfigId = userContextData[32:];
+        bytes32 sha256Hash = sha256(userContextDataWithoutConfigId);
+        bytes20 ripemdHash = ripemd160(abi.encodePacked(sha256Hash));
+        return uint256(uint160(ripemdHash));
+    }
+
+    /// @notice Mock bytes-based verify entrypoint used by SelfVerificationRoot.verifySelfProof tests
+    /// @dev Parses the same config/user-context structure that the real hub receives, then calls
+    ///      back into `onVerificationSuccess` on the requesting contract.
     function verify(
-        bytes calldata,
-        /* baseVerificationInput */
-        bytes calldata /* userContextData */
+        bytes calldata baseVerificationInput,
+        bytes calldata userContextData
     )
         external
-        pure
     {
-        revert("Use simulateVerification for testing");
+        require(baseVerificationInput.length >= 128, "Invalid base input");
+        require(userContextData.length >= 96, "Invalid user context");
+
+        bytes32 configId;
+        bytes32 attestationId;
+        uint256 boundUserIdentifier;
+        uint256 userIdentifier;
+        assembly {
+            configId := calldataload(userContextData.offset)
+            attestationId := calldataload(add(baseVerificationInput.offset, 64))
+            boundUserIdentifier := calldataload(add(baseVerificationInput.offset, 96))
+            userIdentifier := calldataload(add(userContextData.offset, 64))
+        }
+
+        require(configId == MOCK_CONFIG_ID, "Unknown config");
+        require(boundUserIdentifier == _calculateBoundUserIdentifier(userContextData), "Invalid user identifier");
+
+        address user = address(uint160(userIdentifier));
+        require(verifiedUsers[user], "User not verified");
+        require(userNullifiers[user] != 0, "No nullifier set");
+
+        ISelfVerificationRoot.GenericDiscloseOutputV2 memory output = _buildMockVerificationOutput(user, 18);
+        output.attestationId = attestationId;
+
+        bytes memory callbackUserData = userContextData[96:];
+        ISelfVerificationRoot(msg.sender).onVerificationSuccess(abi.encode(output), callbackUserData);
+
+        emit VerificationSimulated(msg.sender, user);
     }
 
     // --- Testing Functions ---

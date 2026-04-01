@@ -189,6 +189,7 @@ async function runWriteTool(
 ): Promise<CallToolResult> {
   const startedAt = Date.now();
   const authClientId = extra.authInfo?.clientId;
+  const requestId = typeof extra.authInfo?.extra?.requestId === "string" ? extra.authInfo.extra.requestId : undefined;
   try {
     const warnings: string[] = [];
     const allowDefaultIdentity = !extra.authInfo && config.transport === "stdio" && !!config.write.defaultIdentityId;
@@ -214,6 +215,7 @@ async function runWriteTool(
       mode,
       chainId: config.write.chainId,
       durationMs: Date.now() - startedAt,
+      requestId,
     });
 
     return jsonToolResult(
@@ -237,6 +239,7 @@ async function runWriteTool(
       authClientId,
       chainId: config.write.chainId,
       durationMs: Date.now() - startedAt,
+      requestId,
       ...serializeError(error),
     });
     return errorToolResult(message);

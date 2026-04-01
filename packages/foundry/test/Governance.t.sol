@@ -478,6 +478,35 @@ contract GovernanceTest is Test {
         assertEq(holders[7], address(mockCategoryRegistry));
     }
 
+    function test_GovernorRejectsLegacyExcludedHolderReplacementSelector() public {
+        address replacement = address(new MockCategoryRegistry());
+
+        (bool success,) =
+            address(governor).call(abi.encodeWithSignature("replaceExcludedHolder(address,address)", mockFaucet, replacement));
+
+        assertFalse(success);
+        assertTrue(governor.isExcludedHolder(mockFaucet));
+        assertFalse(governor.isExcludedHolder(replacement));
+    }
+
+    function test_GovernorExcludedHoldersRemainFixedAcrossGovernanceActions() public {
+        address[] memory beforeHolders = governor.getExcludedHolders();
+        address replacementCategoryRegistry = address(new MockCategoryRegistry());
+
+        _executeSingleCallProposal(
+            address(governor),
+            abi.encodeCall(CuryoGovernor.setCategoryRegistry, (replacementCategoryRegistry)),
+            "Update category registry",
+            false
+        );
+
+        address[] memory afterHolders = governor.getExcludedHolders();
+        assertEq(afterHolders.length, beforeHolders.length);
+        for (uint256 i = 0; i < beforeHolders.length; i++) {
+            assertEq(afterHolders[i], beforeHolders[i]);
+        }
+    }
+
     function test_GovernorRejectsProposalsBeforePoolsInitialization() public {
         vm.startPrank(deployer);
         CuryoGovernor freshGovernor = new CuryoGovernor(IVotes(address(token)), timelock);
@@ -505,6 +534,44 @@ contract GovernanceTest is Test {
         holders[5] = mockContentRegistry;
         holders[6] = mockFrontendRegistry;
         holders[7] = address(mockCategoryRegistry);
+    }
+
+    function _executeSingleCallProposal(address target, bytes memory callData, string memory description, bool expectRevert_)
+        internal
+    {
+        vm.roll(block.number + 1);
+
+        address[] memory targets = new address[](1);
+        targets[0] = target;
+
+        uint256[] memory values = new uint256[](1);
+        values[0] = 0;
+
+        bytes[] memory calldatas = new bytes[](1);
+        calldatas[0] = callData;
+
+        vm.prank(voter1);
+        uint256 proposalId = governor.propose(targets, values, calldatas, description);
+
+        vm.roll(block.number + governor.votingDelay() + 1);
+        vm.prank(voter1);
+        governor.castVote(proposalId, 1);
+        vm.prank(voter2);
+        governor.castVote(proposalId, 1);
+        vm.prank(voter3);
+        governor.castVote(proposalId, 1);
+
+        vm.roll(block.number + governor.votingPeriod() + 1);
+        bytes32 descriptionHash = keccak256(bytes(description));
+        governor.queue(targets, values, calldatas, descriptionHash);
+
+        vm.warp(block.timestamp + 2 days + 1);
+        if (expectRevert_) {
+            vm.expectRevert();
+            governor.execute(targets, values, calldatas, descriptionHash);
+            return;
+        }
+        governor.execute(targets, values, calldatas, descriptionHash);
     }
 
     function test_CreateProposal() public {

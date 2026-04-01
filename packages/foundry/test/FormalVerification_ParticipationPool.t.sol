@@ -232,4 +232,20 @@ contract FormalVerification_ParticipationPoolTest is Test {
         assertEq(crepToken.balanceOf(user), balBefore, "No tokens transferred");
         assertEq(pool.totalDistributed(), 0, "totalDistributed unchanged");
     }
+
+    // ==================== Test 11: Emergency Withdrawal Preserves Reserved Funds ====================
+
+    /// @notice Emergency withdrawal can only move poolBalance and cannot drain reserved rewards.
+    function test_EmergencyWithdrawal_PreservesReservedFunds() public {
+        vm.prank(caller);
+        pool.reserveReward(caller, 7e6);
+
+        vm.prank(admin);
+        pool.withdrawRemaining(admin, type(uint256).max);
+
+        assertEq(pool.poolBalance(), 0, "all unreserved pool funds should be withdrawn");
+        assertEq(pool.reservedBalance(), 7e6, "reserved accounting must remain intact");
+        assertEq(pool.reservedRewards(caller), 7e6, "beneficiary reservation must remain intact");
+        assertEq(crepToken.balanceOf(address(pool)), 7e6, "contract should retain reserved funds only");
+    }
 }

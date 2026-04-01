@@ -49,6 +49,15 @@ Notes:
 - In `NODE_ENV=production`, rate limiting also requires `CURYO_MCP_HTTP_TRUSTED_PROXY_HEADERS` to be set.
 - For hosted wallet sessions, keep the MCP server's `CURYO_MCP_HTTP_SESSION_*` settings aligned with the Next.js issuer configuration.
 
+## Production Notes
+
+- Single replica: the default in-memory rate limiter is acceptable for local development and small single-instance deployments.
+- Multiple replicas or public traffic: switch to `CURYO_MCP_HTTP_RATE_LIMIT_STORE=redis` so all instances share one rate-limit window.
+- Railway healthchecks gate deploys, but they are not a full monitoring system. Keep external uptime checks for the public endpoint.
+- Put the public MCP hostname behind Cloudflare or another WAF/CDN if it will be internet-facing.
+- When bearer auth is enabled, `/metrics` also requires a bearer token with `metrics:read`.
+- The MCP package now advertises protected-resource metadata for bearer auth, but generic self-serve OAuth login is still out of scope. Use deployment-managed bearer tokens or the wallet-session exchange exposed by the Next.js app.
+
 ## Scripts
 
 | Command | Description |
@@ -97,10 +106,14 @@ The server reads from the environment at startup.
 | `CURYO_MCP_HTTP_SESSION_ISSUER` | `curyo-nextjs` | Expected issuer claim for wallet-bound MCP bearer sessions |
 | `CURYO_MCP_HTTP_SESSION_AUDIENCE` | `curyo-mcp` | Expected audience claim for wallet-bound MCP bearer sessions |
 | `CURYO_MCP_HTTP_SESSION_SECRETS_JSON` | — | Optional JSON array of multiple verification keys for session rotation |
-| `CURYO_MCP_HTTP_RATE_LIMIT_ENABLED` | `1` | Enable in-memory HTTP request rate limiting |
+| `CURYO_MCP_HTTP_RATE_LIMIT_ENABLED` | `1` | Enable HTTP request rate limiting |
 | `CURYO_MCP_HTTP_RATE_LIMIT_WINDOW_MS` | `60000` | Shared fixed window used for MCP HTTP rate limits |
 | `CURYO_MCP_HTTP_RATE_LIMIT_READ_LIMIT` | `120` | Max read-oriented MCP HTTP requests per window |
 | `CURYO_MCP_HTTP_RATE_LIMIT_WRITE_LIMIT` | `20` | Max write-capable MCP HTTP requests per window |
+| `CURYO_MCP_HTTP_RATE_LIMIT_STORE` | `memory` | Rate-limit backend: `memory` for single-instance deploys, `redis` for shared multi-replica limits |
+| `CURYO_MCP_HTTP_RATE_LIMIT_REDIS_URL` | — | Required Redis or Redis TLS URL when `CURYO_MCP_HTTP_RATE_LIMIT_STORE=redis` |
+| `CURYO_MCP_HTTP_RATE_LIMIT_REDIS_KEY_PREFIX` | `curyo:mcp:ratelimit` | Key prefix used for Redis-backed rate-limit buckets |
+| `CURYO_MCP_HTTP_RATE_LIMIT_REDIS_CONNECT_TIMEOUT_MS` | `2000` | Redis connection timeout for the shared rate-limit backend |
 | `CURYO_MCP_HTTP_TRUSTED_PROXY_HEADERS` | — | Comma-separated proxy headers to trust for client IP extraction |
 | `CURYO_MCP_WRITE_ENABLED` | `0` | Enable hosted write tools |
 | `CURYO_MCP_WRITE_IDENTITIES` | — | JSON array of signer identities (`privateKey` or Foundry keystore credentials) |
@@ -120,6 +133,7 @@ The server reads from the environment at startup.
 | `CURYO_MCP_ROUND_REWARD_DISTRIBUTOR_ADDRESS` | auto-derived on supported chains | Fallback RoundRewardDistributor address for write mode |
 | `CURYO_MCP_FRONTEND_REGISTRY_ADDRESS` | auto-derived on supported chains | Fallback FrontendRegistry address for write mode |
 | `CURYO_MCP_LOG_ENABLED` | enabled | Set to `0` to suppress stderr JSON logs |
+| `CURYO_MCP_LOG_STACKS` | `0` | Set to `1` to include stack traces in structured error logs |
 
 Example remote setup:
 
@@ -146,6 +160,10 @@ CURYO_MCP_HTTP_SESSION_SECRET=nextjs-session-secret
 CURYO_MCP_HTTP_SESSION_KEY_ID=nextjs-prod
 CURYO_MCP_HTTP_SESSION_ISSUER=curyo-nextjs
 CURYO_MCP_HTTP_SESSION_AUDIENCE=curyo-mcp
+CURYO_MCP_HTTP_RATE_LIMIT_STORE=redis
+CURYO_MCP_HTTP_RATE_LIMIT_REDIS_URL=rediss://default:replace-me@redis.example.upstash.io:6379
+CURYO_MCP_HTTP_RATE_LIMIT_REDIS_KEY_PREFIX=curyo:mcp:ratelimit
+CURYO_MCP_HTTP_RATE_LIMIT_REDIS_CONNECT_TIMEOUT_MS=2000
 CURYO_MCP_HTTP_RATE_LIMIT_READ_LIMIT=120
 CURYO_MCP_HTTP_RATE_LIMIT_WRITE_LIMIT=20
 CURYO_MCP_WRITE_ENABLED=1
@@ -154,6 +172,7 @@ CURYO_MCP_CHAIN_ID=42220
 CURYO_MCP_WRITE_IDENTITIES='[{"id":"curyo-writer","privateKey":"0x...","frontendAddress":"0x7777777777777777777777777777777777777777"}]'
 CURYO_MCP_WRITE_MAX_VOTE_STAKE=5000000000000000000
 CURYO_MCP_WRITE_SUBMISSION_HOST_ALLOWLIST=curyo.xyz,github.com
+CURYO_MCP_LOG_STACKS=0
 ```
 
 ## Transport Behavior
@@ -164,9 +183,10 @@ In Streamable HTTP mode:
 - browser requests to the MCP path must present an allowed `Origin` header when one is sent
 - bearer challenges advertise OAuth protected resource metadata so remote MCP clients can discover auth requirements
 - Node HTTP server limits are explicit instead of relying on platform defaults
+- rate limiting can run either in-process or against a shared Redis backend for multi-replica deployments
 - liveness is exposed on `/healthz`
 - readiness is exposed on `/readyz`
-- Prometheus-style metrics are exposed on `/metrics`
+- Prometheus-style metrics are exposed on `/metrics`, and require `metrics:read` when bearer auth is enabled
 - bearer auth protects the MCP path when `CURYO_MCP_HTTP_AUTH_MODE=bearer`
 - expiring/session tokens can be modeled through `CURYO_MCP_HTTP_TOKENS_JSON`
 - HTTP rate limits apply before MCP requests reach the transport
@@ -196,6 +216,10 @@ Example response shape:
   "metricsUrl": "https://mcp.curyo.xyz/metrics",
   "docsUrl": "https://curyo.xyz/docs/ai",
   "auth": {
+    "requiredScopes": {
+      "mcp": ["mcp:read"],
+      "metrics": ["metrics:read"]
+    },
     "walletSessions": {
       "challengeUrl": "https://curyo.xyz/api/mcp/session/challenge",
       "tokenUrl": "https://curyo.xyz/api/mcp/session/token"

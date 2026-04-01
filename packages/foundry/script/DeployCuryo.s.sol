@@ -272,10 +272,12 @@ contract DeployCuryo is ScaffoldETHDeploy {
                 });
                 bytes32 configId = IIdentityVerificationHubV2(hubAddress).setVerificationConfigV2(config);
                 humanFaucet.setConfigId(configId);
+                _assertFaucetVerificationConfig(humanFaucet, hubAddress, configId);
                 console.log("Set verification config on HumanFaucet");
             } else {
                 bytes32 mockConfigId = MockIdentityVerificationHub(hubAddress).MOCK_CONFIG_ID();
                 humanFaucet.setConfigId(mockConfigId);
+                _assertFaucetVerificationConfig(humanFaucet, hubAddress, mockConfigId);
                 console.log("Set mock configId on HumanFaucet");
             }
 
@@ -473,6 +475,26 @@ contract DeployCuryo is ScaffoldETHDeploy {
         _require(crepToken.balanceOf(address(humanFaucet)) == FAUCET_POOL_AMOUNT, "HumanFaucet launch allocation");
     }
 
+    function _assertFaucetVerificationConfig(HumanFaucet humanFaucet, address hubAddress, bytes32 expectedConfigId)
+        internal
+        view
+    {
+        _require(expectedConfigId != bytes32(0), "HumanFaucet config created");
+        _require(humanFaucet.verificationConfigId() == expectedConfigId, "HumanFaucet config stored");
+        _require(
+            IIdentityVerificationHubV2(hubAddress).verificationConfigV2Exists(expectedConfigId),
+            "HumanFaucet config exists on hub"
+        );
+    }
+
+    function _assertExactExcludedHolders(CuryoGovernor governor, address[] memory expectedExcludedHolders) internal view {
+        address[] memory actualExcludedHolders = governor.getExcludedHolders();
+        _require(actualExcludedHolders.length == expectedExcludedHolders.length, "Governor excluded holders length");
+        for (uint256 i = 0; i < expectedExcludedHolders.length; i++) {
+            _require(actualExcludedHolders[i] == expectedExcludedHolders[i], "Governor excluded holder mismatch");
+        }
+    }
+
     function _verifyProductionDeploymentRoles(
         address deployerAddress,
         address governance,
@@ -624,7 +646,19 @@ contract DeployCuryo is ScaffoldETHDeploy {
         CuryoGovernor governor = CuryoGovernor(payable(governorAddr));
         _require(governor.categoryRegistry() == address(categoryRegistry), "Governor category registry");
         _require(governor.poolsInitialized(), "Governor pools initialized");
-        _require(governor.getExcludedHolders().length > 0, "Governor excluded holders");
+        _assertExactExcludedHolders(
+            governor,
+            _buildQuorumExcludedHolders(
+                address(humanFaucet),
+                address(participationPool),
+                address(rewardDistributor),
+                address(votingEngine),
+                governance,
+                address(registry),
+                address(frontendRegistry),
+                address(categoryRegistry)
+            )
+        );
         TimelockController timelock = TimelockController(payable(governance));
         _requireHasRole(address(timelock), timelock.PROPOSER_ROLE(), governorAddr, "Timelock governor proposer");
         _requireHasRole(address(timelock), timelock.CANCELLER_ROLE(), governorAddr, "Timelock governor canceller");

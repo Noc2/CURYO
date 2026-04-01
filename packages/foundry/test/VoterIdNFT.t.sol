@@ -729,7 +729,7 @@ contract VoterIdNFTTest is Test {
         assertEq(voterIdNFT.resolveHolder(user3), address(0));
     }
 
-    function test_Mint_RevertIfActiveDelegate() public {
+    function test_Mint_ClearsInboundDelegation() public {
         vm.prank(minterAddr);
         voterIdNFT.mint(user1, NULLIFIER_1);
 
@@ -737,10 +737,16 @@ contract VoterIdNFTTest is Test {
         vm.prank(user1);
         voterIdNFT.setDelegate(user2);
 
-        // Trying to mint SBT to user2 (active delegate) should fail
         vm.prank(minterAddr);
-        vm.expectRevert(VoterIdNFT.DelegateAlreadyAssigned.selector);
-        voterIdNFT.mint(user2, NULLIFIER_2);
+        vm.expectEmit(true, true, true, true);
+        emit VoterIdNFT.DelegateRemoved(user1, user2);
+        uint256 tokenId = voterIdNFT.mint(user2, NULLIFIER_2);
+
+        assertEq(tokenId, 2);
+        assertEq(voterIdNFT.ownerOf(tokenId), user2);
+        assertEq(voterIdNFT.resolveHolder(user2), user2);
+        assertEq(voterIdNFT.delegateOf(user2), address(0));
+        assertEq(voterIdNFT.delegateTo(user1), address(0));
     }
 
     // ====================================================

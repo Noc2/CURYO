@@ -182,6 +182,35 @@ function createJsonResourceResult(uri: string, data: Record<string, unknown>): R
   };
 }
 
+function buildAuthResourceSummary(config: ServerConfig): Record<string, unknown> {
+  return {
+    mode: config.httpAuth.mode,
+    protectedPaths: [config.httpPath],
+    staticTokensConfigured: config.httpAuth.tokens.length > 0,
+    walletSessionsEnabled: config.httpAuth.sessionKeys.length > 0,
+  };
+}
+
+function buildRateLimitResourceSummary(config: ServerConfig): Record<string, unknown> {
+  return {
+    enabled: config.httpRateLimit.enabled,
+    backend: config.httpRateLimit.store,
+    windowMs: config.httpRateLimit.windowMs,
+    readRequestsPerWindow: config.httpRateLimit.readRequestsPerWindow,
+    writeRequestsPerWindow: config.httpRateLimit.writeRequestsPerWindow,
+  };
+}
+
+function buildWriteResourceSummary(config: ServerConfig): Record<string, unknown> {
+  return {
+    enabled: config.write.enabled,
+    chainId: config.write.chainId,
+    chainName: config.write.chainName,
+    identitiesConfigured: config.write.identities.length,
+    hostedTools: config.write.enabled ? WRITE_TOOL_CATALOG.map(({ name, title }) => ({ name, title })) : [],
+  };
+}
+
 export function registerResources(server: McpServer, config: ServerConfig, ponderClient: PonderClient): void {
   server.registerResource(
     "about",
@@ -201,28 +230,9 @@ export function registerResources(server: McpServer, config: ServerConfig, ponde
           : "Official read-only Curyo MCP server backed by the indexed Ponder API.",
         currentTransport: config.transport,
         supportedTransports: ["stdio", "streamable-http"],
-        httpAuth: {
-          mode: config.httpAuth.mode,
-          protectedPaths: [config.httpPath],
-          sessionKeys: config.httpAuth.sessionKeys.map(({ keyId, issuer, audience }) => ({ keyId, issuer, audience })),
-        },
-        httpRateLimit: {
-          enabled: config.httpRateLimit.enabled,
-          windowMs: config.httpRateLimit.windowMs,
-          readRequestsPerWindow: config.httpRateLimit.readRequestsPerWindow,
-          writeRequestsPerWindow: config.httpRateLimit.writeRequestsPerWindow,
-        },
-        write: {
-          enabled: config.write.enabled,
-          chainId: config.write.chainId,
-          chainName: config.write.chainName,
-          policy: {
-            maxVoteStake: config.write.policy.maxVoteStake?.toString() ?? null,
-            allowedSubmissionHosts: config.write.policy.allowedSubmissionHosts,
-            submissionRevealPollIntervalMs: config.write.policy.submissionRevealPollIntervalMs,
-            submissionRevealTimeoutMs: config.write.policy.submissionRevealTimeoutMs,
-          },
-        },
+        auth: buildAuthResourceSummary(config),
+        rateLimit: buildRateLimitResourceSummary(config),
+        write: buildWriteResourceSummary(config),
         tools: getToolCatalog(config).map(({ name, title }) => ({ name, title })),
         prompts: PROMPT_CATALOG.map(({ name, title }) => ({ name, title })),
         resources: Object.values(ALL_RESOURCE_URIS),
@@ -244,41 +254,16 @@ export function registerResources(server: McpServer, config: ServerConfig, ponde
           version: config.serverVersion,
           transport: config.transport,
         },
-        auth: {
-          mode: config.httpAuth.mode,
-          realm: config.httpAuth.realm,
-          scopes: config.httpAuth.scopes,
-          configuredTokens: config.httpAuth.tokens.length,
-          configuredSessionKeys: config.httpAuth.sessionKeys.map(({ keyId, issuer, audience }) => ({ keyId, issuer, audience })),
-          protectedPaths: [config.httpPath],
-        },
-        rateLimit: {
-          enabled: config.httpRateLimit.enabled,
-          windowMs: config.httpRateLimit.windowMs,
-          readRequestsPerWindow: config.httpRateLimit.readRequestsPerWindow,
-          writeRequestsPerWindow: config.httpRateLimit.writeRequestsPerWindow,
-          trustedProxyHeaders: config.httpRateLimit.trustedProxyHeaders,
-        },
+        auth: buildAuthResourceSummary(config),
+        rateLimit: buildRateLimitResourceSummary(config),
         protocol: {
           latestVersion: LATEST_PROTOCOL_VERSION,
         },
         upstream: {
           source: "ponder",
-          baseUrl: config.ponderBaseUrl,
-          timeoutMs: config.ponderTimeoutMs,
+          status: "configured",
         },
-        write: {
-          enabled: config.write.enabled,
-          chainId: config.write.chainId,
-          chainName: config.write.chainName,
-          identities: config.write.identities.length,
-          policy: {
-            maxVoteStake: config.write.policy.maxVoteStake?.toString() ?? null,
-            allowedSubmissionHosts: config.write.policy.allowedSubmissionHosts,
-            submissionRevealPollIntervalMs: config.write.policy.submissionRevealPollIntervalMs,
-            submissionRevealTimeoutMs: config.write.policy.submissionRevealTimeoutMs,
-          },
-        },
+        write: buildWriteResourceSummary(config),
         capabilities: {
           tools: getToolCatalog(config).length,
           resources: Object.keys(ALL_RESOURCE_URIS).length,

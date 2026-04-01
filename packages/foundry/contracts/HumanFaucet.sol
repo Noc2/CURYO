@@ -110,6 +110,9 @@ contract HumanFaucet is SelfVerificationRoot, Ownable, Pausable {
     /// @notice Emitted when the claim tier changes due to reaching a threshold
     event TierChanged(uint256 newTier, uint256 newClaimAmount, uint256 totalClaimantsCount);
 
+    /// @notice Emitted when governance withdraws remaining faucet funds while paused
+    event RemainingWithdrawn(address indexed to, uint256 amount);
+
     // --- Errors ---
 
     /// @notice Thrown when a nullifier has already been used
@@ -158,20 +161,29 @@ contract HumanFaucet is SelfVerificationRoot, Ownable, Pausable {
 
     // --- Admin Functions ---
 
-    /// @notice Set the verification config ID (must be created in hub first)
+    /// @notice Set the verification config ID after confirming the hub recognizes it
     /// @param _configId The config ID from the Self.xyz hub
     function setConfigId(bytes32 _configId) external onlyOwner {
+        require(_configId != bytes32(0), "Invalid config");
+        require(_identityVerificationHubV2.verificationConfigV2Exists(_configId), "Unknown config");
         verificationConfigId = _configId;
         emit ConfigIdUpdated(_configId);
     }
 
     /// @notice Withdraw remaining cREP tokens (e.g., after faucet decommissioning)
+    /// @dev Only available while paused so governance must halt new claims before migration or recovery.
     /// @param to Address to receive the tokens
     /// @param amount Amount to withdraw (use type(uint256).max for full balance)
     function withdrawRemaining(address to, uint256 amount) external onlyOwner {
-        to;
-        amount;
-        revert("Withdraw disabled");
+        require(paused(), "Pause required");
+        require(to != address(0), "Invalid address");
+
+        uint256 balance = crepToken.balanceOf(address(this));
+        uint256 withdrawnAmount = amount > balance ? balance : amount;
+        require(withdrawnAmount > 0, "Nothing to withdraw");
+
+        crepToken.safeTransfer(to, withdrawnAmount);
+        emit RemainingWithdrawn(to, withdrawnAmount);
     }
 
     /// @notice Set the Voter ID NFT contract address
@@ -189,14 +201,14 @@ contract HumanFaucet is SelfVerificationRoot, Ownable, Pausable {
         uint256 nullifier = claimNullifier[user];
         require(nullifier != 0, "No nullifier recorded");
         require(address(voterIdNFT) != address(0), "VoterIdNFT not set");
-        require(!voterIdNFT.hasVoterId(user), "User already has Voter ID");
+        require(voterIdNFT.resolveHolder(user) != user, "User already has direct Voter ID");
 
         uint256 tokenId = voterIdNFT.mint(user, nullifier);
         emit VoterIdMinted(user, tokenId, nullifier);
     }
 
     /// @notice Pause the faucet (blocks new claims)
-    /// @dev Only callable by owner. Does NOT affect withdrawRemaining().
+    /// @dev Only callable by owner. Governance must pause before withdrawing remaining funds.
     function pause() external onlyOwner {
         _pause();
     }

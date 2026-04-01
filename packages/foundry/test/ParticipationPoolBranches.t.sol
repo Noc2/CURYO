@@ -214,23 +214,40 @@ contract ParticipationPoolBranchesTest is Test {
 
     function test_WithdrawRemaining_ZeroAddress_Reverts() public {
         vm.prank(admin);
-        vm.expectRevert("Withdraw disabled");
+        vm.expectRevert("Invalid address");
         pool.withdrawRemaining(address(0), 1e6);
     }
 
     function test_WithdrawRemaining_ExceedsBalance_CapsAtBalance() public {
         uint256 amount = pool.poolBalance() + 1_000e6;
+        uint256 expected = pool.poolBalance();
+
         vm.prank(admin);
-        vm.expectRevert("Withdraw disabled");
         pool.withdrawRemaining(user1, amount);
+
+        assertEq(pool.poolBalance(), 0);
+        assertEq(crepToken.balanceOf(user1), expected);
     }
 
     function test_WithdrawRemaining_NothingToWithdraw_Reverts() public {
         _setPoolBalance(0);
 
         vm.prank(admin);
-        vm.expectRevert("Withdraw disabled");
+        vm.expectRevert("Nothing to withdraw");
         pool.withdrawRemaining(user1, 1e6);
+    }
+
+    function test_WithdrawRemaining_DoesNotTouchReservedFunds() public {
+        vm.prank(authorizedCaller);
+        pool.reserveReward(authorizedCaller, 5e6);
+
+        vm.prank(admin);
+        pool.withdrawRemaining(user1, type(uint256).max);
+
+        assertEq(pool.poolBalance(), 0);
+        assertEq(pool.reservedBalance(), 5e6);
+        assertEq(pool.reservedRewards(authorizedCaller), 5e6);
+        assertEq(crepToken.balanceOf(address(pool)), 5e6);
     }
 
     function test_RecoverSurplus_DirectTransferOnlyRecoversExtraBalance() public {

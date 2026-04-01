@@ -128,13 +128,22 @@ contract ParticipationPool is IParticipationPool, Ownable, ReentrancyGuardTransi
         emit PoolDeposit(amount);
     }
 
-    /// @notice Withdraw remaining cREP tokens (governance emergency extraction)
+    /// @notice Withdraw undistributed and unreserved cREP tracked in poolBalance.
+    /// @dev This emergency path is owner-only (governance timelock after handoff) and cannot
+    ///      touch funds reserved for beneficiary contracts via reserveReward().
     /// @param to Address to receive tokens
-    /// @param amount Amount to withdraw (use type(uint256).max for full balance)
+    /// @param amount Amount to withdraw (use type(uint256).max for full tracked pool balance)
     function withdrawRemaining(address to, uint256 amount) external onlyOwner nonReentrant {
-        to;
-        amount;
-        revert("Withdraw disabled");
+        require(to != address(0), "Invalid address");
+
+        uint256 withdrawable = poolBalance;
+        uint256 withdrawAmount = amount > withdrawable ? withdrawable : amount;
+        require(withdrawAmount > 0, "Nothing to withdraw");
+
+        poolBalance = withdrawable - withdrawAmount;
+        crepToken.safeTransfer(to, withdrawAmount);
+
+        emit PoolWithdrawal(to, withdrawAmount);
     }
 
     /// @notice Recover tokens that were transferred directly to the contract without increasing poolBalance.

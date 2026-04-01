@@ -5,7 +5,7 @@ import { StreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/
 import { authenticateRequest, HttpAuthError } from "./auth.js";
 import { PonderClient, type PonderApiError } from "./clients/ponder.js";
 import type { HttpServerConfig, ServerConfig } from "./config.js";
-import { enforceHttpRateLimit, HttpRateLimitError } from "./lib/http-rate-limit.js";
+import { enforceHttpRateLimit, HttpRateLimitError, HttpRateLimitStoreError } from "./lib/http-rate-limit.js";
 import { logEvent, serializeError } from "./lib/logging.js";
 import { extractRequestOrigin, isOriginAllowed, normalizeOrigin } from "./lib/origin.js";
 import { getMetricsText, recordHttpAuthFailure, recordHttpRateLimit, recordHttpRequest, recordReadinessCheck } from "./metrics.js";
@@ -32,6 +32,7 @@ const CORS_ALLOW_HEADERS = "Accept, Authorization, Content-Type, Last-Event-ID, 
 const HEALTH_PATH = "/healthz";
 const READINESS_PATH = "/readyz";
 const METRICS_PATH = "/metrics";
+const REQUEST_ID_HEADERS = ["x-request-id", "x-correlation-id", "cf-ray"] as const;
 type AuthenticatedIncomingMessage = IncomingMessage & { auth?: AuthInfo };
 
 class HttpRequestBodyError extends Error {
@@ -170,6 +171,7 @@ export async function handleStreamableHttpRequest(
   const startedAt = Date.now();
   const method = request.method ?? "UNKNOWN";
   const remoteAddress = request.socket?.remoteAddress ?? null;
+  const requestId = resolveRequestId(request);
 
   const logResponse = (statusCode: number, extra: Record<string, unknown> = {}) => {
     recordHttpRequest(statusCode);
@@ -179,6 +181,7 @@ export async function handleStreamableHttpRequest(
       statusCode,
       durationMs: Date.now() - startedAt,
       remoteAddress,
+      requestId,
       ...extra,
     });
   };
@@ -203,21 +206,16 @@ export async function handleStreamableHttpRequest(
 
   if (requestUrl.pathname === READINESS_PATH) {
     try {
-      const stats = await ponderClient.getStats();
+      await ponderClient.getStats();
       recordReadinessCheck(true);
       sendJson(
         response,
         200,
         {
           status: "ready",
-          upstream: {
-            source: "ponder",
-            baseUrl: config.ponderBaseUrl,
-          },
           checks: {
             ponder: "ok",
           },
-          sample: stats,
           generatedAt: new Date().toISOString(),
         },
         config,
@@ -231,14 +229,10 @@ export async function handleStreamableHttpRequest(
         statusCode,
         {
           status: "degraded",
-          upstream: {
-            source: "ponder",
-            baseUrl: config.ponderBaseUrl,
-          },
           checks: {
             ponder: "failed",
           },
-          ...serializeError(error),
+          generatedAt: new Date().toISOString(),
         },
         config,
       );
@@ -247,6 +241,7 @@ export async function handleStreamableHttpRequest(
         statusCode,
         durationMs: Date.now() - startedAt,
         remoteAddress,
+        requestId,
         ...serializeError(error),
       });
     }
@@ -271,6 +266,7 @@ export async function handleStreamableHttpRequest(
           statusCode: error.statusCode,
           durationMs: Date.now() - startedAt,
           remoteAddress,
+          requestId,
           authMode: config.httpAuth.mode,
           route: "metrics",
           ...serializeError(error),
@@ -309,7 +305,24 @@ export async function handleStreamableHttpRequest(
         return;
       }
 
-      throw error;
+      sendJson(
+        response,
+        500,
+        {
+          error: error instanceof Error ? error.message : "Failed to resolve protected resource metadata",
+        },
+        config,
+      );
+      logEvent("warn", "mcp_http_protected_resource_metadata_failed", {
+        method,
+        path: requestUrl.pathname,
+        statusCode: 500,
+        durationMs: Date.now() - startedAt,
+        remoteAddress,
+        requestId,
+        ...serializeError(error),
+      });
+      return;
     }
   }
 
@@ -328,6 +341,7 @@ export async function handleStreamableHttpRequest(
       statusCode: 403,
       durationMs: Date.now() - startedAt,
       remoteAddress,
+      requestId,
       requestOrigin: originError.requestOrigin,
       allowedOrigins: config.httpAllowedOrigins,
     });
@@ -355,6 +369,15 @@ export async function handleStreamableHttpRequest(
       requiredScopes: ["mcp:read"],
       resourceMetadataUrl: resolveAuthChallengeMetadataUrl(request, config),
     });
+    if (authInfo && requestId) {
+      authInfo = {
+        ...authInfo,
+        extra: {
+          ...(authInfo.extra ?? {}),
+          requestId,
+        },
+      };
+    }
   } catch (error) {
     if (error instanceof HttpAuthError) {
       recordHttpAuthFailure();
@@ -367,6 +390,7 @@ export async function handleStreamableHttpRequest(
         statusCode: error.statusCode,
         durationMs: Date.now() - startedAt,
         remoteAddress,
+        requestId,
         authMode: config.httpAuth.mode,
         ...serializeError(error),
       });
@@ -377,7 +401,7 @@ export async function handleStreamableHttpRequest(
   }
 
   try {
-    enforceHttpRateLimit(request, config.httpRateLimit, authInfo, requestUrl.pathname);
+    await enforceHttpRateLimit(request, config.httpRateLimit, authInfo, requestUrl.pathname);
   } catch (error) {
     if (error instanceof HttpRateLimitError) {
       recordHttpRateLimit();
@@ -399,10 +423,26 @@ export async function handleStreamableHttpRequest(
         statusCode: error.statusCode,
         durationMs: Date.now() - startedAt,
         remoteAddress,
+        requestId,
         authClientId: authInfo?.clientId,
         policy: error.policy,
         limit: error.limit,
         retryAfterSeconds: error.retryAfterSeconds,
+      });
+      return;
+    }
+
+    if (error instanceof HttpRateLimitStoreError) {
+      sendJson(response, error.statusCode, { error: error.message }, config);
+      logEvent("error", "mcp_http_rate_limit_backend_failed", {
+        method,
+        path: requestUrl.pathname,
+        statusCode: error.statusCode,
+        durationMs: Date.now() - startedAt,
+        remoteAddress,
+        requestId,
+        authClientId: authInfo?.clientId,
+        ...serializeError(error),
       });
       return;
     }
@@ -422,6 +462,7 @@ export async function handleStreamableHttpRequest(
         statusCode: error.statusCode,
         durationMs: Date.now() - startedAt,
         remoteAddress,
+        requestId,
         authClientId: authInfo?.clientId,
         limitBytes: config.httpServer.maxRequestBodyBytes,
         ...serializeError(error),
@@ -461,6 +502,7 @@ export async function handleStreamableHttpRequest(
         path: requestUrl.pathname,
         durationMs: Date.now() - startedAt,
         remoteAddress,
+        requestId,
         authClientId: authInfo?.clientId,
         ...serializeError(error),
       });
@@ -476,10 +518,23 @@ export async function handleStreamableHttpRequest(
       statusCode: 500,
       durationMs: Date.now() - startedAt,
       remoteAddress,
+      requestId,
       authClientId: authInfo?.clientId,
       ...serializeError(error),
     });
   }
+}
+
+export function resolveRequestId(request: IncomingMessage): string | null {
+  for (const headerName of REQUEST_ID_HEADERS) {
+    const value = request.headers[headerName];
+    const candidate = Array.isArray(value) ? value[0] : value;
+    if (candidate?.trim()) {
+      return candidate.trim();
+    }
+  }
+
+  return null;
 }
 
 async function readParsedJsonBody(request: IncomingMessage, maxRequestBodyBytes: number): Promise<unknown> {

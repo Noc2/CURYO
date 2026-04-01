@@ -28,7 +28,8 @@ yarn foundry:test # Run test suite
 | `yarn account:import` | Import an existing account into keystore |
 
 On Celo and Celo Sepolia, deploys use a Foundry keystore selected via `--keystore <name>` and skip Forge's
-auto-verification flow. Verify those contracts manually with `make verify-blockscout`.
+auto-verification flow. Verify those contracts manually with
+`make verify-blockscout NETWORK=<celo|celoSepolia> CONTRACT_ADDRESS=0x... CONTRACT_NAME=MyContract`.
 
 ## Configuration
 
@@ -80,5 +81,11 @@ participation, governance, and helper contracts are intentionally non-upgradeabl
 contracts, storage layout must be preserved across upgrades — never reorder, remove, or change types of existing
 storage variables. The `RoundVotingEngine` voting-system rewrites are not storage-compatible with legacy deployments;
 when migrating across those rewrites, deploy a fresh proxy instead of upgrading an existing proxy in place.
+
+Human faucet coverage includes direct callback simulation for hook-level cases and the bytes-based `verifySelfProof`
+entrypoint via the mock Self hub. The mock proof path now enforces the same bound user-context hash shape used by the
+real hub. Before a live Celo redeploy, still run at least one environment-level proof against the real Self hub/config
+for the new faucet address and scope. Faucet config updates should always use a hub-created config ID; the contract now
+rejects zero and unknown config IDs before storing them.
 
 Compiled ABIs and deployed addresses are generated into `packages/contracts/src/` and consumed via the `@curyo/contracts` workspace package.

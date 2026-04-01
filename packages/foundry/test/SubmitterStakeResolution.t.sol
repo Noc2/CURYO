@@ -329,6 +329,102 @@ contract SubmitterStakeResolutionTest is VotingTestBase {
         );
     }
 
+    function test_MarkDormant_UsesFirstSettledRoundWhenLaterRoundTurnsSlashable() public {
+        uint256 rewriteStake = 20e6;
+
+        vm.startPrank(submitter);
+        crepToken.approve(address(registry), 10e6);
+        _submitContentWithReservation(registry, "https://example.com/dormant-freeze-healthy", "goal", "goal", "tags", 0);
+        vm.stopPrank();
+        uint256 submitterBalanceAfterSubmit = crepToken.balanceOf(submitter);
+
+        (bytes32 ck1, bytes32 s1) = _commitWithStake(voter1, 1, true, rewriteStake);
+        (bytes32 ck2, bytes32 s2) = _commitWithStake(voter2, 1, true, rewriteStake);
+        (bytes32 ck3, bytes32 s3) = _commitWithStake(voter3, 1, false, rewriteStake);
+        uint256 round1Id = RoundEngineReadHelpers.activeRoundId(votingEngine, 1);
+
+        vm.warp(T0 + 1 hours + 1);
+        votingEngine.revealVoteByCommitKey(1, round1Id, ck1, true, s1);
+        votingEngine.revealVoteByCommitKey(1, round1Id, ck2, true, s2);
+        votingEngine.revealVoteByCommitKey(1, round1Id, ck3, false, s3);
+        votingEngine.settleRound(1, round1Id);
+
+        (bytes32 ck4, bytes32 s4) = _commitWithStake(voter4, 1, false, rewriteStake);
+        (bytes32 ck5, bytes32 s5) = _commitWithStake(voter5, 1, false, rewriteStake);
+        (bytes32 ck6, bytes32 s6) = _commitWithStake(voter6, 1, false, rewriteStake);
+        uint256 round2Id = RoundEngineReadHelpers.activeRoundId(votingEngine, 1);
+
+        vm.warp(T0 + 2 hours + 2);
+        votingEngine.revealVoteByCommitKey(1, round2Id, ck4, false, s4);
+        votingEngine.revealVoteByCommitKey(1, round2Id, ck5, false, s5);
+        votingEngine.revealVoteByCommitKey(1, round2Id, ck6, false, s6);
+        votingEngine.settleRound(1, round2Id);
+
+        vm.warp(T0 + 31 days + 1);
+        registry.markDormant(1);
+
+        (,,,,,, ContentRegistry.ContentStatus status,,, bool submitterStakeReturned, uint256 rating,) = registry.contents(1);
+        assertEq(uint256(status), uint256(ContentRegistry.ContentStatus.Dormant), "content should transition to dormant");
+        assertTrue(submitterStakeReturned, "dormancy should resolve submitter stake");
+        assertLt(rating, registry.SLASH_RATING_THRESHOLD(), "live rating should reflect the later slashable round");
+        assertEq(
+            crepToken.balanceOf(submitter) - submitterBalanceAfterSubmit,
+            10e6,
+            "dormancy should still return stake from the first healthy settlement"
+        );
+    }
+
+    function test_MarkDormant_UsesFirstSettledRoundWhenLaterRoundTurnsHealthy() public {
+        uint256 slashStake = 20e6;
+
+        vm.startPrank(submitter);
+        crepToken.approve(address(registry), 10e6);
+        _submitContentWithReservation(registry, "https://example.com/dormant-freeze-slash", "goal", "goal", "tags", 0);
+        vm.stopPrank();
+        uint256 submitterBalanceAfterSubmit = crepToken.balanceOf(submitter);
+        uint256 treasuryBalanceBefore = crepToken.balanceOf(owner);
+
+        (bytes32 ck1, bytes32 s1) = _commitWithStake(voter1, 1, false, slashStake);
+        (bytes32 ck2, bytes32 s2) = _commitWithStake(voter2, 1, false, slashStake);
+        (bytes32 ck3, bytes32 s3) = _commitWithStake(voter3, 1, false, slashStake);
+        uint256 round1Id = RoundEngineReadHelpers.activeRoundId(votingEngine, 1);
+
+        vm.warp(T0 + 1 hours + 1);
+        votingEngine.revealVoteByCommitKey(1, round1Id, ck1, false, s1);
+        votingEngine.revealVoteByCommitKey(1, round1Id, ck2, false, s2);
+        votingEngine.revealVoteByCommitKey(1, round1Id, ck3, false, s3);
+        votingEngine.settleRound(1, round1Id);
+
+        (bytes32 ck4, bytes32 s4) = _commitWithStake(voter4, 1, true, slashStake);
+        (bytes32 ck5, bytes32 s5) = _commitWithStake(voter5, 1, true, slashStake);
+        (bytes32 ck6, bytes32 s6) = _commitWithStake(voter6, 1, true, slashStake);
+        uint256 round2Id = RoundEngineReadHelpers.activeRoundId(votingEngine, 1);
+
+        vm.warp(T0 + 2 hours + 2);
+        votingEngine.revealVoteByCommitKey(1, round2Id, ck4, true, s4);
+        votingEngine.revealVoteByCommitKey(1, round2Id, ck5, true, s5);
+        votingEngine.revealVoteByCommitKey(1, round2Id, ck6, true, s6);
+        votingEngine.settleRound(1, round2Id);
+
+        vm.warp(T0 + 31 days + 1);
+        registry.markDormant(1);
+
+        (,,,,,, ContentRegistry.ContentStatus status,,, bool submitterStakeReturned, uint256 rating,) = registry.contents(1);
+        assertEq(uint256(status), uint256(ContentRegistry.ContentStatus.Dormant), "content should transition to dormant");
+        assertTrue(submitterStakeReturned, "dormancy should resolve submitter stake");
+        assertGt(rating, registry.SLASH_RATING_THRESHOLD(), "live rating should reflect the later healthy round");
+        assertEq(
+            crepToken.balanceOf(submitter),
+            submitterBalanceAfterSubmit,
+            "dormancy should still slash from the first settled slashable outcome"
+        );
+        assertEq(
+            crepToken.balanceOf(owner) - treasuryBalanceBefore,
+            10e6,
+            "treasury should receive stake from the first settled slashable outcome"
+        );
+    }
+
     function _commit(address voter, uint256 contentId, bool isUp) internal returns (bytes32 commitKey, bytes32 salt) {
         return _commitWithStake(voter, contentId, isUp, STAKE);
     }

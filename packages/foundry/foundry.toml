@@ -44,7 +44,7 @@ sepolia = { key = "${ETHERSCAN_API_KEY}" }
 baseSepolia = { key = "${BASESCAN_API_KEY}", url = "https://api-sepolia.basescan.org/api" }
 # Celo uses Blockscout (not Celoscan). Forge's built-in Celoscan URL returns 403,
 # and the [etherscan] override is ignored. Verify manually after deploy:
-#   make verify-blockscout CONTRACT_ADDRESS=0x... CONTRACT_NAME=MyContract
+#   make verify-blockscout NETWORK=celo CONTRACT_ADDRESS=0x... CONTRACT_NAME=MyContract
 
 
 

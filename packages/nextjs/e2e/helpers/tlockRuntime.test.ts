@@ -16,6 +16,10 @@ test("resolveTlockTargetBufferSeconds caps long epochs at the drand period", () 
   assert.equal(resolveTlockTargetBufferSeconds(1200, 30), 30);
 });
 
+test("resolveTlockTargetBufferSeconds keeps a safety floor when drand rounds are very short", () => {
+  assert.equal(resolveTlockTargetBufferSeconds(1200, 3), 15);
+});
+
 test("deriveAnchoredTlockRuntimeNowMs targets a buffered point inside the next reveal window", () => {
   assert.equal(
     deriveAnchoredTlockRuntimeNowMs({
@@ -36,7 +40,7 @@ test("deriveAnchoredTlockRuntimeNowMs falls back to a minimal buffer when drand 
       tlockEpochDurationSeconds: 10,
       drandPeriodSeconds: 0,
     }),
-    1_291_000,
+    1_305_000,
   );
 });
 

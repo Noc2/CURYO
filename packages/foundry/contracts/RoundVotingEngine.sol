@@ -494,14 +494,14 @@ contract RoundVotingEngine is
         round.voteCount++;
         round.totalStake += stakeAmount64;
 
-        IVoterIdNFT currentVoterIdNft = _getVoterIdNft();
-        if (useTokenIdentity) {
-            currentVoterIdNft.recordStake(contentId, roundId, voterId, stakeAmount);
-        }
-
         lastVoteTimestamp[contentId][voter] = block.timestamp;
         if (useTokenIdentity) {
             lastVoteTimestampByToken[contentId][voterId] = block.timestamp;
+        }
+
+        IVoterIdNFT currentVoterIdNft = _getVoterIdNft();
+        if (useTokenIdentity) {
+            currentVoterIdNft.recordStake(contentId, roundId, voterId, stakeAmount);
         }
 
         // Vote commits still refresh UI activity timestamps, but not the dormancy anchor.
@@ -605,11 +605,6 @@ contract RoundVotingEngine is
     ///      Rating update uses raw revealed pools for accurate crowd opinion representation.
     function settleRound(uint256 contentId, uint256 roundId) external nonReentrant whenNotPaused {
         RoundLib.Round storage round = rounds[contentId][roundId];
-        ICategoryRegistry currentCategoryRegistry = _getCategoryRegistry();
-        IFrontendRegistry currentFrontendRegistry = _getFrontendRegistry();
-        address currentTreasury = protocolConfig.treasury();
-        IParticipationPool currentParticipationPool = _getParticipationPool();
-        address currentRewardDistributor = protocolConfig.rewardDistributor();
 
         if (round.state != RoundLib.RoundState.Open) revert RoundNotOpen();
 
@@ -685,6 +680,8 @@ contract RoundVotingEngine is
 
             // Distribute platform fees (3% frontend + 1% category)
             if (platformShare > 0) {
+                ICategoryRegistry currentCategoryRegistry = _getCategoryRegistry();
+                IFrontendRegistry currentFrontendRegistry = _getFrontendRegistry();
                 uint256 categorySubmitterShare = platformShare / 4;
                 uint256 frontendShare = platformShare - categorySubmitterShare;
 
@@ -718,6 +715,7 @@ contract RoundVotingEngine is
 
             // Transfer treasury fee
             if (treasuryShare > 0) {
+                address currentTreasury = protocolConfig.treasury();
                 if (currentTreasury != address(0)) {
                     try TokenTransferLib.transfer(crepToken, currentTreasury, treasuryShare) {
                         emit TreasuryFeeDistributed(contentId, roundId, treasuryShare);
@@ -745,6 +743,8 @@ contract RoundVotingEngine is
             roundWinningStake[contentId][roundId] = weightedWinningStake;
         }
 
+        IParticipationPool currentParticipationPool = _getParticipationPool();
+        address currentRewardDistributor = protocolConfig.rewardDistributor();
         RoundSettlementSideEffectsLib.recordSettlement(
             registry,
             currentParticipationPool,
@@ -872,7 +872,6 @@ contract RoundVotingEngine is
 
         if (forfeitedCrep == 0 && refundedCrep == 0) revert NothingProcessed();
     }
-
     // =========================================================================
     // INTERNAL HELPERS
     // =========================================================================

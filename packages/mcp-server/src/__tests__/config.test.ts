@@ -56,6 +56,10 @@ describe("loadConfig", () => {
         readRequestsPerWindow: 120,
         writeRequestsPerWindow: 20,
         trustedProxyHeaders: [],
+        store: "memory",
+        redisUrl: null,
+        redisKeyPrefix: "curyo:mcp:ratelimit",
+        redisConnectTimeoutMs: 2_000,
       },
       write: {
         enabled: false,
@@ -112,6 +116,10 @@ describe("loadConfig", () => {
       readRequestsPerWindow: 120,
       writeRequestsPerWindow: 20,
       trustedProxyHeaders: [],
+      store: "memory",
+      redisUrl: null,
+      redisKeyPrefix: "curyo:mcp:ratelimit",
+      redisConnectTimeoutMs: 2_000,
     });
   });
 
@@ -175,6 +183,7 @@ describe("loadConfig", () => {
     expect(config.httpCorsOrigin).toBe("https://app.curyo.xyz");
     expect(config.httpAllowedOrigins).toEqual(["https://app.curyo.xyz"]);
     expect(config.httpRateLimit.trustedProxyHeaders).toEqual(["x-real-ip", "x-forwarded-for"]);
+    expect(config.httpRateLimit.store).toBe("memory");
   });
 
   it("allows explicit MCP origin allowlists separate from the CORS response origin", () => {
@@ -362,6 +371,10 @@ describe("loadConfig", () => {
       CURYO_MCP_HTTP_RATE_LIMIT_WINDOW_MS: "15000",
       CURYO_MCP_HTTP_RATE_LIMIT_READ_LIMIT: "55",
       CURYO_MCP_HTTP_RATE_LIMIT_WRITE_LIMIT: "7",
+      CURYO_MCP_HTTP_RATE_LIMIT_STORE: "redis",
+      CURYO_MCP_HTTP_RATE_LIMIT_REDIS_URL: "rediss://default:secret@redis.example.upstash.io:6379",
+      CURYO_MCP_HTTP_RATE_LIMIT_REDIS_KEY_PREFIX: "curyo:test:ratelimit",
+      CURYO_MCP_HTTP_RATE_LIMIT_REDIS_CONNECT_TIMEOUT_MS: "5000",
       CURYO_MCP_HTTP_TRUSTED_PROXY_HEADERS: "x-real-ip,x-forwarded-for",
     });
 
@@ -371,7 +384,19 @@ describe("loadConfig", () => {
       readRequestsPerWindow: 55,
       writeRequestsPerWindow: 7,
       trustedProxyHeaders: ["x-real-ip", "x-forwarded-for"],
+      store: "redis",
+      redisUrl: "rediss://default:secret@redis.example.upstash.io:6379",
+      redisKeyPrefix: "curyo:test:ratelimit",
+      redisConnectTimeoutMs: 5000,
     });
+  });
+
+  it("requires a Redis URL when the HTTP rate limiter uses the Redis store", () => {
+    expect(() =>
+      loadConfig({
+        CURYO_MCP_HTTP_RATE_LIMIT_STORE: "redis",
+      }),
+    ).toThrow("CURYO_MCP_HTTP_RATE_LIMIT_REDIS_URL is required when CURYO_MCP_HTTP_RATE_LIMIT_STORE=redis");
   });
 
   it("loads MCP write policy overrides", () => {

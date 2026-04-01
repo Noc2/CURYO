@@ -2,8 +2,9 @@ import { Readable } from "node:stream";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { IncomingMessage, ServerResponse } from "node:http";
 import type { PonderClient } from "../clients/ponder.js";
-import { __resetHttpRateLimitStateForTests } from "../lib/http-rate-limit.js";
-import { configureNodeHttpServer, handleStreamableHttpRequest, resolveAdvertisedHttpUrl } from "../http.js";
+import type { ServerConfig } from "../config.js";
+import { __resetHttpRateLimitStateForTests, __setHttpRateLimitStoreFactoryForTests } from "../lib/http-rate-limit.js";
+import { configureNodeHttpServer, handleStreamableHttpRequest, resolveAdvertisedHttpUrl, resolveRequestId } from "../http.js";
 import { __resetMcpMetricsForTests } from "../metrics.js";
 
 interface MockResponse {
@@ -54,7 +55,7 @@ function createMockResponse(): ServerResponse<IncomingMessage> & MockResponse {
 }
 
 describe("handleStreamableHttpRequest", () => {
-  const config = {
+  const config: ServerConfig = {
     ponderBaseUrl: "https://ponder.curyo.xyz",
     ponderTimeoutMs: 10_000,
     serverName: "curyo-test",
@@ -90,6 +91,10 @@ describe("handleStreamableHttpRequest", () => {
       readRequestsPerWindow: 120,
       writeRequestsPerWindow: 20,
       trustedProxyHeaders: [],
+      store: "memory" as const,
+      redisUrl: null,
+      redisKeyPrefix: "curyo:mcp:ratelimit",
+      redisConnectTimeoutMs: 2_000,
     },
     write: {
       enabled: false,
@@ -111,6 +116,7 @@ describe("handleStreamableHttpRequest", () => {
 
   beforeEach(() => {
     __resetHttpRateLimitStateForTests();
+    __setHttpRateLimitStoreFactoryForTests(null);
     __resetMcpMetricsForTests();
   });
 
@@ -360,12 +366,51 @@ describe("handleStreamableHttpRequest", () => {
     await handleStreamableHttpRequest(request, response, config, ponderClient);
 
     expect(response.statusCode).toBe(200);
-    expect(JSON.parse(response.body)).toMatchObject({
+    const payload = JSON.parse(response.body);
+    expect(payload).toMatchObject({
       status: "ready",
       checks: {
         ponder: "ok",
       },
     });
+    expect(payload).not.toHaveProperty("sample");
+    expect(payload).not.toHaveProperty("upstream");
+  });
+
+  it("keeps readiness failures coarse-grained", async () => {
+    const request = {
+      url: "/readyz",
+      method: "GET",
+      headers: {
+        host: "127.0.0.1:3334",
+      },
+      socket: {
+        remoteAddress: "127.0.0.1",
+      },
+    } as unknown as IncomingMessage;
+    const response = createMockResponse();
+    const ponderClient = {
+      getStats: async () => {
+        throw new Error("ponder connection refused");
+      },
+    } as unknown as PonderClient;
+
+    await handleStreamableHttpRequest(request, response, config, ponderClient);
+
+    expect(response.statusCode).toBe(500);
+    const payload = JSON.parse(response.body);
+    expect(payload).toEqual(
+      expect.objectContaining({
+        status: "degraded",
+        checks: {
+          ponder: "failed",
+        },
+      }),
+    );
+    expect(payload).not.toHaveProperty("error");
+    expect(payload).not.toHaveProperty("message");
+    expect(payload).not.toHaveProperty("stack");
+    expect(payload).not.toHaveProperty("upstream");
   });
 
   it("serves Prometheus-style metrics on /metrics", async () => {
@@ -625,7 +670,7 @@ describe("handleStreamableHttpRequest", () => {
       },
     } as unknown as IncomingMessage;
 
-    const rateLimitedConfig = {
+    const rateLimitedConfig: ServerConfig = {
       ...config,
       httpAuth: {
         mode: "bearer" as const,
@@ -652,6 +697,10 @@ describe("handleStreamableHttpRequest", () => {
         readRequestsPerWindow: 1,
         writeRequestsPerWindow: 1,
         trustedProxyHeaders: [],
+        store: "memory" as const,
+        redisUrl: null,
+        redisKeyPrefix: "curyo:mcp:ratelimit",
+        redisConnectTimeoutMs: 2_000,
       },
     };
 
@@ -673,7 +722,7 @@ describe("handleStreamableHttpRequest", () => {
   it("keys anonymous requests by trusted proxy headers instead of the proxy hop", async () => {
     __resetHttpRateLimitStateForTests();
 
-    const rateLimitedConfig = {
+    const rateLimitedConfig: ServerConfig = {
       ...config,
       httpRateLimit: {
         enabled: true,
@@ -681,6 +730,10 @@ describe("handleStreamableHttpRequest", () => {
         readRequestsPerWindow: 1,
         writeRequestsPerWindow: 1,
         trustedProxyHeaders: ["x-forwarded-for"],
+        store: "memory" as const,
+        redisUrl: null,
+        redisKeyPrefix: "curyo:mcp:ratelimit",
+        redisConnectTimeoutMs: 2_000,
       },
     };
 
@@ -784,6 +837,60 @@ describe("handleStreamableHttpRequest", () => {
       limitBytes: 64,
     });
   });
+
+  it("returns 503 when the shared rate-limit backend is unavailable", async () => {
+    __setHttpRateLimitStoreFactoryForTests(() => ({
+      increment: async () => {
+        throw new Error("redis unavailable");
+      },
+    }));
+
+    const request = {
+      url: "/mcp",
+      method: "POST",
+      headers: {
+        host: "127.0.0.1:3334",
+        authorization: "Bearer secret-token",
+      },
+      socket: {
+        remoteAddress: "127.0.0.1",
+      },
+    } as unknown as IncomingMessage;
+    const response = createMockResponse();
+
+    await handleStreamableHttpRequest(request, response, {
+      ...config,
+      httpAuth: {
+        mode: "bearer" as const,
+        realm: "curyo-mcp",
+        tokenHashes: ["930bbdc51b6aed5c2a5678fd6e28dee7a05e8a4b643cfc0b4427c3efb86c0d94"],
+        scopes: ["mcp:read"],
+        tokens: [
+          {
+            tokenHash: "930bbdc51b6aed5c2a5678fd6e28dee7a05e8a4b643cfc0b4427c3efb86c0d94",
+            clientId: "reader",
+            scopes: ["mcp:read"],
+            identityId: null,
+            notBefore: null,
+            expiresAt: null,
+            subject: null,
+            kind: "static" as const,
+          },
+        ],
+        sessionKeys: [],
+      },
+      httpRateLimit: {
+        ...config.httpRateLimit,
+        store: "redis" as const,
+        redisUrl: "redis://127.0.0.1:6379",
+      },
+    });
+
+    expect(response.statusCode).toBe(503);
+    expect(JSON.parse(response.body)).toEqual({
+      error: "Rate limit backend unavailable: redis unavailable",
+    });
+  });
 });
 
 describe("resolveAdvertisedHttpUrl", () => {
@@ -844,5 +951,28 @@ describe("configureNodeHttpServer", () => {
 
     timeoutHandler?.({ destroy });
     expect(destroy).toHaveBeenCalledOnce();
+  });
+});
+
+describe("resolveRequestId", () => {
+  it("prefers Railway-style request ids when present", () => {
+    const request = {
+      headers: {
+        "x-request-id": "req_123",
+        "x-correlation-id": "corr_456",
+      },
+    } as unknown as IncomingMessage;
+
+    expect(resolveRequestId(request)).toBe("req_123");
+  });
+
+  it("falls back to other correlation headers", () => {
+    const request = {
+      headers: {
+        "cf-ray": "abc123-FRA",
+      },
+    } as unknown as IncomingMessage;
+
+    expect(resolveRequestId(request)).toBe("abc123-FRA");
   });
 });

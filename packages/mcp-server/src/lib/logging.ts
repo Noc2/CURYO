@@ -24,13 +24,18 @@ export function serializeError(error: unknown): Record<string, unknown> {
     return {
       errorName: error.name,
       errorMessage: error.message,
-      errorStack: error.stack,
+      ...(shouldIncludeErrorStacks() && error.stack ? { errorStack: error.stack } : {}),
     };
   }
 
   return {
     errorMessage: String(error),
   };
+}
+
+function shouldIncludeErrorStacks(): boolean {
+  const value = process.env.CURYO_MCP_LOG_STACKS?.trim().toLowerCase();
+  return value === "1" || value === "true" || value === "yes" || value === "on";
 }
 
 function serializeFields(fields: LogFields): LogFields {
