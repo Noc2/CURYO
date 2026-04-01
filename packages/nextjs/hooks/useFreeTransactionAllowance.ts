@@ -3,9 +3,10 @@
 import { useEffect, useMemo, useRef } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { defineChain } from "thirdweb";
-import { useActiveWallet, useSetActiveWallet } from "thirdweb/react";
+import { useActiveWallet, useActiveWalletChain, useSetActiveWallet } from "thirdweb/react";
 import { useAccount } from "wagmi";
 import { useThirdwebWagmiSync } from "~~/hooks/useThirdwebWagmiSync";
+import { resolveWalletExecutionChainId } from "~~/hooks/useWalletExecutionCapabilities";
 import {
   createThirdwebInAppWallet,
   getThirdwebWalletSponsorshipMode,
@@ -115,15 +116,17 @@ export function getFreeTransactionAllowanceQueryKey(address?: string, chainId?: 
 export function useFreeTransactionAllowance() {
   const { address, chain } = useAccount();
   const activeWallet = useActiveWallet();
+  const activeWalletChain = useActiveWalletChain();
   const setActiveWallet = useSetActiveWallet();
   const { syncWalletToWagmi } = useThirdwebWagmiSync();
   const previousRemainingRef = useRef<number | null>(null);
   const sponsorshipSyncAttemptRef = useRef<string | null>(null);
+  const resolvedChainId = resolveWalletExecutionChainId(chain?.id, activeWalletChain?.id);
 
   const query = useQuery({
-    queryKey: getFreeTransactionAllowanceQueryKey(address, chain?.id),
+    queryKey: getFreeTransactionAllowanceQueryKey(address, resolvedChainId),
     queryFn: async () => {
-      const response = await fetch(`/api/transactions/free/session?address=${address}&chainId=${chain?.id}`);
+      const response = await fetch(`/api/transactions/free/session?address=${address}&chainId=${resolvedChainId}`);
       const body = (await response.json().catch(() => null)) as
         | FreeTransactionAllowanceResponse
         | { error?: string }
@@ -135,14 +138,14 @@ export function useFreeTransactionAllowance() {
 
       return body as FreeTransactionAllowanceResponse;
     },
-    enabled: Boolean(address) && typeof chain?.id === "number",
+    enabled: Boolean(address) && typeof resolvedChainId === "number",
     staleTime: 30_000,
     retry: false,
   });
 
   const fallbackSummary = useMemo(
-    () => (query.data ? null : readStoredFreeTransactionAllowanceSummary(address, chain?.id)),
-    [address, chain?.id, query.data],
+    () => (query.data ? null : readStoredFreeTransactionAllowanceSummary(address, resolvedChainId)),
+    [address, query.data, resolvedChainId],
   );
 
   useEffect(() => {
@@ -150,8 +153,8 @@ export function useFreeTransactionAllowance() {
       return;
     }
 
-    storeFreeTransactionAllowanceSummary(query.data, address, chain?.id);
-  }, [address, chain?.id, query.data]);
+    storeFreeTransactionAllowanceSummary(query.data, address, resolvedChainId);
+  }, [address, query.data, resolvedChainId]);
 
   const allowance = useMemo(() => {
     const summary = query.data ?? fallbackSummary;
@@ -171,15 +174,15 @@ export function useFreeTransactionAllowance() {
   }, [fallbackSummary, query]);
 
   const desiredSponsorshipMode = useMemo(() => {
-    if (!chain?.id || !supportsThirdwebExecutionCapabilities(chain.id) || !allowance.isResolved) {
+    if (!resolvedChainId || !supportsThirdwebExecutionCapabilities(resolvedChainId) || !allowance.isResolved) {
       return null;
     }
 
     return allowance.canUseFreeTransactions ? "sponsored" : "self-funded";
-  }, [allowance.canUseFreeTransactions, allowance.isResolved, chain?.id]);
+  }, [allowance.canUseFreeTransactions, allowance.isResolved, resolvedChainId]);
 
   useEffect(() => {
-    if (!chain?.id || !supportsThirdwebExecutionCapabilities(chain.id)) {
+    if (!resolvedChainId || !supportsThirdwebExecutionCapabilities(resolvedChainId)) {
       setStoredThirdwebSponsorshipMode(null);
       return;
     }
@@ -189,13 +192,13 @@ export function useFreeTransactionAllowance() {
     }
 
     setStoredThirdwebSponsorshipMode(desiredSponsorshipMode);
-  }, [chain?.id, desiredSponsorshipMode]);
+  }, [desiredSponsorshipMode, resolvedChainId]);
 
   useEffect(() => {
     if (
       !thirdwebClient ||
       !address ||
-      !chain?.id ||
+      !resolvedChainId ||
       !desiredSponsorshipMode ||
       !activeWallet ||
       activeWallet.id !== "inApp"
@@ -209,7 +212,7 @@ export function useFreeTransactionAllowance() {
       return;
     }
 
-    const attemptKey = `${address.toLowerCase()}:${chain.id}:${desiredSponsorshipMode}`;
+    const attemptKey = `${address.toLowerCase()}:${resolvedChainId}:${desiredSponsorshipMode}`;
     if (sponsorshipSyncAttemptRef.current === attemptKey) {
       return;
     }
@@ -218,24 +221,24 @@ export function useFreeTransactionAllowance() {
 
     void (async () => {
       try {
-        const replacementWallet = createThirdwebInAppWallet(chain.id, {
+        const replacementWallet = createThirdwebInAppWallet(resolvedChainId, {
           sponsorshipMode: desiredSponsorshipMode,
         });
 
         await replacementWallet.autoConnect({
-          chain: defineChain(chain.id),
+          chain: defineChain(resolvedChainId),
           client: thirdwebClient,
         });
-        await syncWalletToWagmi(replacementWallet, chain.id, { reconnect: true });
+        await syncWalletToWagmi(replacementWallet, resolvedChainId, { reconnect: true });
         await setActiveWallet(replacementWallet);
       } catch (error) {
         console.error("Failed to sync thirdweb sponsorship mode:", error);
       }
     })();
-  }, [activeWallet, address, chain?.id, desiredSponsorshipMode, setActiveWallet, syncWalletToWagmi]);
+  }, [activeWallet, address, desiredSponsorshipMode, resolvedChainId, setActiveWallet, syncWalletToWagmi]);
 
   useEffect(() => {
-    if (!allowance.verified || !chain?.id || !allowance.voterIdTokenId) {
+    if (!allowance.verified || !resolvedChainId || !allowance.voterIdTokenId) {
       previousRemainingRef.current = allowance.remaining;
       return;
     }
@@ -248,7 +251,7 @@ export function useFreeTransactionAllowance() {
     }
 
     const toastKey = {
-      chainId: chain.id,
+      chainId: resolvedChainId,
       voterIdTokenId: allowance.voterIdTokenId,
     };
 
@@ -258,7 +261,7 @@ export function useFreeTransactionAllowance() {
 
     markExhaustionToastShown(toastKey);
     notification.warning("Free transactions used up. Add CELO to continue.");
-  }, [allowance.remaining, allowance.verified, allowance.voterIdTokenId, chain?.id]);
+  }, [allowance.remaining, allowance.verified, allowance.voterIdTokenId, resolvedChainId]);
 
   return allowance;
 }
