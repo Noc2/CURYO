@@ -832,10 +832,23 @@ contract RoundVotingEngine is
         uint256 refundedCrep = 0;
 
         for (uint256 i = startIndex; i < endIndex; i++) {
-            (uint256 forfeitedAmount, uint256 refundedAmount) =
-                _processUnrevealedCommit(round, commits[contentId][roundId][commitKeys[i]]);
-            forfeitedCrep += forfeitedAmount;
-            refundedCrep += refundedAmount;
+            RoundLib.Commit storage commit = commits[contentId][roundId][commitKeys[i]];
+            if (!commit.revealed && commit.stakeAmount > 0) {
+                uint256 amount = commit.stakeAmount;
+                commit.stakeAmount = 0;
+
+                if (round.state == RoundLib.RoundState.RevealFailed || commit.revealableAfter <= round.settledAt) {
+                    // Past epoch: ciphertext was decryptable but voter/keeper didn't reveal
+                    forfeitedCrep += amount;
+                } else {
+                    // Current/future epoch: voter had no chance — refund
+                    try TokenTransferLib.transfer(crepToken, commit.voter, amount) {
+                        refundedCrep += amount;
+                    } catch {
+                        forfeitedCrep += amount;
+                    }
+                }
+            }
         }
 
         if (forfeitedCrep > 0) {
@@ -859,29 +872,6 @@ contract RoundVotingEngine is
 
         if (forfeitedCrep == 0 && refundedCrep == 0) revert NothingProcessed();
     }
-
-    function _processUnrevealedCommit(RoundLib.Round storage round, RoundLib.Commit storage commit)
-        private
-        returns (uint256 forfeitedAmount, uint256 refundedAmount)
-    {
-        if (commit.revealed || commit.stakeAmount == 0) return (0, 0);
-
-        uint256 amount = commit.stakeAmount;
-        commit.stakeAmount = 0;
-
-        if (round.state == RoundLib.RoundState.RevealFailed || commit.revealableAfter <= round.settledAt) {
-            // Past epoch: ciphertext was decryptable but voter/keeper didn't reveal
-            return (amount, 0);
-        }
-
-        // Current/future epoch: voter had no chance — refund
-        try TokenTransferLib.transfer(crepToken, commit.voter, amount) {
-            return (0, amount);
-        } catch {
-            return (amount, 0);
-        }
-    }
-
     // =========================================================================
     // INTERNAL HELPERS
     // =========================================================================
