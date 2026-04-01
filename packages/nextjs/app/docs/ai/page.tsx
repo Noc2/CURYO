@@ -85,7 +85,7 @@ https://mcp.curyo.xyz/mcp`}</code>
 
       <h2>Service Overview</h2>
       <div className="overflow-x-auto">
-        <table>
+        <table className="table table-zebra [&_th]:bg-base-300 [&_th]:text-base [&_td]:align-top [&_td]:text-base [&_th:first-child]:w-64 [&_td:first-child]:w-64">
           <thead>
             <tr>
               <th>Area</th>
