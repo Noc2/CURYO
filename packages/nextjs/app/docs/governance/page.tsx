@@ -257,6 +257,59 @@ const GovernanceDocs: NextPage = () => {
         The process follows Curyo&apos;s standard governance flow: evidence is submitted, a governance proposal is
         created, the community votes, and after the timelock delay, the action is executed.
       </p>
+
+      <h2>Spam Prevention</h2>
+      <p>
+        Curyo already rejects malformed or non-armored vote ciphertexts on-chain. However, the current reveal model does
+        not yet use zero-knowledge proofs that every accepted ciphertext was honestly decryptable. That means a
+        malicious voter could still submit a syntactically valid commit that later cannot be revealed by independent
+        resolution services.
+      </p>
+      <p>
+        This is primarily a <strong>liveness and operations risk</strong>, not a way to smuggle counted votes into the
+        result. A vote only affects settlement once it is successfully revealed. But unrevealable spam commits can waste
+        keeper effort, delay round resolution, and if repeated broadly enough, contribute to reveal-failed rounds that
+        require manual cleanup.
+      </p>
+      <p>
+        <strong>Detection:</strong> Community members and independent resolution services can watch for repeated
+        unrevealable commits, failed reveal attempts, or patterns where the same Voter ID repeatedly creates commits
+        that pass the basic on-chain checks but never reveal successfully.
+      </p>
+      <p>
+        <strong>Enforcement via governance proposals:</strong> When there is credible evidence of repeated spam
+        behavior, governance is encouraged to act:
+      </p>
+      <ul>
+        <li>
+          <strong>Revoke Voter IDs</strong> &mdash; governance can permanently revoke the Voter IDs of accounts that
+          repeatedly submit spam or unrevealable vote commits, removing their ability to keep disrupting rounds.
+        </li>
+        <li>
+          <strong>Reward investigators</strong> &mdash; governance is encouraged to use treasury funds to reward
+          operators or community members who document repeated abuse with reproducible evidence from on-chain data and
+          resolution-service observations.
+        </li>
+      </ul>
+      <p>
+        <strong>Deterrence:</strong> Several protocol features already make vote spam costly:
+      </p>
+      <ul>
+        <li>
+          Stake at risk &mdash; unrevealed past-epoch votes can be forfeited to treasury during cleanup, and unrevealed
+          commits in reveal-failed rounds are forfeited rather than refunded.
+        </li>
+        <li>
+          Identity verification &mdash; 1 person = 1 Voter ID via Self.xyz passport or biometric ID card verification.
+        </li>
+        <li>Stake caps &mdash; maximum 100 cREP per content per round limits damage from any one Voter ID.</li>
+        <li>Permanent revocation &mdash; losing your Voter ID is irreversible and eliminates future voting ability.</li>
+      </ul>
+      <p>
+        Over time, a stronger hardening path would be zk-based reveal proofs or comparable cryptographic checks that
+        accepted commits are honestly decryptable. Until then, governance oversight and Voter ID revocation are the main
+        backstop against repeated vote spam.
+      </p>
     </article>
   );
 };
