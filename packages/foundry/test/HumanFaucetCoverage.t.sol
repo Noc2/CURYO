@@ -337,15 +337,24 @@ contract HumanFaucetCoverageTest is Test {
 
     function test_WithdrawRemaining_AmountExceedsBalance_CapsToBalance() public {
         uint256 amount = crepToken.balanceOf(address(faucet)) + 1_000_000e6;
+
         vm.prank(admin);
-        vm.expectRevert("Withdraw disabled");
+        faucet.pause();
+
+        vm.prank(admin);
         faucet.withdrawRemaining(admin, amount);
+
+        assertEq(crepToken.balanceOf(address(faucet)), 0);
     }
 
     function test_WithdrawRemaining_ZeroBalance_Reverts() public {
         _drainFaucet(crepToken.balanceOf(address(faucet)));
+
         vm.prank(admin);
-        vm.expectRevert("Withdraw disabled");
+        faucet.pause();
+
+        vm.prank(admin);
+        vm.expectRevert("Nothing to withdraw");
         faucet.withdrawRemaining(admin, 1e6);
     }
 
