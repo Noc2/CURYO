@@ -5,6 +5,7 @@ import { Test } from "forge-std/Test.sol";
 import { HumanFaucet } from "../contracts/HumanFaucet.sol";
 import { MockIdentityVerificationHub } from "../contracts/mocks/MockIdentityVerificationHub.sol";
 import { CuryoReputation } from "../contracts/CuryoReputation.sol";
+import { VoterIdNFT } from "../contracts/VoterIdNFT.sol";
 import { ISelfVerificationRoot } from "@selfxyz/contracts/contracts/interfaces/ISelfVerificationRoot.sol";
 import { MockVoterIdNFT } from "./mocks/MockVoterIdNFT.sol";
 
@@ -100,6 +101,54 @@ contract HumanFaucetCoverageTest is Test {
 
         assertEq(crepToken.balanceOf(user1), TIER_0_AMOUNT);
         // No revert, no minting
+    }
+
+    function test_Claim_ClearsInboundDelegation_WhenUsingRealVoterIdNFT() public {
+        VoterIdNFT realVoterIdNFT = _deployRealVoterIdNFT();
+
+        vm.prank(admin);
+        realVoterIdNFT.mint(user1, 111111);
+
+        vm.prank(user1);
+        realVoterIdNFT.setDelegate(user2);
+
+        assertEq(realVoterIdNFT.resolveHolder(user2), user1);
+
+        vm.prank(admin);
+        faucet.setVoterIdNFT(address(realVoterIdNFT));
+
+        mockHub.setVerified(user2);
+        mockHub.simulateVerification(address(faucet), user2);
+
+        assertEq(realVoterIdNFT.resolveHolder(user2), user2);
+        assertEq(realVoterIdNFT.delegateOf(user2), address(0));
+        assertEq(realVoterIdNFT.delegateTo(user1), address(0));
+    }
+
+    function test_RetryVoterIdMint_AllowsDelegatedClaimerWithoutDirectId() public {
+        mockHub.setVerified(user2);
+        mockHub.simulateVerification(address(faucet), user2);
+        assertTrue(faucet.hasClaimed(user2));
+
+        VoterIdNFT realVoterIdNFT = _deployRealVoterIdNFT();
+
+        vm.prank(admin);
+        realVoterIdNFT.mint(user1, 222222);
+
+        vm.prank(user1);
+        realVoterIdNFT.setDelegate(user2);
+
+        assertEq(realVoterIdNFT.resolveHolder(user2), user1);
+
+        vm.prank(admin);
+        faucet.setVoterIdNFT(address(realVoterIdNFT));
+
+        vm.prank(admin);
+        faucet.retryVoterIdMint(user2);
+
+        assertEq(realVoterIdNFT.resolveHolder(user2), user2);
+        assertEq(realVoterIdNFT.delegateOf(user2), address(0));
+        assertEq(realVoterIdNFT.delegateTo(user1), address(0));
     }
 
     function test_Claim_RevertsWhenAddressAlreadyClaimedEvenWithFreshNullifier() public {
@@ -513,5 +562,13 @@ contract HumanFaucetCoverageTest is Test {
     function _drainFaucet(uint256 amount) internal {
         vm.prank(address(faucet));
         crepToken.transfer(admin, amount);
+    }
+
+    function _deployRealVoterIdNFT() internal returns (VoterIdNFT realVoterIdNFT) {
+        vm.startPrank(admin);
+        realVoterIdNFT = new VoterIdNFT(admin, admin);
+        realVoterIdNFT.addMinter(admin);
+        realVoterIdNFT.addMinter(address(faucet));
+        vm.stopPrank();
     }
 }

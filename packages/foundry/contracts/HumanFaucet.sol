@@ -189,7 +189,7 @@ contract HumanFaucet is SelfVerificationRoot, Ownable, Pausable {
         uint256 nullifier = claimNullifier[user];
         require(nullifier != 0, "No nullifier recorded");
         require(address(voterIdNFT) != address(0), "VoterIdNFT not set");
-        require(!voterIdNFT.hasVoterId(user), "User already has Voter ID");
+        require(voterIdNFT.resolveHolder(user) != user, "User already has direct Voter ID");
 
         uint256 tokenId = voterIdNFT.mint(user, nullifier);
         emit VoterIdMinted(user, tokenId, nullifier);

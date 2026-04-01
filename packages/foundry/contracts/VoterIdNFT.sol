@@ -190,7 +190,9 @@ contract VoterIdNFT is ERC721, Ownable, IVoterIdNFT {
 
     /// @notice Mint a new Voter ID NFT
     /// @dev Supply is bounded by unique passport nullifiers from Self.xyz (one per real human)
-    ///      plus an on-chain MAX_SUPPLY cap (10M) as defense-in-depth.
+    ///      plus an on-chain MAX_SUPPLY cap (10M) as defense-in-depth. If the recipient was
+    ///      previously assigned as someone else's delegate, direct ownership wins and the
+    ///      inbound delegation is cleared before minting.
     /// @param to The address to mint to
     /// @param nullifier The passport nullifier from Self.xyz
     /// @return tokenId The minted token ID
@@ -198,7 +200,13 @@ contract VoterIdNFT is ERC721, Ownable, IVoterIdNFT {
         if (!authorizedMinters[msg.sender]) revert OnlyMinter();
         if (nullifierUsed[nullifier]) revert NullifierAlreadyUsed();
         if (holderToTokenId[to] != 0) revert AlreadyHasVoterId();
-        if (delegateOf[to] != address(0)) revert DelegateAlreadyAssigned();
+
+        address delegator = delegateOf[to];
+        if (delegator != address(0)) {
+            delete delegateOf[to];
+            delete delegateTo[delegator];
+            emit DelegateRemoved(delegator, to);
+        }
 
         tokenId = _tokenIdCounter++;
         if (tokenId > MAX_SUPPLY) revert MaxSupplyReached();
