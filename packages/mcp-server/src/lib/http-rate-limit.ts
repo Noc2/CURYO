@@ -2,11 +2,17 @@ import { createHash } from "node:crypto";
 import type { IncomingMessage } from "node:http";
 import { isIP } from "node:net";
 import type { AuthInfo } from "@modelcontextprotocol/sdk/server/auth/types.js";
+import Redis from "ioredis";
 import type { HttpRateLimitConfig } from "../config.js";
 
 interface RateLimitBucket {
   count: number;
   expiresAt: number;
+}
+
+interface HttpRateLimitStore {
+  increment(key: string, expiresAt: number, now: number): Promise<RateLimitBucket>;
+  close?(): Promise<void>;
 }
 
 const FORWARDED_FOR_HEADER = "x-forwarded-for";
@@ -20,7 +26,9 @@ const FALLBACK_FINGERPRINT_HEADERS = [
   "referer",
 ] as const;
 const rateLimitBuckets = new Map<string, RateLimitBucket>();
+const rateLimitStoreCache = new Map<string, HttpRateLimitStore>();
 let lastCleanupAt = 0;
+let rateLimitStoreFactory: ((config: HttpRateLimitConfig) => HttpRateLimitStore) | null = null;
 
 export class HttpRateLimitError extends Error {
   readonly statusCode: number;
@@ -38,12 +46,22 @@ export class HttpRateLimitError extends Error {
   }
 }
 
-export function enforceHttpRateLimit(
+export class HttpRateLimitStoreError extends Error {
+  readonly statusCode: number;
+
+  constructor(message: string) {
+    super(message);
+    this.name = "HttpRateLimitStoreError";
+    this.statusCode = 503;
+  }
+}
+
+export async function enforceHttpRateLimit(
   request: IncomingMessage,
   rateLimitConfig: HttpRateLimitConfig,
   authInfo: AuthInfo | undefined,
   requestPath: string,
-): void {
+): Promise<void> {
   if (!rateLimitConfig.enabled) {
     return;
   }
@@ -55,29 +73,42 @@ export function enforceHttpRateLimit(
   }
 
   const now = Date.now();
-  cleanupExpiredBuckets(now);
-
   const windowStartedAt = now - (now % rateLimitConfig.windowMs);
   const expiresAt = windowStartedAt + rateLimitConfig.windowMs;
   const subject = resolveRateLimitSubject(request, rateLimitConfig, authInfo);
   const method = (request.method ?? "UNKNOWN").toUpperCase();
-  const key = hashIdentifier(`${requestPath}:${method}:${windowStartedAt}:${policy}:${subject}`);
-  const existingBucket = rateLimitBuckets.get(key);
+  const key = buildRateLimitKey(rateLimitConfig, requestPath, method, windowStartedAt, policy, subject);
 
-  if (existingBucket) {
-    existingBucket.count += 1;
-    if (existingBucket.count > limit) {
-      throw createRateLimitError(existingBucket.expiresAt, now, limit, policy);
+  try {
+    const bucket = await getRateLimitStore(rateLimitConfig).increment(key, expiresAt, now);
+    if (bucket.count > limit) {
+      throw createRateLimitError(bucket.expiresAt, now, limit, policy);
     }
-    return;
-  }
+  } catch (error) {
+    if (error instanceof HttpRateLimitError) {
+      throw error;
+    }
 
-  rateLimitBuckets.set(key, { count: 1, expiresAt });
+    throw new HttpRateLimitStoreError(
+      error instanceof Error ? `Rate limit backend unavailable: ${error.message}` : "Rate limit backend unavailable",
+    );
+  }
 }
 
 export function __resetHttpRateLimitStateForTests(): void {
   rateLimitBuckets.clear();
+  for (const store of rateLimitStoreCache.values()) {
+    void store.close?.();
+  }
+  rateLimitStoreCache.clear();
+  rateLimitStoreFactory = null;
   lastCleanupAt = 0;
+}
+
+export function __setHttpRateLimitStoreFactoryForTests(
+  factory: ((config: HttpRateLimitConfig) => HttpRateLimitStore) | null,
+): void {
+  rateLimitStoreFactory = factory;
 }
 
 function hasWriteScopes(authInfo: AuthInfo | undefined): boolean {
@@ -91,6 +122,112 @@ function createRateLimitError(expiresAt: number, now: number, limit: number, pol
       ? "Too many write-capable MCP requests in the current window"
       : "Too many MCP requests in the current window";
   return new HttpRateLimitError(message, retryAfterSeconds, limit, policy);
+}
+
+function buildRateLimitKey(
+  config: HttpRateLimitConfig,
+  requestPath: string,
+  method: string,
+  windowStartedAt: number,
+  policy: "read" | "write",
+  subject: string,
+): string {
+  return `${config.redisKeyPrefix}:${hashIdentifier(`${requestPath}:${method}:${windowStartedAt}:${policy}:${subject}`)}`;
+}
+
+function getRateLimitStore(config: HttpRateLimitConfig): HttpRateLimitStore {
+  if (rateLimitStoreFactory) {
+    return rateLimitStoreFactory(config);
+  }
+
+  const cacheKey =
+    config.store === "redis"
+      ? `redis:${config.redisUrl ?? "missing"}:${config.redisKeyPrefix}:${config.redisConnectTimeoutMs}`
+      : "memory";
+  const cached = rateLimitStoreCache.get(cacheKey);
+  if (cached) {
+    return cached;
+  }
+
+  const store =
+    config.store === "redis"
+      ? new RedisHttpRateLimitStore(config.redisUrl ?? "", config.redisConnectTimeoutMs)
+      : new MemoryHttpRateLimitStore();
+  rateLimitStoreCache.set(cacheKey, store);
+  return store;
+}
+
+class MemoryHttpRateLimitStore implements HttpRateLimitStore {
+  async increment(key: string, expiresAt: number, now: number): Promise<RateLimitBucket> {
+    cleanupExpiredBuckets(now);
+
+    const existingBucket = rateLimitBuckets.get(key);
+    if (existingBucket) {
+      existingBucket.count += 1;
+      return existingBucket;
+    }
+
+    const bucket = { count: 1, expiresAt };
+    rateLimitBuckets.set(key, bucket);
+    return bucket;
+  }
+}
+
+class RedisHttpRateLimitStore implements HttpRateLimitStore {
+  private readonly client: Redis;
+  private connectPromise: Promise<void> | null = null;
+
+  constructor(redisUrl: string, connectTimeoutMs: number) {
+    this.client = new Redis(redisUrl, {
+      lazyConnect: true,
+      enableOfflineQueue: false,
+      maxRetriesPerRequest: 0,
+      connectTimeout: connectTimeoutMs,
+    });
+    this.client.on("error", () => {});
+  }
+
+  async increment(key: string, expiresAt: number, now: number): Promise<RateLimitBucket> {
+    await this.ensureConnected();
+
+    const ttlMs = Math.max(1, expiresAt - now);
+    const results = await this.client.multi().incr(key).pexpire(key, ttlMs, "NX").pttl(key).exec();
+    if (!results) {
+      throw new Error("Redis rate limit pipeline returned no result");
+    }
+
+    const count = parseRedisNumber(results[0]?.[1], "INCR");
+    const remainingTtlMs = parseRedisNumber(results[2]?.[1], "PTTL");
+
+    return {
+      count,
+      expiresAt: remainingTtlMs > 0 ? now + remainingTtlMs : expiresAt,
+    };
+  }
+
+  async close(): Promise<void> {
+    if (this.client.status === "end") {
+      return;
+    }
+
+    await this.client.quit().catch(() => {
+      this.client.disconnect();
+    });
+  }
+
+  private async ensureConnected(): Promise<void> {
+    if (this.client.status === "ready") {
+      return;
+    }
+
+    if (!this.connectPromise) {
+      this.connectPromise = this.client.connect().finally(() => {
+        this.connectPromise = null;
+      });
+    }
+
+    await this.connectPromise;
+  }
 }
 
 function cleanupExpiredBuckets(now: number): void {
@@ -190,8 +327,8 @@ function isLikelyProxyHopIp(value: string): boolean {
 
   const ipVersion = isIP(normalized);
   if (ipVersion === 4) {
-    const octets = normalized.split(".").map(part => Number.parseInt(part, 10));
-    if (octets.length !== 4 || octets.some(part => !Number.isInteger(part) || part < 0 || part > 255)) {
+    const octets = normalized.split(".").map((part) => Number.parseInt(part, 10));
+    if (octets.length !== 4 || octets.some((part) => !Number.isInteger(part) || part < 0 || part > 255)) {
       return false;
     }
 
@@ -220,6 +357,14 @@ function isLikelyProxyHopIp(value: string): boolean {
   }
 
   return false;
+}
+
+function parseRedisNumber(value: unknown, command: string): number {
+  if (typeof value === "number" && Number.isFinite(value)) {
+    return value;
+  }
+
+  throw new Error(`Redis ${command} result was not numeric`);
 }
 
 function hashIdentifier(value: string): string {

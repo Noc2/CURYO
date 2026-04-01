@@ -5,7 +5,7 @@ import { StreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/
 import { authenticateRequest, HttpAuthError } from "./auth.js";
 import { PonderClient, type PonderApiError } from "./clients/ponder.js";
 import type { HttpServerConfig, ServerConfig } from "./config.js";
-import { enforceHttpRateLimit, HttpRateLimitError } from "./lib/http-rate-limit.js";
+import { enforceHttpRateLimit, HttpRateLimitError, HttpRateLimitStoreError } from "./lib/http-rate-limit.js";
 import { logEvent, serializeError } from "./lib/logging.js";
 import { extractRequestOrigin, isOriginAllowed, normalizeOrigin } from "./lib/origin.js";
 import { getMetricsText, recordHttpAuthFailure, recordHttpRateLimit, recordHttpRequest, recordReadinessCheck } from "./metrics.js";
@@ -362,7 +362,7 @@ export async function handleStreamableHttpRequest(
   }
 
   try {
-    enforceHttpRateLimit(request, config.httpRateLimit, authInfo, requestUrl.pathname);
+    await enforceHttpRateLimit(request, config.httpRateLimit, authInfo, requestUrl.pathname);
   } catch (error) {
     if (error instanceof HttpRateLimitError) {
       recordHttpRateLimit();
@@ -388,6 +388,20 @@ export async function handleStreamableHttpRequest(
         policy: error.policy,
         limit: error.limit,
         retryAfterSeconds: error.retryAfterSeconds,
+      });
+      return;
+    }
+
+    if (error instanceof HttpRateLimitStoreError) {
+      sendJson(response, error.statusCode, { error: error.message }, config);
+      logEvent("error", "mcp_http_rate_limit_backend_failed", {
+        method,
+        path: requestUrl.pathname,
+        statusCode: error.statusCode,
+        durationMs: Date.now() - startedAt,
+        remoteAddress,
+        authClientId: authInfo?.clientId,
+        ...serializeError(error),
       });
       return;
     }

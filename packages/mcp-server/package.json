@@ -34,6 +34,7 @@
     "@curyo/contracts": "workspace:*",
     "@curyo/node-utils": "workspace:*",
     "@modelcontextprotocol/sdk": "^1.27.1",
+    "ioredis": "^5.4.2",
     "viem": "2.39.0",
     "zod": "^3.25.76"
   },

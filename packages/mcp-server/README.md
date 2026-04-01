@@ -97,10 +97,14 @@ The server reads from the environment at startup.
 | `CURYO_MCP_HTTP_SESSION_ISSUER` | `curyo-nextjs` | Expected issuer claim for wallet-bound MCP bearer sessions |
 | `CURYO_MCP_HTTP_SESSION_AUDIENCE` | `curyo-mcp` | Expected audience claim for wallet-bound MCP bearer sessions |
 | `CURYO_MCP_HTTP_SESSION_SECRETS_JSON` | — | Optional JSON array of multiple verification keys for session rotation |
-| `CURYO_MCP_HTTP_RATE_LIMIT_ENABLED` | `1` | Enable in-memory HTTP request rate limiting |
+| `CURYO_MCP_HTTP_RATE_LIMIT_ENABLED` | `1` | Enable HTTP request rate limiting |
 | `CURYO_MCP_HTTP_RATE_LIMIT_WINDOW_MS` | `60000` | Shared fixed window used for MCP HTTP rate limits |
 | `CURYO_MCP_HTTP_RATE_LIMIT_READ_LIMIT` | `120` | Max read-oriented MCP HTTP requests per window |
 | `CURYO_MCP_HTTP_RATE_LIMIT_WRITE_LIMIT` | `20` | Max write-capable MCP HTTP requests per window |
+| `CURYO_MCP_HTTP_RATE_LIMIT_STORE` | `memory` | Rate-limit backend: `memory` for single-instance deploys, `redis` for shared multi-replica limits |
+| `CURYO_MCP_HTTP_RATE_LIMIT_REDIS_URL` | — | Required Redis or Redis TLS URL when `CURYO_MCP_HTTP_RATE_LIMIT_STORE=redis` |
+| `CURYO_MCP_HTTP_RATE_LIMIT_REDIS_KEY_PREFIX` | `curyo:mcp:ratelimit` | Key prefix used for Redis-backed rate-limit buckets |
+| `CURYO_MCP_HTTP_RATE_LIMIT_REDIS_CONNECT_TIMEOUT_MS` | `2000` | Redis connection timeout for the shared rate-limit backend |
 | `CURYO_MCP_HTTP_TRUSTED_PROXY_HEADERS` | — | Comma-separated proxy headers to trust for client IP extraction |
 | `CURYO_MCP_WRITE_ENABLED` | `0` | Enable hosted write tools |
 | `CURYO_MCP_WRITE_IDENTITIES` | — | JSON array of signer identities (`privateKey` or Foundry keystore credentials) |
@@ -146,6 +150,10 @@ CURYO_MCP_HTTP_SESSION_SECRET=nextjs-session-secret
 CURYO_MCP_HTTP_SESSION_KEY_ID=nextjs-prod
 CURYO_MCP_HTTP_SESSION_ISSUER=curyo-nextjs
 CURYO_MCP_HTTP_SESSION_AUDIENCE=curyo-mcp
+CURYO_MCP_HTTP_RATE_LIMIT_STORE=redis
+CURYO_MCP_HTTP_RATE_LIMIT_REDIS_URL=rediss://default:replace-me@redis.example.upstash.io:6379
+CURYO_MCP_HTTP_RATE_LIMIT_REDIS_KEY_PREFIX=curyo:mcp:ratelimit
+CURYO_MCP_HTTP_RATE_LIMIT_REDIS_CONNECT_TIMEOUT_MS=2000
 CURYO_MCP_HTTP_RATE_LIMIT_READ_LIMIT=120
 CURYO_MCP_HTTP_RATE_LIMIT_WRITE_LIMIT=20
 CURYO_MCP_WRITE_ENABLED=1
@@ -164,6 +172,7 @@ In Streamable HTTP mode:
 - browser requests to the MCP path must present an allowed `Origin` header when one is sent
 - bearer challenges advertise OAuth protected resource metadata so remote MCP clients can discover auth requirements
 - Node HTTP server limits are explicit instead of relying on platform defaults
+- rate limiting can run either in-process or against a shared Redis backend for multi-replica deployments
 - liveness is exposed on `/healthz`
 - readiness is exposed on `/readyz`
 - Prometheus-style metrics are exposed on `/metrics`

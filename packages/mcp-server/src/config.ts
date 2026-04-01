@@ -65,6 +65,10 @@ export interface HttpRateLimitConfig {
   readRequestsPerWindow: number;
   writeRequestsPerWindow: number;
   trustedProxyHeaders: string[];
+  store: "memory" | "redis";
+  redisUrl: string | null;
+  redisKeyPrefix: string;
+  redisConnectTimeoutMs: number;
 }
 
 export interface WriteIdentityConfig {
@@ -151,6 +155,9 @@ const DEFAULT_HTTP_MAX_REQUEST_BODY_BYTES = 1_048_576;
 const DEFAULT_HTTP_RATE_LIMIT_WINDOW_MS = 60_000;
 const DEFAULT_HTTP_READ_REQUESTS_PER_WINDOW = 120;
 const DEFAULT_HTTP_WRITE_REQUESTS_PER_WINDOW = 20;
+const DEFAULT_HTTP_RATE_LIMIT_STORE = "memory" as const;
+const DEFAULT_HTTP_RATE_LIMIT_REDIS_KEY_PREFIX = "curyo:mcp:ratelimit";
+const DEFAULT_HTTP_RATE_LIMIT_REDIS_CONNECT_TIMEOUT_MS = 2_000;
 const DEFAULT_MAX_GAS_PER_TX = 2_000_000;
 const DEFAULT_SUBMISSION_REVEAL_POLL_INTERVAL_MS = 500;
 const DEFAULT_SUBMISSION_REVEAL_TIMEOUT_MS = 30_000;
@@ -166,6 +173,7 @@ const SERVER_TRANSPORT_VALUES = ["stdio", "streamable-http"] as const;
 export type ServerTransport = (typeof SERVER_TRANSPORT_VALUES)[number];
 const HTTP_AUTH_MODE_VALUES = ["none", "bearer"] as const;
 export type HttpAuthMode = (typeof HTTP_AUTH_MODE_VALUES)[number];
+const HTTP_RATE_LIMIT_STORE_VALUES = ["memory", "redis"] as const;
 
 export function normalizeBaseUrl(value: string): string {
   const parsed = new URL(value);
@@ -185,6 +193,15 @@ export function normalizeHttpPath(value: string): string {
 export function normalizeOptionalBaseUrl(value: string | undefined): string | null {
   const trimmed = value?.trim();
   return trimmed ? normalizeBaseUrl(trimmed) : null;
+}
+
+function normalizeRedisUrl(value: string): string {
+  const parsed = new URL(value);
+  if (parsed.protocol !== "redis:" && parsed.protocol !== "rediss:") {
+    throw new Error("Redis URL must use redis or rediss");
+  }
+
+  return parsed.toString();
 }
 
 function dedupeStrings(values: string[]): string[] {
@@ -758,6 +775,19 @@ function loadHttpAuthConfig(env: NodeJS.ProcessEnv, identityIds: ReadonlySet<str
 }
 
 function loadHttpRateLimitConfig(env: NodeJS.ProcessEnv): HttpRateLimitConfig {
+  const rawStore = readEnv(env, "CURYO_MCP_HTTP_RATE_LIMIT_STORE") ?? DEFAULT_HTTP_RATE_LIMIT_STORE;
+  if (!HTTP_RATE_LIMIT_STORE_VALUES.includes(rawStore as (typeof HTTP_RATE_LIMIT_STORE_VALUES)[number])) {
+    throw new Error(
+      `CURYO_MCP_HTTP_RATE_LIMIT_STORE must be one of: ${HTTP_RATE_LIMIT_STORE_VALUES.join(", ")}`,
+    );
+  }
+
+  const store = rawStore as HttpRateLimitConfig["store"];
+  const rawRedisUrl = readEnv(env, "CURYO_MCP_HTTP_RATE_LIMIT_REDIS_URL");
+  if (store === "redis" && !rawRedisUrl) {
+    throw new Error("CURYO_MCP_HTTP_RATE_LIMIT_REDIS_URL is required when CURYO_MCP_HTTP_RATE_LIMIT_STORE=redis");
+  }
+
   return {
     enabled: parseBooleanEnv(readEnv(env, "CURYO_MCP_HTTP_RATE_LIMIT_ENABLED"), true),
     windowMs: parseIntegerEnv(
@@ -779,6 +809,15 @@ function loadHttpRateLimitConfig(env: NodeJS.ProcessEnv): HttpRateLimitConfig {
       0,
     ),
     trustedProxyHeaders: normalizeHeaderNames(parseCsvEnv(readEnv(env, "CURYO_MCP_HTTP_TRUSTED_PROXY_HEADERS"))),
+    store,
+    redisUrl: rawRedisUrl ? normalizeRedisUrl(rawRedisUrl) : null,
+    redisKeyPrefix: readEnv(env, "CURYO_MCP_HTTP_RATE_LIMIT_REDIS_KEY_PREFIX") ?? DEFAULT_HTTP_RATE_LIMIT_REDIS_KEY_PREFIX,
+    redisConnectTimeoutMs: parseIntegerEnv(
+      readEnv(env, "CURYO_MCP_HTTP_RATE_LIMIT_REDIS_CONNECT_TIMEOUT_MS"),
+      DEFAULT_HTTP_RATE_LIMIT_REDIS_CONNECT_TIMEOUT_MS,
+      "CURYO_MCP_HTTP_RATE_LIMIT_REDIS_CONNECT_TIMEOUT_MS",
+      1,
+    ),
   };
 }
 

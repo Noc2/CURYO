@@ -2,7 +2,8 @@ import { Readable } from "node:stream";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { IncomingMessage, ServerResponse } from "node:http";
 import type { PonderClient } from "../clients/ponder.js";
-import { __resetHttpRateLimitStateForTests } from "../lib/http-rate-limit.js";
+import type { ServerConfig } from "../config.js";
+import { __resetHttpRateLimitStateForTests, __setHttpRateLimitStoreFactoryForTests } from "../lib/http-rate-limit.js";
 import { configureNodeHttpServer, handleStreamableHttpRequest, resolveAdvertisedHttpUrl } from "../http.js";
 import { __resetMcpMetricsForTests } from "../metrics.js";
 
@@ -54,7 +55,7 @@ function createMockResponse(): ServerResponse<IncomingMessage> & MockResponse {
 }
 
 describe("handleStreamableHttpRequest", () => {
-  const config = {
+  const config: ServerConfig = {
     ponderBaseUrl: "https://ponder.curyo.xyz",
     ponderTimeoutMs: 10_000,
     serverName: "curyo-test",
@@ -90,6 +91,10 @@ describe("handleStreamableHttpRequest", () => {
       readRequestsPerWindow: 120,
       writeRequestsPerWindow: 20,
       trustedProxyHeaders: [],
+      store: "memory",
+      redisUrl: null,
+      redisKeyPrefix: "curyo:mcp:ratelimit",
+      redisConnectTimeoutMs: 2_000,
     },
     write: {
       enabled: false,
@@ -111,6 +116,7 @@ describe("handleStreamableHttpRequest", () => {
 
   beforeEach(() => {
     __resetHttpRateLimitStateForTests();
+    __setHttpRateLimitStoreFactoryForTests(null);
     __resetMcpMetricsForTests();
   });
 
@@ -557,7 +563,7 @@ describe("handleStreamableHttpRequest", () => {
       },
     } as unknown as IncomingMessage;
 
-    const rateLimitedConfig = {
+    const rateLimitedConfig: ServerConfig = {
       ...config,
       httpAuth: {
         mode: "bearer" as const,
@@ -584,6 +590,10 @@ describe("handleStreamableHttpRequest", () => {
         readRequestsPerWindow: 1,
         writeRequestsPerWindow: 1,
         trustedProxyHeaders: [],
+        store: "memory",
+        redisUrl: null,
+        redisKeyPrefix: "curyo:mcp:ratelimit",
+        redisConnectTimeoutMs: 2_000,
       },
     };
 
@@ -605,7 +615,7 @@ describe("handleStreamableHttpRequest", () => {
   it("keys anonymous requests by trusted proxy headers instead of the proxy hop", async () => {
     __resetHttpRateLimitStateForTests();
 
-    const rateLimitedConfig = {
+    const rateLimitedConfig: ServerConfig = {
       ...config,
       httpRateLimit: {
         enabled: true,
@@ -613,6 +623,10 @@ describe("handleStreamableHttpRequest", () => {
         readRequestsPerWindow: 1,
         writeRequestsPerWindow: 1,
         trustedProxyHeaders: ["x-forwarded-for"],
+        store: "memory",
+        redisUrl: null,
+        redisKeyPrefix: "curyo:mcp:ratelimit",
+        redisConnectTimeoutMs: 2_000,
       },
     };
 
@@ -714,6 +728,60 @@ describe("handleStreamableHttpRequest", () => {
     expect(JSON.parse(response.body)).toEqual({
       error: "Request body exceeds configured limit",
       limitBytes: 64,
+    });
+  });
+
+  it("returns 503 when the shared rate-limit backend is unavailable", async () => {
+    __setHttpRateLimitStoreFactoryForTests(() => ({
+      increment: async () => {
+        throw new Error("redis unavailable");
+      },
+    }));
+
+    const request = {
+      url: "/mcp",
+      method: "POST",
+      headers: {
+        host: "127.0.0.1:3334",
+        authorization: "Bearer secret-token",
+      },
+      socket: {
+        remoteAddress: "127.0.0.1",
+      },
+    } as unknown as IncomingMessage;
+    const response = createMockResponse();
+
+    await handleStreamableHttpRequest(request, response, {
+      ...config,
+      httpAuth: {
+        mode: "bearer" as const,
+        realm: "curyo-mcp",
+        tokenHashes: ["930bbdc51b6aed5c2a5678fd6e28dee7a05e8a4b643cfc0b4427c3efb86c0d94"],
+        scopes: ["mcp:read"],
+        tokens: [
+          {
+            tokenHash: "930bbdc51b6aed5c2a5678fd6e28dee7a05e8a4b643cfc0b4427c3efb86c0d94",
+            clientId: "reader",
+            scopes: ["mcp:read"],
+            identityId: null,
+            notBefore: null,
+            expiresAt: null,
+            subject: null,
+            kind: "static" as const,
+          },
+        ],
+        sessionKeys: [],
+      },
+      httpRateLimit: {
+        ...config.httpRateLimit,
+        store: "redis",
+        redisUrl: "redis://127.0.0.1:6379",
+      },
+    });
+
+    expect(response.statusCode).toBe(503);
+    expect(JSON.parse(response.body)).toEqual({
+      error: "Rate limit backend unavailable: redis unavailable",
     });
   });
 });
