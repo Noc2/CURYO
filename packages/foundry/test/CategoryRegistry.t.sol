@@ -269,6 +269,41 @@ contract CategoryRegistryTest is Test {
         assertTrue(registry.isApprovedCategory(categoryId));
     }
 
+    function test_UpdateGovernance_LinkedProposalCanResumeOnNewGovernorWithoutRelink() public {
+        uint256 categoryId = _submitCategory("migrate-linked.example");
+        string memory description = "Approve migrated linked category";
+        uint256 linkedProposalId = _linkApprovalProposal(categoryId, description);
+
+        MockGovernor newGovernor = new MockGovernor();
+        address newTimelock = address(199);
+        bytes32 descriptionHash = _descriptionHash(description);
+        bytes32 approvalDigest = _approvalDigest(categoryId);
+
+        vm.prank(timelock);
+        registry.updateGovernance(address(newGovernor), newTimelock);
+
+        address[] memory targets = new address[](1);
+        targets[0] = address(registry);
+        uint256[] memory values = new uint256[](1);
+        bytes[] memory calldatas = new bytes[](1);
+        calldatas[0] =
+            abi.encodeWithSelector(registry.approveCategory.selector, categoryId, descriptionHash, approvalDigest);
+
+        vm.roll(block.number + 1);
+        vm.prank(user2);
+        uint256 recreatedProposalId = newGovernor.propose(targets, values, calldatas, description);
+
+        assertEq(recreatedProposalId, linkedProposalId);
+
+        newGovernor.setProposalState(recreatedProposalId, IGovernor.ProposalState.Queued);
+
+        vm.prank(newTimelock);
+        registry.approveCategory(categoryId, descriptionHash, approvalDigest);
+
+        assertTrue(registry.isApprovedCategory(categoryId));
+        assertEq(uint256(registry.getCategory(categoryId).status), uint256(ICategoryRegistry.CategoryStatus.Approved));
+    }
+
     // --- Admin Add Approved Category Tests ---
 
     function test_AddApprovedCategory() public {
