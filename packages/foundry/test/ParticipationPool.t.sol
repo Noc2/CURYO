@@ -431,15 +431,28 @@ contract ParticipationPoolTest is Test {
     // --- Withdraw Tests ---
 
     function test_WithdrawRemaining() public {
+        uint256 amount = 1_000_000e6;
+        uint256 poolBefore = pool.poolBalance();
+        uint256 recipientBefore = crepToken.balanceOf(admin);
+
+        vm.expectEmit(true, false, false, true);
+        emit ParticipationPool.PoolWithdrawal(admin, amount);
+
         vm.prank(admin);
-        vm.expectRevert("Withdraw disabled");
-        pool.withdrawRemaining(admin, 1_000_000e6);
+        pool.withdrawRemaining(admin, amount);
+
+        assertEq(pool.poolBalance(), poolBefore - amount);
+        assertEq(crepToken.balanceOf(admin), recipientBefore + amount);
     }
 
     function test_WithdrawRemaining_FullBalance() public {
+        uint256 fullBalance = pool.poolBalance();
+
         vm.prank(admin);
-        vm.expectRevert("Withdraw disabled");
         pool.withdrawRemaining(admin, type(uint256).max);
+
+        assertEq(pool.poolBalance(), 0);
+        assertEq(crepToken.balanceOf(admin), fullBalance);
     }
 
     function test_WithdrawRemaining_OnlyOwner() public {
@@ -450,15 +463,35 @@ contract ParticipationPoolTest is Test {
 
     function test_WithdrawRemaining_RevertZeroAddress() public {
         vm.prank(admin);
-        vm.expectRevert("Withdraw disabled");
+        vm.expectRevert("Invalid address");
         pool.withdrawRemaining(address(0), 1_000e6);
     }
 
     function test_WithdrawRemaining_RevertNothingToWithdraw() public {
         _setPoolBalance(0);
         vm.prank(admin);
-        vm.expectRevert("Withdraw disabled");
+        vm.expectRevert("Nothing to withdraw");
         pool.withdrawRemaining(admin, 1e6);
+    }
+
+    function test_WithdrawRemaining_DoesNotTouchReservedBalance() public {
+        vm.prank(votingEngine);
+        pool.reserveReward(votingEngine, 5e6);
+
+        uint256 contractBalanceBefore = crepToken.balanceOf(address(pool));
+        uint256 reservedBefore = pool.reservedBalance();
+
+        vm.prank(admin);
+        pool.withdrawRemaining(admin, type(uint256).max);
+
+        assertEq(pool.poolBalance(), 0, "pool balance should be fully withdrawn");
+        assertEq(pool.reservedBalance(), reservedBefore, "reserved accounting must be unchanged");
+        assertEq(pool.reservedRewards(votingEngine), 5e6, "beneficiary reservation must remain");
+        assertEq(
+            crepToken.balanceOf(address(pool)),
+            contractBalanceBefore - (POOL_AMOUNT - 5e6),
+            "contract should retain only reserved funds"
+        );
     }
 
     // --- Ownership Tests ---
@@ -560,16 +593,18 @@ contract ParticipationPoolTest is Test {
     }
 
     function test_WithdrawRemaining_FunctionalWithNonReentrant() public {
+        uint256 amount = 1_000e6;
+
         vm.prank(admin);
-        vm.expectRevert("Withdraw disabled");
-        pool.withdrawRemaining(admin, 1_000e6);
+        pool.withdrawRemaining(admin, amount);
+        assertEq(pool.poolBalance(), POOL_AMOUNT - amount);
     }
 
     // --- Helpers ---
 
     /// @dev Directly set totalDistributed for gas-efficient tier testing
     function _setTotalDistributed(uint256 n) internal {
-        // Storage layout: Ownable._owner = slot 0, totalDistributed = slot 1, poolBalance = slot 2
+        // Storage layout: Ownable._owner = slot 0, totalDistributed = slot 1, poolBalance = slot 2, reservedBalance = slot 3
         vm.store(address(pool), bytes32(uint256(1)), bytes32(n));
         assertEq(pool.totalDistributed(), n);
     }
