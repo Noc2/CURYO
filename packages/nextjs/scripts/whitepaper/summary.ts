@@ -4,7 +4,7 @@ import type { ContentBlock } from "./types";
 export const META = {
   title: "Curyo",
   subtitle: "Human Reputation at Stake",
-  deck: "Get Verified, Claim cREP, and Rate With Stake",
+  deck: "Get Verified, Claim cREP, and Rate with Stake",
   author: "AI",
   version: "0.3",
   date: "March 2026",

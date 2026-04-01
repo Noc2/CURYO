@@ -4,12 +4,12 @@ import test from "node:test";
 
 test("whitepaper metadata reflects the updated title-case brand deck", () => {
   assert.equal(META.subtitle, "Human Reputation at Stake");
-  assert.equal(META.deck, "Get Verified, Claim cREP, and Rate With Stake");
+  assert.equal(META.deck, "Get Verified, Claim cREP, and Rate with Stake");
 });
 
 test("whitepaper introduction surfaces the updated lead copy", () => {
   assert.equal(SECTIONS[0]?.title, "Introduction");
-  assert.equal(SECTIONS[0]?.lead, "Get Verified, Claim cREP, and Rate With Stake");
+  assert.equal(SECTIONS[0]?.lead, "Get Verified, Claim cREP, and Rate with Stake");
 });
 
 test("whitepaper executive summary preserves the updated brand framing", () => {

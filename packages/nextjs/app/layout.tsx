@@ -8,7 +8,7 @@ import { getMetadata } from "~~/utils/scaffold-eth/getMetadata";
 
 export const metadata = getMetadata({
   title: "Curyo — Human Reputation at Stake",
-  description: "Get Verified, Claim cREP, and Rate With Stake",
+  description: "Get Verified, Claim cREP, and Rate with Stake",
 });
 
 const isProduction = process.env.NODE_ENV === "production";

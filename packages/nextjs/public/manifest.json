@@ -1,7 +1,7 @@
 {
   "name": "Curyo",
   "short_name": "Curyo",
-  "description": "Get Verified, Claim cREP, and Rate With Stake",
+  "description": "Get Verified, Claim cREP, and Rate with Stake",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#050607",
