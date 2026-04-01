@@ -536,7 +536,10 @@ contract HumanFaucetBranchTest is Test {
 
     function test_WithdrawRemainingToZeroAddressReverts() public {
         vm.prank(admin);
-        vm.expectRevert("Withdraw disabled");
+        faucet.pause();
+
+        vm.prank(admin);
+        vm.expectRevert("Invalid address");
         faucet.withdrawRemaining(address(0), 100);
     }
 

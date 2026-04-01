@@ -478,8 +478,12 @@ contract HumanFaucetCoverageTest is Test {
 
     function test_WithdrawRemainingNothingToWithdraw() public {
         _drainFaucet(crep.balanceOf(address(faucet)));
+
         vm.prank(admin);
-        vm.expectRevert("Withdraw disabled");
+        faucet.pause();
+
+        vm.prank(admin);
+        vm.expectRevert("Nothing to withdraw");
         faucet.withdrawRemaining(admin, 100);
     }
 
