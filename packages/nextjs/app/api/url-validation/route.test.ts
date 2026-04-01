@@ -86,7 +86,7 @@ test("GET keeps serving cached URL validation responses when the rate-limit stor
   });
 });
 
-test("POST fails closed when the rate-limit store is unavailable", async () => {
+test("POST keeps serving URL validation responses when the rate-limit store is unavailable", async () => {
   const response = await route.POST(
     makeRequest("/api/url-validation", {
       method: "POST",
@@ -100,6 +100,6 @@ test("POST fails closed when the rate-limit store is unavailable", async () => {
     }),
   );
 
-  assert.equal(response.status, 503);
-  assert.deepEqual(await response.json(), { error: "Rate limiting is unavailable" });
+  assert.equal(response.status, 200);
+  assert.deepEqual(await response.json(), { results: {} });
 });
