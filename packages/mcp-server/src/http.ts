@@ -198,21 +198,16 @@ export async function handleStreamableHttpRequest(
 
   if (requestUrl.pathname === READINESS_PATH) {
     try {
-      const stats = await ponderClient.getStats();
+      await ponderClient.getStats();
       recordReadinessCheck(true);
       sendJson(
         response,
         200,
         {
           status: "ready",
-          upstream: {
-            source: "ponder",
-            baseUrl: config.ponderBaseUrl,
-          },
           checks: {
             ponder: "ok",
           },
-          sample: stats,
           generatedAt: new Date().toISOString(),
         },
         config,
@@ -226,14 +221,10 @@ export async function handleStreamableHttpRequest(
         statusCode,
         {
           status: "degraded",
-          upstream: {
-            source: "ponder",
-            baseUrl: config.ponderBaseUrl,
-          },
           checks: {
             ponder: "failed",
           },
-          ...serializeError(error),
+          generatedAt: new Date().toISOString(),
         },
         config,
       );

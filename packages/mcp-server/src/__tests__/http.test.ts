@@ -341,12 +341,51 @@ describe("handleStreamableHttpRequest", () => {
     await handleStreamableHttpRequest(request, response, config, ponderClient);
 
     expect(response.statusCode).toBe(200);
-    expect(JSON.parse(response.body)).toMatchObject({
+    const payload = JSON.parse(response.body);
+    expect(payload).toMatchObject({
       status: "ready",
       checks: {
         ponder: "ok",
       },
     });
+    expect(payload).not.toHaveProperty("sample");
+    expect(payload).not.toHaveProperty("upstream");
+  });
+
+  it("keeps readiness failures coarse-grained", async () => {
+    const request = {
+      url: "/readyz",
+      method: "GET",
+      headers: {
+        host: "127.0.0.1:3334",
+      },
+      socket: {
+        remoteAddress: "127.0.0.1",
+      },
+    } as unknown as IncomingMessage;
+    const response = createMockResponse();
+    const ponderClient = {
+      getStats: async () => {
+        throw new Error("ponder connection refused");
+      },
+    } as unknown as PonderClient;
+
+    await handleStreamableHttpRequest(request, response, config, ponderClient);
+
+    expect(response.statusCode).toBe(500);
+    const payload = JSON.parse(response.body);
+    expect(payload).toEqual(
+      expect.objectContaining({
+        status: "degraded",
+        checks: {
+          ponder: "failed",
+        },
+      }),
+    );
+    expect(payload).not.toHaveProperty("error");
+    expect(payload).not.toHaveProperty("message");
+    expect(payload).not.toHaveProperty("stack");
+    expect(payload).not.toHaveProperty("upstream");
   });
 
   it("serves Prometheus-style metrics on /metrics", async () => {
