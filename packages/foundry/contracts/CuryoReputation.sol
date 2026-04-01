@@ -160,18 +160,27 @@ contract CuryoReputation is ERC20, ERC1363, ERC20Permit, ERC20Votes, AccessContr
 
     // --- ERC20Votes Overrides ---
 
-    /// @dev Check governance locks on transfers, but allow transfers to content voting contracts.
+    /// @dev Check governance locks on transfers, but allow only trusted content-voting paths.
     ///      AUDIT NOTE (L-1): This means the same tokens can count for governance voting power
     ///      (historical snapshot) and content voting stakes simultaneously. This is by design —
     ///      governance uses snapshotted balances, so staking after the snapshot doesn't double-count.
     function _update(address from, address to, uint256 value) internal override(ERC20, ERC20Votes) {
         // Check governance locks for regular transfers (not mints/burns)
         if (from != address(0) && to != address(0)) {
-            // Allow transfers TO content voting contracts even if tokens are locked
-            bool isContentVoting = (to == votingEngine || to == contentRegistry);
+            bool toVotingEngine = to == votingEngine;
+            bool toContentRegistry = to == contentRegistry;
+            bool toContentVotingContract = toVotingEngine || toContentRegistry;
 
-            if (!isContentVoting) {
-                // For regular transfers, check transferable balance
+            // Governance lock bypass is restricted to:
+            // 1) self-initiated transfer/transferAndCall into a content-voting contract, or
+            // 2) pull-based transferFrom initiated by the matching protocol contract itself.
+            bool governanceBypassAllowed = toContentVotingContract
+                && (
+                    msg.sender == from || (toVotingEngine && msg.sender == votingEngine)
+                        || (toContentRegistry && msg.sender == contentRegistry)
+                );
+
+            if (!governanceBypassAllowed) {
                 require(value <= getTransferableBalance(from), "Exceeds transferable balance (governance locked)");
             }
         }

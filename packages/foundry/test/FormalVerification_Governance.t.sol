@@ -365,4 +365,36 @@ contract FormalVerification_GovernanceTest is Test {
 
         assertEq(token.balanceOf(mockVotingEngine), 100e6, "Content voting works during governance lock");
     }
+
+    /// @notice Arbitrary approved spenders cannot bypass governance locks by pushing into content-voting contracts.
+    function test_GovernanceLock_BlocksThirdPartySpenderToContentVotingContracts() public {
+        address mockVotingEngine = address(500);
+        address mockContentRegistry = address(501);
+        address arbitrarySpender = address(777);
+
+        vm.prank(deployer);
+        token.setContentVotingContracts(mockVotingEngine, mockContentRegistry);
+
+        address voter = address(200);
+        _mintCirculating(voter, 1_000_000e6);
+
+        vm.roll(block.number + 1);
+        uint256 pid = _propose(voter, "Third-party lock bypass test");
+        vm.roll(block.number + governor.votingDelay() + 1);
+
+        vm.prank(voter);
+        governor.castVote(pid, 1);
+        assertGt(token.getLockedBalance(voter), 0, "Tokens should be locked");
+
+        vm.prank(voter);
+        token.approve(arbitrarySpender, 200e6);
+
+        vm.prank(arbitrarySpender);
+        vm.expectRevert("Exceeds transferable balance (governance locked)");
+        token.transferFrom(voter, mockVotingEngine, 100e6);
+
+        vm.prank(arbitrarySpender);
+        vm.expectRevert("Exceeds transferable balance (governance locked)");
+        token.transferFrom(voter, mockContentRegistry, 100e6);
+    }
 }
