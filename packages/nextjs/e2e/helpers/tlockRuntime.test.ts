@@ -3,24 +3,11 @@ import {
   deriveDrandRoundRevealableAtSeconds,
   deriveKeeperDecryptWaitMs,
   deriveKeeperDecryptableAtSeconds,
-  resolveTlockTargetBufferSeconds,
 } from "./tlockRuntime";
 import assert from "node:assert/strict";
 import test from "node:test";
 
-test("resolveTlockTargetBufferSeconds keeps short epochs inside the current reveal window", () => {
-  assert.equal(resolveTlockTargetBufferSeconds(30, 30), 15);
-});
-
-test("resolveTlockTargetBufferSeconds caps long epochs at the drand period", () => {
-  assert.equal(resolveTlockTargetBufferSeconds(1200, 30), 30);
-});
-
-test("resolveTlockTargetBufferSeconds keeps a safety floor when drand rounds are very short", () => {
-  assert.equal(resolveTlockTargetBufferSeconds(1200, 3), 15);
-});
-
-test("deriveAnchoredTlockRuntimeNowMs targets a buffered point inside the next reveal window", () => {
+test("deriveAnchoredTlockRuntimeNowMs targets the round epoch boundary", () => {
   assert.equal(
     deriveAnchoredTlockRuntimeNowMs({
       latestBlockTimestampSeconds: 1_000,
@@ -28,11 +15,11 @@ test("deriveAnchoredTlockRuntimeNowMs targets a buffered point inside the next r
       tlockEpochDurationSeconds: 30,
       drandPeriodSeconds: 30,
     }),
-    1_285_000,
+    1_270_000,
   );
 });
 
-test("deriveAnchoredTlockRuntimeNowMs falls back to a minimal buffer when drand period is unavailable", () => {
+test("deriveAnchoredTlockRuntimeNowMs does not depend on drand period once the epoch boundary is fixed", () => {
   assert.equal(
     deriveAnchoredTlockRuntimeNowMs({
       latestBlockTimestampSeconds: 1_000,
@@ -40,7 +27,7 @@ test("deriveAnchoredTlockRuntimeNowMs falls back to a minimal buffer when drand 
       tlockEpochDurationSeconds: 10,
       drandPeriodSeconds: 0,
     }),
-    1_305_000,
+    1_290_000,
   );
 });
 
