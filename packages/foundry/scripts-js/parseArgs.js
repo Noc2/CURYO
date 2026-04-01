@@ -15,6 +15,10 @@ const NETWORK_RPC_OVERRIDE_ENV = {
   celo: "CELO_RPC_URL",
 };
 
+function formatBlockscoutVerifyCommand(networkName) {
+  return `make verify-blockscout NETWORK=${networkName} CONTRACT_ADDRESS=0x... CONTRACT_NAME=MyContract`;
+}
+
 // Get all arguments after the script name
 const args = process.argv.slice(2);
 let network;
@@ -159,7 +163,7 @@ process.env.RESUME_FLAG = resume ? "--resume" : "";
 
 // Blockscout networks — forge's built-in Celoscan URL returns 403 and the
 // [etherscan] override in foundry.toml is ignored. Skip auto-verification;
-// verify manually via: make verify-blockscout CONTRACT_ADDRESS=0x... CONTRACT_NAME=MyContract
+// verify manually via: make verify-blockscout NETWORK=<celo|celoSepolia> CONTRACT_ADDRESS=0x... CONTRACT_NAME=MyContract
 const BLOCKSCOUT_NETWORKS = new Set(["celoSepolia", "celo"]);
 const SLOW_BROADCAST_NETWORKS = new Set(["celoSepolia", "celo"]);
 process.env.DEPLOY_FLOW_FLAGS = SLOW_BROADCAST_NETWORKS.has(network)
@@ -193,7 +197,7 @@ if (network !== "localhost") {
       `\n⚠️  Skipping auto-verification for ${network} (Celoscan returns 403)`
     );
     console.log(
-      `   Verify after deploy: make verify-blockscout CONTRACT_ADDRESS=0x... CONTRACT_NAME=MyContract`
+      `   Verify after deploy: ${formatBlockscoutVerifyCommand(network)}`
     );
   } else {
     try {

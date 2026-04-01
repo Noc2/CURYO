@@ -28,7 +28,8 @@ yarn foundry:test # Run test suite
 | `yarn account:import` | Import an existing account into keystore |
 
 On Celo and Celo Sepolia, deploys use a Foundry keystore selected via `--keystore <name>` and skip Forge's
-auto-verification flow. Verify those contracts manually with `make verify-blockscout`.
+auto-verification flow. Verify those contracts manually with
+`make verify-blockscout NETWORK=<celo|celoSepolia> CONTRACT_ADDRESS=0x... CONTRACT_NAME=MyContract`.
 
 ## Configuration
 

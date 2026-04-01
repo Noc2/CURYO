@@ -67,10 +67,34 @@ verify:
 	forge script script/VerifyAll.s.sol --ffi --rpc-url $(RPC_URL)
 
 # Verify a single contract on Blockscout (Celo chains)
-# Usage: make verify-blockscout CONTRACT_ADDRESS=0x... CONTRACT_NAME=MyContract
-BLOCKSCOUT_URL ?= https://celo-sepolia.blockscout.com/api/
+# Usage: make verify-blockscout NETWORK=<celo|celoSepolia> CONTRACT_ADDRESS=0x... CONTRACT_NAME=MyContract
+# Optional overrides: BLOCKSCOUT_URL=... BLOCKSCOUT_CHAIN_ID=...
 verify-blockscout:
-	forge verify-contract $(CONTRACT_ADDRESS) $(CONTRACT_NAME) --verifier blockscout --verifier-url $(BLOCKSCOUT_URL) --chain 11142220
+	@if [ -z "$(NETWORK)" ]; then \
+		echo "Missing NETWORK. Use NETWORK=celo or NETWORK=celoSepolia."; \
+		exit 1; \
+	fi
+	@if [ -z "$(CONTRACT_ADDRESS)" ] || [ -z "$(CONTRACT_NAME)" ]; then \
+		echo "Usage: make verify-blockscout NETWORK=<celo|celoSepolia> CONTRACT_ADDRESS=0x... CONTRACT_NAME=MyContract"; \
+		exit 1; \
+	fi
+	@case "$(NETWORK)" in \
+		celo) \
+			blockscout_url="https://celo.blockscout.com/api/"; \
+			chain_id="42220"; \
+			;; \
+		celoSepolia) \
+			blockscout_url="https://celo-sepolia.blockscout.com/api/"; \
+			chain_id="11142220"; \
+			;; \
+		*) \
+			echo "Unsupported NETWORK='$(NETWORK)'. Use celo or celoSepolia."; \
+			exit 1; \
+			;; \
+	esac; \
+	if [ -n "$(BLOCKSCOUT_URL)" ]; then blockscout_url="$(BLOCKSCOUT_URL)"; fi; \
+	if [ -n "$(BLOCKSCOUT_CHAIN_ID)" ]; then chain_id="$(BLOCKSCOUT_CHAIN_ID)"; fi; \
+	forge verify-contract $(CONTRACT_ADDRESS) $(CONTRACT_NAME) --verifier blockscout --verifier-url $$blockscout_url --chain $$chain_id
 
 # Static analysis
 slither:
