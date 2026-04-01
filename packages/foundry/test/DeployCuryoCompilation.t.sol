@@ -6,6 +6,9 @@ import { DeployCuryo } from "../script/DeployCuryo.s.sol";
 import { CuryoReputation } from "../contracts/CuryoReputation.sol";
 import { HumanFaucet } from "../contracts/HumanFaucet.sol";
 import { MockIdentityVerificationHub } from "../contracts/mocks/MockIdentityVerificationHub.sol";
+import { CuryoGovernor } from "../contracts/governance/CuryoGovernor.sol";
+import { TimelockController } from "@openzeppelin/contracts/governance/TimelockController.sol";
+import { IVotes } from "@openzeppelin/contracts/governance/utils/IVotes.sol";
 
 contract MissingConfigHub {
     function verificationConfigV2Exists(bytes32) external pure returns (bool) {
@@ -23,6 +26,13 @@ contract DeployCuryoHarness is DeployCuryo {
         view
     {
         _assertFaucetVerificationConfig(humanFaucet, hubAddress, expectedConfigId);
+    }
+
+    function exposedAssertExactExcludedHolders(CuryoGovernor governor, address[] memory expectedExcludedHolders)
+        external
+        view
+    {
+        _assertExactExcludedHolders(governor, expectedExcludedHolders);
     }
 }
 
@@ -93,5 +103,48 @@ contract DeployCuryoCompilationTest is Test {
             abi.encodeWithSelector(DeployCuryo.DeploymentRoleVerificationFailed.selector, "HumanFaucet config exists on hub")
         );
         deployScript.exposedAssertFaucetVerificationConfig(faucet, address(missingConfigHub), configId);
+    }
+
+    function test_AssertExactExcludedHolders_PassesForExactOrder() public {
+        DeployCuryoHarness deployScript = new DeployCuryoHarness();
+        CuryoGovernor governor = _deployGovernorHarness();
+        address[] memory expectedExcludedHolders = new address[](3);
+        expectedExcludedHolders[0] = address(0x100);
+        expectedExcludedHolders[1] = address(0x200);
+        expectedExcludedHolders[2] = address(0x300);
+
+        governor.initializePools(expectedExcludedHolders);
+
+        deployScript.exposedAssertExactExcludedHolders(governor, expectedExcludedHolders);
+    }
+
+    function test_AssertExactExcludedHolders_RevertsOnOrderingMismatch() public {
+        DeployCuryoHarness deployScript = new DeployCuryoHarness();
+        CuryoGovernor governor = _deployGovernorHarness();
+        address[] memory initializedExcludedHolders = new address[](3);
+        initializedExcludedHolders[0] = address(0x100);
+        initializedExcludedHolders[1] = address(0x200);
+        initializedExcludedHolders[2] = address(0x300);
+        address[] memory expectedExcludedHolders = new address[](3);
+        expectedExcludedHolders[0] = address(0x100);
+        expectedExcludedHolders[1] = address(0x300);
+        expectedExcludedHolders[2] = address(0x200);
+
+        governor.initializePools(initializedExcludedHolders);
+
+        vm.expectRevert(
+            abi.encodeWithSelector(DeployCuryo.DeploymentRoleVerificationFailed.selector, "Governor excluded holder mismatch")
+        );
+        deployScript.exposedAssertExactExcludedHolders(governor, expectedExcludedHolders);
+    }
+
+    function _deployGovernorHarness() internal returns (CuryoGovernor governor) {
+        CuryoReputation crepToken = new CuryoReputation(address(this), address(this));
+        address[] memory proposers = new address[](1);
+        proposers[0] = address(this);
+        address[] memory executors = new address[](1);
+        executors[0] = address(0);
+        TimelockController timelock = new TimelockController(2 days, proposers, executors, address(this));
+        governor = new CuryoGovernor(IVotes(address(crepToken)), timelock);
     }
 }

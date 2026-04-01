@@ -487,6 +487,14 @@ contract DeployCuryo is ScaffoldETHDeploy {
         );
     }
 
+    function _assertExactExcludedHolders(CuryoGovernor governor, address[] memory expectedExcludedHolders) internal view {
+        address[] memory actualExcludedHolders = governor.getExcludedHolders();
+        _require(actualExcludedHolders.length == expectedExcludedHolders.length, "Governor excluded holders length");
+        for (uint256 i = 0; i < expectedExcludedHolders.length; i++) {
+            _require(actualExcludedHolders[i] == expectedExcludedHolders[i], "Governor excluded holder mismatch");
+        }
+    }
+
     function _verifyProductionDeploymentRoles(
         address deployerAddress,
         address governance,
@@ -638,7 +646,19 @@ contract DeployCuryo is ScaffoldETHDeploy {
         CuryoGovernor governor = CuryoGovernor(payable(governorAddr));
         _require(governor.categoryRegistry() == address(categoryRegistry), "Governor category registry");
         _require(governor.poolsInitialized(), "Governor pools initialized");
-        _require(governor.getExcludedHolders().length > 0, "Governor excluded holders");
+        _assertExactExcludedHolders(
+            governor,
+            _buildQuorumExcludedHolders(
+                address(humanFaucet),
+                address(participationPool),
+                address(rewardDistributor),
+                address(votingEngine),
+                governance,
+                address(registry),
+                address(frontendRegistry),
+                address(categoryRegistry)
+            )
+        );
         TimelockController timelock = TimelockController(payable(governance));
         _requireHasRole(address(timelock), timelock.PROPOSER_ROLE(), governorAddr, "Timelock governor proposer");
         _requireHasRole(address(timelock), timelock.CANCELLER_ROLE(), governorAddr, "Timelock governor canceller");
