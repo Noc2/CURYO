@@ -37,7 +37,7 @@ contract MockIdentityVerificationHub {
     /// @param user The user address to verify
     function setVerified(address user) external {
         _nullifierCounter++;
-        uint256 nullifier = uint256(keccak256(abi.encodePacked(user, _nullifierCounter, block.timestamp)));
+        uint256 nullifier = uint256(keccak256(abi.encodePacked(user, _nullifierCounter)));
 
         verifiedUsers[user] = true;
         userNullifiers[user] = nullifier;
@@ -145,9 +145,8 @@ contract MockIdentityVerificationHub {
         output.attestationId = attestationId;
 
         bytes memory callbackUserData = userContextData[96:];
-        ISelfVerificationRoot(msg.sender).onVerificationSuccess(abi.encode(output), callbackUserData);
-
         emit VerificationSimulated(msg.sender, user);
+        ISelfVerificationRoot(msg.sender).onVerificationSuccess(abi.encode(output), callbackUserData);
     }
 
     // --- Testing Functions ---
@@ -166,10 +165,9 @@ contract MockIdentityVerificationHub {
         // Encode the output for the callback
         bytes memory encodedOutput = abi.encode(output);
 
+        emit VerificationSimulated(targetContract, user);
         // Call onVerificationSuccess on the target contract
         ISelfVerificationRoot(targetContract).onVerificationSuccess(encodedOutput, "");
-
-        emit VerificationSimulated(targetContract, user);
     }
 
     /// @notice Simulate verification with custom output data
@@ -180,9 +178,8 @@ contract MockIdentityVerificationHub {
         ISelfVerificationRoot.GenericDiscloseOutputV2 memory output
     ) external {
         bytes memory encodedOutput = abi.encode(output);
-        ISelfVerificationRoot(targetContract).onVerificationSuccess(encodedOutput, "");
-
         emit VerificationSimulated(targetContract, address(uint160(output.userIdentifier)));
+        ISelfVerificationRoot(targetContract).onVerificationSuccess(encodedOutput, "");
     }
 
     /// @notice Simulate verification with userData (for referral testing)
@@ -199,10 +196,9 @@ contract MockIdentityVerificationHub {
         // Encode the output for the callback
         bytes memory encodedOutput = abi.encode(output);
 
+        emit VerificationSimulated(targetContract, user);
         // Call onVerificationSuccess with userData
         ISelfVerificationRoot(targetContract).onVerificationSuccess(encodedOutput, userData);
-
-        emit VerificationSimulated(targetContract, user);
     }
 
     /// @notice Simulate verification with a custom age value
@@ -219,9 +215,8 @@ contract MockIdentityVerificationHub {
         // Encode the output for the callback
         bytes memory encodedOutput = abi.encode(output);
 
+        emit VerificationSimulated(targetContract, user);
         // Call onVerificationSuccess on the target contract
         ISelfVerificationRoot(targetContract).onVerificationSuccess(encodedOutput, "");
-
-        emit VerificationSimulated(targetContract, user);
     }
 }
