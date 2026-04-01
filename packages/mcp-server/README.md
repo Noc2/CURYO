@@ -78,6 +78,8 @@ The server reads from the environment at startup.
 | `CURYO_MCP_PUBLIC_BASE_URL` | — | Optional public base URL used in startup logs when binding to wildcard hosts |
 | `CURYO_MCP_HTTP_CORS_ORIGIN` | `http://localhost:3000` | CORS allow-origin header for Streamable HTTP mode |
 | `CURYO_MCP_HTTP_ALLOWED_ORIGINS` | derived | Optional CSV allowlist for browser `Origin` validation on the MCP endpoint |
+| `CURYO_MCP_HTTP_AUTHORIZATION_SERVERS` | — | Optional CSV list of OAuth authorization server issuer URLs advertised via protected resource metadata |
+| `CURYO_MCP_HTTP_RESOURCE_DOCUMENTATION_URL` | — | Optional human-readable documentation URL advertised via protected resource metadata |
 | `CURYO_MCP_HTTP_AUTH_MODE` | `none` | HTTP auth mode: `none` or `bearer` |
 | `CURYO_MCP_HTTP_BEARER_TOKEN` | — | Single bearer token for HTTP mode |
 | `CURYO_MCP_HTTP_BEARER_TOKENS` | — | Comma-separated bearer tokens for rotation |
@@ -124,6 +126,8 @@ CURYO_MCP_HTTP_PATH=/mcp
 CURYO_MCP_PUBLIC_BASE_URL=https://mcp.example.com
 CURYO_MCP_HTTP_CORS_ORIGIN=https://curyo.example.com
 CURYO_MCP_HTTP_ALLOWED_ORIGINS=https://curyo.example.com,https://www.curyo.example.com
+CURYO_MCP_HTTP_AUTHORIZATION_SERVERS=https://auth.example.com
+CURYO_MCP_HTTP_RESOURCE_DOCUMENTATION_URL=https://curyo.example.com/docs/ai
 CURYO_MCP_HTTP_AUTH_MODE=bearer
 CURYO_MCP_HTTP_TOKENS_JSON='[{"token":"replace-me","clientId":"claude-prod","scopes":["mcp:read","mcp:write:vote","mcp:write:submit_content"],"identityId":"curyo-writer","kind":"session","expiresAt":"2030-01-01T00:00:00.000Z","subject":"0x1234..."}]'
 CURYO_MCP_HTTP_SESSION_SECRET=nextjs-session-secret
@@ -146,6 +150,7 @@ In Streamable HTTP mode:
 
 - MCP traffic is served on `CURYO_MCP_HTTP_PATH`
 - browser requests to the MCP path must present an allowed `Origin` header when one is sent
+- bearer challenges advertise OAuth protected resource metadata so remote MCP clients can discover auth requirements
 - liveness is exposed on `/healthz`
 - readiness is exposed on `/readyz`
 - Prometheus-style metrics are exposed on `/metrics`
@@ -158,6 +163,9 @@ In Streamable HTTP mode:
 
 `/readyz` performs a bounded `get_stats` call against the configured Ponder API, so it reflects upstream availability
 rather than only process liveness.
+
+When bearer auth is enabled, the MCP server also serves OAuth 2.0 protected resource metadata at the well-known path
+derived from `CURYO_MCP_HTTP_PATH`, for example `/.well-known/oauth-protected-resource/mcp`.
 
 ## Hosted Client Config
 

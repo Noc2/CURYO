@@ -44,6 +44,25 @@ describe("authenticateRequest", () => {
     expect(() => authenticateRequest({ headers: {} } as IncomingMessage, bearerAuthConfig)).toThrow(HttpAuthError);
   });
 
+  it("includes resource metadata guidance in bearer challenges when provided", () => {
+    try {
+      authenticateRequest(
+        { headers: {} } as IncomingMessage,
+        bearerAuthConfig,
+        {
+          requiredScopes: ["mcp:read"],
+          resourceMetadataUrl: "https://mcp.curyo.xyz/.well-known/oauth-protected-resource/mcp",
+        },
+      );
+      throw new Error("Expected authenticateRequest to throw");
+    } catch (error) {
+      expect(error).toBeInstanceOf(HttpAuthError);
+      const authError = error as HttpAuthError;
+      expect(authError.wwwAuthenticate).toContain('resource_metadata="https://mcp.curyo.xyz/.well-known/oauth-protected-resource/mcp"');
+      expect(authError.wwwAuthenticate).toContain('scope="mcp:read"');
+    }
+  });
+
   it("returns auth info for a valid bearer token", () => {
     const authInfo = authenticateRequest(
       {

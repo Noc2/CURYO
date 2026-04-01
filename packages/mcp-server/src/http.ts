@@ -8,6 +8,7 @@ import { enforceHttpRateLimit, HttpRateLimitError } from "./lib/http-rate-limit.
 import { logEvent, serializeError } from "./lib/logging.js";
 import { extractRequestOrigin, isOriginAllowed, normalizeOrigin } from "./lib/origin.js";
 import { getMetricsText, recordHttpAuthFailure, recordHttpRateLimit, recordHttpRequest, recordReadinessCheck } from "./metrics.js";
+import { buildProtectedResourceMetadata, getProtectedResourceMetadataPath, resolveProtectedResourceMetadataUrl } from "./protected-resource-metadata.js";
 import { createServer as createMcpServer } from "./server.js";
 
 export interface RunningHttpServer {
@@ -232,6 +233,20 @@ export async function handleStreamableHttpRequest(
     return;
   }
 
+  const protectedResourceMetadataPath = getProtectedResourceMetadataPath(config.httpPath);
+  if (config.httpAuth.mode !== "none" && requestUrl.pathname === protectedResourceMetadataPath) {
+    if (request.method !== "GET") {
+      response.setHeader("Allow", "GET");
+      sendJson(response, 405, { error: `Unsupported method: ${request.method ?? "UNKNOWN"}` }, config);
+      logResponse(405, { route: "oauth-protected-resource" });
+      return;
+    }
+
+    sendJson(response, 200, buildProtectedResourceMetadata(request, config), config);
+    logResponse(200, { route: "oauth-protected-resource" });
+    return;
+  }
+
   if (requestUrl.pathname !== config.httpPath) {
     sendJson(response, 404, { error: `MCP endpoint not found: ${requestUrl.pathname}` }, config);
     logResponse(404);
@@ -270,7 +285,10 @@ export async function handleStreamableHttpRequest(
 
   let authInfo: AuthInfo | undefined;
   try {
-    authInfo = authenticateRequest(request, config.httpAuth);
+    authInfo = authenticateRequest(request, config.httpAuth, {
+      requiredScopes: ["mcp:read"],
+      resourceMetadataUrl: resolveProtectedResourceMetadataUrl(request, config),
+    });
   } catch (error) {
     if (error instanceof HttpAuthError) {
       recordHttpAuthFailure();

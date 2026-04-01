@@ -15,6 +15,8 @@ export interface ServerConfig {
   httpPublicBaseUrl: string | null;
   httpCorsOrigin: string;
   httpAllowedOrigins: string[];
+  httpAuthorizationServers: string[];
+  httpResourceDocumentationUrl: string | null;
   httpAuth: HttpAuthConfig;
   httpRateLimit: HttpRateLimitConfig;
   write: WriteConfig;
@@ -840,6 +842,10 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): ServerConfig {
   const httpCorsOrigin = env.CURYO_MCP_HTTP_CORS_ORIGIN ?? DEFAULT_HTTP_CORS_ORIGIN;
   const httpPublicBaseUrl = normalizeOptionalBaseUrl(env.CURYO_MCP_PUBLIC_BASE_URL);
   const httpAllowedOrigins = loadHttpAllowedOrigins(env, httpCorsOrigin, httpPublicBaseUrl);
+  const httpAuthorizationServers = dedupeStrings(
+    parseCsvEnv(readEnv(env, "CURYO_MCP_HTTP_AUTHORIZATION_SERVERS")).map((value) => normalizeBaseUrl(value)),
+  );
+  const httpResourceDocumentationUrl = normalizeOptionalBaseUrl(readEnv(env, "CURYO_MCP_HTTP_RESOURCE_DOCUMENTATION_URL"));
 
   validateProductionStreamableHttpConfig({
     env,
@@ -861,6 +867,8 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): ServerConfig {
     httpPublicBaseUrl,
     httpCorsOrigin,
     httpAllowedOrigins,
+    httpAuthorizationServers,
+    httpResourceDocumentationUrl,
     httpAuth,
     httpRateLimit,
     write,

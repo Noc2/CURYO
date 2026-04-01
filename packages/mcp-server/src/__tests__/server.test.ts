@@ -33,6 +33,8 @@ describe("createServer", () => {
       httpPublicBaseUrl: null,
       httpCorsOrigin: "*",
       httpAllowedOrigins: [],
+      httpAuthorizationServers: [],
+      httpResourceDocumentationUrl: null,
       httpAuth: {
         mode: "none",
         realm: "curyo-mcp",
@@ -74,6 +76,8 @@ describe("createServer", () => {
         httpPublicBaseUrl: null,
         httpCorsOrigin: "*",
         httpAllowedOrigins: [],
+        httpAuthorizationServers: [],
+        httpResourceDocumentationUrl: null,
         httpAuth: {
           mode: "none",
           realm: "curyo-mcp",
@@ -153,6 +157,8 @@ describe("createServer", () => {
       httpPublicBaseUrl: null,
       httpCorsOrigin: "*",
       httpAllowedOrigins: [],
+      httpAuthorizationServers: [],
+      httpResourceDocumentationUrl: null,
       httpAuth: {
         mode: "bearer",
         realm: "curyo-mcp",

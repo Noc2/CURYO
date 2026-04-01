@@ -65,6 +65,8 @@ describe("handleStreamableHttpRequest", () => {
     httpPublicBaseUrl: null,
     httpCorsOrigin: "*",
     httpAllowedOrigins: [],
+    httpAuthorizationServers: [],
+    httpResourceDocumentationUrl: null,
     httpAuth: {
       mode: "none" as const,
       realm: "curyo-mcp",
@@ -244,6 +246,41 @@ describe("handleStreamableHttpRequest", () => {
     });
   });
 
+  it("serves OAuth protected resource metadata for the MCP endpoint", async () => {
+    const request = {
+      url: "/.well-known/oauth-protected-resource/mcp",
+      method: "GET",
+      headers: {
+        host: "mcp.curyo.xyz",
+        "x-forwarded-proto": "https",
+      },
+      socket: {
+        remoteAddress: "127.0.0.1",
+      },
+    } as unknown as IncomingMessage;
+    const response = createMockResponse();
+
+    await handleStreamableHttpRequest(request, response, {
+      ...config,
+      httpAuth: {
+        ...config.httpAuth,
+        mode: "bearer",
+      },
+      httpAuthorizationServers: ["https://auth.curyo.xyz"],
+      httpResourceDocumentationUrl: "https://curyo.xyz/docs/ai",
+    });
+
+    expect(response.statusCode).toBe(200);
+    expect(JSON.parse(response.body)).toEqual({
+      resource: "https://mcp.curyo.xyz/mcp",
+      authorization_servers: ["https://auth.curyo.xyz"],
+      bearer_methods_supported: ["header"],
+      scopes_supported: ["mcp:read"],
+      resource_name: "curyo-test",
+      resource_documentation: "https://curyo.xyz/docs/ai",
+    });
+  });
+
   it("returns readiness based on Ponder availability on /readyz", async () => {
     const request = {
       url: "/readyz",
@@ -334,6 +371,8 @@ describe("handleStreamableHttpRequest", () => {
 
     expect(response.statusCode).toBe(401);
     expect(response.headers["WWW-Authenticate"]).toContain('Bearer realm="curyo-mcp"');
+    expect(response.headers["WWW-Authenticate"]).toContain('resource_metadata="http://127.0.0.1:3334/.well-known/oauth-protected-resource/mcp"');
+    expect(response.headers["WWW-Authenticate"]).toContain('scope="mcp:read"');
     expect(JSON.parse(response.body)).toEqual({
       error: "Missing bearer token",
     });

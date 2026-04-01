@@ -32,6 +32,8 @@ describe("loadConfig", () => {
       httpPublicBaseUrl: null,
       httpCorsOrigin: "http://localhost:3000",
       httpAllowedOrigins: ["http://localhost:3000"],
+      httpAuthorizationServers: [],
+      httpResourceDocumentationUrl: null,
       httpAuth: {
         mode: "none",
         realm: "curyo-mcp",
@@ -83,6 +85,8 @@ describe("loadConfig", () => {
     expect(config.httpPublicBaseUrl).toBe(null);
     expect(config.httpCorsOrigin).toBe("https://chatgpt.com");
     expect(config.httpAllowedOrigins).toEqual(["https://chatgpt.com"]);
+    expect(config.httpAuthorizationServers).toEqual([]);
+    expect(config.httpResourceDocumentationUrl).toBe(null);
     expect(config.ponderTimeoutMs).toBe(2500);
     expect(config.httpAuth.mode).toBe("none");
     expect(config.httpAuth.sessionKeys).toEqual([]);
@@ -167,6 +171,17 @@ describe("loadConfig", () => {
 
     expect(config.httpPublicBaseUrl).toBe("https://mcp.curyo.xyz/base");
     expect(config.httpAllowedOrigins).toEqual(["https://curyo.xyz", "https://www.curyo.xyz"]);
+  });
+
+  it("loads protected resource metadata config for OAuth discovery", () => {
+    const config = loadConfig({
+      CURYO_MCP_TRANSPORT: "streamable-http",
+      CURYO_MCP_HTTP_AUTHORIZATION_SERVERS: "https://auth.curyo.xyz,https://login.curyo.xyz/issuer/",
+      CURYO_MCP_HTTP_RESOURCE_DOCUMENTATION_URL: "https://curyo.xyz/docs/ai/",
+    });
+
+    expect(config.httpAuthorizationServers).toEqual(["https://auth.curyo.xyz", "https://login.curyo.xyz/issuer"]);
+    expect(config.httpResourceDocumentationUrl).toBe("https://curyo.xyz/docs/ai");
   });
 
   it("normalizes an optional public base URL", () => {
