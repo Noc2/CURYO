@@ -15,15 +15,13 @@ test("buildHostedMcpConfig returns canonical hosted URLs by default", () => {
   assert.equal(config.auth.walletSessions.tokenUrl, "https://curyo.xyz/api/mcp/session/token");
   assert.equal(config.auth.walletSessions.ttlSeconds, 3600);
   assert.deepEqual(config.auth.walletSessions.defaultScopes, ["mcp:read"]);
-  assert.equal(config.browserExperiments.webmcp.status, "planned");
 });
 
-test("buildHostedMcpConfig respects environment overrides and enables the WebMCP experiment flag", () => {
+test("buildHostedMcpConfig respects environment overrides and wallet session configuration", () => {
   const config = buildHostedMcpConfig({
     NEXT_PUBLIC_CURLYO_MCP_BASE_URL: "https://staging-mcp.curyo.xyz/base/",
     NEXT_PUBLIC_CURLYO_MCP_PATH: "rpc/",
     NEXT_PUBLIC_SITE_URL: "https://staging.curyo.xyz/",
-    NEXT_PUBLIC_ENABLE_WEBMCP_EXPERIMENT: "1",
     NEXT_PUBLIC_CURLYO_MCP_SERVER_NAME: "curyo-staging",
     CURYO_MCP_HTTP_SESSION_SECRET: "nextjs-session-secret",
     CURYO_MCP_SESSION_WALLET_BINDINGS:
@@ -48,6 +46,4 @@ test("buildHostedMcpConfig respects environment overrides and enables the WebMCP
     "mcp:write:claim_reward",
     "mcp:write:claim_frontend_fee",
   ]);
-  assert.equal(config.browserExperiments.webmcp.status, "experimental");
-  assert.equal(config.browserExperiments.webmcp.enabled, true);
 });

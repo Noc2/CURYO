@@ -49,14 +49,6 @@ interface HostedMcpConfig {
     readTools: readonly string[];
     writeTools: readonly string[];
   };
-  browserExperiments: {
-    webmcp: {
-      enabled: boolean;
-      status: "planned" | "experimental";
-      flag: string;
-      note: string;
-    };
-  };
 }
 
 type McpConfigEnv = Record<string, string | undefined>;
@@ -67,7 +59,6 @@ export function buildHostedMcpConfig(env: McpConfigEnv = process.env): HostedMcp
   );
   const siteBaseUrl = normalizeBaseUrl(env.NEXT_PUBLIC_SITE_URL || DEFAULT_SITE_BASE_URL);
   const path = normalizePath(env.NEXT_PUBLIC_CURLYO_MCP_PATH || env.CURYO_MCP_HTTP_PATH || DEFAULT_MCP_PATH);
-  const webMcpEnabled = env.NEXT_PUBLIC_ENABLE_WEBMCP_EXPERIMENT === "1";
   const walletSessionAuthEnabled = Boolean(
     env.CURYO_MCP_HTTP_SESSION_SECRET?.trim() && env.CURYO_MCP_SESSION_WALLET_BINDINGS?.trim(),
   );
@@ -99,14 +90,6 @@ export function buildHostedMcpConfig(env: McpConfigEnv = process.env): HostedMcp
     capabilities: {
       readTools: READ_TOOLS,
       writeTools: WRITE_TOOLS,
-    },
-    browserExperiments: {
-      webmcp: {
-        enabled: webMcpEnabled,
-        status: webMcpEnabled ? "experimental" : "planned",
-        flag: "NEXT_PUBLIC_ENABLE_WEBMCP_EXPERIMENT",
-        note: "Keep WebMCP behind a feature flag until hosted MCP reads and hosted writes are stable in production.",
-      },
     },
   };
 }

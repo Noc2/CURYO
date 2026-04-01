@@ -127,7 +127,7 @@ rather than only process liveness.
 ## Hosted Client Config
 
 The Next.js app exposes a canonical hosted-config JSON at `/api/mcp/config`. It is intended to be the single source of
-truth for the public endpoint URL, health/readiness URLs, docs URL, and the current WebMCP experiment flag.
+truth for the public endpoint URL, health/readiness URLs, metrics URL, docs URL, and wallet-session settings.
 
 Example response shape:
 
@@ -195,9 +195,6 @@ Cursor / editor MCP clients:
   }
 }
 ```
-
-For early browser-native experiments, keep WebMCP behind a feature flag and treat it as complementary to the hosted MCP
-service rather than a replacement for the canonical backend endpoint.
 
 ## MCP Surface
 
