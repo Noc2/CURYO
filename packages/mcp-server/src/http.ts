@@ -27,6 +27,7 @@ const CORS_ALLOW_HEADERS = "Accept, Authorization, Content-Type, Last-Event-ID, 
 const HEALTH_PATH = "/healthz";
 const READINESS_PATH = "/readyz";
 const METRICS_PATH = "/metrics";
+const REQUEST_ID_HEADERS = ["x-request-id", "x-correlation-id", "cf-ray"] as const;
 type AuthenticatedIncomingMessage = IncomingMessage & { auth?: AuthInfo };
 
 class HttpRequestBodyError extends Error {
@@ -165,6 +166,7 @@ export async function handleStreamableHttpRequest(
   const startedAt = Date.now();
   const method = request.method ?? "UNKNOWN";
   const remoteAddress = request.socket?.remoteAddress ?? null;
+  const requestId = resolveRequestId(request);
 
   const logResponse = (statusCode: number, extra: Record<string, unknown> = {}) => {
     recordHttpRequest(statusCode);
@@ -174,6 +176,7 @@ export async function handleStreamableHttpRequest(
       statusCode,
       durationMs: Date.now() - startedAt,
       remoteAddress,
+      requestId,
       ...extra,
     });
   };
@@ -233,6 +236,7 @@ export async function handleStreamableHttpRequest(
         statusCode,
         durationMs: Date.now() - startedAt,
         remoteAddress,
+        requestId,
         ...serializeError(error),
       });
     }
@@ -257,6 +261,7 @@ export async function handleStreamableHttpRequest(
           statusCode: error.statusCode,
           durationMs: Date.now() - startedAt,
           remoteAddress,
+          requestId,
           authMode: config.httpAuth.mode,
           route: "metrics",
           ...serializeError(error),
@@ -304,6 +309,7 @@ export async function handleStreamableHttpRequest(
       statusCode: 403,
       durationMs: Date.now() - startedAt,
       remoteAddress,
+      requestId,
       requestOrigin: originError.requestOrigin,
       allowedOrigins: config.httpAllowedOrigins,
     });
@@ -331,6 +337,15 @@ export async function handleStreamableHttpRequest(
       requiredScopes: ["mcp:read"],
       resourceMetadataUrl: resolveProtectedResourceMetadataUrl(request, config),
     });
+    if (authInfo && requestId) {
+      authInfo = {
+        ...authInfo,
+        extra: {
+          ...(authInfo.extra ?? {}),
+          requestId,
+        },
+      };
+    }
   } catch (error) {
     if (error instanceof HttpAuthError) {
       recordHttpAuthFailure();
@@ -343,6 +358,7 @@ export async function handleStreamableHttpRequest(
         statusCode: error.statusCode,
         durationMs: Date.now() - startedAt,
         remoteAddress,
+        requestId,
         authMode: config.httpAuth.mode,
         ...serializeError(error),
       });
@@ -375,6 +391,7 @@ export async function handleStreamableHttpRequest(
         statusCode: error.statusCode,
         durationMs: Date.now() - startedAt,
         remoteAddress,
+        requestId,
         authClientId: authInfo?.clientId,
         policy: error.policy,
         limit: error.limit,
@@ -391,6 +408,7 @@ export async function handleStreamableHttpRequest(
         statusCode: error.statusCode,
         durationMs: Date.now() - startedAt,
         remoteAddress,
+        requestId,
         authClientId: authInfo?.clientId,
         ...serializeError(error),
       });
@@ -412,6 +430,7 @@ export async function handleStreamableHttpRequest(
         statusCode: error.statusCode,
         durationMs: Date.now() - startedAt,
         remoteAddress,
+        requestId,
         authClientId: authInfo?.clientId,
         limitBytes: config.httpServer.maxRequestBodyBytes,
         ...serializeError(error),
@@ -451,6 +470,7 @@ export async function handleStreamableHttpRequest(
         path: requestUrl.pathname,
         durationMs: Date.now() - startedAt,
         remoteAddress,
+        requestId,
         authClientId: authInfo?.clientId,
         ...serializeError(error),
       });
@@ -466,10 +486,23 @@ export async function handleStreamableHttpRequest(
       statusCode: 500,
       durationMs: Date.now() - startedAt,
       remoteAddress,
+      requestId,
       authClientId: authInfo?.clientId,
       ...serializeError(error),
     });
   }
+}
+
+export function resolveRequestId(request: IncomingMessage): string | null {
+  for (const headerName of REQUEST_ID_HEADERS) {
+    const value = request.headers[headerName];
+    const candidate = Array.isArray(value) ? value[0] : value;
+    if (candidate?.trim()) {
+      return candidate.trim();
+    }
+  }
+
+  return null;
 }
 
 async function readParsedJsonBody(request: IncomingMessage, maxRequestBodyBytes: number): Promise<unknown> {

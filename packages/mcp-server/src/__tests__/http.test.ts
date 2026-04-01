@@ -4,7 +4,7 @@ import type { IncomingMessage, ServerResponse } from "node:http";
 import type { PonderClient } from "../clients/ponder.js";
 import type { ServerConfig } from "../config.js";
 import { __resetHttpRateLimitStateForTests, __setHttpRateLimitStoreFactoryForTests } from "../lib/http-rate-limit.js";
-import { configureNodeHttpServer, handleStreamableHttpRequest, resolveAdvertisedHttpUrl } from "../http.js";
+import { configureNodeHttpServer, handleStreamableHttpRequest, resolveAdvertisedHttpUrl, resolveRequestId } from "../http.js";
 import { __resetMcpMetricsForTests } from "../metrics.js";
 
 interface MockResponse {
@@ -883,5 +883,28 @@ describe("configureNodeHttpServer", () => {
 
     timeoutHandler?.({ destroy });
     expect(destroy).toHaveBeenCalledOnce();
+  });
+});
+
+describe("resolveRequestId", () => {
+  it("prefers Railway-style request ids when present", () => {
+    const request = {
+      headers: {
+        "x-request-id": "req_123",
+        "x-correlation-id": "corr_456",
+      },
+    } as unknown as IncomingMessage;
+
+    expect(resolveRequestId(request)).toBe("req_123");
+  });
+
+  it("falls back to other correlation headers", () => {
+    const request = {
+      headers: {
+        "cf-ray": "abc123-FRA",
+      },
+    } as unknown as IncomingMessage;
+
+    expect(resolveRequestId(request)).toBe("abc123-FRA");
   });
 });

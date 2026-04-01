@@ -124,6 +124,7 @@ The server reads from the environment at startup.
 | `CURYO_MCP_ROUND_REWARD_DISTRIBUTOR_ADDRESS` | auto-derived on supported chains | Fallback RoundRewardDistributor address for write mode |
 | `CURYO_MCP_FRONTEND_REGISTRY_ADDRESS` | auto-derived on supported chains | Fallback FrontendRegistry address for write mode |
 | `CURYO_MCP_LOG_ENABLED` | enabled | Set to `0` to suppress stderr JSON logs |
+| `CURYO_MCP_LOG_STACKS` | `0` | Set to `1` to include stack traces in structured error logs |
 
 Example remote setup:
 
@@ -162,6 +163,7 @@ CURYO_MCP_CHAIN_ID=42220
 CURYO_MCP_WRITE_IDENTITIES='[{"id":"curyo-writer","privateKey":"0x...","frontendAddress":"0x7777777777777777777777777777777777777777"}]'
 CURYO_MCP_WRITE_MAX_VOTE_STAKE=5000000000000000000
 CURYO_MCP_WRITE_SUBMISSION_HOST_ALLOWLIST=curyo.xyz,github.com
+CURYO_MCP_LOG_STACKS=0
 ```
 
 ## Transport Behavior
