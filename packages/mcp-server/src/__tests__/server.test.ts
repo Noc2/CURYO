@@ -32,6 +32,7 @@ describe("createServer", () => {
       httpPath: "/mcp",
       httpPublicBaseUrl: null,
       httpCorsOrigin: "*",
+      httpAllowedOrigins: [],
       httpAuth: {
         mode: "none",
         realm: "curyo-mcp",
@@ -72,6 +73,7 @@ describe("createServer", () => {
         httpPath: "/mcp",
         httpPublicBaseUrl: null,
         httpCorsOrigin: "*",
+        httpAllowedOrigins: [],
         httpAuth: {
           mode: "none",
           realm: "curyo-mcp",
@@ -150,6 +152,7 @@ describe("createServer", () => {
       httpPath: "/mcp",
       httpPublicBaseUrl: null,
       httpCorsOrigin: "*",
+      httpAllowedOrigins: [],
       httpAuth: {
         mode: "bearer",
         realm: "curyo-mcp",

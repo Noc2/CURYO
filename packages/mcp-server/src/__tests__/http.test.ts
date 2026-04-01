@@ -64,6 +64,7 @@ describe("handleStreamableHttpRequest", () => {
     httpPath: "/mcp",
     httpPublicBaseUrl: null,
     httpCorsOrigin: "*",
+    httpAllowedOrigins: [],
     httpAuth: {
       mode: "none" as const,
       realm: "curyo-mcp",
@@ -137,6 +138,87 @@ describe("handleStreamableHttpRequest", () => {
     expect(response.headers["Access-Control-Allow-Origin"]).toBe("*");
     expect(response.headers["Access-Control-Allow-Methods"]).toContain("POST");
     expect(response.body).toBe("");
+  });
+
+  it("allows MCP requests without an Origin header", async () => {
+    const request = {
+      url: "/mcp",
+      method: "OPTIONS",
+      headers: {
+        host: "127.0.0.1:3334",
+      },
+    } as IncomingMessage;
+    const response = createMockResponse();
+
+    await handleStreamableHttpRequest(request, response, {
+      ...config,
+      httpAllowedOrigins: ["https://curyo.xyz"],
+    });
+
+    expect(response.statusCode).toBe(204);
+  });
+
+  it("rejects MCP requests with an invalid Origin header", async () => {
+    const request = {
+      url: "/mcp",
+      method: "OPTIONS",
+      headers: {
+        host: "127.0.0.1:3334",
+        origin: "null",
+      },
+    } as IncomingMessage;
+    const response = createMockResponse();
+
+    await handleStreamableHttpRequest(request, response, {
+      ...config,
+      httpAllowedOrigins: ["https://curyo.xyz"],
+    });
+
+    expect(response.statusCode).toBe(403);
+    expect(JSON.parse(response.body)).toEqual({
+      error: "Invalid Origin header",
+    });
+  });
+
+  it("rejects MCP requests from origins outside the allowlist", async () => {
+    const request = {
+      url: "/mcp",
+      method: "OPTIONS",
+      headers: {
+        host: "127.0.0.1:3334",
+        origin: "https://evil.example",
+      },
+    } as IncomingMessage;
+    const response = createMockResponse();
+
+    await handleStreamableHttpRequest(request, response, {
+      ...config,
+      httpAllowedOrigins: ["https://curyo.xyz"],
+    });
+
+    expect(response.statusCode).toBe(403);
+    expect(JSON.parse(response.body)).toEqual({
+      error: "Origin is not allowed for this MCP endpoint",
+    });
+  });
+
+  it("accepts MCP requests from configured allowed origins", async () => {
+    const request = {
+      url: "/mcp",
+      method: "OPTIONS",
+      headers: {
+        host: "127.0.0.1:3334",
+        origin: "https://curyo.xyz",
+      },
+    } as IncomingMessage;
+    const response = createMockResponse();
+
+    await handleStreamableHttpRequest(request, response, {
+      ...config,
+      httpAllowedOrigins: ["https://curyo.xyz"],
+    });
+
+    expect(response.statusCode).toBe(204);
   });
 
   it("returns process health on /healthz", async () => {

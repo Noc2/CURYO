@@ -35,6 +35,7 @@ Minimum production variables:
 CURYO_PONDER_URL=https://ponder.example.com
 CURYO_MCP_PUBLIC_BASE_URL=https://mcp.example.com
 CURYO_MCP_HTTP_CORS_ORIGIN=https://curyo.example.com
+CURYO_MCP_HTTP_ALLOWED_ORIGINS=https://curyo.example.com,https://www.curyo.example.com
 CURYO_MCP_HTTP_TRUSTED_PROXY_HEADERS=x-real-ip
 CURYO_MCP_HTTP_AUTH_MODE=bearer
 CURYO_MCP_HTTP_BEARER_TOKEN=replace-me
@@ -44,6 +45,7 @@ Notes:
 
 - The Dockerfile automatically binds the MCP server to `0.0.0.0` and Railway's injected `PORT`.
 - In `NODE_ENV=production`, startup validation rejects `localhost` values for `CURYO_PONDER_URL` and `CURYO_MCP_HTTP_CORS_ORIGIN`.
+- In `NODE_ENV=production`, the MCP HTTP endpoint also requires at least one trusted browser origin, derived from `CURYO_MCP_HTTP_ALLOWED_ORIGINS` or from a non-wildcard `CURYO_MCP_HTTP_CORS_ORIGIN` / `CURYO_MCP_PUBLIC_BASE_URL`.
 - In `NODE_ENV=production`, rate limiting also requires `CURYO_MCP_HTTP_TRUSTED_PROXY_HEADERS` to be set.
 - For hosted wallet sessions, keep the MCP server's `CURYO_MCP_HTTP_SESSION_*` settings aligned with the Next.js issuer configuration.
 
@@ -75,6 +77,7 @@ The server reads from the environment at startup.
 | `CURYO_MCP_HTTP_PATH` | `/mcp` | MCP HTTP endpoint path |
 | `CURYO_MCP_PUBLIC_BASE_URL` | — | Optional public base URL used in startup logs when binding to wildcard hosts |
 | `CURYO_MCP_HTTP_CORS_ORIGIN` | `http://localhost:3000` | CORS allow-origin header for Streamable HTTP mode |
+| `CURYO_MCP_HTTP_ALLOWED_ORIGINS` | derived | Optional CSV allowlist for browser `Origin` validation on the MCP endpoint |
 | `CURYO_MCP_HTTP_AUTH_MODE` | `none` | HTTP auth mode: `none` or `bearer` |
 | `CURYO_MCP_HTTP_BEARER_TOKEN` | — | Single bearer token for HTTP mode |
 | `CURYO_MCP_HTTP_BEARER_TOKENS` | — | Comma-separated bearer tokens for rotation |
@@ -119,6 +122,8 @@ CURYO_MCP_HTTP_HOST=0.0.0.0
 CURYO_MCP_HTTP_PORT=3334
 CURYO_MCP_HTTP_PATH=/mcp
 CURYO_MCP_PUBLIC_BASE_URL=https://mcp.example.com
+CURYO_MCP_HTTP_CORS_ORIGIN=https://curyo.example.com
+CURYO_MCP_HTTP_ALLOWED_ORIGINS=https://curyo.example.com,https://www.curyo.example.com
 CURYO_MCP_HTTP_AUTH_MODE=bearer
 CURYO_MCP_HTTP_TOKENS_JSON='[{"token":"replace-me","clientId":"claude-prod","scopes":["mcp:read","mcp:write:vote","mcp:write:submit_content"],"identityId":"curyo-writer","kind":"session","expiresAt":"2030-01-01T00:00:00.000Z","subject":"0x1234..."}]'
 CURYO_MCP_HTTP_SESSION_SECRET=nextjs-session-secret
@@ -140,6 +145,7 @@ CURYO_MCP_WRITE_SUBMISSION_HOST_ALLOWLIST=curyo.xyz,github.com
 In Streamable HTTP mode:
 
 - MCP traffic is served on `CURYO_MCP_HTTP_PATH`
+- browser requests to the MCP path must present an allowed `Origin` header when one is sent
 - liveness is exposed on `/healthz`
 - readiness is exposed on `/readyz`
 - Prometheus-style metrics are exposed on `/metrics`

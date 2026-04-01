@@ -31,6 +31,7 @@ describe("loadConfig", () => {
       httpPath: "/mcp",
       httpPublicBaseUrl: null,
       httpCorsOrigin: "http://localhost:3000",
+      httpAllowedOrigins: ["http://localhost:3000"],
       httpAuth: {
         mode: "none",
         realm: "curyo-mcp",
@@ -81,6 +82,7 @@ describe("loadConfig", () => {
     expect(config.httpPath).toBe("/rpc");
     expect(config.httpPublicBaseUrl).toBe(null);
     expect(config.httpCorsOrigin).toBe("https://chatgpt.com");
+    expect(config.httpAllowedOrigins).toEqual(["https://chatgpt.com"]);
     expect(config.ponderTimeoutMs).toBe(2500);
     expect(config.httpAuth.mode).toBe("none");
     expect(config.httpAuth.sessionKeys).toEqual([]);
@@ -126,6 +128,20 @@ describe("loadConfig", () => {
     );
   });
 
+  it("requires at least one non-localhost allowed origin for production streamable-http deployments", () => {
+    expect(() =>
+      loadConfig({
+        NODE_ENV: "production",
+        CURYO_MCP_TRANSPORT: "streamable-http",
+        CURYO_PONDER_URL: "https://ponder.curyo.xyz",
+        CURYO_MCP_HTTP_CORS_ORIGIN: "*",
+        CURYO_MCP_HTTP_TRUSTED_PROXY_HEADERS: "x-real-ip",
+      }),
+    ).toThrow(
+      "CURYO_MCP_HTTP_ALLOWED_ORIGINS or a non-wildcard CURYO_MCP_HTTP_CORS_ORIGIN/CURYO_MCP_PUBLIC_BASE_URL is required in production streamable-http deployments",
+    );
+  });
+
   it("allows production streamable-http deployments when Ponder, CORS, and proxy headers are explicit", () => {
     const config = loadConfig({
       NODE_ENV: "production",
@@ -137,7 +153,20 @@ describe("loadConfig", () => {
 
     expect(config.ponderBaseUrl).toBe("https://ponder.curyo.xyz");
     expect(config.httpCorsOrigin).toBe("https://app.curyo.xyz");
+    expect(config.httpAllowedOrigins).toEqual(["https://app.curyo.xyz"]);
     expect(config.httpRateLimit.trustedProxyHeaders).toEqual(["x-real-ip", "x-forwarded-for"]);
+  });
+
+  it("allows explicit MCP origin allowlists separate from the CORS response origin", () => {
+    const config = loadConfig({
+      CURYO_MCP_TRANSPORT: "streamable-http",
+      CURYO_MCP_HTTP_CORS_ORIGIN: "*",
+      CURYO_MCP_PUBLIC_BASE_URL: "https://mcp.curyo.xyz/base/",
+      CURYO_MCP_HTTP_ALLOWED_ORIGINS: "https://curyo.xyz,https://www.curyo.xyz",
+    });
+
+    expect(config.httpPublicBaseUrl).toBe("https://mcp.curyo.xyz/base");
+    expect(config.httpAllowedOrigins).toEqual(["https://curyo.xyz", "https://www.curyo.xyz"]);
   });
 
   it("normalizes an optional public base URL", () => {

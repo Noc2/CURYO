@@ -6,6 +6,7 @@ import { PonderClient, type PonderApiError } from "./clients/ponder.js";
 import type { ServerConfig } from "./config.js";
 import { enforceHttpRateLimit, HttpRateLimitError } from "./lib/http-rate-limit.js";
 import { logEvent, serializeError } from "./lib/logging.js";
+import { extractRequestOrigin, isOriginAllowed, normalizeOrigin } from "./lib/origin.js";
 import { getMetricsText, recordHttpAuthFailure, recordHttpRateLimit, recordHttpRequest, recordReadinessCheck } from "./metrics.js";
 import { createServer as createMcpServer } from "./server.js";
 
@@ -237,6 +238,21 @@ export async function handleStreamableHttpRequest(
     return;
   }
 
+  const originError = validateMcpRequestOrigin(request, config);
+  if (originError) {
+    sendJson(response, 403, { error: originError.message }, config);
+    logEvent("warn", "mcp_http_origin_rejected", {
+      method,
+      path: requestUrl.pathname,
+      statusCode: 403,
+      durationMs: Date.now() - startedAt,
+      remoteAddress,
+      requestOrigin: originError.requestOrigin,
+      allowedOrigins: config.httpAllowedOrigins,
+    });
+    return;
+  }
+
   if (request.method === "OPTIONS") {
     applyCorsHeaders(response, config);
     response.statusCode = 204;
@@ -362,4 +378,40 @@ export async function handleStreamableHttpRequest(
 
 function isPonderApiError(error: unknown): error is PonderApiError {
   return error instanceof Error && error.name === "PonderApiError";
+}
+
+function validateMcpRequestOrigin(
+  request: IncomingMessage,
+  config: ServerConfig,
+): { message: string; requestOrigin: string } | null {
+  const requestOrigin = extractRequestOrigin(request);
+  if (!requestOrigin) {
+    return null;
+  }
+
+  if (requestOrigin.toLowerCase() === "null") {
+    return {
+      message: "Invalid Origin header",
+      requestOrigin,
+    };
+  }
+
+  let normalizedOrigin: string;
+  try {
+    normalizedOrigin = normalizeOrigin(requestOrigin, "Origin header");
+  } catch {
+    return {
+      message: "Invalid Origin header",
+      requestOrigin,
+    };
+  }
+
+  if (config.httpAllowedOrigins.length > 0 && isOriginAllowed(normalizedOrigin, config.httpAllowedOrigins)) {
+    return null;
+  }
+
+  return {
+    message: "Origin is not allowed for this MCP endpoint",
+    requestOrigin: normalizedOrigin,
+  };
 }

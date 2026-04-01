@@ -1,6 +1,7 @@
 import { createHash } from "node:crypto";
 import { getSharedDeploymentAddress as getSharedArtifactAddress } from "@curyo/contracts/deployments";
 import { isAddress, type Address } from "viem";
+import { normalizeOrigin } from "./lib/origin.js";
 
 export interface ServerConfig {
   ponderBaseUrl: string;
@@ -13,6 +14,7 @@ export interface ServerConfig {
   httpPath: string;
   httpPublicBaseUrl: string | null;
   httpCorsOrigin: string;
+  httpAllowedOrigins: string[];
   httpAuth: HttpAuthConfig;
   httpRateLimit: HttpRateLimitConfig;
   write: WriteConfig;
@@ -165,6 +167,10 @@ export function normalizeHttpPath(value: string): string {
 export function normalizeOptionalBaseUrl(value: string | undefined): string | null {
   const trimmed = value?.trim();
   return trimmed ? normalizeBaseUrl(trimmed) : null;
+}
+
+function dedupeStrings(values: string[]): string[] {
+  return [...new Set(values)];
 }
 
 function isLocalhostUrl(value: string): boolean {
@@ -758,10 +764,36 @@ function loadHttpRateLimitConfig(env: NodeJS.ProcessEnv): HttpRateLimitConfig {
   };
 }
 
+function loadHttpAllowedOrigins(
+  env: NodeJS.ProcessEnv,
+  httpCorsOrigin: string,
+  httpPublicBaseUrl: string | null,
+): string[] {
+  const configuredOrigins = parseCsvEnv(readEnv(env, "CURYO_MCP_HTTP_ALLOWED_ORIGINS"));
+  if (configuredOrigins.length > 0) {
+    return dedupeStrings(
+      configuredOrigins.map((origin, index) =>
+        normalizeOrigin(origin, `CURYO_MCP_HTTP_ALLOWED_ORIGINS[${index}]`),
+      ),
+    );
+  }
+
+  const derivedOrigins: string[] = [];
+  if (httpCorsOrigin !== "*") {
+    derivedOrigins.push(normalizeOrigin(httpCorsOrigin, "CURYO_MCP_HTTP_CORS_ORIGIN"));
+  }
+  if (httpPublicBaseUrl) {
+    derivedOrigins.push(new URL(httpPublicBaseUrl).origin);
+  }
+
+  return dedupeStrings(derivedOrigins);
+}
+
 function validateProductionStreamableHttpConfig(params: {
   env: NodeJS.ProcessEnv;
   ponderBaseUrl: string;
   httpCorsOrigin: string;
+  httpAllowedOrigins: string[];
   httpRateLimit: HttpRateLimitConfig;
 }): void {
   if (params.env.NODE_ENV !== "production") {
@@ -780,6 +812,18 @@ function validateProductionStreamableHttpConfig(params: {
     );
   }
 
+  if (params.httpAllowedOrigins.length === 0) {
+    throw new Error(
+      "CURYO_MCP_HTTP_ALLOWED_ORIGINS or a non-wildcard CURYO_MCP_HTTP_CORS_ORIGIN/CURYO_MCP_PUBLIC_BASE_URL is required in production streamable-http deployments",
+    );
+  }
+
+  if (params.httpAllowedOrigins.some((origin) => isLocalhostUrl(origin))) {
+    throw new Error(
+      "CURYO_MCP_HTTP_ALLOWED_ORIGINS must not include localhost origins in production streamable-http deployments",
+    );
+  }
+
   if (params.httpRateLimit.enabled && params.httpRateLimit.trustedProxyHeaders.length === 0) {
     throw new Error(
       "CURYO_MCP_HTTP_TRUSTED_PROXY_HEADERS is required in production when CURYO_MCP_TRANSPORT=streamable-http and rate limiting is enabled",
@@ -794,11 +838,14 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): ServerConfig {
   const httpAuth = loadHttpAuthConfig(env, new Set(write.identities.map((identity) => identity.id)));
   const httpRateLimit = loadHttpRateLimitConfig(env);
   const httpCorsOrigin = env.CURYO_MCP_HTTP_CORS_ORIGIN ?? DEFAULT_HTTP_CORS_ORIGIN;
+  const httpPublicBaseUrl = normalizeOptionalBaseUrl(env.CURYO_MCP_PUBLIC_BASE_URL);
+  const httpAllowedOrigins = loadHttpAllowedOrigins(env, httpCorsOrigin, httpPublicBaseUrl);
 
   validateProductionStreamableHttpConfig({
     env,
     ponderBaseUrl,
     httpCorsOrigin,
+    httpAllowedOrigins,
     httpRateLimit,
   });
 
@@ -811,8 +858,9 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): ServerConfig {
     httpHost: env.CURYO_MCP_HTTP_HOST ?? DEFAULT_HTTP_HOST,
     httpPort: parseIntegerEnv(env.CURYO_MCP_HTTP_PORT, DEFAULT_HTTP_PORT, "CURYO_MCP_HTTP_PORT", 0),
     httpPath: normalizeHttpPath(env.CURYO_MCP_HTTP_PATH ?? DEFAULT_HTTP_PATH),
-    httpPublicBaseUrl: normalizeOptionalBaseUrl(env.CURYO_MCP_PUBLIC_BASE_URL),
+    httpPublicBaseUrl,
     httpCorsOrigin,
+    httpAllowedOrigins,
     httpAuth,
     httpRateLimit,
     write,
