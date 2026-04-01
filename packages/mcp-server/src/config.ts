@@ -17,9 +17,19 @@ export interface ServerConfig {
   httpAllowedOrigins: string[];
   httpAuthorizationServers: string[];
   httpResourceDocumentationUrl: string | null;
+  httpServer: HttpServerConfig;
   httpAuth: HttpAuthConfig;
   httpRateLimit: HttpRateLimitConfig;
   write: WriteConfig;
+}
+
+export interface HttpServerConfig {
+  requestTimeoutMs: number;
+  headersTimeoutMs: number;
+  keepAliveTimeoutMs: number;
+  socketTimeoutMs: number;
+  maxHeadersCount: number;
+  maxRequestBodyBytes: number;
 }
 
 export interface HttpAuthConfig {
@@ -132,6 +142,12 @@ const DEFAULT_HTTP_AUTH_SCOPES = ["mcp:read"] as const;
 const DEFAULT_HTTP_SESSION_KEY_ID = "nextjs-default";
 const DEFAULT_HTTP_SESSION_ISSUER = "curyo-nextjs";
 const DEFAULT_HTTP_SESSION_AUDIENCE = "curyo-mcp";
+const DEFAULT_HTTP_REQUEST_TIMEOUT_MS = 30_000;
+const DEFAULT_HTTP_HEADERS_TIMEOUT_MS = 60_000;
+const DEFAULT_HTTP_KEEP_ALIVE_TIMEOUT_MS = 5_000;
+const DEFAULT_HTTP_SOCKET_TIMEOUT_MS = 60_000;
+const DEFAULT_HTTP_MAX_HEADERS_COUNT = 100;
+const DEFAULT_HTTP_MAX_REQUEST_BODY_BYTES = 1_048_576;
 const DEFAULT_HTTP_RATE_LIMIT_WINDOW_MS = 60_000;
 const DEFAULT_HTTP_READ_REQUESTS_PER_WINDOW = 120;
 const DEFAULT_HTTP_WRITE_REQUESTS_PER_WINDOW = 20;
@@ -766,6 +782,58 @@ function loadHttpRateLimitConfig(env: NodeJS.ProcessEnv): HttpRateLimitConfig {
   };
 }
 
+function loadHttpServerConfig(env: NodeJS.ProcessEnv): HttpServerConfig {
+  const requestTimeoutMs = parseIntegerEnv(
+    readEnv(env, "CURYO_MCP_HTTP_REQUEST_TIMEOUT_MS"),
+    DEFAULT_HTTP_REQUEST_TIMEOUT_MS,
+    "CURYO_MCP_HTTP_REQUEST_TIMEOUT_MS",
+    1,
+  );
+  const headersTimeoutMs = parseIntegerEnv(
+    readEnv(env, "CURYO_MCP_HTTP_HEADERS_TIMEOUT_MS"),
+    DEFAULT_HTTP_HEADERS_TIMEOUT_MS,
+    "CURYO_MCP_HTTP_HEADERS_TIMEOUT_MS",
+    1,
+  );
+  const keepAliveTimeoutMs = parseIntegerEnv(
+    readEnv(env, "CURYO_MCP_HTTP_KEEP_ALIVE_TIMEOUT_MS"),
+    DEFAULT_HTTP_KEEP_ALIVE_TIMEOUT_MS,
+    "CURYO_MCP_HTTP_KEEP_ALIVE_TIMEOUT_MS",
+    1,
+  );
+  const socketTimeoutMs = parseIntegerEnv(
+    readEnv(env, "CURYO_MCP_HTTP_SOCKET_TIMEOUT_MS"),
+    DEFAULT_HTTP_SOCKET_TIMEOUT_MS,
+    "CURYO_MCP_HTTP_SOCKET_TIMEOUT_MS",
+    1,
+  );
+  const maxHeadersCount = parseIntegerEnv(
+    readEnv(env, "CURYO_MCP_HTTP_MAX_HEADERS_COUNT"),
+    DEFAULT_HTTP_MAX_HEADERS_COUNT,
+    "CURYO_MCP_HTTP_MAX_HEADERS_COUNT",
+    1,
+  );
+  const maxRequestBodyBytes = parseIntegerEnv(
+    readEnv(env, "CURYO_MCP_HTTP_MAX_REQUEST_BODY_BYTES"),
+    DEFAULT_HTTP_MAX_REQUEST_BODY_BYTES,
+    "CURYO_MCP_HTTP_MAX_REQUEST_BODY_BYTES",
+    1,
+  );
+
+  if (headersTimeoutMs <= keepAliveTimeoutMs) {
+    throw new Error("CURYO_MCP_HTTP_HEADERS_TIMEOUT_MS must be greater than CURYO_MCP_HTTP_KEEP_ALIVE_TIMEOUT_MS");
+  }
+
+  return {
+    requestTimeoutMs,
+    headersTimeoutMs,
+    keepAliveTimeoutMs,
+    socketTimeoutMs,
+    maxHeadersCount,
+    maxRequestBodyBytes,
+  };
+}
+
 function loadHttpAllowedOrigins(
   env: NodeJS.ProcessEnv,
   httpCorsOrigin: string,
@@ -838,6 +906,7 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): ServerConfig {
   const transport = parseTransportEnv(env.CURYO_MCP_TRANSPORT);
   const write = loadWriteConfig(env);
   const httpAuth = loadHttpAuthConfig(env, new Set(write.identities.map((identity) => identity.id)));
+  const httpServer = loadHttpServerConfig(env);
   const httpRateLimit = loadHttpRateLimitConfig(env);
   const httpCorsOrigin = env.CURYO_MCP_HTTP_CORS_ORIGIN ?? DEFAULT_HTTP_CORS_ORIGIN;
   const httpPublicBaseUrl = normalizeOptionalBaseUrl(env.CURYO_MCP_PUBLIC_BASE_URL);
@@ -869,6 +938,7 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): ServerConfig {
     httpAllowedOrigins,
     httpAuthorizationServers,
     httpResourceDocumentationUrl,
+    httpServer,
     httpAuth,
     httpRateLimit,
     write,

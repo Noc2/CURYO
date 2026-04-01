@@ -34,6 +34,14 @@ describe("loadConfig", () => {
       httpAllowedOrigins: ["http://localhost:3000"],
       httpAuthorizationServers: [],
       httpResourceDocumentationUrl: null,
+      httpServer: {
+        requestTimeoutMs: 30_000,
+        headersTimeoutMs: 60_000,
+        keepAliveTimeoutMs: 5_000,
+        socketTimeoutMs: 60_000,
+        maxHeadersCount: 100,
+        maxRequestBodyBytes: 1_048_576,
+      },
       httpAuth: {
         mode: "none",
         realm: "curyo-mcp",
@@ -87,6 +95,14 @@ describe("loadConfig", () => {
     expect(config.httpAllowedOrigins).toEqual(["https://chatgpt.com"]);
     expect(config.httpAuthorizationServers).toEqual([]);
     expect(config.httpResourceDocumentationUrl).toBe(null);
+    expect(config.httpServer).toEqual({
+      requestTimeoutMs: 30_000,
+      headersTimeoutMs: 60_000,
+      keepAliveTimeoutMs: 5_000,
+      socketTimeoutMs: 60_000,
+      maxHeadersCount: 100,
+      maxRequestBodyBytes: 1_048_576,
+    });
     expect(config.ponderTimeoutMs).toBe(2500);
     expect(config.httpAuth.mode).toBe("none");
     expect(config.httpAuth.sessionKeys).toEqual([]);
@@ -182,6 +198,35 @@ describe("loadConfig", () => {
 
     expect(config.httpAuthorizationServers).toEqual(["https://auth.curyo.xyz", "https://login.curyo.xyz/issuer"]);
     expect(config.httpResourceDocumentationUrl).toBe("https://curyo.xyz/docs/ai");
+  });
+
+  it("loads HTTP hardening overrides", () => {
+    const config = loadConfig({
+      CURYO_MCP_HTTP_REQUEST_TIMEOUT_MS: "15000",
+      CURYO_MCP_HTTP_HEADERS_TIMEOUT_MS: "45000",
+      CURYO_MCP_HTTP_KEEP_ALIVE_TIMEOUT_MS: "4000",
+      CURYO_MCP_HTTP_SOCKET_TIMEOUT_MS: "45000",
+      CURYO_MCP_HTTP_MAX_HEADERS_COUNT: "64",
+      CURYO_MCP_HTTP_MAX_REQUEST_BODY_BYTES: "262144",
+    });
+
+    expect(config.httpServer).toEqual({
+      requestTimeoutMs: 15_000,
+      headersTimeoutMs: 45_000,
+      keepAliveTimeoutMs: 4_000,
+      socketTimeoutMs: 45_000,
+      maxHeadersCount: 64,
+      maxRequestBodyBytes: 262_144,
+    });
+  });
+
+  it("requires HTTP headers timeout to exceed the keep-alive timeout", () => {
+    expect(() =>
+      loadConfig({
+        CURYO_MCP_HTTP_HEADERS_TIMEOUT_MS: "5000",
+        CURYO_MCP_HTTP_KEEP_ALIVE_TIMEOUT_MS: "5000",
+      }),
+    ).toThrow("CURYO_MCP_HTTP_HEADERS_TIMEOUT_MS must be greater than CURYO_MCP_HTTP_KEEP_ALIVE_TIMEOUT_MS");
   });
 
   it("normalizes an optional public base URL", () => {

@@ -80,6 +80,12 @@ The server reads from the environment at startup.
 | `CURYO_MCP_HTTP_ALLOWED_ORIGINS` | derived | Optional CSV allowlist for browser `Origin` validation on the MCP endpoint |
 | `CURYO_MCP_HTTP_AUTHORIZATION_SERVERS` | — | Optional CSV list of OAuth authorization server issuer URLs advertised via protected resource metadata |
 | `CURYO_MCP_HTTP_RESOURCE_DOCUMENTATION_URL` | — | Optional human-readable documentation URL advertised via protected resource metadata |
+| `CURYO_MCP_HTTP_REQUEST_TIMEOUT_MS` | `30000` | Maximum time to receive and finish an HTTP request before Node aborts it |
+| `CURYO_MCP_HTTP_HEADERS_TIMEOUT_MS` | `60000` | Maximum time to receive request headers; must be greater than keep-alive timeout |
+| `CURYO_MCP_HTTP_KEEP_ALIVE_TIMEOUT_MS` | `5000` | Idle keep-alive timeout for persistent HTTP connections |
+| `CURYO_MCP_HTTP_SOCKET_TIMEOUT_MS` | `60000` | Idle socket timeout applied to HTTP connections |
+| `CURYO_MCP_HTTP_MAX_HEADERS_COUNT` | `100` | Maximum number of incoming request headers accepted by the Node HTTP server |
+| `CURYO_MCP_HTTP_MAX_REQUEST_BODY_BYTES` | `1048576` | Maximum JSON request body size accepted on the MCP endpoint |
 | `CURYO_MCP_HTTP_AUTH_MODE` | `none` | HTTP auth mode: `none` or `bearer` |
 | `CURYO_MCP_HTTP_BEARER_TOKEN` | — | Single bearer token for HTTP mode |
 | `CURYO_MCP_HTTP_BEARER_TOKENS` | — | Comma-separated bearer tokens for rotation |
@@ -128,6 +134,12 @@ CURYO_MCP_HTTP_CORS_ORIGIN=https://curyo.example.com
 CURYO_MCP_HTTP_ALLOWED_ORIGINS=https://curyo.example.com,https://www.curyo.example.com
 CURYO_MCP_HTTP_AUTHORIZATION_SERVERS=https://auth.example.com
 CURYO_MCP_HTTP_RESOURCE_DOCUMENTATION_URL=https://curyo.example.com/docs/ai
+CURYO_MCP_HTTP_REQUEST_TIMEOUT_MS=30000
+CURYO_MCP_HTTP_HEADERS_TIMEOUT_MS=60000
+CURYO_MCP_HTTP_KEEP_ALIVE_TIMEOUT_MS=5000
+CURYO_MCP_HTTP_SOCKET_TIMEOUT_MS=60000
+CURYO_MCP_HTTP_MAX_HEADERS_COUNT=100
+CURYO_MCP_HTTP_MAX_REQUEST_BODY_BYTES=1048576
 CURYO_MCP_HTTP_AUTH_MODE=bearer
 CURYO_MCP_HTTP_TOKENS_JSON='[{"token":"replace-me","clientId":"claude-prod","scopes":["mcp:read","mcp:write:vote","mcp:write:submit_content"],"identityId":"curyo-writer","kind":"session","expiresAt":"2030-01-01T00:00:00.000Z","subject":"0x1234..."}]'
 CURYO_MCP_HTTP_SESSION_SECRET=nextjs-session-secret
@@ -151,6 +163,7 @@ In Streamable HTTP mode:
 - MCP traffic is served on `CURYO_MCP_HTTP_PATH`
 - browser requests to the MCP path must present an allowed `Origin` header when one is sent
 - bearer challenges advertise OAuth protected resource metadata so remote MCP clients can discover auth requirements
+- Node HTTP server limits are explicit instead of relying on platform defaults
 - liveness is exposed on `/healthz`
 - readiness is exposed on `/readyz`
 - Prometheus-style metrics are exposed on `/metrics`

@@ -1,8 +1,9 @@
-import { beforeEach, describe, expect, it } from "vitest";
+import { Readable } from "node:stream";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { IncomingMessage, ServerResponse } from "node:http";
 import type { PonderClient } from "../clients/ponder.js";
 import { __resetHttpRateLimitStateForTests } from "../lib/http-rate-limit.js";
-import { handleStreamableHttpRequest, resolveAdvertisedHttpUrl } from "../http.js";
+import { configureNodeHttpServer, handleStreamableHttpRequest, resolveAdvertisedHttpUrl } from "../http.js";
 import { __resetMcpMetricsForTests } from "../metrics.js";
 
 interface MockResponse {
@@ -67,6 +68,14 @@ describe("handleStreamableHttpRequest", () => {
     httpAllowedOrigins: [],
     httpAuthorizationServers: [],
     httpResourceDocumentationUrl: null,
+    httpServer: {
+      requestTimeoutMs: 30_000,
+      headersTimeoutMs: 60_000,
+      keepAliveTimeoutMs: 5_000,
+      socketTimeoutMs: 60_000,
+      maxHeadersCount: 100,
+      maxRequestBodyBytes: 1_048_576,
+    },
     httpAuth: {
       mode: "none" as const,
       realm: "curyo-mcp",
@@ -104,6 +113,28 @@ describe("handleStreamableHttpRequest", () => {
     __resetHttpRateLimitStateForTests();
     __resetMcpMetricsForTests();
   });
+
+  function createStreamingRequest(
+    body: string,
+    options: {
+      url: string;
+      method: string;
+      headers: Record<string, string>;
+      remoteAddress?: string;
+    },
+  ): IncomingMessage {
+    const request = Readable.from([body]) as IncomingMessage;
+    request.url = options.url;
+    request.method = options.method;
+    request.headers = options.headers;
+    Object.defineProperty(request, "socket", {
+      value: {
+        remoteAddress: options.remoteAddress ?? "127.0.0.1",
+      },
+      configurable: true,
+    });
+    return request;
+  }
 
   it("returns 404 for unknown paths", async () => {
     const request = {
@@ -628,6 +659,63 @@ describe("handleStreamableHttpRequest", () => {
       limit: 1,
     });
   });
+
+  it("returns 413 when an MCP JSON request body exceeds the configured limit", async () => {
+    const request = createStreamingRequest(
+      JSON.stringify({
+        jsonrpc: "2.0",
+        id: 1,
+        method: "tools/list",
+        params: {
+          payload: "x".repeat(256),
+        },
+      }),
+      {
+        url: "/mcp",
+        method: "POST",
+        headers: {
+          host: "127.0.0.1:3334",
+          accept: "application/json, text/event-stream",
+          "content-type": "application/json",
+          authorization: "Bearer secret-token",
+        },
+      },
+    );
+    const response = createMockResponse();
+
+    await handleStreamableHttpRequest(request, response, {
+      ...config,
+      httpServer: {
+        ...config.httpServer,
+        maxRequestBodyBytes: 64,
+      },
+      httpAuth: {
+        mode: "bearer",
+        realm: "curyo-mcp",
+        tokenHashes: ["930bbdc51b6aed5c2a5678fd6e28dee7a05e8a4b643cfc0b4427c3efb86c0d94"],
+        scopes: ["mcp:read"],
+        tokens: [
+          {
+            tokenHash: "930bbdc51b6aed5c2a5678fd6e28dee7a05e8a4b643cfc0b4427c3efb86c0d94",
+            clientId: "reader",
+            scopes: ["mcp:read"],
+            identityId: null,
+            notBefore: null,
+            expiresAt: null,
+            subject: null,
+            kind: "static",
+          },
+        ],
+        sessionKeys: [],
+      },
+    });
+
+    expect(response.statusCode).toBe(413);
+    expect(JSON.parse(response.body)).toEqual({
+      error: "Request body exceeds configured limit",
+      limitBytes: 64,
+    });
+  });
 });
 
 describe("resolveAdvertisedHttpUrl", () => {
@@ -651,5 +739,42 @@ describe("resolveAdvertisedHttpUrl", () => {
         publicBaseUrl: "https://mcp.curyo.xyz/base",
       }),
     ).toBe("https://mcp.curyo.xyz/base/mcp");
+  });
+});
+
+describe("configureNodeHttpServer", () => {
+  it("applies explicit timeout and header limits to the Node server", () => {
+    const destroy = vi.fn();
+    let timeoutMs = 0;
+    let timeoutHandler: ((socket: { destroy: () => void }) => void) | undefined;
+    const server = {
+      requestTimeout: 0,
+      headersTimeout: 0,
+      keepAliveTimeout: 0,
+      maxHeadersCount: 0,
+      setTimeout: vi.fn((value: number, handler: (socket: { destroy: () => void }) => void) => {
+        timeoutMs = value;
+        timeoutHandler = handler;
+      }),
+    } as unknown as Parameters<typeof configureNodeHttpServer>[0];
+
+    configureNodeHttpServer(server, {
+      requestTimeoutMs: 15_000,
+      headersTimeoutMs: 45_000,
+      keepAliveTimeoutMs: 4_000,
+      socketTimeoutMs: 20_000,
+      maxHeadersCount: 64,
+      maxRequestBodyBytes: 262_144,
+    });
+
+    expect(server.requestTimeout).toBe(15_000);
+    expect(server.headersTimeout).toBe(45_000);
+    expect(server.keepAliveTimeout).toBe(4_000);
+    expect(server.maxHeadersCount).toBe(64);
+    expect(timeoutMs).toBe(20_000);
+    expect(timeoutHandler).toBeTypeOf("function");
+
+    timeoutHandler?.({ destroy });
+    expect(destroy).toHaveBeenCalledOnce();
   });
 });

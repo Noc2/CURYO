@@ -35,6 +35,14 @@ describe("createServer", () => {
       httpAllowedOrigins: [],
       httpAuthorizationServers: [],
       httpResourceDocumentationUrl: null,
+      httpServer: {
+        requestTimeoutMs: 30_000,
+        headersTimeoutMs: 60_000,
+        keepAliveTimeoutMs: 5_000,
+        socketTimeoutMs: 60_000,
+        maxHeadersCount: 100,
+        maxRequestBodyBytes: 1_048_576,
+      },
       httpAuth: {
         mode: "none",
         realm: "curyo-mcp",
@@ -78,6 +86,14 @@ describe("createServer", () => {
         httpAllowedOrigins: [],
         httpAuthorizationServers: [],
         httpResourceDocumentationUrl: null,
+        httpServer: {
+          requestTimeoutMs: 30_000,
+          headersTimeoutMs: 60_000,
+          keepAliveTimeoutMs: 5_000,
+          socketTimeoutMs: 60_000,
+          maxHeadersCount: 100,
+          maxRequestBodyBytes: 1_048_576,
+        },
         httpAuth: {
           mode: "none",
           realm: "curyo-mcp",
@@ -159,6 +175,14 @@ describe("createServer", () => {
       httpAllowedOrigins: [],
       httpAuthorizationServers: [],
       httpResourceDocumentationUrl: null,
+      httpServer: {
+        requestTimeoutMs: 30_000,
+        headersTimeoutMs: 60_000,
+        keepAliveTimeoutMs: 5_000,
+        socketTimeoutMs: 60_000,
+        maxHeadersCount: 100,
+        maxRequestBodyBytes: 1_048_576,
+      },
       httpAuth: {
         mode: "bearer",
         realm: "curyo-mcp",
