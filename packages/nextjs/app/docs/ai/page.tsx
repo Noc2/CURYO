@@ -297,18 +297,6 @@ https://mcp.curyo.xyz/mcp`}</code>
         , <code>CURYO_MCP_HTTP_SESSION_ISSUER</code>, and <code>CURYO_MCP_HTTP_SESSION_AUDIENCE</code>.
       </p>
 
-      <h2>WebMCP</h2>
-      <p>
-        WebMCP is a browser-native layer that can sit on top of the hosted MCP backend. The hosted MCP endpoint remains
-        the canonical interface for durable reads, auth, and production write policy, while WebMCP stays feature-flagged
-        for in-tab experiments.
-      </p>
-      <ul>
-        <li>Use hosted MCP first for stable read and write workflows.</li>
-        <li>Keep WebMCP behind an explicit feature flag in the web app.</li>
-        <li>Use WebMCP for browser-context actions and read-oriented tab-local workflows.</li>
-      </ul>
-
       <div className="not-prose mt-8 rounded-xl p-4 surface-card">
         <p className="text-base-content/60">
           For the voting lifecycle and protocol rules, see{" "}
