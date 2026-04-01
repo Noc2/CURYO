@@ -478,103 +478,33 @@ contract GovernanceTest is Test {
         assertEq(holders[7], address(mockCategoryRegistry));
     }
 
-    function test_ReplaceExcludedHolder_OnlyGovernance() public {
+    function test_GovernorRejectsLegacyExcludedHolderReplacementSelector() public {
         address replacement = address(new MockCategoryRegistry());
 
-        vm.prank(voter1);
-        vm.expectRevert();
-        governor.replaceExcludedHolder(mockFaucet, replacement);
-    }
+        (bool success,) =
+            address(governor).call(abi.encodeWithSignature("replaceExcludedHolder(address,address)", mockFaucet, replacement));
 
-    function test_ReplaceExcludedHolder_UpdatesExcludedSet() public {
-        address replacement = address(new MockCategoryRegistry());
-
-        _executeSingleCallProposal(
-            address(governor),
-            abi.encodeCall(CuryoGovernor.replaceExcludedHolder, (mockRewardDistributor, replacement)),
-            "Replace excluded holder rewardDistributor->replacement",
-            false
-        );
-
-        assertFalse(governor.isExcludedHolder(mockRewardDistributor));
-        assertTrue(governor.isExcludedHolder(replacement));
-
-        address[] memory holders = governor.getExcludedHolders();
-        assertEq(holders.length, 8);
-        assertEq(holders[2], replacement);
-    }
-
-    function test_ReplaceExcludedHolder_RevertIfOldNotExcluded() public {
-        address replacement = address(new MockCategoryRegistry());
-
-        _executeSingleCallProposal(
-            address(governor),
-            abi.encodeCall(CuryoGovernor.replaceExcludedHolder, (address(0xB0B), replacement)),
-            "Replace excluded holder old-not-excluded",
-            true
-        );
-
+        assertFalse(success);
         assertTrue(governor.isExcludedHolder(mockFaucet));
         assertFalse(governor.isExcludedHolder(replacement));
     }
 
-    function test_ReplaceExcludedHolder_RevertIfNewAlreadyExcluded() public {
-        _executeSingleCallProposal(
-            address(governor),
-            abi.encodeCall(CuryoGovernor.replaceExcludedHolder, (mockFaucet, mockVotingEngine)),
-            "Replace excluded holder new-already-excluded",
-            true
-        );
-
-        assertTrue(governor.isExcludedHolder(mockFaucet));
-        assertTrue(governor.isExcludedHolder(mockVotingEngine));
-    }
-
-    function test_ReplaceExcludedHolder_RevertIfNewHolderIsEOA() public {
-        _executeSingleCallProposal(
-            address(governor),
-            abi.encodeCall(CuryoGovernor.replaceExcludedHolder, (mockFaucet, address(0xBEEF))),
-            "Replace excluded holder new-eoa",
-            true
-        );
-
-        assertTrue(governor.isExcludedHolder(mockFaucet));
-        assertFalse(governor.isExcludedHolder(address(0xBEEF)));
-    }
-
-    function test_ReplaceExcludedHolder_RevertIfNewHolderHasVotes() public {
-        address replacement = address(new MockCategoryRegistry());
-
-        vm.prank(deployer);
-        token.mint(replacement, 1e6);
+    function test_GovernorExcludedHoldersRemainFixedAcrossGovernanceActions() public {
+        address[] memory beforeHolders = governor.getExcludedHolders();
+        address replacementCategoryRegistry = address(new MockCategoryRegistry());
 
         _executeSingleCallProposal(
             address(governor),
-            abi.encodeCall(CuryoGovernor.replaceExcludedHolder, (mockFaucet, replacement)),
-            "Replace excluded holder new-has-votes",
-            true
-        );
-
-        assertTrue(governor.isExcludedHolder(mockFaucet));
-        assertFalse(governor.isExcludedHolder(replacement));
-    }
-
-    function test_GovernorQuorumReflectsExcludedHolderReplacementBeforeBalanceMigration() public {
-        vm.roll(block.number + 1);
-        uint256 baselineQuorum = governor.quorum(block.number - 1);
-
-        address replacement = address(new MockCategoryRegistry());
-
-        _executeSingleCallProposal(
-            address(governor),
-            abi.encodeCall(CuryoGovernor.replaceExcludedHolder, (mockFaucet, replacement)),
-            "Replace excluded holder faucet->replacement",
+            abi.encodeCall(CuryoGovernor.setCategoryRegistry, (replacementCategoryRegistry)),
+            "Update category registry",
             false
         );
 
-        vm.roll(block.number + 1);
-        uint256 expectedQuorumAfterReplacement = baselineQuorum + ((FAUCET_BALANCE * 4) / 100);
-        assertEq(governor.quorum(block.number - 1), expectedQuorumAfterReplacement);
+        address[] memory afterHolders = governor.getExcludedHolders();
+        assertEq(afterHolders.length, beforeHolders.length);
+        for (uint256 i = 0; i < beforeHolders.length; i++) {
+            assertEq(afterHolders[i], beforeHolders[i]);
+        }
     }
 
     function test_GovernorRejectsProposalsBeforePoolsInitialization() public {

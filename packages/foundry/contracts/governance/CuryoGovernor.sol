@@ -55,7 +55,6 @@ contract CuryoGovernor is
     mapping(uint256 => uint256) public proposalCreatedBlock;
 
     event CategoryRegistryUpdated(address indexed categoryRegistry);
-    event ExcludedHolderReplaced(address indexed oldHolder, address indexed newHolder, uint256 index);
 
     /// @notice Deploy the governor with cREP token and timelock
     /// @param _crepToken The cREP voting token address
@@ -97,40 +96,9 @@ contract CuryoGovernor is
         poolsInitialized = true;
     }
 
-    /// @notice Return the full set of holders excluded from quorum calculations.
+    /// @notice Return the full fixed set of holders excluded from quorum calculations.
     function getExcludedHolders() external view returns (address[] memory) {
         return _excludedHolders;
-    }
-
-    /// @notice Replace one excluded holder with a new protocol-controlled contract address.
-    /// @dev Governance-only bounded replacement path for post-launch contract migrations.
-    ///      Keeps set size constant (no arbitrary add/remove) and requires `newHolder` to be
-    ///      an empty contract address at replacement time, reducing quorum-manipulation surface.
-    /// @param oldHolder Existing excluded holder to replace.
-    /// @param newHolder New excluded holder contract address.
-    function replaceExcludedHolder(address oldHolder, address newHolder) external {
-        require(poolsInitialized, "Pools not initialized");
-        _checkGovernance();
-        require(oldHolder != address(0) && newHolder != address(0), "Invalid address");
-        require(oldHolder != newHolder, "Same holder");
-        require(isExcludedHolder[oldHolder], "Old holder not excluded");
-        require(!isExcludedHolder[newHolder], "New holder already excluded");
-        require(newHolder.code.length > 0, "New holder must be contract");
-        require(crepToken.getVotes(newHolder) == 0, "New holder must have zero votes");
-
-        uint256 excludedHoldersLength = _excludedHolders.length;
-        for (uint256 i = 0; i < excludedHoldersLength; i++) {
-            if (_excludedHolders[i] == oldHolder) {
-                _excludedHolders[i] = newHolder;
-                isExcludedHolder[oldHolder] = false;
-                isExcludedHolder[newHolder] = true;
-                emit ExcludedHolderReplaced(oldHolder, newHolder, i);
-                return;
-            }
-        }
-
-        // Should never happen when mapping state is consistent.
-        revert("Old holder missing");
     }
 
     /// @notice Configure the CategoryRegistry used by the lower-threshold approval flow.
