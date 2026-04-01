@@ -1,6 +1,10 @@
 import Link from "next/link";
 import type { NextPage } from "next";
 
+const mcpServerSourceHref = "https://github.com/Noc2/CURYO/tree/main/packages/mcp-server";
+const mcpRoutesSourceHref = "https://github.com/Noc2/CURYO/tree/main/packages/nextjs/app/api/mcp";
+const ponderSourceHref = "https://github.com/Noc2/CURYO/tree/main/packages/ponder";
+
 const AIPage: NextPage = () => {
   return (
     <article className="prose max-w-none">
@@ -62,6 +66,21 @@ https://mcp.curyo.xyz/mcp`}</code>
       <p>
         The Next.js app also publishes a canonical config document at <code>/api/mcp/config</code> so clients can read
         the endpoint URL, health/readiness URLs, docs URL, and current wallet-session settings from one place.
+      </p>
+      <p>
+        The open-source implementation lives in the{" "}
+        <a href={mcpServerSourceHref} target="_blank" rel="noopener noreferrer" className="link link-primary">
+          MCP server package
+        </a>
+        , the{" "}
+        <a href={mcpRoutesSourceHref} target="_blank" rel="noopener noreferrer" className="link link-primary">
+          Next.js MCP routes
+        </a>
+        , and the{" "}
+        <a href={ponderSourceHref} target="_blank" rel="noopener noreferrer" className="link link-primary">
+          Ponder indexer
+        </a>{" "}
+        if you want to inspect or self-host the same stack.
       </p>
 
       <h2>Service Overview</h2>
