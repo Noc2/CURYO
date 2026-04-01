@@ -1,6 +1,5 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { encodeAbiParameters } from "viem";
 import {
   buildCommitHash,
   createTlockVoteCommit,
@@ -176,13 +175,14 @@ test("parseTlockCiphertextMetadata accepts a chunked armor payload whose final l
   assert.notEqual(filler, "");
 });
 
-test("buildCommitHash remains backward-compatible for legacy four-field callers", () => {
+test("buildCommitHash includes the tlock round metadata", () => {
   const salt = ("0x" + "22".repeat(32)) as `0x${string}`;
   const ciphertext = "0x1234" as `0x${string}`;
+  const drandChainHash = ("0x" + "33".repeat(32)) as `0x${string}`;
 
-  const commitHash = buildCommitHash(false, salt, 42n, ciphertext);
+  const commitHash = buildCommitHash(false, salt, 42n, 123n, drandChainHash, ciphertext);
 
-  assert.equal(commitHash, buildCommitHash(false, salt, 42n, ciphertext));
+  assert.equal(commitHash, buildCommitHash(false, salt, 42n, 123n, drandChainHash, ciphertext));
 });
 
 test("encodeVoteTransferPayload round-trips the redeployed vote shape", () => {
@@ -201,60 +201,6 @@ test("encodeVoteTransferPayload round-trips the redeployed vote shape", () => {
     ciphertext: "0x1234",
     targetRound: 123n,
     drandChainHash: "0x" + "22".repeat(32),
-    frontend: "0x3333333333333333333333333333333333333333",
-  });
-});
-
-test("decodeVoteTransferPayload tolerates the temporary six-field misordering", () => {
-  const payload = encodeAbiParameters(
-    [
-      { name: "contentId", type: "uint256" },
-      { name: "commitHash", type: "bytes32" },
-      { name: "ciphertext", type: "bytes" },
-      { name: "targetRound", type: "uint64" },
-      { name: "drandChainHash", type: "bytes32" },
-      { name: "frontend", type: "address" },
-    ],
-    [
-      42n,
-      ("0x" + "11".repeat(32)) as `0x${string}`,
-      makeFakeArmoredTlockCiphertext({
-        targetRound: 123n,
-        drandChainHash: ("0x" + "22".repeat(32)) as `0x${string}`,
-        plaintextMarker: "1:" + "11".repeat(32),
-      }),
-      123n,
-      ("0x" + "22".repeat(32)) as `0x${string}`,
-      "0x3333333333333333333333333333333333333333",
-    ],
-  );
-
-  assert.deepEqual(decodeVoteTransferPayload(payload), {
-    contentId: 42n,
-    commitHash: "0x" + "11".repeat(32),
-    ciphertext: makeFakeArmoredTlockCiphertext({
-      targetRound: 123n,
-      drandChainHash: ("0x" + "22".repeat(32)) as `0x${string}`,
-      plaintextMarker: "1:" + "11".repeat(32),
-    }),
-    targetRound: 123n,
-    drandChainHash: "0x" + "22".repeat(32),
-    frontend: "0x3333333333333333333333333333333333333333",
-  });
-});
-
-test("encodeVoteTransferPayload preserves the legacy payload when metadata is omitted", () => {
-  const payload = encodeVoteTransferPayload({
-    contentId: 42n,
-    commitHash: ("0x" + "11".repeat(32)) as `0x${string}`,
-    ciphertext: "0x1234" as `0x${string}`,
-    frontend: "0x3333333333333333333333333333333333333333",
-  });
-
-  assert.deepEqual(decodeVoteTransferPayload(payload), {
-    contentId: 42n,
-    commitHash: "0x" + "11".repeat(32),
-    ciphertext: "0x1234",
     frontend: "0x3333333333333333333333333333333333333333",
   });
 });

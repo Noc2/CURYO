@@ -15,8 +15,8 @@ export interface VoteTransferPayload {
   contentId: bigint;
   commitHash: VoteCommitHash;
   ciphertext: VoteCiphertext;
-  targetRound?: bigint;
-  drandChainHash?: VoteDrandChainHash;
+  targetRound: bigint;
+  drandChainHash: VoteDrandChainHash;
   frontend: Address;
 }
 export type VoteTlockRuntime = {
@@ -33,22 +33,6 @@ const voteTransferPayloadParams = [
   { name: "frontend", type: "address" },
   { name: "targetRound", type: "uint64" },
   { name: "drandChainHash", type: "bytes32" },
-] as const;
-
-const misorderedVoteTransferPayloadParams = [
-  { name: "contentId", type: "uint256" },
-  { name: "commitHash", type: "bytes32" },
-  { name: "ciphertext", type: "bytes" },
-  { name: "targetRound", type: "uint64" },
-  { name: "drandChainHash", type: "bytes32" },
-  { name: "frontend", type: "address" },
-] as const;
-
-const legacyVoteTransferPayloadParams = [
-  { name: "contentId", type: "uint256" },
-  { name: "commitHash", type: "bytes32" },
-  { name: "ciphertext", type: "bytes" },
-  { name: "frontend", type: "address" },
 ] as const;
 
 const AGE_ARMOR_HEADER = "-----BEGIN AGE ENCRYPTED FILE-----";
@@ -100,35 +84,16 @@ export function buildCommitHash(
   isUp: boolean,
   salt: VoteSalt,
   contentId: bigint,
-  ciphertext: VoteCiphertext,
-): VoteCommitHash;
-export function buildCommitHash(
-  isUp: boolean,
-  salt: VoteSalt,
-  contentId: bigint,
   targetRound: bigint,
   drandChainHash: VoteDrandChainHash,
   ciphertext: VoteCiphertext,
-): VoteCommitHash;
-export function buildCommitHash(
-  isUp: boolean,
-  salt: VoteSalt,
-  contentId: bigint,
-  targetRoundOrCiphertext: bigint | VoteCiphertext,
-  drandChainHashOrCiphertext?: VoteDrandChainHash | VoteCiphertext,
-  ciphertextMaybe?: VoteCiphertext,
 ): VoteCommitHash {
-  if (typeof targetRoundOrCiphertext === "bigint" && typeof drandChainHashOrCiphertext === "string" && ciphertextMaybe != null) {
-    return keccak256(
-      encodePacked(
-        ["bool", "bytes32", "uint256", "uint64", "bytes32", "bytes32"],
-        [isUp, salt, contentId, targetRoundOrCiphertext, drandChainHashOrCiphertext, keccak256(ciphertextMaybe)],
-      ),
-    );
-  }
-
-  const ciphertext = targetRoundOrCiphertext as VoteCiphertext;
-  return keccak256(encodePacked(["bool", "bytes32", "uint256", "bytes32"], [isUp, salt, contentId, keccak256(ciphertext)]));
+  return keccak256(
+    encodePacked(
+      ["bool", "bytes32", "uint256", "uint64", "bytes32", "bytes32"],
+      [isUp, salt, contentId, targetRound, drandChainHash, keccak256(ciphertext)],
+    ),
+  );
 }
 
 export function buildCommitKey(voter: Address, commitHash: `0x${string}`): `0x${string}` {
@@ -136,127 +101,41 @@ export function buildCommitKey(voter: Address, commitHash: `0x${string}`): `0x${
 }
 
 export function encodeVoteTransferPayload(payload: VoteTransferPayload): `0x${string}` {
-  if (payload.targetRound != null && payload.drandChainHash != null) {
-    return encodeAbiParameters(voteTransferPayloadParams, [
-      payload.contentId,
-      payload.commitHash,
-      payload.ciphertext,
-      payload.frontend,
-      payload.targetRound,
-      payload.drandChainHash,
-    ]);
-  }
-
-  return encodeAbiParameters(legacyVoteTransferPayloadParams, [
+  return encodeAbiParameters(voteTransferPayloadParams, [
     payload.contentId,
     payload.commitHash,
     payload.ciphertext,
     payload.frontend,
+    payload.targetRound,
+    payload.drandChainHash,
   ]);
 }
 
 export function decodeVoteTransferPayload(data: `0x${string}`): VoteTransferPayload {
-  const decodeCanonicalPayload = (): VoteTransferPayload | null => {
-    try {
-      const [contentId, commitHash, ciphertext, frontend, targetRound, drandChainHash] = decodeAbiParameters(
-        voteTransferPayloadParams,
-        data,
-      );
-      const reencoded = encodeAbiParameters(voteTransferPayloadParams, [
-        contentId,
-        commitHash,
-        ciphertext,
-        frontend,
-        targetRound,
-        drandChainHash,
-      ]);
-      if (reencoded.toLowerCase() !== data.toLowerCase()) {
-        return null;
-      }
-
-      return {
-        contentId,
-        commitHash,
-        ciphertext,
-        frontend,
-        targetRound,
-        drandChainHash,
-      };
-    } catch {
-      return null;
-    }
-  };
-
-  const decodeMisorderedPayload = (): VoteTransferPayload | null => {
-    try {
-      const [contentId, commitHash, ciphertext, targetRound, drandChainHash, frontend] = decodeAbiParameters(
-        misorderedVoteTransferPayloadParams,
-        data,
-      );
-      const reencoded = encodeAbiParameters(misorderedVoteTransferPayloadParams, [
-        contentId,
-        commitHash,
-        ciphertext,
-        targetRound,
-        drandChainHash,
-        frontend,
-      ]);
-      if (reencoded.toLowerCase() !== data.toLowerCase()) {
-        return null;
-      }
-
-      return {
-        contentId,
-        commitHash,
-        ciphertext,
-        targetRound,
-        drandChainHash,
-        frontend,
-      };
-    } catch {
-      return null;
-    }
-  };
-
-  const matchesCiphertextMetadata = (payload: VoteTransferPayload): boolean => {
-    if (payload.targetRound == null || payload.drandChainHash == null) {
-      return false;
-    }
-
-    const metadata = parseTlockCiphertextMetadata(payload.ciphertext);
-    if (!metadata) {
-      return false;
-    }
-
-    return metadata.targetRound === payload.targetRound
-      && metadata.drandChainHash.toLowerCase() === payload.drandChainHash.toLowerCase();
-  };
-
-  const canonicalPayload = decodeCanonicalPayload();
-  if (canonicalPayload && matchesCiphertextMetadata(canonicalPayload)) {
-    return canonicalPayload;
-  }
-
-  const misorderedPayload = decodeMisorderedPayload();
-  if (misorderedPayload && matchesCiphertextMetadata(misorderedPayload)) {
-    return misorderedPayload;
-  }
-
-  if (canonicalPayload) {
-    return canonicalPayload;
-  }
-
-  if (misorderedPayload) {
-    return misorderedPayload;
-  }
-
   try {
-    const [contentId, commitHash, ciphertext, frontend] = decodeAbiParameters(legacyVoteTransferPayloadParams, data);
+    const [contentId, commitHash, ciphertext, frontend, targetRound, drandChainHash] = decodeAbiParameters(
+      voteTransferPayloadParams,
+      data,
+    );
+    const reencoded = encodeAbiParameters(voteTransferPayloadParams, [
+      contentId,
+      commitHash,
+      ciphertext,
+      frontend,
+      targetRound,
+      drandChainHash,
+    ]);
+    if (reencoded.toLowerCase() !== data.toLowerCase()) {
+      throw new Error("invalid vote transfer payload");
+    }
+
     return {
       contentId,
       commitHash,
       ciphertext,
       frontend,
+      targetRound,
+      drandChainHash,
     };
   } catch {
     throw new Error("invalid vote transfer payload");

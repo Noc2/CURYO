@@ -289,7 +289,29 @@ export async function handleStreamableHttpRequest(
       return;
     }
 
-    sendJson(response, 200, buildProtectedResourceMetadata(request, config), config);
+    try {
+      sendJson(response, 200, buildProtectedResourceMetadata(request, config), config);
+    } catch (error) {
+      const statusCode = error instanceof Error && error.message.includes("HTTP Host header") ? 400 : 500;
+      sendJson(
+        response,
+        statusCode,
+        {
+          error: error instanceof Error ? error.message : "Failed to resolve protected resource metadata",
+        },
+        config,
+      );
+      logEvent("warn", "mcp_http_protected_resource_metadata_failed", {
+        method,
+        path: requestUrl.pathname,
+        statusCode,
+        durationMs: Date.now() - startedAt,
+        remoteAddress,
+        requestId,
+        ...serializeError(error),
+      });
+      return;
+    }
     logResponse(200, { route: "oauth-protected-resource" });
     return;
   }
@@ -335,7 +357,7 @@ export async function handleStreamableHttpRequest(
   try {
     authInfo = authenticateRequest(request, config.httpAuth, {
       requiredScopes: ["mcp:read"],
-      resourceMetadataUrl: resolveProtectedResourceMetadataUrl(request, config),
+      resourceMetadataUrl: maybeResolveProtectedResourceMetadataUrl(request, config),
     });
     if (authInfo && requestId) {
       authInfo = {
@@ -490,6 +512,14 @@ export async function handleStreamableHttpRequest(
       authClientId: authInfo?.clientId,
       ...serializeError(error),
     });
+  }
+}
+
+function maybeResolveProtectedResourceMetadataUrl(request: IncomingMessage, config: ServerConfig): string | undefined {
+  try {
+    return resolveProtectedResourceMetadataUrl(request, config);
+  } catch {
+    return undefined;
   }
 }
 
