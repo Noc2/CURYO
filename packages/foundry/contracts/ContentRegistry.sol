@@ -665,7 +665,10 @@ contract ContentRegistry is Initializable, AccessControlUpgradeable, PausableUpg
     function _resolvePendingSubmitterStake(uint256 contentId, Content storage c) internal {
         if (c.submitterStakeReturned) return;
 
-        if (block.timestamp >= uint256(c.createdAt) + 24 hours && c.rating < SLASH_RATING_THRESHOLD) {
+        bool useMilestoneZeroTerms = milestoneZeroSubmitterTermsSnapshotted[contentId];
+        uint256 slashCheckRating = useMilestoneZeroTerms ? milestoneZeroSubmitterRating[contentId] : c.rating;
+
+        if (block.timestamp >= uint256(c.createdAt) + 24 hours && slashCheckRating < SLASH_RATING_THRESHOLD) {
             require(treasury != address(0), "Treasury not set");
             c.submitterStakeReturned = true;
             crepToken.safeTransfer(treasury, c.submitterStake);
@@ -675,11 +678,19 @@ contract ContentRegistry is Initializable, AccessControlUpgradeable, PausableUpg
 
         c.submitterStakeReturned = true;
         crepToken.safeTransfer(c.submitter, c.submitterStake);
+
+        address rewardPool = useMilestoneZeroTerms
+            ? milestoneZeroSubmitterParticipationPool[contentId]
+            : submitterParticipationSnapshotPool[contentId];
+        uint256 rewardRateBps = useMilestoneZeroTerms
+            ? milestoneZeroSubmitterParticipationRateBps[contentId]
+            : submitterParticipationSnapshotRateBps[contentId];
+
         _accrueSubmitterParticipationReward(
             contentId,
             c,
-            submitterParticipationSnapshotPool[contentId],
-            submitterParticipationSnapshotRateBps[contentId]
+            rewardPool,
+            rewardRateBps
         );
         emit SubmitterStakeReturned(contentId, c.submitterStake);
     }
