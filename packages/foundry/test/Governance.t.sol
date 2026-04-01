@@ -478,6 +478,105 @@ contract GovernanceTest is Test {
         assertEq(holders[7], address(mockCategoryRegistry));
     }
 
+    function test_ReplaceExcludedHolder_OnlyGovernance() public {
+        address replacement = address(new MockCategoryRegistry());
+
+        vm.prank(voter1);
+        vm.expectRevert();
+        governor.replaceExcludedHolder(mockFaucet, replacement);
+    }
+
+    function test_ReplaceExcludedHolder_UpdatesExcludedSet() public {
+        address replacement = address(new MockCategoryRegistry());
+
+        _executeSingleCallProposal(
+            address(governor),
+            abi.encodeCall(CuryoGovernor.replaceExcludedHolder, (mockRewardDistributor, replacement)),
+            "Replace excluded holder rewardDistributor->replacement",
+            false
+        );
+
+        assertFalse(governor.isExcludedHolder(mockRewardDistributor));
+        assertTrue(governor.isExcludedHolder(replacement));
+
+        address[] memory holders = governor.getExcludedHolders();
+        assertEq(holders.length, 8);
+        assertEq(holders[2], replacement);
+    }
+
+    function test_ReplaceExcludedHolder_RevertIfOldNotExcluded() public {
+        address replacement = address(new MockCategoryRegistry());
+
+        _executeSingleCallProposal(
+            address(governor),
+            abi.encodeCall(CuryoGovernor.replaceExcludedHolder, (address(0xB0B), replacement)),
+            "Replace excluded holder old-not-excluded",
+            true
+        );
+
+        assertTrue(governor.isExcludedHolder(mockFaucet));
+        assertFalse(governor.isExcludedHolder(replacement));
+    }
+
+    function test_ReplaceExcludedHolder_RevertIfNewAlreadyExcluded() public {
+        _executeSingleCallProposal(
+            address(governor),
+            abi.encodeCall(CuryoGovernor.replaceExcludedHolder, (mockFaucet, mockVotingEngine)),
+            "Replace excluded holder new-already-excluded",
+            true
+        );
+
+        assertTrue(governor.isExcludedHolder(mockFaucet));
+        assertTrue(governor.isExcludedHolder(mockVotingEngine));
+    }
+
+    function test_ReplaceExcludedHolder_RevertIfNewHolderIsEOA() public {
+        _executeSingleCallProposal(
+            address(governor),
+            abi.encodeCall(CuryoGovernor.replaceExcludedHolder, (mockFaucet, address(0xBEEF))),
+            "Replace excluded holder new-eoa",
+            true
+        );
+
+        assertTrue(governor.isExcludedHolder(mockFaucet));
+        assertFalse(governor.isExcludedHolder(address(0xBEEF)));
+    }
+
+    function test_ReplaceExcludedHolder_RevertIfNewHolderHasVotes() public {
+        address replacement = address(new MockCategoryRegistry());
+
+        vm.prank(deployer);
+        token.mint(replacement, 1e6);
+
+        _executeSingleCallProposal(
+            address(governor),
+            abi.encodeCall(CuryoGovernor.replaceExcludedHolder, (mockFaucet, replacement)),
+            "Replace excluded holder new-has-votes",
+            true
+        );
+
+        assertTrue(governor.isExcludedHolder(mockFaucet));
+        assertFalse(governor.isExcludedHolder(replacement));
+    }
+
+    function test_GovernorQuorumReflectsExcludedHolderReplacementBeforeBalanceMigration() public {
+        vm.roll(block.number + 1);
+        uint256 baselineQuorum = governor.quorum(block.number - 1);
+
+        address replacement = address(new MockCategoryRegistry());
+
+        _executeSingleCallProposal(
+            address(governor),
+            abi.encodeCall(CuryoGovernor.replaceExcludedHolder, (mockFaucet, replacement)),
+            "Replace excluded holder faucet->replacement",
+            false
+        );
+
+        vm.roll(block.number + 1);
+        uint256 expectedQuorumAfterReplacement = baselineQuorum + ((FAUCET_BALANCE * 4) / 100);
+        assertEq(governor.quorum(block.number - 1), expectedQuorumAfterReplacement);
+    }
+
     function test_GovernorRejectsProposalsBeforePoolsInitialization() public {
         vm.startPrank(deployer);
         CuryoGovernor freshGovernor = new CuryoGovernor(IVotes(address(token)), timelock);
@@ -505,6 +604,44 @@ contract GovernanceTest is Test {
         holders[5] = mockContentRegistry;
         holders[6] = mockFrontendRegistry;
         holders[7] = address(mockCategoryRegistry);
+    }
+
+    function _executeSingleCallProposal(address target, bytes memory callData, string memory description, bool expectRevert_)
+        internal
+    {
+        vm.roll(block.number + 1);
+
+        address[] memory targets = new address[](1);
+        targets[0] = target;
+
+        uint256[] memory values = new uint256[](1);
+        values[0] = 0;
+
+        bytes[] memory calldatas = new bytes[](1);
+        calldatas[0] = callData;
+
+        vm.prank(voter1);
+        uint256 proposalId = governor.propose(targets, values, calldatas, description);
+
+        vm.roll(block.number + governor.votingDelay() + 1);
+        vm.prank(voter1);
+        governor.castVote(proposalId, 1);
+        vm.prank(voter2);
+        governor.castVote(proposalId, 1);
+        vm.prank(voter3);
+        governor.castVote(proposalId, 1);
+
+        vm.roll(block.number + governor.votingPeriod() + 1);
+        bytes32 descriptionHash = keccak256(bytes(description));
+        governor.queue(targets, values, calldatas, descriptionHash);
+
+        vm.warp(block.timestamp + 2 days + 1);
+        if (expectRevert_) {
+            vm.expectRevert();
+            governor.execute(targets, values, calldatas, descriptionHash);
+            return;
+        }
+        governor.execute(targets, values, calldatas, descriptionHash);
     }
 
     function test_CreateProposal() public {
