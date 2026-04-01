@@ -472,7 +472,7 @@ contract VoterIdNFT is ERC721, Ownable, IVoterIdNFT {
         bytes memory result = new bytes(encodedLen);
 
         uint256 i;
-        uint256 j;
+        uint256 j = 0;
 
         for (i = 0; i < data.length; i += 3) {
             uint256 a = uint8(data[i]);
