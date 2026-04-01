@@ -5,7 +5,7 @@ TEST_ARGS ?=
 COVERAGE_ARGS ?=
 RESUME_FLAG ?=
 DEPLOY_FLOW_FLAGS ?=
-ANVIL_CODE_SIZE_LIMIT ?= 50000
+LOCALHOST_EVM_SIZE_FLAGS ?= --disable-code-size-limit
 
 # setup wallet for anvil
 setup-anvil-wallet:
@@ -14,16 +14,16 @@ setup-anvil-wallet:
 
 # Start local chain
 chain: setup-anvil-wallet
-	anvil --code-size-limit $(ANVIL_CODE_SIZE_LIMIT)
+	anvil $(LOCALHOST_EVM_SIZE_FLAGS)
 
 # Start a fork
 fork: setup-anvil-wallet
-	anvil --fork-url ${FORK_URL} --chain-id 31337 --code-size-limit $(ANVIL_CODE_SIZE_LIMIT)
+	anvil --fork-url ${FORK_URL} --chain-id 31337 $(LOCALHOST_EVM_SIZE_FLAGS)
 
 # Deploy the contracts
 deploy:
 	@if [ ! -f "$(DEPLOY_SCRIPT)" ]; then 		echo "Error: Deploy script '$(DEPLOY_SCRIPT)' not found"; 		exit 1; 	fi
-	@if [ "$(RPC_URL)" = "localhost" ]; then 		if [ "$(ETH_KEYSTORE_ACCOUNT)" = "scaffold-eth-default" ]; then 			forge script $(DEPLOY_SCRIPT) --rpc-url localhost --password localhost --broadcast --ffi --slow --non-interactive --code-size-limit $(ANVIL_CODE_SIZE_LIMIT) $(RESUME_FLAG); 		else 			forge script $(DEPLOY_SCRIPT) --rpc-url localhost --broadcast --ffi --slow --non-interactive --code-size-limit $(ANVIL_CODE_SIZE_LIMIT) $(RESUME_FLAG); 		fi 	else 		forge script $(DEPLOY_SCRIPT) --rpc-url $(RPC_URL) --account $(ETH_KEYSTORE_ACCOUNT) --broadcast --ffi --gas-estimate-multiplier 200 $(DEPLOY_FLOW_FLAGS) $(RESUME_FLAG) $(VERIFY_FLAGS); 	fi
+	@if [ "$(RPC_URL)" = "localhost" ]; then 		if [ "$(ETH_KEYSTORE_ACCOUNT)" = "scaffold-eth-default" ]; then 			forge script $(DEPLOY_SCRIPT) --rpc-url localhost --password localhost --broadcast --ffi --slow --non-interactive $(LOCALHOST_EVM_SIZE_FLAGS) $(RESUME_FLAG); 		else 			forge script $(DEPLOY_SCRIPT) --rpc-url localhost --broadcast --ffi --slow --non-interactive $(LOCALHOST_EVM_SIZE_FLAGS) $(RESUME_FLAG); 		fi 	else 		forge script $(DEPLOY_SCRIPT) --rpc-url $(RPC_URL) --account $(ETH_KEYSTORE_ACCOUNT) --broadcast --ffi --gas-estimate-multiplier 200 $(DEPLOY_FLOW_FLAGS) $(RESUME_FLAG) $(VERIFY_FLAGS); 	fi
 
 # Deploy and generate ABIs
 deploy-and-generate-abis: deploy generate-abis 
