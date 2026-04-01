@@ -312,6 +312,31 @@ describe("handleStreamableHttpRequest", () => {
     });
   });
 
+  it("rejects protected resource metadata requests without a Host header", async () => {
+    const request = {
+      url: "/.well-known/oauth-protected-resource/mcp",
+      method: "GET",
+      headers: {},
+      socket: {
+        remoteAddress: "127.0.0.1",
+      },
+    } as unknown as IncomingMessage;
+    const response = createMockResponse();
+
+    await handleStreamableHttpRequest(request, response, {
+      ...config,
+      httpAuth: {
+        ...config.httpAuth,
+        mode: "bearer",
+      },
+    });
+
+    expect(response.statusCode).toBe(400);
+    expect(JSON.parse(response.body)).toEqual({
+      error: "Missing HTTP Host header",
+    });
+  });
+
   it("returns readiness based on Ponder availability on /readyz", async () => {
     const request = {
       url: "/readyz",
@@ -491,6 +516,49 @@ describe("handleStreamableHttpRequest", () => {
     expect(response.headers["WWW-Authenticate"]).toContain('Bearer realm="curyo-mcp"');
     expect(response.headers["WWW-Authenticate"]).toContain('resource_metadata="http://127.0.0.1:3334/.well-known/oauth-protected-resource/mcp"');
     expect(response.headers["WWW-Authenticate"]).toContain('scope="mcp:read"');
+    expect(JSON.parse(response.body)).toEqual({
+      error: "Missing bearer token",
+    });
+  });
+
+  it("rejects unauthenticated MCP requests without a Host header when bearer auth is enabled", async () => {
+    const request = {
+      url: "/mcp",
+      method: "POST",
+      headers: {},
+      socket: {
+        remoteAddress: "127.0.0.1",
+      },
+    } as unknown as IncomingMessage;
+    const response = createMockResponse();
+
+    await handleStreamableHttpRequest(request, response, {
+      ...config,
+      httpAuth: {
+        mode: "bearer",
+        realm: "curyo-mcp",
+        tokenHashes: ["8f434346648f6b96df89dda901c5176b10a6d83961fca37f8e1d249d8d68db9d"],
+        scopes: ["mcp:read"],
+        tokens: [
+          {
+            tokenHash: "8f434346648f6b96df89dda901c5176b10a6d83961fca37f8e1d249d8d68db9d",
+            clientId: "reader",
+            scopes: ["mcp:read"],
+            identityId: null,
+            notBefore: null,
+            expiresAt: null,
+            subject: null,
+            kind: "static",
+          },
+        ],
+        sessionKeys: [],
+      },
+    });
+
+    expect(response.statusCode).toBe(401);
+    expect(response.headers["WWW-Authenticate"]).toContain('Bearer realm="curyo-mcp"');
+    expect(response.headers["WWW-Authenticate"]).toContain('scope="mcp:read"');
+    expect(response.headers["WWW-Authenticate"]).not.toContain("resource_metadata=");
     expect(JSON.parse(response.body)).toEqual({
       error: "Missing bearer token",
     });

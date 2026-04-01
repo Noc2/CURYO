@@ -9,7 +9,12 @@ import { enforceHttpRateLimit, HttpRateLimitError } from "./lib/http-rate-limit.
 import { logEvent, serializeError } from "./lib/logging.js";
 import { extractRequestOrigin, isOriginAllowed, normalizeOrigin } from "./lib/origin.js";
 import { getMetricsText, recordHttpAuthFailure, recordHttpRateLimit, recordHttpRequest, recordReadinessCheck } from "./metrics.js";
-import { buildProtectedResourceMetadata, getProtectedResourceMetadataPath, resolveProtectedResourceMetadataUrl } from "./protected-resource-metadata.js";
+import {
+  buildProtectedResourceMetadata,
+  getProtectedResourceMetadataPath,
+  MissingHttpHostHeaderError,
+  resolveProtectedResourceMetadataUrl,
+} from "./protected-resource-metadata.js";
 import { createServer as createMcpServer } from "./server.js";
 
 export interface RunningHttpServer {
@@ -293,9 +298,19 @@ export async function handleStreamableHttpRequest(
       return;
     }
 
-    sendJson(response, 200, buildProtectedResourceMetadata(request, config), config);
-    logResponse(200, { route: "oauth-protected-resource" });
-    return;
+    try {
+      sendJson(response, 200, buildProtectedResourceMetadata(request, config), config);
+      logResponse(200, { route: "oauth-protected-resource" });
+      return;
+    } catch (error) {
+      if (error instanceof MissingHttpHostHeaderError) {
+        sendJson(response, 400, { error: error.message }, config);
+        logResponse(400, { route: "oauth-protected-resource" });
+        return;
+      }
+
+      throw error;
+    }
   }
 
   if (requestUrl.pathname !== config.httpPath) {
@@ -338,7 +353,7 @@ export async function handleStreamableHttpRequest(
   try {
     authInfo = authenticateRequest(request, config.httpAuth, {
       requiredScopes: ["mcp:read"],
-      resourceMetadataUrl: resolveProtectedResourceMetadataUrl(request, config),
+      resourceMetadataUrl: resolveAuthChallengeMetadataUrl(request, config),
     });
   } catch (error) {
     if (error instanceof HttpAuthError) {
@@ -581,6 +596,18 @@ function parseContentLength(header: string | string[] | undefined): number | nul
 
 function isPonderApiError(error: unknown): error is PonderApiError {
   return error instanceof Error && error.name === "PonderApiError";
+}
+
+function resolveAuthChallengeMetadataUrl(request: IncomingMessage, config: ServerConfig): string | undefined {
+  try {
+    return resolveProtectedResourceMetadataUrl(request, config);
+  } catch (error) {
+    if (error instanceof MissingHttpHostHeaderError) {
+      return undefined;
+    }
+
+    throw error;
+  }
 }
 
 function validateMcpRequestOrigin(
