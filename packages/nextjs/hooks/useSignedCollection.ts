@@ -193,6 +193,7 @@ export function useSignedCollection<TItem, TId, TExtraReason extends string = ne
     enabled: Boolean(config.address),
     staleTime: 30_000,
     refetchInterval: false,
+    retry: false,
   });
 
   const { data, isLoading, refetch } = useQuery({
@@ -216,6 +217,7 @@ export function useSignedCollection<TItem, TId, TExtraReason extends string = ne
     enabled: Boolean(config.address),
     staleTime: Infinity,
     refetchInterval: false,
+    retry: false,
   });
 
   const items = data?.items ?? config.emptyResponse.items;

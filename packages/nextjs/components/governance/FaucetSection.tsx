@@ -19,6 +19,7 @@ import { useTermsAcceptance } from "~~/contexts/TermsAcceptanceContext";
 import { useDeployedContractInfo, useScaffoldReadContract } from "~~/hooks/scaffold-eth";
 import { FREE_TRANSACTION_ALLOWANCE_QUERY_KEY } from "~~/hooks/useFreeTransactionAllowance";
 import { useVoterIdNFT } from "~~/hooks/useVoterIdNFT";
+import { shouldRefreshAfterFaucetClaim } from "~~/lib/governance/faucetQueryInvalidation";
 import { buildSelfVerificationApp, getSelfVerificationUniversalLink } from "~~/lib/governance/selfVerificationApp";
 import { notification } from "~~/utils/scaffold-eth";
 
@@ -200,8 +201,9 @@ export function FaucetSection({ referrer }: FaucetSectionProps) {
     }
 
     void queryClient.invalidateQueries({ queryKey: FREE_TRANSACTION_ALLOWANCE_QUERY_KEY });
-    // Invalidate all queries so navbar balance updates immediately
-    void queryClient.invalidateQueries();
+    void queryClient.invalidateQueries({
+      predicate: query => shouldRefreshAfterFaucetClaim(query.queryKey, address),
+    });
     notification.success("cREP sent. Your wallet balance may take a few seconds to refresh.", { duration: 6000 });
     router.replace(POST_CLAIM_ROUTE);
   }, [address, clearStatusToast, queryClient, refetchCrepBalance, router, stopPolling]);
