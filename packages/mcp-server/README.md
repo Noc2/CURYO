@@ -49,6 +49,15 @@ Notes:
 - In `NODE_ENV=production`, rate limiting also requires `CURYO_MCP_HTTP_TRUSTED_PROXY_HEADERS` to be set.
 - For hosted wallet sessions, keep the MCP server's `CURYO_MCP_HTTP_SESSION_*` settings aligned with the Next.js issuer configuration.
 
+## Production Notes
+
+- Single replica: the default in-memory rate limiter is acceptable for local development and small single-instance deployments.
+- Multiple replicas or public traffic: switch to `CURYO_MCP_HTTP_RATE_LIMIT_STORE=redis` so all instances share one rate-limit window.
+- Railway healthchecks gate deploys, but they are not a full monitoring system. Keep external uptime checks for the public endpoint.
+- Put the public MCP hostname behind Cloudflare or another WAF/CDN if it will be internet-facing.
+- When bearer auth is enabled, `/metrics` also requires a bearer token with `metrics:read`.
+- The MCP package now advertises protected-resource metadata for bearer auth, but generic self-serve OAuth login is still out of scope. Use deployment-managed bearer tokens or the wallet-session exchange exposed by the Next.js app.
+
 ## Scripts
 
 | Command | Description |
@@ -177,7 +186,7 @@ In Streamable HTTP mode:
 - rate limiting can run either in-process or against a shared Redis backend for multi-replica deployments
 - liveness is exposed on `/healthz`
 - readiness is exposed on `/readyz`
-- Prometheus-style metrics are exposed on `/metrics`
+- Prometheus-style metrics are exposed on `/metrics`, and require `metrics:read` when bearer auth is enabled
 - bearer auth protects the MCP path when `CURYO_MCP_HTTP_AUTH_MODE=bearer`
 - expiring/session tokens can be modeled through `CURYO_MCP_HTTP_TOKENS_JSON`
 - HTTP rate limits apply before MCP requests reach the transport
@@ -207,6 +216,10 @@ Example response shape:
   "metricsUrl": "https://mcp.curyo.xyz/metrics",
   "docsUrl": "https://curyo.xyz/docs/ai",
   "auth": {
+    "requiredScopes": {
+      "mcp": ["mcp:read"],
+      "metrics": ["metrics:read"]
+    },
     "walletSessions": {
       "challengeUrl": "https://curyo.xyz/api/mcp/session/challenge",
       "tokenUrl": "https://curyo.xyz/api/mcp/session/token"

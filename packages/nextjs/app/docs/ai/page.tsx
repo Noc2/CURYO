@@ -10,9 +10,9 @@ const AIPage: NextPage = () => {
     <article className="prose max-w-none">
       <h1>AI &amp; MCP</h1>
       <p className="lead text-base-content/60 text-lg">
-        Curyo&apos;s hosted MCP service is live at <code>mcp.curyo.xyz</code>. It gives AI clients structured reads,
-        narrow authenticated writes, and a canonical HTTP endpoint without requiring every developer to boot the
-        monorepo locally.
+        Curyo&apos;s hosted MCP service is available at <code>mcp.curyo.xyz</code>. It gives deployment-managed AI
+        clients structured reads, narrow authenticated writes, and a canonical HTTP endpoint without requiring every
+        developer to boot the monorepo locally.
       </p>
 
       <h2>Why This Matters</h2>
@@ -59,13 +59,18 @@ https://mcp.curyo.xyz/mcp`}</code>
       <p>The live service provides:</p>
       <ul>
         <li>Hosted read access backed by a managed Ponder deployment.</li>
-        <li>Stable health, readiness, auth, and observability for agent clients.</li>
+        <li>Health, readiness, protected metrics, and structured observability for agent clients.</li>
         <li>Typed authenticated write tools for a small set of common Curyo actions.</li>
         <li>Vote attribution to a registered frontend code so hosted vote flow can earn protocol frontend fees.</li>
       </ul>
       <p>
         The Next.js app also publishes a canonical config document at <code>/api/mcp/config</code> so clients can read
         the endpoint URL, health/readiness URLs, docs URL, and current wallet-session settings from one place.
+      </p>
+      <p>
+        Public auth is still deployment-managed rather than fully self-serve. In practice that means clients use
+        pre-provisioned bearer tokens or the wallet-session exchange when that flow is enabled. The MCP package now
+        advertises protected-resource metadata, but it is not a generic OAuth login product by itself.
       </p>
       <p>
         The open-source implementation lives in the{" "}
@@ -124,7 +129,7 @@ https://mcp.curyo.xyz/mcp`}</code>
             </tr>
             <tr>
               <td>Ops surface</td>
-              <td>HTTP rate limits, `/metrics`, health, readiness, and structured write audit events</td>
+              <td>HTTP rate limits, scoped `/metrics`, health, readiness, and structured write audit events</td>
             </tr>
           </tbody>
         </table>
@@ -234,6 +239,11 @@ https://mcp.curyo.xyz/mcp`}</code>
         a generic transaction relay.
       </p>
       <p>
+        For internet-facing deployments, the practical baseline is: put the endpoint behind a WAF/CDN, use Redis-backed
+        rate limiting if you run multiple replicas, and treat Railway healthchecks as deploy gates rather than full
+        monitoring.
+      </p>
+      <p>
         The repo now also includes a wallet-signed MCP session exchange in the Next app. Clients can request a challenge
         at <code>/api/mcp/session/challenge</code>, sign it with the bound wallet, and exchange that signature at{" "}
         <code>/api/mcp/session/token</code> for a short-lived bearer token that the hosted MCP server can verify with
@@ -264,6 +274,10 @@ https://mcp.curyo.xyz/mcp`}</code>
         The hosted bootstrap flow is: read <code>/api/mcp/config</code>, connect to the published HTTP endpoint, mint a
         wallet-bound bearer token when write access is needed, then attach a bearer token with the minimum scopes your
         client needs.
+      </p>
+      <p>
+        If your client needs Prometheus metrics, request a token with <code>metrics:read</code>. The main MCP endpoint
+        itself only requires <code>mcp:read</code>.
       </p>
       <pre>
         <code>{`Wallet-bound write session
