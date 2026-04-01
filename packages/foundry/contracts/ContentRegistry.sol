@@ -181,6 +181,10 @@ contract ContentRegistry is Initializable, AccessControlUpgradeable, PausableUpg
     );
     event SubmitterParticipationRewardClaimed(uint256 indexed contentId, address indexed submitter, uint256 amount);
     event SubmitterParticipationReservationFailed(uint256 indexed contentId, address rewardPool, uint256 amount);
+    event MilestoneZeroSubmitterParticipationRepairNeeded(uint256 indexed contentId, address indexed rewardPool);
+    event MilestoneZeroSubmitterParticipationTermsRepaired(
+        uint256 indexed contentId, address indexed rewardPool, uint256 rewardRateBps, uint256 rewardAmount
+    );
     event RatingUpdated(uint256 indexed contentId, uint256 oldRating, uint256 newRating);
     event VoterIdNFTUpdated(address voterIdNFT);
 
@@ -330,8 +334,9 @@ contract ContentRegistry is Initializable, AccessControlUpgradeable, PausableUpg
             require(voterIdNFT.hasVoterId(msg.sender), "Voter ID required");
         }
 
-        SubmissionMetadata memory metadata =
-            SubmissionMetadata({ url: url, title: title, description: description, tags: tags, categoryId: categoryId });
+        SubmissionMetadata memory metadata = SubmissionMetadata({
+            url: url, title: title, description: description, tags: tags, categoryId: categoryId
+        });
         _validateSubmissionMetadata(metadata);
 
         require(address(categoryRegistry) != address(0), "CategoryRegistry not set");
@@ -630,6 +635,40 @@ contract ContentRegistry is Initializable, AccessControlUpgradeable, PausableUpg
         milestoneZeroSubmitterRating[contentId] = rating > 100 ? 100 : uint8(rating);
         milestoneZeroSubmitterParticipationPool[contentId] = rewardPool;
         milestoneZeroSubmitterParticipationRateBps[contentId] = rewardRateBps;
+
+        if (rewardPool != address(0) && rewardRateBps == 0) {
+            emit MilestoneZeroSubmitterParticipationRepairNeeded(contentId, rewardPool);
+        }
+    }
+
+    /// @notice Governance-only repair hook for milestone-zero snapshots that were frozen with a zero participation rate.
+    /// @dev Only repairs healthy first-settlement outcomes and can be used once before any submitter reward state exists.
+    function repairMilestoneZeroSubmitterParticipationTerms(uint256 contentId, uint256 rewardRateBps)
+        external
+        onlyRole(DEFAULT_ADMIN_ROLE)
+        nonReentrant
+    {
+        Content storage c = contents[contentId];
+        require(c.id != 0, "Content does not exist");
+        require(milestoneZeroSubmitterTermsSnapshotted[contentId], "Milestone-zero terms missing");
+
+        address rewardPool = milestoneZeroSubmitterParticipationPool[contentId];
+        require(rewardPool != address(0), "No milestone-zero pool");
+        require(milestoneZeroSubmitterParticipationRateBps[contentId] == 0, "Repair not needed");
+        require(rewardRateBps > 0 && rewardRateBps <= 9000, "Invalid reward rate");
+        require(milestoneZeroSubmitterRating[contentId] >= SLASH_RATING_THRESHOLD, "Slashable milestone-zero");
+        require(submitterParticipationRewardOwed[contentId] == 0, "Reward already accrued");
+        require(submitterParticipationRewardPaid[contentId] == 0, "Reward already claimed");
+        require(submitterParticipationRewardReserved[contentId] == 0, "Reward already reserved");
+
+        milestoneZeroSubmitterParticipationRateBps[contentId] = rewardRateBps;
+
+        uint256 rewardAmount = c.submitterStake * rewardRateBps / 10000;
+        if (c.submitterStakeReturned) {
+            _accrueSubmitterParticipationReward(contentId, c, rewardPool, rewardRateBps);
+        }
+
+        emit MilestoneZeroSubmitterParticipationTermsRepaired(contentId, rewardPool, rewardRateBps, rewardAmount);
     }
 
     /// @notice Called by VotingEngine once the dormancy window elapses without any settled round.
@@ -686,12 +725,7 @@ contract ContentRegistry is Initializable, AccessControlUpgradeable, PausableUpg
             ? milestoneZeroSubmitterParticipationRateBps[contentId]
             : submitterParticipationSnapshotRateBps[contentId];
 
-        _accrueSubmitterParticipationReward(
-            contentId,
-            c,
-            rewardPool,
-            rewardRateBps
-        );
+        _accrueSubmitterParticipationReward(contentId, c, rewardPool, rewardRateBps);
         emit SubmitterStakeReturned(contentId, c.submitterStake);
     }
 
