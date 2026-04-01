@@ -18,9 +18,9 @@ export const DOCS_NAV = [
     section: "Technical",
     links: [
       { label: "Smart Contracts", href: "/docs/smart-contracts" },
+      { label: "Frontend Integrations", href: "/docs/frontend-codes" },
       { label: "SDK", href: "/docs/sdk" },
       { label: "AI & MCP", href: "/docs/ai" },
-      { label: "Frontend Integrations", href: "/docs/frontend-codes" },
     ],
   },
 ];
