@@ -645,8 +645,8 @@ contract ContentRegistry is Initializable, AccessControlUpgradeable, PausableUpg
     /// @dev Only repairs healthy first-settlement outcomes and can be used once before any submitter reward state exists.
     function repairMilestoneZeroSubmitterParticipationTerms(uint256 contentId, uint256 rewardRateBps)
         external
-        onlyRole(DEFAULT_ADMIN_ROLE)
         nonReentrant
+        onlyRole(DEFAULT_ADMIN_ROLE)
     {
         Content storage c = contents[contentId];
         require(c.id != 0, "Content does not exist");
