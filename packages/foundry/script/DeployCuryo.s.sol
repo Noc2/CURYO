@@ -272,10 +272,12 @@ contract DeployCuryo is ScaffoldETHDeploy {
                 });
                 bytes32 configId = IIdentityVerificationHubV2(hubAddress).setVerificationConfigV2(config);
                 humanFaucet.setConfigId(configId);
+                _assertFaucetVerificationConfig(humanFaucet, hubAddress, configId);
                 console.log("Set verification config on HumanFaucet");
             } else {
                 bytes32 mockConfigId = MockIdentityVerificationHub(hubAddress).MOCK_CONFIG_ID();
                 humanFaucet.setConfigId(mockConfigId);
+                _assertFaucetVerificationConfig(humanFaucet, hubAddress, mockConfigId);
                 console.log("Set mock configId on HumanFaucet");
             }
 
@@ -471,6 +473,18 @@ contract DeployCuryo is ScaffoldETHDeploy {
             "ParticipationPool launch allocation"
         );
         _require(crepToken.balanceOf(address(humanFaucet)) == FAUCET_POOL_AMOUNT, "HumanFaucet launch allocation");
+    }
+
+    function _assertFaucetVerificationConfig(HumanFaucet humanFaucet, address hubAddress, bytes32 expectedConfigId)
+        internal
+        view
+    {
+        _require(expectedConfigId != bytes32(0), "HumanFaucet config created");
+        _require(humanFaucet.verificationConfigId() == expectedConfigId, "HumanFaucet config stored");
+        _require(
+            IIdentityVerificationHubV2(hubAddress).verificationConfigV2Exists(expectedConfigId),
+            "HumanFaucet config exists on hub"
+        );
     }
 
     function _verifyProductionDeploymentRoles(
