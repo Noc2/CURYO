@@ -68,8 +68,9 @@ const HowItWorks: NextPage = () => {
       <h2>Reward Distribution</h2>
       <p>
         When a round settles, winners recover their stake and share the losing pool. Revealed losers can still reclaim{" "}
-        <strong>{protocolDocFacts.revealedLoserRefundPercentLabel}</strong> of raw stake. After that, the remaining pool
-        splits <strong>{protocolDocFacts.rewardSplitSummaryLabel}</strong>.
+        <strong>{protocolDocFacts.revealedLoserRefundPercentLabel}</strong> of raw stake, which gives voters an
+        incentive to reveal their votes before settlement. After that, the remaining pool splits{" "}
+        <strong>{protocolDocFacts.rewardSplitSummaryLabel}</strong>.
       </p>
       <div className="not-prose my-6">
         <RewardSplitChart />
