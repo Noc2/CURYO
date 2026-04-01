@@ -50,7 +50,7 @@ export function authenticateRequest(
 
     const keyId = matchedToken.tokenHash.slice(0, 12);
 
-    return {
+    const authInfo: AuthInfo = {
       token,
       clientId: matchedToken.clientId,
       scopes: matchedToken.scopes,
@@ -64,6 +64,9 @@ export function authenticateRequest(
         expiresAt: matchedToken.expiresAt,
       },
     };
+
+    ensureRequiredScopes(authInfo, authConfig, challengeOptions);
+    return authInfo;
   }
 
   if (authConfig.sessionKeys.length === 0) {
@@ -83,7 +86,7 @@ export function authenticateRequest(
       keys: authConfig.sessionKeys,
     });
 
-    return {
+    const authInfo: AuthInfo = {
       token,
       clientId: claims.clientId,
       scopes: claims.scopes,
@@ -100,6 +103,9 @@ export function authenticateRequest(
         sessionId: claims.jti,
       },
     };
+
+    ensureRequiredScopes(authInfo, authConfig, challengeOptions);
+    return authInfo;
   } catch (error) {
     const description = mapSessionTokenError(error);
     throw new HttpAuthError(
@@ -112,6 +118,33 @@ export function authenticateRequest(
       }),
     );
   }
+}
+
+function ensureRequiredScopes(
+  authInfo: AuthInfo,
+  authConfig: HttpAuthConfig,
+  challengeOptions: HttpAuthChallengeOptions,
+): void {
+  if (!challengeOptions.requiredScopes || challengeOptions.requiredScopes.length === 0) {
+    return;
+  }
+
+  const grantedScopes = new Set(authInfo.scopes ?? []);
+  const hasAllRequiredScopes = challengeOptions.requiredScopes.every((scope) => grantedScopes.has(scope));
+  if (hasAllRequiredScopes) {
+    return;
+  }
+
+  throw new HttpAuthError(
+    "Bearer token lacks the required scope",
+    buildWwwAuthenticateHeader(authConfig, {
+      error: "insufficient_scope",
+      errorDescription: "The access token is missing the required scope",
+      requiredScopes: challengeOptions.requiredScopes,
+      resourceMetadataUrl: challengeOptions.resourceMetadataUrl,
+    }),
+    403,
+  );
 }
 
 function ensureTokenIsActive(

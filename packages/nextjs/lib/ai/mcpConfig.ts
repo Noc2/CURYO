@@ -2,6 +2,7 @@ const DEFAULT_MCP_BASE_URL = "https://mcp.curyo.xyz";
 const DEFAULT_MCP_PATH = "/mcp";
 const DEFAULT_SITE_BASE_URL = "https://curyo.xyz";
 const DEFAULT_MCP_SESSION_TTL_MS = 60 * 60 * 1000;
+const METRICS_REQUIRED_SCOPES = ["metrics:read"] as const;
 const DEFAULT_MCP_SESSION_SCOPES = ["mcp:read"] as const;
 const SUPPORTED_MCP_SESSION_SCOPES = [
   "mcp:read",
@@ -35,6 +36,10 @@ interface HostedMcpConfig {
   auth: {
     mode: "bearer";
     header: string;
+    requiredScopes: {
+      mcp: readonly string[];
+      metrics: readonly string[];
+    };
     walletSessions: {
       enabled: boolean;
       challengeUrl: string;
@@ -75,6 +80,10 @@ export function buildHostedMcpConfig(env: McpConfigEnv = process.env): HostedMcp
     auth: {
       mode: "bearer",
       header: "Authorization: Bearer <token>",
+      requiredScopes: {
+        mcp: DEFAULT_MCP_SESSION_SCOPES,
+        metrics: METRICS_REQUIRED_SCOPES,
+      },
       walletSessions: {
         enabled: walletSessionAuthEnabled,
         challengeUrl: buildPathUrl(siteBaseUrl, "/api/mcp/session/challenge"),

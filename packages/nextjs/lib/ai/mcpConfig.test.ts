@@ -10,6 +10,10 @@ test("buildHostedMcpConfig returns canonical hosted URLs by default", () => {
   assert.equal(config.readinessUrl, "https://mcp.curyo.xyz/readyz");
   assert.equal(config.metricsUrl, "https://mcp.curyo.xyz/metrics");
   assert.equal(config.docsUrl, "https://curyo.xyz/docs/ai");
+  assert.deepEqual(config.auth.requiredScopes, {
+    mcp: ["mcp:read"],
+    metrics: ["metrics:read"],
+  });
   assert.equal(config.auth.walletSessions.enabled, false);
   assert.equal(config.auth.walletSessions.challengeUrl, "https://curyo.xyz/api/mcp/session/challenge");
   assert.equal(config.auth.walletSessions.tokenUrl, "https://curyo.xyz/api/mcp/session/token");
@@ -37,6 +41,10 @@ test("buildHostedMcpConfig respects environment overrides and wallet session con
   assert.equal(config.auth.walletSessions.challengeUrl, "https://staging.curyo.xyz/api/mcp/session/challenge");
   assert.equal(config.auth.walletSessions.tokenUrl, "https://staging.curyo.xyz/api/mcp/session/token");
   assert.equal(config.auth.walletSessions.ttlSeconds, 900);
+  assert.deepEqual(config.auth.requiredScopes, {
+    mcp: ["mcp:read"],
+    metrics: ["metrics:read"],
+  });
   assert.deepEqual(config.auth.walletSessions.supportedScopes, [
     "mcp:read",
     "metrics:read",

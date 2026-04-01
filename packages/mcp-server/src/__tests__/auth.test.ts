@@ -63,6 +63,29 @@ describe("authenticateRequest", () => {
     }
   });
 
+  it("rejects bearer tokens that lack the required scope", () => {
+    try {
+      authenticateRequest(
+        {
+          headers: {
+            authorization: "Bearer secret-token",
+          },
+        } as IncomingMessage,
+        bearerAuthConfig,
+        {
+          requiredScopes: ["metrics:read"],
+        },
+      );
+      throw new Error("Expected authenticateRequest to throw");
+    } catch (error) {
+      expect(error).toBeInstanceOf(HttpAuthError);
+      const authError = error as HttpAuthError;
+      expect(authError.statusCode).toBe(403);
+      expect(authError.wwwAuthenticate).toContain('error="insufficient_scope"');
+      expect(authError.wwwAuthenticate).toContain('scope="metrics:read"');
+    }
+  });
+
   it("returns auth info for a valid bearer token", () => {
     const authInfo = authenticateRequest(
       {

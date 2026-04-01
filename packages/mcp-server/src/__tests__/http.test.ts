@@ -333,6 +333,93 @@ describe("handleStreamableHttpRequest", () => {
     expect(response.body).toContain("mcp_write_tool_invocations_total");
   });
 
+  it("requires a metrics scope on /metrics when bearer auth is enabled", async () => {
+    const request = {
+      url: "/metrics",
+      method: "GET",
+      headers: {
+        host: "127.0.0.1:3334",
+        authorization: "Bearer secret-token",
+      },
+      socket: {
+        remoteAddress: "127.0.0.1",
+      },
+    } as unknown as IncomingMessage;
+    const response = createMockResponse();
+
+    await handleStreamableHttpRequest(request, response, {
+      ...config,
+      httpAuth: {
+        mode: "bearer",
+        realm: "curyo-mcp",
+        tokenHashes: ["930bbdc51b6aed5c2a5678fd6e28dee7a05e8a4b643cfc0b4427c3efb86c0d94"],
+        scopes: ["mcp:read"],
+        tokens: [
+          {
+            tokenHash: "930bbdc51b6aed5c2a5678fd6e28dee7a05e8a4b643cfc0b4427c3efb86c0d94",
+            clientId: "reader",
+            scopes: ["mcp:read"],
+            identityId: null,
+            notBefore: null,
+            expiresAt: null,
+            subject: null,
+            kind: "static",
+          },
+        ],
+        sessionKeys: [],
+      },
+    });
+
+    expect(response.statusCode).toBe(403);
+    expect(response.headers["WWW-Authenticate"]).toContain('error="insufficient_scope"');
+    expect(response.headers["WWW-Authenticate"]).toContain('scope="metrics:read"');
+    expect(JSON.parse(response.body)).toEqual({
+      error: "Bearer token lacks the required scope",
+    });
+  });
+
+  it("serves /metrics for bearer tokens with metrics:read", async () => {
+    const request = {
+      url: "/metrics",
+      method: "GET",
+      headers: {
+        host: "127.0.0.1:3334",
+        authorization: "Bearer secret-token",
+      },
+      socket: {
+        remoteAddress: "127.0.0.1",
+      },
+    } as unknown as IncomingMessage;
+    const response = createMockResponse();
+
+    await handleStreamableHttpRequest(request, response, {
+      ...config,
+      httpAuth: {
+        mode: "bearer",
+        realm: "curyo-mcp",
+        tokenHashes: ["930bbdc51b6aed5c2a5678fd6e28dee7a05e8a4b643cfc0b4427c3efb86c0d94"],
+        scopes: ["metrics:read"],
+        tokens: [
+          {
+            tokenHash: "930bbdc51b6aed5c2a5678fd6e28dee7a05e8a4b643cfc0b4427c3efb86c0d94",
+            clientId: "metrics-reader",
+            scopes: ["metrics:read"],
+            identityId: null,
+            notBefore: null,
+            expiresAt: null,
+            subject: null,
+            kind: "static",
+          },
+        ],
+        sessionKeys: [],
+      },
+    });
+
+    expect(response.statusCode).toBe(200);
+    expect(response.headers["Content-Type"]).toContain("text/plain");
+    expect(response.body).toContain("mcp_http_requests_total");
+  });
+
   it("rejects unauthenticated MCP requests when bearer auth is enabled", async () => {
     const request = {
       url: "/mcp",
@@ -375,6 +462,52 @@ describe("handleStreamableHttpRequest", () => {
     expect(response.headers["WWW-Authenticate"]).toContain('scope="mcp:read"');
     expect(JSON.parse(response.body)).toEqual({
       error: "Missing bearer token",
+    });
+  });
+
+  it("rejects MCP requests for bearer tokens without mcp:read", async () => {
+    const request = {
+      url: "/mcp",
+      method: "POST",
+      headers: {
+        host: "127.0.0.1:3334",
+        authorization: "Bearer secret-token",
+      },
+      socket: {
+        remoteAddress: "127.0.0.1",
+      },
+    } as unknown as IncomingMessage;
+    const response = createMockResponse();
+
+    await handleStreamableHttpRequest(request, response, {
+      ...config,
+      httpAuth: {
+        mode: "bearer",
+        realm: "curyo-mcp",
+        tokenHashes: ["930bbdc51b6aed5c2a5678fd6e28dee7a05e8a4b643cfc0b4427c3efb86c0d94"],
+        scopes: ["metrics:read"],
+        tokens: [
+          {
+            tokenHash: "930bbdc51b6aed5c2a5678fd6e28dee7a05e8a4b643cfc0b4427c3efb86c0d94",
+            clientId: "metrics-reader",
+            scopes: ["metrics:read"],
+            identityId: null,
+            notBefore: null,
+            expiresAt: null,
+            subject: null,
+            kind: "static",
+          },
+        ],
+        sessionKeys: [],
+      },
+    });
+
+    expect(response.statusCode).toBe(403);
+    expect(response.headers["WWW-Authenticate"]).toContain('error="insufficient_scope"');
+    expect(response.headers["WWW-Authenticate"]).toContain('scope="mcp:read"');
+    expect(response.headers["WWW-Authenticate"]).toContain('resource_metadata="http://127.0.0.1:3334/.well-known/oauth-protected-resource/mcp"');
+    expect(JSON.parse(response.body)).toEqual({
+      error: "Bearer token lacks the required scope",
     });
   });
 

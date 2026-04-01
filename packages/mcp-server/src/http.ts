@@ -225,11 +225,38 @@ export async function handleStreamableHttpRequest(
   }
 
   if (requestUrl.pathname === METRICS_PATH) {
+    let authInfo: AuthInfo | undefined;
+    try {
+      authInfo = authenticateRequest(request, config.httpAuth, {
+        requiredScopes: ["metrics:read"],
+      });
+    } catch (error) {
+      if (error instanceof HttpAuthError) {
+        recordHttpAuthFailure();
+        response.setHeader("WWW-Authenticate", error.wwwAuthenticate);
+        response.setHeader("Cache-Control", "no-store");
+        sendJson(response, error.statusCode, { error: error.message }, config);
+        logEvent("warn", "mcp_http_auth_failed", {
+          method,
+          path: requestUrl.pathname,
+          statusCode: error.statusCode,
+          durationMs: Date.now() - startedAt,
+          remoteAddress,
+          authMode: config.httpAuth.mode,
+          route: "metrics",
+          ...serializeError(error),
+        });
+        return;
+      }
+
+      throw error;
+    }
+
     applyCorsHeaders(response, config);
     response.statusCode = 200;
     response.setHeader("Content-Type", "text/plain; version=0.0.4; charset=utf-8");
     response.end(getMetricsText());
-    logResponse(200, { route: "metrics" });
+    logResponse(200, { route: "metrics", authClientId: authInfo?.clientId });
     return;
   }
 
