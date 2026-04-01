@@ -104,16 +104,40 @@ contract MockIdentityVerificationHub {
         });
     }
 
-    /// @notice Mock verify function - not used in testing, simulation is done via simulateVerification
+    /// @notice Mock bytes-based verify entrypoint used by SelfVerificationRoot.verifySelfProof tests
+    /// @dev Parses the same config/user-context structure that the real hub receives, then calls
+    ///      back into `onVerificationSuccess` on the requesting contract.
     function verify(
-        bytes calldata,
-        /* baseVerificationInput */
-        bytes calldata /* userContextData */
+        bytes calldata baseVerificationInput,
+        bytes calldata userContextData
     )
         external
-        pure
     {
-        revert("Use simulateVerification for testing");
+        require(baseVerificationInput.length >= 96, "Invalid base input");
+        require(userContextData.length >= 96, "Invalid user context");
+
+        bytes32 configId;
+        bytes32 attestationId;
+        uint256 userIdentifier;
+        assembly {
+            configId := calldataload(userContextData.offset)
+            attestationId := calldataload(add(baseVerificationInput.offset, 64))
+            userIdentifier := calldataload(add(userContextData.offset, 64))
+        }
+
+        require(configId == MOCK_CONFIG_ID, "Unknown config");
+
+        address user = address(uint160(userIdentifier));
+        require(verifiedUsers[user], "User not verified");
+        require(userNullifiers[user] != 0, "No nullifier set");
+
+        ISelfVerificationRoot.GenericDiscloseOutputV2 memory output = _buildMockVerificationOutput(user, 18);
+        output.attestationId = attestationId;
+
+        bytes memory callbackUserData = userContextData[96:];
+        ISelfVerificationRoot(msg.sender).onVerificationSuccess(abi.encode(output), callbackUserData);
+
+        emit VerificationSimulated(msg.sender, user);
     }
 
     // --- Testing Functions ---

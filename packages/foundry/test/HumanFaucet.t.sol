@@ -6,6 +6,7 @@ import { HumanFaucet } from "../contracts/HumanFaucet.sol";
 import { MockIdentityVerificationHub } from "../contracts/mocks/MockIdentityVerificationHub.sol";
 import { CuryoReputation } from "../contracts/CuryoReputation.sol";
 import { Pausable } from "@openzeppelin/contracts/utils/Pausable.sol";
+import { SelfVerificationRoot } from "@selfxyz/contracts/contracts/abstract/SelfVerificationRoot.sol";
 import { ISelfVerificationRoot } from "@selfxyz/contracts/contracts/interfaces/ISelfVerificationRoot.sol";
 
 /// @title HumanFaucet Test Suite
@@ -96,6 +97,48 @@ contract HumanFaucetTest is Test {
         assertTrue(faucet.hasClaimed(user1));
         assertEq(faucet.totalClaimants(), 1);
         assertEq(faucet.totalClaimed(), TIER_0_AMOUNT);
+    }
+
+    function test_VerifySelfProof_Success() public {
+        mockHub.setVerified(user1);
+
+        vm.prank(user1);
+        faucet.verifySelfProof(_buildProofPayload(PASSPORT_ATTESTATION_ID), _buildUserContextData(user1, ""));
+
+        assertEq(crepToken.balanceOf(user1), TIER_0_AMOUNT);
+        assertTrue(faucet.hasClaimed(user1));
+    }
+
+    function test_VerifySelfProof_WithReferralUserData() public {
+        mockHub.setVerified(user1);
+        vm.prank(user1);
+        faucet.verifySelfProof(_buildProofPayload(PASSPORT_ATTESTATION_ID), _buildUserContextData(user1, ""));
+
+        mockHub.setVerified(user2);
+        bytes memory userData = abi.encodePacked(user1);
+
+        vm.prank(user2);
+        faucet.verifySelfProof(_buildProofPayload(PASSPORT_ATTESTATION_ID), _buildUserContextData(user2, userData));
+
+        assertEq(faucet.referredBy(user2), user1);
+        assertEq(crepToken.balanceOf(user2), TIER_0_AMOUNT + TIER_0_REFERRAL_BONUS);
+        assertEq(faucet.referralEarnings(user1), TIER_0_REFERRER_REWARD);
+    }
+
+    function test_VerifySelfProof_RevertShortProofPayload() public {
+        mockHub.setVerified(user1);
+
+        vm.prank(user1);
+        vm.expectRevert(SelfVerificationRoot.InvalidDataFormat.selector);
+        faucet.verifySelfProof(hex"1234", _buildUserContextData(user1, ""));
+    }
+
+    function test_VerifySelfProof_RevertShortUserContextData() public {
+        mockHub.setVerified(user1);
+
+        vm.prank(user1);
+        vm.expectRevert(SelfVerificationRoot.InvalidDataFormat.selector);
+        faucet.verifySelfProof(_buildProofPayload(PASSPORT_ATTESTATION_ID), abi.encodePacked(bytes32(uint256(block.chainid))));
     }
 
     function test_Claim_MultipleUsers() public {
@@ -713,5 +756,13 @@ contract HumanFaucetTest is Test {
     ///      Storage slot 6 determined via `forge inspect HumanFaucet storage`.
     function _setTotalClaimants(uint256 value) internal {
         vm.store(address(faucet), bytes32(uint256(6)), bytes32(value));
+    }
+
+    function _buildProofPayload(bytes32 attestationId) internal pure returns (bytes memory) {
+        return abi.encodePacked(attestationId, bytes32(uint256(1)));
+    }
+
+    function _buildUserContextData(address user, bytes memory userData) internal view returns (bytes memory) {
+        return abi.encodePacked(bytes32(uint256(block.chainid)), bytes32(uint256(uint160(user))), userData);
     }
 }
