@@ -6,10 +6,13 @@ import { checkRateLimit } from "~~/utils/rateLimit";
 const RATE_LIMIT = { limit: 60, windowMs: 60_000 };
 
 export async function GET(request: NextRequest) {
-  const limited = await checkRateLimit(request, RATE_LIMIT);
+  const frontend = request.nextUrl.searchParams.get("frontend");
+  const limited = await checkRateLimit(request, RATE_LIMIT, {
+    allowOnStoreUnavailable: true,
+    extraKeyParts: [typeof frontend === "string" ? frontend : undefined],
+  });
   if (limited) return limited;
 
-  const frontend = request.nextUrl.searchParams.get("frontend");
   if (!frontend || !isAddress(frontend)) {
     return NextResponse.json({ error: "Valid frontend address is required" }, { status: 400 });
   }
