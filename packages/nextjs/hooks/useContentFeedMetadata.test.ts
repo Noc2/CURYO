@@ -1,7 +1,11 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { type ContentItem, mapContentItem, mergeContentFeedMetadata } from "~~/hooks/contentFeed/shared";
-import { getContentFeedMetadataCacheKey, getContentFeedMetadataUrls } from "~~/hooks/useContentFeedMetadata";
+import {
+  getContentFeedMetadataCacheKey,
+  getContentFeedMetadataUrls,
+  normalizeValidationBatchResults,
+} from "~~/hooks/useContentFeedMetadata";
 
 function makeContentItem(overrides: Partial<ContentItem> & Pick<ContentItem, "id" | "url">): ContentItem {
   return {
@@ -79,6 +83,27 @@ test("mergeContentFeedMetadata preserves prior metadata when a later refresh omi
   const [preserved] = mergeContentFeedMetadata([enriched], {}, {});
   assert.equal(preserved.contentMetadata?.title, "openai/openai-node");
   assert.equal(preserved.thumbnailUrl, "https://avatars.githubusercontent.com/u/14957082?v=4");
+});
+
+test("normalizeValidationBatchResults marks generic urls as broken when the API leaves them unvalidated", () => {
+  const genericUrl = "https://example.com/articles/security";
+  const platformUrl = "https://www.youtube.com/watch?v=dQw4w9WgXcQ";
+
+  assert.deepEqual(
+    normalizeValidationBatchResults([genericUrl, platformUrl], {
+      [platformUrl]: { isValid: true },
+    }),
+    {
+      [genericUrl]: false,
+      [platformUrl]: true,
+    },
+  );
+});
+
+test("normalizeValidationBatchResults leaves omitted supported platforms unresolved", () => {
+  const platformUrl = "https://www.youtube.com/watch?v=dQw4w9WgXcQ";
+
+  assert.deepEqual(normalizeValidationBatchResults([platformUrl], {}), {});
 });
 
 test("mapContentItem preserves open-round directional vote counts", () => {

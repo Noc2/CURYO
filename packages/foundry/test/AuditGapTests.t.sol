@@ -115,7 +115,7 @@ contract AuditGapTests is VotingTestBase {
         ProtocolConfig(address(votingEngine.protocolConfig())).setTreasury(treasury);
         ProtocolConfig(address(votingEngine.protocolConfig())).setFrontendRegistry(address(frontendRegistry));
         ProtocolConfig(address(votingEngine.protocolConfig())).setParticipationPool(address(participationPool));
-        ProtocolConfig(address(votingEngine.protocolConfig())).setConfig(EPOCH_DURATION, 7 days, 3, 200);
+        _setTlockRoundConfig(ProtocolConfig(address(votingEngine.protocolConfig())), EPOCH_DURATION, 7 days, 3, 200);
 
         // Fund consensus reserve
         uint256 reserveAmount = 1_000_000e6;
@@ -160,7 +160,7 @@ contract AuditGapTests is VotingTestBase {
         bytes32 hash = _commitHash(isUp, salt, contentId, ciphertext);
         vm.startPrank(voter);
         crepToken.approve(address(votingEngine), stakeAmt);
-        votingEngine.commitVote(contentId, hash, ciphertext, stakeAmt, fe);
+        votingEngine.commitVote(contentId, _tlockCommitTargetRound(), _tlockDrandChainHash(), hash, ciphertext, stakeAmt, fe);
         vm.stopPrank();
         commitKey = keccak256(abi.encodePacked(voter, hash));
     }
@@ -188,7 +188,7 @@ contract AuditGapTests is VotingTestBase {
         vm.startPrank(voter1);
         crepToken.approve(address(votingEngine), STAKE);
         vm.expectRevert(); // EnforcedPause
-        votingEngine.commitVote(contentId, hash, ct, STAKE, address(0));
+        votingEngine.commitVote(contentId, _tlockCommitTargetRound(), _tlockDrandChainHash(), hash, ct, STAKE, address(0));
         vm.stopPrank();
     }
 
@@ -519,7 +519,7 @@ contract AuditGapTests is VotingTestBase {
         vm.startPrank(voter1);
         crepToken.approve(address(votingEngine), STAKE);
         vm.expectRevert(RoundVotingEngine.CooldownActive.selector);
-        votingEngine.commitVote(contentId, hash, ct, STAKE, address(0));
+        votingEngine.commitVote(contentId, _tlockCommitTargetRound(), _tlockDrandChainHash(), hash, ct, STAKE, address(0));
         vm.stopPrank();
 
         // At exactly 24h: should succeed (on different content since already committed on contentId round)

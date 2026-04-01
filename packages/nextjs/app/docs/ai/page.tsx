@@ -6,8 +6,9 @@ const AIPage: NextPage = () => {
     <article className="prose max-w-none">
       <h1>AI &amp; MCP</h1>
       <p className="lead text-base-content/60 text-lg">
-        Curyo now has an in-repo MCP path for hosted reads and narrow authenticated writes. The remaining job is turning
-        that into a canonical managed endpoint at <code>mcp.curyo.xyz</code>.
+        Curyo&apos;s hosted MCP service is live at <code>mcp.curyo.xyz</code>. It gives AI clients structured reads,
+        narrow authenticated writes, and a canonical HTTP endpoint without requiring every developer to boot the
+        monorepo locally.
       </p>
 
       <h2>Why This Matters</h2>
@@ -42,83 +43,93 @@ const AIPage: NextPage = () => {
         />
       </div>
 
-      <h2>Hosted MCP Target</h2>
+      <h2>Hosted MCP Service</h2>
       <p>
-        The target shape is a canonical hosted endpoint at <code>mcp.curyo.xyz</code> that AI tools can connect to
-        directly instead of asking every developer to boot the monorepo, run Ponder, and host their own MCP server.
+        The canonical hosted endpoint is <code>mcp.curyo.xyz</code>. AI tools can connect directly to the live service
+        instead of running their own local MCP server, Ponder stack, and supporting infrastructure.
       </p>
       <pre>
-        <code>{`Planned endpoint
+        <code>{`Live endpoint
 https://mcp.curyo.xyz/mcp`}</code>
       </pre>
-      <p>The hosted service should provide:</p>
+      <p>The live service provides:</p>
       <ul>
         <li>Hosted read access backed by a managed Ponder deployment.</li>
         <li>Stable health, readiness, auth, and observability for agent clients.</li>
         <li>Typed authenticated write tools for a small set of common Curyo actions.</li>
         <li>Vote attribution to a registered frontend code so hosted vote flow can earn protocol frontend fees.</li>
       </ul>
+      <p>
+        The Next.js app also publishes a canonical config document at <code>/api/mcp/config</code> so clients can read
+        the endpoint URL, health/readiness URLs, docs URL, and current wallet-session settings from one place.
+      </p>
 
-      <h2>Current State Vs Target</h2>
+      <h2>Service Overview</h2>
       <div className="overflow-x-auto">
         <table>
           <thead>
             <tr>
               <th>Area</th>
-              <th>Current repo state</th>
-              <th>Hosted target</th>
+              <th>Live service behavior</th>
             </tr>
           </thead>
           <tbody>
             <tr>
               <td>MCP transport</td>
-              <td>Read-only MCP package with stdio and Streamable HTTP transports</td>
-              <td>Canonical hosted HTTP endpoint for external AI clients</td>
+              <td>
+                Canonical Streamable HTTP endpoint for external AI clients, with the in-repo package still available for
+                local stdio workflows
+              </td>
             </tr>
             <tr>
               <td>Indexer dependency</td>
-              <td>
-                Defaults to local Ponder at <code>localhost:42069</code>
-              </td>
-              <td>Managed Ponder + Postgres behind the hosted MCP</td>
+              <td>Managed Ponder + Postgres behind the hosted MCP service</td>
             </tr>
             <tr>
               <td>Authentication</td>
-              <td>Scoped bearer tokens with optional identity binding for hosted writes</td>
-              <td>Scoped per-user auth for writes, with auditable wallet binding</td>
+              <td>
+                Scoped bearer tokens plus wallet-signed session issuance endpoints for short-lived write-capable MCP
+                sessions
+              </td>
             </tr>
             <tr>
               <td>Write support</td>
-              <td>Typed write tools in repo: vote, submit_content, claim_reward, claim_frontend_fee</td>
-              <td>Small typed write surface, not arbitrary contract calls</td>
+              <td>
+                Typed write tools in repo: vote, submit_content, claim_reward, claim_frontend_fee, with preflight
+                simulation and policy guards
+              </td>
             </tr>
             <tr>
               <td>Frontend fee attribution</td>
               <td>Available at protocol level, with configurable frontend attribution in bot and hosted MCP flows</td>
-              <td>Hosted vote path includes a registered frontend code by default</td>
+            </tr>
+            <tr>
+              <td>Ops surface</td>
+              <td>HTTP rate limits, `/metrics`, health, readiness, and structured write audit events</td>
             </tr>
           </tbody>
         </table>
       </div>
 
-      <h2>Phase 1: Hosted Read Rollout</h2>
+      <h2>Read Surface</h2>
       <p>
-        The repo already contains the MCP read surface with stdio and Streamable HTTP transport. The rollout work for
-        phase 1 is hosting it against managed infrastructure so developers and agent clients no longer need to boot the
-        whole monorepo locally.
+        The live service exposes the existing content, profile, vote, category, and stats tools over a managed hosted
+        endpoint. Agent clients no longer need to boot the monorepo locally just to query Curyo data.
       </p>
       <ul>
-        <li>Keep the existing content, profile, vote, category, and stats tools.</li>
-        <li>Back them with hosted Ponder rather than local-only defaults.</li>
-        <li>Publish one official MCP config for agent clients.</li>
-        <li>Rate-limit or token-gate external access as needed without changing the tool surface.</li>
+        <li>Content, profile, vote, category, and stats tools are available through the hosted MCP endpoint.</li>
+        <li>Reads are backed by managed Ponder infrastructure rather than local-only defaults.</li>
+        <li>
+          The canonical client bootstrap document lives at <code>/api/mcp/config</code>.
+        </li>
+        <li>External access is token-gated and rate-limited without changing the read tool surface.</li>
       </ul>
 
-      <h2>Phase 2: Hosted Write Rollout</h2>
+      <h2>Write Surface</h2>
       <p>
-        The first narrow write tools are now implemented in the MCP package. Phase 2 is about rolling them out with
-        stronger production auth, signer isolation, policy controls, and monitoring rather than expanding the on-chain
-        surface area.
+        The hosted MCP service exposes a narrow write surface on top of the protocol. The goal is not to mirror raw
+        contract access, but to offer a small number of typed actions with auth, simulation, policy checks, and audit
+        logging.
       </p>
       <div className="overflow-x-auto">
         <table>
@@ -185,63 +196,39 @@ https://mcp.curyo.xyz/mcp`}</code>
 
       <h2>Security Model</h2>
       <p>
-        Hosted reads can stay simple. Hosted writes need a stricter auth and policy model than the current static bearer
-        token setup.
+        Hosted reads stay simple. Hosted writes use a stricter auth and policy model so the public MCP endpoint remains
+        narrow, attributable, and operable.
       </p>
       <ul>
-        <li>Use scoped per-user auth for writes, not a shared static bearer secret.</li>
-        <li>Bind each write-capable session to a specific wallet or delegate wallet.</li>
-        <li>Simulate and dry-run every write tool before live execution.</li>
-        <li>Keep explicit limits for stake size, rate, and supported actions.</li>
-        <li>Log every write request, simulation result, signature, and on-chain transaction outcome.</li>
-        <li>Do not expose arbitrary contract calls, arbitrary calldata, or generic send-transaction tools.</li>
+        <li>Write access uses scoped per-user auth rather than a single shared static bearer secret.</li>
+        <li>Each write-capable session is bound to a specific wallet or delegate wallet.</li>
+        <li>Every write tool supports simulation and is dry-run friendly before live execution.</li>
+        <li>The service enforces explicit limits for stake size, rate, and supported actions.</li>
+        <li>Write requests, simulations, signatures, and transaction outcomes are logged for auditability.</li>
+        <li>
+          The public MCP surface exposes typed tools, not arbitrary contract calls or generic send-transaction access.
+        </li>
       </ul>
+      <p>
+        The in-repo MCP package now includes token expiry metadata, HTTP rate limits, a Prometheus-style metrics
+        surface, and structured write audit events. The result is a deliberately narrow production interface rather than
+        a generic transaction relay.
+      </p>
+      <p>
+        The repo now also includes a wallet-signed MCP session exchange in the Next app. Clients can request a challenge
+        at <code>/api/mcp/session/challenge</code>, sign it with the bound wallet, and exchange that signature at{" "}
+        <code>/api/mcp/session/token</code> for a short-lived bearer token that the hosted MCP server can verify with
+        the shared session-signing secret.
+      </p>
       <p>
         Delegation already makes sense for voting and submission. Frontend registration itself is still a holder-only
         action, so the frontend operator wallet for <code>mcp.curyo.xyz</code> should be treated as infrastructure, not
         reused as the signing key for normal user traffic.
       </p>
 
-      <h2>Rollout Backlog</h2>
-      <h3>packages/mcp-server</h3>
+      <h2>Protocol Boundaries</h2>
       <ul>
-        <li>Deploy the existing read and write tool surface behind the canonical hosted endpoint.</li>
-        <li>Provision production token issuance, secret rotation, and scope management for external AI clients.</li>
-        <li>Publish official MCP client examples for hosted reads and the authenticated write tools.</li>
-        <li>
-          Keep runtime metadata for chain, frontend code, and write capability state aligned with deployment config.
-        </li>
-      </ul>
-
-      <h3>Signer Service</h3>
-      <ul>
-        <li>
-          The repo currently embeds the signing runtime inside <code>packages/mcp-server</code>; production should
-          extract or harden that into a dedicated signer or transaction-policy service.
-        </li>
-        <li>Support wallet binding, delegated wallet support, and managed agent wallets.</li>
-        <li>Run simulation, nonce management, gas policy, retries, and transaction submission in one place.</li>
-        <li>Prefer HSM or external signer integration over raw long-lived private keys on the MCP host.</li>
-        <li>Store full audit logs for every signing decision and transaction lifecycle event.</li>
-      </ul>
-
-      <h3>Ops Worker</h3>
-      <ul>
-        <li>
-          Run keeper-style reveal and settlement monitoring so hosted agent traffic does not depend on third parties to
-          finish rounds.
-        </li>
-        <li>
-          The keeper now supports optional hosted frontend fee sweeping; deploy it with the hosted frontend operator
-          wallet.
-        </li>
-        <li>Monitor frontend stake health, slash state, and rebonding requirements.</li>
-        <li>Alert on Ponder lag, MCP readiness failures, signer failures, and stuck transactions.</li>
-      </ul>
-
-      <h3>Contract-Touching Changes</h3>
-      <ul>
-        <li>No protocol change is required for the hosted read MVP or for the first typed write tools.</li>
+        <li>No protocol change is required for hosted reads or for the first typed write tools.</li>
         <li>
           Vote attribution already exists through the frontend address field, so hosted vote flow can earn frontend fees
           without new contracts.
@@ -250,17 +237,57 @@ https://mcp.curyo.xyz/mcp`}</code>
           If Curyo later wants the MCP or frontend layer to earn from non-vote actions too, that should be designed as a
           separate protocol feature rather than forced into the current vote-only frontend fee path.
         </li>
+        <li>The public MCP service remains a typed integration layer, not a generic protocol passthrough.</li>
       </ul>
 
-      <h3>Docs And Rollout</h3>
+      <h2>Client Examples</h2>
+      <p>
+        The hosted bootstrap flow is: read <code>/api/mcp/config</code>, connect to the published HTTP endpoint, mint a
+        wallet-bound bearer token when write access is needed, then attach a bearer token with the minimum scopes your
+        client needs.
+      </p>
+      <pre>
+        <code>{`Wallet-bound write session
+1. POST /api/mcp/session/challenge
+   { "address": "0x...", "scopes": ["mcp:read", "mcp:write:vote"], "clientName": "claude-desktop" }
+2. Sign the returned message with the bound wallet
+3. POST /api/mcp/session/token
+   { "address": "0x...", "scopes": ["mcp:read", "mcp:write:vote"], "clientName": "claude-desktop", "challengeId": "...", "signature": "0x..." }
+4. Send Authorization: Bearer <accessToken> to https://mcp.curyo.xyz/mcp`}</code>
+      </pre>
+      <pre>
+        <code>{`Claude Desktop
+{
+  "mcpServers": {
+    "curyo": {
+      "transport": {
+        "type": "streamable_http",
+        "url": "https://mcp.curyo.xyz/mcp",
+        "headers": {
+          "Authorization": "Bearer \${CURYO_MCP_TOKEN}"
+        }
+      }
+    }
+  }
+}`}</code>
+      </pre>
+      <p>
+        The write-capable wallet bindings live on the Next.js side through{" "}
+        <code>CURYO_MCP_SESSION_WALLET_BINDINGS</code>. The hosted MCP server and the Next app must share the same
+        session-signing settings: <code>CURYO_MCP_HTTP_SESSION_SECRET</code>, <code>CURYO_MCP_HTTP_SESSION_KEY_ID</code>
+        , <code>CURYO_MCP_HTTP_SESSION_ISSUER</code>, and <code>CURYO_MCP_HTTP_SESSION_AUDIENCE</code>.
+      </p>
+
+      <h2>WebMCP</h2>
+      <p>
+        WebMCP is a browser-native layer that can sit on top of the hosted MCP backend. The hosted MCP endpoint remains
+        the canonical interface for durable reads, auth, and production write policy, while WebMCP stays feature-flagged
+        for in-tab experiments.
+      </p>
       <ul>
-        <li>Publish this page as the canonical AI documentation entry under the Technical section.</li>
-        <li>Retire the old conceptual AI page behind a redirect so legacy links continue to work.</li>
-        <li>Document the difference between implemented repo support and the remaining hosted deployment work.</li>
-        <li>Provide official agent-client examples for hosted read access once the endpoint exists.</li>
-        <li>
-          Document auth scopes, wallet models, and write-tool safety limits before enabling external write access.
-        </li>
+        <li>Use hosted MCP first for stable read and write workflows.</li>
+        <li>Keep WebMCP behind an explicit feature flag in the web app.</li>
+        <li>Use WebMCP for browser-context actions and read-oriented tab-local workflows.</li>
       </ul>
 
       <div className="not-prose mt-8 rounded-xl p-4 surface-card">
@@ -274,8 +301,12 @@ https://mcp.curyo.xyz/mcp`}</code>
             Smart Contracts
           </Link>
           , and{" "}
+          <Link href="/docs/sdk" className="link link-primary">
+            SDK
+          </Link>
+          , and{" "}
           <Link href="/docs/frontend-codes" className="link link-primary">
-            Frontend Codes
+            Frontend Integrations
           </Link>
           .
         </p>

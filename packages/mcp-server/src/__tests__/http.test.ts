@@ -1,8 +1,9 @@
-import { describe, expect, it } from "vitest";
+import { beforeEach, describe, expect, it } from "vitest";
 import type { IncomingMessage, ServerResponse } from "node:http";
 import type { PonderClient } from "../clients/ponder.js";
 import { __resetHttpRateLimitStateForTests } from "../lib/http-rate-limit.js";
 import { handleStreamableHttpRequest, resolveAdvertisedHttpUrl } from "../http.js";
+import { __resetMcpMetricsForTests } from "../metrics.js";
 
 interface MockResponse {
   headers: Record<string, string>;
@@ -69,6 +70,7 @@ describe("handleStreamableHttpRequest", () => {
       tokenHashes: [],
       scopes: ["mcp:read"],
       tokens: [],
+      sessionKeys: [],
     },
     httpRateLimit: {
       enabled: true,
@@ -86,10 +88,19 @@ describe("handleStreamableHttpRequest", () => {
       defaultIdentityId: null,
       identities: [],
       contracts: null,
+      policy: {
+        maxVoteStake: null,
+        allowedSubmissionHosts: [],
+        submissionRevealPollIntervalMs: 500,
+        submissionRevealTimeoutMs: 30000,
+      },
     },
   };
 
-  __resetHttpRateLimitStateForTests();
+  beforeEach(() => {
+    __resetHttpRateLimitStateForTests();
+    __resetMcpMetricsForTests();
+  });
 
   it("returns 404 for unknown paths", async () => {
     const request = {
@@ -182,6 +193,27 @@ describe("handleStreamableHttpRequest", () => {
     });
   });
 
+  it("serves Prometheus-style metrics on /metrics", async () => {
+    const request = {
+      url: "/metrics",
+      method: "GET",
+      headers: {
+        host: "127.0.0.1:3334",
+      },
+      socket: {
+        remoteAddress: "127.0.0.1",
+      },
+    } as unknown as IncomingMessage;
+    const response = createMockResponse();
+
+    await handleStreamableHttpRequest(request, response, config);
+
+    expect(response.statusCode).toBe(200);
+    expect(response.headers["Content-Type"]).toContain("text/plain");
+    expect(response.body).toContain("mcp_http_requests_total");
+    expect(response.body).toContain("mcp_write_tool_invocations_total");
+  });
+
   it("rejects unauthenticated MCP requests when bearer auth is enabled", async () => {
     const request = {
       url: "/mcp",
@@ -214,6 +246,7 @@ describe("handleStreamableHttpRequest", () => {
             kind: "static",
           },
         ],
+        sessionKeys: [],
       },
     });
 
@@ -258,6 +291,7 @@ describe("handleStreamableHttpRequest", () => {
             kind: "static" as const,
           },
         ],
+        sessionKeys: [],
       },
       httpRateLimit: {
         enabled: true,
@@ -277,6 +311,64 @@ describe("handleStreamableHttpRequest", () => {
     expect(secondResponse.statusCode).toBe(429);
     expect(secondResponse.headers["Retry-After"]).toBeDefined();
     expect(JSON.parse(secondResponse.body)).toMatchObject({
+      error: "Too many MCP requests in the current window",
+      policy: "read",
+      limit: 1,
+    });
+  });
+
+  it("keys anonymous requests by trusted proxy headers instead of the proxy hop", async () => {
+    __resetHttpRateLimitStateForTests();
+
+    const rateLimitedConfig = {
+      ...config,
+      httpRateLimit: {
+        enabled: true,
+        windowMs: 60_000,
+        readRequestsPerWindow: 1,
+        writeRequestsPerWindow: 1,
+        trustedProxyHeaders: ["x-forwarded-for"],
+      },
+    };
+
+    const firstRequest = {
+      url: "/mcp",
+      method: "POST",
+      headers: {
+        host: "127.0.0.1:3334",
+        "x-forwarded-for": "203.0.113.10",
+      },
+      socket: {
+        remoteAddress: "10.0.0.1",
+      },
+    } as unknown as IncomingMessage;
+
+    const secondRequest = {
+      url: "/mcp",
+      method: "POST",
+      headers: {
+        host: "127.0.0.1:3334",
+        "x-forwarded-for": "203.0.113.11",
+      },
+      socket: {
+        remoteAddress: "10.0.0.1",
+      },
+    } as unknown as IncomingMessage;
+
+    const firstResponse = createMockResponse();
+    await handleStreamableHttpRequest(firstRequest, firstResponse, rateLimitedConfig);
+
+    const secondResponse = createMockResponse();
+    await handleStreamableHttpRequest(secondRequest, secondResponse, rateLimitedConfig);
+
+    expect(firstResponse.statusCode).not.toBe(429);
+    expect(secondResponse.statusCode).not.toBe(429);
+
+    const repeatedResponse = createMockResponse();
+    await handleStreamableHttpRequest(firstRequest, repeatedResponse, rateLimitedConfig);
+
+    expect(repeatedResponse.statusCode).toBe(429);
+    expect(JSON.parse(repeatedResponse.body)).toMatchObject({
       error: "Too many MCP requests in the current window",
       policy: "read",
       limit: 1,

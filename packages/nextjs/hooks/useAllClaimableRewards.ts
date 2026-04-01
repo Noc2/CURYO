@@ -3,14 +3,16 @@
 import { useCallback, useMemo } from "react";
 import { EPOCH_WEIGHT_BPS, REWARD_SPLIT_BPS, ROUND_STATE } from "@curyo/contracts/protocol";
 import { useAccount, useReadContracts } from "wagmi";
+import { type ClaimableRewardItem } from "~~/hooks/claimableRewards";
 import { useDeployedContractInfo } from "~~/hooks/scaffold-eth";
+import { useClaimableSubmitterRewards } from "~~/hooks/useClaimableSubmitterRewards";
 import { useRecentUserVotes } from "~~/hooks/useRecentUserVotes";
 
 export interface ClaimableItem {
   contentId: bigint;
   roundId: bigint;
   reward: bigint;
-  claimType: "reward" | "refund";
+  claimType: ClaimableRewardItem["claimType"];
 }
 
 function epochWeightBps(epochIndex: number): number {
@@ -24,6 +26,11 @@ function epochWeightBps(epochIndex: number): number {
 export function useAllClaimableRewards() {
   const { address } = useAccount();
   const { votes, refetch: refetchVotes } = useRecentUserVotes(address);
+  const {
+    claimableItems: submitterClaimableItems,
+    isLoading: submitterLoading,
+    refetch: refetchSubmitterClaimables,
+  } = useClaimableSubmitterRewards();
 
   // --- Step 2: Filter to terminal rounds only ---
   const terminalVotes = useMemo(() => {
@@ -117,9 +124,8 @@ export function useAllClaimableRewards() {
   });
 
   // --- Step 6: Build claimable items with calculated rewards ---
-  const { claimableItems, totalClaimable, activeStake } = useMemo(() => {
+  const { claimableItems, activeStake } = useMemo(() => {
     const items: ClaimableItem[] = [];
-    let total = 0n;
 
     // Safe BigInt conversion — Ponder returns numeric strings, but guard against bad data
     const safeBigInt = (val: unknown): bigint => {
@@ -139,7 +145,6 @@ export function useAllClaimableRewards() {
         reward: stake,
         claimType: "refund",
       });
-      total += stake;
     }
 
     // Add settled winners (stake + weighted share of the winner pool).
@@ -168,7 +173,6 @@ export function useAllClaimableRewards() {
           reward,
           claimType: "reward",
         });
-        total += reward;
       }
     }
 
@@ -182,7 +186,6 @@ export function useAllClaimableRewards() {
         reward,
         claimType: "reward",
       });
-      total += reward;
     }
 
     // Active stake = sum of stakes in open rounds
@@ -193,19 +196,30 @@ export function useAllClaimableRewards() {
       }
     }
 
-    return { claimableItems: items, totalClaimable: total, activeStake: active };
+    return { claimableItems: items, activeStake: active };
   }, [refundVotes, settledWinners, settledLosers, rewardResults, votes]);
 
-  const isLoading = claimedLoading || rewardsLoading;
+  const combinedClaimableItems = useMemo(
+    () => [...claimableItems, ...submitterClaimableItems],
+    [claimableItems, submitterClaimableItems],
+  );
+
+  const combinedTotalClaimable = useMemo(
+    () => combinedClaimableItems.reduce((sum, item) => sum + item.reward, 0n),
+    [combinedClaimableItems],
+  );
+
+  const isLoading = claimedLoading || rewardsLoading || submitterLoading;
 
   const refetch = useCallback(() => {
     refetchVotes();
     refetchClaimed();
-  }, [refetchVotes, refetchClaimed]);
+    refetchSubmitterClaimables();
+  }, [refetchVotes, refetchClaimed, refetchSubmitterClaimables]);
 
   return {
-    claimableItems,
-    totalClaimable,
+    claimableItems: combinedClaimableItems,
+    totalClaimable: combinedTotalClaimable,
     activeStake,
     isLoading,
     refetch,

@@ -88,7 +88,7 @@ contract InvariantRating is VotingTestBase {
         ProtocolConfig(address(engine.protocolConfig())).setRewardDistributor(address(distributor));
         ProtocolConfig(address(engine.protocolConfig())).setCategoryRegistry(address(mockCategoryRegistry));
         ProtocolConfig(address(engine.protocolConfig())).setTreasury(treasury);
-        ProtocolConfig(address(engine.protocolConfig())).setConfig(EPOCH_DURATION, 7 days, 2, 200);
+        _setTlockRoundConfig(ProtocolConfig(address(engine.protocolConfig())), EPOCH_DURATION, 7 days, 2, 200);
 
         // Fund consensus reserve
         uint256 reserveAmount = 1_000_000e6;

@@ -37,6 +37,7 @@ describe("loadConfig", () => {
         tokenHashes: [],
         scopes: ["mcp:read"],
         tokens: [],
+        sessionKeys: [],
       },
       httpRateLimit: {
         enabled: true,
@@ -54,6 +55,12 @@ describe("loadConfig", () => {
         defaultIdentityId: null,
         identities: [],
         contracts: null,
+        policy: {
+          maxVoteStake: null,
+          allowedSubmissionHosts: [],
+          submissionRevealPollIntervalMs: 500,
+          submissionRevealTimeoutMs: 30000,
+        },
       },
     });
   });
@@ -76,6 +83,7 @@ describe("loadConfig", () => {
     expect(config.httpCorsOrigin).toBe("https://chatgpt.com");
     expect(config.ponderTimeoutMs).toBe(2500);
     expect(config.httpAuth.mode).toBe("none");
+    expect(config.httpAuth.sessionKeys).toEqual([]);
     expect(config.httpRateLimit).toEqual({
       enabled: true,
       windowMs: 60_000,
@@ -83,6 +91,53 @@ describe("loadConfig", () => {
       writeRequestsPerWindow: 20,
       trustedProxyHeaders: [],
     });
+  });
+
+  it("rejects production streamable-http deployments that still point at localhost Ponder or CORS defaults", () => {
+    expect(() =>
+      loadConfig({
+        NODE_ENV: "production",
+        CURYO_MCP_TRANSPORT: "streamable-http",
+        CURYO_MCP_HTTP_CORS_ORIGIN: "https://app.curyo.xyz",
+        CURYO_MCP_HTTP_TRUSTED_PROXY_HEADERS: "x-real-ip",
+      }),
+    ).toThrow("CURYO_PONDER_URL or PONDER_URL must not point to localhost in production streamable-http deployments");
+
+    expect(() =>
+      loadConfig({
+        NODE_ENV: "production",
+        CURYO_MCP_TRANSPORT: "streamable-http",
+        CURYO_PONDER_URL: "https://ponder.curyo.xyz",
+        CURYO_MCP_HTTP_TRUSTED_PROXY_HEADERS: "x-real-ip",
+      }),
+    ).toThrow("CURYO_MCP_HTTP_CORS_ORIGIN must not point to localhost in production streamable-http deployments");
+  });
+
+  it("requires trusted proxy headers for production streamable-http rate limiting", () => {
+    expect(() =>
+      loadConfig({
+        NODE_ENV: "production",
+        CURYO_MCP_TRANSPORT: "streamable-http",
+        CURYO_PONDER_URL: "https://ponder.curyo.xyz",
+        CURYO_MCP_HTTP_CORS_ORIGIN: "https://app.curyo.xyz",
+      }),
+    ).toThrow(
+      "CURYO_MCP_HTTP_TRUSTED_PROXY_HEADERS is required in production when CURYO_MCP_TRANSPORT=streamable-http and rate limiting is enabled",
+    );
+  });
+
+  it("allows production streamable-http deployments when Ponder, CORS, and proxy headers are explicit", () => {
+    const config = loadConfig({
+      NODE_ENV: "production",
+      CURYO_MCP_TRANSPORT: "streamable-http",
+      CURYO_PONDER_URL: "https://ponder.curyo.xyz",
+      CURYO_MCP_HTTP_CORS_ORIGIN: "https://app.curyo.xyz",
+      CURYO_MCP_HTTP_TRUSTED_PROXY_HEADERS: "x-real-ip,x-forwarded-for",
+    });
+
+    expect(config.ponderBaseUrl).toBe("https://ponder.curyo.xyz");
+    expect(config.httpCorsOrigin).toBe("https://app.curyo.xyz");
+    expect(config.httpRateLimit.trustedProxyHeaders).toEqual(["x-real-ip", "x-forwarded-for"]);
   });
 
   it("normalizes an optional public base URL", () => {
@@ -107,6 +162,7 @@ describe("loadConfig", () => {
     expect(config.httpAuth.tokenHashes).toHaveLength(2);
     expect(config.httpAuth.scopes).toEqual(["mcp:read", "metrics:read"]);
     expect(config.httpAuth.tokens).toHaveLength(2);
+    expect(config.httpAuth.sessionKeys).toEqual([]);
   });
 
   it("requires a bearer token when bearer auth is enabled", () => {
@@ -114,7 +170,9 @@ describe("loadConfig", () => {
       loadConfig({
         CURYO_MCP_HTTP_AUTH_MODE: "bearer",
       }),
-    ).toThrow("CURYO_MCP_HTTP_BEARER_TOKEN, CURYO_MCP_HTTP_BEARER_TOKENS, or CURYO_MCP_HTTP_TOKENS_JSON is required");
+    ).toThrow(
+      "CURYO_MCP_HTTP_BEARER_TOKEN, CURYO_MCP_HTTP_BEARER_TOKENS, CURYO_MCP_HTTP_TOKENS_JSON, or CURYO_MCP_HTTP_SESSION_SECRET(S)_JSON is required",
+    );
   });
 
   it("loads scoped bearer tokens bound to write identities", () => {
@@ -161,6 +219,12 @@ describe("loadConfig", () => {
         frontendAddress: "0x7777777777777777777777777777777777777777",
       }),
     ]);
+    expect(config.write.policy).toEqual({
+      maxVoteStake: null,
+      allowedSubmissionHosts: [],
+      submissionRevealPollIntervalMs: 500,
+      submissionRevealTimeoutMs: 30000,
+    });
     expect(config.write.contracts).toEqual(
       expect.objectContaining({
         votingEngine: expect.stringMatching(/^0x[0-9a-fA-F]{40}$/),
@@ -183,6 +247,26 @@ describe("loadConfig", () => {
     ).toThrow('references unknown identity "missing"');
   });
 
+  it("allows bearer mode with signed session keys and no static bearer tokens", () => {
+    const config = loadConfig({
+      CURYO_MCP_HTTP_AUTH_MODE: "bearer",
+      CURYO_MCP_HTTP_SESSION_SECRET: "super-secret-signing-key",
+      CURYO_MCP_HTTP_SESSION_KEY_ID: "nextjs-prod",
+      CURYO_MCP_HTTP_SESSION_ISSUER: "curyo-nextjs",
+      CURYO_MCP_HTTP_SESSION_AUDIENCE: "curyo-mcp",
+    });
+
+    expect(config.httpAuth.tokens).toEqual([]);
+    expect(config.httpAuth.sessionKeys).toEqual([
+      {
+        keyId: "nextjs-prod",
+        secret: "super-secret-signing-key",
+        issuer: "curyo-nextjs",
+        audience: "curyo-mcp",
+      },
+    ]);
+  });
+
   it("loads HTTP rate limit overrides", () => {
     const config = loadConfig({
       CURYO_MCP_HTTP_RATE_LIMIT_ENABLED: "true",
@@ -198,6 +282,32 @@ describe("loadConfig", () => {
       readRequestsPerWindow: 55,
       writeRequestsPerWindow: 7,
       trustedProxyHeaders: ["x-real-ip", "x-forwarded-for"],
+    });
+  });
+
+  it("loads MCP write policy overrides", () => {
+    const config = loadConfig({
+      CURYO_MCP_WRITE_ENABLED: "true",
+      CURYO_MCP_RPC_URL: "https://rpc.celo.example",
+      CURYO_MCP_CHAIN_ID: "11142220",
+      CURYO_MCP_WRITE_IDENTITIES: JSON.stringify([
+        {
+          id: "writer",
+          privateKey: `0x${"11".repeat(32)}`,
+          frontendAddress: "0x7777777777777777777777777777777777777777",
+        },
+      ]),
+      CURYO_MCP_WRITE_MAX_VOTE_STAKE: "5000000000000000000",
+      CURYO_MCP_WRITE_SUBMISSION_HOST_ALLOWLIST: "curyo.xyz,example.com",
+      CURYO_MCP_WRITE_SUBMISSION_REVEAL_POLL_MS: "250",
+      CURYO_MCP_WRITE_SUBMISSION_REVEAL_TIMEOUT_MS: "45000",
+    });
+
+    expect(config.write.policy).toEqual({
+      maxVoteStake: 5000000000000000000n,
+      allowedSubmissionHosts: ["curyo.xyz", "example.com"],
+      submissionRevealPollIntervalMs: 250,
+      submissionRevealTimeoutMs: 45000,
     });
   });
 });

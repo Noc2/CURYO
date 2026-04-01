@@ -100,7 +100,7 @@ contract SettlementEdgeCasesTest is VotingTestBase {
         ProtocolConfig(address(engine.protocolConfig())).setTreasury(treasury);
 
         // epochDuration=1h, maxDuration=7d, minVoters=3, maxVoters=1000
-        ProtocolConfig(address(engine.protocolConfig())).setConfig(1 hours, 7 days, 3, 1000);
+        _setTlockRoundConfig(ProtocolConfig(address(engine.protocolConfig())), 1 hours, 7 days, 3, 1000);
 
         FrontendRegistry frImpl = new FrontendRegistry();
         frontendRegistry = FrontendRegistry(
@@ -147,7 +147,7 @@ contract SettlementEdgeCasesTest is VotingTestBase {
         vm.prank(voter);
         crepToken.approve(address(engine), stakeAmt);
         vm.prank(voter);
-        engine.commitVote(contentId, commitHash, ciphertext, stakeAmt, address(0));
+        engine.commitVote(contentId, _tlockCommitTargetRound(), _tlockDrandChainHash(), commitHash, ciphertext, stakeAmt, address(0));
         commitKey = keccak256(abi.encodePacked(voter, commitHash));
     }
 
@@ -170,6 +170,120 @@ contract SettlementEdgeCasesTest is VotingTestBase {
         _submitContentWithReservation(registry, url, "test goal", "test goal", "test", 0);
         vm.stopPrank();
         return registry.nextContentId() - 1;
+    }
+
+    function _commitOnEngine(
+        RoundVotingEngine votingEngine,
+        CuryoReputation token,
+        address voter,
+        uint256 contentId,
+        bool isUp,
+        uint256 stakeAmt
+    ) internal returns (bytes32 commitKey, bytes32 salt, uint64 targetRound) {
+        bytes32 drandChainHash = _tlockDrandChainHash();
+        salt = keccak256(abi.encodePacked(voter, block.timestamp));
+        targetRound = _tlockCommitTargetRound();
+        bytes memory ciphertext = _testCiphertext(isUp, salt, contentId, targetRound, drandChainHash);
+        bytes32 commitHash = _commitHash(isUp, salt, contentId, targetRound, drandChainHash, ciphertext);
+        vm.prank(voter);
+        token.approve(address(votingEngine), stakeAmt);
+        vm.prank(voter);
+        votingEngine.commitVote(contentId, targetRound, drandChainHash, commitHash, ciphertext, stakeAmt, address(0));
+        commitKey = keccak256(abi.encodePacked(voter, commitHash));
+    }
+
+    function _deployZeroReserveHarness()
+        internal
+        returns (CuryoReputation token, ContentRegistry registry_, RoundVotingEngine votingEngine)
+    {
+        vm.startPrank(owner);
+
+        token = new CuryoReputation(owner, owner);
+        token.grantRole(token.MINTER_ROLE(), owner);
+
+        ContentRegistry registryImpl = new ContentRegistry();
+        RoundVotingEngine engineImpl = new RoundVotingEngine();
+        RoundRewardDistributor distImpl = new RoundRewardDistributor();
+
+        registry_ = ContentRegistry(
+            address(
+                new ERC1967Proxy(
+                    address(registryImpl),
+                    abi.encodeCall(ContentRegistry.initialize, (owner, owner, address(token)))
+                )
+            )
+        );
+
+        votingEngine = RoundVotingEngine(
+            address(
+                new ERC1967Proxy(
+                    address(engineImpl),
+                    abi.encodeCall(
+                        RoundVotingEngine.initialize,
+                        (owner, address(token), address(registry_), address(_deployProtocolConfig(owner)))
+                    )
+                )
+            )
+        );
+
+        RoundRewardDistributor dist = RoundRewardDistributor(
+            address(
+                new ERC1967Proxy(
+                    address(distImpl),
+                    abi.encodeCall(
+                        RoundRewardDistributor.initialize,
+                        (owner, address(token), address(votingEngine), address(registry_))
+                    )
+                )
+            )
+        );
+
+        registry_.setVotingEngine(address(votingEngine));
+        MockCategoryRegistry mockCategoryRegistry = new MockCategoryRegistry();
+        mockCategoryRegistry.seedDefaultTestCategories();
+        registry_.setCategoryRegistry(address(mockCategoryRegistry));
+        ProtocolConfig(address(votingEngine.protocolConfig())).setRewardDistributor(address(dist));
+        ProtocolConfig(address(votingEngine.protocolConfig())).setCategoryRegistry(address(mockCategoryRegistry));
+        ProtocolConfig(address(votingEngine.protocolConfig())).setTreasury(treasury);
+        _setTlockRoundConfig(ProtocolConfig(address(votingEngine.protocolConfig())), 1 hours, 7 days, 3, 1000);
+
+        token.mint(submitter, 10_000e6);
+        token.mint(voter1, 10_000e6);
+        token.mint(voter2, 10_000e6);
+        token.mint(voter3, 10_000e6);
+        vm.stopPrank();
+    }
+
+    function _submitContentOnRegistry(CuryoReputation token, ContentRegistry registry_, string memory url)
+        internal
+        returns (uint256 contentId)
+    {
+        vm.startPrank(submitter);
+        token.approve(address(registry_), 10e6);
+        _submitContentWithReservation(registry_, url, "test", "test", "test", 0);
+        vm.stopPrank();
+        contentId = 1;
+    }
+
+    function _prepareUnanimousRoundOnEngine(RoundVotingEngine votingEngine, CuryoReputation token, uint256 contentId)
+        internal
+        returns (uint256 roundId)
+    {
+        (bytes32 ck1, bytes32 s1, uint64 targetRound1) = _commitOnEngine(votingEngine, token, voter1, contentId, true, STAKE);
+        vm.warp(block.timestamp + 1);
+        (bytes32 ck2, bytes32 s2, uint64 targetRound2) = _commitOnEngine(votingEngine, token, voter2, contentId, true, STAKE);
+        vm.warp(block.timestamp + 1);
+        (bytes32 ck3, bytes32 s3, uint64 targetRound3) = _commitOnEngine(votingEngine, token, voter3, contentId, true, STAKE);
+
+        roundId = RoundEngineReadHelpers.activeRoundId(votingEngine, contentId);
+        uint64 maxTargetRound = targetRound1;
+        if (targetRound2 > maxTargetRound) maxTargetRound = targetRound2;
+        if (targetRound3 > maxTargetRound) maxTargetRound = targetRound3;
+        vm.warp(_tlockRoundTimestamp(maxTargetRound) + 1);
+
+        votingEngine.revealVoteByCommitKey(contentId, roundId, ck1, true, s1);
+        votingEngine.revealVoteByCommitKey(contentId, roundId, ck2, true, s2);
+        votingEngine.revealVoteByCommitKey(contentId, roundId, ck3, true, s3);
     }
 
     /// @dev Full 3-voter round: commit, warp past epoch, reveal all 3.
@@ -454,115 +568,13 @@ contract SettlementEdgeCasesTest is VotingTestBase {
     // =========================================================================
 
     function test_Settle_Unanimous_ZeroReserve_SettlesWithZeroSubsidy() public {
-        // Drain the consensus reserve
-        // We can't directly drain, but we can set up many unanimous rounds to exhaust it
-        // Instead, let's deploy with zero reserve
-        vm.startPrank(owner);
-
-        CuryoReputation crepToken2 = new CuryoReputation(owner, owner);
-        crepToken2.grantRole(crepToken2.MINTER_ROLE(), owner);
-
-        ContentRegistry registryImpl2 = new ContentRegistry();
-        RoundVotingEngine engineImpl2 = new RoundVotingEngine();
-        RoundRewardDistributor distImpl2 = new RoundRewardDistributor();
-
-        ContentRegistry registry2 = ContentRegistry(
-            address(
-                new ERC1967Proxy(
-                    address(registryImpl2),
-                    abi.encodeCall(ContentRegistry.initialize, (owner, owner, address(crepToken2)))
-                )
-            )
-        );
-
-        RoundVotingEngine engine2 = RoundVotingEngine(
-            address(
-                new ERC1967Proxy(
-                    address(engineImpl2),
-                    abi.encodeCall(
-                        RoundVotingEngine.initialize,
-                        (owner, address(crepToken2), address(registry2), address(_deployProtocolConfig(owner)))
-                    )
-                )
-            )
-        );
-
-        RoundRewardDistributor dist2 = RoundRewardDistributor(
-            address(
-                new ERC1967Proxy(
-                    address(distImpl2),
-                    abi.encodeCall(
-                        RoundRewardDistributor.initialize,
-                        (owner, address(crepToken2), address(engine2), address(registry2))
-                    )
-                )
-            )
-        );
-
-        registry2.setVotingEngine(address(engine2));
-        MockCategoryRegistry mockCategoryRegistry = new MockCategoryRegistry();
-        mockCategoryRegistry.seedDefaultTestCategories();
-        registry2.setCategoryRegistry(address(mockCategoryRegistry));
-        ProtocolConfig(address(engine2.protocolConfig())).setRewardDistributor(address(dist2));
-        ProtocolConfig(address(engine2.protocolConfig())).setCategoryRegistry(address(mockCategoryRegistry));
-        ProtocolConfig(address(engine2.protocolConfig())).setTreasury(treasury);
-        ProtocolConfig(address(engine2.protocolConfig())).setConfig(1 hours, 7 days, 3, 1000);
+        (CuryoReputation crepToken2, ContentRegistry registry2, RoundVotingEngine engine2) = _deployZeroReserveHarness();
 
         // DO NOT fund consensus reserve — leave at 0
         assertEq(engine2.consensusReserve(), 0);
 
-        // Mint tokens for voters
-        crepToken2.mint(submitter, 10_000e6);
-        crepToken2.mint(voter1, 10_000e6);
-        crepToken2.mint(voter2, 10_000e6);
-        crepToken2.mint(voter3, 10_000e6);
-        vm.stopPrank();
-
-        // Submit content
-        vm.startPrank(submitter);
-        crepToken2.approve(address(registry2), 10e6);
-        _submitContentWithReservation(registry2, "https://example.com/zero-reserve", "test", "test", "test", 0);
-        vm.stopPrank();
-        uint256 contentId = 1;
-
-        // Commit 3 unanimous votes
-        bytes32 s1 = keccak256(abi.encodePacked(voter1, block.timestamp));
-        bytes32 ch1 = _commitHash(true, s1, contentId);
-        bytes memory ct1 = abi.encodePacked(uint8(1), s1, contentId);
-        vm.prank(voter1);
-        crepToken2.approve(address(engine2), STAKE);
-        vm.prank(voter1);
-        engine2.commitVote(contentId, ch1, ct1, STAKE, address(0));
-
-        vm.warp(block.timestamp + 1); // offset for unique salt
-        bytes32 s2 = keccak256(abi.encodePacked(voter2, block.timestamp));
-        bytes32 ch2 = _commitHash(true, s2, contentId);
-        bytes memory ct2 = abi.encodePacked(uint8(1), s2, contentId);
-        vm.prank(voter2);
-        crepToken2.approve(address(engine2), STAKE);
-        vm.prank(voter2);
-        engine2.commitVote(contentId, ch2, ct2, STAKE, address(0));
-
-        vm.warp(block.timestamp + 1);
-        bytes32 s3 = keccak256(abi.encodePacked(voter3, block.timestamp));
-        bytes32 ch3 = _commitHash(true, s3, contentId);
-        bytes memory ct3 = abi.encodePacked(uint8(1), s3, contentId);
-        vm.prank(voter3);
-        crepToken2.approve(address(engine2), STAKE);
-        vm.prank(voter3);
-        engine2.commitVote(contentId, ch3, ct3, STAKE, address(0));
-
-        uint256 roundId = RoundEngineReadHelpers.activeRoundId(engine2, contentId);
-        RoundLib.Round memory r0 = RoundEngineReadHelpers.round(engine2, contentId, roundId);
-        vm.warp(r0.startTime + 1 hours + 1);
-
-        // Reveal all
-        bytes32 ck1 = keccak256(abi.encodePacked(voter1, ch1));
-        bytes32 ck2 = keccak256(abi.encodePacked(voter2, ch2));
-        bytes32 ck3 = keccak256(abi.encodePacked(voter3, ch3));
-        engine2.revealVoteByCommitKey(contentId, roundId, ck1, true, s1);
-        engine2.revealVoteByCommitKey(contentId, roundId, ck2, true, s2);
-        engine2.revealVoteByCommitKey(contentId, roundId, ck3, true, s3);
+        uint256 contentId = _submitContentOnRegistry(crepToken2, registry2, "https://example.com/zero-reserve");
+        uint256 roundId = _prepareUnanimousRoundOnEngine(engine2, crepToken2, contentId);
 
         // Settle — should succeed even with zero reserve
         engine2.settleRound(contentId, roundId);

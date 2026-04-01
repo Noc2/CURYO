@@ -56,7 +56,65 @@ contract MaliciousToken is ERC20 {
     }
 }
 
-contract SecurityReentrancyTest is VotingTestBase {
+abstract contract SecurityHarnessBase is VotingTestBase {
+    function _deploySecurityHarness(CuryoReputation token, address owner)
+        internal
+        returns (ContentRegistry registry, RoundVotingEngine votingEngine)
+    {
+        ContentRegistry registryImpl = new ContentRegistry();
+        RoundVotingEngine engineImpl = new RoundVotingEngine();
+        ProtocolConfig protocolConfig = deployInitializedProtocolConfig(owner);
+
+        registry = ContentRegistry(
+            address(
+                new ERC1967Proxy(
+                    address(registryImpl),
+                    abi.encodeCall(ContentRegistry.initialize, (owner, owner, address(token)))
+                )
+            )
+        );
+
+        votingEngine = RoundVotingEngine(
+            address(
+                new ERC1967Proxy(
+                    address(engineImpl),
+                    abi.encodeCall(
+                        RoundVotingEngine.initialize,
+                        (owner, address(token), address(registry), address(protocolConfig))
+                    )
+                )
+            )
+        );
+    }
+
+    function _configureSecurityHarness(
+        ContentRegistry registry,
+        RoundVotingEngine votingEngine,
+        address treasury,
+        uint256 epochDuration
+    ) internal {
+        registry.setVotingEngine(address(votingEngine));
+
+        MockCategoryRegistry mockCategoryRegistry = new MockCategoryRegistry();
+        mockCategoryRegistry.seedDefaultTestCategories();
+        registry.setCategoryRegistry(address(mockCategoryRegistry));
+
+        ProtocolConfig config = ProtocolConfig(address(votingEngine.protocolConfig()));
+        config.setCategoryRegistry(address(mockCategoryRegistry));
+        config.setTreasury(treasury);
+        _setTlockDrandConfig(config, DEFAULT_DRAND_CHAIN_HASH, DEFAULT_DRAND_GENESIS_TIME, DEFAULT_DRAND_PERIOD);
+        _setTlockRoundConfig(config, epochDuration, 7 days, 2, 200);
+    }
+
+    function _fundConsensusReserve(CuryoReputation token, RoundVotingEngine votingEngine, address owner) internal {
+        uint256 reserveAmount = 1_000_000e6;
+        token.mint(owner, reserveAmount);
+        token.approve(address(votingEngine), reserveAmount);
+        votingEngine.addToConsensusReserve(reserveAmount);
+    }
+}
+
+contract SecurityReentrancyTest is SecurityHarnessBase {
     CuryoReputation crepToken;
     ContentRegistry registry;
     RoundVotingEngine votingEngine;
@@ -70,6 +128,24 @@ contract SecurityReentrancyTest is VotingTestBase {
 
     uint256 constant STAKE = 10e6;
     uint256 constant EPOCH_DURATION = 5 minutes;
+    mapping(bytes32 => bool) internal commitDirections;
+    mapping(bytes32 => bytes32) internal commitSalts;
+
+    function _tlockDrandChainHash() internal pure override returns (bytes32) {
+        return DEFAULT_DRAND_CHAIN_HASH;
+    }
+
+    function _tlockDrandGenesisTime() internal pure override returns (uint64) {
+        return DEFAULT_DRAND_GENESIS_TIME;
+    }
+
+    function _tlockDrandPeriod() internal pure override returns (uint64) {
+        return DEFAULT_DRAND_PERIOD;
+    }
+
+    function _tlockEpochDuration() internal pure override returns (uint256) {
+        return EPOCH_DURATION;
+    }
 
     function setUp() public {
         vm.warp(1000);
@@ -77,47 +153,15 @@ contract SecurityReentrancyTest is VotingTestBase {
 
         crepToken = new CuryoReputation(owner, owner);
         crepToken.grantRole(crepToken.MINTER_ROLE(), owner);
+        (registry, votingEngine) = _deploySecurityHarness(crepToken, owner);
+        _configureSecurityHarness(registry, votingEngine, treasury, EPOCH_DURATION);
+        _fundConsensusReserve(crepToken, votingEngine, owner);
 
-        ContentRegistry registryImpl = new ContentRegistry();
-        RoundVotingEngine engineImpl = new RoundVotingEngine();
-
-        registry = ContentRegistry(
-            address(
-                new ERC1967Proxy(
-                    address(registryImpl),
-                    abi.encodeCall(ContentRegistry.initialize, (owner, owner, address(crepToken)))
-                )
-            )
-        );
-
-        votingEngine = RoundVotingEngine(
-            address(
-                new ERC1967Proxy(
-                    address(engineImpl),
-                    abi.encodeCall(
-                        RoundVotingEngine.initialize,
-                        (owner, address(crepToken), address(registry), address(deployInitializedProtocolConfig(owner)))
-                    )
-                )
-            )
-        );
-
-        registry.setVotingEngine(address(votingEngine));
-        MockCategoryRegistry mockCategoryRegistry = new MockCategoryRegistry();
-        mockCategoryRegistry.seedDefaultTestCategories();
-        registry.setCategoryRegistry(address(mockCategoryRegistry));
-        ProtocolConfig(address(votingEngine.protocolConfig())).setCategoryRegistry(address(mockCategoryRegistry));
-        ProtocolConfig(address(votingEngine.protocolConfig())).setTreasury(treasury);
-        ProtocolConfig(address(votingEngine.protocolConfig())).setConfig(EPOCH_DURATION, 7 days, 2, 200);
-
-        uint256 reserveAmount = 1_000_000e6;
-        crepToken.mint(owner, reserveAmount);
-        crepToken.approve(address(votingEngine), reserveAmount);
-        votingEngine.addToConsensusReserve(reserveAmount);
-
-        address[4] memory users = [submitter, voter1, voter2, attacker];
-        for (uint256 i = 0; i < users.length; i++) {
-            crepToken.mint(users[i], 10_000e6);
+        {
+            address[4] memory users = [submitter, voter1, voter2, attacker];
+            for (uint256 i = 0; i < users.length; i++) {
+                crepToken.mint(users[i], 10_000e6);
+            }
         }
 
         vm.stopPrank();
@@ -131,15 +175,28 @@ contract SecurityReentrancyTest is VotingTestBase {
         return 1;
     }
 
-    function _commit(address voter, uint256 contentId, bool isUp) internal returns (bytes32 commitKey) {
-        bytes32 salt = keccak256(abi.encodePacked(voter, block.timestamp, contentId));
+    function _recordCommit(bytes32 commitKey, bool isUp, bytes32 salt) private {
+        commitDirections[commitKey] = isUp;
+        commitSalts[commitKey] = salt;
+    }
+
+    function _submitCommit(address voter, uint256 contentId, bool isUp, bytes32 salt) private returns (bytes32) {
         bytes memory ciphertext = _testCiphertext(isUp, salt, contentId);
-        bytes32 commitHash = _commitHash(isUp, salt, contentId, ciphertext);
+        uint64 targetRound = _tlockCommitTargetRound();
+        bytes32 drandChainHash = _tlockDrandChainHash();
+        bytes32 commitHash = _commitHash(isUp, salt, contentId, targetRound, drandChainHash, ciphertext);
         vm.startPrank(voter);
         crepToken.approve(address(votingEngine), STAKE);
-        votingEngine.commitVote(contentId, commitHash, ciphertext, STAKE, address(0));
+        votingEngine.commitVote(contentId, targetRound, drandChainHash, commitHash, ciphertext, STAKE, address(0));
         vm.stopPrank();
-        commitKey = keccak256(abi.encodePacked(voter, commitHash));
+        return keccak256(abi.encodePacked(voter, commitHash));
+    }
+
+    function _commit(address voter, uint256 contentId, bool isUp) internal returns (bytes32) {
+        bytes32 salt = keccak256(abi.encodePacked(voter, block.timestamp, contentId));
+        bytes32 commitKey = _submitCommit(voter, contentId, isUp, salt);
+        _recordCommit(commitKey, isUp, salt);
+        return commitKey;
     }
 
     /// @notice claimCancelledRoundRefund token transfer cannot trigger re-entry
@@ -199,12 +256,8 @@ contract SecurityReentrancyTest is VotingTestBase {
     function _revealFromCiphertext(uint256 cid, uint256 roundId, bytes32 commitKey) internal {
         RoundLib.Commit memory c = RoundEngineReadHelpers.commit(votingEngine, cid, roundId, commitKey);
         if (c.revealed || c.stakeAmount == 0) return;
-        bool up = uint8(c.ciphertext[0]) == 1;
-        bytes32 s;
-        bytes memory ct = c.ciphertext;
-        assembly ("memory-safe") {
-            s := mload(add(ct, 33))
-        }
+        bool up = commitDirections[commitKey];
+        bytes32 s = commitSalts[commitKey];
         votingEngine.revealVoteByCommitKey(cid, roundId, commitKey, up, s);
     }
 }
@@ -213,7 +266,14 @@ contract SecurityReentrancyTest is VotingTestBase {
 // Section 2 — ERC1363 transferAndCall Tests
 // ============================================================================
 
-contract SecurityTransferAndCallTest is VotingTestBase {
+contract SecurityTransferAndCallTest is SecurityHarnessBase {
+    struct VotePayloadArtifacts {
+        uint64 targetRound;
+        bytes32 drandChainHash;
+        bytes ciphertext;
+        bytes32 commitHash;
+    }
+
     CuryoReputation crepToken;
     ContentRegistry registry;
     RoundVotingEngine votingEngine;
@@ -227,49 +287,31 @@ contract SecurityTransferAndCallTest is VotingTestBase {
     uint256 constant STAKE = 10e6;
     uint256 constant EPOCH_DURATION = 5 minutes;
 
+    function _tlockDrandChainHash() internal pure override returns (bytes32) {
+        return DEFAULT_DRAND_CHAIN_HASH;
+    }
+
+    function _tlockDrandGenesisTime() internal pure override returns (uint64) {
+        return DEFAULT_DRAND_GENESIS_TIME;
+    }
+
+    function _tlockDrandPeriod() internal pure override returns (uint64) {
+        return DEFAULT_DRAND_PERIOD;
+    }
+
+    function _tlockEpochDuration() internal pure override returns (uint256) {
+        return EPOCH_DURATION;
+    }
+
     function setUp() public {
         vm.warp(1000);
         vm.startPrank(owner);
 
         crepToken = new CuryoReputation(owner, owner);
         crepToken.grantRole(crepToken.MINTER_ROLE(), owner);
-
-        ContentRegistry registryImpl = new ContentRegistry();
-        RoundVotingEngine engineImpl = new RoundVotingEngine();
-
-        registry = ContentRegistry(
-            address(
-                new ERC1967Proxy(
-                    address(registryImpl),
-                    abi.encodeCall(ContentRegistry.initialize, (owner, owner, address(crepToken)))
-                )
-            )
-        );
-
-        votingEngine = RoundVotingEngine(
-            address(
-                new ERC1967Proxy(
-                    address(engineImpl),
-                    abi.encodeCall(
-                        RoundVotingEngine.initialize,
-                        (owner, address(crepToken), address(registry), address(deployInitializedProtocolConfig(owner)))
-                    )
-                )
-            )
-        );
-
-        registry.setVotingEngine(address(votingEngine));
-        MockCategoryRegistry mockCategoryRegistry = new MockCategoryRegistry();
-        mockCategoryRegistry.seedDefaultTestCategories();
-        registry.setCategoryRegistry(address(mockCategoryRegistry));
-        ProtocolConfig(address(votingEngine.protocolConfig())).setCategoryRegistry(address(mockCategoryRegistry));
-        ProtocolConfig(address(votingEngine.protocolConfig())).setTreasury(treasury);
-        ProtocolConfig(address(votingEngine.protocolConfig())).setConfig(EPOCH_DURATION, 7 days, 2, 200);
-
-        uint256 reserveAmount = 1_000_000e6;
-        crepToken.mint(owner, reserveAmount);
-        crepToken.approve(address(votingEngine), reserveAmount);
-        votingEngine.addToConsensusReserve(reserveAmount);
+        (registry, votingEngine) = _deploySecurityHarness(crepToken, owner);
+        _configureSecurityHarness(registry, votingEngine, treasury, EPOCH_DURATION);
+        _fundConsensusReserve(crepToken, votingEngine, owner);
 
         crepToken.mint(submitter, 10_000e6);
         crepToken.mint(voter, 10_000e6);
@@ -291,9 +333,18 @@ contract SecurityTransferAndCallTest is VotingTestBase {
         returns (bytes memory payload, bytes32 commitHash, bytes memory ciphertext)
     {
         bytes32 salt = keccak256(abi.encodePacked(voter, block.timestamp, contentId));
-        ciphertext = _testCiphertext(true, salt, contentId);
-        commitHash = _commitHash(true, salt, contentId, ciphertext);
-        payload = abi.encode(contentId, commitHash, ciphertext, address(0));
+        VotePayloadArtifacts memory artifacts;
+        artifacts.targetRound = _tlockCommitTargetRound();
+        artifacts.drandChainHash = _tlockDrandChainHash();
+        artifacts.ciphertext =
+            _testCiphertext(true, salt, contentId, artifacts.targetRound, artifacts.drandChainHash);
+        artifacts.commitHash =
+            _commitHash(true, salt, contentId, artifacts.targetRound, artifacts.drandChainHash, artifacts.ciphertext);
+        payload = abi.encode(
+            contentId, artifacts.commitHash, artifacts.ciphertext, address(0), artifacts.targetRound, artifacts.drandChainHash
+        );
+        commitHash = artifacts.commitHash;
+        ciphertext = artifacts.ciphertext;
     }
 
     function test_TransferAndCall_RejectsDirectExternalCallback() public {
@@ -352,7 +403,7 @@ contract SecurityTransferAndCallTest is VotingTestBase {
 // Section 4 — Settlement Timing Tests
 // ============================================================================
 
-contract SecuritySettlementTimingTest is VotingTestBase {
+contract SecuritySettlementTimingTest is SecurityHarnessBase {
     CuryoReputation crepToken;
     ContentRegistry registry;
     RoundVotingEngine votingEngine;
@@ -365,6 +416,24 @@ contract SecuritySettlementTimingTest is VotingTestBase {
 
     uint256 constant STAKE = 10e6;
     uint256 constant EPOCH_DURATION = 5 minutes;
+    mapping(bytes32 => bool) internal commitDirections;
+    mapping(bytes32 => bytes32) internal commitSalts;
+
+    function _tlockDrandChainHash() internal pure override returns (bytes32) {
+        return DEFAULT_DRAND_CHAIN_HASH;
+    }
+
+    function _tlockDrandGenesisTime() internal pure override returns (uint64) {
+        return DEFAULT_DRAND_GENESIS_TIME;
+    }
+
+    function _tlockDrandPeriod() internal pure override returns (uint64) {
+        return DEFAULT_DRAND_PERIOD;
+    }
+
+    function _tlockEpochDuration() internal pure override returns (uint256) {
+        return EPOCH_DURATION;
+    }
 
     function setUp() public {
         vm.warp(1000);
@@ -372,47 +441,15 @@ contract SecuritySettlementTimingTest is VotingTestBase {
 
         crepToken = new CuryoReputation(owner, owner);
         crepToken.grantRole(crepToken.MINTER_ROLE(), owner);
+        (registry, votingEngine) = _deploySecurityHarness(crepToken, owner);
+        _configureSecurityHarness(registry, votingEngine, treasury, EPOCH_DURATION);
+        _fundConsensusReserve(crepToken, votingEngine, owner);
 
-        ContentRegistry registryImpl = new ContentRegistry();
-        RoundVotingEngine engineImpl = new RoundVotingEngine();
-
-        registry = ContentRegistry(
-            address(
-                new ERC1967Proxy(
-                    address(registryImpl),
-                    abi.encodeCall(ContentRegistry.initialize, (owner, owner, address(crepToken)))
-                )
-            )
-        );
-
-        votingEngine = RoundVotingEngine(
-            address(
-                new ERC1967Proxy(
-                    address(engineImpl),
-                    abi.encodeCall(
-                        RoundVotingEngine.initialize,
-                        (owner, address(crepToken), address(registry), address(deployInitializedProtocolConfig(owner)))
-                    )
-                )
-            )
-        );
-
-        registry.setVotingEngine(address(votingEngine));
-        MockCategoryRegistry mockCategoryRegistry = new MockCategoryRegistry();
-        mockCategoryRegistry.seedDefaultTestCategories();
-        registry.setCategoryRegistry(address(mockCategoryRegistry));
-        ProtocolConfig(address(votingEngine.protocolConfig())).setCategoryRegistry(address(mockCategoryRegistry));
-        ProtocolConfig(address(votingEngine.protocolConfig())).setTreasury(treasury);
-        ProtocolConfig(address(votingEngine.protocolConfig())).setConfig(EPOCH_DURATION, 7 days, 2, 200);
-
-        uint256 reserveAmount = 1_000_000e6;
-        crepToken.mint(owner, reserveAmount);
-        crepToken.approve(address(votingEngine), reserveAmount);
-        votingEngine.addToConsensusReserve(reserveAmount);
-
-        address[3] memory users = [submitter, voter1, voter2];
-        for (uint256 i = 0; i < users.length; i++) {
-            crepToken.mint(users[i], 10_000e6);
+        {
+            address[3] memory users = [submitter, voter1, voter2];
+            for (uint256 i = 0; i < users.length; i++) {
+                crepToken.mint(users[i], 10_000e6);
+            }
         }
 
         vm.stopPrank();
@@ -426,26 +463,35 @@ contract SecuritySettlementTimingTest is VotingTestBase {
         return 1;
     }
 
-    function _commit(address voter, uint256 contentId, bool isUp) internal returns (bytes32 commitKey) {
-        bytes32 salt = keccak256(abi.encodePacked(voter, block.timestamp, contentId));
+    function _recordCommit(bytes32 commitKey, bool isUp, bytes32 salt) private {
+        commitDirections[commitKey] = isUp;
+        commitSalts[commitKey] = salt;
+    }
+
+    function _submitCommit(address voter, uint256 contentId, bool isUp, bytes32 salt) private returns (bytes32) {
         bytes memory ciphertext = _testCiphertext(isUp, salt, contentId);
-        bytes32 commitHash = _commitHash(isUp, salt, contentId, ciphertext);
+        uint64 targetRound = _tlockCommitTargetRound();
+        bytes32 drandChainHash = _tlockDrandChainHash();
+        bytes32 commitHash = _commitHash(isUp, salt, contentId, targetRound, drandChainHash, ciphertext);
         vm.startPrank(voter);
         crepToken.approve(address(votingEngine), STAKE);
-        votingEngine.commitVote(contentId, commitHash, ciphertext, STAKE, address(0));
+        votingEngine.commitVote(contentId, targetRound, drandChainHash, commitHash, ciphertext, STAKE, address(0));
         vm.stopPrank();
-        commitKey = keccak256(abi.encodePacked(voter, commitHash));
+        return keccak256(abi.encodePacked(voter, commitHash));
+    }
+
+    function _commit(address voter, uint256 contentId, bool isUp) internal returns (bytes32) {
+        bytes32 salt = keccak256(abi.encodePacked(voter, block.timestamp, contentId));
+        bytes32 commitKey = _submitCommit(voter, contentId, isUp, salt);
+        _recordCommit(commitKey, isUp, salt);
+        return commitKey;
     }
 
     function _revealFromCiphertext(uint256 cid, uint256 roundId, bytes32 commitKey) internal {
         RoundLib.Commit memory c = RoundEngineReadHelpers.commit(votingEngine, cid, roundId, commitKey);
         if (c.revealed || c.stakeAmount == 0) return;
-        bool up = uint8(c.ciphertext[0]) == 1;
-        bytes32 s;
-        bytes memory ct = c.ciphertext;
-        assembly ("memory-safe") {
-            s := mload(add(ct, 33))
-        }
+        bool up = commitDirections[commitKey];
+        bytes32 s = commitSalts[commitKey];
         votingEngine.revealVoteByCommitKey(cid, roundId, commitKey, up, s);
     }
 
@@ -459,13 +505,8 @@ contract SecuritySettlementTimingTest is VotingTestBase {
 
         // Still before epoch end — reveal should revert
         vm.warp(round.startTime + EPOCH_DURATION - 1);
-        RoundLib.Commit memory c = RoundEngineReadHelpers.commit(votingEngine, contentId, roundId, ck1);
-        bool up = uint8(c.ciphertext[0]) == 1;
-        bytes32 s;
-        bytes memory ct = c.ciphertext;
-        assembly ("memory-safe") {
-            s := mload(add(ct, 33))
-        }
+        bool up = commitDirections[ck1];
+        bytes32 s = commitSalts[ck1];
         vm.expectRevert(RoundVotingEngine.EpochNotEnded.selector);
         votingEngine.revealVoteByCommitKey(contentId, roundId, ck1, up, s);
     }

@@ -467,6 +467,7 @@ __metadata:
   dependencies:
     "@curyo/contracts": "workspace:*"
     "@curyo/node-utils": "workspace:*"
+    "@curyo/sdk": "workspace:*"
     "@heroicons/react": ~2.1.5
     "@next/bundle-analyzer": ^16.1.6
     "@playwright/test": ^1.58.2
@@ -539,6 +540,18 @@ __metadata:
     typescript: ~5.8.2
     viem: 2.39.0
     vitest: ^4.0.18
+  languageName: unknown
+  linkType: soft
+
+"@curyo/sdk@workspace:*, @curyo/sdk@workspace:packages/sdk":
+  version: 0.0.0-use.local
+  resolution: "@curyo/sdk@workspace:packages/sdk"
+  dependencies:
+    "@curyo/contracts": "workspace:*"
+    "@types/node": ^20.10.7
+    tsx: ^4.21.0
+    typescript: ~5.8.2
+    viem: 2.39.0
   languageName: unknown
   linkType: soft
 

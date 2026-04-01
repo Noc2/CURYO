@@ -12,7 +12,7 @@ import { notification } from "~~/utils/scaffold-eth";
 
 export default function PortfolioPage() {
   const { address, isConnected } = useAccount();
-  const { claimReward, isClaiming } = useClaimReward();
+  const { claimReward, claimTieRefund, isClaiming } = useClaimReward();
 
   const { votes, totalVotes, settledVoteCount, hasMore, loadMore, isLoading } = usePaginatedVoteHistory(address, {
     pageSize: 50,
@@ -30,6 +30,13 @@ export default function PortfolioPage() {
     const success = await claimReward(contentId, roundId);
     if (success) {
       notification.success("Reward claimed!");
+    }
+  };
+
+  const handleRefundClaim = async (contentId: bigint, roundId: bigint) => {
+    const success = await claimTieRefund(contentId, roundId);
+    if (success) {
+      notification.success("Refund claimed!");
     }
   };
 
@@ -158,7 +165,7 @@ export default function PortfolioPage() {
                 const contentId = vote.contentId;
                 const roundId = vote.roundId;
                 const stake = (Number(vote.stake) / 1e6).toFixed(0);
-                const isSettled = vote.isSettled;
+                const claimType = vote.claimType;
 
                 return (
                   <div key={idx} className="bg-base-200 rounded-xl p-4 flex items-center justify-between">
@@ -168,13 +175,21 @@ export default function PortfolioPage() {
                         {stake} cREP · Round #{roundId.toString()}
                       </p>
                     </div>
-                    {isSettled ? (
+                    {claimType === "reward" ? (
                       <button
                         onClick={() => handleClaim(contentId, roundId)}
                         className="text-base font-medium px-4 py-2 rounded-full bg-success/10 text-success hover:bg-success/20 transition-colors disabled:opacity-40"
                         disabled={isClaiming}
                       >
                         {isClaiming ? <span className="loading loading-spinner loading-xs"></span> : "Claim Reward"}
+                      </button>
+                    ) : claimType === "refund" ? (
+                      <button
+                        onClick={() => handleRefundClaim(contentId, roundId)}
+                        className="text-base font-medium px-4 py-2 rounded-full bg-warning/10 text-warning hover:bg-warning/20 transition-colors disabled:opacity-40"
+                        disabled={isClaiming}
+                      >
+                        {isClaiming ? <span className="loading loading-spinner loading-xs"></span> : "Claim Refund"}
                       </button>
                     ) : (
                       <span

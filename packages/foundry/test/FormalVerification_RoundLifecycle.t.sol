@@ -87,7 +87,7 @@ contract FormalVerification_RoundLifecycleTest is VotingTestBase {
         ProtocolConfig(address(engine.protocolConfig())).setTreasury(treasuryAddr);
 
         // Config: epochDuration=5min, maxDuration=7d, minVoters=2, maxVoters=200
-        ProtocolConfig(address(engine.protocolConfig())).setConfig(EPOCH_DURATION, MAX_DURATION, MIN_VOTERS, 200);
+        _setTlockRoundConfig(ProtocolConfig(address(engine.protocolConfig())), EPOCH_DURATION, MAX_DURATION, MIN_VOTERS, 200);
 
         // Fund consensus reserve
         crepToken.mint(owner, 100_000e6);
@@ -128,7 +128,7 @@ contract FormalVerification_RoundLifecycleTest is VotingTestBase {
         vm.prank(voter);
         crepToken.approve(address(engine), stake);
         vm.prank(voter);
-        engine.commitVote(cid, commitHash, ciphertext, stake, address(0));
+        engine.commitVote(cid, _tlockCommitTargetRound(), _tlockDrandChainHash(), commitHash, ciphertext, stake, address(0));
         commitKey = keccak256(abi.encodePacked(voter, commitHash));
     }
 
@@ -141,10 +141,7 @@ contract FormalVerification_RoundLifecycleTest is VotingTestBase {
         for (uint256 i = 0; i < keys.length; i++) {
             RoundLib.Commit memory c = RoundEngineReadHelpers.commit(engine, cid, roundId, keys[i]);
             if (!c.revealed && c.stakeAmount > 0) {
-                bool up = uint8(c.ciphertext[0]) == 1;
-                bytes32 s;
-                bytes memory ct = c.ciphertext;
-                assembly ("memory-safe") { s := mload(add(ct, 33)) }
+                (bool up, bytes32 s) = _decodeTestCiphertext(c.ciphertext);
                 try engine.revealVoteByCommitKey(cid, roundId, keys[i], up, s) { } catch { }
             }
         }
@@ -437,7 +434,7 @@ contract FormalVerification_RoundLifecycleTest is VotingTestBase {
     function test_RevealFailed_RefundsOnlyRevealedVotes() public {
         ProtocolConfig cfg = ProtocolConfig(address(engine.protocolConfig()));
         vm.prank(owner);
-        cfg.setConfig(EPOCH_DURATION, MAX_DURATION, 3, 200);
+        _setTlockRoundConfig(cfg, EPOCH_DURATION, MAX_DURATION, 3, 200);
 
         uint256 cid = _submit();
 
@@ -505,7 +502,7 @@ contract FormalVerification_RoundLifecycleTest is VotingTestBase {
     function test_RefundFlow_CancelledRound() public {
         ProtocolConfig cfg = ProtocolConfig(address(engine.protocolConfig()));
         vm.prank(owner);
-        cfg.setConfig(EPOCH_DURATION, MAX_DURATION, 4, 200);
+        _setTlockRoundConfig(cfg, EPOCH_DURATION, MAX_DURATION, 4, 200);
 
         uint256 cid = _submit();
 

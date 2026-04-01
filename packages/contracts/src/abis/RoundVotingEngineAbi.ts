@@ -170,6 +170,16 @@ export const RoundVotingEngineAbi = [
         "internalType": "uint256"
       },
       {
+        "name": "targetRound",
+        "type": "uint64",
+        "internalType": "uint64"
+      },
+      {
+        "name": "drandChainHash",
+        "type": "bytes32",
+        "internalType": "bytes32"
+      },
+      {
         "name": "commitHash",
         "type": "bytes32",
         "internalType": "bytes32"
@@ -230,6 +240,16 @@ export const RoundVotingEngineAbi = [
         "internalType": "bytes"
       },
       {
+        "name": "targetRound",
+        "type": "uint64",
+        "internalType": "uint64"
+      },
+      {
+        "name": "drandChainHash",
+        "type": "bytes32",
+        "internalType": "bytes32"
+      },
+      {
         "name": "frontend",
         "type": "address",
         "internalType": "address"
@@ -253,6 +273,35 @@ export const RoundVotingEngineAbi = [
         "name": "epochIndex",
         "type": "uint8",
         "internalType": "uint8"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "commitRevealAvailableAt",
+    "inputs": [
+      {
+        "name": "contentId",
+        "type": "uint256",
+        "internalType": "uint256"
+      },
+      {
+        "name": "roundId",
+        "type": "uint256",
+        "internalType": "uint256"
+      },
+      {
+        "name": "commitKey",
+        "type": "bytes32",
+        "internalType": "bytes32"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "",
+        "type": "uint256",
+        "internalType": "uint256"
       }
     ],
     "stateMutability": "view"
@@ -1558,6 +1607,18 @@ export const RoundVotingEngineAbi = [
         "internalType": "bytes32"
       },
       {
+        "name": "targetRound",
+        "type": "uint64",
+        "indexed": false,
+        "internalType": "uint64"
+      },
+      {
+        "name": "drandChainHash",
+        "type": "bytes32",
+        "indexed": false,
+        "internalType": "bytes32"
+      },
+      {
         "name": "stake",
         "type": "uint256",
         "indexed": false,
@@ -1656,6 +1717,11 @@ export const RoundVotingEngineAbi = [
   {
     "type": "error",
     "name": "DormancyWindowElapsed",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "DrandChainHashMismatch",
     "inputs": []
   },
   {
@@ -1787,6 +1853,11 @@ export const RoundVotingEngineAbi = [
   {
     "type": "error",
     "name": "SelfVote",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "TargetRoundOutOfWindow",
     "inputs": []
   },
   {

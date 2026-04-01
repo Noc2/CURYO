@@ -51,6 +51,8 @@ library RoundLib {
         address voter;
         uint64 stakeAmount;
         bytes ciphertext; // tlock-encrypted payload (decryptable after epoch end via drand)
+        uint64 targetRound; // drand round targeted by the ciphertext
+        bytes32 drandChainHash; // drand chain hash bound into the commitment
         address frontend; // Frontend operator address (for fee distribution)
         uint48 revealableAfter; // Epoch end timestamp — reveals allowed after this time
         bool revealed;

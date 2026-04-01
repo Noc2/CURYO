@@ -1,6 +1,6 @@
 # Curyo — Keeper (Round Resolution Service)
 
-Stateless service that reveals committed votes via `revealVoteByCommitKey()` after each epoch, settles eligible rounds via `settleRound()`, finalizes `RevealFailed` rounds after the last grace deadline, sweeps unrevealed-vote cleanup via `processUnrevealedVotes()`, cancels expired rounds, marks dormant content, and can optionally sweep frontend fees for a hosted MCP/frontend operator. Designed for horizontal scaling — multiple instances run independently for redundancy.
+Stateless service that reveals committed votes via `revealVoteByCommitKey()` after each epoch, settles eligible rounds via `settleRound()`, finalizes `RevealFailed` rounds after the last grace deadline, sweeps unrevealed-vote cleanup via `processUnrevealedVotes()`, cancels expired rounds, marks dormant content, and can optionally sweep frontend fees for a hosted MCP/frontend operator. In the redeployed tlock model, it also performs deeper AGE/tlock stanza checks against the stored drand metadata before decrypting. Designed for horizontal scaling — multiple instances run independently for redundancy.
 
 ## Quick Start
 

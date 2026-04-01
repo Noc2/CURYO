@@ -18,7 +18,15 @@ import {
 import { formatUtcDateKey, getPreviousUtcDateKey, normalizeUtcDateKey } from "./streak-utils.js";
 
 ponder.on("RoundVotingEngine:VoteCommitted", async ({ event, context }) => {
-  const { contentId, roundId, voter, commitHash, stake } = event.args;
+  const { contentId, roundId, voter, commitHash, targetRound, drandChainHash, stake } = event.args as {
+    contentId: bigint;
+    roundId: bigint;
+    voter: `0x${string}`;
+    commitHash: `0x${string}`;
+    targetRound: bigint;
+    drandChainHash: `0x${string}`;
+    stake: bigint;
+  };
   const roundKey = `${contentId}-${roundId}`;
   const voteKey = `${contentId}-${roundId}-${voter}`;
 
@@ -60,6 +68,9 @@ ponder.on("RoundVotingEngine:VoteCommitted", async ({ event, context }) => {
       contentId,
       roundId,
       voter,
+      commitHash,
+      targetRound,
+      drandChainHash,
       isUp: null,
       stake,
       epochIndex: 0, // placeholder; updated on VoteRevealed with actual epochIndex

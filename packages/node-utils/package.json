@@ -4,7 +4,8 @@
   "private": true,
   "type": "module",
   "exports": {
-    "./keystore": "./src/keystore.ts"
+    "./keystore": "./src/keystore.ts",
+    "./mcpSessionToken": "./src/mcpSessionToken.ts"
   },
   "scripts": {
     "check-types": "tsc --noEmit"

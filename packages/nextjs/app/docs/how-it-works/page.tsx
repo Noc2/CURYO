@@ -18,7 +18,9 @@ const HowItWorks: NextPage = () => {
       <h2>Voting Flow</h2>
       <p>
         Each content item has independent rounds. You vote <strong>up</strong> or <strong>down</strong> with cREP, your
-        direction stays hidden during the blind phase, and early voters earn more reward weight than later voters.
+        direction stays hidden during the blind phase, and early voters earn more reward weight than later voters. In
+        the redeployed tlock model, commits also bind the target reveal round and drand chain hash, and malformed
+        ciphertexts are rejected on-chain.
       </p>
       <div className="not-prose">
         <VotingFlowDiagram />
@@ -29,7 +31,8 @@ const HowItWorks: NextPage = () => {
         </li>
         <li>
           <strong>Reveal:</strong> After the blind phase, the keeper normally reveals eligible votes and users can
-          self-reveal if needed.
+          self-reveal if needed. The keeper/runtime stack also performs deeper stanza checks against the stored drand
+          metadata before decrypting.
         </li>
         <li>
           <strong>Resolve:</strong> Once at least {protocolDocFacts.minVotersLabel} votes are revealed and reveal

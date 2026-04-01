@@ -41,17 +41,77 @@ function requireUrlEnv(name: string, errors: string[]): string {
   return value;
 }
 
-function requireIntEnv(name: string, errors: string[]): number {
+function requirePositiveIntegerEnv(name: string, errors: string[]): number {
   const value = readEnv(name);
   if (!value) {
     errors.push(`${name} is required`);
     return 0;
   }
 
-  const parsed = Number.parseInt(value, 10);
-  if (!Number.isInteger(parsed) || parsed <= 0) {
+  if (!/^\d+$/.test(value)) {
     errors.push(`${name} must be a positive integer`);
     return 0;
+  }
+
+  const parsed = Number(value);
+  if (!Number.isSafeInteger(parsed) || parsed <= 0) {
+    errors.push(`${name} must be a positive integer`);
+    return 0;
+  }
+
+  return parsed;
+}
+
+function parsePositiveNumberEnv(name: string, fallback: number, errors: string[]): number {
+  const value = readEnv(name);
+  if (!value) {
+    return fallback;
+  }
+
+  const parsed = Number(value);
+  if (!Number.isFinite(parsed) || parsed <= 0) {
+    errors.push(`${name} must be a finite positive number`);
+    return fallback;
+  }
+
+  return parsed;
+}
+
+function parseOptionalPositiveIntegerEnv(name: string, fallback: number, errors: string[]): number {
+  const value = readEnv(name);
+  if (!value) {
+    return fallback;
+  }
+
+  if (!/^\d+$/.test(value)) {
+    errors.push(`${name} must be a positive integer`);
+    return fallback;
+  }
+
+  const parsed = Number(value);
+  if (!Number.isSafeInteger(parsed) || parsed <= 0) {
+    errors.push(`${name} must be a positive integer`);
+    return fallback;
+  }
+
+  return parsed;
+}
+
+function parsePositiveBigIntEnv(name: string, fallback: bigint, errors: string[]): bigint {
+  const value = readEnv(name);
+  if (!value) {
+    return fallback;
+  }
+
+  if (!/^\d+$/.test(value)) {
+    errors.push(`${name} must be a positive integer`);
+    return fallback;
+  }
+
+  const parsed = BigInt(value);
+  if (parsed <= 0n) {
+    errors.push(`${name} must be a positive integer`);
+    return fallback;
   }
 
   return parsed;
@@ -121,7 +181,7 @@ function resolveContractAddress(params: {
 function loadConfig() {
   const errors: string[] = [];
   const warnings: string[] = [];
-  const chainId = requireIntEnv("CHAIN_ID", errors);
+  const chainId = requirePositiveIntegerEnv("CHAIN_ID", errors);
 
   const loadedConfig = {
     // Network
@@ -191,13 +251,13 @@ function loadConfig() {
     rawgApiKey: readEnv("RAWG_API_KEY"),
 
     // Voting
-    voteStake: BigInt(process.env.VOTE_STAKE || "1000000"),
-    voteThreshold: Number.parseFloat(process.env.VOTE_THRESHOLD || "5.0"),
+    voteStake: parsePositiveBigIntEnv("VOTE_STAKE", 1000000n, errors),
+    voteThreshold: parsePositiveNumberEnv("VOTE_THRESHOLD", 5.0, errors),
     voteFrontendAddress: readOptionalAddressEnv("RATE_FRONTEND_ADDRESS", errors),
     // Limits
-    maxVotesPerRun: Number.parseInt(process.env.MAX_VOTES_PER_RUN || "10", 10),
-    maxSubmissionsPerRun: Number.parseInt(process.env.MAX_SUBMISSIONS_PER_RUN || "5", 10),
-    maxSubmissionsPerCategory: Number.parseInt(process.env.MAX_SUBMISSIONS_PER_CATEGORY || "3", 10),
+    maxVotesPerRun: parseOptionalPositiveIntegerEnv("MAX_VOTES_PER_RUN", 10, errors),
+    maxSubmissionsPerRun: parseOptionalPositiveIntegerEnv("MAX_SUBMISSIONS_PER_RUN", 5, errors),
+    maxSubmissionsPerCategory: parseOptionalPositiveIntegerEnv("MAX_SUBMISSIONS_PER_CATEGORY", 3, errors),
   };
 
   if (errors.length > 0) {

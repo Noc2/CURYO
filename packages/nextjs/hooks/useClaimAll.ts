@@ -41,6 +41,11 @@ export function useClaimAll() {
               functionName: "claimCancelledRoundRefund",
               args: [contentId, roundId],
             });
+          } else if (claimType === "submitter_reward") {
+            await (writeDistributor as any)({
+              functionName: "claimSubmitterReward",
+              args: [contentId, roundId],
+            });
           } else {
             await (writeDistributor as any)({
               functionName: "claimReward",

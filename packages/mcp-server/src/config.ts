@@ -24,6 +24,7 @@ export interface HttpAuthConfig {
   tokenHashes: string[];
   scopes: string[];
   tokens: HttpAuthTokenConfig[];
+  sessionKeys: HttpAuthSessionKeyConfig[];
 }
 
 export interface HttpAuthTokenConfig {
@@ -35,6 +36,13 @@ export interface HttpAuthTokenConfig {
   expiresAt: string | null;
   subject: string | null;
   kind: "static" | "session";
+}
+
+export interface HttpAuthSessionKeyConfig {
+  keyId: string;
+  secret: string;
+  issuer: string;
+  audience: string;
 }
 
 export interface HttpRateLimitConfig {
@@ -63,6 +71,13 @@ export interface WriteContractsConfig {
   frontendRegistry: Address;
 }
 
+export interface WritePolicyConfig {
+  maxVoteStake: bigint | null;
+  allowedSubmissionHosts: string[];
+  submissionRevealPollIntervalMs: number;
+  submissionRevealTimeoutMs: number;
+}
+
 export interface WriteConfig {
   enabled: boolean;
   rpcUrl: string | null;
@@ -72,6 +87,7 @@ export interface WriteConfig {
   defaultIdentityId: string | null;
   identities: WriteIdentityConfig[];
   contracts: WriteContractsConfig | null;
+  policy: WritePolicyConfig;
 }
 
 interface RawHttpTokenConfig {
@@ -83,6 +99,13 @@ interface RawHttpTokenConfig {
   expiresAt?: string | null;
   subject?: string | null;
   kind?: "static" | "session";
+}
+
+interface RawHttpSessionKeyConfig {
+  keyId?: string;
+  secret?: string;
+  issuer?: string | null;
+  audience?: string | null;
 }
 
 interface RawWriteIdentityConfig {
@@ -102,10 +125,16 @@ const DEFAULT_HTTP_PATH = "/mcp";
 const DEFAULT_HTTP_CORS_ORIGIN = "http://localhost:3000";
 const DEFAULT_HTTP_AUTH_REALM = "curyo-mcp";
 const DEFAULT_HTTP_AUTH_SCOPES = ["mcp:read"] as const;
+const DEFAULT_HTTP_SESSION_KEY_ID = "nextjs-default";
+const DEFAULT_HTTP_SESSION_ISSUER = "curyo-nextjs";
+const DEFAULT_HTTP_SESSION_AUDIENCE = "curyo-mcp";
 const DEFAULT_HTTP_RATE_LIMIT_WINDOW_MS = 60_000;
 const DEFAULT_HTTP_READ_REQUESTS_PER_WINDOW = 120;
 const DEFAULT_HTTP_WRITE_REQUESTS_PER_WINDOW = 20;
 const DEFAULT_MAX_GAS_PER_TX = 2_000_000;
+const DEFAULT_SUBMISSION_REVEAL_POLL_INTERVAL_MS = 500;
+const DEFAULT_SUBMISSION_REVEAL_TIMEOUT_MS = 30_000;
+const LOCALHOST_HOSTNAMES = new Set(["localhost", "127.0.0.1", "::1"]);
 
 const KNOWN_CHAIN_NAMES: Record<number, string> = {
   31337: "Foundry",
@@ -136,6 +165,15 @@ export function normalizeHttpPath(value: string): string {
 export function normalizeOptionalBaseUrl(value: string | undefined): string | null {
   const trimmed = value?.trim();
   return trimmed ? normalizeBaseUrl(trimmed) : null;
+}
+
+function isLocalhostUrl(value: string): boolean {
+  try {
+    const parsed = new URL(value);
+    return LOCALHOST_HOSTNAMES.has(parsed.hostname);
+  } catch {
+    return false;
+  }
 }
 
 function readEnv(env: NodeJS.ProcessEnv, name: string): string | undefined {
@@ -245,6 +283,19 @@ function parseOptionalTimestamp(value: string | null | undefined, label: string,
   return new Date(timestamp).toISOString();
 }
 
+function parseOptionalBigInt(value: string | undefined, label: string, errors: string[]): bigint | null {
+  if (value === undefined) {
+    return null;
+  }
+
+  if (!/^\d+$/.test(value)) {
+    errors.push(`${label} must be an unsigned integer string`);
+    return null;
+  }
+
+  return BigInt(value);
+}
+
 function parseAddressValue(value: string, label: string, errors: string[]): Address | null {
   if (!isAddress(value)) {
     errors.push(`${label} must be a valid address`);
@@ -304,6 +355,23 @@ function resolveContractAddress(params: {
 
 function loadWriteConfig(env: NodeJS.ProcessEnv): WriteConfig {
   const enabled = parseBooleanEnv(readEnv(env, "CURYO_MCP_WRITE_ENABLED"), false);
+  const policy: WritePolicyConfig = {
+    maxVoteStake: null,
+    allowedSubmissionHosts: normalizeHeaderNames(parseCsvEnv(readEnv(env, "CURYO_MCP_WRITE_SUBMISSION_HOST_ALLOWLIST"))),
+    submissionRevealPollIntervalMs: parseIntegerEnv(
+      readEnv(env, "CURYO_MCP_WRITE_SUBMISSION_REVEAL_POLL_MS"),
+      DEFAULT_SUBMISSION_REVEAL_POLL_INTERVAL_MS,
+      "CURYO_MCP_WRITE_SUBMISSION_REVEAL_POLL_MS",
+      1,
+    ),
+    submissionRevealTimeoutMs: parseIntegerEnv(
+      readEnv(env, "CURYO_MCP_WRITE_SUBMISSION_REVEAL_TIMEOUT_MS"),
+      DEFAULT_SUBMISSION_REVEAL_TIMEOUT_MS,
+      "CURYO_MCP_WRITE_SUBMISSION_REVEAL_TIMEOUT_MS",
+      1,
+    ),
+  };
+
   if (!enabled) {
     return {
       enabled: false,
@@ -314,11 +382,13 @@ function loadWriteConfig(env: NodeJS.ProcessEnv): WriteConfig {
       defaultIdentityId: null,
       identities: [],
       contracts: null,
+      policy,
     };
   }
 
   const errors: string[] = [];
   const warnings: string[] = [];
+  policy.maxVoteStake = parseOptionalBigInt(readEnv(env, "CURYO_MCP_WRITE_MAX_VOTE_STAKE"), "CURYO_MCP_WRITE_MAX_VOTE_STAKE", errors);
 
   const rpcUrlValue = readEnv(env, "CURYO_MCP_RPC_URL") ?? readEnv(env, "RPC_URL");
   let rpcUrl: string | null = null;
@@ -505,6 +575,7 @@ function loadWriteConfig(env: NodeJS.ProcessEnv): WriteConfig {
     defaultIdentityId,
     identities,
     contracts,
+    policy,
   };
 }
 
@@ -544,6 +615,7 @@ function loadHttpAuthConfig(env: NodeJS.ProcessEnv, identityIds: ReadonlySet<str
 
   const configuredTokens: HttpAuthTokenConfig[] = [];
   const tokenErrors: string[] = [];
+  const sessionKeyErrors: string[] = [];
 
   for (const [index, rawToken] of rawTokenConfigs.entries()) {
     if (!rawToken || typeof rawToken !== "object") {
@@ -591,9 +663,63 @@ function loadHttpAuthConfig(env: NodeJS.ProcessEnv, identityIds: ReadonlySet<str
 
   const tokens = [...legacyTokens, ...configuredTokens];
 
-  if (mode === "bearer" && tokens.length === 0) {
+  const sessionKeys: HttpAuthSessionKeyConfig[] = [];
+  const singleSessionSecret = readEnv(env, "CURYO_MCP_HTTP_SESSION_SECRET");
+  if (singleSessionSecret) {
+    sessionKeys.push({
+      keyId: readEnv(env, "CURYO_MCP_HTTP_SESSION_KEY_ID") ?? DEFAULT_HTTP_SESSION_KEY_ID,
+      secret: singleSessionSecret,
+      issuer: readEnv(env, "CURYO_MCP_HTTP_SESSION_ISSUER") ?? DEFAULT_HTTP_SESSION_ISSUER,
+      audience: readEnv(env, "CURYO_MCP_HTTP_SESSION_AUDIENCE") ?? DEFAULT_HTTP_SESSION_AUDIENCE,
+    });
+  }
+
+  const rawSessionKeyConfigs = parseJsonEnv<RawHttpSessionKeyConfig[]>(
+    readEnv(env, "CURYO_MCP_HTTP_SESSION_SECRETS_JSON"),
+    "CURYO_MCP_HTTP_SESSION_SECRETS_JSON",
+  ) ?? [];
+  if (!Array.isArray(rawSessionKeyConfigs) && rawSessionKeyConfigs !== null) {
+    throw new Error("CURYO_MCP_HTTP_SESSION_SECRETS_JSON must be a JSON array");
+  }
+
+  const seenSessionKeyIds = new Set(sessionKeys.map((key) => key.keyId));
+  for (const [index, rawSessionKey] of rawSessionKeyConfigs.entries()) {
+    if (!rawSessionKey || typeof rawSessionKey !== "object") {
+      sessionKeyErrors.push(`CURYO_MCP_HTTP_SESSION_SECRETS_JSON[${index}] must be an object`);
+      continue;
+    }
+
+    const keyId = rawSessionKey.keyId?.trim();
+    const secret = rawSessionKey.secret?.trim();
+    if (!keyId) {
+      sessionKeyErrors.push(`CURYO_MCP_HTTP_SESSION_SECRETS_JSON[${index}].keyId is required`);
+      continue;
+    }
+    if (!secret) {
+      sessionKeyErrors.push(`CURYO_MCP_HTTP_SESSION_SECRETS_JSON[${index}].secret is required`);
+      continue;
+    }
+    if (seenSessionKeyIds.has(keyId)) {
+      sessionKeyErrors.push(`CURYO_MCP_HTTP_SESSION_SECRETS_JSON contains duplicate keyId "${keyId}"`);
+      continue;
+    }
+
+    seenSessionKeyIds.add(keyId);
+    sessionKeys.push({
+      keyId,
+      secret,
+      issuer: rawSessionKey.issuer?.trim() || DEFAULT_HTTP_SESSION_ISSUER,
+      audience: rawSessionKey.audience?.trim() || DEFAULT_HTTP_SESSION_AUDIENCE,
+    });
+  }
+
+  if (sessionKeyErrors.length > 0) {
+    throw new Error(`Invalid MCP HTTP session key configuration:\n- ${sessionKeyErrors.join("\n- ")}`);
+  }
+
+  if (mode === "bearer" && tokens.length === 0 && sessionKeys.length === 0) {
     throw new Error(
-      "CURYO_MCP_HTTP_BEARER_TOKEN, CURYO_MCP_HTTP_BEARER_TOKENS, or CURYO_MCP_HTTP_TOKENS_JSON is required when CURYO_MCP_HTTP_AUTH_MODE=bearer",
+      "CURYO_MCP_HTTP_BEARER_TOKEN, CURYO_MCP_HTTP_BEARER_TOKENS, CURYO_MCP_HTTP_TOKENS_JSON, or CURYO_MCP_HTTP_SESSION_SECRET(S)_JSON is required when CURYO_MCP_HTTP_AUTH_MODE=bearer",
     );
   }
 
@@ -603,6 +729,7 @@ function loadHttpAuthConfig(env: NodeJS.ProcessEnv, identityIds: ReadonlySet<str
     tokenHashes: tokens.map((token) => token.tokenHash),
     scopes: defaultScopes,
     tokens,
+    sessionKeys,
   };
 }
 
@@ -631,11 +758,49 @@ function loadHttpRateLimitConfig(env: NodeJS.ProcessEnv): HttpRateLimitConfig {
   };
 }
 
+function validateProductionStreamableHttpConfig(params: {
+  env: NodeJS.ProcessEnv;
+  ponderBaseUrl: string;
+  httpCorsOrigin: string;
+  httpRateLimit: HttpRateLimitConfig;
+}): void {
+  if (params.env.NODE_ENV !== "production") {
+    return;
+  }
+
+  if (isLocalhostUrl(params.ponderBaseUrl)) {
+    throw new Error(
+      "CURYO_PONDER_URL or PONDER_URL must not point to localhost in production streamable-http deployments",
+    );
+  }
+
+  if (isLocalhostUrl(params.httpCorsOrigin)) {
+    throw new Error(
+      "CURYO_MCP_HTTP_CORS_ORIGIN must not point to localhost in production streamable-http deployments",
+    );
+  }
+
+  if (params.httpRateLimit.enabled && params.httpRateLimit.trustedProxyHeaders.length === 0) {
+    throw new Error(
+      "CURYO_MCP_HTTP_TRUSTED_PROXY_HEADERS is required in production when CURYO_MCP_TRANSPORT=streamable-http and rate limiting is enabled",
+    );
+  }
+}
+
 export function loadConfig(env: NodeJS.ProcessEnv = process.env): ServerConfig {
   const ponderBaseUrl = normalizeBaseUrl(env.CURYO_PONDER_URL ?? env.PONDER_URL ?? DEFAULT_PONDER_URL);
   const transport = parseTransportEnv(env.CURYO_MCP_TRANSPORT);
   const write = loadWriteConfig(env);
   const httpAuth = loadHttpAuthConfig(env, new Set(write.identities.map((identity) => identity.id)));
+  const httpRateLimit = loadHttpRateLimitConfig(env);
+  const httpCorsOrigin = env.CURYO_MCP_HTTP_CORS_ORIGIN ?? DEFAULT_HTTP_CORS_ORIGIN;
+
+  validateProductionStreamableHttpConfig({
+    env,
+    ponderBaseUrl,
+    httpCorsOrigin,
+    httpRateLimit,
+  });
 
   return {
     ponderBaseUrl,
@@ -647,9 +812,9 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): ServerConfig {
     httpPort: parseIntegerEnv(env.CURYO_MCP_HTTP_PORT, DEFAULT_HTTP_PORT, "CURYO_MCP_HTTP_PORT", 0),
     httpPath: normalizeHttpPath(env.CURYO_MCP_HTTP_PATH ?? DEFAULT_HTTP_PATH),
     httpPublicBaseUrl: normalizeOptionalBaseUrl(env.CURYO_MCP_PUBLIC_BASE_URL),
-    httpCorsOrigin: env.CURYO_MCP_HTTP_CORS_ORIGIN ?? DEFAULT_HTTP_CORS_ORIGIN,
+    httpCorsOrigin,
     httpAuth,
-    httpRateLimit: loadHttpRateLimitConfig(env),
+    httpRateLimit,
     write,
   };
 }

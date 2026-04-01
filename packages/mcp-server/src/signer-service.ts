@@ -89,9 +89,21 @@ export class CuryoWriteService {
       reason?: string;
     },
   ): Promise<Record<string, unknown>> {
-    const context = this.getContext(identityId);
     const contentId = BigInt(params.contentId);
     const stakeAmount = BigInt(params.stakeAmount);
+    if (contentId <= 0n) {
+      throw new McpWriteServiceError("contentId must be greater than zero");
+    }
+    if (stakeAmount <= 0n) {
+      throw new McpWriteServiceError("stakeAmount must be greater than zero");
+    }
+    if (this.config.policy.maxVoteStake !== null && stakeAmount > this.config.policy.maxVoteStake) {
+      throw new McpWriteServiceError(
+        `vote stake exceeds the configured MCP limit (${this.config.policy.maxVoteStake.toString()} max)`,
+      );
+    }
+
+    const context = this.getContext(identityId);
     const frontendAddress = params.frontendAddress ?? context.identity.frontendAddress ?? ZERO_ADDRESS;
 
     const hasVoterId = await this.readContract<boolean>(context, {
@@ -157,7 +169,7 @@ export class CuryoWriteService {
     });
 
     const salt = `0x${randomBytes(32).toString("hex")}` as `0x${string}`;
-    const { ciphertext, commitHash } = await createTlockVoteCommit({
+    const { ciphertext, commitHash, targetRound, drandChainHash } = await createTlockVoteCommit({
       isUp: params.direction === "up",
       salt,
       contentId,
@@ -176,6 +188,8 @@ export class CuryoWriteService {
       approvalRequired,
       allowanceBefore: allowance.toString(),
       commitHash,
+      targetRound: targetRound.toString(),
+      drandChainHash,
       ...(params.reason ? { reason: params.reason } : {}),
     };
 
@@ -183,9 +197,9 @@ export class CuryoWriteService {
       if (!approvalRequired) {
         await this.simulateContract(context, {
           address: this.requireContracts().votingEngine,
-          abi: RoundVotingEngineAbi,
+          abi: RoundVotingEngineAbi as any,
           functionName: "commitVote",
-          args: [contentId, commitHash, ciphertext, stakeAmount, frontendAddress],
+          args: [contentId, targetRound, drandChainHash, commitHash, ciphertext, stakeAmount, frontendAddress],
         });
         result.simulation = "commitVote";
       } else {
@@ -207,12 +221,14 @@ export class CuryoWriteService {
       result.approvalTxHash = approvalTxHash;
     }
 
-    const voteTxHash = await this.writeContract(context, {
+    const voteRequest = {
       address: this.requireContracts().votingEngine,
-      abi: RoundVotingEngineAbi,
+      abi: RoundVotingEngineAbi as any,
       functionName: "commitVote",
-      args: [contentId, commitHash, ciphertext, stakeAmount, frontendAddress],
-    });
+      args: [contentId, targetRound, drandChainHash, commitHash, ciphertext, stakeAmount, frontendAddress],
+    } as const;
+    await this.simulateContract(context, voteRequest);
+    const voteTxHash = await this.writeContract(context, voteRequest);
 
     result.voteTxHash = voteTxHash;
     return result;
@@ -229,7 +245,6 @@ export class CuryoWriteService {
       dryRun?: boolean;
     },
   ): Promise<Record<string, unknown>> {
-    const context = this.getContext(identityId);
     const requestedCategoryId = BigInt(params.categoryId);
     const url = params.url.trim();
     const title = params.title.trim();
@@ -248,6 +263,16 @@ export class CuryoWriteService {
     if (!tags) {
       throw new McpWriteServiceError("tags are required");
     }
+    if (requestedCategoryId <= 0n) {
+      throw new McpWriteServiceError("categoryId must be greater than zero");
+    }
+
+    const submissionHost = getNormalizedUrlHost(url);
+    if (!isAllowedSubmissionHost(submissionHost, this.config.policy.allowedSubmissionHosts)) {
+      throw new McpWriteServiceError(`Submission host "${submissionHost}" is not allowed by MCP policy`);
+    }
+
+    const context = this.getContext(identityId);
 
     const hasVoterId = await this.readContract<boolean>(context, {
       address: this.requireContracts().voterIdNFT,
@@ -379,6 +404,8 @@ export class CuryoWriteService {
       submitterStake: minSubmitterStake.toString(),
       revealCommitment,
       reservationWaitMs: waitMs,
+      revealPollIntervalMs: this.config.policy.submissionRevealPollIntervalMs,
+      revealTimeoutMs: this.config.policy.submissionRevealTimeoutMs,
     };
 
     if (params.dryRun) {
@@ -414,14 +441,17 @@ export class CuryoWriteService {
       result.reserveTxHash = "reservation-already-exists";
     }
 
-    await delay(waitMs);
-
-    const submitTxHash = await this.writeContract(context, {
+    const submitRequest = {
       address: this.requireContracts().contentRegistry,
       abi: ContentRegistryAbi,
       functionName: "submitContent",
       args: [url, title, description, tags, requestedCategoryId, salt],
-    });
+    } as const;
+    const revealReadiness = await this.waitForSubmissionRevealReady(context, submitRequest, waitMs);
+    result.submitSimulationAttempts = revealReadiness.attempts;
+    result.revealReadyAfterMs = revealReadiness.waitedMs;
+
+    const submitTxHash = await this.writeContract(context, submitRequest);
 
     result.submitTxHash = submitTxHash;
     return result;
@@ -439,6 +469,9 @@ export class CuryoWriteService {
     const context = this.getContext(identityId);
     const contentId = BigInt(params.contentId);
     const roundId = BigInt(params.roundId);
+    if (contentId <= 0n || roundId <= 0n) {
+      throw new McpWriteServiceError("contentId and roundId must be greater than zero");
+    }
     const request = this.getRewardClaimRequest(contentId, roundId, params.kind);
 
     if (params.dryRun) {
@@ -454,6 +487,7 @@ export class CuryoWriteService {
       };
     }
 
+    await this.simulateContract(context, request);
     const txHash = await this.writeContract(context, request);
     return {
       action: "claim_reward",
@@ -479,6 +513,9 @@ export class CuryoWriteService {
     const context = this.getContext(identityId);
     const contentId = BigInt(params.contentId);
     const roundId = BigInt(params.roundId);
+    if (contentId <= 0n || roundId <= 0n) {
+      throw new McpWriteServiceError("contentId and roundId must be greater than zero");
+    }
     const frontendAddress = params.frontendAddress ?? context.identity.frontendAddress ?? context.account.address;
 
     if (context.account.address.toLowerCase() !== frontendAddress.toLowerCase()) {
@@ -510,6 +547,11 @@ export class CuryoWriteService {
     }
     if (disposition === "protocol") {
       throw new McpWriteServiceError("This frontend fee is no longer claimable by the frontend");
+    }
+    if (operator.toLowerCase() !== context.account.address.toLowerCase()) {
+      throw new McpWriteServiceError(
+        "claim_frontend_fee preview resolved a different frontend operator wallet than the bound signer",
+      );
     }
 
     const result: Record<string, unknown> = {
@@ -555,12 +597,14 @@ export class CuryoWriteService {
       return result;
     }
 
-    const claimTxHash = await this.writeContract(context, {
+    const claimRequest = {
       address: this.requireContracts().roundRewardDistributor,
       abi: RoundRewardDistributorAbi,
       functionName: "claimFrontendFee",
       args: [contentId, roundId, frontendAddress],
-    });
+    } as const;
+    await this.simulateContract(context, claimRequest);
+    const claimTxHash = await this.writeContract(context, claimRequest);
     result.claimTxHash = claimTxHash;
 
     if (params.withdrawAccumulated) {
@@ -571,12 +615,14 @@ export class CuryoWriteService {
         args: [frontendAddress],
       });
       if (accruedAfter > 0n) {
-        const withdrawTxHash = await this.writeContract(context, {
+        const withdrawRequest = {
           address: this.requireContracts().frontendRegistry,
           abi: FrontendRegistryAbi,
           functionName: "claimFees",
           args: [],
-        });
+        } as const;
+        await this.simulateContract(context, withdrawRequest);
+        const withdrawTxHash = await this.writeContract(context, withdrawRequest);
         result.withdrawTxHash = withdrawTxHash;
         result.accruedAfter = accruedAfter.toString();
       }
@@ -735,6 +781,44 @@ export class CuryoWriteService {
       args: [contentId, roundId],
     };
   }
+
+  private async waitForSubmissionRevealReady(
+    context: ExecutionContext,
+    request: {
+      address: Address;
+      abi: unknown;
+      functionName: string;
+      args?: readonly unknown[];
+    },
+    minimumWaitMs: number,
+  ): Promise<{ attempts: number; waitedMs: number }> {
+    if (this.config.policy.submissionRevealTimeoutMs < minimumWaitMs) {
+      throw new McpWriteServiceError(
+        `submit_content reveal timeout (${this.config.policy.submissionRevealTimeoutMs}ms) is shorter than the minimum reveal wait (${minimumWaitMs}ms)`,
+      );
+    }
+
+    const startedAt = Date.now();
+    await delay(minimumWaitMs);
+
+    let attempts = 0;
+    while (true) {
+      attempts += 1;
+      try {
+        await this.simulateContract(context, request);
+        return {
+          attempts,
+          waitedMs: Date.now() - startedAt,
+        };
+      } catch (error) {
+        if (Date.now() - startedAt >= this.config.policy.submissionRevealTimeoutMs) {
+          throw new McpWriteServiceError(`Timed out waiting for submit_content reveal readiness: ${formatWriteError(error)}`);
+        }
+
+        await delay(this.config.policy.submissionRevealPollIntervalMs);
+      }
+    }
+  }
 }
 
 function resolveAccount(identity: WriteIdentityConfig): PrivateKeyAccount {
@@ -785,4 +869,16 @@ function isReservationExistsError(error: unknown): boolean {
 
 async function delay(ms: number): Promise<void> {
   await new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+function getNormalizedUrlHost(url: string): string {
+  return new URL(url).hostname.trim().toLowerCase();
+}
+
+function isAllowedSubmissionHost(host: string, allowedHosts: readonly string[]): boolean {
+  if (allowedHosts.length === 0) {
+    return true;
+  }
+
+  return allowedHosts.some((allowedHost) => host === allowedHost || host.endsWith(`.${allowedHost}`));
 }

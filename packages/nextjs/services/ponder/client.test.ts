@@ -1,6 +1,6 @@
+import { fetchPonderJson, ponderApi, resolvePonderUrl } from "./client";
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { fetchPonderJson, resolvePonderUrl } from "./client";
 
 test("resolvePonderUrl uses the local default outside production", () => {
   assert.equal(resolvePonderUrl(undefined, false), "http://localhost:42069");
@@ -41,16 +41,57 @@ test("fetchPonderJson surfaces request timeouts clearly", async () => {
   const abortError = Object.assign(new Error("aborted"), { name: "AbortError" });
 
   await assert.rejects(
-    () => fetchPonderJson("https://ponder.curyo.xyz/content", 1234, async () => { throw abortError; }),
+    () =>
+      fetchPonderJson("https://ponder.curyo.xyz/content", 1234, async () => {
+        throw abortError;
+      }),
     /Ponder request timed out after 1234ms/,
   );
 });
 
 test("fetchPonderJson wraps fetch failures", async () => {
   await assert.rejects(
-    () => fetchPonderJson("https://ponder.curyo.xyz/content", 1000, async () => {
-      throw new Error("socket hang up");
-    }),
+    () =>
+      fetchPonderJson("https://ponder.curyo.xyz/content", 1000, async () => {
+        throw new Error("socket hang up");
+      }),
     /Ponder request failed: socket hang up/,
   );
+});
+
+test("ponderApi.getContentWindow respects hasMore when search totals are omitted", async () => {
+  const originalGetContent = ponderApi.getContent;
+  let callCount = 0;
+
+  ponderApi.getContent = async () => {
+    callCount += 1;
+
+    if (callCount === 1) {
+      return {
+        items: Array.from({ length: 200 }, (_, index) => ({ id: String(index + 1) })) as any,
+        total: null,
+        limit: 200,
+        offset: 0,
+        hasMore: true,
+      };
+    }
+
+    return {
+      items: Array.from({ length: 50 }, (_, index) => ({ id: String(index + 201) })) as any,
+      total: null,
+      limit: 50,
+      offset: 200,
+      hasMore: true,
+    };
+  };
+
+  try {
+    const response = await ponderApi.getContentWindow({ limit: "250", search: "curyo" });
+
+    assert.equal(response.items.length, 250);
+    assert.equal(response.total, null);
+    assert.equal(response.hasMore, true);
+  } finally {
+    ponderApi.getContent = originalGetContent;
+  }
 });

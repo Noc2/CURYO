@@ -1,0 +1,50 @@
+{
+  "name": "@curyo/sdk",
+  "version": "0.0.1",
+  "private": true,
+  "type": "module",
+  "description": "Framework-agnostic frontend SDK foundations for Curyo integrations",
+  "homepage": "https://github.com/Noc2/CURYO/tree/main/packages/sdk",
+  "repository": {
+    "type": "git",
+    "url": "git@github.com:Noc2/CURYO.git",
+    "directory": "packages/sdk"
+  },
+  "bugs": {
+    "url": "https://github.com/Noc2/CURYO/issues"
+  },
+  "keywords": [
+    "curyo",
+    "sdk",
+    "frontend",
+    "reputation",
+    "viem"
+  ],
+  "exports": {
+    ".": "./src/index.ts",
+    "./client": "./src/client.ts",
+    "./config": "./src/config.ts",
+    "./errors": "./src/errors.ts",
+    "./read": "./src/read.ts",
+    "./types": "./src/types.ts",
+    "./vote": "./src/vote.ts"
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "check-types": "tsc --noEmit",
+    "test": "node ../../scripts/run-node-tests.mjs src"
+  },
+  "dependencies": {
+    "@curyo/contracts": "workspace:*",
+    "viem": "2.39.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20.10.7",
+    "tsx": "^4.21.0",
+    "typescript": "~5.8.2"
+  },
+  "license": "MIT",
+  "engines": {
+    "node": ">=24 <25"
+  }
+}

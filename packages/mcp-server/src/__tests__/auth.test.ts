@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { IncomingMessage } from "node:http";
+import { createMcpSessionToken } from "@curyo/node-utils/mcpSessionToken";
 import { authenticateRequest, HttpAuthError } from "../auth.js";
 import type { HttpAuthConfig } from "../config.js";
 
@@ -22,6 +23,7 @@ const bearerAuthConfig: HttpAuthConfig = {
     },
   ],
   scopes: ["mcp:read"],
+  sessionKeys: [],
 };
 
 describe("authenticateRequest", () => {
@@ -32,6 +34,7 @@ describe("authenticateRequest", () => {
       tokenHashes: [],
       tokens: [],
       scopes: ["mcp:read"],
+      sessionKeys: [],
     });
 
     expect(result).toBeUndefined();
@@ -83,5 +86,49 @@ describe("authenticateRequest", () => {
         },
       ),
     ).toThrow("Bearer token has expired");
+  });
+
+  it("accepts signed MCP wallet sessions", () => {
+    const key = {
+      keyId: "nextjs-prod",
+      secret: "super-secret-signing-key",
+      issuer: "curyo-nextjs",
+      audience: "curyo-mcp",
+    } as const;
+    const { token } = createMcpSessionToken({
+      key,
+      subject: "0x7777777777777777777777777777777777777777",
+      clientId: "wallet:0x7777",
+      scopes: ["mcp:read", "mcp:write:vote"],
+      identityId: "writer",
+      ttlMs: 60_000,
+    });
+
+    const authInfo = authenticateRequest(
+      {
+        headers: {
+          authorization: `Bearer ${token}`,
+        },
+      } as IncomingMessage,
+      {
+        ...bearerAuthConfig,
+        tokens: [],
+        tokenHashes: [],
+        sessionKeys: [key],
+      },
+    );
+
+    expect(authInfo).toMatchObject({
+      clientId: "wallet:0x7777",
+      scopes: ["mcp:read", "mcp:write:vote"],
+      extra: {
+        keyId: "nextjs-prod",
+        identityId: "writer",
+        tokenKind: "session",
+        subject: "0x7777777777777777777777777777777777777777",
+        issuer: "curyo-nextjs",
+        audience: "curyo-mcp",
+      },
+    });
   });
 });

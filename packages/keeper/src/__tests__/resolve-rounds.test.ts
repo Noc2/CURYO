@@ -47,6 +47,8 @@ interface CommitData {
   voter: `0x${string}`;
   stakeAmount: bigint;
   ciphertext: `0x${string}`;
+  targetRound?: bigint;
+  drandChainHash?: `0x${string}`;
   frontend: `0x${string}`;
   revealableAfter: bigint;
   revealed: boolean;
@@ -86,11 +88,67 @@ function makeRound({
   };
 }
 
+function makeTlockCiphertext(params: {
+  isUp: boolean;
+  salt: `0x${string}`;
+  targetRound: bigint;
+  drandChainHash: `0x${string}`;
+  plaintextMarker?: string;
+}): `0x${string}` {
+  const chunkBase64 = (input: string, chunkSize = 64): string => {
+    const chunks: string[] = [];
+    for (let i = 0; i < input.length; i += chunkSize) {
+      chunks.push(input.slice(i, i + chunkSize));
+    }
+    return chunks.join("\n");
+  };
+  const toUnpaddedBase64 = (input: Buffer | string): string => Buffer.from(input).toString("base64").replace(/=+$/u, "");
+  const encryptedBody = Buffer.concat([
+    Buffer.from(params.plaintextMarker ?? `${params.isUp ? "1" : "0"}:${params.salt.slice(2)}`, "utf8"),
+    Buffer.alloc(Math.max(0, 65 - Buffer.byteLength(params.plaintextMarker ?? `${params.isUp ? "1" : "0"}:${params.salt.slice(2)}`, "utf8")), 0x58),
+  ]);
+  const recipientBody = chunkBase64(toUnpaddedBase64(Buffer.alloc(128, 0x42)));
+  const mac = toUnpaddedBase64(Buffer.alloc(32, 0x24));
+  const agePayload = Buffer.concat([
+    Buffer.from(
+      [
+        "age-encryption.org/v1",
+        `-> tlock ${params.targetRound.toString()} ${params.drandChainHash.slice(2)}`,
+        recipientBody,
+        `--- ${mac}`,
+        "",
+      ].join("\n"),
+      "utf8",
+    ),
+    encryptedBody,
+  ]);
+
+  return `0x${Buffer.from(
+    [
+      "-----BEGIN AGE ENCRYPTED FILE-----",
+      chunkBase64(agePayload.toString("base64")),
+      "-----END AGE ENCRYPTED FILE-----",
+      "",
+    ].join("\n"),
+    "utf-8",
+  ).toString("hex")}` as `0x${string}`;
+}
+
 function makeCommit(overrides: Partial<CommitData> = {}): CommitData {
+  const salt = `0x${"aa".repeat(32)}` as `0x${string}`;
+  const targetRound = 123n;
+  const drandChainHash = `0x${"ab".repeat(32)}` as `0x${string}`;
   return {
     voter: VOTER,
     stakeAmount: 100n,
-    ciphertext: "0x1234",
+    ciphertext: makeTlockCiphertext({
+      isUp: true,
+      salt,
+      targetRound,
+      drandChainHash,
+    }),
+    targetRound,
+    drandChainHash,
     frontend: "0x0000000000000000000000000000000000000000",
     revealableAfter: 10n,
     revealed: false,
@@ -124,6 +182,8 @@ function toCommitTuple(commit: CommitData) {
     commit.voter,
     commit.stakeAmount,
     commit.ciphertext,
+    commit.targetRound ?? 0n,
+    commit.drandChainHash ?? `0x${"0".repeat(64)}`,
     commit.frontend,
     commit.revealableAfter,
     commit.revealed,
@@ -353,11 +413,10 @@ describe("resolveRounds", () => {
       round,
       commitKeys: [COMMIT_KEY_1, COMMIT_KEY_2, "0xcccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc"],
       commits: {
-        [COMMIT_KEY_1]: makeCommit({ revealableAfter: 100n, ciphertext: "0xaaaa" }),
-        [COMMIT_KEY_2]: makeCommit({ revealableAfter: 100n, ciphertext: "0xbbbb" }),
+        [COMMIT_KEY_1]: makeCommit({ revealableAfter: 100n }),
+        [COMMIT_KEY_2]: makeCommit({ revealableAfter: 100n }),
         "0xcccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc": makeCommit({
           revealableAfter: 100n,
-          ciphertext: "0xcccc",
           isUp: false,
         }),
       },
@@ -384,6 +443,153 @@ describe("resolveRounds", () => {
     expect(commits[COMMIT_KEY_1].revealed).toBe(true);
     expect(commits[COMMIT_KEY_2].revealed).toBe(true);
     expect(round.state).toBe(1);
+  });
+
+  it("treats malformed tlock ciphertext metadata as a permanent failure without decrypting", async () => {
+    const round = makeRound({
+      state: 0,
+      voteCount: 1n,
+      revealedCount: 0n,
+    });
+    const badCommit = makeCommit({ revealableAfter: 100n });
+    badCommit.ciphertext = "0x1234";
+    const { publicClient, walletClient } = makeHarness({
+      activeRoundId: 1n,
+      latestRoundId: 1n,
+      round,
+      commitKeys: [COMMIT_KEY_1],
+      commits: {
+        [COMMIT_KEY_1]: badCommit,
+      },
+      now: 1_000n,
+    });
+    const logger = makeLogger();
+
+    const result = await resolveRounds(
+      publicClient as any,
+      walletClient as any,
+      {} as any,
+      { address: ACCOUNT } as any,
+      logger as any,
+    );
+
+    expect(result.votesRevealed).toBe(0);
+    expect(timelockDecrypt).not.toHaveBeenCalled();
+    expect(logger.error).toHaveBeenCalledWith(
+      "tlock ciphertext metadata invalid",
+      expect.objectContaining({
+        contentId: 1,
+        roundId: 1,
+        commitKey: COMMIT_KEY_1,
+        permanent: true,
+        error: "malformed tlock ciphertext metadata",
+      }),
+    );
+    expect(walletClient.writeContract).not.toHaveBeenCalledWith(
+      expect.objectContaining({
+        functionName: "revealVoteByCommitKey",
+      }),
+    );
+  });
+
+  it("treats shallow pseudo-tlock envelopes as a permanent failure without decrypting", async () => {
+    const round = makeRound({
+      state: 0,
+      voteCount: 1n,
+      revealedCount: 0n,
+    });
+    const badCommit = makeCommit({ revealableAfter: 100n });
+    badCommit.ciphertext = (`0x${Buffer.from(
+      [
+        "-----BEGIN AGE ENCRYPTED FILE-----",
+        Buffer.from(
+          [
+            "age-encryption.org/v1",
+            `-> tlock ${badCommit.targetRound!.toString()} ${badCommit.drandChainHash!.slice(2)}`,
+            "payload 1:" + "11".repeat(32),
+            "--- bWFj",
+          ].join("\n"),
+          "binary",
+        ).toString("base64"),
+        "-----END AGE ENCRYPTED FILE-----",
+        "",
+      ].join("\n"),
+      "utf8",
+    ).toString("hex")}`) as `0x${string}`;
+    const { publicClient, walletClient } = makeHarness({
+      activeRoundId: 1n,
+      latestRoundId: 1n,
+      round,
+      commitKeys: [COMMIT_KEY_1],
+      commits: {
+        [COMMIT_KEY_1]: badCommit,
+      },
+      now: 1_000n,
+    });
+    const logger = makeLogger();
+
+    const result = await resolveRounds(
+      publicClient as any,
+      walletClient as any,
+      {} as any,
+      { address: ACCOUNT } as any,
+      logger as any,
+    );
+
+    expect(result.votesRevealed).toBe(0);
+    expect(timelockDecrypt).not.toHaveBeenCalled();
+    expect(logger.error).toHaveBeenCalledWith(
+      "tlock ciphertext metadata invalid",
+      expect.objectContaining({
+        contentId: 1,
+        roundId: 1,
+        commitKey: COMMIT_KEY_1,
+        permanent: true,
+        error: "malformed tlock ciphertext metadata",
+      }),
+    );
+  });
+
+  it("treats mismatched tlock metadata as a permanent failure without decrypting", async () => {
+    const round = makeRound({
+      state: 0,
+      voteCount: 1n,
+      revealedCount: 0n,
+    });
+    const badCommit = makeCommit({ revealableAfter: 100n });
+    badCommit.targetRound = badCommit.targetRound! + 1n;
+    const { publicClient, walletClient } = makeHarness({
+      activeRoundId: 1n,
+      latestRoundId: 1n,
+      round,
+      commitKeys: [COMMIT_KEY_1],
+      commits: {
+        [COMMIT_KEY_1]: badCommit,
+      },
+      now: 1_000n,
+    });
+    const logger = makeLogger();
+
+    const result = await resolveRounds(
+      publicClient as any,
+      walletClient as any,
+      {} as any,
+      { address: ACCOUNT } as any,
+      logger as any,
+    );
+
+    expect(result.votesRevealed).toBe(0);
+    expect(timelockDecrypt).not.toHaveBeenCalled();
+    expect(logger.error).toHaveBeenCalledWith(
+      "tlock ciphertext metadata invalid",
+      expect.objectContaining({
+        contentId: 1,
+        roundId: 1,
+        commitKey: COMMIT_KEY_1,
+        permanent: true,
+        error: expect.stringContaining("tlock metadata mismatch"),
+      }),
+    );
   });
 
   it("keeps retrying when tlock says the ciphertext is not decryptable yet", async () => {
@@ -479,6 +685,17 @@ describe("resolveRounds", () => {
         error: "beacon unavailable",
       }),
     );
+    expect(logger.warn).toHaveBeenLastCalledWith(
+      "tlock decryption failed",
+      expect.objectContaining({
+        contentId: 1,
+        roundId: 1,
+        commitKey: COMMIT_KEY_1,
+        attempt: 9,
+        permanent: false,
+        error: "beacon unavailable",
+      }),
+    );
     expect(walletClient.writeContract).not.toHaveBeenCalledWith(
       expect.objectContaining({ functionName: "revealVoteByCommitKey" }),
     );
@@ -502,11 +719,10 @@ describe("resolveRounds", () => {
       round,
       commitKeys: [COMMIT_KEY_1, COMMIT_KEY_2, "0xcccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc"],
       commits: {
-        [COMMIT_KEY_1]: makeCommit({ revealableAfter: 100n, ciphertext: "0xaaaa" }),
-        [COMMIT_KEY_2]: makeCommit({ revealableAfter: 100n, ciphertext: "0xbbbb" }),
+        [COMMIT_KEY_1]: makeCommit({ revealableAfter: 100n }),
+        [COMMIT_KEY_2]: makeCommit({ revealableAfter: 100n }),
         "0xcccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc": makeCommit({
           revealableAfter: 100n,
-          ciphertext: "0xcccc",
           isUp: false,
         }),
       },

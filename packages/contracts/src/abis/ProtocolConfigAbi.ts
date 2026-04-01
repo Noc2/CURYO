@@ -99,6 +99,45 @@ export const ProtocolConfigAbi = [
   },
   {
     "type": "function",
+    "name": "drandChainHash",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "bytes32",
+        "internalType": "bytes32"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "drandGenesisTime",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "uint64",
+        "internalType": "uint64"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "drandPeriod",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "uint64",
+        "internalType": "uint64"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
     "name": "frontendRegistry",
     "inputs": [],
     "outputs": [
@@ -330,6 +369,29 @@ export const ProtocolConfigAbi = [
   },
   {
     "type": "function",
+    "name": "setDrandConfig",
+    "inputs": [
+      {
+        "name": "chainHash",
+        "type": "bytes32",
+        "internalType": "bytes32"
+      },
+      {
+        "name": "genesisTime",
+        "type": "uint64",
+        "internalType": "uint64"
+      },
+      {
+        "name": "period",
+        "type": "uint64",
+        "internalType": "uint64"
+      }
+    ],
+    "outputs": [],
+    "stateMutability": "nonpayable"
+  },
+  {
+    "type": "function",
     "name": "setFrontendRegistry",
     "inputs": [
       {
@@ -491,6 +553,31 @@ export const ProtocolConfigAbi = [
         "type": "uint256",
         "indexed": false,
         "internalType": "uint256"
+      }
+    ],
+    "anonymous": false
+  },
+  {
+    "type": "event",
+    "name": "DrandConfigUpdated",
+    "inputs": [
+      {
+        "name": "drandChainHash",
+        "type": "bytes32",
+        "indexed": false,
+        "internalType": "bytes32"
+      },
+      {
+        "name": "genesisTime",
+        "type": "uint64",
+        "indexed": false,
+        "internalType": "uint64"
+      },
+      {
+        "name": "period",
+        "type": "uint64",
+        "indexed": false,
+        "internalType": "uint64"
       }
     ],
     "anonymous": false

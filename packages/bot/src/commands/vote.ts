@@ -133,7 +133,7 @@ export async function runVote() {
       })) as readonly [bigint, bigint, bigint, bigint];
       const epochDuration = Number(configResult[0]);
 
-      const { ciphertext, commitHash } = await createTlockVoteCommit({
+      const { ciphertext, commitHash, targetRound, drandChainHash } = await createTlockVoteCommit({
         isUp,
         salt,
         contentId,
@@ -142,8 +142,9 @@ export async function runVote() {
 
       const voteTx = await wallet.writeContract({
         ...contractConfig.votingEngine,
+        abi: contractConfig.votingEngine.abi as any,
         functionName: "commitVote",
-        args: [contentId, commitHash, ciphertext, config.voteStake, frontendAddress],
+        args: [contentId, targetRound, drandChainHash, commitHash, ciphertext, config.voteStake, frontendAddress],
       });
       await publicClient.waitForTransactionReceipt({ hash: voteTx });
       log.info(`Committed vote on content #${item.id} (${Number(config.voteStake) / 1e6} cREP, ${isUp ? "UP" : "DOWN"} — hidden until epoch ends): ${voteTx}`);

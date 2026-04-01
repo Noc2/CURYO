@@ -1,4 +1,3 @@
-import "../helpers/fetch-shim";
 import {
   approveCREP,
   commitVoteDirect,
@@ -11,8 +10,13 @@ import {
 } from "../helpers/admin-helpers";
 import { ANVIL_ACCOUNTS, DEPLOYER } from "../helpers/anvil-accounts";
 import { CONTRACT_ADDRESSES } from "../helpers/contracts";
+import "../helpers/fetch-shim";
 import { getContentById, getContentList, getVotes } from "../helpers/ponder-api";
+import { deriveKeeperDecryptWaitMs } from "../helpers/tlockRuntime";
+import { ProtocolConfigAbi, RoundVotingEngineAbi } from "@curyo/contracts/abis";
 import { expect, test } from "@playwright/test";
+import { createPublicClient, http } from "viem";
+import { foundry } from "viem/chains";
 
 /**
  * Keeper-backed settlement lifecycle.
@@ -33,6 +37,12 @@ test.describe("Keeper-backed settlement lifecycle", () => {
   const TLOCK_EPOCH = 30;
   const CHAIN_TIME_OFFSET = EPOCH_DURATION - TLOCK_EPOCH;
   const KEEPER_HEALTH_URL = "http://localhost:9090/health";
+  const KEEPER_INTERVAL_MS = Number(process.env.KEEPER_INTERVAL_MS ?? 30_000);
+  const KEEPER_DECRYPT_BUFFER_MS = 10_000;
+  const publicClient = createPublicClient({
+    chain: foundry,
+    transport: http("http://localhost:8545"),
+  });
 
   test.beforeAll(async () => {
     const keeperRes = await fetch(KEEPER_HEALTH_URL).catch(() => null);
@@ -43,7 +53,7 @@ test.describe("Keeper-backed settlement lifecycle", () => {
   });
 
   test("keeper reveals and settles a short-tlock round end to end", async () => {
-    test.setTimeout(240_000);
+    test.setTimeout(600_000);
 
     await evmSetTimestamp(Math.floor(Date.now() / 1000) - CHAIN_TIME_OFFSET);
 
@@ -102,8 +112,67 @@ test.describe("Keeper-backed settlement lifecycle", () => {
     expect(roundId).toBeGreaterThan(0n);
 
     // Move chain time past the revealable window. The short tlock epoch means
-    // the ciphertext should become decryptable in roughly TLOCK_EPOCH real seconds.
+    // the ciphertext should become decryptable shortly after the epoch ends.
+    //
+    // On heavily seeded Anvil chains, `evmSetTimestamp(realNow - 270s)` cannot move
+    // block.timestamp backwards behind the current head, so the later +301s jump can
+    // still leave the round a few real minutes ahead of drand wall-clock time.
+    // Wait for the latest commit's actual target round instead of assuming the rewind stuck.
     await evmIncreaseTime(EPOCH_DURATION + 1);
+
+    const protocolConfig = await publicClient.readContract({
+      address: VOTING_ENGINE,
+      abi: RoundVotingEngineAbi,
+      functionName: "protocolConfig",
+      args: [],
+    });
+    const [drandGenesisTime, drandPeriod] = await Promise.all([
+      publicClient.readContract({
+        address: protocolConfig,
+        abi: ProtocolConfigAbi,
+        functionName: "drandGenesisTime",
+        args: [],
+      }),
+      publicClient.readContract({
+        address: protocolConfig,
+        abi: ProtocolConfigAbi,
+        functionName: "drandPeriod",
+        args: [],
+      }),
+    ]);
+
+    let keeperDecryptWaitMs = 0;
+    for (let i = 0n; i < BigInt(voters.length); i++) {
+      const commitKey = await publicClient.readContract({
+        address: VOTING_ENGINE,
+        abi: RoundVotingEngineAbi,
+        functionName: "roundCommitHashes",
+        args: [BigInt(contentId!), roundId, i],
+      });
+      const commit = await publicClient.readContract({
+        address: VOTING_ENGINE,
+        abi: RoundVotingEngineAbi,
+        functionName: "commits",
+        args: [BigInt(contentId!), roundId, commitKey],
+      });
+
+      keeperDecryptWaitMs = Math.max(
+        keeperDecryptWaitMs,
+        deriveKeeperDecryptWaitMs({
+          wallClockNowSeconds: Math.floor(Date.now() / 1000),
+          revealableAfterSeconds: commit[6],
+          targetRound: commit[3],
+          drandGenesisTimeSeconds: drandGenesisTime,
+          drandPeriodSeconds: drandPeriod,
+          keeperIntervalMs: KEEPER_INTERVAL_MS,
+          extraBufferMs: KEEPER_DECRYPT_BUFFER_MS,
+        }),
+      );
+    }
+
+    if (keeperDecryptWaitMs > 0) {
+      await new Promise(resolve => setTimeout(resolve, keeperDecryptWaitMs));
+    }
 
     const settledIndexed = await waitForPonderIndexed(
       async () => {

@@ -1,7 +1,20 @@
 import deployedContracts from "@curyo/contracts/deployedContracts";
 import { and, eq, sql } from "drizzle-orm";
 import "server-only";
-import { type Abi, type Address, type Hash, createPublicClient, getAddress, http, isAddress, isHash } from "viem";
+import {
+  type Abi,
+  type Address,
+  type Hash,
+  type Hex,
+  createPublicClient,
+  decodeFunctionData,
+  getAddress,
+  http,
+  isAddress,
+  isHash,
+  isHex,
+  toHex,
+} from "viem";
 import { db } from "~~/lib/db";
 import { freeTransactionQuotas, freeTransactionReservations } from "~~/lib/db/schema";
 import {
@@ -76,6 +89,7 @@ export type FreeTransactionAllowanceDecision =
         | "invalid_sender"
         | "invalid_targets"
         | "target_not_allowlisted"
+        | "unsupported_operation"
         | "invalid_operation_key"
         | "missing_voter_id"
         | "free_tx_exhausted";
@@ -84,7 +98,7 @@ export type FreeTransactionAllowanceDecision =
 const DEFAULT_DENY_REASON = "Transaction not sponsored.";
 const FREE_TX_EXHAUSTED_REASON = "Free transactions used up. Add CELO to continue.";
 const NO_VOTER_ID_REASON = "Verify your ID to unlock free transactions.";
-const FREE_TRANSACTION_RESERVATION_TTL_MS = 30 * 60_000;
+const FREE_TRANSACTION_RESERVATION_TTL_MS = 5 * 60_000;
 const FREE_TRANSACTION_IDEMPOTENCY_WINDOW_MS = 2 * 60_000;
 
 let ensureFreeTransactionQuotaTablePromise: Promise<void> | null = null;
@@ -113,16 +127,19 @@ function isCallableAbi(abi: Abi) {
   return abi.some(entry => entry.type === "function");
 }
 
-function getAllowedContractAddresses(chainId: number) {
+function getContractsByAddress(chainId: number): Map<string, { name: string; address: Address; abi: Abi }> {
   const contracts = getContractsForChain(chainId);
   if (!contracts) {
-    return new Set<string>();
+    return new Map();
   }
 
-  return new Set(
+  return new Map(
     Object.entries(contracts)
       .filter(([name, contract]) => !name.endsWith("Lib") && isCallableAbi(contract.abi))
-      .map(([, contract]) => contract.address.toLowerCase()),
+      .map(([name, contract]) => [
+        contract.address.toLowerCase(),
+        { name, address: contract.address, abi: contract.abi },
+      ]),
   );
 }
 
@@ -225,10 +242,11 @@ function buildQuotaSummary(params: {
   environment: string;
   freeTxLimit: number;
   freeTxUsed: number;
+  pendingReservations?: number;
   voterIdTokenId: string;
   walletAddress: `0x${string}`;
 }) {
-  const used = params.freeTxUsed;
+  const used = params.freeTxUsed + (params.pendingReservations ?? 0);
 
   return {
     chainId: params.chainId,
@@ -316,6 +334,7 @@ async function readQuotaSummary(params: {
   walletAddress: `0x${string}`;
 }) {
   const identityKey = await ensureQuotaRow(db, params);
+  const now = new Date();
   const [row] = await db
     .select()
     .from(freeTransactionQuotas)
@@ -331,11 +350,17 @@ async function readQuotaSummary(params: {
     return null;
   }
 
+  const pendingReservations = await getActivePendingReservationCount(db, {
+    identityKey,
+    now,
+  });
+
   return buildQuotaSummary({
     chainId: quotaRow.chainId,
     environment: quotaRow.environment,
     freeTxLimit: quotaRow.freeTxLimit,
     freeTxUsed: quotaRow.freeTxUsed,
+    pendingReservations,
     voterIdTokenId: quotaRow.voterIdTokenId,
     walletAddress: params.walletAddress,
   });
@@ -366,36 +391,39 @@ function buildUnverifiedSummary(params: { chainId: number; walletAddress: `0x${s
   } satisfies FreeTransactionAllowanceSummary;
 }
 
-function extractTargetAddresses(body: ThirdwebVerifierRequest) {
-  const rawTargets = [...(body.userOp?.targets ?? []), ...(body.userOp?.data?.targets ?? [])];
-  const normalizedTargets = new Set<string>();
+type NormalizedVerifierCall = {
+  data: Hex;
+  to: `0x${string}`;
+  value: Hex;
+};
 
-  for (const target of rawTargets) {
-    if (!isAddress(target)) {
-      return null;
-    }
-
-    normalizedTargets.add(normalizeAddress(target).toLowerCase());
+function normalizeCallValue(value: string | undefined): Hex | null {
+  if (value === undefined) {
+    return "0x0";
   }
 
-  return normalizedTargets;
+  if (isHex(value)) {
+    return toHex(BigInt(value));
+  }
+
+  if (/^\d+$/.test(value)) {
+    return toHex(BigInt(value));
+  }
+
+  return null;
 }
 
-function extractOperationKey(body: ThirdwebVerifierRequest): Hash | null {
-  const sender = body.userOp?.sender;
-  if (!sender || !body.chainId) {
-    return null;
-  }
-
+function extractOperationCalls(body: ThirdwebVerifierRequest): NormalizedVerifierCall[] | null {
   const targets = body.userOp?.data?.targets ?? body.userOp?.targets ?? [];
-  if (targets.length === 0) {
-    return null;
-  }
-
   const callDatas = body.userOp?.data?.callDatas;
   const values = body.userOp?.data?.values;
 
-  if (callDatas && callDatas.length !== targets.length) {
+  if (
+    !Array.isArray(targets) ||
+    targets.length === 0 ||
+    !Array.isArray(callDatas) ||
+    callDatas.length !== targets.length
+  ) {
     return null;
   }
 
@@ -403,15 +431,164 @@ function extractOperationKey(body: ThirdwebVerifierRequest): Hash | null {
     return null;
   }
 
+  const calls: NormalizedVerifierCall[] = [];
+  for (const [index, target] of targets.entries()) {
+    const callData = callDatas[index];
+    const value = normalizeCallValue(values?.[index]);
+
+    if (!isAddress(target) || !isHex(callData) || !value) {
+      return null;
+    }
+
+    calls.push({
+      data: callData,
+      to: normalizeAddress(target),
+      value,
+    });
+  }
+
+  return calls;
+}
+
+function extractOperationKey(body: ThirdwebVerifierRequest, calls: readonly NormalizedVerifierCall[]): Hash | null {
+  const sender = body.userOp?.sender;
+  if (!sender || !body.chainId || calls.length === 0) {
+    return null;
+  }
+
   return buildFreeTransactionOperationKey({
     chainId: body.chainId,
-    calls: targets.map((target, index) => ({
-      data: callDatas?.[index] as `0x${string}` | undefined,
-      to: target as `0x${string}`,
-      value: values?.[index] as `0x${string}` | undefined,
-    })),
+    calls,
     sender,
   });
+}
+
+function isZeroCallValue(value: Hex) {
+  return BigInt(value) === 0n;
+}
+
+function normalizeAddressArg(value: unknown): `0x${string}` | null {
+  if (typeof value !== "string" || !isAddress(value)) {
+    return null;
+  }
+
+  return normalizeAddress(value);
+}
+
+function validateSponsoredCalls(
+  chainId: number,
+  calls: readonly NormalizedVerifierCall[],
+): { ok: true } | { ok: false; debugCode: "target_not_allowlisted" | "unsupported_operation" } {
+  const contracts = getContractsForChain(chainId);
+  const contractsByAddress = getContractsByAddress(chainId);
+  const contentRegistry = contracts?.ContentRegistry;
+  const categoryRegistry = contracts?.CategoryRegistry;
+  const frontendRegistry = contracts?.FrontendRegistry;
+  const votingEngine = contracts?.RoundVotingEngine;
+  const allowedApproveSpenders = new Set(
+    [contentRegistry?.address, categoryRegistry?.address, frontendRegistry?.address]
+      .filter((value): value is Address => Boolean(value))
+      .map(value => value.toLowerCase()),
+  );
+
+  for (const call of calls) {
+    if (!isZeroCallValue(call.value)) {
+      return { ok: false, debugCode: "unsupported_operation" };
+    }
+
+    const contract = contractsByAddress.get(call.to.toLowerCase());
+    if (!contract) {
+      return { ok: false, debugCode: "target_not_allowlisted" };
+    }
+
+    let decoded: { functionName: string; args: readonly unknown[] | undefined };
+    try {
+      decoded = decodeFunctionData({
+        abi: contract.abi,
+        data: call.data,
+      }) as { functionName: string; args: readonly unknown[] | undefined };
+    } catch {
+      return { ok: false, debugCode: "unsupported_operation" };
+    }
+
+    const args = decoded.args ?? [];
+    const functionName = decoded.functionName;
+
+    switch (contract.name) {
+      case "CuryoReputation": {
+        if (functionName === "approve") {
+          const spender = normalizeAddressArg(args[0]);
+          if (spender && allowedApproveSpenders.has(spender.toLowerCase())) {
+            continue;
+          }
+        }
+
+        if (functionName === "transferAndCall") {
+          const target = normalizeAddressArg(args[0]);
+          if (target && votingEngine && target.toLowerCase() === votingEngine.address.toLowerCase()) {
+            continue;
+          }
+        }
+
+        return { ok: false, debugCode: "unsupported_operation" };
+      }
+      case "ContentRegistry":
+        if (functionName === "reserveSubmission" || functionName === "submitContent") {
+          continue;
+        }
+        return { ok: false, debugCode: "unsupported_operation" };
+      case "CategoryRegistry":
+        if (functionName === "submitCategory" || functionName === "linkApprovalProposal") {
+          continue;
+        }
+        return { ok: false, debugCode: "unsupported_operation" };
+      case "FrontendRegistry":
+        if (
+          functionName === "register" ||
+          functionName === "requestDeregister" ||
+          functionName === "completeDeregister" ||
+          functionName === "claimFees"
+        ) {
+          continue;
+        }
+        return { ok: false, debugCode: "unsupported_operation" };
+      case "RoundRewardDistributor":
+        if (functionName === "claimFrontendFee") {
+          continue;
+        }
+        return { ok: false, debugCode: "unsupported_operation" };
+      case "CuryoGovernor":
+        if (functionName === "proposeCategoryApproval") {
+          continue;
+        }
+        return { ok: false, debugCode: "unsupported_operation" };
+      default:
+        return { ok: false, debugCode: "target_not_allowlisted" };
+    }
+  }
+
+  return { ok: true };
+}
+
+async function getActivePendingReservationCount(
+  database: FreeTransactionDbWrite,
+  params: { identityKey: string; now: Date },
+) {
+  const [row] = await database
+    .select({
+      pendingCount: sql<number>`count(*)`,
+    })
+    .from(freeTransactionReservations)
+    .where(
+      and(
+        eq(freeTransactionReservations.identityKey, params.identityKey),
+        eq(freeTransactionReservations.status, "pending"),
+        sql`${freeTransactionReservations.expiresAt} > ${params.now}`,
+      ),
+    )
+    .limit(1);
+
+  return Number(row?.pendingCount ?? 0);
 }
 
 async function allTransactionHashesSucceeded(params: {
@@ -523,9 +700,8 @@ export async function evaluateFreeTransactionAllowance(
     };
   }
 
-  const allowedTargets = getAllowedContractAddresses(body.chainId);
-  const targets = extractTargetAddresses(body);
-  if (!targets || targets.size === 0) {
+  const calls = extractOperationCalls(body);
+  if (!calls || calls.length === 0) {
     return {
       isAllowed: false,
       debugCode: "invalid_targets",
@@ -533,15 +709,16 @@ export async function evaluateFreeTransactionAllowance(
     };
   }
 
-  if ([...targets].some(target => !allowedTargets.has(target))) {
+  const validatedCalls = validateSponsoredCalls(body.chainId, calls);
+  if (!validatedCalls.ok) {
     return {
       isAllowed: false,
-      debugCode: "target_not_allowlisted",
+      debugCode: validatedCalls.debugCode,
       reason: DEFAULT_DENY_REASON,
     };
   }
 
-  const operationKey = extractOperationKey(body);
+  const operationKey = extractOperationKey(body, calls);
   if (!operationKey) {
     return {
       isAllowed: false,
@@ -590,6 +767,11 @@ export async function evaluateFreeTransactionAllowance(
       throw new Error("Failed to read free transaction quota.");
     }
 
+    const activePendingReservations = await getActivePendingReservationCount(tx, {
+      identityKey,
+      now,
+    });
+
     const [existingReservation] = await tx
       .select()
       .from(freeTransactionReservations)
@@ -614,6 +796,7 @@ export async function evaluateFreeTransactionAllowance(
           environment: normalizedQuotaRow.environment,
           freeTxLimit: normalizedQuotaRow.freeTxLimit,
           freeTxUsed: normalizedQuotaRow.freeTxUsed,
+          pendingReservations: activePendingReservations,
           voterIdTokenId: normalizedQuotaRow.voterIdTokenId,
           walletAddress,
         }),
@@ -628,39 +811,14 @@ export async function evaluateFreeTransactionAllowance(
           environment: normalizedQuotaRow.environment,
           freeTxLimit: normalizedQuotaRow.freeTxLimit,
           freeTxUsed: normalizedQuotaRow.freeTxUsed,
+          pendingReservations: activePendingReservations,
           voterIdTokenId: normalizedQuotaRow.voterIdTokenId,
           walletAddress,
         }),
       };
     }
 
-    // Consume quota at reservation time because confirm/release are client-driven
-    // follow-ups and cannot be trusted as the authoritative source of spend.
-    const updatedQuotaRows = await tx
-      .update(freeTransactionQuotas)
-      .set({
-        lastWalletAddress: walletAddress,
-        freeTxUsed: sql`${freeTransactionQuotas.freeTxUsed} + 1`,
-        exhaustedAt: sql`
-          CASE
-            WHEN ${freeTransactionQuotas.freeTxUsed} + 1 >= ${freeTransactionQuotas.freeTxLimit}
-            THEN ${now}
-            ELSE ${freeTransactionQuotas.exhaustedAt}
-          END
-        `,
-        updatedAt: now,
-      })
-      .where(
-        and(
-          eq(freeTransactionQuotas.identityKey, identityKey),
-          sql`${freeTransactionQuotas.freeTxUsed} < ${freeTransactionQuotas.freeTxLimit}`,
-        ),
-      )
-      .returning({
-        identityKey: freeTransactionQuotas.identityKey,
-      });
-
-    if (updatedQuotaRows.length === 0) {
+    if (normalizedQuotaRow.freeTxUsed + activePendingReservations >= normalizedQuotaRow.freeTxLimit) {
       const [latestQuotaRow] = await tx
         .select()
         .from(freeTransactionQuotas)
@@ -681,6 +839,7 @@ export async function evaluateFreeTransactionAllowance(
           environment: normalizedLatestQuotaRow.environment,
           freeTxLimit: normalizedLatestQuotaRow.freeTxLimit,
           freeTxUsed: normalizedLatestQuotaRow.freeTxUsed,
+          pendingReservations: activePendingReservations,
           voterIdTokenId: normalizedLatestQuotaRow.voterIdTokenId,
           walletAddress,
         }),
@@ -729,7 +888,8 @@ export async function evaluateFreeTransactionAllowance(
         chainId: normalizedQuotaRow.chainId,
         environment: normalizedQuotaRow.environment,
         freeTxLimit: normalizedQuotaRow.freeTxLimit,
-        freeTxUsed: normalizedQuotaRow.freeTxUsed + 1,
+        freeTxUsed: normalizedQuotaRow.freeTxUsed,
+        pendingReservations: activePendingReservations + 1,
         voterIdTokenId: normalizedQuotaRow.voterIdTokenId,
         walletAddress,
       }),
@@ -830,6 +990,14 @@ export async function confirmFreeTransactionReservation(params: {
       .update(freeTransactionQuotas)
       .set({
         lastWalletAddress: walletAddress,
+        freeTxUsed: sql`${freeTransactionQuotas.freeTxUsed} + 1`,
+        exhaustedAt: sql`
+          CASE
+            WHEN ${freeTransactionQuotas.freeTxUsed} + 1 >= ${freeTransactionQuotas.freeTxLimit}
+            THEN ${now}
+            ELSE ${freeTransactionQuotas.exhaustedAt}
+          END
+        `,
         updatedAt: now,
       })
       .where(eq(freeTransactionQuotas.identityKey, updatedIdentityKey));

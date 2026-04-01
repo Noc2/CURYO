@@ -21,6 +21,8 @@ export interface CommitData {
   voter: string;
   stakeAmount: bigint;
   ciphertext: `0x${string}`;
+  targetRound?: bigint;
+  drandChainHash?: `0x${string}`;
   frontend: string;
   revealableAfter: bigint;
   revealed: boolean;

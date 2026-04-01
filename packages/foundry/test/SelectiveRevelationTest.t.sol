@@ -18,6 +18,15 @@ import { MockCategoryRegistry } from "../contracts/mocks/MockCategoryRegistry.so
 ///         Validates that the epochUnrevealedCount counter + revealGracePeriod
 ///         prevents attackers from selectively revealing votes and settling.
 contract SelectiveRevelationTest is VotingTestBase {
+    struct CommitArtifacts {
+        bytes32 salt;
+        uint64 targetRound;
+        bytes32 drandChainHash;
+        bytes ciphertext;
+        bytes32 commitHash;
+        bytes32 commitKey;
+    }
+
     CuryoReputation public crepToken;
     ContentRegistry public registry;
     RoundVotingEngine public engine;
@@ -85,7 +94,7 @@ contract SelectiveRevelationTest is VotingTestBase {
         ProtocolConfig(address(engine.protocolConfig())).setRewardDistributor(address(rewardDistributor));
         ProtocolConfig(address(engine.protocolConfig())).setCategoryRegistry(address(mockCategoryRegistry));
         ProtocolConfig(address(engine.protocolConfig())).setTreasury(treasury);
-        ProtocolConfig(address(engine.protocolConfig())).setConfig(EPOCH, 7 days, 3, 1000);
+        _setTlockRoundConfig(ProtocolConfig(address(engine.protocolConfig())), EPOCH, 7 days, 3, 1000);
         ProtocolConfig(address(engine.protocolConfig())).setRevealGracePeriod(GRACE_PERIOD);
 
         crepToken.mint(owner, 2_000_000e6);
@@ -107,18 +116,39 @@ contract SelectiveRevelationTest is VotingTestBase {
     // HELPERS
     // =========================================================================
 
+    function _buildCommitArtifacts(address voter, uint256 contentId, bool isUp, bytes32 salt)
+        private
+        view
+        returns (CommitArtifacts memory artifacts)
+    {
+        artifacts.salt = salt;
+        artifacts.targetRound = _tlockCommitTargetRound();
+        artifacts.drandChainHash = _tlockDrandChainHash();
+        artifacts.ciphertext = _testCiphertext(isUp, salt, contentId, artifacts.targetRound, artifacts.drandChainHash);
+        artifacts.commitHash =
+            _commitHash(isUp, salt, contentId, artifacts.targetRound, artifacts.drandChainHash, artifacts.ciphertext);
+        artifacts.commitKey = keccak256(abi.encodePacked(voter, artifacts.commitHash));
+    }
+
     function _commit(address voter, uint256 contentId, bool isUp, uint256 stake)
         internal
         returns (bytes32 commitKey, bytes32 salt)
     {
         salt = keccak256(abi.encodePacked(voter, block.timestamp));
-        bytes memory ciphertext = _testCiphertext(isUp, salt, contentId);
-        bytes32 commitHash = _commitHash(isUp, salt, contentId, ciphertext);
-        vm.prank(voter);
+        CommitArtifacts memory artifacts = _buildCommitArtifacts(voter, contentId, isUp, salt);
+        vm.startPrank(voter);
         crepToken.approve(address(engine), stake);
-        vm.prank(voter);
-        engine.commitVote(contentId, commitHash, ciphertext, stake, address(0));
-        commitKey = keccak256(abi.encodePacked(voter, commitHash));
+        engine.commitVote(
+            contentId,
+            artifacts.targetRound,
+            artifacts.drandChainHash,
+            artifacts.commitHash,
+            artifacts.ciphertext,
+            stake,
+            address(0)
+        );
+        vm.stopPrank();
+        commitKey = artifacts.commitKey;
     }
 
     function _reveal(uint256 contentId, uint256 roundId, bytes32 commitKey, bool isUp, bytes32 salt) internal {

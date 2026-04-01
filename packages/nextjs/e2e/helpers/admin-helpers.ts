@@ -8,10 +8,19 @@
  * Pattern follows cancelExpiredRoundDirect() in keeper.ts — ABI-encode
  * the call with viem and send via eth_sendTransaction.
  */
+import { ANVIL_ACCOUNTS } from "./anvil-accounts";
 import "./fetch-shim";
 import { PONDER_URL } from "./ponder-url";
+import { deriveAnchoredTlockRuntimeNowMs } from "./tlockRuntime";
 
 const ANVIL_RPC = "http://localhost:8545";
+// Contract gas costs shift as local protocol code evolves, so E2E helpers estimate
+// gas instead of relying on a stale fixed cap for vote/settlement transactions.
+const DEFAULT_TX_GAS_LIMIT = 10_000_000n;
+const ESTIMATED_TX_GAS_BUFFER = 300_000n;
+const ANVIL_PRIVATE_KEYS_BY_ADDRESS = new Map(
+  Object.values(ANVIL_ACCOUNTS).map(account => [account.address.toLowerCase(), account.privateKey as `0x${string}`]),
+);
 
 async function rpcRequest<T = any>(method: string, params: unknown[]): Promise<T | null> {
   const res = await fetch(ANVIL_RPC, {
@@ -27,6 +36,15 @@ async function rpcRequest<T = any>(method: string, params: unknown[]): Promise<T
   const json = await res.json();
   if (json.error) return null;
   return (json.result ?? null) as T | null;
+}
+
+async function resolveTxGasLimit(from: string, to: string, data: `0x${string}`): Promise<bigint> {
+  const estimate = await rpcRequest<`0x${string}`>("eth_estimateGas", [{ from, to, data }, "latest"]);
+  if (!estimate) {
+    return DEFAULT_TX_GAS_LIMIT;
+  }
+
+  return BigInt(estimate) + ESTIMATED_TX_GAS_BUFFER;
 }
 
 async function resolveProtocolConfigAddress(contractAddress: string): Promise<string> {
@@ -124,6 +142,27 @@ async function buildSubmissionReservation(
 
 /** Send a raw transaction to the Anvil RPC, return true if it succeeded on-chain. */
 async function sendTx(from: string, to: string, data: `0x${string}`): Promise<boolean> {
+  const gasLimit = await resolveTxGasLimit(from, to, data);
+  const privateKey = ANVIL_PRIVATE_KEYS_BY_ADDRESS.get(from.toLowerCase());
+  if (privateKey) {
+    try {
+      const [{ createPublicClient, createWalletClient, http }, { privateKeyToAccount }, { foundry }] =
+        await Promise.all([import("viem"), import("viem/accounts"), import("viem/chains")]);
+      const account = privateKeyToAccount(privateKey);
+      const publicClient = createPublicClient({ chain: foundry, transport: http(ANVIL_RPC) });
+      const walletClient = createWalletClient({ account, chain: foundry, transport: http(ANVIL_RPC) });
+      const txHash = await walletClient.sendTransaction({
+        to: to as `0x${string}`,
+        data,
+        gas: gasLimit,
+      });
+      const receipt = await publicClient.waitForTransactionReceipt({ hash: txHash });
+      return receipt.status === "success";
+    } catch (error) {
+      console.warn(`[sendTx] Signed tx failed from=${from} to=${to}; falling back to RPC send: ${String(error)}`);
+    }
+  }
+
   // Impersonate the sender so accounts beyond Anvil's default 10 can send txs
   await fetch(ANVIL_RPC, {
     method: "POST",
@@ -137,7 +176,7 @@ async function sendTx(from: string, to: string, data: `0x${string}`): Promise<bo
     body: JSON.stringify({
       jsonrpc: "2.0",
       method: "eth_sendTransaction",
-      params: [{ from, to, data, gas: "0x1E8480" }], // 2M gas
+      params: [{ from, to, data, gas: `0x${gasLimit.toString(16)}` }],
       id: Date.now(),
     }),
   });
@@ -182,6 +221,64 @@ async function sendTx(from: string, to: string, data: `0x${string}`): Promise<bo
     await new Promise(resolve => setTimeout(resolve, 500));
   }
   return false;
+}
+
+async function readLatestBlockTimestampSeconds(): Promise<number> {
+  const block = await rpcRequest<{ timestamp?: string }>("eth_getBlockByNumber", ["latest", false]);
+  if (!block?.timestamp) {
+    throw new Error("Failed to read latest block timestamp from Anvil");
+  }
+
+  return Number(BigInt(block.timestamp));
+}
+
+async function resolveTlockRuntimeNowMs(
+  votingEngineAddress: string,
+  tlockEpochDurationSeconds: number,
+): Promise<() => number> {
+  const [{ epochDuration }, drandPeriodSeconds, latestBlockTimestamp] = await Promise.all([
+    readRoundConfig(votingEngineAddress),
+    readDrandPeriodSeconds(votingEngineAddress),
+    readLatestBlockTimestampSeconds(),
+  ]);
+
+  // Local E2E chains can drift behind wall-clock time while Next.js builds or routes warm up.
+  // Anchor the drand target just inside the next reveal window instead of on its brittle lower bound.
+  const runtimeNowMs = deriveAnchoredTlockRuntimeNowMs({
+    latestBlockTimestampSeconds: latestBlockTimestamp + 1,
+    roundEpochDurationSeconds: Number(epochDuration),
+    tlockEpochDurationSeconds,
+    drandPeriodSeconds,
+  });
+
+  return () => runtimeNowMs;
+}
+
+async function readDrandPeriodSeconds(contractAddress: string): Promise<number> {
+  const { decodeFunctionResult, encodeFunctionData } = await import("viem");
+  const abi = [
+    {
+      name: "drandPeriod",
+      type: "function",
+      inputs: [],
+      outputs: [{ name: "", type: "uint256" }],
+      stateMutability: "view",
+    },
+  ] as const;
+  const configAddress = await resolveProtocolConfigAddress(contractAddress);
+  const data = encodeFunctionData({ abi, functionName: "drandPeriod" });
+  const result = await rpcRequest<`0x${string}`>("eth_call", [{ to: configAddress, data }, "latest"]);
+  if (!result) {
+    throw new Error("Failed to read drandPeriod from Anvil");
+  }
+
+  return Number(
+    decodeFunctionResult({
+      abi,
+      functionName: "drandPeriod",
+      data: result,
+    }),
+  );
 }
 
 /**
@@ -1000,13 +1097,20 @@ export async function commitVoteDirect(
     ciphertext,
     commitHash: chash,
     commitKey: ckey,
-  } = await createTlockVoteCommit({
-    voter: fromAddress as `0x${string}`,
-    isUp,
-    salt,
-    contentId: BigInt(contentId),
-    epochDurationSeconds,
-  });
+    targetRound,
+    drandChainHash,
+  } = await createTlockVoteCommit(
+    {
+      voter: fromAddress as `0x${string}`,
+      isUp,
+      salt,
+      contentId: BigInt(contentId),
+      epochDurationSeconds,
+    },
+    {
+      now: await resolveTlockRuntimeNowMs(contractAddress, epochDurationSeconds),
+    },
+  );
 
   const data = encodeFunctionData({
     abi: [
@@ -1015,6 +1119,8 @@ export async function commitVoteDirect(
         type: "function",
         inputs: [
           { name: "contentId", type: "uint256" },
+          { name: "targetRound", type: "uint64" },
+          { name: "drandChainHash", type: "bytes32" },
           { name: "commitHash", type: "bytes32" },
           { name: "ciphertext", type: "bytes" },
           { name: "stakeAmount", type: "uint256" },
@@ -1023,9 +1129,9 @@ export async function commitVoteDirect(
         outputs: [],
         stateMutability: "nonpayable",
       },
-    ],
+    ] as any,
     functionName: "commitVote",
-    args: [BigInt(contentId), chash, ciphertext, stakeAmount, frontend as `0x${string}`],
+    args: [BigInt(contentId), targetRound, drandChainHash, chash, ciphertext, stakeAmount, frontend as `0x${string}`],
   });
 
   const success = await sendTx(fromAddress, contractAddress, data);
@@ -1060,18 +1166,27 @@ export async function commitVoteWithTransferAndCallDirect(
     ciphertext,
     commitHash: chash,
     commitKey: ckey,
-  } = await createTlockVoteCommit({
-    voter: fromAddress as `0x${string}`,
-    isUp,
-    salt,
-    contentId: BigInt(contentId),
-    epochDurationSeconds,
-  });
+    targetRound,
+    drandChainHash,
+  } = await createTlockVoteCommit(
+    {
+      voter: fromAddress as `0x${string}`,
+      isUp,
+      salt,
+      contentId: BigInt(contentId),
+      epochDurationSeconds,
+    },
+    {
+      now: await resolveTlockRuntimeNowMs(votingEngineAddress, epochDurationSeconds),
+    },
+  );
 
   const payload = encodeVoteTransferPayload({
     contentId: BigInt(contentId),
     commitHash: chash,
     ciphertext,
+    targetRound,
+    drandChainHash,
     frontend: frontend as `0x${string}`,
   });
 

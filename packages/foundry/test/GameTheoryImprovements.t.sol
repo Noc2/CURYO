@@ -60,7 +60,7 @@ contract GameTheoryImprovementsTest is VotingTestBase {
             )
         );
 
-        // Initialize engine (ciphertext validation is relaxed on chainid 31337)
+        // Initialize engine; Foundry helpers below use test-only payload bytes.
         engine = RoundVotingEngine(
             address(
                 new ERC1967Proxy(
@@ -95,7 +95,7 @@ contract GameTheoryImprovementsTest is VotingTestBase {
         ProtocolConfig(address(engine.protocolConfig())).setTreasury(treasuryAddr);
 
         // Override config: 1-hour epochs, 7-day max, minVoters=3, maxVoters=1000
-        ProtocolConfig(address(engine.protocolConfig())).setConfig(EPOCH_DURATION, MAX_DURATION, MIN_VOTERS, 1000);
+        _setTlockRoundConfig(ProtocolConfig(address(engine.protocolConfig())), EPOCH_DURATION, MAX_DURATION, MIN_VOTERS, 1000);
 
         // Fund consensus reserve
         crepToken.mint(owner, 200_000e6);
@@ -136,14 +136,14 @@ contract GameTheoryImprovementsTest is VotingTestBase {
 
         vm.startPrank(voter);
         crepToken.approve(address(engine), stake);
-        engine.commitVote(contentId, ch, ct, stake, address(0));
+        engine.commitVote(contentId, _tlockCommitTargetRound(), _tlockDrandChainHash(), ch, ct, stake, address(0));
         vm.stopPrank();
     }
 
     /// @dev Reveal a previously committed vote. Caller must warp past revealableAfter first.
     function _reveal(address voter, uint256 contentId, uint256 roundId, bool isUp) internal {
         bytes32 salt = bytes32(uint256(uint160(voter)) ^ uint256(contentId));
-        bytes32 ch = _commitHash(isUp, salt, contentId);
+        bytes32 ch = engine.voterCommitHash(contentId, roundId, voter);
         bytes32 ck = _commitKey(voter, ch);
 
         vm.prank(voter);

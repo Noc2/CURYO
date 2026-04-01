@@ -6,6 +6,7 @@ import { PonderClient, type PonderApiError } from "./clients/ponder.js";
 import type { ServerConfig } from "./config.js";
 import { enforceHttpRateLimit, HttpRateLimitError } from "./lib/http-rate-limit.js";
 import { logEvent, serializeError } from "./lib/logging.js";
+import { getMetricsText, recordHttpAuthFailure, recordHttpRateLimit, recordHttpRequest, recordReadinessCheck } from "./metrics.js";
 import { createServer as createMcpServer } from "./server.js";
 
 export interface RunningHttpServer {
@@ -22,6 +23,7 @@ const CORS_ALLOW_METHODS = "GET, POST, DELETE, OPTIONS";
 const CORS_ALLOW_HEADERS = "Accept, Authorization, Content-Type, Last-Event-ID, MCP-Protocol-Version, Mcp-Session-Id";
 const HEALTH_PATH = "/healthz";
 const READINESS_PATH = "/readyz";
+const METRICS_PATH = "/metrics";
 type AuthenticatedIncomingMessage = IncomingMessage & { auth?: AuthInfo };
 
 function isWildcardAddress(address: string): boolean {
@@ -139,6 +141,7 @@ export async function handleStreamableHttpRequest(
   const remoteAddress = request.socket?.remoteAddress ?? null;
 
   const logResponse = (statusCode: number, extra: Record<string, unknown> = {}) => {
+    recordHttpRequest(statusCode);
     logEvent("info", "mcp_http_request", {
       method,
       path: requestUrl.pathname,
@@ -170,6 +173,7 @@ export async function handleStreamableHttpRequest(
   if (requestUrl.pathname === READINESS_PATH) {
     try {
       const stats = await ponderClient.getStats();
+      recordReadinessCheck(true);
       sendJson(
         response,
         200,
@@ -189,6 +193,7 @@ export async function handleStreamableHttpRequest(
       );
       logResponse(200, { route: "readyz" });
     } catch (error) {
+      recordReadinessCheck(false);
       const statusCode = isPonderApiError(error) ? 503 : 500;
       sendJson(
         response,
@@ -214,6 +219,15 @@ export async function handleStreamableHttpRequest(
         ...serializeError(error),
       });
     }
+    return;
+  }
+
+  if (requestUrl.pathname === METRICS_PATH) {
+    applyCorsHeaders(response, config);
+    response.statusCode = 200;
+    response.setHeader("Content-Type", "text/plain; version=0.0.4; charset=utf-8");
+    response.end(getMetricsText());
+    logResponse(200, { route: "metrics" });
     return;
   }
 
@@ -243,6 +257,7 @@ export async function handleStreamableHttpRequest(
     authInfo = authenticateRequest(request, config.httpAuth);
   } catch (error) {
     if (error instanceof HttpAuthError) {
+      recordHttpAuthFailure();
       response.setHeader("WWW-Authenticate", error.wwwAuthenticate);
       response.setHeader("Cache-Control", "no-store");
       sendJson(response, error.statusCode, { error: error.message }, config);
@@ -265,6 +280,7 @@ export async function handleStreamableHttpRequest(
     enforceHttpRateLimit(request, config.httpRateLimit, authInfo, requestUrl.pathname);
   } catch (error) {
     if (error instanceof HttpRateLimitError) {
+      recordHttpRateLimit();
       response.setHeader("Retry-After", String(error.retryAfterSeconds));
       sendJson(
         response,

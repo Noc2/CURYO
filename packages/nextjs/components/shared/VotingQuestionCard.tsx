@@ -81,7 +81,7 @@ export function VotingQuestionCard({
     hasMyVote ? (
       <div
         className="tooltip tooltip-bottom cursor-help flex items-center gap-2 rounded-full border border-base-content/10 bg-base-content/5 px-4 py-2"
-        data-tip="Your vote is encrypted until the blind phase ends. The keeper normally reveals eligible votes afterward, and you can self-reveal if needed."
+        data-tip="Your vote is encrypted until the blind phase ends. The keeper normally validates the stored tlock stanza and reveals eligible votes afterward, and you can self-reveal if needed."
       >
         <span className="text-base font-semibold text-primary">Committed</span>
         <span className="text-base text-base-content/70">hidden</span>

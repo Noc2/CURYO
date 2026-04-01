@@ -729,7 +729,7 @@ contract RoundSettlementEdgeCase3Test is VotingTestBase {
         ProtocolConfig(address(engine.protocolConfig())).setRewardDistributor(address(distributor));
         ProtocolConfig(address(engine.protocolConfig())).setCategoryRegistry(address(mockCategoryRegistry));
         ProtocolConfig(address(engine.protocolConfig())).setTreasury(treasury);
-        ProtocolConfig(address(engine.protocolConfig())).setConfig(5 minutes, 7 days, 2, 200);
+        _setTlockRoundConfig(ProtocolConfig(address(engine.protocolConfig())), 5 minutes, 7 days, 2, 200);
 
         crep.mint(owner, 2_000_000e6);
         crep.approve(address(engine), 1_000_000e6);
@@ -938,7 +938,7 @@ contract RoundSettlementEdgeCase3Test is VotingTestBase {
         vm.startPrank(voter1);
         crep.approve(address(engine), 100e6);
         vm.expectRevert(RoundVotingEngine.InvalidStake.selector);
-        engine.commitVote(contentId, commitHash, ciphertext, 0, address(0));
+        engine.commitVote(contentId, _tlockCommitTargetRound(), _tlockDrandChainHash(), commitHash, ciphertext, 0, address(0));
         vm.stopPrank();
     }
 
@@ -951,7 +951,7 @@ contract RoundSettlementEdgeCase3Test is VotingTestBase {
         vm.startPrank(voter1);
         crep.approve(address(engine), STAKE);
         vm.expectRevert(RoundVotingEngine.ContentNotActive.selector);
-        engine.commitVote(999, commitHash, ciphertext, STAKE, address(0));
+        engine.commitVote(999, _tlockCommitTargetRound(), _tlockDrandChainHash(), commitHash, ciphertext, STAKE, address(0));
         vm.stopPrank();
     }
 
@@ -1078,28 +1078,28 @@ contract RoundSettlementEdgeCase3Test is VotingTestBase {
         ProtocolConfig cfg = ProtocolConfig(address(engine.protocolConfig()));
         vm.prank(owner);
         vm.expectRevert(ProtocolConfig.InvalidConfig.selector);
-        cfg.setConfig(4 minutes, 7 days, 3, 1000); // epochDuration < 5 minutes
+        _setTlockRoundConfig(cfg, 4 minutes, 7 days, 3, 1000); // epochDuration < 5 minutes
     }
 
     function test_SetConfig_MaxDurationTooShort_Reverts() public {
         ProtocolConfig cfg = ProtocolConfig(address(engine.protocolConfig()));
         vm.prank(owner);
         vm.expectRevert(ProtocolConfig.InvalidConfig.selector);
-        cfg.setConfig(5 minutes, 12 hours, 3, 1000); // maxDuration < 1 day
+        _setTlockRoundConfig(cfg, 5 minutes, 12 hours, 3, 1000); // maxDuration < 1 day
     }
 
     function test_SetConfig_MinVotersTooLow_Reverts() public {
         ProtocolConfig cfg = ProtocolConfig(address(engine.protocolConfig()));
         vm.prank(owner);
         vm.expectRevert(ProtocolConfig.InvalidConfig.selector);
-        cfg.setConfig(5 minutes, 7 days, 1, 1000); // minVoters < 2
+        _setTlockRoundConfig(cfg, 5 minutes, 7 days, 1, 1000); // minVoters < 2
     }
 
     function test_SetConfig_MaxVotersLessThanMin_Reverts() public {
         ProtocolConfig cfg = ProtocolConfig(address(engine.protocolConfig()));
         vm.prank(owner);
         vm.expectRevert(ProtocolConfig.InvalidConfig.selector);
-        cfg.setConfig(5 minutes, 7 days, 5, 3); // maxVoters < minVoters
+        _setTlockRoundConfig(cfg, 5 minutes, 7 days, 5, 3); // maxVoters < minVoters
     }
 
     // --- VoterIdNFT integration ---
@@ -1135,7 +1135,7 @@ contract RoundSettlementEdgeCase3Test is VotingTestBase {
         vm.startPrank(voter1);
         crep.approve(address(engine), STAKE);
         vm.expectRevert(RoundVotingEngine.VoterIdRequired.selector);
-        engine.commitVote(contentId, commitHash, ciphertext, STAKE, address(0));
+        engine.commitVote(contentId, _tlockCommitTargetRound(), _tlockDrandChainHash(), commitHash, ciphertext, STAKE, address(0));
         vm.stopPrank();
     }
 
@@ -1194,7 +1194,7 @@ contract RoundSettlementEdgeCase3Test is VotingTestBase {
         vm.prank(voter);
         crep.approve(address(engine), stake);
         vm.prank(voter);
-        engine.commitVote(contentId, commitHash, ciphertext, stake, address(0));
+        engine.commitVote(contentId, _tlockCommitTargetRound(), _tlockDrandChainHash(), commitHash, ciphertext, stake, address(0));
         commitKey = keccak256(abi.encodePacked(voter, commitHash));
     }
 
@@ -1218,13 +1218,7 @@ contract RoundSettlementEdgeCase3Test is VotingTestBase {
         for (uint256 i = 0; i < keys.length; i++) {
             RoundLib.Commit memory c = RoundEngineReadHelpers.commit(engine, contentId, roundId, keys[i]);
             if (!c.revealed && c.stakeAmount > 0) {
-                // Reconstruct reveal params from ciphertext (test mode: 65-byte plaintext)
-                bytes memory ct = c.ciphertext;
-                bool isUp = uint8(ct[0]) == 1;
-                bytes32 salt;
-                assembly ("memory-safe") {
-                    salt := mload(add(ct, 33))
-                }
+                (bool isUp, bytes32 salt) = _decodeTestCiphertext(c.ciphertext);
                 try engine.revealVoteByCommitKey(contentId, roundId, keys[i], isUp, salt) { } catch { }
             }
         }

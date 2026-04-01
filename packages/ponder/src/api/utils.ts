@@ -1,4 +1,11 @@
+import { getCanonicalUrlParts, getUrlLookupCandidates } from "../urlCanonicalization.js";
+
+export { getCanonicalUrlParts, getUrlLookupCandidates } from "../urlCanonicalization.js";
+
 export const MAX_PAGINATION_OFFSET = 50_000;
+const MIN_CONTENT_SEARCH_QUERY_LENGTH = 3;
+
+const LIKELY_URL_SEARCH_PATTERN = /^[a-z0-9.-]+\.[a-z]{2,}(?:[/?#:].*)?$/i;
 
 /** Safely parse a BigInt from a query/path parameter, returning null on invalid input. */
 export function safeBigInt(value: string): bigint | null {
@@ -29,40 +36,24 @@ export function isValidAddress(value: string): boolean {
   return /^0x[0-9a-fA-F]{40}$/i.test(value);
 }
 
-/**
- * Build exact-match URL candidates for lookup routes.
- * This is intentionally conservative until Curyo stores a canonical URL column.
- */
-export function getUrlLookupCandidates(value: string): string[] | null {
+export function isLikelyUrlSearchQuery(value: string): boolean {
   const trimmed = value.trim();
+  if (!trimmed) return false;
+
+  if (getUrlLookupCandidates(trimmed) !== null) {
+    return true;
+  }
+
+  return LIKELY_URL_SEARCH_PATTERN.test(trimmed);
+}
+
+export function normalizeContentSearchQuery(value: string | undefined): string | null {
+  const trimmed = value?.trim();
   if (!trimmed) return null;
 
-  let parsed: URL;
-  try {
-    parsed = new URL(trimmed);
-  } catch {
+  if (trimmed.length < MIN_CONTENT_SEARCH_QUERY_LENGTH && !isLikelyUrlSearchQuery(trimmed)) {
     return null;
   }
 
-  if (parsed.protocol !== "http:" && parsed.protocol !== "https:") {
-    return null;
-  }
-
-  parsed.hash = "";
-  parsed.hostname = parsed.hostname.toLowerCase();
-
-  if ((parsed.protocol === "http:" && parsed.port === "80") || (parsed.protocol === "https:" && parsed.port === "443")) {
-    parsed.port = "";
-  }
-
-  const normalized = parsed.toString();
-  const candidates = new Set<string>([trimmed, normalized]);
-
-  // Root URLs are commonly submitted with and without a trailing slash.
-  if (parsed.pathname === "/" && !parsed.search) {
-    candidates.add(`${parsed.protocol}//${parsed.host}`);
-    candidates.add(`${parsed.protocol}//${parsed.host}/`);
-  }
-
-  return [...candidates];
+  return trimmed.toLowerCase();
 }

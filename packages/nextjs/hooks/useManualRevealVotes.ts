@@ -1,7 +1,8 @@
 "use client";
 
 import { useCallback, useMemo, useState } from "react";
-import { buildCommitKey, decryptTlockCiphertext } from "@curyo/contracts/voting";
+import { RoundVotingEngineAbi } from "@curyo/contracts/abis";
+import { buildCommitKey, decryptTlockCiphertext, parseTlockCiphertextMetadata } from "@curyo/contracts/voting";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Address, zeroHash } from "viem";
 import { useAccount, usePublicClient, useWalletClient } from "wagmi";
@@ -22,9 +23,12 @@ export interface ManualRevealVote {
   epochIndex: number;
   committedAt: string;
   revealableAfter: bigint;
+  revealAvailableAt: bigint;
   commitHash: `0x${string}`;
   commitKey: `0x${string}`;
   ciphertext: `0x${string}`;
+  targetRound: bigint;
+  drandChainHash: `0x${string}`;
   secondsUntilReveal: number;
   isReady: boolean;
 }
@@ -69,7 +73,7 @@ export function useManualRevealVotes(voter?: Address) {
         allowFailure: true,
         contracts: pendingVotes.map(vote => ({
           address: engineInfo.address,
-          abi: engineInfo.abi,
+          abi: RoundVotingEngineAbi,
           functionName: "voterCommitHash",
           args: [BigInt(vote.contentId), BigInt(vote.roundId), voter],
         })) as any,
@@ -89,17 +93,28 @@ export function useManualRevealVotes(voter?: Address) {
         allowFailure: true,
         contracts: withCommitHashes.map(({ vote, commitKey }) => ({
           address: engineInfo.address,
-          abi: engineInfo.abi,
+          abi: RoundVotingEngineAbi,
           functionName: "commits",
           args: [BigInt(vote.contentId), BigInt(vote.roundId), commitKey],
         })) as any,
       });
 
-      return withCommitHashes.flatMap(({ vote, commitHash, commitKey }, index) => {
-        const result = commitResults[index];
-        if (result?.status !== "success") return [];
+      const revealAvailableAtResults = await publicClient.multicall({
+        allowFailure: true,
+        contracts: withCommitHashes.map(({ vote, commitKey }) => ({
+          address: engineInfo.address,
+          abi: RoundVotingEngineAbi,
+          functionName: "commitRevealAvailableAt",
+          args: [BigInt(vote.contentId), BigInt(vote.roundId), commitKey],
+        })) as any,
+      });
 
-        const commit = result.result as CommitData;
+      return withCommitHashes.flatMap(({ vote, commitHash, commitKey }, index) => {
+        const commitResult = commitResults[index];
+        const revealAvailableAtResult = revealAvailableAtResults[index];
+        if (commitResult?.status !== "success" || revealAvailableAtResult?.status !== "success") return [];
+
+        const commit = commitResult.result as CommitData;
         if (!commit.voter || commit.voter === "0x0000000000000000000000000000000000000000" || commit.revealed) {
           return [];
         }
@@ -113,9 +128,12 @@ export function useManualRevealVotes(voter?: Address) {
             epochIndex: commit.epochIndex,
             committedAt: vote.committedAt,
             revealableAfter: commit.revealableAfter,
+            revealAvailableAt: BigInt(revealAvailableAtResult.result as bigint),
             commitHash,
             commitKey,
             ciphertext: commit.ciphertext as `0x${string}`,
+            targetRound: commit.targetRound ?? 0n,
+            drandChainHash: commit.drandChainHash ?? zeroHash,
             secondsUntilReveal: 0,
             isReady: false,
           },
@@ -127,7 +145,7 @@ export function useManualRevealVotes(voter?: Address) {
   const votes = useMemo(() => {
     return (rawVotes ?? [])
       .map(vote => {
-        const secondsUntilReveal = Math.max(0, Number(vote.revealableAfter) - now);
+        const secondsUntilReveal = Math.max(0, Number(vote.revealAvailableAt) - now);
         return {
           ...vote,
           secondsUntilReveal,
@@ -136,7 +154,7 @@ export function useManualRevealVotes(voter?: Address) {
       })
       .sort((a, b) => {
         if (a.isReady !== b.isReady) return a.isReady ? -1 : 1;
-        return Number(a.revealableAfter - b.revealableAfter);
+        return Number(a.revealAvailableAt - b.revealAvailableAt);
       });
   }, [now, rawVotes]);
 
@@ -169,10 +187,10 @@ export function useManualRevealVotes(voter?: Address) {
       try {
         const latestCommit = (await publicClient.readContract({
           address: engineInfo.address,
-          abi: engineInfo.abi,
+          abi: RoundVotingEngineAbi,
           functionName: "commits",
           args: [vote.contentId, vote.roundId, vote.commitKey],
-        })) as CommitData;
+        })) as unknown as CommitData;
 
         if (latestCommit.revealed) {
           notification.info("That vote has already been revealed.");
@@ -180,9 +198,34 @@ export function useManualRevealVotes(voter?: Address) {
           return true;
         }
 
-        if (BigInt(now) < latestCommit.revealableAfter) {
+        const revealAvailableAt = (await publicClient.readContract({
+          address: engineInfo.address,
+          abi: RoundVotingEngineAbi,
+          functionName: "commitRevealAvailableAt",
+          args: [vote.contentId, vote.roundId, vote.commitKey],
+        })) as bigint;
+        if (BigInt(now) < revealAvailableAt) {
           notification.info("That vote is not revealable yet.");
           await refresh();
+          return false;
+        }
+
+        if (latestCommit.targetRound == null || latestCommit.drandChainHash == null) {
+          notification.error("The stored vote is missing tlock metadata and cannot be manually revealed.");
+          return false;
+        }
+
+        const parsedMetadata = parseTlockCiphertextMetadata(latestCommit.ciphertext as `0x${string}`);
+        if (!parsedMetadata) {
+          notification.error("The stored vote ciphertext is malformed and cannot be manually revealed.");
+          return false;
+        }
+
+        if (
+          parsedMetadata.targetRound !== latestCommit.targetRound ||
+          parsedMetadata.drandChainHash !== latestCommit.drandChainHash
+        ) {
+          notification.error("The stored vote ciphertext does not match the committed drand metadata.");
           return false;
         }
 
@@ -196,7 +239,7 @@ export function useManualRevealVotes(voter?: Address) {
 
         const hash = await walletClient.writeContract({
           address: engineInfo.address,
-          abi: engineInfo.abi,
+          abi: RoundVotingEngineAbi,
           functionName: "revealVoteByCommitKey",
           args: [vote.contentId, vote.roundId, vote.commitKey, decrypted.isUp, decrypted.salt],
           account: address,
@@ -225,7 +268,7 @@ export function useManualRevealVotes(voter?: Address) {
         setPendingCommitKey(null);
       }
     },
-    [address, chain?.id, engineInfo?.abi, engineInfo?.address, now, publicClient, refresh, targetNetwork, walletClient],
+    [address, chain?.id, engineInfo?.address, now, publicClient, refresh, targetNetwork, walletClient],
   );
 
   return {

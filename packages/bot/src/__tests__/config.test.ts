@@ -57,6 +57,44 @@ describe("bot config", () => {
     expect(config.voteFrontendAddress).toBe(frontendAddress);
   });
 
+  it("parses numeric bot config values strictly", async () => {
+    const { config } = await loadBotConfig({
+      VOTE_STAKE: "2500000",
+      VOTE_THRESHOLD: "3.5",
+      MAX_VOTES_PER_RUN: "12",
+      MAX_SUBMISSIONS_PER_RUN: "7",
+      MAX_SUBMISSIONS_PER_CATEGORY: "4",
+    });
+
+    expect(config.voteStake).toBe(2500000n);
+    expect(config.voteThreshold).toBe(3.5);
+    expect(config.maxVotesPerRun).toBe(12);
+    expect(config.maxSubmissionsPerRun).toBe(7);
+    expect(config.maxSubmissionsPerCategory).toBe(4);
+  });
+
+  it("rejects malformed numeric bot config values", async () => {
+    await expect(
+      loadBotConfig({
+        VOTE_STAKE: "25.5",
+        VOTE_THRESHOLD: "NaN",
+        MAX_VOTES_PER_RUN: "0",
+        MAX_SUBMISSIONS_PER_RUN: "-1",
+        MAX_SUBMISSIONS_PER_CATEGORY: "many",
+      }),
+    ).rejects.toThrow("Invalid bot configuration");
+
+    await expect(
+      loadBotConfig({
+        VOTE_STAKE: "25.5",
+        VOTE_THRESHOLD: "NaN",
+        MAX_VOTES_PER_RUN: "0",
+        MAX_SUBMISSIONS_PER_RUN: "-1",
+        MAX_SUBMISSIONS_PER_CATEGORY: "many",
+      }),
+    ).rejects.toThrow("VOTE_STAKE must be a positive integer");
+  });
+
   it("warns when no source API keys are configured", async () => {
     const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
 

@@ -20,6 +20,7 @@
 import type { PublicClient, WalletClient, Chain, Account } from "viem";
 import { timelockDecrypt, mainnetClient } from "tlock-js";
 import { ContentRegistryAbi, RoundVotingEngineAbi } from "@curyo/contracts/abis";
+import { parseTlockCiphertextMetadata } from "@curyo/contracts/voting";
 import {
   type CommitData,
   type RoundData,
@@ -99,6 +100,10 @@ function trackDecryptFailure(commitKey: string): number {
     if (first !== undefined) decryptFailureCount.delete(first);
   }
   return count;
+}
+
+function markPermanentDecryptFailure(commitKey: string): void {
+  decryptFailureCount.set(commitKey, MAX_DECRYPT_RETRIES);
 }
 
 function classifyDecryptError(err: unknown): {
@@ -205,6 +210,32 @@ export async function decryptTlockCiphertext(
   const isUp = plaintext[0] === 1;
   const salt = `0x${plaintext.subarray(1, 33).toString("hex")}` as `0x${string}`;
   return { isUp, salt };
+}
+
+function validateCiphertextMetadata(commit: CommitData): { ok: true } | { ok: false; reason: string } {
+  if (commit.targetRound == null || commit.drandChainHash == null) {
+    return {
+      ok: false,
+      reason: "missing tlock metadata on the stored commit",
+    };
+  }
+
+  const metadata = parseTlockCiphertextMetadata(commit.ciphertext as `0x${string}`);
+  if (!metadata) {
+    return {
+      ok: false,
+      reason: "malformed tlock ciphertext metadata",
+    };
+  }
+
+  if (metadata.targetRound !== commit.targetRound || metadata.drandChainHash !== commit.drandChainHash) {
+    return {
+      ok: false,
+      reason: `tlock metadata mismatch (stored round ${commit.targetRound.toString()}, ciphertext round ${metadata.targetRound.toString()})`,
+    };
+  }
+
+  return { ok: true };
 }
 
 /**
@@ -558,6 +589,20 @@ async function _revealCommits(
       // Skip commitKeys that have permanently failed decryption
       const priorFailures = decryptFailureCount.get(commitKey) ?? 0;
       if (priorFailures >= MAX_DECRYPT_RETRIES) continue;
+
+      const metadataValidation = validateCiphertextMetadata(commit);
+      if (!metadataValidation.ok) {
+        markPermanentDecryptFailure(commitKey);
+        incrementCounter("keeper_decrypt_failures_total");
+        logger.error("tlock ciphertext metadata invalid", {
+          contentId: Number(contentId),
+          roundId: Number(roundId),
+          commitKey,
+          permanent: true,
+          error: metadataValidation.reason,
+        });
+        continue;
+      }
 
       // Decrypt the tlock ciphertext using the drand beacon
       let decrypted: { isUp: boolean; salt: `0x${string}` } | null;

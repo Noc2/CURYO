@@ -83,14 +83,15 @@ export async function getContentById(
  * Fetch content list with optional filters.
  */
 export async function getContentList(
-  params: { status?: string; sortBy?: string; limit?: number; categoryId?: string } = {},
+  params: { status?: string; sortBy?: string; limit?: number; categoryId?: string; search?: string } = {},
   baseURL = PONDER_URL,
-): Promise<{ items: ContentItem[]; total: number }> {
+): Promise<{ items: ContentItem[]; total: number | null; hasMore: boolean }> {
   const searchParams = new URLSearchParams();
   if (params.status) searchParams.set("status", params.status);
   if (params.sortBy) searchParams.set("sortBy", params.sortBy);
   if (params.limit) searchParams.set("limit", String(params.limit));
   if (params.categoryId) searchParams.set("categoryId", params.categoryId);
+  if (params.search) searchParams.set("search", params.search);
 
   const res = await fetchWithRetry(`${baseURL}/content?${searchParams}`);
   if (!res.ok) throw new Error(`GET /content returned ${res.status}`);

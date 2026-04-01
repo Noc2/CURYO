@@ -11,6 +11,12 @@ const disabledWriteConfig = {
   defaultIdentityId: null,
   identities: [],
   contracts: null,
+  policy: {
+    maxVoteStake: null,
+    allowedSubmissionHosts: [],
+    submissionRevealPollIntervalMs: 500,
+    submissionRevealTimeoutMs: 30000,
+  },
 };
 
 describe("createServer", () => {
@@ -32,6 +38,7 @@ describe("createServer", () => {
         tokenHashes: [],
         scopes: ["mcp:read"],
         tokens: [],
+        sessionKeys: [],
       },
       httpRateLimit: {
         enabled: true,
@@ -71,6 +78,7 @@ describe("createServer", () => {
           tokenHashes: [],
           scopes: ["mcp:read"],
           tokens: [],
+          sessionKeys: [],
         },
         httpRateLimit: {
           enabled: true,
@@ -159,6 +167,7 @@ describe("createServer", () => {
             kind: "static",
           },
         ],
+        sessionKeys: [],
       },
       httpRateLimit: {
         enabled: true,
@@ -189,6 +198,12 @@ describe("createServer", () => {
           voterIdNFT: "0x4444444444444444444444444444444444444444",
           roundRewardDistributor: "0x5555555555555555555555555555555555555555",
           frontendRegistry: "0x6666666666666666666666666666666666666666",
+        },
+        policy: {
+          maxVoteStake: null,
+          allowedSubmissionHosts: [],
+          submissionRevealPollIntervalMs: 500,
+          submissionRevealTimeoutMs: 30000,
         },
       },
     });

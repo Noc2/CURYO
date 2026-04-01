@@ -29,7 +29,10 @@ const { mockConfig, timelockDecrypt } = vi.hoisted(() => ({
     cleanupBatchSize: 25,
   },
   timelockDecrypt: vi.fn(async (armored: string) => {
-    const [flag, saltHex] = armored.split(":");
+    const armorLines = armored.split("\n");
+    const agePayload = Buffer.from(armorLines[1] ?? "", "base64").toString("binary");
+    const payloadLines = agePayload.split("\n");
+    const [flag, saltHex] = (payloadLines[payloadLines.length - 1] ?? "").split(":");
     return Buffer.concat([Buffer.from([flag === "1" ? 1 : 0]), Buffer.from(saltHex, "hex")]);
   }),
 }));
@@ -71,8 +74,48 @@ function makeLogger() {
   };
 }
 
-function encodeTestCiphertext(isUp: boolean, salt: `0x${string}`): `0x${string}` {
-  return stringToHex(`${isUp ? "1" : "0"}:${salt.slice(2)}`) as `0x${string}`;
+function encodeTestCiphertext(params: {
+  isUp: boolean;
+  salt: `0x${string}`;
+  targetRound: bigint;
+  drandChainHash: `0x${string}`;
+}): `0x${string}` {
+  const chunkBase64 = (input: string, chunkSize = 64): string => {
+    const chunks: string[] = [];
+    for (let i = 0; i < input.length; i += chunkSize) {
+      chunks.push(input.slice(i, i + chunkSize));
+    }
+    return chunks.join("\n");
+  };
+  const toUnpaddedBase64 = (input: Buffer | string): string => Buffer.from(input).toString("base64").replace(/=+$/u, "");
+  const encryptedBody = Buffer.concat([
+    Buffer.from(`${params.isUp ? "1" : "0"}:${params.salt.slice(2)}`, "utf8"),
+    Buffer.alloc(Math.max(0, 65 - Buffer.byteLength(`${params.isUp ? "1" : "0"}:${params.salt.slice(2)}`, "utf8")), 0x58),
+  ]);
+  const recipientBody = chunkBase64(toUnpaddedBase64(Buffer.alloc(128, 0x42)));
+  const mac = toUnpaddedBase64(Buffer.alloc(32, 0x24));
+  const agePayload = Buffer.concat([
+    Buffer.from(
+      [
+        "age-encryption.org/v1",
+        `-> tlock ${params.targetRound.toString()} ${params.drandChainHash.slice(2)}`,
+        recipientBody,
+        `--- ${mac}`,
+        "",
+      ].join("\n"),
+      "utf8",
+    ),
+    encryptedBody,
+  ]);
+
+  return stringToHex(
+    [
+      "-----BEGIN AGE ENCRYPTED FILE-----",
+      chunkBase64(agePayload.toString("base64")),
+      "-----END AGE ENCRYPTED FILE-----",
+      "",
+    ].join("\n"),
+  ) as `0x${string}`;
 }
 
 async function waitForReceipt(publicClient: ReturnType<typeof createPublicClient>, hash: `0x${string}`) {
@@ -207,9 +250,30 @@ describe("resolveRounds integration", () => {
 
     const contentId = nextContentId;
     const voters = [
-      { client: voter1Client, account: ACCOUNTS.voter1.address, isUp: true, salt: `0x${"11".repeat(32)}` as `0x${string}` },
-      { client: voter2Client, account: ACCOUNTS.voter2.address, isUp: true, salt: `0x${"22".repeat(32)}` as `0x${string}` },
-      { client: voter3Client, account: ACCOUNTS.voter3.address, isUp: false, salt: `0x${"33".repeat(32)}` as `0x${string}` },
+      {
+        client: voter1Client,
+        account: ACCOUNTS.voter1.address,
+        isUp: true,
+        salt: `0x${"11".repeat(32)}` as `0x${string}`,
+        targetRound: 123n,
+        drandChainHash: `0x${"ab".repeat(32)}` as `0x${string}`,
+      },
+      {
+        client: voter2Client,
+        account: ACCOUNTS.voter2.address,
+        isUp: true,
+        salt: `0x${"22".repeat(32)}` as `0x${string}`,
+        targetRound: 123n,
+        drandChainHash: `0x${"ab".repeat(32)}` as `0x${string}`,
+      },
+      {
+        client: voter3Client,
+        account: ACCOUNTS.voter3.address,
+        isUp: false,
+        salt: `0x${"33".repeat(32)}` as `0x${string}`,
+        targetRound: 123n,
+        drandChainHash: `0x${"ab".repeat(32)}` as `0x${string}`,
+      },
     ];
 
     for (const voter of voters) {
@@ -225,8 +289,8 @@ describe("resolveRounds integration", () => {
         }),
       );
 
-      const ciphertext = encodeTestCiphertext(voter.isUp, voter.salt);
-      const commitHash = buildCommitHash(voter.isUp, voter.salt, contentId, ciphertext);
+      const ciphertext = encodeTestCiphertext(voter);
+      const commitHash = buildCommitHash(voter.isUp, voter.salt, contentId, voter.targetRound, voter.drandChainHash, ciphertext);
 
       await waitForReceipt(
         publicClient,
@@ -234,9 +298,9 @@ describe("resolveRounds integration", () => {
           account: voter.account,
           chain: CHAIN,
           address: CONTRACTS.roundVotingEngine,
-          abi: RoundVotingEngineAbi,
+          abi: RoundVotingEngineAbi as any,
           functionName: "commitVote",
-          args: [contentId, commitHash, ciphertext, STAKE, "0x0000000000000000000000000000000000000000"],
+          args: [contentId, voter.targetRound, voter.drandChainHash, commitHash, ciphertext, STAKE, "0x0000000000000000000000000000000000000000"],
         }),
       );
     }

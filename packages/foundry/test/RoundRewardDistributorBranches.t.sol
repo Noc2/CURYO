@@ -81,7 +81,7 @@ contract RoundRewardDistributorBranchesTest is VotingTestBase {
         ProtocolConfig(address(votingEngine.protocolConfig())).setCategoryRegistry(address(mockCategoryRegistry));
         ProtocolConfig(address(votingEngine.protocolConfig())).setTreasury(treasury);
         // 4 params: epochDuration, maxDuration, minVoters, maxVoters
-        ProtocolConfig(address(votingEngine.protocolConfig())).setConfig(EPOCH_DURATION, 7 days, 2, 200);
+        _setTlockRoundConfig(ProtocolConfig(address(votingEngine.protocolConfig())), EPOCH_DURATION, 7 days, 2, 200);
 
         crepToken.mint(owner, 1_000_000e6);
         crepToken.approve(address(votingEngine), 500_000e6);
@@ -109,7 +109,7 @@ contract RoundRewardDistributorBranchesTest is VotingTestBase {
         vm.prank(voter);
         crepToken.approve(address(votingEngine), stake);
         vm.prank(voter);
-        votingEngine.commitVote(contentId, ch, ct, stake, address(0));
+        votingEngine.commitVote(contentId, _tlockCommitTargetRound(), _tlockDrandChainHash(), ch, ct, stake, address(0));
         ck = _commitKey(voter, ch);
     }
 
@@ -122,12 +122,7 @@ contract RoundRewardDistributorBranchesTest is VotingTestBase {
         for (uint256 i = 0; i < keys.length; i++) {
             RoundLib.Commit memory c = RoundEngineReadHelpers.commit(votingEngine, contentId, roundId, keys[i]);
             if (!c.revealed && c.stakeAmount > 0) {
-                bytes memory ct = c.ciphertext;
-                bool isUp = uint8(ct[0]) == 1;
-                bytes32 salt;
-                assembly ("memory-safe") {
-                    salt := mload(add(ct, 33))
-                }
+                (bool isUp, bytes32 salt) = _decodeTestCiphertext(c.ciphertext);
                 try votingEngine.revealVoteByCommitKey(contentId, roundId, keys[i], isUp, salt) { } catch { }
             }
         }

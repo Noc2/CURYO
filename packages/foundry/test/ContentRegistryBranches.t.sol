@@ -35,6 +35,9 @@ contract ContentRegistryBranchesTest is VotingTestBase {
     address public voter1 = address(3);
     address public voter2 = address(4);
     address public voter3 = address(5);
+    address public voter4 = address(6);
+    address public voter5 = address(7);
+    address public voter6 = address(8);
     address public keeper = address(9);
     address public treasury = address(100);
     address public bonusPool = address(101);
@@ -90,7 +93,7 @@ contract ContentRegistryBranchesTest is VotingTestBase {
         registry.setTreasury(treasury);
         ProtocolConfig(address(votingEngine.protocolConfig())).setRewardDistributor(address(rewardDistributor));
         ProtocolConfig(address(votingEngine.protocolConfig())).setTreasury(treasury);
-        ProtocolConfig(address(votingEngine.protocolConfig())).setConfig(1 hours, 7 days, 3, 1000);
+        _setTlockRoundConfig(ProtocolConfig(address(votingEngine.protocolConfig())), 1 hours, 7 days, 3, 1000);
 
         mockVoterIdNFT = new MockVoterIdNFT();
         mockCategoryRegistry = new MockCategoryRegistry();
@@ -108,7 +111,7 @@ contract ContentRegistryBranchesTest is VotingTestBase {
         crepToken.approve(address(votingEngine), 500_000e6);
         votingEngine.addToConsensusReserve(500_000e6);
 
-        address[6] memory users = [submitter, voter1, voter2, voter3, keeper, delegate];
+        address[9] memory users = [submitter, voter1, voter2, voter3, voter4, voter5, voter6, keeper, delegate];
         for (uint256 i = 0; i < users.length; i++) {
             crepToken.mint(users[i], 10_000e6);
         }
@@ -126,15 +129,24 @@ contract ContentRegistryBranchesTest is VotingTestBase {
         bytes memory ciphertext = _testCiphertext(isUp, salt, contentId);
         bytes32 commitHash = _commitHash(isUp, salt, contentId, ciphertext);
         crepToken.approve(address(votingEngine), STAKE);
-        votingEngine.commitVote(contentId, commitHash, ciphertext, STAKE, address(0));
+        votingEngine.commitVote(
+            contentId, _tlockCommitTargetRound(), _tlockDrandChainHash(), commitHash, ciphertext, STAKE, address(0)
+        );
         vm.stopPrank();
         commitKey = keccak256(abi.encodePacked(voter, commitHash));
     }
 
     function _settleHealthyRound(uint256 contentId) internal returns (uint256 roundId) {
-        (bytes32 ck1, bytes32 salt1) = _commit(voter1, contentId, true);
-        (bytes32 ck2, bytes32 salt2) = _commit(voter2, contentId, true);
-        (bytes32 ck3, bytes32 salt3) = _commit(voter3, contentId, false);
+        return _settleHealthyRoundWithVoters(contentId, voter1, voter2, voter3);
+    }
+
+    function _settleHealthyRoundWithVoters(uint256 contentId, address upVoter1, address upVoter2, address downVoter)
+        internal
+        returns (uint256 roundId)
+    {
+        (bytes32 ck1, bytes32 salt1) = _commit(upVoter1, contentId, true);
+        (bytes32 ck2, bytes32 salt2) = _commit(upVoter2, contentId, true);
+        (bytes32 ck3, bytes32 salt3) = _commit(downVoter, contentId, false);
 
         roundId = RoundEngineReadHelpers.activeRoundId(votingEngine, contentId);
         vm.warp(block.timestamp + 1 hours + 1);
@@ -407,6 +419,55 @@ contract ContentRegistryBranchesTest is VotingTestBase {
             registry.submitterParticipationRewardOwed(1),
             9e6,
             "delayed healthy resolution should keep the settlement-time reward rate"
+        );
+    }
+
+    function test_HealthyResolution_UsesMilestoneZeroSnapshotInsteadOfLaterSettlementRate() public {
+        vm.startPrank(owner);
+        ParticipationPool shiftingPool = new ParticipationPool(address(crepToken), owner);
+        shiftingPool.setAuthorizedCaller(address(registry), true);
+        shiftingPool.setAuthorizedCaller(address(rewardDistributor), true);
+        shiftingPool.setAuthorizedCaller(owner, true);
+        crepToken.mint(owner, 3_000_000e6);
+        crepToken.approve(address(shiftingPool), 3_000_000e6);
+        shiftingPool.depositPool(3_000_000e6);
+        registry.setParticipationPool(address(shiftingPool));
+        ProtocolConfig(address(votingEngine.protocolConfig())).setParticipationPool(address(shiftingPool));
+        vm.stopPrank();
+
+        vm.startPrank(submitter);
+        crepToken.approve(address(registry), 10e6);
+        _submitContentWithReservation(
+            registry, "https://example.com/milestone-zero-submitter-rate", "goal", "goal", "tags", 0
+        );
+        vm.stopPrank();
+
+        _settleHealthyRound(1);
+        assertEq(
+            registry.submitterParticipationSnapshotRateBps(1), 9000, "first settlement should snapshot the live rate"
+        );
+
+        vm.prank(owner);
+        shiftingPool.rewardSubmission(owner, 2_300_000e6);
+        assertEq(shiftingPool.getCurrentRateBps(), 4500, "live pool rate should decay before the later settlement");
+
+        _settleHealthyRoundWithVoters(1, voter4, voter5, voter6);
+        assertEq(
+            registry.submitterParticipationSnapshotRateBps(1), 4500, "latest snapshot should follow the later round"
+        );
+
+        vm.warp(T0 + 4 days + 1);
+        votingEngine.resolveSubmitterStake(1);
+
+        assertEq(
+            registry.submitterParticipationRewardPool(1),
+            address(shiftingPool),
+            "milestone-0 resolution should keep the first settled pool"
+        );
+        assertEq(
+            registry.submitterParticipationRewardOwed(1),
+            9e6,
+            "later settlements must not rewrite the milestone-0 reward rate"
         );
     }
 
@@ -869,7 +930,9 @@ contract ContentRegistryBranchesTest is VotingTestBase {
         vm.startPrank(voter2);
         crepToken.approve(address(votingEngine), STAKE);
         vm.expectRevert(RoundVotingEngine.DormancyWindowElapsed.selector);
-        votingEngine.commitVote(1, commitHash, ciphertext, STAKE, address(0));
+        votingEngine.commitVote(
+            1, _tlockCommitTargetRound(), _tlockDrandChainHash(), commitHash, ciphertext, STAKE, address(0)
+        );
         vm.stopPrank();
     }
 

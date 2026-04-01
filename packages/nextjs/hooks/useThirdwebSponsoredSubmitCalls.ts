@@ -89,6 +89,22 @@ export function isThirdwebSponsorshipDeniedError(error: unknown) {
   return message.toLowerCase().includes("transaction not sponsored");
 }
 
+export function shouldAttemptSelfFundedThirdwebFallback(params: {
+  activeWalletId: string | undefined;
+  chainId: number | undefined;
+  error: unknown;
+  executionMode: WalletExecutionMode;
+  hasReservedFreeTransaction: boolean;
+}) {
+  return (
+    params.activeWalletId === "inApp" &&
+    params.executionMode === "sponsored_7702" &&
+    typeof params.chainId === "number" &&
+    !params.hasReservedFreeTransaction &&
+    isThirdwebSponsorshipDeniedError(params.error)
+  );
+}
+
 export function useThirdwebSponsoredSubmitCalls() {
   const queryClient = useQueryClient();
   const activeWallet = useActiveWallet();
@@ -247,10 +263,13 @@ export function useThirdwebSponsoredSubmitCalls() {
         return result;
       } catch (error) {
         if (
-          activeWallet.id === "inApp" &&
-          executionMode === "sponsored_7702" &&
-          typeof chainId === "number" &&
-          isThirdwebSponsorshipDeniedError(error)
+          shouldAttemptSelfFundedThirdwebFallback({
+            activeWalletId: activeWallet.id,
+            chainId,
+            error,
+            executionMode,
+            hasReservedFreeTransaction: Boolean(operationKey),
+          })
         ) {
           try {
             const fallbackWallet = createThirdwebInAppWallet(chainId, {
@@ -271,26 +290,6 @@ export function useThirdwebSponsoredSubmitCalls() {
               (fallbackStatusError as Error & { callsStatus?: typeof fallbackResult }).callsStatus = fallbackResult;
               throw fallbackStatusError;
             }
-
-            if (operationKey && address) {
-              const transactionHashes = (fallbackResult.receipts ?? [])
-                .map(receipt => receipt.transactionHash)
-                .filter((hash): hash is Hex => typeof hash === "string");
-
-              if (transactionHashes.length > 0) {
-                try {
-                  await postFreeTransactionMutation("/api/transactions/free/confirm", {
-                    address,
-                    chainId,
-                    operationKey,
-                    transactionHashes,
-                  });
-                } catch (confirmationError) {
-                  console.error("Failed to confirm fallback free transaction usage:", confirmationError);
-                }
-              }
-            }
-
             return fallbackResult;
           } catch (fallbackError) {
             error = fallbackError;

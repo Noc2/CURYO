@@ -64,6 +64,11 @@ const config: KnipConfig = {
       ],
       project: ["ponder.config*.ts", "scripts/**/*.{js,mjs,cjs,ts,tsx}", "src/**/*.ts"],
     },
+    "packages/sdk": {
+      entry: [...testEntries],
+      ignoreDependencies: ["tsx"],
+      project: ["src/**/*.ts"],
+    },
   },
 };
 

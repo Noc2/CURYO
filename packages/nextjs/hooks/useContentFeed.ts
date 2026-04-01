@@ -6,6 +6,7 @@ import {
   type ContentItem,
   type UseContentFeedOptions,
   filterRpcFeed,
+  isContentSearchQueryTooShort,
   mapContentItem,
   mergeContentFeedMetadata,
   sortRpcFeed,
@@ -36,6 +37,7 @@ export function useContentFeed(voterAddress?: string, options: UseContentFeedOpt
   const limit = options.limit && options.limit > 0 ? Math.floor(options.limit) : undefined;
   const offset = options.offset && options.offset > 0 ? Math.floor(options.offset) : 0;
   const searchQuery = options.searchQuery?.trim();
+  const shortSearchQueryBlocked = isContentSearchQueryTooShort(searchQuery);
   const sortBy = options.sortBy ?? "newest";
   const submitter = options.submitter?.trim();
 
@@ -102,7 +104,10 @@ export function useContentFeed(voterAddress?: string, options: UseContentFeedOpt
       }),
     [categoryId, contentIds, rpcFeed, searchQuery, submitter],
   );
-  const sortedRpcFeed = useMemo(() => sortRpcFeed(filteredRpcFeed, sortBy), [filteredRpcFeed, sortBy]);
+  const sortedRpcFeed = useMemo(
+    () => sortRpcFeed(filteredRpcFeed, sortBy, searchQuery),
+    [filteredRpcFeed, searchQuery, sortBy],
+  );
   const pagedRpcFeed = useMemo(() => {
     if (limit === undefined) return sortedRpcFeed.slice(offset);
     return sortedRpcFeed.slice(offset, offset + limit);
@@ -123,6 +128,14 @@ export function useContentFeed(voterAddress?: string, options: UseContentFeedOpt
       contentIdsParam ?? "",
     ],
     ponderFn: async () => {
+      if (shortSearchQueryBlocked) {
+        return {
+          feed: [],
+          totalContent: 0,
+          hasMore: false,
+        };
+      }
+
       const params = {
         categoryId: categoryId?.toString(),
         contentIds: contentIdsParam,
@@ -140,7 +153,8 @@ export function useContentFeed(voterAddress?: string, options: UseContentFeedOpt
         });
         return {
           feed: response.items.map(item => mapContentItem(item, voterAddress)),
-          totalContent: response.total,
+          totalContent: response.total ?? offset + response.items.length + (response.hasMore ? 1 : 0),
+          hasMore: response.hasMore,
         };
       }
 
@@ -148,11 +162,13 @@ export function useContentFeed(voterAddress?: string, options: UseContentFeedOpt
       return {
         feed: items.map(item => mapContentItem(item, voterAddress)),
         totalContent: items.length,
+        hasMore: false,
       };
     },
     rpcFn: async () => ({
       feed: pagedRpcFeed,
       totalContent: rpcTotalContent,
+      hasMore: rpcTotalContent > offset + pagedRpcFeed.length,
     }),
     rpcEnabled: rpcFallbackEnabled,
     enabled,
@@ -163,6 +179,10 @@ export function useContentFeed(voterAddress?: string, options: UseContentFeedOpt
 
   const baseFeed = result?.source === "rpc" ? pagedRpcFeed : (result?.data?.feed ?? pagedRpcFeed);
   const totalContent = result?.source === "rpc" ? rpcTotalContent : (result?.data?.totalContent ?? rpcTotalContent);
+  const hasMore =
+    result?.source === "rpc"
+      ? rpcTotalContent > offset + pagedRpcFeed.length
+      : (result?.data?.hasMore ?? totalContent > offset + baseFeed.length);
   const isLoading = enabled && (ponderLoading || (rpcFallbackActive && eventsLoading && result?.source !== "ponder"));
   const source = result?.source ?? (rpcFallbackActive ? "rpc" : "ponder");
   const { metadataMap, validationMap } = useContentFeedMetadata(baseFeed);
@@ -176,7 +196,7 @@ export function useContentFeed(voterAddress?: string, options: UseContentFeedOpt
     feed,
     isLoading,
     totalContent,
-    hasMore: totalContent > offset + feed.length,
+    hasMore,
     source,
   };
 }

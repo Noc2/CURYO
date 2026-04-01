@@ -1,22 +1,86 @@
 import { ROUND_STATE } from "@curyo/contracts/protocol";
-import { and, asc, desc, eq, inArray, sql } from "ponder";
+import { and, asc, desc, eq, inArray, or, sql } from "ponder";
 import { db } from "ponder:api";
 import { category, content, profile, ratingChange, rewardClaim, round, vote } from "ponder:schema";
 import type { ApiApp } from "../shared.js";
 import { attachOpenRoundSummary, jsonBig, parseBigIntList } from "../shared.js";
-import { getUrlLookupCandidates, isValidAddress, safeBigInt, safeLimit, safeOffset } from "../utils.js";
+import { getUrlLookupCandidates, isValidAddress, normalizeContentSearchQuery, safeBigInt, safeLimit, safeOffset } from "../utils.js";
+
+function createContentSearchVector() {
+  return sql`(
+    setweight(to_tsvector('simple', coalesce(${content.title}, '')), 'A') ||
+    setweight(to_tsvector('simple', coalesce(${content.tags}, '')), 'B') ||
+    setweight(to_tsvector('simple', coalesce(${content.description}, '')), 'C')
+  )`;
+}
+
+function buildContentSearchExpressions(search: string) {
+  const vector = createContentSearchVector();
+  const query = sql`websearch_to_tsquery('simple', ${search})`;
+  const rank = sql<number>`ts_rank_cd(${vector}, ${query}, 32)`;
+
+  return {
+    condition: sql<boolean>`${vector} @@ ${query}`,
+    rank,
+  };
+}
+
+function getContentOrderBy(sortBy: string) {
+  switch (sortBy) {
+    case "oldest":
+      return [asc(content.createdAt), asc(content.id)];
+    case "highest_rated":
+      return [desc(content.rating), desc(content.createdAt), desc(content.id)];
+    case "lowest_rated":
+      return [asc(content.rating), desc(content.createdAt), desc(content.id)];
+    case "most_votes":
+      return [desc(content.totalVotes), desc(content.createdAt), desc(content.id)];
+    case "newest":
+    case "relevance":
+    default:
+      return [desc(content.createdAt), desc(content.id)];
+  }
+}
+
+function getSearchOrderBy(searchRank: ReturnType<typeof sql<number>>, sortBy: string) {
+  switch (sortBy) {
+    case "oldest":
+      return [desc(searchRank), asc(content.createdAt), asc(content.id)];
+    case "highest_rated":
+      return [desc(searchRank), desc(content.rating), desc(content.createdAt), desc(content.id)];
+    case "lowest_rated":
+      return [desc(searchRank), asc(content.rating), desc(content.createdAt), desc(content.id)];
+    case "most_votes":
+      return [desc(searchRank), desc(content.totalVotes), desc(content.createdAt), desc(content.id)];
+    case "newest":
+    case "relevance":
+    default:
+      return [desc(searchRank), desc(content.createdAt), desc(content.id)];
+  }
+}
 
 export function registerContentRoutes(app: ApiApp) {
   app.get("/content", async (c) => {
     const categoryId = c.req.query("categoryId");
     const contentIds = parseBigIntList(c.req.query("contentIds"), 500);
-    const search = c.req.query("search")?.trim().toLowerCase();
+    const rawSearch = c.req.query("search");
+    const requestedSearch = rawSearch?.trim();
+    const search = normalizeContentSearchQuery(rawSearch);
     const status = c.req.query("status") ?? "0";
     const submitter = c.req.query("submitter");
     const sortBy = c.req.query("sortBy") ?? "newest";
     const limit = safeLimit(c.req.query("limit"), 50, 200);
     const offset = safeOffset(c.req.query("offset"));
     if (Number.isNaN(offset)) return c.json({ error: "Invalid offset" }, 400);
+    if (requestedSearch && search === null) {
+      return jsonBig(c, {
+        items: [],
+        total: 0,
+        limit,
+        offset,
+        hasMore: false,
+      });
+    }
 
     const conditions = [];
     if (status !== "all") {
@@ -36,60 +100,45 @@ export function registerContentRoutes(app: ApiApp) {
       if (!isValidAddress(submitter)) return c.json({ error: "Invalid submitter address" }, 400);
       conditions.push(eq(content.submitter, submitter.toLowerCase() as `0x${string}`));
     }
-    if (search) {
-      const pattern = `%${search}%`;
-      conditions.push(
-        sql<boolean>`(
-          lower(${content.title}) like ${pattern}
-          or lower(${content.description}) like ${pattern}
-          or lower(${content.url}) like ${pattern}
-          or lower(${content.tags}) like ${pattern}
-        )`,
-      );
+    const urlSearchCandidates = search ? getUrlLookupCandidates(search) : null;
+    const searchExpressions = search && urlSearchCandidates === null ? buildContentSearchExpressions(search) : null;
+    if (urlSearchCandidates) {
+      conditions.push(or(inArray(content.canonicalUrl, urlSearchCandidates), inArray(content.url, urlSearchCandidates)));
+    } else if (search) {
+      conditions.push(searchExpressions!.condition);
     }
 
     const where = conditions.length > 0 ? and(...conditions) : undefined;
-
-    let orderBy;
-    switch (sortBy) {
-      case "oldest":
-        orderBy = asc(content.createdAt);
-        break;
-      case "highest_rated":
-        orderBy = desc(content.rating);
-        break;
-      case "lowest_rated":
-        orderBy = asc(content.rating);
-        break;
-      case "most_votes":
-        orderBy = desc(content.totalVotes);
-        break;
-      case "newest":
-      default:
-        orderBy = desc(content.createdAt);
-        break;
-    }
+    const queryLimit = search ? limit + 1 : limit;
+    const orderByExprs = searchExpressions ? getSearchOrderBy(searchExpressions.rank, sortBy) : getContentOrderBy(sortBy);
 
     const items = await db
       .select()
       .from(content)
       .where(where)
-      .orderBy(orderBy)
-      .limit(limit)
+      .orderBy(...orderByExprs)
+      .limit(queryLimit)
       .offset(offset);
 
-    const itemsWithOpenRound = await attachOpenRoundSummary(items);
-
-    const [countResult] = await db
-      .select({ count: sql<number>`count(*)` })
-      .from(content)
-      .where(where);
+    const hasMore = items.length > limit;
+    const pageItems = hasMore ? items.slice(0, limit) : items;
+    const itemsWithOpenRound = await attachOpenRoundSummary(pageItems);
+    const total =
+      search === null
+        ? (
+            await db
+              .select({ count: sql<number>`count(*)` })
+              .from(content)
+              .where(where)
+          )[0]?.count ?? 0
+        : null;
 
     return jsonBig(c, {
       items: itemsWithOpenRound,
-      total: countResult?.count ?? 0,
+      total,
       limit,
       offset,
+      hasMore,
     });
   });
 
@@ -107,7 +156,7 @@ export function registerContentRoutes(app: ApiApp) {
     const matches = await db
       .select()
       .from(content)
-      .where(inArray(content.url, candidates))
+      .where(or(inArray(content.canonicalUrl, candidates), inArray(content.url, candidates)))
       .orderBy(desc(content.createdAt))
       .limit(5);
 
@@ -397,6 +446,9 @@ export function registerContentRoutes(app: ApiApp) {
         contentId: vote.contentId,
         roundId: vote.roundId,
         voter: vote.voter,
+        commitHash: vote.commitHash,
+        targetRound: vote.targetRound,
+        drandChainHash: vote.drandChainHash,
         isUp: vote.isUp,
         stake: vote.stake,
         epochIndex: vote.epochIndex,

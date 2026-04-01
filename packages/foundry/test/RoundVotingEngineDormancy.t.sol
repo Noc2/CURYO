@@ -63,7 +63,7 @@ contract RoundVotingEngineDormancyTest is VotingTestBase {
         mockCategoryRegistry.seedDefaultTestCategories();
         registry.setCategoryRegistry(address(mockCategoryRegistry));
 
-        ProtocolConfig(address(engine.protocolConfig())).setConfig(1 hours, 7 days, 3, 1000);
+        _setTlockRoundConfig(ProtocolConfig(address(engine.protocolConfig())), 1 hours, 7 days, 3, 1000);
 
         address[5] memory users = [submitter, voter1, voter2, voter3, voter4];
         for (uint256 i = 0; i < users.length; i++) {
@@ -107,7 +107,7 @@ contract RoundVotingEngineDormancyTest is VotingTestBase {
         vm.startPrank(voter4);
         crepToken.approve(address(engine), STAKE);
         vm.expectRevert(RoundVotingEngine.DormancyWindowElapsed.selector);
-        engine.commitVote(contentId, commitHash, ciphertext, STAKE, address(0));
+        engine.commitVote(contentId, _tlockCommitTargetRound(), _tlockDrandChainHash(), commitHash, ciphertext, STAKE, address(0));
         vm.stopPrank();
 
         uint256 roundId = RoundEngineReadHelpers.activeRoundId(engine, contentId);
@@ -130,7 +130,7 @@ contract RoundVotingEngineDormancyTest is VotingTestBase {
         bytes32 commitHash = _commitHash(isUp, salt, contentId, ciphertext);
         vm.startPrank(voter);
         crepToken.approve(address(engine), STAKE);
-        engine.commitVote(contentId, commitHash, ciphertext, STAKE, address(0));
+        engine.commitVote(contentId, _tlockCommitTargetRound(), _tlockDrandChainHash(), commitHash, ciphertext, STAKE, address(0));
         vm.stopPrank();
     }
 }
