@@ -79,9 +79,27 @@ const HowItWorks: NextPage = () => {
       <h2>Content Rating</h2>
       <p>
         Each content item starts at <strong>50</strong>. When a round settles, the contract recalculates the rating from
-        the final revealed up and down stake imbalance. Cancelled, tied, and reveal-failed rounds leave the rating
-        unchanged.
+        the final revealed up and down stake imbalance. The rating uses revealed raw stake, so epoch weighting affects
+        rewards but not the score itself. Cancelled, tied, and reveal-failed rounds leave the rating unchanged.
       </p>
+      <div className="not-prose my-6 rounded-xl bg-base-200 p-4 text-sm text-base-content/80">
+        <p className="font-medium text-base-content">Formula</p>
+        <code className="mt-2 block whitespace-pre-wrap font-mono text-xs sm:text-sm">
+          rating = 50 + 50 * (upStake - downStake) / (upStake + downStake + 50)
+        </code>
+        <p className="mt-3">
+          Here, <strong>upStake</strong> and <strong>downStake</strong> are the total revealed raw cREP stakes for the
+          round. The extra <strong>50</strong> is a smoothing constant that keeps small rounds closer to the neutral
+          starting score of 50.
+        </p>
+        <p className="mt-3">
+          <strong>Example:</strong> if a round settles with <strong>150 cREP up</strong> and{" "}
+          <strong>50 cREP down</strong>, then:
+        </p>
+        <code className="mt-2 block whitespace-pre-wrap font-mono text-xs sm:text-sm">
+          rating = 50 + 50 * (150 - 50) / (150 + 50 + 50) = 50 + 20 = 70
+        </code>
+      </div>
 
       <h2 id="transaction-costs">Transaction Costs</h2>
       <p>
