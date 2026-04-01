@@ -494,14 +494,14 @@ contract RoundVotingEngine is
         round.voteCount++;
         round.totalStake += stakeAmount64;
 
-        IVoterIdNFT currentVoterIdNft = _getVoterIdNft();
-        if (useTokenIdentity) {
-            currentVoterIdNft.recordStake(contentId, roundId, voterId, stakeAmount);
-        }
-
         lastVoteTimestamp[contentId][voter] = block.timestamp;
         if (useTokenIdentity) {
             lastVoteTimestampByToken[contentId][voterId] = block.timestamp;
+        }
+
+        IVoterIdNFT currentVoterIdNft = _getVoterIdNft();
+        if (useTokenIdentity) {
+            currentVoterIdNft.recordStake(contentId, roundId, voterId, stakeAmount);
         }
 
         // Vote commits still refresh UI activity timestamps, but not the dormancy anchor.
