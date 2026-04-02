@@ -4,7 +4,6 @@ import { useCallback, useRef, useState } from "react";
 import { CuryoReputationAbi, encodeVoteTransferPayload } from "@curyo/contracts";
 import { buildCommitVoteParams } from "@curyo/sdk/vote";
 import { useQueryClient } from "@tanstack/react-query";
-import { type Hex, encodeFunctionData } from "viem";
 import { useAccount, usePublicClient, useWriteContract } from "wagmi";
 import { useOptimisticVote } from "~~/contexts/OptimisticVoteContext";
 import { useTermsAcceptance } from "~~/contexts/TermsAcceptanceContext";
@@ -21,7 +20,6 @@ import {
   getWalletDisplaySummaryQueryKey,
   persistWalletDisplaySummarySnapshot,
 } from "~~/hooks/useWalletDisplaySummary";
-import { buildFreeTransactionOperationKey } from "~~/lib/thirdweb/freeTransactionOperation";
 import { isFreeTransactionExhaustedError } from "~~/lib/transactionErrors";
 import { VOTE_COOLDOWN_SECONDS } from "~~/lib/vote/cooldown";
 import { resolveRoundVoteRuntime } from "~~/lib/vote/roundVoteRuntime";
@@ -65,23 +63,6 @@ function normalizeRoundVoteError(message: string) {
     return "Voter ID required. Please verify your identity to vote.";
   }
   return message;
-}
-
-async function postFreeTransactionMutation(path: string, body: Record<string, unknown>) {
-  const response = await fetch(path, {
-    body: JSON.stringify(body),
-    headers: {
-      "content-type": "application/json",
-    },
-    method: "POST",
-  });
-
-  if (response.ok) {
-    return;
-  }
-
-  const responseBody = (await response.json().catch(() => null)) as { error?: string } | null;
-  throw new Error(responseBody?.error || "Free transaction update failed");
 }
 
 /**
@@ -154,7 +135,6 @@ export function useRoundVote() {
     commitLock.current = true;
     setIsCommitting(true);
     setError(null);
-    let freeTransactionOperationKey: Hex | null = null;
 
     try {
       let runtime;
@@ -209,26 +189,10 @@ export function useRoundVote() {
             functionName: "transferAndCall",
           },
         ]);
-      } else {
-        const transferAndCallData = encodeFunctionData({
-          abi: CuryoReputationAbi,
-          functionName: "transferAndCall",
-          args: transferAndCallArgs,
-        });
-
-        freeTransactionOperationKey = buildFreeTransactionOperationKey({
-          chainId: targetNetwork.id,
-          calls: [
-            {
-              data: transferAndCallData,
-              to: crepInfo.address as `0x${string}`,
-              value: 0n,
-            },
-          ],
-          sender: address,
-        });
       }
 
+      // Direct writes are self-funded here; only the sponsored helper can
+      // safely confirm free-transaction reservations with the backend.
       if (!canUseSponsoredSubmitCalls && publicClient) {
         const estimatedGas = await publicClient.estimateContractGas({
           address: crepInfo.address,
@@ -245,19 +209,6 @@ export function useRoundVote() {
         const transactionHash = await writeTx(() => wagmiTokenWrite.writeContractAsync(transferAndCallRequest));
         if (!transactionHash) {
           return false;
-        }
-
-        if (freeTransactionOperationKey) {
-          try {
-            await postFreeTransactionMutation("/api/transactions/free/confirm", {
-              address,
-              chainId: targetNetwork.id,
-              operationKey: freeTransactionOperationKey,
-              transactionHashes: [transactionHash],
-            });
-          } catch (confirmationError) {
-            console.error("Failed to confirm sponsored free transaction usage:", confirmationError);
-          }
         }
       }
 
