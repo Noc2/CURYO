@@ -32,18 +32,20 @@ afterEach(() => {
 describe("content sources", () => {
   it("stay aligned with the deployed source category IDs", async () => {
     const { getAllSources } = await loadSources();
-    const categoryIdsBySource = Object.fromEntries(getAllSources().map(source => [source.name, source.categoryId]));
+    const categoryMetadataBySource = Object.fromEntries(
+      getAllSources().map(source => [source.name, { categoryId: source.categoryId, categoryName: source.categoryName }]),
+    );
 
-    expect(categoryIdsBySource).toEqual({
-      youtube: 1n,
-      twitch: 2n,
-      "wikipedia-people": 5n,
-      rawg: 6n,
-      openlibrary: 7n,
-      huggingface: 8n,
-      tmdb: 4n,
-      scryfall: 3n,
-      coingecko: 9n,
+    expect(categoryMetadataBySource).toEqual({
+      youtube: { categoryId: 1n, categoryName: "YouTube" },
+      twitch: { categoryId: 2n, categoryName: "Twitch" },
+      "wikipedia-people": { categoryId: 5n, categoryName: "People" },
+      rawg: { categoryId: 6n, categoryName: "Games" },
+      openlibrary: { categoryId: 7n, categoryName: "Books" },
+      huggingface: { categoryId: 8n, categoryName: "AI" },
+      tmdb: { categoryId: 4n, categoryName: "Movies" },
+      scryfall: { categoryId: 3n, categoryName: "Magic: The Gathering" },
+      coingecko: { categoryId: 9n, categoryName: "Crypto Tokens" },
     });
   });
 

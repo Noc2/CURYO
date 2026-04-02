@@ -5,6 +5,8 @@ import { contractConfig } from "../contracts.js";
 import { config, log } from "../config.js";
 import { truncateContentDescription, truncateContentTitle } from "../contentLimits.js";
 import { getAllSources } from "../sources/index.js";
+import type { ContentSource } from "../sources/types.js";
+import type { SubmitRunOptions } from "../submitOptions.js";
 import { sleep } from "../utils.js";
 
 const MIN_SUBMITTER_STAKE = 10_000_000n; // 10 cREP (6 decimals)
@@ -72,10 +74,42 @@ function isReservationTooNewError(error: unknown): boolean {
   return message.includes("Reservation too new");
 }
 
-export async function runSubmit() {
+function normalizeFilterValue(value: string): string {
+  return value.trim().toLowerCase();
+}
+
+function matchesCategoryFilter(source: ContentSource, filter: string): boolean {
+  const normalized = normalizeFilterValue(filter);
+  return source.categoryId.toString() === normalized || normalizeFilterValue(source.categoryName) === normalized;
+}
+
+function matchesSourceFilter(source: ContentSource, filter: string): boolean {
+  return normalizeFilterValue(source.name) === normalizeFilterValue(filter);
+}
+
+function selectSources(sources: ContentSource[], options: SubmitRunOptions): ContentSource[] {
+  return sources.filter(source => {
+    if (options.category && !matchesCategoryFilter(source, options.category)) {
+      return false;
+    }
+
+    if (options.source && !matchesSourceFilter(source, options.source)) {
+      return false;
+    }
+
+    return true;
+  });
+}
+
+function formatSourceSummary(source: ContentSource): string {
+  return `${source.categoryName} [${source.categoryId}] via ${source.name}`;
+}
+
+export async function runSubmit(options: SubmitRunOptions = {}) {
   const account = getAccount(config.submitBot);
   const wallet = getWalletClient(config.submitBot, account);
   log.info(`Submission bot address: ${account.address}`);
+  const maxSubmissions = options.maxSubmissions ?? config.maxSubmissionsPerRun;
 
   // 1. Check Voter ID NFT
   const hasVoterId = await publicClient.readContract({
@@ -102,17 +136,39 @@ export async function runSubmit() {
   }
 
   // 3. Iterate through all content sources
-  const sources = getAllSources();
+  const sources = selectSources(getAllSources(), options);
+  if (options.category) {
+    log.info(`Category filter: ${options.category}`);
+  }
+  if (options.source) {
+    log.info(`Source filter: ${options.source}`);
+  }
+  if (options.maxSubmissions !== undefined) {
+    log.info(`Max submissions override: ${options.maxSubmissions}`);
+  }
+  if (sources.length === 0) {
+    const availableSources = getAllSources().map(formatSourceSummary).join(", ");
+    log.warn(`No sources matched the current submit filters. Available sources: ${availableSources}`);
+    return;
+  }
+
+  const singleSourceSelected = sources.length === 1;
   let totalSubmitted = 0;
 
   for (const source of sources) {
-    if (totalSubmitted >= config.maxSubmissionsPerRun) {
-      log.info(`Reached max submissions per run (${config.maxSubmissionsPerRun}), stopping`);
+    if (totalSubmitted >= maxSubmissions) {
+      log.info(`Reached max submissions per run (${maxSubmissions}), stopping`);
       break;
     }
 
+    const remainingSubmissions = maxSubmissions - totalSubmitted;
+    const fetchLimit =
+      singleSourceSelected && options.maxSubmissions !== undefined
+        ? remainingSubmissions
+        : Math.min(config.maxSubmissionsPerCategory, remainingSubmissions);
+
     log.info(`Fetching trending content from ${source.name}...`);
-    const items = await source.fetchTrending(config.maxSubmissionsPerCategory);
+    const items = await source.fetchTrending(fetchLimit);
 
     if (items.length === 0) {
       log.debug(`No items from ${source.name}`);
@@ -123,8 +179,8 @@ export async function runSubmit() {
     let sourceSubmitted = 0;
 
     for (const item of items) {
-      if (totalSubmitted >= config.maxSubmissionsPerRun) break;
-      if (sourceSubmitted >= config.maxSubmissionsPerCategory) break;
+      if (totalSubmitted >= maxSubmissions) break;
+      if (sourceSubmitted >= fetchLimit) break;
       let reservedRevealCommitment: Hex | null = null;
 
       // Check if URL already submitted

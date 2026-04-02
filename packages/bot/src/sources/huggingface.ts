@@ -37,6 +37,7 @@ const PIPELINE_MAP: Record<string, string> = {
 export const huggingFaceSource: ContentSource = {
   name: "huggingface",
   categoryId: CATEGORY_ID,
+  categoryName: "AI",
 
   async fetchTrending(limit: number): Promise<ContentItem[]> {
     try {

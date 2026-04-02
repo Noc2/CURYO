@@ -37,9 +37,25 @@ switch (command) {
     break;
   }
   case "submit": {
+    const { formatSubmitUsage, parseSubmitCommandArgs } = await import("./submitOptions.js");
+    let parsedSubmitCommand;
+    try {
+      parsedSubmitCommand = parseSubmitCommandArgs(process.argv.slice(3));
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      console.error(`[Bot] ERROR: ${message}`);
+      console.log(formatSubmitUsage());
+      process.exit(1);
+    }
+
+    if (parsedSubmitCommand.help) {
+      console.log(formatSubmitUsage());
+      process.exit(0);
+    }
+
     await ensureBotRuntime("submit");
     const { runSubmit } = await import("./commands/submit.js");
-    await runSubmit();
+    await runSubmit(parsedSubmitCommand.options);
     break;
   }
   case "status": {

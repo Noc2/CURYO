@@ -9,6 +9,10 @@ Command-line tool for automated content submission and voting. Discovers trendin
 yarn bot:submit   # Discover and submit trending content
 yarn bot:vote     # Rate content and place votes on-chain
 yarn bot:status   # Check bot account balances and Voter ID status
+
+# Target a single category/source with an explicit cap:
+yarn workspace @curyo/bot submit --category Movies --max-submissions 5
+yarn workspace @curyo/bot submit --source coingecko --max-submissions 2
 ```
 
 Requires a running Ponder indexer (`yarn ponder:dev`) and configured environment variables.
@@ -19,6 +23,8 @@ Public submission sources still work without third-party API keys, but source co
 | Command | Description |
 |---|---|
 | `yarn bot:submit` | Discover trending content from platforms and submit to registry |
+| `yarn workspace @curyo/bot submit -- --category Movies --max-submissions 5` | Submit up to 5 items from the `Movies` category |
+| `yarn workspace @curyo/bot submit -- --source coingecko --max-submissions 2` | Submit up to 2 items from the CoinGecko source |
 | `yarn bot:vote` | Rate content and commit encrypted votes via tlock commit-reveal |
 | `yarn bot:status` | Check wallet balances and Voter ID ownership |
 
@@ -76,6 +82,13 @@ Without these keys the bot can still submit from public sources such as CoinGeck
 | `MAX_VOTES_PER_RUN` | — | Limit votes per execution |
 | `MAX_SUBMISSIONS_PER_RUN` | — | Limit submissions per execution |
 | `MAX_SUBMISSIONS_PER_CATEGORY` | — | Per-source cap during submission runs |
+
+`submit` also supports one-off CLI overrides:
+
+- `--category <id|name>` to target a specific category such as `4`, `Movies`, or `Crypto Tokens`
+- `--source <name>` to target a specific source adapter such as `tmdb` or `coingecko`
+- `--max-submissions <count>` to override the per-run cap for that invocation
+- `--help` to print the submit-specific usage text
 
 ## Project Structure
 

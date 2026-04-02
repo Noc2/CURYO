@@ -9,5 +9,6 @@ export interface ContentItem {
 export interface ContentSource {
   name: string;
   categoryId: bigint;
+  categoryName: string;
   fetchTrending(limit: number): Promise<ContentItem[]>;
 }

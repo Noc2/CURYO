@@ -38,6 +38,7 @@ function matchSubcategory(subjects: string[]): string {
 export const openLibrarySource: ContentSource = {
   name: "openlibrary",
   categoryId: CATEGORY_ID,
+  categoryName: "Books",
 
   async fetchTrending(limit: number): Promise<ContentItem[]> {
     try {

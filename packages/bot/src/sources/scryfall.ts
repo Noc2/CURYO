@@ -21,6 +21,7 @@ function getSubcategory(typeLine: string, legalities: Record<string, string>): s
 export const scryfallSource: ContentSource = {
   name: "scryfall",
   categoryId: CATEGORY_ID,
+  categoryName: "Magic: The Gathering",
 
   async fetchTrending(limit: number): Promise<ContentItem[]> {
     try {

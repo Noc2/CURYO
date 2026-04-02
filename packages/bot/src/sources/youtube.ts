@@ -27,6 +27,7 @@ const YOUTUBE_CATEGORY_MAP: Record<number, string> = {
 export const youtubeSource: ContentSource = {
   name: "youtube",
   categoryId: CATEGORY_ID,
+  categoryName: "YouTube",
 
   async fetchTrending(limit: number): Promise<ContentItem[]> {
     if (!config.youtubeApiKey) {

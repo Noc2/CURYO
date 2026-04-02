@@ -35,6 +35,7 @@ function matchSubcategory(categories: string[]): string {
 export const coinGeckoSource: ContentSource = {
   name: "coingecko",
   categoryId: CATEGORY_ID,
+  categoryName: "Crypto Tokens",
 
   async fetchTrending(limit: number): Promise<ContentItem[]> {
     try {

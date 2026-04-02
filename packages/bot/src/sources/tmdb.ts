@@ -30,6 +30,7 @@ const GENRE_MAP: Record<number, string> = {
 export const tmdbSource: ContentSource = {
   name: "tmdb",
   categoryId: CATEGORY_ID,
+  categoryName: "Movies",
 
   async fetchTrending(limit: number): Promise<ContentItem[]> {
     if (!config.tmdbApiKey) {

@@ -39,6 +39,7 @@ async function getTwitchToken(): Promise<string | null> {
 export const twitchSource: ContentSource = {
   name: "twitch",
   categoryId: CATEGORY_ID,
+  categoryName: "Twitch",
 
   async fetchTrending(limit: number): Promise<ContentItem[]> {
     if (!config.twitchClientId || !config.twitchClientSecret) {

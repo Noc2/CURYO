@@ -18,6 +18,12 @@ type SubmitCommandOptions = {
   hasVoterId?: boolean;
   isUrlSubmitted?: boolean;
   previewCategoryId?: bigint;
+  sources?: Array<{
+    categoryId: bigint;
+    categoryName: string;
+    items: typeof ITEM[];
+    name: string;
+  }>;
   submitErrorCount?: number;
   submitError?: Error;
 };
@@ -96,13 +102,20 @@ async function loadSubmitCommand(options: SubmitCommandOptions = {}) {
     log,
   }));
   vi.doMock("../sources/index.js", () => ({
-    getAllSources: () => [
-      {
-        name: "tmdb",
-        categoryId: ITEM.categoryId,
-        fetchTrending: vi.fn().mockResolvedValue([ITEM]),
-      },
-    ],
+    getAllSources: () =>
+      options.sources?.map(source => ({
+        name: source.name,
+        categoryId: source.categoryId,
+        categoryName: source.categoryName,
+        fetchTrending: vi.fn().mockResolvedValue(source.items),
+      })) ?? [
+        {
+          name: "tmdb",
+          categoryId: ITEM.categoryId,
+          categoryName: "Movies",
+          fetchTrending: vi.fn().mockResolvedValue([ITEM]),
+        },
+      ],
   }));
   vi.doMock("../utils.js", async () => {
     const actual = await vi.importActual<typeof import("../utils.js")>("../utils.js");
@@ -237,5 +250,36 @@ describe("runSubmit", () => {
       expect.objectContaining({ functionName: "cancelReservedSubmission" }),
     );
     expect(submitCommand.mocks.log.warn).toHaveBeenCalledWith(`Retrying "${ITEM.title}" after reservation age check`);
+  });
+
+  it("supports category filtering and uses the explicit max for a single selected source", async () => {
+    const tmdbItem = { ...ITEM };
+    const secondTmdbItem = { ...ITEM, url: "https://www.themoviedb.org/movie/604", title: "The Matrix Reloaded" };
+    const thirdTmdbItem = { ...ITEM, url: "https://www.themoviedb.org/movie/605", title: "The Matrix Revolutions" };
+    const submitCommand = await loadSubmitCommand({
+      sources: [
+        {
+          name: "tmdb",
+          categoryId: 4n,
+          categoryName: "Movies",
+          items: [tmdbItem, secondTmdbItem, thirdTmdbItem],
+        },
+        {
+          name: "coingecko",
+          categoryId: 9n,
+          categoryName: "Crypto Tokens",
+          items: [{ ...ITEM, url: "https://www.coingecko.com/en/coins/bitcoin", title: "Bitcoin", categoryId: 9n }],
+        },
+      ],
+    });
+
+    await submitCommand.runSubmit({ category: "Movies", maxSubmissions: 2 });
+
+    expect(
+      submitCommand.mocks.writeContract.mock.calls.filter(
+        ([call]) => call.functionName === "submitContent",
+      ),
+    ).toHaveLength(2);
+    expect(submitCommand.mocks.log.info).toHaveBeenCalledWith("Category filter: Movies");
   });
 });
