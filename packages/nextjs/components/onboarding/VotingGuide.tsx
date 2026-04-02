@@ -16,7 +16,7 @@ const STEPS = [
   },
   { label: "Vote", desc: "place your prediction while direction stays hidden" },
   { label: "Stake", desc: "back your prediction with cREP tokens" },
-  { label: "Reveal & Resolve", desc: "votes are revealed, then rounds settle automatically" },
+  { label: "Reveal & Resolve", desc: "after about 20 minutes, votes are revealed and rounds settle automatically" },
   { label: "Claim", desc: "collect your rewards if your prediction was correct" },
 ];
 
