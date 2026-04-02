@@ -4,11 +4,13 @@ import { useAccount } from "wagmi";
 import { CategoryBars } from "~~/components/leaderboard/CategoryBars";
 import { surfaceSectionHeadingClassName } from "~~/components/shared/sectionHeading";
 import { InfoTooltip } from "~~/components/ui/InfoTooltip";
+import { useTargetNetwork } from "~~/hooks/scaffold-eth/useTargetNetwork";
 import { useVoterAccuracy } from "~~/hooks/useVoterAccuracy";
 import { getReputationAvatarUrl } from "~~/utils/profileImage";
 
 export function VoterAccuracyStats() {
   const { address } = useAccount();
+  const { targetNetwork } = useTargetNetwork();
   const { stats, categories } = useVoterAccuracy(address);
 
   if (!address) return null;
@@ -29,7 +31,7 @@ export function VoterAccuracyStats() {
       : stats.currentStreak < 0
         ? `${Math.abs(stats.currentStreak)}L`
         : "0";
-  const avatarSrc = getReputationAvatarUrl(address, 128) || "";
+  const avatarSrc = getReputationAvatarUrl(address, 128, null, targetNetwork.id) || "";
   const winRateLabel = `${(stats.winRate * 100).toFixed(1)}%`;
   const recordLabel = `${stats.totalWins}W / ${stats.totalLosses}L`;
 

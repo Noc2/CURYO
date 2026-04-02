@@ -6,6 +6,7 @@ import { useAccount } from "wagmi";
 import { FollowScopeToggle } from "~~/components/leaderboard/FollowScopeToggle";
 import { FollowProfileButton } from "~~/components/shared/FollowProfileButton";
 import { surfaceSectionHeadingClassName } from "~~/components/shared/sectionHeading";
+import { useTargetNetwork } from "~~/hooks/scaffold-eth/useTargetNetwork";
 import { useCategoryRegistry } from "~~/hooks/useCategoryRegistry";
 import { useCuryoConnectModal } from "~~/hooks/useCuryoConnectModal";
 import { useFollowedProfiles } from "~~/hooks/useFollowedProfiles";
@@ -19,6 +20,7 @@ type WindowOption = PonderAccuracyLeaderboardWindow;
 
 export function AccuracyLeaderboard() {
   const { address: connectedAddress } = useAccount();
+  const { targetNetwork } = useTargetNetwork();
   const { openConnectModal } = useCuryoConnectModal();
   const { categories } = useCategoryRegistry();
   const {
@@ -236,7 +238,7 @@ export function AccuracyLeaderboard() {
                 const streak = entry.currentStreak;
                 const streakLabel =
                   streak !== undefined ? (streak > 0 ? `${streak}W` : streak < 0 ? `${Math.abs(streak)}L` : "0") : "-";
-                const avatarSrc = getReputationAvatarUrl(entry.voter, 32) || "";
+                const avatarSrc = getReputationAvatarUrl(entry.voter, 32, null, targetNetwork.id) || "";
 
                 return (
                   <tr

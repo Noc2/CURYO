@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { isAddress } from "viem";
+import { getPrimaryServerTargetNetwork, getServerTargetNetworkById } from "~~/lib/env/server";
 import {
   getVoterLeaderboardSnapshot,
   resolveVoterLeaderboardSelection,
@@ -11,8 +12,11 @@ import { checkRateLimit } from "~~/utils/rateLimit";
 const RATE_LIMIT = { limit: 60, windowMs: 60_000 };
 const MAX_LIMIT = 100;
 
-async function buildIncludedAddressFallback(address: string) {
-  const [balances, profiles] = await Promise.all([readCRepBalances([address]), readProfileRegistryProfiles([address])]);
+async function buildIncludedAddressFallback(address: string, chainId: number) {
+  const [balances, profiles] = await Promise.all([
+    readCRepBalances([address], { chainId }),
+    readProfileRegistryProfiles([address], { chainId }),
+  ]);
 
   return NextResponse.json({
     entries: [
@@ -41,6 +45,15 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: "Unsupported leaderboard type" }, { status: 400 });
     }
     const limit = Math.min(Math.max(parseInt(request.nextUrl.searchParams.get("limit") ?? "20") || 20, 1), MAX_LIMIT);
+    const chainIdRaw = request.nextUrl.searchParams.get("chainId");
+    const fallbackChainId = getPrimaryServerTargetNetwork()?.id;
+    const parsedChainId = chainIdRaw ? Number.parseInt(chainIdRaw, 10) : fallbackChainId;
+    if (!Number.isFinite(parsedChainId)) {
+      return NextResponse.json({ error: "Valid chainId is required" }, { status: 400 });
+    }
+    if (!getServerTargetNetworkById(parsedChainId!)) {
+      return NextResponse.json({ error: "Unsupported chainId" }, { status: 400 });
+    }
     const includeAddressParam = request.nextUrl.searchParams.get("includeAddress");
     const includeAddress =
       includeAddressParam && isAddress(includeAddressParam) ? includeAddressParam.toLowerCase() : null;
@@ -50,7 +63,7 @@ export async function GET(request: NextRequest) {
     const ponderAvailable = await isPonderAvailable();
     if (!ponderAvailable) {
       if (canFallbackToIncludedAddress) {
-        return buildIncludedAddressFallback(includeAddress);
+        return buildIncludedAddressFallback(includeAddress, parsedChainId!);
       }
 
       return NextResponse.json(
@@ -60,12 +73,20 @@ export async function GET(request: NextRequest) {
     }
 
     try {
-      const snapshot = await getVoterLeaderboardSnapshot();
-      const selection = await resolveVoterLeaderboardSelection(snapshot, {
-        includeAddress,
-        limit,
+      const snapshot = await getVoterLeaderboardSnapshot({
+        chainId: parsedChainId!,
       });
-      const profiles = await readProfileRegistryProfiles(selection.selectedAddresses);
+      const selection = await resolveVoterLeaderboardSelection(
+        snapshot,
+        {
+          includeAddress,
+          limit,
+        },
+        {
+          readBalances: addresses => readCRepBalances(addresses, { chainId: parsedChainId! }),
+        },
+      );
+      const profiles = await readProfileRegistryProfiles(selection.selectedAddresses, { chainId: parsedChainId! });
       const entries = selection.selectedAddresses.map(address => ({
         rank: selection.ranks[address] ?? 0,
         address,
@@ -82,7 +103,7 @@ export async function GET(request: NextRequest) {
     } catch (e) {
       if (canFallbackToIncludedAddress) {
         console.warn("Ponder token-holder discovery failed, using included-address fallback");
-        return buildIncludedAddressFallback(includeAddress);
+        return buildIncludedAddressFallback(includeAddress, parsedChainId!);
       }
 
       console.warn("Ponder token-holder discovery failed:", e);

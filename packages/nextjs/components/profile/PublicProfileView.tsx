@@ -20,6 +20,7 @@ import { FollowProfileButton } from "~~/components/shared/FollowProfileButton";
 import { ProfileImageLightbox } from "~~/components/shared/ProfileImageLightbox";
 import { InfoTooltip } from "~~/components/ui/InfoTooltip";
 import { useCopyToClipboard } from "~~/hooks/scaffold-eth";
+import { useTargetNetwork } from "~~/hooks/scaffold-eth/useTargetNetwork";
 import { useCuryoConnectModal } from "~~/hooks/useCuryoConnectModal";
 import { useFollowedProfiles } from "~~/hooks/useFollowedProfiles";
 import { usePageVisibility } from "~~/hooks/usePageVisibility";
@@ -98,6 +99,7 @@ function getVoteOutcome(vote: PonderVoteItem) {
 export function PublicProfileView({ address, embedded = false }: PublicProfileViewProps) {
   const normalizedAddress = address.toLowerCase() as `0x${string}`;
   const isPageVisible = usePageVisibility();
+  const { targetNetwork } = useTargetNetwork();
   const { address: connectedAddress } = useAccount();
   const { openConnectModal } = useCuryoConnectModal();
   const {
@@ -244,7 +246,8 @@ export function PublicProfileView({ address, embedded = false }: PublicProfileVi
     : ponderStrategy;
   const displayName = currentName || truncateAddress(normalizedAddress);
   const displayAvatarAccentHex = ownProfile ? (committedAvatarAccentHex ?? avatarAccent?.hex ?? null) : null;
-  const fallbackImageUrl = getReputationAvatarUrl(normalizedAddress, 96, displayAvatarAccentHex) || "";
+  const fallbackImageUrl =
+    getReputationAvatarUrl(normalizedAddress, 96, displayAvatarAccentHex, targetNetwork.id) || "";
   const isOwnName = currentName.length > 0 && currentName.toLowerCase() === nameInput.toLowerCase();
   const showNameStatus = isEditing && nameInput.length >= 3 && !nameCheckLoading;
   const nameIsAvailable = showNameStatus && (!isNameTaken || isOwnName);
@@ -253,7 +256,8 @@ export function PublicProfileView({ address, embedded = false }: PublicProfileVi
   const avatarAccentInputError = avatarAccentInput.trim().length > 0 && !normalizedAvatarAccentInput;
   const previewAvatarAccentHex = normalizedAvatarAccentInput ?? committedAvatarAccentHex;
   const avatarAccentPickerValue = normalizedAvatarAccentInput ?? committedAvatarAccentHex ?? DEFAULT_AVATAR_ACCENT_HEX;
-  const generatedAvatarPreviewUrl = getReputationAvatarUrl(normalizedAddress, 160, previewAvatarAccentHex) || "";
+  const generatedAvatarPreviewUrl =
+    getReputationAvatarUrl(normalizedAddress, 160, previewAvatarAccentHex, targetNetwork.id) || "";
   const generatedAvatarPreviewSrc = generatedAvatarPreviewUrl
     ? `${generatedAvatarPreviewUrl}&preview=${encodeURIComponent(previewAvatarAccentHex ?? "default")}`
     : "";

@@ -30,7 +30,10 @@ function createEmptyReputationAvatarPayload(address: string): ReputationAvatarPa
   };
 }
 
-export async function getReputationAvatarPayload(address: string): Promise<ReputationAvatarPayload> {
+export async function getReputationAvatarPayload(
+  address: string,
+  options: { chainId?: number } = {},
+): Promise<ReputationAvatarPayload> {
   if (!isAddress(address)) {
     return createEmptyReputationAvatarPayload(address);
   }
@@ -52,8 +55,14 @@ export async function getReputationAvatarPayload(address: string): Promise<Reput
           })
           .catch(() => null)
       : Promise.resolve<ReputationAvatarApiResponse | null>(null),
-    readCRepBalances([normalizedAddress]).catch(() => ({ [normalizedAddress]: 0n }) as Record<string, bigint>),
-    readProfileRegistryAvatarAccent(normalizedAddress).catch(() => ({ enabled: false, rgb: null, hex: null })),
+    readCRepBalances([normalizedAddress], { chainId: options.chainId }).catch(
+      () => ({ [normalizedAddress]: 0n }) as Record<string, bigint>,
+    ),
+    readProfileRegistryAvatarAccent(normalizedAddress, { chainId: options.chainId }).catch(() => ({
+      enabled: false,
+      rgb: null,
+      hex: null,
+    })),
   ]);
 
   return {

@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { useTargetNetwork } from "~~/hooks/scaffold-eth/useTargetNetwork";
 import { getFallbackReputationAvatarDataUrl, getReputationAvatarUrl } from "~~/utils/profileImage";
 
 type BlockieAvatarProps = {
@@ -10,7 +11,8 @@ type BlockieAvatarProps = {
 };
 
 export const BlockieAvatar = ({ address, ensImage, size }: BlockieAvatarProps) => {
-  const remoteAvatar = ensImage || getReputationAvatarUrl(address, size);
+  const { targetNetwork } = useTargetNetwork();
+  const remoteAvatar = ensImage || getReputationAvatarUrl(address, size, null, targetNetwork.id);
   const fallbackAvatar = useMemo(() => getFallbackReputationAvatarDataUrl(address, size), [address, size]);
   const [hasLoaded, setHasLoaded] = useState(Boolean(ensImage));
   const [hasFailed, setHasFailed] = useState(false);

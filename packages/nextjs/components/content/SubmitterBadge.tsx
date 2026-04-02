@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useTargetNetwork } from "~~/hooks/scaffold-eth/useTargetNetwork";
 import { getReputationAvatarUrl } from "~~/utils/profileImage";
 
 interface SubmitterBadgeProps {
@@ -25,6 +26,7 @@ export function SubmitterBadge({
   totalSettledVotes,
   action,
 }: SubmitterBadgeProps) {
+  const { targetNetwork } = useTargetNetwork();
   const avatarSize = size === "sm" ? 20 : 28;
   const textSize = size === "sm" ? "text-base" : "text-base";
 
@@ -32,7 +34,7 @@ export function SubmitterBadge({
   const displayName = username || truncatedAddress;
   const inlineAddress = addressMode === "inline" && username ? truncatedAddress : null;
   const profileHref = `/profiles/${address.toLowerCase()}`;
-  const avatarSrc = getReputationAvatarUrl(address, avatarSize) || "";
+  const avatarSrc = getReputationAvatarUrl(address, avatarSize, null, targetNetwork.id) || "";
 
   const showAccuracy = winRate !== undefined && totalSettledVotes !== undefined && totalSettledVotes >= 3;
   const winPct = showAccuracy ? Math.round(winRate! * 100) : 0;

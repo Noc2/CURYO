@@ -1,5 +1,6 @@
 import { rankVoterLeaderboardAddresses } from "./voterLeaderboard";
 import "server-only";
+import { getPrimaryServerTargetNetwork } from "~~/lib/env/server";
 import { readCRepBalances } from "~~/lib/profileRegistry/server";
 import { ponderApi } from "~~/services/ponder/client";
 
@@ -22,21 +23,27 @@ interface VoterLeaderboardSelection {
 
 interface VoterLeaderboardDeps {
   cacheTtlMs: number;
+  chainId: number | null;
   listTokenHolders: typeof ponderApi.getAllTokenHolders;
   now: () => number;
   readBalances: typeof readCRepBalances;
 }
 
-let cachedSnapshot: VoterLeaderboardSnapshot | null = null;
-let refreshPromise: Promise<VoterLeaderboardSnapshot> | null = null;
+const cachedSnapshots = new Map<string, VoterLeaderboardSnapshot>();
+const refreshPromises = new Map<string, Promise<VoterLeaderboardSnapshot>>();
 
 function getDeps(overrides: Partial<VoterLeaderboardDeps> = {}): VoterLeaderboardDeps {
   return {
     cacheTtlMs: overrides.cacheTtlMs ?? VOTER_LEADERBOARD_CACHE_TTL_MS,
+    chainId: overrides.chainId ?? getPrimaryServerTargetNetwork()?.id ?? null,
     listTokenHolders: overrides.listTokenHolders ?? ponderApi.getAllTokenHolders.bind(ponderApi),
     now: overrides.now ?? Date.now,
     readBalances: overrides.readBalances ?? readCRepBalances,
   };
+}
+
+function buildSnapshotCacheKey(chainId: number | null) {
+  return chainId === null ? "default" : String(chainId);
 }
 
 function buildRankIndex(rankedAddresses: string[]): Record<string, number> {
@@ -46,7 +53,9 @@ function buildRankIndex(rankedAddresses: string[]): Record<string, number> {
 async function buildSnapshot(deps: VoterLeaderboardDeps): Promise<VoterLeaderboardSnapshot> {
   const holders = await deps.listTokenHolders();
   const candidateAddresses = [...new Set(holders.map(holder => holder.address.toLowerCase()))];
-  const balances = await deps.readBalances(candidateAddresses);
+  const balances = await deps.readBalances(candidateAddresses, {
+    chainId: deps.chainId ?? undefined,
+  });
   const { rankedAddresses, totalCount } = rankVoterLeaderboardAddresses({
     candidateAddresses,
     balances,
@@ -63,13 +72,13 @@ async function buildSnapshot(deps: VoterLeaderboardDeps): Promise<VoterLeaderboa
   };
 }
 
-async function refreshSnapshot(deps: VoterLeaderboardDeps): Promise<VoterLeaderboardSnapshot> {
+async function refreshSnapshot(cacheKey: string, deps: VoterLeaderboardDeps): Promise<VoterLeaderboardSnapshot> {
   try {
     const snapshot = await buildSnapshot(deps);
-    cachedSnapshot = snapshot;
+    cachedSnapshots.set(cacheKey, snapshot);
     return snapshot;
   } finally {
-    refreshPromise = null;
+    refreshPromises.delete(cacheKey);
   }
 }
 
@@ -78,6 +87,9 @@ export async function getVoterLeaderboardSnapshot(
 ): Promise<VoterLeaderboardSnapshot> {
   const deps = getDeps(overrides);
   const now = deps.now();
+  const cacheKey = buildSnapshotCacheKey(deps.chainId);
+  const cachedSnapshot = cachedSnapshots.get(cacheKey) ?? null;
+  const refreshPromise = refreshPromises.get(cacheKey) ?? null;
 
   if (cachedSnapshot && now - cachedSnapshot.fetchedAt < deps.cacheTtlMs) {
     return cachedSnapshot;
@@ -87,13 +99,14 @@ export async function getVoterLeaderboardSnapshot(
     return cachedSnapshot ?? refreshPromise;
   }
 
-  refreshPromise = refreshSnapshot(deps);
+  const nextRefreshPromise = refreshSnapshot(cacheKey, deps);
+  refreshPromises.set(cacheKey, nextRefreshPromise);
   if (cachedSnapshot) {
-    void refreshPromise;
+    void nextRefreshPromise;
     return cachedSnapshot;
   }
 
-  return refreshPromise;
+  return nextRefreshPromise;
 }
 
 export async function resolveVoterLeaderboardSelection(
@@ -183,6 +196,6 @@ export async function resolveVoterLeaderboardSelection(
 }
 
 export function __resetVoterLeaderboardSnapshotForTests(): void {
-  cachedSnapshot = null;
-  refreshPromise = null;
+  cachedSnapshots.clear();
+  refreshPromises.clear();
 }
