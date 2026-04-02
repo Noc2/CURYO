@@ -654,14 +654,14 @@ contract RoundVotingEngine is
         uint256 losingPool = upWins ? round.downPool : round.upPool;
 
         if (losingPool > 0) {
+            uint256 loserRefundShare = RewardMath.calculateRevealedLoserRefund(losingPool);
             (
-                ,
                 uint256 voterShare,
                 uint256 submitterShare,
                 uint256 platformShare,
                 uint256 treasuryShare,
                 uint256 consensusShare
-            ) = RewardMath.splitPoolAfterLoserRefund(losingPool);
+            ) = RewardMath.splitPool(losingPool - loserRefundShare);
 
             // Store voter pool and weighted winning stake (used for proportional reward claims).
             // Loser rebates are paid directly from raw losing stake during claimReward().
