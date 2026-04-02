@@ -8,7 +8,9 @@ export default defineConfig({
   forbidOnly: !!process.env.CI,
   retries: process.env.CI ? 1 : 0,
   workers: 1, // Single worker to prevent Anvil nonce conflicts
-  reporter: process.env.CI ? "github" : "html",
+  reporter: process.env.CI
+    ? [["github"], ["html", { open: "never", outputFolder: "e2e/playwright-report" }]]
+    : "html",
   timeout: 60_000, // On-chain tx confirmation needs time
 
   use: {
