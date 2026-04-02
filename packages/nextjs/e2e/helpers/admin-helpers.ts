@@ -9,6 +9,7 @@
  * the call with viem and send via eth_sendTransaction.
  */
 import { ANVIL_ACCOUNTS } from "./anvil-accounts";
+import { runCommitAttempts } from "./commit-attempts";
 import "./fetch-shim";
 import { PONDER_URL } from "./ponder-url";
 import { E2E_RPC_URL } from "./service-urls";
@@ -21,6 +22,7 @@ const ANVIL_RPC = E2E_RPC_URL;
 // gas instead of relying on a stale fixed cap for vote/settlement transactions.
 const DEFAULT_TX_GAS_LIMIT = 10_000_000n;
 const ESTIMATED_TX_GAS_BUFFER = 300_000n;
+const DIRECT_VOTE_COMMIT_ATTEMPTS = 3;
 const ANVIL_PRIVATE_KEYS_BY_ADDRESS = new Map(
   Object.values(ANVIL_ACCOUNTS).map(account => [account.address.toLowerCase(), account.privateKey as `0x${string}`]),
 );
@@ -144,28 +146,8 @@ async function buildSubmissionReservation(
 }
 
 /** Send a raw transaction to the Anvil RPC, return true if it succeeded on-chain. */
-async function sendTx(from: string, to: string, data: `0x${string}`): Promise<boolean> {
+async function sendTxViaRpc(from: string, to: string, data: `0x${string}`): Promise<boolean> {
   const gasLimit = await resolveTxGasLimit(from, to, data);
-  const privateKey = ANVIL_PRIVATE_KEYS_BY_ADDRESS.get(from.toLowerCase());
-  if (privateKey) {
-    try {
-      const [{ createPublicClient, createWalletClient, http }, { privateKeyToAccount }, { foundry }] =
-        await Promise.all([import("viem"), import("viem/accounts"), import("viem/chains")]);
-      const account = privateKeyToAccount(privateKey);
-      const publicClient = createPublicClient({ chain: foundry, transport: http(ANVIL_RPC) });
-      const walletClient = createWalletClient({ account, chain: foundry, transport: http(ANVIL_RPC) });
-      const txHash = await walletClient.sendTransaction({
-        to: to as `0x${string}`,
-        data,
-        gas: gasLimit,
-      });
-      const receipt = await publicClient.waitForTransactionReceipt({ hash: txHash });
-      return receipt.status === "success";
-    } catch (error) {
-      console.warn(`[sendTx] Signed tx failed from=${from} to=${to}; falling back to RPC send: ${String(error)}`);
-    }
-  }
-
   // Impersonate the sender so accounts beyond Anvil's default 10 can send txs
   await fetch(ANVIL_RPC, {
     method: "POST",
@@ -224,6 +206,31 @@ async function sendTx(from: string, to: string, data: `0x${string}`): Promise<bo
     await new Promise(resolve => setTimeout(resolve, 500));
   }
   return false;
+}
+
+async function sendTx(from: string, to: string, data: `0x${string}`): Promise<boolean> {
+  const gasLimit = await resolveTxGasLimit(from, to, data);
+  const privateKey = ANVIL_PRIVATE_KEYS_BY_ADDRESS.get(from.toLowerCase());
+  if (privateKey) {
+    try {
+      const [{ createPublicClient, createWalletClient, http }, { privateKeyToAccount }, { foundry }] =
+        await Promise.all([import("viem"), import("viem/accounts"), import("viem/chains")]);
+      const account = privateKeyToAccount(privateKey);
+      const publicClient = createPublicClient({ chain: foundry, transport: http(ANVIL_RPC) });
+      const walletClient = createWalletClient({ account, chain: foundry, transport: http(ANVIL_RPC) });
+      const txHash = await walletClient.sendTransaction({
+        to: to as `0x${string}`,
+        data,
+        gas: gasLimit,
+      });
+      const receipt = await publicClient.waitForTransactionReceipt({ hash: txHash });
+      return receipt.status === "success";
+    } catch (error) {
+      console.warn(`[sendTx] Signed tx failed from=${from} to=${to}; falling back to RPC send: ${String(error)}`);
+    }
+  }
+
+  return sendTxViaRpc(from, to, data);
 }
 
 async function readLatestBlockSnapshot(): Promise<{ blockTag: `0x${string}`; timestampSeconds: number }> {
@@ -1152,6 +1159,20 @@ async function resolveVoteCommitEpochDurationSeconds(
   return Number(epochDuration);
 }
 
+async function buildVoteCommitSalt(
+  fromAddress: string,
+  contentId: bigint,
+  attemptIndex: number,
+): Promise<`0x${string}`> {
+  const { encodePacked, keccak256 } = await import("viem");
+  return keccak256(
+    encodePacked(
+      ["address", "uint256", "uint256", "uint8"],
+      [fromAddress as `0x${string}`, contentId, BigInt(Date.now()), attemptIndex],
+    ),
+  );
+}
+
 /**
  * Commit a vote directly via contract call (tlock commit-reveal).
  * Encrypts vote direction with drand tlock and computes commitHash/commitKey.
@@ -1168,63 +1189,68 @@ export async function commitVoteDirect(
   contractAddress: string,
   epochDurationSeconds?: number,
 ): Promise<{ success: boolean; commitKey: `0x${string}`; isUp: boolean; salt: `0x${string}` }> {
-  const { encodeFunctionData, encodePacked, keccak256 } = await import("viem");
+  const { encodeFunctionData } = await import("viem");
   const resolvedEpochDurationSeconds = await resolveVoteCommitEpochDurationSeconds(
     contractAddress,
     epochDurationSeconds,
   );
+  const contentIdBigInt = BigInt(contentId);
 
-  // Generate deterministic salt from voter + contentId + timestamp
-  const salt = keccak256(
-    encodePacked(
-      ["address", "uint256", "uint256"],
-      [fromAddress as `0x${string}`, BigInt(contentId), BigInt(Date.now())],
-    ),
-  );
+  return runCommitAttempts({
+    attempts: DIRECT_VOTE_COMMIT_ATTEMPTS,
+    attempt: async attemptIndex => {
+      const salt = await buildVoteCommitSalt(fromAddress, contentIdBigInt, attemptIndex);
+      const {
+        ciphertext,
+        commitHash: chash,
+        commitKey: ckey,
+        targetRound,
+        drandChainHash,
+      } = await createTlockVoteCommit(
+        {
+          voter: fromAddress as `0x${string}`,
+          isUp,
+          salt,
+          contentId: contentIdBigInt,
+          epochDurationSeconds: resolvedEpochDurationSeconds,
+        },
+        {
+          now: await resolveTlockRuntimeNowMs(contractAddress, contentIdBigInt, resolvedEpochDurationSeconds),
+        },
+      );
 
-  const {
-    ciphertext,
-    commitHash: chash,
-    commitKey: ckey,
-    targetRound,
-    drandChainHash,
-  } = await createTlockVoteCommit(
-    {
-      voter: fromAddress as `0x${string}`,
-      isUp,
-      salt,
-      contentId: BigInt(contentId),
-      epochDurationSeconds: resolvedEpochDurationSeconds,
+      const data = encodeFunctionData({
+        abi: [
+          {
+            name: "commitVote",
+            type: "function",
+            inputs: [
+              { name: "contentId", type: "uint256" },
+              { name: "targetRound", type: "uint64" },
+              { name: "drandChainHash", type: "bytes32" },
+              { name: "commitHash", type: "bytes32" },
+              { name: "ciphertext", type: "bytes" },
+              { name: "stakeAmount", type: "uint256" },
+              { name: "frontend", type: "address" },
+            ],
+            outputs: [],
+            stateMutability: "nonpayable",
+          },
+        ] as any,
+        functionName: "commitVote",
+        args: [contentIdBigInt, targetRound, drandChainHash, chash, ciphertext, stakeAmount, frontend as `0x${string}`],
+      });
+
+      const success = await sendTxViaRpc(fromAddress, contractAddress, data);
+      return { success, commitKey: ckey!, isUp, salt };
     },
-    {
-      now: await resolveTlockRuntimeNowMs(contractAddress, BigInt(contentId), resolvedEpochDurationSeconds),
+    isSuccess: result => result.success,
+    onRetry: attemptIndex => {
+      console.warn(
+        `[commitVoteDirect] Retrying stale tlock commit for ${fromAddress} on content ${contentIdBigInt.toString()} (attempt ${attemptIndex + 2}/${DIRECT_VOTE_COMMIT_ATTEMPTS})`,
+      );
     },
-  );
-
-  const data = encodeFunctionData({
-    abi: [
-      {
-        name: "commitVote",
-        type: "function",
-        inputs: [
-          { name: "contentId", type: "uint256" },
-          { name: "targetRound", type: "uint64" },
-          { name: "drandChainHash", type: "bytes32" },
-          { name: "commitHash", type: "bytes32" },
-          { name: "ciphertext", type: "bytes" },
-          { name: "stakeAmount", type: "uint256" },
-          { name: "frontend", type: "address" },
-        ],
-        outputs: [],
-        stateMutability: "nonpayable",
-      },
-    ] as any,
-    functionName: "commitVote",
-    args: [BigInt(contentId), targetRound, drandChainHash, chash, ciphertext, stakeAmount, frontend as `0x${string}`],
   });
-
-  const success = await sendTx(fromAddress, contractAddress, data);
-  return { success, commitKey: ckey!, isUp, salt };
 }
 
 /**
@@ -1241,67 +1267,73 @@ export async function commitVoteWithTransferAndCallDirect(
   votingEngineAddress: string,
   epochDurationSeconds?: number,
 ): Promise<{ success: boolean; commitKey: `0x${string}`; isUp: boolean; salt: `0x${string}` }> {
-  const { encodeFunctionData, encodePacked, keccak256 } = await import("viem");
+  const { encodeFunctionData } = await import("viem");
   const resolvedEpochDurationSeconds = await resolveVoteCommitEpochDurationSeconds(
     votingEngineAddress,
     epochDurationSeconds,
   );
+  const contentIdBigInt = BigInt(contentId);
 
-  const salt = keccak256(
-    encodePacked(
-      ["address", "uint256", "uint256"],
-      [fromAddress as `0x${string}`, BigInt(contentId), BigInt(Date.now())],
-    ),
-  );
+  return runCommitAttempts({
+    attempts: DIRECT_VOTE_COMMIT_ATTEMPTS,
+    attempt: async attemptIndex => {
+      const salt = await buildVoteCommitSalt(fromAddress, contentIdBigInt, attemptIndex);
+      const {
+        ciphertext,
+        commitHash: chash,
+        commitKey: ckey,
+        targetRound,
+        drandChainHash,
+      } = await createTlockVoteCommit(
+        {
+          voter: fromAddress as `0x${string}`,
+          isUp,
+          salt,
+          contentId: contentIdBigInt,
+          epochDurationSeconds: resolvedEpochDurationSeconds,
+        },
+        {
+          now: await resolveTlockRuntimeNowMs(votingEngineAddress, contentIdBigInt, resolvedEpochDurationSeconds),
+        },
+      );
 
-  const {
-    ciphertext,
-    commitHash: chash,
-    commitKey: ckey,
-    targetRound,
-    drandChainHash,
-  } = await createTlockVoteCommit(
-    {
-      voter: fromAddress as `0x${string}`,
-      isUp,
-      salt,
-      contentId: BigInt(contentId),
-      epochDurationSeconds: resolvedEpochDurationSeconds,
-    },
-    {
-      now: await resolveTlockRuntimeNowMs(votingEngineAddress, BigInt(contentId), resolvedEpochDurationSeconds),
-    },
-  );
+      const payload = encodeVoteTransferPayload({
+        contentId: contentIdBigInt,
+        commitHash: chash,
+        ciphertext,
+        targetRound,
+        drandChainHash,
+        frontend: frontend as `0x${string}`,
+      });
 
-  const payload = encodeVoteTransferPayload({
-    contentId: BigInt(contentId),
-    commitHash: chash,
-    ciphertext,
-    targetRound,
-    drandChainHash,
-    frontend: frontend as `0x${string}`,
-  });
-
-  const data = encodeFunctionData({
-    abi: [
-      {
-        name: "transferAndCall",
-        type: "function",
-        inputs: [
-          { name: "to", type: "address" },
-          { name: "value", type: "uint256" },
-          { name: "data", type: "bytes" },
+      const data = encodeFunctionData({
+        abi: [
+          {
+            name: "transferAndCall",
+            type: "function",
+            inputs: [
+              { name: "to", type: "address" },
+              { name: "value", type: "uint256" },
+              { name: "data", type: "bytes" },
+            ],
+            outputs: [{ name: "", type: "bool" }],
+            stateMutability: "nonpayable",
+          },
         ],
-        outputs: [{ name: "", type: "bool" }],
-        stateMutability: "nonpayable",
-      },
-    ],
-    functionName: "transferAndCall",
-    args: [votingEngineAddress as `0x${string}`, stakeAmount, payload],
-  });
+        functionName: "transferAndCall",
+        args: [votingEngineAddress as `0x${string}`, stakeAmount, payload],
+      });
 
-  const success = await sendTx(fromAddress, tokenAddress, data);
-  return { success, commitKey: ckey!, isUp, salt };
+      const success = await sendTxViaRpc(fromAddress, tokenAddress, data);
+      return { success, commitKey: ckey!, isUp, salt };
+    },
+    isSuccess: result => result.success,
+    onRetry: attemptIndex => {
+      console.warn(
+        `[commitVoteWithTransferAndCallDirect] Retrying stale tlock commit for ${fromAddress} on content ${contentIdBigInt.toString()} (attempt ${attemptIndex + 2}/${DIRECT_VOTE_COMMIT_ATTEMPTS})`,
+      );
+    },
+  });
 }
 
 /**
