@@ -2,7 +2,7 @@ import { E2E_BASE_URL } from "./helpers/service-urls";
 import { defineConfig, devices } from "@playwright/test";
 
 export default defineConfig({
-  globalSetup: require.resolve("./global-setup"),
+  globalSetup: "./global-setup.cts",
   testDir: "./tests",
   fullyParallel: false, // Tests share Anvil chain state — run sequentially
   forbidOnly: !!process.env.CI,
