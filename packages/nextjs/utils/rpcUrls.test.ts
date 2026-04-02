@@ -1,4 +1,10 @@
-import { buildAlchemyHttpUrl, getPreferredHttpRpcUrls, withPreferredHttpRpcUrls } from "./rpcUrls";
+import {
+  buildAlchemyHttpUrl,
+  getPreferredHttpRpcUrls,
+  mergeRpcOverrides,
+  resolveRpcOverrides,
+  withPreferredHttpRpcUrls,
+} from "./rpcUrls";
 import assert from "node:assert/strict";
 import test from "node:test";
 import { celoSepolia } from "viem/chains";
@@ -32,4 +38,32 @@ test("withPreferredHttpRpcUrls rewrites the chain metadata used for wallet add-c
     "https://celo-sepolia.g.alchemy.com/v2/alchemy-key",
     "https://forno.celo-sepolia.celo-testnet.org",
   ]);
+});
+
+test("resolveRpcOverrides normalizes configured per-chain RPC URLs", () => {
+  assert.deepEqual(
+    resolveRpcOverrides({
+      11142220: "https://11142220.rpc.thirdweb.com/client-id/",
+      42220: undefined,
+    }),
+    {
+      11142220: "https://11142220.rpc.thirdweb.com/client-id",
+    },
+  );
+});
+
+test("mergeRpcOverrides lets env-defined RPC URLs override code defaults", () => {
+  assert.deepEqual(
+    mergeRpcOverrides(
+      {
+        [celoSepolia.id]: "https://forno.celo-sepolia.celo-testnet.org",
+      },
+      {
+        [celoSepolia.id]: "https://11142220.rpc.thirdweb.com/client-id",
+      },
+    ),
+    {
+      [celoSepolia.id]: "https://11142220.rpc.thirdweb.com/client-id",
+    },
+  );
 });

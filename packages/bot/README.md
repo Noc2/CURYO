@@ -90,6 +90,97 @@ Without these keys the bot can still submit from public sources such as CoinGeck
 - `--max-submissions <count>` to override the per-run cap for that invocation
 - `--help` to print the submit-specific usage text
 
+## How Submission Works
+
+For each `submit` run, the bot:
+
+1. Loads the wallet configured in `SUBMIT_*` and checks that it can submit. The on-chain `hasVoterId(address)` check resolves delegated identities, so a delegated hot wallet can submit on behalf of the Voter ID holder.
+2. Checks that the wallet has enough cREP for the next submission. Each successful content submission stakes **10 cREP**, and the wallet also needs native gas for `approve`, `reserveSubmission`, and `submitContent`.
+3. Chooses the enabled source adapters and fetches trending content. For movies, the `tmdb` source reads TMDB's `/movie/popular` feed.
+4. Skips URLs that were already submitted by calling `isUrlSubmitted(url)` before attempting a transaction.
+5. Calls `previewSubmissionKey(url, categoryId)` to verify the canonical category, reserves the hidden submission commitment, waits a little over one second for the reservation age check, and then submits the content with the matching salt.
+6. Stops when it reaches the configured limit, runs out of cREP, or runs out of fresh items. If a reveal transaction fails after reservation, the bot attempts to cancel the reservation.
+
+## Testing Popular Movies With A Delegated Bot Wallet
+
+This is the quickest way to test the bot against the current "popular movies" feed.
+
+1. Configure the bot wallet in `packages/bot/.env`.
+
+```bash
+cp packages/bot/.env.example packages/bot/.env
+```
+
+At minimum, set:
+
+```bash
+SUBMIT_PRIVATE_KEY=0x...
+RPC_URL=...
+CHAIN_ID=...
+PONDER_URL=...
+TMDB_API_KEY=...
+```
+
+You can use a Foundry keystore instead of `SUBMIT_PRIVATE_KEY` if you prefer.
+
+2. Start the services the bot depends on. At minimum, the bot needs a reachable RPC and Ponder indexer on the same deployment.
+
+```bash
+yarn ponder:dev
+```
+
+If you are testing locally through the web app as well, run the app against the same chain so you can manage delegation and transfers from the UI.
+
+3. Print the submit bot wallet address.
+
+```bash
+yarn bot:status
+```
+
+4. From the wallet that already holds your Voter ID, open `/settings?tab=delegation` in the app and set the bot wallet as your delegate.
+
+- Only the Voter ID holder can call `setDelegate(...)`.
+- The delegated bot wallet does not need to hold the NFT itself.
+- If your holder wallet does not have a Voter ID yet, claim one first through the faucet flow in the app.
+
+5. Fund the bot wallet.
+
+- Send enough cREP for the batch you want to test. The bot stakes `10 cREP` per successful submission, so `--max-submissions 5` needs at least `50 cREP`.
+- Send a small amount of native gas token as well so the bot can pay for approvals and submission transactions.
+- The same `/settings?tab=delegation` screen can send cREP to the delegate wallet, or you can transfer cREP directly from any funded wallet.
+
+6. Re-run the status command and confirm the bot wallet is ready.
+
+```bash
+yarn bot:status
+```
+
+You want to see:
+
+- `Voter ID: YES`
+- enough `cREP`
+- enough native gas for the target chain
+
+7. Run a focused TMDB movie submission.
+
+```bash
+yarn workspace @curyo/bot submit --source tmdb --category Movies --max-submissions 1
+```
+
+Once the one-item smoke test looks good, increase the cap:
+
+```bash
+yarn workspace @curyo/bot submit --source tmdb --category Movies --max-submissions 5
+```
+
+Expected behavior:
+
+- The bot fetches TMDB's current popular movies.
+- Already-submitted movie URLs are skipped automatically.
+- Only fresh items are submitted, so the run may submit fewer than the requested max if duplicates are common.
+- Each successful submission consumes a new `10 cREP` stake.
+- If `TMDB_API_KEY` is missing, the TMDB source will return no items.
+
 ## Project Structure
 
 ```

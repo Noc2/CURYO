@@ -64,6 +64,9 @@ Key environment variables (see `.env.example` for the full list):
 | Variable                                | Description                                                                   |
 | --------------------------------------- | ----------------------------------------------------------------------------- |
 | `NEXT_PUBLIC_ALCHEMY_API_KEY`           | Alchemy RPC provider key                                                      |
+| `NEXT_PUBLIC_RPC_URL_31337`             | Optional browser RPC override for local Foundry                               |
+| `NEXT_PUBLIC_RPC_URL_11142220`          | Optional browser RPC override for Celo Sepolia                                |
+| `NEXT_PUBLIC_RPC_URL_42220`             | Optional browser RPC override for Celo mainnet                                |
 | `NEXT_PUBLIC_WALLET_CONNECT_PROJECT_ID` | Optional WalletConnect project ID for external wallet discovery               |
 | `NEXT_PUBLIC_THIRDWEB_CLIENT_ID`        | thirdweb client ID for in-app wallets and sponsored transactions              |
 | `NEXT_PUBLIC_TARGET_NETWORKS`           | Comma-separated deployed chain IDs exposed in the UI (required in production) |
@@ -91,7 +94,8 @@ Key environment variables (see `.env.example` for the full list):
 
 Notes:
 
-- Mainnet is no longer auto-enabled in the browser unless you explicitly target chain `1` or provide a mainnet-capable RPC via `NEXT_PUBLIC_ALCHEMY_API_KEY` or `rpcOverrides[1]`. This avoids CSP violations and noisy ENS lookup failures on unsupported public fallbacks.
+- Browser RPC reads prefer `NEXT_PUBLIC_RPC_URL_<chainId>` overrides first, then `NEXT_PUBLIC_ALCHEMY_API_KEY`, then the chain's default public RPC list.
+- Mainnet is no longer auto-enabled in the browser unless you explicitly target chain `1` or provide a mainnet-capable RPC via `NEXT_PUBLIC_ALCHEMY_API_KEY` or a mainnet RPC override. This avoids CSP violations and noisy ENS lookup failures on unsupported public fallbacks.
 - No contract address env vars are needed for supported chains. The frontend reads deployment metadata from `@curyo/contracts` and fails fast if `NEXT_PUBLIC_TARGET_NETWORKS` includes a chain without it.
 - In production, the intended setup is one Railway Postgres service with separate logical databases for Ponder and Next.js.
 - For local development, `yarn dev:db` and `yarn dev:stack` manage a Docker Postgres container when `DATABASE_URL` points to localhost.

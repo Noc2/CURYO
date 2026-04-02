@@ -13,6 +13,8 @@ import {
   isAddress,
   isHash,
   isHex,
+  parseAbi,
+  parseEventLogs,
   toHex,
 } from "viem";
 import { db } from "~~/lib/db";
@@ -65,6 +67,18 @@ type CheckTransactionHashesSucceeded = (params: {
   transactionHashes: Hash[];
   walletAddress: `0x${string}`;
 }) => Promise<boolean>;
+type TransactionVerificationLog = {
+  address: Address;
+  data: Hex;
+  topics: readonly Hex[];
+};
+type TransactionVerificationClient = {
+  getTransaction: (params: { hash: Hash }) => Promise<{ chainId: bigint | number; from: Address }>;
+  getTransactionReceipt: (params: {
+    hash: Hash;
+  }) => Promise<{ logs: readonly TransactionVerificationLog[]; status: "reverted" | "success" }>;
+};
+type GetTransactionVerificationClient = (chainId: number) => Promise<TransactionVerificationClient | null>;
 
 export type FreeTransactionAllowanceSummary = {
   chainId: number;
@@ -104,11 +118,18 @@ const FREE_TX_EXHAUSTED_REASON = "Free transactions used up. Add CELO to continu
 const NO_VOTER_ID_REASON = "Verify your ID to unlock free transactions.";
 const FREE_TRANSACTION_RESERVATION_TTL_MS = 5 * 60_000;
 const FREE_TRANSACTION_IDEMPOTENCY_WINDOW_MS = 2 * 60_000;
+const USER_OPERATION_RECEIPT_EVENT_ABI = parseAbi([
+  "event UserOperationEvent(bytes32 indexed userOpHash, address indexed sender, address indexed paymaster, uint256 nonce, bool success, uint256 actualGasCost, uint256 actualGasUsed)",
+]);
+const EXECUTED_RECEIPT_EVENT_ABI = parseAbi([
+  "event Executed(address indexed user, address indexed signer, address indexed executor, uint256 batchSize)",
+]);
 
 let ensureFreeTransactionQuotaTablePromise: Promise<void> | null = null;
 let freeTransactionTestOverrides: {
   resolveVoterIdTokenId?: ResolveVoterIdTokenId;
   allTransactionHashesSucceeded?: CheckTransactionHashesSucceeded;
+  getTransactionVerificationClient?: GetTransactionVerificationClient;
 } | null = null;
 
 function getContractsForChain(chainId: number) {
@@ -169,6 +190,32 @@ async function getPublicClientForChain(chainId: number) {
     chain: network,
     transport: http(rpcUrl),
   });
+}
+
+async function getTransactionVerificationClient(chainId: number): Promise<TransactionVerificationClient | null> {
+  if (freeTransactionTestOverrides?.getTransactionVerificationClient) {
+    return freeTransactionTestOverrides.getTransactionVerificationClient(chainId);
+  }
+
+  const client = await getPublicClientForChain(chainId);
+  if (!client) {
+    return null;
+  }
+
+  return {
+    getTransaction: async params => {
+      const transaction = await client.getTransaction(params);
+
+      return {
+        chainId:
+          typeof transaction.chainId === "bigint" || typeof transaction.chainId === "number"
+            ? transaction.chainId
+            : Number.NaN,
+        from: transaction.from,
+      };
+    },
+    getTransactionReceipt: params => client.getTransactionReceipt(params),
+  };
 }
 
 async function resolveVoterIdTokenId(address: `0x${string}`, chainId: number) {
@@ -374,6 +421,7 @@ export function __setFreeTransactionTestOverridesForTests(
   overrides: {
     resolveVoterIdTokenId?: ResolveVoterIdTokenId;
     allTransactionHashesSucceeded?: CheckTransactionHashesSucceeded;
+    getTransactionVerificationClient?: GetTransactionVerificationClient;
   } | null,
 ) {
   freeTransactionTestOverrides = overrides;
@@ -599,12 +647,64 @@ async function getActivePendingReservationCount(
   return Number(row?.pendingCount ?? 0);
 }
 
+function logsIncludeWalletUserOperationSender(params: {
+  logs: readonly TransactionVerificationLog[];
+  walletAddress: `0x${string}`;
+}) {
+  const normalizedWalletAddress = params.walletAddress.toLowerCase();
+
+  return parseEventLogs({
+    abi: USER_OPERATION_RECEIPT_EVENT_ABI,
+    logs: normalizeReceiptLogsForEventParsing(params.logs),
+    strict: false,
+  }).some(event => {
+    const sender = event.args.sender;
+    return typeof sender === "string" && sender.toLowerCase() === normalizedWalletAddress;
+  });
+}
+
+function logsIncludeWalletExecutedEvent(params: {
+  logs: readonly TransactionVerificationLog[];
+  walletAddress: `0x${string}`;
+}) {
+  const normalizedWalletAddress = params.walletAddress.toLowerCase();
+
+  return parseEventLogs({
+    abi: EXECUTED_RECEIPT_EVENT_ABI,
+    logs: normalizeReceiptLogsForEventParsing(params.logs),
+    strict: false,
+  }).some(event => {
+    const user = event.args.user;
+    return typeof user === "string" && user.toLowerCase() === normalizedWalletAddress;
+  });
+}
+
+function logsIncludeWalletExecutionProof(params: {
+  logs: readonly TransactionVerificationLog[];
+  walletAddress: `0x${string}`;
+}) {
+  return logsIncludeWalletUserOperationSender(params) || logsIncludeWalletExecutedEvent(params);
+}
+
+function normalizeReceiptLogsForEventParsing(logs: readonly TransactionVerificationLog[]) {
+  return logs.map(log => ({
+    ...log,
+    blockHash: null,
+    blockNumber: null,
+    logIndex: null,
+    removed: false,
+    topics: [...log.topics],
+    transactionHash: null,
+    transactionIndex: null,
+  })) as Parameters<typeof parseEventLogs>[0]["logs"];
+}
+
 async function allTransactionHashesSucceeded(params: {
   chainId: number;
   transactionHashes: Hash[];
   walletAddress: `0x${string}`;
 }) {
-  const client = await getPublicClientForChain(params.chainId);
+  const client = await getTransactionVerificationClient(params.chainId);
   if (!client || params.transactionHashes.length === 0) {
     return false;
   }
@@ -620,18 +720,22 @@ async function allTransactionHashesSucceeded(params: {
         return {
           ok: receipt.status === "success" && Number(transaction.chainId) === params.chainId,
           from: transaction.from.toLowerCase(),
+          matchesWallet:
+            transaction.from.toLowerCase() === params.walletAddress.toLowerCase() ||
+            logsIncludeWalletExecutionProof({
+              logs: receipt.logs,
+              walletAddress: params.walletAddress,
+            }),
         };
       } catch {
-        return { ok: false };
+        return { matchesWallet: false, ok: false };
       }
     }),
   );
 
-  const hasSenderMismatch = receipts.some(
-    receipt => "from" in receipt && receipt.from !== params.walletAddress.toLowerCase(),
-  );
-  if (hasSenderMismatch) {
-    console.warn("[thirdweb-free-tx] rejected sponsored transaction with non-user sender", {
+  const hasWalletMismatch = receipts.some(receipt => receipt.ok && !receipt.matchesWallet);
+  if (hasWalletMismatch) {
+    console.warn("[thirdweb-free-tx] rejected sponsored transaction without wallet execution proof", {
       chainId: params.chainId,
       transactionHashes: params.transactionHashes,
       walletAddress: params.walletAddress,
@@ -639,7 +743,7 @@ async function allTransactionHashesSucceeded(params: {
     return false;
   }
 
-  return receipts.every(receipt => receipt.ok);
+  return receipts.every(receipt => receipt.ok && receipt.matchesWallet);
 }
 
 export async function ensureFreeTransactionQuotaTable() {

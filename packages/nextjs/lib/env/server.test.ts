@@ -1,15 +1,28 @@
-import { getDatabaseConfig, resolveAppUrl, resolveServerPonderUrl, resolveServerTargetNetworks } from "./server";
+import {
+  getDatabaseConfig,
+  getServerRpcOverrides,
+  resolveAppUrl,
+  resolveServerPonderUrl,
+  resolveServerTargetNetworks,
+} from "./server";
 import assert from "node:assert/strict";
 import { afterEach, test } from "node:test";
 
 const env = process.env as Record<string, string | undefined>;
 const originalDatabaseUrl = env.DATABASE_URL;
+const originalPublicRpcUrl11142220 = env.NEXT_PUBLIC_RPC_URL_11142220;
 
 afterEach(() => {
   if (originalDatabaseUrl === undefined) {
     delete env.DATABASE_URL;
   } else {
     env.DATABASE_URL = originalDatabaseUrl;
+  }
+
+  if (originalPublicRpcUrl11142220 === undefined) {
+    delete env.NEXT_PUBLIC_RPC_URL_11142220;
+  } else {
+    env.NEXT_PUBLIC_RPC_URL_11142220 = originalPublicRpcUrl11142220;
   }
 });
 
@@ -54,6 +67,14 @@ test("resolveServerTargetNetworks tolerates local-chain builds in explicit e2e p
 
 test("resolveServerTargetNetworks returns null for invalid production values", () => {
   assert.equal(resolveServerTargetNetworks("not-a-chain", true), null);
+});
+
+test("getServerRpcOverrides includes public per-chain RPC overrides", () => {
+  env.NEXT_PUBLIC_RPC_URL_11142220 = "https://11142220.rpc.thirdweb.com/client-id/";
+
+  assert.deepEqual(getServerRpcOverrides(), {
+    11142220: "https://11142220.rpc.thirdweb.com/client-id",
+  });
 });
 
 test("getDatabaseConfig maps legacy sqlite-style local urls to memory in development", () => {

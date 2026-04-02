@@ -24,3 +24,14 @@ test("production builds can explicitly opt into the local Foundry chain", () => 
     [chains.foundry.id, chains.celoSepolia.id],
   );
 });
+
+test("configured RPC overrides become the preferred browser transport for target chains", () => {
+  const [network] = resolveTargetNetworks(`${chains.celoSepolia.id}`, {
+    production: false,
+    rpcOverrides: {
+      [chains.celoSepolia.id]: "https://11142220.rpc.thirdweb.com/client-id",
+    },
+  });
+
+  assert.equal(network.rpcUrls.default.http[0], "https://11142220.rpc.thirdweb.com/client-id");
+});

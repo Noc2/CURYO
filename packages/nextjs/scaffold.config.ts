@@ -1,4 +1,4 @@
-import { DEFAULT_POLLING_INTERVAL, RPC_OVERRIDES } from "~~/config/shared";
+import { DEFAULT_POLLING_INTERVAL } from "~~/config/shared";
 import { publicEnv } from "~~/utils/env/public";
 import type { SupportedTargetNetwork } from "~~/utils/env/public";
 
@@ -6,7 +6,7 @@ export type BaseConfig = {
   targetNetworks: readonly [SupportedTargetNetwork, ...SupportedTargetNetwork[]];
   pollingInterval: number;
   alchemyApiKey?: string;
-  rpcOverrides?: Record<number, string>;
+  rpcOverrides?: Partial<Record<number, string>>;
   walletConnectProjectId?: string;
   frontendCode?: `0x${string}`; // Frontend operator address for fee distribution
 };
@@ -23,7 +23,7 @@ const scaffoldConfig = {
   alchemyApiKey: publicEnv.alchemyApiKey,
   // If you want to use a different RPC for a specific network, you can add it here.
   // The key is the chain ID, and the value is the HTTP RPC URL
-  rpcOverrides: RPC_OVERRIDES,
+  rpcOverrides: publicEnv.rpcOverrides,
   // Optional WalletConnect project ID for external wallet discovery flows.
   walletConnectProjectId: publicEnv.walletConnectProjectId,
   // Frontend operator address for fee distribution (3% of the remaining post-rebate losing pool)
