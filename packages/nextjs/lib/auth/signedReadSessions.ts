@@ -25,7 +25,6 @@ const signedReadSessionStore = createSignedSessionStore<SignedReadSessionScope>(
   },
 });
 
-const ensureSignedReadSessionTable = signedReadSessionStore.ensureTable;
 export const issueSignedReadSession = signedReadSessionStore.issueSession;
 export const verifySignedReadSession = signedReadSessionStore.verifySession;
 export const getSignedReadSessionCookie = signedReadSessionStore.getSessionCookie;

@@ -17,7 +17,6 @@ const signedWriteSessionStore = createSignedSessionStore<SignedWriteSessionScope
   },
 });
 
-const ensureSignedWriteSessionTable = signedWriteSessionStore.ensureTable;
 export const issueSignedWriteSession = signedWriteSessionStore.issueSession;
 export const verifySignedWriteSession = signedWriteSessionStore.verifySession;
 export const getSignedWriteSessionCookie = signedWriteSessionStore.getSessionCookie;
