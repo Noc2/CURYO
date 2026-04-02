@@ -12,6 +12,7 @@ import { ANVIL_ACCOUNTS } from "./anvil-accounts";
 import "./fetch-shim";
 import { PONDER_URL } from "./ponder-url";
 import { E2E_RPC_URL } from "./service-urls";
+import { createTlockVoteCommit, encodeVoteTransferPayload } from "./tlock-voting";
 import { parseRound } from "../../lib/contracts/roundVotingEngine";
 import { deriveCommitVoteRuntimeNowMs } from "../../lib/vote/tlockCommitTiming";
 
@@ -1165,7 +1166,6 @@ export async function commitVoteDirect(
   contractAddress: string,
   epochDurationSeconds?: number,
 ): Promise<{ success: boolean; commitKey: `0x${string}`; isUp: boolean; salt: `0x${string}` }> {
-  const { createTlockVoteCommit } = await import("@curyo/contracts/voting");
   const { encodeFunctionData, encodePacked, keccak256 } = await import("viem");
   const resolvedEpochDurationSeconds = await resolveVoteCommitEpochDurationSeconds(
     contractAddress,
@@ -1239,7 +1239,6 @@ export async function commitVoteWithTransferAndCallDirect(
   votingEngineAddress: string,
   epochDurationSeconds?: number,
 ): Promise<{ success: boolean; commitKey: `0x${string}`; isUp: boolean; salt: `0x${string}` }> {
-  const { createTlockVoteCommit, encodeVoteTransferPayload } = await import("@curyo/contracts/voting");
   const { encodeFunctionData, encodePacked, keccak256 } = await import("viem");
   const resolvedEpochDurationSeconds = await resolveVoteCommitEpochDurationSeconds(
     votingEngineAddress,
