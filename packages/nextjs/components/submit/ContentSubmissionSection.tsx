@@ -2,6 +2,15 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import dynamic from "next/dynamic";
+import {
+  buildSubmissionReservationStorageKey,
+  buildSubmissionRevealCommitment,
+  clearStoredSubmissionReservation,
+  createStoredSubmissionReservation,
+  getStoredSubmissionReservation,
+  setStoredSubmissionReservation,
+  submissionReservationMatchesDraft,
+} from "./submissionReservation";
 import { decodeEventLog, encodeAbiParameters, keccak256, toHex } from "viem";
 import { useAccount, useConfig } from "wagmi";
 import { readContract, waitForTransactionReceipt } from "wagmi/actions";
@@ -100,8 +109,6 @@ const DEFAULT_URL_CONFIG = {
   urlHint: "Select a platform first, then paste your URL",
 };
 
-const RESERVED_SUBMISSION_SALT_PREFIX = "curyo:reserved-content-salt:";
-
 function getTitleValidationError(value: string): string | null {
   if (value.length > MAX_CONTENT_TITLE_LENGTH) {
     return `Title must be ${MAX_CONTENT_TITLE_LENGTH} characters or fewer`;
@@ -126,51 +133,20 @@ function createSubmissionSalt(): `0x${string}` {
   return toHex(bytes);
 }
 
-function getReservedSubmissionSaltKey(
-  address: `0x${string}`,
-  url: string,
-  title: string,
-  description: string,
-  tags: string,
-  categoryId: bigint,
-): string {
-  return `${RESERVED_SUBMISSION_SALT_PREFIX}${keccak256(
-    encodeAbiParameters(
-      [
-        { type: "address" },
-        { type: "string" },
-        { type: "string" },
-        { type: "string" },
-        { type: "string" },
-        { type: "uint256" },
-      ],
-      [address, url, title, description, tags, categoryId],
-    ),
-  )}`;
-}
-
-function getStoredSubmissionSalt(storageKey: string): `0x${string}` | null {
-  if (typeof window === "undefined") return null;
-  const stored = window.localStorage.getItem(storageKey);
-  return stored && stored.startsWith("0x") ? (stored as `0x${string}`) : null;
-}
-
-function setStoredSubmissionSalt(storageKey: string, salt: `0x${string}`) {
-  if (typeof window === "undefined") return;
-  window.localStorage.setItem(storageKey, salt);
-}
-
-function clearStoredSubmissionSalt(storageKey: string) {
-  if (typeof window === "undefined") return;
-  window.localStorage.removeItem(storageKey);
-}
-
 function isReservationExistsError(error: unknown): boolean {
   const message =
     (error as { shortMessage?: string; message?: string } | undefined)?.shortMessage ??
     (error as { shortMessage?: string; message?: string } | undefined)?.message ??
     "";
   return message.includes("Reservation exists");
+}
+
+function isReservationNotFoundError(error: unknown): boolean {
+  const message =
+    (error as { shortMessage?: string; message?: string } | undefined)?.shortMessage ??
+    (error as { shortMessage?: string; message?: string } | undefined)?.message ??
+    "";
+  return message.includes("Reservation not found");
 }
 
 function PlatformIcon({ domain, className }: { domain: string; className?: string }) {
@@ -488,6 +464,7 @@ export function ContentSubmissionSection() {
     setIsSubmitting(true);
     const submittedTitle = title;
     const submittedDescription = description;
+    let reservationStorageKey: string | null = null;
     try {
       let contentId: bigint | null = null;
       const stakeAmount = BigInt(10 * 1e6);
@@ -503,34 +480,45 @@ export function ContentSubmissionSection() {
         functionName: "previewSubmissionKey",
         args: [normalizedSubmissionUrl, selectedCategory.id],
       })) as readonly [bigint, `0x${string}`];
+      const submissionDraft = {
+        categoryId: selectedCategory.id,
+        description: submittedDescription,
+        submissionKey,
+        tags: submissionTags,
+        title: submittedTitle,
+        url: normalizedSubmissionUrl,
+      };
+      reservationStorageKey = buildSubmissionReservationStorageKey(submitterAddress, submissionKey);
 
-      const saltStorageKey = getReservedSubmissionSaltKey(
-        submitterAddress,
-        normalizedSubmissionUrl,
-        title,
-        description,
-        submissionTags,
-        selectedCategory.id,
-      );
-      const submissionSalt = getStoredSubmissionSalt(saltStorageKey) ?? createSubmissionSalt();
-      setStoredSubmissionSalt(saltStorageKey, submissionSalt);
+      const cancelReservedSubmission = async (revealCommitment: `0x${string}`) => {
+        if (canUseSponsoredSubmitCalls) {
+          await executeSponsoredCalls(
+            [
+              {
+                abi: registryInfo.abi,
+                address: registryAddress,
+                args: [revealCommitment],
+                functionName: "cancelReservedSubmission",
+              },
+            ],
+            {
+              atomicRequired: true,
+            },
+          );
+          return;
+        }
 
-      const revealCommitment = keccak256(
-        encodeAbiParameters(
-          [
-            { type: "bytes32" },
-            { type: "string" },
-            { type: "string" },
-            { type: "string" },
-            { type: "uint256" },
-            { type: "bytes32" },
-            { type: "address" },
-          ],
-          [submissionKey, title, description, submissionTags, selectedCategory.id, submissionSalt, submitterAddress],
-        ),
-      );
+        const cancelTxHash = await writeRegistry({
+          functionName: "cancelReservedSubmission",
+          args: [revealCommitment],
+        });
 
-      const reserveSubmission = async () => {
+        if (cancelTxHash) {
+          await waitForTransactionReceipt(wagmiConfig, { hash: cancelTxHash });
+        }
+      };
+
+      const reserveSubmission = async (revealCommitment: `0x${string}`) => {
         if (canUseSponsoredSubmitCalls) {
           await executeSponsoredCalls(
             [
@@ -573,12 +561,35 @@ export function ContentSubmissionSection() {
         }
       };
 
-      try {
-        await reserveSubmission();
-      } catch (error) {
-        if (!isReservationExistsError(error)) {
-          throw error;
+      let activeReservation = getStoredSubmissionReservation(reservationStorageKey);
+
+      if (activeReservation && !submissionReservationMatchesDraft(activeReservation, submissionDraft)) {
+        try {
+          await cancelReservedSubmission(activeReservation.revealCommitment);
+        } catch (error) {
+          if (!isReservationNotFoundError(error)) {
+            throw error;
+          }
         }
+
+        clearStoredSubmissionReservation(reservationStorageKey);
+        activeReservation = null;
+      }
+
+      if (!activeReservation) {
+        const submissionSalt = createSubmissionSalt();
+        const revealCommitment = buildSubmissionRevealCommitment(submissionDraft, submissionSalt, submitterAddress);
+
+        try {
+          await reserveSubmission(revealCommitment);
+        } catch (error) {
+          if (!isReservationExistsError(error)) {
+            throw error;
+          }
+        }
+
+        activeReservation = createStoredSubmissionReservation(submissionDraft, submissionSalt, revealCommitment);
+        setStoredSubmissionReservation(reservationStorageKey, activeReservation);
       }
 
       // ContentRegistry enforces a minimum reservation age before reveal.
@@ -591,7 +602,14 @@ export function ContentSubmissionSection() {
             {
               abi: registryInfo.abi,
               address: registryAddress,
-              args: [normalizedSubmissionUrl, title, description, submissionTags, selectedCategory.id, submissionSalt],
+              args: [
+                normalizedSubmissionUrl,
+                submittedTitle,
+                submittedDescription,
+                submissionTags,
+                selectedCategory.id,
+                activeReservation.salt,
+              ],
               functionName: "submitContent",
             },
           ],
@@ -604,7 +622,14 @@ export function ContentSubmissionSection() {
       } else {
         const submitTxHash = await writeRegistry({
           functionName: "submitContent",
-          args: [normalizedSubmissionUrl, title, description, submissionTags, selectedCategory.id, submissionSalt],
+          args: [
+            normalizedSubmissionUrl,
+            submittedTitle,
+            submittedDescription,
+            submissionTags,
+            selectedCategory.id,
+            activeReservation.salt,
+          ],
         });
 
         if (submitTxHash) {
@@ -614,7 +639,7 @@ export function ContentSubmissionSection() {
       }
 
       await refetchNextContentId();
-      clearStoredSubmissionSalt(saltStorageKey);
+      clearStoredSubmissionReservation(reservationStorageKey);
 
       notification.success("Content submitted! Staked 10 cREP.");
       setSubmittedContent(
@@ -636,6 +661,11 @@ export function ContentSubmissionSection() {
         notification.error(getGasBalanceErrorMessage(nativeTokenSymbol, { canSponsorTransactions }));
       } else if (isWalletRpcOverloadedError(e)) {
         showWalletRpcOverloadNotification();
+      } else if (isReservationNotFoundError(e)) {
+        if (reservationStorageKey) {
+          clearStoredSubmissionReservation(reservationStorageKey);
+        }
+        notification.warning("Reservation expired. Retry submit.");
       } else if (isReservationExistsError(e)) {
         notification.warning("Reservation saved. Retry submit.");
       } else {
