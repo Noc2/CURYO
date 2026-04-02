@@ -1,6 +1,5 @@
 import { Buffer } from "buffer";
 import { decodeAbiParameters, encodeAbiParameters, hexToString, keccak256, encodePacked, stringToHex, type Address } from "viem";
-import { mainnetClient, roundAt, timelockDecrypt, timelockEncrypt } from "tlock-js";
 
 export type VoteSalt = `0x${string}`;
 export type VoteCiphertext = `0x${string}`;
@@ -11,6 +10,28 @@ export interface VoteCommitMetadata {
   drandChainHash: VoteDrandChainHash;
 }
 export interface TlockCiphertextMetadata extends VoteCommitMetadata {}
+type TlockChainInfo = {
+  period: number;
+  genesis_time: number;
+  hash: string;
+};
+type TlockClient = {
+  chain: () => {
+    info: () => Promise<TlockChainInfo>;
+  };
+};
+type TlockEncryptFn = (targetRound: number, payload: Uint8Array, client: unknown) => Promise<string>;
+type TlockDecryptFn = (ciphertext: string, client: unknown) => Promise<Uint8Array>;
+type TlockRoundAtFn = (targetTimeMs: number, chainInfo: TlockChainInfo) => number;
+type TlockModule = {
+  mainnetClient: () => TlockClient;
+  roundAt: TlockRoundAtFn;
+  timelockEncrypt: TlockEncryptFn;
+  timelockDecrypt: TlockDecryptFn;
+};
+
+let tlockModulePromise: Promise<TlockModule> | undefined;
+
 export interface VoteTransferPayload {
   contentId: bigint;
   commitHash: VoteCommitHash;
@@ -20,10 +41,10 @@ export interface VoteTransferPayload {
   frontend: Address;
 }
 export type VoteTlockRuntime = {
-  client?: ReturnType<typeof mainnetClient>;
+  client?: TlockClient;
   now?: () => number;
-  encryptFn?: typeof timelockEncrypt;
-  decryptFn?: typeof timelockDecrypt;
+  encryptFn?: TlockEncryptFn;
+  decryptFn?: TlockDecryptFn;
 };
 
 const voteTransferPayloadParams = [
@@ -46,6 +67,17 @@ const UNPADDED_BASE64_LINE = /^[A-Za-z0-9+/]+$/;
 const AGE_MAC_LENGTH = 32;
 const MIN_TLOCK_STANZA_BODY_LENGTH = 80;
 const MIN_ENCRYPTED_BODY_LENGTH = 65;
+
+async function loadTlockModule(): Promise<TlockModule> {
+  tlockModulePromise ??= import("tlock-js").then(module => ({
+    mainnetClient: module.mainnetClient as TlockModule["mainnetClient"],
+    roundAt: module.roundAt as TlockModule["roundAt"],
+    timelockEncrypt: module.timelockEncrypt as TlockModule["timelockEncrypt"],
+    timelockDecrypt: module.timelockDecrypt as TlockModule["timelockDecrypt"],
+  }));
+
+  return tlockModulePromise;
+}
 
 function saltToBytes(salt: VoteSalt): Uint8Array {
   const hex = salt.startsWith("0x") ? salt.slice(2) : salt;
@@ -270,6 +302,7 @@ async function createTlockVoteArtifacts(
   epochDurationSeconds: number,
   runtime: VoteTlockRuntime = {},
 ): Promise<{ ciphertext: VoteCiphertext; targetRound: bigint; drandChainHash: VoteDrandChainHash }> {
+  const { mainnetClient, roundAt, timelockEncrypt } = await loadTlockModule();
   const client = runtime.client ?? mainnetClient();
   const now = runtime.now ?? Date.now;
   const encryptFn = runtime.encryptFn ?? timelockEncrypt;
@@ -298,6 +331,7 @@ export async function decryptTlockCiphertext(
   ciphertext: VoteCiphertext,
   runtime: VoteTlockRuntime = {},
 ): Promise<{ isUp: boolean; salt: VoteSalt } | null> {
+  const { mainnetClient, timelockDecrypt } = await loadTlockModule();
   const client = runtime.client ?? mainnetClient();
   const decryptFn = runtime.decryptFn ?? timelockDecrypt;
   const armored = hexToString(ciphertext);
