@@ -80,6 +80,10 @@ export function shouldAttemptSelfFundedThirdwebFallback(params: {
   );
 }
 
+export function shouldIgnorePostTransactionFallbackWalletSyncError(callStatus: string | undefined) {
+  return callStatus === "success";
+}
+
 export function useThirdwebSponsoredSubmitCalls() {
   const queryClient = useQueryClient();
   const activeWallet = useActiveWallet();
@@ -242,14 +246,24 @@ export function useThirdwebSponsoredSubmitCalls() {
             });
 
             const fallbackResult = await sendCallsWithWallet(fallbackWallet);
-            await syncWalletToWagmi(fallbackWallet, chainId, { reconnect: true });
-            await setActiveWallet(fallbackWallet);
 
             if (fallbackResult.status !== "success") {
               const fallbackStatusError = new Error("Self-funded calls failed.");
               (fallbackStatusError as Error & { callsStatus?: typeof fallbackResult }).callsStatus = fallbackResult;
               throw fallbackStatusError;
             }
+
+            try {
+              await syncWalletToWagmi(fallbackWallet, chainId, { reconnect: true });
+              await setActiveWallet(fallbackWallet);
+            } catch (syncError) {
+              if (!shouldIgnorePostTransactionFallbackWalletSyncError(fallbackResult.status)) {
+                throw syncError;
+              }
+
+              console.error("Self-funded fallback transaction succeeded, but wallet sync failed:", syncError);
+            }
+
             return fallbackResult;
           } catch (fallbackError) {
             error = fallbackError;
