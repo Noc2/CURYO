@@ -27,6 +27,32 @@ let freeTransactions: FreeTransactionsModule;
 let route: RouteModule;
 let memoryResources: DatabaseResources;
 
+function createStoreUnavailableResources(base: DatabaseResources): DatabaseResources {
+  const storeUnavailableError = new Error("database offline", {
+    cause: {
+      code: "SELF_SIGNED_CERT_IN_CHAIN",
+    },
+  });
+  const database = new Proxy(base.database as object, {
+    get(target, property, receiver) {
+      if (property === "insert" || property === "transaction") {
+        return () => {
+          throw storeUnavailableError;
+        };
+      }
+
+      const value = Reflect.get(target, property, receiver);
+      return typeof value === "function" ? value.bind(target) : value;
+    },
+  }) as DatabaseResources["database"];
+
+  return {
+    client: base.client,
+    database,
+    pool: base.pool,
+  };
+}
+
 function makeRequest(body: Record<string, unknown>): NextRequest {
   return new NextRequest("https://curyo.xyz/api/transactions/free/confirm", {
     method: "POST",
@@ -115,4 +141,24 @@ test("free transaction confirm route fails open when the rate limit store is una
 
   assert.equal(response.status, 200);
   assert.deepEqual(await response.json(), { ok: true });
+});
+
+test("free transaction confirm route fails open when the quota store is unavailable", async () => {
+  dbModule.__setDatabaseResourcesForTests(createStoreUnavailableResources(memoryResources));
+
+  try {
+    const response = await route.POST(
+      makeRequest({
+        address: TEST_ADDRESS,
+        chainId: 42220,
+        operationKey: TEST_OPERATION_KEY,
+        transactionHashes: [TEST_TX_HASH],
+      }),
+    );
+
+    assert.equal(response.status, 200);
+    assert.deepEqual(await response.json(), { ok: true });
+  } finally {
+    dbModule.__setDatabaseResourcesForTests(memoryResources);
+  }
 });

@@ -1054,8 +1054,6 @@ export async function confirmFreeTransactionReservation(params: {
   operationKey: string;
   transactionHashes: string[];
 }) {
-  await ensureFreeTransactionQuotaTable();
-
   if (!isAddress(params.address) || !Number.isFinite(params.chainId) || !isHash(params.operationKey)) {
     throw new Error("Invalid free transaction confirmation payload");
   }
@@ -1078,79 +1076,94 @@ export async function confirmFreeTransactionReservation(params: {
     throw new Error("Sponsored transaction receipts could not be verified");
   }
 
-  await db.transaction(async tx => {
-    const [reservation] = await tx
-      .select()
-      .from(freeTransactionReservations)
-      .where(eq(freeTransactionReservations.operationKey, params.operationKey as Hash))
-      .limit(1);
-    const normalizedReservation = normalizeReservationRow(reservation);
+  try {
+    await ensureFreeTransactionQuotaTable();
 
-    if (!normalizedReservation) {
-      return;
-    }
+    await db.transaction(async tx => {
+      const [reservation] = await tx
+        .select()
+        .from(freeTransactionReservations)
+        .where(eq(freeTransactionReservations.operationKey, params.operationKey as Hash))
+        .limit(1);
+      const normalizedReservation = normalizeReservationRow(reservation);
 
-    if (
-      normalizedReservation.chainId !== params.chainId ||
-      normalizedReservation.walletAddress.toLowerCase() !== walletAddress.toLowerCase()
-    ) {
-      throw new Error("Sponsored transaction reservation does not match the current wallet");
-    }
+      if (!normalizedReservation) {
+        return;
+      }
 
-    if (normalizedReservation.status === "confirmed") {
-      return;
-    }
+      if (
+        normalizedReservation.chainId !== params.chainId ||
+        normalizedReservation.walletAddress.toLowerCase() !== walletAddress.toLowerCase()
+      ) {
+        throw new Error("Sponsored transaction reservation does not match the current wallet");
+      }
 
-    if (normalizedReservation.status !== "pending") {
-      return;
-    }
+      if (normalizedReservation.status === "confirmed") {
+        return;
+      }
 
-    const now = new Date();
-    const updatedReservations = await tx
-      .update(freeTransactionReservations)
-      .set({
-        status: "confirmed",
-        txHashes: JSON.stringify(normalizedTransactionHashes),
-        confirmedAt: now,
-        releasedAt: null,
-        updatedAt: now,
-      })
-      .where(
-        and(
-          eq(freeTransactionReservations.operationKey, params.operationKey as Hash),
-          eq(freeTransactionReservations.status, "pending"),
-        ),
-      )
-      .returning({
-        identityKey: freeTransactionReservations.identityKey,
+      if (normalizedReservation.status !== "pending") {
+        return;
+      }
+
+      const now = new Date();
+      const updatedReservations = await tx
+        .update(freeTransactionReservations)
+        .set({
+          status: "confirmed",
+          txHashes: JSON.stringify(normalizedTransactionHashes),
+          confirmedAt: now,
+          releasedAt: null,
+          updatedAt: now,
+        })
+        .where(
+          and(
+            eq(freeTransactionReservations.operationKey, params.operationKey as Hash),
+            eq(freeTransactionReservations.status, "pending"),
+          ),
+        )
+        .returning({
+          identityKey: freeTransactionReservations.identityKey,
+        });
+
+      if (updatedReservations.length === 0) {
+        return;
+      }
+
+      const updatedIdentityKey =
+        updatedReservations[0]?.identityKey ??
+        (updatedReservations[0] as { identity_key?: string; identitykey?: string } | undefined)?.identity_key ??
+        (updatedReservations[0] as { identity_key?: string; identitykey?: string } | undefined)?.identitykey;
+      if (!updatedIdentityKey) {
+        return;
+      }
+
+      await tx
+        .update(freeTransactionQuotas)
+        .set({
+          lastWalletAddress: walletAddress,
+          freeTxUsed: sql`${freeTransactionQuotas.freeTxUsed} + 1`,
+          exhaustedAt: sql`
+            CASE
+              WHEN ${freeTransactionQuotas.freeTxUsed} + 1 >= ${freeTransactionQuotas.freeTxLimit}
+              THEN ${now}
+              ELSE ${freeTransactionQuotas.exhaustedAt}
+            END
+          `,
+          updatedAt: now,
+        })
+        .where(eq(freeTransactionQuotas.identityKey, updatedIdentityKey));
+    });
+  } catch (error) {
+    if (isFreeTransactionStoreUnavailableError(error)) {
+      console.warn("[thirdweb-free-tx] quota store unavailable during confirmation; failing open.", {
+        address: walletAddress,
+        chainId: params.chainId,
+        operationKey: params.operationKey,
       });
-
-    if (updatedReservations.length === 0) {
       return;
     }
 
-    const updatedIdentityKey =
-      updatedReservations[0]?.identityKey ??
-      (updatedReservations[0] as { identity_key?: string; identitykey?: string } | undefined)?.identity_key ??
-      (updatedReservations[0] as { identity_key?: string; identitykey?: string } | undefined)?.identitykey;
-    if (!updatedIdentityKey) {
-      return;
-    }
-
-    await tx
-      .update(freeTransactionQuotas)
-      .set({
-        lastWalletAddress: walletAddress,
-        freeTxUsed: sql`${freeTransactionQuotas.freeTxUsed} + 1`,
-        exhaustedAt: sql`
-          CASE
-            WHEN ${freeTransactionQuotas.freeTxUsed} + 1 >= ${freeTransactionQuotas.freeTxLimit}
-            THEN ${now}
-            ELSE ${freeTransactionQuotas.exhaustedAt}
-          END
-        `,
-        updatedAt: now,
-      })
-      .where(eq(freeTransactionQuotas.identityKey, updatedIdentityKey));
-  });
+    throw error;
+  }
 }
