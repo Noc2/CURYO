@@ -7,6 +7,7 @@ const originalDatabaseUrl = env.DATABASE_URL;
 const originalNodeEnv = env.NODE_ENV;
 const originalTrustedHeaders = env.RATE_LIMIT_TRUSTED_IP_HEADERS;
 const originalPonderUrl = env.NEXT_PUBLIC_PONDER_URL;
+const originalTargetNetworks = env.NEXT_PUBLIC_TARGET_NETWORKS;
 
 const TEST_FRONTEND = "0x63cada40E8AcF7A1d47229af5Be35b78b16035fa";
 
@@ -29,6 +30,7 @@ before(async () => {
   env.NODE_ENV = "production";
   env.RATE_LIMIT_TRUSTED_IP_HEADERS = "x-forwarded-for";
   env.NEXT_PUBLIC_PONDER_URL = "";
+  env.NEXT_PUBLIC_TARGET_NETWORKS = "42220";
 
   rateLimit = await import("~~/utils/rateLimit");
   route = await import("./route");
@@ -39,6 +41,7 @@ beforeEach(() => {
   env.NODE_ENV = "production";
   env.RATE_LIMIT_TRUSTED_IP_HEADERS = "x-forwarded-for";
   env.NEXT_PUBLIC_PONDER_URL = "";
+  env.NEXT_PUBLIC_TARGET_NETWORKS = "42220";
 
   rateLimit.__setRateLimitStoreForTests({
     execute: async () => {
@@ -73,6 +76,12 @@ after(() => {
   } else {
     env.NEXT_PUBLIC_PONDER_URL = originalPonderUrl;
   }
+
+  if (originalTargetNetworks === undefined) {
+    delete env.NEXT_PUBLIC_TARGET_NETWORKS;
+  } else {
+    env.NEXT_PUBLIC_TARGET_NETWORKS = originalTargetNetworks;
+  }
 });
 
 test("frontend claimable fees route fails open when the rate limit store is unavailable", async () => {
@@ -87,5 +96,28 @@ test("frontend claimable fees route fails open when the rate limit store is unav
     nextOffset: 0,
     scannedRounds: 0,
     totalRounds: 0,
+  });
+});
+
+test("frontend claimable fees route accepts an explicit supported chain id", async () => {
+  const response = await route.GET(
+    makeRequest(
+      `/api/frontend/claimable-fees?frontend=${encodeURIComponent(TEST_FRONTEND)}&chainId=42220&limit=10&offset=0`,
+    ),
+  );
+
+  assert.equal(response.status, 200);
+});
+
+test("frontend claimable fees route rejects unsupported chain ids", async () => {
+  const response = await route.GET(
+    makeRequest(
+      `/api/frontend/claimable-fees?frontend=${encodeURIComponent(TEST_FRONTEND)}&chainId=31337&limit=10&offset=0`,
+    ),
+  );
+
+  assert.equal(response.status, 400);
+  assert.deepEqual(await response.json(), {
+    error: "Unsupported chainId",
   });
 });
