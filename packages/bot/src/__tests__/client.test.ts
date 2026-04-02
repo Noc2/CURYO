@@ -4,12 +4,21 @@ import type { PrivateKeyAccount } from "viem/accounts";
 
 type BotClientOptions = {
   keystoreAccount?: PrivateKeyAccount | null;
+  contractCode?: Record<string, string | undefined>;
+  rpcChainId?: number;
 };
 
 async function loadBotClient(options: BotClientOptions = {}) {
   vi.resetModules();
 
-  const createPublicClient = vi.fn(() => ({ kind: "public" }));
+  const mockedPublicClient = {
+    kind: "public",
+    getChainId: vi.fn().mockResolvedValue(options.rpcChainId ?? 11142220),
+    getCode: vi.fn(async ({ address }: { address: string }) => {
+      return options.contractCode?.[address.toLowerCase()] ?? "0x1234";
+    }),
+  };
+  const createPublicClient = vi.fn(() => mockedPublicClient);
   const createWalletClient = vi.fn(() => ({ kind: "wallet" }));
   const defineChain = vi.fn(chain => chain);
   const http = vi.fn(url => ({ url }));
@@ -32,6 +41,13 @@ async function loadBotClient(options: BotClientOptions = {}) {
     config: {
       chainId: 11142220,
       rpcUrl: "https://rpc.example.com",
+      contracts: {
+        categoryRegistry: "0x5555555555555555555555555555555555555555",
+        contentRegistry: "0x2222222222222222222222222222222222222222",
+        crepToken: "0x1111111111111111111111111111111111111111",
+        voterIdNFT: "0x4444444444444444444444444444444444444444",
+        votingEngine: "0x3333333333333333333333333333333333333333",
+      },
     },
   }));
   vi.doMock("../keystore.js", () => ({
@@ -43,6 +59,7 @@ async function loadBotClient(options: BotClientOptions = {}) {
     ...clientModule,
     mocks: {
       createWalletClient,
+      mockedPublicClient,
       getKeystoreAccount,
       privateKeyToAccount,
     },
@@ -107,6 +124,34 @@ describe("bot client", () => {
       expect.objectContaining({
         account: keystoreAccount,
       }),
+    );
+  });
+
+  it("validates the configured RPC chain and deployed contracts", async () => {
+    const clientModule = await loadBotClient();
+
+    await expect(clientModule.validateBotConnectivity()).resolves.toBeUndefined();
+    expect(clientModule.mocks.mockedPublicClient.getChainId).toHaveBeenCalledOnce();
+    expect(clientModule.mocks.mockedPublicClient.getCode).toHaveBeenCalledTimes(5);
+  });
+
+  it("rejects an RPC endpoint on the wrong chain", async () => {
+    const clientModule = await loadBotClient({ rpcChainId: 42220 });
+
+    await expect(clientModule.validateBotConnectivity()).rejects.toThrow(
+      "RPC_URL reports chain ID 42220, but CHAIN_ID is 11142220.",
+    );
+  });
+
+  it("rejects configured contracts that have no bytecode", async () => {
+    const clientModule = await loadBotClient({
+      contractCode: {
+        ["0x3333333333333333333333333333333333333333"]: "0x",
+      },
+    });
+
+    await expect(clientModule.validateBotConnectivity()).rejects.toThrow(
+      "RoundVotingEngine has no bytecode at 0x3333333333333333333333333333333333333333.",
     );
   });
 });

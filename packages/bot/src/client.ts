@@ -36,6 +36,34 @@ export const publicClient = createPublicClient({
   transport: http(config.rpcUrl),
 });
 
+const CONTRACT_DISPLAY_NAMES = {
+  categoryRegistry: "CategoryRegistry",
+  contentRegistry: "ContentRegistry",
+  crepToken: "CuryoReputation",
+  voterIdNFT: "VoterIdNFT",
+  votingEngine: "RoundVotingEngine",
+} as const;
+
+type BotConnectivityClient = Pick<typeof publicClient, "getChainId" | "getCode">;
+
+export async function validateBotConnectivity(client: BotConnectivityClient = publicClient) {
+  const rpcChainId = await client.getChainId();
+  if (rpcChainId !== config.chainId) {
+    throw new Error(`RPC_URL reports chain ID ${rpcChainId}, but CHAIN_ID is ${config.chainId}.`);
+  }
+
+  for (const [contractKey, address] of Object.entries(config.contracts) as Array<
+    [keyof typeof config.contracts, `0x${string}`]
+  >) {
+    const code = await client.getCode({ address });
+    if (!code || code === "0x") {
+      throw new Error(
+        `${CONTRACT_DISPLAY_NAMES[contractKey]} has no bytecode at ${address}. Check RPC_URL, CHAIN_ID, and the configured contract address.`,
+      );
+    }
+  }
+}
+
 export function getWalletClient(identity: BotIdentityConfig, account = getAccount(identity)) {
   return createWalletClient({
     account,

@@ -12,23 +12,38 @@ async function loadConfigModule() {
   }
 }
 
+async function ensureBotRuntime(role?: "submit" | "rate") {
+  const configModule = await loadConfigModule();
+
+  if (role) {
+    configModule.validateConfig(role);
+  }
+
+  try {
+    const { validateBotConnectivity } = await import("./client.js");
+    await validateBotConnectivity();
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    console.error(`[Bot] ERROR: ${message}`);
+    process.exit(1);
+  }
+}
+
 switch (command) {
   case "vote": {
-    const { validateConfig } = await loadConfigModule();
-    validateConfig("rate");
+    await ensureBotRuntime("rate");
     const { runVote } = await import("./commands/vote.js");
     await runVote();
     break;
   }
   case "submit": {
-    const { validateConfig } = await loadConfigModule();
-    validateConfig("submit");
+    await ensureBotRuntime("submit");
     const { runSubmit } = await import("./commands/submit.js");
     await runSubmit();
     break;
   }
   case "status": {
-    await loadConfigModule();
+    await ensureBotRuntime();
     const { runStatus } = await import("./commands/status.js");
     await runStatus();
     break;
