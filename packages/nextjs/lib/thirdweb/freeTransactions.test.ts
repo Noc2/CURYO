@@ -495,6 +495,31 @@ test("confirm leaves the reservation pending when receipt verification fails", a
   assert.equal(reservationRows.rows[0]?.status, "pending");
 });
 
+test("confirm fails open when the quota store is unavailable after receipts verify", async () => {
+  const calls = [voteCall("0x0d")];
+  const initialDecision = await freeTransactions.evaluateFreeTransactionAllowance(buildRequest(calls) as never);
+  assert.equal(initialDecision.isAllowed, true);
+
+  dbModule.__setDatabaseResourcesForTests(createStoreUnavailableResources(memoryResources));
+
+  try {
+    await freeTransactions.confirmFreeTransactionReservation({
+      address: WALLET,
+      chainId: CHAIN_ID,
+      operationKey: buildOperationKey(calls),
+      transactionHashes: [SUCCESS_HASH],
+    });
+  } finally {
+    dbModule.__setDatabaseResourcesForTests(memoryResources);
+  }
+
+  const quotaRows = await dbModule.dbClient.execute("SELECT free_tx_used FROM free_transaction_quotas");
+  assert.equal(Number(quotaRows.rows[0]?.free_tx_used), 0);
+
+  const reservationRows = await dbModule.dbClient.execute("SELECT status FROM free_transaction_reservations");
+  assert.equal(reservationRows.rows[0]?.status, "pending");
+});
+
 test("summary fails open for verified voters when the quota store is unavailable", async () => {
   dbModule.__setDatabaseResourcesForTests(createStoreUnavailableResources(memoryResources));
 
