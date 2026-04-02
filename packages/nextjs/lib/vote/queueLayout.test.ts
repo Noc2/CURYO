@@ -5,7 +5,6 @@ import { chunkVoteQueueItems, computeVoteQueueLayout } from "~~/lib/vote/queueLa
 test("computeVoteQueueLayout keeps one row on standard desktop heights", () => {
   const layout = computeVoteQueueLayout({
     viewportWidth: 1280,
-    viewportHeight: 980,
     containerWidth: 760,
     availableHeight: 520,
     rootFontSize: 16,
@@ -18,7 +17,6 @@ test("computeVoteQueueLayout keeps one row on standard desktop heights", () => {
 test("computeVoteQueueLayout hides the desktop queue when height is too small", () => {
   const layout = computeVoteQueueLayout({
     viewportWidth: 1440,
-    viewportHeight: 900,
     containerWidth: 1024,
     availableHeight: 180,
     rootFontSize: 16,
@@ -31,7 +29,6 @@ test("computeVoteQueueLayout hides the desktop queue when height is too small", 
 test("computeVoteQueueLayout enables two rows only on extra-large viewports with enough height", () => {
   const layout = computeVoteQueueLayout({
     viewportWidth: 1440,
-    viewportHeight: 980,
     containerWidth: 1024,
     availableHeight: 460,
     rootFontSize: 16,
@@ -45,7 +42,6 @@ test("computeVoteQueueLayout enables two rows only on extra-large viewports with
 test("computeVoteQueueLayout enables three rows on very tall desktop layouts", () => {
   const layout = computeVoteQueueLayout({
     viewportWidth: 1728,
-    viewportHeight: 1440,
     containerWidth: 1180,
     availableHeight: 760,
     rootFontSize: 16,
@@ -59,7 +55,6 @@ test("computeVoteQueueLayout enables three rows on very tall desktop layouts", (
 test("computeVoteQueueLayout keeps one row when a second row would overflow the viewport", () => {
   const layout = computeVoteQueueLayout({
     viewportWidth: 1440,
-    viewportHeight: 980,
     containerWidth: 1024,
     availableHeight: 390,
     rootFontSize: 16,
@@ -72,7 +67,6 @@ test("computeVoteQueueLayout keeps one row when a second row would overflow the 
 test("computeVoteQueueLayout keeps one row on mobile regardless of tight height", () => {
   const layout = computeVoteQueueLayout({
     viewportWidth: 390,
-    viewportHeight: 844,
     containerWidth: 358,
     availableHeight: 140,
     rootFontSize: 16,

@@ -282,7 +282,7 @@ const DOMAIN_CONTENT_LABELS: Record<string, string> = {
  * Get a human-friendly content type label for a category (e.g. "video", "card", "book").
  * Falls back to "content" for unknown categories.
  */
-export function getContentLabel(categoryId: bigint | undefined, categories: Category[]): string {
+function getContentLabel(categoryId: bigint | undefined, categories: Category[]): string {
   if (!categoryId) return "content";
   const category = categories.find(c => c.id === categoryId);
   if (!category) return "content";

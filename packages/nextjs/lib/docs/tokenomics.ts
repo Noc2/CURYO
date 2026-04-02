@@ -6,7 +6,7 @@ const crepCompactFormatter = new Intl.NumberFormat("en-US", {
   maximumFractionDigits: 1,
 });
 
-export const CREP_MAX_SUPPLY = 100_000_000;
+const CREP_MAX_SUPPLY = 100_000_000;
 export const CREP_MAX_SUPPLY_LABEL = `${crepAmountFormatter.format(CREP_MAX_SUPPLY)} cREP`;
 
 type TokenDistributionEntry = {
@@ -16,7 +16,7 @@ type TokenDistributionEntry = {
   color: string;
 };
 
-export const tokenDistributionEntries: readonly TokenDistributionEntry[] = [
+const tokenDistributionEntries: readonly TokenDistributionEntry[] = [
   {
     label: "Faucet Pool",
     amount: 52_000_000,
@@ -44,13 +44,13 @@ export const tokenDistributionEntries: readonly TokenDistributionEntry[] = [
   },
 ] as const;
 
-export const CREP_INITIAL_MINTED_SUPPLY = tokenDistributionEntries.reduce((sum, entry) => sum + entry.amount, 0);
+const CREP_INITIAL_MINTED_SUPPLY = tokenDistributionEntries.reduce((sum, entry) => sum + entry.amount, 0);
 export const CREP_INITIAL_MINTED_SUPPLY_LABEL = `${crepAmountFormatter.format(CREP_INITIAL_MINTED_SUPPLY)} cREP`;
 export const CREP_INITIAL_MINTED_SUPPLY_COMPACT_LABEL = crepCompactFormatter.format(CREP_INITIAL_MINTED_SUPPLY);
-export const FAUCET_POOL_AMOUNT = tokenDistributionEntries[0].amount;
+const FAUCET_POOL_AMOUNT = tokenDistributionEntries[0].amount;
 export const FAUCET_POOL_AMOUNT_COMPACT_LABEL = crepCompactFormatter.format(FAUCET_POOL_AMOUNT);
 
-export function formatCrepAmount(amount: number): string {
+function formatCrepAmount(amount: number): string {
   return `${crepAmountFormatter.format(amount)} cREP`;
 }
 
