@@ -5,7 +5,9 @@ export function deriveAnchoredTlockRuntimeNowMs(params: {
   drandPeriodSeconds?: number;
   roundStartTimeSeconds?: number | null;
 }): number {
-  const latestBlockTimestampSeconds = Math.max(0, Math.floor(params.latestBlockTimestampSeconds));
+  // Commits land in the next block, so anchor against the soonest possible
+  // mined timestamp rather than the latest confirmed block.
+  const latestBlockTimestampSeconds = Math.max(0, Math.floor(params.latestBlockTimestampSeconds)) + 1;
   const roundEpochDurationSeconds = Math.max(1, Math.floor(params.roundEpochDurationSeconds));
   const tlockEpochDurationSeconds = Math.max(1, Math.floor(params.tlockEpochDurationSeconds));
   const roundStartTimeSeconds =

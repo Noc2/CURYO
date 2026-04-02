@@ -14,7 +14,7 @@ test("deriveAnchoredTlockRuntimeNowMs targets the round epoch boundary", () => {
       roundEpochDurationSeconds: 300,
       tlockEpochDurationSeconds: 30,
     }),
-    1_270_000,
+    1_271_000,
   );
 });
 
@@ -25,7 +25,7 @@ test("deriveAnchoredTlockRuntimeNowMs uses the round epoch instead of the tlock 
       roundEpochDurationSeconds: 300,
       tlockEpochDurationSeconds: 300,
     }),
-    1_000_000,
+    1_001_000,
   );
 });
 
@@ -38,6 +38,18 @@ test("deriveAnchoredTlockRuntimeNowMs tracks the active round's next epoch bound
       roundStartTimeSeconds: 1_000,
     }),
     1_570_000,
+  );
+});
+
+test("deriveAnchoredTlockRuntimeNowMs crosses an epoch boundary when the commit mines in the next block", () => {
+  assert.equal(
+    deriveAnchoredTlockRuntimeNowMs({
+      latestBlockTimestampSeconds: 1_599,
+      roundEpochDurationSeconds: 300,
+      tlockEpochDurationSeconds: 30,
+      roundStartTimeSeconds: 1_000,
+    }),
+    1_870_000,
   );
 });
 
