@@ -35,6 +35,7 @@ import {
 } from "~~/lib/vote/discoverFeedFilter";
 import { type DiscoverFeedMode, sortDiscoverFeed } from "~~/lib/vote/feedModes";
 import { rankForYouFeed } from "~~/lib/vote/forYouRanker";
+import { buildVoteLocation } from "~~/lib/vote/location";
 import { mergeRequestedContentIntoFeed } from "~~/lib/vote/requestedContent";
 import { type VoteView, getVoteViewGroups, isActivityViewOption } from "~~/lib/vote/viewOptions";
 import { buildRecommendationSignalContext, trackRecommendationSignal } from "~~/utils/recommendationTracker";
@@ -218,9 +219,10 @@ const HomeInner = () => {
     if (feedRequestLimit === undefined) return scopedContentIds;
     return scopedContentIds.slice(0, feedRequestLimit);
   }, [scopedContentIds, feedRequestLimit]);
+  const effectiveRequestedActiveId = activeCategory === ALL_FILTER ? requestedActiveId : null;
   const requestedContentIds = useMemo(
-    () => (requestedActiveId !== null ? [requestedActiveId] : undefined),
-    [requestedActiveId],
+    () => (effectiveRequestedActiveId !== null ? [effectiveRequestedActiveId] : undefined),
+    [effectiveRequestedActiveId],
   );
 
   const {
@@ -239,7 +241,7 @@ const HomeInner = () => {
   });
   const { feed: requestedContentFeed, isLoading: requestedContentLoading } = useContentFeed(address, {
     contentIds: requestedContentIds,
-    enabled: requestedActiveId !== null,
+    enabled: effectiveRequestedActiveId !== null,
     keepPrevious: false,
     limit: 1,
   });
@@ -362,13 +364,6 @@ const HomeInner = () => {
     }
   }, [address, view]);
 
-  // Sync category selection with URL hash (e.g. /#books, /#board-games)
-  const selectCategory = useCallback((name: string) => {
-    setActiveCategory(name);
-    const hash = name === ALL_FILTER ? "" : `#${slugify(name)}`;
-    history.replaceState(null, "", hash || window.location.pathname + window.location.search);
-  }, []);
-
   const displayFeedRef = useRef<ContentItem[]>([]);
   const activeViewSessionRef = useRef<{ contentId: string; startedAt: number; hasPositiveInteraction: boolean } | null>(
     null,
@@ -475,7 +470,7 @@ const HomeInner = () => {
 
   const displayFeed = useMemo(() => {
     const withRequestedItem = (items: ContentItem[]) =>
-      requestedActiveId !== null ? mergeRequestedContentIntoFeed(items, requestedContentItem) : items;
+      effectiveRequestedActiveId !== null ? mergeRequestedContentIntoFeed(items, requestedContentItem) : items;
     const items = [...filteredFeed];
 
     if (isSearchMode) {
@@ -558,7 +553,7 @@ const HomeInner = () => {
     votedContentIds,
     watchedContentIds,
     watchedOrderMap,
-    requestedActiveId,
+    effectiveRequestedActiveId,
     requestedContentItem,
   ]);
   displayFeedRef.current = displayFeed;
@@ -570,7 +565,7 @@ const HomeInner = () => {
     visibleItems: visibleFeedItems,
   } = useVoteFeedStage(displayFeed, {
     visibleCount,
-    requestedActiveId,
+    requestedActiveId: effectiveRequestedActiveId,
     windowSize: 8,
   });
   const queueStatusByContentId = useQueueCardStatusMap(visibleFeedItems, feedSource, nowSeconds);
@@ -726,15 +721,21 @@ const HomeInner = () => {
     setStakeModal(prev => ({ ...prev, isOpen: false }));
   };
 
-  const replaceContentQueryParam = useCallback((contentId: bigint | null) => {
-    const url = new URL(window.location.href);
-    if (contentId === null) {
-      url.searchParams.delete("content");
-    } else {
-      url.searchParams.set("content", contentId.toString());
-    }
-    history.replaceState(null, "", url.toString());
+  const replaceVoteLocation = useCallback((update: { contentId?: bigint | null; categoryHash?: string | null }) => {
+    history.replaceState(null, "", buildVoteLocation(window.location.href, update));
   }, []);
+
+  // Sync category selection with URL hash (e.g. /#books, /#board-games)
+  const selectCategory = useCallback(
+    (name: string) => {
+      setActiveCategory(name);
+      replaceVoteLocation({
+        contentId: null,
+        categoryHash: name === ALL_FILTER ? null : slugify(name),
+      });
+    },
+    [replaceVoteLocation],
+  );
 
   const handleSelectByIndex = useCallback(
     (targetIndex: number) => {
@@ -753,11 +754,11 @@ const HomeInner = () => {
       }
 
       selectContent(targetItem.id);
-      replaceContentQueryParam(targetItem.id);
+      replaceVoteLocation({ contentId: targetItem.id });
 
       return true;
     },
-    [activeSourceIndex, displayFeed, flushActiveViewSession, replaceContentQueryParam, selectContent],
+    [activeSourceIndex, displayFeed, flushActiveViewSession, replaceVoteLocation, selectContent],
   );
 
   const handleSelectCard = useCallback(
@@ -927,7 +928,7 @@ const HomeInner = () => {
   }, [categories]);
 
   const emptyStateMessage = useMemo(() => {
-    if (requestedActiveId !== null && !requestedContentLoading && !requestedContentItem) {
+    if (effectiveRequestedActiveId !== null && !requestedContentLoading && !requestedContentItem) {
       return "This content could not be found.";
     }
 
@@ -993,14 +994,14 @@ const HomeInner = () => {
     activeFeedMode,
     activeScope,
     address,
-    requestedActiveId,
+    effectiveRequestedActiveId,
     requestedContentItem,
     requestedContentLoading,
     isShortSearchQuery,
     trimmedSearchQuery,
   ]);
 
-  const showRequestedContentLoading = requestedActiveId !== null && requestedContentLoading;
+  const showRequestedContentLoading = effectiveRequestedActiveId !== null && requestedContentLoading;
 
   return (
     <AppPageShell>
@@ -1066,7 +1067,7 @@ const HomeInner = () => {
         {categoriesLoading ||
         scopeLoading ||
         showRequestedContentLoading ||
-        (requestedActiveId === null && isLoading) ? (
+        (effectiveRequestedActiveId === null && isLoading) ? (
           <div className="flex justify-center py-16 xl:py-10">
             <span className="loading loading-spinner loading-lg text-primary"></span>
           </div>
