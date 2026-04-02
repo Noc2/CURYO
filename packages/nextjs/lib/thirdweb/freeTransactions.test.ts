@@ -1,7 +1,7 @@
 import deployedContracts from "@curyo/contracts/deployedContracts";
 import assert from "node:assert/strict";
 import { after, before, beforeEach, test } from "node:test";
-import { type Abi, encodeFunctionData } from "viem";
+import { type Abi, encodeAbiParameters, encodeEventTopics, encodeFunctionData, parseAbiItem } from "viem";
 
 const env = process.env as Record<string, string | undefined>;
 const originalAppEnv = env.APP_ENV;
@@ -34,8 +34,17 @@ type EncodedCall = {
 };
 
 const CHAIN_ID = 31337;
+const ENTRY_POINT = "0x1111111111111111111111111111111111111111" as const;
+const EXECUTOR = "0x2222222222222222222222222222222222222222" as const;
+const ZERO_ADDRESS = "0x0000000000000000000000000000000000000000" as const;
 const SUCCESS_HASH = `0x${"1".repeat(64)}` as const;
 const WALLET = "0x1234567890abcdef1234567890abcdef12345678" as const;
+const USER_OPERATION_EVENT = parseAbiItem(
+  "event UserOperationEvent(bytes32 indexed userOpHash, address indexed sender, address indexed paymaster, uint256 nonce, bool success, uint256 actualGasCost, uint256 actualGasUsed)",
+);
+const EXECUTED_EVENT = parseAbiItem(
+  "event Executed(address indexed user, address indexed signer, address indexed executor, uint256 batchSize)",
+);
 const contractsForChain = (deployedContracts as Record<number, Record<string, ContractRecord>>)[CHAIN_ID];
 const crepContract = contractsForChain.CuryoReputation;
 const contentRegistryContract = contractsForChain.ContentRegistry;
@@ -94,6 +103,46 @@ function buildOperationKey(calls: readonly EncodedCall[]) {
 
   assert.ok(operationKey, "operation key should be derived from the verifier payload");
   return operationKey;
+}
+
+function buildUserOperationEventLog(sender: `0x${string}`) {
+  return {
+    address: ENTRY_POINT,
+    data: encodeAbiParameters(
+      [
+        { name: "nonce", type: "uint256" },
+        { name: "success", type: "bool" },
+        { name: "actualGasCost", type: "uint256" },
+        { name: "actualGasUsed", type: "uint256" },
+      ],
+      [0n, true, 0n, 0n],
+    ),
+    topics: encodeEventTopics({
+      abi: [USER_OPERATION_EVENT],
+      eventName: "UserOperationEvent",
+      args: {
+        paymaster: ZERO_ADDRESS,
+        sender,
+        userOpHash: SUCCESS_HASH,
+      },
+    }).filter((topic): topic is `0x${string}` => !!topic),
+  };
+}
+
+function buildExecutedEventLog(user: `0x${string}`) {
+  return {
+    address: EXECUTOR,
+    data: encodeAbiParameters([{ name: "batchSize", type: "uint256" }], [1n]),
+    topics: encodeEventTopics({
+      abi: [EXECUTED_EVENT],
+      eventName: "Executed",
+      args: {
+        executor: EXECUTOR,
+        signer: WALLET,
+        user,
+      },
+    }).filter((topic): topic is `0x${string}` => !!topic),
+  };
 }
 
 const voteCall = (voteMarker: `0x${string}`) =>
@@ -249,6 +298,96 @@ test("confirm increments confirmed quota exactly once", async () => {
   if (!repeatedDecision.isAllowed) return;
   assert.equal(repeatedDecision.summary.used, 1);
   assert.equal(repeatedDecision.summary.remaining, 1);
+});
+
+test("confirm accepts relayed 7702 receipts when the executed event proves the wallet", async () => {
+  const calls = [voteCall("0x0a")];
+  const initialDecision = await freeTransactions.evaluateFreeTransactionAllowance(buildRequest(calls) as never);
+  assert.equal(initialDecision.isAllowed, true);
+
+  freeTransactions.__setFreeTransactionTestOverridesForTests({
+    getTransactionVerificationClient: async () => ({
+      getTransaction: async () => ({
+        chainId: CHAIN_ID,
+        from: EXECUTOR,
+      }),
+      getTransactionReceipt: async () => ({
+        logs: [buildExecutedEventLog(WALLET)],
+        status: "success",
+      }),
+    }),
+    resolveVoterIdTokenId: async () => "42",
+  });
+
+  await freeTransactions.confirmFreeTransactionReservation({
+    address: WALLET,
+    chainId: CHAIN_ID,
+    operationKey: buildOperationKey(calls),
+    transactionHashes: [SUCCESS_HASH],
+  });
+
+  const quotaRows = await dbModule.dbClient.execute("SELECT free_tx_used FROM free_transaction_quotas");
+  assert.equal(Number(quotaRows.rows[0]?.free_tx_used), 1);
+});
+
+test("confirm accepts relayed 4337 receipts when the user operation event proves the wallet", async () => {
+  const calls = [voteCall("0x0b")];
+  const initialDecision = await freeTransactions.evaluateFreeTransactionAllowance(buildRequest(calls) as never);
+  assert.equal(initialDecision.isAllowed, true);
+
+  freeTransactions.__setFreeTransactionTestOverridesForTests({
+    getTransactionVerificationClient: async () => ({
+      getTransaction: async () => ({
+        chainId: CHAIN_ID,
+        from: ENTRY_POINT,
+      }),
+      getTransactionReceipt: async () => ({
+        logs: [buildUserOperationEventLog(WALLET)],
+        status: "success",
+      }),
+    }),
+    resolveVoterIdTokenId: async () => "42",
+  });
+
+  await freeTransactions.confirmFreeTransactionReservation({
+    address: WALLET,
+    chainId: CHAIN_ID,
+    operationKey: buildOperationKey(calls),
+    transactionHashes: [SUCCESS_HASH],
+  });
+
+  const quotaRows = await dbModule.dbClient.execute("SELECT free_tx_used FROM free_transaction_quotas");
+  assert.equal(Number(quotaRows.rows[0]?.free_tx_used), 1);
+});
+
+test("confirm still rejects relayed receipts without wallet execution proof", async () => {
+  const calls = [voteCall("0x0c")];
+  const initialDecision = await freeTransactions.evaluateFreeTransactionAllowance(buildRequest(calls) as never);
+  assert.equal(initialDecision.isAllowed, true);
+
+  freeTransactions.__setFreeTransactionTestOverridesForTests({
+    getTransactionVerificationClient: async () => ({
+      getTransaction: async () => ({
+        chainId: CHAIN_ID,
+        from: EXECUTOR,
+      }),
+      getTransactionReceipt: async () => ({
+        logs: [],
+        status: "success",
+      }),
+    }),
+    resolveVoterIdTokenId: async () => "42",
+  });
+
+  await assert.rejects(
+    freeTransactions.confirmFreeTransactionReservation({
+      address: WALLET,
+      chainId: CHAIN_ID,
+      operationKey: buildOperationKey(calls),
+      transactionHashes: [SUCCESS_HASH],
+    }),
+    /could not be verified/i,
+  );
 });
 
 test("expired pending reservations release held capacity for new operations", async () => {
