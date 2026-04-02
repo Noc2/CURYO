@@ -109,7 +109,7 @@ function markExhaustionToastShown(params: { chainId: number; voterIdTokenId: str
   }
 }
 
-export function getFreeTransactionAllowanceQueryKey(address?: string, chainId?: number) {
+function getFreeTransactionAllowanceQueryKey(address?: string, chainId?: number) {
   return [...FREE_TRANSACTION_ALLOWANCE_QUERY_KEY, address?.toLowerCase() ?? null, chainId ?? null] as const;
 }
 

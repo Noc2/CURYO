@@ -8,7 +8,7 @@ import {
   type EmailNotificationSettingsState,
 } from "~~/lib/notifications/emailShared";
 
-export async function ensureNotificationEmailSubscriptionsTable() {
+async function ensureNotificationEmailSubscriptionsTable() {
   // Schema is managed via Drizzle migrations.
 }
 

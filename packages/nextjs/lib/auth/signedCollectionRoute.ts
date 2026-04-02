@@ -26,7 +26,7 @@ export async function hasSignedCollectionReadSession(
   return verifySignedReadSession(request.cookies.get(cookieName)?.value, walletAddress, scope);
 }
 
-export async function hasSignedCollectionWriteSession(
+async function hasSignedCollectionWriteSession(
   request: NextRequest,
   cookieName: string,
   walletAddress: `0x${string}`,
@@ -35,7 +35,7 @@ export async function hasSignedCollectionWriteSession(
   return verifySignedWriteSession(request.cookies.get(cookieName)?.value, walletAddress, scope);
 }
 
-export async function getSignedCollectionSessionStatus(
+async function getSignedCollectionSessionStatus(
   request: NextRequest,
   params: {
     walletAddress: `0x${string}`;

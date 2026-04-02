@@ -5,7 +5,7 @@ export const WATCHLIST_SIGNED_READ_SESSION_COOKIE_NAME = "curyo_watchlist_read_s
 export const PROFILE_FOLLOWS_SIGNED_READ_SESSION_COOKIE_NAME = "curyo_profile_follows_read_session";
 export const NOTIFICATION_PREFERENCES_SIGNED_READ_SESSION_COOKIE_NAME = "curyo_notification_preferences_read_session";
 export const NOTIFICATION_EMAIL_SIGNED_READ_SESSION_COOKIE_NAME = "curyo_notification_email_read_session";
-export const SIGNED_READ_SESSION_TTL_MS = 7 * 24 * 60 * 60 * 1000;
+const SIGNED_READ_SESSION_TTL_MS = 7 * 24 * 60 * 60 * 1000;
 
 export type SignedReadSessionScope =
   | "watchlist"
@@ -25,7 +25,7 @@ const signedReadSessionStore = createSignedSessionStore<SignedReadSessionScope>(
   },
 });
 
-export const ensureSignedReadSessionTable = signedReadSessionStore.ensureTable;
+const ensureSignedReadSessionTable = signedReadSessionStore.ensureTable;
 export const issueSignedReadSession = signedReadSessionStore.issueSession;
 export const verifySignedReadSession = signedReadSessionStore.verifySession;
 export const getSignedReadSessionCookie = signedReadSessionStore.getSessionCookie;

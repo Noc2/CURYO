@@ -15,7 +15,7 @@ function getContentLength(response: Response): number | null {
   return Number.isFinite(parsed) && parsed >= 0 ? parsed : null;
 }
 
-export function assertContentLengthWithinLimit(response: Response, maxBytes: number) {
+function assertContentLengthWithinLimit(response: Response, maxBytes: number) {
   const contentLength = getContentLength(response);
   if (contentLength !== null && contentLength > maxBytes) {
     throw new ResponseTooLargeError();

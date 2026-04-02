@@ -45,7 +45,6 @@ const tokenDistributionEntries: readonly TokenDistributionEntry[] = [
 ] as const;
 
 const CREP_INITIAL_MINTED_SUPPLY = tokenDistributionEntries.reduce((sum, entry) => sum + entry.amount, 0);
-export const CREP_INITIAL_MINTED_SUPPLY_LABEL = `${crepAmountFormatter.format(CREP_INITIAL_MINTED_SUPPLY)} cREP`;
 export const CREP_INITIAL_MINTED_SUPPLY_COMPACT_LABEL = crepCompactFormatter.format(CREP_INITIAL_MINTED_SUPPLY);
 const FAUCET_POOL_AMOUNT = tokenDistributionEntries[0].amount;
 export const FAUCET_POOL_AMOUNT_COMPACT_LABEL = crepCompactFormatter.format(FAUCET_POOL_AMOUNT);

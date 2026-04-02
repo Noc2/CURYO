@@ -5,8 +5,8 @@ import { verifyMessage } from "viem";
 import { db } from "~~/lib/db";
 import { signedActionChallenges } from "~~/lib/db/schema";
 
-export const SIGNED_ACTION_CHALLENGE_TTL_MS = 5 * 60 * 1000;
-export const STALE_USED_CHALLENGE_MS = 24 * 60 * 60 * 1000;
+const SIGNED_ACTION_CHALLENGE_TTL_MS = 5 * 60 * 1000;
+const STALE_USED_CHALLENGE_MS = 24 * 60 * 60 * 1000;
 
 export function hashSignedActionPayload(parts: string[]): string {
   return createHash("sha256").update(parts.join("\n")).digest("hex");
@@ -99,7 +99,7 @@ export async function ensureSignedActionChallengeTable() {
   // Schema is managed via Drizzle migrations.
 }
 
-export async function cleanupSignedActionChallenges(now = new Date()) {
+async function cleanupSignedActionChallenges(now = new Date()) {
   await ensureSignedActionChallengeTable();
 
   const staleUsedBefore = new Date(now.getTime() - STALE_USED_CHALLENGE_MS);
@@ -113,7 +113,7 @@ export async function cleanupSignedActionChallenges(now = new Date()) {
     );
 }
 
-export async function persistSignedActionChallenge(params: {
+async function persistSignedActionChallenge(params: {
   challengeId: string;
   action: string;
   walletAddress: `0x${string}`;

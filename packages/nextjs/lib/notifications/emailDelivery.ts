@@ -126,7 +126,7 @@ function getRequiredNotificationAppUrl() {
   return appUrl;
 }
 
-export async function ensureNotificationEmailDeliveriesTable() {
+async function ensureNotificationEmailDeliveriesTable() {
   if (!ensureNotificationEmailDeliveriesTablePromise) {
     ensureNotificationEmailDeliveriesTablePromise = Promise.resolve();
   }

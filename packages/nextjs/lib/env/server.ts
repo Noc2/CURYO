@@ -109,7 +109,7 @@ export function resolveServerTargetNetworks(
   }
 }
 
-export function getServerTargetNetworks(): [SupportedTargetNetwork, ...SupportedTargetNetwork[]] | null {
+function getServerTargetNetworks(): [SupportedTargetNetwork, ...SupportedTargetNetwork[]] | null {
   return resolveServerTargetNetworks(readEnv("NEXT_PUBLIC_TARGET_NETWORKS"), isProduction);
 }
 

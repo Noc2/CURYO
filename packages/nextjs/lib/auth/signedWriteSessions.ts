@@ -3,7 +3,7 @@ import { createSignedSessionStore } from "~~/lib/auth/signedSessionStore";
 
 export const WATCHLIST_SIGNED_WRITE_SESSION_COOKIE_NAME = "curyo_watchlist_write_session";
 export const PROFILE_FOLLOWS_SIGNED_WRITE_SESSION_COOKIE_NAME = "curyo_profile_follows_write_session";
-export const SIGNED_WRITE_SESSION_TTL_MS = 7 * 24 * 60 * 60 * 1000;
+const SIGNED_WRITE_SESSION_TTL_MS = 7 * 24 * 60 * 60 * 1000;
 
 export type SignedWriteSessionScope = "watchlist" | "profile_follows";
 
@@ -17,7 +17,7 @@ const signedWriteSessionStore = createSignedSessionStore<SignedWriteSessionScope
   },
 });
 
-export const ensureSignedWriteSessionTable = signedWriteSessionStore.ensureTable;
+const ensureSignedWriteSessionTable = signedWriteSessionStore.ensureTable;
 export const issueSignedWriteSession = signedWriteSessionStore.issueSession;
 export const verifySignedWriteSession = signedWriteSessionStore.verifySession;
 export const getSignedWriteSessionCookie = signedWriteSessionStore.getSessionCookie;

@@ -74,8 +74,7 @@ function emptyResult(): KeeperResult {
   };
 }
 
-export { getRevertReason, isExpectedRevert } from "./revert-utils.js";
-export { assertContractDeployed, readRoundVotingConfig, validateKeeperContracts } from "./contract-reads.js";
+export { validateKeeperContracts } from "./contract-reads.js";
 
 export function resetKeeperStateForTests(): void {
   cleanupQueue.clear();

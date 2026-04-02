@@ -1,6 +1,6 @@
 export const CLAIM_REWARD_NOTIFICATION_DELAY_MS = 15_000;
 export const CLAIM_REWARD_NOTIFICATION_RECHECK_MS = 15_000;
-export const CLAIM_REWARD_NOTIFICATION_COOLDOWN_MS = 30 * 60 * 1000;
+const CLAIM_REWARD_NOTIFICATION_COOLDOWN_MS = 30 * 60 * 1000;
 export const CLAIM_REWARD_NOTIFICATION_EXPIRY_MS = 10 * 60 * 1000;
 
 const LAST_CLAIM_REWARD_NOTIFICATION_PREFIX = "curyo_last_claim_reward_notification";
@@ -10,7 +10,7 @@ export interface PendingClaimRewardNotification {
   readyAtMs: number;
 }
 
-export function getClaimRewardNotificationStorageKey(address: string) {
+function getClaimRewardNotificationStorageKey(address: string) {
   return `${LAST_CLAIM_REWARD_NOTIFICATION_PREFIX}:${address.toLowerCase()}`;
 }
 
