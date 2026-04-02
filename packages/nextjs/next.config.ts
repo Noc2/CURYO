@@ -1,17 +1,26 @@
 import { RPC_OVERRIDES } from "./config/shared";
 import { isLocalE2EProductionBuildEnabled } from "./utils/env/e2eProduction";
 import { DEFAULT_DEV_TARGET_NETWORKS, resolveTargetNetworks } from "./utils/env/targetNetworks";
+import { mergeRpcOverrides, resolveRpcOverrides } from "./utils/rpcUrls";
 import withBundleAnalyzer from "@next/bundle-analyzer";
 import type { NextConfig } from "next";
 
 const isDev = process.env.NODE_ENV === "development";
 const allowLocalE2EProductionBuild = isLocalE2EProductionBuildEnabled();
+const rpcOverrides = mergeRpcOverrides(
+  RPC_OVERRIDES,
+  resolveRpcOverrides({
+    31337: process.env.NEXT_PUBLIC_RPC_URL_31337,
+    11142220: process.env.NEXT_PUBLIC_RPC_URL_11142220,
+    42220: process.env.NEXT_PUBLIC_RPC_URL_42220,
+  }),
+);
 const targetNetworks = resolveTargetNetworks(process.env.NEXT_PUBLIC_TARGET_NETWORKS, {
   alchemyApiKey: process.env.NEXT_PUBLIC_ALCHEMY_API_KEY,
   allowFoundryInProduction: allowLocalE2EProductionBuild,
   production: !isDev,
   fallback: isDev ? DEFAULT_DEV_TARGET_NETWORKS : undefined,
-  rpcOverrides: RPC_OVERRIDES,
+  rpcOverrides,
 });
 
 function toOrigin(value: string): string | undefined {
@@ -24,7 +33,7 @@ function toOrigin(value: string): string | undefined {
 
 const rpcUrls = [
   ...targetNetworks.flatMap(network => network.rpcUrls.default.http),
-  ...Object.values(RPC_OVERRIDES as Partial<Record<number, string>>).filter((value): value is string => Boolean(value)),
+  ...Object.values(rpcOverrides as Partial<Record<number, string>>).filter((value): value is string => Boolean(value)),
 ] as const;
 
 const rpcOrigins = rpcUrls

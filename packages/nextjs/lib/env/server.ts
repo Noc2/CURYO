@@ -6,6 +6,7 @@ import {
   type SupportedTargetNetwork,
   resolveTargetNetworks,
 } from "~~/utils/env/targetNetworks";
+import { mergeRpcOverrides, resolveRpcOverrides } from "~~/utils/rpcUrls";
 
 const isProduction = process.env.NODE_ENV === "production";
 const defaultDevDatabaseUrl = "postgresql://postgres:postgres@127.0.0.1:5432/curyo_app";
@@ -98,12 +99,21 @@ export function resolveServerTargetNetworks(
   options?: { allowFoundryInProduction?: boolean },
 ): [SupportedTargetNetwork, ...SupportedTargetNetwork[]] | null {
   try {
+    const rpcOverrides = mergeRpcOverrides(
+      RPC_OVERRIDES,
+      resolveRpcOverrides({
+        31337: readEnv("NEXT_PUBLIC_RPC_URL_31337"),
+        11142220: readEnv("NEXT_PUBLIC_RPC_URL_11142220"),
+        42220: readEnv("NEXT_PUBLIC_RPC_URL_42220"),
+      }),
+    );
+
     return resolveTargetNetworks(rawValue, {
       alchemyApiKey: readEnv("NEXT_PUBLIC_ALCHEMY_API_KEY"),
       production,
       fallback: !production ? DEFAULT_DEV_TARGET_NETWORKS : undefined,
       allowFoundryInProduction: options?.allowFoundryInProduction ?? allowLocalE2EProductionBuild,
-      rpcOverrides: RPC_OVERRIDES,
+      rpcOverrides,
     });
   } catch {
     return null;
@@ -123,7 +133,14 @@ export function getServerTargetNetworkById(chainId: number): SupportedTargetNetw
 }
 
 export function getServerRpcOverrides(): Partial<Record<number, string>> {
-  return RPC_OVERRIDES;
+  return mergeRpcOverrides(
+    RPC_OVERRIDES,
+    resolveRpcOverrides({
+      31337: readEnv("NEXT_PUBLIC_RPC_URL_31337"),
+      11142220: readEnv("NEXT_PUBLIC_RPC_URL_11142220"),
+      42220: readEnv("NEXT_PUBLIC_RPC_URL_42220"),
+    }),
+  );
 }
 
 export function getDatabaseConfig() {

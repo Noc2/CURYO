@@ -2,6 +2,7 @@ import deployedContracts from "@curyo/contracts/deployedContracts";
 import { isAddress } from "viem";
 import { RPC_OVERRIDES } from "~~/config/shared";
 import { DEFAULT_DEV_TARGET_NETWORKS, resolveTargetNetworks } from "~~/utils/env/targetNetworks";
+import { mergeRpcOverrides, resolveRpcOverrides } from "~~/utils/rpcUrls";
 
 const isProduction = process.env.NODE_ENV === "production";
 export type { SupportedTargetNetwork } from "~~/utils/env/targetNetworks";
@@ -25,10 +26,22 @@ const rawPublicEnv = {
   frontendCode: optionalEnv(process.env.NEXT_PUBLIC_FRONTEND_CODE),
   localE2EProductionBuild: optionalEnv(process.env.NEXT_PUBLIC_CURYO_E2E_PRODUCTION_BUILD),
   ponderUrl: optionalEnv(process.env.NEXT_PUBLIC_PONDER_URL),
+  rpcUrl11142220: optionalEnv(process.env.NEXT_PUBLIC_RPC_URL_11142220),
+  rpcUrl31337: optionalEnv(process.env.NEXT_PUBLIC_RPC_URL_31337),
+  rpcUrl42220: optionalEnv(process.env.NEXT_PUBLIC_RPC_URL_42220),
   targetNetworks: optionalEnv(process.env.NEXT_PUBLIC_TARGET_NETWORKS),
   thirdwebClientId: optionalEnv(process.env.NEXT_PUBLIC_THIRDWEB_CLIENT_ID),
   walletConnectProjectId: optionalEnv(process.env.NEXT_PUBLIC_WALLET_CONNECT_PROJECT_ID),
 } as const;
+
+const rpcOverrides = mergeRpcOverrides(
+  RPC_OVERRIDES,
+  resolveRpcOverrides({
+    31337: rawPublicEnv.rpcUrl31337,
+    11142220: rawPublicEnv.rpcUrl11142220,
+    42220: rawPublicEnv.rpcUrl42220,
+  }),
+);
 
 function requireUrl(name: string, value: string | undefined, fallback?: string): string {
   const resolvedValue = value ?? fallback;
@@ -57,7 +70,7 @@ const targetNetworks = resolveTargetNetworks(rawPublicEnv.targetNetworks, {
   allowFoundryInProduction: rawPublicEnv.localE2EProductionBuild === "true",
   production: isProduction,
   fallback: !isProduction ? DEFAULT_DEV_TARGET_NETWORKS : undefined,
-  rpcOverrides: RPC_OVERRIDES,
+  rpcOverrides,
 });
 const targetNetworkIds = targetNetworks.map(network => network.id);
 
@@ -82,6 +95,7 @@ export const publicEnv = {
   isProduction,
   targetNetworks,
   alchemyApiKey: rawPublicEnv.alchemyApiKey,
+  rpcOverrides,
   thirdwebClientId: rawPublicEnv.thirdwebClientId,
   walletConnectProjectId,
   get ponderUrl() {

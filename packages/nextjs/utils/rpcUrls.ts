@@ -32,6 +32,51 @@ type RpcPreferenceOptions = {
   rpcOverrides?: Partial<Record<number, string>>;
 };
 
+export function normalizeHttpUrl(value: string, name = "RPC URL") {
+  const trimmedValue = value.trim();
+  let parsedUrl: URL;
+
+  try {
+    parsedUrl = new URL(trimmedValue);
+  } catch {
+    throw new Error(`${name} must be a valid http(s) URL.`);
+  }
+
+  if (parsedUrl.protocol !== "http:" && parsedUrl.protocol !== "https:") {
+    throw new Error(`${name} must be a valid http(s) URL.`);
+  }
+
+  return parsedUrl.toString().replace(/\/$/, "");
+}
+
+export function resolveRpcOverrides(values: Partial<Record<number, string | undefined>>) {
+  const overrides: Partial<Record<number, string>> = {};
+
+  for (const [chainId, rawValue] of Object.entries(values)) {
+    if (!rawValue) {
+      continue;
+    }
+
+    overrides[Number.parseInt(chainId, 10)] = normalizeHttpUrl(rawValue, `RPC override for chain ${chainId}`);
+  }
+
+  return overrides;
+}
+
+export function mergeRpcOverrides(...sources: Array<Partial<Record<number, string>> | undefined>) {
+  const merged: Partial<Record<number, string>> = {};
+
+  for (const source of sources) {
+    if (!source) {
+      continue;
+    }
+
+    Object.assign(merged, source);
+  }
+
+  return merged;
+}
+
 function uniqueHttpUrls(values: Array<string | undefined>) {
   return values
     .map(value => value?.trim())
