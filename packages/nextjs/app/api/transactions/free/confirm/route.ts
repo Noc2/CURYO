@@ -21,6 +21,9 @@ export async function POST(request: NextRequest) {
   }
 
   const limited = await checkRateLimit(request, WRITE_RATE_LIMIT, {
+    // This is post-transaction quota accounting, so keep serving if only the
+    // shared rate-limit store is temporarily unavailable.
+    allowOnStoreUnavailable: true,
     extraKeyParts: [body?.address],
   });
   if (limited) return limited;

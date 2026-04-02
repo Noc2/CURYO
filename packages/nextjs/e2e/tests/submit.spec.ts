@@ -71,5 +71,7 @@ test.describe("Content submission", () => {
     const successDialog = page.getByRole("dialog", { name: /Content submitted/i });
     await expect(successDialog).toBeVisible({ timeout: 60_000 });
     await expect(successDialog.getByRole("heading", { name: /Content Submitted!/i })).toBeVisible();
+    await page.waitForTimeout(1_500);
+    await expect(successDialog).toBeVisible();
   });
 });

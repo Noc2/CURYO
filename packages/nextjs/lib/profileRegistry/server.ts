@@ -1,7 +1,7 @@
 import deployedContracts from "@curyo/contracts/deployedContracts";
 import { type Abi, type Address, createPublicClient, http, isAddress } from "viem";
 import { avatarAccentRgbToHex } from "~~/lib/avatar/avatarAccent";
-import { getPrimaryServerTargetNetwork, getServerRpcOverrides } from "~~/lib/env/server";
+import { getPrimaryServerTargetNetwork, getServerRpcOverrides, getServerTargetNetworkById } from "~~/lib/env/server";
 
 interface ProfileRegistryProfile {
   username: string | null;
@@ -38,25 +38,47 @@ const EMPTY_AVATAR_ACCENT: ProfileRegistryAvatarAccent = {
 };
 const MULTICALL_BATCH_SIZE = 200;
 
-const targetNetwork = getPrimaryServerTargetNetwork();
-const contractsForChain = targetNetwork
-  ? (deployedContracts as unknown as Partial<DeployedContractsMap>)[targetNetwork.id]
-  : undefined;
-const profileRegistry = contractsForChain?.ProfileRegistry;
-const crepToken = contractsForChain?.CuryoReputation;
-const rpcOverrides = getServerRpcOverrides();
-const rpcUrl = targetNetwork ? (rpcOverrides?.[targetNetwork.id] ?? targetNetwork.rpcUrls.default.http[0]) : undefined;
-
-const publicClient =
-  targetNetwork && profileRegistry && rpcUrl
-    ? createPublicClient({
-        chain: targetNetwork,
-        transport: http(rpcUrl),
-      })
-    : null;
+type ProfileRegistryReadContext = {
+  crepToken?: {
+    abi: Abi;
+    address: Address;
+  };
+  profileRegistry?: {
+    abi: Abi;
+    address: Address;
+  };
+  publicClient: {
+    multicall: (...args: any[]) => Promise<any>;
+    readContract: (...args: any[]) => Promise<any>;
+  };
+};
 
 function normalizeAddress(address: string): `0x${string}` {
   return address.toLowerCase() as `0x${string}`;
+}
+
+function resolveProfileRegistryReadContext(chainId?: number): ProfileRegistryReadContext | null {
+  const targetNetwork =
+    typeof chainId === "number" ? getServerTargetNetworkById(chainId) : getPrimaryServerTargetNetwork();
+  if (!targetNetwork) {
+    return null;
+  }
+
+  const contractsForChain = (deployedContracts as unknown as Partial<DeployedContractsMap>)[targetNetwork.id];
+  const rpcOverrides = getServerRpcOverrides();
+  const rpcUrl = rpcOverrides?.[targetNetwork.id] ?? targetNetwork.rpcUrls.default.http[0];
+  if (!rpcUrl) {
+    return null;
+  }
+
+  return {
+    crepToken: contractsForChain?.CuryoReputation,
+    profileRegistry: contractsForChain?.ProfileRegistry,
+    publicClient: createPublicClient({
+      chain: targetNetwork,
+      transport: http(rpcUrl),
+    }),
+  };
 }
 
 function chunkAddresses(addresses: readonly `0x${string}`[], size = MULTICALL_BATCH_SIZE): `0x${string}`[][] {
@@ -129,6 +151,7 @@ function parseAvatarAccent(result: unknown): ProfileRegistryAvatarAccent {
 
 export async function readProfileRegistryProfiles(
   addresses: string[],
+  options: { chainId?: number } = {},
 ): Promise<Record<string, ProfileRegistryProfile>> {
   const normalizedAddresses = normalizeUniqueAddresses(addresses);
   const profiles: Record<string, ProfileRegistryProfile> = {};
@@ -137,23 +160,24 @@ export async function readProfileRegistryProfiles(
     profiles[address] = EMPTY_PROFILE;
   }
 
-  if (!profileRegistry || !publicClient || normalizedAddresses.length === 0) {
+  const context = resolveProfileRegistryReadContext(options.chainId);
+  if (!context?.profileRegistry || normalizedAddresses.length === 0) {
     return profiles;
   }
 
   for (const batch of chunkAddresses(normalizedAddresses)) {
     try {
-      const results = await publicClient.multicall({
+      const results = await context.publicClient.multicall({
         allowFailure: true,
         contracts: batch.map(address => ({
-          address: profileRegistry.address,
-          abi: profileRegistry.abi,
+          address: context.profileRegistry!.address,
+          abi: context.profileRegistry!.abi,
           functionName: "getProfile",
           args: [address],
         })),
       });
 
-      results.forEach((result, index) => {
+      results.forEach((result: { status: string; result?: unknown }, index: number) => {
         const address = batch[index];
         profiles[address] = result.status === "success" ? parseProfile(result.result) : EMPTY_PROFILE;
       });
@@ -162,9 +186,9 @@ export async function readProfileRegistryProfiles(
       await Promise.all(
         batch.map(async address => {
           try {
-            const result = await publicClient.readContract({
-              address: profileRegistry.address,
-              abi: profileRegistry.abi,
+            const result = await context.publicClient.readContract({
+              address: context.profileRegistry!.address,
+              abi: context.profileRegistry!.abi,
               functionName: "getProfile",
               args: [address],
             });
@@ -180,15 +204,19 @@ export async function readProfileRegistryProfiles(
   return profiles;
 }
 
-export async function readProfileRegistryAvatarAccent(address: string): Promise<ProfileRegistryAvatarAccent> {
-  if (!isAddress(address) || !profileRegistry || !publicClient) {
+export async function readProfileRegistryAvatarAccent(
+  address: string,
+  options: { chainId?: number } = {},
+): Promise<ProfileRegistryAvatarAccent> {
+  const context = resolveProfileRegistryReadContext(options.chainId);
+  if (!isAddress(address) || !context?.profileRegistry) {
     return EMPTY_AVATAR_ACCENT;
   }
 
   try {
-    const result = await publicClient.readContract({
-      address: profileRegistry.address,
-      abi: profileRegistry.abi,
+    const result = await context.publicClient.readContract({
+      address: context.profileRegistry.address,
+      abi: context.profileRegistry.abi,
       functionName: "getAvatarAccent",
       args: [normalizeAddress(address)],
     });
@@ -198,7 +226,10 @@ export async function readProfileRegistryAvatarAccent(address: string): Promise<
   }
 }
 
-export async function readCRepBalances(addresses: string[]): Promise<Record<string, bigint>> {
+export async function readCRepBalances(
+  addresses: string[],
+  options: { chainId?: number } = {},
+): Promise<Record<string, bigint>> {
   const normalizedAddresses = normalizeUniqueAddresses(addresses);
   const balances: Record<string, bigint> = {};
 
@@ -206,23 +237,24 @@ export async function readCRepBalances(addresses: string[]): Promise<Record<stri
     balances[address] = 0n;
   }
 
-  if (!crepToken || !publicClient || normalizedAddresses.length === 0) {
+  const context = resolveProfileRegistryReadContext(options.chainId);
+  if (!context?.crepToken || normalizedAddresses.length === 0) {
     return balances;
   }
 
   for (const batch of chunkAddresses(normalizedAddresses)) {
     try {
-      const results = await publicClient.multicall({
+      const results = await context.publicClient.multicall({
         allowFailure: true,
         contracts: batch.map(address => ({
-          address: crepToken.address,
-          abi: crepToken.abi,
+          address: context.crepToken!.address,
+          abi: context.crepToken!.abi,
           functionName: "balanceOf",
           args: [address],
         })),
       });
 
-      results.forEach((result, index) => {
+      results.forEach((result: { status: string; result?: unknown }, index: number) => {
         const address = batch[index];
         balances[address] = result.status === "success" && typeof result.result === "bigint" ? result.result : 0n;
       });
@@ -230,9 +262,9 @@ export async function readCRepBalances(addresses: string[]): Promise<Record<stri
       await Promise.all(
         batch.map(async address => {
           try {
-            const result = await publicClient.readContract({
-              address: crepToken.address,
-              abi: crepToken.abi,
+            const result = await context.publicClient.readContract({
+              address: context.crepToken!.address,
+              abi: context.crepToken!.abi,
               functionName: "balanceOf",
               args: [address],
             });

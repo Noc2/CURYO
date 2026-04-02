@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import Link from "next/link";
 import { CheckIcon, ClipboardIcon, XMarkIcon } from "@heroicons/react/24/outline";
 import { truncateContentTitle } from "~~/lib/contentTitle";
@@ -14,14 +14,6 @@ interface ShareModalProps {
 
 export function ShareModal({ contentId, title, description, onClose }: ShareModalProps) {
   const [copied, setCopied] = useState(false);
-
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === "Escape") onClose();
-    };
-    document.addEventListener("keydown", handleKeyDown);
-    return () => document.removeEventListener("keydown", handleKeyDown);
-  }, [onClose]);
 
   const shareUrl = typeof window !== "undefined" ? `${window.location.origin}/vote?content=${contentId}` : "";
   const truncatedTitle = truncateContentTitle(title);
@@ -108,7 +100,7 @@ export function ShareModal({ contentId, title, description, onClose }: ShareModa
           Submit Another
         </button>
       </div>
-      <div className="modal-backdrop bg-black/60 backdrop-blur-sm" onClick={onClose} />
+      <div className="modal-backdrop bg-black/60 backdrop-blur-sm" aria-hidden="true" />
     </div>
   );
 }

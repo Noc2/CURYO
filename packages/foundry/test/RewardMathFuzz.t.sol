@@ -156,6 +156,35 @@ contract RewardMathFuzz is Test {
         assertGe(voterShare, consensusShare, "voter share < consensus share");
     }
 
+    function testFuzz_splitPoolAfterLoserRefund_MatchesManualNetSplit(uint256 losingPool) public pure {
+        losingPool = bound(losingPool, 0, type(uint128).max);
+
+        (
+            uint256 loserRefundShare,
+            uint256 voterShare,
+            uint256 submitterShare,
+            uint256 platformShare,
+            uint256 treasuryShare,
+            uint256 consensusShare
+        ) = RewardMath.splitPoolAfterLoserRefund(losingPool);
+
+        uint256 manualLoserRefundShare = RewardMath.calculateRevealedLoserRefund(losingPool);
+        (
+            uint256 manualVoterShare,
+            uint256 manualSubmitterShare,
+            uint256 manualPlatformShare,
+            uint256 manualTreasuryShare,
+            uint256 manualConsensusShare
+        ) = RewardMath.splitPool(losingPool - manualLoserRefundShare);
+
+        assertEq(manualLoserRefundShare, loserRefundShare, "manual loser refund != helper");
+        assertEq(manualVoterShare, voterShare, "manual voter share != helper");
+        assertEq(manualSubmitterShare, submitterShare, "manual submitter share != helper");
+        assertEq(manualPlatformShare, platformShare, "manual platform share != helper");
+        assertEq(manualTreasuryShare, treasuryShare, "manual treasury share != helper");
+        assertEq(manualConsensusShare, consensusShare, "manual consensus share != helper");
+    }
+
     // =========================================================================
     // calculateConsensusSubsidy
     // =========================================================================

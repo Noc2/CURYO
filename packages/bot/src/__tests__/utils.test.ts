@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { fetchWithTimeout } from "../utils.js";
+import { fetchWithTimeout, sleep } from "../utils.js";
 
 afterEach(() => {
   vi.useRealTimers();
@@ -46,5 +46,24 @@ describe("fetchWithTimeout", () => {
 
     await rejection;
     expect(signal?.aborted).toBe(true);
+  });
+});
+
+describe("sleep", () => {
+  it("resolves after the requested delay", async () => {
+    vi.useFakeTimers();
+
+    const pendingSleep = sleep(50);
+    let resolved = false;
+    void pendingSleep.then(() => {
+      resolved = true;
+    });
+
+    await vi.advanceTimersByTimeAsync(49);
+    expect(resolved).toBe(false);
+
+    await vi.advanceTimersByTimeAsync(1);
+    await pendingSleep;
+    expect(resolved).toBe(true);
   });
 });

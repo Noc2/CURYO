@@ -280,6 +280,7 @@ test("supported sponsored operation families are allowlisted", async () => {
       encodeCall(crepContract, "approve", [contentRegistryContract.address, 10n]),
       encodeCall(contentRegistryContract, "reserveSubmission", [`0x${"1".repeat(64)}`]),
     ],
+    [encodeCall(contentRegistryContract, "cancelReservedSubmission", [`0x${"2".repeat(64)}`])],
     [
       encodeCall(crepContract, "approve", [categoryRegistryContract.address, 10n]),
       encodeCall(categoryRegistryContract, "submitCategory", ["Security", "security.example", ["Smart Contracts"]]),

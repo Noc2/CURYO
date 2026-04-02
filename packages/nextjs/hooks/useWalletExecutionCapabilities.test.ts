@@ -44,6 +44,18 @@ test("resolveWalletExecutionMode keeps external wallets on fee-currency flow for
   );
 });
 
+test("resolveWalletExecutionMode keeps unsupported external wallets on direct celo transactions", () => {
+  assert.equal(
+    resolveWalletExecutionMode({
+      hasSendCalls: true,
+      isThirdwebInApp: false,
+      supportedChain: false,
+      thirdwebSponsorshipMode: null,
+    }),
+    "direct_celo",
+  );
+});
+
 test("shouldQueryWalletCapabilities only enables capability probing for in-app wallets on supported chains", () => {
   assert.equal(
     shouldQueryWalletCapabilities({

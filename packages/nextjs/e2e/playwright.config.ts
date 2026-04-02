@@ -2,14 +2,14 @@ import { E2E_BASE_URL } from "./helpers/service-urls";
 import { defineConfig, devices } from "@playwright/test";
 
 export default defineConfig({
-  globalSetup: require.resolve("./global-setup"),
+  globalSetup: "./global-setup.cts",
   testDir: "./tests",
   fullyParallel: false, // Tests share Anvil chain state — run sequentially
   forbidOnly: !!process.env.CI,
   retries: process.env.CI ? 1 : 0,
   workers: 1, // Single worker to prevent Anvil nonce conflicts
   reporter: process.env.CI
-    ? [["github"], ["html", { open: "never", outputFolder: "e2e/playwright-report" }]]
+    ? [["github"], ["html", { open: "never", outputFolder: "playwright-report" }]]
     : "html",
   timeout: 60_000, // On-chain tx confirmation needs time
 

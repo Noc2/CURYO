@@ -2,9 +2,8 @@
  * Playwright global setup — validates that all required services are running
  * before any test executes.  Fails fast with actionable error messages.
  */
-import { dirname, resolve } from "path";
+import { resolve } from "path";
 import { execFileSync, execSync } from "child_process";
-import { fileURLToPath } from "url";
 import { ensureBaselineSeedData } from "./helpers/baseline-seed";
 import { E2E_BASE_URL, E2E_KEEPER_HEALTH_URL, E2E_RPC_URL, PONDER_URL } from "./helpers/service-urls";
 
@@ -31,7 +30,7 @@ const SERVICES = [
 
 const MAX_WAIT_MS = 30_000;
 const POLL_INTERVAL_MS = 2_000;
-const NEXTJS_DIR = resolve(dirname(fileURLToPath(import.meta.url)), "..");
+const NEXTJS_DIR = resolve(__dirname, "..");
 
 function httpStatus(service: (typeof SERVICES)[number]): number | null {
   const args = ["-sS", "-m", "5", "-o", "/dev/null", "-w", "%{http_code}"];

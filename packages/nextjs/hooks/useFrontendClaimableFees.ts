@@ -28,17 +28,17 @@ interface FrontendClaimableFeePage {
 
 const PAGE_SIZE = 10;
 
-export function useFrontendClaimableFees(frontend?: `0x${string}`) {
+export function useFrontendClaimableFees(frontend?: `0x${string}`, chainId?: number) {
   const isPageVisible = usePageVisibility();
   const query = useInfiniteQuery({
-    queryKey: ["frontend-claimable-fees", frontend],
+    queryKey: ["frontend-claimable-fees", chainId, frontend],
     initialPageParam: 0,
-    enabled: !!frontend,
+    enabled: !!frontend && Number.isFinite(chainId),
     staleTime: 30_000,
     refetchInterval: isPageVisible ? 60_000 : false,
     queryFn: async ({ pageParam }) => {
       const response = await fetch(
-        `/api/frontend/claimable-fees?frontend=${frontend}&limit=${PAGE_SIZE}&offset=${pageParam}`,
+        `/api/frontend/claimable-fees?frontend=${frontend}&chainId=${chainId}&limit=${PAGE_SIZE}&offset=${pageParam}`,
       );
 
       if (!response.ok) {

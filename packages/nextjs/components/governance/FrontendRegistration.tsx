@@ -10,6 +10,7 @@ import { surfaceSectionHeadingClassName } from "~~/components/shared/sectionHead
 import { InfoTooltip } from "~~/components/ui/InfoTooltip";
 import { useCopyToClipboard } from "~~/hooks/scaffold-eth";
 import { useDeployedContractInfo, useScaffoldReadContract, useScaffoldWriteContract } from "~~/hooks/scaffold-eth";
+import { useTargetNetwork } from "~~/hooks/scaffold-eth/useTargetNetwork";
 import { useFrontendClaimableFees } from "~~/hooks/useFrontendClaimableFees";
 import { useGasBalanceStatus } from "~~/hooks/useGasBalanceStatus";
 import { useThirdwebSponsoredSubmitCalls } from "~~/hooks/useThirdwebSponsoredSubmitCalls";
@@ -64,6 +65,7 @@ function FrontendOperatorAddressRow({ label, address }: { label?: string; addres
  */
 export function FrontendRegistration() {
   const { address } = useAccount();
+  const { targetNetwork } = useTargetNetwork();
   const { canSponsorTransactions, isMissingGasBalance, nativeTokenSymbol } = useGasBalanceStatus({
     includeExternalSendCalls: true,
   });
@@ -176,7 +178,7 @@ export function FrontendRegistration() {
     fetchNextPage,
     isFetchingNextPage,
     refetch: refetchClaimableRoundFees,
-  } = useFrontendClaimableFees(isRegistered && address ? (address as `0x${string}`) : undefined);
+  } = useFrontendClaimableFees(isRegistered && address ? (address as `0x${string}`) : undefined, targetNetwork.id);
   const totalClaimableRoundFeesFormatted = Number(totalClaimableRoundFees) / 1e6;
 
   useEffect(() => {

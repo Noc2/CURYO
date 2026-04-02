@@ -20,16 +20,9 @@ import {
 import { buildFreeTransactionOperationKey } from "~~/lib/thirdweb/freeTransactionOperation";
 import {
   createThirdwebInAppWallet,
-  getThirdwebPaymasterServiceUrl,
   supportsThirdwebExecutionCapabilities,
   thirdwebClient,
 } from "~~/services/thirdweb/client";
-
-type SponsoredSubmitCapabilities = {
-  paymasterService: {
-    url: string;
-  };
-};
 
 type SponsoredSubmitContractCall = {
   abi: Abi;
@@ -42,28 +35,6 @@ type SponsoredSubmitContractCall = {
 type ExecuteSponsoredCallsOptions = {
   atomicRequired?: boolean;
 };
-
-function getSponsoredSubmitCapabilities(params: {
-  chainId: number | undefined;
-  executionMode: WalletExecutionMode;
-  supportsPaymasterService: boolean;
-}): SponsoredSubmitCapabilities | undefined {
-  if (params.executionMode !== "external_send_calls" || !params.supportsPaymasterService) {
-    return undefined;
-  }
-
-  const paymasterServiceUrl =
-    typeof params.chainId === "number" ? getThirdwebPaymasterServiceUrl(params.chainId) : null;
-  if (!paymasterServiceUrl) {
-    return undefined;
-  }
-
-  return {
-    paymasterService: {
-      url: paymasterServiceUrl,
-    },
-  };
-}
 
 export function shouldPreferSponsoredSubmitCalls(params: {
   canUseFreeTransactions: boolean;
@@ -109,6 +80,10 @@ export function shouldAttemptSelfFundedThirdwebFallback(params: {
   );
 }
 
+export function shouldIgnorePostTransactionFallbackWalletSyncError(callStatus: string | undefined) {
+  return callStatus === "success";
+}
+
 export function useThirdwebSponsoredSubmitCalls() {
   const queryClient = useQueryClient();
   const activeWallet = useActiveWallet();
@@ -117,18 +92,8 @@ export function useThirdwebSponsoredSubmitCalls() {
   const { syncWalletToWagmi } = useThirdwebWagmiSync();
   const { address, chainId: wagmiChainId, connector } = useAccount();
   const freeTransactionAllowance = useFreeTransactionAllowance();
-  const { executionMode, hasSendCalls, supportsPaymasterService } = useWalletExecutionCapabilities();
+  const { executionMode, hasSendCalls } = useWalletExecutionCapabilities();
   const chainId = resolveWalletExecutionChainId(wagmiChainId, activeWalletChain?.id);
-
-  const sponsoredSubmitCapabilities = useMemo(
-    () =>
-      getSponsoredSubmitCapabilities({
-        chainId,
-        executionMode,
-        supportsPaymasterService,
-      }),
-    [chainId, executionMode, supportsPaymasterService],
-  );
 
   const expectsSponsoredSubmitCalls = useMemo(
     () =>
@@ -152,17 +117,11 @@ export function useThirdwebSponsoredSubmitCalls() {
   const canUseGaslessSubmitTransactions = useMemo(
     () =>
       freeTransactionAllowance.canUseFreeTransactions &&
-      (executionMode === "sponsored_7702" || sponsoredSubmitCapabilities !== undefined || expectsSponsoredSubmitCalls),
-    [
-      expectsSponsoredSubmitCalls,
-      executionMode,
-      freeTransactionAllowance.canUseFreeTransactions,
-      sponsoredSubmitCapabilities,
-    ],
+      (executionMode === "sponsored_7702" || expectsSponsoredSubmitCalls),
+    [expectsSponsoredSubmitCalls, executionMode, freeTransactionAllowance.canUseFreeTransactions],
   );
 
-  const isEligibleForGaslessSubmitTransactions =
-    executionMode === "sponsored_7702" || sponsoredSubmitCapabilities !== undefined || expectsSponsoredSubmitCalls;
+  const isEligibleForGaslessSubmitTransactions = executionMode === "sponsored_7702" || expectsSponsoredSubmitCalls;
 
   const canUseSponsoredSubmitCalls = Boolean(
     thirdwebClient && activeWallet && typeof chainId === "number" && hasSendCalls && canUseGaslessSubmitTransactions,
@@ -227,19 +186,15 @@ export function useThirdwebSponsoredSubmitCalls() {
           ...(typeof call.value !== "undefined" ? { value: call.value } : {}),
         }),
       );
-      const sendCallsWithWallet = async (
-        wallet: NonNullable<typeof activeWallet>,
-        capabilities?: SponsoredSubmitCapabilities,
-      ) =>
+      const sendCallsWithWallet = async (wallet: NonNullable<typeof activeWallet>) =>
         sendAndConfirmCalls({
           atomicRequired: options.atomicRequired ?? false,
-          ...(capabilities ? { capabilities } : {}),
           calls: preparedCalls,
           wallet,
         });
 
       try {
-        const result = await sendCallsWithWallet(activeWallet, sponsoredSubmitCapabilities);
+        const result = await sendCallsWithWallet(activeWallet);
 
         if (result.status !== "success") {
           const error = new Error("Sponsored calls failed.");
@@ -291,14 +246,24 @@ export function useThirdwebSponsoredSubmitCalls() {
             });
 
             const fallbackResult = await sendCallsWithWallet(fallbackWallet);
-            await syncWalletToWagmi(fallbackWallet, chainId, { reconnect: true });
-            await setActiveWallet(fallbackWallet);
 
             if (fallbackResult.status !== "success") {
               const fallbackStatusError = new Error("Self-funded calls failed.");
               (fallbackStatusError as Error & { callsStatus?: typeof fallbackResult }).callsStatus = fallbackResult;
               throw fallbackStatusError;
             }
+
+            try {
+              await syncWalletToWagmi(fallbackWallet, chainId, { reconnect: true });
+              await setActiveWallet(fallbackWallet);
+            } catch (syncError) {
+              if (!shouldIgnorePostTransactionFallbackWalletSyncError(fallbackResult.status)) {
+                throw syncError;
+              }
+
+              console.error("Self-funded fallback transaction succeeded, but wallet sync failed:", syncError);
+            }
+
             return fallbackResult;
           } catch (fallbackError) {
             error = fallbackError;
@@ -319,7 +284,6 @@ export function useThirdwebSponsoredSubmitCalls() {
       postFreeTransactionMutation,
       queryClient,
       setActiveWallet,
-      sponsoredSubmitCapabilities,
       syncWalletToWagmi,
     ],
   );

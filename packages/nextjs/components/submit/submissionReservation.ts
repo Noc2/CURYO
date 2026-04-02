@@ -1,0 +1,126 @@
+"use client";
+
+import { encodeAbiParameters, keccak256 } from "viem";
+
+const RESERVED_SUBMISSION_STORAGE_PREFIX = "curyo:reserved-submission:";
+
+export type SubmissionDraft = {
+  categoryId: bigint;
+  description: string;
+  submissionKey: `0x${string}`;
+  tags: string;
+  title: string;
+  url: string;
+};
+
+export type StoredSubmissionReservation = {
+  categoryId: string;
+  description: string;
+  revealCommitment: `0x${string}`;
+  salt: `0x${string}`;
+  submissionKey: `0x${string}`;
+  tags: string;
+  title: string;
+  url: string;
+};
+
+function isHexValue(value: unknown): value is `0x${string}` {
+  return typeof value === "string" && value.startsWith("0x");
+}
+
+export function buildSubmissionReservationStorageKey(address: `0x${string}`, submissionKey: `0x${string}`): string {
+  return `${RESERVED_SUBMISSION_STORAGE_PREFIX}${keccak256(
+    encodeAbiParameters([{ type: "address" }, { type: "bytes32" }], [address, submissionKey]),
+  )}`;
+}
+
+export function buildSubmissionRevealCommitment(
+  draft: SubmissionDraft,
+  salt: `0x${string}`,
+  submitterAddress: `0x${string}`,
+): `0x${string}` {
+  return keccak256(
+    encodeAbiParameters(
+      [
+        { type: "bytes32" },
+        { type: "string" },
+        { type: "string" },
+        { type: "string" },
+        { type: "uint256" },
+        { type: "bytes32" },
+        { type: "address" },
+      ],
+      [draft.submissionKey, draft.title, draft.description, draft.tags, draft.categoryId, salt, submitterAddress],
+    ),
+  );
+}
+
+export function createStoredSubmissionReservation(
+  draft: SubmissionDraft,
+  salt: `0x${string}`,
+  revealCommitment: `0x${string}`,
+): StoredSubmissionReservation {
+  return {
+    categoryId: draft.categoryId.toString(),
+    description: draft.description,
+    revealCommitment,
+    salt,
+    submissionKey: draft.submissionKey,
+    tags: draft.tags,
+    title: draft.title,
+    url: draft.url,
+  };
+}
+
+export function submissionReservationMatchesDraft(
+  reservation: StoredSubmissionReservation,
+  draft: SubmissionDraft,
+): boolean {
+  return (
+    reservation.categoryId === draft.categoryId.toString() &&
+    reservation.description === draft.description &&
+    reservation.submissionKey === draft.submissionKey &&
+    reservation.tags === draft.tags &&
+    reservation.title === draft.title &&
+    reservation.url === draft.url
+  );
+}
+
+export function getStoredSubmissionReservation(storageKey: string): StoredSubmissionReservation | null {
+  if (typeof window === "undefined") return null;
+
+  try {
+    const rawValue = window.localStorage.getItem(storageKey);
+    if (!rawValue) {
+      return null;
+    }
+
+    const parsedValue = JSON.parse(rawValue) as Partial<StoredSubmissionReservation>;
+    if (
+      typeof parsedValue.categoryId !== "string" ||
+      typeof parsedValue.description !== "string" ||
+      !isHexValue(parsedValue.revealCommitment) ||
+      !isHexValue(parsedValue.salt) ||
+      !isHexValue(parsedValue.submissionKey) ||
+      typeof parsedValue.tags !== "string" ||
+      typeof parsedValue.title !== "string" ||
+      typeof parsedValue.url !== "string"
+    ) {
+      return null;
+    }
+
+    return parsedValue as StoredSubmissionReservation;
+  } catch {
+    return null;
+  }
+}
+
+export function setStoredSubmissionReservation(storageKey: string, reservation: StoredSubmissionReservation) {
+  if (typeof window === "undefined") return;
+  window.localStorage.setItem(storageKey, JSON.stringify(reservation));
+}
+
+export function clearStoredSubmissionReservation(storageKey: string) {
+  if (typeof window === "undefined") return;
+  window.localStorage.removeItem(storageKey);
+}

@@ -13,7 +13,7 @@ type GasBalanceStatusOptions = {
 export function useGasBalanceStatus(options: GasBalanceStatusOptions = {}) {
   const includeExternalSendCalls = options.includeExternalSendCalls ?? false;
   const { address, chain, connector } = useAccount();
-  const { executionMode, supportsPaymasterService } = useWalletExecutionCapabilities();
+  const { executionMode } = useWalletExecutionCapabilities();
   const freeTransactionAllowance = useFreeTransactionAllowance();
   const { data: nativeBalance, isLoading: nativeBalanceLoading } = useBalance({
     address,
@@ -31,9 +31,7 @@ export function useGasBalanceStatus(options: GasBalanceStatusOptions = {}) {
       connector?.id === "in-app-wallet" &&
       typeof chain?.id === "number" &&
       supportsThirdwebExecutionCapabilities(chain.id);
-    const hasExecutableSponsoredCalls =
-      executionMode === "sponsored_7702" ||
-      (includeExternalSendCalls && executionMode === "external_send_calls" && supportsPaymasterService);
+    const hasExecutableSponsoredCalls = executionMode === "sponsored_7702";
     const supportsSponsoredCalls = hasExecutableSponsoredCalls || expectsSponsoredCalls;
     const canSponsorTransactions = supportsSponsoredCalls && freeTransactionAllowance.canUseFreeTransactions;
     const isAwaitingFreeTransactionAllowance = supportsSponsoredCalls && !freeTransactionAllowance.isResolved;
@@ -76,6 +74,5 @@ export function useGasBalanceStatus(options: GasBalanceStatusOptions = {}) {
     includeExternalSendCalls,
     nativeBalance,
     nativeBalanceLoading,
-    supportsPaymasterService,
   ]);
 }

@@ -3,6 +3,7 @@ import { isAddress } from "viem";
 import { normalizeAvatarAccentHex } from "~~/lib/avatar/avatarAccent";
 import { renderOrbitalAvatarSvg } from "~~/lib/avatar/orbitalAvatar";
 import { getReputationAvatarPayload } from "~~/lib/avatar/server";
+import { getPrimaryServerTargetNetwork, getServerTargetNetworkById } from "~~/lib/env/server";
 import { checkRateLimit } from "~~/utils/rateLimit";
 
 const CACHE_SECONDS = 300;
@@ -23,7 +24,17 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: "Missing or invalid address parameter" }, { status: 400 });
   }
 
-  const payload = await getReputationAvatarPayload(address);
+  const chainIdRaw = request.nextUrl.searchParams.get("chainId");
+  const fallbackChainId = getPrimaryServerTargetNetwork()?.id;
+  const parsedChainId = chainIdRaw ? Number.parseInt(chainIdRaw, 10) : fallbackChainId;
+  if (!Number.isFinite(parsedChainId)) {
+    return NextResponse.json({ error: "Valid chainId is required" }, { status: 400 });
+  }
+  if (!getServerTargetNetworkById(parsedChainId!)) {
+    return NextResponse.json({ error: "Unsupported chainId" }, { status: 400 });
+  }
+
+  const payload = await getReputationAvatarPayload(address, { chainId: parsedChainId! });
   const size = parseRequestedSize(request.nextUrl.searchParams.get("size"));
   const previewAccentHex = normalizeAvatarAccentHex(request.nextUrl.searchParams.get("accent"));
   const svg = renderOrbitalAvatarSvg(

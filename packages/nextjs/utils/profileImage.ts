@@ -34,6 +34,7 @@ export function getReputationAvatarUrl(
   address: string | null | undefined,
   size?: number,
   avatarAccentHex?: string | null,
+  chainId?: number,
 ): string | null {
   if (!address || !isAddress(address)) {
     return null;
@@ -50,6 +51,10 @@ export function getReputationAvatarUrl(
   const normalizedAccentHex = normalizeAvatarAccentHex(avatarAccentHex);
   if (normalizedAccentHex) {
     url.set("accent", normalizedAccentHex.slice(1));
+  }
+
+  if (chainId !== undefined && Number.isFinite(chainId)) {
+    url.set("chainId", String(Math.trunc(chainId)));
   }
 
   return `/api/reputation-avatar?${url.toString()}`;

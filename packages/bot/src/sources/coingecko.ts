@@ -3,7 +3,7 @@ import { truncateContentDescription, truncateContentTitle } from "../contentLimi
 import { fetchWithTimeout } from "../utils.js";
 import type { ContentSource, ContentItem } from "./types.js";
 
-const CATEGORY_ID = 11n; // Crypto
+const CATEGORY_ID = 9n; // Crypto Tokens
 
 // Map CoinGecko category strings to on-chain subcategory names
 const CATEGORY_MAP: Record<string, string> = {
@@ -13,13 +13,13 @@ const CATEGORY_MAP: Record<string, string> = {
   "decentralized-exchange": "DeFi",
   "lending-borrowing": "DeFi",
   "yield-farming": "DeFi",
-  "non-fungible-tokens-nft": "NFT",
-  "gaming": "Gaming",
-  "play-to-earn": "Gaming",
-  "meme-token": "Meme",
-  "dog-themed-coins": "Meme",
+  "non-fungible-tokens-nft": "Gaming/NFT",
+  "gaming": "Gaming/NFT",
+  "play-to-earn": "Gaming/NFT",
+  "meme-token": "Memecoins",
+  "dog-themed-coins": "Memecoins",
   "privacy-coins": "Privacy",
-  "stablecoins": "Stablecoin",
+  "stablecoins": "Stablecoins",
 };
 
 function matchSubcategory(categories: string[]): string {
@@ -35,6 +35,7 @@ function matchSubcategory(categories: string[]): string {
 export const coinGeckoSource: ContentSource = {
   name: "coingecko",
   categoryId: CATEGORY_ID,
+  categoryName: "Crypto Tokens",
 
   async fetchTrending(limit: number): Promise<ContentItem[]> {
     try {

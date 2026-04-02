@@ -537,7 +537,11 @@ function validateSponsoredCalls(
         return { ok: false, debugCode: "unsupported_operation" };
       }
       case "ContentRegistry":
-        if (functionName === "reserveSubmission" || functionName === "submitContent") {
+        if (
+          functionName === "cancelReservedSubmission" ||
+          functionName === "reserveSubmission" ||
+          functionName === "submitContent"
+        ) {
           continue;
         }
         return { ok: false, debugCode: "unsupported_operation" };

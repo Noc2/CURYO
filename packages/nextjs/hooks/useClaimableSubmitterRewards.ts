@@ -5,6 +5,7 @@ import { ROUND_STATE } from "@curyo/contracts/protocol";
 import { useAccount, useReadContracts } from "wagmi";
 import { type ClaimableRewardItem, buildSubmitterClaimableRewards } from "~~/hooks/claimableRewards";
 import { useDeployedContractInfo } from "~~/hooks/scaffold-eth";
+import { useTargetNetwork } from "~~/hooks/scaffold-eth/useTargetNetwork";
 import { usePonderQuery } from "~~/hooks/usePonderQuery";
 import { type PonderRoundsResponse, ponderApi } from "~~/services/ponder/client";
 
@@ -23,8 +24,13 @@ function safeBigInt(value: string | number | bigint | null | undefined): bigint 
   }
 }
 
+export function getClaimableSubmitterRewardsQueryKey(address?: string, chainId?: number) {
+  return ["claimableSubmitterRewards", address?.toLowerCase() ?? null, chainId ?? null] as const;
+}
+
 export function useClaimableSubmitterRewards() {
   const { address } = useAccount();
+  const { targetNetwork } = useTargetNetwork();
   const { data: distributorInfo } = useDeployedContractInfo({ contractName: "RoundRewardDistributor" });
   const { data: engineInfo } = useDeployedContractInfo({ contractName: "RoundVotingEngine" as any });
 
@@ -36,7 +42,7 @@ export function useClaimableSubmitterRewards() {
     { settledRounds: Array<{ contentId: string; rounds: PonderRoundsResponse["items"] }> },
     { settledRounds: Array<{ contentId: string; rounds: PonderRoundsResponse["items"] }> }
   >({
-    queryKey: ["claimableSubmitterRewards", address],
+    queryKey: getClaimableSubmitterRewardsQueryKey(address, targetNetwork.id),
     enabled: Boolean(address),
     ponderFn: async () => {
       if (!address) {

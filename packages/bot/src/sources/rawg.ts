@@ -31,6 +31,7 @@ const GENRE_MAP: Record<string, string> = {
 export const rawgSource: ContentSource = {
   name: "rawg",
   categoryId: CATEGORY_ID,
+  categoryName: "Games",
 
   async fetchTrending(limit: number): Promise<ContentItem[]> {
     if (!config.rawgApiKey) {

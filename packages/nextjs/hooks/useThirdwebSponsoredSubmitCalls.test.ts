@@ -2,6 +2,7 @@ import {
   isThirdwebSponsorshipDeniedError,
   shouldAttemptSelfFundedThirdwebFallback,
   shouldExpectSponsoredSubmitCalls,
+  shouldIgnorePostTransactionFallbackWalletSyncError,
   shouldPreferSponsoredSubmitCalls,
 } from "./useThirdwebSponsoredSubmitCalls";
 import assert from "node:assert/strict";
@@ -87,4 +88,9 @@ test("allows self-funded fallback when sponsorship denial is unrelated to a rese
     }),
     true,
   );
+});
+
+test("ignores wallet sync failures after a successful self-funded fallback transaction", () => {
+  assert.equal(shouldIgnorePostTransactionFallbackWalletSyncError("success"), true);
+  assert.equal(shouldIgnorePostTransactionFallbackWalletSyncError("failed"), false);
 });

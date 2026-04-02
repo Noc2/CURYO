@@ -1,7 +1,7 @@
 import deployedContracts from "@curyo/contracts/deployedContracts";
 import { ROUND_STATE } from "@curyo/contracts/protocol";
 import { type Abi, type Address, createPublicClient, http, isAddress } from "viem";
-import { getPrimaryServerTargetNetwork, getServerRpcOverrides } from "~~/lib/env/server";
+import { getPrimaryServerTargetNetwork, getServerRpcOverrides, getServerTargetNetworkById } from "~~/lib/env/server";
 import { type PonderFrontend, type PonderRoundItem, isPonderAvailable, ponderApi } from "~~/services/ponder/client";
 
 type DeployedContractsMap = Record<
@@ -18,23 +18,6 @@ type DeployedContractsMap = Record<
 const MAX_SCAN_BATCH = 100;
 const MAX_SCAN_ROUNDS = 1000;
 const CLAIMABLE_FRONTEND_FEES_CACHE_TTL_MS = 60_000;
-
-const targetNetwork = getPrimaryServerTargetNetwork();
-const contractsForChain = targetNetwork
-  ? (deployedContracts as unknown as Partial<DeployedContractsMap>)[targetNetwork.id]
-  : undefined;
-const votingEngine = contractsForChain?.RoundVotingEngine;
-const rewardDistributor = contractsForChain?.RoundRewardDistributor;
-const rpcOverrides = getServerRpcOverrides();
-const rpcUrl = targetNetwork ? (rpcOverrides?.[targetNetwork.id] ?? targetNetwork.rpcUrls.default.http[0]) : undefined;
-
-const publicClient =
-  targetNetwork && votingEngine && rewardDistributor && rpcUrl
-    ? createPublicClient({
-        chain: targetNetwork,
-        transport: http(rpcUrl),
-      })
-    : null;
 
 interface ClaimableFrontendFeeRound {
   contentId: string;
@@ -75,8 +58,53 @@ const emptySnapshot = (): ClaimableFrontendFeeSnapshot => ({
 const frontendFeeSnapshotCache = new Map<string, ClaimableFrontendFeeSnapshot>();
 const frontendFeeSnapshotPromises = new Map<string, Promise<ClaimableFrontendFeeSnapshot>>();
 
+type FrontendFeeReadContext = {
+  publicClient: {
+    multicall: (...args: any[]) => Promise<any>;
+    readContract: (...args: any[]) => Promise<any>;
+  };
+  rewardDistributor: {
+    abi: Abi;
+    address: Address;
+  };
+  votingEngine: {
+    abi: Abi;
+    address: Address;
+  };
+};
+
 function normalizeFrontendAddress(frontend: string): `0x${string}` {
   return frontend.toLowerCase() as `0x${string}`;
+}
+
+function buildFrontendFeeSnapshotCacheKey(frontend: `0x${string}`, chainId: number) {
+  return `${chainId}:${frontend}`;
+}
+
+function resolveFrontendFeeReadContext(chainId: number): FrontendFeeReadContext | null {
+  const targetNetwork = getServerTargetNetworkById(chainId);
+  if (!targetNetwork) {
+    return null;
+  }
+
+  const contractsForChain = (deployedContracts as unknown as Partial<DeployedContractsMap>)[targetNetwork.id];
+  const votingEngine = contractsForChain?.RoundVotingEngine;
+  const rewardDistributor = contractsForChain?.RoundRewardDistributor;
+  const rpcOverrides = getServerRpcOverrides();
+  const rpcUrl = rpcOverrides?.[targetNetwork.id] ?? targetNetwork.rpcUrls.default.http[0];
+
+  if (!votingEngine || !rewardDistributor || !rpcUrl) {
+    return null;
+  }
+
+  return {
+    publicClient: createPublicClient({
+      chain: targetNetwork,
+      transport: http(rpcUrl),
+    }),
+    rewardDistributor,
+    votingEngine,
+  };
 }
 
 function isPonderNotFoundError(error: unknown): boolean {
@@ -135,8 +163,12 @@ function calculateClaimableFee(
   return (totalFrontendPool * frontendStake) / totalEligibleStake;
 }
 
-async function readFrontendFeeBatch(frontend: `0x${string}`, rounds: PonderRoundItem[]) {
-  if (!publicClient || !votingEngine || !rewardDistributor || rounds.length === 0) {
+async function readFrontendFeeBatch(
+  frontend: `0x${string}`,
+  rounds: PonderRoundItem[],
+  context: FrontendFeeReadContext | null,
+) {
+  if (!context || rounds.length === 0) {
     return rounds.map(() => ({
       totalFrontendPool: 0n,
       frontendStake: 0n,
@@ -154,44 +186,44 @@ async function readFrontendFeeBatch(frontend: `0x${string}`, rounds: PonderRound
 
     return [
       {
-        address: votingEngine.address,
-        abi: votingEngine.abi,
+        address: context.votingEngine.address,
+        abi: context.votingEngine.abi,
         functionName: "roundFrontendPool" as const,
         args: [contentId, roundId],
       },
       {
-        address: votingEngine.address,
-        abi: votingEngine.abi,
+        address: context.votingEngine.address,
+        abi: context.votingEngine.abi,
         functionName: "roundPerFrontendStake" as const,
         args: [contentId, roundId, frontend],
       },
       {
-        address: votingEngine.address,
-        abi: votingEngine.abi,
+        address: context.votingEngine.address,
+        abi: context.votingEngine.abi,
         functionName: "roundStakeWithEligibleFrontend" as const,
         args: [contentId, roundId],
       },
       {
-        address: votingEngine.address,
-        abi: votingEngine.abi,
+        address: context.votingEngine.address,
+        abi: context.votingEngine.abi,
         functionName: "roundEligibleFrontendCount" as const,
         args: [contentId, roundId],
       },
       {
-        address: rewardDistributor.address,
-        abi: rewardDistributor.abi,
+        address: context.rewardDistributor.address,
+        abi: context.rewardDistributor.abi,
         functionName: "frontendFeeClaimed" as const,
         args: [contentId, roundId, frontend],
       },
       {
-        address: rewardDistributor.address,
-        abi: rewardDistributor.abi,
+        address: context.rewardDistributor.address,
+        abi: context.rewardDistributor.abi,
         functionName: "roundFrontendClaimedCount" as const,
         args: [contentId, roundId],
       },
       {
-        address: rewardDistributor.address,
-        abi: rewardDistributor.abi,
+        address: context.rewardDistributor.address,
+        abi: context.rewardDistributor.abi,
         functionName: "roundFrontendClaimedAmount" as const,
         args: [contentId, roundId],
       },
@@ -209,7 +241,7 @@ async function readFrontendFeeBatch(frontend: `0x${string}`, rounds: PonderRound
   };
 
   try {
-    const results = await publicClient.multicall({
+    const results = await context.publicClient.multicall({
       allowFailure: true,
       contracts,
     });
@@ -268,45 +300,45 @@ async function readFrontendFeeBatch(frontend: `0x${string}`, rounds: PonderRound
           claimedCount,
           claimedAmount,
         ] = await Promise.all([
-          publicClient.readContract({
-            address: votingEngine.address,
-            abi: votingEngine.abi,
+          context.publicClient.readContract({
+            address: context.votingEngine.address,
+            abi: context.votingEngine.abi,
             functionName: "roundFrontendPool",
             args: [contentId, roundId],
           }) as Promise<bigint>,
-          publicClient.readContract({
-            address: votingEngine.address,
-            abi: votingEngine.abi,
+          context.publicClient.readContract({
+            address: context.votingEngine.address,
+            abi: context.votingEngine.abi,
             functionName: "roundPerFrontendStake",
             args: [contentId, roundId, frontend],
           }) as Promise<bigint>,
-          publicClient.readContract({
-            address: votingEngine.address,
-            abi: votingEngine.abi,
+          context.publicClient.readContract({
+            address: context.votingEngine.address,
+            abi: context.votingEngine.abi,
             functionName: "roundStakeWithEligibleFrontend",
             args: [contentId, roundId],
           }) as Promise<bigint>,
-          publicClient.readContract({
-            address: votingEngine.address,
-            abi: votingEngine.abi,
+          context.publicClient.readContract({
+            address: context.votingEngine.address,
+            abi: context.votingEngine.abi,
             functionName: "roundEligibleFrontendCount",
             args: [contentId, roundId],
           }) as Promise<bigint>,
-          publicClient.readContract({
-            address: rewardDistributor.address,
-            abi: rewardDistributor.abi,
+          context.publicClient.readContract({
+            address: context.rewardDistributor.address,
+            abi: context.rewardDistributor.abi,
             functionName: "frontendFeeClaimed",
             args: [contentId, roundId, frontend],
           }) as Promise<boolean>,
-          publicClient.readContract({
-            address: rewardDistributor.address,
-            abi: rewardDistributor.abi,
+          context.publicClient.readContract({
+            address: context.rewardDistributor.address,
+            abi: context.rewardDistributor.abi,
             functionName: "roundFrontendClaimedCount",
             args: [contentId, roundId],
           }) as Promise<bigint>,
-          publicClient.readContract({
-            address: rewardDistributor.address,
-            abi: rewardDistributor.abi,
+          context.publicClient.readContract({
+            address: context.rewardDistributor.address,
+            abi: context.rewardDistributor.abi,
             functionName: "roundFrontendClaimedAmount",
             args: [contentId, roundId],
           }) as Promise<bigint>,
@@ -330,7 +362,15 @@ async function readFrontendFeeBatch(frontend: `0x${string}`, rounds: PonderRound
   }
 }
 
-async function buildClaimableFrontendFeeSnapshot(frontend: `0x${string}`): Promise<ClaimableFrontendFeeSnapshot> {
+async function buildClaimableFrontendFeeSnapshot(
+  frontend: `0x${string}`,
+  chainId: number,
+): Promise<ClaimableFrontendFeeSnapshot> {
+  const context = resolveFrontendFeeReadContext(chainId);
+  if (!context) {
+    return emptySnapshot();
+  }
+
   if (!(await isPonderAvailable())) {
     return emptySnapshot();
   }
@@ -368,7 +408,7 @@ async function buildClaimableFrontendFeeSnapshot(frontend: `0x${string}`): Promi
       break;
     }
 
-    const feeRows = await readFrontendFeeBatch(frontend, page.items);
+    const feeRows = await readFrontendFeeBatch(frontend, page.items, context);
 
     for (let index = 0; index < page.items.length; index++) {
       const round = page.items[index];
@@ -435,27 +475,31 @@ async function buildClaimableFrontendFeeSnapshot(frontend: `0x${string}`): Promi
   };
 }
 
-async function getClaimableFrontendFeeSnapshot(frontend: `0x${string}`): Promise<ClaimableFrontendFeeSnapshot> {
-  const cachedSnapshot = frontendFeeSnapshotCache.get(frontend);
+async function getClaimableFrontendFeeSnapshot(
+  frontend: `0x${string}`,
+  chainId: number,
+): Promise<ClaimableFrontendFeeSnapshot> {
+  const cacheKey = buildFrontendFeeSnapshotCacheKey(frontend, chainId);
+  const cachedSnapshot = frontendFeeSnapshotCache.get(cacheKey);
   if (cachedSnapshot && Date.now() - cachedSnapshot.fetchedAt < CLAIMABLE_FRONTEND_FEES_CACHE_TTL_MS) {
     return cachedSnapshot;
   }
 
-  const existingPromise = frontendFeeSnapshotPromises.get(frontend);
+  const existingPromise = frontendFeeSnapshotPromises.get(cacheKey);
   if (existingPromise) {
     return cachedSnapshot ?? existingPromise;
   }
 
-  const refreshPromise = buildClaimableFrontendFeeSnapshot(frontend)
+  const refreshPromise = buildClaimableFrontendFeeSnapshot(frontend, chainId)
     .then(snapshot => {
-      frontendFeeSnapshotCache.set(frontend, snapshot);
+      frontendFeeSnapshotCache.set(cacheKey, snapshot);
       return snapshot;
     })
     .finally(() => {
-      frontendFeeSnapshotPromises.delete(frontend);
+      frontendFeeSnapshotPromises.delete(cacheKey);
     });
 
-  frontendFeeSnapshotPromises.set(frontend, refreshPromise);
+  frontendFeeSnapshotPromises.set(cacheKey, refreshPromise);
 
   if (cachedSnapshot) {
     void refreshPromise;
@@ -467,16 +511,17 @@ async function getClaimableFrontendFeeSnapshot(frontend: `0x${string}`): Promise
 
 export async function listClaimableFrontendFeeRounds(
   frontend: string,
-  params: { limit?: number; offset?: number } = {},
+  params: { chainId?: number; limit?: number; offset?: number } = {},
 ): Promise<ClaimableFrontendFeeResponse> {
+  const resolvedChainId = params.chainId ?? getPrimaryServerTargetNetwork()?.id;
   const limit = Math.min(Math.max(params.limit ?? 10, 1), 50);
   const initialOffset = Math.max(params.offset ?? 0, 0);
 
-  if (!isAddress(frontend) || !publicClient || !votingEngine || !rewardDistributor) {
+  if (!isAddress(frontend) || !Number.isFinite(resolvedChainId)) {
     return toClaimableFeePage(emptySnapshot(), initialOffset, limit);
   }
 
   const normalizedFrontend = normalizeFrontendAddress(frontend);
-  const snapshot = await getClaimableFrontendFeeSnapshot(normalizedFrontend);
+  const snapshot = await getClaimableFrontendFeeSnapshot(normalizedFrontend, resolvedChainId!);
   return toClaimableFeePage(snapshot, initialOffset, limit);
 }

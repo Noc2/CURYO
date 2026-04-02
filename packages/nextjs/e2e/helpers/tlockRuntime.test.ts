@@ -13,21 +13,43 @@ test("deriveAnchoredTlockRuntimeNowMs targets the round epoch boundary", () => {
       latestBlockTimestampSeconds: 1_000,
       roundEpochDurationSeconds: 300,
       tlockEpochDurationSeconds: 30,
-      drandPeriodSeconds: 30,
     }),
-    1_270_000,
+    1_271_000,
   );
 });
 
-test("deriveAnchoredTlockRuntimeNowMs does not depend on drand period once the epoch boundary is fixed", () => {
+test("deriveAnchoredTlockRuntimeNowMs uses the round epoch instead of the tlock epoch for a fresh round", () => {
   assert.equal(
     deriveAnchoredTlockRuntimeNowMs({
       latestBlockTimestampSeconds: 1_000,
       roundEpochDurationSeconds: 300,
-      tlockEpochDurationSeconds: 10,
-      drandPeriodSeconds: 0,
+      tlockEpochDurationSeconds: 300,
     }),
-    1_290_000,
+    1_001_000,
+  );
+});
+
+test("deriveAnchoredTlockRuntimeNowMs tracks the active round's next epoch boundary", () => {
+  assert.equal(
+    deriveAnchoredTlockRuntimeNowMs({
+      latestBlockTimestampSeconds: 1_500,
+      roundEpochDurationSeconds: 300,
+      tlockEpochDurationSeconds: 30,
+      roundStartTimeSeconds: 1_000,
+    }),
+    1_570_000,
+  );
+});
+
+test("deriveAnchoredTlockRuntimeNowMs crosses an epoch boundary when the commit mines in the next block", () => {
+  assert.equal(
+    deriveAnchoredTlockRuntimeNowMs({
+      latestBlockTimestampSeconds: 1_599,
+      roundEpochDurationSeconds: 300,
+      tlockEpochDurationSeconds: 30,
+      roundStartTimeSeconds: 1_000,
+    }),
+    1_870_000,
   );
 });
 
