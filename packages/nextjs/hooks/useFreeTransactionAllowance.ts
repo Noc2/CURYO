@@ -32,12 +32,28 @@ type FreeTransactionAllowanceResponse = {
 
 type SponsorshipMode = "sponsored" | "self-funded";
 
-function buildFreeTransactionAllowanceSnapshotKey(address?: string, chainId?: number) {
+function getClientFreeTransactionEnvironmentScope() {
+  if (typeof window === "undefined") {
+    return undefined;
+  }
+
+  try {
+    return window.location.origin;
+  } catch {
+    return undefined;
+  }
+}
+
+export function buildFreeTransactionAllowanceSnapshotKey(
+  address?: string,
+  chainId?: number,
+  environmentScope: string | undefined = getClientFreeTransactionEnvironmentScope(),
+) {
   if (!address || typeof chainId !== "number") {
     return null;
   }
 
-  return `curyo-free-transactions-summary:${address.toLowerCase()}:${chainId}`;
+  return `curyo-free-transactions-summary:${environmentScope ?? "unknown"}:${address.toLowerCase()}:${chainId}`;
 }
 
 function readStoredFreeTransactionAllowanceSummary(address?: string, chainId?: number) {
@@ -71,7 +87,11 @@ function storeFreeTransactionAllowanceSummary(
     return;
   }
 
-  const storageKey = buildFreeTransactionAllowanceSnapshotKey(address, chainId);
+  const storageKey = buildFreeTransactionAllowanceSnapshotKey(
+    address,
+    chainId,
+    summary.environment || getClientFreeTransactionEnvironmentScope(),
+  );
   if (!storageKey) {
     return;
   }
@@ -83,8 +103,12 @@ function storeFreeTransactionAllowanceSummary(
   }
 }
 
-function buildExhaustionToastKey(params: { chainId: number; voterIdTokenId: string }) {
-  return `curyo-free-transactions-exhausted:${params.chainId}:${params.voterIdTokenId}`;
+export function buildExhaustionToastKey(params: {
+  chainId: number;
+  environmentScope?: string;
+  voterIdTokenId: string;
+}) {
+  return `curyo-free-transactions-exhausted:${params.environmentScope ?? "unknown"}:${params.chainId}:${params.voterIdTokenId}`;
 }
 
 function hasShownExhaustionToast(params: { chainId: number; voterIdTokenId: string }) {
@@ -93,7 +117,14 @@ function hasShownExhaustionToast(params: { chainId: number; voterIdTokenId: stri
   }
 
   try {
-    return window.sessionStorage.getItem(buildExhaustionToastKey(params)) === "1";
+    return (
+      window.sessionStorage.getItem(
+        buildExhaustionToastKey({
+          ...params,
+          environmentScope: getClientFreeTransactionEnvironmentScope(),
+        }),
+      ) === "1"
+    );
   } catch {
     return false;
   }
@@ -105,7 +136,13 @@ function markExhaustionToastShown(params: { chainId: number; voterIdTokenId: str
   }
 
   try {
-    window.sessionStorage.setItem(buildExhaustionToastKey(params), "1");
+    window.sessionStorage.setItem(
+      buildExhaustionToastKey({
+        ...params,
+        environmentScope: getClientFreeTransactionEnvironmentScope(),
+      }),
+      "1",
+    );
   } catch {
     // Ignore storage errors.
   }

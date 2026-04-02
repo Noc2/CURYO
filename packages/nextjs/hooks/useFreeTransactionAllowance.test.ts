@@ -1,6 +1,33 @@
-import { buildSponsorshipSyncAttemptKey, clearSponsorshipSyncAttemptAfterFailure } from "./useFreeTransactionAllowance";
+import {
+  buildExhaustionToastKey,
+  buildFreeTransactionAllowanceSnapshotKey,
+  buildSponsorshipSyncAttemptKey,
+  clearSponsorshipSyncAttemptAfterFailure,
+} from "./useFreeTransactionAllowance";
 import assert from "node:assert/strict";
 import test from "node:test";
+
+test("buildFreeTransactionAllowanceSnapshotKey scopes cached summaries by environment", () => {
+  assert.equal(
+    buildFreeTransactionAllowanceSnapshotKey(
+      "0xAbCdEf0000000000000000000000000000000000",
+      11142220,
+      "https://preview.curyo.example",
+    ),
+    "curyo-free-transactions-summary:https://preview.curyo.example:0xabcdef0000000000000000000000000000000000:11142220",
+  );
+});
+
+test("buildExhaustionToastKey scopes exhaustion notifications by environment", () => {
+  assert.equal(
+    buildExhaustionToastKey({
+      chainId: 11142220,
+      environmentScope: "https://curyo.example",
+      voterIdTokenId: "42",
+    }),
+    "curyo-free-transactions-exhausted:https://curyo.example:11142220:42",
+  );
+});
 
 test("buildSponsorshipSyncAttemptKey normalizes the wallet address", () => {
   assert.equal(
