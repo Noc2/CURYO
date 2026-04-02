@@ -3,7 +3,7 @@ import { truncateContentDescription, truncateContentTitle } from "../contentLimi
 import { fetchWithTimeout } from "../utils.js";
 import type { ContentSource, ContentItem } from "./types.js";
 
-const CATEGORY_ID = 9n; // Movies
+const CATEGORY_ID = 4n; // Movies
 
 // Map TMDB genre IDs to on-chain subcategory names
 const GENRE_MAP: Record<number, string> = {

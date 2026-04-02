@@ -3,18 +3,19 @@ import { truncateContentDescription, truncateContentTitle } from "../contentLimi
 import { fetchWithTimeout } from "../utils.js";
 import type { ContentSource, ContentItem } from "./types.js";
 
-const CATEGORY_ID = 10n; // MTG Cards
+const CATEGORY_ID = 3n; // Magic: The Gathering
 
-// Map card legalities to preferred on-chain subcategory
-function getSubcategory(legalities: Record<string, string>): string {
-  if (legalities.commander === "legal") return "Commander";
-  if (legalities.standard === "legal") return "Standard";
-  if (legalities.modern === "legal") return "Modern";
-  if (legalities.pioneer === "legal") return "Pioneer";
-  if (legalities.legacy === "legal") return "Legacy";
-  if (legalities.vintage === "legal") return "Vintage";
-  if (legalities.pauper === "legal") return "Pauper";
-  return "Commander";
+// Match the deployed MTG subcategories, which are based on card types.
+function getSubcategory(typeLine: string, legalities: Record<string, string>): string {
+  if (typeLine.includes("Instant")) return "Instants";
+  if (typeLine.includes("Sorcery")) return "Sorceries";
+  if (typeLine.includes("Enchantment")) return "Enchantments";
+  if (typeLine.includes("Artifact")) return "Artifacts";
+  if (typeLine.includes("Land")) return "Lands";
+  if (typeLine.includes("Planeswalker")) return "Planeswalkers";
+  if (typeLine.includes("Legendary Creature") && legalities.commander === "legal") return "Commanders";
+  if (typeLine.includes("Creature")) return "Creatures";
+  return legalities.commander === "legal" ? "Commanders" : "Creatures";
 }
 
 export const scryfallSource: ContentSource = {
@@ -40,7 +41,7 @@ export const scryfallSource: ContentSource = {
       for (const card of (data.data ?? []).slice(0, limit)) {
         const set = card.set;
         const collectorNumber = card.collector_number;
-        const tag = getSubcategory(card.legalities || {});
+        const tag = getSubcategory(card.type_line || "", card.legalities || {});
         const title = truncateContentTitle(card.name);
 
         const typeLine = card.type_line || "Card";
