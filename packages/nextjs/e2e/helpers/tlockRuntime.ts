@@ -2,11 +2,23 @@ export function deriveAnchoredTlockRuntimeNowMs(params: {
   latestBlockTimestampSeconds: number;
   roundEpochDurationSeconds: number;
   tlockEpochDurationSeconds: number;
-  drandPeriodSeconds: number;
+  drandPeriodSeconds?: number;
+  roundStartTimeSeconds?: number | null;
 }): number {
-  const revealableAfterMs = (params.latestBlockTimestampSeconds + params.roundEpochDurationSeconds) * 1000;
+  const latestBlockTimestampSeconds = Math.max(0, Math.floor(params.latestBlockTimestampSeconds));
+  const roundEpochDurationSeconds = Math.max(1, Math.floor(params.roundEpochDurationSeconds));
+  const tlockEpochDurationSeconds = Math.max(1, Math.floor(params.tlockEpochDurationSeconds));
+  const roundStartTimeSeconds =
+    params.roundStartTimeSeconds != null ? Math.floor(params.roundStartTimeSeconds) : null;
 
-  return revealableAfterMs - params.tlockEpochDurationSeconds * 1000;
+  let revealableAfterSeconds = latestBlockTimestampSeconds + roundEpochDurationSeconds;
+  if (roundStartTimeSeconds != null && roundStartTimeSeconds > 0) {
+    const elapsedSeconds = Math.max(0, latestBlockTimestampSeconds - roundStartTimeSeconds);
+    const currentEpochIndex = Math.floor(elapsedSeconds / roundEpochDurationSeconds);
+    revealableAfterSeconds = roundStartTimeSeconds + (currentEpochIndex + 1) * roundEpochDurationSeconds;
+  }
+
+  return (revealableAfterSeconds - tlockEpochDurationSeconds) * 1000;
 }
 
 export function deriveDrandRoundRevealableAtSeconds(params: {

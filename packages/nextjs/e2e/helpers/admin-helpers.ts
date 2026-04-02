@@ -12,9 +12,9 @@ import { ANVIL_ACCOUNTS } from "./anvil-accounts";
 import "./fetch-shim";
 import { PONDER_URL } from "./ponder-url";
 import { E2E_RPC_URL } from "./service-urls";
+import { deriveAnchoredTlockRuntimeNowMs } from "./tlockRuntime";
 import { createTlockVoteCommit, encodeVoteTransferPayload } from "./tlock-voting";
 import { parseRound } from "../../lib/contracts/roundVotingEngine";
-import { deriveCommitVoteRuntimeNowMs } from "../../lib/vote/tlockCommitTiming";
 
 const ANVIL_RPC = E2E_RPC_URL;
 // Contract gas costs shift as local protocol code evolves, so E2E helpers estimate
@@ -246,6 +246,7 @@ async function resolveTlockRuntimeNowMs(
 ): Promise<() => number> {
   const latestBlock = await readLatestBlockSnapshot();
   const currentRoundId = await readCurrentRoundId(votingEngineAddress, contentId, latestBlock.blockTag);
+  const { epochDuration } = await readRoundConfig(votingEngineAddress);
 
   let roundStartTimeSeconds: number | null = null;
   if (currentRoundId > 0n) {
@@ -256,9 +257,10 @@ async function resolveTlockRuntimeNowMs(
     }
   }
 
-  const runtimeNowMs = deriveCommitVoteRuntimeNowMs({
+  const runtimeNowMs = deriveAnchoredTlockRuntimeNowMs({
     latestBlockTimestampSeconds: latestBlock.timestampSeconds,
-    epochDurationSeconds: tlockEpochDurationSeconds,
+    roundEpochDurationSeconds: Number(epochDuration),
+    tlockEpochDurationSeconds,
     roundStartTimeSeconds,
   });
 
