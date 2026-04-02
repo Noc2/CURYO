@@ -24,11 +24,12 @@ const SelfQRcodeWrapper = dynamic(() => import("@selfxyz/qrcode").then(mod => mo
 });
 
 interface SelfVerifyButtonProps {
+  referrer?: string | null;
   onStart?: () => void;
   onSuccess: () => void;
 }
 
-export function SelfVerifyButton({ onStart, onSuccess }: SelfVerifyButtonProps) {
+export function SelfVerifyButton({ referrer, onStart, onSuccess }: SelfVerifyButtonProps) {
   const { address, chain } = useAccount();
   const { data: contractInfo } = useDeployedContractInfo({ contractName: "HumanFaucet" });
   const [selfApp, setSelfApp] = useState<SelfApp | null>(null);
@@ -50,10 +51,11 @@ export function SelfVerifyButton({ onStart, onSuccess }: SelfVerifyButtonProps) 
       contractAddress: contractInfo.address,
       chainId: chain.id,
       deeplinkCallback: isMobile ? window.location.href : undefined,
+      referrer,
     });
 
     setSelfApp(nextSelfApp);
-  }, [address, contractInfo?.address, chain?.id, isMobile]);
+  }, [address, contractInfo?.address, chain?.id, isMobile, referrer]);
 
   if (!isSelfVerificationSupportedChain(chain?.id)) {
     return (

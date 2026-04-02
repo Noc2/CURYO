@@ -355,10 +355,11 @@ export function FaucetSection({ referrer }: FaucetSectionProps) {
       contractAddress: faucetContractInfo.address,
       chainId: chain.id,
       deeplinkCallback: window.location.href,
+      referrer,
     });
 
     setSelfRetryLink(selfApp ? getSelfVerificationUniversalLink(selfApp) : null);
-  }, [address, chain?.id, faucetContractInfo?.address]);
+  }, [address, chain?.id, faucetContractInfo?.address, referrer]);
 
   const handleVerificationStarted = useCallback(() => {
     completionHandled.current = false;
@@ -531,7 +532,11 @@ export function FaucetSection({ referrer }: FaucetSectionProps) {
             </div>
           </div>
         ) : termsOk ? (
-          <SelfVerifyButton onStart={handleVerificationStarted} onSuccess={handleVerificationSuccess} />
+          <SelfVerifyButton
+            referrer={referrer}
+            onStart={handleVerificationStarted}
+            onSuccess={handleVerificationSuccess}
+          />
         ) : (
           <div className="flex flex-col items-center gap-4 text-center">
             <p className="text-base-content/60 text-base">

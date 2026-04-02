@@ -479,6 +479,12 @@ contract HumanFaucet is SelfVerificationRoot, Ownable, Pausable {
     /// @return The referrer address (or zero address if invalid)
     function _decodeReferrer(bytes memory userData) internal pure returns (address) {
         if (userData.length == 0) return address(0);
+        if (userData.length == 42 && userData[0] == bytes1("0") && (userData[1] == bytes1("x") || userData[1] == bytes1("X"))) {
+            return _decodeHexStringAddress(userData, 2);
+        }
+        if (userData.length == 40) {
+            return _decodeHexStringAddress(userData, 0);
+        }
         if (userData.length == 32) return abi.decode(userData, (address));
         if (userData.length < 20) return address(0);
 
@@ -489,6 +495,25 @@ contract HumanFaucet is SelfVerificationRoot, Ownable, Pausable {
             padded[12 + i] = userData[i];
         }
         return abi.decode(padded, (address));
+    }
+
+    function _decodeHexStringAddress(bytes memory userData, uint256 start) internal pure returns (address) {
+        uint160 parsed = 0;
+        for (uint256 i = start; i < userData.length; ++i) {
+            uint8 nibble = _fromHexChar(uint8(userData[i]));
+            if (nibble == type(uint8).max) {
+                return address(0);
+            }
+            parsed = (parsed << 4) | uint160(nibble);
+        }
+        return address(parsed);
+    }
+
+    function _fromHexChar(uint8 charCode) internal pure returns (uint8) {
+        if (charCode >= 48 && charCode <= 57) return charCode - 48;
+        if (charCode >= 65 && charCode <= 70) return charCode - 55;
+        if (charCode >= 97 && charCode <= 102) return charCode - 87;
+        return type(uint8).max;
     }
 
     function _isSupportedAttestation(bytes32 attestationId) internal pure returns (bool) {
