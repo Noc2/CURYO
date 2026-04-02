@@ -274,7 +274,10 @@ export function useThirdwebSponsoredSubmitCalls() {
             chainId,
             error,
             executionMode,
-            hasReservedFreeTransaction: Boolean(operationKey),
+            // A locally derived operation key only identifies the payload shape.
+            // The actual free-tx reservation happens server-side in the verifier,
+            // and the client has no reliable signal that one was created here.
+            hasReservedFreeTransaction: false,
           })
         ) {
           try {
