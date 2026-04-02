@@ -11,7 +11,8 @@
 import { ANVIL_ACCOUNTS } from "./anvil-accounts";
 import "./fetch-shim";
 import { PONDER_URL } from "./ponder-url";
-import { deriveAnchoredTlockRuntimeNowMs } from "./tlockRuntime";
+import { parseRound } from "../../lib/contracts/roundVotingEngine";
+import { deriveCommitVoteRuntimeNowMs } from "../../lib/vote/tlockCommitTiming";
 
 const ANVIL_RPC = "http://localhost:8545";
 // Contract gas costs shift as local protocol code evolves, so E2E helpers estimate
@@ -223,62 +224,131 @@ async function sendTx(from: string, to: string, data: `0x${string}`): Promise<bo
   return false;
 }
 
-async function readLatestBlockTimestampSeconds(): Promise<number> {
-  const block = await rpcRequest<{ timestamp?: string }>("eth_getBlockByNumber", ["latest", false]);
-  if (!block?.timestamp) {
+async function readLatestBlockSnapshot(): Promise<{ blockTag: `0x${string}`; timestampSeconds: number }> {
+  const block = await rpcRequest<{ number?: string; timestamp?: string }>("eth_getBlockByNumber", ["latest", false]);
+  if (!block?.number || !block?.timestamp) {
     throw new Error("Failed to read latest block timestamp from Anvil");
   }
 
-  return Number(BigInt(block.timestamp));
+  const blockNumber = BigInt(block.number);
+  return {
+    blockTag: `0x${blockNumber.toString(16)}`,
+    timestampSeconds: Number(BigInt(block.timestamp)),
+  };
 }
 
 async function resolveTlockRuntimeNowMs(
   votingEngineAddress: string,
+  contentId: bigint,
   tlockEpochDurationSeconds: number,
 ): Promise<() => number> {
-  const [{ epochDuration }, drandPeriodSeconds, latestBlockTimestamp] = await Promise.all([
-    readRoundConfig(votingEngineAddress),
-    readDrandPeriodSeconds(votingEngineAddress),
-    readLatestBlockTimestampSeconds(),
-  ]);
+  const latestBlock = await readLatestBlockSnapshot();
+  const currentRoundId = await readCurrentRoundId(votingEngineAddress, contentId, latestBlock.blockTag);
 
-  // Local E2E chains can drift behind wall-clock time while Next.js builds or routes warm up.
-  // Anchor the drand target just inside the next reveal window instead of on its brittle lower bound.
-  const runtimeNowMs = deriveAnchoredTlockRuntimeNowMs({
-    latestBlockTimestampSeconds: latestBlockTimestamp + 1,
-    roundEpochDurationSeconds: Number(epochDuration),
-    tlockEpochDurationSeconds,
-    drandPeriodSeconds,
+  let roundStartTimeSeconds: number | null = null;
+  if (currentRoundId > 0n) {
+    const round = await readRoundAtBlock(votingEngineAddress, contentId, currentRoundId, latestBlock.blockTag);
+    const parsedRound = parseRound(round);
+    if (parsedRound?.state === 0 && parsedRound.startTime > 0n) {
+      roundStartTimeSeconds = Number(parsedRound.startTime);
+    }
+  }
+
+  const runtimeNowMs = deriveCommitVoteRuntimeNowMs({
+    latestBlockTimestampSeconds: latestBlock.timestampSeconds,
+    epochDurationSeconds: tlockEpochDurationSeconds,
+    roundStartTimeSeconds,
   });
 
   return () => runtimeNowMs;
 }
 
-async function readDrandPeriodSeconds(contractAddress: string): Promise<number> {
+async function readCurrentRoundId(
+  contractAddress: string,
+  contentId: bigint,
+  blockTag: `0x${string}`,
+): Promise<bigint> {
   const { decodeFunctionResult, encodeFunctionData } = await import("viem");
   const abi = [
     {
-      name: "drandPeriod",
+      name: "currentRoundId",
       type: "function",
-      inputs: [],
+      inputs: [{ name: "contentId", type: "uint256" }],
       outputs: [{ name: "", type: "uint256" }],
       stateMutability: "view",
     },
   ] as const;
-  const configAddress = await resolveProtocolConfigAddress(contractAddress);
-  const data = encodeFunctionData({ abi, functionName: "drandPeriod" });
-  const result = await rpcRequest<`0x${string}`>("eth_call", [{ to: configAddress, data }, "latest"]);
+  const data = encodeFunctionData({
+    abi,
+    functionName: "currentRoundId",
+    args: [contentId],
+  });
+  const result = await rpcRequest<`0x${string}`>("eth_call", [{ to: contractAddress, data }, blockTag]);
   if (!result) {
-    throw new Error("Failed to read drandPeriod from Anvil");
+    throw new Error("Failed to read currentRoundId from Anvil");
   }
 
-  return Number(
-    decodeFunctionResult({
-      abi,
-      functionName: "drandPeriod",
-      data: result,
-    }),
-  );
+  return decodeFunctionResult({
+    abi,
+    functionName: "currentRoundId",
+    data: result,
+  }) as bigint;
+}
+
+async function readRoundAtBlock(
+  contractAddress: string,
+  contentId: bigint,
+  roundId: bigint,
+  blockTag: `0x${string}`,
+): Promise<unknown> {
+  const { decodeFunctionResult, encodeFunctionData } = await import("viem");
+  const abi = [
+    {
+      name: "rounds",
+      type: "function",
+      inputs: [
+        { name: "contentId", type: "uint256" },
+        { name: "roundId", type: "uint256" },
+      ],
+      outputs: [
+        {
+          type: "tuple",
+          components: [
+            { name: "startTime", type: "uint256" },
+            { name: "state", type: "uint8" },
+            { name: "voteCount", type: "uint256" },
+            { name: "revealedCount", type: "uint256" },
+            { name: "totalStake", type: "uint256" },
+            { name: "upPool", type: "uint256" },
+            { name: "downPool", type: "uint256" },
+            { name: "upCount", type: "uint256" },
+            { name: "downCount", type: "uint256" },
+            { name: "upWins", type: "bool" },
+            { name: "settledAt", type: "uint256" },
+            { name: "thresholdReachedAt", type: "uint256" },
+            { name: "weightedUpPool", type: "uint256" },
+            { name: "weightedDownPool", type: "uint256" },
+          ],
+        },
+      ],
+      stateMutability: "view",
+    },
+  ] as const;
+  const data = encodeFunctionData({
+    abi,
+    functionName: "rounds",
+    args: [contentId, roundId],
+  });
+  const result = await rpcRequest<`0x${string}`>("eth_call", [{ to: contractAddress, data }, blockTag]);
+  if (!result) {
+    throw new Error("Failed to read round data from Anvil");
+  }
+
+  return decodeFunctionResult({
+    abi,
+    functionName: "rounds",
+    data: result,
+  });
 }
 
 /**
@@ -1124,7 +1194,7 @@ export async function commitVoteDirect(
       epochDurationSeconds: resolvedEpochDurationSeconds,
     },
     {
-      now: await resolveTlockRuntimeNowMs(contractAddress, resolvedEpochDurationSeconds),
+      now: await resolveTlockRuntimeNowMs(contractAddress, BigInt(contentId), resolvedEpochDurationSeconds),
     },
   );
 
@@ -1197,7 +1267,7 @@ export async function commitVoteWithTransferAndCallDirect(
       epochDurationSeconds: resolvedEpochDurationSeconds,
     },
     {
-      now: await resolveTlockRuntimeNowMs(votingEngineAddress, resolvedEpochDurationSeconds),
+      now: await resolveTlockRuntimeNowMs(votingEngineAddress, BigInt(contentId), resolvedEpochDurationSeconds),
     },
   );
 
