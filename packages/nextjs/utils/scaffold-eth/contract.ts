@@ -5,7 +5,6 @@ import deployedContractsData from "@curyo/contracts/deployedContracts";
 import { MutateOptions } from "@tanstack/react-query";
 import {
   Abi,
-  AbiParameter,
   AbiParameterToPrimitiveType,
   AbiParametersToPrimitiveTypes,
   ExtractAbiEvent,
@@ -334,8 +333,6 @@ export type UseScaffoldEventHistoryData<
       } & Log<bigint, number, false, TEvent, false, [TEvent], TEventName>[]
     >
   | undefined;
-
-type AbiParameterTuple = Extract<AbiParameter, { type: "tuple" | `tuple[${string}]` }>;
 
 /**
  * Enhanced error parsing that creates a lookup table from all deployed contracts
