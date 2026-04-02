@@ -1,5 +1,9 @@
-import { CURYO_E2E_TEST_WALLET_PRIVATE_KEY_STORAGE_KEY } from "../../services/thirdweb/testWalletStorage";
 import type { Page } from "@playwright/test";
+import { E2E_RPC_URL } from "./service-urls";
+import {
+  CURYO_E2E_RPC_URL_STORAGE_KEY,
+  CURYO_E2E_TEST_WALLET_PRIVATE_KEY_STORAGE_KEY,
+} from "../../services/thirdweb/testWalletStorage";
 
 /**
  * Build a script that pre-seeds localStorage for the localhost thirdweb test wallet flow.
@@ -11,7 +15,7 @@ import type { Page } from "@playwright/test";
  *
  * Must run BEFORE any page navigation (via page.addInitScript).
  */
-function seedWalletSessionScript(privateKey: string): string {
+function seedWalletSessionScript(privateKey: string, rpcUrl: string): string {
   return `
     const walletStatePrefixes = [
       "thirdweb:",
@@ -42,7 +46,8 @@ function seedWalletSessionScript(privateKey: string): string {
     clearWalletState(localStorage);
     clearWalletState(sessionStorage);
 
-    localStorage.setItem("${CURYO_E2E_TEST_WALLET_PRIVATE_KEY_STORAGE_KEY}", "${privateKey}");
+    localStorage.setItem("${CURYO_E2E_TEST_WALLET_PRIVATE_KEY_STORAGE_KEY}", ${JSON.stringify(privateKey)});
+    localStorage.setItem("${CURYO_E2E_RPC_URL_STORAGE_KEY}", ${JSON.stringify(rpcUrl)});
     localStorage.setItem("thirdweb:active-chain", JSON.stringify({ id: 31337 }));
     localStorage.setItem("curyo_terms_accepted", JSON.stringify({
       version: "3.0",
@@ -57,7 +62,7 @@ function seedWalletSessionScript(privateKey: string): string {
   `;
 }
 
-function buildWalletSessionResetScript(privateKey: string): string {
+function buildWalletSessionResetScript(privateKey: string, rpcUrl: string): string {
   return `
     const walletStatePrefixes = [
       "thirdweb:",
@@ -88,7 +93,8 @@ function buildWalletSessionResetScript(privateKey: string): string {
     clearWalletState(localStorage);
     clearWalletState(sessionStorage);
 
-    localStorage.setItem("${CURYO_E2E_TEST_WALLET_PRIVATE_KEY_STORAGE_KEY}", "${privateKey}");
+    localStorage.setItem("${CURYO_E2E_TEST_WALLET_PRIVATE_KEY_STORAGE_KEY}", ${JSON.stringify(privateKey)});
+    localStorage.setItem("${CURYO_E2E_RPC_URL_STORAGE_KEY}", ${JSON.stringify(rpcUrl)});
     localStorage.setItem("thirdweb:active-chain", JSON.stringify({ id: 31337 }));
     localStorage.setItem("curyo_terms_accepted", JSON.stringify({
       version: "3.0",
@@ -110,7 +116,7 @@ export async function setupWallet(
   options: { bootstrap?: boolean } = {},
 ): Promise<void> {
   const { bootstrap = true } = options;
-  await page.addInitScript(seedWalletSessionScript(privateKey));
+  await page.addInitScript(seedWalletSessionScript(privateKey, E2E_RPC_URL));
 
   if (bootstrap && page.url() === "about:blank") {
     await page.goto("/", { waitUntil: "domcontentloaded" });
@@ -121,5 +127,5 @@ export async function setupWallet(
 export async function swapWalletSession(page: Page, privateKey: string): Promise<void> {
   await page.evaluate(script => {
     window.eval(script);
-  }, buildWalletSessionResetScript(privateKey));
+  }, buildWalletSessionResetScript(privateKey, E2E_RPC_URL));
 }

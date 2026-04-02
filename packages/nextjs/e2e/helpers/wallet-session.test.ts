@@ -1,6 +1,10 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { CURYO_E2E_TEST_WALLET_PRIVATE_KEY_STORAGE_KEY } from "../../services/thirdweb/testWalletStorage";
+import {
+  CURYO_E2E_RPC_URL_STORAGE_KEY,
+  CURYO_E2E_TEST_WALLET_PRIVATE_KEY_STORAGE_KEY,
+} from "../../services/thirdweb/testWalletStorage";
+import { E2E_RPC_URL } from "./service-urls";
 import { setupWallet } from "./wallet-session";
 
 function createPageStub(currentUrl = "about:blank") {
@@ -30,7 +34,9 @@ test("setupWallet bootstraps fresh pages by default", async () => {
 
   assert.equal(initScripts.length, 1);
   assert.match(initScripts[0]!, new RegExp(CURYO_E2E_TEST_WALLET_PRIVATE_KEY_STORAGE_KEY));
-  assert.match(initScripts[0]!, new RegExp(privateKey));
+  assert.match(initScripts[0]!, new RegExp(CURYO_E2E_RPC_URL_STORAGE_KEY));
+  assert.ok(initScripts[0]!.includes(privateKey));
+  assert.ok(initScripts[0]!.includes(E2E_RPC_URL));
   assert.deepEqual(gotoCalls, [{ url: "/", options: { waitUntil: "domcontentloaded" } }]);
 });
 
