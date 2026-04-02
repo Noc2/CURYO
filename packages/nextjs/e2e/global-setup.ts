@@ -6,7 +6,7 @@ import { dirname, resolve } from "path";
 import { execFileSync, execSync } from "child_process";
 import { fileURLToPath } from "url";
 import { ensureBaselineSeedData } from "./helpers/baseline-seed";
-import { E2E_BASE_URL, E2E_RPC_URL, PONDER_URL } from "./helpers/service-urls";
+import { E2E_BASE_URL, E2E_KEEPER_HEALTH_URL, E2E_RPC_URL, PONDER_URL } from "./helpers/service-urls";
 
 const SERVICES = [
   {
@@ -177,7 +177,7 @@ async function globalSetup() {
   // requires a live keeper process with metrics enabled.
   try {
     const status = Number(
-      execFileSync("curl", ["-sS", "-m", "3", "-o", "/dev/null", "-w", "%{http_code}", "http://localhost:9090/health"], {
+      execFileSync("curl", ["-sS", "-m", "3", "-o", "/dev/null", "-w", "%{http_code}", E2E_KEEPER_HEALTH_URL], {
         encoding: "utf8",
       }).trim(),
     );
@@ -192,7 +192,7 @@ async function globalSetup() {
   } catch {
     if (process.env.REQUIRE_E2E_KEEPER === "1") {
       throw new Error(
-        "E2E keeper-backed settlement tests require a running keeper at http://localhost:9090/health.\n" +
+        `E2E keeper-backed settlement tests require a running keeper at ${E2E_KEEPER_HEALTH_URL}.\n` +
           "  Start it with: yarn keeper:dev\n",
       );
     }

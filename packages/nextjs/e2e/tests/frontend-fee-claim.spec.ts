@@ -22,6 +22,7 @@ import {
 import { ANVIL_ACCOUNTS, DEPLOYER } from "../helpers/anvil-accounts";
 import { CONTRACT_ADDRESSES } from "../helpers/contracts";
 import { getContentList } from "../helpers/ponder-api";
+import { E2E_RPC_URL } from "../helpers/service-urls";
 import { expect, test } from "@playwright/test";
 
 /**
@@ -57,7 +58,7 @@ test.describe("Frontend fee claim lifecycle", () => {
 
   async function setupFrontend(frontendAddress: `0x${string}`, nullifier: bigint): Promise<void> {
     // Fund the impersonated frontend address with ETH for gas
-    await fetch("http://localhost:8545", {
+    await fetch(E2E_RPC_URL, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({

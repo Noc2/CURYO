@@ -11,10 +11,11 @@
 import { ANVIL_ACCOUNTS } from "./anvil-accounts";
 import "./fetch-shim";
 import { PONDER_URL } from "./ponder-url";
+import { E2E_RPC_URL } from "./service-urls";
 import { parseRound } from "../../lib/contracts/roundVotingEngine";
 import { deriveCommitVoteRuntimeNowMs } from "../../lib/vote/tlockCommitTiming";
 
-const ANVIL_RPC = "http://localhost:8545";
+const ANVIL_RPC = E2E_RPC_URL;
 // Contract gas costs shift as local protocol code evolves, so E2E helpers estimate
 // gas instead of relying on a stale fixed cap for vote/settlement transactions.
 const DEFAULT_TX_GAS_LIMIT = 10_000_000n;
