@@ -7,7 +7,7 @@ import { useTargetNetwork } from "~~/hooks/scaffold-eth/useTargetNetwork";
 import { thirdwebClient } from "~~/services/thirdweb/client";
 
 export function getWagmiConnectorIdForThirdwebWallet(wallet: Wallet) {
-  return wallet.id === "inApp" ? "in-app-wallet" : "injected";
+  return wallet.id === "inApp" ? "in-app-wallet" : wallet.id;
 }
 
 export function shouldSkipThirdwebWagmiSync(params: {

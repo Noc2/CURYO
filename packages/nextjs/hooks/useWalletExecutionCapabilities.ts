@@ -6,12 +6,7 @@ import type { GetCapabilitiesResult } from "thirdweb/wallets/eip5792";
 import { useAccount } from "wagmi";
 import { getThirdwebWalletSponsorshipMode, supportsThirdwebExecutionCapabilities } from "~~/services/thirdweb/client";
 
-export type WalletExecutionMode =
-  | "sponsored_7702"
-  | "self_funded_7702"
-  | "external_send_calls"
-  | "fee_currency"
-  | "direct_celo";
+export type WalletExecutionMode = "sponsored_7702" | "self_funded_7702" | "fee_currency" | "direct_celo";
 
 export function resolveWalletExecutionMode(params: {
   hasSendCalls: boolean;
@@ -31,10 +26,6 @@ export function resolveWalletExecutionMode(params: {
     // External wallets may expose `sendCalls`, but hardware-backed accounts
     // can still reject the EIP-7702 upgrade path. Keep them on plain Celo txs.
     return "fee_currency";
-  }
-
-  if (params.hasSendCalls) {
-    return "external_send_calls";
   }
 
   return "direct_celo";
@@ -138,8 +129,7 @@ export function useWalletExecutionCapabilities() {
       isThirdwebInApp,
       supportsFeeCurrencyFallback: supportedChain,
       supportsPaymasterService,
-      supportsSponsoredCalls:
-        executionMode === "sponsored_7702" || (executionMode === "external_send_calls" && supportsPaymasterService),
+      supportsSponsoredCalls: executionMode === "sponsored_7702",
     };
   }, [capabilities, chainId, supportedChain, thirdwebAccount?.sendCalls, wallet]);
 }

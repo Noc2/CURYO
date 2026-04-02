@@ -11,12 +11,12 @@ test("getWagmiConnectorIdForThirdwebWallet keeps in-app wallets on the in-app co
   );
 });
 
-test("getWagmiConnectorIdForThirdwebWallet routes external wallets through injected wagmi", () => {
+test("getWagmiConnectorIdForThirdwebWallet preserves external wallet ids", () => {
   assert.equal(
     getWagmiConnectorIdForThirdwebWallet({
       id: "io.metamask",
     } as any),
-    "injected",
+    "io.metamask",
   );
 });
 
