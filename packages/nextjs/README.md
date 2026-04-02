@@ -68,6 +68,7 @@ Key environment variables (see `.env.example` for the full list):
 | `NEXT_PUBLIC_THIRDWEB_CLIENT_ID`        | thirdweb client ID for in-app wallets and sponsored transactions              |
 | `NEXT_PUBLIC_TARGET_NETWORKS`           | Comma-separated deployed chain IDs exposed in the UI (required in production) |
 | `TMDB_API_KEY`                          | Server-side TMDB API key for movie metadata                                   |
+| `RAWG_API_KEY`                          | Server-side RAWG API key for games metadata                                   |
 | `DATABASE_URL`                          | PostgreSQL URL for the Next app logical database                              |
 | `RESEND_API_KEY`                        | Resend API key for email notification delivery                                |
 | `RESEND_FROM_EMAIL`                     | Verified sender address/domain used by Resend                                 |
@@ -83,6 +84,8 @@ Key environment variables (see `.env.example` for the full list):
 | `CURYO_MCP_HTTP_SESSION_AUDIENCE`       | Audience claim for wallet-bound MCP bearer sessions                           |
 | `CURYO_MCP_SESSION_WALLET_BINDINGS`     | JSON array mapping wallet addresses to allowed MCP scopes and optional write identity ids |
 | `CURYO_MCP_SESSION_TTL_MS`              | Lifetime for minted wallet-bound MCP bearer sessions                          |
+| `KEYSTORE_ACCOUNT`                      | Optional Foundry keystore name used by the development faucet                 |
+| `KEYSTORE_PASSWORD`                     | Optional password used to decrypt the development faucet keystore             |
 | `DEV_FAUCET_ENABLED`                    | Enable the development-only faucet route                                      |
 | `FAUCET_PRIVATE_KEY`                    | Server-side faucet wallet key                                                 |
 
@@ -94,6 +97,7 @@ Notes:
 - For local development, `yarn dev:db` and `yarn dev:stack` manage a Docker Postgres container when `DATABASE_URL` points to localhost.
 - On Next.js 15, `NextRequest.ip` is not reliably populated. On non-Vercel production hosts you must configure `RATE_LIMIT_TRUSTED_IP_HEADERS` to the header(s) your hosting proxy overwrites. Vercel auto-trusts `x-real-ip`, and localhost shortcuts are only enabled for development or explicit local production-style E2E builds. Protected API routes fail closed when no trusted client IP can be derived or when the rate-limit store is unavailable.
 - The free transaction quota is enforced by the thirdweb server verifier route at `/api/thirdweb/verify-transaction`. Configure the same secret in thirdweb’s dashboard and in `THIRDWEB_SERVER_VERIFIER_SECRET`.
+- The Next.js dev faucet reads `KEYSTORE_ACCOUNT`/`KEYSTORE_PASSWORD` or `FAUCET_PRIVATE_KEY` from `packages/nextjs/.env.local`. Keeper wallet settings live separately in `packages/keeper/.env.local`.
 - Wallet-bound MCP session issuance lives at `/api/mcp/session/challenge` and `/api/mcp/session/token`. Keep `CURYO_MCP_HTTP_SESSION_*` aligned with the MCP server so the issued bearer sessions verify server-side, and use `CURYO_MCP_SESSION_WALLET_BINDINGS` to pin each wallet to the exact scopes and optional write identity it may use.
 
 ## Project Structure
