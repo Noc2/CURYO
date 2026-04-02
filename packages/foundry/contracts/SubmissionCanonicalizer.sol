@@ -139,7 +139,7 @@ contract SubmissionCanonicalizer {
         }
 
         if (_equals(host, "youtube.com") || _equals(host, "m.youtube.com")) {
-            string memory watchPath = _normalizePath(url);
+            string memory watchPath = _normalizeSemanticPath(url);
             if (_equals(watchPath, "/watch")) {
                 return _getQueryParam(url, "v");
             }
@@ -244,7 +244,7 @@ contract SubmissionCanonicalizer {
         string memory host = _extractNormalizedHost(url);
         if (!_equals(host, "en.wikipedia.org")) return "";
 
-        string memory path = _normalizePath(url);
+        string memory path = _normalizeSemanticPath(url);
         if (!_startsWithString(path, "/wiki/")) return "";
         return _sliceString(path, 6, bytes(path).length);
     }
@@ -390,7 +390,8 @@ contract SubmissionCanonicalizer {
 
     function _extractNormalizedHost(string memory url) internal pure returns (string memory) {
         bytes memory urlBytes = bytes(url);
-        uint256 start = 8;
+        uint256 start = _authorityStart(urlBytes);
+        if (start == 0) return "";
         uint256 end = start;
         while (end < urlBytes.length) {
             bytes1 char = urlBytes[end];
@@ -425,7 +426,8 @@ contract SubmissionCanonicalizer {
 
     function _normalizePath(string memory url) internal pure returns (string memory) {
         bytes memory urlBytes = bytes(url);
-        uint256 authorityEnd = 8;
+        uint256 authorityEnd = _authorityStart(urlBytes);
+        if (authorityEnd == 0) return "/";
         while (authorityEnd < urlBytes.length) {
             bytes1 char = urlBytes[authorityEnd];
             if (char == "/" || char == "?" || char == "#") break;
@@ -450,6 +452,57 @@ contract SubmissionCanonicalizer {
         return _sliceBytesToString(urlBytes, authorityEnd, pathEnd);
     }
 
+    function _normalizeSemanticPath(string memory url) internal pure returns (string memory) {
+        bytes memory pathBytes = bytes(_normalizePath(url));
+        if (pathBytes.length <= 1) return "/";
+
+        bytes memory normalized = new bytes(pathBytes.length);
+        uint256[] memory segmentCursorStack = new uint256[](pathBytes.length);
+        uint256 stackLength = 0;
+        uint256 cursor = 1;
+        normalized[0] = "/";
+
+        uint256 segmentStart = 1;
+        while (segmentStart < pathBytes.length) {
+            while (segmentStart < pathBytes.length && pathBytes[segmentStart] == "/") {
+                segmentStart++;
+            }
+            if (segmentStart >= pathBytes.length) break;
+
+            uint256 segmentEnd = segmentStart;
+            while (segmentEnd < pathBytes.length && pathBytes[segmentEnd] != "/") {
+                segmentEnd++;
+            }
+
+            uint256 segmentLength = segmentEnd - segmentStart;
+            bool isDotSegment = segmentLength == 1 && pathBytes[segmentStart] == ".";
+            bool isDotDotSegment = segmentLength == 2 && pathBytes[segmentStart] == "." && pathBytes[segmentStart + 1] == ".";
+
+            if (isDotDotSegment) {
+                if (stackLength > 0) {
+                    stackLength--;
+                    cursor = segmentCursorStack[stackLength];
+                }
+            } else if (!isDotSegment) {
+                segmentCursorStack[stackLength] = cursor;
+                stackLength++;
+                if (cursor > 1) {
+                    normalized[cursor] = "/";
+                    cursor++;
+                }
+                for (uint256 i = segmentStart; i < segmentEnd; i++) {
+                    normalized[cursor] = pathBytes[i];
+                    cursor++;
+                }
+            }
+
+            segmentStart = segmentEnd + 1;
+        }
+
+        if (cursor == 1) return "/";
+        return _sliceBytesToString(normalized, 0, cursor);
+    }
+
     function _normalizeQuery(string memory url) internal pure returns (string memory) {
         bytes memory urlBytes = bytes(url);
         uint256 queryStart = 0;
@@ -469,7 +522,7 @@ contract SubmissionCanonicalizer {
     }
 
     function _getPathSegment(string memory url, uint256 segmentIndex) internal pure returns (string memory) {
-        bytes memory pathBytes = bytes(_normalizePath(url));
+        bytes memory pathBytes = bytes(_normalizeSemanticPath(url));
         if (pathBytes.length <= 1) return "";
 
         uint256 currentIndex = 0;
@@ -489,6 +542,24 @@ contract SubmissionCanonicalizer {
         }
 
         return "";
+    }
+
+    function _authorityStart(bytes memory urlBytes) internal pure returns (uint256) {
+        if (
+            urlBytes.length >= 8 && urlBytes[0] == "h" && urlBytes[1] == "t" && urlBytes[2] == "t" && urlBytes[3] == "p"
+                && urlBytes[4] == "s" && urlBytes[5] == ":" && urlBytes[6] == "/" && urlBytes[7] == "/"
+        ) {
+            return 8;
+        }
+
+        if (
+            urlBytes.length >= 7 && urlBytes[0] == "h" && urlBytes[1] == "t" && urlBytes[2] == "t" && urlBytes[3] == "p"
+                && urlBytes[4] == ":" && urlBytes[5] == "/" && urlBytes[6] == "/"
+        ) {
+            return 7;
+        }
+
+        return 0;
     }
 
     function _getQueryParam(string memory url, string memory key) internal pure returns (string memory) {

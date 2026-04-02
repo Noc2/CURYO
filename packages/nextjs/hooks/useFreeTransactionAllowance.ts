@@ -30,6 +30,8 @@ type FreeTransactionAllowanceResponse = {
   voterIdTokenId: string | null;
 };
 
+type SponsorshipMode = "sponsored" | "self-funded";
+
 function buildFreeTransactionAllowanceSnapshotKey(address?: string, chainId?: number) {
   if (!address || typeof chainId !== "number") {
     return null;
@@ -107,6 +109,18 @@ function markExhaustionToastShown(params: { chainId: number; voterIdTokenId: str
   } catch {
     // Ignore storage errors.
   }
+}
+
+export function buildSponsorshipSyncAttemptKey(params: {
+  address: string;
+  chainId: number;
+  sponsorshipMode: SponsorshipMode;
+}) {
+  return `${params.address.toLowerCase()}:${params.chainId}:${params.sponsorshipMode}`;
+}
+
+export function clearSponsorshipSyncAttemptAfterFailure(currentAttemptKey: string | null, failedAttemptKey: string) {
+  return currentAttemptKey === failedAttemptKey ? null : currentAttemptKey;
 }
 
 function getFreeTransactionAllowanceQueryKey(address?: string, chainId?: number) {
@@ -212,7 +226,11 @@ export function useFreeTransactionAllowance() {
       return;
     }
 
-    const attemptKey = `${address.toLowerCase()}:${resolvedChainId}:${desiredSponsorshipMode}`;
+    const attemptKey = buildSponsorshipSyncAttemptKey({
+      address,
+      chainId: resolvedChainId,
+      sponsorshipMode: desiredSponsorshipMode,
+    });
     if (sponsorshipSyncAttemptRef.current === attemptKey) {
       return;
     }
@@ -232,6 +250,10 @@ export function useFreeTransactionAllowance() {
         await syncWalletToWagmi(replacementWallet, resolvedChainId, { reconnect: true });
         await setActiveWallet(replacementWallet);
       } catch (error) {
+        sponsorshipSyncAttemptRef.current = clearSponsorshipSyncAttemptAfterFailure(
+          sponsorshipSyncAttemptRef.current,
+          attemptKey,
+        );
         console.error("Failed to sync thirdweb sponsorship mode:", error);
       }
     })();

@@ -241,6 +241,14 @@ contract ContentRegistryBranchesTest is VotingTestBase {
         vm.stopPrank();
     }
 
+    function test_SubmitContent_HttpUrl_Reverts() public {
+        vm.startPrank(submitter);
+        crepToken.approve(address(registry), 10e6);
+        vm.expectRevert("Invalid URL");
+        registry.submitContent("http://example.com/1", "goal", "goal", "tags", 0, bytes32(0));
+        vm.stopPrank();
+    }
+
     function test_SubmitContent_UrlWithWhitespace_Reverts() public {
         vm.startPrank(submitter);
         crepToken.approve(address(registry), 10e6);
@@ -1167,6 +1175,21 @@ contract ContentRegistryBranchesTest is VotingTestBase {
         assertEq(firstKey, secondKey);
     }
 
+    function test_ResolveSubmissionKey_GitHubDoubleSlashCanonicalizesEquivalentUrls() public view {
+        bytes32 canonicalKey = registry.resolveSubmissionKey("https://github.com/foundry-rs/foundry");
+        bytes32 malformedKey = registry.resolveSubmissionKey("https://github.com//foundry-rs/foundry");
+
+        assertEq(canonicalKey, malformedKey);
+    }
+
+    function test_ResolveSubmissionKey_WikipediaDotSegmentsCanonicalizesEquivalentUrls() public view {
+        bytes32 canonicalKey = registry.resolveSubmissionKey("https://en.wikipedia.org/wiki/Lionel_Messi");
+        bytes32 malformedKey =
+            registry.resolveSubmissionKey("https://en.wikipedia.org/wiki/./players/../Lionel_Messi");
+
+        assertEq(canonicalKey, malformedKey);
+    }
+
     function test_IsUrlSubmitted_ReturnsFalseForInvalidOrUnapprovedUrls() public view {
         assertFalse(registry.isUrlSubmitted(""));
         assertFalse(registry.isUrlSubmitted("javascript:alert(1)"));
@@ -1423,6 +1446,20 @@ contract ContentRegistryBranchesTest is VotingTestBase {
         );
         vm.expectRevert("URL already submitted");
         registry.submitContent("https://www.github.com/foundry-rs/foundry", "goal2", "goal2", "tags2", 1, bytes32(0));
+        vm.stopPrank();
+    }
+
+    function test_SubmitContent_CanonicalDuplicate_GitHubDoubleSlashCollides() public {
+        vm.prank(owner);
+        registry.setCategoryRegistry(address(mockCategoryRegistry));
+        mockCategoryRegistry.setDomain(1, "github.com");
+        mockCategoryRegistry.setApproved(1, true);
+
+        vm.startPrank(submitter);
+        crepToken.approve(address(registry), 20e6);
+        _submitContentWithReservation(registry, "https://github.com//foundry-rs/foundry", "goal", "goal", "tags", 0);
+        vm.expectRevert("URL already submitted");
+        registry.submitContent("https://github.com/foundry-rs/foundry", "goal2", "goal2", "tags2", 1, bytes32(0));
         vm.stopPrank();
     }
 
