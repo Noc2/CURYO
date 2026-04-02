@@ -4,13 +4,13 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { CheckIcon, XMarkIcon } from "@heroicons/react/24/outline";
 import { useOutsideClick } from "~~/hooks/scaffold-eth/useOutsideClick";
 
-export interface FeedScopeOption {
+interface FeedScopeOption {
   value: string;
   label: string;
   description?: string;
 }
 
-export interface FeedScopeOptionGroup {
+interface FeedScopeOptionGroup {
   label: string;
   options: FeedScopeOption[];
 }

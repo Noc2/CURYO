@@ -5,9 +5,9 @@ import { db } from "~~/lib/db";
 import { notificationPreferences } from "~~/lib/db/schema";
 import { DEFAULT_NOTIFICATION_PREFERENCES } from "~~/lib/notifications/shared";
 
-export type StoredNotificationPreferences = typeof DEFAULT_NOTIFICATION_PREFERENCES;
+type StoredNotificationPreferences = typeof DEFAULT_NOTIFICATION_PREFERENCES;
 
-export async function ensureNotificationPreferencesTable() {
+async function ensureNotificationPreferencesTable() {
   // Schema is managed via Drizzle migrations.
 }
 

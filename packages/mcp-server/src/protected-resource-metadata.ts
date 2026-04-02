@@ -26,7 +26,7 @@ export function resolveProtectedResourceMetadataUrl(request: IncomingMessage, co
   return buildAbsoluteUrl(request, config, getProtectedResourceMetadataPath(config.httpPath));
 }
 
-export function resolveProtectedResourceUrl(request: IncomingMessage, config: ServerConfig): string {
+function resolveProtectedResourceUrl(request: IncomingMessage, config: ServerConfig): string {
   return buildAbsoluteUrl(request, config, config.httpPath);
 }
 

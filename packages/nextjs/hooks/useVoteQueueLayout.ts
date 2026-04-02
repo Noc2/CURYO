@@ -26,13 +26,11 @@ export function useVoteQueueLayout(containerElement: HTMLElement | null) {
       const element = containerElement;
       const scrollContainerRect = scrollContainer?.getBoundingClientRect();
       const rect = element.getBoundingClientRect();
-      const viewportHeight = scrollContainer?.clientHeight ?? window.innerHeight;
       const availableHeight = Math.max(0, (scrollContainerRect?.bottom ?? window.innerHeight) - rect.top);
 
       const rootFontSize = Number.parseFloat(window.getComputedStyle(document.documentElement).fontSize) || 16;
       const nextLayout = computeVoteQueueLayout({
         viewportWidth: window.innerWidth,
-        viewportHeight,
         containerWidth: element.clientWidth,
         availableHeight,
         rootFontSize,

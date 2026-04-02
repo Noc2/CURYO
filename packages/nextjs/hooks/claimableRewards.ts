@@ -9,7 +9,7 @@ export interface ClaimableRewardItem {
   claimType: ClaimableRewardType;
 }
 
-export interface SubmitterRewardClaimCandidate {
+interface SubmitterRewardClaimCandidate {
   contentId: bigint;
   roundId: bigint;
   pendingReward: bigint;

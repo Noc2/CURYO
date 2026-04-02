@@ -35,8 +35,10 @@ Copy `.env.example` to `.env` in the package directory and fill in the deployed 
 | Variable | Description |
 |---|---|
 | `SUBMIT_KEYSTORE_ACCOUNT` | Foundry keystore account for submissions |
+| `SUBMIT_KEYSTORE_PASSWORD` | Password used to decrypt the submission keystore |
 | `SUBMIT_PRIVATE_KEY` | Raw private key for submissions (not recommended) |
 | `RATE_KEYSTORE_ACCOUNT` | Foundry keystore account for voting |
+| `RATE_KEYSTORE_PASSWORD` | Password used to decrypt the rating keystore |
 | `RATE_PRIVATE_KEY` | Raw private key for voting (not recommended) |
 
 **Network & Services:**

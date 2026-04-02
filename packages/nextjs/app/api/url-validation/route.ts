@@ -119,7 +119,7 @@ export async function GET(request: NextRequest) {
  * Validates unchecked/stale URLs, stores results, returns all.
  */
 export async function POST(request: NextRequest) {
-  const limited = await checkRateLimit(request, RATE_LIMIT_POST);
+  const limited = await checkRateLimit(request, RATE_LIMIT_POST, { allowOnStoreUnavailable: true });
   if (limited) return limited;
 
   let body: unknown;

@@ -21,7 +21,7 @@ type IncentiveSnapshot = Pick<
   | "weightedDownPool"
 >;
 
-export interface RoundProgressMessaging {
+interface RoundProgressMessaging {
   badgeLabel: string;
   badgeTone: ProgressTone;
   detailLabel: string | null;
@@ -29,7 +29,7 @@ export interface RoundProgressMessaging {
   tooltip: string;
 }
 
-export interface VoteReturnEstimate {
+interface VoteReturnEstimate {
   effectiveStakeMicro: bigint;
   projectedVoterPoolMicro: bigint;
   projectedPoolShareMicro: bigint;
@@ -42,7 +42,7 @@ function formatPercent(value: number): string {
   return `${value.toLocaleString(undefined, { maximumFractionDigits })}%`;
 }
 
-export function formatPreciseDuration(seconds: number): string {
+function formatPreciseDuration(seconds: number): string {
   if (seconds <= 0) return "00:00";
 
   const days = Math.floor(seconds / 86400);
@@ -61,25 +61,12 @@ export function formatPreciseDuration(seconds: number): string {
   return `${String(minutes).padStart(2, "0")}:${String(remainingSeconds).padStart(2, "0")}`;
 }
 
-export function formatCompactDuration(seconds: number): string {
-  if (seconds <= 0) return "0m";
-
-  const days = Math.floor(seconds / 86400);
-  const hours = Math.floor((seconds % 86400) / 3600);
-  const minutes = Math.floor((seconds % 3600) / 60);
-
-  if (days > 0) return `${days}d ${hours}h`;
-  if (hours > 0) return `${hours}h ${minutes}m`;
-  if (minutes > 0) return `${minutes}m`;
-  return `${seconds}s`;
-}
-
 export function formatCrepAmount(amountMicro: bigint | number, maximumFractionDigits = 1): string {
   const value = typeof amountMicro === "bigint" ? Number(amountMicro) / 1e6 : amountMicro;
   return value.toLocaleString(undefined, { maximumFractionDigits });
 }
 
-export function getBlindParticipationLabel(ratePercent?: number): string | null {
+function getBlindParticipationLabel(ratePercent?: number): string | null {
   if (ratePercent === undefined) return null;
   return `+${formatPercent(ratePercent)} bonus`;
 }

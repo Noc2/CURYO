@@ -532,6 +532,23 @@ contract HumanFaucetTierEdgeCaseTest is Test {
         assertGt(crep.balanceOf(claimer), 10_000e6);
     }
 
+    function test_Claim_UserDataHexString_DecodesReferrer() public {
+        address referrer = address(0x10);
+        mockHub.setVerified(referrer);
+        mockHub.simulateVerification(address(faucet), referrer);
+
+        address claimer = address(0x20);
+        mockHub.setVerified(claimer);
+
+        bytes memory userData = bytes("0x0000000000000000000000000000000000000010");
+        assertEq(userData.length, 42);
+
+        mockHub.simulateVerificationWithUserData(address(faucet), claimer, userData);
+
+        assertGt(crep.balanceOf(claimer), 10_000e6);
+        assertEq(faucet.referredBy(claimer), referrer);
+    }
+
     function test_Claim_UserDataLessThan20Bytes_NoReferral() public {
         address claimer = address(0x20);
         mockHub.setVerified(claimer);

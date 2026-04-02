@@ -84,7 +84,7 @@ export const protocolDocFacts = {
   earlyVoterAdvantageLabel: `${EPOCH_WEIGHT_BPS.blind / EPOCH_WEIGHT_BPS.informed}:1`,
 } as const;
 
-export const rewardSplitTableRows: [string, string][] = [
+const rewardSplitTableRows: [string, string][] = [
   ["Revealed losing voters", protocolDocFacts.revealedLoserRefundLabel],
   ["Content-specific voter pool", protocolDocFacts.voterPoolShareLabel],
   ["Content submitter", protocolDocFacts.submitterShareLabel],

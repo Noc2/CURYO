@@ -3,12 +3,12 @@ import { db, dbClient } from "~~/lib/db";
 import { profileFollows } from "~~/lib/db/schema";
 import { createWatchlistTimestamp, isValidWalletAddress, normalizeWalletAddress } from "~~/lib/watchlist/contentWatch";
 
-export interface FollowedProfileRecord {
+interface FollowedProfileRecord {
   walletAddress: string;
   createdAt: string;
 }
 
-export async function ensureProfileFollowsTable() {
+async function ensureProfileFollowsTable() {
   // Schema is managed via Drizzle migrations.
 }
 

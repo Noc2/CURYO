@@ -11,12 +11,14 @@ import test from "node:test";
 
 const address = "0x1234567890abcdef1234567890abcdef12345678";
 const contractAddress = "0xABCDEFabcdefABCDEFabcdefABCDEFabcdefABCD";
+const referrer = "0xabcdefabcdefabcdefabcdefabcdefabcdefabcd";
 
 test("buildSelfVerificationAppConfig enables dev mode for Celo Sepolia", () => {
   const config = buildSelfVerificationAppConfig({
     address,
     contractAddress,
     chainId: 11142220,
+    referrer,
   });
 
   assert.ok(config);
@@ -25,6 +27,7 @@ test("buildSelfVerificationAppConfig enables dev mode for Celo Sepolia", () => {
   assert.equal(config.endpoint, contractAddress.toLowerCase());
   assert.equal(config.userId, address);
   assert.equal(config.userIdType, "hex");
+  assert.equal(config.userDefinedData, referrer);
   assert.equal(config.devMode, true);
   assert.equal(config.version, 2);
   assert.equal("minimumAge" in config.disclosures, false);
@@ -39,8 +42,21 @@ test("buildSelfVerificationAppConfig keeps production mode on Celo mainnet", () 
 
   assert.ok(config);
   assert.equal(config.endpointType, "celo");
+  assert.equal(config.userDefinedData, "");
   assert.equal(config.devMode, false);
   assert.equal("minimumAge" in config.disclosures, false);
+});
+
+test("buildSelfVerificationAppConfig clears invalid referrers from user-defined data", () => {
+  const config = buildSelfVerificationAppConfig({
+    address,
+    contractAddress,
+    chainId: 42220,
+    referrer: "not-an-address",
+  });
+
+  assert.ok(config);
+  assert.equal(config.userDefinedData, "");
 });
 
 test("buildSelfVerificationApp creates a mobile universal link that Self can open", () => {
@@ -49,6 +65,7 @@ test("buildSelfVerificationApp creates a mobile universal link that Self can ope
     contractAddress,
     chainId: 11142220,
     deeplinkCallback: "https://curyo.example/faucet",
+    referrer,
   });
 
   assert.ok(selfApp);
@@ -67,6 +84,7 @@ test("buildSelfVerificationApp creates a mobile universal link that Self can ope
   assert.equal(decodedSelfApp.chainID, 11142220);
   assert.equal(decodedSelfApp.userId, address.slice(2));
   assert.equal(decodedSelfApp.deeplinkCallback, "https://curyo.example/faucet");
+  assert.equal(decodedSelfApp.userDefinedData, referrer);
   assert.equal("minimumAge" in decodedSelfApp, false);
 });
 

@@ -189,7 +189,7 @@ function extractBearerToken(header: string | string[] | undefined): string | nul
   return match?.[1]?.trim() || null;
 }
 
-export function buildWwwAuthenticateHeader(
+function buildWwwAuthenticateHeader(
   authConfig: HttpAuthConfig,
   options?: {
     error?: string;

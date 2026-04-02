@@ -2,9 +2,11 @@
  * Playwright global setup — validates that all required services are running
  * before any test executes.  Fails fast with actionable error messages.
  */
+import { dirname, resolve } from "path";
 import { execFileSync, execSync } from "child_process";
+import { fileURLToPath } from "url";
 import { ensureBaselineSeedData } from "./helpers/baseline-seed";
-import { E2E_BASE_URL, E2E_RPC_URL, PONDER_URL } from "./helpers/service-urls";
+import { E2E_BASE_URL, E2E_KEEPER_HEALTH_URL, E2E_RPC_URL, PONDER_URL } from "./helpers/service-urls";
 
 const SERVICES = [
   {
@@ -29,6 +31,7 @@ const SERVICES = [
 
 const MAX_WAIT_MS = 30_000;
 const POLL_INTERVAL_MS = 2_000;
+const NEXTJS_DIR = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 
 function httpStatus(service: (typeof SERVICES)[number]): number | null {
   const args = ["-sS", "-m", "5", "-o", "/dev/null", "-w", "%{http_code}"];
@@ -116,19 +119,23 @@ async function topUpKeeperBalance(): Promise<void> {
 
 /**
  * Ensure the Next.js Postgres database schema is up to date.
- * Runs `drizzle-kit push` which creates any missing tables.
+ * Runs the workspace `db:push` command so Drizzle resolves the Next.js config.
  * This is idempotent — safe to run on every test start.
  */
 async function ensureDatabaseSchema(): Promise<void> {
   try {
-    execSync("npx drizzle-kit push", {
-      cwd: `${process.cwd()}`,
+    execFileSync("yarn", ["db:push"], {
+      cwd: NEXTJS_DIR,
+      env: process.env,
       stdio: "pipe",
       timeout: 15_000,
     });
     console.log("  ✓ Postgres database schema up to date");
   } catch (err: any) {
-    console.warn("  ⚠ drizzle-kit push failed:", err.stderr?.toString().trim() || err.message);
+    const details = [err.stdout?.toString().trim(), err.stderr?.toString().trim(), err.message]
+      .filter(Boolean)
+      .join("\n");
+    throw new Error(`Failed to apply the Next.js database schema before E2E tests.\n${details}`);
   }
 }
 
@@ -170,7 +177,7 @@ async function globalSetup() {
   // requires a live keeper process with metrics enabled.
   try {
     const status = Number(
-      execFileSync("curl", ["-sS", "-m", "3", "-o", "/dev/null", "-w", "%{http_code}", "http://localhost:9090/health"], {
+      execFileSync("curl", ["-sS", "-m", "3", "-o", "/dev/null", "-w", "%{http_code}", E2E_KEEPER_HEALTH_URL], {
         encoding: "utf8",
       }).trim(),
     );
@@ -185,7 +192,7 @@ async function globalSetup() {
   } catch {
     if (process.env.REQUIRE_E2E_KEEPER === "1") {
       throw new Error(
-        "E2E keeper-backed settlement tests require a running keeper at http://localhost:9090/health.\n" +
+        `E2E keeper-backed settlement tests require a running keeper at ${E2E_KEEPER_HEALTH_URL}.\n` +
           "  Start it with: yarn keeper:dev\n",
       );
     }

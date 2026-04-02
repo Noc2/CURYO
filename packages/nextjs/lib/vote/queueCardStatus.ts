@@ -3,7 +3,7 @@ import { type RoundPhase, type VotingConfig, deriveRoundTiming } from "~~/lib/co
 type QueueCardPhaseTone = "blind" | "open";
 type QueueCardUrgencyTone = "neutral" | "warning" | "success";
 
-export interface QueueCardStatusSnapshot {
+interface QueueCardStatusSnapshot {
   phase: RoundPhase;
   isEpoch1: boolean;
   epoch1Remaining: number;
@@ -20,7 +20,7 @@ export interface QueueCardStatus {
   urgencyTone: QueueCardUrgencyTone;
 }
 
-export interface QueueCardStatusOpenRound {
+interface QueueCardStatusOpenRound {
   voteCount: number;
   startTime: bigint | null;
 }

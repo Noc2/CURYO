@@ -29,7 +29,7 @@ if (resolvedEnabledChains.length === 0) {
 // Only add mainnet automatically when we have an explicit RPC for it.
 // Otherwise wallet tooling will probe viem's public defaults in the browser,
 // which can violate CSP or hit unreliable third-party endpoints.
-export const enabledChains = resolvedEnabledChains as [Chain, ...Chain[]];
+const enabledChains = resolvedEnabledChains as [Chain, ...Chain[]];
 
 export const wagmiConfig = createConfig({
   chains: enabledChains,

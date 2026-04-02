@@ -4,7 +4,7 @@ import { usePageVisibility } from "~~/hooks/usePageVisibility";
 import { usePonderQuery } from "~~/hooks/usePonderQuery";
 import { ponderApi } from "~~/services/ponder/client";
 
-export interface VotingStakes {
+interface VotingStakes {
   /** Stake in cREP locked in active rounds */
   activeStaked: number;
   /** Number of active votes */

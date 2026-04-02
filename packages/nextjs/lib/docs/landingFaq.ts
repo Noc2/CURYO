@@ -1,6 +1,6 @@
 import { protocolDocFacts } from "./protocolFacts";
 
-export type LandingFaqItem = {
+type LandingFaqItem = {
   question: string;
   answer: string;
   learnMoreHref?: string;

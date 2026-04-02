@@ -37,8 +37,15 @@ test("resolveServerPonderUrl allows localhost production URLs for explicit e2e b
   assert.equal(resolveServerPonderUrl("http://localhost:42069", true, true), "http://localhost:42069");
 });
 
-test("resolveServerTargetNetworks tolerates local-chain builds in production mode", () => {
+test("resolveServerTargetNetworks rejects Foundry in production by default", () => {
   const networks = resolveServerTargetNetworks("31337,11142220", true);
+  assert.equal(networks, null);
+});
+
+test("resolveServerTargetNetworks tolerates local-chain builds in explicit e2e production mode", () => {
+  const networks = resolveServerTargetNetworks("31337,11142220", true, {
+    allowFoundryInProduction: true,
+  });
   assert.deepEqual(
     networks?.map(network => network.id),
     [31337, 11142220],

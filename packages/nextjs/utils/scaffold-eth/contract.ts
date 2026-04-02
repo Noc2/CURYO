@@ -5,7 +5,6 @@ import deployedContractsData from "@curyo/contracts/deployedContracts";
 import { MutateOptions } from "@tanstack/react-query";
 import {
   Abi,
-  AbiParameter,
   AbiParameterToPrimitiveType,
   AbiParametersToPrimitiveTypes,
   ExtractAbiEvent,
@@ -99,12 +98,12 @@ type InferContractAbi<TContract> = TContract extends { abi: infer TAbi } ? TAbi 
 
 export type ContractAbi<TContractName extends ContractName = ContractName> = InferContractAbi<Contract<TContractName>>;
 
-export type AbiFunctionInputs<TAbi extends Abi, TFunctionName extends string> = ExtractAbiFunction<
+type AbiFunctionInputs<TAbi extends Abi, TFunctionName extends string> = ExtractAbiFunction<
   TAbi,
   TFunctionName
 >["inputs"];
 
-export type AbiFunctionArguments<TAbi extends Abi, TFunctionName extends string> = AbiParametersToPrimitiveTypes<
+type AbiFunctionArguments<TAbi extends Abi, TFunctionName extends string> = AbiParametersToPrimitiveTypes<
   AbiFunctionInputs<TAbi, TFunctionName>
 >;
 
@@ -120,7 +119,7 @@ export type AbiFunctionReturnType<TAbi extends Abi, TFunctionName extends string
     : AbiParametersToPrimitiveTypes<AbiFunctionOutputs<TAbi, TFunctionName>>
 >;
 
-export type AbiEventInputs<TAbi extends Abi, TEventName extends ExtractAbiEventNames<TAbi>> = ExtractAbiEvent<
+type AbiEventInputs<TAbi extends Abi, TEventName extends ExtractAbiEventNames<TAbi>> = ExtractAbiEvent<
   TAbi,
   TEventName
 >["inputs"];
@@ -132,10 +131,10 @@ export enum ContractCodeStatus {
 }
 
 type AbiStateMutability = "pure" | "view" | "nonpayable" | "payable";
-export type ReadAbiStateMutability = "view" | "pure";
-export type WriteAbiStateMutability = "nonpayable" | "payable";
+type ReadAbiStateMutability = "view" | "pure";
+type WriteAbiStateMutability = "nonpayable" | "payable";
 
-export type FunctionNamesWithInputs<
+type FunctionNamesWithInputs<
   TContractName extends ContractName,
   TAbiStateMutability extends AbiStateMutability = AbiStateMutability,
 > = Exclude<
@@ -334,8 +333,6 @@ export type UseScaffoldEventHistoryData<
       } & Log<bigint, number, false, TEvent, false, [TEvent], TEventName>[]
     >
   | undefined;
-
-export type AbiParameterTuple = Extract<AbiParameter, { type: "tuple" | `tuple[${string}]` }>;
 
 /**
  * Enhanced error parsing that creates a lookup table from all deployed contracts

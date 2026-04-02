@@ -10,7 +10,7 @@ type ReputationAvatarApiResponse = Omit<ReputationAvatarPayload, "balance" | "av
 
 const AVATAR_REVALIDATE_SECONDS = 300;
 
-export function createEmptyReputationAvatarPayload(address: string): ReputationAvatarPayload {
+function createEmptyReputationAvatarPayload(address: string): ReputationAvatarPayload {
   const normalizedAddress = isAddress(address) ? (address.toLowerCase() as `0x${string}`) : address;
 
   return {

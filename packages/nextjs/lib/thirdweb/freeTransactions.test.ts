@@ -17,6 +17,7 @@ env.NODE_ENV = "test";
 env.NEXT_PUBLIC_TARGET_NETWORKS = "31337";
 
 type DbModule = typeof import("../db");
+type DatabaseResources = import("../db").DatabaseResources;
 type DbTestMemoryModule = typeof import("../db/testMemory");
 type FreeTransactionsModule = typeof import("./freeTransactions");
 type OperationModule = typeof import("./freeTransactionOperation");
@@ -47,6 +48,7 @@ let dbModule: DbModule;
 let dbTestMemory: DbTestMemoryModule;
 let freeTransactions: FreeTransactionsModule;
 let operationModule: OperationModule;
+let memoryResources: DatabaseResources;
 
 function encodeCall(
   contract: ContractRecord,
@@ -97,15 +99,47 @@ function buildOperationKey(calls: readonly EncodedCall[]) {
 const voteCall = (voteMarker: `0x${string}`) =>
   encodeCall(crepContract, "transferAndCall", [votingEngineContract.address, 1n, voteMarker]);
 
+function createStoreUnavailableError() {
+  return new Error("database offline", {
+    cause: {
+      code: "SELF_SIGNED_CERT_IN_CHAIN",
+    },
+  });
+}
+
+function createStoreUnavailableResources(base: DatabaseResources): DatabaseResources {
+  const storeUnavailableError = createStoreUnavailableError();
+  const database = new Proxy(base.database as object, {
+    get(target, property, receiver) {
+      if (property === "insert" || property === "transaction") {
+        return () => {
+          throw storeUnavailableError;
+        };
+      }
+
+      const value = Reflect.get(target, property, receiver);
+      return typeof value === "function" ? value.bind(target) : value;
+    },
+  }) as DatabaseResources["database"];
+
+  return {
+    client: base.client,
+    database,
+    pool: base.pool,
+  };
+}
+
 before(async () => {
   dbModule = await import("../db");
   dbTestMemory = await import("../db/testMemory");
-  dbModule.__setDatabaseResourcesForTests(dbTestMemory.createMemoryDatabaseResources());
+  memoryResources = dbTestMemory.createMemoryDatabaseResources();
+  dbModule.__setDatabaseResourcesForTests(memoryResources);
   freeTransactions = await import("./freeTransactions");
   operationModule = await import("./freeTransactionOperation");
 });
 
 beforeEach(async () => {
+  dbModule.__setDatabaseResourcesForTests(memoryResources);
   freeTransactions.__setFreeTransactionTestOverridesForTests({
     allTransactionHashesSucceeded: async () => true,
     resolveVoterIdTokenId: async () => "42",
@@ -319,4 +353,54 @@ test("confirm leaves the reservation pending when receipt verification fails", a
 
   const reservationRows = await dbModule.dbClient.execute("SELECT status FROM free_transaction_reservations");
   assert.equal(reservationRows.rows[0]?.status, "pending");
+});
+
+test("summary fails open for verified voters when the quota store is unavailable", async () => {
+  dbModule.__setDatabaseResourcesForTests(createStoreUnavailableResources(memoryResources));
+
+  try {
+    const summary = await freeTransactions.getFreeTransactionAllowanceSummary({
+      address: WALLET,
+      chainId: CHAIN_ID,
+    });
+
+    assert.deepEqual(summary, {
+      chainId: CHAIN_ID,
+      environment: "test",
+      limit: 2,
+      used: 0,
+      remaining: 2,
+      verified: true,
+      exhausted: false,
+      walletAddress: "0x1234567890AbcdEF1234567890aBcdef12345678",
+      voterIdTokenId: "42",
+    });
+  } finally {
+    dbModule.__setDatabaseResourcesForTests(memoryResources);
+  }
+});
+
+test("verifier fails open for verified voters when the quota store is unavailable", async () => {
+  dbModule.__setDatabaseResourcesForTests(createStoreUnavailableResources(memoryResources));
+
+  try {
+    const decision = await freeTransactions.evaluateFreeTransactionAllowance(buildRequest([voteCall("0x09")]) as never);
+
+    assert.equal(decision.isAllowed, true);
+    if (!decision.isAllowed) return;
+    assert.equal(decision.debugCode, "store_unavailable_fail_open");
+    assert.deepEqual(decision.summary, {
+      chainId: CHAIN_ID,
+      environment: "test",
+      limit: 2,
+      used: 0,
+      remaining: 2,
+      verified: true,
+      exhausted: false,
+      walletAddress: "0x1234567890AbcdEF1234567890aBcdef12345678",
+      voterIdTokenId: "42",
+    });
+  } finally {
+    dbModule.__setDatabaseResourcesForTests(memoryResources);
+  }
 });

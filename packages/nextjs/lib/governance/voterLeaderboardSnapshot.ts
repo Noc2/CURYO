@@ -13,7 +13,7 @@ export interface VoterLeaderboardSnapshot {
   totalCount: number;
 }
 
-export interface VoterLeaderboardSelection {
+interface VoterLeaderboardSelection {
   balances: Record<string, bigint>;
   ranks: Record<string, number>;
   selectedAddresses: string[];

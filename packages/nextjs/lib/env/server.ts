@@ -95,13 +95,14 @@ export function getOptionalPonderUrl(): string | null {
 export function resolveServerTargetNetworks(
   rawValue: string | undefined,
   production: boolean,
+  options?: { allowFoundryInProduction?: boolean },
 ): [SupportedTargetNetwork, ...SupportedTargetNetwork[]] | null {
   try {
     return resolveTargetNetworks(rawValue, {
       alchemyApiKey: readEnv("NEXT_PUBLIC_ALCHEMY_API_KEY"),
       production,
       fallback: !production ? DEFAULT_DEV_TARGET_NETWORKS : undefined,
-      allowFoundryInProduction: true,
+      allowFoundryInProduction: options?.allowFoundryInProduction ?? allowLocalE2EProductionBuild,
       rpcOverrides: RPC_OVERRIDES,
     });
   } catch {
@@ -109,7 +110,7 @@ export function resolveServerTargetNetworks(
   }
 }
 
-export function getServerTargetNetworks(): [SupportedTargetNetwork, ...SupportedTargetNetwork[]] | null {
+function getServerTargetNetworks(): [SupportedTargetNetwork, ...SupportedTargetNetwork[]] | null {
   return resolveServerTargetNetworks(readEnv("NEXT_PUBLIC_TARGET_NETWORKS"), isProduction);
 }
 

@@ -3,13 +3,13 @@ import { type Abi, type Address, createPublicClient, http, isAddress } from "vie
 import { avatarAccentRgbToHex } from "~~/lib/avatar/avatarAccent";
 import { getPrimaryServerTargetNetwork, getServerRpcOverrides } from "~~/lib/env/server";
 
-export interface ProfileRegistryProfile {
+interface ProfileRegistryProfile {
   username: string | null;
   createdAt: string | null;
   updatedAt: string | null;
 }
 
-export interface ProfileRegistryAvatarAccent {
+interface ProfileRegistryAvatarAccent {
   enabled: boolean;
   rgb: number | null;
   hex: string | null;

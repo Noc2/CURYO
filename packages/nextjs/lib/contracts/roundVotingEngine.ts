@@ -1,8 +1,7 @@
 import { DEFAULT_ROUND_CONFIG, ROUND_STATE } from "@curyo/contracts/protocol";
 import { RoundData } from "~~/types/votingTypes";
 
-export { buildCommitVoteParams, buildStakeAmountWei, generateVoteSalt, resolveFrontendCode } from "@curyo/sdk/vote";
-export type { CommitVoteParams } from "@curyo/sdk/vote";
+export { buildStakeAmountWei, resolveFrontendCode } from "@curyo/sdk/vote";
 
 export type RoundPhase = "voting" | "settled" | "cancelled" | "tied" | "revealFailed" | "none";
 
@@ -25,12 +24,12 @@ export interface OpenRoundFallbackData {
   startTime: bigint | null;
 }
 
-export interface OptimisticRoundDelta {
+interface OptimisticRoundDelta {
   voteCount: number;
   stake: bigint;
 }
 
-export interface RoundTiming {
+interface RoundTiming {
   epoch1EndTime: number;
   epoch1Remaining: number;
   currentEpochRemaining: number;
@@ -38,7 +37,7 @@ export interface RoundTiming {
   isEpoch1: boolean;
 }
 
-export interface VoteDeadlines extends RoundTiming {
+interface VoteDeadlines extends RoundTiming {
   deadline: number;
   nextActionRemaining: number;
 }

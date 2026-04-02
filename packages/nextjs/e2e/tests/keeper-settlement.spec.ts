@@ -12,6 +12,7 @@ import { ANVIL_ACCOUNTS, DEPLOYER } from "../helpers/anvil-accounts";
 import { CONTRACT_ADDRESSES } from "../helpers/contracts";
 import "../helpers/fetch-shim";
 import { getContentById, getContentList, getVotes } from "../helpers/ponder-api";
+import { E2E_KEEPER_HEALTH_URL, E2E_RPC_URL } from "../helpers/service-urls";
 import { deriveKeeperDecryptWaitMs } from "../helpers/tlockRuntime";
 import { ProtocolConfigAbi, RoundVotingEngineAbi } from "@curyo/contracts/abis";
 import { expect, test } from "@playwright/test";
@@ -36,16 +37,15 @@ test.describe("Keeper-backed settlement lifecycle", () => {
   const EPOCH_DURATION = 300;
   const TLOCK_EPOCH = 30;
   const CHAIN_TIME_OFFSET = EPOCH_DURATION - TLOCK_EPOCH;
-  const KEEPER_HEALTH_URL = "http://localhost:9090/health";
   const KEEPER_INTERVAL_MS = Number(process.env.KEEPER_INTERVAL_MS ?? 30_000);
   const KEEPER_DECRYPT_BUFFER_MS = 10_000;
   const publicClient = createPublicClient({
     chain: foundry,
-    transport: http("http://localhost:8545"),
+    transport: http(E2E_RPC_URL),
   });
 
   test.beforeAll(async () => {
-    const keeperRes = await fetch(KEEPER_HEALTH_URL).catch(() => null);
+    const keeperRes = await fetch(E2E_KEEPER_HEALTH_URL).catch(() => null);
     expect(keeperRes?.ok, "Keeper health check failed. Start it with: yarn keeper:dev").toBe(true);
 
     const ok = await setTestConfig(VOTING_ENGINE, DEPLOYER.address, EPOCH_DURATION);

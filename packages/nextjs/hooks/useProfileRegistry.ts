@@ -3,14 +3,14 @@
 import { useScaffoldReadContract, useScaffoldWriteContract } from "~~/hooks/scaffold-eth";
 import { avatarAccentRgbToHex } from "~~/lib/avatar/avatarAccent";
 
-export interface Profile {
+interface Profile {
   name: string;
   strategy: string;
   createdAt: bigint;
   updatedAt: bigint;
 }
 
-export interface AvatarAccent {
+interface AvatarAccent {
   enabled: boolean;
   rgb: bigint | null;
   hex: string | null;

@@ -36,7 +36,7 @@ const publicClient =
       })
     : null;
 
-export interface ClaimableFrontendFeeRound {
+interface ClaimableFrontendFeeRound {
   contentId: string;
   roundId: string;
   title: string | null;
@@ -50,7 +50,7 @@ export interface ClaimableFrontendFeeRound {
   totalFrontendClaimants: number;
 }
 
-export interface ClaimableFrontendFeeResponse {
+interface ClaimableFrontendFeeResponse {
   items: ClaimableFrontendFeeRound[];
   hasMore: boolean;
   nextOffset: number;

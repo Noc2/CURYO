@@ -4,8 +4,9 @@
  */
 import "./fetch-shim";
 import { PONDER_URL } from "./ponder-url";
+import { E2E_RPC_URL } from "./service-urls";
 
-const ANVIL_RPC = "http://localhost:8545";
+const ANVIL_RPC = E2E_RPC_URL;
 
 /**
  * Fast-forward Anvil's block timestamp by the given number of seconds,

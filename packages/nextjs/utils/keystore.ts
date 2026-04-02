@@ -1,10 +1,8 @@
 /**
  * Foundry keystore helpers for Next.js server code.
  */
-import { decryptKeystore, getKeystoreAccountFromCredentials } from "@curyo/node-utils/keystore";
+import { getKeystoreAccountFromCredentials } from "@curyo/node-utils/keystore";
 import type { PrivateKeyAccount } from "viem/accounts";
-
-export { decryptKeystore };
 
 // --- Cached account (scrypt is expensive, only decrypt once) ---
 let cachedAccount: PrivateKeyAccount | null | undefined;

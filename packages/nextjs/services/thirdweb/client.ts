@@ -48,12 +48,12 @@ export const thirdwebClient = publicEnv.thirdwebClientId
     })
   : null;
 
-export const thirdwebSupportedChains = publicEnv.targetNetworks
+const thirdwebSupportedChains = publicEnv.targetNetworks
   .filter(network => isThirdwebWalletChain(network.id))
   .map(network => defineChain(network));
 const thirdwebSupportedChainIds = new Set(thirdwebSupportedChains.map(chain => chain.id));
 
-export const thirdwebDefaultChain = thirdwebSupportedChains[0] ?? defineChain(publicEnv.targetNetworks[0]);
+const thirdwebDefaultChain = thirdwebSupportedChains[0] ?? defineChain(publicEnv.targetNetworks[0]);
 
 function isConfiguredThirdwebWalletChain(chainId: number | null | undefined): chainId is number {
   return typeof chainId === "number" && thirdwebSupportedChainIds.has(chainId);
@@ -98,7 +98,7 @@ export function getPreferredThirdwebChainId(requestedChainId?: number): number {
   return thirdwebDefaultChain.id;
 }
 
-export function getStoredThirdwebSponsorshipMode(): ThirdwebSponsorshipMode | null {
+function getStoredThirdwebSponsorshipMode(): ThirdwebSponsorshipMode | null {
   if (typeof window === "undefined") {
     return null;
   }
@@ -177,7 +177,7 @@ export function createThirdwebInAppWallet(
   });
 }
 
-export function getThirdwebWallets(chainId: number = thirdwebDefaultChain.id) {
+function getThirdwebWallets(chainId: number = thirdwebDefaultChain.id) {
   return [
     createThirdwebInAppWallet(chainId),
     createWallet("io.metamask"),

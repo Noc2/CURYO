@@ -1,5 +1,6 @@
 import { SelfAppBuilder, getUniversalLink } from "@selfxyz/qrcode";
 import type { SelfApp } from "@selfxyz/qrcode";
+import { isAddress } from "viem";
 
 export const SELF_VERIFICATION_SCOPE = "curyo-faucet";
 
@@ -20,7 +21,7 @@ type SelfVerificationDisclosures = {
   expiry_date: false;
 };
 
-export type SelfVerificationAppConfig = {
+type SelfVerificationAppConfig = {
   appName: "Curyo";
   scope: typeof SELF_VERIFICATION_SCOPE;
   endpoint: string;
@@ -28,6 +29,7 @@ export type SelfVerificationAppConfig = {
   deeplinkCallback: string;
   userId: string;
   userIdType: "hex";
+  userDefinedData: string;
   devMode: boolean;
   version: 2;
   disclosures: SelfVerificationDisclosures;
@@ -38,6 +40,7 @@ type BuildSelfVerificationAppParams = {
   contractAddress: string;
   chainId: number;
   deeplinkCallback?: string;
+  referrer?: string | null;
 };
 
 const SELF_ENDPOINT_TYPES: Record<SupportedSelfVerificationChainId, SelfVerificationEndpointType> = {
@@ -69,10 +72,13 @@ export function buildSelfVerificationAppConfig({
   contractAddress,
   chainId,
   deeplinkCallback = "",
+  referrer,
 }: BuildSelfVerificationAppParams): SelfVerificationAppConfig | null {
   if (!isSelfVerificationSupportedChain(chainId)) {
     return null;
   }
+
+  const userDefinedData = typeof referrer === "string" && isAddress(referrer) ? referrer.toLowerCase() : "";
 
   return {
     appName: "Curyo",
@@ -82,6 +88,7 @@ export function buildSelfVerificationAppConfig({
     deeplinkCallback,
     userId: address,
     userIdType: "hex",
+    userDefinedData,
     // Self uses dev mode for mock document flows on staging/testnet.
     devMode: chainId === 11142220,
     version: 2,

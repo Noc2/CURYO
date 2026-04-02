@@ -1,10 +1,10 @@
-export interface VoteProgressIconCountsInput {
+interface VoteProgressIconCountsInput {
   voteCount: number;
   minVoters: number;
   maxIcons?: number;
 }
 
-export interface VoteProgressIconCounts {
+interface VoteProgressIconCounts {
   filled: number;
   empty: number;
 }
