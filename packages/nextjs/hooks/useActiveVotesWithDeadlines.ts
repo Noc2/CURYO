@@ -5,7 +5,7 @@ import { useUnixTime } from "~~/hooks/useUnixTime";
 import { useVotingConfig } from "~~/hooks/useVotingConfig";
 import { deriveVoteDeadlines } from "~~/lib/contracts/roundVotingEngine";
 
-export interface ActiveVoteWithDeadline {
+interface ActiveVoteWithDeadline {
   contentId: string;
   roundId: string;
   stake: string;
@@ -19,7 +19,7 @@ export interface ActiveVoteWithDeadline {
   epoch1Remaining: number; // seconds until epoch 1 ends (0 if already ended)
 }
 
-export interface ActiveVotesWithDeadlines {
+interface ActiveVotesWithDeadlines {
   votes: ActiveVoteWithDeadline[];
   earliestDeadline: string | null;
   /** Formatted time until the earliest unrevealed vote's epoch 1 ends (i.e. when it gets revealed). */

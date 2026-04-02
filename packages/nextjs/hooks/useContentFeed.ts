@@ -19,7 +19,7 @@ import { usePonderQuery } from "~~/hooks/usePonderQuery";
 import { ponderApi } from "~~/services/ponder/client";
 import { publicEnv } from "~~/utils/env/public";
 
-export type { ContentItem, UseContentFeedOptions } from "~~/hooks/contentFeed/shared";
+export type { ContentItem } from "~~/hooks/contentFeed/shared";
 
 /**
  * Fetch the content feed.

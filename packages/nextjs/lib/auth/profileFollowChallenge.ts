@@ -6,7 +6,7 @@ export const UNFOLLOW_PROFILE_ACTION = "unfollow-profile";
 export const READ_PROFILE_FOLLOWS_ACTION = "profile-follows:read";
 export const PROFILE_FOLLOW_CHALLENGE_TITLE = "Curyo follow authorization";
 
-export interface ProfileFollowChallengeInput {
+interface ProfileFollowChallengeInput {
   address?: string;
   targetAddress?: string;
 }
@@ -16,7 +16,7 @@ export interface NormalizedProfileFollowPayload {
   normalizedTargetAddress: `0x${string}`;
 }
 
-export interface NormalizedProfileFollowReadPayload {
+interface NormalizedProfileFollowReadPayload {
   normalizedAddress: `0x${string}`;
 }
 

@@ -46,13 +46,9 @@ export const governorAbi = parseAbi([
 
 const timelockAbi = parseAbi(["function getMinDelay() view returns (uint256)"]);
 
-export type GovernanceManagedContractName =
-  | "CuryoGovernor"
-  | "CategoryRegistry"
-  | "FrontendRegistry"
-  | "ContentRegistry";
+type GovernanceManagedContractName = "CuryoGovernor" | "CategoryRegistry" | "FrontendRegistry" | "ContentRegistry";
 
-export type GovernanceTargetContract = {
+type GovernanceTargetContract = {
   name: GovernanceManagedContractName;
   address: Address;
   abi: Abi;

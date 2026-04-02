@@ -1,15 +1,15 @@
 import { truncateContentTitle } from "~~/lib/contentTitle";
 
-export interface SettlingSoonCandidate {
+interface SettlingSoonCandidate {
   id: string;
   contentId: string;
   title: string;
   estimatedSettlementTime: string | null;
 }
 
-export type SettlingSoonNotificationKind = "hour" | "day";
+type SettlingSoonNotificationKind = "hour" | "day";
 
-export interface SettlingSoonNotificationSummary {
+interface SettlingSoonNotificationSummary {
   kind: SettlingSoonNotificationKind;
   contentId: string;
   href: string;

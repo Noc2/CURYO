@@ -31,7 +31,7 @@ type SponsoredSubmitCapabilities = {
   };
 };
 
-export type SponsoredSubmitContractCall = {
+type SponsoredSubmitContractCall = {
   abi: Abi;
   address: `0x${string}`;
   functionName: string;

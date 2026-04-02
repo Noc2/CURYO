@@ -3,13 +3,13 @@ import { DISCOVER_FEED_MODE_OPTIONS, type DiscoverFeedMode } from "~~/lib/vote/f
 export type ActivityViewOption = "watched" | "my_votes" | "my_submissions" | "settling_soon" | "followed_curators";
 export type VoteView = DiscoverFeedMode | ActivityViewOption;
 
-export interface VoteViewOption {
+interface VoteViewOption {
   value: VoteView;
   label: string;
   description?: string;
 }
 
-export interface VoteViewGroup {
+interface VoteViewGroup {
   label: string;
   options: VoteViewOption[];
 }

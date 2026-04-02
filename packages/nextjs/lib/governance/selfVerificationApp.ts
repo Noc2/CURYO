@@ -21,7 +21,7 @@ type SelfVerificationDisclosures = {
   expiry_date: false;
 };
 
-export type SelfVerificationAppConfig = {
+type SelfVerificationAppConfig = {
   appName: "Curyo";
   scope: typeof SELF_VERIFICATION_SCOPE;
   endpoint: string;

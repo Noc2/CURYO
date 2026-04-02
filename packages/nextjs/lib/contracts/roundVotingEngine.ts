@@ -24,12 +24,12 @@ export interface OpenRoundFallbackData {
   startTime: bigint | null;
 }
 
-export interface OptimisticRoundDelta {
+interface OptimisticRoundDelta {
   voteCount: number;
   stake: bigint;
 }
 
-export interface RoundTiming {
+interface RoundTiming {
   epoch1EndTime: number;
   epoch1Remaining: number;
   currentEpochRemaining: number;
@@ -37,7 +37,7 @@ export interface RoundTiming {
   isEpoch1: boolean;
 }
 
-export interface VoteDeadlines extends RoundTiming {
+interface VoteDeadlines extends RoundTiming {
   deadline: number;
   nextActionRemaining: number;
 }

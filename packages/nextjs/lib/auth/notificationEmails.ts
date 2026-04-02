@@ -14,7 +14,7 @@ export type NotificationEmailPayload = {
   email: string | null;
 } & Omit<EmailNotificationSettingsPayload, "email">;
 
-export type NotificationEmailReadPayload = {
+type NotificationEmailReadPayload = {
   normalizedAddress: `0x${string}`;
 };
 

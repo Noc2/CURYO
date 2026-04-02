@@ -5,7 +5,7 @@ import type { ContentItem } from "~~/hooks/useContentFeed";
 
 export type DiscoverFeedMode = "for_you" | "trending" | "contested" | "fresh" | "near_settlement";
 
-export interface DiscoverFeedModeOption {
+interface DiscoverFeedModeOption {
   value: DiscoverFeedMode;
   label: string;
   description: string;

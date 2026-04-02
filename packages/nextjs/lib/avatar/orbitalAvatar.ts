@@ -53,7 +53,7 @@ interface OrbitalAvatarShell {
   planetStroke: string;
 }
 
-export interface OrbitalAvatarModel {
+interface OrbitalAvatarModel {
   compositionRotation: number;
   planet: OrbitalAvatarPlanet | null;
   orbit: OrbitalAvatarOrbit | null;

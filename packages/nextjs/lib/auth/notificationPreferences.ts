@@ -11,7 +11,7 @@ export type NotificationPreferencesPayload = {
   normalizedAddress: `0x${string}`;
 } & NotificationPreferencesState;
 
-export type NotificationPreferencesReadPayload = {
+type NotificationPreferencesReadPayload = {
   normalizedAddress: `0x${string}`;
 };
 

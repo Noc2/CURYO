@@ -21,7 +21,7 @@ interface UsePonderQueryOptions<TPonder, TRpc> {
   keepPrevious?: boolean;
 }
 
-export interface PonderQueryResult<T> {
+interface PonderQueryResult<T> {
   data: T;
   source: "ponder" | "rpc";
 }

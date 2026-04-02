@@ -9,7 +9,7 @@ export interface SignedCollectionResponse<TItem> {
   count: number;
 }
 
-export interface SignedCollectionSessionStatus {
+interface SignedCollectionSessionStatus {
   hasReadSession: boolean;
   hasWriteSession: boolean;
 }

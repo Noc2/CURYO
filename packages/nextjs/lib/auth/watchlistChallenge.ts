@@ -6,7 +6,7 @@ export const UNWATCH_CONTENT_ACTION = "unwatch-content";
 export const READ_WATCHLIST_ACTION = "watchlist:read";
 export const WATCHLIST_CHALLENGE_TITLE = "Curyo watchlist authorization";
 
-export interface WatchlistChallengeInput {
+interface WatchlistChallengeInput {
   address?: string;
   contentId?: string | number | bigint;
 }
@@ -16,7 +16,7 @@ export interface NormalizedWatchlistChallengePayload {
   contentId: string;
 }
 
-export interface NormalizedWatchlistReadPayload {
+interface NormalizedWatchlistReadPayload {
   normalizedAddress: `0x${string}`;
 }
 
