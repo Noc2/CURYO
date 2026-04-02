@@ -11,7 +11,7 @@ import {
   setStoredSubmissionReservation,
   submissionReservationMatchesDraft,
 } from "./submissionReservation";
-import { decodeEventLog, encodeAbiParameters, keccak256, toHex } from "viem";
+import { decodeEventLog, toHex } from "viem";
 import { useAccount, useConfig } from "wagmi";
 import { readContract, waitForTransactionReceipt } from "wagmi/actions";
 import { ChevronDownIcon, MagnifyingGlassIcon, XMarkIcon } from "@heroicons/react/24/outline";
