@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { SafeExternalLink } from "~~/components/shared/SafeExternalLink";
+import { getEmbedImageLoadingProps } from "~~/lib/content/embedLoadStrategy";
 import type { ContentMetadataResult } from "~~/lib/contentMetadata/types";
 import type { PlatformInfo } from "~~/utils/platforms";
 
@@ -80,6 +81,7 @@ export function GitHubEmbed({ info, compact, prefetchedMetadata }: GitHubEmbedPr
 
   const repoSlug =
     info.id || (info.metadata?.owner && info.metadata?.repo ? `${info.metadata.owner}/${info.metadata.repo}` : null);
+  const imageLoadingProps = getEmbedImageLoadingProps(compact);
 
   useEffect(() => {
     setImageError(false);
@@ -212,9 +214,9 @@ export function GitHubEmbed({ info, compact, prefetchedMetadata }: GitHubEmbedPr
           <img
             src={`/api/image-proxy?url=${encodeURIComponent(repo.imageUrl)}`}
             alt={repo.name}
-            loading="lazy"
             width={192}
             height={192}
+            {...imageLoadingProps}
             className={`aspect-square h-auto w-[clamp(11rem,58%,24rem)] max-h-[72%] rounded-2xl shadow-lg transition-transform group-hover:scale-[1.05] object-cover ${
               imageLoaded ? "opacity-100" : "opacity-0"
             }`}

@@ -166,7 +166,7 @@ export const FeedVoteCard = memo(function FeedVoteCard({
       <div className={contentGridClassName}>
         <div className="flex min-w-0 min-h-0 flex-col overflow-hidden rounded-2xl bg-base-200">
           <div className={`${mediaHeightClassName} overflow-hidden`}>
-            <ContentEmbed url={item.url} prefetchedMetadata={item.contentMetadata} />
+            <ContentEmbed url={item.url} prefetchedMetadata={item.contentMetadata} deferClientFetch />
           </div>
           <FeedContentMetaCard
             item={item}

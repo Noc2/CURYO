@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { SafeExternalLink } from "~~/components/shared/SafeExternalLink";
+import { getEmbedImageLoadingProps } from "~~/lib/content/embedLoadStrategy";
 import type { PlatformInfo } from "~~/utils/platforms";
 
 interface ScryfallEmbedProps {
@@ -24,6 +25,7 @@ function MtgIcon({ className }: { className?: string }) {
 export function ScryfallEmbed({ info, compact }: ScryfallEmbedProps) {
   const [imageError, setImageError] = useState(false);
   const [imageLoaded, setImageLoaded] = useState(false);
+  const imageLoadingProps = getEmbedImageLoadingProps(compact);
 
   const cardName = (info.metadata?.cardName as string)?.replace(/-/g, " ") || "MTG Card";
   const formattedName = cardName
@@ -65,7 +67,7 @@ export function ScryfallEmbed({ info, compact }: ScryfallEmbedProps) {
       <img
         src={`/api/image-proxy?url=${encodeURIComponent(info.thumbnailUrl)}`}
         alt={formattedName}
-        loading="lazy"
+        {...imageLoadingProps}
         className={`shadow-lg transition-transform group-hover:scale-[1.02] ${
           compact
             ? "w-full h-auto rounded-xl aspect-[5/7] object-cover"

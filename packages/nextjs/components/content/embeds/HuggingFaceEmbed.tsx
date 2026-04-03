@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { SafeExternalLink } from "~~/components/shared/SafeExternalLink";
+import { getEmbedImageLoadingProps } from "~~/lib/content/embedLoadStrategy";
 import type { ContentMetadataResult } from "~~/lib/contentMetadata/types";
 import type { PlatformInfo } from "~~/utils/platforms";
 
@@ -47,6 +48,7 @@ export function HuggingFaceEmbed({ info, compact, prefetchedMetadata }: HuggingF
   const [imageLoaded, setImageLoaded] = useState(false);
 
   const modelId = info.id || (info.metadata?.modelId as string);
+  const imageLoadingProps = getEmbedImageLoadingProps(compact);
 
   useEffect(() => {
     setImageError(false);
@@ -161,9 +163,9 @@ export function HuggingFaceEmbed({ info, compact, prefetchedMetadata }: HuggingF
           <img
             src={`/api/image-proxy?url=${encodeURIComponent(model.imageUrl)}`}
             alt={model.name}
-            loading="lazy"
             width={192}
             height={192}
+            {...imageLoadingProps}
             className={`aspect-square h-auto w-[clamp(11rem,58%,24rem)] max-h-[72%] rounded-2xl shadow-lg transition-transform group-hover:scale-[1.05] object-cover ${
               imageLoaded ? "opacity-100" : "opacity-0"
             }`}

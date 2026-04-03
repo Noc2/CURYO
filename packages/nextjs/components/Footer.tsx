@@ -38,6 +38,12 @@ export const Footer = () => {
                 Imprint
               </Link>
             </div>
+            <span>·</span>
+            <div className="text-center">
+              <a href="https://github.com/Noc2/CURYO" target="_blank" rel="noopener noreferrer" className="link">
+                GitHub
+              </a>
+            </div>
           </div>
         </ul>
       </div>

@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { SafeExternalLink } from "~~/components/shared/SafeExternalLink";
+import { getEmbedImageLoadingProps } from "~~/lib/content/embedLoadStrategy";
 import type { ContentMetadataResult } from "~~/lib/contentMetadata/types";
 import type { PlatformInfo } from "~~/utils/platforms";
 
@@ -52,6 +53,7 @@ export function CoinGeckoEmbed({ info, compact, prefetchedMetadata }: CoinGeckoE
 
   const coinId = info.id || (info.metadata?.coinId as string);
   const imageSrc = token?.imageUrl ? `/api/image-proxy?url=${encodeURIComponent(token.imageUrl)}` : undefined;
+  const imageLoadingProps = getEmbedImageLoadingProps(compact);
 
   useEffect(() => {
     setImageError(false);
@@ -168,9 +170,9 @@ export function CoinGeckoEmbed({ info, compact, prefetchedMetadata }: CoinGeckoE
           <img
             src={imageSrc}
             alt={token.name}
-            loading="lazy"
             width={192}
             height={192}
+            {...imageLoadingProps}
             className={`aspect-square h-auto w-[clamp(10rem,48%,18rem)] max-h-[68%] shadow-lg transition-transform group-hover:scale-[1.05] object-contain ${
               imageLoaded ? "opacity-100" : "opacity-0"
             }`}
