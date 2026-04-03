@@ -848,10 +848,11 @@ const HomeInner = () => {
 
   const handleExternalOpen = useCallback(
     (item: ContentItem) => {
+      replaceVoteLocation({ contentId: item.id });
       markPrimaryInteraction(item.id);
       recordRecommendationSignal(item, "external_open");
     },
-    [markPrimaryInteraction, recordRecommendationSignal],
+    [markPrimaryInteraction, recordRecommendationSignal, replaceVoteLocation],
   );
 
   const handleViewChange = useCallback(
