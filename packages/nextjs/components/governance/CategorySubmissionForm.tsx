@@ -26,6 +26,7 @@ import {
   isInsufficientFundsError,
   isWalletRpcOverloadedError,
 } from "~~/lib/transactionErrors";
+import { getSubmittingTransactionMessage } from "~~/lib/ui/transactionStatusCopy";
 import { containsBlockedText, containsBlockedUrl } from "~~/utils/contentFilter";
 import { notification } from "~~/utils/scaffold-eth";
 
@@ -550,6 +551,9 @@ export const CategorySubmissionForm = () => {
               "Submit Platform"
             )}
           </button>
+          {isSubmitting ? (
+            <p className="text-center text-sm text-base-content/65">{getSubmittingTransactionMessage("platform")}</p>
+          ) : null}
         </form>
       )}
     </div>

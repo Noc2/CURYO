@@ -42,6 +42,7 @@ import {
   isInsufficientFundsError,
   isWalletRpcOverloadedError,
 } from "~~/lib/transactionErrors";
+import { getSubmittingTransactionMessage } from "~~/lib/ui/transactionStatusCopy";
 import { containsBlockedText, containsBlockedUrl } from "~~/utils/contentFilter";
 import { sanitizeExternalUrl } from "~~/utils/externalUrl";
 import { canonicalizeUrl, isSupportedVideoPlatform } from "~~/utils/platforms";
@@ -1036,6 +1037,11 @@ export function ContentSubmissionSection() {
                 "Submit Content"
               )}
             </button>
+            {isSubmitting ? (
+              <p className="mt-3 text-center text-sm text-base-content/65">
+                {getSubmittingTransactionMessage("content")}
+              </p>
+            ) : null}
           </div>
         </form>
       </div>

@@ -11,6 +11,7 @@ import { useTargetNetwork } from "~~/hooks/scaffold-eth/useTargetNetwork";
 import { usePageVisibility } from "~~/hooks/usePageVisibility";
 import { invalidateRecentUserVotes, useRecentUserVotes } from "~~/hooks/useRecentUserVotes";
 import { useUnixTime } from "~~/hooks/useUnixTime";
+import { getSubmittingTransactionMessage } from "~~/lib/ui/transactionStatusCopy";
 import { CommitData } from "~~/types/votingTypes";
 import { getParsedErrorWithAllAbis } from "~~/utils/scaffold-eth/contract";
 import { notification } from "~~/utils/scaffold-eth/notification";
@@ -235,7 +236,7 @@ export function useManualRevealVotes(voter?: Address) {
           return false;
         }
 
-        toastId = notification.loading("Submitting reveal...");
+        toastId = notification.loading(getSubmittingTransactionMessage("reveal"));
 
         const hash = await walletClient.writeContract({
           address: engineInfo.address,
