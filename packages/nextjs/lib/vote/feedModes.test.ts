@@ -106,30 +106,30 @@ test("contested keeps only items with an open round and ranks close pools first"
   );
 });
 
-test("fresh favors new submissions with low engagement", () => {
+test("latest orders submissions by created time", () => {
   const nowSeconds = 10_000;
   const ranked = sortDiscoverFeed(
     [
       makeContentItem({
         id: 1n,
         url: "https://example.com/new",
-        title: "Fresh post",
+        title: "Newest post",
         createdAt: "9600",
         lastActivityAt: "9600",
-        totalVotes: 1,
-        totalRounds: 0,
+        totalVotes: 20,
+        totalRounds: 4,
       }),
       makeContentItem({
         id: 2n,
         url: "https://example.com/old",
         title: "Older established post",
         createdAt: "1000",
-        lastActivityAt: "9000",
-        totalVotes: 20,
-        totalRounds: 4,
+        lastActivityAt: "9950",
+        totalVotes: 0,
+        totalRounds: 0,
       }),
     ],
-    "fresh",
+    "latest",
     nowSeconds,
   );
 

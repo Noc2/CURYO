@@ -400,6 +400,7 @@ interface FeedQueueCardProps {
   queuePosition: number;
   queueStatus?: QueueCardStatus | null;
   hasVoted?: boolean;
+  fluidWidth?: boolean;
   selected: boolean;
 }
 
@@ -410,6 +411,7 @@ export const FeedQueueCard = memo(function FeedQueueCard({
   queuePosition,
   queueStatus,
   hasVoted = false,
+  fluidWidth = false,
   selected,
 }: FeedQueueCardProps) {
   const platform = detectPlatform(item.url);
@@ -458,9 +460,11 @@ export const FeedQueueCard = memo(function FeedQueueCard({
           onNavigate?.("last", item.id);
         }
       }}
-      className={`group relative isolate flex w-[11.1rem] min-w-[11.1rem] flex-shrink-0 cursor-pointer snap-start flex-col overflow-hidden rounded-xl bg-base-200 text-left transition-colors sm:w-[11.35rem] sm:min-w-[11.35rem] xl:w-[11.8rem] xl:min-w-[11.8rem] ${
-        selected ? "shadow-[0_18px_36px_rgba(9,10,12,0.26)]" : "hover:bg-base-200"
-      }`}
+      className={`group relative isolate flex cursor-pointer snap-start flex-col overflow-hidden rounded-xl bg-base-200 text-left transition-colors ${
+        fluidWidth
+          ? "w-full min-w-0"
+          : "w-[11.1rem] min-w-[11.1rem] flex-shrink-0 sm:w-[11.35rem] sm:min-w-[11.35rem] xl:w-[11.8rem] xl:min-w-[11.8rem]"
+      } ${selected ? "shadow-[0_18px_36px_rgba(9,10,12,0.26)]" : "hover:bg-base-200"}`}
     >
       <div className="relative aspect-video cursor-pointer overflow-hidden bg-base-200">
         <div className="absolute inset-x-2 top-2 z-10 flex items-center justify-between gap-1.5">
