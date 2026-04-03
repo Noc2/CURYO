@@ -11,35 +11,82 @@ test("getWagmiConnectorIdForThirdwebWallet keeps in-app wallets on the in-app co
   );
 });
 
-test("getWagmiConnectorIdForThirdwebWallet preserves external wallet ids", () => {
+test("getWagmiConnectorIdForThirdwebWallet keeps dedicated connector ids for matching injected wallets", () => {
   assert.equal(
-    getWagmiConnectorIdForThirdwebWallet({
-      id: "io.metamask",
-    } as any),
+    getWagmiConnectorIdForThirdwebWallet(
+      {
+        id: "io.metamask",
+      } as any,
+      {
+        window: {
+          ethereum: {
+            providers: [{ isMetaMask: true }],
+          },
+        },
+      },
+    ),
     "io.metamask",
   );
-});
-
-test("getWagmiConnectorIdForThirdwebWallet keeps dedicated connector ids for known external wallets", () => {
   assert.equal(
-    getWagmiConnectorIdForThirdwebWallet({
-      id: "com.coinbase.wallet",
-    } as any),
+    getWagmiConnectorIdForThirdwebWallet(
+      {
+        id: "com.coinbase.wallet",
+      } as any,
+      {
+        window: {
+          ethereum: {
+            providers: [{ isCoinbaseWallet: true }],
+          },
+        },
+      },
+    ),
     "com.coinbase.wallet",
   );
   assert.equal(
-    getWagmiConnectorIdForThirdwebWallet({
-      id: "me.rainbow",
-    } as any),
+    getWagmiConnectorIdForThirdwebWallet(
+      {
+        id: "me.rainbow",
+      } as any,
+      {
+        window: {
+          ethereum: {
+            providers: [{ isRainbow: true }],
+          },
+        },
+      },
+    ),
     "me.rainbow",
+  );
+});
+
+test("getWagmiConnectorIdForThirdwebWallet skips dedicated external connectors when the injected provider is unavailable", () => {
+  assert.equal(
+    getWagmiConnectorIdForThirdwebWallet(
+      {
+        id: "io.metamask",
+      } as any,
+      {
+        window: {
+          ethereum: {
+            providers: [{ isCoinbaseWallet: true }],
+          },
+        },
+      },
+    ),
+    null,
   );
 });
 
 test("getWagmiConnectorIdForThirdwebWallet falls back to the generic injected connector for unknown external wallets", () => {
   assert.equal(
-    getWagmiConnectorIdForThirdwebWallet({
-      id: "walletConnect",
-    } as any),
+    getWagmiConnectorIdForThirdwebWallet(
+      {
+        id: "walletConnect",
+      } as any,
+      {
+        window: undefined,
+      },
+    ),
     "injected",
   );
 });

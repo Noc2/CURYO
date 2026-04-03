@@ -6,6 +6,7 @@ import type { UseConnectModalOptions } from "thirdweb/react";
 import { createWallet, inAppWallet } from "thirdweb/wallets";
 import type { Wallet } from "thirdweb/wallets";
 import { getThirdwebWalletAuthConfig } from "~~/services/thirdweb/auth";
+import { getAvailableThirdwebExternalWalletIds } from "~~/services/web3/injectedWalletProviders";
 import { publicEnv } from "~~/utils/env/public";
 
 const THIRDWEB_CONNECT_CHAIN_IDS = new Set([31337, 42220, 11142220]);
@@ -177,13 +178,16 @@ export function createThirdwebInAppWallet(
   });
 }
 
+export function getThirdwebWalletIds(
+  win: unknown = typeof window === "undefined" ? undefined : window,
+): Array<"inApp" | "io.metamask" | "com.coinbase.wallet" | "me.rainbow"> {
+  return ["inApp", ...getAvailableThirdwebExternalWalletIds(win)];
+}
+
 function getThirdwebWallets(chainId: number = thirdwebDefaultChain.id) {
-  return [
-    createThirdwebInAppWallet(chainId),
-    createWallet("io.metamask"),
-    createWallet("com.coinbase.wallet"),
-    createWallet("me.rainbow"),
-  ];
+  return getThirdwebWalletIds().map(walletId =>
+    walletId === "inApp" ? createThirdwebInAppWallet(chainId) : createWallet(walletId),
+  );
 }
 
 export function getThirdwebConnectOptions(chainId?: number): UseConnectModalOptions | null {
