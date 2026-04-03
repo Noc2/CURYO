@@ -8,14 +8,15 @@
  * Pattern follows cancelExpiredRoundDirect() in keeper.ts — ABI-encode
  * the call with viem and send via eth_sendTransaction.
  */
+import { parseRound } from "../../lib/contracts/roundVotingEngine";
 import { ANVIL_ACCOUNTS } from "./anvil-accounts";
 import { runCommitAttempts } from "./commit-attempts";
+import { type RpcSendResult, isRetryableDirectCommitSendResult } from "./direct-commit-retry";
 import "./fetch-shim";
 import { PONDER_URL } from "./ponder-url";
 import { E2E_RPC_URL } from "./service-urls";
-import { deriveAnchoredTlockRuntimeNowMs } from "./tlockRuntime";
 import { createTlockVoteCommit, encodeVoteTransferPayload } from "./tlock-voting";
-import { parseRound } from "../../lib/contracts/roundVotingEngine";
+import { deriveAnchoredTlockRuntimeNowMs } from "./tlockRuntime";
 
 const ANVIL_RPC = E2E_RPC_URL;
 // Contract gas costs shift as local protocol code evolves, so E2E helpers estimate
@@ -144,11 +145,6 @@ async function buildSubmissionReservation(
 
   return { revealCommitment, salt };
 }
-
-type RpcSendResult =
-  | { status: "success"; txHash: `0x${string}` }
-  | { status: "reverted"; txHash: `0x${string}`; reason: string }
-  | { status: "unknown"; txHash?: `0x${string}`; error: string };
 
 /** Send a raw transaction to the Anvil RPC and report whether its outcome is known. */
 async function sendTxViaRpc(from: string, to: string, data: `0x${string}`): Promise<RpcSendResult> {
@@ -1252,7 +1248,7 @@ export async function commitVoteDirect(
       const sendResult = await sendTxViaRpc(fromAddress, contractAddress, data);
       return {
         success: sendResult.status === "success",
-        retryable: sendResult.status === "reverted",
+        retryable: isRetryableDirectCommitSendResult(sendResult),
         commitKey: ckey!,
         isUp,
         salt,
@@ -1342,7 +1338,7 @@ export async function commitVoteWithTransferAndCallDirect(
       const sendResult = await sendTxViaRpc(fromAddress, tokenAddress, data);
       return {
         success: sendResult.status === "success",
-        retryable: sendResult.status === "reverted",
+        retryable: isRetryableDirectCommitSendResult(sendResult),
         commitKey: ckey!,
         isUp,
         salt,
