@@ -9,7 +9,7 @@ import { getRevertReason } from "./revert-utils.js";
 const ZERO_ADDRESS = "0x0000000000000000000000000000000000000000" as const;
 const PROTOCOL_FRONTEND_FEE_DISPOSITION = 2;
 
-export interface FrontendFeeSweepResult {
+interface FrontendFeeSweepResult {
   frontendAddress: `0x${string}`;
   roundsClaimed: number;
   withdrawals: number;

@@ -1,6 +1,6 @@
 import type { CallToolResult } from "@modelcontextprotocol/sdk/types.js";
 
-export interface DataEnvelope extends Record<string, unknown> {
+interface DataEnvelope extends Record<string, unknown> {
   data: Record<string, unknown>;
   provenance: {
     source: "ponder" | "chain";

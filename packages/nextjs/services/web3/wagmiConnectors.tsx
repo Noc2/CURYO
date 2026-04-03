@@ -7,18 +7,28 @@ import {
   thirdwebClient,
 } from "~~/services/thirdweb/client";
 import { setConnectedThirdwebConnectorWallet } from "~~/services/thirdweb/connectorWalletState";
-import { findTargetedInjectedProvider } from "~~/services/web3/injectedWalletProviders";
+import {
+  findInjectedProvider,
+  isCoinbaseInjectedProvider,
+  isDedicatedMetaMaskProvider,
+  isRainbowInjectedProvider,
+} from "~~/services/web3/wagmiConnectorTargets";
+import type { InjectedWalletProvider } from "~~/services/web3/wagmiConnectorTargets";
 
 const CURYO_THIRDWEB_ICON = "/favicon.svg";
 
-function createTargetedInjectedConnector(id: string, name: string) {
+function createTargetedInjectedConnector(
+  id: string,
+  name: string,
+  predicate: (provider: InjectedWalletProvider) => boolean,
+) {
   return injected({
     shimDisconnect: true,
     target: {
       id,
       name,
       provider(window) {
-        return findTargetedInjectedProvider(id, window) as any;
+        return findInjectedProvider(window, predicate) as any;
       },
     },
   });
@@ -54,11 +64,13 @@ export const wagmiConnectors = () => {
     );
   }
 
-  connectors.push(createTargetedInjectedConnector("io.metamask", "MetaMask"));
+  connectors.push(createTargetedInjectedConnector("io.metamask", "MetaMask", isDedicatedMetaMaskProvider));
 
-  connectors.push(createTargetedInjectedConnector("com.coinbase.wallet", "Coinbase Wallet"));
+  connectors.push(
+    createTargetedInjectedConnector("com.coinbase.wallet", "Coinbase Wallet", isCoinbaseInjectedProvider),
+  );
 
-  connectors.push(createTargetedInjectedConnector("me.rainbow", "Rainbow"));
+  connectors.push(createTargetedInjectedConnector("me.rainbow", "Rainbow", isRainbowInjectedProvider));
 
   connectors.push(
     injected({

@@ -1,15 +1,15 @@
 const DAY_MS = 24 * 60 * 60 * 1000;
 
-export type AccuracyLeaderboardWindow = "all" | "7d" | "30d" | "365d" | "season";
+type AccuracyLeaderboardWindow = "all" | "7d" | "30d" | "365d" | "season";
 export type AccuracyLeaderboardSortBy = "winRate" | "wins" | "stakeWon" | "settledVotes";
 
-export interface AccuracyLeaderboardWindowBounds {
+interface AccuracyLeaderboardWindowBounds {
   window: AccuracyLeaderboardWindow;
   startsAt: bigint | null;
   endsAt: bigint | null;
 }
 
-export interface SortableAccuracyLeaderboardItem {
+interface SortableAccuracyLeaderboardItem {
   voter: string;
   totalSettledVotes: number;
   totalWins: number;

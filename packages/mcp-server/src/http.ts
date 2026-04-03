@@ -17,7 +17,7 @@ import {
 } from "./protected-resource-metadata.js";
 import { createServer as createMcpServer } from "./server.js";
 
-export interface RunningHttpServer {
+interface RunningHttpServer {
   endpointUrl: string | null;
   healthUrl: string | null;
   readinessUrl: string | null;

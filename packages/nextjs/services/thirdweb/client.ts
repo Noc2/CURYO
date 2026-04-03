@@ -35,14 +35,6 @@ export function supportsThirdwebExecutionCapabilities(chainId: number | null | u
   return typeof chainId === "number" && THIRDWEB_EXECUTION_CHAIN_IDS.has(chainId);
 }
 
-export function getThirdwebPaymasterServiceUrl(chainId: number): string | null {
-  if (!publicEnv.thirdwebClientId || !supportsThirdwebExecutionCapabilities(chainId)) {
-    return null;
-  }
-
-  return `https://${chainId}.bundler.thirdweb.com/${publicEnv.thirdwebClientId}`;
-}
-
 export const thirdwebClient = publicEnv.thirdwebClientId
   ? createThirdwebClient({
       clientId: publicEnv.thirdwebClientId,
