@@ -110,7 +110,8 @@ export async function runVote() {
         log.debug(`Skipping content #${item.id} (already voted — one-time only)`);
         continue;
       }
-    } catch {
+    } catch (err: any) {
+      log.warn(`Skipping content #${item.id} (failed to read vote history: ${err.message})`);
       continue;
     }
 

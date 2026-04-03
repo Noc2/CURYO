@@ -16,6 +16,7 @@ const ITEM = {
 type SubmitCommandOptions = {
   balance?: bigint;
   hasVoterId?: boolean;
+  isUrlSubmittedError?: Error;
   isUrlSubmitted?: boolean;
   previewCategoryId?: bigint;
   sources?: Array<{
@@ -39,6 +40,9 @@ async function loadSubmitCommand(options: SubmitCommandOptions = {}) {
       case "balanceOf":
         return options.balance ?? 20_000_000n;
       case "isUrlSubmitted":
+        if (options.isUrlSubmittedError) {
+          throw options.isUrlSubmittedError;
+        }
         return options.isUrlSubmitted ?? false;
       case "previewSubmissionKey":
         return [options.previewCategoryId ?? ITEM.categoryId, SUBMISSION_KEY] as const;
@@ -203,6 +207,19 @@ describe("runSubmit", () => {
 
     expect(submitCommand.mocks.writeContract).not.toHaveBeenCalled();
     expect(submitCommand.mocks.log.debug).toHaveBeenCalledWith(`Skipping "${ITEM.title}" (URL already submitted)`);
+  });
+
+  it("warns when checking whether a URL is already submitted fails", async () => {
+    const submitCommand = await loadSubmitCommand({
+      isUrlSubmittedError: new Error("registry lookup failed"),
+    });
+
+    await submitCommand.runSubmit();
+
+    expect(submitCommand.mocks.writeContract).not.toHaveBeenCalled();
+    expect(submitCommand.mocks.log.warn).toHaveBeenCalledWith(
+      `Skipping "${ITEM.title}" (failed to check existing submission: registry lookup failed)`,
+    );
   });
 
   it("skips items whose resolved category no longer matches the source mapping", async () => {

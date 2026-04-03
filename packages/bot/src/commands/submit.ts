@@ -194,7 +194,8 @@ export async function runSubmit(options: SubmitRunOptions = {}) {
           log.debug(`Skipping "${item.title}" (URL already submitted)`);
           continue;
         }
-      } catch {
+      } catch (err: any) {
+        log.warn(`Skipping "${item.title}" (failed to check existing submission: ${err.message})`);
         continue;
       }
 

@@ -9,7 +9,11 @@ const COMMIT_HASH = `0x${"aa".repeat(32)}` as const;
 const CIPHERTEXT = `0x${"bb".repeat(16)}` as const;
 const DRAND_CHAIN_HASH = `0x${"cc".repeat(32)}` as const;
 
-async function loadVoteCommand() {
+type VoteCommandOptions = {
+  lastVoteError?: Error;
+};
+
+async function loadVoteCommand(options: VoteCommandOptions = {}) {
   vi.resetModules();
 
   const readContract = vi.fn(async ({ functionName }: { functionName: string }) => {
@@ -19,6 +23,9 @@ async function loadVoteCommand() {
       case "balanceOf":
         return 10_000_000n;
       case "lastVoteTimestamp":
+        if (options.lastVoteError) {
+          throw options.lastVoteError;
+        }
         return 0n;
       case "protocolConfig":
         return PROTOCOL_CONFIG_ADDRESS;
@@ -153,5 +160,18 @@ describe("runVote", () => {
         args: [42n, 123n, DRAND_CHAIN_HASH, COMMIT_HASH, CIPHERTEXT, 1_000_000n, expect.any(String)],
       }),
     );
+  });
+
+  it("warns when a vote-history read fails before skipping the content", async () => {
+    const voteCommand = await loadVoteCommand({
+      lastVoteError: new Error("history unavailable"),
+    });
+
+    await voteCommand.runVote();
+
+    expect(voteCommand.mocks.log.warn).toHaveBeenCalledWith(
+      "Skipping content #42 (failed to read vote history: history unavailable)",
+    );
+    expect(voteCommand.mocks.writeContract).not.toHaveBeenCalled();
   });
 });
