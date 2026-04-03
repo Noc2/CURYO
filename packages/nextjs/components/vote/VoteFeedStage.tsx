@@ -434,9 +434,10 @@ export function VoteFeedStage({
           {hasVisibleQueue ? (
             hasMultiRowQueue ? (
               <div
-                className="grid content-start gap-3 xl:gap-2.5"
+                className="grid content-start"
                 style={{
                   gridTemplateColumns: queueGridTemplateColumns,
+                  gap: queueLayout.gapPx,
                   width: queuePageWidth,
                 }}
                 aria-label="Content queue"
