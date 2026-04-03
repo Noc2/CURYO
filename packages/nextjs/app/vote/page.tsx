@@ -36,6 +36,7 @@ import {
 import { type DiscoverFeedMode, sortDiscoverFeed } from "~~/lib/vote/feedModes";
 import { rankForYouFeed } from "~~/lib/vote/forYouRanker";
 import { buildVoteLocation } from "~~/lib/vote/location";
+import { MAX_VOTE_QUEUE_WINDOW_SIZE } from "~~/lib/vote/queueLayout";
 import { mergeRequestedContentIntoFeed } from "~~/lib/vote/requestedContent";
 import { type VoteView, getVoteViewGroups, isActivityViewOption } from "~~/lib/vote/viewOptions";
 import { buildRecommendationSignalContext, trackRecommendationSignal } from "~~/utils/recommendationTracker";
@@ -567,7 +568,7 @@ const HomeInner = () => {
   } = useVoteFeedStage(displayFeed, {
     visibleCount,
     requestedActiveId: effectiveRequestedActiveId,
-    windowSize: 8,
+    windowSize: MAX_VOTE_QUEUE_WINDOW_SIZE,
   });
   const queueStatusByContentId = useQueueCardStatusMap(visibleFeedItems, feedSource, nowSeconds);
 
