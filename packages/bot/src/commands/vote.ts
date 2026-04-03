@@ -1,4 +1,5 @@
 import { randomBytes } from "crypto";
+import { ProtocolConfigAbi } from "@curyo/contracts/abis";
 import { createTlockVoteCommit } from "@curyo/contracts/voting";
 import { publicClient, getWalletClient, getAccount } from "../client.js";
 import { contractConfig } from "../contracts.js";
@@ -7,6 +8,21 @@ import { ponder } from "../ponder.js";
 import { getStrategy } from "../strategies/index.js";
 
 const ZERO_ADDRESS = "0x0000000000000000000000000000000000000000" as `0x${string}`;
+
+async function readRoundConfig() {
+  const protocolConfigAddress = (await publicClient.readContract({
+    ...contractConfig.votingEngine,
+    functionName: "protocolConfig",
+    args: [],
+  })) as `0x${string}`;
+
+  return publicClient.readContract({
+    address: protocolConfigAddress,
+    abi: ProtocolConfigAbi,
+    functionName: "config",
+    args: [],
+  });
+}
 
 export async function runVote() {
   const account = getAccount(config.rateBot);
@@ -127,10 +143,7 @@ export async function runVote() {
       // tlock commit-reveal: encrypt vote direction to epoch's drand round
       const salt = `0x${randomBytes(32).toString("hex")}` as `0x${string}`;
       // Read epoch duration from contract config
-      const configResult = (await publicClient.readContract({
-        ...contractConfig.votingEngine,
-        functionName: "config",
-      })) as readonly [bigint, bigint, bigint, bigint];
+      const configResult = (await readRoundConfig()) as readonly [bigint, bigint, bigint, bigint];
       const epochDuration = Number(configResult[0]);
 
       const { ciphertext, commitHash, targetRound, drandChainHash } = await createTlockVoteCommit({
