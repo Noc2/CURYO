@@ -23,8 +23,8 @@ Public submission sources still work without third-party API keys, but source co
 | Command | Description |
 |---|---|
 | `yarn bot:submit` | Discover trending content from platforms and submit to registry |
-| `yarn workspace @curyo/bot submit -- --category Movies --max-submissions 5` | Submit up to 5 items from the `Movies` category |
-| `yarn workspace @curyo/bot submit -- --source coingecko --max-submissions 2` | Submit up to 2 items from the CoinGecko source |
+| `yarn workspace @curyo/bot submit --category Movies --max-submissions 5` | Submit up to 5 items from the `Movies` category |
+| `yarn workspace @curyo/bot submit --source coingecko --max-submissions 2` | Submit up to 2 items from the CoinGecko source |
 | `yarn bot:vote` | Rate content and commit encrypted votes via tlock commit-reveal |
 | `yarn bot:status` | Check wallet balances and Voter ID ownership |
 
