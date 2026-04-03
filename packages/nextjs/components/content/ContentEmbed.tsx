@@ -3,11 +3,12 @@
 import React from "react";
 import dynamic from "next/dynamic";
 import { GenericLinkCard } from "./embeds";
+import { shouldWaitForPrefetchedMetadata } from "~~/lib/content/embedLoadStrategy";
 import type { ContentMetadataResult } from "~~/lib/contentMetadata/types";
 import { detectPlatform } from "~~/utils/platforms";
 
 const EmbedSpinner = () => (
-  <div className="flex items-center justify-center p-8">
+  <div className="flex h-full w-full items-center justify-center p-8">
     <span className="loading loading-spinner loading-md text-base-content/30" />
   </div>
 );
@@ -50,6 +51,7 @@ const TwitterEmbed = dynamic(() => import("./embeds/TwitterEmbed").then(m => m.T
 interface ContentEmbedProps {
   url: string;
   compact?: boolean;
+  deferClientFetch?: boolean;
   prefetchedMetadata?: ContentMetadataResult;
 }
 
@@ -76,8 +78,17 @@ class EmbedErrorBoundary extends React.Component<
  * Renders platform-appropriate embedded content.
  * Embeds are code-split via next/dynamic — only the needed embed is loaded.
  */
-export function ContentEmbed({ url, compact = false, prefetchedMetadata }: ContentEmbedProps) {
+export function ContentEmbed({
+  url,
+  compact = false,
+  deferClientFetch = false,
+  prefetchedMetadata,
+}: ContentEmbedProps) {
   const platformInfo = detectPlatform(url);
+
+  if (shouldWaitForPrefetchedMetadata(platformInfo.type, deferClientFetch, prefetchedMetadata)) {
+    return <GenericLinkCard url={url} compact={compact} />;
+  }
 
   let embed: React.ReactNode;
   switch (platformInfo.type) {
@@ -99,7 +110,7 @@ export function ContentEmbed({ url, compact = false, prefetchedMetadata }: Conte
       );
       break;
     case "rawg":
-      embed = <RawgEmbed key={url} info={platformInfo} compact={compact} />;
+      embed = <RawgEmbed key={url} info={platformInfo} compact={compact} prefetchedMetadata={prefetchedMetadata} />;
       break;
     case "openlibrary":
       embed = (

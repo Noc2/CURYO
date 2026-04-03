@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { SafeExternalLink } from "~~/components/shared/SafeExternalLink";
+import { getEmbedImageLoadingProps } from "~~/lib/content/embedLoadStrategy";
 import type { ContentMetadataResult } from "~~/lib/contentMetadata/types";
 import type { PlatformInfo } from "~~/utils/platforms";
 
@@ -27,14 +28,12 @@ function BookIcon({ className }: { className?: string }) {
   );
 }
 
-function getPrefetchedOpenLibraryBook(prefetchedMetadata?: ContentMetadataResult): OpenLibraryBook | null {
-  if (!prefetchedMetadata?.title) return null;
-
+function getPrefetchedOpenLibraryBook(olId: string, prefetchedMetadata?: ContentMetadataResult): OpenLibraryBook {
   return {
-    title: prefetchedMetadata.title,
-    description: prefetchedMetadata.description,
-    coverUrl: prefetchedMetadata.imageUrl ?? prefetchedMetadata.thumbnailUrl ?? undefined,
-    authors: prefetchedMetadata.authors,
+    title: prefetchedMetadata?.title ?? olId,
+    description: prefetchedMetadata?.description,
+    coverUrl: prefetchedMetadata?.imageUrl ?? prefetchedMetadata?.thumbnailUrl ?? undefined,
+    authors: prefetchedMetadata?.authors,
   };
 }
 
@@ -50,6 +49,7 @@ export function OpenLibraryEmbed({ info, compact, prefetchedMetadata }: OpenLibr
   const [imageLoaded, setImageLoaded] = useState(false);
 
   const olId = info.id || (info.metadata?.olId as string);
+  const imageLoadingProps = getEmbedImageLoadingProps(compact);
 
   useEffect(() => {
     setFetchError(false);
@@ -63,7 +63,7 @@ export function OpenLibraryEmbed({ info, compact, prefetchedMetadata }: OpenLibr
     }
 
     if (prefetchedMetadata !== undefined) {
-      setBook(getPrefetchedOpenLibraryBook(prefetchedMetadata));
+      setBook(getPrefetchedOpenLibraryBook(olId, prefetchedMetadata));
       setLoading(false);
       return;
     }
@@ -172,7 +172,7 @@ export function OpenLibraryEmbed({ info, compact, prefetchedMetadata }: OpenLibr
         <img
           src={book.coverUrl}
           alt={book.title}
-          loading="lazy"
+          {...imageLoadingProps}
           className={`rounded-t-xl shadow-lg transition-transform group-hover:scale-[1.02] ${
             compact ? "w-full h-auto aspect-[2/3] object-cover" : "h-full w-full object-contain object-center"
           } ${imageLoaded ? "opacity-100" : "opacity-0"}`}

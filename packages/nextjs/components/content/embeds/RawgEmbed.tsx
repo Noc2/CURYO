@@ -2,11 +2,14 @@
 
 import { useEffect, useState } from "react";
 import { SafeExternalLink } from "~~/components/shared/SafeExternalLink";
+import { getEmbedImageLoadingProps } from "~~/lib/content/embedLoadStrategy";
+import type { ContentMetadataResult } from "~~/lib/contentMetadata/types";
 import type { PlatformInfo } from "~~/utils/platforms";
 
 interface RawgEmbedProps {
   info: PlatformInfo;
   compact?: boolean;
+  prefetchedMetadata?: ContentMetadataResult;
 }
 
 interface RawgGame {
@@ -42,7 +45,15 @@ async function fetchRawgGame(slug: string): Promise<RawgGame | null> {
   }
 }
 
-export function RawgEmbed({ info, compact }: RawgEmbedProps) {
+function getPrefetchedRawgGame(slug: string, prefetchedMetadata?: ContentMetadataResult): RawgGame {
+  return {
+    name: prefetchedMetadata?.title ?? slug.replace(/-/g, " "),
+    description: prefetchedMetadata?.description,
+    backgroundImage: prefetchedMetadata?.imageUrl ?? prefetchedMetadata?.thumbnailUrl ?? undefined,
+  };
+}
+
+export function RawgEmbed({ info, compact, prefetchedMetadata }: RawgEmbedProps) {
   const [game, setGame] = useState<RawgGame | null>(null);
   const [loading, setLoading] = useState(true);
   const [fetchError, setFetchError] = useState(false);
@@ -50,6 +61,7 @@ export function RawgEmbed({ info, compact }: RawgEmbedProps) {
   const [imageLoaded, setImageLoaded] = useState(false);
 
   const slug = info.id || (info.metadata?.slug as string);
+  const imageLoadingProps = getEmbedImageLoadingProps(compact);
 
   useEffect(() => {
     setLoading(true);
@@ -59,6 +71,12 @@ export function RawgEmbed({ info, compact }: RawgEmbedProps) {
     setImageLoaded(false);
 
     if (!slug) {
+      setLoading(false);
+      return;
+    }
+
+    if (prefetchedMetadata !== undefined) {
+      setGame(getPrefetchedRawgGame(slug, prefetchedMetadata));
       setLoading(false);
       return;
     }
@@ -79,7 +97,7 @@ export function RawgEmbed({ info, compact }: RawgEmbedProps) {
     return () => {
       cancelled = true;
     };
-  }, [slug]);
+  }, [slug, prefetchedMetadata]);
 
   // Loading state
   if (loading) {
@@ -154,7 +172,7 @@ export function RawgEmbed({ info, compact }: RawgEmbedProps) {
         <img
           src={`/api/image-proxy?url=${encodeURIComponent(game.backgroundImage)}`}
           alt={game.name}
-          loading="lazy"
+          {...imageLoadingProps}
           className={`rounded-t-xl shadow-lg transition-transform group-hover:scale-[1.02] ${
             compact ? "w-full h-auto aspect-video object-cover" : "h-full w-full object-cover"
           } ${imageLoaded ? "opacity-100" : "opacity-0"}`}

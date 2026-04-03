@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import Image from "next/image";
 import { SafeExternalLink } from "~~/components/shared/SafeExternalLink";
+import { getEmbedImageLoadingProps } from "~~/lib/content/embedLoadStrategy";
 import type { ContentMetadataResult } from "~~/lib/contentMetadata/types";
 import type { PlatformInfo } from "~~/utils/platforms";
 
@@ -41,14 +42,12 @@ function TmdbIcon({ className }: { className?: string }) {
   );
 }
 
-function getPrefetchedTmdbMovie(prefetchedMetadata?: ContentMetadataResult): TmdbMovie | null {
-  if (!prefetchedMetadata?.title) return null;
-
+function getPrefetchedTmdbMovie(movieId: string, prefetchedMetadata?: ContentMetadataResult): TmdbMovie {
   return {
-    title: prefetchedMetadata.title,
-    overview: prefetchedMetadata.description,
-    posterUrl: prefetchedMetadata.imageUrl ?? prefetchedMetadata.thumbnailUrl ?? undefined,
-    releaseYear: prefetchedMetadata.releaseYear,
+    title: prefetchedMetadata?.title ?? `TMDB #${movieId}`,
+    overview: prefetchedMetadata?.description,
+    posterUrl: prefetchedMetadata?.imageUrl ?? prefetchedMetadata?.thumbnailUrl ?? undefined,
+    releaseYear: prefetchedMetadata?.releaseYear,
   };
 }
 
@@ -66,6 +65,7 @@ export function TmdbEmbed({ info, compact, prefetchedMetadata }: TmdbEmbedProps)
 
   const movieId = info.id || (info.metadata?.movieId as string);
   const posterImageSrc = movie?.posterUrl ? getPosterImageSrc(movie.posterUrl) : undefined;
+  const imageLoadingProps = getEmbedImageLoadingProps(compact);
 
   useEffect(() => {
     setFetchError(false);
@@ -77,7 +77,7 @@ export function TmdbEmbed({ info, compact, prefetchedMetadata }: TmdbEmbedProps)
     }
 
     if (prefetchedMetadata !== undefined) {
-      setMovie(getPrefetchedTmdbMovie(prefetchedMetadata));
+      setMovie(getPrefetchedTmdbMovie(movieId, prefetchedMetadata));
       setLoading(false);
       return;
     }
@@ -192,7 +192,7 @@ export function TmdbEmbed({ info, compact, prefetchedMetadata }: TmdbEmbedProps)
         <img
           src={posterImageSrc}
           alt={movie.title}
-          loading="lazy"
+          {...imageLoadingProps}
           className={`rounded-t-xl shadow-lg transition-transform group-hover:scale-[1.02] ${
             compact ? "w-full h-auto aspect-[2/3] object-cover" : "h-full w-full object-contain object-center"
           } ${imageLoaded ? "opacity-100" : "opacity-0"}`}

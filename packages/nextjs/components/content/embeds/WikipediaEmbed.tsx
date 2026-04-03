@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { SafeExternalLink } from "~~/components/shared/SafeExternalLink";
+import { getEmbedImageLoadingProps } from "~~/lib/content/embedLoadStrategy";
 import type { ContentMetadataResult } from "~~/lib/contentMetadata/types";
 import type { PlatformInfo } from "~~/utils/platforms";
 
@@ -27,13 +28,11 @@ function WikipediaIcon({ className }: { className?: string }) {
   );
 }
 
-function getPrefetchedWikipediaPerson(prefetchedMetadata?: ContentMetadataResult): WikipediaPerson | null {
-  if (!prefetchedMetadata?.title) return null;
-
+function getPrefetchedWikipediaPerson(title: string, prefetchedMetadata?: ContentMetadataResult): WikipediaPerson {
   return {
-    title: prefetchedMetadata.title,
-    description: prefetchedMetadata.description,
-    imageUrl: prefetchedMetadata.imageUrl ?? prefetchedMetadata.thumbnailUrl ?? undefined,
+    title: prefetchedMetadata?.title ?? title.replace(/_/g, " "),
+    description: prefetchedMetadata?.description,
+    imageUrl: prefetchedMetadata?.imageUrl ?? prefetchedMetadata?.thumbnailUrl ?? undefined,
   };
 }
 
@@ -49,6 +48,7 @@ export function WikipediaEmbed({ info, compact, prefetchedMetadata }: WikipediaE
   const [imageLoaded, setImageLoaded] = useState(false);
 
   const title = info.id || (info.metadata?.title as string);
+  const imageLoadingProps = getEmbedImageLoadingProps(compact);
 
   useEffect(() => {
     setFetchError(false);
@@ -62,7 +62,7 @@ export function WikipediaEmbed({ info, compact, prefetchedMetadata }: WikipediaE
     }
 
     if (prefetchedMetadata !== undefined) {
-      setPerson(getPrefetchedWikipediaPerson(prefetchedMetadata));
+      setPerson(getPrefetchedWikipediaPerson(title, prefetchedMetadata));
       setLoading(false);
       return;
     }
@@ -170,7 +170,7 @@ export function WikipediaEmbed({ info, compact, prefetchedMetadata }: WikipediaE
         <img
           src={person.imageUrl}
           alt={person.title}
-          loading="lazy"
+          {...imageLoadingProps}
           className={`rounded-t-xl shadow-lg transition-transform group-hover:scale-[1.02] ${
             compact ? "w-full h-auto aspect-[3/4] object-cover" : "h-full w-full object-contain object-center"
           } ${imageLoaded ? "opacity-100" : "opacity-0"}`}

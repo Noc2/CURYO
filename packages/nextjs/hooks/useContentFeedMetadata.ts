@@ -84,26 +84,32 @@ export function useContentFeedMetadata(feed: ContentItem[]) {
   const feedUrls = useMemo(() => getContentFeedMetadataUrls(feed), [feed]);
   const feedUrlsKey = useMemo(() => getContentFeedMetadataCacheKey(feedUrls), [feedUrls]);
 
-  const { data: metadataResult } = useQuery({
+  const { data: metadataMap } = useQuery({
     queryKey: ["contentFeedMetadata", feedUrlsKey],
     enabled: feedUrls.length > 0,
     staleTime: 60_000,
     queryFn: async () => {
-      // The batches are independent, so parallelizing them keeps hydration time from growing linearly with feed size.
-      const [metadataBatches, validationBatches] = await Promise.all([
-        Promise.all(chunkItems(feedUrls, THUMBNAIL_BATCH_SIZE).map(fetchThumbnailMetadataBatch)),
-        Promise.all(chunkItems(feedUrls, VALIDATION_BATCH_SIZE).map(fetchValidationBatch)),
-      ]);
+      const metadataBatches = await Promise.all(
+        chunkItems(feedUrls, THUMBNAIL_BATCH_SIZE).map(fetchThumbnailMetadataBatch),
+      );
+      return mergeBatchMaps(metadataBatches);
+    },
+  });
 
-      return {
-        metadataMap: mergeBatchMaps(metadataBatches),
-        validationMap: mergeBatchMaps(validationBatches),
-      };
+  const { data: validationMap } = useQuery({
+    queryKey: ["contentFeedValidation", feedUrlsKey],
+    enabled: feedUrls.length > 0,
+    staleTime: 60_000,
+    queryFn: async () => {
+      const validationBatches = await Promise.all(
+        chunkItems(feedUrls, VALIDATION_BATCH_SIZE).map(fetchValidationBatch),
+      );
+      return mergeBatchMaps(validationBatches);
     },
   });
 
   return {
-    metadataMap: metadataResult?.metadataMap ?? {},
-    validationMap: metadataResult?.validationMap ?? {},
+    metadataMap: metadataMap ?? {},
+    validationMap: validationMap ?? {},
   };
 }
