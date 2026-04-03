@@ -6,7 +6,6 @@ import type { ContentItem } from "~~/hooks/useContentFeed";
 interface UseVoteFeedStageOptions {
   visibleCount: number;
   requestedActiveId?: bigint | null;
-  windowSize?: number;
 }
 
 export function resolveVoteFeedActiveSourceIndex(
@@ -31,23 +30,8 @@ export function resolveVoteFeedActiveSourceIndex(
   return 0;
 }
 
-export function resolveVoteFeedVisibleItems<T>(
-  items: ReadonlyArray<T>,
-  activeSourceIndex: number,
-  visibleCount: number,
-  windowSize: number,
-) {
-  const loadedItems = items.slice(0, visibleCount);
-  if (loadedItems.length <= windowSize) return loadedItems;
-
-  const halfWindow = Math.floor(windowSize / 2);
-  const maxStart = Math.max(loadedItems.length - windowSize, 0);
-  const start = Math.min(Math.max(activeSourceIndex - halfWindow, 0), maxStart);
-  return loadedItems.slice(start, start + windowSize);
-}
-
 export function useVoteFeedStage(items: ContentItem[], options: UseVoteFeedStageOptions) {
-  const { visibleCount, requestedActiveId, windowSize = 7 } = options;
+  const { visibleCount, requestedActiveId } = options;
   const [activeContentId, setActiveContentId] = useState<bigint | null>(requestedActiveId ?? null);
 
   useEffect(() => {
@@ -73,10 +57,6 @@ export function useVoteFeedStage(items: ContentItem[], options: UseVoteFeedStage
   const activeSourceIndex = useMemo(() => {
     return resolveVoteFeedActiveSourceIndex(items, activeContentId, requestedActiveId);
   }, [activeContentId, items, requestedActiveId]);
-
-  const visibleItems = useMemo(() => {
-    return resolveVoteFeedVisibleItems(items, activeSourceIndex, visibleCount, windowSize);
-  }, [activeSourceIndex, items, visibleCount, windowSize]);
   const activeItem = activeSourceIndex >= 0 ? (items[activeSourceIndex] ?? null) : null;
 
   const selectContent = useCallback((contentId: bigint | null) => {
@@ -103,6 +83,6 @@ export function useVoteFeedStage(items: ContentItem[], options: UseVoteFeedStage
     activeSourceIndex,
     selectContent,
     selectRelative,
-    visibleItems,
+    loadedItems: items.slice(0, visibleCount),
   };
 }

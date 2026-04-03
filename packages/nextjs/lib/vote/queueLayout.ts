@@ -115,12 +115,20 @@ export function computeVoteQueueLayout({
   };
 }
 
-export function chunkVoteQueueItems<T>(items: T[], pageSize: number): T[][] {
-  if (pageSize <= 0 || items.length === 0) return items.length === 0 ? [] : [items];
+export function resolveVoteQueueWindowItems<T>(
+  items: ReadonlyArray<T>,
+  activeIndex: number,
+  layout: Pick<VoteQueueLayout, "rows" | "columns">,
+) {
+  if (layout.rows === 0 || items.length === 0) return [];
+  if (layout.rows === 1) return [...items];
 
-  const pages: T[][] = [];
-  for (let index = 0; index < items.length; index += pageSize) {
-    pages.push(items.slice(index, index + pageSize));
-  }
-  return pages;
+  const capacity = layout.rows * layout.columns;
+  if (items.length <= capacity) return [...items];
+
+  const anchorColumn = Math.floor(layout.columns / 2);
+  const clampedActiveIndex = Math.min(Math.max(activeIndex, 0), items.length - 1);
+  const maxStart = Math.max(items.length - capacity, 0);
+  const start = Math.min(Math.max(clampedActiveIndex - anchorColumn, 0), maxStart);
+  return items.slice(start, start + capacity);
 }

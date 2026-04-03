@@ -563,14 +563,22 @@ const HomeInner = () => {
   const {
     activeItem: primaryItem,
     activeSourceIndex,
+    loadedItems,
     selectContent,
-    visibleItems: visibleFeedItems,
   } = useVoteFeedStage(displayFeed, {
     visibleCount,
     requestedActiveId: effectiveRequestedActiveId,
-    windowSize: MAX_VOTE_QUEUE_WINDOW_SIZE,
   });
-  const queueStatusByContentId = useQueueCardStatusMap(visibleFeedItems, feedSource, nowSeconds);
+  const queueSourceItems = useMemo(() => {
+    if (displayFeed.length === 0) return loadedItems;
+
+    const minimumQueueSourceCount =
+      activeSourceIndex >= 0 ? Math.min(displayFeed.length, activeSourceIndex + MAX_VOTE_QUEUE_WINDOW_SIZE) : 0;
+    const queueSourceCount = Math.max(loadedItems.length, minimumQueueSourceCount);
+
+    return displayFeed.slice(0, queueSourceCount);
+  }, [activeSourceIndex, displayFeed, loadedItems]);
+  const queueStatusByContentId = useQueueCardStatusMap(queueSourceItems, feedSource, nowSeconds);
 
   useEffect(() => {
     return () => {
@@ -600,8 +608,8 @@ const HomeInner = () => {
   }, [flushActiveViewSession, persistRecommendationSignal, primaryItem]);
 
   const submitterAddresses = useMemo(() => {
-    return visibleFeedItems.map(item => item.submitter);
-  }, [visibleFeedItems]);
+    return queueSourceItems.map(item => item.submitter);
+  }, [queueSourceItems]);
   const queuePositionMap = useMemo(() => {
     const positions = new Map<string, number>();
     displayFeed.forEach((item, index) => {
@@ -1080,7 +1088,7 @@ const HomeInner = () => {
           <VoteFeedStage
             primaryItem={primaryItem}
             displayFeed={displayFeed}
-            visibleFeedItems={visibleFeedItems}
+            queueSourceItems={queueSourceItems}
             navigationDirection={navigationDirection}
             activeSourceIndex={activeSourceIndex}
             loadedCount={visibleCount}

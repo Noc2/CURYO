@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { chunkVoteQueueItems, computeVoteQueueLayout } from "~~/lib/vote/queueLayout";
+import { computeVoteQueueLayout, resolveVoteQueueWindowItems } from "~~/lib/vote/queueLayout";
 
 test("computeVoteQueueLayout keeps one row on standard desktop heights", () => {
   const layout = computeVoteQueueLayout({
@@ -76,8 +76,71 @@ test("computeVoteQueueLayout keeps one row on mobile regardless of tight height"
   assert.equal(layout.pageSize, layout.columns);
 });
 
-test("chunkVoteQueueItems groups items into horizontal pages", () => {
-  const pages = chunkVoteQueueItems([1, 2, 3, 4, 5, 6, 7, 8, 9], 4);
+test("resolveVoteQueueWindowItems hides thumbnails when the layout has zero rows", () => {
+  const visibleItems = resolveVoteQueueWindowItems([1, 2, 3, 4, 5], 2, {
+    rows: 0,
+    columns: 5,
+  });
 
-  assert.deepEqual(pages, [[1, 2, 3, 4], [5, 6, 7, 8], [9]]);
+  assert.deepEqual(visibleItems, []);
+});
+
+test("resolveVoteQueueWindowItems keeps the full rail for single-row layouts", () => {
+  const visibleItems = resolveVoteQueueWindowItems([1, 2, 3, 4, 5], 2, {
+    rows: 1,
+    columns: 5,
+  });
+
+  assert.deepEqual(visibleItems, [1, 2, 3, 4, 5]);
+});
+
+test("resolveVoteQueueWindowItems anchors the active item near the middle of the first row in two-row layouts", () => {
+  const items = Array.from({ length: 20 }, (_, index) => index + 1);
+
+  assert.deepEqual(
+    resolveVoteQueueWindowItems(items, 2, {
+      rows: 2,
+      columns: 5,
+    }),
+    [1, 2, 3, 4, 5, 6, 7, 8, 9, 10],
+  );
+
+  assert.deepEqual(
+    resolveVoteQueueWindowItems(items, 3, {
+      rows: 2,
+      columns: 5,
+    }),
+    [2, 3, 4, 5, 6, 7, 8, 9, 10, 11],
+  );
+});
+
+test("resolveVoteQueueWindowItems shifts a three-row layout by one item while keeping full rows only", () => {
+  const items = Array.from({ length: 20 }, (_, index) => index + 1);
+
+  assert.deepEqual(
+    resolveVoteQueueWindowItems(items, 2, {
+      rows: 3,
+      columns: 5,
+    }),
+    [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15],
+  );
+
+  assert.deepEqual(
+    resolveVoteQueueWindowItems(items, 3, {
+      rows: 3,
+      columns: 5,
+    }),
+    [2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16],
+  );
+});
+
+test("resolveVoteQueueWindowItems clamps cleanly near the end of the feed", () => {
+  const items = Array.from({ length: 20 }, (_, index) => index + 1);
+
+  const visibleItems = resolveVoteQueueWindowItems(items, 19, {
+    rows: 2,
+    columns: 5,
+  });
+
+  assert.deepEqual(visibleItems, [11, 12, 13, 14, 15, 16, 17, 18, 19, 20]);
 });

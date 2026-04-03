@@ -8,7 +8,7 @@ import { useQueueNavigation } from "~~/hooks/useQueueNavigation";
 import type { SubmitterProfile } from "~~/hooks/useSubmitterProfiles";
 import { useVoteQueueLayout } from "~~/hooks/useVoteQueueLayout";
 import type { QueueCardStatus } from "~~/lib/vote/queueCardStatus";
-import { chunkVoteQueueItems } from "~~/lib/vote/queueLayout";
+import { resolveVoteQueueWindowItems } from "~~/lib/vote/queueLayout";
 
 const CARD_SWIPE_THRESHOLD = 96;
 const VOTE_CARD_TRANSITION_EASE = [0.22, 1, 0.36, 1] as const;
@@ -39,7 +39,7 @@ type QueueAction = "previous" | "next" | "first" | "last";
 interface VoteFeedStageProps {
   primaryItem: ContentItem | null;
   displayFeed: ContentItem[];
-  visibleFeedItems: ContentItem[];
+  queueSourceItems: ContentItem[];
   navigationDirection: "previous" | "next";
   activeSourceIndex: number;
   loadedCount: number;
@@ -72,7 +72,7 @@ interface VoteFeedStageProps {
 export function VoteFeedStage({
   primaryItem,
   displayFeed,
-  visibleFeedItems,
+  queueSourceItems,
   navigationDirection,
   activeSourceIndex,
   loadedCount,
@@ -110,14 +110,9 @@ export function VoteFeedStage({
   const queueLayout = useVoteQueueLayout(queueSectionElement);
   const hasVisibleQueue = queueLayout.rows > 0;
   const hasMultiRowQueue = queueLayout.rows > 1;
-
-  const queuePages = useMemo(() => {
-    if (queueLayout.rows <= 1) {
-      return [visibleFeedItems];
-    }
-
-    return chunkVoteQueueItems(visibleFeedItems, queueLayout.pageSize);
-  }, [queueLayout.pageSize, queueLayout.rows, visibleFeedItems]);
+  const queueVisibleItems = useMemo(() => {
+    return resolveVoteQueueWindowItems(queueSourceItems, activeSourceIndex, queueLayout);
+  }, [activeSourceIndex, queueLayout, queueSourceItems]);
 
   const queueGridTemplateColumns = useMemo(() => {
     if (queueLayout.rows <= 1) return undefined;
@@ -134,24 +129,27 @@ export function VoteFeedStage({
     return selectedNextItem ? getVoteFeedThumbnailSrc(selectedNextItem) : null;
   }, [activeSourceIndex, displayFeed]);
 
-  const scrollQueueThumbnailIntoView = useCallback((contentId: bigint | null, behavior: ScrollBehavior = "smooth") => {
-    if (contentId === null) return;
+  const scrollQueueThumbnailIntoView = useCallback(
+    (contentId: bigint | null, behavior: ScrollBehavior = "smooth") => {
+      if (contentId === null || queueLayout.rows !== 1) return;
 
-    const rail = queueRailRef.current;
-    if (!rail) return;
+      const rail = queueRailRef.current;
+      if (!rail) return;
 
-    const thumbnail = rail.querySelector<HTMLElement>(`[data-thumbnail-id="${contentId.toString()}"]`);
-    if (!thumbnail) return;
+      const thumbnail = rail.querySelector<HTMLElement>(`[data-thumbnail-id="${contentId.toString()}"]`);
+      if (!thumbnail) return;
 
-    const railRect = rail.getBoundingClientRect();
-    const thumbnailRect = thumbnail.getBoundingClientRect();
-    const centeredScrollLeft =
-      rail.scrollLeft + (thumbnailRect.left - railRect.left) - (rail.clientWidth - thumbnailRect.width) / 2;
-    const maxScrollLeft = Math.max(0, rail.scrollWidth - rail.clientWidth);
-    const nextScrollLeft = Math.min(Math.max(0, centeredScrollLeft), maxScrollLeft);
+      const railRect = rail.getBoundingClientRect();
+      const thumbnailRect = thumbnail.getBoundingClientRect();
+      const centeredScrollLeft =
+        rail.scrollLeft + (thumbnailRect.left - railRect.left) - (rail.clientWidth - thumbnailRect.width) / 2;
+      const maxScrollLeft = Math.max(0, rail.scrollWidth - rail.clientWidth);
+      const nextScrollLeft = Math.min(Math.max(0, centeredScrollLeft), maxScrollLeft);
 
-    rail.scrollTo({ left: nextScrollLeft, behavior });
-  }, []);
+      rail.scrollTo({ left: nextScrollLeft, behavior });
+    },
+    [queueLayout.rows],
+  );
 
   const focusQueueThumbnail = useCallback(
     (contentId: bigint | null) => {
@@ -170,9 +168,9 @@ export function VoteFeedStage({
   );
 
   useEffect(() => {
-    if (!primaryItem) return;
+    if (!primaryItem || queueLayout.rows !== 1) return;
     scrollQueueThumbnailIntoView(primaryItem.id);
-  }, [primaryItem, scrollQueueThumbnailIntoView]);
+  }, [primaryItem, queueLayout.rows, scrollQueueThumbnailIntoView]);
 
   useEffect(() => {
     if (typeof window === "undefined" || typeof window.matchMedia !== "function") return;
@@ -423,7 +421,7 @@ export function VoteFeedStage({
         </div>
       ) : null}
 
-      {visibleFeedItems.length > 0 ? (
+      {queueSourceItems.length > 0 ? (
         <motion.section
           ref={handleQueueSectionRef}
           key={primaryItem?.id.toString() ?? "queue-empty"}
@@ -434,51 +432,49 @@ export function VoteFeedStage({
           transition={{ duration: 0.18, ease: VOTE_CARD_TRANSITION_EASE }}
         >
           {hasVisibleQueue ? (
-            <div
-              ref={handleQueueRailRef}
-              data-disable-queue-wheel="true"
-              className={`scrollbar-hide min-w-0 overflow-x-auto snap-x snap-mandatory ${
-                hasMultiRowQueue ? "flex items-start gap-4 xl:gap-3" : "flex items-stretch gap-3 xl:gap-2.5"
-              }`}
-              aria-label="Content queue"
-            >
-              {hasMultiRowQueue
-                ? queuePages.map((pageItems, pageIndex) => (
-                    <div
-                      key={`queue-page-${pageIndex}`}
-                      className="grid shrink-0 content-start gap-3 snap-start xl:gap-2.5"
-                      style={{
-                        gridTemplateColumns: queueGridTemplateColumns,
-                        width: queuePageWidth,
-                      }}
-                    >
-                      {pageItems.map(item => (
-                        <FeedQueueCard
-                          key={item.id.toString()}
-                          item={item}
-                          onSelect={onSelectCard}
-                          onNavigate={handleQueueKeyboardNavigate}
-                          queuePosition={queuePositionMap.get(item.id.toString()) ?? 0}
-                          queueStatus={queueStatusByContentId.get(item.id.toString()) ?? null}
-                          hasVoted={votedContentIds.has(item.id.toString())}
-                          selected={item.id === primaryItem?.id}
-                        />
-                      ))}
-                    </div>
-                  ))
-                : visibleFeedItems.map(item => (
-                    <FeedQueueCard
-                      key={item.id.toString()}
-                      item={item}
-                      onSelect={onSelectCard}
-                      onNavigate={handleQueueKeyboardNavigate}
-                      queuePosition={queuePositionMap.get(item.id.toString()) ?? 0}
-                      queueStatus={queueStatusByContentId.get(item.id.toString()) ?? null}
-                      hasVoted={votedContentIds.has(item.id.toString())}
-                      selected={item.id === primaryItem?.id}
-                    />
-                  ))}
-            </div>
+            hasMultiRowQueue ? (
+              <div
+                className="grid content-start gap-3 xl:gap-2.5"
+                style={{
+                  gridTemplateColumns: queueGridTemplateColumns,
+                  width: queuePageWidth,
+                }}
+                aria-label="Content queue"
+              >
+                {queueVisibleItems.map(item => (
+                  <FeedQueueCard
+                    key={item.id.toString()}
+                    item={item}
+                    onSelect={onSelectCard}
+                    onNavigate={handleQueueKeyboardNavigate}
+                    queuePosition={queuePositionMap.get(item.id.toString()) ?? 0}
+                    queueStatus={queueStatusByContentId.get(item.id.toString()) ?? null}
+                    hasVoted={votedContentIds.has(item.id.toString())}
+                    selected={item.id === primaryItem?.id}
+                  />
+                ))}
+              </div>
+            ) : (
+              <div
+                ref={handleQueueRailRef}
+                data-disable-queue-wheel="true"
+                className="scrollbar-hide flex min-w-0 items-stretch gap-3 overflow-x-auto snap-x snap-mandatory xl:gap-2.5"
+                aria-label="Content queue"
+              >
+                {queueVisibleItems.map(item => (
+                  <FeedQueueCard
+                    key={item.id.toString()}
+                    item={item}
+                    onSelect={onSelectCard}
+                    onNavigate={handleQueueKeyboardNavigate}
+                    queuePosition={queuePositionMap.get(item.id.toString()) ?? 0}
+                    queueStatus={queueStatusByContentId.get(item.id.toString()) ?? null}
+                    hasVoted={votedContentIds.has(item.id.toString())}
+                    selected={item.id === primaryItem?.id}
+                  />
+                ))}
+              </div>
+            )
           ) : null}
         </motion.section>
       ) : null}
