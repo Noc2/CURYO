@@ -1,306 +1,366 @@
-# Multi-Token / Stablecoin Voting Research
+# Multi-Token Voting Research
 
-Date: 2026-04-03
-Repo snapshot: `/Users/davidhawig/source/curyo-release`
+## Scope
 
-## Executive Summary
+Assumption for this note: we are only discussing additional assets for content voting. `cREP` should remain:
 
-- The current protocol is not token-agnostic. Content voting, vote settlement, submitter stakes, frontend fees, category rewards, treasury inflows, consensus reserve, participation rewards, faucet distribution, docs, bots, and indexers are all wired around cREP.
-- cREP is already the sole governance token by construction. `CuryoGovernor` reads voting power from a single `IVotes` token set in its constructor, and the deploy script passes `CuryoReputation`.
-- Adding native multi-token or stablecoin voting later is possible, but it is a V2 protocol change, not a config change. The safest approach is to leave `CuryoReputation` and `CuryoGovernor` unchanged for governance and build a new content-voting stack.
-- If the real product goal is "let users come in with USDC/USDT and still vote," the lowest-risk path is not native multi-asset voting. It is an access-layer conversion into cREP before the existing vote flow. That preserves the current economics almost completely.
+- usable across the existing protocol
+- the only governance token
+- the canonical asset for submissions, category staking, treasury accounting, and faucet/governance unless we explicitly redesign those too
 
-## Short Answers
+## TL;DR
 
-### 1. Is cREP already the sole governance token by construction?
+- The current protocol core is single-asset, and that asset is wired to `cREP`.
+- Letting users *arrive* with USDC or other stablecoins later is possible, but the lowest-risk version is still "turn that asset into cREP before the existing vote path."
+- Letting the protocol itself settle native `cREP + stablecoin` votes inside the same round is not a small config change. It is a voting/reward redesign.
+- The existing `bonusPool` is not the hard part. It is only the submission-cancellation fee sink. The harder parts are the `cREP`-denominated consensus reserve, participation rewards, treasury accounting, rating math, and off-chain indexing/UI assumptions.
+- `cREP`-only governance is already enforced by construction and can remain unchanged even if we later add non-governance vote-funding paths.
 
-Yes.
+## What The Code Does Today
 
-- `CuryoReputation` is the only token in the repo that implements `ERC20Votes`, and it self-delegates on receipt so balances immediately become governance voting power. See `packages/foundry/contracts/CuryoReputation.sol:15-18` and `packages/foundry/contracts/CuryoReputation.sol:167-193`.
-- `CuryoGovernor` is constructed with a single `IVotes` token and stores that cREP token as `immutable`. See `packages/foundry/contracts/governance/CuryoGovernor.sol:35-38` and `packages/foundry/contracts/governance/CuryoGovernor.sol:59-75`.
-- The production deploy script explicitly wires `CuryoGovernor(IVotes(address(crepToken)), ...)` and sets that governor on `CuryoReputation`. See `packages/foundry/script/DeployCuryo.s.sol:88-110`.
+### 1. Content voting is structurally single-token
 
-### 2. Can other tokens or stablecoins be integrated for voting?
+`RoundVotingEngine` stores a single `crepToken`, only accepts ERC-1363 callbacks from that token, and pays stake returns, rewards, refunds, treasury flows, and consensus reserve flows from that same token balance.
 
-Yes, but not inside the current design without substantial contract and product changes.
+Key references:
 
-- The current voting engine stores a single `crepToken`, pulls only that token on commit, and pays only that token on reward/refund paths. See `packages/foundry/contracts/RoundVotingEngine.sol:102-105`, `packages/foundry/contracts/RoundVotingEngine.sol:182-200`, `packages/foundry/contracts/RoundVotingEngine.sol:202-216`, `packages/foundry/contracts/RoundVotingEngine.sol:230-250`, and `packages/foundry/contracts/RoundVotingEngine.sol:334`.
-- The deploy script states the intended model directly: "All protocol operations use cREP token only (no stablecoins)." See `packages/foundry/script/DeployCuryo.s.sol:27-30`.
+- `packages/foundry/contracts/RoundVotingEngine.sol:96-103`
+- `packages/foundry/contracts/RoundVotingEngine.sol:182-200`
+- `packages/foundry/contracts/RoundVotingEngine.sol:202-215`
+- `packages/foundry/contracts/RoundVotingEngine.sol:230-335`
+- `packages/foundry/contracts/RoundVotingEngine.sol:649-758`
+- `packages/foundry/contracts/RoundVotingEngine.sol:768-880`
 
-### 3. Can this be added later as an upgrade while cREP remains usable everywhere and remains the only governance token?
+The round and commit storage also have no asset identifier. They only store scalar stake amounts:
 
-Yes, but "upgrade" here should mean "new V2 voting architecture governed by the same cREP-based governance," not "small patch to the current contracts."
+- `packages/foundry/contracts/libraries/RoundLib.sol:33-61`
 
-- The proxy-backed contracts can be upgraded under the timelock. See `packages/foundry/script/DeployCuryo.s.sol:120-165` and `packages/foundry/test/UpgradeTest.t.sol:274-620`.
-- Several supporting contracts are not upgradeable, or they pin critical references immutably. Those contracts sharply limit how far an in-place retrofit can go. See the "Upgrade Constraints" section below.
+That means the current storage model has nowhere to represent "this vote used cREP, that vote used USDC."
 
-## What The Current System Assumes
+### 2. Reward math assumes one fungible unit
 
-### Governance is cREP-only
+Reward splitting and rating math operate on raw pool totals with no FX normalization, oracle snapshot, or per-asset accounting.
 
-- `CuryoReputation` is the governance asset and exposes the historical voting checkpoints used by `GovernorVotes`. `packages/foundry/contracts/CuryoReputation.sol:15-18`
-- The governor locks cREP after proposal creation and vote casting by calling back into `CuryoReputation.lockForGovernance`. `packages/foundry/contracts/governance/CuryoGovernor.sol:199-230`
-- Governance thresholds and quorum are all expressed in cREP units: `10_000e6` proposal threshold, `500e6` category threshold, `100_000e6` minimum quorum. `packages/foundry/contracts/governance/CuryoGovernor.sol:44-51`
+Key references:
 
-### Content voting is also cREP-only today
+- `packages/foundry/contracts/libraries/RewardMath.sol:13-27`
+- `packages/foundry/contracts/libraries/RewardMath.sol:29-56`
+- `packages/foundry/contracts/libraries/RewardMath.sol:58-147`
 
-- `RoundVotingEngine` takes stake in `crepToken` and uses that same token for refunds and payouts. `packages/foundry/contracts/RoundVotingEngine.sol:102-105`, `packages/foundry/contracts/RoundVotingEngine.sol:202-216`, `packages/foundry/contracts/RoundVotingEngine.sol:334`, `packages/foundry/contracts/RoundVotingEngine.sol:790`, `packages/foundry/contracts/RoundVotingEngine.sol:844-856`
-- The app's one-transaction vote path is specifically `CuryoReputation.transferAndCall(votingEngine, amount, payload)`. `packages/nextjs/app/docs/smart-contracts/page.tsx:170-188`
-- The thirdweb sponsored-call allowlist is also hard-coded around `CuryoReputation.approve(...)` and `CuryoReputation.transferAndCall(...)`. `packages/nextjs/lib/thirdweb/freeTransactions.ts:530-627`
+Important implication:
 
-### Submitter, category, and frontend staking are all cREP-only
+- `MAX_CONSENSUS_SUBSIDY = 50e6` and `RATING_B = 50e6` are described as 50 `cREP`, not 50 generic units.
+- If a round used a stablecoin natively, those constants would silently become "50 units of whatever token the round used," which changes the economics and rating sensitivity.
 
-- Content submission reserves `10 cREP` and charges cancellation fees in cREP. `packages/foundry/contracts/ContentRegistry.sol:91-95`, `packages/foundry/contracts/ContentRegistry.sol:292-303`, `packages/foundry/contracts/ContentRegistry.sol:346-379`
-- Category proposals require `500 cREP` stake. `packages/foundry/contracts/CategoryRegistry.sol:19-21`, `packages/foundry/contracts/CategoryRegistry.sol:29`, `packages/foundry/contracts/CategoryRegistry.sol:154-156`
-- Frontends post a fixed `1,000 cREP` bond and accumulate `crepFees`. `packages/foundry/contracts/FrontendRegistry.sol:14-15`, `packages/foundry/contracts/FrontendRegistry.sol:24-29`, `packages/foundry/contracts/FrontendRegistry.sol:34-44`, `packages/foundry/contracts/FrontendRegistry.sol:148-173`, `packages/foundry/contracts/FrontendRegistry.sol:208-220`, `packages/foundry/contracts/FrontendRegistry.sol:232-239`
+### 3. Participation rewards are also cREP-native
 
-### Reward pools and fee splits are cREP-denominated
+`ParticipationPool` is a direct, non-upgradeable deployment with immutable `crepToken` and `governance`. It is funded with `cREP`, keeps its own `cREP` balance accounting, and computes rewards directly from raw stake size.
 
-- The losing pool is split into cREP buckets: 80% voter pool, 10% submitter, 4% platform, 1% treasury, 5% consensus reserve. `packages/foundry/contracts/libraries/RewardMath.sol:13-20`, `packages/foundry/contracts/libraries/RewardMath.sol:79-127`
-- Settlement sends frontend, category, treasury, and consensus allocations through cREP paths. `packages/foundry/contracts/RoundVotingEngine.sol:660-725`
-- `ParticipationPool` is a cREP-only emissions pool funded with `34M cREP`, and rewards are proportional to stake amount. `packages/foundry/contracts/ParticipationPool.sol:10-14`, `packages/foundry/contracts/ParticipationPool.sol:19-31`, `packages/foundry/contracts/ParticipationPool.sol:189-217`
-- The `bonusPool` in `ContentRegistry` is not a general reward pool. It is the cREP cancellation-fee sink. `packages/foundry/contracts/ContentRegistry.sol:94`, `packages/foundry/contracts/ContentRegistry.sol:266-270`, `packages/foundry/contracts/ContentRegistry.sol:365-375`
+Key references:
 
-### Identity controls are also cREP-shaped today
+- `packages/foundry/contracts/ParticipationPool.sol:10-49`
+- `packages/foundry/contracts/ParticipationPool.sol:91-98`
+- `packages/foundry/contracts/ParticipationPool.sol:122-128`
+- `packages/foundry/contracts/ParticipationPool.sol:172-239`
 
-- The vote cap per verified identity is `100e6`, meaning "100 cREP per content per round." `packages/foundry/contracts/VoterIdNFT.sol:16-18`
-- `VoterIdNFT` stores raw staked amounts and remaining capacity in those same cREP units. `packages/foundry/contracts/VoterIdNFT.sol:269-310`
+`RoundRewardDistributor` snapshots one participation pool and one reward rate per round, then pays `stakeAmount * rateBps / 10000`.
 
-## What Must Stay Unchanged If cREP Remains Usable Everywhere And The Only Governance Token
+Key references:
 
-If cREP should remain the governance token and still work everywhere it works now, the following pieces should stay conceptually intact:
+- `packages/foundry/contracts/RoundRewardDistributor.sol:71-80`
+- `packages/foundry/contracts/RoundRewardDistributor.sol:283-410`
+- `packages/foundry/contracts/RoundRewardDistributor.sol:572-609`
+- `packages/foundry/contracts/libraries/RoundSettlementSideEffectsLib.sol:13-60`
 
-- `CuryoReputation` remains the only `ERC20Votes` token used by governance. `packages/foundry/contracts/CuryoReputation.sol:15-18`
-- `CuryoGovernor` remains pointed at cREP for proposal thresholds, quorum, vote counting, and governance locks. `packages/foundry/contracts/governance/CuryoGovernor.sol:35-38`, `packages/foundry/contracts/governance/CuryoGovernor.sol:59-75`, `packages/foundry/contracts/governance/CuryoGovernor.sol:138-151`, `packages/foundry/contracts/governance/CuryoGovernor.sol:201-230`
-- cREP stays on the content-voting whitelist even if other assets are added later, otherwise it would no longer be "usable for everything."
-- Category staking, frontend staking, faucet distribution, and treasury accounting should remain cREP unless there is a deliberate decision to redesign those economics too. Those surfaces are heavily cREP-specific today. `packages/foundry/contracts/CategoryRegistry.sol:19-21`, `packages/foundry/contracts/FrontendRegistry.sol:14-15`, `packages/foundry/contracts/HumanFaucet.sol:13-17`
+Important implication:
 
-## What Native Multi-Token Voting Would Mean In Practice
+- If raw stablecoin stake were fed into the current participation reward math, the protocol would pay `cREP` bonuses based on nominal stablecoin size, not `cREP` value.
+- That is not necessarily wrong by policy, but it would be a new economic system, not a neutral extension of the existing one.
 
-### 1. Mixed-asset rounds need a common unit
+### 4. Content lifecycle is also cREP-native
 
-The current engine simply sums raw stake amounts into `upPool` and `downPool`.
+Submission staking, revival staking, cancellation fees, submitter slashing, and submitter participation rewards all sit behind `ContentRegistry.crepToken`.
 
-- That is defensible only when every stake is the same asset. `packages/foundry/contracts/RoundVotingEngine.sol:101-105`, `packages/foundry/contracts/RoundVotingEngine.sol:491-502`, `packages/foundry/contracts/RoundVotingEngine.sol:1018-1046`
-- If the protocol accepted both cREP and a stablecoin in the same round, it would need either:
-  - oracle-based normalization into an internal unit,
-  - governance-set conversion ratios,
-  - or separate pools / separate rounds per asset.
+Key references:
 
-Without one of those, "100 cREP" and "100 USDC" are just incomparable raw numbers.
+- `packages/foundry/contracts/ContentRegistry.sol:90-157`
+- `packages/foundry/contracts/ContentRegistry.sol:261-275`
+- `packages/foundry/contracts/ContentRegistry.sol:280-379`
+- `packages/foundry/contracts/ContentRegistry.sol:505-539`
+- `packages/foundry/contracts/ContentRegistry.sol:589-809`
 
-### 2. Participation rewards stop making sense automatically
+If the question is only about voting assets, this can stay untouched. If the question later expands to "let users also submit or revive with stablecoins," that would be a much bigger redesign because `ContentRegistry` has no token router and no token setter.
 
-The current participation bonus is "stake amount times cREP reward rate."
+### 5. Governance is already cREP-only by design
 
-- `ParticipationPool` computes rewards directly from `stakeAmount`. `packages/foundry/contracts/ParticipationPool.sol:189-217`
-- `RoundSettlementSideEffectsLib` snapshots the participation rate from the cREP participation pool into content settlement side effects. `packages/foundry/contracts/libraries/RoundSettlementSideEffectsLib.sol:25-58`
-- `RoundRewardDistributor` stores `rewardPool` and `rewardRateBps` snapshots that assume a cREP participation pool. `packages/foundry/contracts/RoundRewardDistributor.sol:71-80`, `packages/foundry/contracts/RoundRewardDistributor.sol:96-117`
+`CuryoReputation` is the `ERC20Votes` token and `CuryoGovernor` is built directly around it.
 
-If a user stakes USDC or another token, the protocol would need to choose one of these:
+Key references:
 
-- treat external-token stake as cREP-equivalent using an oracle,
-- create separate per-asset participation pools,
-- or disable participation rewards for non-cREP voting.
+- `packages/foundry/contracts/CuryoReputation.sol:11-27`
+- `packages/foundry/contracts/CuryoReputation.sol:48-95`
+- `packages/foundry/contracts/CuryoReputation.sol:163-200`
+- `packages/foundry/contracts/governance/CuryoGovernor.sol:18-27`
+- `packages/foundry/contracts/governance/CuryoGovernor.sol:35-75`
+- `packages/foundry/contracts/governance/CuryoGovernor.sol:138-150`
+- `packages/foundry/contracts/governance/CuryoGovernor.sol:201-276`
 
-The safest initial rule would be: cREP votes keep existing participation rewards; non-cREP votes do not earn cREP participation emissions until a separate reward policy exists.
+This is the good news: keeping `cREP` as the sole governance token is straightforward. We do not need to touch governor voting power at all to add alternative *non-governance* vote-funding paths later.
 
-### 3. Frontend, category, treasury, and consensus flows would all need policy changes
+## What This Means For "Bonus Pools"
 
-Today those flows inherit value from the losing cREP pool.
+The term "bonus pool" maps to different things in this repo, and they should be separated:
 
-- Frontend fees are credited as `crepFees` in `FrontendRegistry`. `packages/foundry/contracts/FrontendRegistry.sol:34-44`, `packages/foundry/contracts/FrontendRegistry.sol:232-239`
-- Category submitter rewards are paid through `CategoryFeeLib` with `crepToken`. `packages/foundry/contracts/RoundVotingEngine.sol:696-710`
-- Treasury fees are transferred as cREP. `packages/foundry/contracts/RoundVotingEngine.sol:715-725`
-- Consensus reserve is a cREP reserve. `packages/foundry/contracts/RoundVotingEngine.sol:134-136`, `packages/foundry/contracts/RoundVotingEngine.sol:202-207`, `packages/foundry/contracts/RoundVotingEngine.sol:674-678`
+### 1. `bonusPool` in `ContentRegistry`
 
-If stablecoin stakes are introduced, the protocol must explicitly decide whether those derived fees:
+This is only the cancellation-fee sink for content withdrawals before any votes exist.
 
-- remain in the stake asset,
-- get converted to cREP,
-- or are disabled for non-cREP rounds.
+References:
 
-There is no safe "just reuse the current fee logic" path.
+- `packages/foundry/contracts/ContentRegistry.sol:94-95`
+- `packages/foundry/contracts/ContentRegistry.sol:266-275`
+- `packages/foundry/contracts/ContentRegistry.sol:346-379`
 
-### 4. The Voter ID stake cap would need redesign
+If we only add other assets for *content voting*, this can remain `cREP` exactly as it is today.
 
-The current cap is hard-coded as "100 cREP" worth of raw units.
+### 2. Consensus reserve
 
-- `VoterIdNFT.MAX_STAKE_PER_VOTER = 100e6`. `packages/foundry/contracts/VoterIdNFT.sol:16-18`
-- Stake recording and capacity checks simply add raw amounts. `packages/foundry/contracts/VoterIdNFT.sol:274-310`
+This is the real voting-side reserve. It lives inside `RoundVotingEngine` as a single `uint256 consensusReserve`.
 
-This works for cREP and only accidentally works for assets that share the same decimals and a policy of `1 token unit = 1 cREP unit`. It does not work for arbitrary ERC-20 assets.
+References:
 
-### 5. Off-chain blast radius is large
+- `packages/foundry/contracts/RoundVotingEngine.sol:133-136`
+- `packages/foundry/contracts/RoundVotingEngine.sol:202-207`
+- `packages/foundry/contracts/RoundVotingEngine.sol:674-677`
+- `packages/foundry/contracts/RoundVotingEngine.sol:729-738`
+- `packages/foundry/contracts/RoundVotingEngine.sol:853-865`
 
-The cREP assumption is not isolated to Solidity.
+If native multi-asset voting were added, this reserve would need one of the following:
 
-- `rg` finds cREP or `CuryoReputation` references in 117 files across `packages/nextjs`, `packages/bot`, `packages/keeper`, and `packages/ponder`.
-- The bot checks cREP balances and allowances before both voting and submission. `packages/bot/src/commands/vote.ts:51-60`, `packages/bot/src/commands/vote.ts:135-166`, `packages/bot/src/commands/submit.ts:13`, `packages/bot/src/commands/submit.ts:126-145`, `packages/bot/src/commands/submit.ts:203-258`
-- The UI reads `CuryoReputation` directly for stake selection, submission approvals, category submission, delegation, faucet, frontend registration, docs, charts, and claim messaging. Representative examples:
-  - `packages/nextjs/components/swipe/StakeSelector.tsx:66-101`
-  - `packages/nextjs/components/submit/ContentSubmissionSection.tsx:335-345`
-  - `packages/nextjs/components/submit/ContentSubmissionSection.tsx:470-645`
-  - `packages/nextjs/components/governance/CategorySubmissionForm.tsx:32-40`
-  - `packages/nextjs/components/governance/CategorySubmissionForm.tsx:74-123`
-- Ponder indexes reward amounts under cREP-shaped field names like `crepReward` and `crepAmount`. `packages/ponder/ponder.schema.ts:140-170`, `packages/ponder/ponder.schema.ts:290-317`, `packages/ponder/src/RoundRewardDistributor.ts:18-30`, `packages/ponder/src/RoundRewardDistributor.ts:64-77`
+- stay `cREP`-only and only subsidize `cREP` rounds
+- become per-asset reserve accounting
+- or be replaced by a normalized reserve model with explicit conversion rules
 
-## Bonus Pools, Participation Pool, Treasury, And Faucet Impact
+### 3. Participation pool
 
-### `bonusPool`
+This is the other major "bonus" system, and it is currently hard-wired to `cREP`.
 
-The `bonusPool` name is slightly misleading in this repo. It is the content-cancellation fee sink.
+References:
 
-- It receives the `1 cREP` cancellation fee when a submitter voluntarily cancels before any votes. `packages/foundry/contracts/ContentRegistry.sol:266-270`, `packages/foundry/contracts/ContentRegistry.sol:346-379`
-- If only vote stakes become multi-asset and submission remains cREP, `bonusPool` can stay unchanged.
-- If submission stakes ever become multi-asset too, `bonusPool` would need a new asset policy as well.
+- `packages/foundry/contracts/ParticipationPool.sol:30-49`
+- `packages/foundry/contracts/ParticipationPool.sol:91-98`
+- `packages/foundry/contracts/ParticipationPool.sol:172-239`
 
-### Participation pool
+If voting stays internally `cREP`-denominated, the participation pool can stay untouched.
 
-- This is the actual cREP "bonus pool" in practice: a `34M cREP` emissions pool for participation bonuses. `packages/foundry/script/DeployCuryo.s.sol:228-240`, `packages/foundry/contracts/ParticipationPool.sol:10-14`
-- It is tightly tied to cREP-denominated stake sizes. If non-cREP voting is introduced, this pool either needs a normalization layer or should remain cREP-only.
+If native non-`cREP` voting is added, we would need to choose between:
 
-### Treasury
+- no participation bonus for non-`cREP` votes
+- separate participation pools per asset
+- or a normalized reward model that converts other stake assets into some cREP-denominated bonus basis
 
-- The treasury starts with `10M cREP` and receives cREP inflows from round settlement, cancellation fees, forfeitures, and stranded cleanup. `packages/foundry/script/DeployCuryo.s.sol:224-226`, `packages/nextjs/app/docs/tokenomics/page.tsx:189-206`
-- Native external-asset voting means treasury policy must answer whether the treasury accumulates those external assets too, or whether all such value is converted.
+### 4. Treasury and UI/accounting
 
-### Faucet
+The treasury UI and protocol-pool UI currently read and label everything as `cREP`, and Ponder tracks `CuryoReputation` transfers/holders specifically.
 
-- The faucet holds the remaining `52M cREP` launch allocation and distributes cREP to verified humans. `packages/foundry/script/DeployCuryo.s.sol:242-289`, `packages/foundry/contracts/HumanFaucet.sol:13-17`, `packages/foundry/contracts/HumanFaucet.sol:46-59`
-- This faucet does not need to change for a multi-asset voting V2 if cREP remains the governance and onboarding token.
+References:
 
-## Governance And Quorum Side Effects
+- `packages/nextjs/components/governance/TreasuryBalance.tsx:45-120`
+- `packages/nextjs/hooks/useVotingStakes.ts:7-39`
+- `packages/nextjs/hooks/useSubmissionStakes.ts:11-84`
+- `packages/ponder/src/CuryoReputation.ts:1-40`
 
-### Governance quorum itself can stay cREP-only
+So even if the contracts were extended, the product layer would still need multi-asset visibility, formatting, APIs, and reporting.
 
-That part is straightforward and desirable.
+## Can This Be Added Later As An Upgrade?
 
-- `CuryoGovernor.quorum()` uses historical cREP voting power, excluding a fixed list of protocol-controlled cREP holders. `packages/foundry/contracts/governance/CuryoGovernor.sol:138-151`
-- Governance docs already describe the intended philosophy: governance power comes from cREP reputation, not buying power. `packages/nextjs/app/docs/governance/page.tsx:12-21`
+### Short answer
 
-### But the excluded-holder set is fixed after initialization
+Yes, but only if we are precise about *which* kind of change we mean.
 
-This matters if a future multi-token design introduces new protocol-controlled cREP holders.
+### Upgradeable today
 
-- `initializePools()` can only be called once. `packages/foundry/contracts/governance/CuryoGovernor.sol:77-97`
-- The excluded-holder set is intentionally fixed after that. `packages/foundry/contracts/governance/CuryoGovernor.sol:77-83`
-- Tests explicitly assert that excluded holders remain fixed. `packages/foundry/test/Governance.t.sol:457-508`
+These are behind transparent proxies and already have storage gaps and upgrade tests:
 
-Because `CuryoReputation` auto-self-delegates on first receipt, any new contract address that holds cREP will also hold cREP voting power by default. `packages/foundry/contracts/CuryoReputation.sol:190-193`
+- `ContentRegistry`
+- `RoundVotingEngine`
+- `RoundRewardDistributor`
+- `ProtocolConfig`
 
-That means:
+References:
 
-- if a future adapter or reserve contract holds cREP,
-- and it is not in the governor's excluded-holder set,
-- its cREP can unexpectedly count toward circulating supply and quorum math.
+- `packages/foundry/README.md:77-83`
+- `packages/foundry/contracts/ContentRegistry.sol:156-157`
+- `packages/foundry/contracts/RoundVotingEngine.sol:1124-1125`
+- `packages/foundry/contracts/RoundRewardDistributor.sol:611-612`
+- `packages/foundry/contracts/ProtocolConfig.sol:31-32`
+- `packages/foundry/test/UpgradeTest.t.sol:375-405`
+- `packages/foundry/test/UpgradeTest.t.sol:468-553`
+- `packages/foundry/test/UpgradeTest.t.sol:559-589`
+- `packages/foundry/test/UpgradeTest.t.sol:595-624`
 
-Under the current design, avoiding that either requires:
+### Not upgradeable in place
 
-- reusing already-excluded cREP holder addresses,
-- or deploying a new governor and reinitializing the excluded-holder set.
+These are intentionally non-upgradeable or depend on immutable constructor state:
 
-## Upgrade Constraints
+- `CuryoReputation`
+- `CuryoGovernor`
+- `ParticipationPool`
+- `CategoryRegistry`
+- `HumanFaucet`
 
-### Contracts that are upgradeable behind proxies
+References:
 
-These can evolve under the timelock if storage changes stay compatible:
+- `packages/foundry/README.md:77-83`
+- `packages/foundry/contracts/ParticipationPool.sol:30-35`
+- `packages/foundry/contracts/governance/CuryoGovernor.sol:35-38`
+- `packages/foundry/contracts/CategoryRegistry.sol:37-41`
+- `packages/foundry/script/DeployCuryo.s.sol:88-118`
+- `packages/foundry/script/DeployCuryo.s.sol:167-240`
 
-- `ContentRegistry` `packages/foundry/contracts/ContentRegistry.sol:191-237`
-- `RoundVotingEngine` `packages/foundry/contracts/RoundVotingEngine.sol:177-200`, `packages/foundry/contracts/RoundVotingEngine.sol:1124-1125`
-- `RoundRewardDistributor` `packages/foundry/contracts/RoundRewardDistributor.sol:120-141`
-- `ProtocolConfig` `packages/foundry/contracts/ProtocolConfig.sol:8-32`, `packages/foundry/contracts/ProtocolConfig.sol:44-85`
-- `FrontendRegistry` `packages/foundry/contracts/FrontendRegistry.sol:52-70`
-- `ProfileRegistry` (not central to this question, but also proxied)
+### Important warning from the repo itself
 
-The proxy admin owner is the governance timelock. `packages/foundry/script/DeployCuryo.s.sol:120-165`, `packages/foundry/script/DeployCuryo.s.sol:536-615`
+The deploy script explicitly says the voting engine has already had storage-breaking rewrites in this codebase and that those migrations should use a fresh proxy deployment instead of assuming arbitrary in-place compatibility.
 
-### Contracts that are not upgradeable, or pin key references immutably
+References:
 
-- `CuryoReputation` is non-upgradeable and is the governance token. `packages/foundry/script/DeployCuryo.s.sol:88-90`
-- `CuryoGovernor` is non-upgradeable and stores `crepToken` and `poolsInitializer` as `immutable`. `packages/foundry/contracts/governance/CuryoGovernor.sol:35-38`
-- `CategoryRegistry` is non-upgradeable and stores its `token` as `immutable`. `packages/foundry/contracts/CategoryRegistry.sol:38`, `packages/foundry/script/DeployCuryo.s.sol:167-177`
-- `ParticipationPool` is non-upgradeable and stores both `crepToken` and `governance` as `immutable`. `packages/foundry/contracts/ParticipationPool.sol:30-35`
-- `HumanFaucet` is non-upgradeable and stores both `crepToken` and `governance` as `immutable`. `packages/foundry/contracts/HumanFaucet.sol:46-47`, `packages/foundry/contracts/HumanFaucet.sol:135-149`
-- `VoterIdNFT` is non-upgradeable. `packages/foundry/contracts/VoterIdNFT.sol:11`, `packages/foundry/contracts/VoterIdNFT.sol:97-102`
+- `packages/foundry/script/DeployCuryo.s.sol:145-155`
+- `packages/foundry/README.md:80-83`
 
-### Governance migration is uneven
+So "yes, later as an upgrade" is true, but the safe interpretation is:
 
-- `CategoryRegistry` supports `updateGovernance(governor, timelock)`. `packages/foundry/contracts/CategoryRegistry.sol:92-112`
-- `VoterIdNFT` supports `setGovernance(...)`, so ownership can be repointed before transfer. `packages/foundry/contracts/VoterIdNFT.sol:127-133`
-- `ParticipationPool` and `HumanFaucet` do not support repointing governance. Ownership transfer is restricted to the original immutable governance address only. `packages/foundry/contracts/ParticipationPool.sol:33-35`, `packages/foundry/contracts/ParticipationPool.sol:100-108`, `packages/foundry/contracts/HumanFaucet.sol:135-159`
+- small surface changes can be normal proxy upgrades
+- deep voting-system rewrites should be treated as a V2 migration, not as a routine patch
 
-That means:
+### Extra migration constraint: the cREP token only whitelists one voting engine
 
-- deploying a new governor with the same timelock is comparatively feasible,
-- but migrating to a brand-new timelock is much harder because some owned contracts cannot hand off to a new governance address.
+`CuryoReputation` stores one `votingEngine` and one `contentRegistry` for governance-lock bypass.
 
-### The repo itself warns against assuming an in-place voting-engine upgrade is always safe
+References:
 
-- The deploy script says `RoundVotingEngine` has had storage-breaking voting-system rewrites before, and advises fresh proxy deployment rather than in-place upgrade for those versions. `packages/foundry/script/DeployCuryo.s.sol:145-147`
+- `packages/foundry/contracts/CuryoReputation.sol:37-46`
+- `packages/foundry/contracts/CuryoReputation.sol:76-85`
+- `packages/foundry/contracts/CuryoReputation.sol:163-185`
 
-For a change as large as native multi-asset voting, that warning matters.
+That means a future engine migration is possible, but the token does not support multiple parallel content-voting engines being whitelisted at the same time.
 
-## Recommended Paths
+There is still enough indirection to make a V2 migration viable:
 
-### Path A: Access-layer stablecoin support, core protocol still cREP
+- `ContentRegistry` can be repointed to a new voting engine and participation pool: `packages/foundry/contracts/ContentRegistry.sol:239-243`, `packages/foundry/contracts/ContentRegistry.sol:261-263`
+- `CategoryRegistry` can be repointed to a new voting engine: `packages/foundry/contracts/CategoryRegistry.sol:359-362`
 
-Best if the real goal is usability.
+## Practical Design Options
 
-- Users arrive with USDC/USDT.
-- A frontend service, helper contract, or external venue converts that value into cREP before `reserveSubmission()` or `commitVote()`.
-- The existing protocol still sees only cREP.
+## Option A: Keep the protocol core cREP-only, add a swap step before voting
 
-Why this is attractive:
+What it means:
 
-- cREP remains usable everywhere.
-- cREP remains the only governance token.
-- `bonusPool`, `ParticipationPool`, frontend fees, category rewards, treasury flows, faucet, and quorum logic all stay intact.
-- This can be added later with much less protocol risk than native multi-asset voting.
+- users can start with a stablecoin in the frontend
+- the frontend swaps it to `cREP`
+- the existing vote path still commits `cREP`
 
-Main tradeoffs:
+Pros:
 
-- it is not true on-protocol multi-asset voting,
-- it needs a trusted or market-based conversion path,
-- and it may be philosophically sensitive if the project wants to avoid making cREP feel purchasable.
+- lowest protocol risk
+- keeps consensus reserve, participation pool, treasury, docs, analytics, and settlement logic intact
+- keeps `cREP` usable everywhere
+- preserves `cREP` as the only governance token
 
-### Path B: Native multi-asset voting V2
+Cons:
 
-Best only if the protocol truly wants content-voting stake itself to be multi-asset.
+- not a native multi-asset protocol
+- unless you add more infrastructure, the user still ultimately votes with `cREP`
 
-Recommended shape:
+This is the cleanest path if the real product goal is "let people come in with stablecoins" rather than "make the settlement engine itself multi-asset."
 
-- Keep `CuryoReputation` and `CuryoGovernor` unchanged for governance.
-- Keep cREP as one allowed content-voting asset.
-- Deploy a new voting engine and reward distributor rather than retrofitting the current ones.
-- Add explicit asset policy in config:
-  - allowed assets,
-  - decimals handling,
-  - normalization rules,
-  - and whether each asset earns participation rewards.
-- Avoid holding cREP in new protocol contracts unless quorum-exclusion consequences are handled.
+## Option B: One-click funded cREP voting
 
-My recommendation inside this path:
+What it means:
 
-- Do not mix raw cREP and raw stablecoin stakes in the same accounting pools without explicit normalization.
-- Start with cREP plus a very small set of approved stablecoins only.
-- Initially disable cREP participation emissions for non-cREP stake assets.
-- Leave category stake, frontend stake, faucet, and governance cREP-only.
+- users fund the experience with a stablecoin
+- some helper path converts to `cREP`
+- the protocol still settles a `cREP` vote
+- we may add an engine/router/meta-tx path so the vote is still attributed to the user, not an intermediate contract
 
-### Path I would avoid
+Pros:
 
-- A "small adapter" that makes the current engine look multi-asset while silently introducing new cREP-holding vaults, price assumptions, or fee conversions behind the scenes.
+- still keeps the core economics and pools in `cREP`
+- closer to a native UX than Option A
 
-That approach collides with:
+Cons:
 
-- fixed excluded-holder quorum logic,
-- cREP-denominated participation rewards,
-- cREP-denominated frontend and category fees,
-- and the raw-unit Voter ID cap.
+- requires more design around identity attribution, sponsored execution, and approvals
+- still not native multi-asset settlement
+
+Important constraint:
+
+- the current engine records the voter as `msg.sender`, so a helper contract cannot simply call `commitVote()` on behalf of a user and preserve that user's identity without new protocol support: `packages/foundry/contracts/RoundVotingEngine.sol:230-240`, `packages/foundry/contracts/RoundVotingEngine.sol:266-276`
+
+This is the best medium-term path if we want better onboarding without redesigning round math.
+
+## Option C: Native multi-asset voting in a V2 engine
+
+What it means:
+
+- the protocol itself understands more than one voting asset
+- rounds or markets must carry asset identity
+- rewards, refunds, reserves, and UI/indexing all become asset-aware
+
+If we ever do this, the safest design is not "mix all assets in one round." It is one of:
+
+- separate per-asset markets
+- or a per-round asset with explicit value-snapshot rules
+
+Why I would avoid mixed-asset same-round settlement:
+
+- current round storage has no asset identifier
+- current reward math has no price normalization
+- current rating math assumes a fixed 50 `cREP` smoothing constant
+- current consensus reserve and participation pool are single-asset
+
+This is a real V2 protocol project and should be treated that way.
+
+## Recommendation
+
+My recommendation is:
+
+1. Keep `cREP` as the only governance token and the canonical internal accounting asset.
+2. If we want stablecoin onboarding, start with Option A or Option B, not native mixed-asset settlement.
+3. If we eventually want native non-`cREP` voting, build it as a V2 market design with separate asset-aware accounting, likely using a fresh voting-engine/reward-distributor deployment plus new pool contracts.
+
+Concretely:
+
+- Near term: do not retrofit "cREP + USDC in the same round" into the current engine.
+- Medium term: add a user-facing stablecoin-to-`cREP` path and, if needed, a one-click helper path.
+- Long term: if native multi-asset voting becomes strategically important, design it as a separate asset-aware market layer rather than stretching the current single-asset core.
+
+## Off-Chain Blast Radius
+
+Even if we keep governance untouched, the off-chain migration surface is still large.
+
+Examples:
+
+- bot contract config hardcodes `crepToken`: `packages/bot/src/contracts.ts:13-25`
+- bot vote flow reads `cREP` balance/allowance and logs stake in `cREP`: `packages/bot/src/commands/vote.ts:51-60`, `packages/bot/src/commands/vote.ts:135-173`
+- governance hooks anchor on `CuryoReputation`: `packages/nextjs/hooks/useGovernance.ts:125-145`
+- stake hooks divide by `1e6` and label balances as `cREP`: `packages/nextjs/hooks/useVotingStakes.ts:7-39`, `packages/nextjs/hooks/useSubmissionStakes.ts:11-84`
+- treasury UI labels protocol pools as `cREP`: `packages/nextjs/components/governance/TreasuryBalance.tsx:52-116`
+- Ponder tracks `CuryoReputation` transfers/holders specifically: `packages/ponder/src/CuryoReputation.ts:13-40`
+- public-facing docs describe voting stakes and protocol pools in `cREP`: `README.md:8-30`, `packages/contracts/src/protocol.ts:21-46`
+
+Any native multi-asset rollout should therefore include:
+
+- Foundry tests for new settlement/accounting paths
+- Ponder schema and API changes
+- Next.js contract reads and labels
+- bot config/allowance/vote path changes
+- Playwright coverage for vote, reward, claim, and treasury screens
 
 ## Bottom Line
 
-If the question is "can we let people use stablecoins later," the answer is yes.
+Adding other tokens or stablecoins for voting is possible later, but there are two very different versions of that statement:
 
-- If you only need stablecoins as an access path, add them outside the core protocol and keep the onchain stake asset as cREP. That is the least risky path by far.
-- If you want true native multi-token content voting, treat it as a new protocol version. Keep cREP as the only governance token, keep cREP usable as a vote asset, and expect a new voting/reward design rather than a simple upgrade flag.
+- "Users can show up with stablecoins and still end up voting with cREP" - feasible with moderate risk.
+- "The protocol natively supports mixed-asset voting and settlement" - high-risk V2 redesign.
+
+If the goal is to preserve `cREP` as the only governance token and keep it usable everywhere, the cleanest path is to keep the core protocol cREP-denominated and treat other assets as onboarding/funding rails first, not as native settlement assets.
