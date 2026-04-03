@@ -20,6 +20,30 @@ test("getWagmiConnectorIdForThirdwebWallet preserves external wallet ids", () =>
   );
 });
 
+test("getWagmiConnectorIdForThirdwebWallet keeps dedicated connector ids for known external wallets", () => {
+  assert.equal(
+    getWagmiConnectorIdForThirdwebWallet({
+      id: "com.coinbase.wallet",
+    } as any),
+    "com.coinbase.wallet",
+  );
+  assert.equal(
+    getWagmiConnectorIdForThirdwebWallet({
+      id: "me.rainbow",
+    } as any),
+    "me.rainbow",
+  );
+});
+
+test("getWagmiConnectorIdForThirdwebWallet falls back to the generic injected connector for unknown external wallets", () => {
+  assert.equal(
+    getWagmiConnectorIdForThirdwebWallet({
+      id: "walletConnect",
+    } as any),
+    "injected",
+  );
+});
+
 test("shouldSkipThirdwebWagmiSync returns true when the requested thirdweb wallet is already connected", () => {
   assert.equal(
     shouldSkipThirdwebWagmiSync({

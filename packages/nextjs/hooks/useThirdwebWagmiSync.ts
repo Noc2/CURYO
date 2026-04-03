@@ -6,8 +6,14 @@ import { ConnectorAlreadyConnectedError, useAccount, useConnect } from "wagmi";
 import { useTargetNetwork } from "~~/hooks/scaffold-eth/useTargetNetwork";
 import { thirdwebClient } from "~~/services/thirdweb/client";
 
+const EXTERNAL_THIRDWEB_CONNECTOR_IDS = new Set(["io.metamask", "com.coinbase.wallet", "me.rainbow"]);
+
 export function getWagmiConnectorIdForThirdwebWallet(wallet: Wallet) {
-  return wallet.id === "inApp" ? "in-app-wallet" : wallet.id;
+  if (wallet.id === "inApp") {
+    return "in-app-wallet";
+  }
+
+  return EXTERNAL_THIRDWEB_CONNECTOR_IDS.has(wallet.id) ? wallet.id : "injected";
 }
 
 export function shouldSkipThirdwebWagmiSync(params: {

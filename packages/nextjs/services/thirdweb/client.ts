@@ -3,8 +3,8 @@
 import { createThirdwebClient, defineChain } from "thirdweb";
 import type { AutoConnectProps } from "thirdweb/react";
 import type { UseConnectModalOptions } from "thirdweb/react";
+import { createWallet, inAppWallet } from "thirdweb/wallets";
 import type { Wallet } from "thirdweb/wallets";
-import { inAppWallet } from "thirdweb/wallets";
 import { getThirdwebWalletAuthConfig } from "~~/services/thirdweb/auth";
 import { publicEnv } from "~~/utils/env/public";
 
@@ -178,9 +178,12 @@ export function createThirdwebInAppWallet(
 }
 
 function getThirdwebWallets(chainId: number = thirdwebDefaultChain.id) {
-  // External thirdweb wallet sessions need matching wagmi connectors before
-  // they can be safely mirrored into the app's wagmi state.
-  return [createThirdwebInAppWallet(chainId)];
+  return [
+    createThirdwebInAppWallet(chainId),
+    createWallet("io.metamask"),
+    createWallet("com.coinbase.wallet"),
+    createWallet("me.rainbow"),
+  ];
 }
 
 export function getThirdwebConnectOptions(chainId?: number): UseConnectModalOptions | null {
