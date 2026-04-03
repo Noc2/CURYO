@@ -34,7 +34,7 @@ export function ClaimRewardsButton({ buttonClassName, className, showTokenSymbol
         className={buttonClassName ?? "btn btn-primary btn-sm w-full"}
       >
         {isClaiming
-          ? `Claiming ${progress.current}/${progress.total}...`
+          ? `Claim ${progress.current}/${progress.total}`
           : `Claim ${formatCrepAmount(totalClaimable)}${showTokenSymbol ? " cREP" : ""}`}
       </button>
     </div>

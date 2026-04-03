@@ -45,6 +45,15 @@ function getVoteQueueGapPx(viewportWidth: number) {
   return viewportWidth >= 1280 ? QUEUE_GAP_PX.xl : QUEUE_GAP_PX.base;
 }
 
+function getFilledMultiRowGapPx(containerWidth: number, columns: number, cardWidthPx: number, fallbackGapPx: number) {
+  if (columns <= 1) return fallbackGapPx;
+
+  const availableGapWidth = containerWidth - columns * cardWidthPx;
+  if (availableGapWidth <= 0) return fallbackGapPx;
+
+  return Math.max(fallbackGapPx, availableGapWidth / (columns - 1));
+}
+
 export function computeVoteQueueLayout({
   viewportWidth,
   containerWidth,
@@ -84,12 +93,13 @@ export function computeVoteQueueLayout({
   const supportsThreeRows = maxColumnsThatFit >= THREE_ROW_MIN_COLUMNS && availableHeight >= requiredThreeRowHeight;
   if (supportsThreeRows) {
     const columns = Math.max(THREE_ROW_MIN_COLUMNS, Math.min(maxColumnsThatFit, MULTI_ROW_MAX_COLUMNS));
+    const filledGapPx = getFilledMultiRowGapPx(containerWidth, columns, cardWidthPx, gapPx);
     return {
       rows: 3,
       columns,
       pageSize: columns * 3,
       cardWidthPx,
-      gapPx,
+      gapPx: filledGapPx,
     };
   }
 
@@ -106,12 +116,13 @@ export function computeVoteQueueLayout({
   }
 
   const columns = Math.max(TWO_ROW_MIN_COLUMNS, Math.min(maxColumnsThatFit, MULTI_ROW_MAX_COLUMNS));
+  const filledGapPx = getFilledMultiRowGapPx(containerWidth, columns, cardWidthPx, gapPx);
   return {
     rows: 2,
     columns,
     pageSize: columns * 2,
     cardWidthPx,
-    gapPx,
+    gapPx: filledGapPx,
   };
 }
 

@@ -399,6 +399,91 @@ body {
   border: none !important;
 }
 
+/* Compact vote buttons with tooltip labels */
+.vote-btn {
+  position: relative;
+  width: 3.5rem;
+  height: 3.5rem;
+  border-radius: 9999px;
+  cursor: pointer;
+  border: none;
+  background: none;
+  padding: 0;
+  transition: transform 0.2s ease;
+}
+
+.vote-btn .vote-bg {
+  position: absolute;
+  inset: 0;
+  border-radius: 9999px;
+  transition:
+    transform 0.2s ease,
+    box-shadow 0.2s ease,
+    background 0.2s ease;
+}
+
+.vote-btn.vote-yes .vote-bg {
+  background: var(--curyo-ember);
+  box-shadow: 0 8px 22px rgb(242 100 38 / 0.36);
+}
+
+.vote-btn.vote-no .vote-bg {
+  background: var(--curyo-ember-deep);
+  box-shadow: 0 8px 22px rgb(179 52 27 / 0.32);
+}
+
+.vote-btn .vote-symbol {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.vote-btn:hover .vote-bg {
+  transform: scale(1.06);
+}
+
+.vote-btn.vote-yes:hover .vote-bg {
+  box-shadow: 0 10px 24px rgb(242 100 38 / 0.42);
+}
+
+.vote-btn.vote-no:hover .vote-bg {
+  box-shadow: 0 10px 24px rgb(179 52 27 / 0.38);
+}
+
+.vote-btn:active .vote-bg {
+  transform: scale(0.94);
+}
+
+.vote-btn:focus-visible {
+  outline: none;
+}
+
+.vote-btn:focus-visible .vote-bg {
+  box-shadow:
+    0 0 0 2px rgb(245 240 235 / 0.92),
+    0 0 0 5px rgb(242 100 38 / 0.3);
+}
+
+.vote-btn:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+
+.vote-btn:disabled:hover .vote-bg,
+.vote-btn:disabled:active .vote-bg {
+  transform: none;
+}
+
+.vote-btn:disabled.vote-yes:hover .vote-bg {
+  box-shadow: 0 8px 22px rgb(242 100 38 / 0.36);
+}
+
+.vote-btn:disabled.vote-no:hover .vote-bg {
+  box-shadow: 0 8px 22px rgb(179 52 27 / 0.32);
+}
+
 /* Prose typography for docs pages */
 .prose {
   color: var(--color-base-content);
