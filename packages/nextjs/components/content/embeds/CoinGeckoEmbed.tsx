@@ -1,7 +1,8 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { SafeExternalLink } from "~~/components/shared/SafeExternalLink";
+import { getCoinGeckoImageCandidates, getImageLoadState } from "~~/lib/content/coinGeckoImage";
 import { getEmbedImageLoadingProps } from "~~/lib/content/embedLoadStrategy";
 import type { ContentMetadataResult } from "~~/lib/contentMetadata/types";
 import type { PlatformInfo } from "~~/utils/platforms";
@@ -17,8 +18,11 @@ interface CoinGeckoToken {
   symbol: string;
   description?: string;
   imageUrl?: string;
+  thumbnailUrl?: string;
   marketCapRank?: number;
 }
+
+const IMAGE_FALLBACK_TIMEOUT_MS = 4000;
 
 /** CoinGecko gecko icon */
 function CoinGeckoIcon({ className }: { className?: string }) {
@@ -37,7 +41,8 @@ function getPrefetchedCoinGeckoToken(coinId: string, prefetchedMetadata?: Conten
   return {
     name: prefetchedMetadata?.title ?? getCoinDisplayName(coinId),
     symbol: prefetchedMetadata?.symbol ?? coinId.toUpperCase().replace(/-/g, ""),
-    imageUrl: prefetchedMetadata?.imageUrl ?? prefetchedMetadata?.thumbnailUrl ?? undefined,
+    imageUrl: prefetchedMetadata?.imageUrl ?? undefined,
+    thumbnailUrl: prefetchedMetadata?.thumbnailUrl ?? undefined,
   };
 }
 
@@ -50,15 +55,39 @@ export function CoinGeckoEmbed({ info, compact, prefetchedMetadata }: CoinGeckoE
   const [loading, setLoading] = useState(true);
   const [imageError, setImageError] = useState(false);
   const [imageLoaded, setImageLoaded] = useState(false);
+  const [imageCandidateIndex, setImageCandidateIndex] = useState(0);
+  const imageRef = useRef<HTMLImageElement | null>(null);
 
   const coinId = info.id || (info.metadata?.coinId as string);
-  const imageSrc = token?.imageUrl ? `/api/image-proxy?url=${encodeURIComponent(token.imageUrl)}` : undefined;
+  const imageCandidates = getCoinGeckoImageCandidates(token);
+  const activeImageUrl = imageCandidates[imageCandidateIndex];
+  const canFallbackImage = imageCandidateIndex < imageCandidates.length - 1;
+  const imageSrc = activeImageUrl ? `/api/image-proxy?url=${encodeURIComponent(activeImageUrl)}` : undefined;
   const imageLoadingProps = getEmbedImageLoadingProps(compact);
 
-  useEffect(() => {
-    setImageError(false);
-    setImageLoaded(false);
-  }, [imageSrc]);
+  function advanceImageCandidate() {
+    if (!canFallbackImage) {
+      setImageError(true);
+      return;
+    }
+
+    setImageCandidateIndex(currentIndex => Math.min(currentIndex + 1, imageCandidates.length - 1));
+  }
+
+  function handleImageRef(node: HTMLImageElement | null) {
+    imageRef.current = node;
+
+    const loadState = getImageLoadState(node);
+    if (loadState === "loaded") {
+      setImageLoaded(true);
+      setImageError(false);
+      return;
+    }
+
+    if (loadState === "error") {
+      advanceImageCandidate();
+    }
+  }
 
   useEffect(() => {
     if (!coinId) {
@@ -84,7 +113,14 @@ export function CoinGeckoEmbed({ info, compact, prefetchedMetadata }: CoinGeckoE
     fetch(`/api/thumbnail?url=${encodeURIComponent(info.url)}`)
       .then(r => (r.ok ? r.json() : null))
       .then(data => {
-        if (!cancelled) setToken({ name, symbol, imageUrl: data?.imageUrl ?? data?.thumbnailUrl ?? undefined });
+        if (!cancelled) {
+          setToken({
+            name,
+            symbol,
+            imageUrl: data?.imageUrl ?? undefined,
+            thumbnailUrl: data?.thumbnailUrl ?? undefined,
+          });
+        }
       })
       .catch(() => {
         if (!cancelled) setToken({ name, symbol });
@@ -97,6 +133,37 @@ export function CoinGeckoEmbed({ info, compact, prefetchedMetadata }: CoinGeckoE
       cancelled = true;
     };
   }, [coinId, info.url, prefetchedMetadata]);
+
+  useEffect(() => {
+    imageRef.current = null;
+    setImageCandidateIndex(0);
+    setImageError(false);
+    setImageLoaded(false);
+  }, [token?.imageUrl, token?.thumbnailUrl]);
+
+  useEffect(() => {
+    if (!imageSrc || imageLoaded) return;
+
+    const timeout = window.setTimeout(() => {
+      const loadState = getImageLoadState(imageRef.current);
+      if (loadState === "loaded") {
+        setImageLoaded(true);
+        setImageError(false);
+        return;
+      }
+
+      if (canFallbackImage) {
+        setImageCandidateIndex(currentIndex => Math.min(currentIndex + 1, imageCandidates.length - 1));
+        return;
+      }
+
+      setImageError(loadState === "error" || loadState === "pending");
+    }, IMAGE_FALLBACK_TIMEOUT_MS);
+
+    return () => {
+      window.clearTimeout(timeout);
+    };
+  }, [canFallbackImage, imageLoaded, imageSrc, imageCandidates.length]);
 
   // Loading state
   if (loading) {
@@ -134,7 +201,7 @@ export function CoinGeckoEmbed({ info, compact, prefetchedMetadata }: CoinGeckoE
   }
 
   // No image available — show link card
-  if (!token.imageUrl || imageError) {
+  if (!activeImageUrl || imageError) {
     return (
       <SafeExternalLink
         href={info.url}
@@ -168,6 +235,7 @@ export function CoinGeckoEmbed({ info, compact, prefetchedMetadata }: CoinGeckoE
         )}
         <div className="flex h-full w-full items-center justify-center p-8 embed-surface">
           <img
+            ref={handleImageRef}
             src={imageSrc}
             alt={token.name}
             width={192}
@@ -176,8 +244,11 @@ export function CoinGeckoEmbed({ info, compact, prefetchedMetadata }: CoinGeckoE
             className={`aspect-square h-auto w-[clamp(10rem,48%,18rem)] max-h-[68%] shadow-lg transition-transform group-hover:scale-[1.05] object-contain ${
               imageLoaded ? "opacity-100" : "opacity-0"
             }`}
-            onLoad={() => setImageLoaded(true)}
-            onError={() => setImageError(true)}
+            onLoad={() => {
+              setImageLoaded(true);
+              setImageError(false);
+            }}
+            onError={advanceImageCandidate}
           />
         </div>
       </SafeExternalLink>
