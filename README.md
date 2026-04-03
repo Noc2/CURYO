@@ -43,7 +43,7 @@ Curyo is a monorepo with nine packages:
 | `packages/sdk` | Framework-agnostic frontend SDK for hosted reads, vote helpers, and frontend attribution |
 | `packages/ponder` | Ponder indexer for on-chain event processing and API |
 | `packages/keeper` | Standalone keeper service for keeper-assisted round settlement |
-| `packages/bot` | CLI voting bot with pluggable rating strategies |
+| `packages/bot` | Manual CLI bot for content submission and voting |
 | `packages/mcp-server` | Read-only MCP server exposing Curyo data to AI agents |
 | `packages/node-utils` | Shared Node.js utilities used by services and scripts |
 

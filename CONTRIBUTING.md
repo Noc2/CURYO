@@ -21,7 +21,7 @@ Thank you for your interest in contributing to Curyo — the first human reputat
 | `packages/nextjs` | Next.js frontend, React components, hooks |
 | `packages/ponder` | On-chain event indexer and API endpoints |
 | `packages/keeper` | Standalone keeper service for vote reveals |
-| `packages/bot` | CLI voting bot |
+| `packages/bot` | Manual CLI bot for content submission and voting |
 
 ## How to Contribute
 

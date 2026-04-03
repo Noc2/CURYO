@@ -15,7 +15,9 @@ yarn workspace @curyo/bot submit --category Movies --max-submissions 5
 yarn workspace @curyo/bot submit --source coingecko --max-submissions 2
 ```
 
-Requires a running Ponder indexer (`yarn ponder:dev`) and configured environment variables.
+Requires configured environment variables and a reachable RPC endpoint.
+`vote` requires a running Ponder indexer (`yarn ponder:dev`); `submit` does not.
+`status` reports the configured Ponder endpoint when available but can still run without it.
 Public submission sources still work without third-party API keys, but source coverage and automated rating breadth are reduced.
 
 ## Scripts
@@ -28,13 +30,15 @@ Public submission sources still work without third-party API keys, but source co
 | `yarn bot:vote` | Rate content and commit encrypted votes via tlock commit-reveal |
 | `yarn bot:status` | Check wallet balances and Voter ID ownership |
 
+The bot is a manual CLI. `yarn dev:stack` starts Ponder, Next.js, and the keeper, but it does not start `submit` or `vote` automatically.
+
 ## Configuration
 
 Copy `.env.example` to `.env` in the package directory and fill in the deployed network details. The required minimum is:
 
 - one wallet for the role you want to run
 - `RPC_URL`, `CHAIN_ID`, and the deployed contract addresses if your chain is not present in `@curyo/contracts`
-- `PONDER_URL`
+- `PONDER_URL` for `vote` and optional `status` checks
 
 **Wallet (one of):**
 
@@ -123,13 +127,13 @@ TMDB_API_KEY=...
 
 You can use a Foundry keystore instead of `SUBMIT_PRIVATE_KEY` if you prefer.
 
-2. Start the services the bot depends on. At minimum, the bot needs a reachable RPC and Ponder indexer on the same deployment.
+2. Start the services the bot depends on. For `submit`, the bot only needs a reachable RPC on the same deployment.
 
 ```bash
-yarn ponder:dev
+yarn ponder:dev # optional for submit, required for vote
 ```
 
-If you are testing locally through the web app as well, run the app against the same chain so you can manage delegation and transfers from the UI.
+If you are testing locally through the web app as well, run the app and Ponder against the same chain so you can manage delegation and transfers from the UI.
 
 3. Print the submit bot wallet address.
 
