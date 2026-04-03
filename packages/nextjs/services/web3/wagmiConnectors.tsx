@@ -7,50 +7,15 @@ import {
   thirdwebClient,
 } from "~~/services/thirdweb/client";
 import { setConnectedThirdwebConnectorWallet } from "~~/services/thirdweb/connectorWalletState";
+import {
+  findInjectedProvider,
+  isCoinbaseInjectedProvider,
+  isDedicatedMetaMaskProvider,
+  isRainbowInjectedProvider,
+  type InjectedWalletProvider,
+} from "~~/services/web3/wagmiConnectorTargets";
 
 const CURYO_THIRDWEB_ICON = "/favicon.svg";
-const EXTERNAL_WALLET_FLAGS = [
-  "isApexWallet",
-  "isAvalanche",
-  "isBitKeep",
-  "isBlockWallet",
-  "isBraveWallet",
-  "isKuCoinWallet",
-  "isMathWallet",
-  "isOkxWallet",
-  "isOKExWallet",
-  "isOneInchIOSWallet",
-  "isOneInchAndroidWallet",
-  "isOpera",
-  "isPhantom",
-  "isPortal",
-  "isRabby",
-  "isTokenPocket",
-  "isTokenary",
-  "isUniswapWallet",
-  "isZerion",
-] as const;
-
-type InjectedWalletProvider = {
-  isCoinbaseWallet?: boolean;
-  isMetaMask?: boolean;
-  isRainbow?: boolean;
-  providers?: InjectedWalletProvider[];
-  [key: string]: unknown;
-};
-
-function findInjectedProvider(win: unknown, predicate: (provider: InjectedWalletProvider) => boolean) {
-  const ethereum = (win as { ethereum?: InjectedWalletProvider } | undefined)?.ethereum;
-  const providers = Array.isArray(ethereum?.providers) ? ethereum.providers : [];
-
-  for (const provider of providers) {
-    if (predicate(provider)) {
-      return provider;
-    }
-  }
-
-  return ethereum && predicate(ethereum) ? ethereum : undefined;
-}
 
 function createTargetedInjectedConnector(
   id: string,
@@ -100,19 +65,14 @@ export const wagmiConnectors = () => {
   }
 
   connectors.push(
-    createTargetedInjectedConnector("io.metamask", "MetaMask", provider => {
-      if (!provider.isMetaMask) return false;
-      return EXTERNAL_WALLET_FLAGS.every(flag => !provider[flag]);
-    }),
+    createTargetedInjectedConnector("io.metamask", "MetaMask", isDedicatedMetaMaskProvider),
   );
 
   connectors.push(
-    createTargetedInjectedConnector("com.coinbase.wallet", "Coinbase Wallet", provider =>
-      Boolean(provider.isCoinbaseWallet),
-    ),
+    createTargetedInjectedConnector("com.coinbase.wallet", "Coinbase Wallet", isCoinbaseInjectedProvider),
   );
 
-  connectors.push(createTargetedInjectedConnector("me.rainbow", "Rainbow", provider => Boolean(provider.isRainbow)));
+  connectors.push(createTargetedInjectedConnector("me.rainbow", "Rainbow", isRainbowInjectedProvider));
 
   connectors.push(
     injected({
