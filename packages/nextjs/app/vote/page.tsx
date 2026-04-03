@@ -36,6 +36,7 @@ import {
 import { type DiscoverFeedMode, sortDiscoverFeed } from "~~/lib/vote/feedModes";
 import { rankForYouFeed } from "~~/lib/vote/forYouRanker";
 import { buildVoteLocation } from "~~/lib/vote/location";
+import { MAX_VOTE_QUEUE_WINDOW_SIZE } from "~~/lib/vote/queueLayout";
 import { mergeRequestedContentIntoFeed } from "~~/lib/vote/requestedContent";
 import { type VoteView, getVoteViewGroups, isActivityViewOption } from "~~/lib/vote/viewOptions";
 import { buildRecommendationSignalContext, trackRecommendationSignal } from "~~/utils/recommendationTracker";
@@ -567,7 +568,7 @@ const HomeInner = () => {
   } = useVoteFeedStage(displayFeed, {
     visibleCount,
     requestedActiveId: effectiveRequestedActiveId,
-    windowSize: 8,
+    windowSize: MAX_VOTE_QUEUE_WINDOW_SIZE,
   });
   const queueStatusByContentId = useQueueCardStatusMap(visibleFeedItems, feedSource, nowSeconds);
 
@@ -847,10 +848,11 @@ const HomeInner = () => {
 
   const handleExternalOpen = useCallback(
     (item: ContentItem) => {
+      replaceVoteLocation({ contentId: item.id });
       markPrimaryInteraction(item.id);
       recordRecommendationSignal(item, "external_open");
     },
-    [markPrimaryInteraction, recordRecommendationSignal],
+    [markPrimaryInteraction, recordRecommendationSignal, replaceVoteLocation],
   );
 
   const handleViewChange = useCallback(
@@ -1047,18 +1049,25 @@ const HomeInner = () => {
             )}
           </div>
           {!isShortSearchQuery ? (
-            <select
-              value={effectiveSearchSortBy}
-              onChange={e => setSortBy(e.target.value as SearchSortOption)}
-              className="select select-sm bg-base-200 text-base font-medium border-none focus:outline-none w-auto"
-              aria-label="Sort search results"
-            >
-              {SEARCH_SORT_OPTIONS.map(opt => (
-                <option key={opt.value} value={opt.value}>
-                  {opt.label}
-                </option>
-              ))}
-            </select>
+            <>
+              <label htmlFor="vote-search-sort" className="sr-only">
+                Sort search results
+              </label>
+              <select
+                id="vote-search-sort"
+                name="vote-search-sort"
+                value={effectiveSearchSortBy}
+                onChange={e => setSortBy(e.target.value as SearchSortOption)}
+                className="select select-sm bg-base-200 text-base font-medium border-none focus:outline-none w-auto"
+                aria-label="Sort search results"
+              >
+                {SEARCH_SORT_OPTIONS.map(opt => (
+                  <option key={opt.value} value={opt.value}>
+                    {opt.label}
+                  </option>
+                ))}
+              </select>
+            </>
           ) : null}
         </div>
       ) : null}

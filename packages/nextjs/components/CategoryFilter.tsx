@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useId, useMemo, useRef, useState } from "react";
 import { ChevronDownIcon, MagnifyingGlassIcon } from "@heroicons/react/24/outline";
 import { useOutsideClick } from "~~/hooks/scaffold-eth/useOutsideClick";
 
@@ -16,6 +16,7 @@ const PILL_GAP = 8; // gap-2 = 0.5rem = 8px
 const MORE_BUTTON_WIDTH = 100; // approximate width of "+ N more" button
 
 export function CategoryFilter({ categories, activeCategory, onSelect, pillClassName }: CategoryFilterProps) {
+  const searchFieldBaseId = useId();
   const containerRef = useRef<HTMLDivElement>(null);
   const measureRef = useRef<HTMLDivElement>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
@@ -26,6 +27,8 @@ export function CategoryFilter({ categories, activeCategory, onSelect, pillClass
   const [pillWidths, setPillWidths] = useState<number[]>([]);
   const [search, setSearch] = useState("");
   const searchInputRef = useRef<HTMLInputElement>(null);
+  const mobileSearchInputId = `${searchFieldBaseId}-mobile`;
+  const desktopSearchInputId = `${searchFieldBaseId}-desktop`;
 
   useOutsideClick(
     dropdownRef,
@@ -148,8 +151,13 @@ export function CategoryFilter({ categories, activeCategory, onSelect, pillClass
           <div className="absolute top-full mt-1 left-0 z-50 bg-base-200 rounded-box shadow-lg min-w-[200px] max-w-[280px]">
             <div className="p-2">
               <div className="relative">
+                <label htmlFor={mobileSearchInputId} className="sr-only">
+                  Search categories
+                </label>
                 <MagnifyingGlassIcon className="absolute left-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-base-content/40" />
                 <input
+                  id={mobileSearchInputId}
+                  name="category-search-mobile"
                   type="text"
                   placeholder="Search categories..."
                   aria-label="Search categories"
@@ -220,9 +228,14 @@ export function CategoryFilter({ categories, activeCategory, onSelect, pillClass
               <div className="absolute top-full mt-1 right-0 z-50 bg-base-200 rounded-box shadow-lg min-w-[200px]">
                 <div className="p-2">
                   <div className="relative">
+                    <label htmlFor={desktopSearchInputId} className="sr-only">
+                      Search categories
+                    </label>
                     <MagnifyingGlassIcon className="absolute left-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-base-content/40" />
                     <input
+                      id={desktopSearchInputId}
                       ref={searchInputRef}
+                      name="category-search-desktop"
                       type="text"
                       placeholder="Search categories..."
                       aria-label="Search categories"

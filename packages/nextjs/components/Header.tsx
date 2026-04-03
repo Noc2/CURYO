@@ -1,6 +1,6 @@
 "use client";
 
-import React, { Suspense, useCallback, useEffect, useRef, useState } from "react";
+import React, { Suspense, useCallback, useEffect, useId, useRef, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { motion } from "framer-motion";
@@ -223,6 +223,7 @@ const HeaderBrand = ({ className, compact = false }: { className?: string; compa
 const HeaderSearchBar = ({ className }: { className?: string }) => {
   const { activeQuery, commitSearch } = useVoteSearch();
   const [inputValue, setInputValue] = useState(activeQuery);
+  const searchInputId = useId();
 
   useEffect(() => {
     setInputValue(activeQuery);
@@ -252,8 +253,13 @@ const HeaderSearchBar = ({ className }: { className?: string }) => {
   const isSidebar = className?.includes("sidebar");
   return (
     <div className={`relative ${className ?? ""} ${isSidebar ? "w-full min-w-0" : "hidden sm:block"}`}>
+      <label htmlFor={searchInputId} className="sr-only">
+        Search content
+      </label>
       <MagnifyingGlassIcon className="absolute left-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-base-content/45 pointer-events-none" />
       <input
+        id={searchInputId}
+        name="vote-search"
         type="text"
         placeholder="Search there"
         aria-label="Search content"
@@ -285,6 +291,7 @@ const HeaderSearchBar = ({ className }: { className?: string }) => {
 const MobileHeaderSearch = ({ onClose }: { onClose: () => void }) => {
   const { activeQuery, commitSearch } = useVoteSearch();
   const [draftValue, setDraftValue] = useState(activeQuery);
+  const searchInputId = useId();
 
   useEffect(() => {
     setDraftValue(activeQuery);
@@ -310,8 +317,13 @@ const MobileHeaderSearch = ({ onClose }: { onClose: () => void }) => {
         <ArrowLeftIcon className="h-5 w-5" />
       </button>
       <div className="relative min-w-0 flex-1">
+        <label htmlFor={searchInputId} className="sr-only">
+          Search content
+        </label>
         <MagnifyingGlassIcon className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-base-content/30" />
         <input
+          id={searchInputId}
+          name="vote-search-mobile"
           type="text"
           placeholder="Search there"
           aria-label="Search content"

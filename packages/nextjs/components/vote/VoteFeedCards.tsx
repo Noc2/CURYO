@@ -12,6 +12,7 @@ import { VotingQuestionCard } from "~~/components/shared/VotingQuestionCard";
 import { WatchContentButton } from "~~/components/shared/WatchContentButton";
 import type { ContentItem } from "~~/hooks/useContentFeed";
 import type { SubmitterProfile } from "~~/hooks/useSubmitterProfiles";
+import { getPreferredQueueThumbnailUrl } from "~~/lib/content/thumbnailSource";
 import { formatRatingScoreOutOfTen } from "~~/lib/ui/ratingDisplay";
 import type { QueueCardStatus } from "~~/lib/vote/queueCardStatus";
 import { detectPlatform } from "~~/utils/platforms";
@@ -51,8 +52,7 @@ function getThumbnailImageSrc(thumbnailUrl: string) {
 }
 
 export function getVoteFeedThumbnailSrc(item: ContentItem) {
-  const platform = detectPlatform(item.url);
-  const thumbnailUrl = item.contentMetadata?.thumbnailUrl ?? item.thumbnailUrl ?? platform.thumbnailUrl;
+  const thumbnailUrl = getPreferredQueueThumbnailUrl(item);
   return thumbnailUrl ? getThumbnailImageSrc(thumbnailUrl) : null;
 }
 
