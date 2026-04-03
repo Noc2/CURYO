@@ -10,6 +10,7 @@ const CIPHERTEXT = `0x${"bb".repeat(16)}` as const;
 const DRAND_CHAIN_HASH = `0x${"cc".repeat(32)}` as const;
 
 type VoteCommandOptions = {
+  allowance?: bigint;
   lastVoteError?: Error;
 };
 
@@ -22,6 +23,8 @@ async function loadVoteCommand(options: VoteCommandOptions = {}) {
         return true;
       case "balanceOf":
         return 10_000_000n;
+      case "allowance":
+        return options.allowance ?? 0n;
       case "lastVoteTimestamp":
         if (options.lastVoteError) {
           throw options.lastVoteError;
@@ -36,10 +39,16 @@ async function loadVoteCommand(options: VoteCommandOptions = {}) {
     }
   });
   const waitForTransactionReceipt = vi.fn().mockResolvedValue({ status: "success" });
-  const writeContract = vi
-    .fn()
-    .mockResolvedValueOnce("0xapprove")
-    .mockResolvedValueOnce("0xvote");
+  const writeContract = vi.fn(async ({ functionName }: { functionName: string }) => {
+    switch (functionName) {
+      case "approve":
+        return "0xapprove";
+      case "commitVote":
+        return "0xvote";
+      default:
+        throw new Error(`Unexpected writeContract: ${functionName}`);
+    }
+  });
   const log = {
     info: vi.fn(),
     warn: vi.fn(),
@@ -173,5 +182,24 @@ describe("runVote", () => {
       "Skipping content #42 (failed to read vote history: history unavailable)",
     );
     expect(voteCommand.mocks.writeContract).not.toHaveBeenCalled();
+  });
+
+  it("reuses an existing voting allowance when it is already sufficient", async () => {
+    const voteCommand = await loadVoteCommand({
+      allowance: 1_000_000n,
+    });
+
+    await voteCommand.runVote();
+
+    expect(voteCommand.mocks.writeContract).not.toHaveBeenCalledWith(
+      expect.objectContaining({
+        functionName: "approve",
+      }),
+    );
+    expect(voteCommand.mocks.writeContract).toHaveBeenCalledWith(
+      expect.objectContaining({
+        functionName: "commitVote",
+      }),
+    );
   });
 });

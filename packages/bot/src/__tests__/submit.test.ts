@@ -14,6 +14,7 @@ const ITEM = {
 };
 
 type SubmitCommandOptions = {
+  allowance?: bigint;
   balance?: bigint;
   hasVoterId?: boolean;
   isUrlSubmittedError?: Error;
@@ -39,6 +40,8 @@ async function loadSubmitCommand(options: SubmitCommandOptions = {}) {
         return options.hasVoterId ?? true;
       case "balanceOf":
         return options.balance ?? 20_000_000n;
+      case "allowance":
+        return options.allowance ?? 0n;
       case "isUrlSubmitted":
         if (options.isUrlSubmittedError) {
           throw options.isUrlSubmittedError;
@@ -196,6 +199,24 @@ describe("runSubmit", () => {
       expect.objectContaining({
         functionName: "submitContent",
         args: [ITEM.url, ITEM.title, ITEM.description, ITEM.tags, ITEM.categoryId, FIXED_SALT],
+      }),
+    );
+  });
+
+  it("reuses an existing submission allowance when it is already sufficient", async () => {
+    const submitCommand = await loadSubmitCommand({ allowance: 10_000_000n });
+
+    await submitCommand.runSubmit();
+
+    expect(submitCommand.mocks.writeContract).not.toHaveBeenCalledWith(
+      expect.objectContaining({
+        functionName: "approve",
+      }),
+    );
+    expect(submitCommand.mocks.writeContract).toHaveBeenNthCalledWith(
+      1,
+      expect.objectContaining({
+        functionName: "reserveSubmission",
       }),
     );
   });
