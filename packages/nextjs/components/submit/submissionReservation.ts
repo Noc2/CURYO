@@ -4,7 +4,7 @@ import { encodeAbiParameters, keccak256 } from "viem";
 
 const RESERVED_SUBMISSION_STORAGE_PREFIX = "curyo:reserved-submission:";
 
-export type SubmissionDraft = {
+type SubmissionDraft = {
   categoryId: bigint;
   description: string;
   submissionKey: `0x${string}`;
@@ -13,7 +13,7 @@ export type SubmissionDraft = {
   url: string;
 };
 
-export type StoredSubmissionReservation = {
+type StoredSubmissionReservation = {
   categoryId: string;
   description: string;
   revealCommitment: `0x${string}`;

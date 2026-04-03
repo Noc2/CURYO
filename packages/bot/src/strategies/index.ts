@@ -25,5 +25,3 @@ const strategies: RatingStrategy[] = [
 export function getStrategy(url: string): RatingStrategy | null {
   return strategies.find(s => s.canRate(url)) ?? null;
 }
-
-export type { RatingStrategy };

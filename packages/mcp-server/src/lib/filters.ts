@@ -1,11 +1,11 @@
 export const CONTENT_STATUS_VALUES = ["all", "active", "dormant", "cancelled"] as const;
-export type ContentStatus = (typeof CONTENT_STATUS_VALUES)[number];
+type ContentStatus = (typeof CONTENT_STATUS_VALUES)[number];
 
 export const CONTENT_SORT_VALUES = ["newest", "oldest", "highest_rated", "lowest_rated", "most_votes"] as const;
-export type ContentSort = (typeof CONTENT_SORT_VALUES)[number];
+type ContentSort = (typeof CONTENT_SORT_VALUES)[number];
 
 export const ROUND_STATE_VALUES = ["all", "open", "settled", "cancelled", "tied"] as const;
-export type RoundState = (typeof ROUND_STATE_VALUES)[number];
+type RoundState = (typeof ROUND_STATE_VALUES)[number];
 
 const CONTENT_STATUS_TO_API: Record<ContentStatus, string | undefined> = {
   all: "all",

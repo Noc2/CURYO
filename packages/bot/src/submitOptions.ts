@@ -4,7 +4,7 @@ export interface SubmitRunOptions {
   source?: string;
 }
 
-export interface ParsedSubmitCommand {
+interface ParsedSubmitCommand {
   help?: boolean;
   options: SubmitRunOptions;
 }
