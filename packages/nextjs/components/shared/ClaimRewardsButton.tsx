@@ -13,11 +13,7 @@ type ClaimRewardsButtonProps = {
   showTokenSymbol?: boolean;
 };
 
-export function ClaimRewardsButton({
-  buttonClassName,
-  className,
-  showTokenSymbol = true,
-}: ClaimRewardsButtonProps) {
+export function ClaimRewardsButton({ buttonClassName, className, showTokenSymbol = true }: ClaimRewardsButtonProps) {
   const { claimableItems, totalClaimable, refetch: refetchClaimable } = useAllClaimableRewards();
   const { claimAll, isClaiming, progress } = useClaimAll();
 
