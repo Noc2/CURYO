@@ -10,7 +10,7 @@ export class PonderApiError extends Error {
   }
 }
 
-export interface PonderClientOptions {
+interface PonderClientOptions {
   baseUrl: string;
   fetchImpl?: typeof fetch;
   timeoutMs?: number;

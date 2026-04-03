@@ -32,7 +32,7 @@ type RpcPreferenceOptions = {
   rpcOverrides?: Partial<Record<number, string>>;
 };
 
-export function normalizeHttpUrl(value: string, name = "RPC URL") {
+function normalizeHttpUrl(value: string, name = "RPC URL") {
   const trimmedValue = value.trim();
   let parsedUrl: URL;
 
