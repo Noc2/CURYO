@@ -20,3 +20,12 @@ test("selecting content preserves the active category hash", () => {
     "https://www.curyo.xyz/vote?q=openlaw&content=9#youtube",
   );
 });
+
+test("persisting a selected card adds the content query param to a plain vote url", () => {
+  assert.equal(
+    buildVoteLocation("https://www.curyo.xyz/vote", {
+      contentId: 12n,
+    }),
+    "https://www.curyo.xyz/vote?content=12",
+  );
+});
