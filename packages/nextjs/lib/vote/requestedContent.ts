@@ -8,5 +8,9 @@ export function mergeRequestedContentIntoFeed(
     return [...items];
   }
 
-  return [requestedItem, ...items.filter(item => item.id !== requestedItem.id)];
+  if (items.some(item => item.id === requestedItem.id)) {
+    return [...items];
+  }
+
+  return [requestedItem, ...items];
 }
