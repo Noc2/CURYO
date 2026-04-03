@@ -185,7 +185,7 @@ export function useContentFeed(voterAddress?: string, options: UseContentFeedOpt
       : (result?.data?.hasMore ?? totalContent > offset + baseFeed.length);
   const isLoading = enabled && (ponderLoading || (rpcFallbackActive && eventsLoading && result?.source !== "ponder"));
   const source = result?.source ?? (rpcFallbackActive ? "rpc" : "ponder");
-  const { metadataMap, validationMap } = useContentFeedMetadata(baseFeed);
+  const { metadataMap, validationMap, isMetadataPrefetchPending } = useContentFeedMetadata(baseFeed);
 
   const feed = useMemo(
     () => mergeContentFeedMetadata(baseFeed, metadataMap, validationMap),
@@ -195,6 +195,7 @@ export function useContentFeed(voterAddress?: string, options: UseContentFeedOpt
   return {
     feed,
     isLoading,
+    isMetadataPrefetchPending,
     totalContent,
     hasMore,
     source,

@@ -54,6 +54,7 @@ interface VoteFeedStageProps {
   address?: string;
   isCommitting: boolean;
   voteError?: string | null;
+  isMetadataPrefetchPending: boolean;
   primaryItemCooldownSeconds: number;
   navigationLocked: boolean;
   isWatchPending: (contentId: bigint) => boolean;
@@ -86,6 +87,7 @@ export function VoteFeedStage({
   address,
   isCommitting,
   voteError,
+  isMetadataPrefetchPending,
   primaryItemCooldownSeconds,
   navigationLocked,
   isWatchPending,
@@ -408,6 +410,7 @@ export function VoteFeedStage({
                 normalizedAddress={normalizedAddress}
                 isCommitting={isCommitting}
                 voteError={voteError}
+                deferEmbedClientFetch={isMetadataPrefetchPending}
                 cooldownSecondsRemaining={primaryItemCooldownSeconds}
                 address={address}
                 onPrevious={handleSelectPrevious}

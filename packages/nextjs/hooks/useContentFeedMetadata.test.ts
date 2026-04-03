@@ -4,6 +4,7 @@ import { type ContentItem, mapContentItem, mergeContentFeedMetadata } from "~~/h
 import {
   getContentFeedMetadataCacheKey,
   getContentFeedMetadataUrls,
+  isContentFeedMetadataPrefetchPending,
   normalizeValidationBatchResults,
 } from "~~/hooks/useContentFeedMetadata";
 
@@ -104,6 +105,13 @@ test("normalizeValidationBatchResults leaves omitted supported platforms unresol
   const platformUrl = "https://www.youtube.com/watch?v=dQw4w9WgXcQ";
 
   assert.deepEqual(normalizeValidationBatchResults([platformUrl], {}), {});
+});
+
+test("isContentFeedMetadataPrefetchPending only defers embeds while thumbnail batches are unresolved", () => {
+  const urls = ["https://github.com/openai/openai-node"];
+
+  assert.equal(isContentFeedMetadataPrefetchPending(urls, undefined), true);
+  assert.equal(isContentFeedMetadataPrefetchPending(urls, {}), false);
 });
 
 test("mapContentItem preserves open-round directional vote counts", () => {
