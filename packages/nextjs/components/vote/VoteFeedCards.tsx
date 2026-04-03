@@ -76,6 +76,7 @@ interface FeedVoteCardProps {
   onNext?: () => void;
   canPrevious?: boolean;
   canNext?: boolean;
+  deferEmbedClientFetch?: boolean;
 }
 
 export const FeedVoteCard = memo(function FeedVoteCard({
@@ -98,6 +99,7 @@ export const FeedVoteCard = memo(function FeedVoteCard({
   onNext,
   canPrevious = false,
   canNext = false,
+  deferEmbedClientFetch = false,
 }: FeedVoteCardProps) {
   const [isLaptopCompact, setIsLaptopCompact] = useState(false);
   const platformType = detectPlatform(item.url).type;
@@ -166,7 +168,11 @@ export const FeedVoteCard = memo(function FeedVoteCard({
       <div className={contentGridClassName}>
         <div className="flex min-w-0 min-h-0 flex-col overflow-hidden rounded-2xl bg-base-200">
           <div className={`${mediaHeightClassName} overflow-hidden`}>
-            <ContentEmbed url={item.url} prefetchedMetadata={item.contentMetadata} deferClientFetch />
+            <ContentEmbed
+              url={item.url}
+              prefetchedMetadata={item.contentMetadata}
+              deferClientFetch={deferEmbedClientFetch}
+            />
           </div>
           <FeedContentMetaCard
             item={item}

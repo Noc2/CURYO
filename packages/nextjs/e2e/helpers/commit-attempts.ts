@@ -2,6 +2,7 @@ export async function runCommitAttempts<TResult>(params: {
   attempt: (attemptIndex: number) => Promise<TResult>;
   attempts?: number;
   isSuccess: (result: TResult) => boolean;
+  shouldRetry?: (result: TResult) => boolean;
   onRetry?: (attemptIndex: number, result: TResult) => void;
 }): Promise<TResult> {
   const attempts = Math.max(1, Math.floor(params.attempts ?? 1));
@@ -14,9 +15,12 @@ export async function runCommitAttempts<TResult>(params: {
     }
 
     lastResult = result;
-    if (attemptIndex < attempts - 1) {
+    if (attemptIndex < attempts - 1 && (params.shouldRetry?.(result) ?? true)) {
       params.onRetry?.(attemptIndex, result);
+      continue;
     }
+
+    return result;
   }
 
   if (lastResult === undefined) {

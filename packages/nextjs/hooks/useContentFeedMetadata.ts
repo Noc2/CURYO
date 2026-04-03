@@ -80,6 +80,13 @@ export function getContentFeedMetadataCacheKey(urls: string[]): string {
   return JSON.stringify(urls);
 }
 
+export function isContentFeedMetadataPrefetchPending(
+  urls: string[],
+  metadataMap: Record<string, ContentMetadataResult> | undefined,
+): boolean {
+  return urls.length > 0 && metadataMap === undefined;
+}
+
 export function useContentFeedMetadata(feed: ContentItem[]) {
   const feedUrls = useMemo(() => getContentFeedMetadataUrls(feed), [feed]);
   const feedUrlsKey = useMemo(() => getContentFeedMetadataCacheKey(feedUrls), [feedUrls]);
@@ -111,5 +118,6 @@ export function useContentFeedMetadata(feed: ContentItem[]) {
   return {
     metadataMap: metadataMap ?? {},
     validationMap: validationMap ?? {},
+    isMetadataPrefetchPending: isContentFeedMetadataPrefetchPending(feedUrls, metadataMap),
   };
 }

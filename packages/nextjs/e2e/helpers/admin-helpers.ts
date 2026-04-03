@@ -8,14 +8,15 @@
  * Pattern follows cancelExpiredRoundDirect() in keeper.ts — ABI-encode
  * the call with viem and send via eth_sendTransaction.
  */
+import { parseRound } from "../../lib/contracts/roundVotingEngine";
 import { ANVIL_ACCOUNTS } from "./anvil-accounts";
 import { runCommitAttempts } from "./commit-attempts";
+import { type RpcSendResult, isRetryableDirectCommitSendResult } from "./direct-commit-retry";
 import "./fetch-shim";
 import { PONDER_URL } from "./ponder-url";
 import { E2E_RPC_URL } from "./service-urls";
-import { deriveAnchoredTlockRuntimeNowMs } from "./tlockRuntime";
 import { createTlockVoteCommit, encodeVoteTransferPayload } from "./tlock-voting";
-import { parseRound } from "../../lib/contracts/roundVotingEngine";
+import { deriveAnchoredTlockRuntimeNowMs } from "./tlockRuntime";
 
 const ANVIL_RPC = E2E_RPC_URL;
 // Contract gas costs shift as local protocol code evolves, so E2E helpers estimate
@@ -145,8 +146,8 @@ async function buildSubmissionReservation(
   return { revealCommitment, salt };
 }
 
-/** Send a raw transaction to the Anvil RPC, return true if it succeeded on-chain. */
-async function sendTxViaRpc(from: string, to: string, data: `0x${string}`): Promise<boolean> {
+/** Send a raw transaction to the Anvil RPC and report whether its outcome is known. */
+async function sendTxViaRpc(from: string, to: string, data: `0x${string}`): Promise<RpcSendResult> {
   const gasLimit = await resolveTxGasLimit(from, to, data);
   // Impersonate the sender so accounts beyond Anvil's default 10 can send txs
   await fetch(ANVIL_RPC, {
@@ -176,12 +177,12 @@ async function sendTxViaRpc(from: string, to: string, data: `0x${string}`): Prom
 
   if (json.error) {
     console.error(`[sendTx] RPC error from=${from} to=${to}: ${JSON.stringify(json.error)}`);
-    return false;
+    return { status: "unknown", error: JSON.stringify(json.error) };
   }
 
   // Anvil auto-mines, but the receipt may not be available instantly when
   // the keeper is also sending transactions. Retry a few times.
-  const txHash = json.result;
+  const txHash = json.result as `0x${string}`;
   for (let attempt = 0; attempt < 5; attempt++) {
     const receiptRes = await fetch(ANVIL_RPC, {
       method: "POST",
@@ -195,17 +196,19 @@ async function sendTxViaRpc(from: string, to: string, data: `0x${string}`): Prom
     });
     const receiptJson = await receiptRes.json();
     const status = receiptJson.result?.status;
-    if (status === "0x1") return true;
+    if (status === "0x1") return { status: "success", txHash };
     if (status === "0x0") {
       // Log revert data for debugging
       const revertData = receiptJson.result?.revertReason || "no revert reason";
       console.error(`[sendTx] Tx reverted from=${from} to=${to} hash=${txHash} reason=${revertData}`);
-      return false;
+      return { status: "reverted", txHash, reason: revertData };
     }
     // Receipt not yet available — wait and retry
     await new Promise(resolve => setTimeout(resolve, 500));
   }
-  return false;
+  const error = `Transaction receipt for ${txHash} was still unavailable after polling; refusing to retry ambiguously`;
+  console.error(`[sendTx] ${error}`);
+  return { status: "unknown", txHash, error };
 }
 
 async function sendTx(from: string, to: string, data: `0x${string}`): Promise<boolean> {
@@ -230,7 +233,8 @@ async function sendTx(from: string, to: string, data: `0x${string}`): Promise<bo
     }
   }
 
-  return sendTxViaRpc(from, to, data);
+  const result = await sendTxViaRpc(from, to, data);
+  return result.status === "success";
 }
 
 async function readLatestBlockSnapshot(): Promise<{ blockTag: `0x${string}`; timestampSeconds: number }> {
@@ -1188,7 +1192,7 @@ export async function commitVoteDirect(
   fromAddress: string,
   contractAddress: string,
   epochDurationSeconds?: number,
-): Promise<{ success: boolean; commitKey: `0x${string}`; isUp: boolean; salt: `0x${string}` }> {
+): Promise<{ success: boolean; retryable: boolean; commitKey: `0x${string}`; isUp: boolean; salt: `0x${string}` }> {
   const { encodeFunctionData } = await import("viem");
   const resolvedEpochDurationSeconds = await resolveVoteCommitEpochDurationSeconds(
     contractAddress,
@@ -1241,10 +1245,17 @@ export async function commitVoteDirect(
         args: [contentIdBigInt, targetRound, drandChainHash, chash, ciphertext, stakeAmount, frontend as `0x${string}`],
       });
 
-      const success = await sendTxViaRpc(fromAddress, contractAddress, data);
-      return { success, commitKey: ckey!, isUp, salt };
+      const sendResult = await sendTxViaRpc(fromAddress, contractAddress, data);
+      return {
+        success: sendResult.status === "success",
+        retryable: isRetryableDirectCommitSendResult(sendResult),
+        commitKey: ckey!,
+        isUp,
+        salt,
+      };
     },
     isSuccess: result => result.success,
+    shouldRetry: result => result.retryable,
     onRetry: attemptIndex => {
       console.warn(
         `[commitVoteDirect] Retrying stale tlock commit for ${fromAddress} on content ${contentIdBigInt.toString()} (attempt ${attemptIndex + 2}/${DIRECT_VOTE_COMMIT_ATTEMPTS})`,
@@ -1266,7 +1277,7 @@ export async function commitVoteWithTransferAndCallDirect(
   tokenAddress: string,
   votingEngineAddress: string,
   epochDurationSeconds?: number,
-): Promise<{ success: boolean; commitKey: `0x${string}`; isUp: boolean; salt: `0x${string}` }> {
+): Promise<{ success: boolean; retryable: boolean; commitKey: `0x${string}`; isUp: boolean; salt: `0x${string}` }> {
   const { encodeFunctionData } = await import("viem");
   const resolvedEpochDurationSeconds = await resolveVoteCommitEpochDurationSeconds(
     votingEngineAddress,
@@ -1324,10 +1335,17 @@ export async function commitVoteWithTransferAndCallDirect(
         args: [votingEngineAddress as `0x${string}`, stakeAmount, payload],
       });
 
-      const success = await sendTxViaRpc(fromAddress, tokenAddress, data);
-      return { success, commitKey: ckey!, isUp, salt };
+      const sendResult = await sendTxViaRpc(fromAddress, tokenAddress, data);
+      return {
+        success: sendResult.status === "success",
+        retryable: isRetryableDirectCommitSendResult(sendResult),
+        commitKey: ckey!,
+        isUp,
+        salt,
+      };
     },
     isSuccess: result => result.success,
+    shouldRetry: result => result.retryable,
     onRetry: attemptIndex => {
       console.warn(
         `[commitVoteWithTransferAndCallDirect] Retrying stale tlock commit for ${fromAddress} on content ${contentIdBigInt.toString()} (attempt ${attemptIndex + 2}/${DIRECT_VOTE_COMMIT_ATTEMPTS})`,

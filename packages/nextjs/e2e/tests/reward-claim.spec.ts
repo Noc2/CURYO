@@ -176,6 +176,22 @@ test.describe("Reward claim lifecycle", () => {
     expect(data.content).toHaveProperty("totalVotes");
   });
 
+  test("sidebar wallet summary shows claim button after settlement", async ({ browser }) => {
+    test.setTimeout(120_000);
+    test.skip(!settledContentId || roundId === 0n, "No settled content from previous test");
+
+    const context = await newE2EContext(browser);
+    const page = await context.newPage();
+    await setupWallet(page, ANVIL_ACCOUNTS.account4.privateKey);
+
+    await gotoWithRetry(page, "/governance#profile", { ensureWalletConnected: true });
+
+    const walletSummary = page.getByTestId("wallet-connected");
+    await expect(walletSummary.getByRole("button", { name: /Claim .* cREP/ })).toBeVisible({ timeout: 15_000 });
+
+    await context.close();
+  });
+
   test("winning voter claims reward via direct call", async () => {
     test.skip(!settledContentId || roundId === 0n, "No settled content from previous test");
     test.setTimeout(60_000);

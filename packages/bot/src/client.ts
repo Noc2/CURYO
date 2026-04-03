@@ -1,6 +1,12 @@
 import { createPublicClient, createWalletClient, http, defineChain } from "viem";
 import { privateKeyToAccount } from "viem/accounts";
-import { config, type BotIdentityConfig } from "./config.js";
+import {
+  config,
+  getRequiredContractKeys,
+  type BotContractKey,
+  type BotIdentityConfig,
+  type BotRole,
+} from "./config.js";
 import { getKeystoreAccount } from "./keystore.js";
 
 const CHAIN_NAMES: Record<number, string> = {
@@ -36,7 +42,7 @@ export const publicClient = createPublicClient({
   transport: http(config.rpcUrl),
 });
 
-const CONTRACT_DISPLAY_NAMES = {
+const CONTRACT_DISPLAY_NAMES: Record<BotContractKey, string> = {
   categoryRegistry: "CategoryRegistry",
   contentRegistry: "ContentRegistry",
   crepToken: "CuryoReputation",
@@ -46,15 +52,17 @@ const CONTRACT_DISPLAY_NAMES = {
 
 type BotConnectivityClient = Pick<typeof publicClient, "getChainId" | "getCode">;
 
-export async function validateBotConnectivity(client: BotConnectivityClient = publicClient) {
+export async function validateBotConnectivity(role: BotRole, client: BotConnectivityClient = publicClient) {
   const rpcChainId = await client.getChainId();
   if (rpcChainId !== config.chainId) {
     throw new Error(`RPC_URL reports chain ID ${rpcChainId}, but CHAIN_ID is ${config.chainId}.`);
   }
 
-  for (const [contractKey, address] of Object.entries(config.contracts) as Array<
-    [keyof typeof config.contracts, `0x${string}`]
-  >) {
+  for (const contractKey of getRequiredContractKeys(role)) {
+    const address = config.contracts[contractKey];
+    if (!address) {
+      throw new Error(`${CONTRACT_DISPLAY_NAMES[contractKey]} address is not configured.`);
+    }
     const code = await client.getCode({ address });
     if (!code || code === "0x") {
       throw new Error(

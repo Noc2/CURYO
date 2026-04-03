@@ -3,6 +3,7 @@ import { contractConfig } from "../contracts.js";
 import { config, log } from "../config.js";
 import { ponder } from "../ponder.js";
 import { formatEther } from "viem";
+import { ProtocolConfigAbi } from "@curyo/contracts/abis";
 import type { BotIdentityConfig } from "../config.js";
 
 async function showIdentity(label: string, identity: BotIdentityConfig) {
@@ -57,6 +58,21 @@ async function showIdentity(label: string, identity: BotIdentityConfig) {
   console.log("");
 }
 
+async function readRoundConfig() {
+  const protocolConfigAddress = (await publicClient.readContract({
+    ...contractConfig.votingEngine,
+    functionName: "protocolConfig",
+    args: [],
+  })) as `0x${string}`;
+
+  return publicClient.readContract({
+    address: protocolConfigAddress,
+    abi: ProtocolConfigAbi,
+    functionName: "config",
+    args: [],
+  });
+}
+
 export async function runStatus() {
   console.log(`\n=== Curyo Bot Status ===\n`);
   console.log(`RPC:      ${config.rpcUrl}`);
@@ -68,10 +84,7 @@ export async function runStatus() {
 
   // Round config
   try {
-    const [epochDuration, maxDuration, minVoters, maxVoters] = await publicClient.readContract({
-      ...contractConfig.votingEngine,
-      functionName: "config",
-    });
+    const [epochDuration, maxDuration, minVoters, maxVoters] = await readRoundConfig();
 
     console.log(`=== Round Config ===`);
     console.log(`Epoch dur:  ${Number(epochDuration) / 60}m (tlock tier window)`);
@@ -80,7 +93,7 @@ export async function runStatus() {
     console.log(`Max vote: ${maxVoters} voters per round`);
     console.log(`Cooldown: 24 hours`);
   } catch (err: any) {
-    console.log(`Rounds:   ERROR (${err.message})`);
+    console.log(`Round config: ERROR (${err.message})`);
   }
 
   // Ponder

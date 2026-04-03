@@ -35,14 +35,14 @@ test("mergeRequestedContentIntoFeed preserves the feed when no requested item is
   );
 });
 
-test("mergeRequestedContentIntoFeed moves an existing requested item to the front", () => {
+test("mergeRequestedContentIntoFeed preserves ranked order when the requested item is already loaded", () => {
   const first = buildItem(1n);
   const second = buildItem(2n);
   const third = buildItem(3n);
 
   assert.deepEqual(
     mergeRequestedContentIntoFeed([first, second, third], second).map(item => item.id),
-    [2n, 1n, 3n],
+    [1n, 2n, 3n],
   );
 });
 

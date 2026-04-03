@@ -1,5 +1,7 @@
 import { randomBytes } from "crypto";
+import { ProtocolConfigAbi } from "@curyo/contracts/abis";
 import { createTlockVoteCommit } from "@curyo/contracts/voting";
+import { ensureCrepAllowance } from "../allowance.js";
 import { publicClient, getWalletClient, getAccount } from "../client.js";
 import { contractConfig } from "../contracts.js";
 import { config, log } from "../config.js";
@@ -7,6 +9,21 @@ import { ponder } from "../ponder.js";
 import { getStrategy } from "../strategies/index.js";
 
 const ZERO_ADDRESS = "0x0000000000000000000000000000000000000000" as `0x${string}`;
+
+async function readRoundConfig() {
+  const protocolConfigAddress = (await publicClient.readContract({
+    ...contractConfig.votingEngine,
+    functionName: "protocolConfig",
+    args: [],
+  })) as `0x${string}`;
+
+  return publicClient.readContract({
+    address: protocolConfigAddress,
+    abi: ProtocolConfigAbi,
+    functionName: "config",
+    args: [],
+  });
+}
 
 export async function runVote() {
   const account = getAccount(config.rateBot);
@@ -94,7 +111,8 @@ export async function runVote() {
         log.debug(`Skipping content #${item.id} (already voted — one-time only)`);
         continue;
       }
-    } catch {
+    } catch (err: any) {
+      log.warn(`Skipping content #${item.id} (failed to read vote history: ${err.message})`);
       continue;
     }
 
@@ -115,22 +133,20 @@ export async function runVote() {
     log.info(`Content #${item.id}: ${strategy.name} score=${score.toFixed(1)} -> vote ${isUp ? "UP" : "DOWN"}`);
 
     try {
-      // Approve cREP for staking
-      const approveTx = await wallet.writeContract({
-        ...contractConfig.token,
-        functionName: "approve",
-        args: [config.contracts.votingEngine, config.voteStake],
+      const approveTx = await ensureCrepAllowance({
+        owner: account.address,
+        spender: config.contracts.votingEngine,
+        requiredAmount: config.voteStake,
+        wallet,
       });
-      await publicClient.waitForTransactionReceipt({ hash: approveTx });
-      log.debug(`Approved cREP: ${approveTx}`);
+      if (approveTx) {
+        log.debug(`Approved cREP: ${approveTx}`);
+      }
 
       // tlock commit-reveal: encrypt vote direction to epoch's drand round
       const salt = `0x${randomBytes(32).toString("hex")}` as `0x${string}`;
       // Read epoch duration from contract config
-      const configResult = (await publicClient.readContract({
-        ...contractConfig.votingEngine,
-        functionName: "config",
-      })) as readonly [bigint, bigint, bigint, bigint];
+      const configResult = (await readRoundConfig()) as readonly [bigint, bigint, bigint, bigint];
       const epochDuration = Number(configResult[0]);
 
       const { ciphertext, commitHash, targetRound, drandChainHash } = await createTlockVoteCommit({

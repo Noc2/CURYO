@@ -15,6 +15,37 @@ const GAME_TO_SUBCATEGORY: Record<string, string> = {
   "Science & Technology": "Creative",
 };
 
+async function getTwitchGameNames(gameIds: string[], token: string): Promise<Map<string, string>> {
+  const uniqueGameIds = [...new Set(gameIds.filter(Boolean))];
+  if (uniqueGameIds.length === 0) {
+    return new Map();
+  }
+
+  const query = new URLSearchParams();
+  for (const gameId of uniqueGameIds) {
+    query.append("id", gameId);
+  }
+
+  try {
+    const res = await fetchWithTimeout(`https://api.twitch.tv/helix/games?${query.toString()}`, 15_000, {
+      headers: {
+        "Client-Id": config.twitchClientId!,
+        "Authorization": `Bearer ${token}`,
+      },
+    });
+    if (!res.ok) {
+      log.warn(`Twitch games API error: ${res.status} ${res.statusText}`);
+      return new Map();
+    }
+
+    const data = await res.json();
+    return new Map((data.data ?? []).map((game: { id: string; name: string }) => [game.id, game.name]));
+  } catch (err: any) {
+    log.warn(`Twitch games lookup error: ${err.message}`);
+    return new Map();
+  }
+}
+
 async function getTwitchToken(): Promise<string | null> {
   if (!config.twitchClientId || !config.twitchClientSecret) return null;
 
@@ -71,11 +102,15 @@ export const twitchSource: ContentSource = {
       }
 
       const data = await res.json();
+      const gameNames = await getTwitchGameNames(
+        (data.data ?? []).map((clip: { game_id?: string }) => clip.game_id ?? "").filter(Boolean),
+        token,
+      );
       const items: ContentItem[] = [];
 
       for (const clip of data.data ?? []) {
-        const gameName = clip.game_id ? "Gaming" : "Talk Shows";
-        const tag = GAME_TO_SUBCATEGORY[clip.game_id] || gameName;
+        const gameName = clip.game_id ? gameNames.get(clip.game_id) : undefined;
+        const tag = gameName ? GAME_TO_SUBCATEGORY[gameName] || "Gaming" : "Talk Shows";
         const title = truncateContentTitle(clip.title);
 
         items.push({

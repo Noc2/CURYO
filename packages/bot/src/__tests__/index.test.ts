@@ -73,7 +73,7 @@ describe("bot index", () => {
     const bot = await loadBotIndex({ command: "status" });
 
     expect(bot.validateConfig).not.toHaveBeenCalled();
-    expect(bot.validateBotConnectivity).toHaveBeenCalledOnce();
+    expect(bot.validateBotConnectivity).not.toHaveBeenCalled();
     expect(bot.runStatus).toHaveBeenCalledOnce();
   });
 
@@ -81,7 +81,7 @@ describe("bot index", () => {
     const bot = await loadBotIndex({ command: "vote" });
 
     expect(bot.validateConfig).toHaveBeenCalledWith("rate");
-    expect(bot.validateBotConnectivity).toHaveBeenCalledOnce();
+    expect(bot.validateBotConnectivity).toHaveBeenCalledWith("rate");
     expect(bot.runVote).toHaveBeenCalledOnce();
   });
 
@@ -94,6 +94,7 @@ describe("bot index", () => {
     expect(String(bot.importError)).toContain("process.exit:1");
     expect(bot.errorSpy).toHaveBeenCalledWith("[Bot] ERROR: RPC mismatch");
     expect(bot.exitSpy).toHaveBeenCalledWith(1);
+    expect(bot.validateBotConnectivity).toHaveBeenCalledWith("submit");
     expect(bot.runSubmit).not.toHaveBeenCalled();
   });
 });

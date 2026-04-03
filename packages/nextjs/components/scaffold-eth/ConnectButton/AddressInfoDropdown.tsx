@@ -5,6 +5,7 @@ import { hardhat } from "viem/chains";
 import { useAccount } from "wagmi";
 import { ArrowLeftOnRectangleIcon, Cog6ToothIcon, GiftIcon } from "@heroicons/react/24/outline";
 import { BlockieAvatar } from "~~/components/scaffold-eth";
+import { ClaimRewardsButton } from "~~/components/shared/ClaimRewardsButton";
 import { InfoTooltip } from "~~/components/ui/InfoTooltip";
 import { useScaffoldReadContract } from "~~/hooks/scaffold-eth";
 import { useTargetNetwork } from "~~/hooks/scaffold-eth/useTargetNetwork";
@@ -262,6 +263,10 @@ export const AddressInfoDropdown = ({
       <div className="flex items-start gap-3">
         <BlockieAvatar address={checkSumAddress} size={24} ensImage={ensAvatar} />
         <div className="min-w-0 flex flex-1 flex-col gap-1">
+          <ClaimRewardsButton
+            className="mb-1"
+            buttonClassName="btn btn-primary btn-xs h-8 min-h-0 w-full border-none px-3 text-sm"
+          />
           <span className="truncate text-sm font-medium leading-5 text-base-content/72">
             {isENS(displayName) ? displayName : checkSumAddress?.slice(0, 6) + "..." + checkSumAddress?.slice(-4)}
           </span>

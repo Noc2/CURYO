@@ -5,15 +5,25 @@ import type { Wallet } from "thirdweb/wallets";
 import { ConnectorAlreadyConnectedError, useAccount, useConnect } from "wagmi";
 import { useTargetNetwork } from "~~/hooks/scaffold-eth/useTargetNetwork";
 import { thirdwebClient } from "~~/services/thirdweb/client";
+import {
+  TARGETED_INJECTED_THIRDWEB_WALLET_IDS,
+  hasTargetedInjectedProvider,
+} from "~~/services/web3/injectedWalletProviders";
 
-const EXTERNAL_THIRDWEB_CONNECTOR_IDS = new Set(["io.metamask", "com.coinbase.wallet", "me.rainbow"]);
-
-export function getWagmiConnectorIdForThirdwebWallet(wallet: Wallet) {
+export function getWagmiConnectorIdForThirdwebWallet(wallet: Wallet, options?: { window?: unknown }): string | null {
   if (wallet.id === "inApp") {
     return "in-app-wallet";
   }
 
-  return EXTERNAL_THIRDWEB_CONNECTOR_IDS.has(wallet.id) ? wallet.id : "injected";
+  if (hasTargetedInjectedProvider(wallet.id, options?.window)) {
+    return wallet.id;
+  }
+
+  return TARGETED_INJECTED_THIRDWEB_WALLET_IDS.includes(
+    wallet.id as (typeof TARGETED_INJECTED_THIRDWEB_WALLET_IDS)[number],
+  )
+    ? null
+    : "injected";
 }
 
 export function shouldSkipThirdwebWagmiSync(params: {
@@ -42,7 +52,14 @@ export function useThirdwebWagmiSync() {
         return;
       }
 
-      const connectorId = getWagmiConnectorIdForThirdwebWallet(wallet);
+      const connectorId = getWagmiConnectorIdForThirdwebWallet(wallet, {
+        window: typeof window === "undefined" ? undefined : window,
+      });
+      if (!connectorId) {
+        console.warn(`[thirdweb] Skipping wagmi sync for ${wallet.id}; no matching injected provider is available`);
+        return;
+      }
+
       const connector = connectors.find(item => item.id === connectorId);
       if (!connector) {
         throw new Error(`Wagmi connector "${connectorId}" is not configured`);

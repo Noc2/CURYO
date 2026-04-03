@@ -228,6 +228,7 @@ const HomeInner = () => {
   const {
     feed,
     isLoading,
+    isMetadataPrefetchPending,
     totalContent: serverTotalContent,
     hasMore: serverHasMoreFeed,
     source: feedSource,
@@ -1092,6 +1093,7 @@ const HomeInner = () => {
             address={address}
             isCommitting={isCommitting}
             voteError={voteError}
+            isMetadataPrefetchPending={isMetadataPrefetchPending}
             primaryItemCooldownSeconds={primaryItemCooldownSeconds}
             navigationLocked={stakeModal.isOpen}
             isWatchPending={isWatchPending}

@@ -14,8 +14,10 @@ const ITEM = {
 };
 
 type SubmitCommandOptions = {
+  allowance?: bigint;
   balance?: bigint;
   hasVoterId?: boolean;
+  isUrlSubmittedError?: Error;
   isUrlSubmitted?: boolean;
   previewCategoryId?: bigint;
   sources?: Array<{
@@ -38,7 +40,12 @@ async function loadSubmitCommand(options: SubmitCommandOptions = {}) {
         return options.hasVoterId ?? true;
       case "balanceOf":
         return options.balance ?? 20_000_000n;
+      case "allowance":
+        return options.allowance ?? 0n;
       case "isUrlSubmitted":
+        if (options.isUrlSubmittedError) {
+          throw options.isUrlSubmittedError;
+        }
         return options.isUrlSubmitted ?? false;
       case "previewSubmissionKey":
         return [options.previewCategoryId ?? ITEM.categoryId, SUBMISSION_KEY] as const;
@@ -196,6 +203,24 @@ describe("runSubmit", () => {
     );
   });
 
+  it("reuses an existing submission allowance when it is already sufficient", async () => {
+    const submitCommand = await loadSubmitCommand({ allowance: 10_000_000n });
+
+    await submitCommand.runSubmit();
+
+    expect(submitCommand.mocks.writeContract).not.toHaveBeenCalledWith(
+      expect.objectContaining({
+        functionName: "approve",
+      }),
+    );
+    expect(submitCommand.mocks.writeContract).toHaveBeenNthCalledWith(
+      1,
+      expect.objectContaining({
+        functionName: "reserveSubmission",
+      }),
+    );
+  });
+
   it("skips URLs that are already submitted", async () => {
     const submitCommand = await loadSubmitCommand({ isUrlSubmitted: true });
 
@@ -203,6 +228,19 @@ describe("runSubmit", () => {
 
     expect(submitCommand.mocks.writeContract).not.toHaveBeenCalled();
     expect(submitCommand.mocks.log.debug).toHaveBeenCalledWith(`Skipping "${ITEM.title}" (URL already submitted)`);
+  });
+
+  it("warns when checking whether a URL is already submitted fails", async () => {
+    const submitCommand = await loadSubmitCommand({
+      isUrlSubmittedError: new Error("registry lookup failed"),
+    });
+
+    await submitCommand.runSubmit();
+
+    expect(submitCommand.mocks.writeContract).not.toHaveBeenCalled();
+    expect(submitCommand.mocks.log.warn).toHaveBeenCalledWith(
+      `Skipping "${ITEM.title}" (failed to check existing submission: registry lookup failed)`,
+    );
   });
 
   it("skips items whose resolved category no longer matches the source mapping", async () => {

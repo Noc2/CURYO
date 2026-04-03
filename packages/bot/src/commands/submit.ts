@@ -1,5 +1,6 @@
 import { randomBytes } from "node:crypto";
 import { encodeAbiParameters, keccak256, type Hex } from "viem";
+import { ensureCrepAllowance } from "../allowance.js";
 import { publicClient, getWalletClient, getAccount } from "../client.js";
 import { contractConfig } from "../contracts.js";
 import { config, log } from "../config.js";
@@ -194,7 +195,8 @@ export async function runSubmit(options: SubmitRunOptions = {}) {
           log.debug(`Skipping "${item.title}" (URL already submitted)`);
           continue;
         }
-      } catch {
+      } catch (err: any) {
+        log.warn(`Skipping "${item.title}" (failed to check existing submission: ${err.message})`);
         continue;
       }
 
@@ -236,13 +238,15 @@ export async function runSubmit(options: SubmitRunOptions = {}) {
           submitter: account.address,
         });
 
-        // Approve cREP for submission stake
-        const approveTx = await wallet.writeContract({
-          ...contractConfig.token,
-          functionName: "approve",
-          args: [config.contracts.contentRegistry, MIN_SUBMITTER_STAKE],
+        const approveTx = await ensureCrepAllowance({
+          owner: account.address,
+          spender: config.contracts.contentRegistry,
+          requiredAmount: MIN_SUBMITTER_STAKE,
+          wallet,
         });
-        await publicClient.waitForTransactionReceipt({ hash: approveTx });
+        if (approveTx) {
+          log.debug(`Approved cREP: ${approveTx}`);
+        }
 
         const reserveTx = await wallet.writeContract({
           ...contractConfig.registry,

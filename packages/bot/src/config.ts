@@ -10,6 +10,21 @@ export interface BotIdentityConfig {
   privateKey?: `0x${string}`;
 }
 
+const CONTRACT_ENV_NAMES = {
+  categoryRegistry: "CATEGORY_REGISTRY_ADDRESS",
+  contentRegistry: "CONTENT_REGISTRY_ADDRESS",
+  crepToken: "CREP_TOKEN_ADDRESS",
+  voterIdNFT: "VOTER_ID_NFT_ADDRESS",
+  votingEngine: "VOTING_ENGINE_ADDRESS",
+} as const;
+
+export type BotContractKey = keyof typeof CONTRACT_ENV_NAMES;
+
+const REQUIRED_CONTRACTS_BY_ROLE: Record<BotRole, BotContractKey[]> = {
+  submit: ["crepToken", "contentRegistry", "voterIdNFT"],
+  rate: ["crepToken", "votingEngine", "voterIdNFT"],
+};
+
 const isProduction = process.env.NODE_ENV === "production";
 
 function readEnv(name: string): string | undefined {
@@ -22,6 +37,29 @@ function requireUrlEnv(name: string, errors: string[]): string {
   if (!value) {
     errors.push(`${name} is required`);
     return "";
+  }
+
+  try {
+    const url = new URL(value);
+    const isLocalhost =
+      url.hostname === "localhost" ||
+      url.hostname === "127.0.0.1" ||
+      url.hostname === "::1";
+
+    if (isProduction && isLocalhost) {
+      errors.push(`${name} must not point to localhost in production`);
+    }
+  } catch {
+    errors.push(`${name} must be a valid URL`);
+  }
+
+  return value;
+}
+
+function readOptionalUrlEnv(name: string, errors: string[]): string | undefined {
+  const value = readEnv(name);
+  if (!value) {
+    return undefined;
   }
 
   try {
@@ -146,13 +184,13 @@ function readOptionalAddressEnv(name: string, errors: string[]): `0x${string}` |
   return value as `0x${string}`;
 }
 
-function resolveContractAddress(params: {
+function resolveOptionalContractAddress(params: {
   chainId: number;
   envName: string;
   contractName: string;
   errors: string[];
   warnings: string[];
-}): `0x${string}` {
+}): `0x${string}` | undefined {
   const { chainId, envName, contractName, errors, warnings } = params;
   const sharedAddress = getSharedArtifactAddress(chainId, contractName);
   const envValue = readEnv(envName);
@@ -175,7 +213,7 @@ function resolveContractAddress(params: {
     return sharedAddress;
   }
 
-  return requireAddressEnv(envName, errors);
+  return readOptionalAddressEnv(envName, errors);
 }
 
 function loadConfig() {
@@ -190,35 +228,35 @@ function loadConfig() {
 
     // Contracts
     contracts: {
-      crepToken: resolveContractAddress({
+      crepToken: resolveOptionalContractAddress({
         chainId,
         envName: "CREP_TOKEN_ADDRESS",
         contractName: "CuryoReputation",
         errors,
         warnings,
       }),
-      contentRegistry: resolveContractAddress({
+      contentRegistry: resolveOptionalContractAddress({
         chainId,
         envName: "CONTENT_REGISTRY_ADDRESS",
         contractName: "ContentRegistry",
         errors,
         warnings,
       }),
-      votingEngine: resolveContractAddress({
+      votingEngine: resolveOptionalContractAddress({
         chainId,
         envName: "VOTING_ENGINE_ADDRESS",
         contractName: "RoundVotingEngine",
         errors,
         warnings,
       }),
-      voterIdNFT: resolveContractAddress({
+      voterIdNFT: resolveOptionalContractAddress({
         chainId,
         envName: "VOTER_ID_NFT_ADDRESS",
         contractName: "VoterIdNFT",
         errors,
         warnings,
       }),
-      categoryRegistry: resolveContractAddress({
+      categoryRegistry: resolveOptionalContractAddress({
         chainId,
         envName: "CATEGORY_REGISTRY_ADDRESS",
         contractName: "CategoryRegistry",
@@ -241,7 +279,7 @@ function loadConfig() {
     } satisfies BotIdentityConfig,
 
     // Ponder
-    ponderUrl: requireUrlEnv("PONDER_URL", errors),
+    ponderUrl: readOptionalUrlEnv("PONDER_URL", errors),
 
     // External APIs
     tmdbApiKey: readEnv("TMDB_API_KEY"),
@@ -285,6 +323,14 @@ export function getIdentityConfig(role: BotRole): BotIdentityConfig {
   return role === "submit" ? config.submitBot : config.rateBot;
 }
 
+export function getRequiredContractKeys(role: BotRole): readonly BotContractKey[] {
+  return REQUIRED_CONTRACTS_BY_ROLE[role];
+}
+
+export function getContractEnvName(contractKey: BotContractKey): string {
+  return CONTRACT_ENV_NAMES[contractKey];
+}
+
 /** Validate required config for a given bot role. Call at startup. */
 export function validateConfig(role: BotRole): void {
   const errors: string[] = [];
@@ -293,6 +339,16 @@ export function validateConfig(role: BotRole): void {
   if (!identity.keystoreAccount && !identity.privateKey) {
     const prefix = role === "submit" ? "SUBMIT" : "RATE";
     errors.push(`${prefix}_KEYSTORE_ACCOUNT or ${prefix}_PRIVATE_KEY is required`);
+  }
+
+  if (role === "rate" && !config.ponderUrl) {
+    errors.push("PONDER_URL is required");
+  }
+
+  for (const contractKey of getRequiredContractKeys(role)) {
+    if (!config.contracts[contractKey]) {
+      errors.push(`${getContractEnvName(contractKey)} is required`);
+    }
   }
 
   if (errors.length > 0) {
