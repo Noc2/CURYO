@@ -104,5 +104,6 @@ export function useVoteFeedStage(items: ContentItem[], options: UseVoteFeedStage
     selectContent,
     selectRelative,
     visibleItems,
+    loadedItems: items.slice(0, visibleCount),
   };
 }

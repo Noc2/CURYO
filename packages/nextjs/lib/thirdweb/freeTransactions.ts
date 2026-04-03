@@ -608,8 +608,17 @@ function validateSponsoredCalls(
           continue;
         }
         return { ok: false, debugCode: "unsupported_operation" };
+      case "RoundVotingEngine":
+        if (functionName === "claimCancelledRoundRefund") {
+          continue;
+        }
+        return { ok: false, debugCode: "unsupported_operation" };
       case "RoundRewardDistributor":
-        if (functionName === "claimFrontendFee") {
+        if (
+          functionName === "claimFrontendFee" ||
+          functionName === "claimReward" ||
+          functionName === "claimSubmitterReward"
+        ) {
           continue;
         }
         return { ok: false, debugCode: "unsupported_operation" };
