@@ -187,7 +187,9 @@ test.describe("Reward claim lifecycle", () => {
     await gotoWithRetry(page, "/governance#profile", { ensureWalletConnected: true });
 
     const walletSummary = page.getByTestId("wallet-connected");
-    await expect(walletSummary.getByRole("button", { name: /Claim .* cREP/ })).toBeVisible({ timeout: 15_000 });
+    await expect(walletSummary.getByRole("button", { name: /^Claim [\d,]+(?: cREP)?$/ })).toBeVisible({
+      timeout: 15_000,
+    });
 
     await context.close();
   });
