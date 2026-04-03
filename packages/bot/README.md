@@ -92,7 +92,23 @@ Without these keys the bot can still submit from public sources such as CoinGeck
 - `--category <id|name>` to target a specific category such as `4`, `Movies`, or `Crypto Tokens`
 - `--source <name>` to target a specific source adapter such as `tmdb` or `coingecko`
 - `--max-submissions <count>` to override the per-run cap for that invocation
-- `--help` to print the submit-specific usage text
+- `--help` to print the submit-specific usage text, including the full category/source catalog below
+
+## Available Categories
+
+`--category` accepts either the numeric ID or the category name. `--source` accepts the source adapter name.
+
+| ID | Category | `--source` | Availability |
+|---|---|---|---|
+| `1` | YouTube | `youtube` | Requires `YOUTUBE_API_KEY` |
+| `2` | Twitch | `twitch` | Requires `TWITCH_CLIENT_ID` and `TWITCH_CLIENT_SECRET` |
+| `3` | Magic: The Gathering | `scryfall` | Public |
+| `4` | Movies | `tmdb` | Requires `TMDB_API_KEY` |
+| `5` | People | `wikipedia-people` | Public |
+| `6` | Games | `rawg` | Requires `RAWG_API_KEY` |
+| `7` | Books | `openlibrary` | Public |
+| `8` | AI | `huggingface` | Public |
+| `9` | Crypto Tokens | `coingecko` | Public |
 
 ## How Submission Works
 

@@ -18,6 +18,10 @@ describe("submit options", () => {
       options: {},
     });
     expect(formatSubmitUsage()).toContain("--category <id|name>");
+    expect(formatSubmitUsage()).toContain("Available categories:");
+    expect(formatSubmitUsage()).toContain("1  YouTube");
+    expect(formatSubmitUsage()).toContain("wikipedia-people");
+    expect(formatSubmitUsage()).toContain("requires YOUTUBE_API_KEY");
   });
 
   it("rejects malformed submit options", () => {
