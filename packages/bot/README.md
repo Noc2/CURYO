@@ -13,6 +13,7 @@ yarn bot:status   # Check bot account balances and Voter ID status
 # Target a single category/source with an explicit cap:
 yarn workspace @curyo/bot submit --category Movies --max-submissions 5
 yarn workspace @curyo/bot submit --source coingecko --max-submissions 2
+yarn workspace @curyo/bot submit --category "GitHub Repos" --source github --max-submissions 2
 ```
 
 Requires configured environment variables and a reachable RPC endpoint.
@@ -74,6 +75,7 @@ Copy `.env.example` to `.env` in the package directory and fill in the deployed 
 | `TWITCH_CLIENT_ID` | Twitch API client ID |
 | `TWITCH_CLIENT_SECRET` | Twitch API client secret |
 | `RAWG_API_KEY` | RAWG API key (games) |
+| `GITHUB_TOKEN` | GitHub REST API token for GitHub repo discovery and rating |
 
 Without these keys the bot can still submit from public sources such as CoinGecko, Open Library, Hugging Face, Scryfall, and Wikipedia, but keyed sources and some rating strategies will be unavailable.
 
@@ -109,6 +111,14 @@ Without these keys the bot can still submit from public sources such as CoinGeck
 | `7` | Books | `openlibrary` | Public |
 | `8` | AI | `huggingface` | Public |
 | `9` | Crypto Tokens | `coingecko` | Public |
+| `11` | GitHub Repos | `github` | Requires `GITHUB_TOKEN` |
+
+Deployed categories that are already on-chain but still missing automated `submit` coverage:
+
+- `10` Tweets
+- `12` Spotify Podcasts
+- `13` npm Packages
+- `14` PyPI Packages
 
 ## How Submission Works
 
@@ -207,6 +217,7 @@ Expected behavior:
 src/
 ├── index.ts         # CLI entry point & command router
 ├── config.ts        # Configuration from environment
+├── sourceCatalog.ts # Shared bot coverage manifest (submit + vote)
 ├── client.ts        # viem public & wallet clients
 ├── keystore.ts      # Foundry keystore handling
 ├── contracts.ts     # Contract ABI imports

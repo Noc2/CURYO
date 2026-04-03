@@ -287,6 +287,7 @@ function loadConfig() {
     twitchClientId: readEnv("TWITCH_CLIENT_ID"),
     twitchClientSecret: readEnv("TWITCH_CLIENT_SECRET"),
     rawgApiKey: readEnv("RAWG_API_KEY"),
+    githubToken: readEnv("GITHUB_TOKEN"),
 
     // Voting
     voteStake: parsePositiveBigIntEnv("VOTE_STAKE", 1000000n, errors),
@@ -307,7 +308,11 @@ function loadConfig() {
   }
 
   const hasApiKey =
-    loadedConfig.tmdbApiKey || loadedConfig.youtubeApiKey || loadedConfig.twitchClientId || loadedConfig.rawgApiKey;
+    loadedConfig.tmdbApiKey ||
+    loadedConfig.youtubeApiKey ||
+    loadedConfig.twitchClientId ||
+    loadedConfig.rawgApiKey ||
+    loadedConfig.githubToken;
   if (!hasApiKey) {
     console.warn(
       "[Bot] WARN: No keyed content-source API keys configured — public sources still work, but some sources and rating strategies will be unavailable",

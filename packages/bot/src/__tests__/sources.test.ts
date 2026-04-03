@@ -1,3 +1,5 @@
+import { readFileSync } from "node:fs";
+import { fileURLToPath } from "node:url";
 import deployedContracts from "@curyo/contracts/deployedContracts";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
@@ -23,6 +25,16 @@ async function loadSources() {
   return import("../sources/index.js");
 }
 
+function readDeployedCategoryCatalog() {
+  const deployScriptPath = fileURLToPath(new URL("../../../foundry/script/DeployCuryo.s.sol", import.meta.url));
+  const deployScript = readFileSync(deployScriptPath, "utf8");
+
+  return [...deployScript.matchAll(/registry\.addApprovedCategory\("([^"]+)"/g)].map((match, index) => ({
+    categoryId: BigInt(index + 1),
+    categoryName: match[1],
+  }));
+}
+
 afterEach(() => {
   process.env = { ...ORIGINAL_ENV };
   vi.restoreAllMocks();
@@ -39,13 +51,14 @@ describe("content sources", () => {
     expect(categoryMetadataBySource).toEqual({
       youtube: { categoryId: 1n, categoryName: "YouTube" },
       twitch: { categoryId: 2n, categoryName: "Twitch" },
+      scryfall: { categoryId: 3n, categoryName: "Magic: The Gathering" },
+      tmdb: { categoryId: 4n, categoryName: "Movies" },
       "wikipedia-people": { categoryId: 5n, categoryName: "People" },
       rawg: { categoryId: 6n, categoryName: "Games" },
       openlibrary: { categoryId: 7n, categoryName: "Books" },
       huggingface: { categoryId: 8n, categoryName: "AI" },
-      tmdb: { categoryId: 4n, categoryName: "Movies" },
-      scryfall: { categoryId: 3n, categoryName: "Magic: The Gathering" },
       coingecko: { categoryId: 9n, categoryName: "Crypto Tokens" },
+      github: { categoryId: 11n, categoryName: "GitHub Repos" },
     });
   });
 
@@ -53,5 +66,23 @@ describe("content sources", () => {
     const { getAllSources } = await loadSources();
     const categoryIds = getAllSources().map(source => source.categoryId.toString());
     expect(new Set(categoryIds).size).toBe(categoryIds.length);
+  });
+
+  it("tracks deployed category coverage explicitly", async () => {
+    const { getCategoryCoverageCatalog } = await import("../sourceCatalog.js");
+    const coverageCatalog = getCategoryCoverageCatalog();
+
+    expect(
+      coverageCatalog.map(entry => ({
+        categoryId: entry.categoryId,
+        categoryName: entry.categoryName,
+      })),
+    ).toEqual(readDeployedCategoryCatalog());
+
+    expect(
+      coverageCatalog
+        .filter(entry => !entry.supportsSubmit)
+        .map(entry => `${entry.categoryId.toString()} ${entry.categoryName}`),
+    ).toEqual(["10 Tweets", "12 Spotify Podcasts", "13 npm Packages", "14 PyPI Packages"]);
   });
 });

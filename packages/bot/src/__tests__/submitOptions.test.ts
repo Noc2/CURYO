@@ -20,8 +20,12 @@ describe("submit options", () => {
     expect(formatSubmitUsage()).toContain("--category <id|name>");
     expect(formatSubmitUsage()).toContain("Available categories:");
     expect(formatSubmitUsage()).toContain("1  YouTube");
+    expect(formatSubmitUsage()).toContain("11 GitHub Repos");
     expect(formatSubmitUsage()).toContain("wikipedia-people");
     expect(formatSubmitUsage()).toContain("requires YOUTUBE_API_KEY");
+    expect(formatSubmitUsage()).toContain("requires GITHUB_TOKEN");
+    expect(formatSubmitUsage()).toContain("Deployed categories without automated submit support yet:");
+    expect(formatSubmitUsage()).toContain("10 Tweets");
   });
 
   it("rejects malformed submit options", () => {
