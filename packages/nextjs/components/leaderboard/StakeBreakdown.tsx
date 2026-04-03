@@ -1,11 +1,10 @@
 "use client";
 
 import { useAccount } from "wagmi";
+import { ClaimRewardsButton } from "~~/components/shared/ClaimRewardsButton";
 import { surfaceSectionHeadingClassName } from "~~/components/shared/sectionHeading";
 import { useScaffoldReadContract } from "~~/hooks/scaffold-eth";
 import { useActiveVotesWithDeadlines } from "~~/hooks/useActiveVotesWithDeadlines";
-import { useAllClaimableRewards } from "~~/hooks/useAllClaimableRewards";
-import { useClaimAll } from "~~/hooks/useClaimAll";
 import { useSubmissionStakes } from "~~/hooks/useSubmissionStakes";
 import { useVotingStakes } from "~~/hooks/useVotingStakes";
 
@@ -25,15 +24,6 @@ export function StakeBreakdown({
   const { totalSubmissionStake } = useSubmissionStakes(address);
   const { activeStaked } = useVotingStakes(address);
   const { earliestDeadline } = useActiveVotesWithDeadlines(address);
-
-  // Claimable rewards
-  const { claimableItems, totalClaimable, refetch: refetchClaimable } = useAllClaimableRewards();
-  const { claimAll, isClaiming, progress } = useClaimAll();
-  const claimableFormatted =
-    totalClaimable > 0n ? (Number(totalClaimable) / 1e6).toLocaleString(undefined, { maximumFractionDigits: 0 }) : "";
-  const handleClaimAll = () => {
-    claimAll(claimableItems, () => refetchClaimable());
-  };
 
   // Frontend operator stake
   const { data: frontendInfo } = useScaffoldReadContract({
@@ -93,13 +83,7 @@ export function StakeBreakdown({
           No active stakes
         </div>
       )}
-      {totalClaimable > 0n && (
-        <div className="pt-2 border-t border-base-content/10">
-          <button onClick={handleClaimAll} disabled={isClaiming} className="btn btn-primary btn-sm w-full">
-            {isClaiming ? `Claiming ${progress.current}/${progress.total}...` : `Claim ${claimableFormatted} cREP`}
-          </button>
-        </div>
-      )}
+      <ClaimRewardsButton className="border-t border-base-content/10 pt-2" />
     </div>
   );
 }
