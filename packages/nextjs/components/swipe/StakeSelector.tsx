@@ -5,6 +5,7 @@ import Link from "next/link";
 import { EPOCH_WEIGHT_BPS } from "@curyo/contracts/protocol";
 import { AnimatePresence, motion } from "framer-motion";
 import { useAccount } from "wagmi";
+import { VoteDirectionIcon } from "~~/components/shared/CuryoVoteButton";
 import { InfoTooltip } from "~~/components/ui/InfoTooltip";
 import { useScaffoldReadContract } from "~~/hooks/scaffold-eth";
 import { useContentLabel } from "~~/hooks/useCategoryRegistry";
@@ -151,18 +152,7 @@ export function StakeSelector({
                   isUp ? "bg-success/10 text-success" : "bg-error/10 text-error"
                 }`}
               >
-                <svg
-                  width="16"
-                  height="16"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="2.5"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                >
-                  {isUp ? <path d="M4.5 15.75l7.5-7.5 7.5 7.5" /> : <path d="M19.5 8.25l-7.5 7.5-7.5-7.5" />}
-                </svg>
+                <VoteDirectionIcon direction={isUp ? "up" : "down"} className="h-4 w-4 stroke-[2.5]" />
                 {isUp ? "Rating goes up" : "Rating goes down"}
               </div>
             </div>

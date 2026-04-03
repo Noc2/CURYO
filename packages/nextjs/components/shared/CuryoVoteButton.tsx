@@ -6,10 +6,23 @@ interface CuryoVoteButtonProps {
   onClick: () => void;
 }
 
+interface VoteDirectionIconProps {
+  direction: "up" | "down";
+  className?: string;
+}
+
+export function VoteDirectionIcon({
+  direction,
+  className = "h-[22px] w-[22px] stroke-[2.5] drop-shadow-sm",
+}: VoteDirectionIconProps) {
+  const Icon = direction === "up" ? ArrowUpIcon : ArrowDownIcon;
+
+  return <Icon className={className} aria-hidden />;
+}
+
 export function CuryoVoteButton({ direction, disabled = false, onClick }: CuryoVoteButtonProps) {
   const isUp = direction === "up";
   const label = isUp ? "Raise score" : "Lower score";
-  const Icon = isUp ? ArrowUpIcon : ArrowDownIcon;
 
   return (
     <div className="tooltip tooltip-bottom" data-tip={label}>
@@ -23,7 +36,7 @@ export function CuryoVoteButton({ direction, disabled = false, onClick }: CuryoV
       >
         <span className="vote-bg" />
         <span className="vote-symbol">
-          <Icon className="h-[22px] w-[22px] stroke-[2.5] drop-shadow-sm" aria-hidden />
+          <VoteDirectionIcon direction={direction} />
         </span>
       </button>
     </div>
