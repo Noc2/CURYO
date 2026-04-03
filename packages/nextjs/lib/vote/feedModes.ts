@@ -3,7 +3,7 @@
 import { DEFAULT_ROUND_CONFIG } from "@curyo/contracts/protocol";
 import type { ContentItem } from "~~/hooks/useContentFeed";
 
-export type DiscoverFeedMode = "for_you" | "trending" | "contested" | "fresh" | "near_settlement";
+export type DiscoverFeedMode = "for_you" | "trending" | "contested" | "latest" | "near_settlement";
 
 interface DiscoverFeedModeOption {
   value: DiscoverFeedMode;
@@ -28,9 +28,9 @@ export const DISCOVER_FEED_MODE_OPTIONS: DiscoverFeedModeOption[] = [
     description: "Open rounds with the closest split between up and down stake.",
   },
   {
-    value: "fresh",
-    label: "Fresh",
-    description: "New submissions that still need public signal.",
+    value: "latest",
+    label: "Latest",
+    description: "Newest submissions, sorted by when they were added.",
   },
   {
     value: "near_settlement",
@@ -40,8 +40,6 @@ export const DISCOVER_FEED_MODE_OPTIONS: DiscoverFeedModeOption[] = [
 ];
 
 const TRENDING_WINDOW_SECONDS = 7 * 24 * 60 * 60;
-const FRESH_WINDOW_SECONDS = 14 * 24 * 60 * 60;
-
 function parseTimestampSeconds(value: string | null | undefined): number | null {
   if (!value) return null;
 
@@ -99,16 +97,6 @@ function getTrendingScore(item: ContentItem, nowSeconds: number): number {
   return recency * 1.35 + voteScore * 1.15 + roundScore * 0.55 + openRoundBoost * 0.8;
 }
 
-function getFreshScore(item: ContentItem, nowSeconds: number): number {
-  const createdAtSeconds = parseTimestampSeconds(item.createdAt);
-  const freshness = getRecencyScore(createdAtSeconds, nowSeconds, FRESH_WINDOW_SECONDS);
-  const lowVoteBonus = 1 - Math.min(item.totalVotes / 12, 1);
-  const lowRoundBonus = 1 - Math.min(item.totalRounds / 4, 1);
-  const openRoundBoost = item.openRound ? 0.15 : 0;
-
-  return freshness * 1.5 + lowVoteBonus * 1.15 + lowRoundBonus * 0.7 + openRoundBoost;
-}
-
 function getContestedScore(item: ContentItem, nowSeconds: number): number {
   const openRound = item.openRound;
   if (!openRound) return Number.NEGATIVE_INFINITY;
@@ -145,6 +133,13 @@ function compareTimestampDesc(a: ContentItem, b: ContentItem) {
   return Number(b.id - a.id);
 }
 
+function compareCreatedAtDesc(a: ContentItem, b: ContentItem) {
+  const aTime = parseTimestampSeconds(a.createdAt) ?? 0;
+  const bTime = parseTimestampSeconds(b.createdAt) ?? 0;
+  if (aTime !== bTime) return bTime - aTime;
+  return Number(b.id - a.id);
+}
+
 export function sortDiscoverFeed(items: ContentItem[], mode: Exclude<DiscoverFeedMode, "for_you">, nowSeconds: number) {
   const ranked = items
     .filter(item => {
@@ -159,13 +154,16 @@ export function sortDiscoverFeed(items: ContentItem[], mode: Exclude<DiscoverFee
           return { item, score: getTrendingScore(item, nowSeconds) };
         case "contested":
           return { item, score: getContestedScore(item, nowSeconds) };
-        case "fresh":
-          return { item, score: getFreshScore(item, nowSeconds) };
+        case "latest":
+          return { item, score: 0 };
         case "near_settlement":
           return { item, score: getNearSettlementScore(item, nowSeconds) };
       }
     })
     .sort((a, b) => {
+      if (mode === "latest") {
+        return compareCreatedAtDesc(a.item, b.item);
+      }
       if (a.score !== b.score) {
         return b.score - a.score;
       }

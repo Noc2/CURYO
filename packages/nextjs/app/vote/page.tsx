@@ -983,8 +983,8 @@ const HomeInner = () => {
       return "No live rounds look meaningfully contested right now.";
     }
 
-    if (activeScope === "all" && activeFeedMode === "fresh") {
-      return "No fresh submissions are waiting for signal right now.";
+    if (activeScope === "all" && activeFeedMode === "latest") {
+      return "No recent submissions are available right now.";
     }
 
     if (activeScope === "all" && activeFeedMode === "near_settlement") {
