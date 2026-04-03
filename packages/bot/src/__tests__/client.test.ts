@@ -49,6 +49,10 @@ async function loadBotClient(options: BotClientOptions = {}) {
         votingEngine: "0x3333333333333333333333333333333333333333",
       },
     },
+    getRequiredContractKeys: (role: "submit" | "rate") =>
+      role === "submit"
+        ? (["crepToken", "contentRegistry", "voterIdNFT"] as const)
+        : (["crepToken", "votingEngine", "voterIdNFT"] as const),
   }));
   vi.doMock("../keystore.js", () => ({
     getKeystoreAccount,
@@ -130,15 +134,15 @@ describe("bot client", () => {
   it("validates the configured RPC chain and deployed contracts", async () => {
     const clientModule = await loadBotClient();
 
-    await expect(clientModule.validateBotConnectivity()).resolves.toBeUndefined();
+    await expect(clientModule.validateBotConnectivity("submit")).resolves.toBeUndefined();
     expect(clientModule.mocks.mockedPublicClient.getChainId).toHaveBeenCalledOnce();
-    expect(clientModule.mocks.mockedPublicClient.getCode).toHaveBeenCalledTimes(5);
+    expect(clientModule.mocks.mockedPublicClient.getCode).toHaveBeenCalledTimes(3);
   });
 
   it("rejects an RPC endpoint on the wrong chain", async () => {
     const clientModule = await loadBotClient({ rpcChainId: 42220 });
 
-    await expect(clientModule.validateBotConnectivity()).rejects.toThrow(
+    await expect(clientModule.validateBotConnectivity("submit")).rejects.toThrow(
       "RPC_URL reports chain ID 42220, but CHAIN_ID is 11142220.",
     );
   });
@@ -150,8 +154,18 @@ describe("bot client", () => {
       },
     });
 
-    await expect(clientModule.validateBotConnectivity()).rejects.toThrow(
+    await expect(clientModule.validateBotConnectivity("rate")).rejects.toThrow(
       "RoundVotingEngine has no bytecode at 0x3333333333333333333333333333333333333333.",
     );
+  });
+
+  it("skips vote-only contract checks during submit connectivity validation", async () => {
+    const clientModule = await loadBotClient({
+      contractCode: {
+        ["0x3333333333333333333333333333333333333333"]: "0x",
+      },
+    });
+
+    await expect(clientModule.validateBotConnectivity("submit")).resolves.toBeUndefined();
   });
 });

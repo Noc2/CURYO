@@ -15,13 +15,15 @@ async function loadConfigModule() {
 async function ensureBotRuntime(role?: "submit" | "rate") {
   const configModule = await loadConfigModule();
 
-  if (role) {
-    configModule.validateConfig(role);
+  if (!role) {
+    return;
   }
+
+  configModule.validateConfig(role);
 
   try {
     const { validateBotConnectivity } = await import("./client.js");
-    await validateBotConnectivity();
+    await validateBotConnectivity(role);
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
     console.error(`[Bot] ERROR: ${message}`);

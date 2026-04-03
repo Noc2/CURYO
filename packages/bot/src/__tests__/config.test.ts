@@ -120,6 +120,29 @@ describe("bot config", () => {
     expect(exitSpy).toHaveBeenCalledWith(1);
   });
 
+  it("does not require PONDER_URL for submit-only validation", async () => {
+    const { validateConfig } = await loadBotConfig(
+      {
+        SUBMIT_PRIVATE_KEY: `0x${"22".repeat(32)}`,
+      },
+      ["PONDER_URL"],
+    );
+
+    expect(() => validateConfig("submit")).not.toThrow();
+  });
+
+  it("requires PONDER_URL for the vote bot role", async () => {
+    const errorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+    const exitSpy = vi.spyOn(process, "exit").mockImplementation((code?: string | number | null) => {
+      throw new Error(`process.exit:${code ?? ""}`);
+    }) as any;
+    const botModule = await loadBotConfig({}, ["PONDER_URL"]);
+
+    expect(() => botModule.validateConfig("rate")).toThrow("process.exit:1");
+    expect(errorSpy).toHaveBeenCalledWith("[Bot] ERROR: PONDER_URL is required");
+    expect(exitSpy).toHaveBeenCalledWith(1);
+  });
+
   it("rejects localhost service URLs in production", async () => {
     await expect(
       loadBotConfig({
@@ -198,21 +221,57 @@ describe("bot config", () => {
     expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining("Ignoring CATEGORY_REGISTRY_ADDRESS"));
   });
 
-  it("still requires contract env values for unsupported chains", async () => {
-    await expect(
-      loadBotConfig(
-        {
-          CHAIN_ID: "999999",
-        },
-        [
-          "CREP_TOKEN_ADDRESS",
-          "CONTENT_REGISTRY_ADDRESS",
-          "VOTING_ENGINE_ADDRESS",
-          "VOTER_ID_NFT_ADDRESS",
-          "CATEGORY_REGISTRY_ADDRESS",
-        ],
-      ),
-    ).rejects.toThrow("CREP_TOKEN_ADDRESS is required");
+  it("only requires submit contracts for submit validation on unsupported chains", async () => {
+    const errorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+    const exitSpy = vi.spyOn(process, "exit").mockImplementation((code?: string | number | null) => {
+      throw new Error(`process.exit:${code ?? ""}`);
+    }) as any;
+    const botModule = await loadBotConfig(
+      {
+        CHAIN_ID: "999999",
+        SUBMIT_PRIVATE_KEY: `0x${"22".repeat(32)}`,
+      },
+      [
+        "CREP_TOKEN_ADDRESS",
+        "CONTENT_REGISTRY_ADDRESS",
+        "VOTING_ENGINE_ADDRESS",
+        "VOTER_ID_NFT_ADDRESS",
+        "CATEGORY_REGISTRY_ADDRESS",
+      ],
+    );
+
+    expect(() => botModule.validateConfig("submit")).toThrow("process.exit:1");
+    expect(errorSpy).toHaveBeenCalledWith("[Bot] ERROR: CREP_TOKEN_ADDRESS is required");
+    expect(errorSpy).toHaveBeenCalledWith("[Bot] ERROR: CONTENT_REGISTRY_ADDRESS is required");
+    expect(errorSpy).toHaveBeenCalledWith("[Bot] ERROR: VOTER_ID_NFT_ADDRESS is required");
+    expect(errorSpy).not.toHaveBeenCalledWith("[Bot] ERROR: VOTING_ENGINE_ADDRESS is required");
+    expect(exitSpy).toHaveBeenCalledWith(1);
+  });
+
+  it("only requires vote contracts for rate validation on unsupported chains", async () => {
+    const errorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+    const exitSpy = vi.spyOn(process, "exit").mockImplementation((code?: string | number | null) => {
+      throw new Error(`process.exit:${code ?? ""}`);
+    }) as any;
+    const botModule = await loadBotConfig(
+      {
+        CHAIN_ID: "999999",
+      },
+      [
+        "CREP_TOKEN_ADDRESS",
+        "CONTENT_REGISTRY_ADDRESS",
+        "VOTING_ENGINE_ADDRESS",
+        "VOTER_ID_NFT_ADDRESS",
+        "CATEGORY_REGISTRY_ADDRESS",
+      ],
+    );
+
+    expect(() => botModule.validateConfig("rate")).toThrow("process.exit:1");
+    expect(errorSpy).toHaveBeenCalledWith("[Bot] ERROR: CREP_TOKEN_ADDRESS is required");
+    expect(errorSpy).toHaveBeenCalledWith("[Bot] ERROR: VOTING_ENGINE_ADDRESS is required");
+    expect(errorSpy).toHaveBeenCalledWith("[Bot] ERROR: VOTER_ID_NFT_ADDRESS is required");
+    expect(errorSpy).not.toHaveBeenCalledWith("[Bot] ERROR: CONTENT_REGISTRY_ADDRESS is required");
+    expect(exitSpy).toHaveBeenCalledWith(1);
   });
 
   it("rejects an invalid vote frontend address", async () => {
