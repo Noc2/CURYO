@@ -50,3 +50,27 @@ test("runCommitAttempts invokes the retry hook for each failed attempt before th
 
   assert.deepEqual(retries, [0, 1]);
 });
+
+test("runCommitAttempts stops when a failed attempt is marked as non-retryable", async () => {
+  const calls: number[] = [];
+  const retries: number[] = [];
+
+  const result = await runCommitAttempts({
+    attempts: 3,
+    attempt: async attemptIndex => {
+      calls.push(attemptIndex);
+      return { success: false, retryable: attemptIndex === 0, attemptIndex };
+    },
+    isSuccess: value => value.success,
+    shouldRetry: value => value.retryable,
+    onRetry: attemptIndex => {
+      retries.push(attemptIndex);
+    },
+  });
+
+  assert.deepEqual(calls, [0, 1]);
+  assert.deepEqual(retries, [0]);
+  assert.equal(result.success, false);
+  assert.equal(result.retryable, false);
+  assert.equal(result.attemptIndex, 1);
+});
