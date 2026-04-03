@@ -266,6 +266,7 @@ export const AddressInfoDropdown = ({
           <ClaimRewardsButton
             className="mb-1"
             buttonClassName="btn btn-primary btn-xs h-8 min-h-0 w-full border-none px-3 text-sm"
+            showTokenSymbol={false}
           />
           <span className="truncate text-sm font-medium leading-5 text-base-content/72">
             {isENS(displayName) ? displayName : checkSumAddress?.slice(0, 6) + "..." + checkSumAddress?.slice(-4)}

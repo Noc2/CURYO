@@ -1,6 +1,6 @@
 "use client";
 
-import { type CSSProperties, useEffect, useMemo, useState } from "react";
+import { type CSSProperties, useEffect, useId, useMemo, useState } from "react";
 import Link from "next/link";
 import { EPOCH_WEIGHT_BPS } from "@curyo/contracts/protocol";
 import { AnimatePresence, motion } from "framer-motion";
@@ -43,6 +43,7 @@ export function StakeSelector({
   onConfirm,
   onCancel,
 }: StakeSelectorProps) {
+  const stakeAmountInputId = useId();
   const contentLabel = useContentLabel(categoryId);
   const [amount, setAmount] = useState(5);
   const { address } = useAccount();
@@ -215,7 +216,12 @@ export function StakeSelector({
             </div>
 
             <div className="mb-3 px-1">
+              <label htmlFor={stakeAmountInputId} className="sr-only">
+                Stake amount
+              </label>
               <input
+                id={stakeAmountInputId}
+                name="stake-amount"
                 type="range"
                 min={1}
                 max={sliderMax}
