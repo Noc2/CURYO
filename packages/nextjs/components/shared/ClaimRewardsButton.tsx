@@ -10,9 +10,14 @@ function formatCrepAmount(value: bigint) {
 type ClaimRewardsButtonProps = {
   buttonClassName?: string;
   className?: string;
+  showTokenSymbol?: boolean;
 };
 
-export function ClaimRewardsButton({ buttonClassName, className }: ClaimRewardsButtonProps) {
+export function ClaimRewardsButton({
+  buttonClassName,
+  className,
+  showTokenSymbol = true,
+}: ClaimRewardsButtonProps) {
   const { claimableItems, totalClaimable, refetch: refetchClaimable } = useAllClaimableRewards();
   const { claimAll, isClaiming, progress } = useClaimAll();
 
@@ -34,7 +39,7 @@ export function ClaimRewardsButton({ buttonClassName, className }: ClaimRewardsB
       >
         {isClaiming
           ? `Claiming ${progress.current}/${progress.total}...`
-          : `Claim ${formatCrepAmount(totalClaimable)} cREP`}
+          : `Claim ${formatCrepAmount(totalClaimable)}${showTokenSymbol ? " cREP" : ""}`}
       </button>
     </div>
   );
