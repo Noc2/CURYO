@@ -33,19 +33,12 @@ test("isDedicatedMetaMaskProvider rejects wallets that spoof the MetaMask flag",
 test("findInjectedProvider falls back to the top-level ethereum provider when no nested provider matches", () => {
   const coinbaseProvider = { isCoinbaseWallet: true };
   const rainbowProvider = { isRainbow: true };
+  const ethereum = {
+    ...coinbaseProvider,
+    providers: [rainbowProvider],
+  };
 
-  assert.equal(
-    findInjectedProvider(
-      {
-        ethereum: {
-          ...coinbaseProvider,
-          providers: [rainbowProvider],
-        },
-      },
-      isCoinbaseInjectedProvider,
-    ),
-    coinbaseProvider,
-  );
+  assert.equal(findInjectedProvider({ ethereum }, isCoinbaseInjectedProvider), ethereum);
 });
 
 test("wallet-specific predicates stay aligned with dedicated connector routing", () => {

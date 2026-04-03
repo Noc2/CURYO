@@ -12,8 +12,8 @@ import {
   isCoinbaseInjectedProvider,
   isDedicatedMetaMaskProvider,
   isRainbowInjectedProvider,
-  type InjectedWalletProvider,
 } from "~~/services/web3/wagmiConnectorTargets";
+import type { InjectedWalletProvider } from "~~/services/web3/wagmiConnectorTargets";
 
 const CURYO_THIRDWEB_ICON = "/favicon.svg";
 
@@ -64,9 +64,7 @@ export const wagmiConnectors = () => {
     );
   }
 
-  connectors.push(
-    createTargetedInjectedConnector("io.metamask", "MetaMask", isDedicatedMetaMaskProvider),
-  );
+  connectors.push(createTargetedInjectedConnector("io.metamask", "MetaMask", isDedicatedMetaMaskProvider));
 
   connectors.push(
     createTargetedInjectedConnector("com.coinbase.wallet", "Coinbase Wallet", isCoinbaseInjectedProvider),
