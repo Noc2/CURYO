@@ -116,13 +116,8 @@ export function VoteFeedStage({
 
   const queueGridTemplateColumns = useMemo(() => {
     if (queueLayout.rows <= 1) return undefined;
-    return `repeat(${queueLayout.columns}, minmax(0, ${queueLayout.cardWidthPx}px))`;
-  }, [queueLayout.cardWidthPx, queueLayout.columns, queueLayout.rows]);
-
-  const queuePageWidth = useMemo(() => {
-    if (queueLayout.rows <= 1) return undefined;
-    return queueLayout.columns * queueLayout.cardWidthPx + (queueLayout.columns - 1) * queueLayout.gapPx;
-  }, [queueLayout]);
+    return `repeat(${queueLayout.columns}, minmax(0, 1fr))`;
+  }, [queueLayout.columns, queueLayout.rows]);
 
   const nextThumbnailSrc = useMemo(() => {
     const selectedNextItem = activeSourceIndex >= 0 ? (displayFeed[activeSourceIndex + 1] ?? null) : null;
@@ -363,7 +358,7 @@ export function VoteFeedStage({
   }, []);
 
   return (
-    <div ref={activeCardRegionRef} className="flex min-h-0 flex-col gap-5 xl:gap-4">
+    <div ref={activeCardRegionRef} className="flex min-h-0 flex-col gap-3 xl:gap-2.5">
       {isCommitting ? (
         <div className="flex shrink-0 items-center justify-center">
           <span className="text-base text-base-content/50">
@@ -434,11 +429,10 @@ export function VoteFeedStage({
           {hasVisibleQueue ? (
             hasMultiRowQueue ? (
               <div
-                className="grid content-start"
+                className="grid w-full content-start"
                 style={{
                   gridTemplateColumns: queueGridTemplateColumns,
                   gap: queueLayout.gapPx,
-                  width: queuePageWidth,
                 }}
                 aria-label="Content queue"
               >
@@ -451,6 +445,7 @@ export function VoteFeedStage({
                     queuePosition={queuePositionMap.get(item.id.toString()) ?? 0}
                     queueStatus={queueStatusByContentId.get(item.id.toString()) ?? null}
                     hasVoted={votedContentIds.has(item.id.toString())}
+                    fluidWidth
                     selected={item.id === primaryItem?.id}
                   />
                 ))}

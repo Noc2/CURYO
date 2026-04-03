@@ -39,7 +39,7 @@ test("computeVoteQueueLayout enables two rows only on extra-large viewports with
   assert.equal(layout.pageSize, layout.columns * 2);
 });
 
-test("computeVoteQueueLayout expands multi-row gaps to fill the available width", () => {
+test("computeVoteQueueLayout keeps multi-row gaps aligned with the design rhythm", () => {
   const layout = computeVoteQueueLayout({
     viewportWidth: 1440,
     containerWidth: 1024,
@@ -47,11 +47,8 @@ test("computeVoteQueueLayout expands multi-row gaps to fill the available width"
     rootFontSize: 16,
   });
 
-  const consumedWidth = layout.columns * layout.cardWidthPx + (layout.columns - 1) * layout.gapPx;
   assert.equal(layout.rows, 2);
-  assert.ok(consumedWidth <= 1024 + 0.001);
-  assert.ok(consumedWidth >= 1024 - 0.001);
-  assert.ok(layout.gapPx > 10);
+  assert.equal(layout.gapPx, 10);
 });
 
 test("computeVoteQueueLayout enables three rows on very tall desktop layouts", () => {
