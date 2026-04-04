@@ -66,7 +66,7 @@ test:
 
 # Verify contracts (Etherscan-compatible chains)
 verify:
-	forge script script/VerifyAll.s.sol --ffi --rpc-url $(RPC_URL)
+	FOUNDRY_PROFILE=$(DEPLOY_PROFILE) forge script script/VerifyAll.s.sol --ffi --rpc-url $(RPC_URL)
 
 # Verify a single contract on Blockscout (Celo chains)
 # Usage: make verify-blockscout NETWORK=<celo|celoSepolia> CONTRACT_ADDRESS=0x... CONTRACT_NAME=MyContract
