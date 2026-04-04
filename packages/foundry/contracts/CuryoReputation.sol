@@ -52,9 +52,8 @@ contract CuryoReputation is ERC20, ERC1363, ERC20Permit, ERC20Votes, AccessContr
         _grantRole(DEFAULT_ADMIN_ROLE, _governance);
         _grantRole(CONFIG_ROLE, _governance);
 
-        // Admin gets temporary setup roles (renounced at end of deploy script)
+        // Admin gets only the temporary setup roles needed during deployment.
         if (_admin != _governance) {
-            _grantRole(DEFAULT_ADMIN_ROLE, _admin);
             _grantRole(CONFIG_ROLE, _admin);
             _grantRole(MINTER_ROLE, _admin);
         }

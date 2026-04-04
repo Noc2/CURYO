@@ -9,6 +9,7 @@ import { SafeERC20 } from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.s
 
 import { RoundVotingEngine } from "./RoundVotingEngine.sol";
 import { ContentRegistry } from "./ContentRegistry.sol";
+import { ProtocolConfig } from "./ProtocolConfig.sol";
 import { IFrontendRegistry } from "./interfaces/IFrontendRegistry.sol";
 import { IParticipationPool } from "./interfaces/IParticipationPool.sol";
 import { RoundLib } from "./libraries/RoundLib.sol";
@@ -115,6 +116,13 @@ contract RoundRewardDistributor is Initializable, AccessControlUpgradeable, Reen
     event ParticipationRewardFinalized(
         uint256 indexed contentId, uint256 indexed roundId, address indexed rewardPool, uint256 releasedDust
     );
+    event ParticipationRewardSnapshotFailed(
+        uint256 indexed contentId,
+        uint256 indexed roundId,
+        address indexed rewardPool,
+        uint256 rewardRateBps,
+        uint256 totalReward
+    );
     event StrandedCrepSwept(address indexed treasury, uint256 amount);
 
     /// @custom:oz-upgrades-unsafe-allow constructor
@@ -144,7 +152,7 @@ contract RoundRewardDistributor is Initializable, AccessControlUpgradeable, Reen
     /// @dev Historical cancellation fees were mistakenly routed here in some deployments. This contract does not
     ///      custody live reward inventory, so governance can safely recover the full balance to treasury.
     function sweepStrandedCrepToTreasury() external onlyRole(DEFAULT_ADMIN_ROLE) nonReentrant returns (uint256 amount) {
-        address treasury = registry.treasury();
+        address treasury = _protocolTreasury();
         if (treasury == address(0)) revert TreasuryNotSet();
 
         amount = crepToken.balanceOf(address(this));
@@ -292,8 +300,12 @@ contract RoundRewardDistributor is Initializable, AccessControlUpgradeable, Reen
     ) external nonReentrant {
         if (msg.sender != address(votingEngine)) revert UnauthorizedCaller();
 
-        (uint256 totalReward, uint256 reservedReward) =
-            _syncParticipationRewardSnapshot(contentId, roundId, rewardPool, rewardRateBps, winningStake);
+        (uint256 totalReward, uint256 reservedReward, bool fullyReserved) =
+            _syncParticipationRewardSnapshot(contentId, roundId, rewardPool, rewardRateBps, winningStake, false);
+        if (!fullyReserved) {
+            emit ParticipationRewardSnapshotFailed(contentId, roundId, rewardPool, rewardRateBps, totalReward);
+            return;
+        }
 
         emit ParticipationRewardSnapshotted(contentId, roundId, rewardPool, rewardRateBps, totalReward, reservedReward);
     }
@@ -311,8 +323,10 @@ contract RoundRewardDistributor is Initializable, AccessControlUpgradeable, Reen
 
         uint256 winningStake = round.upWins ? round.upPool : round.downPool;
         uint256 totalReward;
-        (totalReward, reservedReward) =
-            _syncParticipationRewardSnapshot(contentId, roundId, rewardPool, rewardRateBps, winningStake);
+        bool fullyReserved;
+        (totalReward, reservedReward, fullyReserved) =
+            _syncParticipationRewardSnapshot(contentId, roundId, rewardPool, rewardRateBps, winningStake, true);
+        if (!fullyReserved) revert PoolDepleted();
 
         emit ParticipationRewardBackfilled(contentId, roundId, rewardPool, rewardRateBps, totalReward, reservedReward);
     }
@@ -558,7 +572,7 @@ contract RoundRewardDistributor is Initializable, AccessControlUpgradeable, Reen
     }
 
     function _routeFrontendFeeToProtocol(uint256 fee) internal {
-        address treasury = registry.treasury();
+        address treasury = _protocolTreasury();
         if (treasury != address(0)) {
             votingEngine.transferReward(treasury, fee);
             return;
@@ -574,8 +588,9 @@ contract RoundRewardDistributor is Initializable, AccessControlUpgradeable, Reen
         uint256 roundId,
         address rewardPool,
         uint256 rewardRateBps,
-        uint256 winningStake
-    ) internal returns (uint256 totalReward, uint256 reservedReward) {
+        uint256 winningStake,
+        bool requireFullReservation
+    ) internal returns (uint256 totalReward, uint256 reservedReward, bool fullyReserved) {
         if (rewardPool == address(0)) revert NoPool();
         if (rewardRateBps == 0) revert NoParticipationRate();
         if (roundParticipationRewardFinalized[contentId][roundId]) revert InvalidParticipationSnapshot();
@@ -588,24 +603,40 @@ contract RoundRewardDistributor is Initializable, AccessControlUpgradeable, Reen
         uint256 existingRateBps = roundParticipationRewardRateBps[contentId][roundId];
         if (existingRateBps != 0 && existingRateBps != rewardRateBps) revert InvalidParticipationSnapshot();
 
-        roundParticipationRewardPool[contentId][roundId] = rewardPool;
-        roundParticipationRewardRateBps[contentId][roundId] = rewardRateBps;
-
         totalReward = roundParticipationRewardOwed[contentId][roundId];
         if (totalReward == 0) {
             totalReward = winningStake * rewardRateBps / 10000;
-            roundParticipationRewardOwed[contentId][roundId] = totalReward;
         }
 
         reservedReward = roundParticipationRewardReserved[contentId][roundId];
         if (reservedReward < totalReward) {
-            uint256 additionalReserved =
-                IParticipationPool(rewardPool).reserveReward(address(this), totalReward - reservedReward);
+            uint256 additionalReserved = IParticipationPool(rewardPool).reserveReward(address(this), totalReward - reservedReward);
             if (additionalReserved > 0) {
-                reservedReward += additionalReserved;
-                roundParticipationRewardReserved[contentId][roundId] = reservedReward;
+                uint256 nextReservedReward = reservedReward + additionalReserved;
+                if (nextReservedReward < totalReward) {
+                    IParticipationPool(rewardPool).releaseReservedReward(additionalReserved);
+                    if (requireFullReservation) revert PoolDepleted();
+                    return (totalReward, reservedReward, false);
+                }
+                reservedReward = nextReservedReward;
+            } else if (requireFullReservation) {
+                revert PoolDepleted();
+            } else if (totalReward > 0) {
+                return (totalReward, reservedReward, false);
             }
         }
+
+        roundParticipationRewardPool[contentId][roundId] = rewardPool;
+        roundParticipationRewardRateBps[contentId][roundId] = rewardRateBps;
+        if (roundParticipationRewardOwed[contentId][roundId] == 0) {
+            roundParticipationRewardOwed[contentId][roundId] = totalReward;
+        }
+        roundParticipationRewardReserved[contentId][roundId] = reservedReward;
+        fullyReserved = true;
+    }
+
+    function _protocolTreasury() internal view returns (address) {
+        return ProtocolConfig(votingEngine.protocolConfig()).treasury();
     }
 
     // --- Storage Gap for Future Upgrades ---

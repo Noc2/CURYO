@@ -11,6 +11,19 @@ import { IRoundRewardDistributor } from "../interfaces/IRoundRewardDistributor.s
 /// @title RoundSettlementSideEffectsLib
 /// @notice Moves best-effort post-settlement external calls out of RoundVotingEngine runtime bytecode.
 library RoundSettlementSideEffectsLib {
+    enum SideEffectFailureStage {
+        ParticipationRateQuery,
+        SubmitterParticipationTermsSnapshot,
+        VoterParticipationRewardsSnapshot
+    }
+
+    event SettlementSideEffectFailed(
+        uint256 indexed contentId,
+        uint256 indexed roundId,
+        address indexed target,
+        SideEffectFailureStage stage
+    );
+
     function recordSettlement(
         ContentRegistry registry,
         RatingLib.RatingConfig memory ratingConfig,
@@ -46,7 +59,14 @@ library RoundSettlementSideEffectsLib {
             try participationPool.getCurrentRateBps() returns (uint256 rate) {
                 participationRateBps = rate;
                 hasParticipationRate = true;
-            } catch { }
+            } catch {
+                emit SettlementSideEffectFailed(
+                    contentId,
+                    roundId,
+                    participationPoolAddress,
+                    SideEffectFailureStage.ParticipationRateQuery
+                );
+            }
         }
 
         if (isFirstSettledRound) {
@@ -62,14 +82,28 @@ library RoundSettlementSideEffectsLib {
             try registry.snapshotSubmitterParticipationTerms(
                 contentId, participationPoolAddress, participationRateBps
             ) { }
-                catch { }
+                catch {
+                    emit SettlementSideEffectFailed(
+                        contentId,
+                        roundId,
+                        address(registry),
+                        SideEffectFailureStage.SubmitterParticipationTermsSnapshot
+                    );
+                }
             if (rewardDistributor != address(0)) {
                 uint256 winningStake = upWins ? upPool : downPool;
                 try IRoundRewardDistributor(rewardDistributor)
                     .snapshotParticipationRewards(
                         contentId, roundId, participationPoolAddress, participationRateBps, winningStake
                     ) { }
-                    catch { }
+                    catch {
+                        emit SettlementSideEffectFailed(
+                            contentId,
+                            roundId,
+                            rewardDistributor,
+                            SideEffectFailureStage.VoterParticipationRewardsSnapshot
+                        );
+                    }
             }
         }
 
