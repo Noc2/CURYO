@@ -13,6 +13,7 @@ import { encodeFunctionData, type Address, type Hex } from "viem";
 export interface CommitVoteParams {
   commitHash: VoteCommitHash;
   ciphertext: VoteCiphertext;
+  roundReferenceRatingBps: number;
   targetRound: bigint;
   drandChainHash: VoteDrandChainHash;
   salt: `0x${string}`;
@@ -49,6 +50,7 @@ export async function buildCommitVoteParams(params: {
   isUp: boolean;
   stakeAmount: number;
   epochDuration: number;
+  roundReferenceRatingBps: number;
   frontendCode?: `0x${string}`;
   defaultFrontendCode?: `0x${string}`;
   salt?: `0x${string}`;
@@ -57,19 +59,22 @@ export async function buildCommitVoteParams(params: {
   const stakeWei = buildStakeAmountWei(params.stakeAmount);
   const frontend = resolveFrontendCode(params.frontendCode, params.defaultFrontendCode);
   const salt = params.salt ?? generateVoteSalt();
-  const { ciphertext, commitHash, targetRound, drandChainHash } = await createTlockVoteCommit(
-    {
-      isUp: params.isUp,
-      salt,
-      contentId: params.contentId,
-      epochDurationSeconds: params.epochDuration,
-    },
-    params.runtime,
-  );
+  const { ciphertext, commitHash, roundReferenceRatingBps, targetRound, drandChainHash } =
+    await createTlockVoteCommit(
+      {
+        isUp: params.isUp,
+        salt,
+        contentId: params.contentId,
+        roundReferenceRatingBps: params.roundReferenceRatingBps,
+        epochDurationSeconds: params.epochDuration,
+      },
+      params.runtime,
+    );
 
   return {
     commitHash,
     ciphertext,
+    roundReferenceRatingBps,
     targetRound,
     drandChainHash,
     salt,

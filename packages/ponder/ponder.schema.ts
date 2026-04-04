@@ -19,6 +19,12 @@ export const content = onchainTable(
     categoryId: t.bigint().notNull(),
     status: t.integer().notNull(), // 0=Active, 1=Dormant, 2=Cancelled
     rating: t.integer().notNull(), // 0-100, starts at 50
+    ratingBps: t.integer().notNull(), // 0-10000, starts at 5000
+    conservativeRatingBps: t.integer().notNull(),
+    ratingConfidenceMass: t.bigint().notNull(),
+    ratingEffectiveEvidence: t.bigint().notNull(),
+    ratingSettledRounds: t.integer().notNull(),
+    ratingLowSince: t.bigint().notNull(),
     submitterStakeReturned: t.boolean().notNull(),
     createdAt: t.bigint().notNull(),
     lastActivityAt: t.bigint().notNull(),
@@ -70,6 +76,13 @@ export const round = onchainTable(
     downPool: t.bigint().notNull(), // raw DOWN stake (from revealed votes)
     upCount: t.integer().notNull(),
     downCount: t.integer().notNull(),
+    referenceRatingBps: t.integer().notNull(),
+    ratingBps: t.integer().notNull(),
+    conservativeRatingBps: t.integer().notNull(),
+    confidenceMass: t.bigint().notNull(),
+    effectiveEvidence: t.bigint().notNull(),
+    settledRounds: t.integer().notNull(),
+    lowSince: t.bigint().notNull(),
     upWins: t.boolean(),
     losingPool: t.bigint(),
     startTime: t.bigint(),
@@ -339,8 +352,17 @@ export const ratingChange = onchainTable(
   (t) => ({
     id: t.text().primaryKey(), // `${contentId}-${blockNumber}`
     contentId: t.bigint().notNull(),
+    roundId: t.bigint().notNull(),
     oldRating: t.integer().notNull(),
     newRating: t.integer().notNull(),
+    referenceRatingBps: t.integer().notNull(),
+    oldRatingBps: t.integer().notNull(),
+    newRatingBps: t.integer().notNull(),
+    conservativeRatingBps: t.integer().notNull(),
+    confidenceMass: t.bigint().notNull(),
+    effectiveEvidence: t.bigint().notNull(),
+    settledRounds: t.integer().notNull(),
+    lowSince: t.bigint().notNull(),
     timestamp: t.bigint().notNull(),
   }),
   (table) => ({

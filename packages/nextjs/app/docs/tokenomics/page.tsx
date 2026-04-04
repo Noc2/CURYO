@@ -190,9 +190,10 @@ const Tokenomics = () => {
       <p>
         The protocol treasury starts with <strong>10M cREP</strong> on the governor/timelock from launch. It grows over
         time through four main ongoing inflow sources: a 1% treasury fee on contested losing pools, cancellation fees
-        from voluntary content withdrawals, forfeited submitter deposits (when content rating drops below 25), and
-        forfeited unrevealed past-epoch votes swept during settlement cleanup. Treasury spending follows the same
-        governance proposal path as upgrades and other governed config changes.
+        from voluntary content withdrawals, forfeited submitter deposits (when a content item&apos;s conservative rating
+        bound stays below the governed slash threshold long enough with enough evidence), and forfeited unrevealed
+        past-epoch votes swept during settlement cleanup. Treasury spending follows the same governance proposal path as
+        upgrades and other governed config changes.
       </p>
 
       <hr />
@@ -240,8 +241,8 @@ const Tokenomics = () => {
         </table>
       </div>
       <p>
-        Submitter deposits are forfeited (100% to treasury) if content rating drops below 25 after a 24-hour grace
-        period.
+        Submitter deposits are forfeited (100% to treasury) only once the content&apos;s conservative rating bound stays
+        below the governed slash threshold after a 24-hour grace period and enough evidence has accumulated.
       </p>
     </article>
   );

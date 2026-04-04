@@ -44,7 +44,7 @@ Curyo is a monorepo with nine packages:
 | `packages/ponder` | Ponder indexer for on-chain event processing and API |
 | `packages/keeper` | Standalone keeper service for keeper-assisted round settlement |
 | `packages/bot` | Manual CLI bot for content submission and voting |
-| `packages/mcp-server` | Read-only MCP server exposing Curyo data to AI agents |
+| `packages/mcp-server` | MCP server exposing Curyo data and optional hosted write tools to AI agents |
 | `packages/node-utils` | Shared Node.js utilities used by services and scripts |
 
 ```
@@ -55,7 +55,7 @@ sdk        (shared)  → hosted read client + vote/frontend integration helpers
 ponder     (index)   → REST API at localhost:42069
 nextjs     (frontend)→ reads contracts via thirdweb, wagmi, and the Ponder API
 keeper     (service) → settles rounds, finalizes reveal failures, cleans up unrevealed votes, marks dormant content
-mcp-server (tools)   → exposes read-only MCP tools backed by the Ponder API
+mcp-server (tools)   → exposes MCP tools backed by the Ponder API, plus optional hosted write tools
 ```
 
 Built with Next.js, Foundry, Ponder, thirdweb, wagmi, viem, Drizzle ORM, and PostgreSQL.
@@ -94,7 +94,7 @@ cd CURYO
 yarn install
 ```
 
-For Celo mainnet deployment, see [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md).
+For Celo mainnet deployment, see [packages/foundry/README.md](packages/foundry/README.md).
 
 ## Usage
 
@@ -122,10 +122,10 @@ If you are using a local chain, keep Anvil and deployment separate:
 
 **1. Local chain:**
 ```bash
-yarn chain --block-time 12
+yarn chain
 ```
 
-> **Important:** The `--block-time 12` flag makes Anvil auto-mine a block every 12 seconds. Without it, Anvil only mines blocks when transactions are sent, causing `block.timestamp` to freeze during idle periods. This prevents the keeper from revealing and settling votes (it uses `block.timestamp` to decide when epochs have ended).
+> The repo's chain helper starts Anvil with its default mining behavior. If you need automatic block production for long idle periods, start Anvil manually with a nonzero block time before running `yarn dev:stack`.
 
 **2. Deploy contracts:**
 ```bash

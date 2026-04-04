@@ -58,6 +58,71 @@ export const ContentRegistryAbi = [
   },
   {
     "type": "function",
+    "name": "DEFAULT_CONFIDENCE_MASS_INITIAL",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "DEFAULT_MIN_SLASH_EVIDENCE",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "DEFAULT_MIN_SLASH_LOW_DURATION",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "uint48",
+        "internalType": "uint48"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "DEFAULT_MIN_SLASH_SETTLED_ROUNDS",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "uint16",
+        "internalType": "uint16"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "DEFAULT_SLASH_THRESHOLD_BPS",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "uint16",
+        "internalType": "uint16"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
     "name": "DORMANCY_PERIOD",
     "inputs": [],
     "outputs": [
@@ -337,6 +402,40 @@ export const ContentRegistryAbi = [
   },
   {
     "type": "function",
+    "name": "contentSlashConfigSnapshot",
+    "inputs": [
+      {
+        "name": "",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "slashThresholdBps",
+        "type": "uint16",
+        "internalType": "uint16"
+      },
+      {
+        "name": "minSlashSettledRounds",
+        "type": "uint16",
+        "internalType": "uint16"
+      },
+      {
+        "name": "minSlashLowDuration",
+        "type": "uint48",
+        "internalType": "uint48"
+      },
+      {
+        "name": "minSlashEvidence",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
     "name": "contents",
     "inputs": [
       {
@@ -443,6 +542,25 @@ export const ContentRegistryAbi = [
   },
   {
     "type": "function",
+    "name": "getConservativeRating",
+    "inputs": [
+      {
+        "name": "contentId",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "",
+        "type": "uint16",
+        "internalType": "uint16"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
     "name": "getContentSubmitter",
     "inputs": [
       {
@@ -462,6 +580,86 @@ export const ContentRegistryAbi = [
   },
   {
     "type": "function",
+    "name": "getRating",
+    "inputs": [
+      {
+        "name": "contentId",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "",
+        "type": "uint16",
+        "internalType": "uint16"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "getRatingState",
+    "inputs": [
+      {
+        "name": "contentId",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "state",
+        "type": "tuple",
+        "internalType": "struct RatingLib.RatingState",
+        "components": [
+          {
+            "name": "ratingLogitX18",
+            "type": "int128",
+            "internalType": "int128"
+          },
+          {
+            "name": "confidenceMass",
+            "type": "uint128",
+            "internalType": "uint128"
+          },
+          {
+            "name": "effectiveEvidence",
+            "type": "uint128",
+            "internalType": "uint128"
+          },
+          {
+            "name": "settledRounds",
+            "type": "uint32",
+            "internalType": "uint32"
+          },
+          {
+            "name": "ratingBps",
+            "type": "uint16",
+            "internalType": "uint16"
+          },
+          {
+            "name": "conservativeRatingBps",
+            "type": "uint16",
+            "internalType": "uint16"
+          },
+          {
+            "name": "lastUpdatedAt",
+            "type": "uint48",
+            "internalType": "uint48"
+          },
+          {
+            "name": "lowSince",
+            "type": "uint48",
+            "internalType": "uint48"
+          }
+        ]
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
     "name": "getRoleAdmin",
     "inputs": [
       {
@@ -475,6 +673,47 @@ export const ContentRegistryAbi = [
         "name": "",
         "type": "bytes32",
         "internalType": "bytes32"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "getSlashConfigForContent",
+    "inputs": [
+      {
+        "name": "contentId",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "slashConfig",
+        "type": "tuple",
+        "internalType": "struct RatingLib.SlashConfig",
+        "components": [
+          {
+            "name": "slashThresholdBps",
+            "type": "uint16",
+            "internalType": "uint16"
+          },
+          {
+            "name": "minSlashSettledRounds",
+            "type": "uint16",
+            "internalType": "uint16"
+          },
+          {
+            "name": "minSlashLowDuration",
+            "type": "uint48",
+            "internalType": "uint48"
+          },
+          {
+            "name": "minSlashEvidence",
+            "type": "uint256",
+            "internalType": "uint256"
+          }
+        ]
       }
     ],
     "stateMutability": "view"
@@ -613,6 +852,25 @@ export const ContentRegistryAbi = [
   {
     "type": "function",
     "name": "isDormancyEligible",
+    "inputs": [
+      {
+        "name": "contentId",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "",
+        "type": "bool",
+        "internalType": "bool"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "isSubmitterStakeSlashable",
     "inputs": [
       {
         "name": "contentId",
@@ -853,6 +1111,73 @@ export const ContentRegistryAbi = [
   },
   {
     "type": "function",
+    "name": "protocolConfig",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "address",
+        "internalType": "contract ProtocolConfig"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "ratingState",
+    "inputs": [
+      {
+        "name": "",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "ratingLogitX18",
+        "type": "int128",
+        "internalType": "int128"
+      },
+      {
+        "name": "confidenceMass",
+        "type": "uint128",
+        "internalType": "uint128"
+      },
+      {
+        "name": "effectiveEvidence",
+        "type": "uint128",
+        "internalType": "uint128"
+      },
+      {
+        "name": "settledRounds",
+        "type": "uint32",
+        "internalType": "uint32"
+      },
+      {
+        "name": "ratingBps",
+        "type": "uint16",
+        "internalType": "uint16"
+      },
+      {
+        "name": "conservativeRatingBps",
+        "type": "uint16",
+        "internalType": "uint16"
+      },
+      {
+        "name": "lastUpdatedAt",
+        "type": "uint48",
+        "internalType": "uint48"
+      },
+      {
+        "name": "lowSince",
+        "type": "uint48",
+        "internalType": "uint48"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
     "name": "recordMeaningfulActivity",
     "inputs": [
       {
@@ -1052,6 +1377,19 @@ export const ContentRegistryAbi = [
     "inputs": [
       {
         "name": "_participationPool",
+        "type": "address",
+        "internalType": "address"
+      }
+    ],
+    "outputs": [],
+    "stateMutability": "nonpayable"
+  },
+  {
+    "type": "function",
+    "name": "setProtocolConfig",
+    "inputs": [
+      {
+        "name": "_protocolConfig",
         "type": "address",
         "internalType": "address"
       }
@@ -1417,6 +1755,76 @@ export const ContentRegistryAbi = [
   },
   {
     "type": "function",
+    "name": "updateRatingState",
+    "inputs": [
+      {
+        "name": "contentId",
+        "type": "uint256",
+        "internalType": "uint256"
+      },
+      {
+        "name": "roundId",
+        "type": "uint256",
+        "internalType": "uint256"
+      },
+      {
+        "name": "referenceRatingBps",
+        "type": "uint16",
+        "internalType": "uint16"
+      },
+      {
+        "name": "nextState",
+        "type": "tuple",
+        "internalType": "struct RatingLib.RatingState",
+        "components": [
+          {
+            "name": "ratingLogitX18",
+            "type": "int128",
+            "internalType": "int128"
+          },
+          {
+            "name": "confidenceMass",
+            "type": "uint128",
+            "internalType": "uint128"
+          },
+          {
+            "name": "effectiveEvidence",
+            "type": "uint128",
+            "internalType": "uint128"
+          },
+          {
+            "name": "settledRounds",
+            "type": "uint32",
+            "internalType": "uint32"
+          },
+          {
+            "name": "ratingBps",
+            "type": "uint16",
+            "internalType": "uint16"
+          },
+          {
+            "name": "conservativeRatingBps",
+            "type": "uint16",
+            "internalType": "uint16"
+          },
+          {
+            "name": "lastUpdatedAt",
+            "type": "uint48",
+            "internalType": "uint48"
+          },
+          {
+            "name": "lowSince",
+            "type": "uint48",
+            "internalType": "uint48"
+          }
+        ]
+      }
+    ],
+    "outputs": [],
+    "stateMutability": "nonpayable"
+  },
+  {
+    "type": "function",
     "name": "voterIdNFT",
     "inputs": [],
     "outputs": [
@@ -1632,6 +2040,80 @@ export const ContentRegistryAbi = [
         "type": "address",
         "indexed": false,
         "internalType": "address"
+      }
+    ],
+    "anonymous": false
+  },
+  {
+    "type": "event",
+    "name": "ProtocolConfigUpdated",
+    "inputs": [
+      {
+        "name": "protocolConfig",
+        "type": "address",
+        "indexed": false,
+        "internalType": "address"
+      }
+    ],
+    "anonymous": false
+  },
+  {
+    "type": "event",
+    "name": "RatingStateUpdated",
+    "inputs": [
+      {
+        "name": "contentId",
+        "type": "uint256",
+        "indexed": true,
+        "internalType": "uint256"
+      },
+      {
+        "name": "roundId",
+        "type": "uint256",
+        "indexed": true,
+        "internalType": "uint256"
+      },
+      {
+        "name": "referenceRatingBps",
+        "type": "uint16",
+        "indexed": false,
+        "internalType": "uint16"
+      },
+      {
+        "name": "oldRatingBps",
+        "type": "uint16",
+        "indexed": false,
+        "internalType": "uint16"
+      },
+      {
+        "name": "newRatingBps",
+        "type": "uint16",
+        "indexed": false,
+        "internalType": "uint16"
+      },
+      {
+        "name": "conservativeRatingBps",
+        "type": "uint16",
+        "indexed": false,
+        "internalType": "uint16"
+      },
+      {
+        "name": "confidenceMass",
+        "type": "uint256",
+        "indexed": false,
+        "internalType": "uint256"
+      },
+      {
+        "name": "effectiveEvidence",
+        "type": "uint256",
+        "indexed": false,
+        "internalType": "uint256"
+      },
+      {
+        "name": "settledRounds",
+        "type": "uint32",
+        "indexed": false,
+        "internalType": "uint32"
       }
     ],
     "anonymous": false
@@ -1996,6 +2478,81 @@ export const ContentRegistryAbi = [
     "type": "error",
     "name": "NotInitializing",
     "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "PRBMath_MulDiv_Overflow",
+    "inputs": [
+      {
+        "name": "x",
+        "type": "uint256",
+        "internalType": "uint256"
+      },
+      {
+        "name": "y",
+        "type": "uint256",
+        "internalType": "uint256"
+      },
+      {
+        "name": "denominator",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ]
+  },
+  {
+    "type": "error",
+    "name": "PRBMath_SD59x18_Convert_Overflow",
+    "inputs": [
+      {
+        "name": "x",
+        "type": "int256",
+        "internalType": "int256"
+      }
+    ]
+  },
+  {
+    "type": "error",
+    "name": "PRBMath_SD59x18_Convert_Underflow",
+    "inputs": [
+      {
+        "name": "x",
+        "type": "int256",
+        "internalType": "int256"
+      }
+    ]
+  },
+  {
+    "type": "error",
+    "name": "PRBMath_SD59x18_Div_InputTooSmall",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "PRBMath_SD59x18_Div_Overflow",
+    "inputs": [
+      {
+        "name": "x",
+        "type": "int256",
+        "internalType": "SD59x18"
+      },
+      {
+        "name": "y",
+        "type": "int256",
+        "internalType": "SD59x18"
+      }
+    ]
+  },
+  {
+    "type": "error",
+    "name": "PRBMath_SD59x18_Log_InputTooSmall",
+    "inputs": [
+      {
+        "name": "x",
+        "type": "int256",
+        "internalType": "SD59x18"
+      }
+    ]
   },
   {
     "type": "error",

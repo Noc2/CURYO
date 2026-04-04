@@ -304,8 +304,8 @@ const SmartContracts: NextPage = () => {
         </li>
         <li>
           <code>updateRatingDirect(contentId, newRating)</code> &mdash; Called by RoundVotingEngine after settlement
-          with the new rating computed from the final revealed up and down stake pools using the protocol&apos;s
-          smoothed stake-imbalance formula.
+          with the new rating data. In the planned redeploy, this becomes a richer score-relative update path fed by the
+          round&apos;s snapshotted reference score, epoch-weighted revealed evidence, and conservative rating bound.
         </li>
       </ul>
       <h3>Submitter Stake</h3>
@@ -314,13 +314,14 @@ const SmartContracts: NextPage = () => {
           <strong>Grace period:</strong> 24 hours. No slash possible during this time.
         </li>
         <li>
-          <strong>Slash:</strong> If a settled round establishes rating below 25 after grace period, 100% of stake goes
-          to the treasury.
+          <strong>Slash:</strong> In the redesigned redeploy, submitter stake only becomes slashable once a conservative
+          low-rating bound stays below the governed threshold after grace period and the content has accumulated enough
+          evidence, enough settled rounds, and enough time below threshold.
         </li>
         <li>
-          <strong>Auto-return:</strong> After ~4 days once a settled round confirms rating stays above 25 and no later
-          round remains open. If no round ever settles, the stake resolves when the content reaches dormancy after all
-          open rounds have been closed.
+          <strong>Auto-return:</strong> After ~4 days once a settled round confirms the conservative rating bound is
+          healthy again and no later round remains open. If no round ever settles, the stake resolves when the content
+          reaches dormancy after all open rounds have been closed.
         </li>
         <li>
           <strong>Submitter participation reward:</strong> Healthy submitter rewards are snapshotted when the stake
@@ -395,13 +396,13 @@ const SmartContracts: NextPage = () => {
       <ul>
         <li>
           <code>
-            CuryoReputation.transferAndCall(votingEngine, stakeAmount, abi.encode(contentId, commitHash, ciphertext,
-            frontend, targetRound, drandChainHash))
+            CuryoReputation.transferAndCall(votingEngine, stakeAmount, abi.encode(contentId, roundReferenceRatingBps,
+            commitHash, ciphertext, frontend, targetRound, drandChainHash))
           </code>{" "}
           &mdash; Default one-transaction vote flow. Transfers cREP and records the tlock-encrypted commit atomically.
           Direction is hidden until the epoch ends. Requires Voter ID and enforces the same 1&ndash;100 cREP stake
-          bounds. The redeployed contract rejects malformed or non-armored ciphertexts and binds the reveal-target
-          metadata on-chain.
+          bounds. The redeployed contract rejects malformed or non-armored ciphertexts, binds the canonical round
+          reference score into the vote payload, and binds the reveal-target metadata on-chain.
         </li>
         <li>
           <code>commitVote(...)</code> &mdash; Lower-level integration path for bots, tests, and direct contract callers
@@ -409,7 +410,9 @@ const SmartContracts: NextPage = () => {
         </li>
         <li>
           <strong>VoteCommitted event:</strong> emits the commit hash, <code>targetRound</code>, and{" "}
-          <code>drandChainHash</code> so indexers can observe the exact reveal metadata attached to each vote.
+          <code>drandChainHash</code> so indexers can observe the exact reveal metadata attached to each vote. The
+          planned redeploy also snapshots <code>roundReferenceRatingBps</code> per round so every frontend can recover
+          the exact score anchor users voted against.
         </li>
         <li>
           <code>revealVoteByCommitKey(contentId, roundId, commitKey, isUp, salt)</code> &mdash; Reveal a previously
@@ -425,7 +428,8 @@ const SmartContracts: NextPage = () => {
           <code>settleRound(contentId, roundId)</code> &mdash; Settle the current round once at least{" "}
           <code>minVoters</code> votes are revealed and all past-epoch votes have been revealed (or their{" "}
           {protocolDocFacts.revealGracePeriodLabel} reveal grace period has expired). Determines winners based on
-          epoch-weighted stakes, splits reward pools, and updates content rating.
+          epoch-weighted stakes, splits reward pools, and updates content rating from the round reference score using
+          the governed score-relative rating model.
         </li>
         <li>
           <code>RoundRewardDistributor.claimFrontendFee(contentId, roundId, frontend)</code> &mdash; Frontend operators
@@ -684,8 +688,10 @@ const SmartContracts: NextPage = () => {
           from the content-specific pool. 100% of the voter share goes to the content-specific pool.
         </li>
         <li>
-          <code>calculateRating(totalUpStake, totalDownStake)</code> &mdash; Returns the final 0&ndash;100 rating using
-          the protocol&apos;s smoothed stake-imbalance formula with a fixed 50 cREP parameter.
+          <code>calculateRating(totalUpStake, totalDownStake)</code> &mdash; Legacy deployments use this smoothed
+          stake-imbalance helper. The planned redeploy replaces it with a dedicated score-relative rating math library
+          that consumes the round reference score, epoch-weighted evidence, dynamic confidence, and conservative-bound
+          logic.
         </li>
       </ul>
       <h3>RoundLib</h3>

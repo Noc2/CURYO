@@ -330,49 +330,60 @@ contract RoundRewardDistributorBranchesTest is VotingTestBase {
     // =========================================================================
 
     function test_SweepStrandedCrepToTreasury_TransfersFullBalance() public {
+        ProtocolConfig protocolConfig = ProtocolConfig(address(votingEngine.protocolConfig()));
+        address updatedTreasury = address(101);
         vm.prank(owner);
-        registry.setTreasury(treasury);
+        protocolConfig.setTreasury(updatedTreasury);
 
         vm.prank(owner);
         crepToken.mint(address(rewardDistributor), 7e6);
 
-        uint256 treasuryBefore = crepToken.balanceOf(treasury);
+        uint256 treasuryBefore = crepToken.balanceOf(updatedTreasury);
 
         vm.prank(owner);
         uint256 swept = rewardDistributor.sweepStrandedCrepToTreasury();
 
         assertEq(swept, 7e6);
         assertEq(crepToken.balanceOf(address(rewardDistributor)), 0);
-        assertEq(crepToken.balanceOf(treasury), treasuryBefore + 7e6);
+        assertEq(crepToken.balanceOf(updatedTreasury), treasuryBefore + 7e6);
     }
 
-    function test_SweepStrandedCrepToTreasury_TreasuryNotSet_Reverts() public {
-        vm.prank(owner);
-        crepToken.mint(address(rewardDistributor), 1e6);
-
-        vm.prank(owner);
-        vm.expectRevert(RoundRewardDistributor.TreasuryNotSet.selector);
-        rewardDistributor.sweepStrandedCrepToTreasury();
+    function test_SweepStrandedCrepToTreasury_UsesInitializedProtocolTreasury() public view {
+        assertEq(ProtocolConfig(address(votingEngine.protocolConfig())).treasury(), treasury);
     }
 
     function test_SweepStrandedCrepToTreasury_NoBalance_Reverts() public {
-        vm.prank(owner);
-        registry.setTreasury(treasury);
-
-        vm.prank(owner);
         vm.expectRevert(RoundRewardDistributor.NoStrandedCrep.selector);
+        vm.prank(owner);
         rewardDistributor.sweepStrandedCrepToTreasury();
     }
 
     function test_SweepStrandedCrepToTreasury_NonAdmin_Reverts() public {
         vm.prank(owner);
-        registry.setTreasury(treasury);
-
-        vm.prank(owner);
         crepToken.mint(address(rewardDistributor), 1e6);
 
-        vm.prank(voter1);
         vm.expectRevert();
+        vm.prank(voter1);
         rewardDistributor.sweepStrandedCrepToTreasury();
+    }
+
+    function test_SweepStrandedCrepToTreasury_UsesProtocolTreasuryWhenRegistryDiffers() public {
+        address registryTreasury = address(0xCAFE);
+        vm.startPrank(owner);
+        registry.setTreasury(registryTreasury);
+        ProtocolConfig(address(votingEngine.protocolConfig())).setTreasury(treasury);
+        vm.stopPrank();
+
+        vm.prank(owner);
+        crepToken.mint(address(rewardDistributor), 2e6);
+
+        uint256 protocolTreasuryBefore = crepToken.balanceOf(treasury);
+        uint256 registryTreasuryBefore = crepToken.balanceOf(registryTreasury);
+
+        vm.prank(owner);
+        rewardDistributor.sweepStrandedCrepToTreasury();
+
+        assertEq(crepToken.balanceOf(treasury), protocolTreasuryBefore + 2e6);
+        assertEq(crepToken.balanceOf(registryTreasury), registryTreasuryBefore);
     }
 }

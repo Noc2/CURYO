@@ -11,13 +11,18 @@ That changes the plan materially:
 - we can redesign submitter-slash logic together with rating logic
 - we should still preserve the protocol's current anti-herding and adversarial guarantees unless we intentionally replace them
 
+Implementation companion:
+
+- detailed build plan and governance parameter table: [rating-system-implementation-plan.md](/Users/davidhawig/source/curyo-release/docs/rating-system-implementation-plan.md)
+- local simulation note: [rating-system-redesign-simulations.md](/Users/davidhawig/source/curyo-release/docs/rating-system-redesign-simulations.md)
+
 ## TL;DR
 
 - The current deployment has a semantic gap: the UI and whitepaper ask users whether the current displayed score should go up or down, but the contract ignores that displayed score and recomputes a fresh absolute score from the current round only.
 - Because the product intentionally shows the current score before voting, the new model should treat votes as **score-relative observations**, not as absolute up/down evidence.
-- The recommended redesign is a **reference-aware latent rating model**: keep a canonical per-round reference score on-chain, update the current rating from the current displayed level, and damp later movement as evidence accumulates.
-- The cleanest deployable approximation is a **logit-space update rule with confidence damping** driven by epoch-weighted round imbalance.
-- Confidence still matters separately from score. Feed ranking, safety actions, and slash logic should use minimum evidence thresholds and conservative ranking, not score alone.
+- The recommended redesign is a **reference-aware latent rating model**: keep a canonical per-round reference score on-chain, infer a score gap from the round's observed vote share, and update the rating on a single latent scale.
+- V1 should use **dynamic uncertainty**, not monotone hardening. Contradictory rounds must be able to reopen uncertainty instead of only making the score harder to move forever.
+- Confidence still matters separately from score. Feed ranking, safety actions, and slash logic should use conservative bounds and minimum evidence thresholds, not the point estimate alone.
 - Since the displayed score now becomes part of the mechanism, canonical score display and round-anchor integrity become security-critical product requirements.
 
 ## Why The Plan Changed
@@ -45,6 +50,10 @@ and a down vote is best interpreted as:
 ```
 
 So the score visible to users is not passive context. It is part of the voting mechanism itself.
+
+This plan therefore assumes Curyo intentionally embraces that product meaning.
+
+If later product validation concludes that users are really making absolute quality judgments and only using the displayed score as loose context, then the right redesign would shift back toward an absolute-evidence model rather than the score-relative model proposed here.
 
 ## Current Semantic Gap
 
@@ -178,7 +187,33 @@ Recommended rule:
 
 - when a new round opens, snapshot `roundReferenceRatingBps`
 - every frontend should read and display that exact value for the round
-- commits should include or validate the expected round anchor so stale clients cannot silently vote against a different reference state
+- bind that anchor into the blind commit payload or preimage so stale clients cannot silently vote against a different reference state
+
+Recommended payload evolution:
+
+```text
+current payload:
+  (contentId, commitHash, ciphertext, frontend, targetRound, drandChainHash)
+
+proposed payload:
+  (contentId, roundReferenceRatingBps, commitHash, ciphertext, frontend, targetRound, drandChainHash)
+```
+
+Recommended commit binding:
+
+```text
+commitHash = keccak256(
+  isUp,
+  salt,
+  contentId,
+  roundReferenceRatingBps,
+  targetRound,
+  drandChainHash,
+  keccak256(ciphertext)
+)
+```
+
+That makes the reference score part of the exact question the voter committed to answering.
 
 Why this matters:
 
@@ -187,29 +222,31 @@ Why this matters:
 
 ### 3. Use a score-relative update rule on-chain
 
-The ideal statistical model is a latent-quality posterior with a score-relative likelihood. That is more complex than we need for v1.
+The ideal statistical model is a latent-quality posterior with a score-relative likelihood. For v1, the important thing is to keep the observation model and the state update on the same latent scale.
 
-A clean deployable approximation is:
+Recommended v1 framing:
 
 ```text
+anchorLogit_t = logit(roundReferenceRatingBps_t / 10000)
 roundEvidence_t = weightedUp_t + weightedDown_t
-roundSignal_t = (weightedUp_t - weightedDown_t) / (weightedUp_t + weightedDown_t + B_round)
 
-K_t = K0 / sqrt(1 + cumulativeEffectiveEvidence_t / E_ref)
+pObs_t = (weightedUp_t + a) / (weightedUp_t + weightedDown_t + a + b)
+gapObs_t = logit(pObs_t) / beta
 
-ratingLogit_{t+1} = clamp(ratingLogit_t + K_t * roundSignal_t, -L_max, L_max)
+step_t = roundEvidence_t / (roundEvidence_t + ratingConfidenceMass_t)
+
+ratingLogit_{t+1} =
+  clamp(anchorLogit_t + step_t * gapObs_t, -L_max, L_max)
+
 ratingBps_{t+1} = floor(10000 * sigmoid(ratingLogit_{t+1}))
-
-cumulativeEffectiveEvidence_{t+1} =
-  cumulativeEffectiveEvidence_t + roundEvidence_t
 ```
 
 Recommended starting constants for simulation:
 
 ```text
-B_round = 50
-K0 = 1.5
-E_ref = 200
+a = 25
+b = 25
+beta = 2
 L_max = logit(0.99) ~= 4.595
 ```
 
@@ -218,9 +255,36 @@ Why this works well:
 - it updates from the current displayed score instead of resetting from 50 every round
 - repeated up-heavy rounds continue to lift the score
 - repeated down-heavy rounds continue to lower the score
-- movement naturally slows as cumulative evidence grows
+- the observed round signal is expressed on the same logit-style latent scale as the rating state
 - logit-space updates avoid unrealistic linear behavior near 0 and 100
 - the formula stays simple enough to audit
+
+Most importantly, this is more coherent than saying the round follows a logistic score-relative model but then updating the state with an unrelated imbalance heuristic.
+
+### 3a. Make uncertainty dynamic in v1
+
+V1 should not let confidence only increase forever.
+
+Recommended principle:
+
+- stable, non-contradictory rounds increase `ratingConfidenceMass`
+- strong contradictory rounds reduce `ratingConfidenceMass` before the next update
+- this makes established ratings harder to move most of the time, without making them impossible to correct when reality changes or an early anchor was wrong
+
+One acceptable implementation family is:
+
+```text
+ratingConfidenceMass_{t+1} =
+  clamp(
+    ratingConfidenceMass_t
+    + confidenceGain(roundEvidence_t)
+    - confidenceReopen(contradiction_t, surprise_t),
+    C_min,
+    C_max
+  )
+```
+
+The exact `confidenceGain` and `confidenceReopen` functions should be tuned in simulation, but the reopening behavior should be part of v1 rather than deferred.
 
 ### 4. Use epoch-weighted evidence for rating, not raw stake
 
@@ -243,25 +307,28 @@ Why:
 
 The displayed score alone is not enough.
 
-Recommended state:
+Recommended on-chain state:
 
 - `ratingBps`
 - `ratingLogitX18`
+- `ratingConfidenceMassX18`
 - `ratingEffectiveEvidence`
-- `ratingEffectiveVoterCount`
 - `ratingSettledRounds`
 - `ratingLastUpdatedAt`
 
-Recommended derived values:
+Recommended off-chain derived values:
 
 - `ratingConfidenceBps`
 - `ratingConservativeBps` or another conservative ranking field
+- `ratingEffectiveVoterCount`
+- `ratingParticipationConfidenceBps`
 
 Initial recommendation:
 
 - compute `ratingBps` on-chain
-- compute conservative ranking and richer confidence indicators off-chain in Ponder / API
+- compute conservative ranking, voter-breadth metrics, and richer confidence indicators off-chain in Ponder / API
 - display confidence in the frontend so users know whether the shown score is provisional or established
+- if slash logic remains on-chain, persist or derive a simple conservative bound on-chain at settlement time
 
 Recommended breadth proxy:
 
@@ -277,10 +344,10 @@ This is useful because it distinguishes:
 - `100` weighted cREP from one voter
 - `100` weighted cREP spread across many independent voters
 
-Recommended starting confidence proxy:
+Recommended participation-confidence proxy:
 
 ```text
-ratingConfidence =
+ratingParticipationConfidence =
   (1 - exp(-ratingEffectiveEvidence / E_conf))
   * (1 - exp(-ratingEffectiveVoterCount / V_conf))
 ```
@@ -292,28 +359,29 @@ E_conf = 200
 V_conf = 20
 ```
 
-Why this is better than stake-only confidence:
+Why this is better than stake-only participation confidence:
 
 - stake captures conviction and economic cost
 - voter breadth captures how concentrated that evidence is
 - together they fit the intuition that "many people independently agreed" should mean more than "one whale pushed hard"
 
-History should matter in score movement too, not just in a separate confidence badge.
+But participation alone is not the same thing as certainty.
 
-That is already built into the update rule:
+Final displayed confidence should combine:
 
-```text
-K_t = K0 / sqrt(1 + cumulativeEffectiveEvidence_t / E_ref)
-```
+- on-chain rating uncertainty or confidence mass
+- cumulative weighted evidence
+- voter breadth
+- contradiction or disagreement over time
 
-As cumulative evidence grows, later rounds move the score less. So stable history creates inertia by design.
+That avoids the failure mode where a highly polarized or oscillating history looks "high confidence" only because many people participated.
 
-Recommended v1.1 refinement:
+History should matter in score movement too, not just in a separate badge.
 
-- let `K_t` shrink when history accumulates
-- let uncertainty widen modestly after a strong contradictory round
+The key principle is:
 
-That would make the system harder to whip around without making established ratings impossible to correct.
+- stable history should create inertia
+- contradictory history should reopen uncertainty
 
 ### 6. Redesign slash logic with score-relative ratings in mind
 
@@ -323,21 +391,28 @@ Safer rule:
 
 - do not slash from one low-evidence round
 - require all of:
-  - `ratingBps < 2500`
+  - `ratingConservativeBps < 2500`
   - `ratingSettledRounds >= 2`
   - `ratingEffectiveEvidence >= minSlashEvidence`
+  - `lowRatingDuration >= minSlashLowDuration`
   - grace period elapsed
 
 Suggested starting point:
 
 ```text
 minSlashEvidence = 200 weighted cREP-equivalent
+minSlashLowDuration = 7 days
 ```
 
 This preserves the important distinction between:
 
 - "the current displayed score looks low"
 - "the system has high enough confidence to impose an economic penalty"
+
+Recommended v1 simplification:
+
+- if slashing must be decided fully on-chain, keep it tied to on-chain conservative bounds and time/evidence floors
+- do not make slashing depend on off-chain-only voter-breadth analytics
 
 ### 7. Why the previous Beta-style plan is no longer the primary recommendation
 
@@ -360,6 +435,8 @@ Recommended frontend behavior:
 - ask a precise question such as "Should this content be rated higher or lower than 5.7?"
 - show confidence or "provisional / established" status next to the score
 - show rating history and recent movement so users understand direction and stability
+- keep history visible before voting, but derive it from canonical settled round data rather than frontend-local state
+- treat the round reference score as the only commit-bound question state; visible history and confidence remain informative context, not signed commit inputs
 
 Important product consequence:
 
@@ -370,14 +447,15 @@ That means the round anchor, confidence label, and explanatory copy deserve the 
 
 ## Example Voting Behaviour Over Time
 
-The examples below use the proposed score-relative update rule with:
+The examples below show candidate trajectories from a score-relative model with:
 
-- `B_round = 50`
-- `K0 = 1.5`
-- `E_ref = 200`
-- all evidence numbers already epoch-weighted
+- epoch-weighted evidence
+- smoothed vote-share log-odds
+- dynamic confidence that usually hardens over time but can reopen after contradictory rounds
 
-These numbers are illustrative. The simulation phase should tune them before deployment.
+These numbers are illustrative rather than normative. The simulation phase should tune the exact parameters before deployment.
+
+For one concrete candidate parameterization and a comparison between monotone vs contradiction-sensitive confidence, see [rating-system-redesign-simulations.md](/Users/davidhawig/source/curyo-release/docs/rating-system-redesign-simulations.md).
 
 ### Example 1: Repeated mildly up-heavy rounds
 
@@ -385,11 +463,11 @@ Each round settles at `60 up / 40 down`.
 
 | Round | Current deployed formula | Proposed score-relative model |
 | --- | ---: | ---: |
-| 1 | 56.7 | 55.0 |
-| 2 | 56.7 | 59.0 |
-| 3 | 56.7 | 62.4 |
-| 4 | 56.7 | 65.3 |
-| 5 | 56.7 | 67.9 |
+| 1 | 56.7 | 52.3 |
+| 2 | 56.7 | 54.5 |
+| 3 | 56.7 | 56.6 |
+| 4 | 56.7 | 58.5 |
+| 5 | 56.7 | 60.3 |
 
 Interpretation:
 
@@ -406,10 +484,11 @@ Round sequence:
 
 | Round | Current deployed formula | Proposed score-relative model |
 | --- | ---: | ---: |
-| 1 | 16.7 | 26.9 |
-| 2 | 70.0 | 37.5 |
-| 3 | 70.0 | 47.9 |
-| 4 | 70.0 | 57.3 |
+| 1 | 16.7 | 33.9 |
+| 2 | 70.0 | 41.3 |
+| 3 | 70.0 | 49.0 |
+| 4 | 70.0 | 56.7 |
+| 5 | 70.0 | 64.0 |
 
 Interpretation:
 
@@ -425,17 +504,17 @@ If later `80 / 20` rounds count at full weight:
 
 | Step | Unweighted score-relative score |
 | --- | ---: |
-| After blind round | 55.0 |
-| After late round 2 | 66.6 |
-| After late round 3 | 75.3 |
+| After blind round | 52.3 |
+| After late round 2 | 59.4 |
+| After late round 3 | 66.1 |
 
 If those later rounds count at `25%` effective weight:
 
 | Step | Weighted score-relative score |
 | --- | ---: |
-| After blind round | 55.0 |
-| After late round 2 | 60.9 |
-| After late round 3 | 66.4 |
+| After blind round | 52.3 |
+| After late round 2 | 54.2 |
+| After late round 3 | 56.0 |
 
 Interpretation:
 
@@ -448,16 +527,16 @@ Interpretation:
 Suppose a content item is currently at `57.0`, and that score has already been supported by:
 
 - `ratingEffectiveEvidence = 1000`
-- `ratingEffectiveVoterCount = 100`
+- broad prior voter participation
 - many prior rounds that were roughly balanced around the current displayed score
 
 Now one later round settles unanimously up, but only with `5 up / 0 down`.
 
-Under the proposed rule:
+Under one candidate parameterization:
 
-- `K_t = 1.5 / sqrt(1 + 1000 / 200) ~= 0.61`
-- `roundSignal = 5 / (5 + 50) ~= 0.09`
-- the rating moves from `57.0` to about `58.4`
+- the established history keeps the round step small
+- the one-sided late round is treated as a small positive correction
+- the rating moves from `57.0` to about `57.1`
 
 Interpretation:
 
@@ -544,9 +623,10 @@ Why this matters more now:
 Mitigations:
 
 - snapshot `roundReferenceRatingBps` on-chain
+- bind the anchor into the blind commit payload or preimage
 - require frontends to render the round anchor from chain state
-- validate the expected anchor during commit
 - echo the reference score in wallet confirmation and activity views where feasible
+- treat malicious score display as a residual trust problem even after anchor binding
 
 ### 2. Ratchet attacks across many rounds
 
@@ -558,9 +638,11 @@ This is more realistic under the new model because repeated `60 / 40` rounds rea
 
 Mitigations:
 
-- damp update size as evidence accumulates
+- damp update size as confidence accumulates
+- reduce confidence after strong contradictory rounds
 - keep per-voter caps and Voter ID
 - use conservative ranking for low-confidence content
+- add a per-round maximum movement cap or minimum effective-participation floor
 - monitor multi-round directional manipulation in analytics
 
 ### 3. Herding and social-influence amplification
@@ -585,9 +667,9 @@ Risk:
 
 Mitigations:
 
-- tune `K0`, `E_ref`, and `B_round` in simulation
+- tune `a`, `b`, `beta`, and confidence dynamics in simulation
 - test contradictory-round recovery explicitly
-- if needed, add a later v1.1 mechanism where major contradictory rounds modestly widen uncertainty again instead of only shrinking it forever
+- make contradiction-sensitive uncertainty reopening part of v1
 
 ### 5. Slash griefing
 
@@ -597,8 +679,10 @@ Risk:
 
 Mitigations:
 
+- conservative lower-bound based slash threshold
 - minimum slash evidence
 - minimum settled rounds
+- minimum low-rating dwell time
 - grace periods
 - do not trigger slashing from a single low score alone
 
@@ -613,8 +697,22 @@ Mitigations:
 - display low confidence clearly
 - rank by conservative score rather than raw score
 - require minimum evidence before using rating for high-stakes actions
+- cap movement for very low-liquidity rounds
 
-### 7. Self-opposition and coalition behavior
+### 7. Selective revelation and reveal withholding
+
+Risk:
+
+- the round signal depends on revealed weighted stake
+- in a compounding score-relative system, reveal timing can shape drift, ranking, and slash timing
+
+Mitigations:
+
+- preserve the current settlement invariant that past-epoch unrevealed votes block premature settlement inside the grace window
+- explicitly threat-model selective reveal for rating drift, not only reward theft
+- keep selective-reveal tests as first-class launch blockers
+
+### 8. Self-opposition and coalition behavior
 
 The repo already has adversarial tests showing self-opposition is directly unprofitable under the current reward split.
 
@@ -627,7 +725,7 @@ Important nuance:
 
 - even if self-opposition remains directly unprofitable, score manipulation can still be worthwhile as griefing or as an attack on off-protocol reputation
 
-### 8. Precision and arithmetic risk
+### 9. Precision and arithmetic risk
 
 A logit-based score model introduces new implementation risk:
 
@@ -693,6 +791,12 @@ Add an explicit reference score to the round:
 
 - `uint32 roundReferenceRatingBps`
 
+And bind it into the vote commit interface:
+
+- include `roundReferenceRatingBps` in the transfer payload alongside the existing vote fields
+- include `roundReferenceRatingBps` in the commit-hash preimage
+- reject commit/reveal pairs whose bound reference score does not match the round snapshot
+
 This should be snapshotted when the round opens and treated as the canonical question for that round.
 
 ### Content rating state
@@ -700,31 +804,38 @@ This should be snapshotted when the round opens and treated as the canonical que
 Recommended fresh-deploy state:
 
 - `int128 ratingLogitX18` or a similar signed fixed-point type
+- `uint128 ratingConfidenceMass`
 - `uint32 ratingBps`
 - `uint128 ratingEffectiveEvidence`
 - `uint32 ratingSettledRounds`
+- `uint48 lowRatingStartedAt`
 - `uint48 ratingLastUpdatedAt`
 
 Optional:
 
 - `uint32 ratingConfidenceBps` if later stored on-chain
+- `uint32 conservativeRatingBps` if slash logic keys directly off a stored lower bound
 
 ### Config state
 
 `ProtocolConfig` should gain a rating config surface such as:
 
-- `ratingRoundBiasB`
-- `ratingBaseK`
-- `ratingEvidenceRef`
+- `ratingSmoothingAlpha`
+- `ratingSmoothingBeta`
+- `ratingObservationBeta`
+- `ratingConfidenceGainRate`
+- `ratingConfidenceReopenRate`
 - `minSlashEvidence`
 - `minSlashSettledRounds`
+- `minSlashLowDuration`
+- `maxRoundRatingStepBps`
 - `lateEpochEvidenceWeightBps`
 
 ### Events
 
 Prefer an explicit event such as:
 
-- `RatingUpdated(contentId, roundId, referenceRatingBps, oldRatingBps, newRatingBps, roundSignal, cumulativeEvidence)`
+- `RatingUpdated(contentId, roundId, referenceRatingBps, oldRatingBps, newRatingBps, observedGap, confidenceMass, cumulativeEvidence)`
 
 This makes it much easier to audit how a round moved the score.
 
@@ -770,19 +881,26 @@ New test focus areas:
 
 - round anchor snapshot correctness
 - stale-anchor commit rejection
+- malicious-display / mismatched-anchor UX failure modes
 - repeated mild-majority rounds ratcheting in the expected direction
 - contradictory-round recovery
+- uncertainty reopening after surprise rounds
+- conservative slash-bound behavior
+- low-liquidity per-round movement caps
+- selective-reveal drift resistance
 - confidence gating for slashability
 
 ## Recommended Implementation Plan
 
 ### Phase 1: Behavioral and attack simulation
 
+- validate with product that Curyo intentionally wants score-relative vote semantics
 - replay historical round data off-chain
 - compare:
   - current deployed formula
   - cumulative Beta accumulator
-  - score-relative logit update with different `K0`, `E_ref`, and `B_round`
+  - score-relative update with smoothed vote-share log-odds
+  - dynamic-confidence vs monotone-confidence variants
   - weighted vs unweighted round evidence
 - run synthetic agent experiments where voters react to the displayed score with:
   - no anchoring bias
@@ -794,20 +912,23 @@ New test focus areas:
   - recovery after attack rounds
   - low-confidence ratchet risk
   - confidence distortion from concentrated stake versus broad agreement
+  - conservative-bound slash behavior
   - slash false-positive risk
 
 ### Phase 2: Contract redesign
 
 - add canonical `roundReferenceRatingBps`
+- bind the round anchor into the blind commit interface
 - redesign rating state around score-relative updates
 - add rating config to `ProtocolConfig`
-- update settlement path to apply the score-relative rule from the current rating
-- redesign slash conditions to use evidence floors and minimum rounds
+- update settlement path to apply the score-relative rule from the round anchor
+- redesign slash conditions around conservative bounds, evidence floors, and low-rating dwell time
 - emit richer rating events
 
 ### Phase 3: Indexer and API
 
 - index round anchors, rating state, and effective evidence
+- compute breadth, participation confidence, and conservative bounds off-chain
 - expose both raw score and confidence-aware ranking fields
 - keep per-round movement queryable for audits and research
 
@@ -816,6 +937,7 @@ New test focus areas:
 - show score plus confidence, not score alone
 - explain that the visible score is the round's reference point
 - show whether the score is provisional or established
+- make the wallet / confirmation flow echo the bound round anchor where feasible
 - ensure all frontends use the same canonical round anchor
 
 ### Phase 5: Adversarial validation
@@ -823,6 +945,7 @@ New test focus areas:
 - extend the existing self-opposition and selective-reveal suites
 - add stale-frontend and wrong-anchor tests
 - add multi-round ratchet simulations
+- add malicious-display threat-model review
 - add invariant tests around monotonicity, bounds, and anchor integrity
 
 ## Research References
@@ -846,10 +969,13 @@ Under a fresh redeploy, I recommend:
 
 - keep the visible score as part of the product
 - formally treat it as the round's canonical reference point
-- replace the current per-round overwrite with a score-relative logit update rule
+- bind that reference score into the blind commit interface
+- replace the current per-round overwrite with a score-relative update on a single latent scale
+- add dynamic uncertainty reopening in v1, not later
 - use epoch-weighted evidence for rating
+- keep on-chain state minimal and push richer breadth analytics off-chain
 - expose confidence separately from score
-- gate slashability on low score plus minimum evidence and minimum rounds
+- gate slashability on conservative bounds plus minimum evidence and dwell time
 - treat frontend anchor integrity as part of protocol security
 
-This is the smallest redesign that actually matches how users appear to understand the product today.
+This is the smallest redesign that matches how users appear to understand the product today without over-claiming mathematical certainty or underestimating the security risks of visible anchors.

@@ -5,6 +5,7 @@ TEST_ARGS ?=
 COVERAGE_ARGS ?=
 RESUME_FLAG ?=
 DEPLOY_FLOW_FLAGS ?=
+DEPLOY_PROFILE ?= deploy
 LOCALHOST_EVM_SIZE_FLAGS ?= --disable-code-size-limit
 
 # setup wallet for anvil
@@ -23,7 +24,7 @@ fork: setup-anvil-wallet
 # Deploy the contracts
 deploy:
 	@if [ ! -f "$(DEPLOY_SCRIPT)" ]; then 		echo "Error: Deploy script '$(DEPLOY_SCRIPT)' not found"; 		exit 1; 	fi
-	@if [ "$(RPC_URL)" = "localhost" ]; then 		if [ "$(ETH_KEYSTORE_ACCOUNT)" = "scaffold-eth-default" ]; then 			forge script $(DEPLOY_SCRIPT) --rpc-url localhost --password localhost --broadcast --ffi --slow --non-interactive $(LOCALHOST_EVM_SIZE_FLAGS) $(RESUME_FLAG); 		else 			forge script $(DEPLOY_SCRIPT) --rpc-url localhost --broadcast --ffi --slow --non-interactive $(LOCALHOST_EVM_SIZE_FLAGS) $(RESUME_FLAG); 		fi 	else 		forge script $(DEPLOY_SCRIPT) --rpc-url $(RPC_URL) --account $(ETH_KEYSTORE_ACCOUNT) --broadcast --ffi --gas-estimate-multiplier 200 $(DEPLOY_FLOW_FLAGS) $(RESUME_FLAG) $(VERIFY_FLAGS); 	fi
+	@if [ "$(RPC_URL)" = "localhost" ]; then 		if [ "$(ETH_KEYSTORE_ACCOUNT)" = "scaffold-eth-default" ]; then 			FOUNDRY_PROFILE=$(DEPLOY_PROFILE) forge script $(DEPLOY_SCRIPT) --rpc-url localhost --password localhost --broadcast --ffi --slow --non-interactive $(LOCALHOST_EVM_SIZE_FLAGS) $(RESUME_FLAG); 		else 			FOUNDRY_PROFILE=$(DEPLOY_PROFILE) forge script $(DEPLOY_SCRIPT) --rpc-url localhost --broadcast --ffi --slow --non-interactive $(LOCALHOST_EVM_SIZE_FLAGS) $(RESUME_FLAG); 		fi 	else 		FOUNDRY_PROFILE=$(DEPLOY_PROFILE) forge script $(DEPLOY_SCRIPT) --rpc-url $(RPC_URL) --account $(ETH_KEYSTORE_ACCOUNT) --broadcast --ffi --gas-estimate-multiplier 200 $(DEPLOY_FLOW_FLAGS) $(RESUME_FLAG) $(VERIFY_FLAGS); 	fi
 
 # Deploy and generate ABIs
 deploy-and-generate-abis: deploy generate-abis 
@@ -65,7 +66,7 @@ test:
 
 # Verify contracts (Etherscan-compatible chains)
 verify:
-	forge script script/VerifyAll.s.sol --ffi --rpc-url $(RPC_URL)
+	FOUNDRY_PROFILE=$(DEPLOY_PROFILE) forge script script/VerifyAll.s.sol --ffi --rpc-url $(RPC_URL)
 
 # Verify a single contract on Blockscout (Celo chains)
 # Usage: make verify-blockscout NETWORK=<celo|celoSepolia> CONTRACT_ADDRESS=0x... CONTRACT_NAME=MyContract

@@ -30,10 +30,17 @@ type TlockModule = {
   timelockDecrypt: TlockDecryptFn;
 };
 
+export interface VoteTlockChainInfo {
+  periodSeconds: bigint;
+  genesisTimeSeconds: bigint;
+  drandChainHash: VoteDrandChainHash;
+}
+
 let tlockModulePromise: Promise<TlockModule> | undefined;
 
 export interface VoteTransferPayload {
   contentId: bigint;
+  roundReferenceRatingBps: number;
   commitHash: VoteCommitHash;
   ciphertext: VoteCiphertext;
   targetRound: bigint;
@@ -49,6 +56,7 @@ export type VoteTlockRuntime = {
 
 const voteTransferPayloadParams = [
   { name: "contentId", type: "uint256" },
+  { name: "roundReferenceRatingBps", type: "uint16" },
   { name: "commitHash", type: "bytes32" },
   { name: "ciphertext", type: "bytes" },
   { name: "frontend", type: "address" },
@@ -77,6 +85,29 @@ async function loadTlockModule(): Promise<TlockModule> {
   }));
 
   return tlockModulePromise;
+}
+
+export async function getVoteTlockChainInfo(runtime: VoteTlockRuntime = {}): Promise<VoteTlockChainInfo> {
+  const { mainnetClient } = await loadTlockModule();
+  const client = runtime.client ?? mainnetClient();
+  const chainInfo = await client.chain().info();
+
+  return {
+    periodSeconds: BigInt(chainInfo.period),
+    genesisTimeSeconds: BigInt(chainInfo.genesis_time),
+    drandChainHash: `0x${chainInfo.hash.toLowerCase()}` as VoteDrandChainHash,
+  };
+}
+
+export function deriveVoteTlockRevealAvailableAtSeconds(
+  targetRound: bigint,
+  chainInfo: VoteTlockChainInfo,
+): bigint {
+  if (targetRound <= 0n || chainInfo.periodSeconds <= 0n) {
+    return 0n;
+  }
+
+  return chainInfo.genesisTimeSeconds + (targetRound - 1n) * chainInfo.periodSeconds;
 }
 
 function saltToBytes(salt: VoteSalt): Uint8Array {
@@ -116,14 +147,15 @@ export function buildCommitHash(
   isUp: boolean,
   salt: VoteSalt,
   contentId: bigint,
+  roundReferenceRatingBps: number,
   targetRound: bigint,
   drandChainHash: VoteDrandChainHash,
   ciphertext: VoteCiphertext,
 ): VoteCommitHash {
   return keccak256(
     encodePacked(
-      ["bool", "bytes32", "uint256", "uint64", "bytes32", "bytes32"],
-      [isUp, salt, contentId, targetRound, drandChainHash, keccak256(ciphertext)],
+      ["bool", "bytes32", "uint256", "uint16", "uint64", "bytes32", "bytes32"],
+      [isUp, salt, contentId, roundReferenceRatingBps, targetRound, drandChainHash, keccak256(ciphertext)],
     ),
   );
 }
@@ -135,6 +167,7 @@ export function buildCommitKey(voter: Address, commitHash: `0x${string}`): `0x${
 export function encodeVoteTransferPayload(payload: VoteTransferPayload): `0x${string}` {
   return encodeAbiParameters(voteTransferPayloadParams, [
     payload.contentId,
+    payload.roundReferenceRatingBps,
     payload.commitHash,
     payload.ciphertext,
     payload.frontend,
@@ -145,12 +178,14 @@ export function encodeVoteTransferPayload(payload: VoteTransferPayload): `0x${st
 
 export function decodeVoteTransferPayload(data: `0x${string}`): VoteTransferPayload {
   try {
-    const [contentId, commitHash, ciphertext, frontend, targetRound, drandChainHash] = decodeAbiParameters(
+    const [contentId, roundReferenceRatingBps, commitHash, ciphertext, frontend, targetRound, drandChainHash] =
+      decodeAbiParameters(
       voteTransferPayloadParams,
       data,
     );
     const reencoded = encodeAbiParameters(voteTransferPayloadParams, [
       contentId,
+      roundReferenceRatingBps,
       commitHash,
       ciphertext,
       frontend,
@@ -163,6 +198,7 @@ export function decodeVoteTransferPayload(data: `0x${string}`): VoteTransferPayl
 
     return {
       contentId,
+      roundReferenceRatingBps,
       commitHash,
       ciphertext,
       frontend,
@@ -344,12 +380,14 @@ export async function createTlockVoteCommit(params: {
   isUp: boolean;
   salt: VoteSalt;
   contentId: bigint;
+  roundReferenceRatingBps: number;
   epochDurationSeconds: number;
 }, runtime: VoteTlockRuntime = {}): Promise<{
   ciphertext: VoteCiphertext;
   commitHash: `0x${string}`;
   targetRound: bigint;
   drandChainHash: VoteDrandChainHash;
+  roundReferenceRatingBps: number;
   commitKey?: `0x${string}`;
 }> {
   const { ciphertext, targetRound, drandChainHash } = await createTlockVoteArtifacts(
@@ -358,13 +396,22 @@ export async function createTlockVoteCommit(params: {
     params.epochDurationSeconds,
     runtime,
   );
-  const commitHash = buildCommitHash(params.isUp, params.salt, params.contentId, targetRound, drandChainHash, ciphertext);
+  const commitHash = buildCommitHash(
+    params.isUp,
+    params.salt,
+    params.contentId,
+    params.roundReferenceRatingBps,
+    targetRound,
+    drandChainHash,
+    ciphertext,
+  );
 
   return {
     ciphertext,
     commitHash,
     targetRound,
     drandChainHash,
+    roundReferenceRatingBps: params.roundReferenceRatingBps,
     commitKey: params.voter ? buildCommitKey(params.voter, commitHash) : undefined,
   };
 }

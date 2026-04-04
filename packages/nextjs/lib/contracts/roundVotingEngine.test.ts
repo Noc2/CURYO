@@ -203,6 +203,7 @@ test("vote transfer payloads round-trip for single-transaction voting", () => {
   const drandChainHash = ("0x" + "22".repeat(32)) as `0x${string}`;
   const payload = encodeVoteTransferPayload({
     contentId: 42n,
+    roundReferenceRatingBps: 5_000,
     commitHash: "0x1111111111111111111111111111111111111111111111111111111111111111",
     ciphertext: "0x1234",
     targetRound: 123n,
@@ -212,6 +213,7 @@ test("vote transfer payloads round-trip for single-transaction voting", () => {
 
   assert.deepEqual(decodeVoteTransferPayload(payload), {
     contentId: 42n,
+    roundReferenceRatingBps: 5_000,
     commitHash: "0x1111111111111111111111111111111111111111111111111111111111111111",
     ciphertext: "0x1234",
     targetRound: 123n,

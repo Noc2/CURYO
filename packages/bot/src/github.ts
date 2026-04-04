@@ -25,7 +25,7 @@ const RESERVED_GITHUB_OWNERS = new Set([
   "trending",
 ]);
 
-export interface GitHubRepoRef {
+interface GitHubRepoRef {
   fullName: string;
   owner: string;
   repo: string;

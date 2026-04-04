@@ -141,6 +141,7 @@ describe("CuryoWriteService", () => {
       .mockResolvedValueOnce(1_000n)
       .mockResolvedValueOnce(1_000n)
       .mockResolvedValueOnce(0n)
+      .mockResolvedValueOnce(5_000)
       .mockResolvedValueOnce("0x9999999999999999999999999999999999999999")
       .mockResolvedValueOnce([1_200n, 0n, 0n, 0n] as const);
     internals.simulateContract = vi.fn(async () => {});
@@ -152,12 +153,20 @@ describe("CuryoWriteService", () => {
       dryRun: true,
     });
 
+    expect(createTlockVoteCommitMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        contentId: 1n,
+        roundReferenceRatingBps: 5_000,
+        epochDurationSeconds: 1_200,
+      }),
+    );
     expect(internals.simulateContract).toHaveBeenCalledWith(
       mockContext,
       expect.objectContaining({
         functionName: "commitVote",
         args: [
           1n,
+          5_000,
           123n,
           `0x${"bb".repeat(32)}`,
           `0x${"aa".repeat(32)}`,
@@ -170,6 +179,7 @@ describe("CuryoWriteService", () => {
     expect(result).toMatchObject({
       action: "vote",
       simulation: "commitVote",
+      roundReferenceRatingBps: 5_000,
       targetRound: "123",
       drandChainHash: `0x${"bb".repeat(32)}`,
     });

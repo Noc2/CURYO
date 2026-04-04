@@ -1,7 +1,7 @@
 import { beforeAll, describe, expect, it, vi } from "vitest";
 import { createPublicClient, createWalletClient, defineChain, http, stringToHex } from "viem";
 import { privateKeyToAccount } from "viem/accounts";
-import { ContentRegistryAbi, CuryoReputationAbi, RoundVotingEngineAbi } from "@curyo/contracts/abis";
+import { ContentRegistryAbi, CuryoReputationAbi, ProtocolConfigAbi, RoundVotingEngineAbi } from "@curyo/contracts/abis";
 import deployedContracts from "@curyo/contracts/deployedContracts";
 import { buildCommitHash } from "@curyo/contracts/voting";
 
@@ -204,12 +204,18 @@ describe("resolveRounds integration", () => {
     }
 
     const logger = makeLogger();
-    const [epochDuration] = (await publicClient.readContract({
+    const protocolConfigAddress = (await publicClient.readContract({
       address: CONTRACTS.roundVotingEngine,
       abi: RoundVotingEngineAbi,
+      functionName: "protocolConfig",
+      args: [],
+    })) as `0x${string}`;
+    const [epochDurationSeconds] = (await publicClient.readContract({
+      address: protocolConfigAddress,
+      abi: ProtocolConfigAbi,
       functionName: "config",
       args: [],
-    })) as readonly [bigint, bigint, bigint, bigint];
+    })) as unknown as readonly [number, number, number, number];
 
     const nextContentId = (await publicClient.readContract({
       address: CONTRACTS.contentRegistry,
@@ -244,11 +250,20 @@ describe("resolveRounds integration", () => {
           "integration",
           "keeper,integration",
           1n,
+          `0x${"44".repeat(32)}` as `0x${string}`,
         ],
       }),
     );
 
     const contentId = nextContentId;
+    const roundReferenceRatingBps = Number(
+      await publicClient.readContract({
+        address: CONTRACTS.roundVotingEngine,
+        abi: RoundVotingEngineAbi,
+        functionName: "previewCommitReferenceRatingBps",
+        args: [contentId],
+      }),
+    );
     const voters = [
       {
         client: voter1Client,
@@ -290,7 +305,15 @@ describe("resolveRounds integration", () => {
       );
 
       const ciphertext = encodeTestCiphertext(voter);
-      const commitHash = buildCommitHash(voter.isUp, voter.salt, contentId, voter.targetRound, voter.drandChainHash, ciphertext);
+      const commitHash = buildCommitHash(
+        voter.isUp,
+        voter.salt,
+        contentId,
+        roundReferenceRatingBps,
+        voter.targetRound,
+        voter.drandChainHash,
+        ciphertext,
+      );
 
       await waitForReceipt(
         publicClient,
@@ -300,7 +323,16 @@ describe("resolveRounds integration", () => {
           address: CONTRACTS.roundVotingEngine,
           abi: RoundVotingEngineAbi as any,
           functionName: "commitVote",
-          args: [contentId, voter.targetRound, voter.drandChainHash, commitHash, ciphertext, STAKE, "0x0000000000000000000000000000000000000000"],
+          args: [
+            contentId,
+            roundReferenceRatingBps,
+            voter.targetRound,
+            voter.drandChainHash,
+            commitHash,
+            ciphertext,
+            STAKE,
+            "0x0000000000000000000000000000000000000000",
+          ],
         }),
       );
     }
@@ -313,7 +345,7 @@ describe("resolveRounds integration", () => {
     })) as bigint;
     expect(roundId).toBeGreaterThan(0n);
 
-    await increaseTime(publicClient, Number(epochDuration + 1n));
+    await increaseTime(publicClient, epochDurationSeconds + 1);
 
     const result = await resolveRounds(publicClient as any, keeperClient as any, CHAIN, ACCOUNTS.keeper as any, logger as any);
 
@@ -330,8 +362,12 @@ describe("resolveRounds integration", () => {
       abi: RoundVotingEngineAbi,
       functionName: "rounds",
       args: [contentId, roundId],
-    })) as readonly [bigint, number, bigint, bigint, bigint, bigint, bigint, bigint, bigint, boolean, bigint, bigint, bigint, bigint];
-    const [, state, , revealedCount, , , , , , , settledAt, thresholdReachedAt] = round;
+    })) as unknown as { state?: number; revealedCount?: bigint; settledAt?: bigint; thresholdReachedAt?: bigint } & readonly unknown[];
+    const roundTuple = round as readonly unknown[];
+    const state = Number(round.state ?? roundTuple[1] ?? 0);
+    const revealedCount = BigInt((round.revealedCount ?? roundTuple[3] ?? 0) as bigint | number | string);
+    const settledAt = BigInt((round.settledAt ?? roundTuple[10] ?? 0) as bigint | number | string);
+    const thresholdReachedAt = BigInt((round.thresholdReachedAt ?? roundTuple[11] ?? 0) as bigint | number | string);
 
     expect(revealedCount).toBe(3n);
     expect(thresholdReachedAt).toBeGreaterThan(0n);

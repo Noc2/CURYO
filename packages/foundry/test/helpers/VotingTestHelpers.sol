@@ -10,6 +10,7 @@ import { CuryoReputation } from "../../contracts/CuryoReputation.sol";
 import { ContentRegistry } from "../../contracts/ContentRegistry.sol";
 import { ProtocolConfig } from "../../contracts/ProtocolConfig.sol";
 import { RoundVotingEngine } from "../../contracts/RoundVotingEngine.sol";
+import { RatingLib } from "../../contracts/libraries/RatingLib.sol";
 
 function deployInitializedProtocolConfig(address admin) returns (ProtocolConfig protocolConfig) {
     return deployInitializedProtocolConfig(admin, admin);
@@ -26,6 +27,7 @@ function deployInitializedProtocolConfig(address admin, address governance) retu
 
 abstract contract ContentSubmissionTestBase {
     Vm internal constant HEVM = Vm(address(uint160(uint256(keccak256("hevm cheat code")))));
+    ContentRegistry internal activeTlockContentRegistry;
 
     function _submitContentWithReservation(
         ContentRegistry registry,
@@ -35,6 +37,7 @@ abstract contract ContentSubmissionTestBase {
         string memory tags,
         uint256 categoryId
     ) internal returns (uint256 contentId) {
+        activeTlockContentRegistry = registry;
         (VmSafe.CallerMode mode, address msgSender, address txOrigin) = HEVM.readCallers();
         bool normalizedPrank = false;
         if (mode == VmSafe.CallerMode.Prank) {
@@ -67,6 +70,7 @@ abstract contract ContentSubmissionTestBase {
 abstract contract VotingTestBase is Test, ContentSubmissionTestBase {
     struct TestCommitArtifacts {
         bytes ciphertext;
+        uint16 roundReferenceRatingBps;
         uint64 targetRound;
         bytes32 drandChainHash;
         bytes32 commitHash;
@@ -224,7 +228,15 @@ abstract contract VotingTestBase is Test, ContentSubmissionTestBase {
     /// @dev Build commit hash bound to the exact ciphertext bytes used at commit time.
     function _commitHash(bool isUp, bytes32 salt, uint256 contentId) internal view returns (bytes32) {
         bytes memory ciphertext = _testCiphertext(isUp, salt, contentId);
-        return _commitHash(isUp, salt, contentId, _tlockCommitTargetRound(), _tlockDrandChainHash(), ciphertext);
+        return _commitHash(
+            isUp,
+            salt,
+            contentId,
+            _currentRatingReferenceBps(contentId),
+            _tlockCommitTargetRound(),
+            _tlockDrandChainHash(),
+            ciphertext
+        );
     }
 
     /// @dev Build commit hash for a caller-supplied ciphertext.
@@ -233,7 +245,15 @@ abstract contract VotingTestBase is Test, ContentSubmissionTestBase {
         view
         returns (bytes32)
     {
-        return _commitHash(isUp, salt, contentId, _tlockCommitTargetRound(), _tlockDrandChainHash(), ciphertext);
+        return _commitHash(
+            isUp,
+            salt,
+            contentId,
+            _currentRatingReferenceBps(contentId),
+            _tlockCommitTargetRound(),
+            _tlockDrandChainHash(),
+            ciphertext
+        );
     }
 
     function _buildTestCommitArtifacts(address voter, bool isUp, bytes32 salt, uint256 contentId)
@@ -242,10 +262,18 @@ abstract contract VotingTestBase is Test, ContentSubmissionTestBase {
         returns (TestCommitArtifacts memory artifacts)
     {
         artifacts.ciphertext = _testCiphertext(isUp, salt, contentId);
+        artifacts.roundReferenceRatingBps = _currentRatingReferenceBps(contentId);
         artifacts.targetRound = _tlockCommitTargetRound();
         artifacts.drandChainHash = _tlockDrandChainHash();
-        artifacts.commitHash =
-            _commitHash(isUp, salt, contentId, artifacts.targetRound, artifacts.drandChainHash, artifacts.ciphertext);
+        artifacts.commitHash = _commitHash(
+            isUp,
+            salt,
+            contentId,
+            artifacts.roundReferenceRatingBps,
+            artifacts.targetRound,
+            artifacts.drandChainHash,
+            artifacts.ciphertext
+        );
         artifacts.commitKey = _commitKey(voter, artifacts.commitHash);
     }
 
@@ -257,6 +285,7 @@ abstract contract VotingTestBase is Test, ContentSubmissionTestBase {
         request.crepToken.approve(address(request.engine), request.stake);
         request.engine.commitVote(
             request.contentId,
+            artifacts.roundReferenceRatingBps,
             artifacts.targetRound,
             artifacts.drandChainHash,
             artifacts.commitHash,
@@ -277,6 +306,7 @@ abstract contract VotingTestBase is Test, ContentSubmissionTestBase {
             _buildTestCommitArtifacts(request.voter, request.isUp, request.salt, request.contentId);
         bytes memory payload = abi.encode(
             request.contentId,
+            artifacts.roundReferenceRatingBps,
             artifacts.commitHash,
             artifacts.ciphertext,
             request.frontend,
@@ -331,14 +361,45 @@ abstract contract VotingTestBase is Test, ContentSubmissionTestBase {
         uint64 targetRound,
         bytes32 drandChainHash,
         bytes memory ciphertext
+    ) internal view returns (bytes32) {
+        return _commitHash(
+            isUp,
+            salt,
+            contentId,
+            _currentRatingReferenceBps(contentId),
+            targetRound,
+            drandChainHash,
+            ciphertext
+        );
+    }
+
+    function _commitHash(
+        bool isUp,
+        bytes32 salt,
+        uint256 contentId,
+        uint16 roundReferenceRatingBps,
+        uint64 targetRound,
+        bytes32 drandChainHash,
+        bytes memory ciphertext
     )
         internal
         pure
         returns (bytes32)
     {
         return keccak256(
-            abi.encodePacked(isUp, salt, contentId, targetRound, drandChainHash, keccak256(ciphertext))
+            abi.encodePacked(
+                isUp, salt, contentId, roundReferenceRatingBps, targetRound, drandChainHash, keccak256(ciphertext)
+            )
         );
+    }
+
+    function _currentRatingReferenceBps(uint256 contentId) internal view returns (uint16) {
+        if (address(activeTlockContentRegistry) == address(0)) {
+            return RatingLib.DEFAULT_RATING_BPS;
+        }
+
+        uint16 ratingBps = activeTlockContentRegistry.getRating(contentId);
+        return ratingBps == 0 ? RatingLib.DEFAULT_RATING_BPS : ratingBps;
     }
 
     function _decodeTestCiphertext(bytes memory ciphertext) internal pure returns (bool isUp, bytes32 salt) {

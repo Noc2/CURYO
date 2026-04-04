@@ -9,6 +9,8 @@ import { RoundVotingEngine } from "../contracts/RoundVotingEngine.sol";
 import { ProtocolConfig } from "../contracts/ProtocolConfig.sol";
 import { RoundRewardDistributor } from "../contracts/RoundRewardDistributor.sol";
 import { RoundLib } from "../contracts/libraries/RoundLib.sol";
+import { RatingLib } from "../contracts/libraries/RatingLib.sol";
+import { RoundSettlementSideEffectsLib } from "../contracts/libraries/RoundSettlementSideEffectsLib.sol";
 import { RoundEngineReadHelpers } from "./helpers/RoundEngineReadHelpers.sol";
 import { CuryoReputation } from "../contracts/CuryoReputation.sol";
 import { ParticipationPool } from "../contracts/ParticipationPool.sol";
@@ -135,6 +137,7 @@ contract RoundIntegrationTest is VotingTestBase {
         );
 
         registry.setVotingEngine(address(votingEngine));
+        registry.setProtocolConfig(address(votingEngine.protocolConfig()));
         MockCategoryRegistry mockCategoryRegistry = new MockCategoryRegistry();
         mockCategoryRegistry.seedDefaultTestCategories();
         registry.setCategoryRegistry(address(mockCategoryRegistry));
@@ -1086,15 +1089,23 @@ contract RoundIntegrationTest is VotingTestBase {
         assertGt(crepToken.balanceOf(voter1), balBefore, "Voter should receive consensus subsidy");
     }
 
-    function test_SubmitterStake_SlashesLowRatedFirstSettlementAfterFourDays() public {
+    function test_SubmitterStake_SlashesLowRatedFirstSettlementAfterDwellWhenGovernanceRelaxesSlashConfig() public {
+        ProtocolConfig protocolConfig = ProtocolConfig(address(votingEngine.protocolConfig()));
+        vm.startPrank(owner);
+        registry.setTreasury(treasury);
+        protocolConfig.setSlashConfig(4_000, 1, 2 days, 100e6);
+        vm.stopPrank();
+
         uint256 contentId = _submitContent();
         uint256 submitterBalanceBefore = crepToken.balanceOf(submitter);
         uint256 treasuryBalanceBefore = crepToken.balanceOf(treasury);
+        RatingLib.SlashConfig memory slashConfig = registry.getSlashConfigForContent(contentId);
+        assertEq(slashConfig.slashThresholdBps, 4_000, "content should snapshot the tuned slash threshold");
+        assertEq(slashConfig.minSlashSettledRounds, 1, "content should snapshot the tuned settled-round requirement");
+        assertEq(slashConfig.minSlashLowDuration, 2 days, "content should snapshot the tuned dwell window");
+        assertEq(slashConfig.minSlashEvidence, 100e6, "content should snapshot the tuned evidence floor");
 
-        vm.prank(owner);
-        registry.setTreasury(treasury);
-
-        vm.warp(block.timestamp + 4 days + 1);
+        vm.warp(block.timestamp + 1 days + 1);
 
         address[] memory voters = new address[](2);
         voters[0] = voter1;
@@ -1106,7 +1117,18 @@ contract RoundIntegrationTest is VotingTestBase {
         _settleRoundWith(voters, contentId, dirs, 100e6);
 
         (,,,,,,,,, bool submitterStakeReturned, uint256 rating,) = registry.contents(contentId);
-        assertLt(rating, registry.SLASH_RATING_THRESHOLD(), "round should be slashable");
+        RatingLib.RatingState memory ratingState = registry.getRatingState(contentId);
+        assertLt(registry.getConservativeRating(contentId), 4_000, "conservative rating should fall below the tuned threshold");
+        assertGt(uint256(ratingState.lowSince), 0, "first low settlement should start the low-rating dwell timer");
+        assertFalse(submitterStakeReturned, "dwell should keep the stake pending right after settlement");
+        assertEq(crepToken.balanceOf(treasury), treasuryBalanceBefore, "treasury should not be paid before the dwell window");
+
+        vm.warp(block.timestamp + 3 days + 1);
+        assertTrue(registry.isSubmitterStakeSlashable(contentId), "slashability should mature before the day-4 resolution window");
+        votingEngine.resolveSubmitterStake(contentId);
+
+        (,,,,,,,,, submitterStakeReturned, rating,) = registry.contents(contentId);
+        assertLt(uint256(rating), 40, "display rating should still reflect a low settlement");
         assertTrue(submitterStakeReturned, "submitter stake should be resolved");
         assertEq(crepToken.balanceOf(submitter), submitterBalanceBefore, "submitter stake should not be returned");
         assertEq(crepToken.balanceOf(treasury) - treasuryBalanceBefore, 10e6, "slash amount should be sent to treasury");
@@ -1966,15 +1988,30 @@ contract RoundIntegrationTest is VotingTestBase {
 
         uint256 roundId = _settleRoundWith(voters, contentId, dirs, STAKE);
         assertEq(
-            rewardDistributor.roundParticipationRewardOwed(contentId, roundId), 9e6, "owed amount should be snapshotted"
+            rewardDistributor.roundParticipationRewardOwed(contentId, roundId),
+            0,
+            "underfunded settlement should not snapshot a partially funded obligation"
         );
         assertEq(
             rewardDistributor.roundParticipationRewardReserved(contentId, roundId),
-            4e6,
-            "only available pool balance should be reserved"
+            0,
+            "underfunded settlement should not leave a partial reservation behind"
         );
 
-        pool.setAuthorizedCaller(address(rewardDistributor), false);
+        vm.prank(voter1);
+        vm.expectRevert(RoundRewardDistributor.NoPool.selector);
+        rewardDistributor.claimParticipationReward(contentId, roundId);
+
+        vm.prank(voter2);
+        vm.expectRevert(RoundRewardDistributor.NoPool.selector);
+        rewardDistributor.claimParticipationReward(contentId, roundId);
+
+        vm.startPrank(owner);
+        crepToken.mint(owner, 5e6);
+        crepToken.approve(address(pool), 5e6);
+        pool.depositPool(5e6);
+        rewardDistributor.backfillParticipationRewards(contentId, roundId, address(pool), 9000);
+        vm.stopPrank();
 
         uint256 voter1Before = crepToken.balanceOf(voter1);
         vm.prank(voter1);
@@ -1986,8 +2023,8 @@ contract RoundIntegrationTest is VotingTestBase {
         rewardDistributor.claimParticipationReward(contentId, roundId);
         uint256 voter2Delta = crepToken.balanceOf(voter2) - voter2Before;
 
-        assertEq(voter1Delta, 2e6, "first winner should receive a pro-rata reserved share");
-        assertEq(voter2Delta, 2e6, "second winner should receive the same pro-rata reserved share");
+        assertEq(voter1Delta, 4_500_000, "backfill should restore the full winner share");
+        assertEq(voter2Delta, 4_500_000, "claim order should not matter once the round is backfilled");
 
         vm.prank(voter1);
         vm.expectRevert(RoundRewardDistributor.AlreadyClaimed.selector);
@@ -2089,9 +2126,14 @@ contract RoundIntegrationTest is VotingTestBase {
 
         uint256 roundId = _settleRoundWith(voters, contentId, dirs, STAKE);
 
+        assertEq(
+            rewardDistributor.roundParticipationRewardReserved(contentId, roundId),
+            0,
+            "underfunded settlement should not leave a partial reservation behind"
+        );
+
         vm.prank(voter1);
-        rewardDistributor.claimParticipationReward(contentId, roundId);
-        vm.prank(voter2);
+        vm.expectRevert(RoundRewardDistributor.NoPool.selector);
         rewardDistributor.claimParticipationReward(contentId, roundId);
 
         vm.expectRevert(RoundRewardDistributor.ParticipationRewardsOutstanding.selector);
@@ -2120,6 +2162,54 @@ contract RoundIntegrationTest is VotingTestBase {
         assertTrue(
             rewardDistributor.roundParticipationRewardFinalized(contentId, roundId),
             "round should still be finalizable when the released dust is zero"
+        );
+    }
+
+    function test_SettlementSideEffectFailure_InsufficientParticipationLiquidityCanBeBackfilled() public {
+        ParticipationPool tinyPool = new ParticipationPool(address(crepToken), owner);
+        tinyPool.setAuthorizedCaller(address(rewardDistributor), true);
+
+        vm.startPrank(owner);
+        crepToken.mint(owner, 4e6);
+        crepToken.approve(address(tinyPool), 4e6);
+        tinyPool.depositPool(4e6);
+        ProtocolConfig(address(votingEngine.protocolConfig())).setParticipationPool(address(tinyPool));
+        vm.stopPrank();
+
+        uint256 contentId = _submitContent();
+
+        address[] memory voters = new address[](3);
+        voters[0] = voter1;
+        voters[1] = voter2;
+        voters[2] = voter3;
+        bool[] memory dirs = new bool[](3);
+        dirs[0] = true;
+        dirs[1] = true;
+        dirs[2] = false;
+
+        uint256 roundId = _settleRoundWith(voters, contentId, dirs, STAKE);
+
+        assertEq(tinyPool.reservedRewards(address(rewardDistributor)), 0, "partial reservations should be rolled back");
+        vm.prank(voter1);
+        vm.expectRevert(RoundRewardDistributor.NoPool.selector);
+        rewardDistributor.claimParticipationReward(contentId, roundId);
+
+        vm.startPrank(owner);
+        crepToken.mint(owner, 5e6);
+        crepToken.approve(address(tinyPool), 5e6);
+        tinyPool.depositPool(5e6);
+        rewardDistributor.backfillParticipationRewards(contentId, roundId, address(tinyPool), 9000);
+        vm.stopPrank();
+
+        vm.prank(voter1);
+        rewardDistributor.claimParticipationReward(contentId, roundId);
+        vm.prank(voter2);
+        rewardDistributor.claimParticipationReward(contentId, roundId);
+
+        assertEq(
+            rewardDistributor.roundParticipationRewardPaidTotal(contentId, roundId),
+            9e6,
+            "backfill should restore the full participation entitlement"
         );
     }
 
@@ -2215,6 +2305,13 @@ contract RoundIntegrationTest is VotingTestBase {
         _commitAllThenReveal(voters, contentId, dirs, STAKE);
         uint256 roundId = _getActiveOrLatestRoundId(contentId);
 
+        vm.expectEmit(true, true, true, true, address(votingEngine));
+        emit RoundSettlementSideEffectsLib.SettlementSideEffectFailed(
+            contentId,
+            roundId,
+            address(badPool),
+            RoundSettlementSideEffectsLib.SideEffectFailureStage.ParticipationRateQuery
+        );
         votingEngine.settleRound(contentId, roundId);
         vm.prank(voter1);
         vm.expectRevert(RoundRewardDistributor.NoPool.selector);

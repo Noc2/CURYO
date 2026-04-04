@@ -6,6 +6,7 @@ import { useAccount, useConfig } from "wagmi";
 import { waitForTransactionReceipt } from "wagmi/actions";
 import { PlusIcon, TrashIcon } from "@heroicons/react/24/outline";
 import { GasBalanceWarning } from "~~/components/shared/GasBalanceWarning";
+import { TransactionStatusCallout } from "~~/components/shared/TransactionStatusCallout";
 import { surfaceSectionHeadingClassName } from "~~/components/shared/sectionHeading";
 import { InfoTooltip } from "~~/components/ui/InfoTooltip";
 import { useTermsAcceptance } from "~~/contexts/TermsAcceptanceContext";
@@ -32,7 +33,7 @@ import {
   isInsufficientFundsError,
   isWalletRpcOverloadedError,
 } from "~~/lib/transactionErrors";
-import { getSubmittingTransactionMessage } from "~~/lib/ui/transactionStatusCopy";
+import { getSubmittingTransactionStatus } from "~~/lib/ui/transactionStatusCopy";
 import { notification } from "~~/utils/scaffold-eth";
 
 // Constants from CategoryRegistry contract
@@ -64,6 +65,7 @@ export const CategorySubmissionForm = () => {
   const [domain, setDomain] = useState("");
   const [subcategories, setSubcategories] = useState<string[]>([""]);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const submittingStatus = getSubmittingTransactionStatus("platform");
 
   // Contract hooks
   const { data: categoryRegistryInfo, isLoading: isCategoryRegistryLoading } = useDeployedContractInfo({
@@ -570,7 +572,7 @@ export const CategorySubmissionForm = () => {
             )}
           </button>
           {isSubmitting ? (
-            <p className="text-center text-sm text-base-content/65">{getSubmittingTransactionMessage("platform")}</p>
+            <TransactionStatusCallout title={submittingStatus.title} description={submittingStatus.description} />
           ) : null}
         </form>
       )}

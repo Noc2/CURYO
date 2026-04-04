@@ -22,6 +22,20 @@ contract ScaffoldETHDeploy is Script {
     Deployment[] public deployments;
     uint256 constant ANVIL_BASE_BALANCE = 10000 ether;
 
+    function canonicalChainName(uint256 chainId) internal pure returns (string memory) {
+        if (chainId == 31337) {
+            return "hardhat";
+        }
+        if (chainId == 11142220) {
+            return "celoSepolia";
+        }
+        if (chainId == 42220) {
+            return "celo";
+        }
+
+        return "";
+    }
+
     /// @notice The deployer address for every run
     address deployer;
 
@@ -72,12 +86,14 @@ contract ScaffoldETHDeploy is Script {
             vm.serializeString(jsonWrite, vm.toString(deployments[i].addr), deployments[i].name);
         }
 
-        string memory chainName;
+        string memory chainName = canonicalChainName(block.chainid);
 
-        try vm.getChain(block.chainid) returns (Vm.Chain memory chain) {
-            chainName = chain.name;
-        } catch {
-            chainName = findChainName();
+        if (bytes(chainName).length == 0) {
+            try vm.getChain(block.chainid) returns (Vm.Chain memory chain) {
+                chainName = chain.name;
+            } catch {
+                chainName = findChainName();
+            }
         }
         jsonWrite = vm.serializeString(jsonWrite, "networkName", chainName);
         vm.writeJson(jsonWrite, path);

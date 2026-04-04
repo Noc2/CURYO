@@ -760,7 +760,7 @@ contract ContentRegistryBranchesTest is VotingTestBase {
         );
     }
 
-    function test_ResolveSubmitterStake_NoSettledRound_LowRatingSlashesAfterDormancyPeriod() public {
+    function test_ResolveSubmitterStake_NoSettledRound_LowDisplayRatingStillReturnsAfterDormancyPeriod() public {
         uint256 treasuryBefore = crepToken.balanceOf(treasury);
         uint256 submitterBefore = crepToken.balanceOf(submitter);
 
@@ -775,14 +775,15 @@ contract ContentRegistryBranchesTest is VotingTestBase {
         vm.warp(T0 + 31 days);
         votingEngine.resolveSubmitterStake(1);
 
-        assertEq(crepToken.balanceOf(treasury) - treasuryBefore, 10e6, "low-rated dormant fallback should slash");
+        assertEq(crepToken.balanceOf(treasury) - treasuryBefore, 0, "display rating alone should not slash");
         assertEq(
             crepToken.balanceOf(submitter),
-            submitterBefore - 10e6,
-            "submitter should not recover stake after dormant fallback slash"
+            submitterBefore,
+            "submitter should recover stake when no settled evidence exists"
         );
         (,,,,,,,,, bool submitterStakeReturned,,) = registry.contents(1);
-        assertTrue(submitterStakeReturned, "stake should resolve after dormant fallback slash");
+        assertTrue(submitterStakeReturned, "stake should resolve after dormant fallback");
+        assertFalse(registry.isSubmitterStakeSlashable(1), "manual display rating changes should not make content slashable");
     }
 
     function test_SubmitContent_NoParticipationPool_NoReward() public {
@@ -1196,7 +1197,7 @@ contract ContentRegistryBranchesTest is VotingTestBase {
         assertFalse(registry.isUrlSubmitted("https://not-approved.example/path"));
     }
 
-    function test_MarkDormant_LowRatedContent_SlashesUnresolvedStake() public {
+    function test_MarkDormant_LowDisplayRatingWithoutEvidenceReturnsStake() public {
         vm.startPrank(submitter);
         crepToken.approve(address(registry), 10e6);
         _submitContentWithReservation(registry, "https://example.com/dormant-slash", "goal", "goal", "tags", 0);
@@ -1211,11 +1212,11 @@ contract ContentRegistryBranchesTest is VotingTestBase {
         vm.warp(T0 + 31 days);
         registry.markDormant(1);
 
-        assertEq(crepToken.balanceOf(treasury) - treasuryBefore, 10e6, "low-rated dormant content should be slashed");
+        assertEq(crepToken.balanceOf(treasury) - treasuryBefore, 0, "display rating alone should not slash");
         assertEq(
             crepToken.balanceOf(submitter),
-            submitterBefore,
-            "submitter should not recover stake after low-rated content goes dormant"
+            submitterBefore + 10e6,
+            "submitter should recover stake when dormancy resolves without settled evidence"
         );
     }
 

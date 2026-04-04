@@ -164,6 +164,22 @@ contract HumanFaucetCoverageTest is Test {
     // 3. transferOwnership — governance restriction
     // =========================================================================
 
+    function test_SetGovernance_AllowsMigration() public {
+        address newGovernance = address(77);
+
+        vm.prank(admin);
+        vm.expectEmit(true, false, false, false);
+        emit HumanFaucet.GovernanceUpdated(newGovernance);
+        faucet.setGovernance(newGovernance);
+
+        assertEq(faucet.governance(), newGovernance);
+
+        vm.prank(admin);
+        faucet.transferOwnership(newGovernance);
+
+        assertEq(faucet.owner(), newGovernance);
+    }
+
     function test_TransferOwnership_ToGovernance_Succeeds() public {
         // governance == admin in our setUp
         vm.prank(admin);

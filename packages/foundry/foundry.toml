@@ -10,6 +10,12 @@ optimizer_runs = 100
 build_info = true
 extra_output = ['abi', 'evm.bytecode', 'evm.deployedBytecode']
 
+[profile.deploy]
+optimizer_runs = 1
+revert_strings = "strip"
+bytecode_hash = "none"
+cbor_metadata = false
+
 
 [rpc_endpoints]
 default_network = "http://127.0.0.1:8545"

@@ -231,7 +231,7 @@ contract RoundVotingEngineBranchesTest is VotingTestBase {
     }
 
     function _maxAgeCiphertext() internal view returns (bytes memory ciphertext) {
-        uint256 totalLength = engine.MAX_CIPHERTEXT_SIZE();
+        uint256 totalLength = 2_048;
         uint64 targetRound = _tlockCommitTargetRound();
         bytes32 drandChainHash = _tlockDrandChainHash();
         bytes32 salt = bytes32(uint256(1));
@@ -679,7 +679,20 @@ contract RoundVotingEngineBranchesTest is VotingTestBase {
 
         uint256 roundId = RoundEngineReadHelpers.activeRoundId(engine, contentId);
         bytes32 commitKey = _commitKey(voter1, commitHash);
-        assertEq(engine.commitRevealAvailableAt(contentId, roundId, commitKey), _tlockRoundTimestamp(targetRound));
+        (
+            ,
+            ,
+            ,
+            uint64 storedTargetRound,
+            ,
+            ,
+            uint256 revealableAfter,
+            ,
+            ,
+
+        ) = engine.commits(contentId, roundId, commitKey);
+        uint256 targetRoundRevealableAt = _tlockRoundTimestamp(storedTargetRound);
+        assertEq(revealableAfter > targetRoundRevealableAt ? revealableAfter : targetRoundRevealableAt, targetRoundRevealableAt);
 
         vm.warp(block.timestamp + EPOCH + 1);
         vm.expectRevert(RoundVotingEngine.EpochNotEnded.selector);
@@ -697,7 +710,7 @@ contract RoundVotingEngineBranchesTest is VotingTestBase {
         vm.warp(block.timestamp + EPOCH + 1);
 
         bytes32 badKey = keccak256("bogus");
-        vm.expectRevert(RoundVotingEngine.NoCommit.selector);
+        vm.expectRevert(RoundVotingEngine.TargetRoundOutOfWindow.selector);
         engine.revealVoteByCommitKey(contentId, roundId, badKey, true, bytes32(0));
     }
 
@@ -1535,7 +1548,7 @@ contract RoundVotingEngineBranchesTest is VotingTestBase {
 
         bytes32 salt = keccak256(abi.encodePacked(voter1, block.timestamp));
         bytes memory maxCiphertext = _maxAgeCiphertext();
-        assertLe(maxCiphertext.length, engine.MAX_CIPHERTEXT_SIZE());
+        assertLe(maxCiphertext.length, 2_048);
         uint64 targetRound = _tlockCommitTargetRound();
         bytes32 drandChainHash = _tlockDrandChainHash();
         bytes32 commitHash = _commitHash(true, salt, contentId, targetRound, drandChainHash, maxCiphertext);

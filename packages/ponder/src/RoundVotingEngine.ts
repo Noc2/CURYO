@@ -29,6 +29,10 @@ ponder.on("RoundVotingEngine:VoteCommitted", async ({ event, context }) => {
   };
   const roundKey = `${contentId}-${roundId}`;
   const voteKey = `${contentId}-${roundId}-${voter}`;
+  const contentRecord = await context.db.find(content, { id: contentId });
+  const referenceRatingBps = contentRecord
+    ? (contentRecord.ratingBps > 0 ? contentRecord.ratingBps : contentRecord.rating * 100)
+    : 5000;
 
   // Compute epochIndex from round startTime and event timestamp
   // We'll store it as 0 or 1 based on whether it's in epoch-1
@@ -51,12 +55,22 @@ ponder.on("RoundVotingEngine:VoteCommitted", async ({ event, context }) => {
       downPool: 0n,
       upCount: 0,
       downCount: 0,
+      referenceRatingBps,
+      ratingBps: referenceRatingBps,
+      conservativeRatingBps: referenceRatingBps,
+      confidenceMass: 0n,
+      effectiveEvidence: 0n,
+      settledRounds: 0,
+      lowSince: 0n,
       startTime: event.block.timestamp,
     });
   } else {
     await context.db.update(round, { id: roundKey }).set((row) => ({
       voteCount: row.voteCount + 1,
       totalStake: row.totalStake + stake,
+      referenceRatingBps: row.referenceRatingBps > 0 ? row.referenceRatingBps : referenceRatingBps,
+      ratingBps: row.ratingBps > 0 ? row.ratingBps : referenceRatingBps,
+      conservativeRatingBps: row.conservativeRatingBps > 0 ? row.conservativeRatingBps : referenceRatingBps,
     }));
   }
 
@@ -81,7 +95,6 @@ ponder.on("RoundVotingEngine:VoteCommitted", async ({ event, context }) => {
     .onConflictDoNothing();
 
   // Update content aggregate and lastActivityAt
-  const contentRecord = await context.db.find(content, { id: contentId });
   if (contentRecord) {
     await context.db
       .update(content, { id: contentId })
@@ -239,6 +252,13 @@ ponder.on("RoundVotingEngine:RoundSettled", async ({ event, context }) => {
       downPool: 0n,
       upCount: 0,
       downCount: 0,
+      referenceRatingBps: 5000,
+      ratingBps: 5000,
+      conservativeRatingBps: 5000,
+      confidenceMass: 0n,
+      effectiveEvidence: 0n,
+      settledRounds: 0,
+      lowSince: 0n,
       upWins,
       losingPool,
       settledAt: event.block.timestamp,
@@ -340,7 +360,12 @@ ponder.on("RoundVotingEngine:RoundCancelled", async ({ event, context }) => {
 
   const existingRound = await context.db.find(round, { id: roundKey });
   if (existingRound) {
-    await context.db.update(round, { id: roundKey }).set({ state: ROUND_STATE.Cancelled });
+    await context.db.update(round, { id: roundKey }).set((row) => ({
+      state: ROUND_STATE.Cancelled,
+      referenceRatingBps: row.referenceRatingBps > 0 ? row.referenceRatingBps : 5000,
+      ratingBps: row.ratingBps > 0 ? row.ratingBps : 5000,
+      conservativeRatingBps: row.conservativeRatingBps > 0 ? row.conservativeRatingBps : 5000,
+    }));
   } else {
     await context.db.insert(round).values({
       id: roundKey,
@@ -354,6 +379,13 @@ ponder.on("RoundVotingEngine:RoundCancelled", async ({ event, context }) => {
       downPool: 0n,
       upCount: 0,
       downCount: 0,
+      referenceRatingBps: 5000,
+      ratingBps: 5000,
+      conservativeRatingBps: 5000,
+      confidenceMass: 0n,
+      effectiveEvidence: 0n,
+      settledRounds: 0,
+      lowSince: 0n,
     });
   }
 });
@@ -364,7 +396,12 @@ ponder.on("RoundVotingEngine:RoundTied", async ({ event, context }) => {
 
   const existingRound = await context.db.find(round, { id: roundKey });
   if (existingRound) {
-    await context.db.update(round, { id: roundKey }).set({ state: ROUND_STATE.Tied });
+    await context.db.update(round, { id: roundKey }).set((row) => ({
+      state: ROUND_STATE.Tied,
+      referenceRatingBps: row.referenceRatingBps > 0 ? row.referenceRatingBps : 5000,
+      ratingBps: row.ratingBps > 0 ? row.ratingBps : 5000,
+      conservativeRatingBps: row.conservativeRatingBps > 0 ? row.conservativeRatingBps : 5000,
+    }));
   } else {
     await context.db.insert(round).values({
       id: roundKey,
@@ -378,6 +415,13 @@ ponder.on("RoundVotingEngine:RoundTied", async ({ event, context }) => {
       downPool: 0n,
       upCount: 0,
       downCount: 0,
+      referenceRatingBps: 5000,
+      ratingBps: 5000,
+      conservativeRatingBps: 5000,
+      confidenceMass: 0n,
+      effectiveEvidence: 0n,
+      settledRounds: 0,
+      lowSince: 0n,
     });
   }
 });
@@ -388,7 +432,12 @@ ponder.on("RoundVotingEngine:RoundRevealFailed", async ({ event, context }) => {
 
   const existingRound = await context.db.find(round, { id: roundKey });
   if (existingRound) {
-    await context.db.update(round, { id: roundKey }).set({ state: ROUND_STATE.RevealFailed });
+    await context.db.update(round, { id: roundKey }).set((row) => ({
+      state: ROUND_STATE.RevealFailed,
+      referenceRatingBps: row.referenceRatingBps > 0 ? row.referenceRatingBps : 5000,
+      ratingBps: row.ratingBps > 0 ? row.ratingBps : 5000,
+      conservativeRatingBps: row.conservativeRatingBps > 0 ? row.conservativeRatingBps : 5000,
+    }));
   } else {
     await context.db.insert(round).values({
       id: roundKey,
@@ -402,6 +451,13 @@ ponder.on("RoundVotingEngine:RoundRevealFailed", async ({ event, context }) => {
       downPool: 0n,
       upCount: 0,
       downCount: 0,
+      referenceRatingBps: 5000,
+      ratingBps: 5000,
+      conservativeRatingBps: 5000,
+      confidenceMass: 0n,
+      effectiveEvidence: 0n,
+      settledRounds: 0,
+      lowSince: 0n,
     });
   }
 });

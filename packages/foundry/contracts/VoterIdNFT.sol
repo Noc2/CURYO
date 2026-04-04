@@ -35,8 +35,17 @@ contract VoterIdNFT is ERC721, Ownable, IVoterIdNFT {
     /// @notice Mapping to track used nullifiers (prevents double minting)
     mapping(uint256 => bool) public nullifierUsed;
 
+    /// @notice Mapping from token ID to the nullifier used to mint it
+    mapping(uint256 => uint256) private _tokenIdToNullifier;
+
+    /// @notice Whether a token ID has a recorded nullifier snapshot
+    mapping(uint256 => bool) private _tokenIdHasNullifier;
+
     /// @notice Stake tracking per Voter ID: contentId => epochId => tokenId => stakedAmount
     mapping(uint256 => mapping(uint256 => mapping(uint256 => uint256))) private _epochContentStake;
+
+    /// @notice Stake tracking per identity nullifier: contentId => epochId => nullifier => stakedAmount
+    mapping(uint256 => mapping(uint256 => mapping(uint256 => uint256))) private _nullifierEpochContentStake;
 
     /// @notice Authorized minters (e.g., HumanFaucet, WorldIdFaucet)
     mapping(address => bool) public authorizedMinters;
@@ -213,6 +222,8 @@ contract VoterIdNFT is ERC721, Ownable, IVoterIdNFT {
 
         // Mark nullifier as used
         nullifierUsed[nullifier] = true;
+        _tokenIdToNullifier[tokenId] = nullifier;
+        _tokenIdHasNullifier[tokenId] = true;
 
         // Update bidirectional mappings
         holderToTokenId[to] = tokenId;
@@ -276,6 +287,9 @@ contract VoterIdNFT is ERC721, Ownable, IVoterIdNFT {
         require(tokenIdToHolder[tokenId] != address(0), "Token not active"); // L-10: defense-in-depth
 
         _epochContentStake[contentId][epochId][tokenId] += amount;
+        if (_tokenIdHasNullifier[tokenId]) {
+            _nullifierEpochContentStake[contentId][epochId][_tokenIdToNullifier[tokenId]] += amount;
+        }
 
         emit StakeRecorded(contentId, epochId, tokenId, amount);
     }
@@ -291,7 +305,7 @@ contract VoterIdNFT is ERC721, Ownable, IVoterIdNFT {
         override
         returns (uint256)
     {
-        return _epochContentStake[contentId][epochId][tokenId];
+        return _effectiveStake(contentId, epochId, tokenId);
     }
 
     /// @notice Get remaining stake capacity for a Voter ID on specific content in an epoch
@@ -304,7 +318,7 @@ contract VoterIdNFT is ERC721, Ownable, IVoterIdNFT {
         view
         returns (uint256)
     {
-        uint256 currentStake = _epochContentStake[contentId][epochId][tokenId];
+        uint256 currentStake = _effectiveStake(contentId, epochId, tokenId);
         if (currentStake >= MAX_STAKE_PER_VOTER) return 0;
         return MAX_STAKE_PER_VOTER - currentStake;
     }
@@ -363,6 +377,16 @@ contract VoterIdNFT is ERC721, Ownable, IVoterIdNFT {
     function resolveHolder(address addr) external view returns (address) {
         if (holderToTokenId[addr] != 0) return addr;
         return delegateOf[addr];
+    }
+
+    function _effectiveStake(uint256 contentId, uint256 epochId, uint256 tokenId) internal view returns (uint256) {
+        uint256 tokenStake = _epochContentStake[contentId][epochId][tokenId];
+        if (!_tokenIdHasNullifier[tokenId]) {
+            return tokenStake;
+        }
+
+        uint256 nullifierStake = _nullifierEpochContentStake[contentId][epochId][_tokenIdToNullifier[tokenId]];
+        return nullifierStake > tokenStake ? nullifierStake : tokenStake;
     }
 
     // ====================================================

@@ -35,6 +35,14 @@ export async function resolveRoundVoteRuntime(params: {
     }
   }
 
+  const roundReferenceRatingBps = (await params.publicClient.readContract({
+    address: params.votingEngineAddress,
+    abi: RoundVotingEngineAbi,
+    functionName: "previewCommitReferenceRatingBps",
+    args: [params.contentId],
+    blockNumber: snapshotBlockNumber,
+  })) as number;
+
   const runtimeNowMs = deriveCommitVoteRuntimeNowMs({
     latestBlockTimestampSeconds: Number(latestBlock.timestamp),
     epochDurationSeconds: params.epochDuration,
@@ -43,5 +51,6 @@ export async function resolveRoundVoteRuntime(params: {
 
   return {
     now: () => runtimeNowMs,
+    roundReferenceRatingBps,
   };
 }

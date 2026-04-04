@@ -13,6 +13,9 @@ import { IRoundVotingEngine } from "./interfaces/IRoundVotingEngine.sol";
 import { IVoterIdNFT } from "./interfaces/IVoterIdNFT.sol";
 import { IParticipationPool } from "./interfaces/IParticipationPool.sol";
 import { RoundLib } from "./libraries/RoundLib.sol";
+import { RatingLib } from "./libraries/RatingLib.sol";
+import { RatingMath } from "./libraries/RatingMath.sol";
+import { ProtocolConfig } from "./ProtocolConfig.sol";
 import { SubmissionCanonicalizer } from "./SubmissionCanonicalizer.sol";
 
 /// @title ContentRegistry
@@ -41,6 +44,11 @@ contract ContentRegistry is Initializable, AccessControlUpgradeable, PausableUpg
 
     // Submitter stake rules
     uint256 public constant SLASH_RATING_THRESHOLD = 25; // Rating below this triggers slash
+    uint16 public constant DEFAULT_SLASH_THRESHOLD_BPS = 2500;
+    uint16 public constant DEFAULT_MIN_SLASH_SETTLED_ROUNDS = 2;
+    uint48 public constant DEFAULT_MIN_SLASH_LOW_DURATION = 7 days;
+    uint256 public constant DEFAULT_MIN_SLASH_EVIDENCE = 200e6;
+    uint256 public constant DEFAULT_CONFIDENCE_MASS_INITIAL = 80e6;
 
     // String length limits (prevent storage bloat)
     uint256 public constant MAX_URL_LENGTH = 2048;
@@ -124,15 +132,16 @@ contract ContentRegistry is Initializable, AccessControlUpgradeable, PausableUpg
     ///      and milestone-0 settlement move the dormancy window forward.
     mapping(uint256 => uint256) internal dormancyAnchorAt;
 
+    /// @notice ProtocolConfig used for governance-tunable rating and slash parameters.
+    ProtocolConfig public protocolConfig;
+
     /// @notice Hidden, time-bounded reservations for future content reveals.
-    /// @dev Declared after legacy mappings to preserve upgrade-safe storage layout.
     mapping(bytes32 => PendingSubmission) public pendingSubmissions;
 
     /// @notice Timestamp after which a dormant content key may be publicly released for replacement.
     mapping(uint256 => uint256) public dormantKeyReleasableAt;
 
     /// @notice Snapshotted participation reward rate captured at the latest successful settlement.
-    /// @dev Appended after the legacy reward and dormancy mappings to preserve proxy-safe storage layout.
     mapping(uint256 => uint256) public submitterParticipationSnapshotRateBps;
 
     /// @notice Snapshotted participation pool captured at the latest successful settlement.
@@ -140,6 +149,12 @@ contract ContentRegistry is Initializable, AccessControlUpgradeable, PausableUpg
 
     /// @notice Whether milestone-0 submitter resolution terms have been frozen for this content.
     mapping(uint256 => bool) public milestoneZeroSubmitterTermsSnapshotted;
+
+    /// @notice Rich rating state used by the score-relative rating system.
+    mapping(uint256 => RatingLib.RatingState) public ratingState;
+
+    /// @notice Slash policy frozen at content creation so governance cannot retroactively rewrite stake terms.
+    mapping(uint256 => RatingLib.SlashConfig) public contentSlashConfigSnapshot;
 
     /// @notice Frozen rating from the first settled round (milestone 0).
     mapping(uint256 => uint8) public milestoneZeroSubmitterRating;
@@ -186,7 +201,19 @@ contract ContentRegistry is Initializable, AccessControlUpgradeable, PausableUpg
         uint256 indexed contentId, address indexed rewardPool, uint256 rewardRateBps, uint256 rewardAmount
     );
     event RatingUpdated(uint256 indexed contentId, uint256 oldRating, uint256 newRating);
+    event RatingStateUpdated(
+        uint256 indexed contentId,
+        uint256 indexed roundId,
+        uint16 referenceRatingBps,
+        uint16 oldRatingBps,
+        uint16 newRatingBps,
+        uint16 conservativeRatingBps,
+        uint256 confidenceMass,
+        uint256 effectiveEvidence,
+        uint32 settledRounds
+    );
     event VoterIdNFTUpdated(address voterIdNFT);
+    event ProtocolConfigUpdated(address protocolConfig);
 
     /// @custom:oz-upgrades-unsafe-allow constructor state-variable-immutable
     constructor() {
@@ -227,13 +254,12 @@ contract ContentRegistry is Initializable, AccessControlUpgradeable, PausableUpg
         // Admin gets only CONFIG_ROLE for initial cross-contract wiring
         if (_admin != _governance) {
             _grantRole(CONFIG_ROLE, _admin);
-            if (_admin != _treasuryAuthority) {
-                _grantRole(TREASURY_ROLE, _admin);
-            }
         }
 
         crepToken = IERC20(_crepToken);
         nextContentId = 1;
+        treasury = _treasuryAuthority;
+        bonusPool = _treasuryAuthority;
     }
 
     /// @notice Set the VotingEngine address (can only be called by CONFIG_ROLE).
@@ -246,6 +272,12 @@ contract ContentRegistry is Initializable, AccessControlUpgradeable, PausableUpg
     function setCategoryRegistry(address _categoryRegistry) external onlyRole(CONFIG_ROLE) {
         require(_categoryRegistry != address(0), "Invalid address");
         categoryRegistry = ICategoryRegistry(_categoryRegistry);
+    }
+
+    function setProtocolConfig(address _protocolConfig) external onlyRole(CONFIG_ROLE) {
+        require(_protocolConfig != address(0), "Invalid address");
+        protocolConfig = ProtocolConfig(_protocolConfig);
+        emit ProtocolConfigUpdated(_protocolConfig);
     }
 
     /// @notice Set the Voter ID NFT contract for sybil resistance
@@ -454,6 +486,17 @@ contract ContentRegistry is Initializable, AccessControlUpgradeable, PausableUpg
             rating: 50,
             categoryId: resolvedCategoryId.toUint64()
         });
+        ratingState[contentId] = RatingLib.RatingState({
+            ratingLogitX18: int128(RatingLib.DEFAULT_RATING_LOGIT_X18),
+            confidenceMass: uint128(_getInitialConfidenceMass()),
+            effectiveEvidence: 0,
+            settledRounds: 0,
+            ratingBps: RatingLib.DEFAULT_RATING_BPS,
+            conservativeRatingBps: RatingLib.DEFAULT_RATING_BPS,
+            lastUpdatedAt: 0,
+            lowSince: 0
+        });
+        contentSlashConfigSnapshot[contentId] = _getCurrentSlashConfig();
         dormancyAnchorAt[contentId] = block.timestamp;
         delete dormantKeyReleasableAt[contentId];
     }
@@ -583,7 +626,60 @@ contract ContentRegistry is Initializable, AccessControlUpgradeable, PausableUpg
         if (clampedRating == oldRating) return;
 
         c.rating = clampedRating;
+        RatingLib.RatingState storage state = ratingState[contentId];
+        state.ratingBps = uint16(uint256(clampedRating) * 100);
+        state.ratingLogitX18 = int128(RatingMath.ratingBpsToLogitX18(state.ratingBps));
+        if (state.conservativeRatingBps == 0 || state.conservativeRatingBps > state.ratingBps) {
+            state.conservativeRatingBps = state.ratingBps;
+        }
+        state.lastUpdatedAt = uint48(block.timestamp);
         emit RatingUpdated(contentId, oldRating, clampedRating);
+    }
+
+    function updateRatingState(
+        uint256 contentId,
+        uint256 roundId,
+        uint16 referenceRatingBps,
+        RatingLib.RatingState calldata nextState
+    ) external {
+        require(msg.sender == votingEngine, "Only VotingEngine");
+
+        Content storage c = contents[contentId];
+        require(c.id != 0, "Content does not exist");
+
+        RatingLib.RatingState storage state = ratingState[contentId];
+        uint16 oldRatingBps = state.ratingBps == 0 ? uint16(uint256(c.rating) * 100) : state.ratingBps;
+        uint8 oldDisplayRating = c.rating;
+        uint16 clampedRatingBps = RatingMath.clampRatingBps(nextState.ratingBps);
+        uint16 clampedConservativeRatingBps =
+            nextState.conservativeRatingBps > clampedRatingBps ? clampedRatingBps : nextState.conservativeRatingBps;
+
+        state.ratingLogitX18 = nextState.ratingLogitX18;
+        state.confidenceMass = nextState.confidenceMass;
+        state.effectiveEvidence = nextState.effectiveEvidence;
+        state.settledRounds = nextState.settledRounds;
+        state.ratingBps = clampedRatingBps;
+        state.conservativeRatingBps = clampedConservativeRatingBps;
+        state.lastUpdatedAt = nextState.lastUpdatedAt == 0 ? uint48(block.timestamp) : nextState.lastUpdatedAt;
+        state.lowSince = nextState.lowSince;
+
+        uint8 newDisplayRating = RatingMath.displayRatingFromBps(clampedRatingBps);
+        if (newDisplayRating != oldDisplayRating) {
+            c.rating = newDisplayRating;
+            emit RatingUpdated(contentId, oldDisplayRating, newDisplayRating);
+        }
+
+        emit RatingStateUpdated(
+            contentId,
+            roundId,
+            referenceRatingBps,
+            oldRatingBps,
+            clampedRatingBps,
+            clampedConservativeRatingBps,
+            nextState.confidenceMass,
+            nextState.effectiveEvidence,
+            nextState.settledRounds
+        );
     }
 
     /// @notice Called by VotingEngine to return submitter stake with a snapshotted submission reward rate.
@@ -656,7 +752,7 @@ contract ContentRegistry is Initializable, AccessControlUpgradeable, PausableUpg
         require(rewardPool != address(0), "No milestone-zero pool");
         require(milestoneZeroSubmitterParticipationRateBps[contentId] == 0, "Repair not needed");
         require(rewardRateBps > 0 && rewardRateBps <= 9000, "Invalid reward rate");
-        require(milestoneZeroSubmitterRating[contentId] >= SLASH_RATING_THRESHOLD, "Slashable milestone-zero");
+        require(ratingState[contentId].conservativeRatingBps >= _getSlashConfigForContent(contentId).slashThresholdBps, "Slashable milestone-zero");
         require(submitterParticipationRewardOwed[contentId] == 0, "Reward already accrued");
         require(submitterParticipationRewardPaid[contentId] == 0, "Reward already claimed");
         require(submitterParticipationRewardReserved[contentId] == 0, "Reward already reserved");
@@ -705,14 +801,23 @@ contract ContentRegistry is Initializable, AccessControlUpgradeable, PausableUpg
         if (c.submitterStakeReturned) return;
 
         bool useMilestoneZeroTerms = milestoneZeroSubmitterTermsSnapshotted[contentId];
-        uint256 slashCheckRating = useMilestoneZeroTerms ? milestoneZeroSubmitterRating[contentId] : c.rating;
 
-        if (block.timestamp >= uint256(c.createdAt) + 24 hours && slashCheckRating < SLASH_RATING_THRESHOLD) {
+        if (isSubmitterStakeSlashable(contentId)) {
             require(treasury != address(0), "Treasury not set");
             c.submitterStakeReturned = true;
             crepToken.safeTransfer(treasury, c.submitterStake);
             emit SubmitterStakeSlashed(contentId, c.submitterStake);
             return;
+        }
+
+        if (useMilestoneZeroTerms) {
+            if (block.timestamp < uint256(c.createdAt) + 4 days) {
+                return;
+            }
+
+            if (ratingState[contentId].lowSince != 0) {
+                return;
+            }
         }
 
         c.submitterStakeReturned = true;
@@ -800,6 +905,7 @@ contract ContentRegistry is Initializable, AccessControlUpgradeable, PausableUpg
         Content storage c = contents[contentId];
         require(!c.submitterStakeReturned, "Already returned");
         require(treasury != address(0), "Treasury not set");
+        require(isSubmitterStakeSlashable(contentId), "Not slashable");
 
         c.submitterStakeReturned = true;
         slashAmount = c.submitterStake; // 100% slashed
@@ -818,6 +924,42 @@ contract ContentRegistry is Initializable, AccessControlUpgradeable, PausableUpg
 
     function getContentSubmitter(uint256 contentId) external view returns (address) {
         return contents[contentId].submitter;
+    }
+
+    function getRatingState(uint256 contentId) external view returns (RatingLib.RatingState memory state) {
+        state = ratingState[contentId];
+    }
+
+    function getSlashConfigForContent(uint256 contentId) external view returns (RatingLib.SlashConfig memory slashConfig) {
+        slashConfig = _getSlashConfigForContent(contentId);
+    }
+
+    function getRating(uint256 contentId) external view returns (uint16) {
+        uint16 ratingBps = ratingState[contentId].ratingBps;
+        if (ratingBps == 0) return uint16(uint256(contents[contentId].rating) * 100);
+        return ratingBps;
+    }
+
+    function getConservativeRating(uint256 contentId) external view returns (uint16) {
+        uint16 conservativeRatingBps = ratingState[contentId].conservativeRatingBps;
+        if (conservativeRatingBps == 0) return uint16(uint256(contents[contentId].rating) * 100);
+        return conservativeRatingBps;
+    }
+
+    function isSubmitterStakeSlashable(uint256 contentId) public view returns (bool) {
+        Content storage c = contents[contentId];
+        if (c.id == 0 || c.submitterStakeReturned) return false;
+        if (block.timestamp < uint256(c.createdAt) + 24 hours) return false;
+
+        RatingLib.RatingState memory state = ratingState[contentId];
+        RatingLib.SlashConfig memory slashConfig = _getSlashConfigForContent(contentId);
+
+        if (state.conservativeRatingBps >= slashConfig.slashThresholdBps) return false;
+        if (state.effectiveEvidence < slashConfig.minSlashEvidence) return false;
+        if (state.settledRounds < slashConfig.minSlashSettledRounds) return false;
+        if (state.lowSince == 0) return false;
+
+        return block.timestamp >= uint256(state.lowSince) + slashConfig.minSlashLowDuration;
     }
 
     function isContentActive(uint256 contentId) external view returns (bool) {
@@ -922,6 +1064,37 @@ contract ContentRegistry is Initializable, AccessControlUpgradeable, PausableUpg
         (, RoundLib.RoundState roundState,,,,,,,,,,,,) =
             IRoundVotingEngine(votingEngine).rounds(contentId, activeRoundId);
         return roundState == RoundLib.RoundState.Open;
+    }
+
+    function _getInitialConfidenceMass() internal view returns (uint256) {
+        if (address(protocolConfig) == address(0)) {
+            return DEFAULT_CONFIDENCE_MASS_INITIAL;
+        }
+
+        uint256 initialConfidenceMass = protocolConfig.getInitialConfidenceMass();
+        return initialConfidenceMass == 0 ? DEFAULT_CONFIDENCE_MASS_INITIAL : initialConfidenceMass;
+    }
+
+    function _getCurrentSlashConfig() internal view returns (RatingLib.SlashConfig memory slashConfig) {
+        if (address(protocolConfig) == address(0)) {
+            slashConfig = RatingLib.SlashConfig({
+                slashThresholdBps: DEFAULT_SLASH_THRESHOLD_BPS,
+                minSlashSettledRounds: DEFAULT_MIN_SLASH_SETTLED_ROUNDS,
+                minSlashLowDuration: DEFAULT_MIN_SLASH_LOW_DURATION,
+                minSlashEvidence: DEFAULT_MIN_SLASH_EVIDENCE
+            });
+            return slashConfig;
+        }
+
+        (slashConfig.slashThresholdBps, slashConfig.minSlashSettledRounds, slashConfig.minSlashLowDuration, slashConfig.minSlashEvidence) =
+            protocolConfig.slashConfig();
+    }
+
+    function _getSlashConfigForContent(uint256 contentId) internal view returns (RatingLib.SlashConfig memory slashConfig) {
+        slashConfig = contentSlashConfigSnapshot[contentId];
+        if (slashConfig.slashThresholdBps == 0) {
+            return _getCurrentSlashConfig();
+        }
     }
 
     // --- Admin ---

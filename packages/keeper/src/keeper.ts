@@ -56,6 +56,17 @@ interface CleanupCursor {
   nextIndex: number;
 }
 
+interface ContentResolutionState {
+  exists: boolean;
+  createdAt: bigint;
+  submitterStakeReturned: boolean;
+}
+
+interface RatingResolutionState {
+  settledRounds: bigint;
+  lowSince: bigint;
+}
+
 const MAX_CLEANUP_BATCHES_PER_TICK = 4;
 const MAX_CLEANUP_COMPLETED = 5000;
 const cleanupQueue = new Map<string, CleanupCursor>();
@@ -72,6 +83,61 @@ function emptyResult(): KeeperResult {
     submitterStakesResolved: 0,
     contentMarkedDormant: 0,
   };
+}
+
+function toBigInt(value: unknown, fallback = 0n): bigint {
+  return typeof value === "bigint" ? value : typeof value === "number" ? BigInt(value) : fallback;
+}
+
+function parseContentResolutionState(rawContent: unknown): ContentResolutionState {
+  const content = rawContent as (Record<string, unknown> & unknown[]) | null | undefined;
+  if (!content) {
+    return { exists: false, createdAt: 0n, submitterStakeReturned: false };
+  }
+
+  if (content.id != null) {
+    return {
+      exists: toBigInt(content.id) > 0n,
+      createdAt: toBigInt(content.createdAt),
+      submitterStakeReturned: Boolean(content.submitterStakeReturned),
+    };
+  }
+
+  if (Array.isArray(content) && content.length >= 10) {
+    return {
+      exists: toBigInt(content[0]) > 0n,
+      createdAt: toBigInt(content[4]),
+      submitterStakeReturned: Boolean(content[9]),
+    };
+  }
+
+  return { exists: false, createdAt: 0n, submitterStakeReturned: false };
+}
+
+function parseRatingResolutionState(rawState: unknown): RatingResolutionState {
+  const ratingState = rawState as (Record<string, unknown> & unknown[]) | null | undefined;
+  const nestedState = ratingState?.state as (Record<string, unknown> & unknown[]) | null | undefined;
+  const candidate = nestedState ?? ratingState;
+
+  if (!candidate) {
+    return { settledRounds: 0n, lowSince: 0n };
+  }
+
+  if (candidate.settledRounds != null) {
+    return {
+      settledRounds: toBigInt(candidate.settledRounds),
+      lowSince: toBigInt(candidate.lowSince),
+    };
+  }
+
+  if (Array.isArray(candidate) && candidate.length >= 8) {
+    return {
+      settledRounds: toBigInt(candidate[3]),
+      lowSince: toBigInt(candidate[7]),
+    };
+  }
+
+  return { settledRounds: 0n, lowSince: 0n };
 }
 
 export { validateKeeperContracts } from "./contract-reads.js";
@@ -262,6 +328,7 @@ export async function resolveRounds(
   }
 
   const result: KeeperResult = emptyResult();
+  const fourDaysSeconds = 4n * 24n * 60n * 60n;
 
   // --- Get total content count ---
   let nextContentId: bigint;
@@ -442,12 +509,57 @@ export async function resolveRounds(
 
       // --- 6. Resolve submitter stakes once their policy window opens ---
       try {
-        const submitterStakeResolvable = (await publicClient.readContract({
-          address: engineAddr,
-          abi: RoundVotingEngineAbi,
-          functionName: "isSubmitterStakeResolvable",
-          args: [contentId],
-        })) as boolean;
+        const [rawContent, rawRatingState] = await Promise.all([
+          publicClient.readContract({
+            address: registryAddr,
+            abi: ContentRegistryAbi,
+            functionName: "contents",
+            args: [contentId],
+          }),
+          publicClient.readContract({
+            address: registryAddr,
+            abi: ContentRegistryAbi,
+            functionName: "getRatingState",
+            args: [contentId],
+          }),
+        ]);
+
+        const contentState = parseContentResolutionState(rawContent);
+        const ratingState = parseRatingResolutionState(rawRatingState);
+
+        let submitterStakeResolvable = false;
+        if (contentState.exists && !contentState.submitterStakeReturned) {
+          if (ratingState.settledRounds === 0n) {
+            const currentOpenRoundId = (await publicClient.readContract({
+              address: engineAddr,
+              abi: RoundVotingEngineAbi,
+              functionName: "currentRoundId",
+              args: [contentId],
+            })) as bigint;
+
+            submitterStakeResolvable = currentOpenRoundId === 0n && now >= contentState.createdAt + config.dormancyPeriod;
+          } else {
+            const [slashable, milestoneZeroTermsSnapshotted] = await Promise.all([
+              publicClient.readContract({
+                address: registryAddr,
+                abi: ContentRegistryAbi,
+                functionName: "isSubmitterStakeSlashable",
+                args: [contentId],
+              }) as Promise<boolean>,
+              publicClient.readContract({
+                address: registryAddr,
+                abi: ContentRegistryAbi,
+                functionName: "milestoneZeroSubmitterTermsSnapshotted",
+                args: [contentId],
+              }) as Promise<boolean>,
+            ]);
+
+            submitterStakeResolvable = slashable
+              || (!milestoneZeroTermsSnapshotted
+                ? true
+                : now >= contentState.createdAt + fourDaysSeconds && ratingState.lowSince === 0n);
+          }
+        }
 
         if (submitterStakeResolvable) {
           await writeContractAndConfirm(publicClient, walletClient, {

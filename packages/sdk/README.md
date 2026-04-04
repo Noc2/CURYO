@@ -34,18 +34,20 @@ const curyo = createCuryoClient({
   frontendCode: "0x1234567890123456789012345678901234567890",
 });
 
-const content = await curyo.read.getContent("42");
+const { content } = await curyo.read.getContent("42");
 
 const commit = await buildCommitVoteParams({
   contentId: 42n,
   isUp: true,
   stakeAmount: 2.5,
   epochDuration: 20 * 60,
+  roundReferenceRatingBps: content.openRound?.referenceRatingBps ?? content.ratingBps ?? 5000,
   defaultFrontendCode: curyo.config.frontendCode,
 });
 
 const payload = buildVoteTransferPayload({
   contentId: 42n,
+  roundReferenceRatingBps: commit.roundReferenceRatingBps,
   commitHash: commit.commitHash,
   ciphertext: commit.ciphertext,
   frontend: commit.frontend,

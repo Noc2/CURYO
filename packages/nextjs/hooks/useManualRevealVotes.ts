@@ -2,7 +2,13 @@
 
 import { useCallback, useMemo, useState } from "react";
 import { RoundVotingEngineAbi } from "@curyo/contracts/abis";
-import { buildCommitKey, decryptTlockCiphertext, parseTlockCiphertextMetadata } from "@curyo/contracts/voting";
+import {
+  buildCommitKey,
+  decryptTlockCiphertext,
+  deriveVoteTlockRevealAvailableAtSeconds,
+  getVoteTlockChainInfo,
+  parseTlockCiphertextMetadata,
+} from "@curyo/contracts/voting";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Address, zeroHash } from "viem";
 import { useAccount, usePublicClient, useWalletClient } from "wagmi";
@@ -39,6 +45,120 @@ const BENIGN_REVEAL_ERRORS = ["AlreadyRevealed", "RoundNotOpen", "EpochNotEnded"
 function isBenignRevealError(message: string): boolean {
   const lower = message.toLowerCase();
   return BENIGN_REVEAL_ERRORS.some(error => lower.includes(error.toLowerCase()));
+}
+
+type LiveDrandConfig = {
+  drandGenesisTime: bigint;
+  drandPeriod: bigint;
+};
+
+async function readLiveDrandConfig(
+  publicClient: NonNullable<ReturnType<typeof usePublicClient>>,
+  engineAddress: Address,
+): Promise<LiveDrandConfig> {
+  const protocolConfigAddress = (await publicClient.readContract({
+    address: engineAddress,
+    abi: RoundVotingEngineAbi,
+    functionName: "protocolConfig",
+  })) as Address;
+
+  const [drandGenesisTime, drandPeriod] = await Promise.all([
+    publicClient.readContract({
+      address: protocolConfigAddress,
+      abi: [
+        {
+          type: "function",
+          name: "drandGenesisTime",
+          stateMutability: "view",
+          inputs: [],
+          outputs: [{ name: "", type: "uint64" }],
+        },
+      ],
+      functionName: "drandGenesisTime",
+    }),
+    publicClient.readContract({
+      address: protocolConfigAddress,
+      abi: [
+        {
+          type: "function",
+          name: "drandPeriod",
+          stateMutability: "view",
+          inputs: [],
+          outputs: [{ name: "", type: "uint64" }],
+        },
+      ],
+      functionName: "drandPeriod",
+    }),
+  ]);
+
+  return {
+    drandGenesisTime: drandGenesisTime as bigint,
+    drandPeriod: drandPeriod as bigint,
+  };
+}
+
+function deriveRevealAvailableAtFromLiveConfig(
+  revealableAfterSeconds: bigint,
+  targetRound: bigint,
+  liveDrandConfig: LiveDrandConfig,
+) {
+  if (targetRound <= 0n || liveDrandConfig.drandPeriod <= 0n) {
+    return revealableAfterSeconds;
+  }
+
+  const drandRoundRevealableAt = liveDrandConfig.drandGenesisTime + (targetRound - 1n) * liveDrandConfig.drandPeriod;
+  return revealableAfterSeconds > drandRoundRevealableAt ? revealableAfterSeconds : drandRoundRevealableAt;
+}
+
+async function deriveRevealAvailableAtSeconds(params: {
+  publicClient: NonNullable<ReturnType<typeof usePublicClient>>;
+  engineAddress: Address;
+  revealableAfter: bigint;
+  targetRound: bigint;
+  drandChainHash: `0x${string}`;
+  tlockChainInfo?: Awaited<ReturnType<typeof getVoteTlockChainInfo>> | null;
+  liveDrandConfig?: LiveDrandConfig | null;
+}) {
+  const { publicClient, engineAddress, revealableAfter, targetRound, drandChainHash } = params;
+
+  if (targetRound <= 0n) {
+    return {
+      revealAvailableAt: revealableAfter,
+      tlockChainInfo: params.tlockChainInfo ?? null,
+      liveDrandConfig: params.liveDrandConfig ?? null,
+    };
+  }
+
+  let tlockChainInfo = params.tlockChainInfo;
+  if (tlockChainInfo === undefined) {
+    try {
+      tlockChainInfo = await getVoteTlockChainInfo();
+    } catch {
+      tlockChainInfo = null;
+    }
+  }
+
+  if (tlockChainInfo && tlockChainInfo.drandChainHash.toLowerCase() === drandChainHash.toLowerCase()) {
+    const tlockRevealAvailableAt = deriveVoteTlockRevealAvailableAtSeconds(targetRound, tlockChainInfo);
+    return {
+      revealAvailableAt: revealableAfter > tlockRevealAvailableAt ? revealableAfter : tlockRevealAvailableAt,
+      tlockChainInfo,
+      liveDrandConfig: params.liveDrandConfig ?? null,
+    };
+  }
+
+  let liveDrandConfig = params.liveDrandConfig;
+  if (liveDrandConfig === undefined) {
+    liveDrandConfig = await readLiveDrandConfig(publicClient, engineAddress);
+  }
+
+  return {
+    revealAvailableAt: liveDrandConfig
+      ? deriveRevealAvailableAtFromLiveConfig(revealableAfter, targetRound, liveDrandConfig)
+      : revealableAfter,
+    tlockChainInfo,
+    liveDrandConfig,
+  };
 }
 
 export function useManualRevealVotes(voter?: Address) {
@@ -100,28 +220,31 @@ export function useManualRevealVotes(voter?: Address) {
         })) as any,
       });
 
-      const revealAvailableAtResults = await publicClient.multicall({
-        allowFailure: true,
-        contracts: withCommitHashes.map(({ vote, commitKey }) => ({
-          address: engineInfo.address,
-          abi: RoundVotingEngineAbi,
-          functionName: "commitRevealAvailableAt",
-          args: [BigInt(vote.contentId), BigInt(vote.roundId), commitKey],
-        })) as any,
-      });
+      let tlockChainInfo: Awaited<ReturnType<typeof getVoteTlockChainInfo>> | null | undefined;
+      let liveDrandConfig: LiveDrandConfig | null | undefined;
+      const votesWithRevealTimes = await Promise.all(
+        withCommitHashes.map(async ({ vote, commitHash, commitKey }, index) => {
+          const commitResult = commitResults[index];
+          if (commitResult?.status !== "success") return null;
 
-      return withCommitHashes.flatMap(({ vote, commitHash, commitKey }, index) => {
-        const commitResult = commitResults[index];
-        const revealAvailableAtResult = revealAvailableAtResults[index];
-        if (commitResult?.status !== "success" || revealAvailableAtResult?.status !== "success") return [];
+          const commit = commitResult.result as CommitData;
+          if (!commit.voter || commit.voter === "0x0000000000000000000000000000000000000000" || commit.revealed) {
+            return null;
+          }
 
-        const commit = commitResult.result as CommitData;
-        if (!commit.voter || commit.voter === "0x0000000000000000000000000000000000000000" || commit.revealed) {
-          return [];
-        }
+          const timing = await deriveRevealAvailableAtSeconds({
+            publicClient,
+            engineAddress: engineInfo.address,
+            revealableAfter: commit.revealableAfter,
+            targetRound: commit.targetRound ?? 0n,
+            drandChainHash: (commit.drandChainHash ?? zeroHash) as `0x${string}`,
+            tlockChainInfo,
+            liveDrandConfig,
+          });
+          tlockChainInfo = timing.tlockChainInfo;
+          liveDrandConfig = timing.liveDrandConfig;
 
-        return [
-          {
+          return {
             contentId: BigInt(vote.contentId),
             roundId: BigInt(vote.roundId),
             voter: commit.voter as Address,
@@ -129,7 +252,7 @@ export function useManualRevealVotes(voter?: Address) {
             epochIndex: commit.epochIndex,
             committedAt: vote.committedAt,
             revealableAfter: commit.revealableAfter,
-            revealAvailableAt: BigInt(revealAvailableAtResult.result as bigint),
+            revealAvailableAt: timing.revealAvailableAt,
             commitHash,
             commitKey,
             ciphertext: commit.ciphertext as `0x${string}`,
@@ -137,9 +260,11 @@ export function useManualRevealVotes(voter?: Address) {
             drandChainHash: commit.drandChainHash ?? zeroHash,
             secondsUntilReveal: 0,
             isReady: false,
-          },
-        ];
-      });
+          } satisfies ManualRevealVote;
+        }),
+      );
+
+      return votesWithRevealTimes.flatMap(vote => (vote ? [vote] : []));
     },
   });
 
@@ -199,12 +324,14 @@ export function useManualRevealVotes(voter?: Address) {
           return true;
         }
 
-        const revealAvailableAt = (await publicClient.readContract({
-          address: engineInfo.address,
-          abi: RoundVotingEngineAbi,
-          functionName: "commitRevealAvailableAt",
-          args: [vote.contentId, vote.roundId, vote.commitKey],
-        })) as bigint;
+        const timing = await deriveRevealAvailableAtSeconds({
+          publicClient,
+          engineAddress: engineInfo.address,
+          revealableAfter: latestCommit.revealableAfter,
+          targetRound: latestCommit.targetRound ?? 0n,
+          drandChainHash: (latestCommit.drandChainHash ?? zeroHash) as `0x${string}`,
+        });
+        const revealAvailableAt = timing.revealAvailableAt;
         if (BigInt(now) < revealAvailableAt) {
           notification.info("That vote is not revealable yet.");
           await refresh();

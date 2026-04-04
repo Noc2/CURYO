@@ -2,7 +2,8 @@
 pragma solidity ^0.8.24;
 
 import { ContentRegistry } from "../ContentRegistry.sol";
-import { RewardMath } from "./RewardMath.sol";
+import { RatingLib } from "./RatingLib.sol";
+import { RatingMath } from "./RatingMath.sol";
 import { SubmitterStakeLib } from "./SubmitterStakeLib.sol";
 import { IParticipationPool } from "../interfaces/IParticipationPool.sol";
 import { IRoundRewardDistributor } from "../interfaces/IRoundRewardDistributor.sol";
@@ -10,18 +11,46 @@ import { IRoundRewardDistributor } from "../interfaces/IRoundRewardDistributor.s
 /// @title RoundSettlementSideEffectsLib
 /// @notice Moves best-effort post-settlement external calls out of RoundVotingEngine runtime bytecode.
 library RoundSettlementSideEffectsLib {
+    enum SideEffectFailureStage {
+        ParticipationRateQuery,
+        SubmitterParticipationTermsSnapshot,
+        VoterParticipationRewardsSnapshot
+    }
+
+    event SettlementSideEffectFailed(
+        uint256 indexed contentId,
+        uint256 indexed roundId,
+        address indexed target,
+        SideEffectFailureStage stage
+    );
+
     function recordSettlement(
         ContentRegistry registry,
+        RatingLib.RatingConfig memory ratingConfig,
         IParticipationPool participationPool,
         address rewardDistributor,
         bool isFirstSettledRound,
         uint256 contentId,
         uint256 roundId,
+        uint16 referenceRatingBps,
+        uint64 weightedUpPool,
+        uint64 weightedDownPool,
         bool upWins,
         uint64 upPool,
         uint64 downPool
     ) external {
-        uint16 newRating = RewardMath.calculateRating(upPool, downPool);
+        RatingLib.RatingState memory previousState = registry.getRatingState(contentId);
+        RatingLib.SlashConfig memory slashConfig = registry.getSlashConfigForContent(contentId);
+        (RatingLib.RatingState memory nextState,,) = RatingMath.applySettlement(
+            referenceRatingBps,
+            weightedUpPool,
+            weightedDownPool,
+            previousState,
+            ratingConfig,
+            slashConfig,
+            uint48(block.timestamp)
+        );
+        uint8 newDisplayRating = RatingMath.displayRatingFromBps(nextState.ratingBps);
         address participationPoolAddress = address(participationPool);
         uint256 participationRateBps = 0;
         bool hasParticipationRate = false;
@@ -30,30 +59,51 @@ library RoundSettlementSideEffectsLib {
             try participationPool.getCurrentRateBps() returns (uint256 rate) {
                 participationRateBps = rate;
                 hasParticipationRate = true;
-            } catch { }
+            } catch {
+                emit SettlementSideEffectFailed(
+                    contentId,
+                    roundId,
+                    participationPoolAddress,
+                    SideEffectFailureStage.ParticipationRateQuery
+                );
+            }
         }
 
         if (isFirstSettledRound) {
             registry.snapshotMilestoneZeroSubmitterTerms(
-                contentId, newRating, participationPoolAddress, hasParticipationRate ? participationRateBps : 0
+                contentId, newDisplayRating, participationPoolAddress, hasParticipationRate ? participationRateBps : 0
             );
         }
 
-        try registry.updateRatingDirect(contentId, newRating) { } catch { }
+        try registry.updateRatingState(contentId, roundId, referenceRatingBps, nextState) { } catch { }
         try registry.recordMeaningfulActivity(contentId) { } catch { }
 
         if (participationPoolAddress != address(0) && hasParticipationRate) {
             try registry.snapshotSubmitterParticipationTerms(
                 contentId, participationPoolAddress, participationRateBps
             ) { }
-                catch { }
+                catch {
+                    emit SettlementSideEffectFailed(
+                        contentId,
+                        roundId,
+                        address(registry),
+                        SideEffectFailureStage.SubmitterParticipationTermsSnapshot
+                    );
+                }
             if (rewardDistributor != address(0)) {
                 uint256 winningStake = upWins ? upPool : downPool;
                 try IRoundRewardDistributor(rewardDistributor)
                     .snapshotParticipationRewards(
                         contentId, roundId, participationPoolAddress, participationRateBps, winningStake
                     ) { }
-                    catch { }
+                    catch {
+                        emit SettlementSideEffectFailed(
+                            contentId,
+                            roundId,
+                            rewardDistributor,
+                            SideEffectFailureStage.VoterParticipationRewardsSnapshot
+                        );
+                    }
             }
         }
 

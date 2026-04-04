@@ -777,6 +777,27 @@ contract VoterIdNFTTest is Test {
         assertEq(newTokenId, 2);
     }
 
+    function test_ResetNullifier_DoesNotBypassStakeCap() public {
+        vm.prank(minterAddr);
+        voterIdNFT.mint(user1, NULLIFIER_1);
+
+        vm.prank(recorderAddr);
+        voterIdNFT.recordStake(1, 100, 1, 100e6);
+
+        vm.prank(admin);
+        voterIdNFT.revokeVoterId(user1);
+
+        vm.prank(admin);
+        voterIdNFT.resetNullifier(NULLIFIER_1);
+
+        vm.prank(minterAddr);
+        uint256 newTokenId = voterIdNFT.mint(user2, NULLIFIER_1);
+
+        assertEq(newTokenId, 2);
+        assertEq(voterIdNFT.getEpochContentStake(1, 100, newTokenId), 100e6);
+        assertEq(voterIdNFT.getRemainingStakeCapacity(1, 100, newTokenId), 0);
+    }
+
     function test_ResetNullifier_RevertNotOwner() public {
         vm.prank(user1);
         vm.expectRevert(abi.encodeWithSelector(Ownable.OwnableUnauthorizedAccount.selector, user1));

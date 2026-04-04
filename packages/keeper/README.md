@@ -1,6 +1,6 @@
 # Curyo — Keeper (Round Resolution Service)
 
-Stateless service that reveals committed votes via `revealVoteByCommitKey()` after each epoch, settles eligible rounds via `settleRound()`, finalizes `RevealFailed` rounds after the last grace deadline, sweeps unrevealed-vote cleanup via `processUnrevealedVotes()`, cancels expired rounds, marks dormant content, and can optionally sweep frontend fees for a hosted MCP/frontend operator. In the redeployed tlock model, it also performs deeper AGE/tlock stanza checks against the stored drand metadata before decrypting. Designed for horizontal scaling — multiple instances run independently for redundancy.
+Stateless service that reveals committed votes via `revealVoteByCommitKey()` after each epoch, settles eligible rounds via `settleRound()`, finalizes `RevealFailed` rounds after the last grace deadline, sweeps unrevealed-vote cleanup via `processUnrevealedVotes()`, cancels expired rounds, marks dormant content, and can optionally sweep frontend fees when the keeper wallet is also the frontend operator. In the redeployed tlock model, it also performs deeper AGE/tlock stanza checks against the stored drand metadata before decrypting. Designed for horizontal scaling — multiple instances run independently for redundancy.
 
 ## Quick Start
 
@@ -51,7 +51,7 @@ Only set address vars on unsupported chains.
 | `MIN_GAS_BALANCE_WEI` | `10000000000000000` | Warning threshold for keeper wallet gas balance |
 | `MAX_GAS_PER_TX` | `2000000` | Per-transaction gas cap for keeper writes |
 | `KEEPER_FRONTEND_FEE_ENABLED` | `false` | Enable hosted frontend fee sweep mode |
-| `KEEPER_FRONTEND_ADDRESS` | keeper wallet address | Optional frontend/operator address to claim for |
+| `KEEPER_FRONTEND_ADDRESS` | keeper wallet address | Optional frontend/operator address to claim for. Must match the keeper wallet for fee sweeps to run. |
 | `KEEPER_FRONTEND_FEE_LOOKBACK_ROUNDS` | `8` | Number of recent rounds per content item to inspect for frontend fees |
 | `KEEPER_FRONTEND_FEE_WITHDRAW` | `true` | Withdraw accumulated `FrontendRegistry` fees after claiming round fees |
 
@@ -60,7 +60,7 @@ Only set address vars on unsupported chains.
 ```bash
 # From the monorepo root (the image needs the shared @curyo/contracts workspace)
 docker build -f packages/keeper/Dockerfile -t curyo-keeper .
-docker run --env-file packages/keeper/.env.local -p 9090:9090 curyo-keeper
+docker run --env-file packages/keeper/.env.local -e METRICS_BIND_ADDRESS=0.0.0.0 -p 9090:9090 curyo-keeper
 ```
 
 ## Monitoring

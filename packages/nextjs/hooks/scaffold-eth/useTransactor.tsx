@@ -3,8 +3,9 @@ import { Hash, SendTransactionParameters, TransactionReceipt, WalletClient } fro
 import { Config, useConfig, useWalletClient } from "wagmi";
 import { getPublicClient } from "wagmi/actions";
 import { SendTransactionMutate } from "wagmi/query";
+import { TransactionStatusCallout } from "~~/components/shared/TransactionStatusCallout";
 import { FREE_TRANSACTION_ALLOWANCE_QUERY_KEY } from "~~/hooks/useFreeTransactionAllowance";
-import { TRANSACTION_CONFIRMING_MESSAGE, getSubmittingTransactionMessage } from "~~/lib/ui/transactionStatusCopy";
+import { TRANSACTION_CONFIRMING_STATUS, getSubmittingTransactionStatus } from "~~/lib/ui/transactionStatusCopy";
 import scaffoldConfig from "~~/scaffold.config";
 import { AllowedChainIds, getBlockExplorerTxLink, notification } from "~~/utils/scaffold-eth";
 import { TransactorFuncOptions, getParsedErrorWithAllAbis } from "~~/utils/scaffold-eth/contract";
@@ -74,8 +75,13 @@ export const useTransactor = (_walletClient?: WalletClient): TransactionFunc => 
         throw new Error("Public client not available for this chain");
       }
 
+      const submittingStatus = getSubmittingTransactionStatus("transaction");
       notificationId = notification.loading(
-        <TxnNotification message={getSubmittingTransactionMessage("transaction")} />,
+        <TransactionStatusCallout
+          variant="toast"
+          title={submittingStatus.title}
+          description={submittingStatus.description}
+        />,
       );
       if (typeof tx === "function") {
         // Tx is already prepared by the caller
@@ -106,7 +112,12 @@ export const useTransactor = (_walletClient?: WalletClient): TransactionFunc => 
       }
 
       notificationId = notification.loading(
-        <TxnNotification message={TRANSACTION_CONFIRMING_MESSAGE} blockExplorerLink={blockExplorerTxURL} />,
+        <TransactionStatusCallout
+          variant="toast"
+          title={TRANSACTION_CONFIRMING_STATUS.title}
+          description={TRANSACTION_CONFIRMING_STATUS.description}
+          blockExplorerLink={blockExplorerTxURL}
+        />,
       );
 
       transactionReceipt = await publicClient.waitForTransactionReceipt({

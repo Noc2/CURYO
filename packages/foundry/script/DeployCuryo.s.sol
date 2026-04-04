@@ -62,6 +62,8 @@ contract DeployCuryo is ScaffoldETHDeploy {
         // Production: timelock governs upgrades, config, and treasury from launch
         address governance;
         address governorAddr;
+        TimelockController timelock;
+        CuryoGovernor governor;
 
         if (isLocalDev) {
             governance = deployer;
@@ -74,7 +76,7 @@ contract DeployCuryo is ScaffoldETHDeploy {
             address[] memory executors = new address[](1);
             executors[0] = address(0); // Anyone can execute after delay
 
-            TimelockController timelock = new TimelockController(
+            timelock = new TimelockController(
                 TIMELOCK_MIN_DELAY,
                 proposers,
                 executors,
@@ -92,8 +94,7 @@ contract DeployCuryo is ScaffoldETHDeploy {
         // 3. Deploy CuryoGovernor (production only)
         //    Excluded holders are set later via initializePools() after protocol contracts are deployed.
         if (!isLocalDev) {
-            CuryoGovernor governor =
-                new CuryoGovernor(IVotes(address(crepToken)), TimelockController(payable(governance)));
+            governor = new CuryoGovernor(IVotes(address(crepToken)), TimelockController(payable(governance)));
             governorAddr = address(governor);
             console.log("CuryoGovernor deployed at:", governorAddr);
 
@@ -182,6 +183,7 @@ contract DeployCuryo is ScaffoldETHDeploy {
 
         // 8. Wire contracts together (deployer uses temporary config/admin roles where needed)
         registry.setVotingEngine(address(votingEngine));
+        registry.setProtocolConfig(address(votingEngine.protocolConfig()));
         registry.setCategoryRegistry(address(categoryRegistry));
         ProtocolConfig(address(votingEngine.protocolConfig())).setRewardDistributor(address(rewardDistributor));
         ProtocolConfig(address(votingEngine.protocolConfig())).setFrontendRegistry(address(frontendRegistry));
@@ -204,15 +206,12 @@ contract DeployCuryo is ScaffoldETHDeploy {
         // 10. Set content voting contracts on token (for governance lock bypass)
         crepToken.setContentVotingContracts(address(votingEngine), address(registry));
 
-        // 11. Set treasury, cancellation fee sink, and configure round parameters
-        registry.setBonusPool(governance);
-        registry.setTreasury(governance);
-        ProtocolConfig(address(votingEngine.protocolConfig())).setTreasury(governance);
+        // 11. Configure round parameters
         ProtocolConfig(address(votingEngine.protocolConfig())).setConfig(20 minutes, 7 days, 3, 1000); // epochDuration, maxDuration, minVoters, maxVoters
 
         // 12. Fund consensus reserve (pre-funded reserve for unanimous round rewards)
         // Local dev: deployer has DEFAULT_ADMIN_ROLE and needs to grant MINTER_ROLE
-        // Production: deployer already has MINTER_ROLE from constructor
+        // Production: deployer gets only MINTER_ROLE + CONFIG_ROLE from constructor
         if (isLocalDev) {
             crepToken.grantRole(crepToken.MINTER_ROLE(), deployer);
         }
@@ -339,13 +338,12 @@ contract DeployCuryo is ScaffoldETHDeploy {
         // 13. Renounce deployer's temporary roles
         // Local dev: deployer IS governance, so don't renounce (need roles for dev)
         if (!isLocalDev) {
-            // Grant MINTER_ROLE to dev faucet account (whitelisted testnets only)
+            // Production/testnet dev faucet grants now require governance after deployment.
             address devFaucet = vm.envOr("DEV_FAUCET_ADDRESS", address(0));
             bool isTestnet = (block.chainid == 44787 || block.chainid == 11142220);
             if (devFaucet != address(0) && isTestnet) {
-                crepToken.grantRole(crepToken.MINTER_ROLE(), devFaucet);
-                voterIdNFT.addMinter(devFaucet);
-                console.log("Granted MINTER_ROLE to dev faucet:", devFaucet);
+                console.log("DEV_FAUCET_ADDRESS configured; grant MINTER_ROLE/VoterId minter via governance post-deploy:");
+                console.logAddress(devFaucet);
             }
 
             // Renounce all deployer roles on CuryoReputation
@@ -356,9 +354,7 @@ contract DeployCuryo is ScaffoldETHDeploy {
 
             // Renounce deployer config/admin roles on protocol contracts
             registry.renounceRole(registry.CONFIG_ROLE(), deployer);
-            registry.renounceRole(registry.TREASURY_ROLE(), deployer);
             protocolConfig.renounceRole(protocolConfig.CONFIG_ROLE(), deployer);
-            protocolConfig.renounceRole(protocolConfig.TREASURY_ROLE(), deployer);
 
             // Renounce ADMIN_ROLE on registries
             frontendRegistry.renounceRole(frontendRegistry.ADMIN_ROLE(), deployer);
@@ -401,6 +397,12 @@ contract DeployCuryo is ScaffoldETHDeploy {
         }
 
         // 14. Register addresses for scaffold-eth ABI generation
+        if (address(timelock) != address(0)) {
+            deployments.push(Deployment("TimelockController", address(timelock)));
+        }
+        if (address(governor) != address(0)) {
+            deployments.push(Deployment("CuryoGovernor", address(governor)));
+        }
         deployments.push(Deployment("CuryoReputation", address(crepToken)));
         deployments.push(Deployment("FrontendRegistry", address(frontendRegistryProxy)));
         deployments.push(Deployment("ProfileRegistry", address(profileRegistryProxy)));

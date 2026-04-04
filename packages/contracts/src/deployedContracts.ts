@@ -7,7 +7,7 @@ import type { GenericContractsDeclaration } from "./types";
 const deployedContracts: GenericContractsDeclaration = {
   31337: {
     CategoryFeeLib: {
-      address: "0x6d8576ea4eea7f165e3c23e91127ad73692c4047",
+      address: "0x516c2cb9de208549dae16c2e16925e1bd67595cb",
       abi: [
         {
           type: "error",
@@ -25,7 +25,7 @@ const deployedContracts: GenericContractsDeclaration = {
       deployedOnBlock: 1,
     },
     VotePreflightLib: {
-      address: "0x629d41f6d59a345054c031c688346f462040b2fc",
+      address: "0x2a115f5e007b9cdf29355e930f5031918b12fc16",
       abi: [
         {
           type: "function",
@@ -170,6 +170,11 @@ const deployedContracts: GenericContractsDeclaration = {
               internalType: "uint256",
             },
             {
+              name: "roundReferenceRatingBps",
+              type: "uint16",
+              internalType: "uint16",
+            },
+            {
               name: "targetRound",
               type: "uint64",
               internalType: "uint64",
@@ -209,6 +214,11 @@ const deployedContracts: GenericContractsDeclaration = {
               name: "contentId",
               type: "uint256",
               internalType: "uint256",
+            },
+            {
+              name: "roundReferenceRatingBps",
+              type: "uint16",
+              internalType: "uint16",
             },
             {
               name: "commitHash",
@@ -340,16 +350,11 @@ const deployedContracts: GenericContractsDeclaration = {
       deployedOnBlock: 4,
     },
     SubmitterStakeLib: {
-      address: "0xb2c7fb497d13b4a4f0c66da2c09d80dbaeaa92f6",
+      address: "0x730cc91b82faf57b915a05a783bb53099e1880e8",
       abi: [
         {
           type: "error",
           name: "ContentNotFound",
-          inputs: [],
-        },
-        {
-          type: "error",
-          name: "MilestoneZeroSnapshotMissing",
           inputs: [],
         },
       ],
@@ -357,8 +362,153 @@ const deployedContracts: GenericContractsDeclaration = {
       deployedOnBlock: 5,
     },
     RoundSettlementSideEffectsLib: {
-      address: "0x3e8da6e7328564eb8310734cef5adb706eca9fcb",
-      abi: [],
+      address: "0x50854efaac108d2f1b783402ced21f9d9fb4b18a",
+      abi: [
+        {
+          type: "error",
+          name: "PRBMath_MulDiv18_Overflow",
+          inputs: [
+            {
+              name: "x",
+              type: "uint256",
+              internalType: "uint256",
+            },
+            {
+              name: "y",
+              type: "uint256",
+              internalType: "uint256",
+            },
+          ],
+        },
+        {
+          type: "error",
+          name: "PRBMath_MulDiv_Overflow",
+          inputs: [
+            {
+              name: "x",
+              type: "uint256",
+              internalType: "uint256",
+            },
+            {
+              name: "y",
+              type: "uint256",
+              internalType: "uint256",
+            },
+            {
+              name: "denominator",
+              type: "uint256",
+              internalType: "uint256",
+            },
+          ],
+        },
+        {
+          type: "error",
+          name: "PRBMath_SD59x18_Abs_MinSD59x18",
+          inputs: [],
+        },
+        {
+          type: "error",
+          name: "PRBMath_SD59x18_Convert_Overflow",
+          inputs: [
+            {
+              name: "x",
+              type: "int256",
+              internalType: "int256",
+            },
+          ],
+        },
+        {
+          type: "error",
+          name: "PRBMath_SD59x18_Convert_Underflow",
+          inputs: [
+            {
+              name: "x",
+              type: "int256",
+              internalType: "int256",
+            },
+          ],
+        },
+        {
+          type: "error",
+          name: "PRBMath_SD59x18_Div_InputTooSmall",
+          inputs: [],
+        },
+        {
+          type: "error",
+          name: "PRBMath_SD59x18_Div_Overflow",
+          inputs: [
+            {
+              name: "x",
+              type: "int256",
+              internalType: "SD59x18",
+            },
+            {
+              name: "y",
+              type: "int256",
+              internalType: "SD59x18",
+            },
+          ],
+        },
+        {
+          type: "error",
+          name: "PRBMath_SD59x18_Exp2_InputTooBig",
+          inputs: [
+            {
+              name: "x",
+              type: "int256",
+              internalType: "SD59x18",
+            },
+          ],
+        },
+        {
+          type: "error",
+          name: "PRBMath_SD59x18_Exp_InputTooBig",
+          inputs: [
+            {
+              name: "x",
+              type: "int256",
+              internalType: "SD59x18",
+            },
+          ],
+        },
+        {
+          type: "error",
+          name: "PRBMath_SD59x18_Log_InputTooSmall",
+          inputs: [
+            {
+              name: "x",
+              type: "int256",
+              internalType: "SD59x18",
+            },
+          ],
+        },
+        {
+          type: "error",
+          name: "PRBMath_SD59x18_Mul_InputTooSmall",
+          inputs: [],
+        },
+        {
+          type: "error",
+          name: "PRBMath_SD59x18_Mul_Overflow",
+          inputs: [
+            {
+              name: "x",
+              type: "int256",
+              internalType: "SD59x18",
+            },
+            {
+              name: "y",
+              type: "int256",
+              internalType: "SD59x18",
+            },
+          ],
+        },
+        {
+          type: "error",
+          name: "RatingMathOverflow",
+          inputs: [],
+        },
+      ],
       inheritedFunctions: {},
       deployedOnBlock: 6,
     },
@@ -2128,6 +2278,71 @@ const deployedContracts: GenericContractsDeclaration = {
         },
         {
           type: "function",
+          name: "DEFAULT_CONFIDENCE_MASS_INITIAL",
+          inputs: [],
+          outputs: [
+            {
+              name: "",
+              type: "uint256",
+              internalType: "uint256",
+            },
+          ],
+          stateMutability: "view",
+        },
+        {
+          type: "function",
+          name: "DEFAULT_MIN_SLASH_EVIDENCE",
+          inputs: [],
+          outputs: [
+            {
+              name: "",
+              type: "uint256",
+              internalType: "uint256",
+            },
+          ],
+          stateMutability: "view",
+        },
+        {
+          type: "function",
+          name: "DEFAULT_MIN_SLASH_LOW_DURATION",
+          inputs: [],
+          outputs: [
+            {
+              name: "",
+              type: "uint48",
+              internalType: "uint48",
+            },
+          ],
+          stateMutability: "view",
+        },
+        {
+          type: "function",
+          name: "DEFAULT_MIN_SLASH_SETTLED_ROUNDS",
+          inputs: [],
+          outputs: [
+            {
+              name: "",
+              type: "uint16",
+              internalType: "uint16",
+            },
+          ],
+          stateMutability: "view",
+        },
+        {
+          type: "function",
+          name: "DEFAULT_SLASH_THRESHOLD_BPS",
+          inputs: [],
+          outputs: [
+            {
+              name: "",
+              type: "uint16",
+              internalType: "uint16",
+            },
+          ],
+          stateMutability: "view",
+        },
+        {
+          type: "function",
           name: "DORMANCY_PERIOD",
           inputs: [],
           outputs: [
@@ -2407,6 +2622,40 @@ const deployedContracts: GenericContractsDeclaration = {
         },
         {
           type: "function",
+          name: "contentSlashConfigSnapshot",
+          inputs: [
+            {
+              name: "",
+              type: "uint256",
+              internalType: "uint256",
+            },
+          ],
+          outputs: [
+            {
+              name: "slashThresholdBps",
+              type: "uint16",
+              internalType: "uint16",
+            },
+            {
+              name: "minSlashSettledRounds",
+              type: "uint16",
+              internalType: "uint16",
+            },
+            {
+              name: "minSlashLowDuration",
+              type: "uint48",
+              internalType: "uint48",
+            },
+            {
+              name: "minSlashEvidence",
+              type: "uint256",
+              internalType: "uint256",
+            },
+          ],
+          stateMutability: "view",
+        },
+        {
+          type: "function",
           name: "contents",
           inputs: [
             {
@@ -2513,6 +2762,25 @@ const deployedContracts: GenericContractsDeclaration = {
         },
         {
           type: "function",
+          name: "getConservativeRating",
+          inputs: [
+            {
+              name: "contentId",
+              type: "uint256",
+              internalType: "uint256",
+            },
+          ],
+          outputs: [
+            {
+              name: "",
+              type: "uint16",
+              internalType: "uint16",
+            },
+          ],
+          stateMutability: "view",
+        },
+        {
+          type: "function",
           name: "getContentSubmitter",
           inputs: [
             {
@@ -2532,6 +2800,86 @@ const deployedContracts: GenericContractsDeclaration = {
         },
         {
           type: "function",
+          name: "getRating",
+          inputs: [
+            {
+              name: "contentId",
+              type: "uint256",
+              internalType: "uint256",
+            },
+          ],
+          outputs: [
+            {
+              name: "",
+              type: "uint16",
+              internalType: "uint16",
+            },
+          ],
+          stateMutability: "view",
+        },
+        {
+          type: "function",
+          name: "getRatingState",
+          inputs: [
+            {
+              name: "contentId",
+              type: "uint256",
+              internalType: "uint256",
+            },
+          ],
+          outputs: [
+            {
+              name: "state",
+              type: "tuple",
+              internalType: "struct RatingLib.RatingState",
+              components: [
+                {
+                  name: "ratingLogitX18",
+                  type: "int128",
+                  internalType: "int128",
+                },
+                {
+                  name: "confidenceMass",
+                  type: "uint128",
+                  internalType: "uint128",
+                },
+                {
+                  name: "effectiveEvidence",
+                  type: "uint128",
+                  internalType: "uint128",
+                },
+                {
+                  name: "settledRounds",
+                  type: "uint32",
+                  internalType: "uint32",
+                },
+                {
+                  name: "ratingBps",
+                  type: "uint16",
+                  internalType: "uint16",
+                },
+                {
+                  name: "conservativeRatingBps",
+                  type: "uint16",
+                  internalType: "uint16",
+                },
+                {
+                  name: "lastUpdatedAt",
+                  type: "uint48",
+                  internalType: "uint48",
+                },
+                {
+                  name: "lowSince",
+                  type: "uint48",
+                  internalType: "uint48",
+                },
+              ],
+            },
+          ],
+          stateMutability: "view",
+        },
+        {
+          type: "function",
           name: "getRoleAdmin",
           inputs: [
             {
@@ -2545,6 +2893,47 @@ const deployedContracts: GenericContractsDeclaration = {
               name: "",
               type: "bytes32",
               internalType: "bytes32",
+            },
+          ],
+          stateMutability: "view",
+        },
+        {
+          type: "function",
+          name: "getSlashConfigForContent",
+          inputs: [
+            {
+              name: "contentId",
+              type: "uint256",
+              internalType: "uint256",
+            },
+          ],
+          outputs: [
+            {
+              name: "slashConfig",
+              type: "tuple",
+              internalType: "struct RatingLib.SlashConfig",
+              components: [
+                {
+                  name: "slashThresholdBps",
+                  type: "uint16",
+                  internalType: "uint16",
+                },
+                {
+                  name: "minSlashSettledRounds",
+                  type: "uint16",
+                  internalType: "uint16",
+                },
+                {
+                  name: "minSlashLowDuration",
+                  type: "uint48",
+                  internalType: "uint48",
+                },
+                {
+                  name: "minSlashEvidence",
+                  type: "uint256",
+                  internalType: "uint256",
+                },
+              ],
             },
           ],
           stateMutability: "view",
@@ -2683,6 +3072,25 @@ const deployedContracts: GenericContractsDeclaration = {
         {
           type: "function",
           name: "isDormancyEligible",
+          inputs: [
+            {
+              name: "contentId",
+              type: "uint256",
+              internalType: "uint256",
+            },
+          ],
+          outputs: [
+            {
+              name: "",
+              type: "bool",
+              internalType: "bool",
+            },
+          ],
+          stateMutability: "view",
+        },
+        {
+          type: "function",
+          name: "isSubmitterStakeSlashable",
           inputs: [
             {
               name: "contentId",
@@ -2923,6 +3331,73 @@ const deployedContracts: GenericContractsDeclaration = {
         },
         {
           type: "function",
+          name: "protocolConfig",
+          inputs: [],
+          outputs: [
+            {
+              name: "",
+              type: "address",
+              internalType: "contract ProtocolConfig",
+            },
+          ],
+          stateMutability: "view",
+        },
+        {
+          type: "function",
+          name: "ratingState",
+          inputs: [
+            {
+              name: "",
+              type: "uint256",
+              internalType: "uint256",
+            },
+          ],
+          outputs: [
+            {
+              name: "ratingLogitX18",
+              type: "int128",
+              internalType: "int128",
+            },
+            {
+              name: "confidenceMass",
+              type: "uint128",
+              internalType: "uint128",
+            },
+            {
+              name: "effectiveEvidence",
+              type: "uint128",
+              internalType: "uint128",
+            },
+            {
+              name: "settledRounds",
+              type: "uint32",
+              internalType: "uint32",
+            },
+            {
+              name: "ratingBps",
+              type: "uint16",
+              internalType: "uint16",
+            },
+            {
+              name: "conservativeRatingBps",
+              type: "uint16",
+              internalType: "uint16",
+            },
+            {
+              name: "lastUpdatedAt",
+              type: "uint48",
+              internalType: "uint48",
+            },
+            {
+              name: "lowSince",
+              type: "uint48",
+              internalType: "uint48",
+            },
+          ],
+          stateMutability: "view",
+        },
+        {
+          type: "function",
           name: "recordMeaningfulActivity",
           inputs: [
             {
@@ -3122,6 +3597,19 @@ const deployedContracts: GenericContractsDeclaration = {
           inputs: [
             {
               name: "_participationPool",
+              type: "address",
+              internalType: "address",
+            },
+          ],
+          outputs: [],
+          stateMutability: "nonpayable",
+        },
+        {
+          type: "function",
+          name: "setProtocolConfig",
+          inputs: [
+            {
+              name: "_protocolConfig",
               type: "address",
               internalType: "address",
             },
@@ -3487,6 +3975,76 @@ const deployedContracts: GenericContractsDeclaration = {
         },
         {
           type: "function",
+          name: "updateRatingState",
+          inputs: [
+            {
+              name: "contentId",
+              type: "uint256",
+              internalType: "uint256",
+            },
+            {
+              name: "roundId",
+              type: "uint256",
+              internalType: "uint256",
+            },
+            {
+              name: "referenceRatingBps",
+              type: "uint16",
+              internalType: "uint16",
+            },
+            {
+              name: "nextState",
+              type: "tuple",
+              internalType: "struct RatingLib.RatingState",
+              components: [
+                {
+                  name: "ratingLogitX18",
+                  type: "int128",
+                  internalType: "int128",
+                },
+                {
+                  name: "confidenceMass",
+                  type: "uint128",
+                  internalType: "uint128",
+                },
+                {
+                  name: "effectiveEvidence",
+                  type: "uint128",
+                  internalType: "uint128",
+                },
+                {
+                  name: "settledRounds",
+                  type: "uint32",
+                  internalType: "uint32",
+                },
+                {
+                  name: "ratingBps",
+                  type: "uint16",
+                  internalType: "uint16",
+                },
+                {
+                  name: "conservativeRatingBps",
+                  type: "uint16",
+                  internalType: "uint16",
+                },
+                {
+                  name: "lastUpdatedAt",
+                  type: "uint48",
+                  internalType: "uint48",
+                },
+                {
+                  name: "lowSince",
+                  type: "uint48",
+                  internalType: "uint48",
+                },
+              ],
+            },
+          ],
+          outputs: [],
+          stateMutability: "nonpayable",
+        },
+        {
+          type: "function",
           name: "voterIdNFT",
           inputs: [],
           outputs: [
@@ -3702,6 +4260,80 @@ const deployedContracts: GenericContractsDeclaration = {
               type: "address",
               indexed: false,
               internalType: "address",
+            },
+          ],
+          anonymous: false,
+        },
+        {
+          type: "event",
+          name: "ProtocolConfigUpdated",
+          inputs: [
+            {
+              name: "protocolConfig",
+              type: "address",
+              indexed: false,
+              internalType: "address",
+            },
+          ],
+          anonymous: false,
+        },
+        {
+          type: "event",
+          name: "RatingStateUpdated",
+          inputs: [
+            {
+              name: "contentId",
+              type: "uint256",
+              indexed: true,
+              internalType: "uint256",
+            },
+            {
+              name: "roundId",
+              type: "uint256",
+              indexed: true,
+              internalType: "uint256",
+            },
+            {
+              name: "referenceRatingBps",
+              type: "uint16",
+              indexed: false,
+              internalType: "uint16",
+            },
+            {
+              name: "oldRatingBps",
+              type: "uint16",
+              indexed: false,
+              internalType: "uint16",
+            },
+            {
+              name: "newRatingBps",
+              type: "uint16",
+              indexed: false,
+              internalType: "uint16",
+            },
+            {
+              name: "conservativeRatingBps",
+              type: "uint16",
+              indexed: false,
+              internalType: "uint16",
+            },
+            {
+              name: "confidenceMass",
+              type: "uint256",
+              indexed: false,
+              internalType: "uint256",
+            },
+            {
+              name: "effectiveEvidence",
+              type: "uint256",
+              indexed: false,
+              internalType: "uint256",
+            },
+            {
+              name: "settledRounds",
+              type: "uint32",
+              indexed: false,
+              internalType: "uint32",
             },
           ],
           anonymous: false,
@@ -4069,6 +4701,81 @@ const deployedContracts: GenericContractsDeclaration = {
         },
         {
           type: "error",
+          name: "PRBMath_MulDiv_Overflow",
+          inputs: [
+            {
+              name: "x",
+              type: "uint256",
+              internalType: "uint256",
+            },
+            {
+              name: "y",
+              type: "uint256",
+              internalType: "uint256",
+            },
+            {
+              name: "denominator",
+              type: "uint256",
+              internalType: "uint256",
+            },
+          ],
+        },
+        {
+          type: "error",
+          name: "PRBMath_SD59x18_Convert_Overflow",
+          inputs: [
+            {
+              name: "x",
+              type: "int256",
+              internalType: "int256",
+            },
+          ],
+        },
+        {
+          type: "error",
+          name: "PRBMath_SD59x18_Convert_Underflow",
+          inputs: [
+            {
+              name: "x",
+              type: "int256",
+              internalType: "int256",
+            },
+          ],
+        },
+        {
+          type: "error",
+          name: "PRBMath_SD59x18_Div_InputTooSmall",
+          inputs: [],
+        },
+        {
+          type: "error",
+          name: "PRBMath_SD59x18_Div_Overflow",
+          inputs: [
+            {
+              name: "x",
+              type: "int256",
+              internalType: "SD59x18",
+            },
+            {
+              name: "y",
+              type: "int256",
+              internalType: "SD59x18",
+            },
+          ],
+        },
+        {
+          type: "error",
+          name: "PRBMath_SD59x18_Log_InputTooSmall",
+          inputs: [
+            {
+              name: "x",
+              type: "int256",
+              internalType: "SD59x18",
+            },
+          ],
+        },
+        {
+          type: "error",
           name: "ReentrancyGuardReentrantCall",
           inputs: [],
         },
@@ -4143,45 +4850,6 @@ const deployedContracts: GenericContractsDeclaration = {
         },
         {
           type: "function",
-          name: "MAX_CIPHERTEXT_SIZE",
-          inputs: [],
-          outputs: [
-            {
-              name: "",
-              type: "uint256",
-              internalType: "uint256",
-            },
-          ],
-          stateMutability: "view",
-        },
-        {
-          type: "function",
-          name: "MAX_STAKE",
-          inputs: [],
-          outputs: [
-            {
-              name: "",
-              type: "uint256",
-              internalType: "uint256",
-            },
-          ],
-          stateMutability: "view",
-        },
-        {
-          type: "function",
-          name: "MIN_STAKE",
-          inputs: [],
-          outputs: [
-            {
-              name: "",
-              type: "uint256",
-              internalType: "uint256",
-            },
-          ],
-          stateMutability: "view",
-        },
-        {
-          type: "function",
           name: "PAUSER_ROLE",
           inputs: [],
           outputs: [
@@ -4189,19 +4857,6 @@ const deployedContracts: GenericContractsDeclaration = {
               name: "",
               type: "bytes32",
               internalType: "bytes32",
-            },
-          ],
-          stateMutability: "view",
-        },
-        {
-          type: "function",
-          name: "VOTE_COOLDOWN",
-          inputs: [],
-          outputs: [
-            {
-              name: "",
-              type: "uint256",
-              internalType: "uint256",
             },
           ],
           stateMutability: "view",
@@ -4286,7 +4941,7 @@ const deployedContracts: GenericContractsDeclaration = {
         },
         {
           type: "function",
-          name: "commitRevealAvailableAt",
+          name: "commitVote",
           inputs: [
             {
               name: "contentId",
@@ -4294,24 +4949,38 @@ const deployedContracts: GenericContractsDeclaration = {
               internalType: "uint256",
             },
             {
-              name: "roundId",
-              type: "uint256",
-              internalType: "uint256",
+              name: "targetRound",
+              type: "uint64",
+              internalType: "uint64",
             },
             {
-              name: "commitKey",
+              name: "drandChainHash",
               type: "bytes32",
               internalType: "bytes32",
             },
-          ],
-          outputs: [
             {
-              name: "",
+              name: "commitHash",
+              type: "bytes32",
+              internalType: "bytes32",
+            },
+            {
+              name: "ciphertext",
+              type: "bytes",
+              internalType: "bytes",
+            },
+            {
+              name: "stakeAmount",
               type: "uint256",
               internalType: "uint256",
             },
+            {
+              name: "frontend",
+              type: "address",
+              internalType: "address",
+            },
           ],
-          stateMutability: "view",
+          outputs: [],
+          stateMutability: "nonpayable",
         },
         {
           type: "function",
@@ -4321,6 +4990,11 @@ const deployedContracts: GenericContractsDeclaration = {
               name: "contentId",
               type: "uint256",
               internalType: "uint256",
+            },
+            {
+              name: "roundReferenceRatingBps",
+              type: "uint16",
+              internalType: "uint16",
             },
             {
               name: "targetRound",
@@ -4445,19 +5119,6 @@ const deployedContracts: GenericContractsDeclaration = {
         },
         {
           type: "function",
-          name: "crepToken",
-          inputs: [],
-          outputs: [
-            {
-              name: "",
-              type: "address",
-              internalType: "contract IERC20",
-            },
-          ],
-          stateMutability: "view",
-        },
-        {
-          type: "function",
           name: "currentRoundId",
           inputs: [
             {
@@ -4562,35 +5223,6 @@ const deployedContracts: GenericContractsDeclaration = {
               name: "account",
               type: "address",
               internalType: "address",
-            },
-          ],
-          outputs: [
-            {
-              name: "",
-              type: "bool",
-              internalType: "bool",
-            },
-          ],
-          stateMutability: "view",
-        },
-        {
-          type: "function",
-          name: "hasTokenIdCommitted",
-          inputs: [
-            {
-              name: "",
-              type: "uint256",
-              internalType: "uint256",
-            },
-            {
-              name: "",
-              type: "uint256",
-              internalType: "uint256",
-            },
-            {
-              name: "",
-              type: "uint256",
-              internalType: "uint256",
             },
           ],
           outputs: [
@@ -4734,6 +5366,25 @@ const deployedContracts: GenericContractsDeclaration = {
         },
         {
           type: "function",
+          name: "previewCommitReferenceRatingBps",
+          inputs: [
+            {
+              name: "contentId",
+              type: "uint256",
+              internalType: "uint256",
+            },
+          ],
+          outputs: [
+            {
+              name: "",
+              type: "uint16",
+              internalType: "uint16",
+            },
+          ],
+          stateMutability: "view",
+        },
+        {
+          type: "function",
           name: "processUnrevealedVotes",
           inputs: [
             {
@@ -4769,19 +5420,6 @@ const deployedContracts: GenericContractsDeclaration = {
               name: "",
               type: "address",
               internalType: "contract ProtocolConfig",
-            },
-          ],
-          stateMutability: "view",
-        },
-        {
-          type: "function",
-          name: "registry",
-          inputs: [],
-          outputs: [
-            {
-              name: "",
-              type: "address",
-              internalType: "contract ContentRegistry",
             },
           ],
           stateMutability: "view",
@@ -5597,6 +6235,31 @@ const deployedContracts: GenericContractsDeclaration = {
         },
         {
           type: "event",
+          name: "RoundReferenceSnapshotted",
+          inputs: [
+            {
+              name: "contentId",
+              type: "uint256",
+              indexed: true,
+              internalType: "uint256",
+            },
+            {
+              name: "roundId",
+              type: "uint256",
+              indexed: true,
+              internalType: "uint256",
+            },
+            {
+              name: "roundReferenceRatingBps",
+              type: "uint16",
+              indexed: false,
+              internalType: "uint16",
+            },
+          ],
+          anonymous: false,
+        },
+        {
+          type: "event",
           name: "RoundRevealFailed",
           inputs: [
             {
@@ -5729,6 +6392,12 @@ const deployedContracts: GenericContractsDeclaration = {
               type: "bytes32",
               indexed: false,
               internalType: "bytes32",
+            },
+            {
+              name: "roundReferenceRatingBps",
+              type: "uint16",
+              indexed: false,
+              internalType: "uint16",
             },
             {
               name: "targetRound",
@@ -5931,6 +6600,11 @@ const deployedContracts: GenericContractsDeclaration = {
         {
           type: "error",
           name: "ReentrancyGuardReentrantCall",
+          inputs: [],
+        },
+        {
+          type: "error",
+          name: "ReferenceRatingMismatch",
           inputs: [],
         },
         {
@@ -9240,6 +9914,86 @@ const deployedContracts: GenericContractsDeclaration = {
         },
         {
           type: "function",
+          name: "getRatingConfig",
+          inputs: [],
+          outputs: [
+            {
+              name: "cfg",
+              type: "tuple",
+              internalType: "struct RatingLib.RatingConfig",
+              components: [
+                {
+                  name: "smoothingAlpha",
+                  type: "uint256",
+                  internalType: "uint256",
+                },
+                {
+                  name: "smoothingBeta",
+                  type: "uint256",
+                  internalType: "uint256",
+                },
+                {
+                  name: "observationBetaX18",
+                  type: "uint256",
+                  internalType: "uint256",
+                },
+                {
+                  name: "confidenceMassInitial",
+                  type: "uint256",
+                  internalType: "uint256",
+                },
+                {
+                  name: "confidenceMassMin",
+                  type: "uint256",
+                  internalType: "uint256",
+                },
+                {
+                  name: "confidenceMassMax",
+                  type: "uint256",
+                  internalType: "uint256",
+                },
+                {
+                  name: "confidenceGainBps",
+                  type: "uint16",
+                  internalType: "uint16",
+                },
+                {
+                  name: "confidenceReopenBps",
+                  type: "uint16",
+                  internalType: "uint16",
+                },
+                {
+                  name: "surpriseReferenceX18",
+                  type: "uint256",
+                  internalType: "uint256",
+                },
+                {
+                  name: "maxDeltaLogitX18",
+                  type: "uint256",
+                  internalType: "uint256",
+                },
+                {
+                  name: "maxAbsLogitX18",
+                  type: "uint256",
+                  internalType: "uint256",
+                },
+                {
+                  name: "conservativePenaltyMaxBps",
+                  type: "uint16",
+                  internalType: "uint16",
+                },
+                {
+                  name: "conservativePenaltyMinBps",
+                  type: "uint16",
+                  internalType: "uint16",
+                },
+              ],
+            },
+          ],
+          stateMutability: "view",
+        },
+        {
+          type: "function",
           name: "getRoleAdmin",
           inputs: [
             {
@@ -9253,6 +10007,41 @@ const deployedContracts: GenericContractsDeclaration = {
               name: "",
               type: "bytes32",
               internalType: "bytes32",
+            },
+          ],
+          stateMutability: "view",
+        },
+        {
+          type: "function",
+          name: "getSlashConfig",
+          inputs: [],
+          outputs: [
+            {
+              name: "cfg",
+              type: "tuple",
+              internalType: "struct RatingLib.SlashConfig",
+              components: [
+                {
+                  name: "slashThresholdBps",
+                  type: "uint16",
+                  internalType: "uint16",
+                },
+                {
+                  name: "minSlashSettledRounds",
+                  type: "uint16",
+                  internalType: "uint16",
+                },
+                {
+                  name: "minSlashLowDuration",
+                  type: "uint48",
+                  internalType: "uint48",
+                },
+                {
+                  name: "minSlashEvidence",
+                  type: "uint256",
+                  internalType: "uint256",
+                },
+              ],
             },
           ],
           stateMutability: "view",
@@ -9349,6 +10138,79 @@ const deployedContracts: GenericContractsDeclaration = {
               name: "",
               type: "address",
               internalType: "address",
+            },
+          ],
+          stateMutability: "view",
+        },
+        {
+          type: "function",
+          name: "ratingConfig",
+          inputs: [],
+          outputs: [
+            {
+              name: "smoothingAlpha",
+              type: "uint256",
+              internalType: "uint256",
+            },
+            {
+              name: "smoothingBeta",
+              type: "uint256",
+              internalType: "uint256",
+            },
+            {
+              name: "observationBetaX18",
+              type: "uint256",
+              internalType: "uint256",
+            },
+            {
+              name: "confidenceMassInitial",
+              type: "uint256",
+              internalType: "uint256",
+            },
+            {
+              name: "confidenceMassMin",
+              type: "uint256",
+              internalType: "uint256",
+            },
+            {
+              name: "confidenceMassMax",
+              type: "uint256",
+              internalType: "uint256",
+            },
+            {
+              name: "confidenceGainBps",
+              type: "uint16",
+              internalType: "uint16",
+            },
+            {
+              name: "confidenceReopenBps",
+              type: "uint16",
+              internalType: "uint16",
+            },
+            {
+              name: "surpriseReferenceX18",
+              type: "uint256",
+              internalType: "uint256",
+            },
+            {
+              name: "maxDeltaLogitX18",
+              type: "uint256",
+              internalType: "uint256",
+            },
+            {
+              name: "maxAbsLogitX18",
+              type: "uint256",
+              internalType: "uint256",
+            },
+            {
+              name: "conservativePenaltyMaxBps",
+              type: "uint16",
+              internalType: "uint16",
+            },
+            {
+              name: "conservativePenaltyMinBps",
+              type: "uint16",
+              internalType: "uint16",
             },
           ],
           stateMutability: "view",
@@ -9507,6 +10369,79 @@ const deployedContracts: GenericContractsDeclaration = {
         },
         {
           type: "function",
+          name: "setRatingConfig",
+          inputs: [
+            {
+              name: "smoothingAlpha",
+              type: "uint256",
+              internalType: "uint256",
+            },
+            {
+              name: "smoothingBeta",
+              type: "uint256",
+              internalType: "uint256",
+            },
+            {
+              name: "observationBetaX18",
+              type: "uint256",
+              internalType: "uint256",
+            },
+            {
+              name: "confidenceMassInitial",
+              type: "uint256",
+              internalType: "uint256",
+            },
+            {
+              name: "confidenceMassMin",
+              type: "uint256",
+              internalType: "uint256",
+            },
+            {
+              name: "confidenceMassMax",
+              type: "uint256",
+              internalType: "uint256",
+            },
+            {
+              name: "confidenceGainBps",
+              type: "uint16",
+              internalType: "uint16",
+            },
+            {
+              name: "confidenceReopenBps",
+              type: "uint16",
+              internalType: "uint16",
+            },
+            {
+              name: "surpriseReferenceX18",
+              type: "uint256",
+              internalType: "uint256",
+            },
+            {
+              name: "maxDeltaLogitX18",
+              type: "uint256",
+              internalType: "uint256",
+            },
+            {
+              name: "maxAbsLogitX18",
+              type: "uint256",
+              internalType: "uint256",
+            },
+            {
+              name: "conservativePenaltyMaxBps",
+              type: "uint16",
+              internalType: "uint16",
+            },
+            {
+              name: "conservativePenaltyMinBps",
+              type: "uint16",
+              internalType: "uint16",
+            },
+          ],
+          outputs: [],
+          stateMutability: "nonpayable",
+        },
+        {
+          type: "function",
           name: "setRevealGracePeriod",
           inputs: [
             {
@@ -9526,6 +10461,34 @@ const deployedContracts: GenericContractsDeclaration = {
               name: "value",
               type: "address",
               internalType: "address",
+            },
+          ],
+          outputs: [],
+          stateMutability: "nonpayable",
+        },
+        {
+          type: "function",
+          name: "setSlashConfig",
+          inputs: [
+            {
+              name: "slashThresholdBps",
+              type: "uint16",
+              internalType: "uint16",
+            },
+            {
+              name: "minSlashSettledRounds",
+              type: "uint16",
+              internalType: "uint16",
+            },
+            {
+              name: "minSlashLowDuration",
+              type: "uint48",
+              internalType: "uint48",
+            },
+            {
+              name: "minSlashEvidence",
+              type: "uint256",
+              internalType: "uint256",
             },
           ],
           outputs: [],
@@ -9556,6 +10519,34 @@ const deployedContracts: GenericContractsDeclaration = {
           ],
           outputs: [],
           stateMutability: "nonpayable",
+        },
+        {
+          type: "function",
+          name: "slashConfig",
+          inputs: [],
+          outputs: [
+            {
+              name: "slashThresholdBps",
+              type: "uint16",
+              internalType: "uint16",
+            },
+            {
+              name: "minSlashSettledRounds",
+              type: "uint16",
+              internalType: "uint16",
+            },
+            {
+              name: "minSlashLowDuration",
+              type: "uint48",
+              internalType: "uint48",
+            },
+            {
+              name: "minSlashEvidence",
+              type: "uint256",
+              internalType: "uint256",
+            },
+          ],
+          stateMutability: "view",
         },
         {
           type: "function",
@@ -9712,6 +10703,91 @@ const deployedContracts: GenericContractsDeclaration = {
         },
         {
           type: "event",
+          name: "RatingConfigUpdated",
+          inputs: [
+            {
+              name: "smoothingAlpha",
+              type: "uint256",
+              indexed: false,
+              internalType: "uint256",
+            },
+            {
+              name: "smoothingBeta",
+              type: "uint256",
+              indexed: false,
+              internalType: "uint256",
+            },
+            {
+              name: "observationBetaX18",
+              type: "uint256",
+              indexed: false,
+              internalType: "uint256",
+            },
+            {
+              name: "confidenceMassInitial",
+              type: "uint256",
+              indexed: false,
+              internalType: "uint256",
+            },
+            {
+              name: "confidenceMassMin",
+              type: "uint256",
+              indexed: false,
+              internalType: "uint256",
+            },
+            {
+              name: "confidenceMassMax",
+              type: "uint256",
+              indexed: false,
+              internalType: "uint256",
+            },
+            {
+              name: "confidenceGainBps",
+              type: "uint16",
+              indexed: false,
+              internalType: "uint16",
+            },
+            {
+              name: "confidenceReopenBps",
+              type: "uint16",
+              indexed: false,
+              internalType: "uint16",
+            },
+            {
+              name: "surpriseReferenceX18",
+              type: "uint256",
+              indexed: false,
+              internalType: "uint256",
+            },
+            {
+              name: "maxDeltaLogitX18",
+              type: "uint256",
+              indexed: false,
+              internalType: "uint256",
+            },
+            {
+              name: "maxAbsLogitX18",
+              type: "uint256",
+              indexed: false,
+              internalType: "uint256",
+            },
+            {
+              name: "conservativePenaltyMaxBps",
+              type: "uint16",
+              indexed: false,
+              internalType: "uint16",
+            },
+            {
+              name: "conservativePenaltyMinBps",
+              type: "uint16",
+              indexed: false,
+              internalType: "uint16",
+            },
+          ],
+          anonymous: false,
+        },
+        {
+          type: "event",
           name: "RevealGracePeriodUpdated",
           inputs: [
             {
@@ -9807,6 +10883,37 @@ const deployedContracts: GenericContractsDeclaration = {
               type: "address",
               indexed: true,
               internalType: "address",
+            },
+          ],
+          anonymous: false,
+        },
+        {
+          type: "event",
+          name: "SlashConfigUpdated",
+          inputs: [
+            {
+              name: "slashThresholdBps",
+              type: "uint16",
+              indexed: false,
+              internalType: "uint16",
+            },
+            {
+              name: "minSlashSettledRounds",
+              type: "uint16",
+              indexed: false,
+              internalType: "uint16",
+            },
+            {
+              name: "minSlashLowDuration",
+              type: "uint48",
+              indexed: false,
+              internalType: "uint48",
+            },
+            {
+              name: "minSlashEvidence",
+              type: "uint256",
+              indexed: false,
+              internalType: "uint256",
             },
           ],
           anonymous: false,
@@ -14671,11 +15778,6 @@ const deployedContracts: GenericContractsDeclaration = {
           name: "ContentNotFound",
           inputs: [],
         },
-        {
-          type: "error",
-          name: "MilestoneZeroSnapshotMissing",
-          inputs: [],
-        },
       ],
       inheritedFunctions: {},
       deployedOnBlock: 63209798,
@@ -19457,6 +20559,71 @@ const deployedContracts: GenericContractsDeclaration = {
         },
         {
           type: "function",
+          name: "DEFAULT_CONFIDENCE_MASS_INITIAL",
+          inputs: [],
+          outputs: [
+            {
+              name: "",
+              type: "uint256",
+              internalType: "uint256",
+            },
+          ],
+          stateMutability: "view",
+        },
+        {
+          type: "function",
+          name: "DEFAULT_MIN_SLASH_EVIDENCE",
+          inputs: [],
+          outputs: [
+            {
+              name: "",
+              type: "uint256",
+              internalType: "uint256",
+            },
+          ],
+          stateMutability: "view",
+        },
+        {
+          type: "function",
+          name: "DEFAULT_MIN_SLASH_LOW_DURATION",
+          inputs: [],
+          outputs: [
+            {
+              name: "",
+              type: "uint48",
+              internalType: "uint48",
+            },
+          ],
+          stateMutability: "view",
+        },
+        {
+          type: "function",
+          name: "DEFAULT_MIN_SLASH_SETTLED_ROUNDS",
+          inputs: [],
+          outputs: [
+            {
+              name: "",
+              type: "uint16",
+              internalType: "uint16",
+            },
+          ],
+          stateMutability: "view",
+        },
+        {
+          type: "function",
+          name: "DEFAULT_SLASH_THRESHOLD_BPS",
+          inputs: [],
+          outputs: [
+            {
+              name: "",
+              type: "uint16",
+              internalType: "uint16",
+            },
+          ],
+          stateMutability: "view",
+        },
+        {
+          type: "function",
           name: "DORMANCY_PERIOD",
           inputs: [],
           outputs: [
@@ -19736,6 +20903,40 @@ const deployedContracts: GenericContractsDeclaration = {
         },
         {
           type: "function",
+          name: "contentSlashConfigSnapshot",
+          inputs: [
+            {
+              name: "",
+              type: "uint256",
+              internalType: "uint256",
+            },
+          ],
+          outputs: [
+            {
+              name: "slashThresholdBps",
+              type: "uint16",
+              internalType: "uint16",
+            },
+            {
+              name: "minSlashSettledRounds",
+              type: "uint16",
+              internalType: "uint16",
+            },
+            {
+              name: "minSlashLowDuration",
+              type: "uint48",
+              internalType: "uint48",
+            },
+            {
+              name: "minSlashEvidence",
+              type: "uint256",
+              internalType: "uint256",
+            },
+          ],
+          stateMutability: "view",
+        },
+        {
+          type: "function",
           name: "contents",
           inputs: [
             {
@@ -19842,6 +21043,25 @@ const deployedContracts: GenericContractsDeclaration = {
         },
         {
           type: "function",
+          name: "getConservativeRating",
+          inputs: [
+            {
+              name: "contentId",
+              type: "uint256",
+              internalType: "uint256",
+            },
+          ],
+          outputs: [
+            {
+              name: "",
+              type: "uint16",
+              internalType: "uint16",
+            },
+          ],
+          stateMutability: "view",
+        },
+        {
+          type: "function",
           name: "getContentSubmitter",
           inputs: [
             {
@@ -19861,6 +21081,86 @@ const deployedContracts: GenericContractsDeclaration = {
         },
         {
           type: "function",
+          name: "getRating",
+          inputs: [
+            {
+              name: "contentId",
+              type: "uint256",
+              internalType: "uint256",
+            },
+          ],
+          outputs: [
+            {
+              name: "",
+              type: "uint16",
+              internalType: "uint16",
+            },
+          ],
+          stateMutability: "view",
+        },
+        {
+          type: "function",
+          name: "getRatingState",
+          inputs: [
+            {
+              name: "contentId",
+              type: "uint256",
+              internalType: "uint256",
+            },
+          ],
+          outputs: [
+            {
+              name: "state",
+              type: "tuple",
+              internalType: "struct RatingLib.RatingState",
+              components: [
+                {
+                  name: "ratingLogitX18",
+                  type: "int128",
+                  internalType: "int128",
+                },
+                {
+                  name: "confidenceMass",
+                  type: "uint128",
+                  internalType: "uint128",
+                },
+                {
+                  name: "effectiveEvidence",
+                  type: "uint128",
+                  internalType: "uint128",
+                },
+                {
+                  name: "settledRounds",
+                  type: "uint32",
+                  internalType: "uint32",
+                },
+                {
+                  name: "ratingBps",
+                  type: "uint16",
+                  internalType: "uint16",
+                },
+                {
+                  name: "conservativeRatingBps",
+                  type: "uint16",
+                  internalType: "uint16",
+                },
+                {
+                  name: "lastUpdatedAt",
+                  type: "uint48",
+                  internalType: "uint48",
+                },
+                {
+                  name: "lowSince",
+                  type: "uint48",
+                  internalType: "uint48",
+                },
+              ],
+            },
+          ],
+          stateMutability: "view",
+        },
+        {
+          type: "function",
           name: "getRoleAdmin",
           inputs: [
             {
@@ -19874,6 +21174,47 @@ const deployedContracts: GenericContractsDeclaration = {
               name: "",
               type: "bytes32",
               internalType: "bytes32",
+            },
+          ],
+          stateMutability: "view",
+        },
+        {
+          type: "function",
+          name: "getSlashConfigForContent",
+          inputs: [
+            {
+              name: "contentId",
+              type: "uint256",
+              internalType: "uint256",
+            },
+          ],
+          outputs: [
+            {
+              name: "slashConfig",
+              type: "tuple",
+              internalType: "struct RatingLib.SlashConfig",
+              components: [
+                {
+                  name: "slashThresholdBps",
+                  type: "uint16",
+                  internalType: "uint16",
+                },
+                {
+                  name: "minSlashSettledRounds",
+                  type: "uint16",
+                  internalType: "uint16",
+                },
+                {
+                  name: "minSlashLowDuration",
+                  type: "uint48",
+                  internalType: "uint48",
+                },
+                {
+                  name: "minSlashEvidence",
+                  type: "uint256",
+                  internalType: "uint256",
+                },
+              ],
             },
           ],
           stateMutability: "view",
@@ -20012,6 +21353,25 @@ const deployedContracts: GenericContractsDeclaration = {
         {
           type: "function",
           name: "isDormancyEligible",
+          inputs: [
+            {
+              name: "contentId",
+              type: "uint256",
+              internalType: "uint256",
+            },
+          ],
+          outputs: [
+            {
+              name: "",
+              type: "bool",
+              internalType: "bool",
+            },
+          ],
+          stateMutability: "view",
+        },
+        {
+          type: "function",
+          name: "isSubmitterStakeSlashable",
           inputs: [
             {
               name: "contentId",
@@ -20252,6 +21612,73 @@ const deployedContracts: GenericContractsDeclaration = {
         },
         {
           type: "function",
+          name: "protocolConfig",
+          inputs: [],
+          outputs: [
+            {
+              name: "",
+              type: "address",
+              internalType: "contract ProtocolConfig",
+            },
+          ],
+          stateMutability: "view",
+        },
+        {
+          type: "function",
+          name: "ratingState",
+          inputs: [
+            {
+              name: "",
+              type: "uint256",
+              internalType: "uint256",
+            },
+          ],
+          outputs: [
+            {
+              name: "ratingLogitX18",
+              type: "int128",
+              internalType: "int128",
+            },
+            {
+              name: "confidenceMass",
+              type: "uint128",
+              internalType: "uint128",
+            },
+            {
+              name: "effectiveEvidence",
+              type: "uint128",
+              internalType: "uint128",
+            },
+            {
+              name: "settledRounds",
+              type: "uint32",
+              internalType: "uint32",
+            },
+            {
+              name: "ratingBps",
+              type: "uint16",
+              internalType: "uint16",
+            },
+            {
+              name: "conservativeRatingBps",
+              type: "uint16",
+              internalType: "uint16",
+            },
+            {
+              name: "lastUpdatedAt",
+              type: "uint48",
+              internalType: "uint48",
+            },
+            {
+              name: "lowSince",
+              type: "uint48",
+              internalType: "uint48",
+            },
+          ],
+          stateMutability: "view",
+        },
+        {
+          type: "function",
           name: "recordMeaningfulActivity",
           inputs: [
             {
@@ -20451,6 +21878,19 @@ const deployedContracts: GenericContractsDeclaration = {
           inputs: [
             {
               name: "_participationPool",
+              type: "address",
+              internalType: "address",
+            },
+          ],
+          outputs: [],
+          stateMutability: "nonpayable",
+        },
+        {
+          type: "function",
+          name: "setProtocolConfig",
+          inputs: [
+            {
+              name: "_protocolConfig",
               type: "address",
               internalType: "address",
             },
@@ -20816,6 +22256,76 @@ const deployedContracts: GenericContractsDeclaration = {
         },
         {
           type: "function",
+          name: "updateRatingState",
+          inputs: [
+            {
+              name: "contentId",
+              type: "uint256",
+              internalType: "uint256",
+            },
+            {
+              name: "roundId",
+              type: "uint256",
+              internalType: "uint256",
+            },
+            {
+              name: "referenceRatingBps",
+              type: "uint16",
+              internalType: "uint16",
+            },
+            {
+              name: "nextState",
+              type: "tuple",
+              internalType: "struct RatingLib.RatingState",
+              components: [
+                {
+                  name: "ratingLogitX18",
+                  type: "int128",
+                  internalType: "int128",
+                },
+                {
+                  name: "confidenceMass",
+                  type: "uint128",
+                  internalType: "uint128",
+                },
+                {
+                  name: "effectiveEvidence",
+                  type: "uint128",
+                  internalType: "uint128",
+                },
+                {
+                  name: "settledRounds",
+                  type: "uint32",
+                  internalType: "uint32",
+                },
+                {
+                  name: "ratingBps",
+                  type: "uint16",
+                  internalType: "uint16",
+                },
+                {
+                  name: "conservativeRatingBps",
+                  type: "uint16",
+                  internalType: "uint16",
+                },
+                {
+                  name: "lastUpdatedAt",
+                  type: "uint48",
+                  internalType: "uint48",
+                },
+                {
+                  name: "lowSince",
+                  type: "uint48",
+                  internalType: "uint48",
+                },
+              ],
+            },
+          ],
+          outputs: [],
+          stateMutability: "nonpayable",
+        },
+        {
+          type: "function",
           name: "voterIdNFT",
           inputs: [],
           outputs: [
@@ -21031,6 +22541,80 @@ const deployedContracts: GenericContractsDeclaration = {
               type: "address",
               indexed: false,
               internalType: "address",
+            },
+          ],
+          anonymous: false,
+        },
+        {
+          type: "event",
+          name: "ProtocolConfigUpdated",
+          inputs: [
+            {
+              name: "protocolConfig",
+              type: "address",
+              indexed: false,
+              internalType: "address",
+            },
+          ],
+          anonymous: false,
+        },
+        {
+          type: "event",
+          name: "RatingStateUpdated",
+          inputs: [
+            {
+              name: "contentId",
+              type: "uint256",
+              indexed: true,
+              internalType: "uint256",
+            },
+            {
+              name: "roundId",
+              type: "uint256",
+              indexed: true,
+              internalType: "uint256",
+            },
+            {
+              name: "referenceRatingBps",
+              type: "uint16",
+              indexed: false,
+              internalType: "uint16",
+            },
+            {
+              name: "oldRatingBps",
+              type: "uint16",
+              indexed: false,
+              internalType: "uint16",
+            },
+            {
+              name: "newRatingBps",
+              type: "uint16",
+              indexed: false,
+              internalType: "uint16",
+            },
+            {
+              name: "conservativeRatingBps",
+              type: "uint16",
+              indexed: false,
+              internalType: "uint16",
+            },
+            {
+              name: "confidenceMass",
+              type: "uint256",
+              indexed: false,
+              internalType: "uint256",
+            },
+            {
+              name: "effectiveEvidence",
+              type: "uint256",
+              indexed: false,
+              internalType: "uint256",
+            },
+            {
+              name: "settledRounds",
+              type: "uint32",
+              indexed: false,
+              internalType: "uint32",
             },
           ],
           anonymous: false,
@@ -21398,6 +22982,81 @@ const deployedContracts: GenericContractsDeclaration = {
         },
         {
           type: "error",
+          name: "PRBMath_MulDiv_Overflow",
+          inputs: [
+            {
+              name: "x",
+              type: "uint256",
+              internalType: "uint256",
+            },
+            {
+              name: "y",
+              type: "uint256",
+              internalType: "uint256",
+            },
+            {
+              name: "denominator",
+              type: "uint256",
+              internalType: "uint256",
+            },
+          ],
+        },
+        {
+          type: "error",
+          name: "PRBMath_SD59x18_Convert_Overflow",
+          inputs: [
+            {
+              name: "x",
+              type: "int256",
+              internalType: "int256",
+            },
+          ],
+        },
+        {
+          type: "error",
+          name: "PRBMath_SD59x18_Convert_Underflow",
+          inputs: [
+            {
+              name: "x",
+              type: "int256",
+              internalType: "int256",
+            },
+          ],
+        },
+        {
+          type: "error",
+          name: "PRBMath_SD59x18_Div_InputTooSmall",
+          inputs: [],
+        },
+        {
+          type: "error",
+          name: "PRBMath_SD59x18_Div_Overflow",
+          inputs: [
+            {
+              name: "x",
+              type: "int256",
+              internalType: "SD59x18",
+            },
+            {
+              name: "y",
+              type: "int256",
+              internalType: "SD59x18",
+            },
+          ],
+        },
+        {
+          type: "error",
+          name: "PRBMath_SD59x18_Log_InputTooSmall",
+          inputs: [
+            {
+              name: "x",
+              type: "int256",
+              internalType: "SD59x18",
+            },
+          ],
+        },
+        {
+          type: "error",
           name: "ReentrancyGuardReentrantCall",
           inputs: [],
         },
@@ -21472,45 +23131,6 @@ const deployedContracts: GenericContractsDeclaration = {
         },
         {
           type: "function",
-          name: "MAX_CIPHERTEXT_SIZE",
-          inputs: [],
-          outputs: [
-            {
-              name: "",
-              type: "uint256",
-              internalType: "uint256",
-            },
-          ],
-          stateMutability: "view",
-        },
-        {
-          type: "function",
-          name: "MAX_STAKE",
-          inputs: [],
-          outputs: [
-            {
-              name: "",
-              type: "uint256",
-              internalType: "uint256",
-            },
-          ],
-          stateMutability: "view",
-        },
-        {
-          type: "function",
-          name: "MIN_STAKE",
-          inputs: [],
-          outputs: [
-            {
-              name: "",
-              type: "uint256",
-              internalType: "uint256",
-            },
-          ],
-          stateMutability: "view",
-        },
-        {
-          type: "function",
           name: "PAUSER_ROLE",
           inputs: [],
           outputs: [
@@ -21518,19 +23138,6 @@ const deployedContracts: GenericContractsDeclaration = {
               name: "",
               type: "bytes32",
               internalType: "bytes32",
-            },
-          ],
-          stateMutability: "view",
-        },
-        {
-          type: "function",
-          name: "VOTE_COOLDOWN",
-          inputs: [],
-          outputs: [
-            {
-              name: "",
-              type: "uint256",
-              internalType: "uint256",
             },
           ],
           stateMutability: "view",
@@ -21615,7 +23222,7 @@ const deployedContracts: GenericContractsDeclaration = {
         },
         {
           type: "function",
-          name: "commitRevealAvailableAt",
+          name: "commitVote",
           inputs: [
             {
               name: "contentId",
@@ -21623,24 +23230,38 @@ const deployedContracts: GenericContractsDeclaration = {
               internalType: "uint256",
             },
             {
-              name: "roundId",
-              type: "uint256",
-              internalType: "uint256",
+              name: "targetRound",
+              type: "uint64",
+              internalType: "uint64",
             },
             {
-              name: "commitKey",
+              name: "drandChainHash",
               type: "bytes32",
               internalType: "bytes32",
             },
-          ],
-          outputs: [
             {
-              name: "",
+              name: "commitHash",
+              type: "bytes32",
+              internalType: "bytes32",
+            },
+            {
+              name: "ciphertext",
+              type: "bytes",
+              internalType: "bytes",
+            },
+            {
+              name: "stakeAmount",
               type: "uint256",
               internalType: "uint256",
             },
+            {
+              name: "frontend",
+              type: "address",
+              internalType: "address",
+            },
           ],
-          stateMutability: "view",
+          outputs: [],
+          stateMutability: "nonpayable",
         },
         {
           type: "function",
@@ -21650,6 +23271,11 @@ const deployedContracts: GenericContractsDeclaration = {
               name: "contentId",
               type: "uint256",
               internalType: "uint256",
+            },
+            {
+              name: "roundReferenceRatingBps",
+              type: "uint16",
+              internalType: "uint16",
             },
             {
               name: "targetRound",
@@ -21774,19 +23400,6 @@ const deployedContracts: GenericContractsDeclaration = {
         },
         {
           type: "function",
-          name: "crepToken",
-          inputs: [],
-          outputs: [
-            {
-              name: "",
-              type: "address",
-              internalType: "contract IERC20",
-            },
-          ],
-          stateMutability: "view",
-        },
-        {
-          type: "function",
           name: "currentRoundId",
           inputs: [
             {
@@ -21891,35 +23504,6 @@ const deployedContracts: GenericContractsDeclaration = {
               name: "account",
               type: "address",
               internalType: "address",
-            },
-          ],
-          outputs: [
-            {
-              name: "",
-              type: "bool",
-              internalType: "bool",
-            },
-          ],
-          stateMutability: "view",
-        },
-        {
-          type: "function",
-          name: "hasTokenIdCommitted",
-          inputs: [
-            {
-              name: "",
-              type: "uint256",
-              internalType: "uint256",
-            },
-            {
-              name: "",
-              type: "uint256",
-              internalType: "uint256",
-            },
-            {
-              name: "",
-              type: "uint256",
-              internalType: "uint256",
             },
           ],
           outputs: [
@@ -22063,6 +23647,25 @@ const deployedContracts: GenericContractsDeclaration = {
         },
         {
           type: "function",
+          name: "previewCommitReferenceRatingBps",
+          inputs: [
+            {
+              name: "contentId",
+              type: "uint256",
+              internalType: "uint256",
+            },
+          ],
+          outputs: [
+            {
+              name: "",
+              type: "uint16",
+              internalType: "uint16",
+            },
+          ],
+          stateMutability: "view",
+        },
+        {
+          type: "function",
           name: "processUnrevealedVotes",
           inputs: [
             {
@@ -22098,19 +23701,6 @@ const deployedContracts: GenericContractsDeclaration = {
               name: "",
               type: "address",
               internalType: "contract ProtocolConfig",
-            },
-          ],
-          stateMutability: "view",
-        },
-        {
-          type: "function",
-          name: "registry",
-          inputs: [],
-          outputs: [
-            {
-              name: "",
-              type: "address",
-              internalType: "contract ContentRegistry",
             },
           ],
           stateMutability: "view",
@@ -22926,6 +24516,31 @@ const deployedContracts: GenericContractsDeclaration = {
         },
         {
           type: "event",
+          name: "RoundReferenceSnapshotted",
+          inputs: [
+            {
+              name: "contentId",
+              type: "uint256",
+              indexed: true,
+              internalType: "uint256",
+            },
+            {
+              name: "roundId",
+              type: "uint256",
+              indexed: true,
+              internalType: "uint256",
+            },
+            {
+              name: "roundReferenceRatingBps",
+              type: "uint16",
+              indexed: false,
+              internalType: "uint16",
+            },
+          ],
+          anonymous: false,
+        },
+        {
+          type: "event",
           name: "RoundRevealFailed",
           inputs: [
             {
@@ -23058,6 +24673,12 @@ const deployedContracts: GenericContractsDeclaration = {
               type: "bytes32",
               indexed: false,
               internalType: "bytes32",
+            },
+            {
+              name: "roundReferenceRatingBps",
+              type: "uint16",
+              indexed: false,
+              internalType: "uint16",
             },
             {
               name: "targetRound",
@@ -23260,6 +24881,11 @@ const deployedContracts: GenericContractsDeclaration = {
         {
           type: "error",
           name: "ReentrancyGuardReentrantCall",
+          inputs: [],
+        },
+        {
+          type: "error",
+          name: "ReferenceRatingMismatch",
           inputs: [],
         },
         {
@@ -26569,6 +28195,86 @@ const deployedContracts: GenericContractsDeclaration = {
         },
         {
           type: "function",
+          name: "getRatingConfig",
+          inputs: [],
+          outputs: [
+            {
+              name: "cfg",
+              type: "tuple",
+              internalType: "struct RatingLib.RatingConfig",
+              components: [
+                {
+                  name: "smoothingAlpha",
+                  type: "uint256",
+                  internalType: "uint256",
+                },
+                {
+                  name: "smoothingBeta",
+                  type: "uint256",
+                  internalType: "uint256",
+                },
+                {
+                  name: "observationBetaX18",
+                  type: "uint256",
+                  internalType: "uint256",
+                },
+                {
+                  name: "confidenceMassInitial",
+                  type: "uint256",
+                  internalType: "uint256",
+                },
+                {
+                  name: "confidenceMassMin",
+                  type: "uint256",
+                  internalType: "uint256",
+                },
+                {
+                  name: "confidenceMassMax",
+                  type: "uint256",
+                  internalType: "uint256",
+                },
+                {
+                  name: "confidenceGainBps",
+                  type: "uint16",
+                  internalType: "uint16",
+                },
+                {
+                  name: "confidenceReopenBps",
+                  type: "uint16",
+                  internalType: "uint16",
+                },
+                {
+                  name: "surpriseReferenceX18",
+                  type: "uint256",
+                  internalType: "uint256",
+                },
+                {
+                  name: "maxDeltaLogitX18",
+                  type: "uint256",
+                  internalType: "uint256",
+                },
+                {
+                  name: "maxAbsLogitX18",
+                  type: "uint256",
+                  internalType: "uint256",
+                },
+                {
+                  name: "conservativePenaltyMaxBps",
+                  type: "uint16",
+                  internalType: "uint16",
+                },
+                {
+                  name: "conservativePenaltyMinBps",
+                  type: "uint16",
+                  internalType: "uint16",
+                },
+              ],
+            },
+          ],
+          stateMutability: "view",
+        },
+        {
+          type: "function",
           name: "getRoleAdmin",
           inputs: [
             {
@@ -26582,6 +28288,41 @@ const deployedContracts: GenericContractsDeclaration = {
               name: "",
               type: "bytes32",
               internalType: "bytes32",
+            },
+          ],
+          stateMutability: "view",
+        },
+        {
+          type: "function",
+          name: "getSlashConfig",
+          inputs: [],
+          outputs: [
+            {
+              name: "cfg",
+              type: "tuple",
+              internalType: "struct RatingLib.SlashConfig",
+              components: [
+                {
+                  name: "slashThresholdBps",
+                  type: "uint16",
+                  internalType: "uint16",
+                },
+                {
+                  name: "minSlashSettledRounds",
+                  type: "uint16",
+                  internalType: "uint16",
+                },
+                {
+                  name: "minSlashLowDuration",
+                  type: "uint48",
+                  internalType: "uint48",
+                },
+                {
+                  name: "minSlashEvidence",
+                  type: "uint256",
+                  internalType: "uint256",
+                },
+              ],
             },
           ],
           stateMutability: "view",
@@ -26678,6 +28419,79 @@ const deployedContracts: GenericContractsDeclaration = {
               name: "",
               type: "address",
               internalType: "address",
+            },
+          ],
+          stateMutability: "view",
+        },
+        {
+          type: "function",
+          name: "ratingConfig",
+          inputs: [],
+          outputs: [
+            {
+              name: "smoothingAlpha",
+              type: "uint256",
+              internalType: "uint256",
+            },
+            {
+              name: "smoothingBeta",
+              type: "uint256",
+              internalType: "uint256",
+            },
+            {
+              name: "observationBetaX18",
+              type: "uint256",
+              internalType: "uint256",
+            },
+            {
+              name: "confidenceMassInitial",
+              type: "uint256",
+              internalType: "uint256",
+            },
+            {
+              name: "confidenceMassMin",
+              type: "uint256",
+              internalType: "uint256",
+            },
+            {
+              name: "confidenceMassMax",
+              type: "uint256",
+              internalType: "uint256",
+            },
+            {
+              name: "confidenceGainBps",
+              type: "uint16",
+              internalType: "uint16",
+            },
+            {
+              name: "confidenceReopenBps",
+              type: "uint16",
+              internalType: "uint16",
+            },
+            {
+              name: "surpriseReferenceX18",
+              type: "uint256",
+              internalType: "uint256",
+            },
+            {
+              name: "maxDeltaLogitX18",
+              type: "uint256",
+              internalType: "uint256",
+            },
+            {
+              name: "maxAbsLogitX18",
+              type: "uint256",
+              internalType: "uint256",
+            },
+            {
+              name: "conservativePenaltyMaxBps",
+              type: "uint16",
+              internalType: "uint16",
+            },
+            {
+              name: "conservativePenaltyMinBps",
+              type: "uint16",
+              internalType: "uint16",
             },
           ],
           stateMutability: "view",
@@ -26836,6 +28650,79 @@ const deployedContracts: GenericContractsDeclaration = {
         },
         {
           type: "function",
+          name: "setRatingConfig",
+          inputs: [
+            {
+              name: "smoothingAlpha",
+              type: "uint256",
+              internalType: "uint256",
+            },
+            {
+              name: "smoothingBeta",
+              type: "uint256",
+              internalType: "uint256",
+            },
+            {
+              name: "observationBetaX18",
+              type: "uint256",
+              internalType: "uint256",
+            },
+            {
+              name: "confidenceMassInitial",
+              type: "uint256",
+              internalType: "uint256",
+            },
+            {
+              name: "confidenceMassMin",
+              type: "uint256",
+              internalType: "uint256",
+            },
+            {
+              name: "confidenceMassMax",
+              type: "uint256",
+              internalType: "uint256",
+            },
+            {
+              name: "confidenceGainBps",
+              type: "uint16",
+              internalType: "uint16",
+            },
+            {
+              name: "confidenceReopenBps",
+              type: "uint16",
+              internalType: "uint16",
+            },
+            {
+              name: "surpriseReferenceX18",
+              type: "uint256",
+              internalType: "uint256",
+            },
+            {
+              name: "maxDeltaLogitX18",
+              type: "uint256",
+              internalType: "uint256",
+            },
+            {
+              name: "maxAbsLogitX18",
+              type: "uint256",
+              internalType: "uint256",
+            },
+            {
+              name: "conservativePenaltyMaxBps",
+              type: "uint16",
+              internalType: "uint16",
+            },
+            {
+              name: "conservativePenaltyMinBps",
+              type: "uint16",
+              internalType: "uint16",
+            },
+          ],
+          outputs: [],
+          stateMutability: "nonpayable",
+        },
+        {
+          type: "function",
           name: "setRevealGracePeriod",
           inputs: [
             {
@@ -26855,6 +28742,34 @@ const deployedContracts: GenericContractsDeclaration = {
               name: "value",
               type: "address",
               internalType: "address",
+            },
+          ],
+          outputs: [],
+          stateMutability: "nonpayable",
+        },
+        {
+          type: "function",
+          name: "setSlashConfig",
+          inputs: [
+            {
+              name: "slashThresholdBps",
+              type: "uint16",
+              internalType: "uint16",
+            },
+            {
+              name: "minSlashSettledRounds",
+              type: "uint16",
+              internalType: "uint16",
+            },
+            {
+              name: "minSlashLowDuration",
+              type: "uint48",
+              internalType: "uint48",
+            },
+            {
+              name: "minSlashEvidence",
+              type: "uint256",
+              internalType: "uint256",
             },
           ],
           outputs: [],
@@ -26885,6 +28800,34 @@ const deployedContracts: GenericContractsDeclaration = {
           ],
           outputs: [],
           stateMutability: "nonpayable",
+        },
+        {
+          type: "function",
+          name: "slashConfig",
+          inputs: [],
+          outputs: [
+            {
+              name: "slashThresholdBps",
+              type: "uint16",
+              internalType: "uint16",
+            },
+            {
+              name: "minSlashSettledRounds",
+              type: "uint16",
+              internalType: "uint16",
+            },
+            {
+              name: "minSlashLowDuration",
+              type: "uint48",
+              internalType: "uint48",
+            },
+            {
+              name: "minSlashEvidence",
+              type: "uint256",
+              internalType: "uint256",
+            },
+          ],
+          stateMutability: "view",
         },
         {
           type: "function",
@@ -27041,6 +28984,91 @@ const deployedContracts: GenericContractsDeclaration = {
         },
         {
           type: "event",
+          name: "RatingConfigUpdated",
+          inputs: [
+            {
+              name: "smoothingAlpha",
+              type: "uint256",
+              indexed: false,
+              internalType: "uint256",
+            },
+            {
+              name: "smoothingBeta",
+              type: "uint256",
+              indexed: false,
+              internalType: "uint256",
+            },
+            {
+              name: "observationBetaX18",
+              type: "uint256",
+              indexed: false,
+              internalType: "uint256",
+            },
+            {
+              name: "confidenceMassInitial",
+              type: "uint256",
+              indexed: false,
+              internalType: "uint256",
+            },
+            {
+              name: "confidenceMassMin",
+              type: "uint256",
+              indexed: false,
+              internalType: "uint256",
+            },
+            {
+              name: "confidenceMassMax",
+              type: "uint256",
+              indexed: false,
+              internalType: "uint256",
+            },
+            {
+              name: "confidenceGainBps",
+              type: "uint16",
+              indexed: false,
+              internalType: "uint16",
+            },
+            {
+              name: "confidenceReopenBps",
+              type: "uint16",
+              indexed: false,
+              internalType: "uint16",
+            },
+            {
+              name: "surpriseReferenceX18",
+              type: "uint256",
+              indexed: false,
+              internalType: "uint256",
+            },
+            {
+              name: "maxDeltaLogitX18",
+              type: "uint256",
+              indexed: false,
+              internalType: "uint256",
+            },
+            {
+              name: "maxAbsLogitX18",
+              type: "uint256",
+              indexed: false,
+              internalType: "uint256",
+            },
+            {
+              name: "conservativePenaltyMaxBps",
+              type: "uint16",
+              indexed: false,
+              internalType: "uint16",
+            },
+            {
+              name: "conservativePenaltyMinBps",
+              type: "uint16",
+              indexed: false,
+              internalType: "uint16",
+            },
+          ],
+          anonymous: false,
+        },
+        {
+          type: "event",
           name: "RevealGracePeriodUpdated",
           inputs: [
             {
@@ -27136,6 +29164,37 @@ const deployedContracts: GenericContractsDeclaration = {
               type: "address",
               indexed: true,
               internalType: "address",
+            },
+          ],
+          anonymous: false,
+        },
+        {
+          type: "event",
+          name: "SlashConfigUpdated",
+          inputs: [
+            {
+              name: "slashThresholdBps",
+              type: "uint16",
+              indexed: false,
+              internalType: "uint16",
+            },
+            {
+              name: "minSlashSettledRounds",
+              type: "uint16",
+              indexed: false,
+              internalType: "uint16",
+            },
+            {
+              name: "minSlashLowDuration",
+              type: "uint48",
+              indexed: false,
+              internalType: "uint48",
+            },
+            {
+              name: "minSlashEvidence",
+              type: "uint256",
+              indexed: false,
+              internalType: "uint256",
             },
           ],
           anonymous: false,
@@ -31683,6 +33742,11 @@ const deployedContracts: GenericContractsDeclaration = {
               internalType: "uint256",
             },
             {
+              name: "roundReferenceRatingBps",
+              type: "uint16",
+              internalType: "uint16",
+            },
+            {
               name: "targetRound",
               type: "uint64",
               internalType: "uint64",
@@ -31722,6 +33786,11 @@ const deployedContracts: GenericContractsDeclaration = {
               name: "contentId",
               type: "uint256",
               internalType: "uint256",
+            },
+            {
+              name: "roundReferenceRatingBps",
+              type: "uint16",
+              internalType: "uint16",
             },
             {
               name: "commitHash",
@@ -31854,7 +33923,152 @@ const deployedContracts: GenericContractsDeclaration = {
     },
     RoundSettlementSideEffectsLib: {
       address: "0x50854efaac108d2f1b783402ced21f9d9fb4b18a",
-      abi: [],
+      abi: [
+        {
+          type: "error",
+          name: "PRBMath_MulDiv18_Overflow",
+          inputs: [
+            {
+              name: "x",
+              type: "uint256",
+              internalType: "uint256",
+            },
+            {
+              name: "y",
+              type: "uint256",
+              internalType: "uint256",
+            },
+          ],
+        },
+        {
+          type: "error",
+          name: "PRBMath_MulDiv_Overflow",
+          inputs: [
+            {
+              name: "x",
+              type: "uint256",
+              internalType: "uint256",
+            },
+            {
+              name: "y",
+              type: "uint256",
+              internalType: "uint256",
+            },
+            {
+              name: "denominator",
+              type: "uint256",
+              internalType: "uint256",
+            },
+          ],
+        },
+        {
+          type: "error",
+          name: "PRBMath_SD59x18_Abs_MinSD59x18",
+          inputs: [],
+        },
+        {
+          type: "error",
+          name: "PRBMath_SD59x18_Convert_Overflow",
+          inputs: [
+            {
+              name: "x",
+              type: "int256",
+              internalType: "int256",
+            },
+          ],
+        },
+        {
+          type: "error",
+          name: "PRBMath_SD59x18_Convert_Underflow",
+          inputs: [
+            {
+              name: "x",
+              type: "int256",
+              internalType: "int256",
+            },
+          ],
+        },
+        {
+          type: "error",
+          name: "PRBMath_SD59x18_Div_InputTooSmall",
+          inputs: [],
+        },
+        {
+          type: "error",
+          name: "PRBMath_SD59x18_Div_Overflow",
+          inputs: [
+            {
+              name: "x",
+              type: "int256",
+              internalType: "SD59x18",
+            },
+            {
+              name: "y",
+              type: "int256",
+              internalType: "SD59x18",
+            },
+          ],
+        },
+        {
+          type: "error",
+          name: "PRBMath_SD59x18_Exp2_InputTooBig",
+          inputs: [
+            {
+              name: "x",
+              type: "int256",
+              internalType: "SD59x18",
+            },
+          ],
+        },
+        {
+          type: "error",
+          name: "PRBMath_SD59x18_Exp_InputTooBig",
+          inputs: [
+            {
+              name: "x",
+              type: "int256",
+              internalType: "SD59x18",
+            },
+          ],
+        },
+        {
+          type: "error",
+          name: "PRBMath_SD59x18_Log_InputTooSmall",
+          inputs: [
+            {
+              name: "x",
+              type: "int256",
+              internalType: "SD59x18",
+            },
+          ],
+        },
+        {
+          type: "error",
+          name: "PRBMath_SD59x18_Mul_InputTooSmall",
+          inputs: [],
+        },
+        {
+          type: "error",
+          name: "PRBMath_SD59x18_Mul_Overflow",
+          inputs: [
+            {
+              name: "x",
+              type: "int256",
+              internalType: "SD59x18",
+            },
+            {
+              name: "y",
+              type: "int256",
+              internalType: "SD59x18",
+            },
+          ],
+        },
+        {
+          type: "error",
+          name: "RatingMathOverflow",
+          inputs: [],
+        },
+      ],
       inheritedFunctions: {},
       deployedOnBlock: 63209803,
     },
@@ -31902,11 +34116,6 @@ const deployedContracts: GenericContractsDeclaration = {
         {
           type: "error",
           name: "ContentNotFound",
-          inputs: [],
-        },
-        {
-          type: "error",
-          name: "MilestoneZeroSnapshotMissing",
           inputs: [],
         },
       ],
@@ -36690,6 +38899,71 @@ const deployedContracts: GenericContractsDeclaration = {
         },
         {
           type: "function",
+          name: "DEFAULT_CONFIDENCE_MASS_INITIAL",
+          inputs: [],
+          outputs: [
+            {
+              name: "",
+              type: "uint256",
+              internalType: "uint256",
+            },
+          ],
+          stateMutability: "view",
+        },
+        {
+          type: "function",
+          name: "DEFAULT_MIN_SLASH_EVIDENCE",
+          inputs: [],
+          outputs: [
+            {
+              name: "",
+              type: "uint256",
+              internalType: "uint256",
+            },
+          ],
+          stateMutability: "view",
+        },
+        {
+          type: "function",
+          name: "DEFAULT_MIN_SLASH_LOW_DURATION",
+          inputs: [],
+          outputs: [
+            {
+              name: "",
+              type: "uint48",
+              internalType: "uint48",
+            },
+          ],
+          stateMutability: "view",
+        },
+        {
+          type: "function",
+          name: "DEFAULT_MIN_SLASH_SETTLED_ROUNDS",
+          inputs: [],
+          outputs: [
+            {
+              name: "",
+              type: "uint16",
+              internalType: "uint16",
+            },
+          ],
+          stateMutability: "view",
+        },
+        {
+          type: "function",
+          name: "DEFAULT_SLASH_THRESHOLD_BPS",
+          inputs: [],
+          outputs: [
+            {
+              name: "",
+              type: "uint16",
+              internalType: "uint16",
+            },
+          ],
+          stateMutability: "view",
+        },
+        {
+          type: "function",
           name: "DORMANCY_PERIOD",
           inputs: [],
           outputs: [
@@ -36969,6 +39243,40 @@ const deployedContracts: GenericContractsDeclaration = {
         },
         {
           type: "function",
+          name: "contentSlashConfigSnapshot",
+          inputs: [
+            {
+              name: "",
+              type: "uint256",
+              internalType: "uint256",
+            },
+          ],
+          outputs: [
+            {
+              name: "slashThresholdBps",
+              type: "uint16",
+              internalType: "uint16",
+            },
+            {
+              name: "minSlashSettledRounds",
+              type: "uint16",
+              internalType: "uint16",
+            },
+            {
+              name: "minSlashLowDuration",
+              type: "uint48",
+              internalType: "uint48",
+            },
+            {
+              name: "minSlashEvidence",
+              type: "uint256",
+              internalType: "uint256",
+            },
+          ],
+          stateMutability: "view",
+        },
+        {
+          type: "function",
           name: "contents",
           inputs: [
             {
@@ -37075,6 +39383,25 @@ const deployedContracts: GenericContractsDeclaration = {
         },
         {
           type: "function",
+          name: "getConservativeRating",
+          inputs: [
+            {
+              name: "contentId",
+              type: "uint256",
+              internalType: "uint256",
+            },
+          ],
+          outputs: [
+            {
+              name: "",
+              type: "uint16",
+              internalType: "uint16",
+            },
+          ],
+          stateMutability: "view",
+        },
+        {
+          type: "function",
           name: "getContentSubmitter",
           inputs: [
             {
@@ -37094,6 +39421,86 @@ const deployedContracts: GenericContractsDeclaration = {
         },
         {
           type: "function",
+          name: "getRating",
+          inputs: [
+            {
+              name: "contentId",
+              type: "uint256",
+              internalType: "uint256",
+            },
+          ],
+          outputs: [
+            {
+              name: "",
+              type: "uint16",
+              internalType: "uint16",
+            },
+          ],
+          stateMutability: "view",
+        },
+        {
+          type: "function",
+          name: "getRatingState",
+          inputs: [
+            {
+              name: "contentId",
+              type: "uint256",
+              internalType: "uint256",
+            },
+          ],
+          outputs: [
+            {
+              name: "state",
+              type: "tuple",
+              internalType: "struct RatingLib.RatingState",
+              components: [
+                {
+                  name: "ratingLogitX18",
+                  type: "int128",
+                  internalType: "int128",
+                },
+                {
+                  name: "confidenceMass",
+                  type: "uint128",
+                  internalType: "uint128",
+                },
+                {
+                  name: "effectiveEvidence",
+                  type: "uint128",
+                  internalType: "uint128",
+                },
+                {
+                  name: "settledRounds",
+                  type: "uint32",
+                  internalType: "uint32",
+                },
+                {
+                  name: "ratingBps",
+                  type: "uint16",
+                  internalType: "uint16",
+                },
+                {
+                  name: "conservativeRatingBps",
+                  type: "uint16",
+                  internalType: "uint16",
+                },
+                {
+                  name: "lastUpdatedAt",
+                  type: "uint48",
+                  internalType: "uint48",
+                },
+                {
+                  name: "lowSince",
+                  type: "uint48",
+                  internalType: "uint48",
+                },
+              ],
+            },
+          ],
+          stateMutability: "view",
+        },
+        {
+          type: "function",
           name: "getRoleAdmin",
           inputs: [
             {
@@ -37107,6 +39514,47 @@ const deployedContracts: GenericContractsDeclaration = {
               name: "",
               type: "bytes32",
               internalType: "bytes32",
+            },
+          ],
+          stateMutability: "view",
+        },
+        {
+          type: "function",
+          name: "getSlashConfigForContent",
+          inputs: [
+            {
+              name: "contentId",
+              type: "uint256",
+              internalType: "uint256",
+            },
+          ],
+          outputs: [
+            {
+              name: "slashConfig",
+              type: "tuple",
+              internalType: "struct RatingLib.SlashConfig",
+              components: [
+                {
+                  name: "slashThresholdBps",
+                  type: "uint16",
+                  internalType: "uint16",
+                },
+                {
+                  name: "minSlashSettledRounds",
+                  type: "uint16",
+                  internalType: "uint16",
+                },
+                {
+                  name: "minSlashLowDuration",
+                  type: "uint48",
+                  internalType: "uint48",
+                },
+                {
+                  name: "minSlashEvidence",
+                  type: "uint256",
+                  internalType: "uint256",
+                },
+              ],
             },
           ],
           stateMutability: "view",
@@ -37245,6 +39693,25 @@ const deployedContracts: GenericContractsDeclaration = {
         {
           type: "function",
           name: "isDormancyEligible",
+          inputs: [
+            {
+              name: "contentId",
+              type: "uint256",
+              internalType: "uint256",
+            },
+          ],
+          outputs: [
+            {
+              name: "",
+              type: "bool",
+              internalType: "bool",
+            },
+          ],
+          stateMutability: "view",
+        },
+        {
+          type: "function",
+          name: "isSubmitterStakeSlashable",
           inputs: [
             {
               name: "contentId",
@@ -37485,6 +39952,73 @@ const deployedContracts: GenericContractsDeclaration = {
         },
         {
           type: "function",
+          name: "protocolConfig",
+          inputs: [],
+          outputs: [
+            {
+              name: "",
+              type: "address",
+              internalType: "contract ProtocolConfig",
+            },
+          ],
+          stateMutability: "view",
+        },
+        {
+          type: "function",
+          name: "ratingState",
+          inputs: [
+            {
+              name: "",
+              type: "uint256",
+              internalType: "uint256",
+            },
+          ],
+          outputs: [
+            {
+              name: "ratingLogitX18",
+              type: "int128",
+              internalType: "int128",
+            },
+            {
+              name: "confidenceMass",
+              type: "uint128",
+              internalType: "uint128",
+            },
+            {
+              name: "effectiveEvidence",
+              type: "uint128",
+              internalType: "uint128",
+            },
+            {
+              name: "settledRounds",
+              type: "uint32",
+              internalType: "uint32",
+            },
+            {
+              name: "ratingBps",
+              type: "uint16",
+              internalType: "uint16",
+            },
+            {
+              name: "conservativeRatingBps",
+              type: "uint16",
+              internalType: "uint16",
+            },
+            {
+              name: "lastUpdatedAt",
+              type: "uint48",
+              internalType: "uint48",
+            },
+            {
+              name: "lowSince",
+              type: "uint48",
+              internalType: "uint48",
+            },
+          ],
+          stateMutability: "view",
+        },
+        {
+          type: "function",
           name: "recordMeaningfulActivity",
           inputs: [
             {
@@ -37684,6 +40218,19 @@ const deployedContracts: GenericContractsDeclaration = {
           inputs: [
             {
               name: "_participationPool",
+              type: "address",
+              internalType: "address",
+            },
+          ],
+          outputs: [],
+          stateMutability: "nonpayable",
+        },
+        {
+          type: "function",
+          name: "setProtocolConfig",
+          inputs: [
+            {
+              name: "_protocolConfig",
               type: "address",
               internalType: "address",
             },
@@ -38049,6 +40596,76 @@ const deployedContracts: GenericContractsDeclaration = {
         },
         {
           type: "function",
+          name: "updateRatingState",
+          inputs: [
+            {
+              name: "contentId",
+              type: "uint256",
+              internalType: "uint256",
+            },
+            {
+              name: "roundId",
+              type: "uint256",
+              internalType: "uint256",
+            },
+            {
+              name: "referenceRatingBps",
+              type: "uint16",
+              internalType: "uint16",
+            },
+            {
+              name: "nextState",
+              type: "tuple",
+              internalType: "struct RatingLib.RatingState",
+              components: [
+                {
+                  name: "ratingLogitX18",
+                  type: "int128",
+                  internalType: "int128",
+                },
+                {
+                  name: "confidenceMass",
+                  type: "uint128",
+                  internalType: "uint128",
+                },
+                {
+                  name: "effectiveEvidence",
+                  type: "uint128",
+                  internalType: "uint128",
+                },
+                {
+                  name: "settledRounds",
+                  type: "uint32",
+                  internalType: "uint32",
+                },
+                {
+                  name: "ratingBps",
+                  type: "uint16",
+                  internalType: "uint16",
+                },
+                {
+                  name: "conservativeRatingBps",
+                  type: "uint16",
+                  internalType: "uint16",
+                },
+                {
+                  name: "lastUpdatedAt",
+                  type: "uint48",
+                  internalType: "uint48",
+                },
+                {
+                  name: "lowSince",
+                  type: "uint48",
+                  internalType: "uint48",
+                },
+              ],
+            },
+          ],
+          outputs: [],
+          stateMutability: "nonpayable",
+        },
+        {
+          type: "function",
           name: "voterIdNFT",
           inputs: [],
           outputs: [
@@ -38264,6 +40881,80 @@ const deployedContracts: GenericContractsDeclaration = {
               type: "address",
               indexed: false,
               internalType: "address",
+            },
+          ],
+          anonymous: false,
+        },
+        {
+          type: "event",
+          name: "ProtocolConfigUpdated",
+          inputs: [
+            {
+              name: "protocolConfig",
+              type: "address",
+              indexed: false,
+              internalType: "address",
+            },
+          ],
+          anonymous: false,
+        },
+        {
+          type: "event",
+          name: "RatingStateUpdated",
+          inputs: [
+            {
+              name: "contentId",
+              type: "uint256",
+              indexed: true,
+              internalType: "uint256",
+            },
+            {
+              name: "roundId",
+              type: "uint256",
+              indexed: true,
+              internalType: "uint256",
+            },
+            {
+              name: "referenceRatingBps",
+              type: "uint16",
+              indexed: false,
+              internalType: "uint16",
+            },
+            {
+              name: "oldRatingBps",
+              type: "uint16",
+              indexed: false,
+              internalType: "uint16",
+            },
+            {
+              name: "newRatingBps",
+              type: "uint16",
+              indexed: false,
+              internalType: "uint16",
+            },
+            {
+              name: "conservativeRatingBps",
+              type: "uint16",
+              indexed: false,
+              internalType: "uint16",
+            },
+            {
+              name: "confidenceMass",
+              type: "uint256",
+              indexed: false,
+              internalType: "uint256",
+            },
+            {
+              name: "effectiveEvidence",
+              type: "uint256",
+              indexed: false,
+              internalType: "uint256",
+            },
+            {
+              name: "settledRounds",
+              type: "uint32",
+              indexed: false,
+              internalType: "uint32",
             },
           ],
           anonymous: false,
@@ -38631,6 +41322,81 @@ const deployedContracts: GenericContractsDeclaration = {
         },
         {
           type: "error",
+          name: "PRBMath_MulDiv_Overflow",
+          inputs: [
+            {
+              name: "x",
+              type: "uint256",
+              internalType: "uint256",
+            },
+            {
+              name: "y",
+              type: "uint256",
+              internalType: "uint256",
+            },
+            {
+              name: "denominator",
+              type: "uint256",
+              internalType: "uint256",
+            },
+          ],
+        },
+        {
+          type: "error",
+          name: "PRBMath_SD59x18_Convert_Overflow",
+          inputs: [
+            {
+              name: "x",
+              type: "int256",
+              internalType: "int256",
+            },
+          ],
+        },
+        {
+          type: "error",
+          name: "PRBMath_SD59x18_Convert_Underflow",
+          inputs: [
+            {
+              name: "x",
+              type: "int256",
+              internalType: "int256",
+            },
+          ],
+        },
+        {
+          type: "error",
+          name: "PRBMath_SD59x18_Div_InputTooSmall",
+          inputs: [],
+        },
+        {
+          type: "error",
+          name: "PRBMath_SD59x18_Div_Overflow",
+          inputs: [
+            {
+              name: "x",
+              type: "int256",
+              internalType: "SD59x18",
+            },
+            {
+              name: "y",
+              type: "int256",
+              internalType: "SD59x18",
+            },
+          ],
+        },
+        {
+          type: "error",
+          name: "PRBMath_SD59x18_Log_InputTooSmall",
+          inputs: [
+            {
+              name: "x",
+              type: "int256",
+              internalType: "SD59x18",
+            },
+          ],
+        },
+        {
+          type: "error",
           name: "ReentrancyGuardReentrantCall",
           inputs: [],
         },
@@ -38705,45 +41471,6 @@ const deployedContracts: GenericContractsDeclaration = {
         },
         {
           type: "function",
-          name: "MAX_CIPHERTEXT_SIZE",
-          inputs: [],
-          outputs: [
-            {
-              name: "",
-              type: "uint256",
-              internalType: "uint256",
-            },
-          ],
-          stateMutability: "view",
-        },
-        {
-          type: "function",
-          name: "MAX_STAKE",
-          inputs: [],
-          outputs: [
-            {
-              name: "",
-              type: "uint256",
-              internalType: "uint256",
-            },
-          ],
-          stateMutability: "view",
-        },
-        {
-          type: "function",
-          name: "MIN_STAKE",
-          inputs: [],
-          outputs: [
-            {
-              name: "",
-              type: "uint256",
-              internalType: "uint256",
-            },
-          ],
-          stateMutability: "view",
-        },
-        {
-          type: "function",
           name: "PAUSER_ROLE",
           inputs: [],
           outputs: [
@@ -38751,19 +41478,6 @@ const deployedContracts: GenericContractsDeclaration = {
               name: "",
               type: "bytes32",
               internalType: "bytes32",
-            },
-          ],
-          stateMutability: "view",
-        },
-        {
-          type: "function",
-          name: "VOTE_COOLDOWN",
-          inputs: [],
-          outputs: [
-            {
-              name: "",
-              type: "uint256",
-              internalType: "uint256",
             },
           ],
           stateMutability: "view",
@@ -38848,7 +41562,7 @@ const deployedContracts: GenericContractsDeclaration = {
         },
         {
           type: "function",
-          name: "commitRevealAvailableAt",
+          name: "commitVote",
           inputs: [
             {
               name: "contentId",
@@ -38856,24 +41570,38 @@ const deployedContracts: GenericContractsDeclaration = {
               internalType: "uint256",
             },
             {
-              name: "roundId",
-              type: "uint256",
-              internalType: "uint256",
+              name: "targetRound",
+              type: "uint64",
+              internalType: "uint64",
             },
             {
-              name: "commitKey",
+              name: "drandChainHash",
               type: "bytes32",
               internalType: "bytes32",
             },
-          ],
-          outputs: [
             {
-              name: "",
+              name: "commitHash",
+              type: "bytes32",
+              internalType: "bytes32",
+            },
+            {
+              name: "ciphertext",
+              type: "bytes",
+              internalType: "bytes",
+            },
+            {
+              name: "stakeAmount",
               type: "uint256",
               internalType: "uint256",
             },
+            {
+              name: "frontend",
+              type: "address",
+              internalType: "address",
+            },
           ],
-          stateMutability: "view",
+          outputs: [],
+          stateMutability: "nonpayable",
         },
         {
           type: "function",
@@ -38883,6 +41611,11 @@ const deployedContracts: GenericContractsDeclaration = {
               name: "contentId",
               type: "uint256",
               internalType: "uint256",
+            },
+            {
+              name: "roundReferenceRatingBps",
+              type: "uint16",
+              internalType: "uint16",
             },
             {
               name: "targetRound",
@@ -39007,19 +41740,6 @@ const deployedContracts: GenericContractsDeclaration = {
         },
         {
           type: "function",
-          name: "crepToken",
-          inputs: [],
-          outputs: [
-            {
-              name: "",
-              type: "address",
-              internalType: "contract IERC20",
-            },
-          ],
-          stateMutability: "view",
-        },
-        {
-          type: "function",
           name: "currentRoundId",
           inputs: [
             {
@@ -39124,35 +41844,6 @@ const deployedContracts: GenericContractsDeclaration = {
               name: "account",
               type: "address",
               internalType: "address",
-            },
-          ],
-          outputs: [
-            {
-              name: "",
-              type: "bool",
-              internalType: "bool",
-            },
-          ],
-          stateMutability: "view",
-        },
-        {
-          type: "function",
-          name: "hasTokenIdCommitted",
-          inputs: [
-            {
-              name: "",
-              type: "uint256",
-              internalType: "uint256",
-            },
-            {
-              name: "",
-              type: "uint256",
-              internalType: "uint256",
-            },
-            {
-              name: "",
-              type: "uint256",
-              internalType: "uint256",
             },
           ],
           outputs: [
@@ -39296,6 +41987,25 @@ const deployedContracts: GenericContractsDeclaration = {
         },
         {
           type: "function",
+          name: "previewCommitReferenceRatingBps",
+          inputs: [
+            {
+              name: "contentId",
+              type: "uint256",
+              internalType: "uint256",
+            },
+          ],
+          outputs: [
+            {
+              name: "",
+              type: "uint16",
+              internalType: "uint16",
+            },
+          ],
+          stateMutability: "view",
+        },
+        {
+          type: "function",
           name: "processUnrevealedVotes",
           inputs: [
             {
@@ -39331,19 +42041,6 @@ const deployedContracts: GenericContractsDeclaration = {
               name: "",
               type: "address",
               internalType: "contract ProtocolConfig",
-            },
-          ],
-          stateMutability: "view",
-        },
-        {
-          type: "function",
-          name: "registry",
-          inputs: [],
-          outputs: [
-            {
-              name: "",
-              type: "address",
-              internalType: "contract ContentRegistry",
             },
           ],
           stateMutability: "view",
@@ -40159,6 +42856,31 @@ const deployedContracts: GenericContractsDeclaration = {
         },
         {
           type: "event",
+          name: "RoundReferenceSnapshotted",
+          inputs: [
+            {
+              name: "contentId",
+              type: "uint256",
+              indexed: true,
+              internalType: "uint256",
+            },
+            {
+              name: "roundId",
+              type: "uint256",
+              indexed: true,
+              internalType: "uint256",
+            },
+            {
+              name: "roundReferenceRatingBps",
+              type: "uint16",
+              indexed: false,
+              internalType: "uint16",
+            },
+          ],
+          anonymous: false,
+        },
+        {
+          type: "event",
           name: "RoundRevealFailed",
           inputs: [
             {
@@ -40291,6 +43013,12 @@ const deployedContracts: GenericContractsDeclaration = {
               type: "bytes32",
               indexed: false,
               internalType: "bytes32",
+            },
+            {
+              name: "roundReferenceRatingBps",
+              type: "uint16",
+              indexed: false,
+              internalType: "uint16",
             },
             {
               name: "targetRound",
@@ -40493,6 +43221,11 @@ const deployedContracts: GenericContractsDeclaration = {
         {
           type: "error",
           name: "ReentrancyGuardReentrantCall",
+          inputs: [],
+        },
+        {
+          type: "error",
+          name: "ReferenceRatingMismatch",
           inputs: [],
         },
         {
@@ -43802,6 +46535,86 @@ const deployedContracts: GenericContractsDeclaration = {
         },
         {
           type: "function",
+          name: "getRatingConfig",
+          inputs: [],
+          outputs: [
+            {
+              name: "cfg",
+              type: "tuple",
+              internalType: "struct RatingLib.RatingConfig",
+              components: [
+                {
+                  name: "smoothingAlpha",
+                  type: "uint256",
+                  internalType: "uint256",
+                },
+                {
+                  name: "smoothingBeta",
+                  type: "uint256",
+                  internalType: "uint256",
+                },
+                {
+                  name: "observationBetaX18",
+                  type: "uint256",
+                  internalType: "uint256",
+                },
+                {
+                  name: "confidenceMassInitial",
+                  type: "uint256",
+                  internalType: "uint256",
+                },
+                {
+                  name: "confidenceMassMin",
+                  type: "uint256",
+                  internalType: "uint256",
+                },
+                {
+                  name: "confidenceMassMax",
+                  type: "uint256",
+                  internalType: "uint256",
+                },
+                {
+                  name: "confidenceGainBps",
+                  type: "uint16",
+                  internalType: "uint16",
+                },
+                {
+                  name: "confidenceReopenBps",
+                  type: "uint16",
+                  internalType: "uint16",
+                },
+                {
+                  name: "surpriseReferenceX18",
+                  type: "uint256",
+                  internalType: "uint256",
+                },
+                {
+                  name: "maxDeltaLogitX18",
+                  type: "uint256",
+                  internalType: "uint256",
+                },
+                {
+                  name: "maxAbsLogitX18",
+                  type: "uint256",
+                  internalType: "uint256",
+                },
+                {
+                  name: "conservativePenaltyMaxBps",
+                  type: "uint16",
+                  internalType: "uint16",
+                },
+                {
+                  name: "conservativePenaltyMinBps",
+                  type: "uint16",
+                  internalType: "uint16",
+                },
+              ],
+            },
+          ],
+          stateMutability: "view",
+        },
+        {
+          type: "function",
           name: "getRoleAdmin",
           inputs: [
             {
@@ -43815,6 +46628,41 @@ const deployedContracts: GenericContractsDeclaration = {
               name: "",
               type: "bytes32",
               internalType: "bytes32",
+            },
+          ],
+          stateMutability: "view",
+        },
+        {
+          type: "function",
+          name: "getSlashConfig",
+          inputs: [],
+          outputs: [
+            {
+              name: "cfg",
+              type: "tuple",
+              internalType: "struct RatingLib.SlashConfig",
+              components: [
+                {
+                  name: "slashThresholdBps",
+                  type: "uint16",
+                  internalType: "uint16",
+                },
+                {
+                  name: "minSlashSettledRounds",
+                  type: "uint16",
+                  internalType: "uint16",
+                },
+                {
+                  name: "minSlashLowDuration",
+                  type: "uint48",
+                  internalType: "uint48",
+                },
+                {
+                  name: "minSlashEvidence",
+                  type: "uint256",
+                  internalType: "uint256",
+                },
+              ],
             },
           ],
           stateMutability: "view",
@@ -43911,6 +46759,79 @@ const deployedContracts: GenericContractsDeclaration = {
               name: "",
               type: "address",
               internalType: "address",
+            },
+          ],
+          stateMutability: "view",
+        },
+        {
+          type: "function",
+          name: "ratingConfig",
+          inputs: [],
+          outputs: [
+            {
+              name: "smoothingAlpha",
+              type: "uint256",
+              internalType: "uint256",
+            },
+            {
+              name: "smoothingBeta",
+              type: "uint256",
+              internalType: "uint256",
+            },
+            {
+              name: "observationBetaX18",
+              type: "uint256",
+              internalType: "uint256",
+            },
+            {
+              name: "confidenceMassInitial",
+              type: "uint256",
+              internalType: "uint256",
+            },
+            {
+              name: "confidenceMassMin",
+              type: "uint256",
+              internalType: "uint256",
+            },
+            {
+              name: "confidenceMassMax",
+              type: "uint256",
+              internalType: "uint256",
+            },
+            {
+              name: "confidenceGainBps",
+              type: "uint16",
+              internalType: "uint16",
+            },
+            {
+              name: "confidenceReopenBps",
+              type: "uint16",
+              internalType: "uint16",
+            },
+            {
+              name: "surpriseReferenceX18",
+              type: "uint256",
+              internalType: "uint256",
+            },
+            {
+              name: "maxDeltaLogitX18",
+              type: "uint256",
+              internalType: "uint256",
+            },
+            {
+              name: "maxAbsLogitX18",
+              type: "uint256",
+              internalType: "uint256",
+            },
+            {
+              name: "conservativePenaltyMaxBps",
+              type: "uint16",
+              internalType: "uint16",
+            },
+            {
+              name: "conservativePenaltyMinBps",
+              type: "uint16",
+              internalType: "uint16",
             },
           ],
           stateMutability: "view",
@@ -44069,6 +46990,79 @@ const deployedContracts: GenericContractsDeclaration = {
         },
         {
           type: "function",
+          name: "setRatingConfig",
+          inputs: [
+            {
+              name: "smoothingAlpha",
+              type: "uint256",
+              internalType: "uint256",
+            },
+            {
+              name: "smoothingBeta",
+              type: "uint256",
+              internalType: "uint256",
+            },
+            {
+              name: "observationBetaX18",
+              type: "uint256",
+              internalType: "uint256",
+            },
+            {
+              name: "confidenceMassInitial",
+              type: "uint256",
+              internalType: "uint256",
+            },
+            {
+              name: "confidenceMassMin",
+              type: "uint256",
+              internalType: "uint256",
+            },
+            {
+              name: "confidenceMassMax",
+              type: "uint256",
+              internalType: "uint256",
+            },
+            {
+              name: "confidenceGainBps",
+              type: "uint16",
+              internalType: "uint16",
+            },
+            {
+              name: "confidenceReopenBps",
+              type: "uint16",
+              internalType: "uint16",
+            },
+            {
+              name: "surpriseReferenceX18",
+              type: "uint256",
+              internalType: "uint256",
+            },
+            {
+              name: "maxDeltaLogitX18",
+              type: "uint256",
+              internalType: "uint256",
+            },
+            {
+              name: "maxAbsLogitX18",
+              type: "uint256",
+              internalType: "uint256",
+            },
+            {
+              name: "conservativePenaltyMaxBps",
+              type: "uint16",
+              internalType: "uint16",
+            },
+            {
+              name: "conservativePenaltyMinBps",
+              type: "uint16",
+              internalType: "uint16",
+            },
+          ],
+          outputs: [],
+          stateMutability: "nonpayable",
+        },
+        {
+          type: "function",
           name: "setRevealGracePeriod",
           inputs: [
             {
@@ -44088,6 +47082,34 @@ const deployedContracts: GenericContractsDeclaration = {
               name: "value",
               type: "address",
               internalType: "address",
+            },
+          ],
+          outputs: [],
+          stateMutability: "nonpayable",
+        },
+        {
+          type: "function",
+          name: "setSlashConfig",
+          inputs: [
+            {
+              name: "slashThresholdBps",
+              type: "uint16",
+              internalType: "uint16",
+            },
+            {
+              name: "minSlashSettledRounds",
+              type: "uint16",
+              internalType: "uint16",
+            },
+            {
+              name: "minSlashLowDuration",
+              type: "uint48",
+              internalType: "uint48",
+            },
+            {
+              name: "minSlashEvidence",
+              type: "uint256",
+              internalType: "uint256",
             },
           ],
           outputs: [],
@@ -44118,6 +47140,34 @@ const deployedContracts: GenericContractsDeclaration = {
           ],
           outputs: [],
           stateMutability: "nonpayable",
+        },
+        {
+          type: "function",
+          name: "slashConfig",
+          inputs: [],
+          outputs: [
+            {
+              name: "slashThresholdBps",
+              type: "uint16",
+              internalType: "uint16",
+            },
+            {
+              name: "minSlashSettledRounds",
+              type: "uint16",
+              internalType: "uint16",
+            },
+            {
+              name: "minSlashLowDuration",
+              type: "uint48",
+              internalType: "uint48",
+            },
+            {
+              name: "minSlashEvidence",
+              type: "uint256",
+              internalType: "uint256",
+            },
+          ],
+          stateMutability: "view",
         },
         {
           type: "function",
@@ -44274,6 +47324,91 @@ const deployedContracts: GenericContractsDeclaration = {
         },
         {
           type: "event",
+          name: "RatingConfigUpdated",
+          inputs: [
+            {
+              name: "smoothingAlpha",
+              type: "uint256",
+              indexed: false,
+              internalType: "uint256",
+            },
+            {
+              name: "smoothingBeta",
+              type: "uint256",
+              indexed: false,
+              internalType: "uint256",
+            },
+            {
+              name: "observationBetaX18",
+              type: "uint256",
+              indexed: false,
+              internalType: "uint256",
+            },
+            {
+              name: "confidenceMassInitial",
+              type: "uint256",
+              indexed: false,
+              internalType: "uint256",
+            },
+            {
+              name: "confidenceMassMin",
+              type: "uint256",
+              indexed: false,
+              internalType: "uint256",
+            },
+            {
+              name: "confidenceMassMax",
+              type: "uint256",
+              indexed: false,
+              internalType: "uint256",
+            },
+            {
+              name: "confidenceGainBps",
+              type: "uint16",
+              indexed: false,
+              internalType: "uint16",
+            },
+            {
+              name: "confidenceReopenBps",
+              type: "uint16",
+              indexed: false,
+              internalType: "uint16",
+            },
+            {
+              name: "surpriseReferenceX18",
+              type: "uint256",
+              indexed: false,
+              internalType: "uint256",
+            },
+            {
+              name: "maxDeltaLogitX18",
+              type: "uint256",
+              indexed: false,
+              internalType: "uint256",
+            },
+            {
+              name: "maxAbsLogitX18",
+              type: "uint256",
+              indexed: false,
+              internalType: "uint256",
+            },
+            {
+              name: "conservativePenaltyMaxBps",
+              type: "uint16",
+              indexed: false,
+              internalType: "uint16",
+            },
+            {
+              name: "conservativePenaltyMinBps",
+              type: "uint16",
+              indexed: false,
+              internalType: "uint16",
+            },
+          ],
+          anonymous: false,
+        },
+        {
+          type: "event",
           name: "RevealGracePeriodUpdated",
           inputs: [
             {
@@ -44369,6 +47504,37 @@ const deployedContracts: GenericContractsDeclaration = {
               type: "address",
               indexed: true,
               internalType: "address",
+            },
+          ],
+          anonymous: false,
+        },
+        {
+          type: "event",
+          name: "SlashConfigUpdated",
+          inputs: [
+            {
+              name: "slashThresholdBps",
+              type: "uint16",
+              indexed: false,
+              internalType: "uint16",
+            },
+            {
+              name: "minSlashSettledRounds",
+              type: "uint16",
+              indexed: false,
+              internalType: "uint16",
+            },
+            {
+              name: "minSlashLowDuration",
+              type: "uint48",
+              indexed: false,
+              internalType: "uint48",
+            },
+            {
+              name: "minSlashEvidence",
+              type: "uint256",
+              indexed: false,
+              internalType: "uint256",
             },
           ],
           anonymous: false,

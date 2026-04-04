@@ -14,6 +14,7 @@ import { ProtocolConfig } from "../contracts/ProtocolConfig.sol";
 import { RoundRewardDistributor } from "../contracts/RoundRewardDistributor.sol";
 import { ParticipationPool } from "../contracts/ParticipationPool.sol";
 import { RoundLib } from "../contracts/libraries/RoundLib.sol";
+import { RatingLib } from "../contracts/libraries/RatingLib.sol";
 import { RoundEngineReadHelpers } from "./helpers/RoundEngineReadHelpers.sol";
 import { MockVoterIdNFT } from "./mocks/MockVoterIdNFT.sol";
 import { IRoundVotingEngine } from "../contracts/interfaces/IRoundVotingEngine.sol";
@@ -1175,6 +1176,24 @@ contract ContentRegistryCoverageTest is VotingTestBase {
         uint256 id = _submitContent(submitter, "https://example.com/slash");
         vm.prank(admin);
         registry.setVotingEngine(address(this));
+        vm.warp(block.timestamp + 8 days);
+
+        registry.updateRatingState(
+            id,
+            1,
+            5_000,
+            RatingLib.RatingState({
+                ratingLogitX18: int128(-1e18),
+                confidenceMass: uint128(400e6),
+                effectiveEvidence: uint128(250e6),
+                settledRounds: 2,
+                ratingBps: 1_500,
+                conservativeRatingBps: 1_200,
+                lastUpdatedAt: uint48(block.timestamp),
+                lowSince: uint48(block.timestamp - 7 days - 1)
+            })
+        );
+        assertTrue(registry.isSubmitterStakeSlashable(id), "seeded rating state should unlock the slash path");
 
         uint256 treasuryBefore = crep.balanceOf(treasury);
         uint256 slashed = registry.slashSubmitterStake(id);

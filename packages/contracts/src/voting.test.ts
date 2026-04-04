@@ -3,8 +3,10 @@ import test from "node:test";
 import {
   buildCommitHash,
   createTlockVoteCommit,
+  deriveVoteTlockRevealAvailableAtSeconds,
   decodeVoteTransferPayload,
   encodeVoteTransferPayload,
+  getVoteTlockChainInfo,
   parseTlockCiphertextMetadata,
 } from "./voting";
 
@@ -179,15 +181,20 @@ test("buildCommitHash includes the tlock round metadata", () => {
   const salt = ("0x" + "22".repeat(32)) as `0x${string}`;
   const ciphertext = "0x1234" as `0x${string}`;
   const drandChainHash = ("0x" + "33".repeat(32)) as `0x${string}`;
+  const roundReferenceRatingBps = 5_000;
 
-  const commitHash = buildCommitHash(false, salt, 42n, 123n, drandChainHash, ciphertext);
+  const commitHash = buildCommitHash(false, salt, 42n, roundReferenceRatingBps, 123n, drandChainHash, ciphertext);
 
-  assert.equal(commitHash, buildCommitHash(false, salt, 42n, 123n, drandChainHash, ciphertext));
+  assert.equal(
+    commitHash,
+    buildCommitHash(false, salt, 42n, roundReferenceRatingBps, 123n, drandChainHash, ciphertext),
+  );
 });
 
 test("encodeVoteTransferPayload round-trips the redeployed vote shape", () => {
   const payload = encodeVoteTransferPayload({
     contentId: 42n,
+    roundReferenceRatingBps: 5_000,
     commitHash: ("0x" + "11".repeat(32)) as `0x${string}`,
     ciphertext: "0x1234" as `0x${string}`,
     targetRound: 123n,
@@ -197,6 +204,7 @@ test("encodeVoteTransferPayload round-trips the redeployed vote shape", () => {
 
   assert.deepEqual(decodeVoteTransferPayload(payload), {
     contentId: 42n,
+    roundReferenceRatingBps: 5_000,
     commitHash: "0x" + "11".repeat(32),
     ciphertext: "0x1234",
     targetRound: 123n,
@@ -212,6 +220,7 @@ test("createTlockVoteCommit returns the tlock metadata used in the commit hash",
       isUp: true,
       salt: ("0x" + "33".repeat(32)) as `0x${string}`,
       contentId: 7n,
+      roundReferenceRatingBps: 5_000,
       epochDurationSeconds: 1200,
     },
     {
@@ -231,8 +240,38 @@ test("createTlockVoteCommit returns the tlock metadata used in the commit hash",
 
   assert.equal(commit.targetRound > 0n, true);
   assert.equal(commit.drandChainHash, "0x52db9ba70e0cc0f6eaf7803dd07447a1f5477735fd3f661792ba94600c84e971");
+  assert.equal(commit.roundReferenceRatingBps, 5_000);
   assert.equal(
     commit.commitHash,
-    buildCommitHash(true, ("0x" + "33".repeat(32)) as `0x${string}`, 7n, commit.targetRound, commit.drandChainHash, commit.ciphertext),
+    buildCommitHash(
+      true,
+      ("0x" + "33".repeat(32)) as `0x${string}`,
+      7n,
+      5_000,
+      commit.targetRound,
+      commit.drandChainHash,
+      commit.ciphertext,
+    ),
+  );
+});
+
+test("getVoteTlockChainInfo returns the canonical drand metadata from the tlock client", async () => {
+  const chainInfo = await getVoteTlockChainInfo({ client: fakeClient });
+
+  assert.deepEqual(chainInfo, {
+    periodSeconds: 3n,
+    genesisTimeSeconds: 1692803367n,
+    drandChainHash: "0x52db9ba70e0cc0f6eaf7803dd07447a1f5477735fd3f661792ba94600c84e971",
+  });
+});
+
+test("deriveVoteTlockRevealAvailableAtSeconds converts a committed round into its reveal timestamp", () => {
+  assert.equal(
+    deriveVoteTlockRevealAvailableAtSeconds(401n, {
+      periodSeconds: 3n,
+      genesisTimeSeconds: 1692803367n,
+      drandChainHash: "0x52db9ba70e0cc0f6eaf7803dd07447a1f5477735fd3f661792ba94600c84e971",
+    }),
+    1692804567n,
   );
 });

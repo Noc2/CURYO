@@ -233,7 +233,7 @@ export function resolveCanonicalDomain(domain: string): string {
 
 /**
  * Find categoryId from a URL using the domain map.
- * Returns 0n for unknown/legacy content.
+ * Returns 0n when no known category matches.
  */
 export function getCategoryIdFromUrl(url: string, domainMap: Map<string, bigint>): bigint {
   const domain = extractDomain(url);

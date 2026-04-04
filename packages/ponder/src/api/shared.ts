@@ -90,6 +90,13 @@ export async function attachOpenRoundSummary<T extends { id: bigint }>(items: T[
       downPool: round.downPool,
       upCount: round.upCount,
       downCount: round.downCount,
+      referenceRatingBps: round.referenceRatingBps,
+      ratingBps: round.ratingBps,
+      conservativeRatingBps: round.conservativeRatingBps,
+      confidenceMass: round.confidenceMass,
+      effectiveEvidence: round.effectiveEvidence,
+      settledRounds: round.settledRounds,
+      lowSince: round.lowSince,
       startTime: round.startTime,
     })
     .from(round)
@@ -118,6 +125,13 @@ export async function attachOpenRoundSummary<T extends { id: bigint }>(items: T[
             downPool: openRound.downPool,
             upCount: openRound.upCount,
             downCount: openRound.downCount,
+            referenceRatingBps: openRound.referenceRatingBps,
+            ratingBps: openRound.ratingBps,
+            conservativeRatingBps: openRound.conservativeRatingBps,
+            confidenceMass: openRound.confidenceMass,
+            effectiveEvidence: openRound.effectiveEvidence,
+            settledRounds: openRound.settledRounds,
+            lowSince: openRound.lowSince,
             startTime: openRound.startTime,
             estimatedSettlementTime: getEstimatedSettlementTime(openRound.startTime),
           }

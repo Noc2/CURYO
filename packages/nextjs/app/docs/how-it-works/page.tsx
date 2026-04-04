@@ -78,26 +78,39 @@ const HowItWorks: NextPage = () => {
 
       <h2>Content Rating</h2>
       <p>
-        Each content item starts at <strong>50</strong>. When a round settles, the contract recalculates the rating from
-        the final revealed up and down stake imbalance. The rating uses revealed raw stake, so epoch weighting affects
-        rewards but not the score itself. Cancelled, tied, and reveal-failed rounds leave the rating unchanged.
+        In the redeployed rating model, each content item still starts at <strong>50</strong>, but the protocol no
+        longer recomputes a fresh absolute score from a single round. Instead, when a round opens it snapshots a
+        canonical <strong>round reference score</strong>, and voters decide whether that displayed score is too low or
+        too high.
+      </p>
+      <p>
+        When the round settles, the next score is updated from that round reference using epoch-weighted revealed
+        evidence, modest vote-share smoothing, and a dynamic confidence term. Stable history makes established content
+        harder to move, while contradictory rounds can reopen confidence instead of locking bad early anchors in place.
+        Cancelled, tied, and reveal-failed rounds still leave the score unchanged.
       </p>
       <div className="not-prose my-6 rounded-xl bg-base-200 p-4 text-sm text-base-content/80">
         <p className="font-medium text-base-content">Formula</p>
         <code className="mt-2 block whitespace-pre-wrap font-mono text-xs sm:text-sm">
-          rating = 50 + 50 * (upStake - downStake) / (upStake + downStake + 50)
+          pObs = (weightedUp + alpha) / (weightedUp + weightedDown + alpha + beta)
+          {"\n"}
+          gap = logit(pObs) / observationBeta
+          {"\n"}
+          nextRating = sigmoid(logit(referenceRating) + boundedStep * gap)
         </code>
         <p className="mt-3">
-          Here, <strong>upStake</strong> and <strong>downStake</strong> are the total revealed raw cREP stakes for the
-          round. The extra <strong>50</strong> is a smoothing constant that keeps small rounds closer to the neutral
-          starting score of 50.
+          Here, <strong>referenceRating</strong> is the canonical score snapshot for the open round, while{" "}
+          <strong>weightedUp</strong> and <strong>weightedDown</strong> are the epoch-weighted revealed cREP totals.
+          Governance can later fine-tune the smoothing, confidence, and movement-cap parameters, but every round
+          snapshots its config when it opens.
         </p>
         <p className="mt-3">
-          <strong>Example:</strong> if a round settles with <strong>150 cREP up</strong> and{" "}
-          <strong>50 cREP down</strong>, then:
+          <strong>Example:</strong> if repeated rounds keep settling at roughly <strong>60 up / 40 down</strong>, the
+          score can keep rising from the currently displayed anchor instead of snapping back to the same value each
+          time. A representative simulation path is:
         </p>
         <code className="mt-2 block whitespace-pre-wrap font-mono text-xs sm:text-sm">
-          rating = 50 + 50 * (150 - 50) / (150 + 50 + 50) = 50 + 20 = 70
+          50.0 -&gt; 52.3 -&gt; 54.5 -&gt; 56.6
         </code>
       </div>
 

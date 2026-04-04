@@ -11,7 +11,10 @@ const DRAND_CHAIN_HASH = `0x${"cc".repeat(32)}` as const;
 
 type VoteCommandOptions = {
   allowance?: bigint;
-  lastVoteError?: Error;
+  roundStateError?: Error;
+  currentRoundId?: bigint;
+  voterCommitHash?: `0x${string}`;
+  commitVoteError?: Error;
 };
 
 async function loadVoteCommand(options: VoteCommandOptions = {}) {
@@ -25,15 +28,18 @@ async function loadVoteCommand(options: VoteCommandOptions = {}) {
         return 10_000_000n;
       case "allowance":
         return options.allowance ?? 0n;
-      case "lastVoteTimestamp":
-        if (options.lastVoteError) {
-          throw options.lastVoteError;
-        }
-        return 0n;
+      case "currentRoundId":
+        if (options.roundStateError) throw options.roundStateError;
+        return options.currentRoundId ?? 0n;
+      case "voterCommitHash":
+        if (options.roundStateError) throw options.roundStateError;
+        return options.voterCommitHash ?? `0x${"00".repeat(32)}`;
       case "protocolConfig":
         return PROTOCOL_CONFIG_ADDRESS;
       case "config":
         return [1_200n, 172_800n, 3n, 1_000n] as const;
+      case "previewCommitReferenceRatingBps":
+        return 5_000;
       default:
         throw new Error(`Unexpected readContract: ${functionName}`);
     }
@@ -44,6 +50,7 @@ async function loadVoteCommand(options: VoteCommandOptions = {}) {
       case "approve":
         return "0xapprove";
       case "commitVote":
+        if (options.commitVoteError) throw options.commitVoteError;
         return "0xvote";
       default:
         throw new Error(`Unexpected writeContract: ${functionName}`);
@@ -66,6 +73,7 @@ async function loadVoteCommand(options: VoteCommandOptions = {}) {
       commitHash: COMMIT_HASH,
       targetRound: 123n,
       drandChainHash: DRAND_CHAIN_HASH,
+      roundReferenceRatingBps: 5_000,
     }),
   }));
   vi.doMock("../client.js", () => ({
@@ -166,20 +174,34 @@ describe("runVote", () => {
       2,
       expect.objectContaining({
         functionName: "commitVote",
-        args: [42n, 123n, DRAND_CHAIN_HASH, COMMIT_HASH, CIPHERTEXT, 1_000_000n, expect.any(String)],
+        args: [42n, 5_000, 123n, DRAND_CHAIN_HASH, COMMIT_HASH, CIPHERTEXT, 1_000_000n, expect.any(String)],
       }),
     );
   });
 
-  it("warns when a vote-history read fails before skipping the content", async () => {
+  it("warns when the current-round vote-state read fails before skipping the content", async () => {
     const voteCommand = await loadVoteCommand({
-      lastVoteError: new Error("history unavailable"),
+      roundStateError: new Error("round state unavailable"),
     });
 
     await voteCommand.runVote();
 
     expect(voteCommand.mocks.log.warn).toHaveBeenCalledWith(
-      "Skipping content #42 (failed to read vote history: history unavailable)",
+      "Skipping content #42 (failed to read current round vote state: round state unavailable)",
+    );
+    expect(voteCommand.mocks.writeContract).not.toHaveBeenCalled();
+  });
+
+  it("skips content already committed in the current round", async () => {
+    const voteCommand = await loadVoteCommand({
+      currentRoundId: 7n,
+      voterCommitHash: COMMIT_HASH,
+    });
+
+    await voteCommand.runVote();
+
+    expect(voteCommand.mocks.log.debug).toHaveBeenCalledWith(
+      "Skipping content #42 (already committed in the current round)",
     );
     expect(voteCommand.mocks.writeContract).not.toHaveBeenCalled();
   });
@@ -200,6 +222,21 @@ describe("runVote", () => {
       expect.objectContaining({
         functionName: "commitVote",
       }),
+    );
+  });
+
+  it("treats cooldown reverts as a skip instead of an error", async () => {
+    const voteCommand = await loadVoteCommand({
+      commitVoteError: new Error("CooldownActive"),
+    });
+
+    await voteCommand.runVote();
+
+    expect(voteCommand.mocks.log.debug).toHaveBeenCalledWith(
+      "Skipping content #42 (vote cooldown still active)",
+    );
+    expect(voteCommand.mocks.log.error).not.toHaveBeenCalledWith(
+      expect.stringContaining("Failed to vote on content #42"),
     );
   });
 });

@@ -17,6 +17,7 @@ import { readContract, waitForTransactionReceipt } from "wagmi/actions";
 import { ChevronDownIcon, MagnifyingGlassIcon, XMarkIcon } from "@heroicons/react/24/outline";
 import { ContentEmbed } from "~~/components/content/ContentEmbed";
 import { GasBalanceWarning } from "~~/components/shared/GasBalanceWarning";
+import { TransactionStatusCallout } from "~~/components/shared/TransactionStatusCallout";
 import { surfaceSectionHeadingClassName } from "~~/components/shared/sectionHeading";
 import { InfoTooltip } from "~~/components/ui/InfoTooltip";
 import { serializeTags } from "~~/constants/categories";
@@ -48,7 +49,7 @@ import {
   isInsufficientFundsError,
   isWalletRpcOverloadedError,
 } from "~~/lib/transactionErrors";
-import { getSubmittingTransactionMessage } from "~~/lib/ui/transactionStatusCopy";
+import { getSubmittingTransactionStatus } from "~~/lib/ui/transactionStatusCopy";
 import { containsBlockedUrl } from "~~/utils/contentFilter";
 import { sanitizeExternalUrl } from "~~/utils/externalUrl";
 import { canonicalizeUrl, isSupportedVideoPlatform } from "~~/utils/platforms";
@@ -174,6 +175,7 @@ export function ContentSubmissionSection() {
   const [selectedSubcategories, setSelectedSubcategories] = useState<string[]>([]);
   const [customSubcategory, setCustomSubcategory] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const submittingStatus = getSubmittingTransactionStatus("content");
   const [submitAttempted, setSubmitAttempted] = useState(false);
   const [submittedContent, setSubmittedContent] = useState<{
     id: bigint;
@@ -1040,9 +1042,11 @@ export function ContentSubmissionSection() {
               )}
             </button>
             {isSubmitting ? (
-              <p className="mt-3 text-center text-sm text-base-content/65">
-                {getSubmittingTransactionMessage("content")}
-              </p>
+              <TransactionStatusCallout
+                className="mt-3"
+                title={submittingStatus.title}
+                description={submittingStatus.description}
+              />
             ) : null}
           </div>
         </form>

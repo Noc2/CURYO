@@ -465,6 +465,56 @@ contract GovernanceTest is Test {
         governor.initializePools(holders);
     }
 
+    function test_GovernorBootstrapCanBeRecoveredViaTimelockProposal() public {
+        vm.startPrank(deployer);
+        CuryoGovernor freshGovernor = new CuryoGovernor(IVotes(address(token)), timelock);
+        token.setGovernor(address(freshGovernor));
+        timelock.grantRole(timelock.PROPOSER_ROLE(), address(freshGovernor));
+        timelock.grantRole(timelock.CANCELLER_ROLE(), address(freshGovernor));
+        vm.stopPrank();
+
+        vm.roll(block.number + 1);
+
+        address[] memory holders = new address[](3);
+        holders[0] = address(100);
+        holders[1] = address(101);
+        holders[2] = address(102);
+
+        address[] memory targets = new address[](2);
+        targets[0] = address(freshGovernor);
+        targets[1] = address(freshGovernor);
+
+        uint256[] memory values = new uint256[](2);
+        bytes[] memory calldatas = new bytes[](2);
+        calldatas[0] = abi.encodeCall(CuryoGovernor.initializePools, (holders));
+        calldatas[1] = abi.encodeCall(CuryoGovernor.setCategoryRegistry, (address(mockCategoryRegistry)));
+
+        string memory description = "Recover bootstrap";
+        vm.prank(voter1);
+        uint256 proposalId = freshGovernor.propose(targets, values, calldatas, description);
+
+        vm.roll(block.number + freshGovernor.votingDelay() + 1);
+        vm.prank(voter1);
+        freshGovernor.castVote(proposalId, 1);
+        vm.prank(voter2);
+        freshGovernor.castVote(proposalId, 1);
+        vm.prank(voter3);
+        freshGovernor.castVote(proposalId, 1);
+
+        vm.roll(block.number + freshGovernor.votingPeriod() + 1);
+        bytes32 descriptionHash = keccak256(bytes(description));
+        freshGovernor.queue(targets, values, calldatas, descriptionHash);
+
+        vm.warp(block.timestamp + 2 days + 1);
+        freshGovernor.execute(targets, values, calldatas, descriptionHash);
+
+        assertTrue(freshGovernor.poolsInitialized());
+        assertEq(freshGovernor.categoryRegistry(), address(mockCategoryRegistry));
+        assertTrue(freshGovernor.isExcludedHolder(address(100)));
+        assertTrue(freshGovernor.isExcludedHolder(address(101)));
+        assertTrue(freshGovernor.isExcludedHolder(address(102)));
+    }
+
     function test_GovernorGetExcludedHolders() public view {
         address[] memory holders = governor.getExcludedHolders();
         assertEq(holders.length, 8);
@@ -507,9 +557,10 @@ contract GovernanceTest is Test {
         }
     }
 
-    function test_GovernorRejectsProposalsBeforePoolsInitialization() public {
+    function test_GovernorAllowsProposalsBeforePoolsInitialization() public {
         vm.startPrank(deployer);
         CuryoGovernor freshGovernor = new CuryoGovernor(IVotes(address(token)), timelock);
+        token.setGovernor(address(freshGovernor));
         vm.stopPrank();
 
         vm.roll(block.number + 1);
@@ -520,8 +571,8 @@ contract GovernanceTest is Test {
         bytes[] memory calldatas = new bytes[](1);
 
         vm.prank(voter1);
-        vm.expectRevert("Pools not initialized");
-        freshGovernor.propose(targets, values, calldatas, "Test");
+        uint256 proposalId = freshGovernor.propose(targets, values, calldatas, "Test");
+        assertTrue(proposalId != 0);
     }
 
     function _excludedHolders() internal view returns (address[] memory holders) {
@@ -647,7 +698,7 @@ contract GovernanceTest is Test {
         assertTrue(timelock.hasRole(timelock.CANCELLER_ROLE(), address(governor)));
     }
 
-    function test_AdminHasTemporaryDefaultAdminRole() public {
+    function test_AdminOnlyGetsTemporarySetupRoles() public {
         // Deploy with separate admin and governance
         address admin = address(0xA);
         address governance = address(0xB);
@@ -660,28 +711,18 @@ contract GovernanceTest is Test {
         bytes32 configRole = separateToken.CONFIG_ROLE();
         bytes32 minterRole = separateToken.MINTER_ROLE();
 
-        // Admin should have DEFAULT_ADMIN_ROLE, CONFIG_ROLE, and MINTER_ROLE
-        assertTrue(separateToken.hasRole(defaultAdminRole, admin));
+        // Admin gets only the setup roles needed for deployment wiring and minting.
+        assertFalse(separateToken.hasRole(defaultAdminRole, admin));
         assertTrue(separateToken.hasRole(configRole, admin));
         assertTrue(separateToken.hasRole(minterRole, admin));
 
-        // Governance should also have DEFAULT_ADMIN_ROLE
+        // Governance retains permanent admin authority.
         assertTrue(separateToken.hasRole(defaultAdminRole, governance));
-
-        // Admin can grant roles (needed for dev faucet setup during deploy)
-        vm.prank(admin);
-        separateToken.grantRole(minterRole, address(0xC));
-        assertTrue(separateToken.hasRole(minterRole, address(0xC)));
-
-        // Admin can renounce DEFAULT_ADMIN_ROLE (done at end of deploy)
-        vm.prank(admin);
-        separateToken.renounceRole(defaultAdminRole, admin);
-        assertFalse(separateToken.hasRole(defaultAdminRole, admin));
 
         // After renouncing, admin can no longer grant roles
         vm.prank(admin);
         vm.expectRevert();
-        separateToken.grantRole(minterRole, address(0xD));
+        separateToken.grantRole(minterRole, address(0xC));
     }
 
     function test_AdminCanRenounceSetupRoles() public {
@@ -692,8 +733,8 @@ contract GovernanceTest is Test {
         vm.prank(admin);
         CuryoReputation separateToken = new CuryoReputation(admin, governance);
 
-        // Admin has DEFAULT_ADMIN_ROLE, CONFIG_ROLE, and MINTER_ROLE
-        assertTrue(separateToken.hasRole(separateToken.DEFAULT_ADMIN_ROLE(), admin));
+        // Admin has only the temporary setup roles.
+        assertFalse(separateToken.hasRole(separateToken.DEFAULT_ADMIN_ROLE(), admin));
         assertTrue(separateToken.hasRole(separateToken.CONFIG_ROLE(), admin));
         assertTrue(separateToken.hasRole(separateToken.MINTER_ROLE(), admin));
 
@@ -701,7 +742,6 @@ contract GovernanceTest is Test {
         vm.startPrank(admin);
         separateToken.renounceRole(separateToken.MINTER_ROLE(), admin);
         separateToken.renounceRole(separateToken.CONFIG_ROLE(), admin);
-        separateToken.renounceRole(separateToken.DEFAULT_ADMIN_ROLE(), admin);
         vm.stopPrank();
 
         // Admin no longer has any roles
@@ -709,7 +749,7 @@ contract GovernanceTest is Test {
         assertFalse(separateToken.hasRole(separateToken.CONFIG_ROLE(), admin));
         assertFalse(separateToken.hasRole(separateToken.MINTER_ROLE(), admin));
 
-        // Governance still has all roles
+        // Governance still has permanent roles
         assertTrue(separateToken.hasRole(separateToken.DEFAULT_ADMIN_ROLE(), governance));
         assertTrue(separateToken.hasRole(separateToken.CONFIG_ROLE(), governance));
     }

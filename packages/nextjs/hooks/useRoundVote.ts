@@ -147,25 +147,35 @@ export function useRoundVote() {
             epochDuration,
           });
         } catch (runtimeError) {
-          console.warn("[round-vote] failed to anchor tlock target to the active round; using wall clock timing.", {
+          console.warn("[round-vote] failed to anchor tlock target to the active round.", {
             contentId: contentId.toString(),
             error: runtimeError,
           });
+          setError("Preparing vote. Try again in a moment.");
+          return false;
         }
       }
 
-      const { ciphertext, commitHash, targetRound, drandChainHash, frontend, stakeWei } = await buildCommitVoteParams({
-        contentId,
-        isUp,
-        stakeAmount,
-        epochDuration,
-        frontendCode,
-        defaultFrontendCode: scaffoldConfig.frontendCode,
-        runtime,
-      });
+      if (!runtime) {
+        setError("Preparing vote. Try again in a moment.");
+        return false;
+      }
+
+      const { ciphertext, commitHash, roundReferenceRatingBps, targetRound, drandChainHash, frontend, stakeWei } =
+        await buildCommitVoteParams({
+          contentId,
+          isUp,
+          stakeAmount,
+          epochDuration,
+          roundReferenceRatingBps: runtime.roundReferenceRatingBps,
+          frontendCode,
+          defaultFrontendCode: scaffoldConfig.frontendCode,
+          runtime,
+        });
 
       const payload = encodeVoteTransferPayload({
         contentId,
+        roundReferenceRatingBps,
         commitHash,
         ciphertext,
         targetRound,

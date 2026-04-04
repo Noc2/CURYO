@@ -104,6 +104,9 @@ contract HumanFaucet is SelfVerificationRoot, Ownable, Pausable {
     /// @notice Emitted when the Voter ID NFT contract is set
     event VoterIdNFTSet(address indexed voterIdNFT);
 
+    /// @notice Emitted when the governance address is updated
+    event GovernanceUpdated(address indexed governance);
+
     /// @notice Emitted when Voter ID minting fails (claim still succeeds)
     event VoterIdMintFailed(address indexed user, uint256 nullifier);
 
@@ -133,7 +136,7 @@ contract HumanFaucet is SelfVerificationRoot, Ownable, Pausable {
     // --- Constructor ---
 
     /// @notice The governance address (timelock) — ownership can only be transferred here
-    address public immutable governance;
+    address public governance;
 
     /// @notice Deploy the HumanFaucet
     /// @param _crepToken Address of the cREP token contract
@@ -146,6 +149,14 @@ contract HumanFaucet is SelfVerificationRoot, Ownable, Pausable {
         require(_governance != address(0), "Invalid governance");
         crepToken = IERC20(_crepToken);
         governance = _governance;
+    }
+
+    /// @notice Update the governance address that ownership may migrate to.
+    /// @dev Current owner (the existing governance timelock) can retarget this before a governance migration.
+    function setGovernance(address newGovernance) external onlyOwner {
+        require(newGovernance != address(0), "Invalid governance");
+        governance = newGovernance;
+        emit GovernanceUpdated(newGovernance);
     }
 
     /// @notice Override to restrict ownership transfer to governance only
