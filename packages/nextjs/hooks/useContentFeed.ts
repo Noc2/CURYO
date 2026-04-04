@@ -5,6 +5,7 @@ import { parseTags } from "~~/constants/categories";
 import {
   type ContentItem,
   type UseContentFeedOptions,
+  filterModeratedContentItems,
   filterRpcFeed,
   isContentSearchQueryTooShort,
   mapContentItem,
@@ -96,12 +97,14 @@ export function useContentFeed(voterAddress?: string, options: UseContentFeedOpt
 
   const filteredRpcFeed = useMemo(
     () =>
-      filterRpcFeed(rpcFeed, {
-        categoryId,
-        contentIds,
-        searchQuery,
-        submitter,
-      }),
+      filterModeratedContentItems(
+        filterRpcFeed(rpcFeed, {
+          categoryId,
+          contentIds,
+          searchQuery,
+          submitter,
+        }),
+      ),
     [categoryId, contentIds, rpcFeed, searchQuery, submitter],
   );
   const sortedRpcFeed = useMemo(
@@ -114,7 +117,6 @@ export function useContentFeed(voterAddress?: string, options: UseContentFeedOpt
   }, [limit, offset, sortedRpcFeed]);
   const rpcTotalContent = filteredRpcFeed.length;
   const contentIdsParam = useMemo(() => contentIds?.map(id => id.toString()).join(","), [contentIds]);
-
   const { data: result, isLoading: ponderLoading } = usePonderQuery({
     queryKey: [
       "contentFeed",
@@ -151,17 +153,19 @@ export function useContentFeed(voterAddress?: string, options: UseContentFeedOpt
           limit: String(limit),
           offset: String(offset),
         });
+        const feed = response.items.map(item => mapContentItem(item, voterAddress));
         return {
-          feed: response.items.map(item => mapContentItem(item, voterAddress)),
-          totalContent: response.total ?? offset + response.items.length + (response.hasMore ? 1 : 0),
+          feed,
+          totalContent: response.total ?? offset + feed.length + (response.hasMore ? 1 : 0),
           hasMore: response.hasMore,
         };
       }
 
       const items = await ponderApi.getAllContent(params);
+      const feed = items.map(item => mapContentItem(item, voterAddress));
       return {
-        feed: items.map(item => mapContentItem(item, voterAddress)),
-        totalContent: items.length,
+        feed,
+        totalContent: feed.length,
         hasMore: false,
       };
     },

@@ -34,8 +34,14 @@ test.describe("Governance page", () => {
     await expect(followingOnlyToggle).toBeVisible({ timeout: 10_000 });
     await expect(page.getByRole("combobox", { name: "Time range" })).toBeVisible({ timeout: 10_000 });
     await expect(page.getByRole("combobox", { name: "Filter by category" })).toBeVisible({ timeout: 10_000 });
-    await expect(page.getByRole("combobox", { name: "Sort by" })).toBeVisible({ timeout: 10_000 });
-    await expect(page.getByRole("combobox", { name: "Minimum votes" })).toBeVisible({ timeout: 10_000 });
+    const sortBy = page.getByRole("combobox", { name: "Sort by" });
+    await expect(sortBy).toBeVisible({ timeout: 10_000 });
+    await expect(sortBy).toHaveValue("wins");
+
+    const minVotes = page.getByRole("combobox", { name: "Minimum votes" });
+    await expect(minVotes).toBeVisible({ timeout: 10_000 });
+    await expect(minVotes).toHaveValue("1");
+    await expect(minVotes.getByRole("option", { name: "Min 1 vote" })).toBeAttached();
   });
 
   test("profile tab stays read-only until edit is clicked", async ({ browser }) => {

@@ -8,18 +8,30 @@ import { huggingFaceSource } from "./huggingface.js";
 import { tmdbSource } from "./tmdb.js";
 import { scryfallSource } from "./scryfall.js";
 import { coinGeckoSource } from "./coingecko.js";
+import { githubSource } from "./github.js";
+import { getSubmitSourceCatalog } from "../sourceCatalog.js";
 
-const allSources: ContentSource[] = [
-  youtubeSource,
-  twitchSource,
-  wikipediaSource,
-  rawgSource,
-  openLibrarySource,
-  huggingFaceSource,
-  tmdbSource,
-  scryfallSource,
-  coinGeckoSource,
-];
+const sourceImplementations = {
+  coingecko: coinGeckoSource,
+  github: githubSource,
+  huggingface: huggingFaceSource,
+  openlibrary: openLibrarySource,
+  rawg: rawgSource,
+  scryfall: scryfallSource,
+  tmdb: tmdbSource,
+  twitch: twitchSource,
+  "wikipedia-people": wikipediaSource,
+  youtube: youtubeSource,
+} satisfies Record<string, ContentSource>;
+
+const allSources: ContentSource[] = getSubmitSourceCatalog().map(entry => {
+  const source = sourceImplementations[entry.sourceName as keyof typeof sourceImplementations];
+  if (!source) {
+    throw new Error(`Missing source implementation for ${entry.sourceName}`);
+  }
+
+  return source;
+});
 
 export function getAllSources(): ContentSource[] {
   return allSources;

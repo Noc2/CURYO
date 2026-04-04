@@ -1,6 +1,10 @@
 import { Hono } from "hono";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
+function serializeExpression(value: unknown) {
+  return JSON.stringify(value, (_key, current) => (typeof current === "bigint" ? current.toString() : current));
+}
+
 function createQueryBuilder<T>(result: T) {
   const builder = {
     from: vi.fn(() => builder),
@@ -48,6 +52,7 @@ function mockPonderModules<T>(result: T) {
   }));
   vi.doMock("ponder:schema", () => ({
     category: {
+      domain: "category.domain",
       id: "category.id",
       name: "category.name",
       status: "category.status",
@@ -218,11 +223,10 @@ describe("registerContentRoutes", () => {
     expect(response.status).toBe(200);
 
     const whereArg = queryBuilder.where.mock.calls[0]?.[0];
-    expect(JSON.stringify(whereArg)).toContain("websearch_to_tsquery");
-    expect(JSON.stringify(whereArg)).not.toContain(" like ");
+    expect(serializeExpression(whereArg)).toContain("websearch_to_tsquery");
 
     const [firstOrderBy] = queryBuilder.orderBy.mock.calls[0] ?? [];
-    expect(JSON.stringify(firstOrderBy)).toContain("ts_rank_cd");
+    expect(serializeExpression(firstOrderBy)).toContain("ts_rank_cd");
   });
 
   it("uses canonical url candidates for exact url searches", async () => {
@@ -238,9 +242,70 @@ describe("registerContentRoutes", () => {
     expect(response.status).toBe(200);
 
     const whereArg = queryBuilder.where.mock.calls[0]?.[0];
-    expect(JSON.stringify(whereArg)).toContain("content.canonicalUrl");
-    expect(JSON.stringify(whereArg)).toContain("content.url");
-    expect(JSON.stringify(whereArg)).not.toContain("websearch_to_tsquery");
+    expect(serializeExpression(whereArg)).toContain("content.canonicalUrl");
+    expect(serializeExpression(whereArg)).toContain("content.url");
+    expect(serializeExpression(whereArg)).not.toContain("websearch_to_tsquery");
+  });
+
+  it("adds moderation predicates to content list queries before pagination", async () => {
+    const { queryBuilder } = mockPonderModules([{ id: 1n }]);
+    mockSharedModule();
+    const { registerContentRoutes } = await import("../src/api/routes/content-routes.js");
+
+    const app = new Hono();
+    registerContentRoutes(app);
+
+    const response = await app.request("http://localhost/content?status=all");
+
+    expect(response.status).toBe(200);
+
+    const whereArg = queryBuilder.where.mock.calls[0]?.[0];
+    const serialized = serializeExpression(whereArg);
+
+    expect(serialized).toContain("content.urlHost");
+    expect(serialized).toContain("content.canonicalUrl");
+    expect(serialized).toContain("content.title");
+    expect(serialized).toContain("content.description");
+    expect(serialized).toContain("content.tags");
+  });
+
+  it("adds moderation predicates to direct content lookups", async () => {
+    const { queryBuilder } = mockPonderModules([{ id: 1n }]);
+    mockSharedModule();
+    const { registerContentRoutes } = await import("../src/api/routes/content-routes.js");
+
+    const app = new Hono();
+    registerContentRoutes(app);
+
+    const response = await app.request("http://localhost/content/1");
+
+    expect(response.status).toBe(200);
+
+    const whereArg = queryBuilder.where.mock.calls[0]?.[0];
+    const serialized = serializeExpression(whereArg);
+
+    expect(serialized).toContain("content.id");
+    expect(serialized).toContain("content.urlHost");
+    expect(serialized).toContain("content.canonicalUrl");
+  });
+
+  it("filters categories with the moderation predicate", async () => {
+    const { queryBuilder } = mockPonderModules([{ id: 1n }]);
+    mockSharedModule();
+    const { registerContentRoutes } = await import("../src/api/routes/content-routes.js");
+
+    const app = new Hono();
+    registerContentRoutes(app);
+
+    const response = await app.request("http://localhost/categories?status=all");
+
+    expect(response.status).toBe(200);
+
+    const whereArg = queryBuilder.where.mock.calls[0]?.[0];
+    const serialized = serializeExpression(whereArg);
+
+    expect(serialized).toContain("category.domain");
+    expect(serialized).toContain("category.name");
   });
 });
 
@@ -273,5 +338,71 @@ describe("registerLeaderboardRoutes", () => {
     expect(response.status).toBe(400);
     expect(await response.json()).toEqual({ error: "Invalid offset" });
     expect(db.select).not.toHaveBeenCalled();
+  });
+});
+
+describe("registerDiscoveryRoutes", () => {
+  it("adds moderation predicates to discover signals queries", async () => {
+    const { queryBuilder } = mockPonderModules([]);
+    const { registerDiscoveryRoutes } = await import("../src/api/routes/discovery-routes.js");
+
+    const app = new Hono();
+    registerDiscoveryRoutes(app);
+
+    const response = await app.request(
+      "http://localhost/discover-signals/0x0000000000000000000000000000000000000001?watched=1,2&followed=0x0000000000000000000000000000000000000002",
+    );
+
+    expect(response.status).toBe(200);
+
+    const serializedWhereCalls = queryBuilder.where.mock.calls.map(([value]) => serializeExpression(value));
+    expect(serializedWhereCalls.length).toBeGreaterThanOrEqual(4);
+    expect(serializedWhereCalls.every(value => value.includes("content.title"))).toBe(true);
+    expect(serializedWhereCalls.every(value => value.includes("content.description"))).toBe(true);
+    expect(serializedWhereCalls.every(value => value.includes("content.urlHost"))).toBe(true);
+    expect(serializedWhereCalls.every(value => value.includes("content.canonicalUrl"))).toBe(true);
+    expect(serializedWhereCalls.every(value => value.includes("content.tags"))).toBe(true);
+  });
+
+  it("adds moderation predicates to notification event queries", async () => {
+    const { queryBuilder } = mockPonderModules([]);
+    const { registerDiscoveryRoutes } = await import("../src/api/routes/discovery-routes.js");
+
+    const app = new Hono();
+    registerDiscoveryRoutes(app);
+
+    const response = await app.request(
+      "http://localhost/notification-events/0x0000000000000000000000000000000000000001?watched=1,2&followed=0x0000000000000000000000000000000000000002",
+    );
+
+    expect(response.status).toBe(200);
+
+    const serializedWhereCalls = queryBuilder.where.mock.calls.map(([value]) => serializeExpression(value));
+    expect(serializedWhereCalls.length).toBeGreaterThanOrEqual(6);
+    expect(serializedWhereCalls.every(value => value.includes("content.title"))).toBe(true);
+    expect(serializedWhereCalls.every(value => value.includes("content.description"))).toBe(true);
+    expect(serializedWhereCalls.every(value => value.includes("content.urlHost"))).toBe(true);
+    expect(serializedWhereCalls.every(value => value.includes("content.canonicalUrl"))).toBe(true);
+    expect(serializedWhereCalls.every(value => value.includes("content.tags"))).toBe(true);
+  });
+
+  it("adds moderation predicates to featured content queries", async () => {
+    const { queryBuilder } = mockPonderModules([]);
+    const { registerDiscoveryRoutes } = await import("../src/api/routes/discovery-routes.js");
+
+    const app = new Hono();
+    registerDiscoveryRoutes(app);
+
+    const response = await app.request("http://localhost/featured-today?limit=6");
+
+    expect(response.status).toBe(200);
+
+    const serializedWhereCalls = queryBuilder.where.mock.calls.map(([value]) => serializeExpression(value));
+    expect(serializedWhereCalls.length).toBe(2);
+    expect(serializedWhereCalls.every(value => value.includes("content.title"))).toBe(true);
+    expect(serializedWhereCalls.every(value => value.includes("content.description"))).toBe(true);
+    expect(serializedWhereCalls.every(value => value.includes("content.urlHost"))).toBe(true);
+    expect(serializedWhereCalls.every(value => value.includes("content.canonicalUrl"))).toBe(true);
+    expect(serializedWhereCalls.every(value => value.includes("content.tags"))).toBe(true);
   });
 });

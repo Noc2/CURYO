@@ -940,7 +940,7 @@ const HomeInner = () => {
 
   const emptyStateMessage = useMemo(() => {
     if (effectiveRequestedActiveId !== null && !requestedContentLoading && !requestedContentItem) {
-      return "This content could not be found.";
+      return "This content could not be shown. It may be unavailable or hidden by this frontend's moderation policy.";
     }
 
     if (trimmedSearchQuery) {

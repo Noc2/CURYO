@@ -13,6 +13,7 @@ yarn bot:status   # Check bot account balances and Voter ID status
 # Target a single category/source with an explicit cap:
 yarn workspace @curyo/bot submit --category Movies --max-submissions 5
 yarn workspace @curyo/bot submit --source coingecko --max-submissions 2
+yarn workspace @curyo/bot submit --category "GitHub Repos" --source github --max-submissions 2
 ```
 
 Requires configured environment variables and a reachable RPC endpoint.
@@ -74,6 +75,7 @@ Copy `.env.example` to `.env` in the package directory and fill in the deployed 
 | `TWITCH_CLIENT_ID` | Twitch API client ID |
 | `TWITCH_CLIENT_SECRET` | Twitch API client secret |
 | `RAWG_API_KEY` | RAWG API key (games) |
+| `GITHUB_TOKEN` | GitHub REST API token for GitHub repo discovery and rating |
 
 Without these keys the bot can still submit from public sources such as CoinGecko, Open Library, Hugging Face, Scryfall, and Wikipedia, but keyed sources and some rating strategies will be unavailable.
 
@@ -92,7 +94,31 @@ Without these keys the bot can still submit from public sources such as CoinGeck
 - `--category <id|name>` to target a specific category such as `4`, `Movies`, or `Crypto Tokens`
 - `--source <name>` to target a specific source adapter such as `tmdb` or `coingecko`
 - `--max-submissions <count>` to override the per-run cap for that invocation
-- `--help` to print the submit-specific usage text
+- `--help` to print the submit-specific usage text, including the full category/source catalog below
+
+## Available Categories
+
+`--category` accepts either the numeric ID or the category name. `--source` accepts the source adapter name.
+
+| ID | Category | `--source` | Availability |
+|---|---|---|---|
+| `1` | YouTube | `youtube` | Requires `YOUTUBE_API_KEY` |
+| `2` | Twitch | `twitch` | Requires `TWITCH_CLIENT_ID` and `TWITCH_CLIENT_SECRET` |
+| `3` | Magic: The Gathering | `scryfall` | Public |
+| `4` | Movies | `tmdb` | Requires `TMDB_API_KEY` |
+| `5` | People | `wikipedia-people` | Public |
+| `6` | Games | `rawg` | Requires `RAWG_API_KEY` |
+| `7` | Books | `openlibrary` | Public |
+| `8` | AI | `huggingface` | Public |
+| `9` | Crypto Tokens | `coingecko` | Public |
+| `11` | GitHub Repos | `github` | Requires `GITHUB_TOKEN` |
+
+Deployed categories that are already on-chain but still missing automated `submit` coverage:
+
+- `10` Tweets
+- `12` Spotify Podcasts
+- `13` npm Packages
+- `14` PyPI Packages
 
 ## How Submission Works
 
@@ -191,6 +217,7 @@ Expected behavior:
 src/
 ├── index.ts         # CLI entry point & command router
 ├── config.ts        # Configuration from environment
+├── sourceCatalog.ts # Shared bot coverage manifest (submit + vote)
 ├── client.ts        # viem public & wallet clients
 ├── keystore.ts      # Foundry keystore handling
 ├── contracts.ts     # Contract ABI imports

@@ -2,6 +2,7 @@
 
 import { parseTags } from "~~/constants/categories";
 import type { ContentMetadataResult } from "~~/lib/contentMetadata/types";
+import { isContentItemBlocked } from "~~/utils/contentFilter";
 
 export const MIN_CONTENT_SEARCH_QUERY_LENGTH = 3;
 
@@ -136,6 +137,10 @@ export function mergeContentFeedMetadata(
       thumbnailUrl: contentMetadata?.thumbnailUrl ?? item.thumbnailUrl,
     };
   });
+}
+
+export function filterModeratedContentItems(feed: ContentItem[]): ContentItem[] {
+  return feed.filter(item => !isContentItemBlocked(item));
 }
 
 function getSearchTokens(value: string): string[] {

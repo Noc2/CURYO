@@ -4,6 +4,7 @@
   "private": true,
   "type": "module",
   "exports": {
+    "./contentModeration": "./src/contentModeration.ts",
     "./keystore": "./src/keystore.ts",
     "./mcpSessionToken": "./src/mcpSessionToken.ts"
   },

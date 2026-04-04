@@ -15,7 +15,7 @@ import { getReputationAvatarUrl } from "~~/utils/profileImage";
 import { notification } from "~~/utils/scaffold-eth";
 
 type SortOption = "winRate" | "wins" | "stakeWon" | "settledVotes";
-type MinVotesOption = "3" | "5" | "10";
+type MinVotesOption = "1" | "3" | "5" | "10";
 type WindowOption = PonderAccuracyLeaderboardWindow;
 
 export function AccuracyLeaderboard() {
@@ -35,8 +35,8 @@ export function AccuracyLeaderboard() {
   const [items, setItems] = useState<PonderAccuracyLeaderboardItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [fetchError, setFetchError] = useState(false);
-  const [sortBy, setSortBy] = useState<SortOption>("winRate");
-  const [minVotes, setMinVotes] = useState<MinVotesOption>("3");
+  const [sortBy, setSortBy] = useState<SortOption>("wins");
+  const [minVotes, setMinVotes] = useState<MinVotesOption>("1");
   const [window, setWindow] = useState<WindowOption>("all");
   const [categoryId, setCategoryId] = useState<string>("");
   const [scope, setScope] = useState<"all" | "following">("all");
@@ -196,6 +196,7 @@ export function AccuracyLeaderboard() {
           value={minVotes}
           onChange={e => setMinVotes(e.target.value as MinVotesOption)}
         >
+          <option value="1">Min 1 vote</option>
           <option value="3">Min 3 votes</option>
           <option value="5">Min 5 votes</option>
           <option value="10">Min 10 votes</option>

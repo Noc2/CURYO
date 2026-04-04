@@ -112,5 +112,6 @@ export async function runStatus() {
   console.log(`TMDB API key:    ${config.tmdbApiKey ? "set" : "NOT SET"}`);
   console.log(`YouTube API key: ${config.youtubeApiKey ? "set" : "NOT SET"}`);
   console.log(`Twitch client:   ${config.twitchClientId ? "set" : "NOT SET"}`);
+  console.log(`GitHub token:    ${config.githubToken ? "set" : "NOT SET"}`);
   console.log("");
 }

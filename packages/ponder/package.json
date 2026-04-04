@@ -15,6 +15,7 @@
   },
   "dependencies": {
     "@curyo/contracts": "workspace:*",
+    "@curyo/node-utils": "workspace:*",
     "hono": "~4.12.7",
     "ponder": "^1.0.0",
     "viem": "2.39.0"

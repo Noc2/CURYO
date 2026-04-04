@@ -13,6 +13,7 @@ vi.mock("../config.js", () => ({
       categoryRegistry: "0x0000000000000000000000000000000000000005",
     },
     ponderUrl: "http://localhost:42069",
+    githubToken: "github-token",
     tmdbApiKey: "test-key",
     youtubeApiKey: undefined,
     rawgApiKey: undefined,
@@ -21,6 +22,7 @@ vi.mock("../config.js", () => ({
 }));
 
 import { getStrategy } from "../strategies/index.js";
+import { githubStrategy } from "../strategies/github.js";
 import { youtubeStrategy } from "../strategies/youtube.js";
 import { wikipediaStrategy } from "../strategies/wikipedia.js";
 import { tmdbStrategy } from "../strategies/tmdb.js";
@@ -65,6 +67,18 @@ describe("tmdbStrategy.canRate", () => {
   });
 });
 
+describe("githubStrategy.canRate", () => {
+  it("accepts GitHub repository URLs", () => {
+    expect(githubStrategy.canRate("https://github.com/vercel/ai")).toBe(true);
+    expect(githubStrategy.canRate("https://github.com/vercel/ai/tree/main/packages/core")).toBe(true);
+  });
+
+  it("rejects non-repository GitHub URLs", () => {
+    expect(githubStrategy.canRate("https://github.com/explore")).toBe(false);
+    expect(githubStrategy.canRate("https://gitlab.com/vercel/ai")).toBe(false);
+  });
+});
+
 describe("getStrategy", () => {
   it("returns youtubeStrategy for YouTube URLs", () => {
     const strategy = getStrategy("https://www.youtube.com/watch?v=abc123");
@@ -82,6 +96,12 @@ describe("getStrategy", () => {
     const strategy = getStrategy("https://www.themoviedb.org/movie/550");
     expect(strategy).not.toBeNull();
     expect(strategy!.name).toBe("tmdb");
+  });
+
+  it("returns githubStrategy for GitHub URLs", () => {
+    const strategy = getStrategy("https://github.com/vercel/ai");
+    expect(strategy).not.toBeNull();
+    expect(strategy!.name).toBe("github");
   });
 
   it("returns null for unknown URLs", () => {

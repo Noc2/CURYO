@@ -58,6 +58,14 @@ describe("bot config", () => {
     expect(config.voteFrontendAddress).toBe(frontendAddress);
   });
 
+  it("loads an optional GitHub token", async () => {
+    const { config } = await loadBotConfig({
+      GITHUB_TOKEN: "github-token",
+    });
+
+    expect(config.githubToken).toBe("github-token");
+  });
+
   it("parses numeric bot config values strictly", async () => {
     const { config } = await loadBotConfig({
       VOTE_STAKE: "2500000",
@@ -99,7 +107,10 @@ describe("bot config", () => {
   it("warns when no source API keys are configured", async () => {
     const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
 
-    await loadBotConfig({}, ["TMDB_API_KEY", "YOUTUBE_API_KEY", "TWITCH_CLIENT_ID", "TWITCH_CLIENT_SECRET", "RAWG_API_KEY"]);
+    await loadBotConfig(
+      {},
+      ["TMDB_API_KEY", "YOUTUBE_API_KEY", "TWITCH_CLIENT_ID", "TWITCH_CLIENT_SECRET", "RAWG_API_KEY", "GITHUB_TOKEN"],
+    );
 
     expect(warnSpy).toHaveBeenCalledWith(
       "[Bot] WARN: No keyed content-source API keys configured — public sources still work, but some sources and rating strategies will be unavailable",
