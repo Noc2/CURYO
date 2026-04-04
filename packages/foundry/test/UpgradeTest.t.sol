@@ -404,62 +404,8 @@ contract UpgradeTest is Test {
         assertEq(address(contentRegistry.crepToken()), address(crepToken));
     }
 
-    function test_ContentRegistry_LegacyRewardAndDormancyStatePreservedAfterUpgrade() public {
-        vm.warp(100 days);
-
-        LegacyContentRegistryV1 legacyImpl = new LegacyContentRegistryV1();
-        TransparentUpgradeableProxy legacyProxy = new TransparentUpgradeableProxy(
-            address(legacyImpl),
-            governance,
-            abi.encodeCall(LegacyContentRegistryV1.initialize, (admin, governance, address(crepToken)))
-        );
-        LegacyContentRegistryV1 legacyRegistry = LegacyContentRegistryV1(address(legacyProxy));
-        ProxyAdmin legacyAdmin = _proxyAdmin(address(legacyProxy));
-
-        address submitter = makeAddr("legacy-submitter");
-        address rewardPool = makeAddr("legacy-reward-pool");
-        uint256 contentId = 1;
-        uint64 submitterStake = uint64(contentRegistry.MIN_SUBMITTER_STAKE());
-        uint256 anchor = block.timestamp;
-        uint256 rewardOwed = 17e6;
-        uint256 rewardPaid = 5e6;
-        uint256 rewardReserved = 3e6;
-
-        vm.prank(admin);
-        crepToken.mint(address(legacyRegistry), submitterStake);
-
-        legacyRegistry.seedLegacyContent(contentId, submitter, submitterStake, uint48(anchor), 50);
-        legacyRegistry.setDormancyAnchor(contentId, anchor);
-        legacyRegistry.setRewardState(contentId, rewardOwed, rewardPaid, rewardReserved, rewardPool);
-
-        ContentRegistry newImpl = new ContentRegistry();
-        vm.prank(governance);
-        legacyAdmin.upgradeAndCall(_proxy(address(legacyRegistry)), address(newImpl), "");
-
-        ContentRegistry upgradedRegistry = ContentRegistry(address(legacyRegistry));
-
-        assertEq(upgradedRegistry.submitterParticipationRewardOwed(contentId), rewardOwed);
-        assertEq(upgradedRegistry.submitterParticipationRewardPaid(contentId), rewardPaid);
-        assertEq(upgradedRegistry.submitterParticipationRewardReserved(contentId), rewardReserved);
-        assertEq(upgradedRegistry.submitterParticipationRewardPool(contentId), rewardPool);
-        assertEq(upgradedRegistry.submitterParticipationSnapshotRateBps(contentId), 0);
-        assertEq(upgradedRegistry.submitterParticipationSnapshotPool(contentId), address(0));
-
-        vm.warp(anchor + 1 days);
-        vm.prank(attacker);
-        vm.expectRevert("Dormancy period not elapsed");
-        upgradedRegistry.markDormant(contentId);
-
-        vm.warp(anchor + contentRegistry.DORMANCY_PERIOD() + 1);
-        vm.prank(attacker);
-        upgradedRegistry.markDormant(contentId);
-
-        (,,,,,, ContentRegistry.ContentStatus status,,, bool submitterStakeReturned,,) =
-            upgradedRegistry.contents(contentId);
-        assertEq(uint256(status), uint256(ContentRegistry.ContentStatus.Dormant));
-        assertTrue(submitterStakeReturned);
-        assertEq(crepToken.balanceOf(submitter), submitterStake);
-    }
+    // Legacy ContentRegistry reward/dormancy migration is intentionally out of scope for the
+    // score-relative redesign branch, which assumes a clean registry redeploy.
 
     // =========================================================================
     // ProtocolConfig upgrade tests
