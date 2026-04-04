@@ -137,6 +137,66 @@ contract ProtocolConfigBranchesTest is Test {
         config.setRatingConfig(10e6, 10e6, 2e18, 80e6, 50e6, 500e6, 1_500, 2_000, 8e17, 6e17, 4e18, 200, 300);
     }
 
+    function test_SetRatingConfig_RejectsOverflowingMathAndStorageInputs() public {
+        ProtocolConfig config = deployInitializedProtocolConfig(address(this));
+
+        vm.expectRevert(ProtocolConfig.InvalidConfig.selector);
+        config.setRatingConfig(
+            uint256(type(uint128).max) + 1, 10e6, 2e18, 80e6, 50e6, 500e6, 1_500, 2_000, 8e17, 6e17, 4e18, 1_500, 250
+        );
+
+        vm.expectRevert(ProtocolConfig.InvalidConfig.selector);
+        config.setRatingConfig(
+            10e6,
+            10e6,
+            2e18,
+            uint256(type(uint128).max) + 1,
+            50e6,
+            uint256(type(uint128).max) + 1,
+            1_500,
+            2_000,
+            8e17,
+            6e17,
+            4e18,
+            1_500,
+            250
+        );
+
+        vm.expectRevert(ProtocolConfig.InvalidConfig.selector);
+        config.setRatingConfig(
+            10e6,
+            10e6,
+            uint256(type(int256).max) + 1,
+            80e6,
+            50e6,
+            500e6,
+            1_500,
+            2_000,
+            8e17,
+            6e17,
+            4e18,
+            1_500,
+            250
+        );
+
+        vm.expectRevert(ProtocolConfig.InvalidConfig.selector);
+        config.setRatingConfig(
+            10e6,
+            10e6,
+            2e18,
+            80e6,
+            50e6,
+            500e6,
+            1_500,
+            2_000,
+            8e17,
+            6e17,
+            uint256(uint128(type(int128).max)) + 1,
+            1_500,
+            250
+        );
+    }
+
     function test_SetSlashConfig_UpdatesStateAndEmits() public {
         ProtocolConfig config = deployInitializedProtocolConfig(address(this));
 

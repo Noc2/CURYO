@@ -307,13 +307,22 @@ contract ProtocolConfig is Initializable, AccessControl {
         uint16 conservativePenaltyMaxBps,
         uint16 conservativePenaltyMinBps
     ) internal {
+        if (smoothingAlpha > type(uint128).max || smoothingBeta > type(uint128).max) revert InvalidConfig();
         if (confidenceMassMin == 0 || confidenceMassInitial < confidenceMassMin || confidenceMassMax < confidenceMassInitial)
         {
             revert InvalidConfig();
         }
+        if (
+            confidenceMassInitial > type(uint128).max || confidenceMassMin > type(uint128).max
+                || confidenceMassMax > type(uint128).max
+        ) {
+            revert InvalidConfig();
+        }
         if (observationBetaX18 == 0) revert InvalidConfig();
+        if (observationBetaX18 > uint256(type(int256).max)) revert InvalidConfig();
         if (confidenceGainBps > 10_000 || confidenceReopenBps > 10_000) revert InvalidConfig();
         if (surpriseReferenceX18 == 0) revert InvalidConfig();
+        if (maxAbsLogitX18 > uint256(uint128(type(int128).max))) revert InvalidConfig();
         if (maxDeltaLogitX18 == 0 || maxAbsLogitX18 == 0 || maxDeltaLogitX18 > maxAbsLogitX18) revert InvalidConfig();
         if (conservativePenaltyMaxBps > RatingLib.BPS_SCALE || conservativePenaltyMinBps > conservativePenaltyMaxBps)
         {
