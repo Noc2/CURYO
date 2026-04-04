@@ -31,9 +31,9 @@ function getContentOrderBy(sortBy: string) {
     case "oldest":
       return [asc(content.createdAt), asc(content.id)];
     case "highest_rated":
-      return [desc(content.rating), desc(content.createdAt), desc(content.id)];
+      return [desc(content.ratingBps), desc(content.rating), desc(content.createdAt), desc(content.id)];
     case "lowest_rated":
-      return [asc(content.rating), desc(content.createdAt), desc(content.id)];
+      return [asc(content.ratingBps), asc(content.rating), desc(content.createdAt), desc(content.id)];
     case "most_votes":
       return [desc(content.totalVotes), desc(content.createdAt), desc(content.id)];
     case "newest":
@@ -48,9 +48,9 @@ function getSearchOrderBy(searchRank: ReturnType<typeof sql<number>>, sortBy: st
     case "oldest":
       return [desc(searchRank), asc(content.createdAt), asc(content.id)];
     case "highest_rated":
-      return [desc(searchRank), desc(content.rating), desc(content.createdAt), desc(content.id)];
+      return [desc(searchRank), desc(content.ratingBps), desc(content.rating), desc(content.createdAt), desc(content.id)];
     case "lowest_rated":
-      return [desc(searchRank), asc(content.rating), desc(content.createdAt), desc(content.id)];
+      return [desc(searchRank), asc(content.ratingBps), asc(content.rating), desc(content.createdAt), desc(content.id)];
     case "most_votes":
       return [desc(searchRank), desc(content.totalVotes), desc(content.createdAt), desc(content.id)];
     case "newest":
