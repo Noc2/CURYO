@@ -3,8 +3,10 @@ import test from "node:test";
 import {
   buildCommitHash,
   createTlockVoteCommit,
+  deriveVoteTlockRevealAvailableAtSeconds,
   decodeVoteTransferPayload,
   encodeVoteTransferPayload,
+  getVoteTlockChainInfo,
   parseTlockCiphertextMetadata,
 } from "./voting";
 
@@ -250,5 +252,26 @@ test("createTlockVoteCommit returns the tlock metadata used in the commit hash",
       commit.drandChainHash,
       commit.ciphertext,
     ),
+  );
+});
+
+test("getVoteTlockChainInfo returns the canonical drand metadata from the tlock client", async () => {
+  const chainInfo = await getVoteTlockChainInfo({ client: fakeClient });
+
+  assert.deepEqual(chainInfo, {
+    periodSeconds: 3n,
+    genesisTimeSeconds: 1692803367n,
+    drandChainHash: "0x52db9ba70e0cc0f6eaf7803dd07447a1f5477735fd3f661792ba94600c84e971",
+  });
+});
+
+test("deriveVoteTlockRevealAvailableAtSeconds converts a committed round into its reveal timestamp", () => {
+  assert.equal(
+    deriveVoteTlockRevealAvailableAtSeconds(401n, {
+      periodSeconds: 3n,
+      genesisTimeSeconds: 1692803367n,
+      drandChainHash: "0x52db9ba70e0cc0f6eaf7803dd07447a1f5477735fd3f661792ba94600c84e971",
+    }),
+    1692804567n,
   );
 });

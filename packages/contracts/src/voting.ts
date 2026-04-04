@@ -30,6 +30,12 @@ type TlockModule = {
   timelockDecrypt: TlockDecryptFn;
 };
 
+export interface VoteTlockChainInfo {
+  periodSeconds: bigint;
+  genesisTimeSeconds: bigint;
+  drandChainHash: VoteDrandChainHash;
+}
+
 let tlockModulePromise: Promise<TlockModule> | undefined;
 
 export interface VoteTransferPayload {
@@ -79,6 +85,29 @@ async function loadTlockModule(): Promise<TlockModule> {
   }));
 
   return tlockModulePromise;
+}
+
+export async function getVoteTlockChainInfo(runtime: VoteTlockRuntime = {}): Promise<VoteTlockChainInfo> {
+  const { mainnetClient } = await loadTlockModule();
+  const client = runtime.client ?? mainnetClient();
+  const chainInfo = await client.chain().info();
+
+  return {
+    periodSeconds: BigInt(chainInfo.period),
+    genesisTimeSeconds: BigInt(chainInfo.genesis_time),
+    drandChainHash: `0x${chainInfo.hash.toLowerCase()}` as VoteDrandChainHash,
+  };
+}
+
+export function deriveVoteTlockRevealAvailableAtSeconds(
+  targetRound: bigint,
+  chainInfo: VoteTlockChainInfo,
+): bigint {
+  if (targetRound <= 0n || chainInfo.periodSeconds <= 0n) {
+    return 0n;
+  }
+
+  return chainInfo.genesisTimeSeconds + (targetRound - 1n) * chainInfo.periodSeconds;
 }
 
 function saltToBytes(salt: VoteSalt): Uint8Array {

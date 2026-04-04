@@ -2,7 +2,13 @@
 
 import { useCallback, useMemo, useState } from "react";
 import { RoundVotingEngineAbi } from "@curyo/contracts/abis";
-import { buildCommitKey, decryptTlockCiphertext, parseTlockCiphertextMetadata } from "@curyo/contracts/voting";
+import {
+  buildCommitKey,
+  decryptTlockCiphertext,
+  deriveVoteTlockRevealAvailableAtSeconds,
+  getVoteTlockChainInfo,
+  parseTlockCiphertextMetadata,
+} from "@curyo/contracts/voting";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Address, zeroHash } from "viem";
 import { useAccount, usePublicClient, useWalletClient } from "wagmi";
@@ -41,31 +47,118 @@ function isBenignRevealError(message: string): boolean {
   return BENIGN_REVEAL_ERRORS.some(error => lower.includes(error.toLowerCase()));
 }
 
-function deriveDrandRoundRevealableAtSeconds(
-  targetRound: bigint,
-  drandGenesisTimeSeconds: bigint,
-  drandPeriodSeconds: bigint,
-) {
-  if (targetRound <= 0n || drandPeriodSeconds <= 0n) {
-    return 0n;
-  }
+type LiveDrandConfig = {
+  drandGenesisTime: bigint;
+  drandPeriod: bigint;
+};
 
-  return drandGenesisTimeSeconds + (targetRound - 1n) * drandPeriodSeconds;
+async function readLiveDrandConfig(
+  publicClient: NonNullable<ReturnType<typeof usePublicClient>>,
+  engineAddress: Address,
+): Promise<LiveDrandConfig> {
+  const protocolConfigAddress = (await publicClient.readContract({
+    address: engineAddress,
+    abi: RoundVotingEngineAbi,
+    functionName: "protocolConfig",
+  })) as Address;
+
+  const [drandGenesisTime, drandPeriod] = await Promise.all([
+    publicClient.readContract({
+      address: protocolConfigAddress,
+      abi: [
+        {
+          type: "function",
+          name: "drandGenesisTime",
+          stateMutability: "view",
+          inputs: [],
+          outputs: [{ name: "", type: "uint64" }],
+        },
+      ],
+      functionName: "drandGenesisTime",
+    }),
+    publicClient.readContract({
+      address: protocolConfigAddress,
+      abi: [
+        {
+          type: "function",
+          name: "drandPeriod",
+          stateMutability: "view",
+          inputs: [],
+          outputs: [{ name: "", type: "uint64" }],
+        },
+      ],
+      functionName: "drandPeriod",
+    }),
+  ]);
+
+  return {
+    drandGenesisTime: drandGenesisTime as bigint,
+    drandPeriod: drandPeriod as bigint,
+  };
 }
 
-function deriveRevealAvailableAtSeconds(
+function deriveRevealAvailableAtFromLiveConfig(
   revealableAfterSeconds: bigint,
   targetRound: bigint,
-  drandGenesisTimeSeconds: bigint,
-  drandPeriodSeconds: bigint,
+  liveDrandConfig: LiveDrandConfig,
 ) {
-  const drandRoundRevealableAt = deriveDrandRoundRevealableAtSeconds(
-    targetRound,
-    drandGenesisTimeSeconds,
-    drandPeriodSeconds,
-  );
+  if (targetRound <= 0n || liveDrandConfig.drandPeriod <= 0n) {
+    return revealableAfterSeconds;
+  }
 
+  const drandRoundRevealableAt = liveDrandConfig.drandGenesisTime + (targetRound - 1n) * liveDrandConfig.drandPeriod;
   return revealableAfterSeconds > drandRoundRevealableAt ? revealableAfterSeconds : drandRoundRevealableAt;
+}
+
+async function deriveRevealAvailableAtSeconds(params: {
+  publicClient: NonNullable<ReturnType<typeof usePublicClient>>;
+  engineAddress: Address;
+  revealableAfter: bigint;
+  targetRound: bigint;
+  drandChainHash: `0x${string}`;
+  tlockChainInfo?: Awaited<ReturnType<typeof getVoteTlockChainInfo>> | null;
+  liveDrandConfig?: LiveDrandConfig | null;
+}) {
+  const { publicClient, engineAddress, revealableAfter, targetRound, drandChainHash } = params;
+
+  if (targetRound <= 0n) {
+    return {
+      revealAvailableAt: revealableAfter,
+      tlockChainInfo: params.tlockChainInfo ?? null,
+      liveDrandConfig: params.liveDrandConfig ?? null,
+    };
+  }
+
+  let tlockChainInfo = params.tlockChainInfo;
+  if (tlockChainInfo === undefined) {
+    try {
+      tlockChainInfo = await getVoteTlockChainInfo();
+    } catch {
+      tlockChainInfo = null;
+    }
+  }
+
+  if (tlockChainInfo && tlockChainInfo.drandChainHash.toLowerCase() === drandChainHash.toLowerCase()) {
+    const tlockRevealAvailableAt = deriveVoteTlockRevealAvailableAtSeconds(targetRound, tlockChainInfo);
+    return {
+      revealAvailableAt: revealableAfter > tlockRevealAvailableAt ? revealableAfter : tlockRevealAvailableAt,
+      tlockChainInfo,
+      liveDrandConfig: params.liveDrandConfig ?? null,
+    };
+  }
+
+  let liveDrandConfig = params.liveDrandConfig;
+  if (liveDrandConfig === undefined) {
+    liveDrandConfig = await readLiveDrandConfig(publicClient, engineAddress);
+  }
+
+  return {
+    revealAvailableAt: liveDrandConfig
+      ? deriveRevealAvailableAtFromLiveConfig(revealableAfter, targetRound, liveDrandConfig)
+      : revealableAfter,
+    tlockChainInfo,
+    liveDrandConfig,
+  };
 }
 
 export function useManualRevealVotes(voter?: Address) {
@@ -117,41 +210,6 @@ export function useManualRevealVotes(voter?: Address) {
 
       if (withCommitHashes.length === 0) return [];
 
-      const protocolConfigAddress = (await publicClient.readContract({
-        address: engineInfo.address,
-        abi: RoundVotingEngineAbi,
-        functionName: "protocolConfig",
-      })) as Address;
-
-      const [drandGenesisTime, drandPeriod] = await Promise.all([
-        publicClient.readContract({
-          address: protocolConfigAddress,
-          abi: [
-            {
-              type: "function",
-              name: "drandGenesisTime",
-              stateMutability: "view",
-              inputs: [],
-              outputs: [{ name: "", type: "uint64" }],
-            },
-          ],
-          functionName: "drandGenesisTime",
-        }),
-        publicClient.readContract({
-          address: protocolConfigAddress,
-          abi: [
-            {
-              type: "function",
-              name: "drandPeriod",
-              stateMutability: "view",
-              inputs: [],
-              outputs: [{ name: "", type: "uint64" }],
-            },
-          ],
-          functionName: "drandPeriod",
-        }),
-      ]);
-
       const commitResults = await publicClient.multicall({
         allowFailure: true,
         contracts: withCommitHashes.map(({ vote, commitKey }) => ({
@@ -162,24 +220,31 @@ export function useManualRevealVotes(voter?: Address) {
         })) as any,
       });
 
-      return withCommitHashes.flatMap(({ vote, commitHash, commitKey }, index) => {
-        const commitResult = commitResults[index];
-        if (commitResult?.status !== "success") return [];
+      let tlockChainInfo: Awaited<ReturnType<typeof getVoteTlockChainInfo>> | null | undefined;
+      let liveDrandConfig: LiveDrandConfig | null | undefined;
+      const votesWithRevealTimes = await Promise.all(
+        withCommitHashes.map(async ({ vote, commitHash, commitKey }, index) => {
+          const commitResult = commitResults[index];
+          if (commitResult?.status !== "success") return null;
 
-        const commit = commitResult.result as CommitData;
-        if (!commit.voter || commit.voter === "0x0000000000000000000000000000000000000000" || commit.revealed) {
-          return [];
-        }
+          const commit = commitResult.result as CommitData;
+          if (!commit.voter || commit.voter === "0x0000000000000000000000000000000000000000" || commit.revealed) {
+            return null;
+          }
 
-        const revealAvailableAt = deriveRevealAvailableAtSeconds(
-          commit.revealableAfter,
-          commit.targetRound ?? 0n,
-          drandGenesisTime as bigint,
-          drandPeriod as bigint,
-        );
+          const timing = await deriveRevealAvailableAtSeconds({
+            publicClient,
+            engineAddress: engineInfo.address,
+            revealableAfter: commit.revealableAfter,
+            targetRound: commit.targetRound ?? 0n,
+            drandChainHash: (commit.drandChainHash ?? zeroHash) as `0x${string}`,
+            tlockChainInfo,
+            liveDrandConfig,
+          });
+          tlockChainInfo = timing.tlockChainInfo;
+          liveDrandConfig = timing.liveDrandConfig;
 
-        return [
-          {
+          return {
             contentId: BigInt(vote.contentId),
             roundId: BigInt(vote.roundId),
             voter: commit.voter as Address,
@@ -187,7 +252,7 @@ export function useManualRevealVotes(voter?: Address) {
             epochIndex: commit.epochIndex,
             committedAt: vote.committedAt,
             revealableAfter: commit.revealableAfter,
-            revealAvailableAt,
+            revealAvailableAt: timing.revealAvailableAt,
             commitHash,
             commitKey,
             ciphertext: commit.ciphertext as `0x${string}`,
@@ -195,9 +260,11 @@ export function useManualRevealVotes(voter?: Address) {
             drandChainHash: commit.drandChainHash ?? zeroHash,
             secondsUntilReveal: 0,
             isReady: false,
-          },
-        ];
-      });
+          } satisfies ManualRevealVote;
+        }),
+      );
+
+      return votesWithRevealTimes.flatMap(vote => (vote ? [vote] : []));
     },
   });
 
@@ -257,46 +324,14 @@ export function useManualRevealVotes(voter?: Address) {
           return true;
         }
 
-        const protocolConfigAddress = (await publicClient.readContract({
-          address: engineInfo.address,
-          abi: RoundVotingEngineAbi,
-          functionName: "protocolConfig",
-        })) as Address;
-        const [drandGenesisTime, drandPeriod] = await Promise.all([
-          publicClient.readContract({
-            address: protocolConfigAddress,
-            abi: [
-              {
-                type: "function",
-                name: "drandGenesisTime",
-                stateMutability: "view",
-                inputs: [],
-                outputs: [{ name: "", type: "uint64" }],
-              },
-            ],
-            functionName: "drandGenesisTime",
-          }),
-          publicClient.readContract({
-            address: protocolConfigAddress,
-            abi: [
-              {
-                type: "function",
-                name: "drandPeriod",
-                stateMutability: "view",
-                inputs: [],
-                outputs: [{ name: "", type: "uint64" }],
-              },
-            ],
-            functionName: "drandPeriod",
-          }),
-        ]);
-
-        const revealAvailableAt = deriveRevealAvailableAtSeconds(
-          latestCommit.revealableAfter,
-          latestCommit.targetRound ?? 0n,
-          drandGenesisTime as bigint,
-          drandPeriod as bigint,
-        );
+        const timing = await deriveRevealAvailableAtSeconds({
+          publicClient,
+          engineAddress: engineInfo.address,
+          revealableAfter: latestCommit.revealableAfter,
+          targetRound: latestCommit.targetRound ?? 0n,
+          drandChainHash: (latestCommit.drandChainHash ?? zeroHash) as `0x${string}`,
+        });
+        const revealAvailableAt = timing.revealAvailableAt;
         if (BigInt(now) < revealAvailableAt) {
           notification.info("That vote is not revealable yet.");
           await refresh();
