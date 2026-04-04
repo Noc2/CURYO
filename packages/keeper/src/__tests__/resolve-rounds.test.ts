@@ -56,6 +56,17 @@ interface CommitData {
   epochIndex: number;
 }
 
+interface ContentData {
+  id: bigint;
+  createdAt: bigint;
+  submitterStakeReturned: boolean;
+}
+
+interface RatingStateData {
+  settledRounds: bigint;
+  lowSince: bigint;
+}
+
 function makeLogger() {
   return {
     info: vi.fn(),
@@ -196,6 +207,27 @@ function toRoundConfigTuple(config: { epochDuration: bigint; maxDuration: bigint
   return [config.epochDuration, config.maxDuration, config.minVoters, config.maxVoters] as const;
 }
 
+function toContentTuple(content: ContentData) {
+  return [
+    content.id,
+    zeroHash,
+    ACCOUNT,
+    100n,
+    content.createdAt,
+    content.createdAt,
+    0,
+    0,
+    ACCOUNT,
+    content.submitterStakeReturned,
+    50,
+    1n,
+  ] as const;
+}
+
+function toRatingStateTuple(ratingState: RatingStateData) {
+  return [0n, 0n, 0n, ratingState.settledRounds, 5000, 5000, 0n, ratingState.lowSince] as const;
+}
+
 function makePlaintext(isUp: boolean, fillByte: number): Buffer {
   return Buffer.concat([Buffer.from([isUp ? 1 : 0]), Buffer.alloc(32, fillByte)]);
 }
@@ -207,7 +239,10 @@ function makeHarness(options: {
   currentRoundId?: bigint;
   tupleResults?: boolean;
   dormancyEligible?: boolean;
-  submitterStakeResolvable?: boolean;
+  content?: ContentData;
+  ratingState?: RatingStateData;
+  slashable?: boolean;
+  milestoneZeroTermsSnapshotted?: boolean;
   round: RoundData;
   roundConfig?: { epochDuration: bigint; maxDuration: bigint; minVoters: bigint; maxVoters: bigint };
   commitKeys?: readonly `0x${string}`[];
@@ -227,7 +262,17 @@ function makeHarness(options: {
   const currentRoundId = options.currentRoundId ?? (latestRoundId > 0n ? latestRoundId : activeRoundId);
   const tupleResults = options.tupleResults ?? false;
   const dormancyEligible = options.dormancyEligible ?? false;
-  const submitterStakeResolvable = options.submitterStakeResolvable ?? false;
+  const content = options.content ?? {
+    id: 1n,
+    createdAt: options.now != null ? options.now - 5n * 24n * 60n * 60n : now - 5n * 24n * 60n * 60n,
+    submitterStakeReturned: false,
+  };
+  const ratingState = options.ratingState ?? {
+    settledRounds: 0n,
+    lowSince: 0n,
+  };
+  const slashable = options.slashable ?? false;
+  const milestoneZeroTermsSnapshotted = options.milestoneZeroTermsSnapshotted ?? (ratingState.settledRounds > 0n);
   const commitKeys = options.commitKeys ?? [];
   const commits = options.commits ?? {};
   const round = options.round;
@@ -265,8 +310,14 @@ function makeHarness(options: {
           return tupleResults
             ? toCommitTuple(commits[String(args[2])] ?? makeCommit({ revealed: true, stakeAmount: 0n }))
             : commits[String(args[2])] ?? makeCommit({ revealed: true, stakeAmount: 0n });
-        case "isSubmitterStakeResolvable":
-          return submitterStakeResolvable;
+        case "contents":
+          return tupleResults ? toContentTuple(content) : content;
+        case "getRatingState":
+          return tupleResults ? toRatingStateTuple(ratingState) : ratingState;
+        case "isSubmitterStakeSlashable":
+          return slashable;
+        case "milestoneZeroSubmitterTermsSnapshotted":
+          return milestoneZeroTermsSnapshotted;
         case "isDormancyEligible":
           return dormancyEligible;
         default:
@@ -896,7 +947,11 @@ describe("resolveRounds", () => {
       activeRoundId: 0n,
       latestRoundId: 1n,
       round,
-      submitterStakeResolvable: true,
+      ratingState: {
+        settledRounds: 1n,
+        lowSince: 0n,
+      },
+      milestoneZeroTermsSnapshotted: true,
       dormancyEligible: true,
     });
     const logger = makeLogger();
@@ -920,6 +975,45 @@ describe("resolveRounds", () => {
     expect(walletClient.writeContract).toHaveBeenNthCalledWith(
       2,
       expect.objectContaining({ functionName: "markDormant", args: [1n] }),
+    );
+  });
+
+  it("resolves dormant submitter stakes after the active round closes", async () => {
+    const round = makeRound({
+      state: 2,
+      voteCount: 0n,
+      revealedCount: 0n,
+    });
+    const now = 40n * 24n * 60n * 60n;
+    const { publicClient, walletClient } = makeHarness({
+      now,
+      activeRoundId: 0n,
+      latestRoundId: 1n,
+      currentRoundId: 0n,
+      round,
+      content: {
+        id: 1n,
+        createdAt: now - mockConfig.dormancyPeriod - 1n,
+        submitterStakeReturned: false,
+      },
+      ratingState: {
+        settledRounds: 0n,
+        lowSince: 0n,
+      },
+    });
+    const logger = makeLogger();
+
+    const result = await resolveRounds(
+      publicClient as any,
+      walletClient as any,
+      {} as any,
+      { address: ACCOUNT } as any,
+      logger as any,
+    );
+
+    expect(result.submitterStakesResolved).toBe(1);
+    expect(walletClient.writeContract).toHaveBeenCalledWith(
+      expect.objectContaining({ functionName: "resolveSubmitterStake", args: [1n] }),
     );
   });
 });
