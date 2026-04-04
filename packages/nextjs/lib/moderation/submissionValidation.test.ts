@@ -1,5 +1,9 @@
 import {
+  findBlockedCategorySubcategories,
   findBlockedContentTags,
+  getCategoryDomainValidationError,
+  getCategoryNameValidationError,
+  getCategorySubcategoryValidationError,
   getContentDescriptionValidationError,
   getContentTagValidationError,
   getContentTitleValidationError,
@@ -28,4 +32,24 @@ test("getContentTagValidationError allows normal custom tags", () => {
 
 test("findBlockedContentTags returns trimmed blocked tags", () => {
   assert.deepEqual(findBlockedContentTags(["music", " nsfw ", "science"]), ["nsfw"]);
+});
+
+test("getCategoryNameValidationError rejects prohibited platform names", () => {
+  assert.equal(getCategoryNameValidationError("OnlyFans clips"), "Platform name contains prohibited content");
+});
+
+test("getCategoryDomainValidationError rejects prohibited platform domains", () => {
+  assert.equal(getCategoryDomainValidationError("xhamster.com"), "This domain contains prohibited content");
+});
+
+test("getCategorySubcategoryValidationError rejects prohibited subcategories", () => {
+  assert.equal(getCategorySubcategoryValidationError(" hentai "), "This category contains prohibited content");
+});
+
+test("findBlockedCategorySubcategories returns trimmed blocked subcategories", () => {
+  assert.deepEqual(findBlockedCategorySubcategories(["Culture", " rule34 "]), ["rule34"]);
+});
+
+test("findBlockedCategorySubcategories allows normal trimmed subcategories", () => {
+  assert.deepEqual(findBlockedCategorySubcategories([" Culture ", "Podcasts"]), []);
 });

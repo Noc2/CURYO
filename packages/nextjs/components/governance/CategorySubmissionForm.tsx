@@ -21,13 +21,18 @@ import {
 import { useThirdwebSponsoredSubmitCalls } from "~~/hooks/useThirdwebSponsoredSubmitCalls";
 import { useWalletRpcRecovery } from "~~/hooks/useWalletRpcRecovery";
 import {
+  findBlockedCategorySubcategories,
+  getCategoryDomainValidationError,
+  getCategoryNameValidationError,
+  getCategorySubcategoryValidationError,
+} from "~~/lib/moderation/submissionValidation";
+import {
   getGasBalanceErrorMessage,
   isFreeTransactionExhaustedError,
   isInsufficientFundsError,
   isWalletRpcOverloadedError,
 } from "~~/lib/transactionErrors";
 import { getSubmittingTransactionMessage } from "~~/lib/ui/transactionStatusCopy";
-import { containsBlockedText, containsBlockedUrl } from "~~/utils/contentFilter";
 import { notification } from "~~/utils/scaffold-eth";
 
 // Constants from CategoryRegistry contract
@@ -125,6 +130,11 @@ export const CategorySubmissionForm = () => {
   const canSubmitCategory = !submitsWithProposal
     ? hasEnoughBalance && hasEnoughStakeTransferable
     : canAutoCreateProposal;
+  const nameBlockedError = name ? getCategoryNameValidationError(name) : null;
+  const domainBlockedError = domain ? getCategoryDomainValidationError(domain) : null;
+  const subcategoryErrors = subcategories.map(subcategory =>
+    subcategory.trim() ? getCategorySubcategoryValidationError(subcategory) : null,
+  );
 
   const addSubcategory = () => {
     if (subcategories.length < MAX_SUBCATEGORIES) {
@@ -175,9 +185,15 @@ export const CategorySubmissionForm = () => {
       return;
     }
 
-    const validSubcats = subcategories.filter(s => s.trim());
+    const validSubcats = subcategories.map(s => s.trim()).filter(Boolean);
     if (validSubcats.length === 0) {
       notification.error("Please add at least one category");
+      return;
+    }
+
+    const blockedSubcategories = findBlockedCategorySubcategories(validSubcats);
+    if (blockedSubcategories.length > 0) {
+      notification.warning("Categories containing prohibited content cannot be submitted");
       return;
     }
 
@@ -187,11 +203,11 @@ export const CategorySubmissionForm = () => {
     }
 
     // Check for prohibited content
-    if (containsBlockedText(name).blocked) {
+    if (nameBlockedError) {
       notification.warning("Platform name contains prohibited content and cannot be submitted");
       return;
     }
-    if (containsBlockedUrl(domain).blocked) {
+    if (domainBlockedError) {
       notification.warning("This domain contains prohibited content and cannot be submitted");
       return;
     }
@@ -365,9 +381,6 @@ export const CategorySubmissionForm = () => {
     }
   };
 
-  const domainBlockedError = domain && containsBlockedUrl(domain).blocked;
-  const nameBlockedError = name && containsBlockedText(name).blocked;
-
   // Normalize domain input (lowercase, remove www.)
   const handleDomainChange = (value: string) => {
     let normalized = value.toLowerCase().trim();
@@ -408,7 +421,7 @@ export const CategorySubmissionForm = () => {
               maxLength={64}
               required
             />
-            {nameBlockedError && <p className="text-error text-base mt-1">Platform name contains prohibited content</p>}
+            {nameBlockedError ? <p className="text-error text-base mt-1">{nameBlockedError}</p> : null}
           </div>
 
           {/* Domain */}
@@ -427,7 +440,7 @@ export const CategorySubmissionForm = () => {
               required
             />
             {isDomainRegistered && <p className="text-error text-base mt-1">This domain is already registered</p>}
-            {domainBlockedError && <p className="text-error text-base mt-1">This domain contains prohibited content</p>}
+            {domainBlockedError ? <p className="text-error text-base mt-1">{domainBlockedError}</p> : null}
           </div>
 
           {/* Subcategories */}
@@ -438,14 +451,19 @@ export const CategorySubmissionForm = () => {
             <div className="space-y-2">
               {subcategories.map((subcat, index) => (
                 <div key={index} className="flex gap-2">
-                  <input
-                    type="text"
-                    placeholder={`Category ${index + 1}`}
-                    className="input input-bordered flex-1 bg-base-100"
-                    value={subcat}
-                    onChange={e => updateSubcategory(index, e.target.value)}
-                    maxLength={MAX_SUBCATEGORY_LENGTH}
-                  />
+                  <div className="flex-1">
+                    <input
+                      type="text"
+                      placeholder={`Category ${index + 1}`}
+                      className={`input input-bordered w-full bg-base-100 ${subcategoryErrors[index] ? "input-error" : ""}`}
+                      value={subcat}
+                      onChange={e => updateSubcategory(index, e.target.value)}
+                      maxLength={MAX_SUBCATEGORY_LENGTH}
+                    />
+                    {subcategoryErrors[index] ? (
+                      <p className="mt-1 text-base text-error">{subcategoryErrors[index]}</p>
+                    ) : null}
+                  </div>
                   {subcategories.length > 1 && (
                     <button type="button" onClick={() => removeSubcategory(index)} className="btn btn-ghost btn-square">
                       <TrashIcon className="w-5 h-5" />
