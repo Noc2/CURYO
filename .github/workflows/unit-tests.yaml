@@ -6,6 +6,26 @@ on:
     branches: [main]
 
 jobs:
+  contract-size:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+        with:
+          submodules: true
+      - uses: ./.github/actions/setup-foundry
+      - uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
+        with:
+          path: |
+            packages/foundry/cache
+            packages/foundry/out
+          key: forge-${{ hashFiles('packages/foundry/foundry.toml', 'packages/foundry/**/*.sol') }}
+      - name: Build contracts
+        working-directory: packages/foundry
+        run: forge build --skip script --skip test
+      - name: Enforce EIP-170 contract size limit
+        working-directory: packages/foundry
+        run: bash scripts/check-contract-sizes.sh
+
   foundry:
     runs-on: ubuntu-latest
     steps:
