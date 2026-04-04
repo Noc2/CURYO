@@ -11,6 +11,11 @@ That changes the plan materially:
 - we can redesign submitter-slash logic together with rating logic
 - we should still preserve the protocol's current anti-herding and adversarial guarantees unless we intentionally replace them
 
+Implementation companion:
+
+- detailed build plan and governance parameter table: [rating-system-implementation-plan.md](/Users/davidhawig/source/curyo-release/docs/rating-system-implementation-plan.md)
+- local simulation note: [rating-system-redesign-simulations.md](/Users/davidhawig/source/curyo-release/docs/rating-system-redesign-simulations.md)
+
 ## TL;DR
 
 - The current deployment has a semantic gap: the UI and whitepaper ask users whether the current displayed score should go up or down, but the contract ignores that displayed score and recomputes a fresh absolute score from the current round only.
