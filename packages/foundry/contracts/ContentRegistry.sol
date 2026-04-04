@@ -133,18 +133,15 @@ contract ContentRegistry is Initializable, AccessControlUpgradeable, PausableUpg
     mapping(uint256 => uint256) internal dormancyAnchorAt;
 
     /// @notice ProtocolConfig used for governance-tunable rating and slash parameters.
-    /// @dev Appended after the legacy storage region to preserve upgrade-safe layout.
     ProtocolConfig public protocolConfig;
 
     /// @notice Hidden, time-bounded reservations for future content reveals.
-    /// @dev Declared after legacy mappings to preserve upgrade-safe storage layout.
     mapping(bytes32 => PendingSubmission) public pendingSubmissions;
 
     /// @notice Timestamp after which a dormant content key may be publicly released for replacement.
     mapping(uint256 => uint256) public dormantKeyReleasableAt;
 
     /// @notice Snapshotted participation reward rate captured at the latest successful settlement.
-    /// @dev Appended after the legacy reward and dormancy mappings to preserve proxy-safe storage layout.
     mapping(uint256 => uint256) public submitterParticipationSnapshotRateBps;
 
     /// @notice Snapshotted participation pool captured at the latest successful settlement.

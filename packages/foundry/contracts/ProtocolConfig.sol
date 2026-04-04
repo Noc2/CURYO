@@ -8,7 +8,7 @@ import { RatingLib } from "./libraries/RatingLib.sol";
 
 /// @title ProtocolConfig
 /// @notice Governance-controlled configuration and address book for RoundVotingEngine.
-/// @dev Keeps the legacy AccessControl storage layout so existing proxies can be upgraded safely in place.
+/// @dev Upgradeable behind a transparent proxy, so storage layout must remain stable across future upgrades.
 contract ProtocolConfig is Initializable, AccessControl {
     bytes32 public constant CONFIG_ROLE = keccak256("CONFIG_ROLE");
     bytes32 public constant TREASURY_ROLE = keccak256("TREASURY_ROLE");
