@@ -1,4 +1,4 @@
-export interface BotCategoryCatalogEntry {
+interface BotCategoryCatalogEntry {
   authRequirement: string;
   categoryId: bigint;
   categoryName: string;

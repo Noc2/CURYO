@@ -1,7 +1,7 @@
 const TRANSACTION_PENDING_SUFFIX =
   "This can take a few seconds. Some wallets show an approval step, others submit without a popup.";
 
-export type TransactionStatusCopy = {
+type TransactionStatusCopy = {
   title: string;
   description: string;
 };
@@ -22,5 +22,3 @@ export const TRANSACTION_CONFIRMING_STATUS: TransactionStatusCopy = {
   title: "Transaction sent",
   description: "Waiting for blockchain confirmation.",
 };
-
-export const TRANSACTION_CONFIRMING_MESSAGE = `${TRANSACTION_CONFIRMING_STATUS.title}. ${TRANSACTION_CONFIRMING_STATUS.description}`;

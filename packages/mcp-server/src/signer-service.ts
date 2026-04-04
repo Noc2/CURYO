@@ -155,6 +155,13 @@ export class CuryoWriteService {
       }
     }
 
+    const roundReferenceRatingBps = await this.readContract<number>(context, {
+      address: this.requireContracts().votingEngine,
+      abi: RoundVotingEngineAbi,
+      functionName: "previewCommitReferenceRatingBps",
+      args: [contentId],
+    });
+
     const protocolConfigAddress = await this.readContract<Address>(context, {
       address: this.requireContracts().votingEngine,
       abi: RoundVotingEngineAbi,
@@ -173,6 +180,7 @@ export class CuryoWriteService {
       isUp: params.direction === "up",
       salt,
       contentId,
+      roundReferenceRatingBps,
       epochDurationSeconds: Number(epochDurationSeconds),
     });
 
@@ -188,6 +196,7 @@ export class CuryoWriteService {
       approvalRequired,
       allowanceBefore: allowance.toString(),
       commitHash,
+      roundReferenceRatingBps,
       targetRound: targetRound.toString(),
       drandChainHash,
       ...(params.reason ? { reason: params.reason } : {}),
@@ -199,7 +208,16 @@ export class CuryoWriteService {
           address: this.requireContracts().votingEngine,
           abi: RoundVotingEngineAbi as any,
           functionName: "commitVote",
-          args: [contentId, targetRound, drandChainHash, commitHash, ciphertext, stakeAmount, frontendAddress],
+          args: [
+            contentId,
+            roundReferenceRatingBps,
+            targetRound,
+            drandChainHash,
+            commitHash,
+            ciphertext,
+            stakeAmount,
+            frontendAddress,
+          ],
         });
         result.simulation = "commitVote";
       } else {
@@ -225,7 +243,16 @@ export class CuryoWriteService {
       address: this.requireContracts().votingEngine,
       abi: RoundVotingEngineAbi as any,
       functionName: "commitVote",
-      args: [contentId, targetRound, drandChainHash, commitHash, ciphertext, stakeAmount, frontendAddress],
+      args: [
+        contentId,
+        roundReferenceRatingBps,
+        targetRound,
+        drandChainHash,
+        commitHash,
+        ciphertext,
+        stakeAmount,
+        frontendAddress,
+      ],
     } as const;
     await this.simulateContract(context, voteRequest);
     const voteTxHash = await this.writeContract(context, voteRequest);

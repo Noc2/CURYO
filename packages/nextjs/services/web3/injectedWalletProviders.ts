@@ -24,9 +24,9 @@ const EXTERNAL_WALLET_FLAGS = [
 
 export const TARGETED_INJECTED_THIRDWEB_WALLET_IDS = ["io.metamask", "com.coinbase.wallet", "me.rainbow"] as const;
 
-export type TargetedInjectedThirdwebWalletId = (typeof TARGETED_INJECTED_THIRDWEB_WALLET_IDS)[number];
+type TargetedInjectedThirdwebWalletId = (typeof TARGETED_INJECTED_THIRDWEB_WALLET_IDS)[number];
 
-export type InjectedWalletProvider = {
+type InjectedWalletProvider = {
   isCoinbaseWallet?: boolean;
   isMetaMask?: boolean;
   isRainbow?: boolean;
