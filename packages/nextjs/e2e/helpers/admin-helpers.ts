@@ -278,6 +278,39 @@ async function resolveTlockRuntimeNowMs(
   return () => runtimeNowMs;
 }
 
+async function readRoundReferenceRatingBps(
+  contractAddress: string,
+  contentId: bigint,
+  blockTag: `0x${string}`,
+): Promise<number> {
+  const { decodeFunctionResult, encodeFunctionData } = await import("viem");
+  const abi = [
+    {
+      name: "previewCommitReferenceRatingBps",
+      type: "function",
+      inputs: [{ name: "contentId", type: "uint256" }],
+      outputs: [{ name: "", type: "uint16" }],
+      stateMutability: "view",
+    },
+  ] as const;
+
+  const data = encodeFunctionData({
+    abi,
+    functionName: "previewCommitReferenceRatingBps",
+    args: [contentId],
+  });
+  const result = await rpcRequest<`0x${string}`>("eth_call", [{ to: contractAddress, data }, blockTag]);
+  if (!result) {
+    throw new Error("Failed to read previewCommitReferenceRatingBps from Anvil");
+  }
+
+  return decodeFunctionResult({
+    abi,
+    functionName: "previewCommitReferenceRatingBps",
+    data: result,
+  }) as number;
+}
+
 async function readCurrentRoundId(
   contractAddress: string,
   contentId: bigint,
@@ -1204,6 +1237,12 @@ export async function commitVoteDirect(
     attempts: DIRECT_VOTE_COMMIT_ATTEMPTS,
     attempt: async attemptIndex => {
       const salt = await buildVoteCommitSalt(fromAddress, contentIdBigInt, attemptIndex);
+      const latestBlock = await readLatestBlockSnapshot();
+      const roundReferenceRatingBps = await readRoundReferenceRatingBps(
+        contractAddress,
+        contentIdBigInt,
+        latestBlock.blockTag,
+      );
       const {
         ciphertext,
         commitHash: chash,
@@ -1216,6 +1255,7 @@ export async function commitVoteDirect(
           isUp,
           salt,
           contentId: contentIdBigInt,
+          roundReferenceRatingBps,
           epochDurationSeconds: resolvedEpochDurationSeconds,
         },
         {
@@ -1230,6 +1270,7 @@ export async function commitVoteDirect(
             type: "function",
             inputs: [
               { name: "contentId", type: "uint256" },
+              { name: "roundReferenceRatingBps", type: "uint16" },
               { name: "targetRound", type: "uint64" },
               { name: "drandChainHash", type: "bytes32" },
               { name: "commitHash", type: "bytes32" },
@@ -1242,7 +1283,16 @@ export async function commitVoteDirect(
           },
         ] as any,
         functionName: "commitVote",
-        args: [contentIdBigInt, targetRound, drandChainHash, chash, ciphertext, stakeAmount, frontend as `0x${string}`],
+        args: [
+          contentIdBigInt,
+          roundReferenceRatingBps,
+          targetRound,
+          drandChainHash,
+          chash,
+          ciphertext,
+          stakeAmount,
+          frontend as `0x${string}`,
+        ],
       });
 
       const sendResult = await sendTxViaRpc(fromAddress, contractAddress, data);
@@ -1289,6 +1339,12 @@ export async function commitVoteWithTransferAndCallDirect(
     attempts: DIRECT_VOTE_COMMIT_ATTEMPTS,
     attempt: async attemptIndex => {
       const salt = await buildVoteCommitSalt(fromAddress, contentIdBigInt, attemptIndex);
+      const latestBlock = await readLatestBlockSnapshot();
+      const roundReferenceRatingBps = await readRoundReferenceRatingBps(
+        votingEngineAddress,
+        contentIdBigInt,
+        latestBlock.blockTag,
+      );
       const {
         ciphertext,
         commitHash: chash,
@@ -1301,6 +1357,7 @@ export async function commitVoteWithTransferAndCallDirect(
           isUp,
           salt,
           contentId: contentIdBigInt,
+          roundReferenceRatingBps,
           epochDurationSeconds: resolvedEpochDurationSeconds,
         },
         {
@@ -1310,6 +1367,7 @@ export async function commitVoteWithTransferAndCallDirect(
 
       const payload = encodeVoteTransferPayload({
         contentId: contentIdBigInt,
+        roundReferenceRatingBps,
         commitHash: chash,
         ciphertext,
         targetRound,

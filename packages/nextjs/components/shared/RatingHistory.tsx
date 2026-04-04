@@ -56,8 +56,8 @@ export function RatingHistory({ contentId, variant = "default", showHeader = tru
         }
       }
     } else if (currentRating !== undefined) {
-      // No events yet, just show initial -> current
-      points.push(Number(currentRating));
+      // No events yet, just show initial -> current (getRating returns bps on-chain)
+      points.push(Number(currentRating) / 100);
     }
 
     return points;
@@ -75,13 +75,16 @@ export function RatingHistory({ contentId, variant = "default", showHeader = tru
         response.ratings
           ?.slice()
           .reverse()
-          .map(rating => rating.newRating) ?? [];
+          .map(rating => (rating.newRatingBps !== undefined ? rating.newRatingBps / 100 : rating.newRating)) ?? [];
 
       if (ratings.length > 0) {
         return [50, ...ratings];
       }
 
-      return [50, response.content?.rating ?? 50];
+      const currentDisplayRating =
+        response.content?.ratingBps !== undefined ? response.content.ratingBps / 100 : (response.content?.rating ?? 50);
+
+      return [50, currentDisplayRating];
     },
     rpcFn: async () => rpcDataPoints,
     rpcEnabled: rpcFallbackEnabled,

@@ -16,6 +16,10 @@ test("resolveRoundVoteRuntime pins round reads to the block used for timestamp a
         return 2n;
       }
 
+      if (args.functionName === "previewCommitReferenceRatingBps") {
+        return 5_000;
+      }
+
       return [900n, 0, 0n, 0n, 0n, 0n, 0n, 0n, 0n, false, 0n, 0n, 0n, 0n];
     },
   };
@@ -27,8 +31,10 @@ test("resolveRoundVoteRuntime pins round reads to the block used for timestamp a
     epochDuration: 100,
   });
 
-  assert.equal(readCalls.length, 2);
+  assert.equal(readCalls.length, 3);
   assert.equal(readCalls[0].blockNumber, 123n);
   assert.equal(readCalls[1].blockNumber, 123n);
+  assert.equal(readCalls[2].blockNumber, 123n);
   assert.equal(runtime.now(), 1_001_000);
+  assert.equal(runtime.roundReferenceRatingBps, 5_000);
 });

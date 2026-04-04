@@ -157,6 +157,12 @@ export interface PonderContentItem {
   categoryId: string;
   status: number;
   rating: number;
+  ratingBps?: number;
+  conservativeRatingBps?: number;
+  ratingConfidenceMass?: string;
+  ratingEffectiveEvidence?: string;
+  ratingSettledRounds?: number;
+  ratingLowSince?: string;
   submitterStakeReturned: boolean;
   createdAt: string;
   lastActivityAt: string;
@@ -194,6 +200,13 @@ export interface PonderContentOpenRoundSummary {
   downPool: string;
   upCount?: number;
   downCount?: number;
+  referenceRatingBps?: number;
+  ratingBps?: number;
+  conservativeRatingBps?: number;
+  confidenceMass?: string;
+  effectiveEvidence?: string;
+  settledRounds?: number;
+  lowSince?: string;
   startTime: string | null;
   estimatedSettlementTime: string | null;
 }
@@ -210,6 +223,13 @@ export interface PonderRoundItem {
   downPool: string;
   upCount: number;
   downCount: number;
+  referenceRatingBps?: number;
+  ratingBps?: number;
+  conservativeRatingBps?: number;
+  confidenceMass?: string;
+  effectiveEvidence?: string;
+  settledRounds?: number;
+  lowSince?: string;
   upWins: boolean | null;
   losingPool: string | null;
   startTime: string | null;
@@ -231,8 +251,17 @@ export interface PonderRoundsResponse {
 export interface PonderRatingChange {
   id: string;
   contentId: string;
+  roundId?: string;
   oldRating: number;
   newRating: number;
+  referenceRatingBps?: number;
+  oldRatingBps?: number;
+  newRatingBps?: number;
+  conservativeRatingBps?: number;
+  confidenceMass?: string;
+  effectiveEvidence?: string;
+  settledRounds?: number;
+  lowSince?: string;
   timestamp: string;
 }
 
