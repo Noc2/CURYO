@@ -98,7 +98,6 @@ contract ContentRegistry is Initializable, AccessControlUpgradeable, PausableUpg
     // --- State ---
     IERC20 public crepToken;
     address public votingEngine;
-    ProtocolConfig public protocolConfig;
     ICategoryRegistry public categoryRegistry;
     address public bonusPool; // Cancellation fee sink (anti-spam), typically the treasury
     address public treasury; // Receives 100% of slashed stakes (governance timelock)
@@ -132,6 +131,10 @@ contract ContentRegistry is Initializable, AccessControlUpgradeable, PausableUpg
     /// @dev Vote commits still update `lastActivityAt` for UI/analytics, but only submission, revival,
     ///      and milestone-0 settlement move the dormancy window forward.
     mapping(uint256 => uint256) internal dormancyAnchorAt;
+
+    /// @notice ProtocolConfig used for governance-tunable rating and slash parameters.
+    /// @dev Appended after the legacy storage region to preserve upgrade-safe layout.
+    ProtocolConfig public protocolConfig;
 
     /// @notice Hidden, time-bounded reservations for future content reveals.
     /// @dev Declared after legacy mappings to preserve upgrade-safe storage layout.
