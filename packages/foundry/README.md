@@ -79,8 +79,7 @@ The upgradeable control-plane contracts are deployed behind **transparent upgrad
 `RoundRewardDistributor`, `ProtocolConfig`, `FrontendRegistry`, and `ProfileRegistry`. Token, identity, faucet,
 participation, governance, and helper contracts are intentionally non-upgradeable. For upgradeable implementation
 contracts, storage layout must be preserved across upgrades — never reorder, remove, or change types of existing
-storage variables. The `RoundVotingEngine` voting-system rewrites are not storage-compatible with legacy deployments;
-when migrating across those rewrites, deploy a fresh proxy instead of upgrading an existing proxy in place.
+storage variables.
 
 Human faucet coverage includes direct callback simulation for hook-level cases and the bytes-based `verifySelfProof`
 entrypoint via the mock Self hub. The mock proof path now enforces the same bound user-context hash shape used by the
