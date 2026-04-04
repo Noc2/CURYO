@@ -19,12 +19,9 @@ jobs:
             packages/foundry/cache
             packages/foundry/out
           key: forge-${{ hashFiles('packages/foundry/foundry.toml', 'packages/foundry/**/*.sol') }}
-      - name: Build contracts
-        working-directory: packages/foundry
-        run: forge build --skip script --skip test
       - name: Enforce EIP-170 contract size limit
         working-directory: packages/foundry
-        run: bash scripts/check-contract-sizes.sh
+        run: make check-contract-sizes DEPLOY_PROFILE=deploy
 
   foundry:
     runs-on: ubuntu-latest
