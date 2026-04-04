@@ -19,45 +19,6 @@ export const RoundVotingEngineAbi = [
   },
   {
     "type": "function",
-    "name": "MAX_CIPHERTEXT_SIZE",
-    "inputs": [],
-    "outputs": [
-      {
-        "name": "",
-        "type": "uint256",
-        "internalType": "uint256"
-      }
-    ],
-    "stateMutability": "view"
-  },
-  {
-    "type": "function",
-    "name": "MAX_STAKE",
-    "inputs": [],
-    "outputs": [
-      {
-        "name": "",
-        "type": "uint256",
-        "internalType": "uint256"
-      }
-    ],
-    "stateMutability": "view"
-  },
-  {
-    "type": "function",
-    "name": "MIN_STAKE",
-    "inputs": [],
-    "outputs": [
-      {
-        "name": "",
-        "type": "uint256",
-        "internalType": "uint256"
-      }
-    ],
-    "stateMutability": "view"
-  },
-  {
-    "type": "function",
     "name": "PAUSER_ROLE",
     "inputs": [],
     "outputs": [
@@ -65,19 +26,6 @@ export const RoundVotingEngineAbi = [
         "name": "",
         "type": "bytes32",
         "internalType": "bytes32"
-      }
-    ],
-    "stateMutability": "view"
-  },
-  {
-    "type": "function",
-    "name": "VOTE_COOLDOWN",
-    "inputs": [],
-    "outputs": [
-      {
-        "name": "",
-        "type": "uint256",
-        "internalType": "uint256"
       }
     ],
     "stateMutability": "view"
@@ -369,19 +317,6 @@ export const RoundVotingEngineAbi = [
   },
   {
     "type": "function",
-    "name": "crepToken",
-    "inputs": [],
-    "outputs": [
-      {
-        "name": "",
-        "type": "address",
-        "internalType": "contract IERC20"
-      }
-    ],
-    "stateMutability": "view"
-  },
-  {
-    "type": "function",
     "name": "currentRoundId",
     "inputs": [
       {
@@ -486,35 +421,6 @@ export const RoundVotingEngineAbi = [
         "name": "account",
         "type": "address",
         "internalType": "address"
-      }
-    ],
-    "outputs": [
-      {
-        "name": "",
-        "type": "bool",
-        "internalType": "bool"
-      }
-    ],
-    "stateMutability": "view"
-  },
-  {
-    "type": "function",
-    "name": "hasTokenIdCommitted",
-    "inputs": [
-      {
-        "name": "",
-        "type": "uint256",
-        "internalType": "uint256"
-      },
-      {
-        "name": "",
-        "type": "uint256",
-        "internalType": "uint256"
-      },
-      {
-        "name": "",
-        "type": "uint256",
-        "internalType": "uint256"
       }
     ],
     "outputs": [
@@ -712,19 +618,6 @@ export const RoundVotingEngineAbi = [
         "name": "",
         "type": "address",
         "internalType": "contract ProtocolConfig"
-      }
-    ],
-    "stateMutability": "view"
-  },
-  {
-    "type": "function",
-    "name": "registry",
-    "inputs": [],
-    "outputs": [
-      {
-        "name": "",
-        "type": "address",
-        "internalType": "contract ContentRegistry"
       }
     ],
     "stateMutability": "view"
@@ -976,114 +869,6 @@ export const RoundVotingEngineAbi = [
         "name": "",
         "type": "uint256",
         "internalType": "uint256"
-      }
-    ],
-    "stateMutability": "view"
-  },
-  {
-    "type": "function",
-    "name": "roundRatingConfigSnapshot",
-    "inputs": [
-      {
-        "name": "",
-        "type": "uint256",
-        "internalType": "uint256"
-      },
-      {
-        "name": "",
-        "type": "uint256",
-        "internalType": "uint256"
-      }
-    ],
-    "outputs": [
-      {
-        "name": "smoothingAlpha",
-        "type": "uint256",
-        "internalType": "uint256"
-      },
-      {
-        "name": "smoothingBeta",
-        "type": "uint256",
-        "internalType": "uint256"
-      },
-      {
-        "name": "observationBetaX18",
-        "type": "uint256",
-        "internalType": "uint256"
-      },
-      {
-        "name": "confidenceMassInitial",
-        "type": "uint256",
-        "internalType": "uint256"
-      },
-      {
-        "name": "confidenceMassMin",
-        "type": "uint256",
-        "internalType": "uint256"
-      },
-      {
-        "name": "confidenceMassMax",
-        "type": "uint256",
-        "internalType": "uint256"
-      },
-      {
-        "name": "confidenceGainBps",
-        "type": "uint16",
-        "internalType": "uint16"
-      },
-      {
-        "name": "confidenceReopenBps",
-        "type": "uint16",
-        "internalType": "uint16"
-      },
-      {
-        "name": "surpriseReferenceX18",
-        "type": "uint256",
-        "internalType": "uint256"
-      },
-      {
-        "name": "maxDeltaLogitX18",
-        "type": "uint256",
-        "internalType": "uint256"
-      },
-      {
-        "name": "maxAbsLogitX18",
-        "type": "uint256",
-        "internalType": "uint256"
-      },
-      {
-        "name": "conservativePenaltyMaxBps",
-        "type": "uint16",
-        "internalType": "uint16"
-      },
-      {
-        "name": "conservativePenaltyMinBps",
-        "type": "uint16",
-        "internalType": "uint16"
-      }
-    ],
-    "stateMutability": "view"
-  },
-  {
-    "type": "function",
-    "name": "roundReferenceRatingBpsSnapshot",
-    "inputs": [
-      {
-        "name": "",
-        "type": "uint256",
-        "internalType": "uint256"
-      },
-      {
-        "name": "",
-        "type": "uint256",
-        "internalType": "uint256"
-      }
-    ],
-    "outputs": [
-      {
-        "name": "",
-        "type": "uint16",
-        "internalType": "uint16"
       }
     ],
     "stateMutability": "view"

@@ -41,6 +41,33 @@ function isBenignRevealError(message: string): boolean {
   return BENIGN_REVEAL_ERRORS.some(error => lower.includes(error.toLowerCase()));
 }
 
+function deriveDrandRoundRevealableAtSeconds(
+  targetRound: bigint,
+  drandGenesisTimeSeconds: bigint,
+  drandPeriodSeconds: bigint,
+) {
+  if (targetRound <= 0n || drandPeriodSeconds <= 0n) {
+    return 0n;
+  }
+
+  return drandGenesisTimeSeconds + (targetRound - 1n) * drandPeriodSeconds;
+}
+
+function deriveRevealAvailableAtSeconds(
+  revealableAfterSeconds: bigint,
+  targetRound: bigint,
+  drandGenesisTimeSeconds: bigint,
+  drandPeriodSeconds: bigint,
+) {
+  const drandRoundRevealableAt = deriveDrandRoundRevealableAtSeconds(
+    targetRound,
+    drandGenesisTimeSeconds,
+    drandPeriodSeconds,
+  );
+
+  return revealableAfterSeconds > drandRoundRevealableAt ? revealableAfterSeconds : drandRoundRevealableAt;
+}
+
 export function useManualRevealVotes(voter?: Address) {
   const { address, chain } = useAccount();
   const { data: walletClient } = useWalletClient();
@@ -90,6 +117,41 @@ export function useManualRevealVotes(voter?: Address) {
 
       if (withCommitHashes.length === 0) return [];
 
+      const protocolConfigAddress = (await publicClient.readContract({
+        address: engineInfo.address,
+        abi: RoundVotingEngineAbi,
+        functionName: "protocolConfig",
+      })) as Address;
+
+      const [drandGenesisTime, drandPeriod] = await Promise.all([
+        publicClient.readContract({
+          address: protocolConfigAddress,
+          abi: [
+            {
+              type: "function",
+              name: "drandGenesisTime",
+              stateMutability: "view",
+              inputs: [],
+              outputs: [{ name: "", type: "uint64" }],
+            },
+          ],
+          functionName: "drandGenesisTime",
+        }),
+        publicClient.readContract({
+          address: protocolConfigAddress,
+          abi: [
+            {
+              type: "function",
+              name: "drandPeriod",
+              stateMutability: "view",
+              inputs: [],
+              outputs: [{ name: "", type: "uint64" }],
+            },
+          ],
+          functionName: "drandPeriod",
+        }),
+      ]);
+
       const commitResults = await publicClient.multicall({
         allowFailure: true,
         contracts: withCommitHashes.map(({ vote, commitKey }) => ({
@@ -100,25 +162,21 @@ export function useManualRevealVotes(voter?: Address) {
         })) as any,
       });
 
-      const revealAvailableAtResults = await publicClient.multicall({
-        allowFailure: true,
-        contracts: withCommitHashes.map(({ vote, commitKey }) => ({
-          address: engineInfo.address,
-          abi: RoundVotingEngineAbi,
-          functionName: "commitRevealAvailableAt",
-          args: [BigInt(vote.contentId), BigInt(vote.roundId), commitKey],
-        })) as any,
-      });
-
       return withCommitHashes.flatMap(({ vote, commitHash, commitKey }, index) => {
         const commitResult = commitResults[index];
-        const revealAvailableAtResult = revealAvailableAtResults[index];
-        if (commitResult?.status !== "success" || revealAvailableAtResult?.status !== "success") return [];
+        if (commitResult?.status !== "success") return [];
 
         const commit = commitResult.result as CommitData;
         if (!commit.voter || commit.voter === "0x0000000000000000000000000000000000000000" || commit.revealed) {
           return [];
         }
+
+        const revealAvailableAt = deriveRevealAvailableAtSeconds(
+          commit.revealableAfter,
+          commit.targetRound ?? 0n,
+          drandGenesisTime as bigint,
+          drandPeriod as bigint,
+        );
 
         return [
           {
@@ -129,7 +187,7 @@ export function useManualRevealVotes(voter?: Address) {
             epochIndex: commit.epochIndex,
             committedAt: vote.committedAt,
             revealableAfter: commit.revealableAfter,
-            revealAvailableAt: BigInt(revealAvailableAtResult.result as bigint),
+            revealAvailableAt,
             commitHash,
             commitKey,
             ciphertext: commit.ciphertext as `0x${string}`,
@@ -199,12 +257,46 @@ export function useManualRevealVotes(voter?: Address) {
           return true;
         }
 
-        const revealAvailableAt = (await publicClient.readContract({
+        const protocolConfigAddress = (await publicClient.readContract({
           address: engineInfo.address,
           abi: RoundVotingEngineAbi,
-          functionName: "commitRevealAvailableAt",
-          args: [vote.contentId, vote.roundId, vote.commitKey],
-        })) as bigint;
+          functionName: "protocolConfig",
+        })) as Address;
+        const [drandGenesisTime, drandPeriod] = await Promise.all([
+          publicClient.readContract({
+            address: protocolConfigAddress,
+            abi: [
+              {
+                type: "function",
+                name: "drandGenesisTime",
+                stateMutability: "view",
+                inputs: [],
+                outputs: [{ name: "", type: "uint64" }],
+              },
+            ],
+            functionName: "drandGenesisTime",
+          }),
+          publicClient.readContract({
+            address: protocolConfigAddress,
+            abi: [
+              {
+                type: "function",
+                name: "drandPeriod",
+                stateMutability: "view",
+                inputs: [],
+                outputs: [{ name: "", type: "uint64" }],
+              },
+            ],
+            functionName: "drandPeriod",
+          }),
+        ]);
+
+        const revealAvailableAt = deriveRevealAvailableAtSeconds(
+          latestCommit.revealableAfter,
+          latestCommit.targetRound ?? 0n,
+          drandGenesisTime as bigint,
+          drandPeriod as bigint,
+        );
         if (BigInt(now) < revealAvailableAt) {
           notification.info("That vote is not revealable yet.");
           await refresh();

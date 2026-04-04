@@ -524,14 +524,12 @@ contract UpgradeTest is Test {
 
     function test_VotingEngine_StatePreservedAfterUpgrade() public {
         assertEq(votingEngineAdmin.owner(), governance);
-        assertEq(address(votingEngine.registry()), address(contentRegistry));
 
         RoundVotingEngine newImpl = new RoundVotingEngine();
         vm.prank(governance);
         votingEngineAdmin.upgradeAndCall(_proxy(address(votingEngine)), address(newImpl), "");
 
         assertEq(votingEngineAdmin.owner(), governance);
-        assertEq(address(votingEngine.registry()), address(contentRegistry));
     }
 
     // =========================================================================
