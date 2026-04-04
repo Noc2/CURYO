@@ -7,7 +7,7 @@ const referenceAppSourceHref = "https://github.com/Noc2/CURYO/tree/main/packages
 const keeperSourceHref = "https://github.com/Noc2/CURYO/tree/main/packages/keeper";
 const ponderSourceHref = "https://github.com/Noc2/CURYO/tree/main/packages/ponder";
 const contentModerationPolicySourceHref =
-  "https://github.com/Noc2/CURYO/blob/main/packages/nextjs/config/contentModeration.ts";
+  "https://github.com/Noc2/CURYO/blob/main/packages/node-utils/src/contentModeration.ts";
 const contentFilterSourceHref = "https://github.com/Noc2/CURYO/blob/main/packages/nextjs/utils/contentFilter.ts";
 const submissionValidationSourceHref =
   "https://github.com/Noc2/CURYO/blob/main/packages/nextjs/lib/moderation/submissionValidation.ts";
@@ -262,7 +262,7 @@ const FrontendCodes: NextPage = () => {
           rel="noopener noreferrer"
           className="link link-primary"
         >
-          packages/nextjs/config/contentModeration.ts
+          packages/node-utils/src/contentModeration.ts
         </a>
         , the lower-level matching helpers live in{" "}
         <a href={contentFilterSourceHref} target="_blank" rel="noopener noreferrer" className="link link-primary">

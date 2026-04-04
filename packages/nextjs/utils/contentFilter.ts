@@ -1,4 +1,4 @@
-import { contentModerationPolicy } from "~~/config/contentModeration";
+import { contentModerationPolicy } from "@curyo/node-utils/contentModeration";
 
 /**
  * Client-side content moderation filter.
