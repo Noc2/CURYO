@@ -520,6 +520,9 @@ contract RoundVotingEngine is
     function _markFrontendEligibility(uint256 contentId, uint256 roundId, bytes32 commitKey, address frontend)
         internal
     {
+        if (frontend == address(0)) {
+            return;
+        }
         IFrontendRegistry currentFrontendRegistry = _getFrontendRegistry();
         if (VotePreflightLib.isFrontendEligible(currentFrontendRegistry, frontend)) {
             frontendEligibleAtCommit[contentId][roundId][commitKey] = true;
