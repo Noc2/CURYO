@@ -25,7 +25,18 @@ test("getCoinGeckoImageCandidates removes duplicate image urls", () => {
   );
 });
 
+test("getCoinGeckoImageCandidates drops blank urls after trimming", () => {
+  assert.deepEqual(
+    getCoinGeckoImageCandidates({
+      imageUrl: "   ",
+      thumbnailUrl: " https://coin-images.coingecko.com/coins/images/1/small/bitcoin.png ",
+    }),
+    ["https://coin-images.coingecko.com/coins/images/1/small/bitcoin.png"],
+  );
+});
+
 test("getImageLoadState detects cached, pending, and failed image loads", () => {
+  assert.equal(getImageLoadState(null), "pending");
   assert.equal(getImageLoadState({ complete: false, naturalWidth: 0 }), "pending");
   assert.equal(getImageLoadState({ complete: true, naturalWidth: 192 }), "loaded");
   assert.equal(getImageLoadState({ complete: true, naturalWidth: 0 }), "error");

@@ -136,6 +136,35 @@ test("latest orders submissions by created time", () => {
   assert.equal(ranked[0]?.id, 1n);
 });
 
+test("latest breaks created-time ties with the newer id", () => {
+  const nowSeconds = 10_000;
+  const ranked = sortDiscoverFeed(
+    [
+      makeContentItem({
+        id: 1n,
+        url: "https://example.com/first",
+        title: "First",
+        createdAt: "9600",
+        lastActivityAt: "9900",
+      }),
+      makeContentItem({
+        id: 2n,
+        url: "https://example.com/second",
+        title: "Second",
+        createdAt: "9600",
+        lastActivityAt: "9600",
+      }),
+    ],
+    "latest",
+    nowSeconds,
+  );
+
+  assert.deepEqual(
+    ranked.map(item => item.id),
+    [2n, 1n],
+  );
+});
+
 test("near settlement favors rounds with sooner estimated settlement", () => {
   const nowSeconds = 10_000;
   const ranked = sortDiscoverFeed(
