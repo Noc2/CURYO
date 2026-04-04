@@ -60,6 +60,15 @@ test("detects thirdweb sponsorship denials", () => {
   );
 });
 
+test("detects exhausted free transaction denials as sponsorship denials", () => {
+  assert.equal(
+    isThirdwebSponsorshipDeniedError(
+      new Error('Error executing 7702 transaction: {"reason":"Free transactions used up. Add CELO to continue."}'),
+    ),
+    true,
+  );
+});
+
 test("ignores unrelated thirdweb submit failures", () => {
   assert.equal(isThirdwebSponsorshipDeniedError(new Error("User rejected the request.")), false);
 });
@@ -83,6 +92,21 @@ test("allows self-funded fallback when sponsorship denial is unrelated to a rese
       activeWalletId: "inApp",
       chainId: 42220,
       error: new Error('Error executing 7702 transaction: {"reason":"Transaction not sponsored."}'),
+      executionMode: "sponsored_7702",
+      hasReservedFreeTransaction: false,
+    }),
+    true,
+  );
+});
+
+test("allows self-funded fallback when free transactions are exhausted", () => {
+  assert.equal(
+    shouldAttemptSelfFundedThirdwebFallback({
+      activeWalletId: "inApp",
+      chainId: 42220,
+      error: new Error(
+        'Error executing 7702 transaction: {"reason":"Free transactions used up. Add CELO to continue."}',
+      ),
       executionMode: "sponsored_7702",
       hasReservedFreeTransaction: false,
     }),
