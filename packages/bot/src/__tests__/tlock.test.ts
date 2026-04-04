@@ -116,12 +116,31 @@ describe("shared voting helpers", () => {
   it("builds stable commit hashes and keys", () => {
     const salt = ("0x" + "22".repeat(32)) as `0x${string}`;
     const ciphertext = "0x1234" as `0x${string}`;
-    const commitHash = buildCommitHash(false, salt, 42n, 123n, ("0x" + "ab".repeat(32)) as `0x${string}`, ciphertext);
+    const roundReferenceRatingBps = 5_000;
+    const commitHash = buildCommitHash(
+      false,
+      salt,
+      42n,
+      roundReferenceRatingBps,
+      123n,
+      ("0x" + "ab".repeat(32)) as `0x${string}`,
+      ciphertext,
+    );
     const commitKey = buildCommitKey("0x1111111111111111111111111111111111111111", commitHash);
 
     expect(commitHash).toMatch(/^0x[0-9a-f]{64}$/);
     expect(commitKey).toMatch(/^0x[0-9a-f]{64}$/);
-    expect(buildCommitHash(false, salt, 42n, 123n, ("0x" + "ab".repeat(32)) as `0x${string}`, ciphertext)).toBe(commitHash);
+    expect(
+      buildCommitHash(
+        false,
+        salt,
+        42n,
+        roundReferenceRatingBps,
+        123n,
+        ("0x" + "ab".repeat(32)) as `0x${string}`,
+        ciphertext,
+      ),
+    ).toBe(commitHash);
     expect(buildCommitKey("0x1111111111111111111111111111111111111111", commitHash)).toBe(commitKey);
   });
 
@@ -135,19 +154,31 @@ describe("shared voting helpers", () => {
       isUp: true,
       salt,
       contentId: 7n,
+      roundReferenceRatingBps: 5_000,
       epochDurationSeconds: 1200,
     }, { client: fakeClient, encryptFn, now: fakeNow });
 
     expect(commit.ciphertext).toBe("0x46414b452d41524d4f5245442d4147452d535452494e47");
     expect(commit.targetRound).toBe(401n);
     expect(commit.drandChainHash).toBe(`0x${"ab".repeat(32)}`);
-    expect(commit.commitHash).toBe(buildCommitHash(true, salt, 7n, commit.targetRound, commit.drandChainHash, commit.ciphertext));
+    expect(commit.commitHash).toBe(
+      buildCommitHash(
+        true,
+        salt,
+        7n,
+        commit.roundReferenceRatingBps,
+        commit.targetRound,
+        commit.drandChainHash,
+        commit.ciphertext,
+      ),
+    );
     expect(commit.commitKey).toBe(buildCommitKey(voter, commit.commitHash));
   });
 
   it("round-trips the ERC-1363 vote transfer payload", () => {
     const payload = {
       contentId: 9n,
+      roundReferenceRatingBps: 5_000,
       commitHash: ("0x" + "44".repeat(32)) as `0x${string}`,
       ciphertext: "0x123456" as `0x${string}`,
       targetRound: 99n,
