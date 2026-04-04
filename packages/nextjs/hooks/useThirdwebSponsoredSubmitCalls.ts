@@ -18,6 +18,7 @@ import {
   useWalletExecutionCapabilities,
 } from "~~/hooks/useWalletExecutionCapabilities";
 import { buildFreeTransactionOperationKey } from "~~/lib/thirdweb/freeTransactionOperation";
+import { isFreeTransactionExhaustedError } from "~~/lib/transactionErrors";
 import {
   createThirdwebInAppWallet,
   supportsThirdwebExecutionCapabilities,
@@ -64,6 +65,10 @@ export function isThirdwebSponsorshipDeniedError(error: unknown) {
   return message.toLowerCase().includes("transaction not sponsored");
 }
 
+export function isThirdwebSelfFundedFallbackEligibleError(error: unknown) {
+  return isThirdwebSponsorshipDeniedError(error) || isFreeTransactionExhaustedError(error);
+}
+
 export function shouldAttemptSelfFundedThirdwebFallback(params: {
   activeWalletId: string | undefined;
   chainId: number | undefined;
@@ -76,7 +81,7 @@ export function shouldAttemptSelfFundedThirdwebFallback(params: {
     params.executionMode === "sponsored_7702" &&
     typeof params.chainId === "number" &&
     !params.hasReservedFreeTransaction &&
-    isThirdwebSponsorshipDeniedError(params.error)
+    isThirdwebSelfFundedFallbackEligibleError(params.error)
   );
 }
 
