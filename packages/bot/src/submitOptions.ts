@@ -49,7 +49,7 @@ export function formatSubmitUsage(): string {
     entry => `  ${String(entry.categoryId).padEnd(2)} ${entry.categoryName}`,
   ).join("\n");
 
-  return `Usage: yarn bot submit [options]
+  return `Usage: yarn submit [options]
 
 Discover trending content and submit it to ContentRegistry.
 
@@ -69,6 +69,7 @@ Deployed categories without automated submit support yet:
 ${pendingCoverage}
 
 Examples:
+  yarn submit --category Movies --source tmdb --max-submissions 3
   yarn workspace @curyo/bot submit --category Movies --source tmdb --max-submissions 3
   yarn workspace @curyo/bot submit --category "GitHub Repos" --source github --max-submissions 2`;
 }
