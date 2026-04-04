@@ -135,6 +135,7 @@ contract RoundIntegrationTest is VotingTestBase {
         );
 
         registry.setVotingEngine(address(votingEngine));
+        registry.setProtocolConfig(address(votingEngine.protocolConfig()));
         MockCategoryRegistry mockCategoryRegistry = new MockCategoryRegistry();
         mockCategoryRegistry.seedDefaultTestCategories();
         registry.setCategoryRegistry(address(mockCategoryRegistry));
@@ -1086,15 +1087,18 @@ contract RoundIntegrationTest is VotingTestBase {
         assertGt(crepToken.balanceOf(voter1), balBefore, "Voter should receive consensus subsidy");
     }
 
-    function test_SubmitterStake_SlashesLowRatedFirstSettlementAfterFourDays() public {
+    function test_SubmitterStake_SlashesLowRatedFirstSettlementAfterDwellWhenGovernanceRelaxesSlashConfig() public {
+        ProtocolConfig protocolConfig = ProtocolConfig(address(votingEngine.protocolConfig()));
+        vm.startPrank(owner);
+        registry.setTreasury(treasury);
+        protocolConfig.setSlashConfig(4_000, 1, 2 days, 100e6);
+        vm.stopPrank();
+
         uint256 contentId = _submitContent();
         uint256 submitterBalanceBefore = crepToken.balanceOf(submitter);
         uint256 treasuryBalanceBefore = crepToken.balanceOf(treasury);
 
-        vm.prank(owner);
-        registry.setTreasury(treasury);
-
-        vm.warp(block.timestamp + 4 days + 1);
+        vm.warp(block.timestamp + 1 days + 1);
 
         address[] memory voters = new address[](2);
         voters[0] = voter1;
@@ -1106,7 +1110,16 @@ contract RoundIntegrationTest is VotingTestBase {
         _settleRoundWith(voters, contentId, dirs, 100e6);
 
         (,,,,,,,,, bool submitterStakeReturned, uint256 rating,) = registry.contents(contentId);
-        assertLt(rating, registry.SLASH_RATING_THRESHOLD(), "round should be slashable");
+        assertLt(registry.getConservativeRating(contentId), 4_000, "conservative rating should fall below the tuned threshold");
+        assertFalse(submitterStakeReturned, "dwell should keep the stake pending right after settlement");
+        assertEq(crepToken.balanceOf(treasury), treasuryBalanceBefore, "treasury should not be paid before the dwell window");
+
+        vm.warp(block.timestamp + 3 days + 1);
+        assertTrue(registry.isSubmitterStakeSlashable(contentId), "slashability should mature before the day-4 resolution window");
+        votingEngine.resolveSubmitterStake(contentId);
+
+        (,,,,,,,,, submitterStakeReturned, rating,) = registry.contents(contentId);
+        assertLt(uint256(rating), 40, "display rating should still reflect a low settlement");
         assertTrue(submitterStakeReturned, "submitter stake should be resolved");
         assertEq(crepToken.balanceOf(submitter), submitterBalanceBefore, "submitter stake should not be returned");
         assertEq(crepToken.balanceOf(treasury) - treasuryBalanceBefore, 10e6, "slash amount should be sent to treasury");
