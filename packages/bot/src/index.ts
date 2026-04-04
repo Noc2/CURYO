@@ -67,7 +67,9 @@ switch (command) {
     break;
   }
   default:
-    console.log(`Usage: yarn bot [vote|submit|status]
+    console.log(`Usage:
+  yarn submit|vote|status
+  yarn bot:submit|bot:vote|bot:status
 
 Commands:
   submit  Discover trending content from all platforms, submit to ContentRegistry

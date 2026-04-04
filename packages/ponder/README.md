@@ -60,17 +60,18 @@ src/
 ├── RoundVotingEngine.ts      # Commit, reveal, settle, cancel events
 ├── RoundRewardDistributor.ts # Reward distribution events
 ├── CategoryRegistry.ts       # Category registration events
-├── ProfileRegistry.ts        # Profile update events
+├── ProfileRegistry.ts       # Profile update events
 ├── FrontendRegistry.ts       # Frontend fee events
 ├── VoterIdNFT.ts             # NFT minting events
 ├── CuryoReputation.ts        # Token transfer events
 └── api/
     └── index.ts              # REST API routes (Hono)
 
-abis/                         # Contract ABIs (copied from foundry build)
 scripts/
 └── devWithRecovery.mjs       # Auto-restart on crash, clears corrupted state
 ```
+
+ABIs come from `@curyo/contracts/abis`; the indexer imports the shared package directly.
 
 ## API Endpoints
 
