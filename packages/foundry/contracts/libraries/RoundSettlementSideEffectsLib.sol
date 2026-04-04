@@ -2,7 +2,8 @@
 pragma solidity ^0.8.24;
 
 import { ContentRegistry } from "../ContentRegistry.sol";
-import { RewardMath } from "./RewardMath.sol";
+import { RatingLib } from "./RatingLib.sol";
+import { RatingMath } from "./RatingMath.sol";
 import { SubmitterStakeLib } from "./SubmitterStakeLib.sol";
 import { IParticipationPool } from "../interfaces/IParticipationPool.sol";
 import { IRoundRewardDistributor } from "../interfaces/IRoundRewardDistributor.sol";
@@ -12,16 +13,31 @@ import { IRoundRewardDistributor } from "../interfaces/IRoundRewardDistributor.s
 library RoundSettlementSideEffectsLib {
     function recordSettlement(
         ContentRegistry registry,
+        RatingLib.RatingConfig memory ratingConfig,
         IParticipationPool participationPool,
         address rewardDistributor,
         bool isFirstSettledRound,
         uint256 contentId,
         uint256 roundId,
+        uint16 referenceRatingBps,
+        uint64 weightedUpPool,
+        uint64 weightedDownPool,
         bool upWins,
         uint64 upPool,
         uint64 downPool
     ) external {
-        uint16 newRating = RewardMath.calculateRating(upPool, downPool);
+        RatingLib.RatingState memory previousState = registry.getRatingState(contentId);
+        RatingLib.SlashConfig memory slashConfig = registry.getSlashConfigForContent(contentId);
+        (RatingLib.RatingState memory nextState,,) = RatingMath.applySettlement(
+            referenceRatingBps,
+            weightedUpPool,
+            weightedDownPool,
+            previousState,
+            ratingConfig,
+            slashConfig,
+            uint48(block.timestamp)
+        );
+        uint8 newDisplayRating = RatingMath.displayRatingFromBps(nextState.ratingBps);
         address participationPoolAddress = address(participationPool);
         uint256 participationRateBps = 0;
         bool hasParticipationRate = false;
@@ -35,11 +51,11 @@ library RoundSettlementSideEffectsLib {
 
         if (isFirstSettledRound) {
             registry.snapshotMilestoneZeroSubmitterTerms(
-                contentId, newRating, participationPoolAddress, hasParticipationRate ? participationRateBps : 0
+                contentId, newDisplayRating, participationPoolAddress, hasParticipationRate ? participationRateBps : 0
             );
         }
 
-        try registry.updateRatingDirect(contentId, newRating) { } catch { }
+        try registry.updateRatingState(contentId, roundId, referenceRatingBps, nextState) { } catch { }
         try registry.recordMeaningfulActivity(contentId) { } catch { }
 
         if (participationPoolAddress != address(0) && hasParticipationRate) {

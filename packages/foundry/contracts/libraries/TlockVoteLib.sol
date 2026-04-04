@@ -26,6 +26,7 @@ library TlockVoteLib {
         pure
         returns (
             uint256 contentId,
+            uint16 roundReferenceRatingBps,
             bytes32 commitHash,
             bytes memory ciphertext,
             uint64 targetRound,
@@ -33,9 +34,9 @@ library TlockVoteLib {
             address frontend
         )
     {
-        if (data.length < 192) revert InvalidCiphertext();
-        (contentId, commitHash, ciphertext, frontend, targetRound, drandChainHash) =
-            abi.decode(data, (uint256, bytes32, bytes, address, uint64, bytes32));
+        if (data.length < 224) revert InvalidCiphertext();
+        (contentId, roundReferenceRatingBps, commitHash, ciphertext, frontend, targetRound, drandChainHash) =
+            abi.decode(data, (uint256, uint16, bytes32, bytes, address, uint64, bytes32));
     }
 
     function validateCommitData(
@@ -64,12 +65,15 @@ library TlockVoteLib {
         bool isUp,
         bytes32 salt,
         uint256 contentId,
+        uint16 roundReferenceRatingBps,
         uint64 targetRound,
         bytes32 drandChainHash,
         bytes memory ciphertext
     ) external pure returns (bytes32) {
         bytes32 ciphertextHash = keccak256(ciphertext);
-        return keccak256(abi.encodePacked(isUp, salt, contentId, targetRound, drandChainHash, ciphertextHash));
+        return keccak256(
+            abi.encodePacked(isUp, salt, contentId, roundReferenceRatingBps, targetRound, drandChainHash, ciphertextHash)
+        );
     }
 
     function _validateCiphertext(bytes memory ciphertext) private pure {

@@ -13,6 +13,7 @@ import { IERC1363Receiver } from "@openzeppelin/contracts/interfaces/IERC1363Rec
 import { ContentRegistry } from "./ContentRegistry.sol";
 import { ProtocolConfig } from "./ProtocolConfig.sol";
 import { RoundLib } from "./libraries/RoundLib.sol";
+import { RatingLib } from "./libraries/RatingLib.sol";
 import { RewardMath } from "./libraries/RewardMath.sol";
 import { RoundSettlementSideEffectsLib } from "./libraries/RoundSettlementSideEffectsLib.sol";
 import { CategoryFeeLib } from "./libraries/CategoryFeeLib.sol";
@@ -66,6 +67,7 @@ contract RoundVotingEngine is
     error DrandChainHashMismatch();
     error TargetRoundOutOfWindow();
     error RoundNotOpen();
+    error ReferenceRatingMismatch();
     error ActiveRoundStillOpen();
     error RoundNotAccepting();
     error RoundNotExpired();
@@ -137,6 +139,8 @@ contract RoundVotingEngine is
 
     // Config snapshot per round: prevents governance config changes from affecting in-progress rounds
     mapping(uint256 => mapping(uint256 => RoundLib.RoundConfig)) public roundConfigSnapshot;
+    mapping(uint256 => mapping(uint256 => RatingLib.RatingConfig)) public roundRatingConfigSnapshot;
+    mapping(uint256 => mapping(uint256 => uint16)) public roundReferenceRatingBpsSnapshot;
 
     // Voter to commit hash lookup: contentId => roundId => voter => commitHash (O(1) claim lookups)
     mapping(uint256 => mapping(uint256 => mapping(address => bytes32))) public voterCommitHash;
@@ -153,10 +157,12 @@ contract RoundVotingEngine is
         uint256 indexed roundId,
         address indexed voter,
         bytes32 commitHash,
+        uint16 roundReferenceRatingBps,
         uint64 targetRound,
         bytes32 drandChainHash,
         uint256 stake
     );
+    event RoundReferenceSnapshotted(uint256 indexed contentId, uint256 indexed roundId, uint16 roundReferenceRatingBps);
     event VoteRevealed(uint256 indexed contentId, uint256 indexed roundId, address indexed voter, bool isUp);
     event RoundSettled(uint256 indexed contentId, uint256 indexed roundId, bool upWins, uint256 losingPool);
     event RoundCancelled(uint256 indexed contentId, uint256 indexed roundId);
@@ -221,14 +227,16 @@ contract RoundVotingEngine is
 
     /// @notice Commit a blind vote on content. Direction is hidden via tlock encryption.
     /// @param contentId The content being voted on.
+    /// @param roundReferenceRatingBps Canonical round score the voter is judging against.
     /// @param targetRound drand round targeted by the ciphertext.
     /// @param drandChainHash drand chain hash bound into the commitment.
-    /// @param commitHash keccak256(abi.encodePacked(isUp, salt, contentId, targetRound, drandChainHash, keccak256(ciphertext))).
+    /// @param commitHash keccak256(abi.encodePacked(isUp, salt, contentId, roundReferenceRatingBps, targetRound, drandChainHash, keccak256(ciphertext))).
     /// @param ciphertext Tlock-encrypted payload (decryptable after epoch end via drand).
     /// @param stakeAmount Amount of cREP tokens to stake (1-100).
     /// @param frontend Address of frontend operator for fee distribution.
     function commitVote(
         uint256 contentId,
+        uint16 roundReferenceRatingBps,
         uint64 targetRound,
         bytes32 drandChainHash,
         bytes32 commitHash,
@@ -237,7 +245,41 @@ contract RoundVotingEngine is
         address frontend
     ) external nonReentrant whenNotPaused {
         _commitVote(
-            msg.sender, contentId, targetRound, drandChainHash, commitHash, ciphertext, stakeAmount, frontend, false
+            msg.sender,
+            contentId,
+            roundReferenceRatingBps,
+            targetRound,
+            drandChainHash,
+            commitHash,
+            ciphertext,
+            stakeAmount,
+            frontend,
+            false
+        );
+    }
+
+    /// @notice Backward-compatible direct commit path that derives the canonical round reference score on-chain.
+    /// @dev Legacy callers must still build `commitHash` with the derived reference score or reveal will fail.
+    function commitVote(
+        uint256 contentId,
+        uint64 targetRound,
+        bytes32 drandChainHash,
+        bytes32 commitHash,
+        bytes memory ciphertext,
+        uint256 stakeAmount,
+        address frontend
+    ) public nonReentrant whenNotPaused {
+        _commitVote(
+            msg.sender,
+            contentId,
+            _previewCommitReferenceRatingBps(contentId),
+            targetRound,
+            drandChainHash,
+            commitHash,
+            ciphertext,
+            stakeAmount,
+            frontend,
+            false
         );
     }
 
@@ -252,6 +294,7 @@ contract RoundVotingEngine is
 
         (
             uint256 contentId,
+            uint16 roundReferenceRatingBps,
             bytes32 commitHash,
             bytes memory ciphertext,
             uint64 targetRound,
@@ -259,13 +302,25 @@ contract RoundVotingEngine is
             address frontend
         ) = TlockVoteLib.decodeCommitPayload(data);
 
-        _commitVote(from, contentId, targetRound, drandChainHash, commitHash, ciphertext, value, frontend, true);
+        _commitVote(
+            from,
+            contentId,
+            roundReferenceRatingBps,
+            targetRound,
+            drandChainHash,
+            commitHash,
+            ciphertext,
+            value,
+            frontend,
+            true
+        );
         return IERC1363Receiver.onTransferReceived.selector;
     }
 
     function _commitVote(
         address voter,
         uint256 contentId,
+        uint16 roundReferenceRatingBps,
         uint64 targetRound,
         bytes32 drandChainHash,
         bytes32 commitHash,
@@ -299,6 +354,8 @@ contract RoundVotingEngine is
         uint256 roundId = _getOrCreateRound(contentId);
         RoundLib.Round storage round = rounds[contentId][roundId];
         RoundLib.RoundConfig memory roundCfg = _getRoundConfig(contentId, roundId);
+        uint16 expectedReferenceRatingBps = _getRoundReferenceRatingBps(contentId, roundId);
+        if (roundReferenceRatingBps != expectedReferenceRatingBps) revert ReferenceRatingMismatch();
 
         // Round must be Open and not expired
         if (!RoundLib.acceptsVotes(round, roundCfg.maxDuration)) revert RoundNotAccepting();
@@ -352,7 +409,16 @@ contract RoundVotingEngine is
         );
         _recordCommitAccounting(round, contentId, roundId, voter, voterId, useTokenIdentity, stakeAmount64, stakeAmount);
 
-        emit VoteCommitted(contentId, roundId, voter, commitHash, targetRound, drandChainHash, stakeAmount);
+        emit VoteCommitted(
+            contentId,
+            roundId,
+            voter,
+            commitHash,
+            expectedReferenceRatingBps,
+            targetRound,
+            drandChainHash,
+            stakeAmount
+        );
     }
 
     function _computeCommitEpoch(RoundLib.Round storage round, RoundLib.RoundConfig memory roundCfg)
@@ -536,10 +602,13 @@ contract RoundVotingEngine is
 
         // Snapshot config at round creation to prevent mid-round governance changes
         roundConfigSnapshot[contentId][roundId] = _currentConfig();
+        roundRatingConfigSnapshot[contentId][roundId] = _currentRatingConfig();
+        roundReferenceRatingBpsSnapshot[contentId][roundId] = registry.getRating(contentId);
         roundRevealGracePeriodSnapshot[contentId][roundId] = protocolConfig.revealGracePeriod();
         roundDrandChainHashSnapshot[contentId][roundId] = protocolConfig.drandChainHash();
         roundDrandGenesisTimeSnapshot[contentId][roundId] = protocolConfig.drandGenesisTime();
         roundDrandPeriodSnapshot[contentId][roundId] = protocolConfig.drandPeriod();
+        emit RoundReferenceSnapshotted(contentId, roundId, roundReferenceRatingBpsSnapshot[contentId][roundId]);
 
         return roundId;
     }
@@ -746,11 +815,15 @@ contract RoundVotingEngine is
         address currentRewardDistributor = protocolConfig.rewardDistributor();
         RoundSettlementSideEffectsLib.recordSettlement(
             registry,
+            _getRoundRatingConfig(contentId, roundId),
             currentParticipationPool,
             currentRewardDistributor,
             isFirstSettledRound,
             contentId,
             roundId,
+            _getRoundReferenceRatingBps(contentId, roundId),
+            round.weightedUpPool,
+            round.weightedDownPool,
             upWins,
             round.upPool,
             round.downPool
@@ -921,6 +994,43 @@ contract RoundVotingEngine is
         (cfg.epochDuration, cfg.maxDuration, cfg.minVoters, cfg.maxVoters) = protocolConfig.config();
     }
 
+    function _currentRatingConfig() internal view returns (RatingLib.RatingConfig memory cfg) {
+        cfg = protocolConfig.getRatingConfig();
+    }
+
+    function _getRoundRatingConfig(uint256 contentId, uint256 roundId)
+        internal
+        view
+        returns (RatingLib.RatingConfig memory cfg)
+    {
+        cfg = roundRatingConfigSnapshot[contentId][roundId];
+        if (cfg.confidenceMassInitial == 0) {
+            return _currentRatingConfig();
+        }
+    }
+
+    function _getRoundReferenceRatingBps(uint256 contentId, uint256 roundId) internal view returns (uint16) {
+        uint16 referenceRatingBps = roundReferenceRatingBpsSnapshot[contentId][roundId];
+        if (referenceRatingBps == 0) {
+            return registry.getRating(contentId);
+        }
+        return referenceRatingBps;
+    }
+
+    function _previewCommitReferenceRatingBps(uint256 contentId) internal view returns (uint16) {
+        uint256 openRoundId = currentRoundId[contentId];
+        if (openRoundId == 0) {
+            return registry.getRating(contentId);
+        }
+
+        RoundLib.Round storage round = rounds[contentId][openRoundId];
+        if (RoundLib.isTerminal(round) || _canFinalizeRevealFailedRound(contentId, openRoundId, round)) {
+            return registry.getRating(contentId);
+        }
+
+        return _getRoundReferenceRatingBps(contentId, openRoundId);
+    }
+
     function _getFrontendRegistry() internal view returns (IFrontendRegistry) {
         return IFrontendRegistry(protocolConfig.frontendRegistry());
     }
@@ -999,7 +1109,13 @@ contract RoundVotingEngine is
 
         // Verify commit hash
         bytes32 expectedHash = TlockVoteLib.buildExpectedCommitHash(
-            isUp, salt, contentId, commit.targetRound, commit.drandChainHash, commit.ciphertext
+            isUp,
+            salt,
+            contentId,
+            _getRoundReferenceRatingBps(contentId, roundId),
+            commit.targetRound,
+            commit.drandChainHash,
+            commit.ciphertext
         );
         if (commitKey != _buildCommitKey(commit.voter, expectedHash)) revert HashMismatch();
 
@@ -1058,6 +1174,10 @@ contract RoundVotingEngine is
 
     function hasCommits(uint256 contentId) external view override returns (bool) {
         return contentHasCommits[contentId];
+    }
+
+    function previewCommitReferenceRatingBps(uint256 contentId) external view returns (uint16) {
+        return _previewCommitReferenceRatingBps(contentId);
     }
 
     function commitRevealAvailableAt(uint256 contentId, uint256 roundId, bytes32 commitKey)

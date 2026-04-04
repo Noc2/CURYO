@@ -4,6 +4,7 @@ pragma solidity ^0.8.24;
 import { Initializable } from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 import { AccessControl } from "@openzeppelin/contracts/access/AccessControl.sol";
 import { RoundLib } from "./libraries/RoundLib.sol";
+import { RatingLib } from "./libraries/RatingLib.sol";
 
 /// @title ProtocolConfig
 /// @notice Governance-controlled configuration and address book for RoundVotingEngine.
@@ -27,9 +28,11 @@ contract ProtocolConfig is Initializable, AccessControl {
     bytes32 public drandChainHash;
     uint64 public drandGenesisTime;
     uint64 public drandPeriod;
+    RatingLib.RatingConfig public ratingConfig;
+    RatingLib.SlashConfig public slashConfig;
 
     /// @dev Reserved storage gap for future proxy-safe upgrades.
-    uint256[47] private __gap;
+    uint256[35] private __gap;
 
     event RewardDistributorUpdated(address rewardDistributor);
     event FrontendRegistryUpdated(address frontendRegistry);
@@ -40,6 +43,24 @@ contract ProtocolConfig is Initializable, AccessControl {
     event ParticipationPoolUpdated(address participationPool);
     event ConfigUpdated(uint256 epochDuration, uint256 maxDuration, uint256 minVoters, uint256 maxVoters);
     event DrandConfigUpdated(bytes32 drandChainHash, uint64 genesisTime, uint64 period);
+    event RatingConfigUpdated(
+        uint256 smoothingAlpha,
+        uint256 smoothingBeta,
+        uint256 observationBetaX18,
+        uint256 confidenceMassInitial,
+        uint256 confidenceMassMin,
+        uint256 confidenceMassMax,
+        uint16 confidenceGainBps,
+        uint16 confidenceReopenBps,
+        uint256 surpriseReferenceX18,
+        uint256 maxDeltaLogitX18,
+        uint256 maxAbsLogitX18,
+        uint16 conservativePenaltyMaxBps,
+        uint16 conservativePenaltyMinBps
+    );
+    event SlashConfigUpdated(
+        uint16 slashThresholdBps, uint16 minSlashSettledRounds, uint48 minSlashLowDuration, uint256 minSlashEvidence
+    );
 
     /// @custom:oz-upgrades-unsafe-allow constructor
     constructor() {
@@ -82,6 +103,27 @@ contract ProtocolConfig is Initializable, AccessControl {
         drandChainHash = 0x52db9ba70e0cc0f6eaf7803dd07447a1f5477735fd3f661792ba94600c84e971;
         drandGenesisTime = 1_692_803_367;
         drandPeriod = 3;
+        ratingConfig = RatingLib.RatingConfig({
+            smoothingAlpha: 10e6,
+            smoothingBeta: 10e6,
+            observationBetaX18: 2e18,
+            confidenceMassInitial: 80e6,
+            confidenceMassMin: 50e6,
+            confidenceMassMax: 500e6,
+            confidenceGainBps: 1_500,
+            confidenceReopenBps: 2_000,
+            surpriseReferenceX18: 8e17,
+            maxDeltaLogitX18: 6e17,
+            maxAbsLogitX18: 4_595_119_850_134_590_000,
+            conservativePenaltyMaxBps: 1_500,
+            conservativePenaltyMinBps: 250
+        });
+        slashConfig = RatingLib.SlashConfig({
+            slashThresholdBps: 2_500,
+            minSlashSettledRounds: 2,
+            minSlashLowDuration: uint48(7 days),
+            minSlashEvidence: 200e6
+        });
     }
 
     function setRewardDistributor(address value) external onlyRole(CONFIG_ROLE) {
@@ -121,6 +163,55 @@ contract ProtocolConfig is Initializable, AccessControl {
 
     function setDrandConfig(bytes32 chainHash, uint64 genesisTime, uint64 period) external onlyRole(CONFIG_ROLE) {
         _setDrandConfig(chainHash, genesisTime, period);
+    }
+
+    function setRatingConfig(
+        uint256 smoothingAlpha,
+        uint256 smoothingBeta,
+        uint256 observationBetaX18,
+        uint256 confidenceMassInitial,
+        uint256 confidenceMassMin,
+        uint256 confidenceMassMax,
+        uint16 confidenceGainBps,
+        uint16 confidenceReopenBps,
+        uint256 surpriseReferenceX18,
+        uint256 maxDeltaLogitX18,
+        uint256 maxAbsLogitX18,
+        uint16 conservativePenaltyMaxBps,
+        uint16 conservativePenaltyMinBps
+    ) external onlyRole(CONFIG_ROLE) {
+        _setRatingConfig(
+            smoothingAlpha,
+            smoothingBeta,
+            observationBetaX18,
+            confidenceMassInitial,
+            confidenceMassMin,
+            confidenceMassMax,
+            confidenceGainBps,
+            confidenceReopenBps,
+            surpriseReferenceX18,
+            maxDeltaLogitX18,
+            maxAbsLogitX18,
+            conservativePenaltyMaxBps,
+            conservativePenaltyMinBps
+        );
+    }
+
+    function setSlashConfig(
+        uint16 slashThresholdBps,
+        uint16 minSlashSettledRounds,
+        uint48 minSlashLowDuration,
+        uint256 minSlashEvidence
+    ) external onlyRole(CONFIG_ROLE) {
+        _setSlashConfig(slashThresholdBps, minSlashSettledRounds, minSlashLowDuration, minSlashEvidence);
+    }
+
+    function getRatingConfig() external view returns (RatingLib.RatingConfig memory cfg) {
+        cfg = ratingConfig;
+    }
+
+    function getSlashConfig() external view returns (RatingLib.SlashConfig memory cfg) {
+        cfg = slashConfig;
     }
 
     function _setRewardDistributor(address value) internal {
@@ -198,5 +289,86 @@ contract ProtocolConfig is Initializable, AccessControl {
         drandPeriod = period;
 
         emit DrandConfigUpdated(chainHash, genesisTime, period);
+    }
+
+    function _setRatingConfig(
+        uint256 smoothingAlpha,
+        uint256 smoothingBeta,
+        uint256 observationBetaX18,
+        uint256 confidenceMassInitial,
+        uint256 confidenceMassMin,
+        uint256 confidenceMassMax,
+        uint16 confidenceGainBps,
+        uint16 confidenceReopenBps,
+        uint256 surpriseReferenceX18,
+        uint256 maxDeltaLogitX18,
+        uint256 maxAbsLogitX18,
+        uint16 conservativePenaltyMaxBps,
+        uint16 conservativePenaltyMinBps
+    ) internal {
+        if (confidenceMassMin == 0 || confidenceMassInitial < confidenceMassMin || confidenceMassMax < confidenceMassInitial)
+        {
+            revert InvalidConfig();
+        }
+        if (observationBetaX18 == 0) revert InvalidConfig();
+        if (confidenceGainBps > 10_000 || confidenceReopenBps > 10_000) revert InvalidConfig();
+        if (surpriseReferenceX18 == 0) revert InvalidConfig();
+        if (maxDeltaLogitX18 == 0 || maxAbsLogitX18 == 0 || maxDeltaLogitX18 > maxAbsLogitX18) revert InvalidConfig();
+        if (conservativePenaltyMaxBps > RatingLib.BPS_SCALE || conservativePenaltyMinBps > conservativePenaltyMaxBps)
+        {
+            revert InvalidConfig();
+        }
+
+        ratingConfig = RatingLib.RatingConfig({
+            smoothingAlpha: smoothingAlpha,
+            smoothingBeta: smoothingBeta,
+            observationBetaX18: observationBetaX18,
+            confidenceMassInitial: confidenceMassInitial,
+            confidenceMassMin: confidenceMassMin,
+            confidenceMassMax: confidenceMassMax,
+            confidenceGainBps: confidenceGainBps,
+            confidenceReopenBps: confidenceReopenBps,
+            surpriseReferenceX18: surpriseReferenceX18,
+            maxDeltaLogitX18: maxDeltaLogitX18,
+            maxAbsLogitX18: maxAbsLogitX18,
+            conservativePenaltyMaxBps: conservativePenaltyMaxBps,
+            conservativePenaltyMinBps: conservativePenaltyMinBps
+        });
+
+        emit RatingConfigUpdated(
+            smoothingAlpha,
+            smoothingBeta,
+            observationBetaX18,
+            confidenceMassInitial,
+            confidenceMassMin,
+            confidenceMassMax,
+            confidenceGainBps,
+            confidenceReopenBps,
+            surpriseReferenceX18,
+            maxDeltaLogitX18,
+            maxAbsLogitX18,
+            conservativePenaltyMaxBps,
+            conservativePenaltyMinBps
+        );
+    }
+
+    function _setSlashConfig(
+        uint16 slashThresholdBps,
+        uint16 minSlashSettledRounds,
+        uint48 minSlashLowDuration,
+        uint256 minSlashEvidence
+    ) internal {
+        if (slashThresholdBps == 0 || slashThresholdBps >= RatingLib.BPS_SCALE) revert InvalidConfig();
+        if (minSlashSettledRounds == 0) revert InvalidConfig();
+        if (minSlashLowDuration == 0) revert InvalidConfig();
+
+        slashConfig = RatingLib.SlashConfig({
+            slashThresholdBps: slashThresholdBps,
+            minSlashSettledRounds: minSlashSettledRounds,
+            minSlashLowDuration: minSlashLowDuration,
+            minSlashEvidence: minSlashEvidence
+        });
+
+        emit SlashConfigUpdated(slashThresholdBps, minSlashSettledRounds, minSlashLowDuration, minSlashEvidence);
     }
 }
