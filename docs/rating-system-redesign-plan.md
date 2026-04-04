@@ -184,6 +184,32 @@ Recommended rule:
 - every frontend should read and display that exact value for the round
 - bind that anchor into the blind commit payload or preimage so stale clients cannot silently vote against a different reference state
 
+Recommended payload evolution:
+
+```text
+current payload:
+  (contentId, commitHash, ciphertext, frontend, targetRound, drandChainHash)
+
+proposed payload:
+  (contentId, roundReferenceRatingBps, commitHash, ciphertext, frontend, targetRound, drandChainHash)
+```
+
+Recommended commit binding:
+
+```text
+commitHash = keccak256(
+  isUp,
+  salt,
+  contentId,
+  roundReferenceRatingBps,
+  targetRound,
+  drandChainHash,
+  keccak256(ciphertext)
+)
+```
+
+That makes the reference score part of the exact question the voter committed to answering.
+
 Why this matters:
 
 - if two frontends show different scores for the same round, they are effectively asking different questions
@@ -404,6 +430,8 @@ Recommended frontend behavior:
 - ask a precise question such as "Should this content be rated higher or lower than 5.7?"
 - show confidence or "provisional / established" status next to the score
 - show rating history and recent movement so users understand direction and stability
+- keep history visible before voting, but derive it from canonical settled round data rather than frontend-local state
+- treat the round reference score as the only commit-bound question state; visible history and confidence remain informative context, not signed commit inputs
 
 Important product consequence:
 
@@ -422,17 +450,19 @@ The examples below show candidate trajectories from a score-relative model with:
 
 These numbers are illustrative rather than normative. The simulation phase should tune the exact parameters before deployment.
 
+For one concrete candidate parameterization and a comparison between monotone vs contradiction-sensitive confidence, see [rating-system-redesign-simulations.md](/Users/davidhawig/source/curyo-release/docs/rating-system-redesign-simulations.md).
+
 ### Example 1: Repeated mildly up-heavy rounds
 
 Each round settles at `60 up / 40 down`.
 
 | Round | Current deployed formula | Proposed score-relative model |
 | --- | ---: | ---: |
-| 1 | 56.7 | 55.0 |
-| 2 | 56.7 | 59.0 |
-| 3 | 56.7 | 62.4 |
-| 4 | 56.7 | 65.3 |
-| 5 | 56.7 | 67.9 |
+| 1 | 56.7 | 52.3 |
+| 2 | 56.7 | 54.5 |
+| 3 | 56.7 | 56.6 |
+| 4 | 56.7 | 58.5 |
+| 5 | 56.7 | 60.3 |
 
 Interpretation:
 
@@ -449,10 +479,11 @@ Round sequence:
 
 | Round | Current deployed formula | Proposed score-relative model |
 | --- | ---: | ---: |
-| 1 | 16.7 | 26.9 |
-| 2 | 70.0 | 37.5 |
-| 3 | 70.0 | 47.9 |
-| 4 | 70.0 | 57.3 |
+| 1 | 16.7 | 33.9 |
+| 2 | 70.0 | 41.3 |
+| 3 | 70.0 | 49.0 |
+| 4 | 70.0 | 56.7 |
+| 5 | 70.0 | 64.0 |
 
 Interpretation:
 
@@ -468,17 +499,17 @@ If later `80 / 20` rounds count at full weight:
 
 | Step | Unweighted score-relative score |
 | --- | ---: |
-| After blind round | 55.0 |
-| After late round 2 | 66.6 |
-| After late round 3 | 75.3 |
+| After blind round | 52.3 |
+| After late round 2 | 59.4 |
+| After late round 3 | 66.1 |
 
 If those later rounds count at `25%` effective weight:
 
 | Step | Weighted score-relative score |
 | --- | ---: |
-| After blind round | 55.0 |
-| After late round 2 | 60.9 |
-| After late round 3 | 66.4 |
+| After blind round | 52.3 |
+| After late round 2 | 54.2 |
+| After late round 3 | 56.0 |
 
 Interpretation:
 
@@ -491,7 +522,7 @@ Interpretation:
 Suppose a content item is currently at `57.0`, and that score has already been supported by:
 
 - `ratingEffectiveEvidence = 1000`
-- `ratingEffectiveVoterCount = 100`
+- broad prior voter participation
 - many prior rounds that were roughly balanced around the current displayed score
 
 Now one later round settles unanimously up, but only with `5 up / 0 down`.
@@ -500,7 +531,7 @@ Under one candidate parameterization:
 
 - the established history keeps the round step small
 - the one-sided late round is treated as a small positive correction
-- the rating moves from `57.0` to about `58.4`
+- the rating moves from `57.0` to about `57.1`
 
 Interpretation:
 
@@ -757,7 +788,8 @@ Add an explicit reference score to the round:
 
 And bind it into the vote commit interface:
 
-- include `roundReferenceRatingBps` or its hash in the commit payload / preimage
+- include `roundReferenceRatingBps` in the transfer payload alongside the existing vote fields
+- include `roundReferenceRatingBps` in the commit-hash preimage
 - reject commit/reveal pairs whose bound reference score does not match the round snapshot
 
 This should be snapshotted when the round opens and treated as the canonical question for that round.
