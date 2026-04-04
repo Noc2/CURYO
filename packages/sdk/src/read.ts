@@ -5,74 +5,122 @@ type QueryValue = string | number | boolean | undefined;
 type JsonRecord = Record<string, unknown>;
 
 export interface CuryoOpenRoundSummary {
-  roundId?: string;
-  voteCount?: string;
-  revealedCount?: string;
-  totalStake?: string;
-  upPool?: string;
-  downPool?: string;
-  upCount?: string;
-  downCount?: string;
-  startTime?: string | null;
-  estimatedSettlementTime?: string | null;
+  roundId: string;
+  voteCount: number;
+  revealedCount: number;
+  totalStake: string;
+  upPool: string;
+  downPool: string;
+  upCount?: number;
+  downCount?: number;
+  referenceRatingBps?: number;
+  ratingBps?: number;
+  conservativeRatingBps?: number;
+  confidenceMass?: string;
+  effectiveEvidence?: string;
+  settledRounds?: number;
+  lowSince?: string;
+  startTime: string | null;
+  estimatedSettlementTime: string | null;
   [key: string]: unknown;
 }
 
 export interface CuryoContentItem {
   id: string;
-  submitter?: `0x${string}`;
-  url?: string | null;
-  title?: string | null;
-  description?: string | null;
-  categoryId?: string;
-  categoryName?: string | null;
-  status?: number;
-  rating?: number;
-  totalVotes?: number;
-  totalRounds?: number;
-  createdAt?: string;
-  openRound?: CuryoOpenRoundSummary | null;
+  submitter: `0x${string}`;
+  contentHash: string;
+  url: string;
+  title: string;
+  description: string;
+  tags: string;
+  categoryId: string;
+  status: number;
+  rating: number;
+  ratingBps?: number;
+  conservativeRatingBps?: number;
+  ratingConfidenceMass?: string;
+  ratingEffectiveEvidence?: string;
+  ratingSettledRounds?: number;
+  ratingLowSince?: string;
+  submitterStakeReturned: boolean;
+  createdAt: string;
+  lastActivityAt: string;
+  totalVotes: number;
+  totalRounds: number;
+  openRound: CuryoOpenRoundSummary | null;
+  [key: string]: unknown;
+}
+
+export interface CuryoProfileSubmissionItem {
+  id: string;
+  submitter: `0x${string}`;
+  url: string;
+  title: string;
+  description: string;
+  categoryId: string;
+  categoryName: string | null;
+  status: number;
+  rating: number;
+  ratingBps?: number;
+  conservativeRatingBps?: number;
+  ratingConfidenceMass?: string;
+  ratingEffectiveEvidence?: string;
+  ratingSettledRounds?: number;
+  ratingLowSince?: string;
+  createdAt: string;
+  totalVotes: number;
+  totalRounds: number;
   [key: string]: unknown;
 }
 
 export interface CuryoRoundItem {
-  id?: string;
-  contentId?: string;
-  roundId?: string;
-  state?: number;
-  voteCount?: string;
-  revealedCount?: string;
-  totalStake?: string;
-  upPool?: string;
-  downPool?: string;
-  upCount?: string;
-  downCount?: string;
-  upWins?: boolean;
-  losingPool?: string;
-  startTime?: string;
-  settledAt?: string | null;
-  title?: string | null;
-  description?: string | null;
-  url?: string | null;
-  submitter?: `0x${string}`;
-  categoryId?: string;
+  id: string;
+  contentId: string;
+  roundId: string;
+  state: number;
+  voteCount: number;
+  revealedCount: number;
+  totalStake: string;
+  upPool: string;
+  downPool: string;
+  upCount: number;
+  downCount: number;
+  referenceRatingBps?: number;
+  ratingBps?: number;
+  conservativeRatingBps?: number;
+  confidenceMass?: string;
+  effectiveEvidence?: string;
+  settledRounds?: number;
+  lowSince?: string;
+  upWins: boolean | null;
+  losingPool: string | null;
+  startTime: string | null;
+  settledAt: string | null;
+  title: string | null;
+  description: string | null;
+  url: string | null;
+  submitter: `0x${string}` | null;
+  categoryId: string | null;
   [key: string]: unknown;
 }
 
 export interface CuryoVoteItem {
-  id?: string;
-  contentId?: string;
-  roundId?: string;
-  voter?: `0x${string}`;
-  isUp?: boolean;
-  stake?: string;
-  epochIndex?: number;
-  revealed?: boolean;
-  committedAt?: string;
-  revealedAt?: string | null;
-  roundStartTime?: string | null;
-  roundState?: number | null;
-  roundUpWins?: boolean | null;
+  id: string;
+  contentId: string;
+  roundId: string;
+  voter: `0x${string}`;
+  commitHash: `0x${string}`;
+  targetRound: string;
+  drandChainHash: `0x${string}`;
+  isUp: boolean | null;
+  stake: string;
+  epochIndex: number;
+  revealed: boolean;
+  committedAt: string;
+  revealedAt: string | null;
+  roundStartTime: string | null;
+  roundState: number | null;
+  roundUpWins: boolean | null;
   [key: string]: unknown;
 }
 
@@ -117,16 +165,17 @@ export interface CuryoGlobalStats {
 
 export interface CuryoPaginatedResponse<T> {
   items: T[];
-  total?: number;
+  total?: number | null;
   settledTotal?: number;
   limit?: number;
   offset?: number;
+  hasMore?: boolean;
 }
 
 export interface CuryoContentDetailsResponse {
   content: CuryoContentItem;
   rounds: CuryoRoundItem[];
-  ratings?: JsonRecord[];
+  ratings: JsonRecord[];
   matchCount?: number;
 }
 
@@ -139,7 +188,7 @@ export interface CuryoProfileResponse {
   };
   recentVotes: CuryoVoteItem[];
   recentRewards: JsonRecord[];
-  recentSubmissions: CuryoContentItem[];
+  recentSubmissions: CuryoProfileSubmissionItem[];
 }
 
 export interface SearchContentParams {
