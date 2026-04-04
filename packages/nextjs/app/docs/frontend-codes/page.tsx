@@ -9,6 +9,7 @@ const ponderSourceHref = "https://github.com/Noc2/CURYO/tree/main/packages/ponde
 const contentModerationPolicySourceHref =
   "https://github.com/Noc2/CURYO/blob/main/packages/node-utils/src/contentModeration.ts";
 const contentFilterSourceHref = "https://github.com/Noc2/CURYO/blob/main/packages/nextjs/utils/contentFilter.ts";
+const ponderModerationSourceHref = "https://github.com/Noc2/CURYO/blob/main/packages/ponder/src/api/moderation.ts";
 const submissionValidationSourceHref =
   "https://github.com/Noc2/CURYO/blob/main/packages/nextjs/lib/moderation/submissionValidation.ts";
 
@@ -213,10 +214,10 @@ const FrontendCodes: NextPage = () => {
 
       <h3>Own Your Moderation Layer</h3>
       <p>
-        Frontend operators are allowed and encouraged to implement <strong>client-side content moderation</strong> to
-        comply with local regulations and their own platform policies. Because Curyo is a decentralized protocol, there
-        is no protocol-level censorship, and content submitted to the blockchain is permanent. However, each frontend is
-        free to decide what it displays to its users.
+        Frontend operators are allowed and encouraged to implement their own <strong>frontend moderation layer</strong>{" "}
+        to comply with local regulations and their own platform policies. Because Curyo is a decentralized protocol,
+        there is no protocol-level censorship, and content submitted to the blockchain is permanent. However, each
+        frontend is free to decide what it displays to its users.
       </p>
       <p>The reference implementation includes a policy-driven moderation layer that:</p>
       <ul>
@@ -225,8 +226,8 @@ const FrontendCodes: NextPage = () => {
           descriptions, custom content categories, platform names, domains, and platform subcategories.
         </li>
         <li>
-          <strong>Filters the feed centrally</strong> so that blocked content is hidden across standard feed loads and
-          direct requested-content lookups.
+          <strong>Filters indexed reads centrally</strong> in the bundled Ponder query layer so blocked content stays
+          hidden across feed loads, discovery modules, category reads, and direct requested-content lookups.
         </li>
         <li>
           <strong>Notifies users</strong> with inline validation and clear warning messages when their input is rejected
@@ -251,8 +252,9 @@ const FrontendCodes: NextPage = () => {
         </li>
       </ul>
       <p>
-        Each frontend operator is responsible for the content they serve to their audience. The moderation logic lives
-        entirely in the frontend codebase and has no effect on the underlying protocol or other frontends.
+        Each frontend operator is responsible for the content they serve to their audience. In the reference
+        implementation, moderation is enforced in frontend submit validation plus the bundled Ponder query layer; it has
+        no effect on the underlying protocol or on other frontends that choose a different policy.
       </p>
       <p>
         The reference policy list lives in{" "}
@@ -267,6 +269,10 @@ const FrontendCodes: NextPage = () => {
         , the lower-level matching helpers live in{" "}
         <a href={contentFilterSourceHref} target="_blank" rel="noopener noreferrer" className="link link-primary">
           packages/nextjs/utils/contentFilter.ts
+        </a>
+        , the Ponder query-layer enforcement lives in{" "}
+        <a href={ponderModerationSourceHref} target="_blank" rel="noopener noreferrer" className="link link-primary">
+          packages/ponder/src/api/moderation.ts
         </a>
         , and the submit-form validators live in{" "}
         <a

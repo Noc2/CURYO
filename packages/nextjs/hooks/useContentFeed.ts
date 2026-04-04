@@ -153,16 +153,16 @@ export function useContentFeed(voterAddress?: string, options: UseContentFeedOpt
           limit: String(limit),
           offset: String(offset),
         });
-        const feed = filterModeratedContentItems(response.items.map(item => mapContentItem(item, voterAddress)));
+        const feed = response.items.map(item => mapContentItem(item, voterAddress));
         return {
           feed,
-          totalContent: response.total ?? offset + response.items.length + (response.hasMore ? 1 : 0),
+          totalContent: response.total ?? offset + feed.length + (response.hasMore ? 1 : 0),
           hasMore: response.hasMore,
         };
       }
 
       const items = await ponderApi.getAllContent(params);
-      const feed = filterModeratedContentItems(items.map(item => mapContentItem(item, voterAddress)));
+      const feed = items.map(item => mapContentItem(item, voterAddress));
       return {
         feed,
         totalContent: feed.length,
