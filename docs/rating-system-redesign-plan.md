@@ -248,6 +248,7 @@ Recommended state:
 - `ratingBps`
 - `ratingLogitX18`
 - `ratingEffectiveEvidence`
+- `ratingEffectiveVoterCount`
 - `ratingSettledRounds`
 - `ratingLastUpdatedAt`
 
@@ -262,13 +263,57 @@ Initial recommendation:
 - compute conservative ranking and richer confidence indicators off-chain in Ponder / API
 - display confidence in the frontend so users know whether the shown score is provisional or established
 
-One simple starting confidence proxy:
+Recommended breadth proxy:
 
 ```text
-ratingConfidence = 1 - exp(-ratingEffectiveEvidence / E_conf)
+ratingEffectiveVoterCount =
+  (sum_i w_i)^2 / sum_i (w_i^2)
 ```
 
-This is not the only possible choice, but it is easy to reason about and monotonic.
+where `w_i` is the cumulative epoch-weighted evidence contributed by voter `i` to that content.
+
+This is useful because it distinguishes:
+
+- `100` weighted cREP from one voter
+- `100` weighted cREP spread across many independent voters
+
+Recommended starting confidence proxy:
+
+```text
+ratingConfidence =
+  (1 - exp(-ratingEffectiveEvidence / E_conf))
+  * (1 - exp(-ratingEffectiveVoterCount / V_conf))
+```
+
+Suggested simulation defaults:
+
+```text
+E_conf = 200
+V_conf = 20
+```
+
+Why this is better than stake-only confidence:
+
+- stake captures conviction and economic cost
+- voter breadth captures how concentrated that evidence is
+- together they fit the intuition that "many people independently agreed" should mean more than "one whale pushed hard"
+
+History should matter in score movement too, not just in a separate confidence badge.
+
+That is already built into the update rule:
+
+```text
+K_t = K0 / sqrt(1 + cumulativeEffectiveEvidence_t / E_ref)
+```
+
+As cumulative evidence grows, later rounds move the score less. So stable history creates inertia by design.
+
+Recommended v1.1 refinement:
+
+- let `K_t` shrink when history accumulates
+- let uncertainty widen modestly after a strong contradictory round
+
+That would make the system harder to whip around without making established ratings impossible to correct.
 
 ### 6. Redesign slash logic with score-relative ratings in mind
 
@@ -397,6 +442,28 @@ Interpretation:
 - score-relative updating does not remove herding risk by itself
 - epoch weighting still matters a lot once the displayed score influences later votes
 - discounting late visible evidence keeps the mechanism closer to blind information aggregation
+
+### Example 4: Stable history should resist a small one-sided round
+
+Suppose a content item is currently at `57.0`, and that score has already been supported by:
+
+- `ratingEffectiveEvidence = 1000`
+- `ratingEffectiveVoterCount = 100`
+- many prior rounds that were roughly balanced around the current displayed score
+
+Now one later round settles unanimously up, but only with `5 up / 0 down`.
+
+Under the proposed rule:
+
+- `K_t = 1.5 / sqrt(1 + 1000 / 200) ~= 0.61`
+- `roundSignal = 5 / (5 + 50) ~= 0.09`
+- the rating moves from `57.0` to about `58.4`
+
+Interpretation:
+
+- a one-sided round still matters
+- but it only nudges an established score instead of replacing the history
+- this is exactly the intended behavior when many prior voters have already kept the rating stable
 
 ## Game-Theoretic Analysis
 
@@ -726,6 +793,7 @@ New test focus areas:
   - time-to-calibration
   - recovery after attack rounds
   - low-confidence ratchet risk
+  - confidence distortion from concentrated stake versus broad agreement
   - slash false-positive risk
 
 ### Phase 2: Contract redesign
