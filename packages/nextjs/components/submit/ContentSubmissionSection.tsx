@@ -37,13 +37,19 @@ import { MAX_CONTENT_DESCRIPTION_LENGTH } from "~~/lib/contentDescription";
 import { MAX_CONTENT_TITLE_LENGTH } from "~~/lib/contentTitle";
 import { protocolDocFacts } from "~~/lib/docs/protocolFacts";
 import {
+  findBlockedContentTags,
+  getContentDescriptionValidationError,
+  getContentTagValidationError,
+  getContentTitleValidationError,
+} from "~~/lib/moderation/submissionValidation";
+import {
   getGasBalanceErrorMessage,
   isFreeTransactionExhaustedError,
   isInsufficientFundsError,
   isWalletRpcOverloadedError,
 } from "~~/lib/transactionErrors";
 import { getSubmittingTransactionMessage } from "~~/lib/ui/transactionStatusCopy";
-import { containsBlockedText, containsBlockedUrl } from "~~/utils/contentFilter";
+import { containsBlockedUrl } from "~~/utils/contentFilter";
 import { sanitizeExternalUrl } from "~~/utils/externalUrl";
 import { canonicalizeUrl, isSupportedVideoPlatform } from "~~/utils/platforms";
 import { notification } from "~~/utils/scaffold-eth";
@@ -109,24 +115,6 @@ const DEFAULT_URL_CONFIG = {
   urlPlaceholder: "https://...",
   urlHint: "Select a platform first, then paste your URL",
 };
-
-function getTitleValidationError(value: string): string | null {
-  if (value.length > MAX_CONTENT_TITLE_LENGTH) {
-    return `Title must be ${MAX_CONTENT_TITLE_LENGTH} characters or fewer`;
-  }
-
-  const check = containsBlockedText(value);
-  return check.blocked ? "Your title contains prohibited content" : null;
-}
-
-function getDescriptionValidationError(value: string): string | null {
-  if (value.length > MAX_CONTENT_DESCRIPTION_LENGTH) {
-    return `Description must be ${MAX_CONTENT_DESCRIPTION_LENGTH} characters or fewer`;
-  }
-
-  const check = containsBlockedText(value);
-  return check.blocked ? "Your description contains prohibited content" : null;
-}
 
 function createSubmissionSalt(): `0x${string}` {
   const bytes = new Uint8Array(32);
@@ -252,6 +240,7 @@ export function ContentSubmissionSection() {
       DEFAULT_URL_CONFIG
     );
   }, [selectedCategory]);
+  const customSubcategoryError = customSubcategory ? getContentTagValidationError(customSubcategory) : null;
 
   const getUrlValidationError = (value: string): string | null => {
     if (!value) {
@@ -327,7 +316,12 @@ export function ContentSubmissionSection() {
 
   const handleAddCustomSubcategory = () => {
     const trimmed = customSubcategory.trim();
-    if (trimmed && !selectedSubcategories.includes(trimmed) && selectedSubcategories.length < 3) {
+    if (
+      trimmed &&
+      !selectedSubcategories.includes(trimmed) &&
+      selectedSubcategories.length < 3 &&
+      getContentTagValidationError(trimmed) === null
+    ) {
       setSelectedSubcategories(prev => [...prev, trimmed]);
       setCustomSubcategory("");
     }
@@ -390,12 +384,12 @@ export function ContentSubmissionSection() {
 
   const handleTitleChange = (value: string) => {
     setTitle(value);
-    setTitleError(getTitleValidationError(value));
+    setTitleError(getContentTitleValidationError(value));
   };
 
   const handleDescriptionChange = (value: string) => {
     setDescription(value);
-    setDescriptionError(getDescriptionValidationError(value));
+    setDescriptionError(getContentDescriptionValidationError(value));
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -426,8 +420,9 @@ export function ContentSubmissionSection() {
     const trimmedTitle = title.trim();
     const trimmedDescription = description.trim();
     const nextUrlError = getUrlValidationError(url);
-    const nextTitleError = trimmedTitle ? getTitleValidationError(trimmedTitle) : null;
-    const nextDescriptionError = trimmedDescription ? getDescriptionValidationError(trimmedDescription) : null;
+    const nextTitleError = trimmedTitle ? getContentTitleValidationError(trimmedTitle) : null;
+    const nextDescriptionError = trimmedDescription ? getContentDescriptionValidationError(trimmedDescription) : null;
+    const blockedContentTags = findBlockedContentTags(selectedSubcategories);
 
     setUrlError(nextUrlError);
     setTitleError(nextTitleError);
@@ -435,6 +430,11 @@ export function ContentSubmissionSection() {
 
     if (!selectedCategory || !url || !trimmedTitle || !trimmedDescription || selectedSubcategories.length === 0) {
       notification.warning("Fill in the highlighted fields before submitting.");
+      return;
+    }
+
+    if (blockedContentTags.length > 0) {
+      notification.warning("Remove categories with prohibited content before submitting.");
       return;
     }
 
@@ -919,7 +919,7 @@ export function ContentSubmissionSection() {
                   <input
                     type="text"
                     placeholder="Add custom category..."
-                    className="input input-bordered input-sm flex-1 bg-base-100"
+                    className={`input input-bordered input-sm flex-1 bg-base-100 ${customSubcategoryError ? "input-error" : ""}`}
                     value={customSubcategory}
                     onChange={e => setCustomSubcategory(e.target.value)}
                     onKeyDown={e => {
@@ -935,6 +935,7 @@ export function ContentSubmissionSection() {
                     onClick={handleAddCustomSubcategory}
                     disabled={
                       !customSubcategory.trim() ||
+                      customSubcategoryError !== null ||
                       selectedSubcategories.length >= 3 ||
                       selectedSubcategories.includes(customSubcategory.trim())
                     }
@@ -943,6 +944,7 @@ export function ContentSubmissionSection() {
                     Add
                   </button>
                 </div>
+                {customSubcategoryError ? <p className="mt-2 text-base text-error">{customSubcategoryError}</p> : null}
                 {submitAttempted && selectedSubcategories.length === 0 ? (
                   <p className="mt-2 text-base text-error">Pick at least one category before submitting.</p>
                 ) : null}
