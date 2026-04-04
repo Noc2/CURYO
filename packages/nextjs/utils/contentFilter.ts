@@ -1,36 +1,38 @@
+import { contentModerationPolicy } from "~~/config/contentModeration";
+
 /**
  * Client-side content moderation filter.
  *
  * Frontend operators are free to customize this blocklist to comply with
  * local regulations and their own platform policies. There is no
- * protocol-level censorship — filtering happens entirely at the UI layer.
+ * protocol-level censorship - filtering happens entirely at the UI layer.
  */
 
-// Terms that are always problematic in URLs (substring match)
-const URL_BLOCKED_TERMS = [
-  "porn",
-  "xxx",
-  "xvideos",
-  "pornhub",
-  "xhamster",
-  "redtube",
-  "xnxx",
-  "youporn",
-  "hentai",
-  "rule34",
-  "nhentai",
-  "hanime",
-  "brazzers",
-  "onlyfans",
-  "chaturbate",
-  "livejasmin",
-  "stripchat",
-  "cam4",
-  "bongacams",
-];
+function normalizeHostForModeration(value: string): string | null {
+  const trimmed = value.trim().toLowerCase();
+  if (!trimmed) return null;
 
-// Terms checked with word-boundary matching in free text (title, description, tags)
-const TEXT_BLOCKED_TERMS = ["porn", "pornography", "xxx", "nsfw", "hentai", "rule34", "onlyfans"];
+  const candidate = /^[a-z][a-z0-9+.-]*:\/\//i.test(trimmed) ? trimmed : `https://${trimmed}`;
+
+  try {
+    return new URL(candidate).hostname.replace(/\.$/, "");
+  } catch {
+    return null;
+  }
+}
+
+function findBlockedDomain(url: string): string | null {
+  const host = normalizeHostForModeration(url);
+  if (!host) return null;
+
+  for (const domain of contentModerationPolicy.blockedDomains) {
+    if (host === domain || host.endsWith(`.${domain}`)) {
+      return domain;
+    }
+  }
+
+  return null;
+}
 
 /**
  * Build a regex that matches any of the given terms as whole words (case-insensitive).
@@ -40,7 +42,7 @@ function buildWordBoundaryRegex(terms: string[]): RegExp {
   return new RegExp(`\\b(${escaped.join("|")})\\b`, "i");
 }
 
-const textRegex = buildWordBoundaryRegex(TEXT_BLOCKED_TERMS);
+const textRegex = buildWordBoundaryRegex([...contentModerationPolicy.blockedTextTerms]);
 
 /**
  * Check whether a URL string contains blocked content.
@@ -48,8 +50,13 @@ const textRegex = buildWordBoundaryRegex(TEXT_BLOCKED_TERMS);
  * path / domain are always intentional.
  */
 export function containsBlockedUrl(url: string): { blocked: boolean; matchedTerm: string | null } {
+  const domainMatch = findBlockedDomain(url);
+  if (domainMatch) {
+    return { blocked: true, matchedTerm: domainMatch };
+  }
+
   const lower = url.toLowerCase();
-  for (const term of URL_BLOCKED_TERMS) {
+  for (const term of contentModerationPolicy.blockedUrlTerms) {
     if (lower.includes(term)) {
       return { blocked: true, matchedTerm: term };
     }
