@@ -1273,32 +1273,21 @@ contract ContentRegistryBranchesTest is VotingTestBase {
     // slashSubmitterStake BRANCHES
     // =========================================================================
 
-    function test_SlashSubmitterStake_TreasuryNotSet_Reverts() public {
+    function test_InitializeWithTreasury_ConfiguresTreasuryAuthority() public {
         vm.startPrank(owner);
         ContentRegistry registryImpl2 = new ContentRegistry();
         ContentRegistry reg2 = ContentRegistry(
             address(
                 new ERC1967Proxy(
                     address(registryImpl2),
-                    abi.encodeCall(ContentRegistry.initialize, (owner, owner, address(crepToken)))
+                    abi.encodeCall(ContentRegistry.initializeWithTreasury, (owner, owner, treasury, address(crepToken)))
                 )
             )
         );
-        reg2.setVotingEngine(address(votingEngine));
-        MockCategoryRegistry mockCategoryRegistry2 = new MockCategoryRegistry();
-        mockCategoryRegistry2.seedDefaultTestCategories();
-        reg2.setCategoryRegistry(address(mockCategoryRegistry2));
-        // DON'T set treasury
         vm.stopPrank();
 
-        vm.startPrank(submitter);
-        crepToken.approve(address(reg2), 10e6);
-        _submitContentWithReservation(reg2, "https://example.com/1", "goal", "goal", "tags", 0);
-        vm.stopPrank();
-
-        vm.prank(address(votingEngine));
-        vm.expectRevert("Treasury not set");
-        reg2.slashSubmitterStake(1);
+        assertEq(reg2.treasury(), treasury);
+        assertEq(reg2.bonusPool(), treasury);
     }
 
     // =========================================================================
