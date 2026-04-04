@@ -56,3 +56,17 @@ test("mergeRequestedContentIntoFeed prepends a requested item that is missing fr
     [9n, 1n, 2n],
   );
 });
+
+test("mergeRequestedContentIntoFeed does not prepend a blocked requested item", () => {
+  const first = buildItem(1n);
+  const second = buildItem(2n);
+  const requested = {
+    ...buildItem(9n),
+    title: "NSFW item",
+  };
+
+  assert.deepEqual(
+    mergeRequestedContentIntoFeed([first, second], requested).map(item => item.id),
+    [1n, 2n],
+  );
+});
