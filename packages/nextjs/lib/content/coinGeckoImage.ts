@@ -10,8 +10,9 @@ interface ImageLoadSnapshot {
 
 export function getCoinGeckoImageCandidates(metadata?: CoinGeckoImageMetadata | null): string[] {
   const urls = [metadata?.imageUrl, metadata?.thumbnailUrl]
-    .filter((url): url is string => typeof url === "string" && url.length > 0)
-    .map(url => url.trim());
+    .filter((url): url is string => typeof url === "string")
+    .map(url => url.trim())
+    .filter(url => url.length > 0);
 
   return [...new Set(urls)];
 }
