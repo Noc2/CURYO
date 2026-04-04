@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
+import { CuryoGovernorAbi } from "./abis";
 import deployedContracts from "./deployedContracts";
 import { getSharedChainStartBlock, getSharedDeploymentAddress, getSharedDeploymentStartBlock } from "./deployments";
 
@@ -26,8 +27,12 @@ const expectedContentRegistryStartBlock = chain11142220.ContentRegistry.deployed
 test("shared deployment helpers return supported-chain addresses", () => {
   assert.equal(getSharedDeploymentAddress(11142220, "ContentRegistry"), chain11142220.ContentRegistry.address);
   assert.equal(getSharedDeploymentAddress(11142220, "RoundVotingEngine"), chain11142220.RoundVotingEngine.address);
+  assert.equal(getSharedDeploymentAddress(11142220, "TimelockController"), chain11142220.TimelockController.address);
+  assert.equal(getSharedDeploymentAddress(11142220, "CuryoGovernor"), chain11142220.CuryoGovernor.address);
   assert.equal(getSharedDeploymentAddress(42220, "ContentRegistry"), chain42220.ContentRegistry.address);
   assert.equal(getSharedDeploymentAddress(42220, "RoundVotingEngine"), chain42220.RoundVotingEngine.address);
+  assert.equal(getSharedDeploymentAddress(42220, "TimelockController"), chain42220.TimelockController.address);
+  assert.equal(getSharedDeploymentAddress(42220, "CuryoGovernor"), chain42220.CuryoGovernor.address);
 });
 
 test("shared deployment helpers expose the chain start block and prefer contract-specific blocks when present", () => {
@@ -40,4 +45,9 @@ test("shared deployment helpers expose the chain start block and prefer contract
 test("shared deployment helpers return undefined for unknown chains", () => {
   assert.equal(getSharedDeploymentAddress(999999, "ContentRegistry"), undefined);
   assert.equal(getSharedDeploymentStartBlock(999999, "ContentRegistry"), undefined);
+});
+
+test("shared ABI exports include governance contracts present in shared deployments", () => {
+  assert.ok(Array.isArray(CuryoGovernorAbi));
+  assert.ok(CuryoGovernorAbi.length > 0);
 });

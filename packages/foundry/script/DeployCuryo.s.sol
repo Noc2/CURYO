@@ -62,6 +62,8 @@ contract DeployCuryo is ScaffoldETHDeploy {
         // Production: timelock governs upgrades, config, and treasury from launch
         address governance;
         address governorAddr;
+        TimelockController timelock;
+        CuryoGovernor governor;
 
         if (isLocalDev) {
             governance = deployer;
@@ -74,7 +76,7 @@ contract DeployCuryo is ScaffoldETHDeploy {
             address[] memory executors = new address[](1);
             executors[0] = address(0); // Anyone can execute after delay
 
-            TimelockController timelock = new TimelockController(
+            timelock = new TimelockController(
                 TIMELOCK_MIN_DELAY,
                 proposers,
                 executors,
@@ -92,8 +94,7 @@ contract DeployCuryo is ScaffoldETHDeploy {
         // 3. Deploy CuryoGovernor (production only)
         //    Excluded holders are set later via initializePools() after protocol contracts are deployed.
         if (!isLocalDev) {
-            CuryoGovernor governor =
-                new CuryoGovernor(IVotes(address(crepToken)), TimelockController(payable(governance)));
+            governor = new CuryoGovernor(IVotes(address(crepToken)), TimelockController(payable(governance)));
             governorAddr = address(governor);
             console.log("CuryoGovernor deployed at:", governorAddr);
 
@@ -402,6 +403,12 @@ contract DeployCuryo is ScaffoldETHDeploy {
         }
 
         // 14. Register addresses for scaffold-eth ABI generation
+        if (address(timelock) != address(0)) {
+            deployments.push(Deployment("TimelockController", address(timelock)));
+        }
+        if (address(governor) != address(0)) {
+            deployments.push(Deployment("CuryoGovernor", address(governor)));
+        }
         deployments.push(Deployment("CuryoReputation", address(crepToken)));
         deployments.push(Deployment("FrontendRegistry", address(frontendRegistryProxy)));
         deployments.push(Deployment("ProfileRegistry", address(profileRegistryProxy)));

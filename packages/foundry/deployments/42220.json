@@ -4,11 +4,13 @@
   "0x11E49B4b0615B1445875bCc5aE730b7C70A07D75": "CuryoReputation",
   "0x33a6429b1f9A2Cd22Fe98b3Be1aFaF63e9049a77": "ProfileRegistry",
   "0x387120fB39177E56A2954f9c8266e36Ee61Ff399": "RoundVotingEngine",
+  "0x543f15bff63fa7bf2dc8f6dfd6ce7d21f6117063": "CuryoGovernor",
   "0x697D6030Bf6CbaA8188587ed8D9B18a62d0aA262": "RoundRewardDistributor",
   "0x7036cE25e48Df44128B7a0d1359f5d406017eF01": "FrontendRegistry",
   "0xCfc7ae237F32aEf0a2588B78eB4100b121AeCd26": "ContentRegistry",
   "0xae5BD642A958bf12169237A5ffA6aDBBDF7C2EEF": "VoterIdNFT",
   "0xb90b634E2DcEb078D008fAE8D480459Cc82F163a": "ProtocolConfig",
+  "0xe7dad34a75e27e4127ad9adde216d54a80412161": "TimelockController",
   "0xe44c0BDe5e5C4c22F2D539b29860E5AE8dF78a65": "ParticipationPool",
   "networkName": "celo"
 }
