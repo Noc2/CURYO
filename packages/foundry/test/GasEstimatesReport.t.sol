@@ -27,18 +27,17 @@ contract MockVotingEngineForFrontendGas {
 contract UserTransactionGasEstimatesTest is RoundIntegrationTest {
     function _voteTransferPayload(
         uint256 contentId,
-        bytes32 commitHash,
-        bytes memory ciphertext,
+        TestCommitArtifacts memory artifacts,
         address frontend
     ) internal view returns (bytes memory) {
         return abi.encode(
             contentId,
-            votingEngine.previewCommitReferenceRatingBps(contentId),
-            commitHash,
-            ciphertext,
+            artifacts.roundReferenceRatingBps,
+            artifacts.commitHash,
+            artifacts.ciphertext,
             frontend,
-            _tlockCommitTargetRound(),
-            _tlockDrandChainHash()
+            artifacts.targetRound,
+            artifacts.drandChainHash
         );
     }
 
@@ -114,9 +113,8 @@ contract UserTransactionGasEstimatesTest is RoundIntegrationTest {
         uint256 contentId = _submitContent();
 
         bytes32 salt = keccak256(abi.encodePacked(voter1, contentId, true, uint256(999)));
-        bytes32 commitHash = _commitHash(true, salt, contentId);
-        bytes memory ciphertext = _testCiphertext(true, salt, contentId);
-        bytes memory payload = _voteTransferPayload(contentId, commitHash, ciphertext, address(0));
+        TestCommitArtifacts memory artifacts = _buildTestCommitArtifacts(voter1, true, salt, contentId);
+        bytes memory payload = _voteTransferPayload(contentId, artifacts, address(0));
 
         uint256 gasUsed = _measureCallAs(
             voter1,
@@ -132,9 +130,8 @@ contract UserTransactionGasEstimatesTest is RoundIntegrationTest {
         uint256 contentId = _submitContent();
 
         bytes32 salt = keccak256(abi.encodePacked(voter1, contentId, true, uint256(1002)));
-        bytes32 commitHash = _commitHash(true, salt, contentId);
-        bytes memory ciphertext = _testCiphertext(true, salt, contentId);
-        bytes memory payload = _voteTransferPayload(contentId, commitHash, ciphertext, frontendOp);
+        TestCommitArtifacts memory artifacts = _buildTestCommitArtifacts(voter1, true, salt, contentId);
+        bytes memory payload = _voteTransferPayload(contentId, artifacts, frontendOp);
 
         uint256 gasUsed = _measureCallAs(
             voter1,
@@ -178,23 +175,25 @@ contract UserTransactionGasEstimatesTest is RoundIntegrationTest {
         vm.pauseGasMetering();
         uint256 contentId = _submitContent();
         bytes32 salt = keccak256(abi.encodePacked(voter1, contentId, true, uint256(1001)));
-        bytes32 commitHash = _commitHash(true, salt, contentId);
-        bytes memory ciphertext = _testCiphertext(true, salt, contentId);
-        bytes memory payload = _voteTransferPayload(contentId, commitHash, ciphertext, address(0));
-
-        vm.startPrank(voter1);
-        crepToken.transferAndCall(address(votingEngine), STAKE, payload);
-        vm.stopPrank();
+        bytes32 commitKey = _transferAndCallTestVote(
+            TransferAndCallTestCommitRequest({
+                engine: votingEngine,
+                crepToken: crepToken,
+                voter: voter1,
+                contentId: contentId,
+                isUp: true,
+                stake: STAKE,
+                frontend: address(0),
+                salt: salt
+            })
+        );
 
         uint256 roundId = votingEngine.currentRoundId(contentId);
         vm.warp(block.timestamp + EPOCH_DURATION + 1);
 
         uint256 gasUsed = _measureCall(
             address(votingEngine),
-            abi.encodeCall(
-                RoundVotingEngine.revealVoteByCommitKey,
-                (contentId, roundId, _commitKey(voter1, commitHash), true, salt)
-            )
+            abi.encodeCall(RoundVotingEngine.revealVoteByCommitKey, (contentId, roundId, commitKey, true, salt))
         );
         console2.log("reveal_vote_gas", gasUsed);
     }
