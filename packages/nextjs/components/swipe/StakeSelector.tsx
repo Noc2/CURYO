@@ -6,13 +6,14 @@ import { EPOCH_WEIGHT_BPS } from "@curyo/contracts/protocol";
 import { AnimatePresence, motion } from "framer-motion";
 import { useAccount } from "wagmi";
 import { VoteDirectionIcon } from "~~/components/shared/CuryoVoteButton";
+import { TransactionStatusCallout } from "~~/components/shared/TransactionStatusCallout";
 import { InfoTooltip } from "~~/components/ui/InfoTooltip";
 import { useScaffoldReadContract } from "~~/hooks/scaffold-eth";
 import { useContentLabel } from "~~/hooks/useCategoryRegistry";
 import { useParticipationRate } from "~~/hooks/useParticipationRate";
 import { useRoundSnapshot } from "~~/hooks/useRoundSnapshot";
 import { useVoterIdNFT, useVoterIdStake } from "~~/hooks/useVoterIdNFT";
-import { getSubmittingTransactionMessage } from "~~/lib/ui/transactionStatusCopy";
+import { getSubmittingTransactionStatus } from "~~/lib/ui/transactionStatusCopy";
 import { formatVoteCooldownRemaining } from "~~/lib/vote/cooldown";
 import { estimateVoteReturn, formatCrepAmount } from "~~/lib/vote/voteIncentives";
 
@@ -29,6 +30,7 @@ interface StakeSelectorProps {
 }
 
 const PRESET_AMOUNTS = [1, 5, 25, 50, 100];
+const VOTE_SUBMITTING_STATUS = getSubmittingTransactionStatus("vote");
 
 /**
  * Bottom-sheet modal to select stake amount before committing a vote.
@@ -309,12 +311,11 @@ export function StakeSelector({
             </div>
 
             {isConfirming && (
-              <div className="mb-4 rounded-2xl border border-primary/20 bg-primary/10 px-4 py-3 text-center text-sm text-primary">
-                <div className="flex items-center justify-center gap-2">
-                  <span className="loading loading-spinner loading-xs" />
-                  <span>{getSubmittingTransactionMessage("vote")}</span>
-                </div>
-              </div>
+              <TransactionStatusCallout
+                className="mb-4"
+                title={VOTE_SUBMITTING_STATUS.title}
+                description={VOTE_SUBMITTING_STATUS.description}
+              />
             )}
 
             <div className="flex gap-3">
