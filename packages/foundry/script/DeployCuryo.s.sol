@@ -206,15 +206,12 @@ contract DeployCuryo is ScaffoldETHDeploy {
         // 10. Set content voting contracts on token (for governance lock bypass)
         crepToken.setContentVotingContracts(address(votingEngine), address(registry));
 
-        // 11. Set treasury, cancellation fee sink, and configure round parameters
-        registry.setBonusPool(governance);
-        registry.setTreasury(governance);
-        ProtocolConfig(address(votingEngine.protocolConfig())).setTreasury(governance);
+        // 11. Configure round parameters
         ProtocolConfig(address(votingEngine.protocolConfig())).setConfig(20 minutes, 7 days, 3, 1000); // epochDuration, maxDuration, minVoters, maxVoters
 
         // 12. Fund consensus reserve (pre-funded reserve for unanimous round rewards)
         // Local dev: deployer has DEFAULT_ADMIN_ROLE and needs to grant MINTER_ROLE
-        // Production: deployer already has MINTER_ROLE from constructor
+        // Production: deployer gets only MINTER_ROLE + CONFIG_ROLE from constructor
         if (isLocalDev) {
             crepToken.grantRole(crepToken.MINTER_ROLE(), deployer);
         }
@@ -341,13 +338,12 @@ contract DeployCuryo is ScaffoldETHDeploy {
         // 13. Renounce deployer's temporary roles
         // Local dev: deployer IS governance, so don't renounce (need roles for dev)
         if (!isLocalDev) {
-            // Grant MINTER_ROLE to dev faucet account (whitelisted testnets only)
+            // Production/testnet dev faucet grants now require governance after deployment.
             address devFaucet = vm.envOr("DEV_FAUCET_ADDRESS", address(0));
             bool isTestnet = (block.chainid == 44787 || block.chainid == 11142220);
             if (devFaucet != address(0) && isTestnet) {
-                crepToken.grantRole(crepToken.MINTER_ROLE(), devFaucet);
-                voterIdNFT.addMinter(devFaucet);
-                console.log("Granted MINTER_ROLE to dev faucet:", devFaucet);
+                console.log("DEV_FAUCET_ADDRESS configured; grant MINTER_ROLE/VoterId minter via governance post-deploy:");
+                console.logAddress(devFaucet);
             }
 
             // Renounce all deployer roles on CuryoReputation
@@ -358,9 +354,7 @@ contract DeployCuryo is ScaffoldETHDeploy {
 
             // Renounce deployer config/admin roles on protocol contracts
             registry.renounceRole(registry.CONFIG_ROLE(), deployer);
-            registry.renounceRole(registry.TREASURY_ROLE(), deployer);
             protocolConfig.renounceRole(protocolConfig.CONFIG_ROLE(), deployer);
-            protocolConfig.renounceRole(protocolConfig.TREASURY_ROLE(), deployer);
 
             // Renounce ADMIN_ROLE on registries
             frontendRegistry.renounceRole(frontendRegistry.ADMIN_ROLE(), deployer);
