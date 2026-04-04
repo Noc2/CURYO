@@ -25,6 +25,14 @@ async function readRoundConfig() {
   });
 }
 
+async function readRoundReferenceRatingBps(contentId: bigint) {
+  return publicClient.readContract({
+    ...contractConfig.votingEngine,
+    functionName: "previewCommitReferenceRatingBps",
+    args: [contentId],
+  });
+}
+
 export async function runVote() {
   const account = getAccount(config.rateBot);
   const wallet = getWalletClient(config.rateBot, account);
@@ -100,19 +108,34 @@ export async function runVote() {
 
     const contentId = BigInt(item.id);
 
-    // Vote-once check: if we have EVER voted on this content, skip entirely
+    // Preflight current-round duplicate commits; longer-term cooldown is still enforced by the contract on commit.
     try {
-      const lastVote = await publicClient.readContract({
+      const currentRoundId = (await publicClient.readContract({
         ...contractConfig.votingEngine,
-        functionName: "lastVoteTimestamp",
-        args: [contentId, account.address],
-      });
-      if (lastVote > 0n) {
-        log.debug(`Skipping content #${item.id} (already voted — one-time only)`);
-        continue;
+        functionName: "currentRoundId",
+        args: [contentId],
+      })) as bigint;
+      if (currentRoundId > 0n) {
+        const commitHash = (await publicClient.readContract({
+          ...contractConfig.votingEngine,
+          functionName: "voterCommitHash",
+          args: [contentId, currentRoundId, account.address],
+        })) as `0x${string}`;
+        if (commitHash !== "0x0000000000000000000000000000000000000000000000000000000000000000") {
+          log.debug(`Skipping content #${item.id} (already committed in the current round)`);
+          continue;
+        }
       }
     } catch (err: any) {
-      log.warn(`Skipping content #${item.id} (failed to read vote history: ${err.message})`);
+      log.warn(`Skipping content #${item.id} (failed to read current round vote state: ${err.message})`);
+      continue;
+    }
+
+    let roundReferenceRatingBps: number;
+    try {
+      roundReferenceRatingBps = Number(await readRoundReferenceRatingBps(contentId));
+    } catch (err: any) {
+      log.warn(`Skipping content #${item.id} (failed to read round reference rating: ${err.message})`);
       continue;
     }
 
@@ -153,6 +176,7 @@ export async function runVote() {
         isUp,
         salt,
         contentId,
+        roundReferenceRatingBps,
         epochDurationSeconds: epochDuration,
       });
 
@@ -160,15 +184,24 @@ export async function runVote() {
         ...contractConfig.votingEngine,
         abi: contractConfig.votingEngine.abi as any,
         functionName: "commitVote",
-        args: [contentId, targetRound, drandChainHash, commitHash, ciphertext, config.voteStake, frontendAddress],
+        args: [contentId, roundReferenceRatingBps, targetRound, drandChainHash, commitHash, ciphertext, config.voteStake, frontendAddress],
       });
       await publicClient.waitForTransactionReceipt({ hash: voteTx });
       log.info(`Committed vote on content #${item.id} (${Number(config.voteStake) / 1e6} cREP, ${isUp ? "UP" : "DOWN"} — hidden until epoch ends): ${voteTx}`);
       votesPlaced++;
     } catch (err: any) {
-      log.error(`Failed to vote on content #${item.id}: ${err.message}`);
+      const message = err?.message ?? String(err);
+      if (message.includes("CooldownActive")) {
+        log.debug(`Skipping content #${item.id} (vote cooldown still active)`);
+        continue;
+      }
+      if (message.includes("AlreadyCommitted")) {
+        log.debug(`Skipping content #${item.id} (already committed in the current round)`);
+        continue;
+      }
+      log.error(`Failed to vote on content #${item.id}: ${message}`);
     }
   }
 
-  log.info(`Vote run complete: ${votesPlaced} votes placed (${Number(config.voteStake) / 1e6} cREP each, one-time per content)`);
+  log.info(`Vote run complete: ${votesPlaced} votes placed (${Number(config.voteStake) / 1e6} cREP each)`);
 }

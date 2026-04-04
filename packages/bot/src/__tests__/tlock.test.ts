@@ -161,6 +161,7 @@ describe("shared voting helpers", () => {
     expect(commit.ciphertext).toBe("0x46414b452d41524d4f5245442d4147452d535452494e47");
     expect(commit.targetRound).toBe(401n);
     expect(commit.drandChainHash).toBe(`0x${"ab".repeat(32)}`);
+    expect(commit.roundReferenceRatingBps).toBe(5_000);
     expect(commit.commitHash).toBe(
       buildCommitHash(
         true,
