@@ -36,9 +36,9 @@ contract UserTransactionGasEstimatesTest is RoundIntegrationTest {
             votingEngine.previewCommitReferenceRatingBps(contentId),
             commitHash,
             ciphertext,
+            frontend,
             _tlockCommitTargetRound(),
-            _tlockDrandChainHash(),
-            frontend
+            _tlockDrandChainHash()
         );
     }
 
