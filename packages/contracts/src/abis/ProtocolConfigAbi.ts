@@ -151,6 +151,19 @@ export const ProtocolConfigAbi = [
   },
   {
     "type": "function",
+    "name": "getInitialConfidenceMass",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
     "name": "getRatingConfig",
     "inputs": [],
     "outputs": [
