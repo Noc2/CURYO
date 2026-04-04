@@ -1,7 +1,6 @@
 "use client";
 
 import type { ContentItem } from "~~/hooks/useContentFeed";
-import { isContentItemBlocked } from "~~/utils/contentFilter";
 
 export const DISCOVER_ALL_FILTER = "All";
 export const DISCOVER_BROKEN_FILTER = "Broken";
@@ -11,7 +10,7 @@ export function filterDiscoverCategoryItems(
   activeCategory: string,
   activeCategoryId?: bigint,
 ): ContentItem[] {
-  let items = feed.filter(item => !isContentItemBlocked(item));
+  let items = [...feed];
 
   if (activeCategory === DISCOVER_BROKEN_FILTER) {
     items = items.filter(item => item.isValidUrl === false);

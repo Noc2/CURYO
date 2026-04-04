@@ -1,4 +1,4 @@
-import { type ContentItem, isContentSearchQueryTooShort, sortRpcFeed } from "./shared";
+import { type ContentItem, filterModeratedContentItems, isContentSearchQueryTooShort, sortRpcFeed } from "./shared";
 import assert from "node:assert/strict";
 import test from "node:test";
 
@@ -48,5 +48,17 @@ test("sortRpcFeed prioritizes stronger relevance matches for rpc search fallback
   assert.deepEqual(
     sorted.map(item => item.id),
     [2n, 1n, 3n],
+  );
+});
+
+test("filterModeratedContentItems removes content blocked by the frontend policy", () => {
+  const feed = [
+    buildItem(1n, "Normal title", "Normal description", ["science"]),
+    buildItem(2n, "NSFW title", "Normal description", ["art"]),
+  ];
+
+  assert.deepEqual(
+    filterModeratedContentItems(feed).map(item => item.id),
+    [1n],
   );
 });

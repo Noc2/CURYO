@@ -111,3 +111,25 @@ test("Broken filter isolates invalid links into the separate feed bucket", () =>
     [1n],
   );
 });
+
+test("filterDiscoverCategoryItems leaves moderation ownership to the feed layer", () => {
+  const feed = [
+    makeContentItem({
+      id: 1n,
+      url: "https://example.com/blocked",
+      title: "NSFW title",
+      isValidUrl: true,
+    }),
+    makeContentItem({
+      id: 2n,
+      url: "https://example.com/healthy",
+      title: "Healthy item",
+      isValidUrl: true,
+    }),
+  ];
+
+  assert.deepEqual(
+    filterDiscoverCategoryItems(feed, DISCOVER_ALL_FILTER).map(item => item.id),
+    [1n, 2n],
+  );
+});
