@@ -409,7 +409,9 @@ contract RoundVotingEngine is
             voterId,
             useTokenIdentity
         );
-        _recordCommitAccounting(round, contentId, roundId, voter, voterId, useTokenIdentity, stakeAmount64, stakeAmount);
+        _recordCommitAccounting(
+            round, currentVoterIdNft, contentId, roundId, voter, voterId, useTokenIdentity, stakeAmount64, stakeAmount
+        );
 
         emit VoteCommitted(
             contentId,
@@ -551,6 +553,7 @@ contract RoundVotingEngine is
 
     function _recordCommitAccounting(
         RoundLib.Round storage round,
+        IVoterIdNFT currentVoterIdNft,
         uint256 contentId,
         uint256 roundId,
         address voter,
@@ -565,10 +568,6 @@ contract RoundVotingEngine is
         lastVoteTimestamp[contentId][voter] = block.timestamp;
         if (useTokenIdentity) {
             lastVoteTimestampByToken[contentId][voterId] = block.timestamp;
-        }
-
-        IVoterIdNFT currentVoterIdNft = _getVoterIdNft();
-        if (useTokenIdentity) {
             currentVoterIdNft.recordStake(contentId, roundId, voterId, stakeAmount);
         }
 
