@@ -119,10 +119,8 @@ ponder.on("ContentRegistry:ContentCancelled", async ({ event, context }) => {
 });
 
 ponder.on("ContentRegistry:RatingUpdated", async ({ event, context }) => {
-  const { contentId, oldRating, newRating } = event.args;
-  const oldRatingNum = Number(oldRating);
+  const { contentId, newRating } = event.args;
   const newRatingNum = Number(newRating);
-  const oldRatingBps = oldRatingNum * 100;
   const newRatingBps = newRatingNum * 100;
 
   await context.db.update(content, { id: contentId }).set({
@@ -131,26 +129,6 @@ ponder.on("ContentRegistry:RatingUpdated", async ({ event, context }) => {
     conservativeRatingBps: newRatingBps,
     lastActivityAt: event.block.timestamp,
   });
-
-  await context.db
-    .insert(ratingChange)
-    .values({
-      id: `${contentId}-${event.block.number}`,
-      contentId,
-      roundId: 0n,
-      oldRating: oldRatingNum,
-      newRating: newRatingNum,
-      referenceRatingBps: oldRatingBps,
-      oldRatingBps,
-      newRatingBps,
-      conservativeRatingBps: newRatingBps,
-      confidenceMass: 0n,
-      effectiveEvidence: 0n,
-      settledRounds: 0,
-      lowSince: 0n,
-      timestamp: event.block.timestamp,
-    })
-    .onConflictDoNothing();
 });
 
 ponder.on("ContentRegistry:RatingStateUpdated", async ({ event, context }) => {

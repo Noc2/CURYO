@@ -74,6 +74,52 @@ afterEach(() => {
 });
 
 describe("ContentRegistry ponder handlers", () => {
+  it("does not create synthetic rating history rows for RatingUpdated display refreshes", async () => {
+    const { db, insertCalls, updateCalls } = createDb();
+
+    const registeredHandlers = await loadHandlers();
+    const handler = registeredHandlers.get("ContentRegistry:RatingUpdated");
+
+    expect(handler).toBeDefined();
+
+    await handler!({
+      event: {
+        args: {
+          contentId: 1n,
+          newRating: 57,
+          oldRating: 50,
+        },
+        block: {
+          number: 42n,
+          timestamp: 999n,
+        },
+      },
+      context: {
+        client: { readContract: vi.fn() },
+        contracts: {
+          ContentRegistry: {
+            address: "0x000000000000000000000000000000000000c0de",
+          },
+        },
+        db,
+      },
+    });
+
+    expect(updateCalls).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          table: "content",
+          values: expect.objectContaining({
+            conservativeRatingBps: 5700,
+            rating: 57,
+            ratingBps: 5700,
+          }),
+        }),
+      ]),
+    );
+    expect(insertCalls).toEqual([]);
+  });
+
   it("loads lowSince from on-chain rating state for RatingStateUpdated events", async () => {
     const { db, insertCalls, updateCalls } = createDb();
     const readContract = vi.fn(async () => ({
