@@ -646,6 +646,19 @@ export const HumanFaucetAbi = [
   },
   {
     "type": "function",
+    "name": "setGovernance",
+    "inputs": [
+      {
+        "name": "newGovernance",
+        "type": "address",
+        "internalType": "address"
+      }
+    ],
+    "outputs": [],
+    "stateMutability": "nonpayable"
+  },
+  {
+    "type": "function",
     "name": "setVoterIdNFT",
     "inputs": [
       {
@@ -787,6 +800,19 @@ export const HumanFaucetAbi = [
         "type": "bytes32",
         "indexed": false,
         "internalType": "bytes32"
+      }
+    ],
+    "anonymous": false
+  },
+  {
+    "type": "event",
+    "name": "GovernanceUpdated",
+    "inputs": [
+      {
+        "name": "governance",
+        "type": "address",
+        "indexed": true,
+        "internalType": "address"
       }
     ],
     "anonymous": false

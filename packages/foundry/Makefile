@@ -1,4 +1,4 @@
-.PHONY: build deploy generate-abis get-address account chain compile compile-all flatten fork format lint test verify verify-blockscout slither aderyn coverage
+.PHONY: build deploy generate-abis get-address account chain compile compile-all flatten fork format lint test verify verify-blockscout slither aderyn coverage check-contract-sizes
 
 DEPLOY_SCRIPT ?= script/Deploy.s.sol
 TEST_ARGS ?=
@@ -107,3 +107,7 @@ aderyn:
 
 coverage:
 	forge coverage --offline --ir-minimum $(COVERAGE_ARGS)
+
+check-contract-sizes:
+	FOUNDRY_PROFILE=$(DEPLOY_PROFILE) forge build --skip script --skip test
+	bash scripts/check-contract-sizes.sh
