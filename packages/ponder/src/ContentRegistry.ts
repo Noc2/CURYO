@@ -1,3 +1,4 @@
+import { ContentRegistryAbi } from "@curyo/contracts/abis";
 import { ROUND_STATE } from "@curyo/contracts/protocol";
 import { ponder } from "ponder:registry";
 import { content, category, profile, globalStats, ratingChange, round } from "ponder:schema";
@@ -6,6 +7,26 @@ import { getCanonicalUrlParts } from "./urlCanonicalization.js";
 
 function displayRatingFromBps(ratingBps: number) {
   return Math.min(100, Math.max(0, Math.round(ratingBps / 100)));
+}
+
+async function readRatingStateAtEventBlock(
+  context: Parameters<Parameters<typeof ponder.on>[1]>[0]["context"],
+  contentId: bigint,
+) {
+  const contentRegistryAddress = Array.isArray(context.contracts.ContentRegistry.address)
+    ? context.contracts.ContentRegistry.address[0]
+    : context.contracts.ContentRegistry.address;
+
+  if (!contentRegistryAddress) {
+    throw new Error("Missing ContentRegistry address in Ponder context");
+  }
+
+  return context.client.readContract({
+    abi: ContentRegistryAbi,
+    address: contentRegistryAddress,
+    functionName: "getRatingState",
+    args: [contentId],
+  });
 }
 
 ponder.on("ContentRegistry:ContentSubmitted", async ({ event, context }) => {
@@ -143,8 +164,9 @@ ponder.on("ContentRegistry:RatingStateUpdated", async ({ event, context }) => {
     confidenceMass,
     effectiveEvidence,
     settledRounds,
-    lowSince,
   } = event.args;
+  const ratingState = await readRatingStateAtEventBlock(context, contentId);
+  const lowSince = BigInt(ratingState.lowSince);
   const oldRating = displayRatingFromBps(Number(oldRatingBps));
   const newRating = displayRatingFromBps(Number(newRatingBps));
 
