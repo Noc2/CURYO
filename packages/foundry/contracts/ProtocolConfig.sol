@@ -260,6 +260,7 @@ contract ProtocolConfig is Initializable, AccessControl {
     function _setConfig(uint256 epochDuration, uint256 maxDuration, uint256 minVoters, uint256 maxVoters) internal {
         if (epochDuration < 5 minutes) revert InvalidConfig();
         if (maxDuration < 1 days || maxDuration > 30 days) revert InvalidConfig();
+        if (epochDuration > type(uint32).max) revert InvalidConfig();
         if (maxDuration / epochDuration > 2016) revert InvalidConfig();
         if (minVoters < 2) revert InvalidConfig();
         if (maxVoters < minVoters || maxVoters > 10000) revert InvalidConfig();

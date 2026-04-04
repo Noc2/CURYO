@@ -167,4 +167,11 @@ contract ProtocolConfigBranchesTest is Test {
         vm.expectRevert(ProtocolConfig.InvalidConfig.selector);
         config.setSlashConfig(2_500, 2, 0, 200e6);
     }
+
+    function test_SetConfig_RejectsEpochDurationAboveUint32Max() public {
+        ProtocolConfig config = deployInitializedProtocolConfig(address(this));
+
+        vm.expectRevert(ProtocolConfig.InvalidConfig.selector);
+        config.setConfig(uint256(type(uint32).max) + 1, 30 days, 3, 1000);
+    }
 }
