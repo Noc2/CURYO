@@ -17,7 +17,7 @@ contract GasBudgetTest is RoundIntegrationTest {
     uint256 internal constant MAX_SUBMIT_CONTENT_GAS = 700_000;
     // commitVote now validates the full armored AGE envelope and persists the ciphertext payload,
     // so the post-tlock baseline is materially higher than the earlier pre-parser threshold.
-    uint256 internal constant MAX_COMMIT_VOTE_GAS = 2_500_000;
+    uint256 internal constant MAX_COMMIT_VOTE_GAS = 2_700_000;
     uint256 internal constant MAX_REVEAL_VOTE_GAS = 320_000;
     uint256 internal constant MAX_SETTLE_ROUND_GAS = 475_000;
     uint256 internal constant MAX_SETTLE_ROUND_MAX_EPOCH_SCAN_GAS = 5_500_000;
@@ -90,6 +90,7 @@ contract GasBudgetTest is RoundIntegrationTest {
     function testGas_commitVote_underBudget() public {
         vm.pauseGasMetering();
         uint256 contentId = _submitContent();
+        uint16 roundReferenceRatingBps = votingEngine.previewCommitReferenceRatingBps(contentId);
         bytes32 salt = keccak256(abi.encodePacked(voter1, contentId, true, uint256(1)));
         bytes32 commitHash = _commitHash(true, salt, contentId);
         bytes memory ciphertext = _testCiphertext(true, salt, contentId);
@@ -102,8 +103,9 @@ contract GasBudgetTest is RoundIntegrationTest {
             voter1,
             address(votingEngine),
             abi.encodeWithSelector(
-                bytes4(keccak256("commitVote(uint256,uint64,bytes32,bytes32,bytes,uint256,address)")),
+                bytes4(keccak256("commitVote(uint256,uint16,uint64,bytes32,bytes32,bytes,uint256,address)")),
                 contentId,
+                roundReferenceRatingBps,
                 _tlockCommitTargetRound(),
                 _tlockDrandChainHash(),
                 commitHash,

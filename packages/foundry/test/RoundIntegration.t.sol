@@ -9,6 +9,7 @@ import { RoundVotingEngine } from "../contracts/RoundVotingEngine.sol";
 import { ProtocolConfig } from "../contracts/ProtocolConfig.sol";
 import { RoundRewardDistributor } from "../contracts/RoundRewardDistributor.sol";
 import { RoundLib } from "../contracts/libraries/RoundLib.sol";
+import { RatingLib } from "../contracts/libraries/RatingLib.sol";
 import { RoundEngineReadHelpers } from "./helpers/RoundEngineReadHelpers.sol";
 import { CuryoReputation } from "../contracts/CuryoReputation.sol";
 import { ParticipationPool } from "../contracts/ParticipationPool.sol";
@@ -1097,6 +1098,11 @@ contract RoundIntegrationTest is VotingTestBase {
         uint256 contentId = _submitContent();
         uint256 submitterBalanceBefore = crepToken.balanceOf(submitter);
         uint256 treasuryBalanceBefore = crepToken.balanceOf(treasury);
+        RatingLib.SlashConfig memory slashConfig = registry.getSlashConfigForContent(contentId);
+        assertEq(slashConfig.slashThresholdBps, 4_000, "content should snapshot the tuned slash threshold");
+        assertEq(slashConfig.minSlashSettledRounds, 1, "content should snapshot the tuned settled-round requirement");
+        assertEq(slashConfig.minSlashLowDuration, 2 days, "content should snapshot the tuned dwell window");
+        assertEq(slashConfig.minSlashEvidence, 100e6, "content should snapshot the tuned evidence floor");
 
         vm.warp(block.timestamp + 1 days + 1);
 
@@ -1110,7 +1116,9 @@ contract RoundIntegrationTest is VotingTestBase {
         _settleRoundWith(voters, contentId, dirs, 100e6);
 
         (,,,,,,,,, bool submitterStakeReturned, uint256 rating,) = registry.contents(contentId);
+        RatingLib.RatingState memory ratingState = registry.getRatingState(contentId);
         assertLt(registry.getConservativeRating(contentId), 4_000, "conservative rating should fall below the tuned threshold");
+        assertGt(uint256(ratingState.lowSince), 0, "first low settlement should start the low-rating dwell timer");
         assertFalse(submitterStakeReturned, "dwell should keep the stake pending right after settlement");
         assertEq(crepToken.balanceOf(treasury), treasuryBalanceBefore, "treasury should not be paid before the dwell window");
 
