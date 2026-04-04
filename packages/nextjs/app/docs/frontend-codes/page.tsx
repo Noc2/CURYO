@@ -6,7 +6,11 @@ const sdkSourceHref = "https://github.com/Noc2/CURYO/tree/main/packages/sdk";
 const referenceAppSourceHref = "https://github.com/Noc2/CURYO/tree/main/packages/nextjs";
 const keeperSourceHref = "https://github.com/Noc2/CURYO/tree/main/packages/keeper";
 const ponderSourceHref = "https://github.com/Noc2/CURYO/tree/main/packages/ponder";
+const contentModerationPolicySourceHref =
+  "https://github.com/Noc2/CURYO/blob/main/packages/nextjs/config/contentModeration.ts";
 const contentFilterSourceHref = "https://github.com/Noc2/CURYO/blob/main/packages/nextjs/utils/contentFilter.ts";
+const submissionValidationSourceHref =
+  "https://github.com/Noc2/CURYO/blob/main/packages/nextjs/lib/moderation/submissionValidation.ts";
 
 const FrontendCodes: NextPage = () => {
   return (
@@ -214,17 +218,19 @@ const FrontendCodes: NextPage = () => {
         is no protocol-level censorship, and content submitted to the blockchain is permanent. However, each frontend is
         free to decide what it displays to its users.
       </p>
-      <p>The reference implementation includes a keyword-based blocklist that:</p>
+      <p>The reference implementation includes a policy-driven moderation layer that:</p>
       <ul>
         <li>
-          <strong>Blocks submissions</strong> containing prohibited terms in URLs, titles, descriptions, platform names,
-          and domains.
+          <strong>Blocks submissions</strong> containing prohibited terms or blocked domains in URLs, titles,
+          descriptions, custom content categories, platform names, domains, and platform subcategories.
         </li>
         <li>
-          <strong>Filters the feed</strong> so that content matching the blocklist is hidden from users automatically.
+          <strong>Filters the feed centrally</strong> so that blocked content is hidden across standard feed loads and
+          direct requested-content lookups.
         </li>
         <li>
-          <strong>Notifies users</strong> with clear warning messages when their input is rejected.
+          <strong>Notifies users</strong> with inline validation and clear warning messages when their input is rejected
+          or a requested item is hidden.
         </li>
       </ul>
       <p>Frontend operators can customize and extend their moderation approach in several ways:</p>
@@ -249,9 +255,27 @@ const FrontendCodes: NextPage = () => {
         entirely in the frontend codebase and has no effect on the underlying protocol or other frontends.
       </p>
       <p>
-        The reference blocklist and helper functions are implemented in{" "}
+        The reference policy list lives in{" "}
+        <a
+          href={contentModerationPolicySourceHref}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="link link-primary"
+        >
+          packages/nextjs/config/contentModeration.ts
+        </a>
+        , the lower-level matching helpers live in{" "}
         <a href={contentFilterSourceHref} target="_blank" rel="noopener noreferrer" className="link link-primary">
           packages/nextjs/utils/contentFilter.ts
+        </a>
+        , and the submit-form validators live in{" "}
+        <a
+          href={submissionValidationSourceHref}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="link link-primary"
+        >
+          packages/nextjs/lib/moderation/submissionValidation.ts
         </a>
         .
       </p>
