@@ -77,15 +77,15 @@ export const SECTIONS: Section[] = [
         blocks: [
           {
             type: "paragraph",
-            text: "Every content item has a rating from 0 to 100, starting at 50. The rating updates at settlement based on revealed votes, computed as: rating = 50 + 50 * (upStake - downStake) / (upStake + downStake + b_r), where b_r = 50 cREP is a smoothing parameter that ensures individual votes have diminishing impact as total stake grows. After settlement, the rating carries over to the next round.",
+            text: "Every content item has a rating from 0 to 100, starting at 50. In the redeployed design, each round snapshots a canonical reference score on-chain (`roundReferenceRatingBps`). Frontends display that exact score for the round, and voters judge whether it is too low or too high rather than casting an absolute quality vote in a vacuum.",
           },
           {
             type: "paragraph",
-            text: "Categories no longer define custom voting questions. Instead, voters judge whether the current community rating should move up or down based on the content, the available evidence, and the current score shown by the frontend.",
+            text: "Settlement updates the next score from that round reference on a logit scale using epoch-weighted revealed evidence, modest vote-share smoothing, and a dynamic confidence term. Repeated up-heavy rounds continue lifting the score from the current anchor, repeated down-heavy rounds continue lowering it, and contradictory rounds can reopen uncertainty instead of freezing the score permanently.",
           },
           {
             type: "paragraph",
-            text: "Illegal content, content that doesn't load, or content with an incorrect description should always be downvoted regardless of the current rating. Content that falls below a rating of 25 after its grace period results in the submitter's stake being slashed.",
+            text: "Illegal content, content that doesn't load, or content with an incorrect description should always be downvoted regardless of the current rating. Submitter stakes are no longer meant to slash from the point estimate alone: after redeploy, slashability should require a conservative low-rating bound plus minimum evidence, minimum settled rounds, and dwell time below threshold.",
           },
         ],
       },
@@ -298,7 +298,11 @@ export const SECTIONS: Section[] = [
           },
           {
             type: "paragraph",
-            text: "The content rating updates at settlement based on revealed raw stakes: rating = 50 + 50 * (upStake - downStake) / (upStake + downStake + b_r), where b_r = 50 cREP is the rating smoothing parameter. Raw stakes (not epoch-weighted) are used for the rating to accurately reflect the crowd opinion. The win condition uses epoch-weighted stakes to reward early blind voters. In equilibrium, content ratings converge to the community's aggregate quality assessment as the number of rounds grows.",
+            text: "In the redeployed model, ratings update from the current round reference score rather than recomputing from 50 or from the current round alone. The protocol converts the epoch-weighted revealed vote share into a score-gap signal on a latent logit scale, dampens that signal with a confidence term learned from prior settled rounds, and applies a bounded movement step. The result is a system where history creates real inertia, but surprising contradictory rounds can still move the score and reopen confidence instead of leaving bad early anchors permanently locked in.",
+          },
+          {
+            type: "paragraph",
+            text: "Governance can later tune smoothing, confidence, and movement-cap parameters, but each round snapshots its rating configuration when it opens. That means in-progress rounds always settle under the exact rating rules and reference score that voters saw when they committed.",
           },
         ],
       },
@@ -391,7 +395,7 @@ export const SECTIONS: Section[] = [
         blocks: [
           {
             type: "paragraph",
-            text: "Each content item has a rating from 0 to 100 (starting at 50). The rating updates at settlement based on revealed votes, computed as: rating = 50 + 50 * (upStake - downStake) / (upStake + downStake + b_r), where b_r = 50 cREP is the rating smoothing parameter. Raw stakes (not epoch-weighted) are used for the rating formula, so the rating reflects the true crowd opinion. When a round settles, the final rating carries over to the next round. The rating converges over many rounds to the community's aggregate quality assessment. Winners receive their original stake back plus an epoch-weighted share of the losing pool.",
+            text: "Each content item has a rating from 0 to 100 (starting at 50). In the redeployed design, when a round opens the protocol snapshots `roundReferenceRatingBps`, and every frontend should display that same reference score while the round is open. The rating update then starts from that reference score, interprets up votes as evidence the displayed score is too low and down votes as evidence it is too high, and settles the next score from epoch-weighted revealed evidence on a bounded latent scale. Winners still receive their original stake back plus an epoch-weighted share of the losing pool, but the score itself now compounds from the current displayed anchor instead of being recomputed from the round in isolation.",
           },
         ],
       },
@@ -527,7 +531,7 @@ export const SECTIONS: Section[] = [
           },
           {
             type: "paragraph",
-            text: "Settlement is permissionless: anyone may call settleRound(contentId, roundId) once conditions are met. The contract enforces that all past-epoch votes have been revealed (or their reveal grace period has expired) before allowing settlement, preventing selective revelation attacks. The keeper service handles both reveal and settlement automatically. The content rating updates at settlement based on raw revealed stakes (not epoch-weighted), so the rating accurately reflects crowd opinion regardless of when voters committed.",
+            text: "Settlement is permissionless: anyone may call settleRound(contentId, roundId) once conditions are met. The contract enforces that all past-epoch votes have been revealed (or their reveal grace period has expired) before allowing settlement, preventing selective revelation attacks. The keeper service handles both reveal and settlement automatically. In the redeployed rating model, settlement also consumes the round's canonical reference score and epoch-weighted revealed evidence, so the same anti-herding weights that shape rewards also shape how much late visible votes can move the score.",
           },
         ],
       },
@@ -814,7 +818,7 @@ export const SECTIONS: Section[] = [
           },
           {
             type: "paragraph",
-            text: "Submitter stakes are slashed (100% to treasury) if content rating drops below 25 after a 24-hour grace period and a settled round establishes that low rating. Stakes are returned after roughly 4 days once a settled round confirms a healthy rating and no later round remains open. If no round ever settles, the stake instead resolves when the content reaches dormancy. Healthy submitter participation rewards are snapshotted at that return point and claimed later; whatever the pool can already fund is reserved immediately so later claims do not depend entirely on future authorization state.",
+            text: "Submitter stakes are slashed (100% to treasury) only when the content's conservative rating bound stays below the slash threshold after the 24-hour grace period and enough evidence has accumulated to make that signal credible. The redeployed design therefore gates slashability on a conservative low-score bound plus minimum evidence, minimum settled rounds, and a dwell period below threshold. Stakes are returned after roughly 4 days once a settled round confirms a healthy conservative rating and no later round remains open. If no round ever settles, the stake instead resolves when the content reaches dormancy. Healthy submitter participation rewards are snapshotted at that return point and claimed later; whatever the pool can already fund is reserved immediately so later claims do not depend entirely on future authorization state.",
           },
         ],
       },
@@ -1402,6 +1406,39 @@ export const SECTIONS: Section[] = [
           {
             type: "paragraph",
             text: "Document-based identity verification via Self.xyz provides strong Sybil resistance, but it still excludes people who lack supported documents or cannot complete the verification flow. The system has no documented appeal mechanism for false rejections, and recovery from a compromised or offline Self.xyz service is not described here. These are inherent trade-offs of document-gated identity systems.",
+          },
+        ],
+      },
+    ],
+  },
+
+  // ── 8. Rating Research Basis ──
+  {
+    title: "Rating Research Basis",
+    lead: "Research that shaped the redesigned score-relative rating model.",
+    subsections: [
+      {
+        heading: "Why This Rating Design",
+        blocks: [
+          {
+            type: "paragraph",
+            text: "The redesigned rating system is grounded in a few complementary research threads. Anchoring and reference-dependence research shows that visible scores influence later judgments, which is why the protocol now treats the displayed round score as a canonical reference point rather than as passive UI context. Comparative-judgment models such as Thurstone and Bradley-Terry motivate interpreting each vote as a noisy comparison between latent content quality and that displayed score. Dynamic-rating work such as Glicko and TrueSkill motivates tracking confidence separately from the point estimate so stable histories become harder to move while contradictory evidence can still reopen uncertainty. Reputation-system and social-influence research further motivate conservative slashing, minimum-evidence thresholds, and keeping visible-score manipulation in scope as a security concern.",
+          },
+          {
+            type: "bullets",
+            items: [
+              "Amos Tversky and Daniel Kahneman, Judgment under Uncertainty: Heuristics and Biases (1974) -- https://doi.org/10.1126/science.185.4157.1124",
+              "Daniel Kahneman and Amos Tversky, Prospect Theory: An Analysis of Decision under Risk (1979) -- https://www.jstor.org/stable/1914185",
+              "L. L. Thurstone, A Law of Comparative Judgment (1927) -- https://doi.org/10.1037/h0070288",
+              "R. A. Bradley and M. E. Terry, Rank Analysis of Incomplete Block Designs (1952) -- https://doi.org/10.2307/2334029",
+              "Mark E. Glickman, Parameter Estimation in Large Dynamic Paired Comparison Experiments (1999) -- https://www.glicko.net/research/glicko.pdf",
+              "Ralf Herbrich, Tom Minka, and Thore Graepel, TrueSkill (2006) -- https://www.microsoft.com/en-us/research/publication/trueskilltm-a-bayesian-skill-rating-system-2/",
+              "Audun Jøsang and Roslan Ismail, The Beta Reputation System (2002) -- https://sites.cc.gatech.edu/fac/Charles.Isbell/classes/reading/papers/josang/JI2002-Bled.pdf",
+              "Matthew J. Salganik, Peter Sheridan Dodds, and Duncan J. Watts, Experimental Study of Inequality and Unpredictability in an Artificial Cultural Market (2006) -- https://doi.org/10.1126/science.1121066",
+              "Lev Muchnik, Sinan Aral, and Sean J. Taylor, Social Influence Bias: A Randomized Experiment (2013) -- https://doi.org/10.1126/science.1240466",
+              "Lawrence D. Brown, T. Tony Cai, and Anirban DasGupta, Interval Estimation for a Binomial Proportion (2001) -- https://doi.org/10.1214/ss/1009213286",
+              "Alan Agresti and Brent A. Coull, Approximate Is Better than Exact for Interval Estimation of Binomial Proportions (1998) -- https://doi.org/10.1080/00031305.1998.10480550",
+            ],
           },
         ],
       },

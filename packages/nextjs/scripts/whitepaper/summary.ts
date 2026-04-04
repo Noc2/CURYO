@@ -17,7 +17,7 @@ export const EXECUTIVE_SUMMARY: ContentBlock[] = [
   },
   {
     type: "paragraph",
-    text: `Curyo is a decentralized content curation protocol that replaces passive engagement metrics with stake-weighted prediction games. Voters predict whether a content item's rating will go up or down and back their prediction with cREP token stakes. Votes are encrypted via tlock (time-lock encryption) and hidden until each ${protocolDocFacts.blindPhaseDurationLabel} epoch ends, preventing herding. Commits in the redeployed stack bind explicit drand metadata (targetRound and drandChainHash) and on-chain reject malformed or non-armored ciphertexts, while the keeper/runtime layer still performs deeper stanza checks before reveal. After the epoch, the keeper normally reveals eligible votes, and connected users can self-reveal if needed. The side with the larger epoch-weighted stake wins -- early (blind) voters earn full reward weight, while later voters who saw epoch-1 results earn ${protocolDocFacts.openPhaseWeightLabel} weight, creating a ${protocolDocFacts.earlyVoterAdvantageLabel} incentive to vote early.`,
+    text: `Curyo is a decentralized content curation protocol that replaces passive engagement metrics with stake-weighted prediction games. In the redeployed rating model, voters judge whether the currently displayed community score for a content item is too low or too high and back that judgment with cREP token stakes. Each round snapshots a canonical reference score on-chain, and the settlement logic updates the next score from that anchor rather than recomputing from scratch. Votes are encrypted via tlock (time-lock encryption) and hidden until each ${protocolDocFacts.blindPhaseDurationLabel} epoch ends, preventing herding. Commits in the redeployed stack bind the reference score together with explicit drand metadata (targetRound and drandChainHash), and on-chain logic rejects malformed or non-armored ciphertexts while the keeper/runtime layer still performs deeper stanza checks before reveal. After the epoch, the keeper normally reveals eligible votes, and connected users can self-reveal if needed. The side with the larger epoch-weighted stake wins -- early (blind) voters earn full reward weight, while later voters who saw epoch-1 results earn ${protocolDocFacts.openPhaseWeightLabel} weight, creating a ${protocolDocFacts.earlyVoterAdvantageLabel} incentive to vote early.`,
   },
   {
     type: "paragraph",
@@ -33,6 +33,6 @@ export const EXECUTIVE_SUMMARY: ContentBlock[] = [
   },
   {
     type: "paragraph",
-    text: "This paper describes the protocol's mechanisms in detail: the tlock commit-reveal voting flow, epoch-weighted reward distribution, parimutuel stake settlement, tokenomics, on-chain governance, and the role of AI-assisted curation in building trustworthy quality infrastructure for the age of AI.",
+    text: "This paper describes the protocol's mechanisms in detail: the tlock commit-reveal voting flow, the score-relative rating update, epoch-weighted reward distribution, parimutuel stake settlement, governance-tunable rating parameters, tokenomics, on-chain governance, and the role of AI-assisted curation in building trustworthy quality infrastructure for the age of AI.",
   },
 ];
