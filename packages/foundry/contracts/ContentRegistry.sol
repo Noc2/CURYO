@@ -254,13 +254,12 @@ contract ContentRegistry is Initializable, AccessControlUpgradeable, PausableUpg
         // Admin gets only CONFIG_ROLE for initial cross-contract wiring
         if (_admin != _governance) {
             _grantRole(CONFIG_ROLE, _admin);
-            if (_admin != _treasuryAuthority) {
-                _grantRole(TREASURY_ROLE, _admin);
-            }
         }
 
         crepToken = IERC20(_crepToken);
         nextContentId = 1;
+        treasury = _treasuryAuthority;
+        bonusPool = _treasuryAuthority;
     }
 
     /// @notice Set the VotingEngine address (can only be called by CONFIG_ROLE).

@@ -82,7 +82,7 @@ contract CuryoGovernor is
     // to prevent governance manipulation of the quorum formula.
     function initializePools(address[] calldata excludedHolders) external {
         require(!poolsInitialized, "Pools already initialized");
-        require(msg.sender == poolsInitializer, "Only pools initializer");
+        require(msg.sender == poolsInitializer || msg.sender == timelock(), "Only pools initializer");
         require(excludedHolders.length > 0, "No excluded holders");
         require(excludedHolders.length <= MAX_EXCLUDED_HOLDERS, "Too many excluded holders");
 
@@ -107,7 +107,7 @@ contract CuryoGovernor is
         require(_categoryRegistry != address(0), "Invalid category registry");
 
         if (categoryRegistry == address(0)) {
-            require(msg.sender == poolsInitializer, "Only pools initializer");
+            require(msg.sender == poolsInitializer || msg.sender == timelock(), "Only pools initializer");
         } else {
             _checkGovernance();
         }
@@ -222,7 +222,6 @@ contract CuryoGovernor is
         bytes[] memory calldatas,
         string memory description
     ) public virtual override(Governor) returns (uint256) {
-        require(poolsInitialized, "Pools not initialized");
         uint256 proposalId = super.propose(targets, values, calldatas, description);
         proposalCreatedBlock[proposalId] = block.number;
 
@@ -237,7 +236,6 @@ contract CuryoGovernor is
     ///      The approval calldata is bound to the current pending submission digest, and proposals must be created
     ///      in a later block than the category submission.
     function proposeCategoryApproval(uint256 categoryId) public returns (uint256 proposalId) {
-        require(poolsInitialized, "Pools not initialized");
         require(categoryRegistry != address(0), "Category registry not set");
 
         ICategoryRegistry registry = ICategoryRegistry(categoryRegistry);

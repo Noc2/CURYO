@@ -88,9 +88,6 @@ contract ProtocolConfig is Initializable, AccessControl {
         _grantRole(TREASURY_ROLE, treasuryAuthority);
         if (admin != governance) {
             _grantRole(CONFIG_ROLE, admin);
-            if (admin != treasuryAuthority) {
-                _grantRole(TREASURY_ROLE, admin);
-            }
         }
 
         config = RoundLib.RoundConfig({
@@ -124,6 +121,7 @@ contract ProtocolConfig is Initializable, AccessControl {
             minSlashLowDuration: uint48(7 days),
             minSlashEvidence: 200e6
         });
+        _setTreasury(treasuryAuthority);
     }
 
     function setRewardDistributor(address value) external onlyRole(CONFIG_ROLE) {
