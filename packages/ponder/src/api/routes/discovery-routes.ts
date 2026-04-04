@@ -2,6 +2,7 @@ import { DEFAULT_ROUND_CONFIG, ROUND_STATE } from "@curyo/contracts/protocol";
 import { and, asc, desc, eq, gte, inArray, or, sql } from "ponder";
 import { db } from "ponder:api";
 import { content, profile, round, vote } from "ponder:schema";
+import { buildAllowedContentCondition } from "../moderation.js";
 import type { ApiApp } from "../shared.js";
 import {
   DISCOVER_MODULE_LIMIT,
@@ -16,6 +17,15 @@ import {
 import { isValidAddress, safeLimit } from "../utils.js";
 
 export function registerDiscoveryRoutes(app: ApiApp) {
+  const allowedContentCondition = buildAllowedContentCondition({
+    canonicalUrl: content.canonicalUrl,
+    description: content.description,
+    tags: content.tags,
+    title: content.title,
+    url: content.url,
+    urlHost: content.urlHost,
+  });
+
   app.get("/discover-signals/:address", async (c) => {
     const address = c.req.param("address").toLowerCase() as `0x${string}`;
     if (!isValidAddress(address)) return c.json({ error: "Invalid address" }, 400);
@@ -45,6 +55,7 @@ export function registerDiscoveryRoutes(app: ApiApp) {
       .leftJoin(profile, eq(content.submitter, profile.address))
       .where(
         and(
+          allowedContentCondition,
           eq(vote.voter, address),
           eq(round.state, ROUND_STATE.Open),
           gte(round.voteCount, DEFAULT_ROUND_CONFIG.minVoters),
@@ -73,6 +84,7 @@ export function registerDiscoveryRoutes(app: ApiApp) {
           .leftJoin(profile, eq(content.submitter, profile.address))
           .where(
             and(
+              allowedContentCondition,
               inArray(round.contentId, watchedContentIds),
               eq(round.state, ROUND_STATE.Open),
               gte(round.voteCount, DEFAULT_ROUND_CONFIG.minVoters),
@@ -139,7 +151,7 @@ export function registerDiscoveryRoutes(app: ApiApp) {
           })
           .from(content)
           .leftJoin(profile, eq(content.submitter, profile.address))
-          .where(and(eq(content.status, 0), inArray(content.submitter, followedAddresses)))
+          .where(and(allowedContentCondition, eq(content.status, 0), inArray(content.submitter, followedAddresses)))
           .orderBy(desc(content.createdAt))
           .limit(DISCOVER_MODULE_LIMIT);
 
@@ -171,6 +183,7 @@ export function registerDiscoveryRoutes(app: ApiApp) {
           .innerJoin(content, eq(vote.contentId, content.id))
           .leftJoin(profile, eq(vote.voter, profile.address))
           .where(and(
+            allowedContentCondition,
             inArray(vote.voter, followedAddresses),
             eq(vote.revealed, true),
             or(
@@ -222,6 +235,7 @@ export function registerDiscoveryRoutes(app: ApiApp) {
       .leftJoin(profile, eq(content.submitter, profile.address))
       .where(
         and(
+          allowedContentCondition,
           eq(vote.voter, address),
           eq(round.state, ROUND_STATE.Open),
           gte(round.voteCount, DEFAULT_ROUND_CONFIG.minVoters),
@@ -250,6 +264,7 @@ export function registerDiscoveryRoutes(app: ApiApp) {
           .leftJoin(profile, eq(content.submitter, profile.address))
           .where(
             and(
+              allowedContentCondition,
               inArray(round.contentId, watchedContentIds),
               eq(round.state, ROUND_STATE.Open),
               gte(round.voteCount, DEFAULT_ROUND_CONFIG.minVoters),
@@ -296,7 +311,12 @@ export function registerDiscoveryRoutes(app: ApiApp) {
           })
           .from(content)
           .leftJoin(profile, eq(content.submitter, profile.address))
-          .where(and(eq(content.status, 0), inArray(content.submitter, followedAddresses), gte(content.createdAt, recentCutoff)))
+          .where(and(
+            allowedContentCondition,
+            eq(content.status, 0),
+            inArray(content.submitter, followedAddresses),
+            gte(content.createdAt, recentCutoff),
+          ))
           .orderBy(desc(content.createdAt))
           .limit(24);
 
@@ -322,6 +342,7 @@ export function registerDiscoveryRoutes(app: ApiApp) {
           .innerJoin(content, eq(vote.contentId, content.id))
           .leftJoin(profile, eq(vote.voter, profile.address))
           .where(and(
+            allowedContentCondition,
             inArray(vote.voter, followedAddresses),
             eq(vote.revealed, true),
             gte(round.settledAt, recentCutoff),
@@ -356,6 +377,7 @@ export function registerDiscoveryRoutes(app: ApiApp) {
       .innerJoin(content, eq(vote.contentId, content.id))
       .leftJoin(profile, eq(content.submitter, profile.address))
       .where(and(
+        allowedContentCondition,
         eq(vote.voter, address),
         gte(round.settledAt, recentCutoff),
         or(
@@ -390,6 +412,7 @@ export function registerDiscoveryRoutes(app: ApiApp) {
           .innerJoin(content, eq(round.contentId, content.id))
           .leftJoin(profile, eq(content.submitter, profile.address))
           .where(and(
+            allowedContentCondition,
             inArray(round.contentId, watchedContentIds),
             gte(round.settledAt, recentCutoff),
             or(
@@ -457,6 +480,7 @@ export function registerDiscoveryRoutes(app: ApiApp) {
       .innerJoin(content, eq(round.contentId, content.id))
       .leftJoin(profile, eq(content.submitter, profile.address))
       .where(and(
+        allowedContentCondition,
         eq(round.state, ROUND_STATE.Open),
         eq(content.status, 0),
         gte(round.voteCount, DEFAULT_ROUND_CONFIG.minVoters),
@@ -470,6 +494,7 @@ export function registerDiscoveryRoutes(app: ApiApp) {
       .innerJoin(content, eq(round.contentId, content.id))
       .leftJoin(profile, eq(content.submitter, profile.address))
       .where(and(
+        allowedContentCondition,
         eq(round.state, ROUND_STATE.Open),
         eq(content.status, 0),
         sql`${round.voteCount} < ${DEFAULT_ROUND_CONFIG.minVoters}`,

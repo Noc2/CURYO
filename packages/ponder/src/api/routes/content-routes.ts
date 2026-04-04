@@ -2,7 +2,7 @@ import { ROUND_STATE } from "@curyo/contracts/protocol";
 import { and, asc, desc, eq, inArray, or, sql } from "ponder";
 import { db } from "ponder:api";
 import { category, content, profile, ratingChange, rewardClaim, round, vote } from "ponder:schema";
-import { buildAllowedContentCondition } from "../moderation.js";
+import { buildAllowedCategoryCondition, buildAllowedContentCondition } from "../moderation.js";
 import type { ApiApp } from "../shared.js";
 import { attachOpenRoundSummary, jsonBig, parseBigIntList } from "../shared.js";
 import { getUrlLookupCandidates, isValidAddress, normalizeContentSearchQuery, safeBigInt, safeLimit, safeOffset } from "../utils.js";
@@ -389,7 +389,18 @@ export function registerContentRoutes(app: ApiApp) {
     if (statusFilter !== "all") {
       const parsed = parseInt(statusFilter);
       if (isNaN(parsed)) return c.json({ error: "Invalid status filter" }, 400);
-      where = eq(category.status, parsed);
+      where = and(
+        eq(category.status, parsed),
+        buildAllowedCategoryCondition({
+          domain: category.domain,
+          name: category.name,
+        }),
+      );
+    } else {
+      where = buildAllowedCategoryCondition({
+        domain: category.domain,
+        name: category.name,
+      });
     }
     const offset = safeOffset(c.req.query("offset"));
     if (Number.isNaN(offset)) return c.json({ error: "Invalid offset" }, 400);
