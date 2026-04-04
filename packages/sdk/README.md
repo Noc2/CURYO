@@ -41,11 +41,13 @@ const commit = await buildCommitVoteParams({
   isUp: true,
   stakeAmount: 2.5,
   epochDuration: 20 * 60,
+  roundReferenceRatingBps: content.openRound?.referenceRatingBps ?? BigInt(content.ratingBps ?? 5000),
   defaultFrontendCode: curyo.config.frontendCode,
 });
 
 const payload = buildVoteTransferPayload({
   contentId: 42n,
+  roundReferenceRatingBps: commit.roundReferenceRatingBps,
   commitHash: commit.commitHash,
   ciphertext: commit.ciphertext,
   frontend: commit.frontend,

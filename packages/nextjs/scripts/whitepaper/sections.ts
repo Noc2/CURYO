@@ -59,7 +59,7 @@ export const SECTIONS: Section[] = [
           {
             type: "ordered",
             items: [
-              "Commit: Choose up or down, select stake (1-100 cREP per Voter ID). The UI encrypts the vote, encodes (contentId, commitHash, ciphertext, frontendAddress, targetRound, drandChainHash), and submits it through CuryoReputation.transferAndCall(votingEngine, stakeAmount, payload). The vote direction stays hidden until the epoch ends.",
+              "Commit: Choose up or down, select stake (1-100 cREP per Voter ID). The UI encrypts the vote, encodes (contentId, roundReferenceRatingBps, commitHash, ciphertext, frontendAddress, targetRound, drandChainHash), and submits it through CuryoReputation.transferAndCall(votingEngine, stakeAmount, payload). The vote direction stays hidden until the epoch ends.",
               `Accumulate: More voters commit during the ${protocolDocFacts.blindPhaseDurationLabel} epoch. No one can see anyone else's vote direction until the epoch ends.`,
               "Reveal: After the epoch ends, the keeper normally decrypts eligible ciphertexts off-chain, checks the stored drand stanza metadata, and submits reveals on-chain. Connected users can also self-reveal if they know their vote plaintext. The rating does not change yet -- it updates only when the round later settles.",
               `Settle: Once at least ${protocolDocFacts.minVotersLabel} votes are revealed and all past-epoch votes are revealed (or the ${protocolDocFacts.revealGracePeriodLabel} reveal grace period expires), anyone can call settleRound(). The side with the larger epoch-weighted stake wins.`,

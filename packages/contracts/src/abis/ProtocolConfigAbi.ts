@@ -151,6 +151,86 @@ export const ProtocolConfigAbi = [
   },
   {
     "type": "function",
+    "name": "getRatingConfig",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "cfg",
+        "type": "tuple",
+        "internalType": "struct RatingLib.RatingConfig",
+        "components": [
+          {
+            "name": "smoothingAlpha",
+            "type": "uint256",
+            "internalType": "uint256"
+          },
+          {
+            "name": "smoothingBeta",
+            "type": "uint256",
+            "internalType": "uint256"
+          },
+          {
+            "name": "observationBetaX18",
+            "type": "uint256",
+            "internalType": "uint256"
+          },
+          {
+            "name": "confidenceMassInitial",
+            "type": "uint256",
+            "internalType": "uint256"
+          },
+          {
+            "name": "confidenceMassMin",
+            "type": "uint256",
+            "internalType": "uint256"
+          },
+          {
+            "name": "confidenceMassMax",
+            "type": "uint256",
+            "internalType": "uint256"
+          },
+          {
+            "name": "confidenceGainBps",
+            "type": "uint16",
+            "internalType": "uint16"
+          },
+          {
+            "name": "confidenceReopenBps",
+            "type": "uint16",
+            "internalType": "uint16"
+          },
+          {
+            "name": "surpriseReferenceX18",
+            "type": "uint256",
+            "internalType": "uint256"
+          },
+          {
+            "name": "maxDeltaLogitX18",
+            "type": "uint256",
+            "internalType": "uint256"
+          },
+          {
+            "name": "maxAbsLogitX18",
+            "type": "uint256",
+            "internalType": "uint256"
+          },
+          {
+            "name": "conservativePenaltyMaxBps",
+            "type": "uint16",
+            "internalType": "uint16"
+          },
+          {
+            "name": "conservativePenaltyMinBps",
+            "type": "uint16",
+            "internalType": "uint16"
+          }
+        ]
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
     "name": "getRoleAdmin",
     "inputs": [
       {
@@ -164,6 +244,41 @@ export const ProtocolConfigAbi = [
         "name": "",
         "type": "bytes32",
         "internalType": "bytes32"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "getSlashConfig",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "cfg",
+        "type": "tuple",
+        "internalType": "struct RatingLib.SlashConfig",
+        "components": [
+          {
+            "name": "slashThresholdBps",
+            "type": "uint16",
+            "internalType": "uint16"
+          },
+          {
+            "name": "minSlashSettledRounds",
+            "type": "uint16",
+            "internalType": "uint16"
+          },
+          {
+            "name": "minSlashLowDuration",
+            "type": "uint48",
+            "internalType": "uint48"
+          },
+          {
+            "name": "minSlashEvidence",
+            "type": "uint256",
+            "internalType": "uint256"
+          }
+        ]
       }
     ],
     "stateMutability": "view"
@@ -260,6 +375,79 @@ export const ProtocolConfigAbi = [
         "name": "",
         "type": "address",
         "internalType": "address"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "ratingConfig",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "smoothingAlpha",
+        "type": "uint256",
+        "internalType": "uint256"
+      },
+      {
+        "name": "smoothingBeta",
+        "type": "uint256",
+        "internalType": "uint256"
+      },
+      {
+        "name": "observationBetaX18",
+        "type": "uint256",
+        "internalType": "uint256"
+      },
+      {
+        "name": "confidenceMassInitial",
+        "type": "uint256",
+        "internalType": "uint256"
+      },
+      {
+        "name": "confidenceMassMin",
+        "type": "uint256",
+        "internalType": "uint256"
+      },
+      {
+        "name": "confidenceMassMax",
+        "type": "uint256",
+        "internalType": "uint256"
+      },
+      {
+        "name": "confidenceGainBps",
+        "type": "uint16",
+        "internalType": "uint16"
+      },
+      {
+        "name": "confidenceReopenBps",
+        "type": "uint16",
+        "internalType": "uint16"
+      },
+      {
+        "name": "surpriseReferenceX18",
+        "type": "uint256",
+        "internalType": "uint256"
+      },
+      {
+        "name": "maxDeltaLogitX18",
+        "type": "uint256",
+        "internalType": "uint256"
+      },
+      {
+        "name": "maxAbsLogitX18",
+        "type": "uint256",
+        "internalType": "uint256"
+      },
+      {
+        "name": "conservativePenaltyMaxBps",
+        "type": "uint16",
+        "internalType": "uint16"
+      },
+      {
+        "name": "conservativePenaltyMinBps",
+        "type": "uint16",
+        "internalType": "uint16"
       }
     ],
     "stateMutability": "view"
@@ -418,6 +606,79 @@ export const ProtocolConfigAbi = [
   },
   {
     "type": "function",
+    "name": "setRatingConfig",
+    "inputs": [
+      {
+        "name": "smoothingAlpha",
+        "type": "uint256",
+        "internalType": "uint256"
+      },
+      {
+        "name": "smoothingBeta",
+        "type": "uint256",
+        "internalType": "uint256"
+      },
+      {
+        "name": "observationBetaX18",
+        "type": "uint256",
+        "internalType": "uint256"
+      },
+      {
+        "name": "confidenceMassInitial",
+        "type": "uint256",
+        "internalType": "uint256"
+      },
+      {
+        "name": "confidenceMassMin",
+        "type": "uint256",
+        "internalType": "uint256"
+      },
+      {
+        "name": "confidenceMassMax",
+        "type": "uint256",
+        "internalType": "uint256"
+      },
+      {
+        "name": "confidenceGainBps",
+        "type": "uint16",
+        "internalType": "uint16"
+      },
+      {
+        "name": "confidenceReopenBps",
+        "type": "uint16",
+        "internalType": "uint16"
+      },
+      {
+        "name": "surpriseReferenceX18",
+        "type": "uint256",
+        "internalType": "uint256"
+      },
+      {
+        "name": "maxDeltaLogitX18",
+        "type": "uint256",
+        "internalType": "uint256"
+      },
+      {
+        "name": "maxAbsLogitX18",
+        "type": "uint256",
+        "internalType": "uint256"
+      },
+      {
+        "name": "conservativePenaltyMaxBps",
+        "type": "uint16",
+        "internalType": "uint16"
+      },
+      {
+        "name": "conservativePenaltyMinBps",
+        "type": "uint16",
+        "internalType": "uint16"
+      }
+    ],
+    "outputs": [],
+    "stateMutability": "nonpayable"
+  },
+  {
+    "type": "function",
     "name": "setRevealGracePeriod",
     "inputs": [
       {
@@ -437,6 +698,34 @@ export const ProtocolConfigAbi = [
         "name": "value",
         "type": "address",
         "internalType": "address"
+      }
+    ],
+    "outputs": [],
+    "stateMutability": "nonpayable"
+  },
+  {
+    "type": "function",
+    "name": "setSlashConfig",
+    "inputs": [
+      {
+        "name": "slashThresholdBps",
+        "type": "uint16",
+        "internalType": "uint16"
+      },
+      {
+        "name": "minSlashSettledRounds",
+        "type": "uint16",
+        "internalType": "uint16"
+      },
+      {
+        "name": "minSlashLowDuration",
+        "type": "uint48",
+        "internalType": "uint48"
+      },
+      {
+        "name": "minSlashEvidence",
+        "type": "uint256",
+        "internalType": "uint256"
       }
     ],
     "outputs": [],
@@ -467,6 +756,34 @@ export const ProtocolConfigAbi = [
     ],
     "outputs": [],
     "stateMutability": "nonpayable"
+  },
+  {
+    "type": "function",
+    "name": "slashConfig",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "slashThresholdBps",
+        "type": "uint16",
+        "internalType": "uint16"
+      },
+      {
+        "name": "minSlashSettledRounds",
+        "type": "uint16",
+        "internalType": "uint16"
+      },
+      {
+        "name": "minSlashLowDuration",
+        "type": "uint48",
+        "internalType": "uint48"
+      },
+      {
+        "name": "minSlashEvidence",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "stateMutability": "view"
   },
   {
     "type": "function",
@@ -623,6 +940,91 @@ export const ProtocolConfigAbi = [
   },
   {
     "type": "event",
+    "name": "RatingConfigUpdated",
+    "inputs": [
+      {
+        "name": "smoothingAlpha",
+        "type": "uint256",
+        "indexed": false,
+        "internalType": "uint256"
+      },
+      {
+        "name": "smoothingBeta",
+        "type": "uint256",
+        "indexed": false,
+        "internalType": "uint256"
+      },
+      {
+        "name": "observationBetaX18",
+        "type": "uint256",
+        "indexed": false,
+        "internalType": "uint256"
+      },
+      {
+        "name": "confidenceMassInitial",
+        "type": "uint256",
+        "indexed": false,
+        "internalType": "uint256"
+      },
+      {
+        "name": "confidenceMassMin",
+        "type": "uint256",
+        "indexed": false,
+        "internalType": "uint256"
+      },
+      {
+        "name": "confidenceMassMax",
+        "type": "uint256",
+        "indexed": false,
+        "internalType": "uint256"
+      },
+      {
+        "name": "confidenceGainBps",
+        "type": "uint16",
+        "indexed": false,
+        "internalType": "uint16"
+      },
+      {
+        "name": "confidenceReopenBps",
+        "type": "uint16",
+        "indexed": false,
+        "internalType": "uint16"
+      },
+      {
+        "name": "surpriseReferenceX18",
+        "type": "uint256",
+        "indexed": false,
+        "internalType": "uint256"
+      },
+      {
+        "name": "maxDeltaLogitX18",
+        "type": "uint256",
+        "indexed": false,
+        "internalType": "uint256"
+      },
+      {
+        "name": "maxAbsLogitX18",
+        "type": "uint256",
+        "indexed": false,
+        "internalType": "uint256"
+      },
+      {
+        "name": "conservativePenaltyMaxBps",
+        "type": "uint16",
+        "indexed": false,
+        "internalType": "uint16"
+      },
+      {
+        "name": "conservativePenaltyMinBps",
+        "type": "uint16",
+        "indexed": false,
+        "internalType": "uint16"
+      }
+    ],
+    "anonymous": false
+  },
+  {
+    "type": "event",
     "name": "RevealGracePeriodUpdated",
     "inputs": [
       {
@@ -718,6 +1120,37 @@ export const ProtocolConfigAbi = [
         "type": "address",
         "indexed": true,
         "internalType": "address"
+      }
+    ],
+    "anonymous": false
+  },
+  {
+    "type": "event",
+    "name": "SlashConfigUpdated",
+    "inputs": [
+      {
+        "name": "slashThresholdBps",
+        "type": "uint16",
+        "indexed": false,
+        "internalType": "uint16"
+      },
+      {
+        "name": "minSlashSettledRounds",
+        "type": "uint16",
+        "indexed": false,
+        "internalType": "uint16"
+      },
+      {
+        "name": "minSlashLowDuration",
+        "type": "uint48",
+        "indexed": false,
+        "internalType": "uint48"
+      },
+      {
+        "name": "minSlashEvidence",
+        "type": "uint256",
+        "indexed": false,
+        "internalType": "uint256"
       }
     ],
     "anonymous": false

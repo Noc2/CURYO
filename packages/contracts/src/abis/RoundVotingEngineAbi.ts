@@ -199,11 +199,6 @@ export const RoundVotingEngineAbi = [
         "internalType": "uint256"
       },
       {
-        "name": "roundReferenceRatingBps",
-        "type": "uint16",
-        "internalType": "uint16"
-      },
-      {
         "name": "targetRound",
         "type": "uint64",
         "internalType": "uint64"
@@ -245,6 +240,11 @@ export const RoundVotingEngineAbi = [
         "name": "contentId",
         "type": "uint256",
         "internalType": "uint256"
+      },
+      {
+        "name": "roundReferenceRatingBps",
+        "type": "uint16",
+        "internalType": "uint16"
       },
       {
         "name": "targetRound",
@@ -475,25 +475,6 @@ export const RoundVotingEngineAbi = [
   },
   {
     "type": "function",
-    "name": "previewCommitReferenceRatingBps",
-    "inputs": [
-      {
-        "name": "contentId",
-        "type": "uint256",
-        "internalType": "uint256"
-      }
-    ],
-    "outputs": [
-      {
-        "name": "",
-        "type": "uint16",
-        "internalType": "uint16"
-      }
-    ],
-    "stateMutability": "view"
-  },
-  {
-    "type": "function",
     "name": "hasRole",
     "inputs": [
       {
@@ -671,6 +652,25 @@ export const RoundVotingEngineAbi = [
         "name": "",
         "type": "uint256",
         "internalType": "uint256"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "previewCommitReferenceRatingBps",
+    "inputs": [
+      {
+        "name": "contentId",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "",
+        "type": "uint16",
+        "internalType": "uint16"
       }
     ],
     "stateMutability": "view"
@@ -976,6 +976,114 @@ export const RoundVotingEngineAbi = [
         "name": "",
         "type": "uint256",
         "internalType": "uint256"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "roundRatingConfigSnapshot",
+    "inputs": [
+      {
+        "name": "",
+        "type": "uint256",
+        "internalType": "uint256"
+      },
+      {
+        "name": "",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "smoothingAlpha",
+        "type": "uint256",
+        "internalType": "uint256"
+      },
+      {
+        "name": "smoothingBeta",
+        "type": "uint256",
+        "internalType": "uint256"
+      },
+      {
+        "name": "observationBetaX18",
+        "type": "uint256",
+        "internalType": "uint256"
+      },
+      {
+        "name": "confidenceMassInitial",
+        "type": "uint256",
+        "internalType": "uint256"
+      },
+      {
+        "name": "confidenceMassMin",
+        "type": "uint256",
+        "internalType": "uint256"
+      },
+      {
+        "name": "confidenceMassMax",
+        "type": "uint256",
+        "internalType": "uint256"
+      },
+      {
+        "name": "confidenceGainBps",
+        "type": "uint16",
+        "internalType": "uint16"
+      },
+      {
+        "name": "confidenceReopenBps",
+        "type": "uint16",
+        "internalType": "uint16"
+      },
+      {
+        "name": "surpriseReferenceX18",
+        "type": "uint256",
+        "internalType": "uint256"
+      },
+      {
+        "name": "maxDeltaLogitX18",
+        "type": "uint256",
+        "internalType": "uint256"
+      },
+      {
+        "name": "maxAbsLogitX18",
+        "type": "uint256",
+        "internalType": "uint256"
+      },
+      {
+        "name": "conservativePenaltyMaxBps",
+        "type": "uint16",
+        "internalType": "uint16"
+      },
+      {
+        "name": "conservativePenaltyMinBps",
+        "type": "uint16",
+        "internalType": "uint16"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "roundReferenceRatingBpsSnapshot",
+    "inputs": [
+      {
+        "name": "",
+        "type": "uint256",
+        "internalType": "uint256"
+      },
+      {
+        "name": "",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "",
+        "type": "uint16",
+        "internalType": "uint16"
       }
     ],
     "stateMutability": "view"
@@ -1540,6 +1648,31 @@ export const RoundVotingEngineAbi = [
   },
   {
     "type": "event",
+    "name": "RoundReferenceSnapshotted",
+    "inputs": [
+      {
+        "name": "contentId",
+        "type": "uint256",
+        "indexed": true,
+        "internalType": "uint256"
+      },
+      {
+        "name": "roundId",
+        "type": "uint256",
+        "indexed": true,
+        "internalType": "uint256"
+      },
+      {
+        "name": "roundReferenceRatingBps",
+        "type": "uint16",
+        "indexed": false,
+        "internalType": "uint16"
+      }
+    ],
+    "anonymous": false
+  },
+  {
+    "type": "event",
     "name": "RoundRevealFailed",
     "inputs": [
       {
@@ -1672,6 +1805,12 @@ export const RoundVotingEngineAbi = [
         "type": "bytes32",
         "indexed": false,
         "internalType": "bytes32"
+      },
+      {
+        "name": "roundReferenceRatingBps",
+        "type": "uint16",
+        "indexed": false,
+        "internalType": "uint16"
       },
       {
         "name": "targetRound",
@@ -1874,6 +2013,11 @@ export const RoundVotingEngineAbi = [
   {
     "type": "error",
     "name": "ReentrancyGuardReentrantCall",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "ReferenceRatingMismatch",
     "inputs": []
   },
   {
