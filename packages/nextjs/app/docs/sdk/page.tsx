@@ -62,12 +62,12 @@ import {
 });
 
 const stats = await curyo.read.getStats();
-const content = await curyo.read.searchContent({
+const { items: contentItems } = await curyo.read.searchContent({
   sortBy: "most_votes",
   limit: 12,
 });
 
-const frontend = await curyo.read.getFrontend(
+const { frontend } = await curyo.read.getFrontend(
   "0x1234567890123456789012345678901234567890",
 );`}</code>
       </pre>
@@ -83,12 +83,14 @@ const frontend = await curyo.read.getFrontend(
         enforce the new metadata bindings on-chain.
       </p>
       <pre className="bg-base-200 p-4 rounded-lg overflow-x-auto">
-        <code>{`const commit = await buildCommitVoteParams({
+        <code>{`const { content } = await curyo.read.getContent("42");
+
+const commit = await buildCommitVoteParams({
   contentId: 42n,
   isUp: true,
   stakeAmount: 2.5,
   epochDuration: 20 * 60,
-  roundReferenceRatingBps: content.openRound?.referenceRatingBps ?? BigInt(content.ratingBps ?? 5000),
+  roundReferenceRatingBps: content.openRound?.referenceRatingBps ?? content.ratingBps ?? 5000,
   defaultFrontendCode: curyo.config.frontendCode,
 });
 

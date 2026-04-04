@@ -118,9 +118,10 @@ const FrontendCodes: NextPage = () => {
     stakeAmount,
     abi.encode(
         contentId,
+        roundReferenceRatingBps,
         commitHash,
         ciphertext,
-        frontendAddress, // Your registered frontend address
+        frontend, // Your registered frontend address
         targetRound,
         drandChainHash
     )
