@@ -43,7 +43,8 @@ export const landingFaqItems: LandingFaqItem[] = [
   },
   {
     question: "How is the final rating decided?",
-    answer: `Every item starts at 50 and updates only when a round settles from the revealed up and down stake imbalance.`,
+    answer:
+      "In the redeployed rating model, each round asks whether the current displayed score is too low or too high. The next score updates from that round anchor using epoch-weighted evidence and confidence, instead of being recomputed from scratch.",
     learnMoreHref: "/docs/how-it-works",
     learnMoreLabel: "Rating Formula",
   },
