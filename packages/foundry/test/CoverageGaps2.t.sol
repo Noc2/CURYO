@@ -1380,7 +1380,6 @@ contract CuryoReputationCoverageTest is Test {
     function setUp() public {
         vm.startPrank(admin);
         crep = new CuryoReputation(admin, governance);
-        crep.grantRole(crep.MINTER_ROLE(), admin);
         crep.setGovernor(governor);
         crep.setContentVotingContracts(votingEngine, contentRegistry);
         crep.mint(user1, 10_000e6);
