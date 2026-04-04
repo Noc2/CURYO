@@ -1,69 +1,58 @@
 import { contentModerationPolicy } from "@curyo/node-utils/contentModeration";
-import { category, content } from "ponder:schema";
-import { eq, or, sql } from "ponder";
+import { or, sql } from "ponder";
 import { buildAsciiWordBoundaryPattern, buildSubdomainLikePattern } from "./moderationPatterns.js";
 
-type SqlBoolean = ReturnType<typeof sql<boolean>>;
-
-function buildOrCondition(conditions: SqlBoolean[]): SqlBoolean {
-  if (conditions.length === 0) {
-    return sql<boolean>`false`;
-  }
-
-  if (conditions.length === 1) {
-    return conditions[0];
-  }
-
-  return or(...conditions) as SqlBoolean;
+function escapeLikeTerm(value: string): string {
+  return value.replace(/[\\%_]/g, "\\$&");
 }
 
-function buildBlockedHostCondition(hostExpression: any): SqlBoolean {
-  const domainConditions = contentModerationPolicy.blockedDomains.flatMap(domain => [
-    eq(hostExpression, domain) as SqlBoolean,
-    sql<boolean>`coalesce(${hostExpression}, '') LIKE ${buildSubdomainLikePattern(domain)}`,
-  ]);
+const blockedTextPattern = buildAsciiWordBoundaryPattern(contentModerationPolicy.blockedTextTerms);
 
-  return buildOrCondition(domainConditions);
+function buildBlockedDomainCondition(hostExpr: unknown) {
+  return or(
+    ...contentModerationPolicy.blockedDomains.flatMap(domain => [
+      sql<boolean>`lower(coalesce(${hostExpr}, '')) = ${domain}`,
+      sql<boolean>`lower(coalesce(${hostExpr}, '')) like ${buildSubdomainLikePattern(domain)}`,
+    ]),
+  );
 }
 
-function buildBlockedUrlTermCondition(urlExpression: any): SqlBoolean {
-  const urlTermConditions = contentModerationPolicy.blockedUrlTerms.map(term =>
-    sql<boolean>`lower(coalesce(${urlExpression}, '')) LIKE ${`%${term.toLowerCase()}%`}`,
+function buildBlockedUrlTermCondition(urlExpr: unknown) {
+  return or(
+    ...contentModerationPolicy.blockedUrlTerms.map(term =>
+      sql<boolean>`lower(coalesce(${urlExpr}, '')) like ${`%${escapeLikeTerm(term)}%`} escape '\\'`,
+    ),
+  );
+}
+
+function buildBlockedTextCondition(textExpr: unknown) {
+  return sql<boolean>`coalesce(${textExpr}, '') ~* ${blockedTextPattern}`;
+}
+
+export function buildAllowedContentCondition(fields: {
+  canonicalUrl: unknown;
+  description: unknown;
+  tags: unknown;
+  title: unknown;
+  url: unknown;
+  urlHost: unknown;
+}) {
+  const blockedCondition = or(
+    buildBlockedDomainCondition(fields.urlHost),
+    buildBlockedUrlTermCondition(fields.url),
+    buildBlockedUrlTermCondition(fields.canonicalUrl),
+    buildBlockedTextCondition(fields.title),
+    buildBlockedTextCondition(fields.description),
+    buildBlockedTextCondition(fields.tags),
   );
 
-  return buildOrCondition(urlTermConditions);
+  return sql<boolean>`not (${blockedCondition})`;
 }
 
-const contentTextPattern = buildAsciiWordBoundaryPattern(contentModerationPolicy.blockedTextTerms);
-
-function buildBlockedTextCondition(textExpression: any): SqlBoolean {
-  return sql<boolean>`coalesce(${textExpression}, '') ~* ${contentTextPattern}`;
-}
-
-export function buildBlockedContentCondition(): SqlBoolean {
-  return buildOrCondition([
-    buildBlockedHostCondition(content.urlHost),
-    buildBlockedUrlTermCondition(content.url),
-    buildBlockedUrlTermCondition(content.canonicalUrl),
-    buildBlockedTextCondition(content.title),
-    buildBlockedTextCondition(content.description),
-    buildBlockedTextCondition(content.tags),
-  ]);
-}
-
-export function buildUnmoderatedContentCondition(): SqlBoolean {
-  const blockedCondition = buildBlockedContentCondition();
-  return sql<boolean>`NOT (${blockedCondition})`;
-}
-
-export function buildBlockedCategoryCondition(): SqlBoolean {
-  return buildOrCondition([
-    buildBlockedHostCondition(category.domain),
-    buildBlockedTextCondition(category.name),
-  ]);
-}
-
-export function buildUnmoderatedCategoryCondition(): SqlBoolean {
-  const blockedCondition = buildBlockedCategoryCondition();
-  return sql<boolean>`NOT (${blockedCondition})`;
+export function buildAllowedCategoryCondition(fields: {
+  domain: unknown;
+  name: unknown;
+}) {
+  const blockedCondition = or(buildBlockedDomainCondition(fields.domain), buildBlockedTextCondition(fields.name));
+  return sql<boolean>`not (${blockedCondition})`;
 }

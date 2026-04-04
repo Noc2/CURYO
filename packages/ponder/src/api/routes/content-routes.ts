@@ -2,6 +2,7 @@ import { ROUND_STATE } from "@curyo/contracts/protocol";
 import { and, asc, desc, eq, inArray, or, sql } from "ponder";
 import { db } from "ponder:api";
 import { category, content, profile, ratingChange, rewardClaim, round, vote } from "ponder:schema";
+import { buildAllowedContentCondition } from "../moderation.js";
 import type { ApiApp } from "../shared.js";
 import { attachOpenRoundSummary, jsonBig, parseBigIntList } from "../shared.js";
 import { getUrlLookupCandidates, isValidAddress, normalizeContentSearchQuery, safeBigInt, safeLimit, safeOffset } from "../utils.js";
@@ -82,7 +83,16 @@ export function registerContentRoutes(app: ApiApp) {
       });
     }
 
-    const conditions = [];
+    const conditions = [
+      buildAllowedContentCondition({
+        canonicalUrl: content.canonicalUrl,
+        description: content.description,
+        tags: content.tags,
+        title: content.title,
+        url: content.url,
+        urlHost: content.urlHost,
+      }),
+    ];
     if (status !== "all") {
       const parsed = parseInt(status);
       if (isNaN(parsed)) return c.json({ error: "Invalid status filter" }, 400);
@@ -156,7 +166,19 @@ export function registerContentRoutes(app: ApiApp) {
     const matches = await db
       .select()
       .from(content)
-      .where(or(inArray(content.canonicalUrl, candidates), inArray(content.url, candidates)))
+      .where(
+        and(
+          or(inArray(content.canonicalUrl, candidates), inArray(content.url, candidates)),
+          buildAllowedContentCondition({
+            canonicalUrl: content.canonicalUrl,
+            description: content.description,
+            tags: content.tags,
+            title: content.title,
+            url: content.url,
+            urlHost: content.urlHost,
+          }),
+        ),
+      )
       .orderBy(desc(content.createdAt))
       .limit(5);
 
@@ -196,7 +218,19 @@ export function registerContentRoutes(app: ApiApp) {
     const [item] = await db
       .select()
       .from(content)
-      .where(eq(content.id, id))
+      .where(
+        and(
+          eq(content.id, id),
+          buildAllowedContentCondition({
+            canonicalUrl: content.canonicalUrl,
+            description: content.description,
+            tags: content.tags,
+            title: content.title,
+            url: content.url,
+            urlHost: content.urlHost,
+          }),
+        ),
+      )
       .limit(1);
 
     if (!item) {
