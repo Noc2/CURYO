@@ -182,6 +182,7 @@ contract DeployCuryo is ScaffoldETHDeploy {
 
         // 8. Wire contracts together (deployer uses temporary config/admin roles where needed)
         registry.setVotingEngine(address(votingEngine));
+        registry.setProtocolConfig(address(votingEngine.protocolConfig()));
         registry.setCategoryRegistry(address(categoryRegistry));
         ProtocolConfig(address(votingEngine.protocolConfig())).setRewardDistributor(address(rewardDistributor));
         ProtocolConfig(address(votingEngine.protocolConfig())).setFrontendRegistry(address(frontendRegistry));
