@@ -1071,8 +1071,8 @@ contract ContentRegistry is Initializable, AccessControlUpgradeable, PausableUpg
             return DEFAULT_CONFIDENCE_MASS_INITIAL;
         }
 
-        RatingLib.RatingConfig memory ratingConfig = protocolConfig.getRatingConfig();
-        return ratingConfig.confidenceMassInitial == 0 ? DEFAULT_CONFIDENCE_MASS_INITIAL : ratingConfig.confidenceMassInitial;
+        uint256 initialConfidenceMass = protocolConfig.getInitialConfidenceMass();
+        return initialConfidenceMass == 0 ? DEFAULT_CONFIDENCE_MASS_INITIAL : initialConfidenceMass;
     }
 
     function _getCurrentSlashConfig() internal view returns (RatingLib.SlashConfig memory slashConfig) {

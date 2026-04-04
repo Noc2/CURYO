@@ -208,6 +208,10 @@ contract ProtocolConfig is Initializable, AccessControl {
         cfg = ratingConfig;
     }
 
+    function getInitialConfidenceMass() external view returns (uint256) {
+        return ratingConfig.confidenceMassInitial;
+    }
+
     function getSlashConfig() external view returns (RatingLib.SlashConfig memory cfg) {
         cfg = slashConfig;
     }
