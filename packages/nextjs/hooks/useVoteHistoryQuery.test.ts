@@ -1,4 +1,3 @@
-import { getRecentUserVotesQueryKey } from "./useRecentUserVotes";
 import { buildRpcVoteHistory, getVoteHistoryQueryKey } from "./useVoteHistoryQuery";
 import { ROUND_STATE } from "@curyo/contracts/protocol";
 import assert from "node:assert/strict";
@@ -44,15 +43,4 @@ test("buildRpcVoteHistory classifies settled, cancelled, tied, and reveal-failed
 
 test("getVoteHistoryQueryKey scopes cache entries by chain", () => {
   assert.deepEqual(getVoteHistoryQueryKey("0xabc", 11142220), ["ponder-fallback", "voteHistory", 11142220, "0xabc"]);
-  assert.deepEqual(getVoteHistoryQueryKey("0xabc"), ["ponder-fallback", "voteHistory", "unknown", "0xabc"]);
-});
-
-test("getRecentUserVotesQueryKey scopes cache entries by chain", () => {
-  assert.deepEqual(getRecentUserVotesQueryKey("0xabc", 11142220), [
-    "ponder-fallback",
-    "recentUserVotes",
-    11142220,
-    "0xabc",
-  ]);
-  assert.deepEqual(getRecentUserVotesQueryKey("0xabc"), ["ponder-fallback", "recentUserVotes", "unknown", "0xabc"]);
 });

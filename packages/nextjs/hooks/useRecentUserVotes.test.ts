@@ -9,5 +9,4 @@ test("getRecentUserVotesQueryKey scopes cache entries by chain", () => {
     11142220,
     "0xabc",
   ]);
-  assert.deepEqual(getRecentUserVotesQueryKey("0xabc"), ["ponder-fallback", "recentUserVotes", "unknown", "0xabc"]);
 });

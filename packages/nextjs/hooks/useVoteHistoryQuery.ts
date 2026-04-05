@@ -15,8 +15,12 @@ interface UseVoteHistoryQueryOptions {
   limit?: number;
 }
 
+function normalizeVoter(voter?: string) {
+  return voter?.toLowerCase() ?? null;
+}
+
 export function getVoteHistoryQueryKey(voter?: string, chainId?: number) {
-  return ["ponder-fallback", "voteHistory", chainId ?? "unknown", voter] as const;
+  return ["ponder-fallback", "voteHistory", chainId ?? null, normalizeVoter(voter)] as const;
 }
 
 type VoteHistoryEvent = {
@@ -107,42 +111,48 @@ export function useVoteHistoryQuery(voter?: string, options: UseVoteHistoryQuery
   const rpcFallbackActive = rpcFallbackEnabled && ponderAvailable === false;
   const isPageVisible = usePageVisibility();
   const limit = options.limit && options.limit > 0 ? Math.floor(options.limit) : undefined;
+  const normalizedVoter = normalizeVoter(voter) ?? undefined;
 
   const { data: commitEvents, isLoading: commitsLoading } = useScaffoldEventHistory({
     contractName: "RoundVotingEngine",
     eventName: "VoteCommitted",
+    chainId: targetNetwork.id as any,
     blockData: true,
     filters: { voter },
     watch: rpcFallbackActive && isPageVisible,
-    enabled: rpcFallbackActive && Boolean(voter) && isPageVisible,
+    enabled: rpcFallbackActive && Boolean(normalizedVoter) && isPageVisible,
   } as any);
 
   const { data: settledEvents, isLoading: settledLoading } = useScaffoldEventHistory({
     contractName: "RoundVotingEngine",
     eventName: "RoundSettled",
+    chainId: targetNetwork.id as any,
     watch: rpcFallbackActive && isPageVisible,
-    enabled: rpcFallbackActive && Boolean(voter) && isPageVisible,
+    enabled: rpcFallbackActive && Boolean(normalizedVoter) && isPageVisible,
   } as any);
 
   const { data: cancelledEvents } = useScaffoldEventHistory({
     contractName: "RoundVotingEngine",
     eventName: "RoundCancelled",
+    chainId: targetNetwork.id as any,
     watch: rpcFallbackActive && isPageVisible,
-    enabled: rpcFallbackActive && Boolean(voter) && isPageVisible,
+    enabled: rpcFallbackActive && Boolean(normalizedVoter) && isPageVisible,
   } as any);
 
   const { data: tiedEvents } = useScaffoldEventHistory({
     contractName: "RoundVotingEngine",
     eventName: "RoundTied",
+    chainId: targetNetwork.id as any,
     watch: rpcFallbackActive && isPageVisible,
-    enabled: rpcFallbackActive && Boolean(voter) && isPageVisible,
+    enabled: rpcFallbackActive && Boolean(normalizedVoter) && isPageVisible,
   } as any);
 
   const { data: revealFailedEvents } = useScaffoldEventHistory({
     contractName: "RoundVotingEngine",
     eventName: "RoundRevealFailed",
+    chainId: targetNetwork.id as any,
     watch: rpcFallbackActive && isPageVisible,
-    enabled: rpcFallbackActive && Boolean(voter) && isPageVisible,
+    enabled: rpcFallbackActive && Boolean(normalizedVoter) && isPageVisible,
   } as any);
 
   const rpcVotes = useMemo(() => {
@@ -159,10 +169,10 @@ export function useVoteHistoryQuery(voter?: string, options: UseVoteHistoryQuery
   const rpcVisibleVotes = useMemo(() => (limit === undefined ? rpcVotes : rpcVotes.slice(0, limit)), [limit, rpcVotes]);
 
   const { data: result, isLoading } = usePonderQuery({
-    queryKey: ["voteHistory", targetNetwork.id, voter, limit ?? "all"],
-    enabled: Boolean(voter),
+    queryKey: ["voteHistory", targetNetwork.id, normalizedVoter, limit ?? "all"],
+    enabled: Boolean(normalizedVoter),
     ponderFn: async () => {
-      if (!voter) {
+      if (!normalizedVoter) {
         return {
           votes: [] as VoteHistoryItem[],
           total: 0,
@@ -171,7 +181,7 @@ export function useVoteHistoryQuery(voter?: string, options: UseVoteHistoryQuery
       }
 
       if (limit !== undefined) {
-        const response = await ponderApi.getVotesWindow({ voter, limit: String(limit) });
+        const response = await ponderApi.getVotesWindow({ voter: normalizedVoter, limit: String(limit) });
         const mappedVotes = response.items.map(mapVoteHistoryItem);
         return {
           votes: mappedVotes,
@@ -180,7 +190,7 @@ export function useVoteHistoryQuery(voter?: string, options: UseVoteHistoryQuery
         };
       }
 
-      const votes = await ponderApi.getAllVotes({ voter });
+      const votes = await ponderApi.getAllVotes({ voter: normalizedVoter });
       const mappedVotes = votes.map(mapVoteHistoryItem);
       return {
         votes: mappedVotes,

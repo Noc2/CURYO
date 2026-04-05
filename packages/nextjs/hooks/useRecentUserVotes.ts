@@ -9,7 +9,7 @@ import { usePageVisibility } from "~~/hooks/usePageVisibility";
 import { type PonderVoteItem, ponderApi } from "~~/services/ponder/client";
 
 export function getRecentUserVotesQueryKey(voter?: string, chainId?: number) {
-  return ["ponder-fallback", "recentUserVotes", chainId ?? "unknown", voter] as const;
+  return ["ponder-fallback", "recentUserVotes", chainId, voter] as const;
 }
 
 export function invalidateRecentUserVotes(queryClient: QueryClient, voter?: string, chainId?: number) {

@@ -184,7 +184,7 @@ export function useManualRevealVotes(voter?: Address) {
   }, [pendingVotes]);
 
   const { data: rawVotes, isLoading: isLoadingCommits } = useQuery({
-    queryKey: ["manualRevealVotesOnchain", voter, pendingVoteKey],
+    queryKey: ["manualRevealVotesOnchain", targetNetwork.id, voter, pendingVoteKey],
     enabled: Boolean(voter && publicClient && engineInfo?.address && pendingVotes.length > 0),
     staleTime: 30_000,
     refetchInterval: isPageVisible ? 60_000 : false,
@@ -290,7 +290,7 @@ export function useManualRevealVotes(voter?: Address) {
 
   const refresh = useCallback(async () => {
     await Promise.all([
-      queryClient.invalidateQueries({ queryKey: ["manualRevealVotesOnchain", voter] }),
+      queryClient.invalidateQueries({ queryKey: ["manualRevealVotesOnchain", targetNetwork.id, voter] }),
       invalidateRecentUserVotes(queryClient, voter, targetNetwork.id),
       queryClient.invalidateQueries({ queryKey: ["ponder-fallback", "votingStakes", voter] }),
       queryClient.invalidateQueries({ queryKey: getVoteHistoryQueryKey(voter, targetNetwork.id) }),
