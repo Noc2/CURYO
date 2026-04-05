@@ -61,6 +61,15 @@ test("detects thirdweb sponsorship denials", () => {
   );
 });
 
+test("detects exhausted free transaction denials as sponsorship denials", () => {
+  assert.equal(
+    isThirdwebSponsorshipDeniedError(
+      new Error('Error executing 7702 transaction: {"reason":"Free transactions used up. Add CELO to continue."}'),
+    ),
+    true,
+  );
+});
+
 test("treats exhausted free transactions as eligible for self-funded fallback", () => {
   assert.equal(
     isThirdwebSelfFundedFallbackEligibleError(

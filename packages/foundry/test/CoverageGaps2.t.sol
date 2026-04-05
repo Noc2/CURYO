@@ -966,10 +966,9 @@ contract ContentRegistryCoverageTest is VotingTestBase {
         assertEq(id2, 2);
     }
 
-    // --- cancelContent without bonus pool ---
+    // --- initialize: treasury authority defaults ---
 
-    function test_CancelContentNoBonusPoolReverts() public {
-        // Deploy fresh registry without bonusPool set
+    function test_InitializeDefaultsTreasuryAndBonusPoolToGovernance() public {
         vm.startPrank(admin);
         ContentRegistry impl = new ContentRegistry();
         ContentRegistry reg2 = ContentRegistry(
@@ -979,18 +978,10 @@ contract ContentRegistryCoverageTest is VotingTestBase {
                 )
             )
         );
-        MockCategoryRegistry mockCategoryRegistry2 = new MockCategoryRegistry();
-        mockCategoryRegistry2.seedDefaultTestCategories();
-        reg2.setCategoryRegistry(address(mockCategoryRegistry2));
-        crep.mint(submitter, 100_000e6);
         vm.stopPrank();
 
-        vm.startPrank(submitter);
-        crep.approve(address(reg2), 10e6);
-        uint256 id = _submitContentWithReservation(reg2, "https://example.com/nobonus", "goal", "goal", "tag1", 0);
-        vm.expectRevert("Bonus pool not set");
-        reg2.cancelContent(id);
-        vm.stopPrank();
+        assertEq(reg2.treasury(), admin);
+        assertEq(reg2.bonusPool(), admin);
     }
 
     // --- markDormant: success ---
@@ -1214,10 +1205,9 @@ contract ContentRegistryCoverageTest is VotingTestBase {
         registry.slashSubmitterStake(id);
     }
 
-    // --- slashSubmitterStake: treasury not set ---
+    // --- slashSubmitterStake: initialized treasury authority receives slash ---
 
-    function test_SlashSubmitterStakeNoTreasuryReverts() public {
-        // Deploy fresh registry without treasury
+    function test_SlashSubmitterStakeUsesInitializedTreasury() public {
         vm.startPrank(admin);
         ContentRegistry impl = new ContentRegistry();
         ContentRegistry reg2 = ContentRegistry(
@@ -1227,7 +1217,6 @@ contract ContentRegistryCoverageTest is VotingTestBase {
                 )
             )
         );
-        reg2.setBonusPool(bonusPool);
         MockCategoryRegistry mockCategoryRegistry2 = new MockCategoryRegistry();
         mockCategoryRegistry2.seedDefaultTestCategories();
         reg2.setCategoryRegistry(address(mockCategoryRegistry2));
@@ -1240,8 +1229,28 @@ contract ContentRegistryCoverageTest is VotingTestBase {
         uint256 id = _submitContentWithReservation(reg2, "https://example.com/notreasury", "goal", "goal", "tag1", 0);
         vm.stopPrank();
 
-        vm.expectRevert("Treasury not set");
-        reg2.slashSubmitterStake(id);
+        vm.warp(block.timestamp + 8 days);
+        reg2.updateRatingState(
+            id,
+            1,
+            5_000,
+            RatingLib.RatingState({
+                ratingLogitX18: int128(-1e18),
+                confidenceMass: uint128(400e6),
+                effectiveEvidence: uint128(250e6),
+                settledRounds: 2,
+                ratingBps: 1_500,
+                conservativeRatingBps: 1_200,
+                lastUpdatedAt: uint48(block.timestamp),
+                lowSince: uint48(block.timestamp - 7 days - 1)
+            })
+        );
+
+        uint256 treasuryBefore = crep.balanceOf(admin);
+        uint256 slashed = reg2.slashSubmitterStake(id);
+
+        assertEq(slashed, 10e6);
+        assertEq(crep.balanceOf(admin) - treasuryBefore, 10e6);
     }
 
     // --- View functions ---
@@ -1371,7 +1380,6 @@ contract CuryoReputationCoverageTest is Test {
     function setUp() public {
         vm.startPrank(admin);
         crep = new CuryoReputation(admin, governance);
-        crep.grantRole(crep.MINTER_ROLE(), admin);
         crep.setGovernor(governor);
         crep.setContentVotingContracts(votingEngine, contentRegistry);
         crep.mint(user1, 10_000e6);

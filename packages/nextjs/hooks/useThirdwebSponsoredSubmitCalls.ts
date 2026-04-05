@@ -62,7 +62,7 @@ export function isThirdwebSponsorshipDeniedError(error: unknown) {
     (error as { message?: string; shortMessage?: string } | undefined)?.shortMessage ??
     "";
 
-  return message.toLowerCase().includes("transaction not sponsored");
+  return message.toLowerCase().includes("transaction not sponsored") || isFreeTransactionExhaustedError(error);
 }
 
 export function isThirdwebSelfFundedFallbackEligibleError(error: unknown) {
