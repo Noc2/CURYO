@@ -20,6 +20,7 @@ type SubmitCommandOptions = {
   isUrlSubmittedError?: Error;
   isUrlSubmitted?: boolean;
   previewCategoryId?: bigint;
+  receiptStatusByHash?: Record<string, "success" | "reverted">;
   sources?: Array<{
     categoryId: bigint;
     categoryName: string;
@@ -53,7 +54,9 @@ async function loadSubmitCommand(options: SubmitCommandOptions = {}) {
         throw new Error(`Unexpected readContract: ${functionName}`);
     }
   });
-  const waitForTransactionReceipt = vi.fn().mockResolvedValue({ status: "success" });
+  const waitForTransactionReceipt = vi.fn(async ({ hash }: { hash: string }) => ({
+    status: options.receiptStatusByHash?.[hash] ?? "success",
+  }));
   let submitAttempts = 0;
   const writeContract = vi.fn(async ({ functionName }: { functionName: string }) => {
     if (functionName === "submitContent" && options.submitError && submitAttempts < (options.submitErrorCount ?? 1)) {
@@ -201,6 +204,19 @@ describe("runSubmit", () => {
         args: [ITEM.url, ITEM.title, ITEM.description, ITEM.tags, ITEM.categoryId, FIXED_SALT],
       }),
     );
+    expect(submitCommand.mocks.log.info).toHaveBeenCalledWith(`Processing tmdb item 1/1: "${ITEM.title}"`);
+    expect(submitCommand.mocks.log.info).toHaveBeenCalledWith(
+      `Waiting for reservation receipt for "${ITEM.title}": 0xreserve`,
+    );
+    expect(submitCommand.mocks.log.info).toHaveBeenCalledWith(`Waiting for submit receipt for "${ITEM.title}": 0xsubmit`);
+    expect(submitCommand.mocks.waitForTransactionReceipt).toHaveBeenCalledWith({
+      hash: "0xreserve",
+      timeout: 180_000,
+    });
+    expect(submitCommand.mocks.waitForTransactionReceipt).toHaveBeenCalledWith({
+      hash: "0xsubmit",
+      timeout: 180_000,
+    });
   });
 
   it("reuses an existing submission allowance when it is already sufficient", async () => {
@@ -267,6 +283,28 @@ describe("runSubmit", () => {
       }),
     );
     expect(submitCommand.mocks.log.error).toHaveBeenCalledWith(`Failed to submit "${ITEM.title}": submit failed`);
+  });
+
+  it("cancels the reservation when the submit receipt reverts", async () => {
+    const submitCommand = await loadSubmitCommand({
+      receiptStatusByHash: { "0xsubmit": "reverted" },
+    });
+
+    await submitCommand.runSubmit();
+
+    expect(submitCommand.mocks.writeContract).toHaveBeenNthCalledWith(
+      4,
+      expect.objectContaining({
+        functionName: "cancelReservedSubmission",
+        args: [buildExpectedRevealCommitment()],
+      }),
+    );
+    expect(submitCommand.mocks.log.info).toHaveBeenCalledWith(
+      `Waiting for cancel reservation receipt for "${ITEM.title}": 0xcancel`,
+    );
+    expect(submitCommand.mocks.log.error).toHaveBeenCalledWith(
+      `Failed to submit "${ITEM.title}": submit transaction reverted: 0xsubmit`,
+    );
   });
 
   it("retries once when the reservation is still too new", async () => {
