@@ -8,12 +8,44 @@ import { getRevertReason } from "./revert-utils.js";
 
 const ZERO_ADDRESS = "0x0000000000000000000000000000000000000000" as const;
 const PROTOCOL_FRONTEND_FEE_DISPOSITION = 2;
+const nextHistoricalRoundByContent = new Map<string, bigint>();
 
 interface FrontendFeeSweepResult {
   frontendAddress: `0x${string}`;
   roundsClaimed: number;
   withdrawals: number;
   withdrawnAmount: bigint;
+}
+
+function getRoundIdsToScan(contentId: bigint, latestRoundId: bigint, lookbackRounds: bigint) {
+  const roundIds: bigint[] = [];
+  const recentStartRoundId = latestRoundId > lookbackRounds ? latestRoundId - lookbackRounds + 1n : 1n;
+  const historicalUpperBound = recentStartRoundId > 1n ? recentStartRoundId - 1n : 0n;
+  const cursorKey = contentId.toString();
+  const nextHistoricalRoundId = nextHistoricalRoundByContent.get(cursorKey) ?? 1n;
+
+  if (nextHistoricalRoundId <= historicalUpperBound) {
+    const historicalEndRoundId =
+      nextHistoricalRoundId + lookbackRounds - 1n < historicalUpperBound
+        ? nextHistoricalRoundId + lookbackRounds - 1n
+        : historicalUpperBound;
+
+    for (let roundId = nextHistoricalRoundId; roundId <= historicalEndRoundId; roundId++) {
+      roundIds.push(roundId);
+    }
+
+    nextHistoricalRoundByContent.set(cursorKey, historicalEndRoundId + 1n);
+  }
+
+  for (let roundId = recentStartRoundId; roundId <= latestRoundId; roundId++) {
+    roundIds.push(roundId);
+  }
+
+  return roundIds;
+}
+
+export function resetFrontendFeeSweepStateForTests() {
+  nextHistoricalRoundByContent.clear();
 }
 
 export async function claimConfiguredFrontendFees(
@@ -69,7 +101,7 @@ export async function claimConfiguredFrontendFees(
   }
 
   let roundsClaimed = 0;
-  const lookbackRounds = BigInt(config.frontendFees.lookbackRounds);
+  const lookbackRounds = BigInt(Math.max(1, config.frontendFees.lookbackRounds));
 
   for (let contentId = 1n; contentId < nextContentId; contentId++) {
     let latestRoundId: bigint;
@@ -83,9 +115,7 @@ export async function claimConfiguredFrontendFees(
       continue;
     }
 
-    const startRoundId = latestRoundId > lookbackRounds ? latestRoundId - lookbackRounds + 1n : 1n;
-
-    for (let roundId = startRoundId; roundId <= latestRoundId; roundId++) {
+    for (const roundId of getRoundIdsToScan(contentId, latestRoundId, lookbackRounds)) {
       try {
         const round = await readRound(publicClient, config.contracts.votingEngine, contentId, roundId);
         if (round.state !== RoundState.Settled) {
