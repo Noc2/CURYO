@@ -11,8 +11,10 @@ import { RoundRevealedBreakdown, RoundStats } from "~~/components/shared/RoundSt
 import { InfoTooltip } from "~~/components/ui/InfoTooltip";
 import type { ContentOpenRoundSummary } from "~~/hooks/contentFeed/shared";
 import { useScaffoldReadContract } from "~~/hooks/scaffold-eth";
+import { useParticipationRate } from "~~/hooks/useParticipationRate";
 import { useRoundSnapshot } from "~~/hooks/useRoundSnapshot";
 import { formatVoteCooldownRemaining } from "~~/lib/vote/cooldown";
+import { formatCrepAmount, getRoundProgressMessaging } from "~~/lib/vote/voteIncentives";
 import { computeVoteProgressIconCounts } from "~~/lib/vote/voteProgressIcons";
 
 interface VotingQuestionCardProps {
@@ -33,6 +35,100 @@ interface VotingQuestionCardProps {
 
 const RATING_GUIDANCE_TEXT =
   "The community score runs from 0.0 to 10.0, where higher means better. Vote up when content deserves a better score and vote down when it deserves a worse one. Always vote down illegal, broken, or misdescribed content.";
+
+type ActivityTone = "primary" | "warning" | "success" | "neutral";
+
+function getActivityToneClassName(tone: ActivityTone) {
+  switch (tone) {
+    case "primary":
+      return "bg-primary/12 text-primary";
+    case "warning":
+      return "bg-warning/12 text-warning";
+    case "success":
+      return "bg-success/12 text-success";
+    case "neutral":
+    default:
+      return "bg-base-content/[0.06] text-base-content/72";
+  }
+}
+
+function LiveRoundActivity({ snapshot, compact }: { snapshot: ReturnType<typeof useRoundSnapshot>; compact: boolean }) {
+  const { ratePercent, calculateBonus } = useParticipationRate();
+  const progress = getRoundProgressMessaging(snapshot, ratePercent);
+  const exampleBonus = calculateBonus(5);
+  const detailCopy =
+    snapshot.phase !== "voting"
+      ? snapshot.hasRound
+        ? `${formatCrepAmount(snapshot.totalStake)} cREP locked in the last round.`
+        : "A new round forms with the next vote."
+      : snapshot.isEpoch1
+        ? exampleBonus != null
+          ? `Example bonus: +${exampleBonus.toLocaleString(undefined, { maximumFractionDigits: 1 })} cREP on 5 cREP.`
+          : "Loading blind-phase participation bonus."
+        : `${formatCrepAmount(snapshot.totalStake)} cREP active · ${snapshot.votersNeeded > 0 ? `${snapshot.votersNeeded} more vote${snapshot.votersNeeded === 1 ? "" : "s"} to settle.` : "Settlement threshold is in reach."}`;
+  const supportCopy =
+    snapshot.phase !== "voting"
+      ? "Check the round details below for the settled breakdown and history."
+      : snapshot.isEpoch1
+        ? "Votes stay hidden until reveal, so early signal stays private while keeping full weight."
+        : "Revealed signal is live now. Open votes use informed weight, but they can still help close the round.";
+
+  return (
+    <div
+      className={`rounded-[1.3rem] bg-base-content/[0.04] ring-1 ring-base-content/8 ${
+        compact ? "px-3 py-3" : "px-3.5 py-3.5"
+      }`}
+    >
+      <div className="flex flex-wrap items-start justify-between gap-2">
+        <div>
+          <p className="text-[0.68rem] font-semibold uppercase tracking-[0.18em] text-base-content/52">
+            Live round activity
+          </p>
+          <p
+            className={`mt-1 text-sm leading-relaxed text-base-content/70 ${compact ? "max-w-none" : "max-w-[18rem]"}`}
+          >
+            {detailCopy}
+          </p>
+        </div>
+        <div className="flex flex-wrap items-center gap-1.5">
+          {progress ? (
+            <span
+              className={`rounded-full px-2.5 py-1 text-xs font-semibold ${getActivityToneClassName(progress.badgeTone)}`}
+            >
+              {progress.badgeLabel}
+            </span>
+          ) : null}
+          {progress?.detailLabel ? (
+            <span
+              className={`rounded-full px-2.5 py-1 text-xs font-medium ${getActivityToneClassName(progress.detailTone)}`}
+            >
+              {progress.detailLabel}
+            </span>
+          ) : null}
+        </div>
+      </div>
+
+      <div className="mt-3 grid grid-cols-3 gap-2">
+        <div className="rounded-[1rem] bg-base-content/[0.04] px-3 py-2">
+          <p className="text-[0.64rem] font-semibold uppercase tracking-[0.16em] text-base-content/40">Committed</p>
+          <p className="mt-1 text-base font-semibold tabular-nums text-base-content">{snapshot.voteCount}</p>
+        </div>
+        <div className="rounded-[1rem] bg-base-content/[0.04] px-3 py-2">
+          <p className="text-[0.64rem] font-semibold uppercase tracking-[0.16em] text-base-content/40">Revealed</p>
+          <p className="mt-1 text-base font-semibold tabular-nums text-base-content">{snapshot.revealedCount}</p>
+        </div>
+        <div className="rounded-[1rem] bg-base-content/[0.04] px-3 py-2">
+          <p className="text-[0.64rem] font-semibold uppercase tracking-[0.16em] text-base-content/40">Staked</p>
+          <p className="mt-1 text-base font-semibold tabular-nums text-base-content">
+            {formatCrepAmount(snapshot.totalStake, 0)}
+          </p>
+        </div>
+      </div>
+
+      <p className="mt-3 text-sm leading-relaxed text-base-content/56">{supportCopy}</p>
+    </div>
+  );
+}
 
 /**
  * Displays the live rating signal and all voting controls in a separate card.
@@ -210,6 +306,7 @@ export function VotingQuestionCard({
         </div>
 
         <div className={`flex shrink-0 flex-col ${footerStackClassName}`}>
+          <LiveRoundActivity snapshot={roundSnapshot} compact={compact} />
           <RoundProgress snapshot={roundSnapshot} />
           <div className={compact ? "pt-0.5" : "pt-1"}>
             <MoreToggleButton

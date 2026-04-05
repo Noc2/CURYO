@@ -9,6 +9,7 @@ import { CategoryFilter } from "~~/components/CategoryFilter";
 import { AppPageShell } from "~~/components/shared/AppPageShell";
 import { StreakCounter } from "~~/components/shared/StreakCounter";
 import { FeedScopeFilter } from "~~/components/vote/FeedScopeFilter";
+import { VoteSignalRail } from "~~/components/vote/VoteSignalRail";
 import { MIN_CONTENT_SEARCH_QUERY_LENGTH, isContentSearchQueryTooShort } from "~~/hooks/contentFeed/shared";
 import { useTargetNetwork } from "~~/hooks/scaffold-eth/useTargetNetwork";
 import { useCategoryPopularity } from "~~/hooks/useCategoryPopularity";
@@ -680,54 +681,6 @@ const HomeInner = () => {
     ],
   );
 
-  const handleConfirmStake = useCallback(
-    async (stakeAmount: number) => {
-      const cooldownSeconds = stakeModalCooldownSeconds;
-      if (cooldownSeconds > 0) {
-        notification.info(getVoteCooldownMessage(cooldownSeconds), { duration: 6000 });
-        setStakeModal(prev => ({ ...prev, isOpen: false }));
-        return;
-      }
-
-      const item = displayFeed.find(i => i.id === stakeModal.contentId);
-      const success = await commitVote({
-        contentId: stakeModal.contentId,
-        isUp: stakeModal.isUp,
-        stakeAmount,
-        submitter: item?.submitter,
-      });
-      if (success) {
-        clearVoteError();
-        setStakeModal(prev => ({ ...prev, isOpen: false }));
-        setOptimisticVotedContentIds(previous => {
-          const next = new Set(previous);
-          next.add(stakeModal.contentId.toString());
-          return next;
-        });
-        if (item) {
-          markPrimaryInteraction(item.id);
-          recordRecommendationSignal(item, "vote_commit", { isUp: stakeModal.isUp });
-        }
-        notification.success(`Vote committed! Stake: ${stakeAmount} cREP`);
-        if (isFirstVote) {
-          markVoteCompleted();
-          notification.info("Great first vote! Keep going to build your reputation.", { duration: 5000 });
-        }
-      }
-    },
-    [
-      clearVoteError,
-      commitVote,
-      displayFeed,
-      isFirstVote,
-      markVoteCompleted,
-      markPrimaryInteraction,
-      recordRecommendationSignal,
-      stakeModal,
-      stakeModalCooldownSeconds,
-    ],
-  );
-
   const handleCancelStake = () => {
     clearVoteError();
     setStakeModal(prev => ({ ...prev, isOpen: false }));
@@ -795,6 +748,66 @@ const HomeInner = () => {
       return handleSelectByIndex(nextIndex);
     },
     [activeSourceIndex, displayFeed.length, handleSelectByIndex],
+  );
+
+  const handleConfirmStake = useCallback(
+    async (stakeAmount: number) => {
+      const cooldownSeconds = stakeModalCooldownSeconds;
+      if (cooldownSeconds > 0) {
+        notification.info(getVoteCooldownMessage(cooldownSeconds), { duration: 6000 });
+        setStakeModal(prev => ({ ...prev, isOpen: false }));
+        return;
+      }
+
+      const item = displayFeed.find(i => i.id === stakeModal.contentId);
+      const committedIndex = displayFeed.findIndex(i => i.id === stakeModal.contentId);
+      const success = await commitVote({
+        contentId: stakeModal.contentId,
+        isUp: stakeModal.isUp,
+        stakeAmount,
+        submitter: item?.submitter,
+      });
+      if (!success) {
+        return;
+      }
+
+      clearVoteError();
+      setStakeModal(prev => ({ ...prev, isOpen: false }));
+      setOptimisticVotedContentIds(previous => {
+        const next = new Set(previous);
+        next.add(stakeModal.contentId.toString());
+        return next;
+      });
+      if (item) {
+        markPrimaryInteraction(item.id);
+        recordRecommendationSignal(item, "vote_commit", { isUp: stakeModal.isUp });
+      }
+
+      const nextIndex = committedIndex >= 0 ? Math.min(committedIndex + 1, displayFeed.length - 1) : -1;
+      const advanced = nextIndex > committedIndex ? handleSelectByIndex(nextIndex) : false;
+      notification.success(
+        advanced
+          ? `Vote committed! Stake: ${stakeAmount} cREP · next card ready`
+          : `Vote committed! Stake: ${stakeAmount} cREP`,
+      );
+
+      if (isFirstVote) {
+        markVoteCompleted();
+        notification.info("Great first vote! Keep going to build your reputation.", { duration: 5000 });
+      }
+    },
+    [
+      clearVoteError,
+      commitVote,
+      displayFeed,
+      handleSelectByIndex,
+      isFirstVote,
+      markVoteCompleted,
+      markPrimaryInteraction,
+      recordRecommendationSignal,
+      stakeModal,
+      stakeModalCooldownSeconds,
+    ],
   );
 
   const handleToggleWatch = useCallback(
@@ -1015,118 +1028,135 @@ const HomeInner = () => {
   ]);
 
   const showRequestedContentLoading = effectiveRequestedActiveId !== null && requestedContentLoading;
+  const activeViewLabel =
+    viewGroups.flatMap(group => group.options).find(option => option.value === view)?.label ??
+    (activeScope === "all" ? "For You" : "Discover");
 
   return (
-    <AppPageShell>
+    <AppPageShell contentClassName="max-w-[1400px]">
       <VotingGuide />
-      <div
-        className="mb-4 flex shrink-0 flex-wrap items-center gap-2 sm:gap-3 xl:mb-2 xl:flex-nowrap"
-        data-disable-queue-wheel="true"
-      >
-        <CategoryFilter
-          categories={categories}
-          activeCategory={activeCategory}
-          onSelect={selectCategory}
-          pillClassName={(cat, isActive) => {
-            if (cat !== BROKEN_FILTER) return undefined;
-            return isActive
-              ? "bg-warning/20 text-warning border border-warning/40"
-              : "pill-inactive text-warning/70 hover:bg-warning/10";
-          }}
-        />
-        <FeedScopeFilter
-          value={view}
-          groups={viewGroups}
-          onChange={value => {
-            void handleViewChange(value as VoteView);
-          }}
-          label="View"
-        />
-        <div className="shrink-0 flex items-center">
-          <StreakCounter />
-        </div>
-      </div>
-
-      {isSearchMode ? (
-        <div className="mb-5 flex shrink-0 flex-wrap items-center gap-2 xl:mb-3" data-disable-queue-wheel="true">
-          <div className="rounded-full bg-base-200 px-3 py-2 text-sm text-base-content/70">
-            {isShortSearchQuery ? (
-              <span>Keep typing to search. Terms need at least {MIN_CONTENT_SEARCH_QUERY_LENGTH} characters.</span>
-            ) : (
-              <>
-                Results for <span className="font-medium text-base-content">&quot;{trimmedSearchQuery}&quot;</span>
-              </>
-            )}
+      <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_22rem] xl:items-start">
+        <div className="order-2 min-w-0 xl:order-1">
+          <div
+            className="mb-4 flex shrink-0 flex-wrap items-center gap-2 sm:gap-3 xl:mb-3 xl:flex-nowrap"
+            data-disable-queue-wheel="true"
+          >
+            <CategoryFilter
+              categories={categories}
+              activeCategory={activeCategory}
+              onSelect={selectCategory}
+              pillClassName={(cat, isActive) => {
+                if (cat !== BROKEN_FILTER) return undefined;
+                return isActive
+                  ? "bg-warning/20 text-warning border border-warning/40"
+                  : "pill-inactive text-warning/70 hover:bg-warning/10";
+              }}
+            />
+            <FeedScopeFilter
+              value={view}
+              groups={viewGroups}
+              onChange={value => {
+                void handleViewChange(value as VoteView);
+              }}
+              label="View"
+            />
+            <div className="shrink-0 flex items-center xl:hidden">
+              <StreakCounter />
+            </div>
           </div>
-          {!isShortSearchQuery ? (
-            <>
-              <label htmlFor="vote-search-sort" className="sr-only">
-                Sort search results
-              </label>
-              <select
-                id="vote-search-sort"
-                name="vote-search-sort"
-                value={effectiveSearchSortBy}
-                onChange={e => setSortBy(e.target.value as SearchSortOption)}
-                className="select select-sm bg-base-200 text-base font-medium border-none focus:outline-none w-auto"
-                aria-label="Sort search results"
-              >
-                {SEARCH_SORT_OPTIONS.map(opt => (
-                  <option key={opt.value} value={opt.value}>
-                    {opt.label}
-                  </option>
-                ))}
-              </select>
-            </>
+
+          {isSearchMode ? (
+            <div className="mb-5 flex shrink-0 flex-wrap items-center gap-2 xl:mb-3" data-disable-queue-wheel="true">
+              <div className="rounded-full bg-base-200 px-3 py-2 text-sm text-base-content/70">
+                {isShortSearchQuery ? (
+                  <span>Keep typing to search. Terms need at least {MIN_CONTENT_SEARCH_QUERY_LENGTH} characters.</span>
+                ) : (
+                  <>
+                    Results for <span className="font-medium text-base-content">&quot;{trimmedSearchQuery}&quot;</span>
+                  </>
+                )}
+              </div>
+              {!isShortSearchQuery ? (
+                <>
+                  <label htmlFor="vote-search-sort" className="sr-only">
+                    Sort search results
+                  </label>
+                  <select
+                    id="vote-search-sort"
+                    name="vote-search-sort"
+                    value={effectiveSearchSortBy}
+                    onChange={e => setSortBy(e.target.value as SearchSortOption)}
+                    className="select select-sm bg-base-200 text-base font-medium border-none focus:outline-none w-auto"
+                    aria-label="Sort search results"
+                  >
+                    {SEARCH_SORT_OPTIONS.map(opt => (
+                      <option key={opt.value} value={opt.value}>
+                        {opt.label}
+                      </option>
+                    ))}
+                  </select>
+                </>
+              ) : null}
+            </div>
           ) : null}
-        </div>
-      ) : null}
 
-      <div className="min-w-0">
-        {/* Main content */}
-        {categoriesLoading ||
-        scopeLoading ||
-        showRequestedContentLoading ||
-        (effectiveRequestedActiveId === null && isLoading) ? (
-          <div className="flex justify-center py-16 xl:py-10">
-            <span className="loading loading-spinner loading-lg text-primary"></span>
+          <div className="surface-card rounded-[2rem] p-3 sm:p-4 xl:min-h-[calc(100vh-13.5rem)]">
+            <div className="min-w-0 h-full">
+              {/* Main content */}
+              {categoriesLoading ||
+              scopeLoading ||
+              showRequestedContentLoading ||
+              (effectiveRequestedActiveId === null && isLoading) ? (
+                <div className="flex justify-center py-16 xl:py-10">
+                  <span className="loading loading-spinner loading-lg text-primary"></span>
+                </div>
+              ) : displayFeed.length === 0 ? (
+                <div className="py-16 text-center text-base text-base-content/30 xl:py-10">{emptyStateMessage}</div>
+              ) : (
+                <VoteFeedStage
+                  primaryItem={primaryItem}
+                  displayFeed={displayFeed}
+                  queueSourceItems={queueSourceItems}
+                  navigationDirection={navigationDirection}
+                  activeSourceIndex={activeSourceIndex}
+                  loadedCount={visibleCount}
+                  canLoadMore={canLoadMore}
+                  queueStatusByContentId={queueStatusByContentId}
+                  queuePositionMap={queuePositionMap}
+                  enrichedProfiles={enrichedProfiles}
+                  watchedContentIds={watchedContentIds}
+                  votedContentIds={votedContentIds}
+                  followedWallets={followedWallets}
+                  normalizedAddress={normalizedAddress}
+                  address={address}
+                  isCommitting={isCommitting}
+                  voteError={voteError}
+                  isMetadataPrefetchPending={isMetadataPrefetchPending}
+                  primaryItemCooldownSeconds={primaryItemCooldownSeconds}
+                  navigationLocked={stakeModal.isOpen}
+                  isWatchPending={isWatchPending}
+                  isFollowPending={isFollowPending}
+                  onLoadMore={() => setVisibleCount(prev => prev + FEED_PAGE_SIZE)}
+                  onNavigateSelection={handleNavigateSelection}
+                  onSelectByIndex={handleSelectByIndex}
+                  onSelectCard={handleSelectCard}
+                  onVote={handleButtonVote}
+                  onExternalOpen={handleExternalOpen}
+                  onToggleWatch={handleToggleWatch}
+                  onToggleFollow={handleToggleFollow}
+                />
+              )}
+            </div>
           </div>
-        ) : displayFeed.length === 0 ? (
-          <div className="py-16 text-center text-base text-base-content/30 xl:py-10">{emptyStateMessage}</div>
-        ) : (
-          <VoteFeedStage
+        </div>
+        <div className="order-1 min-w-0 xl:order-2">
+          <VoteSignalRail
             primaryItem={primaryItem}
-            displayFeed={displayFeed}
-            queueSourceItems={queueSourceItems}
-            navigationDirection={navigationDirection}
-            activeSourceIndex={activeSourceIndex}
-            loadedCount={visibleCount}
-            canLoadMore={canLoadMore}
-            queueStatusByContentId={queueStatusByContentId}
-            queuePositionMap={queuePositionMap}
-            enrichedProfiles={enrichedProfiles}
-            watchedContentIds={watchedContentIds}
-            votedContentIds={votedContentIds}
-            followedWallets={followedWallets}
-            normalizedAddress={normalizedAddress}
-            address={address}
-            isCommitting={isCommitting}
-            voteError={voteError}
-            isMetadataPrefetchPending={isMetadataPrefetchPending}
-            primaryItemCooldownSeconds={primaryItemCooldownSeconds}
-            navigationLocked={stakeModal.isOpen}
-            isWatchPending={isWatchPending}
-            isFollowPending={isFollowPending}
-            onLoadMore={() => setVisibleCount(prev => prev + FEED_PAGE_SIZE)}
-            onNavigateSelection={handleNavigateSelection}
-            onSelectByIndex={handleSelectByIndex}
-            onSelectCard={handleSelectCard}
-            onVote={handleButtonVote}
-            onExternalOpen={handleExternalOpen}
-            onToggleWatch={handleToggleWatch}
-            onToggleFollow={handleToggleFollow}
+            activeIndex={activeSourceIndex}
+            totalCount={displayFeed.length}
+            viewLabel={activeViewLabel}
           />
-        )}
+        </div>
       </div>
 
       {/* Stake selector modal */}
