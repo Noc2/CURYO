@@ -149,7 +149,7 @@ library RoundSettlementDistributionLib {
     ) private {
         address currentTreasury = protocolConfig.treasury();
         if (currentTreasury != address(0)) {
-            try TokenTransferLib.transfer(crepToken, currentTreasury, treasuryShare) {
+            try TokenTransferLib.safeTransfer(crepToken, currentTreasury, treasuryShare) {
                 emit TreasuryFeeDistributed(contentId, roundId, treasuryShare);
             } catch {
                 roundVoterPool[contentId][roundId] += treasuryShare;
