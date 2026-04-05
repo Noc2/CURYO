@@ -1,4 +1,4 @@
-import { buildRpcVoteHistory } from "./useVoteHistoryQuery";
+import { buildRpcVoteHistory, getVoteHistoryQueryKey } from "./useVoteHistoryQuery";
 import { ROUND_STATE } from "@curyo/contracts/protocol";
 import assert from "node:assert/strict";
 import test from "node:test";
@@ -39,4 +39,9 @@ test("buildRpcVoteHistory classifies settled, cancelled, tied, and reveal-failed
   assert.equal(votes[0]?.committedAt, "1970-01-01T00:01:40.000Z");
   assert.equal(votes[1]?.committedAt, "1970-01-01T00:03:20.000Z");
   assert.equal(votes[3]?.isSettled, true);
+});
+
+test("getVoteHistoryQueryKey scopes cache entries by chain", () => {
+  assert.deepEqual(getVoteHistoryQueryKey("0xabc", 11142220), ["ponder-fallback", "voteHistory", 11142220, "0xabc"]);
+  assert.deepEqual(getVoteHistoryQueryKey("0xabc"), ["ponder-fallback", "voteHistory", "unknown", "0xabc"]);
 });

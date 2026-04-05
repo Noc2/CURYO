@@ -258,8 +258,8 @@ export function useRoundVote() {
         };
       });
       queryClient.invalidateQueries({ queryKey: ["ponder-fallback", "votingStakes", address] });
-      queryClient.invalidateQueries({ queryKey: getRecentUserVotesQueryKey(address) });
-      queryClient.invalidateQueries({ queryKey: getVoteHistoryQueryKey(address) });
+      queryClient.invalidateQueries({ queryKey: getRecentUserVotesQueryKey(address, targetNetwork.id) });
+      queryClient.invalidateQueries({ queryKey: getVoteHistoryQueryKey(address, targetNetwork.id) });
 
       return true;
     } catch (e: any) {

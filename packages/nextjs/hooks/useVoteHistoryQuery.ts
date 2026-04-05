@@ -3,6 +3,7 @@
 import { useMemo } from "react";
 import { ROUND_STATE } from "@curyo/contracts/protocol";
 import { useScaffoldEventHistory } from "~~/hooks/scaffold-eth";
+import { useTargetNetwork } from "~~/hooks/scaffold-eth/useTargetNetwork";
 import { usePageVisibility } from "~~/hooks/usePageVisibility";
 import { usePonderAvailability } from "~~/hooks/usePonderAvailability";
 import { usePonderQuery } from "~~/hooks/usePonderQuery";
@@ -14,8 +15,8 @@ interface UseVoteHistoryQueryOptions {
   limit?: number;
 }
 
-export function getVoteHistoryQueryKey(voter?: string) {
-  return ["ponder-fallback", "voteHistory", voter] as const;
+export function getVoteHistoryQueryKey(voter?: string, chainId?: number) {
+  return ["ponder-fallback", "voteHistory", chainId ?? "unknown", voter] as const;
 }
 
 type VoteHistoryEvent = {
@@ -100,6 +101,7 @@ export function buildRpcVoteHistory(params: {
 }
 
 export function useVoteHistoryQuery(voter?: string, options: UseVoteHistoryQueryOptions = {}) {
+  const { targetNetwork } = useTargetNetwork();
   const rpcFallbackEnabled = publicEnv.rpcFallbackEnabled;
   const ponderAvailable = usePonderAvailability(rpcFallbackEnabled);
   const rpcFallbackActive = rpcFallbackEnabled && ponderAvailable === false;
@@ -157,7 +159,7 @@ export function useVoteHistoryQuery(voter?: string, options: UseVoteHistoryQuery
   const rpcVisibleVotes = useMemo(() => (limit === undefined ? rpcVotes : rpcVotes.slice(0, limit)), [limit, rpcVotes]);
 
   const { data: result, isLoading } = usePonderQuery({
-    queryKey: ["voteHistory", voter, limit ?? "all"],
+    queryKey: ["voteHistory", targetNetwork.id, voter, limit ?? "all"],
     enabled: Boolean(voter),
     ponderFn: async () => {
       if (!voter) {
