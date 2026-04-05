@@ -47,9 +47,21 @@ export class McpWriteServiceError extends Error {
   }
 }
 
+type WriteChainValidationClient = Pick<ReturnType<typeof createPublicClient>, "getChainId">;
+
+export async function validateWriteChainId(expectedChainId: number, client: WriteChainValidationClient) {
+  const rpcChainId = await client.getChainId();
+  if (rpcChainId !== expectedChainId) {
+    throw new McpWriteServiceError(
+      `Configured write RPC reports chain ID ${rpcChainId}, but hosted writes are configured for ${expectedChainId}.`,
+    );
+  }
+}
+
 export class CuryoWriteService {
   private readonly config: WriteConfig;
   private readonly contextCache = new Map<string, ExecutionContext>();
+  private readonly contextPromises = new Map<string, Promise<ExecutionContext>>();
 
   constructor(config: WriteConfig) {
     this.config = config;
@@ -103,7 +115,7 @@ export class CuryoWriteService {
       );
     }
 
-    const context = this.getContext(identityId);
+    const context = await this.getContext(identityId);
     const frontendAddress = params.frontendAddress ?? context.identity.frontendAddress ?? ZERO_ADDRESS;
 
     const hasVoterId = await this.readContract<boolean>(context, {
@@ -299,7 +311,7 @@ export class CuryoWriteService {
       throw new McpWriteServiceError(`Submission host "${submissionHost}" is not allowed by MCP policy`);
     }
 
-    const context = this.getContext(identityId);
+    const context = await this.getContext(identityId);
 
     const hasVoterId = await this.readContract<boolean>(context, {
       address: this.requireContracts().voterIdNFT,
@@ -493,7 +505,7 @@ export class CuryoWriteService {
       dryRun?: boolean;
     },
   ): Promise<Record<string, unknown>> {
-    const context = this.getContext(identityId);
+    const context = await this.getContext(identityId);
     const contentId = BigInt(params.contentId);
     const roundId = BigInt(params.roundId);
     if (contentId <= 0n || roundId <= 0n) {
@@ -537,7 +549,7 @@ export class CuryoWriteService {
       dryRun?: boolean;
     },
   ): Promise<Record<string, unknown>> {
-    const context = this.getContext(identityId);
+    const context = await this.getContext(identityId);
     const contentId = BigInt(params.contentId);
     const roundId = BigInt(params.roundId);
     if (contentId <= 0n || roundId <= 0n) {
@@ -675,46 +687,60 @@ export class CuryoWriteService {
     return identity;
   }
 
-  private getContext(identityId: string): ExecutionContext {
+  private async getContext(identityId: string): Promise<ExecutionContext> {
     const cached = this.contextCache.get(identityId);
     if (cached) {
       return cached;
+    }
+
+    const existingPromise = this.contextPromises.get(identityId);
+    if (existingPromise) {
+      return existingPromise;
     }
 
     if (!this.config.enabled || !this.config.rpcUrl || !this.config.chainId || !this.config.chainName) {
       throw new McpWriteServiceError("Hosted write execution is not configured");
     }
 
-    const identity = this.getIdentity(identityId);
-    const account = resolveAccount(identity);
-    const chain = defineChain({
-      id: this.config.chainId,
-      name: this.config.chainName,
-      nativeCurrency: { name: "CELO", symbol: "CELO", decimals: 18 },
-      rpcUrls: {
-        default: { http: [this.config.rpcUrl] },
-      },
+    const contextPromise = (async () => {
+      const identity = this.getIdentity(identityId);
+      const account = resolveAccount(identity);
+      const chain = defineChain({
+        id: this.config.chainId,
+        name: this.config.chainName,
+        nativeCurrency: { name: "CELO", symbol: "CELO", decimals: 18 },
+        rpcUrls: {
+          default: { http: [this.config.rpcUrl] },
+        },
+      });
+
+      const publicClient = createPublicClient({
+        chain,
+        transport: http(this.config.rpcUrl),
+      });
+      await validateWriteChainId(this.config.chainId, publicClient);
+
+      const walletClient = createWalletClient({
+        account,
+        chain,
+        transport: http(this.config.rpcUrl),
+      });
+
+      const context: ExecutionContext = {
+        account,
+        chain,
+        publicClient,
+        walletClient,
+        identity,
+      };
+      this.contextCache.set(identityId, context);
+      return context;
+    })().finally(() => {
+      this.contextPromises.delete(identityId);
     });
 
-    const publicClient = createPublicClient({
-      chain,
-      transport: http(this.config.rpcUrl),
-    });
-    const walletClient = createWalletClient({
-      account,
-      chain,
-      transport: http(this.config.rpcUrl),
-    });
-
-    const context: ExecutionContext = {
-      account,
-      chain,
-      publicClient,
-      walletClient,
-      identity,
-    };
-    this.contextCache.set(identityId, context);
-    return context;
+    this.contextPromises.set(identityId, contextPromise);
+    return contextPromise;
   }
 
   private async readContract<T>(

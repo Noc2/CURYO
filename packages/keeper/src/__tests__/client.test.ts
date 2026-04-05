@@ -4,6 +4,7 @@ import type { PrivateKeyAccount } from "viem/accounts";
 type KeeperClientOptions = {
   keystoreAccount?: PrivateKeyAccount | null;
   privateKey?: `0x${string}` | undefined;
+  rpcChainId?: number;
 };
 
 function mockPrivateKeyAccount(address: `0x${string}`): PrivateKeyAccount {
@@ -13,7 +14,11 @@ function mockPrivateKeyAccount(address: `0x${string}`): PrivateKeyAccount {
 async function loadKeeperClient(options: KeeperClientOptions = {}) {
   vi.resetModules();
 
-  const createPublicClient = vi.fn(() => ({ kind: "public" }));
+  const mockedPublicClient = {
+    kind: "public",
+    getChainId: vi.fn().mockResolvedValue(options.rpcChainId ?? 11142220),
+  };
+  const createPublicClient = vi.fn(() => mockedPublicClient);
   const createWalletClient = vi.fn(() => ({ kind: "wallet" }));
   const defineChain = vi.fn(chain => chain);
   const http = vi.fn(url => ({ url }));
@@ -49,6 +54,7 @@ async function loadKeeperClient(options: KeeperClientOptions = {}) {
     ...clientModule,
     mocks: {
       createWalletClient,
+      mockedPublicClient,
       getKeystoreAccount,
       privateKeyToAccount,
     },
@@ -102,6 +108,21 @@ describe("keeper client", () => {
       expect.objectContaining({
         account: keystoreAccount,
       }),
+    );
+  });
+
+  it("validates that RPC_URL resolves to the configured chain", async () => {
+    const clientModule = await loadKeeperClient();
+
+    await expect(clientModule.validateKeeperConnectivity()).resolves.toBeUndefined();
+    expect(clientModule.mocks.mockedPublicClient.getChainId).toHaveBeenCalledOnce();
+  });
+
+  it("rejects RPC endpoints on the wrong chain", async () => {
+    const clientModule = await loadKeeperClient({ rpcChainId: 42220 });
+
+    await expect(clientModule.validateKeeperConnectivity()).rejects.toThrow(
+      "RPC_URL reports chain ID 42220, but CHAIN_ID is 11142220.",
     );
   });
 });

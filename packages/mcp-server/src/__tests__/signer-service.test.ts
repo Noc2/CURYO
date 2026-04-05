@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 import type { WriteConfig } from "../config.js";
-import { CuryoWriteService } from "../signer-service.js";
+import { CuryoWriteService, McpWriteServiceError, validateWriteChainId } from "../signer-service.js";
 
 const { createTlockVoteCommitMock } = vi.hoisted(() => ({
   createTlockVoteCommitMock: vi.fn(),
@@ -67,6 +67,24 @@ const mockContext = {
 } as const;
 
 describe("CuryoWriteService", () => {
+  it("rejects hosted write RPC endpoints on the wrong chain", async () => {
+    await expect(
+      validateWriteChainId(11142220, {
+        getChainId: vi.fn().mockResolvedValue(42220),
+      } as never),
+    ).rejects.toEqual(
+      new McpWriteServiceError("Configured write RPC reports chain ID 42220, but hosted writes are configured for 11142220."),
+    );
+  });
+
+  it("accepts hosted write RPC endpoints on the configured chain", async () => {
+    await expect(
+      validateWriteChainId(11142220, {
+        getChainId: vi.fn().mockResolvedValue(11142220),
+      } as never),
+    ).resolves.toBeUndefined();
+  });
+
   it("rejects vote stakes above the configured policy cap", async () => {
     const { service } = createService({
       ...baseWriteConfig,

@@ -54,6 +54,7 @@ async function loadKeeperIndex(options: KeeperIndexOptions = {}) {
     withdrawals: 0,
     withdrawnAmount: 0n,
   });
+  const validateKeeperConnectivity = vi.fn().mockResolvedValue(undefined);
   const processOn = vi.spyOn(process, "on").mockImplementation(((..._args: any[]) => process) as typeof process.on);
   const setIntervalMock = vi.fn(() => 1 as unknown as NodeJS.Timeout);
   const clearIntervalMock = vi.fn();
@@ -100,6 +101,7 @@ async function loadKeeperIndex(options: KeeperIndexOptions = {}) {
     getWalletClient,
     getAccount,
     chain: { id: 31337 },
+    validateKeeperConnectivity,
   }));
   vi.doMock("../keeper.js", () => ({
     resolveRounds,
@@ -131,6 +133,7 @@ async function loadKeeperIndex(options: KeeperIndexOptions = {}) {
     recordError,
     getWalletClient,
     getAccount,
+    validateKeeperConnectivity,
     claimConfiguredFrontendFees,
     processOn,
     setIntervalMock,
@@ -151,6 +154,7 @@ describe("keeper index", () => {
       consensusReserve: 4_000n,
     });
 
+    expect(keeper.validateKeeperConnectivity).toHaveBeenCalledWith(expect.anything());
     expect(keeper.validateKeeperContracts).toHaveBeenCalledWith(expect.anything(), ENGINE, REGISTRY);
     expect(keeper.getBalance).toHaveBeenCalledWith({ address: ACCOUNT });
     expect(keeper.readContract).toHaveBeenNthCalledWith(

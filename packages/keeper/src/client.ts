@@ -28,6 +28,15 @@ export const publicClient = createPublicClient({
   transport: http(config.rpcUrl),
 });
 
+type KeeperConnectivityClient = Pick<typeof publicClient, "getChainId">;
+
+export async function validateKeeperConnectivity(client: KeeperConnectivityClient = publicClient) {
+  const rpcChainId = await client.getChainId();
+  if (rpcChainId !== config.chainId) {
+    throw new Error(`RPC_URL reports chain ID ${rpcChainId}, but CHAIN_ID is ${config.chainId}.`);
+  }
+}
+
 export function getWalletClient() {
   const account = getAccount();
   return createWalletClient({
