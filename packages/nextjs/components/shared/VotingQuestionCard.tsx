@@ -31,6 +31,7 @@ interface VotingQuestionCardProps {
   /** When true, removes card background/rounding (parent provides it). */
   embedded?: boolean;
   compact?: boolean;
+  variant?: "default" | "signal";
 }
 
 const RATING_GUIDANCE_TEXT =
@@ -52,20 +53,34 @@ function getActivityToneClassName(tone: ActivityTone) {
   }
 }
 
-function LiveRoundActivity({ snapshot, compact }: { snapshot: ReturnType<typeof useRoundSnapshot>; compact: boolean }) {
+function LiveRoundActivity({
+  snapshot,
+  compact,
+  condensed = false,
+}: {
+  snapshot: ReturnType<typeof useRoundSnapshot>;
+  compact: boolean;
+  condensed?: boolean;
+}) {
   const { ratePercent, calculateBonus } = useParticipationRate();
   const progress = getRoundProgressMessaging(snapshot, ratePercent);
   const exampleBonus = calculateBonus(5);
+  const blindDetail =
+    exampleBonus != null
+      ? `+${exampleBonus.toLocaleString(undefined, { maximumFractionDigits: 1 })} cREP bonus on 5 cREP`
+      : "Blind-phase bonus loading";
   const detailCopy =
     snapshot.phase !== "voting"
       ? snapshot.hasRound
-        ? `${formatCrepAmount(snapshot.totalStake)} cREP locked in the last round.`
+        ? `${formatCrepAmount(snapshot.totalStake, 0)} cREP locked in the last round`
         : "A new round forms with the next vote."
       : snapshot.isEpoch1
-        ? exampleBonus != null
-          ? `Example bonus: +${exampleBonus.toLocaleString(undefined, { maximumFractionDigits: 1 })} cREP on 5 cREP.`
-          : "Loading blind-phase participation bonus."
-        : `${formatCrepAmount(snapshot.totalStake)} cREP active · ${snapshot.votersNeeded > 0 ? `${snapshot.votersNeeded} more vote${snapshot.votersNeeded === 1 ? "" : "s"} to settle.` : "Settlement threshold is in reach."}`;
+        ? condensed
+          ? blindDetail
+          : `Example bonus: ${blindDetail}.`
+        : condensed
+          ? (progress?.detailLabel ?? `${formatCrepAmount(snapshot.totalStake, 0)} cREP active`)
+          : `${formatCrepAmount(snapshot.totalStake, 0)} cREP active · ${snapshot.votersNeeded > 0 ? `${snapshot.votersNeeded} more vote${snapshot.votersNeeded === 1 ? "" : "s"} to settle.` : "Settlement threshold is in reach."}`;
   const supportCopy =
     snapshot.phase !== "voting"
       ? "Check the round details below for the settled breakdown and history."
@@ -125,7 +140,7 @@ function LiveRoundActivity({ snapshot, compact }: { snapshot: ReturnType<typeof 
         </div>
       </div>
 
-      <p className="mt-3 text-sm leading-relaxed text-base-content/56">{supportCopy}</p>
+      {!condensed ? <p className="mt-3 text-sm leading-relaxed text-base-content/56">{supportCopy}</p> : null}
     </div>
   );
 }
@@ -146,6 +161,7 @@ export function VotingQuestionCard({
   openRound,
   embedded,
   compact = false,
+  variant = "default",
 }: VotingQuestionCardProps) {
   // Check if user already voted on this content in the current round
   const roundSnapshot = useRoundSnapshot(contentId, openRound ?? undefined);
@@ -207,7 +223,8 @@ export function VotingQuestionCard({
     ) : null
   ) : null;
 
-  const orbSize = compact ? 166 : 190;
+  const isSignalVariant = variant === "signal";
+  const orbSize = compact ? 166 : isSignalVariant ? 176 : 190;
   const shellClassName = compact ? "p-3 space-y-2.5" : "p-4 space-y-3 xl:p-3 xl:space-y-2.5 2xl:p-4 2xl:space-y-3";
   const headingRowClassName = compact ? "mb-2.5" : "mb-3";
   const actionStackClassName = compact ? "mt-2.5 gap-1.5" : "mt-3 gap-2";
@@ -306,16 +323,18 @@ export function VotingQuestionCard({
         </div>
 
         <div className={`flex shrink-0 flex-col ${footerStackClassName}`}>
-          <LiveRoundActivity snapshot={roundSnapshot} compact={compact} />
-          <RoundProgress snapshot={roundSnapshot} />
-          <div className={compact ? "pt-0.5" : "pt-1"}>
-            <MoreToggleButton
-              expanded={isDetailsOpen}
-              onClick={() => setIsDetailsOpen(current => !current)}
-              controlsId={detailsId}
-            />
-          </div>
-          {isDetailsOpen ? (
+          <LiveRoundActivity snapshot={roundSnapshot} compact={compact} condensed={isSignalVariant} />
+          {!isSignalVariant ? <RoundProgress snapshot={roundSnapshot} /> : null}
+          {!isSignalVariant ? (
+            <div className={compact ? "pt-0.5" : "pt-1"}>
+              <MoreToggleButton
+                expanded={isDetailsOpen}
+                onClick={() => setIsDetailsOpen(current => !current)}
+                controlsId={detailsId}
+              />
+            </div>
+          ) : null}
+          {!isSignalVariant && isDetailsOpen ? (
             <div id={detailsId} className={`flex flex-col ${compact ? "gap-2.5" : "gap-3"}`}>
               <RoundRevealedBreakdown snapshot={roundSnapshot} />
               <RoundStats categoryId={categoryId} snapshot={roundSnapshot} />

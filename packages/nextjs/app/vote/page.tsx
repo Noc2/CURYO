@@ -21,7 +21,6 @@ import { useDiscoverSignals } from "~~/hooks/useDiscoverSignals";
 import { useFollowedProfiles } from "~~/hooks/useFollowedProfiles";
 import { useInterestProfile } from "~~/hooks/useInterestProfile";
 import { useOnboarding } from "~~/hooks/useOnboarding";
-import { useQueueCardStatusMap } from "~~/hooks/useQueueCardStatusMap";
 import { useRoundVote } from "~~/hooks/useRoundVote";
 import { SubmitterProfile, useSubmitterProfiles } from "~~/hooks/useSubmitterProfiles";
 import { useUnixTime } from "~~/hooks/useUnixTime";
@@ -38,7 +37,6 @@ import {
 import { type DiscoverFeedMode, sortDiscoverFeed } from "~~/lib/vote/feedModes";
 import { rankForYouFeed } from "~~/lib/vote/forYouRanker";
 import { buildVoteLocation } from "~~/lib/vote/location";
-import { MAX_VOTE_QUEUE_WINDOW_SIZE } from "~~/lib/vote/queueLayout";
 import { mergeRequestedContentIntoFeed } from "~~/lib/vote/requestedContent";
 import { type VoteView, getVoteViewGroups, isActivityViewOption } from "~~/lib/vote/viewOptions";
 import { buildRecommendationSignalContext, trackRecommendationSignal } from "~~/utils/recommendationTracker";
@@ -73,8 +71,8 @@ const SEARCH_SORT_OPTIONS: { value: SearchSortOption; label: string }[] = [
   { value: "highest_rated", label: "Highest Rated" },
   { value: "lowest_rated", label: "Lowest Rated" },
 ];
-const FEED_PAGE_SIZE = 20;
-const FEED_PREFETCH_BUFFER = 20;
+const FEED_PAGE_SIZE = 6;
+const FEED_PREFETCH_BUFFER = 6;
 
 function getVoteCooldownMessage(seconds: number) {
   return `You already voted on this content recently. Try again in ${formatVoteCooldownRemaining(seconds)}.`;
@@ -113,7 +111,6 @@ const HomeInner = () => {
   const [view, setView] = useState<VoteView>("for_you");
   const [sortBy, setSortBy] = useState<SortOption>("for_you");
   const [visibleCount, setVisibleCount] = useState(FEED_PAGE_SIZE);
-  const [navigationDirection, setNavigationDirection] = useState<"previous" | "next">("next");
   const [interactionVersion, setInteractionVersion] = useState(0);
   const [optimisticVotedContentIds, setOptimisticVotedContentIds] = useState<Set<string>>(() => new Set());
   const trimmedSearchQuery = searchQuery.trim();
@@ -235,7 +232,6 @@ const HomeInner = () => {
     isMetadataPrefetchPending,
     totalContent: serverTotalContent,
     hasMore: serverHasMoreFeed,
-    source: feedSource,
   } = useContentFeed(address, {
     categoryId: activeCategoryId,
     contentIds: feedContentIds,
@@ -572,16 +568,6 @@ const HomeInner = () => {
     visibleCount,
     requestedActiveId: effectiveRequestedActiveId,
   });
-  const queueSourceItems = useMemo(() => {
-    if (displayFeed.length === 0) return loadedItems;
-
-    const minimumQueueSourceCount =
-      activeSourceIndex >= 0 ? Math.min(displayFeed.length, activeSourceIndex + MAX_VOTE_QUEUE_WINDOW_SIZE) : 0;
-    const queueSourceCount = Math.max(loadedItems.length, minimumQueueSourceCount);
-
-    return displayFeed.slice(0, queueSourceCount);
-  }, [activeSourceIndex, displayFeed, loadedItems]);
-  const queueStatusByContentId = useQueueCardStatusMap(queueSourceItems, feedSource, nowSeconds);
 
   useEffect(() => {
     return () => {
@@ -611,15 +597,8 @@ const HomeInner = () => {
   }, [flushActiveViewSession, persistRecommendationSignal, primaryItem]);
 
   const submitterAddresses = useMemo(() => {
-    return queueSourceItems.map(item => item.submitter);
-  }, [queueSourceItems]);
-  const queuePositionMap = useMemo(() => {
-    const positions = new Map<string, number>();
-    displayFeed.forEach((item, index) => {
-      positions.set(item.id.toString(), index);
-    });
-    return positions;
-  }, [displayFeed]);
+    return loadedItems.map(item => item.submitter);
+  }, [loadedItems]);
 
   const { profiles: submitterProfiles } = useSubmitterProfiles(submitterAddresses);
 
@@ -715,7 +694,6 @@ const HomeInner = () => {
 
       if (activeSourceIndex !== -1) {
         flushActiveViewSession(true);
-        setNavigationDirection(targetIndex > activeSourceIndex ? "next" : "previous");
       }
 
       selectContent(targetItem.id);
@@ -724,30 +702,6 @@ const HomeInner = () => {
       return true;
     },
     [activeSourceIndex, displayFeed, flushActiveViewSession, replaceVoteLocation, selectContent],
-  );
-
-  const handleSelectCard = useCallback(
-    (id: bigint) => {
-      const item = displayFeed.find(entry => entry.id === id);
-      if (item) {
-        recordRecommendationSignal(item, "card_open");
-      }
-      const targetIndex = displayFeed.findIndex(item => item.id === id);
-      if (targetIndex === -1) return;
-      handleSelectByIndex(targetIndex);
-    },
-    [displayFeed, handleSelectByIndex, recordRecommendationSignal],
-  );
-
-  const handleNavigateSelection = useCallback(
-    (direction: "previous" | "next") => {
-      if (displayFeed.length === 0 || activeSourceIndex === -1) return false;
-
-      const delta = direction === "next" ? 1 : -1;
-      const nextIndex = Math.min(Math.max(activeSourceIndex + delta, 0), displayFeed.length - 1);
-      return handleSelectByIndex(nextIndex);
-    },
-    [activeSourceIndex, displayFeed.length, handleSelectByIndex],
   );
 
   const handleConfirmStake = useCallback(
@@ -785,6 +739,13 @@ const HomeInner = () => {
 
       const nextIndex = committedIndex >= 0 ? Math.min(committedIndex + 1, displayFeed.length - 1) : -1;
       const advanced = nextIndex > committedIndex ? handleSelectByIndex(nextIndex) : false;
+      if (advanced && typeof window !== "undefined") {
+        window.requestAnimationFrame(() => {
+          document
+            .getElementById(`vote-feed-card-${nextIndex}`)
+            ?.scrollIntoView({ behavior: "smooth", block: "start" });
+        });
+      }
       notification.success(
         advanced
           ? `Vote committed! Stake: ${stakeAmount} cREP · next card ready`
@@ -1033,10 +994,10 @@ const HomeInner = () => {
     (activeScope === "all" ? "For You" : "Discover");
 
   return (
-    <AppPageShell contentClassName="max-w-[1400px]">
+    <AppPageShell contentClassName="max-w-[1320px]">
       <VotingGuide />
-      <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_22rem] xl:items-start">
-        <div className="order-2 min-w-0 xl:order-1">
+      <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_19.5rem] xl:items-start">
+        <div className="min-w-0">
           <div
             className="mb-4 flex shrink-0 flex-wrap items-center gap-2 sm:gap-3 xl:mb-3 xl:flex-nowrap"
             data-disable-queue-wheel="true"
@@ -1116,30 +1077,23 @@ const HomeInner = () => {
                 <VoteFeedStage
                   primaryItem={primaryItem}
                   displayFeed={displayFeed}
-                  queueSourceItems={queueSourceItems}
-                  navigationDirection={navigationDirection}
                   activeSourceIndex={activeSourceIndex}
                   loadedCount={visibleCount}
                   canLoadMore={canLoadMore}
-                  queueStatusByContentId={queueStatusByContentId}
-                  queuePositionMap={queuePositionMap}
                   enrichedProfiles={enrichedProfiles}
                   watchedContentIds={watchedContentIds}
-                  votedContentIds={votedContentIds}
                   followedWallets={followedWallets}
                   normalizedAddress={normalizedAddress}
                   address={address}
                   isCommitting={isCommitting}
                   voteError={voteError}
                   isMetadataPrefetchPending={isMetadataPrefetchPending}
-                  primaryItemCooldownSeconds={primaryItemCooldownSeconds}
                   navigationLocked={stakeModal.isOpen}
                   isWatchPending={isWatchPending}
                   isFollowPending={isFollowPending}
+                  getCooldownSeconds={getContentCooldownSeconds}
                   onLoadMore={() => setVisibleCount(prev => prev + FEED_PAGE_SIZE)}
-                  onNavigateSelection={handleNavigateSelection}
                   onSelectByIndex={handleSelectByIndex}
-                  onSelectCard={handleSelectCard}
                   onVote={handleButtonVote}
                   onExternalOpen={handleExternalOpen}
                   onToggleWatch={handleToggleWatch}
@@ -1149,12 +1103,16 @@ const HomeInner = () => {
             </div>
           </div>
         </div>
-        <div className="order-1 min-w-0 xl:order-2">
+        <div className="hidden min-w-0 xl:block">
           <VoteSignalRail
             primaryItem={primaryItem}
             activeIndex={activeSourceIndex}
             totalCount={displayFeed.length}
             viewLabel={activeViewLabel}
+            isCommitting={isCommitting}
+            voteError={voteError}
+            cooldownSecondsRemaining={primaryItemCooldownSeconds}
+            onVote={handleButtonVote}
           />
         </div>
       </div>

@@ -128,15 +128,13 @@ export const FeedVoteCard = memo(function FeedVoteCard({
   }, []);
 
   const contentStackClassName = isLaptopCompact ? "gap-2.5" : "gap-3 xl:gap-2.5";
-  const contentGridClassName = isLaptopCompact
-    ? "grid min-h-0 grid-cols-1 gap-2.5 lg:grid-cols-[minmax(0,1fr)_minmax(18.75rem,22rem)] xl:grid-cols-[minmax(0,1fr)_minmax(19.5rem,22.5rem)] lg:items-stretch"
-    : "grid min-h-0 grid-cols-1 gap-3 lg:grid-cols-[minmax(0,1fr)_minmax(20rem,24rem)] xl:grid-cols-[minmax(0,1fr)_minmax(21rem,25rem)] lg:items-stretch";
+  const contentGridClassName = "grid min-h-0 grid-cols-1 gap-3";
   const usesIntrinsicMediaHeight = platformType === "youtube";
   const mediaHeightClassName = usesIntrinsicMediaHeight
     ? "w-full"
     : isLaptopCompact
-      ? "w-full lg:h-[clamp(13.75rem,33vh,18.75rem)] xl:h-[clamp(14.25rem,34vh,19.5rem)]"
-      : "w-full lg:h-[clamp(17rem,42vh,28rem)]";
+      ? "w-full lg:h-[clamp(18rem,44vh,24rem)] xl:h-[clamp(19rem,48vh,28rem)]"
+      : "w-full lg:h-[clamp(20rem,52vh,34rem)]";
 
   return (
     <div
@@ -189,7 +187,9 @@ export const FeedVoteCard = memo(function FeedVoteCard({
             collapseDescription
           />
         </div>
+      </div>
 
+      <div className="xl:hidden">
         <div className="min-w-0 min-h-0 overflow-hidden rounded-2xl bg-base-200">
           <VotingQuestionCard
             contentId={item.id}
@@ -203,7 +203,8 @@ export const FeedVoteCard = memo(function FeedVoteCard({
             cooldownSecondsRemaining={cooldownSecondsRemaining}
             isOwnContent={item.isOwnContent}
             embedded
-            compact={isLaptopCompact}
+            compact
+            variant="signal"
           />
         </div>
       </div>
