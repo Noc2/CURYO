@@ -7,6 +7,7 @@ import process from "node:process";
 import { fileURLToPath } from "node:url";
 
 import { MissingDockerComposeError, ensureLocalDatabase, formatDatabaseTarget, resolveNextDatabaseConfig } from "./dev-db.mjs";
+import { getMissingKeeperEnvVars } from "./dev-stack-keeper.mjs";
 
 const currentFile = fileURLToPath(import.meta.url);
 const repoRoot = path.resolve(path.dirname(currentFile), "..");
@@ -120,23 +121,7 @@ function resolveKeeperStartupStatus() {
   const keeperEnvPath = path.join(repoRoot, "packages", "keeper", ".env.local");
   const envFromFile = parseEnvFile(keeperEnvPath);
   const env = { ...envFromFile, ...process.env };
-  const missing = [];
-
-  if (!env.RPC_URL?.trim()) {
-    missing.push("RPC_URL");
-  }
-  if (!env.CHAIN_ID?.trim()) {
-    missing.push("CHAIN_ID");
-  }
-
-  const hasKeystoreAccount = Boolean(env.KEYSTORE_ACCOUNT?.trim());
-  const hasPrivateKey = Boolean(env.KEEPER_PRIVATE_KEY?.trim());
-  if (!hasKeystoreAccount && !hasPrivateKey) {
-    missing.push("KEYSTORE_ACCOUNT or KEEPER_PRIVATE_KEY");
-  }
-  if (hasKeystoreAccount && !env.KEYSTORE_PASSWORD?.trim()) {
-    missing.push("KEYSTORE_PASSWORD");
-  }
+  const missing = getMissingKeeperEnvVars(env);
 
   return {
     keeperEnvPath,
