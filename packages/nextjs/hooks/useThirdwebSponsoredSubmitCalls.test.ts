@@ -1,4 +1,5 @@
 import {
+  isThirdwebSelfFundedFallbackEligibleError,
   isThirdwebSponsorshipDeniedError,
   shouldAttemptSelfFundedThirdwebFallback,
   shouldExpectSponsoredSubmitCalls,
@@ -69,6 +70,15 @@ test("detects exhausted free transaction denials as sponsorship denials", () => 
   );
 });
 
+test("treats exhausted free transactions as eligible for self-funded fallback", () => {
+  assert.equal(
+    isThirdwebSelfFundedFallbackEligibleError(
+      new Error('Error executing 7702 transaction: {"reason":"Free transactions used up. Add CELO to continue."}'),
+    ),
+    true,
+  );
+});
+
 test("ignores unrelated thirdweb submit failures", () => {
   assert.equal(isThirdwebSponsorshipDeniedError(new Error("User rejected the request.")), false);
 });
@@ -99,7 +109,7 @@ test("allows self-funded fallback when sponsorship denial is unrelated to a rese
   );
 });
 
-test("allows self-funded fallback when free transactions are exhausted", () => {
+test("allows self-funded fallback when sponsored free transactions are exhausted", () => {
   assert.equal(
     shouldAttemptSelfFundedThirdwebFallback({
       activeWalletId: "inApp",
