@@ -698,7 +698,8 @@ export class CuryoWriteService {
       return existingPromise;
     }
 
-    if (!this.config.enabled || !this.config.rpcUrl || !this.config.chainId || !this.config.chainName) {
+    const { enabled, rpcUrl, chainId, chainName } = this.config;
+    if (!enabled || rpcUrl == null || chainId == null || chainName == null) {
       throw new McpWriteServiceError("Hosted write execution is not configured");
     }
 
@@ -706,24 +707,24 @@ export class CuryoWriteService {
       const identity = this.getIdentity(identityId);
       const account = resolveAccount(identity);
       const chain = defineChain({
-        id: this.config.chainId,
-        name: this.config.chainName,
+        id: chainId,
+        name: chainName,
         nativeCurrency: { name: "CELO", symbol: "CELO", decimals: 18 },
         rpcUrls: {
-          default: { http: [this.config.rpcUrl] },
+          default: { http: [rpcUrl] },
         },
       });
 
       const publicClient = createPublicClient({
         chain,
-        transport: http(this.config.rpcUrl),
+        transport: http(rpcUrl),
       });
-      await validateWriteChainId(this.config.chainId, publicClient);
+      await validateWriteChainId(chainId, publicClient);
 
       const walletClient = createWalletClient({
         account,
         chain,
-        transport: http(this.config.rpcUrl),
+        transport: http(rpcUrl),
       });
 
       const context: ExecutionContext = {
