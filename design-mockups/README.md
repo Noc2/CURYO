@@ -6,6 +6,11 @@ Current canonical brand artwork:
 
 - `ai-sphere-obsidian-ember-fold-with-flare.svg`
 
+Current vote-feed exploration boards:
+
+- `vote-feed-infinite-scroll-directions.svg`
+- `vote-feed-infinite-scroll-recommended.svg`
+
 Archived alternatives kept only for reference:
 
 - `planet-flare-obsidian-ember.svg`
@@ -31,6 +36,14 @@ Archived alternatives kept only for reference:
 5. `render-pngs.mjs`
    Utility script that exports PNG previews from the SVG sources.
 
+6. `vote-feed-infinite-scroll-directions.svg`
+   Comparison board for three infinite-scroll voting interaction models.
+   Preview export: `vote-feed-infinite-scroll-directions.png`
+
+7. `vote-feed-infinite-scroll-recommended.svg`
+   Focused mock-up for the preferred infinite feed with persistent voting.
+   Preview export: `vote-feed-infinite-scroll-recommended.png`
+
 ## PNG Export
 
 The checked-in PNG previews are generated from the retained SVG sources with:
@@ -40,7 +53,9 @@ node design-mockups/generate-planet-flare-theme-directions.mjs
 node design-mockups/render-pngs.mjs \
   design-mockups/ai-sphere-obsidian-ember-fold-with-flare.svg \
   design-mockups/planet-flare-obsidian-ember.svg \
-  design-mockups/ai-sphere-obsidian-ember-fold-with-flare-single-palette-deeper-blue.svg
+  design-mockups/ai-sphere-obsidian-ember-fold-with-flare-single-palette-deeper-blue.svg \
+  design-mockups/vote-feed-infinite-scroll-directions.svg \
+  design-mockups/vote-feed-infinite-scroll-recommended.svg
 ```
 
 This keeps the raster previews in sync with the editable SVG artwork.
