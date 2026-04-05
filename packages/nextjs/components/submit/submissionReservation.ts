@@ -26,6 +26,8 @@ type StoredSubmissionReservation = {
   url: string;
 };
 
+type LegacyStoredSubmissionReservation = Omit<StoredSubmissionReservation, "chainId">;
+
 function isHexValue(value: unknown): value is `0x${string}` {
   return typeof value === "string" && value.startsWith("0x");
 }
@@ -57,6 +59,15 @@ export function buildSubmissionReservationStorageKey(
       [{ type: "address" }, { type: "uint256" }, { type: "bytes32" }],
       [address, BigInt(chainId), submissionKey],
     ),
+  )}`;
+}
+
+export function buildLegacySubmissionReservationStorageKey(
+  address: `0x${string}`,
+  submissionKey: `0x${string}`,
+): string {
+  return `${RESERVED_SUBMISSION_STORAGE_PREFIX}${keccak256(
+    encodeAbiParameters([{ type: "address" }, { type: "bytes32" }], [address, submissionKey]),
   )}`;
 }
 
@@ -145,31 +156,71 @@ export function submissionReservationMatchesDraft(
   );
 }
 
-export function getStoredSubmissionReservation(storageKey: string): StoredSubmissionReservation | null {
+function readStoredSubmissionReservationValue(storageKey: string): unknown {
   if (typeof window === "undefined") return null;
 
+  const rawValue = window.localStorage.getItem(storageKey);
+  if (!rawValue) {
+    return null;
+  }
+
+  return JSON.parse(rawValue);
+}
+
+function parseStoredSubmissionReservation(value: unknown): StoredSubmissionReservation | null {
+  const parsedValue = value as Partial<StoredSubmissionReservation>;
+  if (
+    typeof parsedValue.categoryId !== "string" ||
+    typeof parsedValue.chainId !== "number" ||
+    typeof parsedValue.description !== "string" ||
+    !isHexValue(parsedValue.revealCommitment) ||
+    !isHexValue(parsedValue.salt) ||
+    !isHexValue(parsedValue.submissionKey) ||
+    typeof parsedValue.tags !== "string" ||
+    typeof parsedValue.title !== "string" ||
+    typeof parsedValue.url !== "string"
+  ) {
+    return null;
+  }
+
+  return parsedValue as StoredSubmissionReservation;
+}
+
+function parseLegacyStoredSubmissionReservation(value: unknown, chainId: number): StoredSubmissionReservation | null {
+  const parsedValue = value as Partial<LegacyStoredSubmissionReservation>;
+  if (
+    typeof parsedValue.categoryId !== "string" ||
+    typeof parsedValue.description !== "string" ||
+    !isHexValue(parsedValue.revealCommitment) ||
+    !isHexValue(parsedValue.salt) ||
+    !isHexValue(parsedValue.submissionKey) ||
+    typeof parsedValue.tags !== "string" ||
+    typeof parsedValue.title !== "string" ||
+    typeof parsedValue.url !== "string"
+  ) {
+    return null;
+  }
+
+  return {
+    ...parsedValue,
+    chainId,
+  } as StoredSubmissionReservation;
+}
+
+export function getStoredSubmissionReservation(storageKey: string): StoredSubmissionReservation | null {
   try {
-    const rawValue = window.localStorage.getItem(storageKey);
-    if (!rawValue) {
-      return null;
-    }
+    return parseStoredSubmissionReservation(readStoredSubmissionReservationValue(storageKey));
+  } catch {
+    return null;
+  }
+}
 
-    const parsedValue = JSON.parse(rawValue) as Partial<StoredSubmissionReservation>;
-    if (
-      typeof parsedValue.categoryId !== "string" ||
-      typeof parsedValue.chainId !== "number" ||
-      typeof parsedValue.description !== "string" ||
-      !isHexValue(parsedValue.revealCommitment) ||
-      !isHexValue(parsedValue.salt) ||
-      !isHexValue(parsedValue.submissionKey) ||
-      typeof parsedValue.tags !== "string" ||
-      typeof parsedValue.title !== "string" ||
-      typeof parsedValue.url !== "string"
-    ) {
-      return null;
-    }
-
-    return parsedValue as StoredSubmissionReservation;
+export function getLegacyStoredSubmissionReservation(
+  storageKey: string,
+  chainId: number,
+): StoredSubmissionReservation | null {
+  try {
+    return parseLegacyStoredSubmissionReservation(readStoredSubmissionReservationValue(storageKey), chainId);
   } catch {
     return null;
   }

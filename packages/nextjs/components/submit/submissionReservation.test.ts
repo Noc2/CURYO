@@ -1,8 +1,10 @@
 import {
+  buildLegacySubmissionReservationStorageKey,
   buildSubmissionReservationStorageKey,
   buildSubmissionRevealCommitment,
   createStoredSubmissionReservation,
   deriveSubmissionReservationSalt,
+  getLegacyStoredSubmissionReservation,
   submissionReservationMatchesDraft,
 } from "./submissionReservation";
 import assert from "node:assert/strict";
@@ -25,6 +27,13 @@ test("buildSubmissionReservationStorageKey is chain-scoped", () => {
   const sepolia = buildSubmissionReservationStorageKey(ADDRESS, 11142220, SUBMISSION_KEY);
 
   assert.notEqual(celo, sepolia);
+});
+
+test("buildLegacySubmissionReservationStorageKey matches the pre-chain-scope format", () => {
+  const legacy = buildLegacySubmissionReservationStorageKey(ADDRESS, SUBMISSION_KEY);
+  const current = buildSubmissionReservationStorageKey(ADDRESS, CHAIN_ID, SUBMISSION_KEY);
+
+  assert.notEqual(legacy, current);
 });
 
 test("buildSubmissionRevealCommitment changes when the reserved metadata changes", () => {
@@ -152,6 +161,64 @@ test("deriveSubmissionReservationSalt recreates the same salt for the same draft
 
     assert.equal(first, second);
     assert.notEqual(first, otherChain);
+  } finally {
+    if (originalWindowDescriptor) {
+      Object.defineProperty(globalThis, "window", originalWindowDescriptor);
+    } else {
+      delete (globalThis as { window?: unknown }).window;
+    }
+  }
+});
+
+test("getLegacyStoredSubmissionReservation upgrades pre-chain-scope entries with the active chain id", () => {
+  const storage = new Map<string, string>();
+  const originalWindowDescriptor = Object.getOwnPropertyDescriptor(globalThis, "window");
+  const storageKey = buildLegacySubmissionReservationStorageKey(ADDRESS, SUBMISSION_KEY);
+  const mockWindow = {
+    localStorage: {
+      getItem(key: string) {
+        return storage.get(key) ?? null;
+      },
+      setItem(key: string, value: string) {
+        storage.set(key, value);
+      },
+      removeItem(key: string) {
+        storage.delete(key);
+      },
+    },
+  } as unknown as Window & typeof globalThis;
+
+  Object.defineProperty(globalThis, "window", {
+    configurable: true,
+    value: mockWindow,
+  });
+
+  storage.set(
+    storageKey,
+    JSON.stringify({
+      categoryId: "1",
+      description: "first description",
+      revealCommitment: SUBMISSION_KEY,
+      salt: SALT,
+      submissionKey: SUBMISSION_KEY,
+      tags: "alpha,beta",
+      title: "First title",
+      url: "https://example.com/demo",
+    }),
+  );
+
+  try {
+    assert.deepEqual(getLegacyStoredSubmissionReservation(storageKey, CHAIN_ID), {
+      categoryId: "1",
+      chainId: CHAIN_ID,
+      description: "first description",
+      revealCommitment: SUBMISSION_KEY,
+      salt: SALT,
+      submissionKey: SUBMISSION_KEY,
+      tags: "alpha,beta",
+      title: "First title",
+      url: "https://example.com/demo",
+    });
   } finally {
     if (originalWindowDescriptor) {
       Object.defineProperty(globalThis, "window", originalWindowDescriptor);
