@@ -17,6 +17,7 @@ import { useTargetNetwork } from "~~/hooks/scaffold-eth/useTargetNetwork";
 import { usePageVisibility } from "~~/hooks/usePageVisibility";
 import { invalidateRecentUserVotes, useRecentUserVotes } from "~~/hooks/useRecentUserVotes";
 import { useUnixTime } from "~~/hooks/useUnixTime";
+import { getVoteHistoryQueryKey } from "~~/hooks/useVoteHistoryQuery";
 import { getSubmittingTransactionMessage } from "~~/lib/ui/transactionStatusCopy";
 import { CommitData } from "~~/types/votingTypes";
 import { getParsedErrorWithAllAbis } from "~~/utils/scaffold-eth/contract";
@@ -290,11 +291,11 @@ export function useManualRevealVotes(voter?: Address) {
   const refresh = useCallback(async () => {
     await Promise.all([
       queryClient.invalidateQueries({ queryKey: ["manualRevealVotesOnchain", voter] }),
-      invalidateRecentUserVotes(queryClient, voter),
+      invalidateRecentUserVotes(queryClient, voter, targetNetwork.id),
       queryClient.invalidateQueries({ queryKey: ["ponder-fallback", "votingStakes", voter] }),
-      queryClient.invalidateQueries({ queryKey: ["ponder-fallback", "voteHistory", voter] }),
+      queryClient.invalidateQueries({ queryKey: getVoteHistoryQueryKey(voter, targetNetwork.id) }),
     ]);
-  }, [queryClient, voter]);
+  }, [queryClient, targetNetwork.id, voter]);
 
   const revealVote = useCallback(
     async (vote: ManualRevealVote) => {
