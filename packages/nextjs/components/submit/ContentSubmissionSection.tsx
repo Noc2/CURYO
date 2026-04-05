@@ -7,11 +7,12 @@ import {
   buildSubmissionRevealCommitment,
   clearStoredSubmissionReservation,
   createStoredSubmissionReservation,
+  deriveSubmissionReservationSalt,
   getStoredSubmissionReservation,
   setStoredSubmissionReservation,
   submissionReservationMatchesDraft,
 } from "./submissionReservation";
-import { decodeEventLog, toHex } from "viem";
+import { decodeEventLog } from "viem";
 import { useAccount, useConfig } from "wagmi";
 import { readContract, waitForTransactionReceipt } from "wagmi/actions";
 import { ChevronDownIcon, MagnifyingGlassIcon, XMarkIcon } from "@heroicons/react/24/outline";
@@ -23,6 +24,7 @@ import { InfoTooltip } from "~~/components/ui/InfoTooltip";
 import { serializeTags } from "~~/constants/categories";
 import { useTermsAcceptance } from "~~/contexts/TermsAcceptanceContext";
 import { useDeployedContractInfo, useScaffoldReadContract, useScaffoldWriteContract } from "~~/hooks/scaffold-eth";
+import { useTargetNetwork } from "~~/hooks/scaffold-eth/useTargetNetwork";
 import {
   type Category,
   extractDomain,
@@ -117,12 +119,6 @@ const DEFAULT_URL_CONFIG = {
   urlHint: "Select a platform first, then paste your URL",
 };
 
-function createSubmissionSalt(): `0x${string}` {
-  const bytes = new Uint8Array(32);
-  window.crypto.getRandomValues(bytes);
-  return toHex(bytes);
-}
-
 function isReservationExistsError(error: unknown): boolean {
   const message =
     (error as { shortMessage?: string; message?: string } | undefined)?.shortMessage ??
@@ -155,6 +151,7 @@ function PlatformIcon({ domain, className }: { domain: string; className?: strin
 export function ContentSubmissionSection() {
   const wagmiConfig = useConfig();
   const { address: connectedAddress } = useAccount();
+  const { targetNetwork } = useTargetNetwork();
   const { canSponsorTransactions, isMissingGasBalance, nativeTokenSymbol } = useGasBalanceStatus({
     includeExternalSendCalls: true,
   });
@@ -491,7 +488,7 @@ export function ContentSubmissionSection() {
         title: submittedTitle,
         url: normalizedSubmissionUrl,
       };
-      reservationStorageKey = buildSubmissionReservationStorageKey(submitterAddress, submissionKey);
+      reservationStorageKey = buildSubmissionReservationStorageKey(submitterAddress, targetNetwork.id, submissionKey);
 
       const cancelReservedSubmission = async (revealCommitment: `0x${string}`) => {
         if (canUseSponsoredSubmitCalls) {
@@ -580,7 +577,7 @@ export function ContentSubmissionSection() {
       }
 
       if (!activeReservation) {
-        const submissionSalt = createSubmissionSalt();
+        const submissionSalt = deriveSubmissionReservationSalt(submissionDraft, submitterAddress, targetNetwork.id);
         const revealCommitment = buildSubmissionRevealCommitment(submissionDraft, submissionSalt, submitterAddress);
 
         try {
@@ -591,7 +588,12 @@ export function ContentSubmissionSection() {
           }
         }
 
-        activeReservation = createStoredSubmissionReservation(submissionDraft, submissionSalt, revealCommitment);
+        activeReservation = createStoredSubmissionReservation(
+          submissionDraft,
+          submissionSalt,
+          revealCommitment,
+          targetNetwork.id,
+        );
         setStoredSubmissionReservation(reservationStorageKey, activeReservation);
       }
 
