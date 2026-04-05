@@ -65,7 +65,7 @@ vi.mock("../revert-utils.js", () => ({
   getRevertReason,
 }));
 
-import { claimConfiguredFrontendFees, resetFrontendFeeSweepStateForTests } from "../frontend-fees.js";
+import { claimConfiguredFrontendFees } from "../frontend-fees.js";
 
 function makeLogger() {
   return {
@@ -79,7 +79,6 @@ function makeLogger() {
 describe("claimConfiguredFrontendFees", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    resetFrontendFeeSweepStateForTests();
     mockConfig.frontendFees.enabled = true;
     mockConfig.frontendFees.frontendAddress = undefined;
     mockConfig.frontendFees.lookbackRounds = 8;
@@ -207,7 +206,7 @@ describe("claimConfiguredFrontendFees", () => {
     expect(logger.warn).not.toHaveBeenCalled();
   });
 
-  it("backfills older settled rounds outside the recent lookback window", async () => {
+  it("backfills older settled rounds outside the recent lookback window in the same run", async () => {
     mockConfig.frontendFees.lookbackRounds = 2;
     const logger = makeLogger();
     const publicClient = {
@@ -216,7 +215,7 @@ describe("claimConfiguredFrontendFees", () => {
           case "nextContentId":
             return 2n;
           case "previewFrontendFee":
-            return args?.[1] === 1n ? ([15n, 0, ACCOUNT, false] as const) : ([0n, 0, ACCOUNT, false] as const);
+            return args?.[1] === 3n ? ([15n, 0, ACCOUNT, false] as const) : ([0n, 0, ACCOUNT, false] as const);
           case "getAccumulatedFees":
             return 0n;
           default:
@@ -230,7 +229,7 @@ describe("claimConfiguredFrontendFees", () => {
       latestRoundId: 5n,
     });
     readRound.mockImplementation(async (_publicClient: unknown, _engine: unknown, _contentId: bigint, roundId: bigint) => ({
-      state: roundId === 1n ? 1 : 0,
+      state: roundId === 3n ? 1 : 0,
     }));
     writeContractAndConfirm.mockResolvedValue("0xabc");
 
@@ -249,7 +248,7 @@ describe("claimConfiguredFrontendFees", () => {
       expect.objectContaining({
         address: ROUND_REWARD_DISTRIBUTOR,
         functionName: "claimFrontendFee",
-        args: [1n, 1n, ACCOUNT],
+        args: [1n, 3n, ACCOUNT],
       }),
     );
   });

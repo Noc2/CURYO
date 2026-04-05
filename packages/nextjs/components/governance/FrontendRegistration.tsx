@@ -613,7 +613,7 @@ export function FrontendRegistration() {
               </div>
             ) : claimableRoundFees.length === 0 ? (
               <p className="text-sm text-base-content/60">
-                No unclaimed frontend fees were found in the settled rounds scanned so far.
+                No unclaimed frontend fees were found in settled rounds for this frontend.
               </p>
             ) : (
               <div className="space-y-3">

@@ -8,44 +8,12 @@ import { getRevertReason } from "./revert-utils.js";
 
 const ZERO_ADDRESS = "0x0000000000000000000000000000000000000000" as const;
 const PROTOCOL_FRONTEND_FEE_DISPOSITION = 2;
-const nextHistoricalRoundByContent = new Map<string, bigint>();
 
 interface FrontendFeeSweepResult {
   frontendAddress: `0x${string}`;
   roundsClaimed: number;
   withdrawals: number;
   withdrawnAmount: bigint;
-}
-
-function getRoundIdsToScan(contentId: bigint, latestRoundId: bigint, lookbackRounds: bigint) {
-  const roundIds: bigint[] = [];
-  const recentStartRoundId = latestRoundId > lookbackRounds ? latestRoundId - lookbackRounds + 1n : 1n;
-  const historicalUpperBound = recentStartRoundId > 1n ? recentStartRoundId - 1n : 0n;
-  const cursorKey = contentId.toString();
-  const nextHistoricalRoundId = nextHistoricalRoundByContent.get(cursorKey) ?? 1n;
-
-  if (nextHistoricalRoundId <= historicalUpperBound) {
-    const historicalEndRoundId =
-      nextHistoricalRoundId + lookbackRounds - 1n < historicalUpperBound
-        ? nextHistoricalRoundId + lookbackRounds - 1n
-        : historicalUpperBound;
-
-    for (let roundId = nextHistoricalRoundId; roundId <= historicalEndRoundId; roundId++) {
-      roundIds.push(roundId);
-    }
-
-    nextHistoricalRoundByContent.set(cursorKey, historicalEndRoundId + 1n);
-  }
-
-  for (let roundId = recentStartRoundId; roundId <= latestRoundId; roundId++) {
-    roundIds.push(roundId);
-  }
-
-  return roundIds;
-}
-
-export function resetFrontendFeeSweepStateForTests() {
-  nextHistoricalRoundByContent.clear();
 }
 
 export async function claimConfiguredFrontendFees(
@@ -115,7 +83,59 @@ export async function claimConfiguredFrontendFees(
       continue;
     }
 
-    for (const roundId of getRoundIdsToScan(contentId, latestRoundId, lookbackRounds)) {
+    const recentStartRoundId = latestRoundId > lookbackRounds ? latestRoundId - lookbackRounds + 1n : 1n;
+    for (let roundId = recentStartRoundId; roundId <= latestRoundId; roundId++) {
+      try {
+        const round = await readRound(publicClient, config.contracts.votingEngine, contentId, roundId);
+        if (round.state !== RoundState.Settled) {
+          continue;
+        }
+
+        const [fee, disposition, operator, alreadyClaimed] = (await publicClient.readContract({
+          address: contracts.roundRewardDistributor,
+          abi: RoundRewardDistributorAbi,
+          functionName: "previewFrontendFee",
+          args: [contentId, roundId, frontendAddress],
+        })) as readonly [bigint, number, `0x${string}`, boolean];
+
+        if (fee === 0n || alreadyClaimed || disposition === PROTOCOL_FRONTEND_FEE_DISPOSITION) {
+          continue;
+        }
+
+        if (operator !== ZERO_ADDRESS && operator.toLowerCase() !== account.address.toLowerCase()) {
+          logger.warn("Skipping frontend fee claim because preview operator does not match keeper wallet", {
+            contentId: Number(contentId),
+            roundId: Number(roundId),
+            frontendAddress,
+            operator,
+            account: account.address,
+          });
+          continue;
+        }
+
+        await writeContractAndConfirm(publicClient, walletClient, {
+          chain,
+          account,
+          address: contracts.roundRewardDistributor,
+          abi: RoundRewardDistributorAbi,
+          functionName: "claimFrontendFee",
+          args: [contentId, roundId, frontendAddress],
+        });
+        roundsClaimed++;
+      } catch (error: unknown) {
+        logger.debug("Frontend fee preview/claim skipped", {
+          contentId: Number(contentId),
+          roundId: Number(roundId),
+          error: getRevertReason(error),
+        });
+      }
+    }
+
+    if (recentStartRoundId <= 1n) {
+      continue;
+    }
+
+    for (let roundId = 1n; roundId < recentStartRoundId; roundId++) {
       try {
         const round = await readRound(publicClient, config.contracts.votingEngine, contentId, roundId);
         if (round.state !== RoundState.Settled) {
