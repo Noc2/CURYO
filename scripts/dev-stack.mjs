@@ -13,7 +13,7 @@ const repoRoot = path.resolve(path.dirname(currentFile), "..");
 const nextProjectDir = path.join(repoRoot, "packages", "nextjs");
 const nextDevLockPath = path.join(nextProjectDir, ".next-dev.lock");
 const yarnCommand = process.platform === "win32" ? "yarn.cmd" : "yarn";
-const services = [
+const baseServices = [
   {
     name: "Ponder",
     label: "ponder",
@@ -28,14 +28,14 @@ const services = [
     command: yarnCommand,
     args: ["start"],
   },
-  {
-    name: "Keeper",
-    label: "keeper",
-    color: "\u001b[35m",
-    command: yarnCommand,
-    args: ["keeper:dev"],
-  },
 ];
+const keeperService = {
+  name: "Keeper",
+  label: "keeper",
+  color: "\u001b[35m",
+  command: yarnCommand,
+  args: ["keeper:dev"],
+};
 const resetColor = "\u001b[0m";
 const managedChildren = [];
 let shuttingDown = false;
@@ -89,6 +89,60 @@ function warnIfMissing(filePath, message) {
   if (!existsSync(filePath)) {
     console.warn(`[dev-stack] ${message}`);
   }
+}
+
+function parseEnvFile(filePath) {
+  if (!existsSync(filePath)) {
+    return {};
+  }
+
+  const values = {};
+  const raw = readFileSync(filePath, "utf8");
+  for (const line of raw.split(/\r?\n/)) {
+    const trimmed = line.trim();
+    if (!trimmed || trimmed.startsWith("#")) continue;
+
+    const separatorIndex = trimmed.indexOf("=");
+    if (separatorIndex <= 0) continue;
+
+    const key = trimmed.slice(0, separatorIndex).trim();
+    let value = trimmed.slice(separatorIndex + 1).trim();
+    if ((value.startsWith('"') && value.endsWith('"')) || (value.startsWith("'") && value.endsWith("'"))) {
+      value = value.slice(1, -1);
+    }
+    values[key] = value;
+  }
+
+  return values;
+}
+
+function resolveKeeperStartupStatus() {
+  const keeperEnvPath = path.join(repoRoot, "packages", "keeper", ".env.local");
+  const envFromFile = parseEnvFile(keeperEnvPath);
+  const env = { ...envFromFile, ...process.env };
+  const missing = [];
+
+  if (!env.RPC_URL?.trim()) {
+    missing.push("RPC_URL");
+  }
+  if (!env.CHAIN_ID?.trim()) {
+    missing.push("CHAIN_ID");
+  }
+
+  const hasKeystoreAccount = Boolean(env.KEYSTORE_ACCOUNT?.trim());
+  const hasPrivateKey = Boolean(env.KEEPER_PRIVATE_KEY?.trim());
+  if (!hasKeystoreAccount && !hasPrivateKey) {
+    missing.push("KEYSTORE_ACCOUNT or KEEPER_PRIVATE_KEY");
+  }
+  if (hasKeystoreAccount && !env.KEYSTORE_PASSWORD?.trim()) {
+    missing.push("KEYSTORE_PASSWORD");
+  }
+
+  return {
+    keeperEnvPath,
+    enabled: missing.length === 0,
+    missing,
+  };
 }
 
 function printMissingDockerHelp(databaseConfig) {
@@ -213,7 +267,7 @@ Starts the local app stack:
   - Next.js schema push
   - Ponder
   - Next.js
-  - Keeper
+  - Keeper (when configured)
 
 Options:
   --skip-db  Do not start the local Postgres container
@@ -224,14 +278,11 @@ Options:
   const databaseConfig = resolveNextDatabaseConfig();
   const skipDb = process.argv.includes("--skip-db");
   const activeNextDevLock = readActiveNextDevLock();
+  const keeperStartup = resolveKeeperStartupStatus();
 
   warnIfMissing(
     path.join(repoRoot, "packages", "ponder", ".env.local"),
     "packages/ponder/.env.local is missing. Ponder will use defaults where it can, but RPC/network settings may be incomplete.",
-  );
-  warnIfMissing(
-    path.join(repoRoot, "packages", "keeper", ".env.local"),
-    "packages/keeper/.env.local is missing. Keeper needs RPC_URL, CHAIN_ID, and a wallet before it can start.",
   );
 
   if (activeNextDevLock) {
@@ -261,7 +312,14 @@ Options:
 
   runDbPush(databaseConfig);
 
-  console.log("[dev-stack] Starting Ponder, Next.js, and Keeper...");
+  const services = keeperStartup.enabled ? [...baseServices, keeperService] : baseServices;
+  if (!keeperStartup.enabled) {
+    console.log(
+      `[dev-stack] Skipping Keeper because ${keeperStartup.missing.join(", ")} is not configured in the environment or ${path.relative(repoRoot, keeperStartup.keeperEnvPath)}.`,
+    );
+  }
+
+  console.log(`[dev-stack] Starting ${services.map(service => service.name).join(", ")}...`);
   console.log("[dev-stack] Deployment stays separate. Point your env files at the chain you already deployed to.");
 
   process.on("SIGINT", () => shutdown(0));
