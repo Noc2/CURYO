@@ -614,7 +614,8 @@ contract RoundRewardDistributor is Initializable, AccessControlUpgradeable, Reen
             if (additionalReserved > 0) {
                 uint256 nextReservedReward = reservedReward + additionalReserved;
                 if (nextReservedReward < totalReward) {
-                    IParticipationPool(rewardPool).releaseReservedReward(additionalReserved);
+                    uint256 releasedReserved = IParticipationPool(rewardPool).releaseReservedReward(additionalReserved);
+                    if (releasedReserved != additionalReserved) revert InvalidParticipationSnapshot();
                     if (requireFullReservation) revert PoolDepleted();
                     return (totalReward, reservedReward, false);
                 }

@@ -10,7 +10,7 @@ import { SafeERC20 } from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.s
 library TokenTransferLib {
     using SafeERC20 for IERC20;
 
-    function transfer(IERC20 token, address recipient, uint256 amount) external {
+    function safeTransfer(IERC20 token, address recipient, uint256 amount) external {
         token.safeTransfer(recipient, amount);
     }
 }
