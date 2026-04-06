@@ -994,73 +994,73 @@ const HomeInner = () => {
     (activeScope === "all" ? "For You" : "Discover");
 
   return (
-    <AppPageShell contentClassName="max-w-[1320px]">
+    <AppPageShell contentClassName="space-y-4">
       <VotingGuide />
-      <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_19.5rem] xl:items-start">
-        <div className="min-w-0">
-          <div
-            className="mb-4 flex shrink-0 flex-wrap items-center gap-2 sm:gap-3 xl:mb-3 xl:flex-nowrap"
-            data-disable-queue-wheel="true"
-          >
-            <CategoryFilter
-              categories={categories}
-              activeCategory={activeCategory}
-              onSelect={selectCategory}
-              pillClassName={(cat, isActive) => {
-                if (cat !== BROKEN_FILTER) return undefined;
-                return isActive
-                  ? "bg-warning/20 text-warning border border-warning/40"
-                  : "pill-inactive text-warning/70 hover:bg-warning/10";
-              }}
-            />
-            <FeedScopeFilter
-              value={view}
-              groups={viewGroups}
-              onChange={value => {
-                void handleViewChange(value as VoteView);
-              }}
-              label="View"
-            />
-            <div className="shrink-0 flex items-center xl:hidden">
-              <StreakCounter />
-            </div>
+      <div
+        className="flex shrink-0 flex-wrap items-center gap-2 sm:gap-3 xl:flex-nowrap"
+        data-disable-queue-wheel="true"
+      >
+        <CategoryFilter
+          categories={categories}
+          activeCategory={activeCategory}
+          onSelect={selectCategory}
+          pillClassName={(cat, isActive) => {
+            if (cat !== BROKEN_FILTER) return undefined;
+            return isActive
+              ? "bg-warning/20 text-warning border border-warning/40"
+              : "pill-inactive text-warning/70 hover:bg-warning/10";
+          }}
+        />
+        <FeedScopeFilter
+          value={view}
+          groups={viewGroups}
+          onChange={value => {
+            void handleViewChange(value as VoteView);
+          }}
+          label="View"
+        />
+        <div className="shrink-0 flex items-center xl:hidden">
+          <StreakCounter />
+        </div>
+      </div>
+
+      {isSearchMode ? (
+        <div className="flex shrink-0 flex-wrap items-center gap-2" data-disable-queue-wheel="true">
+          <div className="rounded-full bg-base-200 px-3 py-2 text-sm text-base-content/70">
+            {isShortSearchQuery ? (
+              <span>Keep typing to search. Terms need at least {MIN_CONTENT_SEARCH_QUERY_LENGTH} characters.</span>
+            ) : (
+              <>
+                Results for <span className="font-medium text-base-content">&quot;{trimmedSearchQuery}&quot;</span>
+              </>
+            )}
           </div>
-
-          {isSearchMode ? (
-            <div className="mb-5 flex shrink-0 flex-wrap items-center gap-2 xl:mb-3" data-disable-queue-wheel="true">
-              <div className="rounded-full bg-base-200 px-3 py-2 text-sm text-base-content/70">
-                {isShortSearchQuery ? (
-                  <span>Keep typing to search. Terms need at least {MIN_CONTENT_SEARCH_QUERY_LENGTH} characters.</span>
-                ) : (
-                  <>
-                    Results for <span className="font-medium text-base-content">&quot;{trimmedSearchQuery}&quot;</span>
-                  </>
-                )}
-              </div>
-              {!isShortSearchQuery ? (
-                <>
-                  <label htmlFor="vote-search-sort" className="sr-only">
-                    Sort search results
-                  </label>
-                  <select
-                    id="vote-search-sort"
-                    name="vote-search-sort"
-                    value={effectiveSearchSortBy}
-                    onChange={e => setSortBy(e.target.value as SearchSortOption)}
-                    className="select select-sm bg-base-200 text-base font-medium border-none focus:outline-none w-auto"
-                    aria-label="Sort search results"
-                  >
-                    {SEARCH_SORT_OPTIONS.map(opt => (
-                      <option key={opt.value} value={opt.value}>
-                        {opt.label}
-                      </option>
-                    ))}
-                  </select>
-                </>
-              ) : null}
-            </div>
+          {!isShortSearchQuery ? (
+            <>
+              <label htmlFor="vote-search-sort" className="sr-only">
+                Sort search results
+              </label>
+              <select
+                id="vote-search-sort"
+                name="vote-search-sort"
+                value={effectiveSearchSortBy}
+                onChange={e => setSortBy(e.target.value as SearchSortOption)}
+                className="select select-sm bg-base-200 text-base font-medium border-none focus:outline-none w-auto"
+                aria-label="Sort search results"
+              >
+                {SEARCH_SORT_OPTIONS.map(opt => (
+                  <option key={opt.value} value={opt.value}>
+                    {opt.label}
+                  </option>
+                ))}
+              </select>
+            </>
           ) : null}
+        </div>
+      ) : null}
 
+      <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_18rem] xl:items-start">
+        <div className="min-w-0">
           <div className="surface-card rounded-[2rem] p-3 sm:p-4 xl:min-h-[calc(100vh-13.5rem)]">
             <div className="min-w-0 h-full">
               {/* Main content */}

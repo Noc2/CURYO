@@ -62,12 +62,11 @@ function getStatusChipClassName(tone: SignalStatusTone) {
   }
 }
 
-function RailMetric({ label, value, detail }: { label: string; value: string; detail: string }) {
+function RailMetric({ label, value }: { label: string; value: string }) {
   return (
     <div className="rounded-[1.35rem] bg-base-100/70 px-3.5 py-3.5 ring-1 ring-base-content/8">
       <p className="text-[0.65rem] font-semibold uppercase tracking-[0.18em] text-base-content/42">{label}</p>
       <p className="mt-2 display-metric text-[1.85rem] text-base-content">{value}</p>
-      <p className="mt-1 text-xs leading-relaxed text-base-content/52">{detail}</p>
     </div>
   );
 }
@@ -105,12 +104,9 @@ export function VoteSignalRail({
   return (
     <aside className="surface-card rounded-[2rem] p-4 sm:p-5 xl:sticky xl:top-5">
       <div className="flex items-start justify-between gap-3">
-        <div>
-          <p className="display-section text-[1.9rem] text-base-content">Signal Rail</p>
-          <p className="mt-1 text-sm text-base-content/55">
-            {viewLabel} · Card {currentCardLabel}
-          </p>
-        </div>
+        <p className="text-[0.72rem] font-semibold uppercase tracking-[0.18em] text-base-content/52">
+          {viewLabel} · Card {currentCardLabel}
+        </p>
         <div className={`rounded-full px-3 py-1.5 text-sm font-semibold ${getStatusChipClassName(status.tone)}`}>
           {status.label}
         </div>
@@ -136,26 +132,10 @@ export function VoteSignalRail({
       ) : null}
 
       <div className="mt-4 grid grid-cols-2 gap-3">
-        <RailMetric
-          label="Total cREP"
-          value={address ? formatCrepAmount(totalCrepMicro, 0) : "—"}
-          detail={address ? "Liquid plus staked" : "Connect to load"}
-        />
-        <RailMetric
-          label="Staked"
-          value={address ? formatCrepAmount(totalStakedMicro, 0) : "—"}
-          detail={address ? "Voting and submission" : "Locked stake"}
-        />
-        <RailMetric
-          label="Accuracy"
-          value={address ? formatPercent(winRate) : "—"}
-          detail={address ? `${totalSettledVotes} resolved votes` : "Settled record"}
-        />
-        <RailMetric
-          label="Status"
-          value={address ? status.label : "—"}
-          detail={address ? `${currentStreak} day streak` : "Momentum"}
-        />
+        <RailMetric label="Total cREP" value={address ? formatCrepAmount(totalCrepMicro, 0) : "—"} />
+        <RailMetric label="Staked" value={address ? formatCrepAmount(totalStakedMicro, 0) : "—"} />
+        <RailMetric label="Accuracy" value={address ? formatPercent(winRate) : "—"} />
+        <RailMetric label="Status" value={address ? status.label : "—"} />
       </div>
 
       {!address ? (
