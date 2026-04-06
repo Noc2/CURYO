@@ -91,7 +91,7 @@ function LiveRoundActivity({
   return (
     <div
       className={`rounded-[1.3rem] bg-base-content/[0.04] ring-1 ring-base-content/8 ${
-        compact ? "px-3 py-3" : "px-3.5 py-3.5"
+        condensed ? "px-2.5 py-2.5" : compact ? "px-3 py-3" : "px-3.5 py-3.5"
       }`}
     >
       <div className="flex flex-wrap items-start justify-between gap-2">
@@ -100,7 +100,9 @@ function LiveRoundActivity({
             Live round activity
           </p>
           <p
-            className={`mt-1 text-sm leading-relaxed text-base-content/70 ${compact ? "max-w-none" : "max-w-[18rem]"}`}
+            className={`mt-1 leading-relaxed text-base-content/70 ${
+              condensed ? "text-xs" : "text-sm"
+            } ${compact ? "max-w-none" : "max-w-[18rem]"}`}
           >
             {detailCopy}
           </p>
@@ -123,18 +125,28 @@ function LiveRoundActivity({
         </div>
       </div>
 
-      <div className="mt-3 grid grid-cols-3 gap-2">
-        <div className="rounded-[1rem] bg-base-content/[0.04] px-3 py-2">
+      <div className={`grid grid-cols-3 ${condensed ? "mt-2.5 gap-1.5" : "mt-3 gap-2"}`}>
+        <div className={`rounded-[1rem] bg-base-content/[0.04] ${condensed ? "px-2 py-1.5" : "px-3 py-2"}`}>
           <p className="text-[0.64rem] font-semibold uppercase tracking-[0.16em] text-base-content/40">Committed</p>
-          <p className="mt-1 text-base font-semibold tabular-nums text-base-content">{snapshot.voteCount}</p>
+          <p
+            className={`font-semibold tabular-nums text-base-content ${condensed ? "mt-0.5 text-sm" : "mt-1 text-base"}`}
+          >
+            {snapshot.voteCount}
+          </p>
         </div>
-        <div className="rounded-[1rem] bg-base-content/[0.04] px-3 py-2">
+        <div className={`rounded-[1rem] bg-base-content/[0.04] ${condensed ? "px-2 py-1.5" : "px-3 py-2"}`}>
           <p className="text-[0.64rem] font-semibold uppercase tracking-[0.16em] text-base-content/40">Revealed</p>
-          <p className="mt-1 text-base font-semibold tabular-nums text-base-content">{snapshot.revealedCount}</p>
+          <p
+            className={`font-semibold tabular-nums text-base-content ${condensed ? "mt-0.5 text-sm" : "mt-1 text-base"}`}
+          >
+            {snapshot.revealedCount}
+          </p>
         </div>
-        <div className="rounded-[1rem] bg-base-content/[0.04] px-3 py-2">
+        <div className={`rounded-[1rem] bg-base-content/[0.04] ${condensed ? "px-2 py-1.5" : "px-3 py-2"}`}>
           <p className="text-[0.64rem] font-semibold uppercase tracking-[0.16em] text-base-content/40">Staked</p>
-          <p className="mt-1 text-base font-semibold tabular-nums text-base-content">
+          <p
+            className={`font-semibold tabular-nums text-base-content ${condensed ? "mt-0.5 text-sm" : "mt-1 text-base"}`}
+          >
             {formatCrepAmount(snapshot.totalStake, 0)}
           </p>
         </div>
@@ -224,7 +236,7 @@ export function VotingQuestionCard({
   ) : null;
 
   const isSignalVariant = variant === "signal";
-  const orbSize = isSignalVariant ? (compact ? 138 : 176) : compact ? 166 : 190;
+  const orbSize = isSignalVariant ? (compact ? 112 : 136) : compact ? 166 : 190;
   const shellClassName = compact ? "p-3 space-y-2.5" : "p-4 space-y-3 xl:p-3 xl:space-y-2.5 2xl:p-4 2xl:space-y-3";
   const headingRowClassName = compact ? "mb-2.5" : "mb-3";
   const actionStackClassName = compact ? "mt-2.5 gap-1.5" : "mt-3 gap-2";

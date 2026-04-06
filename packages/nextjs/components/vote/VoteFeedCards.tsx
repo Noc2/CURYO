@@ -133,8 +133,8 @@ export const FeedVoteCard = memo(function FeedVoteCard({
   const mediaHeightClassName = usesIntrinsicMediaHeight
     ? "w-full"
     : isLaptopCompact
-      ? "w-full lg:h-[clamp(18rem,44vh,24rem)] xl:h-[clamp(19rem,48vh,28rem)]"
-      : "w-full lg:h-[clamp(20rem,52vh,34rem)]";
+      ? "w-full h-[clamp(16rem,48vh,22rem)] lg:h-[clamp(18rem,44vh,24rem)] xl:h-[clamp(19rem,48vh,28rem)]"
+      : "w-full h-[clamp(16rem,50vh,24rem)] lg:h-[clamp(20rem,52vh,34rem)]";
 
   return (
     <div
@@ -172,6 +172,23 @@ export const FeedVoteCard = memo(function FeedVoteCard({
               deferClientFetch={deferEmbedClientFetch}
             />
           </div>
+          <div className="border-t border-base-content/8 xl:hidden">
+            <VotingQuestionCard
+              contentId={item.id}
+              categoryId={item.categoryId}
+              currentRating={item.rating}
+              openRound={item.openRound}
+              onVote={isUp => onVote(item, isUp)}
+              isCommitting={isCommitting}
+              address={address}
+              error={voteError}
+              cooldownSecondsRemaining={cooldownSecondsRemaining}
+              isOwnContent={item.isOwnContent}
+              embedded
+              compact
+              variant="signal"
+            />
+          </div>
           <FeedContentMetaCard
             item={item}
             submitterProfile={submitterProfile}
@@ -185,26 +202,6 @@ export const FeedVoteCard = memo(function FeedVoteCard({
             compact={isLaptopCompact}
             embedded
             collapseDescription
-          />
-        </div>
-      </div>
-
-      <div className="xl:hidden">
-        <div className="min-w-0 min-h-0 overflow-hidden rounded-2xl bg-base-200">
-          <VotingQuestionCard
-            contentId={item.id}
-            categoryId={item.categoryId}
-            currentRating={item.rating}
-            openRound={item.openRound}
-            onVote={isUp => onVote(item, isUp)}
-            isCommitting={isCommitting}
-            address={address}
-            error={voteError}
-            cooldownSecondsRemaining={cooldownSecondsRemaining}
-            isOwnContent={item.isOwnContent}
-            embedded
-            compact
-            variant="signal"
           />
         </div>
       </div>
