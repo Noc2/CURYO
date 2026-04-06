@@ -240,10 +240,14 @@ const HomeInner = () => {
     sortBy: isSearchMode ? effectiveSearchSortBy : "newest",
     submitter: activeScope === "my_submissions" ? address : undefined,
   });
+  const feedContainsRequestedContent = useMemo(() => {
+    if (effectiveRequestedActiveId === null) return false;
+    return feed.some(item => item.id === effectiveRequestedActiveId);
+  }, [effectiveRequestedActiveId, feed]);
   const { feed: requestedContentFeed, isLoading: requestedContentLoading } = useContentFeed(address, {
     contentIds: requestedContentIds,
-    enabled: effectiveRequestedActiveId !== null,
-    keepPrevious: false,
+    enabled: effectiveRequestedActiveId !== null && !feedContainsRequestedContent,
+    keepPrevious: true,
     limit: 1,
   });
   const requestedContentItem = requestedContentFeed[0] ?? null;
@@ -988,7 +992,12 @@ const HomeInner = () => {
     trimmedSearchQuery,
   ]);
 
-  const showRequestedContentLoading = effectiveRequestedActiveId !== null && requestedContentLoading;
+  const showRequestedContentLoading =
+    effectiveRequestedActiveId !== null &&
+    !feedContainsRequestedContent &&
+    requestedContentItem === null &&
+    requestedContentLoading &&
+    feed.length === 0;
   const activeViewLabel =
     viewGroups.flatMap(group => group.options).find(option => option.value === view)?.label ??
     (activeScope === "all" ? "For You" : "Discover");
