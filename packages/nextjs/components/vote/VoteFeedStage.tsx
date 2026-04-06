@@ -24,6 +24,7 @@ interface VoteFeedStageProps {
   isFollowPending: (address: string) => boolean;
   getCooldownSeconds: (contentId: bigint) => number;
   onLoadMore: () => void;
+  onTrackActiveIndex: (targetIndex: number) => boolean;
   onSelectByIndex: (targetIndex: number) => boolean;
   onVote: (item: ContentItem, isUp: boolean) => void;
   onExternalOpen: (item: ContentItem) => void;
@@ -31,7 +32,7 @@ interface VoteFeedStageProps {
   onToggleFollow: (address: string) => void;
 }
 
-const ACTIVE_CARD_MIN_RATIO = 0.18;
+const ACTIVE_CARD_FOCUS_LINE_FRACTION = 0.34;
 
 export function VoteFeedStage({
   primaryItem,
@@ -52,6 +53,7 @@ export function VoteFeedStage({
   isFollowPending,
   getCooldownSeconds,
   onLoadMore,
+  onTrackActiveIndex,
   onSelectByIndex,
   onVote,
   onExternalOpen,
@@ -60,7 +62,6 @@ export function VoteFeedStage({
 }: VoteFeedStageProps) {
   const loadMoreRef = useRef<HTMLDivElement | null>(null);
   const cardElementsRef = useRef(new Map<number, HTMLDivElement>());
-  const intersectionRatiosRef = useRef(new Map<number, number>());
   const lastObservedActiveIndexRef = useRef<number | null>(null);
 
   const renderedCount = Math.max(loadedCount, activeSourceIndex + 1, primaryItem ? activeSourceIndex + 2 : loadedCount);
@@ -77,50 +78,58 @@ export function VoteFeedStage({
     lastObservedActiveIndexRef.current = activeSourceIndex >= 0 ? activeSourceIndex : null;
   }, [activeSourceIndex]);
 
+  const trackActiveCard = useCallback(() => {
+    if (typeof window === "undefined") return;
+
+    const focusLine = Math.min(window.innerHeight * ACTIVE_CARD_FOCUS_LINE_FRACTION, 240);
+    let bestIndex: number | null = null;
+    let bestDistance = Number.POSITIVE_INFINITY;
+
+    for (const [index, node] of cardElementsRef.current.entries()) {
+      const rect = node.getBoundingClientRect();
+      if (rect.bottom <= 0 || rect.top >= window.innerHeight) continue;
+
+      const spansFocusLine = rect.top <= focusLine && rect.bottom >= focusLine;
+      const distance = spansFocusLine ? 0 : Math.min(Math.abs(rect.top - focusLine), Math.abs(rect.bottom - focusLine));
+
+      if (distance < bestDistance) {
+        bestDistance = distance;
+        bestIndex = index;
+      }
+    }
+
+    if (bestIndex === null || lastObservedActiveIndexRef.current === bestIndex) {
+      return;
+    }
+
+    lastObservedActiveIndexRef.current = bestIndex;
+    onTrackActiveIndex(bestIndex);
+  }, [onTrackActiveIndex]);
+
   useEffect(() => {
     if (typeof window === "undefined") return;
 
-    const observer = new IntersectionObserver(
-      entries => {
-        for (const entry of entries) {
-          const index = Number((entry.target as HTMLElement).dataset.feedCardIndex);
-          if (!Number.isFinite(index)) continue;
-          intersectionRatiosRef.current.set(index, entry.isIntersecting ? entry.intersectionRatio : 0);
-        }
+    let frameId = 0;
+    const requestTrack = () => {
+      if (frameId !== 0) return;
+      frameId = window.requestAnimationFrame(() => {
+        frameId = 0;
+        trackActiveCard();
+      });
+    };
 
-        let bestIndex: number | null = null;
-        let bestRatio = 0;
+    requestTrack();
+    window.addEventListener("scroll", requestTrack, { passive: true });
+    window.addEventListener("resize", requestTrack);
 
-        for (const [index, ratio] of intersectionRatiosRef.current.entries()) {
-          if (ratio <= bestRatio) continue;
-          bestRatio = ratio;
-          bestIndex = index;
-        }
-
-        if (
-          bestIndex === null ||
-          bestRatio < ACTIVE_CARD_MIN_RATIO ||
-          lastObservedActiveIndexRef.current === bestIndex
-        ) {
-          return;
-        }
-
-        lastObservedActiveIndexRef.current = bestIndex;
-        onSelectByIndex(bestIndex);
-      },
-      {
-        threshold: [0, 0.2, 0.4, 0.6, 0.8],
-        rootMargin: "-8% 0px -34% 0px",
-      },
-    );
-
-    const nodes = Array.from(cardElementsRef.current.values());
-    for (const node of nodes) {
-      observer.observe(node);
-    }
-
-    return () => observer.disconnect();
-  }, [activeSourceIndex, feedItems, onSelectByIndex]);
+    return () => {
+      if (frameId !== 0) {
+        window.cancelAnimationFrame(frameId);
+      }
+      window.removeEventListener("scroll", requestTrack);
+      window.removeEventListener("resize", requestTrack);
+    };
+  }, [feedItems.length, trackActiveCard]);
 
   useEffect(() => {
     const observer = new IntersectionObserver(
@@ -148,7 +157,6 @@ export function VoteFeedStage({
   const setCardElement = useCallback((index: number, node: HTMLDivElement | null) => {
     if (!node) {
       cardElementsRef.current.delete(index);
-      intersectionRatiosRef.current.delete(index);
       return;
     }
 
@@ -167,6 +175,7 @@ export function VoteFeedStage({
 
       const node = cardElementsRef.current.get(targetIndex);
       if (node) {
+        lastObservedActiveIndexRef.current = targetIndex;
         node.scrollIntoView({ behavior: "smooth", block: "start" });
       }
 

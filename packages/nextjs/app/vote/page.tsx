@@ -685,8 +685,8 @@ const HomeInner = () => {
     [replaceVoteLocation],
   );
 
-  const handleSelectByIndex = useCallback(
-    (targetIndex: number) => {
+  const setActiveFeedIndex = useCallback(
+    (targetIndex: number, options?: { syncLocation?: boolean }) => {
       if (targetIndex < 0 || targetIndex >= displayFeed.length) return false;
 
       const targetItem = displayFeed[targetIndex];
@@ -701,11 +701,27 @@ const HomeInner = () => {
       }
 
       selectContent(targetItem.id);
-      replaceVoteLocation({ contentId: targetItem.id });
+      if (options?.syncLocation) {
+        replaceVoteLocation({ contentId: targetItem.id });
+      }
 
       return true;
     },
     [activeSourceIndex, displayFeed, flushActiveViewSession, replaceVoteLocation, selectContent],
+  );
+
+  const handleTrackVisibleIndex = useCallback(
+    (targetIndex: number) => {
+      return setActiveFeedIndex(targetIndex);
+    },
+    [setActiveFeedIndex],
+  );
+
+  const handleSelectByIndex = useCallback(
+    (targetIndex: number) => {
+      return setActiveFeedIndex(targetIndex, { syncLocation: true });
+    },
+    [setActiveFeedIndex],
   );
 
   const handleConfirmStake = useCallback(
@@ -1102,6 +1118,7 @@ const HomeInner = () => {
                   isFollowPending={isFollowPending}
                   getCooldownSeconds={getContentCooldownSeconds}
                   onLoadMore={() => setVisibleCount(prev => prev + FEED_PAGE_SIZE)}
+                  onTrackActiveIndex={handleTrackVisibleIndex}
                   onSelectByIndex={handleSelectByIndex}
                   onVote={handleButtonVote}
                   onExternalOpen={handleExternalOpen}
