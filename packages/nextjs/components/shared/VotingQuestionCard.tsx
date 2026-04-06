@@ -31,7 +31,7 @@ interface VotingQuestionCardProps {
   /** When true, removes card background/rounding (parent provides it). */
   embedded?: boolean;
   compact?: boolean;
-  variant?: "default" | "signal";
+  variant?: "default" | "signal" | "dock";
 }
 
 const RATING_GUIDANCE_TEXT =
@@ -236,7 +236,8 @@ export function VotingQuestionCard({
   ) : null;
 
   const isSignalVariant = variant === "signal";
-  const orbSize = isSignalVariant ? (compact ? 112 : 136) : compact ? 166 : 190;
+  const isDockVariant = variant === "dock";
+  const orbSize = isDockVariant ? (compact ? 88 : 100) : isSignalVariant ? (compact ? 112 : 136) : compact ? 166 : 190;
   const shellClassName = compact ? "p-3 space-y-2.5" : "p-4 space-y-3 xl:p-3 xl:space-y-2.5 2xl:p-4 2xl:space-y-3";
   const headingRowClassName = compact ? "mb-2.5" : "mb-3";
   const actionStackClassName = compact ? "mt-2.5 gap-1.5" : "mt-3 gap-2";
@@ -245,6 +246,70 @@ export function VotingQuestionCard({
   useEffect(() => {
     setIsDetailsOpen(false);
   }, [contentId]);
+
+  if (isDockVariant) {
+    const dockBadgeLabel = phase === "voting" ? "Live" : roundSnapshot.hasRound ? "Settled" : "Starting";
+    const dockSummary =
+      phase === "voting"
+        ? roundSnapshot.votersNeeded > 0
+          ? `${roundSnapshot.votersNeeded} more vote${roundSnapshot.votersNeeded === 1 ? "" : "s"}`
+          : "Settlement in reach"
+        : roundSnapshot.hasRound
+          ? `${formatCrepAmount(roundSnapshot.totalStake, 0)} cREP settled`
+          : "Next round on first vote";
+
+    return (
+      <div
+        className={`relative ${embedded ? "" : "rounded-2xl"} flex min-h-0 flex-col overflow-hidden ${compact ? "p-3" : "p-4"}`}
+        style={embedded ? {} : { background: "var(--curyo-surface-elevated)" }}
+      >
+        <div
+          aria-hidden
+          className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_20%_10%,rgba(255,153,104,0.12),transparent_28%),radial-gradient(circle_at_78%_88%,rgba(255,241,216,0.06),transparent_34%)]"
+        />
+        <div className="relative z-10 flex items-center gap-3">
+          <div className="shrink-0">
+            <RatingOrb rating={currentRating} size={orbSize} />
+          </div>
+
+          <div className="min-w-0 flex-1">
+            <div className="flex flex-wrap items-center gap-1.5">
+              <span className="rounded-full bg-base-content/[0.06] px-2.5 py-1 text-[0.68rem] font-semibold uppercase tracking-[0.16em] text-base-content/72">
+                {dockBadgeLabel}
+              </span>
+              <span className="rounded-full bg-base-content/[0.06] px-2.5 py-1 text-xs font-medium text-base-content/72">
+                {dockSummary}
+              </span>
+            </div>
+
+            {(phase === "voting" || hasMyVote) && !centerStatusContent ? (
+              <div className="mt-2 flex items-center gap-2 text-xs text-base-content/58">
+                <span>{voteCount} committed</span>
+                <span>{revealedCount} revealed</span>
+              </div>
+            ) : null}
+
+            {displayError ? <p className="mt-2 text-sm text-error">{displayError}</p> : null}
+          </div>
+
+          <div className="shrink-0">
+            {!(address && hasMyVote) && !centerStatusContent ? (
+              address ? (
+                <div className="flex flex-col items-center gap-2">
+                  <CuryoVoteButton direction="up" onClick={() => onVote(true)} disabled={isCommitting} size="sm" />
+                  <CuryoVoteButton direction="down" onClick={() => onVote(false)} disabled={isCommitting} size="sm" />
+                </div>
+              ) : (
+                <CuryoConnectButton compact />
+              )
+            ) : centerStatusContent ? (
+              centerStatusContent
+            ) : null}
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div
@@ -329,7 +394,7 @@ export function VotingQuestionCard({
             {displayError && <p className="text-center text-base text-error">{displayError}</p>}
 
             {/* Voting arrows - centered below the rating stack */}
-            {!(address && hasMyVote) && !centerStatusContent && !isSignalVariant && (
+            {!(address && hasMyVote) && !centerStatusContent && !isSignalVariant && !isDockVariant && (
               <div className="flex shrink-0 items-center justify-center gap-2 lg:gap-3">
                 {address ? (
                   <>

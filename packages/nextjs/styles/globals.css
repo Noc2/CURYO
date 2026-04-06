@@ -412,6 +412,11 @@ body {
   transition: transform 0.2s ease;
 }
 
+.vote-btn.vote-btn-sm {
+  width: 2.75rem;
+  height: 2.75rem;
+}
+
 .vote-btn .vote-bg {
   position: absolute;
   inset: 0;

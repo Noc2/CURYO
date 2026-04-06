@@ -38,6 +38,7 @@ const ShareContentModal = dynamic(
 );
 
 const LAPTOP_VOTE_CARD_MEDIA_QUERY = "(min-width: 1024px) and (max-width: 1535px)";
+const MOBILE_VOTE_CARD_MEDIA_QUERY = "(max-width: 767px)";
 
 function getThumbnailImageSrc(thumbnailUrl: string) {
   try {
@@ -102,6 +103,7 @@ export const FeedVoteCard = memo(function FeedVoteCard({
   deferEmbedClientFetch = false,
 }: FeedVoteCardProps) {
   const [isLaptopCompact, setIsLaptopCompact] = useState(false);
+  const [isMobileViewport, setIsMobileViewport] = useState(false);
   const platformType = detectPlatform(item.url).type;
 
   useEffect(() => {
@@ -127,18 +129,42 @@ export const FeedVoteCard = memo(function FeedVoteCard({
     };
   }, []);
 
-  const contentStackClassName = isLaptopCompact ? "gap-2.5" : "gap-3 xl:gap-2.5";
-  const contentGridClassName = "grid min-h-0 grid-cols-1 gap-3";
+  useEffect(() => {
+    if (typeof window === "undefined" || typeof window.matchMedia !== "function") return;
+
+    const mediaQuery = window.matchMedia(MOBILE_VOTE_CARD_MEDIA_QUERY);
+    const updateMobileMode = () => {
+      setIsMobileViewport(mediaQuery.matches);
+    };
+
+    updateMobileMode();
+
+    if (typeof mediaQuery.addEventListener === "function") {
+      mediaQuery.addEventListener("change", updateMobileMode);
+      return () => {
+        mediaQuery.removeEventListener("change", updateMobileMode);
+      };
+    }
+
+    mediaQuery.addListener(updateMobileMode);
+    return () => {
+      mediaQuery.removeListener(updateMobileMode);
+    };
+  }, []);
+
+  const useCompactCard = isLaptopCompact || isMobileViewport;
+  const contentStackClassName = useCompactCard ? "gap-2.5" : "gap-3 xl:gap-4";
+  const contentGridClassName = "grid min-h-0 flex-1 grid-cols-1 gap-3";
   const usesIntrinsicMediaHeight = platformType === "youtube";
   const mediaHeightClassName = usesIntrinsicMediaHeight
     ? "w-full"
-    : isLaptopCompact
-      ? "w-full h-[clamp(16rem,48vh,22rem)] lg:h-[clamp(18rem,44vh,24rem)] xl:h-[clamp(19rem,48vh,28rem)]"
-      : "w-full h-[clamp(16rem,50vh,24rem)] lg:h-[clamp(20rem,52vh,34rem)]";
+    : useCompactCard
+      ? "w-full h-[clamp(16rem,48vh,22rem)] lg:h-[clamp(22rem,58svh,30rem)] xl:h-[clamp(24rem,64svh,34rem)]"
+      : "w-full h-[clamp(16rem,50vh,24rem)] lg:h-[clamp(24rem,62svh,38rem)] xl:h-[clamp(28rem,70svh,44rem)]";
 
   return (
     <div
-      className={`flex h-full min-h-0 flex-col ${contentStackClassName}`}
+      className={`flex h-full min-h-0 flex-col ${contentStackClassName} xl:min-h-[calc(100svh-9rem)]`}
       onClickCapture={event => {
         if (!onExternalOpen) return;
 
@@ -160,11 +186,11 @@ export const FeedVoteCard = memo(function FeedVoteCard({
         onNext={onNext}
         canPrevious={canPrevious}
         canNext={canNext}
-        compact={isLaptopCompact}
+        compact={useCompactCard}
       />
 
       <div className={contentGridClassName}>
-        <div className="flex min-w-0 min-h-0 flex-col overflow-hidden rounded-2xl bg-base-200">
+        <div className="flex min-w-0 min-h-0 flex-1 flex-col overflow-hidden rounded-2xl bg-base-200">
           <div className={`${mediaHeightClassName} overflow-hidden`}>
             <ContentEmbed
               url={item.url}
@@ -186,7 +212,7 @@ export const FeedVoteCard = memo(function FeedVoteCard({
               isOwnContent={item.isOwnContent}
               embedded
               compact
-              variant="signal"
+              variant="dock"
             />
           </div>
           <FeedContentMetaCard
@@ -199,7 +225,7 @@ export const FeedVoteCard = memo(function FeedVoteCard({
             watchPending={watchPending}
             onToggleFollow={onToggleFollow}
             onToggleWatch={onToggleWatch}
-            compact={isLaptopCompact}
+            compact={useCompactCard}
             embedded
             collapseDescription
           />
