@@ -247,7 +247,7 @@ const HomeInner = () => {
   const { feed: requestedContentFeed, isLoading: requestedContentLoading } = useContentFeed(address, {
     contentIds: requestedContentIds,
     enabled: effectiveRequestedActiveId !== null && !feedContainsRequestedContent,
-    keepPrevious: true,
+    keepPrevious: false,
     limit: 1,
   });
   const requestedContentItem = requestedContentFeed[0] ?? null;
@@ -697,7 +697,7 @@ const HomeInner = () => {
       }
 
       if (activeSourceIndex !== -1) {
-        flushActiveViewSession(true);
+        flushActiveViewSession(false);
       }
 
       selectContent(targetItem.id);

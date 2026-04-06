@@ -31,7 +31,7 @@ interface VoteFeedStageProps {
   onToggleFollow: (address: string) => void;
 }
 
-const ACTIVE_CARD_THRESHOLD = 0.55;
+const ACTIVE_CARD_MIN_RATIO = 0.18;
 
 export function VoteFeedStage({
   primaryItem,
@@ -74,6 +74,10 @@ export function VoteFeedStage({
   }, [activeSourceIndex, canLoadMore, feedItems.length, onLoadMore]);
 
   useEffect(() => {
+    lastObservedActiveIndexRef.current = activeSourceIndex >= 0 ? activeSourceIndex : null;
+  }, [activeSourceIndex]);
+
+  useEffect(() => {
     if (typeof window === "undefined") return;
 
     const observer = new IntersectionObserver(
@@ -85,15 +89,19 @@ export function VoteFeedStage({
         }
 
         let bestIndex: number | null = null;
-        let bestRatio = ACTIVE_CARD_THRESHOLD;
+        let bestRatio = 0;
 
         for (const [index, ratio] of intersectionRatiosRef.current.entries()) {
-          if (ratio < bestRatio) continue;
+          if (ratio <= bestRatio) continue;
           bestRatio = ratio;
           bestIndex = index;
         }
 
-        if (bestIndex === null || lastObservedActiveIndexRef.current === bestIndex) {
+        if (
+          bestIndex === null ||
+          bestRatio < ACTIVE_CARD_MIN_RATIO ||
+          lastObservedActiveIndexRef.current === bestIndex
+        ) {
           return;
         }
 
@@ -101,8 +109,8 @@ export function VoteFeedStage({
         onSelectByIndex(bestIndex);
       },
       {
-        threshold: [0.2, ACTIVE_CARD_THRESHOLD, 0.8],
-        rootMargin: "-12% 0px -18% 0px",
+        threshold: [0, 0.2, 0.4, 0.6, 0.8],
+        rootMargin: "-8% 0px -34% 0px",
       },
     );
 
@@ -112,7 +120,7 @@ export function VoteFeedStage({
     }
 
     return () => observer.disconnect();
-  }, [feedItems, onSelectByIndex]);
+  }, [activeSourceIndex, feedItems, onSelectByIndex]);
 
   useEffect(() => {
     const observer = new IntersectionObserver(

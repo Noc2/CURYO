@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { CuryoConnectButton } from "~~/components/scaffold-eth";
-import { CuryoVoteButton } from "~~/components/shared/CuryoVoteButton";
+import { CuryoVoteButton, VoteDirectionIcon } from "~~/components/shared/CuryoVoteButton";
 import { MoreToggleButton } from "~~/components/shared/MoreToggleButton";
 import { RatingHistory } from "~~/components/shared/RatingHistory";
 import { RatingOrb } from "~~/components/shared/RatingOrb";
@@ -157,6 +157,30 @@ function LiveRoundActivity({
   );
 }
 
+function DockVoteAction({
+  label,
+  direction,
+  disabled,
+  onClick,
+}: {
+  label: string;
+  direction: "up" | "down";
+  disabled: boolean;
+  onClick: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      disabled={disabled}
+      className="flex min-h-0 items-center justify-center gap-1.5 rounded-full bg-base-100/80 px-3 py-1.5 text-xs font-semibold text-base-content transition-colors hover:bg-base-100 disabled:cursor-not-allowed disabled:opacity-50"
+    >
+      <VoteDirectionIcon direction={direction} className="h-3.5 w-3.5 stroke-[2.4]" />
+      <span>{label}</span>
+    </button>
+  );
+}
+
 /**
  * Displays the live rating signal and all voting controls in a separate card.
  */
@@ -296,8 +320,18 @@ export function VotingQuestionCard({
             {!(address && hasMyVote) && !centerStatusContent ? (
               address ? (
                 <div className="flex flex-col items-center gap-2">
-                  <CuryoVoteButton direction="up" onClick={() => onVote(true)} disabled={isCommitting} size="sm" />
-                  <CuryoVoteButton direction="down" onClick={() => onVote(false)} disabled={isCommitting} size="sm" />
+                  <DockVoteAction
+                    label="Score too low"
+                    direction="up"
+                    disabled={isCommitting}
+                    onClick={() => onVote(true)}
+                  />
+                  <DockVoteAction
+                    label="Score too high"
+                    direction="down"
+                    disabled={isCommitting}
+                    onClick={() => onVote(false)}
+                  />
                 </div>
               ) : (
                 <CuryoConnectButton compact />
