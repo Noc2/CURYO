@@ -9,6 +9,7 @@ Thank you for your interest in contributing to Curyo — the first human reputat
    ```bash
    git clone https://github.com/YOUR_USERNAME/curyo.git
    cd curyo
+   corepack enable
    yarn install
    ```
 3. Follow the [Usage](README.md#usage) section to run the project locally

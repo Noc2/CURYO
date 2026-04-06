@@ -81,8 +81,8 @@ For protocol review, security review, and contribution planning, treat Curyo-own
 
 ### Prerequisites
 
-- [Node.js 24.x](https://nodejs.org/)
-- [Yarn v3](https://yarnpkg.com/)
+- [Node.js 24.x](https://nodejs.org/) via the repo's [`.nvmrc`](./.nvmrc) or [`.node-version`](./.node-version)
+- Yarn v3 via Corepack (`corepack enable`)
 - [Foundry](https://book.getfoundry.sh/getting-started/installation)
 - [Git](https://git-scm.com/)
 
@@ -91,6 +91,7 @@ For protocol review, security review, and contribution planning, treat Curyo-own
 ```bash
 git clone https://github.com/Noc2/CURYO.git
 cd CURYO
+corepack enable
 yarn install
 ```
 
