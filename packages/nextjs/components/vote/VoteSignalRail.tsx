@@ -102,11 +102,16 @@ export function VoteSignalRail({
     primaryItem != null && activeIndex >= 0 ? `${activeIndex + 1} / ${Math.max(totalCount, activeIndex + 1)}` : "—";
 
   return (
-    <aside className="surface-card rounded-[2rem] p-4 sm:p-5 xl:sticky xl:top-5">
+    <aside className="surface-card rounded-[2rem] p-4 xl:sticky xl:top-4">
       <div className="flex items-start justify-between gap-3">
-        <p className="text-[0.72rem] font-semibold uppercase tracking-[0.18em] text-base-content/52">
-          {viewLabel} · Card {currentCardLabel}
-        </p>
+        <div className="flex flex-wrap items-center gap-2">
+          <div className="rounded-full bg-base-content/[0.05] px-3 py-1.5 text-xs font-medium text-base-content/68">
+            {viewLabel}
+          </div>
+          <div className="rounded-full bg-base-content/[0.05] px-3 py-1.5 text-xs font-medium text-base-content/68">
+            Card {currentCardLabel}
+          </div>
+        </div>
         <div className={`rounded-full px-3 py-1.5 text-sm font-semibold ${getStatusChipClassName(status.tone)}`}>
           {status.label}
         </div>

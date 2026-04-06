@@ -1059,9 +1059,9 @@ const HomeInner = () => {
         </div>
       ) : null}
 
-      <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_18rem] xl:items-start">
+      <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_17.25rem] xl:items-start">
         <div className="min-w-0">
-          <div className="surface-card rounded-[2rem] p-3 sm:p-4 xl:min-h-[calc(100vh-13.5rem)]">
+          <div className="surface-card rounded-[2rem] p-3 sm:p-4">
             <div className="min-w-0 h-full">
               {/* Main content */}
               {categoriesLoading ||
@@ -1103,7 +1103,7 @@ const HomeInner = () => {
             </div>
           </div>
         </div>
-        <div className="hidden min-w-0 xl:block">
+        <div className="hidden min-w-0 self-start xl:block">
           <VoteSignalRail
             primaryItem={primaryItem}
             activeIndex={activeSourceIndex}

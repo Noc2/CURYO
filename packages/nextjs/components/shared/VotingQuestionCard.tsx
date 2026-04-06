@@ -224,7 +224,7 @@ export function VotingQuestionCard({
   ) : null;
 
   const isSignalVariant = variant === "signal";
-  const orbSize = compact ? 166 : isSignalVariant ? 176 : 190;
+  const orbSize = isSignalVariant ? (compact ? 138 : 176) : compact ? 166 : 190;
   const shellClassName = compact ? "p-3 space-y-2.5" : "p-4 space-y-3 xl:p-3 xl:space-y-2.5 2xl:p-4 2xl:space-y-3";
   const headingRowClassName = compact ? "mb-2.5" : "mb-3";
   const actionStackClassName = compact ? "mt-2.5 gap-1.5" : "mt-3 gap-2";
@@ -252,7 +252,17 @@ export function VotingQuestionCard({
             <span>Community rating</span>
             <InfoTooltip text={RATING_GUIDANCE_TEXT} position="bottom" />
           </div>
+          {!(address && hasMyVote) && !centerStatusContent && isSignalVariant && address ? (
+            <div className="mb-2">
+              <CuryoVoteButton direction="up" onClick={() => onVote(true)} disabled={isCommitting} />
+            </div>
+          ) : null}
           <RatingOrb rating={currentRating} size={orbSize} />
+          {!(address && hasMyVote) && !centerStatusContent && isSignalVariant && address ? (
+            <div className="mt-2">
+              <CuryoVoteButton direction="down" onClick={() => onVote(false)} disabled={isCommitting} />
+            </div>
+          ) : null}
           <div className={`flex w-full shrink-0 flex-col items-center ${actionStackClassName}`}>
             {phase === "voting" || hasMyVote ? (
               <div className="flex flex-col items-center gap-2">
@@ -307,7 +317,7 @@ export function VotingQuestionCard({
             {displayError && <p className="text-center text-base text-error">{displayError}</p>}
 
             {/* Voting arrows - centered below the rating stack */}
-            {!(address && hasMyVote) && !centerStatusContent && (
+            {!(address && hasMyVote) && !centerStatusContent && !isSignalVariant && (
               <div className="flex shrink-0 items-center justify-center gap-2 lg:gap-3">
                 {address ? (
                   <>
