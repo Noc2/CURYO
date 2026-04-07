@@ -29,7 +29,12 @@ const bebasNeue = Bebas_Neue({
 
 const ScaffoldEthApp = ({ children }: { children: React.ReactNode }) => {
   return (
-    <html className={`${sourceSans.variable} ${bebasNeue.variable}`} data-theme="dark" style={{ colorScheme: "dark" }}>
+    <html
+      lang="en"
+      className={`${sourceSans.variable} ${bebasNeue.variable}`}
+      data-theme="dark"
+      style={{ colorScheme: "dark" }}
+    >
       <body>
         <ScaffoldEthAppWithProviders>{children}</ScaffoldEthAppWithProviders>
         {isProduction ? <Script src="https://scripts.simpleanalyticscdn.com/latest.js" /> : null}
