@@ -307,14 +307,13 @@ export function VoteFeedStage({
     const scroller = getActiveScroller();
     if (!scroller) return;
     const scrollerRect = scroller.getBoundingClientRect();
-    const scrollerCenter = scrollerRect.top + scroller.clientHeight / 2;
+    const scrollerAnchor = scrollerRect.top;
     let bestIndex: number | null = null;
     let bestDistance = Number.POSITIVE_INFINITY;
 
     for (const [index, node] of cardElementsRef.current.entries()) {
       const cardRect = node.getBoundingClientRect();
-      const cardCenter = cardRect.top + cardRect.height / 2;
-      const distance = Math.abs(cardCenter - scrollerCenter);
+      const distance = Math.abs(cardRect.top - scrollerAnchor);
 
       if (distance < bestDistance) {
         bestDistance = distance;
@@ -394,6 +393,11 @@ export function VoteFeedStage({
       return;
     }
 
+    if (lastObservedActiveIndexRef.current === null && activeSourceIndex === 0) {
+      lastObservedActiveIndexRef.current = 0;
+      return;
+    }
+
     if (activeSourceIndex >= loadedItemCount) {
       queuedNavigationTargetRef.current = activeSourceIndex;
       lastProgrammaticScrollRequestRef.current = null;
@@ -419,7 +423,6 @@ export function VoteFeedStage({
       });
     };
 
-    requestTrack();
     scroller.addEventListener("scroll", requestTrack, { passive: true });
     window.addEventListener("resize", requestTrack);
 

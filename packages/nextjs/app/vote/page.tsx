@@ -655,34 +655,6 @@ const HomeInner = () => {
     visibleCount,
     requestedActiveId: effectiveRequestedActiveId,
   });
-  const lastSyncedRequestedContentIdRef = useRef<bigint | null>(null);
-
-  useEffect(() => {
-    if (typeof window === "undefined") return;
-
-    if (effectiveRequestedActiveId === null) {
-      lastSyncedRequestedContentIdRef.current = null;
-      return;
-    }
-
-    const activeItem = activeSourceIndex >= 0 ? (displayFeed[activeSourceIndex] ?? null) : null;
-    if (!activeItem || activeItem.id !== effectiveRequestedActiveId) {
-      return;
-    }
-
-    if (lastSyncedRequestedContentIdRef.current === effectiveRequestedActiveId) {
-      return;
-    }
-
-    lastSyncedRequestedContentIdRef.current = effectiveRequestedActiveId;
-
-    window.requestAnimationFrame(() => {
-      document.getElementById(`vote-feed-card-${activeSourceIndex}`)?.scrollIntoView({
-        behavior: "smooth",
-        block: "start",
-      });
-    });
-  }, [activeSourceIndex, displayFeed, effectiveRequestedActiveId]);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
