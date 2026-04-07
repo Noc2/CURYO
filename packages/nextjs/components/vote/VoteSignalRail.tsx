@@ -1,7 +1,6 @@
 "use client";
 
 import { useAccount } from "wagmi";
-import { CuryoConnectButton } from "~~/components/scaffold-eth";
 import { ClaimRewardsButton } from "~~/components/shared/ClaimRewardsButton";
 import { VotingQuestionCard } from "~~/components/shared/VotingQuestionCard";
 import { useAllClaimableRewards } from "~~/hooks/useAllClaimableRewards";
@@ -138,11 +137,7 @@ export function VoteSignalRail({
         <RailMetric label="Status" value={address ? status.label : "—"} />
       </div>
 
-      {!address ? (
-        <div className="mt-4">
-          <CuryoConnectButton />
-        </div>
-      ) : totalClaimable > 0n ? (
+      {address && totalClaimable > 0n ? (
         <div className="mt-4">
           <ClaimRewardsButton buttonClassName="btn btn-primary btn-sm h-10 min-h-0 w-full rounded-full border-none text-sm" />
         </div>

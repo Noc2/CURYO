@@ -643,6 +643,12 @@ const HomeInner = () => {
 
   const handleButtonVote = useCallback(
     (item: ContentItem, isUp: boolean) => {
+      if (!address) {
+        notification.info("Sign in to vote.");
+        void openConnectModal();
+        return;
+      }
+
       const cooldownSeconds =
         primaryItem && item.id === primaryItem.id ? primaryItemCooldownSeconds : getContentCooldownSeconds(item.id);
       if (cooldownSeconds > 0) {
@@ -656,9 +662,11 @@ const HomeInner = () => {
       setStakeModal({ isOpen: true, isUp, contentId: item.id, categoryId: item.categoryId });
     },
     [
+      address,
       clearVoteError,
       getContentCooldownSeconds,
       markPrimaryInteraction,
+      openConnectModal,
       primaryItem,
       primaryItemCooldownSeconds,
       recordRecommendationSignal,

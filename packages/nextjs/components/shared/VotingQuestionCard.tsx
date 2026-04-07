@@ -365,13 +365,13 @@ export function VotingQuestionCard({
             <span>Community rating</span>
             <InfoTooltip text={RATING_GUIDANCE_TEXT} position="bottom" />
           </div>
-          {!(address && hasMyVote) && !centerStatusContent && isSignalVariant && address ? (
+          {!(address && hasMyVote) && !centerStatusContent && isSignalVariant ? (
             <div className="mb-2">
               <CuryoVoteButton direction="up" onClick={() => onVote(true)} disabled={isCommitting} />
             </div>
           ) : null}
           <RatingOrb rating={currentRating} size={orbSize} />
-          {!(address && hasMyVote) && !centerStatusContent && isSignalVariant && address ? (
+          {!(address && hasMyVote) && !centerStatusContent && isSignalVariant ? (
             <div className="mt-2">
               <CuryoVoteButton direction="down" onClick={() => onVote(false)} disabled={isCommitting} />
             </div>
