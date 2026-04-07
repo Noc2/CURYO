@@ -31,17 +31,17 @@ export function RoundRevealedBreakdown({ snapshot, stacked = false }: RoundRevea
   if (stacked) {
     return (
       <div className="flex w-full max-w-full flex-col gap-1.5 text-base-content/60">
-        <div className="inline-flex min-w-0 flex-wrap items-center justify-start gap-x-2 gap-y-1 text-left">
-          <span className="font-semibold">Up</span>
+        <div className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1 text-left">
+          <span>Up</span>
           <span className="font-semibold tabular-nums">{upPoolFormatted.toFixed(0)} cREP</span>
-          <span className="text-xs text-base-content/60">
+          <span className="text-sm text-base-content/60">
             {upCount} vote{upCount === 1 ? "" : "s"}
           </span>
         </div>
-        <div className="inline-flex min-w-0 flex-wrap items-center justify-start gap-x-2 gap-y-1 text-left">
-          <span className="font-semibold">Down</span>
+        <div className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1 text-left">
+          <span>Down</span>
           <span className="font-semibold tabular-nums">{downPoolFormatted.toFixed(0)} cREP</span>
-          <span className="text-xs text-base-content/60">
+          <span className="text-sm text-base-content/60">
             {downCount} vote{downCount === 1 ? "" : "s"}
           </span>
         </div>

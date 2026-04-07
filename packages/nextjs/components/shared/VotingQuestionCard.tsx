@@ -114,12 +114,14 @@ function InlineVotingSummary({
   emptyVoteIcons,
   compact,
   stackForNarrowRail = false,
+  alignLeft = false,
 }: {
   snapshot: ReturnType<typeof useRoundSnapshot>;
   filledVoteIcons: number;
   emptyVoteIcons: number;
   compact: boolean;
   stackForNarrowRail?: boolean;
+  alignLeft?: boolean;
 }) {
   const { ratePercent } = useParticipationRate();
   const progressMessaging = getRoundProgressMessaging(snapshot, ratePercent);
@@ -133,7 +135,9 @@ function InlineVotingSummary({
   }
 
   return (
-    <div className={`flex w-full flex-col items-center ${compact ? "gap-2" : "gap-2.5"}`}>
+    <div
+      className={`flex w-full flex-col ${alignLeft ? "items-start" : "items-center"} ${compact ? "gap-2" : "gap-2.5"}`}
+    >
       {showVoteIcons ? (
         <VoteParticipationIcons
           filledVoteIcons={filledVoteIcons}
@@ -144,7 +148,7 @@ function InlineVotingSummary({
       {progressMessaging ? (
         <div
           className={`flex text-base text-base-content/75 ${
-            stackForNarrowRail
+            alignLeft || stackForNarrowRail
               ? "w-full flex-col items-start gap-1 text-left"
               : "flex-wrap items-center justify-center gap-x-2.5 gap-y-1.5 text-center"
           }`}
@@ -196,7 +200,7 @@ function InlineVotingSummary({
       ) : null}
       {showRevealedBreakdown ? (
         <div className="w-full">
-          <RoundRevealedBreakdown snapshot={snapshot} stacked={stackForNarrowRail} />
+          <RoundRevealedBreakdown snapshot={snapshot} stacked={stackForNarrowRail || alignLeft} />
         </div>
       ) : null}
     </div>
@@ -426,6 +430,7 @@ export function VotingQuestionCard({
   const footerStackClassName = compact ? "mt-2.5 gap-2" : "mt-3 gap-3 xl:mt-2.5 xl:gap-2.5 2xl:mt-3 2xl:gap-3";
   const activitySummary = <LiveRoundActivity snapshot={roundSnapshot} compact={compact} condensed />;
   const isDesktopSignalRailCard = compact && isSignalVariant;
+  const isLeftAlignedDockDetails = isDockVariant;
   const showInlineVotingSummary = phase === "voting" || roundSnapshot.round.revealedCount > 0;
   const { ratePercent } = useParticipationRate();
   const progressMessaging = getRoundProgressMessaging(roundSnapshot, ratePercent);
@@ -438,6 +443,7 @@ export function VotingQuestionCard({
       emptyVoteIcons={emptyVoteIcons}
       compact={compact}
       stackForNarrowRail={isDesktopSignalRailCard}
+      alignLeft={isLeftAlignedDockDetails}
     />
   );
   const showExpandedDetails = isSignalVariant || (isDetailsOpen && !isDockVariant);
