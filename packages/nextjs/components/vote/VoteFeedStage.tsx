@@ -795,7 +795,7 @@ export function VoteFeedStage({
               data-feed-card-index={actualIndex}
               aria-current={isActiveCard ? "true" : undefined}
               aria-hidden={!isActiveCard}
-              className={`relative shrink-0 snap-start snap-always xl:snap-normal transition-[opacity,filter,transform] duration-300 ease-out ${
+              className={`relative shrink-0 snap-start snap-always transition-[opacity,filter,transform] duration-300 ease-out ${
                 isActiveCard
                   ? "opacity-100"
                   : "pointer-events-none opacity-32 grayscale-[0.38] saturate-[0.46] brightness-[0.72]"
@@ -846,12 +846,12 @@ export function VoteFeedStage({
       {scrollIndicatorState.isVisible && (isDesktopViewport || isMobileScrollIndicatorActive) ? (
         <div
           aria-hidden="true"
-          className="pointer-events-none fixed right-1 top-0 z-40 w-5"
+          className="pointer-events-none fixed right-2 top-0 z-40 w-6 rounded-full bg-base-100/18 backdrop-blur-[2px]"
           style={{ top: `${scrollIndicatorState.top}px`, height: `${scrollIndicatorState.height}px` }}
         >
-          <div className="absolute inset-y-0 left-1/2 w-[2px] -translate-x-1/2 rounded-full bg-primary/20" />
+          <div className="absolute inset-y-1 left-1/2 w-[2px] -translate-x-1/2 rounded-full bg-base-content/20" />
           <div
-            className="absolute left-1/2 w-2.5 -translate-x-1/2 rounded-full bg-primary shadow-[0_0_14px_rgba(242,100,38,0.48)]"
+            className="absolute left-1/2 w-3 -translate-x-1/2 rounded-full bg-primary shadow-[0_0_16px_rgba(242,100,38,0.55)]"
             style={{
               top: `${scrollIndicatorState.thumbOffset}px`,
               height: `${scrollIndicatorState.thumbHeight}px`,
