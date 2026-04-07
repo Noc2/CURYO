@@ -39,7 +39,7 @@ import { type DiscoverFeedMode, sortDiscoverFeed } from "~~/lib/vote/feedModes";
 import { rankForYouFeed } from "~~/lib/vote/forYouRanker";
 import { buildVoteLocation } from "~~/lib/vote/location";
 import { mergeRequestedContentIntoFeed } from "~~/lib/vote/requestedContent";
-import { stabilizeSessionFeedOrder } from "~~/lib/vote/stableFeedOrder";
+import { resolveStableSessionFeedOrder } from "~~/lib/vote/stableFeedOrder";
 import { type VoteView, getVoteViewGroups, isActivityViewOption } from "~~/lib/vote/viewOptions";
 import { buildRecommendationSignalContext, trackRecommendationSignal } from "~~/utils/recommendationTracker";
 import { notification } from "~~/utils/scaffold-eth";
@@ -75,6 +75,7 @@ const SEARCH_SORT_OPTIONS: { value: SearchSortOption; label: string }[] = [
 ];
 const FEED_PAGE_SIZE = 6;
 const FEED_PREFETCH_BUFFER = 6;
+const MOBILE_VOTE_DOCK_RESERVED_SPACE_PX = 152;
 
 function areIdListsEqual(left: readonly string[], right: readonly string[]) {
   if (left.length !== right.length) return false;
@@ -121,6 +122,8 @@ const HomeInner = () => {
   const [interactionVersion, setInteractionVersion] = useState(0);
   const [optimisticVotedContentIds, setOptimisticVotedContentIds] = useState<Set<string>>(() => new Set());
   const desktopScrollContainerRef = useRef<HTMLDivElement | null>(null);
+  const mobileDockContainerRef = useRef<HTMLDivElement | null>(null);
+  const [mobileDockReservedSpace, setMobileDockReservedSpace] = useState<number | null>(null);
   const trimmedSearchQuery = searchQuery.trim();
   const isSearchMode = trimmedSearchQuery.length > 0;
   const isShortSearchQuery = isContentSearchQueryTooShort(trimmedSearchQuery);
@@ -577,9 +580,11 @@ const HomeInner = () => {
         activeCategory,
         view,
         isSearchMode ? `search:${trimmedSearchQuery}:${effectiveSearchSortBy}` : `sort:${sortBy}`,
+        `content:${effectiveRequestedActiveId?.toString() ?? "none"}`,
       ].join("|"),
     [
       activeCategory,
+      effectiveRequestedActiveId,
       effectiveSearchSortBy,
       isSearchMode,
       normalizedAddress,
@@ -589,24 +594,41 @@ const HomeInner = () => {
       view,
     ],
   );
-  const feedSessionKeyRef = useRef(feedSessionKey);
-  const [stableDisplayFeedIds, setStableDisplayFeedIds] = useState<string[]>(() =>
-    rankedDisplayFeed.map(item => item.id.toString()),
+  const rankedDisplayFeedIds = useMemo(() => rankedDisplayFeed.map(item => item.id.toString()), [rankedDisplayFeed]);
+  const [stableDisplayFeedState, setStableDisplayFeedState] = useState<{ sessionKey: string; ids: string[] }>(() => ({
+    sessionKey: feedSessionKey,
+    ids: rankedDisplayFeedIds,
+  }));
+  const stableDisplayFeedIds = useMemo(
+    () =>
+      resolveStableSessionFeedOrder({
+        previousIds: stableDisplayFeedState.ids,
+        previousSessionKey: stableDisplayFeedState.sessionKey,
+        nextIds: rankedDisplayFeedIds,
+        nextSessionKey: feedSessionKey,
+      }),
+    [feedSessionKey, rankedDisplayFeedIds, stableDisplayFeedState.ids, stableDisplayFeedState.sessionKey],
   );
 
   useEffect(() => {
-    setStableDisplayFeedIds(previousIds => {
-      const nextIds = rankedDisplayFeed.map(item => item.id.toString());
+    setStableDisplayFeedState(previousState => {
+      const nextIds = resolveStableSessionFeedOrder({
+        previousIds: previousState.ids,
+        previousSessionKey: previousState.sessionKey,
+        nextIds: rankedDisplayFeedIds,
+        nextSessionKey: feedSessionKey,
+      });
 
-      if (feedSessionKeyRef.current !== feedSessionKey) {
-        feedSessionKeyRef.current = feedSessionKey;
-        return nextIds;
+      if (previousState.sessionKey === feedSessionKey && areIdListsEqual(previousState.ids, nextIds)) {
+        return previousState;
       }
 
-      const stableIds = stabilizeSessionFeedOrder(previousIds, nextIds);
-      return areIdListsEqual(previousIds, stableIds) ? previousIds : stableIds;
+      return {
+        sessionKey: feedSessionKey,
+        ids: nextIds,
+      };
     });
-  }, [feedSessionKey, rankedDisplayFeed]);
+  }, [feedSessionKey, rankedDisplayFeedIds]);
 
   const displayFeed = useMemo(() => {
     const itemById = new Map(rankedDisplayFeed.map(item => [item.id.toString(), item]));
@@ -623,34 +645,54 @@ const HomeInner = () => {
     visibleCount,
     requestedActiveId: effectiveRequestedActiveId,
   });
-  const lastSyncedRequestedContentIdRef = useRef<bigint | null>(null);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
 
-    if (effectiveRequestedActiveId === null) {
-      lastSyncedRequestedContentIdRef.current = null;
+    const dockNode = mobileDockContainerRef.current;
+    if (!dockNode) {
+      setMobileDockReservedSpace(current => (current === null ? current : null));
       return;
     }
 
-    const activeItem = activeSourceIndex >= 0 ? (displayFeed[activeSourceIndex] ?? null) : null;
-    if (!activeItem || activeItem.id !== effectiveRequestedActiveId) {
-      return;
-    }
+    let frameId = 0;
+    let resizeObserver: ResizeObserver | null = null;
 
-    if (lastSyncedRequestedContentIdRef.current === effectiveRequestedActiveId) {
-      return;
-    }
+    const measureDockSpace = () => {
+      const nextReservedSpace = Math.max(
+        MOBILE_VOTE_DOCK_RESERVED_SPACE_PX,
+        Math.ceil(window.innerHeight - dockNode.getBoundingClientRect().top),
+      );
+      setMobileDockReservedSpace(current => (current === nextReservedSpace ? current : nextReservedSpace));
+    };
 
-    lastSyncedRequestedContentIdRef.current = effectiveRequestedActiveId;
+    const requestDockMeasurement = () => {
+      if (frameId !== 0) {
+        window.cancelAnimationFrame(frameId);
+      }
 
-    window.requestAnimationFrame(() => {
-      document.getElementById(`vote-feed-card-${activeSourceIndex}`)?.scrollIntoView({
-        behavior: "smooth",
-        block: "start",
+      frameId = window.requestAnimationFrame(() => {
+        frameId = 0;
+        measureDockSpace();
       });
-    });
-  }, [activeSourceIndex, displayFeed, effectiveRequestedActiveId]);
+    };
+
+    requestDockMeasurement();
+    window.addEventListener("resize", requestDockMeasurement);
+
+    if (typeof ResizeObserver !== "undefined") {
+      resizeObserver = new ResizeObserver(requestDockMeasurement);
+      resizeObserver.observe(dockNode);
+    }
+
+    return () => {
+      if (frameId !== 0) {
+        window.cancelAnimationFrame(frameId);
+      }
+      window.removeEventListener("resize", requestDockMeasurement);
+      resizeObserver?.disconnect();
+    };
+  }, [primaryItem?.id]);
 
   useEffect(() => {
     return () => {
@@ -799,7 +841,7 @@ const HomeInner = () => {
 
   const handleTrackVisibleIndex = useCallback(
     (targetIndex: number) => {
-      return setActiveFeedIndex(targetIndex);
+      return setActiveFeedIndex(targetIndex, { syncLocation: true });
     },
     [setActiveFeedIndex],
   );
@@ -846,13 +888,6 @@ const HomeInner = () => {
 
       const nextIndex = committedIndex >= 0 ? Math.min(committedIndex + 1, displayFeed.length - 1) : -1;
       const advanced = nextIndex > committedIndex ? handleSelectByIndex(nextIndex) : false;
-      if (advanced && typeof window !== "undefined") {
-        window.requestAnimationFrame(() => {
-          document
-            .getElementById(`vote-feed-card-${nextIndex}`)
-            ?.scrollIntoView({ behavior: "smooth", block: "start" });
-        });
-      }
       notification.success(
         advanced
           ? `Vote committed! Stake: ${stakeAmount} cREP · next card ready`
@@ -1197,6 +1232,7 @@ const HomeInner = () => {
                       displayFeed={displayFeed}
                       activeSourceIndex={activeSourceIndex}
                       loadedCount={visibleCount}
+                      mobileDockReservedSpace={mobileDockReservedSpace}
                       canLoadMore={canLoadMore}
                       enrichedProfiles={enrichedProfiles}
                       watchedContentIds={watchedContentIds}
@@ -1235,7 +1271,10 @@ const HomeInner = () => {
       </div>
 
       {primaryItem ? (
-        <div className="fixed inset-x-4 bottom-[calc(env(safe-area-inset-bottom)+0.75rem)] z-30 xl:hidden">
+        <div
+          ref={mobileDockContainerRef}
+          className="fixed inset-x-4 bottom-[calc(env(safe-area-inset-bottom)+0.75rem)] z-30 xl:hidden"
+        >
           <div className="mx-auto w-full max-w-5xl">
             <div className="overflow-visible">
               <VotingQuestionCard

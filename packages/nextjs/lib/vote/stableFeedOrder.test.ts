@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { stabilizeSessionFeedOrder } from "~~/lib/vote/stableFeedOrder";
+import { resolveStableSessionFeedOrder, stabilizeSessionFeedOrder } from "~~/lib/vote/stableFeedOrder";
 
 test("stabilizeSessionFeedOrder seeds an empty session from the current ranked order", () => {
   assert.deepEqual(stabilizeSessionFeedOrder([], ["bitcoin", "shelter", "witcher"]), ["bitcoin", "shelter", "witcher"]);
@@ -18,4 +18,28 @@ test("stabilizeSessionFeedOrder removes items that no longer belong to the activ
     "bitcoin",
     "witcher",
   ]);
+});
+
+test("resolveStableSessionFeedOrder resets immediately when the feed session changes", () => {
+  assert.deepEqual(
+    resolveStableSessionFeedOrder({
+      previousIds: ["bitcoin", "shelter", "witcher"],
+      previousSessionKey: "network-1|for-you",
+      nextIds: ["requested", "bitcoin", "mike"],
+      nextSessionKey: "network-1|for-you|requested",
+    }),
+    ["requested", "bitcoin", "mike"],
+  );
+});
+
+test("resolveStableSessionFeedOrder preserves visible order within the same session", () => {
+  assert.deepEqual(
+    resolveStableSessionFeedOrder({
+      previousIds: ["bitcoin", "shelter", "witcher"],
+      previousSessionKey: "network-1|for-you",
+      nextIds: ["bitcoin", "mike", "witcher", "shelter"],
+      nextSessionKey: "network-1|for-you",
+    }),
+    ["bitcoin", "shelter", "witcher", "mike"],
+  );
 });

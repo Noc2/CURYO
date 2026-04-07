@@ -10,6 +10,7 @@ interface VoteFeedStageProps {
   displayFeed: ContentItem[];
   activeSourceIndex: number;
   loadedCount: number;
+  mobileDockReservedSpace?: number | null;
   canLoadMore: boolean;
   enrichedProfiles: Record<string, SubmitterProfile>;
   watchedContentIds: Set<string>;
@@ -34,8 +35,7 @@ const MOBILE_STAGE_MEDIA_QUERY = "(max-width: 767px)";
 const DESKTOP_WHEEL_STEP_THRESHOLD = 10;
 const DESKTOP_WHEEL_STEP_RESET_MS = 260;
 const DESKTOP_WHEEL_STEP_LOCK_MS = 260;
-const MOBILE_DOCK_HEIGHT_PX = 140;
-const MOBILE_STAGE_BOTTOM_GAP_PX = 12;
+const MOBILE_DOCK_RESERVED_SPACE_PX = 152;
 const MOBILE_MIN_SCROLLER_HEIGHT_PX = 320;
 
 export function VoteFeedStage({
@@ -43,6 +43,7 @@ export function VoteFeedStage({
   displayFeed,
   activeSourceIndex,
   loadedCount,
+  mobileDockReservedSpace,
   canLoadMore,
   enrichedProfiles,
   watchedContentIds,
@@ -65,6 +66,8 @@ export function VoteFeedStage({
   const loadMoreRef = useRef<HTMLDivElement | null>(null);
   const cardElementsRef = useRef(new Map<number, HTMLDivElement>());
   const lastObservedActiveIndexRef = useRef<number | null>(null);
+  const pendingProgrammaticScrollTargetRef = useRef<number | null>(null);
+  const lastProgrammaticScrollRequestRef = useRef<number | null>(null);
   const wheelDeltaAccumulatorRef = useRef(0);
   const wheelLockTimeoutRef = useRef<number | null>(null);
   const wheelResetTimeoutRef = useRef<number | null>(null);
@@ -74,6 +77,7 @@ export function VoteFeedStage({
 
   const renderedCount = Math.max(loadedCount, activeSourceIndex + 1, primaryItem ? activeSourceIndex + 2 : loadedCount);
   const feedItems = useMemo(() => displayFeed.slice(0, renderedCount), [displayFeed, renderedCount]);
+  const effectiveMobileDockReservedSpace = mobileDockReservedSpace ?? MOBILE_DOCK_RESERVED_SPACE_PX;
   const getActiveScroller = useCallback(() => {
     if (isDesktopViewport && scrollContainerRef?.current) {
       return scrollContainerRef.current;
@@ -129,7 +133,7 @@ export function VoteFeedStage({
       const topOffset = scroller.getBoundingClientRect().top;
       const availableHeight = Math.max(
         MOBILE_MIN_SCROLLER_HEIGHT_PX,
-        Math.floor(window.innerHeight - topOffset - MOBILE_DOCK_HEIGHT_PX - MOBILE_STAGE_BOTTOM_GAP_PX),
+        Math.floor(window.innerHeight - topOffset - effectiveMobileDockReservedSpace),
       );
 
       setMobileScrollerHeight(current => (current === availableHeight ? current : availableHeight));
@@ -167,7 +171,7 @@ export function VoteFeedStage({
         mobileStageQuery.removeListener(requestMeasurement);
       }
     };
-  }, [feedItems.length]);
+  }, [effectiveMobileDockReservedSpace, feedItems.length]);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -257,11 +261,35 @@ export function VoteFeedStage({
     };
   }, [canLoadMore, feedItems.length, getActiveScroller, mobileScrollerHeight]);
 
-  useEffect(() => {
-    lastObservedActiveIndexRef.current = activeSourceIndex >= 0 ? activeSourceIndex : null;
-  }, [activeSourceIndex]);
+  const requestProgrammaticScroll = useCallback(
+    (targetIndex: number) => {
+      if (targetIndex < 0 || targetIndex >= displayFeed.length) {
+        pendingProgrammaticScrollTargetRef.current = null;
+        lastProgrammaticScrollRequestRef.current = null;
+        return;
+      }
+
+      pendingProgrammaticScrollTargetRef.current = targetIndex;
+
+      const scroller = getActiveScroller();
+      const node = cardElementsRef.current.get(targetIndex);
+      if (!scroller || !node || lastProgrammaticScrollRequestRef.current === targetIndex) {
+        return;
+      }
+
+      const scrollerRect = scroller.getBoundingClientRect();
+      const nodeRect = node.getBoundingClientRect();
+      scroller.scrollTo({ top: scroller.scrollTop + nodeRect.top - scrollerRect.top, behavior: "smooth" });
+      lastProgrammaticScrollRequestRef.current = targetIndex;
+    },
+    [displayFeed.length, getActiveScroller],
+  );
 
   const trackActiveCard = useCallback(() => {
+    if (activeSourceIndex < 0) {
+      return;
+    }
+
     const scroller = getActiveScroller();
     if (!scroller) return;
     const scrollerRect = scroller.getBoundingClientRect();
@@ -280,13 +308,56 @@ export function VoteFeedStage({
       }
     }
 
-    if (bestIndex === null || lastObservedActiveIndexRef.current === bestIndex) {
+    if (bestIndex === null) {
+      return;
+    }
+
+    const pendingProgrammaticTarget = pendingProgrammaticScrollTargetRef.current;
+    if (pendingProgrammaticTarget !== null) {
+      if (bestIndex !== pendingProgrammaticTarget) {
+        return;
+      }
+
+      pendingProgrammaticScrollTargetRef.current = null;
+      lastProgrammaticScrollRequestRef.current = null;
+      lastObservedActiveIndexRef.current = bestIndex;
+      return;
+    }
+
+    if (lastObservedActiveIndexRef.current === bestIndex) {
       return;
     }
 
     lastObservedActiveIndexRef.current = bestIndex;
     onTrackActiveIndex(bestIndex);
-  }, [getActiveScroller, onTrackActiveIndex]);
+  }, [activeSourceIndex, getActiveScroller, onTrackActiveIndex]);
+
+  useEffect(() => {
+    if (activeSourceIndex < 0) {
+      lastObservedActiveIndexRef.current = null;
+      pendingProgrammaticScrollTargetRef.current = null;
+      lastProgrammaticScrollRequestRef.current = null;
+      return;
+    }
+
+    if (
+      pendingProgrammaticScrollTargetRef.current === null &&
+      lastObservedActiveIndexRef.current === activeSourceIndex
+    ) {
+      return;
+    }
+
+    if (activeSourceIndex >= feedItems.length) {
+      pendingProgrammaticScrollTargetRef.current = activeSourceIndex;
+      lastProgrammaticScrollRequestRef.current = null;
+      if (canLoadMore) {
+        onLoadMore();
+      }
+      return;
+    }
+
+    requestProgrammaticScroll(activeSourceIndex);
+  }, [activeSourceIndex, canLoadMore, feedItems.length, onLoadMore, requestProgrammaticScroll]);
 
   useEffect(() => {
     const scroller = getActiveScroller();
@@ -367,25 +438,21 @@ export function VoteFeedStage({
         onLoadMore();
       }
 
-      const node = cardElementsRef.current.get(targetIndex);
-      const scroller = getActiveScroller();
-      if (node && scroller) {
-        const scrollerRect = scroller.getBoundingClientRect();
-        const nodeRect = node.getBoundingClientRect();
-        lastObservedActiveIndexRef.current = targetIndex;
-        scroller.scrollTo({ top: scroller.scrollTop + nodeRect.top - scrollerRect.top, behavior: "smooth" });
+      const didSelect = onSelectByIndex(targetIndex);
+      if (didSelect) {
+        requestProgrammaticScroll(targetIndex);
       }
 
-      return onSelectByIndex(targetIndex);
+      return didSelect;
     },
     [
       canLoadMore,
       displayFeed.length,
       feedItems.length,
-      getActiveScroller,
       navigationLocked,
       onLoadMore,
       onSelectByIndex,
+      requestProgrammaticScroll,
     ],
   );
 
@@ -506,12 +573,13 @@ export function VoteFeedStage({
 
       <div
         ref={scrollerRef}
-        className="flex min-h-0 flex-1 snap-y snap-mandatory flex-col gap-3 overflow-y-auto overscroll-contain pb-[8.75rem] pr-1 scroll-pb-[8.75rem] scroll-smooth xl:flex-none xl:gap-4 xl:overflow-visible xl:overscroll-auto xl:pb-4 xl:pr-0 xl:scroll-pb-0"
-        style={
-          mobileScrollerHeight !== null
-            ? { height: `${mobileScrollerHeight}px`, maxHeight: `${mobileScrollerHeight}px` }
-            : undefined
-        }
+        className="flex min-h-0 flex-1 snap-y snap-mandatory flex-col gap-3 overflow-y-auto overscroll-contain pr-1 scroll-smooth xl:flex-none xl:gap-4 xl:overflow-visible xl:overscroll-auto xl:pb-4 xl:pr-0 xl:scroll-pb-0"
+        style={{
+          height: mobileScrollerHeight !== null ? `${mobileScrollerHeight}px` : undefined,
+          maxHeight: mobileScrollerHeight !== null ? `${mobileScrollerHeight}px` : undefined,
+          paddingBottom: isDesktopViewport ? undefined : `${effectiveMobileDockReservedSpace}px`,
+          scrollPaddingBottom: isDesktopViewport ? undefined : `${effectiveMobileDockReservedSpace}px`,
+        }}
       >
         {feedItems.map((item, index) => {
           const canPrevious = index > 0 && !isCommitting && !navigationLocked;

@@ -10,3 +10,18 @@ export function stabilizeSessionFeedOrder(previousIds: readonly string[], nextId
 
   return [...preservedIds, ...appendedIds];
 }
+
+export function resolveStableSessionFeedOrder(params: {
+  previousIds: readonly string[];
+  previousSessionKey: string;
+  nextIds: readonly string[];
+  nextSessionKey: string;
+}) {
+  const { nextIds, nextSessionKey, previousIds, previousSessionKey } = params;
+
+  if (previousSessionKey !== nextSessionKey) {
+    return [...nextIds];
+  }
+
+  return stabilizeSessionFeedOrder(previousIds, nextIds);
+}
