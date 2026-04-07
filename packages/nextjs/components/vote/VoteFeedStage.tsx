@@ -31,9 +31,9 @@ interface VoteFeedStageProps {
 
 const DESKTOP_STEP_MEDIA_QUERY = "(min-width: 1280px)";
 const MOBILE_STAGE_MEDIA_QUERY = "(max-width: 767px)";
-const DESKTOP_WHEEL_STEP_THRESHOLD = 18;
-const DESKTOP_WHEEL_STEP_RESET_MS = 180;
-const DESKTOP_WHEEL_STEP_LOCK_MS = 320;
+const DESKTOP_WHEEL_STEP_THRESHOLD = 10;
+const DESKTOP_WHEEL_STEP_RESET_MS = 260;
+const DESKTOP_WHEEL_STEP_LOCK_MS = 260;
 const MOBILE_DOCK_HEIGHT_PX = 140;
 const MOBILE_STAGE_BOTTOM_GAP_PX = 12;
 const MOBILE_MIN_SCROLLER_HEIGHT_PX = 320;
@@ -403,13 +403,14 @@ export function VoteFeedStage({
 
     const handleWheel = (event: WheelEvent) => {
       if (!desktopStepQuery.matches || navigationLocked) return;
-      if (Math.abs(event.deltaY) <= Math.abs(event.deltaX) || Math.abs(event.deltaY) < 4) return;
+      const deltaY = event.deltaMode === WheelEvent.DOM_DELTA_LINE ? event.deltaY * 16 : event.deltaY;
+      if (Math.abs(deltaY) <= Math.abs(event.deltaX) || Math.abs(deltaY) < 1) return;
 
       event.preventDefault();
 
       if (wheelLockTimeoutRef.current !== null) return;
 
-      wheelDeltaAccumulatorRef.current += event.deltaY;
+      wheelDeltaAccumulatorRef.current += deltaY;
       clearWheelResetTimer();
       wheelResetTimeoutRef.current = window.setTimeout(() => {
         wheelDeltaAccumulatorRef.current = 0;
