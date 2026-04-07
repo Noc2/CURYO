@@ -1219,7 +1219,7 @@ const HomeInner = () => {
         ref={desktopScrollContainerRef}
         className="min-h-0 flex-1 overflow-hidden xl:relative xl:left-1/2 xl:w-screen xl:-translate-x-1/2 xl:overflow-x-hidden xl:overflow-y-auto xl:overscroll-contain xl:scrollbar-subtle xl:snap-y xl:snap-mandatory xl:scroll-pb-4 xl:scroll-smooth"
       >
-        <div className="flex min-h-0 flex-1 flex-col gap-3 overflow-hidden xl:mx-auto xl:w-full xl:max-w-5xl xl:px-4 xl:pb-4">
+        <div className="flex min-h-0 flex-1 flex-col gap-3 overflow-hidden xl:mx-auto xl:w-full xl:max-w-5xl xl:pb-4">
           <div className="flex min-h-0 flex-1 flex-col gap-3 overflow-hidden xl:grid xl:grid-cols-[minmax(0,1fr)_17.25rem] xl:items-start xl:gap-4">
             <div className="flex min-w-0 min-h-0 flex-1 flex-col gap-3 xl:gap-0">
               <div className="surface-card flex min-h-0 flex-1 flex-col overflow-hidden rounded-t-[2rem] rounded-b-none p-3 sm:p-4 xl:rounded-[2rem]">
