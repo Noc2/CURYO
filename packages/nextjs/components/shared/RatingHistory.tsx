@@ -149,7 +149,7 @@ export function RatingHistory({
           <span className={`text-base font-medium ${textColor}`}>Rating history</span>
           <span className="inline-flex items-baseline gap-0.5 text-base tabular-nums">
             <span className="font-semibold text-base-content/72">{currentRatingScore}</span>
-            <span className="font-medium text-base-content/38">/10</span>
+            <span className="font-medium text-base-content/58">/10</span>
           </span>
         </div>
       ) : null}

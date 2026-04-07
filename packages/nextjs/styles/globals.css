@@ -610,11 +610,17 @@ body {
 
 /* Selected pills and tabs */
 .pill-active,
-.pill-category,
 .pill-filter-active {
   background: var(--curyo-ember);
   background-image: none;
   color: var(--color-primary-content);
+  box-shadow: 0 10px 24px rgb(242 100 38 / 0.22);
+}
+
+.pill-category {
+  background: var(--curyo-ember);
+  background-image: none;
+  color: var(--color-neutral-content);
   box-shadow: 0 10px 24px rgb(242 100 38 / 0.22);
 }
 

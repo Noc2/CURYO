@@ -57,9 +57,9 @@ export function VoteSignalRail({
 
       <FooterLinks
         className="px-1"
-        listClassName="justify-start text-[0.72rem] leading-5 text-base-content/44"
-        linkClassName="text-base-content/44 no-underline transition-colors hover:text-base-content/70 hover:underline"
-        separatorClassName="text-base-content/28"
+        listClassName="justify-start text-[0.72rem] leading-5 text-base-content/62"
+        linkClassName="text-base-content/66 no-underline transition-colors hover:text-base-content/90 hover:underline"
+        separatorClassName="text-base-content/42"
       />
     </div>
   );
