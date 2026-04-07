@@ -28,7 +28,10 @@ interface VoteFeedStageProps {
   onToggleFollow: (address: string) => void;
 }
 
-const ACTIVE_CARD_FOCUS_LINE_FRACTION = 0.34;
+const DESKTOP_STEP_MEDIA_QUERY = "(min-width: 1280px)";
+const DESKTOP_WHEEL_STEP_THRESHOLD = 56;
+const DESKTOP_WHEEL_STEP_RESET_MS = 140;
+const DESKTOP_WHEEL_STEP_LOCK_MS = 420;
 
 export function VoteFeedStage({
   primaryItem,
@@ -56,6 +59,9 @@ export function VoteFeedStage({
   const loadMoreRef = useRef<HTMLDivElement | null>(null);
   const cardElementsRef = useRef(new Map<number, HTMLDivElement>());
   const lastObservedActiveIndexRef = useRef<number | null>(null);
+  const wheelDeltaAccumulatorRef = useRef(0);
+  const wheelLockTimeoutRef = useRef<number | null>(null);
+  const wheelResetTimeoutRef = useRef<number | null>(null);
 
   const renderedCount = Math.max(loadedCount, activeSourceIndex + 1, primaryItem ? activeSourceIndex + 2 : loadedCount);
   const feedItems = useMemo(() => displayFeed.slice(0, renderedCount), [displayFeed, renderedCount]);
@@ -74,18 +80,11 @@ export function VoteFeedStage({
   const trackActiveCard = useCallback(() => {
     const scroller = scrollerRef.current;
     if (!scroller) return;
-
-    const scrollerRect = scroller.getBoundingClientRect();
-    const focusLine = scrollerRect.top + Math.min(scrollerRect.height * ACTIVE_CARD_FOCUS_LINE_FRACTION, 240);
     let bestIndex: number | null = null;
     let bestDistance = Number.POSITIVE_INFINITY;
 
     for (const [index, node] of cardElementsRef.current.entries()) {
-      const rect = node.getBoundingClientRect();
-      if (rect.bottom <= scrollerRect.top || rect.top >= scrollerRect.bottom) continue;
-
-      const spansFocusLine = rect.top <= focusLine && rect.bottom >= focusLine;
-      const distance = spansFocusLine ? 0 : Math.min(Math.abs(rect.top - focusLine), Math.abs(rect.bottom - focusLine));
+      const distance = Math.abs(node.offsetTop - scroller.scrollTop);
 
       if (distance < bestDistance) {
         bestDistance = distance;
@@ -180,6 +179,66 @@ export function VoteFeedStage({
     },
     [canLoadMore, displayFeed.length, feedItems.length, navigationLocked, onLoadMore, onSelectByIndex],
   );
+
+  useEffect(() => {
+    const scroller = scrollerRef.current;
+    if (!scroller || typeof window === "undefined") return;
+
+    const desktopStepQuery = window.matchMedia(DESKTOP_STEP_MEDIA_QUERY);
+
+    const clearWheelResetTimer = () => {
+      if (wheelResetTimeoutRef.current !== null) {
+        window.clearTimeout(wheelResetTimeoutRef.current);
+        wheelResetTimeoutRef.current = null;
+      }
+    };
+
+    const clearWheelLockTimer = () => {
+      if (wheelLockTimeoutRef.current !== null) {
+        window.clearTimeout(wheelLockTimeoutRef.current);
+        wheelLockTimeoutRef.current = null;
+      }
+    };
+
+    const handleWheel = (event: WheelEvent) => {
+      if (!desktopStepQuery.matches || navigationLocked) return;
+      if (Math.abs(event.deltaY) <= Math.abs(event.deltaX) || Math.abs(event.deltaY) < 4) return;
+
+      event.preventDefault();
+
+      if (wheelLockTimeoutRef.current !== null) return;
+
+      wheelDeltaAccumulatorRef.current += event.deltaY;
+      clearWheelResetTimer();
+      wheelResetTimeoutRef.current = window.setTimeout(() => {
+        wheelDeltaAccumulatorRef.current = 0;
+        wheelResetTimeoutRef.current = null;
+      }, DESKTOP_WHEEL_STEP_RESET_MS);
+
+      if (Math.abs(wheelDeltaAccumulatorRef.current) < DESKTOP_WHEEL_STEP_THRESHOLD) {
+        return;
+      }
+
+      const direction = wheelDeltaAccumulatorRef.current > 0 ? 1 : -1;
+      wheelDeltaAccumulatorRef.current = 0;
+      clearWheelResetTimer();
+
+      scrollToIndex((activeSourceIndex >= 0 ? activeSourceIndex : 0) + direction);
+
+      wheelLockTimeoutRef.current = window.setTimeout(() => {
+        wheelLockTimeoutRef.current = null;
+      }, DESKTOP_WHEEL_STEP_LOCK_MS);
+    };
+
+    scroller.addEventListener("wheel", handleWheel, { passive: false });
+
+    return () => {
+      scroller.removeEventListener("wheel", handleWheel);
+      clearWheelResetTimer();
+      clearWheelLockTimer();
+      wheelDeltaAccumulatorRef.current = 0;
+    };
+  }, [activeSourceIndex, navigationLocked, scrollToIndex]);
 
   useEffect(() => {
     if (typeof window === "undefined" || navigationLocked) return;
