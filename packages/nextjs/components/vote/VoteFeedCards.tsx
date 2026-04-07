@@ -11,25 +11,7 @@ import { MoreToggleButton } from "~~/components/shared/MoreToggleButton";
 import { WatchContentButton } from "~~/components/shared/WatchContentButton";
 import type { ContentItem } from "~~/hooks/useContentFeed";
 import type { SubmitterProfile } from "~~/hooks/useSubmitterProfiles";
-import { getPreferredQueueThumbnailUrl } from "~~/lib/content/thumbnailSource";
-import { formatRatingScoreOutOfTen } from "~~/lib/ui/ratingDisplay";
-import type { QueueCardStatus } from "~~/lib/vote/queueCardStatus";
 import { detectPlatform } from "~~/utils/platforms";
-
-const PROXYABLE_THUMBNAIL_HOSTS = new Set([
-  "coin-images.coingecko.com",
-  "assets.coingecko.com",
-  "image.tmdb.org",
-  "upload.wikimedia.org",
-  "cdn-avatars.huggingface.co",
-  "pbs.twimg.com",
-  "media.rawg.io",
-  "avatars.githubusercontent.com",
-  "api.scryfall.com",
-  "cards.scryfall.io",
-  "img.youtube.com",
-  "i.ytimg.com",
-]);
 
 const ShareContentModal = dynamic(
   () => import("~~/components/shared/ShareContentModal").then(m => m.ShareContentModal),
@@ -38,23 +20,6 @@ const ShareContentModal = dynamic(
 
 const LAPTOP_VOTE_CARD_MEDIA_QUERY = "(min-width: 1024px) and (max-width: 1535px)";
 const MOBILE_VOTE_CARD_MEDIA_QUERY = "(max-width: 767px)";
-
-function getThumbnailImageSrc(thumbnailUrl: string) {
-  try {
-    const parsed = new URL(thumbnailUrl);
-    if (parsed.protocol === "https:" && PROXYABLE_THUMBNAIL_HOSTS.has(parsed.hostname)) {
-      return `/api/image-proxy?url=${encodeURIComponent(thumbnailUrl)}`;
-    }
-  } catch {
-    return thumbnailUrl;
-  }
-  return thumbnailUrl;
-}
-
-export function getVoteFeedThumbnailSrc(item: ContentItem) {
-  const thumbnailUrl = getPreferredQueueThumbnailUrl(item);
-  return thumbnailUrl ? getThumbnailImageSrc(thumbnailUrl) : null;
-}
 
 interface FeedVoteCardProps {
   item: ContentItem;
@@ -392,133 +357,3 @@ function FeedContentMetaCard({
     </>
   );
 }
-
-interface FeedQueueCardProps {
-  item: ContentItem;
-  onSelect: (id: bigint) => void;
-  onNavigate?: (action: "previous" | "next" | "first" | "last", currentId: bigint) => void;
-  queuePosition: number;
-  queueStatus?: QueueCardStatus | null;
-  hasVoted?: boolean;
-  fluidWidth?: boolean;
-  selected: boolean;
-}
-
-export const FeedQueueCard = memo(function FeedQueueCard({
-  item,
-  onSelect,
-  onNavigate,
-  queuePosition,
-  queueStatus,
-  hasVoted = false,
-  fluidWidth = false,
-  selected,
-}: FeedQueueCardProps) {
-  const platform = detectPlatform(item.url);
-  const [imageError, setImageError] = useState(false);
-  const thumbnailSrc = getVoteFeedThumbnailSrc(item);
-  const ratingScore = formatRatingScoreOutOfTen(item.rating);
-  const statusBadgeClassName =
-    queueStatus?.urgencyTone === "success"
-      ? "bg-success/15 text-success ring-success/30"
-      : queueStatus?.urgencyTone === "warning"
-        ? "bg-warning/15 text-warning ring-warning/30"
-        : queueStatus?.phaseTone === "blind"
-          ? "bg-primary/15 text-primary ring-primary/30"
-          : "bg-base-content/[0.05] text-base-content/75 ring-base-content/10";
-
-  return (
-    <button
-      type="button"
-      data-testid="content-thumbnail"
-      data-thumbnail-id={item.id.toString()}
-      data-disable-queue-wheel="true"
-      aria-current={selected ? "true" : undefined}
-      tabIndex={selected ? 0 : -1}
-      onClick={() => onSelect(item.id)}
-      onKeyDown={event => {
-        if (event.key === "ArrowLeft") {
-          event.preventDefault();
-          onNavigate?.("previous", item.id);
-          return;
-        }
-
-        if (event.key === "ArrowRight") {
-          event.preventDefault();
-          onNavigate?.("next", item.id);
-          return;
-        }
-
-        if (event.key === "Home" || event.key === "PageUp") {
-          event.preventDefault();
-          onNavigate?.("first", item.id);
-          return;
-        }
-
-        if (event.key === "End" || event.key === "PageDown") {
-          event.preventDefault();
-          onNavigate?.("last", item.id);
-        }
-      }}
-      className={`group relative isolate flex cursor-pointer snap-start flex-col overflow-hidden rounded-xl bg-base-200 text-left transition-colors ${
-        fluidWidth
-          ? "w-full min-w-0"
-          : "w-[11.1rem] min-w-[11.1rem] flex-shrink-0 sm:w-[11.35rem] sm:min-w-[11.35rem] xl:w-[11.8rem] xl:min-w-[11.8rem]"
-      } ${selected ? "shadow-[0_18px_36px_rgba(9,10,12,0.26)]" : "hover:bg-base-200"}`}
-    >
-      <div className="relative aspect-video cursor-pointer overflow-hidden bg-base-200">
-        <div className="absolute inset-x-2 top-2 z-10 flex items-center justify-between gap-1.5">
-          <span className="rounded-full bg-black/70 px-2.5 py-1 text-xs font-semibold text-base-content backdrop-blur">
-            {queuePosition + 1}
-          </span>
-          <span className="rounded-full bg-black/70 px-2.5 py-1 text-xs text-base-content backdrop-blur">
-            <span className="font-semibold tabular-nums">{ratingScore}</span>
-            <span className="font-medium text-base-content/60">/10</span>
-          </span>
-        </div>
-        {thumbnailSrc && !imageError ? (
-          <img
-            src={thumbnailSrc}
-            alt=""
-            className="h-full w-full cursor-pointer object-cover transition-transform duration-200 group-hover:scale-[1.02]"
-            loading="lazy"
-            onError={() => setImageError(true)}
-          />
-        ) : (
-          <div className="flex h-full w-full cursor-pointer items-end bg-[radial-gradient(circle_at_top,_rgba(242,100,38,0.18),_transparent_55%),linear-gradient(180deg,rgba(245,240,235,0.05),rgba(20,19,22,0.32))] p-3">
-            <div>
-              <p className="text-xs font-semibold uppercase tracking-wide text-primary/80">{platform.type}</p>
-              <p className="mt-1 line-clamp-2 text-sm font-medium text-base-content/90">{item.title}</p>
-            </div>
-          </div>
-        )}
-      </div>
-
-      <div className="flex min-h-[5.5rem] flex-1 flex-col p-2.5">
-        <p className="line-clamp-2 text-sm font-medium leading-snug text-base-content/90">{item.title}</p>
-        {queueStatus || hasVoted ? (
-          <div className="mt-2 flex flex-wrap gap-1.5">
-            {queueStatus ? (
-              <span
-                className={`inline-flex items-center rounded-full px-2 py-1 text-[0.68rem] font-semibold tracking-[0.04em] ring-1 ${statusBadgeClassName}`}
-              >
-                {queueStatus.urgencyLabel}
-              </span>
-            ) : null}
-            {hasVoted ? (
-              <span className="inline-flex items-center rounded-full bg-base-content/[0.05] px-2 py-1 text-[0.68rem] font-semibold tracking-[0.04em] text-base-content/70 ring-1 ring-base-content/10">
-                Voted
-              </span>
-            ) : null}
-          </div>
-        ) : null}
-      </div>
-      {selected ? (
-        <div
-          aria-hidden="true"
-          className="pointer-events-none absolute inset-0 z-20 rounded-xl ring-2 ring-inset ring-primary/75"
-        />
-      ) : null}
-    </button>
-  );
-});

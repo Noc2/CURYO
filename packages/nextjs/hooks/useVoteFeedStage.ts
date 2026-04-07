@@ -6,7 +6,6 @@ import type { ContentItem } from "~~/hooks/useContentFeed";
 interface UseVoteFeedStageOptions {
   visibleCount: number;
   requestedActiveId?: bigint | null;
-  windowSize?: number;
 }
 
 export function resolveVoteFeedVisibleRange(
@@ -56,18 +55,8 @@ export function resolveVoteFeedActiveSourceIndex(
   return 0;
 }
 
-export function resolveVoteFeedVisibleItems<T>(
-  items: ReadonlyArray<T>,
-  activeSourceIndex: number,
-  visibleCount: number,
-  windowSize: number,
-) {
-  const { end, start } = resolveVoteFeedVisibleRange(items.length, activeSourceIndex, visibleCount, windowSize);
-  return items.slice(start, end);
-}
-
 export function useVoteFeedStage(items: ContentItem[], options: UseVoteFeedStageOptions) {
-  const { visibleCount, requestedActiveId, windowSize = 7 } = options;
+  const { visibleCount, requestedActiveId } = options;
   const [activeContentId, setActiveContentId] = useState<bigint | null>(requestedActiveId ?? null);
 
   useEffect(() => {
@@ -94,36 +83,16 @@ export function useVoteFeedStage(items: ContentItem[], options: UseVoteFeedStage
     return resolveVoteFeedActiveSourceIndex(items, activeContentId, requestedActiveId);
   }, [activeContentId, items, requestedActiveId]);
 
-  const visibleItems = useMemo(() => {
-    return resolveVoteFeedVisibleItems(items, activeSourceIndex, visibleCount, windowSize);
-  }, [activeSourceIndex, items, visibleCount, windowSize]);
   const activeItem = activeSourceIndex >= 0 ? (items[activeSourceIndex] ?? null) : null;
 
   const selectContent = useCallback((contentId: bigint | null) => {
     setActiveContentId(contentId);
   }, []);
 
-  const selectRelative = useCallback(
-    (offset: number) => {
-      if (items.length === 0) return null;
-
-      const targetIndex = Math.min(Math.max(activeSourceIndex + offset, 0), items.length - 1);
-      if (targetIndex === activeSourceIndex) return null;
-
-      const nextItem = items[targetIndex];
-      setActiveContentId(nextItem.id);
-      return nextItem;
-    },
-    [activeSourceIndex, items],
-  );
-
   return {
-    activeContentId,
     activeItem,
     activeSourceIndex,
     selectContent,
-    selectRelative,
-    visibleItems,
     loadedItems: items.slice(0, visibleCount),
   };
 }
