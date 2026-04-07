@@ -39,6 +39,7 @@ const DESKTOP_WHEEL_STEP_LOCK_MS = 260;
 const MOBILE_DOCK_RESERVED_SPACE_PX = 152;
 const MOBILE_MIN_SCROLLER_HEIGHT_PX = 320;
 const PROGRAMMATIC_SCROLL_RECOVERY_MS = 700;
+const ACTIVE_CARD_TOP_TOLERANCE_PX = 1;
 
 export function VoteFeedStage({
   displayFeed,
@@ -92,6 +93,10 @@ export function VoteFeedStage({
         .map((item, offset) => ({ actualIndex: renderWindowStart + offset, item })),
     [displayFeed, renderWindowEnd, renderWindowStart],
   );
+  const renderedActiveIndex =
+    activeSourceIndex >= renderWindowStart && activeSourceIndex < renderWindowEnd
+      ? activeSourceIndex
+      : (feedItems[0]?.actualIndex ?? 0);
   const getActiveScroller = useCallback(() => {
     if (isDesktopViewport && scrollContainerRef?.current) {
       return scrollContainerRef.current;
@@ -309,17 +314,27 @@ export function VoteFeedStage({
     const scrollerRect = scroller.getBoundingClientRect();
     const scrollerAnchor = scrollerRect.top;
     let bestIndex: number | null = null;
-    let bestDistance = Number.POSITIVE_INFINITY;
+    let bestTop = Number.NEGATIVE_INFINITY;
+    let fallbackIndex: number | null = null;
+    let fallbackTop = Number.POSITIVE_INFINITY;
 
     for (const [index, node] of cardElementsRef.current.entries()) {
       const cardRect = node.getBoundingClientRect();
-      const distance = Math.abs(cardRect.top - scrollerAnchor);
+      if (cardRect.top <= scrollerAnchor + ACTIVE_CARD_TOP_TOLERANCE_PX) {
+        if (cardRect.top > bestTop) {
+          bestTop = cardRect.top;
+          bestIndex = index;
+        }
+        continue;
+      }
 
-      if (distance < bestDistance) {
-        bestDistance = distance;
-        bestIndex = index;
+      if (cardRect.top < fallbackTop) {
+        fallbackTop = cardRect.top;
+        fallbackIndex = index;
       }
     }
+
+    bestIndex ??= fallbackIndex;
 
     if (bestIndex === null) {
       return;
@@ -651,16 +666,9 @@ export function VoteFeedStage({
         }}
       >
         {feedItems.map(({ actualIndex, item }) => {
-          const fallbackActiveIndex =
-            activeSourceIndex >= 0
-              ? Math.min(
-                  Math.max(activeSourceIndex, renderWindowStart),
-                  Math.max(renderWindowEnd - 1, renderWindowStart),
-                )
-              : renderWindowStart;
           const canPrevious = actualIndex > 0 && !isCommitting && !navigationLocked;
           const canNext = actualIndex < displayFeed.length - 1 && !isCommitting && !navigationLocked;
-          const isActiveCard = actualIndex === fallbackActiveIndex;
+          const isActiveCard = actualIndex === renderedActiveIndex;
 
           return (
             <div
