@@ -79,7 +79,7 @@ export function NotificationSettingsPanel({
 }) {
   const { openConnectModal } = useCuryoConnectModal();
   const { preferences, isSaving, isLoading, updatePreference } = useNotificationPreferences(address, {
-    autoRead: true,
+    autoRead: false,
   });
   const {
     settings: emailSettings,
