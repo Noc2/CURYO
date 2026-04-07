@@ -5,10 +5,6 @@ import { ClaimRewardsButton } from "~~/components/shared/ClaimRewardsButton";
 import { VotingQuestionCard } from "~~/components/shared/VotingQuestionCard";
 import { useAllClaimableRewards } from "~~/hooks/useAllClaimableRewards";
 import type { ContentItem } from "~~/hooks/useContentFeed";
-import { useVoterAccuracy } from "~~/hooks/useVoterAccuracy";
-import { useVoterStreak } from "~~/hooks/useVoterStreak";
-import { useWalletSummaryData } from "~~/hooks/useWalletSummaryData";
-import { formatCrepAmount } from "~~/lib/vote/voteIncentives";
 
 interface VoteSignalRailProps {
   primaryItem: ContentItem | null;
@@ -20,38 +16,6 @@ interface VoteSignalRailProps {
   onVote: (item: ContentItem, isUp: boolean) => void;
 }
 
-function formatPercent(value: number | undefined | null) {
-  if (value == null) return "—";
-  return `${(value * 100).toFixed(1)}%`;
-}
-
-function getSignalStatus(args: { totalSettledVotes: number; winRate: number | null; currentStreak: number }) {
-  const { totalSettledVotes, winRate, currentStreak } = args;
-
-  if (totalSettledVotes < 5 || winRate == null) {
-    return "Calibrating";
-  }
-
-  if (winRate >= 0.68 && totalSettledVotes >= 40) {
-    return "Proven";
-  }
-
-  if (winRate >= 0.58 || currentStreak >= 7) {
-    return "Rising";
-  }
-
-  return "Building";
-}
-
-function RailMetric({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="rounded-[1.35rem] bg-base-100/70 px-3.5 py-3.5 ring-1 ring-base-content/8">
-      <p className="text-[0.65rem] font-semibold uppercase tracking-[0.18em] text-base-content/42">{label}</p>
-      <p className="mt-2 display-metric text-[1.85rem] text-base-content">{value}</p>
-    </div>
-  );
-}
-
 export function VoteSignalRail({
   primaryItem,
   isCommitting,
@@ -60,22 +24,7 @@ export function VoteSignalRail({
   onVote,
 }: VoteSignalRailProps) {
   const { address } = useAccount();
-  const { liquidBalance, summary } = useWalletSummaryData(address);
-  const { stats } = useVoterAccuracy(address);
-  const streak = useVoterStreak(address);
   const { totalClaimable } = useAllClaimableRewards();
-
-  const totalSettledVotes = stats?.totalSettledVotes ?? 0;
-  const winRate = stats?.winRate ?? null;
-  const currentStreak = streak?.currentDailyStreak ?? 0;
-  const status = getSignalStatus({
-    totalSettledVotes,
-    winRate,
-    currentStreak,
-  });
-
-  const totalCrepMicro = summary?.totalMicro ?? liquidBalance ?? 0n;
-  const totalStakedMicro = summary?.totalStakedMicro ?? 0n;
 
   return (
     <aside className="surface-card flex h-full min-h-0 flex-col overflow-y-auto rounded-[2rem] bg-[radial-gradient(circle_at_50%_14%,rgba(255,153,104,0.18),transparent_34%),radial-gradient(circle_at_50%_58%,rgba(255,241,216,0.08),transparent_40%)] p-4">
@@ -96,13 +45,6 @@ export function VoteSignalRail({
           variant="signal"
         />
       ) : null}
-
-      <div className="mt-4 grid grid-cols-2 gap-3">
-        <RailMetric label="Total cREP" value={address ? formatCrepAmount(totalCrepMicro, 0) : "—"} />
-        <RailMetric label="Staked" value={address ? formatCrepAmount(totalStakedMicro, 0) : "—"} />
-        <RailMetric label="Accuracy" value={address ? formatPercent(winRate) : "—"} />
-        <RailMetric label="Status" value={address ? status : "—"} />
-      </div>
 
       {address && totalClaimable > 0n ? (
         <div className="mt-4">
