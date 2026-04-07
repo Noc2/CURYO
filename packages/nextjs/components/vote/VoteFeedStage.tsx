@@ -37,7 +37,6 @@ const DESKTOP_WHEEL_STEP_LOCK_MS = 260;
 const MOBILE_DOCK_RESERVED_SPACE_PX = 152;
 const MOBILE_MIN_SCROLLER_HEIGHT_PX = 320;
 const PROGRAMMATIC_SCROLL_RECOVERY_MS = 700;
-const ACTIVE_CARD_TOP_TOLERANCE_PX = 1;
 
 export function VoteFeedStage({
   displayFeed,
@@ -73,6 +72,7 @@ export function VoteFeedStage({
   const wheelDeltaAccumulatorRef = useRef(0);
   const wheelLockTimeoutRef = useRef<number | null>(null);
   const wheelResetTimeoutRef = useRef<number | null>(null);
+  const lastAutoPrefetchLoadedCountRef = useRef<number | null>(null);
   const [mobileScrollerHeight, setMobileScrollerHeight] = useState<number | null>(null);
   const [desktopEndSpacerHeight, setDesktopEndSpacerHeight] = useState(0);
   const [isDesktopViewport, setIsDesktopViewport] = useState(false);
@@ -118,10 +118,22 @@ export function VoteFeedStage({
   }, []);
 
   useEffect(() => {
-    const remainingLoadedItems = loadedItemCount - (activeSourceIndex + 1);
-    if (remainingLoadedItems < 3 && canLoadMore) {
-      onLoadMore();
+    if (!canLoadMore) {
+      lastAutoPrefetchLoadedCountRef.current = null;
+      return;
     }
+
+    const remainingLoadedItems = loadedItemCount - (activeSourceIndex + 1);
+    if (remainingLoadedItems >= 3) {
+      return;
+    }
+
+    if (lastAutoPrefetchLoadedCountRef.current === loadedItemCount) {
+      return;
+    }
+
+    lastAutoPrefetchLoadedCountRef.current = loadedItemCount;
+    onLoadMore();
   }, [activeSourceIndex, canLoadMore, loadedItemCount, onLoadMore]);
 
   useEffect(() => {
@@ -303,28 +315,19 @@ export function VoteFeedStage({
     if (!scroller) return;
     const scrollerRect = scroller.getBoundingClientRect();
     let bestIndex: number | null = null;
-    let bestTop = Number.NEGATIVE_INFINITY;
-    let fallbackIndex: number | null = null;
-    let fallbackTop = Number.POSITIVE_INFINITY;
+    let bestDistance = Number.POSITIVE_INFINITY;
+    let bestTop = Number.POSITIVE_INFINITY;
 
     for (const [index, node] of cardElementsRef.current.entries()) {
       const cardRect = node.getBoundingClientRect();
       const relativeTop = cardRect.top - scrollerRect.top;
-      if (relativeTop <= ACTIVE_CARD_TOP_TOLERANCE_PX) {
-        if (relativeTop > bestTop) {
-          bestTop = relativeTop;
-          bestIndex = index;
-        }
-        continue;
-      }
-
-      if (relativeTop < fallbackTop) {
-        fallbackTop = relativeTop;
-        fallbackIndex = index;
+      const distance = Math.abs(relativeTop);
+      if (distance < bestDistance || (distance === bestDistance && relativeTop < bestTop)) {
+        bestDistance = distance;
+        bestTop = relativeTop;
+        bestIndex = index;
       }
     }
-
-    bestIndex ??= fallbackIndex;
 
     if (bestIndex === null) {
       return;
@@ -529,6 +532,49 @@ export function VoteFeedStage({
   );
 
   useEffect(() => {
+    if (typeof window === "undefined" || navigationLocked) return;
+
+    const handleWindowKeyDown = (event: KeyboardEvent) => {
+      if (event.defaultPrevented || event.altKey || event.ctrlKey || event.metaKey) return;
+
+      const target = event.target as HTMLElement | null;
+      if (
+        target?.closest(
+          "input,textarea,select,button,[contenteditable='true'],[role='textbox'],[role='searchbox'],[data-disable-queue-wheel='true']",
+        )
+      ) {
+        return;
+      }
+
+      if (event.key === "ArrowDown" || event.key === "ArrowRight" || event.key === "PageDown") {
+        event.preventDefault();
+        scrollToIndex(activeSourceIndex + 1);
+        return;
+      }
+
+      if (event.key === "ArrowUp" || event.key === "ArrowLeft" || event.key === "PageUp") {
+        event.preventDefault();
+        scrollToIndex(activeSourceIndex - 1);
+        return;
+      }
+
+      if (event.key === "Home") {
+        event.preventDefault();
+        scrollToIndex(0);
+        return;
+      }
+
+      if (event.key === "End") {
+        event.preventDefault();
+        scrollToIndex(displayFeed.length - 1);
+      }
+    };
+
+    window.addEventListener("keydown", handleWindowKeyDown);
+    return () => window.removeEventListener("keydown", handleWindowKeyDown);
+  }, [activeSourceIndex, displayFeed.length, navigationLocked, scrollToIndex]);
+
+  useEffect(() => {
     const scroller = getActiveScroller();
     if (!scroller || typeof window === "undefined") return;
 
@@ -591,49 +637,6 @@ export function VoteFeedStage({
       wheelDeltaAccumulatorRef.current = 0;
     };
   }, [activeSourceIndex, getActiveScroller, navigationLocked, scrollToIndex]);
-
-  useEffect(() => {
-    if (typeof window === "undefined" || navigationLocked) return;
-
-    const handleWindowKeyDown = (event: KeyboardEvent) => {
-      if (event.defaultPrevented || event.altKey || event.ctrlKey || event.metaKey) return;
-
-      const target = event.target as HTMLElement | null;
-      if (
-        target?.closest(
-          "input,textarea,select,button,[contenteditable='true'],[role='textbox'],[role='searchbox'],[data-disable-queue-wheel='true']",
-        )
-      ) {
-        return;
-      }
-
-      if (event.key === "ArrowDown" || event.key === "ArrowRight" || event.key === "PageDown") {
-        event.preventDefault();
-        scrollToIndex(activeSourceIndex + 1);
-        return;
-      }
-
-      if (event.key === "ArrowUp" || event.key === "ArrowLeft" || event.key === "PageUp") {
-        event.preventDefault();
-        scrollToIndex(activeSourceIndex - 1);
-        return;
-      }
-
-      if (event.key === "Home") {
-        event.preventDefault();
-        scrollToIndex(0);
-        return;
-      }
-
-      if (event.key === "End") {
-        event.preventDefault();
-        scrollToIndex(displayFeed.length - 1);
-      }
-    };
-
-    window.addEventListener("keydown", handleWindowKeyDown);
-    return () => window.removeEventListener("keydown", handleWindowKeyDown);
-  }, [activeSourceIndex, displayFeed.length, navigationLocked, scrollToIndex]);
 
   return (
     <div className="flex h-full min-h-0 flex-col">

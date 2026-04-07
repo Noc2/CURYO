@@ -851,9 +851,12 @@ const HomeInner = () => {
 
   const handleTrackVisibleIndex = useCallback(
     (targetIndex: number) => {
+      if (activeSourceIndex < 0) {
+        return false;
+      }
       return setActiveFeedIndex(targetIndex, { syncLocation: true });
     },
-    [setActiveFeedIndex],
+    [activeSourceIndex, setActiveFeedIndex],
   );
 
   const handleSelectByIndex = useCallback(
@@ -862,6 +865,10 @@ const HomeInner = () => {
     },
     [setActiveFeedIndex],
   );
+
+  const handleLoadMore = useCallback(() => {
+    setVisibleCount(prev => prev + FEED_PAGE_SIZE);
+  }, []);
 
   const handleConfirmStake = useCallback(
     async (stakeAmount: number) => {
@@ -1254,7 +1261,7 @@ const HomeInner = () => {
                         isWatchPending={isWatchPending}
                         isFollowPending={isFollowPending}
                         scrollContainerRef={desktopScrollContainerRef}
-                        onLoadMore={() => setVisibleCount(prev => prev + FEED_PAGE_SIZE)}
+                        onLoadMore={handleLoadMore}
                         onTrackActiveIndex={handleTrackVisibleIndex}
                         onSelectByIndex={handleSelectByIndex}
                         onExternalOpen={handleExternalOpen}

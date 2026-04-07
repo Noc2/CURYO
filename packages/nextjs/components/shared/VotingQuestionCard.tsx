@@ -68,6 +68,131 @@ function getActivityDetailToneClassName(tone: ActivityTone) {
   }
 }
 
+function VoteParticipationIcons({
+  filledVoteIcons,
+  emptyVoteIcons,
+  tooltip,
+}: {
+  filledVoteIcons: number;
+  emptyVoteIcons: number;
+  tooltip: string;
+}) {
+  return (
+    <span className="inline-flex items-center gap-1.5">
+      <span className="flex -space-x-1">
+        {Array.from({ length: filledVoteIcons }).map((_, i) => (
+          <svg
+            key={`filled-${i}`}
+            xmlns="http://www.w3.org/2000/svg"
+            className="h-3.5 w-3.5 text-primary"
+            viewBox="0 0 20 20"
+            fill="currentColor"
+          >
+            <path fillRule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clipRule="evenodd" />
+          </svg>
+        ))}
+        {Array.from({ length: emptyVoteIcons }).map((_, i) => (
+          <svg
+            key={`empty-${i}`}
+            xmlns="http://www.w3.org/2000/svg"
+            className="h-3.5 w-3.5 text-base-content/30"
+            viewBox="0 0 20 20"
+            fill="currentColor"
+          >
+            <path fillRule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clipRule="evenodd" />
+          </svg>
+        ))}
+      </span>
+      <InfoTooltip text={tooltip} position="bottom" />
+    </span>
+  );
+}
+
+function InlineVotingSummary({
+  snapshot,
+  filledVoteIcons,
+  emptyVoteIcons,
+  compact,
+}: {
+  snapshot: ReturnType<typeof useRoundSnapshot>;
+  filledVoteIcons: number;
+  emptyVoteIcons: number;
+  compact: boolean;
+}) {
+  const { ratePercent } = useParticipationRate();
+  const progressMessaging = getRoundProgressMessaging(snapshot, ratePercent);
+  const pendingRevealCount = Math.max(0, snapshot.voteCount - snapshot.revealedCount);
+  const voteTooltip = `${snapshot.voteCount} vote${snapshot.voteCount === 1 ? "" : "s"} committed in this round. ${snapshot.revealedCount} revealed.${pendingRevealCount > 0 ? ` ${pendingRevealCount} commit${pendingRevealCount === 1 ? "" : "s"} still pending reveal.` : ""} ${Math.max(0, snapshot.minVoters - snapshot.revealedCount) > 0 ? `${Math.max(0, snapshot.minVoters - snapshot.revealedCount)} more revealed vote${Math.max(0, snapshot.minVoters - snapshot.revealedCount) === 1 ? "" : "s"} needed before settlement can start.` : "Threshold reached. Settlement follows once past-epoch reveal checks clear."}`;
+  const showVoteIcons = snapshot.phase === "voting";
+  const showRevealedBreakdown = snapshot.round.revealedCount > 0;
+
+  if (!showVoteIcons && !progressMessaging && !showRevealedBreakdown) {
+    return null;
+  }
+
+  return (
+    <div className={`flex w-full flex-col items-center ${compact ? "gap-2" : "gap-2.5"}`}>
+      {showVoteIcons ? (
+        <VoteParticipationIcons
+          filledVoteIcons={filledVoteIcons}
+          emptyVoteIcons={emptyVoteIcons}
+          tooltip={voteTooltip}
+        />
+      ) : null}
+      {progressMessaging ? (
+        <div className="flex flex-wrap items-center justify-center gap-x-2.5 gap-y-1.5 text-center text-base text-base-content/75">
+          <span
+            className={`badge badge-sm gap-1 text-base ${
+              progressMessaging.badgeTone === "primary" ? "badge-primary" : "badge-warning"
+            }`}
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-3.5 w-3.5" viewBox="0 0 20 20" fill="currentColor">
+              {progressMessaging.badgeTone === "primary" ? (
+                <path
+                  fillRule="evenodd"
+                  d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2V7a3 3 0 00-6 0v2h6z"
+                  clipRule="evenodd"
+                />
+              ) : (
+                <>
+                  <path d="M10 12a2 2 0 100-4 2 2 0 000 4z" />
+                  <path
+                    fillRule="evenodd"
+                    d="M.458 10C1.732 5.943 5.522 3 10 3s8.268 2.943 9.542 7c-1.274 4.057-5.064 7-9.542 7S1.732 14.057.458 10zM14 10a4 4 0 11-8 0 4 4 0 018 0z"
+                    clipRule="evenodd"
+                  />
+                </>
+              )}
+            </svg>
+            {progressMessaging.badgeLabel}
+          </span>
+          <InfoTooltip text={progressMessaging.tooltip} position="bottom" />
+          {progressMessaging.detailLabel ? (
+            <span
+              className={`tabular-nums ${
+                progressMessaging.detailTone === "success"
+                  ? "text-success/80"
+                  : progressMessaging.detailTone === "warning"
+                    ? "text-warning"
+                    : progressMessaging.detailTone === "primary"
+                      ? "text-primary/80"
+                      : "text-base-content/75"
+              }`}
+            >
+              {progressMessaging.detailLabel}
+            </span>
+          ) : null}
+        </div>
+      ) : null}
+      {showRevealedBreakdown ? (
+        <div className="w-full">
+          <RoundRevealedBreakdown snapshot={snapshot} />
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
 function LiveRoundActivity({
   snapshot,
   compact,
@@ -228,8 +353,7 @@ export function VotingQuestionCard({
 
   // Check if user already voted on this content in the current round
   const roundSnapshot = useRoundSnapshot(contentId, openRound ?? undefined);
-  const { roundId, isRoundFull, phase, voteCount, revealedCount, minVoters } = roundSnapshot;
-  const pendingRevealCount = Math.max(0, voteCount - revealedCount);
+  const { roundId, isRoundFull, phase, voteCount, minVoters } = roundSnapshot;
   const { filled: filledVoteIcons, empty: emptyVoteIcons } = computeVoteProgressIconCounts({ voteCount, minVoters });
   const cooldownActive = cooldownSecondsRemaining > 0;
   const cooldownLabel = formatVoteCooldownRemaining(cooldownSecondsRemaining);
@@ -291,6 +415,15 @@ export function VotingQuestionCard({
   const actionStackClassName = compact ? "mt-2.5 gap-1.5" : "mt-3 gap-2";
   const footerStackClassName = compact ? "mt-2.5 gap-2" : "mt-3 gap-3 xl:mt-2.5 xl:gap-2.5 2xl:mt-3 2xl:gap-3";
   const activitySummary = <LiveRoundActivity snapshot={roundSnapshot} compact={compact} condensed />;
+  const showInlineVotingSummary = phase === "voting" || roundSnapshot.round.revealedCount > 0;
+  const inlineVotingSummary = (
+    <InlineVotingSummary
+      snapshot={roundSnapshot}
+      filledVoteIcons={filledVoteIcons}
+      emptyVoteIcons={emptyVoteIcons}
+      compact={compact}
+    />
+  );
   const showExpandedDetails = isSignalVariant || (isDetailsOpen && !isDockVariant);
 
   useEffect(() => {
@@ -370,6 +503,7 @@ export function VotingQuestionCard({
             )}
           </div>
 
+          {showInlineVotingSummary ? <div className="px-4 pb-1">{inlineVotingSummary}</div> : null}
           {displayError ? <p className="px-4 pb-1 text-center text-sm text-error">{displayError}</p> : null}
 
           {isDetailsOpen ? (
@@ -424,47 +558,7 @@ export function VotingQuestionCard({
           <div className={`flex w-full shrink-0 flex-col items-center ${actionStackClassName}`}>
             {phase === "voting" || hasMyVote ? (
               <div className="flex flex-col items-center gap-2">
-                {phase === "voting" && (
-                  <span className="inline-flex items-center gap-1.5">
-                    <span className="flex -space-x-1">
-                      {Array.from({ length: filledVoteIcons }).map((_, i) => (
-                        <svg
-                          key={`filled-${i}`}
-                          xmlns="http://www.w3.org/2000/svg"
-                          className="h-3.5 w-3.5 text-primary"
-                          viewBox="0 0 20 20"
-                          fill="currentColor"
-                        >
-                          <path
-                            fillRule="evenodd"
-                            d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z"
-                            clipRule="evenodd"
-                          />
-                        </svg>
-                      ))}
-                      {Array.from({ length: emptyVoteIcons }).map((_, i) => (
-                        <svg
-                          key={`empty-${i}`}
-                          xmlns="http://www.w3.org/2000/svg"
-                          className="h-3.5 w-3.5 text-base-content/30"
-                          viewBox="0 0 20 20"
-                          fill="currentColor"
-                        >
-                          <path
-                            fillRule="evenodd"
-                            d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z"
-                            clipRule="evenodd"
-                          />
-                        </svg>
-                      ))}
-                    </span>
-                    <InfoTooltip
-                      text={`${voteCount} vote${voteCount === 1 ? "" : "s"} committed in this round. ${revealedCount} revealed.${pendingRevealCount > 0 ? ` ${pendingRevealCount} commit${pendingRevealCount === 1 ? "" : "s"} still pending reveal.` : ""} ${Math.max(0, minVoters - revealedCount) > 0 ? `${Math.max(0, minVoters - revealedCount)} more revealed vote${Math.max(0, minVoters - revealedCount) === 1 ? "" : "s"} needed before settlement can start.` : "Threshold reached. Settlement follows once past-epoch reveal checks clear."}`}
-                      position="bottom"
-                    />
-                  </span>
-                )}
-
+                {showInlineVotingSummary ? inlineVotingSummary : null}
                 {centerStatusContent}
               </div>
             ) : centerStatusContent ? (
