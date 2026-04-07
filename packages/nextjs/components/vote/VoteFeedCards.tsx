@@ -237,14 +237,14 @@ interface FeedContentHeaderProps {
 
 function FeedContentHeader({ item, onPrevious, onNext, canPrevious, canNext, compact }: FeedContentHeaderProps) {
   return (
-    <div className={`rounded-2xl bg-base-200 ${compact ? "p-3" : "p-4 xl:p-3"}`}>
+    <div className={`rounded-2xl bg-base-200 ${compact ? "px-4 py-3" : "px-5 py-4 xl:px-4 xl:py-3"}`}>
       <div className="flex items-center justify-between gap-3">
         <button
           type="button"
           onClick={onPrevious}
           disabled={!canPrevious}
           aria-label="Show previous card"
-          className="btn btn-circle btn-sm border-0 bg-base-300 text-base-content/80 hover:bg-base-content/20 hover:text-primary disabled:cursor-not-allowed disabled:opacity-30"
+          className="btn btn-circle btn-sm shrink-0 border-0 bg-base-300 text-base-content/80 hover:bg-base-content/20 hover:text-primary disabled:cursor-not-allowed disabled:opacity-30"
         >
           <ChevronLeftIcon className="h-4 w-4" />
         </button>
@@ -264,7 +264,7 @@ function FeedContentHeader({ item, onPrevious, onNext, canPrevious, canNext, com
           onClick={onNext}
           disabled={!canNext}
           aria-label="Show next card"
-          className="btn btn-circle btn-sm border-0 bg-base-300 text-base-content/80 hover:bg-base-content/20 hover:text-primary disabled:cursor-not-allowed disabled:opacity-30"
+          className="btn btn-circle btn-sm shrink-0 border-0 bg-base-300 text-base-content/80 hover:bg-base-content/20 hover:text-primary disabled:cursor-not-allowed disabled:opacity-30"
         >
           <ChevronRightIcon className="h-4 w-4" />
         </button>
