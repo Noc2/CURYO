@@ -238,6 +238,7 @@ export function VotingQuestionCard({
 }: VotingQuestionCardProps) {
   const isSignalVariant = variant === "signal";
   const isDockVariant = variant === "dock";
+  const hideEmbeddedSignalSurface = Boolean(embedded && isSignalVariant);
 
   // Check if user already voted on this content in the current round
   const roundSnapshot = useRoundSnapshot(contentId, openRound ?? undefined);
@@ -324,10 +325,12 @@ export function VotingQuestionCard({
         className={`relative ${embedded ? "" : "rounded-2xl"} flex min-h-0 flex-col overflow-hidden ${compact ? "p-3" : "p-4"}`}
         style={embedded ? {} : { background: "var(--curyo-surface-elevated)" }}
       >
-        <div
-          aria-hidden
-          className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_20%_10%,rgba(255,153,104,0.12),transparent_28%),radial-gradient(circle_at_78%_88%,rgba(255,241,216,0.06),transparent_34%)]"
-        />
+        {!hideEmbeddedSignalSurface ? (
+          <div
+            aria-hidden
+            className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_20%_10%,rgba(255,153,104,0.12),transparent_28%),radial-gradient(circle_at_78%_88%,rgba(255,241,216,0.06),transparent_34%)]"
+          />
+        ) : null}
         <div className="relative z-10 flex items-center gap-3">
           <div className="shrink-0">
             <RatingOrb rating={currentRating} size={orbSize} />
@@ -383,10 +386,12 @@ export function VotingQuestionCard({
       className={`relative ${embedded ? "" : "rounded-2xl"} flex h-full min-h-0 flex-col overflow-hidden ${shellClassName}`}
       style={embedded ? {} : { background: "var(--curyo-surface-elevated)" }}
     >
-      <div
-        aria-hidden
-        className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_50%_14%,rgba(255,153,104,0.18),transparent_34%),radial-gradient(circle_at_50%_58%,rgba(255,241,216,0.08),transparent_40%)]"
-      />
+      {!hideEmbeddedSignalSurface ? (
+        <div
+          aria-hidden
+          className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_50%_14%,rgba(255,153,104,0.18),transparent_34%),radial-gradient(circle_at_50%_58%,rgba(255,241,216,0.08),transparent_40%)]"
+        />
+      ) : null}
       {/* Content */}
       <div className="relative z-10 flex min-h-0 flex-1 flex-col overflow-hidden">
         <div className="flex shrink-0 flex-col items-center text-center">

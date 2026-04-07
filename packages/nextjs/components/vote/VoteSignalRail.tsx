@@ -78,7 +78,7 @@ export function VoteSignalRail({
   const totalStakedMicro = summary?.totalStakedMicro ?? 0n;
 
   return (
-    <aside className="surface-card flex h-full min-h-0 flex-col overflow-y-auto rounded-[2rem] p-4">
+    <aside className="surface-card flex h-full min-h-0 flex-col overflow-y-auto rounded-[2rem] bg-[radial-gradient(circle_at_50%_14%,rgba(255,153,104,0.18),transparent_34%),radial-gradient(circle_at_50%_58%,rgba(255,241,216,0.08),transparent_40%)] p-4">
       {primaryItem ? (
         <VotingQuestionCard
           contentId={primaryItem.id}
@@ -91,6 +91,7 @@ export function VoteSignalRail({
           error={voteError}
           cooldownSecondsRemaining={cooldownSecondsRemaining}
           isOwnContent={primaryItem.isOwnContent}
+          embedded
           compact
           variant="signal"
         />
