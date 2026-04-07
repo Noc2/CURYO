@@ -201,6 +201,9 @@ export function VotingQuestionCard({
   compact = false,
   variant = "default",
 }: VotingQuestionCardProps) {
+  const isSignalVariant = variant === "signal";
+  const isDockVariant = variant === "dock";
+
   // Check if user already voted on this content in the current round
   const roundSnapshot = useRoundSnapshot(contentId, openRound ?? undefined);
   const { roundId, isRoundFull, phase, voteCount, revealedCount, minVoters } = roundSnapshot;
@@ -210,7 +213,7 @@ export function VotingQuestionCard({
   const cooldownLabel = formatVoteCooldownRemaining(cooldownSecondsRemaining);
   const displayError =
     cooldownActive && error?.includes("You already voted on this content within the last") ? null : error;
-  const [isDetailsOpen, setIsDetailsOpen] = useState(false);
+  const [isDetailsOpen, setIsDetailsOpen] = useState(isSignalVariant);
   const detailsId = `voting-card-details-${contentId.toString()}`;
 
   // Check if user has committed to this round (direction hidden until reveal)
@@ -260,9 +263,6 @@ export function VotingQuestionCard({
       </div>
     ) : null
   ) : null;
-
-  const isSignalVariant = variant === "signal";
-  const isDockVariant = variant === "dock";
   const orbSize = isDockVariant ? (compact ? 88 : 100) : isSignalVariant ? (compact ? 112 : 136) : compact ? 166 : 190;
   const shellClassName = compact ? "p-3 space-y-2.5" : "p-4 space-y-3 xl:p-3 xl:space-y-2.5 2xl:p-4 2xl:space-y-3";
   const headingRowClassName = compact ? "mb-2.5" : "mb-3";
@@ -270,8 +270,8 @@ export function VotingQuestionCard({
   const footerStackClassName = compact ? "mt-2.5 gap-2" : "mt-3 gap-3 xl:mt-2.5 xl:gap-2.5 2xl:mt-3 2xl:gap-3";
 
   useEffect(() => {
-    setIsDetailsOpen(false);
-  }, [contentId]);
+    setIsDetailsOpen(isSignalVariant);
+  }, [contentId, isSignalVariant]);
 
   if (isDockVariant) {
     const dockBadgeLabel = phase === "voting" ? "Live" : roundSnapshot.hasRound ? "Settled" : "Starting";
@@ -448,7 +448,7 @@ export function VotingQuestionCard({
         <div className={`flex shrink-0 flex-col ${footerStackClassName}`}>
           <LiveRoundActivity snapshot={roundSnapshot} compact={compact} condensed={isSignalVariant} />
           {!isSignalVariant ? <RoundProgress snapshot={roundSnapshot} /> : null}
-          {!isSignalVariant ? (
+          {!isDockVariant ? (
             <div className={compact ? "pt-0.5" : "pt-1"}>
               <MoreToggleButton
                 expanded={isDetailsOpen}
@@ -457,11 +457,11 @@ export function VotingQuestionCard({
               />
             </div>
           ) : null}
-          {!isSignalVariant && isDetailsOpen ? (
+          {isDetailsOpen && !isDockVariant ? (
             <div id={detailsId} className={`flex flex-col ${compact ? "gap-2.5" : "gap-3"}`}>
-              <RoundRevealedBreakdown snapshot={roundSnapshot} />
+              {!isSignalVariant ? <RoundRevealedBreakdown snapshot={roundSnapshot} /> : null}
               <RoundStats categoryId={categoryId} snapshot={roundSnapshot} />
-              <RatingHistory contentId={contentId} variant={embedded ? "dark" : "default"} />
+              <RatingHistory contentId={contentId} variant={embedded || isSignalVariant ? "dark" : "default"} />
             </div>
           ) : null}
         </div>
