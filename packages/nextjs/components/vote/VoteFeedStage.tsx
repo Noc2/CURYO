@@ -846,12 +846,12 @@ export function VoteFeedStage({
       {scrollIndicatorState.isVisible && (isDesktopViewport || isMobileScrollIndicatorActive) ? (
         <div
           aria-hidden="true"
-          className="pointer-events-none fixed right-0 top-0 z-40 w-4"
+          className="pointer-events-none fixed right-1 top-0 z-40 w-5"
           style={{ top: `${scrollIndicatorState.top}px`, height: `${scrollIndicatorState.height}px` }}
         >
-          <div className="absolute inset-y-0 left-1/2 w-[2px] -translate-x-1/2 rounded-full bg-base-content/18" />
+          <div className="absolute inset-y-0 left-1/2 w-[2px] -translate-x-1/2 rounded-full bg-primary/20" />
           <div
-            className="absolute left-1/2 w-2 -translate-x-1/2 rounded-full bg-base-content/80 shadow-[0_0_12px_rgba(15,23,42,0.42)]"
+            className="absolute left-1/2 w-2.5 -translate-x-1/2 rounded-full bg-primary shadow-[0_0_14px_rgba(242,100,38,0.48)]"
             style={{
               top: `${scrollIndicatorState.thumbOffset}px`,
               height: `${scrollIndicatorState.thumbHeight}px`,
