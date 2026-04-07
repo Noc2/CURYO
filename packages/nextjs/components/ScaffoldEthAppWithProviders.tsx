@@ -26,26 +26,21 @@ const TermsAcceptanceModal = dynamic(
 const ScaffoldEthApp = ({ children }: { children: React.ReactNode }) => {
   const pathname = usePathname() ?? "";
   const isVoteRoute = pathname.startsWith("/vote");
-  const isVoteFeedRoute = pathname === "/vote";
 
   return (
     <>
       <div className="flex min-h-screen flex-col">
         <Header />
         {/* Main content: offset by left sidebar on desktop (208px at xl) */}
-        <div
-          className={`flex flex-1 flex-col xl:pl-52 ${
-            isVoteRoute ? "xl:h-screen xl:max-h-screen xl:min-h-0 xl:overflow-hidden" : ""
-          }`}
-        >
+        <div className="flex flex-1 min-h-0 flex-col xl:pl-52">
           <main
             className={`relative flex flex-1 flex-col overflow-x-hidden ${
-              isVoteRoute ? "xl:min-h-0 xl:overflow-hidden" : ""
+              isVoteRoute ? "min-h-0 overflow-hidden" : ""
             }`}
           >
             {children}
           </main>
-          <div className={isVoteFeedRoute ? "hidden" : isVoteRoute ? "hidden xl:block" : ""}>
+          <div className={isVoteRoute ? "shrink-0" : ""}>
             <Footer />
           </div>
         </div>
