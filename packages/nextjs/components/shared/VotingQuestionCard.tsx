@@ -288,64 +288,69 @@ export function VotingQuestionCard({
 
   if (isDockVariant) {
     const dockVoteDisabled = isCommitting || Boolean(centerStatusContent);
+    const dockShellMaskStyle = {
+      WebkitMaskImage: "radial-gradient(circle 44px at 50% 0, transparent 0 40px, black 41px)",
+      maskImage: "radial-gradient(circle 44px at 50% 0, transparent 0 40px, black 41px)",
+      WebkitMaskRepeat: "no-repeat",
+      maskRepeat: "no-repeat",
+    };
 
     return (
-      <div
-        className={`relative ${embedded ? "" : "rounded-2xl"} flex min-h-0 flex-col overflow-hidden ${compact ? "p-3" : "p-4"}`}
-        style={embedded ? {} : { background: "var(--curyo-surface-elevated)" }}
-      >
-        {!hideEmbeddedSignalSurface ? (
-          <div
-            aria-hidden
-            className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_20%_10%,rgba(255,153,104,0.12),transparent_28%),radial-gradient(circle_at_78%_88%,rgba(255,241,216,0.06),transparent_34%)]"
-          />
-        ) : null}
-        <div className="relative z-10 flex flex-col">
-          <div className="pointer-events-none absolute left-1/2 top-0 -translate-x-1/2">
-            <RatingOrb rating={currentRating} size={orbSize} />
-          </div>
-
-          {!centerStatusContent ? (
-            <div className="mt-10 grid grid-cols-[1fr_auto_1fr] items-center gap-2 rounded-[1.9rem] bg-base-content/[0.05] px-3 py-2 ring-1 ring-base-content/8">
-              <div className="justify-self-start">
-                <CuryoVoteButton direction="up" size="sm" onClick={() => onVote(true)} disabled={dockVoteDisabled} />
-              </div>
-              <MoreToggleButton
-                expanded={isDetailsOpen}
-                onClick={() => setIsDetailsOpen(current => !current)}
-                controlsId={detailsId}
-                className="justify-self-center text-[0.82rem] text-base-content/58"
-              />
-              <div className="justify-self-end">
-                <CuryoVoteButton direction="down" size="sm" onClick={() => onVote(false)} disabled={dockVoteDisabled} />
-              </div>
-            </div>
-          ) : (
-            <div className="mt-10 flex items-center gap-2 rounded-[1.9rem] bg-base-content/[0.05] px-3 py-2 ring-1 ring-base-content/8">
-              <div className="min-w-0 flex-1 flex justify-center">{centerStatusContent}</div>
-              <MoreToggleButton
-                expanded={isDetailsOpen}
-                onClick={() => setIsDetailsOpen(current => !current)}
-                controlsId={detailsId}
-                className="shrink-0 text-[0.82rem] text-base-content/58"
-              />
-            </div>
-          )}
-
-          {displayError ? <p className="mt-2 text-center text-sm text-error">{displayError}</p> : null}
-
-          {isDetailsOpen ? (
-            <div id={detailsId} className="mt-2.5 max-h-[38svh] overflow-y-auto pr-1">
-              <div className="flex flex-col gap-2.5">
-                {activitySummary}
-                <RoundProgress snapshot={roundSnapshot} />
-                <RoundRevealedBreakdown snapshot={roundSnapshot} />
-                <RoundStats categoryId={categoryId} snapshot={roundSnapshot} />
-                <RatingHistory contentId={contentId} variant={embedded ? "dark" : "default"} />
-              </div>
-            </div>
-          ) : null}
+      <div className={`relative ${embedded ? "" : "rounded-2xl"} flex min-h-0 flex-col ${compact ? "pt-10" : "pt-11"}`}>
+        <div className="pointer-events-none absolute left-1/2 top-0 z-10 -translate-x-1/2">
+          <RatingOrb rating={currentRating} size={orbSize} />
         </div>
+
+        <div
+          className="relative overflow-hidden rounded-[2rem] bg-[radial-gradient(circle_at_50%_0,rgba(255,153,104,0.2),transparent_30%),linear-gradient(180deg,rgba(23,22,26,0.98),rgba(23,22,26,0.96))] ring-1 ring-base-content/8 shadow-[0_16px_36px_rgb(0_0_0_/_0.28)]"
+          style={dockShellMaskStyle}
+        >
+          <div className="flex min-h-[4.9rem] flex-col justify-between px-4 pb-2 pt-5">
+            {!centerStatusContent ? (
+              <div className="grid grid-cols-2 items-center">
+                <div className="justify-self-start">
+                  <CuryoVoteButton direction="up" size="sm" onClick={() => onVote(true)} disabled={dockVoteDisabled} />
+                </div>
+                <div className="justify-self-end">
+                  <CuryoVoteButton
+                    direction="down"
+                    size="sm"
+                    onClick={() => onVote(false)}
+                    disabled={dockVoteDisabled}
+                  />
+                </div>
+              </div>
+            ) : (
+              <div className="flex items-center justify-center pt-1">{centerStatusContent}</div>
+            )}
+
+            <div className="flex items-center justify-center pt-1">
+              <MoreToggleButton
+                expanded={isDetailsOpen}
+                onClick={() => setIsDetailsOpen(current => !current)}
+                controlsId={detailsId}
+                className="text-[0.82rem] text-base-content/58"
+              />
+            </div>
+          </div>
+        </div>
+
+        {displayError ? <p className="mt-2 text-center text-sm text-error">{displayError}</p> : null}
+
+        {isDetailsOpen ? (
+          <div
+            id={detailsId}
+            className="surface-card-nested mt-2.5 max-h-[38svh] overflow-y-auto rounded-[1.65rem] p-3"
+          >
+            <div className="flex flex-col gap-2.5">
+              {activitySummary}
+              <RoundProgress snapshot={roundSnapshot} />
+              <RoundRevealedBreakdown snapshot={roundSnapshot} />
+              <RoundStats categoryId={categoryId} snapshot={roundSnapshot} />
+              <RatingHistory contentId={contentId} variant={embedded ? "dark" : "default"} />
+            </div>
+          </div>
+        ) : null}
       </div>
     );
   }

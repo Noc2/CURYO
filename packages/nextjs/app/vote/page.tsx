@@ -1151,7 +1151,7 @@ const HomeInner = () => {
       {primaryItem ? (
         <div className="fixed inset-x-4 bottom-[calc(env(safe-area-inset-bottom)+0.75rem)] z-30 xl:hidden">
           <div className="mx-auto w-full max-w-5xl">
-            <div className="overflow-hidden rounded-2xl bg-base-200 shadow-[0_-8px_28px_rgb(0_0_0_/_0.28)]">
+            <div className="overflow-visible">
               <VotingQuestionCard
                 contentId={primaryItem.id}
                 categoryId={primaryItem.categoryId}
