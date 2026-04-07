@@ -34,7 +34,7 @@ const ScaffoldEthApp = ({ children }: { children: React.ReactNode }) => {
 
   return (
     <>
-      <div className="flex min-h-screen flex-col">
+      <div className={`flex min-h-screen flex-col ${isVoteFeedRoute ? "xl:h-screen xl:overflow-hidden" : ""}`.trim()}>
         <Header />
         {/* Main content: offset by left sidebar on desktop (208px at xl) */}
         <div className="flex flex-1 min-h-0 flex-col xl:pl-52">

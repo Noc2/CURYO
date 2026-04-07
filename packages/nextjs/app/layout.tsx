@@ -37,7 +37,7 @@ const ScaffoldEthApp = ({ children }: { children: React.ReactNode }) => {
     >
       <body>
         <ScaffoldEthAppWithProviders>
-          <main id="main-content" className="relative flex flex-1 flex-col overflow-x-hidden">
+          <main id="main-content" className="relative flex min-h-0 flex-1 flex-col overflow-x-hidden">
             {children}
           </main>
         </ScaffoldEthAppWithProviders>
