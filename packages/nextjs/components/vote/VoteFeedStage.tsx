@@ -35,8 +35,6 @@ const MOBILE_DOCK_RESERVED_SPACE_PX = 152;
 const MOBILE_MIN_SCROLLER_HEIGHT_PX = 320;
 const PROGRAMMATIC_SCROLL_RECOVERY_MS = 700;
 const MIN_SCROLL_INDICATOR_HEIGHT_PX = 40;
-const DESKTOP_SCROLL_SETTLE_MS = 140;
-const DESKTOP_SCROLL_SNAP_TOLERANCE_PX = 16;
 const MOBILE_SCROLL_INDICATOR_ACTIVE_MS = 900;
 
 export function VoteFeedStage({
@@ -474,53 +472,6 @@ export function VoteFeedStage({
   }, [feedItems.length, getActiveScroller, trackActiveCard]);
 
   useEffect(() => {
-    if (!isDesktopViewport || typeof window === "undefined") return;
-
-    const scroller = getActiveScroller();
-    if (!scroller) return;
-
-    let settleTimeoutId: number | null = null;
-
-    const clearSettleTimeout = () => {
-      if (settleTimeoutId !== null) {
-        window.clearTimeout(settleTimeoutId);
-        settleTimeoutId = null;
-      }
-    };
-
-    const settleToNearestCard = () => {
-      settleTimeoutId = null;
-
-      if (navigationLocked || pendingProgrammaticScrollTargetRef.current !== null) {
-        return;
-      }
-
-      const nearestCard = resolveNearestCard();
-      if (!nearestCard) {
-        return;
-      }
-
-      if (Math.abs(nearestCard.relativeTop) <= DESKTOP_SCROLL_SNAP_TOLERANCE_PX) {
-        return;
-      }
-
-      requestProgrammaticScroll(nearestCard.index);
-    };
-
-    const scheduleSettle = () => {
-      clearSettleTimeout();
-      settleTimeoutId = window.setTimeout(settleToNearestCard, DESKTOP_SCROLL_SETTLE_MS);
-    };
-
-    scroller.addEventListener("scroll", scheduleSettle, { passive: true });
-
-    return () => {
-      scroller.removeEventListener("scroll", scheduleSettle);
-      clearSettleTimeout();
-    };
-  }, [getActiveScroller, isDesktopViewport, navigationLocked, requestProgrammaticScroll, resolveNearestCard]);
-
-  useEffect(() => {
     if (typeof window === "undefined") return;
 
     const scroller = getActiveScroller();
@@ -844,7 +795,7 @@ export function VoteFeedStage({
               data-feed-card-index={actualIndex}
               aria-current={isActiveCard ? "true" : undefined}
               aria-hidden={!isActiveCard}
-              className={`relative shrink-0 snap-start snap-always transition-[opacity,filter,transform] duration-300 ease-out ${
+              className={`relative shrink-0 snap-start snap-always xl:snap-normal transition-[opacity,filter,transform] duration-300 ease-out ${
                 isActiveCard
                   ? "opacity-100"
                   : "pointer-events-none opacity-32 grayscale-[0.38] saturate-[0.46] brightness-[0.72]"
