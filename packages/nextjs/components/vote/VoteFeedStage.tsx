@@ -15,18 +15,14 @@ interface VoteFeedStageProps {
   watchedContentIds: Set<string>;
   followedWallets: Set<string>;
   normalizedAddress?: string;
-  address?: string;
   isCommitting: boolean;
-  voteError?: string | null;
   isMetadataPrefetchPending: boolean;
   navigationLocked: boolean;
   isWatchPending: (contentId: bigint) => boolean;
   isFollowPending: (address: string) => boolean;
-  getCooldownSeconds: (contentId: bigint) => number;
   onLoadMore: () => void;
   onTrackActiveIndex: (targetIndex: number) => boolean;
   onSelectByIndex: (targetIndex: number) => boolean;
-  onVote: (item: ContentItem, isUp: boolean) => void;
   onExternalOpen: (item: ContentItem) => void;
   onToggleWatch: (contentId: bigint) => void;
   onToggleFollow: (address: string) => void;
@@ -44,18 +40,14 @@ export function VoteFeedStage({
   watchedContentIds,
   followedWallets,
   normalizedAddress,
-  address,
   isCommitting,
-  voteError,
   isMetadataPrefetchPending,
   navigationLocked,
   isWatchPending,
   isFollowPending,
-  getCooldownSeconds,
   onLoadMore,
   onTrackActiveIndex,
   onSelectByIndex,
-  onVote,
   onExternalOpen,
   onToggleWatch,
   onToggleFollow,
@@ -245,7 +237,7 @@ export function VoteFeedStage({
 
       <div
         ref={scrollerRef}
-        className="scrollbar-hide flex min-h-0 flex-1 snap-y snap-mandatory flex-col gap-3 overflow-y-auto overscroll-contain pr-1 scroll-smooth xl:gap-4"
+        className="scrollbar-hide flex min-h-0 flex-1 snap-y snap-mandatory flex-col gap-2.5 overflow-y-auto overscroll-contain pr-1 scroll-smooth xl:gap-3"
       >
         {feedItems.map((item, index) => {
           const canPrevious = index > 0 && !isCommitting && !navigationLocked;
@@ -257,13 +249,12 @@ export function VoteFeedStage({
               id={`vote-feed-card-${index}`}
               ref={node => setCardElement(index, node)}
               data-feed-card-index={index}
-              className="min-h-full snap-start"
+              className="snap-start"
             >
               <FeedVoteCard
                 item={item}
                 submitterProfile={enrichedProfiles[item.submitter.toLowerCase()]}
                 onExternalOpen={contentItem => onExternalOpen(contentItem)}
-                onVote={onVote}
                 onToggleWatch={onToggleWatch}
                 onToggleFollow={onToggleFollow}
                 watched={watchedContentIds.has(item.id.toString())}
@@ -271,11 +262,7 @@ export function VoteFeedStage({
                 following={followedWallets.has(item.submitter.toLowerCase())}
                 followPending={isFollowPending(item.submitter)}
                 normalizedAddress={normalizedAddress}
-                isCommitting={isCommitting}
-                voteError={item.id === primaryItem?.id ? voteError : null}
                 deferEmbedClientFetch={isMetadataPrefetchPending && index !== activeSourceIndex}
-                cooldownSecondsRemaining={getCooldownSeconds(item.id)}
-                address={address}
                 onPrevious={canPrevious ? () => void scrollToIndex(index - 1) : undefined}
                 onNext={canNext ? () => void scrollToIndex(index + 1) : undefined}
                 canPrevious={canPrevious}

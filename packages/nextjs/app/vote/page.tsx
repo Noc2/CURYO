@@ -8,6 +8,7 @@ import { useAccount } from "wagmi";
 import { CategoryFilter } from "~~/components/CategoryFilter";
 import { AppPageShell } from "~~/components/shared/AppPageShell";
 import { StreakCounter } from "~~/components/shared/StreakCounter";
+import { VotingQuestionCard } from "~~/components/shared/VotingQuestionCard";
 import { FeedScopeFilter } from "~~/components/vote/FeedScopeFilter";
 import { VoteSignalRail } from "~~/components/vote/VoteSignalRail";
 import { MIN_CONTENT_SEARCH_QUERY_LENGTH, isContentSearchQueryTooShort } from "~~/hooks/contentFeed/shared";
@@ -1087,7 +1088,7 @@ const HomeInner = () => {
         </div>
       ) : null}
 
-      <div className="grid min-h-0 flex-1 gap-4 xl:grid-cols-[minmax(0,1fr)_17.25rem] xl:items-stretch">
+      <div className="grid min-h-0 flex-1 gap-4 xl:overflow-hidden xl:grid-cols-[minmax(0,1fr)_17.25rem] xl:items-stretch">
         <div className="min-w-0">
           <div className="surface-card flex min-h-0 flex-col overflow-hidden rounded-[2rem] p-3 sm:p-4 xl:h-full">
             <div className="min-w-0 flex-1 min-h-0">
@@ -1114,24 +1115,41 @@ const HomeInner = () => {
                   watchedContentIds={watchedContentIds}
                   followedWallets={followedWallets}
                   normalizedAddress={normalizedAddress}
-                  address={address}
                   isCommitting={isCommitting}
-                  voteError={voteError}
                   isMetadataPrefetchPending={isMetadataPrefetchPending}
                   navigationLocked={stakeModal.isOpen}
                   isWatchPending={isWatchPending}
                   isFollowPending={isFollowPending}
-                  getCooldownSeconds={getContentCooldownSeconds}
                   onLoadMore={() => setVisibleCount(prev => prev + FEED_PAGE_SIZE)}
                   onTrackActiveIndex={handleTrackVisibleIndex}
                   onSelectByIndex={handleSelectByIndex}
-                  onVote={handleButtonVote}
                   onExternalOpen={handleExternalOpen}
                   onToggleWatch={handleToggleWatch}
                   onToggleFollow={handleToggleFollow}
                 />
               )}
             </div>
+            {primaryItem ? (
+              <div className="mt-3 shrink-0 xl:hidden">
+                <div className="overflow-hidden rounded-2xl bg-base-200">
+                  <VotingQuestionCard
+                    contentId={primaryItem.id}
+                    categoryId={primaryItem.categoryId}
+                    currentRating={primaryItem.rating}
+                    openRound={primaryItem.openRound}
+                    onVote={isUp => handleButtonVote(primaryItem, isUp)}
+                    isCommitting={isCommitting}
+                    address={address}
+                    error={voteError}
+                    cooldownSecondsRemaining={primaryItemCooldownSeconds}
+                    isOwnContent={primaryItem.isOwnContent}
+                    embedded
+                    compact
+                    variant="dock"
+                  />
+                </div>
+              </div>
+            ) : null}
           </div>
         </div>
         <div className="hidden min-w-0 xl:flex xl:h-full xl:min-h-0">

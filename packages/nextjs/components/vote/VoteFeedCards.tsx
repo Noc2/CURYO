@@ -8,7 +8,6 @@ import { ContentEmbed } from "~~/components/content/ContentEmbed";
 import { SubmitterBadge } from "~~/components/content/SubmitterBadge";
 import { FollowProfileButton } from "~~/components/shared/FollowProfileButton";
 import { MoreToggleButton } from "~~/components/shared/MoreToggleButton";
-import { VotingQuestionCard } from "~~/components/shared/VotingQuestionCard";
 import { WatchContentButton } from "~~/components/shared/WatchContentButton";
 import type { ContentItem } from "~~/hooks/useContentFeed";
 import type { SubmitterProfile } from "~~/hooks/useSubmitterProfiles";
@@ -60,7 +59,6 @@ export function getVoteFeedThumbnailSrc(item: ContentItem) {
 interface FeedVoteCardProps {
   item: ContentItem;
   submitterProfile?: SubmitterProfile;
-  onVote: (item: ContentItem, isUp: boolean) => void;
   onExternalOpen?: (item: ContentItem, href: string) => void;
   onToggleWatch: (id: bigint) => void;
   onToggleFollow: (address: string) => void;
@@ -69,10 +67,6 @@ interface FeedVoteCardProps {
   following: boolean;
   followPending: boolean;
   normalizedAddress?: string;
-  isCommitting: boolean;
-  voteError?: string | null;
-  cooldownSecondsRemaining?: number;
-  address?: string;
   onPrevious?: () => void;
   onNext?: () => void;
   canPrevious?: boolean;
@@ -83,7 +77,6 @@ interface FeedVoteCardProps {
 export const FeedVoteCard = memo(function FeedVoteCard({
   item,
   submitterProfile,
-  onVote,
   onExternalOpen,
   onToggleWatch,
   onToggleFollow,
@@ -92,10 +85,6 @@ export const FeedVoteCard = memo(function FeedVoteCard({
   following,
   followPending,
   normalizedAddress,
-  isCommitting,
-  voteError,
-  cooldownSecondsRemaining = 0,
-  address,
   onPrevious,
   onNext,
   canPrevious = false,
@@ -153,7 +142,7 @@ export const FeedVoteCard = memo(function FeedVoteCard({
   }, []);
 
   const useCompactCard = isLaptopCompact || isMobileViewport;
-  const contentStackClassName = useCompactCard ? "gap-2.5" : "gap-3 xl:gap-3";
+  const contentStackClassName = useCompactCard ? "gap-2.5" : "gap-3 xl:gap-2.5";
   const contentGridClassName = "grid min-h-0 flex-1 grid-cols-1 gap-3";
   const usesIntrinsicMediaHeight = platformType === "youtube";
   const mediaHeightClassName = usesIntrinsicMediaHeight
@@ -164,7 +153,7 @@ export const FeedVoteCard = memo(function FeedVoteCard({
 
   return (
     <div
-      className={`flex h-full min-h-0 flex-col ${contentStackClassName} xl:min-h-full`}
+      className={`flex h-full min-h-0 flex-col ${contentStackClassName}`}
       onClickCapture={event => {
         if (!onExternalOpen) return;
 
@@ -196,23 +185,6 @@ export const FeedVoteCard = memo(function FeedVoteCard({
               url={item.url}
               prefetchedMetadata={item.contentMetadata}
               deferClientFetch={deferEmbedClientFetch}
-            />
-          </div>
-          <div className="border-t border-base-content/8 xl:hidden">
-            <VotingQuestionCard
-              contentId={item.id}
-              categoryId={item.categoryId}
-              currentRating={item.rating}
-              openRound={item.openRound}
-              onVote={isUp => onVote(item, isUp)}
-              isCommitting={isCommitting}
-              address={address}
-              error={voteError}
-              cooldownSecondsRemaining={cooldownSecondsRemaining}
-              isOwnContent={item.isOwnContent}
-              embedded
-              compact
-              variant="dock"
             />
           </div>
           <FeedContentMetaCard
