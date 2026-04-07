@@ -320,24 +320,20 @@ export function VotingQuestionCard({
 
           <div className="shrink-0">
             {!(address && hasMyVote) && !centerStatusContent ? (
-              address ? (
-                <div className="flex flex-col items-center gap-2">
-                  <DockVoteAction
-                    label="Score too low"
-                    direction="up"
-                    disabled={isCommitting}
-                    onClick={() => onVote(true)}
-                  />
-                  <DockVoteAction
-                    label="Score too high"
-                    direction="down"
-                    disabled={isCommitting}
-                    onClick={() => onVote(false)}
-                  />
-                </div>
-              ) : (
-                <CuryoConnectButton compact />
-              )
+              <div className="flex flex-col items-center gap-2">
+                <DockVoteAction
+                  label="Score too low"
+                  direction="up"
+                  disabled={isCommitting}
+                  onClick={() => onVote(true)}
+                />
+                <DockVoteAction
+                  label="Score too high"
+                  direction="down"
+                  disabled={isCommitting}
+                  onClick={() => onVote(false)}
+                />
+              </div>
             ) : centerStatusContent ? (
               centerStatusContent
             ) : null}

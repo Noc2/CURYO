@@ -42,8 +42,8 @@ export function RatingOrb({ rating, size = 196, className = "" }: RatingOrbProps
   const coreStroke = `url(#${orbId}-core)`;
   const endPoint = polarToCartesian(center, trackRadius, START_ANGLE + progress * 360);
   const isSmallOrb = size <= 100;
-  const ratingFontSize = isSmallOrb ? Math.max(30, size * 0.32) : Math.max(40, size * 0.27);
-  const scaleFontSize = isSmallOrb ? Math.max(12, ratingFontSize * 0.36) : Math.max(18, ratingFontSize * 0.42);
+  const ratingFontSize = isSmallOrb ? Math.max(30, size * 0.32) : Math.max(36, size * 0.25);
+  const scaleFontSize = isSmallOrb ? Math.max(12, ratingFontSize * 0.36) : Math.max(16, ratingFontSize * 0.4);
   const scoreGapClassName = isSmallOrb ? "ml-1" : "ml-2";
 
   useEffect(() => {
