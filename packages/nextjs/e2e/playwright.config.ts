@@ -51,7 +51,6 @@ export default defineConfig({
       name: "settlement-keeper",
       use: { ...devices["Desktop Chrome"] },
       testMatch: /keeper-settlement/,
-      dependencies: ["chromium"],
     },
     {
       // Round cancellation fast-forwards 7+ days — runs after settlement tests.
