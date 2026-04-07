@@ -281,6 +281,7 @@ export function VotingQuestionCard({
   const actionStackClassName = compact ? "mt-2.5 gap-1.5" : "mt-3 gap-2";
   const footerStackClassName = compact ? "mt-2.5 gap-2" : "mt-3 gap-3 xl:mt-2.5 xl:gap-2.5 2xl:mt-3 2xl:gap-3";
   const activitySummary = <LiveRoundActivity snapshot={roundSnapshot} compact={compact} condensed />;
+  const showExpandedDetails = isSignalVariant || (isDetailsOpen && !isDockVariant);
 
   useEffect(() => {
     setIsDetailsOpen(isSignalVariant);
@@ -452,20 +453,18 @@ export function VotingQuestionCard({
         </div>
 
         <div className={`flex shrink-0 flex-col ${footerStackClassName}`}>
-          {isSignalVariant ? (
-            activitySummary
-          ) : (
-            <LiveRoundActivity snapshot={roundSnapshot} compact={compact} condensed={false} />
-          )}
+          {!isSignalVariant ? <LiveRoundActivity snapshot={roundSnapshot} compact={compact} condensed={false} /> : null}
           {!isSignalVariant ? <RoundProgress snapshot={roundSnapshot} /> : null}
-          <div className={compact ? "pt-0.5" : "pt-1"}>
-            <MoreToggleButton
-              expanded={isDetailsOpen}
-              onClick={() => setIsDetailsOpen(current => !current)}
-              controlsId={detailsId}
-            />
-          </div>
-          {isDetailsOpen && !isDockVariant ? (
+          {!isSignalVariant ? (
+            <div className={compact ? "pt-0.5" : "pt-1"}>
+              <MoreToggleButton
+                expanded={isDetailsOpen}
+                onClick={() => setIsDetailsOpen(current => !current)}
+                controlsId={detailsId}
+              />
+            </div>
+          ) : null}
+          {showExpandedDetails ? (
             <div id={detailsId} className={`flex flex-col ${compact ? "gap-2.5" : "gap-3"}`}>
               {!isSignalVariant ? <RoundRevealedBreakdown snapshot={roundSnapshot} /> : null}
               <RoundStats categoryId={categoryId} snapshot={roundSnapshot} />
