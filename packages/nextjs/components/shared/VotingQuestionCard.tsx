@@ -416,6 +416,10 @@ export function VotingQuestionCard({
   const footerStackClassName = compact ? "mt-2.5 gap-2" : "mt-3 gap-3 xl:mt-2.5 xl:gap-2.5 2xl:mt-3 2xl:gap-3";
   const activitySummary = <LiveRoundActivity snapshot={roundSnapshot} compact={compact} condensed />;
   const showInlineVotingSummary = phase === "voting" || roundSnapshot.round.revealedCount > 0;
+  const { ratePercent } = useParticipationRate();
+  const progressMessaging = getRoundProgressMessaging(roundSnapshot, ratePercent);
+  const showInlineProgress = showInlineVotingSummary && Boolean(progressMessaging);
+  const showInlineRevealedBreakdown = showInlineVotingSummary && roundSnapshot.round.revealedCount > 0;
   const inlineVotingSummary = (
     <InlineVotingSummary
       snapshot={roundSnapshot}
@@ -511,8 +515,8 @@ export function VotingQuestionCard({
               <div className="max-h-[34svh] overflow-y-auto [scrollbar-gutter:stable]">
                 <div className="flex flex-col gap-2.5 pb-1">
                   {activitySummary}
-                  <RoundProgress snapshot={roundSnapshot} />
-                  <RoundRevealedBreakdown snapshot={roundSnapshot} />
+                  {!showInlineProgress ? <RoundProgress snapshot={roundSnapshot} /> : null}
+                  {!showInlineRevealedBreakdown ? <RoundRevealedBreakdown snapshot={roundSnapshot} /> : null}
                   <RoundStats categoryId={categoryId} snapshot={roundSnapshot} />
                   <RatingHistory
                     contentId={contentId}
@@ -586,7 +590,7 @@ export function VotingQuestionCard({
 
         <div className={`flex shrink-0 flex-col ${footerStackClassName}`}>
           {!isSignalVariant ? <LiveRoundActivity snapshot={roundSnapshot} compact={compact} condensed={false} /> : null}
-          {!isSignalVariant ? <RoundProgress snapshot={roundSnapshot} /> : null}
+          {!isSignalVariant && !showInlineProgress ? <RoundProgress snapshot={roundSnapshot} /> : null}
           {!isSignalVariant ? (
             <div className={compact ? "pt-0.5" : "pt-1"}>
               <MoreToggleButton
@@ -598,7 +602,9 @@ export function VotingQuestionCard({
           ) : null}
           {showExpandedDetails ? (
             <div id={detailsId} className={`flex flex-col ${compact ? "gap-2.5" : "gap-3"}`}>
-              {!isSignalVariant ? <RoundRevealedBreakdown snapshot={roundSnapshot} /> : null}
+              {!isSignalVariant && !showInlineRevealedBreakdown ? (
+                <RoundRevealedBreakdown snapshot={roundSnapshot} />
+              ) : null}
               <RoundStats categoryId={categoryId} snapshot={roundSnapshot} />
               <RatingHistory
                 contentId={contentId}
