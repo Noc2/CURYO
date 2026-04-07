@@ -3,7 +3,7 @@
 import { useAccount } from "wagmi";
 import { FooterLinks } from "~~/components/FooterLinks";
 import { ClaimRewardsButton } from "~~/components/shared/ClaimRewardsButton";
-import { VotingQuestionCard } from "~~/components/shared/VotingQuestionCard";
+import { VOTING_SURFACE_BACKGROUND, VotingQuestionCard } from "~~/components/shared/VotingQuestionCard";
 import { useAllClaimableRewards } from "~~/hooks/useAllClaimableRewards";
 import type { ContentItem } from "~~/hooks/useContentFeed";
 
@@ -29,7 +29,10 @@ export function VoteSignalRail({
 
   return (
     <div className="flex w-full min-w-0 flex-col gap-3">
-      <aside className="surface-card flex w-full min-w-0 flex-col rounded-[2rem] bg-[radial-gradient(circle_at_50%_14%,rgba(255,153,104,0.18),transparent_34%),radial-gradient(circle_at_50%_58%,rgba(255,241,216,0.08),transparent_40%)] p-4">
+      <aside
+        className="surface-card flex w-full min-w-0 flex-col rounded-[2rem] p-4"
+        style={{ background: VOTING_SURFACE_BACKGROUND }}
+      >
         {primaryItem ? (
           <VotingQuestionCard
             contentId={primaryItem.id}
