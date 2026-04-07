@@ -652,6 +652,35 @@ body {
   display: none;
 }
 
+/* Subtle native-feeling scrollbar for dark inner scroll regions */
+.scrollbar-subtle {
+  scrollbar-gutter: stable;
+  scrollbar-width: thin;
+  scrollbar-color: rgb(126 137 150 / 0.72) transparent;
+}
+
+.scrollbar-subtle::-webkit-scrollbar {
+  width: 0.65rem;
+  height: 0.65rem;
+}
+
+.scrollbar-subtle::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.scrollbar-subtle::-webkit-scrollbar-thumb {
+  min-height: 3rem;
+  border: 2px solid transparent;
+  border-radius: 9999px;
+  background: rgb(126 137 150 / 0.44);
+  background-clip: padding-box;
+}
+
+.scrollbar-subtle::-webkit-scrollbar-thumb:hover {
+  background: rgb(126 137 150 / 0.62);
+  background-clip: padding-box;
+}
+
 /* Lite YouTube embed overrides */
 .yt-lite {
   border-radius: 0.75rem !important;

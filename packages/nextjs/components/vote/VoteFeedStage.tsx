@@ -449,7 +449,7 @@ export function VoteFeedStage({
 
       <div
         ref={scrollerRef}
-        className="scrollbar-hide flex min-h-0 flex-1 snap-y snap-mandatory flex-col gap-3 overflow-y-auto overscroll-contain pb-[8.75rem] pr-1 scroll-pb-[8.75rem] scroll-smooth xl:gap-4 xl:pb-0 xl:scroll-pb-4"
+        className="scrollbar-subtle flex min-h-0 flex-1 snap-y snap-mandatory flex-col gap-3 overflow-y-auto overscroll-contain pb-[8.75rem] pr-1 scroll-pb-[8.75rem] scroll-smooth xl:gap-4 xl:pb-0 xl:scroll-pb-4"
         style={
           mobileScrollerHeight !== null
             ? { height: `${mobileScrollerHeight}px`, maxHeight: `${mobileScrollerHeight}px` }
