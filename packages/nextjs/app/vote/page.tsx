@@ -1222,69 +1222,76 @@ const HomeInner = () => {
         </div>
       ) : null}
 
-      <div className="min-h-0 flex-1 overflow-hidden">
-        <div className="flex min-h-0 flex-1 flex-col gap-3 overflow-hidden xl:mx-auto xl:w-full xl:max-w-5xl xl:pb-4">
-          <div className="flex min-h-0 flex-1 flex-col gap-3 overflow-hidden xl:grid xl:grid-cols-[minmax(0,1fr)_17.25rem] xl:items-start xl:gap-4">
-            <div
-              ref={desktopScrollContainerRef}
-              className="min-h-0 flex min-w-0 flex-1 flex-col overflow-hidden xl:overflow-x-hidden xl:overflow-y-auto xl:overscroll-contain xl:scrollbar-subtle xl:snap-y xl:snap-mandatory xl:scroll-pb-4 xl:scroll-smooth"
-            >
-              <div className="flex min-w-0 min-h-0 flex-1 flex-col gap-3 xl:gap-0">
-                <div className="surface-card flex min-h-0 flex-1 flex-col overflow-hidden rounded-t-[2rem] rounded-b-none p-3 sm:p-4 xl:rounded-[2rem]">
-                  <div className="min-w-0 flex-1 min-h-0">
-                    {/* Main content */}
-                    {categoriesLoading ||
-                    scopeLoading ||
-                    showRequestedContentLoading ||
-                    (effectiveRequestedActiveId === null && isLoading) ? (
-                      <div className="flex justify-center py-16 xl:h-full xl:items-center xl:py-10">
-                        <span className="loading loading-spinner loading-lg text-primary"></span>
-                      </div>
-                    ) : displayFeed.length === 0 ? (
-                      <div className="py-16 text-center text-base text-base-content/30 xl:flex xl:h-full xl:items-center xl:justify-center xl:py-10">
-                        {emptyStateMessage}
-                      </div>
-                    ) : (
-                      <VoteFeedStage
-                        displayFeed={displayFeed}
-                        activeSourceIndex={activeSourceIndex}
-                        loadedCount={visibleCount}
-                        mobileDockReservedSpace={mobileDockReservedSpace}
-                        canLoadMore={canLoadMore}
-                        enrichedProfiles={enrichedProfiles}
-                        watchedContentIds={watchedContentIds}
-                        followedWallets={followedWallets}
-                        normalizedAddress={normalizedAddress}
-                        isCommitting={isCommitting}
-                        isMetadataPrefetchPending={isMetadataPrefetchPending}
-                        navigationLocked={stakeModal.isOpen}
-                        isWatchPending={isWatchPending}
-                        isFollowPending={isFollowPending}
-                        scrollContainerRef={desktopScrollContainerRef}
-                        onLoadMore={handleLoadMore}
-                        onTrackActiveIndex={handleTrackVisibleIndex}
-                        onSelectByIndex={handleSelectByIndex}
-                        onExternalOpen={handleExternalOpen}
-                        onToggleWatch={handleToggleWatch}
-                        onToggleFollow={handleToggleFollow}
-                      />
-                    )}
+      <div className="relative min-h-0 flex-1 overflow-hidden">
+        <div
+          ref={desktopScrollContainerRef}
+          className="min-h-0 flex h-full flex-col overflow-hidden xl:relative xl:left-1/2 xl:w-screen xl:-translate-x-1/2 xl:overflow-x-hidden xl:overflow-y-auto xl:overscroll-contain xl:scrollbar-subtle xl:snap-y xl:snap-mandatory xl:scroll-pb-4 xl:scroll-smooth"
+        >
+          <div className="flex min-h-0 flex-1 flex-col gap-3 overflow-hidden xl:mx-auto xl:min-h-full xl:w-full xl:max-w-5xl xl:flex-none xl:overflow-visible xl:pb-4">
+            <div className="flex min-h-0 flex-1 flex-col gap-3 overflow-hidden xl:grid xl:min-h-full xl:w-full xl:flex-none xl:grid-cols-[minmax(0,1fr)_17.25rem] xl:items-start xl:gap-4 xl:overflow-visible">
+              <div className="min-h-0 flex min-w-0 flex-1 flex-col overflow-hidden xl:min-h-full xl:flex-none xl:overflow-visible">
+                <div className="flex min-w-0 min-h-0 flex-1 flex-col gap-3 xl:min-h-full xl:flex-none xl:gap-0">
+                  <div className="surface-card flex min-h-0 flex-1 flex-col overflow-hidden rounded-t-[2rem] rounded-b-none p-3 sm:p-4 xl:min-h-full xl:flex-none xl:rounded-[2rem]">
+                    <div className="min-w-0 flex-1 min-h-0 xl:flex-none">
+                      {/* Main content */}
+                      {categoriesLoading ||
+                      scopeLoading ||
+                      showRequestedContentLoading ||
+                      (effectiveRequestedActiveId === null && isLoading) ? (
+                        <div className="flex justify-center py-16 xl:h-full xl:items-center xl:py-10">
+                          <span className="loading loading-spinner loading-lg text-primary"></span>
+                        </div>
+                      ) : displayFeed.length === 0 ? (
+                        <div className="py-16 text-center text-base text-base-content/30 xl:flex xl:h-full xl:items-center xl:justify-center xl:py-10">
+                          {emptyStateMessage}
+                        </div>
+                      ) : (
+                        <VoteFeedStage
+                          displayFeed={displayFeed}
+                          activeSourceIndex={activeSourceIndex}
+                          loadedCount={visibleCount}
+                          mobileDockReservedSpace={mobileDockReservedSpace}
+                          canLoadMore={canLoadMore}
+                          enrichedProfiles={enrichedProfiles}
+                          watchedContentIds={watchedContentIds}
+                          followedWallets={followedWallets}
+                          normalizedAddress={normalizedAddress}
+                          isCommitting={isCommitting}
+                          isMetadataPrefetchPending={isMetadataPrefetchPending}
+                          navigationLocked={stakeModal.isOpen}
+                          isWatchPending={isWatchPending}
+                          isFollowPending={isFollowPending}
+                          scrollContainerRef={desktopScrollContainerRef}
+                          onLoadMore={handleLoadMore}
+                          onTrackActiveIndex={handleTrackVisibleIndex}
+                          onSelectByIndex={handleSelectByIndex}
+                          onExternalOpen={handleExternalOpen}
+                          onToggleWatch={handleToggleWatch}
+                          onToggleFollow={handleToggleFollow}
+                        />
+                      )}
+                    </div>
                   </div>
                 </div>
               </div>
+              <div aria-hidden="true" className="hidden xl:block" />
             </div>
-            <div className="hidden min-w-0 xl:block">
-              <div className="sticky top-0">
-                <VoteSignalRail
-                  primaryItem={primaryItem}
-                  activeIndex={activeSourceIndex}
-                  totalCount={displayFeed.length}
-                  isCommitting={isCommitting}
-                  voteError={voteError}
-                  cooldownSecondsRemaining={primaryItemCooldownSeconds}
-                  onVote={handleButtonVote}
-                />
-              </div>
+          </div>
+        </div>
+
+        <div className="pointer-events-none absolute inset-y-0 left-0 right-0 hidden xl:block">
+          <div className="mx-auto flex h-full w-full max-w-5xl gap-4">
+            <div className="min-w-0 flex-1" />
+            <div className="pointer-events-auto w-[17.25rem] shrink-0">
+              <VoteSignalRail
+                primaryItem={primaryItem}
+                activeIndex={activeSourceIndex}
+                totalCount={displayFeed.length}
+                isCommitting={isCommitting}
+                voteError={voteError}
+                cooldownSecondsRemaining={primaryItemCooldownSeconds}
+                onVote={handleButtonVote}
+              />
             </div>
           </div>
         </div>

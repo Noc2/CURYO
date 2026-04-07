@@ -31,9 +31,6 @@ interface VoteFeedStageProps {
 
 const DESKTOP_STEP_MEDIA_QUERY = "(min-width: 1280px)";
 const MOBILE_STAGE_MEDIA_QUERY = "(max-width: 767px)";
-const DESKTOP_WHEEL_STEP_THRESHOLD = 10;
-const DESKTOP_WHEEL_STEP_RESET_MS = 260;
-const DESKTOP_WHEEL_STEP_LOCK_MS = 260;
 const MOBILE_DOCK_RESERVED_SPACE_PX = 152;
 const MOBILE_MIN_SCROLLER_HEIGHT_PX = 320;
 const PROGRAMMATIC_SCROLL_RECOVERY_MS = 700;
@@ -69,9 +66,6 @@ export function VoteFeedStage({
   const pendingProgrammaticScrollTargetRef = useRef<number | null>(null);
   const pendingProgrammaticScrollStartedAtRef = useRef<number | null>(null);
   const lastProgrammaticScrollRequestRef = useRef<number | null>(null);
-  const wheelDeltaAccumulatorRef = useRef(0);
-  const wheelLockTimeoutRef = useRef<number | null>(null);
-  const wheelResetTimeoutRef = useRef<number | null>(null);
   const lastAutoPrefetchLoadedCountRef = useRef<number | null>(null);
   const [mobileScrollerHeight, setMobileScrollerHeight] = useState<number | null>(null);
   const [desktopEndSpacerHeight, setDesktopEndSpacerHeight] = useState(0);
@@ -574,72 +568,8 @@ export function VoteFeedStage({
     return () => window.removeEventListener("keydown", handleWindowKeyDown);
   }, [activeSourceIndex, displayFeed.length, navigationLocked, scrollToIndex]);
 
-  useEffect(() => {
-    const scroller = getActiveScroller();
-    if (!scroller || typeof window === "undefined") return;
-
-    const desktopStepQuery = window.matchMedia(DESKTOP_STEP_MEDIA_QUERY);
-
-    const clearWheelResetTimer = () => {
-      if (wheelResetTimeoutRef.current !== null) {
-        window.clearTimeout(wheelResetTimeoutRef.current);
-        wheelResetTimeoutRef.current = null;
-      }
-    };
-
-    const clearWheelLockTimer = () => {
-      if (wheelLockTimeoutRef.current !== null) {
-        window.clearTimeout(wheelLockTimeoutRef.current);
-        wheelLockTimeoutRef.current = null;
-      }
-    };
-
-    const handleWheel = (event: WheelEvent) => {
-      if (!desktopStepQuery.matches || navigationLocked) return;
-      const deltaY = event.deltaMode === WheelEvent.DOM_DELTA_LINE ? event.deltaY * 16 : event.deltaY;
-      if (Math.abs(deltaY) <= Math.abs(event.deltaX) || Math.abs(deltaY) < 1) return;
-
-      if (wheelLockTimeoutRef.current !== null) return;
-
-      wheelDeltaAccumulatorRef.current += deltaY;
-      clearWheelResetTimer();
-      wheelResetTimeoutRef.current = window.setTimeout(() => {
-        wheelDeltaAccumulatorRef.current = 0;
-        wheelResetTimeoutRef.current = null;
-      }, DESKTOP_WHEEL_STEP_RESET_MS);
-
-      if (Math.abs(wheelDeltaAccumulatorRef.current) < DESKTOP_WHEEL_STEP_THRESHOLD) {
-        return;
-      }
-
-      const direction = wheelDeltaAccumulatorRef.current > 0 ? 1 : -1;
-      wheelDeltaAccumulatorRef.current = 0;
-      clearWheelResetTimer();
-
-      const didAdvance = scrollToIndex((activeSourceIndex >= 0 ? activeSourceIndex : 0) + direction);
-      if (!didAdvance) {
-        return;
-      }
-
-      event.preventDefault();
-
-      wheelLockTimeoutRef.current = window.setTimeout(() => {
-        wheelLockTimeoutRef.current = null;
-      }, DESKTOP_WHEEL_STEP_LOCK_MS);
-    };
-
-    scroller.addEventListener("wheel", handleWheel, { passive: false });
-
-    return () => {
-      scroller.removeEventListener("wheel", handleWheel);
-      clearWheelResetTimer();
-      clearWheelLockTimer();
-      wheelDeltaAccumulatorRef.current = 0;
-    };
-  }, [activeSourceIndex, getActiveScroller, navigationLocked, scrollToIndex]);
-
   return (
-    <div className="flex h-full min-h-0 flex-col">
+    <div className="flex h-full min-h-0 flex-col xl:h-auto">
       {isCommitting ? (
         <div className="flex shrink-0 items-center justify-center">
           <span className="text-base text-base-content/50">
