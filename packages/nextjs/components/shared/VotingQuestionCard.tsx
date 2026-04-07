@@ -53,6 +53,20 @@ function getActivityToneClassName(tone: ActivityTone) {
   }
 }
 
+function getActivityDetailToneClassName(tone: ActivityTone) {
+  switch (tone) {
+    case "success":
+      return "text-success/80";
+    case "warning":
+      return "text-warning";
+    case "primary":
+      return "text-primary/80";
+    case "neutral":
+    default:
+      return "text-base-content/75";
+  }
+}
+
 function LiveRoundActivity({
   snapshot,
   compact,
@@ -87,6 +101,27 @@ function LiveRoundActivity({
       : snapshot.isEpoch1
         ? "Votes stay hidden until reveal, so early signal stays private while keeping full weight."
         : "Revealed signal is live now. Open votes use informed weight, but they can still help close the round.";
+  const condensedDetailCopy =
+    progress?.detailLabel ??
+    (snapshot.phase === "voting" && snapshot.voteCount >= snapshot.minVoters ? "Waiting for reveals" : detailCopy);
+
+  if (condensed) {
+    return (
+      <div className="flex flex-wrap items-center gap-x-2.5 gap-y-1.5 text-base text-base-content/75">
+        {progress ? (
+          <span
+            className={`rounded-full px-2.5 py-1 text-xs font-semibold ${getActivityToneClassName(progress.badgeTone)}`}
+          >
+            {progress.badgeLabel}
+          </span>
+        ) : null}
+        <InfoTooltip text={progress?.tooltip ?? supportCopy} position="bottom" />
+        <span className={`text-base tabular-nums ${getActivityDetailToneClassName(progress?.detailTone ?? "neutral")}`}>
+          {condensedDetailCopy}
+        </span>
+      </div>
+    );
+  }
 
   return (
     <div
