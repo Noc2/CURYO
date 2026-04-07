@@ -1021,7 +1021,7 @@ const HomeInner = () => {
 
   return (
     <AppPageShell
-      outerClassName="min-h-0 pb-4"
+      outerClassName="min-h-0 pb-[calc(env(safe-area-inset-bottom)+7rem)] xl:pb-4"
       contentClassName="flex min-h-[calc(100svh-6.25rem)] flex-1 flex-col gap-4 xl:min-h-0"
     >
       <VotingGuide />
@@ -1129,27 +1129,6 @@ const HomeInner = () => {
                 />
               )}
             </div>
-            {primaryItem ? (
-              <div className="mt-3 shrink-0 xl:hidden">
-                <div className="overflow-hidden rounded-2xl bg-base-200">
-                  <VotingQuestionCard
-                    contentId={primaryItem.id}
-                    categoryId={primaryItem.categoryId}
-                    currentRating={primaryItem.rating}
-                    openRound={primaryItem.openRound}
-                    onVote={isUp => handleButtonVote(primaryItem, isUp)}
-                    isCommitting={isCommitting}
-                    address={address}
-                    error={voteError}
-                    cooldownSecondsRemaining={primaryItemCooldownSeconds}
-                    isOwnContent={primaryItem.isOwnContent}
-                    embedded
-                    compact
-                    variant="dock"
-                  />
-                </div>
-              </div>
-            ) : null}
           </div>
         </div>
         <div className="hidden min-w-0 xl:flex xl:h-full xl:min-h-0">
@@ -1165,6 +1144,30 @@ const HomeInner = () => {
           />
         </div>
       </div>
+
+      {primaryItem ? (
+        <div className="fixed inset-x-4 bottom-3 z-30 xl:hidden">
+          <div className="mx-auto w-full max-w-5xl">
+            <div className="overflow-hidden rounded-2xl bg-base-200 shadow-[0_-8px_28px_rgb(0_0_0_/_0.28)]">
+              <VotingQuestionCard
+                contentId={primaryItem.id}
+                categoryId={primaryItem.categoryId}
+                currentRating={primaryItem.rating}
+                openRound={primaryItem.openRound}
+                onVote={isUp => handleButtonVote(primaryItem, isUp)}
+                isCommitting={isCommitting}
+                address={address}
+                error={voteError}
+                cooldownSecondsRemaining={primaryItemCooldownSeconds}
+                isOwnContent={primaryItem.isOwnContent}
+                embedded
+                compact
+                variant="dock"
+              />
+            </div>
+          </div>
+        </div>
+      ) : null}
 
       {/* Stake selector modal */}
       {stakeModal.isOpen ? (

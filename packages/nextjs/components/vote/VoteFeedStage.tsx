@@ -296,7 +296,7 @@ export function VoteFeedStage({
 
       <div
         ref={scrollerRef}
-        className="scrollbar-hide flex min-h-0 flex-1 snap-y snap-mandatory flex-col gap-2.5 overflow-y-auto overscroll-contain pr-1 scroll-smooth xl:gap-3"
+        className="scrollbar-hide flex min-h-0 flex-1 snap-y snap-mandatory flex-col gap-2.5 overflow-y-auto overscroll-contain pb-32 pr-1 scroll-pb-32 scroll-smooth xl:gap-3 xl:pb-0 xl:scroll-pb-0"
       >
         {feedItems.map((item, index) => {
           const canPrevious = index > 0 && !isCommitting && !navigationLocked;
