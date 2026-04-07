@@ -519,13 +519,13 @@ export function VotingQuestionCard({
             )}
           </div>
 
-          {showInlineVotingSummary ? <div className="px-4 pb-1">{inlineVotingSummary}</div> : null}
           {displayError ? <p className="px-4 pb-1 text-center text-sm text-error">{displayError}</p> : null}
 
           {isDetailsOpen ? (
             <div id={detailsId} className="relative z-10 px-4 pb-3 pt-1">
               <div className="max-h-[34svh] overflow-y-auto [scrollbar-gutter:stable]">
                 <div className="flex flex-col gap-2.5 pb-1">
+                  {showInlineVotingSummary ? inlineVotingSummary : null}
                   {activitySummary}
                   {!showInlineProgress ? <RoundProgress snapshot={roundSnapshot} /> : null}
                   {!showInlineRevealedBreakdown ? <RoundRevealedBreakdown snapshot={roundSnapshot} /> : null}
