@@ -317,11 +317,6 @@ export function VotingQuestionCard({
 
     return (
       <div className={`relative ${embedded ? "" : "rounded-2xl"} flex min-h-0 flex-col ${compact ? "pt-10" : "pt-14"}`}>
-        <div
-          aria-hidden
-          className="pointer-events-none absolute inset-0 z-0 rounded-[2rem] ring-1 ring-base-content/8"
-          style={dockSurfaceStyle}
-        />
         <div className="pointer-events-none absolute left-1/2 top-0 z-20 -translate-x-1/2">
           <RatingOrb rating={currentRating} size={orbSize} showGlow={false} />
         </div>
@@ -336,7 +331,7 @@ export function VotingQuestionCard({
                 <div className="justify-self-start">
                   <CuryoVoteButton direction="up" size="sm" onClick={() => onVote(true)} disabled={dockVoteDisabled} />
                 </div>
-                <div className="justify-self-center pb-1">
+                <div className="justify-self-center translate-y-1">
                   <MoreToggleButton
                     expanded={isDetailsOpen}
                     onClick={() => setIsDetailsOpen(current => !current)}
@@ -356,12 +351,14 @@ export function VotingQuestionCard({
             ) : (
               <div className="flex flex-col items-center gap-2.5">
                 <div className="flex items-center justify-center">{centerStatusContent}</div>
-                <MoreToggleButton
-                  expanded={isDetailsOpen}
-                  onClick={() => setIsDetailsOpen(current => !current)}
-                  controlsId={detailsId}
-                  className={dockMoreClassName}
-                />
+                <div className="translate-y-1">
+                  <MoreToggleButton
+                    expanded={isDetailsOpen}
+                    onClick={() => setIsDetailsOpen(current => !current)}
+                    controlsId={detailsId}
+                    className={dockMoreClassName}
+                  />
+                </div>
               </div>
             )}
           </div>
