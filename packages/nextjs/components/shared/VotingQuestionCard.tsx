@@ -300,10 +300,10 @@ export function VotingQuestionCard({
 
   if (isDockVariant) {
     const dockVoteDisabled = isCommitting || Boolean(centerStatusContent);
-    const dockNotchRadius = compact ? 54 : 66;
-    const dockNotchCutout = compact ? 48 : 60;
-    const dockControlsPaddingClassName = compact ? "px-4 pb-2.5 pt-[2.8rem]" : "px-4 pb-3.5 pt-[4.1rem]";
-    const dockSurfaceTopOffsetClassName = compact ? "top-[3.15rem]" : "top-[4.65rem]";
+    const dockNotchRadius = compact ? 58 : 66;
+    const dockNotchCutout = compact ? 52 : 60;
+    const dockControlsPaddingClassName = compact ? "px-4 pb-3 pt-[3.55rem]" : "px-4 pb-3.5 pt-[4.1rem]";
+    const dockSurfaceTopOffsetClassName = compact ? "top-[3.55rem]" : "top-[4.65rem]";
     const dockMoreClassName = "text-base font-medium text-base-content/68 hover:text-base-content/88";
     const dockShellMaskStyle = {
       WebkitMaskImage: `radial-gradient(circle ${dockNotchRadius}px at 50% 0, transparent 0 ${dockNotchCutout}px, black ${dockNotchCutout + 1}px)`,
@@ -317,7 +317,7 @@ export function VotingQuestionCard({
     };
 
     return (
-      <div className={`relative ${embedded ? "" : "rounded-2xl"} flex min-h-0 flex-col ${compact ? "pt-8" : "pt-14"}`}>
+      <div className={`relative ${embedded ? "" : "rounded-2xl"} flex min-h-0 flex-col ${compact ? "pt-10" : "pt-14"}`}>
         <div className="pointer-events-none absolute left-1/2 top-0 z-20 -translate-x-1/2">
           <RatingOrb rating={currentRating} size={orbSize} showGlow={false} />
         </div>
