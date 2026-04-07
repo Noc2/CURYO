@@ -35,6 +35,8 @@ const MOBILE_DOCK_RESERVED_SPACE_PX = 152;
 const MOBILE_MIN_SCROLLER_HEIGHT_PX = 320;
 const PROGRAMMATIC_SCROLL_RECOVERY_MS = 700;
 const MIN_SCROLL_INDICATOR_HEIGHT_PX = 40;
+const DESKTOP_SCROLL_SETTLE_MS = 140;
+const DESKTOP_SCROLL_SNAP_TOLERANCE_PX = 16;
 
 export function VoteFeedStage({
   displayFeed,
@@ -318,9 +320,10 @@ export function VoteFeedStage({
     [displayFeed.length, getActiveScroller],
   );
 
-  const trackActiveCard = useCallback(() => {
+  const resolveNearestCard = useCallback(() => {
     const scroller = getActiveScroller();
-    if (!scroller) return;
+    if (!scroller) return null;
+
     const scrollerRect = scroller.getBoundingClientRect();
     let bestIndex: number | null = null;
     let bestDistance = Number.POSITIVE_INFINITY;
@@ -330,6 +333,7 @@ export function VoteFeedStage({
       const cardRect = node.getBoundingClientRect();
       const relativeTop = cardRect.top - scrollerRect.top;
       const distance = Math.abs(relativeTop);
+
       if (distance < bestDistance || (distance === bestDistance && relativeTop < bestTop)) {
         bestDistance = distance;
         bestTop = relativeTop;
@@ -338,8 +342,22 @@ export function VoteFeedStage({
     }
 
     if (bestIndex === null) {
+      return null;
+    }
+
+    return {
+      index: bestIndex,
+      relativeTop: bestTop,
+    };
+  }, [getActiveScroller]);
+
+  const trackActiveCard = useCallback(() => {
+    const nearestCard = resolveNearestCard();
+    if (!nearestCard) {
       return;
     }
+
+    const { index: bestIndex } = nearestCard;
 
     const pendingProgrammaticTarget = pendingProgrammaticScrollTargetRef.current;
     if (pendingProgrammaticTarget !== null) {
@@ -367,7 +385,7 @@ export function VoteFeedStage({
 
     lastObservedActiveIndexRef.current = bestIndex;
     onTrackActiveIndex(bestIndex);
-  }, [getActiveScroller, onTrackActiveIndex]);
+  }, [onTrackActiveIndex, resolveNearestCard]);
 
   useEffect(() => {
     if (activeSourceIndex < 0) {
@@ -451,6 +469,53 @@ export function VoteFeedStage({
       window.removeEventListener("resize", requestTrack);
     };
   }, [feedItems.length, getActiveScroller, trackActiveCard]);
+
+  useEffect(() => {
+    if (!isDesktopViewport || typeof window === "undefined") return;
+
+    const scroller = getActiveScroller();
+    if (!scroller) return;
+
+    let settleTimeoutId: number | null = null;
+
+    const clearSettleTimeout = () => {
+      if (settleTimeoutId !== null) {
+        window.clearTimeout(settleTimeoutId);
+        settleTimeoutId = null;
+      }
+    };
+
+    const settleToNearestCard = () => {
+      settleTimeoutId = null;
+
+      if (navigationLocked || pendingProgrammaticScrollTargetRef.current !== null) {
+        return;
+      }
+
+      const nearestCard = resolveNearestCard();
+      if (!nearestCard) {
+        return;
+      }
+
+      if (Math.abs(nearestCard.relativeTop) <= DESKTOP_SCROLL_SNAP_TOLERANCE_PX) {
+        return;
+      }
+
+      requestProgrammaticScroll(nearestCard.index);
+    };
+
+    const scheduleSettle = () => {
+      clearSettleTimeout();
+      settleTimeoutId = window.setTimeout(settleToNearestCard, DESKTOP_SCROLL_SETTLE_MS);
+    };
+
+    scroller.addEventListener("scroll", scheduleSettle, { passive: true });
+
+    return () => {
+      scroller.removeEventListener("scroll", scheduleSettle);
+      clearSettleTimeout();
+    };
+  }, [getActiveScroller, isDesktopViewport, navigationLocked, requestProgrammaticScroll, resolveNearestCard]);
 
   useEffect(() => {
     if (isDesktopViewport) return;
