@@ -37,7 +37,7 @@ interface VotingQuestionCardProps {
 const RATING_GUIDANCE_TEXT =
   "The community score runs from 0.0 to 10.0, where higher means better. Vote up when content deserves a better score and vote down when it deserves a worse one. Always vote down illegal, broken, or misdescribed content.";
 export const VOTING_SURFACE_BACKGROUND =
-  "radial-gradient(circle at 50% 12%, rgba(255,176,124,0.22) 0%, rgba(255,176,124,0.16) 18%, rgba(255,176,124,0.06) 34%, rgba(255,176,124,0) 54%), radial-gradient(circle at 50% 58%, rgba(255,241,216,0.08), rgba(255,241,216,0) 42%), linear-gradient(180deg, rgba(53,39,40,0.98) 0%, rgba(30,26,31,0.99) 46%, rgba(23,22,26,1) 100%)";
+  "radial-gradient(circle at 50% 12%, rgb(121 88 68) 0%, rgb(103 74 61) 18%, rgb(79 58 57) 36%, rgb(53 41 46) 56%, rgb(35 30 35) 78%, rgb(23 22 26) 100%), linear-gradient(180deg, rgb(92 67 57) 0%, rgb(61 47 50) 30%, rgb(38 31 36) 62%, rgb(23 22 26) 100%)";
 
 type ActivityTone = "primary" | "warning" | "success" | "neutral";
 
@@ -294,6 +294,7 @@ export function VotingQuestionCard({
     const dockNotchRadius = compact ? 58 : 66;
     const dockNotchCutout = compact ? 52 : 60;
     const dockControlsPaddingClassName = compact ? "px-4 pb-2.5 pt-6" : "px-4 pb-3 pt-7";
+    const dockMoreClassName = "text-base font-medium text-base-content/68 hover:text-base-content/88";
     const dockShellMaskStyle = {
       WebkitMaskImage: `radial-gradient(circle ${dockNotchRadius}px at 50% 0, transparent 0 ${dockNotchCutout}px, black ${dockNotchCutout + 1}px)`,
       maskImage: `radial-gradient(circle ${dockNotchRadius}px at 50% 0, transparent 0 ${dockNotchCutout}px, black ${dockNotchCutout + 1}px)`,
@@ -306,12 +307,17 @@ export function VotingQuestionCard({
 
     return (
       <div className={`relative ${embedded ? "" : "rounded-2xl"} flex min-h-0 flex-col ${compact ? "pt-12" : "pt-14"}`}>
-        <div className="pointer-events-none absolute left-1/2 top-0 z-10 -translate-x-1/2">
+        <div
+          aria-hidden
+          className="pointer-events-none absolute inset-0 z-0 rounded-[2rem] ring-1 ring-base-content/8"
+          style={dockSurfaceStyle}
+        />
+        <div className="pointer-events-none absolute left-1/2 top-0 z-20 -translate-x-1/2">
           <RatingOrb rating={currentRating} size={orbSize} showGlow={false} />
         </div>
 
         <div
-          className="relative overflow-hidden rounded-[2rem] ring-1 ring-base-content/8 shadow-[0_16px_36px_rgb(0_0_0_/_0.28)]"
+          className="relative z-10 overflow-hidden rounded-[2rem] ring-1 ring-base-content/8 shadow-[0_16px_36px_rgb(0_0_0_/_0.28)]"
           style={{ ...dockShellMaskStyle, ...dockSurfaceStyle }}
         >
           <div className={dockControlsPaddingClassName}>
@@ -320,12 +326,12 @@ export function VotingQuestionCard({
                 <div className="justify-self-start">
                   <CuryoVoteButton direction="up" size="sm" onClick={() => onVote(true)} disabled={dockVoteDisabled} />
                 </div>
-                <div className="justify-self-center">
+                <div className="justify-self-center pb-1">
                   <MoreToggleButton
                     expanded={isDetailsOpen}
                     onClick={() => setIsDetailsOpen(current => !current)}
                     controlsId={detailsId}
-                    className="rounded-full border border-primary/20 bg-base-content/[0.05] px-2.5 py-1 text-[0.82rem] text-base-content/68 shadow-[0_8px_16px_rgb(0_0_0_/_0.12)]"
+                    className={dockMoreClassName}
                   />
                 </div>
                 <div className="justify-self-end">
@@ -344,7 +350,7 @@ export function VotingQuestionCard({
                   expanded={isDetailsOpen}
                   onClick={() => setIsDetailsOpen(current => !current)}
                   controlsId={detailsId}
-                  className="rounded-full border border-primary/20 bg-base-content/[0.05] px-2.5 py-1 text-[0.82rem] text-base-content/68 shadow-[0_8px_16px_rgb(0_0_0_/_0.12)]"
+                  className={dockMoreClassName}
                 />
               </div>
             )}
