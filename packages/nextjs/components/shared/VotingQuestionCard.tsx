@@ -289,24 +289,29 @@ export function VotingQuestionCard({
 
   if (isDockVariant) {
     const dockVoteDisabled = isCommitting || Boolean(centerStatusContent);
+    const dockNotchRadius = compact ? 58 : 66;
+    const dockNotchCutout = compact ? 52 : 60;
     const dockShellMaskStyle = {
-      WebkitMaskImage: "radial-gradient(circle 44px at 50% 0, transparent 0 40px, black 41px)",
-      maskImage: "radial-gradient(circle 44px at 50% 0, transparent 0 40px, black 41px)",
+      WebkitMaskImage: `radial-gradient(circle ${dockNotchRadius}px at 50% 0, transparent 0 ${dockNotchCutout}px, black ${dockNotchCutout + 1}px)`,
+      maskImage: `radial-gradient(circle ${dockNotchRadius}px at 50% 0, transparent 0 ${dockNotchCutout}px, black ${dockNotchCutout + 1}px)`,
       WebkitMaskRepeat: "no-repeat",
       maskRepeat: "no-repeat",
     };
+    const dockSurfaceStyle = {
+      background: "var(--curyo-surface-elevated)",
+    };
 
     return (
-      <div className={`relative ${embedded ? "" : "rounded-2xl"} flex min-h-0 flex-col ${compact ? "pt-10" : "pt-11"}`}>
+      <div className={`relative ${embedded ? "" : "rounded-2xl"} flex min-h-0 flex-col ${compact ? "pt-12" : "pt-14"}`}>
         <div className="pointer-events-none absolute left-1/2 top-0 z-10 -translate-x-1/2">
-          <RatingOrb rating={currentRating} size={orbSize} />
+          <RatingOrb rating={currentRating} size={orbSize} showGlow={false} />
         </div>
 
         <div
-          className="relative overflow-hidden rounded-[2rem] bg-[radial-gradient(circle_at_50%_0,rgba(255,153,104,0.2),transparent_30%),linear-gradient(180deg,rgba(23,22,26,0.98),rgba(23,22,26,0.96))] ring-1 ring-base-content/8 shadow-[0_16px_36px_rgb(0_0_0_/_0.28)]"
-          style={dockShellMaskStyle}
+          className="relative overflow-hidden rounded-[2rem] ring-1 ring-base-content/8 shadow-[0_16px_36px_rgb(0_0_0_/_0.28)]"
+          style={{ ...dockShellMaskStyle, ...dockSurfaceStyle }}
         >
-          <div className="flex min-h-[4.9rem] flex-col justify-between px-4 pb-2 pt-5">
+          <div className="flex min-h-[5.25rem] flex-col justify-between px-4 pb-2.5 pt-6">
             {!centerStatusContent ? (
               <div className="grid grid-cols-2 items-center">
                 <div className="justify-self-start">
@@ -341,7 +346,8 @@ export function VotingQuestionCard({
         {isDetailsOpen ? (
           <div
             id={detailsId}
-            className="surface-card-nested mt-2.5 max-h-[38svh] overflow-y-auto rounded-[1.65rem] p-3"
+            className="mt-2.5 max-h-[38svh] overflow-y-auto rounded-[1.65rem] p-3 ring-1 ring-base-content/8 shadow-[0_16px_36px_rgb(0_0_0_/_0.28)]"
+            style={dockSurfaceStyle}
           >
             <div className="flex flex-col gap-2.5">
               {activitySummary}

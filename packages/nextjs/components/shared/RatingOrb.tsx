@@ -23,9 +23,10 @@ interface RatingOrbProps {
   rating: number;
   size?: number;
   className?: string;
+  showGlow?: boolean;
 }
 
-export function RatingOrb({ rating, size = 196, className = "" }: RatingOrbProps) {
+export function RatingOrb({ rating, size = 196, className = "", showGlow = true }: RatingOrbProps) {
   const orbId = useId().replace(/:/g, "");
   const clampedRating = clampContentRating(rating);
   const [animatedRating, setAnimatedRating] = useState(0);
@@ -116,7 +117,12 @@ export function RatingOrb({ rating, size = 196, className = "" }: RatingOrbProps
           </filter>
         </defs>
 
-        <circle cx={center} cy={center} r={trackRadius + trackWidth * 0.95} fill="rgba(245,240,235,0.03)" />
+        <circle
+          cx={center}
+          cy={center}
+          r={trackRadius + trackWidth * 0.95}
+          fill={showGlow ? "rgba(245,240,235,0.03)" : "transparent"}
+        />
         <circle
           cx={center}
           cy={center}
@@ -144,17 +150,19 @@ export function RatingOrb({ rating, size = 196, className = "" }: RatingOrbProps
 
         {progress >= 1 ? (
           <>
-            <circle
-              cx={center}
-              cy={center}
-              r={trackRadius}
-              fill="none"
-              stroke={flareStroke}
-              strokeWidth={trackWidth}
-              strokeLinecap="round"
-              filter={`url(#${orbId}-glow)`}
-              opacity="0.56"
-            />
+            {showGlow ? (
+              <circle
+                cx={center}
+                cy={center}
+                r={trackRadius}
+                fill="none"
+                stroke={flareStroke}
+                strokeWidth={trackWidth}
+                strokeLinecap="round"
+                filter={`url(#${orbId}-glow)`}
+                opacity="0.56"
+              />
+            ) : null}
             <circle
               cx={center}
               cy={center}
@@ -176,19 +184,21 @@ export function RatingOrb({ rating, size = 196, className = "" }: RatingOrbProps
           </>
         ) : progress > 0 ? (
           <>
-            <circle
-              cx={center}
-              cy={center}
-              r={trackRadius}
-              fill="none"
-              stroke={flareStroke}
-              strokeWidth={trackWidth}
-              strokeLinecap="round"
-              filter={`url(#${orbId}-glow)`}
-              opacity="0.56"
-              strokeDasharray={`${progressLength} ${circumference}`}
-              transform={`rotate(-90 ${center} ${center})`}
-            />
+            {showGlow ? (
+              <circle
+                cx={center}
+                cy={center}
+                r={trackRadius}
+                fill="none"
+                stroke={flareStroke}
+                strokeWidth={trackWidth}
+                strokeLinecap="round"
+                filter={`url(#${orbId}-glow)`}
+                opacity="0.56"
+                strokeDasharray={`${progressLength} ${circumference}`}
+                transform={`rotate(-90 ${center} ${center})`}
+              />
+            ) : null}
             <circle
               cx={center}
               cy={center}
