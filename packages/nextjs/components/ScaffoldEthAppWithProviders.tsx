@@ -26,6 +26,7 @@ const TermsAcceptanceModal = dynamic(
 const ScaffoldEthApp = ({ children }: { children: React.ReactNode }) => {
   const pathname = usePathname() ?? "";
   const isVoteRoute = pathname.startsWith("/vote");
+  const isVoteFeedRoute = pathname === "/vote";
 
   return (
     <>
@@ -44,7 +45,7 @@ const ScaffoldEthApp = ({ children }: { children: React.ReactNode }) => {
           >
             {children}
           </main>
-          <div className={isVoteRoute ? "hidden xl:block" : ""}>
+          <div className={isVoteFeedRoute ? "hidden" : isVoteRoute ? "hidden xl:block" : ""}>
             <Footer />
           </div>
         </div>

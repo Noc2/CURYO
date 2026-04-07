@@ -1184,7 +1184,7 @@ const HomeInner = () => {
             </div>
           </div>
         </div>
-        <div className="hidden min-w-0 xl:flex xl:h-full xl:min-h-0">
+        <div className="hidden min-w-0 xl:flex xl:self-start">
           <VoteSignalRail
             primaryItem={primaryItem}
             activeIndex={activeSourceIndex}
