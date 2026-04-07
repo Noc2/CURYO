@@ -1015,10 +1015,6 @@ const HomeInner = () => {
     requestedContentItem === null &&
     requestedContentLoading &&
     feed.length === 0;
-  const activeViewLabel =
-    viewGroups.flatMap(group => group.options).find(option => option.value === view)?.label ??
-    (activeScope === "all" ? "For You" : "Discover");
-
   return (
     <AppPageShell
       outerClassName="min-h-0 pb-[calc(env(safe-area-inset-bottom)+7rem)] xl:pb-4"
@@ -1136,7 +1132,6 @@ const HomeInner = () => {
             primaryItem={primaryItem}
             activeIndex={activeSourceIndex}
             totalCount={displayFeed.length}
-            viewLabel={activeViewLabel}
             isCommitting={isCommitting}
             voteError={voteError}
             cooldownSecondsRemaining={primaryItemCooldownSeconds}
