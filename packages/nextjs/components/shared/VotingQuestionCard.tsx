@@ -302,8 +302,7 @@ export function VotingQuestionCard({
     const dockVoteDisabled = isCommitting || Boolean(centerStatusContent);
     const dockNotchRadius = compact ? 58 : 66;
     const dockNotchCutout = compact ? 52 : 60;
-    const dockControlsPaddingClassName = compact ? "px-4 pb-3 pt-[3.55rem]" : "px-4 pb-3.5 pt-[4.1rem]";
-    const dockSurfaceTopOffsetClassName = compact ? "top-[3.55rem]" : "top-[4.65rem]";
+    const dockControlsPaddingClassName = compact ? "px-4 pb-2.5 pt-4" : "px-4 pb-3 pt-7";
     const dockMoreClassName = "text-base font-medium text-base-content/68 hover:text-base-content/88";
     const dockShellMaskStyle = {
       WebkitMaskImage: `radial-gradient(circle ${dockNotchRadius}px at 50% 0, transparent 0 ${dockNotchCutout}px, black ${dockNotchCutout + 1}px)`,
@@ -318,26 +317,26 @@ export function VotingQuestionCard({
 
     return (
       <div className={`relative ${embedded ? "" : "rounded-2xl"} flex min-h-0 flex-col ${compact ? "pt-10" : "pt-14"}`}>
+        <div
+          aria-hidden
+          className="pointer-events-none absolute inset-0 z-0 rounded-[2rem] ring-1 ring-base-content/8"
+          style={dockSurfaceStyle}
+        />
         <div className="pointer-events-none absolute left-1/2 top-0 z-20 -translate-x-1/2">
           <RatingOrb rating={currentRating} size={orbSize} showGlow={false} />
         </div>
 
         <div
-          className="relative z-10 overflow-hidden rounded-[2rem] ring-1 ring-base-content/8 shadow-[0_16px_36px_rgb(0_0_0_/_0.22)]"
-          style={dockShellMaskStyle}
+          className="relative z-10 overflow-hidden rounded-[2rem] ring-1 ring-base-content/8 shadow-[0_16px_36px_rgb(0_0_0_/_0.28)]"
+          style={{ ...dockShellMaskStyle, ...dockSurfaceStyle }}
         >
-          <div
-            aria-hidden
-            className={`pointer-events-none absolute inset-x-0 bottom-0 z-0 ${dockSurfaceTopOffsetClassName} rounded-[2rem]`}
-            style={dockSurfaceStyle}
-          />
-          <div className={`relative z-10 ${dockControlsPaddingClassName}`}>
+          <div className={dockControlsPaddingClassName}>
             {!centerStatusContent ? (
               <div className="grid grid-cols-[1fr_auto_1fr] items-end gap-3">
                 <div className="justify-self-start">
                   <CuryoVoteButton direction="up" size="sm" onClick={() => onVote(true)} disabled={dockVoteDisabled} />
                 </div>
-                <div className="justify-self-center">
+                <div className="justify-self-center pb-1">
                   <MoreToggleButton
                     expanded={isDetailsOpen}
                     onClick={() => setIsDetailsOpen(current => !current)}
