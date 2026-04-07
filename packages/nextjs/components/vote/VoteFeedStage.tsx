@@ -4,9 +4,9 @@ import { type RefObject, useCallback, useEffect, useMemo, useRef, useState } fro
 import { FeedVoteCard } from "~~/components/vote/VoteFeedCards";
 import type { ContentItem } from "~~/hooks/useContentFeed";
 import type { SubmitterProfile } from "~~/hooks/useSubmitterProfiles";
+import { resolveVoteFeedVisibleRange } from "~~/hooks/useVoteFeedStage";
 
 interface VoteFeedStageProps {
-  primaryItem: ContentItem | null;
   displayFeed: ContentItem[];
   activeSourceIndex: number;
   loadedCount: number;
@@ -32,14 +32,15 @@ interface VoteFeedStageProps {
 
 const DESKTOP_STEP_MEDIA_QUERY = "(min-width: 1280px)";
 const MOBILE_STAGE_MEDIA_QUERY = "(max-width: 767px)";
+const DESKTOP_RENDER_WINDOW_SIZE = 5;
 const DESKTOP_WHEEL_STEP_THRESHOLD = 10;
 const DESKTOP_WHEEL_STEP_RESET_MS = 260;
 const DESKTOP_WHEEL_STEP_LOCK_MS = 260;
 const MOBILE_DOCK_RESERVED_SPACE_PX = 152;
 const MOBILE_MIN_SCROLLER_HEIGHT_PX = 320;
+const PROGRAMMATIC_SCROLL_RECOVERY_MS = 700;
 
 export function VoteFeedStage({
-  primaryItem,
   displayFeed,
   activeSourceIndex,
   loadedCount,
@@ -66,7 +67,9 @@ export function VoteFeedStage({
   const loadMoreRef = useRef<HTMLDivElement | null>(null);
   const cardElementsRef = useRef(new Map<number, HTMLDivElement>());
   const lastObservedActiveIndexRef = useRef<number | null>(null);
+  const queuedNavigationTargetRef = useRef<number | null>(null);
   const pendingProgrammaticScrollTargetRef = useRef<number | null>(null);
+  const pendingProgrammaticScrollStartedAtRef = useRef<number | null>(null);
   const lastProgrammaticScrollRequestRef = useRef<number | null>(null);
   const wheelDeltaAccumulatorRef = useRef(0);
   const wheelLockTimeoutRef = useRef<number | null>(null);
@@ -75,9 +78,20 @@ export function VoteFeedStage({
   const [desktopEndSpacerHeight, setDesktopEndSpacerHeight] = useState(0);
   const [isDesktopViewport, setIsDesktopViewport] = useState(false);
 
-  const renderedCount = Math.max(loadedCount, activeSourceIndex + 1, primaryItem ? activeSourceIndex + 2 : loadedCount);
-  const feedItems = useMemo(() => displayFeed.slice(0, renderedCount), [displayFeed, renderedCount]);
   const effectiveMobileDockReservedSpace = mobileDockReservedSpace ?? MOBILE_DOCK_RESERVED_SPACE_PX;
+  const loadedItemCount = Math.min(Math.max(loadedCount, 0), displayFeed.length);
+  const renderWindowSize = isDesktopViewport ? DESKTOP_RENDER_WINDOW_SIZE : loadedItemCount || 1;
+  const { end: renderWindowEnd, start: renderWindowStart } = useMemo(
+    () => resolveVoteFeedVisibleRange(displayFeed.length, activeSourceIndex, loadedItemCount, renderWindowSize),
+    [activeSourceIndex, displayFeed.length, loadedItemCount, renderWindowSize],
+  );
+  const feedItems = useMemo(
+    () =>
+      displayFeed
+        .slice(renderWindowStart, renderWindowEnd)
+        .map((item, offset) => ({ actualIndex: renderWindowStart + offset, item })),
+    [displayFeed, renderWindowEnd, renderWindowStart],
+  );
   const getActiveScroller = useCallback(() => {
     if (isDesktopViewport && scrollContainerRef?.current) {
       return scrollContainerRef.current;
@@ -109,11 +123,11 @@ export function VoteFeedStage({
   }, []);
 
   useEffect(() => {
-    const remainingLoadedItems = feedItems.length - (activeSourceIndex + 1);
+    const remainingLoadedItems = loadedItemCount - (activeSourceIndex + 1);
     if (remainingLoadedItems < 3 && canLoadMore) {
       onLoadMore();
     }
-  }, [activeSourceIndex, canLoadMore, feedItems.length, onLoadMore]);
+  }, [activeSourceIndex, canLoadMore, loadedItemCount, onLoadMore]);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -171,7 +185,7 @@ export function VoteFeedStage({
         mobileStageQuery.removeListener(requestMeasurement);
       }
     };
-  }, [effectiveMobileDockReservedSpace, feedItems.length]);
+  }, [effectiveMobileDockReservedSpace, loadedItemCount]);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -181,13 +195,19 @@ export function VoteFeedStage({
     let observedLastNode: HTMLDivElement | null = null;
     let scrollerResizeObserver: ResizeObserver | null = null;
     let lastCardResizeObserver: ResizeObserver | null = null;
+    const renderedLastIndex = feedItems.length > 0 ? (feedItems[feedItems.length - 1]?.actualIndex ?? -1) : -1;
 
     const updateEndSpacerHeight = () => {
       const scroller = getActiveScroller();
-      const lastIndex = feedItems.length - 1;
-      const lastNode = lastIndex >= 0 ? (cardElementsRef.current.get(lastIndex) ?? null) : null;
+      const lastNode = renderedLastIndex >= 0 ? (cardElementsRef.current.get(renderedLastIndex) ?? null) : null;
 
-      if (!scroller || !desktopStageQuery.matches || canLoadMore || !lastNode) {
+      if (
+        !scroller ||
+        !desktopStageQuery.matches ||
+        canLoadMore ||
+        renderedLastIndex !== displayFeed.length - 1 ||
+        !lastNode
+      ) {
         setDesktopEndSpacerHeight(current => (current === 0 ? current : 0));
         return;
       }
@@ -208,8 +228,7 @@ export function VoteFeedStage({
     };
 
     const syncObservedLastNode = () => {
-      const lastIndex = feedItems.length - 1;
-      const nextLastNode = lastIndex >= 0 ? (cardElementsRef.current.get(lastIndex) ?? null) : null;
+      const nextLastNode = renderedLastIndex >= 0 ? (cardElementsRef.current.get(renderedLastIndex) ?? null) : null;
 
       if (observedLastNode === nextLastNode) {
         requestEndSpacerMeasurement();
@@ -259,37 +278,35 @@ export function VoteFeedStage({
         desktopStageQuery.removeListener(syncObservedLastNode);
       }
     };
-  }, [canLoadMore, feedItems.length, getActiveScroller, mobileScrollerHeight]);
+  }, [canLoadMore, displayFeed.length, feedItems, getActiveScroller, mobileScrollerHeight]);
 
   const requestProgrammaticScroll = useCallback(
     (targetIndex: number) => {
       if (targetIndex < 0 || targetIndex >= displayFeed.length) {
         pendingProgrammaticScrollTargetRef.current = null;
+        pendingProgrammaticScrollStartedAtRef.current = null;
         lastProgrammaticScrollRequestRef.current = null;
-        return;
+        return false;
       }
-
-      pendingProgrammaticScrollTargetRef.current = targetIndex;
 
       const scroller = getActiveScroller();
       const node = cardElementsRef.current.get(targetIndex);
       if (!scroller || !node || lastProgrammaticScrollRequestRef.current === targetIndex) {
-        return;
+        return false;
       }
 
       const scrollerRect = scroller.getBoundingClientRect();
       const nodeRect = node.getBoundingClientRect();
       scroller.scrollTo({ top: scroller.scrollTop + nodeRect.top - scrollerRect.top, behavior: "smooth" });
+      pendingProgrammaticScrollTargetRef.current = targetIndex;
+      pendingProgrammaticScrollStartedAtRef.current = Date.now();
       lastProgrammaticScrollRequestRef.current = targetIndex;
+      return true;
     },
     [displayFeed.length, getActiveScroller],
   );
 
   const trackActiveCard = useCallback(() => {
-    if (activeSourceIndex < 0) {
-      return;
-    }
-
     const scroller = getActiveScroller();
     if (!scroller) return;
     const scrollerRect = scroller.getBoundingClientRect();
@@ -315,13 +332,21 @@ export function VoteFeedStage({
     const pendingProgrammaticTarget = pendingProgrammaticScrollTargetRef.current;
     if (pendingProgrammaticTarget !== null) {
       if (bestIndex !== pendingProgrammaticTarget) {
+        const pendingStartedAt = pendingProgrammaticScrollStartedAtRef.current;
+        if (pendingStartedAt !== null && Date.now() - pendingStartedAt < PROGRAMMATIC_SCROLL_RECOVERY_MS) {
+          return;
+        }
+
+        pendingProgrammaticScrollTargetRef.current = null;
+        pendingProgrammaticScrollStartedAtRef.current = null;
+        lastProgrammaticScrollRequestRef.current = null;
+      } else {
+        pendingProgrammaticScrollTargetRef.current = null;
+        pendingProgrammaticScrollStartedAtRef.current = null;
+        lastProgrammaticScrollRequestRef.current = null;
+        lastObservedActiveIndexRef.current = bestIndex;
         return;
       }
-
-      pendingProgrammaticScrollTargetRef.current = null;
-      lastProgrammaticScrollRequestRef.current = null;
-      lastObservedActiveIndexRef.current = bestIndex;
-      return;
     }
 
     if (lastObservedActiveIndexRef.current === bestIndex) {
@@ -330,13 +355,38 @@ export function VoteFeedStage({
 
     lastObservedActiveIndexRef.current = bestIndex;
     onTrackActiveIndex(bestIndex);
-  }, [activeSourceIndex, getActiveScroller, onTrackActiveIndex]);
+  }, [getActiveScroller, onTrackActiveIndex]);
 
   useEffect(() => {
     if (activeSourceIndex < 0) {
       lastObservedActiveIndexRef.current = null;
+      queuedNavigationTargetRef.current = null;
       pendingProgrammaticScrollTargetRef.current = null;
+      pendingProgrammaticScrollStartedAtRef.current = null;
       lastProgrammaticScrollRequestRef.current = null;
+      return;
+    }
+
+    const queuedNavigationTarget = queuedNavigationTargetRef.current;
+    if (queuedNavigationTarget !== null) {
+      if (queuedNavigationTarget >= loadedItemCount) {
+        lastProgrammaticScrollRequestRef.current = null;
+        if (canLoadMore) {
+          onLoadMore();
+        }
+        return;
+      }
+
+      if (activeSourceIndex !== queuedNavigationTarget) {
+        const didSelect = onSelectByIndex(queuedNavigationTarget);
+        if (didSelect) {
+          return;
+        }
+      }
+
+      if (requestProgrammaticScroll(queuedNavigationTarget)) {
+        queuedNavigationTargetRef.current = null;
+      }
       return;
     }
 
@@ -347,8 +397,8 @@ export function VoteFeedStage({
       return;
     }
 
-    if (activeSourceIndex >= feedItems.length) {
-      pendingProgrammaticScrollTargetRef.current = activeSourceIndex;
+    if (activeSourceIndex >= loadedItemCount) {
+      queuedNavigationTargetRef.current = activeSourceIndex;
       lastProgrammaticScrollRequestRef.current = null;
       if (canLoadMore) {
         onLoadMore();
@@ -357,7 +407,7 @@ export function VoteFeedStage({
     }
 
     requestProgrammaticScroll(activeSourceIndex);
-  }, [activeSourceIndex, canLoadMore, feedItems.length, onLoadMore, requestProgrammaticScroll]);
+  }, [activeSourceIndex, canLoadMore, loadedItemCount, onLoadMore, onSelectByIndex, requestProgrammaticScroll]);
 
   useEffect(() => {
     const scroller = getActiveScroller();
@@ -386,6 +436,8 @@ export function VoteFeedStage({
   }, [feedItems.length, getActiveScroller, trackActiveCard]);
 
   useEffect(() => {
+    if (isDesktopViewport) return;
+
     const scroller = getActiveScroller();
     if (!scroller) return;
 
@@ -409,7 +461,7 @@ export function VoteFeedStage({
       }
       observer.disconnect();
     };
-  }, [canLoadMore, getActiveScroller, onLoadMore]);
+  }, [canLoadMore, getActiveScroller, isDesktopViewport, onLoadMore]);
 
   const setCardElement = useCallback((index: number, node: HTMLDivElement | null) => {
     if (!node) {
@@ -434,21 +486,35 @@ export function VoteFeedStage({
         return false;
       }
 
-      if (targetIndex >= feedItems.length && canLoadMore) {
+      queuedNavigationTargetRef.current = targetIndex;
+
+      if (targetIndex >= loadedItemCount && canLoadMore) {
+        lastProgrammaticScrollRequestRef.current = null;
         onLoadMore();
+        return true;
       }
 
-      const didSelect = onSelectByIndex(targetIndex);
-      if (didSelect) {
-        requestProgrammaticScroll(targetIndex);
+      if (targetIndex !== activeSourceIndex) {
+        const didSelect = onSelectByIndex(targetIndex);
+        if (!didSelect) {
+          queuedNavigationTargetRef.current = null;
+          return false;
+        }
+        return true;
       }
 
-      return didSelect;
+      if (requestProgrammaticScroll(targetIndex)) {
+        queuedNavigationTargetRef.current = null;
+        return true;
+      }
+
+      return false;
     },
     [
+      activeSourceIndex,
       canLoadMore,
       displayFeed.length,
-      feedItems.length,
+      loadedItemCount,
       navigationLocked,
       onLoadMore,
       onSelectByIndex,
@@ -481,8 +547,6 @@ export function VoteFeedStage({
       const deltaY = event.deltaMode === WheelEvent.DOM_DELTA_LINE ? event.deltaY * 16 : event.deltaY;
       if (Math.abs(deltaY) <= Math.abs(event.deltaX) || Math.abs(deltaY) < 1) return;
 
-      event.preventDefault();
-
       if (wheelLockTimeoutRef.current !== null) return;
 
       wheelDeltaAccumulatorRef.current += deltaY;
@@ -500,7 +564,12 @@ export function VoteFeedStage({
       wheelDeltaAccumulatorRef.current = 0;
       clearWheelResetTimer();
 
-      scrollToIndex((activeSourceIndex >= 0 ? activeSourceIndex : 0) + direction);
+      const didAdvance = scrollToIndex((activeSourceIndex >= 0 ? activeSourceIndex : 0) + direction);
+      if (!didAdvance) {
+        return;
+      }
+
+      event.preventDefault();
 
       wheelLockTimeoutRef.current = window.setTimeout(() => {
         wheelLockTimeoutRef.current = null;
@@ -581,17 +650,18 @@ export function VoteFeedStage({
           scrollPaddingBottom: isDesktopViewport ? undefined : `${effectiveMobileDockReservedSpace}px`,
         }}
       >
-        {feedItems.map((item, index) => {
-          const canPrevious = index > 0 && !isCommitting && !navigationLocked;
-          const canNext = index < displayFeed.length - 1 && !isCommitting && !navigationLocked;
-          const isActiveCard = index === (activeSourceIndex >= 0 ? activeSourceIndex : 0);
+        {feedItems.map(({ actualIndex, item }) => {
+          const fallbackActiveIndex = activeSourceIndex >= 0 ? activeSourceIndex : renderWindowStart;
+          const canPrevious = actualIndex > 0 && !isCommitting && !navigationLocked;
+          const canNext = actualIndex < displayFeed.length - 1 && !isCommitting && !navigationLocked;
+          const isActiveCard = actualIndex === fallbackActiveIndex;
 
           return (
             <div
               key={item.id.toString()}
-              id={`vote-feed-card-${index}`}
-              ref={node => setCardElement(index, node)}
-              data-feed-card-index={index}
+              id={`vote-feed-card-${actualIndex}`}
+              ref={node => setCardElement(actualIndex, node)}
+              data-feed-card-index={actualIndex}
               aria-current={isActiveCard ? "true" : undefined}
               aria-hidden={!isActiveCard}
               className={`relative shrink-0 snap-start snap-always transition-[opacity,filter,transform] duration-300 ease-out ${
@@ -609,9 +679,9 @@ export function VoteFeedStage({
                 following={followedWallets.has(item.submitter.toLowerCase())}
                 followPending={isFollowPending(item.submitter)}
                 normalizedAddress={normalizedAddress}
-                deferEmbedClientFetch={isMetadataPrefetchPending && index !== activeSourceIndex}
-                onPrevious={canPrevious ? () => void scrollToIndex(index - 1) : undefined}
-                onNext={canNext ? () => void scrollToIndex(index + 1) : undefined}
+                deferEmbedClientFetch={isMetadataPrefetchPending && actualIndex !== activeSourceIndex}
+                onPrevious={canPrevious ? () => void scrollToIndex(actualIndex - 1) : undefined}
+                onNext={canNext ? () => void scrollToIndex(actualIndex + 1) : undefined}
                 canPrevious={canPrevious}
                 canNext={canNext}
               />

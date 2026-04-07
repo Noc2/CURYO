@@ -1,4 +1,8 @@
-import { resolveVoteFeedActiveSourceIndex, resolveVoteFeedVisibleItems } from "./useVoteFeedStage";
+import {
+  resolveVoteFeedActiveSourceIndex,
+  resolveVoteFeedVisibleItems,
+  resolveVoteFeedVisibleRange,
+} from "./useVoteFeedStage";
 import assert from "node:assert/strict";
 import test from "node:test";
 
@@ -29,4 +33,18 @@ test("keeps enough thumbnails visible to fill larger desktop queue layouts", () 
     visibleItems.map(item => item.id),
     [1n, 2n, 3n, 4n, 5n, 6n, 7n, 8n, 9n, 10n, 11n, 12n, 13n, 14n, 15n],
   );
+});
+
+test("resolveVoteFeedVisibleRange centers the desktop render window around the active card when possible", () => {
+  assert.deepEqual(resolveVoteFeedVisibleRange(20, 7, 12, 5), {
+    start: 5,
+    end: 10,
+  });
+});
+
+test("resolveVoteFeedVisibleRange clamps to the loaded edge when the active card is near the end", () => {
+  assert.deepEqual(resolveVoteFeedVisibleRange(20, 11, 12, 5), {
+    start: 7,
+    end: 12,
+  });
 });

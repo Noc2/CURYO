@@ -9,6 +9,31 @@ interface UseVoteFeedStageOptions {
   windowSize?: number;
 }
 
+export function resolveVoteFeedVisibleRange(
+  itemCount: number,
+  activeSourceIndex: number,
+  visibleCount: number,
+  windowSize: number,
+) {
+  const loadedCount = Math.min(Math.max(visibleCount, 0), itemCount);
+  if (loadedCount === 0) {
+    return { start: 0, end: 0 };
+  }
+
+  if (loadedCount <= windowSize) {
+    return { start: 0, end: loadedCount };
+  }
+
+  const anchorIndex = Math.min(Math.max(activeSourceIndex, 0), loadedCount - 1);
+  const halfWindow = Math.floor(windowSize / 2);
+  const maxStart = Math.max(loadedCount - windowSize, 0);
+  const start = Math.min(Math.max(anchorIndex - halfWindow, 0), maxStart);
+  return {
+    start,
+    end: start + windowSize,
+  };
+}
+
 export function resolveVoteFeedActiveSourceIndex(
   items: ReadonlyArray<{ id: bigint }>,
   activeContentId: bigint | null,
@@ -37,13 +62,8 @@ export function resolveVoteFeedVisibleItems<T>(
   visibleCount: number,
   windowSize: number,
 ) {
-  const loadedItems = items.slice(0, visibleCount);
-  if (loadedItems.length <= windowSize) return loadedItems;
-
-  const halfWindow = Math.floor(windowSize / 2);
-  const maxStart = Math.max(loadedItems.length - windowSize, 0);
-  const start = Math.min(Math.max(activeSourceIndex - halfWindow, 0), maxStart);
-  return loadedItems.slice(start, start + windowSize);
+  const { end, start } = resolveVoteFeedVisibleRange(items.length, activeSourceIndex, visibleCount, windowSize);
+  return items.slice(start, end);
 }
 
 export function useVoteFeedStage(items: ContentItem[], options: UseVoteFeedStageOptions) {
