@@ -302,7 +302,6 @@ export function VoteFeedStage({
     const scroller = getActiveScroller();
     if (!scroller) return;
     const scrollerRect = scroller.getBoundingClientRect();
-    const scrollerAnchor = scroller.scrollTop;
     let bestIndex: number | null = null;
     let bestTop = Number.NEGATIVE_INFINITY;
     let fallbackIndex: number | null = null;
@@ -310,17 +309,17 @@ export function VoteFeedStage({
 
     for (const [index, node] of cardElementsRef.current.entries()) {
       const cardRect = node.getBoundingClientRect();
-      const cardTop = scroller.scrollTop + cardRect.top - scrollerRect.top;
-      if (cardTop <= scrollerAnchor + ACTIVE_CARD_TOP_TOLERANCE_PX) {
-        if (cardTop > bestTop) {
-          bestTop = cardTop;
+      const relativeTop = cardRect.top - scrollerRect.top;
+      if (relativeTop <= ACTIVE_CARD_TOP_TOLERANCE_PX) {
+        if (relativeTop > bestTop) {
+          bestTop = relativeTop;
           bestIndex = index;
         }
         continue;
       }
 
-      if (cardTop < fallbackTop) {
-        fallbackTop = cardTop;
+      if (relativeTop < fallbackTop) {
+        fallbackTop = relativeTop;
         fallbackIndex = index;
       }
     }
