@@ -1025,8 +1025,8 @@ const HomeInner = () => {
     feed.length === 0;
   return (
     <AppPageShell
-      outerClassName="min-h-0 pb-[calc(env(safe-area-inset-bottom)+7rem)] xl:pb-4"
-      contentClassName="flex min-h-[calc(100svh-6.25rem)] flex-1 flex-col gap-4 xl:min-h-0"
+      outerClassName="h-full min-h-0 overflow-hidden pb-4"
+      contentClassName="flex h-full min-h-0 flex-col gap-4 overflow-hidden"
     >
       <VotingGuide />
       <div
@@ -1092,9 +1092,9 @@ const HomeInner = () => {
         </div>
       ) : null}
 
-      <div className="grid min-h-0 flex-1 gap-4 xl:overflow-hidden xl:grid-cols-[minmax(0,1fr)_17.25rem] xl:items-stretch">
-        <div className="min-w-0">
-          <div className="surface-card flex min-h-0 flex-col overflow-hidden rounded-[2rem] p-3 sm:p-4 xl:h-full">
+      <div className="flex min-h-0 flex-1 flex-col gap-3 overflow-hidden xl:grid xl:grid-cols-[minmax(0,1fr)_17.25rem] xl:items-stretch xl:gap-4">
+        <div className="flex min-w-0 min-h-0 flex-1 flex-col gap-3 xl:gap-0">
+          <div className="surface-card flex min-h-0 flex-1 flex-col overflow-hidden rounded-[2rem] p-3 sm:p-4">
             <div className="min-w-0 flex-1 min-h-0">
               {/* Main content */}
               {categoriesLoading ||
@@ -1134,6 +1134,27 @@ const HomeInner = () => {
               )}
             </div>
           </div>
+          {primaryItem ? (
+            <div className="shrink-0 xl:hidden">
+              <div className="overflow-hidden rounded-2xl bg-base-200 shadow-[0_-8px_28px_rgb(0_0_0_/_0.18)]">
+                <VotingQuestionCard
+                  contentId={primaryItem.id}
+                  categoryId={primaryItem.categoryId}
+                  currentRating={primaryItem.rating}
+                  openRound={primaryItem.openRound}
+                  onVote={isUp => handleButtonVote(primaryItem, isUp)}
+                  isCommitting={isCommitting}
+                  address={address}
+                  error={voteError}
+                  cooldownSecondsRemaining={primaryItemCooldownSeconds}
+                  isOwnContent={primaryItem.isOwnContent}
+                  embedded
+                  compact
+                  variant="dock"
+                />
+              </div>
+            </div>
+          ) : null}
         </div>
         <div className="hidden min-w-0 xl:flex xl:h-full xl:min-h-0">
           <VoteSignalRail
@@ -1147,30 +1168,6 @@ const HomeInner = () => {
           />
         </div>
       </div>
-
-      {primaryItem ? (
-        <div className="fixed inset-x-4 bottom-3 z-30 xl:hidden">
-          <div className="mx-auto w-full max-w-5xl">
-            <div className="overflow-hidden rounded-2xl bg-base-200 shadow-[0_-8px_28px_rgb(0_0_0_/_0.28)]">
-              <VotingQuestionCard
-                contentId={primaryItem.id}
-                categoryId={primaryItem.categoryId}
-                currentRating={primaryItem.rating}
-                openRound={primaryItem.openRound}
-                onVote={isUp => handleButtonVote(primaryItem, isUp)}
-                isCommitting={isCommitting}
-                address={address}
-                error={voteError}
-                cooldownSecondsRemaining={primaryItemCooldownSeconds}
-                isOwnContent={primaryItem.isOwnContent}
-                embedded
-                compact
-                variant="dock"
-              />
-            </div>
-          </div>
-        </div>
-      ) : null}
 
       {/* Stake selector modal */}
       {stakeModal.isOpen ? (

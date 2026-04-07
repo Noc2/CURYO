@@ -29,9 +29,9 @@ interface VoteFeedStageProps {
 }
 
 const DESKTOP_STEP_MEDIA_QUERY = "(min-width: 1280px)";
-const DESKTOP_WHEEL_STEP_THRESHOLD = 56;
-const DESKTOP_WHEEL_STEP_RESET_MS = 140;
-const DESKTOP_WHEEL_STEP_LOCK_MS = 420;
+const DESKTOP_WHEEL_STEP_THRESHOLD = 18;
+const DESKTOP_WHEEL_STEP_RESET_MS = 180;
+const DESKTOP_WHEEL_STEP_LOCK_MS = 320;
 
 export function VoteFeedStage({
   primaryItem,
@@ -80,11 +80,13 @@ export function VoteFeedStage({
   const trackActiveCard = useCallback(() => {
     const scroller = scrollerRef.current;
     if (!scroller) return;
+    const scrollerCenter = scroller.scrollTop + scroller.clientHeight / 2;
     let bestIndex: number | null = null;
     let bestDistance = Number.POSITIVE_INFINITY;
 
     for (const [index, node] of cardElementsRef.current.entries()) {
-      const distance = Math.abs(node.offsetTop - scroller.scrollTop);
+      const cardCenter = node.offsetTop + node.offsetHeight / 2;
+      const distance = Math.abs(cardCenter - scrollerCenter);
 
       if (distance < bestDistance) {
         bestDistance = distance;
@@ -170,9 +172,10 @@ export function VoteFeedStage({
       }
 
       const node = cardElementsRef.current.get(targetIndex);
-      if (node) {
+      const scroller = scrollerRef.current;
+      if (node && scroller) {
         lastObservedActiveIndexRef.current = targetIndex;
-        node.scrollIntoView({ behavior: "smooth", block: "start" });
+        scroller.scrollTo({ top: node.offsetTop, behavior: "smooth" });
       }
 
       return onSelectByIndex(targetIndex);
@@ -296,7 +299,7 @@ export function VoteFeedStage({
 
       <div
         ref={scrollerRef}
-        className="scrollbar-hide flex min-h-0 flex-1 snap-y snap-mandatory flex-col gap-2.5 overflow-y-auto overscroll-contain pb-32 pr-1 scroll-pb-32 scroll-smooth xl:gap-3 xl:pb-0 xl:scroll-pb-0"
+        className="scrollbar-hide flex min-h-0 flex-1 snap-y snap-mandatory flex-col overflow-y-auto overscroll-contain pr-1 scroll-pb-4 scroll-smooth"
       >
         {feedItems.map((item, index) => {
           const canPrevious = index > 0 && !isCommitting && !navigationLocked;
@@ -308,7 +311,7 @@ export function VoteFeedStage({
               id={`vote-feed-card-${index}`}
               ref={node => setCardElement(index, node)}
               data-feed-card-index={index}
-              className="snap-start"
+              className="h-full min-h-full snap-start snap-always"
             >
               <FeedVoteCard
                 item={item}
