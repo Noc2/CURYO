@@ -311,7 +311,7 @@ export function VoteFeedStage({
               id={`vote-feed-card-${index}`}
               ref={node => setCardElement(index, node)}
               data-feed-card-index={index}
-              className="h-full min-h-full snap-start snap-always"
+              className="h-full min-h-full shrink-0 basis-full snap-start snap-always xl:basis-auto"
             >
               <FeedVoteCard
                 item={item}

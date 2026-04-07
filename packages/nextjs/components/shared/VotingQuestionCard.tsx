@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { CuryoConnectButton } from "~~/components/scaffold-eth";
-import { CuryoVoteButton, VoteDirectionIcon } from "~~/components/shared/CuryoVoteButton";
+import { CuryoVoteButton } from "~~/components/shared/CuryoVoteButton";
 import { MoreToggleButton } from "~~/components/shared/MoreToggleButton";
 import { RatingHistory } from "~~/components/shared/RatingHistory";
 import { RatingOrb } from "~~/components/shared/RatingOrb";
@@ -194,30 +194,6 @@ function LiveRoundActivity({
   );
 }
 
-function DockVoteAction({
-  label,
-  direction,
-  disabled,
-  onClick,
-}: {
-  label: string;
-  direction: "up" | "down";
-  disabled: boolean;
-  onClick: () => void;
-}) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      disabled={disabled}
-      className="flex min-h-0 items-center justify-center gap-1.5 rounded-full bg-base-100/80 px-3 py-1.5 text-xs font-semibold text-base-content transition-colors hover:bg-base-100 disabled:cursor-not-allowed disabled:opacity-50"
-    >
-      <VoteDirectionIcon direction={direction} className="h-3.5 w-3.5 stroke-[2.4]" />
-      <span>{label}</span>
-    </button>
-  );
-}
-
 /**
  * Displays the live rating signal and all voting controls in a separate card.
  */
@@ -310,15 +286,7 @@ export function VotingQuestionCard({
   }, [contentId, isSignalVariant]);
 
   if (isDockVariant) {
-    const dockBadgeLabel = phase === "voting" ? "Live" : roundSnapshot.hasRound ? "Settled" : "Starting";
-    const dockSummary =
-      phase === "voting"
-        ? roundSnapshot.votersNeeded > 0
-          ? `${roundSnapshot.votersNeeded} more vote${roundSnapshot.votersNeeded === 1 ? "" : "s"}`
-          : "Settlement in reach"
-        : roundSnapshot.hasRound
-          ? `${formatCrepAmount(roundSnapshot.totalStake, 0)} cREP settled`
-          : "Next round on first vote";
+    const dockVoteDisabled = isCommitting || Boolean(centerStatusContent);
 
     return (
       <div
@@ -331,51 +299,44 @@ export function VotingQuestionCard({
             className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_20%_10%,rgba(255,153,104,0.12),transparent_28%),radial-gradient(circle_at_78%_88%,rgba(255,241,216,0.06),transparent_34%)]"
           />
         ) : null}
-        <div className="relative z-10 flex items-center gap-3">
-          <div className="shrink-0">
-            <RatingOrb rating={currentRating} size={orbSize} />
-          </div>
-
-          <div className="min-w-0 flex-1">
-            <div className="flex flex-wrap items-center gap-1.5">
-              <span className="rounded-full bg-base-content/[0.06] px-2.5 py-1 text-[0.68rem] font-semibold uppercase tracking-[0.16em] text-base-content/72">
-                {dockBadgeLabel}
-              </span>
-              <span className="rounded-full bg-base-content/[0.06] px-2.5 py-1 text-xs font-medium text-base-content/72">
-                {dockSummary}
-              </span>
+        <div className="relative z-10 flex flex-col gap-2.5">
+          <div className="flex items-center justify-between gap-3">
+            <div className="flex w-14 shrink-0 justify-center">
+              <CuryoVoteButton direction="up" size="sm" onClick={() => onVote(true)} disabled={dockVoteDisabled} />
             </div>
 
-            {(phase === "voting" || hasMyVote) && !centerStatusContent ? (
-              <div className="mt-2 flex items-center gap-2 text-xs text-base-content/58">
-                <span>{voteCount} committed</span>
-                <span>{revealedCount} revealed</span>
-              </div>
-            ) : null}
+            <div className="flex min-w-0 flex-1 justify-center">
+              <RatingOrb rating={currentRating} size={orbSize} />
+            </div>
 
-            {displayError ? <p className="mt-2 text-sm text-error">{displayError}</p> : null}
+            <div className="flex w-14 shrink-0 justify-center">
+              <CuryoVoteButton direction="down" size="sm" onClick={() => onVote(false)} disabled={dockVoteDisabled} />
+            </div>
           </div>
 
-          <div className="shrink-0">
-            {!(address && hasMyVote) && !centerStatusContent ? (
-              <div className="flex flex-col items-center gap-2">
-                <DockVoteAction
-                  label="Score too low"
-                  direction="up"
-                  disabled={isCommitting}
-                  onClick={() => onVote(true)}
-                />
-                <DockVoteAction
-                  label="Score too high"
-                  direction="down"
-                  disabled={isCommitting}
-                  onClick={() => onVote(false)}
-                />
-              </div>
-            ) : centerStatusContent ? (
-              centerStatusContent
-            ) : null}
+          {displayError ? <p className="text-center text-sm text-error">{displayError}</p> : null}
+
+          {centerStatusContent ? <div className="flex justify-center">{centerStatusContent}</div> : null}
+
+          <div className="flex items-center justify-end pt-0.5">
+            <MoreToggleButton
+              expanded={isDetailsOpen}
+              onClick={() => setIsDetailsOpen(current => !current)}
+              controlsId={detailsId}
+            />
           </div>
+
+          {isDetailsOpen ? (
+            <div id={detailsId} className="max-h-[38svh] overflow-y-auto pr-1">
+              <div className="flex flex-col gap-2.5">
+                <LiveRoundActivity snapshot={roundSnapshot} compact condensed={false} />
+                <RoundProgress snapshot={roundSnapshot} />
+                <RoundRevealedBreakdown snapshot={roundSnapshot} />
+                <RoundStats categoryId={categoryId} snapshot={roundSnapshot} />
+                <RatingHistory contentId={contentId} variant={embedded ? "dark" : "default"} />
+              </div>
+            </div>
+          ) : null}
         </div>
       </div>
     );
@@ -484,15 +445,13 @@ export function VotingQuestionCard({
         <div className={`flex shrink-0 flex-col ${footerStackClassName}`}>
           <LiveRoundActivity snapshot={roundSnapshot} compact={compact} condensed={isSignalVariant} />
           {!isSignalVariant ? <RoundProgress snapshot={roundSnapshot} /> : null}
-          {!isDockVariant ? (
-            <div className={compact ? "pt-0.5" : "pt-1"}>
-              <MoreToggleButton
-                expanded={isDetailsOpen}
-                onClick={() => setIsDetailsOpen(current => !current)}
-                controlsId={detailsId}
-              />
-            </div>
-          ) : null}
+          <div className={compact ? "pt-0.5" : "pt-1"}>
+            <MoreToggleButton
+              expanded={isDetailsOpen}
+              onClick={() => setIsDetailsOpen(current => !current)}
+              controlsId={detailsId}
+            />
+          </div>
           {isDetailsOpen && !isDockVariant ? (
             <div id={detailsId} className={`flex flex-col ${compact ? "gap-2.5" : "gap-3"}`}>
               {!isSignalVariant ? <RoundRevealedBreakdown snapshot={roundSnapshot} /> : null}
