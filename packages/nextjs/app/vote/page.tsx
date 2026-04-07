@@ -10,6 +10,7 @@ import { AppPageShell } from "~~/components/shared/AppPageShell";
 import { StreakCounter } from "~~/components/shared/StreakCounter";
 import { FeedScopeFilter } from "~~/components/vote/FeedScopeFilter";
 import { MIN_CONTENT_SEARCH_QUERY_LENGTH, isContentSearchQueryTooShort } from "~~/hooks/contentFeed/shared";
+import { useTargetNetwork } from "~~/hooks/scaffold-eth/useTargetNetwork";
 import { useCategoryPopularity } from "~~/hooks/useCategoryPopularity";
 import { useCategoryRegistry } from "~~/hooks/useCategoryRegistry";
 import type { ContentItem } from "~~/hooks/useContentFeed";
@@ -103,6 +104,7 @@ const HomeInner = () => {
   }, [contentParam]);
 
   const { address } = useAccount();
+  const { targetNetwork } = useTargetNetwork();
   const nowSeconds = useUnixTime(60_000);
   const { openConnectModal } = useCuryoConnectModal();
   const { isFirstVote, markVoteCompleted } = useOnboarding();
@@ -277,7 +279,7 @@ const HomeInner = () => {
 
   useEffect(() => {
     setOptimisticVotedContentIds(previous => (previous.size === 0 ? previous : new Set()));
-  }, [address]);
+  }, [address, targetNetwork.id]);
 
   useEffect(() => {
     if (optimisticVotedContentIds.size === 0) return;

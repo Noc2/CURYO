@@ -69,7 +69,7 @@ export async function claimConfiguredFrontendFees(
   }
 
   let roundsClaimed = 0;
-  const lookbackRounds = BigInt(config.frontendFees.lookbackRounds);
+  const lookbackRounds = BigInt(Math.max(1, config.frontendFees.lookbackRounds));
 
   for (let contentId = 1n; contentId < nextContentId; contentId++) {
     let latestRoundId: bigint;
@@ -83,9 +83,59 @@ export async function claimConfiguredFrontendFees(
       continue;
     }
 
-    const startRoundId = latestRoundId > lookbackRounds ? latestRoundId - lookbackRounds + 1n : 1n;
+    const recentStartRoundId = latestRoundId > lookbackRounds ? latestRoundId - lookbackRounds + 1n : 1n;
+    for (let roundId = recentStartRoundId; roundId <= latestRoundId; roundId++) {
+      try {
+        const round = await readRound(publicClient, config.contracts.votingEngine, contentId, roundId);
+        if (round.state !== RoundState.Settled) {
+          continue;
+        }
 
-    for (let roundId = startRoundId; roundId <= latestRoundId; roundId++) {
+        const [fee, disposition, operator, alreadyClaimed] = (await publicClient.readContract({
+          address: contracts.roundRewardDistributor,
+          abi: RoundRewardDistributorAbi,
+          functionName: "previewFrontendFee",
+          args: [contentId, roundId, frontendAddress],
+        })) as readonly [bigint, number, `0x${string}`, boolean];
+
+        if (fee === 0n || alreadyClaimed || disposition === PROTOCOL_FRONTEND_FEE_DISPOSITION) {
+          continue;
+        }
+
+        if (operator !== ZERO_ADDRESS && operator.toLowerCase() !== account.address.toLowerCase()) {
+          logger.warn("Skipping frontend fee claim because preview operator does not match keeper wallet", {
+            contentId: Number(contentId),
+            roundId: Number(roundId),
+            frontendAddress,
+            operator,
+            account: account.address,
+          });
+          continue;
+        }
+
+        await writeContractAndConfirm(publicClient, walletClient, {
+          chain,
+          account,
+          address: contracts.roundRewardDistributor,
+          abi: RoundRewardDistributorAbi,
+          functionName: "claimFrontendFee",
+          args: [contentId, roundId, frontendAddress],
+        });
+        roundsClaimed++;
+      } catch (error: unknown) {
+        logger.debug("Frontend fee preview/claim skipped", {
+          contentId: Number(contentId),
+          roundId: Number(roundId),
+          error: getRevertReason(error),
+        });
+      }
+    }
+
+    if (recentStartRoundId <= 1n) {
+      continue;
+    }
+
+    for (let roundId = 1n; roundId < recentStartRoundId; roundId++) {
       try {
         const round = await readRound(publicClient, config.contracts.votingEngine, contentId, roundId);
         if (round.state !== RoundState.Settled) {
