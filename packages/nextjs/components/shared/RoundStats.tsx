@@ -57,9 +57,9 @@ export function RoundRevealedBreakdown({ snapshot }: RoundRevealedBreakdownProps
  */
 export function RoundStats({ categoryId, snapshot }: RoundStatsProps) {
   const contentLabel = useContentLabel(categoryId);
-  const { round, isLoading, maxVoters, isRoundFull, phase } = snapshot;
+  const { round, hasRound, isLoading, maxVoters, isRoundFull, phase } = snapshot;
 
-  if (isLoading) {
+  if (isLoading && !hasRound) {
     return (
       <div className="flex flex-col gap-2 py-2 text-base animate-pulse">
         <div className="flex items-center gap-3">

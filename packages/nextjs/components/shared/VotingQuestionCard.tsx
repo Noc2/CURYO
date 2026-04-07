@@ -354,7 +354,11 @@ export function VotingQuestionCard({
               <RoundProgress snapshot={roundSnapshot} />
               <RoundRevealedBreakdown snapshot={roundSnapshot} />
               <RoundStats categoryId={categoryId} snapshot={roundSnapshot} />
-              <RatingHistory contentId={contentId} variant={embedded ? "dark" : "default"} />
+              <RatingHistory
+                contentId={contentId}
+                variant={embedded ? "dark" : "default"}
+                fallbackRating={currentRating}
+              />
             </div>
           </div>
         ) : null}
@@ -474,7 +478,11 @@ export function VotingQuestionCard({
             <div id={detailsId} className={`flex flex-col ${compact ? "gap-2.5" : "gap-3"}`}>
               {!isSignalVariant ? <RoundRevealedBreakdown snapshot={roundSnapshot} /> : null}
               <RoundStats categoryId={categoryId} snapshot={roundSnapshot} />
-              <RatingHistory contentId={contentId} variant={embedded || isSignalVariant ? "dark" : "default"} />
+              <RatingHistory
+                contentId={contentId}
+                variant={embedded || isSignalVariant ? "dark" : "default"}
+                fallbackRating={currentRating}
+              />
             </div>
           ) : null}
         </div>
