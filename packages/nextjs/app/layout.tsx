@@ -36,7 +36,11 @@ const ScaffoldEthApp = ({ children }: { children: React.ReactNode }) => {
       style={{ colorScheme: "dark" }}
     >
       <body>
-        <ScaffoldEthAppWithProviders>{children}</ScaffoldEthAppWithProviders>
+        <ScaffoldEthAppWithProviders>
+          <main id="main-content" className="relative flex flex-1 flex-col overflow-x-hidden">
+            {children}
+          </main>
+        </ScaffoldEthAppWithProviders>
         {isProduction ? <Script src="https://scripts.simpleanalyticscdn.com/latest.js" /> : null}
       </body>
     </html>

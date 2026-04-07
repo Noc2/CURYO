@@ -38,13 +38,13 @@ const ScaffoldEthApp = ({ children }: { children: React.ReactNode }) => {
         <Header />
         {/* Main content: offset by left sidebar on desktop (208px at xl) */}
         <div className="flex flex-1 min-h-0 flex-col xl:pl-52">
-          <main
+          <div
             className={`relative flex flex-1 flex-col overflow-x-hidden ${
               isVoteFeedRoute ? "min-h-0 overflow-hidden xl:overflow-hidden" : ""
             }`}
           >
             {children}
-          </main>
+          </div>
           {showVoteFeedMobileFaucet ? (
             <div className="xl:hidden">
               <div className="pointer-events-none fixed bottom-0 left-0 z-10 flex w-full items-center justify-between p-4">
