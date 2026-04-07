@@ -14,7 +14,7 @@ import { useScaffoldReadContract } from "~~/hooks/scaffold-eth";
 import { useParticipationRate } from "~~/hooks/useParticipationRate";
 import { useRoundSnapshot } from "~~/hooks/useRoundSnapshot";
 import { formatVoteCooldownRemaining } from "~~/lib/vote/cooldown";
-import { formatCrepAmount, getRoundProgressMessaging } from "~~/lib/vote/voteIncentives";
+import { describeOpenRoundActivity, formatCrepAmount, getRoundProgressMessaging } from "~~/lib/vote/voteIncentives";
 import { computeVoteProgressIconCounts } from "~~/lib/vote/voteProgressIcons";
 
 interface VotingQuestionCardProps {
@@ -94,7 +94,7 @@ function LiveRoundActivity({
           : `Example bonus: ${blindDetail}.`
         : condensed
           ? (progress?.detailLabel ?? `${formatCrepAmount(snapshot.totalStake, 0)} cREP active`)
-          : `${formatCrepAmount(snapshot.totalStake, 0)} cREP active · ${snapshot.votersNeeded > 0 ? `${snapshot.votersNeeded} more vote${snapshot.votersNeeded === 1 ? "" : "s"} to settle.` : "Settlement threshold is in reach."}`;
+          : describeOpenRoundActivity(snapshot);
   const supportCopy =
     snapshot.phase !== "voting"
       ? "Check the round details below for the settled breakdown and history."
