@@ -301,6 +301,7 @@ export function VoteFeedStage({
   const trackActiveCard = useCallback(() => {
     const scroller = getActiveScroller();
     if (!scroller) return;
+    const scrollerRect = scroller.getBoundingClientRect();
     const scrollerAnchor = scroller.scrollTop;
     let bestIndex: number | null = null;
     let bestTop = Number.NEGATIVE_INFINITY;
@@ -308,7 +309,8 @@ export function VoteFeedStage({
     let fallbackTop = Number.POSITIVE_INFINITY;
 
     for (const [index, node] of cardElementsRef.current.entries()) {
-      const cardTop = node.offsetTop;
+      const cardRect = node.getBoundingClientRect();
+      const cardTop = scroller.scrollTop + cardRect.top - scrollerRect.top;
       if (cardTop <= scrollerAnchor + ACTIVE_CARD_TOP_TOLERANCE_PX) {
         if (cardTop > bestTop) {
           bestTop = cardTop;
