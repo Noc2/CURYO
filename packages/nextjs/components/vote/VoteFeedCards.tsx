@@ -142,20 +142,20 @@ export const FeedVoteCard = memo(function FeedVoteCard({
   }, []);
 
   const useCompactCard = isLaptopCompact || isMobileViewport;
-  const contentStackClassName = useCompactCard ? "gap-2.5" : "gap-3 xl:gap-2.5";
-  const contentGridClassName = "grid min-h-0 flex-1 grid-cols-1 gap-3";
+  const contentStackClassName = useCompactCard ? "gap-2" : "gap-3 xl:gap-2.5";
+  const contentGridClassName = "grid min-h-0 flex-1 grid-cols-1";
   const usesIntrinsicMediaHeight = platformType === "youtube";
   const mediaHeightClassName = usesIntrinsicMediaHeight
     ? "w-full"
     : isMobileViewport
-      ? "w-full h-[clamp(14rem,40svh,19rem)]"
+      ? "w-full min-h-[14rem] flex-1"
       : useCompactCard
-        ? "w-full h-[clamp(16rem,48vh,22rem)] lg:h-[clamp(22rem,58svh,30rem)] xl:h-[clamp(24rem,64svh,34rem)]"
+        ? "w-full min-h-[16rem] flex-1"
         : "w-full min-h-[18rem] lg:min-h-[22rem] lg:flex-1";
 
   return (
     <div
-      className={`flex h-full min-h-0 flex-col xl:h-auto ${contentStackClassName}`}
+      className={`flex h-full min-h-0 flex-col ${contentStackClassName}`}
       onClickCapture={event => {
         if (!onExternalOpen) return;
 
@@ -185,6 +185,7 @@ export const FeedVoteCard = memo(function FeedVoteCard({
           <div className={`${mediaHeightClassName} overflow-hidden`}>
             <ContentEmbed
               url={item.url}
+              compact={useCompactCard}
               prefetchedMetadata={item.contentMetadata}
               deferClientFetch={deferEmbedClientFetch}
             />
