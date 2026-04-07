@@ -43,3 +43,29 @@ test("resolveStableSessionFeedOrder preserves visible order within the same sess
     ["bitcoin", "shelter", "witcher", "mike"],
   );
 });
+
+test("resolveStableSessionFeedOrder promotes a newly requested id without resetting the whole session", () => {
+  assert.deepEqual(
+    resolveStableSessionFeedOrder({
+      previousIds: ["bitcoin", "shelter", "witcher"],
+      previousSessionKey: "network-1|for-you",
+      nextIds: ["bitcoin", "shelter", "witcher", "requested"],
+      nextSessionKey: "network-1|for-you",
+      prioritizedIds: ["requested"],
+    }),
+    ["requested", "bitcoin", "shelter", "witcher"],
+  );
+});
+
+test("resolveStableSessionFeedOrder does not keep reordering ids that were already present", () => {
+  assert.deepEqual(
+    resolveStableSessionFeedOrder({
+      previousIds: ["bitcoin", "shelter", "witcher"],
+      previousSessionKey: "network-1|for-you",
+      nextIds: ["bitcoin", "shelter", "witcher"],
+      nextSessionKey: "network-1|for-you",
+      prioritizedIds: ["shelter"],
+    }),
+    ["bitcoin", "shelter", "witcher"],
+  );
+});

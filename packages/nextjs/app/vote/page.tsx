@@ -580,11 +580,9 @@ const HomeInner = () => {
         activeCategory,
         view,
         isSearchMode ? `search:${trimmedSearchQuery}:${effectiveSearchSortBy}` : `sort:${sortBy}`,
-        `content:${effectiveRequestedActiveId?.toString() ?? "none"}`,
       ].join("|"),
     [
       activeCategory,
-      effectiveRequestedActiveId,
       effectiveSearchSortBy,
       isSearchMode,
       normalizedAddress,
@@ -593,6 +591,10 @@ const HomeInner = () => {
       trimmedSearchQuery,
       view,
     ],
+  );
+  const prioritizedFeedIds = useMemo(
+    () => (effectiveRequestedActiveId !== null ? [effectiveRequestedActiveId.toString()] : []),
+    [effectiveRequestedActiveId],
   );
   const rankedDisplayFeedIds = useMemo(() => rankedDisplayFeed.map(item => item.id.toString()), [rankedDisplayFeed]);
   const [stableDisplayFeedState, setStableDisplayFeedState] = useState<{ sessionKey: string; ids: string[] }>(() => ({
@@ -606,8 +608,15 @@ const HomeInner = () => {
         previousSessionKey: stableDisplayFeedState.sessionKey,
         nextIds: rankedDisplayFeedIds,
         nextSessionKey: feedSessionKey,
+        prioritizedIds: prioritizedFeedIds,
       }),
-    [feedSessionKey, rankedDisplayFeedIds, stableDisplayFeedState.ids, stableDisplayFeedState.sessionKey],
+    [
+      feedSessionKey,
+      prioritizedFeedIds,
+      rankedDisplayFeedIds,
+      stableDisplayFeedState.ids,
+      stableDisplayFeedState.sessionKey,
+    ],
   );
 
   useEffect(() => {
@@ -617,6 +626,7 @@ const HomeInner = () => {
         previousSessionKey: previousState.sessionKey,
         nextIds: rankedDisplayFeedIds,
         nextSessionKey: feedSessionKey,
+        prioritizedIds: prioritizedFeedIds,
       });
 
       if (previousState.sessionKey === feedSessionKey && areIdListsEqual(previousState.ids, nextIds)) {
@@ -628,7 +638,7 @@ const HomeInner = () => {
         ids: nextIds,
       };
     });
-  }, [feedSessionKey, rankedDisplayFeedIds]);
+  }, [feedSessionKey, prioritizedFeedIds, rankedDisplayFeedIds]);
 
   const displayFeed = useMemo(() => {
     const itemById = new Map(rankedDisplayFeed.map(item => [item.id.toString(), item]));
@@ -645,6 +655,34 @@ const HomeInner = () => {
     visibleCount,
     requestedActiveId: effectiveRequestedActiveId,
   });
+  const lastSyncedRequestedContentIdRef = useRef<bigint | null>(null);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+
+    if (effectiveRequestedActiveId === null) {
+      lastSyncedRequestedContentIdRef.current = null;
+      return;
+    }
+
+    const activeItem = activeSourceIndex >= 0 ? (displayFeed[activeSourceIndex] ?? null) : null;
+    if (!activeItem || activeItem.id !== effectiveRequestedActiveId) {
+      return;
+    }
+
+    if (lastSyncedRequestedContentIdRef.current === effectiveRequestedActiveId) {
+      return;
+    }
+
+    lastSyncedRequestedContentIdRef.current = effectiveRequestedActiveId;
+
+    window.requestAnimationFrame(() => {
+      document.getElementById(`vote-feed-card-${activeSourceIndex}`)?.scrollIntoView({
+        behavior: "smooth",
+        block: "start",
+      });
+    });
+  }, [activeSourceIndex, displayFeed, effectiveRequestedActiveId]);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -1228,7 +1266,6 @@ const HomeInner = () => {
                     </div>
                   ) : (
                     <VoteFeedStage
-                      primaryItem={primaryItem}
                       displayFeed={displayFeed}
                       activeSourceIndex={activeSourceIndex}
                       loadedCount={visibleCount}
