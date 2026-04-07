@@ -310,17 +310,26 @@ export function VotingQuestionCard({
       maskRepeat: "no-repeat",
     };
     const dockSurfaceStyle = {
-      background: compact ? "var(--curyo-surface-elevated-hover)" : VOTING_SURFACE_BACKGROUND,
+      background: compact ? "var(--curyo-surface-mobile-vote)" : VOTING_SURFACE_BACKGROUND,
     };
+    const dockShellClassName = compact ? "rounded-none" : "rounded-[2rem]";
+    const mobileOrbClassName = compact ? "drop-shadow-[0_14px_28px_rgba(9,10,12,0.7)]" : "";
 
     return (
       <div className={`relative ${embedded ? "" : "rounded-2xl"} flex min-h-0 flex-col ${compact ? "pt-10" : "pt-14"}`}>
+        {compact ? (
+          <div
+            aria-hidden
+            className="pointer-events-none absolute left-1/2 top-2 z-10 -translate-x-1/2 rounded-full bg-[rgba(9,10,12,0.46)] blur-[12px]"
+            style={{ width: `${orbSize * 0.84}px`, height: `${orbSize * 0.84}px` }}
+          />
+        ) : null}
         <div className="pointer-events-none absolute left-1/2 top-0 z-20 -translate-x-1/2">
-          <RatingOrb rating={currentRating} size={orbSize} showGlow={false} />
+          <RatingOrb rating={currentRating} size={orbSize} showGlow={compact} className={mobileOrbClassName} />
         </div>
 
         <div
-          className="relative z-10 overflow-hidden rounded-[2rem] ring-1 ring-base-content/8 shadow-[0_16px_36px_rgb(0_0_0_/_0.28)]"
+          className={`relative z-10 overflow-hidden ring-1 ring-base-content/8 shadow-[0_16px_36px_rgb(0_0_0_/_0.28)] ${dockShellClassName}`}
           style={{ ...dockShellMaskStyle, ...dockSurfaceStyle }}
         >
           <div className={dockControlsPaddingClassName}>

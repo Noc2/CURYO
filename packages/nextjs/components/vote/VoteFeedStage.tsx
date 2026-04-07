@@ -670,7 +670,9 @@ export function VoteFeedStage({
               aria-current={isActiveCard ? "true" : undefined}
               aria-hidden={!isActiveCard}
               className={`relative shrink-0 snap-start snap-always transition-[opacity,filter,transform] duration-300 ease-out ${
-                isActiveCard ? "opacity-100" : "pointer-events-none opacity-45 grayscale-[0.22] saturate-[0.72]"
+                isActiveCard
+                  ? "opacity-100"
+                  : "pointer-events-none opacity-32 grayscale-[0.38] saturate-[0.46] brightness-[0.72]"
               }`}
             >
               <FeedVoteCard
@@ -693,7 +695,7 @@ export function VoteFeedStage({
               {!isActiveCard ? (
                 <div
                   aria-hidden="true"
-                  className="pointer-events-none absolute inset-0 rounded-[1.75rem] bg-[linear-gradient(180deg,rgba(16,16,18,0.08),rgba(16,16,18,0.28))]"
+                  className="pointer-events-none absolute inset-0 rounded-[1.75rem] bg-[linear-gradient(180deg,rgba(10,10,12,0.18),rgba(10,10,12,0.46))]"
                 />
               ) : null}
             </div>
