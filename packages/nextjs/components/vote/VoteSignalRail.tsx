@@ -102,7 +102,7 @@ export function VoteSignalRail({
     primaryItem != null && activeIndex >= 0 ? `${activeIndex + 1} / ${Math.max(totalCount, activeIndex + 1)}` : "—";
 
   return (
-    <aside className="surface-card rounded-[2rem] p-4 xl:sticky xl:top-4">
+    <aside className="surface-card flex h-full min-h-0 flex-col rounded-[2rem] p-4">
       <div className="flex items-start justify-between gap-3">
         <div className="flex flex-wrap items-center gap-2">
           <div className="rounded-full bg-base-content/[0.05] px-3 py-1.5 text-xs font-medium text-base-content/68">

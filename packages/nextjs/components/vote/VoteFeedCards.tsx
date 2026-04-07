@@ -153,18 +153,18 @@ export const FeedVoteCard = memo(function FeedVoteCard({
   }, []);
 
   const useCompactCard = isLaptopCompact || isMobileViewport;
-  const contentStackClassName = useCompactCard ? "gap-2.5" : "gap-3 xl:gap-4";
+  const contentStackClassName = useCompactCard ? "gap-2.5" : "gap-3 xl:gap-3";
   const contentGridClassName = "grid min-h-0 flex-1 grid-cols-1 gap-3";
   const usesIntrinsicMediaHeight = platformType === "youtube";
   const mediaHeightClassName = usesIntrinsicMediaHeight
     ? "w-full"
     : useCompactCard
       ? "w-full h-[clamp(16rem,48vh,22rem)] lg:h-[clamp(22rem,58svh,30rem)] xl:h-[clamp(24rem,64svh,34rem)]"
-      : "w-full h-[clamp(16rem,50vh,24rem)] lg:h-[clamp(24rem,62svh,38rem)] xl:h-[clamp(28rem,70svh,44rem)]";
+      : "w-full min-h-[18rem] lg:min-h-[22rem] lg:flex-1";
 
   return (
     <div
-      className={`flex h-full min-h-0 flex-col ${contentStackClassName} xl:min-h-[calc(100svh-9rem)]`}
+      className={`flex h-full min-h-0 flex-col ${contentStackClassName} xl:min-h-full`}
       onClickCapture={event => {
         if (!onExternalOpen) return;
 

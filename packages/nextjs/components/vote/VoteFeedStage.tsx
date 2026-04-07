@@ -60,6 +60,7 @@ export function VoteFeedStage({
   onToggleWatch,
   onToggleFollow,
 }: VoteFeedStageProps) {
+  const scrollerRef = useRef<HTMLDivElement | null>(null);
   const loadMoreRef = useRef<HTMLDivElement | null>(null);
   const cardElementsRef = useRef(new Map<number, HTMLDivElement>());
   const lastObservedActiveIndexRef = useRef<number | null>(null);
@@ -79,15 +80,17 @@ export function VoteFeedStage({
   }, [activeSourceIndex]);
 
   const trackActiveCard = useCallback(() => {
-    if (typeof window === "undefined") return;
+    const scroller = scrollerRef.current;
+    if (!scroller) return;
 
-    const focusLine = Math.min(window.innerHeight * ACTIVE_CARD_FOCUS_LINE_FRACTION, 240);
+    const scrollerRect = scroller.getBoundingClientRect();
+    const focusLine = scrollerRect.top + Math.min(scrollerRect.height * ACTIVE_CARD_FOCUS_LINE_FRACTION, 240);
     let bestIndex: number | null = null;
     let bestDistance = Number.POSITIVE_INFINITY;
 
     for (const [index, node] of cardElementsRef.current.entries()) {
       const rect = node.getBoundingClientRect();
-      if (rect.bottom <= 0 || rect.top >= window.innerHeight) continue;
+      if (rect.bottom <= scrollerRect.top || rect.top >= scrollerRect.bottom) continue;
 
       const spansFocusLine = rect.top <= focusLine && rect.bottom >= focusLine;
       const distance = spansFocusLine ? 0 : Math.min(Math.abs(rect.top - focusLine), Math.abs(rect.bottom - focusLine));
@@ -107,7 +110,8 @@ export function VoteFeedStage({
   }, [onTrackActiveIndex]);
 
   useEffect(() => {
-    if (typeof window === "undefined") return;
+    const scroller = scrollerRef.current;
+    if (!scroller || typeof window === "undefined") return;
 
     let frameId = 0;
     const requestTrack = () => {
@@ -119,26 +123,27 @@ export function VoteFeedStage({
     };
 
     requestTrack();
-    window.addEventListener("scroll", requestTrack, { passive: true });
+    scroller.addEventListener("scroll", requestTrack, { passive: true });
     window.addEventListener("resize", requestTrack);
 
     return () => {
       if (frameId !== 0) {
         window.cancelAnimationFrame(frameId);
       }
-      window.removeEventListener("scroll", requestTrack);
+      scroller.removeEventListener("scroll", requestTrack);
       window.removeEventListener("resize", requestTrack);
     };
   }, [feedItems.length, trackActiveCard]);
 
   useEffect(() => {
+    const scroller = scrollerRef.current;
     const observer = new IntersectionObserver(
       entries => {
         if (entries[0]?.isIntersecting && canLoadMore) {
           onLoadMore();
         }
       },
-      { threshold: 0.1 },
+      { root: scroller, threshold: 0.1 },
     );
 
     const currentRef = loadMoreRef.current;
@@ -228,7 +233,7 @@ export function VoteFeedStage({
   }, [activeSourceIndex, displayFeed.length, navigationLocked, scrollToIndex]);
 
   return (
-    <div className="flex min-h-0 flex-col gap-4 xl:gap-5">
+    <div className="flex h-full min-h-0 flex-col">
       {isCommitting ? (
         <div className="flex shrink-0 items-center justify-center">
           <span className="text-base text-base-content/50">
@@ -238,49 +243,54 @@ export function VoteFeedStage({
         </div>
       ) : null}
 
-      {feedItems.map((item, index) => {
-        const canPrevious = index > 0 && !isCommitting && !navigationLocked;
-        const canNext = index < displayFeed.length - 1 && !isCommitting && !navigationLocked;
+      <div
+        ref={scrollerRef}
+        className="scrollbar-hide flex min-h-0 flex-1 snap-y snap-mandatory flex-col gap-3 overflow-y-auto overscroll-contain pr-1 scroll-smooth xl:gap-4"
+      >
+        {feedItems.map((item, index) => {
+          const canPrevious = index > 0 && !isCommitting && !navigationLocked;
+          const canNext = index < displayFeed.length - 1 && !isCommitting && !navigationLocked;
 
-        return (
-          <div
-            key={item.id.toString()}
-            id={`vote-feed-card-${index}`}
-            ref={node => setCardElement(index, node)}
-            data-feed-card-index={index}
-            className="scroll-mt-4 xl:scroll-mt-5"
-          >
-            <FeedVoteCard
-              item={item}
-              submitterProfile={enrichedProfiles[item.submitter.toLowerCase()]}
-              onExternalOpen={contentItem => onExternalOpen(contentItem)}
-              onVote={onVote}
-              onToggleWatch={onToggleWatch}
-              onToggleFollow={onToggleFollow}
-              watched={watchedContentIds.has(item.id.toString())}
-              watchPending={isWatchPending(item.id)}
-              following={followedWallets.has(item.submitter.toLowerCase())}
-              followPending={isFollowPending(item.submitter)}
-              normalizedAddress={normalizedAddress}
-              isCommitting={isCommitting}
-              voteError={item.id === primaryItem?.id ? voteError : null}
-              deferEmbedClientFetch={isMetadataPrefetchPending && index !== activeSourceIndex}
-              cooldownSecondsRemaining={getCooldownSeconds(item.id)}
-              address={address}
-              onPrevious={canPrevious ? () => void scrollToIndex(index - 1) : undefined}
-              onNext={canNext ? () => void scrollToIndex(index + 1) : undefined}
-              canPrevious={canPrevious}
-              canNext={canNext}
-            />
+          return (
+            <div
+              key={item.id.toString()}
+              id={`vote-feed-card-${index}`}
+              ref={node => setCardElement(index, node)}
+              data-feed-card-index={index}
+              className="min-h-full snap-start"
+            >
+              <FeedVoteCard
+                item={item}
+                submitterProfile={enrichedProfiles[item.submitter.toLowerCase()]}
+                onExternalOpen={contentItem => onExternalOpen(contentItem)}
+                onVote={onVote}
+                onToggleWatch={onToggleWatch}
+                onToggleFollow={onToggleFollow}
+                watched={watchedContentIds.has(item.id.toString())}
+                watchPending={isWatchPending(item.id)}
+                following={followedWallets.has(item.submitter.toLowerCase())}
+                followPending={isFollowPending(item.submitter)}
+                normalizedAddress={normalizedAddress}
+                isCommitting={isCommitting}
+                voteError={item.id === primaryItem?.id ? voteError : null}
+                deferEmbedClientFetch={isMetadataPrefetchPending && index !== activeSourceIndex}
+                cooldownSecondsRemaining={getCooldownSeconds(item.id)}
+                address={address}
+                onPrevious={canPrevious ? () => void scrollToIndex(index - 1) : undefined}
+                onNext={canNext ? () => void scrollToIndex(index + 1) : undefined}
+                canPrevious={canPrevious}
+                canNext={canNext}
+              />
+            </div>
+          );
+        })}
+
+        {canLoadMore ? (
+          <div ref={loadMoreRef} className="flex justify-center py-8">
+            <span className="loading loading-spinner loading-md text-primary"></span>
           </div>
-        );
-      })}
-
-      {canLoadMore ? (
-        <div ref={loadMoreRef} className="flex justify-center py-8">
-          <span className="loading loading-spinner loading-md text-primary"></span>
-        </div>
-      ) : null}
+        ) : null}
+      </div>
     </div>
   );
 }

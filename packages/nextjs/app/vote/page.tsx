@@ -1019,7 +1019,10 @@ const HomeInner = () => {
     (activeScope === "all" ? "For You" : "Discover");
 
   return (
-    <AppPageShell contentClassName="space-y-4">
+    <AppPageShell
+      outerClassName="min-h-0 pb-4"
+      contentClassName="flex min-h-[calc(100svh-6.25rem)] flex-1 flex-col gap-4 xl:min-h-0"
+    >
       <VotingGuide />
       <div
         className="flex shrink-0 flex-wrap items-center gap-2 sm:gap-3 xl:flex-nowrap"
@@ -1084,20 +1087,22 @@ const HomeInner = () => {
         </div>
       ) : null}
 
-      <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_17.25rem] xl:items-start">
+      <div className="grid min-h-0 flex-1 gap-4 xl:grid-cols-[minmax(0,1fr)_17.25rem] xl:items-stretch">
         <div className="min-w-0">
-          <div className="surface-card rounded-[2rem] p-3 sm:p-4">
-            <div className="min-w-0 h-full">
+          <div className="surface-card flex min-h-0 flex-col overflow-hidden rounded-[2rem] p-3 sm:p-4 xl:h-full">
+            <div className="min-w-0 flex-1 min-h-0">
               {/* Main content */}
               {categoriesLoading ||
               scopeLoading ||
               showRequestedContentLoading ||
               (effectiveRequestedActiveId === null && isLoading) ? (
-                <div className="flex justify-center py-16 xl:py-10">
+                <div className="flex justify-center py-16 xl:h-full xl:items-center xl:py-10">
                   <span className="loading loading-spinner loading-lg text-primary"></span>
                 </div>
               ) : displayFeed.length === 0 ? (
-                <div className="py-16 text-center text-base text-base-content/30 xl:py-10">{emptyStateMessage}</div>
+                <div className="py-16 text-center text-base text-base-content/30 xl:flex xl:h-full xl:items-center xl:justify-center xl:py-10">
+                  {emptyStateMessage}
+                </div>
               ) : (
                 <VoteFeedStage
                   primaryItem={primaryItem}
@@ -1129,7 +1134,7 @@ const HomeInner = () => {
             </div>
           </div>
         </div>
-        <div className="hidden min-w-0 self-start xl:block">
+        <div className="hidden min-w-0 xl:flex xl:h-full xl:min-h-0">
           <VoteSignalRail
             primaryItem={primaryItem}
             activeIndex={activeSourceIndex}
