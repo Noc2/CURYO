@@ -36,6 +36,9 @@ const MOBILE_MIN_SCROLLER_HEIGHT_PX = 320;
 const PROGRAMMATIC_SCROLL_RECOVERY_MS = 700;
 const MIN_SCROLL_INDICATOR_HEIGHT_PX = 40;
 const MOBILE_SCROLL_INDICATOR_ACTIVE_MS = 900;
+const DESKTOP_SCROLL_SETTLE_MS = 120;
+const DESKTOP_SNAP_ANCHOR_PX = 0;
+const DESKTOP_SNAP_SETTLE_TOLERANCE_PX = 8;
 
 export function VoteFeedStage({
   displayFeed,
@@ -70,6 +73,9 @@ export function VoteFeedStage({
   const lastProgrammaticScrollRequestRef = useRef<number | null>(null);
   const lastAutoPrefetchLoadedCountRef = useRef<number | null>(null);
   const mobileScrollIndicatorTimeoutRef = useRef<number | null>(null);
+  const desktopScrollSettleTimeoutRef = useRef<number | null>(null);
+  const lastDesktopScrollTopRef = useRef(0);
+  const desktopScrollDirectionRef = useRef<"up" | "down" | null>(null);
   const [mobileScrollerHeight, setMobileScrollerHeight] = useState<number | null>(null);
   const [desktopEndSpacerHeight, setDesktopEndSpacerHeight] = useState(0);
   const [isDesktopViewport, setIsDesktopViewport] = useState(false);
@@ -352,6 +358,38 @@ export function VoteFeedStage({
     };
   }, [getActiveScroller]);
 
+  const resolveDirectionalDesktopSnapTarget = useCallback(() => {
+    const scroller = getActiveScroller();
+    if (!scroller) return null;
+
+    const scrollerRect = scroller.getBoundingClientRect();
+    const candidates = Array.from(cardElementsRef.current.entries())
+      .map(([index, node]) => ({
+        index,
+        relativeTop: node.getBoundingClientRect().top - scrollerRect.top,
+      }))
+      .sort((left, right) => left.relativeTop - right.relativeTop);
+
+    if (candidates.length === 0) {
+      return null;
+    }
+
+    const beforeOrAtAnchor =
+      [...candidates].reverse().find(candidate => candidate.relativeTop <= DESKTOP_SNAP_ANCHOR_PX) ?? null;
+    const afterAnchor = candidates.find(candidate => candidate.relativeTop > DESKTOP_SNAP_ANCHOR_PX) ?? null;
+    const direction = desktopScrollDirectionRef.current;
+
+    if (direction === "down") {
+      return afterAnchor ?? beforeOrAtAnchor ?? candidates[candidates.length - 1] ?? null;
+    }
+
+    if (direction === "up") {
+      return beforeOrAtAnchor ?? afterAnchor ?? candidates[0] ?? null;
+    }
+
+    return resolveNearestCard();
+  }, [getActiveScroller, resolveNearestCard]);
+
   const trackActiveCard = useCallback(() => {
     const nearestCard = resolveNearestCard();
     if (!nearestCard) {
@@ -470,6 +508,67 @@ export function VoteFeedStage({
       window.removeEventListener("resize", requestTrack);
     };
   }, [feedItems.length, getActiveScroller, trackActiveCard]);
+
+  useEffect(() => {
+    if (!isDesktopViewport || typeof window === "undefined") return;
+
+    const scroller = getActiveScroller();
+    if (!scroller) return;
+
+    lastDesktopScrollTopRef.current = scroller.scrollTop;
+
+    const clearDesktopSettle = () => {
+      if (desktopScrollSettleTimeoutRef.current !== null) {
+        window.clearTimeout(desktopScrollSettleTimeoutRef.current);
+        desktopScrollSettleTimeoutRef.current = null;
+      }
+    };
+
+    const settleDesktopScroll = () => {
+      desktopScrollSettleTimeoutRef.current = null;
+
+      if (navigationLocked || pendingProgrammaticScrollTargetRef.current !== null) {
+        return;
+      }
+
+      const target = resolveDirectionalDesktopSnapTarget();
+      if (!target) {
+        return;
+      }
+
+      if (Math.abs(target.relativeTop - DESKTOP_SNAP_ANCHOR_PX) <= DESKTOP_SNAP_SETTLE_TOLERANCE_PX) {
+        return;
+      }
+
+      requestProgrammaticScroll(target.index);
+    };
+
+    const handleDesktopScroll = () => {
+      const nextScrollTop = scroller.scrollTop;
+      const delta = nextScrollTop - lastDesktopScrollTopRef.current;
+
+      if (Math.abs(delta) > 1) {
+        desktopScrollDirectionRef.current = delta > 0 ? "down" : "up";
+        lastDesktopScrollTopRef.current = nextScrollTop;
+      }
+
+      clearDesktopSettle();
+      desktopScrollSettleTimeoutRef.current = window.setTimeout(settleDesktopScroll, DESKTOP_SCROLL_SETTLE_MS);
+    };
+
+    scroller.addEventListener("scroll", handleDesktopScroll, { passive: true });
+
+    return () => {
+      scroller.removeEventListener("scroll", handleDesktopScroll);
+      clearDesktopSettle();
+    };
+  }, [
+    getActiveScroller,
+    isDesktopViewport,
+    navigationLocked,
+    requestProgrammaticScroll,
+    resolveDirectionalDesktopSnapTarget,
+  ]);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -846,12 +945,22 @@ export function VoteFeedStage({
       {scrollIndicatorState.isVisible && (isDesktopViewport || isMobileScrollIndicatorActive) ? (
         <div
           aria-hidden="true"
-          className="pointer-events-none fixed right-2 top-0 z-40 w-6 rounded-full bg-base-100/18 backdrop-blur-[2px]"
+          className={`pointer-events-none fixed top-0 z-40 ${isDesktopViewport ? "right-1 w-5" : "right-2 w-6"}`}
           style={{ top: `${scrollIndicatorState.top}px`, height: `${scrollIndicatorState.height}px` }}
         >
-          <div className="absolute inset-y-1 left-1/2 w-[2px] -translate-x-1/2 rounded-full bg-base-content/20" />
           <div
-            className="absolute left-1/2 w-3 -translate-x-1/2 rounded-full bg-primary shadow-[0_0_16px_rgba(242,100,38,0.55)]"
+            className={`absolute left-1/2 -translate-x-1/2 rounded-full ${
+              isDesktopViewport
+                ? "inset-y-0 w-[3px] bg-white/22 shadow-[0_0_0_1px_rgba(255,255,255,0.08)]"
+                : "inset-y-1 w-[2px] bg-base-content/20"
+            }`}
+          />
+          <div
+            className={`absolute left-1/2 -translate-x-1/2 rounded-full bg-primary ${
+              isDesktopViewport
+                ? "w-[5px] shadow-[0_0_18px_rgba(242,100,38,0.7)]"
+                : "w-3 shadow-[0_0_16px_rgba(242,100,38,0.55)]"
+            }`}
             style={{
               top: `${scrollIndicatorState.thumbOffset}px`,
               height: `${scrollIndicatorState.thumbHeight}px`,
