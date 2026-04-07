@@ -67,6 +67,7 @@ export function VoteFeedStage({
   const wheelLockTimeoutRef = useRef<number | null>(null);
   const wheelResetTimeoutRef = useRef<number | null>(null);
   const [mobileScrollerHeight, setMobileScrollerHeight] = useState<number | null>(null);
+  const [desktopEndSpacerHeight, setDesktopEndSpacerHeight] = useState(0);
 
   const renderedCount = Math.max(loadedCount, activeSourceIndex + 1, primaryItem ? activeSourceIndex + 2 : loadedCount);
   const feedItems = useMemo(() => displayFeed.slice(0, renderedCount), [displayFeed, renderedCount]);
@@ -135,6 +136,92 @@ export function VoteFeedStage({
       }
     };
   }, [feedItems.length]);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+
+    const desktopStageQuery = window.matchMedia(DESKTOP_STEP_MEDIA_QUERY);
+    let frameId = 0;
+    let observedLastNode: HTMLDivElement | null = null;
+    let scrollerResizeObserver: ResizeObserver | null = null;
+    let lastCardResizeObserver: ResizeObserver | null = null;
+
+    const updateEndSpacerHeight = () => {
+      const scroller = scrollerRef.current;
+      const lastIndex = feedItems.length - 1;
+      const lastNode = lastIndex >= 0 ? (cardElementsRef.current.get(lastIndex) ?? null) : null;
+
+      if (!scroller || !desktopStageQuery.matches || canLoadMore || !lastNode) {
+        setDesktopEndSpacerHeight(current => (current === 0 ? current : 0));
+        return;
+      }
+
+      const nextHeight = Math.max(scroller.clientHeight - lastNode.offsetHeight, 0);
+      setDesktopEndSpacerHeight(current => (current === nextHeight ? current : nextHeight));
+    };
+
+    const requestEndSpacerMeasurement = () => {
+      if (frameId !== 0) {
+        window.cancelAnimationFrame(frameId);
+      }
+
+      frameId = window.requestAnimationFrame(() => {
+        frameId = 0;
+        updateEndSpacerHeight();
+      });
+    };
+
+    const syncObservedLastNode = () => {
+      const lastIndex = feedItems.length - 1;
+      const nextLastNode = lastIndex >= 0 ? (cardElementsRef.current.get(lastIndex) ?? null) : null;
+
+      if (observedLastNode === nextLastNode) {
+        requestEndSpacerMeasurement();
+        return;
+      }
+
+      lastCardResizeObserver?.disconnect();
+      lastCardResizeObserver = null;
+      observedLastNode = nextLastNode;
+
+      if (observedLastNode && typeof ResizeObserver !== "undefined") {
+        lastCardResizeObserver = new ResizeObserver(requestEndSpacerMeasurement);
+        lastCardResizeObserver.observe(observedLastNode);
+      }
+
+      requestEndSpacerMeasurement();
+    };
+
+    if (typeof ResizeObserver !== "undefined" && scrollerRef.current) {
+      scrollerResizeObserver = new ResizeObserver(syncObservedLastNode);
+      scrollerResizeObserver.observe(scrollerRef.current);
+    }
+
+    syncObservedLastNode();
+    window.addEventListener("resize", syncObservedLastNode);
+
+    if (typeof desktopStageQuery.addEventListener === "function") {
+      desktopStageQuery.addEventListener("change", syncObservedLastNode);
+    } else {
+      desktopStageQuery.addListener(syncObservedLastNode);
+    }
+
+    return () => {
+      if (frameId !== 0) {
+        window.cancelAnimationFrame(frameId);
+      }
+
+      scrollerResizeObserver?.disconnect();
+      lastCardResizeObserver?.disconnect();
+      window.removeEventListener("resize", syncObservedLastNode);
+
+      if (typeof desktopStageQuery.addEventListener === "function") {
+        desktopStageQuery.removeEventListener("change", syncObservedLastNode);
+      } else {
+        desktopStageQuery.removeListener(syncObservedLastNode);
+      }
+    };
+  }, [canLoadMore, feedItems.length, mobileScrollerHeight]);
 
   useEffect(() => {
     lastObservedActiveIndexRef.current = activeSourceIndex >= 0 ? activeSourceIndex : null;
@@ -416,6 +503,14 @@ export function VoteFeedStage({
           <div ref={loadMoreRef} className="flex justify-center py-8">
             <span className="loading loading-spinner loading-md text-primary"></span>
           </div>
+        ) : null}
+
+        {!canLoadMore && desktopEndSpacerHeight > 0 ? (
+          <div
+            aria-hidden="true"
+            className="hidden shrink-0 xl:block"
+            style={{ height: `${desktopEndSpacerHeight}px` }}
+          />
         ) : null}
       </div>
     </div>
