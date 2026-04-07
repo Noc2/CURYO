@@ -275,7 +275,7 @@ export function VotingQuestionCard({
       </div>
     ) : null
   ) : null;
-  const orbSize = isDockVariant ? (compact ? 88 : 100) : isSignalVariant ? (compact ? 112 : 136) : compact ? 166 : 190;
+  const orbSize = isDockVariant ? (compact ? 88 : 100) : isSignalVariant ? (compact ? 148 : 168) : compact ? 166 : 190;
   const shellClassName = compact ? "p-3 space-y-2.5" : "p-4 space-y-3 xl:p-3 xl:space-y-2.5 2xl:p-4 2xl:space-y-3";
   const headingRowClassName = compact ? "mb-2.5" : "mb-3";
   const actionStackClassName = compact ? "mt-2.5 gap-1.5" : "mt-3 gap-2";
@@ -300,35 +300,42 @@ export function VotingQuestionCard({
             className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_20%_10%,rgba(255,153,104,0.12),transparent_28%),radial-gradient(circle_at_78%_88%,rgba(255,241,216,0.06),transparent_34%)]"
           />
         ) : null}
-        <div className="relative z-10 flex flex-col gap-2.5">
-          <div className="flex items-center justify-between gap-3">
-            <div className="flex w-14 shrink-0 justify-center">
-              <CuryoVoteButton direction="up" size="sm" onClick={() => onVote(true)} disabled={dockVoteDisabled} />
-            </div>
-
-            <div className="flex min-w-0 flex-1 justify-center">
-              <RatingOrb rating={currentRating} size={orbSize} />
-            </div>
-
-            <div className="flex w-14 shrink-0 justify-center">
-              <CuryoVoteButton direction="down" size="sm" onClick={() => onVote(false)} disabled={dockVoteDisabled} />
-            </div>
+        <div className="relative z-10 flex flex-col">
+          <div className="pointer-events-none absolute left-1/2 top-0 -translate-x-1/2">
+            <RatingOrb rating={currentRating} size={orbSize} />
           </div>
 
-          {displayError ? <p className="text-center text-sm text-error">{displayError}</p> : null}
+          {!centerStatusContent ? (
+            <div className="mt-10 grid grid-cols-[1fr_auto_1fr] items-center gap-2 rounded-[1.9rem] bg-base-content/[0.05] px-3 py-2 ring-1 ring-base-content/8">
+              <div className="justify-self-start">
+                <CuryoVoteButton direction="up" size="sm" onClick={() => onVote(true)} disabled={dockVoteDisabled} />
+              </div>
+              <MoreToggleButton
+                expanded={isDetailsOpen}
+                onClick={() => setIsDetailsOpen(current => !current)}
+                controlsId={detailsId}
+                className="justify-self-center text-[0.82rem] text-base-content/58"
+              />
+              <div className="justify-self-end">
+                <CuryoVoteButton direction="down" size="sm" onClick={() => onVote(false)} disabled={dockVoteDisabled} />
+              </div>
+            </div>
+          ) : (
+            <div className="mt-10 flex items-center gap-2 rounded-[1.9rem] bg-base-content/[0.05] px-3 py-2 ring-1 ring-base-content/8">
+              <div className="min-w-0 flex-1 flex justify-center">{centerStatusContent}</div>
+              <MoreToggleButton
+                expanded={isDetailsOpen}
+                onClick={() => setIsDetailsOpen(current => !current)}
+                controlsId={detailsId}
+                className="shrink-0 text-[0.82rem] text-base-content/58"
+              />
+            </div>
+          )}
 
-          {centerStatusContent ? <div className="flex justify-center">{centerStatusContent}</div> : null}
-
-          <div className="flex items-center justify-end pt-0.5">
-            <MoreToggleButton
-              expanded={isDetailsOpen}
-              onClick={() => setIsDetailsOpen(current => !current)}
-              controlsId={detailsId}
-            />
-          </div>
+          {displayError ? <p className="mt-2 text-center text-sm text-error">{displayError}</p> : null}
 
           {isDetailsOpen ? (
-            <div id={detailsId} className="max-h-[38svh] overflow-y-auto pr-1">
+            <div id={detailsId} className="mt-2.5 max-h-[38svh] overflow-y-auto pr-1">
               <div className="flex flex-col gap-2.5">
                 {activitySummary}
                 <RoundProgress snapshot={roundSnapshot} />
@@ -363,14 +370,10 @@ export function VotingQuestionCard({
             <span>Community rating</span>
             <InfoTooltip text={RATING_GUIDANCE_TEXT} position="bottom" />
           </div>
-          {!(address && hasMyVote) && !centerStatusContent && isSignalVariant ? (
-            <div className="mb-2">
-              <CuryoVoteButton direction="up" onClick={() => onVote(true)} disabled={isCommitting} />
-            </div>
-          ) : null}
           <RatingOrb rating={currentRating} size={orbSize} />
           {!(address && hasMyVote) && !centerStatusContent && isSignalVariant ? (
-            <div className="mt-2">
+            <div className="mt-3 flex items-center justify-center gap-3">
+              <CuryoVoteButton direction="up" onClick={() => onVote(true)} disabled={isCommitting} />
               <CuryoVoteButton direction="down" onClick={() => onVote(false)} disabled={isCommitting} />
             </div>
           ) : null}
