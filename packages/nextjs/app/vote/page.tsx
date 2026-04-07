@@ -120,6 +120,7 @@ const HomeInner = () => {
   const [visibleCount, setVisibleCount] = useState(FEED_PAGE_SIZE);
   const [interactionVersion, setInteractionVersion] = useState(0);
   const [optimisticVotedContentIds, setOptimisticVotedContentIds] = useState<Set<string>>(() => new Set());
+  const desktopScrollContainerRef = useRef<HTMLDivElement | null>(null);
   const trimmedSearchQuery = searchQuery.trim();
   const isSearchMode = trimmedSearchQuery.length > 0;
   const isShortSearchQuery = isContentSearchQueryTooShort(trimmedSearchQuery);
@@ -1074,8 +1075,8 @@ const HomeInner = () => {
     feed.length === 0;
   return (
     <AppPageShell
-      outerClassName="min-h-0 flex-1 overflow-hidden pb-4"
-      contentClassName="flex min-h-0 flex-1 flex-col gap-4 overflow-hidden"
+      outerClassName="min-h-0 flex-1 overflow-hidden pb-4 xl:overflow-visible"
+      contentClassName="flex min-h-0 flex-1 flex-col gap-4 overflow-hidden xl:overflow-visible"
     >
       <VotingGuide />
       <div
@@ -1141,59 +1142,67 @@ const HomeInner = () => {
         </div>
       ) : null}
 
-      <div className="flex min-h-0 flex-1 flex-col gap-3 overflow-hidden xl:grid xl:grid-cols-[minmax(0,1fr)_17.25rem] xl:items-stretch xl:gap-4">
-        <div className="flex min-w-0 min-h-0 flex-1 flex-col gap-3 xl:gap-0">
-          <div className="surface-card flex min-h-0 flex-1 flex-col overflow-hidden rounded-[2rem] p-3 sm:p-4">
-            <div className="min-w-0 flex-1 min-h-0">
-              {/* Main content */}
-              {categoriesLoading ||
-              scopeLoading ||
-              showRequestedContentLoading ||
-              (effectiveRequestedActiveId === null && isLoading) ? (
-                <div className="flex justify-center py-16 xl:h-full xl:items-center xl:py-10">
-                  <span className="loading loading-spinner loading-lg text-primary"></span>
+      <div
+        ref={desktopScrollContainerRef}
+        className="min-h-0 flex-1 overflow-hidden xl:relative xl:left-1/2 xl:w-screen xl:-translate-x-1/2 xl:overflow-x-hidden xl:overflow-y-auto xl:overscroll-contain xl:scrollbar-subtle xl:snap-y xl:snap-mandatory xl:scroll-pb-4 xl:scroll-smooth"
+      >
+        <div className="flex min-h-0 flex-1 flex-col gap-3 overflow-hidden xl:mx-auto xl:w-full xl:max-w-5xl xl:px-4 xl:pb-4">
+          <div className="flex min-h-0 flex-1 flex-col gap-3 overflow-hidden xl:grid xl:grid-cols-[minmax(0,1fr)_17.25rem] xl:items-start xl:gap-4">
+            <div className="flex min-w-0 min-h-0 flex-1 flex-col gap-3 xl:gap-0">
+              <div className="surface-card flex min-h-0 flex-1 flex-col overflow-hidden rounded-[2rem] p-3 sm:p-4">
+                <div className="min-w-0 flex-1 min-h-0">
+                  {/* Main content */}
+                  {categoriesLoading ||
+                  scopeLoading ||
+                  showRequestedContentLoading ||
+                  (effectiveRequestedActiveId === null && isLoading) ? (
+                    <div className="flex justify-center py-16 xl:h-full xl:items-center xl:py-10">
+                      <span className="loading loading-spinner loading-lg text-primary"></span>
+                    </div>
+                  ) : displayFeed.length === 0 ? (
+                    <div className="py-16 text-center text-base text-base-content/30 xl:flex xl:h-full xl:items-center xl:justify-center xl:py-10">
+                      {emptyStateMessage}
+                    </div>
+                  ) : (
+                    <VoteFeedStage
+                      primaryItem={primaryItem}
+                      displayFeed={displayFeed}
+                      activeSourceIndex={activeSourceIndex}
+                      loadedCount={visibleCount}
+                      canLoadMore={canLoadMore}
+                      enrichedProfiles={enrichedProfiles}
+                      watchedContentIds={watchedContentIds}
+                      followedWallets={followedWallets}
+                      normalizedAddress={normalizedAddress}
+                      isCommitting={isCommitting}
+                      isMetadataPrefetchPending={isMetadataPrefetchPending}
+                      navigationLocked={stakeModal.isOpen}
+                      isWatchPending={isWatchPending}
+                      isFollowPending={isFollowPending}
+                      scrollContainerRef={desktopScrollContainerRef}
+                      onLoadMore={() => setVisibleCount(prev => prev + FEED_PAGE_SIZE)}
+                      onTrackActiveIndex={handleTrackVisibleIndex}
+                      onSelectByIndex={handleSelectByIndex}
+                      onExternalOpen={handleExternalOpen}
+                      onToggleWatch={handleToggleWatch}
+                      onToggleFollow={handleToggleFollow}
+                    />
+                  )}
                 </div>
-              ) : displayFeed.length === 0 ? (
-                <div className="py-16 text-center text-base text-base-content/30 xl:flex xl:h-full xl:items-center xl:justify-center xl:py-10">
-                  {emptyStateMessage}
-                </div>
-              ) : (
-                <VoteFeedStage
-                  primaryItem={primaryItem}
-                  displayFeed={displayFeed}
-                  activeSourceIndex={activeSourceIndex}
-                  loadedCount={visibleCount}
-                  canLoadMore={canLoadMore}
-                  enrichedProfiles={enrichedProfiles}
-                  watchedContentIds={watchedContentIds}
-                  followedWallets={followedWallets}
-                  normalizedAddress={normalizedAddress}
-                  isCommitting={isCommitting}
-                  isMetadataPrefetchPending={isMetadataPrefetchPending}
-                  navigationLocked={stakeModal.isOpen}
-                  isWatchPending={isWatchPending}
-                  isFollowPending={isFollowPending}
-                  onLoadMore={() => setVisibleCount(prev => prev + FEED_PAGE_SIZE)}
-                  onTrackActiveIndex={handleTrackVisibleIndex}
-                  onSelectByIndex={handleSelectByIndex}
-                  onExternalOpen={handleExternalOpen}
-                  onToggleWatch={handleToggleWatch}
-                  onToggleFollow={handleToggleFollow}
-                />
-              )}
+              </div>
+            </div>
+            <div className="hidden min-w-0 xl:flex xl:self-start xl:sticky xl:top-0">
+              <VoteSignalRail
+                primaryItem={primaryItem}
+                activeIndex={activeSourceIndex}
+                totalCount={displayFeed.length}
+                isCommitting={isCommitting}
+                voteError={voteError}
+                cooldownSecondsRemaining={primaryItemCooldownSeconds}
+                onVote={handleButtonVote}
+              />
             </div>
           </div>
-        </div>
-        <div className="hidden min-w-0 xl:flex xl:self-start">
-          <VoteSignalRail
-            primaryItem={primaryItem}
-            activeIndex={activeSourceIndex}
-            totalCount={displayFeed.length}
-            isCommitting={isCommitting}
-            voteError={voteError}
-            cooldownSecondsRemaining={primaryItemCooldownSeconds}
-            onVote={handleButtonVote}
-          />
         </div>
       </div>
 

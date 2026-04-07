@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { type RefObject, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { FeedVoteCard } from "~~/components/vote/VoteFeedCards";
 import type { ContentItem } from "~~/hooks/useContentFeed";
 import type { SubmitterProfile } from "~~/hooks/useSubmitterProfiles";
@@ -20,6 +20,7 @@ interface VoteFeedStageProps {
   navigationLocked: boolean;
   isWatchPending: (contentId: bigint) => boolean;
   isFollowPending: (address: string) => boolean;
+  scrollContainerRef?: RefObject<HTMLDivElement | null>;
   onLoadMore: () => void;
   onTrackActiveIndex: (targetIndex: number) => boolean;
   onSelectByIndex: (targetIndex: number) => boolean;
@@ -52,6 +53,7 @@ export function VoteFeedStage({
   navigationLocked,
   isWatchPending,
   isFollowPending,
+  scrollContainerRef,
   onLoadMore,
   onTrackActiveIndex,
   onSelectByIndex,
@@ -68,9 +70,39 @@ export function VoteFeedStage({
   const wheelResetTimeoutRef = useRef<number | null>(null);
   const [mobileScrollerHeight, setMobileScrollerHeight] = useState<number | null>(null);
   const [desktopEndSpacerHeight, setDesktopEndSpacerHeight] = useState(0);
+  const [isDesktopViewport, setIsDesktopViewport] = useState(false);
 
   const renderedCount = Math.max(loadedCount, activeSourceIndex + 1, primaryItem ? activeSourceIndex + 2 : loadedCount);
   const feedItems = useMemo(() => displayFeed.slice(0, renderedCount), [displayFeed, renderedCount]);
+  const getActiveScroller = useCallback(() => {
+    if (isDesktopViewport && scrollContainerRef?.current) {
+      return scrollContainerRef.current;
+    }
+    return scrollerRef.current;
+  }, [isDesktopViewport, scrollContainerRef]);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+
+    const desktopStageQuery = window.matchMedia(DESKTOP_STEP_MEDIA_QUERY);
+    const updateDesktopViewport = () => {
+      setIsDesktopViewport(desktopStageQuery.matches);
+    };
+
+    updateDesktopViewport();
+
+    if (typeof desktopStageQuery.addEventListener === "function") {
+      desktopStageQuery.addEventListener("change", updateDesktopViewport);
+      return () => {
+        desktopStageQuery.removeEventListener("change", updateDesktopViewport);
+      };
+    }
+
+    desktopStageQuery.addListener(updateDesktopViewport);
+    return () => {
+      desktopStageQuery.removeListener(updateDesktopViewport);
+    };
+  }, []);
 
   useEffect(() => {
     const remainingLoadedItems = feedItems.length - (activeSourceIndex + 1);
@@ -147,7 +179,7 @@ export function VoteFeedStage({
     let lastCardResizeObserver: ResizeObserver | null = null;
 
     const updateEndSpacerHeight = () => {
-      const scroller = scrollerRef.current;
+      const scroller = getActiveScroller();
       const lastIndex = feedItems.length - 1;
       const lastNode = lastIndex >= 0 ? (cardElementsRef.current.get(lastIndex) ?? null) : null;
 
@@ -192,9 +224,11 @@ export function VoteFeedStage({
       requestEndSpacerMeasurement();
     };
 
-    if (typeof ResizeObserver !== "undefined" && scrollerRef.current) {
+    const activeScroller = getActiveScroller();
+
+    if (typeof ResizeObserver !== "undefined" && activeScroller) {
       scrollerResizeObserver = new ResizeObserver(syncObservedLastNode);
-      scrollerResizeObserver.observe(scrollerRef.current);
+      scrollerResizeObserver.observe(activeScroller);
     }
 
     syncObservedLastNode();
@@ -221,21 +255,23 @@ export function VoteFeedStage({
         desktopStageQuery.removeListener(syncObservedLastNode);
       }
     };
-  }, [canLoadMore, feedItems.length, mobileScrollerHeight]);
+  }, [canLoadMore, feedItems.length, getActiveScroller, mobileScrollerHeight]);
 
   useEffect(() => {
     lastObservedActiveIndexRef.current = activeSourceIndex >= 0 ? activeSourceIndex : null;
   }, [activeSourceIndex]);
 
   const trackActiveCard = useCallback(() => {
-    const scroller = scrollerRef.current;
+    const scroller = getActiveScroller();
     if (!scroller) return;
-    const scrollerCenter = scroller.scrollTop + scroller.clientHeight / 2;
+    const scrollerRect = scroller.getBoundingClientRect();
+    const scrollerCenter = scrollerRect.top + scroller.clientHeight / 2;
     let bestIndex: number | null = null;
     let bestDistance = Number.POSITIVE_INFINITY;
 
     for (const [index, node] of cardElementsRef.current.entries()) {
-      const cardCenter = node.offsetTop + node.offsetHeight / 2;
+      const cardRect = node.getBoundingClientRect();
+      const cardCenter = cardRect.top + cardRect.height / 2;
       const distance = Math.abs(cardCenter - scrollerCenter);
 
       if (distance < bestDistance) {
@@ -250,10 +286,10 @@ export function VoteFeedStage({
 
     lastObservedActiveIndexRef.current = bestIndex;
     onTrackActiveIndex(bestIndex);
-  }, [onTrackActiveIndex]);
+  }, [getActiveScroller, onTrackActiveIndex]);
 
   useEffect(() => {
-    const scroller = scrollerRef.current;
+    const scroller = getActiveScroller();
     if (!scroller || typeof window === "undefined") return;
 
     let frameId = 0;
@@ -276,10 +312,12 @@ export function VoteFeedStage({
       scroller.removeEventListener("scroll", requestTrack);
       window.removeEventListener("resize", requestTrack);
     };
-  }, [feedItems.length, trackActiveCard]);
+  }, [feedItems.length, getActiveScroller, trackActiveCard]);
 
   useEffect(() => {
-    const scroller = scrollerRef.current;
+    const scroller = getActiveScroller();
+    if (!scroller) return;
+
     const observer = new IntersectionObserver(
       entries => {
         if (entries[0]?.isIntersecting && canLoadMore) {
@@ -300,7 +338,7 @@ export function VoteFeedStage({
       }
       observer.disconnect();
     };
-  }, [canLoadMore, onLoadMore]);
+  }, [canLoadMore, getActiveScroller, onLoadMore]);
 
   const setCardElement = useCallback((index: number, node: HTMLDivElement | null) => {
     if (!node) {
@@ -322,19 +360,29 @@ export function VoteFeedStage({
       }
 
       const node = cardElementsRef.current.get(targetIndex);
-      const scroller = scrollerRef.current;
+      const scroller = getActiveScroller();
       if (node && scroller) {
+        const scrollerRect = scroller.getBoundingClientRect();
+        const nodeRect = node.getBoundingClientRect();
         lastObservedActiveIndexRef.current = targetIndex;
-        scroller.scrollTo({ top: node.offsetTop, behavior: "smooth" });
+        scroller.scrollTo({ top: scroller.scrollTop + nodeRect.top - scrollerRect.top, behavior: "smooth" });
       }
 
       return onSelectByIndex(targetIndex);
     },
-    [canLoadMore, displayFeed.length, feedItems.length, navigationLocked, onLoadMore, onSelectByIndex],
+    [
+      canLoadMore,
+      displayFeed.length,
+      feedItems.length,
+      getActiveScroller,
+      navigationLocked,
+      onLoadMore,
+      onSelectByIndex,
+    ],
   );
 
   useEffect(() => {
-    const scroller = scrollerRef.current;
+    const scroller = getActiveScroller();
     if (!scroller || typeof window === "undefined") return;
 
     const desktopStepQuery = window.matchMedia(DESKTOP_STEP_MEDIA_QUERY);
@@ -391,7 +439,7 @@ export function VoteFeedStage({
       clearWheelLockTimer();
       wheelDeltaAccumulatorRef.current = 0;
     };
-  }, [activeSourceIndex, navigationLocked, scrollToIndex]);
+  }, [activeSourceIndex, getActiveScroller, navigationLocked, scrollToIndex]);
 
   useEffect(() => {
     if (typeof window === "undefined" || navigationLocked) return;
@@ -449,7 +497,7 @@ export function VoteFeedStage({
 
       <div
         ref={scrollerRef}
-        className="scrollbar-subtle flex min-h-0 flex-1 snap-y snap-mandatory flex-col gap-3 overflow-y-auto overscroll-contain pb-[8.75rem] pr-1 scroll-pb-[8.75rem] scroll-smooth xl:gap-4 xl:pb-0 xl:scroll-pb-4"
+        className="flex min-h-0 flex-1 snap-y snap-mandatory flex-col gap-3 overflow-y-auto overscroll-contain pb-[8.75rem] pr-1 scroll-pb-[8.75rem] scroll-smooth xl:flex-none xl:gap-4 xl:overflow-visible xl:overscroll-auto xl:pb-4 xl:pr-0 xl:scroll-pb-0"
         style={
           mobileScrollerHeight !== null
             ? { height: `${mobileScrollerHeight}px`, maxHeight: `${mobileScrollerHeight}px` }
