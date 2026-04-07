@@ -1075,7 +1075,7 @@ const HomeInner = () => {
     feed.length === 0;
   return (
     <AppPageShell
-      outerClassName="min-h-0 flex-1 overflow-hidden pb-4 xl:overflow-visible"
+      outerClassName="min-h-0 flex-1 overflow-hidden pb-0 xl:overflow-visible xl:pb-4"
       contentClassName="flex min-h-0 flex-1 flex-col gap-4 overflow-hidden xl:overflow-visible"
     >
       <VotingGuide />
@@ -1149,7 +1149,7 @@ const HomeInner = () => {
         <div className="flex min-h-0 flex-1 flex-col gap-3 overflow-hidden xl:mx-auto xl:w-full xl:max-w-5xl xl:px-4 xl:pb-4">
           <div className="flex min-h-0 flex-1 flex-col gap-3 overflow-hidden xl:grid xl:grid-cols-[minmax(0,1fr)_17.25rem] xl:items-start xl:gap-4">
             <div className="flex min-w-0 min-h-0 flex-1 flex-col gap-3 xl:gap-0">
-              <div className="surface-card flex min-h-0 flex-1 flex-col overflow-hidden rounded-[2rem] p-3 sm:p-4">
+              <div className="surface-card flex min-h-0 flex-1 flex-col overflow-hidden rounded-t-[2rem] rounded-b-none p-3 sm:p-4 xl:rounded-[2rem]">
                 <div className="min-w-0 flex-1 min-h-0">
                   {/* Main content */}
                   {categoriesLoading ||
