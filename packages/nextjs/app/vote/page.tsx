@@ -39,6 +39,7 @@ import { type DiscoverFeedMode, sortDiscoverFeed } from "~~/lib/vote/feedModes";
 import { rankForYouFeed } from "~~/lib/vote/forYouRanker";
 import { buildVoteLocation } from "~~/lib/vote/location";
 import { mergeRequestedContentIntoFeed } from "~~/lib/vote/requestedContent";
+import { stabilizeSessionFeedOrder } from "~~/lib/vote/stableFeedOrder";
 import { type VoteView, getVoteViewGroups, isActivityViewOption } from "~~/lib/vote/viewOptions";
 import { buildRecommendationSignalContext, trackRecommendationSignal } from "~~/utils/recommendationTracker";
 import { notification } from "~~/utils/scaffold-eth";
@@ -74,6 +75,11 @@ const SEARCH_SORT_OPTIONS: { value: SearchSortOption; label: string }[] = [
 ];
 const FEED_PAGE_SIZE = 6;
 const FEED_PREFETCH_BUFFER = 6;
+
+function areIdListsEqual(left: readonly string[], right: readonly string[]) {
+  if (left.length !== right.length) return false;
+  return left.every((value, index) => value === right[index]);
+}
 
 function getVoteCooldownMessage(seconds: number) {
   return `You already voted on this content recently. Try again in ${formatVoteCooldownRemaining(seconds)}.`;
@@ -474,7 +480,7 @@ const HomeInner = () => {
     followedCuratorContentIds,
   ]);
 
-  const displayFeed = useMemo(() => {
+  const rankedDisplayFeed = useMemo(() => {
     const withRequestedItem = (items: ContentItem[]) =>
       effectiveRequestedActiveId !== null ? mergeRequestedContentIntoFeed(items, requestedContentItem) : items;
     const items = [...filteredFeed];
@@ -562,6 +568,49 @@ const HomeInner = () => {
     effectiveRequestedActiveId,
     requestedContentItem,
   ]);
+  const feedSessionKey = useMemo(
+    () =>
+      [
+        targetNetwork.id,
+        normalizedAddress ?? "anonymous",
+        activeCategory,
+        view,
+        isSearchMode ? `search:${trimmedSearchQuery}:${effectiveSearchSortBy}` : `sort:${sortBy}`,
+      ].join("|"),
+    [
+      activeCategory,
+      effectiveSearchSortBy,
+      isSearchMode,
+      normalizedAddress,
+      sortBy,
+      targetNetwork.id,
+      trimmedSearchQuery,
+      view,
+    ],
+  );
+  const feedSessionKeyRef = useRef(feedSessionKey);
+  const [stableDisplayFeedIds, setStableDisplayFeedIds] = useState<string[]>(() =>
+    rankedDisplayFeed.map(item => item.id.toString()),
+  );
+
+  useEffect(() => {
+    setStableDisplayFeedIds(previousIds => {
+      const nextIds = rankedDisplayFeed.map(item => item.id.toString());
+
+      if (feedSessionKeyRef.current !== feedSessionKey) {
+        feedSessionKeyRef.current = feedSessionKey;
+        return nextIds;
+      }
+
+      const stableIds = stabilizeSessionFeedOrder(previousIds, nextIds);
+      return areIdListsEqual(previousIds, stableIds) ? previousIds : stableIds;
+    });
+  }, [feedSessionKey, rankedDisplayFeed]);
+
+  const displayFeed = useMemo(() => {
+    const itemById = new Map(rankedDisplayFeed.map(item => [item.id.toString(), item]));
+    return stableDisplayFeedIds.map(id => itemById.get(id)).filter((item): item is ContentItem => item !== undefined);
+  }, [rankedDisplayFeed, stableDisplayFeedIds]);
   displayFeedRef.current = displayFeed;
 
   const {
