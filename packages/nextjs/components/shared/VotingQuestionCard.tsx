@@ -312,7 +312,7 @@ export function VotingQuestionCard({
     const dockSurfaceStyle = {
       background: compact ? "var(--curyo-surface-mobile-vote)" : VOTING_SURFACE_BACKGROUND,
     };
-    const dockShellClassName = compact ? "rounded-none" : "rounded-[2rem]";
+    const dockShellClassName = compact ? "rounded-[1rem]" : "rounded-[2rem]";
     const mobileOrbClassName = compact ? "drop-shadow-[0_14px_28px_rgba(9,10,12,0.7)]" : "";
 
     return (
