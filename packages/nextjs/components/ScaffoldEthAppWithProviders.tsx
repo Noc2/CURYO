@@ -54,7 +54,7 @@ const ScaffoldEthApp = ({ children }: { children: React.ReactNode }) => {
               </div>
             </div>
           ) : null}
-          <div className={isVoteFeedRoute ? "hidden xl:block" : ""}>
+          <div className={isVoteFeedRoute ? "hidden" : ""}>
             <Footer />
           </div>
         </div>
