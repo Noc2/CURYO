@@ -1134,27 +1134,6 @@ const HomeInner = () => {
               )}
             </div>
           </div>
-          {primaryItem ? (
-            <div className="shrink-0 xl:hidden">
-              <div className="overflow-hidden rounded-2xl bg-base-200 shadow-[0_-8px_28px_rgb(0_0_0_/_0.18)]">
-                <VotingQuestionCard
-                  contentId={primaryItem.id}
-                  categoryId={primaryItem.categoryId}
-                  currentRating={primaryItem.rating}
-                  openRound={primaryItem.openRound}
-                  onVote={isUp => handleButtonVote(primaryItem, isUp)}
-                  isCommitting={isCommitting}
-                  address={address}
-                  error={voteError}
-                  cooldownSecondsRemaining={primaryItemCooldownSeconds}
-                  isOwnContent={primaryItem.isOwnContent}
-                  embedded
-                  compact
-                  variant="dock"
-                />
-              </div>
-            </div>
-          ) : null}
         </div>
         <div className="hidden min-w-0 xl:flex xl:h-full xl:min-h-0">
           <VoteSignalRail
@@ -1168,6 +1147,30 @@ const HomeInner = () => {
           />
         </div>
       </div>
+
+      {primaryItem ? (
+        <div className="fixed inset-x-4 bottom-[calc(env(safe-area-inset-bottom)+0.75rem)] z-30 xl:hidden">
+          <div className="mx-auto w-full max-w-5xl">
+            <div className="overflow-hidden rounded-2xl bg-base-200 shadow-[0_-8px_28px_rgb(0_0_0_/_0.28)]">
+              <VotingQuestionCard
+                contentId={primaryItem.id}
+                categoryId={primaryItem.categoryId}
+                currentRating={primaryItem.rating}
+                openRound={primaryItem.openRound}
+                onVote={isUp => handleButtonVote(primaryItem, isUp)}
+                isCommitting={isCommitting}
+                address={address}
+                error={voteError}
+                cooldownSecondsRemaining={primaryItemCooldownSeconds}
+                isOwnContent={primaryItem.isOwnContent}
+                embedded
+                compact
+                variant="dock"
+              />
+            </div>
+          </div>
+        </div>
+      ) : null}
 
       {/* Stake selector modal */}
       {stakeModal.isOpen ? (
