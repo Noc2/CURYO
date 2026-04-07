@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { FeedVoteCard } from "~~/components/vote/VoteFeedCards";
 import type { ContentItem } from "~~/hooks/useContentFeed";
 import type { SubmitterProfile } from "~~/hooks/useSubmitterProfiles";
@@ -29,9 +29,13 @@ interface VoteFeedStageProps {
 }
 
 const DESKTOP_STEP_MEDIA_QUERY = "(min-width: 1280px)";
+const MOBILE_STAGE_MEDIA_QUERY = "(max-width: 767px)";
 const DESKTOP_WHEEL_STEP_THRESHOLD = 18;
 const DESKTOP_WHEEL_STEP_RESET_MS = 180;
 const DESKTOP_WHEEL_STEP_LOCK_MS = 320;
+const MOBILE_DOCK_HEIGHT_PX = 140;
+const MOBILE_STAGE_BOTTOM_GAP_PX = 12;
+const MOBILE_MIN_SCROLLER_HEIGHT_PX = 320;
 
 export function VoteFeedStage({
   primaryItem,
@@ -62,6 +66,7 @@ export function VoteFeedStage({
   const wheelDeltaAccumulatorRef = useRef(0);
   const wheelLockTimeoutRef = useRef<number | null>(null);
   const wheelResetTimeoutRef = useRef<number | null>(null);
+  const [mobileScrollerHeight, setMobileScrollerHeight] = useState<number | null>(null);
 
   const renderedCount = Math.max(loadedCount, activeSourceIndex + 1, primaryItem ? activeSourceIndex + 2 : loadedCount);
   const feedItems = useMemo(() => displayFeed.slice(0, renderedCount), [displayFeed, renderedCount]);
@@ -72,6 +77,64 @@ export function VoteFeedStage({
       onLoadMore();
     }
   }, [activeSourceIndex, canLoadMore, feedItems.length, onLoadMore]);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+
+    const mobileStageQuery = window.matchMedia(MOBILE_STAGE_MEDIA_QUERY);
+    let frameId = 0;
+
+    const measureScrollerHeight = () => {
+      const scroller = scrollerRef.current;
+      if (!scroller) return;
+
+      if (!mobileStageQuery.matches) {
+        setMobileScrollerHeight(current => (current === null ? current : null));
+        return;
+      }
+
+      const topOffset = scroller.getBoundingClientRect().top;
+      const availableHeight = Math.max(
+        MOBILE_MIN_SCROLLER_HEIGHT_PX,
+        Math.floor(window.innerHeight - topOffset - MOBILE_DOCK_HEIGHT_PX - MOBILE_STAGE_BOTTOM_GAP_PX),
+      );
+
+      setMobileScrollerHeight(current => (current === availableHeight ? current : availableHeight));
+    };
+
+    const requestMeasurement = () => {
+      if (frameId !== 0) {
+        window.cancelAnimationFrame(frameId);
+      }
+
+      frameId = window.requestAnimationFrame(() => {
+        frameId = 0;
+        measureScrollerHeight();
+      });
+    };
+
+    requestMeasurement();
+    window.addEventListener("resize", requestMeasurement);
+
+    if (typeof mobileStageQuery.addEventListener === "function") {
+      mobileStageQuery.addEventListener("change", requestMeasurement);
+    } else {
+      mobileStageQuery.addListener(requestMeasurement);
+    }
+
+    return () => {
+      if (frameId !== 0) {
+        window.cancelAnimationFrame(frameId);
+      }
+      window.removeEventListener("resize", requestMeasurement);
+
+      if (typeof mobileStageQuery.addEventListener === "function") {
+        mobileStageQuery.removeEventListener("change", requestMeasurement);
+      } else {
+        mobileStageQuery.removeListener(requestMeasurement);
+      }
+    };
+  }, [feedItems.length]);
 
   useEffect(() => {
     lastObservedActiveIndexRef.current = activeSourceIndex >= 0 ? activeSourceIndex : null;
@@ -300,6 +363,11 @@ export function VoteFeedStage({
       <div
         ref={scrollerRef}
         className="scrollbar-hide flex min-h-0 flex-1 snap-y snap-mandatory flex-col overflow-y-auto overscroll-contain pb-[8.75rem] pr-1 scroll-pb-[8.75rem] scroll-smooth xl:pb-0 xl:scroll-pb-4"
+        style={
+          mobileScrollerHeight !== null
+            ? { height: `${mobileScrollerHeight}px`, maxHeight: `${mobileScrollerHeight}px` }
+            : undefined
+        }
       >
         {feedItems.map((item, index) => {
           const canPrevious = index > 0 && !isCommitting && !navigationLocked;
