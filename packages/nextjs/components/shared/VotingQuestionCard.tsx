@@ -106,8 +106,13 @@ function LiveRoundActivity({
   const condensedDetailCopy =
     progress?.detailLabel ??
     (snapshot.phase === "voting" && snapshot.voteCount >= snapshot.minVoters ? "Waiting for reveals" : detailCopy);
+  const showsDedicatedProgressRow = Boolean(progress);
 
   if (condensed) {
+    if (showsDedicatedProgressRow) {
+      return null;
+    }
+
     return (
       <div className="flex flex-wrap items-center gap-x-2.5 gap-y-1.5 text-base text-base-content/75">
         {progress ? (
@@ -137,31 +142,35 @@ function LiveRoundActivity({
             <p className="text-[0.68rem] font-semibold uppercase tracking-[0.18em] text-base-content/52">
               Live round activity
             </p>
-            <p
-              className={`mt-1 leading-relaxed text-base-content/70 ${
-                condensed ? "text-xs" : "text-sm"
-              } ${compact ? "max-w-none" : "max-w-[18rem]"}`}
-            >
-              {detailCopy}
-            </p>
+            {!showsDedicatedProgressRow ? (
+              <p
+                className={`mt-1 leading-relaxed text-base-content/70 ${
+                  condensed ? "text-xs" : "text-sm"
+                } ${compact ? "max-w-none" : "max-w-[18rem]"}`}
+              >
+                {detailCopy}
+              </p>
+            ) : null}
           </div>
         ) : null}
-        <div className="flex flex-wrap items-center gap-1.5">
-          {progress ? (
-            <span
-              className={`rounded-full px-2.5 py-1 text-xs font-semibold ${getActivityToneClassName(progress.badgeTone)}`}
-            >
-              {progress.badgeLabel}
-            </span>
-          ) : null}
-          {!condensed && progress?.detailLabel ? (
-            <span
-              className={`rounded-full px-2.5 py-1 text-xs font-medium ${getActivityToneClassName(progress.detailTone)}`}
-            >
-              {progress.detailLabel}
-            </span>
-          ) : null}
-        </div>
+        {!showsDedicatedProgressRow ? (
+          <div className="flex flex-wrap items-center gap-1.5">
+            {progress ? (
+              <span
+                className={`rounded-full px-2.5 py-1 text-xs font-semibold ${getActivityToneClassName(progress.badgeTone)}`}
+              >
+                {progress.badgeLabel}
+              </span>
+            ) : null}
+            {!condensed && progress?.detailLabel ? (
+              <span
+                className={`rounded-full px-2.5 py-1 text-xs font-medium ${getActivityToneClassName(progress.detailTone)}`}
+              >
+                {progress.detailLabel}
+              </span>
+            ) : null}
+          </div>
+        ) : null}
       </div>
 
       <div className={`grid grid-cols-3 ${condensed ? "mt-2.5 gap-1.5" : "mt-3 gap-2"}`}>
