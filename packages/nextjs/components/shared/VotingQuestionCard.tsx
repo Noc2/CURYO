@@ -113,11 +113,13 @@ function InlineVotingSummary({
   filledVoteIcons,
   emptyVoteIcons,
   compact,
+  stackForNarrowRail = false,
 }: {
   snapshot: ReturnType<typeof useRoundSnapshot>;
   filledVoteIcons: number;
   emptyVoteIcons: number;
   compact: boolean;
+  stackForNarrowRail?: boolean;
 }) {
   const { ratePercent } = useParticipationRate();
   const progressMessaging = getRoundProgressMessaging(snapshot, ratePercent);
@@ -140,33 +142,41 @@ function InlineVotingSummary({
         />
       ) : null}
       {progressMessaging ? (
-        <div className="flex flex-wrap items-center justify-center gap-x-2.5 gap-y-1.5 text-center text-base text-base-content/75">
-          <span
-            className={`badge badge-sm gap-1 text-base ${
-              progressMessaging.badgeTone === "primary" ? "badge-primary" : "badge-warning"
-            }`}
-          >
-            <svg xmlns="http://www.w3.org/2000/svg" className="h-3.5 w-3.5" viewBox="0 0 20 20" fill="currentColor">
-              {progressMessaging.badgeTone === "primary" ? (
-                <path
-                  fillRule="evenodd"
-                  d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2V7a3 3 0 00-6 0v2h6z"
-                  clipRule="evenodd"
-                />
-              ) : (
-                <>
-                  <path d="M10 12a2 2 0 100-4 2 2 0 000 4z" />
+        <div
+          className={`flex text-base text-base-content/75 ${
+            stackForNarrowRail
+              ? "w-full flex-col items-start gap-1 text-left"
+              : "flex-wrap items-center justify-center gap-x-2.5 gap-y-1.5 text-center"
+          }`}
+        >
+          <div className="flex items-center gap-2.5">
+            <span
+              className={`badge badge-sm gap-1 text-base ${
+                progressMessaging.badgeTone === "primary" ? "badge-primary" : "badge-warning"
+              }`}
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-3.5 w-3.5" viewBox="0 0 20 20" fill="currentColor">
+                {progressMessaging.badgeTone === "primary" ? (
                   <path
                     fillRule="evenodd"
-                    d="M.458 10C1.732 5.943 5.522 3 10 3s8.268 2.943 9.542 7c-1.274 4.057-5.064 7-9.542 7S1.732 14.057.458 10zM14 10a4 4 0 11-8 0 4 4 0 018 0z"
+                    d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2V7a3 3 0 00-6 0v2h6z"
                     clipRule="evenodd"
                   />
-                </>
-              )}
-            </svg>
-            {progressMessaging.badgeLabel}
-          </span>
-          <InfoTooltip text={progressMessaging.tooltip} position="bottom" />
+                ) : (
+                  <>
+                    <path d="M10 12a2 2 0 100-4 2 2 0 000 4z" />
+                    <path
+                      fillRule="evenodd"
+                      d="M.458 10C1.732 5.943 5.522 3 10 3s8.268 2.943 9.542 7c-1.274 4.057-5.064 7-9.542 7S1.732 14.057.458 10zM14 10a4 4 0 11-8 0 4 4 0 018 0z"
+                      clipRule="evenodd"
+                    />
+                  </>
+                )}
+              </svg>
+              {progressMessaging.badgeLabel}
+            </span>
+            <InfoTooltip text={progressMessaging.tooltip} position="bottom" />
+          </div>
           {progressMessaging.detailLabel ? (
             <span
               className={`tabular-nums ${
@@ -186,7 +196,7 @@ function InlineVotingSummary({
       ) : null}
       {showRevealedBreakdown ? (
         <div className="w-full">
-          <RoundRevealedBreakdown snapshot={snapshot} />
+          <RoundRevealedBreakdown snapshot={snapshot} stacked={stackForNarrowRail} />
         </div>
       ) : null}
     </div>
@@ -415,6 +425,7 @@ export function VotingQuestionCard({
   const actionStackClassName = compact ? "mt-2.5 gap-1.5" : "mt-3 gap-2";
   const footerStackClassName = compact ? "mt-2.5 gap-2" : "mt-3 gap-3 xl:mt-2.5 xl:gap-2.5 2xl:mt-3 2xl:gap-3";
   const activitySummary = <LiveRoundActivity snapshot={roundSnapshot} compact={compact} condensed />;
+  const isDesktopSignalRailCard = compact && isSignalVariant;
   const showInlineVotingSummary = phase === "voting" || roundSnapshot.round.revealedCount > 0;
   const { ratePercent } = useParticipationRate();
   const progressMessaging = getRoundProgressMessaging(roundSnapshot, ratePercent);
@@ -426,6 +437,7 @@ export function VotingQuestionCard({
       filledVoteIcons={filledVoteIcons}
       emptyVoteIcons={emptyVoteIcons}
       compact={compact}
+      stackForNarrowRail={isDesktopSignalRailCard}
     />
   );
   const showExpandedDetails = isSignalVariant || (isDetailsOpen && !isDockVariant);
@@ -603,7 +615,7 @@ export function VotingQuestionCard({
           {showExpandedDetails ? (
             <div id={detailsId} className={`flex flex-col ${compact ? "gap-2.5" : "gap-3"}`}>
               {!isSignalVariant && !showInlineRevealedBreakdown ? (
-                <RoundRevealedBreakdown snapshot={roundSnapshot} />
+                <RoundRevealedBreakdown snapshot={roundSnapshot} stacked={isDesktopSignalRailCard} />
               ) : null}
               <RoundStats categoryId={categoryId} snapshot={roundSnapshot} />
               <RatingHistory

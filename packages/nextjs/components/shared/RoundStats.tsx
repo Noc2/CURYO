@@ -12,9 +12,10 @@ interface RoundStatsProps {
 
 interface RoundRevealedBreakdownProps {
   snapshot: RoundSnapshot;
+  stacked?: boolean;
 }
 
-export function RoundRevealedBreakdown({ snapshot }: RoundRevealedBreakdownProps) {
+export function RoundRevealedBreakdown({ snapshot, stacked = false }: RoundRevealedBreakdownProps) {
   const { round, isLoading } = snapshot;
 
   if (isLoading) return null;
@@ -26,6 +27,27 @@ export function RoundRevealedBreakdown({ snapshot }: RoundRevealedBreakdownProps
   const downPoolFormatted = Number(round.downPool) / 1e6;
   const upCount = Number(round.upCount);
   const downCount = Number(round.downCount);
+
+  if (stacked) {
+    return (
+      <div className="flex w-full max-w-full flex-col gap-1.5 text-base-content/60">
+        <div className="inline-flex min-w-0 flex-wrap items-center justify-start gap-x-2 gap-y-1 text-left">
+          <span className="font-semibold">Up</span>
+          <span className="font-semibold tabular-nums">{upPoolFormatted.toFixed(0)} cREP</span>
+          <span className="text-xs text-base-content/60">
+            {upCount} vote{upCount === 1 ? "" : "s"}
+          </span>
+        </div>
+        <div className="inline-flex min-w-0 flex-wrap items-center justify-start gap-x-2 gap-y-1 text-left">
+          <span className="font-semibold">Down</span>
+          <span className="font-semibold tabular-nums">{downPoolFormatted.toFixed(0)} cREP</span>
+          <span className="text-xs text-base-content/60">
+            {downCount} vote{downCount === 1 ? "" : "s"}
+          </span>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="flex w-full max-w-full items-center gap-3">
