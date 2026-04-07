@@ -648,7 +648,13 @@ export function VoteFeedStage({
         }}
       >
         {feedItems.map(({ actualIndex, item }) => {
-          const fallbackActiveIndex = activeSourceIndex >= 0 ? activeSourceIndex : renderWindowStart;
+          const fallbackActiveIndex =
+            activeSourceIndex >= 0
+              ? Math.min(
+                  Math.max(activeSourceIndex, renderWindowStart),
+                  Math.max(renderWindowEnd - 1, renderWindowStart),
+                )
+              : renderWindowStart;
           const canPrevious = actualIndex > 0 && !isCommitting && !navigationLocked;
           const canNext = actualIndex < displayFeed.length - 1 && !isCommitting && !navigationLocked;
           const isActiveCard = actualIndex === fallbackActiveIndex;
