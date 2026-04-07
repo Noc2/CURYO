@@ -37,6 +37,7 @@ const PROGRAMMATIC_SCROLL_RECOVERY_MS = 700;
 const MIN_SCROLL_INDICATOR_HEIGHT_PX = 40;
 const DESKTOP_SCROLL_SETTLE_MS = 140;
 const DESKTOP_SCROLL_SNAP_TOLERANCE_PX = 16;
+const MOBILE_SCROLL_INDICATOR_ACTIVE_MS = 900;
 
 export function VoteFeedStage({
   displayFeed,
@@ -70,9 +71,11 @@ export function VoteFeedStage({
   const pendingProgrammaticScrollStartedAtRef = useRef<number | null>(null);
   const lastProgrammaticScrollRequestRef = useRef<number | null>(null);
   const lastAutoPrefetchLoadedCountRef = useRef<number | null>(null);
+  const mobileScrollIndicatorTimeoutRef = useRef<number | null>(null);
   const [mobileScrollerHeight, setMobileScrollerHeight] = useState<number | null>(null);
   const [desktopEndSpacerHeight, setDesktopEndSpacerHeight] = useState(0);
   const [isDesktopViewport, setIsDesktopViewport] = useState(false);
+  const [isMobileScrollIndicatorActive, setIsMobileScrollIndicatorActive] = useState(false);
   const [scrollIndicatorState, setScrollIndicatorState] = useState<{
     isVisible: boolean;
     top: number;
@@ -518,6 +521,43 @@ export function VoteFeedStage({
   }, [getActiveScroller, isDesktopViewport, navigationLocked, requestProgrammaticScroll, resolveNearestCard]);
 
   useEffect(() => {
+    if (typeof window === "undefined") return;
+
+    const scroller = getActiveScroller();
+    if (!scroller || isDesktopViewport) {
+      setIsMobileScrollIndicatorActive(false);
+      if (mobileScrollIndicatorTimeoutRef.current !== null) {
+        window.clearTimeout(mobileScrollIndicatorTimeoutRef.current);
+        mobileScrollIndicatorTimeoutRef.current = null;
+      }
+      return;
+    }
+
+    const showMobileIndicator = () => {
+      setIsMobileScrollIndicatorActive(true);
+
+      if (mobileScrollIndicatorTimeoutRef.current !== null) {
+        window.clearTimeout(mobileScrollIndicatorTimeoutRef.current);
+      }
+
+      mobileScrollIndicatorTimeoutRef.current = window.setTimeout(() => {
+        mobileScrollIndicatorTimeoutRef.current = null;
+        setIsMobileScrollIndicatorActive(false);
+      }, MOBILE_SCROLL_INDICATOR_ACTIVE_MS);
+    };
+
+    scroller.addEventListener("scroll", showMobileIndicator, { passive: true });
+
+    return () => {
+      scroller.removeEventListener("scroll", showMobileIndicator);
+      if (mobileScrollIndicatorTimeoutRef.current !== null) {
+        window.clearTimeout(mobileScrollIndicatorTimeoutRef.current);
+        mobileScrollIndicatorTimeoutRef.current = null;
+      }
+    };
+  }, [getActiveScroller, isDesktopViewport]);
+
+  useEffect(() => {
     if (isDesktopViewport) return;
 
     const scroller = getActiveScroller();
@@ -783,7 +823,7 @@ export function VoteFeedStage({
 
       <div
         ref={scrollerRef}
-        className="flex min-h-0 flex-1 snap-y snap-mandatory flex-col gap-3 overflow-y-auto overscroll-contain pr-1 scroll-smooth xl:flex-none xl:gap-4 xl:overflow-visible xl:overscroll-auto xl:pb-4 xl:pr-0 xl:scroll-pb-0"
+        className="scrollbar-hide flex min-h-0 flex-1 snap-y snap-mandatory flex-col gap-3 overflow-y-auto overscroll-contain pr-1 scroll-smooth xl:flex-none xl:gap-4 xl:overflow-visible xl:overscroll-auto xl:pb-4 xl:pr-0 xl:scroll-pb-0"
         style={{
           height: mobileScrollerHeight !== null ? `${mobileScrollerHeight}px` : undefined,
           maxHeight: mobileScrollerHeight !== null ? `${mobileScrollerHeight}px` : undefined,
@@ -852,15 +892,15 @@ export function VoteFeedStage({
         ) : null}
       </div>
 
-      {scrollIndicatorState.isVisible ? (
+      {scrollIndicatorState.isVisible && (isDesktopViewport || isMobileScrollIndicatorActive) ? (
         <div
           aria-hidden="true"
-          className="pointer-events-none fixed right-0 top-0 z-40 w-3"
+          className="pointer-events-none fixed right-0 top-0 z-40 w-4"
           style={{ top: `${scrollIndicatorState.top}px`, height: `${scrollIndicatorState.height}px` }}
         >
-          <div className="absolute inset-y-0 left-1/2 w-px -translate-x-1/2 rounded-full bg-base-content/10" />
+          <div className="absolute inset-y-0 left-1/2 w-[2px] -translate-x-1/2 rounded-full bg-base-content/18" />
           <div
-            className="absolute left-1/2 w-1.5 -translate-x-1/2 rounded-full bg-base-content/60 shadow-[0_0_10px_rgba(15,23,42,0.32)]"
+            className="absolute left-1/2 w-2 -translate-x-1/2 rounded-full bg-base-content/80 shadow-[0_0_12px_rgba(15,23,42,0.42)]"
             style={{
               top: `${scrollIndicatorState.thumbOffset}px`,
               height: `${scrollIndicatorState.thumbHeight}px`,
