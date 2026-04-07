@@ -4,7 +4,6 @@ import { type RefObject, useCallback, useEffect, useMemo, useRef, useState } fro
 import { FeedVoteCard } from "~~/components/vote/VoteFeedCards";
 import type { ContentItem } from "~~/hooks/useContentFeed";
 import type { SubmitterProfile } from "~~/hooks/useSubmitterProfiles";
-import { resolveVoteFeedVisibleRange } from "~~/hooks/useVoteFeedStage";
 
 interface VoteFeedStageProps {
   displayFeed: ContentItem[];
@@ -32,7 +31,6 @@ interface VoteFeedStageProps {
 
 const DESKTOP_STEP_MEDIA_QUERY = "(min-width: 1280px)";
 const MOBILE_STAGE_MEDIA_QUERY = "(max-width: 767px)";
-const DESKTOP_RENDER_WINDOW_SIZE = 5;
 const DESKTOP_WHEEL_STEP_THRESHOLD = 10;
 const DESKTOP_WHEEL_STEP_RESET_MS = 260;
 const DESKTOP_WHEEL_STEP_LOCK_MS = 260;
@@ -81,22 +79,14 @@ export function VoteFeedStage({
 
   const effectiveMobileDockReservedSpace = mobileDockReservedSpace ?? MOBILE_DOCK_RESERVED_SPACE_PX;
   const loadedItemCount = Math.min(Math.max(loadedCount, 0), displayFeed.length);
-  const renderWindowSize = isDesktopViewport ? DESKTOP_RENDER_WINDOW_SIZE : loadedItemCount || 1;
-  const { end: renderWindowEnd, start: renderWindowStart } = useMemo(
-    () => resolveVoteFeedVisibleRange(displayFeed.length, activeSourceIndex, loadedItemCount, renderWindowSize),
-    [activeSourceIndex, displayFeed.length, loadedItemCount, renderWindowSize],
-  );
   const feedItems = useMemo(
-    () =>
-      displayFeed
-        .slice(renderWindowStart, renderWindowEnd)
-        .map((item, offset) => ({ actualIndex: renderWindowStart + offset, item })),
-    [displayFeed, renderWindowEnd, renderWindowStart],
+    () => displayFeed.slice(0, loadedItemCount).map((item, actualIndex) => ({ actualIndex, item })),
+    [displayFeed, loadedItemCount],
   );
   const renderedActiveIndex =
-    activeSourceIndex >= renderWindowStart && activeSourceIndex < renderWindowEnd
+    activeSourceIndex >= 0 && activeSourceIndex < loadedItemCount
       ? activeSourceIndex
-      : (feedItems[0]?.actualIndex ?? 0);
+      : Math.min(Math.max(lastObservedActiveIndexRef.current ?? 0, 0), Math.max(loadedItemCount - 1, 0));
   const getActiveScroller = useCallback(() => {
     if (isDesktopViewport && scrollContainerRef?.current) {
       return scrollContainerRef.current;
@@ -311,25 +301,24 @@ export function VoteFeedStage({
   const trackActiveCard = useCallback(() => {
     const scroller = getActiveScroller();
     if (!scroller) return;
-    const scrollerRect = scroller.getBoundingClientRect();
-    const scrollerAnchor = scrollerRect.top;
+    const scrollerAnchor = scroller.scrollTop;
     let bestIndex: number | null = null;
     let bestTop = Number.NEGATIVE_INFINITY;
     let fallbackIndex: number | null = null;
     let fallbackTop = Number.POSITIVE_INFINITY;
 
     for (const [index, node] of cardElementsRef.current.entries()) {
-      const cardRect = node.getBoundingClientRect();
-      if (cardRect.top <= scrollerAnchor + ACTIVE_CARD_TOP_TOLERANCE_PX) {
-        if (cardRect.top > bestTop) {
-          bestTop = cardRect.top;
+      const cardTop = node.offsetTop;
+      if (cardTop <= scrollerAnchor + ACTIVE_CARD_TOP_TOLERANCE_PX) {
+        if (cardTop > bestTop) {
+          bestTop = cardTop;
           bestIndex = index;
         }
         continue;
       }
 
-      if (cardRect.top < fallbackTop) {
-        fallbackTop = cardRect.top;
+      if (cardTop < fallbackTop) {
+        fallbackTop = cardTop;
         fallbackIndex = index;
       }
     }
@@ -438,6 +427,7 @@ export function VoteFeedStage({
       });
     };
 
+    requestTrack();
     scroller.addEventListener("scroll", requestTrack, { passive: true });
     window.addEventListener("resize", requestTrack);
 
@@ -488,12 +478,12 @@ export function VoteFeedStage({
   }, []);
 
   useEffect(() => {
-    const activeIndex = activeSourceIndex >= 0 ? activeSourceIndex : 0;
+    const activeIndex = renderedActiveIndex;
 
     for (const [index, node] of cardElementsRef.current.entries()) {
       node.inert = index !== activeIndex;
     }
-  }, [activeSourceIndex, feedItems.length]);
+  }, [feedItems.length, renderedActiveIndex]);
 
   const scrollToIndex = useCallback(
     (targetIndex: number) => {
@@ -693,7 +683,7 @@ export function VoteFeedStage({
                 following={followedWallets.has(item.submitter.toLowerCase())}
                 followPending={isFollowPending(item.submitter)}
                 normalizedAddress={normalizedAddress}
-                deferEmbedClientFetch={isMetadataPrefetchPending && actualIndex !== activeSourceIndex}
+                deferEmbedClientFetch={isMetadataPrefetchPending && actualIndex !== renderedActiveIndex}
                 onPrevious={canPrevious ? () => void scrollToIndex(actualIndex - 1) : undefined}
                 onNext={canNext ? () => void scrollToIndex(actualIndex + 1) : undefined}
                 canPrevious={canPrevious}
