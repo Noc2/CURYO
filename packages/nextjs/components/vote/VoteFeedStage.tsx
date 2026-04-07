@@ -145,10 +145,7 @@ export function VoteFeedStage({
       }
 
       const topOffset = scroller.getBoundingClientRect().top;
-      const availableHeight = Math.max(
-        MOBILE_MIN_SCROLLER_HEIGHT_PX,
-        Math.floor(window.innerHeight - topOffset - effectiveMobileDockReservedSpace),
-      );
+      const availableHeight = Math.max(MOBILE_MIN_SCROLLER_HEIGHT_PX, Math.floor(window.innerHeight - topOffset));
 
       setMobileScrollerHeight(current => (current === availableHeight ? current : availableHeight));
     };
