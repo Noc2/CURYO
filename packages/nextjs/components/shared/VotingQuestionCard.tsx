@@ -291,8 +291,7 @@ export function VotingQuestionCard({
     const dockVoteDisabled = isCommitting || Boolean(centerStatusContent);
     const dockNotchRadius = compact ? 58 : 66;
     const dockNotchCutout = compact ? 52 : 60;
-    const dockControlsPaddingClassName = compact ? "px-4 pb-1 pt-7" : "px-4 pb-1.5 pt-8";
-    const dockDividerClassName = "border-t border-base-content/8";
+    const dockControlsPaddingClassName = compact ? "px-4 pb-2.5 pt-6" : "px-4 pb-3 pt-7";
     const dockShellMaskStyle = {
       WebkitMaskImage: `radial-gradient(circle ${dockNotchRadius}px at 50% 0, transparent 0 ${dockNotchCutout}px, black ${dockNotchCutout + 1}px)`,
       maskImage: `radial-gradient(circle ${dockNotchRadius}px at 50% 0, transparent 0 ${dockNotchCutout}px, black ${dockNotchCutout + 1}px)`,
@@ -300,7 +299,8 @@ export function VotingQuestionCard({
       maskRepeat: "no-repeat",
     };
     const dockSurfaceStyle = {
-      background: "var(--curyo-surface-elevated)",
+      background:
+        "radial-gradient(circle at 50% -8%, rgba(255,187,142,0.3), transparent 44%), linear-gradient(180deg, rgba(255,145,92,0.18) 0%, rgba(41,28,31,0.98) 24%, rgba(24,21,26,0.99) 100%)",
     };
 
     return (
@@ -315,9 +315,17 @@ export function VotingQuestionCard({
         >
           <div className={dockControlsPaddingClassName}>
             {!centerStatusContent ? (
-              <div className="grid grid-cols-2 items-end">
+              <div className="grid grid-cols-[1fr_auto_1fr] items-end gap-3">
                 <div className="justify-self-start">
                   <CuryoVoteButton direction="up" size="sm" onClick={() => onVote(true)} disabled={dockVoteDisabled} />
+                </div>
+                <div className="justify-self-center">
+                  <MoreToggleButton
+                    expanded={isDetailsOpen}
+                    onClick={() => setIsDetailsOpen(current => !current)}
+                    controlsId={detailsId}
+                    className="rounded-full border border-primary/20 bg-base-content/[0.05] px-2.5 py-1 text-[0.82rem] text-base-content/68 shadow-[0_8px_16px_rgb(0_0_0_/_0.12)]"
+                  />
                 </div>
                 <div className="justify-self-end">
                   <CuryoVoteButton
@@ -329,25 +337,22 @@ export function VotingQuestionCard({
                 </div>
               </div>
             ) : (
-              <div className="flex items-center justify-center">{centerStatusContent}</div>
+              <div className="flex flex-col items-center gap-2.5">
+                <div className="flex items-center justify-center">{centerStatusContent}</div>
+                <MoreToggleButton
+                  expanded={isDetailsOpen}
+                  onClick={() => setIsDetailsOpen(current => !current)}
+                  controlsId={detailsId}
+                  className="rounded-full border border-primary/20 bg-base-content/[0.05] px-2.5 py-1 text-[0.82rem] text-base-content/68 shadow-[0_8px_16px_rgb(0_0_0_/_0.12)]"
+                />
+              </div>
             )}
           </div>
 
-          <div className={`${dockDividerClassName} flex items-center justify-center px-4 py-1.5`}>
-            <MoreToggleButton
-              expanded={isDetailsOpen}
-              onClick={() => setIsDetailsOpen(current => !current)}
-              controlsId={detailsId}
-              className="text-[0.82rem] text-base-content/58"
-            />
-          </div>
-
-          {displayError ? (
-            <p className={`${dockDividerClassName} px-4 py-2 text-center text-sm text-error`}>{displayError}</p>
-          ) : null}
+          {displayError ? <p className="px-4 pb-1 text-center text-sm text-error">{displayError}</p> : null}
 
           {isDetailsOpen ? (
-            <div id={detailsId} className={`${dockDividerClassName} px-4 pb-3 pt-2.5`}>
+            <div id={detailsId} className="px-4 pb-3 pt-1">
               <div className="max-h-[34svh] overflow-y-auto [scrollbar-gutter:stable]">
                 <div className="flex flex-col gap-2.5 pb-1">
                   {activitySummary}
