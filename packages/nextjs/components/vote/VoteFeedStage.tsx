@@ -34,6 +34,7 @@ const MOBILE_STAGE_MEDIA_QUERY = "(max-width: 767px)";
 const MOBILE_DOCK_RESERVED_SPACE_PX = 152;
 const MOBILE_MIN_SCROLLER_HEIGHT_PX = 320;
 const PROGRAMMATIC_SCROLL_RECOVERY_MS = 700;
+const MIN_SCROLL_INDICATOR_HEIGHT_PX = 40;
 
 export function VoteFeedStage({
   displayFeed,
@@ -70,6 +71,19 @@ export function VoteFeedStage({
   const [mobileScrollerHeight, setMobileScrollerHeight] = useState<number | null>(null);
   const [desktopEndSpacerHeight, setDesktopEndSpacerHeight] = useState(0);
   const [isDesktopViewport, setIsDesktopViewport] = useState(false);
+  const [scrollIndicatorState, setScrollIndicatorState] = useState<{
+    isVisible: boolean;
+    top: number;
+    height: number;
+    thumbOffset: number;
+    thumbHeight: number;
+  }>({
+    isVisible: false,
+    top: 0,
+    height: 0,
+    thumbOffset: 0,
+    thumbHeight: MIN_SCROLL_INDICATOR_HEIGHT_PX,
+  });
 
   const effectiveMobileDockReservedSpace = mobileDockReservedSpace ?? MOBILE_DOCK_RESERVED_SPACE_PX;
   const loadedItemCount = Math.min(Math.max(loadedCount, 0), displayFeed.length);
@@ -483,6 +497,129 @@ export function VoteFeedStage({
     }
   }, [feedItems.length, renderedActiveIndex]);
 
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+
+    let frameId = 0;
+    let resizeObserver: ResizeObserver | null = null;
+    const desktopStageQuery = window.matchMedia(DESKTOP_STEP_MEDIA_QUERY);
+    let observedScroller: HTMLDivElement | null = null;
+
+    const updateIndicator = () => {
+      const scroller = getActiveScroller();
+      if (!scroller) {
+        setScrollIndicatorState(current => (current.isVisible ? { ...current, isVisible: false } : current));
+        return;
+      }
+
+      const scrollerRect = scroller.getBoundingClientRect();
+      const visibleTop = Math.max(scrollerRect.top, 0);
+      const visibleBottom = Math.min(scrollerRect.bottom, window.innerHeight);
+      const trackHeight = Math.max(visibleBottom - visibleTop, 0);
+      const scrollRange = Math.max(scroller.scrollHeight - scroller.clientHeight, 0);
+
+      if (trackHeight < MIN_SCROLL_INDICATOR_HEIGHT_PX || scrollRange <= 0) {
+        setScrollIndicatorState(current => (current.isVisible ? { ...current, isVisible: false } : current));
+        return;
+      }
+
+      const thumbHeight = Math.max(
+        MIN_SCROLL_INDICATOR_HEIGHT_PX,
+        Math.round((scroller.clientHeight / scroller.scrollHeight) * trackHeight),
+      );
+      const thumbTravel = Math.max(trackHeight - thumbHeight, 0);
+      const thumbOffset = thumbTravel * (scroller.scrollTop / scrollRange);
+
+      setScrollIndicatorState(current => {
+        if (
+          current.isVisible &&
+          current.top === visibleTop &&
+          current.height === trackHeight &&
+          current.thumbHeight === thumbHeight &&
+          Math.abs(current.thumbOffset - thumbOffset) < 1
+        ) {
+          return current;
+        }
+
+        return {
+          isVisible: true,
+          top: visibleTop,
+          height: trackHeight,
+          thumbOffset,
+          thumbHeight,
+        };
+      });
+    };
+
+    const requestUpdate = () => {
+      if (frameId !== 0) return;
+      frameId = window.requestAnimationFrame(() => {
+        frameId = 0;
+        updateIndicator();
+      });
+    };
+
+    const bindScroller = () => {
+      const scroller = getActiveScroller();
+      if (observedScroller === scroller) {
+        requestUpdate();
+        return;
+      }
+
+      if (observedScroller) {
+        observedScroller.removeEventListener("scroll", requestUpdate);
+      }
+
+      resizeObserver?.disconnect();
+      resizeObserver = null;
+      observedScroller = scroller;
+
+      if (observedScroller) {
+        observedScroller.addEventListener("scroll", requestUpdate, { passive: true });
+        if (typeof ResizeObserver !== "undefined") {
+          resizeObserver = new ResizeObserver(requestUpdate);
+          resizeObserver.observe(observedScroller);
+        }
+      }
+
+      requestUpdate();
+    };
+
+    bindScroller();
+    window.addEventListener("resize", bindScroller);
+
+    if (window.visualViewport) {
+      window.visualViewport.addEventListener("resize", bindScroller);
+    }
+
+    if (typeof desktopStageQuery.addEventListener === "function") {
+      desktopStageQuery.addEventListener("change", bindScroller);
+    } else {
+      desktopStageQuery.addListener(bindScroller);
+    }
+
+    return () => {
+      if (frameId !== 0) {
+        window.cancelAnimationFrame(frameId);
+      }
+      if (observedScroller) {
+        observedScroller.removeEventListener("scroll", requestUpdate);
+      }
+      resizeObserver?.disconnect();
+      window.removeEventListener("resize", bindScroller);
+
+      if (window.visualViewport) {
+        window.visualViewport.removeEventListener("resize", bindScroller);
+      }
+
+      if (typeof desktopStageQuery.addEventListener === "function") {
+        desktopStageQuery.removeEventListener("change", bindScroller);
+      } else {
+        desktopStageQuery.removeListener(bindScroller);
+      }
+    };
+  }, [desktopEndSpacerHeight, feedItems.length, getActiveScroller, isDesktopViewport, mobileScrollerHeight]);
+
   const scrollToIndex = useCallback(
     (targetIndex: number) => {
       if (navigationLocked || targetIndex < 0 || targetIndex >= displayFeed.length) {
@@ -649,6 +786,23 @@ export function VoteFeedStage({
           />
         ) : null}
       </div>
+
+      {scrollIndicatorState.isVisible ? (
+        <div
+          aria-hidden="true"
+          className="pointer-events-none fixed right-0 top-0 z-40 w-3"
+          style={{ top: `${scrollIndicatorState.top}px`, height: `${scrollIndicatorState.height}px` }}
+        >
+          <div className="absolute inset-y-0 left-1/2 w-px -translate-x-1/2 rounded-full bg-base-content/10" />
+          <div
+            className="absolute left-1/2 w-1.5 -translate-x-1/2 rounded-full bg-base-content/60 shadow-[0_0_10px_rgba(15,23,42,0.32)]"
+            style={{
+              top: `${scrollIndicatorState.thumbOffset}px`,
+              height: `${scrollIndicatorState.thumbHeight}px`,
+            }}
+          />
+        </div>
+      ) : null}
     </div>
   );
 }
