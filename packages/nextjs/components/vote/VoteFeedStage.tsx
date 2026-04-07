@@ -362,7 +362,7 @@ export function VoteFeedStage({
 
       <div
         ref={scrollerRef}
-        className="scrollbar-hide flex min-h-0 flex-1 snap-y snap-mandatory flex-col overflow-y-auto overscroll-contain pb-[8.75rem] pr-1 scroll-pb-[8.75rem] scroll-smooth xl:pb-0 xl:scroll-pb-4"
+        className="scrollbar-hide flex min-h-0 flex-1 snap-y snap-mandatory flex-col gap-3 overflow-y-auto overscroll-contain pb-[8.75rem] pr-1 scroll-pb-[8.75rem] scroll-smooth xl:gap-4 xl:pb-0 xl:scroll-pb-4"
         style={
           mobileScrollerHeight !== null
             ? { height: `${mobileScrollerHeight}px`, maxHeight: `${mobileScrollerHeight}px` }
@@ -372,6 +372,7 @@ export function VoteFeedStage({
         {feedItems.map((item, index) => {
           const canPrevious = index > 0 && !isCommitting && !navigationLocked;
           const canNext = index < displayFeed.length - 1 && !isCommitting && !navigationLocked;
+          const isActiveCard = index === (activeSourceIndex >= 0 ? activeSourceIndex : 0);
 
           return (
             <div
@@ -379,7 +380,10 @@ export function VoteFeedStage({
               id={`vote-feed-card-${index}`}
               ref={node => setCardElement(index, node)}
               data-feed-card-index={index}
-              className="h-full min-h-full shrink-0 basis-full snap-start snap-always xl:basis-auto"
+              aria-current={isActiveCard ? "true" : undefined}
+              className={`relative shrink-0 snap-start snap-always transition-[opacity,filter,transform] duration-300 ease-out ${
+                isActiveCard ? "opacity-100" : "pointer-events-none opacity-45 grayscale-[0.22] saturate-[0.72]"
+              }`}
             >
               <FeedVoteCard
                 item={item}
@@ -398,6 +402,12 @@ export function VoteFeedStage({
                 canPrevious={canPrevious}
                 canNext={canNext}
               />
+              {!isActiveCard ? (
+                <div
+                  aria-hidden="true"
+                  className="pointer-events-none absolute inset-0 rounded-[1.75rem] bg-[linear-gradient(180deg,rgba(16,16,18,0.08),rgba(16,16,18,0.28))]"
+                />
+              ) : null}
             </div>
           );
         })}

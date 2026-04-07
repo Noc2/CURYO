@@ -156,7 +156,7 @@ export const FeedVoteCard = memo(function FeedVoteCard({
 
   return (
     <div
-      className={`flex h-full min-h-0 flex-col ${contentStackClassName}`}
+      className={`flex min-h-0 flex-col ${contentStackClassName}`}
       onClickCapture={event => {
         if (!onExternalOpen) return;
 
