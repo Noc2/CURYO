@@ -95,18 +95,20 @@ function LiveRoundActivity({
       }`}
     >
       <div className="flex flex-wrap items-start justify-between gap-2">
-        <div>
-          <p className="text-[0.68rem] font-semibold uppercase tracking-[0.18em] text-base-content/52">
-            Live round activity
-          </p>
-          <p
-            className={`mt-1 leading-relaxed text-base-content/70 ${
-              condensed ? "text-xs" : "text-sm"
-            } ${compact ? "max-w-none" : "max-w-[18rem]"}`}
-          >
-            {detailCopy}
-          </p>
-        </div>
+        {!condensed ? (
+          <div>
+            <p className="text-[0.68rem] font-semibold uppercase tracking-[0.18em] text-base-content/52">
+              Live round activity
+            </p>
+            <p
+              className={`mt-1 leading-relaxed text-base-content/70 ${
+                condensed ? "text-xs" : "text-sm"
+              } ${compact ? "max-w-none" : "max-w-[18rem]"}`}
+            >
+              {detailCopy}
+            </p>
+          </div>
+        ) : null}
         <div className="flex flex-wrap items-center gap-1.5">
           {progress ? (
             <span
@@ -115,7 +117,7 @@ function LiveRoundActivity({
               {progress.badgeLabel}
             </span>
           ) : null}
-          {progress?.detailLabel ? (
+          {!condensed && progress?.detailLabel ? (
             <span
               className={`rounded-full px-2.5 py-1 text-xs font-medium ${getActivityToneClassName(progress.detailTone)}`}
             >
