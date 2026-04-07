@@ -36,8 +36,7 @@ interface VotingQuestionCardProps {
 
 const RATING_GUIDANCE_TEXT =
   "The community score runs from 0.0 to 10.0, where higher means better. Vote up when content deserves a better score and vote down when it deserves a worse one. Always vote down illegal, broken, or misdescribed content.";
-export const VOTING_SURFACE_BACKGROUND =
-  "radial-gradient(circle at 50% 12%, rgb(121 88 68) 0%, rgb(103 74 61) 18%, rgb(79 58 57) 36%, rgb(53 41 46) 56%, rgb(35 30 35) 78%, rgb(23 22 26) 100%), linear-gradient(180deg, rgb(92 67 57) 0%, rgb(61 47 50) 30%, rgb(38 31 36) 62%, rgb(23 22 26) 100%)";
+export const VOTING_SURFACE_BACKGROUND = "var(--curyo-vote-surface)";
 
 type ActivityTone = "primary" | "warning" | "success" | "neutral";
 
@@ -311,8 +310,7 @@ export function VotingQuestionCard({
       maskRepeat: "no-repeat",
     };
     const dockSurfaceStyle = {
-      backgroundColor: "rgb(23 22 26)",
-      backgroundImage: VOTING_SURFACE_BACKGROUND,
+      background: VOTING_SURFACE_BACKGROUND,
     };
 
     return (
