@@ -349,6 +349,14 @@ export function VoteFeedStage({
     cardElementsRef.current.set(index, node);
   }, []);
 
+  useEffect(() => {
+    const activeIndex = activeSourceIndex >= 0 ? activeSourceIndex : 0;
+
+    for (const [index, node] of cardElementsRef.current.entries()) {
+      node.inert = index !== activeIndex;
+    }
+  }, [activeSourceIndex, feedItems.length]);
+
   const scrollToIndex = useCallback(
     (targetIndex: number) => {
       if (navigationLocked || targetIndex < 0 || targetIndex >= displayFeed.length) {
@@ -517,6 +525,7 @@ export function VoteFeedStage({
               ref={node => setCardElement(index, node)}
               data-feed-card-index={index}
               aria-current={isActiveCard ? "true" : undefined}
+              aria-hidden={!isActiveCard}
               className={`relative shrink-0 snap-start snap-always transition-[opacity,filter,transform] duration-300 ease-out ${
                 isActiveCard ? "opacity-100" : "pointer-events-none opacity-45 grayscale-[0.22] saturate-[0.72]"
               }`}
