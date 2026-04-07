@@ -300,9 +300,9 @@ export function VotingQuestionCard({
 
   if (isDockVariant) {
     const dockVoteDisabled = isCommitting || Boolean(centerStatusContent);
-    const dockNotchRadius = compact ? 58 : 66;
-    const dockNotchCutout = compact ? 52 : 60;
-    const dockControlsPaddingClassName = compact ? "px-4 pb-3 pt-[3.55rem]" : "px-4 pb-3.5 pt-[4.1rem]";
+    const dockNotchRadius = compact ? 54 : 66;
+    const dockNotchCutout = compact ? 48 : 60;
+    const dockControlsPaddingClassName = compact ? "px-4 pb-2.5 pt-[2.8rem]" : "px-4 pb-3.5 pt-[4.1rem]";
     const dockMoreClassName = "text-base font-medium text-base-content/68 hover:text-base-content/88";
     const dockShellMaskStyle = {
       WebkitMaskImage: `radial-gradient(circle ${dockNotchRadius}px at 50% 0, transparent 0 ${dockNotchCutout}px, black ${dockNotchCutout + 1}px)`,
@@ -310,34 +310,29 @@ export function VotingQuestionCard({
       WebkitMaskRepeat: "no-repeat",
       maskRepeat: "no-repeat",
     };
-    const dockNotchAccentStyle = {
-      background: VOTING_SURFACE_BACKGROUND,
+    const dockSurfaceStyle = {
+      backgroundColor: "rgb(23 22 26)",
+      backgroundImage: VOTING_SURFACE_BACKGROUND,
     };
 
     return (
-      <div className={`relative ${embedded ? "" : "rounded-2xl"} flex min-h-0 flex-col ${compact ? "pt-10" : "pt-14"}`}>
+      <div className={`relative ${embedded ? "" : "rounded-2xl"} flex min-h-0 flex-col ${compact ? "pt-8" : "pt-14"}`}>
+        <div aria-hidden className="pointer-events-none absolute inset-0 z-0 rounded-[2rem]" style={dockSurfaceStyle} />
         <div className="pointer-events-none absolute left-1/2 top-0 z-20 -translate-x-1/2">
           <RatingOrb rating={currentRating} size={orbSize} showGlow={false} />
         </div>
 
         <div
           className="relative z-10 overflow-hidden rounded-[2rem] ring-1 ring-base-content/8 shadow-[0_16px_36px_rgb(0_0_0_/_0.22)]"
-          style={dockShellMaskStyle}
+          style={{ ...dockShellMaskStyle, ...dockSurfaceStyle }}
         >
-          <div
-            aria-hidden
-            className={`pointer-events-none absolute inset-x-0 top-0 z-0 ${
-              compact ? "h-[7rem]" : "h-[8.25rem]"
-            } [mask-image:linear-gradient(180deg,black_0%,black_76%,transparent_100%)]`}
-            style={dockNotchAccentStyle}
-          />
           <div className={`relative z-10 ${dockControlsPaddingClassName}`}>
             {!centerStatusContent ? (
               <div className="grid grid-cols-[1fr_auto_1fr] items-end gap-3">
                 <div className="justify-self-start">
                   <CuryoVoteButton direction="up" size="sm" onClick={() => onVote(true)} disabled={dockVoteDisabled} />
                 </div>
-                <div className="justify-self-center translate-y-1.5">
+                <div className="justify-self-center">
                   <MoreToggleButton
                     expanded={isDetailsOpen}
                     onClick={() => setIsDetailsOpen(current => !current)}
@@ -361,7 +356,7 @@ export function VotingQuestionCard({
                   expanded={isDetailsOpen}
                   onClick={() => setIsDetailsOpen(current => !current)}
                   controlsId={detailsId}
-                  className={`${dockMoreClassName} translate-y-1`}
+                  className={dockMoreClassName}
                 />
               </div>
             )}
