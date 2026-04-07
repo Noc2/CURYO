@@ -1,6 +1,7 @@
 "use client";
 
 import dynamic from "next/dynamic";
+import { usePathname } from "next/navigation";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { AppProgressBar as ProgressBar } from "next-nprogress-bar";
 import { Toaster } from "react-hot-toast";
@@ -23,13 +24,22 @@ const TermsAcceptanceModal = dynamic(
 );
 
 const ScaffoldEthApp = ({ children }: { children: React.ReactNode }) => {
+  const pathname = usePathname() ?? "";
+  const isVoteRoute = pathname.startsWith("/vote");
+
   return (
     <>
       <div className="flex min-h-screen flex-col">
         <Header />
         {/* Main content: offset by left sidebar on desktop (208px at xl) */}
-        <div className="flex flex-1 flex-col xl:pl-52">
-          <main className="relative flex flex-1 flex-col overflow-x-hidden">{children}</main>
+        <div className={`flex flex-1 flex-col xl:pl-52 ${isVoteRoute ? "xl:min-h-0 xl:overflow-hidden" : ""}`}>
+          <main
+            className={`relative flex flex-1 flex-col overflow-x-hidden ${
+              isVoteRoute ? "xl:min-h-0 xl:overflow-hidden" : ""
+            }`}
+          >
+            {children}
+          </main>
           <Footer />
         </div>
       </div>
