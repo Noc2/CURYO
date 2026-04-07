@@ -291,6 +291,8 @@ export function VotingQuestionCard({
     const dockVoteDisabled = isCommitting || Boolean(centerStatusContent);
     const dockNotchRadius = compact ? 58 : 66;
     const dockNotchCutout = compact ? 52 : 60;
+    const dockControlsPaddingClassName = compact ? "px-4 pb-1 pt-7" : "px-4 pb-1.5 pt-8";
+    const dockDividerClassName = "border-t border-base-content/8";
     const dockShellMaskStyle = {
       WebkitMaskImage: `radial-gradient(circle ${dockNotchRadius}px at 50% 0, transparent 0 ${dockNotchCutout}px, black ${dockNotchCutout + 1}px)`,
       maskImage: `radial-gradient(circle ${dockNotchRadius}px at 50% 0, transparent 0 ${dockNotchCutout}px, black ${dockNotchCutout + 1}px)`,
@@ -311,9 +313,9 @@ export function VotingQuestionCard({
           className="relative overflow-hidden rounded-[2rem] ring-1 ring-base-content/8 shadow-[0_16px_36px_rgb(0_0_0_/_0.28)]"
           style={{ ...dockShellMaskStyle, ...dockSurfaceStyle }}
         >
-          <div className="flex min-h-[5.25rem] flex-col justify-between px-4 pb-2.5 pt-6">
+          <div className={dockControlsPaddingClassName}>
             {!centerStatusContent ? (
-              <div className="grid grid-cols-2 items-center">
+              <div className="grid grid-cols-2 items-end">
                 <div className="justify-self-start">
                   <CuryoVoteButton direction="up" size="sm" onClick={() => onVote(true)} disabled={dockVoteDisabled} />
                 </div>
@@ -327,41 +329,41 @@ export function VotingQuestionCard({
                 </div>
               </div>
             ) : (
-              <div className="flex items-center justify-center pt-1">{centerStatusContent}</div>
+              <div className="flex items-center justify-center">{centerStatusContent}</div>
             )}
-
-            <div className="flex items-center justify-center pt-1">
-              <MoreToggleButton
-                expanded={isDetailsOpen}
-                onClick={() => setIsDetailsOpen(current => !current)}
-                controlsId={detailsId}
-                className="text-[0.82rem] text-base-content/58"
-              />
-            </div>
           </div>
+
+          <div className={`${dockDividerClassName} flex items-center justify-center px-4 py-1.5`}>
+            <MoreToggleButton
+              expanded={isDetailsOpen}
+              onClick={() => setIsDetailsOpen(current => !current)}
+              controlsId={detailsId}
+              className="text-[0.82rem] text-base-content/58"
+            />
+          </div>
+
+          {displayError ? (
+            <p className={`${dockDividerClassName} px-4 py-2 text-center text-sm text-error`}>{displayError}</p>
+          ) : null}
+
+          {isDetailsOpen ? (
+            <div id={detailsId} className={`${dockDividerClassName} px-4 pb-3 pt-2.5`}>
+              <div className="max-h-[34svh] overflow-y-auto [scrollbar-gutter:stable]">
+                <div className="flex flex-col gap-2.5 pb-1">
+                  {activitySummary}
+                  <RoundProgress snapshot={roundSnapshot} />
+                  <RoundRevealedBreakdown snapshot={roundSnapshot} />
+                  <RoundStats categoryId={categoryId} snapshot={roundSnapshot} />
+                  <RatingHistory
+                    contentId={contentId}
+                    variant={embedded ? "dark" : "default"}
+                    fallbackRating={currentRating}
+                  />
+                </div>
+              </div>
+            </div>
+          ) : null}
         </div>
-
-        {displayError ? <p className="mt-2 text-center text-sm text-error">{displayError}</p> : null}
-
-        {isDetailsOpen ? (
-          <div
-            id={detailsId}
-            className="mt-2.5 max-h-[38svh] overflow-y-auto rounded-[1.65rem] p-3 ring-1 ring-base-content/8 shadow-[0_16px_36px_rgb(0_0_0_/_0.28)]"
-            style={dockSurfaceStyle}
-          >
-            <div className="flex flex-col gap-2.5">
-              {activitySummary}
-              <RoundProgress snapshot={roundSnapshot} />
-              <RoundRevealedBreakdown snapshot={roundSnapshot} />
-              <RoundStats categoryId={categoryId} snapshot={roundSnapshot} />
-              <RatingHistory
-                contentId={contentId}
-                variant={embedded ? "dark" : "default"}
-                fallbackRating={currentRating}
-              />
-            </div>
-          </div>
-        ) : null}
       </div>
     );
   }
