@@ -34,4 +34,39 @@ test.describe("Content feed", () => {
     const filterPill = page.getByRole("button", { name: /^View$/i }).first();
     await expect(filterPill).toBeVisible({ timeout: 10_000 });
   });
+
+  test("clicking a non-video preview keeps users on the vote page and nudges the vote controls", async ({
+    connectedPage: page,
+  }) => {
+    await gotoWithRetry(page, "/vote?q=go-ethereum", { ensureWalletConnected: true, timeout: 45_000 });
+    await waitForFeedLoaded(page, 30_000);
+
+    await expect(page.getByRole("heading", { name: /go-ethereum/i }).first()).toBeVisible({ timeout: 10_000 });
+
+    const activeSurface = page.locator('[aria-current="true"] [data-testid="vote-content-surface"]').first();
+    await expect(activeSurface).toBeVisible({ timeout: 10_000 });
+
+    const popupPromise = page.context().waitForEvent("page", { timeout: 1_000 }).catch(() => null);
+    await activeSurface.click();
+
+    const popup = await popupPromise;
+    expect(popup).toBeNull();
+    await expect(page).toHaveURL(/\/vote\?.*q=go-ethereum.*content=/, { timeout: 10_000 });
+    await expect(page.locator('[data-vote-attention="true"]').first()).toBeVisible({ timeout: 5_000 });
+  });
+
+  test("explicit source links still open externally", async ({ connectedPage: page }) => {
+    await gotoWithRetry(page, "/vote?q=go-ethereum", { ensureWalletConnected: true, timeout: 45_000 });
+    await waitForFeedLoaded(page, 30_000);
+
+    const sourceLink = page.getByTestId("content-source-link").first();
+    await expect(sourceLink).toBeVisible({ timeout: 10_000 });
+
+    const popupPromise = page.context().waitForEvent("page");
+    await sourceLink.click();
+
+    const popup = await popupPromise;
+    await popup.waitForLoadState("domcontentloaded");
+    await expect(popup).toHaveURL(/github\.com\/ethereum\/go-ethereum/i);
+  });
 });

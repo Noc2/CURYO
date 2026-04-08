@@ -1,5 +1,5 @@
 import { expect, test } from "../fixtures/wallet";
-import { findVoteableContent, waitForFeedLoaded } from "../helpers/wait-helpers";
+import { findVoteableContent, gotoWithRetry, waitForFeedLoaded } from "../helpers/wait-helpers";
 
 // Device profile comes from Playwright project config (iPhone 12 / iPad Mini).
 // No manual setViewportSize() needed — the project device descriptor handles
@@ -100,6 +100,22 @@ test.describe("Mobile viewport (phone)", () => {
     expect(hasConfirm).toBe(true);
 
     await page.keyboard.press("Escape");
+  });
+
+  test("preview clicks keep the user on /vote and emphasize the mobile dock", async ({ connectedPage: page }) => {
+    await gotoWithRetry(page, "/vote?q=go-ethereum", { ensureWalletConnected: true, timeout: 45_000 });
+    await waitForFeedLoaded(page, 30_000);
+
+    const activeSurface = page.locator('[aria-current="true"] [data-testid="vote-content-surface"]').first();
+    await expect(activeSurface).toBeVisible({ timeout: 10_000 });
+
+    const popupPromise = page.context().waitForEvent("page", { timeout: 1_000 }).catch(() => null);
+    await activeSurface.click();
+
+    const popup = await popupPromise;
+    expect(popup).toBeNull();
+    await expect(page).toHaveURL(/\/vote\?.*q=go-ethereum.*content=/, { timeout: 10_000 });
+    await expect(page.locator('[data-vote-attention="true"]').first()).toBeVisible({ timeout: 5_000 });
   });
 
   test("submit page form is usable", async ({ connectedPage: page }) => {
