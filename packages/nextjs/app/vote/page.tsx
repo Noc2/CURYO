@@ -1111,7 +1111,16 @@ const HomeInner = () => {
     [displayFeed, markPrimaryInteraction, openConnectModal, primaryItem, recordRecommendationSignal, toggleFollow],
   );
 
-  const handleExternalOpen = useCallback(
+  const handleContentIntent = useCallback(
+    (item: ContentItem) => {
+      replaceVoteLocation({ contentId: item.id });
+      markPrimaryInteraction(item.id);
+      recordRecommendationSignal(item, "card_open");
+    },
+    [markPrimaryInteraction, recordRecommendationSignal, replaceVoteLocation],
+  );
+
+  const handleSourceOpen = useCallback(
     (item: ContentItem) => {
       replaceVoteLocation({ contentId: item.id });
       markPrimaryInteraction(item.id);
@@ -1387,7 +1396,8 @@ const HomeInner = () => {
                           onLoadMore={handleLoadMore}
                           onTrackActiveIndex={handleTrackVisibleIndex}
                           onSelectByIndex={handleSelectByIndex}
-                          onExternalOpen={handleExternalOpen}
+                          onContentIntent={handleContentIntent}
+                          onSourceOpen={handleSourceOpen}
                           onToggleWatch={handleToggleWatch}
                           onToggleFollow={handleToggleFollow}
                         />
