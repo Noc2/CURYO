@@ -538,7 +538,7 @@ export function VotingQuestionCard({
     const dockControlsStyle = compact ? { paddingBottom: "calc(0.625rem + env(safe-area-inset-bottom))" } : undefined;
     const dockShellClassName = compact ? "rounded-none" : "rounded-[2rem]";
     const dockShellBorderClassName = compact ? "" : "ring-1 ring-base-content/8";
-    const dockTopBorderArcRadius = compact ? dockNotchCutout + 5 : dockNotchCutout;
+    const dockTopBorderArcRadius = dockNotchCutout;
     const dockTopBorderOverlayStyle = compact
       ? {
           height: `${dockTopBorderArcRadius + 2}px`,
