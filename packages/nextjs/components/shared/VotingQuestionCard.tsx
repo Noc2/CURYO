@@ -478,6 +478,7 @@ export function VotingQuestionCard({
     const dockNotchCutout = compact ? 52 : 60;
     const dockControlsPaddingClassName = compact ? "px-4 pb-2.5 pt-4" : "px-4 pb-3 pt-7";
     const dockMoreClassName = "text-base font-medium text-base-content/68 hover:text-base-content/88";
+    const dockVoteSpacerClassName = "h-11 w-11";
     const dockShellMaskStyle = {
       WebkitMaskImage: `radial-gradient(circle ${dockNotchRadius}px at 50% 0, transparent 0 ${dockNotchCutout}px, black ${dockNotchCutout + 1}px)`,
       maskImage: `radial-gradient(circle ${dockNotchRadius}px at 50% 0, transparent 0 ${dockNotchCutout}px, black ${dockNotchCutout + 1}px)`,
@@ -531,9 +532,9 @@ export function VotingQuestionCard({
                 </div>
               </div>
             ) : (
-              <div className="grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-end gap-3">
+              <div className="grid grid-cols-[minmax(0,1fr)_auto_auto] items-end gap-3">
                 <div className="min-w-0 justify-self-start [&>button]:max-w-full">{centerStatusContent}</div>
-                <div className="justify-self-center translate-y-1">
+                <div className="translate-y-1">
                   <MoreToggleButton
                     expanded={isDetailsOpen}
                     onClick={() => setIsDetailsOpen(current => !current)}
@@ -541,7 +542,7 @@ export function VotingQuestionCard({
                     className={dockMoreClassName}
                   />
                 </div>
-                <div aria-hidden className="h-10 w-10 justify-self-end" />
+                <div aria-hidden className={`${dockVoteSpacerClassName} justify-self-end`} />
               </div>
             )}
           </div>
