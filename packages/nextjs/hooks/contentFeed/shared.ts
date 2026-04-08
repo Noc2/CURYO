@@ -60,9 +60,26 @@ export interface UseContentFeedOptions {
   keepPrevious?: boolean;
   limit?: number;
   offset?: number;
+  ownSubmitterAddresses?: string[];
   searchQuery?: string;
   sortBy?: FeedSort;
   submitter?: string;
+  submitters?: string[];
+}
+
+function buildNormalizedAddressSet(addresses: readonly string[] | undefined, fallbackAddress?: string): Set<string> {
+  const values = new Set<string>();
+
+  const addAddress = (address?: string) => {
+    const trimmed = address?.trim();
+    if (!trimmed) return;
+    values.add(trimmed.toLowerCase());
+  };
+
+  addAddress(fallbackAddress);
+  addresses?.forEach(addAddress);
+
+  return values;
 }
 
 export function mapContentItem(
@@ -103,7 +120,9 @@ export function mapContentItem(
     } | null;
   },
   voterAddress?: string,
+  ownSubmitterAddresses?: readonly string[],
 ): ContentItem {
+  const ownSubmitterAddressSet = buildNormalizedAddressSet(ownSubmitterAddresses, voterAddress);
   const mappedOpenRound = item.openRound
     ? {
         roundId: BigInt(item.openRound.roundId),
@@ -144,7 +163,7 @@ export function mapContentItem(
     tags: parseTags(item.tags),
     submitter: item.submitter,
     contentHash: item.contentHash,
-    isOwnContent: !!voterAddress && item.submitter.toLowerCase() === voterAddress.toLowerCase(),
+    isOwnContent: ownSubmitterAddressSet.has(item.submitter.toLowerCase()),
     categoryId: BigInt(item.categoryId),
     rating: displayedRating,
     ratingBps,
@@ -324,13 +343,13 @@ export function isContentSearchQueryTooShort(value: string | undefined): boolean
 }
 
 export function filterRpcFeed(feed: ContentItem[], options: UseContentFeedOptions): ContentItem[] {
-  const { categoryId, contentIds, searchQuery, submitter } = options;
+  const { categoryId, contentIds, searchQuery, submitter, submitters } = options;
   if (isContentSearchQueryTooShort(searchQuery)) {
     return [];
   }
 
   const normalizedSearch = searchQuery?.trim().toLowerCase();
-  const normalizedSubmitter = submitter?.toLowerCase();
+  const normalizedSubmitters = buildNormalizedAddressSet(submitters, submitter);
   const contentIdSet = contentIds ? new Set(contentIds.map(id => id.toString())) : null;
 
   return feed.filter(item => {
@@ -342,7 +361,7 @@ export function filterRpcFeed(feed: ContentItem[], options: UseContentFeedOption
       return false;
     }
 
-    if (normalizedSubmitter && item.submitter.toLowerCase() !== normalizedSubmitter) {
+    if (normalizedSubmitters.size > 0 && !normalizedSubmitters.has(item.submitter.toLowerCase())) {
       return false;
     }
 

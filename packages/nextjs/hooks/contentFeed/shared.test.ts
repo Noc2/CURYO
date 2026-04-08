@@ -1,4 +1,11 @@
-import { type ContentItem, filterModeratedContentItems, isContentSearchQueryTooShort, sortRpcFeed } from "./shared";
+import {
+  type ContentItem,
+  filterModeratedContentItems,
+  filterRpcFeed,
+  isContentSearchQueryTooShort,
+  mapContentItem,
+  sortRpcFeed,
+} from "./shared";
 import assert from "node:assert/strict";
 import test from "node:test";
 
@@ -59,6 +66,44 @@ test("filterModeratedContentItems removes content blocked by the frontend policy
 
   assert.deepEqual(
     filterModeratedContentItems(feed).map(item => item.id),
+    [1n],
+  );
+});
+
+test("mapContentItem marks linked submitter addresses as own content", () => {
+  const item = mapContentItem(
+    {
+      id: "1",
+      url: "https://example.com/1",
+      title: "Delegated submission",
+      description: "Submitted through a linked voter wallet",
+      tags: "",
+      submitter: "0x00000000000000000000000000000000000000aa",
+      contentHash: "hash-1",
+      categoryId: "1",
+      rating: 50,
+    },
+    "0x0000000000000000000000000000000000000001",
+    ["0x00000000000000000000000000000000000000aa"],
+  );
+
+  assert.equal(item.isOwnContent, true);
+});
+
+test("filterRpcFeed matches any address in the submitters filter", () => {
+  const matching = {
+    ...buildItem(1n, "Delegated", "Bot-submitted content", []),
+    submitter: "0x00000000000000000000000000000000000000aa",
+  };
+  const ignored = {
+    ...buildItem(2n, "Other", "Other content", []),
+    submitter: "0x00000000000000000000000000000000000000bb",
+  };
+
+  assert.deepEqual(
+    filterRpcFeed([matching, ignored], {
+      submitters: ["0x0000000000000000000000000000000000000001", "0x00000000000000000000000000000000000000aa"],
+    }).map(item => item.id),
     [1n],
   );
 });

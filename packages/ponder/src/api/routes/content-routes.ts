@@ -68,7 +68,8 @@ export function registerContentRoutes(app: ApiApp) {
     const requestedSearch = rawSearch?.trim();
     const search = normalizeContentSearchQuery(rawSearch);
     const status = c.req.query("status") ?? "0";
-    const submitter = c.req.query("submitter");
+    const submitterQuery = c.req.query("submitter");
+    const submittersQuery = c.req.query("submitters");
     const sortBy = c.req.query("sortBy") ?? "newest";
     const limit = safeLimit(c.req.query("limit"), 50, 200);
     const offset = safeOffset(c.req.query("offset"));
@@ -106,9 +107,25 @@ export function registerContentRoutes(app: ApiApp) {
     if (contentIds.length > 0) {
       conditions.push(inArray(content.id, contentIds));
     }
-    if (submitter) {
-      if (!isValidAddress(submitter)) return c.json({ error: "Invalid submitter address" }, 400);
-      conditions.push(eq(content.submitter, submitter.toLowerCase() as `0x${string}`));
+    const submitterFilters = new Set<`0x${string}`>();
+    if (submitterQuery) {
+      if (!isValidAddress(submitterQuery)) return c.json({ error: "Invalid submitter address" }, 400);
+      submitterFilters.add(submitterQuery.toLowerCase() as `0x${string}`);
+    }
+    if (submittersQuery) {
+      const parsedSubmitters = submittersQuery
+        .split(",")
+        .map(value => value.trim())
+        .filter(Boolean);
+      if (parsedSubmitters.length === 0 || parsedSubmitters.some(value => !isValidAddress(value))) {
+        return c.json({ error: "Invalid submitters filter" }, 400);
+      }
+      parsedSubmitters.forEach(value => submitterFilters.add(value.toLowerCase() as `0x${string}`));
+    }
+    if (submitterFilters.size === 1) {
+      conditions.push(eq(content.submitter, Array.from(submitterFilters)[0]));
+    } else if (submitterFilters.size > 1) {
+      conditions.push(inArray(content.submitter, Array.from(submitterFilters)));
     }
     const urlSearchCandidates = search ? getUrlLookupCandidates(search) : null;
     const searchExpressions = search && urlSearchCandidates === null ? buildContentSearchExpressions(search) : null;

@@ -43,6 +43,7 @@ import {
 } from "~~/lib/vote/discoverFeedFilter";
 import { type DiscoverFeedMode, sortDiscoverFeed } from "~~/lib/vote/feedModes";
 import { rankForYouFeed } from "~~/lib/vote/forYouRanker";
+import { buildLinkedWalletAddresses } from "~~/lib/vote/linkedWalletAddresses";
 import { buildVoteLocation } from "~~/lib/vote/location";
 import { mergeRequestedContentIntoFeed } from "~~/lib/vote/requestedContent";
 import { resolveStableSessionFeedOrder } from "~~/lib/vote/stableFeedOrder";
@@ -126,6 +127,7 @@ const HomeInner = () => {
   const [sortBy, setSortBy] = useState<SortOption>("for_you");
   const [visibleCount, setVisibleCount] = useState(FEED_PAGE_SIZE);
   const [interactionVersion, setInteractionVersion] = useState(0);
+  const [optimisticOwnContentIds, setOptimisticOwnContentIds] = useState<Set<string>>(() => new Set());
   const [optimisticVotedContentIds, setOptimisticVotedContentIds] = useState<Set<string>>(() => new Set());
   const desktopScrollContainerRef = useRef<HTMLDivElement | null>(null);
   const mobileDockContainerRef = useRef<HTMLDivElement | null>(null);
@@ -141,6 +143,10 @@ const HomeInner = () => {
   const { delegateTo, delegateOf, hasDelegate, isDelegate, isLoading: delegationLoading } = useDelegation(address);
   const delegateVoteAddress = hasDelegate ? delegateTo : undefined;
   const delegatorVoteAddress = isDelegate ? delegateOf : undefined;
+  const ownSubmitterAddresses = useMemo(
+    () => buildLinkedWalletAddresses(address, delegateVoteAddress, delegatorVoteAddress),
+    [address, delegateVoteAddress, delegatorVoteAddress],
+  );
   const { votes: directVotes, isLoading: directVotesLoading } = useVoteHistoryQuery(address);
   const { votes: delegateVotes, isLoading: delegateVotesLoading } = useVoteHistoryQuery(delegateVoteAddress);
   const { votes: delegatorVotes, isLoading: delegatorVotesLoading } = useVoteHistoryQuery(delegatorVoteAddress);
@@ -257,7 +263,7 @@ const HomeInner = () => {
   );
 
   const {
-    feed,
+    feed: rawFeed,
     isLoading,
     isMetadataPrefetchPending,
     totalContent: serverTotalContent,
@@ -266,20 +272,36 @@ const HomeInner = () => {
     categoryId: activeCategoryId,
     contentIds: feedContentIds,
     limit: feedRequestLimit,
+    ownSubmitterAddresses,
     searchQuery: searchQuery.trim() || undefined,
     sortBy: isSearchMode ? effectiveSearchSortBy : "newest",
-    submitter: activeScope === "my_submissions" ? address : undefined,
+    submitters: activeScope === "my_submissions" ? ownSubmitterAddresses : undefined,
   });
+  const feed = useMemo(
+    () =>
+      rawFeed.map(item =>
+        optimisticOwnContentIds.has(item.id.toString()) && !item.isOwnContent ? { ...item, isOwnContent: true } : item,
+      ),
+    [optimisticOwnContentIds, rawFeed],
+  );
   const feedContainsRequestedContent = useMemo(() => {
     if (effectiveRequestedActiveId === null) return false;
     return feed.some(item => item.id === effectiveRequestedActiveId);
   }, [effectiveRequestedActiveId, feed]);
-  const { feed: requestedContentFeed, isLoading: requestedContentLoading } = useContentFeed(address, {
+  const { feed: rawRequestedContentFeed, isLoading: requestedContentLoading } = useContentFeed(address, {
     contentIds: requestedContentIds,
     enabled: effectiveRequestedActiveId !== null && !feedContainsRequestedContent,
     keepPrevious: false,
     limit: 1,
+    ownSubmitterAddresses,
   });
+  const requestedContentFeed = useMemo(
+    () =>
+      rawRequestedContentFeed.map(item =>
+        optimisticOwnContentIds.has(item.id.toString()) && !item.isOwnContent ? { ...item, isOwnContent: true } : item,
+      ),
+    [optimisticOwnContentIds, rawRequestedContentFeed],
+  );
   const requestedContentItem = requestedContentFeed[0] ?? null;
   const totalContent = scopedContentIds?.length ?? serverTotalContent;
   const hasMoreFeed = scopedContentIds ? feed.length < totalContent : serverHasMoreFeed;
@@ -323,6 +345,7 @@ const HomeInner = () => {
   }, [nowSeconds, optimisticCooldownUntilByContentId, voteCooldownByContentId]);
 
   useEffect(() => {
+    setOptimisticOwnContentIds(previous => (previous.size === 0 ? previous : new Set()));
     setOptimisticVotedContentIds(previous => (previous.size === 0 ? previous : new Set()));
     setOptimisticCooldownUntilByContentId(previous => (previous.size === 0 ? previous : new Map()));
   }, [address, targetNetwork.id]);
@@ -838,6 +861,22 @@ const HomeInner = () => {
     });
   }, [nowSeconds, primaryItem?.id, stakeModal.contentId, voteCooldownByContentId, voteError]);
 
+  useEffect(() => {
+    if (!voteError?.toLowerCase().includes("own content")) return;
+
+    const contentId =
+      stakeModal.contentId > 0n ? stakeModal.contentId : primaryItem?.id !== undefined ? primaryItem.id : null;
+    if (contentId === null) return;
+
+    const key = contentId.toString();
+    setOptimisticOwnContentIds(previous => {
+      if (previous.has(key)) return previous;
+      const next = new Set(previous);
+      next.add(key);
+      return next;
+    });
+  }, [primaryItem?.id, stakeModal.contentId, voteError]);
+
   const handleButtonVote = useCallback(
     (item: ContentItem, isUp: boolean) => {
       if (!address) {
@@ -850,6 +889,11 @@ const HomeInner = () => {
         primaryItem && item.id === primaryItem.id ? primaryItemCooldownSeconds : getContentCooldownSeconds(item.id);
       if (cooldownSeconds > 0) {
         notification.info(getVoteCooldownMessage(cooldownSeconds), { duration: 6000 });
+        return;
+      }
+
+      if (item.isOwnContent) {
+        notification.info("You cannot vote on your own content.", { duration: 6000 });
         return;
       }
 
@@ -947,10 +991,16 @@ const HomeInner = () => {
       }
 
       const item = displayFeed.find(i => i.id === stakeModal.contentId);
+      if (item?.isOwnContent) {
+        notification.info("You cannot vote on your own content.", { duration: 6000 });
+        setStakeModal(prev => ({ ...prev, isOpen: false }));
+        return;
+      }
       const committedIndex = displayFeed.findIndex(i => i.id === stakeModal.contentId);
       const success = await commitVote({
         contentId: stakeModal.contentId,
         isUp: stakeModal.isUp,
+        isOwnContent: item?.isOwnContent,
         stakeAmount,
         submitter: item?.submitter,
       });

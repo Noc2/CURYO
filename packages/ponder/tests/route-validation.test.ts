@@ -210,6 +210,21 @@ describe("registerContentRoutes", () => {
     expect(db.select).not.toHaveBeenCalled();
   });
 
+  it("rejects invalid multi-submitter filters before querying the database", async () => {
+    const { db } = mockPonderModules([]);
+    mockSharedModule();
+    const { registerContentRoutes } = await import("../src/api/routes/content-routes.js");
+
+    const app = new Hono();
+    registerContentRoutes(app);
+
+    const response = await app.request("http://localhost/content?submitters=0x123,not-an-address");
+
+    expect(response.status).toBe(400);
+    expect(await response.json()).toEqual({ error: "Invalid submitters filter" });
+    expect(db.select).not.toHaveBeenCalled();
+  });
+
   it("uses bounded search pagination without running an exact count", async () => {
     const { db, queryBuilder } = mockPonderModules([{ id: 1n }]);
     mockSharedModule();
@@ -289,6 +304,28 @@ describe("registerContentRoutes", () => {
     expect(serialized).toContain("content.title");
     expect(serialized).toContain("content.description");
     expect(serialized).toContain("content.tags");
+  });
+
+  it("supports filtering content by multiple raw submitter wallets", async () => {
+    const { queryBuilder } = mockPonderModules([{ id: 1n }]);
+    mockSharedModule();
+    const { registerContentRoutes } = await import("../src/api/routes/content-routes.js");
+
+    const app = new Hono();
+    registerContentRoutes(app);
+
+    const response = await app.request(
+      "http://localhost/content?submitters=0x0000000000000000000000000000000000000001,0x00000000000000000000000000000000000000aa",
+    );
+
+    expect(response.status).toBe(200);
+
+    const whereArg = queryBuilder.where.mock.calls[0]?.[0];
+    const serialized = serializeExpression(whereArg);
+
+    expect(serialized).toContain("inArray");
+    expect(serialized).toContain("content.submitter");
+    expect(serialized).toContain("0x00000000000000000000000000000000000000aa");
   });
 
   it("adds moderation predicates to direct content lookups", async () => {
