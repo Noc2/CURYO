@@ -19,6 +19,7 @@ import type { QueueCardStatus } from "~~/lib/vote/queueCardStatus";
 import { resolveVoteQueueWindowItems } from "~~/lib/vote/queueLayout";
 
 const CARD_SWIPE_THRESHOLD = 96;
+const LOAD_MORE_OBSERVER_ROOT_MARGIN = "0px 0px 40vh 0px";
 const VOTE_CARD_TRANSITION_EASE = [0.22, 1, 0.36, 1] as const;
 
 const voteCardVariants: Variants = {
@@ -126,14 +127,15 @@ export function VoteFeedStage({
   const activeArticleRef = useRef<HTMLElement | null>(null);
   const queueRailRef = useRef<HTMLDivElement | null>(null);
   const loadMoreRef = useRef<HTMLDivElement | null>(null);
-  const lastQueuePrefetchVisibleCountRef = useRef<number | null>(null);
+  const lastLoadMoreRequestCountRef = useRef<number | null>(null);
   const lastPreloadedThumbnailRef = useRef<string | null>(null);
   const shouldFocusActiveArticleRef = useRef(false);
   const [queueSectionElement, setQueueSectionElement] = useState<HTMLElement | null>(null);
   const queueLayout = useVoteQueueLayout(queueSectionElement);
   const hasVisibleQueue = queueLayout.rows > 0;
   const hasMultiRowQueue = queueLayout.rows > 1;
-  const activeArticleTitleId = primaryItem ? `vote-feed-title-${primaryItem.id.toString()}` : undefined;
+  const activeArticleId = primaryItem?.id ?? null;
+  const activeArticleTitleId = activeArticleId !== null ? `vote-feed-title-${activeArticleId.toString()}` : undefined;
   const activeArticlePosition = activeSourceIndex >= 0 ? activeSourceIndex + 1 : undefined;
   const activeArticleSetSize = canLoadMore ? -1 : displayFeed.length;
   const queueVisibleItems = useMemo(() => {
@@ -220,15 +222,15 @@ export function VoteFeedStage({
     const shouldPrefetchQueue = remainingLoadedItems < 8 && canLoadMore;
 
     if (!shouldPrefetchQueue) {
-      lastQueuePrefetchVisibleCountRef.current = null;
+      lastLoadMoreRequestCountRef.current = null;
       return;
     }
 
-    if (lastQueuePrefetchVisibleCountRef.current === loadedCount) {
+    if (lastLoadMoreRequestCountRef.current === loadedCount) {
       return;
     }
 
-    lastQueuePrefetchVisibleCountRef.current = loadedCount;
+    lastLoadMoreRequestCountRef.current = loadedCount;
     onLoadMore();
   }, [activeSourceIndex, canLoadMore, displayFeed.length, loadedCount, onLoadMore]);
 
@@ -243,13 +245,27 @@ export function VoteFeedStage({
   }, [nextThumbnailSrc]);
 
   useEffect(() => {
+    if (!canLoadMore) {
+      lastLoadMoreRequestCountRef.current = null;
+    }
+  }, [canLoadMore]);
+
+  useEffect(() => {
+    if (!canLoadMore) return;
+
     const observer = new IntersectionObserver(
       entries => {
-        if (entries[0].isIntersecting && canLoadMore) {
-          onLoadMore();
-        }
+        const entry = entries[0];
+        if (!entry?.isIntersecting || !canLoadMore) return;
+        if (lastLoadMoreRequestCountRef.current === loadedCount) return;
+
+        lastLoadMoreRequestCountRef.current = loadedCount;
+        onLoadMore();
       },
-      { threshold: 0.1 },
+      {
+        threshold: 0,
+        rootMargin: LOAD_MORE_OBSERVER_ROOT_MARGIN,
+      },
     );
 
     const currentRef = loadMoreRef.current;
@@ -262,7 +278,7 @@ export function VoteFeedStage({
         observer.unobserve(currentRef);
       }
     };
-  }, [canLoadMore, onLoadMore]);
+  }, [canLoadMore, loadedCount, onLoadMore]);
 
   const handleSelectPrevious = useCallback(() => {
     if (onNavigateSelection("previous")) {
@@ -307,7 +323,7 @@ export function VoteFeedStage({
   );
 
   useEffect(() => {
-    if (!primaryItem || !shouldFocusActiveArticleRef.current || typeof window === "undefined") return;
+    if (activeArticleId === null || !shouldFocusActiveArticleRef.current || typeof window === "undefined") return;
 
     shouldFocusActiveArticleRef.current = false;
     const frameId = window.requestAnimationFrame(() => {
@@ -317,7 +333,7 @@ export function VoteFeedStage({
     return () => {
       window.cancelAnimationFrame(frameId);
     };
-  }, [primaryItem?.id]);
+  }, [activeArticleId]);
 
   const canNavigateCards = displayFeed.length > 1 && !isCommitting && !navigationLocked;
   const canSwipeNavigate = supportsTouchNavigation && canNavigateCards;
