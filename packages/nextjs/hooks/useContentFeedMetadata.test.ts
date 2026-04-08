@@ -111,7 +111,22 @@ test("isContentFeedMetadataPrefetchPending only defers embeds while thumbnail ba
   const urls = ["https://github.com/openai/openai-node"];
 
   assert.equal(isContentFeedMetadataPrefetchPending(urls, undefined), true);
-  assert.equal(isContentFeedMetadataPrefetchPending(urls, {}), false);
+  assert.equal(isContentFeedMetadataPrefetchPending(urls, {}), true);
+  assert.equal(isContentFeedMetadataPrefetchPending(urls, { [urls[0]]: { thumbnailUrl: null } }), false);
+});
+
+test("isContentFeedMetadataPrefetchPending stays pending when only part of the next feed is enriched", () => {
+  const urls = ["https://github.com/openai/openai-node", "https://rawg.io/games/portal-2"];
+
+  assert.equal(
+    isContentFeedMetadataPrefetchPending(urls, {
+      [urls[0]]: {
+        thumbnailUrl: "https://avatars.githubusercontent.com/u/14957082?v=4",
+        title: "openai/openai-node",
+      },
+    }),
+    true,
+  );
 });
 
 test("mapContentItem preserves open-round directional vote counts", () => {

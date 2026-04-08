@@ -81,12 +81,10 @@ export function GitHubEmbed({ info, compact, prefetchedMetadata }: GitHubEmbedPr
 
   const repoSlug =
     info.id || (info.metadata?.owner && info.metadata?.repo ? `${info.metadata.owner}/${info.metadata.repo}` : null);
+  const imageSrc = repo?.imageUrl ? `/api/image-proxy?url=${encodeURIComponent(repo.imageUrl)}` : undefined;
   const imageLoadingProps = getEmbedImageLoadingProps(compact);
 
   useEffect(() => {
-    setImageError(false);
-    setImageLoaded(false);
-
     if (!repoSlug) {
       setRepo(null);
       setLoading(false);
@@ -130,6 +128,11 @@ export function GitHubEmbed({ info, compact, prefetchedMetadata }: GitHubEmbedPr
       cancelled = true;
     };
   }, [repoSlug, info.url, prefetchedMetadata]);
+
+  useEffect(() => {
+    setImageError(false);
+    setImageLoaded(false);
+  }, [imageSrc]);
 
   if (loading) {
     return (
@@ -212,7 +215,7 @@ export function GitHubEmbed({ info, compact, prefetchedMetadata }: GitHubEmbedPr
         )}
         <div className="flex h-full w-full items-center justify-center p-10 embed-surface">
           <img
-            src={`/api/image-proxy?url=${encodeURIComponent(repo.imageUrl)}`}
+            src={imageSrc}
             alt={repo.name}
             width={192}
             height={192}

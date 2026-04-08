@@ -61,14 +61,15 @@ export function RawgEmbed({ info, compact, prefetchedMetadata }: RawgEmbedProps)
   const [imageLoaded, setImageLoaded] = useState(false);
 
   const slug = info.id || (info.metadata?.slug as string);
+  const imageSrc = game?.backgroundImage
+    ? `/api/image-proxy?url=${encodeURIComponent(game.backgroundImage)}`
+    : undefined;
   const imageLoadingProps = getEmbedImageLoadingProps(compact);
 
   useEffect(() => {
     setLoading(true);
     setGame(null);
     setFetchError(false);
-    setImageError(false);
-    setImageLoaded(false);
 
     if (!slug) {
       setLoading(false);
@@ -98,6 +99,11 @@ export function RawgEmbed({ info, compact, prefetchedMetadata }: RawgEmbedProps)
       cancelled = true;
     };
   }, [slug, prefetchedMetadata]);
+
+  useEffect(() => {
+    setImageError(false);
+    setImageLoaded(false);
+  }, [imageSrc]);
 
   // Loading state
   if (loading) {
@@ -170,7 +176,7 @@ export function RawgEmbed({ info, compact, prefetchedMetadata }: RawgEmbedProps)
           </div>
         )}
         <img
-          src={`/api/image-proxy?url=${encodeURIComponent(game.backgroundImage)}`}
+          src={imageSrc}
           alt={game.name}
           {...imageLoadingProps}
           className={`rounded-t-xl shadow-lg transition-transform group-hover:scale-[1.02] ${

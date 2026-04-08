@@ -48,12 +48,10 @@ export function HuggingFaceEmbed({ info, compact, prefetchedMetadata }: HuggingF
   const [imageLoaded, setImageLoaded] = useState(false);
 
   const modelId = info.id || (info.metadata?.modelId as string);
+  const imageSrc = model?.imageUrl ? `/api/image-proxy?url=${encodeURIComponent(model.imageUrl)}` : undefined;
   const imageLoadingProps = getEmbedImageLoadingProps(compact);
 
   useEffect(() => {
-    setImageError(false);
-    setImageLoaded(false);
-
     if (!modelId) {
       setModel(null);
       setLoading(false);
@@ -94,6 +92,11 @@ export function HuggingFaceEmbed({ info, compact, prefetchedMetadata }: HuggingF
       cancelled = true;
     };
   }, [modelId, info.url, prefetchedMetadata]);
+
+  useEffect(() => {
+    setImageError(false);
+    setImageLoaded(false);
+  }, [imageSrc]);
 
   if (loading) {
     return (
@@ -161,7 +164,7 @@ export function HuggingFaceEmbed({ info, compact, prefetchedMetadata }: HuggingF
         )}
         <div className="flex h-full w-full items-center justify-center p-10 embed-surface">
           <img
-            src={`/api/image-proxy?url=${encodeURIComponent(model.imageUrl)}`}
+            src={imageSrc}
             alt={model.name}
             width={192}
             height={192}
