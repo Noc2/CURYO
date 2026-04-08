@@ -49,6 +49,8 @@ type HeaderNavLinkProps = {
 
 const navIndicatorClassName =
   "absolute right-2 top-2 bottom-2 w-1 rounded-full bg-linear-to-b from-[#F5F0EB] via-[#F26426] to-[#B3341B] shadow-[0_0_18px_rgba(242,100,38,0.45)]";
+const headerChromeSurfaceClassName = "bg-[#000]";
+const headerChromeBorderClassName = "border-[color:var(--curyo-shell-border-strong)]";
 
 const HeaderNavLink = ({
   className,
@@ -201,6 +203,7 @@ const SEARCH_COMMIT_DEBOUNCE_MS = 200;
 const MOBILE_HEADER_SCROLL_DELTA = 12;
 const MOBILE_HEADER_HIDE_OFFSET = 72;
 const EXPLICIT_LANDING_HREF = "/?landing=1";
+const MOBILE_HEADER_SCROLL_SOURCE_ATTRIBUTE = "data-mobile-header-scroll-source";
 
 const HeaderBrand = ({ className, compact = false }: { className?: string; compact?: boolean }) => (
   <Link href={EXPLICIT_LANDING_HREF} className={`flex min-w-0 items-center gap-2 ${className ?? ""}`}>
@@ -261,7 +264,7 @@ const HeaderSearchBar = ({ className }: { className?: string }) => {
         id={searchInputId}
         name="vote-search"
         type="text"
-        placeholder="Search there"
+        placeholder="Search"
         aria-label="Search content"
         value={inputValue}
         onChange={e => updateSearch(e.target.value)}
@@ -271,7 +274,7 @@ const HeaderSearchBar = ({ className }: { className?: string }) => {
             commitSearch(inputValue, { skipIfUnchanged: true });
           }
         }}
-        className={`input input-sm input-bordered border-base-content/10 bg-base-300/80 pl-8 pr-7 text-base focus:border-primary/30 focus:bg-base-300 ${
+        className={`header-search-input input input-sm input-bordered border-base-content/10 bg-base-300/80 pl-8 pr-7 text-base focus:border-primary/30 focus:bg-base-300 ${
           isSidebar ? "w-full max-w-full" : "w-40 lg:w-56"
         }`}
       />
@@ -325,12 +328,12 @@ const MobileHeaderSearch = ({ onClose }: { onClose: () => void }) => {
           id={searchInputId}
           name="vote-search-mobile"
           type="text"
-          placeholder="Search there"
+          placeholder="Search"
           aria-label="Search content"
           value={draftValue}
           onChange={event => setDraftValue(event.target.value)}
           autoFocus
-          className="input input-sm w-full border-base-content/10 bg-base-300/85 pl-9 pr-9 text-base"
+          className="header-search-input input input-sm w-full border-base-content/10 bg-base-300/85 pl-9 pr-9 text-base"
         />
         {draftValue ? (
           <button
@@ -359,7 +362,10 @@ export const Header = () => {
   const [isMobileHeaderVisible, setIsMobileHeaderVisible] = useState(true);
 
   const burgerMenuRef = useRef<HTMLDetailsElement>(null);
-  const lastScrollYRef = useRef(0);
+  const lastScrollStateRef = useRef<{ source: Window | HTMLElement | null; offset: number }>({
+    source: null,
+    offset: 0,
+  });
   useOutsideClick(burgerMenuRef, () => {
     burgerMenuRef?.current?.removeAttribute("open");
   });
@@ -371,38 +377,94 @@ export const Header = () => {
 
   useEffect(() => {
     if (typeof window === "undefined") return;
+    if (pathname === "/vote") {
+      setIsMobileHeaderVisible(true);
+      return;
+    }
 
-    lastScrollYRef.current = window.scrollY;
+    const readScrollOffset = (source: Window | HTMLElement) =>
+      source instanceof HTMLElement ? source.scrollTop : window.scrollY;
 
-    const handleScroll = () => {
-      const currentScrollY = window.scrollY;
-      const scrollDelta = currentScrollY - lastScrollYRef.current;
+    const resolveScrollSource = (target: EventTarget | null) => {
+      if (
+        target === window ||
+        target === document ||
+        target === document.documentElement ||
+        target === document.body ||
+        target === null
+      ) {
+        return window;
+      }
+
+      if (target instanceof HTMLElement && target.getAttribute(MOBILE_HEADER_SCROLL_SOURCE_ATTRIBUTE) === "true") {
+        return target;
+      }
+
+      return null;
+    };
+
+    const initializeScrollState = () => {
+      const explicitScrollSource = document.querySelector<HTMLElement>(
+        `[${MOBILE_HEADER_SCROLL_SOURCE_ATTRIBUTE}="true"]`,
+      );
+      const source = explicitScrollSource ?? window;
+      lastScrollStateRef.current = {
+        source,
+        offset: readScrollOffset(source),
+      };
+    };
+
+    initializeScrollState();
+
+    const handleScroll = (event: Event) => {
+      const scrollSource = resolveScrollSource(event.target);
+      if (!scrollSource) return;
+
+      const currentScrollY = readScrollOffset(scrollSource);
+      const previousState = lastScrollStateRef.current;
+      const previousScrollY = previousState.source === scrollSource ? previousState.offset : 0;
+      const scrollDelta = currentScrollY - previousScrollY;
       const isMobileMenuOpen = burgerMenuRef.current?.open ?? false;
 
       if (currentScrollY <= 0) {
         setIsMobileHeaderVisible(true);
-        lastScrollYRef.current = 0;
+        lastScrollStateRef.current = {
+          source: scrollSource,
+          offset: 0,
+        };
         return;
       }
 
       if (mobileSearchOpen || isMobileMenuOpen) {
         setIsMobileHeaderVisible(true);
-        lastScrollYRef.current = currentScrollY;
+        lastScrollStateRef.current = {
+          source: scrollSource,
+          offset: currentScrollY,
+        };
         return;
       }
 
-      if (Math.abs(scrollDelta) < MOBILE_HEADER_SCROLL_DELTA) return;
+      if (Math.abs(scrollDelta) < MOBILE_HEADER_SCROLL_DELTA) {
+        lastScrollStateRef.current = {
+          source: scrollSource,
+          offset: currentScrollY,
+        };
+        return;
+      }
 
       setIsMobileHeaderVisible(scrollDelta < 0 || currentScrollY < MOBILE_HEADER_HIDE_OFFSET);
-      lastScrollYRef.current = currentScrollY;
+      lastScrollStateRef.current = {
+        source: scrollSource,
+        offset: currentScrollY,
+      };
     };
 
-    window.addEventListener("scroll", handleScroll, { passive: true });
+    window.addEventListener("scroll", handleScroll, { capture: true, passive: true });
 
     return () => {
-      window.removeEventListener("scroll", handleScroll);
+      window.removeEventListener("scroll", handleScroll, true);
     };
-  }, [mobileSearchOpen]);
+  }, [mobileSearchOpen, pathname]);
 
   return (
     <>
@@ -414,7 +476,9 @@ export const Header = () => {
         data-mobile-header="true"
         data-visible={isMobileHeaderVisible ? "true" : "false"}
       >
-        <div className="navbar min-h-0 shrink-0 justify-between bg-base-200 px-4 py-3 shadow-[0_18px_44px_rgba(9,10,12,0.32)] backdrop-blur-xl sm:px-6">
+        <div
+          className={`navbar min-h-0 shrink-0 justify-between px-4 py-3 shadow-[0_18px_44px_rgba(9,10,12,0.32)] backdrop-blur-xl sm:px-6 ${headerChromeSurfaceClassName}`}
+        >
           {mobileSearchOpen ? (
             <Suspense>
               <MobileHeaderSearch onClose={() => setMobileSearchOpen(false)} />
@@ -433,7 +497,7 @@ export const Header = () => {
                     <Bars3Icon className="h-5 w-5" />
                   </summary>
                   <ul
-                    className="menu menu-compact dropdown-content mt-3 w-64 rounded-xl bg-base-200 p-2 shadow-lg"
+                    className={`menu menu-compact dropdown-content mt-3 w-64 rounded-xl border p-2 shadow-lg ${headerChromeSurfaceClassName} ${headerChromeBorderClassName}`}
                     onClick={() => burgerMenuRef?.current?.removeAttribute("open")}
                   >
                     <Suspense>
@@ -463,7 +527,9 @@ export const Header = () => {
       </div>
 
       {/* Desktop: left sidebar */}
-      <aside className="fixed left-0 top-0 z-20 hidden h-screen w-52 shrink-0 flex-col items-stretch bg-base-200 py-4 shadow-[18px_0_48px_rgba(9,10,12,0.24)] backdrop-blur-xl xl:flex">
+      <aside
+        className={`fixed left-0 top-0 z-20 hidden h-screen w-52 shrink-0 flex-col items-stretch border-r py-4 shadow-[18px_0_48px_rgba(9,10,12,0.24)] backdrop-blur-xl xl:flex ${headerChromeSurfaceClassName} ${headerChromeBorderClassName}`}
+      >
         <HeaderBrand className="mb-4 shrink-0 px-4" />
         <div className="mb-4 w-full min-w-0 px-2.5">
           <Suspense>
@@ -475,7 +541,9 @@ export const Header = () => {
             <HeaderMenuLinks variant="desktop" />
           </ul>
         </nav>
-        <div className="mt-auto flex w-full shrink-0 flex-col items-stretch gap-2 border-t border-base-300 px-2.5 pt-4">
+        <div
+          className={`mt-auto flex w-full shrink-0 flex-col items-stretch gap-2 border-t px-2.5 pt-4 ${headerChromeBorderClassName}`}
+        >
           <div className="w-full flex justify-stretch">
             <CuryoConnectButton inlineMenu />
           </div>

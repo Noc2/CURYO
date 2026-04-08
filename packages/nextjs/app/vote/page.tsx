@@ -1346,12 +1346,13 @@ const HomeInner = () => {
     feed.length === 0;
   return (
     <AppPageShell
+      paddingTopClassName="pt-2 xl:pt-4"
       outerClassName="min-h-0 flex-1 overflow-hidden pb-0 xl:pb-4"
       contentClassName="flex min-h-0 flex-1 flex-col gap-4 overflow-hidden"
     >
       <VotingGuide />
       <div
-        className="flex shrink-0 flex-wrap items-center gap-2 sm:gap-3 xl:flex-nowrap"
+        className="flex shrink-0 flex-wrap items-center gap-2 touch-none sm:gap-3 xl:flex-nowrap xl:touch-auto"
         data-disable-queue-wheel="true"
       >
         <CategoryFilter
@@ -1379,7 +1380,10 @@ const HomeInner = () => {
       </div>
 
       {isSearchMode ? (
-        <div className="flex shrink-0 flex-wrap items-center gap-2" data-disable-queue-wheel="true">
+        <div
+          className="flex shrink-0 flex-wrap items-center gap-2 touch-none xl:touch-auto"
+          data-disable-queue-wheel="true"
+        >
           <div className="rounded-full bg-base-200 px-3 py-2 text-sm text-base-content/70">
             {isShortSearchQuery ? (
               <span>Keep typing to search. Terms need at least {MIN_CONTENT_SEARCH_QUERY_LENGTH} characters.</span>
@@ -1491,11 +1495,8 @@ const HomeInner = () => {
       </div>
 
       {primaryItem ? (
-        <div
-          ref={mobileDockContainerRef}
-          className="fixed inset-x-4 bottom-[calc(env(safe-area-inset-bottom)+0.75rem)] z-30 xl:hidden"
-        >
-          <div className="mx-auto w-full max-w-5xl">
+        <div ref={mobileDockContainerRef} className="fixed inset-x-0 bottom-0 z-30 xl:hidden">
+          <div className="w-full">
             <div className="overflow-visible">
               <VotingQuestionCard
                 contentId={primaryItem.id}

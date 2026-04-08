@@ -33,9 +33,49 @@ test.describe("Mobile viewport (phone)", () => {
     await expect(dropdown.getByRole("link", { name: /cREP/i })).toBeVisible({ timeout: 3_000 });
   });
 
-  test("mobile header hides on scroll down and returns on scroll up", async ({ connectedPage: page }) => {
+  test("vote page mobile header stays visible while the feed scrolls", async ({ connectedPage: page }) => {
     await page.goto("/vote");
     await waitForFeedLoaded(page);
+
+    const mobileHeader = page.locator('[data-mobile-header="true"]');
+    await expect(mobileHeader).toHaveAttribute("data-visible", "true");
+
+    const canScroll = await page.evaluate(() => {
+      const explicitScrollSource = document.querySelector<HTMLElement>('[data-mobile-header-scroll-source="true"]');
+      const scrollSource = explicitScrollSource ?? document.scrollingElement;
+      if (!scrollSource) return false;
+      return scrollSource.scrollHeight > scrollSource.clientHeight + 200;
+    });
+    expect(canScroll).toBe(true);
+
+    await page.evaluate(() => {
+      const explicitScrollSource = document.querySelector<HTMLElement>('[data-mobile-header-scroll-source="true"]');
+      if (explicitScrollSource) {
+        explicitScrollSource.scrollTop = 900;
+        explicitScrollSource.dispatchEvent(new Event("scroll"));
+        return;
+      }
+
+      window.scrollTo(0, 900);
+    });
+    await expect(mobileHeader).toHaveAttribute("data-visible", "true");
+
+    await page.evaluate(() => {
+      const explicitScrollSource = document.querySelector<HTMLElement>('[data-mobile-header-scroll-source="true"]');
+      if (explicitScrollSource) {
+        explicitScrollSource.scrollTop = 320;
+        explicitScrollSource.dispatchEvent(new Event("scroll"));
+        return;
+      }
+
+      window.scrollTo(0, 320);
+    });
+    await expect(mobileHeader).toHaveAttribute("data-visible", "true");
+  });
+
+  test("mobile header still hides on scroll down and returns on scroll up on landing", async ({ connectedPage: page }) => {
+    await page.goto("/?landing=1");
+    await expect(page.getByText(/Human Reputation at Stake/i)).toBeVisible({ timeout: 10_000 });
 
     const mobileHeader = page.locator('[data-mobile-header="true"]');
     await expect(mobileHeader).toHaveAttribute("data-visible", "true");
