@@ -28,7 +28,10 @@ export function StreakCounter() {
     : `${streak.currentDailyStreak} day streak! All milestones reached`;
 
   return (
-    <div className="tooltip tooltip-bottom" data-tip={tooltipText}>
+    <div
+      className="tooltip tooltip-left shrink-0 before:max-w-[min(16rem,calc(100vw-2rem))] before:whitespace-normal before:text-left sm:tooltip-bottom"
+      data-tip={tooltipText}
+    >
       <div
         className={`flex items-center gap-1.5 rounded-full bg-base-200 px-3 py-1.5 text-base font-medium tabular-nums ${color} ${
           nearMilestone ? "animate-pulse" : ""
