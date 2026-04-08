@@ -40,13 +40,36 @@ test.describe("Mobile viewport (phone)", () => {
     const mobileHeader = page.locator('[data-mobile-header="true"]');
     await expect(mobileHeader).toHaveAttribute("data-visible", "true");
 
-    const canScroll = await page.evaluate(() => document.documentElement.scrollHeight > window.innerHeight + 200);
+    const canScroll = await page.evaluate(() => {
+      const explicitScrollSource = document.querySelector<HTMLElement>('[data-mobile-header-scroll-source="true"]');
+      const scrollSource = explicitScrollSource ?? document.scrollingElement;
+      if (!scrollSource) return false;
+      return scrollSource.scrollHeight > scrollSource.clientHeight + 200;
+    });
     expect(canScroll).toBe(true);
 
-    await page.evaluate(() => window.scrollTo(0, 900));
+    await page.evaluate(() => {
+      const explicitScrollSource = document.querySelector<HTMLElement>('[data-mobile-header-scroll-source="true"]');
+      if (explicitScrollSource) {
+        explicitScrollSource.scrollTop = 900;
+        explicitScrollSource.dispatchEvent(new Event("scroll"));
+        return;
+      }
+
+      window.scrollTo(0, 900);
+    });
     await expect(mobileHeader).toHaveAttribute("data-visible", "false");
 
-    await page.evaluate(() => window.scrollTo(0, 320));
+    await page.evaluate(() => {
+      const explicitScrollSource = document.querySelector<HTMLElement>('[data-mobile-header-scroll-source="true"]');
+      if (explicitScrollSource) {
+        explicitScrollSource.scrollTop = 320;
+        explicitScrollSource.dispatchEvent(new Event("scroll"));
+        return;
+      }
+
+      window.scrollTo(0, 320);
+    });
     await expect(mobileHeader).toHaveAttribute("data-visible", "true");
   });
 

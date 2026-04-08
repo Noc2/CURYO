@@ -203,6 +203,7 @@ const SEARCH_COMMIT_DEBOUNCE_MS = 200;
 const MOBILE_HEADER_SCROLL_DELTA = 12;
 const MOBILE_HEADER_HIDE_OFFSET = 72;
 const EXPLICIT_LANDING_HREF = "/?landing=1";
+const MOBILE_HEADER_SCROLL_SOURCE_ATTRIBUTE = "data-mobile-header-scroll-source";
 
 const HeaderBrand = ({ className, compact = false }: { className?: string; compact?: boolean }) => (
   <Link href={EXPLICIT_LANDING_HREF} className={`flex min-w-0 items-center gap-2 ${className ?? ""}`}>
@@ -361,7 +362,10 @@ export const Header = () => {
   const [isMobileHeaderVisible, setIsMobileHeaderVisible] = useState(true);
 
   const burgerMenuRef = useRef<HTMLDetailsElement>(null);
-  const lastScrollYRef = useRef(0);
+  const lastScrollStateRef = useRef<{ source: Window | HTMLElement | null; offset: number }>({
+    source: null,
+    offset: 0,
+  });
   useOutsideClick(burgerMenuRef, () => {
     burgerMenuRef?.current?.removeAttribute("open");
   });
@@ -374,35 +378,87 @@ export const Header = () => {
   useEffect(() => {
     if (typeof window === "undefined") return;
 
-    lastScrollYRef.current = window.scrollY;
+    const readScrollOffset = (source: Window | HTMLElement) =>
+      source instanceof HTMLElement ? source.scrollTop : window.scrollY;
 
-    const handleScroll = () => {
-      const currentScrollY = window.scrollY;
-      const scrollDelta = currentScrollY - lastScrollYRef.current;
+    const resolveScrollSource = (target: EventTarget | null) => {
+      if (
+        target === window ||
+        target === document ||
+        target === document.documentElement ||
+        target === document.body ||
+        target === null
+      ) {
+        return window;
+      }
+
+      if (target instanceof HTMLElement && target.getAttribute(MOBILE_HEADER_SCROLL_SOURCE_ATTRIBUTE) === "true") {
+        return target;
+      }
+
+      return null;
+    };
+
+    const initializeScrollState = () => {
+      const explicitScrollSource = document.querySelector<HTMLElement>(
+        `[${MOBILE_HEADER_SCROLL_SOURCE_ATTRIBUTE}="true"]`,
+      );
+      const source = explicitScrollSource ?? window;
+      lastScrollStateRef.current = {
+        source,
+        offset: readScrollOffset(source),
+      };
+    };
+
+    initializeScrollState();
+
+    const handleScroll = (event: Event) => {
+      const scrollSource = resolveScrollSource(event.target);
+      if (!scrollSource) return;
+
+      const currentScrollY = readScrollOffset(scrollSource);
+      const previousState = lastScrollStateRef.current;
+      const previousScrollY = previousState.source === scrollSource ? previousState.offset : 0;
+      const scrollDelta = currentScrollY - previousScrollY;
       const isMobileMenuOpen = burgerMenuRef.current?.open ?? false;
 
       if (currentScrollY <= 0) {
         setIsMobileHeaderVisible(true);
-        lastScrollYRef.current = 0;
+        lastScrollStateRef.current = {
+          source: scrollSource,
+          offset: 0,
+        };
         return;
       }
 
       if (mobileSearchOpen || isMobileMenuOpen) {
         setIsMobileHeaderVisible(true);
-        lastScrollYRef.current = currentScrollY;
+        lastScrollStateRef.current = {
+          source: scrollSource,
+          offset: currentScrollY,
+        };
         return;
       }
 
-      if (Math.abs(scrollDelta) < MOBILE_HEADER_SCROLL_DELTA) return;
+      if (Math.abs(scrollDelta) < MOBILE_HEADER_SCROLL_DELTA) {
+        lastScrollStateRef.current = {
+          source: scrollSource,
+          offset: currentScrollY,
+        };
+        return;
+      }
 
       setIsMobileHeaderVisible(scrollDelta < 0 || currentScrollY < MOBILE_HEADER_HIDE_OFFSET);
-      lastScrollYRef.current = currentScrollY;
+      lastScrollStateRef.current = {
+        source: scrollSource,
+        offset: currentScrollY,
+      };
     };
 
-    window.addEventListener("scroll", handleScroll, { passive: true });
+    window.addEventListener("scroll", handleScroll, { capture: true, passive: true });
 
     return () => {
-      window.removeEventListener("scroll", handleScroll);
+      window.removeEventListener("scroll", handleScroll, true);
     };
   }, [mobileSearchOpen]);
 
