@@ -24,6 +24,7 @@ const MOBILE_VOTE_CARD_MEDIA_QUERY = "(max-width: 767px)";
 interface FeedVoteCardProps {
   item: ContentItem;
   submitterProfile?: SubmitterProfile;
+  titleId?: string;
   onExternalOpen?: (item: ContentItem, href: string) => void;
   onToggleWatch: (id: bigint) => void;
   onToggleFollow: (address: string) => void;
@@ -42,6 +43,7 @@ interface FeedVoteCardProps {
 export const FeedVoteCard = memo(function FeedVoteCard({
   item,
   submitterProfile,
+  titleId,
   onExternalOpen,
   onToggleWatch,
   onToggleFollow,
@@ -139,6 +141,7 @@ export const FeedVoteCard = memo(function FeedVoteCard({
     >
       <FeedContentHeader
         item={item}
+        titleId={titleId}
         onPrevious={onPrevious}
         onNext={onNext}
         canPrevious={canPrevious}
@@ -193,6 +196,7 @@ interface FeedContentMetaCardProps {
 
 interface FeedContentHeaderProps {
   item: ContentItem;
+  titleId?: string;
   onPrevious?: () => void;
   onNext?: () => void;
   canPrevious: boolean;
@@ -200,7 +204,7 @@ interface FeedContentHeaderProps {
   compact?: boolean;
 }
 
-function FeedContentHeader({ item, onPrevious, onNext, canPrevious, canNext, compact }: FeedContentHeaderProps) {
+function FeedContentHeader({ item, titleId, onPrevious, onNext, canPrevious, canNext, compact }: FeedContentHeaderProps) {
   return (
     <div className={`rounded-2xl bg-base-200 ${compact ? "px-4 py-3" : "px-5 py-4 xl:px-4 xl:py-3"}`}>
       <div className="flex items-center justify-between gap-3">
@@ -215,6 +219,7 @@ function FeedContentHeader({ item, onPrevious, onNext, canPrevious, canNext, com
         </button>
         <div className="min-w-0 flex-1">
           <h2
+            id={titleId}
             className={`break-words text-center font-display leading-[0.94] tracking-[0.02em] text-base-content ${
               compact
                 ? "text-[1.55rem] sm:text-[1.7rem] xl:text-[1.62rem]"

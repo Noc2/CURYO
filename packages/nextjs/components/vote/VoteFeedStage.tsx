@@ -1,6 +1,6 @@
 "use client";
 
-import { type RefObject, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { type RefObject, useCallback, useEffect, useId, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { FeedVoteCard } from "~~/components/vote/VoteFeedCards";
 import type { ContentItem } from "~~/hooks/useContentFeed";
@@ -63,9 +63,10 @@ export function VoteFeedStage({
   onToggleWatch,
   onToggleFollow,
 }: VoteFeedStageProps) {
+  const feedInstructionsId = useId();
   const scrollerRef = useRef<HTMLDivElement | null>(null);
   const loadMoreRef = useRef<HTMLDivElement | null>(null);
-  const cardElementsRef = useRef(new Map<number, HTMLDivElement>());
+  const cardElementsRef = useRef(new Map<number, HTMLElement>());
   const lastObservedActiveIndexRef = useRef<number | null>(null);
   const queuedNavigationTargetRef = useRef<number | null>(null);
   const pendingProgrammaticScrollTargetRef = useRef<number | null>(null);
@@ -210,7 +211,7 @@ export function VoteFeedStage({
 
     const desktopStageQuery = window.matchMedia(DESKTOP_STEP_MEDIA_QUERY);
     let frameId = 0;
-    let observedLastNode: HTMLDivElement | null = null;
+    let observedLastNode: HTMLElement | null = null;
     let scrollerResizeObserver: ResizeObserver | null = null;
     let lastCardResizeObserver: ResizeObserver | null = null;
     const renderedLastIndex = feedItems.length > 0 ? (feedItems[feedItems.length - 1]?.actualIndex ?? -1) : -1;
@@ -586,7 +587,7 @@ export function VoteFeedStage({
     };
   }, [canLoadMore, getActiveScroller, isDesktopViewport, onLoadMore]);
 
-  const setCardElement = useCallback((index: number, node: HTMLDivElement | null) => {
+  const setCardElement = useCallback((index: number, node: HTMLElement | null) => {
     if (!node) {
       cardElementsRef.current.delete(index);
       return;
@@ -812,7 +813,17 @@ export function VoteFeedStage({
   }, [activeSourceIndex, displayFeed.length, navigationLocked, scrollToIndex]);
 
   return (
-    <div className="flex h-full min-h-0 flex-col xl:h-auto">
+    <div
+      role="feed"
+      aria-label="Content feed"
+      aria-busy={isCommitting || isMetadataPrefetchPending}
+      aria-describedby={feedInstructionsId}
+      className="flex h-full min-h-0 flex-col xl:h-auto"
+    >
+      <p id={feedInstructionsId} className="sr-only">
+        Use the arrow keys or Page Up and Page Down to move between items. Use Home or End to jump to the start or
+        end of the loaded feed.
+      </p>
       {isCommitting ? (
         <div className="flex shrink-0 items-center justify-center">
           <span className="text-base text-base-content/50">
@@ -836,15 +847,20 @@ export function VoteFeedStage({
           const canPrevious = actualIndex > 0 && !isCommitting && !navigationLocked;
           const canNext = actualIndex < displayFeed.length - 1 && !isCommitting && !navigationLocked;
           const isActiveCard = actualIndex === renderedActiveIndex;
+          const titleId = `vote-feed-title-${item.id.toString()}`;
 
           return (
-            <div
+            <article
               key={item.id.toString()}
               id={`vote-feed-card-${actualIndex}`}
               ref={node => setCardElement(actualIndex, node)}
               data-feed-card-index={actualIndex}
               aria-current={isActiveCard ? "true" : undefined}
+              aria-labelledby={titleId}
+              aria-posinset={actualIndex + 1}
+              aria-setsize={canLoadMore ? -1 : displayFeed.length}
               aria-hidden={!isActiveCard}
+              tabIndex={isActiveCard ? 0 : -1}
               className={`relative shrink-0 snap-start snap-always transition-[opacity,filter,transform] duration-300 ease-out ${
                 isActiveCard
                   ? "opacity-100"
@@ -854,6 +870,7 @@ export function VoteFeedStage({
               <FeedVoteCard
                 item={item}
                 submitterProfile={enrichedProfiles[item.submitter.toLowerCase()]}
+                titleId={titleId}
                 onExternalOpen={contentItem => onExternalOpen(contentItem)}
                 onToggleWatch={onToggleWatch}
                 onToggleFollow={onToggleFollow}
@@ -874,7 +891,7 @@ export function VoteFeedStage({
                   className="pointer-events-none absolute inset-0 rounded-[1.75rem] bg-[linear-gradient(180deg,rgba(10,10,12,0.18),rgba(10,10,12,0.46))]"
                 />
               ) : null}
-            </div>
+            </article>
           );
         })}
 
