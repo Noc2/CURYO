@@ -618,8 +618,8 @@ export function VoteFeedStage({
       }
 
       const scrollerRect = scroller.getBoundingClientRect();
-      const visibleTop = Math.max(scrollerRect.top, 0);
-      const visibleBottom = Math.min(scrollerRect.bottom, window.innerHeight);
+      const visibleTop = isDesktopViewport ? 0 : Math.max(scrollerRect.top, 0);
+      const visibleBottom = isDesktopViewport ? window.innerHeight : Math.min(scrollerRect.bottom, window.innerHeight);
       const trackHeight = Math.max(visibleBottom - visibleTop, 0);
       const scrollRange = Math.max(scroller.scrollHeight - scroller.clientHeight, 0);
 
@@ -895,12 +895,20 @@ export function VoteFeedStage({
       {scrollIndicatorState.isVisible && (isDesktopViewport || isMobileScrollIndicatorActive) ? (
         <div
           aria-hidden="true"
-          className="pointer-events-none fixed right-1 top-0 z-40 w-5"
+          className={`pointer-events-none fixed top-0 z-40 ${isDesktopViewport ? "right-0 w-3" : "right-1 w-5"}`}
           style={{ top: `${scrollIndicatorState.top}px`, height: `${scrollIndicatorState.height}px` }}
         >
-          <div className="absolute inset-y-0 left-1/2 w-[2px] -translate-x-1/2 rounded-full bg-primary/20" />
           <div
-            className="absolute left-1/2 w-2.5 -translate-x-1/2 rounded-full bg-primary shadow-[0_0_14px_rgba(242,100,38,0.48)]"
+            className={`absolute inset-y-0 left-1/2 -translate-x-1/2 rounded-full ${
+              isDesktopViewport ? "w-[3px] bg-white/18" : "w-[2px] bg-primary/20"
+            }`}
+          />
+          <div
+            className={`absolute left-1/2 -translate-x-1/2 rounded-full bg-primary ${
+              isDesktopViewport
+                ? "w-[3px] shadow-[0_0_18px_rgba(242,100,38,0.85)]"
+                : "w-2.5 shadow-[0_0_14px_rgba(242,100,38,0.48)]"
+            }`}
             style={{
               top: `${scrollIndicatorState.thumbOffset}px`,
               height: `${scrollIndicatorState.thumbHeight}px`,
