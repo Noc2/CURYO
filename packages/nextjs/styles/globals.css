@@ -209,6 +209,32 @@ body {
     0 0 0 1.5px rgb(242 100 38 / 0.32);
 }
 
+.header-search-input {
+  box-shadow:
+    inset 0 1px 0 rgb(245 240 235 / 0.03),
+    0 0 0 1px rgb(245 240 235 / 0.1),
+    0 10px 24px rgb(0 0 0 / 0.18);
+}
+
+.header-search-input::placeholder {
+  color: rgb(245 240 235 / 0.42);
+}
+
+.header-search-input:hover {
+  box-shadow:
+    inset 0 1px 0 rgb(245 240 235 / 0.04),
+    0 0 0 1px rgb(245 240 235 / 0.14),
+    0 12px 26px rgb(0 0 0 / 0.2);
+}
+
+.header-search-input:focus,
+.header-search-input:focus-within {
+  box-shadow:
+    inset 0 1px 0 rgb(245 240 235 / 0.04),
+    0 0 0 1.5px rgb(242 100 38 / 0.32),
+    0 14px 28px rgb(0 0 0 / 0.22);
+}
+
 .input.input-error,
 .select.select-error,
 .textarea.textarea-error,

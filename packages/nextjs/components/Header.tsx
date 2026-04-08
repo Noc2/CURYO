@@ -264,7 +264,7 @@ const HeaderSearchBar = ({ className }: { className?: string }) => {
         id={searchInputId}
         name="vote-search"
         type="text"
-        placeholder="Search there"
+        placeholder="Search"
         aria-label="Search content"
         value={inputValue}
         onChange={e => updateSearch(e.target.value)}
@@ -274,7 +274,7 @@ const HeaderSearchBar = ({ className }: { className?: string }) => {
             commitSearch(inputValue, { skipIfUnchanged: true });
           }
         }}
-        className={`input input-sm input-bordered border-base-content/10 bg-base-300/80 pl-8 pr-7 text-base focus:border-primary/30 focus:bg-base-300 ${
+        className={`header-search-input input input-sm input-bordered border-base-content/10 bg-base-300/80 pl-8 pr-7 text-base focus:border-primary/30 focus:bg-base-300 ${
           isSidebar ? "w-full max-w-full" : "w-40 lg:w-56"
         }`}
       />
@@ -328,12 +328,12 @@ const MobileHeaderSearch = ({ onClose }: { onClose: () => void }) => {
           id={searchInputId}
           name="vote-search-mobile"
           type="text"
-          placeholder="Search there"
+          placeholder="Search"
           aria-label="Search content"
           value={draftValue}
           onChange={event => setDraftValue(event.target.value)}
           autoFocus
-          className="input input-sm w-full border-base-content/10 bg-base-300/85 pl-9 pr-9 text-base"
+          className="header-search-input input input-sm w-full border-base-content/10 bg-base-300/85 pl-9 pr-9 text-base"
         />
         {draftValue ? (
           <button
