@@ -195,13 +195,6 @@ export const FeedVoteCard = memo(function FeedVoteCard({
               prefetchedMetadata={item.contentMetadata}
               deferClientFetch={deferEmbedClientFetch}
             />
-            {contentIntentEnabled ? (
-              <div aria-hidden="true" className="pointer-events-none absolute inset-x-3 bottom-3 flex justify-start">
-                <span className="inline-flex items-center rounded-full bg-black/55 px-3 py-1.5 text-xs font-medium uppercase tracking-[0.16em] text-white/88 shadow-[0_10px_22px_rgba(0,0,0,0.28)] backdrop-blur-sm">
-                  Rate below
-                </span>
-              </div>
-            ) : null}
           </div>
           <FeedContentMetaCard
             item={item}

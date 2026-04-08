@@ -212,24 +212,66 @@ async function resolveCoinGecko(coinId: string): Promise<EmbedResult> {
   };
 }
 
+function buildHuggingFaceAssetUrl(modelId: string, assetPath: string): string | null {
+  const trimmedPath = assetPath.trim();
+  if (!trimmedPath) return null;
+
+  const modelSegments = modelId
+    .split("/")
+    .map(segment => segment.trim())
+    .filter(Boolean);
+  const assetSegments = trimmedPath
+    .replace(/^\/+/, "")
+    .split("/")
+    .map(segment => segment.trim())
+    .filter(Boolean);
+
+  if (modelSegments.length !== 2 || assetSegments.length === 0) {
+    return null;
+  }
+
+  if (assetSegments.some(segment => segment === "." || segment === "..")) {
+    return null;
+  }
+
+  const encodedModelId = modelSegments.map(segment => encodeURIComponent(segment)).join("/");
+  const encodedAssetPath = assetSegments.map(segment => encodeURIComponent(segment)).join("/");
+  return `https://huggingface.co/${encodedModelId}/raw/main/${encodedAssetPath}`;
+}
+
 async function resolveHuggingFace(modelId: string, metadata?: Record<string, unknown>): Promise<EmbedResult> {
   const author = (metadata?.author as string) || modelId.split("/")[0];
 
   // Fetch model metadata from HuggingFace API
   let title: string | undefined;
   let description: string | undefined;
+  let modelImageUrl: string | null = null;
 
   try {
     const modelData = await safeFetchJson(`https://huggingface.co/api/models/${encodeURIComponent(modelId)}`);
     if (modelData) {
       title = modelData.modelId ?? modelId;
       const parts: string[] = [];
-      if (modelData.pipeline_tag) parts.push(modelData.pipeline_tag.replace(/-/g, " "));
-      if (modelData.library_name) parts.push(`(${modelData.library_name})`);
+      const pipelineTag = modelData.pipeline_tag ?? modelData.cardData?.pipeline_tag;
+      const libraryName = modelData.library_name ?? modelData.cardData?.library_name;
+      if (pipelineTag) parts.push(String(pipelineTag).replace(/-/g, " "));
+      if (libraryName) parts.push(`(${libraryName})`);
       if (parts.length > 0) description = parts.join(" ");
+
+      const thumbnailPath = typeof modelData.cardData?.thumbnail === "string" ? modelData.cardData.thumbnail : null;
+      modelImageUrl = thumbnailPath ? buildHuggingFaceAssetUrl(modelId, thumbnailPath) : null;
     }
   } catch {
     // Continue with fallback
+  }
+
+  if (modelImageUrl) {
+    return {
+      thumbnailUrl: modelImageUrl,
+      imageUrl: modelImageUrl,
+      title: title ?? modelId,
+      description,
+    };
   }
 
   // Fetch org avatar by scraping the org page HTML
