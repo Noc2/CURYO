@@ -46,6 +46,12 @@ export function isFreeTransactionExhaustedError(error: unknown) {
   );
 }
 
+export function isUnsupportedRpcMethodError(error: unknown) {
+  const haystack = collectErrorText(error, new Set()).join(" ").toLowerCase();
+
+  return haystack.includes("this request method is not supported");
+}
+
 export function isWalletRpcOverloadedError(error: unknown) {
   const haystack = collectErrorText(error, new Set()).join(" ").toLowerCase();
 

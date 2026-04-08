@@ -142,15 +142,20 @@ export const useTransactor = (_walletClient?: WalletClient): TransactionFunc => 
       if (notificationId) {
         notification.remove(notificationId);
       }
-      const message = getParsedErrorWithAllAbis(error, chainId as AllowedChainIds);
+      const defaultMessage = getParsedErrorWithAllAbis(error, chainId as AllowedChainIds);
+      const message = options?.getErrorMessage?.(error, defaultMessage) ?? defaultMessage;
 
       // if receipt was reverted, show notification with block explorer link and return error
       if (transactionReceipt?.status === "reverted") {
-        notification.error(<TxnNotification message={message} blockExplorerLink={blockExplorerTxURL} />);
+        if (!options?.suppressErrorToast) {
+          notification.error(<TxnNotification message={message} blockExplorerLink={blockExplorerTxURL} />);
+        }
         throw error;
       }
 
-      notification.error(message);
+      if (!options?.suppressErrorToast) {
+        notification.error(message);
+      }
       void queryClient.invalidateQueries({ queryKey: FREE_TRANSACTION_ALLOWANCE_QUERY_KEY });
       throw error;
     }

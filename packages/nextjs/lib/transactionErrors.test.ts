@@ -2,6 +2,7 @@ import {
   getGasBalanceErrorMessage,
   isFreeTransactionExhaustedError,
   isInsufficientFundsError,
+  isUnsupportedRpcMethodError,
   isWalletRpcOverloadedError,
 } from "./transactionErrors";
 import assert from "node:assert/strict";
@@ -49,4 +50,15 @@ test("detects wallet RPC overload errors", () => {
   };
 
   assert.equal(isWalletRpcOverloadedError(error), true);
+});
+
+test("detects unsupported RPC method errors from nested wallet responses", () => {
+  const error = {
+    shortMessage: "An unknown RPC error occurred.",
+    cause: {
+      details: "this request method is not supported",
+    },
+  };
+
+  assert.equal(isUnsupportedRpcMethodError(error), true);
 });

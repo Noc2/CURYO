@@ -8,7 +8,7 @@ import { RatingHistory } from "~~/components/shared/RatingHistory";
 import { RatingOrb } from "~~/components/shared/RatingOrb";
 import { RoundProgress } from "~~/components/shared/RoundProgress";
 import { RoundRevealedBreakdown, RoundStats } from "~~/components/shared/RoundStats";
-import { InfoTooltip } from "~~/components/ui/InfoTooltip";
+import { HoverTooltip, InfoTooltip } from "~~/components/ui/InfoTooltip";
 import type { ContentOpenRoundSummary } from "~~/hooks/contentFeed/shared";
 import { useScaffoldReadContract } from "~~/hooks/scaffold-eth";
 import { useParticipationRate } from "~~/hooks/useParticipationRate";
@@ -37,6 +37,8 @@ interface VotingQuestionCardProps {
 const RATING_GUIDANCE_TEXT =
   "The community score runs from 0.0 to 10.0, where higher means better. Vote up when content deserves a better score and vote down when it deserves a worse one. Always vote down illegal, broken, or misdescribed content.";
 export const VOTING_SURFACE_BACKGROUND = "var(--curyo-surface-elevated)";
+const STATUS_PILL_CLASS_NAME =
+  "inline-flex items-center gap-2 rounded-full border border-base-content/10 bg-base-content/5 px-4 py-2";
 
 type ActivityTone = "primary" | "warning" | "success" | "neutral";
 
@@ -392,35 +394,40 @@ export function VotingQuestionCard({
 
   const centerStatusContent = address ? (
     hasMyVote ? (
-      <div
-        className="tooltip tooltip-bottom cursor-help flex items-center gap-2 rounded-full border border-base-content/10 bg-base-content/5 px-4 py-2"
-        data-tip="Your vote is encrypted until the blind phase ends. The keeper normally validates the stored tlock stanza and reveals eligible votes afterward, and you can self-reveal if needed."
+      <HoverTooltip
+        text="Your vote is encrypted until the blind phase ends. The keeper normally validates the stored tlock stanza and reveals eligible votes afterward, and you can self-reveal if needed."
+        position="bottom"
       >
-        <span className="text-base font-semibold text-primary">Committed</span>
-        <span className="text-base text-base-content/70">hidden</span>
-      </div>
+        <span className={STATUS_PILL_CLASS_NAME}>
+          <span className="text-base font-semibold text-primary">Committed</span>
+          <span className="text-base text-base-content/70">hidden</span>
+        </span>
+      </HoverTooltip>
     ) : isOwnContent ? (
-      <div
-        className="tooltip tooltip-bottom cursor-help flex items-center gap-2 rounded-full border border-base-content/10 bg-base-content/5 px-4 py-2"
-        data-tip="Content submitters cannot vote on their own submissions."
-      >
-        <span className="text-base text-base-content/65">Your submission</span>
-      </div>
+      <HoverTooltip text="Content submitters cannot vote on their own submissions." position="bottom">
+        <span className={STATUS_PILL_CLASS_NAME}>
+          <span className="text-base text-base-content/65">Your submission</span>
+        </span>
+      </HoverTooltip>
     ) : cooldownActive ? (
-      <div
-        className="tooltip tooltip-bottom cursor-help flex items-center gap-2 rounded-full border border-base-content/10 bg-base-content/5 px-4 py-2"
-        data-tip={`You already voted on this content within the last 24 hours. Try again in ${cooldownLabel}.`}
+      <HoverTooltip
+        text={`You already voted on this content within the last 24 hours. Try again in ${cooldownLabel}.`}
+        position="bottom"
       >
-        <span className="text-base font-medium text-base-content/75">Cooldown</span>
-        <span className="text-base text-base-content/60">{cooldownLabel}</span>
-      </div>
+        <span className={STATUS_PILL_CLASS_NAME}>
+          <span className="text-base font-medium text-base-content/75">Cooldown</span>
+          <span className="text-base text-base-content/60">{cooldownLabel}</span>
+        </span>
+      </HoverTooltip>
     ) : isRoundFull ? (
-      <div
-        className="tooltip tooltip-bottom cursor-help flex items-center gap-2 rounded-full border border-base-content/10 bg-base-content/5 px-4 py-2"
-        data-tip="This round has reached the maximum number of voters. A new round will start after resolution."
+      <HoverTooltip
+        text="This round has reached the maximum number of voters. A new round will start after resolution."
+        position="bottom"
       >
-        <span className="text-base text-base-content/65">Round full</span>
-      </div>
+        <span className={STATUS_PILL_CLASS_NAME}>
+          <span className="text-base text-base-content/65">Round full</span>
+        </span>
+      </HoverTooltip>
     ) : null
   ) : null;
   const orbSize = isDockVariant ? (compact ? 88 : 100) : isSignalVariant ? (compact ? 148 : 168) : compact ? 166 : 190;
