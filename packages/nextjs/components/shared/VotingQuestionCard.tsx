@@ -39,6 +39,7 @@ const RATING_GUIDANCE_TEXT =
 export const VOTING_SURFACE_BACKGROUND = "var(--curyo-surface-elevated)";
 const STATUS_PILL_CLASS_NAME =
   "inline-flex items-center gap-2 rounded-full border border-base-content/10 bg-base-content/5 px-4 py-2";
+const DOCK_STATUS_TEXT_CLASS_NAME = "inline-flex max-w-full flex-col items-start justify-center py-0.5 text-left";
 
 type ActivityTone = "primary" | "warning" | "success" | "neutral";
 
@@ -401,6 +402,7 @@ export function VotingQuestionCard({
   const hasMyVote =
     myCommitHash != null &&
     (myCommitHash as unknown as string) !== "0x0000000000000000000000000000000000000000000000000000000000000000";
+  const usesDockStatusText = isDockVariant;
 
   const centerStatusContent = address ? (
     hasMyVote ? (
@@ -408,35 +410,63 @@ export function VotingQuestionCard({
         text="Your vote is encrypted until the blind phase ends. The keeper normally validates the stored tlock stanza and reveals eligible votes afterward, and you can self-reveal if needed."
         position="bottom"
       >
-        <span className={STATUS_PILL_CLASS_NAME}>
-          <span className="text-base font-semibold text-primary">Committed</span>
-          <span className="text-base text-base-content/70">hidden</span>
-        </span>
+        {usesDockStatusText ? (
+          <span className={DOCK_STATUS_TEXT_CLASS_NAME}>
+            <span className="text-[0.95rem] font-semibold leading-none text-primary">Committed</span>
+            <span className="mt-0.5 text-[0.95rem] leading-none text-base-content/62">hidden</span>
+          </span>
+        ) : (
+          <span className={STATUS_PILL_CLASS_NAME}>
+            <span className="text-base font-semibold text-primary">Committed</span>
+            <span className="text-base text-base-content/70">hidden</span>
+          </span>
+        )}
       </HoverTooltip>
     ) : isOwnContent ? (
       <HoverTooltip text="Content submitters cannot vote on their own submissions." position="bottom">
-        <span className={STATUS_PILL_CLASS_NAME}>
-          <span className="text-base text-base-content/65">Your submission</span>
-        </span>
+        {usesDockStatusText ? (
+          <span
+            className={`${DOCK_STATUS_TEXT_CLASS_NAME} max-w-[7.25rem] text-[0.95rem] leading-tight text-base-content/68`}
+          >
+            Your submission
+          </span>
+        ) : (
+          <span className={STATUS_PILL_CLASS_NAME}>
+            <span className="text-base text-base-content/65">Your submission</span>
+          </span>
+        )}
       </HoverTooltip>
     ) : cooldownActive ? (
       <HoverTooltip
         text={`You already voted on this content within the last 24 hours. Try again in ${cooldownLabel}.`}
         position="bottom"
       >
-        <span className={STATUS_PILL_CLASS_NAME}>
-          <span className="text-base font-medium text-base-content/75">Cooldown</span>
-          <span className="text-base text-base-content/60">{cooldownLabel}</span>
-        </span>
+        {usesDockStatusText ? (
+          <span className={DOCK_STATUS_TEXT_CLASS_NAME}>
+            <span className="text-[0.95rem] font-medium leading-none text-base-content/75">Cooldown</span>
+            <span className="mt-0.5 text-[0.95rem] leading-none text-base-content/60">{cooldownLabel}</span>
+          </span>
+        ) : (
+          <span className={STATUS_PILL_CLASS_NAME}>
+            <span className="text-base font-medium text-base-content/75">Cooldown</span>
+            <span className="text-base text-base-content/60">{cooldownLabel}</span>
+          </span>
+        )}
       </HoverTooltip>
     ) : isRoundFull ? (
       <HoverTooltip
         text="This round has reached the maximum number of voters. A new round will start after resolution."
         position="bottom"
       >
-        <span className={STATUS_PILL_CLASS_NAME}>
-          <span className="text-base text-base-content/65">Round full</span>
-        </span>
+        {usesDockStatusText ? (
+          <span className={`${DOCK_STATUS_TEXT_CLASS_NAME} text-[0.95rem] leading-tight text-base-content/68`}>
+            Round full
+          </span>
+        ) : (
+          <span className={STATUS_PILL_CLASS_NAME}>
+            <span className="text-base text-base-content/65">Round full</span>
+          </span>
+        )}
       </HoverTooltip>
     ) : null
   ) : null;
