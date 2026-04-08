@@ -9,13 +9,13 @@
  * the call with viem and send via eth_sendTransaction.
  */
 import { parseRound } from "../../lib/contracts/roundVotingEngine";
+import { createTlockVoteCommit, encodeVoteTransferPayload } from "@curyo/contracts/voting";
 import { ANVIL_ACCOUNTS } from "./anvil-accounts";
 import { runCommitAttempts } from "./commit-attempts";
 import { type RpcSendResult, isRetryableDirectCommitSendResult } from "./direct-commit-retry";
 import "./fetch-shim";
 import { PONDER_URL } from "./ponder-url";
 import { E2E_RPC_URL } from "./service-urls";
-import { createTlockVoteCommit, encodeVoteTransferPayload } from "./tlock-voting";
 import { deriveAnchoredTlockRuntimeNowMs } from "./tlockRuntime";
 
 const ANVIL_RPC = E2E_RPC_URL;
