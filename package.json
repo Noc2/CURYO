@@ -100,6 +100,7 @@
     "react-spinners@^0.14.1": "patch:react-spinners@npm%3A0.14.1#./.yarn/patches/react-spinners-npm-0.14.1-545ddaba3f.patch",
     "axios@^1.12.2": "1.13.5",
     "vite@5.0.7": "5.4.21",
+    "vite@^6.0.0 || ^7.0.0": "7.3.2",
     "rollup@^4.20.0": "4.59.0",
     "hono@4.12.9": "4.12.12",
     "hono@^4.10.3": "4.12.12",
