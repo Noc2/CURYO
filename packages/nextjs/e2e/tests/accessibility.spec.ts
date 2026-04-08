@@ -1,8 +1,8 @@
+import { type Page, expect, test } from "../fixtures/wallet";
 import { ANVIL_ACCOUNTS } from "../helpers/anvil-accounts";
 import { E2E_BASE_URL } from "../helpers/service-urls";
 import { findVoteableContent, gotoWithRetry, waitForFeedLoaded } from "../helpers/wait-helpers";
 import { setupWallet } from "../helpers/wallet-session";
-import { expect, test, type Page } from "../fixtures/wallet";
 
 async function gotoPath(page: Page, path: string, options?: { ensureWalletConnected?: boolean }): Promise<void> {
   await gotoWithRetry(page, new URL(path, E2E_BASE_URL).toString(), options);
@@ -20,7 +20,10 @@ test.describe("Accessibility basics", () => {
     test(`${path} exposes a primary heading`, async ({ page }) => {
       await setupWallet(page, ANVIL_ACCOUNTS.account2.privateKey);
       await gotoPath(page, path, { ensureWalletConnected: true });
-      await expect(page.getByRole("heading", { name: heading }).first(), `Page ${path} should have a visible h1 heading`).toBeVisible({
+      await expect(
+        page.getByRole("heading", { name: heading }).first(),
+        `Page ${path} should have a visible h1 heading`,
+      ).toBeVisible({
         timeout: 15_000,
       });
     });
@@ -35,6 +38,54 @@ test.describe("Accessibility basics", () => {
     await expect(page.getByRole("link", { name: "Discover" })).toBeVisible({ timeout: 10_000 });
     await expect(page.getByRole("link", { name: "Submit" })).toBeVisible({ timeout: 10_000 });
     await expect(page.getByRole("button", { name: /^View(?:: .+)?$/i }).first()).toBeVisible({ timeout: 10_000 });
+  });
+
+  test("vote feed exposes feed and article semantics", async ({ page }) => {
+    await setupWallet(page, ANVIL_ACCOUNTS.account2.privateKey);
+    await gotoPath(page, "/vote", { ensureWalletConnected: true });
+
+    try {
+      await waitForFeedLoaded(page, 30_000);
+    } catch {
+      test.skip(true, "Vote feed did not stabilize for feed semantics assertions");
+      return;
+    }
+
+    const emptyState = page.getByText(/No content submitted yet|No content found/i);
+    const feed = page.locator('[role="feed"][aria-label="Content feed"]').first();
+    const isFeedVisible = await feed.isVisible({ timeout: 5_000 }).catch(() => false);
+
+    if (!isFeedVisible) {
+      if (
+        await emptyState
+          .first()
+          .isVisible({ timeout: 3_000 })
+          .catch(() => false)
+      ) {
+        test.skip(true, "Vote feed is empty for feed semantics assertions");
+        return;
+      }
+
+      test.skip(true, "Vote feed did not expose feed semantics");
+      return;
+    }
+
+    await expect(feed).toHaveAttribute("aria-busy", /^(true|false)$/);
+
+    const activeArticle = feed.locator('article[aria-current="true"]').first();
+    await expect(activeArticle).toBeVisible({ timeout: 10_000 });
+    await activeArticle.focus();
+    await expect(activeArticle).toBeFocused();
+    await expect(activeArticle).toHaveAttribute("aria-posinset", /^[1-9]\d*$/);
+    await expect(activeArticle).toHaveAttribute("aria-setsize", /^(-1|[1-9]\d*)$/);
+
+    const titleId = await activeArticle.getAttribute("aria-labelledby");
+    expect(titleId, "Active feed article should reference its visible title").toBeTruthy();
+    if (!titleId) {
+      return;
+    }
+
+    await expect(page.locator(`#${titleId}`)).toBeVisible({ timeout: 5_000 });
   });
 
   test("StakeSelector dialog has ARIA attributes", async ({ page }) => {

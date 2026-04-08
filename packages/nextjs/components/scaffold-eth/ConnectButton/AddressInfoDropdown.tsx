@@ -10,7 +10,9 @@ import { InfoTooltip } from "~~/components/ui/InfoTooltip";
 import { useTargetNetwork } from "~~/hooks/scaffold-eth/useTargetNetwork";
 import { useCuryoDisconnect } from "~~/hooks/useCuryoDisconnect";
 import { useFreeTransactionAllowance } from "~~/hooks/useFreeTransactionAllowance";
+import { useVoterAccuracy } from "~~/hooks/useVoterAccuracy";
 import { useWalletSummaryData } from "~~/hooks/useWalletSummaryData";
+import { AVATAR_WIN_RATE_TOOLTIP } from "~~/lib/profile/winRateTooltip";
 import { isENS } from "~~/utils/scaffold-eth/common";
 
 type AddressInfoDropdownProps = {
@@ -54,16 +56,31 @@ function FreeTransactionAllowanceText({ className }: { className?: string }) {
   );
 }
 
+function WinRateSummaryText({ address, className }: { address: Address; className?: string }) {
+  const { stats } = useVoterAccuracy(address);
+  const winRateLabel = stats && stats.totalSettledVotes > 0 ? `${(stats.winRate * 100).toFixed(1)}%` : "—";
+
+  return (
+    <div className={`flex items-center gap-1.5 text-sm font-medium leading-5 text-base-content/62 ${className ?? ""}`}>
+      <span className="tabular-nums">{winRateLabel}</span>
+      <span className="text-base-content/48">win rate</span>
+      <InfoTooltip text={AVATAR_WIN_RATE_TOOLTIP} position="bottom" />
+    </div>
+  );
+}
+
 function WalletSummaryDetails({
   address,
   balanceClassName,
   freeTxClassName,
   stakeClassName,
+  winRateClassName,
 }: {
   address: Address;
   balanceClassName: string;
   freeTxClassName: string;
   stakeClassName: string;
+  winRateClassName: string;
 }) {
   const { activeVotes, earliestReveal, hasPendingReveals, liquidBalance, summary } = useWalletSummaryData(address);
   const totalStakedMicro = summary?.totalStakedMicro ?? 0n;
@@ -103,6 +120,7 @@ function WalletSummaryDetails({
           {stakeTooltip ? <InfoTooltip text={stakeTooltip} position="bottom" /> : null}
         </div>
       ) : null}
+      <WinRateSummaryText address={address} className={winRateClassName} />
       <FreeTransactionAllowanceText className={freeTxClassName} />
     </>
   );
@@ -179,6 +197,7 @@ export const AddressInfoDropdown = ({
                 balanceClassName="text-sm font-medium leading-5 text-base-content/78"
                 freeTxClassName="text-left"
                 stakeClassName="flex items-center gap-1.5 text-sm font-medium leading-5 text-base-content/68"
+                winRateClassName="text-left"
               />
             </div>
           </div>
@@ -206,6 +225,7 @@ export const AddressInfoDropdown = ({
             balanceClassName="text-left text-sm font-medium leading-5 text-base-content/78"
             freeTxClassName="text-left"
             stakeClassName="flex items-center justify-start gap-1.5 text-left text-sm font-medium leading-5 text-base-content/68"
+            winRateClassName="text-left"
           />
         </div>
       </div>
@@ -244,6 +264,7 @@ export const AddressInfoDropdown = ({
         balanceClassName="hidden lg:inline lg:px-2 text-sm font-medium leading-5 text-base-content/78"
         freeTxClassName="hidden lg:flex lg:px-2"
         stakeClassName="hidden lg:flex lg:px-2 items-center gap-1.5 text-sm font-medium leading-5 text-base-content/68"
+        winRateClassName="hidden lg:flex lg:px-2"
       />
     </div>
   );
