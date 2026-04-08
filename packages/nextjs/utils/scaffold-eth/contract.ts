@@ -216,6 +216,9 @@ export type TransactorFuncOptions = {
   blockConfirmations?: number;
   getErrorMessage?: (error: unknown, defaultMessage: string) => string | undefined;
   suppressErrorToast?: boolean;
+  suppressStatusToast?: boolean;
+  suppressSuccessToast?: boolean;
+  action?: string;
 };
 
 export type ScaffoldWriteContractOptions = MutateOptions<
