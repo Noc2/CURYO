@@ -2,12 +2,13 @@
 
 import { memo, useEffect, useState } from "react";
 import dynamic from "next/dynamic";
-import { ChevronLeftIcon, ChevronRightIcon } from "@heroicons/react/24/outline";
+import { ArrowTopRightOnSquareIcon, ChevronLeftIcon, ChevronRightIcon } from "@heroicons/react/24/outline";
 import { ShareIcon } from "@heroicons/react/24/outline";
 import { ContentEmbed } from "~~/components/content/ContentEmbed";
 import { SubmitterBadge } from "~~/components/content/SubmitterBadge";
 import { FollowProfileButton } from "~~/components/shared/FollowProfileButton";
 import { MoreToggleButton } from "~~/components/shared/MoreToggleButton";
+import { SafeExternalLink } from "~~/components/shared/SafeExternalLink";
 import { WatchContentButton } from "~~/components/shared/WatchContentButton";
 import type { ContentItem } from "~~/hooks/useContentFeed";
 import type { SubmitterProfile } from "~~/hooks/useSubmitterProfiles";
@@ -20,12 +21,28 @@ const ShareContentModal = dynamic(
 
 const LAPTOP_VOTE_CARD_MEDIA_QUERY = "(min-width: 1024px) and (max-width: 1535px)";
 const MOBILE_VOTE_CARD_MEDIA_QUERY = "(max-width: 767px)";
+const CONTENT_INTENT_INTERACTIVE_SELECTOR =
+  "a[href],button,input,select,textarea,summary,iframe,[role='button'],[role='link']";
+
+function getSourceLabel(url: string) {
+  try {
+    return new URL(url).hostname.replace(/^www\./, "");
+  } catch {
+    return url;
+  }
+}
+
+function isInteractiveTarget(target: EventTarget | null) {
+  return target instanceof Element && target.closest(CONTENT_INTENT_INTERACTIVE_SELECTOR) !== null;
+}
 
 interface FeedVoteCardProps {
   item: ContentItem;
   submitterProfile?: SubmitterProfile;
   titleId?: string;
-  onExternalOpen?: (item: ContentItem, href: string) => void;
+  isActive?: boolean;
+  onContentIntent?: (item: ContentItem) => void;
+  onSourceOpen?: (item: ContentItem) => void;
   onToggleWatch: (id: bigint) => void;
   onToggleFollow: (address: string) => void;
   watched: boolean;
@@ -44,7 +61,9 @@ export const FeedVoteCard = memo(function FeedVoteCard({
   item,
   submitterProfile,
   titleId,
-  onExternalOpen,
+  isActive = true,
+  onContentIntent,
+  onSourceOpen,
   onToggleWatch,
   onToggleFollow,
   watched,
@@ -113,6 +132,7 @@ export const FeedVoteCard = memo(function FeedVoteCard({
   const contentStackClassName = useCompactCard ? "gap-2" : "gap-3 xl:gap-2.5";
   const contentGridClassName = "grid min-h-0 flex-1 grid-cols-1 gap-3";
   const usesIntrinsicMediaHeight = platformType === "youtube";
+  const contentIntentEnabled = platformType !== "youtube";
   const mediaHeightClassName = usesIntrinsicMediaHeight
     ? "w-full"
     : isMobileViewport
@@ -122,23 +142,7 @@ export const FeedVoteCard = memo(function FeedVoteCard({
         : "w-full h-[clamp(20rem,56vh,32rem)]";
 
   return (
-    <div
-      className={`flex min-h-0 flex-col ${contentStackClassName}`}
-      onClickCapture={event => {
-        if (!onExternalOpen) return;
-
-        const target = event.target;
-        if (!(target instanceof Element)) return;
-
-        const anchor = target.closest<HTMLAnchorElement>("a[href]");
-        if (!anchor) return;
-
-        const href = anchor.getAttribute("href");
-        if (!href || href.startsWith("/") || href.startsWith("#")) return;
-
-        onExternalOpen(item, href);
-      }}
-    >
+    <div className={`flex min-h-0 flex-col ${contentStackClassName}`}>
       <FeedContentHeader
         item={item}
         titleId={titleId}
@@ -151,17 +155,58 @@ export const FeedVoteCard = memo(function FeedVoteCard({
 
       <div className={contentGridClassName}>
         <div className="flex min-w-0 min-h-0 flex-1 flex-col overflow-hidden rounded-2xl bg-base-200">
-          <div className={`${mediaHeightClassName} overflow-hidden`}>
+          <div
+            className={`${mediaHeightClassName} relative overflow-hidden`}
+            data-testid="vote-content-surface"
+            onClickCapture={event => {
+              if (!contentIntentEnabled || !onContentIntent) return;
+
+              const target = event.target;
+              if (!(target instanceof Element)) return;
+
+              const contentIntentSurface = target.closest<HTMLElement>("[data-content-intent-surface='true']");
+              if (contentIntentSurface) {
+                event.stopPropagation();
+                onContentIntent(item);
+                return;
+              }
+
+              const anchor = target.closest<HTMLAnchorElement>("a[href]");
+              if (!anchor) return;
+
+              const href = anchor.getAttribute("href");
+              if (!href || href.startsWith("/") || href.startsWith("#")) return;
+
+              event.preventDefault();
+              event.stopPropagation();
+              onContentIntent(item);
+            }}
+            onClick={event => {
+              if (!contentIntentEnabled || !onContentIntent) return;
+              if (isInteractiveTarget(event.target)) return;
+              onContentIntent(item);
+            }}
+          >
             <ContentEmbed
               url={item.url}
               compact={useCompactEmbed}
+              isActive={isActive}
+              interactionMode={contentIntentEnabled ? "vote" : "default"}
               prefetchedMetadata={item.contentMetadata}
               deferClientFetch={deferEmbedClientFetch}
             />
+            {contentIntentEnabled ? (
+              <div aria-hidden="true" className="pointer-events-none absolute inset-x-3 bottom-3 flex justify-start">
+                <span className="inline-flex items-center rounded-full bg-black/55 px-3 py-1.5 text-xs font-medium uppercase tracking-[0.16em] text-white/88 shadow-[0_10px_22px_rgba(0,0,0,0.28)] backdrop-blur-sm">
+                  Rate below
+                </span>
+              </div>
+            ) : null}
           </div>
           <FeedContentMetaCard
             item={item}
             submitterProfile={submitterProfile}
+            onSourceOpen={onSourceOpen}
             normalizedAddress={normalizedAddress}
             following={following}
             followPending={followPending}
@@ -182,6 +227,7 @@ export const FeedVoteCard = memo(function FeedVoteCard({
 interface FeedContentMetaCardProps {
   item: ContentItem;
   submitterProfile?: SubmitterProfile;
+  onSourceOpen?: (item: ContentItem) => void;
   normalizedAddress?: string;
   following: boolean;
   followPending: boolean;
@@ -254,6 +300,7 @@ function FeedContentHeader({
 function FeedContentMetaCard({
   item,
   submitterProfile,
+  onSourceOpen,
   normalizedAddress,
   following,
   followPending,
@@ -274,6 +321,7 @@ function FeedContentMetaCard({
   const hasDescription = description.length > 0;
   const hasTags = item.tags.length > 0;
   const hasMagicDisclaimer = item.categoryId === 3n;
+  const sourceLabel = getSourceLabel(item.url);
   const hasExpandableDetails = hasDescription || hasTags || hasMagicDisclaimer;
   const showExpandedDetails = !collapseDescription || isExpanded;
   const visibleTags = showExpandedDetails ? item.tags.filter(Boolean) : [];
@@ -326,20 +374,48 @@ function FeedContentMetaCard({
           </div>
         </div>
 
+        <div
+          className={compact ? "mt-2 flex flex-wrap items-center gap-2" : "mt-2.5 flex flex-wrap items-center gap-2"}
+        >
+          <span className="inline-flex items-center rounded-full bg-base-300 px-2.5 py-1 text-sm font-medium leading-none text-base-content/80">
+            {platformType}
+          </span>
+          <SafeExternalLink
+            href={item.url}
+            allowExternalOpen
+            testId="content-source-link"
+            title={`Open source: ${sourceLabel}`}
+            ariaLabel={`Open source: ${sourceLabel}`}
+            onClick={() => onSourceOpen?.(item)}
+            className="inline-flex items-center gap-1.5 rounded-full bg-base-content/[0.06] px-2.5 py-1 text-sm font-medium leading-none text-base-content/78 transition-colors hover:bg-base-content/[0.1] hover:text-base-content"
+          >
+            <ArrowTopRightOnSquareIcon className="h-3.5 w-3.5" />
+            <span className="max-w-[12rem] truncate">{sourceLabel}</span>
+          </SafeExternalLink>
+          {visibleTags.map(tag => (
+            <span key={tag} className="text-sm text-base-content/70">
+              #{tag}
+            </span>
+          ))}
+        </div>
+
         {showExpandedDetails ? (
           <div id={detailsId} className={compact ? "mt-2.5 space-y-2" : "mt-3 space-y-2.5"}>
             {hasDescription ? <p className="text-base leading-relaxed text-base-content/85">{description}</p> : null}
 
-            <div className="flex flex-wrap items-center gap-2">
-              <span className="inline-flex items-center rounded-full bg-base-300 px-2.5 py-1 text-sm font-medium leading-none text-base-content/80">
-                {platformType}
-              </span>
-              {visibleTags.map(tag => (
-                <span key={tag} className="text-sm text-base-content/70">
-                  #{tag}
-                </span>
-              ))}
-            </div>
+            <p className="text-sm leading-relaxed text-base-content/70">
+              Source:{" "}
+              <SafeExternalLink
+                href={item.url}
+                allowExternalOpen
+                title={`Open source: ${sourceLabel}`}
+                ariaLabel={`Open source: ${sourceLabel}`}
+                onClick={() => onSourceOpen?.(item)}
+                className="font-medium text-primary hover:underline"
+              >
+                {sourceLabel}
+              </SafeExternalLink>
+            </p>
 
             {hasMagicDisclaimer ? (
               <p className="text-base leading-tight text-base-content/70">
@@ -348,6 +424,7 @@ function FeedContentMetaCard({
                   href="https://company.wizards.com/en/legal/fancontentpolicy"
                   target="_blank"
                   rel="noopener noreferrer"
+                  data-allow-external-open="true"
                   className="underline hover:text-base-content/70"
                 >
                   Fan Content Policy

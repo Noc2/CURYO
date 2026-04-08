@@ -83,6 +83,7 @@ const SEARCH_SORT_OPTIONS: { value: SearchSortOption; label: string }[] = [
 const FEED_PAGE_SIZE = 6;
 const FEED_PREFETCH_BUFFER = 6;
 const MOBILE_VOTE_DOCK_RESERVED_SPACE_PX = 152;
+const CONTENT_INTENT_PROMPT_MS = 1_400;
 
 function areIdListsEqual(left: readonly string[], right: readonly string[]) {
   if (left.length !== right.length) return false;
@@ -127,10 +128,13 @@ const HomeInner = () => {
   const [sortBy, setSortBy] = useState<SortOption>("for_you");
   const [visibleCount, setVisibleCount] = useState(FEED_PAGE_SIZE);
   const [interactionVersion, setInteractionVersion] = useState(0);
+  const [voteAttention, setVoteAttention] = useState<{ contentId: string; token: number } | null>(null);
   const [optimisticOwnContentIds, setOptimisticOwnContentIds] = useState<Set<string>>(() => new Set());
   const [optimisticVotedContentIds, setOptimisticVotedContentIds] = useState<Set<string>>(() => new Set());
   const desktopScrollContainerRef = useRef<HTMLDivElement | null>(null);
   const mobileDockContainerRef = useRef<HTMLDivElement | null>(null);
+  const voteAttentionTimeoutRef = useRef<number | null>(null);
+  const voteAttentionTokenRef = useRef(0);
   const [mobileDockReservedSpace, setMobileDockReservedSpace] = useState<number | null>(null);
   const [optimisticCooldownUntilByContentId, setOptimisticCooldownUntilByContentId] = useState<Map<string, number>>(
     () => new Map(),
@@ -493,6 +497,22 @@ const HomeInner = () => {
       activeViewSessionRef.current.hasPositiveInteraction = true;
     }
   }, []);
+  const triggerVoteAttention = useCallback((contentId: bigint) => {
+    if (typeof window === "undefined") return;
+
+    voteAttentionTokenRef.current += 1;
+    const token = voteAttentionTokenRef.current;
+    setVoteAttention({ contentId: contentId.toString(), token });
+
+    if (voteAttentionTimeoutRef.current !== null) {
+      window.clearTimeout(voteAttentionTimeoutRef.current);
+    }
+
+    voteAttentionTimeoutRef.current = window.setTimeout(() => {
+      setVoteAttention(current => (current?.token === token ? null : current));
+      voteAttentionTimeoutRef.current = null;
+    }, CONTENT_INTENT_PROMPT_MS);
+  }, []);
   const flushActiveViewSession = useCallback(
     (syncProfile: boolean) => {
       const session = activeViewSessionRef.current;
@@ -841,6 +861,8 @@ const HomeInner = () => {
   );
 
   const primaryItemCooldownSeconds = primaryItem ? getContentCooldownSeconds(primaryItem.id) : 0;
+  const primaryAttentionToken =
+    primaryItem && voteAttention?.contentId === primaryItem.id.toString() ? voteAttention.token : null;
   const stakeModalCooldownSeconds = stakeModal.contentId > 0n ? getContentCooldownSeconds(stakeModal.contentId) : 0;
 
   // Reset visible count when filters change
@@ -1111,7 +1133,17 @@ const HomeInner = () => {
     [displayFeed, markPrimaryInteraction, openConnectModal, primaryItem, recordRecommendationSignal, toggleFollow],
   );
 
-  const handleExternalOpen = useCallback(
+  const handleContentIntent = useCallback(
+    (item: ContentItem) => {
+      replaceVoteLocation({ contentId: item.id });
+      markPrimaryInteraction(item.id);
+      recordRecommendationSignal(item, "card_open");
+      triggerVoteAttention(item.id);
+    },
+    [markPrimaryInteraction, recordRecommendationSignal, replaceVoteLocation, triggerVoteAttention],
+  );
+
+  const handleSourceOpen = useCallback(
     (item: ContentItem) => {
       replaceVoteLocation({ contentId: item.id });
       markPrimaryInteraction(item.id);
@@ -1119,6 +1151,14 @@ const HomeInner = () => {
     },
     [markPrimaryInteraction, recordRecommendationSignal, replaceVoteLocation],
   );
+
+  useEffect(() => {
+    return () => {
+      if (voteAttentionTimeoutRef.current !== null && typeof window !== "undefined") {
+        window.clearTimeout(voteAttentionTimeoutRef.current);
+      }
+    };
+  }, []);
 
   const handleViewChange = useCallback(
     async (nextView: VoteView) => {
@@ -1387,7 +1427,8 @@ const HomeInner = () => {
                           onLoadMore={handleLoadMore}
                           onTrackActiveIndex={handleTrackVisibleIndex}
                           onSelectByIndex={handleSelectByIndex}
-                          onExternalOpen={handleExternalOpen}
+                          onContentIntent={handleContentIntent}
+                          onSourceOpen={handleSourceOpen}
                           onToggleWatch={handleToggleWatch}
                           onToggleFollow={handleToggleFollow}
                         />
@@ -1412,6 +1453,7 @@ const HomeInner = () => {
                 isCommitting={isCommitting}
                 voteError={voteError}
                 cooldownSecondsRemaining={primaryItemCooldownSeconds}
+                attentionToken={primaryAttentionToken}
                 onVote={handleButtonVote}
               />
             </div>
@@ -1440,6 +1482,7 @@ const HomeInner = () => {
                 embedded
                 compact
                 variant="dock"
+                attentionToken={primaryAttentionToken}
               />
             </div>
           </div>

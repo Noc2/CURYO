@@ -3,6 +3,7 @@
 import React from "react";
 import dynamic from "next/dynamic";
 import { GenericLinkCard } from "./embeds";
+import { ExternalLinkBehaviorProvider } from "~~/components/shared/SafeExternalLink";
 import { shouldWaitForPrefetchedMetadata } from "~~/lib/content/embedLoadStrategy";
 import type { ContentMetadataResult } from "~~/lib/contentMetadata/types";
 import { detectPlatform } from "~~/utils/platforms";
@@ -51,8 +52,10 @@ const TwitterEmbed = dynamic(() => import("./embeds/TwitterEmbed").then(m => m.T
 interface ContentEmbedProps {
   url: string;
   compact?: boolean;
+  isActive?: boolean;
   deferClientFetch?: boolean;
   prefetchedMetadata?: ContentMetadataResult;
+  interactionMode?: "default" | "vote";
 }
 
 /** Error boundary that catches render errors in embed components and falls back to a link card. */
@@ -81,19 +84,26 @@ class EmbedErrorBoundary extends React.Component<
 export function ContentEmbed({
   url,
   compact = false,
+  isActive = true,
   deferClientFetch = false,
   prefetchedMetadata,
+  interactionMode = "default",
 }: ContentEmbedProps) {
   const platformInfo = detectPlatform(url);
+  const disableExternalNavigation = interactionMode === "vote";
 
   if (shouldWaitForPrefetchedMetadata(platformInfo.type, deferClientFetch, prefetchedMetadata)) {
-    return <GenericLinkCard url={url} compact={compact} />;
+    return (
+      <ExternalLinkBehaviorProvider disableNavigation={disableExternalNavigation}>
+        <GenericLinkCard url={url} compact={compact} />
+      </ExternalLinkBehaviorProvider>
+    );
   }
 
   let embed: React.ReactNode;
   switch (platformInfo.type) {
     case "youtube":
-      embed = <YouTubeEmbed key={url} info={platformInfo} compact={compact} />;
+      embed = <YouTubeEmbed key={url} info={platformInfo} compact={compact} isActive={isActive} />;
       break;
     case "twitch":
       embed = <TwitchEmbed key={url} info={platformInfo} compact={compact} />;
@@ -137,12 +147,18 @@ export function ContentEmbed({
       embed = <GitHubEmbed key={url} info={platformInfo} compact={compact} prefetchedMetadata={prefetchedMetadata} />;
       break;
     default:
-      return <GenericLinkCard url={url} compact={compact} />;
+      return (
+        <ExternalLinkBehaviorProvider disableNavigation={disableExternalNavigation}>
+          <GenericLinkCard url={url} compact={compact} />
+        </ExternalLinkBehaviorProvider>
+      );
   }
 
   return (
-    <EmbedErrorBoundary key={url} url={url} compact={compact}>
-      {embed}
-    </EmbedErrorBoundary>
+    <ExternalLinkBehaviorProvider disableNavigation={disableExternalNavigation}>
+      <EmbedErrorBoundary key={url} url={url} compact={compact}>
+        {embed}
+      </EmbedErrorBoundary>
+    </ExternalLinkBehaviorProvider>
   );
 }

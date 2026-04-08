@@ -25,7 +25,8 @@ interface VoteFeedStageProps {
   onLoadMore: () => void;
   onTrackActiveIndex: (targetIndex: number) => boolean;
   onSelectByIndex: (targetIndex: number) => boolean;
-  onExternalOpen: (item: ContentItem) => void;
+  onContentIntent: (item: ContentItem) => void;
+  onSourceOpen: (item: ContentItem) => void;
   onToggleWatch: (contentId: bigint) => void;
   onToggleFollow: (address: string) => void;
 }
@@ -59,7 +60,8 @@ export function VoteFeedStage({
   onLoadMore,
   onTrackActiveIndex,
   onSelectByIndex,
-  onExternalOpen,
+  onContentIntent,
+  onSourceOpen,
   onToggleWatch,
   onToggleFollow,
 }: VoteFeedStageProps) {
@@ -871,7 +873,9 @@ export function VoteFeedStage({
                 item={item}
                 submitterProfile={enrichedProfiles[item.submitter.toLowerCase()]}
                 titleId={titleId}
-                onExternalOpen={contentItem => onExternalOpen(contentItem)}
+                isActive={isActiveCard}
+                onContentIntent={contentItem => onContentIntent(contentItem)}
+                onSourceOpen={contentItem => onSourceOpen(contentItem)}
                 onToggleWatch={onToggleWatch}
                 onToggleFollow={onToggleFollow}
                 watched={watchedContentIds.has(item.id.toString())}

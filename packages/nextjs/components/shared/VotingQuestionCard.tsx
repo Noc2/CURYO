@@ -32,6 +32,7 @@ interface VotingQuestionCardProps {
   embedded?: boolean;
   compact?: boolean;
   variant?: "default" | "signal" | "dock";
+  attentionToken?: number | null;
 }
 
 const RATING_GUIDANCE_TEXT =
@@ -39,6 +40,7 @@ const RATING_GUIDANCE_TEXT =
 export const VOTING_SURFACE_BACKGROUND = "var(--curyo-surface-elevated)";
 const STATUS_PILL_CLASS_NAME =
   "inline-flex items-center gap-2 rounded-full border border-base-content/10 bg-base-content/5 px-4 py-2";
+const DOCK_STATUS_TEXT_CLASS_NAME = "inline-flex max-w-full flex-col items-start justify-center py-0.5 text-left";
 
 type ActivityTone = "primary" | "warning" | "success" | "neutral";
 
@@ -372,6 +374,7 @@ export function VotingQuestionCard({
   embedded,
   compact = false,
   variant = "default",
+  attentionToken,
 }: VotingQuestionCardProps) {
   const isSignalVariant = variant === "signal";
   const isDockVariant = variant === "dock";
@@ -386,6 +389,7 @@ export function VotingQuestionCard({
   const displayError =
     cooldownActive && error?.includes("You already voted on this content within the last") ? null : error;
   const [isDetailsOpen, setIsDetailsOpen] = useState(isSignalVariant);
+  const [isAttentionActive, setIsAttentionActive] = useState(false);
   const detailsId = `voting-card-details-${contentId.toString()}`;
 
   // Check if user has committed to this round (direction hidden until reveal)
@@ -401,6 +405,7 @@ export function VotingQuestionCard({
   const hasMyVote =
     myCommitHash != null &&
     (myCommitHash as unknown as string) !== "0x0000000000000000000000000000000000000000000000000000000000000000";
+  const usesDockStatusText = isDockVariant;
 
   const centerStatusContent = address ? (
     hasMyVote ? (
@@ -408,35 +413,63 @@ export function VotingQuestionCard({
         text="Your vote is encrypted until the blind phase ends. The keeper normally validates the stored tlock stanza and reveals eligible votes afterward, and you can self-reveal if needed."
         position="bottom"
       >
-        <span className={STATUS_PILL_CLASS_NAME}>
-          <span className="text-base font-semibold text-primary">Committed</span>
-          <span className="text-base text-base-content/70">hidden</span>
-        </span>
+        {usesDockStatusText ? (
+          <span className={DOCK_STATUS_TEXT_CLASS_NAME}>
+            <span className="text-[0.95rem] font-semibold leading-none text-primary">Committed</span>
+            <span className="mt-0.5 text-[0.95rem] leading-none text-base-content/62">hidden</span>
+          </span>
+        ) : (
+          <span className={STATUS_PILL_CLASS_NAME}>
+            <span className="text-base font-semibold text-primary">Committed</span>
+            <span className="text-base text-base-content/70">hidden</span>
+          </span>
+        )}
       </HoverTooltip>
     ) : isOwnContent ? (
       <HoverTooltip text="Content submitters cannot vote on their own submissions." position="bottom">
-        <span className={STATUS_PILL_CLASS_NAME}>
-          <span className="text-base text-base-content/65">Your submission</span>
-        </span>
+        {usesDockStatusText ? (
+          <span
+            className={`${DOCK_STATUS_TEXT_CLASS_NAME} max-w-[7.25rem] text-[0.95rem] leading-tight text-base-content/68`}
+          >
+            Your submission
+          </span>
+        ) : (
+          <span className={STATUS_PILL_CLASS_NAME}>
+            <span className="text-base text-base-content/65">Your submission</span>
+          </span>
+        )}
       </HoverTooltip>
     ) : cooldownActive ? (
       <HoverTooltip
         text={`You already voted on this content within the last 24 hours. Try again in ${cooldownLabel}.`}
         position="bottom"
       >
-        <span className={STATUS_PILL_CLASS_NAME}>
-          <span className="text-base font-medium text-base-content/75">Cooldown</span>
-          <span className="text-base text-base-content/60">{cooldownLabel}</span>
-        </span>
+        {usesDockStatusText ? (
+          <span className={DOCK_STATUS_TEXT_CLASS_NAME}>
+            <span className="text-[0.95rem] font-medium leading-none text-base-content/75">Cooldown</span>
+            <span className="mt-0.5 text-[0.95rem] leading-none text-base-content/60">{cooldownLabel}</span>
+          </span>
+        ) : (
+          <span className={STATUS_PILL_CLASS_NAME}>
+            <span className="text-base font-medium text-base-content/75">Cooldown</span>
+            <span className="text-base text-base-content/60">{cooldownLabel}</span>
+          </span>
+        )}
       </HoverTooltip>
     ) : isRoundFull ? (
       <HoverTooltip
         text="This round has reached the maximum number of voters. A new round will start after resolution."
         position="bottom"
       >
-        <span className={STATUS_PILL_CLASS_NAME}>
-          <span className="text-base text-base-content/65">Round full</span>
-        </span>
+        {usesDockStatusText ? (
+          <span className={`${DOCK_STATUS_TEXT_CLASS_NAME} text-[0.95rem] leading-tight text-base-content/68`}>
+            Round full
+          </span>
+        ) : (
+          <span className={STATUS_PILL_CLASS_NAME}>
+            <span className="text-base text-base-content/65">Round full</span>
+          </span>
+        )}
       </HoverTooltip>
     ) : null
   ) : null;
@@ -467,10 +500,23 @@ export function VotingQuestionCard({
   );
   const showExpandedDetails = isSignalVariant || (isDetailsOpen && !isDockVariant);
   const inlineSummaryIncludesStatus = hasMyVote && showInlineVotingSummary;
+  const showVoteAttentionHint = isAttentionActive && !centerStatusContent;
 
   useEffect(() => {
     setIsDetailsOpen(isSignalVariant);
   }, [contentId, isSignalVariant]);
+
+  useEffect(() => {
+    if (!attentionToken) return;
+
+    setIsAttentionActive(false);
+    const frameId = window.requestAnimationFrame(() => setIsAttentionActive(true));
+    const timeoutId = window.setTimeout(() => setIsAttentionActive(false), 1100);
+    return () => {
+      window.cancelAnimationFrame(frameId);
+      window.clearTimeout(timeoutId);
+    };
+  }, [attentionToken]);
 
   if (isDockVariant) {
     const dockVoteDisabled = isCommitting || Boolean(centerStatusContent);
@@ -478,6 +524,7 @@ export function VotingQuestionCard({
     const dockNotchCutout = compact ? 52 : 60;
     const dockControlsPaddingClassName = compact ? "px-4 pb-2.5 pt-4" : "px-4 pb-3 pt-7";
     const dockMoreClassName = "text-base font-medium text-base-content/68 hover:text-base-content/88";
+    const dockVoteSpacerClassName = "h-11 w-11";
     const dockShellMaskStyle = {
       WebkitMaskImage: `radial-gradient(circle ${dockNotchRadius}px at 50% 0, transparent 0 ${dockNotchCutout}px, black ${dockNotchCutout + 1}px)`,
       maskImage: `radial-gradient(circle ${dockNotchRadius}px at 50% 0, transparent 0 ${dockNotchCutout}px, black ${dockNotchCutout + 1}px)`,
@@ -504,14 +551,23 @@ export function VotingQuestionCard({
         </div>
 
         <div
-          className={`relative z-10 overflow-hidden ring-1 ring-base-content/8 shadow-[0_16px_36px_rgb(0_0_0_/_0.28)] ${dockShellClassName}`}
+          className={`relative z-10 overflow-hidden ring-1 ring-base-content/8 shadow-[0_16px_36px_rgb(0_0_0_/_0.28)] ${
+            isAttentionActive ? "vote-surface-attention" : ""
+          } ${dockShellClassName}`}
+          data-vote-attention={isAttentionActive ? "true" : undefined}
           style={{ ...dockShellMaskStyle, ...dockSurfaceStyle }}
         >
           <div className={dockControlsPaddingClassName}>
             {!centerStatusContent ? (
               <div className="grid grid-cols-[auto_minmax(0,1fr)_auto] items-end gap-3">
                 <div className="justify-self-start">
-                  <CuryoVoteButton direction="up" size="sm" onClick={() => onVote(true)} disabled={dockVoteDisabled} />
+                  <CuryoVoteButton
+                    direction="up"
+                    size="sm"
+                    onClick={() => onVote(true)}
+                    disabled={dockVoteDisabled}
+                    attention={isAttentionActive && !dockVoteDisabled}
+                  />
                 </div>
                 <div className="justify-self-end translate-y-1">
                   <MoreToggleButton
@@ -527,13 +583,14 @@ export function VotingQuestionCard({
                     size="sm"
                     onClick={() => onVote(false)}
                     disabled={dockVoteDisabled}
+                    attention={isAttentionActive && !dockVoteDisabled}
                   />
                 </div>
               </div>
             ) : (
-              <div className="grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-end gap-3">
+              <div className="grid grid-cols-[minmax(0,1fr)_auto_auto] items-end gap-3">
                 <div className="min-w-0 justify-self-start [&>button]:max-w-full">{centerStatusContent}</div>
-                <div className="justify-self-center translate-y-1">
+                <div className="translate-y-1">
                   <MoreToggleButton
                     expanded={isDetailsOpen}
                     onClick={() => setIsDetailsOpen(current => !current)}
@@ -541,10 +598,16 @@ export function VotingQuestionCard({
                     className={dockMoreClassName}
                   />
                 </div>
-                <div aria-hidden className="h-10 w-10 justify-self-end" />
+                <div aria-hidden className={`${dockVoteSpacerClassName} justify-self-end`} />
               </div>
             )}
           </div>
+
+          {showVoteAttentionHint ? (
+            <p className="vote-attention-hint px-4 pb-1 text-center text-[0.72rem] font-semibold uppercase tracking-[0.16em] text-primary/90">
+              Rate this content here
+            </p>
+          ) : null}
 
           {displayError ? <p className="px-4 pb-1 text-center text-sm text-error">{displayError}</p> : null}
 
@@ -573,7 +636,10 @@ export function VotingQuestionCard({
 
   return (
     <div
-      className={`relative ${embedded ? "" : "rounded-2xl"} flex h-full min-h-0 flex-col overflow-hidden ${shellClassName}`}
+      className={`relative ${embedded ? "" : "rounded-2xl"} flex h-full min-h-0 flex-col overflow-hidden ${
+        isAttentionActive ? "vote-surface-attention" : ""
+      } ${shellClassName}`}
+      data-vote-attention={isAttentionActive ? "true" : undefined}
       style={embedded ? {} : { background: "var(--curyo-surface-elevated)" }}
     >
       {!hideEmbeddedSignalSurface ? (
@@ -592,10 +658,25 @@ export function VotingQuestionCard({
             <InfoTooltip text={RATING_GUIDANCE_TEXT} position="bottom" />
           </div>
           <RatingOrb rating={currentRating} size={orbSize} />
+          {showVoteAttentionHint && isSignalVariant ? (
+            <p className="vote-attention-hint mt-3 text-[0.72rem] font-semibold uppercase tracking-[0.16em] text-primary/90">
+              Rate this content here
+            </p>
+          ) : null}
           {!(address && hasMyVote) && !centerStatusContent && isSignalVariant ? (
             <div className="mt-3 flex items-center justify-center gap-3">
-              <CuryoVoteButton direction="up" onClick={() => onVote(true)} disabled={isCommitting} />
-              <CuryoVoteButton direction="down" onClick={() => onVote(false)} disabled={isCommitting} />
+              <CuryoVoteButton
+                direction="up"
+                onClick={() => onVote(true)}
+                disabled={isCommitting}
+                attention={isAttentionActive && !isCommitting}
+              />
+              <CuryoVoteButton
+                direction="down"
+                onClick={() => onVote(false)}
+                disabled={isCommitting}
+                attention={isAttentionActive && !isCommitting}
+              />
             </div>
           ) : null}
           <div className={`flex w-full shrink-0 flex-col items-center ${actionStackClassName}`}>
@@ -616,8 +697,18 @@ export function VotingQuestionCard({
               <div className="flex shrink-0 items-center justify-center gap-2 lg:gap-3">
                 {address ? (
                   <>
-                    <CuryoVoteButton direction="up" onClick={() => onVote(true)} disabled={isCommitting} />
-                    <CuryoVoteButton direction="down" onClick={() => onVote(false)} disabled={isCommitting} />
+                    <CuryoVoteButton
+                      direction="up"
+                      onClick={() => onVote(true)}
+                      disabled={isCommitting}
+                      attention={isAttentionActive && !isCommitting}
+                    />
+                    <CuryoVoteButton
+                      direction="down"
+                      onClick={() => onVote(false)}
+                      disabled={isCommitting}
+                      attention={isAttentionActive && !isCommitting}
+                    />
                   </>
                 ) : (
                   <CuryoConnectButton />
