@@ -18,6 +18,7 @@ import { useCategoryRegistry } from "~~/hooks/useCategoryRegistry";
 import type { ContentItem } from "~~/hooks/useContentFeed";
 import { useContentFeed } from "~~/hooks/useContentFeed";
 import { useCuryoConnectModal } from "~~/hooks/useCuryoConnectModal";
+import { useDelegation } from "~~/hooks/useDelegation";
 import { useDiscoverSignals } from "~~/hooks/useDiscoverSignals";
 import { useFollowedProfiles } from "~~/hooks/useFollowedProfiles";
 import { useInterestProfile } from "~~/hooks/useInterestProfile";
@@ -29,7 +30,12 @@ import { useVoteFeedStage } from "~~/hooks/useVoteFeedStage";
 import { useVoteHistoryQuery } from "~~/hooks/useVoteHistoryQuery";
 import { useVoterAccuracyBatch } from "~~/hooks/useVoterAccuracyBatch";
 import { useWatchedContent } from "~~/hooks/useWatchedContent";
-import { formatVoteCooldownRemaining, getVoteCooldownRemainingSeconds } from "~~/lib/vote/cooldown";
+import { mergeVoteHistoryItems } from "~~/hooks/voteHistory/shared";
+import {
+  VOTE_COOLDOWN_SECONDS,
+  formatVoteCooldownRemaining,
+  getVoteCooldownRemainingSeconds,
+} from "~~/lib/vote/cooldown";
 import {
   DISCOVER_ALL_FILTER,
   DISCOVER_BROKEN_FILTER,
@@ -124,12 +130,25 @@ const HomeInner = () => {
   const desktopScrollContainerRef = useRef<HTMLDivElement | null>(null);
   const mobileDockContainerRef = useRef<HTMLDivElement | null>(null);
   const [mobileDockReservedSpace, setMobileDockReservedSpace] = useState<number | null>(null);
+  const [optimisticCooldownUntilByContentId, setOptimisticCooldownUntilByContentId] = useState<Map<string, number>>(
+    () => new Map(),
+  );
   const trimmedSearchQuery = searchQuery.trim();
   const isSearchMode = trimmedSearchQuery.length > 0;
   const isShortSearchQuery = isContentSearchQueryTooShort(trimmedSearchQuery);
   const effectiveSearchSortBy: SearchSortOption = sortBy === "for_you" ? "relevance" : sortBy;
   const { categories: websiteCategories, categoryNameToId, isLoading: categoriesLoading } = useCategoryRegistry();
-  const { votes, isLoading: votesLoading } = useVoteHistoryQuery(address);
+  const { delegateTo, delegateOf, hasDelegate, isDelegate, isLoading: delegationLoading } = useDelegation(address);
+  const delegateVoteAddress = hasDelegate ? delegateTo : undefined;
+  const delegatorVoteAddress = isDelegate ? delegateOf : undefined;
+  const { votes: directVotes, isLoading: directVotesLoading } = useVoteHistoryQuery(address);
+  const { votes: delegateVotes, isLoading: delegateVotesLoading } = useVoteHistoryQuery(delegateVoteAddress);
+  const { votes: delegatorVotes, isLoading: delegatorVotesLoading } = useVoteHistoryQuery(delegatorVoteAddress);
+  const votes = useMemo(
+    () => mergeVoteHistoryItems([directVotes, delegateVotes, delegatorVotes]),
+    [delegateVotes, delegatorVotes, directVotes],
+  );
+  const votesLoading = directVotesLoading || delegateVotesLoading || delegatorVotesLoading || delegationLoading;
   const {
     watchedItems,
     watchedContentIds,
@@ -288,9 +307,24 @@ const HomeInner = () => {
 
     return cooldowns;
   }, [nowSeconds, votes]);
+  const resolvedVoteCooldownByContentId = useMemo(() => {
+    const cooldowns = new Map(voteCooldownByContentId);
+
+    optimisticCooldownUntilByContentId.forEach((cooldownUntil, contentId) => {
+      if (cooldowns.has(contentId)) return;
+
+      const remainingSeconds = Math.max(0, cooldownUntil - nowSeconds);
+      if (remainingSeconds > 0) {
+        cooldowns.set(contentId, remainingSeconds);
+      }
+    });
+
+    return cooldowns;
+  }, [nowSeconds, optimisticCooldownUntilByContentId, voteCooldownByContentId]);
 
   useEffect(() => {
     setOptimisticVotedContentIds(previous => (previous.size === 0 ? previous : new Set()));
+    setOptimisticCooldownUntilByContentId(previous => (previous.size === 0 ? previous : new Map()));
   }, [address, targetNetwork.id]);
 
   useEffect(() => {
@@ -312,6 +346,25 @@ const HomeInner = () => {
       return changed ? next : previous;
     });
   }, [optimisticVotedContentIds.size, votes]);
+
+  useEffect(() => {
+    if (optimisticCooldownUntilByContentId.size === 0) return;
+
+    setOptimisticCooldownUntilByContentId(previous => {
+      let changed = false;
+      const next = new Map<string, number>();
+
+      previous.forEach((cooldownUntil, contentId) => {
+        if (voteCooldownByContentId.has(contentId) || cooldownUntil <= nowSeconds) {
+          changed = true;
+          return;
+        }
+        next.set(contentId, cooldownUntil);
+      });
+
+      return changed ? next : previous;
+    });
+  }, [nowSeconds, optimisticCooldownUntilByContentId.size, voteCooldownByContentId]);
 
   // Filter & sort state
   const fetchedVotedContentIds = useMemo(() => new Set(votes.map(vote => vote.contentId.toString())), [votes]);
@@ -755,8 +808,8 @@ const HomeInner = () => {
 
   const canLoadMore = visibleCount < displayFeed.length || hasMoreFeed;
   const getContentCooldownSeconds = useCallback(
-    (contentId: bigint) => voteCooldownByContentId.get(contentId.toString()) ?? 0,
-    [voteCooldownByContentId],
+    (contentId: bigint) => resolvedVoteCooldownByContentId.get(contentId.toString()) ?? 0,
+    [resolvedVoteCooldownByContentId],
   );
 
   const primaryItemCooldownSeconds = primaryItem ? getContentCooldownSeconds(primaryItem.id) : 0;
@@ -769,7 +822,21 @@ const HomeInner = () => {
 
   useEffect(() => {
     if (!voteError?.includes("You already voted on this content within the last")) return;
-  }, [voteError]);
+
+    const contentId =
+      stakeModal.contentId > 0n ? stakeModal.contentId : primaryItem?.id !== undefined ? primaryItem.id : null;
+    if (contentId === null) return;
+
+    const key = contentId.toString();
+    if (voteCooldownByContentId.has(key)) return;
+
+    setOptimisticCooldownUntilByContentId(previous => {
+      if (previous.get(key) !== undefined) return previous;
+      const next = new Map(previous);
+      next.set(key, nowSeconds + VOTE_COOLDOWN_SECONDS);
+      return next;
+    });
+  }, [nowSeconds, primaryItem?.id, stakeModal.contentId, voteCooldownByContentId, voteError]);
 
   const handleButtonVote = useCallback(
     (item: ContentItem, isUp: boolean) => {

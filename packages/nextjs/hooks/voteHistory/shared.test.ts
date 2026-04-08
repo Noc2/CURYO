@@ -1,4 +1,4 @@
-import { getVoteClaimType, mapVoteHistoryItem } from "./shared";
+import { getVoteClaimType, mapVoteHistoryItem, mergeVoteHistoryItems } from "./shared";
 import { ROUND_STATE } from "@curyo/contracts/protocol";
 import assert from "node:assert/strict";
 import test from "node:test";
@@ -34,4 +34,55 @@ test("mapVoteHistoryItem preserves terminal round state and claim type", () => {
   assert.equal(rewardVote.isSettled, true);
   assert.equal(rewardVote.claimType, "reward");
   assert.equal(rewardVote.roundState, ROUND_STATE.Settled);
+});
+
+test("mergeVoteHistoryItems deduplicates overlapping votes and keeps newest votes first", () => {
+  const merged = mergeVoteHistoryItems([
+    [
+      {
+        contentId: 42n,
+        roundId: 8n,
+        stake: 2_000_000n,
+        isSettled: false,
+        roundState: ROUND_STATE.Open,
+        claimType: null,
+        committedAt: "2026-04-08T08:00:00.000Z",
+      },
+      {
+        contentId: 7n,
+        roundId: 2n,
+        stake: 1_000_000n,
+        isSettled: false,
+        roundState: ROUND_STATE.Open,
+        claimType: null,
+        committedAt: "2026-04-07T08:00:00.000Z",
+      },
+    ],
+    [
+      {
+        contentId: 42n,
+        roundId: 8n,
+        stake: 2_000_000n,
+        isSettled: false,
+        roundState: ROUND_STATE.Open,
+        claimType: null,
+        committedAt: "2026-04-08T08:00:00.000Z",
+      },
+      {
+        contentId: 99n,
+        roundId: 3n,
+        stake: 5_000_000n,
+        isSettled: true,
+        roundState: ROUND_STATE.Settled,
+        claimType: "reward",
+        committedAt: "2026-04-08T09:00:00.000Z",
+      },
+    ],
+  ]);
+
+  assert.equal(merged.length, 3);
+  assert.deepEqual(
+    merged.map(vote => vote.contentId),
+    [99n, 42n, 7n],
+  );
 });
