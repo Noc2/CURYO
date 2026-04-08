@@ -32,6 +32,7 @@ interface VotingQuestionCardProps {
   embedded?: boolean;
   compact?: boolean;
   variant?: "default" | "signal" | "dock";
+  attentionToken?: number | null;
 }
 
 const RATING_GUIDANCE_TEXT =
@@ -373,6 +374,7 @@ export function VotingQuestionCard({
   embedded,
   compact = false,
   variant = "default",
+  attentionToken,
 }: VotingQuestionCardProps) {
   const isSignalVariant = variant === "signal";
   const isDockVariant = variant === "dock";
@@ -387,6 +389,7 @@ export function VotingQuestionCard({
   const displayError =
     cooldownActive && error?.includes("You already voted on this content within the last") ? null : error;
   const [isDetailsOpen, setIsDetailsOpen] = useState(isSignalVariant);
+  const [isAttentionActive, setIsAttentionActive] = useState(false);
   const detailsId = `voting-card-details-${contentId.toString()}`;
 
   // Check if user has committed to this round (direction hidden until reveal)
@@ -497,10 +500,23 @@ export function VotingQuestionCard({
   );
   const showExpandedDetails = isSignalVariant || (isDetailsOpen && !isDockVariant);
   const inlineSummaryIncludesStatus = hasMyVote && showInlineVotingSummary;
+  const showVoteAttentionHint = isAttentionActive && !centerStatusContent;
 
   useEffect(() => {
     setIsDetailsOpen(isSignalVariant);
   }, [contentId, isSignalVariant]);
+
+  useEffect(() => {
+    if (!attentionToken) return;
+
+    setIsAttentionActive(false);
+    const frameId = window.requestAnimationFrame(() => setIsAttentionActive(true));
+    const timeoutId = window.setTimeout(() => setIsAttentionActive(false), 1100);
+    return () => {
+      window.cancelAnimationFrame(frameId);
+      window.clearTimeout(timeoutId);
+    };
+  }, [attentionToken]);
 
   if (isDockVariant) {
     const dockVoteDisabled = isCommitting || Boolean(centerStatusContent);
@@ -535,14 +551,23 @@ export function VotingQuestionCard({
         </div>
 
         <div
-          className={`relative z-10 overflow-hidden ring-1 ring-base-content/8 shadow-[0_16px_36px_rgb(0_0_0_/_0.28)] ${dockShellClassName}`}
+          className={`relative z-10 overflow-hidden ring-1 ring-base-content/8 shadow-[0_16px_36px_rgb(0_0_0_/_0.28)] ${
+            isAttentionActive ? "vote-surface-attention" : ""
+          } ${dockShellClassName}`}
+          data-vote-attention={isAttentionActive ? "true" : undefined}
           style={{ ...dockShellMaskStyle, ...dockSurfaceStyle }}
         >
           <div className={dockControlsPaddingClassName}>
             {!centerStatusContent ? (
               <div className="grid grid-cols-[auto_minmax(0,1fr)_auto] items-end gap-3">
                 <div className="justify-self-start">
-                  <CuryoVoteButton direction="up" size="sm" onClick={() => onVote(true)} disabled={dockVoteDisabled} />
+                  <CuryoVoteButton
+                    direction="up"
+                    size="sm"
+                    onClick={() => onVote(true)}
+                    disabled={dockVoteDisabled}
+                    attention={isAttentionActive && !dockVoteDisabled}
+                  />
                 </div>
                 <div className="justify-self-end translate-y-1">
                   <MoreToggleButton
@@ -558,6 +583,7 @@ export function VotingQuestionCard({
                     size="sm"
                     onClick={() => onVote(false)}
                     disabled={dockVoteDisabled}
+                    attention={isAttentionActive && !dockVoteDisabled}
                   />
                 </div>
               </div>
@@ -576,6 +602,12 @@ export function VotingQuestionCard({
               </div>
             )}
           </div>
+
+          {showVoteAttentionHint ? (
+            <p className="vote-attention-hint px-4 pb-1 text-center text-[0.72rem] font-semibold uppercase tracking-[0.16em] text-primary/90">
+              Rate this content here
+            </p>
+          ) : null}
 
           {displayError ? <p className="px-4 pb-1 text-center text-sm text-error">{displayError}</p> : null}
 
@@ -604,7 +636,10 @@ export function VotingQuestionCard({
 
   return (
     <div
-      className={`relative ${embedded ? "" : "rounded-2xl"} flex h-full min-h-0 flex-col overflow-hidden ${shellClassName}`}
+      className={`relative ${embedded ? "" : "rounded-2xl"} flex h-full min-h-0 flex-col overflow-hidden ${
+        isAttentionActive ? "vote-surface-attention" : ""
+      } ${shellClassName}`}
+      data-vote-attention={isAttentionActive ? "true" : undefined}
       style={embedded ? {} : { background: "var(--curyo-surface-elevated)" }}
     >
       {!hideEmbeddedSignalSurface ? (
@@ -623,10 +658,25 @@ export function VotingQuestionCard({
             <InfoTooltip text={RATING_GUIDANCE_TEXT} position="bottom" />
           </div>
           <RatingOrb rating={currentRating} size={orbSize} />
+          {showVoteAttentionHint && isSignalVariant ? (
+            <p className="vote-attention-hint mt-3 text-[0.72rem] font-semibold uppercase tracking-[0.16em] text-primary/90">
+              Rate this content here
+            </p>
+          ) : null}
           {!(address && hasMyVote) && !centerStatusContent && isSignalVariant ? (
             <div className="mt-3 flex items-center justify-center gap-3">
-              <CuryoVoteButton direction="up" onClick={() => onVote(true)} disabled={isCommitting} />
-              <CuryoVoteButton direction="down" onClick={() => onVote(false)} disabled={isCommitting} />
+              <CuryoVoteButton
+                direction="up"
+                onClick={() => onVote(true)}
+                disabled={isCommitting}
+                attention={isAttentionActive && !isCommitting}
+              />
+              <CuryoVoteButton
+                direction="down"
+                onClick={() => onVote(false)}
+                disabled={isCommitting}
+                attention={isAttentionActive && !isCommitting}
+              />
             </div>
           ) : null}
           <div className={`flex w-full shrink-0 flex-col items-center ${actionStackClassName}`}>
@@ -647,8 +697,18 @@ export function VotingQuestionCard({
               <div className="flex shrink-0 items-center justify-center gap-2 lg:gap-3">
                 {address ? (
                   <>
-                    <CuryoVoteButton direction="up" onClick={() => onVote(true)} disabled={isCommitting} />
-                    <CuryoVoteButton direction="down" onClick={() => onVote(false)} disabled={isCommitting} />
+                    <CuryoVoteButton
+                      direction="up"
+                      onClick={() => onVote(true)}
+                      disabled={isCommitting}
+                      attention={isAttentionActive && !isCommitting}
+                    />
+                    <CuryoVoteButton
+                      direction="down"
+                      onClick={() => onVote(false)}
+                      disabled={isCommitting}
+                      attention={isAttentionActive && !isCommitting}
+                    />
                   </>
                 ) : (
                   <CuryoConnectButton />
