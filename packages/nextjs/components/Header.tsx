@@ -473,7 +473,7 @@ export const Header = () => {
         data-visible={isMobileHeaderVisible ? "true" : "false"}
       >
         <div
-          className={`navbar min-h-0 shrink-0 justify-between border-b px-4 py-3 shadow-[0_18px_44px_rgba(9,10,12,0.32)] backdrop-blur-xl sm:px-6 ${headerChromeSurfaceClassName} ${headerChromeBorderClassName}`}
+          className={`navbar min-h-0 shrink-0 justify-between px-4 py-3 shadow-[0_18px_44px_rgba(9,10,12,0.32)] backdrop-blur-xl sm:px-6 ${headerChromeSurfaceClassName}`}
         >
           {mobileSearchOpen ? (
             <Suspense>
