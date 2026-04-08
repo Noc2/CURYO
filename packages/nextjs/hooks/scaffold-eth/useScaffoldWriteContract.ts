@@ -92,7 +92,8 @@ export function useScaffoldWriteContract<TContractName extends ContractName>(
       // Reset wagmi mutation state to prevent stale state from blocking new transactions
       wagmiContractWrite.reset();
       setIsMining(true);
-      const { blockConfirmations, onBlockConfirmation, ...mutateOptions } = options || {};
+      const { blockConfirmations, onBlockConfirmation, getErrorMessage, suppressErrorToast, ...mutateOptions } =
+        options || {};
 
       const writeContractObject = {
         abi: deployedContractData.abi as Abi,
@@ -156,7 +157,12 @@ export function useScaffoldWriteContract<TContractName extends ContractName>(
             | undefined,
         );
       };
-      const writeTxResult = await writeTx(makeWriteWithParams, { blockConfirmations, onBlockConfirmation });
+      const writeTxResult = await writeTx(makeWriteWithParams, {
+        blockConfirmations,
+        onBlockConfirmation,
+        getErrorMessage,
+        suppressErrorToast,
+      });
 
       return writeTxResult;
     } catch (e: any) {
