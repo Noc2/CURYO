@@ -51,7 +51,7 @@ afterEach(() => {
 });
 
 describe("huggingFaceSource", () => {
-  it("requests trending models with the current Hugging Face API sort key", async () => {
+  it("requests trending models with the current Hugging Face HTTP sort key", async () => {
     const sourceModule = await loadHuggingFaceSource([
       createJsonResponse([
         {
@@ -80,7 +80,7 @@ describe("huggingFaceSource", () => {
     const parsed = new URL(requestUrl);
     expect(parsed.origin).toBe("https://huggingface.co");
     expect(parsed.pathname).toBe("/api/models");
-    expect(parsed.searchParams.get("sort")).toBe("trending_score");
+    expect(parsed.searchParams.get("sort")).toBe("trendingScore");
     expect(parsed.searchParams.get("direction")).toBe("-1");
     expect(parsed.searchParams.get("limit")).toBe("10");
   });

@@ -44,7 +44,7 @@ export const huggingFaceSource: ContentSource = {
       const params = new URLSearchParams({
         direction: "-1",
         limit: String(limit),
-        sort: "trending_score",
+        sort: "trendingScore",
       });
       const res = await fetchWithTimeout(`https://huggingface.co/api/models?${params.toString()}`);
       if (!res.ok) {
