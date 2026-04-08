@@ -20,7 +20,6 @@ import { readContract, waitForTransactionReceipt } from "wagmi/actions";
 import { ChevronDownIcon, MagnifyingGlassIcon, XMarkIcon } from "@heroicons/react/24/outline";
 import { ContentEmbed } from "~~/components/content/ContentEmbed";
 import { GasBalanceWarning } from "~~/components/shared/GasBalanceWarning";
-import { TransactionStatusCallout } from "~~/components/shared/TransactionStatusCallout";
 import { surfaceSectionHeadingClassName } from "~~/components/shared/sectionHeading";
 import { InfoTooltip } from "~~/components/ui/InfoTooltip";
 import { serializeTags } from "~~/constants/categories";
@@ -37,6 +36,7 @@ import {
 import { useGasBalanceStatus } from "~~/hooks/useGasBalanceStatus";
 import { useParticipationRate } from "~~/hooks/useParticipationRate";
 import { useThirdwebSponsoredSubmitCalls } from "~~/hooks/useThirdwebSponsoredSubmitCalls";
+import { useTransactionStatusToast } from "~~/hooks/useTransactionStatusToast";
 import { useWalletRpcRecovery } from "~~/hooks/useWalletRpcRecovery";
 import { MAX_CONTENT_DESCRIPTION_LENGTH } from "~~/lib/contentDescription";
 import { MAX_CONTENT_TITLE_LENGTH } from "~~/lib/contentTitle";
@@ -53,7 +53,6 @@ import {
   isInsufficientFundsError,
   isWalletRpcOverloadedError,
 } from "~~/lib/transactionErrors";
-import { getSubmittingTransactionStatus } from "~~/lib/ui/transactionStatusCopy";
 import { containsBlockedUrl } from "~~/utils/contentFilter";
 import { sanitizeExternalUrl } from "~~/utils/externalUrl";
 import { canonicalizeUrl, isSupportedVideoPlatform } from "~~/utils/platforms";
@@ -166,6 +165,7 @@ export function ContentSubmissionSection() {
   const { canSponsorTransactions, isMissingGasBalance, nativeTokenSymbol } = useGasBalanceStatus({
     includeExternalSendCalls: true,
   });
+  const statusToast = useTransactionStatusToast();
   const { ratePercent, calculateBonus } = useParticipationRate();
   const { canUseSponsoredSubmitCalls, executeSponsoredCalls, isAwaitingSponsoredSubmitCalls } =
     useThirdwebSponsoredSubmitCalls();
@@ -183,7 +183,6 @@ export function ContentSubmissionSection() {
   const [selectedSubcategories, setSelectedSubcategories] = useState<string[]>([]);
   const [customSubcategory, setCustomSubcategory] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const submittingStatus = getSubmittingTransactionStatus("content");
   const [submitAttempted, setSubmitAttempted] = useState(false);
   const [submittedContent, setSubmittedContent] = useState<{
     id: bigint;
@@ -473,6 +472,7 @@ export function ContentSubmissionSection() {
     if (!accepted) return;
 
     setIsSubmitting(true);
+    statusToast.showSubmitting({ action: "content" });
     const submittedTitle = title;
     const submittedDescription = description;
     let reservationStorageKey: string | null = null;
@@ -520,15 +520,23 @@ export function ContentSubmissionSection() {
             ],
             {
               atomicRequired: true,
+              suppressStatusToast: true,
             },
           );
           return;
         }
 
-        const cancelTxHash = await writeRegistry({
-          functionName: "cancelReservedSubmission",
-          args: [revealCommitment],
-        });
+        const cancelTxHash = await writeRegistry(
+          {
+            functionName: "cancelReservedSubmission",
+            args: [revealCommitment],
+          },
+          {
+            suppressErrorToast: true,
+            suppressStatusToast: true,
+            suppressSuccessToast: true,
+          },
+        );
 
         if (cancelTxHash) {
           await waitForTransactionReceipt(wagmiConfig, { hash: cancelTxHash });
@@ -554,6 +562,7 @@ export function ContentSubmissionSection() {
             ],
             {
               atomicRequired: true,
+              suppressStatusToast: true,
             },
           );
           return;
@@ -561,17 +570,29 @@ export function ContentSubmissionSection() {
 
         const approveTxHash = await writeCRep(
           { functionName: "approve", args: [registryAddress, stakeAmount] },
-          { blockConfirmations: 1 },
+          {
+            blockConfirmations: 1,
+            suppressErrorToast: true,
+            suppressStatusToast: true,
+            suppressSuccessToast: true,
+          },
         );
 
         if (approveTxHash) {
           await waitForTransactionReceipt(wagmiConfig, { hash: approveTxHash });
         }
 
-        const reserveTxHash = await writeRegistry({
-          functionName: "reserveSubmission",
-          args: [revealCommitment],
-        });
+        const reserveTxHash = await writeRegistry(
+          {
+            functionName: "reserveSubmission",
+            args: [revealCommitment],
+          },
+          {
+            suppressErrorToast: true,
+            suppressStatusToast: true,
+            suppressSuccessToast: true,
+          },
+        );
 
         if (reserveTxHash) {
           await waitForTransactionReceipt(wagmiConfig, { hash: reserveTxHash });
@@ -670,22 +691,30 @@ export function ContentSubmissionSection() {
           ],
           {
             atomicRequired: true,
+            suppressStatusToast: true,
           },
         );
 
         contentId = extractSubmittedContentId((callsResult.receipts ?? []).flatMap(receipt => receipt.logs));
       } else {
-        const submitTxHash = await writeRegistry({
-          functionName: "submitContent",
-          args: [
-            normalizedSubmissionUrl,
-            submittedTitle,
-            submittedDescription,
-            submissionTags,
-            selectedCategory.id,
-            activeReservation.salt,
-          ],
-        });
+        const submitTxHash = await writeRegistry(
+          {
+            functionName: "submitContent",
+            args: [
+              normalizedSubmissionUrl,
+              submittedTitle,
+              submittedDescription,
+              submissionTags,
+              selectedCategory.id,
+              activeReservation.salt,
+            ],
+          },
+          {
+            suppressErrorToast: true,
+            suppressStatusToast: true,
+            suppressSuccessToast: true,
+          },
+        );
 
         if (submitTxHash) {
           const submitReceipt = await waitForTransactionReceipt(wagmiConfig, { hash: submitTxHash });
@@ -696,6 +725,7 @@ export function ContentSubmissionSection() {
       await refetchNextContentId();
       clearStoredSubmissionReservation(reservationStorageKey);
 
+      statusToast.dismiss();
       notification.success("Content submitted! Staked 10 cREP.");
       setSubmittedContent(
         contentId !== null ? { id: contentId, title: submittedTitle, description: submittedDescription } : null,
@@ -712,6 +742,7 @@ export function ContentSubmissionSection() {
       setSubmitAttempted(false);
     } catch (e: unknown) {
       console.error("Submit failed:", e);
+      statusToast.dismiss();
       if (isFreeTransactionExhaustedError(e) || isInsufficientFundsError(e)) {
         notification.error(getGasBalanceErrorMessage(nativeTokenSymbol, { canSponsorTransactions }));
       } else if (isWalletRpcOverloadedError(e)) {
@@ -732,6 +763,7 @@ export function ContentSubmissionSection() {
       }
     } finally {
       setIsSubmitting(false);
+      statusToast.dismiss();
     }
   };
 
@@ -1093,13 +1125,6 @@ export function ContentSubmissionSection() {
                 "Submit Content"
               )}
             </button>
-            {isSubmitting ? (
-              <TransactionStatusCallout
-                className="mt-3"
-                title={submittingStatus.title}
-                description={submittingStatus.description}
-              />
-            ) : null}
           </div>
         </form>
       </div>
