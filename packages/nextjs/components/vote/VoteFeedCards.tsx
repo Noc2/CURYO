@@ -25,6 +25,7 @@ interface FeedVoteCardProps {
   item: ContentItem;
   submitterProfile?: SubmitterProfile;
   titleId?: string;
+  isActive?: boolean;
   onExternalOpen?: (item: ContentItem, href: string) => void;
   onToggleWatch: (id: bigint) => void;
   onToggleFollow: (address: string) => void;
@@ -44,6 +45,7 @@ export const FeedVoteCard = memo(function FeedVoteCard({
   item,
   submitterProfile,
   titleId,
+  isActive = true,
   onExternalOpen,
   onToggleWatch,
   onToggleFollow,
@@ -155,6 +157,7 @@ export const FeedVoteCard = memo(function FeedVoteCard({
             <ContentEmbed
               url={item.url}
               compact={useCompactEmbed}
+              isActive={isActive}
               prefetchedMetadata={item.contentMetadata}
               deferClientFetch={deferEmbedClientFetch}
             />

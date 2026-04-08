@@ -51,6 +51,7 @@ const TwitterEmbed = dynamic(() => import("./embeds/TwitterEmbed").then(m => m.T
 interface ContentEmbedProps {
   url: string;
   compact?: boolean;
+  isActive?: boolean;
   deferClientFetch?: boolean;
   prefetchedMetadata?: ContentMetadataResult;
 }
@@ -81,6 +82,7 @@ class EmbedErrorBoundary extends React.Component<
 export function ContentEmbed({
   url,
   compact = false,
+  isActive = true,
   deferClientFetch = false,
   prefetchedMetadata,
 }: ContentEmbedProps) {
@@ -93,7 +95,7 @@ export function ContentEmbed({
   let embed: React.ReactNode;
   switch (platformInfo.type) {
     case "youtube":
-      embed = <YouTubeEmbed key={url} info={platformInfo} compact={compact} />;
+      embed = <YouTubeEmbed key={url} info={platformInfo} compact={compact} isActive={isActive} />;
       break;
     case "twitch":
       embed = <TwitchEmbed key={url} info={platformInfo} compact={compact} />;

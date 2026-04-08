@@ -871,6 +871,7 @@ export function VoteFeedStage({
                 item={item}
                 submitterProfile={enrichedProfiles[item.submitter.toLowerCase()]}
                 titleId={titleId}
+                isActive={isActiveCard}
                 onExternalOpen={contentItem => onExternalOpen(contentItem)}
                 onToggleWatch={onToggleWatch}
                 onToggleFollow={onToggleFollow}
