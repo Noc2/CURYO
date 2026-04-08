@@ -6,7 +6,6 @@ import { useAccount, useConfig } from "wagmi";
 import { waitForTransactionReceipt } from "wagmi/actions";
 import { PlusIcon, TrashIcon } from "@heroicons/react/24/outline";
 import { GasBalanceWarning } from "~~/components/shared/GasBalanceWarning";
-import { TransactionStatusCallout } from "~~/components/shared/TransactionStatusCallout";
 import { surfaceSectionHeadingClassName } from "~~/components/shared/sectionHeading";
 import { InfoTooltip } from "~~/components/ui/InfoTooltip";
 import { useTermsAcceptance } from "~~/contexts/TermsAcceptanceContext";
@@ -20,6 +19,7 @@ import {
   useGovernanceWrite,
 } from "~~/hooks/useGovernance";
 import { useThirdwebSponsoredSubmitCalls } from "~~/hooks/useThirdwebSponsoredSubmitCalls";
+import { useTransactionStatusToast } from "~~/hooks/useTransactionStatusToast";
 import { useWalletRpcRecovery } from "~~/hooks/useWalletRpcRecovery";
 import {
   findBlockedCategorySubcategories,
@@ -33,7 +33,6 @@ import {
   isInsufficientFundsError,
   isWalletRpcOverloadedError,
 } from "~~/lib/transactionErrors";
-import { getSubmittingTransactionStatus } from "~~/lib/ui/transactionStatusCopy";
 import { notification } from "~~/utils/scaffold-eth";
 
 // Constants from CategoryRegistry contract
@@ -53,6 +52,7 @@ export const CategorySubmissionForm = () => {
   const { canSponsorTransactions, isMissingGasBalance, nativeTokenSymbol } = useGasBalanceStatus({
     includeExternalSendCalls: true,
   });
+  const statusToast = useTransactionStatusToast();
   const { governorAddress, hasGovernorContract } = useGovernanceContracts();
   const { categoryProposalThreshold: categoryProposalThresholdRaw } = useGovernanceStats();
   const { writeContractAsync: writeGovernanceContract } = useGovernanceWrite();
@@ -65,7 +65,6 @@ export const CategorySubmissionForm = () => {
   const [domain, setDomain] = useState("");
   const [subcategories, setSubcategories] = useState<string[]>([""]);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const submittingStatus = getSubmittingTransactionStatus("platform");
 
   // Contract hooks
   const { data: categoryRegistryInfo, isLoading: isCategoryRegistryLoading } = useDeployedContractInfo({
@@ -219,6 +218,7 @@ export const CategorySubmissionForm = () => {
     if (!accepted) return;
 
     setIsSubmitting(true);
+    statusToast.showSubmitting({ action: "platform" });
     let categoryId = nextCategoryId ?? 1n;
     let categorySubmitted = false;
     let proposalCreated = false;
@@ -239,9 +239,11 @@ export const CategorySubmissionForm = () => {
               functionName: "submitCategory",
             },
           ],
-          { atomicRequired: true },
+          {
+            atomicRequired: true,
+            suppressStatusToast: true,
+          },
         );
-
         const submittedLog = (callsResult.receipts ?? [])
           .flatMap(receipt => receipt.logs)
           .find(log => {
@@ -270,10 +272,17 @@ export const CategorySubmissionForm = () => {
         }
         categorySubmitted = true;
       } else {
-        const approveTxHash = await writeCRep({
-          functionName: "approve",
-          args: [categoryRegistryAddress, CATEGORY_STAKE],
-        });
+        const approveTxHash = await writeCRep(
+          {
+            functionName: "approve",
+            args: [categoryRegistryAddress, CATEGORY_STAKE],
+          },
+          {
+            suppressErrorToast: true,
+            suppressStatusToast: true,
+            suppressSuccessToast: true,
+          },
+        );
 
         if (approveTxHash) {
           await waitForTransactionReceipt(wagmiConfig, { hash: approveTxHash });
@@ -284,10 +293,17 @@ export const CategorySubmissionForm = () => {
           return;
         }
 
-        const submitTxHash = await writeRegistry({
-          functionName: "submitCategory",
-          args: [name.trim(), domain.trim().toLowerCase(), validSubcats],
-        });
+        const submitTxHash = await writeRegistry(
+          {
+            functionName: "submitCategory",
+            args: [name.trim(), domain.trim().toLowerCase(), validSubcats],
+          },
+          {
+            suppressErrorToast: true,
+            suppressStatusToast: true,
+            suppressSuccessToast: true,
+          },
+        );
         if (submitTxHash) {
           const submitReceipt = await waitForTransactionReceipt(wagmiConfig, { hash: submitTxHash });
           const submittedLog = submitReceipt.logs.find(log => {
@@ -336,24 +352,43 @@ export const CategorySubmissionForm = () => {
                 functionName: "linkApprovalProposal",
               },
             ],
-            { atomicRequired: true },
+            {
+              atomicRequired: true,
+              suppressStatusToast: true,
+            },
           );
         } else {
-          await writeGovernanceContract({
-            address: governorContractAddress,
-            abi: governorAbi,
-            functionName: "proposeCategoryApproval",
-            args: [categoryId],
-          });
-          await writeRegistry({
-            functionName: "linkApprovalProposal",
-            args: [categoryId, proposalDescriptionHash],
-          });
+          await writeGovernanceContract(
+            {
+              address: governorContractAddress,
+              abi: governorAbi,
+              functionName: "proposeCategoryApproval",
+              args: [categoryId],
+            },
+            {
+              suppressErrorToast: true,
+              suppressStatusToast: true,
+              suppressSuccessToast: true,
+            },
+          );
+          await writeRegistry(
+            {
+              functionName: "linkApprovalProposal",
+              args: [categoryId, proposalDescriptionHash],
+            },
+            {
+              suppressErrorToast: true,
+              suppressStatusToast: true,
+              suppressSuccessToast: true,
+            },
+          );
         }
         proposalCreated = true;
 
+        statusToast.dismiss();
         notification.success("Platform submitted and proposal created.");
       } else {
+        statusToast.dismiss();
         notification.success("Platform submitted.");
       }
 
@@ -363,6 +398,7 @@ export const CategorySubmissionForm = () => {
       setSubcategories([""]);
     } catch (e: any) {
       console.error("Category submission failed:", e);
+      statusToast.dismiss();
       if (categorySubmitted) {
         if (proposalCreated) {
           notification.warning(`Platform submitted, but linking failed for category #${categoryId.toString()}.`);
@@ -380,6 +416,7 @@ export const CategorySubmissionForm = () => {
       }
     } finally {
       setIsSubmitting(false);
+      statusToast.dismiss();
     }
   };
 
@@ -571,9 +608,6 @@ export const CategorySubmissionForm = () => {
               "Submit Platform"
             )}
           </button>
-          {isSubmitting ? (
-            <TransactionStatusCallout title={submittingStatus.title} description={submittingStatus.description} />
-          ) : null}
         </form>
       )}
     </div>

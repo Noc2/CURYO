@@ -14,6 +14,7 @@ import {
 import { usePageVisibility } from "~~/hooks/usePageVisibility";
 import { notification } from "~~/utils/scaffold-eth";
 import { ZERO_ADDRESS } from "~~/utils/scaffold-eth/common";
+import { TransactorFuncOptions } from "~~/utils/scaffold-eth/contract";
 
 export const governorAbi = parseAbi([
   "function categoryProposalThreshold() view returns (uint256)",
@@ -512,7 +513,7 @@ export function useGovernanceWrite() {
   const writeTx = useTransactor();
   const { writeContractAsync, isPending, reset } = useWriteContract();
 
-  const writeDynamicContract = async (request: GovernanceWriteRequest) => {
+  const writeDynamicContract = async (request: GovernanceWriteRequest, options?: TransactorFuncOptions) => {
     if (!chain?.id) {
       notification.error("Please connect your wallet");
       return;
@@ -524,14 +525,16 @@ export function useGovernanceWrite() {
     }
 
     reset();
-    return writeTx(() =>
-      writeContractAsync({
-        address: request.address,
-        abi: request.abi,
-        functionName: request.functionName,
-        args: request.args,
-        value: request.value,
-      } as any),
+    return writeTx(
+      () =>
+        writeContractAsync({
+          address: request.address,
+          abi: request.abi,
+          functionName: request.functionName,
+          args: request.args,
+          value: request.value,
+        } as any),
+      options,
     );
   };
 
