@@ -132,3 +132,29 @@ export function resolveVoteQueueWindowItems<T>(
   const start = Math.min(Math.max(clampedActiveIndex - anchorColumn, 0), maxStart);
   return items.slice(start, start + capacity);
 }
+
+export function resolveVoteQueueSourceItems<T>(
+  items: ReadonlyArray<T>,
+  activeIndex: number,
+  loadedCount: number,
+  maxWindowSize: number = MAX_VOTE_QUEUE_WINDOW_SIZE,
+) {
+  const clampedLoadedCount = Math.min(Math.max(loadedCount, 0), items.length);
+  if (clampedLoadedCount === 0 || maxWindowSize <= 0) return [];
+
+  const halfWindow = Math.floor(maxWindowSize / 2);
+  const revealedCount =
+    activeIndex >= 0
+      ? Math.min(items.length, Math.max(clampedLoadedCount, activeIndex + halfWindow + 1))
+      : clampedLoadedCount;
+  const unlockedItems = items.slice(0, revealedCount);
+
+  if (unlockedItems.length <= maxWindowSize) {
+    return unlockedItems;
+  }
+
+  const anchorIndex = activeIndex >= 0 ? Math.min(Math.max(activeIndex, 0), unlockedItems.length - 1) : 0;
+  const maxStart = Math.max(unlockedItems.length - maxWindowSize, 0);
+  const start = Math.min(Math.max(anchorIndex - halfWindow, 0), maxStart);
+  return unlockedItems.slice(start, start + maxWindowSize);
+}

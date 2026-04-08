@@ -36,7 +36,7 @@ import {
 import { type DiscoverFeedMode, sortDiscoverFeed } from "~~/lib/vote/feedModes";
 import { rankForYouFeed } from "~~/lib/vote/forYouRanker";
 import { buildVoteLocation } from "~~/lib/vote/location";
-import { MAX_VOTE_QUEUE_WINDOW_SIZE } from "~~/lib/vote/queueLayout";
+import { MAX_VOTE_QUEUE_WINDOW_SIZE, resolveVoteQueueSourceItems } from "~~/lib/vote/queueLayout";
 import { mergeRequestedContentIntoFeed } from "~~/lib/vote/requestedContent";
 import { type VoteView, getVoteViewGroups, isActivityViewOption } from "~~/lib/vote/viewOptions";
 import { buildRecommendationSignalContext, trackRecommendationSignal } from "~~/utils/recommendationTracker";
@@ -563,21 +563,14 @@ const HomeInner = () => {
   const {
     activeItem: primaryItem,
     activeSourceIndex,
-    loadedItems,
     selectContent,
   } = useVoteFeedStage(displayFeed, {
     visibleCount,
     requestedActiveId: effectiveRequestedActiveId,
   });
   const queueSourceItems = useMemo(() => {
-    if (displayFeed.length === 0) return loadedItems;
-
-    const minimumQueueSourceCount =
-      activeSourceIndex >= 0 ? Math.min(displayFeed.length, activeSourceIndex + MAX_VOTE_QUEUE_WINDOW_SIZE) : 0;
-    const queueSourceCount = Math.max(loadedItems.length, minimumQueueSourceCount);
-
-    return displayFeed.slice(0, queueSourceCount);
-  }, [activeSourceIndex, displayFeed, loadedItems]);
+    return resolveVoteQueueSourceItems(displayFeed, activeSourceIndex, visibleCount, MAX_VOTE_QUEUE_WINDOW_SIZE);
+  }, [activeSourceIndex, displayFeed, visibleCount]);
   const queueStatusByContentId = useQueueCardStatusMap(queueSourceItems, feedSource, nowSeconds);
 
   useEffect(() => {
@@ -608,8 +601,8 @@ const HomeInner = () => {
   }, [flushActiveViewSession, persistRecommendationSignal, primaryItem]);
 
   const submitterAddresses = useMemo(() => {
-    return queueSourceItems.map(item => item.submitter);
-  }, [queueSourceItems]);
+    return primaryItem ? [primaryItem.submitter] : [];
+  }, [primaryItem]);
   const queuePositionMap = useMemo(() => {
     const positions = new Map<string, number>();
     displayFeed.forEach((item, index) => {

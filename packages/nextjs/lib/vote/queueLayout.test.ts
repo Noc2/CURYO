@@ -1,6 +1,10 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { computeVoteQueueLayout, resolveVoteQueueWindowItems } from "~~/lib/vote/queueLayout";
+import {
+  computeVoteQueueLayout,
+  resolveVoteQueueSourceItems,
+  resolveVoteQueueWindowItems,
+} from "~~/lib/vote/queueLayout";
 
 test("computeVoteQueueLayout keeps one row on standard desktop heights", () => {
   const layout = computeVoteQueueLayout({
@@ -155,4 +159,28 @@ test("resolveVoteQueueWindowItems clamps cleanly near the end of the feed", () =
   });
 
   assert.deepEqual(visibleItems, [11, 12, 13, 14, 15, 16, 17, 18, 19, 20]);
+});
+
+test("resolveVoteQueueSourceItems keeps an unlocked prefix when it fits inside the source window", () => {
+  const items = Array.from({ length: 20 }, (_, index) => index + 1);
+
+  assert.deepEqual(resolveVoteQueueSourceItems(items, 0, 12, 15), [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]);
+});
+
+test("resolveVoteQueueSourceItems centers the source window around the active item when more content is unlocked", () => {
+  const items = Array.from({ length: 30 }, (_, index) => index + 1);
+
+  assert.deepEqual(
+    resolveVoteQueueSourceItems(items, 12, 20, 15),
+    [6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20],
+  );
+});
+
+test("resolveVoteQueueSourceItems expands beyond the unlocked count to keep a deep-linked active item in view", () => {
+  const items = Array.from({ length: 40 }, (_, index) => index + 1);
+
+  assert.deepEqual(
+    resolveVoteQueueSourceItems(items, 25, 20, 15),
+    [19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33],
+  );
 });
