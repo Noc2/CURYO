@@ -49,7 +49,7 @@ type HeaderNavLinkProps = {
 
 const navIndicatorClassName =
   "absolute right-2 top-2 bottom-2 w-1 rounded-full bg-linear-to-b from-[#F5F0EB] via-[#F26426] to-[#B3341B] shadow-[0_0_18px_rgba(242,100,38,0.45)]";
-const headerChromeSurfaceClassName = "bg-[color:var(--curyo-surface)]";
+const headerChromeSurfaceClassName = "bg-[#000]";
 const headerChromeBorderClassName = "border-[color:var(--curyo-shell-border-strong)]";
 
 const HeaderNavLink = ({
