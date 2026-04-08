@@ -1352,7 +1352,7 @@ const HomeInner = () => {
     >
       <VotingGuide />
       <div
-        className="flex shrink-0 flex-wrap items-center gap-2 sm:gap-3 xl:flex-nowrap"
+        className="flex shrink-0 flex-wrap items-center gap-2 touch-none sm:gap-3 xl:flex-nowrap xl:touch-auto"
         data-disable-queue-wheel="true"
       >
         <CategoryFilter
@@ -1380,7 +1380,10 @@ const HomeInner = () => {
       </div>
 
       {isSearchMode ? (
-        <div className="flex shrink-0 flex-wrap items-center gap-2" data-disable-queue-wheel="true">
+        <div
+          className="flex shrink-0 flex-wrap items-center gap-2 touch-none xl:touch-auto"
+          data-disable-queue-wheel="true"
+        >
           <div className="rounded-full bg-base-200 px-3 py-2 text-sm text-base-content/70">
             {isShortSearchQuery ? (
               <span>Keep typing to search. Terms need at least {MIN_CONTENT_SEARCH_QUERY_LENGTH} characters.</span>
