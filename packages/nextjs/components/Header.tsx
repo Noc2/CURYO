@@ -377,6 +377,10 @@ export const Header = () => {
 
   useEffect(() => {
     if (typeof window === "undefined") return;
+    if (pathname === "/vote") {
+      setIsMobileHeaderVisible(true);
+      return;
+    }
 
     const readScrollOffset = (source: Window | HTMLElement) =>
       source instanceof HTMLElement ? source.scrollTop : window.scrollY;
@@ -460,7 +464,7 @@ export const Header = () => {
     return () => {
       window.removeEventListener("scroll", handleScroll, true);
     };
-  }, [mobileSearchOpen]);
+  }, [mobileSearchOpen, pathname]);
 
   return (
     <>
