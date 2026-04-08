@@ -186,31 +186,6 @@ export const FeedVoteCard = memo(function FeedVoteCard({
               if (isInteractiveTarget(event.target)) return;
               onContentIntent(item);
             }}
-            onKeyDown={event => {
-              if (!contentIntentEnabled || !onContentIntent) return;
-              if (platformType === "spotify" || platformType === "twitter" || platformType === "twitch") return;
-              if (event.key !== "Enter" && event.key !== " ") return;
-
-              event.preventDefault();
-              onContentIntent(item);
-            }}
-            role={
-              contentIntentEnabled &&
-              platformType !== "spotify" &&
-              platformType !== "twitter" &&
-              platformType !== "twitch"
-                ? "button"
-                : undefined
-            }
-            tabIndex={
-              contentIntentEnabled &&
-              platformType !== "spotify" &&
-              platformType !== "twitter" &&
-              platformType !== "twitch"
-                ? 0
-                : undefined
-            }
-            aria-label={contentIntentEnabled ? `Focus vote controls for ${item.title}` : undefined}
           >
             <ContentEmbed
               url={item.url}
