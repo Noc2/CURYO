@@ -141,7 +141,6 @@ export function FeedScopeFilter({ value, groups, onChange, label = "View" }: Fee
       <div className="mb-3 flex items-center justify-between sm:hidden">
         <div>
           <p className="text-sm font-semibold text-base-content">{label}</p>
-          <p className="text-xs text-base-content/70">Choose how you want to browse content.</p>
         </div>
         <button
           type="button"
