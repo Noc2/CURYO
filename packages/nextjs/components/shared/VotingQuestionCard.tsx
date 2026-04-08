@@ -523,7 +523,7 @@ export function VotingQuestionCard({
     const dockVoteDisabled = isCommitting || Boolean(centerStatusContent);
     const dockNotchRadius = compact ? 58 : 66;
     const dockNotchCutout = compact ? 52 : 60;
-    const dockControlsPaddingClassName = compact ? "px-4 pt-4" : "px-4 pb-3 pt-7";
+    const dockControlsPaddingClassName = compact ? "px-4 pb-2.5 pt-4" : "px-4 pb-3 pt-7";
     const dockMoreClassName = "text-base font-medium text-base-content/68 hover:text-base-content/88";
     const dockVoteSpacerClassName = "h-11 w-11";
     const dockShellMaskStyle = {
@@ -535,7 +535,7 @@ export function VotingQuestionCard({
     const dockSurfaceStyle = {
       background: compact ? "var(--curyo-surface)" : VOTING_SURFACE_BACKGROUND,
     };
-    const dockControlsStyle = compact ? { paddingBottom: "calc(0.625rem + env(safe-area-inset-bottom))" } : undefined;
+    const dockContentStyle = compact ? { paddingBottom: "env(safe-area-inset-bottom)" } : undefined;
     const dockShellClassName = compact ? "rounded-none" : "rounded-[2rem]";
     const dockShellBorderClassName = compact ? "" : "ring-1 ring-base-content/8";
     const dockTopBorderArcRadius = dockNotchCutout;
@@ -592,78 +592,80 @@ export function VotingQuestionCard({
             data-vote-attention={isAttentionActive ? "true" : undefined}
             style={{ ...dockShellMaskStyle, ...dockSurfaceStyle }}
           >
-            <div className={dockControlsPaddingClassName} style={dockControlsStyle}>
-              {!centerStatusContent ? (
-                <div className="grid grid-cols-[auto_minmax(0,1fr)_auto] items-end gap-3">
-                  <div className="justify-self-start">
-                    <CuryoVoteButton
-                      direction="up"
-                      size="sm"
-                      onClick={() => onVote(true)}
-                      disabled={dockVoteDisabled}
-                      attention={isAttentionActive && !dockVoteDisabled}
-                    />
+            <div style={dockContentStyle}>
+              <div className={dockControlsPaddingClassName}>
+                {!centerStatusContent ? (
+                  <div className="grid grid-cols-[auto_minmax(0,1fr)_auto] items-end gap-3">
+                    <div className="justify-self-start">
+                      <CuryoVoteButton
+                        direction="up"
+                        size="sm"
+                        onClick={() => onVote(true)}
+                        disabled={dockVoteDisabled}
+                        attention={isAttentionActive && !dockVoteDisabled}
+                      />
+                    </div>
+                    <div className="justify-self-end translate-y-1">
+                      <MoreToggleButton
+                        expanded={isDetailsOpen}
+                        onClick={() => setIsDetailsOpen(current => !current)}
+                        controlsId={detailsId}
+                        className={dockMoreClassName}
+                      />
+                    </div>
+                    <div className="justify-self-end">
+                      <CuryoVoteButton
+                        direction="down"
+                        size="sm"
+                        onClick={() => onVote(false)}
+                        disabled={dockVoteDisabled}
+                        attention={isAttentionActive && !dockVoteDisabled}
+                      />
+                    </div>
                   </div>
-                  <div className="justify-self-end translate-y-1">
-                    <MoreToggleButton
-                      expanded={isDetailsOpen}
-                      onClick={() => setIsDetailsOpen(current => !current)}
-                      controlsId={detailsId}
-                      className={dockMoreClassName}
-                    />
+                ) : (
+                  <div className="grid grid-cols-[minmax(0,1fr)_auto_auto] items-center gap-3">
+                    <div className="min-w-0 justify-self-start [&>button]:max-w-full">{centerStatusContent}</div>
+                    <div className="self-center">
+                      <MoreToggleButton
+                        expanded={isDetailsOpen}
+                        onClick={() => setIsDetailsOpen(current => !current)}
+                        controlsId={detailsId}
+                        className={dockMoreClassName}
+                      />
+                    </div>
+                    <div aria-hidden className={`${dockVoteSpacerClassName} justify-self-end`} />
                   </div>
-                  <div className="justify-self-end">
-                    <CuryoVoteButton
-                      direction="down"
-                      size="sm"
-                      onClick={() => onVote(false)}
-                      disabled={dockVoteDisabled}
-                      attention={isAttentionActive && !dockVoteDisabled}
-                    />
-                  </div>
-                </div>
-              ) : (
-                <div className="grid grid-cols-[minmax(0,1fr)_auto_auto] items-center gap-3">
-                  <div className="min-w-0 justify-self-start [&>button]:max-w-full">{centerStatusContent}</div>
-                  <div className="self-center">
-                    <MoreToggleButton
-                      expanded={isDetailsOpen}
-                      onClick={() => setIsDetailsOpen(current => !current)}
-                      controlsId={detailsId}
-                      className={dockMoreClassName}
-                    />
-                  </div>
-                  <div aria-hidden className={`${dockVoteSpacerClassName} justify-self-end`} />
-                </div>
-              )}
-            </div>
-
-            {showVoteAttentionHint ? (
-              <p className="vote-attention-hint px-4 pb-1 text-center text-[0.72rem] font-semibold uppercase tracking-[0.16em] text-primary/90">
-                Rate this content here
-              </p>
-            ) : null}
-
-            {displayError ? <p className="px-4 pb-1 text-center text-sm text-error">{displayError}</p> : null}
-
-            {isDetailsOpen ? (
-              <div id={detailsId} className="relative z-10 px-4 pb-3 pt-1">
-                <div className="max-h-[34svh] overflow-y-auto [scrollbar-gutter:stable]">
-                  <div className="flex flex-col gap-2.5 pb-1">
-                    {showInlineVotingSummary ? inlineVotingSummary : null}
-                    {activitySummary}
-                    {!showInlineProgress ? <RoundProgress snapshot={roundSnapshot} /> : null}
-                    {!showInlineRevealedBreakdown ? <RoundRevealedBreakdown snapshot={roundSnapshot} /> : null}
-                    <RoundStats categoryId={categoryId} snapshot={roundSnapshot} />
-                    <RatingHistory
-                      contentId={contentId}
-                      variant={embedded ? "dark" : "default"}
-                      fallbackRating={currentRating}
-                    />
-                  </div>
-                </div>
+                )}
               </div>
-            ) : null}
+
+              {showVoteAttentionHint ? (
+                <p className="vote-attention-hint px-4 pb-1 text-center text-[0.72rem] font-semibold uppercase tracking-[0.16em] text-primary/90">
+                  Rate this content here
+                </p>
+              ) : null}
+
+              {displayError ? <p className="px-4 pb-1 text-center text-sm text-error">{displayError}</p> : null}
+
+              {isDetailsOpen ? (
+                <div id={detailsId} className="relative z-10 px-4 pb-3 pt-1">
+                  <div className="max-h-[34svh] overflow-y-auto [scrollbar-gutter:stable]">
+                    <div className="flex flex-col gap-2.5 pb-1">
+                      {showInlineVotingSummary ? inlineVotingSummary : null}
+                      {activitySummary}
+                      {!showInlineProgress ? <RoundProgress snapshot={roundSnapshot} /> : null}
+                      {!showInlineRevealedBreakdown ? <RoundRevealedBreakdown snapshot={roundSnapshot} /> : null}
+                      <RoundStats categoryId={categoryId} snapshot={roundSnapshot} />
+                      <RatingHistory
+                        contentId={contentId}
+                        variant={embedded ? "dark" : "default"}
+                        fallbackRating={currentRating}
+                      />
+                    </div>
+                  </div>
+                </div>
+              ) : null}
+            </div>
           </div>
         </div>
       </div>
