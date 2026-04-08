@@ -69,3 +69,16 @@ test("resolveStableSessionFeedOrder does not keep reordering ids that were alrea
     ["bitcoin", "shelter", "witcher"],
   );
 });
+
+test("resolveStableSessionFeedOrder promotes each newly prioritized id in the requested order", () => {
+  assert.deepEqual(
+    resolveStableSessionFeedOrder({
+      previousIds: ["bitcoin", "shelter", "witcher"],
+      previousSessionKey: "network-1|for-you",
+      nextIds: ["bitcoin", "new-one", "witcher", "new-two", "shelter"],
+      nextSessionKey: "network-1|for-you",
+      prioritizedIds: ["new-two", "missing", "new-one"],
+    }),
+    ["new-two", "new-one", "bitcoin", "shelter", "witcher"],
+  );
+});
