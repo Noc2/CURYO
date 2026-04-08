@@ -529,6 +529,7 @@ export function VotingQuestionCard({
     const dockVoteDisabled = isCommitting || Boolean(centerStatusContent);
     const dockNotchRadius = compact ? 58 : 66;
     const dockNotchCutout = compact ? 52 : 60;
+    const dockWrapperTopPaddingClassName = compact ? (isDetailsOpen ? "pt-8" : "pt-10") : "pt-14";
     const dockControlsPaddingClassName = compact ? "px-4 pb-2.5 pt-4" : "px-4 pb-3 pt-7";
     const dockMoreClassName = "text-base font-medium text-base-content/68 hover:text-base-content/88";
     const dockVoteSpacerClassName = "h-11 w-11";
@@ -567,7 +568,9 @@ export function VotingQuestionCard({
     const mobileOrbClassName = compact ? "drop-shadow-[0_14px_28px_rgba(9,10,12,0.7)]" : "";
 
     return (
-      <div className={`relative ${embedded ? "" : "rounded-2xl"} flex min-h-0 flex-col ${compact ? "pt-10" : "pt-14"}`}>
+      <div
+        className={`relative ${embedded ? "" : "rounded-2xl"} flex min-h-0 flex-col transition-[padding-top] duration-200 ease-out ${dockWrapperTopPaddingClassName}`}
+      >
         {compact ? (
           <div
             aria-hidden
