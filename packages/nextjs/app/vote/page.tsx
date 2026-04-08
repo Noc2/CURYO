@@ -147,6 +147,7 @@ const HomeInner = () => {
     () => buildLinkedWalletAddresses(address, delegateVoteAddress, delegatorVoteAddress),
     [address, delegateVoteAddress, delegatorVoteAddress],
   );
+  const ownSubmitterAddressesKey = useMemo(() => ownSubmitterAddresses.join(","), [ownSubmitterAddresses]);
   const { votes: directVotes, isLoading: directVotesLoading } = useVoteHistoryQuery(address);
   const { votes: delegateVotes, isLoading: delegateVotesLoading } = useVoteHistoryQuery(delegateVoteAddress);
   const { votes: delegatorVotes, isLoading: delegatorVotesLoading } = useVoteHistoryQuery(delegatorVoteAddress);
@@ -349,6 +350,10 @@ const HomeInner = () => {
     setOptimisticVotedContentIds(previous => (previous.size === 0 ? previous : new Set()));
     setOptimisticCooldownUntilByContentId(previous => (previous.size === 0 ? previous : new Map()));
   }, [address, targetNetwork.id]);
+
+  useEffect(() => {
+    setOptimisticOwnContentIds(previous => (previous.size === 0 ? previous : new Set()));
+  }, [ownSubmitterAddressesKey]);
 
   useEffect(() => {
     if (optimisticVotedContentIds.size === 0) return;
