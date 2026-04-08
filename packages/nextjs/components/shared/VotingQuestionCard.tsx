@@ -573,96 +573,98 @@ export function VotingQuestionCard({
           <RatingOrb rating={currentRating} size={orbSize} showGlow={compact} className={mobileOrbClassName} />
         </div>
 
-        {dockTopBorderOverlayStyle ? (
-          <div
-            aria-hidden
-            className="pointer-events-none absolute inset-x-0 top-0 z-[15] overflow-hidden"
-            style={dockTopBorderOverlayStyle}
-          >
-            <div className="absolute left-0 top-0 border-t" style={dockTopBorderSegmentStyle} />
-            <div className="absolute right-0 top-0 border-t" style={dockTopBorderSegmentStyle} />
-            <div className="absolute left-1/2 -translate-x-1/2 rounded-full border" style={dockTopBorderArcStyle} />
-          </div>
-        ) : null}
-        <div
-          className={`relative z-10 overflow-hidden shadow-[0_16px_36px_rgb(0_0_0_/_0.28)] ${
-            isAttentionActive ? "vote-surface-attention" : ""
-          } ${dockShellClassName} ${dockShellBorderClassName}`}
-          data-vote-attention={isAttentionActive ? "true" : undefined}
-          style={{ ...dockShellMaskStyle, ...dockSurfaceStyle }}
-        >
-          <div className={dockControlsPaddingClassName} style={dockControlsStyle}>
-            {!centerStatusContent ? (
-              <div className="grid grid-cols-[auto_minmax(0,1fr)_auto] items-end gap-3">
-                <div className="justify-self-start">
-                  <CuryoVoteButton
-                    direction="up"
-                    size="sm"
-                    onClick={() => onVote(true)}
-                    disabled={dockVoteDisabled}
-                    attention={isAttentionActive && !dockVoteDisabled}
-                  />
-                </div>
-                <div className="justify-self-end translate-y-1">
-                  <MoreToggleButton
-                    expanded={isDetailsOpen}
-                    onClick={() => setIsDetailsOpen(current => !current)}
-                    controlsId={detailsId}
-                    className={dockMoreClassName}
-                  />
-                </div>
-                <div className="justify-self-end">
-                  <CuryoVoteButton
-                    direction="down"
-                    size="sm"
-                    onClick={() => onVote(false)}
-                    disabled={dockVoteDisabled}
-                    attention={isAttentionActive && !dockVoteDisabled}
-                  />
-                </div>
-              </div>
-            ) : (
-              <div className="grid grid-cols-[minmax(0,1fr)_auto_auto] items-center gap-3">
-                <div className="min-w-0 justify-self-start [&>button]:max-w-full">{centerStatusContent}</div>
-                <div className="self-center">
-                  <MoreToggleButton
-                    expanded={isDetailsOpen}
-                    onClick={() => setIsDetailsOpen(current => !current)}
-                    controlsId={detailsId}
-                    className={dockMoreClassName}
-                  />
-                </div>
-                <div aria-hidden className={`${dockVoteSpacerClassName} justify-self-end`} />
-              </div>
-            )}
-          </div>
-
-          {showVoteAttentionHint ? (
-            <p className="vote-attention-hint px-4 pb-1 text-center text-[0.72rem] font-semibold uppercase tracking-[0.16em] text-primary/90">
-              Rate this content here
-            </p>
-          ) : null}
-
-          {displayError ? <p className="px-4 pb-1 text-center text-sm text-error">{displayError}</p> : null}
-
-          {isDetailsOpen ? (
-            <div id={detailsId} className="relative z-10 px-4 pb-3 pt-1">
-              <div className="max-h-[34svh] overflow-y-auto [scrollbar-gutter:stable]">
-                <div className="flex flex-col gap-2.5 pb-1">
-                  {showInlineVotingSummary ? inlineVotingSummary : null}
-                  {activitySummary}
-                  {!showInlineProgress ? <RoundProgress snapshot={roundSnapshot} /> : null}
-                  {!showInlineRevealedBreakdown ? <RoundRevealedBreakdown snapshot={roundSnapshot} /> : null}
-                  <RoundStats categoryId={categoryId} snapshot={roundSnapshot} />
-                  <RatingHistory
-                    contentId={contentId}
-                    variant={embedded ? "dark" : "default"}
-                    fallbackRating={currentRating}
-                  />
-                </div>
-              </div>
+        <div className="relative z-10">
+          {dockTopBorderOverlayStyle ? (
+            <div
+              aria-hidden
+              className="pointer-events-none absolute inset-x-0 top-0 z-10 overflow-hidden"
+              style={dockTopBorderOverlayStyle}
+            >
+              <div className="absolute left-0 top-0 border-t" style={dockTopBorderSegmentStyle} />
+              <div className="absolute right-0 top-0 border-t" style={dockTopBorderSegmentStyle} />
+              <div className="absolute left-1/2 -translate-x-1/2 rounded-full border" style={dockTopBorderArcStyle} />
             </div>
           ) : null}
+          <div
+            className={`relative overflow-hidden shadow-[0_16px_36px_rgb(0_0_0_/_0.28)] ${
+              isAttentionActive ? "vote-surface-attention" : ""
+            } ${dockShellClassName} ${dockShellBorderClassName}`}
+            data-vote-attention={isAttentionActive ? "true" : undefined}
+            style={{ ...dockShellMaskStyle, ...dockSurfaceStyle }}
+          >
+            <div className={dockControlsPaddingClassName} style={dockControlsStyle}>
+              {!centerStatusContent ? (
+                <div className="grid grid-cols-[auto_minmax(0,1fr)_auto] items-end gap-3">
+                  <div className="justify-self-start">
+                    <CuryoVoteButton
+                      direction="up"
+                      size="sm"
+                      onClick={() => onVote(true)}
+                      disabled={dockVoteDisabled}
+                      attention={isAttentionActive && !dockVoteDisabled}
+                    />
+                  </div>
+                  <div className="justify-self-end translate-y-1">
+                    <MoreToggleButton
+                      expanded={isDetailsOpen}
+                      onClick={() => setIsDetailsOpen(current => !current)}
+                      controlsId={detailsId}
+                      className={dockMoreClassName}
+                    />
+                  </div>
+                  <div className="justify-self-end">
+                    <CuryoVoteButton
+                      direction="down"
+                      size="sm"
+                      onClick={() => onVote(false)}
+                      disabled={dockVoteDisabled}
+                      attention={isAttentionActive && !dockVoteDisabled}
+                    />
+                  </div>
+                </div>
+              ) : (
+                <div className="grid grid-cols-[minmax(0,1fr)_auto_auto] items-center gap-3">
+                  <div className="min-w-0 justify-self-start [&>button]:max-w-full">{centerStatusContent}</div>
+                  <div className="self-center">
+                    <MoreToggleButton
+                      expanded={isDetailsOpen}
+                      onClick={() => setIsDetailsOpen(current => !current)}
+                      controlsId={detailsId}
+                      className={dockMoreClassName}
+                    />
+                  </div>
+                  <div aria-hidden className={`${dockVoteSpacerClassName} justify-self-end`} />
+                </div>
+              )}
+            </div>
+
+            {showVoteAttentionHint ? (
+              <p className="vote-attention-hint px-4 pb-1 text-center text-[0.72rem] font-semibold uppercase tracking-[0.16em] text-primary/90">
+                Rate this content here
+              </p>
+            ) : null}
+
+            {displayError ? <p className="px-4 pb-1 text-center text-sm text-error">{displayError}</p> : null}
+
+            {isDetailsOpen ? (
+              <div id={detailsId} className="relative z-10 px-4 pb-3 pt-1">
+                <div className="max-h-[34svh] overflow-y-auto [scrollbar-gutter:stable]">
+                  <div className="flex flex-col gap-2.5 pb-1">
+                    {showInlineVotingSummary ? inlineVotingSummary : null}
+                    {activitySummary}
+                    {!showInlineProgress ? <RoundProgress snapshot={roundSnapshot} /> : null}
+                    {!showInlineRevealedBreakdown ? <RoundRevealedBreakdown snapshot={roundSnapshot} /> : null}
+                    <RoundStats categoryId={categoryId} snapshot={roundSnapshot} />
+                    <RatingHistory
+                      contentId={contentId}
+                      variant={embedded ? "dark" : "default"}
+                      fallbackRating={currentRating}
+                    />
+                  </div>
+                </div>
+              </div>
+            ) : null}
+          </div>
         </div>
       </div>
     );
