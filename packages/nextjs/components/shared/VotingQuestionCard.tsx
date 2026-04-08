@@ -538,6 +538,12 @@ export function VotingQuestionCard({
     const dockControlsStyle = compact ? { paddingBottom: "calc(0.625rem + env(safe-area-inset-bottom))" } : undefined;
     const dockShellClassName = compact ? "rounded-none" : "rounded-[2rem]";
     const dockShellBorderClassName = compact ? "ring-[color:var(--curyo-shell-border-strong)]" : "ring-base-content/8";
+    const dockShellBorderOverlayStyle = compact
+      ? {
+          ...dockShellMaskStyle,
+          boxShadow: "inset 0 0 0 1px var(--curyo-shell-border-strong)",
+        }
+      : undefined;
     const mobileOrbClassName = compact ? "drop-shadow-[0_14px_28px_rgba(9,10,12,0.7)]" : "";
 
     return (
@@ -560,6 +566,13 @@ export function VotingQuestionCard({
           data-vote-attention={isAttentionActive ? "true" : undefined}
           style={{ ...dockShellMaskStyle, ...dockSurfaceStyle }}
         >
+          {dockShellBorderOverlayStyle ? (
+            <div
+              aria-hidden
+              className="pointer-events-none absolute inset-0 z-10"
+              style={dockShellBorderOverlayStyle}
+            />
+          ) : null}
           <div className={dockControlsPaddingClassName} style={dockControlsStyle}>
             {!centerStatusContent ? (
               <div className="grid grid-cols-[auto_minmax(0,1fr)_auto] items-end gap-3">
