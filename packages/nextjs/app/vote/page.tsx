@@ -1491,11 +1491,8 @@ const HomeInner = () => {
       </div>
 
       {primaryItem ? (
-        <div
-          ref={mobileDockContainerRef}
-          className="fixed inset-x-4 bottom-[calc(env(safe-area-inset-bottom)+0.75rem)] z-30 xl:hidden"
-        >
-          <div className="mx-auto w-full max-w-5xl">
+        <div ref={mobileDockContainerRef} className="fixed inset-x-0 bottom-0 z-30 xl:hidden">
+          <div className="w-full">
             <div className="overflow-visible">
               <VotingQuestionCard
                 contentId={primaryItem.id}

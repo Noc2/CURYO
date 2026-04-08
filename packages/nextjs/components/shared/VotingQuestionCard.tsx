@@ -523,7 +523,7 @@ export function VotingQuestionCard({
     const dockVoteDisabled = isCommitting || Boolean(centerStatusContent);
     const dockNotchRadius = compact ? 58 : 66;
     const dockNotchCutout = compact ? 52 : 60;
-    const dockControlsPaddingClassName = compact ? "px-4 pb-2.5 pt-4" : "px-4 pb-3 pt-7";
+    const dockControlsPaddingClassName = compact ? "px-4 pt-4" : "px-4 pb-3 pt-7";
     const dockMoreClassName = "text-base font-medium text-base-content/68 hover:text-base-content/88";
     const dockVoteSpacerClassName = "h-11 w-11";
     const dockShellMaskStyle = {
@@ -533,9 +533,11 @@ export function VotingQuestionCard({
       maskRepeat: "no-repeat",
     };
     const dockSurfaceStyle = {
-      background: compact ? "var(--curyo-surface-mobile-vote)" : VOTING_SURFACE_BACKGROUND,
+      background: compact ? "var(--curyo-surface)" : VOTING_SURFACE_BACKGROUND,
     };
-    const dockShellClassName = compact ? "rounded-[1rem]" : "rounded-[2rem]";
+    const dockControlsStyle = compact ? { paddingBottom: "calc(0.625rem + env(safe-area-inset-bottom))" } : undefined;
+    const dockShellClassName = compact ? "rounded-none" : "rounded-[2rem]";
+    const dockShellBorderClassName = compact ? "ring-[color:var(--curyo-shell-border-strong)]" : "ring-base-content/8";
     const mobileOrbClassName = compact ? "drop-shadow-[0_14px_28px_rgba(9,10,12,0.7)]" : "";
 
     return (
@@ -552,13 +554,13 @@ export function VotingQuestionCard({
         </div>
 
         <div
-          className={`relative z-10 overflow-hidden ring-1 ring-base-content/8 shadow-[0_16px_36px_rgb(0_0_0_/_0.28)] ${
+          className={`relative z-10 overflow-hidden ring-1 shadow-[0_16px_36px_rgb(0_0_0_/_0.28)] ${
             isAttentionActive ? "vote-surface-attention" : ""
-          } ${dockShellClassName}`}
+          } ${dockShellClassName} ${dockShellBorderClassName}`}
           data-vote-attention={isAttentionActive ? "true" : undefined}
           style={{ ...dockShellMaskStyle, ...dockSurfaceStyle }}
         >
-          <div className={dockControlsPaddingClassName}>
+          <div className={dockControlsPaddingClassName} style={dockControlsStyle}>
             {!centerStatusContent ? (
               <div className="grid grid-cols-[auto_minmax(0,1fr)_auto] items-end gap-3">
                 <div className="justify-self-start">
