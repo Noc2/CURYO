@@ -169,14 +169,17 @@ export function useRoundVote() {
       };
 
       if (canUseSponsoredSubmitCalls) {
-        await executeSponsoredCalls([
-          {
-            abi: CuryoReputationAbi,
-            address: crepInfo.address as `0x${string}`,
-            args: transferAndCallArgs,
-            functionName: "transferAndCall",
-          },
-        ]);
+        await executeSponsoredCalls(
+          [
+            {
+              abi: CuryoReputationAbi,
+              address: crepInfo.address as `0x${string}`,
+              args: transferAndCallArgs,
+              functionName: "transferAndCall",
+            },
+          ],
+          { action: "vote" },
+        );
       }
 
       // Direct writes are self-funded here; only the sponsored helper can
@@ -194,7 +197,10 @@ export function useRoundVote() {
 
       if (!canUseSponsoredSubmitCalls) {
         wagmiTokenWrite.reset();
-        const transactionHash = await writeTx(() => wagmiTokenWrite.writeContractAsync(transferAndCallRequest));
+        const transactionHash = await writeTx(() => wagmiTokenWrite.writeContractAsync(transferAndCallRequest), {
+          action: "vote",
+          suppressSuccessToast: true,
+        });
         if (!transactionHash) {
           return false;
         }

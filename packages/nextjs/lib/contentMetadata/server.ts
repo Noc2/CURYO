@@ -25,8 +25,21 @@ function getTimestampMs(value: Date | string): number {
   return value instanceof Date ? value.getTime() : new Date(value).getTime();
 }
 
-function isFresh(cached: ContentMetadata): boolean {
-  return Date.now() - getTimestampMs(cached.fetchedAt) < CACHE_TTL_MS;
+export function shouldReuseCachedContentMetadata(
+  url: string,
+  cached: Pick<ContentMetadata, "thumbnailUrl" | "imageUrl" | "fetchedAt">,
+  nowMs = Date.now(),
+): boolean {
+  if (nowMs - getTimestampMs(cached.fetchedAt) >= CACHE_TTL_MS) {
+    return false;
+  }
+
+  const platform = detectPlatform(url);
+  if (platform.type === "huggingface" && !cached.thumbnailUrl && !cached.imageUrl) {
+    return false;
+  }
+
+  return true;
 }
 
 function isHttpUrl(url: string): boolean {
@@ -100,7 +113,7 @@ export async function resolveContentMetadata(url: string): Promise<EmbedResult> 
 
   try {
     const [cached] = await db.select().from(contentMetadata).where(eq(contentMetadata.url, url)).limit(1);
-    if (cached && isFresh(cached)) {
+    if (cached && shouldReuseCachedContentMetadata(url, cached)) {
       return toEmbedResult(cached);
     }
   } catch (error) {
@@ -139,7 +152,7 @@ export async function resolveContentMetadataBatch(urls: string[]): Promise<Recor
       .from(contentMetadata)
       .where(inArray(contentMetadata.url, [...unresolved]));
     for (const cached of cachedRows) {
-      if (!isFresh(cached)) continue;
+      if (!shouldReuseCachedContentMetadata(cached.url, cached)) continue;
       results[cached.url] = toEmbedResult(cached);
       unresolved.delete(cached.url);
     }

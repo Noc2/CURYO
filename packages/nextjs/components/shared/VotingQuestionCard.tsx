@@ -40,7 +40,8 @@ const RATING_GUIDANCE_TEXT =
 export const VOTING_SURFACE_BACKGROUND = "var(--curyo-surface-elevated)";
 const STATUS_PILL_CLASS_NAME =
   "inline-flex items-center gap-2 rounded-full border border-base-content/10 bg-base-content/5 px-4 py-2";
-const DOCK_STATUS_TEXT_CLASS_NAME = "inline-flex max-w-full flex-col items-start justify-center py-0.5 text-left";
+const DOCK_STATUS_TEXT_CLASS_NAME =
+  "inline-flex max-w-full flex-wrap items-center gap-x-1.5 gap-y-0.5 py-0.5 text-left leading-none";
 
 type ActivityTone = "primary" | "warning" | "success" | "neutral";
 
@@ -410,17 +411,17 @@ export function VotingQuestionCard({
   const centerStatusContent = address ? (
     hasMyVote ? (
       <HoverTooltip
-        text="Your vote is encrypted until the blind phase ends. The keeper normally validates the stored tlock stanza and reveals eligible votes afterward, and you can self-reveal if needed."
+        text="You voted, and your direction stays hidden until the blind phase ends. After that, eligible votes are normally revealed automatically, and you can self-reveal if needed."
         position="bottom"
       >
         {usesDockStatusText ? (
           <span className={DOCK_STATUS_TEXT_CLASS_NAME}>
-            <span className="text-[0.95rem] font-semibold leading-none text-primary">Committed</span>
-            <span className="mt-0.5 text-[0.95rem] leading-none text-base-content/62">hidden</span>
+            <span className="text-[0.95rem] font-semibold leading-none text-primary">Voted</span>
+            <span className="text-[0.95rem] leading-none text-base-content/62">hidden</span>
           </span>
         ) : (
           <span className={STATUS_PILL_CLASS_NAME}>
-            <span className="text-base font-semibold text-primary">Committed</span>
+            <span className="text-base font-semibold text-primary">Voted</span>
             <span className="text-base text-base-content/70">hidden</span>
           </span>
         )}
@@ -447,7 +448,7 @@ export function VotingQuestionCard({
         {usesDockStatusText ? (
           <span className={DOCK_STATUS_TEXT_CLASS_NAME}>
             <span className="text-[0.95rem] font-medium leading-none text-base-content/75">Cooldown</span>
-            <span className="mt-0.5 text-[0.95rem] leading-none text-base-content/60">{cooldownLabel}</span>
+            <span className="text-[0.95rem] leading-none text-base-content/60">{cooldownLabel}</span>
           </span>
         ) : (
           <span className={STATUS_PILL_CLASS_NAME}>
@@ -588,9 +589,9 @@ export function VotingQuestionCard({
                 </div>
               </div>
             ) : (
-              <div className="grid grid-cols-[minmax(0,1fr)_auto_auto] items-end gap-3">
+              <div className="grid grid-cols-[minmax(0,1fr)_auto_auto] items-center gap-3">
                 <div className="min-w-0 justify-self-start [&>button]:max-w-full">{centerStatusContent}</div>
-                <div className="translate-y-1">
+                <div className="self-center">
                   <MoreToggleButton
                     expanded={isDetailsOpen}
                     onClick={() => setIsDetailsOpen(current => !current)}

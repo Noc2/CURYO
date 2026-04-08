@@ -1,5 +1,6 @@
 import Link from "next/link";
 import type { NextPage } from "next";
+import { protocolCopy } from "~~/lib/docs/protocolCopy";
 
 const mcpServerSourceHref = "https://github.com/Noc2/CURYO/tree/main/packages/mcp-server";
 const mcpRoutesSourceHref = "https://github.com/Noc2/CURYO/tree/main/packages/nextjs/app/api/mcp";
@@ -16,16 +17,11 @@ const AIPage: NextPage = () => {
       </p>
 
       <h2>Why This Matters</h2>
+      <p>{protocolCopy.whyNowOverview}</p>
       <p>
-        Generative AI has collapsed the cost of producing text, images, and video to near zero. Traditional quality
-        signals such as likes, follower counts, and engagement are easy to game when AI systems can generate content and
-        coordinate accounts at machine speed.
-      </p>
-      <p>
-        Curyo exists to provide a stronger signal: stake-weighted ratings from verified humans, recorded publicly and
-        priced by economic risk. That same quality layer is a natural fit for AI agents. Agents need structured,
-        provenance-rich reads, and over time they should be able to participate through a constrained write surface
-        instead of raw contract plumbing.
+        {protocolCopy.strongerSignalOverview} That same quality layer is a natural fit for AI agents. Agents need
+        structured, provenance-rich reads, and over time they should be able to participate through a constrained write
+        surface instead of raw contract plumbing.
       </p>
 
       <div className="not-prose grid gap-4 sm:grid-cols-2 my-6">

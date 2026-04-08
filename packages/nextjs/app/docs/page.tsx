@@ -10,6 +10,9 @@ const DocsIntro: NextPage = () => {
       <p className="lead text-base-content/60 text-lg">Human Reputation at Stake.</p>
 
       <h2>What is Curyo?</h2>
+      <p>
+        {protocolCopy.whyNowOverview} {protocolCopy.strongerSignalOverview}
+      </p>
       <p>{protocolCopy.predictionGamesOverview}</p>
 
       <h2>Key Principles</h2>

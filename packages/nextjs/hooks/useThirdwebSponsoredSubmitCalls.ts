@@ -12,6 +12,7 @@ import {
   useFreeTransactionAllowance,
 } from "~~/hooks/useFreeTransactionAllowance";
 import { useThirdwebWagmiSync } from "~~/hooks/useThirdwebWagmiSync";
+import { useTransactionStatusToast } from "~~/hooks/useTransactionStatusToast";
 import {
   type WalletExecutionMode,
   resolveWalletExecutionChainId,
@@ -35,6 +36,8 @@ type SponsoredSubmitContractCall = {
 
 type ExecuteSponsoredCallsOptions = {
   atomicRequired?: boolean;
+  action?: string;
+  suppressStatusToast?: boolean;
 };
 
 export function shouldPreferSponsoredSubmitCalls(params: {
@@ -95,6 +98,7 @@ export function useThirdwebSponsoredSubmitCalls() {
   const activeWalletChain = useActiveWalletChain();
   const setActiveWallet = useSetActiveWallet();
   const { syncWalletToWagmi } = useThirdwebWagmiSync();
+  const statusToast = useTransactionStatusToast();
   const { address, chainId: wagmiChainId, connector } = useAccount();
   const freeTransactionAllowance = useFreeTransactionAllowance();
   const { executionMode, hasSendCalls } = useWalletExecutionCapabilities();
@@ -199,6 +203,10 @@ export function useThirdwebSponsoredSubmitCalls() {
         });
 
       try {
+        if (!options.suppressStatusToast) {
+          statusToast.showSubmitting({ action: options.action ?? "transaction" });
+        }
+
         const result = await sendCallsWithWallet(activeWallet);
 
         if (result.status !== "success") {
@@ -277,6 +285,7 @@ export function useThirdwebSponsoredSubmitCalls() {
 
         throw error;
       } finally {
+        statusToast.dismiss();
         void queryClient.invalidateQueries({ queryKey: FREE_TRANSACTION_ALLOWANCE_QUERY_KEY });
       }
     },
@@ -289,6 +298,7 @@ export function useThirdwebSponsoredSubmitCalls() {
       postFreeTransactionMutation,
       queryClient,
       setActiveWallet,
+      statusToast,
       syncWalletToWagmi,
     ],
   );

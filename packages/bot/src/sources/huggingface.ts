@@ -41,9 +41,12 @@ export const huggingFaceSource: ContentSource = {
 
   async fetchTrending(limit: number): Promise<ContentItem[]> {
     try {
-      const res = await fetchWithTimeout(
-        `https://huggingface.co/api/models?sort=trending&limit=${limit}`,
-      );
+      const params = new URLSearchParams({
+        direction: "-1",
+        limit: String(limit),
+        sort: "trendingScore",
+      });
+      const res = await fetchWithTimeout(`https://huggingface.co/api/models?${params.toString()}`);
       if (!res.ok) {
         log.warn(`HuggingFace API error: ${res.status}`);
         return [];

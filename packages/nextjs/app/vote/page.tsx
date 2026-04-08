@@ -22,6 +22,7 @@ import { useDelegation } from "~~/hooks/useDelegation";
 import { useDiscoverSignals } from "~~/hooks/useDiscoverSignals";
 import { useFollowedProfiles } from "~~/hooks/useFollowedProfiles";
 import { useInterestProfile } from "~~/hooks/useInterestProfile";
+import { useLiveVoteCooldown } from "~~/hooks/useLiveVoteCooldown";
 import { useOnboarding } from "~~/hooks/useOnboarding";
 import { useRoundVote } from "~~/hooks/useRoundVote";
 import { SubmitterProfile, useSubmitterProfiles } from "~~/hooks/useSubmitterProfiles";
@@ -147,6 +148,10 @@ const HomeInner = () => {
   const { delegateTo, delegateOf, hasDelegate, isDelegate, isLoading: delegationLoading } = useDelegation(address);
   const delegateVoteAddress = hasDelegate ? delegateTo : undefined;
   const delegatorVoteAddress = isDelegate ? delegateOf : undefined;
+  const voteCooldownAddresses = useMemo(
+    () => buildLinkedWalletAddresses(address, delegateVoteAddress, delegatorVoteAddress),
+    [address, delegateVoteAddress, delegatorVoteAddress],
+  );
   const ownSubmitterAddresses = useMemo(
     () => buildLinkedWalletAddresses(address, delegateVoteAddress, delegatorVoteAddress),
     [address, delegateVoteAddress, delegatorVoteAddress],
@@ -860,10 +865,34 @@ const HomeInner = () => {
     [resolvedVoteCooldownByContentId],
   );
 
-  const primaryItemCooldownSeconds = primaryItem ? getContentCooldownSeconds(primaryItem.id) : 0;
+  const primaryItemKnownCooldownSeconds = primaryItem ? getContentCooldownSeconds(primaryItem.id) : 0;
+  const { cooldownSecondsRemaining: primaryItemLiveCooldownSeconds } = useLiveVoteCooldown({
+    contentId: primaryItem?.id,
+    voters: voteCooldownAddresses,
+    nowSeconds,
+    enabled:
+      primaryItem !== null &&
+      primaryItem !== undefined &&
+      primaryItemKnownCooldownSeconds === 0 &&
+      voteCooldownAddresses.length > 0,
+  });
+  const primaryItemCooldownSeconds = Math.max(primaryItemKnownCooldownSeconds, primaryItemLiveCooldownSeconds);
   const primaryAttentionToken =
     primaryItem && voteAttention?.contentId === primaryItem.id.toString() ? voteAttention.token : null;
-  const stakeModalCooldownSeconds = stakeModal.contentId > 0n ? getContentCooldownSeconds(stakeModal.contentId) : 0;
+  const stakeModalNeedsLiveCooldown =
+    stakeModal.contentId > 0n && (primaryItem?.id === undefined || stakeModal.contentId !== primaryItem.id);
+  const stakeModalKnownCooldownSeconds =
+    stakeModal.contentId > 0n ? getContentCooldownSeconds(stakeModal.contentId) : 0;
+  const { cooldownSecondsRemaining: stakeModalLiveCooldownSeconds } = useLiveVoteCooldown({
+    contentId: stakeModalNeedsLiveCooldown ? stakeModal.contentId : undefined,
+    voters: voteCooldownAddresses,
+    nowSeconds,
+    enabled: stakeModalNeedsLiveCooldown && stakeModalKnownCooldownSeconds === 0 && voteCooldownAddresses.length > 0,
+  });
+  const stakeModalCooldownSeconds = Math.max(
+    stakeModalKnownCooldownSeconds,
+    stakeModalNeedsLiveCooldown ? stakeModalLiveCooldownSeconds : primaryItemLiveCooldownSeconds,
+  );
 
   // Reset visible count when filters change
   useEffect(() => {
@@ -1344,7 +1373,7 @@ const HomeInner = () => {
           }}
           label="View"
         />
-        <div className="shrink-0 flex items-center xl:hidden">
+        <div className="shrink-0 flex items-center">
           <StreakCounter />
         </div>
       </div>

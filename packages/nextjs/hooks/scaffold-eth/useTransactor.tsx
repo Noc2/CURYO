@@ -75,14 +75,17 @@ export const useTransactor = (_walletClient?: WalletClient): TransactionFunc => 
         throw new Error("Public client not available for this chain");
       }
 
-      const submittingStatus = getSubmittingTransactionStatus("transaction");
-      notificationId = notification.loading(
-        <TransactionStatusCallout
-          variant="toast"
-          title={submittingStatus.title}
-          description={submittingStatus.description}
-        />,
-      );
+      const action = options?.action ?? "transaction";
+      const submittingStatus = getSubmittingTransactionStatus(action);
+      if (!options?.suppressStatusToast) {
+        notificationId = notification.loading(
+          <TransactionStatusCallout
+            variant="toast"
+            title={submittingStatus.title}
+            description={submittingStatus.description}
+          />,
+        );
+      }
       if (typeof tx === "function") {
         // Tx is already prepared by the caller
         const result = await tx();
@@ -92,7 +95,9 @@ export const useTransactor = (_walletClient?: WalletClient): TransactionFunc => 
       } else {
         throw new Error("Incorrect transaction passed to transactor");
       }
-      notification.remove(notificationId);
+      if (notificationId) {
+        notification.remove(notificationId);
+      }
 
       blockExplorerTxURL = chainId ? getBlockExplorerTxLink(chainId, transactionHash) : "";
 
@@ -100,40 +105,50 @@ export const useTransactor = (_walletClient?: WalletClient): TransactionFunc => 
       // The simulation already validated the tx, so skip receipt polling which is
       // unreliable on local chains due to publicClient transport issues.
       if (chainId === 31337) {
-        notification.remove(notificationId);
+        if (notificationId) {
+          notification.remove(notificationId);
+        }
         void queryClient.invalidateQueries({ queryKey: FREE_TRANSACTION_ALLOWANCE_QUERY_KEY });
+        if (!options?.suppressSuccessToast) {
+          notification.success(
+            <TxnNotification message="Transaction completed successfully!" blockExplorerLink={blockExplorerTxURL} />,
+            {
+              icon: "🎉",
+            },
+          );
+        }
+        return transactionHash;
+      }
+
+      if (!options?.suppressStatusToast) {
+        notificationId = notification.loading(
+          <TransactionStatusCallout
+            variant="toast"
+            title={TRANSACTION_CONFIRMING_STATUS.title}
+            description={TRANSACTION_CONFIRMING_STATUS.description}
+            blockExplorerLink={blockExplorerTxURL}
+          />,
+        );
+      }
+
+      transactionReceipt = await publicClient.waitForTransactionReceipt({
+        hash: transactionHash,
+        confirmations: options?.blockConfirmations,
+      });
+      if (notificationId) {
+        notification.remove(notificationId);
+      }
+
+      if (transactionReceipt.status === "reverted") throw new Error("Transaction reverted");
+
+      if (!options?.suppressSuccessToast) {
         notification.success(
           <TxnNotification message="Transaction completed successfully!" blockExplorerLink={blockExplorerTxURL} />,
           {
             icon: "🎉",
           },
         );
-        return transactionHash;
       }
-
-      notificationId = notification.loading(
-        <TransactionStatusCallout
-          variant="toast"
-          title={TRANSACTION_CONFIRMING_STATUS.title}
-          description={TRANSACTION_CONFIRMING_STATUS.description}
-          blockExplorerLink={blockExplorerTxURL}
-        />,
-      );
-
-      transactionReceipt = await publicClient.waitForTransactionReceipt({
-        hash: transactionHash,
-        confirmations: options?.blockConfirmations,
-      });
-      notification.remove(notificationId);
-
-      if (transactionReceipt.status === "reverted") throw new Error("Transaction reverted");
-
-      notification.success(
-        <TxnNotification message="Transaction completed successfully!" blockExplorerLink={blockExplorerTxURL} />,
-        {
-          icon: "🎉",
-        },
-      );
 
       void queryClient.invalidateQueries({ queryKey: FREE_TRANSACTION_ALLOWANCE_QUERY_KEY });
 

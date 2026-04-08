@@ -120,3 +120,27 @@ test("continues serving images when the rate-limit backing store is unavailable"
   assert.equal(response.headers.get("content-type"), "image/png");
   assert.deepEqual(Array.from(new Uint8Array(await response.arrayBuffer())), [4, 5, 6]);
 });
+
+test("allows Hugging Face repository image assets", async () => {
+  const calls: string[] = [];
+  globalThis.fetch = (async (input: RequestInfo | URL) => {
+    calls.push(String(input));
+
+    return new Response(new Uint8Array([7, 8, 9]), {
+      headers: {
+        "content-type": "image/png",
+      },
+    });
+  }) as typeof fetch;
+
+  const response = await GET(
+    new NextRequest(
+      "http://localhost/api/image-proxy?url=https://huggingface.co/dealignai/Gemma-4-31B-JANG_4M-CRACK/raw/main/dealign_mascot.png",
+    ),
+  );
+
+  assert.equal(response.status, 200);
+  assert.equal(response.headers.get("content-type"), "image/png");
+  assert.deepEqual(calls, ["https://huggingface.co/dealignai/Gemma-4-31B-JANG_4M-CRACK/raw/main/dealign_mascot.png"]);
+  assert.deepEqual(Array.from(new Uint8Array(await response.arrayBuffer())), [7, 8, 9]);
+});
