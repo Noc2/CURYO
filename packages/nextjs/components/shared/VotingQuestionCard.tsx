@@ -537,11 +537,24 @@ export function VotingQuestionCard({
     };
     const dockControlsStyle = compact ? { paddingBottom: "calc(0.625rem + env(safe-area-inset-bottom))" } : undefined;
     const dockShellClassName = compact ? "rounded-none" : "rounded-[2rem]";
-    const dockShellBorderClassName = compact ? "ring-[color:var(--curyo-shell-border-strong)]" : "ring-base-content/8";
-    const dockShellBorderOverlayStyle = compact
+    const dockShellBorderClassName = compact ? "" : "ring-1 ring-base-content/8";
+    const dockTopBorderOverlayStyle = compact
       ? {
-          ...dockShellMaskStyle,
-          boxShadow: "inset 0 0 0 1px var(--curyo-shell-border-strong)",
+          height: `${dockNotchCutout + 2}px`,
+        }
+      : undefined;
+    const dockTopBorderSegmentStyle = compact
+      ? {
+          width: `calc(50% - ${dockNotchCutout}px)`,
+          borderColor: "var(--curyo-shell-border-strong)",
+        }
+      : undefined;
+    const dockTopBorderArcStyle = compact
+      ? {
+          top: `${-dockNotchCutout}px`,
+          width: `${dockNotchCutout * 2}px`,
+          height: `${dockNotchCutout * 2}px`,
+          borderColor: "var(--curyo-shell-border-strong)",
         }
       : undefined;
     const mobileOrbClassName = compact ? "drop-shadow-[0_14px_28px_rgba(9,10,12,0.7)]" : "";
@@ -560,18 +573,22 @@ export function VotingQuestionCard({
         </div>
 
         <div
-          className={`relative z-10 overflow-hidden ring-1 shadow-[0_16px_36px_rgb(0_0_0_/_0.28)] ${
+          className={`relative z-10 overflow-hidden shadow-[0_16px_36px_rgb(0_0_0_/_0.28)] ${
             isAttentionActive ? "vote-surface-attention" : ""
           } ${dockShellClassName} ${dockShellBorderClassName}`}
           data-vote-attention={isAttentionActive ? "true" : undefined}
           style={{ ...dockShellMaskStyle, ...dockSurfaceStyle }}
         >
-          {dockShellBorderOverlayStyle ? (
+          {dockTopBorderOverlayStyle ? (
             <div
               aria-hidden
-              className="pointer-events-none absolute inset-0 z-10"
-              style={dockShellBorderOverlayStyle}
-            />
+              className="pointer-events-none absolute inset-x-0 top-0 z-10 overflow-hidden"
+              style={dockTopBorderOverlayStyle}
+            >
+              <div className="absolute left-0 top-0 border-t" style={dockTopBorderSegmentStyle} />
+              <div className="absolute right-0 top-0 border-t" style={dockTopBorderSegmentStyle} />
+              <div className="absolute left-1/2 -translate-x-1/2 rounded-full border" style={dockTopBorderArcStyle} />
+            </div>
           ) : null}
           <div className={dockControlsPaddingClassName} style={dockControlsStyle}>
             {!centerStatusContent ? (
