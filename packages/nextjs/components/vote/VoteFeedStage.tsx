@@ -1,229 +1,576 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { AnimatePresence, type PanInfo, type Variants, motion } from "framer-motion";
-import { FeedQueueCard, FeedVoteCard, getVoteFeedThumbnailSrc } from "~~/components/vote/VoteFeedCards";
+import { type RefObject, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { createPortal } from "react-dom";
+import { FeedVoteCard } from "~~/components/vote/VoteFeedCards";
 import type { ContentItem } from "~~/hooks/useContentFeed";
-import { useQueueNavigation } from "~~/hooks/useQueueNavigation";
 import type { SubmitterProfile } from "~~/hooks/useSubmitterProfiles";
-import { useVoteQueueLayout } from "~~/hooks/useVoteQueueLayout";
-import type { QueueCardStatus } from "~~/lib/vote/queueCardStatus";
-import { resolveVoteQueueWindowItems } from "~~/lib/vote/queueLayout";
-
-const CARD_SWIPE_THRESHOLD = 96;
-const VOTE_CARD_TRANSITION_EASE = [0.22, 1, 0.36, 1] as const;
-
-const voteCardVariants: Variants = {
-  enter: (direction: "previous" | "next") => ({
-    opacity: 0.38,
-    x: direction === "next" ? 22 : -22,
-    y: 10,
-    scale: 0.992,
-  }),
-  center: {
-    opacity: 1,
-    x: 0,
-    y: 0,
-    scale: 1,
-  },
-  exit: (direction: "previous" | "next") => ({
-    opacity: 0.72,
-    x: direction === "next" ? -14 : 14,
-    y: 4,
-    scale: 0.997,
-  }),
-};
-
-type QueueAction = "previous" | "next" | "first" | "last";
 
 interface VoteFeedStageProps {
-  primaryItem: ContentItem | null;
   displayFeed: ContentItem[];
-  queueSourceItems: ContentItem[];
-  navigationDirection: "previous" | "next";
   activeSourceIndex: number;
   loadedCount: number;
+  mobileDockReservedSpace?: number | null;
   canLoadMore: boolean;
-  queueStatusByContentId: Map<string, QueueCardStatus | null>;
-  queuePositionMap: Map<string, number>;
   enrichedProfiles: Record<string, SubmitterProfile>;
   watchedContentIds: Set<string>;
-  votedContentIds: Set<string>;
   followedWallets: Set<string>;
   normalizedAddress?: string;
-  address?: string;
   isCommitting: boolean;
-  voteError?: string | null;
   isMetadataPrefetchPending: boolean;
-  primaryItemCooldownSeconds: number;
   navigationLocked: boolean;
   isWatchPending: (contentId: bigint) => boolean;
   isFollowPending: (address: string) => boolean;
+  scrollContainerRef?: RefObject<HTMLDivElement | null>;
   onLoadMore: () => void;
-  onNavigateSelection: (direction: "previous" | "next") => boolean;
+  onTrackActiveIndex: (targetIndex: number) => boolean;
   onSelectByIndex: (targetIndex: number) => boolean;
-  onSelectCard: (id: bigint) => void;
-  onVote: (item: ContentItem, isUp: boolean) => void;
   onExternalOpen: (item: ContentItem) => void;
   onToggleWatch: (contentId: bigint) => void;
   onToggleFollow: (address: string) => void;
 }
 
+const DESKTOP_STEP_MEDIA_QUERY = "(min-width: 1280px)";
+const MOBILE_STAGE_MEDIA_QUERY = "(max-width: 767px)";
+const MOBILE_DOCK_RESERVED_SPACE_PX = 152;
+const MOBILE_MIN_SCROLLER_HEIGHT_PX = 320;
+const PROGRAMMATIC_SCROLL_RECOVERY_MS = 700;
+const MIN_SCROLL_INDICATOR_HEIGHT_PX = 40;
+const DESKTOP_SCROLL_SETTLE_MS = 140;
+const DESKTOP_SCROLL_SNAP_TOLERANCE_PX = 16;
+const MOBILE_SCROLL_INDICATOR_ACTIVE_MS = 900;
+
 export function VoteFeedStage({
-  primaryItem,
   displayFeed,
-  queueSourceItems,
-  navigationDirection,
   activeSourceIndex,
   loadedCount,
+  mobileDockReservedSpace,
   canLoadMore,
-  queueStatusByContentId,
-  queuePositionMap,
   enrichedProfiles,
   watchedContentIds,
-  votedContentIds,
   followedWallets,
   normalizedAddress,
-  address,
   isCommitting,
-  voteError,
   isMetadataPrefetchPending,
-  primaryItemCooldownSeconds,
   navigationLocked,
   isWatchPending,
   isFollowPending,
+  scrollContainerRef,
   onLoadMore,
-  onNavigateSelection,
+  onTrackActiveIndex,
   onSelectByIndex,
-  onSelectCard,
-  onVote,
   onExternalOpen,
   onToggleWatch,
   onToggleFollow,
 }: VoteFeedStageProps) {
-  const [supportsTouchNavigation, setSupportsTouchNavigation] = useState(false);
-  const queueRailRef = useRef<HTMLDivElement | null>(null);
+  const scrollerRef = useRef<HTMLDivElement | null>(null);
   const loadMoreRef = useRef<HTMLDivElement | null>(null);
-  const lastQueuePrefetchVisibleCountRef = useRef<number | null>(null);
-  const lastPreloadedThumbnailRef = useRef<string | null>(null);
-  const [queueSectionElement, setQueueSectionElement] = useState<HTMLElement | null>(null);
-  const queueLayout = useVoteQueueLayout(queueSectionElement);
-  const hasVisibleQueue = queueLayout.rows > 0;
-  const hasMultiRowQueue = queueLayout.rows > 1;
-  const queueVisibleItems = useMemo(() => {
-    return resolveVoteQueueWindowItems(queueSourceItems, activeSourceIndex, queueLayout);
-  }, [activeSourceIndex, queueLayout, queueSourceItems]);
+  const cardElementsRef = useRef(new Map<number, HTMLDivElement>());
+  const lastObservedActiveIndexRef = useRef<number | null>(null);
+  const queuedNavigationTargetRef = useRef<number | null>(null);
+  const pendingProgrammaticScrollTargetRef = useRef<number | null>(null);
+  const pendingProgrammaticScrollStartedAtRef = useRef<number | null>(null);
+  const lastProgrammaticScrollRequestRef = useRef<number | null>(null);
+  const lastAutoPrefetchLoadedCountRef = useRef<number | null>(null);
+  const mobileScrollIndicatorTimeoutRef = useRef<number | null>(null);
+  const [mobileScrollerHeight, setMobileScrollerHeight] = useState<number | null>(null);
+  const [desktopEndSpacerHeight, setDesktopEndSpacerHeight] = useState(0);
+  const [isDesktopViewport, setIsDesktopViewport] = useState(false);
+  const [isMobileScrollIndicatorActive, setIsMobileScrollIndicatorActive] = useState(false);
+  const [scrollIndicatorState, setScrollIndicatorState] = useState<{
+    isVisible: boolean;
+    top: number;
+    height: number;
+    thumbOffset: number;
+    thumbHeight: number;
+  }>({
+    isVisible: false,
+    top: 0,
+    height: 0,
+    thumbOffset: 0,
+    thumbHeight: MIN_SCROLL_INDICATOR_HEIGHT_PX,
+  });
 
-  const queueGridTemplateColumns = useMemo(() => {
-    if (queueLayout.rows <= 1) return undefined;
-    return `repeat(${queueLayout.columns}, minmax(0, 1fr))`;
-  }, [queueLayout.columns, queueLayout.rows]);
-
-  const nextThumbnailSrc = useMemo(() => {
-    const selectedNextItem = activeSourceIndex >= 0 ? (displayFeed[activeSourceIndex + 1] ?? null) : null;
-    return selectedNextItem ? getVoteFeedThumbnailSrc(selectedNextItem) : null;
-  }, [activeSourceIndex, displayFeed]);
-
-  const scrollQueueThumbnailIntoView = useCallback(
-    (contentId: bigint | null, behavior: ScrollBehavior = "smooth") => {
-      if (contentId === null || queueLayout.rows !== 1) return;
-
-      const rail = queueRailRef.current;
-      if (!rail) return;
-
-      const thumbnail = rail.querySelector<HTMLElement>(`[data-thumbnail-id="${contentId.toString()}"]`);
-      if (!thumbnail) return;
-
-      const railRect = rail.getBoundingClientRect();
-      const thumbnailRect = thumbnail.getBoundingClientRect();
-      const centeredScrollLeft =
-        rail.scrollLeft + (thumbnailRect.left - railRect.left) - (rail.clientWidth - thumbnailRect.width) / 2;
-      const maxScrollLeft = Math.max(0, rail.scrollWidth - rail.clientWidth);
-      const nextScrollLeft = Math.min(Math.max(0, centeredScrollLeft), maxScrollLeft);
-
-      rail.scrollTo({ left: nextScrollLeft, behavior });
-    },
-    [queueLayout.rows],
+  const effectiveMobileDockReservedSpace = mobileDockReservedSpace ?? MOBILE_DOCK_RESERVED_SPACE_PX;
+  const loadedItemCount = Math.min(Math.max(loadedCount, 0), displayFeed.length);
+  const feedItems = useMemo(
+    () => displayFeed.slice(0, loadedItemCount).map((item, actualIndex) => ({ actualIndex, item })),
+    [displayFeed, loadedItemCount],
   );
-
-  const focusQueueThumbnail = useCallback(
-    (contentId: bigint | null) => {
-      if (contentId === null || typeof window === "undefined") return;
-
-      window.requestAnimationFrame(() => {
-        const rail = queueRailRef.current;
-        if (!rail) return;
-
-        scrollQueueThumbnailIntoView(contentId, "auto");
-        const thumbnail = rail.querySelector<HTMLElement>(`[data-thumbnail-id="${contentId.toString()}"]`);
-        thumbnail?.focus({ preventScroll: true });
-      });
-    },
-    [scrollQueueThumbnailIntoView],
-  );
+  const renderedActiveIndex =
+    activeSourceIndex >= 0 && activeSourceIndex < loadedItemCount
+      ? activeSourceIndex
+      : Math.min(Math.max(lastObservedActiveIndexRef.current ?? 0, 0), Math.max(loadedItemCount - 1, 0));
+  const getActiveScroller = useCallback(() => {
+    if (isDesktopViewport && scrollContainerRef?.current) {
+      return scrollContainerRef.current;
+    }
+    return scrollerRef.current;
+  }, [isDesktopViewport, scrollContainerRef]);
 
   useEffect(() => {
-    if (!primaryItem || queueLayout.rows !== 1) return;
-    scrollQueueThumbnailIntoView(primaryItem.id);
-  }, [primaryItem, queueLayout.rows, scrollQueueThumbnailIntoView]);
+    if (typeof window === "undefined") return;
 
-  useEffect(() => {
-    if (typeof window === "undefined" || typeof window.matchMedia !== "function") return;
-
-    const mediaQuery = window.matchMedia("(pointer: coarse), (hover: none)");
-    const updatePointerMode = () => {
-      setSupportsTouchNavigation(mediaQuery.matches);
+    const desktopStageQuery = window.matchMedia(DESKTOP_STEP_MEDIA_QUERY);
+    const updateDesktopViewport = () => {
+      setIsDesktopViewport(desktopStageQuery.matches);
     };
 
-    updatePointerMode();
-    if (typeof mediaQuery.addEventListener === "function") {
-      mediaQuery.addEventListener("change", updatePointerMode);
+    updateDesktopViewport();
+
+    if (typeof desktopStageQuery.addEventListener === "function") {
+      desktopStageQuery.addEventListener("change", updateDesktopViewport);
       return () => {
-        mediaQuery.removeEventListener("change", updatePointerMode);
+        desktopStageQuery.removeEventListener("change", updateDesktopViewport);
       };
     }
 
-    mediaQuery.addListener(updatePointerMode);
+    desktopStageQuery.addListener(updateDesktopViewport);
     return () => {
-      mediaQuery.removeListener(updatePointerMode);
+      desktopStageQuery.removeListener(updateDesktopViewport);
     };
   }, []);
 
   useEffect(() => {
-    const remainingLoadedItems = displayFeed.length - (activeSourceIndex + 1);
-    const shouldPrefetchQueue = remainingLoadedItems < 8 && canLoadMore;
-
-    if (!shouldPrefetchQueue) {
-      lastQueuePrefetchVisibleCountRef.current = null;
+    if (!canLoadMore) {
+      lastAutoPrefetchLoadedCountRef.current = null;
       return;
     }
 
-    if (lastQueuePrefetchVisibleCountRef.current === loadedCount) {
+    const remainingLoadedItems = loadedItemCount - (activeSourceIndex + 1);
+    if (remainingLoadedItems >= 3) {
       return;
     }
 
-    lastQueuePrefetchVisibleCountRef.current = loadedCount;
+    if (lastAutoPrefetchLoadedCountRef.current === loadedItemCount) {
+      return;
+    }
+
+    lastAutoPrefetchLoadedCountRef.current = loadedItemCount;
     onLoadMore();
-  }, [activeSourceIndex, canLoadMore, displayFeed.length, loadedCount, onLoadMore]);
+  }, [activeSourceIndex, canLoadMore, loadedItemCount, onLoadMore]);
 
   useEffect(() => {
-    if (!nextThumbnailSrc || typeof window === "undefined") return;
-    if (lastPreloadedThumbnailRef.current === nextThumbnailSrc) return;
+    if (typeof window === "undefined") return;
 
-    lastPreloadedThumbnailRef.current = nextThumbnailSrc;
-    const image = new window.Image();
-    image.decoding = "async";
-    image.src = nextThumbnailSrc;
-  }, [nextThumbnailSrc]);
+    const mobileStageQuery = window.matchMedia(MOBILE_STAGE_MEDIA_QUERY);
+    let frameId = 0;
+
+    const measureScrollerHeight = () => {
+      const scroller = scrollerRef.current;
+      if (!scroller) return;
+
+      if (!mobileStageQuery.matches) {
+        setMobileScrollerHeight(current => (current === null ? current : null));
+        return;
+      }
+
+      const topOffset = scroller.getBoundingClientRect().top;
+      const availableHeight = Math.max(MOBILE_MIN_SCROLLER_HEIGHT_PX, Math.floor(window.innerHeight - topOffset));
+
+      setMobileScrollerHeight(current => (current === availableHeight ? current : availableHeight));
+    };
+
+    const requestMeasurement = () => {
+      if (frameId !== 0) {
+        window.cancelAnimationFrame(frameId);
+      }
+
+      frameId = window.requestAnimationFrame(() => {
+        frameId = 0;
+        measureScrollerHeight();
+      });
+    };
+
+    requestMeasurement();
+    window.addEventListener("resize", requestMeasurement);
+
+    if (typeof mobileStageQuery.addEventListener === "function") {
+      mobileStageQuery.addEventListener("change", requestMeasurement);
+    } else {
+      mobileStageQuery.addListener(requestMeasurement);
+    }
+
+    return () => {
+      if (frameId !== 0) {
+        window.cancelAnimationFrame(frameId);
+      }
+      window.removeEventListener("resize", requestMeasurement);
+
+      if (typeof mobileStageQuery.addEventListener === "function") {
+        mobileStageQuery.removeEventListener("change", requestMeasurement);
+      } else {
+        mobileStageQuery.removeListener(requestMeasurement);
+      }
+    };
+  }, [effectiveMobileDockReservedSpace, loadedItemCount]);
 
   useEffect(() => {
+    if (typeof window === "undefined") return;
+
+    const desktopStageQuery = window.matchMedia(DESKTOP_STEP_MEDIA_QUERY);
+    let frameId = 0;
+    let observedLastNode: HTMLDivElement | null = null;
+    let scrollerResizeObserver: ResizeObserver | null = null;
+    let lastCardResizeObserver: ResizeObserver | null = null;
+    const renderedLastIndex = feedItems.length > 0 ? (feedItems[feedItems.length - 1]?.actualIndex ?? -1) : -1;
+
+    const updateEndSpacerHeight = () => {
+      const scroller = getActiveScroller();
+      const lastNode = renderedLastIndex >= 0 ? (cardElementsRef.current.get(renderedLastIndex) ?? null) : null;
+
+      if (
+        !scroller ||
+        !desktopStageQuery.matches ||
+        canLoadMore ||
+        renderedLastIndex !== displayFeed.length - 1 ||
+        !lastNode
+      ) {
+        setDesktopEndSpacerHeight(current => (current === 0 ? current : 0));
+        return;
+      }
+
+      const nextHeight = Math.max(scroller.clientHeight - lastNode.offsetHeight, 0);
+      setDesktopEndSpacerHeight(current => (current === nextHeight ? current : nextHeight));
+    };
+
+    const requestEndSpacerMeasurement = () => {
+      if (frameId !== 0) {
+        window.cancelAnimationFrame(frameId);
+      }
+
+      frameId = window.requestAnimationFrame(() => {
+        frameId = 0;
+        updateEndSpacerHeight();
+      });
+    };
+
+    const syncObservedLastNode = () => {
+      const nextLastNode = renderedLastIndex >= 0 ? (cardElementsRef.current.get(renderedLastIndex) ?? null) : null;
+
+      if (observedLastNode === nextLastNode) {
+        requestEndSpacerMeasurement();
+        return;
+      }
+
+      lastCardResizeObserver?.disconnect();
+      lastCardResizeObserver = null;
+      observedLastNode = nextLastNode;
+
+      if (observedLastNode && typeof ResizeObserver !== "undefined") {
+        lastCardResizeObserver = new ResizeObserver(requestEndSpacerMeasurement);
+        lastCardResizeObserver.observe(observedLastNode);
+      }
+
+      requestEndSpacerMeasurement();
+    };
+
+    const activeScroller = getActiveScroller();
+
+    if (typeof ResizeObserver !== "undefined" && activeScroller) {
+      scrollerResizeObserver = new ResizeObserver(syncObservedLastNode);
+      scrollerResizeObserver.observe(activeScroller);
+    }
+
+    syncObservedLastNode();
+    window.addEventListener("resize", syncObservedLastNode);
+
+    if (typeof desktopStageQuery.addEventListener === "function") {
+      desktopStageQuery.addEventListener("change", syncObservedLastNode);
+    } else {
+      desktopStageQuery.addListener(syncObservedLastNode);
+    }
+
+    return () => {
+      if (frameId !== 0) {
+        window.cancelAnimationFrame(frameId);
+      }
+
+      scrollerResizeObserver?.disconnect();
+      lastCardResizeObserver?.disconnect();
+      window.removeEventListener("resize", syncObservedLastNode);
+
+      if (typeof desktopStageQuery.addEventListener === "function") {
+        desktopStageQuery.removeEventListener("change", syncObservedLastNode);
+      } else {
+        desktopStageQuery.removeListener(syncObservedLastNode);
+      }
+    };
+  }, [canLoadMore, displayFeed.length, feedItems, getActiveScroller, mobileScrollerHeight]);
+
+  const requestProgrammaticScroll = useCallback(
+    (targetIndex: number) => {
+      if (targetIndex < 0 || targetIndex >= displayFeed.length) {
+        pendingProgrammaticScrollTargetRef.current = null;
+        pendingProgrammaticScrollStartedAtRef.current = null;
+        lastProgrammaticScrollRequestRef.current = null;
+        return false;
+      }
+
+      const scroller = getActiveScroller();
+      const node = cardElementsRef.current.get(targetIndex);
+      if (!scroller || !node || lastProgrammaticScrollRequestRef.current === targetIndex) {
+        return false;
+      }
+
+      const scrollerRect = scroller.getBoundingClientRect();
+      const nodeRect = node.getBoundingClientRect();
+      scroller.scrollTo({ top: scroller.scrollTop + nodeRect.top - scrollerRect.top, behavior: "smooth" });
+      pendingProgrammaticScrollTargetRef.current = targetIndex;
+      pendingProgrammaticScrollStartedAtRef.current = Date.now();
+      lastProgrammaticScrollRequestRef.current = targetIndex;
+      return true;
+    },
+    [displayFeed.length, getActiveScroller],
+  );
+
+  const resolveNearestCard = useCallback(() => {
+    const scroller = getActiveScroller();
+    if (!scroller) return null;
+
+    const scrollerRect = scroller.getBoundingClientRect();
+    let bestIndex: number | null = null;
+    let bestDistance = Number.POSITIVE_INFINITY;
+    let bestTop = Number.POSITIVE_INFINITY;
+
+    for (const [index, node] of cardElementsRef.current.entries()) {
+      const cardRect = node.getBoundingClientRect();
+      const relativeTop = cardRect.top - scrollerRect.top;
+      const distance = Math.abs(relativeTop);
+
+      if (distance < bestDistance || (distance === bestDistance && relativeTop < bestTop)) {
+        bestDistance = distance;
+        bestTop = relativeTop;
+        bestIndex = index;
+      }
+    }
+
+    if (bestIndex === null) {
+      return null;
+    }
+
+    return {
+      index: bestIndex,
+      relativeTop: bestTop,
+    };
+  }, [getActiveScroller]);
+
+  const trackActiveCard = useCallback(() => {
+    const nearestCard = resolveNearestCard();
+    if (!nearestCard) {
+      return;
+    }
+
+    const { index: bestIndex } = nearestCard;
+
+    const pendingProgrammaticTarget = pendingProgrammaticScrollTargetRef.current;
+    if (pendingProgrammaticTarget !== null) {
+      if (bestIndex !== pendingProgrammaticTarget) {
+        const pendingStartedAt = pendingProgrammaticScrollStartedAtRef.current;
+        if (pendingStartedAt !== null && Date.now() - pendingStartedAt < PROGRAMMATIC_SCROLL_RECOVERY_MS) {
+          return;
+        }
+
+        pendingProgrammaticScrollTargetRef.current = null;
+        pendingProgrammaticScrollStartedAtRef.current = null;
+        lastProgrammaticScrollRequestRef.current = null;
+      } else {
+        pendingProgrammaticScrollTargetRef.current = null;
+        pendingProgrammaticScrollStartedAtRef.current = null;
+        lastProgrammaticScrollRequestRef.current = null;
+        lastObservedActiveIndexRef.current = bestIndex;
+        return;
+      }
+    }
+
+    if (lastObservedActiveIndexRef.current === bestIndex) {
+      return;
+    }
+
+    lastObservedActiveIndexRef.current = bestIndex;
+    onTrackActiveIndex(bestIndex);
+  }, [onTrackActiveIndex, resolveNearestCard]);
+
+  useEffect(() => {
+    if (activeSourceIndex < 0) {
+      lastObservedActiveIndexRef.current = null;
+      queuedNavigationTargetRef.current = null;
+      pendingProgrammaticScrollTargetRef.current = null;
+      pendingProgrammaticScrollStartedAtRef.current = null;
+      lastProgrammaticScrollRequestRef.current = null;
+      return;
+    }
+
+    const queuedNavigationTarget = queuedNavigationTargetRef.current;
+    if (queuedNavigationTarget !== null) {
+      if (queuedNavigationTarget >= loadedItemCount) {
+        lastProgrammaticScrollRequestRef.current = null;
+        if (canLoadMore) {
+          onLoadMore();
+        }
+        return;
+      }
+
+      if (activeSourceIndex !== queuedNavigationTarget) {
+        const didSelect = onSelectByIndex(queuedNavigationTarget);
+        if (didSelect) {
+          return;
+        }
+      }
+
+      if (requestProgrammaticScroll(queuedNavigationTarget)) {
+        queuedNavigationTargetRef.current = null;
+      }
+      return;
+    }
+
+    if (
+      pendingProgrammaticScrollTargetRef.current === null &&
+      lastObservedActiveIndexRef.current === activeSourceIndex
+    ) {
+      return;
+    }
+
+    if (lastObservedActiveIndexRef.current === null && activeSourceIndex === 0) {
+      lastObservedActiveIndexRef.current = 0;
+      return;
+    }
+
+    if (activeSourceIndex >= loadedItemCount) {
+      queuedNavigationTargetRef.current = activeSourceIndex;
+      lastProgrammaticScrollRequestRef.current = null;
+      if (canLoadMore) {
+        onLoadMore();
+      }
+      return;
+    }
+
+    requestProgrammaticScroll(activeSourceIndex);
+  }, [activeSourceIndex, canLoadMore, loadedItemCount, onLoadMore, onSelectByIndex, requestProgrammaticScroll]);
+
+  useEffect(() => {
+    const scroller = getActiveScroller();
+    if (!scroller || typeof window === "undefined") return;
+
+    let frameId = 0;
+    const requestTrack = () => {
+      if (frameId !== 0) return;
+      frameId = window.requestAnimationFrame(() => {
+        frameId = 0;
+        trackActiveCard();
+      });
+    };
+
+    requestTrack();
+    scroller.addEventListener("scroll", requestTrack, { passive: true });
+    window.addEventListener("resize", requestTrack);
+
+    return () => {
+      if (frameId !== 0) {
+        window.cancelAnimationFrame(frameId);
+      }
+      scroller.removeEventListener("scroll", requestTrack);
+      window.removeEventListener("resize", requestTrack);
+    };
+  }, [feedItems.length, getActiveScroller, trackActiveCard]);
+
+  useEffect(() => {
+    if (!isDesktopViewport || typeof window === "undefined") return;
+
+    const scroller = getActiveScroller();
+    if (!scroller) return;
+
+    let settleTimeoutId: number | null = null;
+
+    const clearSettleTimeout = () => {
+      if (settleTimeoutId !== null) {
+        window.clearTimeout(settleTimeoutId);
+        settleTimeoutId = null;
+      }
+    };
+
+    const settleToNearestCard = () => {
+      settleTimeoutId = null;
+
+      if (navigationLocked || pendingProgrammaticScrollTargetRef.current !== null) {
+        return;
+      }
+
+      const nearestCard = resolveNearestCard();
+      if (!nearestCard) {
+        return;
+      }
+
+      if (Math.abs(nearestCard.relativeTop) <= DESKTOP_SCROLL_SNAP_TOLERANCE_PX) {
+        return;
+      }
+
+      requestProgrammaticScroll(nearestCard.index);
+    };
+
+    const scheduleSettle = () => {
+      clearSettleTimeout();
+      settleTimeoutId = window.setTimeout(settleToNearestCard, DESKTOP_SCROLL_SETTLE_MS);
+    };
+
+    scroller.addEventListener("scroll", scheduleSettle, { passive: true });
+
+    return () => {
+      scroller.removeEventListener("scroll", scheduleSettle);
+      clearSettleTimeout();
+    };
+  }, [getActiveScroller, isDesktopViewport, navigationLocked, requestProgrammaticScroll, resolveNearestCard]);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+
+    const scroller = getActiveScroller();
+    if (!scroller || isDesktopViewport) {
+      setIsMobileScrollIndicatorActive(false);
+      if (mobileScrollIndicatorTimeoutRef.current !== null) {
+        window.clearTimeout(mobileScrollIndicatorTimeoutRef.current);
+        mobileScrollIndicatorTimeoutRef.current = null;
+      }
+      return;
+    }
+
+    const showMobileIndicator = () => {
+      setIsMobileScrollIndicatorActive(true);
+
+      if (mobileScrollIndicatorTimeoutRef.current !== null) {
+        window.clearTimeout(mobileScrollIndicatorTimeoutRef.current);
+      }
+
+      mobileScrollIndicatorTimeoutRef.current = window.setTimeout(() => {
+        mobileScrollIndicatorTimeoutRef.current = null;
+        setIsMobileScrollIndicatorActive(false);
+      }, MOBILE_SCROLL_INDICATOR_ACTIVE_MS);
+    };
+
+    scroller.addEventListener("scroll", showMobileIndicator, { passive: true });
+
+    return () => {
+      scroller.removeEventListener("scroll", showMobileIndicator);
+      if (mobileScrollIndicatorTimeoutRef.current !== null) {
+        window.clearTimeout(mobileScrollIndicatorTimeoutRef.current);
+        mobileScrollIndicatorTimeoutRef.current = null;
+      }
+    };
+  }, [getActiveScroller, isDesktopViewport]);
+
+  useEffect(() => {
+    if (isDesktopViewport) return;
+
+    const scroller = getActiveScroller();
+    if (!scroller) return;
+
     const observer = new IntersectionObserver(
       entries => {
-        if (entries[0].isIntersecting && canLoadMore) {
+        if (entries[0]?.isIntersecting && canLoadMore) {
           onLoadMore();
         }
       },
-      { threshold: 0.1 },
+      { root: scroller, threshold: 0.1 },
     );
 
     const currentRef = loadMoreRef.current;
@@ -235,60 +582,194 @@ export function VoteFeedStage({
       if (currentRef) {
         observer.unobserve(currentRef);
       }
+      observer.disconnect();
     };
-  }, [canLoadMore, onLoadMore]);
+  }, [canLoadMore, getActiveScroller, isDesktopViewport, onLoadMore]);
 
-  const handleSelectPrevious = useCallback(() => {
-    onNavigateSelection("previous");
-  }, [onNavigateSelection]);
+  const setCardElement = useCallback((index: number, node: HTMLDivElement | null) => {
+    if (!node) {
+      cardElementsRef.current.delete(index);
+      return;
+    }
 
-  const handleSelectNext = useCallback(() => {
-    onNavigateSelection("next");
-  }, [onNavigateSelection]);
+    cardElementsRef.current.set(index, node);
+  }, []);
 
-  const handleQueueKeyboardNavigate = useCallback(
-    (action: QueueAction, currentId: bigint) => {
-      if (displayFeed.length === 0) return;
+  useEffect(() => {
+    const activeIndex = renderedActiveIndex;
 
-      if (action === "first") {
-        if (onSelectByIndex(0)) {
-          focusQueueThumbnail(displayFeed[0]?.id ?? null);
-        }
-        return;
-      }
-
-      if (action === "last") {
-        const lastIndex = displayFeed.length - 1;
-        if (onSelectByIndex(lastIndex)) {
-          focusQueueThumbnail(displayFeed[lastIndex]?.id ?? null);
-        }
-        return;
-      }
-
-      const currentIndex = displayFeed.findIndex(item => item.id === currentId);
-      if (currentIndex === -1) return;
-
-      const nextIndex = Math.min(Math.max(currentIndex + (action === "next" ? 1 : -1), 0), displayFeed.length - 1);
-      if (onSelectByIndex(nextIndex)) {
-        focusQueueThumbnail(displayFeed[nextIndex]?.id ?? null);
-      }
-    },
-    [displayFeed, focusQueueThumbnail, onSelectByIndex],
-  );
-
-  const canNavigateCards = displayFeed.length > 1 && !isCommitting && !navigationLocked;
-  const canSwipeNavigate = supportsTouchNavigation && canNavigateCards;
-  const canWheelNavigate = !supportsTouchNavigation && canNavigateCards;
-
-  const activeCardRegionRef = useQueueNavigation<HTMLDivElement>({
-    enabled: Boolean(primaryItem && canNavigateCards),
-    enableWheel: canWheelNavigate,
-    onNavigate: onNavigateSelection,
-  });
+    for (const [index, node] of cardElementsRef.current.entries()) {
+      node.inert = index !== activeIndex;
+    }
+  }, [feedItems.length, renderedActiveIndex]);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
-    if (navigationLocked) return;
+
+    let frameId = 0;
+    let resizeObserver: ResizeObserver | null = null;
+    const desktopStageQuery = window.matchMedia(DESKTOP_STEP_MEDIA_QUERY);
+    let observedScroller: HTMLDivElement | null = null;
+
+    const updateIndicator = () => {
+      const scroller = getActiveScroller();
+      if (!scroller) {
+        setScrollIndicatorState(current => (current.isVisible ? { ...current, isVisible: false } : current));
+        return;
+      }
+
+      const scrollerRect = scroller.getBoundingClientRect();
+      const visibleTop = isDesktopViewport ? 0 : Math.max(scrollerRect.top, 0);
+      const visibleBottom = isDesktopViewport ? window.innerHeight : Math.min(scrollerRect.bottom, window.innerHeight);
+      const trackHeight = Math.max(visibleBottom - visibleTop, 0);
+      const scrollRange = Math.max(scroller.scrollHeight - scroller.clientHeight, 0);
+
+      if (trackHeight < MIN_SCROLL_INDICATOR_HEIGHT_PX || scrollRange <= 0) {
+        setScrollIndicatorState(current => (current.isVisible ? { ...current, isVisible: false } : current));
+        return;
+      }
+
+      const thumbHeight = Math.max(
+        MIN_SCROLL_INDICATOR_HEIGHT_PX,
+        Math.round((scroller.clientHeight / scroller.scrollHeight) * trackHeight),
+      );
+      const thumbTravel = Math.max(trackHeight - thumbHeight, 0);
+      const thumbOffset = thumbTravel * (scroller.scrollTop / scrollRange);
+
+      setScrollIndicatorState(current => {
+        if (
+          current.isVisible &&
+          current.top === visibleTop &&
+          current.height === trackHeight &&
+          current.thumbHeight === thumbHeight &&
+          Math.abs(current.thumbOffset - thumbOffset) < 1
+        ) {
+          return current;
+        }
+
+        return {
+          isVisible: true,
+          top: visibleTop,
+          height: trackHeight,
+          thumbOffset,
+          thumbHeight,
+        };
+      });
+    };
+
+    const requestUpdate = () => {
+      if (frameId !== 0) return;
+      frameId = window.requestAnimationFrame(() => {
+        frameId = 0;
+        updateIndicator();
+      });
+    };
+
+    const bindScroller = () => {
+      const scroller = getActiveScroller();
+      if (observedScroller === scroller) {
+        requestUpdate();
+        return;
+      }
+
+      if (observedScroller) {
+        observedScroller.removeEventListener("scroll", requestUpdate);
+      }
+
+      resizeObserver?.disconnect();
+      resizeObserver = null;
+      observedScroller = scroller;
+
+      if (observedScroller) {
+        observedScroller.addEventListener("scroll", requestUpdate, { passive: true });
+        if (typeof ResizeObserver !== "undefined") {
+          resizeObserver = new ResizeObserver(requestUpdate);
+          resizeObserver.observe(observedScroller);
+        }
+      }
+
+      requestUpdate();
+    };
+
+    bindScroller();
+    window.addEventListener("resize", bindScroller);
+
+    if (window.visualViewport) {
+      window.visualViewport.addEventListener("resize", bindScroller);
+    }
+
+    if (typeof desktopStageQuery.addEventListener === "function") {
+      desktopStageQuery.addEventListener("change", bindScroller);
+    } else {
+      desktopStageQuery.addListener(bindScroller);
+    }
+
+    return () => {
+      if (frameId !== 0) {
+        window.cancelAnimationFrame(frameId);
+      }
+      if (observedScroller) {
+        observedScroller.removeEventListener("scroll", requestUpdate);
+      }
+      resizeObserver?.disconnect();
+      window.removeEventListener("resize", bindScroller);
+
+      if (window.visualViewport) {
+        window.visualViewport.removeEventListener("resize", bindScroller);
+      }
+
+      if (typeof desktopStageQuery.addEventListener === "function") {
+        desktopStageQuery.removeEventListener("change", bindScroller);
+      } else {
+        desktopStageQuery.removeListener(bindScroller);
+      }
+    };
+  }, [desktopEndSpacerHeight, feedItems.length, getActiveScroller, isDesktopViewport, mobileScrollerHeight]);
+
+  const scrollToIndex = useCallback(
+    (targetIndex: number) => {
+      if (navigationLocked || targetIndex < 0 || targetIndex >= displayFeed.length) {
+        return false;
+      }
+
+      queuedNavigationTargetRef.current = targetIndex;
+
+      if (targetIndex >= loadedItemCount && canLoadMore) {
+        lastProgrammaticScrollRequestRef.current = null;
+        onLoadMore();
+        return true;
+      }
+
+      if (targetIndex !== activeSourceIndex) {
+        const didSelect = onSelectByIndex(targetIndex);
+        if (!didSelect) {
+          queuedNavigationTargetRef.current = null;
+          return false;
+        }
+        return true;
+      }
+
+      if (requestProgrammaticScroll(targetIndex)) {
+        queuedNavigationTargetRef.current = null;
+        return true;
+      }
+
+      return false;
+    },
+    [
+      activeSourceIndex,
+      canLoadMore,
+      displayFeed.length,
+      loadedItemCount,
+      navigationLocked,
+      onLoadMore,
+      onSelectByIndex,
+      requestProgrammaticScroll,
+    ],
+  );
+
+  useEffect(() => {
+    if (typeof window === "undefined" || navigationLocked) return;
 
     const handleWindowKeyDown = (event: KeyboardEvent) => {
       if (event.defaultPrevented || event.altKey || event.ctrlKey || event.metaKey) return;
@@ -302,63 +783,36 @@ export function VoteFeedStage({
         return;
       }
 
-      if (event.key === "ArrowLeft") {
+      if (event.key === "ArrowDown" || event.key === "ArrowRight" || event.key === "PageDown") {
         event.preventDefault();
-        onNavigateSelection("previous");
+        scrollToIndex(activeSourceIndex + 1);
         return;
       }
 
-      if (event.key === "ArrowRight") {
+      if (event.key === "ArrowUp" || event.key === "ArrowLeft" || event.key === "PageUp") {
         event.preventDefault();
-        onNavigateSelection("next");
+        scrollToIndex(activeSourceIndex - 1);
         return;
       }
 
-      if (event.key === "Home" || event.key === "PageUp") {
+      if (event.key === "Home") {
         event.preventDefault();
-        onSelectByIndex(0);
+        scrollToIndex(0);
         return;
       }
 
-      if (event.key === "End" || event.key === "PageDown") {
+      if (event.key === "End") {
         event.preventDefault();
-        onSelectByIndex(displayFeed.length - 1);
+        scrollToIndex(displayFeed.length - 1);
       }
     };
 
     window.addEventListener("keydown", handleWindowKeyDown);
     return () => window.removeEventListener("keydown", handleWindowKeyDown);
-  }, [displayFeed.length, navigationLocked, onNavigateSelection, onSelectByIndex]);
-
-  const handleCardDragEnd = useCallback(
-    (_: MouseEvent | TouchEvent | PointerEvent, info: PanInfo) => {
-      if (!canSwipeNavigate) return;
-
-      const offsetX = info.offset.x;
-      const velocityX = info.velocity.x;
-
-      if (offsetX <= -CARD_SWIPE_THRESHOLD || velocityX <= -500) {
-        onNavigateSelection("next");
-        return;
-      }
-
-      if (offsetX >= CARD_SWIPE_THRESHOLD || velocityX >= 500) {
-        onNavigateSelection("previous");
-      }
-    },
-    [canSwipeNavigate, onNavigateSelection],
-  );
-
-  const handleQueueRailRef = useCallback((node: HTMLDivElement | null) => {
-    queueRailRef.current = node;
-  }, []);
-
-  const handleQueueSectionRef = useCallback((node: HTMLElement | null) => {
-    setQueueSectionElement(node);
-  }, []);
+  }, [activeSourceIndex, displayFeed.length, navigationLocked, scrollToIndex]);
 
   return (
-    <div ref={activeCardRegionRef} className="flex min-h-0 flex-col gap-3 xl:gap-2.5">
+    <div className="flex h-full min-h-0 flex-col xl:h-auto">
       {isCommitting ? (
         <div className="flex shrink-0 items-center justify-center">
           <span className="text-base text-base-content/50">
@@ -368,118 +822,98 @@ export function VoteFeedStage({
         </div>
       ) : null}
 
-      {primaryItem ? (
-        <div className="min-h-0">
-          <AnimatePresence initial={false} mode="wait" custom={navigationDirection}>
-            <motion.div
-              key={primaryItem.id.toString()}
-              custom={navigationDirection}
-              className="touch-pan-y"
-              variants={voteCardVariants}
-              initial="enter"
-              animate="center"
-              exit="exit"
-              transition={{
-                duration: 0.24,
-                ease: VOTE_CARD_TRANSITION_EASE,
-              }}
-              drag={canSwipeNavigate ? "x" : false}
-              dragConstraints={{ left: 0, right: 0 }}
-              dragElastic={0.12}
-              dragMomentum={false}
-              onDragEnd={handleCardDragEnd}
+      <div
+        ref={scrollerRef}
+        className="scrollbar-hide flex min-h-0 flex-1 snap-y snap-mandatory flex-col gap-3 overflow-y-auto overscroll-contain pr-1 scroll-smooth xl:flex-none xl:gap-4 xl:overflow-visible xl:overscroll-auto xl:pb-4 xl:pr-0 xl:scroll-pb-0"
+        style={{
+          height: mobileScrollerHeight !== null ? `${mobileScrollerHeight}px` : undefined,
+          maxHeight: mobileScrollerHeight !== null ? `${mobileScrollerHeight}px` : undefined,
+          paddingBottom: isDesktopViewport ? undefined : `${effectiveMobileDockReservedSpace}px`,
+          scrollPaddingBottom: isDesktopViewport ? undefined : `${effectiveMobileDockReservedSpace}px`,
+        }}
+      >
+        {feedItems.map(({ actualIndex, item }) => {
+          const canPrevious = actualIndex > 0 && !isCommitting && !navigationLocked;
+          const canNext = actualIndex < displayFeed.length - 1 && !isCommitting && !navigationLocked;
+          const isActiveCard = actualIndex === renderedActiveIndex;
+
+          return (
+            <div
+              key={item.id.toString()}
+              id={`vote-feed-card-${actualIndex}`}
+              ref={node => setCardElement(actualIndex, node)}
+              data-feed-card-index={actualIndex}
+              aria-current={isActiveCard ? "true" : undefined}
+              aria-hidden={!isActiveCard}
+              className={`relative shrink-0 snap-start snap-always transition-[opacity,filter,transform] duration-300 ease-out ${
+                isActiveCard
+                  ? "opacity-100"
+                  : "pointer-events-none opacity-32 grayscale-[0.38] saturate-[0.46] brightness-[0.72]"
+              }`}
             >
               <FeedVoteCard
-                item={primaryItem}
-                submitterProfile={enrichedProfiles[primaryItem.submitter.toLowerCase()]}
-                onExternalOpen={item => onExternalOpen(item)}
-                onVote={onVote}
+                item={item}
+                submitterProfile={enrichedProfiles[item.submitter.toLowerCase()]}
+                onExternalOpen={contentItem => onExternalOpen(contentItem)}
                 onToggleWatch={onToggleWatch}
                 onToggleFollow={onToggleFollow}
-                watched={watchedContentIds.has(primaryItem.id.toString())}
-                watchPending={isWatchPending(primaryItem.id)}
-                following={followedWallets.has(primaryItem.submitter.toLowerCase())}
-                followPending={isFollowPending(primaryItem.submitter)}
+                watched={watchedContentIds.has(item.id.toString())}
+                watchPending={isWatchPending(item.id)}
+                following={followedWallets.has(item.submitter.toLowerCase())}
+                followPending={isFollowPending(item.submitter)}
                 normalizedAddress={normalizedAddress}
-                isCommitting={isCommitting}
-                voteError={voteError}
-                deferEmbedClientFetch={isMetadataPrefetchPending}
-                cooldownSecondsRemaining={primaryItemCooldownSeconds}
-                address={address}
-                onPrevious={handleSelectPrevious}
-                onNext={handleSelectNext}
-                canPrevious={activeSourceIndex > 0}
-                canNext={activeSourceIndex >= 0 && activeSourceIndex < displayFeed.length - 1}
+                deferEmbedClientFetch={isMetadataPrefetchPending && actualIndex !== renderedActiveIndex}
+                onPrevious={canPrevious ? () => void scrollToIndex(actualIndex - 1) : undefined}
+                onNext={canNext ? () => void scrollToIndex(actualIndex + 1) : undefined}
+                canPrevious={canPrevious}
+                canNext={canNext}
               />
-            </motion.div>
-          </AnimatePresence>
-        </div>
-      ) : null}
+              {!isActiveCard ? (
+                <div
+                  aria-hidden="true"
+                  className="pointer-events-none absolute inset-0 rounded-[1.75rem] bg-[linear-gradient(180deg,rgba(10,10,12,0.18),rgba(10,10,12,0.46))]"
+                />
+              ) : null}
+            </div>
+          );
+        })}
 
-      {queueSourceItems.length > 0 ? (
-        <motion.section
-          ref={handleQueueSectionRef}
-          key={primaryItem?.id.toString() ?? "queue-empty"}
-          className={hasVisibleQueue ? "shrink-0" : "h-0 overflow-hidden"}
-          aria-label="Up next queue"
-          initial={{ opacity: 0.82, y: 8 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.18, ease: VOTE_CARD_TRANSITION_EASE }}
-        >
-          {hasVisibleQueue ? (
-            hasMultiRowQueue ? (
+        {canLoadMore ? (
+          <div ref={loadMoreRef} className="flex justify-center py-8">
+            <span className="loading loading-spinner loading-md text-primary"></span>
+          </div>
+        ) : null}
+
+        {!canLoadMore && desktopEndSpacerHeight > 0 ? (
+          <div
+            aria-hidden="true"
+            className="hidden shrink-0 xl:block"
+            style={{ height: `${desktopEndSpacerHeight}px` }}
+          />
+        ) : null}
+      </div>
+
+      {typeof document !== "undefined" &&
+      scrollIndicatorState.isVisible &&
+      (isDesktopViewport || isMobileScrollIndicatorActive)
+        ? createPortal(
+            <div
+              aria-hidden="true"
+              className="pointer-events-none fixed right-0 top-0 z-40 w-3"
+              style={{ top: `${scrollIndicatorState.top}px`, height: `${scrollIndicatorState.height}px` }}
+            >
+              <div className="absolute inset-y-0 left-1/2 w-[3px] -translate-x-1/2 rounded-full bg-white/18" />
               <div
-                className="grid w-full content-start"
+                className="absolute left-1/2 w-[3px] -translate-x-1/2 rounded-full bg-primary shadow-[0_0_18px_rgba(242,100,38,0.85)]"
                 style={{
-                  gridTemplateColumns: queueGridTemplateColumns,
-                  gap: queueLayout.gapPx,
+                  top: `${scrollIndicatorState.thumbOffset}px`,
+                  height: `${scrollIndicatorState.thumbHeight}px`,
                 }}
-                aria-label="Content queue"
-              >
-                {queueVisibleItems.map(item => (
-                  <FeedQueueCard
-                    key={item.id.toString()}
-                    item={item}
-                    onSelect={onSelectCard}
-                    onNavigate={handleQueueKeyboardNavigate}
-                    queuePosition={queuePositionMap.get(item.id.toString()) ?? 0}
-                    queueStatus={queueStatusByContentId.get(item.id.toString()) ?? null}
-                    hasVoted={votedContentIds.has(item.id.toString())}
-                    fluidWidth
-                    selected={item.id === primaryItem?.id}
-                  />
-                ))}
-              </div>
-            ) : (
-              <div
-                ref={handleQueueRailRef}
-                data-disable-queue-wheel="true"
-                className="scrollbar-hide flex min-w-0 items-stretch gap-3 overflow-x-auto snap-x snap-mandatory xl:gap-2.5"
-                aria-label="Content queue"
-              >
-                {queueVisibleItems.map(item => (
-                  <FeedQueueCard
-                    key={item.id.toString()}
-                    item={item}
-                    onSelect={onSelectCard}
-                    onNavigate={handleQueueKeyboardNavigate}
-                    queuePosition={queuePositionMap.get(item.id.toString()) ?? 0}
-                    queueStatus={queueStatusByContentId.get(item.id.toString()) ?? null}
-                    hasVoted={votedContentIds.has(item.id.toString())}
-                    selected={item.id === primaryItem?.id}
-                  />
-                ))}
-              </div>
-            )
-          ) : null}
-        </motion.section>
-      ) : null}
-
-      {canLoadMore ? (
-        <div ref={loadMoreRef} className="flex justify-center py-8 xl:hidden">
-          <span className="loading loading-spinner loading-md text-primary"></span>
-        </div>
-      ) : null}
+              />
+            </div>,
+            document.body,
+          )
+        : null}
     </div>
   );
 }

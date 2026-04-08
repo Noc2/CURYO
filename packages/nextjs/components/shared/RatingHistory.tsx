@@ -13,13 +13,19 @@ interface RatingHistoryProps {
   contentId: bigint;
   variant?: "default" | "dark";
   showHeader?: boolean;
+  fallbackRating?: number;
 }
 
 /**
  * SVG sparkline chart showing the content's rating over time.
  * Plots data from RatingUpdated events + current on-chain rating.
  */
-export function RatingHistory({ contentId, variant = "default", showHeader = true }: RatingHistoryProps) {
+export function RatingHistory({
+  contentId,
+  variant = "default",
+  showHeader = true,
+  fallbackRating,
+}: RatingHistoryProps) {
   const rpcFallbackEnabled = publicEnv.rpcFallbackEnabled;
   const ponderAvailable = usePonderAvailability(rpcFallbackEnabled);
   const rpcFallbackActive = rpcFallbackEnabled && ponderAvailable === false;
@@ -90,11 +96,24 @@ export function RatingHistory({ contentId, variant = "default", showHeader = tru
     rpcEnabled: rpcFallbackEnabled,
     staleTime: 15_000,
     refetchInterval: isPageVisible ? 30_000 : false,
+    keepPrevious: false,
   });
 
-  const dataPoints = result?.data ?? rpcDataPoints;
+  const fallbackDataPoints = useMemo(() => {
+    if (rpcDataPoints.length >= 2) {
+      return rpcDataPoints;
+    }
 
-  if (isLoading || (rpcFallbackActive && eventsLoading)) {
+    if (fallbackRating !== undefined) {
+      return [50, fallbackRating];
+    }
+
+    return rpcDataPoints;
+  }, [fallbackRating, rpcDataPoints]);
+  const dataPoints = result?.data ?? fallbackDataPoints;
+  const hasRenderableChart = dataPoints.length >= 2;
+
+  if ((isLoading || (rpcFallbackActive && eventsLoading)) && !hasRenderableChart) {
     return (
       <div className="h-16 flex items-center justify-center">
         <span className="loading loading-spinner loading-xs text-base-content/20"></span>
@@ -102,7 +121,7 @@ export function RatingHistory({ contentId, variant = "default", showHeader = tru
     );
   }
 
-  if (error || (rpcFallbackActive && eventsError)) {
+  if ((error || (rpcFallbackActive && eventsError)) && !hasRenderableChart) {
     const textColor = variant === "dark" ? "text-base-content/40" : "text-base-content/25";
     return (
       <div className={`h-16 flex items-center justify-center text-base ${textColor}`}>
@@ -120,15 +139,17 @@ export function RatingHistory({ contentId, variant = "default", showHeader = tru
   const currentRatingValue = dataPoints[dataPoints.length - 1];
   const textColor = variant === "dark" ? "text-base-content/60" : "text-base-content/40";
   const currentRatingScore = formatRatingScoreOutOfTen(currentRatingValue);
+  const containerOpacityClassName =
+    isLoading || (rpcFallbackActive && eventsLoading) ? "opacity-[0.85]" : "opacity-100";
 
   return (
-    <div className="w-full">
+    <div className={`w-full transition-opacity duration-150 ${containerOpacityClassName}`}>
       {showHeader ? (
         <div className="flex items-center justify-between mb-1.5">
           <span className={`text-base font-medium ${textColor}`}>Rating history</span>
           <span className="inline-flex items-baseline gap-0.5 text-base tabular-nums">
             <span className="font-semibold text-base-content/72">{currentRatingScore}</span>
-            <span className="font-medium text-base-content/38">/10</span>
+            <span className="font-medium text-base-content/58">/10</span>
           </span>
         </div>
       ) : null}

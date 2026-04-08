@@ -6,7 +6,31 @@ import type { ContentItem } from "~~/hooks/useContentFeed";
 interface UseVoteFeedStageOptions {
   visibleCount: number;
   requestedActiveId?: bigint | null;
-  windowSize?: number;
+}
+
+export function resolveVoteFeedVisibleRange(
+  itemCount: number,
+  activeSourceIndex: number,
+  visibleCount: number,
+  windowSize: number,
+) {
+  const loadedCount = Math.min(Math.max(visibleCount, 0), itemCount);
+  if (loadedCount === 0) {
+    return { start: 0, end: 0 };
+  }
+
+  if (loadedCount <= windowSize) {
+    return { start: 0, end: loadedCount };
+  }
+
+  const anchorIndex = Math.min(Math.max(activeSourceIndex, 0), loadedCount - 1);
+  const halfWindow = Math.floor(windowSize / 2);
+  const maxStart = Math.max(loadedCount - windowSize, 0);
+  const start = Math.min(Math.max(anchorIndex - halfWindow, 0), maxStart);
+  return {
+    start,
+    end: start + windowSize,
+  };
 }
 
 export function resolveVoteFeedActiveSourceIndex(
@@ -31,23 +55,8 @@ export function resolveVoteFeedActiveSourceIndex(
   return 0;
 }
 
-export function resolveVoteFeedVisibleItems<T>(
-  items: ReadonlyArray<T>,
-  activeSourceIndex: number,
-  visibleCount: number,
-  windowSize: number,
-) {
-  const loadedItems = items.slice(0, visibleCount);
-  if (loadedItems.length <= windowSize) return loadedItems;
-
-  const halfWindow = Math.floor(windowSize / 2);
-  const maxStart = Math.max(loadedItems.length - windowSize, 0);
-  const start = Math.min(Math.max(activeSourceIndex - halfWindow, 0), maxStart);
-  return loadedItems.slice(start, start + windowSize);
-}
-
 export function useVoteFeedStage(items: ContentItem[], options: UseVoteFeedStageOptions) {
-  const { visibleCount, requestedActiveId, windowSize = 7 } = options;
+  const { visibleCount, requestedActiveId } = options;
   const [activeContentId, setActiveContentId] = useState<bigint | null>(requestedActiveId ?? null);
 
   useEffect(() => {
@@ -74,36 +83,16 @@ export function useVoteFeedStage(items: ContentItem[], options: UseVoteFeedStage
     return resolveVoteFeedActiveSourceIndex(items, activeContentId, requestedActiveId);
   }, [activeContentId, items, requestedActiveId]);
 
-  const visibleItems = useMemo(() => {
-    return resolveVoteFeedVisibleItems(items, activeSourceIndex, visibleCount, windowSize);
-  }, [activeSourceIndex, items, visibleCount, windowSize]);
   const activeItem = activeSourceIndex >= 0 ? (items[activeSourceIndex] ?? null) : null;
 
   const selectContent = useCallback((contentId: bigint | null) => {
     setActiveContentId(contentId);
   }, []);
 
-  const selectRelative = useCallback(
-    (offset: number) => {
-      if (items.length === 0) return null;
-
-      const targetIndex = Math.min(Math.max(activeSourceIndex + offset, 0), items.length - 1);
-      if (targetIndex === activeSourceIndex) return null;
-
-      const nextItem = items[targetIndex];
-      setActiveContentId(nextItem.id);
-      return nextItem;
-    },
-    [activeSourceIndex, items],
-  );
-
   return {
-    activeContentId,
     activeItem,
     activeSourceIndex,
     selectContent,
-    selectRelative,
-    visibleItems,
     loadedItems: items.slice(0, visibleCount),
   };
 }
