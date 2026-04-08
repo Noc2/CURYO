@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useId, useLayoutEffect, useRef, useState } from "react";
+import { type ReactNode, useEffect, useId, useLayoutEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { InformationCircleIcon } from "@heroicons/react/24/outline";
 import { type TooltipPlacement, type TooltipPosition, computeTooltipPlacement } from "~~/lib/ui/tooltipPosition";
@@ -9,6 +9,11 @@ interface InfoTooltipProps {
   text: string;
   position?: TooltipPosition;
   className?: string;
+}
+
+interface HoverTooltipProps extends InfoTooltipProps {
+  ariaLabel?: string;
+  children: ReactNode;
 }
 
 function measureTooltipLayout(
@@ -35,10 +40,10 @@ function getArrowStyle(layout: TooltipPlacement) {
 }
 
 /**
- * Reusable info icon with a viewport-aware tooltip.
+ * Reusable trigger with a viewport-aware tooltip.
  * Renders into a portal so the tooltip is not clipped by overflow-hidden parents.
  */
-export const InfoTooltip = ({ text, position = "top", className = "" }: InfoTooltipProps) => {
+export const HoverTooltip = ({ text, position = "top", className = "", ariaLabel, children }: HoverTooltipProps) => {
   const tooltipId = useId();
   const triggerRef = useRef<HTMLButtonElement | null>(null);
   const tooltipRef = useRef<HTMLSpanElement | null>(null);
@@ -78,15 +83,15 @@ export const InfoTooltip = ({ text, position = "top", className = "" }: InfoTool
       <button
         ref={triggerRef}
         type="button"
-        className={`inline-flex cursor-help items-center align-middle ${className}`}
-        aria-label={text}
+        className={`inline-flex cursor-help items-center border-0 bg-transparent p-0 text-left align-middle text-inherit ${className}`}
+        aria-label={ariaLabel}
         aria-describedby={isOpen ? tooltipId : undefined}
         onMouseEnter={() => setIsOpen(true)}
         onMouseLeave={() => setIsOpen(false)}
         onFocus={() => setIsOpen(true)}
         onBlur={() => setIsOpen(false)}
       >
-        <InformationCircleIcon className="h-4 w-4 text-base-content/40 hover:text-base-content/60" />
+        {children}
       </button>
 
       {isMounted && isOpen
@@ -120,3 +125,13 @@ export const InfoTooltip = ({ text, position = "top", className = "" }: InfoTool
     </>
   );
 };
+
+/**
+ * Reusable info icon with a viewport-aware tooltip.
+ * Renders into a portal so the tooltip is not clipped by overflow-hidden parents.
+ */
+export const InfoTooltip = ({ text, position = "top", className = "" }: InfoTooltipProps) => (
+  <HoverTooltip text={text} position={position} className={className} ariaLabel={text}>
+    <InformationCircleIcon className="h-4 w-4 text-base-content/40 hover:text-base-content/60" aria-hidden="true" />
+  </HoverTooltip>
+);
