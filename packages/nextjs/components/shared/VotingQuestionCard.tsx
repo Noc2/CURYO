@@ -579,7 +579,7 @@ export function VotingQuestionCard({
           ) : null}
           <div className={`flex w-full shrink-0 flex-col items-center ${actionStackClassName}`}>
             {phase === "voting" || hasMyVote ? (
-              <div className="flex flex-col items-center gap-2">
+              <div className="flex w-full flex-col items-center gap-2">
                 {showInlineVotingSummary ? inlineVotingSummary : null}
                 {centerStatusContent}
               </div>
