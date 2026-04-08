@@ -573,6 +573,17 @@ export function VotingQuestionCard({
           <RatingOrb rating={currentRating} size={orbSize} showGlow={compact} className={mobileOrbClassName} />
         </div>
 
+        {dockTopBorderOverlayStyle ? (
+          <div
+            aria-hidden
+            className="pointer-events-none absolute inset-x-0 top-0 z-[15] overflow-hidden"
+            style={dockTopBorderOverlayStyle}
+          >
+            <div className="absolute left-0 top-0 border-t" style={dockTopBorderSegmentStyle} />
+            <div className="absolute right-0 top-0 border-t" style={dockTopBorderSegmentStyle} />
+            <div className="absolute left-1/2 -translate-x-1/2 rounded-full border" style={dockTopBorderArcStyle} />
+          </div>
+        ) : null}
         <div
           className={`relative z-10 overflow-hidden shadow-[0_16px_36px_rgb(0_0_0_/_0.28)] ${
             isAttentionActive ? "vote-surface-attention" : ""
@@ -580,17 +591,6 @@ export function VotingQuestionCard({
           data-vote-attention={isAttentionActive ? "true" : undefined}
           style={{ ...dockShellMaskStyle, ...dockSurfaceStyle }}
         >
-          {dockTopBorderOverlayStyle ? (
-            <div
-              aria-hidden
-              className="pointer-events-none absolute inset-x-0 top-0 z-10 overflow-hidden"
-              style={dockTopBorderOverlayStyle}
-            >
-              <div className="absolute left-0 top-0 border-t" style={dockTopBorderSegmentStyle} />
-              <div className="absolute right-0 top-0 border-t" style={dockTopBorderSegmentStyle} />
-              <div className="absolute left-1/2 -translate-x-1/2 rounded-full border" style={dockTopBorderArcStyle} />
-            </div>
-          ) : null}
           <div className={dockControlsPaddingClassName} style={dockControlsStyle}>
             {!centerStatusContent ? (
               <div className="grid grid-cols-[auto_minmax(0,1fr)_auto] items-end gap-3">
