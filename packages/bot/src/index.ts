@@ -32,6 +32,11 @@ async function ensureBotRuntime(role?: "submit" | "rate") {
 }
 
 switch (command) {
+  case "claim": {
+    const { runClaim } = await import("./commands/claim.js");
+    await runClaim();
+    break;
+  }
   case "vote": {
     await ensureBotRuntime("rate");
     const { runVote } = await import("./commands/vote.js");
@@ -68,12 +73,13 @@ switch (command) {
   }
   default:
     console.log(`Usage:
-  yarn submit|vote|status
-  yarn bot:submit|bot:vote|bot:status
+  yarn submit|vote|claim|status
+  yarn bot:submit|bot:vote|bot:claim|bot:status
 
 Commands:
   submit  Discover trending content from all platforms, submit to ContentRegistry
   vote    Rate content using external APIs, commit one initial vote per item
+  claim   Claim bot rewards for configured submit/rate wallets
   status  Check both bot account statuses (balances, voter ID)`);
     process.exit(command ? 1 : 0);
 }

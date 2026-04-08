@@ -6,6 +6,7 @@
   "scripts": {
     "vote": "tsx src/index.ts vote",
     "submit": "tsx src/index.ts submit",
+    "claim": "tsx src/index.ts claim",
     "status": "tsx src/index.ts status",
     "test": "vitest run",
     "test:watch": "vitest"

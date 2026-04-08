@@ -8,6 +8,7 @@ Command-line tool for automated content submission and voting. Discovers trendin
 # From the monorepo root:
 yarn bot:submit   # Discover and submit trending content
 yarn bot:vote     # Rate content and place votes on-chain
+yarn bot:claim    # Claim rewards earned by the configured bot wallets
 yarn bot:status   # Check bot account balances and Voter ID status
 
 # Target a single category/source with an explicit cap:
@@ -17,7 +18,7 @@ yarn workspace @curyo/bot submit --category "GitHub Repos" --source github --max
 ```
 
 Requires configured environment variables and a reachable RPC endpoint.
-`vote` requires a running Ponder indexer (`yarn ponder:dev`); `submit` does not.
+`vote` and `claim` require a running Ponder indexer (`yarn ponder:dev`); `submit` does not.
 `status` reports the configured Ponder endpoint when available but can still run without it.
 Public submission sources still work without third-party API keys, but source coverage and automated rating breadth are reduced.
 
@@ -29,6 +30,7 @@ Public submission sources still work without third-party API keys, but source co
 | `yarn workspace @curyo/bot submit --category Movies --max-submissions 5` | Submit up to 5 items from the `Movies` category |
 | `yarn workspace @curyo/bot submit --source coingecko --max-submissions 2` | Submit up to 2 items from the CoinGecko source |
 | `yarn bot:vote` | Rate content and commit encrypted votes via tlock commit-reveal |
+| `yarn bot:claim` | Claim voter and submitter rewards for the configured bot wallets |
 | `yarn bot:status` | Check wallet balances and Voter ID ownership |
 
 The bot is a manual CLI. `yarn dev:stack` starts Ponder, Next.js, and the keeper, but it does not start `submit` or `vote` automatically.
@@ -61,6 +63,7 @@ Copy `.env.example` to `.env` in the package directory and fill in the deployed 
 | `CREP_TOKEN_ADDRESS` | Auto-derived for supported chains | Fallback cREP token address |
 | `CONTENT_REGISTRY_ADDRESS` | Auto-derived for supported chains | Fallback ContentRegistry address |
 | `VOTING_ENGINE_ADDRESS` | Auto-derived for supported chains | Fallback RoundVotingEngine address |
+| `ROUND_REWARD_DISTRIBUTOR_ADDRESS` | Auto-derived for supported chains | Fallback RoundRewardDistributor address |
 | `VOTER_ID_NFT_ADDRESS` | Auto-derived for supported chains | Fallback VoterIdNFT address |
 | `CATEGORY_REGISTRY_ADDRESS` | Auto-derived for supported chains | Fallback CategoryRegistry address |
 | `PONDER_URL` | — | Ponder indexer URL |
@@ -95,6 +98,20 @@ Without these keys the bot can still submit from public sources such as CoinGeck
 - `--source <name>` to target a specific source adapter such as `tmdb` or `coingecko`
 - `--max-submissions <count>` to override the per-run cap for that invocation
 - `--help` to print the submit-specific usage text, including the full category/source catalog below
+
+## How Claiming Works
+
+`yarn bot:claim` scans Ponder history plus current on-chain claim state, then submits only the claims that are still outstanding for the configured bot wallets.
+
+- Submission bot claims:
+  - `RoundRewardDistributor.claimSubmitterReward(contentId, roundId)`
+  - `ContentRegistry.claimSubmitterParticipationReward(contentId)`
+- Rating bot claims:
+  - `RoundVotingEngine.claimCancelledRoundRefund(contentId, roundId)`
+  - `RoundRewardDistributor.claimReward(contentId, roundId)`
+  - `RoundRewardDistributor.claimParticipationReward(contentId, roundId)`
+
+Frontend fee sweeping remains a keeper responsibility when the keeper wallet is also the frontend operator.
 
 ## Available Categories
 
@@ -165,6 +182,7 @@ If you are testing locally through the web app as well, run the app and Ponder a
 
 ```bash
 yarn bot:status
+yarn bot:claim
 ```
 
 4. From the wallet that already holds your Voter ID, open `/settings?tab=delegation` in the app and set the bot wallet as your delegate.
@@ -224,6 +242,7 @@ src/
 ├── commands/
 │   ├── submit.ts    # Discover trending content, submit to ContentRegistry
 │   ├── vote.ts      # Rate content, place votes on-chain
+│   ├── claim.ts     # Claim bot submitter and voter rewards
 │   └── status.ts    # Check balances and Voter ID
 ├── sources/         # Content platform adapters (public + API-backed)
 └── strategies/      # Platform-specific rating strategies

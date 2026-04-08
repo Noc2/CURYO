@@ -11,6 +11,8 @@ const VALID_ENV = {
   CREP_TOKEN_ADDRESS: chain11142220?.CuryoReputation?.address ?? "0x1111111111111111111111111111111111111111",
   CONTENT_REGISTRY_ADDRESS: chain11142220?.ContentRegistry?.address ?? "0x2222222222222222222222222222222222222222",
   VOTING_ENGINE_ADDRESS: chain11142220?.RoundVotingEngine?.address ?? "0x3333333333333333333333333333333333333333",
+  ROUND_REWARD_DISTRIBUTOR_ADDRESS:
+    chain11142220?.RoundRewardDistributor?.address ?? "0x6666666666666666666666666666666666666666",
   VOTER_ID_NFT_ADDRESS: chain11142220?.VoterIdNFT?.address ?? "0x4444444444444444444444444444444444444444",
   CATEGORY_REGISTRY_ADDRESS: chain11142220?.CategoryRegistry?.address ?? "0x5555555555555555555555555555555555555555",
   RATE_PRIVATE_KEY: `0x${"11".repeat(32)}`,
@@ -177,6 +179,7 @@ describe("bot config", () => {
         "CREP_TOKEN_ADDRESS",
         "CONTENT_REGISTRY_ADDRESS",
         "VOTING_ENGINE_ADDRESS",
+        "ROUND_REWARD_DISTRIBUTOR_ADDRESS",
         "VOTER_ID_NFT_ADDRESS",
         "CATEGORY_REGISTRY_ADDRESS",
       ],
@@ -185,6 +188,7 @@ describe("bot config", () => {
     expect(config.contracts.crepToken).toBe(chain11142220.CuryoReputation.address);
     expect(config.contracts.contentRegistry).toBe(chain11142220.ContentRegistry.address);
     expect(config.contracts.votingEngine).toBe(chain11142220.RoundVotingEngine.address);
+    expect(config.contracts.roundRewardDistributor).toBe(chain11142220.RoundRewardDistributor.address);
     expect(config.contracts.voterIdNFT).toBe(chain11142220.VoterIdNFT.address);
     expect(config.contracts.categoryRegistry).toBe(chain11142220.CategoryRegistry.address);
   });
@@ -198,6 +202,7 @@ describe("bot config", () => {
         "CREP_TOKEN_ADDRESS",
         "CONTENT_REGISTRY_ADDRESS",
         "VOTING_ENGINE_ADDRESS",
+        "ROUND_REWARD_DISTRIBUTOR_ADDRESS",
         "VOTER_ID_NFT_ADDRESS",
         "CATEGORY_REGISTRY_ADDRESS",
       ],
@@ -206,6 +211,7 @@ describe("bot config", () => {
     expect(config.contracts.crepToken).toBe(chain42220.CuryoReputation.address);
     expect(config.contracts.contentRegistry).toBe(chain42220.ContentRegistry.address);
     expect(config.contracts.votingEngine).toBe(chain42220.RoundVotingEngine.address);
+    expect(config.contracts.roundRewardDistributor).toBe(chain42220.RoundRewardDistributor.address);
     expect(config.contracts.voterIdNFT).toBe(chain42220.VoterIdNFT.address);
     expect(config.contracts.categoryRegistry).toBe(chain42220.CategoryRegistry.address);
   });
@@ -216,6 +222,7 @@ describe("bot config", () => {
       CREP_TOKEN_ADDRESS: "0x1111111111111111111111111111111111111111",
       CONTENT_REGISTRY_ADDRESS: "0x2222222222222222222222222222222222222222",
       VOTING_ENGINE_ADDRESS: "0x3333333333333333333333333333333333333333",
+      ROUND_REWARD_DISTRIBUTOR_ADDRESS: "0x6666666666666666666666666666666666666666",
       VOTER_ID_NFT_ADDRESS: "0x4444444444444444444444444444444444444444",
       CATEGORY_REGISTRY_ADDRESS: "0x5555555555555555555555555555555555555555",
     });
@@ -223,11 +230,13 @@ describe("bot config", () => {
     expect(config.contracts.crepToken).toBe(chain11142220.CuryoReputation.address);
     expect(config.contracts.contentRegistry).toBe(chain11142220.ContentRegistry.address);
     expect(config.contracts.votingEngine).toBe(chain11142220.RoundVotingEngine.address);
+    expect(config.contracts.roundRewardDistributor).toBe(chain11142220.RoundRewardDistributor.address);
     expect(config.contracts.voterIdNFT).toBe(chain11142220.VoterIdNFT.address);
     expect(config.contracts.categoryRegistry).toBe(chain11142220.CategoryRegistry.address);
     expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining("Ignoring CREP_TOKEN_ADDRESS"));
     expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining("Ignoring CONTENT_REGISTRY_ADDRESS"));
     expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining("Ignoring VOTING_ENGINE_ADDRESS"));
+    expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining("Ignoring ROUND_REWARD_DISTRIBUTOR_ADDRESS"));
     expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining("Ignoring VOTER_ID_NFT_ADDRESS"));
     expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining("Ignoring CATEGORY_REGISTRY_ADDRESS"));
   });

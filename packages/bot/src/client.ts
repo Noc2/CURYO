@@ -46,19 +46,23 @@ const CONTRACT_DISPLAY_NAMES: Record<BotContractKey, string> = {
   categoryRegistry: "CategoryRegistry",
   contentRegistry: "ContentRegistry",
   crepToken: "CuryoReputation",
+  roundRewardDistributor: "RoundRewardDistributor",
   voterIdNFT: "VoterIdNFT",
   votingEngine: "RoundVotingEngine",
 } as const;
 
 type BotConnectivityClient = Pick<typeof publicClient, "getChainId" | "getCode">;
 
-export async function validateBotConnectivity(role: BotRole, client: BotConnectivityClient = publicClient) {
+export async function validateContractKeys(
+  contractKeys: readonly BotContractKey[],
+  client: BotConnectivityClient = publicClient,
+) {
   const rpcChainId = await client.getChainId();
   if (rpcChainId !== config.chainId) {
     throw new Error(`RPC_URL reports chain ID ${rpcChainId}, but CHAIN_ID is ${config.chainId}.`);
   }
 
-  for (const contractKey of getRequiredContractKeys(role)) {
+  for (const contractKey of contractKeys) {
     const address = config.contracts[contractKey];
     if (!address) {
       throw new Error(`${CONTRACT_DISPLAY_NAMES[contractKey]} address is not configured.`);
@@ -70,6 +74,10 @@ export async function validateBotConnectivity(role: BotRole, client: BotConnecti
       );
     }
   }
+}
+
+export async function validateBotConnectivity(role: BotRole, client: BotConnectivityClient = publicClient) {
+  return validateContractKeys(getRequiredContractKeys(role), client);
 }
 
 export function getWalletClient(identity: BotIdentityConfig, account = getAccount(identity)) {
