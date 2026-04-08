@@ -49,6 +49,8 @@ type HeaderNavLinkProps = {
 
 const navIndicatorClassName =
   "absolute right-2 top-2 bottom-2 w-1 rounded-full bg-linear-to-b from-[#F5F0EB] via-[#F26426] to-[#B3341B] shadow-[0_0_18px_rgba(242,100,38,0.45)]";
+const headerChromeSurfaceClassName = "bg-[color:var(--curyo-surface)]";
+const headerChromeBorderClassName = "border-[color:var(--curyo-shell-border-strong)]";
 
 const HeaderNavLink = ({
   className,
@@ -414,7 +416,9 @@ export const Header = () => {
         data-mobile-header="true"
         data-visible={isMobileHeaderVisible ? "true" : "false"}
       >
-        <div className="navbar min-h-0 shrink-0 justify-between border border-base-content/20 bg-black px-4 py-3 shadow-[0_18px_44px_rgba(9,10,12,0.32)] backdrop-blur-xl sm:px-6">
+        <div
+          className={`navbar min-h-0 shrink-0 justify-between border-b px-4 py-3 shadow-[0_18px_44px_rgba(9,10,12,0.32)] backdrop-blur-xl sm:px-6 ${headerChromeSurfaceClassName} ${headerChromeBorderClassName}`}
+        >
           {mobileSearchOpen ? (
             <Suspense>
               <MobileHeaderSearch onClose={() => setMobileSearchOpen(false)} />
@@ -433,7 +437,7 @@ export const Header = () => {
                     <Bars3Icon className="h-5 w-5" />
                   </summary>
                   <ul
-                    className="menu menu-compact dropdown-content mt-3 w-64 rounded-xl border border-base-content/20 bg-black p-2 shadow-lg"
+                    className={`menu menu-compact dropdown-content mt-3 w-64 rounded-xl border p-2 shadow-lg ${headerChromeSurfaceClassName} ${headerChromeBorderClassName}`}
                     onClick={() => burgerMenuRef?.current?.removeAttribute("open")}
                   >
                     <Suspense>
@@ -463,7 +467,9 @@ export const Header = () => {
       </div>
 
       {/* Desktop: left sidebar */}
-      <aside className="fixed left-0 top-0 z-20 hidden h-screen w-52 shrink-0 flex-col items-stretch border-r border-base-content/20 bg-black py-4 shadow-[18px_0_48px_rgba(9,10,12,0.24)] backdrop-blur-xl xl:flex">
+      <aside
+        className={`fixed left-0 top-0 z-20 hidden h-screen w-52 shrink-0 flex-col items-stretch border-r py-4 shadow-[18px_0_48px_rgba(9,10,12,0.24)] backdrop-blur-xl xl:flex ${headerChromeSurfaceClassName} ${headerChromeBorderClassName}`}
+      >
         <HeaderBrand className="mb-4 shrink-0 px-4" />
         <div className="mb-4 w-full min-w-0 px-2.5">
           <Suspense>
@@ -475,7 +481,9 @@ export const Header = () => {
             <HeaderMenuLinks variant="desktop" />
           </ul>
         </nav>
-        <div className="mt-auto flex w-full shrink-0 flex-col items-stretch gap-2 border-t border-base-300 px-2.5 pt-4">
+        <div
+          className={`mt-auto flex w-full shrink-0 flex-col items-stretch gap-2 border-t px-2.5 pt-4 ${headerChromeBorderClassName}`}
+        >
           <div className="w-full flex justify-stretch">
             <CuryoConnectButton inlineMenu />
           </div>
