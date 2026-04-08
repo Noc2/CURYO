@@ -1,4 +1,8 @@
-import { buildSubmitterClaimableRewards, buildSubmitterParticipationClaimableRewards } from "./claimableRewards";
+import {
+  buildSubmitterClaimableRewards,
+  buildSubmitterParticipationClaimableRewards,
+  sortClaimableRewardItems,
+} from "./claimableRewards";
 import assert from "node:assert/strict";
 import test from "node:test";
 
@@ -99,6 +103,50 @@ test("buildSubmitterParticipationClaimableRewards keeps reserved payouts claimab
       contentId: 7n,
       reward: 4n,
       claimType: "submitter_participation_reward",
+    },
+  ]);
+});
+
+test("sortClaimableRewardItems keeps frontend round credits ahead of the final frontend withdrawal", () => {
+  const items = sortClaimableRewardItems([
+    {
+      frontend: "0x3000000000000000000000000000000000000000",
+      reward: 5n,
+      claimType: "frontend_registry_fee",
+    },
+    {
+      contentId: 8n,
+      roundId: 2n,
+      frontend: "0x3000000000000000000000000000000000000000",
+      reward: 3n,
+      claimType: "frontend_round_fee",
+    },
+    {
+      contentId: 2n,
+      roundId: 1n,
+      reward: 4n,
+      claimType: "reward",
+    },
+  ]);
+
+  assert.deepEqual(items, [
+    {
+      contentId: 2n,
+      roundId: 1n,
+      reward: 4n,
+      claimType: "reward",
+    },
+    {
+      contentId: 8n,
+      roundId: 2n,
+      frontend: "0x3000000000000000000000000000000000000000",
+      reward: 3n,
+      claimType: "frontend_round_fee",
+    },
+    {
+      frontend: "0x3000000000000000000000000000000000000000",
+      reward: 5n,
+      claimType: "frontend_registry_fee",
     },
   ]);
 });

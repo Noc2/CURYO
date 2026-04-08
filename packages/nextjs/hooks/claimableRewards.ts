@@ -1,6 +1,12 @@
 "use client";
 
-export type ClaimableRewardType = "reward" | "refund" | "submitter_reward" | "submitter_participation_reward";
+export type ClaimableRewardType =
+  | "reward"
+  | "refund"
+  | "submitter_reward"
+  | "submitter_participation_reward"
+  | "frontend_round_fee"
+  | "frontend_registry_fee";
 
 export interface RoundClaimableRewardItem {
   contentId: bigint;
@@ -15,7 +21,25 @@ export interface SubmitterParticipationClaimableRewardItem {
   claimType: "submitter_participation_reward";
 }
 
-export type ClaimableRewardItem = RoundClaimableRewardItem | SubmitterParticipationClaimableRewardItem;
+export interface FrontendRoundFeeClaimableRewardItem {
+  contentId: bigint;
+  roundId: bigint;
+  frontend: `0x${string}`;
+  reward: bigint;
+  claimType: "frontend_round_fee";
+}
+
+export interface FrontendRegistryClaimableRewardItem {
+  frontend: `0x${string}`;
+  reward: bigint;
+  claimType: "frontend_registry_fee";
+}
+
+export type ClaimableRewardItem =
+  | RoundClaimableRewardItem
+  | SubmitterParticipationClaimableRewardItem
+  | FrontendRoundFeeClaimableRewardItem
+  | FrontendRegistryClaimableRewardItem;
 
 interface SubmitterRewardClaimCandidate {
   contentId: bigint;
@@ -93,4 +117,44 @@ export function buildSubmitterParticipationClaimableRewards(
 
 export function getClaimableRoundKey(item: ClaimableRewardItem) {
   return "roundId" in item ? `${item.contentId.toString()}-${item.roundId.toString()}` : null;
+}
+
+function claimExecutionPriority(item: ClaimableRewardItem) {
+  switch (item.claimType) {
+    case "refund":
+      return 0;
+    case "reward":
+      return 1;
+    case "submitter_reward":
+      return 2;
+    case "submitter_participation_reward":
+      return 3;
+    case "frontend_round_fee":
+      return 4;
+    case "frontend_registry_fee":
+      return 5;
+  }
+}
+
+export function sortClaimableRewardItems(items: readonly ClaimableRewardItem[]) {
+  return [...items].sort((left, right) => {
+    const priorityDelta = claimExecutionPriority(left) - claimExecutionPriority(right);
+    if (priorityDelta !== 0) {
+      return priorityDelta;
+    }
+
+    if ("contentId" in left && "contentId" in right && left.contentId !== right.contentId) {
+      return left.contentId < right.contentId ? -1 : 1;
+    }
+
+    if ("roundId" in left && "roundId" in right && left.roundId !== right.roundId) {
+      return left.roundId < right.roundId ? -1 : 1;
+    }
+
+    if ("frontend" in left && "frontend" in right && left.frontend !== right.frontend) {
+      return left.frontend.localeCompare(right.frontend);
+    }
+
+    return 0;
+  });
 }

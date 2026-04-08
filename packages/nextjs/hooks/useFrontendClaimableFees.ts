@@ -4,7 +4,7 @@ import { useMemo } from "react";
 import { useInfiniteQuery } from "@tanstack/react-query";
 import { usePageVisibility } from "~~/hooks/usePageVisibility";
 
-interface FrontendClaimableFeeItem {
+export interface FrontendClaimableFeeItem {
   contentId: string;
   roundId: string;
   title: string | null;
@@ -18,7 +18,7 @@ interface FrontendClaimableFeeItem {
   totalFrontendClaimants: number;
 }
 
-interface FrontendClaimableFeePage {
+export interface FrontendClaimableFeePage {
   items: FrontendClaimableFeeItem[];
   hasMore: boolean;
   nextOffset: number;
@@ -28,6 +28,24 @@ interface FrontendClaimableFeePage {
 
 const PAGE_SIZE = 10;
 
+export async function fetchClaimableFrontendFeePage(
+  frontend: `0x${string}`,
+  chainId: number,
+  limit: number,
+  offset: number,
+) {
+  const response = await fetch(
+    `/api/frontend/claimable-fees?frontend=${frontend}&chainId=${chainId}&limit=${limit}&offset=${offset}`,
+  );
+
+  if (!response.ok) {
+    const body = (await response.json().catch(() => null)) as { error?: string } | null;
+    throw new Error(body?.error || "Failed to fetch claimable frontend fees");
+  }
+
+  return (await response.json()) as FrontendClaimableFeePage;
+}
+
 export function useFrontendClaimableFees(frontend?: `0x${string}`, chainId?: number) {
   const isPageVisible = usePageVisibility();
   const query = useInfiniteQuery({
@@ -36,18 +54,7 @@ export function useFrontendClaimableFees(frontend?: `0x${string}`, chainId?: num
     enabled: !!frontend && Number.isFinite(chainId),
     staleTime: 30_000,
     refetchInterval: isPageVisible ? 60_000 : false,
-    queryFn: async ({ pageParam }) => {
-      const response = await fetch(
-        `/api/frontend/claimable-fees?frontend=${frontend}&chainId=${chainId}&limit=${PAGE_SIZE}&offset=${pageParam}`,
-      );
-
-      if (!response.ok) {
-        const body = (await response.json().catch(() => null)) as { error?: string } | null;
-        throw new Error(body?.error || "Failed to fetch claimable frontend fees");
-      }
-
-      return (await response.json()) as FrontendClaimableFeePage;
-    },
+    queryFn: ({ pageParam }) => fetchClaimableFrontendFeePage(frontend!, chainId!, PAGE_SIZE, pageParam),
     getNextPageParam: lastPage => (lastPage.hasMore ? lastPage.nextOffset : undefined),
   });
 

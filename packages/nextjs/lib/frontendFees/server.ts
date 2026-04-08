@@ -110,10 +110,6 @@ function isPonderNotFoundError(error: unknown): boolean {
   return error instanceof Error && error.message.includes("404");
 }
 
-function hasOutstandingFrontendFees(frontend: PonderFrontend): boolean {
-  return BigInt(frontend.totalFeesCredited) > BigInt(frontend.totalFeesClaimed);
-}
-
 function toClaimableFeePage(
   snapshot: ClaimableFrontendFeeSnapshot,
   offset: number,
@@ -131,35 +127,8 @@ function toClaimableFeePage(
   };
 }
 
-function isClaimableSnapshot(
-  totalFrontendPool: bigint,
-  frontendStake: bigint,
-  totalEligibleStake: bigint,
-  totalFrontendClaimants: bigint,
-  alreadyClaimed: boolean,
-) {
-  return (
-    !alreadyClaimed &&
-    totalFrontendPool > 0n &&
-    frontendStake > 0n &&
-    totalEligibleStake > 0n &&
-    totalFrontendClaimants > 0n
-  );
-}
-
-function calculateClaimableFee(
-  totalFrontendPool: bigint,
-  frontendStake: bigint,
-  totalEligibleStake: bigint,
-  totalFrontendClaimants: bigint,
-  claimedCount: bigint,
-  claimedAmount: bigint,
-) {
-  if (claimedCount + 1n === totalFrontendClaimants) {
-    return totalFrontendPool - claimedAmount;
-  }
-
-  return (totalFrontendPool * frontendStake) / totalEligibleStake;
+function isClaimableSnapshot(claimableFee: bigint, disposition: bigint, alreadyClaimed: boolean) {
+  return !alreadyClaimed && claimableFee > 0n && disposition !== 2n;
 }
 
 async function readFrontendFeeBatch(
@@ -173,9 +142,10 @@ async function readFrontendFeeBatch(
       frontendStake: 0n,
       totalEligibleStake: 0n,
       totalFrontendClaimants: 0n,
+      claimableFee: 0n,
+      disposition: 2n,
+      operator: "0x0000000000000000000000000000000000000000" as Address,
       alreadyClaimed: false,
-      claimedCount: 0n,
-      claimedAmount: 0n,
     }));
   }
 
@@ -211,20 +181,8 @@ async function readFrontendFeeBatch(
       {
         address: context.rewardDistributor.address,
         abi: context.rewardDistributor.abi,
-        functionName: "frontendFeeClaimed" as const,
+        functionName: "previewFrontendFee" as const,
         args: [contentId, roundId, frontend],
-      },
-      {
-        address: context.rewardDistributor.address,
-        abi: context.rewardDistributor.abi,
-        functionName: "roundFrontendClaimedCount" as const,
-        args: [contentId, roundId],
-      },
-      {
-        address: context.rewardDistributor.address,
-        abi: context.rewardDistributor.abi,
-        functionName: "roundFrontendClaimedAmount" as const,
-        args: [contentId, roundId],
       },
     ];
   });
@@ -234,9 +192,10 @@ async function readFrontendFeeBatch(
     frontendStake: 0n,
     totalEligibleStake: 0n,
     totalFrontendClaimants: 0n,
+    claimableFee: 0n,
+    disposition: 2n,
+    operator: "0x0000000000000000000000000000000000000000" as Address,
     alreadyClaimed: false,
-    claimedCount: 0n,
-    claimedAmount: 0n,
   };
 
   try {
@@ -246,13 +205,13 @@ async function readFrontendFeeBatch(
     });
 
     return rounds.map((_, index) => {
-      const totalFrontendPoolResult = results[index * 7];
-      const frontendStakeResult = results[index * 7 + 1];
-      const totalEligibleStakeResult = results[index * 7 + 2];
-      const totalFrontendClaimantsResult = results[index * 7 + 3];
-      const claimedResult = results[index * 7 + 4];
-      const claimedCountResult = results[index * 7 + 5];
-      const claimedAmountResult = results[index * 7 + 6];
+      const totalFrontendPoolResult = results[index * 5];
+      const frontendStakeResult = results[index * 5 + 1];
+      const totalEligibleStakeResult = results[index * 5 + 2];
+      const totalFrontendClaimantsResult = results[index * 5 + 3];
+      const previewResult = results[index * 5 + 4];
+      const previewTuple =
+        previewResult?.status === "success" && Array.isArray(previewResult.result) ? previewResult.result : null;
 
       return {
         totalFrontendPool:
@@ -271,15 +230,11 @@ async function readFrontendFeeBatch(
           totalFrontendClaimantsResult?.status === "success" && typeof totalFrontendClaimantsResult.result === "bigint"
             ? totalFrontendClaimantsResult.result
             : 0n,
-        alreadyClaimed: claimedResult?.status === "success" ? Boolean(claimedResult.result) : false,
-        claimedCount:
-          claimedCountResult?.status === "success" && typeof claimedCountResult.result === "bigint"
-            ? claimedCountResult.result
-            : 0n,
-        claimedAmount:
-          claimedAmountResult?.status === "success" && typeof claimedAmountResult.result === "bigint"
-            ? claimedAmountResult.result
-            : 0n,
+        claimableFee: previewTuple && typeof previewTuple[0] === "bigint" ? previewTuple[0] : 0n,
+        disposition: previewTuple && typeof previewTuple[1] === "bigint" ? previewTuple[1] : 2n,
+        operator:
+          previewTuple && typeof previewTuple[2] === "string" ? (previewTuple[2] as Address) : emptyRow.operator,
+        alreadyClaimed: previewTuple && typeof previewTuple[3] === "boolean" ? previewTuple[3] : false,
       };
     });
   } catch {
@@ -290,67 +245,51 @@ async function readFrontendFeeBatch(
       const roundId = BigInt(item.roundId);
 
       try {
-        const [
-          totalFrontendPool,
-          frontendStake,
-          totalEligibleStake,
-          totalFrontendClaimants,
-          alreadyClaimed,
-          claimedCount,
-          claimedAmount,
-        ] = await Promise.all([
-          context.publicClient.readContract({
-            address: context.votingEngine.address,
-            abi: context.votingEngine.abi,
-            functionName: "roundFrontendPool",
-            args: [contentId, roundId],
-          }) as Promise<bigint>,
-          context.publicClient.readContract({
-            address: context.votingEngine.address,
-            abi: context.votingEngine.abi,
-            functionName: "roundPerFrontendStake",
-            args: [contentId, roundId, frontend],
-          }) as Promise<bigint>,
-          context.publicClient.readContract({
-            address: context.votingEngine.address,
-            abi: context.votingEngine.abi,
-            functionName: "roundStakeWithEligibleFrontend",
-            args: [contentId, roundId],
-          }) as Promise<bigint>,
-          context.publicClient.readContract({
-            address: context.votingEngine.address,
-            abi: context.votingEngine.abi,
-            functionName: "roundEligibleFrontendCount",
-            args: [contentId, roundId],
-          }) as Promise<bigint>,
-          context.publicClient.readContract({
-            address: context.rewardDistributor.address,
-            abi: context.rewardDistributor.abi,
-            functionName: "frontendFeeClaimed",
-            args: [contentId, roundId, frontend],
-          }) as Promise<boolean>,
-          context.publicClient.readContract({
-            address: context.rewardDistributor.address,
-            abi: context.rewardDistributor.abi,
-            functionName: "roundFrontendClaimedCount",
-            args: [contentId, roundId],
-          }) as Promise<bigint>,
-          context.publicClient.readContract({
-            address: context.rewardDistributor.address,
-            abi: context.rewardDistributor.abi,
-            functionName: "roundFrontendClaimedAmount",
-            args: [contentId, roundId],
-          }) as Promise<bigint>,
-        ]);
+        const [totalFrontendPool, frontendStake, totalEligibleStake, totalFrontendClaimants, previewFrontendFee] =
+          await Promise.all([
+            context.publicClient.readContract({
+              address: context.votingEngine.address,
+              abi: context.votingEngine.abi,
+              functionName: "roundFrontendPool",
+              args: [contentId, roundId],
+            }) as Promise<bigint>,
+            context.publicClient.readContract({
+              address: context.votingEngine.address,
+              abi: context.votingEngine.abi,
+              functionName: "roundPerFrontendStake",
+              args: [contentId, roundId, frontend],
+            }) as Promise<bigint>,
+            context.publicClient.readContract({
+              address: context.votingEngine.address,
+              abi: context.votingEngine.abi,
+              functionName: "roundStakeWithEligibleFrontend",
+              args: [contentId, roundId],
+            }) as Promise<bigint>,
+            context.publicClient.readContract({
+              address: context.votingEngine.address,
+              abi: context.votingEngine.abi,
+              functionName: "roundEligibleFrontendCount",
+              args: [contentId, roundId],
+            }) as Promise<bigint>,
+            context.publicClient.readContract({
+              address: context.rewardDistributor.address,
+              abi: context.rewardDistributor.abi,
+              functionName: "previewFrontendFee",
+              args: [contentId, roundId, frontend],
+            }) as Promise<[bigint, bigint, Address, boolean]>,
+          ]);
+
+        const [claimableFee, disposition, operator, alreadyClaimed] = previewFrontendFee;
 
         rows.push({
           totalFrontendPool,
           frontendStake,
           totalEligibleStake,
           totalFrontendClaimants,
+          claimableFee,
+          disposition,
+          operator,
           alreadyClaimed,
-          claimedCount,
-          claimedAmount,
         });
       } catch {
         rows.push(emptyRow);
@@ -385,7 +324,7 @@ async function buildClaimableFrontendFeeSnapshot(
     throw error;
   }
 
-  if (!frontendRecord || !hasOutstandingFrontendFees(frontendRecord)) {
+  if (!frontendRecord) {
     return emptySnapshot();
   }
 
@@ -415,28 +354,7 @@ async function buildClaimableFrontendFeeSnapshot(
       scanOffset += 1;
       scannedRounds += 1;
 
-      if (
-        !isClaimableSnapshot(
-          row.totalFrontendPool,
-          row.frontendStake,
-          row.totalEligibleStake,
-          row.totalFrontendClaimants,
-          row.alreadyClaimed,
-        )
-      ) {
-        continue;
-      }
-
-      const claimableFee = calculateClaimableFee(
-        row.totalFrontendPool,
-        row.frontendStake,
-        row.totalEligibleStake,
-        row.totalFrontendClaimants,
-        row.claimedCount,
-        row.claimedAmount,
-      );
-
-      if (claimableFee <= 0n) {
+      if (!isClaimableSnapshot(row.claimableFee, row.disposition, row.alreadyClaimed)) {
         continue;
       }
 
@@ -447,7 +365,7 @@ async function buildClaimableFrontendFeeSnapshot(
         description: round.description,
         url: round.url,
         settledAt: round.settledAt,
-        claimableFee: claimableFee.toString(),
+        claimableFee: row.claimableFee.toString(),
         totalFrontendPool: row.totalFrontendPool.toString(),
         frontendStake: row.frontendStake.toString(),
         totalEligibleStake: row.totalEligibleStake.toString(),

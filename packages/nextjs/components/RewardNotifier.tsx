@@ -18,7 +18,7 @@ function getClaimableTotalStorageKey(address: string) {
 }
 
 /**
- * Headless component that fires a toast when new claimable rewards appear.
+ * Headless component that fires a toast when new claimable cREP appears.
  * Uses storage to avoid repeat toasts on page refresh and a cooldown to avoid spam.
  */
 export function RewardNotifier() {
@@ -62,7 +62,7 @@ export function RewardNotifier() {
       const formatted = (Number(totalClaimable) / 1e6).toLocaleString(undefined, { maximumFractionDigits: 0 });
       notification.success(
         <Link href="/portfolio" className="font-medium underline">
-          {`You have ${formatted} cREP rewards ready to claim in Portfolio.`}
+          {`You have ${formatted} cREP ready to claim in Portfolio.`}
         </Link>,
         { duration: 8000 },
       );
