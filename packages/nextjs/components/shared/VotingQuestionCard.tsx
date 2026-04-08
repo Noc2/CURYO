@@ -138,6 +138,7 @@ function InlineVotingSummary({
   const voteTooltip = `${snapshot.voteCount} vote${snapshot.voteCount === 1 ? "" : "s"} committed in this round. ${snapshot.revealedCount} revealed.${pendingRevealCount > 0 ? ` ${pendingRevealCount} commit${pendingRevealCount === 1 ? "" : "s"} still pending reveal.` : ""} ${Math.max(0, snapshot.minVoters - snapshot.revealedCount) > 0 ? `${Math.max(0, snapshot.minVoters - snapshot.revealedCount)} more revealed vote${Math.max(0, snapshot.minVoters - snapshot.revealedCount) === 1 ? "" : "s"} needed before settlement can start.` : "Threshold reached. Settlement follows once past-epoch reveal checks clear."}`;
   const showVoteIcons = snapshot.phase === "voting";
   const showRevealedBreakdown = snapshot.round.revealedCount > 0;
+  const useCompactInlineRows = compact && alignLeft && !stackForNarrowRail;
 
   if (!showVoteIcons && !progressMessaging && !showRevealedBreakdown) {
     return null;
@@ -162,9 +163,11 @@ function InlineVotingSummary({
       {progressMessaging ? (
         <div
           className={`flex text-base text-base-content/75 ${
-            alignLeft || stackForNarrowRail
-              ? "w-full flex-col items-start gap-1 text-left"
-              : "flex-wrap items-center justify-center gap-x-2.5 gap-y-1.5 text-center"
+            useCompactInlineRows
+              ? "w-full flex-wrap items-center gap-x-2 gap-y-1 text-left"
+              : alignLeft || stackForNarrowRail
+                ? "w-full flex-col items-start gap-1 text-left"
+                : "flex-wrap items-center justify-center gap-x-2.5 gap-y-1.5 text-center"
           }`}
         >
           <div className="flex items-center gap-2.5">
@@ -215,7 +218,10 @@ function InlineVotingSummary({
       {statusPlacement === "afterProgress" ? statusRow : null}
       {showRevealedBreakdown ? (
         <div className="w-full">
-          <RoundRevealedBreakdown snapshot={snapshot} stacked={stackForNarrowRail || alignLeft} />
+          <RoundRevealedBreakdown
+            snapshot={snapshot}
+            stacked={!useCompactInlineRows && (stackForNarrowRail || alignLeft)}
+          />
         </div>
       ) : null}
     </div>
