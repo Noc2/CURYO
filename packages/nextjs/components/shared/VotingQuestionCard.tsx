@@ -509,11 +509,11 @@ export function VotingQuestionCard({
         >
           <div className={dockControlsPaddingClassName}>
             {!centerStatusContent ? (
-              <div className="grid grid-cols-[1fr_auto_1fr] items-end gap-3">
+              <div className="grid grid-cols-[auto_minmax(0,1fr)_auto] items-end gap-3">
                 <div className="justify-self-start">
                   <CuryoVoteButton direction="up" size="sm" onClick={() => onVote(true)} disabled={dockVoteDisabled} />
                 </div>
-                <div className="justify-self-center translate-y-1">
+                <div className="justify-self-end translate-y-1">
                   <MoreToggleButton
                     expanded={isDetailsOpen}
                     onClick={() => setIsDetailsOpen(current => !current)}
