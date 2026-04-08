@@ -821,8 +821,8 @@ export function VoteFeedStage({
       className="flex h-full min-h-0 flex-col xl:h-auto"
     >
       <p id={feedInstructionsId} className="sr-only">
-        Use the arrow keys or Page Up and Page Down to move between items. Use Home or End to jump to the start or
-        end of the loaded feed.
+        Use the arrow keys or Page Up and Page Down to move between items. Use Home or End to jump to the start or end
+        of the loaded feed.
       </p>
       {isCommitting ? (
         <div className="flex shrink-0 items-center justify-center">

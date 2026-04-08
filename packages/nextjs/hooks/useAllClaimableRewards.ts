@@ -5,15 +5,10 @@ import { EPOCH_WEIGHT_BPS, REWARD_SPLIT_BPS, ROUND_STATE } from "@curyo/contract
 import { useAccount, useReadContracts } from "wagmi";
 import { type ClaimableRewardItem } from "~~/hooks/claimableRewards";
 import { useDeployedContractInfo } from "~~/hooks/scaffold-eth";
+import { useClaimableFrontendRewards } from "~~/hooks/useClaimableFrontendRewards";
+import { useClaimableSubmitterParticipationRewards } from "~~/hooks/useClaimableSubmitterParticipationRewards";
 import { useClaimableSubmitterRewards } from "~~/hooks/useClaimableSubmitterRewards";
 import { useRecentUserVotes } from "~~/hooks/useRecentUserVotes";
-
-export interface ClaimableItem {
-  contentId: bigint;
-  roundId: bigint;
-  reward: bigint;
-  claimType: ClaimableRewardItem["claimType"];
-}
 
 function epochWeightBps(epochIndex: number): number {
   return epochIndex === 0 ? EPOCH_WEIGHT_BPS.blind : EPOCH_WEIGHT_BPS.informed;
@@ -31,6 +26,16 @@ export function useAllClaimableRewards() {
     isLoading: submitterLoading,
     refetch: refetchSubmitterClaimables,
   } = useClaimableSubmitterRewards();
+  const {
+    claimableItems: submitterParticipationClaimableItems,
+    isLoading: submitterParticipationLoading,
+    refetch: refetchSubmitterParticipationClaimables,
+  } = useClaimableSubmitterParticipationRewards();
+  const {
+    claimableItems: frontendClaimableItems,
+    isLoading: frontendClaimableLoading,
+    refetch: refetchFrontendClaimables,
+  } = useClaimableFrontendRewards();
 
   // --- Step 2: Filter to terminal rounds only ---
   const terminalVotes = useMemo(() => {
@@ -125,7 +130,7 @@ export function useAllClaimableRewards() {
 
   // --- Step 6: Build claimable items with calculated rewards ---
   const { claimableItems, activeStake } = useMemo(() => {
-    const items: ClaimableItem[] = [];
+    const items: ClaimableRewardItem[] = [];
 
     // Safe BigInt conversion — Ponder returns numeric strings, but guard against bad data
     const safeBigInt = (val: unknown): bigint => {
@@ -200,8 +205,13 @@ export function useAllClaimableRewards() {
   }, [refundVotes, settledWinners, settledLosers, rewardResults, votes]);
 
   const combinedClaimableItems = useMemo(
-    () => [...claimableItems, ...submitterClaimableItems],
-    [claimableItems, submitterClaimableItems],
+    () => [
+      ...claimableItems,
+      ...submitterClaimableItems,
+      ...submitterParticipationClaimableItems,
+      ...frontendClaimableItems,
+    ],
+    [claimableItems, submitterClaimableItems, submitterParticipationClaimableItems, frontendClaimableItems],
   );
 
   const combinedTotalClaimable = useMemo(
@@ -209,13 +219,22 @@ export function useAllClaimableRewards() {
     [combinedClaimableItems],
   );
 
-  const isLoading = claimedLoading || rewardsLoading || submitterLoading;
+  const isLoading =
+    claimedLoading || rewardsLoading || submitterLoading || submitterParticipationLoading || frontendClaimableLoading;
 
   const refetch = useCallback(() => {
     refetchVotes();
     refetchClaimed();
     refetchSubmitterClaimables();
-  }, [refetchVotes, refetchClaimed, refetchSubmitterClaimables]);
+    refetchSubmitterParticipationClaimables();
+    refetchFrontendClaimables();
+  }, [
+    refetchVotes,
+    refetchClaimed,
+    refetchSubmitterClaimables,
+    refetchSubmitterParticipationClaimables,
+    refetchFrontendClaimables,
+  ]);
 
   return {
     claimableItems: combinedClaimableItems,

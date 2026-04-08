@@ -14,6 +14,7 @@ const CONTRACT_ENV_NAMES = {
   categoryRegistry: "CATEGORY_REGISTRY_ADDRESS",
   contentRegistry: "CONTENT_REGISTRY_ADDRESS",
   crepToken: "CREP_TOKEN_ADDRESS",
+  roundRewardDistributor: "ROUND_REWARD_DISTRIBUTOR_ADDRESS",
   voterIdNFT: "VOTER_ID_NFT_ADDRESS",
   votingEngine: "VOTING_ENGINE_ADDRESS",
 } as const;
@@ -246,6 +247,13 @@ function loadConfig() {
         chainId,
         envName: "VOTING_ENGINE_ADDRESS",
         contractName: "RoundVotingEngine",
+        errors,
+        warnings,
+      }),
+      roundRewardDistributor: resolveOptionalContractAddress({
+        chainId,
+        envName: "ROUND_REWARD_DISTRIBUTOR_ADDRESS",
+        contractName: "RoundRewardDistributor",
         errors,
         warnings,
       }),

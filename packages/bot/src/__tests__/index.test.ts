@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 type BotIndexOptions = {
-  command: "status" | "submit" | "vote";
+  command: "claim" | "status" | "submit" | "vote";
   connectivityError?: Error;
 };
 
@@ -17,6 +17,7 @@ async function loadBotIndex(options: BotIndexOptions) {
   const runStatus = vi.fn().mockResolvedValue(undefined);
   const runSubmit = vi.fn().mockResolvedValue(undefined);
   const runVote = vi.fn().mockResolvedValue(undefined);
+  const runClaim = vi.fn().mockResolvedValue(undefined);
   const errorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
   const exitSpy = vi.spyOn(process, "exit").mockImplementation((code?: string | number | null) => {
     throw new Error(`process.exit:${code ?? ""}`);
@@ -40,6 +41,9 @@ async function loadBotIndex(options: BotIndexOptions) {
   vi.doMock("../commands/vote.js", () => ({
     runVote,
   }));
+  vi.doMock("../commands/claim.js", () => ({
+    runClaim,
+  }));
 
   let importError: unknown = null;
   try {
@@ -55,6 +59,7 @@ async function loadBotIndex(options: BotIndexOptions) {
     errorSpy,
     exitSpy,
     importError,
+    runClaim,
     runStatus,
     runSubmit,
     runVote,
@@ -83,6 +88,14 @@ describe("bot index", () => {
     expect(bot.validateConfig).toHaveBeenCalledWith("rate");
     expect(bot.validateBotConnectivity).toHaveBeenCalledWith("rate");
     expect(bot.runVote).toHaveBeenCalledOnce();
+  });
+
+  it("runs the claim command without submit/vote connectivity preflight", async () => {
+    const bot = await loadBotIndex({ command: "claim" });
+
+    expect(bot.validateConfig).not.toHaveBeenCalled();
+    expect(bot.validateBotConnectivity).not.toHaveBeenCalled();
+    expect(bot.runClaim).toHaveBeenCalledOnce();
   });
 
   it("exits before running commands when connectivity validation fails", async () => {

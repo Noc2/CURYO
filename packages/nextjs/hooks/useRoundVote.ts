@@ -22,7 +22,7 @@ import {
   persistWalletDisplaySummarySnapshot,
 } from "~~/hooks/useWalletDisplaySummary";
 import { isFreeTransactionExhaustedError } from "~~/lib/transactionErrors";
-import { VOTE_COOLDOWN_SECONDS } from "~~/lib/vote/cooldown";
+import { normalizeRoundVoteError } from "~~/lib/vote/roundVoteErrors";
 import { resolveRoundVoteRuntime } from "~~/lib/vote/roundVoteRuntime";
 import scaffoldConfig from "~~/scaffold.config";
 import { getParsedErrorWithAllAbis } from "~~/utils/scaffold-eth/contract";
@@ -32,38 +32,8 @@ interface RoundVoteParams {
   isUp: boolean;
   stakeAmount: number; // In whole tokens (e.g., 5 = 5 cREP)
   frontendCode?: `0x${string}`; // Optional frontend operator address for fee distribution
+  isOwnContent?: boolean;
   submitter?: string; // Content submitter address (for self-vote prevention)
-}
-
-function normalizeRoundVoteError(message: string) {
-  if (message.toLowerCase().includes("free transactions used up")) {
-    return "Free transactions used up. Add CELO to continue.";
-  }
-  if (message.includes("CooldownActive")) {
-    return `You already voted on this content within the last ${Math.round(VOTE_COOLDOWN_SECONDS / 3600)} hours. Try again after the cooldown ends.`;
-  }
-  if (message.includes("AlreadyCommitted")) {
-    return "You already have a vote committed on this content in the current round.";
-  }
-  if (message.includes("MaxVotersReached")) {
-    return "This round is full. Wait for the next round to vote again.";
-  }
-  if (message.includes("SelfVote")) {
-    return "You cannot vote on your own content.";
-  }
-  if (message.includes("ContentNotActive")) {
-    return "This content is no longer active for voting.";
-  }
-  if (message.includes("TargetRoundOutOfWindow") || message.includes("0xe56a7aca")) {
-    return "The voting window moved while your vote was being prepared. Please try again.";
-  }
-  if (message.includes("RoundNotAccepting") || message.includes("RoundNotOpen")) {
-    return "This round is not accepting votes right now.";
-  }
-  if (message.includes("VoterIdRequired")) {
-    return "Voter ID required. Please verify your identity to vote.";
-  }
-  return message;
 }
 
 /**
@@ -97,7 +67,14 @@ export function useRoundVote() {
   const publicClient = usePublicClient();
   const clearError = useCallback(() => setError(null), []);
 
-  const commitVote = async ({ contentId, isUp, stakeAmount, frontendCode, submitter }: RoundVoteParams) => {
+  const commitVote = async ({
+    contentId,
+    isUp,
+    stakeAmount,
+    frontendCode,
+    isOwnContent,
+    submitter,
+  }: RoundVoteParams) => {
     const accepted = await requireAcceptance("vote");
     if (!accepted) return false;
 
@@ -106,8 +83,8 @@ export function useRoundVote() {
       return false;
     }
 
-    if (submitter && address && submitter.toLowerCase() === address.toLowerCase()) {
-      setError("Cannot vote on own content");
+    if (isOwnContent || (submitter && address && submitter.toLowerCase() === address.toLowerCase())) {
+      setError(normalizeRoundVoteError("SelfVote"));
       return false;
     }
 

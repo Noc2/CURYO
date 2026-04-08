@@ -1,4 +1,8 @@
-import { buildSubmitterClaimableRewards } from "./claimableRewards";
+import {
+  buildSubmitterClaimableRewards,
+  buildSubmitterParticipationClaimableRewards,
+  sortClaimableRewardItems,
+} from "./claimableRewards";
 import assert from "node:assert/strict";
 import test from "node:test";
 
@@ -30,6 +34,119 @@ test("buildSubmitterClaimableRewards filters out zero-value and already-claimed 
       roundId: 12n,
       reward: 456n,
       claimType: "submitter_reward",
+    },
+  ]);
+});
+
+test("buildSubmitterParticipationClaimableRewards honors reserved rewards and shared pool depletion", () => {
+  const items = buildSubmitterParticipationClaimableRewards(
+    [
+      {
+        contentId: 1n,
+        totalReward: 9n,
+        alreadyPaid: 0n,
+        reservedReward: 4n,
+        rewardPool: "0x1000000000000000000000000000000000000000",
+      },
+      {
+        contentId: 2n,
+        totalReward: 6n,
+        alreadyPaid: 0n,
+        reservedReward: 0n,
+        rewardPool: "0x1000000000000000000000000000000000000000",
+      },
+    ],
+    new Map([
+      [
+        "0x1000000000000000000000000000000000000000",
+        {
+          authorized: true,
+          poolBalance: 5n,
+        },
+      ],
+    ]),
+  );
+
+  assert.deepEqual(items, [
+    {
+      contentId: 1n,
+      reward: 9n,
+      claimType: "submitter_participation_reward",
+    },
+  ]);
+});
+
+test("buildSubmitterParticipationClaimableRewards keeps reserved payouts claimable after deauthorization", () => {
+  const items = buildSubmitterParticipationClaimableRewards(
+    [
+      {
+        contentId: 7n,
+        totalReward: 9n,
+        alreadyPaid: 0n,
+        reservedReward: 4n,
+        rewardPool: "0x2000000000000000000000000000000000000000",
+      },
+    ],
+    new Map([
+      [
+        "0x2000000000000000000000000000000000000000",
+        {
+          authorized: false,
+          poolBalance: 10n,
+        },
+      ],
+    ]),
+  );
+
+  assert.deepEqual(items, [
+    {
+      contentId: 7n,
+      reward: 4n,
+      claimType: "submitter_participation_reward",
+    },
+  ]);
+});
+
+test("sortClaimableRewardItems keeps frontend round credits ahead of the final frontend withdrawal", () => {
+  const items = sortClaimableRewardItems([
+    {
+      frontend: "0x3000000000000000000000000000000000000000",
+      reward: 5n,
+      claimType: "frontend_registry_fee",
+    },
+    {
+      contentId: 8n,
+      roundId: 2n,
+      frontend: "0x3000000000000000000000000000000000000000",
+      reward: 3n,
+      claimType: "frontend_round_fee",
+    },
+    {
+      contentId: 2n,
+      roundId: 1n,
+      reward: 4n,
+      claimType: "reward",
+    },
+  ]);
+
+  assert.deepEqual(items, [
+    {
+      contentId: 2n,
+      roundId: 1n,
+      reward: 4n,
+      claimType: "reward",
+    },
+    {
+      contentId: 8n,
+      roundId: 2n,
+      frontend: "0x3000000000000000000000000000000000000000",
+      reward: 3n,
+      claimType: "frontend_round_fee",
+    },
+    {
+      frontend: "0x3000000000000000000000000000000000000000",
+      reward: 5n,
+      claimType: "frontend_registry_fee",
     },
   ]);
 });

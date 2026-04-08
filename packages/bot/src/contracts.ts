@@ -1,5 +1,11 @@
 import { config, getContractEnvName, type BotContractKey } from "./config.js";
-import { ContentRegistryAbi, CuryoReputationAbi, RoundVotingEngineAbi, VoterIdNFTAbi } from "@curyo/contracts/abis";
+import {
+  ContentRegistryAbi,
+  CuryoReputationAbi,
+  RoundRewardDistributorAbi,
+  RoundVotingEngineAbi,
+  VoterIdNFTAbi,
+} from "@curyo/contracts/abis";
 
 function requireContractAddress(contractKey: BotContractKey): `0x${string}` {
   const address = config.contracts[contractKey];
@@ -19,6 +25,9 @@ export const contractConfig = {
   },
   get votingEngine() {
     return { address: requireContractAddress("votingEngine"), abi: RoundVotingEngineAbi };
+  },
+  get distributor() {
+    return { address: requireContractAddress("roundRewardDistributor"), abi: RoundRewardDistributorAbi };
   },
   get voterIdNFT() {
     return { address: requireContractAddress("voterIdNFT"), abi: VoterIdNFTAbi };

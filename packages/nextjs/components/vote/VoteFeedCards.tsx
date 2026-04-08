@@ -204,7 +204,15 @@ interface FeedContentHeaderProps {
   compact?: boolean;
 }
 
-function FeedContentHeader({ item, titleId, onPrevious, onNext, canPrevious, canNext, compact }: FeedContentHeaderProps) {
+function FeedContentHeader({
+  item,
+  titleId,
+  onPrevious,
+  onNext,
+  canPrevious,
+  canNext,
+  compact,
+}: FeedContentHeaderProps) {
   return (
     <div className={`rounded-2xl bg-base-200 ${compact ? "px-4 py-3" : "px-5 py-4 xl:px-4 xl:py-3"}`}>
       <div className="flex items-center justify-between gap-3">

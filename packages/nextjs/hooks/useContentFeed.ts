@@ -37,10 +37,46 @@ export function useContentFeed(voterAddress?: string, options: UseContentFeedOpt
   const keepPrevious = options.keepPrevious ?? true;
   const limit = options.limit && options.limit > 0 ? Math.floor(options.limit) : undefined;
   const offset = options.offset && options.offset > 0 ? Math.floor(options.offset) : 0;
+  const ownSubmitterAddresses = options.ownSubmitterAddresses;
   const searchQuery = options.searchQuery?.trim();
   const shortSearchQueryBlocked = isContentSearchQueryTooShort(searchQuery);
   const sortBy = options.sortBy ?? "newest";
   const submitter = options.submitter?.trim();
+  const submitters = options.submitters;
+  const normalizedOwnSubmitterAddresses = useMemo(() => {
+    const values = new Set<string>();
+
+    const addAddress = (address?: string) => {
+      const trimmed = address?.trim();
+      if (!trimmed) return;
+      values.add(trimmed.toLowerCase());
+    };
+
+    addAddress(voterAddress);
+    ownSubmitterAddresses?.forEach(addAddress);
+
+    return Array.from(values);
+  }, [ownSubmitterAddresses, voterAddress]);
+  const ownSubmitterAddressSet = useMemo(
+    () => new Set(normalizedOwnSubmitterAddresses),
+    [normalizedOwnSubmitterAddresses],
+  );
+  const normalizedSubmitterFilters = useMemo(() => {
+    const values = new Set<string>();
+
+    const addAddress = (address?: string) => {
+      const trimmed = address?.trim();
+      if (!trimmed) return;
+      values.add(trimmed.toLowerCase());
+    };
+
+    addAddress(submitter);
+    submitters?.forEach(addAddress);
+
+    return Array.from(values);
+  }, [submitter, submitters]);
+  const submittersKey = normalizedSubmitterFilters.join(",");
+  const ownSubmitterAddressesKey = normalizedOwnSubmitterAddresses.join(",");
 
   const { data: events, isLoading: eventsLoading } = useScaffoldEventHistory({
     contractName: "ContentRegistry",
@@ -76,7 +112,7 @@ export function useContentFeed(voterAddress?: string, options: UseContentFeedOpt
           tags: parseTags(args.tags || ""),
           submitter: eventSubmitter,
           contentHash: args.contentHash || "",
-          isOwnContent: !!voterAddress && eventSubmitter.toLowerCase() === voterAddress.toLowerCase(),
+          isOwnContent: ownSubmitterAddressSet.has(eventSubmitter.toLowerCase()),
           categoryId: args.categoryId ?? 0n,
           rating: 50,
           createdAt: event.blockData?.timestamp
@@ -93,7 +129,7 @@ export function useContentFeed(voterAddress?: string, options: UseContentFeedOpt
         };
       })
       .filter((item): item is ContentItem => item !== null);
-  }, [events, voterAddress]);
+  }, [events, ownSubmitterAddressSet]);
 
   const filteredRpcFeed = useMemo(
     () =>
@@ -101,11 +137,11 @@ export function useContentFeed(voterAddress?: string, options: UseContentFeedOpt
         filterRpcFeed(rpcFeed, {
           categoryId,
           contentIds,
+          submitters: normalizedSubmitterFilters,
           searchQuery,
-          submitter,
         }),
       ),
-    [categoryId, contentIds, rpcFeed, searchQuery, submitter],
+    [categoryId, contentIds, normalizedSubmitterFilters, rpcFeed, searchQuery],
   );
   const sortedRpcFeed = useMemo(
     () => sortRpcFeed(filteredRpcFeed, sortBy, searchQuery),
@@ -121,11 +157,12 @@ export function useContentFeed(voterAddress?: string, options: UseContentFeedOpt
     queryKey: [
       "contentFeed",
       voterAddress,
+      ownSubmitterAddressesKey,
       sortBy,
       limit ?? "all",
       offset,
       categoryId?.toString() ?? "all",
-      submitter ?? "all",
+      submittersKey || "all",
       searchQuery ?? "",
       contentIdsParam ?? "",
     ],
@@ -144,7 +181,8 @@ export function useContentFeed(voterAddress?: string, options: UseContentFeedOpt
         search: searchQuery || undefined,
         sortBy,
         status: "all",
-        submitter: submitter || undefined,
+        submitter: normalizedSubmitterFilters.length === 1 ? normalizedSubmitterFilters[0] : undefined,
+        submitters: normalizedSubmitterFilters.length > 1 ? normalizedSubmitterFilters.join(",") : undefined,
       };
 
       if (limit !== undefined) {
@@ -153,7 +191,7 @@ export function useContentFeed(voterAddress?: string, options: UseContentFeedOpt
           limit: String(limit),
           offset: String(offset),
         });
-        const feed = response.items.map(item => mapContentItem(item, voterAddress));
+        const feed = response.items.map(item => mapContentItem(item, voterAddress, normalizedOwnSubmitterAddresses));
         return {
           feed,
           totalContent: response.total ?? offset + feed.length + (response.hasMore ? 1 : 0),
@@ -162,7 +200,7 @@ export function useContentFeed(voterAddress?: string, options: UseContentFeedOpt
       }
 
       const items = await ponderApi.getAllContent(params);
-      const feed = items.map(item => mapContentItem(item, voterAddress));
+      const feed = items.map(item => mapContentItem(item, voterAddress, normalizedOwnSubmitterAddresses));
       return {
         feed,
         totalContent: feed.length,

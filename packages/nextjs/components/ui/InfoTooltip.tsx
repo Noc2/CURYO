@@ -105,10 +105,9 @@ export const HoverTooltip = ({ text, position = "top", className = "", ariaLabel
                 left: layout?.left ?? 0,
                 top: layout?.top ?? 0,
                 visibility: layout ? "visible" : "hidden",
-                maxWidth: "min(20rem, calc(100vw - 1rem))",
               }}
             >
-              <span className="relative block rounded-2xl bg-neutral px-3 py-2 text-sm leading-snug text-neutral-content shadow-2xl">
+              <span className="relative block w-max max-w-[min(20rem,calc(100vw-1rem))] break-words rounded-2xl bg-neutral px-3 py-2 text-sm leading-snug whitespace-normal text-neutral-content shadow-2xl">
                 {text}
                 {layout ? (
                   <span

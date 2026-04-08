@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { type ReactNode, useEffect, useState } from "react";
 import { CuryoConnectButton } from "~~/components/scaffold-eth";
 import { CuryoVoteButton } from "~~/components/shared/CuryoVoteButton";
 import { MoreToggleButton } from "~~/components/shared/MoreToggleButton";
@@ -117,6 +117,8 @@ function InlineVotingSummary({
   compact,
   stackForNarrowRail = false,
   alignLeft = false,
+  statusContent,
+  statusPlacement = "afterProgress",
 }: {
   snapshot: ReturnType<typeof useRoundSnapshot>;
   filledVoteIcons: number;
@@ -124,6 +126,8 @@ function InlineVotingSummary({
   compact: boolean;
   stackForNarrowRail?: boolean;
   alignLeft?: boolean;
+  statusContent?: ReactNode;
+  statusPlacement?: "beforeProgress" | "afterProgress";
 }) {
   const { ratePercent } = useParticipationRate();
   const progressMessaging = getRoundProgressMessaging(snapshot, ratePercent);
@@ -136,6 +140,10 @@ function InlineVotingSummary({
     return null;
   }
 
+  const statusRow = statusContent ? (
+    <div className={`flex w-full ${alignLeft ? "justify-start" : "justify-center"}`}>{statusContent}</div>
+  ) : null;
+
   return (
     <div
       className={`flex w-full flex-col ${alignLeft ? "items-start" : "items-center"} ${compact ? "gap-2" : "gap-2.5"}`}
@@ -147,6 +155,7 @@ function InlineVotingSummary({
           tooltip={voteTooltip}
         />
       ) : null}
+      {statusPlacement === "beforeProgress" ? statusRow : null}
       {progressMessaging ? (
         <div
           className={`flex text-base text-base-content/75 ${
@@ -200,6 +209,7 @@ function InlineVotingSummary({
           ) : null}
         </div>
       ) : null}
+      {statusPlacement === "afterProgress" ? statusRow : null}
       {showRevealedBreakdown ? (
         <div className="w-full">
           <RoundRevealedBreakdown snapshot={snapshot} stacked={stackForNarrowRail || alignLeft} />
@@ -451,9 +461,12 @@ export function VotingQuestionCard({
       compact={compact}
       stackForNarrowRail={isDesktopSignalRailCard}
       alignLeft={isLeftAlignedDockDetails}
+      statusContent={hasMyVote ? centerStatusContent : undefined}
+      statusPlacement={hasMyVote ? "beforeProgress" : "afterProgress"}
     />
   );
   const showExpandedDetails = isSignalVariant || (isDetailsOpen && !isDockVariant);
+  const inlineSummaryIncludesStatus = hasMyVote && showInlineVotingSummary;
 
   useEffect(() => {
     setIsDetailsOpen(isSignalVariant);
@@ -496,11 +509,11 @@ export function VotingQuestionCard({
         >
           <div className={dockControlsPaddingClassName}>
             {!centerStatusContent ? (
-              <div className="grid grid-cols-[1fr_auto_1fr] items-end gap-3">
+              <div className="grid grid-cols-[auto_minmax(0,1fr)_auto] items-end gap-3">
                 <div className="justify-self-start">
                   <CuryoVoteButton direction="up" size="sm" onClick={() => onVote(true)} disabled={dockVoteDisabled} />
                 </div>
-                <div className="justify-self-center translate-y-1">
+                <div className="justify-self-end translate-y-1">
                   <MoreToggleButton
                     expanded={isDetailsOpen}
                     onClick={() => setIsDetailsOpen(current => !current)}
@@ -518,9 +531,9 @@ export function VotingQuestionCard({
                 </div>
               </div>
             ) : (
-              <div className="flex flex-col items-center gap-2.5">
-                <div className="flex items-center justify-center">{centerStatusContent}</div>
-                <div className="translate-y-1">
+              <div className="grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-end gap-3">
+                <div className="min-w-0 justify-self-start [&>button]:max-w-full">{centerStatusContent}</div>
+                <div className="justify-self-center translate-y-1">
                   <MoreToggleButton
                     expanded={isDetailsOpen}
                     onClick={() => setIsDetailsOpen(current => !current)}
@@ -528,6 +541,7 @@ export function VotingQuestionCard({
                     className={dockMoreClassName}
                   />
                 </div>
+                <div aria-hidden className="h-10 w-10 justify-self-end" />
               </div>
             )}
           </div>
@@ -588,7 +602,7 @@ export function VotingQuestionCard({
             {phase === "voting" || hasMyVote ? (
               <div className="flex w-full flex-col items-center gap-2">
                 {showInlineVotingSummary ? inlineVotingSummary : null}
-                {centerStatusContent}
+                {!inlineSummaryIncludesStatus ? centerStatusContent : null}
               </div>
             ) : centerStatusContent ? (
               centerStatusContent

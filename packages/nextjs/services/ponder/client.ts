@@ -189,6 +189,7 @@ export interface PonderContentQuery {
   sortBy?: string;
   status?: string;
   submitter?: string;
+  submitters?: string;
 }
 
 export interface PonderContentOpenRoundSummary {

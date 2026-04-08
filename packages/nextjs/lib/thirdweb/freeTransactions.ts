@@ -586,6 +586,7 @@ function validateSponsoredCalls(
       }
       case "ContentRegistry":
         if (
+          functionName === "claimSubmitterParticipationReward" ||
           functionName === "cancelReservedSubmission" ||
           functionName === "reserveSubmission" ||
           functionName === "submitContent"
