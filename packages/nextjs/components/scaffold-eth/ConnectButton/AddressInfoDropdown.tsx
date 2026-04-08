@@ -14,8 +14,10 @@ import { useCuryoDisconnect } from "~~/hooks/useCuryoDisconnect";
 import { useFreeTransactionAllowance } from "~~/hooks/useFreeTransactionAllowance";
 import { usePageVisibility } from "~~/hooks/usePageVisibility";
 import { useSubmissionStakes } from "~~/hooks/useSubmissionStakes";
+import { useVoterAccuracy } from "~~/hooks/useVoterAccuracy";
 import { useVotingStakes } from "~~/hooks/useVotingStakes";
 import { getWalletDisplayLiquidMicro, useWalletDisplaySummary } from "~~/hooks/useWalletDisplaySummary";
+import { AVATAR_WIN_RATE_TOOLTIP } from "~~/lib/profile/winRateTooltip";
 import { isENS } from "~~/utils/scaffold-eth/common";
 
 type AddressInfoDropdownProps = {
@@ -106,18 +108,33 @@ function FreeTransactionAllowanceText({ className }: { className?: string }) {
   );
 }
 
+function WinRateSummaryText({ address, className }: { address: Address; className?: string }) {
+  const { stats } = useVoterAccuracy(address);
+  const winRateLabel = stats && stats.totalSettledVotes > 0 ? `${(stats.winRate * 100).toFixed(1)}%` : "—";
+
+  return (
+    <div className={`flex items-center gap-1.5 text-sm font-medium leading-5 text-base-content/62 ${className ?? ""}`}>
+      <span className="tabular-nums">{winRateLabel}</span>
+      <span className="text-base-content/48">win rate</span>
+      <InfoTooltip text={AVATAR_WIN_RATE_TOOLTIP} position="bottom" />
+    </div>
+  );
+}
+
 function WalletSummaryDetails({
   address,
   crepBalance,
   balanceClassName,
   freeTxClassName,
   stakeClassName,
+  winRateClassName,
 }: {
   address: Address;
   crepBalance: bigint | undefined;
   balanceClassName: string;
   freeTxClassName: string;
   stakeClassName: string;
+  winRateClassName: string;
 }) {
   const { activeVotes, earliestReveal, hasPendingReveals, liquidBalance, summary } = useWalletSummaryData(
     address,
@@ -160,6 +177,7 @@ function WalletSummaryDetails({
           {stakeTooltip ? <InfoTooltip text={stakeTooltip} position="bottom" /> : null}
         </div>
       ) : null}
+      <WinRateSummaryText address={address} className={winRateClassName} />
       <FreeTransactionAllowanceText className={freeTxClassName} />
     </>
   );
@@ -247,6 +265,7 @@ export const AddressInfoDropdown = ({
                 address={address}
                 crepBalance={crepBalance}
                 balanceClassName="text-sm font-medium leading-5 text-base-content/78"
+                winRateClassName="text-left"
                 freeTxClassName="text-left"
                 stakeClassName="flex items-center gap-1.5 text-sm font-medium leading-5 text-base-content/68"
               />
@@ -275,6 +294,7 @@ export const AddressInfoDropdown = ({
             address={address}
             crepBalance={crepBalance}
             balanceClassName="text-left text-sm font-medium leading-5 text-base-content/78"
+            winRateClassName="text-left"
             freeTxClassName="text-left"
             stakeClassName="flex items-center justify-start gap-1.5 text-left text-sm font-medium leading-5 text-base-content/68"
           />
@@ -314,6 +334,7 @@ export const AddressInfoDropdown = ({
         address={address}
         crepBalance={crepBalance}
         balanceClassName="hidden lg:inline lg:px-2 text-sm font-medium leading-5 text-base-content/78"
+        winRateClassName="hidden lg:flex lg:px-2"
         freeTxClassName="hidden lg:flex lg:px-2"
         stakeClassName="hidden lg:flex lg:px-2 items-center gap-1.5 text-sm font-medium leading-5 text-base-content/68"
       />

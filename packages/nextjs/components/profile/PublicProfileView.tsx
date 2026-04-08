@@ -38,6 +38,7 @@ import { useVoterAccuracy } from "~~/hooks/useVoterAccuracy";
 import { useVoterIdNFT } from "~~/hooks/useVoterIdNFT";
 import { avatarAccentHexToRgb, normalizeAvatarAccentHex } from "~~/lib/avatar/avatarAccent";
 import { MAX_PROFILE_STRATEGY_LENGTH } from "~~/lib/profile/profileValidation";
+import { AVATAR_WIN_RATE_TOOLTIP } from "~~/lib/profile/winRateTooltip";
 import { formatRatingScoreOutOfTen } from "~~/lib/ui/ratingDisplay";
 import { type PonderProfileDetailResponse, type PonderVoteItem, ponderApi } from "~~/services/ponder/client";
 import { getReputationAvatarUrl } from "~~/utils/profileImage";
@@ -595,8 +596,11 @@ export function PublicProfileView({ address, embedded = false }: PublicProfileVi
           {!isEditing ? (
             <div className="mt-4 flex flex-col gap-2 text-base text-base-content/55 lg:flex-row lg:items-center">
               <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
-                <span>
-                  Win rate <span className="font-mono tabular-nums text-base-content/75">{winRateLabel}</span>
+                <span className="inline-flex items-center gap-1.5">
+                  <span>
+                    Win rate <span className="font-mono tabular-nums text-base-content/75">{winRateLabel}</span>
+                  </span>
+                  <InfoTooltip text={AVATAR_WIN_RATE_TOOLTIP} position="bottom" />
                 </span>
                 <span className="text-base-content/35">&bull;</span>
                 <span>{profileLoading ? "..." : `${totalVotes} votes`}</span>
