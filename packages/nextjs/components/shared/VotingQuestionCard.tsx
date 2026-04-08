@@ -411,17 +411,17 @@ export function VotingQuestionCard({
   const centerStatusContent = address ? (
     hasMyVote ? (
       <HoverTooltip
-        text="Your vote is encrypted until the blind phase ends. The keeper normally validates the stored tlock stanza and reveals eligible votes afterward, and you can self-reveal if needed."
+        text="You voted, and your direction stays hidden until the blind phase ends. After that, eligible votes are normally revealed automatically, and you can self-reveal if needed."
         position="bottom"
       >
         {usesDockStatusText ? (
           <span className={DOCK_STATUS_TEXT_CLASS_NAME}>
-            <span className="text-[0.95rem] font-semibold leading-none text-primary">Committed</span>
+            <span className="text-[0.95rem] font-semibold leading-none text-primary">Voted</span>
             <span className="text-[0.95rem] leading-none text-base-content/62">hidden</span>
           </span>
         ) : (
           <span className={STATUS_PILL_CLASS_NAME}>
-            <span className="text-base font-semibold text-primary">Committed</span>
+            <span className="text-base font-semibold text-primary">Voted</span>
             <span className="text-base text-base-content/70">hidden</span>
           </span>
         )}

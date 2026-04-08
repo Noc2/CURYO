@@ -93,7 +93,7 @@ function getVoteOutcome(vote: PonderVoteItem) {
   if (vote.roundState === ROUND_STATE.Cancelled) return { label: "Cancelled", className: "text-base-content/50" };
   if (vote.roundState === ROUND_STATE.Tied) return { label: "Tied", className: "text-warning" };
   if (vote.roundState === ROUND_STATE.RevealFailed) return { label: "Reveal failed", className: "text-warning" };
-  if (!vote.revealed) return { label: "Committed", className: "text-base-content/50" };
+  if (!vote.revealed) return { label: "Voted hidden", className: "text-base-content/50" };
   return { label: "Open", className: "text-primary" };
 }
 
