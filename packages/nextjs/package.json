@@ -48,7 +48,7 @@
     "@thirdweb-dev/wagmi-adapter": "0.2.208",
     "@wagmi/core": "2.22.1",
     "daisyui": "5.0.9",
-    "drizzle-orm": "~0.45.1",
+    "drizzle-orm": "~0.45.2",
     "framer-motion": "^12.29.2",
     "next": "~15.5.14",
     "next-nprogress-bar": "~2.3.13",

@@ -486,7 +486,7 @@ __metadata:
     bgipfs: ~0.0.12
     daisyui: 5.0.9
     drizzle-kit: ^0.31.10
-    drizzle-orm: ~0.45.1
+    drizzle-orm: ~0.45.2
     eslint: ~9.38.0
     eslint-config-next: ~15.5.12
     eslint-config-prettier: ~10.1.1
@@ -11206,9 +11206,9 @@ __metadata:
   languageName: node
   linkType: hard
 
-"drizzle-orm@npm:~0.45.1":
-  version: 0.45.1
-  resolution: "drizzle-orm@npm:0.45.1"
+"drizzle-orm@npm:~0.45.2":
+  version: 0.45.2
+  resolution: "drizzle-orm@npm:0.45.2"
   peerDependencies:
     "@aws-sdk/client-rds-data": ">=3"
     "@cloudflare/workers-types": ">=4"
@@ -11297,7 +11297,7 @@ __metadata:
       optional: true
     sqlite3:
       optional: true
-  checksum: 61a90edde7de804378b2a0332bf9124c2446c6d63c30e4c830fe961473206b3f521da4de7ae4fb076c869c6fa3c5c8c0b3ac3021286f430d67accf99aab219dc
+  checksum: 96f908b92391c28b87f67ac1b75e8c4155b8214dc19bc7d0af303d91a1b1a1493b54048a1438c507e55b184fba03d4042973dd353866b1df35fc53edb0af91ed
   languageName: node
   linkType: hard
 
