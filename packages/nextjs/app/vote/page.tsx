@@ -1346,7 +1346,8 @@ const HomeInner = () => {
     feed.length === 0;
   return (
     <AppPageShell
-      outerClassName="min-h-0 flex-1 overflow-hidden pb-0 pt-2 xl:pb-4 xl:pt-4"
+      paddingTopClassName="pt-2 xl:pt-4"
+      outerClassName="min-h-0 flex-1 overflow-hidden pb-0 xl:pb-4"
       contentClassName="flex min-h-0 flex-1 flex-col gap-4 overflow-hidden"
     >
       <VotingGuide />
