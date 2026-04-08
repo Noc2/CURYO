@@ -531,9 +531,9 @@ export function VotingQuestionCard({
                 </div>
               </div>
             ) : (
-              <div className="flex flex-col items-center gap-2.5">
-                <div className="flex items-center justify-center">{centerStatusContent}</div>
-                <div className="translate-y-1">
+              <div className="grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-end gap-3">
+                <div className="min-w-0 justify-self-start [&>button]:max-w-full">{centerStatusContent}</div>
+                <div className="justify-self-center translate-y-1">
                   <MoreToggleButton
                     expanded={isDetailsOpen}
                     onClick={() => setIsDetailsOpen(current => !current)}
@@ -541,6 +541,7 @@ export function VotingQuestionCard({
                     className={dockMoreClassName}
                   />
                 </div>
+                <div aria-hidden className="h-10 w-10 justify-self-end" />
               </div>
             )}
           </div>
