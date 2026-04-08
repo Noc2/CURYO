@@ -1,6 +1,10 @@
 import { protocolDocFacts } from "./protocolFacts";
 
 export const protocolCopy = {
+  whyNowOverview:
+    "Generative AI has made it cheap to produce convincing text, images, and video at scale. That weakens passive signals like likes, follower counts, and engagement.",
+  strongerSignalOverview:
+    "Curyo offers a stronger signal: stake-weighted ratings from verified humans, recorded publicly and backed by economic risk.",
   predictionGamesOverview: `Curyo replaces passive likes with prediction games. Voters predict whether content's rating will go up or down and back their predictions with cREP token stakes. The majority side wins the content-specific voter pool: revealed losers can reclaim ${protocolDocFacts.revealedLoserRefundPercentLabel} of raw stake, and the remaining losing pool is split across winners, submitters, platform fees, consensus reserve, and treasury according to fixed on-chain percentages.`,
   contributorRewardsOverview: `After a ${protocolDocFacts.revealedLoserRefundPercentLabel} rebate for revealed losers, the remaining losing stake funds the content-specific voter pool plus submitter, category, frontend, consensus, and treasury shares.`,
   participationPoolPurpose:
