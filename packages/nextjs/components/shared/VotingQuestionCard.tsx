@@ -538,22 +538,23 @@ export function VotingQuestionCard({
     const dockControlsStyle = compact ? { paddingBottom: "calc(0.625rem + env(safe-area-inset-bottom))" } : undefined;
     const dockShellClassName = compact ? "rounded-none" : "rounded-[2rem]";
     const dockShellBorderClassName = compact ? "" : "ring-1 ring-base-content/8";
+    const dockTopBorderArcRadius = compact ? dockNotchCutout + 5 : dockNotchCutout;
     const dockTopBorderOverlayStyle = compact
       ? {
-          height: `${dockNotchCutout + 2}px`,
+          height: `${dockTopBorderArcRadius + 2}px`,
         }
       : undefined;
     const dockTopBorderSegmentStyle = compact
       ? {
-          width: `calc(50% - ${dockNotchCutout}px)`,
+          width: `calc(50% - ${dockTopBorderArcRadius}px)`,
           borderColor: "var(--curyo-shell-border-strong)",
         }
       : undefined;
     const dockTopBorderArcStyle = compact
       ? {
-          top: `${-dockNotchCutout}px`,
-          width: `${dockNotchCutout * 2}px`,
-          height: `${dockNotchCutout * 2}px`,
+          top: `${-dockTopBorderArcRadius}px`,
+          width: `${dockTopBorderArcRadius * 2}px`,
+          height: `${dockTopBorderArcRadius * 2}px`,
           borderColor: "var(--curyo-shell-border-strong)",
         }
       : undefined;
