@@ -59,6 +59,7 @@ export function getVoteFeedThumbnailSrc(item: ContentItem) {
 interface FeedVoteCardProps {
   item: ContentItem;
   submitterProfile?: SubmitterProfile;
+  titleId?: string;
   onVote: (item: ContentItem, isUp: boolean) => void;
   onExternalOpen?: (item: ContentItem, href: string) => void;
   onToggleWatch: (id: bigint) => void;
@@ -82,6 +83,7 @@ interface FeedVoteCardProps {
 export const FeedVoteCard = memo(function FeedVoteCard({
   item,
   submitterProfile,
+  titleId,
   onVote,
   onExternalOpen,
   onToggleWatch,
@@ -158,6 +160,7 @@ export const FeedVoteCard = memo(function FeedVoteCard({
     >
       <FeedContentHeader
         item={item}
+        titleId={titleId}
         onPrevious={onPrevious}
         onNext={onNext}
         canPrevious={canPrevious}
@@ -228,6 +231,7 @@ interface FeedContentMetaCardProps {
 
 interface FeedContentHeaderProps {
   item: ContentItem;
+  titleId?: string;
   onPrevious?: () => void;
   onNext?: () => void;
   canPrevious: boolean;
@@ -235,7 +239,15 @@ interface FeedContentHeaderProps {
   compact?: boolean;
 }
 
-function FeedContentHeader({ item, onPrevious, onNext, canPrevious, canNext, compact }: FeedContentHeaderProps) {
+function FeedContentHeader({
+  item,
+  titleId,
+  onPrevious,
+  onNext,
+  canPrevious,
+  canNext,
+  compact,
+}: FeedContentHeaderProps) {
   return (
     <div className={`rounded-2xl bg-base-200 ${compact ? "p-3" : "p-4 xl:p-3"}`}>
       <div className="flex items-center justify-between gap-3">
@@ -250,6 +262,7 @@ function FeedContentHeader({ item, onPrevious, onNext, canPrevious, canNext, com
         </button>
         <div className="min-w-0 flex-1">
           <h2
+            id={titleId}
             className={`break-words text-center font-display leading-[0.94] tracking-[0.02em] text-base-content ${
               compact
                 ? "text-[1.55rem] sm:text-[1.7rem] xl:text-[1.62rem]"

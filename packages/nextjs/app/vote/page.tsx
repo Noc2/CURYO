@@ -1103,6 +1103,7 @@ const HomeInner = () => {
             address={address}
             isCommitting={isCommitting}
             voteError={voteError}
+            isFeedBusy={isLoading || requestedContentLoading}
             isMetadataPrefetchPending={isMetadataPrefetchPending}
             primaryItemCooldownSeconds={primaryItemCooldownSeconds}
             navigationLocked={stakeModal.isOpen}

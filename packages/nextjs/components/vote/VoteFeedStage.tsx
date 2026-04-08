@@ -1,6 +1,14 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import {
+  type KeyboardEvent as ReactKeyboardEvent,
+  useCallback,
+  useEffect,
+  useId,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import { AnimatePresence, type PanInfo, type Variants, motion } from "framer-motion";
 import { FeedQueueCard, FeedVoteCard, getVoteFeedThumbnailSrc } from "~~/components/vote/VoteFeedCards";
 import type { ContentItem } from "~~/hooks/useContentFeed";
@@ -36,6 +44,16 @@ const voteCardVariants: Variants = {
 
 type QueueAction = "previous" | "next" | "first" | "last";
 
+function isKeyboardNavigationTarget(target: EventTarget | null) {
+  if (!(target instanceof HTMLElement)) return false;
+
+  return Boolean(
+    target.closest(
+      "a,button,input,textarea,select,label,summary,[contenteditable='true'],[role='button'],[role='textbox'],[role='searchbox'],[data-disable-queue-wheel='true']",
+    ),
+  );
+}
+
 interface VoteFeedStageProps {
   primaryItem: ContentItem | null;
   displayFeed: ContentItem[];
@@ -54,6 +72,7 @@ interface VoteFeedStageProps {
   address?: string;
   isCommitting: boolean;
   voteError?: string | null;
+  isFeedBusy: boolean;
   isMetadataPrefetchPending: boolean;
   primaryItemCooldownSeconds: number;
   navigationLocked: boolean;
@@ -87,6 +106,7 @@ export function VoteFeedStage({
   address,
   isCommitting,
   voteError,
+  isFeedBusy,
   isMetadataPrefetchPending,
   primaryItemCooldownSeconds,
   navigationLocked,
@@ -101,15 +121,21 @@ export function VoteFeedStage({
   onToggleWatch,
   onToggleFollow,
 }: VoteFeedStageProps) {
+  const feedInstructionsId = useId();
   const [supportsTouchNavigation, setSupportsTouchNavigation] = useState(false);
+  const activeArticleRef = useRef<HTMLElement | null>(null);
   const queueRailRef = useRef<HTMLDivElement | null>(null);
   const loadMoreRef = useRef<HTMLDivElement | null>(null);
   const lastQueuePrefetchVisibleCountRef = useRef<number | null>(null);
   const lastPreloadedThumbnailRef = useRef<string | null>(null);
+  const shouldFocusActiveArticleRef = useRef(false);
   const [queueSectionElement, setQueueSectionElement] = useState<HTMLElement | null>(null);
   const queueLayout = useVoteQueueLayout(queueSectionElement);
   const hasVisibleQueue = queueLayout.rows > 0;
   const hasMultiRowQueue = queueLayout.rows > 1;
+  const activeArticleTitleId = primaryItem ? `vote-feed-title-${primaryItem.id.toString()}` : undefined;
+  const activeArticlePosition = activeSourceIndex >= 0 ? activeSourceIndex + 1 : undefined;
+  const activeArticleSetSize = canLoadMore ? -1 : displayFeed.length;
   const queueVisibleItems = useMemo(() => {
     return resolveVoteQueueWindowItems(queueSourceItems, activeSourceIndex, queueLayout);
   }, [activeSourceIndex, queueLayout, queueSourceItems]);
@@ -239,11 +265,15 @@ export function VoteFeedStage({
   }, [canLoadMore, onLoadMore]);
 
   const handleSelectPrevious = useCallback(() => {
-    onNavigateSelection("previous");
+    if (onNavigateSelection("previous")) {
+      shouldFocusActiveArticleRef.current = true;
+    }
   }, [onNavigateSelection]);
 
   const handleSelectNext = useCallback(() => {
-    onNavigateSelection("next");
+    if (onNavigateSelection("next")) {
+      shouldFocusActiveArticleRef.current = true;
+    }
   }, [onNavigateSelection]);
 
   const handleQueueKeyboardNavigate = useCallback(
@@ -276,6 +306,19 @@ export function VoteFeedStage({
     [displayFeed, focusQueueThumbnail, onSelectByIndex],
   );
 
+  useEffect(() => {
+    if (!primaryItem || !shouldFocusActiveArticleRef.current || typeof window === "undefined") return;
+
+    shouldFocusActiveArticleRef.current = false;
+    const frameId = window.requestAnimationFrame(() => {
+      activeArticleRef.current?.focus({ preventScroll: true });
+    });
+
+    return () => {
+      window.cancelAnimationFrame(frameId);
+    };
+  }, [primaryItem?.id]);
+
   const canNavigateCards = displayFeed.length > 1 && !isCommitting && !navigationLocked;
   const canSwipeNavigate = supportsTouchNavigation && canNavigateCards;
   const canWheelNavigate = !supportsTouchNavigation && canNavigateCards;
@@ -286,49 +329,52 @@ export function VoteFeedStage({
     onNavigate: onNavigateSelection,
   });
 
-  useEffect(() => {
-    if (typeof window === "undefined") return;
-    if (navigationLocked) return;
+  const handleSelectCard = useCallback(
+    (id: bigint) => {
+      shouldFocusActiveArticleRef.current = true;
+      onSelectCard(id);
+    },
+    [onSelectCard],
+  );
 
-    const handleWindowKeyDown = (event: KeyboardEvent) => {
-      if (event.defaultPrevented || event.altKey || event.ctrlKey || event.metaKey) return;
+  const handleActiveCardKeyDown = useCallback(
+    (event: ReactKeyboardEvent<HTMLElement>) => {
+      if (navigationLocked || event.defaultPrevented || event.altKey || event.ctrlKey || event.metaKey) return;
+      if (isKeyboardNavigationTarget(event.target)) return;
 
-      const target = event.target as HTMLElement | null;
-      if (
-        target?.closest(
-          "input,textarea,select,button,[contenteditable='true'],[role='textbox'],[role='searchbox'],[data-disable-queue-wheel='true']",
-        )
-      ) {
+      if (event.key === "ArrowLeft" || event.key === "PageUp") {
+        event.preventDefault();
+        if (onNavigateSelection("previous")) {
+          shouldFocusActiveArticleRef.current = true;
+        }
         return;
       }
 
-      if (event.key === "ArrowLeft") {
+      if (event.key === "ArrowRight" || event.key === "PageDown") {
         event.preventDefault();
-        onNavigateSelection("previous");
+        if (onNavigateSelection("next")) {
+          shouldFocusActiveArticleRef.current = true;
+        }
         return;
       }
 
-      if (event.key === "ArrowRight") {
+      if (event.key === "Home") {
         event.preventDefault();
-        onNavigateSelection("next");
+        if (onSelectByIndex(0)) {
+          shouldFocusActiveArticleRef.current = true;
+        }
         return;
       }
 
-      if (event.key === "Home" || event.key === "PageUp") {
+      if (event.key === "End") {
         event.preventDefault();
-        onSelectByIndex(0);
-        return;
+        if (onSelectByIndex(displayFeed.length - 1)) {
+          shouldFocusActiveArticleRef.current = true;
+        }
       }
-
-      if (event.key === "End" || event.key === "PageDown") {
-        event.preventDefault();
-        onSelectByIndex(displayFeed.length - 1);
-      }
-    };
-
-    window.addEventListener("keydown", handleWindowKeyDown);
-    return () => window.removeEventListener("keydown", handleWindowKeyDown);
-  }, [displayFeed.length, navigationLocked, onNavigateSelection, onSelectByIndex]);
+    },
+    [displayFeed.length, navigationLocked, onNavigateSelection, onSelectByIndex],
+  );
 
   const handleCardDragEnd = useCallback(
     (_: MouseEvent | TouchEvent | PointerEvent, info: PanInfo) => {
@@ -358,7 +404,19 @@ export function VoteFeedStage({
   }, []);
 
   return (
-    <div ref={activeCardRegionRef} className="flex min-h-0 flex-col gap-3 xl:gap-2.5">
+    <div
+      ref={activeCardRegionRef}
+      role="feed"
+      aria-label="Content feed"
+      aria-busy={isFeedBusy || isCommitting}
+      aria-describedby={feedInstructionsId}
+      className="flex min-h-0 flex-col gap-3 xl:gap-2.5"
+    >
+      <p id={feedInstructionsId} className="sr-only">
+        Use Left and Right Arrow keys or Page Up and Page Down to move between items. Use Home or End to jump to the
+        first or last loaded item.
+      </p>
+
       {isCommitting ? (
         <div className="flex shrink-0 items-center justify-center">
           <span className="text-base text-base-content/50">
@@ -371,10 +429,16 @@ export function VoteFeedStage({
       {primaryItem ? (
         <div className="min-h-0">
           <AnimatePresence initial={false} mode="wait" custom={navigationDirection}>
-            <motion.div
+            <motion.article
+              ref={activeArticleRef}
               key={primaryItem.id.toString()}
               custom={navigationDirection}
-              className="touch-pan-y"
+              className="touch-pan-y rounded-[1.75rem] focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/60 focus-visible:ring-offset-2 focus-visible:ring-offset-base-100"
+              tabIndex={navigationLocked ? -1 : 0}
+              aria-current="true"
+              aria-labelledby={activeArticleTitleId}
+              aria-posinset={activeArticlePosition}
+              aria-setsize={activeArticleSetSize}
               variants={voteCardVariants}
               initial="enter"
               animate="center"
@@ -387,11 +451,13 @@ export function VoteFeedStage({
               dragConstraints={{ left: 0, right: 0 }}
               dragElastic={0.12}
               dragMomentum={false}
+              onKeyDown={handleActiveCardKeyDown}
               onDragEnd={handleCardDragEnd}
             >
               <FeedVoteCard
                 item={primaryItem}
                 submitterProfile={enrichedProfiles[primaryItem.submitter.toLowerCase()]}
+                titleId={activeArticleTitleId}
                 onExternalOpen={item => onExternalOpen(item)}
                 onVote={onVote}
                 onToggleWatch={onToggleWatch}
@@ -411,7 +477,7 @@ export function VoteFeedStage({
                 canPrevious={activeSourceIndex > 0}
                 canNext={activeSourceIndex >= 0 && activeSourceIndex < displayFeed.length - 1}
               />
-            </motion.div>
+            </motion.article>
           </AnimatePresence>
         </div>
       ) : null}
@@ -440,7 +506,7 @@ export function VoteFeedStage({
                   <FeedQueueCard
                     key={item.id.toString()}
                     item={item}
-                    onSelect={onSelectCard}
+                    onSelect={handleSelectCard}
                     onNavigate={handleQueueKeyboardNavigate}
                     queuePosition={queuePositionMap.get(item.id.toString()) ?? 0}
                     queueStatus={queueStatusByContentId.get(item.id.toString()) ?? null}
@@ -461,7 +527,7 @@ export function VoteFeedStage({
                   <FeedQueueCard
                     key={item.id.toString()}
                     item={item}
-                    onSelect={onSelectCard}
+                    onSelect={handleSelectCard}
                     onNavigate={handleQueueKeyboardNavigate}
                     queuePosition={queuePositionMap.get(item.id.toString()) ?? 0}
                     queueStatus={queueStatusByContentId.get(item.id.toString()) ?? null}
