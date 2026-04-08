@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { useAccount } from "wagmi";
+import { getClaimableRoundKey } from "~~/hooks/claimableRewards";
 import { useScaffoldWatchContractEvent } from "~~/hooks/scaffold-eth";
 import { useAllClaimableRewards } from "~~/hooks/useAllClaimableRewards";
 import { useDiscoverSignals } from "~~/hooks/useDiscoverSignals";
@@ -58,7 +59,7 @@ export function SettlementNotifier() {
   const { claimableItems, refetch: refetchClaimable } = useAllClaimableRewards();
 
   const claimableRoundKeys = useMemo(
-    () => new Set(claimableItems.map(item => `${item.contentId.toString()}-${item.roundId.toString()}`)),
+    () => new Set(claimableItems.map(item => getClaimableRoundKey(item)).filter((key): key is string => key !== null)),
     [claimableItems],
   );
 

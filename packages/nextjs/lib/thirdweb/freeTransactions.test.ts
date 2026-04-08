@@ -426,6 +426,7 @@ test("supported sponsored operation families are allowlisted", async () => {
     ],
     [encodeCall(frontendRegistryContract, "register")],
     [encodeCall(frontendRegistryContract, "claimFees")],
+    [encodeCall(contentRegistryContract, "claimSubmitterParticipationReward", [1n])],
     [encodeCall(votingEngineContract, "claimCancelledRoundRefund", [1n, 1n])],
     [encodeCall(rewardDistributorContract, "claimFrontendFee", [1n, 1n, WALLET])],
     [encodeCall(rewardDistributorContract, "claimReward", [1n, 1n])],

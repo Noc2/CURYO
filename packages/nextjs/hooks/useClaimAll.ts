@@ -2,8 +2,8 @@
 
 import { useState } from "react";
 import { useTermsAcceptance } from "~~/contexts/TermsAcceptanceContext";
+import { type ClaimableRewardItem } from "~~/hooks/claimableRewards";
 import { useScaffoldWriteContract } from "~~/hooks/scaffold-eth";
-import { ClaimableItem } from "~~/hooks/useAllClaimableRewards";
 import { useGasBalanceStatus } from "~~/hooks/useGasBalanceStatus";
 import { useWalletRpcRecovery } from "~~/hooks/useWalletRpcRecovery";
 import {
@@ -41,7 +41,11 @@ export function useClaimAll() {
     contractName: "RoundVotingEngine",
   } as any);
 
-  const claimAll = async (items: ClaimableItem[], onComplete?: () => void) => {
+  const { writeContractAsync: writeContentRegistry } = useScaffoldWriteContract({
+    contractName: "ContentRegistry",
+  } as any);
+
+  const claimAll = async (items: ClaimableRewardItem[], onComplete?: () => void) => {
     if (items.length === 0) return;
 
     const accepted = await requireAcceptance("claim");
@@ -75,22 +79,30 @@ export function useClaimAll() {
     try {
       for (let i = 0; i < items.length; i++) {
         setProgress({ current: i + 1, total: items.length });
-        const { contentId, roundId, claimType } = items[i];
+        const item = items[i];
 
         try {
-          if (claimType === "refund") {
+          if (item.claimType === "refund") {
             await (writeVotingEngine as any)(
               {
                 functionName: "claimCancelledRoundRefund",
-                args: [contentId, roundId],
+                args: [item.contentId, item.roundId],
               },
               { getErrorMessage: getTransactionErrorMessage },
             );
-          } else if (claimType === "submitter_reward") {
+          } else if (item.claimType === "submitter_reward") {
             await (writeDistributor as any)(
               {
                 functionName: "claimSubmitterReward",
-                args: [contentId, roundId],
+                args: [item.contentId, item.roundId],
+              },
+              { getErrorMessage: getTransactionErrorMessage },
+            );
+          } else if (item.claimType === "submitter_participation_reward") {
+            await (writeContentRegistry as any)(
+              {
+                functionName: "claimSubmitterParticipationReward",
+                args: [item.contentId],
               },
               { getErrorMessage: getTransactionErrorMessage },
             );
@@ -98,13 +110,17 @@ export function useClaimAll() {
             await (writeDistributor as any)(
               {
                 functionName: "claimReward",
-                args: [contentId, roundId],
+                args: [item.contentId, item.roundId],
               },
               { getErrorMessage: getTransactionErrorMessage },
             );
           }
         } catch (e: any) {
-          console.error(`Claim failed for content #${contentId} round ${roundId}:`, e?.shortMessage || e?.message);
+          const claimLabel =
+            item.claimType === "submitter_participation_reward"
+              ? `submitter participation reward for content #${item.contentId}`
+              : `content #${item.contentId} round ${item.roundId}`;
+          console.error(`Claim failed for ${claimLabel}:`, e?.shortMessage || e?.message);
           if (isClaimGasShortageError(e, transactionFeedback)) {
             break;
           }
