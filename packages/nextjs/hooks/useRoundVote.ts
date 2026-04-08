@@ -15,6 +15,7 @@ import { useThirdwebSponsoredSubmitCalls } from "~~/hooks/useThirdwebSponsoredSu
 import { getVoteHistoryQueryKey } from "~~/hooks/useVoteHistoryQuery";
 import { useVoterIdNFT } from "~~/hooks/useVoterIdNFT";
 import { useVotingConfig } from "~~/hooks/useVotingConfig";
+import { getVotingStakesQueryKey } from "~~/hooks/useVotingStakes";
 import {
   type WalletDisplaySummary,
   getWalletDisplaySummaryQueryKey,
@@ -245,7 +246,7 @@ export function useRoundVote() {
       queryClient.setQueryData<{
         data: { activeStaked: number; activeCount: number; totalVotingStake: number };
         source: string;
-      }>(["ponder-fallback", "votingStakes", address], old => {
+      }>(getVotingStakesQueryKey(address, targetNetwork.id), old => {
         if (!old?.data) return old;
         const added = Number(stakeWei) / 1e6;
         return {
@@ -257,9 +258,9 @@ export function useRoundVote() {
           },
         };
       });
-      queryClient.invalidateQueries({ queryKey: ["ponder-fallback", "votingStakes", address] });
-      queryClient.invalidateQueries({ queryKey: getRecentUserVotesQueryKey(address) });
-      queryClient.invalidateQueries({ queryKey: getVoteHistoryQueryKey(address) });
+      queryClient.invalidateQueries({ queryKey: getVotingStakesQueryKey(address, targetNetwork.id) });
+      queryClient.invalidateQueries({ queryKey: getRecentUserVotesQueryKey(address, targetNetwork.id) });
+      queryClient.invalidateQueries({ queryKey: getVoteHistoryQueryKey(address, targetNetwork.id) });
 
       return true;
     } catch (e: any) {

@@ -8,8 +8,11 @@ import { useAccount } from "wagmi";
 import { CategoryFilter } from "~~/components/CategoryFilter";
 import { AppPageShell } from "~~/components/shared/AppPageShell";
 import { StreakCounter } from "~~/components/shared/StreakCounter";
+import { VotingQuestionCard } from "~~/components/shared/VotingQuestionCard";
 import { FeedScopeFilter } from "~~/components/vote/FeedScopeFilter";
+import { VoteSignalRail } from "~~/components/vote/VoteSignalRail";
 import { MIN_CONTENT_SEARCH_QUERY_LENGTH, isContentSearchQueryTooShort } from "~~/hooks/contentFeed/shared";
+import { useTargetNetwork } from "~~/hooks/scaffold-eth/useTargetNetwork";
 import { useCategoryPopularity } from "~~/hooks/useCategoryPopularity";
 import { useCategoryRegistry } from "~~/hooks/useCategoryRegistry";
 import type { ContentItem } from "~~/hooks/useContentFeed";
@@ -19,7 +22,6 @@ import { useDiscoverSignals } from "~~/hooks/useDiscoverSignals";
 import { useFollowedProfiles } from "~~/hooks/useFollowedProfiles";
 import { useInterestProfile } from "~~/hooks/useInterestProfile";
 import { useOnboarding } from "~~/hooks/useOnboarding";
-import { useQueueCardStatusMap } from "~~/hooks/useQueueCardStatusMap";
 import { useRoundVote } from "~~/hooks/useRoundVote";
 import { SubmitterProfile, useSubmitterProfiles } from "~~/hooks/useSubmitterProfiles";
 import { useUnixTime } from "~~/hooks/useUnixTime";
@@ -36,8 +38,8 @@ import {
 import { type DiscoverFeedMode, sortDiscoverFeed } from "~~/lib/vote/feedModes";
 import { rankForYouFeed } from "~~/lib/vote/forYouRanker";
 import { buildVoteLocation } from "~~/lib/vote/location";
-import { MAX_VOTE_QUEUE_WINDOW_SIZE, resolveVoteQueueSourceItems } from "~~/lib/vote/queueLayout";
 import { mergeRequestedContentIntoFeed } from "~~/lib/vote/requestedContent";
+import { resolveStableSessionFeedOrder } from "~~/lib/vote/stableFeedOrder";
 import { type VoteView, getVoteViewGroups, isActivityViewOption } from "~~/lib/vote/viewOptions";
 import { buildRecommendationSignalContext, trackRecommendationSignal } from "~~/utils/recommendationTracker";
 import { notification } from "~~/utils/scaffold-eth";
@@ -71,8 +73,14 @@ const SEARCH_SORT_OPTIONS: { value: SearchSortOption; label: string }[] = [
   { value: "highest_rated", label: "Highest Rated" },
   { value: "lowest_rated", label: "Lowest Rated" },
 ];
-const FEED_PAGE_SIZE = 20;
-const FEED_PREFETCH_BUFFER = 20;
+const FEED_PAGE_SIZE = 6;
+const FEED_PREFETCH_BUFFER = 6;
+const MOBILE_VOTE_DOCK_RESERVED_SPACE_PX = 152;
+
+function areIdListsEqual(left: readonly string[], right: readonly string[]) {
+  if (left.length !== right.length) return false;
+  return left.every((value, index) => value === right[index]);
+}
 
 function getVoteCooldownMessage(seconds: number) {
   return `You already voted on this content recently. Try again in ${formatVoteCooldownRemaining(seconds)}.`;
@@ -103,6 +111,7 @@ const HomeInner = () => {
   }, [contentParam]);
 
   const { address } = useAccount();
+  const { targetNetwork } = useTargetNetwork();
   const nowSeconds = useUnixTime(60_000);
   const { openConnectModal } = useCuryoConnectModal();
   const { isFirstVote, markVoteCompleted } = useOnboarding();
@@ -110,9 +119,11 @@ const HomeInner = () => {
   const [view, setView] = useState<VoteView>("for_you");
   const [sortBy, setSortBy] = useState<SortOption>("for_you");
   const [visibleCount, setVisibleCount] = useState(FEED_PAGE_SIZE);
-  const [navigationDirection, setNavigationDirection] = useState<"previous" | "next">("next");
   const [interactionVersion, setInteractionVersion] = useState(0);
   const [optimisticVotedContentIds, setOptimisticVotedContentIds] = useState<Set<string>>(() => new Set());
+  const desktopScrollContainerRef = useRef<HTMLDivElement | null>(null);
+  const mobileDockContainerRef = useRef<HTMLDivElement | null>(null);
+  const [mobileDockReservedSpace, setMobileDockReservedSpace] = useState<number | null>(null);
   const trimmedSearchQuery = searchQuery.trim();
   const isSearchMode = trimmedSearchQuery.length > 0;
   const isShortSearchQuery = isContentSearchQueryTooShort(trimmedSearchQuery);
@@ -232,7 +243,6 @@ const HomeInner = () => {
     isMetadataPrefetchPending,
     totalContent: serverTotalContent,
     hasMore: serverHasMoreFeed,
-    source: feedSource,
   } = useContentFeed(address, {
     categoryId: activeCategoryId,
     contentIds: feedContentIds,
@@ -241,9 +251,13 @@ const HomeInner = () => {
     sortBy: isSearchMode ? effectiveSearchSortBy : "newest",
     submitter: activeScope === "my_submissions" ? address : undefined,
   });
+  const feedContainsRequestedContent = useMemo(() => {
+    if (effectiveRequestedActiveId === null) return false;
+    return feed.some(item => item.id === effectiveRequestedActiveId);
+  }, [effectiveRequestedActiveId, feed]);
   const { feed: requestedContentFeed, isLoading: requestedContentLoading } = useContentFeed(address, {
     contentIds: requestedContentIds,
-    enabled: effectiveRequestedActiveId !== null,
+    enabled: effectiveRequestedActiveId !== null && !feedContainsRequestedContent,
     keepPrevious: false,
     limit: 1,
   });
@@ -277,7 +291,7 @@ const HomeInner = () => {
 
   useEffect(() => {
     setOptimisticVotedContentIds(previous => (previous.size === 0 ? previous : new Set()));
-  }, [address]);
+  }, [address, targetNetwork.id]);
 
   useEffect(() => {
     if (optimisticVotedContentIds.size === 0) return;
@@ -470,7 +484,7 @@ const HomeInner = () => {
     followedCuratorContentIds,
   ]);
 
-  const displayFeed = useMemo(() => {
+  const rankedDisplayFeed = useMemo(() => {
     const withRequestedItem = (items: ContentItem[]) =>
       effectiveRequestedActiveId !== null ? mergeRequestedContentIntoFeed(items, requestedContentItem) : items;
     const items = [...filteredFeed];
@@ -558,20 +572,137 @@ const HomeInner = () => {
     effectiveRequestedActiveId,
     requestedContentItem,
   ]);
+  const feedSessionKey = useMemo(
+    () =>
+      [
+        targetNetwork.id,
+        normalizedAddress ?? "anonymous",
+        activeCategory,
+        view,
+        isSearchMode ? `search:${trimmedSearchQuery}:${effectiveSearchSortBy}` : `sort:${sortBy}`,
+      ].join("|"),
+    [
+      activeCategory,
+      effectiveSearchSortBy,
+      isSearchMode,
+      normalizedAddress,
+      sortBy,
+      targetNetwork.id,
+      trimmedSearchQuery,
+      view,
+    ],
+  );
+  const prioritizedFeedIds = useMemo(
+    () => (effectiveRequestedActiveId !== null ? [effectiveRequestedActiveId.toString()] : []),
+    [effectiveRequestedActiveId],
+  );
+  const rankedDisplayFeedIds = useMemo(() => rankedDisplayFeed.map(item => item.id.toString()), [rankedDisplayFeed]);
+  const [stableDisplayFeedState, setStableDisplayFeedState] = useState<{ sessionKey: string; ids: string[] }>(() => ({
+    sessionKey: feedSessionKey,
+    ids: rankedDisplayFeedIds,
+  }));
+  const stableDisplayFeedIds = useMemo(
+    () =>
+      resolveStableSessionFeedOrder({
+        previousIds: stableDisplayFeedState.ids,
+        previousSessionKey: stableDisplayFeedState.sessionKey,
+        nextIds: rankedDisplayFeedIds,
+        nextSessionKey: feedSessionKey,
+        prioritizedIds: prioritizedFeedIds,
+      }),
+    [
+      feedSessionKey,
+      prioritizedFeedIds,
+      rankedDisplayFeedIds,
+      stableDisplayFeedState.ids,
+      stableDisplayFeedState.sessionKey,
+    ],
+  );
+
+  useEffect(() => {
+    setStableDisplayFeedState(previousState => {
+      const nextIds = resolveStableSessionFeedOrder({
+        previousIds: previousState.ids,
+        previousSessionKey: previousState.sessionKey,
+        nextIds: rankedDisplayFeedIds,
+        nextSessionKey: feedSessionKey,
+        prioritizedIds: prioritizedFeedIds,
+      });
+
+      if (previousState.sessionKey === feedSessionKey && areIdListsEqual(previousState.ids, nextIds)) {
+        return previousState;
+      }
+
+      return {
+        sessionKey: feedSessionKey,
+        ids: nextIds,
+      };
+    });
+  }, [feedSessionKey, prioritizedFeedIds, rankedDisplayFeedIds]);
+
+  const displayFeed = useMemo(() => {
+    const itemById = new Map(rankedDisplayFeed.map(item => [item.id.toString(), item]));
+    return stableDisplayFeedIds.map(id => itemById.get(id)).filter((item): item is ContentItem => item !== undefined);
+  }, [rankedDisplayFeed, stableDisplayFeedIds]);
   displayFeedRef.current = displayFeed;
 
   const {
     activeItem: primaryItem,
     activeSourceIndex,
+    loadedItems,
     selectContent,
   } = useVoteFeedStage(displayFeed, {
     visibleCount,
     requestedActiveId: effectiveRequestedActiveId,
   });
-  const queueSourceItems = useMemo(() => {
-    return resolveVoteQueueSourceItems(displayFeed, activeSourceIndex, visibleCount, MAX_VOTE_QUEUE_WINDOW_SIZE);
-  }, [activeSourceIndex, displayFeed, visibleCount]);
-  const queueStatusByContentId = useQueueCardStatusMap(queueSourceItems, feedSource, nowSeconds);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+
+    const dockNode = mobileDockContainerRef.current;
+    if (!dockNode) {
+      setMobileDockReservedSpace(current => (current === null ? current : null));
+      return;
+    }
+
+    let frameId = 0;
+    let resizeObserver: ResizeObserver | null = null;
+
+    const measureDockSpace = () => {
+      const nextReservedSpace = Math.max(
+        MOBILE_VOTE_DOCK_RESERVED_SPACE_PX,
+        Math.ceil(window.innerHeight - dockNode.getBoundingClientRect().top),
+      );
+      setMobileDockReservedSpace(current => (current === nextReservedSpace ? current : nextReservedSpace));
+    };
+
+    const requestDockMeasurement = () => {
+      if (frameId !== 0) {
+        window.cancelAnimationFrame(frameId);
+      }
+
+      frameId = window.requestAnimationFrame(() => {
+        frameId = 0;
+        measureDockSpace();
+      });
+    };
+
+    requestDockMeasurement();
+    window.addEventListener("resize", requestDockMeasurement);
+
+    if (typeof ResizeObserver !== "undefined") {
+      resizeObserver = new ResizeObserver(requestDockMeasurement);
+      resizeObserver.observe(dockNode);
+    }
+
+    return () => {
+      if (frameId !== 0) {
+        window.cancelAnimationFrame(frameId);
+      }
+      window.removeEventListener("resize", requestDockMeasurement);
+      resizeObserver?.disconnect();
+    };
+  }, [primaryItem?.id]);
 
   useEffect(() => {
     return () => {
@@ -601,15 +732,8 @@ const HomeInner = () => {
   }, [flushActiveViewSession, persistRecommendationSignal, primaryItem]);
 
   const submitterAddresses = useMemo(() => {
-    return primaryItem ? [primaryItem.submitter] : [];
-  }, [primaryItem]);
-  const queuePositionMap = useMemo(() => {
-    const positions = new Map<string, number>();
-    displayFeed.forEach((item, index) => {
-      positions.set(item.id.toString(), index);
-    });
-    return positions;
-  }, [displayFeed]);
+    return loadedItems.map(item => item.submitter);
+  }, [loadedItems]);
 
   const { profiles: submitterProfiles } = useSubmitterProfiles(submitterAddresses);
 
@@ -649,6 +773,12 @@ const HomeInner = () => {
 
   const handleButtonVote = useCallback(
     (item: ContentItem, isUp: boolean) => {
+      if (!address) {
+        notification.info("Sign in to vote.");
+        void openConnectModal();
+        return;
+      }
+
       const cooldownSeconds =
         primaryItem && item.id === primaryItem.id ? primaryItemCooldownSeconds : getContentCooldownSeconds(item.id);
       if (cooldownSeconds > 0) {
@@ -662,60 +792,14 @@ const HomeInner = () => {
       setStakeModal({ isOpen: true, isUp, contentId: item.id, categoryId: item.categoryId });
     },
     [
+      address,
       clearVoteError,
       getContentCooldownSeconds,
       markPrimaryInteraction,
+      openConnectModal,
       primaryItem,
       primaryItemCooldownSeconds,
       recordRecommendationSignal,
-    ],
-  );
-
-  const handleConfirmStake = useCallback(
-    async (stakeAmount: number) => {
-      const cooldownSeconds = stakeModalCooldownSeconds;
-      if (cooldownSeconds > 0) {
-        notification.info(getVoteCooldownMessage(cooldownSeconds), { duration: 6000 });
-        setStakeModal(prev => ({ ...prev, isOpen: false }));
-        return;
-      }
-
-      const item = displayFeed.find(i => i.id === stakeModal.contentId);
-      const success = await commitVote({
-        contentId: stakeModal.contentId,
-        isUp: stakeModal.isUp,
-        stakeAmount,
-        submitter: item?.submitter,
-      });
-      if (success) {
-        clearVoteError();
-        setStakeModal(prev => ({ ...prev, isOpen: false }));
-        setOptimisticVotedContentIds(previous => {
-          const next = new Set(previous);
-          next.add(stakeModal.contentId.toString());
-          return next;
-        });
-        if (item) {
-          markPrimaryInteraction(item.id);
-          recordRecommendationSignal(item, "vote_commit", { isUp: stakeModal.isUp });
-        }
-        notification.success(`Vote committed! Stake: ${stakeAmount} cREP`);
-        if (isFirstVote) {
-          markVoteCompleted();
-          notification.info("Great first vote! Keep going to build your reputation.", { duration: 5000 });
-        }
-      }
-    },
-    [
-      clearVoteError,
-      commitVote,
-      displayFeed,
-      isFirstVote,
-      markVoteCompleted,
-      markPrimaryInteraction,
-      recordRecommendationSignal,
-      stakeModal,
-      stakeModalCooldownSeconds,
     ],
   );
 
@@ -740,8 +824,8 @@ const HomeInner = () => {
     [replaceVoteLocation],
   );
 
-  const handleSelectByIndex = useCallback(
-    (targetIndex: number) => {
+  const setActiveFeedIndex = useCallback(
+    (targetIndex: number, options?: { syncLocation?: boolean }) => {
       if (targetIndex < 0 || targetIndex >= displayFeed.length) return false;
 
       const targetItem = displayFeed[targetIndex];
@@ -752,40 +836,98 @@ const HomeInner = () => {
       }
 
       if (activeSourceIndex !== -1) {
-        flushActiveViewSession(true);
-        setNavigationDirection(targetIndex > activeSourceIndex ? "next" : "previous");
+        flushActiveViewSession(false);
       }
 
       selectContent(targetItem.id);
-      replaceVoteLocation({ contentId: targetItem.id });
+      if (options?.syncLocation) {
+        replaceVoteLocation({ contentId: targetItem.id });
+      }
 
       return true;
     },
     [activeSourceIndex, displayFeed, flushActiveViewSession, replaceVoteLocation, selectContent],
   );
 
-  const handleSelectCard = useCallback(
-    (id: bigint) => {
-      const item = displayFeed.find(entry => entry.id === id);
-      if (item) {
-        recordRecommendationSignal(item, "card_open");
+  const handleTrackVisibleIndex = useCallback(
+    (targetIndex: number) => {
+      if (activeSourceIndex < 0) {
+        return false;
       }
-      const targetIndex = displayFeed.findIndex(item => item.id === id);
-      if (targetIndex === -1) return;
-      handleSelectByIndex(targetIndex);
+      return setActiveFeedIndex(targetIndex, { syncLocation: true });
     },
-    [displayFeed, handleSelectByIndex, recordRecommendationSignal],
+    [activeSourceIndex, setActiveFeedIndex],
   );
 
-  const handleNavigateSelection = useCallback(
-    (direction: "previous" | "next") => {
-      if (displayFeed.length === 0 || activeSourceIndex === -1) return false;
-
-      const delta = direction === "next" ? 1 : -1;
-      const nextIndex = Math.min(Math.max(activeSourceIndex + delta, 0), displayFeed.length - 1);
-      return handleSelectByIndex(nextIndex);
+  const handleSelectByIndex = useCallback(
+    (targetIndex: number) => {
+      return setActiveFeedIndex(targetIndex, { syncLocation: true });
     },
-    [activeSourceIndex, displayFeed.length, handleSelectByIndex],
+    [setActiveFeedIndex],
+  );
+
+  const handleLoadMore = useCallback(() => {
+    setVisibleCount(prev => prev + FEED_PAGE_SIZE);
+  }, []);
+
+  const handleConfirmStake = useCallback(
+    async (stakeAmount: number) => {
+      const cooldownSeconds = stakeModalCooldownSeconds;
+      if (cooldownSeconds > 0) {
+        notification.info(getVoteCooldownMessage(cooldownSeconds), { duration: 6000 });
+        setStakeModal(prev => ({ ...prev, isOpen: false }));
+        return;
+      }
+
+      const item = displayFeed.find(i => i.id === stakeModal.contentId);
+      const committedIndex = displayFeed.findIndex(i => i.id === stakeModal.contentId);
+      const success = await commitVote({
+        contentId: stakeModal.contentId,
+        isUp: stakeModal.isUp,
+        stakeAmount,
+        submitter: item?.submitter,
+      });
+      if (!success) {
+        return;
+      }
+
+      clearVoteError();
+      setStakeModal(prev => ({ ...prev, isOpen: false }));
+      setOptimisticVotedContentIds(previous => {
+        const next = new Set(previous);
+        next.add(stakeModal.contentId.toString());
+        return next;
+      });
+      if (item) {
+        markPrimaryInteraction(item.id);
+        recordRecommendationSignal(item, "vote_commit", { isUp: stakeModal.isUp });
+      }
+
+      const nextIndex = committedIndex >= 0 ? Math.min(committedIndex + 1, displayFeed.length - 1) : -1;
+      const advanced = nextIndex > committedIndex ? handleSelectByIndex(nextIndex) : false;
+      notification.success(
+        advanced
+          ? `Vote committed! Stake: ${stakeAmount} cREP · next card ready`
+          : `Vote committed! Stake: ${stakeAmount} cREP`,
+      );
+
+      if (isFirstVote) {
+        markVoteCompleted();
+        notification.info("Great first vote! Keep going to build your reputation.", { duration: 5000 });
+      }
+    },
+    [
+      clearVoteError,
+      commitVote,
+      displayFeed,
+      handleSelectByIndex,
+      isFirstVote,
+      markVoteCompleted,
+      markPrimaryInteraction,
+      recordRecommendationSignal,
+      stakeModal,
+      stakeModalCooldownSeconds,
+    ],
   );
 
   const handleToggleWatch = useCallback(
@@ -1005,13 +1147,20 @@ const HomeInner = () => {
     trimmedSearchQuery,
   ]);
 
-  const showRequestedContentLoading = effectiveRequestedActiveId !== null && requestedContentLoading;
-
+  const showRequestedContentLoading =
+    effectiveRequestedActiveId !== null &&
+    !feedContainsRequestedContent &&
+    requestedContentItem === null &&
+    requestedContentLoading &&
+    feed.length === 0;
   return (
-    <AppPageShell>
+    <AppPageShell
+      outerClassName="min-h-0 flex-1 overflow-hidden pb-0 xl:pb-4"
+      contentClassName="flex min-h-0 flex-1 flex-col gap-4 overflow-hidden"
+    >
       <VotingGuide />
       <div
-        className="mb-4 flex shrink-0 flex-wrap items-center gap-2 sm:gap-3 xl:mb-2 xl:flex-nowrap"
+        className="flex shrink-0 flex-wrap items-center gap-2 sm:gap-3 xl:flex-nowrap"
         data-disable-queue-wheel="true"
       >
         <CategoryFilter
@@ -1033,13 +1182,13 @@ const HomeInner = () => {
           }}
           label="View"
         />
-        <div className="shrink-0 flex items-center">
+        <div className="shrink-0 flex items-center xl:hidden">
           <StreakCounter />
         </div>
       </div>
 
       {isSearchMode ? (
-        <div className="mb-5 flex shrink-0 flex-wrap items-center gap-2 xl:mb-3" data-disable-queue-wheel="true">
+        <div className="flex shrink-0 flex-wrap items-center gap-2" data-disable-queue-wheel="true">
           <div className="rounded-full bg-base-200 px-3 py-2 text-sm text-base-content/70">
             {isShortSearchQuery ? (
               <span>Keep typing to search. Terms need at least {MIN_CONTENT_SEARCH_QUERY_LENGTH} characters.</span>
@@ -1073,53 +1222,107 @@ const HomeInner = () => {
         </div>
       ) : null}
 
-      <div className="min-w-0">
-        {/* Main content */}
-        {categoriesLoading ||
-        scopeLoading ||
-        showRequestedContentLoading ||
-        (effectiveRequestedActiveId === null && isLoading) ? (
-          <div className="flex justify-center py-16 xl:py-10">
-            <span className="loading loading-spinner loading-lg text-primary"></span>
+      <div className="relative min-h-0 flex-1 overflow-hidden">
+        <div
+          ref={desktopScrollContainerRef}
+          className="min-h-0 flex h-full flex-col overflow-hidden xl:relative xl:left-1/2 xl:w-screen xl:-translate-x-1/2 xl:overflow-x-hidden xl:overflow-y-scroll xl:overscroll-contain xl:scrollbar-subtle xl:snap-y xl:snap-mandatory xl:scroll-pb-4 xl:scroll-smooth"
+        >
+          <div className="flex min-h-0 flex-1 flex-col gap-3 overflow-hidden xl:mx-auto xl:min-h-full xl:w-full xl:max-w-5xl xl:flex-none xl:overflow-visible xl:pb-4">
+            <div className="flex min-h-0 flex-1 flex-col gap-3 overflow-hidden xl:grid xl:min-h-full xl:w-full xl:flex-none xl:grid-cols-[minmax(0,1fr)_17.25rem] xl:items-start xl:gap-4 xl:overflow-visible">
+              <div className="min-h-0 flex min-w-0 flex-1 flex-col overflow-hidden xl:min-h-full xl:flex-none xl:overflow-visible">
+                <div className="flex min-w-0 min-h-0 flex-1 flex-col gap-3 xl:min-h-full xl:flex-none xl:gap-0">
+                  <div className="surface-card flex min-h-0 flex-1 flex-col overflow-hidden rounded-t-[2rem] rounded-b-none p-3 sm:p-4 xl:min-h-full xl:flex-none xl:rounded-[2rem]">
+                    <div className="min-w-0 flex-1 min-h-0 xl:flex-none">
+                      {/* Main content */}
+                      {categoriesLoading ||
+                      scopeLoading ||
+                      showRequestedContentLoading ||
+                      (effectiveRequestedActiveId === null && isLoading) ? (
+                        <div className="flex justify-center py-16 xl:h-full xl:items-center xl:py-10">
+                          <span className="loading loading-spinner loading-lg text-primary"></span>
+                        </div>
+                      ) : displayFeed.length === 0 ? (
+                        <div className="py-16 text-center text-base text-base-content/30 xl:flex xl:h-full xl:items-center xl:justify-center xl:py-10">
+                          {emptyStateMessage}
+                        </div>
+                      ) : (
+                        <VoteFeedStage
+                          displayFeed={displayFeed}
+                          activeSourceIndex={activeSourceIndex}
+                          loadedCount={visibleCount}
+                          mobileDockReservedSpace={mobileDockReservedSpace}
+                          canLoadMore={canLoadMore}
+                          enrichedProfiles={enrichedProfiles}
+                          watchedContentIds={watchedContentIds}
+                          followedWallets={followedWallets}
+                          normalizedAddress={normalizedAddress}
+                          isCommitting={isCommitting}
+                          isMetadataPrefetchPending={isMetadataPrefetchPending}
+                          navigationLocked={stakeModal.isOpen}
+                          isWatchPending={isWatchPending}
+                          isFollowPending={isFollowPending}
+                          scrollContainerRef={desktopScrollContainerRef}
+                          onLoadMore={handleLoadMore}
+                          onTrackActiveIndex={handleTrackVisibleIndex}
+                          onSelectByIndex={handleSelectByIndex}
+                          onExternalOpen={handleExternalOpen}
+                          onToggleWatch={handleToggleWatch}
+                          onToggleFollow={handleToggleFollow}
+                        />
+                      )}
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <div aria-hidden="true" className="hidden xl:block" />
+            </div>
           </div>
-        ) : displayFeed.length === 0 ? (
-          <div className="py-16 text-center text-base text-base-content/30 xl:py-10">{emptyStateMessage}</div>
-        ) : (
-          <VoteFeedStage
-            primaryItem={primaryItem}
-            displayFeed={displayFeed}
-            queueSourceItems={queueSourceItems}
-            navigationDirection={navigationDirection}
-            activeSourceIndex={activeSourceIndex}
-            loadedCount={visibleCount}
-            canLoadMore={canLoadMore}
-            queueStatusByContentId={queueStatusByContentId}
-            queuePositionMap={queuePositionMap}
-            enrichedProfiles={enrichedProfiles}
-            watchedContentIds={watchedContentIds}
-            votedContentIds={votedContentIds}
-            followedWallets={followedWallets}
-            normalizedAddress={normalizedAddress}
-            address={address}
-            isCommitting={isCommitting}
-            voteError={voteError}
-            isFeedBusy={isLoading || requestedContentLoading}
-            isMetadataPrefetchPending={isMetadataPrefetchPending}
-            primaryItemCooldownSeconds={primaryItemCooldownSeconds}
-            navigationLocked={stakeModal.isOpen}
-            isWatchPending={isWatchPending}
-            isFollowPending={isFollowPending}
-            onLoadMore={() => setVisibleCount(prev => prev + FEED_PAGE_SIZE)}
-            onNavigateSelection={handleNavigateSelection}
-            onSelectByIndex={handleSelectByIndex}
-            onSelectCard={handleSelectCard}
-            onVote={handleButtonVote}
-            onExternalOpen={handleExternalOpen}
-            onToggleWatch={handleToggleWatch}
-            onToggleFollow={handleToggleFollow}
-          />
-        )}
+        </div>
+
+        <div className="pointer-events-none absolute inset-y-0 left-0 right-0 hidden xl:block">
+          <div className="mx-auto flex h-full w-full max-w-5xl gap-4">
+            <div className="min-w-0 flex-1" />
+            <div className="pointer-events-auto w-[17.25rem] shrink-0">
+              <VoteSignalRail
+                primaryItem={primaryItem}
+                activeIndex={activeSourceIndex}
+                totalCount={displayFeed.length}
+                isCommitting={isCommitting}
+                voteError={voteError}
+                cooldownSecondsRemaining={primaryItemCooldownSeconds}
+                onVote={handleButtonVote}
+              />
+            </div>
+          </div>
+        </div>
       </div>
+
+      {primaryItem ? (
+        <div
+          ref={mobileDockContainerRef}
+          className="fixed inset-x-4 bottom-[calc(env(safe-area-inset-bottom)+0.75rem)] z-30 xl:hidden"
+        >
+          <div className="mx-auto w-full max-w-5xl">
+            <div className="overflow-visible">
+              <VotingQuestionCard
+                contentId={primaryItem.id}
+                categoryId={primaryItem.categoryId}
+                currentRating={primaryItem.rating}
+                openRound={primaryItem.openRound}
+                onVote={isUp => handleButtonVote(primaryItem, isUp)}
+                isCommitting={isCommitting}
+                address={address}
+                error={voteError}
+                cooldownSecondsRemaining={primaryItemCooldownSeconds}
+                isOwnContent={primaryItem.isOwnContent}
+                embedded
+                compact
+                variant="dock"
+              />
+            </div>
+          </div>
+        </div>
+      ) : null}
 
       {/* Stake selector modal */}
       {stakeModal.isOpen ? (

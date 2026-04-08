@@ -23,9 +23,10 @@ interface RatingOrbProps {
   rating: number;
   size?: number;
   className?: string;
+  showGlow?: boolean;
 }
 
-export function RatingOrb({ rating, size = 196, className = "" }: RatingOrbProps) {
+export function RatingOrb({ rating, size = 196, className = "", showGlow = true }: RatingOrbProps) {
   const orbId = useId().replace(/:/g, "");
   const clampedRating = clampContentRating(rating);
   const [animatedRating, setAnimatedRating] = useState(0);
@@ -41,8 +42,10 @@ export function RatingOrb({ rating, size = 196, className = "" }: RatingOrbProps
   const flareStroke = `url(#${orbId}-flare)`;
   const coreStroke = `url(#${orbId}-core)`;
   const endPoint = polarToCartesian(center, trackRadius, START_ANGLE + progress * 360);
-  const ratingFontSize = Math.max(40, size * 0.27);
-  const scaleFontSize = Math.max(18, ratingFontSize * 0.42);
+  const isSmallOrb = size <= 100;
+  const ratingFontSize = isSmallOrb ? Math.max(30, size * 0.32) : Math.max(36, size * 0.25);
+  const scaleFontSize = isSmallOrb ? Math.max(12, ratingFontSize * 0.36) : Math.max(16, ratingFontSize * 0.4);
+  const scoreGapClassName = isSmallOrb ? "ml-1" : "ml-2";
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -114,7 +117,12 @@ export function RatingOrb({ rating, size = 196, className = "" }: RatingOrbProps
           </filter>
         </defs>
 
-        <circle cx={center} cy={center} r={trackRadius + trackWidth * 0.95} fill="rgba(245,240,235,0.03)" />
+        <circle
+          cx={center}
+          cy={center}
+          r={trackRadius + trackWidth * 0.95}
+          fill={showGlow ? "rgba(245,240,235,0.03)" : "transparent"}
+        />
         <circle
           cx={center}
           cy={center}
@@ -142,17 +150,19 @@ export function RatingOrb({ rating, size = 196, className = "" }: RatingOrbProps
 
         {progress >= 1 ? (
           <>
-            <circle
-              cx={center}
-              cy={center}
-              r={trackRadius}
-              fill="none"
-              stroke={flareStroke}
-              strokeWidth={trackWidth}
-              strokeLinecap="round"
-              filter={`url(#${orbId}-glow)`}
-              opacity="0.56"
-            />
+            {showGlow ? (
+              <circle
+                cx={center}
+                cy={center}
+                r={trackRadius}
+                fill="none"
+                stroke={flareStroke}
+                strokeWidth={trackWidth}
+                strokeLinecap="round"
+                filter={`url(#${orbId}-glow)`}
+                opacity="0.56"
+              />
+            ) : null}
             <circle
               cx={center}
               cy={center}
@@ -174,19 +184,21 @@ export function RatingOrb({ rating, size = 196, className = "" }: RatingOrbProps
           </>
         ) : progress > 0 ? (
           <>
-            <circle
-              cx={center}
-              cy={center}
-              r={trackRadius}
-              fill="none"
-              stroke={flareStroke}
-              strokeWidth={trackWidth}
-              strokeLinecap="round"
-              filter={`url(#${orbId}-glow)`}
-              opacity="0.56"
-              strokeDasharray={`${progressLength} ${circumference}`}
-              transform={`rotate(-90 ${center} ${center})`}
-            />
+            {showGlow ? (
+              <circle
+                cx={center}
+                cy={center}
+                r={trackRadius}
+                fill="none"
+                stroke={flareStroke}
+                strokeWidth={trackWidth}
+                strokeLinecap="round"
+                filter={`url(#${orbId}-glow)`}
+                opacity="0.56"
+                strokeDasharray={`${progressLength} ${circumference}`}
+                transform={`rotate(-90 ${center} ${center})`}
+              />
+            ) : null}
             <circle
               cx={center}
               cy={center}
@@ -234,7 +246,7 @@ export function RatingOrb({ rating, size = 196, className = "" }: RatingOrbProps
             {displayedScore}
           </span>
           <span
-            className="ml-2 mb-[0.12em] shrink-0 font-medium leading-[0.92] text-base-content/46"
+            className={`${scoreGapClassName} mb-[0.12em] shrink-0 font-medium leading-[0.92] text-base-content/46`}
             style={{ fontSize: scaleFontSize }}
           >
             /10

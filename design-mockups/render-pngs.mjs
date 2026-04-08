@@ -6,7 +6,13 @@ import { fileURLToPath } from "node:url";
 import { createRequire } from "node:module";
 
 const require = createRequire(import.meta.url);
-const sharp = require("../../packages/nextjs/node_modules/sharp");
+let sharp;
+
+try {
+  sharp = require("../packages/nextjs/node_modules/sharp");
+} catch {
+  sharp = require("sharp");
+}
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);

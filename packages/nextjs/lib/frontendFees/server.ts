@@ -16,7 +16,6 @@ type DeployedContractsMap = Record<
 >;
 
 const MAX_SCAN_BATCH = 100;
-const MAX_SCAN_ROUNDS = 1000;
 const CLAIMABLE_FRONTEND_FEES_CACHE_TTL_MS = 60_000;
 
 interface ClaimableFrontendFeeRound {
@@ -395,8 +394,8 @@ async function buildClaimableFrontendFeeSnapshot(
   let scannedRounds = 0;
   let totalRounds = 0;
 
-  while (scannedRounds < MAX_SCAN_ROUNDS) {
-    const batchSize = Math.min(MAX_SCAN_BATCH, MAX_SCAN_ROUNDS - scannedRounds);
+  while (true) {
+    const batchSize = MAX_SCAN_BATCH;
     const page = await ponderApi.getRounds({
       state: String(ROUND_STATE.Settled),
       limit: String(batchSize),
@@ -425,7 +424,6 @@ async function buildClaimableFrontendFeeSnapshot(
           row.alreadyClaimed,
         )
       ) {
-        if (scannedRounds >= MAX_SCAN_ROUNDS) break;
         continue;
       }
 
@@ -439,7 +437,6 @@ async function buildClaimableFrontendFeeSnapshot(
       );
 
       if (claimableFee <= 0n) {
-        if (scannedRounds >= MAX_SCAN_ROUNDS) break;
         continue;
       }
 
@@ -456,10 +453,6 @@ async function buildClaimableFrontendFeeSnapshot(
         totalEligibleStake: row.totalEligibleStake.toString(),
         totalFrontendClaimants: Number(row.totalFrontendClaimants),
       });
-
-      if (scannedRounds >= MAX_SCAN_ROUNDS) {
-        break;
-      }
     }
 
     if (page.items.length < batchSize || scanOffset >= page.total) {

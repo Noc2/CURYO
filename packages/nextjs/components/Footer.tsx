@@ -1,6 +1,5 @@
-import React from "react";
-import Link from "next/link";
 import { hardhat } from "viem/chains";
+import { FooterLinks } from "~~/components/FooterLinks";
 import { Faucet } from "~~/components/scaffold-eth";
 import { useTargetNetwork } from "~~/hooks/scaffold-eth/useTargetNetwork";
 
@@ -18,35 +17,7 @@ export const Footer = () => {
           <div className="flex flex-col md:flex-row gap-2 pointer-events-auto">{showFaucet && <Faucet />}</div>
         </div>
       </div>
-      <div className="w-full">
-        <ul className="menu menu-horizontal w-full">
-          <div className="flex justify-center items-center gap-2 text-sm w-full lg:text-base">
-            <div className="text-center">
-              <Link href="/legal/terms" className="link">
-                Terms
-              </Link>
-            </div>
-            <span>·</span>
-            <div className="text-center">
-              <Link href="/legal/privacy" className="link">
-                Privacy
-              </Link>
-            </div>
-            <span>·</span>
-            <div className="text-center">
-              <Link href="/legal/imprint" className="link">
-                Imprint
-              </Link>
-            </div>
-            <span>·</span>
-            <div className="text-center">
-              <a href="https://github.com/Noc2/CURYO" target="_blank" rel="noopener noreferrer" className="link">
-                GitHub
-              </a>
-            </div>
-          </div>
-        </ul>
-      </div>
+      <FooterLinks className="w-full" listClassName="w-full justify-center text-sm lg:text-base" />
     </div>
   );
 };

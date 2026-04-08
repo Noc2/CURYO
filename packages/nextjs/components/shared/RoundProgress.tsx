@@ -20,10 +20,10 @@ interface RoundProgressProps {
  */
 export function RoundProgress({ snapshot }: RoundProgressProps) {
   const { ratePercent } = useParticipationRate();
-  const { phase, isReady, readyToSettle, thresholdReachedAt, voteCount, minVoters } = snapshot;
+  const { phase, hasRound, isReady, readyToSettle, thresholdReachedAt, voteCount, minVoters } = snapshot;
   const progressMessaging = getRoundProgressMessaging(snapshot, ratePercent);
 
-  if (!isReady) {
+  if (!isReady && !hasRound) {
     return (
       <div className="flex items-center gap-2 text-base text-base-content/60">
         <span className="loading loading-spinner loading-xs" />

@@ -7,16 +7,11 @@ import { ArrowLeftOnRectangleIcon, Cog6ToothIcon, GiftIcon } from "@heroicons/re
 import { BlockieAvatar } from "~~/components/scaffold-eth";
 import { ClaimRewardsButton } from "~~/components/shared/ClaimRewardsButton";
 import { InfoTooltip } from "~~/components/ui/InfoTooltip";
-import { useScaffoldReadContract } from "~~/hooks/scaffold-eth";
 import { useTargetNetwork } from "~~/hooks/scaffold-eth/useTargetNetwork";
-import { useActiveVotesWithDeadlines } from "~~/hooks/useActiveVotesWithDeadlines";
 import { useCuryoDisconnect } from "~~/hooks/useCuryoDisconnect";
 import { useFreeTransactionAllowance } from "~~/hooks/useFreeTransactionAllowance";
-import { usePageVisibility } from "~~/hooks/usePageVisibility";
-import { useSubmissionStakes } from "~~/hooks/useSubmissionStakes";
 import { useVoterAccuracy } from "~~/hooks/useVoterAccuracy";
-import { useVotingStakes } from "~~/hooks/useVotingStakes";
-import { getWalletDisplayLiquidMicro, useWalletDisplaySummary } from "~~/hooks/useWalletDisplaySummary";
+import { useWalletSummaryData } from "~~/hooks/useWalletSummaryData";
 import { AVATAR_WIN_RATE_TOOLTIP } from "~~/lib/profile/winRateTooltip";
 import { isENS } from "~~/utils/scaffold-eth/common";
 
@@ -41,53 +36,6 @@ const getMenuItemClass = (showText: boolean) =>
 function formatCrepAmount(value: bigint | null | undefined) {
   if (value == null) return "—";
   return (Number(value) / 1e6).toLocaleString(undefined, { maximumFractionDigits: 0 });
-}
-
-function toMicroUnits(value: number) {
-  return BigInt(Math.round(value * 1e6));
-}
-
-function useWalletSummaryData(address: Address, crepBalance: bigint | undefined) {
-  const isPageVisible = usePageVisibility();
-  const { totalSubmissionStake } = useSubmissionStakes(address);
-  const { activeStaked: votingStaked } = useVotingStakes(address);
-  const { votes: activeVotes, earliestReveal, hasPendingReveals } = useActiveVotesWithDeadlines(address);
-
-  const { data: frontendInfo } = useScaffoldReadContract({
-    contractName: "FrontendRegistry",
-    functionName: "getFrontendInfo",
-    args: [address],
-    watch: false,
-    query: {
-      staleTime: 60_000,
-      refetchInterval: isPageVisible ? 60_000 : false,
-    },
-  });
-
-  const fallbackVotingStakedMicro = activeVotes.reduce((sum, vote) => sum + BigInt(vote.stake), 0n);
-  const indexedVotingStakedMicro = toMicroUnits(votingStaked);
-  const votingStakedMicro =
-    indexedVotingStakedMicro > fallbackVotingStakedMicro ? indexedVotingStakedMicro : fallbackVotingStakedMicro;
-
-  const summary = useWalletDisplaySummary(
-    address,
-    crepBalance === undefined
-      ? null
-      : {
-          liquidMicro: crepBalance,
-          votingStakedMicro,
-          submissionStakedMicro: toMicroUnits(totalSubmissionStake),
-          frontendStakedMicro: frontendInfo?.[1] ?? 0n,
-        },
-  );
-
-  return {
-    activeVotes,
-    earliestReveal,
-    hasPendingReveals,
-    liquidBalance: getWalletDisplayLiquidMicro(summary, crepBalance),
-    summary,
-  };
 }
 
 function FreeTransactionAllowanceText({ className }: { className?: string }) {
@@ -123,23 +71,18 @@ function WinRateSummaryText({ address, className }: { address: Address; classNam
 
 function WalletSummaryDetails({
   address,
-  crepBalance,
   balanceClassName,
   freeTxClassName,
   stakeClassName,
   winRateClassName,
 }: {
   address: Address;
-  crepBalance: bigint | undefined;
   balanceClassName: string;
   freeTxClassName: string;
   stakeClassName: string;
   winRateClassName: string;
 }) {
-  const { activeVotes, earliestReveal, hasPendingReveals, liquidBalance, summary } = useWalletSummaryData(
-    address,
-    crepBalance,
-  );
+  const { activeVotes, earliestReveal, hasPendingReveals, liquidBalance, summary } = useWalletSummaryData(address);
   const totalStakedMicro = summary?.totalStakedMicro ?? 0n;
   const showStaked = totalStakedMicro > 0n || activeVotes.length > 0;
   const submissionStakedMicro = summary?.submissionStakedMicro ?? 0n;
@@ -232,24 +175,12 @@ export const AddressInfoDropdown = ({
   menuItemsOnly = false,
   compact = false,
 }: AddressInfoDropdownProps) => {
-  const isPageVisible = usePageVisibility();
   const disconnect = useCuryoDisconnect();
   const { chain } = useAccount();
   const { targetNetwork } = useTargetNetwork();
   const checkSumAddress = getAddress(address);
   const isLocalNetwork = targetNetwork.id === hardhat.id && chain?.id === hardhat.id;
   const showFaucet = isLocalNetwork;
-
-  const { data: crepBalance } = useScaffoldReadContract({
-    contractName: "CuryoReputation",
-    functionName: "balanceOf",
-    args: [address],
-    watch: false,
-    query: {
-      staleTime: 60_000,
-      refetchInterval: isPageVisible ? 60_000 : false,
-    },
-  });
 
   if (menuItemsOnly) {
     return (
@@ -263,11 +194,10 @@ export const AddressInfoDropdown = ({
               </p>
               <WalletSummaryDetails
                 address={address}
-                crepBalance={crepBalance}
                 balanceClassName="text-sm font-medium leading-5 text-base-content/78"
-                winRateClassName="text-left"
                 freeTxClassName="text-left"
                 stakeClassName="flex items-center gap-1.5 text-sm font-medium leading-5 text-base-content/68"
+                winRateClassName="text-left"
               />
             </div>
           </div>
@@ -292,11 +222,10 @@ export const AddressInfoDropdown = ({
           </span>
           <WalletSummaryDetails
             address={address}
-            crepBalance={crepBalance}
             balanceClassName="text-left text-sm font-medium leading-5 text-base-content/78"
-            winRateClassName="text-left"
             freeTxClassName="text-left"
             stakeClassName="flex items-center justify-start gap-1.5 text-left text-sm font-medium leading-5 text-base-content/68"
+            winRateClassName="text-left"
           />
         </div>
       </div>
@@ -332,11 +261,10 @@ export const AddressInfoDropdown = ({
       </div>
       <WalletSummaryDetails
         address={address}
-        crepBalance={crepBalance}
         balanceClassName="hidden lg:inline lg:px-2 text-sm font-medium leading-5 text-base-content/78"
-        winRateClassName="hidden lg:flex lg:px-2"
         freeTxClassName="hidden lg:flex lg:px-2"
         stakeClassName="hidden lg:flex lg:px-2 items-center gap-1.5 text-sm font-medium leading-5 text-base-content/68"
+        winRateClassName="hidden lg:flex lg:px-2"
       />
     </div>
   );

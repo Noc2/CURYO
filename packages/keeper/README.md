@@ -52,7 +52,7 @@ Only set address vars on unsupported chains.
 | `MAX_GAS_PER_TX` | `2000000` | Per-transaction gas cap for keeper writes |
 | `KEEPER_FRONTEND_FEE_ENABLED` | `false` | Enable hosted frontend fee sweep mode |
 | `KEEPER_FRONTEND_ADDRESS` | keeper wallet address | Optional frontend/operator address to claim for. Must match the keeper wallet for fee sweeps to run. |
-| `KEEPER_FRONTEND_FEE_LOOKBACK_ROUNDS` | `8` | Number of recent rounds per content item to inspect for frontend fees |
+| `KEEPER_FRONTEND_FEE_LOOKBACK_ROUNDS` | `8` | Number of recent rounds per content item to prioritize before backfilling older frontend fees |
 | `KEEPER_FRONTEND_FEE_WITHDRAW` | `true` | Withdraw accumulated `FrontendRegistry` fees after claiming round fees |
 
 ## Docker
@@ -70,7 +70,7 @@ docker run --env-file packages/keeper/.env.local -e METRICS_BIND_ADDRESS=0.0.0.0
 
 Key metrics: `keeper_is_running` (gauge), `keeper_rounds_settled_total` (counter), `keeper_rounds_cancelled_total` (counter), `keeper_rounds_reveal_failed_finalized_total` (counter), `keeper_unrevealed_cleanup_batches_total` (counter), `keeper_consensus_reserve_wei` (gauge).
 
-When `KEEPER_FRONTEND_FEE_ENABLED=true`, the same worker also scans recent settled rounds for the configured frontend/operator, calls `RoundRewardDistributor.claimFrontendFee(...)` where claimable, and optionally withdraws accumulated `FrontendRegistry.claimFees()` credits.
+When `KEEPER_FRONTEND_FEE_ENABLED=true`, the same worker prioritizes recent settled rounds for the configured frontend/operator, then backfills older settled rounds so historical `RoundRewardDistributor.claimFrontendFee(...)` claims do not age out of automation. It can also withdraw accumulated `FrontendRegistry.claimFees()` credits.
 
 ## Project Structure
 

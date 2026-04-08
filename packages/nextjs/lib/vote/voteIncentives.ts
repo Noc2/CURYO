@@ -66,6 +66,22 @@ export function formatCrepAmount(amountMicro: bigint | number, maximumFractionDi
   return value.toLocaleString(undefined, { maximumFractionDigits });
 }
 
+export function describeOpenRoundActivity(
+  snapshot: Pick<RoundSnapshot, "minVoters" | "revealedCount" | "totalStake" | "voteCount">,
+) {
+  const votersNeeded = Math.max(0, snapshot.minVoters - snapshot.voteCount);
+  if (votersNeeded > 0) {
+    return `${formatCrepAmount(snapshot.totalStake, 0)} cREP active · ${votersNeeded} more vote${votersNeeded === 1 ? "" : "s"} to settle.`;
+  }
+
+  const revealsNeeded = Math.max(0, snapshot.minVoters - snapshot.revealedCount);
+  if (revealsNeeded > 0) {
+    return `${formatCrepAmount(snapshot.totalStake, 0)} cREP active · Waiting for ${revealsNeeded} more reveal${revealsNeeded === 1 ? "" : "s"}.`;
+  }
+
+  return `${formatCrepAmount(snapshot.totalStake, 0)} cREP active · Settlement threshold is in reach.`;
+}
+
 function getBlindParticipationLabel(ratePercent?: number): string | null {
   if (ratePercent === undefined) return null;
   return `+${formatPercent(ratePercent)} bonus`;

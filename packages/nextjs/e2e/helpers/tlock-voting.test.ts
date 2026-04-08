@@ -1,7 +1,12 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { buildCommitHash, buildCommitKey, decodeVoteTransferPayload } from "@curyo/contracts/voting";
-import { createTlockVoteCommit, encodeVoteTransferPayload } from "./tlock-voting";
+import {
+  buildCommitHash,
+  buildCommitKey,
+  createTlockVoteCommit,
+  decodeVoteTransferPayload,
+  encodeVoteTransferPayload,
+} from "@curyo/contracts/voting";
 
 const CHAIN_INFO = {
   hash: "52db9ba70e0cc0f6eaf7803dd07447a1f5477735fd3f661792ba94600c84e971",

@@ -14,14 +14,12 @@ import { ContentRegistry } from "./ContentRegistry.sol";
 import { ProtocolConfig } from "./ProtocolConfig.sol";
 import { RoundLib } from "./libraries/RoundLib.sol";
 import { RatingLib } from "./libraries/RatingLib.sol";
-import { RewardMath } from "./libraries/RewardMath.sol";
 import { RoundSettlementSideEffectsLib } from "./libraries/RoundSettlementSideEffectsLib.sol";
-import { CategoryFeeLib } from "./libraries/CategoryFeeLib.sol";
+import { RoundSettlementDistributionLib } from "./libraries/RoundSettlementDistributionLib.sol";
 import { SubmitterStakeLib } from "./libraries/SubmitterStakeLib.sol";
 import { RoundCleanupLib } from "./libraries/RoundCleanupLib.sol";
 import { RoundRevealLib } from "./libraries/RoundRevealLib.sol";
 import { TlockVoteLib } from "./libraries/TlockVoteLib.sol";
-import { TokenTransferLib } from "./libraries/TokenTransferLib.sol";
 import { VotePreflightLib } from "./libraries/VotePreflightLib.sol";
 import { IFrontendRegistry } from "./interfaces/IFrontendRegistry.sol";
 import { ICategoryRegistry } from "./interfaces/ICategoryRegistry.sol";
@@ -726,94 +724,23 @@ contract RoundVotingEngine is
         // redistributed to winners, protocol, treasury, and the consensus reserve.
         uint256 losingPool = upWins ? round.downPool : round.upPool;
 
-        if (losingPool > 0) {
-            uint256 loserRefundShare = RewardMath.calculateRevealedLoserRefund(losingPool);
-            (
-                uint256 voterShare,
-                uint256 submitterShare,
-                uint256 platformShare,
-                uint256 treasuryShare,
-                uint256 consensusShare
-            ) = RewardMath.splitPool(losingPool - loserRefundShare);
-
-            // Store voter pool and weighted winning stake (used for proportional reward claims).
-            // Loser rebates are paid directly from raw losing stake during claimReward().
-            roundVoterPool[contentId][roundId] = voterShare;
-            roundWinningStake[contentId][roundId] = weightedWinningStake;
-
-            // Store submitter reward
-            pendingSubmitterReward[contentId][roundId] = submitterShare;
-
-            // Fund consensus reserve (5% of losing pool)
-            if (consensusShare > 0) {
-                consensusReserve += consensusShare;
-                emit ConsensusReserveFunded(contentId, roundId, consensusShare);
-            }
-
-            // Distribute platform fees (3% frontend + 1% category)
-            if (platformShare > 0) {
-                ICategoryRegistry currentCategoryRegistry = _getCategoryRegistry();
-                IFrontendRegistry currentFrontendRegistry = _getFrontendRegistry();
-                uint256 categorySubmitterShare = platformShare / 4;
-                uint256 frontendShare = platformShare - categorySubmitterShare;
-
-                if (frontendShare > 0) {
-                    if (roundStakeWithEligibleFrontend[contentId][roundId] > 0) {
-                        roundFrontendPool[contentId][roundId] = frontendShare;
-                        roundFrontendRegistrySnapshot[contentId][roundId] = address(currentFrontendRegistry);
-                    } else {
-                        roundVoterPool[contentId][roundId] += frontendShare;
-                    }
-                }
-
-                if (categorySubmitterShare > 0) {
-                    try CategoryFeeLib.distribute(
-                        crepToken, registry, currentCategoryRegistry, contentId, categorySubmitterShare
-                    ) returns (
-                        bool paid, uint256 categoryId, address categorySubmitter
-                    ) {
-                        if (paid) {
-                            emit CategorySubmitterRewarded(
-                                contentId, categoryId, categorySubmitter, categorySubmitterShare
-                            );
-                        } else {
-                            roundVoterPool[contentId][roundId] += categorySubmitterShare;
-                        }
-                    } catch {
-                        roundVoterPool[contentId][roundId] += categorySubmitterShare;
-                    }
-                }
-            }
-
-            // Transfer treasury fee
-            if (treasuryShare > 0) {
-                address currentTreasury = protocolConfig.treasury();
-                if (currentTreasury != address(0)) {
-                    try TokenTransferLib.transfer(crepToken, currentTreasury, treasuryShare) {
-                        emit TreasuryFeeDistributed(contentId, roundId, treasuryShare);
-                    } catch {
-                        roundVoterPool[contentId][roundId] += treasuryShare;
-                    }
-                } else {
-                    roundVoterPool[contentId][roundId] += treasuryShare;
-                }
-            }
-        } else {
-            // Unanimous: losingPool == 0, pay from consensus reserve
-            uint256 totalStake = round.upPool + round.downPool;
-            uint256 subsidy = RewardMath.calculateConsensusSubsidy(totalStake, consensusReserve);
-
-            if (subsidy > 0) {
-                consensusReserve -= subsidy;
-                (uint256 voterSubsidy, uint256 submitterSubsidy) = RewardMath.splitConsensusSubsidy(subsidy);
-                roundVoterPool[contentId][roundId] = voterSubsidy;
-                pendingSubmitterReward[contentId][roundId] = submitterSubsidy;
-                emit ConsensusSubsidyDistributed(contentId, roundId, subsidy);
-            }
-
-            // All voters are winners; use weighted total stake
-            roundWinningStake[contentId][roundId] = weightedWinningStake;
-        }
+        consensusReserve = RoundSettlementDistributionLib.distribute(
+            crepToken,
+            registry,
+            protocolConfig,
+            round,
+            roundVoterPool,
+            roundWinningStake,
+            pendingSubmitterReward,
+            roundStakeWithEligibleFrontend,
+            roundFrontendPool,
+            roundFrontendRegistrySnapshot,
+            consensusReserve,
+            contentId,
+            roundId,
+            weightedWinningStake,
+            losingPool
+        );
 
         IParticipationPool currentParticipationPool = _getParticipationPool();
         address currentRewardDistributor = protocolConfig.rewardDistributor();

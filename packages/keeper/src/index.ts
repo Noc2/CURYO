@@ -10,7 +10,7 @@
  */
 import { config } from "./config.js";
 import { createLogger } from "./logger.js";
-import { publicClient, getWalletClient, getAccount, chain } from "./client.js";
+import { publicClient, getWalletClient, getAccount, chain, validateKeeperConnectivity } from "./client.js";
 import { resolveRounds, validateKeeperContracts } from "./keeper.js";
 import { claimConfiguredFrontendFees } from "./frontend-fees.js";
 import { RoundVotingEngineAbi } from "@curyo/contracts/abis";
@@ -39,6 +39,7 @@ async function main() {
     frontendFeeAddress: config.frontendFees.frontendAddress ?? account.address,
   });
 
+  await validateKeeperConnectivity(publicClient);
   await validateKeeperContracts(publicClient, config.contracts.votingEngine, config.contracts.contentRegistry);
   logger.info("Keeper contract connectivity verified");
 

@@ -12,6 +12,7 @@ import { sleep } from "../utils.js";
 
 const MIN_SUBMITTER_STAKE = 10_000_000n; // 10 cREP (6 decimals)
 const RESERVED_SUBMISSION_WAIT_MS = 1_100;
+const TX_RECEIPT_TIMEOUT_MS = 180_000;
 
 type PreviewSubmissionResult = readonly [bigint, Hex];
 
@@ -63,7 +64,11 @@ async function cancelReservedSubmission(
       functionName: "cancelReservedSubmission",
       args: [revealCommitment],
     });
-    await publicClient.waitForTransactionReceipt({ hash: cancelTx });
+    await waitForTransactionReceipt({
+      hash: cancelTx,
+      stage: "cancel reservation",
+      title,
+    });
     log.warn(`Cancelled reservation for "${title}" after a failed submit attempt`);
   } catch (error: any) {
     log.warn(`Failed to cancel reservation for "${title}": ${error.message}`);
@@ -104,6 +109,22 @@ function selectSources(sources: ContentSource[], options: SubmitRunOptions): Con
 
 function formatSourceSummary(source: ContentSource): string {
   return `${source.categoryName} [${source.categoryId}] via ${source.name}`;
+}
+
+async function waitForTransactionReceipt(params: {
+  hash: Hex;
+  stage: string;
+  title: string;
+}): Promise<void> {
+  log.info(`Waiting for ${params.stage} receipt for "${params.title}": ${params.hash}`);
+  const receipt = await publicClient.waitForTransactionReceipt({
+    hash: params.hash,
+    timeout: TX_RECEIPT_TIMEOUT_MS,
+  });
+
+  if (receipt.status !== "success") {
+    throw new Error(`${params.stage} transaction reverted: ${params.hash}`);
+  }
 }
 
 export async function runSubmit(options: SubmitRunOptions = {}) {
@@ -179,10 +200,12 @@ export async function runSubmit(options: SubmitRunOptions = {}) {
     log.info(`Got ${items.length} items from ${source.name}`);
     let sourceSubmitted = 0;
 
-    for (const item of items) {
+    for (const [itemIndex, item] of items.entries()) {
       if (totalSubmitted >= maxSubmissions) break;
       if (sourceSubmitted >= fetchLimit) break;
       let reservedRevealCommitment: Hex | null = null;
+
+      log.info(`Processing ${source.name} item ${itemIndex + 1}/${items.length}: "${item.title}"`);
 
       // Check if URL already submitted
       try {
@@ -253,7 +276,11 @@ export async function runSubmit(options: SubmitRunOptions = {}) {
           functionName: "reserveSubmission",
           args: [revealCommitment],
         });
-        await publicClient.waitForTransactionReceipt({ hash: reserveTx });
+        await waitForTransactionReceipt({
+          hash: reserveTx,
+          stage: "reservation",
+          title: item.title,
+        });
         reservedRevealCommitment = revealCommitment;
 
         // ContentRegistry requires the reservation to age by at least one second.
@@ -280,7 +307,11 @@ export async function runSubmit(options: SubmitRunOptions = {}) {
             args: [item.url, title, description, item.tags, requestedCategoryId, salt],
           });
         }
-        await publicClient.waitForTransactionReceipt({ hash: submitTx });
+        await waitForTransactionReceipt({
+          hash: submitTx,
+          stage: "submit",
+          title: item.title,
+        });
         reservedRevealCommitment = null;
 
         log.info(`Submitted "${item.title}" [${source.name}] cat=${requestedCategoryId}: ${submitTx}`);

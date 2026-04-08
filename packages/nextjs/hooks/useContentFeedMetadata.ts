@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import type { ContentItem } from "~~/hooks/contentFeed/shared";
 import type { ContentMetadataResult } from "~~/lib/contentMetadata/types";
 import { detectPlatform } from "~~/utils/platforms";
@@ -84,7 +84,7 @@ export function isContentFeedMetadataPrefetchPending(
   urls: string[],
   metadataMap: Record<string, ContentMetadataResult> | undefined,
 ): boolean {
-  return urls.length > 0 && metadataMap === undefined;
+  return urls.length > 0 && urls.some(url => !(url in (metadataMap ?? {})));
 }
 
 export function useContentFeedMetadata(feed: ContentItem[]) {
@@ -95,6 +95,7 @@ export function useContentFeedMetadata(feed: ContentItem[]) {
     queryKey: ["contentFeedMetadata", feedUrlsKey],
     enabled: feedUrls.length > 0,
     staleTime: 60_000,
+    placeholderData: keepPreviousData,
     queryFn: async () => {
       const metadataBatches = await Promise.all(
         chunkItems(feedUrls, THUMBNAIL_BATCH_SIZE).map(fetchThumbnailMetadataBatch),
@@ -107,6 +108,7 @@ export function useContentFeedMetadata(feed: ContentItem[]) {
     queryKey: ["contentFeedValidation", feedUrlsKey],
     enabled: feedUrls.length > 0,
     staleTime: 60_000,
+    placeholderData: keepPreviousData,
     queryFn: async () => {
       const validationBatches = await Promise.all(
         chunkItems(feedUrls, VALIDATION_BATCH_SIZE).map(fetchValidationBatch),

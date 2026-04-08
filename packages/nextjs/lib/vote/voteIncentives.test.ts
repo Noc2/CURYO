@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { estimateVoteReturn, getRoundProgressMessaging } from "~~/lib/vote/voteIncentives";
+import { describeOpenRoundActivity, estimateVoteReturn, getRoundProgressMessaging } from "~~/lib/vote/voteIncentives";
 
 test("getRoundProgressMessaging makes blind rounds sell bonus and urgency", () => {
   const message = getRoundProgressMessaging(
@@ -49,6 +49,30 @@ test("getRoundProgressMessaging reframes open rounds around settlement momentum"
 
   assert.equal(message?.badgeLabel, "Open");
   assert.equal(message?.detailLabel, "Only 1 more vote to settle");
+});
+
+test("describeOpenRoundActivity uses committed votes before the settle quorum is met", () => {
+  assert.equal(
+    describeOpenRoundActivity({
+      totalStake: 30_000_000n,
+      voteCount: 2,
+      revealedCount: 0,
+      minVoters: 3,
+    }),
+    "30 cREP active · 1 more vote to settle.",
+  );
+});
+
+test("describeOpenRoundActivity switches to reveal progress after commit quorum is reached", () => {
+  assert.equal(
+    describeOpenRoundActivity({
+      totalStake: 30_000_000n,
+      voteCount: 3,
+      revealedCount: 1,
+      minVoters: 3,
+    }),
+    "30 cREP active · Waiting for 2 more reveals.",
+  );
 });
 
 test("estimateVoteReturn uses informed weight during open phase", () => {

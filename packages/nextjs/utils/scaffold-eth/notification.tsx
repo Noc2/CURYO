@@ -46,17 +46,17 @@ const Notification = ({
   return toast.custom(
     (t: Toast) => (
       <div
-        className={`flex flex-row items-start justify-between max-w-sm rounded-xl shadow-center shadow-accent bg-base-200 p-4 transform-gpu relative transition-all duration-500 ease-in-out space-x-2
+        className={`relative flex max-w-sm flex-row items-start justify-between space-x-2 overflow-hidden rounded-xl bg-base-200 p-4 shadow-center shadow-accent transform-gpu transition-all duration-500 ease-in-out
         ${
           position.substring(0, 3) == "top"
             ? `hover:translate-y-1 ${t.visible ? "top-0" : "-top-96"}`
             : `hover:-translate-y-1 ${t.visible ? "bottom-0" : "-bottom-96"}`
         }`}
       >
-        <div className="leading-[0] self-center">{icon ? icon : ENUM_STATUSES[status]}</div>
-        <div className={`overflow-x-hidden break-words whitespace-pre-line ${icon ? "mt-1" : ""}`}>{content}</div>
+        <div className="shrink-0 self-center leading-[0]">{icon ? icon : ENUM_STATUSES[status]}</div>
+        <div className={`min-w-0 flex-1 break-words whitespace-pre-line ${icon ? "mt-1" : ""}`}>{content}</div>
 
-        <div className={`cursor-pointer text-lg ${icon ? "mt-1" : ""}`} onClick={() => toast.dismiss(t.id)}>
+        <div className={`shrink-0 cursor-pointer text-lg ${icon ? "mt-1" : ""}`} onClick={() => toast.dismiss(t.id)}>
           <XMarkIcon className="w-6 cursor-pointer" onClick={() => toast.remove(t.id)} />
         </div>
       </div>

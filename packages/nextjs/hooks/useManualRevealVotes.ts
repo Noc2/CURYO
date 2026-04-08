@@ -17,6 +17,8 @@ import { useTargetNetwork } from "~~/hooks/scaffold-eth/useTargetNetwork";
 import { usePageVisibility } from "~~/hooks/usePageVisibility";
 import { invalidateRecentUserVotes, useRecentUserVotes } from "~~/hooks/useRecentUserVotes";
 import { useUnixTime } from "~~/hooks/useUnixTime";
+import { getVoteHistoryQueryKey } from "~~/hooks/useVoteHistoryQuery";
+import { getVotingStakesQueryKey } from "~~/hooks/useVotingStakes";
 import { getSubmittingTransactionMessage } from "~~/lib/ui/transactionStatusCopy";
 import { CommitData } from "~~/types/votingTypes";
 import { getParsedErrorWithAllAbis } from "~~/utils/scaffold-eth/contract";
@@ -177,13 +179,14 @@ export function useManualRevealVotes(voter?: Address) {
   const pendingVotes = useMemo(() => {
     return openVotes.filter(vote => !vote.revealed);
   }, [openVotes]);
+  const normalizedVoter = voter?.toLowerCase();
 
   const pendingVoteKey = useMemo(() => {
     return pendingVotes.map(vote => `${vote.contentId}-${vote.roundId}-${vote.committedAt}`).join("|");
   }, [pendingVotes]);
 
   const { data: rawVotes, isLoading: isLoadingCommits } = useQuery({
-    queryKey: ["manualRevealVotesOnchain", voter, pendingVoteKey],
+    queryKey: ["manualRevealVotesOnchain", targetNetwork.id, normalizedVoter, pendingVoteKey],
     enabled: Boolean(voter && publicClient && engineInfo?.address && pendingVotes.length > 0),
     staleTime: 30_000,
     refetchInterval: isPageVisible ? 60_000 : false,
@@ -289,12 +292,12 @@ export function useManualRevealVotes(voter?: Address) {
 
   const refresh = useCallback(async () => {
     await Promise.all([
-      queryClient.invalidateQueries({ queryKey: ["manualRevealVotesOnchain", voter] }),
-      invalidateRecentUserVotes(queryClient, voter),
-      queryClient.invalidateQueries({ queryKey: ["ponder-fallback", "votingStakes", voter] }),
-      queryClient.invalidateQueries({ queryKey: ["ponder-fallback", "voteHistory", voter] }),
+      queryClient.invalidateQueries({ queryKey: ["manualRevealVotesOnchain", targetNetwork.id, normalizedVoter] }),
+      invalidateRecentUserVotes(queryClient, voter, targetNetwork.id),
+      queryClient.invalidateQueries({ queryKey: getVotingStakesQueryKey(voter, targetNetwork.id) }),
+      queryClient.invalidateQueries({ queryKey: getVoteHistoryQueryKey(voter, targetNetwork.id) }),
     ]);
-  }, [queryClient, voter]);
+  }, [normalizedVoter, queryClient, targetNetwork.id, voter]);
 
   const revealVote = useCallback(
     async (vote: ManualRevealVote) => {

@@ -79,6 +79,7 @@
   --curyo-surface: #090a0c;
   --curyo-surface-elevated: #17161a;
   --curyo-surface-elevated-hover: #1d1c20;
+  --curyo-surface-mobile-vote: #26242a;
   --curyo-surface-nested: #090a0c;
   --curyo-shell-border: rgb(245 240 235 / 0.08);
   --curyo-shell-border-strong: rgb(245 240 235 / 0.14);
@@ -412,6 +413,11 @@ body {
   transition: transform 0.2s ease;
 }
 
+.vote-btn.vote-btn-sm {
+  width: 2.75rem;
+  height: 2.75rem;
+}
+
 .vote-btn .vote-bg {
   position: absolute;
   inset: 0;
@@ -605,11 +611,17 @@ body {
 
 /* Selected pills and tabs */
 .pill-active,
-.pill-category,
 .pill-filter-active {
   background: var(--curyo-ember);
   background-image: none;
   color: var(--color-primary-content);
+  box-shadow: 0 10px 24px rgb(242 100 38 / 0.22);
+}
+
+.pill-category {
+  background: var(--curyo-ember);
+  background-image: none;
+  color: var(--color-neutral-content);
   box-shadow: 0 10px 24px rgb(242 100 38 / 0.22);
 }
 
@@ -645,6 +657,35 @@ body {
 }
 .scrollbar-hide::-webkit-scrollbar {
   display: none;
+}
+
+/* Subtle native-feeling scrollbar for dark inner scroll regions */
+.scrollbar-subtle {
+  scrollbar-gutter: stable;
+  scrollbar-width: auto;
+  scrollbar-color: rgb(242 100 38 / 0.9) rgb(255 255 255 / 0.08);
+}
+
+.scrollbar-subtle::-webkit-scrollbar {
+  width: 0.9rem;
+  height: 0.9rem;
+}
+
+.scrollbar-subtle::-webkit-scrollbar-track {
+  background: rgb(255 255 255 / 0.06);
+}
+
+.scrollbar-subtle::-webkit-scrollbar-thumb {
+  min-height: 3rem;
+  border: 3px solid transparent;
+  border-radius: 9999px;
+  background: rgb(242 100 38 / 0.88);
+  background-clip: padding-box;
+}
+
+.scrollbar-subtle::-webkit-scrollbar-thumb:hover {
+  background: rgb(255 132 76 / 0.98);
+  background-clip: padding-box;
 }
 
 /* Lite YouTube embed overrides */

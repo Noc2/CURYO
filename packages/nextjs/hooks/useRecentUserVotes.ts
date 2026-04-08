@@ -4,31 +4,38 @@ import { useMemo } from "react";
 import { usePonderQuery } from "./usePonderQuery";
 import { ROUND_STATE } from "@curyo/contracts/protocol";
 import { QueryClient } from "@tanstack/react-query";
+import { useTargetNetwork } from "~~/hooks/scaffold-eth/useTargetNetwork";
 import { usePageVisibility } from "~~/hooks/usePageVisibility";
 import { type PonderVoteItem, ponderApi } from "~~/services/ponder/client";
 
-export function getRecentUserVotesQueryKey(voter?: string) {
-  return ["ponder-fallback", "recentUserVotes", voter] as const;
+function normalizeVoter(voter?: string) {
+  return voter?.toLowerCase() ?? null;
 }
 
-export function invalidateRecentUserVotes(queryClient: QueryClient, voter?: string) {
-  return queryClient.invalidateQueries({ queryKey: getRecentUserVotesQueryKey(voter) });
+export function getRecentUserVotesQueryKey(voter?: string, chainId?: number) {
+  return ["ponder-fallback", "recentUserVotes", chainId ?? null, normalizeVoter(voter)] as const;
+}
+
+export function invalidateRecentUserVotes(queryClient: QueryClient, voter?: string, chainId?: number) {
+  return queryClient.invalidateQueries({ queryKey: getRecentUserVotesQueryKey(voter, chainId) });
 }
 
 export function useRecentUserVotes(voter?: string) {
+  const { targetNetwork } = useTargetNetwork();
   const isPageVisible = usePageVisibility();
+  const normalizedVoter = normalizeVoter(voter) ?? undefined;
   const {
     data: result,
     isLoading,
     refetch,
   } = usePonderQuery({
-    queryKey: ["recentUserVotes", voter],
+    queryKey: ["recentUserVotes", targetNetwork.id, normalizedVoter],
     ponderFn: async () => {
-      if (!voter) return [] as PonderVoteItem[];
-      return ponderApi.getAllVotes({ voter });
+      if (!normalizedVoter) return [] as PonderVoteItem[];
+      return ponderApi.getAllVotes({ voter: normalizedVoter });
     },
     rpcFn: async () => [] as PonderVoteItem[],
-    enabled: !!voter,
+    enabled: !!normalizedVoter,
     staleTime: 30_000,
     refetchInterval: isPageVisible ? 60_000 : false,
   });

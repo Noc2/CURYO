@@ -2,6 +2,7 @@
 pragma solidity ^0.8.24;
 
 import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import { SafeERC20 } from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 
 import { ProtocolConfig } from "../ProtocolConfig.sol";
 import { RoundLib } from "./RoundLib.sol";
@@ -10,6 +11,8 @@ import { TokenTransferLib } from "./TokenTransferLib.sol";
 /// @title RoundCleanupLib
 /// @notice Shared refund and cleanup paths extracted from RoundVotingEngine to reduce runtime size.
 library RoundCleanupLib {
+    using SafeERC20 for IERC20;
+
     error RoundNotCancelledOrTied();
     error AlreadyClaimed();
     error NoCommit();
@@ -45,7 +48,7 @@ library RoundCleanupLib {
         commit.stakeAmount = 0;
         refundClaims[claimer] = true;
 
-        TokenTransferLib.transfer(crepToken, claimer, refundAmount);
+        crepToken.safeTransfer(claimer, refundAmount);
     }
 
     function processUnrevealedVotes(
@@ -71,7 +74,7 @@ library RoundCleanupLib {
                 if (round.state == RoundLib.RoundState.RevealFailed || commit.revealableAfter <= round.settledAt) {
                     forfeitedCrep += amount;
                 } else {
-                    try TokenTransferLib.transfer(crepToken, commit.voter, amount) {
+                    try TokenTransferLib.safeTransfer(crepToken, commit.voter, amount) {
                         refundedCrep += amount;
                     } catch {
                         forfeitedCrep += amount;
@@ -83,7 +86,7 @@ library RoundCleanupLib {
         if (forfeitedCrep > 0) {
             address currentTreasury = protocolConfig.treasury();
             if (currentTreasury != address(0)) {
-                try TokenTransferLib.transfer(crepToken, currentTreasury, forfeitedCrep) { }
+                try TokenTransferLib.safeTransfer(crepToken, currentTreasury, forfeitedCrep) { }
                 catch {
                     updatedConsensusReserve += forfeitedCrep;
                 }

@@ -3,15 +3,18 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import dynamic from "next/dynamic";
 import {
+  buildLegacySubmissionReservationStorageKey,
   buildSubmissionReservationStorageKey,
   buildSubmissionRevealCommitment,
   clearStoredSubmissionReservation,
   createStoredSubmissionReservation,
+  deriveSubmissionReservationSalt,
+  getLegacyStoredSubmissionReservation,
   getStoredSubmissionReservation,
   setStoredSubmissionReservation,
   submissionReservationMatchesDraft,
 } from "./submissionReservation";
-import { decodeEventLog, toHex } from "viem";
+import { decodeEventLog } from "viem";
 import { useAccount, useConfig } from "wagmi";
 import { readContract, waitForTransactionReceipt } from "wagmi/actions";
 import { ChevronDownIcon, MagnifyingGlassIcon, XMarkIcon } from "@heroicons/react/24/outline";
@@ -23,6 +26,7 @@ import { InfoTooltip } from "~~/components/ui/InfoTooltip";
 import { serializeTags } from "~~/constants/categories";
 import { useTermsAcceptance } from "~~/contexts/TermsAcceptanceContext";
 import { useDeployedContractInfo, useScaffoldReadContract, useScaffoldWriteContract } from "~~/hooks/scaffold-eth";
+import { useTargetNetwork } from "~~/hooks/scaffold-eth/useTargetNetwork";
 import {
   type Category,
   extractDomain,
@@ -117,12 +121,6 @@ const DEFAULT_URL_CONFIG = {
   urlHint: "Select a platform first, then paste your URL",
 };
 
-function createSubmissionSalt(): `0x${string}` {
-  const bytes = new Uint8Array(32);
-  window.crypto.getRandomValues(bytes);
-  return toHex(bytes);
-}
-
 function isReservationExistsError(error: unknown): boolean {
   const message =
     (error as { shortMessage?: string; message?: string } | undefined)?.shortMessage ??
@@ -137,6 +135,15 @@ function isReservationNotFoundError(error: unknown): boolean {
     (error as { shortMessage?: string; message?: string } | undefined)?.message ??
     "";
   return message.includes("Reservation not found");
+}
+
+function getPendingSubmissionSubmitter(pendingSubmission: unknown): string | null {
+  if (Array.isArray(pendingSubmission)) {
+    return typeof pendingSubmission[0] === "string" ? pendingSubmission[0] : null;
+  }
+
+  const submitter = (pendingSubmission as { submitter?: unknown } | null | undefined)?.submitter;
+  return typeof submitter === "string" ? submitter : null;
 }
 
 function PlatformIcon({ domain, className }: { domain: string; className?: string }) {
@@ -155,6 +162,7 @@ function PlatformIcon({ domain, className }: { domain: string; className?: strin
 export function ContentSubmissionSection() {
   const wagmiConfig = useConfig();
   const { address: connectedAddress } = useAccount();
+  const { targetNetwork } = useTargetNetwork();
   const { canSponsorTransactions, isMissingGasBalance, nativeTokenSymbol } = useGasBalanceStatus({
     includeExternalSendCalls: true,
   });
@@ -491,7 +499,13 @@ export function ContentSubmissionSection() {
         title: submittedTitle,
         url: normalizedSubmissionUrl,
       };
-      reservationStorageKey = buildSubmissionReservationStorageKey(submitterAddress, submissionKey);
+      const currentReservationStorageKey = buildSubmissionReservationStorageKey(
+        submitterAddress,
+        targetNetwork.id,
+        submissionKey,
+      );
+      reservationStorageKey = currentReservationStorageKey;
+      const legacyReservationStorageKey = buildLegacySubmissionReservationStorageKey(submitterAddress, submissionKey);
 
       const cancelReservedSubmission = async (revealCommitment: `0x${string}`) => {
         if (canUseSponsoredSubmitCalls) {
@@ -564,7 +578,40 @@ export function ContentSubmissionSection() {
         }
       };
 
-      let activeReservation = getStoredSubmissionReservation(reservationStorageKey);
+      const migrateLegacyReservation = async () => {
+        if (legacyReservationStorageKey === currentReservationStorageKey) {
+          return null;
+        }
+
+        const legacyReservation = getLegacyStoredSubmissionReservation(legacyReservationStorageKey, targetNetwork.id);
+        if (!legacyReservation) {
+          return null;
+        }
+
+        try {
+          const pendingSubmission = await readContract(wagmiConfig, {
+            abi: registryInfo.abi,
+            address: registryAddress,
+            functionName: "pendingSubmissions",
+            args: [legacyReservation.revealCommitment],
+          });
+          const pendingSubmitter = getPendingSubmissionSubmitter(pendingSubmission);
+          if (!pendingSubmitter || pendingSubmitter.toLowerCase() !== submitterAddress.toLowerCase()) {
+            return null;
+          }
+        } catch {
+          return null;
+        }
+
+        setStoredSubmissionReservation(currentReservationStorageKey, legacyReservation);
+        clearStoredSubmissionReservation(legacyReservationStorageKey);
+        return legacyReservation;
+      };
+
+      let activeReservation = getStoredSubmissionReservation(currentReservationStorageKey);
+      if (!activeReservation) {
+        activeReservation = await migrateLegacyReservation();
+      }
 
       if (activeReservation && !submissionReservationMatchesDraft(activeReservation, submissionDraft)) {
         try {
@@ -575,12 +622,12 @@ export function ContentSubmissionSection() {
           }
         }
 
-        clearStoredSubmissionReservation(reservationStorageKey);
+        clearStoredSubmissionReservation(currentReservationStorageKey);
         activeReservation = null;
       }
 
       if (!activeReservation) {
-        const submissionSalt = createSubmissionSalt();
+        const submissionSalt = deriveSubmissionReservationSalt(submissionDraft, submitterAddress, targetNetwork.id);
         const revealCommitment = buildSubmissionRevealCommitment(submissionDraft, submissionSalt, submitterAddress);
 
         try {
@@ -591,8 +638,13 @@ export function ContentSubmissionSection() {
           }
         }
 
-        activeReservation = createStoredSubmissionReservation(submissionDraft, submissionSalt, revealCommitment);
-        setStoredSubmissionReservation(reservationStorageKey, activeReservation);
+        activeReservation = createStoredSubmissionReservation(
+          submissionDraft,
+          submissionSalt,
+          revealCommitment,
+          targetNetwork.id,
+        );
+        setStoredSubmissionReservation(currentReservationStorageKey, activeReservation);
       }
 
       // ContentRegistry enforces a minimum reservation age before reveal.

@@ -12,9 +12,10 @@ interface RoundStatsProps {
 
 interface RoundRevealedBreakdownProps {
   snapshot: RoundSnapshot;
+  stacked?: boolean;
 }
 
-export function RoundRevealedBreakdown({ snapshot }: RoundRevealedBreakdownProps) {
+export function RoundRevealedBreakdown({ snapshot, stacked = false }: RoundRevealedBreakdownProps) {
   const { round, isLoading } = snapshot;
 
   if (isLoading) return null;
@@ -26,6 +27,27 @@ export function RoundRevealedBreakdown({ snapshot }: RoundRevealedBreakdownProps
   const downPoolFormatted = Number(round.downPool) / 1e6;
   const upCount = Number(round.upCount);
   const downCount = Number(round.downCount);
+
+  if (stacked) {
+    return (
+      <div className="flex w-full max-w-full flex-col gap-1.5 text-base-content/60">
+        <div className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1 text-left">
+          <span>Up</span>
+          <span className="font-semibold tabular-nums">{upPoolFormatted.toFixed(0)} cREP</span>
+          <span className="text-sm text-base-content/60">
+            {upCount} vote{upCount === 1 ? "" : "s"}
+          </span>
+        </div>
+        <div className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1 text-left">
+          <span>Down</span>
+          <span className="font-semibold tabular-nums">{downPoolFormatted.toFixed(0)} cREP</span>
+          <span className="text-sm text-base-content/60">
+            {downCount} vote{downCount === 1 ? "" : "s"}
+          </span>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="flex w-full max-w-full items-center gap-3">
@@ -57,9 +79,9 @@ export function RoundRevealedBreakdown({ snapshot }: RoundRevealedBreakdownProps
  */
 export function RoundStats({ categoryId, snapshot }: RoundStatsProps) {
   const contentLabel = useContentLabel(categoryId);
-  const { round, isLoading, maxVoters, isRoundFull, phase } = snapshot;
+  const { round, hasRound, isLoading, maxVoters, isRoundFull, phase } = snapshot;
 
-  if (isLoading) {
+  if (isLoading && !hasRound) {
     return (
       <div className="flex flex-col gap-2 py-2 text-base animate-pulse">
         <div className="flex items-center gap-3">

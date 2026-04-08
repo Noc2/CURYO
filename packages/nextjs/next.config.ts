@@ -6,6 +6,7 @@ import withBundleAnalyzer from "@next/bundle-analyzer";
 import type { NextConfig } from "next";
 
 const isDev = process.env.NODE_ENV === "development";
+const isVercelPreview = process.env.VERCEL_ENV === "preview";
 const allowLocalE2EProductionBuild = isLocalE2EProductionBuildEnabled();
 const rpcOverrides = mergeRpcOverrides(
   RPC_OVERRIDES,
@@ -42,12 +43,24 @@ const rpcOrigins = rpcUrls
 
 // Build CSP directives. Production Ponder URL comes from env at build time.
 const ponderUrl = process.env.NEXT_PUBLIC_PONDER_URL ?? (isDev ? "http://localhost:42069" : "");
+const vercelLiveScriptSources = isVercelPreview ? ["https://vercel.live"] : [];
+const vercelLiveStyleSources = isVercelPreview ? ["https://vercel.live"] : [];
+const vercelLiveFontSources = isVercelPreview ? ["https://vercel.live", "https://assets.vercel.com"] : [];
+const vercelLiveConnectSources = isVercelPreview
+  ? ["https://vercel.live", "https://*.pusher.com", "wss://*.pusher.com"]
+  : [];
+const vercelLiveFrameSources = isVercelPreview ? ["https://vercel.live"] : [];
 const cspDirectives = [
   "default-src 'self'",
   // Static CSP headers need inline bootstrap scripts for Next's production app shell.
-  `script-src 'self' 'wasm-unsafe-eval' 'unsafe-inline' https://scripts.simpleanalyticscdn.com${isDev ? " 'unsafe-eval'" : ""}`,
-  "style-src 'self' 'unsafe-inline'",
-  "font-src 'self'",
+  [
+    "script-src 'self' 'wasm-unsafe-eval' 'unsafe-inline'",
+    "https://scripts.simpleanalyticscdn.com",
+    ...(isDev ? ["'unsafe-eval'"] : []),
+    ...vercelLiveScriptSources,
+  ].join(" "),
+  ["style-src 'self' 'unsafe-inline'", ...vercelLiveStyleSources].join(" "),
+  ["font-src 'self'", ...vercelLiveFontSources].join(" "),
   "img-src 'self' data: blob: https:",
   [
     "connect-src 'self'",
@@ -70,6 +83,7 @@ const cspDirectives = [
     // Simple Analytics
     "https://scripts.simpleanalyticscdn.com",
     "https://queue.simpleanalyticscdn.com",
+    ...vercelLiveConnectSources,
     // Coinbase Wallet SDK
     "https://cca-lite.coinbase.com",
     // Content metadata APIs (platform handlers)
@@ -100,6 +114,7 @@ const cspDirectives = [
     "https://open.spotify.com",
     "https://self.xyz",
     "https://verify.walletconnect.com",
+    ...vercelLiveFrameSources,
   ].join(" "),
   "object-src 'none'",
   "base-uri 'self'",
