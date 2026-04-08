@@ -1,6 +1,7 @@
 "use client";
 
 import { type RefObject, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { FeedVoteCard } from "~~/components/vote/VoteFeedCards";
 import type { ContentItem } from "~~/hooks/useContentFeed";
 import type { SubmitterProfile } from "~~/hooks/useSubmitterProfiles";
@@ -892,30 +893,35 @@ export function VoteFeedStage({
         ) : null}
       </div>
 
-      {scrollIndicatorState.isVisible && (isDesktopViewport || isMobileScrollIndicatorActive) ? (
-        <div
-          aria-hidden="true"
-          className={`pointer-events-none fixed top-0 z-40 ${isDesktopViewport ? "right-0 w-3" : "right-1 w-5"}`}
-          style={{ top: `${scrollIndicatorState.top}px`, height: `${scrollIndicatorState.height}px` }}
-        >
-          <div
-            className={`absolute inset-y-0 left-1/2 -translate-x-1/2 rounded-full ${
-              isDesktopViewport ? "w-[3px] bg-white/18" : "w-[2px] bg-primary/20"
-            }`}
-          />
-          <div
-            className={`absolute left-1/2 -translate-x-1/2 rounded-full bg-primary ${
-              isDesktopViewport
-                ? "w-[3px] shadow-[0_0_18px_rgba(242,100,38,0.85)]"
-                : "w-2.5 shadow-[0_0_14px_rgba(242,100,38,0.48)]"
-            }`}
-            style={{
-              top: `${scrollIndicatorState.thumbOffset}px`,
-              height: `${scrollIndicatorState.thumbHeight}px`,
-            }}
-          />
-        </div>
-      ) : null}
+      {typeof document !== "undefined" &&
+      scrollIndicatorState.isVisible &&
+      (isDesktopViewport || isMobileScrollIndicatorActive)
+        ? createPortal(
+            <div
+              aria-hidden="true"
+              className={`pointer-events-none fixed top-0 z-40 ${isDesktopViewport ? "right-0 w-3" : "right-1 w-5"}`}
+              style={{ top: `${scrollIndicatorState.top}px`, height: `${scrollIndicatorState.height}px` }}
+            >
+              <div
+                className={`absolute inset-y-0 left-1/2 -translate-x-1/2 rounded-full ${
+                  isDesktopViewport ? "w-[3px] bg-white/18" : "w-[2px] bg-primary/20"
+                }`}
+              />
+              <div
+                className={`absolute left-1/2 -translate-x-1/2 rounded-full bg-primary ${
+                  isDesktopViewport
+                    ? "w-[3px] shadow-[0_0_18px_rgba(242,100,38,0.85)]"
+                    : "w-2.5 shadow-[0_0_14px_rgba(242,100,38,0.48)]"
+                }`}
+                style={{
+                  top: `${scrollIndicatorState.thumbOffset}px`,
+                  height: `${scrollIndicatorState.thumbHeight}px`,
+                }}
+              />
+            </div>,
+            document.body,
+          )
+        : null}
     </div>
   );
 }
