@@ -48,12 +48,11 @@ export function WikipediaEmbed({ info, compact, prefetchedMetadata }: WikipediaE
   const [imageLoaded, setImageLoaded] = useState(false);
 
   const title = info.id || (info.metadata?.title as string);
+  const imageSrc = person?.imageUrl;
   const imageLoadingProps = getEmbedImageLoadingProps(compact);
 
   useEffect(() => {
     setFetchError(false);
-    setImageError(false);
-    setImageLoaded(false);
 
     if (!title) {
       setPerson(null);
@@ -94,6 +93,11 @@ export function WikipediaEmbed({ info, compact, prefetchedMetadata }: WikipediaE
       cancelled = true;
     };
   }, [title, info.url, prefetchedMetadata]);
+
+  useEffect(() => {
+    setImageError(false);
+    setImageLoaded(false);
+  }, [imageSrc]);
 
   // Loading state
   if (loading) {
@@ -168,7 +172,7 @@ export function WikipediaEmbed({ info, compact, prefetchedMetadata }: WikipediaE
           </div>
         )}
         <img
-          src={person.imageUrl}
+          src={imageSrc}
           alt={person.title}
           {...imageLoadingProps}
           className={`rounded-t-xl shadow-lg transition-transform group-hover:scale-[1.02] ${

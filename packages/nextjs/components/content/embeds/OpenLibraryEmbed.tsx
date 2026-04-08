@@ -49,12 +49,11 @@ export function OpenLibraryEmbed({ info, compact, prefetchedMetadata }: OpenLibr
   const [imageLoaded, setImageLoaded] = useState(false);
 
   const olId = info.id || (info.metadata?.olId as string);
+  const imageSrc = book?.coverUrl;
   const imageLoadingProps = getEmbedImageLoadingProps(compact);
 
   useEffect(() => {
     setFetchError(false);
-    setImageError(false);
-    setImageLoaded(false);
 
     if (!olId) {
       setBook(null);
@@ -96,6 +95,11 @@ export function OpenLibraryEmbed({ info, compact, prefetchedMetadata }: OpenLibr
       cancelled = true;
     };
   }, [olId, info.url, prefetchedMetadata]);
+
+  useEffect(() => {
+    setImageError(false);
+    setImageLoaded(false);
+  }, [imageSrc]);
 
   // Loading state
   if (loading) {
@@ -170,7 +174,7 @@ export function OpenLibraryEmbed({ info, compact, prefetchedMetadata }: OpenLibr
           </div>
         )}
         <img
-          src={book.coverUrl}
+          src={imageSrc}
           alt={book.title}
           {...imageLoadingProps}
           className={`rounded-t-xl shadow-lg transition-transform group-hover:scale-[1.02] ${
