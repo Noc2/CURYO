@@ -27,9 +27,23 @@ test("resolveVoteFeedVisibleRange centers the desktop render window around the a
   });
 });
 
+test("resolveVoteFeedVisibleRange clamps to the loaded items when fewer cards are available than the desktop window", () => {
+  assert.deepEqual(resolveVoteFeedVisibleRange(20, 4, 3, 5), {
+    start: 0,
+    end: 3,
+  });
+});
+
 test("resolveVoteFeedVisibleRange clamps to the loaded edge when the active card is near the end", () => {
   assert.deepEqual(resolveVoteFeedVisibleRange(20, 11, 12, 5), {
     start: 7,
     end: 12,
+  });
+});
+
+test("resolveVoteFeedVisibleRange clamps back to the first loaded card when the active index is before the feed", () => {
+  assert.deepEqual(resolveVoteFeedVisibleRange(20, -3, 12, 5), {
+    start: 0,
+    end: 5,
   });
 });
