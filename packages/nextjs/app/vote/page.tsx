@@ -1373,7 +1373,7 @@ const HomeInner = () => {
           }}
           label="View"
         />
-        <div className="shrink-0 flex items-center xl:hidden">
+        <div className="shrink-0 flex items-center">
           <StreakCounter />
         </div>
       </div>
