@@ -1,6 +1,9 @@
 "use client";
 
-import { useScaffoldReadContract, useScaffoldWriteContract } from "~~/hooks/scaffold-eth";
+import { useCallback, useState } from "react";
+import type { Abi } from "viem";
+import { useDeployedContractInfo, useScaffoldReadContract, useScaffoldWriteContract } from "~~/hooks/scaffold-eth";
+import { useThirdwebSponsoredSubmitCalls } from "~~/hooks/useThirdwebSponsoredSubmitCalls";
 import { avatarAccentRgbToHex } from "~~/lib/avatar/avatarAccent";
 
 interface Profile {
@@ -14,6 +17,52 @@ interface AvatarAccent {
   enabled: boolean;
   rgb: bigint | null;
   hex: string | null;
+}
+
+function useProfileRegistryWrite() {
+  const { data: profileRegistryContract } = useDeployedContractInfo({
+    contractName: "ProfileRegistry" as any,
+  });
+  const { writeContractAsync, isPending } = useScaffoldWriteContract({
+    contractName: "ProfileRegistry" as any,
+  });
+  const { canUseSponsoredSubmitCalls, executeSponsoredCalls } = useThirdwebSponsoredSubmitCalls();
+  const [isSponsoredWritePending, setIsSponsoredWritePending] = useState(false);
+
+  const writeProfileRegistry = useCallback(
+    async (functionName: string, args: readonly unknown[], action: string) => {
+      if (canUseSponsoredSubmitCalls && profileRegistryContract) {
+        setIsSponsoredWritePending(true);
+        try {
+          await executeSponsoredCalls(
+            [
+              {
+                abi: profileRegistryContract.abi as Abi,
+                address: profileRegistryContract.address as `0x${string}`,
+                args,
+                functionName,
+              },
+            ],
+            { action },
+          );
+          return;
+        } finally {
+          setIsSponsoredWritePending(false);
+        }
+      }
+
+      await (writeContractAsync as any)({
+        args,
+        functionName,
+      });
+    },
+    [canUseSponsoredSubmitCalls, executeSponsoredCalls, profileRegistryContract, writeContractAsync],
+  );
+
+  return {
+    isPending: isPending || isSponsoredWritePending,
+    writeProfileRegistry,
+  };
 }
 
 /**
@@ -78,15 +127,10 @@ export function useIsNameTaken(name: string) {
  * Hook to set or update a profile.
  */
 export function useSetProfile() {
-  const { writeContractAsync, isPending } = useScaffoldWriteContract({
-    contractName: "ProfileRegistry" as any,
-  });
+  const { isPending, writeProfileRegistry } = useProfileRegistryWrite();
 
   const setProfile = async (name: string, strategy: string) => {
-    await (writeContractAsync as any)({
-      functionName: "setProfile",
-      args: [name, strategy],
-    });
+    await writeProfileRegistry("setProfile", [name, strategy], "profile update");
   };
 
   return {
@@ -136,15 +180,10 @@ export function useAvatarAccent(address?: string) {
  * Hook to store an avatar accent override.
  */
 export function useSetAvatarAccent() {
-  const { writeContractAsync, isPending } = useScaffoldWriteContract({
-    contractName: "ProfileRegistry" as any,
-  });
+  const { isPending, writeProfileRegistry } = useProfileRegistryWrite();
 
   const setAvatarAccent = async (rgb: number) => {
-    await (writeContractAsync as any)({
-      functionName: "setAvatarAccent",
-      args: [BigInt(rgb)],
-    });
+    await writeProfileRegistry("setAvatarAccent", [BigInt(rgb)], "avatar color update");
   };
 
   return {
@@ -157,15 +196,10 @@ export function useSetAvatarAccent() {
  * Hook to clear an avatar accent override.
  */
 export function useClearAvatarAccent() {
-  const { writeContractAsync, isPending } = useScaffoldWriteContract({
-    contractName: "ProfileRegistry" as any,
-  });
+  const { isPending, writeProfileRegistry } = useProfileRegistryWrite();
 
   const clearAvatarAccent = async () => {
-    await (writeContractAsync as any)({
-      functionName: "clearAvatarAccent",
-      args: [],
-    });
+    await writeProfileRegistry("clearAvatarAccent", [], "avatar color reset");
   };
 
   return {
