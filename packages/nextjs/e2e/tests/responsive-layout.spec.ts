@@ -12,7 +12,7 @@ const VIEWPORTS = [
   { name: "desktop", width: 1440, height: 900 },
 ];
 
-const ROUTES = ["/", "/vote", "/submit", "/portfolio", "/docs", "/legal"];
+const ROUTES = ["/", "/vote", "/submit", "/governance", "/docs", "/legal"];
 const VOTE_UP_BUTTON = /^Vote up\b/i;
 const VOTE_DOWN_BUTTON = /^Vote down\b/i;
 
@@ -55,10 +55,13 @@ async function expectRouteControls(page: Page, path: string, width: number): Pro
     return;
   }
 
-  if (path === "/portfolio") {
+  if (path === "/governance") {
     await expect(
-      main.getByRole("heading", { name: /portfolio/i }).or(main.getByText(/vote history/i)).first(),
-      "Portfolio heading or vote history should stay visible",
+      main
+        .getByRole("button", { name: /Profile|Leaderboard|Governance|Voter ID/ })
+        .or(main.getByText(/Voting performance|Staked cREP|Checking Voter ID/i))
+        .first(),
+      "Governance claim surface should stay visible",
     ).toBeVisible({ timeout: 15_000 });
     return;
   }

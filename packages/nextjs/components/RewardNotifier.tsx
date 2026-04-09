@@ -61,8 +61,8 @@ export function RewardNotifier() {
     ) {
       const formatted = (Number(totalClaimable) / 1e6).toLocaleString(undefined, { maximumFractionDigits: 0 });
       notification.success(
-        <Link href="/portfolio" className="font-medium underline">
-          {`You have ${formatted} cREP ready to claim in Portfolio.`}
+        <Link href="/governance" className="font-medium underline">
+          {`You have ${formatted} cREP ready to claim.`}
         </Link>,
         { duration: 8000 },
       );

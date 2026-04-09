@@ -104,12 +104,12 @@ test("gotoWithRetry raises the timeout floor in CI", async () => {
   });
 
   await withCiEnv("true", async () => {
-    await gotoWithRetry(page, "/portfolio", { timeout: 12_345 });
+    await gotoWithRetry(page, "/governance", { timeout: 12_345 });
   });
 
   assert.deepEqual(gotoCalls, [
     {
-      url: "/portfolio",
+      url: "/governance",
       options: { timeout: 60_000, waitUntil: "domcontentloaded" },
     },
   ]);

@@ -28,7 +28,7 @@ import {
 import { pickSettlingSoonNotification } from "~~/lib/notifications/settlingSoon";
 import { notification } from "~~/utils/scaffold-eth";
 
-const PORTFOLIO_REWARDS_HREF = "/portfolio";
+const GOVERNANCE_REWARDS_HREF = "/governance";
 
 type PendingClaimRoundNotification = PendingClaimRewardNotification & {
   contentId: string;
@@ -312,8 +312,8 @@ export function SettlementNotifier() {
     notifyWithLink(
       "success",
       "Reward Ready to Claim",
-      `Round resolved! Content #${pendingRound.contentId} round #${pendingRound.roundId} is now ready to claim in Portfolio.`,
-      PORTFOLIO_REWARDS_HREF,
+      `Round resolved! Content #${pendingRound.contentId} round #${pendingRound.roundId} is ready to claim.`,
+      GOVERNANCE_REWARDS_HREF,
     );
   }, [address, claimableRoundKeys, claimRecheckTick, notifyWithLink, pendingClaimCount]);
 

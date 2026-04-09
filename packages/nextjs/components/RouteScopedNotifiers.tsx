@@ -5,7 +5,7 @@ import { useAccount } from "wagmi";
 import { RewardNotifier } from "~~/components/RewardNotifier";
 import { SettlementNotifier } from "~~/components/SettlementNotifier";
 
-const NOTIFIER_ROUTE_PREFIXES = ["/vote", "/portfolio", "/governance"];
+const NOTIFIER_ROUTE_PREFIXES = ["/vote", "/governance"];
 
 export function RouteScopedNotifiers() {
   const pathname = usePathname() ?? "";

@@ -157,22 +157,19 @@ test.describe("Settlement lifecycle", () => {
     expect(settledContent.submitterStakeReturned).toBe(false);
   });
 
-  test("portfolio shows vote history after voting", async ({ browser }) => {
+  test("governance profile shows vote history after voting", async ({ browser }) => {
+    test.skip(!newContentId, "No content from previous test");
+
     const context = await newE2EContext(browser);
     const page = await context.newPage();
-    await setupWallet(page, ANVIL_ACCOUNTS.account2.privateKey);
+    await setupWallet(page, ANVIL_ACCOUNTS.account3.privateKey);
 
-    await gotoWithRetry(page, "/portfolio", { ensureWalletConnected: true });
-
-    const heading = page.getByRole("heading", { name: "Portfolio" });
-    await expect(heading).toBeVisible({ timeout: 15_000 });
+    await gotoWithRetry(page, "/governance#profile", { ensureWalletConnected: true });
 
     const main = page.locator("main");
-    const totalVotesLabel = main.getByText("Total Votes");
-    await expect(totalVotesLabel).toBeVisible({ timeout: 10_000 });
-
-    const voteHistoryHeading = page.getByRole("heading", { name: "Vote History" });
-    await expect(voteHistoryHeading).toBeVisible({ timeout: 10_000 });
+    await expect(main.getByText("Voting performance")).toBeVisible({ timeout: 15_000 });
+    await expect(main.getByText("Recent votes")).toBeVisible({ timeout: 10_000 });
+    await expect(main.getByRole("link", { name: `Content #${newContentId}` })).toBeVisible({ timeout: 15_000 });
 
     await context.close();
   });
