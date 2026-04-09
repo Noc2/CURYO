@@ -1,6 +1,11 @@
 import { E2E_BASE_URL } from "./helpers/service-urls";
 import { defineConfig, devices } from "@playwright/test";
 
+const BROWSER_COMPAT_TESTS = /browser-compat/;
+const RESPONSIVE_LAYOUT_TESTS = /responsive-layout/;
+const ACCESSIBILITY_AXE_TESTS = /accessibility-axe/;
+const MOBILE_TESTS = /mobile/;
+
 export default defineConfig({
   globalSetup: "./global-setup.cts",
   testDir: "./tests",
@@ -32,9 +37,34 @@ export default defineConfig({
       // Exclude tests that need special conditions:
       // - settlement/reward/tied-round: need block advancement for settlement
       // - round-cancellation/content-dormancy: need time-skip (fast-forward days)
-      // - mobile: need phone/tablet device profiles (run via mobile-phone/mobile-tablet projects)
+      // - mobile/responsive/browser-compat/a11y: scoped device/browser projects
       testIgnore:
-        /round-cancellation|content-dormancy|settlement-lifecycle|reward-claim|tied-round|zz-multi-round|unanimous-settlement|frontend-fee-claim|reveal-failed|manual-reveal|keeper-settlement|mobile/,
+        /round-cancellation|content-dormancy|settlement-lifecycle|reward-claim|tied-round|zz-multi-round|unanimous-settlement|frontend-fee-claim|reveal-failed|manual-reveal|keeper-settlement|mobile|browser-compat|responsive-layout|accessibility-axe/,
+    },
+    {
+      name: "responsive-layout",
+      use: { ...devices["Desktop Chrome"] },
+      testMatch: RESPONSIVE_LAYOUT_TESTS,
+    },
+    {
+      name: "accessibility-axe",
+      use: { ...devices["Desktop Chrome"] },
+      testMatch: ACCESSIBILITY_AXE_TESTS,
+    },
+    {
+      name: "compat-chromium",
+      use: { ...devices["Desktop Chrome"] },
+      testMatch: BROWSER_COMPAT_TESTS,
+    },
+    {
+      name: "compat-firefox",
+      use: { ...devices["Desktop Firefox"] },
+      testMatch: BROWSER_COMPAT_TESTS,
+    },
+    {
+      name: "compat-webkit",
+      use: { ...devices["Desktop Safari"] },
+      testMatch: BROWSER_COMPAT_TESTS,
     },
     {
       // Settlement tests need block advancement for random settlement.
@@ -67,29 +97,21 @@ export default defineConfig({
       dependencies: ["round-cancellation"],
     },
     // Mobile: opt-in via --project=mobile-phone or --project=mobile-tablet
-    // Install first: npx playwright install webkit
+    // Install first: npx playwright install chromium webkit
     {
       name: "mobile-phone",
       use: { ...devices["iPhone 12"] },
-      testMatch: /mobile/,
-      dependencies: ["chromium"],
+      testMatch: MOBILE_TESTS,
+    },
+    {
+      name: "mobile-android",
+      use: { ...devices["Pixel 5"] },
+      testMatch: MOBILE_TESTS,
     },
     {
       name: "mobile-tablet",
       use: { ...devices["iPad Mini"] },
-      testMatch: /mobile/,
-      dependencies: ["chromium"],
-    },
-    // Cross-browser: opt-in via --project=firefox or --project=webkit
-    // Not included in default run to avoid tripling runtime on shared Anvil state.
-    // Install first: npx playwright install firefox webkit
-    {
-      name: "firefox",
-      use: { ...devices["Desktop Firefox"] },
-    },
-    {
-      name: "webkit",
-      use: { ...devices["Desktop Safari"] },
+      testMatch: MOBILE_TESTS,
     },
   ],
 

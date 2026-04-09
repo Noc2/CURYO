@@ -28,11 +28,14 @@
     "e2e:ci:keeper": "REQUIRE_E2E_KEEPER=1 playwright test --config e2e/playwright.config.ts --project=settlement-keeper",
     "e2e:settlement": "playwright test --config e2e/playwright.config.ts --project=settlement",
     "e2e:settlement:keeper": "REQUIRE_E2E_KEEPER=1 playwright test --config e2e/playwright.config.ts --project=settlement-keeper",
-    "e2e:mobile": "playwright test --config e2e/playwright.config.ts --project=mobile-phone --project=mobile-tablet",
-    "e2e:full": "REQUIRE_E2E_KEEPER=1 playwright test --config e2e/playwright.config.ts --project=chromium --project=settlement --project=settlement-keeper --project=round-cancellation --project=content-dormancy --project=mobile-phone --project=mobile-tablet",
-    "e2e:firefox": "playwright test --config e2e/playwright.config.ts --project=firefox",
-    "e2e:webkit": "playwright test --config e2e/playwright.config.ts --project=webkit",
-    "e2e:all-browsers": "playwright test --config e2e/playwright.config.ts",
+    "e2e:responsive": "playwright test --config e2e/playwright.config.ts --project=responsive-layout",
+    "e2e:a11y": "playwright test --config e2e/playwright.config.ts --project=accessibility-axe",
+    "e2e:compat": "playwright test --config e2e/playwright.config.ts --project=compat-chromium --project=compat-firefox --project=compat-webkit",
+    "e2e:mobile": "playwright test --config e2e/playwright.config.ts --project=mobile-phone --project=mobile-android --project=mobile-tablet",
+    "e2e:full": "REQUIRE_E2E_KEEPER=1 playwright test --config e2e/playwright.config.ts --project=chromium --project=settlement --project=settlement-keeper --project=round-cancellation --project=content-dormancy --project=responsive-layout --project=mobile-phone --project=mobile-android --project=mobile-tablet",
+    "e2e:firefox": "playwright test --config e2e/playwright.config.ts --project=compat-firefox",
+    "e2e:webkit": "playwright test --config e2e/playwright.config.ts --project=compat-webkit",
+    "e2e:all-browsers": "playwright test --config e2e/playwright.config.ts --project=compat-chromium --project=compat-firefox --project=compat-webkit",
     "e2e:ui": "playwright test --config e2e/playwright.config.ts --ui",
     "e2e:reset": "bash e2e/scripts/reset-chain.sh"
   },
@@ -66,6 +69,7 @@
     "zustand": "~5.0.0"
   },
   "devDependencies": {
+    "@axe-core/playwright": "^4.11.1",
     "@next/bundle-analyzer": "^16.1.6",
     "@playwright/test": "^1.58.2",
     "@react-pdf/renderer": "^4.3.2",

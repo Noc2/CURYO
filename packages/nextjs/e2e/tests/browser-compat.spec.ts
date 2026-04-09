@@ -1,0 +1,58 @@
+import { expectNoHorizontalOverflow, expectNoNextErrorOverlay } from "../helpers/layout";
+import { waitForFeedLoaded } from "../helpers/wait-helpers";
+import { expect, test } from "../fixtures/wallet";
+
+const PUBLIC_ROUTES = [
+  { path: "/", content: /Human Reputation at Stake|Discover|Vote/i },
+  { path: "/docs", content: /Introduction/i },
+  { path: "/legal", content: /^Legal$/i },
+  { path: "/legal/terms", content: /Terms of Service/i },
+];
+
+test.describe("Browser compatibility smoke", () => {
+  for (const { path, content } of PUBLIC_ROUTES) {
+    test(`${path} renders primary content`, async ({ page }) => {
+      await page.goto(path, { waitUntil: "domcontentloaded" });
+      await expectNoNextErrorOverlay(page);
+
+      const main = page.locator("main");
+      await expect(main, `${path} should expose visible main content`).toBeVisible({ timeout: 15_000 });
+      await expect(main.getByText(content).or(main.getByRole("heading", { name: content })).first()).toBeVisible({
+        timeout: 15_000,
+      });
+      await expectNoHorizontalOverflow(page, `${path} browser compat`);
+    });
+  }
+
+  test("/vote loads the feed in a connected browser session", async ({ connectedPage: page }) => {
+    await page.goto("/vote", { waitUntil: "domcontentloaded" });
+    await expectNoNextErrorOverlay(page);
+    await waitForFeedLoaded(page, 30_000);
+
+    const main = page.locator("main");
+    await expect(main).toBeVisible({ timeout: 10_000 });
+    await expect(
+      page
+        .getByRole("button", { name: /^Vote up$/i })
+        .or(page.getByRole("button", { name: /^Vote down$/i }))
+        .or(page.getByText(/No content submitted yet|No content found/i))
+        .first(),
+    ).toBeVisible({ timeout: 15_000 });
+    await expectNoHorizontalOverflow(page, "/vote browser compat");
+  });
+
+  test("/submit keeps the URL field usable in a connected browser session", async ({ connectedPage: page }) => {
+    await page.goto("/submit", { waitUntil: "domcontentloaded" });
+    await expectNoNextErrorOverlay(page);
+
+    const main = page.locator("main");
+    await expect(main).toBeVisible({ timeout: 10_000 });
+
+    const urlInput = page.getByPlaceholder(/paste/i).or(page.getByRole("textbox").first()).first();
+    await expect(urlInput).toBeVisible({ timeout: 15_000 });
+    await urlInput.focus();
+    await expect(urlInput).toBeFocused();
+    await expectNoHorizontalOverflow(page, "/submit browser compat");
+  });
+});
+

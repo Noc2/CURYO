@@ -1,13 +1,14 @@
 import { expect, test } from "../fixtures/wallet";
 import { findVoteableContent, gotoWithRetry, waitForFeedLoaded } from "../helpers/wait-helpers";
 
-// Device profile comes from Playwright project config (iPhone 12 / iPad Mini).
+// Device profile comes from Playwright project config (iPhone / Android / tablet).
 // No manual setViewportSize() needed — the project device descriptor handles
 // viewport, UA, touch emulation, and browser engine.
+const PHONE_PROJECTS = new Set(["mobile-phone", "mobile-android"]);
 
 test.describe("Mobile viewport (phone)", () => {
   test.beforeEach(async ({}, testInfo) => {
-    test.skip(testInfo.project.name === "mobile-tablet", "Phone-only tests");
+    test.skip(!PHONE_PROJECTS.has(testInfo.project.name), "Phone-only tests");
   });
 
   test("sidebar hidden and hamburger visible", async ({ connectedPage: page }) => {
