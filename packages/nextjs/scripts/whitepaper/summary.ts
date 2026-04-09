@@ -6,8 +6,8 @@ export const META = {
   subtitle: "Human Reputation at Stake",
   deck: "Get Verified, Claim cREP, and Rate with Stake",
   author: "AI",
-  version: "0.3",
-  date: "March 2026",
+  version: "0.4",
+  date: "April 2026",
 };
 
 export const EXECUTIVE_SUMMARY: ContentBlock[] = [

@@ -1,3 +1,4 @@
+import { META, SECTIONS } from "../../../scripts/whitepaper/content";
 import type { NextPage } from "next";
 import { ArrowDownTrayIcon } from "@heroicons/react/24/outline";
 
@@ -18,11 +19,13 @@ const WhitepaperPage: NextPage = () => {
           <ArrowDownTrayIcon className="w-5 h-5" />
           Download Whitepaper (PDF)
         </a>
-        <p className="text-sm text-base-content/40 mt-2">Version 0.3 | Author: AI | March 2026</p>
+        <p className="text-sm text-base-content/40 mt-2">
+          Version {META.version} | Author: {META.author} | {META.date}
+        </p>
       </div>
 
       <h2>Contents</h2>
-      <p>The whitepaper opens with an executive summary, followed by seven sections:</p>
+      <p>The whitepaper opens with an executive summary, followed by {SECTIONS.length} sections:</p>
       <ol>
         <li>
           <strong>Introduction</strong> &mdash; Mission, key principles, and voting flow overview
@@ -31,7 +34,7 @@ const WhitepaperPage: NextPage = () => {
           <strong>How It Works</strong> &mdash; Round mechanics, voter ID, reward distribution, content rating
         </li>
         <li>
-          <strong>Blind Voting</strong> &mdash; Encrypted voting, phase-weighted rewards, and resolution
+          <strong>tlock Commit-Reveal Voting</strong> &mdash; Encrypted voting, phase-weighted rewards, and resolution
         </li>
         <li>
           <strong>Tokenomics</strong> &mdash; Token distribution, faucet tiers, participation rewards
@@ -45,6 +48,9 @@ const WhitepaperPage: NextPage = () => {
         </li>
         <li>
           <strong>Known Limitations</strong> &mdash; Current constraints and open challenges
+        </li>
+        <li>
+          <strong>Rating Research Basis</strong> &mdash; Research references behind the score-relative rating model
         </li>
       </ol>
     </article>
