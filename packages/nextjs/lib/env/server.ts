@@ -1,6 +1,7 @@
 import "server-only";
 import { RPC_OVERRIDES } from "~~/config/shared";
 import { isLocalE2EProductionBuildEnabled } from "~~/utils/env/e2eProduction";
+import { resolvePonderUrlValue } from "~~/utils/env/ponderUrl";
 import {
   DEFAULT_DEV_TARGET_NETWORKS,
   type SupportedTargetNetwork,
@@ -77,21 +78,7 @@ export function resolveServerPonderUrl(
   production: boolean,
   allowLocalhostInProduction = false,
 ): string | null {
-  const resolvedValue = rawValue?.trim() || (!production ? "http://localhost:42069" : undefined);
-
-  if (!resolvedValue) {
-    return null;
-  }
-
-  try {
-    const url = new URL(resolvedValue);
-    if (production && !allowLocalhostInProduction && isLocalhostHostname(url.hostname)) {
-      return null;
-    }
-    return url.toString().replace(/\/$/, "");
-  } catch {
-    return null;
-  }
+  return resolvePonderUrlValue(rawValue, production, allowLocalhostInProduction).url;
 }
 
 export function getOptionalPonderUrl(): string | null {
