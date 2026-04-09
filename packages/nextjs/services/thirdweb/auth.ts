@@ -1,6 +1,6 @@
-type ThirdwebSocialAuthOption = "google" | "apple" | "email" | "passkey";
+type ThirdwebAuthOption = "google" | "apple" | "email" | "passkey" | "wallet";
 
-const THIRDWEB_SOCIAL_AUTH_OPTIONS: ThirdwebSocialAuthOption[] = ["google", "apple", "email", "passkey"];
+const THIRDWEB_AUTH_OPTIONS: ThirdwebAuthOption[] = ["google", "apple", "email", "passkey", "wallet"];
 const LOCALHOST_HOSTNAMES = new Set(["localhost", "127.0.0.1", "::1"]);
 
 function getCurrentLocation() {
@@ -23,7 +23,7 @@ export function getThirdwebWalletAuthConfig(args?: { hostname?: string; currentU
   const hostname = args?.hostname ?? location?.hostname;
   const currentUrl = args?.currentUrl ?? location?.href;
   const mode = getThirdwebAuthMode(hostname);
-  const options: ThirdwebSocialAuthOption[] = [...THIRDWEB_SOCIAL_AUTH_OPTIONS];
+  const options: ThirdwebAuthOption[] = [...THIRDWEB_AUTH_OPTIONS];
 
   if (mode === "redirect" && currentUrl) {
     return {
