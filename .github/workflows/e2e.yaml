@@ -138,7 +138,7 @@ jobs:
       - name: Warm critical Next.js routes
         run: |
           # Avoid spending Playwright's navigation budget on first-hit Next dev compilation.
-          for route in / /vote /submit /portfolio /vote/reveal /docs /legal /legal/terms; do
+          for route in / /vote /submit /vote/reveal /docs /legal /legal/terms; do
             echo "Warming ${route}"
             timeout 120 bash -c "until curl -fsS http://localhost:3000${route} > /dev/null 2>&1; do sleep 2; done"
           done
@@ -290,7 +290,7 @@ jobs:
 
       - name: Warm critical Next.js routes
         run: |
-          for route in / /vote /submit /portfolio /docs /legal /legal/terms; do
+          for route in / /vote /submit /docs /legal /legal/terms; do
             echo "Warming ${route}"
             timeout 120 bash -c "until curl -fsS http://localhost:3000${route} > /dev/null 2>&1; do sleep 2; done"
           done
