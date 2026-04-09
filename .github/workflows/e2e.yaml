@@ -183,7 +183,7 @@ jobs:
           retention-days: 14
 
   e2e-browser-compat:
-    name: E2E Browser Compat (${{ matrix.suite }})
+    name: E2E Browser Compat
     if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
     timeout-minutes: ${{ matrix.timeout }}
