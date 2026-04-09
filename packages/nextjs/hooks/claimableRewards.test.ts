@@ -107,6 +107,37 @@ test("buildSubmitterParticipationClaimableRewards keeps reserved payouts claimab
   ]);
 });
 
+test("buildSubmitterParticipationClaimableRewards applies prior payouts before streaming balance", () => {
+  const items = buildSubmitterParticipationClaimableRewards(
+    [
+      {
+        contentId: 9n,
+        totalReward: 10n,
+        alreadyPaid: 3n,
+        reservedReward: 4n,
+        rewardPool: "0x2000000000000000000000000000000000000000",
+      },
+    ],
+    new Map([
+      [
+        "0x2000000000000000000000000000000000000000",
+        {
+          authorized: true,
+          poolBalance: 2n,
+        },
+      ],
+    ]),
+  );
+
+  assert.deepEqual(items, [
+    {
+      contentId: 9n,
+      reward: 3n,
+      claimType: "submitter_participation_reward",
+    },
+  ]);
+});
+
 test("sortClaimableRewardItems keeps frontend round credits ahead of the final frontend withdrawal", () => {
   const items = sortClaimableRewardItems([
     {
