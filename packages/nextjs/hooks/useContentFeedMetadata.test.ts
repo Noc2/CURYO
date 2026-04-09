@@ -4,6 +4,8 @@ import { type ContentItem, mapContentItem, mergeContentFeedMetadata } from "~~/h
 import {
   getContentFeedMetadataCacheKey,
   getContentFeedMetadataUrls,
+  getContentFeedValidationUrls,
+  getGenericValidationMap,
   isContentFeedMetadataPrefetchPending,
   normalizeValidationBatchResults,
 } from "~~/hooks/useContentFeedMetadata";
@@ -47,6 +49,23 @@ test("getContentFeedMetadataCacheKey stays stable when the feed order changes", 
     getContentFeedMetadataCacheKey(getContentFeedMetadataUrls(firstFeed)),
     getContentFeedMetadataCacheKey(getContentFeedMetadataUrls(secondFeed)),
   );
+});
+
+test("getContentFeedValidationUrls skips generic URLs before live validation", () => {
+  const genericUrl = "https://example.com/articles/security";
+  const youtubeUrl = "https://www.youtube.com/watch?v=dQw4w9WgXcQ";
+  const wikipediaUrl = "https://en.wikipedia.org/wiki/Bitcoin";
+
+  assert.deepEqual(getContentFeedValidationUrls([genericUrl, youtubeUrl, wikipediaUrl]), [youtubeUrl, wikipediaUrl]);
+});
+
+test("getGenericValidationMap keeps generic URLs broken without an API round-trip", () => {
+  const genericUrl = "https://example.com/articles/security";
+  const platformUrl = "https://www.youtube.com/watch?v=dQw4w9WgXcQ";
+
+  assert.deepEqual(getGenericValidationMap([genericUrl, platformUrl]), {
+    [genericUrl]: false,
+  });
 });
 
 test("mergeContentFeedMetadata adds rich metadata without dropping the existing thumbnail fallback", () => {

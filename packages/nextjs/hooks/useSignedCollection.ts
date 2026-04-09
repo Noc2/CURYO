@@ -330,6 +330,7 @@ export function useSignedCollection<TItem, TId, TExtraReason extends string = ne
 
         await readResponseBody(response, "Request failed");
         setHasWriteSession(true);
+        queryClient.setQueryData(sessionStatusQueryKey, { hasReadSession: true, hasWriteSession: true });
         return { ok: true, selected: !currentlySelected };
       } catch (error) {
         queryClient.setQueryData(config.queryKey, previous);
@@ -348,7 +349,7 @@ export function useSignedCollection<TItem, TId, TExtraReason extends string = ne
         updatePending(normalizedId, false);
       }
     },
-    [config, hasWriteSession, itemKeys, queryClient, refetch, setOptimisticState, updatePending],
+    [config, hasWriteSession, itemKeys, queryClient, refetch, sessionStatusQueryKey, setOptimisticState, updatePending],
   );
 
   const isPending = useCallback((id: TId) => pendingKeys.has(config.normalizeId(id)), [config, pendingKeys]);

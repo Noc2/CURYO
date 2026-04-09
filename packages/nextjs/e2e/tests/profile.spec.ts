@@ -42,7 +42,6 @@ async function openSettingsWithConnectedWallet(page: Parameters<typeof gotoWithR
     await setupWallet(page, createProfileAccount.privateKey);
     await openSettingsWithConnectedWallet(page);
 
-    const notificationsTab = page.getByRole("button", { name: "Notifications", exact: true });
     await expect(page.getByRole("heading", { name: /Notification settings/i })).toBeVisible({ timeout: 10_000 });
     await expect(page.getByRole("button", { name: "Delegation" })).toBeVisible({ timeout: 5_000 });
     await expect(page.getByRole("button", { name: "Profile" })).toHaveCount(0);

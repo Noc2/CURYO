@@ -172,7 +172,7 @@ async function waitForVoteFeedScene(page: Page, timeout = 30_000): Promise<void>
   const indicators = page
     .getByRole("button", { name: "Vote up" })
     .or(page.getByRole("button", { name: "Vote down" }))
-    .or(page.getByText(/Voted (Up|Down)/i))
+    .or(page.getByText(/Voted(?: hidden| Up| Down)?/i))
     .or(page.getByText("Your submission"))
     .or(page.getByText(/Cooldown/i))
     .or(page.getByText("Round full"))
@@ -258,7 +258,7 @@ async function recordVoteScene(page: Page, searchQuery?: string): Promise<void> 
   await confirmButton.waitFor({ state: "visible", timeout: 15_000 });
   await clickTarget(page, confirmButton, 600);
 
-  const successIndicator = page.getByText(/Voted Up|Voted Down|Vote revealed\.|voted/i).first();
+  const successIndicator = page.getByText(/Vote revealed\.|voted/i).first();
   const errorIndicator = page
     .getByText(/reverted/i)
     .or(page.getByText(/failed/i))

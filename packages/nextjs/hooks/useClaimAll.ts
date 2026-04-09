@@ -103,6 +103,14 @@ export function useClaimAll() {
               },
               { getErrorMessage: getTransactionErrorMessage },
             );
+          } else if (item.claimType === "participation_reward") {
+            await (writeDistributor as any)(
+              {
+                functionName: "claimParticipationReward",
+                args: [item.contentId, item.roundId],
+              },
+              { getErrorMessage: getTransactionErrorMessage },
+            );
           } else if (item.claimType === "submitter_participation_reward") {
             await (writeContentRegistry as any)(
               {
@@ -142,13 +150,15 @@ export function useClaimAll() {
           }
         } catch (e: any) {
           const claimLabel =
-            item.claimType === "submitter_participation_reward"
-              ? `submitter participation reward for content #${item.contentId}`
-              : item.claimType === "frontend_registry_fee"
-                ? `frontend registry fees for ${item.frontend}`
-                : item.claimType === "frontend_round_fee"
-                  ? `frontend round fee for content #${item.contentId} round ${item.roundId}`
-                  : `content #${item.contentId} round ${item.roundId}`;
+            item.claimType === "participation_reward"
+              ? `participation reward for content #${item.contentId} round ${item.roundId}`
+              : item.claimType === "submitter_participation_reward"
+                ? `submitter participation reward for content #${item.contentId}`
+                : item.claimType === "frontend_registry_fee"
+                  ? `frontend registry fees for ${item.frontend}`
+                  : item.claimType === "frontend_round_fee"
+                    ? `frontend round fee for content #${item.contentId} round ${item.roundId}`
+                    : `content #${item.contentId} round ${item.roundId}`;
           console.error(`Claim failed for ${claimLabel}:`, e?.shortMessage || e?.message);
           if (isClaimGasShortageError(e, transactionFeedback)) {
             break;

@@ -247,7 +247,7 @@ export function mergeRoundDataWithFallback(params: {
   };
 }
 
-export function deriveRoundTiming(params: {
+function deriveRoundTiming(params: {
   startTime: number;
   now: number;
   epochDuration: number;

@@ -1,0 +1,41 @@
+import { expectNoBlockingAccessibilityViolations } from "../helpers/a11y";
+import { expectNoNextErrorOverlay } from "../helpers/layout";
+import { expect, test } from "../fixtures/wallet";
+
+const PUBLIC_PAGES = [
+  { path: "/", heading: /Human Reputation at Stake|Discover|Vote/i },
+  { path: "/docs", heading: /^Introduction$/i },
+  { path: "/legal", heading: /^Legal$/i },
+  { path: "/legal/terms", heading: /Terms of Service/i },
+];
+
+test.describe("Axe accessibility regressions", () => {
+  for (const { path, heading } of PUBLIC_PAGES) {
+    test(`${path} has no blocking axe violations`, async ({ page }) => {
+      await page.goto(path, { waitUntil: "domcontentloaded" });
+      await expectNoNextErrorOverlay(page);
+
+      const main = page.locator("main");
+      await expect(main).toBeVisible({ timeout: 15_000 });
+      await expect(main.getByRole("heading", { name: heading }).or(main.getByText(heading)).first()).toBeVisible({
+        timeout: 15_000,
+      });
+
+      await expectNoBlockingAccessibilityViolations(page, path);
+    });
+  }
+
+  test("/submit connected form has no blocking axe violations", async ({ connectedPage: page }) => {
+    await page.goto("/submit", { waitUntil: "domcontentloaded" });
+    await expectNoNextErrorOverlay(page);
+
+    const main = page.locator("main");
+    await expect(main).toBeVisible({ timeout: 15_000 });
+    await expect(main.getByPlaceholder(/paste/i).or(main.getByRole("textbox").first()).first()).toBeVisible({
+      timeout: 15_000,
+    });
+
+    await expectNoBlockingAccessibilityViolations(page, "/submit");
+  });
+});
+

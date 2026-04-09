@@ -24,7 +24,7 @@ test.describe("Smoke tests", () => {
     // If the feed is empty ("No content submitted yet"), the sort dropdown still renders,
     // proving the wallet connected and the page loaded (just no content in Ponder yet).
     const voteUp = page.getByRole("button", { name: "Vote up" });
-    const votedStatus = page.getByText(/Voted (Up|Down)/i);
+    const votedStatus = page.getByText(/Voted(?: hidden| Up| Down)?/i);
     const ownContent = page.getByText("Your submission");
     const emptyFeed = page.getByText("No content submitted yet");
     const sortDropdown = page.locator("select").first();

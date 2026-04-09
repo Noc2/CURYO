@@ -167,7 +167,7 @@ export const useScaffoldEventHistory = <
     },
     enabled: enabled && isContractAddressAndClientReady && !isPollingActive, // Disable when polling starts
     initialPageParam: fromBlockValue,
-    getNextPageParam: (lastPage, allPages, lastPageParam) => {
+    getNextPageParam: (_lastPage, _allPages, lastPageParam) => {
       if (!blockNumber || fromBlockValue >= blockNumber) return undefined;
 
       const nextBlock = lastPageParam + BigInt(blocksBatchSize);

@@ -2,7 +2,6 @@ import { ContentRegistryAbi } from "@curyo/contracts/abis";
 import { ROUND_STATE } from "@curyo/contracts/protocol";
 import { ponder } from "ponder:registry";
 import { content, category, profile, globalStats, ratingChange, round } from "ponder:schema";
-import { eq } from "ponder";
 import { getCanonicalUrlParts } from "./urlCanonicalization.js";
 
 function displayRatingFromBps(ratingBps: number) {

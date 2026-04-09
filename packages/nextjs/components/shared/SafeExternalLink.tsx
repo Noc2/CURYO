@@ -32,7 +32,7 @@ export function ExternalLinkBehaviorProvider({
   );
 }
 
-export function useExternalLinkBehavior() {
+function useExternalLinkBehavior() {
   return useContext(ExternalLinkBehaviorContext);
 }
 

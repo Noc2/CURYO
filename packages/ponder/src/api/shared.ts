@@ -2,7 +2,7 @@ import { DEFAULT_REVEAL_GRACE_PERIOD_SECONDS, DEFAULT_ROUND_CONFIG, ROUND_STATE 
 import type { Context, Hono } from "hono";
 import { and, desc, eq, inArray, replaceBigInts } from "ponder";
 import { db } from "ponder:api";
-import { content, round } from "ponder:schema";
+import { round } from "ponder:schema";
 import { isValidAddress, safeBigInt } from "./utils.js";
 
 export type ApiApp = Hono;

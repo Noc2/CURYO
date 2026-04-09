@@ -1,8 +1,12 @@
-export type VoteCommittedLogLike = {
+type VoteCommittedLogLike = {
   blockHash?: `0x${string}` | null;
   blockNumber?: bigint | null;
   logIndex?: number | null;
 };
+
+export function shouldUseAddressLogCooldownFallback(params: { hasVoterId: boolean; isIdentityResolved: boolean }) {
+  return params.isIdentityResolved && !params.hasVoterId;
+}
 
 export function pickLatestVoteCommittedLog<T extends VoteCommittedLogLike>(logs: readonly T[]): T | null {
   let latest: T | null = null;

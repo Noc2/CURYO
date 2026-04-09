@@ -1,6 +1,6 @@
 import { publicClient, getAccount } from "../client.js";
 import { contractConfig } from "../contracts.js";
-import { config, log } from "../config.js";
+import { config } from "../config.js";
 import { ponder } from "../ponder.js";
 import { formatEther } from "viem";
 import { ProtocolConfigAbi } from "@curyo/contracts/abis";

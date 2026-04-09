@@ -1,6 +1,7 @@
 import {
   buildSubmitterClaimableRewards,
   buildSubmitterParticipationClaimableRewards,
+  buildVoterParticipationClaimableRewards,
   sortClaimableRewardItems,
 } from "./claimableRewards";
 import assert from "node:assert/strict";
@@ -36,6 +37,60 @@ test("buildSubmitterClaimableRewards filters out zero-value and already-claimed 
       claimType: "submitter_reward",
     },
   ]);
+});
+
+test("buildVoterParticipationClaimableRewards surfaces partially reserved winning-voter rewards", () => {
+  const items = buildVoterParticipationClaimableRewards([
+    {
+      contentId: 4n,
+      roundId: 2n,
+      stake: 10_000_000n,
+      rateBps: 9000n,
+      totalReward: 18_000_000n,
+      reservedReward: 9_000_000n,
+      alreadyPaid: 2_000_000n,
+      rewardPool: "0x4000000000000000000000000000000000000000",
+      alreadyClaimed: false,
+    },
+  ]);
+
+  assert.deepEqual(items, [
+    {
+      contentId: 4n,
+      roundId: 2n,
+      reward: 2_500_000n,
+      claimType: "participation_reward",
+    },
+  ]);
+});
+
+test("buildVoterParticipationClaimableRewards skips already claimed or unbacked rewards", () => {
+  const items = buildVoterParticipationClaimableRewards([
+    {
+      contentId: 4n,
+      roundId: 2n,
+      stake: 10_000_000n,
+      rateBps: 9000n,
+      totalReward: 18_000_000n,
+      reservedReward: 18_000_000n,
+      alreadyPaid: 0n,
+      rewardPool: "0x4000000000000000000000000000000000000000",
+      alreadyClaimed: true,
+    },
+    {
+      contentId: 5n,
+      roundId: 2n,
+      stake: 10_000_000n,
+      rateBps: 9000n,
+      totalReward: 18_000_000n,
+      reservedReward: 0n,
+      alreadyPaid: 0n,
+      rewardPool: "0x4000000000000000000000000000000000000000",
+      alreadyClaimed: false,
+    },
+  ]);
+
+  assert.deepEqual(items, []);
 });
 
 test("buildSubmitterParticipationClaimableRewards honors reserved rewards and shared pool depletion", () => {
@@ -158,6 +213,12 @@ test("sortClaimableRewardItems keeps frontend round credits ahead of the final f
       reward: 4n,
       claimType: "reward",
     },
+    {
+      contentId: 2n,
+      roundId: 1n,
+      reward: 1n,
+      claimType: "participation_reward",
+    },
   ]);
 
   assert.deepEqual(items, [
@@ -166,6 +227,12 @@ test("sortClaimableRewardItems keeps frontend round credits ahead of the final f
       roundId: 1n,
       reward: 4n,
       claimType: "reward",
+    },
+    {
+      contentId: 2n,
+      roundId: 1n,
+      reward: 1n,
+      claimType: "participation_reward",
     },
     {
       contentId: 8n,

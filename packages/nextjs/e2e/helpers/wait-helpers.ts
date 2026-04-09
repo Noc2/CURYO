@@ -157,7 +157,7 @@ export async function waitForFeedLoaded(page: Page, timeout = 15_000): Promise<v
     page
       .getByRole("button", { name: "Vote up" })
       .or(page.getByRole("button", { name: "Vote down" }))
-      .or(page.getByText(/Voted (Up|Down)/i))
+      .or(page.getByText(/Voted(?: hidden| Up| Down)?/i))
       .or(page.getByText("Your submission"))
       .or(page.getByText(/Cooldown/))
       .or(page.getByText("Round full"))

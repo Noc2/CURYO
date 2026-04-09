@@ -124,7 +124,7 @@ export const SECTIONS: Section[] = [
         blocks: [
           {
             type: "paragraph",
-            text: "Submitting content requires a URL, title, description, tags, and category. The URL must be unique. Title and description are emitted in the on-chain ContentSubmitted event so any frontend or indexer can reconstruct the same canonical metadata; the title is the primary label shown above the content, while the description gives longer context below it.",
+            text: "Submitting content requires a URL, title, description, platform, and one to three category tags. The URL must be unique. Title and description are emitted in the on-chain ContentSubmitted event so any frontend or indexer can reconstruct the same canonical metadata; the title is the primary label shown above the content, while the description gives longer context below it.",
           },
           {
             type: "paragraph",
@@ -135,7 +135,7 @@ export const SECTIONS: Section[] = [
             items: [
               "Commit (any time during the round): Choose up or down. The UI encrypts your direction and submits a single transferAndCall transaction carrying (contentId, roundReferenceRatingBps, commitHash, ciphertext, frontend, targetRound, drandChainHash). Your stake is locked; your direction is hidden on-chain until the epoch ends.",
               `Epoch ends (every ${protocolDocFacts.blindPhaseDurationLabel}): The drand beacon publishes a randomness value. The keeper fetches it, validates the stored AGE/tlock stanza against the commit metadata, decrypts eligible ciphertexts off-chain, and calls revealVoteByCommitKey() for unrevealed commits.`,
-              `Settlement: After at least ${protocolDocFacts.minVotersLabel} votes are revealed and all past-epoch votes are revealed (or the ${protocolDocFacts.revealGracePeriodLabel} reveal grace period expires), anyone may call settleRound(contentId, roundId). The side with the larger epoch-weighted stake wins. The content rating is recalculated at settlement from revealed raw stakes.`,
+              `Settlement: After at least ${protocolDocFacts.minVotersLabel} votes are revealed and all past-epoch votes are revealed (or the ${protocolDocFacts.revealGracePeriodLabel} reveal grace period expires), anyone may call settleRound(contentId, roundId). The side with the larger epoch-weighted stake wins. The content rating updates from the round reference score using epoch-weighted revealed stake evidence.`,
               `Claim: Winners call claimReward(contentId, roundId) to receive their original stake plus an epoch-weighted share of the remaining losing pool. Revealed losers may also call claimReward(contentId, roundId) to recover a fixed ${protocolDocFacts.revealedLoserRefundPercentLabel} rebate. Content submitters may claim a separate submitter reward.`,
             ],
           },
@@ -230,23 +230,23 @@ export const SECTIONS: Section[] = [
           },
           {
             type: "paragraph",
-            text: "For voter i on the winning side:",
+            text: "For voter i on the winning side, net payoff beyond recovering the original stake is:",
           },
           {
             type: "formula",
-            latex: `P_i^{\\mathrm{win}} = s_i + \\frac{e_i}{W_e} \\times ${protocolDocFacts.voterPoolEffectiveRawFactorLabel} \\, L`,
+            latex: `P_i^{\\mathrm{win}} = \\frac{e_i}{W_e} \\times ${protocolDocFacts.voterPoolEffectiveRawFactorLabel} \\, L`,
           },
           {
             type: "paragraph",
-            text: "where e_i is the epoch-weighted effective stake (e_i = s_i for Tier 1, e_i = 0.25 * s_i for Tier 2+) and W_e is the sum of effective stakes on the winning side. This means Tier 1 voters earn 4x more reward per cREP staked compared to Tier 2+ voters with the same raw stake.",
+            text: "where e_i is the epoch-weighted effective stake (e_i = s_i for Tier 1, e_i = 0.25 * s_i for Tier 2+) and W_e is the sum of effective stakes on the winning side. Winners also recover their original stake. This means Tier 1 voters earn 4x more reward per cREP staked compared to Tier 2+ voters with the same raw stake.",
           },
           {
             type: "paragraph",
-            text: "For voter i on the losing side:",
+            text: `For voter i on the losing side, the revealed-loser rebate reduces the net loss to ${protocolDocFacts.revealedLoserRefundPercentLabel} less than the original stake:`,
           },
           {
             type: "formula",
-            latex: "P_i^{\\mathrm{lose}} = -s_i",
+            latex: "P_i^{\\mathrm{lose}} = -0.95\\,s_i",
           },
           {
             type: "paragraph",
@@ -254,7 +254,7 @@ export const SECTIONS: Section[] = [
           },
           {
             type: "formula",
-            latex: `E[P_i^{T1}] = s_i \\left[ P(\\mathrm{win}) \\left(1 + \\frac{${protocolDocFacts.voterPoolEffectiveRawFactorLabel} \\, L}{W_e}\\right) - P(\\mathrm{lose}) \\right]`,
+            latex: `E[P_i^{T1}] = s_i \\left[ P(\\mathrm{win}) \\frac{${protocolDocFacts.voterPoolEffectiveRawFactorLabel} \\, L}{W_e} - P(\\mathrm{lose}) \\cdot 0.95 \\right]`,
           },
           {
             type: "sub_heading",
@@ -262,7 +262,7 @@ export const SECTIONS: Section[] = [
           },
           {
             type: "paragraph",
-            text: `If each voter has a private signal with accuracy p > 0.5 about the true majority direction, honest voting (following one's signal) constitutes a Bayesian Nash Equilibrium. The tlock scheme enforces that votes committed before epoch end are cryptographically hidden from other voters, ensuring genuine independence. Deviating from honest voting moves a voter from the expected-winning pool to the expected-losing pool, sacrificing their full stake. For p > 0.5, the expected gain from honest voting dominates any deviation. The epoch-weight penalty (${protocolDocFacts.earlyVoterAdvantageLabel} ratio) further strengthens this equilibrium by rewarding early honest voters disproportionately, making bandwagoning (waiting to see epoch-1 results) costly in reward terms.`,
+            text: `If each voter has a private signal with accuracy p > 0.5 about the true majority direction, honest voting (following one's signal) constitutes a Bayesian Nash Equilibrium. The tlock scheme enforces that votes committed before epoch end are cryptographically hidden from other voters, ensuring genuine independence. Deviating from honest voting moves a voter from the expected-winning pool to the expected-losing pool, sacrificing most of their stake after the fixed revealed-loser rebate. For p > 0.5, the expected gain from honest voting dominates any deviation. The epoch-weight penalty (${protocolDocFacts.earlyVoterAdvantageLabel} ratio) further strengthens this equilibrium by rewarding early honest voters disproportionately, making bandwagoning (waiting to see epoch-1 results) costly in reward terms.`,
           },
           {
             type: "sub_heading",
@@ -274,7 +274,7 @@ export const SECTIONS: Section[] = [
           },
           {
             type: "formula",
-            latex: `P(\\mathrm{win}) > \\frac{1}{1 + ${protocolDocFacts.voterPoolEffectiveRawFactorLabel} \\cdot L/W_e}`,
+            latex: `P(\\mathrm{win}) > \\frac{0.95}{0.95 + ${protocolDocFacts.voterPoolEffectiveRawFactorLabel} \\cdot L/W_e}`,
           },
           {
             type: "paragraph",
@@ -311,7 +311,7 @@ export const SECTIONS: Section[] = [
         blocks: [
           {
             type: "paragraph",
-            text: "The theoretical incentive properties are validated by a 46-scenario Forge test suite covering game theory, participation economics, governance capture, and round lifecycle edge cases.",
+            text: "The theoretical incentive properties are validated by a 49-scenario Forge test suite covering game theory, participation economics, governance capture, and round lifecycle edge cases.",
           },
           {
             type: "sub_heading",
@@ -352,7 +352,7 @@ export const SECTIONS: Section[] = [
           },
           {
             type: "paragraph",
-            text: "Despite the multiplicity of equilibria in abstract game theory (contrarian voting or random voting are also self-consistent), the honest voting equilibrium from the formal analysis serves as the focal (Schelling) point. It is Pareto-dominant  -- honest voters collectively earn more than any coordinated deviation. This focal point is reinforced by participation pool rewards (which pay regardless of outcome, reducing the penalty for being in the minority) and the threat of permanent Voter ID revocation for detected manipulation.",
+            text: "Despite the multiplicity of equilibria in abstract game theory (contrarian voting or random voting are also self-consistent), the honest voting equilibrium from the formal analysis serves as the focal (Schelling) point. It is Pareto-dominant  -- honest voters collectively earn more than any coordinated deviation. This focal point is reinforced by winner participation rewards, revealed-loser rebates that reduce but do not remove downside risk, and the threat of governance Voter ID revocation for detected manipulation.",
           },
         ],
       },
@@ -410,7 +410,8 @@ export const SECTIONS: Section[] = [
             type: "bullets",
             items: [
               "Safety check: Content with an active unsettled round cannot be marked dormant, protecting voters from stranded stakes.",
-              "Revival: Dormant content can be revived by staking 5 cREP. This resets the 30-day activity timer. Each content item can be revived up to 2 times.",
+              "Revival: Dormant content can be revived by a Voter ID holder who proves the original submitter identity and stakes 5 cREP to the treasury. This resets the 30-day activity timer. Each content item can be revived up to 2 times.",
+              "Exclusive window: The original submitter has a 1-day exclusive revival window before the dormant submission key can be released.",
               "Permanent dormancy: After 2 revivals, content that goes dormant again cannot be revived.",
             ],
           },
@@ -544,7 +545,7 @@ export const SECTIONS: Section[] = [
           },
           {
             type: "paragraph",
-            text: "One-sided rounds (only up or only down votes revealed) settle as tied/consensus. All stakes are returned, and voters receive a small reward from the consensus subsidy reserve -- 5% of the total stake (capped at 50 cREP per round), split between voters (~89%) and the content submitter (~11%).",
+            text: "One-sided rounds (only up or only down votes revealed) settle normally with the revealed side as the winner and a zero losing pool. All stakes are returned, and voters receive a small reward from the consensus subsidy reserve -- 5% of the total stake (capped at 50 cREP per round), split between voters (~89%) and the content submitter (~11%). These rounds are consensus-subsidized settlements, not tied-round settlements.",
           },
           {
             type: "paragraph",
@@ -578,7 +579,7 @@ export const SECTIONS: Section[] = [
           },
           {
             type: "paragraph",
-            text: `Rounds require a minimum of ${protocolDocFacts.minVotersLabel} revealed votes (minVoters) to settle as contested. If ${protocolDocFacts.maxRoundDurationLabel} pass below commit quorum, the round is cancelled and refundable. If commit quorum was reached but reveal quorum still never materializes by the final reveal grace deadline, the round can finalize as RevealFailed: revealed votes remain refundable, while unrevealed stakes are forfeited in cleanup. If all voters vote in the same direction, the round settles as a consensus and voters receive a subsidy payout.`,
+            text: `Rounds require a minimum of ${protocolDocFacts.minVotersLabel} revealed votes (minVoters) to settle as contested. If ${protocolDocFacts.maxRoundDurationLabel} pass below commit quorum, the round is cancelled and refundable. If commit quorum was reached but reveal quorum still never materializes by the final reveal grace deadline, the round can finalize as RevealFailed: revealed votes remain refundable, while unrevealed stakes are forfeited in cleanup. If all voters reveal in the same direction, the round settles with that side as the winner and receives a consensus subsidy payout.`,
           },
           {
             type: "sub_heading",
@@ -594,7 +595,7 @@ export const SECTIONS: Section[] = [
           },
           {
             type: "paragraph",
-            text: "The on-chain commitment is commitHash = keccak256(isUp, salt, contentId, keccak256(ciphertext)) where salt is a 32-byte random value chosen by the voter and ciphertext is the exact timelock payload submitted on-chain. In the redeployed contracts, the commit also binds the target drand round and chain hash so the keeper/runtime stack can validate the reveal metadata before decryption. Guessing the direction requires finding a preimage of keccak256, which is computationally infeasible. The tlock ciphertext additionally encrypts the direction to the epoch-end timestamp, providing a second layer of confidentiality.",
+            text: "The on-chain commitment is commitHash = keccak256(isUp, salt, contentId, roundReferenceRatingBps, targetRound, drandChainHash, keccak256(ciphertext)) where salt is a 32-byte random value chosen by the voter and ciphertext is the exact timelock payload submitted on-chain. Binding the round reference score, target drand round, chain hash, and ciphertext digest prevents a valid reveal from being replayed against a different score anchor or drand target. Guessing the direction requires finding a preimage of keccak256, which is computationally infeasible. The tlock ciphertext additionally encrypts the direction to the epoch-end timestamp, providing a second layer of confidentiality.",
           },
           {
             type: "sub_heading",
@@ -627,7 +628,7 @@ export const SECTIONS: Section[] = [
         blocks: [
           {
             type: "paragraph",
-            text: "cREP has no monetary value and is not designed as an investment or financial instrument. It exists solely to measure reputation and participation within the Curyo platform. It cannot be purchased  -- it is only earned through verified identity claims and active participation. There is no team, no company, and no central entity behind the token. Curyo is a fully decentralized, community-governed protocol from day one.",
+            text: "cREP has no monetary value and is not designed as an investment or financial instrument. It exists solely to measure reputation and participation within the Curyo platform. The protocol does not sell cREP: distribution is intended to flow through verified identity claims and active participation, while unlocked balances remain standard transferable token balances. There is no team, no company, and no central entity behind the token. Curyo is a fully decentralized, community-governed protocol from day one.",
           },
         ],
       },
@@ -867,7 +868,7 @@ export const SECTIONS: Section[] = [
           },
           {
             type: "paragraph",
-            text: "If detected via on-chain pattern analysis (correlated wallet funding, synchronized vote timing, identical stake amounts) and a subsequent governance proposal, all K identities are permanently revoked. The attacker loses not only the current round's stake but all future voting capability across those identities. The expected cost of detection increases with K (more identities produce more on-chain correlation signals), creating a superlinear deterrent:",
+            text: "If detected via on-chain pattern analysis (correlated wallet funding, synchronized vote timing, identical stake amounts) and a subsequent governance proposal, all K identities can be revoked. The attacker loses not only the current round's stake but future voting capability across those identities unless governance later restores a valid claim path. The expected cost of detection increases with K (more identities produce more on-chain correlation signals), creating a superlinear deterrent:",
           },
           {
             type: "formula",
@@ -896,7 +897,7 @@ export const SECTIONS: Section[] = [
           },
           {
             type: "paragraph",
-            text: "Curyo is a reputation token with no monetary value. It is not sold, has no treasury backing, and is not designed as a financial instrument. Governance power comes from earning reputation through verified participation, not from purchasing tokens.",
+            text: "Curyo is a reputation token with no monetary value. It is not sold by the protocol, has no treasury backing, and is not designed as a financial instrument. Governance power is intended to come from reputation earned through verified participation, not from a token sale.",
           },
         ],
       },
@@ -950,7 +951,7 @@ export const SECTIONS: Section[] = [
         blocks: [
           {
             type: "paragraph",
-            text: "The following parameters control per-content round-based voting. Core round settings are adjustable via governance proposals through the setConfig() function on the RoundVotingEngine contract. The reveal grace period is updated separately through setRevealGracePeriod().",
+            text: "The following parameters control per-content round-based voting. Core round settings are adjustable via governance proposals through setConfig(), while reveal timing, drand metadata, rating behavior, and submitter slash guardrails are configured through separate ProtocolConfig functions. New rounds snapshot the round, drand, and rating configuration they start with.",
           },
           {
             type: "table",
@@ -973,7 +974,28 @@ export const SECTIONS: Section[] = [
                   "Minimum revealed votes required before settlement is allowed",
                 ],
                 ["maxVoters", protocolDocFacts.maxVotersLabel, "Per-round cap on total commits"],
-                ["Rating smoothing (b_r)", "50 cREP (hardcoded)", "Controls rating sensitivity to individual votes"],
+                ["Rating smoothing", "alpha=10 cREP / beta=10 cREP", "Dampens small or lopsided vote-share samples"],
+                ["Observation beta", "2.0", "Scales the score-gap signal before logit movement"],
+                [
+                  "Confidence mass",
+                  "80 cREP initial, bounded 50-500 cREP",
+                  "Controls rating inertia as evidence accumulates",
+                ],
+                [
+                  "Movement caps",
+                  "0.6 logit per round, +/-4.595 total",
+                  "Limits single-round and absolute score movement",
+                ],
+                [
+                  "Conservative slashing",
+                  "15% max / 2.5% min penalty",
+                  "Derives the low-confidence rating bound used for submitter slashing",
+                ],
+                [
+                  "Slash guardrails",
+                  "25 score, 2 settled rounds, 7 days low, 200 cREP evidence",
+                  "Gates submitter slashability",
+                ],
                 ["Vote stake", "1-100 cREP", "Stake range per vote, capped per Voter ID"],
                 ["Vote cooldown", "24 hours", "Wait time before voting on the same content again"],
               ],
@@ -981,7 +1003,7 @@ export const SECTIONS: Section[] = [
           },
           {
             type: "paragraph",
-            text: `The epoch-based mechanism ensures rounds complete within a bounded timeframe. The epochDuration defines the reward tier window (${protocolDocFacts.blindPhaseDurationLabel} for full weight). Settlement becomes available once minVoters is reached and past-epoch reveal constraints are satisfied. The maxDuration hard cap prevents indefinite rounds. The rating smoothing parameter b_r is hardcoded and controls how responsive the content rating is to individual revealed votes. As the platform grows, governance can adjust the configurable parameters to optimize for the observed voter population.`,
+            text: `The epoch-based mechanism ensures rounds complete within a bounded timeframe. The epochDuration defines the reward tier window (${protocolDocFacts.blindPhaseDurationLabel} for full weight). Settlement becomes available once minVoters is reached and past-epoch reveal constraints are satisfied. The maxDuration hard cap prevents indefinite rounds. RatingConfig replaces the old single hardcoded smoothing constant with governance-controlled smoothing, confidence, movement-cap, and conservative-bound parameters. As the platform grows, governance can adjust the configurable parameters to optimize for the observed voter population while in-progress rounds keep their snapshotted rules.`,
           },
         ],
       },
@@ -1033,7 +1055,7 @@ export const SECTIONS: Section[] = [
           {
             type: "bullets",
             items: [
-              "Revoke Voter IDs  -- governance can permanently revoke the Voter ID NFTs of confirmed colluders, removing their ability to vote on the platform.",
+              "Revoke Voter IDs  -- governance can revoke the Voter ID NFTs of confirmed colluders, removing their ability to vote on the platform unless governance later restores a valid claim path.",
               "Reward whistleblowers  -- governance is encouraged to allocate cREP from the treasury to reward community members who provide evidence of collusion.",
             ],
           },
@@ -1051,7 +1073,7 @@ export const SECTIONS: Section[] = [
               "Sybil resistance  -- 1 person = 1 Voter ID via Self.xyz passport or biometric ID card verification.",
               "Stake caps  -- maximum 100 cREP per content per round limits single-voter influence.",
               "Vote cooldowns  -- a 24-hour cooldown on the same content prevents rapid re-voting and is enforced per effective Voter ID.",
-              "Permanent revocation  -- losing your Voter ID is irreversible and eliminates voting ability.",
+              "Governance revocation  -- losing your Voter ID removes voting ability and makes recovery depend on a later governance action.",
             ],
           },
           {
@@ -1088,7 +1110,7 @@ export const SECTIONS: Section[] = [
           },
           {
             type: "paragraph",
-            text: "On-chain signals of collusion include: identical vote timing within the same block or narrow window, correlated stake amounts, shared funding sources traceable via transaction graphs, and repeated same-direction voting on identical content across rounds. The probability of detection P(detect | C) is monotonically increasing in C. Combined with permanent Voter ID revocation, the expected penalty is:",
+            text: "On-chain signals of collusion include: identical vote timing within the same block or narrow window, correlated stake amounts, shared funding sources traceable via transaction graphs, and repeated same-direction voting on identical content across rounds. The probability of detection P(detect | C) is monotonically increasing in C. Combined with governance Voter ID revocation, the expected penalty is:",
           },
           {
             type: "formula",
@@ -1134,7 +1156,7 @@ export const SECTIONS: Section[] = [
           {
             type: "bullets",
             items: [
-              "Revoke Voter IDs  -- governance can permanently revoke the Voter IDs of accounts that repeatedly submit spam or unrevealable vote commits, removing their ability to keep disrupting rounds.",
+              "Revoke Voter IDs  -- governance can revoke the Voter IDs of accounts that repeatedly submit spam or unrevealable vote commits, removing their ability to keep disrupting rounds unless governance later restores a valid claim path.",
               "Reward investigators  -- governance is encouraged to use treasury funds to reward operators or community members who document repeated abuse with reproducible evidence from on-chain data and resolution-service observations.",
             ],
           },
@@ -1152,7 +1174,7 @@ export const SECTIONS: Section[] = [
               "Stake at risk  -- unrevealed past-epoch votes can be forfeited to treasury during cleanup, and unrevealed commits in reveal-failed rounds are forfeited rather than refunded.",
               "Sybil resistance  -- 1 person = 1 Voter ID via Self.xyz passport or biometric ID card verification.",
               "Stake caps  -- maximum 100 cREP per content per round limits damage from any one Voter ID.",
-              "Permanent revocation  -- losing your Voter ID is irreversible and eliminates future voting ability.",
+              "Governance revocation  -- losing your Voter ID eliminates future voting ability unless governance later restores a valid claim path.",
             ],
           },
           {
@@ -1254,7 +1276,7 @@ export const SECTIONS: Section[] = [
         blocks: [
           {
             type: "paragraph",
-            text: "A foundational design decision in Curyo is the use of a public blockchain as the settlement layer. This ensures that all quality ratings -- including individual vote directions, stake amounts, round outcomes, and resulting content scores -- are inherently public, permissionless, and exportable. No proprietary API key or platform terms-of-service restriction mediates access to the data; hosted indexers may still apply service-level rate limits, but the underlying chain data remains open.",
+            text: "A foundational design decision in Curyo is the use of a public blockchain as the settlement layer. This ensures that all quality ratings -- including individual vote directions, stake amounts, round outcomes, and resulting content scores -- are inherently public, permissionless, and exportable. No proprietary API key or platform terms-of-service restriction mediates access to the underlying chain data. Hosted indexers and reference frontends may still apply service-level rate limits and policy-driven moderation filters to their displayed or indexed reads, but those filters do not alter the canonical on-chain record.",
           },
           {
             type: "paragraph",
@@ -1280,11 +1302,11 @@ export const SECTIONS: Section[] = [
         blocks: [
           {
             type: "paragraph",
-            text: "Curyo incorporates AI as a first-class participant through automated voting bots that use pluggable rating strategies. Each strategy queries an external API to obtain a normalized quality score for submitted content. The bot votes up or down based on whether the score meets a configurable threshold.",
+            text: "Curyo incorporates AI as a first-class participant through reference bot tooling that uses pluggable rating strategies. Each strategy can query an external API to obtain a normalized quality score for supported content. The bot votes up or down based on whether the score meets a configurable threshold, but it is a manual or schedulable CLI rather than an always-on protocol daemon.",
           },
           {
             type: "paragraph",
-            text: "Submission bots can also publish richer metadata than a single free-form caption. They submit a short title, a longer description, tags, and a category alongside the canonical URL, which makes downstream discovery interfaces easier to scan while keeping the same shared on-chain event history for every frontend.",
+            text: "Submission bots can also publish richer metadata than a single free-form caption. They submit a short title, a longer description, platform, and category tags alongside the canonical URL, which makes downstream discovery interfaces easier to scan while keeping the same shared on-chain event history for every frontend. Coverage is intentionally adapter-based: supported sources can submit or vote today, while other platform categories remain read-only or pending until an adapter exists.",
           },
           {
             type: "paragraph",
@@ -1304,7 +1326,24 @@ export const SECTIONS: Section[] = [
           },
           {
             type: "paragraph",
-            text: "AI-assisted voting directly addresses the cold-start problem inherent in new content platforms. When a content item is submitted, automated strategies can produce initial quality signals within seconds, seeding the voting market before human participants engage. This creates immediate activity and provides a focal point for human voters to agree or disagree with, accelerating convergence toward accurate ratings.",
+            text: "AI-assisted voting addresses the cold-start problem inherent in new content platforms. When a bot run or external scheduler picks up newly submitted content, automated strategies can seed an initial quality signal before many human participants engage. This creates early activity and provides a focal point for human voters to agree or disagree with, accelerating convergence toward accurate ratings without giving bots protocol-level privileges.",
+          },
+        ],
+      },
+      {
+        heading: "SDK, MCP & Reference Stack",
+        blocks: [
+          {
+            type: "paragraph",
+            text: "The current reference implementation includes integration surfaces around the core contracts. These services are not consensus-critical, but they make the public protocol easier to read, operate, and automate.",
+          },
+          {
+            type: "bullets",
+            items: [
+              "SDK: @curyo/sdk provides hosted read helpers, vote transaction payload builders, and frontend attribution helpers while staying wallet-agnostic.",
+              "MCP: the hosted MCP service exposes Ponder-backed structured reads plus a narrow authenticated write surface for common actions such as vote, submit, claim reward, and claim frontend fee. Write-capable sessions are scoped and wallet-bound rather than generic contract passthroughs.",
+              "Operator stack: the monorepo includes the Next.js app, Ponder/Postgres API, keeper service, bot CLI, SDK, MCP server, shared contract metadata, and Solidity contracts. Operators can self-host these pieces or use the hosted endpoints where available.",
+            ],
           },
         ],
       },
@@ -1387,7 +1426,7 @@ export const SECTIONS: Section[] = [
         blocks: [
           {
             type: "paragraph",
-            text: "Governance can change round parameters (epochDuration, maxDuration, minVoters) at any time through the standard proposal process. Changes apply to new rounds only: each round snapshots configuration at creation time, so in-progress rounds keep the rules they started with.",
+            text: "Governance can change round parameters, reveal grace, drand metadata, rating configuration, and submitter slash configuration through the standard proposal process. Round, drand, and rating changes apply to new rounds only: each round snapshots configuration at creation time, so in-progress rounds keep the rules they started with. Submitter slash settings are snapshotted per content submission.",
           },
         ],
       },

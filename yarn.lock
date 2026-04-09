@@ -19,6 +19,17 @@ __metadata:
   languageName: node
   linkType: hard
 
+"@axe-core/playwright@npm:^4.11.1":
+  version: 4.11.1
+  resolution: "@axe-core/playwright@npm:4.11.1"
+  dependencies:
+    axe-core: ~4.11.1
+  peerDependencies:
+    playwright-core: ">= 1.0.0"
+  checksum: 311f107688bfd930ee201dbab9c75048a6cdd39be7af0d8fdf05e5d01b76ef8d57ca687954102839eefa14ec23f96b6a2833d4bef82c4b280e43b7f4e15a39b3
+  languageName: node
+  linkType: hard
+
 "@babel/code-frame@npm:^7.0.0, @babel/code-frame@npm:^7.23.4, @babel/code-frame@npm:^7.29.0":
   version: 7.29.0
   resolution: "@babel/code-frame@npm:7.29.0"
@@ -463,6 +474,7 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "@curyo/nextjs@workspace:packages/nextjs"
   dependencies:
+    "@axe-core/playwright": ^4.11.1
     "@curyo/contracts": "workspace:*"
     "@curyo/node-utils": "workspace:*"
     "@curyo/sdk": "workspace:*"
@@ -497,6 +509,7 @@ __metadata:
     next-nprogress-bar: ~2.3.13
     pg: ^8.20.0
     pg-mem: ^3.0.14
+    playwright-core: 1.58.2
     postcss: ~8.4.45
     prettier: ~3.5.3
     react: ~19.2.3
@@ -9612,6 +9625,13 @@ __metadata:
   version: 4.11.1
   resolution: "axe-core@npm:4.11.1"
   checksum: 92b3c79af3695bcebac0e7f3f90f4bc11d2b39ccdc670937290e8dacbc943473713cc06b771dea0563c66d57d93d940ed89e082bfdecccf9dd70782d4bb243c0
+  languageName: node
+  linkType: hard
+
+"axe-core@npm:~4.11.1":
+  version: 4.11.2
+  resolution: "axe-core@npm:4.11.2"
+  checksum: 9d156e714990ace407814235d823eb996a6b419162cfa80e9d85ac79b42b4ca9aaa2adf29698618b389ec5e2bd967f57464aeb84928fa261122b46b49f7fb513
   languageName: node
   linkType: hard
 

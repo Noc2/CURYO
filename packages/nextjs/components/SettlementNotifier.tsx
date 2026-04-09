@@ -21,6 +21,10 @@ import {
   readLastClaimRewardNotificationAt,
   writeLastClaimRewardNotificationAt,
 } from "~~/lib/notifications/claimRewards";
+import {
+  getFollowedSubmissionNotificationKey,
+  pickFollowedSubmissionNotifications,
+} from "~~/lib/notifications/followedActivity";
 import { pickSettlingSoonNotification } from "~~/lib/notifications/settlingSoon";
 import { notification } from "~~/utils/scaffold-eth";
 
@@ -203,14 +207,16 @@ export function SettlementNotifier() {
     }
 
     for (const item of discoverSignals.followedSubmissions) {
-      const key = `${item.contentId}-${item.createdAt}`;
-      currentSubmissionKeys.add(key);
+      currentSubmissionKeys.add(getFollowedSubmissionNotificationKey(item));
+    }
 
-      if (
-        discoverSignalsInitializedRef.current &&
-        preferences.followedSubmission &&
-        !seenFollowedSubmissionKeysRef.current.has(key)
-      ) {
+    if (discoverSignalsInitializedRef.current && preferences.followedSubmission) {
+      const submissionNotifications = pickFollowedSubmissionNotifications(
+        discoverSignals.followedSubmissions,
+        seenFollowedSubmissionKeysRef.current,
+      );
+
+      for (const item of submissionNotifications) {
         const displayName = item.profileName || `${item.submitter.slice(0, 6)}...${item.submitter.slice(-4)}`;
         const shortTitle = truncateContentTitle(item.title);
         notifyWithLink(

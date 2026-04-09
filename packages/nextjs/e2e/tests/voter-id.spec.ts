@@ -24,8 +24,6 @@ test.describe("VoterID lifecycle", () => {
   test.describe.configure({ mode: "serial" });
 
   const VOTER_ID_NFT = CONTRACT_ADDRESSES.VoterIdNFT;
-  let minted = false;
-
   test("seed-minted VoterIDs are indexed in Ponder", async () => {
     test.setTimeout(30_000);
 
@@ -52,8 +50,6 @@ test.describe("VoterID lifecycle", () => {
     // Check if account #11 already has a VoterID (from prior test run on same chain)
     const alreadyHas = await hasVoterIdOnChain(ANVIL_ACCOUNTS.account11.address, VOTER_ID_NFT);
     if (alreadyHas) {
-      // Already minted — mark as minted so revocation test can proceed
-      minted = true;
       test.skip(true, "Account #11 already has VoterID (prior run on same chain)");
       return;
     }
@@ -72,7 +68,6 @@ test.describe("VoterID lifecycle", () => {
     // Verify on-chain
     const hasOnChain = await hasVoterIdOnChain(ANVIL_ACCOUNTS.account11.address, VOTER_ID_NFT);
     expect(hasOnChain).toBe(true);
-    minted = true;
 
     // Wait for Ponder to index the mint — check for a non-revoked entry
     // (prior runs may have left revoked entries that match immediately)

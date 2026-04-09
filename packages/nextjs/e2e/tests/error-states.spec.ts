@@ -17,10 +17,6 @@ test.describe("Error states and edge cases", () => {
     const getVoterIdLink = page.getByRole("link", { name: /Get Voter ID/i });
     const submitForm = page.getByRole("heading", { name: "Submit Content" });
     const signedOutHeading = page.getByRole("heading", { name: "Submit" });
-    const signInButton = page
-      .getByTestId("auth-connect-button")
-      .or(page.getByRole("button", { name: /Sign In(?: Unavailable)?|Unavailable/i }).first());
-
     // Local wallet auto-connect is best-effort in E2E. Accept either the
     // connected no-VoterID prompt, the full submit form, or the signed-out shell.
     await expect(voterIdRequired.or(submitForm).or(signedOutHeading)).toBeVisible({ timeout: 15_000 });

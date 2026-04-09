@@ -9,7 +9,7 @@ test.describe("Content feed", () => {
     // The feed should show vote UI or an empty state — one of these must be visible
     const anyState = page
       .getByRole("button", { name: "Vote up" })
-      .or(page.getByText(/Voted (Up|Down)/i))
+      .or(page.getByText(/Voted(?: hidden| Up| Down)?/i))
       .or(page.getByText("Your submission"))
       .or(page.getByText("Round full"))
       .or(page.getByText(/Cooldown/))

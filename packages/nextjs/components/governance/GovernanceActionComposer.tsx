@@ -199,7 +199,7 @@ const actionTemplates: readonly GovernanceActionTemplate[] = [
       { key: "domain", label: "Domain", type: "string", required: true },
       { key: "subcategories", label: "Subcategories", type: "csv", required: true, helperText: "Comma-separated" },
     ],
-    buildArgs: (values, parser) => [
+    buildArgs: (_, parser) => [
       parser.string("name", "Name"),
       parser.string("domain", "Domain").toLowerCase(),
       parser.csv("subcategories"),

@@ -1,18 +1,10 @@
 "use client";
 
-export type ClaimableRewardType =
-  | "reward"
-  | "refund"
-  | "submitter_reward"
-  | "submitter_participation_reward"
-  | "frontend_round_fee"
-  | "frontend_registry_fee";
-
 export interface RoundClaimableRewardItem {
   contentId: bigint;
   roundId: bigint;
   reward: bigint;
-  claimType: "reward" | "refund" | "submitter_reward";
+  claimType: "reward" | "refund" | "participation_reward" | "submitter_reward";
 }
 
 export interface SubmitterParticipationClaimableRewardItem {
@@ -48,6 +40,18 @@ interface SubmitterRewardClaimCandidate {
   alreadyClaimed: boolean;
 }
 
+interface VoterParticipationRewardClaimCandidate {
+  contentId: bigint;
+  roundId: bigint;
+  stake: bigint;
+  rateBps: bigint;
+  totalReward: bigint;
+  alreadyPaid: bigint;
+  reservedReward: bigint;
+  rewardPool: `0x${string}` | null;
+  alreadyClaimed: boolean;
+}
+
 interface SubmitterParticipationClaimCandidate {
   contentId: bigint;
   totalReward: bigint;
@@ -73,6 +77,37 @@ export function buildSubmitterClaimableRewards(candidates: readonly SubmitterRew
           claimType: "submitter_reward" as const,
         }) satisfies ClaimableRewardItem,
     );
+}
+
+export function buildVoterParticipationClaimableRewards(candidates: readonly VoterParticipationRewardClaimCandidate[]) {
+  return candidates.flatMap(candidate => {
+    const { contentId, roundId, stake, rateBps, totalReward, alreadyPaid, reservedReward, rewardPool, alreadyClaimed } =
+      candidate;
+
+    if (alreadyClaimed || !rewardPool || stake <= 0n || rateBps <= 0n || totalReward <= 0n) {
+      return [];
+    }
+
+    const fullReward = (stake * rateBps) / 10000n;
+    if (fullReward <= 0n) {
+      return [];
+    }
+
+    const currentlyClaimable = reservedReward < totalReward ? (fullReward * reservedReward) / totalReward : fullReward;
+    const claimableReward = currentlyClaimable > alreadyPaid ? currentlyClaimable - alreadyPaid : 0n;
+    if (claimableReward <= 0n) {
+      return [];
+    }
+
+    return [
+      {
+        contentId,
+        roundId,
+        reward: claimableReward,
+        claimType: "participation_reward" as const,
+      } satisfies ClaimableRewardItem,
+    ];
+  });
 }
 
 export function buildSubmitterParticipationClaimableRewards(
@@ -125,14 +160,16 @@ function claimExecutionPriority(item: ClaimableRewardItem) {
       return 0;
     case "reward":
       return 1;
-    case "submitter_reward":
+    case "participation_reward":
       return 2;
-    case "submitter_participation_reward":
+    case "submitter_reward":
       return 3;
-    case "frontend_round_fee":
+    case "submitter_participation_reward":
       return 4;
-    case "frontend_registry_fee":
+    case "frontend_round_fee":
       return 5;
+    case "frontend_registry_fee":
+      return 6;
   }
 }
 
