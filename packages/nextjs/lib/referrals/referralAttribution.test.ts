@@ -37,6 +37,36 @@ class ThrowingStorage extends MemoryStorage {
   }
 }
 
+class BlockableStorage extends MemoryStorage {
+  private writesBlocked = false;
+
+  blockWrites() {
+    this.writesBlocked = true;
+  }
+
+  setItem(key: string, value: string) {
+    if (this.writesBlocked) {
+      throw new Error("blocked");
+    }
+
+    super.setItem(key, value);
+  }
+}
+
+class FullyThrowingStorage {
+  getItem(): string | null {
+    throw new Error("blocked");
+  }
+
+  setItem(): void {
+    throw new Error("blocked");
+  }
+
+  removeItem(): void {
+    throw new Error("blocked");
+  }
+}
+
 test("captures a valid referral address from search params", () => {
   const localStorage = new MemoryStorage();
   const sessionStorage = new MemoryStorage();
@@ -128,6 +158,38 @@ test("manual attribution can replace a stored URL attribution", () => {
 
   assert.equal(manualAttribution?.source, "manual");
   assert.equal(getStoredReferralAddress({ localStorage, now: 2_001, sessionStorage }), SECOND_REFERRER);
+});
+
+test("manual attribution wins from session storage when local writes become blocked", () => {
+  const localStorage = new BlockableStorage();
+  const sessionStorage = new MemoryStorage();
+
+  storeReferralAttributionFromValue(REFERRER, { localStorage, now: 1_000, sessionStorage });
+  localStorage.blockWrites();
+  const manualAttribution = storeReferralAttributionFromValue(SECOND_REFERRER, {
+    localStorage,
+    now: 2_000,
+    sessionStorage,
+    source: "manual",
+  });
+
+  assert.equal(manualAttribution?.source, "manual");
+  assert.equal(getStoredReferralAddress({ localStorage, now: 2_001, sessionStorage }), SECOND_REFERRER);
+});
+
+test("blocked storage reads and cleanup do not throw", () => {
+  const localStorage = new FullyThrowingStorage();
+  const sessionStorage = new FullyThrowingStorage();
+
+  assert.doesNotThrow(() =>
+    captureReferralAttributionFromSearchParams(new URLSearchParams({ ref: REFERRER }), {
+      localStorage,
+      now: 1_000,
+      sessionStorage,
+    }),
+  );
+  assert.equal(getStoredReferralAddress({ localStorage, now: 1_001, sessionStorage }), null);
+  assert.doesNotThrow(() => clearStoredReferralAttribution({ localStorage, sessionStorage }));
 });
 
 test("reads legacy session referrers", () => {

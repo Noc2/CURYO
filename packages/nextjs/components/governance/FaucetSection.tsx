@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useId, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useQueryClient } from "@tanstack/react-query";
@@ -160,6 +160,7 @@ function clearPendingSelfVerificationSession() {
 }
 
 export function FaucetSection({ referrer }: FaucetSectionProps) {
+  const referralInputMessageId = useId();
   const { address, chain } = useAccount();
   const router = useRouter();
   const queryClient = useQueryClient();
@@ -516,6 +517,24 @@ export function FaucetSection({ referrer }: FaucetSectionProps) {
   const baseAmount = claimAmount ?? 0n;
   const referralBonusActive = referralInputState.canCheckReferrer && isValidReferrer === true;
   const referralCheckPending = referralInputState.canCheckReferrer && referrerLoading;
+  const referralInputMessage = referralInputState.isInvalid
+    ? "Enter a valid EVM address. The base faucet claim still works without it."
+    : referralInputState.isSelfReferral
+      ? "Use a different wallet address. Self-referrals do not receive a bonus."
+      : referralBonusActive
+        ? "Referral bonus active. You and the referrer receive cREP when verification succeeds."
+        : referralCheckPending
+          ? "Checking referral eligibility..."
+          : referralInputState.canCheckReferrer
+            ? "Referral saved, but this address is not eligible yet. Your base claim will still work."
+            : "Paste a referral address before verifying if someone invited you.";
+  const referralInputMessageClassName = referralInputState.isInvalid
+    ? "text-error"
+    : referralInputState.isSelfReferral
+      ? "text-warning"
+      : referralBonusActive
+        ? "text-success"
+        : "text-base-content/60";
   const bonusAmount = referralBonusActive ? (claimantBonus ?? 0n) : 0n;
   const totalClaimAmount = baseAmount + bonusAmount;
   const faucetClaimStatus = getFaucetClaimStatus({ hasClaimed: hasClaimed === true, hasVoterId });
@@ -619,6 +638,8 @@ export function FaucetSection({ referrer }: FaucetSectionProps) {
             type="text"
             value={referralInput}
             placeholder="0x..."
+            aria-describedby={referralInputMessageId}
+            aria-invalid={referralInputState.isInvalid || referralInputState.isSelfReferral || undefined}
             className={`input input-bordered min-w-0 flex-1 font-mono text-sm ${
               referralInputState.isInvalid || referralInputState.isSelfReferral ? "input-error" : ""
             }`}
@@ -635,25 +656,14 @@ export function FaucetSection({ referrer }: FaucetSectionProps) {
             Clear
           </button>
         </div>
-        {referralInputState.isInvalid ? (
-          <p className="text-sm text-error">Enter a valid EVM address. The base faucet claim still works without it.</p>
-        ) : referralInputState.isSelfReferral ? (
-          <p className="text-sm text-warning">Use a different wallet address. Self-referrals do not receive a bonus.</p>
-        ) : referralBonusActive ? (
-          <p className="text-sm text-success">
-            Referral bonus active. You and the referrer receive cREP when verification succeeds.
-          </p>
-        ) : referralCheckPending ? (
-          <p className="text-sm text-base-content/60">Checking referral eligibility...</p>
-        ) : referralInputState.canCheckReferrer ? (
-          <p className="text-sm text-base-content/60">
-            Referral saved, but this address is not eligible yet. Your base claim will still work.
-          </p>
-        ) : (
-          <p className="text-sm text-base-content/60">
-            Paste a referral address before verifying if someone invited you.
-          </p>
-        )}
+        <p
+          id={referralInputMessageId}
+          className={`text-sm ${referralInputMessageClassName}`}
+          role="status"
+          aria-live="polite"
+        >
+          {referralInputMessage}
+        </p>
       </div>
 
       {/* Referral Badge */}

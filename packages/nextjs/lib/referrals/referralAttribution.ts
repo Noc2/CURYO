@@ -46,6 +46,43 @@ function getStoragePair(options: ReferralStorageOptions) {
   };
 }
 
+function safeGetItem(storage: ReferralStorage | null, key: string): string | null {
+  if (!storage) {
+    return null;
+  }
+
+  try {
+    return storage.getItem(key);
+  } catch {
+    return null;
+  }
+}
+
+function safeSetItem(storage: ReferralStorage | null, key: string, value: string): boolean {
+  if (!storage) {
+    return false;
+  }
+
+  try {
+    storage.setItem(key, value);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+function safeRemoveItem(storage: ReferralStorage | null, key: string) {
+  if (!storage) {
+    return;
+  }
+
+  try {
+    storage.removeItem(key);
+  } catch {
+    // Ignore unavailable or blocked storage.
+  }
+}
+
 export function normalizeReferralAddress(value: string | null | undefined): string | null {
   const candidate = value?.trim().replace(/^0X/, "0x").toLowerCase();
   if (!candidate || !isAddress(candidate, { strict: false })) {
@@ -101,46 +138,52 @@ function parseReferralAttribution(rawValue: string, now: number): ReferralAttrib
 }
 
 function readAttributionFromStorage(storage: ReferralStorage | null, now: number): ReferralAttribution | null {
-  if (!storage) {
-    return null;
-  }
-
-  const rawValue = storage.getItem(REFERRAL_ATTRIBUTION_STORAGE_KEY);
+  const rawValue = safeGetItem(storage, REFERRAL_ATTRIBUTION_STORAGE_KEY);
   if (!rawValue) {
     return null;
   }
 
   const parsed = parseReferralAttribution(rawValue, now);
   if (!parsed) {
-    storage.removeItem(REFERRAL_ATTRIBUTION_STORAGE_KEY);
+    safeRemoveItem(storage, REFERRAL_ATTRIBUTION_STORAGE_KEY);
   }
 
   return parsed;
 }
 
 function readLegacyReferrer(storage: ReferralStorage | null, now: number): ReferralAttribution | null {
-  if (!storage) {
-    return null;
-  }
-
-  const referrer = normalizeReferralAddress(storage.getItem(LEGACY_REFERRER_STORAGE_KEY));
+  const referrer = normalizeReferralAddress(safeGetItem(storage, LEGACY_REFERRER_STORAGE_KEY));
   if (!referrer) {
-    storage.removeItem(LEGACY_REFERRER_STORAGE_KEY);
+    safeRemoveItem(storage, LEGACY_REFERRER_STORAGE_KEY);
     return null;
   }
 
   return createReferralAttribution(referrer, { now, source: "url" });
 }
 
+function getLatestAttribution(...attributions: Array<ReferralAttribution | null>): ReferralAttribution | null {
+  return attributions.reduce<ReferralAttribution | null>((latest, attribution) => {
+    if (!attribution) {
+      return latest;
+    }
+
+    if (!latest || attribution.capturedAt > latest.capturedAt) {
+      return attribution;
+    }
+
+    return latest;
+  }, null);
+}
+
 export function readStoredReferralAttribution(options: ReferralStorageOptions = {}): ReferralAttribution | null {
   const now = options.now ?? Date.now();
   const { local, session } = getStoragePair(options);
 
-  return (
-    readAttributionFromStorage(local, now) ??
-    readAttributionFromStorage(session, now) ??
-    readLegacyReferrer(session, now) ??
-    readLegacyReferrer(local, now)
+  return getLatestAttribution(
+    readAttributionFromStorage(local, now),
+    readAttributionFromStorage(session, now),
+    readLegacyReferrer(session, now),
+    readLegacyReferrer(local, now),
   );
 }
 
@@ -154,31 +197,19 @@ export function writeReferralAttribution(
 ): ReferralAttribution {
   const { local, session } = getStoragePair(options);
   const serialized = JSON.stringify(attribution);
-  let wrotePrimary = false;
 
-  try {
-    local?.setItem(REFERRAL_ATTRIBUTION_STORAGE_KEY, serialized);
-    local?.removeItem(LEGACY_REFERRER_STORAGE_KEY);
-    wrotePrimary = !!local;
-  } catch {
-    wrotePrimary = false;
+  const wrotePrimary = safeSetItem(local, REFERRAL_ATTRIBUTION_STORAGE_KEY, serialized);
+  if (wrotePrimary) {
+    safeRemoveItem(local, LEGACY_REFERRER_STORAGE_KEY);
   }
 
   if (!wrotePrimary) {
-    session?.setItem(REFERRAL_ATTRIBUTION_STORAGE_KEY, serialized);
+    safeSetItem(session, REFERRAL_ATTRIBUTION_STORAGE_KEY, serialized);
   } else {
-    try {
-      session?.setItem(REFERRAL_ATTRIBUTION_STORAGE_KEY, serialized);
-    } catch {
-      // localStorage already has the attribution.
-    }
+    safeSetItem(session, REFERRAL_ATTRIBUTION_STORAGE_KEY, serialized);
   }
 
-  try {
-    session?.removeItem(LEGACY_REFERRER_STORAGE_KEY);
-  } catch {
-    // Ignore legacy cleanup failures.
-  }
+  safeRemoveItem(session, LEGACY_REFERRER_STORAGE_KEY);
 
   return attribution;
 }
@@ -214,8 +245,8 @@ export function clearStoredReferralAttribution(options: ReferralStorageOptions =
   const { local, session } = getStoragePair(options);
 
   for (const storage of [local, session]) {
-    storage?.removeItem(REFERRAL_ATTRIBUTION_STORAGE_KEY);
-    storage?.removeItem(LEGACY_REFERRER_STORAGE_KEY);
+    safeRemoveItem(storage, REFERRAL_ATTRIBUTION_STORAGE_KEY);
+    safeRemoveItem(storage, LEGACY_REFERRER_STORAGE_KEY);
   }
 }
 

@@ -1,5 +1,6 @@
 "use client";
 
+import { Suspense } from "react";
 import dynamic from "next/dynamic";
 import { usePathname } from "next/navigation";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
@@ -85,7 +86,9 @@ export const ScaffoldEthAppWithProviders = ({ children }: { children: React.Reac
           <LocalTestWalletBridge />
           <ThirdwebConnectorWalletBridge />
           <ThirdwebAutoConnectBridge />
-          <ReferralAttributionCapture />
+          <Suspense fallback={null}>
+            <ReferralAttributionCapture />
+          </Suspense>
           <ProgressBar height="3px" color="#F26426" />
           <TermsAcceptanceProvider>
             <OptimisticVoteProvider>
