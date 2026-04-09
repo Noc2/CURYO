@@ -267,7 +267,7 @@ export function PublicProfileView({ address, embedded = false }: PublicProfileVi
   const avatarAccentBusy = avatarAccentPending || clearAvatarAccentPending;
   const hasAvatarAccentChanges = normalizedAvatarAccentInput !== committedAvatarAccentHex;
   const referralCountLabel = Number(referralCount).toLocaleString();
-  const referralTweetText = `Join Curyo and claim free cREP tokens! Use my referral link to get a bonus: ${referralLink}`;
+  const referralTweetText = `Join Curyo, claim cREP, and get verified. Use my referral link so we both receive a cREP bonus: ${referralLink}`;
   const winRateLabel = stats && stats.totalSettledVotes > 0 ? `${(stats.winRate * 100).toFixed(1)}%` : "—";
   const dailyStreakLabel = (dailyStreak?.currentDailyStreak ?? 0).toLocaleString();
   const resolvedVotesLabel = (stats?.totalSettledVotes ?? 0).toLocaleString();

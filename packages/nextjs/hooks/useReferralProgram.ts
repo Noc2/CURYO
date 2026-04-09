@@ -3,6 +3,7 @@
 import { useMemo } from "react";
 import { useScaffoldReadContract } from "~~/hooks/scaffold-eth";
 import { useVoterIdNFT } from "~~/hooks/useVoterIdNFT";
+import { buildReferralLandingUrl } from "~~/lib/referrals/referralAttribution";
 
 export function formatReferralAmount(amount: bigint | undefined) {
   if (!amount) return "0";
@@ -36,7 +37,7 @@ export function useReferralProgram(address?: string) {
       return "";
     }
 
-    return `${window.location.origin}/governance?ref=${address}`;
+    return buildReferralLandingUrl(window.location.origin, address);
   }, [address]);
 
   return {
