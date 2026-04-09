@@ -126,16 +126,16 @@ export function useScaffoldWriteContract<TContractName extends ContractName>(
       wagmiContractWrite.reset();
       setIsMining(true);
       const transactorOptions = pickTransactorOptions(options);
-      const {
-        action: _action,
-        blockConfirmations: _blockConfirmations,
-        onBlockConfirmation: _onBlockConfirmation,
-        getErrorMessage: _getErrorMessage,
-        suppressErrorToast: _suppressErrorToast,
-        suppressStatusToast: _suppressStatusToast,
-        suppressSuccessToast: _suppressSuccessToast,
-        ...mutateOptions
-      } = options || {};
+      const mutateOptions = options ? { ...options } : undefined;
+      if (mutateOptions) {
+        delete mutateOptions.action;
+        delete mutateOptions.blockConfirmations;
+        delete mutateOptions.onBlockConfirmation;
+        delete mutateOptions.getErrorMessage;
+        delete mutateOptions.suppressErrorToast;
+        delete mutateOptions.suppressStatusToast;
+        delete mutateOptions.suppressSuccessToast;
+      }
 
       const writeContractObject = {
         abi: deployedContractData.abi as Abi,
