@@ -521,20 +521,16 @@ export function FaucetSection({ referrer }: FaucetSectionProps) {
     ? "Enter a valid EVM address. The base faucet claim still works without it."
     : referralInputState.isSelfReferral
       ? "Use a different wallet address. Self-referrals do not receive a bonus."
-      : referralBonusActive
-        ? "Referral bonus active. You and the referrer receive cREP when verification succeeds."
-        : referralCheckPending
-          ? "Checking referral eligibility..."
-          : referralInputState.canCheckReferrer
-            ? "Referral saved, but this address is not eligible yet. Your base claim will still work."
-            : "Paste a referral address before verifying if someone invited you.";
+      : referralCheckPending
+        ? "Checking referral eligibility..."
+        : referralInputState.canCheckReferrer && !referralBonusActive
+          ? "Referral saved, but this address is not eligible yet. Your base claim will still work."
+          : "";
   const referralInputMessageClassName = referralInputState.isInvalid
     ? "text-error"
     : referralInputState.isSelfReferral
       ? "text-warning"
-      : referralBonusActive
-        ? "text-success"
-        : "text-base-content/60";
+      : "text-base-content/60";
   const bonusAmount = referralBonusActive ? (claimantBonus ?? 0n) : 0n;
   const totalClaimAmount = baseAmount + bonusAmount;
   const faucetClaimStatus = getFaucetClaimStatus({ hasClaimed: hasClaimed === true, hasVoterId });
@@ -625,12 +621,11 @@ export function FaucetSection({ referrer }: FaucetSectionProps) {
         <InfoTooltip text="Claim free cREP with a Self.xyz passport or biometric ID card proof" />
       </div>
 
-      <div className="rounded-xl border border-base-300 bg-base-200/60 p-4 space-y-3">
+      <div className="rounded-xl bg-base-200/60 p-4 space-y-3">
         <div className="flex flex-wrap items-center justify-between gap-2">
           <label htmlFor="faucet-referral-address" className="font-semibold">
-            Referral address
+            Referral address (optional)
           </label>
-          <span className="text-sm text-base-content/50">Optional</span>
         </div>
         <div className="flex flex-col gap-2 sm:flex-row">
           <input
@@ -638,7 +633,7 @@ export function FaucetSection({ referrer }: FaucetSectionProps) {
             type="text"
             value={referralInput}
             placeholder="0x..."
-            aria-describedby={referralInputMessageId}
+            aria-describedby={referralInputMessage ? referralInputMessageId : undefined}
             aria-invalid={referralInputState.isInvalid || referralInputState.isSelfReferral || undefined}
             className={`input input-bordered min-w-0 flex-1 font-mono text-sm ${
               referralInputState.isInvalid || referralInputState.isSelfReferral ? "input-error" : ""
@@ -656,14 +651,16 @@ export function FaucetSection({ referrer }: FaucetSectionProps) {
             Clear
           </button>
         </div>
-        <p
-          id={referralInputMessageId}
-          className={`text-sm ${referralInputMessageClassName}`}
-          role="status"
-          aria-live="polite"
-        >
-          {referralInputMessage}
-        </p>
+        {referralInputMessage ? (
+          <p
+            id={referralInputMessageId}
+            className={`text-sm ${referralInputMessageClassName}`}
+            role="status"
+            aria-live="polite"
+          >
+            {referralInputMessage}
+          </p>
+        ) : null}
       </div>
 
       {/* Referral Badge */}
@@ -781,7 +778,6 @@ export function FaucetSection({ referrer }: FaucetSectionProps) {
           <li>Scan the QR code above with the Self app</li>
           <li>Self generates a zero-knowledge proof — no personal data is shared</li>
           <li>The proof is verified on the blockchain and you receive your cREP + Voter ID</li>
-          {referralBonusActive && <li className="text-success">Referral bonus is applied automatically!</li>}
         </ol>
       </div>
 
