@@ -456,12 +456,12 @@ body {
 
 .vote-btn.vote-yes .vote-bg {
   background: var(--curyo-ember);
-  box-shadow: 0 8px 22px rgb(242 100 38 / 0.36);
+  box-shadow: none;
 }
 
 .vote-btn.vote-no .vote-bg {
   background: var(--curyo-ember-deep);
-  box-shadow: 0 8px 22px rgb(179 52 27 / 0.32);
+  box-shadow: none;
 }
 
 .vote-btn .vote-symbol {
@@ -526,9 +526,7 @@ body {
   }
 
   60% {
-    box-shadow:
-      0 0 0 2px rgb(245 240 235 / 0.9),
-      0 0 0 5px rgb(242 100 38 / 0.2);
+    box-shadow: 0 0 0 2px rgb(245 240 235 / 0.9);
   }
 }
 
@@ -564,11 +562,11 @@ body {
 }
 
 .vote-btn.vote-yes:hover .vote-bg {
-  box-shadow: 0 10px 24px rgb(242 100 38 / 0.42);
+  box-shadow: none;
 }
 
 .vote-btn.vote-no:hover .vote-bg {
-  box-shadow: 0 10px 24px rgb(179 52 27 / 0.38);
+  box-shadow: none;
 }
 
 .vote-btn:active .vote-bg {
@@ -580,9 +578,7 @@ body {
 }
 
 .vote-btn:focus-visible .vote-bg {
-  box-shadow:
-    0 0 0 2px rgb(245 240 235 / 0.92),
-    0 0 0 5px rgb(242 100 38 / 0.3);
+  box-shadow: 0 0 0 2px rgb(245 240 235 / 0.92);
 }
 
 .vote-btn:disabled {
@@ -596,11 +592,11 @@ body {
 }
 
 .vote-btn:disabled.vote-yes:hover .vote-bg {
-  box-shadow: 0 8px 22px rgb(242 100 38 / 0.36);
+  box-shadow: none;
 }
 
 .vote-btn:disabled.vote-no:hover .vote-bg {
-  box-shadow: 0 8px 22px rgb(179 52 27 / 0.32);
+  box-shadow: none;
 }
 
 @keyframes vote-attention-hint {
