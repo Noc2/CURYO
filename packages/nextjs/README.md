@@ -110,7 +110,6 @@ Notes:
 ```text
 app/                          # Next.js App Router
 ├── api/                      # Server-side API routes
-├── blockexplorer/            # Scaffold-ETH block explorer
 ├── debug/                    # Contract debugger
 ├── docs/                     # In-app documentation
 ├── radar/, submit/, vote/    # Discovery and voting flows

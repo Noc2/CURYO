@@ -20,9 +20,8 @@ import { CuryoLogo } from "~~/components/CuryoLogo";
 import { CuryoConnectButton } from "~~/components/scaffold-eth";
 import { AddressInfoDropdown } from "~~/components/scaffold-eth/ConnectButton/AddressInfoDropdown";
 import { DOCS_NAV } from "~~/constants/docsNav";
-import { useOutsideClick, useTargetNetwork } from "~~/hooks/scaffold-eth";
+import { useOutsideClick } from "~~/hooks/scaffold-eth";
 import { useVoteSearch } from "~~/hooks/useVoteSearch";
-import { getBlockExplorerAddressLink } from "~~/utils/scaffold-eth";
 
 type HeaderMenuLink = {
   label: string;
@@ -176,8 +175,6 @@ const HeaderMenuLinks = ({ variant = "mobile" }: { variant?: "mobile" | "desktop
 
 const MobileMenuLinks = () => {
   const { address } = useAccount();
-  const { targetNetwork } = useTargetNetwork();
-  const blockExplorerAddressLink = address ? getBlockExplorerAddressLink(targetNetwork, address) : undefined;
 
   return (
     <>
@@ -190,7 +187,6 @@ const MobileMenuLinks = () => {
           <AddressInfoDropdown
             address={address as Address}
             displayName={address.slice(0, 6) + "..." + address.slice(-4)}
-            blockExplorerAddressLink={blockExplorerAddressLink}
             menuItemsOnly
           />
         </>

@@ -19,7 +19,6 @@ type AddressInfoDropdownProps = {
   address: Address;
   displayName: string;
   ensAvatar?: string;
-  blockExplorerAddressLink?: string;
   /** When true, render wallet + menu items inline (e.g. in sidebar) instead of dropdown */
   inlineMenu?: boolean;
   /** When true, render only the menu items list (for mobile menu) */
