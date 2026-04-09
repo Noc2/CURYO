@@ -609,6 +609,15 @@ function validateSponsoredCalls(
           continue;
         }
         return { ok: false, debugCode: "unsupported_operation" };
+      case "ProfileRegistry":
+        if (
+          functionName === "setProfile" ||
+          functionName === "setAvatarAccent" ||
+          functionName === "clearAvatarAccent"
+        ) {
+          continue;
+        }
+        return { ok: false, debugCode: "unsupported_operation" };
       case "RoundVotingEngine":
         if (functionName === "claimCancelledRoundRefund") {
           continue;
