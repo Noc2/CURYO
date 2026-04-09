@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect } from "react";
+import { useCallback, useEffect } from "react";
 import { useDeployedContractInfo, useScaffoldReadContract } from "~~/hooks/scaffold-eth";
 
 export function isInitialQueryPending({
@@ -107,10 +107,10 @@ export function useVoterIdNFT(address?: string) {
     }
   }, [address, hasVoterId, tokenId]);
 
-  const refetch = () => {
+  const refetch = useCallback(() => {
     refetchHasVoterId();
     refetchTokenId();
-  };
+  }, [refetchHasVoterId, refetchTokenId]);
 
   const hasAddress = Boolean(address);
   const contractUnavailable = hasAddress && !voterIdContractLoading && !voterIdContract;

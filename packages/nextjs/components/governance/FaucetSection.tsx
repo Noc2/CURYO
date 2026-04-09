@@ -7,6 +7,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { useAccount } from "wagmi";
 import {
   ArrowPathIcon,
+  ExclamationTriangleIcon,
   GiftIcon,
   IdentificationIcon,
   ShieldCheckIcon,
@@ -42,6 +43,26 @@ type PendingSelfVerificationSession = {
   address: string;
   startedAt: number;
 };
+
+type FaucetClaimStatus = "unclaimed" | "verified" | "claim_without_voter_id";
+
+export function getFaucetClaimStatus({
+  hasClaimed,
+  hasVoterId,
+}: {
+  hasClaimed: boolean;
+  hasVoterId: boolean;
+}): FaucetClaimStatus {
+  if (hasVoterId) {
+    return "verified";
+  }
+
+  if (hasClaimed) {
+    return "claim_without_voter_id";
+  }
+
+  return "unclaimed";
+}
 
 function readPendingSelfVerificationSession(): PendingSelfVerificationSession | null {
   if (typeof window === "undefined") {
@@ -108,7 +129,7 @@ export function FaucetSection({ referrer }: FaucetSectionProps) {
   const { address, chain } = useAccount();
   const router = useRouter();
   const queryClient = useQueryClient();
-  const { hasVoterId, tokenId, isLoading: voterIdLoading } = useVoterIdNFT(address);
+  const { hasVoterId, tokenId, isLoading: voterIdLoading, refetch: refetchVoterId } = useVoterIdNFT(address);
   const { isAccepted, requireAcceptance } = useTermsAcceptance();
   const { data: faucetContractInfo } = useDeployedContractInfo({ contractName: "HumanFaucet" });
   const [termsOk, setTermsOk] = useState(false);
@@ -175,38 +196,55 @@ export function FaucetSection({ referrer }: FaucetSectionProps) {
     [clearStatusToast],
   );
 
-  const finishVerification = useCallback(async () => {
-    if (completionHandled.current) {
-      return;
-    }
-
-    completionHandled.current = true;
-    clearPendingSelfVerificationSession();
-    stopPolling();
-    setVerificationPending(false);
-    setVerificationConfirmed(false);
-    clearStatusToast();
-
-    if (address) {
-      try {
-        const balanceResult = await refetchCrepBalance();
-        if (balanceResult.data !== undefined) {
-          queryClient.setQueryData(["wallet-crep-balance", address.toLowerCase()], balanceResult.data);
-        }
-      } catch {
-        // Fall back to invalidation-only refresh if the direct balance read fails.
+  const finishVerification = useCallback(
+    async (claimStatus: Exclude<FaucetClaimStatus, "unclaimed">) => {
+      if (completionHandled.current) {
+        return;
       }
 
-      void queryClient.invalidateQueries({ queryKey: ["wallet-crep-balance", address.toLowerCase()] });
-    }
+      completionHandled.current = true;
+      clearPendingSelfVerificationSession();
+      stopPolling();
+      setVerificationPending(false);
+      setVerificationConfirmed(false);
+      clearStatusToast();
 
-    void queryClient.invalidateQueries({ queryKey: FREE_TRANSACTION_ALLOWANCE_QUERY_KEY });
-    void queryClient.invalidateQueries({
-      predicate: query => shouldRefreshAfterFaucetClaim(query.queryKey, address),
-    });
-    notification.success("cREP sent. Your wallet balance may take a few seconds to refresh.", { duration: 6000 });
-    router.replace(POST_CLAIM_ROUTE);
-  }, [address, clearStatusToast, queryClient, refetchCrepBalance, router, stopPolling]);
+      if (address) {
+        try {
+          const balanceResult = await refetchCrepBalance();
+          if (balanceResult.data !== undefined) {
+            queryClient.setQueryData(["wallet-crep-balance", address.toLowerCase()], balanceResult.data);
+          }
+        } catch {
+          // Fall back to invalidation-only refresh if the direct balance read fails.
+        }
+
+        void queryClient.invalidateQueries({ queryKey: ["wallet-crep-balance", address.toLowerCase()] });
+      }
+
+      void queryClient.invalidateQueries({ queryKey: FREE_TRANSACTION_ALLOWANCE_QUERY_KEY });
+      void queryClient.invalidateQueries({
+        predicate: query => shouldRefreshAfterFaucetClaim(query.queryKey, address),
+      });
+      void refetchVoterId();
+
+      if (claimStatus === "verified") {
+        notification.success("cREP sent and Voter ID minted. Your wallet balance may take a few seconds to refresh.", {
+          duration: 6000,
+        });
+        router.replace(POST_CLAIM_ROUTE);
+        return;
+      }
+
+      notification.warning(
+        "cREP sent, but your Voter ID is still pending. Voting will unlock after minting is retried.",
+        {
+          duration: 9000,
+        },
+      );
+    },
+    [address, clearStatusToast, queryClient, refetchCrepBalance, refetchVoterId, router, stopPolling],
+  );
 
   const startPolling = useCallback(() => {
     const activeSession = address ? beginPendingSelfVerificationSession(address) : null;
@@ -216,13 +254,14 @@ export function FaucetSection({ referrer }: FaucetSectionProps) {
 
     const pollClaimStatus = async () => {
       if (hasVoterId) {
-        await finishVerification();
+        await finishVerification("verified");
         return true;
       }
 
       const result = await refetchClaimed();
       if (result.data === true) {
-        await finishVerification();
+        void refetchVoterId();
+        await finishVerification("claim_without_voter_id");
         return true;
       }
 
@@ -247,7 +286,7 @@ export function FaucetSection({ referrer }: FaucetSectionProps) {
         void pollClaimStatus();
       }, POLL_INTERVAL_MS);
     });
-  }, [address, clearStatusToast, finishVerification, hasVoterId, refetchClaimed, stopPolling]);
+  }, [address, clearStatusToast, finishVerification, hasVoterId, refetchClaimed, refetchVoterId, stopPolling]);
 
   // Clean up polling on unmount
   useEffect(
@@ -283,8 +322,14 @@ export function FaucetSection({ referrer }: FaucetSectionProps) {
       return;
     }
 
-    if (hasClaimed === true || hasVoterId) {
-      void finishVerification();
+    if (hasVoterId) {
+      void finishVerification("verified");
+      return;
+    }
+
+    if (hasClaimed === true) {
+      void refetchVoterId();
+      void finishVerification("claim_without_voter_id");
       return;
     }
 
@@ -297,6 +342,7 @@ export function FaucetSection({ referrer }: FaucetSectionProps) {
     finishVerification,
     hasClaimed,
     hasVoterId,
+    refetchVoterId,
     startPolling,
     stopPolling,
     verificationPending,
@@ -313,8 +359,14 @@ export function FaucetSection({ referrer }: FaucetSectionProps) {
         return;
       }
 
-      if (hasClaimed === true || hasVoterId) {
-        void finishVerification();
+      if (hasVoterId) {
+        void finishVerification("verified");
+        return;
+      }
+
+      if (hasClaimed === true) {
+        void refetchVoterId();
+        void finishVerification("claim_without_voter_id");
         return;
       }
 
@@ -336,7 +388,7 @@ export function FaucetSection({ referrer }: FaucetSectionProps) {
       window.removeEventListener("focus", resumeVerificationTracking);
       document.removeEventListener("visibilitychange", handleVisibilityChange);
     };
-  }, [address, finishVerification, hasClaimed, hasVoterId, startPolling, verificationPending]);
+  }, [address, finishVerification, hasClaimed, hasVoterId, refetchVoterId, startPolling, verificationPending]);
 
   useEffect(() => {
     if (
@@ -398,6 +450,7 @@ export function FaucetSection({ referrer }: FaucetSectionProps) {
   const baseAmount = claimAmount ?? 0n;
   const bonusAmount = isValidReferrer ? (claimantBonus ?? 0n) : 0n;
   const totalClaimAmount = baseAmount + bonusAmount;
+  const faucetClaimStatus = getFaucetClaimStatus({ hasClaimed: hasClaimed === true, hasVoterId });
 
   if (voterIdLoading || tierLoading || claimLoading) {
     return (
@@ -408,7 +461,7 @@ export function FaucetSection({ referrer }: FaucetSectionProps) {
     );
   }
 
-  if (hasClaimed || hasVoterId) {
+  if (faucetClaimStatus === "verified") {
     return (
       <div className="surface-card rounded-2xl p-6 text-center space-y-4">
         <ShieldCheckIcon className="w-12 h-12 text-success mx-auto" />
@@ -440,6 +493,38 @@ export function FaucetSection({ referrer }: FaucetSectionProps) {
         <Link href="/vote" className="btn btn-primary w-full mt-4">
           Start Voting
         </Link>
+      </div>
+    );
+  }
+
+  if (faucetClaimStatus === "claim_without_voter_id") {
+    return (
+      <div className="surface-card rounded-2xl p-6 text-center space-y-4">
+        <ExclamationTriangleIcon className="w-12 h-12 text-warning mx-auto" />
+        <h2 className={surfaceSectionHeadingClassName}>cREP Claimed, Voter ID Pending</h2>
+
+        <p className="text-base-content/70">
+          Your faucet claim succeeded, but your Voter ID was not minted. Voting, submitting, and referrals unlock after
+          the Voter ID mint is retried.
+        </p>
+
+        {address && (
+          <div className="bg-base-200 rounded-xl p-4 text-left text-sm text-base-content/70">
+            <p className="font-semibold text-base-content mb-1">Share this wallet with an operator:</p>
+            <p className="break-all font-mono">{address}</p>
+          </div>
+        )}
+
+        <button
+          type="button"
+          className="btn btn-primary w-full mt-4"
+          onClick={() => {
+            void refetchClaimed();
+            void refetchVoterId();
+          }}
+        >
+          Refresh Voter ID Status
+        </button>
       </div>
     );
   }
