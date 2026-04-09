@@ -3,6 +3,7 @@
 import { useMemo } from "react";
 import { useAccount } from "wagmi";
 import { CuryoConnectButton } from "~~/components/scaffold-eth";
+import { ClaimRewardsButton } from "~~/components/shared/ClaimRewardsButton";
 import { useScaffoldReadContract } from "~~/hooks/scaffold-eth";
 import { formatTimeRemaining, useActiveVotesWithDeadlines } from "~~/hooks/useActiveVotesWithDeadlines";
 import { useClaimReward } from "~~/hooks/useClaimReward";
@@ -70,6 +71,11 @@ export default function PortfolioPage() {
     <div className="flex flex-col items-center grow px-4 pt-8 pb-12">
       <div className="w-full max-w-2xl">
         <h1 className="text-2xl font-bold mb-6">Portfolio</h1>
+
+        <ClaimRewardsButton
+          className="mb-6"
+          buttonClassName="btn btn-primary btn-sm h-10 min-h-0 w-full rounded-full border-none text-sm"
+        />
 
         {/* Stats */}
         <div className="surface-card mb-6 rounded-2xl p-6">

@@ -56,15 +56,14 @@ export function useClaimableSubmitterRewards() {
 
       const settledRounds = await Promise.all(
         contentResponse.map(async contentItem => {
-          const roundsResponse = await ponderApi.getRounds({
+          const rounds = await ponderApi.getAllRounds({
             contentId: contentItem.id,
             state: String(ROUND_STATE.Settled),
-            limit: "200",
           });
 
           return {
             contentId: contentItem.id,
-            rounds: roundsResponse.items,
+            rounds,
           };
         }),
       );

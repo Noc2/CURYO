@@ -127,8 +127,19 @@ function toClaimableFeePage(
   };
 }
 
-function isClaimableSnapshot(claimableFee: bigint, disposition: bigint, alreadyClaimed: boolean) {
-  return !alreadyClaimed && claimableFee > 0n && disposition !== 2n;
+export function normalizeFrontendFeeDisposition(value: unknown): bigint {
+  if (typeof value === "bigint") {
+    return value;
+  }
+  if (typeof value === "number" && Number.isInteger(value)) {
+    return BigInt(value);
+  }
+  return 2n;
+}
+
+export function isClaimableFrontendFeeSnapshot(claimableFee: bigint, disposition: unknown, alreadyClaimed: boolean) {
+  const normalizedDisposition = normalizeFrontendFeeDisposition(disposition);
+  return !alreadyClaimed && claimableFee > 0n && normalizedDisposition !== 2n;
 }
 
 async function readFrontendFeeBatch(
@@ -231,7 +242,7 @@ async function readFrontendFeeBatch(
             ? totalFrontendClaimantsResult.result
             : 0n,
         claimableFee: previewTuple && typeof previewTuple[0] === "bigint" ? previewTuple[0] : 0n,
-        disposition: previewTuple && typeof previewTuple[1] === "bigint" ? previewTuple[1] : 2n,
+        disposition: previewTuple ? normalizeFrontendFeeDisposition(previewTuple[1]) : 2n,
         operator:
           previewTuple && typeof previewTuple[2] === "string" ? (previewTuple[2] as Address) : emptyRow.operator,
         alreadyClaimed: previewTuple && typeof previewTuple[3] === "boolean" ? previewTuple[3] : false,
@@ -276,7 +287,7 @@ async function readFrontendFeeBatch(
               abi: context.rewardDistributor.abi,
               functionName: "previewFrontendFee",
               args: [contentId, roundId, frontend],
-            }) as Promise<[bigint, bigint, Address, boolean]>,
+            }) as Promise<[bigint, bigint | number, Address, boolean]>,
           ]);
 
         const [claimableFee, disposition, operator, alreadyClaimed] = previewFrontendFee;
@@ -287,7 +298,7 @@ async function readFrontendFeeBatch(
           totalEligibleStake,
           totalFrontendClaimants,
           claimableFee,
-          disposition,
+          disposition: normalizeFrontendFeeDisposition(disposition),
           operator,
           alreadyClaimed,
         });
@@ -354,7 +365,7 @@ async function buildClaimableFrontendFeeSnapshot(
       scanOffset += 1;
       scannedRounds += 1;
 
-      if (!isClaimableSnapshot(row.claimableFee, row.disposition, row.alreadyClaimed)) {
+      if (!isClaimableFrontendFeeSnapshot(row.claimableFee, row.disposition, row.alreadyClaimed)) {
         continue;
       }
 
