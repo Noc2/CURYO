@@ -1,10 +1,12 @@
 import { E2E_BASE_URL } from "./helpers/service-urls";
 import { defineConfig, devices } from "@playwright/test";
 
-const BROWSER_COMPAT_TESTS = /browser-compat/;
-const RESPONSIVE_LAYOUT_TESTS = /responsive-layout/;
-const ACCESSIBILITY_AXE_TESTS = /accessibility-axe/;
-const MOBILE_TESTS = /mobile/;
+const specFile = (name: string) => new RegExp(`(^|[/\\\\])${name}\\.spec\\.[cm]?[jt]sx?$`);
+
+const BROWSER_COMPAT_TESTS = specFile("browser-compat");
+const RESPONSIVE_LAYOUT_TESTS = specFile("responsive-layout");
+const ACCESSIBILITY_AXE_TESTS = specFile("accessibility-axe");
+const MOBILE_TESTS = specFile("mobile");
 
 export default defineConfig({
   globalSetup: "./global-setup.cts",

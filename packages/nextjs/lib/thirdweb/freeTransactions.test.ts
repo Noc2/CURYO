@@ -50,6 +50,7 @@ const crepContract = contractsForChain.CuryoReputation;
 const contentRegistryContract = contractsForChain.ContentRegistry;
 const categoryRegistryContract = contractsForChain.CategoryRegistry;
 const frontendRegistryContract = contractsForChain.FrontendRegistry;
+const profileRegistryContract = contractsForChain.ProfileRegistry;
 const rewardDistributorContract = contractsForChain.RoundRewardDistributor;
 const votingEngineContract = contractsForChain.RoundVotingEngine;
 
@@ -426,6 +427,9 @@ test("supported sponsored operation families are allowlisted", async () => {
     ],
     [encodeCall(frontendRegistryContract, "register")],
     [encodeCall(frontendRegistryContract, "claimFees")],
+    [encodeCall(profileRegistryContract, "setProfile", ["EthHealth", "I check primary sources before rating."])],
+    [encodeCall(profileRegistryContract, "setAvatarAccent", [0x76bb40])],
+    [encodeCall(profileRegistryContract, "clearAvatarAccent")],
     [encodeCall(contentRegistryContract, "claimSubmitterParticipationReward", [1n])],
     [encodeCall(votingEngineContract, "claimCancelledRoundRefund", [1n, 1n])],
     [encodeCall(rewardDistributorContract, "claimFrontendFee", [1n, 1n, WALLET])],

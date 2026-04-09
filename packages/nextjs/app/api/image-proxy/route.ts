@@ -29,6 +29,7 @@ const ALLOWED_HOSTS = new Set([
 ]);
 
 const MAX_RESPONSE_SIZE = 10 * 1024 * 1024; // 10 MB
+const UPSTREAM_FETCH_OPTIONS = { cache: "no-store" as const, redirect: "manual" as const };
 
 export async function GET(request: NextRequest) {
   const limited = await checkRateLimit(request, RATE_LIMIT, { allowOnStoreUnavailable: true });
@@ -55,7 +56,7 @@ export async function GET(request: NextRequest) {
   }
 
   try {
-    const res = await fetch(url, { next: { revalidate: 86400 }, redirect: "manual" });
+    const res = await fetch(url, UPSTREAM_FETCH_OPTIONS);
 
     // If the upstream redirects, re-validate the target against the allowlist
     if (res.status >= 300 && res.status < 400) {
@@ -74,7 +75,7 @@ export async function GET(request: NextRequest) {
         return new NextResponse(null, { status: 403 });
       }
       // Follow the validated redirect once (no further chaining)
-      const redirectRes = await fetch(redirectUrl.toString(), { next: { revalidate: 86400 }, redirect: "manual" });
+      const redirectRes = await fetch(redirectUrl.toString(), UPSTREAM_FETCH_OPTIONS);
       if (!redirectRes.ok) return new NextResponse(null, { status: redirectRes.status });
       const ct = redirectRes.headers.get("content-type") || "image/png";
       if (!ct.startsWith("image/")) return new NextResponse(null, { status: 502 });
