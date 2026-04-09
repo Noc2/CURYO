@@ -8,6 +8,9 @@ import { detectPlatform } from "~~/utils/platforms";
 
 const THUMBNAIL_BATCH_SIZE = 40;
 const VALIDATION_BATCH_SIZE = 10;
+const VALIDATION_CACHE_MS = 24 * 60 * 60 * 1000;
+
+const validationResultCache = new Map<string, { value: boolean | null; expiresAt: number }>();
 
 function chunkItems<T>(items: T[], batchSize: number): T[][] {
   const batches: T[][] = [];
@@ -80,6 +83,42 @@ export function getContentFeedMetadataCacheKey(urls: string[]): string {
   return JSON.stringify(urls);
 }
 
+export function getContentFeedValidationUrls(urls: string[]): string[] {
+  return urls.filter(url => detectPlatform(url).type !== "generic");
+}
+
+export function getGenericValidationMap(urls: string[]): Record<string, boolean | null> {
+  return Object.fromEntries(urls.filter(url => detectPlatform(url).type === "generic").map(url => [url, false]));
+}
+
+function getCachedValidationMap(urls: string[], now = Date.now()): Record<string, boolean | null> {
+  const cached: Record<string, boolean | null> = {};
+
+  for (const url of urls) {
+    const result = validationResultCache.get(url);
+    if (!result) continue;
+    if (result.expiresAt <= now) {
+      validationResultCache.delete(url);
+      continue;
+    }
+    cached[url] = result.value;
+  }
+
+  return cached;
+}
+
+function getUncachedValidationUrls(urls: string[], now = Date.now()): string[] {
+  getCachedValidationMap(urls, now);
+  return urls.filter(url => !validationResultCache.has(url));
+}
+
+function rememberValidationResults(results: Record<string, boolean | null>, now = Date.now()) {
+  const expiresAt = now + VALIDATION_CACHE_MS;
+  for (const [url, value] of Object.entries(results)) {
+    validationResultCache.set(url, { value, expiresAt });
+  }
+}
+
 export function isContentFeedMetadataPrefetchPending(
   urls: string[],
   metadataMap: Record<string, ContentMetadataResult> | undefined,
@@ -90,6 +129,9 @@ export function isContentFeedMetadataPrefetchPending(
 export function useContentFeedMetadata(feed: ContentItem[]) {
   const feedUrls = useMemo(() => getContentFeedMetadataUrls(feed), [feed]);
   const feedUrlsKey = useMemo(() => getContentFeedMetadataCacheKey(feedUrls), [feedUrls]);
+  const validationUrls = useMemo(() => getContentFeedValidationUrls(feedUrls), [feedUrls]);
+  const validationUrlsKey = useMemo(() => getContentFeedMetadataCacheKey(validationUrls), [validationUrls]);
+  const genericValidationMap = useMemo(() => getGenericValidationMap(feedUrls), [feedUrls]);
 
   const { data: metadataMap } = useQuery({
     queryKey: ["contentFeedMetadata", feedUrlsKey],
@@ -105,21 +147,33 @@ export function useContentFeedMetadata(feed: ContentItem[]) {
   });
 
   const { data: validationMap } = useQuery({
-    queryKey: ["contentFeedValidation", feedUrlsKey],
-    enabled: feedUrls.length > 0,
-    staleTime: 60_000,
+    queryKey: ["contentFeedValidation", validationUrlsKey],
+    enabled: validationUrls.length > 0,
+    staleTime: VALIDATION_CACHE_MS,
     placeholderData: keepPreviousData,
     queryFn: async () => {
+      const urlsToValidate = getUncachedValidationUrls(validationUrls);
       const validationBatches = await Promise.all(
-        chunkItems(feedUrls, VALIDATION_BATCH_SIZE).map(fetchValidationBatch),
+        chunkItems(urlsToValidate, VALIDATION_BATCH_SIZE).map(fetchValidationBatch),
       );
-      return mergeBatchMaps(validationBatches);
+      const fetchedMap = mergeBatchMaps(validationBatches);
+      rememberValidationResults(fetchedMap);
+      return { ...getCachedValidationMap(validationUrls), ...fetchedMap };
     },
   });
 
+  const mergedValidationMap = useMemo(
+    () => ({
+      ...genericValidationMap,
+      ...getCachedValidationMap(validationUrls),
+      ...(validationMap ?? {}),
+    }),
+    [genericValidationMap, validationMap, validationUrls],
+  );
+
   return {
     metadataMap: metadataMap ?? {},
-    validationMap: validationMap ?? {},
+    validationMap: mergedValidationMap,
     isMetadataPrefetchPending: isContentFeedMetadataPrefetchPending(feedUrls, metadataMap),
   };
 }
