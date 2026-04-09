@@ -1,4 +1,4 @@
-import { getCanonicalUrlParts, getUrlLookupCandidates } from "../urlCanonicalization.js";
+import { getUrlLookupCandidates } from "../urlCanonicalization.js";
 
 export { getCanonicalUrlParts, getUrlLookupCandidates } from "../urlCanonicalization.js";
 

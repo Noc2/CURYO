@@ -15,9 +15,7 @@ interface HttpRateLimitStore {
   close?(): Promise<void>;
 }
 
-const FORWARDED_FOR_HEADER = "x-forwarded-for";
 const FORWARDED_HEADER = "forwarded";
-const REAL_IP_HEADER = "x-real-ip";
 const FALLBACK_FINGERPRINT_HEADERS = [
   "user-agent",
   "accept-language",

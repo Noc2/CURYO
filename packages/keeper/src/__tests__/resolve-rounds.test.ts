@@ -1,7 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-const ENGINE = "0x1111111111111111111111111111111111111111" as const;
-const REGISTRY = "0x2222222222222222222222222222222222222222" as const;
 const VOTER = "0x3333333333333333333333333333333333333333" as const;
 const ACCOUNT = "0x4444444444444444444444444444444444444444" as const;
 const COMMIT_KEY_1 = "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa" as const;

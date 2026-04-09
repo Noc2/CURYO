@@ -156,21 +156,6 @@ function parsePositiveBigIntEnv(name: string, fallback: bigint, errors: string[]
   return parsed;
 }
 
-function requireAddressEnv(name: string, errors: string[]): `0x${string}` {
-  const value = readEnv(name);
-  if (!value) {
-    errors.push(`${name} is required`);
-    return "0x0000000000000000000000000000000000000000";
-  }
-
-  if (!isAddress(value)) {
-    errors.push(`${name} must be a valid address`);
-    return "0x0000000000000000000000000000000000000000";
-  }
-
-  return value as `0x${string}`;
-}
-
 function readOptionalAddressEnv(name: string, errors: string[]): `0x${string}` | undefined {
   const value = readEnv(name);
   if (!value) {

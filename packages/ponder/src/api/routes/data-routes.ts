@@ -6,7 +6,6 @@ import {
   content,
   frontend,
   globalStats,
-  profile,
   rewardClaim,
   round,
   submitterRewardClaim,

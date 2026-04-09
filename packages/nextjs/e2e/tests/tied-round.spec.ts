@@ -9,7 +9,7 @@ import {
 import { ANVIL_ACCOUNTS, DEPLOYER } from "../helpers/anvil-accounts";
 import { newE2EContext } from "../helpers/browser-context";
 import { CONTRACT_ADDRESSES } from "../helpers/contracts";
-import { fastForwardTime, waitForSettlementIndexed } from "../helpers/keeper";
+import { waitForSettlementIndexed } from "../helpers/keeper";
 import { PONDER_URL } from "../helpers/ponder-url";
 import { gotoWithRetry } from "../helpers/wait-helpers";
 import { setupWallet } from "../helpers/wallet-session";

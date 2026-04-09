@@ -9,7 +9,6 @@ import {
   processUnrevealedVotes,
   readAddress,
   readTokenBalance,
-  readUint256,
   revealVoteDirect,
   setTestConfig,
   settleRoundDirect,
