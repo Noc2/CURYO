@@ -38,6 +38,11 @@ function formatCrepAmount(value: bigint | null | undefined) {
   return (Number(value) / 1e6).toLocaleString(undefined, { maximumFractionDigits: 0 });
 }
 
+function formatWinRate(value: number) {
+  const percent = Number((value * 100).toFixed(1));
+  return `${Number.isInteger(percent) ? percent.toFixed(0) : percent.toFixed(1)}%`;
+}
+
 function FreeTransactionAllowanceText({ className }: { className?: string }) {
   const { isResolved, limit, remaining, verified } = useFreeTransactionAllowance();
 
@@ -58,12 +63,12 @@ function FreeTransactionAllowanceText({ className }: { className?: string }) {
 
 function WinRateSummaryText({ address, className }: { address: Address; className?: string }) {
   const { stats } = useVoterAccuracy(address);
-  const winRateLabel = stats && stats.totalSettledVotes > 0 ? `${(stats.winRate * 100).toFixed(1)}%` : "—";
+  const winRateLabel = stats && stats.totalSettledVotes > 0 ? formatWinRate(stats.winRate) : "—";
 
   return (
     <div className={`flex items-center gap-1.5 text-sm font-medium leading-5 text-base-content/62 ${className ?? ""}`}>
       <span className="tabular-nums">{winRateLabel}</span>
-      <span className="text-base-content/48">win rate</span>
+      <span className="whitespace-nowrap text-base-content/48">win rate</span>
       <InfoTooltip text={AVATAR_WIN_RATE_TOOLTIP} position="bottom" />
     </div>
   );
