@@ -123,7 +123,7 @@ test("buildSubmitterParticipationClaimableRewards applies prior payouts before s
         "0x2000000000000000000000000000000000000000",
         {
           authorized: true,
-          poolBalance: 2n,
+          poolBalance: 6n,
         },
       ],
     ]),
@@ -132,7 +132,7 @@ test("buildSubmitterParticipationClaimableRewards applies prior payouts before s
   assert.deepEqual(items, [
     {
       contentId: 9n,
-      reward: 3n,
+      reward: 7n,
       claimType: "submitter_participation_reward",
     },
   ]);
