@@ -205,40 +205,6 @@ test.describe("Reward claim lifecycle", () => {
     expect(success, "Voter reward claim should succeed for winning voter").toBe(true);
   });
 
-  test("portfolio shows claim button after settlement", async ({ browser }) => {
-    test.setTimeout(120_000);
-    test.skip(!settledContentId, "No settled content from previous test");
-
-    const context = await newE2EContext(browser);
-    const page = await context.newPage();
-    await setupWallet(page, ANVIL_ACCOUNTS.account3.privateKey);
-
-    await gotoWithRetry(page, "/portfolio", { ensureWalletConnected: true });
-
-    const heading = page.getByRole("heading", { name: "Portfolio" });
-    await expect(heading).toBeVisible({ timeout: 15_000 });
-
-    const voteHistory = page.getByRole("heading", { name: "Vote History" });
-    await expect(voteHistory).toBeVisible({ timeout: 10_000 });
-
-    // Scroll to vote history so round-status elements are in the viewport
-    await voteHistory.scrollIntoViewIfNeeded();
-
-    // Check for any settlement state badge — use toPass() to retry because
-    // .or().first() can pick a hidden element earlier in DOM order.
-    await expect(async () => {
-      const hasClaimBtn = await page.getByRole("button", { name: "Claim Reward" }).first().isVisible();
-      const hasActive = await page
-        .getByText(/^Active( ·|$)/)
-        .first()
-        .isVisible();
-      const hasClaimed = await page.getByText("Claimed", { exact: true }).first().isVisible();
-      expect(hasClaimBtn || hasActive || hasClaimed).toBeTruthy();
-    }).toPass({ timeout: 15_000 });
-
-    await context.close();
-  });
-
   test("submitter rewards visible in Ponder API", async () => {
     test.skip(!settledContentId, "No settled content from previous test");
 

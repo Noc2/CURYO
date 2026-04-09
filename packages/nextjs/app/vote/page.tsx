@@ -7,6 +7,7 @@ import type { NextPage } from "next";
 import { useAccount } from "wagmi";
 import { CategoryFilter } from "~~/components/CategoryFilter";
 import { AppPageShell } from "~~/components/shared/AppPageShell";
+import { ClaimRewardsButton } from "~~/components/shared/ClaimRewardsButton";
 import { StreakCounter } from "~~/components/shared/StreakCounter";
 import { VotingQuestionCard } from "~~/components/shared/VotingQuestionCard";
 import { FeedScopeFilter } from "~~/components/vote/FeedScopeFilter";
@@ -1510,6 +1511,10 @@ const HomeInner = () => {
         <div ref={mobileDockContainerRef} className="fixed inset-x-0 bottom-0 z-30 xl:hidden">
           <div className="w-full">
             <div className="overflow-visible">
+              <ClaimRewardsButton
+                className="px-3 pb-2"
+                buttonClassName="btn btn-primary btn-sm h-10 min-h-0 w-full rounded-full border-none text-sm"
+              />
               <VotingQuestionCard
                 contentId={primaryItem.id}
                 categoryId={primaryItem.categoryId}

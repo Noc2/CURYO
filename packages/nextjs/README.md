@@ -1,6 +1,6 @@
 # Curyo — Next.js (Frontend)
 
-Full-stack web application built with Next.js 15 and React 19. Provides the UI for voting on content, submitting content, managing portfolios, and reading in-app documentation. Includes server-side API routes and a PostgreSQL database via Drizzle ORM.
+Full-stack web application built with Next.js 15 and React 19. Provides the UI for voting on content, submitting content, managing profiles, and reading in-app documentation. Includes server-side API routes and a PostgreSQL database via Drizzle ORM.
 
 ## Quick Start
 
@@ -110,10 +110,8 @@ Notes:
 ```text
 app/                          # Next.js App Router
 ├── api/                      # Server-side API routes
-├── blockexplorer/            # Scaffold-ETH block explorer
 ├── debug/                    # Contract debugger
 ├── docs/                     # In-app documentation
-├── portfolio/                # Portfolio and voting history surface
 ├── radar/, submit/, vote/    # Discovery and voting flows
 └── profiles/, settings/      # User profile and preference routes
 

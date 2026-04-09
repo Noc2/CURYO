@@ -54,21 +54,6 @@ test.describe("Page smoke tests", () => {
     await expect(imprintHeading).toBeVisible({ timeout: 5_000 });
   });
 
-  test("blockexplorer shows search and transactions", async ({ page }) => {
-    await gotoPath(page, "/blockexplorer");
-
-    const localOnlyGuard = page.getByRole("heading", { name: "Local Block Explorer Only" });
-    const searchInput = page.getByPlaceholder("Search by hash or address");
-
-    if (await localOnlyGuard.isVisible().catch(() => false)) {
-      await expect(page.getByRole("link", { name: "Celo Explorer" })).toBeVisible({ timeout: 10_000 });
-      return;
-    }
-
-    await expect(searchInput).toBeVisible({ timeout: 10_000 });
-    await expect(page.locator("table")).toBeVisible({ timeout: 10_000 });
-  });
-
   for (const subpage of legalSubpages) {
     test(`${subpage} loads without errors`, async ({ page }) => {
       await gotoPath(page, subpage);

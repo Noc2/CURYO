@@ -20,7 +20,7 @@ test("getThirdwebWalletAuthConfig adds a redirect URL for localhost flows", () =
 
   assert.equal(auth.mode, "redirect");
   assert.equal(auth.redirectUrl, "http://localhost:3000/vote?content=1");
-  assert.deepEqual(auth.options, ["google", "apple", "email", "passkey"]);
+  assert.deepEqual(auth.options, ["google", "apple", "email", "passkey", "wallet"]);
 });
 
 test("getThirdwebWalletAuthConfig keeps popup mode for non-localhost flows", () => {
@@ -31,4 +31,5 @@ test("getThirdwebWalletAuthConfig keeps popup mode for non-localhost flows", () 
 
   assert.equal(auth.mode, "popup");
   assert.ok(!("redirectUrl" in auth));
+  assert.ok(auth.options.includes("wallet"));
 });

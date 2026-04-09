@@ -176,16 +176,16 @@ test.describe("Mobile viewport (phone)", () => {
     expect(hasOverflow).toBe(false);
   });
 
-  test("portfolio page renders", async ({ connectedPage: page }) => {
-    await page.goto("/portfolio");
+  test("governance page renders", async ({ connectedPage: page }) => {
+    await page.goto("/governance");
 
     const main = page.locator("main");
     await expect(main).toBeVisible({ timeout: 10_000 });
 
-    // Portfolio should show heading or stats — scope to main to avoid hidden nav elements
-    const portfolioHeading = main.getByRole("heading", { name: /portfolio/i });
-    const voteHistory = main.getByText(/vote history/i);
-    await expect(portfolioHeading.or(voteHistory).first()).toBeVisible({ timeout: 10_000 });
+    const governanceContent = main
+      .getByRole("button", { name: /Profile|Leaderboard|Governance|Voter ID/ })
+      .or(main.getByText(/Voting performance|Staked cREP|Checking Voter ID/i));
+    await expect(governanceContent.first()).toBeVisible({ timeout: 15_000 });
   });
 
   test("docs page renders without overflow", async ({ connectedPage: page }) => {
@@ -232,7 +232,7 @@ test.describe("Tablet viewport", () => {
   });
 
   test("no horizontal overflow on key pages", async ({ connectedPage: page }) => {
-    const pages = ["/vote", "/submit", "/portfolio", "/docs"];
+    const pages = ["/vote", "/submit", "/governance", "/docs"];
 
     for (const path of pages) {
       await page.goto(path, { waitUntil: "domcontentloaded" });

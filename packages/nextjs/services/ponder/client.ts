@@ -612,6 +612,16 @@ export const ponderApi = {
     return ponderGet<PonderRoundsResponse>("/rounds", params);
   },
 
+  async getAllRounds(params?: { contentId?: string; state?: string }) {
+    return getAllPages(offset =>
+      this.getRounds({
+        ...params,
+        limit: String(PONDER_PAGE_LIMIT),
+        offset: String(offset),
+      }),
+    );
+  },
+
   async getAllContent(params?: Omit<PonderContentQuery, "limit" | "offset">) {
     return getAllPages(offset =>
       this.getContent({

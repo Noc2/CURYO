@@ -36,6 +36,7 @@ import {
 import { formatReferralAmount, useReferralProgram } from "~~/hooks/useReferralProgram";
 import { useVoterAccuracy } from "~~/hooks/useVoterAccuracy";
 import { useVoterIdNFT } from "~~/hooks/useVoterIdNFT";
+import { useVoterStreak } from "~~/hooks/useVoterStreak";
 import { avatarAccentHexToRgb, normalizeAvatarAccentHex } from "~~/lib/avatar/avatarAccent";
 import { MAX_PROFILE_STRATEGY_LENGTH } from "~~/lib/profile/profileValidation";
 import { AVATAR_WIN_RATE_TOOLTIP } from "~~/lib/profile/winRateTooltip";
@@ -154,6 +155,7 @@ export function PublicProfileView({ address, embedded = false }: PublicProfileVi
 
   const profileDetail = profileResult?.data ?? null;
   const summary = profileDetail?.profile ?? null;
+  const dailyStreak = useVoterStreak(normalizedAddress);
   const recentVotes = profileDetail?.recentVotes ?? [];
   const recentSubmissions = profileDetail?.recentSubmissions ?? [];
   const ownProfile = connectedAddress?.toLowerCase() === normalizedAddress;
@@ -265,8 +267,10 @@ export function PublicProfileView({ address, embedded = false }: PublicProfileVi
   const avatarAccentBusy = avatarAccentPending || clearAvatarAccentPending;
   const hasAvatarAccentChanges = normalizedAvatarAccentInput !== committedAvatarAccentHex;
   const referralCountLabel = Number(referralCount).toLocaleString();
-  const referralTweetText = `Join Curyo and claim free cREP tokens! Use my referral link to get a bonus: ${referralLink}`;
+  const referralTweetText = `Join Curyo, claim cREP, and get verified. Use my referral link so we both receive a cREP bonus: ${referralLink}`;
   const winRateLabel = stats && stats.totalSettledVotes > 0 ? `${(stats.winRate * 100).toFixed(1)}%` : "—";
+  const dailyStreakLabel = (dailyStreak?.currentDailyStreak ?? 0).toLocaleString();
+  const resolvedVotesLabel = (stats?.totalSettledVotes ?? 0).toLocaleString();
 
   const streakLabel = useMemo(() => {
     if (!stats) return "0";
@@ -603,7 +607,11 @@ export function PublicProfileView({ address, embedded = false }: PublicProfileVi
                   <InfoTooltip text={AVATAR_WIN_RATE_TOOLTIP} position="bottom" />
                 </span>
                 <span className="text-base-content/35">&bull;</span>
+                <span>Daily Streak {dailyStreakLabel}</span>
+                <span className="text-base-content/35">&bull;</span>
                 <span>{profileLoading ? "..." : `${totalVotes} votes`}</span>
+                <span className="text-base-content/35">&bull;</span>
+                <span>{resolvedVotesLabel} resolved</span>
                 <span className="text-base-content/35">&bull;</span>
                 <span>
                   {voterIdLoading
@@ -682,7 +690,7 @@ export function PublicProfileView({ address, embedded = false }: PublicProfileVi
               <span className="text-base font-medium text-base-content/60">Voting performance</span>
               <InfoTooltip text="Resolved rounds only. Category bars show win and loss ratios by category." />
             </div>
-            <span className="text-base tabular-nums text-base-content/60">{stats ? stats.totalSettledVotes : 0}</span>
+            <span className="text-base tabular-nums text-base-content/60">{resolvedVotesLabel} resolved</span>
           </div>
 
           {stats ? (

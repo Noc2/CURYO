@@ -8,7 +8,7 @@ import { Address as AddressType, createPublicClient, createWalletClient, http, p
 import { hardhat } from "viem/chains";
 import { useAccount } from "wagmi";
 import { GiftIcon } from "@heroicons/react/24/outline";
-import { useTargetNetwork, useTransactor } from "~~/hooks/scaffold-eth";
+import { useTransactor } from "~~/hooks/scaffold-eth";
 import { notification } from "~~/utils/scaffold-eth";
 
 // Account index to use from generated hardhat accounts.
@@ -99,8 +99,6 @@ export const Faucet = () => {
   const [curyoAmount, setCuryoAmount] = useState("1000");
   const [hasVoterId, setHasVoterId] = useState<boolean | null>(null);
   const [voterIdTokenId, setVoterIdTokenId] = useState<bigint | null>(null);
-  const { targetNetwork } = useTargetNetwork();
-
   const { chain: ConnectedChain, address: connectedAddress } = useAccount();
 
   const isHardhat = ConnectedChain?.id === hardhat.id;
@@ -347,13 +345,7 @@ export const Faucet = () => {
                 <div className="flex space-x-4">
                   <div>
                     <span className="text-base font-bold">From:</span>
-                    <Address
-                      address={faucetAddress}
-                      onlyEnsOrAddress
-                      blockExplorerAddressLink={
-                        targetNetwork.id === hardhat.id ? `/blockexplorer/address/${faucetAddress}` : undefined
-                      }
-                    />
+                    <Address address={faucetAddress} onlyEnsOrAddress />
                   </div>
                   <div>
                     <span className="text-base font-bold pl-3">ETH Available:</span>

@@ -1,12 +1,13 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useId, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useQueryClient } from "@tanstack/react-query";
 import { useAccount } from "wagmi";
 import {
   ArrowPathIcon,
+  ExclamationTriangleIcon,
   GiftIcon,
   IdentificationIcon,
   ShieldCheckIcon,
@@ -21,6 +22,11 @@ import { FREE_TRANSACTION_ALLOWANCE_QUERY_KEY } from "~~/hooks/useFreeTransactio
 import { useVoterIdNFT } from "~~/hooks/useVoterIdNFT";
 import { shouldRefreshAfterFaucetClaim } from "~~/lib/governance/faucetQueryInvalidation";
 import { buildSelfVerificationApp, getSelfVerificationUniversalLink } from "~~/lib/governance/selfVerificationApp";
+import {
+  clearStoredReferralAttribution,
+  normalizeReferralAddress,
+  storeReferralAttributionFromValue,
+} from "~~/lib/referrals/referralAttribution";
 import { notification } from "~~/utils/scaffold-eth";
 
 interface FaucetSectionProps {
@@ -42,6 +48,55 @@ type PendingSelfVerificationSession = {
   address: string;
   startedAt: number;
 };
+
+type FaucetClaimStatus = "unclaimed" | "verified" | "claim_without_voter_id";
+
+type FaucetReferralInputState = {
+  canCheckReferrer: boolean;
+  hasReferralInput: boolean;
+  isInvalid: boolean;
+  isSelfReferral: boolean;
+  normalizedReferrer: string | null;
+};
+
+export function getFaucetClaimStatus({
+  hasClaimed,
+  hasVoterId,
+}: {
+  hasClaimed: boolean;
+  hasVoterId: boolean;
+}): FaucetClaimStatus {
+  if (hasVoterId) {
+    return "verified";
+  }
+
+  if (hasClaimed) {
+    return "claim_without_voter_id";
+  }
+
+  return "unclaimed";
+}
+
+export function getFaucetReferralInputState({
+  connectedAddress,
+  inputValue,
+}: {
+  connectedAddress?: string | null;
+  inputValue: string;
+}): FaucetReferralInputState {
+  const hasReferralInput = inputValue.trim().length > 0;
+  const normalizedReferrer = normalizeReferralAddress(inputValue);
+  const normalizedConnectedAddress = normalizeReferralAddress(connectedAddress);
+  const isSelfReferral = !!normalizedReferrer && normalizedReferrer === normalizedConnectedAddress;
+
+  return {
+    canCheckReferrer: !!normalizedReferrer && !isSelfReferral,
+    hasReferralInput,
+    isInvalid: hasReferralInput && !normalizedReferrer,
+    isSelfReferral,
+    normalizedReferrer,
+  };
+}
 
 function readPendingSelfVerificationSession(): PendingSelfVerificationSession | null {
   if (typeof window === "undefined") {
@@ -105,20 +160,26 @@ function clearPendingSelfVerificationSession() {
 }
 
 export function FaucetSection({ referrer }: FaucetSectionProps) {
+  const referralInputMessageId = useId();
   const { address, chain } = useAccount();
   const router = useRouter();
   const queryClient = useQueryClient();
-  const { hasVoterId, tokenId, isLoading: voterIdLoading } = useVoterIdNFT(address);
+  const { hasVoterId, tokenId, isLoading: voterIdLoading, refetch: refetchVoterId } = useVoterIdNFT(address);
   const { isAccepted, requireAcceptance } = useTermsAcceptance();
   const { data: faucetContractInfo } = useDeployedContractInfo({ contractName: "HumanFaucet" });
   const [termsOk, setTermsOk] = useState(false);
   const [verificationPending, setVerificationPending] = useState(false);
   const [verificationConfirmed, setVerificationConfirmed] = useState(false);
+  const [referralInput, setReferralInput] = useState(() => normalizeReferralAddress(referrer) ?? "");
+  const [hasEditedReferralInput, setHasEditedReferralInput] = useState(false);
   const [selfRetryLink, setSelfRetryLink] = useState<string | null>(null);
   const pollTimer = useRef<ReturnType<typeof setInterval>>(null);
   const pollStart = useRef<number>(0);
   const completionHandled = useRef(false);
   const statusToastId = useRef<string | null>(null);
+  const normalizedIncomingReferrer = normalizeReferralAddress(referrer);
+  const referralInputState = getFaucetReferralInputState({ connectedAddress: address, inputValue: referralInput });
+  const effectiveReferrer = referralInputState.canCheckReferrer ? referralInputState.normalizedReferrer : null;
 
   // Read tier info from HumanFaucet contract
   const { data: tierInfo, isLoading: tierLoading } = useScaffoldReadContract({
@@ -145,11 +206,11 @@ export function FaucetSection({ referrer }: FaucetSectionProps) {
   });
 
   // Check if referrer is valid (has a Voter ID)
-  const { data: isValidReferrer } = useScaffoldReadContract({
+  const { data: isValidReferrer, isLoading: referrerLoading } = useScaffoldReadContract({
     contractName: "HumanFaucet",
     functionName: "isValidReferrer",
-    args: [referrer as `0x${string}`],
-    query: { enabled: !!referrer },
+    args: [effectiveReferrer as `0x${string}`],
+    query: { enabled: !!effectiveReferrer },
   });
 
   // When the Self app reports success, start polling hasClaimed until on-chain tx confirms
@@ -175,38 +236,55 @@ export function FaucetSection({ referrer }: FaucetSectionProps) {
     [clearStatusToast],
   );
 
-  const finishVerification = useCallback(async () => {
-    if (completionHandled.current) {
-      return;
-    }
-
-    completionHandled.current = true;
-    clearPendingSelfVerificationSession();
-    stopPolling();
-    setVerificationPending(false);
-    setVerificationConfirmed(false);
-    clearStatusToast();
-
-    if (address) {
-      try {
-        const balanceResult = await refetchCrepBalance();
-        if (balanceResult.data !== undefined) {
-          queryClient.setQueryData(["wallet-crep-balance", address.toLowerCase()], balanceResult.data);
-        }
-      } catch {
-        // Fall back to invalidation-only refresh if the direct balance read fails.
+  const finishVerification = useCallback(
+    async (claimStatus: Exclude<FaucetClaimStatus, "unclaimed">) => {
+      if (completionHandled.current) {
+        return;
       }
 
-      void queryClient.invalidateQueries({ queryKey: ["wallet-crep-balance", address.toLowerCase()] });
-    }
+      completionHandled.current = true;
+      clearPendingSelfVerificationSession();
+      stopPolling();
+      setVerificationPending(false);
+      setVerificationConfirmed(false);
+      clearStatusToast();
 
-    void queryClient.invalidateQueries({ queryKey: FREE_TRANSACTION_ALLOWANCE_QUERY_KEY });
-    void queryClient.invalidateQueries({
-      predicate: query => shouldRefreshAfterFaucetClaim(query.queryKey, address),
-    });
-    notification.success("cREP sent. Your wallet balance may take a few seconds to refresh.", { duration: 6000 });
-    router.replace(POST_CLAIM_ROUTE);
-  }, [address, clearStatusToast, queryClient, refetchCrepBalance, router, stopPolling]);
+      if (address) {
+        try {
+          const balanceResult = await refetchCrepBalance();
+          if (balanceResult.data !== undefined) {
+            queryClient.setQueryData(["wallet-crep-balance", address.toLowerCase()], balanceResult.data);
+          }
+        } catch {
+          // Fall back to invalidation-only refresh if the direct balance read fails.
+        }
+
+        void queryClient.invalidateQueries({ queryKey: ["wallet-crep-balance", address.toLowerCase()] });
+      }
+
+      void queryClient.invalidateQueries({ queryKey: FREE_TRANSACTION_ALLOWANCE_QUERY_KEY });
+      void queryClient.invalidateQueries({
+        predicate: query => shouldRefreshAfterFaucetClaim(query.queryKey, address),
+      });
+      void refetchVoterId();
+
+      if (claimStatus === "verified") {
+        notification.success("cREP sent and Voter ID minted. Your wallet balance may take a few seconds to refresh.", {
+          duration: 6000,
+        });
+        router.replace(POST_CLAIM_ROUTE);
+        return;
+      }
+
+      notification.warning(
+        "cREP sent, but your Voter ID is still pending. Voting will unlock after minting is retried.",
+        {
+          duration: 9000,
+        },
+      );
+    },
+    [address, clearStatusToast, queryClient, refetchCrepBalance, refetchVoterId, router, stopPolling],
+  );
 
   const startPolling = useCallback(() => {
     const activeSession = address ? beginPendingSelfVerificationSession(address) : null;
@@ -216,13 +294,14 @@ export function FaucetSection({ referrer }: FaucetSectionProps) {
 
     const pollClaimStatus = async () => {
       if (hasVoterId) {
-        await finishVerification();
+        await finishVerification("verified");
         return true;
       }
 
       const result = await refetchClaimed();
       if (result.data === true) {
-        await finishVerification();
+        const voterIdResult = await refetchVoterId();
+        await finishVerification(voterIdResult.hasVoterId ? "verified" : "claim_without_voter_id");
         return true;
       }
 
@@ -247,7 +326,7 @@ export function FaucetSection({ referrer }: FaucetSectionProps) {
         void pollClaimStatus();
       }, POLL_INTERVAL_MS);
     });
-  }, [address, clearStatusToast, finishVerification, hasVoterId, refetchClaimed, stopPolling]);
+  }, [address, clearStatusToast, finishVerification, hasVoterId, refetchClaimed, refetchVoterId, stopPolling]);
 
   // Clean up polling on unmount
   useEffect(
@@ -283,8 +362,14 @@ export function FaucetSection({ referrer }: FaucetSectionProps) {
       return;
     }
 
-    if (hasClaimed === true || hasVoterId) {
-      void finishVerification();
+    if (hasVoterId) {
+      void finishVerification("verified");
+      return;
+    }
+
+    if (hasClaimed === true) {
+      void refetchVoterId();
+      void finishVerification("claim_without_voter_id");
       return;
     }
 
@@ -297,6 +382,7 @@ export function FaucetSection({ referrer }: FaucetSectionProps) {
     finishVerification,
     hasClaimed,
     hasVoterId,
+    refetchVoterId,
     startPolling,
     stopPolling,
     verificationPending,
@@ -313,8 +399,14 @@ export function FaucetSection({ referrer }: FaucetSectionProps) {
         return;
       }
 
-      if (hasClaimed === true || hasVoterId) {
-        void finishVerification();
+      if (hasVoterId) {
+        void finishVerification("verified");
+        return;
+      }
+
+      if (hasClaimed === true) {
+        void refetchVoterId();
+        void finishVerification("claim_without_voter_id");
         return;
       }
 
@@ -336,7 +428,7 @@ export function FaucetSection({ referrer }: FaucetSectionProps) {
       window.removeEventListener("focus", resumeVerificationTracking);
       document.removeEventListener("visibilitychange", handleVisibilityChange);
     };
-  }, [address, finishVerification, hasClaimed, hasVoterId, startPolling, verificationPending]);
+  }, [address, finishVerification, hasClaimed, hasVoterId, refetchVoterId, startPolling, verificationPending]);
 
   useEffect(() => {
     if (
@@ -355,11 +447,19 @@ export function FaucetSection({ referrer }: FaucetSectionProps) {
       contractAddress: faucetContractInfo.address,
       chainId: chain.id,
       deeplinkCallback: window.location.href,
-      referrer,
+      referrer: effectiveReferrer,
     });
 
     setSelfRetryLink(selfApp ? getSelfVerificationUniversalLink(selfApp) : null);
-  }, [address, chain?.id, faucetContractInfo?.address, referrer]);
+  }, [address, chain?.id, effectiveReferrer, faucetContractInfo?.address]);
+
+  useEffect(() => {
+    if (hasEditedReferralInput) {
+      return;
+    }
+
+    setReferralInput(normalizedIncomingReferrer ?? "");
+  }, [hasEditedReferralInput, normalizedIncomingReferrer]);
 
   const handleVerificationStarted = useCallback(() => {
     completionHandled.current = false;
@@ -376,6 +476,25 @@ export function FaucetSection({ referrer }: FaucetSectionProps) {
     showStatusToast("Verification received. Finalizing your cREP faucet claim...");
     startPolling();
   }, [showStatusToast, startPolling]);
+
+  const handleReferralInputChange = useCallback((value: string) => {
+    setHasEditedReferralInput(true);
+    setReferralInput(value);
+  }, []);
+
+  const handleReferralInputBlur = useCallback(() => {
+    if (!referralInputState.canCheckReferrer || !referralInputState.normalizedReferrer) {
+      return;
+    }
+
+    storeReferralAttributionFromValue(referralInputState.normalizedReferrer, { source: "manual" });
+  }, [referralInputState.canCheckReferrer, referralInputState.normalizedReferrer]);
+
+  const handleClearReferralInput = useCallback(() => {
+    setHasEditedReferralInput(true);
+    setReferralInput("");
+    clearStoredReferralAttribution();
+  }, []);
 
   // Sync terms acceptance from context (already accepted via localStorage)
   useEffect(() => {
@@ -396,8 +515,29 @@ export function FaucetSection({ referrer }: FaucetSectionProps) {
 
   // Calculate total claim amount
   const baseAmount = claimAmount ?? 0n;
-  const bonusAmount = isValidReferrer ? (claimantBonus ?? 0n) : 0n;
+  const referralBonusActive = referralInputState.canCheckReferrer && isValidReferrer === true;
+  const referralCheckPending = referralInputState.canCheckReferrer && referrerLoading;
+  const referralInputMessage = referralInputState.isInvalid
+    ? "Enter a valid EVM address. The base faucet claim still works without it."
+    : referralInputState.isSelfReferral
+      ? "Use a different wallet address. Self-referrals do not receive a bonus."
+      : referralBonusActive
+        ? "Referral bonus active. You and the referrer receive cREP when verification succeeds."
+        : referralCheckPending
+          ? "Checking referral eligibility..."
+          : referralInputState.canCheckReferrer
+            ? "Referral saved, but this address is not eligible yet. Your base claim will still work."
+            : "Paste a referral address before verifying if someone invited you.";
+  const referralInputMessageClassName = referralInputState.isInvalid
+    ? "text-error"
+    : referralInputState.isSelfReferral
+      ? "text-warning"
+      : referralBonusActive
+        ? "text-success"
+        : "text-base-content/60";
+  const bonusAmount = referralBonusActive ? (claimantBonus ?? 0n) : 0n;
   const totalClaimAmount = baseAmount + bonusAmount;
+  const faucetClaimStatus = getFaucetClaimStatus({ hasClaimed: hasClaimed === true, hasVoterId });
 
   if (voterIdLoading || tierLoading || claimLoading) {
     return (
@@ -408,7 +548,7 @@ export function FaucetSection({ referrer }: FaucetSectionProps) {
     );
   }
 
-  if (hasClaimed || hasVoterId) {
+  if (faucetClaimStatus === "verified") {
     return (
       <div className="surface-card rounded-2xl p-6 text-center space-y-4">
         <ShieldCheckIcon className="w-12 h-12 text-success mx-auto" />
@@ -444,6 +584,38 @@ export function FaucetSection({ referrer }: FaucetSectionProps) {
     );
   }
 
+  if (faucetClaimStatus === "claim_without_voter_id") {
+    return (
+      <div className="surface-card rounded-2xl p-6 text-center space-y-4">
+        <ExclamationTriangleIcon className="w-12 h-12 text-warning mx-auto" />
+        <h2 className={surfaceSectionHeadingClassName}>cREP Claimed, Voter ID Pending</h2>
+
+        <p className="text-base-content/70">
+          Your faucet claim succeeded, but your Voter ID was not minted. Voting, submitting, and referrals unlock after
+          the Voter ID mint is retried.
+        </p>
+
+        {address && (
+          <div className="bg-base-200 rounded-xl p-4 text-left text-sm text-base-content/70">
+            <p className="font-semibold text-base-content mb-1">Use an official support channel for this wallet:</p>
+            <p className="break-all font-mono">{address}</p>
+          </div>
+        )}
+
+        <button
+          type="button"
+          className="btn btn-primary w-full mt-4"
+          onClick={() => {
+            void refetchClaimed();
+            void refetchVoterId();
+          }}
+        >
+          Refresh Voter ID Status
+        </button>
+      </div>
+    );
+  }
+
   return (
     <div className="surface-card rounded-2xl p-6 space-y-6">
       {/* Header */}
@@ -453,8 +625,49 @@ export function FaucetSection({ referrer }: FaucetSectionProps) {
         <InfoTooltip text="Claim free cREP with a Self.xyz passport or biometric ID card proof" />
       </div>
 
+      <div className="rounded-xl border border-base-300 bg-base-200/60 p-4 space-y-3">
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <label htmlFor="faucet-referral-address" className="font-semibold">
+            Referral address
+          </label>
+          <span className="text-sm text-base-content/50">Optional</span>
+        </div>
+        <div className="flex flex-col gap-2 sm:flex-row">
+          <input
+            id="faucet-referral-address"
+            type="text"
+            value={referralInput}
+            placeholder="0x..."
+            aria-describedby={referralInputMessageId}
+            aria-invalid={referralInputState.isInvalid || referralInputState.isSelfReferral || undefined}
+            className={`input input-bordered min-w-0 flex-1 font-mono text-sm ${
+              referralInputState.isInvalid || referralInputState.isSelfReferral ? "input-error" : ""
+            }`}
+            disabled={verificationPending}
+            onBlur={handleReferralInputBlur}
+            onChange={event => handleReferralInputChange(event.target.value)}
+          />
+          <button
+            type="button"
+            className="btn btn-ghost border border-base-300 sm:w-auto"
+            disabled={!referralInput || verificationPending}
+            onClick={handleClearReferralInput}
+          >
+            Clear
+          </button>
+        </div>
+        <p
+          id={referralInputMessageId}
+          className={`text-sm ${referralInputMessageClassName}`}
+          role="status"
+          aria-live="polite"
+        >
+          {referralInputMessage}
+        </p>
+      </div>
+
       {/* Referral Badge */}
-      {isValidReferrer && (
+      {referralBonusActive && (
         <div className="bg-success/10 border border-success/20 rounded-xl p-4">
           <div className="flex items-center gap-2 text-success">
             <UserGroupIcon className="w-5 h-5" />
@@ -471,7 +684,7 @@ export function FaucetSection({ referrer }: FaucetSectionProps) {
         <div className="bg-base-200 rounded-xl p-4">
           <p className="text-base text-base-content/60">You Will Receive</p>
           <p className="text-2xl font-bold text-primary">{formatAmount(totalClaimAmount)} cREP</p>
-          {isValidReferrer && <p className="text-base text-success">+{formatAmount(claimantBonus)} bonus</p>}
+          {referralBonusActive && <p className="text-base text-success">+{formatAmount(claimantBonus)} bonus</p>}
         </div>
         <div className="bg-base-200 rounded-xl p-4">
           <div className="flex items-center gap-1">
@@ -533,7 +746,7 @@ export function FaucetSection({ referrer }: FaucetSectionProps) {
           </div>
         ) : termsOk ? (
           <SelfVerifyButton
-            referrer={referrer}
+            referrer={effectiveReferrer}
             onStart={handleVerificationStarted}
             onSuccess={handleVerificationSuccess}
           />
@@ -568,7 +781,7 @@ export function FaucetSection({ referrer }: FaucetSectionProps) {
           <li>Scan the QR code above with the Self app</li>
           <li>Self generates a zero-knowledge proof — no personal data is shared</li>
           <li>The proof is verified on the blockchain and you receive your cREP + Voter ID</li>
-          {isValidReferrer && <li className="text-success">Referral bonus is applied automatically!</li>}
+          {referralBonusActive && <li className="text-success">Referral bonus is applied automatically!</li>}
         </ol>
       </div>
 

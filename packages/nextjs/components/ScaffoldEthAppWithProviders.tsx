@@ -1,5 +1,6 @@
 "use client";
 
+import { Suspense } from "react";
 import dynamic from "next/dynamic";
 import { usePathname } from "next/navigation";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
@@ -11,6 +12,7 @@ import { WagmiProvider } from "wagmi";
 import { Footer } from "~~/components/Footer";
 import { Header } from "~~/components/Header";
 import { RouteScopedNotifiers } from "~~/components/RouteScopedNotifiers";
+import { ReferralAttributionCapture } from "~~/components/referrals/ReferralAttributionCapture";
 import { Faucet } from "~~/components/scaffold-eth";
 import { ClearLegacyBurnerSession } from "~~/components/thirdweb/ClearLegacyBurnerSession";
 import { LocalTestWalletBridge } from "~~/components/thirdweb/LocalTestWalletBridge";
@@ -84,6 +86,9 @@ export const ScaffoldEthAppWithProviders = ({ children }: { children: React.Reac
           <LocalTestWalletBridge />
           <ThirdwebConnectorWalletBridge />
           <ThirdwebAutoConnectBridge />
+          <Suspense fallback={null}>
+            <ReferralAttributionCapture />
+          </Suspense>
           <ProgressBar height="3px" color="#F26426" />
           <TermsAcceptanceProvider>
             <OptimisticVoteProvider>
