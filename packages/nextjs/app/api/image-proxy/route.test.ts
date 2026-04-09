@@ -42,8 +42,10 @@ after(() => {
 
 test("revalidates HTTPS redirects before following them", async () => {
   const calls: string[] = [];
-  globalThis.fetch = (async (input: RequestInfo | URL) => {
+  const requestOptions: RequestInit[] = [];
+  globalThis.fetch = (async (input: RequestInfo | URL, init?: RequestInit) => {
     calls.push(String(input));
+    requestOptions.push(init ?? {});
 
     if (calls.length === 1) {
       return new Response(null, {
@@ -68,6 +70,10 @@ test("revalidates HTTPS redirects before following them", async () => {
   assert.equal(response.status, 200);
   assert.equal(response.headers.get("content-type"), "image/png");
   assert.deepEqual(calls, ["https://coin-images.coingecko.com/initial.png", "https://assets.coingecko.com/final.png"]);
+  assert.deepEqual(requestOptions, [
+    { cache: "no-store", redirect: "manual" },
+    { cache: "no-store", redirect: "manual" },
+  ]);
   assert.deepEqual(Array.from(new Uint8Array(await response.arrayBuffer())), [1, 2, 3]);
 });
 
