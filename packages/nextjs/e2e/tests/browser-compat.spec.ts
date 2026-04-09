@@ -8,6 +8,8 @@ const PUBLIC_ROUTES = [
   { path: "/legal", content: /^Legal$/i },
   { path: "/legal/terms", content: /Terms of Service/i },
 ];
+const VOTE_UP_BUTTON = /^Vote up\b/i;
+const VOTE_DOWN_BUTTON = /^Vote down\b/i;
 
 test.describe("Browser compatibility smoke", () => {
   for (const { path, content } of PUBLIC_ROUTES) {
@@ -33,8 +35,8 @@ test.describe("Browser compatibility smoke", () => {
     await expect(main).toBeVisible({ timeout: 10_000 });
     await expect(
       page
-        .getByRole("button", { name: /^Vote up$/i })
-        .or(page.getByRole("button", { name: /^Vote down$/i }))
+        .getByRole("button", { name: VOTE_UP_BUTTON })
+        .or(page.getByRole("button", { name: VOTE_DOWN_BUTTON }))
         .or(page.getByText(/No content submitted yet|No content found/i))
         .first(),
     ).toBeVisible({ timeout: 15_000 });
@@ -55,4 +57,3 @@ test.describe("Browser compatibility smoke", () => {
     await expectNoHorizontalOverflow(page, "/submit browser compat");
   });
 });
-

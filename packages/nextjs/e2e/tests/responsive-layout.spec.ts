@@ -13,6 +13,8 @@ const VIEWPORTS = [
 ];
 
 const ROUTES = ["/", "/vote", "/submit", "/portfolio", "/docs", "/legal"];
+const VOTE_UP_BUTTON = /^Vote up\b/i;
+const VOTE_DOWN_BUTTON = /^Vote down\b/i;
 
 async function expectNavigationForViewport(page: Page, width: number): Promise<void> {
   const sidebar = page.locator("aside").first();
@@ -36,8 +38,8 @@ async function expectRouteControls(page: Page, path: string, width: number): Pro
     await expectNavigationForViewport(page, width);
     await expect(
       page
-        .getByRole("button", { name: /^Vote up$/i })
-        .or(page.getByRole("button", { name: /^Vote down$/i }))
+        .getByRole("button", { name: VOTE_UP_BUTTON })
+        .or(page.getByRole("button", { name: VOTE_DOWN_BUTTON }))
         .or(page.getByText(/No content submitted yet|No content found/i))
         .first(),
       "Vote route should keep its primary feed state visible",
@@ -98,7 +100,7 @@ test.describe("Responsive layout", () => {
     const canVote = await findVoteableContent(page);
     expect(canVote, "Should find at least one voteable content before checking dialog layout").toBeTruthy();
 
-    await page.getByRole("button", { name: /^Vote up$/i }).click();
+    await page.getByRole("button", { name: VOTE_UP_BUTTON }).click();
 
     const dialog = page.getByRole("dialog").first();
     await expect(dialog).toBeVisible({ timeout: 5_000 });
@@ -120,4 +122,3 @@ test.describe("Responsive layout", () => {
     await page.keyboard.press("Escape");
   });
 });
-
