@@ -27,6 +27,11 @@ type ThirdwebWalletExecutionMode =
 
 type ThirdwebSponsorshipMode = "sponsored" | "self-funded";
 
+type CreateThirdwebInAppWalletOptions = {
+  includeWalletAuthOption?: boolean;
+  sponsorshipMode?: ThirdwebSponsorshipMode | null;
+};
+
 export function isThirdwebWalletChain(chainId: number | null | undefined): boolean {
   return typeof chainId === "number" && THIRDWEB_CONNECT_CHAIN_IDS.has(chainId);
 }
@@ -151,12 +156,11 @@ export function getThirdwebWalletSponsorshipMode(wallet: Wallet | null | undefin
   return null;
 }
 
-export function createThirdwebInAppWallet(
-  chainId: number,
-  options?: { sponsorshipMode?: ThirdwebSponsorshipMode | null },
-) {
+export function createThirdwebInAppWallet(chainId: number, options?: CreateThirdwebInAppWalletOptions) {
   return inAppWallet({
-    auth: getThirdwebWalletAuthConfig(),
+    auth: getThirdwebWalletAuthConfig({
+      includeWalletOption: options?.includeWalletAuthOption,
+    }),
     executionMode: getThirdwebWalletExecutionMode(chainId, options),
     metadata: {
       image: {
@@ -176,9 +180,21 @@ export function getThirdwebWalletIds(
   return ["inApp", ...getAvailableThirdwebExternalWalletIds(win)];
 }
 
-function getThirdwebWallets(chainId: number = thirdwebDefaultChain.id) {
-  return getThirdwebWalletIds().map(walletId =>
-    walletId === "inApp" ? createThirdwebInAppWallet(chainId) : createWallet(walletId),
+export function shouldIncludeThirdwebWalletAuthOption(
+  win: unknown = typeof window === "undefined" ? undefined : window,
+): boolean {
+  return getAvailableThirdwebExternalWalletIds(win).length === 0;
+}
+
+function getThirdwebWallets(
+  chainId: number = thirdwebDefaultChain.id,
+  win: unknown = typeof window === "undefined" ? undefined : window,
+) {
+  const walletIds = getThirdwebWalletIds(win);
+  const includeWalletAuthOption = walletIds.length === 1;
+
+  return walletIds.map(walletId =>
+    walletId === "inApp" ? createThirdwebInAppWallet(chainId, { includeWalletAuthOption }) : createWallet(walletId),
   );
 }
 

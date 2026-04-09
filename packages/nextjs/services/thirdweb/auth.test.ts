@@ -33,3 +33,12 @@ test("getThirdwebWalletAuthConfig keeps popup mode for non-localhost flows", () 
   assert.ok(!("redirectUrl" in auth));
   assert.ok(auth.options.includes("wallet"));
 });
+
+test("getThirdwebWalletAuthConfig can omit wallet auth when external wallets are already available", () => {
+  const auth = getThirdwebWalletAuthConfig({
+    hostname: "app.curyo.xyz",
+    includeWalletOption: false,
+  });
+
+  assert.deepEqual(auth.options, ["google", "apple", "email", "passkey"]);
+});
