@@ -3,7 +3,7 @@
 import { useCallback, useMemo } from "react";
 import { EPOCH_WEIGHT_BPS, REWARD_SPLIT_BPS, ROUND_STATE } from "@curyo/contracts/protocol";
 import { useAccount, useReadContracts } from "wagmi";
-import { type ClaimableRewardItem } from "~~/hooks/claimableRewards";
+import { type ClaimableRewardItem, buildVoterParticipationClaimableRewards } from "~~/hooks/claimableRewards";
 import { useDeployedContractInfo } from "~~/hooks/scaffold-eth";
 import { useClaimableFrontendRewards } from "~~/hooks/useClaimableFrontendRewards";
 import { useClaimableSubmitterParticipationRewards } from "~~/hooks/useClaimableSubmitterParticipationRewards";
@@ -103,6 +103,18 @@ export function useAllClaimableRewards() {
     () => rewardVotes.filter(v => v.isUp !== null && v.roundUpWins !== null && v.isUp !== v.roundUpWins),
     [rewardVotes],
   );
+  const settledWinningTerminalVotes = useMemo(
+    () =>
+      terminalVotes.filter(
+        v =>
+          v.roundState === ROUND_STATE.Settled &&
+          v.revealed &&
+          v.isUp !== null &&
+          v.roundUpWins !== null &&
+          v.isUp === v.roundUpWins,
+      ),
+    [terminalVotes],
+  );
 
   // --- Step 5: Multicall roundVoterPool + roundWinningStake for winners ---
   const rewardContracts = useMemo(() => {
@@ -126,6 +138,62 @@ export function useAllClaimableRewards() {
   const { data: rewardResults, isLoading: rewardsLoading } = useReadContracts({
     contracts: rewardContracts,
     query: { enabled: rewardContracts.length > 0 },
+  });
+
+  const participationRewardContracts = useMemo(() => {
+    if (!distributorInfo || !address || settledWinningTerminalVotes.length === 0) return [];
+    return settledWinningTerminalVotes.flatMap(v => {
+      const contentId = BigInt(v.contentId);
+      const roundId = BigInt(v.roundId);
+
+      return [
+        {
+          address: distributorInfo.address,
+          abi: distributorInfo.abi,
+          functionName: "participationRewardClaimed" as const,
+          args: [contentId, roundId, address],
+        },
+        {
+          address: distributorInfo.address,
+          abi: distributorInfo.abi,
+          functionName: "participationRewardPaid" as const,
+          args: [contentId, roundId, address],
+        },
+        {
+          address: distributorInfo.address,
+          abi: distributorInfo.abi,
+          functionName: "roundParticipationRewardRateBps" as const,
+          args: [contentId, roundId],
+        },
+        {
+          address: distributorInfo.address,
+          abi: distributorInfo.abi,
+          functionName: "roundParticipationRewardOwed" as const,
+          args: [contentId, roundId],
+        },
+        {
+          address: distributorInfo.address,
+          abi: distributorInfo.abi,
+          functionName: "roundParticipationRewardReserved" as const,
+          args: [contentId, roundId],
+        },
+        {
+          address: distributorInfo.address,
+          abi: distributorInfo.abi,
+          functionName: "roundParticipationRewardPool" as const,
+          args: [contentId, roundId],
+        },
+      ];
+    });
+  }, [address, distributorInfo, settledWinningTerminalVotes]);
+
+  const {
+    data: participationRewardResults,
+    isLoading: participationRewardsLoading,
+    refetch: refetchParticipationRewards,
+  } = useReadContracts({
+    contracts: participationRewardContracts,
+    query: { enabled: participationRewardContracts.length > 0 },
   });
 
   // --- Step 6: Build claimable items with calculated rewards ---
@@ -204,14 +272,62 @@ export function useAllClaimableRewards() {
     return { claimableItems: items, activeStake: active };
   }, [refundVotes, settledWinners, settledLosers, rewardResults, votes]);
 
+  const participationClaimableItems = useMemo<ClaimableRewardItem[]>(() => {
+    if (!participationRewardResults || participationRewardResults.length !== settledWinningTerminalVotes.length * 6) {
+      return [];
+    }
+
+    const safeBigInt = (val: unknown): bigint => {
+      try {
+        return BigInt(val as string | number | bigint);
+      } catch {
+        return 0n;
+      }
+    };
+
+    const candidates = settledWinningTerminalVotes.map((vote, index) => {
+      const claimed = participationRewardResults[index * 6];
+      const paid = participationRewardResults[index * 6 + 1];
+      const rate = participationRewardResults[index * 6 + 2];
+      const owed = participationRewardResults[index * 6 + 3];
+      const reserved = participationRewardResults[index * 6 + 4];
+      const pool = participationRewardResults[index * 6 + 5];
+      const rewardPool =
+        pool?.status === "success" && typeof pool.result === "string" && !/^0x0{40}$/i.test(pool.result)
+          ? (pool.result.toLowerCase() as `0x${string}`)
+          : null;
+
+      return {
+        contentId: safeBigInt(vote.contentId),
+        roundId: safeBigInt(vote.roundId),
+        stake: safeBigInt(vote.stake),
+        alreadyClaimed: claimed?.status === "success" && claimed.result === true,
+        alreadyPaid: paid?.status === "success" ? safeBigInt(paid.result) : 0n,
+        rateBps: rate?.status === "success" ? safeBigInt(rate.result) : 0n,
+        totalReward: owed?.status === "success" ? safeBigInt(owed.result) : 0n,
+        reservedReward: reserved?.status === "success" ? safeBigInt(reserved.result) : 0n,
+        rewardPool,
+      };
+    });
+
+    return buildVoterParticipationClaimableRewards(candidates);
+  }, [participationRewardResults, settledWinningTerminalVotes]);
+
   const combinedClaimableItems = useMemo(
     () => [
       ...claimableItems,
+      ...participationClaimableItems,
       ...submitterClaimableItems,
       ...submitterParticipationClaimableItems,
       ...frontendClaimableItems,
     ],
-    [claimableItems, submitterClaimableItems, submitterParticipationClaimableItems, frontendClaimableItems],
+    [
+      claimableItems,
+      participationClaimableItems,
+      submitterClaimableItems,
+      submitterParticipationClaimableItems,
+      frontendClaimableItems,
+    ],
   );
 
   const combinedTotalClaimable = useMemo(
@@ -220,17 +336,24 @@ export function useAllClaimableRewards() {
   );
 
   const isLoading =
-    claimedLoading || rewardsLoading || submitterLoading || submitterParticipationLoading || frontendClaimableLoading;
+    claimedLoading ||
+    rewardsLoading ||
+    participationRewardsLoading ||
+    submitterLoading ||
+    submitterParticipationLoading ||
+    frontendClaimableLoading;
 
   const refetch = useCallback(() => {
     refetchVotes();
     refetchClaimed();
+    refetchParticipationRewards();
     refetchSubmitterClaimables();
     refetchSubmitterParticipationClaimables();
     refetchFrontendClaimables();
   }, [
     refetchVotes,
     refetchClaimed,
+    refetchParticipationRewards,
     refetchSubmitterClaimables,
     refetchSubmitterParticipationClaimables,
     refetchFrontendClaimables,
