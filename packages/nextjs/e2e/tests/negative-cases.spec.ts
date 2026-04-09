@@ -104,9 +104,9 @@ test.describe("Negative cases", () => {
     await confirmBtn.click();
 
     // Wait for success or error (includes approval failures).
-    // The UI may show "Voted!", "committed", "staked", or an error toast.
+    // The UI may show "Voted!", "submitted", "committed", "staked", or an error toast.
     // Also detect the modal closing as an implicit success signal.
-    const successMsg = page.getByText(/voted|success|committed|staked/i);
+    const successMsg = page.getByText(/voted|success|submitted|committed|staked/i);
     const errorMsg = page.getByText(/reverted|failed|error|rejected|not confirmed/i);
     const modalClosed = stakeModal
       .waitFor({ state: "hidden", timeout: 30_000 })
@@ -136,13 +136,12 @@ test.describe("Negative cases", () => {
 
     // After successful vote, stay on the page and verify the UI shows voted state.
     // The VotingQuestionCard reads the vote from contract state and shows
-    // "Voted Up"/"Voted Down" badge or "Cooldown" instead of vote buttons.
+    // "Voted hidden" badge or "Cooldown" instead of vote buttons.
     // The page may auto-advance to the next content after voting.
     // Also accept "vote reverted" as evidence: the contract rejects
     // duplicate votes, so a revert when revisiting means the prior vote stuck.
     const votedOrCooldown = page
-      .getByText("Voted Up")
-      .or(page.getByText("Voted Down"))
+      .getByText(/Voted(?: hidden| Up| Down)?/i)
       .or(page.getByText(/Cooldown/i))
       .or(page.getByText(/vote.*reverted/i));
 
@@ -172,7 +171,7 @@ test.describe("Negative cases", () => {
       }
     }
 
-    // The voted content should show "Voted Up/Down", "Cooldown", or
+    // The voted content should show "Voted hidden", "Cooldown", or
     // "vote reverted" (contract rejects duplicate votes).
     // After voting the page auto-advances to the next card, so re-finding
     // the voted content in the thumbnail grid can be flaky — skip gracefully.

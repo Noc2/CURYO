@@ -39,8 +39,7 @@ function formatCrepAmount(value: bigint | null | undefined) {
 }
 
 function formatWinRate(value: number) {
-  const percent = Number((value * 100).toFixed(1));
-  return `${Number.isInteger(percent) ? percent.toFixed(0) : percent.toFixed(1)}%`;
+  return `${(value * 100).toFixed(1)}%`;
 }
 
 function FreeTransactionAllowanceText({ className }: { className?: string }) {

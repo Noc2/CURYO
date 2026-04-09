@@ -41,7 +41,7 @@ test.describe("Voting flow — 3-voter threshold", () => {
       .or(page.getByRole("button", { name: "Vote down" }))
       .or(page.getByText("Your submission"))
       .or(page.getByText(/Cooldown/))
-      .or(page.getByText(/Voted (Up|Down)/))
+      .or(page.getByText(/Voted(?: hidden| Up| Down)?/i))
       .or(page.getByText("Round full"))
       .or(page.getByText("No content submitted yet"));
 

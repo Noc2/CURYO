@@ -30,6 +30,7 @@ import { useUnixTime } from "~~/hooks/useUnixTime";
 import { useVoteFeedStage } from "~~/hooks/useVoteFeedStage";
 import { useVoteHistoryQuery } from "~~/hooks/useVoteHistoryQuery";
 import { useVoterAccuracyBatch } from "~~/hooks/useVoterAccuracyBatch";
+import { useVoterIdNFT } from "~~/hooks/useVoterIdNFT";
 import { useWatchedContent } from "~~/hooks/useWatchedContent";
 import { mergeVoteHistoryItems } from "~~/hooks/voteHistory/shared";
 import {
@@ -45,6 +46,7 @@ import {
 import { type DiscoverFeedMode, sortDiscoverFeed } from "~~/lib/vote/feedModes";
 import { rankForYouFeed } from "~~/lib/vote/forYouRanker";
 import { buildLinkedWalletAddresses } from "~~/lib/vote/linkedWalletAddresses";
+import { shouldUseAddressLogCooldownFallback } from "~~/lib/vote/liveCooldown";
 import { buildVoteLocation } from "~~/lib/vote/location";
 import { mergeRequestedContentIntoFeed } from "~~/lib/vote/requestedContent";
 import { resolveStableSessionFeedOrder } from "~~/lib/vote/stableFeedOrder";
@@ -148,6 +150,11 @@ const HomeInner = () => {
   const { delegateTo, delegateOf, hasDelegate, isDelegate, isLoading: delegationLoading } = useDelegation(address);
   const delegateVoteAddress = hasDelegate ? delegateTo : undefined;
   const delegatorVoteAddress = isDelegate ? delegateOf : undefined;
+  const { hasVoterId: voteCooldownHasVoterId, isResolved: voteCooldownIdentityResolved } = useVoterIdNFT(address);
+  const canUseAddressLogVoteCooldownFallback = shouldUseAddressLogCooldownFallback({
+    hasVoterId: voteCooldownHasVoterId,
+    isIdentityResolved: voteCooldownIdentityResolved,
+  });
   const voteCooldownAddresses = useMemo(
     () => buildLinkedWalletAddresses(address, delegateVoteAddress, delegatorVoteAddress),
     [address, delegateVoteAddress, delegatorVoteAddress],
@@ -874,6 +881,7 @@ const HomeInner = () => {
       primaryItem !== null &&
       primaryItem !== undefined &&
       primaryItemKnownCooldownSeconds === 0 &&
+      canUseAddressLogVoteCooldownFallback &&
       voteCooldownAddresses.length > 0,
   });
   const primaryItemCooldownSeconds = Math.max(primaryItemKnownCooldownSeconds, primaryItemLiveCooldownSeconds);
@@ -887,7 +895,11 @@ const HomeInner = () => {
     contentId: stakeModalNeedsLiveCooldown ? stakeModal.contentId : undefined,
     voters: voteCooldownAddresses,
     nowSeconds,
-    enabled: stakeModalNeedsLiveCooldown && stakeModalKnownCooldownSeconds === 0 && voteCooldownAddresses.length > 0,
+    enabled:
+      stakeModalNeedsLiveCooldown &&
+      stakeModalKnownCooldownSeconds === 0 &&
+      canUseAddressLogVoteCooldownFallback &&
+      voteCooldownAddresses.length > 0,
   });
   const stakeModalCooldownSeconds = Math.max(
     stakeModalKnownCooldownSeconds,
@@ -1080,8 +1092,8 @@ const HomeInner = () => {
       const advanced = nextIndex > committedIndex ? handleSelectByIndex(nextIndex) : false;
       notification.success(
         advanced
-          ? `Vote committed! Stake: ${stakeAmount} cREP · next card ready`
-          : `Vote committed! Stake: ${stakeAmount} cREP`,
+          ? `Vote submitted! Stake: ${stakeAmount} cREP · next card ready`
+          : `Vote submitted! Stake: ${stakeAmount} cREP`,
       );
 
       if (isFirstVote) {
