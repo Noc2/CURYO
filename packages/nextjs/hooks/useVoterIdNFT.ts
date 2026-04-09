@@ -107,9 +107,9 @@ export function useVoterIdNFT(address?: string) {
     }
   }, [address, hasVoterId, tokenId]);
 
-  const refetch = useCallback(() => {
-    refetchHasVoterId();
-    refetchTokenId();
+  const refetch = useCallback(async () => {
+    const [hasVoterIdResult] = await Promise.all([refetchHasVoterId(), refetchTokenId()]);
+    return { hasVoterId: hasVoterIdResult.data as boolean | undefined };
   }, [refetchHasVoterId, refetchTokenId]);
 
   const hasAddress = Boolean(address);

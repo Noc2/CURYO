@@ -260,8 +260,8 @@ export function FaucetSection({ referrer }: FaucetSectionProps) {
 
       const result = await refetchClaimed();
       if (result.data === true) {
-        void refetchVoterId();
-        await finishVerification("claim_without_voter_id");
+        const voterIdResult = await refetchVoterId();
+        await finishVerification(voterIdResult.hasVoterId ? "verified" : "claim_without_voter_id");
         return true;
       }
 
@@ -510,7 +510,7 @@ export function FaucetSection({ referrer }: FaucetSectionProps) {
 
         {address && (
           <div className="bg-base-200 rounded-xl p-4 text-left text-sm text-base-content/70">
-            <p className="font-semibold text-base-content mb-1">Share this wallet with an operator:</p>
+            <p className="font-semibold text-base-content mb-1">Use an official support channel for this wallet:</p>
             <p className="break-all font-mono">{address}</p>
           </div>
         )}
