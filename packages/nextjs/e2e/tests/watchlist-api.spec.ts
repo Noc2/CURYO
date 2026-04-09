@@ -1,8 +1,11 @@
 import "../helpers/fetch-shim";
+import { getNamedSetCookie } from "../helpers/cookies";
 import { E2E_BASE_URL } from "../helpers/service-urls";
 import { expect, test } from "@playwright/test";
 
 const BASE_URL = E2E_BASE_URL;
+const WATCHLIST_READ_COOKIE = "curyo_watchlist_read_session";
+const WATCHLIST_WRITE_COOKIE = "curyo_watchlist_write_session";
 
 test.describe("Watchlist API routes", () => {
   async function getReadSessionStatus(address: string, cookie?: string) {
@@ -56,7 +59,7 @@ test.describe("Watchlist API routes", () => {
     expect(res.status).toBe(200);
     return {
       body: await res.json(),
-      cookie: res.headers.get("set-cookie")?.split(";")[0],
+      cookie: getNamedSetCookie(res.headers, WATCHLIST_WRITE_COOKIE),
     };
   }
 
@@ -74,11 +77,11 @@ test.describe("Watchlist API routes", () => {
     });
     expect(res.status).toBe(200);
 
-    const cookie = res.headers.get("set-cookie");
-    expect(cookie).toContain("curyo_watchlist_read_session=");
+    const cookie = getNamedSetCookie(res.headers, WATCHLIST_READ_COOKIE);
+    expect(cookie).toContain(`${WATCHLIST_READ_COOKIE}=`);
 
     return {
-      cookie: cookie!.split(";")[0],
+      cookie: cookie!,
       body: await res.json(),
     };
   }
@@ -106,7 +109,7 @@ test.describe("Watchlist API routes", () => {
     expect(res.status).toBe(200);
     return {
       body: await res.json(),
-      cookie: res.headers.get("set-cookie")?.split(";")[0],
+      cookie: getNamedSetCookie(res.headers, WATCHLIST_WRITE_COOKIE),
     };
   }
 
@@ -135,7 +138,7 @@ test.describe("Watchlist API routes", () => {
 
     const firstWatch = await watchContent(address, firstContentId, account);
     expect(firstWatch.body).toMatchObject({ ok: true, watched: true, contentId: firstContentId });
-    expect(firstWatch.cookie).toContain("curyo_watchlist_write_session=");
+    expect(firstWatch.cookie).toContain(`${WATCHLIST_WRITE_COOKIE}=`);
 
     await new Promise(resolve => setTimeout(resolve, 1_100));
 
@@ -222,7 +225,7 @@ test.describe("Watchlist API routes", () => {
     const otherAddress = otherAccount.address.toLowerCase();
 
     const signedWatch = await watchContent(address, "31", account);
-    expect(signedWatch.cookie).toContain("curyo_watchlist_write_session=");
+    expect(signedWatch.cookie).toContain(`${WATCHLIST_WRITE_COOKIE}=`);
 
     const cookie = signedWatch.cookie!;
 

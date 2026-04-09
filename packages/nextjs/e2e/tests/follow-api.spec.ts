@@ -1,8 +1,11 @@
 import "../helpers/fetch-shim";
+import { getNamedSetCookie } from "../helpers/cookies";
 import { E2E_BASE_URL } from "../helpers/service-urls";
 import { expect, test } from "@playwright/test";
 
 const BASE_URL = E2E_BASE_URL;
+const PROFILE_FOLLOWS_READ_COOKIE = "curyo_profile_follows_read_session";
+const PROFILE_FOLLOWS_WRITE_COOKIE = "curyo_profile_follows_write_session";
 
 test.describe("Profile follow API routes", () => {
   async function getFollowSessionStatus(address: string, cookie?: string) {
@@ -47,11 +50,11 @@ test.describe("Profile follow API routes", () => {
     });
     expect(res.status).toBe(200);
 
-    const cookie = res.headers.get("set-cookie");
-    expect(cookie).toContain("curyo_profile_follows_read_session=");
+    const cookie = getNamedSetCookie(res.headers, PROFILE_FOLLOWS_READ_COOKIE);
+    expect(cookie).toContain(`${PROFILE_FOLLOWS_READ_COOKIE}=`);
 
     return {
-      cookie: cookie!.split(";")[0],
+      cookie: cookie!,
       body: await res.json(),
     };
   }
@@ -79,7 +82,7 @@ test.describe("Profile follow API routes", () => {
     expect(res.status).toBe(200);
     return {
       body: await res.json(),
-      cookie: res.headers.get("set-cookie")?.split(";")[0],
+      cookie: getNamedSetCookie(res.headers, PROFILE_FOLLOWS_WRITE_COOKIE),
     };
   }
 
@@ -106,7 +109,7 @@ test.describe("Profile follow API routes", () => {
     expect(res.status).toBe(200);
     return {
       body: await res.json(),
-      cookie: res.headers.get("set-cookie")?.split(";")[0],
+      cookie: getNamedSetCookie(res.headers, PROFILE_FOLLOWS_WRITE_COOKIE),
     };
   }
 
@@ -129,7 +132,7 @@ test.describe("Profile follow API routes", () => {
 
     const firstFollow = await followProfile(address, firstTarget, account);
     expect(firstFollow.body).toMatchObject({ ok: true, following: true, targetAddress: firstTarget });
-    expect(firstFollow.cookie).toContain("curyo_profile_follows_write_session=");
+    expect(firstFollow.cookie).toContain(`${PROFILE_FOLLOWS_WRITE_COOKIE}=`);
 
     await new Promise(resolve => setTimeout(resolve, 1_100));
 
@@ -173,7 +176,7 @@ test.describe("Profile follow API routes", () => {
     const target = privateKeyToAccount(generatePrivateKey()).address.toLowerCase();
 
     const firstFollow = await followProfile(address, target, account);
-    expect(firstFollow.cookie).toContain("curyo_profile_follows_write_session=");
+    expect(firstFollow.cookie).toContain(`${PROFILE_FOLLOWS_WRITE_COOKIE}=`);
 
     const cookie = firstFollow.cookie!;
 
