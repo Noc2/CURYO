@@ -13,6 +13,7 @@ import {
   ContractName,
   ScaffoldWriteContractOptions,
   ScaffoldWriteContractVariables,
+  TransactorFuncOptions,
   UseScaffoldWriteConfig,
   simulateContractWriteAndNotifyError,
 } from "~~/utils/scaffold-eth/contract";
@@ -33,6 +34,38 @@ type ScaffoldWriteContractReturnType<TContractName extends ContractName> = Omit<
     options?: Omit<ScaffoldWriteContractOptions, "onBlockConfirmation" | "blockConfirmations">,
   ) => void;
 };
+
+export function pickTransactorOptions(options?: ScaffoldWriteContractOptions): TransactorFuncOptions {
+  if (!options) {
+    return {};
+  }
+
+  const transactorOptions: TransactorFuncOptions = {};
+
+  if (options.action !== undefined) {
+    transactorOptions.action = options.action;
+  }
+  if (options.blockConfirmations !== undefined) {
+    transactorOptions.blockConfirmations = options.blockConfirmations;
+  }
+  if (options.onBlockConfirmation !== undefined) {
+    transactorOptions.onBlockConfirmation = options.onBlockConfirmation;
+  }
+  if (options.getErrorMessage !== undefined) {
+    transactorOptions.getErrorMessage = options.getErrorMessage;
+  }
+  if (options.suppressErrorToast !== undefined) {
+    transactorOptions.suppressErrorToast = options.suppressErrorToast;
+  }
+  if (options.suppressStatusToast !== undefined) {
+    transactorOptions.suppressStatusToast = options.suppressStatusToast;
+  }
+  if (options.suppressSuccessToast !== undefined) {
+    transactorOptions.suppressSuccessToast = options.suppressSuccessToast;
+  }
+
+  return transactorOptions;
+}
 
 export function useScaffoldWriteContract<TContractName extends ContractName>(
   config: UseScaffoldWriteConfig<TContractName>,
@@ -92,8 +125,17 @@ export function useScaffoldWriteContract<TContractName extends ContractName>(
       // Reset wagmi mutation state to prevent stale state from blocking new transactions
       wagmiContractWrite.reset();
       setIsMining(true);
-      const { blockConfirmations, onBlockConfirmation, getErrorMessage, suppressErrorToast, ...mutateOptions } =
-        options || {};
+      const transactorOptions = pickTransactorOptions(options);
+      const {
+        action: _action,
+        blockConfirmations: _blockConfirmations,
+        onBlockConfirmation: _onBlockConfirmation,
+        getErrorMessage: _getErrorMessage,
+        suppressErrorToast: _suppressErrorToast,
+        suppressStatusToast: _suppressStatusToast,
+        suppressSuccessToast: _suppressSuccessToast,
+        ...mutateOptions
+      } = options || {};
 
       const writeContractObject = {
         abi: deployedContractData.abi as Abi,
@@ -158,10 +200,7 @@ export function useScaffoldWriteContract<TContractName extends ContractName>(
         );
       };
       const writeTxResult = await writeTx(makeWriteWithParams, {
-        blockConfirmations,
-        onBlockConfirmation,
-        getErrorMessage,
-        suppressErrorToast,
+        ...transactorOptions,
       });
 
       return writeTxResult;

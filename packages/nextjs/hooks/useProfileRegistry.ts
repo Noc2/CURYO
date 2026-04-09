@@ -51,10 +51,13 @@ function useProfileRegistryWrite() {
         }
       }
 
-      await (writeContractAsync as any)({
-        args,
-        functionName,
-      });
+      await (writeContractAsync as any)(
+        {
+          args,
+          functionName,
+        },
+        { action },
+      );
     },
     [canUseSponsoredSubmitCalls, executeSponsoredCalls, profileRegistryContract, writeContractAsync],
   );
