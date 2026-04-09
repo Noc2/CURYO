@@ -1,4 +1,4 @@
-export type VoteCommittedLogLike = {
+type VoteCommittedLogLike = {
   blockHash?: `0x${string}` | null;
   blockNumber?: bigint | null;
   logIndex?: number | null;

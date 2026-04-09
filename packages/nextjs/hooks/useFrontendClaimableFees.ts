@@ -4,7 +4,7 @@ import { useMemo } from "react";
 import { useInfiniteQuery } from "@tanstack/react-query";
 import { usePageVisibility } from "~~/hooks/usePageVisibility";
 
-export interface FrontendClaimableFeeItem {
+interface FrontendClaimableFeeItem {
   contentId: string;
   roundId: string;
   title: string | null;
@@ -18,7 +18,7 @@ export interface FrontendClaimableFeeItem {
   totalFrontendClaimants: number;
 }
 
-export interface FrontendClaimableFeePage {
+interface FrontendClaimableFeePage {
   items: FrontendClaimableFeeItem[];
   hasMore: boolean;
   nextOffset: number;

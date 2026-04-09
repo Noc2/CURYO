@@ -17,7 +17,7 @@ export interface PonderContentItem {
   submitterStakeReturned: boolean;
 }
 
-export interface PonderRoundItem {
+interface PonderRoundItem {
   id: string;
   contentId: string;
   roundId: string;

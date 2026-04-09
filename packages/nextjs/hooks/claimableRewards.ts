@@ -1,13 +1,5 @@
 "use client";
 
-export type ClaimableRewardType =
-  | "reward"
-  | "refund"
-  | "submitter_reward"
-  | "submitter_participation_reward"
-  | "frontend_round_fee"
-  | "frontend_registry_fee";
-
 export interface RoundClaimableRewardItem {
   contentId: bigint;
   roundId: bigint;

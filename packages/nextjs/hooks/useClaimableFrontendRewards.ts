@@ -39,7 +39,7 @@ async function fetchAllClaimableFrontendFees(frontend: `0x${string}`, chainId: n
   }
 }
 
-export function getClaimableFrontendRewardsQueryKey(address?: string, chainId?: number) {
+function getClaimableFrontendRewardsQueryKey(address?: string, chainId?: number) {
   return ["claimableFrontendRewards", address?.toLowerCase() ?? null, chainId ?? null] as const;
 }
 
