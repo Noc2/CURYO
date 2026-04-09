@@ -617,6 +617,7 @@ function validateSponsoredCalls(
       case "RoundRewardDistributor":
         if (
           functionName === "claimFrontendFee" ||
+          functionName === "claimParticipationReward" ||
           functionName === "claimReward" ||
           functionName === "claimSubmitterReward"
         ) {
