@@ -18,12 +18,19 @@ export function getThirdwebAuthMode(hostname?: string): "popup" | "redirect" {
   return hostname && LOCALHOST_HOSTNAMES.has(hostname) ? "redirect" : "popup";
 }
 
-export function getThirdwebWalletAuthConfig(args?: { hostname?: string; currentUrl?: string }) {
+export function getThirdwebWalletAuthConfig(args?: {
+  currentUrl?: string;
+  hostname?: string;
+  includeWalletOption?: boolean;
+}) {
   const location = getCurrentLocation();
   const hostname = args?.hostname ?? location?.hostname;
   const currentUrl = args?.currentUrl ?? location?.href;
   const mode = getThirdwebAuthMode(hostname);
-  const options: ThirdwebAuthOption[] = [...THIRDWEB_AUTH_OPTIONS];
+  const options: ThirdwebAuthOption[] =
+    args?.includeWalletOption === false
+      ? THIRDWEB_AUTH_OPTIONS.filter(option => option !== "wallet")
+      : [...THIRDWEB_AUTH_OPTIONS];
 
   if (mode === "redirect" && currentUrl) {
     return {
