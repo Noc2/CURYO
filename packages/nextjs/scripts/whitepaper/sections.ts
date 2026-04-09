@@ -124,7 +124,7 @@ export const SECTIONS: Section[] = [
         blocks: [
           {
             type: "paragraph",
-            text: "Submitting content requires a URL, title, description, tags, and category. The URL must be unique. Title and description are emitted in the on-chain ContentSubmitted event so any frontend or indexer can reconstruct the same canonical metadata; the title is the primary label shown above the content, while the description gives longer context below it.",
+            text: "Submitting content requires a URL, title, description, platform, and one to three category tags. The URL must be unique. Title and description are emitted in the on-chain ContentSubmitted event so any frontend or indexer can reconstruct the same canonical metadata; the title is the primary label shown above the content, while the description gives longer context below it.",
           },
           {
             type: "paragraph",
@@ -1276,7 +1276,7 @@ export const SECTIONS: Section[] = [
         blocks: [
           {
             type: "paragraph",
-            text: "A foundational design decision in Curyo is the use of a public blockchain as the settlement layer. This ensures that all quality ratings -- including individual vote directions, stake amounts, round outcomes, and resulting content scores -- are inherently public, permissionless, and exportable. No proprietary API key or platform terms-of-service restriction mediates access to the data; hosted indexers may still apply service-level rate limits, but the underlying chain data remains open.",
+            text: "A foundational design decision in Curyo is the use of a public blockchain as the settlement layer. This ensures that all quality ratings -- including individual vote directions, stake amounts, round outcomes, and resulting content scores -- are inherently public, permissionless, and exportable. No proprietary API key or platform terms-of-service restriction mediates access to the underlying chain data. Hosted indexers and reference frontends may still apply service-level rate limits and policy-driven moderation filters to their displayed or indexed reads, but those filters do not alter the canonical on-chain record.",
           },
           {
             type: "paragraph",
@@ -1302,11 +1302,11 @@ export const SECTIONS: Section[] = [
         blocks: [
           {
             type: "paragraph",
-            text: "Curyo incorporates AI as a first-class participant through automated voting bots that use pluggable rating strategies. Each strategy queries an external API to obtain a normalized quality score for submitted content. The bot votes up or down based on whether the score meets a configurable threshold.",
+            text: "Curyo incorporates AI as a first-class participant through reference bot tooling that uses pluggable rating strategies. Each strategy can query an external API to obtain a normalized quality score for supported content. The bot votes up or down based on whether the score meets a configurable threshold, but it is a manual or schedulable CLI rather than an always-on protocol daemon.",
           },
           {
             type: "paragraph",
-            text: "Submission bots can also publish richer metadata than a single free-form caption. They submit a short title, a longer description, tags, and a category alongside the canonical URL, which makes downstream discovery interfaces easier to scan while keeping the same shared on-chain event history for every frontend.",
+            text: "Submission bots can also publish richer metadata than a single free-form caption. They submit a short title, a longer description, platform, and category tags alongside the canonical URL, which makes downstream discovery interfaces easier to scan while keeping the same shared on-chain event history for every frontend. Coverage is intentionally adapter-based: supported sources can submit or vote today, while other platform categories remain read-only or pending until an adapter exists.",
           },
           {
             type: "paragraph",
@@ -1326,7 +1326,24 @@ export const SECTIONS: Section[] = [
           },
           {
             type: "paragraph",
-            text: "AI-assisted voting directly addresses the cold-start problem inherent in new content platforms. When a content item is submitted, automated strategies can produce initial quality signals within seconds, seeding the voting market before human participants engage. This creates immediate activity and provides a focal point for human voters to agree or disagree with, accelerating convergence toward accurate ratings.",
+            text: "AI-assisted voting addresses the cold-start problem inherent in new content platforms. When a bot run or external scheduler picks up newly submitted content, automated strategies can seed an initial quality signal before many human participants engage. This creates early activity and provides a focal point for human voters to agree or disagree with, accelerating convergence toward accurate ratings without giving bots protocol-level privileges.",
+          },
+        ],
+      },
+      {
+        heading: "SDK, MCP & Reference Stack",
+        blocks: [
+          {
+            type: "paragraph",
+            text: "The current reference implementation includes integration surfaces around the core contracts. These services are not consensus-critical, but they make the public protocol easier to read, operate, and automate.",
+          },
+          {
+            type: "bullets",
+            items: [
+              "SDK: @curyo/sdk provides hosted read helpers, vote transaction payload builders, and frontend attribution helpers while staying wallet-agnostic.",
+              "MCP: the hosted MCP service exposes Ponder-backed structured reads plus a narrow authenticated write surface for common actions such as vote, submit, claim reward, and claim frontend fee. Write-capable sessions are scoped and wallet-bound rather than generic contract passthroughs.",
+              "Operator stack: the monorepo includes the Next.js app, Ponder/Postgres API, keeper service, bot CLI, SDK, MCP server, shared contract metadata, and Solidity contracts. Operators can self-host these pieces or use the hosted endpoints where available.",
+            ],
           },
         ],
       },

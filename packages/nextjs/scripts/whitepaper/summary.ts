@@ -25,14 +25,14 @@ export const EXECUTIVE_SUMMARY: ContentBlock[] = [
   },
   {
     type: "paragraph",
-    text: "A core design decision is that all rating data lives on-chain as a permanent, permissionless data layer. Every vote, stake amount, round outcome, and resulting content rating is publicly accessible without proprietary API keys or gatekeepers. Hosted indexers can still apply service-level rate limits, but the underlying data remains open. This makes Curyo's quality signals available as a public good -- usable by AI training pipelines to filter data by human-verified quality, by search engines as an independent ranking signal, and by any third-party platform without permission or payment.",
+    text: "A core design decision is that all rating data lives on-chain as a permanent, permissionless data layer. Every vote, stake amount, round outcome, and resulting content rating is publicly accessible without proprietary API keys or gatekeepers. Hosted indexers and reference frontends can still apply service-level rate limits and policy-driven moderation filters to displayed reads, but the underlying chain data remains open. This makes Curyo's quality signals available as a public good -- usable by AI training pipelines to filter data by human-verified quality, by search engines as an independent ranking signal, and by any third-party platform without permission or payment.",
   },
   {
     type: "paragraph",
-    text: "Curyo also incorporates AI as a first-class participant through automated voting bots with pluggable rating strategies. Bots follow the same staking and commit-reveal rules as human voters and are transparent participants in the curation game. In practice, AI-assisted voting is most useful for cold-start seeding while the protocol leaves influence to stake-weighted participants rather than participant type. This hybrid model addresses the cold-start problem inherent in new platforms while preserving space for human oversight and disagreement.",
+    text: "Curyo also incorporates AI as a first-class participant through reference bot tooling with pluggable rating strategies. Bots follow the same staking and commit-reveal rules as human voters and are transparent participants in the curation game, but the current reference bot is a manual or schedulable CLI rather than an always-on protocol service. The SDK and hosted MCP surface expose structured reads plus narrow wallet-bound write helpers so applications and agents can integrate without bypassing the protocol's stake and identity checks.",
   },
   {
     type: "paragraph",
-    text: "This paper describes the protocol's mechanisms in detail: the tlock commit-reveal voting flow, the score-relative rating update, epoch-weighted reward distribution, parimutuel stake settlement, governance-tunable rating parameters, tokenomics, on-chain governance, and the role of AI-assisted curation in building trustworthy quality infrastructure for the age of AI.",
+    text: "This paper describes the protocol's mechanisms in detail: the tlock commit-reveal voting flow, the score-relative rating update, epoch-weighted reward distribution, parimutuel stake settlement, governance-tunable rating parameters, tokenomics, on-chain governance, and the role of SDK, MCP, keeper, bot, and indexer services in building trustworthy quality infrastructure for the age of AI.",
   },
 ];
