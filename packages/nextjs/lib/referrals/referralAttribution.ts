@@ -199,10 +199,15 @@ export function captureReferralAttributionFromSearchParams(
   searchParams: SearchParamReader | null | undefined,
   options: ReferralStorageOptions = {},
 ): ReferralAttribution | null {
-  return storeReferralAttributionFromValue(searchParams?.get(REFERRAL_QUERY_PARAM), {
+  const attribution = createReferralAttribution(searchParams?.get(REFERRAL_QUERY_PARAM), {
     ...options,
     source: options.source ?? "url",
   });
+  if (!attribution) {
+    return null;
+  }
+
+  return readStoredReferralAttribution(options) ?? writeReferralAttribution(attribution, options);
 }
 
 export function clearStoredReferralAttribution(options: ReferralStorageOptions = {}) {

@@ -70,6 +70,26 @@ test("does not overwrite a stored referral with an invalid URL value", () => {
   assert.equal(getStoredReferralAddress({ localStorage, now: 2_000, sessionStorage }), REFERRER);
 });
 
+test("keeps the first valid URL referral within the attribution window", () => {
+  const localStorage = new MemoryStorage();
+  const sessionStorage = new MemoryStorage();
+
+  captureReferralAttributionFromSearchParams(new URLSearchParams({ ref: REFERRER }), {
+    localStorage,
+    now: 1_000,
+    sessionStorage,
+  });
+  const captured = captureReferralAttributionFromSearchParams(new URLSearchParams({ ref: SECOND_REFERRER }), {
+    localStorage,
+    now: 2_000,
+    sessionStorage,
+  });
+
+  assert.equal(captured?.referrer, REFERRER);
+  assert.equal(captured?.capturedAt, 1_000);
+  assert.equal(getStoredReferralAddress({ localStorage, now: 2_000, sessionStorage }), REFERRER);
+});
+
 test("expires stored referrals and removes stale records", () => {
   const localStorage = new MemoryStorage();
   const sessionStorage = new MemoryStorage();

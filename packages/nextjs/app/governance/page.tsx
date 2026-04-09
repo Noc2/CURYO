@@ -3,12 +3,15 @@
 import { Suspense, useCallback, useEffect, useRef, useState } from "react";
 import dynamic from "next/dynamic";
 import { useSearchParams } from "next/navigation";
-import { isAddress } from "viem";
 import { useAccount } from "wagmi";
 import { AppPageShell } from "~~/components/shared/AppPageShell";
 import { ConnectWalletCard } from "~~/components/shared/ConnectWalletCard";
 import { useScaffoldReadContract } from "~~/hooks/scaffold-eth";
 import { useVoterIdNFT } from "~~/hooks/useVoterIdNFT";
+import {
+  captureReferralAttributionFromSearchParams,
+  getStoredReferralAddress,
+} from "~~/lib/referrals/referralAttribution";
 
 type GovernanceTab = "profile" | "leaderboard" | "governance" | "faucet";
 
@@ -106,19 +109,10 @@ function GovernancePageInner() {
     return () => window.removeEventListener("hashchange", applyHash);
   }, []);
 
-  // Extract and validate referral code from URL
+  // Extract and validate referral code from URL, then fall back to stored attribution.
   useEffect(() => {
-    const refParam = searchParams?.get("ref");
-    if (refParam && isAddress(refParam)) {
-      setReferrer(refParam);
-      sessionStorage.setItem("curyo_referrer", refParam);
-    } else {
-      // Check sessionStorage for existing referrer
-      const storedReferrer = sessionStorage.getItem("curyo_referrer");
-      if (storedReferrer && isAddress(storedReferrer)) {
-        setReferrer(storedReferrer);
-      }
-    }
+    const capturedAttribution = captureReferralAttributionFromSearchParams(searchParams, { source: "url" });
+    setReferrer(capturedAttribution?.referrer ?? getStoredReferralAddress());
   }, [searchParams]);
 
   // Check cREP balance
