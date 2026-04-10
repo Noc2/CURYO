@@ -1,8 +1,9 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { SafeExternalLink } from "~~/components/shared/SafeExternalLink";
 import { getEmbedImageLoadingProps } from "~~/lib/content/embedLoadStrategy";
+import { getOpenLibraryCoverCandidates } from "~~/lib/content/openLibraryCover";
 import type { ContentMetadataResult } from "~~/lib/contentMetadata/types";
 import type { PlatformInfo } from "~~/utils/platforms";
 
@@ -16,8 +17,16 @@ interface OpenLibraryBook {
   title: string;
   description?: string;
   coverUrl?: string;
+  thumbnailUrl?: string;
   authors?: string[];
 }
+
+interface ImageLoadSnapshot {
+  complete: boolean;
+  naturalWidth: number;
+}
+
+const COVER_FALLBACK_TIMEOUT_MS = 4000;
 
 /** Book icon */
 function BookIcon({ className }: { className?: string }) {
@@ -32,9 +41,15 @@ function getPrefetchedOpenLibraryBook(olId: string, prefetchedMetadata?: Content
   return {
     title: prefetchedMetadata?.title ?? olId,
     description: prefetchedMetadata?.description,
-    coverUrl: prefetchedMetadata?.imageUrl ?? prefetchedMetadata?.thumbnailUrl ?? undefined,
+    coverUrl: prefetchedMetadata?.imageUrl ?? undefined,
+    thumbnailUrl: prefetchedMetadata?.thumbnailUrl ?? undefined,
     authors: prefetchedMetadata?.authors,
   };
+}
+
+function getImageLoadState(image: ImageLoadSnapshot | null): "pending" | "loaded" | "error" {
+  if (!image || !image.complete) return "pending";
+  return image.naturalWidth > 0 ? "loaded" : "error";
 }
 
 /**
@@ -47,10 +62,38 @@ export function OpenLibraryEmbed({ info, compact, prefetchedMetadata }: OpenLibr
   const [fetchError, setFetchError] = useState(false);
   const [imageError, setImageError] = useState(false);
   const [imageLoaded, setImageLoaded] = useState(false);
+  const [coverCandidateIndex, setCoverCandidateIndex] = useState(0);
+  const imageRef = useRef<HTMLImageElement | null>(null);
 
   const olId = info.id || (info.metadata?.olId as string);
-  const imageSrc = book?.coverUrl;
+  const coverCandidates = getOpenLibraryCoverCandidates(book);
+  const imageSrc = coverCandidates[coverCandidateIndex];
+  const canFallbackCover = coverCandidateIndex < coverCandidates.length - 1;
   const imageLoadingProps = getEmbedImageLoadingProps(compact);
+
+  function advanceCoverCandidate() {
+    if (!canFallbackCover) {
+      setImageError(true);
+      return;
+    }
+
+    setCoverCandidateIndex(currentIndex => Math.min(currentIndex + 1, coverCandidates.length - 1));
+  }
+
+  function handleImageRef(node: HTMLImageElement | null) {
+    imageRef.current = node;
+
+    const loadState = getImageLoadState(node);
+    if (loadState === "loaded") {
+      setImageLoaded(true);
+      setImageError(false);
+      return;
+    }
+
+    if (loadState === "error") {
+      advanceCoverCandidate();
+    }
+  }
 
   useEffect(() => {
     setFetchError(false);
@@ -80,6 +123,7 @@ export function OpenLibraryEmbed({ info, compact, prefetchedMetadata }: OpenLibr
             title: data.title,
             description: data.description,
             coverUrl: data.imageUrl,
+            thumbnailUrl: data.thumbnailUrl,
             authors: data.authors,
           });
         }
@@ -97,9 +141,35 @@ export function OpenLibraryEmbed({ info, compact, prefetchedMetadata }: OpenLibr
   }, [olId, info.url, prefetchedMetadata]);
 
   useEffect(() => {
+    imageRef.current = null;
+    setCoverCandidateIndex(0);
     setImageError(false);
     setImageLoaded(false);
-  }, [imageSrc]);
+  }, [book?.coverUrl, book?.thumbnailUrl]);
+
+  useEffect(() => {
+    if (!imageSrc || imageLoaded) return;
+
+    const timeout = window.setTimeout(() => {
+      const loadState = getImageLoadState(imageRef.current);
+      if (loadState === "loaded") {
+        setImageLoaded(true);
+        setImageError(false);
+        return;
+      }
+
+      if (canFallbackCover) {
+        setCoverCandidateIndex(currentIndex => Math.min(currentIndex + 1, coverCandidates.length - 1));
+        return;
+      }
+
+      setImageError(loadState === "error" || loadState === "pending");
+    }, COVER_FALLBACK_TIMEOUT_MS);
+
+    return () => {
+      window.clearTimeout(timeout);
+    };
+  }, [canFallbackCover, coverCandidates.length, imageLoaded, imageSrc]);
 
   // Loading state
   if (loading) {
@@ -139,7 +209,7 @@ export function OpenLibraryEmbed({ info, compact, prefetchedMetadata }: OpenLibr
   const subtitle = book.authors ? `by ${book.authors.join(", ")}` : undefined;
 
   // No cover available — show link card
-  if (!book.coverUrl || imageError) {
+  if (!imageSrc || imageError) {
     return (
       <SafeExternalLink
         href={info.url}
@@ -174,6 +244,7 @@ export function OpenLibraryEmbed({ info, compact, prefetchedMetadata }: OpenLibr
           </div>
         )}
         <img
+          ref={handleImageRef}
           src={imageSrc}
           alt={book.title}
           {...imageLoadingProps}
@@ -181,7 +252,7 @@ export function OpenLibraryEmbed({ info, compact, prefetchedMetadata }: OpenLibr
             compact ? "w-full h-auto aspect-[2/3] object-cover" : "h-full w-full object-contain object-center"
           } ${imageLoaded ? "opacity-100" : "opacity-0"}`}
           onLoad={() => setImageLoaded(true)}
-          onError={() => setImageError(true)}
+          onError={advanceCoverCandidate}
         />
         <div className="absolute bottom-0 left-0 right-0 p-3 bg-gradient-to-t from-black/70 to-transparent opacity-0 group-hover:opacity-100 transition-opacity">
           <p className="text-white text-base font-bold text-center">{book.title}</p>
