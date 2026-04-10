@@ -9,6 +9,25 @@ const PREFETCH_FIRST_EMBED_TYPES = new Set([
   "tmdb",
   "wikipedia",
 ]);
+const IMAGE_REQUIRED_PREFETCH_TYPES = new Set(["coingecko"]);
+
+function hasImageMetadata(prefetchedMetadata: ContentMetadataResult): boolean {
+  const imageUrls = [prefetchedMetadata.imageUrl, prefetchedMetadata.thumbnailUrl];
+  return imageUrls.some(url => typeof url === "string" && url.trim().length > 0);
+}
+
+export function getUsablePrefetchedMetadata(
+  platformType: string,
+  prefetchedMetadata?: ContentMetadataResult,
+): ContentMetadataResult | undefined {
+  if (prefetchedMetadata === undefined) return undefined;
+
+  if (IMAGE_REQUIRED_PREFETCH_TYPES.has(platformType) && !hasImageMetadata(prefetchedMetadata)) {
+    return undefined;
+  }
+
+  return prefetchedMetadata;
+}
 
 export function shouldWaitForPrefetchedMetadata(
   platformType: string,

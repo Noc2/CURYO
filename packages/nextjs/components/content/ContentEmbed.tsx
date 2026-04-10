@@ -4,7 +4,7 @@ import React from "react";
 import dynamic from "next/dynamic";
 import { GenericLinkCard } from "./embeds";
 import { ExternalLinkBehaviorProvider } from "~~/components/shared/SafeExternalLink";
-import { shouldWaitForPrefetchedMetadata } from "~~/lib/content/embedLoadStrategy";
+import { getUsablePrefetchedMetadata, shouldWaitForPrefetchedMetadata } from "~~/lib/content/embedLoadStrategy";
 import type { ContentMetadataResult } from "~~/lib/contentMetadata/types";
 import { detectPlatform } from "~~/utils/platforms";
 
@@ -90,9 +90,10 @@ export function ContentEmbed({
   interactionMode = "default",
 }: ContentEmbedProps) {
   const platformInfo = detectPlatform(url);
+  const usablePrefetchedMetadata = getUsablePrefetchedMetadata(platformInfo.type, prefetchedMetadata);
   const disableExternalNavigation = interactionMode === "vote";
 
-  if (shouldWaitForPrefetchedMetadata(platformInfo.type, deferClientFetch, prefetchedMetadata)) {
+  if (shouldWaitForPrefetchedMetadata(platformInfo.type, deferClientFetch, usablePrefetchedMetadata)) {
     return (
       <ExternalLinkBehaviorProvider disableNavigation={disableExternalNavigation}>
         <GenericLinkCard url={url} compact={compact} />
@@ -112,19 +113,28 @@ export function ContentEmbed({
       embed = <ScryfallEmbed key={url} info={platformInfo} compact={compact} />;
       break;
     case "tmdb":
-      embed = <TmdbEmbed key={url} info={platformInfo} compact={compact} prefetchedMetadata={prefetchedMetadata} />;
+      embed = (
+        <TmdbEmbed key={url} info={platformInfo} compact={compact} prefetchedMetadata={usablePrefetchedMetadata} />
+      );
       break;
     case "wikipedia":
       embed = (
-        <WikipediaEmbed key={url} info={platformInfo} compact={compact} prefetchedMetadata={prefetchedMetadata} />
+        <WikipediaEmbed key={url} info={platformInfo} compact={compact} prefetchedMetadata={usablePrefetchedMetadata} />
       );
       break;
     case "rawg":
-      embed = <RawgEmbed key={url} info={platformInfo} compact={compact} prefetchedMetadata={prefetchedMetadata} />;
+      embed = (
+        <RawgEmbed key={url} info={platformInfo} compact={compact} prefetchedMetadata={usablePrefetchedMetadata} />
+      );
       break;
     case "openlibrary":
       embed = (
-        <OpenLibraryEmbed key={url} info={platformInfo} compact={compact} prefetchedMetadata={prefetchedMetadata} />
+        <OpenLibraryEmbed
+          key={url}
+          info={platformInfo}
+          compact={compact}
+          prefetchedMetadata={usablePrefetchedMetadata}
+        />
       );
       break;
     case "spotify":
@@ -132,19 +142,26 @@ export function ContentEmbed({
       break;
     case "coingecko":
       embed = (
-        <CoinGeckoEmbed key={url} info={platformInfo} compact={compact} prefetchedMetadata={prefetchedMetadata} />
+        <CoinGeckoEmbed key={url} info={platformInfo} compact={compact} prefetchedMetadata={usablePrefetchedMetadata} />
       );
       break;
     case "huggingface":
       embed = (
-        <HuggingFaceEmbed key={url} info={platformInfo} compact={compact} prefetchedMetadata={prefetchedMetadata} />
+        <HuggingFaceEmbed
+          key={url}
+          info={platformInfo}
+          compact={compact}
+          prefetchedMetadata={usablePrefetchedMetadata}
+        />
       );
       break;
     case "twitter":
       embed = <TwitterEmbed key={url} info={platformInfo} compact={compact} />;
       break;
     case "github":
-      embed = <GitHubEmbed key={url} info={platformInfo} compact={compact} prefetchedMetadata={prefetchedMetadata} />;
+      embed = (
+        <GitHubEmbed key={url} info={platformInfo} compact={compact} prefetchedMetadata={usablePrefetchedMetadata} />
+      );
       break;
     default:
       return (
