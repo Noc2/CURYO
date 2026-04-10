@@ -1,5 +1,5 @@
 import { eq, inArray } from "drizzle-orm";
-import { getSafeHuggingFaceImageUrl } from "~~/lib/content/huggingFaceImage";
+import { getSafeHuggingFaceImageUrl, isHuggingFaceAvatarUrl } from "~~/lib/content/huggingFaceImage";
 import { db } from "~~/lib/db";
 import { type ContentMetadata, contentMetadata } from "~~/lib/db/schema";
 import { detectPlatform, getThumbnailUrl } from "~~/utils/platforms";
@@ -13,14 +13,15 @@ function sanitizeEmbedResultForUrl(url: string, result: EmbedResult): EmbedResul
     return result;
   }
 
-  const thumbnailUrl = getSafeHuggingFaceImageUrl(result.thumbnailUrl);
   const imageUrl = getSafeHuggingFaceImageUrl(result.imageUrl);
+  const thumbnailUrl =
+    getSafeHuggingFaceImageUrl(result.thumbnailUrl) ?? (imageUrl && isHuggingFaceAvatarUrl(imageUrl) ? imageUrl : null);
   const sanitized: EmbedResult = {
     ...result,
     thumbnailUrl,
   };
 
-  if (imageUrl) {
+  if (imageUrl && !isHuggingFaceAvatarUrl(imageUrl)) {
     sanitized.imageUrl = imageUrl;
   } else {
     delete sanitized.imageUrl;
