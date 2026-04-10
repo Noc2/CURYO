@@ -53,7 +53,7 @@ export function SubmitterBadge({
   };
 
   return (
-    <div className="flex items-center gap-1.5">
+    <div className="flex min-w-0 items-center gap-1.5">
       <Link
         href={profileHref}
         aria-label={`View profile for ${displayName}`}

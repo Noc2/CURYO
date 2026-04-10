@@ -1487,7 +1487,7 @@ const HomeInner = () => {
                 <div className="flex min-w-0 min-h-0 flex-1 flex-col gap-3 xl:min-h-full xl:flex-none xl:gap-0">
                   <div
                     data-testid="vote-feed-surface"
-                    className="surface-card flex min-h-0 flex-1 flex-col overflow-hidden rounded-t-[2rem] rounded-b-none p-3 sm:p-4 xl:min-h-full xl:flex-none xl:rounded-[2rem]"
+                    className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-t-[2rem] rounded-b-none bg-base-100 p-3 sm:p-4 xl:min-h-full xl:flex-none xl:rounded-[2rem]"
                   >
                     <div className="min-w-0 flex-1 min-h-0 xl:flex-none">
                       {/* Main content */}

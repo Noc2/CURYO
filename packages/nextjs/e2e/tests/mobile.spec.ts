@@ -60,17 +60,29 @@ test.describe("Mobile viewport (phone)", () => {
         const mobileScrollGutters = document.querySelector<HTMLElement>('[data-testid="vote-mobile-scroll-gutters"]');
         const activeArticle = document.querySelector<HTMLElement>('article[aria-current="true"]');
         const activeTitle = document.querySelector<HTMLElement>('article[aria-current="true"] h2');
+        const activeMoreButton = activeArticle?.querySelector<HTMLElement>(
+          'button[aria-label="Expand details"], button[aria-label="Collapse details"]',
+        );
 
         const scrollerRect = explicitScrollSource?.getBoundingClientRect() ?? null;
         const gutterRect = mobileScrollGutters?.getBoundingClientRect() ?? null;
         const activeArticleRect = activeArticle?.getBoundingClientRect() ?? null;
+        const activeMoreButtonRect = activeMoreButton?.getBoundingClientRect() ?? null;
         const leftGutterWidth = activeArticleRect && gutterRect ? activeArticleRect.left - gutterRect.left : 0;
         const rightGutterWidth = activeArticleRect && gutterRect ? gutterRect.right - activeArticleRect.right : 0;
 
         return {
+          activeMoreControlFits:
+            !activeArticleRect || !activeMoreButtonRect
+              ? true
+              : activeMoreButtonRect.left >= activeArticleRect.left - 1 &&
+                activeMoreButtonRect.right <= activeArticleRect.right + 1,
+          activeMoreControlVisible:
+            !activeMoreButtonRect || (activeMoreButtonRect.width > 0 && activeMoreButtonRect.height > 0),
           activeTitleBottom: activeTitle?.getBoundingClientRect().bottom ?? 0,
           activeTitleTop: activeTitle?.getBoundingClientRect().top ?? 0,
           documentScrollTop: document.scrollingElement?.scrollTop ?? 0,
+          feedSurfaceBackground: feedSurface ? getComputedStyle(feedSurface).backgroundColor : "",
           feedSurfaceTop: feedSurface?.getBoundingClientRect().top ?? 0,
           gutterBackground: mobileScrollGutters ? getComputedStyle(mobileScrollGutters).backgroundColor : "",
           gutterWheelX:
@@ -113,7 +125,10 @@ test.describe("Mobile viewport (phone)", () => {
     const initialLayout = await readLayout();
     expect(initialLayout.leftGutterWidth).toBeGreaterThanOrEqual(20);
     expect(initialLayout.rightGutterWidth).toBeGreaterThanOrEqual(20);
+    expect(initialLayout.feedSurfaceBackground).toBe("rgb(9, 10, 12)");
     expect(initialLayout.gutterBackground).toBe("rgb(9, 10, 12)");
+    expect(initialLayout.activeMoreControlVisible).toBe(true);
+    expect(initialLayout.activeMoreControlFits).toBe(true);
 
     await page.mouse.move(initialLayout.gutterWheelX, initialLayout.gutterWheelY);
     await page.mouse.wheel(0, 900);

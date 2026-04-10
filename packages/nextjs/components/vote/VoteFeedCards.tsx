@@ -331,16 +331,18 @@ function FeedContentMetaCard({
   return (
     <>
       <div className={wrapperClassName}>
-        <div className="flex items-center justify-between gap-3">
-          <SubmitterBadge
-            address={item.submitter}
-            username={submitterProfile?.username}
-            winRate={submitterProfile?.winRate}
-            totalSettledVotes={submitterProfile?.totalSettledVotes}
-            size="sm"
-            addressMode={submitterProfile?.username ? "inline" : "hidden"}
-          />
-          <div className="flex shrink-0 items-center gap-1">
+        <div className="flex flex-wrap items-center gap-x-2 gap-y-2">
+          <div className="min-w-0 flex-[1_1_9rem]">
+            <SubmitterBadge
+              address={item.submitter}
+              username={submitterProfile?.username}
+              winRate={submitterProfile?.winRate}
+              totalSettledVotes={submitterProfile?.totalSettledVotes}
+              size="sm"
+              addressMode={submitterProfile?.username ? "inline" : "hidden"}
+            />
+          </div>
+          <div className="ml-auto flex shrink-0 items-center gap-0.5 sm:gap-1">
             {hasFollowButton ? (
               <FollowProfileButton
                 following={following}
