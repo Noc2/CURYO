@@ -1359,13 +1359,14 @@ const HomeInner = () => {
     feed.length === 0;
   return (
     <AppPageShell
+      horizontalPaddingClassName="px-0 xl:px-4"
       paddingTopClassName="pt-2 xl:pt-4"
       outerClassName="min-h-0 flex-1 overflow-hidden pb-0 xl:pb-4"
       contentClassName="flex min-h-0 flex-1 flex-col gap-4 overflow-hidden"
     >
       <VotingGuide />
       <div
-        className="flex shrink-0 flex-wrap items-center gap-2 touch-none sm:gap-3 xl:flex-nowrap xl:touch-auto"
+        className="flex shrink-0 flex-wrap items-center gap-2 px-4 touch-none sm:gap-3 xl:flex-nowrap xl:px-0 xl:touch-auto"
         data-disable-queue-wheel="true"
       >
         <CategoryFilter
@@ -1394,7 +1395,7 @@ const HomeInner = () => {
 
       {isSearchMode ? (
         <div
-          className="flex shrink-0 flex-wrap items-center gap-2 touch-none xl:touch-auto"
+          className="flex shrink-0 flex-wrap items-center gap-2 px-4 touch-none xl:px-0 xl:touch-auto"
           data-disable-queue-wheel="true"
         >
           <div className="rounded-full bg-base-200 px-3 py-2 text-sm text-base-content/70">
@@ -1439,7 +1440,7 @@ const HomeInner = () => {
             <div className="flex min-h-0 flex-1 flex-col gap-3 overflow-hidden xl:grid xl:min-h-full xl:w-full xl:flex-none xl:grid-cols-[minmax(0,1fr)_17.25rem] xl:items-start xl:gap-4 xl:overflow-visible">
               <div className="min-h-0 flex min-w-0 flex-1 flex-col overflow-hidden xl:min-h-full xl:flex-none xl:overflow-visible">
                 <div className="flex min-w-0 min-h-0 flex-1 flex-col gap-3 xl:min-h-full xl:flex-none xl:gap-0">
-                  <div className="surface-card flex min-h-0 flex-1 flex-col overflow-hidden rounded-t-[2rem] rounded-b-none p-3 sm:p-4 xl:min-h-full xl:flex-none xl:rounded-[2rem]">
+                  <div className="surface-card flex min-h-0 flex-1 flex-col overflow-hidden rounded-t-[2rem] rounded-b-none px-0 py-3 md:p-4 xl:min-h-full xl:flex-none xl:rounded-[2rem]">
                     <div className="min-w-0 flex-1 min-h-0 xl:flex-none">
                       {/* Main content */}
                       {categoriesLoading ||
