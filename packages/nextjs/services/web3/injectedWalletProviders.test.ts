@@ -28,6 +28,16 @@ test("findTargetedInjectedProvider excludes MetaMask-flavored wallets from the M
   assert.equal(provider, undefined);
 });
 
+test("findTargetedInjectedProvider does not route Ledger-style providers through targeted injected wallets", () => {
+  const provider = findTargetedInjectedProvider("io.metamask", {
+    ethereum: {
+      providers: [{ isLedgerConnect: true }, { isMetaMask: true, isLedgerConnect: true }],
+    },
+  });
+
+  assert.equal(provider, undefined);
+});
+
 test("getAvailableThirdwebExternalWalletIds only returns branded wallets that have matching injected providers", () => {
   assert.deepEqual(
     getAvailableThirdwebExternalWalletIds({
@@ -36,5 +46,16 @@ test("getAvailableThirdwebExternalWalletIds only returns branded wallets that ha
       },
     }),
     ["io.metamask", "me.rainbow"],
+  );
+});
+
+test("getAvailableThirdwebExternalWalletIds ignores unknown injected providers", () => {
+  assert.deepEqual(
+    getAvailableThirdwebExternalWalletIds({
+      ethereum: {
+        providers: [{ isLedgerConnect: true }, { isFrame: true }, { request: () => undefined }],
+      },
+    }),
+    [],
   );
 });
