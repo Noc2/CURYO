@@ -1,7 +1,6 @@
+import { resolvePonderUrlValue } from "./ponderUrl";
 import assert from "node:assert/strict";
 import { test } from "node:test";
-
-import { resolvePonderUrlValue } from "./ponderUrl";
 
 test("resolvePonderUrlValue falls back to the local dev Ponder URL outside production", () => {
   assert.deepEqual(resolvePonderUrlValue(undefined, false), {
