@@ -3,6 +3,7 @@
 import { type RefObject, useCallback, useEffect, useId, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { FeedVoteCard } from "~~/components/vote/VoteFeedCards";
+import { useMobileHeaderVisibility } from "~~/contexts/MobileHeaderVisibilityContext";
 import type { ContentItem } from "~~/hooks/useContentFeed";
 import type { SubmitterProfile } from "~~/hooks/useSubmitterProfiles";
 
@@ -37,6 +38,9 @@ const MOBILE_STAGE_MEDIA_QUERY = "(max-width: 767px)";
 const MOBILE_DOCK_RESERVED_SPACE_PX = 152;
 const MOBILE_MIN_SCROLLER_HEIGHT_PX = 320;
 const MOBILE_CHROME_TRANSITION_MEASURE_MS = 260;
+const MOBILE_CHROME_SETTLED_MEASURE_MS = MOBILE_CHROME_TRANSITION_MEASURE_MS + 40;
+const MOBILE_CARD_TOP_SNAP_GUARD_PX = 12;
+const MOBILE_HEADER_CARD_VISIBILITY_SETTLE_MS = 140;
 const MOBILE_HEADER_SCROLL_SYNC_ATTRIBUTE = "data-mobile-header-scroll-sync";
 const MOBILE_HEADER_SCROLL_SYNC_OFFSET_ATTRIBUTE = "data-mobile-header-scroll-sync-offset";
 const MOBILE_HEADER_SCROLL_SYNC_MS = MOBILE_CHROME_TRANSITION_MEASURE_MS + 120;
@@ -71,6 +75,7 @@ export function VoteFeedStage({
   onToggleWatch,
   onToggleFollow,
 }: VoteFeedStageProps) {
+  const { setIsMobileHeaderVisible } = useMobileHeaderVisibility();
   const feedInstructionsId = useId();
   const scrollerRef = useRef<HTMLDivElement | null>(null);
   const loadMoreRef = useRef<HTMLDivElement | null>(null);
@@ -82,8 +87,11 @@ export function VoteFeedStage({
   const lastProgrammaticScrollRequestRef = useRef<number | null>(null);
   const lastAutoPrefetchLoadedCountRef = useRef<number | null>(null);
   const mobileScrollIndicatorTimeoutRef = useRef<number | null>(null);
-  const mobileScrollerTopRef = useRef<number | null>(null);
-  const lastMobileTopChromeVisibleRef = useRef(mobileTopChromeVisible);
+  const mobileHeaderVisibilityTimeoutRef = useRef<number | null>(null);
+  const lastMobileHeadlineGuardStateRef = useRef({
+    index: activeSourceIndex,
+    topChromeVisible: mobileTopChromeVisible,
+  });
   const [mobileScrollerHeight, setMobileScrollerHeight] = useState<number | null>(null);
   const [desktopEndSpacerHeight, setDesktopEndSpacerHeight] = useState(0);
   const [isDesktopViewport, setIsDesktopViewport] = useState(false);
@@ -142,6 +150,35 @@ export function VoteFeedStage({
     scroller.style.scrollBehavior = previousScrollBehavior;
   }, []);
 
+  const scheduleMobileHeaderVisibilityForCardChange = useCallback(
+    (previousIndex: number | null, nextIndex: number) => {
+      if (isDesktopViewport || previousIndex === null || previousIndex === nextIndex || typeof window === "undefined") {
+        return;
+      }
+
+      const nextVisible = nextIndex <= 0 || nextIndex < previousIndex;
+
+      if (mobileHeaderVisibilityTimeoutRef.current !== null) {
+        window.clearTimeout(mobileHeaderVisibilityTimeoutRef.current);
+      }
+
+      mobileHeaderVisibilityTimeoutRef.current = window.setTimeout(() => {
+        mobileHeaderVisibilityTimeoutRef.current = null;
+        setIsMobileHeaderVisible(nextVisible);
+      }, MOBILE_HEADER_CARD_VISIBILITY_SETTLE_MS);
+    },
+    [isDesktopViewport, setIsMobileHeaderVisible],
+  );
+
+  useEffect(() => {
+    return () => {
+      if (mobileHeaderVisibilityTimeoutRef.current !== null) {
+        window.clearTimeout(mobileHeaderVisibilityTimeoutRef.current);
+        mobileHeaderVisibilityTimeoutRef.current = null;
+      }
+    };
+  }, []);
+
   useEffect(() => {
     if (typeof window === "undefined") return;
 
@@ -190,34 +227,12 @@ export function VoteFeedStage({
     const mobileStageQuery = window.matchMedia(MOBILE_STAGE_MEDIA_QUERY);
     let frameId = 0;
     const transitionMeasurementTimeouts: number[] = [];
-    const shouldProtectActiveHeadline = lastMobileTopChromeVisibleRef.current !== mobileTopChromeVisible;
-    lastMobileTopChromeVisibleRef.current = mobileTopChromeVisible;
+    const previousHeadlineGuardState = lastMobileHeadlineGuardStateRef.current;
+    const didChromeVisibilityChange = previousHeadlineGuardState.topChromeVisible !== mobileTopChromeVisible;
+    const shouldProtectActiveHeadline =
+      didChromeVisibilityChange || previousHeadlineGuardState.index !== renderedActiveIndex;
+    lastMobileHeadlineGuardStateRef.current = { index: renderedActiveIndex, topChromeVisible: mobileTopChromeVisible };
 
-    const preserveMobileScrollerAnchor = (scroller: HTMLDivElement) => {
-      if (!mobileStageQuery.matches) {
-        mobileScrollerTopRef.current = null;
-        return;
-      }
-
-      const previousTop = mobileScrollerTopRef.current;
-      const nextTop = scroller.getBoundingClientRect().top;
-
-      if (previousTop !== null) {
-        const topDelta = nextTop - previousTop;
-
-        if (Math.abs(topDelta) >= 1) {
-          const maxScrollTop = Math.max(scroller.scrollHeight - scroller.clientHeight, 0);
-          const nextScrollTop = Math.min(Math.max(scroller.scrollTop + topDelta, 0), maxScrollTop);
-
-          if (Math.abs(nextScrollTop - scroller.scrollTop) >= 0.5) {
-            markMobileHeaderScrollSync(scroller, nextScrollTop);
-            setMobileScrollerScrollTop(scroller, nextScrollTop);
-          }
-        }
-      }
-
-      mobileScrollerTopRef.current = nextTop;
-    };
     const keepActiveHeadlineInView = (scroller: HTMLDivElement) => {
       if (!shouldProtectActiveHeadline || !mobileStageQuery.matches) {
         return;
@@ -232,7 +247,9 @@ export function VoteFeedStage({
         return;
       }
 
-      const scrollerTop = scroller.getBoundingClientRect().top;
+      const scrollerRect = scroller.getBoundingClientRect();
+      const viewportTop = window.visualViewport?.offsetTop ?? 0;
+      const scrollerTop = Math.max(scrollerRect.top, viewportTop) + MOBILE_CARD_TOP_SNAP_GUARD_PX;
       const titleTop = activeTitle.getBoundingClientRect().top;
       const hiddenByTopEdge = scrollerTop - titleTop;
 
@@ -256,12 +273,10 @@ export function VoteFeedStage({
       if (!scroller) return;
 
       if (!mobileStageQuery.matches) {
-        mobileScrollerTopRef.current = null;
         setMobileScrollerHeight(current => (current === null ? current : null));
         return;
       }
 
-      preserveMobileScrollerAnchor(scroller);
       keepActiveHeadlineInView(scroller);
       const topOffset = scroller.getBoundingClientRect().top;
       const viewportHeight = Math.floor(window.visualViewport?.height ?? window.innerHeight);
@@ -281,16 +296,15 @@ export function VoteFeedStage({
       });
     };
 
-    requestMeasurement();
-    transitionMeasurementTimeouts.push(
-      window.setTimeout(requestMeasurement, Math.floor(MOBILE_CHROME_TRANSITION_MEASURE_MS / 2)),
-      window.setTimeout(requestMeasurement, MOBILE_CHROME_TRANSITION_MEASURE_MS),
-    );
+    if (didChromeVisibilityChange) {
+      transitionMeasurementTimeouts.push(window.setTimeout(requestMeasurement, MOBILE_CHROME_SETTLED_MEASURE_MS));
+    } else {
+      requestMeasurement();
+    }
     window.addEventListener("resize", requestMeasurement);
 
     if (window.visualViewport) {
       window.visualViewport.addEventListener("resize", requestMeasurement);
-      window.visualViewport.addEventListener("scroll", requestMeasurement);
     }
 
     if (typeof mobileStageQuery.addEventListener === "function") {
@@ -308,7 +322,6 @@ export function VoteFeedStage({
 
       if (window.visualViewport) {
         window.visualViewport.removeEventListener("resize", requestMeasurement);
-        window.visualViewport.removeEventListener("scroll", requestMeasurement);
       }
 
       if (typeof mobileStageQuery.addEventListener === "function") {
@@ -436,13 +449,17 @@ export function VoteFeedStage({
 
       const scrollerRect = scroller.getBoundingClientRect();
       const nodeRect = node.getBoundingClientRect();
-      scroller.scrollTo({ top: scroller.scrollTop + nodeRect.top - scrollerRect.top, behavior: "smooth" });
+      const topSnapGuard = isDesktopViewport ? 0 : MOBILE_CARD_TOP_SNAP_GUARD_PX;
+      scroller.scrollTo({
+        top: scroller.scrollTop + nodeRect.top - scrollerRect.top - topSnapGuard,
+        behavior: "smooth",
+      });
       pendingProgrammaticScrollTargetRef.current = targetIndex;
       pendingProgrammaticScrollStartedAtRef.current = Date.now();
       lastProgrammaticScrollRequestRef.current = targetIndex;
       return true;
     },
-    [displayFeed.length, getActiveScroller],
+    [displayFeed.length, getActiveScroller, isDesktopViewport],
   );
 
   const resolveNearestCard = useCallback(() => {
@@ -450,6 +467,7 @@ export function VoteFeedStage({
     if (!scroller) return null;
 
     const scrollerRect = scroller.getBoundingClientRect();
+    const topSnapGuard = isDesktopViewport ? 0 : MOBILE_CARD_TOP_SNAP_GUARD_PX;
     let bestIndex: number | null = null;
     let bestDistance = Number.POSITIVE_INFINITY;
     let bestTop = Number.POSITIVE_INFINITY;
@@ -457,7 +475,7 @@ export function VoteFeedStage({
     for (const [index, node] of cardElementsRef.current.entries()) {
       const cardRect = node.getBoundingClientRect();
       const relativeTop = cardRect.top - scrollerRect.top;
-      const distance = Math.abs(relativeTop);
+      const distance = Math.abs(relativeTop - topSnapGuard);
 
       if (distance < bestDistance || (distance === bestDistance && relativeTop < bestTop)) {
         bestDistance = distance;
@@ -474,7 +492,7 @@ export function VoteFeedStage({
       index: bestIndex,
       relativeTop: bestTop,
     };
-  }, [getActiveScroller]);
+  }, [getActiveScroller, isDesktopViewport]);
 
   const trackActiveCard = useCallback(() => {
     const nearestCard = resolveNearestCard();
@@ -483,6 +501,7 @@ export function VoteFeedStage({
     }
 
     const { index: bestIndex } = nearestCard;
+    const previousObservedIndex = lastObservedActiveIndexRef.current;
 
     const pendingProgrammaticTarget = pendingProgrammaticScrollTargetRef.current;
     if (pendingProgrammaticTarget !== null) {
@@ -499,18 +518,20 @@ export function VoteFeedStage({
         pendingProgrammaticScrollTargetRef.current = null;
         pendingProgrammaticScrollStartedAtRef.current = null;
         lastProgrammaticScrollRequestRef.current = null;
+        scheduleMobileHeaderVisibilityForCardChange(previousObservedIndex, bestIndex);
         lastObservedActiveIndexRef.current = bestIndex;
         return;
       }
     }
 
-    if (lastObservedActiveIndexRef.current === bestIndex) {
+    if (previousObservedIndex === bestIndex) {
       return;
     }
 
+    scheduleMobileHeaderVisibilityForCardChange(previousObservedIndex, bestIndex);
     lastObservedActiveIndexRef.current = bestIndex;
     onTrackActiveIndex(bestIndex);
-  }, [onTrackActiveIndex, resolveNearestCard]);
+  }, [onTrackActiveIndex, resolveNearestCard, scheduleMobileHeaderVisibilityForCardChange]);
 
   useEffect(() => {
     if (activeSourceIndex < 0) {
@@ -946,6 +967,7 @@ export function VoteFeedStage({
         height: mobileScrollerHeight !== null ? `${mobileScrollerHeight}px` : undefined,
         maxHeight: mobileScrollerHeight !== null ? `${mobileScrollerHeight}px` : undefined,
         paddingBottom: isDesktopViewport ? undefined : `${effectiveMobileDockReservedSpace}px`,
+        scrollPaddingTop: isDesktopViewport ? undefined : `${MOBILE_CARD_TOP_SNAP_GUARD_PX}px`,
         scrollPaddingBottom: isDesktopViewport ? undefined : `${effectiveMobileDockReservedSpace}px`,
       }}
     >
@@ -980,7 +1002,7 @@ export function VoteFeedStage({
             aria-setsize={canLoadMore ? -1 : displayFeed.length}
             aria-hidden={!isActiveCard}
             tabIndex={isActiveCard ? 0 : -1}
-            className={`relative shrink-0 snap-start snap-always transition-[opacity,filter,transform] duration-300 ease-out ${
+            className={`relative shrink-0 snap-start xl:snap-always transition-[opacity,filter,transform] duration-300 ease-out ${
               isActiveCard
                 ? "opacity-100"
                 : "pointer-events-none opacity-32 grayscale-[0.38] saturate-[0.46] brightness-[0.72]"

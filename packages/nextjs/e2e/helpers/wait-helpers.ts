@@ -1,5 +1,5 @@
-import type { Locator, Page } from "@playwright/test";
 import { CURYO_E2E_TEST_WALLET_PRIVATE_KEY_STORAGE_KEY } from "../../services/thirdweb/testWalletStorage";
+import type { Locator, Page } from "@playwright/test";
 
 const RETRIABLE_GOTO_ERROR_PATTERNS = [
   /ERR_ABORTED/i,
@@ -7,6 +7,7 @@ const RETRIABLE_GOTO_ERROR_PATTERNS = [
   /ECONNRESET/i,
   /frame was detached/i,
   /page\.goto: Timeout .*exceeded/i,
+  /page\.goto: Navigation to .* is interrupted by another navigation/i,
   /Test timeout/i,
 ];
 
@@ -27,7 +28,9 @@ export function getVisibleConnectedWallet(page: Page): Locator {
 }
 
 export async function waitForWalletConnected(page: Page, timeout = 20_000): Promise<void> {
-  await getVisibleConnectedWallet(page).first().waitFor({ state: "visible", timeout: getEffectiveE2ETimeout(timeout) });
+  await getVisibleConnectedWallet(page)
+    .first()
+    .waitFor({ state: "visible", timeout: getEffectiveE2ETimeout(timeout) });
 }
 
 function getEffectiveE2ETimeout(timeout: number): number {
@@ -169,8 +172,16 @@ export async function waitForFeedLoaded(page: Page, timeout = 15_000): Promise<v
 
   for (let attempt = 0; attempt < 2; attempt += 1) {
     try {
-      if (await connectButton.first().isVisible().catch(() => false)) {
-        await connectButton.first().waitFor({ state: "hidden", timeout: Math.min(timeout, 10_000) }).catch(() => undefined);
+      if (
+        await connectButton
+          .first()
+          .isVisible()
+          .catch(() => false)
+      ) {
+        await connectButton
+          .first()
+          .waitFor({ state: "hidden", timeout: Math.min(timeout, 10_000) })
+          .catch(() => undefined);
       }
 
       await feedContent().first().waitFor({ state: "visible", timeout });
@@ -178,8 +189,15 @@ export async function waitForFeedLoaded(page: Page, timeout = 15_000): Promise<v
     } catch (error) {
       lastError = error;
 
-      const stillLoading = await page.getByText("Loading...").first().isVisible().catch(() => false);
-      const connectPromptVisible = await connectButton.first().isVisible().catch(() => false);
+      const stillLoading = await page
+        .getByText("Loading...")
+        .first()
+        .isVisible()
+        .catch(() => false);
+      const connectPromptVisible = await connectButton
+        .first()
+        .isVisible()
+        .catch(() => false);
 
       if (attempt === 1 || (!stillLoading && !connectPromptVisible)) {
         throw error;
@@ -216,8 +234,15 @@ export async function waitForVisibleWithReload(
     } catch (error) {
       lastError = error;
 
-      const connectPromptVisible = await getVisibleAuthConnectButton(page).first().isVisible().catch(() => false);
-      const loadingVisible = await page.getByText("Loading...").first().isVisible().catch(() => false);
+      const connectPromptVisible = await getVisibleAuthConnectButton(page)
+        .first()
+        .isVisible()
+        .catch(() => false);
+      const loadingVisible = await page
+        .getByText("Loading...")
+        .first()
+        .isVisible()
+        .catch(() => false);
 
       if (attempt === attempts - 1 || (!connectPromptVisible && !loadingVisible)) {
         throw error;
