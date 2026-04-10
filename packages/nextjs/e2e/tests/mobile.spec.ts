@@ -55,28 +55,81 @@ test.describe("Mobile viewport (phone)", () => {
       page.evaluate(() => {
         const explicitScrollSource = document.querySelector<HTMLElement>('[data-mobile-header-scroll-source="true"]');
         const topChrome = document.querySelector<HTMLElement>('[data-vote-mobile-top-chrome="true"]');
+        const mobileHeader = document.querySelector<HTMLElement>('[data-mobile-header="true"]');
         const feedSurface = document.querySelector<HTMLElement>('[data-testid="vote-feed-surface"]');
+        const mobileScrollGutters = document.querySelector<HTMLElement>('[data-testid="vote-mobile-scroll-gutters"]');
+        const activeArticle = document.querySelector<HTMLElement>('article[aria-current="true"]');
+        const activeTitle = document.querySelector<HTMLElement>('article[aria-current="true"] h2');
+
+        const scrollerRect = explicitScrollSource?.getBoundingClientRect() ?? null;
+        const gutterRect = mobileScrollGutters?.getBoundingClientRect() ?? null;
+        const activeArticleRect = activeArticle?.getBoundingClientRect() ?? null;
+        const leftGutterWidth = activeArticleRect && gutterRect ? activeArticleRect.left - gutterRect.left : 0;
+        const rightGutterWidth = activeArticleRect && gutterRect ? gutterRect.right - activeArticleRect.right : 0;
 
         return {
+          activeTitleBottom: activeTitle?.getBoundingClientRect().bottom ?? 0,
+          activeTitleTop: activeTitle?.getBoundingClientRect().top ?? 0,
           documentScrollTop: document.scrollingElement?.scrollTop ?? 0,
           feedSurfaceTop: feedSurface?.getBoundingClientRect().top ?? 0,
+          gutterBackground: mobileScrollGutters ? getComputedStyle(mobileScrollGutters).backgroundColor : "",
+          gutterWheelX:
+            gutterRect && leftGutterWidth > 0 ? gutterRect.left + Math.max(2, Math.min(leftGutterWidth / 2, 16)) : 0,
+          gutterWheelY: scrollerRect
+            ? Math.min(
+                Math.max(scrollerRect.top + 80, 80),
+                Math.min(scrollerRect.bottom - 80, window.innerHeight - 160),
+              )
+            : 0,
+          leftGutterWidth,
+          mobileHeaderBottom: mobileHeader?.getBoundingClientRect().bottom ?? 0,
+          rightGutterWidth,
+          scrollerTop: scrollerRect?.top ?? 0,
           topChromeHeight: topChrome?.getBoundingClientRect().height ?? 0,
+          topChromeTop: topChrome?.getBoundingClientRect().top ?? 0,
           voteScrollTop: explicitScrollSource?.scrollTop ?? 0,
         };
       });
+    const setFeedScrollTop = (targetScrollTop: number) =>
+      page.evaluate(scrollTop => {
+        const explicitScrollSource = document.querySelector<HTMLElement>('[data-mobile-header-scroll-source="true"]');
+        if (!explicitScrollSource) {
+          window.scrollTo(0, scrollTop);
+          return;
+        }
+
+        const previousScrollBehavior = explicitScrollSource.style.scrollBehavior;
+        explicitScrollSource.style.scrollBehavior = "auto";
+        explicitScrollSource.scrollTop = scrollTop;
+        explicitScrollSource.dispatchEvent(new Event("scroll", { bubbles: true }));
+        explicitScrollSource.style.scrollBehavior = previousScrollBehavior;
+      }, targetScrollTop);
+    const waitForMobileHeaderScrollSyncIdle = () =>
+      page.waitForFunction(() => {
+        const explicitScrollSource = document.querySelector<HTMLElement>('[data-mobile-header-scroll-source="true"]');
+        return !explicitScrollSource?.hasAttribute("data-mobile-header-scroll-sync");
+      });
+
+    const initialLayout = await readLayout();
+    expect(initialLayout.leftGutterWidth).toBeGreaterThanOrEqual(20);
+    expect(initialLayout.rightGutterWidth).toBeGreaterThanOrEqual(20);
+    expect(initialLayout.gutterBackground).toBe("rgb(9, 10, 12)");
+
+    await page.mouse.move(initialLayout.gutterWheelX, initialLayout.gutterWheelY);
+    await page.mouse.wheel(0, 900);
+    await expect.poll(async () => (await readLayout()).voteScrollTop).toBeGreaterThan(initialLayout.voteScrollTop);
+    const afterGutterWheel = await readLayout();
+    expect(afterGutterWheel.documentScrollTop).toBe(0);
+
+    await setFeedScrollTop(0);
+    await expect(mobileHeader).toHaveAttribute("data-visible", "true");
+    await expect(voteTopChrome).toHaveAttribute("data-visible", "true");
 
     const expandedLayout = await readLayout();
+    expect(expandedLayout.topChromeTop).toBeGreaterThanOrEqual(expandedLayout.mobileHeaderBottom - 1);
+    await waitForMobileHeaderScrollSyncIdle();
 
-    await page.evaluate(() => {
-      const explicitScrollSource = document.querySelector<HTMLElement>('[data-mobile-header-scroll-source="true"]');
-      if (explicitScrollSource) {
-        explicitScrollSource.scrollTop = 900;
-        explicitScrollSource.dispatchEvent(new Event("scroll"));
-        return;
-      }
-
-      window.scrollTo(0, 900);
-    });
+    await setFeedScrollTop(900);
     await expect(mobileHeader).toHaveAttribute("data-visible", "false");
     await expect(voteTopChrome).toHaveAttribute("data-visible", "false");
     await page.waitForFunction(() => {
@@ -89,17 +142,10 @@ test.describe("Mobile viewport (phone)", () => {
     expect(collapsedLayout.feedSurfaceTop).toBeLessThan(expandedLayout.feedSurfaceTop - 24);
     expect(collapsedLayout.topChromeHeight).toBeLessThan(4);
     expect(collapsedLayout.voteScrollTop).toBeGreaterThan(0);
+    expect(collapsedLayout.activeTitleTop).toBeGreaterThanOrEqual(collapsedLayout.scrollerTop - 1);
+    expect(collapsedLayout.activeTitleBottom).toBeGreaterThan(collapsedLayout.scrollerTop + 8);
 
-    await page.evaluate(() => {
-      const explicitScrollSource = document.querySelector<HTMLElement>('[data-mobile-header-scroll-source="true"]');
-      if (explicitScrollSource) {
-        explicitScrollSource.scrollTop = 320;
-        explicitScrollSource.dispatchEvent(new Event("scroll"));
-        return;
-      }
-
-      window.scrollTo(0, 320);
-    });
+    await setFeedScrollTop(320);
     await expect(mobileHeader).toHaveAttribute("data-visible", "true");
     await expect(voteTopChrome).toHaveAttribute("data-visible", "true");
     await page.waitForFunction(() => {
@@ -109,9 +155,13 @@ test.describe("Mobile viewport (phone)", () => {
 
     const restoredLayout = await readLayout();
     expect(restoredLayout.feedSurfaceTop).toBeGreaterThan(collapsedLayout.feedSurfaceTop + 24);
+    expect(restoredLayout.topChromeTop).toBeGreaterThanOrEqual(restoredLayout.mobileHeaderBottom - 1);
+    expect(restoredLayout.activeTitleTop).toBeGreaterThanOrEqual(restoredLayout.scrollerTop - 1);
   });
 
-  test("mobile header still hides on scroll down and returns on scroll up on landing", async ({ connectedPage: page }) => {
+  test("mobile header still hides on scroll down and returns on scroll up on landing", async ({
+    connectedPage: page,
+  }) => {
     await page.goto("/?landing=1");
     await expect(page.getByText(/Human Reputation at Stake/i)).toBeVisible({ timeout: 10_000 });
 
@@ -187,7 +237,10 @@ test.describe("Mobile viewport (phone)", () => {
     const activeSurface = page.locator('[aria-current="true"] [data-testid="vote-content-surface"]').first();
     await expect(activeSurface).toBeVisible({ timeout: 10_000 });
 
-    const popupPromise = page.context().waitForEvent("page", { timeout: 1_000 }).catch(() => null);
+    const popupPromise = page
+      .context()
+      .waitForEvent("page", { timeout: 1_000 })
+      .catch(() => null);
     await activeSurface.click();
 
     const popup = await popupPromise;
