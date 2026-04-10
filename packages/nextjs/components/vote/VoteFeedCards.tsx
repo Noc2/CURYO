@@ -154,7 +154,10 @@ export const FeedVoteCard = memo(function FeedVoteCard({
       />
 
       <div className={contentGridClassName}>
-        <div className="flex min-w-0 min-h-0 flex-1 flex-col overflow-hidden rounded-2xl bg-base-200">
+        <div
+          data-testid="vote-content-card-shell"
+          className="flex min-w-0 min-h-0 flex-1 flex-col overflow-hidden rounded-2xl bg-base-200"
+        >
           <div
             className={`${mediaHeightClassName} relative overflow-hidden`}
             data-testid="vote-content-surface"
@@ -253,7 +256,10 @@ function FeedContentHeader({
   compact,
 }: FeedContentHeaderProps) {
   return (
-    <div className={`rounded-2xl bg-base-200 ${compact ? "px-4 py-3" : "px-5 py-4 xl:px-4 xl:py-3"}`}>
+    <div
+      data-testid="vote-content-header"
+      className={`rounded-2xl bg-base-200 ${compact ? "px-4 py-3" : "px-5 py-4 xl:px-4 xl:py-3"}`}
+    >
       <div className="flex items-center justify-between gap-3">
         <button
           type="button"
@@ -331,16 +337,18 @@ function FeedContentMetaCard({
   return (
     <>
       <div className={wrapperClassName}>
-        <div className="flex items-center justify-between gap-3">
-          <SubmitterBadge
-            address={item.submitter}
-            username={submitterProfile?.username}
-            winRate={submitterProfile?.winRate}
-            totalSettledVotes={submitterProfile?.totalSettledVotes}
-            size="sm"
-            addressMode={submitterProfile?.username ? "inline" : "hidden"}
-          />
-          <div className="flex shrink-0 items-center gap-1">
+        <div className="flex flex-wrap items-center gap-x-2 gap-y-2">
+          <div className="min-w-0 flex-[1_1_9rem]">
+            <SubmitterBadge
+              address={item.submitter}
+              username={submitterProfile?.username}
+              winRate={submitterProfile?.winRate}
+              totalSettledVotes={submitterProfile?.totalSettledVotes}
+              size="sm"
+              addressMode={submitterProfile?.username ? "inline" : "hidden"}
+            />
+          </div>
+          <div className="ml-auto flex shrink-0 items-center gap-0.5 sm:gap-1">
             {hasFollowButton ? (
               <FollowProfileButton
                 following={following}
