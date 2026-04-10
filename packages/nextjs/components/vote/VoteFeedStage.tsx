@@ -11,6 +11,7 @@ interface VoteFeedStageProps {
   activeSourceIndex: number;
   loadedCount: number;
   mobileDockReservedSpace?: number | null;
+  mobileTopChromeVisible?: boolean;
   canLoadMore: boolean;
   enrichedProfiles: Record<string, SubmitterProfile>;
   watchedContentIds: Set<string>;
@@ -35,6 +36,7 @@ const DESKTOP_STEP_MEDIA_QUERY = "(min-width: 1280px)";
 const MOBILE_STAGE_MEDIA_QUERY = "(max-width: 767px)";
 const MOBILE_DOCK_RESERVED_SPACE_PX = 152;
 const MOBILE_MIN_SCROLLER_HEIGHT_PX = 320;
+const MOBILE_CHROME_TRANSITION_MEASURE_MS = 260;
 const PROGRAMMATIC_SCROLL_RECOVERY_MS = 700;
 const MIN_SCROLL_INDICATOR_HEIGHT_PX = 40;
 const DESKTOP_SCROLL_SETTLE_MS = 140;
@@ -46,6 +48,7 @@ export function VoteFeedStage({
   activeSourceIndex,
   loadedCount,
   mobileDockReservedSpace,
+  mobileTopChromeVisible = true,
   canLoadMore,
   enrichedProfiles,
   watchedContentIds,
@@ -158,6 +161,7 @@ export function VoteFeedStage({
 
     const mobileStageQuery = window.matchMedia(MOBILE_STAGE_MEDIA_QUERY);
     let frameId = 0;
+    let transitionMeasurementTimeout = 0;
 
     const measureScrollerHeight = () => {
       const scroller = scrollerRef.current;
@@ -186,6 +190,7 @@ export function VoteFeedStage({
     };
 
     requestMeasurement();
+    transitionMeasurementTimeout = window.setTimeout(requestMeasurement, MOBILE_CHROME_TRANSITION_MEASURE_MS);
     window.addEventListener("resize", requestMeasurement);
 
     if (typeof mobileStageQuery.addEventListener === "function") {
@@ -198,6 +203,7 @@ export function VoteFeedStage({
       if (frameId !== 0) {
         window.cancelAnimationFrame(frameId);
       }
+      window.clearTimeout(transitionMeasurementTimeout);
       window.removeEventListener("resize", requestMeasurement);
 
       if (typeof mobileStageQuery.addEventListener === "function") {
@@ -206,7 +212,7 @@ export function VoteFeedStage({
         mobileStageQuery.removeListener(requestMeasurement);
       }
     };
-  }, [effectiveMobileDockReservedSpace, loadedItemCount]);
+  }, [effectiveMobileDockReservedSpace, loadedItemCount, mobileTopChromeVisible]);
 
   useEffect(() => {
     if (typeof window === "undefined") return;

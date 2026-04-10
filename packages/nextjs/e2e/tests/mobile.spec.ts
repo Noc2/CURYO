@@ -34,12 +34,14 @@ test.describe("Mobile viewport (phone)", () => {
     await expect(dropdown.getByRole("link", { name: /cREP/i })).toBeVisible({ timeout: 3_000 });
   });
 
-  test("vote page mobile header stays visible while the feed scrolls", async ({ connectedPage: page }) => {
+  test("vote page mobile chrome collapses with feed scroll and reclaims space", async ({ connectedPage: page }) => {
     await page.goto("/vote");
     await waitForFeedLoaded(page);
 
     const mobileHeader = page.locator('[data-mobile-header="true"]');
+    const voteTopChrome = page.locator('[data-vote-mobile-top-chrome="true"]');
     await expect(mobileHeader).toHaveAttribute("data-visible", "true");
+    await expect(voteTopChrome).toHaveAttribute("data-visible", "true");
 
     const canScroll = await page.evaluate(() => {
       const explicitScrollSource = document.querySelector<HTMLElement>('[data-mobile-header-scroll-source="true"]');
@@ -48,6 +50,22 @@ test.describe("Mobile viewport (phone)", () => {
       return scrollSource.scrollHeight > scrollSource.clientHeight + 200;
     });
     expect(canScroll).toBe(true);
+
+    const readLayout = () =>
+      page.evaluate(() => {
+        const explicitScrollSource = document.querySelector<HTMLElement>('[data-mobile-header-scroll-source="true"]');
+        const topChrome = document.querySelector<HTMLElement>('[data-vote-mobile-top-chrome="true"]');
+        const feedSurface = document.querySelector<HTMLElement>('[data-testid="vote-feed-surface"]');
+
+        return {
+          documentScrollTop: document.scrollingElement?.scrollTop ?? 0,
+          feedSurfaceTop: feedSurface?.getBoundingClientRect().top ?? 0,
+          topChromeHeight: topChrome?.getBoundingClientRect().height ?? 0,
+          voteScrollTop: explicitScrollSource?.scrollTop ?? 0,
+        };
+      });
+
+    const expandedLayout = await readLayout();
 
     await page.evaluate(() => {
       const explicitScrollSource = document.querySelector<HTMLElement>('[data-mobile-header-scroll-source="true"]');
@@ -59,7 +77,18 @@ test.describe("Mobile viewport (phone)", () => {
 
       window.scrollTo(0, 900);
     });
-    await expect(mobileHeader).toHaveAttribute("data-visible", "true");
+    await expect(mobileHeader).toHaveAttribute("data-visible", "false");
+    await expect(voteTopChrome).toHaveAttribute("data-visible", "false");
+    await page.waitForFunction(() => {
+      const topChrome = document.querySelector<HTMLElement>('[data-vote-mobile-top-chrome="true"]');
+      return topChrome !== null && topChrome.getBoundingClientRect().height < 4;
+    });
+
+    const collapsedLayout = await readLayout();
+    expect(collapsedLayout.documentScrollTop).toBe(0);
+    expect(collapsedLayout.feedSurfaceTop).toBeLessThan(expandedLayout.feedSurfaceTop - 24);
+    expect(collapsedLayout.topChromeHeight).toBeLessThan(4);
+    expect(collapsedLayout.voteScrollTop).toBeGreaterThan(0);
 
     await page.evaluate(() => {
       const explicitScrollSource = document.querySelector<HTMLElement>('[data-mobile-header-scroll-source="true"]');
@@ -72,6 +101,14 @@ test.describe("Mobile viewport (phone)", () => {
       window.scrollTo(0, 320);
     });
     await expect(mobileHeader).toHaveAttribute("data-visible", "true");
+    await expect(voteTopChrome).toHaveAttribute("data-visible", "true");
+    await page.waitForFunction(() => {
+      const topChrome = document.querySelector<HTMLElement>('[data-vote-mobile-top-chrome="true"]');
+      return topChrome !== null && topChrome.getBoundingClientRect().height > 24;
+    });
+
+    const restoredLayout = await readLayout();
+    expect(restoredLayout.feedSurfaceTop).toBeGreaterThan(collapsedLayout.feedSurfaceTop + 24);
   });
 
   test("mobile header still hides on scroll down and returns on scroll up on landing", async ({ connectedPage: page }) => {

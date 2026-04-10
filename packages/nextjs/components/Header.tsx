@@ -20,6 +20,7 @@ import { CuryoLogo } from "~~/components/CuryoLogo";
 import { CuryoConnectButton } from "~~/components/scaffold-eth";
 import { AddressInfoDropdown } from "~~/components/scaffold-eth/ConnectButton/AddressInfoDropdown";
 import { DOCS_NAV } from "~~/constants/docsNav";
+import { useMobileHeaderVisibility } from "~~/contexts/MobileHeaderVisibilityContext";
 import { useOutsideClick } from "~~/hooks/scaffold-eth";
 import { useVoteSearch } from "~~/hooks/useVoteSearch";
 
@@ -355,7 +356,8 @@ const MobileHeaderSearch = ({ onClose }: { onClose: () => void }) => {
 export const Header = () => {
   const pathname = usePathname() ?? "";
   const [mobileSearchOpen, setMobileSearchOpen] = useState(false);
-  const [isMobileHeaderVisible, setIsMobileHeaderVisible] = useState(true);
+  const { isMobileHeaderVisible, setIsMobileHeaderVisible } = useMobileHeaderVisibility();
+  const shouldUseVoteLayoutCollapse = pathname === "/vote";
 
   const burgerMenuRef = useRef<HTMLDetailsElement>(null);
   const lastScrollStateRef = useRef<{ source: Window | HTMLElement | null; offset: number }>({
@@ -369,14 +371,10 @@ export const Header = () => {
   useEffect(() => {
     setMobileSearchOpen(false);
     setIsMobileHeaderVisible(true);
-  }, [pathname]);
+  }, [pathname, setIsMobileHeaderVisible]);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
-    if (pathname === "/vote") {
-      setIsMobileHeaderVisible(true);
-      return;
-    }
 
     const readScrollOffset = (source: Window | HTMLElement) =>
       source instanceof HTMLElement ? source.scrollTop : window.scrollY;
@@ -460,14 +458,20 @@ export const Header = () => {
     return () => {
       window.removeEventListener("scroll", handleScroll, true);
     };
-  }, [mobileSearchOpen, pathname]);
+  }, [mobileSearchOpen, pathname, setIsMobileHeaderVisible]);
 
   return (
     <>
       {/* Mobile: top bar */}
       <div
-        className={`xl:hidden sticky top-0 z-20 transition-transform duration-200 ease-out will-change-transform ${
-          isMobileHeaderVisible ? "translate-y-0" : "-translate-y-full"
+        className={`xl:hidden sticky top-0 z-20 duration-200 ease-out will-change-transform ${
+          shouldUseVoteLayoutCollapse
+            ? `transition-all ${
+                isMobileHeaderVisible
+                  ? "max-h-24 translate-y-0 overflow-visible"
+                  : "max-h-0 -translate-y-full overflow-hidden"
+              }`
+            : `transition-transform ${isMobileHeaderVisible ? "translate-y-0" : "-translate-y-full"}`
         }`}
         data-mobile-header="true"
         data-visible={isMobileHeaderVisible ? "true" : "false"}
