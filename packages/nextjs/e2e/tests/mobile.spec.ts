@@ -99,6 +99,7 @@ test.describe("Mobile viewport (phone)", () => {
           activeTitleTop: activeTitle?.getBoundingClientRect().top ?? 0,
           documentScrollTop: document.scrollingElement?.scrollTop ?? 0,
           feedSurfaceBackground: feedSurface ? getComputedStyle(feedSurface).backgroundColor : "",
+          feedSurfacePaddingTop: feedSurface ? getComputedStyle(feedSurface).paddingTop : "",
           feedSurfaceTop: feedSurface?.getBoundingClientRect().top ?? 0,
           scrollContainerBackground: mobileScrollContainer
             ? getComputedStyle(mobileScrollContainer).backgroundColor
@@ -224,6 +225,7 @@ test.describe("Mobile viewport (phone)", () => {
     expect(initialLayout.leftGutterWidth).toBeLessThanOrEqual(1);
     expect(initialLayout.rightGutterWidth).toBeLessThanOrEqual(1);
     expect(initialLayout.feedSurfaceBackground).toBe("rgb(0, 0, 0)");
+    expect(initialLayout.feedSurfacePaddingTop).toBe("6px");
     expect(initialLayout.scrollContainerBackground).toBe("rgb(0, 0, 0)");
     expect(initialLayout.activeContentCardShellBackground).toBe("rgb(23, 22, 26)");
     expect(initialLayout.activeContentHeaderBackground).toBe("rgb(23, 22, 26)");
