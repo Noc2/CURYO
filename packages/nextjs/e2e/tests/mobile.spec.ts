@@ -127,6 +127,39 @@ test.describe("Mobile viewport (phone)", () => {
         explicitScrollSource.dispatchEvent(new Event("scroll", { bubbles: true }));
         explicitScrollSource.style.scrollBehavior = previousScrollBehavior;
       }, targetScrollTop);
+    const stepFeedScrollTop = (targetScrollTop: number, stepSize = 8) =>
+      page.evaluate(
+        async ({ targetScrollTop: requestedScrollTop, stepSize: requestedStepSize }) => {
+          const explicitScrollSource = document.querySelector<HTMLElement>('[data-mobile-header-scroll-source="true"]');
+          if (!explicitScrollSource) {
+            window.scrollTo(0, requestedScrollTop);
+            return;
+          }
+
+          const previousScrollBehavior = explicitScrollSource.style.scrollBehavior;
+          const direction = requestedScrollTop >= explicitScrollSource.scrollTop ? 1 : -1;
+          const step = Math.max(1, Math.abs(requestedStepSize));
+          let remainingSteps = 400;
+
+          explicitScrollSource.style.scrollBehavior = "auto";
+
+          while (remainingSteps > 0 && Math.abs(requestedScrollTop - explicitScrollSource.scrollTop) > 0.5) {
+            explicitScrollSource.scrollTop =
+              direction > 0
+                ? Math.min(explicitScrollSource.scrollTop + step, requestedScrollTop)
+                : Math.max(explicitScrollSource.scrollTop - step, requestedScrollTop);
+            explicitScrollSource.dispatchEvent(new Event("scroll", { bubbles: true }));
+            remainingSteps -= 1;
+
+            await new Promise<void>(resolve => {
+              window.requestAnimationFrame(() => resolve());
+            });
+          }
+
+          explicitScrollSource.style.scrollBehavior = previousScrollBehavior;
+        },
+        { targetScrollTop, stepSize },
+      );
     const waitForMobileHeaderScrollSyncIdle = () =>
       page.waitForFunction(() => {
         const explicitScrollSource = document.querySelector<HTMLElement>('[data-mobile-header-scroll-source="true"]');
@@ -200,7 +233,7 @@ test.describe("Mobile viewport (phone)", () => {
     await waitForMobileHeaderScrollSyncIdle();
 
     await startMobileChromeChangeCapture();
-    await setFeedScrollTop(900);
+    await stepFeedScrollTop(900);
     await expect(mobileHeader).toHaveAttribute("data-visible", "false");
     await expect(voteTopChrome).toHaveAttribute("data-visible", "false");
     await page.waitForFunction(() => {
@@ -224,7 +257,7 @@ test.describe("Mobile viewport (phone)", () => {
     expect(collapsedLayout.activeTitleBottom).toBeGreaterThan(collapsedLayout.scrollerTop + 8);
 
     await startMobileChromeChangeCapture();
-    await setFeedScrollTop(320);
+    await stepFeedScrollTop(320);
     await expect(mobileHeader).toHaveAttribute("data-visible", "true");
     await expect(voteTopChrome).toHaveAttribute("data-visible", "true");
     await page.waitForFunction(() => {

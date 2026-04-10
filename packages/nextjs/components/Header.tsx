@@ -380,7 +380,7 @@ export const Header = () => {
   const setMobileHeaderVisibility = useCallback(
     (nextVisible: boolean, options?: { ignoreStabilizeWindow?: boolean }) => {
       const currentVisible = isMobileHeaderVisibleRef.current;
-      if (currentVisible === nextVisible) return;
+      if (currentVisible === nextVisible) return true;
 
       const now =
         typeof performance !== "undefined" && typeof performance.now === "function" ? performance.now() : Date.now();
@@ -388,11 +388,12 @@ export const Header = () => {
         !options?.ignoreStabilizeWindow &&
         now - lastMobileHeaderVisibilityChangeAtRef.current < MOBILE_HEADER_VISIBILITY_STABILIZE_MS;
 
-      if (isWithinStabilizeWindow) return;
+      if (isWithinStabilizeWindow) return false;
 
       isMobileHeaderVisibleRef.current = nextVisible;
       lastMobileHeaderVisibilityChangeAtRef.current = now;
       setIsMobileHeaderVisible(nextVisible);
+      return true;
     },
     [setIsMobileHeaderVisible],
   );
@@ -475,18 +476,23 @@ export const Header = () => {
       }
 
       if (Math.abs(scrollDelta) < MOBILE_HEADER_SCROLL_DELTA) {
+        if (previousState.source !== scrollSource) {
+          lastScrollStateRef.current = {
+            source: scrollSource,
+            offset: currentScrollY,
+          };
+        }
+        return;
+      }
+
+      const nextVisible = scrollDelta < 0 || currentScrollY < MOBILE_HEADER_HIDE_OFFSET;
+      const didSettleVisibility = setMobileHeaderVisibility(nextVisible);
+      if (didSettleVisibility) {
         lastScrollStateRef.current = {
           source: scrollSource,
           offset: currentScrollY,
         };
-        return;
       }
-
-      setMobileHeaderVisibility(scrollDelta < 0 || currentScrollY < MOBILE_HEADER_HIDE_OFFSET);
-      lastScrollStateRef.current = {
-        source: scrollSource,
-        offset: currentScrollY,
-      };
     };
 
     let explicitScrollSource: HTMLElement | null = null;
