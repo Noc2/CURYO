@@ -253,6 +253,40 @@ test.describe("Mobile viewport (phone)", () => {
 
     await page.evaluate(() => {
       const explicitScrollSource = document.querySelector<HTMLElement>('[data-mobile-header-scroll-source="true"]');
+      if (explicitScrollSource) {
+        explicitScrollSource.style.scrollSnapType = "none";
+      }
+    });
+    const sameCardScrollStart = await readLayout();
+    await startMobileChromeChangeCapture();
+    await setFeedScrollTop(sameCardScrollStart.voteScrollTop + 96);
+    await expect.poll(async () => (await readLayout()).activeIndex).toBe(sameCardScrollStart.activeIndex);
+    await expect(mobileHeader).toHaveAttribute("data-visible", "false");
+    await expect(voteTopChrome).toHaveAttribute("data-visible", "false");
+
+    const sameCardCollapsedLayout = await readLayout();
+    const sameCardChromeChanges = await stopMobileChromeChangeCapture();
+    expect(sameCardCollapsedLayout.activeIndex).toBe(sameCardScrollStart.activeIndex);
+    expect(sameCardCollapsedLayout.voteScrollTop).toBeGreaterThan(sameCardScrollStart.voteScrollTop);
+    expect(sameCardChromeChanges.filter(change => change.target === "header").map(change => change.visible)).toEqual([
+      "false",
+    ]);
+    expect(sameCardChromeChanges.filter(change => change.target === "tabs").map(change => change.visible)).toEqual([
+      "false",
+    ]);
+
+    await page.evaluate(() => {
+      const explicitScrollSource = document.querySelector<HTMLElement>('[data-mobile-header-scroll-source="true"]');
+      if (explicitScrollSource) {
+        explicitScrollSource.style.scrollSnapType = "";
+      }
+    });
+    await setFeedScrollTop(0);
+    await expect(mobileHeader).toHaveAttribute("data-visible", "true");
+    await expect(voteTopChrome).toHaveAttribute("data-visible", "true");
+
+    await page.evaluate(() => {
+      const explicitScrollSource = document.querySelector<HTMLElement>('[data-mobile-header-scroll-source="true"]');
       explicitScrollSource?.scrollBy({ top: 900, behavior: "smooth" });
     });
     await expect.poll(async () => (await readLayout()).voteScrollTop).toBeGreaterThan(initialLayout.voteScrollTop);

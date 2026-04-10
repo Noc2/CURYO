@@ -200,6 +200,7 @@ const SEARCH_COMMIT_DEBOUNCE_MS = 200;
 const MOBILE_HEADER_SCROLL_DELTA = 12;
 const MOBILE_HEADER_HIDE_OFFSET = 72;
 const MOBILE_HEADER_VISIBILITY_STABILIZE_MS = 260;
+const MOBILE_HEADER_VOTE_SAME_CARD_SETTLE_MS = 160;
 const EXPLICIT_LANDING_HREF = "/?landing=1";
 const MOBILE_HEADER_SCROLL_SOURCE_ATTRIBUTE = "data-mobile-header-scroll-source";
 const MOBILE_HEADER_SCROLL_SYNC_ATTRIBUTE = "data-mobile-header-scroll-sync";
@@ -411,6 +412,9 @@ export const Header = () => {
     const readScrollOffset = (source: Window | HTMLElement) =>
       source instanceof HTMLElement ? source.scrollTop : window.scrollY;
 
+    const readVoteActiveCardIndex = (source: HTMLElement) =>
+      source.querySelector<HTMLElement>('article[aria-current="true"]')?.getAttribute("data-feed-card-index") ?? null;
+
     const resolveScrollSource = (target: EventTarget | null) => {
       if (
         target === window ||
@@ -427,6 +431,17 @@ export const Header = () => {
       }
 
       return null;
+    };
+
+    let voteLayoutScrollVisibilityTimeout: number | null = null;
+    let voteLayoutScrollSequenceIndex: string | null | undefined = undefined;
+
+    const clearDeferredVoteLayoutVisibility = () => {
+      if (voteLayoutScrollVisibilityTimeout !== null) {
+        window.clearTimeout(voteLayoutScrollVisibilityTimeout);
+        voteLayoutScrollVisibilityTimeout = null;
+      }
+      voteLayoutScrollSequenceIndex = undefined;
     };
 
     const handleScroll = (event: Event) => {
@@ -458,6 +473,7 @@ export const Header = () => {
       const isMobileMenuOpen = burgerMenuRef.current?.open ?? false;
 
       if (currentScrollY <= 0) {
+        clearDeferredVoteLayoutVisibility();
         setMobileHeaderVisibility(true, { ignoreStabilizeWindow: true });
         lastScrollStateRef.current = {
           source: scrollSource,
@@ -467,6 +483,7 @@ export const Header = () => {
       }
 
       if (mobileSearchOpen || isMobileMenuOpen) {
+        clearDeferredVoteLayoutVisibility();
         setMobileHeaderVisibility(true, { ignoreStabilizeWindow: true });
         lastScrollStateRef.current = {
           source: scrollSource,
@@ -476,6 +493,38 @@ export const Header = () => {
       }
 
       if (shouldUseVoteLayoutCollapse && scrollSource instanceof HTMLElement) {
+        if (Math.abs(scrollDelta) < MOBILE_HEADER_SCROLL_DELTA) {
+          if (previousState.source !== scrollSource) {
+            lastScrollStateRef.current = {
+              source: scrollSource,
+              offset: currentScrollY,
+            };
+          }
+          return;
+        }
+
+        const sequenceIndex =
+          voteLayoutScrollSequenceIndex === undefined
+            ? readVoteActiveCardIndex(scrollSource)
+            : voteLayoutScrollSequenceIndex;
+        voteLayoutScrollSequenceIndex = sequenceIndex;
+        const nextVisible = scrollDelta < 0 || currentScrollY < MOBILE_HEADER_HIDE_OFFSET;
+
+        if (voteLayoutScrollVisibilityTimeout !== null) {
+          window.clearTimeout(voteLayoutScrollVisibilityTimeout);
+        }
+
+        voteLayoutScrollVisibilityTimeout = window.setTimeout(() => {
+          voteLayoutScrollVisibilityTimeout = null;
+          voteLayoutScrollSequenceIndex = undefined;
+
+          if (sequenceIndex === null || readVoteActiveCardIndex(scrollSource) !== sequenceIndex) {
+            return;
+          }
+
+          setMobileHeaderVisibility(nextVisible);
+        }, MOBILE_HEADER_VOTE_SAME_CARD_SETTLE_MS);
+
         lastScrollStateRef.current = {
           source: scrollSource,
           offset: currentScrollY,
@@ -564,6 +613,7 @@ export const Header = () => {
       if (bindFrameId !== 0) {
         window.cancelAnimationFrame(bindFrameId);
       }
+      clearDeferredVoteLayoutVisibility();
       mutationObserver.disconnect();
       if (explicitScrollSource) {
         explicitScrollSource.removeEventListener("scroll", handleScroll);
