@@ -169,8 +169,8 @@ test.describe("Mobile viewport (phone)", () => {
     const initialLayout = await readLayout();
     expect(initialLayout.leftGutterWidth).toBeGreaterThanOrEqual(20);
     expect(initialLayout.rightGutterWidth).toBeGreaterThanOrEqual(20);
-    expect(initialLayout.feedSurfaceBackground).toBe("rgb(9, 10, 12)");
-    expect(initialLayout.gutterBackground).toBe("rgb(9, 10, 12)");
+    expect(initialLayout.feedSurfaceBackground).toBe("rgb(0, 0, 0)");
+    expect(initialLayout.gutterBackground).toBe("rgb(0, 0, 0)");
     expect(initialLayout.activeMoreControlVisible).toBe(true);
     expect(initialLayout.activeMoreControlFits).toBe(true);
 

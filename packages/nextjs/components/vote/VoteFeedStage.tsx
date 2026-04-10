@@ -957,7 +957,7 @@ export function VoteFeedStage({
         ref={scrollerRef}
         data-mobile-header-scroll-source="true"
         data-testid="vote-mobile-scroll-gutters"
-        className="scrollbar-hide -mx-3 flex min-h-0 flex-1 snap-y snap-mandatory flex-col gap-3 overflow-y-auto overscroll-contain bg-base-100 px-6 sm:-mx-4 sm:px-8 md:mx-0 md:bg-transparent md:px-0 md:pr-1 xl:flex-none xl:gap-4 xl:overflow-visible xl:overscroll-auto xl:pb-4 xl:pr-0 xl:scroll-pb-0"
+        className="scrollbar-hide -mx-3 flex min-h-0 flex-1 snap-y snap-mandatory flex-col gap-3 overflow-y-auto overscroll-contain bg-black px-6 sm:-mx-4 sm:px-8 md:mx-0 md:bg-transparent md:px-0 md:pr-1 xl:flex-none xl:gap-4 xl:overflow-visible xl:overscroll-auto xl:pb-4 xl:pr-0 xl:scroll-pb-0"
         style={{
           height: mobileScrollerHeight !== null ? `${mobileScrollerHeight}px` : undefined,
           maxHeight: mobileScrollerHeight !== null ? `${mobileScrollerHeight}px` : undefined,
