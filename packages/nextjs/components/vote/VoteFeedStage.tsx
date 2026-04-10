@@ -934,11 +934,20 @@ export function VoteFeedStage({
 
   return (
     <div
+      ref={scrollerRef}
       role="feed"
       aria-label="Content feed"
       aria-busy={isCommitting || isMetadataPrefetchPending}
       aria-describedby={feedInstructionsId}
-      className="flex h-full min-h-0 flex-col xl:h-auto"
+      data-mobile-header-scroll-source="true"
+      data-testid="vote-mobile-scroll-container"
+      className="scrollbar-hide flex h-full min-h-0 snap-y snap-mandatory flex-col gap-3 overflow-y-auto overscroll-contain bg-black xl:h-auto xl:flex-none xl:gap-4 xl:overflow-visible xl:overscroll-auto xl:pb-4 xl:pr-0 xl:scroll-pb-0"
+      style={{
+        height: mobileScrollerHeight !== null ? `${mobileScrollerHeight}px` : undefined,
+        maxHeight: mobileScrollerHeight !== null ? `${mobileScrollerHeight}px` : undefined,
+        paddingBottom: isDesktopViewport ? undefined : `${effectiveMobileDockReservedSpace}px`,
+        scrollPaddingBottom: isDesktopViewport ? undefined : `${effectiveMobileDockReservedSpace}px`,
+      }}
     >
       <p id={feedInstructionsId} className="sr-only">
         Use the arrow keys or Page Up and Page Down to move between items. Use Home or End to jump to the start or end
@@ -953,86 +962,73 @@ export function VoteFeedStage({
         </div>
       ) : null}
 
-      <div
-        ref={scrollerRef}
-        data-mobile-header-scroll-source="true"
-        data-testid="vote-mobile-scroll-gutters"
-        className="scrollbar-hide -mx-3 flex min-h-0 flex-1 snap-y snap-mandatory flex-col gap-3 overflow-y-auto overscroll-contain bg-black px-6 sm:-mx-4 sm:px-8 md:mx-0 md:bg-transparent md:px-0 md:pr-1 xl:flex-none xl:gap-4 xl:overflow-visible xl:overscroll-auto xl:pb-4 xl:pr-0 xl:scroll-pb-0"
-        style={{
-          height: mobileScrollerHeight !== null ? `${mobileScrollerHeight}px` : undefined,
-          maxHeight: mobileScrollerHeight !== null ? `${mobileScrollerHeight}px` : undefined,
-          paddingBottom: isDesktopViewport ? undefined : `${effectiveMobileDockReservedSpace}px`,
-          scrollPaddingBottom: isDesktopViewport ? undefined : `${effectiveMobileDockReservedSpace}px`,
-        }}
-      >
-        {feedItems.map(({ actualIndex, item }) => {
-          const canPrevious = actualIndex > 0 && !isCommitting && !navigationLocked;
-          const canNext = actualIndex < displayFeed.length - 1 && !isCommitting && !navigationLocked;
-          const isActiveCard = actualIndex === renderedActiveIndex;
-          const titleId = `vote-feed-title-${item.id.toString()}`;
+      {feedItems.map(({ actualIndex, item }) => {
+        const canPrevious = actualIndex > 0 && !isCommitting && !navigationLocked;
+        const canNext = actualIndex < displayFeed.length - 1 && !isCommitting && !navigationLocked;
+        const isActiveCard = actualIndex === renderedActiveIndex;
+        const titleId = `vote-feed-title-${item.id.toString()}`;
 
-          return (
-            <article
-              key={item.id.toString()}
-              id={`vote-feed-card-${actualIndex}`}
-              ref={node => setCardElement(actualIndex, node)}
-              data-feed-card-index={actualIndex}
-              aria-current={isActiveCard ? "true" : undefined}
-              aria-labelledby={titleId}
-              aria-posinset={actualIndex + 1}
-              aria-setsize={canLoadMore ? -1 : displayFeed.length}
-              aria-hidden={!isActiveCard}
-              tabIndex={isActiveCard ? 0 : -1}
-              className={`relative shrink-0 snap-start snap-always transition-[opacity,filter,transform] duration-300 ease-out ${
-                isActiveCard
-                  ? "opacity-100"
-                  : "pointer-events-none opacity-32 grayscale-[0.38] saturate-[0.46] brightness-[0.72]"
-              }`}
-            >
-              <FeedVoteCard
-                item={item}
-                submitterProfile={enrichedProfiles[item.submitter.toLowerCase()]}
-                titleId={titleId}
-                isActive={isActiveCard}
-                onContentIntent={contentItem => onContentIntent(contentItem)}
-                onSourceOpen={contentItem => onSourceOpen(contentItem)}
-                onToggleWatch={onToggleWatch}
-                onToggleFollow={onToggleFollow}
-                watched={watchedContentIds.has(item.id.toString())}
-                watchPending={isWatchPending(item.id)}
-                following={followedWallets.has(item.submitter.toLowerCase())}
-                followPending={isFollowPending(item.submitter)}
-                normalizedAddress={normalizedAddress}
-                deferEmbedClientFetch={isMetadataPrefetchPending && actualIndex !== renderedActiveIndex}
-                onPrevious={canPrevious ? () => void scrollToIndex(actualIndex - 1) : undefined}
-                onNext={canNext ? () => void scrollToIndex(actualIndex + 1) : undefined}
-                canPrevious={canPrevious}
-                canNext={canNext}
+        return (
+          <article
+            key={item.id.toString()}
+            id={`vote-feed-card-${actualIndex}`}
+            ref={node => setCardElement(actualIndex, node)}
+            data-feed-card-index={actualIndex}
+            aria-current={isActiveCard ? "true" : undefined}
+            aria-labelledby={titleId}
+            aria-posinset={actualIndex + 1}
+            aria-setsize={canLoadMore ? -1 : displayFeed.length}
+            aria-hidden={!isActiveCard}
+            tabIndex={isActiveCard ? 0 : -1}
+            className={`relative shrink-0 snap-start snap-always transition-[opacity,filter,transform] duration-300 ease-out ${
+              isActiveCard
+                ? "opacity-100"
+                : "pointer-events-none opacity-32 grayscale-[0.38] saturate-[0.46] brightness-[0.72]"
+            }`}
+          >
+            <FeedVoteCard
+              item={item}
+              submitterProfile={enrichedProfiles[item.submitter.toLowerCase()]}
+              titleId={titleId}
+              isActive={isActiveCard}
+              onContentIntent={contentItem => onContentIntent(contentItem)}
+              onSourceOpen={contentItem => onSourceOpen(contentItem)}
+              onToggleWatch={onToggleWatch}
+              onToggleFollow={onToggleFollow}
+              watched={watchedContentIds.has(item.id.toString())}
+              watchPending={isWatchPending(item.id)}
+              following={followedWallets.has(item.submitter.toLowerCase())}
+              followPending={isFollowPending(item.submitter)}
+              normalizedAddress={normalizedAddress}
+              deferEmbedClientFetch={isMetadataPrefetchPending && actualIndex !== renderedActiveIndex}
+              onPrevious={canPrevious ? () => void scrollToIndex(actualIndex - 1) : undefined}
+              onNext={canNext ? () => void scrollToIndex(actualIndex + 1) : undefined}
+              canPrevious={canPrevious}
+              canNext={canNext}
+            />
+            {!isActiveCard ? (
+              <div
+                aria-hidden="true"
+                className="pointer-events-none absolute inset-0 rounded-[1.75rem] bg-[linear-gradient(180deg,rgba(0,0,0,0.18),rgba(0,0,0,0.46))]"
               />
-              {!isActiveCard ? (
-                <div
-                  aria-hidden="true"
-                  className="pointer-events-none absolute inset-0 rounded-[1.75rem] bg-[linear-gradient(180deg,rgba(10,10,12,0.18),rgba(10,10,12,0.46))]"
-                />
-              ) : null}
-            </article>
-          );
-        })}
+            ) : null}
+          </article>
+        );
+      })}
 
-        {canLoadMore ? (
-          <div ref={loadMoreRef} className="flex justify-center py-8">
-            <span className="loading loading-spinner loading-md text-primary"></span>
-          </div>
-        ) : null}
+      {canLoadMore ? (
+        <div ref={loadMoreRef} className="flex justify-center py-8">
+          <span className="loading loading-spinner loading-md text-primary"></span>
+        </div>
+      ) : null}
 
-        {!canLoadMore && desktopEndSpacerHeight > 0 ? (
-          <div
-            aria-hidden="true"
-            className="hidden shrink-0 xl:block"
-            style={{ height: `${desktopEndSpacerHeight}px` }}
-          />
-        ) : null}
-      </div>
+      {!canLoadMore && desktopEndSpacerHeight > 0 ? (
+        <div
+          aria-hidden="true"
+          className="hidden shrink-0 xl:block"
+          style={{ height: `${desktopEndSpacerHeight}px` }}
+        />
+      ) : null}
 
       {typeof document !== "undefined" &&
       scrollIndicatorState.isVisible &&

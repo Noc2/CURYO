@@ -57,7 +57,9 @@ test.describe("Mobile viewport (phone)", () => {
         const topChrome = document.querySelector<HTMLElement>('[data-vote-mobile-top-chrome="true"]');
         const mobileHeader = document.querySelector<HTMLElement>('[data-mobile-header="true"]');
         const feedSurface = document.querySelector<HTMLElement>('[data-testid="vote-feed-surface"]');
-        const mobileScrollGutters = document.querySelector<HTMLElement>('[data-testid="vote-mobile-scroll-gutters"]');
+        const mobileScrollContainer = document.querySelector<HTMLElement>(
+          '[data-testid="vote-mobile-scroll-container"]',
+        );
         const activeArticle = document.querySelector<HTMLElement>('article[aria-current="true"]');
         const activeTitle = document.querySelector<HTMLElement>('article[aria-current="true"] h2');
         const activeMoreButton = activeArticle?.querySelector<HTMLElement>(
@@ -65,11 +67,15 @@ test.describe("Mobile viewport (phone)", () => {
         );
 
         const scrollerRect = explicitScrollSource?.getBoundingClientRect() ?? null;
-        const gutterRect = mobileScrollGutters?.getBoundingClientRect() ?? null;
+        const mobileScrollContainerRect = mobileScrollContainer?.getBoundingClientRect() ?? null;
         const activeArticleRect = activeArticle?.getBoundingClientRect() ?? null;
         const activeMoreButtonRect = activeMoreButton?.getBoundingClientRect() ?? null;
-        const leftGutterWidth = activeArticleRect && gutterRect ? activeArticleRect.left - gutterRect.left : 0;
-        const rightGutterWidth = activeArticleRect && gutterRect ? gutterRect.right - activeArticleRect.right : 0;
+        const leftGutterWidth =
+          activeArticleRect && mobileScrollContainerRect ? activeArticleRect.left - mobileScrollContainerRect.left : 0;
+        const rightGutterWidth =
+          activeArticleRect && mobileScrollContainerRect
+            ? mobileScrollContainerRect.right - activeArticleRect.right
+            : 0;
 
         return {
           activeMoreControlFits:
@@ -84,10 +90,15 @@ test.describe("Mobile viewport (phone)", () => {
           documentScrollTop: document.scrollingElement?.scrollTop ?? 0,
           feedSurfaceBackground: feedSurface ? getComputedStyle(feedSurface).backgroundColor : "",
           feedSurfaceTop: feedSurface?.getBoundingClientRect().top ?? 0,
-          gutterBackground: mobileScrollGutters ? getComputedStyle(mobileScrollGutters).backgroundColor : "",
-          gutterWheelX:
-            gutterRect && leftGutterWidth > 0 ? gutterRect.left + Math.max(2, Math.min(leftGutterWidth / 2, 16)) : 0,
-          gutterWheelY: scrollerRect
+          scrollContainerBackground: mobileScrollContainer
+            ? getComputedStyle(mobileScrollContainer).backgroundColor
+            : "",
+          scrollWheelX: activeArticleRect
+            ? activeArticleRect.left + Math.min(24, activeArticleRect.width / 2)
+            : scrollerRect
+              ? scrollerRect.left + 16
+              : 0,
+          scrollWheelY: scrollerRect
             ? Math.min(
                 Math.max(scrollerRect.top + 80, 80),
                 Math.min(scrollerRect.bottom - 80, window.innerHeight - 160),
@@ -167,18 +178,18 @@ test.describe("Mobile viewport (phone)", () => {
       });
 
     const initialLayout = await readLayout();
-    expect(initialLayout.leftGutterWidth).toBeGreaterThanOrEqual(20);
-    expect(initialLayout.rightGutterWidth).toBeGreaterThanOrEqual(20);
+    expect(initialLayout.leftGutterWidth).toBeLessThanOrEqual(1);
+    expect(initialLayout.rightGutterWidth).toBeLessThanOrEqual(1);
     expect(initialLayout.feedSurfaceBackground).toBe("rgb(0, 0, 0)");
-    expect(initialLayout.gutterBackground).toBe("rgb(0, 0, 0)");
+    expect(initialLayout.scrollContainerBackground).toBe("rgb(0, 0, 0)");
     expect(initialLayout.activeMoreControlVisible).toBe(true);
     expect(initialLayout.activeMoreControlFits).toBe(true);
 
-    await page.mouse.move(initialLayout.gutterWheelX, initialLayout.gutterWheelY);
+    await page.mouse.move(initialLayout.scrollWheelX, initialLayout.scrollWheelY);
     await page.mouse.wheel(0, 900);
     await expect.poll(async () => (await readLayout()).voteScrollTop).toBeGreaterThan(initialLayout.voteScrollTop);
-    const afterGutterWheel = await readLayout();
-    expect(afterGutterWheel.documentScrollTop).toBe(0);
+    const afterScrollWheel = await readLayout();
+    expect(afterScrollWheel.documentScrollTop).toBe(0);
 
     await setFeedScrollTop(0);
     await expect(mobileHeader).toHaveAttribute("data-visible", "true");
