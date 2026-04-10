@@ -1,5 +1,6 @@
 import { RPC_OVERRIDES } from "./config/shared";
 import { isLocalE2EProductionBuildEnabled } from "./utils/env/e2eProduction";
+import { resolvePonderUrlValue } from "./utils/env/ponderUrl";
 import { DEFAULT_DEV_TARGET_NETWORKS, resolveTargetNetworks } from "./utils/env/targetNetworks";
 import { mergeRpcOverrides, resolveRpcOverrides } from "./utils/rpcUrls";
 import withBundleAnalyzer from "@next/bundle-analyzer";
@@ -42,7 +43,8 @@ const rpcOrigins = rpcUrls
   .filter((value, index, values): value is string => Boolean(value) && values.indexOf(value) === index);
 
 // Build CSP directives. Production Ponder URL comes from env at build time.
-const ponderUrl = process.env.NEXT_PUBLIC_PONDER_URL ?? (isDev ? "http://localhost:42069" : "");
+const ponderUrl =
+  resolvePonderUrlValue(process.env.NEXT_PUBLIC_PONDER_URL, !isDev, allowLocalE2EProductionBuild).url ?? "";
 const vercelLiveScriptSources = isVercelPreview ? ["https://vercel.live"] : [];
 const vercelLiveStyleSources = isVercelPreview ? ["https://vercel.live"] : [];
 const vercelLiveFontSources = isVercelPreview ? ["https://vercel.live", "https://assets.vercel.com"] : [];

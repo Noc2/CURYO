@@ -1,7 +1,8 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 import { CheckIcon, ClipboardIcon, XMarkIcon } from "@heroicons/react/24/outline";
+import { useCopyToClipboard } from "~~/hooks/scaffold-eth";
 import { truncateContentTitle } from "~~/lib/contentTitle";
 
 interface ShareContentModalProps {
@@ -12,7 +13,7 @@ interface ShareContentModalProps {
 }
 
 export function ShareContentModal({ contentId, title, description, onClose }: ShareContentModalProps) {
-  const [copied, setCopied] = useState(false);
+  const { copyToClipboard, isCopiedToClipboard: copied } = useCopyToClipboard({ successDurationMs: 2000 });
 
   // Close on Escape key
   useEffect(() => {
@@ -27,20 +28,7 @@ export function ShareContentModal({ contentId, title, description, onClose }: Sh
   const truncatedTitle = truncateContentTitle(title);
 
   const handleCopyLink = async () => {
-    try {
-      await navigator.clipboard.writeText(shareUrl);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
-    } catch {
-      const textArea = document.createElement("textarea");
-      textArea.value = shareUrl;
-      document.body.appendChild(textArea);
-      textArea.select();
-      document.execCommand("copy");
-      document.body.removeChild(textArea);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
-    }
+    await copyToClipboard(shareUrl);
   };
 
   const tweetText = `Check out "${truncatedTitle}" on Curyo! ${shareUrl}`;
