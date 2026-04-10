@@ -144,12 +144,16 @@ test.describe("Responsive layout", () => {
       const frameRect = frame.getBoundingClientRect();
       const surfaceRect = surface.getBoundingClientRect();
       const scrollerRect = scroller.getBoundingClientRect();
+      const surfaceStyle = getComputedStyle(surface);
       const leftPadding = surfaceRect.left - frameRect.left;
 
       return {
         hasSurface: true as const,
         canScroll: scroller.scrollHeight > scroller.clientHeight + 48,
         leftPadding,
+        surfaceBorderTopLeftRadius: surfaceStyle.borderTopLeftRadius,
+        surfaceOverflowX: surfaceStyle.overflowX,
+        surfaceOverflowY: surfaceStyle.overflowY,
         wheelX: frameRect.left + leftPadding / 2,
         wheelY: Math.min(Math.max(surfaceRect.top + 48, scrollerRect.top + 48), scrollerRect.bottom - 48),
       };
@@ -166,6 +170,18 @@ test.describe("Responsive layout", () => {
     expect(metrics.leftPadding, "Desktop feed should keep visible side padding around the card").toBeGreaterThanOrEqual(
       12,
     );
+    expect(
+      metrics.surfaceBorderTopLeftRadius,
+      "Desktop feed surface should not clip the first content headline with its own radius",
+    ).toBe("0px");
+    expect(
+      metrics.surfaceOverflowX,
+      "Desktop feed surface should not clip the first content headline horizontally",
+    ).toBe("visible");
+    expect(
+      metrics.surfaceOverflowY,
+      "Desktop feed surface should not clip the first content headline vertically",
+    ).toBe("visible");
 
     test.skip(!metrics.canScroll, "Vote feed is not tall enough to verify wheel scrolling from the side padding");
 
