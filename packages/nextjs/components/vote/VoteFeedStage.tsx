@@ -37,6 +37,9 @@ const MOBILE_STAGE_MEDIA_QUERY = "(max-width: 767px)";
 const MOBILE_DOCK_RESERVED_SPACE_PX = 152;
 const MOBILE_MIN_SCROLLER_HEIGHT_PX = 320;
 const MOBILE_CHROME_TRANSITION_MEASURE_MS = 260;
+const MOBILE_HEADER_SCROLL_SYNC_ATTRIBUTE = "data-mobile-header-scroll-sync";
+const MOBILE_HEADER_SCROLL_SYNC_OFFSET_ATTRIBUTE = "data-mobile-header-scroll-sync-offset";
+const MOBILE_HEADER_SCROLL_SYNC_MS = MOBILE_CHROME_TRANSITION_MEASURE_MS + 120;
 const PROGRAMMATIC_SCROLL_RECOVERY_MS = 700;
 const MIN_SCROLL_INDICATOR_HEIGHT_PX = 40;
 const DESKTOP_SCROLL_SETTLE_MS = 140;
@@ -79,6 +82,8 @@ export function VoteFeedStage({
   const lastProgrammaticScrollRequestRef = useRef<number | null>(null);
   const lastAutoPrefetchLoadedCountRef = useRef<number | null>(null);
   const mobileScrollIndicatorTimeoutRef = useRef<number | null>(null);
+  const mobileScrollerTopRef = useRef<number | null>(null);
+  const lastMobileTopChromeVisibleRef = useRef(mobileTopChromeVisible);
   const [mobileScrollerHeight, setMobileScrollerHeight] = useState<number | null>(null);
   const [desktopEndSpacerHeight, setDesktopEndSpacerHeight] = useState(0);
   const [isDesktopViewport, setIsDesktopViewport] = useState(false);
@@ -113,6 +118,29 @@ export function VoteFeedStage({
     }
     return scrollerRef.current;
   }, [isDesktopViewport, scrollContainerRef]);
+
+  const markMobileHeaderScrollSync = useCallback((scroller: HTMLElement, expectedScrollTop: number) => {
+    if (typeof window === "undefined") return;
+
+    const token = String(Date.now());
+    scroller.setAttribute(MOBILE_HEADER_SCROLL_SYNC_ATTRIBUTE, token);
+    scroller.setAttribute(MOBILE_HEADER_SCROLL_SYNC_OFFSET_ATTRIBUTE, String(expectedScrollTop));
+    window.setTimeout(() => {
+      if (scroller.getAttribute(MOBILE_HEADER_SCROLL_SYNC_ATTRIBUTE) === token) {
+        scroller.removeAttribute(MOBILE_HEADER_SCROLL_SYNC_ATTRIBUTE);
+        scroller.removeAttribute(MOBILE_HEADER_SCROLL_SYNC_OFFSET_ATTRIBUTE);
+      }
+    }, MOBILE_HEADER_SCROLL_SYNC_MS);
+  }, []);
+
+  const setMobileScrollerScrollTop = useCallback((scroller: HTMLElement, nextScrollTop: number) => {
+    const previousScrollBehavior = scroller.style.scrollBehavior;
+
+    scroller.style.scrollBehavior = "auto";
+    scroller.scrollTop = nextScrollTop;
+    scroller.dispatchEvent(new Event("scroll", { bubbles: true }));
+    scroller.style.scrollBehavior = previousScrollBehavior;
+  }, []);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -161,19 +189,83 @@ export function VoteFeedStage({
 
     const mobileStageQuery = window.matchMedia(MOBILE_STAGE_MEDIA_QUERY);
     let frameId = 0;
-    let transitionMeasurementTimeout = 0;
+    const transitionMeasurementTimeouts: number[] = [];
+    const shouldProtectActiveHeadline = lastMobileTopChromeVisibleRef.current !== mobileTopChromeVisible;
+    lastMobileTopChromeVisibleRef.current = mobileTopChromeVisible;
+
+    const preserveMobileScrollerAnchor = (scroller: HTMLDivElement) => {
+      if (!mobileStageQuery.matches) {
+        mobileScrollerTopRef.current = null;
+        return;
+      }
+
+      const previousTop = mobileScrollerTopRef.current;
+      const nextTop = scroller.getBoundingClientRect().top;
+
+      if (previousTop !== null) {
+        const topDelta = nextTop - previousTop;
+
+        if (Math.abs(topDelta) >= 1) {
+          const maxScrollTop = Math.max(scroller.scrollHeight - scroller.clientHeight, 0);
+          const nextScrollTop = Math.min(Math.max(scroller.scrollTop + topDelta, 0), maxScrollTop);
+
+          if (Math.abs(nextScrollTop - scroller.scrollTop) >= 0.5) {
+            markMobileHeaderScrollSync(scroller, nextScrollTop);
+            setMobileScrollerScrollTop(scroller, nextScrollTop);
+          }
+        }
+      }
+
+      mobileScrollerTopRef.current = nextTop;
+    };
+    const keepActiveHeadlineInView = (scroller: HTMLDivElement) => {
+      if (!shouldProtectActiveHeadline || !mobileStageQuery.matches) {
+        return;
+      }
+
+      const activeNode = cardElementsRef.current.get(renderedActiveIndex);
+      const activeTitleId = activeNode?.getAttribute("aria-labelledby");
+      const activeTitle =
+        (activeTitleId ? document.getElementById(activeTitleId) : null) ?? activeNode?.querySelector<HTMLElement>("h2");
+
+      if (!activeTitle) {
+        return;
+      }
+
+      const scrollerTop = scroller.getBoundingClientRect().top;
+      const titleTop = activeTitle.getBoundingClientRect().top;
+      const hiddenByTopEdge = scrollerTop - titleTop;
+
+      if (hiddenByTopEdge < 1) {
+        return;
+      }
+
+      const maxScrollTop = Math.max(scroller.scrollHeight - scroller.clientHeight, 0);
+      const nextScrollTop = Math.min(Math.max(scroller.scrollTop - hiddenByTopEdge, 0), maxScrollTop);
+
+      if (Math.abs(nextScrollTop - scroller.scrollTop) < 0.5) {
+        return;
+      }
+
+      markMobileHeaderScrollSync(scroller, nextScrollTop);
+      setMobileScrollerScrollTop(scroller, nextScrollTop);
+    };
 
     const measureScrollerHeight = () => {
       const scroller = scrollerRef.current;
       if (!scroller) return;
 
       if (!mobileStageQuery.matches) {
+        mobileScrollerTopRef.current = null;
         setMobileScrollerHeight(current => (current === null ? current : null));
         return;
       }
 
+      preserveMobileScrollerAnchor(scroller);
+      keepActiveHeadlineInView(scroller);
       const topOffset = scroller.getBoundingClientRect().top;
-      const availableHeight = Math.max(MOBILE_MIN_SCROLLER_HEIGHT_PX, Math.floor(window.innerHeight - topOffset));
+      const viewportHeight = Math.floor(window.visualViewport?.height ?? window.innerHeight);
+      const availableHeight = Math.max(MOBILE_MIN_SCROLLER_HEIGHT_PX, Math.floor(viewportHeight - topOffset));
 
       setMobileScrollerHeight(current => (current === availableHeight ? current : availableHeight));
     };
@@ -190,8 +282,16 @@ export function VoteFeedStage({
     };
 
     requestMeasurement();
-    transitionMeasurementTimeout = window.setTimeout(requestMeasurement, MOBILE_CHROME_TRANSITION_MEASURE_MS);
+    transitionMeasurementTimeouts.push(
+      window.setTimeout(requestMeasurement, Math.floor(MOBILE_CHROME_TRANSITION_MEASURE_MS / 2)),
+      window.setTimeout(requestMeasurement, MOBILE_CHROME_TRANSITION_MEASURE_MS),
+    );
     window.addEventListener("resize", requestMeasurement);
+
+    if (window.visualViewport) {
+      window.visualViewport.addEventListener("resize", requestMeasurement);
+      window.visualViewport.addEventListener("scroll", requestMeasurement);
+    }
 
     if (typeof mobileStageQuery.addEventListener === "function") {
       mobileStageQuery.addEventListener("change", requestMeasurement);
@@ -203,8 +303,13 @@ export function VoteFeedStage({
       if (frameId !== 0) {
         window.cancelAnimationFrame(frameId);
       }
-      window.clearTimeout(transitionMeasurementTimeout);
+      transitionMeasurementTimeouts.forEach(timeoutId => window.clearTimeout(timeoutId));
       window.removeEventListener("resize", requestMeasurement);
+
+      if (window.visualViewport) {
+        window.visualViewport.removeEventListener("resize", requestMeasurement);
+        window.visualViewport.removeEventListener("scroll", requestMeasurement);
+      }
 
       if (typeof mobileStageQuery.addEventListener === "function") {
         mobileStageQuery.removeEventListener("change", requestMeasurement);
@@ -212,7 +317,14 @@ export function VoteFeedStage({
         mobileStageQuery.removeListener(requestMeasurement);
       }
     };
-  }, [effectiveMobileDockReservedSpace, loadedItemCount, mobileTopChromeVisible]);
+  }, [
+    effectiveMobileDockReservedSpace,
+    loadedItemCount,
+    markMobileHeaderScrollSync,
+    mobileTopChromeVisible,
+    renderedActiveIndex,
+    setMobileScrollerScrollTop,
+  ]);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -844,7 +956,8 @@ export function VoteFeedStage({
       <div
         ref={scrollerRef}
         data-mobile-header-scroll-source="true"
-        className="scrollbar-hide flex min-h-0 flex-1 snap-y snap-mandatory flex-col gap-3 overflow-y-auto overscroll-contain px-3 scroll-smooth sm:px-4 md:pl-0 md:pr-1 xl:flex-none xl:gap-4 xl:overflow-visible xl:overscroll-auto xl:pb-4 xl:pr-0 xl:scroll-pb-0"
+        data-testid="vote-mobile-scroll-gutters"
+        className="scrollbar-hide -mx-3 flex min-h-0 flex-1 snap-y snap-mandatory flex-col gap-3 overflow-y-auto overscroll-contain bg-base-100 px-6 sm:-mx-4 sm:px-8 md:mx-0 md:bg-transparent md:px-0 md:pr-1 xl:flex-none xl:gap-4 xl:overflow-visible xl:overscroll-auto xl:pb-4 xl:pr-0 xl:scroll-pb-0"
         style={{
           height: mobileScrollerHeight !== null ? `${mobileScrollerHeight}px` : undefined,
           maxHeight: mobileScrollerHeight !== null ? `${mobileScrollerHeight}px` : undefined,
