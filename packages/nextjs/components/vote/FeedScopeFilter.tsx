@@ -195,6 +195,20 @@ export function FeedScopeFilter({ value, groups, onChange, label = "View" }: Fee
     </>
   );
 
+  const mobilePanel = (
+    <>
+      <div className="fixed inset-0 z-50 bg-black/45 sm:hidden" onClick={close} aria-hidden="true" />
+      <div
+        ref={mobilePanelRef}
+        className="fixed inset-x-0 bottom-0 z-[60] rounded-t-3xl bg-base-200 p-4 shadow-2xl sm:hidden"
+        role="dialog"
+        aria-label={`${label} options`}
+      >
+        {panelContent}
+      </div>
+    </>
+  );
+
   return (
     <div ref={wrapperRef} className="relative">
       <button
@@ -213,15 +227,7 @@ export function FeedScopeFilter({ value, groups, onChange, label = "View" }: Fee
 
       {isOpen && (
         <>
-          <div className="fixed inset-0 z-30 bg-black/45 sm:hidden" onClick={close} aria-hidden="true" />
-          <div
-            ref={mobilePanelRef}
-            className="fixed inset-x-0 bottom-0 z-40 rounded-t-3xl bg-base-200 p-4 shadow-2xl sm:hidden"
-            role="dialog"
-            aria-label={`${label} options`}
-          >
-            {panelContent}
-          </div>
+          {isMounted ? createPortal(mobilePanel, document.body) : null}
           {isMounted && isDesktopViewport
             ? createPortal(
                 <div

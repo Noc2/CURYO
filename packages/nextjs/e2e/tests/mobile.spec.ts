@@ -341,6 +341,32 @@ test.describe("Mobile viewport (phone)", () => {
     expect(hasOverflow).toBe(false);
   });
 
+  test("view filter sheet opens above the vote feed", async ({ connectedPage: page }) => {
+    await page.goto("/vote");
+    await waitForFeedLoaded(page);
+
+    const viewButton = page.getByRole("button", { name: /^View$/i }).first();
+    await expect(viewButton).toBeVisible({ timeout: 10_000 });
+    await viewButton.click();
+
+    const dialog = page.getByRole("dialog", { name: "View options" });
+    await expect(dialog).toBeVisible({ timeout: 5_000 });
+
+    const isDialogTopmost = await dialog.evaluate(node => {
+      const rect = node.getBoundingClientRect();
+      const x = rect.left + rect.width / 2;
+      const y = Math.min(rect.bottom - 24, rect.top + rect.height / 2);
+      const topElement = document.elementFromPoint(x, y);
+
+      return topElement === node || node.contains(topElement);
+    });
+
+    expect(isDialogTopmost).toBe(true);
+
+    await dialog.getByRole("button", { name: "Close feed options" }).click();
+    await expect(dialog).toBeHidden();
+  });
+
   test("StakeSelector dialog opens on mobile", async ({ connectedPage: page }) => {
     await page.goto("/vote");
     await waitForFeedLoaded(page);
