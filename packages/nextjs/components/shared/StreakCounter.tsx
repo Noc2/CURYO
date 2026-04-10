@@ -1,6 +1,7 @@
 "use client";
 
 import { useAccount } from "wagmi";
+import { HoverTooltip } from "~~/components/ui/InfoTooltip";
 import { useVoterStreak } from "~~/hooks/useVoterStreak";
 
 function getStreakColor(streak: number): string {
@@ -28,10 +29,7 @@ export function StreakCounter() {
     : `${streak.currentDailyStreak} day streak! All milestones reached`;
 
   return (
-    <div
-      className="tooltip tooltip-left shrink-0 before:max-w-[min(16rem,calc(100vw-2rem))] before:whitespace-normal before:text-left sm:tooltip-bottom"
-      data-tip={tooltipText}
-    >
+    <HoverTooltip text={tooltipText} position="bottom" className="shrink-0" ariaLabel={tooltipText}>
       <div
         className={`flex items-center gap-1.5 rounded-full bg-base-200 px-3 py-1.5 text-base font-medium tabular-nums ${color} ${
           nearMilestone ? "animate-pulse" : ""
@@ -46,6 +44,6 @@ export function StreakCounter() {
         </svg>
         <span>{streak.currentDailyStreak}</span>
       </div>
-    </div>
+    </HoverTooltip>
   );
 }
