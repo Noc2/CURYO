@@ -1433,13 +1433,20 @@ const HomeInner = () => {
       <div className="relative min-h-0 flex-1 overflow-hidden">
         <div
           ref={desktopScrollContainerRef}
+          data-testid="vote-desktop-scroll-container"
           className="min-h-0 flex h-full flex-col overflow-hidden xl:relative xl:left-1/2 xl:w-screen xl:-translate-x-1/2 xl:overflow-x-hidden xl:overflow-y-scroll xl:overscroll-contain xl:scrollbar-subtle xl:snap-y xl:snap-mandatory xl:scroll-pb-4 xl:scroll-smooth"
         >
-          <div className="flex min-h-0 flex-1 flex-col gap-3 overflow-hidden xl:mx-auto xl:min-h-full xl:w-full xl:max-w-5xl xl:flex-none xl:overflow-visible xl:pb-4">
+          <div
+            data-testid="vote-desktop-scroll-frame"
+            className="flex min-h-0 flex-1 flex-col gap-3 overflow-hidden xl:mx-auto xl:min-h-full xl:w-full xl:max-w-5xl xl:flex-none xl:overflow-visible xl:px-4 xl:pb-4"
+          >
             <div className="flex min-h-0 flex-1 flex-col gap-3 overflow-hidden xl:grid xl:min-h-full xl:w-full xl:flex-none xl:grid-cols-[minmax(0,1fr)_17.25rem] xl:items-start xl:gap-4 xl:overflow-visible">
               <div className="min-h-0 flex min-w-0 flex-1 flex-col overflow-hidden xl:min-h-full xl:flex-none xl:overflow-visible">
                 <div className="flex min-w-0 min-h-0 flex-1 flex-col gap-3 xl:min-h-full xl:flex-none xl:gap-0">
-                  <div className="surface-card flex min-h-0 flex-1 flex-col overflow-hidden rounded-t-[2rem] rounded-b-none px-0 py-3 md:p-4 xl:min-h-full xl:flex-none xl:rounded-[2rem]">
+                  <div
+                    data-testid="vote-feed-surface"
+                    className="surface-card flex min-h-0 flex-1 flex-col overflow-hidden rounded-t-[2rem] rounded-b-none p-3 sm:p-4 xl:min-h-full xl:flex-none xl:rounded-[2rem]"
+                  >
                     <div className="min-w-0 flex-1 min-h-0 xl:flex-none">
                       {/* Main content */}
                       {categoriesLoading ||
@@ -1489,7 +1496,7 @@ const HomeInner = () => {
         </div>
 
         <div className="pointer-events-none absolute inset-y-0 left-0 right-0 hidden xl:block">
-          <div className="mx-auto flex h-full w-full max-w-5xl gap-4">
+          <div className="mx-auto flex h-full w-full max-w-5xl gap-4 px-4">
             <div className="min-w-0 flex-1" />
             <div className="pointer-events-auto w-[17.25rem] shrink-0">
               <VoteSignalRail
