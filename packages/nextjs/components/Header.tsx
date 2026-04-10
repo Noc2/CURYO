@@ -475,6 +475,14 @@ export const Header = () => {
         return;
       }
 
+      if (shouldUseVoteLayoutCollapse && scrollSource instanceof HTMLElement) {
+        lastScrollStateRef.current = {
+          source: scrollSource,
+          offset: currentScrollY,
+        };
+        return;
+      }
+
       if (Math.abs(scrollDelta) < MOBILE_HEADER_SCROLL_DELTA) {
         if (previousState.source !== scrollSource) {
           lastScrollStateRef.current = {
@@ -562,7 +570,7 @@ export const Header = () => {
       }
       window.removeEventListener("scroll", handleScroll, true);
     };
-  }, [mobileSearchOpen, pathname, setMobileHeaderVisibility]);
+  }, [mobileSearchOpen, pathname, setMobileHeaderVisibility, shouldUseVoteLayoutCollapse]);
 
   return (
     <>
