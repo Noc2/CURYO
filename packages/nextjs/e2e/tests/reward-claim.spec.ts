@@ -175,20 +175,31 @@ test.describe("Reward claim lifecycle", () => {
     expect(data.content).toHaveProperty("totalVotes");
   });
 
-  test("sidebar wallet summary shows claim button after settlement", async ({ browser }) => {
+  test("sidebar wallet summary claims reward after settlement", async ({ browser }) => {
     test.setTimeout(120_000);
     test.skip(!settledContentId || roundId === 0n, "No settled content from previous test");
 
     const context = await newE2EContext(browser);
     const page = await context.newPage();
-    await setupWallet(page, ANVIL_ACCOUNTS.account4.privateKey);
+    const winner = ANVIL_ACCOUNTS.account4;
+    await setupWallet(page, winner.privateKey);
 
     await gotoWithRetry(page, "/governance#profile", { ensureWalletConnected: true });
 
+    const balanceBefore = await readTokenBalance(winner.address, CREP_TOKEN);
     const walletSummary = page.getByTestId("wallet-connected");
-    await expect(walletSummary.getByRole("button", { name: /^Claim [\d,]+(?: cREP)?$/ })).toBeVisible({
+    const claimButton = walletSummary.getByRole("button", { name: /^Claim [\d,]+(?: cREP)?$/ });
+    await expect(claimButton).toBeVisible({
       timeout: 15_000,
     });
+    await claimButton.click();
+
+    await expect
+      .poll(async () => readTokenBalance(winner.address, CREP_TOKEN), {
+        message: "winner wallet balance should increase after claiming from the relocated wallet summary",
+        timeout: 45_000,
+      })
+      .toBeGreaterThan(balanceBefore);
 
     await context.close();
   });
