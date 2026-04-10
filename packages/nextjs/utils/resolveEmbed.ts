@@ -1,4 +1,5 @@
 import { getTwitterSyndicationTokens } from "@curyo/contracts/twitterSyndication";
+import { getSafeHuggingFaceImageUrl } from "~~/lib/content/huggingFaceImage";
 import { MAX_CONTENT_DESCRIPTION_LENGTH } from "~~/lib/contentDescription";
 import type { ContentMetadataResult } from "~~/lib/contentMetadata/types";
 import { getTmdbApiKey } from "~~/lib/env/server";
@@ -236,7 +237,7 @@ function buildHuggingFaceAssetUrl(modelId: string, assetPath: string): string | 
 
   const encodedModelId = modelSegments.map(segment => encodeURIComponent(segment)).join("/");
   const encodedAssetPath = assetSegments.map(segment => encodeURIComponent(segment)).join("/");
-  return `https://huggingface.co/${encodedModelId}/raw/main/${encodedAssetPath}`;
+  return getSafeHuggingFaceImageUrl(`https://huggingface.co/${encodedModelId}/raw/main/${encodedAssetPath}`);
 }
 
 async function resolveHuggingFace(modelId: string, metadata?: Record<string, unknown>): Promise<EmbedResult> {
@@ -279,9 +280,9 @@ async function resolveHuggingFace(modelId: string, metadata?: Record<string, unk
   try {
     const html = await safeFetchText(`https://huggingface.co/${encodeURIComponent(author)}`);
     if (html) {
-      const avatarMatch = html.match(/https:\/\/cdn-avatars\.huggingface\.co\/[^"'\s]+/);
+      const avatarMatch = html.match(/https:\/\/cdn-avatars\.huggingface\.co\/[^"'\s<]+/);
       if (avatarMatch) {
-        avatarUrl = avatarMatch[0];
+        avatarUrl = getSafeHuggingFaceImageUrl(avatarMatch[0]);
       }
     }
   } catch {

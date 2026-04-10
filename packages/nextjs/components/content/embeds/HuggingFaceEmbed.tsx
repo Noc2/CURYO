@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { SafeExternalLink } from "~~/components/shared/SafeExternalLink";
 import { getEmbedImageLoadingProps } from "~~/lib/content/embedLoadStrategy";
+import { getSafeHuggingFaceImageUrl } from "~~/lib/content/huggingFaceImage";
 import type { ContentMetadataResult } from "~~/lib/contentMetadata/types";
 import type { PlatformInfo } from "~~/utils/platforms";
 
@@ -33,7 +34,10 @@ function getPrefetchedHuggingFaceModel(modelId: string, prefetchedMetadata?: Con
   return {
     name: prefetchedMetadata?.title ?? displayName,
     description: prefetchedMetadata?.description,
-    imageUrl: prefetchedMetadata?.imageUrl ?? prefetchedMetadata?.thumbnailUrl ?? undefined,
+    imageUrl:
+      getSafeHuggingFaceImageUrl(prefetchedMetadata?.imageUrl) ??
+      getSafeHuggingFaceImageUrl(prefetchedMetadata?.thumbnailUrl) ??
+      undefined,
   };
 }
 
@@ -48,7 +52,8 @@ export function HuggingFaceEmbed({ info, compact, prefetchedMetadata }: HuggingF
   const [imageLoaded, setImageLoaded] = useState(false);
 
   const modelId = info.id || (info.metadata?.modelId as string);
-  const imageSrc = model?.imageUrl ? `/api/image-proxy?url=${encodeURIComponent(model.imageUrl)}` : undefined;
+  const safeImageUrl = getSafeHuggingFaceImageUrl(model?.imageUrl);
+  const imageSrc = safeImageUrl ? `/api/image-proxy?url=${encodeURIComponent(safeImageUrl)}` : undefined;
   const imageLoadingProps = getEmbedImageLoadingProps(compact);
 
   useEffect(() => {
@@ -77,7 +82,8 @@ export function HuggingFaceEmbed({ info, compact, prefetchedMetadata }: HuggingF
           setModel({
             name: data?.title ?? displayName,
             description: data?.description,
-            imageUrl: data?.imageUrl ?? data?.thumbnailUrl ?? undefined,
+            imageUrl:
+              getSafeHuggingFaceImageUrl(data?.imageUrl) ?? getSafeHuggingFaceImageUrl(data?.thumbnailUrl) ?? undefined,
           });
         }
       })
@@ -132,7 +138,7 @@ export function HuggingFaceEmbed({ info, compact, prefetchedMetadata }: HuggingF
   }
 
   // No image — show link card with metadata
-  if (!model.imageUrl || imageError) {
+  if (!safeImageUrl || imageError) {
     return (
       <SafeExternalLink
         href={info.url}
