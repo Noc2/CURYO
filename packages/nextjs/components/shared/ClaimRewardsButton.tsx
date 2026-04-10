@@ -15,7 +15,7 @@ type ClaimRewardsButtonProps = {
 
 export function ClaimRewardsButton({ buttonClassName, className, showTokenSymbol = true }: ClaimRewardsButtonProps) {
   const { claimableItems, totalClaimable, refetch: refetchClaimable } = useAllClaimableRewards();
-  const { claimAll, isClaiming, progress } = useClaimAll();
+  const { claimAll, isClaiming, isPreparingClaim, progress } = useClaimAll();
 
   if (totalClaimable <= 0n) {
     return null;
@@ -30,12 +30,14 @@ export function ClaimRewardsButton({ buttonClassName, className, showTokenSymbol
       <button
         type="button"
         onClick={handleClaimAll}
-        disabled={isClaiming}
+        disabled={isClaiming || isPreparingClaim}
         className={buttonClassName ?? "btn btn-primary btn-sm w-full"}
       >
-        {isClaiming
-          ? `Claim ${progress.current}/${progress.total}`
-          : `Claim ${formatCrepAmount(totalClaimable)}${showTokenSymbol ? " cREP" : ""}`}
+        {isPreparingClaim
+          ? "Preparing..."
+          : isClaiming
+            ? `Claim ${progress.current}/${progress.total}`
+            : `Claim ${formatCrepAmount(totalClaimable)}${showTokenSymbol ? " cREP" : ""}`}
       </button>
     </div>
   );

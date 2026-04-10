@@ -31,9 +31,14 @@ export function shouldSkipThirdwebWagmiSync(params: {
   currentAddress?: string;
   currentChainId?: number;
   currentConnectorId?: string;
+  forceReconnect?: boolean;
   requestedAddress?: string;
   requestedChainId: number;
 }) {
+  if (params.forceReconnect) {
+    return false;
+  }
+
   return (
     params.currentConnectorId === params.connectorId &&
     params.currentChainId === params.requestedChainId &&
@@ -74,6 +79,7 @@ export function useThirdwebWagmiSync() {
           currentAddress: address,
           currentChainId: chainId,
           currentConnectorId: activeConnector?.id,
+          forceReconnect: options?.reconnect,
           requestedAddress,
           requestedChainId,
         })

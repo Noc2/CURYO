@@ -25,8 +25,11 @@ export function useClaimAll() {
     canSponsorTransactions,
     freeTransactionRemaining,
     freeTransactionVerified,
+    isAwaitingFreeTransactionAllowance,
+    isAwaitingSelfFundedWalletReconnect,
     isAwaitingSponsoredWalletReconnect,
     isMissingGasBalance,
+    nativeBalanceValue,
     nativeTokenSymbol,
   } = useGasBalanceStatus({
     includeExternalSendCalls: true,
@@ -58,13 +61,20 @@ export function useClaimAll() {
       canSponsorTransactions,
       freeTransactionRemaining,
       freeTransactionVerified,
+      hasNativeGasBalance: nativeBalanceValue > 0n,
+      isAwaitingFreeTransactionAllowance,
+      isAwaitingSelfFundedWalletReconnect,
       isAwaitingSponsoredWalletReconnect,
       isMissingGasBalance,
       nativeTokenSymbol,
     };
     const preflightError = getClaimPreflightErrorMessage(transactionFeedback);
     if (preflightError) {
-      if (isAwaitingSponsoredWalletReconnect) {
+      if (
+        isAwaitingFreeTransactionAllowance ||
+        isAwaitingSelfFundedWalletReconnect ||
+        isAwaitingSponsoredWalletReconnect
+      ) {
         notification.warning(preflightError);
       } else {
         notification.error(preflightError);
@@ -176,5 +186,11 @@ export function useClaimAll() {
     }
   };
 
-  return { claimAll, isClaiming, progress };
+  return {
+    claimAll,
+    isClaiming,
+    isPreparingClaim:
+      isAwaitingFreeTransactionAllowance || isAwaitingSelfFundedWalletReconnect || isAwaitingSponsoredWalletReconnect,
+    progress,
+  };
 }

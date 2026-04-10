@@ -105,6 +105,21 @@ test("shouldSkipThirdwebWagmiSync returns true when the requested thirdweb walle
   );
 });
 
+test("shouldSkipThirdwebWagmiSync returns false for forced reconnects on the same wallet", () => {
+  assert.equal(
+    shouldSkipThirdwebWagmiSync({
+      connectorId: "in-app-wallet",
+      currentAddress: "0xabcDEF0000000000000000000000000000000000",
+      currentChainId: 42220,
+      currentConnectorId: "in-app-wallet",
+      forceReconnect: true,
+      requestedAddress: "0xabcdef0000000000000000000000000000000000",
+      requestedChainId: 42220,
+    }),
+    false,
+  );
+});
+
 test("shouldSkipThirdwebWagmiSync returns false when the requested chain differs", () => {
   assert.equal(
     shouldSkipThirdwebWagmiSync({
