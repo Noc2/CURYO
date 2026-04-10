@@ -5,6 +5,7 @@ import { detectPlatform, getThumbnailUrl } from "~~/utils/platforms";
 import { type EmbedResult, resolveEmbed } from "~~/utils/resolveEmbed";
 
 const CACHE_TTL_MS = 7 * 24 * 60 * 60 * 1000;
+const IMAGE_REQUIRED_CACHE_TYPES = new Set(["coingecko", "huggingface"]);
 
 function toEmbedResult(cached: ContentMetadata): EmbedResult {
   return {
@@ -35,7 +36,7 @@ export function shouldReuseCachedContentMetadata(
   }
 
   const platform = detectPlatform(url);
-  if (platform.type === "huggingface" && !cached.thumbnailUrl && !cached.imageUrl) {
+  if (IMAGE_REQUIRED_CACHE_TYPES.has(platform.type) && !cached.thumbnailUrl && !cached.imageUrl) {
     return false;
   }
 

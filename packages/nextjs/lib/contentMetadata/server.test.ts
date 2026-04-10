@@ -19,6 +19,21 @@ test("shouldReuseCachedContentMetadata refreshes fresh Hugging Face entries that
   );
 });
 
+test("shouldReuseCachedContentMetadata refreshes fresh CoinGecko entries that never resolved an image", () => {
+  assert.equal(
+    shouldReuseCachedContentMetadata(
+      "https://www.coingecko.com/en/coins/figure-heloc",
+      {
+        thumbnailUrl: null,
+        imageUrl: null,
+        fetchedAt: new Date(NOW - 5 * 60 * 1000),
+      },
+      NOW,
+    ),
+    false,
+  );
+});
+
 test("shouldReuseCachedContentMetadata keeps fresh Hugging Face entries once an image is cached", () => {
   assert.equal(
     shouldReuseCachedContentMetadata(
