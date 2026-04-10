@@ -240,6 +240,19 @@ function buildHuggingFaceAssetUrl(modelId: string, assetPath: string): string | 
   return getSafeHuggingFaceImageUrl(`https://huggingface.co/${encodedModelId}/raw/main/${encodedAssetPath}`);
 }
 
+function buildHuggingFaceModelApiUrl(modelId: string): string | null {
+  const segments = modelId
+    .split("/")
+    .map(segment => segment.trim())
+    .filter(Boolean);
+
+  if (segments.length !== 2) {
+    return null;
+  }
+
+  return `https://huggingface.co/api/models/${segments.map(segment => encodeURIComponent(segment)).join("/")}`;
+}
+
 async function resolveHuggingFace(modelId: string, metadata?: Record<string, unknown>): Promise<EmbedResult> {
   const author = (metadata?.author as string) || modelId.split("/")[0];
 
@@ -249,7 +262,8 @@ async function resolveHuggingFace(modelId: string, metadata?: Record<string, unk
   let modelImageUrl: string | null = null;
 
   try {
-    const modelData = await safeFetchJson(`https://huggingface.co/api/models/${encodeURIComponent(modelId)}`);
+    const modelApiUrl = buildHuggingFaceModelApiUrl(modelId);
+    const modelData = modelApiUrl ? await safeFetchJson(modelApiUrl) : null;
     if (modelData) {
       title = modelData.modelId ?? modelId;
       const parts: string[] = [];
@@ -291,7 +305,6 @@ async function resolveHuggingFace(modelId: string, metadata?: Record<string, unk
 
   return {
     thumbnailUrl: avatarUrl,
-    imageUrl: avatarUrl ?? undefined,
     title: title ?? modelId,
     description,
   };
