@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { getSafeHuggingFaceImageUrl } from "~~/lib/content/huggingFaceImage";
 import { ResponseTooLargeError, readResponseBytes } from "~~/utils/fetchBodyLimit";
 import { checkRateLimit } from "~~/utils/rateLimit";
 
@@ -31,6 +32,10 @@ const ALLOWED_HOSTS = new Set([
 const MAX_RESPONSE_SIZE = 10 * 1024 * 1024; // 10 MB
 const UPSTREAM_FETCH_OPTIONS = { cache: "no-store" as const, redirect: "manual" as const };
 
+function normalizeProxyImageUrl(url: string): string {
+  return getSafeHuggingFaceImageUrl(url) ?? url;
+}
+
 export async function GET(request: NextRequest) {
   const limited = await checkRateLimit(request, RATE_LIMIT, { allowOnStoreUnavailable: true });
   if (limited) return limited;
@@ -40,9 +45,11 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: "Missing url parameter" }, { status: 400 });
   }
 
+  const normalizedUrl = normalizeProxyImageUrl(url);
+
   let parsed: URL;
   try {
-    parsed = new URL(url);
+    parsed = new URL(normalizedUrl);
   } catch {
     return NextResponse.json({ error: "Invalid url" }, { status: 400 });
   }
@@ -56,7 +63,7 @@ export async function GET(request: NextRequest) {
   }
 
   try {
-    const res = await fetch(url, UPSTREAM_FETCH_OPTIONS);
+    const res = await fetch(normalizedUrl, UPSTREAM_FETCH_OPTIONS);
 
     // If the upstream redirects, re-validate the target against the allowlist
     if (res.status >= 300 && res.status < 400) {
@@ -64,7 +71,7 @@ export async function GET(request: NextRequest) {
       if (!location) return new NextResponse(null, { status: 502 });
       let redirectUrl: URL;
       try {
-        redirectUrl = new URL(location, url);
+        redirectUrl = new URL(location, normalizedUrl);
       } catch {
         return new NextResponse(null, { status: 502 });
       }

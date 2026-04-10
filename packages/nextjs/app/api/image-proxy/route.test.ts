@@ -150,3 +150,30 @@ test("allows Hugging Face repository image assets", async () => {
   assert.deepEqual(calls, ["https://huggingface.co/dealignai/Gemma-4-31B-JANG_4M-CRACK/raw/main/dealign_mascot.png"]);
   assert.deepEqual(Array.from(new Uint8Array(await response.arrayBuffer())), [7, 8, 9]);
 });
+
+test("normalizes escaped Hugging Face avatar URLs before proxying", async () => {
+  const calls: string[] = [];
+  globalThis.fetch = (async (input: RequestInfo | URL) => {
+    calls.push(String(input));
+
+    return new Response(new Uint8Array([10, 11, 12]), {
+      headers: {
+        "content-type": "image/jpeg",
+      },
+    });
+  }) as typeof fetch;
+
+  const malformedAvatarUrl =
+    "https://cdn-avatars.huggingface.co/v1/production/uploads/66309bd090589b7c65950665/RcOk7ysh7nEt5YlHHzauj.jpeg&quot;,&quot;type&quot;:&quot;update&quot;,&quot;repoData&quot;:{}";
+
+  const response = await GET(
+    new NextRequest(`http://localhost/api/image-proxy?url=${encodeURIComponent(malformedAvatarUrl)}`),
+  );
+
+  assert.equal(response.status, 200);
+  assert.equal(response.headers.get("content-type"), "image/jpeg");
+  assert.deepEqual(calls, [
+    "https://cdn-avatars.huggingface.co/v1/production/uploads/66309bd090589b7c65950665/RcOk7ysh7nEt5YlHHzauj.jpeg",
+  ]);
+  assert.deepEqual(Array.from(new Uint8Array(await response.arrayBuffer())), [10, 11, 12]);
+});

@@ -19,7 +19,7 @@ export function YouTubeEmbed({ info, isActive = true }: YouTubeEmbedProps) {
         key={`${info.id}-${isActive ? "active" : "inactive"}`}
         id={info.id}
         title="Content video"
-        poster="maxresdefault"
+        poster="hqdefault"
         noCookie={true}
       />
     </div>
