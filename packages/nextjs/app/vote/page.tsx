@@ -1393,7 +1393,6 @@ const HomeInner = () => {
         }`}
         data-vote-mobile-top-chrome="true"
         data-visible={isVoteTopChromeCollapsed ? "false" : "true"}
-        aria-hidden={isVoteTopChromeCollapsed ? "true" : undefined}
         inert={isVoteTopChromeCollapsed ? true : undefined}
       >
         <div className="min-h-0 overflow-hidden xl:overflow-visible">

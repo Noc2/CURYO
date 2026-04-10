@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { SafeExternalLink } from "~~/components/shared/SafeExternalLink";
 import { getEmbedImageLoadingProps } from "~~/lib/content/embedLoadStrategy";
-import { getSafeHuggingFaceImageUrl } from "~~/lib/content/huggingFaceImage";
+import { getSafeHuggingFaceImageUrl, isHuggingFaceAvatarUrl } from "~~/lib/content/huggingFaceImage";
 import type { ContentMetadataResult } from "~~/lib/contentMetadata/types";
 import type { PlatformInfo } from "~~/utils/platforms";
 
@@ -16,6 +16,7 @@ interface HuggingFaceEmbedProps {
 interface HuggingFaceModel {
   name: string;
   description?: string;
+  thumbnailUrl?: string;
   imageUrl?: string;
 }
 
@@ -34,10 +35,8 @@ function getPrefetchedHuggingFaceModel(modelId: string, prefetchedMetadata?: Con
   return {
     name: prefetchedMetadata?.title ?? displayName,
     description: prefetchedMetadata?.description,
-    imageUrl:
-      getSafeHuggingFaceImageUrl(prefetchedMetadata?.imageUrl) ??
-      getSafeHuggingFaceImageUrl(prefetchedMetadata?.thumbnailUrl) ??
-      undefined,
+    thumbnailUrl: getSafeHuggingFaceImageUrl(prefetchedMetadata?.thumbnailUrl) ?? undefined,
+    imageUrl: getSafeHuggingFaceImageUrl(prefetchedMetadata?.imageUrl) ?? undefined,
   };
 }
 
@@ -52,8 +51,13 @@ export function HuggingFaceEmbed({ info, compact, prefetchedMetadata }: HuggingF
   const [imageLoaded, setImageLoaded] = useState(false);
 
   const modelId = info.id || (info.metadata?.modelId as string);
-  const safeImageUrl = getSafeHuggingFaceImageUrl(model?.imageUrl);
+  const safeImageUrl =
+    model?.imageUrl && !isHuggingFaceAvatarUrl(model.imageUrl) ? getSafeHuggingFaceImageUrl(model.imageUrl) : null;
+  const safeAvatarUrl =
+    getSafeHuggingFaceImageUrl(model?.thumbnailUrl) ??
+    (model?.imageUrl && isHuggingFaceAvatarUrl(model.imageUrl) ? getSafeHuggingFaceImageUrl(model.imageUrl) : null);
   const imageSrc = safeImageUrl ? `/api/image-proxy?url=${encodeURIComponent(safeImageUrl)}` : undefined;
+  const avatarSrc = safeAvatarUrl ? `/api/image-proxy?url=${encodeURIComponent(safeAvatarUrl)}` : undefined;
   const imageLoadingProps = getEmbedImageLoadingProps(compact);
 
   useEffect(() => {
@@ -82,8 +86,8 @@ export function HuggingFaceEmbed({ info, compact, prefetchedMetadata }: HuggingF
           setModel({
             name: data?.title ?? displayName,
             description: data?.description,
-            imageUrl:
-              getSafeHuggingFaceImageUrl(data?.imageUrl) ?? getSafeHuggingFaceImageUrl(data?.thumbnailUrl) ?? undefined,
+            thumbnailUrl: getSafeHuggingFaceImageUrl(data?.thumbnailUrl) ?? undefined,
+            imageUrl: getSafeHuggingFaceImageUrl(data?.imageUrl) ?? undefined,
           });
         }
       })
@@ -137,7 +141,7 @@ export function HuggingFaceEmbed({ info, compact, prefetchedMetadata }: HuggingF
     );
   }
 
-  // No image — show link card with metadata
+  // No dedicated model image — show link card with metadata and optional org avatar.
   if (!safeImageUrl || imageError) {
     return (
       <SafeExternalLink
@@ -146,8 +150,12 @@ export function HuggingFaceEmbed({ info, compact, prefetchedMetadata }: HuggingF
           compact ? "p-3" : "p-5"
         }`}
       >
-        <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-[#ff9d00] to-[#ff5a00] flex items-center justify-center shrink-0">
-          <HuggingFaceIcon className="w-5 h-5 text-white" />
+        <div className="w-12 h-12 rounded-lg bg-gradient-to-br from-[#ff9d00] to-[#ff5a00] flex items-center justify-center shrink-0 overflow-hidden">
+          {avatarSrc ? (
+            <img src={avatarSrc} alt="" width={48} height={48} loading="lazy" className="h-full w-full object-cover" />
+          ) : (
+            <HuggingFaceIcon className="w-6 h-6 text-white" />
+          )}
         </div>
         <div className="min-w-0">
           <p className="text-base font-medium truncate">{model.name}</p>
