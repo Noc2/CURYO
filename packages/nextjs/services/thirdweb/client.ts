@@ -186,7 +186,7 @@ export function shouldIncludeThirdwebWalletAuthOption(
   return getAvailableThirdwebExternalWalletIds(win).length === 0;
 }
 
-function getThirdwebWallets(
+export function getThirdwebWallets(
   chainId: number = thirdwebDefaultChain.id,
   win: unknown = typeof window === "undefined" ? undefined : window,
 ) {
