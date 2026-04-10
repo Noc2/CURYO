@@ -1,9 +1,9 @@
 "use client";
 
-import { useCallback, useEffect, useId, useMemo, useRef, useState } from "react";
+import { useEffect, useId, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { CheckIcon, ChevronDownIcon, MagnifyingGlassIcon, XMarkIcon } from "@heroicons/react/24/outline";
-import { useOutsideClick } from "~~/hooks/scaffold-eth/useOutsideClick";
+import { type PopoverPlacement, computePopoverPlacement } from "~~/lib/ui/popoverPosition";
 
 interface CategoryFilterProps {
   categories: string[];
@@ -15,47 +15,97 @@ interface CategoryFilterProps {
 
 const PILL_GAP = 8; // gap-2 = 0.5rem = 8px
 const MORE_BUTTON_WIDTH = 100; // approximate width of "+ N more" button
+const DESKTOP_BREAKPOINT_QUERY = "(min-width: 640px)";
+
+function measureDesktopPopover(
+  triggerElement: HTMLButtonElement | null,
+  popoverElement: HTMLDivElement | null,
+): PopoverPlacement | null {
+  if (!triggerElement || !popoverElement || typeof window === "undefined") return null;
+
+  const triggerRect = triggerElement.getBoundingClientRect();
+  const popoverRect = popoverElement.getBoundingClientRect();
+
+  return computePopoverPlacement({
+    triggerRect,
+    popoverSize: { width: popoverRect.width, height: popoverRect.height },
+    viewportWidth: window.innerWidth,
+    viewportHeight: window.innerHeight,
+  });
+}
 
 export function CategoryFilter({ categories, activeCategory, onSelect, pillClassName }: CategoryFilterProps) {
   const searchFieldBaseId = useId();
   const containerRef = useRef<HTMLDivElement>(null);
   const measureRef = useRef<HTMLDivElement>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
+  const dropdownButtonRef = useRef<HTMLButtonElement>(null);
+  const desktopPanelRef = useRef<HTMLDivElement>(null);
   const [visibleCount, setVisibleCount] = useState(categories.length);
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
   const [isMounted, setIsMounted] = useState(false);
+  const [isDesktopViewport, setIsDesktopViewport] = useState(false);
+  const [desktopLayout, setDesktopLayout] = useState<PopoverPlacement | null>(null);
   const [pillWidths, setPillWidths] = useState<number[]>([]);
   const [search, setSearch] = useState("");
   const searchInputRef = useRef<HTMLInputElement>(null);
   const mobileSearchInputId = `${searchFieldBaseId}-mobile`;
   const desktopSearchInputId = `${searchFieldBaseId}-desktop`;
 
-  useOutsideClick(
-    dropdownRef,
-    useCallback(() => {
-      setDropdownOpen(false);
-      setSearch("");
-    }, []),
-  );
-
   useEffect(() => {
     setIsMounted(true);
   }, []);
 
   useEffect(() => {
-    if (!mobileOpen) return;
+    if (typeof window === "undefined") return;
+
+    const mediaQuery = window.matchMedia(DESKTOP_BREAKPOINT_QUERY);
+    const updateViewportMode = () => setIsDesktopViewport(mediaQuery.matches);
+
+    updateViewportMode();
+    mediaQuery.addEventListener("change", updateViewportMode);
+    return () => mediaQuery.removeEventListener("change", updateViewportMode);
+  }, []);
+
+  useEffect(() => {
+    if (!dropdownOpen) return;
+
+    const handlePointerDown = (event: MouseEvent) => {
+      if (!(event.target instanceof Node)) return;
+
+      const isInsideTrigger = dropdownRef.current?.contains(event.target) ?? false;
+      const isInsidePanel = desktopPanelRef.current?.contains(event.target) ?? false;
+
+      if (isInsideTrigger || isInsidePanel) return;
+      setDropdownOpen(false);
+      setSearch("");
+    };
+
+    document.addEventListener("mousedown", handlePointerDown);
+    return () => document.removeEventListener("mousedown", handlePointerDown);
+  }, [dropdownOpen]);
+
+  useEffect(() => {
+    if (!mobileOpen && !dropdownOpen) return;
 
     const onKeyDown = (event: KeyboardEvent) => {
       if (event.key === "Escape") {
         setMobileOpen(false);
+        setDropdownOpen(false);
         setSearch("");
       }
     };
 
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
-  }, [mobileOpen]);
+  }, [dropdownOpen, mobileOpen]);
+
+  useEffect(() => {
+    if (!dropdownOpen) {
+      setDesktopLayout(null);
+    }
+  }, [dropdownOpen]);
 
   // Measure pill widths from the hidden measurement row
   useEffect(() => {
@@ -125,6 +175,26 @@ export function CategoryFilter({ categories, activeCategory, onSelect, pillClass
     () => categories.filter(category => category.toLowerCase().includes(search.toLowerCase())),
     [categories, search],
   );
+
+  useLayoutEffect(() => {
+    if (!isMounted || !dropdownOpen || !isDesktopViewport) return;
+
+    const updateLayout = () => {
+      const nextLayout = measureDesktopPopover(dropdownButtonRef.current, desktopPanelRef.current);
+      if (nextLayout) {
+        setDesktopLayout(nextLayout);
+      }
+    };
+
+    updateLayout();
+    window.addEventListener("resize", updateLayout);
+    window.addEventListener("scroll", updateLayout, true);
+
+    return () => {
+      window.removeEventListener("resize", updateLayout);
+      window.removeEventListener("scroll", updateLayout, true);
+    };
+  }, [dropdownOpen, filteredOverflow.length, isDesktopViewport, isMounted, search]);
 
   const handleSelect = (category: string) => {
     onSelect(category);
@@ -265,6 +335,7 @@ export function CategoryFilter({ categories, activeCategory, onSelect, pillClass
         {overflow.length > 0 && (
           <div ref={dropdownRef} className="relative shrink-0">
             <button
+              ref={dropdownButtonRef}
               onClick={() => setDropdownOpen(prev => !prev)}
               className={`px-3 py-1.5 rounded-full text-base font-medium whitespace-nowrap transition-colors flex items-center gap-1 ${
                 overflow.includes(activeCategory) ? "pill-category" : "pill-inactive"
@@ -274,48 +345,64 @@ export function CategoryFilter({ categories, activeCategory, onSelect, pillClass
               <ChevronDownIcon className="w-3.5 h-3.5" />
             </button>
 
-            {dropdownOpen && (
-              <div className="absolute top-full mt-1 right-0 z-50 bg-base-200 rounded-box shadow-lg min-w-[200px]">
-                <div className="p-2">
-                  <div className="relative">
-                    <label htmlFor={desktopSearchInputId} className="sr-only">
-                      Search categories
-                    </label>
-                    <MagnifyingGlassIcon className="absolute left-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-base-content/40" />
-                    <input
-                      id={desktopSearchInputId}
-                      ref={searchInputRef}
-                      name="category-search-desktop"
-                      type="text"
-                      placeholder="Search categories..."
-                      aria-label="Search categories"
-                      value={search}
-                      onChange={e => setSearch(e.target.value)}
-                      className="input input-sm w-full pl-8 bg-base-300 border-none text-base"
-                      autoFocus
-                    />
-                  </div>
-                </div>
-                <ul className="menu p-2 pt-0 max-h-[250px] overflow-y-auto">
-                  {filteredOverflow.length > 0 ? (
-                    filteredOverflow.map(category => (
-                      <li key={category}>
-                        <button
-                          onClick={() => handleSelect(category)}
-                          className={`whitespace-nowrap ${
-                            activeCategory === category ? "bg-primary text-primary-content hover:bg-primary" : ""
-                          }`}
-                        >
-                          {category}
-                        </button>
-                      </li>
-                    ))
-                  ) : (
-                    <li className="text-base-content/40 text-sm px-3 py-2">No matches</li>
-                  )}
-                </ul>
-              </div>
-            )}
+            {dropdownOpen && isMounted && isDesktopViewport
+              ? createPortal(
+                  <div
+                    ref={desktopPanelRef}
+                    className="fixed z-[1000] bg-base-200 rounded-box shadow-lg"
+                    style={{
+                      left: desktopLayout?.left ?? 0,
+                      top: desktopLayout?.top ?? 0,
+                      width: "min(18rem, calc(100vw - 1rem))",
+                      maxHeight: desktopLayout ? `${desktopLayout.maxHeight}px` : undefined,
+                      visibility: desktopLayout ? "visible" : "hidden",
+                    }}
+                  >
+                    <div className="p-2">
+                      <div className="relative">
+                        <label htmlFor={desktopSearchInputId} className="sr-only">
+                          Search categories
+                        </label>
+                        <MagnifyingGlassIcon className="absolute left-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-base-content/40" />
+                        <input
+                          id={desktopSearchInputId}
+                          ref={searchInputRef}
+                          name="category-search-desktop"
+                          type="text"
+                          placeholder="Search categories..."
+                          aria-label="Search categories"
+                          value={search}
+                          onChange={e => setSearch(e.target.value)}
+                          className="input input-sm w-full pl-8 bg-base-300 border-none text-base"
+                          autoFocus
+                        />
+                      </div>
+                    </div>
+                    <ul
+                      className="menu p-2 pt-0 overflow-y-auto"
+                      style={{ maxHeight: desktopLayout ? `${Math.max(desktopLayout.maxHeight - 60, 120)}px` : 250 }}
+                    >
+                      {filteredOverflow.length > 0 ? (
+                        filteredOverflow.map(category => (
+                          <li key={category}>
+                            <button
+                              onClick={() => handleSelect(category)}
+                              className={`whitespace-nowrap ${
+                                activeCategory === category ? "bg-primary text-primary-content hover:bg-primary" : ""
+                              }`}
+                            >
+                              {category}
+                            </button>
+                          </li>
+                        ))
+                      ) : (
+                        <li className="text-base-content/40 text-sm px-3 py-2">No matches</li>
+                      )}
+                    </ul>
+                  </div>,
+                  document.body,
+                )
+              : null}
           </div>
         )}
       </div>
