@@ -1382,16 +1382,14 @@ const HomeInner = () => {
   return (
     <AppPageShell
       horizontalPaddingClassName="px-0 xl:px-4"
-      paddingTopClassName={isVoteTopChromeCollapsed ? "pt-0 xl:pt-4" : "pt-2 xl:pt-4"}
+      paddingTopClassName="pt-2 xl:pt-4"
       outerClassName="min-h-0 flex-1 overflow-hidden pb-0 xl:pb-4"
       contentClassName="flex min-h-0 flex-1 flex-col overflow-hidden"
     >
       <VotingGuide />
       <div
-        className={`grid shrink-0 overflow-hidden transition-all duration-200 ease-out xl:mb-4 xl:block xl:translate-y-0 xl:overflow-visible xl:opacity-100 ${
-          isVoteTopChromeCollapsed
-            ? "mb-0 grid-rows-[0fr] -translate-y-2 opacity-0"
-            : "mb-4 grid-rows-[1fr] translate-y-0 opacity-100"
+        className={`grid shrink-0 overflow-hidden transition-[grid-template-rows,margin-bottom,opacity] duration-200 ease-out will-change-[grid-template-rows,margin-bottom,opacity] xl:mb-4 xl:block xl:overflow-visible xl:opacity-100 ${
+          isVoteTopChromeCollapsed ? "mb-0 grid-rows-[0fr] opacity-0" : "mb-4 grid-rows-[1fr] opacity-100"
         }`}
         data-vote-mobile-top-chrome="true"
         data-visible={isVoteTopChromeCollapsed ? "false" : "true"}

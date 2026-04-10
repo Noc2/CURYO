@@ -199,6 +199,7 @@ const MobileMenuLinks = () => {
 const SEARCH_COMMIT_DEBOUNCE_MS = 200;
 const MOBILE_HEADER_SCROLL_DELTA = 12;
 const MOBILE_HEADER_HIDE_OFFSET = 72;
+const MOBILE_HEADER_VISIBILITY_STABILIZE_MS = 260;
 const EXPLICIT_LANDING_HREF = "/?landing=1";
 const MOBILE_HEADER_SCROLL_SOURCE_ATTRIBUTE = "data-mobile-header-scroll-source";
 const MOBILE_HEADER_SCROLL_SYNC_ATTRIBUTE = "data-mobile-header-scroll-sync";
@@ -366,12 +367,40 @@ export const Header = () => {
     source: null,
     offset: 0,
   });
+  const isMobileHeaderVisibleRef = useRef(isMobileHeaderVisible);
+  const lastMobileHeaderVisibilityChangeAtRef = useRef(0);
   useOutsideClick(burgerMenuRef, () => {
     burgerMenuRef?.current?.removeAttribute("open");
   });
 
   useEffect(() => {
+    isMobileHeaderVisibleRef.current = isMobileHeaderVisible;
+  }, [isMobileHeaderVisible]);
+
+  const setMobileHeaderVisibility = useCallback(
+    (nextVisible: boolean, options?: { ignoreStabilizeWindow?: boolean }) => {
+      const currentVisible = isMobileHeaderVisibleRef.current;
+      if (currentVisible === nextVisible) return;
+
+      const now =
+        typeof performance !== "undefined" && typeof performance.now === "function" ? performance.now() : Date.now();
+      const isWithinStabilizeWindow =
+        !options?.ignoreStabilizeWindow &&
+        now - lastMobileHeaderVisibilityChangeAtRef.current < MOBILE_HEADER_VISIBILITY_STABILIZE_MS;
+
+      if (isWithinStabilizeWindow) return;
+
+      isMobileHeaderVisibleRef.current = nextVisible;
+      lastMobileHeaderVisibilityChangeAtRef.current = now;
+      setIsMobileHeaderVisible(nextVisible);
+    },
+    [setIsMobileHeaderVisible],
+  );
+
+  useEffect(() => {
     setMobileSearchOpen(false);
+    isMobileHeaderVisibleRef.current = true;
+    lastMobileHeaderVisibilityChangeAtRef.current = 0;
     setIsMobileHeaderVisible(true);
   }, [pathname, setIsMobileHeaderVisible]);
 
@@ -428,7 +457,7 @@ export const Header = () => {
       const isMobileMenuOpen = burgerMenuRef.current?.open ?? false;
 
       if (currentScrollY <= 0) {
-        setIsMobileHeaderVisible(true);
+        setMobileHeaderVisibility(true, { ignoreStabilizeWindow: true });
         lastScrollStateRef.current = {
           source: scrollSource,
           offset: 0,
@@ -437,7 +466,7 @@ export const Header = () => {
       }
 
       if (mobileSearchOpen || isMobileMenuOpen) {
-        setIsMobileHeaderVisible(true);
+        setMobileHeaderVisibility(true, { ignoreStabilizeWindow: true });
         lastScrollStateRef.current = {
           source: scrollSource,
           offset: currentScrollY,
@@ -453,7 +482,7 @@ export const Header = () => {
         return;
       }
 
-      setIsMobileHeaderVisible(scrollDelta < 0 || currentScrollY < MOBILE_HEADER_HIDE_OFFSET);
+      setMobileHeaderVisibility(scrollDelta < 0 || currentScrollY < MOBILE_HEADER_HIDE_OFFSET);
       lastScrollStateRef.current = {
         source: scrollSource,
         offset: currentScrollY,
@@ -527,20 +556,18 @@ export const Header = () => {
       }
       window.removeEventListener("scroll", handleScroll, true);
     };
-  }, [mobileSearchOpen, pathname, setIsMobileHeaderVisible]);
+  }, [mobileSearchOpen, pathname, setMobileHeaderVisibility]);
 
   return (
     <>
       {/* Mobile: top bar */}
       <div
-        className={`xl:hidden sticky top-0 z-20 duration-200 ease-out will-change-transform ${
+        className={`xl:hidden sticky top-0 z-20 duration-200 ease-out ${
           shouldUseVoteLayoutCollapse
-            ? `transition-all ${
-                isMobileHeaderVisible
-                  ? "max-h-24 translate-y-0 overflow-visible"
-                  : "max-h-0 -translate-y-full overflow-hidden"
+            ? `transition-[max-height,opacity] will-change-[max-height,opacity] ${
+                isMobileHeaderVisible ? "max-h-24 overflow-visible opacity-100" : "max-h-0 overflow-hidden opacity-0"
               }`
-            : `transition-transform ${isMobileHeaderVisible ? "translate-y-0" : "-translate-y-full"}`
+            : `transition-transform will-change-transform ${isMobileHeaderVisible ? "translate-y-0" : "-translate-y-full"}`
         }`}
         data-mobile-header="true"
         data-visible={isMobileHeaderVisible ? "true" : "false"}

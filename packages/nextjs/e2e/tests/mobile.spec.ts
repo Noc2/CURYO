@@ -121,6 +121,50 @@ test.describe("Mobile viewport (phone)", () => {
         const explicitScrollSource = document.querySelector<HTMLElement>('[data-mobile-header-scroll-source="true"]');
         return !explicitScrollSource?.hasAttribute("data-mobile-header-scroll-sync");
       });
+    const startMobileChromeChangeCapture = () =>
+      page.evaluate(() => {
+        type ChromeChange = { target: "header" | "tabs"; visible: string; at: number };
+        type ChromeCaptureWindow = Window & {
+          __curyoMobileChromeChanges?: ChromeChange[];
+          __curyoMobileChromeObservers?: MutationObserver[];
+        };
+        const captureWindow = window as ChromeCaptureWindow;
+        captureWindow.__curyoMobileChromeObservers?.forEach(observer => observer.disconnect());
+        captureWindow.__curyoMobileChromeChanges = [];
+
+        const observeVisibility = (target: "header" | "tabs", node: HTMLElement | null) => {
+          if (!node) return null;
+
+          const observer = new MutationObserver(() => {
+            captureWindow.__curyoMobileChromeChanges?.push({
+              target,
+              visible: node.getAttribute("data-visible") ?? "",
+              at: Math.round(performance.now()),
+            });
+          });
+          observer.observe(node, { attributeFilter: ["data-visible"] });
+          return observer;
+        };
+
+        captureWindow.__curyoMobileChromeObservers = [
+          observeVisibility("header", document.querySelector<HTMLElement>('[data-mobile-header="true"]')),
+          observeVisibility("tabs", document.querySelector<HTMLElement>('[data-vote-mobile-top-chrome="true"]')),
+        ].filter((observer): observer is MutationObserver => observer !== null);
+      });
+    const stopMobileChromeChangeCapture = () =>
+      page.evaluate(() => {
+        type ChromeChange = { target: "header" | "tabs"; visible: string; at: number };
+        type ChromeCaptureWindow = Window & {
+          __curyoMobileChromeChanges?: ChromeChange[];
+          __curyoMobileChromeObservers?: MutationObserver[];
+        };
+        const captureWindow = window as ChromeCaptureWindow;
+        const changes = captureWindow.__curyoMobileChromeChanges ?? [];
+        captureWindow.__curyoMobileChromeObservers?.forEach(observer => observer.disconnect());
+        captureWindow.__curyoMobileChromeObservers = [];
+        captureWindow.__curyoMobileChromeChanges = [];
+        return changes;
+      });
 
     const initialLayout = await readLayout();
     expect(initialLayout.leftGutterWidth).toBeGreaterThanOrEqual(20);
@@ -144,6 +188,7 @@ test.describe("Mobile viewport (phone)", () => {
     expect(expandedLayout.topChromeTop).toBeGreaterThanOrEqual(expandedLayout.mobileHeaderBottom - 1);
     await waitForMobileHeaderScrollSyncIdle();
 
+    await startMobileChromeChangeCapture();
     await setFeedScrollTop(900);
     await expect(mobileHeader).toHaveAttribute("data-visible", "false");
     await expect(voteTopChrome).toHaveAttribute("data-visible", "false");
@@ -153,6 +198,13 @@ test.describe("Mobile viewport (phone)", () => {
     });
 
     const collapsedLayout = await readLayout();
+    const collapseChromeChanges = await stopMobileChromeChangeCapture();
+    expect(collapseChromeChanges.filter(change => change.target === "header").map(change => change.visible)).toEqual([
+      "false",
+    ]);
+    expect(collapseChromeChanges.filter(change => change.target === "tabs").map(change => change.visible)).toEqual([
+      "false",
+    ]);
     expect(collapsedLayout.documentScrollTop).toBe(0);
     expect(collapsedLayout.feedSurfaceTop).toBeLessThan(expandedLayout.feedSurfaceTop - 24);
     expect(collapsedLayout.topChromeHeight).toBeLessThan(4);
@@ -160,6 +212,7 @@ test.describe("Mobile viewport (phone)", () => {
     expect(collapsedLayout.activeTitleTop).toBeGreaterThanOrEqual(collapsedLayout.scrollerTop - 1);
     expect(collapsedLayout.activeTitleBottom).toBeGreaterThan(collapsedLayout.scrollerTop + 8);
 
+    await startMobileChromeChangeCapture();
     await setFeedScrollTop(320);
     await expect(mobileHeader).toHaveAttribute("data-visible", "true");
     await expect(voteTopChrome).toHaveAttribute("data-visible", "true");
@@ -169,6 +222,13 @@ test.describe("Mobile viewport (phone)", () => {
     });
 
     const restoredLayout = await readLayout();
+    const restoreChromeChanges = await stopMobileChromeChangeCapture();
+    expect(restoreChromeChanges.filter(change => change.target === "header").map(change => change.visible)).toEqual([
+      "true",
+    ]);
+    expect(restoreChromeChanges.filter(change => change.target === "tabs").map(change => change.visible)).toEqual([
+      "true",
+    ]);
     expect(restoredLayout.feedSurfaceTop).toBeGreaterThan(collapsedLayout.feedSurfaceTop + 24);
     expect(restoredLayout.topChromeTop).toBeGreaterThanOrEqual(restoredLayout.mobileHeaderBottom - 1);
     expect(restoredLayout.activeTitleTop).toBeGreaterThanOrEqual(restoredLayout.scrollerTop - 1);
