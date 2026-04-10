@@ -9,6 +9,9 @@ export type ClaimTransactionFeedbackContext = {
   canSponsorTransactions: boolean;
   freeTransactionRemaining: number;
   freeTransactionVerified: boolean;
+  hasNativeGasBalance: boolean;
+  isAwaitingFreeTransactionAllowance: boolean;
+  isAwaitingSelfFundedWalletReconnect: boolean;
   isAwaitingSponsoredWalletReconnect: boolean;
   isMissingGasBalance: boolean;
   nativeTokenSymbol: string;
@@ -17,10 +20,18 @@ export type ClaimTransactionFeedbackContext = {
 export function getClaimGasErrorMessage(
   context: Pick<
     ClaimTransactionFeedbackContext,
-    "canSponsorTransactions" | "freeTransactionRemaining" | "freeTransactionVerified" | "nativeTokenSymbol"
+    | "canSponsorTransactions"
+    | "freeTransactionRemaining"
+    | "freeTransactionVerified"
+    | "hasNativeGasBalance"
+    | "nativeTokenSymbol"
   >,
 ) {
   if (context.freeTransactionVerified && context.freeTransactionRemaining === 0) {
+    if (context.hasNativeGasBalance) {
+      return `Free transactions used up. Retry to use ${context.nativeTokenSymbol} for gas.`;
+    }
+
     return `Free transactions used up. Add some ${context.nativeTokenSymbol} for gas, then retry.`;
   }
 
@@ -30,6 +41,14 @@ export function getClaimGasErrorMessage(
 }
 
 export function getClaimPreflightErrorMessage(context: ClaimTransactionFeedbackContext) {
+  if (context.isAwaitingFreeTransactionAllowance) {
+    return "Checking wallet gas mode. Retry in a moment.";
+  }
+
+  if (context.isAwaitingSelfFundedWalletReconnect) {
+    return "Wallet switching to paid gas. Retry in a moment.";
+  }
+
   if (context.isAwaitingSponsoredWalletReconnect) {
     return "Wallet reconnecting. Retry in a moment.";
   }

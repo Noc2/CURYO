@@ -11,6 +11,9 @@ const BASE_CONTEXT: ClaimTransactionFeedbackContext = {
   canSponsorTransactions: false,
   freeTransactionRemaining: 3,
   freeTransactionVerified: true,
+  hasNativeGasBalance: false,
+  isAwaitingFreeTransactionAllowance: false,
+  isAwaitingSelfFundedWalletReconnect: false,
   isAwaitingSponsoredWalletReconnect: false,
   isMissingGasBalance: false,
   nativeTokenSymbol: "CELO",
@@ -23,6 +26,37 @@ test("getClaimGasErrorMessage explains when free transactions are exhausted", ()
       freeTransactionRemaining: 0,
     }),
     "Free transactions used up. Add some CELO for gas, then retry.",
+  );
+});
+
+test("getClaimGasErrorMessage does not ask funded wallets to add CELO", () => {
+  assert.equal(
+    getClaimGasErrorMessage({
+      ...BASE_CONTEXT,
+      freeTransactionRemaining: 0,
+      hasNativeGasBalance: true,
+    }),
+    "Free transactions used up. Retry to use CELO for gas.",
+  );
+});
+
+test("getClaimPreflightErrorMessage waits for free transaction allowance before claiming", () => {
+  assert.equal(
+    getClaimPreflightErrorMessage({
+      ...BASE_CONTEXT,
+      isAwaitingFreeTransactionAllowance: true,
+    }),
+    "Checking wallet gas mode. Retry in a moment.",
+  );
+});
+
+test("getClaimPreflightErrorMessage waits while switching to paid gas", () => {
+  assert.equal(
+    getClaimPreflightErrorMessage({
+      ...BASE_CONTEXT,
+      isAwaitingSelfFundedWalletReconnect: true,
+    }),
+    "Wallet switching to paid gas. Retry in a moment.",
   );
 });
 

@@ -2,9 +2,7 @@
 
 import { useAccount } from "wagmi";
 import { FooterLinks } from "~~/components/FooterLinks";
-import { ClaimRewardsButton } from "~~/components/shared/ClaimRewardsButton";
 import { VOTING_SURFACE_BACKGROUND, VotingQuestionCard } from "~~/components/shared/VotingQuestionCard";
-import { useAllClaimableRewards } from "~~/hooks/useAllClaimableRewards";
 import type { ContentItem } from "~~/hooks/useContentFeed";
 
 interface VoteSignalRailProps {
@@ -27,7 +25,6 @@ export function VoteSignalRail({
   onVote,
 }: VoteSignalRailProps) {
   const { address } = useAccount();
-  const { totalClaimable } = useAllClaimableRewards();
 
   return (
     <div className="flex w-full min-w-0 flex-col gap-3">
@@ -53,12 +50,6 @@ export function VoteSignalRail({
             variant="signal"
             attentionToken={attentionToken}
           />
-        ) : null}
-
-        {address && totalClaimable > 0n ? (
-          <div className="mt-4">
-            <ClaimRewardsButton buttonClassName="btn btn-primary btn-sm h-10 min-h-0 w-full rounded-full border-none text-sm" />
-          </div>
         ) : null}
       </aside>
 

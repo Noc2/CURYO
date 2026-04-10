@@ -32,17 +32,24 @@ export function useGasBalanceStatus(options: GasBalanceStatusOptions = {}) {
       typeof chain?.id === "number" &&
       supportsThirdwebExecutionCapabilities(chain.id);
     const hasExecutableSponsoredCalls = executionMode === "sponsored_7702";
+    const hasSelfFundedThirdwebCalls = executionMode === "self_funded_7702";
     const supportsSponsoredCalls = hasExecutableSponsoredCalls || expectsSponsoredCalls;
     const canSponsorTransactions = supportsSponsoredCalls && freeTransactionAllowance.canUseFreeTransactions;
     const isAwaitingFreeTransactionAllowance = supportsSponsoredCalls && !freeTransactionAllowance.isResolved;
     const isAwaitingSponsoredWalletReconnect =
       expectsSponsoredCalls && freeTransactionAllowance.canUseFreeTransactions && !hasExecutableSponsoredCalls;
+    const isAwaitingSelfFundedWalletReconnect =
+      expectsSponsoredCalls &&
+      freeTransactionAllowance.isResolved &&
+      !freeTransactionAllowance.canUseFreeTransactions &&
+      !hasSelfFundedThirdwebCalls;
     const isMissingGasBalance =
       hasResolvedNativeBalance &&
       nativeBalanceValue === 0n &&
       !canSponsorTransactions &&
       !isAwaitingFreeTransactionAllowance &&
-      !isAwaitingSponsoredWalletReconnect;
+      !isAwaitingSponsoredWalletReconnect &&
+      !isAwaitingSelfFundedWalletReconnect;
 
     return {
       canSponsorTransactions,
@@ -52,6 +59,7 @@ export function useGasBalanceStatus(options: GasBalanceStatusOptions = {}) {
       freeTransactionVerified: freeTransactionAllowance.verified,
       hasResolvedNativeBalance,
       isAwaitingFreeTransactionAllowance,
+      isAwaitingSelfFundedWalletReconnect,
       isAwaitingSponsoredWalletReconnect,
       isMissingGasBalance,
       nativeBalanceValue,
