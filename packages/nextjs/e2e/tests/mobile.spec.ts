@@ -62,6 +62,10 @@ test.describe("Mobile viewport (phone)", () => {
         );
         const activeArticle = document.querySelector<HTMLElement>('article[aria-current="true"]');
         const activeTitle = document.querySelector<HTMLElement>('article[aria-current="true"] h2');
+        const activeContentCardShell = activeArticle?.querySelector<HTMLElement>(
+          '[data-testid="vote-content-card-shell"]',
+        );
+        const activeContentHeader = activeArticle?.querySelector<HTMLElement>('[data-testid="vote-content-header"]');
         const activeMoreButton = activeArticle?.querySelector<HTMLElement>(
           'button[aria-label="Expand details"], button[aria-label="Collapse details"]',
         );
@@ -85,6 +89,12 @@ test.describe("Mobile viewport (phone)", () => {
                 activeMoreButtonRect.right <= activeArticleRect.right + 1,
           activeMoreControlVisible:
             !activeMoreButtonRect || (activeMoreButtonRect.width > 0 && activeMoreButtonRect.height > 0),
+          activeContentCardShellBackground: activeContentCardShell
+            ? getComputedStyle(activeContentCardShell).backgroundColor
+            : "",
+          activeContentHeaderBackground: activeContentHeader
+            ? getComputedStyle(activeContentHeader).backgroundColor
+            : "",
           activeTitleBottom: activeTitle?.getBoundingClientRect().bottom ?? 0,
           activeTitleTop: activeTitle?.getBoundingClientRect().top ?? 0,
           documentScrollTop: document.scrollingElement?.scrollTop ?? 0,
@@ -215,6 +225,8 @@ test.describe("Mobile viewport (phone)", () => {
     expect(initialLayout.rightGutterWidth).toBeLessThanOrEqual(1);
     expect(initialLayout.feedSurfaceBackground).toBe("rgb(0, 0, 0)");
     expect(initialLayout.scrollContainerBackground).toBe("rgb(0, 0, 0)");
+    expect(initialLayout.activeContentCardShellBackground).toBe("rgb(23, 22, 26)");
+    expect(initialLayout.activeContentHeaderBackground).toBe("rgb(23, 22, 26)");
     expect(initialLayout.activeMoreControlVisible).toBe(true);
     expect(initialLayout.activeMoreControlFits).toBe(true);
 

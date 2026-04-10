@@ -154,7 +154,10 @@ export const FeedVoteCard = memo(function FeedVoteCard({
       />
 
       <div className={contentGridClassName}>
-        <div className="flex min-w-0 min-h-0 flex-1 flex-col overflow-hidden rounded-2xl bg-black">
+        <div
+          data-testid="vote-content-card-shell"
+          className="flex min-w-0 min-h-0 flex-1 flex-col overflow-hidden rounded-2xl bg-base-200"
+        >
           <div
             className={`${mediaHeightClassName} relative overflow-hidden`}
             data-testid="vote-content-surface"
@@ -253,7 +256,10 @@ function FeedContentHeader({
   compact,
 }: FeedContentHeaderProps) {
   return (
-    <div className={`rounded-2xl bg-black ${compact ? "px-4 py-3" : "px-5 py-4 xl:px-4 xl:py-3"}`}>
+    <div
+      data-testid="vote-content-header"
+      className={`rounded-2xl bg-base-200 ${compact ? "px-4 py-3" : "px-5 py-4 xl:px-4 xl:py-3"}`}
+    >
       <div className="flex items-center justify-between gap-3">
         <button
           type="button"
@@ -322,7 +328,7 @@ function FeedContentMetaCard({
     ? compact
       ? "border-t border-base-content/10 px-3 py-3"
       : "border-t border-base-content/10 p-4"
-    : `rounded-2xl bg-black ${compact ? "p-3" : "p-4 xl:p-3"}`;
+    : `rounded-2xl bg-base-200 ${compact ? "p-3" : "p-4 xl:p-3"}`;
 
   useEffect(() => {
     setIsExpanded(false);
