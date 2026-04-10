@@ -399,19 +399,6 @@ export const Header = () => {
       return null;
     };
 
-    const initializeScrollState = () => {
-      const explicitScrollSource = document.querySelector<HTMLElement>(
-        `[${MOBILE_HEADER_SCROLL_SOURCE_ATTRIBUTE}="true"]`,
-      );
-      const source = explicitScrollSource ?? window;
-      lastScrollStateRef.current = {
-        source,
-        offset: readScrollOffset(source),
-      };
-    };
-
-    initializeScrollState();
-
     const handleScroll = (event: Event) => {
       const scrollSource = resolveScrollSource(event.target);
       if (!scrollSource) return;
@@ -473,9 +460,71 @@ export const Header = () => {
       };
     };
 
+    let explicitScrollSource: HTMLElement | null = null;
+    let bindFrameId = 0;
+
+    const setInitialScrollState = (source: Window | HTMLElement) => {
+      lastScrollStateRef.current = {
+        source,
+        offset: readScrollOffset(source),
+      };
+    };
+
+    const bindExplicitScrollSource = () => {
+      const nextExplicitScrollSource = document.querySelector<HTMLElement>(
+        `[${MOBILE_HEADER_SCROLL_SOURCE_ATTRIBUTE}="true"]`,
+      );
+
+      if (nextExplicitScrollSource === explicitScrollSource) {
+        return;
+      }
+
+      if (explicitScrollSource) {
+        explicitScrollSource.removeEventListener("scroll", handleScroll);
+      }
+
+      explicitScrollSource = nextExplicitScrollSource;
+
+      if (explicitScrollSource) {
+        explicitScrollSource.addEventListener("scroll", handleScroll, { passive: true });
+        setInitialScrollState(explicitScrollSource);
+        return;
+      }
+
+      setInitialScrollState(window);
+    };
+
+    const requestExplicitScrollSourceBind = () => {
+      if (bindFrameId !== 0) {
+        return;
+      }
+
+      bindFrameId = window.requestAnimationFrame(() => {
+        bindFrameId = 0;
+        bindExplicitScrollSource();
+      });
+    };
+
+    const mutationObserver = new MutationObserver(requestExplicitScrollSourceBind);
+
+    setInitialScrollState(window);
+    bindExplicitScrollSource();
     window.addEventListener("scroll", handleScroll, { capture: true, passive: true });
+    mutationObserver.observe(document.body, {
+      attributeFilter: [MOBILE_HEADER_SCROLL_SOURCE_ATTRIBUTE],
+      attributes: true,
+      childList: true,
+      subtree: true,
+    });
 
     return () => {
+      if (bindFrameId !== 0) {
+        window.cancelAnimationFrame(bindFrameId);
+      }
+      mutationObserver.disconnect();
+      if (explicitScrollSource) {
+        explicitScrollSource.removeEventListener("scroll", handleScroll);
+      }
       window.removeEventListener("scroll", handleScroll, true);
     };
   }, [mobileSearchOpen, pathname, setIsMobileHeaderVisible]);
