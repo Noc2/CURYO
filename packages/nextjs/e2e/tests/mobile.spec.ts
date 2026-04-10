@@ -171,6 +171,27 @@ test.describe("Mobile viewport (phone)", () => {
         },
         { targetScrollTop, stepSize },
       );
+    const forceDocumentScrollLeak = (targetScrollTop: number) =>
+      page.evaluate(scrollTop => {
+        document.querySelector('[data-root-scroll-recovery-spacer="true"]')?.remove();
+
+        const spacer = document.createElement("div");
+        spacer.setAttribute("data-root-scroll-recovery-spacer", "true");
+        spacer.setAttribute("aria-hidden", "true");
+        spacer.style.height = "1200px";
+        spacer.style.width = "1px";
+        spacer.style.opacity = "0";
+        spacer.style.pointerEvents = "none";
+        document.body.appendChild(spacer);
+
+        window.scrollTo(0, scrollTop);
+        window.dispatchEvent(new Event("scroll"));
+      }, targetScrollTop);
+    const removeDocumentScrollLeakSpacer = () =>
+      page.evaluate(() => {
+        document.querySelector('[data-root-scroll-recovery-spacer="true"]')?.remove();
+        window.scrollTo(0, 0);
+      });
     const waitForMobileHeaderScrollSyncIdle = () =>
       page.waitForFunction(() => {
         const explicitScrollSource = document.querySelector<HTMLElement>('[data-mobile-header-scroll-source="true"]');
@@ -238,6 +259,19 @@ test.describe("Mobile viewport (phone)", () => {
     const afterScrollWheel = await readLayout();
     expect(afterScrollWheel.documentScrollTop).toBe(0);
 
+    await setFeedScrollTop(0);
+    await expect(mobileHeader).toHaveAttribute("data-visible", "true");
+    await expect(voteTopChrome).toHaveAttribute("data-visible", "true");
+
+    const beforeRootScrollLeak = await readLayout();
+    expect(beforeRootScrollLeak.voteScrollTop).toBeLessThan(2);
+    await forceDocumentScrollLeak(64);
+    await expect.poll(async () => (await readLayout()).documentScrollTop).toBe(0);
+    await expect.poll(async () => (await readLayout()).voteScrollTop).toBeGreaterThan(48);
+
+    const afterRootScrollLeak = await readLayout();
+    expect(afterRootScrollLeak.topChromeTop).toBeGreaterThanOrEqual(afterRootScrollLeak.mobileHeaderBottom - 1);
+    await removeDocumentScrollLeakSpacer();
     await setFeedScrollTop(0);
     await expect(mobileHeader).toHaveAttribute("data-visible", "true");
     await expect(voteTopChrome).toHaveAttribute("data-visible", "true");
