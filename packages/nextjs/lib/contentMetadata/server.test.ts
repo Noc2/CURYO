@@ -49,6 +49,37 @@ test("shouldReuseCachedContentMetadata keeps fresh Hugging Face entries once an 
   );
 });
 
+test("shouldReuseCachedContentMetadata keeps trim-safe Hugging Face avatar cache entries", () => {
+  assert.equal(
+    shouldReuseCachedContentMetadata(
+      "https://huggingface.co/Jackrong/Gemopus-4-E4B-it",
+      {
+        thumbnailUrl:
+          "https://cdn-avatars.huggingface.co/v1/production/uploads/66309bd090589b7c65950665/RcOk7ysh7nEt5YlHHzauj.jpeg&quot;,&quot;type&quot;:&quot;update&quot;",
+        imageUrl: null,
+        fetchedAt: new Date(NOW - 5 * 60 * 1000),
+      },
+      NOW,
+    ),
+    true,
+  );
+});
+
+test("shouldReuseCachedContentMetadata refreshes unsafe Hugging Face image cache entries", () => {
+  assert.equal(
+    shouldReuseCachedContentMetadata(
+      "https://huggingface.co/Jackrong/Gemopus-4-E4B-it",
+      {
+        thumbnailUrl: "https://example.com/not-hugging-face.png",
+        imageUrl: null,
+        fetchedAt: new Date(NOW - 5 * 60 * 1000),
+      },
+      NOW,
+    ),
+    false,
+  );
+});
+
 test("shouldReuseCachedContentMetadata still expires entries after the normal TTL", () => {
   assert.equal(
     shouldReuseCachedContentMetadata(

@@ -1,4 +1,5 @@
 import { eq, inArray } from "drizzle-orm";
+import { getSafeHuggingFaceImageUrl } from "~~/lib/content/huggingFaceImage";
 import { db } from "~~/lib/db";
 import { type ContentMetadata, contentMetadata } from "~~/lib/db/schema";
 import { detectPlatform, getThumbnailUrl } from "~~/utils/platforms";
@@ -7,8 +8,29 @@ import { type EmbedResult, resolveEmbed } from "~~/utils/resolveEmbed";
 const CACHE_TTL_MS = 7 * 24 * 60 * 60 * 1000;
 const IMAGE_REQUIRED_CACHE_TYPES = new Set(["coingecko", "huggingface"]);
 
+function sanitizeEmbedResultForUrl(url: string, result: EmbedResult): EmbedResult {
+  if (detectPlatform(url).type !== "huggingface") {
+    return result;
+  }
+
+  const thumbnailUrl = getSafeHuggingFaceImageUrl(result.thumbnailUrl);
+  const imageUrl = getSafeHuggingFaceImageUrl(result.imageUrl);
+  const sanitized: EmbedResult = {
+    ...result,
+    thumbnailUrl,
+  };
+
+  if (imageUrl) {
+    sanitized.imageUrl = imageUrl;
+  } else {
+    delete sanitized.imageUrl;
+  }
+
+  return sanitized;
+}
+
 function toEmbedResult(cached: ContentMetadata): EmbedResult {
-  return {
+  return sanitizeEmbedResultForUrl(cached.url, {
     thumbnailUrl: cached.thumbnailUrl,
     ...(cached.title && { title: cached.title }),
     ...(cached.description && { description: cached.description }),
@@ -19,7 +41,7 @@ function toEmbedResult(cached: ContentMetadata): EmbedResult {
     ...(cached.stars != null && { stars: cached.stars }),
     ...(cached.forks != null && { forks: cached.forks }),
     ...(cached.language && { language: cached.language }),
-  };
+  });
 }
 
 function getTimestampMs(value: Date | string): number {
@@ -36,7 +58,12 @@ export function shouldReuseCachedContentMetadata(
   }
 
   const platform = detectPlatform(url);
-  if (IMAGE_REQUIRED_CACHE_TYPES.has(platform.type) && !cached.thumbnailUrl && !cached.imageUrl) {
+  const hasUsableImage =
+    platform.type === "huggingface"
+      ? Boolean(getSafeHuggingFaceImageUrl(cached.thumbnailUrl) || getSafeHuggingFaceImageUrl(cached.imageUrl))
+      : Boolean(cached.thumbnailUrl || cached.imageUrl);
+
+  if (IMAGE_REQUIRED_CACHE_TYPES.has(platform.type) && !hasUsableImage) {
     return false;
   }
 
@@ -53,7 +80,9 @@ function isHttpUrl(url: string): boolean {
 }
 
 async function persistContentMetadata(url: string, result: EmbedResult) {
-  if (!result.thumbnailUrl && !result.title && !result.description) {
+  const sanitizedResult = sanitizeEmbedResultForUrl(url, result);
+
+  if (!sanitizedResult.thumbnailUrl && !sanitizedResult.title && !sanitizedResult.description) {
     return;
   }
 
@@ -62,31 +91,31 @@ async function persistContentMetadata(url: string, result: EmbedResult) {
       .insert(contentMetadata)
       .values({
         url,
-        thumbnailUrl: result.thumbnailUrl,
-        title: result.title ?? null,
-        description: result.description ?? null,
-        imageUrl: result.imageUrl ?? null,
-        authors: result.authors ? JSON.stringify(result.authors) : null,
-        releaseYear: result.releaseYear ?? null,
-        symbol: result.symbol ?? null,
-        stars: result.stars ?? null,
-        forks: result.forks ?? null,
-        language: result.language ?? null,
+        thumbnailUrl: sanitizedResult.thumbnailUrl,
+        title: sanitizedResult.title ?? null,
+        description: sanitizedResult.description ?? null,
+        imageUrl: sanitizedResult.imageUrl ?? null,
+        authors: sanitizedResult.authors ? JSON.stringify(sanitizedResult.authors) : null,
+        releaseYear: sanitizedResult.releaseYear ?? null,
+        symbol: sanitizedResult.symbol ?? null,
+        stars: sanitizedResult.stars ?? null,
+        forks: sanitizedResult.forks ?? null,
+        language: sanitizedResult.language ?? null,
         fetchedAt: new Date(),
       })
       .onConflictDoUpdate({
         target: contentMetadata.url,
         set: {
-          thumbnailUrl: result.thumbnailUrl,
-          title: result.title ?? null,
-          description: result.description ?? null,
-          imageUrl: result.imageUrl ?? null,
-          authors: result.authors ? JSON.stringify(result.authors) : null,
-          releaseYear: result.releaseYear ?? null,
-          symbol: result.symbol ?? null,
-          stars: result.stars ?? null,
-          forks: result.forks ?? null,
-          language: result.language ?? null,
+          thumbnailUrl: sanitizedResult.thumbnailUrl,
+          title: sanitizedResult.title ?? null,
+          description: sanitizedResult.description ?? null,
+          imageUrl: sanitizedResult.imageUrl ?? null,
+          authors: sanitizedResult.authors ? JSON.stringify(sanitizedResult.authors) : null,
+          releaseYear: sanitizedResult.releaseYear ?? null,
+          symbol: sanitizedResult.symbol ?? null,
+          stars: sanitizedResult.stars ?? null,
+          forks: sanitizedResult.forks ?? null,
+          language: sanitizedResult.language ?? null,
           fetchedAt: new Date(),
         },
       });
@@ -103,8 +132,9 @@ async function resolveFreshContentMetadata(url: string): Promise<EmbedResult> {
 
   const info = detectPlatform(url);
   const result = await resolveEmbed(info.type, info.id, info.metadata);
-  await persistContentMetadata(url, result);
-  return result;
+  const sanitizedResult = sanitizeEmbedResultForUrl(url, result);
+  await persistContentMetadata(url, sanitizedResult);
+  return sanitizedResult;
 }
 
 export async function resolveContentMetadata(url: string): Promise<EmbedResult> {
