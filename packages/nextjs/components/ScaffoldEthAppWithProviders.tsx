@@ -18,6 +18,7 @@ import { ClearLegacyBurnerSession } from "~~/components/thirdweb/ClearLegacyBurn
 import { LocalTestWalletBridge } from "~~/components/thirdweb/LocalTestWalletBridge";
 import { ThirdwebAutoConnectBridge } from "~~/components/thirdweb/ThirdwebAutoConnectBridge";
 import { ThirdwebConnectorWalletBridge } from "~~/components/thirdweb/ThirdwebConnectorWalletBridge";
+import { MobileHeaderVisibilityProvider } from "~~/contexts/MobileHeaderVisibilityContext";
 import { OptimisticVoteProvider } from "~~/contexts/OptimisticVoteContext";
 import { TermsAcceptanceProvider } from "~~/contexts/TermsAcceptanceContext";
 import { useTargetNetwork } from "~~/hooks/scaffold-eth/useTargetNetwork";
@@ -35,7 +36,7 @@ const ScaffoldEthApp = ({ children }: { children: React.ReactNode }) => {
   const showVoteFeedMobileFaucet = isVoteFeedRoute && targetNetwork.id === hardhat.id;
 
   return (
-    <>
+    <MobileHeaderVisibilityProvider>
       <div className={`flex min-h-screen flex-col ${isVoteFeedRoute ? "xl:h-screen xl:overflow-hidden" : ""}`.trim()}>
         <Header />
         {/* Main content: offset by left sidebar on desktop (208px at xl) */}
@@ -63,7 +64,7 @@ const ScaffoldEthApp = ({ children }: { children: React.ReactNode }) => {
       </div>
       <Toaster />
       <RouteScopedNotifiers />
-    </>
+    </MobileHeaderVisibilityProvider>
   );
 };
 

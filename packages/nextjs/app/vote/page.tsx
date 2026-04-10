@@ -7,11 +7,11 @@ import type { NextPage } from "next";
 import { useAccount } from "wagmi";
 import { CategoryFilter } from "~~/components/CategoryFilter";
 import { AppPageShell } from "~~/components/shared/AppPageShell";
-import { ClaimRewardsButton } from "~~/components/shared/ClaimRewardsButton";
 import { StreakCounter } from "~~/components/shared/StreakCounter";
 import { VotingQuestionCard } from "~~/components/shared/VotingQuestionCard";
 import { FeedScopeFilter } from "~~/components/vote/FeedScopeFilter";
 import { VoteSignalRail } from "~~/components/vote/VoteSignalRail";
+import { useMobileHeaderVisibility } from "~~/contexts/MobileHeaderVisibilityContext";
 import { MIN_CONTENT_SEARCH_QUERY_LENGTH, isContentSearchQueryTooShort } from "~~/hooks/contentFeed/shared";
 import { useTargetNetwork } from "~~/hooks/scaffold-eth/useTargetNetwork";
 import { useCategoryPopularity } from "~~/hooks/useCategoryPopularity";
@@ -87,6 +87,7 @@ const SEARCH_SORT_OPTIONS: { value: SearchSortOption; label: string }[] = [
 const FEED_PAGE_SIZE = 6;
 const FEED_PREFETCH_BUFFER = 6;
 const MOBILE_VOTE_DOCK_RESERVED_SPACE_PX = 152;
+const VOTE_MOBILE_CHROME_QUERY = "(max-width: 1279px)";
 const CONTENT_INTENT_PROMPT_MS = 1_400;
 
 function areIdListsEqual(left: readonly string[], right: readonly string[]) {
@@ -124,6 +125,7 @@ const HomeInner = () => {
 
   const { address } = useAccount();
   const { targetNetwork } = useTargetNetwork();
+  const { isMobileHeaderVisible } = useMobileHeaderVisibility();
   const nowSeconds = useUnixTime(60_000);
   const { openConnectModal } = useCuryoConnectModal();
   const { isFirstVote, markVoteCompleted } = useOnboarding();
@@ -140,6 +142,7 @@ const HomeInner = () => {
   const voteAttentionTimeoutRef = useRef<number | null>(null);
   const voteAttentionTokenRef = useRef(0);
   const [mobileDockReservedSpace, setMobileDockReservedSpace] = useState<number | null>(null);
+  const [isMobileChromeViewport, setIsMobileChromeViewport] = useState(false);
   const [optimisticCooldownUntilByContentId, setOptimisticCooldownUntilByContentId] = useState<Map<string, number>>(
     () => new Map(),
   );
@@ -760,6 +763,25 @@ const HomeInner = () => {
   }, [rankedDisplayFeed, stableDisplayFeedIds]);
   displayFeedRef.current = displayFeed;
 
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+
+    const mobileChromeQuery = window.matchMedia(VOTE_MOBILE_CHROME_QUERY);
+    const updateChromeViewport = () => setIsMobileChromeViewport(mobileChromeQuery.matches);
+
+    updateChromeViewport();
+
+    if (typeof mobileChromeQuery.addEventListener === "function") {
+      mobileChromeQuery.addEventListener("change", updateChromeViewport);
+      return () => mobileChromeQuery.removeEventListener("change", updateChromeViewport);
+    }
+
+    mobileChromeQuery.addListener(updateChromeViewport);
+    return () => mobileChromeQuery.removeListener(updateChromeViewport);
+  }, []);
+
+  const isVoteTopChromeCollapsed = isMobileChromeViewport && !isMobileHeaderVisible;
+
   const {
     activeItem: primaryItem,
     activeSourceIndex,
@@ -1360,87 +1382,113 @@ const HomeInner = () => {
   return (
     <AppPageShell
       horizontalPaddingClassName="px-0 xl:px-4"
-      paddingTopClassName="pt-2 xl:pt-4"
+      paddingTopClassName={isVoteTopChromeCollapsed ? "pt-0 xl:pt-4" : "pt-2 xl:pt-4"}
       outerClassName="min-h-0 flex-1 overflow-hidden pb-0 xl:pb-4"
-      contentClassName="flex min-h-0 flex-1 flex-col gap-4 overflow-hidden"
+      contentClassName="flex min-h-0 flex-1 flex-col overflow-hidden"
     >
       <VotingGuide />
       <div
-        className="flex shrink-0 flex-wrap items-center gap-2 px-4 touch-none sm:gap-3 xl:flex-nowrap xl:px-0 xl:touch-auto"
-        data-disable-queue-wheel="true"
+        className={`grid shrink-0 overflow-hidden transition-all duration-200 ease-out xl:mb-4 xl:block xl:translate-y-0 xl:overflow-visible xl:opacity-100 ${
+          isVoteTopChromeCollapsed
+            ? "mb-0 grid-rows-[0fr] -translate-y-2 opacity-0"
+            : "mb-4 grid-rows-[1fr] translate-y-0 opacity-100"
+        }`}
+        data-vote-mobile-top-chrome="true"
+        data-visible={isVoteTopChromeCollapsed ? "false" : "true"}
+        aria-hidden={isVoteTopChromeCollapsed ? "true" : undefined}
+        inert={isVoteTopChromeCollapsed ? true : undefined}
       >
-        <CategoryFilter
-          categories={categories}
-          activeCategory={activeCategory}
-          onSelect={selectCategory}
-          pillClassName={(cat, isActive) => {
-            if (cat !== BROKEN_FILTER) return undefined;
-            return isActive
-              ? "bg-warning/20 text-warning border border-warning/40"
-              : "pill-inactive text-warning/70 hover:bg-warning/10";
-          }}
-        />
-        <FeedScopeFilter
-          value={view}
-          groups={viewGroups}
-          onChange={value => {
-            void handleViewChange(value as VoteView);
-          }}
-          label="View"
-        />
-        <div className="shrink-0 flex items-center">
-          <StreakCounter />
+        <div className="min-h-0 overflow-hidden xl:overflow-visible">
+          <div className="flex min-h-0 flex-col gap-4">
+            <div
+              className="flex shrink-0 flex-wrap items-center gap-2 px-4 touch-none sm:gap-3 xl:flex-nowrap xl:px-0 xl:touch-auto"
+              data-disable-queue-wheel="true"
+            >
+              <CategoryFilter
+                categories={categories}
+                activeCategory={activeCategory}
+                onSelect={selectCategory}
+                pillClassName={(cat, isActive) => {
+                  if (cat !== BROKEN_FILTER) return undefined;
+                  return isActive
+                    ? "bg-warning/20 text-warning border border-warning/40"
+                    : "pill-inactive text-warning/70 hover:bg-warning/10";
+                }}
+              />
+              <FeedScopeFilter
+                value={view}
+                groups={viewGroups}
+                onChange={value => {
+                  void handleViewChange(value as VoteView);
+                }}
+                label="View"
+              />
+              <div className="shrink-0 flex items-center">
+                <StreakCounter />
+              </div>
+            </div>
+
+            {isSearchMode ? (
+              <div
+                className="flex shrink-0 flex-wrap items-center gap-2 px-4 touch-none xl:px-0 xl:touch-auto"
+                data-disable-queue-wheel="true"
+              >
+                <div className="rounded-full bg-base-200 px-3 py-2 text-sm text-base-content/70">
+                  {isShortSearchQuery ? (
+                    <span>
+                      Keep typing to search. Terms need at least {MIN_CONTENT_SEARCH_QUERY_LENGTH} characters.
+                    </span>
+                  ) : (
+                    <>
+                      Results for{" "}
+                      <span className="font-medium text-base-content">&quot;{trimmedSearchQuery}&quot;</span>
+                    </>
+                  )}
+                </div>
+                {!isShortSearchQuery ? (
+                  <>
+                    <label htmlFor="vote-search-sort" className="sr-only">
+                      Sort search results
+                    </label>
+                    <select
+                      id="vote-search-sort"
+                      name="vote-search-sort"
+                      value={effectiveSearchSortBy}
+                      onChange={e => setSortBy(e.target.value as SearchSortOption)}
+                      className="select select-sm bg-base-200 text-base font-medium border-none focus:outline-none w-auto"
+                      aria-label="Sort search results"
+                    >
+                      {SEARCH_SORT_OPTIONS.map(opt => (
+                        <option key={opt.value} value={opt.value}>
+                          {opt.label}
+                        </option>
+                      ))}
+                    </select>
+                  </>
+                ) : null}
+              </div>
+            ) : null}
+          </div>
         </div>
       </div>
-
-      {isSearchMode ? (
-        <div
-          className="flex shrink-0 flex-wrap items-center gap-2 px-4 touch-none xl:px-0 xl:touch-auto"
-          data-disable-queue-wheel="true"
-        >
-          <div className="rounded-full bg-base-200 px-3 py-2 text-sm text-base-content/70">
-            {isShortSearchQuery ? (
-              <span>Keep typing to search. Terms need at least {MIN_CONTENT_SEARCH_QUERY_LENGTH} characters.</span>
-            ) : (
-              <>
-                Results for <span className="font-medium text-base-content">&quot;{trimmedSearchQuery}&quot;</span>
-              </>
-            )}
-          </div>
-          {!isShortSearchQuery ? (
-            <>
-              <label htmlFor="vote-search-sort" className="sr-only">
-                Sort search results
-              </label>
-              <select
-                id="vote-search-sort"
-                name="vote-search-sort"
-                value={effectiveSearchSortBy}
-                onChange={e => setSortBy(e.target.value as SearchSortOption)}
-                className="select select-sm bg-base-200 text-base font-medium border-none focus:outline-none w-auto"
-                aria-label="Sort search results"
-              >
-                {SEARCH_SORT_OPTIONS.map(opt => (
-                  <option key={opt.value} value={opt.value}>
-                    {opt.label}
-                  </option>
-                ))}
-              </select>
-            </>
-          ) : null}
-        </div>
-      ) : null}
 
       <div className="relative min-h-0 flex-1 overflow-hidden">
         <div
           ref={desktopScrollContainerRef}
+          data-testid="vote-desktop-scroll-container"
           className="min-h-0 flex h-full flex-col overflow-hidden xl:relative xl:left-1/2 xl:w-screen xl:-translate-x-1/2 xl:overflow-x-hidden xl:overflow-y-scroll xl:overscroll-contain xl:scrollbar-subtle xl:snap-y xl:snap-mandatory xl:scroll-pb-4 xl:scroll-smooth"
         >
-          <div className="flex min-h-0 flex-1 flex-col gap-3 overflow-hidden xl:mx-auto xl:min-h-full xl:w-full xl:max-w-5xl xl:flex-none xl:overflow-visible xl:pb-4">
+          <div
+            data-testid="vote-desktop-scroll-frame"
+            className="flex min-h-0 flex-1 flex-col gap-3 overflow-hidden xl:mx-auto xl:min-h-full xl:w-full xl:max-w-5xl xl:flex-none xl:overflow-visible xl:px-4 xl:pb-4"
+          >
             <div className="flex min-h-0 flex-1 flex-col gap-3 overflow-hidden xl:grid xl:min-h-full xl:w-full xl:flex-none xl:grid-cols-[minmax(0,1fr)_17.25rem] xl:items-start xl:gap-4 xl:overflow-visible">
               <div className="min-h-0 flex min-w-0 flex-1 flex-col overflow-hidden xl:min-h-full xl:flex-none xl:overflow-visible">
                 <div className="flex min-w-0 min-h-0 flex-1 flex-col gap-3 xl:min-h-full xl:flex-none xl:gap-0">
-                  <div className="surface-card flex min-h-0 flex-1 flex-col overflow-hidden rounded-t-[2rem] rounded-b-none px-0 py-3 md:p-4 xl:min-h-full xl:flex-none xl:rounded-[2rem]">
+                  <div
+                    data-testid="vote-feed-surface"
+                    className="surface-card flex min-h-0 flex-1 flex-col overflow-hidden rounded-t-[2rem] rounded-b-none p-3 sm:p-4 xl:min-h-full xl:flex-none xl:rounded-[2rem]"
+                  >
                     <div className="min-w-0 flex-1 min-h-0 xl:flex-none">
                       {/* Main content */}
                       {categoriesLoading ||
@@ -1460,6 +1508,7 @@ const HomeInner = () => {
                           activeSourceIndex={activeSourceIndex}
                           loadedCount={visibleCount}
                           mobileDockReservedSpace={mobileDockReservedSpace}
+                          mobileTopChromeVisible={!isVoteTopChromeCollapsed}
                           canLoadMore={canLoadMore}
                           enrichedProfiles={enrichedProfiles}
                           watchedContentIds={watchedContentIds}
@@ -1490,7 +1539,7 @@ const HomeInner = () => {
         </div>
 
         <div className="pointer-events-none absolute inset-y-0 left-0 right-0 hidden xl:block">
-          <div className="mx-auto flex h-full w-full max-w-5xl gap-4">
+          <div className="mx-auto flex h-full w-full max-w-5xl gap-4 px-4">
             <div className="min-w-0 flex-1" />
             <div className="pointer-events-auto w-[17.25rem] shrink-0">
               <VoteSignalRail
@@ -1512,10 +1561,6 @@ const HomeInner = () => {
         <div ref={mobileDockContainerRef} className="fixed inset-x-0 bottom-0 z-30 xl:hidden">
           <div className="w-full">
             <div className="overflow-visible">
-              <ClaimRewardsButton
-                className="px-3 pb-2"
-                buttonClassName="btn btn-primary btn-sm h-10 min-h-0 w-full rounded-full border-none text-sm"
-              />
               <VotingQuestionCard
                 contentId={primaryItem.id}
                 categoryId={primaryItem.categoryId}

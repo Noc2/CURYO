@@ -1,6 +1,6 @@
+import { type Page, expect, test } from "../fixtures/wallet";
 import { expectNoHorizontalOverflow, expectNoNextErrorOverlay } from "../helpers/layout";
 import { findVoteableContent, gotoWithRetry, waitForFeedLoaded } from "../helpers/wait-helpers";
-import { expect, test, type Page } from "../fixtures/wallet";
 
 const VIEWPORTS = [
   { name: "small phone", width: 360, height: 640 },
@@ -123,5 +123,63 @@ test.describe("Responsive layout", () => {
     await expectNoHorizontalOverflow(page, "Stake selector dialog at phone width");
 
     await page.keyboard.press("Escape");
+  });
+
+  test("desktop vote side padding remains inside the feed scroll hit area", async ({ connectedPage: page }) => {
+    await page.setViewportSize({ width: 1366, height: 768 });
+    await gotoWithRetry(page, "/vote", { ensureWalletConnected: true, timeout: 45_000 });
+    await waitForFeedLoaded(page, 30_000);
+
+    const metrics = await page.evaluate(() => {
+      const scroller = document.querySelector<HTMLElement>('[data-testid="vote-desktop-scroll-container"]');
+      const frame = document.querySelector<HTMLElement>('[data-testid="vote-desktop-scroll-frame"]');
+      const surface = document.querySelector<HTMLElement>('[data-testid="vote-feed-surface"]');
+
+      if (!scroller || !frame) return null;
+      if (!surface) return { hasSurface: false as const };
+
+      scroller.scrollTop = 0;
+      scroller.dispatchEvent(new Event("scroll"));
+
+      const frameRect = frame.getBoundingClientRect();
+      const surfaceRect = surface.getBoundingClientRect();
+      const scrollerRect = scroller.getBoundingClientRect();
+      const leftPadding = surfaceRect.left - frameRect.left;
+
+      return {
+        hasSurface: true as const,
+        canScroll: scroller.scrollHeight > scroller.clientHeight + 48,
+        leftPadding,
+        wheelX: frameRect.left + leftPadding / 2,
+        wheelY: Math.min(Math.max(surfaceRect.top + 48, scrollerRect.top + 48), scrollerRect.bottom - 48),
+      };
+    });
+
+    expect(metrics, "Vote desktop feed should expose the scroll frame and surface").not.toBeNull();
+    if (!metrics) return;
+
+    if (!metrics.hasSurface) {
+      test.skip(true, "Vote feed did not render a card surface to verify side padding");
+      return;
+    }
+
+    expect(metrics.leftPadding, "Desktop feed should keep visible side padding around the card").toBeGreaterThanOrEqual(
+      12,
+    );
+
+    test.skip(!metrics.canScroll, "Vote feed is not tall enough to verify wheel scrolling from the side padding");
+
+    await page.mouse.move(metrics.wheelX, metrics.wheelY);
+    await page.mouse.wheel(0, 420);
+
+    await expect
+      .poll(
+        () =>
+          page.evaluate(() => {
+            return document.querySelector<HTMLElement>('[data-testid="vote-desktop-scroll-container"]')?.scrollTop ?? 0;
+          }),
+        { timeout: 3_000 },
+      )
+      .toBeGreaterThan(0);
   });
 });
