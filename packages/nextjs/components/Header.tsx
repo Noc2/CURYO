@@ -362,10 +362,12 @@ const MobileHeaderSearch = ({ onClose }: { onClose: () => void }) => {
 export const Header = () => {
   const pathname = usePathname() ?? "";
   const [mobileSearchOpen, setMobileSearchOpen] = useState(false);
-  const { isMobileHeaderVisible, setIsMobileHeaderVisible } = useMobileHeaderVisibility();
+  const { isMobileHeaderVisible, mobileHeaderVoteControls, setIsMobileHeaderVisible, setMobileHeaderHeight } =
+    useMobileHeaderVisibility();
   const shouldUseVoteLayoutCollapse = pathname === "/vote";
 
   const burgerMenuRef = useRef<HTMLDetailsElement>(null);
+  const mobileHeaderMeasureRef = useRef<HTMLDivElement>(null);
   const lastScrollStateRef = useRef<{ source: Window | HTMLElement | null; offset: number }>({
     source: null,
     offset: 0,
@@ -373,6 +375,7 @@ export const Header = () => {
   const isMobileHeaderVisibleRef = useRef(isMobileHeaderVisible);
   const lastMobileHeaderVisibilityChangeAtRef = useRef(0);
   const suppressNextVoteRootScrollRef = useRef(false);
+  const [measuredMobileHeaderHeight, setMeasuredMobileHeaderHeight] = useState(160);
   useOutsideClick(burgerMenuRef, () => {
     burgerMenuRef?.current?.removeAttribute("open");
   });
@@ -413,6 +416,57 @@ export const Header = () => {
     suppressNextVoteRootScrollRef.current = false;
     setIsMobileHeaderVisible(true);
   }, [pathname, setIsMobileHeaderVisible]);
+
+  useEffect(() => {
+    if (!shouldUseVoteLayoutCollapse) {
+      setMobileHeaderHeight(0);
+      return;
+    }
+
+    if (typeof window === "undefined") return;
+
+    const measuredNode = mobileHeaderMeasureRef.current;
+    if (!measuredNode) return;
+
+    let frameId = 0;
+    let resizeObserver: ResizeObserver | null = null;
+
+    const updateMobileHeaderHeight = () => {
+      const nextHeight = Math.ceil(measuredNode.getBoundingClientRect().height);
+
+      if (nextHeight <= 0) return;
+
+      setMeasuredMobileHeaderHeight(current => (current === nextHeight ? current : nextHeight));
+      setMobileHeaderHeight(current => (current === nextHeight ? current : nextHeight));
+    };
+
+    const requestMobileHeaderHeightUpdate = () => {
+      if (frameId !== 0) {
+        window.cancelAnimationFrame(frameId);
+      }
+
+      frameId = window.requestAnimationFrame(() => {
+        frameId = 0;
+        updateMobileHeaderHeight();
+      });
+    };
+
+    requestMobileHeaderHeightUpdate();
+    window.addEventListener("resize", requestMobileHeaderHeightUpdate);
+
+    if (typeof ResizeObserver !== "undefined") {
+      resizeObserver = new ResizeObserver(requestMobileHeaderHeightUpdate);
+      resizeObserver.observe(measuredNode);
+    }
+
+    return () => {
+      if (frameId !== 0) {
+        window.cancelAnimationFrame(frameId);
+      }
+      window.removeEventListener("resize", requestMobileHeaderHeightUpdate);
+      resizeObserver?.disconnect();
+    };
+  }, [mobileHeaderVoteControls, mobileSearchOpen, setMobileHeaderHeight, shouldUseVoteLayoutCollapse]);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -704,60 +758,78 @@ export const Header = () => {
         className={`xl:hidden sticky top-0 z-20 duration-200 ease-out ${
           shouldUseVoteLayoutCollapse
             ? `transition-[max-height,opacity] will-change-[max-height,opacity] ${
-                isMobileHeaderVisible ? "max-h-24 overflow-visible opacity-100" : "max-h-0 overflow-hidden opacity-0"
+                isMobileHeaderVisible ? "overflow-visible opacity-100" : "overflow-hidden opacity-0"
               }`
             : `transition-transform will-change-transform ${isMobileHeaderVisible ? "translate-y-0" : "-translate-y-full"}`
         }`}
+        style={
+          shouldUseVoteLayoutCollapse
+            ? { maxHeight: isMobileHeaderVisible ? `${measuredMobileHeaderHeight}px` : "0px" }
+            : undefined
+        }
         data-mobile-header="true"
         data-visible={isMobileHeaderVisible ? "true" : "false"}
       >
-        <div
-          className={`navbar min-h-0 shrink-0 justify-between px-4 py-3 shadow-[0_18px_44px_rgba(9,10,12,0.32)] backdrop-blur-xl sm:px-6 ${headerChromeSurfaceClassName}`}
-        >
-          {mobileSearchOpen ? (
-            <Suspense>
-              <MobileHeaderSearch onClose={() => setMobileSearchOpen(false)} />
-            </Suspense>
-          ) : (
-            <>
-              <div className="flex min-w-0 items-center gap-2">
-                <details
-                  className="dropdown"
-                  ref={burgerMenuRef}
-                  onToggle={() => {
-                    if (burgerMenuRef.current?.open) setIsMobileHeaderVisible(true);
-                  }}
-                >
-                  <summary className="btn btn-ghost btn-sm hover:bg-transparent p-1" aria-label="Open menu">
-                    <Bars3Icon className="h-5 w-5" />
-                  </summary>
-                  <ul
-                    className={`menu menu-compact dropdown-content mt-3 w-64 rounded-xl border p-2 shadow-lg ${headerChromeSurfaceClassName} ${headerChromeBorderClassName}`}
-                    onClick={() => burgerMenuRef?.current?.removeAttribute("open")}
+        <div ref={mobileHeaderMeasureRef} className={`flex min-h-0 flex-col ${headerChromeSurfaceClassName}`}>
+          <div
+            className={`navbar min-h-0 shrink-0 justify-between px-4 py-3 shadow-[0_18px_44px_rgba(9,10,12,0.32)] backdrop-blur-xl sm:px-6 ${headerChromeSurfaceClassName}`}
+            data-mobile-header-navbar="true"
+          >
+            {mobileSearchOpen ? (
+              <Suspense>
+                <MobileHeaderSearch onClose={() => setMobileSearchOpen(false)} />
+              </Suspense>
+            ) : (
+              <>
+                <div className="flex min-w-0 items-center gap-2">
+                  <details
+                    className="dropdown"
+                    ref={burgerMenuRef}
+                    onToggle={() => {
+                      if (burgerMenuRef.current?.open) setIsMobileHeaderVisible(true);
+                    }}
                   >
-                    <Suspense>
-                      <MobileMenuLinks />
-                    </Suspense>
-                  </ul>
-                </details>
-                <HeaderBrand compact />
-              </div>
-              <div className="flex items-center gap-2 shrink-0">
-                <button
-                  type="button"
-                  onClick={() => setMobileSearchOpen(true)}
-                  className="btn btn-ghost btn-sm p-1 sm:hidden"
-                  aria-label="Search content"
-                >
-                  <MagnifyingGlassIcon className="h-5 w-5" />
-                </button>
-                <Suspense>
-                  <HeaderSearchBar />
-                </Suspense>
-                <CuryoConnectButton compact />
-              </div>
-            </>
-          )}
+                    <summary className="btn btn-ghost btn-sm hover:bg-transparent p-1" aria-label="Open menu">
+                      <Bars3Icon className="h-5 w-5" />
+                    </summary>
+                    <ul
+                      className={`menu menu-compact dropdown-content mt-3 w-64 rounded-xl border p-2 shadow-lg ${headerChromeSurfaceClassName} ${headerChromeBorderClassName}`}
+                      onClick={() => burgerMenuRef?.current?.removeAttribute("open")}
+                    >
+                      <Suspense>
+                        <MobileMenuLinks />
+                      </Suspense>
+                    </ul>
+                  </details>
+                  <HeaderBrand compact />
+                </div>
+                <div className="flex items-center gap-2 shrink-0">
+                  <button
+                    type="button"
+                    onClick={() => setMobileSearchOpen(true)}
+                    className="btn btn-ghost btn-sm p-1 sm:hidden"
+                    aria-label="Search content"
+                  >
+                    <MagnifyingGlassIcon className="h-5 w-5" />
+                  </button>
+                  <Suspense>
+                    <HeaderSearchBar />
+                  </Suspense>
+                  <CuryoConnectButton compact />
+                </div>
+              </>
+            )}
+          </div>
+          {shouldUseVoteLayoutCollapse && !mobileSearchOpen && mobileHeaderVoteControls ? (
+            <div
+              className="shrink-0"
+              data-vote-mobile-top-chrome="true"
+              data-visible={isMobileHeaderVisible ? "true" : "false"}
+              inert={isMobileHeaderVisible ? undefined : true}
+            >
+              {mobileHeaderVoteControls}
+            </div>
+          ) : null}
         </div>
       </div>
 
