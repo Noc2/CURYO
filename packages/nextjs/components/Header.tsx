@@ -20,7 +20,7 @@ import { CuryoLogo } from "~~/components/CuryoLogo";
 import { CuryoConnectButton } from "~~/components/scaffold-eth";
 import { AddressInfoDropdown } from "~~/components/scaffold-eth/ConnectButton/AddressInfoDropdown";
 import { DOCS_NAV } from "~~/constants/docsNav";
-import { useMobileHeaderVisibility } from "~~/contexts/MobileHeaderVisibilityContext";
+import { useMobileHeaderVisibility, useMobileHeaderVoteControls } from "~~/contexts/MobileHeaderVisibilityContext";
 import { useOutsideClick } from "~~/hooks/scaffold-eth";
 import { useVoteSearch } from "~~/hooks/useVoteSearch";
 
@@ -362,8 +362,8 @@ const MobileHeaderSearch = ({ onClose }: { onClose: () => void }) => {
 export const Header = () => {
   const pathname = usePathname() ?? "";
   const [mobileSearchOpen, setMobileSearchOpen] = useState(false);
-  const { isMobileHeaderVisible, mobileHeaderVoteControls, setIsMobileHeaderVisible, setMobileHeaderHeight } =
-    useMobileHeaderVisibility();
+  const { isMobileHeaderVisible, setIsMobileHeaderVisible, setMobileHeaderHeight } = useMobileHeaderVisibility();
+  const mobileHeaderVoteControls = useMobileHeaderVoteControls();
   const shouldUseVoteLayoutCollapse = pathname === "/vote";
 
   const burgerMenuRef = useRef<HTMLDetailsElement>(null);

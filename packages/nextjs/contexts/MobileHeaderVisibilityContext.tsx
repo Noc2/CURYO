@@ -13,13 +13,13 @@ import {
 type MobileHeaderVisibilityContextValue = {
   isMobileHeaderVisible: boolean;
   mobileHeaderHeight: number;
-  mobileHeaderVoteControls: ReactNode | null;
   setIsMobileHeaderVisible: Dispatch<SetStateAction<boolean>>;
   setMobileHeaderHeight: Dispatch<SetStateAction<number>>;
   setMobileHeaderVoteControls: Dispatch<SetStateAction<ReactNode | null>>;
 };
 
 const MobileHeaderVisibilityContext = createContext<MobileHeaderVisibilityContextValue | null>(null);
+const MobileHeaderVoteControlsContext = createContext<ReactNode | null>(null);
 
 export function MobileHeaderVisibilityProvider({ children }: { children: ReactNode }) {
   const [isMobileHeaderVisible, setIsMobileHeaderVisible] = useState(true);
@@ -29,7 +29,6 @@ export function MobileHeaderVisibilityProvider({ children }: { children: ReactNo
     () => ({
       isMobileHeaderVisible,
       mobileHeaderHeight,
-      mobileHeaderVoteControls,
       setIsMobileHeaderVisible,
       setMobileHeaderHeight,
       setMobileHeaderVoteControls,
@@ -37,14 +36,19 @@ export function MobileHeaderVisibilityProvider({ children }: { children: ReactNo
     [
       isMobileHeaderVisible,
       mobileHeaderHeight,
-      mobileHeaderVoteControls,
       setIsMobileHeaderVisible,
       setMobileHeaderHeight,
       setMobileHeaderVoteControls,
     ],
   );
 
-  return <MobileHeaderVisibilityContext.Provider value={value}>{children}</MobileHeaderVisibilityContext.Provider>;
+  return (
+    <MobileHeaderVisibilityContext.Provider value={value}>
+      <MobileHeaderVoteControlsContext.Provider value={mobileHeaderVoteControls}>
+        {children}
+      </MobileHeaderVoteControlsContext.Provider>
+    </MobileHeaderVisibilityContext.Provider>
+  );
 }
 
 export function useMobileHeaderVisibility() {
@@ -55,4 +59,8 @@ export function useMobileHeaderVisibility() {
   }
 
   return context;
+}
+
+export function useMobileHeaderVoteControls() {
+  return useContext(MobileHeaderVoteControlsContext);
 }
