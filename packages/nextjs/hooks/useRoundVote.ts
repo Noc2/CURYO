@@ -57,8 +57,12 @@ export function useRoundVote() {
   const { epochDuration } = useVotingConfig();
   const writeTx = useTransactor();
   const wagmiTokenWrite = useWriteContract();
-  const { canUseSponsoredSubmitCalls, executeSponsoredCalls, isAwaitingSponsoredSubmitCalls } =
-    useThirdwebSponsoredSubmitCalls();
+  const {
+    canUseSponsoredSubmitCalls,
+    executeSponsoredCalls,
+    isAwaitingSelfFundedSubmitCalls,
+    isAwaitingSponsoredSubmitCalls,
+  } = useThirdwebSponsoredSubmitCalls();
 
   const { data: votingEngineInfo, isLoading: isVotingEngineLoading } = useDeployedContractInfo({
     contractName: "RoundVotingEngine",
@@ -105,6 +109,11 @@ export function useRoundVote() {
 
     if (isAwaitingSponsoredSubmitCalls) {
       setError("Preparing wallet. Try again in a moment.");
+      return false;
+    }
+
+    if (isAwaitingSelfFundedSubmitCalls) {
+      setError("Wallet switching to paid gas. Retry in a moment.");
       return false;
     }
 
