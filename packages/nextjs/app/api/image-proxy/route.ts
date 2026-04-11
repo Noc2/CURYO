@@ -19,6 +19,7 @@ const ALLOWED_HOSTS = new Set([
   "image.tmdb.org",
   "upload.wikimedia.org",
   "cdn-avatars.huggingface.co",
+  "cdn-thumbnails.huggingface.co",
   "huggingface.co",
   "pbs.twimg.com",
   "media.rawg.io",

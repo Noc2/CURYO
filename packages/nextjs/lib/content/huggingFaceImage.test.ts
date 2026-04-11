@@ -20,6 +20,13 @@ test("getSafeHuggingFaceImageUrl accepts Hugging Face raw model assets", () => {
   );
 });
 
+test("getSafeHuggingFaceImageUrl accepts protocol-relative Hugging Face social thumbnails", () => {
+  assert.equal(
+    getSafeHuggingFaceImageUrl("//cdn-thumbnails.huggingface.co/social-thumbnails/models/google/gemma-4-E2B-it.png"),
+    "https://cdn-thumbnails.huggingface.co/social-thumbnails/models/google/gemma-4-E2B-it.png",
+  );
+});
+
 test("getSafeHuggingFaceImageUrl rejects malformed and non-Hugging Face URLs", () => {
   assert.equal(getSafeHuggingFaceImageUrl("not a url"), null);
   assert.equal(getSafeHuggingFaceImageUrl("http://huggingface.co/example/raw/main/image.png"), null);
