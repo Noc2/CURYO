@@ -23,7 +23,6 @@ import { DOCS_NAV } from "~~/constants/docsNav";
 import { useMobileHeaderVisibility } from "~~/contexts/MobileHeaderVisibilityContext";
 import { useOutsideClick } from "~~/hooks/scaffold-eth";
 import { useVoteSearch } from "~~/hooks/useVoteSearch";
-import { VOTE_MOBILE_CHROME_REVEAL_EVENT } from "~~/lib/vote/mobileChrome";
 
 type HeaderMenuLink = {
   label: string;
@@ -475,24 +474,6 @@ export const Header = () => {
       voteLayoutScrollSequenceIndex = undefined;
     };
 
-    const handleVoteMobileChromeReveal = () => {
-      if (!shouldUseVoteLayoutCollapse || !voteMobileLayoutQuery.matches) return;
-
-      clearDeferredVoteLayoutVisibility();
-
-      if (readRootScrollOffset() > VOTE_ROOT_SCROLL_RECOVERY_MIN_PX) {
-        suppressNextVoteRootScrollRef.current = true;
-        resetRootScrollOffset();
-      }
-
-      setMobileHeaderVisibility(true, { ignoreStabilizeWindow: true });
-      const scrollSource = explicitScrollSource ?? window;
-      lastScrollStateRef.current = {
-        source: scrollSource,
-        offset: readScrollOffset(scrollSource),
-      };
-    };
-
     const handleScroll = (event: Event) => {
       const scrollSource = resolveScrollSource(event.target);
       if (!scrollSource) return;
@@ -695,7 +676,6 @@ export const Header = () => {
 
     setInitialScrollState(window);
     bindExplicitScrollSource();
-    window.addEventListener(VOTE_MOBILE_CHROME_REVEAL_EVENT, handleVoteMobileChromeReveal);
     window.addEventListener("scroll", handleScroll, { capture: true, passive: true });
     mutationObserver.observe(document.body, {
       attributeFilter: [MOBILE_HEADER_SCROLL_SOURCE_ATTRIBUTE],
@@ -713,7 +693,6 @@ export const Header = () => {
       if (explicitScrollSource) {
         explicitScrollSource.removeEventListener("scroll", handleScroll);
       }
-      window.removeEventListener(VOTE_MOBILE_CHROME_REVEAL_EVENT, handleVoteMobileChromeReveal);
       window.removeEventListener("scroll", handleScroll, true);
     };
   }, [mobileSearchOpen, pathname, setMobileHeaderVisibility, shouldUseVoteLayoutCollapse]);
