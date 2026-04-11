@@ -475,6 +475,29 @@ test.describe("Mobile viewport (phone)", () => {
     await expect(activeMoreButton).toHaveAttribute("aria-expanded", "true");
   });
 
+  test("category switches keep the mobile feed controls visible", async ({ connectedPage: page }) => {
+    await gotoWithRetry(page, "/vote#games", { ensureWalletConnected: true });
+    await waitForFeedLoaded(page);
+
+    const voteTopChrome = page.locator('[data-vote-mobile-top-chrome="true"]');
+    await expect(voteTopChrome).toHaveAttribute("data-visible", "true");
+
+    const categoryButton = page.getByRole("button", { name: /^Category: Games$/ }).first();
+    await expect(categoryButton).toBeVisible({ timeout: 10_000 });
+
+    await categoryButton.click();
+    const categoryDialog = page.getByRole("dialog", { name: "Category options" });
+    await expect(categoryDialog).toBeVisible({ timeout: 5_000 });
+    await categoryDialog.getByRole("button", { name: "Crypto Tokens" }).click();
+
+    await expect(page).toHaveURL(/#crypto-tokens$/, { timeout: 5_000 });
+    await expect(voteTopChrome).toHaveAttribute("data-visible", "true");
+    await expect(page.getByRole("button", { name: /^Category: Crypto Tokens$/ }).first()).toBeVisible({
+      timeout: 5_000,
+    });
+    await expect(page.getByRole("button", { name: /^View(?:$|:)/ }).first()).toBeVisible();
+  });
+
   test("mobile header still hides on scroll down and returns on scroll up on landing", async ({
     connectedPage: page,
   }) => {

@@ -10,6 +10,7 @@ import { resolveEndSpacerHeightForLastCardSnap } from "~~/lib/ui/feedScrollSpace
 
 interface VoteFeedStageProps {
   displayFeed: ContentItem[];
+  sessionKey?: string;
   activeSourceIndex: number;
   loadedCount: number;
   mobileDockReservedSpace?: number | null;
@@ -53,6 +54,7 @@ const MOBILE_SCROLL_INDICATOR_ACTIVE_MS = 900;
 
 export function VoteFeedStage({
   displayFeed,
+  sessionKey,
   activeSourceIndex,
   loadedCount,
   mobileDockReservedSpace,
@@ -87,6 +89,7 @@ export function VoteFeedStage({
   const pendingProgrammaticScrollStartedAtRef = useRef<number | null>(null);
   const lastProgrammaticScrollRequestRef = useRef<number | null>(null);
   const lastAutoPrefetchLoadedCountRef = useRef<number | null>(null);
+  const previousSessionKeyRef = useRef(sessionKey);
   const mobileScrollIndicatorTimeoutRef = useRef<number | null>(null);
   const mobileHeaderVisibilityTimeoutRef = useRef<number | null>(null);
   const lastMobileHeadlineGuardStateRef = useRef({
@@ -180,6 +183,45 @@ export function VoteFeedStage({
       }
     };
   }, []);
+
+  useEffect(() => {
+    if (previousSessionKeyRef.current === sessionKey) {
+      return;
+    }
+
+    previousSessionKeyRef.current = sessionKey;
+
+    if (mobileHeaderVisibilityTimeoutRef.current !== null) {
+      window.clearTimeout(mobileHeaderVisibilityTimeoutRef.current);
+      mobileHeaderVisibilityTimeoutRef.current = null;
+    }
+
+    lastObservedActiveIndexRef.current = renderedActiveIndex >= 0 ? renderedActiveIndex : null;
+    queuedNavigationTargetRef.current = null;
+    pendingProgrammaticScrollTargetRef.current = null;
+    pendingProgrammaticScrollStartedAtRef.current = null;
+    lastProgrammaticScrollRequestRef.current = null;
+    lastMobileHeadlineGuardStateRef.current = {
+      index: renderedActiveIndex,
+      topChromeVisible: true,
+    };
+    setIsMobileHeaderVisible(true);
+
+    const scroller = scrollerRef.current;
+    if (!scroller || isDesktopViewport) {
+      return;
+    }
+
+    markMobileHeaderScrollSync(scroller, 0);
+    setMobileScrollerScrollTop(scroller, 0);
+  }, [
+    isDesktopViewport,
+    markMobileHeaderScrollSync,
+    renderedActiveIndex,
+    sessionKey,
+    setIsMobileHeaderVisible,
+    setMobileScrollerScrollTop,
+  ]);
 
   useEffect(() => {
     if (typeof window === "undefined") return;

@@ -379,6 +379,10 @@ export const Header = () => {
 
   useEffect(() => {
     isMobileHeaderVisibleRef.current = isMobileHeaderVisible;
+    if (isMobileHeaderVisible) {
+      lastMobileHeaderVisibilityChangeAtRef.current =
+        typeof performance !== "undefined" && typeof performance.now === "function" ? performance.now() : Date.now();
+    }
   }, [isMobileHeaderVisible]);
 
   const setMobileHeaderVisibility = useCallback(
