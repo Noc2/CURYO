@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import Image from "next/image";
 import { SafeExternalLink } from "~~/components/shared/SafeExternalLink";
 import { getEmbedImageLoadingProps } from "~~/lib/content/embedLoadStrategy";
+import { useEmbedImageLoadState } from "~~/lib/content/useEmbedImageLoadState";
 import type { ContentMetadataResult } from "~~/lib/contentMetadata/types";
 import type { PlatformInfo } from "~~/utils/platforms";
 
@@ -61,12 +62,14 @@ export function TmdbEmbed({ info, compact, isActive = !compact, prefetchedMetada
   const [movie, setMovie] = useState<TmdbMovie | null>(null);
   const [loading, setLoading] = useState(true);
   const [fetchError, setFetchError] = useState(false);
-  const [imageError, setImageError] = useState(false);
-  const [imageLoaded, setImageLoaded] = useState(false);
 
   const movieId = info.id || (info.metadata?.movieId as string);
   const posterImageSrc = movie?.posterUrl ? getPosterImageSrc(movie.posterUrl) : undefined;
   const imageLoadingProps = getEmbedImageLoadingProps(compact, isActive);
+  const { handleImageError, handleImageLoad, handleImageRef, imageError, imageLoaded } = useEmbedImageLoadState(
+    posterImageSrc,
+    imageLoadingProps.loading === "eager",
+  );
 
   useEffect(() => {
     setFetchError(false);
@@ -111,11 +114,6 @@ export function TmdbEmbed({ info, compact, isActive = !compact, prefetchedMetada
       cancelled = true;
     };
   }, [movieId, info.url, prefetchedMetadata]);
-
-  useEffect(() => {
-    setImageError(false);
-    setImageLoaded(false);
-  }, [posterImageSrc]);
 
   // Loading state
   if (loading) {
@@ -191,14 +189,15 @@ export function TmdbEmbed({ info, compact, isActive = !compact, prefetchedMetada
           </div>
         )}
         <img
+          ref={handleImageRef}
           src={posterImageSrc}
           alt={movie.title}
           {...imageLoadingProps}
           className={`rounded-t-xl shadow-lg transition-transform group-hover:scale-[1.02] ${
             compact ? "w-full h-auto aspect-[2/3] object-cover" : "h-full w-full object-contain object-center"
           } ${imageLoaded ? "opacity-100" : "opacity-0"}`}
-          onLoad={() => setImageLoaded(true)}
-          onError={() => setImageError(true)}
+          onLoad={handleImageLoad}
+          onError={handleImageError}
         />
         <div className="absolute bottom-0 left-0 right-0 p-3 bg-gradient-to-t from-black/70 to-transparent opacity-0 group-hover:opacity-100 transition-opacity">
           <p className="text-white text-base font-bold text-center">

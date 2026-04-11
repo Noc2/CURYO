@@ -65,6 +65,7 @@ export function CoinGeckoEmbed({ info, compact, isActive = !compact, prefetchedM
   const canFallbackImage = imageCandidateIndex < imageCandidates.length - 1;
   const imageSrc = activeImageUrl ? `/api/image-proxy?url=${encodeURIComponent(activeImageUrl)}` : undefined;
   const imageLoadingProps = getEmbedImageLoadingProps(compact, isActive);
+  const shouldTimeoutImageLoad = imageLoadingProps.loading === "eager";
 
   function advanceImageCandidate() {
     if (!canFallbackImage) {
@@ -143,7 +144,7 @@ export function CoinGeckoEmbed({ info, compact, isActive = !compact, prefetchedM
   }, [token?.imageUrl, token?.thumbnailUrl]);
 
   useEffect(() => {
-    if (!imageSrc || imageLoaded) return;
+    if (!imageSrc || imageLoaded || !shouldTimeoutImageLoad) return;
 
     const timeout = window.setTimeout(() => {
       const loadState = getImageLoadState(imageRef.current);
@@ -164,7 +165,7 @@ export function CoinGeckoEmbed({ info, compact, isActive = !compact, prefetchedM
     return () => {
       window.clearTimeout(timeout);
     };
-  }, [canFallbackImage, imageLoaded, imageSrc, imageCandidates.length]);
+  }, [canFallbackImage, imageLoaded, imageSrc, imageCandidates.length, shouldTimeoutImageLoad]);
 
   // Loading state
   if (loading) {

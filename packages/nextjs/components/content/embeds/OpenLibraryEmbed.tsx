@@ -72,6 +72,7 @@ export function OpenLibraryEmbed({ info, compact, isActive = !compact, prefetche
   const imageSrc = activeCoverUrl ? `/api/image-proxy?url=${encodeURIComponent(activeCoverUrl)}` : undefined;
   const canFallbackCover = coverCandidateIndex < coverCandidates.length - 1;
   const imageLoadingProps = getEmbedImageLoadingProps(compact, isActive);
+  const shouldTimeoutImageLoad = imageLoadingProps.loading === "eager";
 
   function advanceCoverCandidate() {
     if (!canFallbackCover) {
@@ -150,7 +151,7 @@ export function OpenLibraryEmbed({ info, compact, isActive = !compact, prefetche
   }, [book?.coverUrl, book?.thumbnailUrl]);
 
   useEffect(() => {
-    if (!imageSrc || imageLoaded) return;
+    if (!imageSrc || imageLoaded || !shouldTimeoutImageLoad) return;
 
     const timeout = window.setTimeout(() => {
       const loadState = getImageLoadState(imageRef.current);
@@ -171,7 +172,7 @@ export function OpenLibraryEmbed({ info, compact, isActive = !compact, prefetche
     return () => {
       window.clearTimeout(timeout);
     };
-  }, [canFallbackCover, coverCandidates.length, imageLoaded, imageSrc]);
+  }, [canFallbackCover, coverCandidates.length, imageLoaded, imageSrc, shouldTimeoutImageLoad]);
 
   // Loading state
   if (loading) {

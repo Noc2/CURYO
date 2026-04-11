@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { SafeExternalLink } from "~~/components/shared/SafeExternalLink";
 import { getEmbedImageLoadingProps } from "~~/lib/content/embedLoadStrategy";
+import { useEmbedImageLoadState } from "~~/lib/content/useEmbedImageLoadState";
 import type { ContentMetadataResult } from "~~/lib/contentMetadata/types";
 import type { PlatformInfo } from "~~/utils/platforms";
 
@@ -58,14 +59,16 @@ export function RawgEmbed({ info, compact, isActive = !compact, prefetchedMetada
   const [game, setGame] = useState<RawgGame | null>(null);
   const [loading, setLoading] = useState(true);
   const [fetchError, setFetchError] = useState(false);
-  const [imageError, setImageError] = useState(false);
-  const [imageLoaded, setImageLoaded] = useState(false);
 
   const slug = info.id || (info.metadata?.slug as string);
   const imageSrc = game?.backgroundImage
     ? `/api/image-proxy?url=${encodeURIComponent(game.backgroundImage)}`
     : undefined;
   const imageLoadingProps = getEmbedImageLoadingProps(compact, isActive);
+  const { handleImageError, handleImageLoad, handleImageRef, imageError, imageLoaded } = useEmbedImageLoadState(
+    imageSrc,
+    imageLoadingProps.loading === "eager",
+  );
 
   useEffect(() => {
     setLoading(true);
@@ -100,11 +103,6 @@ export function RawgEmbed({ info, compact, isActive = !compact, prefetchedMetada
       cancelled = true;
     };
   }, [slug, prefetchedMetadata]);
-
-  useEffect(() => {
-    setImageError(false);
-    setImageLoaded(false);
-  }, [imageSrc]);
 
   // Loading state
   if (loading) {
@@ -177,14 +175,15 @@ export function RawgEmbed({ info, compact, isActive = !compact, prefetchedMetada
           </div>
         )}
         <img
+          ref={handleImageRef}
           src={imageSrc}
           alt={game.name}
           {...imageLoadingProps}
           className={`rounded-t-xl shadow-lg transition-transform group-hover:scale-[1.02] ${
             compact ? "w-full h-auto aspect-video object-cover" : "h-full w-full object-cover"
           } ${imageLoaded ? "opacity-100" : "opacity-0"}`}
-          onLoad={() => setImageLoaded(true)}
-          onError={() => setImageError(true)}
+          onLoad={handleImageLoad}
+          onError={handleImageError}
         />
         <div className="absolute bottom-0 left-0 right-0 p-3 bg-gradient-to-t from-black/70 to-transparent opacity-0 group-hover:opacity-100 transition-opacity">
           <p className="text-white text-base font-bold text-center">{game.name}</p>

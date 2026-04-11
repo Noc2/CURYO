@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { SafeExternalLink } from "~~/components/shared/SafeExternalLink";
 import { getEmbedImageLoadingProps } from "~~/lib/content/embedLoadStrategy";
 import { getSafeHuggingFaceImageUrl, isHuggingFaceAvatarUrl } from "~~/lib/content/huggingFaceImage";
+import { useEmbedImageLoadState } from "~~/lib/content/useEmbedImageLoadState";
 import type { ContentMetadataResult } from "~~/lib/contentMetadata/types";
 import type { PlatformInfo } from "~~/utils/platforms";
 
@@ -48,8 +49,6 @@ function getPrefetchedHuggingFaceModel(modelId: string, prefetchedMetadata?: Con
 export function HuggingFaceEmbed({ info, compact, isActive = !compact, prefetchedMetadata }: HuggingFaceEmbedProps) {
   const [model, setModel] = useState<HuggingFaceModel | null>(null);
   const [loading, setLoading] = useState(true);
-  const [imageError, setImageError] = useState(false);
-  const [imageLoaded, setImageLoaded] = useState(false);
 
   const modelId = info.id || (info.metadata?.modelId as string);
   const safeImageUrl =
@@ -60,6 +59,10 @@ export function HuggingFaceEmbed({ info, compact, isActive = !compact, prefetche
   const imageSrc = safeImageUrl ? `/api/image-proxy?url=${encodeURIComponent(safeImageUrl)}` : undefined;
   const avatarSrc = safeAvatarUrl ? `/api/image-proxy?url=${encodeURIComponent(safeAvatarUrl)}` : undefined;
   const imageLoadingProps = getEmbedImageLoadingProps(compact, isActive);
+  const { handleImageError, handleImageLoad, handleImageRef, imageError, imageLoaded } = useEmbedImageLoadState(
+    imageSrc,
+    imageLoadingProps.loading === "eager",
+  );
 
   useEffect(() => {
     if (!modelId) {
@@ -103,11 +106,6 @@ export function HuggingFaceEmbed({ info, compact, isActive = !compact, prefetche
       cancelled = true;
     };
   }, [modelId, info.url, prefetchedMetadata]);
-
-  useEffect(() => {
-    setImageError(false);
-    setImageLoaded(false);
-  }, [imageSrc]);
 
   if (loading) {
     return (
@@ -179,6 +177,7 @@ export function HuggingFaceEmbed({ info, compact, isActive = !compact, prefetche
         )}
         <div className="flex h-full w-full items-center justify-center p-10 embed-surface">
           <img
+            ref={handleImageRef}
             src={imageSrc}
             alt={model.name}
             width={192}
@@ -187,8 +186,8 @@ export function HuggingFaceEmbed({ info, compact, isActive = !compact, prefetche
             className={`aspect-square h-auto w-[clamp(11rem,58%,24rem)] max-h-[72%] rounded-2xl shadow-lg transition-transform group-hover:scale-[1.05] object-cover ${
               imageLoaded ? "opacity-100" : "opacity-0"
             }`}
-            onLoad={() => setImageLoaded(true)}
-            onError={() => setImageError(true)}
+            onLoad={handleImageLoad}
+            onError={handleImageError}
           />
         </div>
       </SafeExternalLink>
