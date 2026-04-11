@@ -170,21 +170,21 @@ export function HuggingFaceEmbed({ info, compact, isActive = !compact, prefetche
   // Image card with org avatar and metadata
   return (
     <div className="block w-full overflow-hidden rounded-xl bg-base-200 embed-surface relative h-full flex flex-col">
-      <SafeExternalLink href={info.url} className="flex-1 flex items-center justify-center relative group">
+      <SafeExternalLink href={info.url} className="group relative flex min-h-0 flex-1 items-center justify-center">
         {!imageLoaded && (
           <div className="absolute inset-0 flex items-center justify-center embed-surface">
             <span className="loading loading-spinner loading-md text-primary"></span>
           </div>
         )}
-        <div className="flex h-full w-full items-center justify-center p-10 embed-surface">
+        <div className="flex min-h-0 h-full w-full items-center justify-center p-3 embed-surface sm:p-4">
           <img
             ref={handleImageRef}
             src={imageSrc}
             alt={model.name}
-            width={192}
-            height={192}
+            width={1200}
+            height={630}
             {...imageLoadingProps}
-            className={`aspect-square h-auto w-[clamp(11rem,58%,24rem)] max-h-[72%] rounded-2xl shadow-lg transition-transform group-hover:scale-[1.05] object-cover ${
+            className={`h-full w-full rounded-2xl object-contain object-center shadow-lg transition-transform group-hover:scale-[1.02] ${
               imageLoaded ? "opacity-100" : "opacity-0"
             }`}
             onLoad={handleImageLoad}

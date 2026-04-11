@@ -1544,7 +1544,9 @@ const HomeInner = () => {
   const voteTopChrome = (
     <div
       className={`grid shrink-0 overflow-hidden transition-[grid-template-rows,margin-bottom,opacity] duration-200 ease-out will-change-[grid-template-rows,margin-bottom,opacity] xl:mb-4 xl:block xl:overflow-visible xl:opacity-100 ${
-        isVoteTopChromeCollapsed ? "mb-0 grid-rows-[0fr] opacity-0" : "mb-2 grid-rows-[1fr] opacity-100"
+        isVoteTopChromeCollapsed
+          ? "pointer-events-none mb-0 grid-rows-[0fr] opacity-0"
+          : "pointer-events-auto mb-2 grid-rows-[1fr] opacity-100"
       }`}
       data-vote-mobile-top-chrome="true"
       data-visible={isVoteTopChromeCollapsed ? "false" : "true"}
@@ -1723,9 +1725,9 @@ const HomeInner = () => {
         <div
           ref={mobileDockContainerRef}
           data-testid="vote-mobile-dock"
-          className="fixed inset-x-0 bottom-0 z-30 xl:hidden"
+          className="pointer-events-none fixed inset-x-0 bottom-0 z-30 isolate xl:hidden"
         >
-          <div className="w-full">
+          <div className="pointer-events-auto w-full">
             <div className="overflow-visible">
               <VotingQuestionCard
                 contentId={primaryItem.id}
