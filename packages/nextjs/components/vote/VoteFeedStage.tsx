@@ -221,6 +221,7 @@ export function VoteFeedStage({
   }, [
     isDesktopViewport,
     markMobileHeaderScrollSync,
+    mobileTopChromeHeight,
     renderedActiveIndex,
     sessionKey,
     setIsMobileHeaderVisible,
