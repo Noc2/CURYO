@@ -300,7 +300,7 @@ const HomeInner = () => {
     if (feedRequestLimit === undefined) return scopedContentIds;
     return scopedContentIds.slice(0, feedRequestLimit);
   }, [scopedContentIds, feedRequestLimit]);
-  const effectiveRequestedActiveId = activeCategory === ALL_FILTER ? requestedActiveId : null;
+  const effectiveRequestedActiveId = requestedActiveId;
   const requestedContentIds = useMemo(
     () => (effectiveRequestedActiveId !== null ? [effectiveRequestedActiveId] : undefined),
     [effectiveRequestedActiveId],
@@ -1072,7 +1072,6 @@ const HomeInner = () => {
     (name: string) => {
       setActiveCategory(name);
       replaceVoteLocation({
-        contentId: null,
         categoryHash: name === ALL_FILTER ? null : slugify(name),
       });
     },
