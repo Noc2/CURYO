@@ -396,6 +396,85 @@ test.describe("Mobile viewport (phone)", () => {
     expect(restoredLayout.activeTitleBottom).toBeLessThanOrEqual(restoredLayout.scrollerBottom + 1);
   });
 
+  test("last category card snaps above the mobile dock and opens More", async ({ connectedPage: page }) => {
+    await gotoWithRetry(page, "/vote#crypto-tokens", { ensureWalletConnected: true });
+    await waitForFeedLoaded(page);
+
+    await expect(page.getByRole("button", { name: /^Category: Crypto Tokens$/ }).first()).toBeVisible({
+      timeout: 10_000,
+    });
+
+    const lastIndex = await page.evaluate(() => {
+      const articles = Array.from(document.querySelectorAll<HTMLElement>("article[data-feed-card-index]"));
+      if (articles.length < 2) {
+        throw new Error("Expected multiple Crypto Tokens cards in the mobile feed");
+      }
+
+      return Number(articles.at(-1)?.getAttribute("data-feed-card-index") ?? -1);
+    });
+
+    await page.evaluate(() => {
+      const explicitScrollSource = document.querySelector<HTMLElement>('[data-mobile-header-scroll-source="true"]');
+      if (!explicitScrollSource) {
+        throw new Error("Missing mobile feed scroller");
+      }
+
+      const previousScrollBehavior = explicitScrollSource.style.scrollBehavior;
+      explicitScrollSource.style.scrollBehavior = "auto";
+      explicitScrollSource.scrollTop = explicitScrollSource.scrollHeight;
+      explicitScrollSource.dispatchEvent(new Event("scroll", { bubbles: true }));
+      explicitScrollSource.style.scrollBehavior = previousScrollBehavior;
+    });
+
+    await expect
+      .poll(
+        () =>
+          page.evaluate(() => {
+            const activeArticle = document.querySelector<HTMLElement>('article[aria-current="true"]');
+            return Number(activeArticle?.getAttribute("data-feed-card-index") ?? -1);
+          }),
+        { timeout: 3_000 },
+      )
+      .toBe(lastIndex);
+
+    const activeMoreButton = page.locator('article[aria-current="true"] button[aria-label="Expand details"]').first();
+    await expect(activeMoreButton).toBeVisible({ timeout: 5_000 });
+
+    const layout = await activeMoreButton.evaluate(button => {
+      const scroller = document.querySelector<HTMLElement>('[data-mobile-header-scroll-source="true"]');
+      const activeArticle = document.querySelector<HTMLElement>('article[aria-current="true"]');
+      const mobileDock = document.querySelector<HTMLElement>('[data-testid="vote-mobile-dock"]');
+
+      if (!scroller || !activeArticle || !mobileDock) {
+        throw new Error("Missing mobile feed layout elements");
+      }
+
+      const scrollerRect = scroller.getBoundingClientRect();
+      const activeArticleRect = activeArticle.getBoundingClientRect();
+      const buttonRect = button.getBoundingClientRect();
+      const dockRect = mobileDock.getBoundingClientRect();
+      const topElement = document.elementFromPoint(
+        buttonRect.left + buttonRect.width / 2,
+        buttonRect.top + buttonRect.height / 2,
+      );
+
+      return {
+        activeMoreBottom: buttonRect.bottom,
+        activeMoreCenterTopmost: topElement === button || button.contains(topElement),
+        activeTop: activeArticleRect.top,
+        dockTop: dockRect.top,
+        scrollerTop: scrollerRect.top,
+      };
+    });
+
+    expect(Math.abs(layout.activeTop - layout.scrollerTop - 12)).toBeLessThanOrEqual(24);
+    expect(layout.activeMoreBottom).toBeLessThanOrEqual(layout.dockTop - 1);
+    expect(layout.activeMoreCenterTopmost).toBe(true);
+
+    await activeMoreButton.click();
+    await expect(activeMoreButton).toHaveAttribute("aria-expanded", "true");
+  });
+
   test("mobile header still hides on scroll down and returns on scroll up on landing", async ({
     connectedPage: page,
   }) => {

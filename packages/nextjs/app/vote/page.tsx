@@ -1574,7 +1574,11 @@ const HomeInner = () => {
       </div>
 
       {primaryItem ? (
-        <div ref={mobileDockContainerRef} className="fixed inset-x-0 bottom-0 z-30 xl:hidden">
+        <div
+          ref={mobileDockContainerRef}
+          data-testid="vote-mobile-dock"
+          className="fixed inset-x-0 bottom-0 z-30 xl:hidden"
+        >
           <div className="w-full">
             <div className="overflow-visible">
               <VotingQuestionCard
