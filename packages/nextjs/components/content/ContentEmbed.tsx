@@ -110,21 +110,39 @@ export function ContentEmbed({
       embed = <TwitchEmbed key={url} info={platformInfo} compact={compact} />;
       break;
     case "scryfall":
-      embed = <ScryfallEmbed key={url} info={platformInfo} compact={compact} />;
+      embed = <ScryfallEmbed key={url} info={platformInfo} compact={compact} isActive={isActive} />;
       break;
     case "tmdb":
       embed = (
-        <TmdbEmbed key={url} info={platformInfo} compact={compact} prefetchedMetadata={usablePrefetchedMetadata} />
+        <TmdbEmbed
+          key={url}
+          info={platformInfo}
+          compact={compact}
+          isActive={isActive}
+          prefetchedMetadata={usablePrefetchedMetadata}
+        />
       );
       break;
     case "wikipedia":
       embed = (
-        <WikipediaEmbed key={url} info={platformInfo} compact={compact} prefetchedMetadata={usablePrefetchedMetadata} />
+        <WikipediaEmbed
+          key={url}
+          info={platformInfo}
+          compact={compact}
+          isActive={isActive}
+          prefetchedMetadata={usablePrefetchedMetadata}
+        />
       );
       break;
     case "rawg":
       embed = (
-        <RawgEmbed key={url} info={platformInfo} compact={compact} prefetchedMetadata={usablePrefetchedMetadata} />
+        <RawgEmbed
+          key={url}
+          info={platformInfo}
+          compact={compact}
+          isActive={isActive}
+          prefetchedMetadata={usablePrefetchedMetadata}
+        />
       );
       break;
     case "openlibrary":
@@ -133,6 +151,7 @@ export function ContentEmbed({
           key={url}
           info={platformInfo}
           compact={compact}
+          isActive={isActive}
           prefetchedMetadata={usablePrefetchedMetadata}
         />
       );
@@ -142,7 +161,13 @@ export function ContentEmbed({
       break;
     case "coingecko":
       embed = (
-        <CoinGeckoEmbed key={url} info={platformInfo} compact={compact} prefetchedMetadata={usablePrefetchedMetadata} />
+        <CoinGeckoEmbed
+          key={url}
+          info={platformInfo}
+          compact={compact}
+          isActive={isActive}
+          prefetchedMetadata={usablePrefetchedMetadata}
+        />
       );
       break;
     case "huggingface":
@@ -151,6 +176,7 @@ export function ContentEmbed({
           key={url}
           info={platformInfo}
           compact={compact}
+          isActive={isActive}
           prefetchedMetadata={usablePrefetchedMetadata}
         />
       );
@@ -160,7 +186,13 @@ export function ContentEmbed({
       break;
     case "github":
       embed = (
-        <GitHubEmbed key={url} info={platformInfo} compact={compact} prefetchedMetadata={usablePrefetchedMetadata} />
+        <GitHubEmbed
+          key={url}
+          info={platformInfo}
+          compact={compact}
+          isActive={isActive}
+          prefetchedMetadata={usablePrefetchedMetadata}
+        />
       );
       break;
     default:

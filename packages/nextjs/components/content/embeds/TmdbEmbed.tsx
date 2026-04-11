@@ -10,6 +10,7 @@ import type { PlatformInfo } from "~~/utils/platforms";
 interface TmdbEmbedProps {
   info: PlatformInfo;
   compact?: boolean;
+  isActive?: boolean;
   prefetchedMetadata?: ContentMetadataResult;
 }
 
@@ -56,7 +57,7 @@ function getPrefetchedTmdbMovie(movieId: string, prefetchedMetadata?: ContentMet
  * Fetches movie data via server-side proxy to hide API key and cache results.
  * Includes required TMDB attribution.
  */
-export function TmdbEmbed({ info, compact, prefetchedMetadata }: TmdbEmbedProps) {
+export function TmdbEmbed({ info, compact, isActive = !compact, prefetchedMetadata }: TmdbEmbedProps) {
   const [movie, setMovie] = useState<TmdbMovie | null>(null);
   const [loading, setLoading] = useState(true);
   const [fetchError, setFetchError] = useState(false);
@@ -65,7 +66,7 @@ export function TmdbEmbed({ info, compact, prefetchedMetadata }: TmdbEmbedProps)
 
   const movieId = info.id || (info.metadata?.movieId as string);
   const posterImageSrc = movie?.posterUrl ? getPosterImageSrc(movie.posterUrl) : undefined;
-  const imageLoadingProps = getEmbedImageLoadingProps(compact);
+  const imageLoadingProps = getEmbedImageLoadingProps(compact, isActive);
 
   useEffect(() => {
     setFetchError(false);

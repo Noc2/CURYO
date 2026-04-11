@@ -9,6 +9,7 @@ import type { PlatformInfo } from "~~/utils/platforms";
 interface RawgEmbedProps {
   info: PlatformInfo;
   compact?: boolean;
+  isActive?: boolean;
   prefetchedMetadata?: ContentMetadataResult;
 }
 
@@ -53,7 +54,7 @@ function getPrefetchedRawgGame(slug: string, prefetchedMetadata?: ContentMetadat
   };
 }
 
-export function RawgEmbed({ info, compact, prefetchedMetadata }: RawgEmbedProps) {
+export function RawgEmbed({ info, compact, isActive = !compact, prefetchedMetadata }: RawgEmbedProps) {
   const [game, setGame] = useState<RawgGame | null>(null);
   const [loading, setLoading] = useState(true);
   const [fetchError, setFetchError] = useState(false);
@@ -64,7 +65,7 @@ export function RawgEmbed({ info, compact, prefetchedMetadata }: RawgEmbedProps)
   const imageSrc = game?.backgroundImage
     ? `/api/image-proxy?url=${encodeURIComponent(game.backgroundImage)}`
     : undefined;
-  const imageLoadingProps = getEmbedImageLoadingProps(compact);
+  const imageLoadingProps = getEmbedImageLoadingProps(compact, isActive);
 
   useEffect(() => {
     setLoading(true);

@@ -9,6 +9,7 @@ import type { PlatformInfo } from "~~/utils/platforms";
 interface GitHubEmbedProps {
   info: PlatformInfo;
   compact?: boolean;
+  isActive?: boolean;
   prefetchedMetadata?: ContentMetadataResult;
 }
 
@@ -73,7 +74,7 @@ function getPrefetchedGitHubRepo(repoSlug: string, prefetchedMetadata?: ContentM
  * GitHub repository embed component.
  * Fetches repo data via server-side proxy and displays a rich card.
  */
-export function GitHubEmbed({ info, compact, prefetchedMetadata }: GitHubEmbedProps) {
+export function GitHubEmbed({ info, compact, isActive = !compact, prefetchedMetadata }: GitHubEmbedProps) {
   const [repo, setRepo] = useState<GitHubRepo | null>(null);
   const [loading, setLoading] = useState(true);
   const [imageError, setImageError] = useState(false);
@@ -82,7 +83,7 @@ export function GitHubEmbed({ info, compact, prefetchedMetadata }: GitHubEmbedPr
   const repoSlug =
     info.id || (info.metadata?.owner && info.metadata?.repo ? `${info.metadata.owner}/${info.metadata.repo}` : null);
   const imageSrc = repo?.imageUrl ? `/api/image-proxy?url=${encodeURIComponent(repo.imageUrl)}` : undefined;
-  const imageLoadingProps = getEmbedImageLoadingProps(compact);
+  const imageLoadingProps = getEmbedImageLoadingProps(compact, isActive);
 
   useEffect(() => {
     if (!repoSlug) {

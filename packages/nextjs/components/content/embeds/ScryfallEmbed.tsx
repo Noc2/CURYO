@@ -8,6 +8,7 @@ import type { PlatformInfo } from "~~/utils/platforms";
 interface ScryfallEmbedProps {
   info: PlatformInfo;
   compact?: boolean;
+  isActive?: boolean;
 }
 
 function MtgIcon({ className }: { className?: string }) {
@@ -22,10 +23,10 @@ function MtgIcon({ className }: { className?: string }) {
  * Scryfall MTG card embed.
  * Displays the card image directly from Scryfall API.
  */
-export function ScryfallEmbed({ info, compact }: ScryfallEmbedProps) {
+export function ScryfallEmbed({ info, compact, isActive = !compact }: ScryfallEmbedProps) {
   const [imageError, setImageError] = useState(false);
   const [imageLoaded, setImageLoaded] = useState(false);
-  const imageLoadingProps = getEmbedImageLoadingProps(compact);
+  const imageLoadingProps = getEmbedImageLoadingProps(compact, isActive);
 
   const cardName = (info.metadata?.cardName as string)?.replace(/-/g, " ") || "MTG Card";
   const formattedName = cardName

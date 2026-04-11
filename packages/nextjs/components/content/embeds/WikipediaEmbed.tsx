@@ -9,6 +9,7 @@ import type { PlatformInfo } from "~~/utils/platforms";
 interface WikipediaEmbedProps {
   info: PlatformInfo;
   compact?: boolean;
+  isActive?: boolean;
   prefetchedMetadata?: ContentMetadataResult;
 }
 
@@ -40,7 +41,7 @@ function getPrefetchedWikipediaPerson(title: string, prefetchedMetadata?: Conten
  * Wikipedia person/article embed component.
  * Fetches data via server-side proxy to avoid CORS and cache results.
  */
-export function WikipediaEmbed({ info, compact, prefetchedMetadata }: WikipediaEmbedProps) {
+export function WikipediaEmbed({ info, compact, isActive = !compact, prefetchedMetadata }: WikipediaEmbedProps) {
   const [person, setPerson] = useState<WikipediaPerson | null>(null);
   const [loading, setLoading] = useState(true);
   const [fetchError, setFetchError] = useState(false);
@@ -49,7 +50,7 @@ export function WikipediaEmbed({ info, compact, prefetchedMetadata }: WikipediaE
 
   const title = info.id || (info.metadata?.title as string);
   const imageSrc = person?.imageUrl ? `/api/image-proxy?url=${encodeURIComponent(person.imageUrl)}` : undefined;
-  const imageLoadingProps = getEmbedImageLoadingProps(compact);
+  const imageLoadingProps = getEmbedImageLoadingProps(compact, isActive);
 
   useEffect(() => {
     setFetchError(false);

@@ -10,6 +10,7 @@ import type { PlatformInfo } from "~~/utils/platforms";
 interface HuggingFaceEmbedProps {
   info: PlatformInfo;
   compact?: boolean;
+  isActive?: boolean;
   prefetchedMetadata?: ContentMetadataResult;
 }
 
@@ -44,7 +45,7 @@ function getPrefetchedHuggingFaceModel(modelId: string, prefetchedMetadata?: Con
  * HuggingFace model embed component.
  * Fetches model data and org avatar via server-side proxy.
  */
-export function HuggingFaceEmbed({ info, compact, prefetchedMetadata }: HuggingFaceEmbedProps) {
+export function HuggingFaceEmbed({ info, compact, isActive = !compact, prefetchedMetadata }: HuggingFaceEmbedProps) {
   const [model, setModel] = useState<HuggingFaceModel | null>(null);
   const [loading, setLoading] = useState(true);
   const [imageError, setImageError] = useState(false);
@@ -58,7 +59,7 @@ export function HuggingFaceEmbed({ info, compact, prefetchedMetadata }: HuggingF
     (model?.imageUrl && isHuggingFaceAvatarUrl(model.imageUrl) ? getSafeHuggingFaceImageUrl(model.imageUrl) : null);
   const imageSrc = safeImageUrl ? `/api/image-proxy?url=${encodeURIComponent(safeImageUrl)}` : undefined;
   const avatarSrc = safeAvatarUrl ? `/api/image-proxy?url=${encodeURIComponent(safeAvatarUrl)}` : undefined;
-  const imageLoadingProps = getEmbedImageLoadingProps(compact);
+  const imageLoadingProps = getEmbedImageLoadingProps(compact, isActive);
 
   useEffect(() => {
     if (!modelId) {

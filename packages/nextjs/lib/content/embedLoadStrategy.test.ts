@@ -25,6 +25,18 @@ test("getEmbedImageLoadingProps prioritizes the primary vote card image", () => 
     fetchPriority: "auto",
     decoding: "async",
   });
+
+  assert.deepEqual(getEmbedImageLoadingProps(true, true), {
+    loading: "eager",
+    fetchPriority: "high",
+    decoding: "async",
+  });
+
+  assert.deepEqual(getEmbedImageLoadingProps(false, false), {
+    loading: "lazy",
+    fetchPriority: "auto",
+    decoding: "async",
+  });
 });
 
 test("getUsablePrefetchedMetadata lets CoinGecko retry when prefetch missed image urls", () => {

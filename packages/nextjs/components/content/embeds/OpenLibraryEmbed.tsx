@@ -10,6 +10,7 @@ import type { PlatformInfo } from "~~/utils/platforms";
 interface OpenLibraryEmbedProps {
   info: PlatformInfo;
   compact?: boolean;
+  isActive?: boolean;
   prefetchedMetadata?: ContentMetadataResult;
 }
 
@@ -56,7 +57,7 @@ function getImageLoadState(image: ImageLoadSnapshot | null): "pending" | "loaded
  * Open Library book embed component.
  * Fetches book data via server-side proxy (resolves authors server-side, cached 24h).
  */
-export function OpenLibraryEmbed({ info, compact, prefetchedMetadata }: OpenLibraryEmbedProps) {
+export function OpenLibraryEmbed({ info, compact, isActive = !compact, prefetchedMetadata }: OpenLibraryEmbedProps) {
   const [book, setBook] = useState<OpenLibraryBook | null>(null);
   const [loading, setLoading] = useState(true);
   const [fetchError, setFetchError] = useState(false);
@@ -70,7 +71,7 @@ export function OpenLibraryEmbed({ info, compact, prefetchedMetadata }: OpenLibr
   const activeCoverUrl = coverCandidates[coverCandidateIndex];
   const imageSrc = activeCoverUrl ? `/api/image-proxy?url=${encodeURIComponent(activeCoverUrl)}` : undefined;
   const canFallbackCover = coverCandidateIndex < coverCandidates.length - 1;
-  const imageLoadingProps = getEmbedImageLoadingProps(compact);
+  const imageLoadingProps = getEmbedImageLoadingProps(compact, isActive);
 
   function advanceCoverCandidate() {
     if (!canFallbackCover) {
