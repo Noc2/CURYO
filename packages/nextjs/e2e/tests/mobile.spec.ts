@@ -479,8 +479,58 @@ test.describe("Mobile viewport (phone)", () => {
     await gotoWithRetry(page, "/vote#games", { ensureWalletConnected: true });
     await waitForFeedLoaded(page);
 
+    const mobileHeader = page.locator('[data-mobile-header="true"]');
     const voteTopChrome = page.locator('[data-vote-mobile-top-chrome="true"]');
     await expect(voteTopChrome).toHaveAttribute("data-visible", "true");
+
+    const schedulePendingChromeHide = async () => {
+      await page.evaluate(async () => {
+        const scroller = document.querySelector<HTMLElement>('[data-mobile-header-scroll-source="true"]');
+        if (!scroller) throw new Error("Missing mobile vote scroll source");
+
+        const maxScrollTop = Math.max(scroller.scrollHeight - scroller.clientHeight, 0);
+        if (maxScrollTop < 48) throw new Error("Mobile vote feed cannot scroll far enough for chrome test");
+
+        const nextScrollTop = Math.min(scroller.scrollTop + 96, maxScrollTop);
+        scroller.scrollTop = nextScrollTop;
+        scroller.dispatchEvent(new Event("scroll", { bubbles: true }));
+
+        await new Promise<void>(resolve => {
+          window.requestAnimationFrame(() => resolve());
+        });
+      });
+    };
+
+    const expectMobileChromeVisible = async () => {
+      await expect(mobileHeader).toHaveAttribute("data-visible", "true");
+      await expect(voteTopChrome).toHaveAttribute("data-visible", "true");
+      await expect(page.getByRole("button", { name: /^Category:/ }).first()).toBeVisible();
+      await expect(page.getByRole("button", { name: /^View(?:$|:)/ }).first()).toBeVisible();
+
+      const layout = await page.evaluate(() => {
+        const topChrome = document.querySelector<HTMLElement>('[data-vote-mobile-top-chrome="true"]');
+        const mobileHeader = document.querySelector<HTMLElement>('[data-mobile-header="true"]');
+        const activeTitle = document.querySelector<HTMLElement>('article[aria-current="true"] h2');
+        const scroller = document.querySelector<HTMLElement>('[data-mobile-header-scroll-source="true"]');
+        const topChromeRect = topChrome?.getBoundingClientRect() ?? null;
+        const activeTitleRect = activeTitle?.getBoundingClientRect() ?? null;
+        const scrollerRect = scroller?.getBoundingClientRect() ?? null;
+
+        return {
+          activeTitleTop: activeTitleRect?.top ?? 0,
+          documentScrollTop: document.scrollingElement?.scrollTop ?? 0,
+          mobileHeaderBottom: mobileHeader?.getBoundingClientRect().bottom ?? 0,
+          scrollerTop: scrollerRect?.top ?? 0,
+          topChromeHeight: topChromeRect?.height ?? 0,
+          topChromeTop: topChromeRect?.top ?? 0,
+        };
+      });
+
+      expect(layout.documentScrollTop).toBe(0);
+      expect(layout.topChromeHeight).toBeGreaterThan(20);
+      expect(layout.topChromeTop).toBeGreaterThanOrEqual(layout.mobileHeaderBottom - 1);
+      expect(layout.activeTitleTop).toBeGreaterThanOrEqual(layout.scrollerTop - 1);
+    };
 
     const categoryButton = page.getByRole("button", { name: /^Category: Games$/ }).first();
     await expect(categoryButton).toBeVisible({ timeout: 10_000 });
@@ -488,14 +538,26 @@ test.describe("Mobile viewport (phone)", () => {
     await categoryButton.click();
     const categoryDialog = page.getByRole("dialog", { name: "Category options" });
     await expect(categoryDialog).toBeVisible({ timeout: 5_000 });
+    await schedulePendingChromeHide();
     await categoryDialog.getByRole("button", { name: "Crypto Tokens" }).click();
 
     await expect(page).toHaveURL(/#crypto-tokens$/, { timeout: 5_000 });
-    await expect(voteTopChrome).toHaveAttribute("data-visible", "true");
     await expect(page.getByRole("button", { name: /^Category: Crypto Tokens$/ }).first()).toBeVisible({
       timeout: 5_000,
     });
-    await expect(page.getByRole("button", { name: /^View(?:$|:)/ }).first()).toBeVisible();
+    await page.waitForTimeout(250);
+    await expectMobileChromeVisible();
+
+    const viewButton = page.getByRole("button", { name: /^View(?:$|:)/ }).first();
+    await viewButton.click();
+    const viewDialog = page.getByRole("dialog", { name: "View options" });
+    await expect(viewDialog).toBeVisible({ timeout: 5_000 });
+    await schedulePendingChromeHide();
+    await viewDialog.getByRole("button", { name: "Latest" }).click();
+
+    await expect(page.getByRole("button", { name: /^View: Latest$/ }).first()).toBeVisible({ timeout: 5_000 });
+    await page.waitForTimeout(250);
+    await expectMobileChromeVisible();
   });
 
   test("mobile header still hides on scroll down and returns on scroll up on landing", async ({
