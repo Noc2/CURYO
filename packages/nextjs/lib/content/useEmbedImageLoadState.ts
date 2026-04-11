@@ -46,10 +46,19 @@ export function useEmbedImageLoadState(imageSrc?: string, enabled = true) {
   );
 
   useEffect(() => {
-    imageRef.current = null;
     setImageError(false);
     setImageLoaded(false);
-  }, [imageSrc]);
+
+    const loadState = getImageLoadState(imageRef.current);
+    if (loadState === "loaded") {
+      markImageLoaded();
+      return;
+    }
+
+    if (loadState === "error") {
+      markImageError();
+    }
+  }, [imageSrc, markImageError, markImageLoaded]);
 
   useEffect(() => {
     if (!enabled || !imageSrc || imageLoaded || imageError) return;
