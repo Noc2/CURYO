@@ -67,7 +67,8 @@ export function OpenLibraryEmbed({ info, compact, prefetchedMetadata }: OpenLibr
 
   const olId = info.id || (info.metadata?.olId as string);
   const coverCandidates = getOpenLibraryCoverCandidates(book);
-  const imageSrc = coverCandidates[coverCandidateIndex];
+  const activeCoverUrl = coverCandidates[coverCandidateIndex];
+  const imageSrc = activeCoverUrl ? `/api/image-proxy?url=${encodeURIComponent(activeCoverUrl)}` : undefined;
   const canFallbackCover = coverCandidateIndex < coverCandidates.length - 1;
   const imageLoadingProps = getEmbedImageLoadingProps(compact);
 

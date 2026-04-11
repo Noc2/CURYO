@@ -48,7 +48,7 @@ export function WikipediaEmbed({ info, compact, prefetchedMetadata }: WikipediaE
   const [imageLoaded, setImageLoaded] = useState(false);
 
   const title = info.id || (info.metadata?.title as string);
-  const imageSrc = person?.imageUrl;
+  const imageSrc = person?.imageUrl ? `/api/image-proxy?url=${encodeURIComponent(person.imageUrl)}` : undefined;
   const imageLoadingProps = getEmbedImageLoadingProps(compact);
 
   useEffect(() => {
