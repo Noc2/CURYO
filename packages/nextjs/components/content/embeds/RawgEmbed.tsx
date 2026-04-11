@@ -12,6 +12,7 @@ interface RawgEmbedProps {
   compact?: boolean;
   isActive?: boolean;
   prefetchedMetadata?: ContentMetadataResult;
+  fillMediaSurface?: boolean;
 }
 
 interface RawgGame {
@@ -55,7 +56,13 @@ function getPrefetchedRawgGame(slug: string, prefetchedMetadata?: ContentMetadat
   };
 }
 
-export function RawgEmbed({ info, compact, isActive = !compact, prefetchedMetadata }: RawgEmbedProps) {
+export function RawgEmbed({
+  info,
+  compact,
+  isActive = !compact,
+  prefetchedMetadata,
+  fillMediaSurface = false,
+}: RawgEmbedProps) {
   const [game, setGame] = useState<RawgGame | null>(null);
   const [loading, setLoading] = useState(true);
   const [fetchError, setFetchError] = useState(false);
@@ -161,14 +168,19 @@ export function RawgEmbed({ info, compact, isActive = !compact, prefetchedMetada
     );
   }
 
+  const shouldFillImageSurface = fillMediaSurface || !compact;
+
   // Image card with background image and attribution
   return (
     <div
       className={`block w-full overflow-hidden rounded-xl bg-base-200 embed-surface relative ${
-        compact ? "max-w-[200px] mx-auto" : "h-full max-w-full flex flex-col"
+        shouldFillImageSurface ? "h-full max-w-full flex flex-col" : "max-w-[200px] mx-auto"
       }`}
     >
-      <SafeExternalLink href={info.url} className={`relative group ${compact ? "block" : "flex-1 min-h-0"}`}>
+      <SafeExternalLink
+        href={info.url}
+        className={`relative group ${shouldFillImageSurface ? "flex-1 min-h-0" : "block"}`}
+      >
         {!imageLoaded && (
           <div className="absolute inset-0 flex items-center justify-center embed-surface">
             <span className="loading loading-spinner loading-md text-primary"></span>
@@ -180,7 +192,7 @@ export function RawgEmbed({ info, compact, isActive = !compact, prefetchedMetada
           alt={game.name}
           {...imageLoadingProps}
           className={`rounded-t-xl shadow-lg transition-transform group-hover:scale-[1.02] ${
-            compact ? "w-full h-auto aspect-video object-cover" : "h-full w-full object-cover"
+            shouldFillImageSurface ? "h-full w-full object-cover" : "w-full h-auto aspect-video object-cover"
           } ${imageLoaded ? "opacity-100" : "opacity-0"}`}
           onLoad={handleImageLoad}
           onError={handleImageError}
