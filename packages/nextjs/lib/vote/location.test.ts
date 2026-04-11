@@ -1,4 +1,4 @@
-import { buildVoteLocation } from "./location";
+import { buildVoteContentPinKey, buildVoteContentPinKeyFromUrl, buildVoteLocation } from "./location";
 import assert from "node:assert/strict";
 import test from "node:test";
 
@@ -46,4 +46,19 @@ test("persisting a selected card adds the content query param to a plain vote ur
     }),
     "https://www.curyo.xyz/vote?content=12",
   );
+});
+
+test("content pin keys normalize query order and ignore hash changes", () => {
+  assert.equal(
+    buildVoteContentPinKeyFromUrl("https://www.curyo.xyz/vote?q=openlaw&content=6#youtube"),
+    "/vote?content=6&q=openlaw",
+  );
+  assert.equal(
+    buildVoteContentPinKeyFromUrl("https://www.curyo.xyz/vote?content=6&q=openlaw#books"),
+    "/vote?content=6&q=openlaw",
+  );
+});
+
+test("content pin keys are absent without a content query param", () => {
+  assert.equal(buildVoteContentPinKey("/vote", new URLSearchParams("q=openlaw")), null);
 });

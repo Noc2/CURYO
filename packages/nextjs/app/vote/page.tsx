@@ -2,7 +2,7 @@
 
 import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import dynamic from "next/dynamic";
-import { useSearchParams } from "next/navigation";
+import { usePathname, useSearchParams } from "next/navigation";
 import type { NextPage } from "next";
 import { useAccount } from "wagmi";
 import { CategoryFilter } from "~~/components/CategoryFilter";
@@ -55,7 +55,7 @@ import { type DiscoverFeedMode, sortDiscoverFeed } from "~~/lib/vote/feedModes";
 import { rankForYouFeed } from "~~/lib/vote/forYouRanker";
 import { buildLinkedWalletAddresses } from "~~/lib/vote/linkedWalletAddresses";
 import { shouldUseAddressLogCooldownFallback } from "~~/lib/vote/liveCooldown";
-import { buildVoteLocation } from "~~/lib/vote/location";
+import { buildVoteContentPinKey, buildVoteContentPinKeyFromUrl, buildVoteLocation } from "~~/lib/vote/location";
 import { mergeRequestedContentIntoFeed } from "~~/lib/vote/requestedContent";
 import { resolveStableSessionFeedOrder } from "~~/lib/vote/stableFeedOrder";
 import { type VoteView, getVoteViewGroups, isActivityViewOption } from "~~/lib/vote/viewOptions";
@@ -97,6 +97,13 @@ const FEED_PREFETCH_BUFFER = 6;
 const MOBILE_VOTE_DOCK_RESERVED_SPACE_PX = 152;
 const VOTE_MOBILE_CHROME_QUERY = "(max-width: 1279px)";
 const CONTENT_INTENT_PROMPT_MS = 1_400;
+const INTERNAL_CONTENT_PIN_STORAGE_KEY = "curyo_internal_vote_content_pin";
+const INTERNAL_CONTENT_PIN_TTL_MS = 6 * 60 * 60 * 1000;
+
+interface InternalContentPinMarker {
+  key: string;
+  savedAt: number;
+}
 
 function areIdListsEqual(left: readonly string[], right: readonly string[]) {
   if (left.length !== right.length) return false;
@@ -105,6 +112,48 @@ function areIdListsEqual(left: readonly string[], right: readonly string[]) {
 
 function getVoteCooldownMessage(seconds: number) {
   return `You already voted on this content recently. Try again in ${formatVoteCooldownRemaining(seconds)}.`;
+}
+
+function readInternalContentPinKey(contentPinKey: string | null) {
+  if (!contentPinKey || typeof window === "undefined") return null;
+
+  try {
+    const rawMarker = window.sessionStorage.getItem(INTERNAL_CONTENT_PIN_STORAGE_KEY);
+    if (!rawMarker) return null;
+
+    const marker = JSON.parse(rawMarker) as Partial<InternalContentPinMarker>;
+    if (marker.key !== contentPinKey || typeof marker.savedAt !== "number") {
+      return null;
+    }
+
+    if (Date.now() - marker.savedAt > INTERNAL_CONTENT_PIN_TTL_MS) {
+      window.sessionStorage.removeItem(INTERNAL_CONTENT_PIN_STORAGE_KEY);
+      return null;
+    }
+
+    return marker.key;
+  } catch {
+    return null;
+  }
+}
+
+function writeInternalContentPinKey(contentPinKey: string | null) {
+  if (typeof window === "undefined") return;
+
+  try {
+    if (!contentPinKey) {
+      window.sessionStorage.removeItem(INTERNAL_CONTENT_PIN_STORAGE_KEY);
+      return;
+    }
+
+    const marker: InternalContentPinMarker = {
+      key: contentPinKey,
+      savedAt: Date.now(),
+    };
+    window.sessionStorage.setItem(INTERNAL_CONTENT_PIN_STORAGE_KEY, JSON.stringify(marker));
+  } catch {
+    // sessionStorage can be unavailable in private or embedded contexts.
+  }
 }
 
 interface ActiveViewSession {
@@ -128,6 +177,7 @@ function VoteStageLoading() {
 
 const HomeInner = () => {
   const searchParams = useSearchParams();
+  const pathname = usePathname();
   const searchQuery = searchParams?.get("q") ?? "";
   const contentParam = searchParams?.get("content");
   const requestedActiveId = useMemo(() => {
@@ -138,6 +188,20 @@ const HomeInner = () => {
       return null;
     }
   }, [contentParam]);
+  const contentPinKey = useMemo(
+    () =>
+      requestedActiveId !== null && searchParams ? buildVoteContentPinKey(pathname ?? "/vote", searchParams) : null,
+    [pathname, requestedActiveId, searchParams],
+  );
+  const [internallySyncedContentPinKey, setInternallySyncedContentPinKey] = useState<string | null>(() =>
+    readInternalContentPinKey(contentPinKey),
+  );
+  const hasExplicitRequestedContentPin =
+    requestedActiveId !== null && contentPinKey !== null && internallySyncedContentPinKey !== contentPinKey;
+
+  useEffect(() => {
+    setInternallySyncedContentPinKey(readInternalContentPinKey(contentPinKey));
+  }, [contentPinKey]);
 
   const { address } = useAccount();
   const { targetNetwork } = useTargetNetwork();
@@ -218,7 +282,7 @@ const HomeInner = () => {
   const activeScope: ScopeOption = isActivityViewOption(view) ? view : "all";
   const activeFeedMode: DiscoverFeedMode = isActivityViewOption(view) ? "for_you" : view;
   const isAlgorithmicForYouFeed =
-    !isSearchMode && activeScope === "all" && activeFeedMode === "for_you" && requestedActiveId === null;
+    !isSearchMode && activeScope === "all" && activeFeedMode === "for_you" && !hasExplicitRequestedContentPin;
   const feedRequestLimit = Math.max(
     isAlgorithmicForYouFeed
       ? FEED_PAGE_SIZE * FOR_YOU_CANDIDATE_PAGE_MULTIPLIER
@@ -1065,7 +1129,14 @@ const HomeInner = () => {
   };
 
   const replaceVoteLocation = useCallback((update: { contentId?: bigint | null; categoryHash?: string | null }) => {
-    history.replaceState(null, "", buildVoteLocation(window.location.href, update));
+    const nextUrl = buildVoteLocation(window.location.href, update);
+    history.replaceState(null, "", nextUrl);
+
+    if (update.contentId !== undefined) {
+      const nextContentPinKey = update.contentId === null ? null : buildVoteContentPinKeyFromUrl(nextUrl);
+      writeInternalContentPinKey(nextContentPinKey);
+      setInternallySyncedContentPinKey(nextContentPinKey);
+    }
   }, []);
 
   const clearActiveContentPin = useCallback(() => {
