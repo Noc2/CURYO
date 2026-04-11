@@ -207,7 +207,6 @@ const VOTE_ROOT_SCROLL_RECOVERY_MIN_PX = 1;
 const MOBILE_HEADER_SCROLL_SOURCE_ATTRIBUTE = "data-mobile-header-scroll-source";
 const MOBILE_HEADER_SCROLL_SYNC_ATTRIBUTE = "data-mobile-header-scroll-sync";
 const MOBILE_HEADER_SCROLL_SYNC_OFFSET_ATTRIBUTE = "data-mobile-header-scroll-sync-offset";
-const MOBILE_VOTE_TOP_CHROME_SLOT_ID = "vote-mobile-top-chrome-slot";
 
 const HeaderBrand = ({ className, compact = false }: { className?: string; compact?: boolean }) => (
   <Link href={EXPLICIT_LANDING_HREF} className={`flex min-w-0 items-center gap-2 ${className ?? ""}`}>
@@ -705,7 +704,7 @@ export const Header = () => {
         className={`xl:hidden sticky top-0 z-20 duration-200 ease-out ${
           shouldUseVoteLayoutCollapse
             ? `transition-[max-height,opacity] will-change-[max-height,opacity] ${
-                isMobileHeaderVisible ? "max-h-52 overflow-visible opacity-100" : "max-h-0 overflow-hidden opacity-0"
+                isMobileHeaderVisible ? "max-h-24 overflow-visible opacity-100" : "max-h-0 overflow-hidden opacity-0"
               }`
             : `transition-transform will-change-transform ${isMobileHeaderVisible ? "translate-y-0" : "-translate-y-full"}`
         }`}
@@ -713,7 +712,6 @@ export const Header = () => {
         data-visible={isMobileHeaderVisible ? "true" : "false"}
       >
         <div
-          data-mobile-header-navbar="true"
           className={`navbar min-h-0 shrink-0 justify-between px-4 py-3 shadow-[0_18px_44px_rgba(9,10,12,0.32)] backdrop-blur-xl sm:px-6 ${headerChromeSurfaceClassName}`}
         >
           {mobileSearchOpen ? (
@@ -761,9 +759,6 @@ export const Header = () => {
             </>
           )}
         </div>
-        {shouldUseVoteLayoutCollapse ? (
-          <div id={MOBILE_VOTE_TOP_CHROME_SLOT_ID} className="bg-[#000] xl:hidden" />
-        ) : null}
       </div>
 
       {/* Desktop: left sidebar */}
