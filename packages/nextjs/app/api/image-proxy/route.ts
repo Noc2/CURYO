@@ -31,6 +31,7 @@ const ALLOWED_HOSTS = new Set([
 ]);
 
 const MAX_RESPONSE_SIZE = 10 * 1024 * 1024; // 10 MB
+const MAX_REDIRECTS = 3;
 const UPSTREAM_FETCH_OPTIONS = { cache: "no-store" as const, redirect: "manual" as const };
 const BROWSER_IMAGE_CACHE_CONTROL = "public, max-age=86400, immutable";
 const CDN_IMAGE_CACHE_CONTROL = "public, max-age=86400, stale-while-revalidate=604800, stale-if-error=604800";
@@ -48,6 +49,19 @@ function buildImageResponse(bytes: Uint8Array, contentType: string) {
 
 function normalizeProxyImageUrl(url: string): string {
   return getSafeHuggingFaceImageUrl(url) ?? url;
+}
+
+function isRedirectStatus(status: number): boolean {
+  return status >= 300 && status < 400;
+}
+
+function isAllowedOpenLibraryCoverRedirect(sourceHostname: string, targetHostname: string): boolean {
+  if (sourceHostname === "covers.openlibrary.org") return targetHostname === "archive.org";
+  return sourceHostname === "archive.org" && targetHostname.endsWith(".us.archive.org");
+}
+
+function isAllowedRedirectTarget(sourceHostname: string, targetHostname: string): boolean {
+  return ALLOWED_HOSTS.has(targetHostname) || isAllowedOpenLibraryCoverRedirect(sourceHostname, targetHostname);
 }
 
 export async function GET(request: NextRequest) {
@@ -77,45 +91,51 @@ export async function GET(request: NextRequest) {
   }
 
   try {
-    const res = await fetch(normalizedUrl, UPSTREAM_FETCH_OPTIONS);
+    let currentUrl = parsed;
 
-    // If the upstream redirects, re-validate the target against the allowlist
-    if (res.status >= 300 && res.status < 400) {
-      const location = res.headers.get("location");
-      if (!location) return new NextResponse(null, { status: 502 });
-      let redirectUrl: URL;
-      try {
-        redirectUrl = new URL(location, normalizedUrl);
-      } catch {
+    for (let redirectCount = 0; redirectCount <= MAX_REDIRECTS; redirectCount += 1) {
+      const res = await fetch(currentUrl.toString(), UPSTREAM_FETCH_OPTIONS);
+
+      // If the upstream redirects, re-validate each target before following it.
+      if (isRedirectStatus(res.status)) {
+        if (redirectCount === MAX_REDIRECTS) return new NextResponse(null, { status: 502 });
+
+        const location = res.headers.get("location");
+        if (!location) return new NextResponse(null, { status: 502 });
+
+        let redirectUrl: URL;
+        try {
+          redirectUrl = new URL(location, currentUrl);
+        } catch {
+          return new NextResponse(null, { status: 502 });
+        }
+
+        if (redirectUrl.protocol !== "https:") {
+          return NextResponse.json({ error: "Only HTTPS URLs allowed" }, { status: 400 });
+        }
+        if (!isAllowedRedirectTarget(currentUrl.hostname, redirectUrl.hostname)) {
+          return new NextResponse(null, { status: 403 });
+        }
+
+        currentUrl = redirectUrl;
+        continue;
+      }
+
+      if (!res.ok) {
+        return new NextResponse(null, { status: res.status });
+      }
+
+      const contentType = res.headers.get("content-type") || "image/png";
+      if (!contentType.startsWith("image/")) {
         return new NextResponse(null, { status: 502 });
       }
-      if (redirectUrl.protocol !== "https:") {
-        return NextResponse.json({ error: "Only HTTPS URLs allowed" }, { status: 400 });
-      }
-      if (!ALLOWED_HOSTS.has(redirectUrl.hostname)) {
-        return new NextResponse(null, { status: 403 });
-      }
-      // Follow the validated redirect once (no further chaining)
-      const redirectRes = await fetch(redirectUrl.toString(), UPSTREAM_FETCH_OPTIONS);
-      if (!redirectRes.ok) return new NextResponse(null, { status: redirectRes.status });
-      const ct = redirectRes.headers.get("content-type") || "image/png";
-      if (!ct.startsWith("image/")) return new NextResponse(null, { status: 502 });
-      const bytes = await readResponseBytes(redirectRes, MAX_RESPONSE_SIZE);
-      return buildImageResponse(bytes, ct);
+
+      const buffer = await readResponseBytes(res, MAX_RESPONSE_SIZE);
+
+      return buildImageResponse(buffer, contentType);
     }
 
-    if (!res.ok) {
-      return new NextResponse(null, { status: res.status });
-    }
-
-    const contentType = res.headers.get("content-type") || "image/png";
-    if (!contentType.startsWith("image/")) {
-      return new NextResponse(null, { status: 502 });
-    }
-
-    const buffer = await readResponseBytes(res, MAX_RESPONSE_SIZE);
-
-    return buildImageResponse(buffer, contentType);
+    return new NextResponse(null, { status: 502 });
   } catch (error) {
     if (error instanceof ResponseTooLargeError) {
       return new NextResponse(null, { status: 413 });

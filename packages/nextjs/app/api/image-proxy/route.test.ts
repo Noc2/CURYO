@@ -86,6 +86,56 @@ test("revalidates HTTPS redirects before following them", async () => {
   assert.deepEqual(Array.from(new Uint8Array(await response.arrayBuffer())), [1, 2, 3]);
 });
 
+test("follows Open Library cover redirects through archive hosts", async () => {
+  const calls: string[] = [];
+  const requestOptions: RequestInit[] = [];
+  const coverUrl = "https://covers.openlibrary.org/b/id/14542536-L.jpg";
+  const archiveUrl = "https://archive.org/download/l_covers_0014/l_covers_0014_54.zip/0014542536-L.jpg";
+  const archiveImageUrl =
+    "https://ia800505.us.archive.org/view_archive.php?archive=/35/items/l_covers_0014/l_covers_0014_54.zip&file=0014542536-L.jpg";
+
+  globalThis.fetch = (async (input: RequestInfo | URL, init?: RequestInit) => {
+    calls.push(String(input));
+    requestOptions.push(init ?? {});
+
+    if (calls.length === 1) {
+      return new Response(null, {
+        status: 302,
+        headers: {
+          location: archiveUrl,
+        },
+      });
+    }
+
+    if (calls.length === 2) {
+      return new Response(null, {
+        status: 302,
+        headers: {
+          location: archiveImageUrl,
+        },
+      });
+    }
+
+    return new Response(new Uint8Array([16, 17, 18]), {
+      headers: {
+        "content-type": "image/jpeg",
+      },
+    });
+  }) as typeof fetch;
+
+  const response = await GET(new NextRequest(`http://localhost/api/image-proxy?url=${encodeURIComponent(coverUrl)}`));
+
+  assert.equal(response.status, 200);
+  assert.equal(response.headers.get("content-type"), "image/jpeg");
+  assert.deepEqual(calls, [coverUrl, archiveUrl, archiveImageUrl]);
+  assert.deepEqual(requestOptions, [
+    { cache: "no-store", redirect: "manual" },
+    { cache: "no-store", redirect: "manual" },
+    { cache: "no-store", redirect: "manual" },
+  ]);
+  assert.deepEqual(Array.from(new Uint8Array(await response.arrayBuffer())), [16, 17, 18]);
+});
+
 test("rejects redirect targets that downgrade to http", async () => {
   const calls: string[] = [];
   globalThis.fetch = (async (input: RequestInfo | URL) => {
