@@ -88,6 +88,21 @@ export function shouldAttemptSelfFundedThirdwebFallback(params: {
   );
 }
 
+export function shouldAwaitSelfFundedSubmitCalls(params: {
+  canUseFreeTransactions: boolean;
+  chainId: number | undefined;
+  connectorId: string | undefined;
+  executionMode: WalletExecutionMode;
+  freeTransactionAllowanceResolved: boolean;
+}) {
+  return (
+    shouldExpectSponsoredSubmitCalls(params) &&
+    params.freeTransactionAllowanceResolved &&
+    !params.canUseFreeTransactions &&
+    params.executionMode !== "self_funded_7702"
+  );
+}
+
 export function shouldIgnorePostTransactionFallbackWalletSyncError(callStatus: string | undefined) {
   return callStatus === "success";
 }
@@ -138,6 +153,23 @@ export function useThirdwebSponsoredSubmitCalls() {
   const isAwaitingSponsoredSubmitCalls =
     expectsSponsoredSubmitCalls &&
     (!freeTransactionAllowance.isResolved || (prefersSponsoredSubmitCalls && !canUseSponsoredSubmitCalls));
+  const isAwaitingSelfFundedSubmitCalls = useMemo(
+    () =>
+      shouldAwaitSelfFundedSubmitCalls({
+        canUseFreeTransactions: freeTransactionAllowance.canUseFreeTransactions,
+        chainId,
+        connectorId: connector?.id,
+        executionMode,
+        freeTransactionAllowanceResolved: freeTransactionAllowance.isResolved,
+      }),
+    [
+      chainId,
+      connector?.id,
+      executionMode,
+      freeTransactionAllowance.canUseFreeTransactions,
+      freeTransactionAllowance.isResolved,
+    ],
+  );
 
   const postFreeTransactionMutation = useCallback(async (path: string, body: Record<string, unknown>) => {
     const response = await fetch(path, {
@@ -311,6 +343,7 @@ export function useThirdwebSponsoredSubmitCalls() {
     freeTransactionRemaining: freeTransactionAllowance.remaining,
     freeTransactionVerified: freeTransactionAllowance.verified,
     isAwaitingSponsoredSubmitCalls,
+    isAwaitingSelfFundedSubmitCalls,
     isAwaitingFreeTransactionAllowance: isEligibleForGaslessSubmitTransactions && !freeTransactionAllowance.isResolved,
     executeSponsoredCalls,
   };

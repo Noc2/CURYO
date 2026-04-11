@@ -2,6 +2,7 @@ import {
   isThirdwebSelfFundedFallbackEligibleError,
   isThirdwebSponsorshipDeniedError,
   shouldAttemptSelfFundedThirdwebFallback,
+  shouldAwaitSelfFundedSubmitCalls,
   shouldExpectSponsoredSubmitCalls,
   shouldIgnorePostTransactionFallbackWalletSyncError,
   shouldPreferSponsoredSubmitCalls,
@@ -121,6 +122,45 @@ test("allows self-funded fallback when sponsored free transactions are exhausted
       hasReservedFreeTransaction: false,
     }),
     true,
+  );
+});
+
+test("awaits self-funded reconnect after free transactions are exhausted for thirdweb in-app wallets", () => {
+  assert.equal(
+    shouldAwaitSelfFundedSubmitCalls({
+      canUseFreeTransactions: false,
+      chainId: 42220,
+      connectorId: "in-app-wallet",
+      executionMode: "sponsored_7702",
+      freeTransactionAllowanceResolved: true,
+    }),
+    true,
+  );
+});
+
+test("stops awaiting self-funded reconnect once the in-app wallet is self-funded", () => {
+  assert.equal(
+    shouldAwaitSelfFundedSubmitCalls({
+      canUseFreeTransactions: false,
+      chainId: 42220,
+      connectorId: "in-app-wallet",
+      executionMode: "self_funded_7702",
+      freeTransactionAllowanceResolved: true,
+    }),
+    false,
+  );
+});
+
+test("does not await self-funded reconnect before free transaction allowance resolves", () => {
+  assert.equal(
+    shouldAwaitSelfFundedSubmitCalls({
+      canUseFreeTransactions: false,
+      chainId: 42220,
+      connectorId: "in-app-wallet",
+      executionMode: "sponsored_7702",
+      freeTransactionAllowanceResolved: false,
+    }),
+    false,
   );
 });
 
