@@ -61,6 +61,7 @@ test.describe("Mobile viewport (phone)", () => {
         const explicitScrollSource = document.querySelector<HTMLElement>('[data-mobile-header-scroll-source="true"]');
         const topChrome = document.querySelector<HTMLElement>('[data-vote-mobile-top-chrome="true"]');
         const mobileHeader = document.querySelector<HTMLElement>('[data-mobile-header="true"]');
+        const mobileNavbar = document.querySelector<HTMLElement>('[data-mobile-header-navbar="true"]');
         const feedSurface = document.querySelector<HTMLElement>('[data-testid="vote-feed-surface"]');
         const mobileScrollContainer = document.querySelector<HTMLElement>(
           '[data-testid="vote-mobile-scroll-container"]',
@@ -134,6 +135,7 @@ test.describe("Mobile viewport (phone)", () => {
             : 0,
           leftGutterWidth,
           mobileHeaderBottom: mobileHeader?.getBoundingClientRect().bottom ?? 0,
+          mobileNavbarBottom: mobileNavbar?.getBoundingClientRect().bottom ?? 0,
           rightGutterWidth,
           scrollerBottom: scrollerRect?.bottom ?? 0,
           scrollerTop: scrollerRect?.top ?? 0,
@@ -328,14 +330,14 @@ test.describe("Mobile viewport (phone)", () => {
     await expect.poll(async () => (await readLayout()).voteScrollTop).toBeGreaterThan(48);
 
     const afterRootScrollLeak = await readLayout();
-    expect(afterRootScrollLeak.topChromeTop).toBeGreaterThanOrEqual(afterRootScrollLeak.mobileHeaderBottom - 1);
+    expect(afterRootScrollLeak.topChromeTop).toBeGreaterThanOrEqual(afterRootScrollLeak.mobileNavbarBottom - 1);
     await removeDocumentScrollLeakSpacer();
     await setFeedScrollTop(0);
     await expect(mobileHeader).toHaveAttribute("data-visible", "true");
     await expect(voteTopChrome).toHaveAttribute("data-visible", "true");
 
     const expandedLayout = await readLayout();
-    expect(expandedLayout.topChromeTop).toBeGreaterThanOrEqual(expandedLayout.mobileHeaderBottom - 1);
+    expect(expandedLayout.topChromeTop).toBeGreaterThanOrEqual(expandedLayout.mobileNavbarBottom - 1);
     await waitForMobileHeaderScrollSyncIdle();
 
     const beforeFirstNativeScroll = await readLayout();
@@ -388,8 +390,8 @@ test.describe("Mobile viewport (phone)", () => {
     ]);
     expect(restoredLayout.activeIndex).toBe(beforeNativeScrollUp.activeIndex - 1);
     expect(restoredLayout.feedSurfaceTop).toBeGreaterThan(collapsedLayout.feedSurfaceTop + 24);
-    expect(restoredLayout.topChromeTop).toBeGreaterThanOrEqual(restoredLayout.mobileHeaderBottom - 1);
-    expect(restoredLayout.categoryButtonTop).toBeGreaterThanOrEqual(restoredLayout.mobileHeaderBottom - 1);
+    expect(restoredLayout.topChromeTop).toBeGreaterThanOrEqual(restoredLayout.mobileNavbarBottom - 1);
+    expect(restoredLayout.categoryButtonTop).toBeGreaterThanOrEqual(restoredLayout.mobileNavbarBottom - 1);
     expect(restoredLayout.categoryButtonHeight).toBeGreaterThan(20);
     expect(restoredLayout.viewButtonHeight).toBeGreaterThan(20);
     expect(restoredLayout.activeTitleTop).toBeGreaterThanOrEqual(restoredLayout.scrollerTop - 1);
@@ -496,6 +498,30 @@ test.describe("Mobile viewport (phone)", () => {
       timeout: 5_000,
     });
     await expect(page.getByRole("button", { name: /^View(?:$|:)/ }).first()).toBeVisible();
+
+    const restoredLayout = await page.evaluate(() => {
+      const topChrome = document.querySelector<HTMLElement>('[data-vote-mobile-top-chrome="true"]');
+      const mobileNavbar = document.querySelector<HTMLElement>('[data-mobile-header-navbar="true"]');
+      const categoryButton = topChrome?.querySelector<HTMLElement>('button[aria-label^="Category:"]');
+      const viewButton = topChrome?.querySelector<HTMLElement>(
+        'button[aria-label="View"], button[aria-label^="View:"]',
+      );
+      const categoryRect = categoryButton?.getBoundingClientRect() ?? null;
+      const viewRect = viewButton?.getBoundingClientRect() ?? null;
+
+      return {
+        categoryButtonHeight: categoryRect?.height ?? 0,
+        categoryButtonTop: categoryRect?.top ?? 0,
+        mobileNavbarBottom: mobileNavbar?.getBoundingClientRect().bottom ?? 0,
+        topChromeTop: topChrome?.getBoundingClientRect().top ?? 0,
+        viewButtonHeight: viewRect?.height ?? 0,
+      };
+    });
+
+    expect(restoredLayout.topChromeTop).toBeGreaterThanOrEqual(restoredLayout.mobileNavbarBottom - 1);
+    expect(restoredLayout.categoryButtonTop).toBeGreaterThanOrEqual(restoredLayout.mobileNavbarBottom - 1);
+    expect(restoredLayout.categoryButtonHeight).toBeGreaterThan(20);
+    expect(restoredLayout.viewButtonHeight).toBeGreaterThan(20);
   });
 
   test("mobile header still hides on scroll down and returns on scroll up on landing", async ({

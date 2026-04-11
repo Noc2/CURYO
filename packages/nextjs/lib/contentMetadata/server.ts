@@ -1,5 +1,9 @@
 import { eq, inArray } from "drizzle-orm";
-import { getSafeHuggingFaceImageUrl, isHuggingFaceAvatarUrl } from "~~/lib/content/huggingFaceImage";
+import {
+  getSafeHuggingFaceDisplayImageUrl,
+  getSafeHuggingFaceImageUrl,
+  isHuggingFaceAvatarUrl,
+} from "~~/lib/content/huggingFaceImage";
 import { db } from "~~/lib/db";
 import { type ContentMetadata, contentMetadata } from "~~/lib/db/schema";
 import { detectPlatform, getThumbnailUrl } from "~~/utils/platforms";
@@ -61,7 +65,7 @@ export function shouldReuseCachedContentMetadata(
   const platform = detectPlatform(url);
   const hasUsableImage =
     platform.type === "huggingface"
-      ? Boolean(getSafeHuggingFaceImageUrl(cached.thumbnailUrl) || getSafeHuggingFaceImageUrl(cached.imageUrl))
+      ? Boolean(getSafeHuggingFaceDisplayImageUrl(cached.imageUrl, cached.thumbnailUrl))
       : Boolean(cached.thumbnailUrl || cached.imageUrl);
 
   if (IMAGE_REQUIRED_CACHE_TYPES.has(platform.type) && !hasUsableImage) {

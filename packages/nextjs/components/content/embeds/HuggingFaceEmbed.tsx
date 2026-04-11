@@ -3,7 +3,11 @@
 import { useEffect, useState } from "react";
 import { SafeExternalLink } from "~~/components/shared/SafeExternalLink";
 import { getEmbedImageLoadingProps } from "~~/lib/content/embedLoadStrategy";
-import { getSafeHuggingFaceImageUrl, isHuggingFaceAvatarUrl } from "~~/lib/content/huggingFaceImage";
+import {
+  getSafeHuggingFaceAvatarUrl,
+  getSafeHuggingFaceDisplayImageUrl,
+  getSafeHuggingFaceImageUrl,
+} from "~~/lib/content/huggingFaceImage";
 import { useEmbedImageLoadState } from "~~/lib/content/useEmbedImageLoadState";
 import type { ContentMetadataResult } from "~~/lib/contentMetadata/types";
 import type { PlatformInfo } from "~~/utils/platforms";
@@ -51,11 +55,8 @@ export function HuggingFaceEmbed({ info, compact, isActive = !compact, prefetche
   const [loading, setLoading] = useState(true);
 
   const modelId = info.id || (info.metadata?.modelId as string);
-  const safeImageUrl =
-    model?.imageUrl && !isHuggingFaceAvatarUrl(model.imageUrl) ? getSafeHuggingFaceImageUrl(model.imageUrl) : null;
-  const safeAvatarUrl =
-    getSafeHuggingFaceImageUrl(model?.thumbnailUrl) ??
-    (model?.imageUrl && isHuggingFaceAvatarUrl(model.imageUrl) ? getSafeHuggingFaceImageUrl(model.imageUrl) : null);
+  const safeImageUrl = getSafeHuggingFaceDisplayImageUrl(model?.imageUrl, model?.thumbnailUrl);
+  const safeAvatarUrl = getSafeHuggingFaceAvatarUrl(model?.thumbnailUrl, model?.imageUrl);
   const imageSrc = safeImageUrl ? `/api/image-proxy?url=${encodeURIComponent(safeImageUrl)}` : undefined;
   const avatarSrc = safeAvatarUrl ? `/api/image-proxy?url=${encodeURIComponent(safeAvatarUrl)}` : undefined;
   const imageLoadingProps = getEmbedImageLoadingProps(compact, isActive);
