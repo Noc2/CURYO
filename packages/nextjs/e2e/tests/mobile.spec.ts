@@ -136,6 +136,9 @@ test.describe("Mobile viewport (phone)", () => {
           leftGutterWidth,
           mobileHeaderBottom: mobileHeader?.getBoundingClientRect().bottom ?? 0,
           mobileNavbarBottom: mobileNavbar?.getBoundingClientRect().bottom ?? 0,
+          mobileSnapGuardTop: mobileScrollContainer
+            ? Number.parseFloat(getComputedStyle(mobileScrollContainer).scrollPaddingTop) || 0
+            : 0,
           rightGutterWidth,
           scrollerBottom: scrollerRect?.bottom ?? 0,
           scrollerTop: scrollerRect?.top ?? 0,
@@ -364,7 +367,9 @@ test.describe("Mobile viewport (phone)", () => {
     expect(collapsedLayout.topChromeHeight).toBeLessThan(4);
     expect(collapsedLayout.voteScrollTop).toBeGreaterThan(0);
     expect(collapsedLayout.voteScrollTop).toBeGreaterThan(beforeFirstNativeScroll.voteScrollTop);
-    expect(Math.abs(collapsedLayout.activeTop - collapsedLayout.scrollerTop - 12)).toBeLessThanOrEqual(18);
+    expect(
+      Math.abs(collapsedLayout.activeTop - collapsedLayout.scrollerTop - collapsedLayout.mobileSnapGuardTop),
+    ).toBeLessThanOrEqual(18);
     expect(collapsedLayout.activeTitleTop).toBeGreaterThanOrEqual(collapsedLayout.scrollerTop - 1);
     expect(collapsedLayout.activeTitleBottom).toBeLessThanOrEqual(collapsedLayout.scrollerBottom + 1);
 
