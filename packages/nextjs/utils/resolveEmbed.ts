@@ -217,6 +217,10 @@ function buildHuggingFaceAssetUrl(modelId: string, assetPath: string): string | 
   const trimmedPath = assetPath.trim();
   if (!trimmedPath) return null;
 
+  if (/^(?:https?:)?\/\//i.test(trimmedPath)) {
+    return getSafeHuggingFaceImageUrl(trimmedPath);
+  }
+
   const modelSegments = modelId
     .split("/")
     .map(segment => segment.trim())
