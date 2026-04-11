@@ -142,6 +142,7 @@ export function ContentEmbed({
           compact={compact}
           isActive={isActive}
           prefetchedMetadata={usablePrefetchedMetadata}
+          fillMediaSurface={interactionMode === "vote"}
         />
       );
       break;
