@@ -2,16 +2,7 @@ import { buildVoteContentPinKey, buildVoteContentPinKeyFromUrl, buildVoteLocatio
 import assert from "node:assert/strict";
 import test from "node:test";
 
-test("switching categories preserves the requested content query param when the pin is still active", () => {
-  assert.equal(
-    buildVoteLocation("https://www.curyo.xyz/vote?content=6&q=openlaw", {
-      categoryHash: "youtube",
-    }),
-    "https://www.curyo.xyz/vote?content=6&q=openlaw#youtube",
-  );
-});
-
-test("category changes can still explicitly clear the requested content query param", () => {
+test("switching categories clears the requested content query param", () => {
   assert.equal(
     buildVoteLocation("https://www.curyo.xyz/vote?content=6&q=openlaw", {
       contentId: null,
