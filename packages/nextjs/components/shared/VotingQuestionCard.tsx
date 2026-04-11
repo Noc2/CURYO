@@ -612,6 +612,7 @@ export function VotingQuestionCard({
                         onClick={() => onVote(true)}
                         disabled={dockVoteDisabled}
                         attention={isAttentionActive && !dockVoteDisabled}
+                        tooltipPosition="top"
                       />
                     </div>
                     <div className="justify-self-end translate-y-1">
@@ -629,6 +630,7 @@ export function VotingQuestionCard({
                         onClick={() => onVote(false)}
                         disabled={dockVoteDisabled}
                         attention={isAttentionActive && !dockVoteDisabled}
+                        tooltipPosition="top"
                       />
                     </div>
                   </div>

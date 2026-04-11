@@ -1,4 +1,6 @@
 import { HandThumbDownIcon, HandThumbUpIcon } from "@heroicons/react/24/outline";
+import { TooltipAnchor } from "~~/components/ui/InfoTooltip";
+import type { TooltipPosition } from "~~/lib/ui/tooltipPosition";
 
 interface CuryoVoteButtonProps {
   direction: "up" | "down";
@@ -6,6 +8,7 @@ interface CuryoVoteButtonProps {
   onClick: () => void;
   size?: "default" | "sm";
   attention?: boolean;
+  tooltipPosition?: TooltipPosition;
 }
 
 interface VoteDirectionIconProps {
@@ -28,13 +31,14 @@ export function CuryoVoteButton({
   onClick,
   size = "default",
   attention = false,
+  tooltipPosition = "bottom",
 }: CuryoVoteButtonProps) {
   const isUp = direction === "up";
   const label = isUp ? "Raise score" : "Lower score";
   const iconClassName = size === "sm" ? "h-5 w-5 drop-shadow-sm" : "h-[22px] w-[22px] drop-shadow-sm";
 
   return (
-    <div className="tooltip tooltip-bottom" data-tip={label}>
+    <TooltipAnchor text={label} position={tooltipPosition}>
       <button
         type="button"
         onClick={onClick}
@@ -50,6 +54,6 @@ export function CuryoVoteButton({
           <VoteDirectionIcon direction={direction} className={iconClassName} />
         </span>
       </button>
-    </div>
+    </TooltipAnchor>
   );
 }
