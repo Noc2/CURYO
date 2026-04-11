@@ -32,6 +32,9 @@ test.describe("Mobile viewport (phone)", () => {
     await expect(dropdown.getByRole("link", { name: /Discover/i })).toBeVisible({ timeout: 5_000 });
     await expect(dropdown.getByRole("link", { name: /Submit/i })).toBeVisible({ timeout: 3_000 });
     await expect(dropdown.getByRole("link", { name: /cREP/i })).toBeVisible({ timeout: 3_000 });
+    const voteTopChrome = page.locator('[data-vote-mobile-top-chrome="true"]');
+    await expect(voteTopChrome).toHaveAttribute("data-visible", "false");
+    await expect(voteTopChrome).toHaveAttribute("inert", "");
   });
 
   test("vote page mobile chrome collapses with feed scroll and reclaims space", async ({ connectedPage: page }) => {

@@ -361,6 +361,7 @@ const MobileHeaderSearch = ({ onClose }: { onClose: () => void }) => {
  */
 export const Header = () => {
   const pathname = usePathname() ?? "";
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [mobileSearchOpen, setMobileSearchOpen] = useState(false);
   const { isMobileHeaderVisible, setIsMobileHeaderVisible, setMobileHeaderHeight } = useMobileHeaderVisibility();
   const mobileHeaderVoteControls = useMobileHeaderVoteControls();
@@ -378,6 +379,7 @@ export const Header = () => {
   const [measuredMobileHeaderHeight, setMeasuredMobileHeaderHeight] = useState(160);
   useOutsideClick(burgerMenuRef, () => {
     burgerMenuRef?.current?.removeAttribute("open");
+    setMobileMenuOpen(false);
   });
 
   useEffect(() => {
@@ -410,6 +412,7 @@ export const Header = () => {
   );
 
   useEffect(() => {
+    setMobileMenuOpen(false);
     setMobileSearchOpen(false);
     isMobileHeaderVisibleRef.current = true;
     lastMobileHeaderVisibilityChangeAtRef.current = 0;
@@ -784,18 +787,23 @@ export const Header = () => {
               <>
                 <div className="flex min-w-0 items-center gap-2">
                   <details
-                    className="dropdown"
+                    className="dropdown relative z-50"
                     ref={burgerMenuRef}
                     onToggle={() => {
-                      if (burgerMenuRef.current?.open) setIsMobileHeaderVisible(true);
+                      const nextOpen = burgerMenuRef.current?.open ?? false;
+                      setMobileMenuOpen(nextOpen);
+                      if (nextOpen) setIsMobileHeaderVisible(true);
                     }}
                   >
                     <summary className="btn btn-ghost btn-sm hover:bg-transparent p-1" aria-label="Open menu">
                       <Bars3Icon className="h-5 w-5" />
                     </summary>
                     <ul
-                      className={`menu menu-compact dropdown-content mt-3 w-64 rounded-xl border p-2 shadow-lg ${headerChromeSurfaceClassName} ${headerChromeBorderClassName}`}
-                      onClick={() => burgerMenuRef?.current?.removeAttribute("open")}
+                      className={`menu menu-compact dropdown-content z-[80] mt-3 w-64 rounded-xl border p-2 shadow-lg ${headerChromeSurfaceClassName} ${headerChromeBorderClassName}`}
+                      onClick={() => {
+                        burgerMenuRef?.current?.removeAttribute("open");
+                        setMobileMenuOpen(false);
+                      }}
                     >
                       <Suspense>
                         <MobileMenuLinks />
@@ -807,7 +815,11 @@ export const Header = () => {
                 <div className="flex items-center gap-2 shrink-0">
                   <button
                     type="button"
-                    onClick={() => setMobileSearchOpen(true)}
+                    onClick={() => {
+                      burgerMenuRef?.current?.removeAttribute("open");
+                      setMobileMenuOpen(false);
+                      setMobileSearchOpen(true);
+                    }}
                     className="btn btn-ghost btn-sm p-1 sm:hidden"
                     aria-label="Search content"
                   >
@@ -823,10 +835,12 @@ export const Header = () => {
           </div>
           {shouldUseVoteLayoutCollapse && !mobileSearchOpen && mobileHeaderVoteControls ? (
             <div
-              className="shrink-0"
+              className={`shrink-0 transition-opacity duration-150 ${
+                mobileMenuOpen ? "pointer-events-none opacity-0" : "opacity-100"
+              }`}
               data-vote-mobile-top-chrome="true"
-              data-visible={isMobileHeaderVisible ? "true" : "false"}
-              inert={isMobileHeaderVisible ? undefined : true}
+              data-visible={isMobileHeaderVisible && !mobileMenuOpen ? "true" : "false"}
+              inert={isMobileHeaderVisible && !mobileMenuOpen ? undefined : true}
             >
               {mobileHeaderVoteControls}
             </div>
