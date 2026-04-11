@@ -1015,15 +1015,19 @@ const HomeInner = () => {
     history.replaceState(null, "", buildVoteLocation(window.location.href, update));
   }, []);
 
+  const clearActiveContentPin = useCallback(() => {
+    selectContent(null);
+    replaceVoteLocation({ contentId: null });
+  }, [replaceVoteLocation, selectContent]);
+
   const handleSearchSortChange = useCallback(
     (nextSortBy: SearchSortOption) => {
       if (nextSortBy === effectiveSearchSortBy) return;
 
-      selectContent(null);
-      replaceVoteLocation({ contentId: null });
+      clearActiveContentPin();
       setSortBy(nextSortBy);
     },
-    [effectiveSearchSortBy, replaceVoteLocation, selectContent],
+    [clearActiveContentPin, effectiveSearchSortBy],
   );
 
   // Sync category selection with URL hash (e.g. /#books, /#board-games)
@@ -1253,11 +1257,13 @@ const HomeInner = () => {
           return;
         }
 
+        clearActiveContentPin();
         setView("watched");
         return;
       }
 
       if (nextView !== "followed_curators") {
+        clearActiveContentPin();
         setView(nextView);
         return;
       }
@@ -1276,9 +1282,10 @@ const HomeInner = () => {
         return;
       }
 
+      clearActiveContentPin();
       setView("followed_curators");
     },
-    [openConnectModal, requestFollowReadAccess, requestWatchReadAccess],
+    [clearActiveContentPin, openConnectModal, requestFollowReadAccess, requestWatchReadAccess],
   );
 
   // Count broken URLs for the filter pill
