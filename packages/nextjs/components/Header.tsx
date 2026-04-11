@@ -202,6 +202,8 @@ const MOBILE_HEADER_HIDE_OFFSET = 72;
 const MOBILE_HEADER_VISIBILITY_STABILIZE_MS = 260;
 const MOBILE_HEADER_VOTE_SAME_CARD_SETTLE_MS = 160;
 const EXPLICIT_LANDING_HREF = "/?landing=1";
+const VOTE_MOBILE_LAYOUT_MEDIA_QUERY = "(max-width: 1279px)";
+const VOTE_ROOT_SCROLL_RECOVERY_MIN_PX = 1;
 const MOBILE_HEADER_SCROLL_SOURCE_ATTRIBUTE = "data-mobile-header-scroll-source";
 const MOBILE_HEADER_SCROLL_SYNC_ATTRIBUTE = "data-mobile-header-scroll-sync";
 const MOBILE_HEADER_SCROLL_SYNC_OFFSET_ATTRIBUTE = "data-mobile-header-scroll-sync-offset";
@@ -370,6 +372,7 @@ export const Header = () => {
   });
   const isMobileHeaderVisibleRef = useRef(isMobileHeaderVisible);
   const lastMobileHeaderVisibilityChangeAtRef = useRef(0);
+  const suppressNextVoteRootScrollRef = useRef(false);
   useOutsideClick(burgerMenuRef, () => {
     burgerMenuRef?.current?.removeAttribute("open");
   });
@@ -403,14 +406,37 @@ export const Header = () => {
     setMobileSearchOpen(false);
     isMobileHeaderVisibleRef.current = true;
     lastMobileHeaderVisibilityChangeAtRef.current = 0;
+    suppressNextVoteRootScrollRef.current = false;
     setIsMobileHeaderVisible(true);
   }, [pathname, setIsMobileHeaderVisible]);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
 
+    const voteMobileLayoutQuery = window.matchMedia(VOTE_MOBILE_LAYOUT_MEDIA_QUERY);
+    let explicitScrollSource: HTMLElement | null = null;
+
     const readScrollOffset = (source: Window | HTMLElement) =>
       source instanceof HTMLElement ? source.scrollTop : window.scrollY;
+    const readRootScrollOffset = () =>
+      Math.max(
+        window.scrollY,
+        document.scrollingElement?.scrollTop ?? 0,
+        document.documentElement.scrollTop,
+        document.body.scrollTop,
+      );
+    const resetRootScrollOffset = () => {
+      const previousHtmlScrollBehavior = document.documentElement.style.scrollBehavior;
+      document.documentElement.style.scrollBehavior = "auto";
+      window.scrollTo({ top: 0, left: window.scrollX, behavior: "auto" });
+
+      if (document.scrollingElement) {
+        document.scrollingElement.scrollTop = 0;
+      }
+      document.documentElement.scrollTop = 0;
+      document.body.scrollTop = 0;
+      document.documentElement.style.scrollBehavior = previousHtmlScrollBehavior;
+    };
 
     const readVoteActiveCardIndex = (source: HTMLElement) =>
       source.querySelector<HTMLElement>('article[aria-current="true"]')?.getAttribute("data-feed-card-index") ?? null;
@@ -448,6 +474,53 @@ export const Header = () => {
       const scrollSource = resolveScrollSource(event.target);
       if (!scrollSource) return;
 
+      const isMobileMenuOpen = burgerMenuRef.current?.open ?? false;
+      if (scrollSource === window && suppressNextVoteRootScrollRef.current) {
+        const rootScrollOffset = readRootScrollOffset();
+
+        if (rootScrollOffset <= VOTE_ROOT_SCROLL_RECOVERY_MIN_PX) {
+          suppressNextVoteRootScrollRef.current = false;
+          return;
+        }
+
+        suppressNextVoteRootScrollRef.current = false;
+      }
+
+      if (
+        scrollSource === window &&
+        shouldUseVoteLayoutCollapse &&
+        voteMobileLayoutQuery.matches &&
+        explicitScrollSource &&
+        !mobileSearchOpen &&
+        !isMobileMenuOpen
+      ) {
+        const rootScrollOffset = readRootScrollOffset();
+
+        if (rootScrollOffset > VOTE_ROOT_SCROLL_RECOVERY_MIN_PX) {
+          // Safari can leak gestures that start outside the feed to the document root.
+          // Keep the feed as the scroll source so the vote layout stays anchored.
+          const maxScrollTop = Math.max(explicitScrollSource.scrollHeight - explicitScrollSource.clientHeight, 0);
+          const nextScrollTop = Math.min(Math.max(explicitScrollSource.scrollTop + rootScrollOffset, 0), maxScrollTop);
+          suppressNextVoteRootScrollRef.current = true;
+          resetRootScrollOffset();
+
+          if (Math.abs(nextScrollTop - explicitScrollSource.scrollTop) >= 0.5) {
+            const previousScrollBehavior = explicitScrollSource.style.scrollBehavior;
+            explicitScrollSource.style.scrollBehavior = "auto";
+            explicitScrollSource.scrollTop = nextScrollTop;
+            explicitScrollSource.dispatchEvent(new Event("scroll", { bubbles: true }));
+            explicitScrollSource.style.scrollBehavior = previousScrollBehavior;
+          } else {
+            lastScrollStateRef.current = {
+              source: explicitScrollSource,
+              offset: explicitScrollSource.scrollTop,
+            };
+          }
+
+          return;
+        }
+      }
+
       const currentScrollY = readScrollOffset(scrollSource);
       if (scrollSource instanceof HTMLElement && scrollSource.hasAttribute(MOBILE_HEADER_SCROLL_SYNC_ATTRIBUTE)) {
         const syncOffsetAttribute = scrollSource.getAttribute(MOBILE_HEADER_SCROLL_SYNC_OFFSET_ATTRIBUTE);
@@ -470,7 +543,6 @@ export const Header = () => {
       const previousState = lastScrollStateRef.current;
       const previousScrollY = previousState.source === scrollSource ? previousState.offset : 0;
       const scrollDelta = currentScrollY - previousScrollY;
-      const isMobileMenuOpen = burgerMenuRef.current?.open ?? false;
 
       if (currentScrollY <= 0) {
         clearDeferredVoteLayoutVisibility();
@@ -552,7 +624,6 @@ export const Header = () => {
       }
     };
 
-    let explicitScrollSource: HTMLElement | null = null;
     let bindFrameId = 0;
 
     const setInitialScrollState = (source: Window | HTMLElement) => {

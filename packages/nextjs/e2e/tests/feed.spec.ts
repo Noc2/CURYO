@@ -59,7 +59,10 @@ test.describe("Content feed", () => {
     await gotoWithRetry(page, "/vote?q=go-ethereum", { ensureWalletConnected: true, timeout: 45_000 });
     await waitForFeedLoaded(page, 30_000);
 
-    const sourceLink = page.getByTestId("content-source-link").first();
+    const activeCard = page.locator('article[aria-current="true"]').first();
+    await activeCard.getByRole("button", { name: "Expand details" }).click();
+
+    const sourceLink = activeCard.getByTestId("content-source-link").first();
     await expect(sourceLink).toBeVisible({ timeout: 10_000 });
 
     const popupPromise = page.context().waitForEvent("page");
