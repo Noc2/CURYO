@@ -56,7 +56,6 @@ import { rankForYouFeed } from "~~/lib/vote/forYouRanker";
 import { buildLinkedWalletAddresses } from "~~/lib/vote/linkedWalletAddresses";
 import { shouldUseAddressLogCooldownFallback } from "~~/lib/vote/liveCooldown";
 import { buildVoteContentPinKey, buildVoteContentPinKeyFromUrl, buildVoteLocation } from "~~/lib/vote/location";
-import { requestVoteMobileChromeReveal } from "~~/lib/vote/mobileChrome";
 import { mergeRequestedContentIntoFeed } from "~~/lib/vote/requestedContent";
 import { resolveStableSessionFeedOrder } from "~~/lib/vote/stableFeedOrder";
 import { type VoteView, getVoteViewGroups, isActivityViewOption } from "~~/lib/vote/viewOptions";
@@ -1159,7 +1158,6 @@ const HomeInner = () => {
   // Sync category selection with URL hash (e.g. /#books, /#board-games)
   const selectCategory = useCallback(
     (name: string) => {
-      requestVoteMobileChromeReveal();
       setIsMobileHeaderVisible(true);
       setActiveCategory(name);
       replaceVoteLocation({
@@ -1384,7 +1382,6 @@ const HomeInner = () => {
           return;
         }
 
-        requestVoteMobileChromeReveal();
         setIsMobileHeaderVisible(true);
         clearActiveContentPin();
         setView("watched");
@@ -1392,7 +1389,6 @@ const HomeInner = () => {
       }
 
       if (nextView !== "followed_curators") {
-        requestVoteMobileChromeReveal();
         setIsMobileHeaderVisible(true);
         clearActiveContentPin();
         setView(nextView);
@@ -1413,7 +1409,6 @@ const HomeInner = () => {
         return;
       }
 
-      requestVoteMobileChromeReveal();
       setIsMobileHeaderVisible(true);
       clearActiveContentPin();
       setView("followed_curators");
