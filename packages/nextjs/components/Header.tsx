@@ -1,6 +1,6 @@
 "use client";
 
-import React, { Suspense, useCallback, useEffect, useId, useRef, useState } from "react";
+import React, { Suspense, useCallback, useEffect, useId, useLayoutEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { motion } from "framer-motion";
@@ -417,7 +417,7 @@ export const Header = () => {
     setIsMobileHeaderVisible(true);
   }, [pathname, setIsMobileHeaderVisible]);
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     if (!shouldUseVoteLayoutCollapse) {
       setMobileHeaderHeight(0);
       return;
@@ -769,6 +769,7 @@ export const Header = () => {
         }
         data-mobile-header="true"
         data-visible={isMobileHeaderVisible ? "true" : "false"}
+        inert={shouldUseVoteLayoutCollapse && !isMobileHeaderVisible ? true : undefined}
       >
         <div ref={mobileHeaderMeasureRef} className={`flex min-h-0 flex-col ${headerChromeSurfaceClassName}`}>
           <div

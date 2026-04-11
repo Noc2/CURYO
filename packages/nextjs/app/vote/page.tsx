@@ -1,6 +1,6 @@
 "use client";
 
-import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { Suspense, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import dynamic from "next/dynamic";
 import { usePathname, useSearchParams } from "next/navigation";
 import type { NextPage } from "next";
@@ -1516,11 +1516,11 @@ const HomeInner = () => {
   );
   const mobileVoteHeaderControls = useMemo(() => renderVoteTopControls("mobile"), [renderVoteTopControls]);
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     setMobileHeaderVoteControls(mobileVoteHeaderControls);
   }, [mobileVoteHeaderControls, setMobileHeaderVoteControls]);
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     return () => setMobileHeaderVoteControls(null);
   }, [setMobileHeaderVoteControls]);
 
