@@ -10,6 +10,7 @@ import type { PlatformInfo } from "~~/utils/platforms";
 interface CoinGeckoEmbedProps {
   info: PlatformInfo;
   compact?: boolean;
+  isActive?: boolean;
   prefetchedMetadata?: ContentMetadataResult;
 }
 
@@ -50,7 +51,7 @@ function getPrefetchedCoinGeckoToken(coinId: string, prefetchedMetadata?: Conten
  * CoinGecko token embed component.
  * Fetches coin image via server-side proxy to avoid CORS/rate-limit issues.
  */
-export function CoinGeckoEmbed({ info, compact, prefetchedMetadata }: CoinGeckoEmbedProps) {
+export function CoinGeckoEmbed({ info, compact, isActive = !compact, prefetchedMetadata }: CoinGeckoEmbedProps) {
   const [token, setToken] = useState<CoinGeckoToken | null>(null);
   const [loading, setLoading] = useState(true);
   const [imageError, setImageError] = useState(false);
@@ -63,7 +64,8 @@ export function CoinGeckoEmbed({ info, compact, prefetchedMetadata }: CoinGeckoE
   const activeImageUrl = imageCandidates[imageCandidateIndex];
   const canFallbackImage = imageCandidateIndex < imageCandidates.length - 1;
   const imageSrc = activeImageUrl ? `/api/image-proxy?url=${encodeURIComponent(activeImageUrl)}` : undefined;
-  const imageLoadingProps = getEmbedImageLoadingProps(compact);
+  const imageLoadingProps = getEmbedImageLoadingProps(compact, isActive);
+  const shouldTimeoutImageLoad = imageLoadingProps.loading === "eager";
 
   function advanceImageCandidate() {
     if (!canFallbackImage) {
@@ -142,7 +144,7 @@ export function CoinGeckoEmbed({ info, compact, prefetchedMetadata }: CoinGeckoE
   }, [token?.imageUrl, token?.thumbnailUrl]);
 
   useEffect(() => {
-    if (!imageSrc || imageLoaded) return;
+    if (!imageSrc || imageLoaded || !shouldTimeoutImageLoad) return;
 
     const timeout = window.setTimeout(() => {
       const loadState = getImageLoadState(imageRef.current);
@@ -163,7 +165,7 @@ export function CoinGeckoEmbed({ info, compact, prefetchedMetadata }: CoinGeckoE
     return () => {
       window.clearTimeout(timeout);
     };
-  }, [canFallbackImage, imageLoaded, imageSrc, imageCandidates.length]);
+  }, [canFallbackImage, imageLoaded, imageSrc, imageCandidates.length, shouldTimeoutImageLoad]);
 
   // Loading state
   if (loading) {

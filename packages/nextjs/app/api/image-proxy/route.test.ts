@@ -69,6 +69,15 @@ test("revalidates HTTPS redirects before following them", async () => {
 
   assert.equal(response.status, 200);
   assert.equal(response.headers.get("content-type"), "image/png");
+  assert.equal(response.headers.get("cache-control"), "public, max-age=86400, immutable");
+  assert.equal(
+    response.headers.get("cdn-cache-control"),
+    "public, max-age=86400, stale-while-revalidate=604800, stale-if-error=604800",
+  );
+  assert.equal(
+    response.headers.get("vercel-cdn-cache-control"),
+    "public, max-age=86400, stale-while-revalidate=604800, stale-if-error=604800",
+  );
   assert.deepEqual(calls, ["https://coin-images.coingecko.com/initial.png", "https://assets.coingecko.com/final.png"]);
   assert.deepEqual(requestOptions, [
     { cache: "no-store", redirect: "manual" },
@@ -147,6 +156,15 @@ test("allows Hugging Face repository image assets", async () => {
 
   assert.equal(response.status, 200);
   assert.equal(response.headers.get("content-type"), "image/png");
+  assert.equal(response.headers.get("cache-control"), "public, max-age=86400, immutable");
+  assert.equal(
+    response.headers.get("cdn-cache-control"),
+    "public, max-age=86400, stale-while-revalidate=604800, stale-if-error=604800",
+  );
+  assert.equal(
+    response.headers.get("vercel-cdn-cache-control"),
+    "public, max-age=86400, stale-while-revalidate=604800, stale-if-error=604800",
+  );
   assert.deepEqual(calls, ["https://huggingface.co/dealignai/Gemma-4-31B-JANG_4M-CRACK/raw/main/dealign_mascot.png"]);
   assert.deepEqual(Array.from(new Uint8Array(await response.arrayBuffer())), [7, 8, 9]);
 });

@@ -10,6 +10,7 @@ import type { PlatformInfo } from "~~/utils/platforms";
 interface OpenLibraryEmbedProps {
   info: PlatformInfo;
   compact?: boolean;
+  isActive?: boolean;
   prefetchedMetadata?: ContentMetadataResult;
 }
 
@@ -56,7 +57,7 @@ function getImageLoadState(image: ImageLoadSnapshot | null): "pending" | "loaded
  * Open Library book embed component.
  * Fetches book data via server-side proxy (resolves authors server-side, cached 24h).
  */
-export function OpenLibraryEmbed({ info, compact, prefetchedMetadata }: OpenLibraryEmbedProps) {
+export function OpenLibraryEmbed({ info, compact, isActive = !compact, prefetchedMetadata }: OpenLibraryEmbedProps) {
   const [book, setBook] = useState<OpenLibraryBook | null>(null);
   const [loading, setLoading] = useState(true);
   const [fetchError, setFetchError] = useState(false);
@@ -67,9 +68,11 @@ export function OpenLibraryEmbed({ info, compact, prefetchedMetadata }: OpenLibr
 
   const olId = info.id || (info.metadata?.olId as string);
   const coverCandidates = getOpenLibraryCoverCandidates(book);
-  const imageSrc = coverCandidates[coverCandidateIndex];
+  const activeCoverUrl = coverCandidates[coverCandidateIndex];
+  const imageSrc = activeCoverUrl ? `/api/image-proxy?url=${encodeURIComponent(activeCoverUrl)}` : undefined;
   const canFallbackCover = coverCandidateIndex < coverCandidates.length - 1;
-  const imageLoadingProps = getEmbedImageLoadingProps(compact);
+  const imageLoadingProps = getEmbedImageLoadingProps(compact, isActive);
+  const shouldTimeoutImageLoad = imageLoadingProps.loading === "eager";
 
   function advanceCoverCandidate() {
     if (!canFallbackCover) {
@@ -148,7 +151,7 @@ export function OpenLibraryEmbed({ info, compact, prefetchedMetadata }: OpenLibr
   }, [book?.coverUrl, book?.thumbnailUrl]);
 
   useEffect(() => {
-    if (!imageSrc || imageLoaded) return;
+    if (!imageSrc || imageLoaded || !shouldTimeoutImageLoad) return;
 
     const timeout = window.setTimeout(() => {
       const loadState = getImageLoadState(imageRef.current);
@@ -169,7 +172,7 @@ export function OpenLibraryEmbed({ info, compact, prefetchedMetadata }: OpenLibr
     return () => {
       window.clearTimeout(timeout);
     };
-  }, [canFallbackCover, coverCandidates.length, imageLoaded, imageSrc]);
+  }, [canFallbackCover, coverCandidates.length, imageLoaded, imageSrc, shouldTimeoutImageLoad]);
 
   // Loading state
   if (loading) {

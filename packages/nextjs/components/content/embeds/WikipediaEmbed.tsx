@@ -3,12 +3,14 @@
 import { useEffect, useState } from "react";
 import { SafeExternalLink } from "~~/components/shared/SafeExternalLink";
 import { getEmbedImageLoadingProps } from "~~/lib/content/embedLoadStrategy";
+import { useEmbedImageLoadState } from "~~/lib/content/useEmbedImageLoadState";
 import type { ContentMetadataResult } from "~~/lib/contentMetadata/types";
 import type { PlatformInfo } from "~~/utils/platforms";
 
 interface WikipediaEmbedProps {
   info: PlatformInfo;
   compact?: boolean;
+  isActive?: boolean;
   prefetchedMetadata?: ContentMetadataResult;
 }
 
@@ -40,16 +42,18 @@ function getPrefetchedWikipediaPerson(title: string, prefetchedMetadata?: Conten
  * Wikipedia person/article embed component.
  * Fetches data via server-side proxy to avoid CORS and cache results.
  */
-export function WikipediaEmbed({ info, compact, prefetchedMetadata }: WikipediaEmbedProps) {
+export function WikipediaEmbed({ info, compact, isActive = !compact, prefetchedMetadata }: WikipediaEmbedProps) {
   const [person, setPerson] = useState<WikipediaPerson | null>(null);
   const [loading, setLoading] = useState(true);
   const [fetchError, setFetchError] = useState(false);
-  const [imageError, setImageError] = useState(false);
-  const [imageLoaded, setImageLoaded] = useState(false);
 
   const title = info.id || (info.metadata?.title as string);
-  const imageSrc = person?.imageUrl;
-  const imageLoadingProps = getEmbedImageLoadingProps(compact);
+  const imageSrc = person?.imageUrl ? `/api/image-proxy?url=${encodeURIComponent(person.imageUrl)}` : undefined;
+  const imageLoadingProps = getEmbedImageLoadingProps(compact, isActive);
+  const { handleImageError, handleImageLoad, handleImageRef, imageError, imageLoaded } = useEmbedImageLoadState(
+    imageSrc,
+    imageLoadingProps.loading === "eager",
+  );
 
   useEffect(() => {
     setFetchError(false);
@@ -93,11 +97,6 @@ export function WikipediaEmbed({ info, compact, prefetchedMetadata }: WikipediaE
       cancelled = true;
     };
   }, [title, info.url, prefetchedMetadata]);
-
-  useEffect(() => {
-    setImageError(false);
-    setImageLoaded(false);
-  }, [imageSrc]);
 
   // Loading state
   if (loading) {
@@ -172,14 +171,15 @@ export function WikipediaEmbed({ info, compact, prefetchedMetadata }: WikipediaE
           </div>
         )}
         <img
+          ref={handleImageRef}
           src={imageSrc}
           alt={person.title}
           {...imageLoadingProps}
           className={`rounded-t-xl shadow-lg transition-transform group-hover:scale-[1.02] ${
             compact ? "w-full h-auto aspect-[3/4] object-cover" : "h-full w-full object-contain object-center"
           } ${imageLoaded ? "opacity-100" : "opacity-0"}`}
-          onLoad={() => setImageLoaded(true)}
-          onError={() => setImageError(true)}
+          onLoad={handleImageLoad}
+          onError={handleImageError}
         />
         <div className="absolute bottom-0 left-0 right-0 p-3 bg-gradient-to-t from-black/70 to-transparent opacity-0 group-hover:opacity-100 transition-opacity">
           <p className="text-white text-base font-bold text-center">{person.title}</p>

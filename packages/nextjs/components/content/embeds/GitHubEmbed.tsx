@@ -3,12 +3,14 @@
 import { useEffect, useState } from "react";
 import { SafeExternalLink } from "~~/components/shared/SafeExternalLink";
 import { getEmbedImageLoadingProps } from "~~/lib/content/embedLoadStrategy";
+import { useEmbedImageLoadState } from "~~/lib/content/useEmbedImageLoadState";
 import type { ContentMetadataResult } from "~~/lib/contentMetadata/types";
 import type { PlatformInfo } from "~~/utils/platforms";
 
 interface GitHubEmbedProps {
   info: PlatformInfo;
   compact?: boolean;
+  isActive?: boolean;
   prefetchedMetadata?: ContentMetadataResult;
 }
 
@@ -73,16 +75,18 @@ function getPrefetchedGitHubRepo(repoSlug: string, prefetchedMetadata?: ContentM
  * GitHub repository embed component.
  * Fetches repo data via server-side proxy and displays a rich card.
  */
-export function GitHubEmbed({ info, compact, prefetchedMetadata }: GitHubEmbedProps) {
+export function GitHubEmbed({ info, compact, isActive = !compact, prefetchedMetadata }: GitHubEmbedProps) {
   const [repo, setRepo] = useState<GitHubRepo | null>(null);
   const [loading, setLoading] = useState(true);
-  const [imageError, setImageError] = useState(false);
-  const [imageLoaded, setImageLoaded] = useState(false);
 
   const repoSlug =
     info.id || (info.metadata?.owner && info.metadata?.repo ? `${info.metadata.owner}/${info.metadata.repo}` : null);
   const imageSrc = repo?.imageUrl ? `/api/image-proxy?url=${encodeURIComponent(repo.imageUrl)}` : undefined;
-  const imageLoadingProps = getEmbedImageLoadingProps(compact);
+  const imageLoadingProps = getEmbedImageLoadingProps(compact, isActive);
+  const { handleImageError, handleImageLoad, handleImageRef, imageError, imageLoaded } = useEmbedImageLoadState(
+    imageSrc,
+    imageLoadingProps.loading === "eager",
+  );
 
   useEffect(() => {
     if (!repoSlug) {
@@ -128,11 +132,6 @@ export function GitHubEmbed({ info, compact, prefetchedMetadata }: GitHubEmbedPr
       cancelled = true;
     };
   }, [repoSlug, info.url, prefetchedMetadata]);
-
-  useEffect(() => {
-    setImageError(false);
-    setImageLoaded(false);
-  }, [imageSrc]);
 
   if (loading) {
     return (
@@ -215,6 +214,7 @@ export function GitHubEmbed({ info, compact, prefetchedMetadata }: GitHubEmbedPr
         )}
         <div className="flex h-full w-full items-center justify-center p-10 embed-surface">
           <img
+            ref={handleImageRef}
             src={imageSrc}
             alt={repo.name}
             width={192}
@@ -223,8 +223,8 @@ export function GitHubEmbed({ info, compact, prefetchedMetadata }: GitHubEmbedPr
             className={`aspect-square h-auto w-[clamp(11rem,58%,24rem)] max-h-[72%] rounded-2xl shadow-lg transition-transform group-hover:scale-[1.05] object-cover ${
               imageLoaded ? "opacity-100" : "opacity-0"
             }`}
-            onLoad={() => setImageLoaded(true)}
-            onError={() => setImageError(true)}
+            onLoad={handleImageLoad}
+            onError={handleImageError}
           />
         </div>
       </SafeExternalLink>

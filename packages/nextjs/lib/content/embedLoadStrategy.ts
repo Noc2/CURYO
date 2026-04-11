@@ -37,10 +37,10 @@ export function shouldWaitForPrefetchedMetadata(
   return deferClientFetch && prefetchedMetadata === undefined && PREFETCH_FIRST_EMBED_TYPES.has(platformType);
 }
 
-export function getEmbedImageLoadingProps(compact = false) {
+export function getEmbedImageLoadingProps(compact = false, isActive = !compact) {
   return {
-    loading: compact ? ("lazy" as const) : ("eager" as const),
-    fetchPriority: compact ? ("auto" as const) : ("high" as const),
+    loading: isActive ? ("eager" as const) : ("lazy" as const),
+    fetchPriority: isActive ? ("high" as const) : ("auto" as const),
     decoding: "async" as const,
   };
 }

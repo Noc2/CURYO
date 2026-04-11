@@ -1,13 +1,14 @@
 "use client";
 
-import { useState } from "react";
 import { SafeExternalLink } from "~~/components/shared/SafeExternalLink";
 import { getEmbedImageLoadingProps } from "~~/lib/content/embedLoadStrategy";
+import { useEmbedImageLoadState } from "~~/lib/content/useEmbedImageLoadState";
 import type { PlatformInfo } from "~~/utils/platforms";
 
 interface ScryfallEmbedProps {
   info: PlatformInfo;
   compact?: boolean;
+  isActive?: boolean;
 }
 
 function MtgIcon({ className }: { className?: string }) {
@@ -22,10 +23,13 @@ function MtgIcon({ className }: { className?: string }) {
  * Scryfall MTG card embed.
  * Displays the card image directly from Scryfall API.
  */
-export function ScryfallEmbed({ info, compact }: ScryfallEmbedProps) {
-  const [imageError, setImageError] = useState(false);
-  const [imageLoaded, setImageLoaded] = useState(false);
-  const imageLoadingProps = getEmbedImageLoadingProps(compact);
+export function ScryfallEmbed({ info, compact, isActive = !compact }: ScryfallEmbedProps) {
+  const imageLoadingProps = getEmbedImageLoadingProps(compact, isActive);
+  const imageSrc = info.thumbnailUrl ? `/api/image-proxy?url=${encodeURIComponent(info.thumbnailUrl)}` : undefined;
+  const { handleImageError, handleImageLoad, handleImageRef, imageError, imageLoaded } = useEmbedImageLoadState(
+    imageSrc,
+    imageLoadingProps.loading === "eager",
+  );
 
   const cardName = (info.metadata?.cardName as string)?.replace(/-/g, " ") || "MTG Card";
   const formattedName = cardName
@@ -33,7 +37,7 @@ export function ScryfallEmbed({ info, compact }: ScryfallEmbedProps) {
     .map(word => word.charAt(0).toUpperCase() + word.slice(1))
     .join(" ");
 
-  if (!info.thumbnailUrl || imageError) {
+  if (!imageSrc || imageError) {
     return (
       <SafeExternalLink
         href={info.url}
@@ -65,7 +69,8 @@ export function ScryfallEmbed({ info, compact }: ScryfallEmbedProps) {
         </div>
       )}
       <img
-        src={`/api/image-proxy?url=${encodeURIComponent(info.thumbnailUrl)}`}
+        ref={handleImageRef}
+        src={imageSrc}
         alt={formattedName}
         {...imageLoadingProps}
         className={`shadow-lg transition-transform group-hover:scale-[1.02] ${
@@ -73,8 +78,8 @@ export function ScryfallEmbed({ info, compact }: ScryfallEmbedProps) {
             ? "w-full h-auto rounded-xl aspect-[5/7] object-cover"
             : "h-full w-full rounded-xl object-contain object-center embed-surface"
         } ${imageLoaded ? "opacity-100" : "opacity-0"}`}
-        onLoad={() => setImageLoaded(true)}
-        onError={() => setImageError(true)}
+        onLoad={handleImageLoad}
+        onError={handleImageError}
       />
       <div className="absolute bottom-0 left-0 right-0 p-3 bg-gradient-to-t from-black/70 to-transparent opacity-0 group-hover:opacity-100 transition-opacity">
         <p className="text-white text-base font-bold text-center">{formattedName}</p>

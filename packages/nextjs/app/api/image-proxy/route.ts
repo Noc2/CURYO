@@ -32,6 +32,19 @@ const ALLOWED_HOSTS = new Set([
 
 const MAX_RESPONSE_SIZE = 10 * 1024 * 1024; // 10 MB
 const UPSTREAM_FETCH_OPTIONS = { cache: "no-store" as const, redirect: "manual" as const };
+const BROWSER_IMAGE_CACHE_CONTROL = "public, max-age=86400, immutable";
+const CDN_IMAGE_CACHE_CONTROL = "public, max-age=86400, stale-while-revalidate=604800, stale-if-error=604800";
+
+function buildImageResponse(bytes: Uint8Array, contentType: string) {
+  return new NextResponse(bytes, {
+    headers: {
+      "Content-Type": contentType,
+      "Cache-Control": BROWSER_IMAGE_CACHE_CONTROL,
+      "CDN-Cache-Control": CDN_IMAGE_CACHE_CONTROL,
+      "Vercel-CDN-Cache-Control": CDN_IMAGE_CACHE_CONTROL,
+    },
+  });
+}
 
 function normalizeProxyImageUrl(url: string): string {
   return getSafeHuggingFaceImageUrl(url) ?? url;
@@ -88,9 +101,7 @@ export async function GET(request: NextRequest) {
       const ct = redirectRes.headers.get("content-type") || "image/png";
       if (!ct.startsWith("image/")) return new NextResponse(null, { status: 502 });
       const bytes = await readResponseBytes(redirectRes, MAX_RESPONSE_SIZE);
-      return new NextResponse(bytes, {
-        headers: { "Content-Type": ct, "Cache-Control": "public, max-age=86400, immutable" },
-      });
+      return buildImageResponse(bytes, ct);
     }
 
     if (!res.ok) {
@@ -104,12 +115,7 @@ export async function GET(request: NextRequest) {
 
     const buffer = await readResponseBytes(res, MAX_RESPONSE_SIZE);
 
-    return new NextResponse(buffer, {
-      headers: {
-        "Content-Type": contentType,
-        "Cache-Control": "public, max-age=86400, immutable",
-      },
-    });
+    return buildImageResponse(buffer, contentType);
   } catch (error) {
     if (error instanceof ResponseTooLargeError) {
       return new NextResponse(null, { status: 413 });
