@@ -98,6 +98,26 @@ test("protected content ids stay visible even when previously ignored", () => {
   );
 });
 
+test("disabled policy preserves explicit-mode ordering", () => {
+  resetStorage();
+  const scope = buildFeedExposureScope({ address: "0xABC", chainId: 31337 });
+  const now = Date.UTC(2026, 3, 11);
+
+  recordFeedExposure(scope, { contentId: 1n, hasPositiveInteraction: false, now });
+
+  const ordered = applyFeedExposurePolicy([item(1n), item(2n), item(3n)], {
+    enabled: false,
+    minVisibleItems: 1,
+    now: now + 60_000,
+    scope,
+  });
+
+  assert.deepEqual(
+    ordered.map(entry => entry.id),
+    [1n, 2n, 3n],
+  );
+});
+
 test("ignored content naturally returns after the cooldown window", () => {
   resetStorage();
   const scope = buildFeedExposureScope({ address: "0xABC", chainId: 31337 });
