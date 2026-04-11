@@ -44,6 +44,13 @@ import {
   DISCOVER_BROKEN_FILTER,
   filterDiscoverCategoryItems,
 } from "~~/lib/vote/discoverFeedFilter";
+import {
+  type FeedExposureScope,
+  applyFeedExposurePolicy,
+  buildFeedExposureScope,
+  recordFeedExposure,
+  recordFeedPositiveInteraction,
+} from "~~/lib/vote/feedExposure";
 import { type DiscoverFeedMode, sortDiscoverFeed } from "~~/lib/vote/feedModes";
 import { rankForYouFeed } from "~~/lib/vote/forYouRanker";
 import { buildLinkedWalletAddresses } from "~~/lib/vote/linkedWalletAddresses";
@@ -85,6 +92,7 @@ const SEARCH_SORT_OPTIONS: { value: SearchSortOption; label: string }[] = [
   { value: "lowest_rated", label: "Lowest Rated" },
 ];
 const FEED_PAGE_SIZE = 6;
+const FOR_YOU_CANDIDATE_PAGE_MULTIPLIER = 6;
 const FEED_PREFETCH_BUFFER = 6;
 const MOBILE_VOTE_DOCK_RESERVED_SPACE_PX = 152;
 const VOTE_MOBILE_CHROME_QUERY = "(max-width: 1279px)";
@@ -97,6 +105,14 @@ function areIdListsEqual(left: readonly string[], right: readonly string[]) {
 
 function getVoteCooldownMessage(seconds: number) {
   return `You already voted on this content recently. Try again in ${formatVoteCooldownRemaining(seconds)}.`;
+}
+
+interface ActiveViewSession {
+  contentId: string;
+  feedExposureScope: FeedExposureScope;
+  hasPositiveInteraction: boolean;
+  shouldTrackFeedExposure: boolean;
+  startedAt: number;
 }
 
 function VoteStageLoading() {
@@ -125,6 +141,7 @@ const HomeInner = () => {
 
   const { address } = useAccount();
   const { targetNetwork } = useTargetNetwork();
+  const normalizedAddress = address?.toLowerCase();
   const { isMobileHeaderVisible } = useMobileHeaderVisibility();
   const nowSeconds = useUnixTime(60_000);
   const { openConnectModal } = useCuryoConnectModal();
@@ -200,8 +217,14 @@ const HomeInner = () => {
   const viewGroups = useMemo(() => getVoteViewGroups(hasWallet), [hasWallet]);
   const activeScope: ScopeOption = isActivityViewOption(view) ? view : "all";
   const activeFeedMode: DiscoverFeedMode = isActivityViewOption(view) ? "for_you" : view;
+  const isAlgorithmicForYouFeed =
+    !isSearchMode && activeScope === "all" && activeFeedMode === "for_you" && requestedActiveId === null;
   const feedRequestLimit = Math.max(
-    !isSearchMode && activeScope === "all" ? FEED_PAGE_SIZE * 4 : FEED_PAGE_SIZE * 2,
+    isAlgorithmicForYouFeed
+      ? FEED_PAGE_SIZE * FOR_YOU_CANDIDATE_PAGE_MULTIPLIER
+      : !isSearchMode && activeScope === "all"
+        ? FEED_PAGE_SIZE * 4
+        : FEED_PAGE_SIZE * 2,
     visibleCount + FEED_PREFETCH_BUFFER + 1,
   );
 
@@ -473,7 +496,14 @@ const HomeInner = () => {
     (activeScope === "my_votes" && !!address && votesLoading) ||
     ((activeScope === "settling_soon" || activeScope === "followed_curators") && !!address && discoverSignalsLoading) ||
     (activeScope === "followed_curators" && !!address && followedProfilesLoading);
-  const normalizedAddress = address?.toLowerCase();
+  const feedExposureScope = useMemo(
+    () =>
+      buildFeedExposureScope({
+        address: normalizedAddress,
+        chainId: targetNetwork.id,
+      }),
+    [normalizedAddress, targetNetwork.id],
+  );
 
   useEffect(() => {
     if (!address && isActivityViewOption(view)) {
@@ -482,9 +512,7 @@ const HomeInner = () => {
   }, [address, view]);
 
   const displayFeedRef = useRef<ContentItem[]>([]);
-  const activeViewSessionRef = useRef<{ contentId: string; startedAt: number; hasPositiveInteraction: boolean } | null>(
-    null,
-  );
+  const activeViewSessionRef = useRef<ActiveViewSession | null>(null);
   const isMountedRef = useRef(true);
   const persistRecommendationSignal = useCallback(
     (
@@ -508,11 +536,16 @@ const HomeInner = () => {
     },
     [persistRecommendationSignal],
   );
-  const markPrimaryInteraction = useCallback((contentId: bigint) => {
-    if (activeViewSessionRef.current?.contentId === contentId.toString()) {
-      activeViewSessionRef.current.hasPositiveInteraction = true;
-    }
-  }, []);
+  const markPrimaryInteraction = useCallback(
+    (contentId: bigint, options: { isVote?: boolean } = {}) => {
+      if (activeViewSessionRef.current?.contentId === contentId.toString()) {
+        activeViewSessionRef.current.hasPositiveInteraction = true;
+      }
+
+      recordFeedPositiveInteraction(feedExposureScope, { contentId, isVote: options.isVote });
+    },
+    [feedExposureScope],
+  );
   const triggerVoteAttention = useCallback((contentId: bigint) => {
     if (typeof window === "undefined") return;
 
@@ -540,6 +573,13 @@ const HomeInner = () => {
 
       const dwellMs = Date.now() - session.startedAt;
       let profileChanged = false;
+
+      if (session.shouldTrackFeedExposure) {
+        recordFeedExposure(session.feedExposureScope, {
+          contentId: session.contentId,
+          hasPositiveInteraction: session.hasPositiveInteraction,
+        });
+      }
 
       if (dwellMs >= 1_200) {
         persistRecommendationSignal(item, "dwell", { dwellMs });
@@ -660,13 +700,22 @@ const HomeInner = () => {
         break;
       default:
         return withRequestedItem(
-          rankForYouFeed(items, {
-            nowSeconds,
-            profile: interestProfile,
-            votedContentIds,
-            watchedContentIds,
-            followedWallets,
-          }),
+          applyFeedExposurePolicy(
+            rankForYouFeed(items, {
+              nowSeconds,
+              profile: interestProfile,
+              votedContentIds,
+              watchedContentIds,
+              followedWallets,
+            }),
+            {
+              enabled: isAlgorithmicForYouFeed,
+              minVisibleItems: FEED_PAGE_SIZE,
+              now: nowSeconds * 1000,
+              protectedContentIds: effectiveRequestedActiveId !== null ? [effectiveRequestedActiveId] : [],
+              scope: feedExposureScope,
+            },
+          ),
         );
     }
 
@@ -679,6 +728,7 @@ const HomeInner = () => {
     followedCuratorOrderMap,
     followedWallets,
     interestProfile,
+    isAlgorithmicForYouFeed,
     isSearchMode,
     nowSeconds,
     voteOrderMap,
@@ -688,6 +738,7 @@ const HomeInner = () => {
     watchedOrderMap,
     effectiveRequestedActiveId,
     requestedContentItem,
+    feedExposureScope,
   ]);
   const feedSessionKey = useMemo(
     () =>
@@ -855,8 +906,10 @@ const HomeInner = () => {
     persistRecommendationSignal(primaryItem, "impression");
     const session = {
       contentId: primaryItem.id.toString(),
+      feedExposureScope,
       startedAt: Date.now(),
       hasPositiveInteraction: false,
+      shouldTrackFeedExposure: isAlgorithmicForYouFeed,
     };
     activeViewSessionRef.current = session;
 
@@ -865,7 +918,7 @@ const HomeInner = () => {
         flushActiveViewSession(false);
       }
     };
-  }, [flushActiveViewSession, persistRecommendationSignal, primaryItem]);
+  }, [feedExposureScope, flushActiveViewSession, isAlgorithmicForYouFeed, persistRecommendationSignal, primaryItem]);
 
   const submitterAddresses = useMemo(() => {
     return loadedItems.map(item => item.submitter);
@@ -1107,7 +1160,7 @@ const HomeInner = () => {
         return next;
       });
       if (item) {
-        markPrimaryInteraction(item.id);
+        markPrimaryInteraction(item.id, { isVote: true });
         recordRecommendationSignal(item, "vote_commit", { isUp: stakeModal.isUp });
       }
 
