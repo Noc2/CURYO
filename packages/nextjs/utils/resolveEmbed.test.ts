@@ -51,6 +51,49 @@ test("resolveEmbed prefers Hugging Face card thumbnails over avatar fallbacks", 
   assert.equal(result.description, "text generation (mlx)");
 });
 
+test("resolveEmbed accepts absolute Hugging Face card thumbnail URLs", async () => {
+  const calls: string[] = [];
+
+  globalThis.fetch = (async (input: RequestInfo | URL) => {
+    const url = String(input);
+    calls.push(url);
+
+    if (url === "https://huggingface.co/api/models/google/gemma-4-E2B-it") {
+      return new Response(
+        JSON.stringify({
+          modelId: "google/gemma-4-E2B-it",
+          pipeline_tag: "any-to-any",
+          library_name: "transformers",
+          cardData: {
+            thumbnail: "https://cdn-thumbnails.huggingface.co/social-thumbnails/models/google/gemma-4-E2B-it.png",
+          },
+        }),
+        {
+          headers: {
+            "content-type": "application/json",
+          },
+        },
+      );
+    }
+
+    throw new Error(`Unexpected fetch: ${url}`);
+  }) as typeof fetch;
+
+  const result = await resolveEmbed("huggingface", "google/gemma-4-E2B-it", { author: "google" });
+
+  assert.deepEqual(calls, ["https://huggingface.co/api/models/google/gemma-4-E2B-it"]);
+  assert.equal(
+    result.thumbnailUrl,
+    "https://cdn-thumbnails.huggingface.co/social-thumbnails/models/google/gemma-4-E2B-it.png",
+  );
+  assert.equal(
+    result.imageUrl,
+    "https://cdn-thumbnails.huggingface.co/social-thumbnails/models/google/gemma-4-E2B-it.png",
+  );
+  assert.equal(result.title, "google/gemma-4-E2B-it");
+  assert.equal(result.description, "any to any (transformers)");
+});
+
 test("resolveEmbed trims escaped Hugging Face avatar URLs before returning metadata", async () => {
   const calls: string[] = [];
 
@@ -97,7 +140,10 @@ test("resolveEmbed trims escaped Hugging Face avatar URLs before returning metad
     result.thumbnailUrl,
     "https://cdn-avatars.huggingface.co/v1/production/uploads/66309bd090589b7c65950665/RcOk7ysh7nEt5YlHHzauj.jpeg",
   );
-  assert.equal(result.imageUrl, undefined);
+  assert.equal(
+    result.imageUrl,
+    "https://cdn-thumbnails.huggingface.co/social-thumbnails/models/Jackrong/Gemopus-4-E4B-it.png",
+  );
   assert.equal(result.title, "Jackrong/Gemopus-4-E4B-it");
   assert.equal(result.description, "image text to text");
 });
@@ -148,5 +194,62 @@ test("resolveEmbed calls Hugging Face model APIs with unescaped path separators"
     result.thumbnailUrl,
     "https://cdn-avatars.huggingface.co/v1/production/uploads/5dd96eb166059660ed1ee413/WtA3YYitedOr9n02eHfJe.png",
   );
-  assert.equal(result.imageUrl, undefined);
+  assert.equal(
+    result.imageUrl,
+    "https://cdn-thumbnails.huggingface.co/social-thumbnails/models/google/gemma-4-E4B-it.png",
+  );
+});
+
+test("resolveEmbed uses Hugging Face social thumbnails when model cards have no thumbnail", async () => {
+  const calls: string[] = [];
+
+  globalThis.fetch = (async (input: RequestInfo | URL) => {
+    const url = String(input);
+    calls.push(url);
+
+    if (url === "https://huggingface.co/api/models/google/gemma-4-E2B-it") {
+      return new Response(
+        JSON.stringify({
+          modelId: "google/gemma-4-E2B-it",
+          pipeline_tag: "any-to-any",
+          library_name: "transformers",
+          cardData: {
+            pipeline_tag: "any-to-any",
+          },
+        }),
+        {
+          headers: {
+            "content-type": "application/json",
+          },
+        },
+      );
+    }
+
+    if (url === "https://huggingface.co/google") {
+      return new Response(
+        '<script>{"avatarUrl":"https://cdn-avatars.huggingface.co/v1/production/uploads/5dd96eb166059660ed1ee413/WtA3YYitedOr9n02eHfJe.png","fullname":"Google"}</script>',
+        {
+          headers: {
+            "content-type": "text/html",
+          },
+        },
+      );
+    }
+
+    throw new Error(`Unexpected fetch: ${url}`);
+  }) as typeof fetch;
+
+  const result = await resolveEmbed("huggingface", "google/gemma-4-E2B-it", { author: "google" });
+
+  assert.deepEqual(calls, ["https://huggingface.co/api/models/google/gemma-4-E2B-it", "https://huggingface.co/google"]);
+  assert.equal(result.title, "google/gemma-4-E2B-it");
+  assert.equal(result.description, "any to any (transformers)");
+  assert.equal(
+    result.thumbnailUrl,
+    "https://cdn-avatars.huggingface.co/v1/production/uploads/5dd96eb166059660ed1ee413/WtA3YYitedOr9n02eHfJe.png",
+  );
+  assert.equal(
+    result.imageUrl,
+    "https://cdn-thumbnails.huggingface.co/social-thumbnails/models/google/gemma-4-E2B-it.png",
+  );
 });

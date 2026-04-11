@@ -169,6 +169,30 @@ test("allows Hugging Face repository image assets", async () => {
   assert.deepEqual(Array.from(new Uint8Array(await response.arrayBuffer())), [7, 8, 9]);
 });
 
+test("allows Hugging Face social thumbnail assets", async () => {
+  const calls: string[] = [];
+  globalThis.fetch = (async (input: RequestInfo | URL) => {
+    calls.push(String(input));
+
+    return new Response(new Uint8Array([13, 14, 15]), {
+      headers: {
+        "content-type": "image/png",
+      },
+    });
+  }) as typeof fetch;
+
+  const response = await GET(
+    new NextRequest(
+      "http://localhost/api/image-proxy?url=https://cdn-thumbnails.huggingface.co/social-thumbnails/models/google/gemma-4-E2B-it.png",
+    ),
+  );
+
+  assert.equal(response.status, 200);
+  assert.equal(response.headers.get("content-type"), "image/png");
+  assert.deepEqual(calls, ["https://cdn-thumbnails.huggingface.co/social-thumbnails/models/google/gemma-4-E2B-it.png"]);
+  assert.deepEqual(Array.from(new Uint8Array(await response.arrayBuffer())), [13, 14, 15]);
+});
+
 test("normalizes escaped Hugging Face avatar URLs before proxying", async () => {
   const calls: string[] = [];
   globalThis.fetch = (async (input: RequestInfo | URL) => {

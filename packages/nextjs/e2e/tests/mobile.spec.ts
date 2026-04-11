@@ -192,6 +192,27 @@ test.describe("Mobile viewport (phone)", () => {
 
       return scrollIntent;
     };
+    const forceDocumentScrollLeak = (targetScrollTop: number) =>
+      page.evaluate(scrollTop => {
+        document.querySelector('[data-root-scroll-recovery-spacer="true"]')?.remove();
+
+        const spacer = document.createElement("div");
+        spacer.setAttribute("data-root-scroll-recovery-spacer", "true");
+        spacer.setAttribute("aria-hidden", "true");
+        spacer.style.height = "1200px";
+        spacer.style.width = "1px";
+        spacer.style.opacity = "0";
+        spacer.style.pointerEvents = "none";
+        document.body.appendChild(spacer);
+
+        window.scrollTo(0, scrollTop);
+        window.dispatchEvent(new Event("scroll"));
+      }, targetScrollTop);
+    const removeDocumentScrollLeakSpacer = () =>
+      page.evaluate(() => {
+        document.querySelector('[data-root-scroll-recovery-spacer="true"]')?.remove();
+        window.scrollTo(0, 0);
+      });
     const waitForMobileHeaderScrollSyncIdle = () =>
       page.waitForFunction(() => {
         const explicitScrollSource = document.querySelector<HTMLElement>('[data-mobile-header-scroll-source="true"]');
@@ -300,6 +321,19 @@ test.describe("Mobile viewport (phone)", () => {
     await expect(mobileHeader).toHaveAttribute("data-visible", "true");
     await expect(voteTopChrome).toHaveAttribute("data-visible", "true");
 
+    const beforeRootScrollLeak = await readLayout();
+    expect(beforeRootScrollLeak.voteScrollTop).toBeLessThan(2);
+    await forceDocumentScrollLeak(64);
+    await expect.poll(async () => (await readLayout()).documentScrollTop).toBe(0);
+    await expect.poll(async () => (await readLayout()).voteScrollTop).toBeGreaterThan(48);
+
+    const afterRootScrollLeak = await readLayout();
+    expect(afterRootScrollLeak.topChromeTop).toBeGreaterThanOrEqual(afterRootScrollLeak.mobileHeaderBottom - 1);
+    await removeDocumentScrollLeakSpacer();
+    await setFeedScrollTop(0);
+    await expect(mobileHeader).toHaveAttribute("data-visible", "true");
+    await expect(voteTopChrome).toHaveAttribute("data-visible", "true");
+
     const expandedLayout = await readLayout();
     expect(expandedLayout.topChromeTop).toBeGreaterThanOrEqual(expandedLayout.mobileHeaderBottom - 1);
     await waitForMobileHeaderScrollSyncIdle();
@@ -360,6 +394,108 @@ test.describe("Mobile viewport (phone)", () => {
     expect(restoredLayout.viewButtonHeight).toBeGreaterThan(20);
     expect(restoredLayout.activeTitleTop).toBeGreaterThanOrEqual(restoredLayout.scrollerTop - 1);
     expect(restoredLayout.activeTitleBottom).toBeLessThanOrEqual(restoredLayout.scrollerBottom + 1);
+  });
+
+  test("last category card snaps above the mobile dock and opens More", async ({ connectedPage: page }) => {
+    await gotoWithRetry(page, "/vote#crypto-tokens", { ensureWalletConnected: true });
+    await waitForFeedLoaded(page);
+
+    await expect(page.getByRole("button", { name: /^Category: Crypto Tokens$/ }).first()).toBeVisible({
+      timeout: 10_000,
+    });
+
+    const lastIndex = await page.evaluate(() => {
+      const articles = Array.from(document.querySelectorAll<HTMLElement>("article[data-feed-card-index]"));
+      if (articles.length < 2) {
+        throw new Error("Expected multiple Crypto Tokens cards in the mobile feed");
+      }
+
+      return Number(articles.at(-1)?.getAttribute("data-feed-card-index") ?? -1);
+    });
+
+    await page.evaluate(() => {
+      const explicitScrollSource = document.querySelector<HTMLElement>('[data-mobile-header-scroll-source="true"]');
+      if (!explicitScrollSource) {
+        throw new Error("Missing mobile feed scroller");
+      }
+
+      const previousScrollBehavior = explicitScrollSource.style.scrollBehavior;
+      explicitScrollSource.style.scrollBehavior = "auto";
+      explicitScrollSource.scrollTop = explicitScrollSource.scrollHeight;
+      explicitScrollSource.dispatchEvent(new Event("scroll", { bubbles: true }));
+      explicitScrollSource.style.scrollBehavior = previousScrollBehavior;
+    });
+
+    await expect
+      .poll(
+        () =>
+          page.evaluate(() => {
+            const activeArticle = document.querySelector<HTMLElement>('article[aria-current="true"]');
+            return Number(activeArticle?.getAttribute("data-feed-card-index") ?? -1);
+          }),
+        { timeout: 3_000 },
+      )
+      .toBe(lastIndex);
+
+    const activeMoreButton = page.locator('article[aria-current="true"] button[aria-label="Expand details"]').first();
+    await expect(activeMoreButton).toBeVisible({ timeout: 5_000 });
+
+    const layout = await activeMoreButton.evaluate(button => {
+      const scroller = document.querySelector<HTMLElement>('[data-mobile-header-scroll-source="true"]');
+      const activeArticle = document.querySelector<HTMLElement>('article[aria-current="true"]');
+      const mobileDock = document.querySelector<HTMLElement>('[data-testid="vote-mobile-dock"]');
+
+      if (!scroller || !activeArticle || !mobileDock) {
+        throw new Error("Missing mobile feed layout elements");
+      }
+
+      const scrollerRect = scroller.getBoundingClientRect();
+      const activeArticleRect = activeArticle.getBoundingClientRect();
+      const buttonRect = button.getBoundingClientRect();
+      const dockRect = mobileDock.getBoundingClientRect();
+      const topElement = document.elementFromPoint(
+        buttonRect.left + buttonRect.width / 2,
+        buttonRect.top + buttonRect.height / 2,
+      );
+
+      return {
+        activeMoreBottom: buttonRect.bottom,
+        activeMoreCenterTopmost: topElement === button || button.contains(topElement),
+        activeTop: activeArticleRect.top,
+        dockTop: dockRect.top,
+        scrollerTop: scrollerRect.top,
+      };
+    });
+
+    expect(Math.abs(layout.activeTop - layout.scrollerTop - 12)).toBeLessThanOrEqual(24);
+    expect(layout.activeMoreBottom).toBeLessThanOrEqual(layout.dockTop - 1);
+    expect(layout.activeMoreCenterTopmost).toBe(true);
+
+    await activeMoreButton.click();
+    await expect(activeMoreButton).toHaveAttribute("aria-expanded", "true");
+  });
+
+  test("category switches keep the mobile feed controls visible", async ({ connectedPage: page }) => {
+    await gotoWithRetry(page, "/vote#games", { ensureWalletConnected: true });
+    await waitForFeedLoaded(page);
+
+    const voteTopChrome = page.locator('[data-vote-mobile-top-chrome="true"]');
+    await expect(voteTopChrome).toHaveAttribute("data-visible", "true");
+
+    const categoryButton = page.getByRole("button", { name: /^Category: Games$/ }).first();
+    await expect(categoryButton).toBeVisible({ timeout: 10_000 });
+
+    await categoryButton.click();
+    const categoryDialog = page.getByRole("dialog", { name: "Category options" });
+    await expect(categoryDialog).toBeVisible({ timeout: 5_000 });
+    await categoryDialog.getByRole("button", { name: "Crypto Tokens" }).click();
+
+    await expect(page).toHaveURL(/#crypto-tokens$/, { timeout: 5_000 });
+    await expect(voteTopChrome).toHaveAttribute("data-visible", "true");
+    await expect(page.getByRole("button", { name: /^Category: Crypto Tokens$/ }).first()).toBeVisible({
+      timeout: 5_000,
+    });
+    await expect(page.getByRole("button", { name: /^View(?:$|:)/ }).first()).toBeVisible();
   });
 
   test("mobile header still hides on scroll down and returns on scroll up on landing", async ({

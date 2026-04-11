@@ -217,6 +217,10 @@ function buildHuggingFaceAssetUrl(modelId: string, assetPath: string): string | 
   const trimmedPath = assetPath.trim();
   if (!trimmedPath) return null;
 
+  if (/^(?:https?:)?\/\//i.test(trimmedPath)) {
+    return getSafeHuggingFaceImageUrl(trimmedPath);
+  }
+
   const modelSegments = modelId
     .split("/")
     .map(segment => segment.trim())
@@ -240,7 +244,7 @@ function buildHuggingFaceAssetUrl(modelId: string, assetPath: string): string | 
   return getSafeHuggingFaceImageUrl(`https://huggingface.co/${encodedModelId}/raw/main/${encodedAssetPath}`);
 }
 
-function buildHuggingFaceModelApiUrl(modelId: string): string | null {
+function getHuggingFaceModelSegments(modelId: string): string[] | null {
   const segments = modelId
     .split("/")
     .map(segment => segment.trim())
@@ -250,7 +254,24 @@ function buildHuggingFaceModelApiUrl(modelId: string): string | null {
     return null;
   }
 
+  return segments;
+}
+
+function buildHuggingFaceModelApiUrl(modelId: string): string | null {
+  const segments = getHuggingFaceModelSegments(modelId);
+  if (!segments) return null;
+
   return `https://huggingface.co/api/models/${segments.map(segment => encodeURIComponent(segment)).join("/")}`;
+}
+
+function buildHuggingFaceSocialThumbnailUrl(modelId: string): string | null {
+  const segments = getHuggingFaceModelSegments(modelId);
+  if (!segments) return null;
+
+  const encodedModelId = segments.map(segment => encodeURIComponent(segment)).join("/");
+  return getSafeHuggingFaceImageUrl(
+    `https://cdn-thumbnails.huggingface.co/social-thumbnails/models/${encodedModelId}.png`,
+  );
 }
 
 async function resolveHuggingFace(modelId: string, metadata?: Record<string, unknown>): Promise<EmbedResult> {
@@ -260,6 +281,7 @@ async function resolveHuggingFace(modelId: string, metadata?: Record<string, unk
   let title: string | undefined;
   let description: string | undefined;
   let modelImageUrl: string | null = null;
+  let socialThumbnailUrl: string | null = null;
 
   try {
     const modelApiUrl = buildHuggingFaceModelApiUrl(modelId);
@@ -275,6 +297,7 @@ async function resolveHuggingFace(modelId: string, metadata?: Record<string, unk
 
       const thumbnailPath = typeof modelData.cardData?.thumbnail === "string" ? modelData.cardData.thumbnail : null;
       modelImageUrl = thumbnailPath ? buildHuggingFaceAssetUrl(modelId, thumbnailPath) : null;
+      socialThumbnailUrl = modelImageUrl ? null : buildHuggingFaceSocialThumbnailUrl(modelId);
     }
   } catch {
     // Continue with fallback
@@ -301,6 +324,15 @@ async function resolveHuggingFace(modelId: string, metadata?: Record<string, unk
     }
   } catch {
     // No avatar available
+  }
+
+  if (socialThumbnailUrl) {
+    return {
+      thumbnailUrl: avatarUrl ?? socialThumbnailUrl,
+      imageUrl: socialThumbnailUrl,
+      title: title ?? modelId,
+      description,
+    };
   }
 
   return {

@@ -142,7 +142,7 @@ const HomeInner = () => {
   const { address } = useAccount();
   const { targetNetwork } = useTargetNetwork();
   const normalizedAddress = address?.toLowerCase();
-  const { isMobileHeaderVisible } = useMobileHeaderVisibility();
+  const { isMobileHeaderVisible, setIsMobileHeaderVisible } = useMobileHeaderVisibility();
   const nowSeconds = useUnixTime(60_000);
   const { openConnectModal } = useCuryoConnectModal();
   const { isFirstVote, markVoteCompleted } = useOnboarding();
@@ -839,6 +839,7 @@ const HomeInner = () => {
     loadedItems,
     selectContent,
   } = useVoteFeedStage(displayFeed, {
+    sessionKey: feedSessionKey,
     visibleCount,
     requestedActiveId: effectiveRequestedActiveId,
   });
@@ -1067,15 +1068,32 @@ const HomeInner = () => {
     history.replaceState(null, "", buildVoteLocation(window.location.href, update));
   }, []);
 
+  const clearActiveContentPin = useCallback(() => {
+    selectContent(null);
+    replaceVoteLocation({ contentId: null });
+  }, [replaceVoteLocation, selectContent]);
+
+  const handleSearchSortChange = useCallback(
+    (nextSortBy: SearchSortOption) => {
+      if (nextSortBy === effectiveSearchSortBy) return;
+
+      setIsMobileHeaderVisible(true);
+      clearActiveContentPin();
+      setSortBy(nextSortBy);
+    },
+    [clearActiveContentPin, effectiveSearchSortBy, setIsMobileHeaderVisible],
+  );
+
   // Sync category selection with URL hash (e.g. /#books, /#board-games)
   const selectCategory = useCallback(
     (name: string) => {
+      setIsMobileHeaderVisible(true);
       setActiveCategory(name);
       replaceVoteLocation({
         categoryHash: name === ALL_FILTER ? null : slugify(name),
       });
     },
-    [replaceVoteLocation],
+    [replaceVoteLocation, setIsMobileHeaderVisible],
   );
 
   const setActiveFeedIndex = useCallback(
@@ -1293,11 +1311,15 @@ const HomeInner = () => {
           return;
         }
 
+        setIsMobileHeaderVisible(true);
+        clearActiveContentPin();
         setView("watched");
         return;
       }
 
       if (nextView !== "followed_curators") {
+        setIsMobileHeaderVisible(true);
+        clearActiveContentPin();
         setView(nextView);
         return;
       }
@@ -1316,9 +1338,17 @@ const HomeInner = () => {
         return;
       }
 
+      setIsMobileHeaderVisible(true);
+      clearActiveContentPin();
       setView("followed_curators");
     },
-    [openConnectModal, requestFollowReadAccess, requestWatchReadAccess],
+    [
+      clearActiveContentPin,
+      openConnectModal,
+      requestFollowReadAccess,
+      requestWatchReadAccess,
+      setIsMobileHeaderVisible,
+    ],
   );
 
   // Count broken URLs for the filter pill
@@ -1503,7 +1533,7 @@ const HomeInner = () => {
                       id="vote-search-sort"
                       name="vote-search-sort"
                       value={effectiveSearchSortBy}
-                      onChange={e => setSortBy(e.target.value as SearchSortOption)}
+                      onChange={e => handleSearchSortChange(e.target.value as SearchSortOption)}
                       className="select select-sm bg-base-200 text-base font-medium border-none focus:outline-none w-auto"
                       aria-label="Sort search results"
                     >
@@ -1554,6 +1584,7 @@ const HomeInner = () => {
                       ) : (
                         <VoteFeedStage
                           displayFeed={displayFeed}
+                          sessionKey={feedSessionKey}
                           activeSourceIndex={activeSourceIndex}
                           loadedCount={visibleCount}
                           mobileDockReservedSpace={mobileDockReservedSpace}
@@ -1607,7 +1638,11 @@ const HomeInner = () => {
       </div>
 
       {primaryItem ? (
-        <div ref={mobileDockContainerRef} className="fixed inset-x-0 bottom-0 z-30 xl:hidden">
+        <div
+          ref={mobileDockContainerRef}
+          data-testid="vote-mobile-dock"
+          className="fixed inset-x-0 bottom-0 z-30 xl:hidden"
+        >
           <div className="w-full">
             <div className="overflow-visible">
               <VotingQuestionCard

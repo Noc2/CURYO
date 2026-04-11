@@ -47,6 +47,7 @@ test.describe("Accessibility basics", () => {
 
     const activeCard = page.locator('article[aria-current="true"]').first();
     await expect(activeCard.locator('[data-content-intent-surface="true"]').first()).toBeVisible({ timeout: 10_000 });
+    await activeCard.getByRole("button", { name: "Expand details" }).click();
     await expect(activeCard.getByRole("link", { name: /Open source: github\.com/i }).first()).toBeVisible({
       timeout: 10_000,
     });

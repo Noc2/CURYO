@@ -21,6 +21,15 @@ test("category changes can still explicitly clear the requested content query pa
   );
 });
 
+test("switching feed views clears requested content without changing the active route filters", () => {
+  assert.equal(
+    buildVoteLocation("https://www.curyo.xyz/vote?content=82&q=ed-sheeran#youtube", {
+      contentId: null,
+    }),
+    "https://www.curyo.xyz/vote?q=ed-sheeran#youtube",
+  );
+});
+
 test("selecting content preserves the active category hash", () => {
   assert.equal(
     buildVoteLocation("https://www.curyo.xyz/vote?q=openlaw#youtube", {

@@ -321,7 +321,8 @@ function FeedContentMetaCard({
   const hasTags = item.tags.length > 0;
   const hasMagicDisclaimer = item.categoryId === 3n;
   const sourceLabel = getSourceLabel(item.url);
-  const hasExpandableDetails = hasDescription || hasTags || hasMagicDisclaimer;
+  const hasSourceDetails = sourceLabel.trim().length > 0;
+  const hasExpandableDetails = hasSourceDetails || hasDescription || hasTags || hasMagicDisclaimer;
   const showExpandedDetails = !collapseDescription || isExpanded;
   const visibleTags = showExpandedDetails ? item.tags.filter(Boolean) : [];
   const wrapperClassName = embedded
@@ -375,48 +376,32 @@ function FeedContentMetaCard({
           </div>
         </div>
 
-        <div
-          className={compact ? "mt-2 flex flex-wrap items-center gap-2" : "mt-2.5 flex flex-wrap items-center gap-2"}
-        >
-          <span className="inline-flex items-center rounded-full bg-base-300 px-2.5 py-1 text-sm font-medium leading-none text-base-content/80">
-            {platformType}
-          </span>
-          <SafeExternalLink
-            href={item.url}
-            allowExternalOpen
-            testId="content-source-link"
-            title={`Open source: ${sourceLabel}`}
-            ariaLabel={`Open source: ${sourceLabel}`}
-            onClick={() => onSourceOpen?.(item)}
-            className="inline-flex items-center gap-1.5 rounded-full bg-base-content/[0.06] px-2.5 py-1 text-sm font-medium leading-none text-base-content/78 transition-colors hover:bg-base-content/[0.1] hover:text-base-content"
-          >
-            <ArrowTopRightOnSquareIcon className="h-3.5 w-3.5" />
-            <span className="max-w-[12rem] truncate">{sourceLabel}</span>
-          </SafeExternalLink>
-          {visibleTags.map(tag => (
-            <span key={tag} className="text-sm text-base-content/70">
-              #{tag}
-            </span>
-          ))}
-        </div>
-
         {showExpandedDetails ? (
           <div id={detailsId} className={compact ? "mt-2.5 space-y-2" : "mt-3 space-y-2.5"}>
-            {hasDescription ? <p className="text-base leading-relaxed text-base-content/85">{description}</p> : null}
-
-            <p className="text-sm leading-relaxed text-base-content/70">
-              Source:{" "}
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="inline-flex items-center rounded-full bg-base-300 px-2.5 py-1 text-sm font-medium leading-none text-base-content/80">
+                {platformType}
+              </span>
               <SafeExternalLink
                 href={item.url}
                 allowExternalOpen
+                testId="content-source-link"
                 title={`Open source: ${sourceLabel}`}
                 ariaLabel={`Open source: ${sourceLabel}`}
                 onClick={() => onSourceOpen?.(item)}
-                className="font-medium text-primary hover:underline"
+                className="inline-flex items-center gap-1.5 rounded-full bg-base-content/[0.06] px-2.5 py-1 text-sm font-medium leading-none text-base-content/78 transition-colors hover:bg-base-content/[0.1] hover:text-base-content"
               >
-                {sourceLabel}
+                <ArrowTopRightOnSquareIcon className="h-3.5 w-3.5" />
+                <span className="max-w-[12rem] truncate">{sourceLabel}</span>
               </SafeExternalLink>
-            </p>
+              {visibleTags.map(tag => (
+                <span key={tag} className="text-sm text-base-content/70">
+                  #{tag}
+                </span>
+              ))}
+            </div>
+
+            {hasDescription ? <p className="text-base leading-relaxed text-base-content/85">{description}</p> : null}
 
             {hasMagicDisclaimer ? (
               <p className="text-base leading-tight text-base-content/70">

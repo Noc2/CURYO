@@ -6,9 +6,11 @@ import { FeedVoteCard } from "~~/components/vote/VoteFeedCards";
 import { useMobileHeaderVisibility } from "~~/contexts/MobileHeaderVisibilityContext";
 import type { ContentItem } from "~~/hooks/useContentFeed";
 import type { SubmitterProfile } from "~~/hooks/useSubmitterProfiles";
+import { resolveEndSpacerHeightForLastCardSnap } from "~~/lib/ui/feedScrollSpacer";
 
 interface VoteFeedStageProps {
   displayFeed: ContentItem[];
+  sessionKey?: string;
   activeSourceIndex: number;
   loadedCount: number;
   mobileDockReservedSpace?: number | null;
@@ -52,6 +54,7 @@ const MOBILE_SCROLL_INDICATOR_ACTIVE_MS = 900;
 
 export function VoteFeedStage({
   displayFeed,
+  sessionKey,
   activeSourceIndex,
   loadedCount,
   mobileDockReservedSpace,
@@ -86,6 +89,7 @@ export function VoteFeedStage({
   const pendingProgrammaticScrollStartedAtRef = useRef<number | null>(null);
   const lastProgrammaticScrollRequestRef = useRef<number | null>(null);
   const lastAutoPrefetchLoadedCountRef = useRef<number | null>(null);
+  const previousSessionKeyRef = useRef(sessionKey);
   const mobileScrollIndicatorTimeoutRef = useRef<number | null>(null);
   const mobileHeaderVisibilityTimeoutRef = useRef<number | null>(null);
   const lastMobileHeadlineGuardStateRef = useRef({
@@ -94,6 +98,7 @@ export function VoteFeedStage({
   });
   const [mobileScrollerHeight, setMobileScrollerHeight] = useState<number | null>(null);
   const [desktopEndSpacerHeight, setDesktopEndSpacerHeight] = useState(0);
+  const [mobileEndSpacerHeight, setMobileEndSpacerHeight] = useState(0);
   const [isDesktopViewport, setIsDesktopViewport] = useState(false);
   const [isMobileScrollIndicatorActive, setIsMobileScrollIndicatorActive] = useState(false);
   const [scrollIndicatorState, setScrollIndicatorState] = useState<{
@@ -178,6 +183,45 @@ export function VoteFeedStage({
       }
     };
   }, []);
+
+  useEffect(() => {
+    if (previousSessionKeyRef.current === sessionKey) {
+      return;
+    }
+
+    previousSessionKeyRef.current = sessionKey;
+
+    if (mobileHeaderVisibilityTimeoutRef.current !== null) {
+      window.clearTimeout(mobileHeaderVisibilityTimeoutRef.current);
+      mobileHeaderVisibilityTimeoutRef.current = null;
+    }
+
+    lastObservedActiveIndexRef.current = renderedActiveIndex >= 0 ? renderedActiveIndex : null;
+    queuedNavigationTargetRef.current = null;
+    pendingProgrammaticScrollTargetRef.current = null;
+    pendingProgrammaticScrollStartedAtRef.current = null;
+    lastProgrammaticScrollRequestRef.current = null;
+    lastMobileHeadlineGuardStateRef.current = {
+      index: renderedActiveIndex,
+      topChromeVisible: true,
+    };
+    setIsMobileHeaderVisible(true);
+
+    const scroller = scrollerRef.current;
+    if (!scroller || isDesktopViewport) {
+      return;
+    }
+
+    markMobileHeaderScrollSync(scroller, 0);
+    setMobileScrollerScrollTop(scroller, 0);
+  }, [
+    isDesktopViewport,
+    markMobileHeaderScrollSync,
+    renderedActiveIndex,
+    sessionKey,
+    setIsMobileHeaderVisible,
+    setMobileScrollerScrollTop,
+  ]);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -364,7 +408,10 @@ export function VoteFeedStage({
         return;
       }
 
-      const nextHeight = Math.max(scroller.clientHeight - lastNode.offsetHeight, 0);
+      const nextHeight = resolveEndSpacerHeightForLastCardSnap({
+        scrollerHeight: scroller.clientHeight,
+        lastCardHeight: lastNode.offsetHeight,
+      });
       setDesktopEndSpacerHeight(current => (current === nextHeight ? current : nextHeight));
     };
 
@@ -431,6 +478,112 @@ export function VoteFeedStage({
       }
     };
   }, [canLoadMore, displayFeed.length, feedItems, getActiveScroller, mobileScrollerHeight]);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+
+    const mobileStageQuery = window.matchMedia(MOBILE_STAGE_MEDIA_QUERY);
+    let frameId = 0;
+    let observedLastNode: HTMLElement | null = null;
+    let scrollerResizeObserver: ResizeObserver | null = null;
+    let lastCardResizeObserver: ResizeObserver | null = null;
+    const renderedLastIndex = feedItems.length > 0 ? (feedItems[feedItems.length - 1]?.actualIndex ?? -1) : -1;
+
+    const updateEndSpacerHeight = () => {
+      const scroller = scrollerRef.current;
+      const lastNode = renderedLastIndex >= 0 ? (cardElementsRef.current.get(renderedLastIndex) ?? null) : null;
+
+      if (
+        !scroller ||
+        !mobileStageQuery.matches ||
+        canLoadMore ||
+        renderedLastIndex !== displayFeed.length - 1 ||
+        !lastNode
+      ) {
+        setMobileEndSpacerHeight(current => (current === 0 ? current : 0));
+        return;
+      }
+
+      const nextHeight = resolveEndSpacerHeightForLastCardSnap({
+        scrollerHeight: scroller.clientHeight,
+        lastCardHeight: lastNode.offsetHeight,
+        reservedEndSpace: effectiveMobileDockReservedSpace,
+        topSnapGuard: MOBILE_CARD_TOP_SNAP_GUARD_PX,
+      });
+      setMobileEndSpacerHeight(current => (current === nextHeight ? current : nextHeight));
+    };
+
+    const requestEndSpacerMeasurement = () => {
+      if (frameId !== 0) {
+        window.cancelAnimationFrame(frameId);
+      }
+
+      frameId = window.requestAnimationFrame(() => {
+        frameId = 0;
+        updateEndSpacerHeight();
+      });
+    };
+
+    const syncObservedLastNode = () => {
+      const nextLastNode = renderedLastIndex >= 0 ? (cardElementsRef.current.get(renderedLastIndex) ?? null) : null;
+
+      if (observedLastNode === nextLastNode) {
+        requestEndSpacerMeasurement();
+        return;
+      }
+
+      lastCardResizeObserver?.disconnect();
+      lastCardResizeObserver = null;
+      observedLastNode = nextLastNode;
+
+      if (observedLastNode && typeof ResizeObserver !== "undefined") {
+        lastCardResizeObserver = new ResizeObserver(requestEndSpacerMeasurement);
+        lastCardResizeObserver.observe(observedLastNode);
+      }
+
+      requestEndSpacerMeasurement();
+    };
+
+    const activeScroller = scrollerRef.current;
+
+    if (typeof ResizeObserver !== "undefined" && activeScroller) {
+      scrollerResizeObserver = new ResizeObserver(syncObservedLastNode);
+      scrollerResizeObserver.observe(activeScroller);
+    }
+
+    syncObservedLastNode();
+    window.addEventListener("resize", syncObservedLastNode);
+
+    if (window.visualViewport) {
+      window.visualViewport.addEventListener("resize", syncObservedLastNode);
+    }
+
+    if (typeof mobileStageQuery.addEventListener === "function") {
+      mobileStageQuery.addEventListener("change", syncObservedLastNode);
+    } else {
+      mobileStageQuery.addListener(syncObservedLastNode);
+    }
+
+    return () => {
+      if (frameId !== 0) {
+        window.cancelAnimationFrame(frameId);
+      }
+
+      scrollerResizeObserver?.disconnect();
+      lastCardResizeObserver?.disconnect();
+      window.removeEventListener("resize", syncObservedLastNode);
+
+      if (window.visualViewport) {
+        window.visualViewport.removeEventListener("resize", syncObservedLastNode);
+      }
+
+      if (typeof mobileStageQuery.addEventListener === "function") {
+        mobileStageQuery.removeEventListener("change", syncObservedLastNode);
+      } else {
+        mobileStageQuery.removeListener(syncObservedLastNode);
+      }
+    };
+  }, [canLoadMore, displayFeed.length, effectiveMobileDockReservedSpace, feedItems, mobileScrollerHeight]);
 
   const requestProgrammaticScroll = useCallback(
     (targetIndex: number) => {
@@ -866,7 +1019,14 @@ export function VoteFeedStage({
         desktopStageQuery.removeListener(bindScroller);
       }
     };
-  }, [desktopEndSpacerHeight, feedItems.length, getActiveScroller, isDesktopViewport, mobileScrollerHeight]);
+  }, [
+    desktopEndSpacerHeight,
+    feedItems.length,
+    getActiveScroller,
+    isDesktopViewport,
+    mobileEndSpacerHeight,
+    mobileScrollerHeight,
+  ]);
 
   const scrollToIndex = useCallback(
     (targetIndex: number) => {
@@ -1042,6 +1202,10 @@ export function VoteFeedStage({
         <div ref={loadMoreRef} className="flex justify-center py-8">
           <span className="loading loading-spinner loading-md text-primary"></span>
         </div>
+      ) : null}
+
+      {!canLoadMore && mobileEndSpacerHeight > 0 ? (
+        <div aria-hidden="true" className="shrink-0 xl:hidden" style={{ height: `${mobileEndSpacerHeight}px` }} />
       ) : null}
 
       {!canLoadMore && desktopEndSpacerHeight > 0 ? (
