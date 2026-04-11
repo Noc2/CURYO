@@ -1518,8 +1518,11 @@ const HomeInner = () => {
 
   useEffect(() => {
     setMobileHeaderVoteControls(mobileVoteHeaderControls);
-    return () => setMobileHeaderVoteControls(null);
   }, [mobileVoteHeaderControls, setMobileHeaderVoteControls]);
+
+  useEffect(() => {
+    return () => setMobileHeaderVoteControls(null);
+  }, [setMobileHeaderVoteControls]);
 
   // Apply URL hash to category selection (on mount and hash change)
   useEffect(() => {
