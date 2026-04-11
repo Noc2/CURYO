@@ -14,6 +14,7 @@ interface VoteFeedStageProps {
   activeSourceIndex: number;
   loadedCount: number;
   mobileDockReservedSpace?: number | null;
+  mobileTopChromeHeight?: number;
   mobileTopChromeVisible?: boolean;
   canLoadMore: boolean;
   enrichedProfiles: Record<string, SubmitterProfile>;
@@ -58,6 +59,7 @@ export function VoteFeedStage({
   activeSourceIndex,
   loadedCount,
   mobileDockReservedSpace,
+  mobileTopChromeHeight = 0,
   mobileTopChromeVisible = true,
   canLoadMore,
   enrichedProfiles,
@@ -94,6 +96,7 @@ export function VoteFeedStage({
   const mobileHeaderVisibilityTimeoutRef = useRef<number | null>(null);
   const lastMobileHeadlineGuardStateRef = useRef({
     index: activeSourceIndex,
+    topChromeHeight: mobileTopChromeHeight,
     topChromeVisible: mobileTopChromeVisible,
   });
   const [mobileScrollerHeight, setMobileScrollerHeight] = useState<number | null>(null);
@@ -203,6 +206,7 @@ export function VoteFeedStage({
     lastProgrammaticScrollRequestRef.current = null;
     lastMobileHeadlineGuardStateRef.current = {
       index: renderedActiveIndex,
+      topChromeHeight: mobileTopChromeHeight,
       topChromeVisible: true,
     };
     setIsMobileHeaderVisible(true);
@@ -217,6 +221,7 @@ export function VoteFeedStage({
   }, [
     isDesktopViewport,
     markMobileHeaderScrollSync,
+    mobileTopChromeHeight,
     renderedActiveIndex,
     sessionKey,
     setIsMobileHeaderVisible,
@@ -272,10 +277,16 @@ export function VoteFeedStage({
     let frameId = 0;
     const transitionMeasurementTimeouts: number[] = [];
     const previousHeadlineGuardState = lastMobileHeadlineGuardStateRef.current;
-    const didChromeVisibilityChange = previousHeadlineGuardState.topChromeVisible !== mobileTopChromeVisible;
+    const didChromeVisibilityChange =
+      previousHeadlineGuardState.topChromeVisible !== mobileTopChromeVisible ||
+      Math.abs(previousHeadlineGuardState.topChromeHeight - mobileTopChromeHeight) >= 1;
     const shouldProtectActiveHeadline =
       didChromeVisibilityChange || previousHeadlineGuardState.index !== renderedActiveIndex;
-    lastMobileHeadlineGuardStateRef.current = { index: renderedActiveIndex, topChromeVisible: mobileTopChromeVisible };
+    lastMobileHeadlineGuardStateRef.current = {
+      index: renderedActiveIndex,
+      topChromeHeight: mobileTopChromeHeight,
+      topChromeVisible: mobileTopChromeVisible,
+    };
 
     const keepActiveHeadlineInView = (scroller: HTMLDivElement) => {
       if (!shouldProtectActiveHeadline || !mobileStageQuery.matches) {
@@ -378,6 +389,7 @@ export function VoteFeedStage({
     effectiveMobileDockReservedSpace,
     loadedItemCount,
     markMobileHeaderScrollSync,
+    mobileTopChromeHeight,
     mobileTopChromeVisible,
     renderedActiveIndex,
     setMobileScrollerScrollTop,

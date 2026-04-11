@@ -32,6 +32,9 @@ test.describe("Mobile viewport (phone)", () => {
     await expect(dropdown.getByRole("link", { name: /Discover/i })).toBeVisible({ timeout: 5_000 });
     await expect(dropdown.getByRole("link", { name: /Submit/i })).toBeVisible({ timeout: 3_000 });
     await expect(dropdown.getByRole("link", { name: /cREP/i })).toBeVisible({ timeout: 3_000 });
+    const voteTopChrome = page.locator('[data-vote-mobile-top-chrome="true"]');
+    await expect(voteTopChrome).toHaveAttribute("data-visible", "false");
+    await expect(voteTopChrome).toHaveAttribute("inert", "");
   });
 
   test("vote page mobile chrome collapses with feed scroll and reclaims space", async ({ connectedPage: page }) => {
@@ -61,6 +64,7 @@ test.describe("Mobile viewport (phone)", () => {
         const explicitScrollSource = document.querySelector<HTMLElement>('[data-mobile-header-scroll-source="true"]');
         const topChrome = document.querySelector<HTMLElement>('[data-vote-mobile-top-chrome="true"]');
         const mobileHeader = document.querySelector<HTMLElement>('[data-mobile-header="true"]');
+        const mobileHeaderNavbar = document.querySelector<HTMLElement>('[data-mobile-header-navbar="true"]');
         const feedSurface = document.querySelector<HTMLElement>('[data-testid="vote-feed-surface"]');
         const mobileScrollContainer = document.querySelector<HTMLElement>(
           '[data-testid="vote-mobile-scroll-container"]',
@@ -80,6 +84,9 @@ test.describe("Mobile viewport (phone)", () => {
         );
 
         const scrollerRect = explicitScrollSource?.getBoundingClientRect() ?? null;
+        const mobileHeaderRect = mobileHeader?.getBoundingClientRect() ?? null;
+        const mobileHeaderNavbarRect = mobileHeaderNavbar?.getBoundingClientRect() ?? null;
+        const topChromeRect = topChrome?.getBoundingClientRect() ?? null;
         const mobileScrollContainerRect = mobileScrollContainer?.getBoundingClientRect() ?? null;
         const activeArticleRect = activeArticle?.getBoundingClientRect() ?? null;
         const activeTitleRect = activeTitle?.getBoundingClientRect() ?? null;
@@ -133,12 +140,15 @@ test.describe("Mobile viewport (phone)", () => {
               )
             : 0,
           leftGutterWidth,
-          mobileHeaderBottom: mobileHeader?.getBoundingClientRect().bottom ?? 0,
+          mobileHeaderBottom: mobileHeaderRect?.bottom ?? 0,
+          mobileHeaderHeight: mobileHeaderRect?.height ?? 0,
+          mobileHeaderNavbarBottom: mobileHeaderNavbarRect?.bottom ?? 0,
           rightGutterWidth,
           scrollerBottom: scrollerRect?.bottom ?? 0,
           scrollerTop: scrollerRect?.top ?? 0,
-          topChromeHeight: topChrome?.getBoundingClientRect().height ?? 0,
-          topChromeTop: topChrome?.getBoundingClientRect().top ?? 0,
+          topChromeBottom: topChromeRect?.bottom ?? 0,
+          topChromeHeight: topChromeRect?.height ?? 0,
+          topChromeTop: topChromeRect?.top ?? 0,
           viewButtonHeight: viewButtonRect?.height ?? 0,
           voteScrollTop: explicitScrollSource?.scrollTop ?? 0,
         };
@@ -328,14 +338,17 @@ test.describe("Mobile viewport (phone)", () => {
     await expect.poll(async () => (await readLayout()).voteScrollTop).toBeGreaterThan(48);
 
     const afterRootScrollLeak = await readLayout();
-    expect(afterRootScrollLeak.topChromeTop).toBeGreaterThanOrEqual(afterRootScrollLeak.mobileHeaderBottom - 1);
+    expect(afterRootScrollLeak.topChromeTop).toBeGreaterThanOrEqual(afterRootScrollLeak.mobileHeaderNavbarBottom - 1);
+    expect(afterRootScrollLeak.topChromeBottom).toBeLessThanOrEqual(afterRootScrollLeak.mobileHeaderBottom + 1);
     await removeDocumentScrollLeakSpacer();
     await setFeedScrollTop(0);
     await expect(mobileHeader).toHaveAttribute("data-visible", "true");
     await expect(voteTopChrome).toHaveAttribute("data-visible", "true");
 
     const expandedLayout = await readLayout();
-    expect(expandedLayout.topChromeTop).toBeGreaterThanOrEqual(expandedLayout.mobileHeaderBottom - 1);
+    expect(expandedLayout.topChromeTop).toBeGreaterThanOrEqual(expandedLayout.mobileHeaderNavbarBottom - 1);
+    expect(expandedLayout.topChromeBottom).toBeLessThanOrEqual(expandedLayout.mobileHeaderBottom + 1);
+    expect(expandedLayout.activeTitleTop).toBeGreaterThanOrEqual(expandedLayout.mobileHeaderBottom - 1);
     await waitForMobileHeaderScrollSyncIdle();
 
     const beforeFirstNativeScroll = await readLayout();
@@ -344,8 +357,8 @@ test.describe("Mobile viewport (phone)", () => {
     await expect(mobileHeader).toHaveAttribute("data-visible", "false");
     await expect(voteTopChrome).toHaveAttribute("data-visible", "false");
     await page.waitForFunction(() => {
-      const topChrome = document.querySelector<HTMLElement>('[data-vote-mobile-top-chrome="true"]');
-      return topChrome !== null && topChrome.getBoundingClientRect().height < 4;
+      const mobileHeader = document.querySelector<HTMLElement>('[data-mobile-header="true"]');
+      return mobileHeader !== null && mobileHeader.getBoundingClientRect().height < 4;
     });
 
     const collapsedLayout = await readLayout();
@@ -359,7 +372,7 @@ test.describe("Mobile viewport (phone)", () => {
     expect(collapsedLayout.documentScrollTop).toBe(0);
     expect(collapsedLayout.activeIndex).toBe(beforeFirstNativeScroll.activeIndex + 1);
     expect(collapsedLayout.feedSurfaceTop).toBeLessThan(expandedLayout.feedSurfaceTop - 24);
-    expect(collapsedLayout.topChromeHeight).toBeLessThan(4);
+    expect(collapsedLayout.mobileHeaderHeight).toBeLessThan(4);
     expect(collapsedLayout.voteScrollTop).toBeGreaterThan(0);
     expect(collapsedLayout.voteScrollTop).toBeGreaterThan(beforeFirstNativeScroll.voteScrollTop);
     expect(Math.abs(collapsedLayout.activeTop - collapsedLayout.scrollerTop - 12)).toBeLessThanOrEqual(18);
@@ -388,10 +401,12 @@ test.describe("Mobile viewport (phone)", () => {
     ]);
     expect(restoredLayout.activeIndex).toBe(beforeNativeScrollUp.activeIndex - 1);
     expect(restoredLayout.feedSurfaceTop).toBeGreaterThan(collapsedLayout.feedSurfaceTop + 24);
-    expect(restoredLayout.topChromeTop).toBeGreaterThanOrEqual(restoredLayout.mobileHeaderBottom - 1);
-    expect(restoredLayout.categoryButtonTop).toBeGreaterThanOrEqual(restoredLayout.mobileHeaderBottom - 1);
+    expect(restoredLayout.topChromeTop).toBeGreaterThanOrEqual(restoredLayout.mobileHeaderNavbarBottom - 1);
+    expect(restoredLayout.topChromeBottom).toBeLessThanOrEqual(restoredLayout.mobileHeaderBottom + 1);
+    expect(restoredLayout.categoryButtonTop).toBeGreaterThanOrEqual(restoredLayout.mobileHeaderNavbarBottom - 1);
     expect(restoredLayout.categoryButtonHeight).toBeGreaterThan(20);
     expect(restoredLayout.viewButtonHeight).toBeGreaterThan(20);
+    expect(restoredLayout.activeTitleTop).toBeGreaterThanOrEqual(restoredLayout.mobileHeaderBottom - 1);
     expect(restoredLayout.activeTitleTop).toBeGreaterThanOrEqual(restoredLayout.scrollerTop - 1);
     expect(restoredLayout.activeTitleBottom).toBeLessThanOrEqual(restoredLayout.scrollerBottom + 1);
   });
@@ -480,10 +495,48 @@ test.describe("Mobile viewport (phone)", () => {
     await waitForFeedLoaded(page);
 
     const voteTopChrome = page.locator('[data-vote-mobile-top-chrome="true"]');
+    const mobileHeader = page.locator('[data-mobile-header="true"]');
+    const readHeaderTabsLayout = () =>
+      page.evaluate(() => {
+        const mobileHeader = document.querySelector<HTMLElement>('[data-mobile-header="true"]');
+        const mobileHeaderNavbar = document.querySelector<HTMLElement>('[data-mobile-header-navbar="true"]');
+        const topChrome = document.querySelector<HTMLElement>('[data-vote-mobile-top-chrome="true"]');
+        const activeTitle = document.querySelector<HTMLElement>('article[aria-current="true"] h2');
+        const mobileHeaderRect = mobileHeader?.getBoundingClientRect() ?? null;
+        const mobileHeaderNavbarRect = mobileHeaderNavbar?.getBoundingClientRect() ?? null;
+        const topChromeRect = topChrome?.getBoundingClientRect() ?? null;
+        const activeTitleRect = activeTitle?.getBoundingClientRect() ?? null;
+
+        return {
+          activeTitleTop: activeTitleRect?.top ?? 0,
+          documentScrollTop: document.scrollingElement?.scrollTop ?? 0,
+          mobileHeaderBottom: mobileHeaderRect?.bottom ?? 0,
+          mobileHeaderNavbarBottom: mobileHeaderNavbarRect?.bottom ?? 0,
+          topChromeBottom: topChromeRect?.bottom ?? 0,
+          topChromeTop: topChromeRect?.top ?? 0,
+        };
+      });
+    const expectHeaderTabsStable = async () => {
+      await expect(mobileHeader).toHaveAttribute("data-visible", "true");
+      await expect(voteTopChrome).toHaveAttribute("data-visible", "true");
+      await expect
+        .poll(async () => {
+          const layout = await readHeaderTabsLayout();
+          return (
+            layout.documentScrollTop === 0 &&
+            layout.topChromeTop >= layout.mobileHeaderNavbarBottom - 1 &&
+            layout.topChromeBottom <= layout.mobileHeaderBottom + 1 &&
+            layout.activeTitleTop >= layout.mobileHeaderBottom - 1
+          );
+        })
+        .toBe(true);
+    };
+
     await expect(voteTopChrome).toHaveAttribute("data-visible", "true");
 
-    const categoryButton = page.getByRole("button", { name: /^Category: Games$/ }).first();
+    const categoryButton = voteTopChrome.getByRole("button", { name: /^Category: Games$/ }).first();
     await expect(categoryButton).toBeVisible({ timeout: 10_000 });
+    await expectHeaderTabsStable();
 
     await categoryButton.click();
     const categoryDialog = page.getByRole("dialog", { name: "Category options" });
@@ -491,11 +544,22 @@ test.describe("Mobile viewport (phone)", () => {
     await categoryDialog.getByRole("button", { name: "Crypto Tokens" }).click();
 
     await expect(page).toHaveURL(/#crypto-tokens$/, { timeout: 5_000 });
-    await expect(voteTopChrome).toHaveAttribute("data-visible", "true");
-    await expect(page.getByRole("button", { name: /^Category: Crypto Tokens$/ }).first()).toBeVisible({
+    await expectHeaderTabsStable();
+    await expect(voteTopChrome.getByRole("button", { name: /^Category: Crypto Tokens$/ }).first()).toBeVisible({
       timeout: 5_000,
     });
-    await expect(page.getByRole("button", { name: /^View(?:$|:)/ }).first()).toBeVisible();
+    const viewButton = voteTopChrome.getByRole("button", { name: /^View(?:$|:)/ }).first();
+    await expect(viewButton).toBeVisible();
+
+    await viewButton.click();
+    const viewDialog = page.getByRole("dialog", { name: "View options" });
+    await expect(viewDialog).toBeVisible({ timeout: 5_000 });
+    await viewDialog.getByRole("button", { name: "Latest" }).click();
+
+    await expect(voteTopChrome.getByRole("button", { name: /^View: Latest$/ }).first()).toBeVisible({
+      timeout: 5_000,
+    });
+    await expectHeaderTabsStable();
   });
 
   test("mobile header still hides on scroll down and returns on scroll up on landing", async ({

@@ -1,6 +1,6 @@
 "use client";
 
-import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { Suspense, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import dynamic from "next/dynamic";
 import { usePathname, useSearchParams } from "next/navigation";
 import type { NextPage } from "next";
@@ -95,7 +95,6 @@ const FEED_PAGE_SIZE = 6;
 const FOR_YOU_CANDIDATE_PAGE_MULTIPLIER = 6;
 const FEED_PREFETCH_BUFFER = 6;
 const MOBILE_VOTE_DOCK_RESERVED_SPACE_PX = 152;
-const VOTE_MOBILE_CHROME_QUERY = "(max-width: 1279px)";
 const CONTENT_INTENT_PROMPT_MS = 1_400;
 const INTERNAL_CONTENT_PIN_STORAGE_KEY = "curyo_internal_vote_content_pin";
 const INTERNAL_CONTENT_PIN_TTL_MS = 6 * 60 * 60 * 1000;
@@ -206,7 +205,8 @@ const HomeInner = () => {
   const { address } = useAccount();
   const { targetNetwork } = useTargetNetwork();
   const normalizedAddress = address?.toLowerCase();
-  const { isMobileHeaderVisible, setIsMobileHeaderVisible } = useMobileHeaderVisibility();
+  const { isMobileHeaderVisible, mobileHeaderHeight, setIsMobileHeaderVisible, setMobileHeaderVoteControls } =
+    useMobileHeaderVisibility();
   const nowSeconds = useUnixTime(60_000);
   const { openConnectModal } = useCuryoConnectModal();
   const { isFirstVote, markVoteCompleted } = useOnboarding();
@@ -223,7 +223,6 @@ const HomeInner = () => {
   const voteAttentionTimeoutRef = useRef<number | null>(null);
   const voteAttentionTokenRef = useRef(0);
   const [mobileDockReservedSpace, setMobileDockReservedSpace] = useState<number | null>(null);
-  const [isMobileChromeViewport, setIsMobileChromeViewport] = useState(false);
   const [optimisticCooldownUntilByContentId, setOptimisticCooldownUntilByContentId] = useState<Map<string, number>>(
     () => new Map(),
   );
@@ -878,25 +877,6 @@ const HomeInner = () => {
   }, [rankedDisplayFeed, stableDisplayFeedIds]);
   displayFeedRef.current = displayFeed;
 
-  useEffect(() => {
-    if (typeof window === "undefined") return;
-
-    const mobileChromeQuery = window.matchMedia(VOTE_MOBILE_CHROME_QUERY);
-    const updateChromeViewport = () => setIsMobileChromeViewport(mobileChromeQuery.matches);
-
-    updateChromeViewport();
-
-    if (typeof mobileChromeQuery.addEventListener === "function") {
-      mobileChromeQuery.addEventListener("change", updateChromeViewport);
-      return () => mobileChromeQuery.removeEventListener("change", updateChromeViewport);
-    }
-
-    mobileChromeQuery.addListener(updateChromeViewport);
-    return () => mobileChromeQuery.removeListener(updateChromeViewport);
-  }, []);
-
-  const isVoteTopChromeCollapsed = isMobileChromeViewport && !isMobileHeaderVisible;
-
   const {
     activeItem: primaryItem,
     activeSourceIndex,
@@ -1439,6 +1419,110 @@ const HomeInner = () => {
     if (brokenCount > 0) cats.push(BROKEN_FILTER);
     return cats;
   }, [websiteCategories, voteCounts, brokenCount]);
+  const renderVoteTopControls = useCallback(
+    (variant: "mobile" | "desktop") => {
+      const isMobileVariant = variant === "mobile";
+      const searchSortId = isMobileVariant ? "vote-search-sort-mobile" : "vote-search-sort-desktop";
+
+      return (
+        <div
+          className={isMobileVariant ? "flex min-h-0 flex-col gap-3 px-4 pb-3 sm:px-6" : "flex min-h-0 flex-col gap-4"}
+        >
+          <div
+            className={`flex shrink-0 flex-wrap items-center gap-2 sm:gap-3 ${
+              isMobileVariant ? "touch-none" : "xl:flex-nowrap xl:px-0 xl:touch-auto"
+            }`}
+            data-disable-queue-wheel="true"
+          >
+            <CategoryFilter
+              categories={categories}
+              activeCategory={activeCategory}
+              onSelect={selectCategory}
+              pillClassName={(cat, isActive) => {
+                if (cat !== BROKEN_FILTER) return undefined;
+                return isActive
+                  ? "bg-warning/20 text-warning border border-warning/40"
+                  : "pill-inactive text-warning/70 hover:bg-warning/10";
+              }}
+            />
+            <FeedScopeFilter
+              value={view}
+              groups={viewGroups}
+              onChange={value => {
+                void handleViewChange(value as VoteView);
+              }}
+              label="View"
+            />
+            <div className="shrink-0 flex items-center">
+              <StreakCounter />
+            </div>
+          </div>
+
+          {isSearchMode ? (
+            <div
+              className={`flex shrink-0 flex-wrap items-center gap-2 ${
+                isMobileVariant ? "touch-none" : "xl:px-0 xl:touch-auto"
+              }`}
+              data-disable-queue-wheel="true"
+            >
+              <div className="rounded-full bg-base-200 px-3 py-2 text-sm text-base-content/70">
+                {isShortSearchQuery ? (
+                  <span>Keep typing to search. Terms need at least {MIN_CONTENT_SEARCH_QUERY_LENGTH} characters.</span>
+                ) : (
+                  <>
+                    Results for <span className="font-medium text-base-content">&quot;{trimmedSearchQuery}&quot;</span>
+                  </>
+                )}
+              </div>
+              {!isShortSearchQuery ? (
+                <>
+                  <label htmlFor={searchSortId} className="sr-only">
+                    Sort search results
+                  </label>
+                  <select
+                    id={searchSortId}
+                    name="vote-search-sort"
+                    value={effectiveSearchSortBy}
+                    onChange={e => handleSearchSortChange(e.target.value as SearchSortOption)}
+                    className="select select-sm bg-base-200 text-base font-medium border-none focus:outline-none w-auto"
+                    aria-label="Sort search results"
+                  >
+                    {SEARCH_SORT_OPTIONS.map(opt => (
+                      <option key={opt.value} value={opt.value}>
+                        {opt.label}
+                      </option>
+                    ))}
+                  </select>
+                </>
+              ) : null}
+            </div>
+          ) : null}
+        </div>
+      );
+    },
+    [
+      activeCategory,
+      categories,
+      effectiveSearchSortBy,
+      handleSearchSortChange,
+      handleViewChange,
+      isSearchMode,
+      isShortSearchQuery,
+      selectCategory,
+      trimmedSearchQuery,
+      view,
+      viewGroups,
+    ],
+  );
+  const mobileVoteHeaderControls = useMemo(() => renderVoteTopControls("mobile"), [renderVoteTopControls]);
+
+  useLayoutEffect(() => {
+    setMobileHeaderVoteControls(mobileVoteHeaderControls);
+  }, [mobileVoteHeaderControls, setMobileHeaderVoteControls]);
+
+  useLayoutEffect(() => {
+    return () => setMobileHeaderVoteControls(null);
+  }, [setMobileHeaderVoteControls]);
 
   // Apply URL hash to category selection (on mount and hash change)
   useEffect(() => {
@@ -1541,86 +1625,8 @@ const HomeInner = () => {
       contentClassName="flex min-h-0 flex-1 flex-col overflow-hidden"
     >
       <VotingGuide />
-      <div
-        className={`grid shrink-0 overflow-hidden transition-[grid-template-rows,margin-bottom,opacity] duration-200 ease-out will-change-[grid-template-rows,margin-bottom,opacity] xl:mb-4 xl:block xl:overflow-visible xl:opacity-100 ${
-          isVoteTopChromeCollapsed ? "mb-0 grid-rows-[0fr] opacity-0" : "mb-2 grid-rows-[1fr] opacity-100"
-        }`}
-        data-vote-mobile-top-chrome="true"
-        data-visible={isVoteTopChromeCollapsed ? "false" : "true"}
-        inert={isVoteTopChromeCollapsed ? true : undefined}
-      >
-        <div className="min-h-0 overflow-hidden xl:overflow-visible">
-          <div className="flex min-h-0 flex-col gap-4">
-            <div
-              className="flex shrink-0 flex-wrap items-center gap-2 px-4 touch-none sm:gap-3 xl:flex-nowrap xl:px-0 xl:touch-auto"
-              data-disable-queue-wheel="true"
-            >
-              <CategoryFilter
-                categories={categories}
-                activeCategory={activeCategory}
-                onSelect={selectCategory}
-                pillClassName={(cat, isActive) => {
-                  if (cat !== BROKEN_FILTER) return undefined;
-                  return isActive
-                    ? "bg-warning/20 text-warning border border-warning/40"
-                    : "pill-inactive text-warning/70 hover:bg-warning/10";
-                }}
-              />
-              <FeedScopeFilter
-                value={view}
-                groups={viewGroups}
-                onChange={value => {
-                  void handleViewChange(value as VoteView);
-                }}
-                label="View"
-              />
-              <div className="shrink-0 flex items-center">
-                <StreakCounter />
-              </div>
-            </div>
-
-            {isSearchMode ? (
-              <div
-                className="flex shrink-0 flex-wrap items-center gap-2 px-4 touch-none xl:px-0 xl:touch-auto"
-                data-disable-queue-wheel="true"
-              >
-                <div className="rounded-full bg-base-200 px-3 py-2 text-sm text-base-content/70">
-                  {isShortSearchQuery ? (
-                    <span>
-                      Keep typing to search. Terms need at least {MIN_CONTENT_SEARCH_QUERY_LENGTH} characters.
-                    </span>
-                  ) : (
-                    <>
-                      Results for{" "}
-                      <span className="font-medium text-base-content">&quot;{trimmedSearchQuery}&quot;</span>
-                    </>
-                  )}
-                </div>
-                {!isShortSearchQuery ? (
-                  <>
-                    <label htmlFor="vote-search-sort" className="sr-only">
-                      Sort search results
-                    </label>
-                    <select
-                      id="vote-search-sort"
-                      name="vote-search-sort"
-                      value={effectiveSearchSortBy}
-                      onChange={e => handleSearchSortChange(e.target.value as SearchSortOption)}
-                      className="select select-sm bg-base-200 text-base font-medium border-none focus:outline-none w-auto"
-                      aria-label="Sort search results"
-                    >
-                      {SEARCH_SORT_OPTIONS.map(opt => (
-                        <option key={opt.value} value={opt.value}>
-                          {opt.label}
-                        </option>
-                      ))}
-                    </select>
-                  </>
-                ) : null}
-              </div>
-            ) : null}
-          </div>
-        </div>
+      <div className="hidden shrink-0 xl:mb-4 xl:block xl:overflow-visible" data-vote-desktop-top-chrome="true">
+        {renderVoteTopControls("desktop")}
       </div>
 
       <div className="relative min-h-0 flex-1 overflow-hidden">
@@ -1660,7 +1666,8 @@ const HomeInner = () => {
                           activeSourceIndex={activeSourceIndex}
                           loadedCount={visibleCount}
                           mobileDockReservedSpace={mobileDockReservedSpace}
-                          mobileTopChromeVisible={!isVoteTopChromeCollapsed}
+                          mobileTopChromeHeight={mobileHeaderHeight}
+                          mobileTopChromeVisible={isMobileHeaderVisible}
                           canLoadMore={canLoadMore}
                           enrichedProfiles={enrichedProfiles}
                           watchedContentIds={watchedContentIds}

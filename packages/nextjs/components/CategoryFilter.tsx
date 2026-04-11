@@ -50,6 +50,7 @@ export function CategoryFilter({ categories, activeCategory, onSelect, pillClass
   const [pillWidths, setPillWidths] = useState<number[]>([]);
   const [search, setSearch] = useState("");
   const searchInputRef = useRef<HTMLInputElement>(null);
+  const mobileSearchInputRef = useRef<HTMLInputElement>(null);
   const mobileSearchInputId = `${searchFieldBaseId}-mobile`;
   const desktopSearchInputId = `${searchFieldBaseId}-desktop`;
 
@@ -100,6 +101,16 @@ export function CategoryFilter({ categories, activeCategory, onSelect, pillClass
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
   }, [dropdownOpen, mobileOpen]);
+
+  useEffect(() => {
+    if (!mobileOpen || typeof window === "undefined") return;
+
+    const frameId = window.requestAnimationFrame(() => {
+      mobileSearchInputRef.current?.focus({ preventScroll: true });
+    });
+
+    return () => window.cancelAnimationFrame(frameId);
+  }, [mobileOpen]);
 
   useEffect(() => {
     if (!dropdownOpen) {
@@ -274,6 +285,7 @@ export function CategoryFilter({ categories, activeCategory, onSelect, pillClass
                   <MagnifyingGlassIcon className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-base-content/40" />
                   <input
                     id={mobileSearchInputId}
+                    ref={mobileSearchInputRef}
                     name="category-search-mobile"
                     type="text"
                     placeholder="Search categories..."
@@ -281,7 +293,6 @@ export function CategoryFilter({ categories, activeCategory, onSelect, pillClass
                     value={search}
                     onChange={e => setSearch(e.target.value)}
                     className="input h-12 w-full rounded-2xl border-none bg-base-300 pl-10 text-base"
-                    autoFocus
                   />
                 </div>
 
