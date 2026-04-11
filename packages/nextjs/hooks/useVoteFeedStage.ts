@@ -1,9 +1,10 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { ContentItem } from "~~/hooks/useContentFeed";
 
 interface UseVoteFeedStageOptions {
+  sessionKey?: string;
   visibleCount: number;
   requestedActiveId?: bigint | null;
 }
@@ -55,14 +56,43 @@ export function resolveVoteFeedActiveSourceIndex(
   return 0;
 }
 
+export function resolveVoteFeedActiveContentIdForSessionChange(
+  activeContentId: bigint | null,
+  previousSessionKey: string | undefined,
+  nextSessionKey: string | undefined,
+  requestedActiveId?: bigint | null,
+) {
+  if (previousSessionKey === nextSessionKey) {
+    return activeContentId;
+  }
+
+  return requestedActiveId ?? null;
+}
+
 export function useVoteFeedStage(items: ContentItem[], options: UseVoteFeedStageOptions) {
-  const { visibleCount, requestedActiveId } = options;
+  const { sessionKey, visibleCount, requestedActiveId } = options;
   const [activeContentId, setActiveContentId] = useState<bigint | null>(requestedActiveId ?? null);
+  const previousSessionKeyRef = useRef(sessionKey);
 
   useEffect(() => {
     if (requestedActiveId === undefined) return;
     setActiveContentId(current => (current === requestedActiveId ? current : requestedActiveId));
   }, [requestedActiveId]);
+
+  useEffect(() => {
+    if (sessionKey === undefined) return;
+
+    setActiveContentId(current => {
+      const next = resolveVoteFeedActiveContentIdForSessionChange(
+        current,
+        previousSessionKeyRef.current,
+        sessionKey,
+        requestedActiveId,
+      );
+      return current === next ? current : next;
+    });
+    previousSessionKeyRef.current = sessionKey;
+  }, [requestedActiveId, sessionKey]);
 
   useEffect(() => {
     if (items.length === 0) {

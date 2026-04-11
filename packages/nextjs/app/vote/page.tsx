@@ -788,6 +788,7 @@ const HomeInner = () => {
     loadedItems,
     selectContent,
   } = useVoteFeedStage(displayFeed, {
+    sessionKey: feedSessionKey,
     visibleCount,
     requestedActiveId: effectiveRequestedActiveId,
   });
@@ -1013,6 +1014,17 @@ const HomeInner = () => {
   const replaceVoteLocation = useCallback((update: { contentId?: bigint | null; categoryHash?: string | null }) => {
     history.replaceState(null, "", buildVoteLocation(window.location.href, update));
   }, []);
+
+  const handleSearchSortChange = useCallback(
+    (nextSortBy: SearchSortOption) => {
+      if (nextSortBy === effectiveSearchSortBy) return;
+
+      selectContent(null);
+      replaceVoteLocation({ contentId: null });
+      setSortBy(nextSortBy);
+    },
+    [effectiveSearchSortBy, replaceVoteLocation, selectContent],
+  );
 
   // Sync category selection with URL hash (e.g. /#books, /#board-games)
   const selectCategory = useCallback(
@@ -1451,7 +1463,7 @@ const HomeInner = () => {
                       id="vote-search-sort"
                       name="vote-search-sort"
                       value={effectiveSearchSortBy}
-                      onChange={e => setSortBy(e.target.value as SearchSortOption)}
+                      onChange={e => handleSearchSortChange(e.target.value as SearchSortOption)}
                       className="select select-sm bg-base-200 text-base font-medium border-none focus:outline-none w-auto"
                       aria-label="Sort search results"
                     >
