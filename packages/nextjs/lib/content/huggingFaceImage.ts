@@ -37,3 +37,25 @@ export function isHuggingFaceAvatarUrl(value?: string | null): boolean {
 
   return new URL(safeUrl).hostname === HUGGING_FACE_AVATAR_HOST;
 }
+
+export function getSafeHuggingFaceDisplayImageUrl(...values: Array<string | null | undefined>): string | null {
+  for (const value of values) {
+    const safeUrl = getSafeHuggingFaceImageUrl(value);
+    if (safeUrl && !isHuggingFaceAvatarUrl(safeUrl)) {
+      return safeUrl;
+    }
+  }
+
+  return null;
+}
+
+export function getSafeHuggingFaceAvatarUrl(...values: Array<string | null | undefined>): string | null {
+  for (const value of values) {
+    const safeUrl = getSafeHuggingFaceImageUrl(value);
+    if (safeUrl && isHuggingFaceAvatarUrl(safeUrl)) {
+      return safeUrl;
+    }
+  }
+
+  return null;
+}

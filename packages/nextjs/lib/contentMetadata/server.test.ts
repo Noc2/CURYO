@@ -49,7 +49,7 @@ test("shouldReuseCachedContentMetadata keeps fresh Hugging Face entries once an 
   );
 });
 
-test("shouldReuseCachedContentMetadata keeps trim-safe Hugging Face avatar cache entries", () => {
+test("shouldReuseCachedContentMetadata refreshes Hugging Face entries with only an avatar image", () => {
   assert.equal(
     shouldReuseCachedContentMetadata(
       "https://huggingface.co/Jackrong/Gemopus-4-E4B-it",
@@ -57,6 +57,21 @@ test("shouldReuseCachedContentMetadata keeps trim-safe Hugging Face avatar cache
         thumbnailUrl:
           "https://cdn-avatars.huggingface.co/v1/production/uploads/66309bd090589b7c65950665/RcOk7ysh7nEt5YlHHzauj.jpeg&quot;,&quot;type&quot;:&quot;update&quot;",
         imageUrl: null,
+        fetchedAt: new Date(NOW - 5 * 60 * 1000),
+      },
+      NOW,
+    ),
+    false,
+  );
+});
+
+test("shouldReuseCachedContentMetadata keeps Hugging Face entries with avatar and display image URLs", () => {
+  assert.equal(
+    shouldReuseCachedContentMetadata(
+      "https://huggingface.co/k2-fsa/OmniVoice",
+      {
+        thumbnailUrl: "https://cdn-avatars.huggingface.co/v1/production/uploads/org/k2-fsa.png",
+        imageUrl: "https://cdn-thumbnails.huggingface.co/social-thumbnails/models/k2-fsa/OmniVoice.png",
         fetchedAt: new Date(NOW - 5 * 60 * 1000),
       },
       NOW,

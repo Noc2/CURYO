@@ -1,6 +1,11 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { getSafeHuggingFaceImageUrl, isHuggingFaceAvatarUrl } from "~~/lib/content/huggingFaceImage";
+import {
+  getSafeHuggingFaceAvatarUrl,
+  getSafeHuggingFaceDisplayImageUrl,
+  getSafeHuggingFaceImageUrl,
+  isHuggingFaceAvatarUrl,
+} from "~~/lib/content/huggingFaceImage";
 
 test("getSafeHuggingFaceImageUrl trims escaped JSON after avatar URLs", () => {
   assert.equal(
@@ -31,6 +36,26 @@ test("getSafeHuggingFaceImageUrl rejects malformed and non-Hugging Face URLs", (
   assert.equal(getSafeHuggingFaceImageUrl("not a url"), null);
   assert.equal(getSafeHuggingFaceImageUrl("http://huggingface.co/example/raw/main/image.png"), null);
   assert.equal(getSafeHuggingFaceImageUrl("https://example.com/avatar.png"), null);
+});
+
+test("getSafeHuggingFaceDisplayImageUrl skips avatars", () => {
+  assert.equal(
+    getSafeHuggingFaceDisplayImageUrl(
+      "https://cdn-avatars.huggingface.co/v1/production/uploads/5dd96eb166059660ed1ee413/WtA3YYitedOr9n02eHfJe.png",
+      "https://cdn-thumbnails.huggingface.co/social-thumbnails/models/google/gemma-4-E2B-it.png",
+    ),
+    "https://cdn-thumbnails.huggingface.co/social-thumbnails/models/google/gemma-4-E2B-it.png",
+  );
+});
+
+test("getSafeHuggingFaceAvatarUrl only returns avatar URLs", () => {
+  assert.equal(
+    getSafeHuggingFaceAvatarUrl(
+      "https://cdn-thumbnails.huggingface.co/social-thumbnails/models/google/gemma-4-E2B-it.png",
+      "https://cdn-avatars.huggingface.co/v1/production/uploads/5dd96eb166059660ed1ee413/WtA3YYitedOr9n02eHfJe.png",
+    ),
+    "https://cdn-avatars.huggingface.co/v1/production/uploads/5dd96eb166059660ed1ee413/WtA3YYitedOr9n02eHfJe.png",
+  );
 });
 
 test("isHuggingFaceAvatarUrl distinguishes org avatars from raw model assets", () => {
