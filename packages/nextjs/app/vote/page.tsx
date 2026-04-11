@@ -788,6 +788,7 @@ const HomeInner = () => {
     loadedItems,
     selectContent,
   } = useVoteFeedStage(displayFeed, {
+    sessionKey: feedSessionKey,
     visibleCount,
     requestedActiveId: effectiveRequestedActiveId,
   });
@@ -1013,6 +1014,21 @@ const HomeInner = () => {
   const replaceVoteLocation = useCallback((update: { contentId?: bigint | null; categoryHash?: string | null }) => {
     history.replaceState(null, "", buildVoteLocation(window.location.href, update));
   }, []);
+
+  const clearActiveContentPin = useCallback(() => {
+    selectContent(null);
+    replaceVoteLocation({ contentId: null });
+  }, [replaceVoteLocation, selectContent]);
+
+  const handleSearchSortChange = useCallback(
+    (nextSortBy: SearchSortOption) => {
+      if (nextSortBy === effectiveSearchSortBy) return;
+
+      clearActiveContentPin();
+      setSortBy(nextSortBy);
+    },
+    [clearActiveContentPin, effectiveSearchSortBy],
+  );
 
   // Sync category selection with URL hash (e.g. /#books, /#board-games)
   const selectCategory = useCallback(
@@ -1241,11 +1257,13 @@ const HomeInner = () => {
           return;
         }
 
+        clearActiveContentPin();
         setView("watched");
         return;
       }
 
       if (nextView !== "followed_curators") {
+        clearActiveContentPin();
         setView(nextView);
         return;
       }
@@ -1264,9 +1282,10 @@ const HomeInner = () => {
         return;
       }
 
+      clearActiveContentPin();
       setView("followed_curators");
     },
-    [openConnectModal, requestFollowReadAccess, requestWatchReadAccess],
+    [clearActiveContentPin, openConnectModal, requestFollowReadAccess, requestWatchReadAccess],
   );
 
   // Count broken URLs for the filter pill
@@ -1451,7 +1470,7 @@ const HomeInner = () => {
                       id="vote-search-sort"
                       name="vote-search-sort"
                       value={effectiveSearchSortBy}
-                      onChange={e => setSortBy(e.target.value as SearchSortOption)}
+                      onChange={e => handleSearchSortChange(e.target.value as SearchSortOption)}
                       className="select select-sm bg-base-200 text-base font-medium border-none focus:outline-none w-auto"
                       aria-label="Sort search results"
                     >

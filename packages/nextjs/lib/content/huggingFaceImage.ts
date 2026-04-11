@@ -1,4 +1,8 @@
-const HUGGING_FACE_IMAGE_HOSTS = new Set(["cdn-avatars.huggingface.co", "huggingface.co"]);
+const HUGGING_FACE_IMAGE_HOSTS = new Set([
+  "cdn-avatars.huggingface.co",
+  "cdn-thumbnails.huggingface.co",
+  "huggingface.co",
+]);
 const HUGGING_FACE_AVATAR_HOST = "cdn-avatars.huggingface.co";
 
 const URL_TAIL_MARKER_PATTERN = /(?:&(?:amp;)?quot;|&#(?:x22|34);|\\u0022|["'<>\s])/i;
@@ -11,9 +15,11 @@ export function getSafeHuggingFaceImageUrl(value?: string | null): string | null
   const candidate = (markerMatch?.index === undefined ? rawValue : rawValue.slice(0, markerMatch.index)).trim();
   if (!candidate) return null;
 
+  const normalizedCandidate = candidate.startsWith("//") ? `https:${candidate}` : candidate;
+
   let parsed: URL;
   try {
-    parsed = new URL(candidate);
+    parsed = new URL(normalizedCandidate);
   } catch {
     return null;
   }
