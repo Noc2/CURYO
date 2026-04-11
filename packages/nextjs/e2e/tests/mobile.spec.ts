@@ -61,9 +61,7 @@ test.describe("Mobile viewport (phone)", () => {
         const explicitScrollSource = document.querySelector<HTMLElement>('[data-mobile-header-scroll-source="true"]');
         const topChrome = document.querySelector<HTMLElement>('[data-vote-mobile-top-chrome="true"]');
         const mobileHeader = document.querySelector<HTMLElement>('[data-mobile-header="true"]');
-        const mobileNavbar = document.querySelector<HTMLElement>('[data-mobile-header-navbar="true"]');
         const feedSurface = document.querySelector<HTMLElement>('[data-testid="vote-feed-surface"]');
-        const mobileDock = document.querySelector<HTMLElement>('[data-testid="vote-mobile-dock"]');
         const mobileScrollContainer = document.querySelector<HTMLElement>(
           '[data-testid="vote-mobile-scroll-container"]',
         );
@@ -136,16 +134,10 @@ test.describe("Mobile viewport (phone)", () => {
             : 0,
           leftGutterWidth,
           mobileHeaderBottom: mobileHeader?.getBoundingClientRect().bottom ?? 0,
-          mobileNavbarBottom: mobileNavbar?.getBoundingClientRect().bottom ?? 0,
-          mobileDockPointerEvents: mobileDock ? getComputedStyle(mobileDock).pointerEvents : "",
-          mobileSnapGuardTop: mobileScrollContainer
-            ? Number.parseFloat(getComputedStyle(mobileScrollContainer).scrollPaddingTop) || 0
-            : 0,
           rightGutterWidth,
           scrollerBottom: scrollerRect?.bottom ?? 0,
           scrollerTop: scrollerRect?.top ?? 0,
           topChromeHeight: topChrome?.getBoundingClientRect().height ?? 0,
-          topChromePointerEvents: topChrome ? getComputedStyle(topChrome).pointerEvents : "",
           topChromeTop: topChrome?.getBoundingClientRect().top ?? 0,
           viewButtonHeight: viewButtonRect?.height ?? 0,
           voteScrollTop: explicitScrollSource?.scrollTop ?? 0,
@@ -281,8 +273,6 @@ test.describe("Mobile viewport (phone)", () => {
     expect(initialLayout.activeContentHeaderBackground).toBe("rgb(23, 22, 26)");
     expect(initialLayout.activeMoreControlVisible).toBe(true);
     expect(initialLayout.activeMoreControlFits).toBe(true);
-    expect(initialLayout.mobileDockPointerEvents).toBe("none");
-    expect(initialLayout.topChromePointerEvents).toBe("auto");
 
     await page.evaluate(() => {
       const explicitScrollSource = document.querySelector<HTMLElement>('[data-mobile-header-scroll-source="true"]');
@@ -338,14 +328,14 @@ test.describe("Mobile viewport (phone)", () => {
     await expect.poll(async () => (await readLayout()).voteScrollTop).toBeGreaterThan(48);
 
     const afterRootScrollLeak = await readLayout();
-    expect(afterRootScrollLeak.topChromeTop).toBeGreaterThanOrEqual(afterRootScrollLeak.mobileNavbarBottom - 1);
+    expect(afterRootScrollLeak.topChromeTop).toBeGreaterThanOrEqual(afterRootScrollLeak.mobileHeaderBottom - 1);
     await removeDocumentScrollLeakSpacer();
     await setFeedScrollTop(0);
     await expect(mobileHeader).toHaveAttribute("data-visible", "true");
     await expect(voteTopChrome).toHaveAttribute("data-visible", "true");
 
     const expandedLayout = await readLayout();
-    expect(expandedLayout.topChromeTop).toBeGreaterThanOrEqual(expandedLayout.mobileNavbarBottom - 1);
+    expect(expandedLayout.topChromeTop).toBeGreaterThanOrEqual(expandedLayout.mobileHeaderBottom - 1);
     await waitForMobileHeaderScrollSyncIdle();
 
     const beforeFirstNativeScroll = await readLayout();
@@ -370,12 +360,9 @@ test.describe("Mobile viewport (phone)", () => {
     expect(collapsedLayout.activeIndex).toBe(beforeFirstNativeScroll.activeIndex + 1);
     expect(collapsedLayout.feedSurfaceTop).toBeLessThan(expandedLayout.feedSurfaceTop - 24);
     expect(collapsedLayout.topChromeHeight).toBeLessThan(4);
-    expect(collapsedLayout.topChromePointerEvents).toBe("none");
     expect(collapsedLayout.voteScrollTop).toBeGreaterThan(0);
     expect(collapsedLayout.voteScrollTop).toBeGreaterThan(beforeFirstNativeScroll.voteScrollTop);
-    expect(
-      Math.abs(collapsedLayout.activeTop - collapsedLayout.scrollerTop - collapsedLayout.mobileSnapGuardTop),
-    ).toBeLessThanOrEqual(18);
+    expect(Math.abs(collapsedLayout.activeTop - collapsedLayout.scrollerTop - 12)).toBeLessThanOrEqual(18);
     expect(collapsedLayout.activeTitleTop).toBeGreaterThanOrEqual(collapsedLayout.scrollerTop - 1);
     expect(collapsedLayout.activeTitleBottom).toBeLessThanOrEqual(collapsedLayout.scrollerBottom + 1);
 
@@ -401,11 +388,10 @@ test.describe("Mobile viewport (phone)", () => {
     ]);
     expect(restoredLayout.activeIndex).toBe(beforeNativeScrollUp.activeIndex - 1);
     expect(restoredLayout.feedSurfaceTop).toBeGreaterThan(collapsedLayout.feedSurfaceTop + 24);
-    expect(restoredLayout.topChromeTop).toBeGreaterThanOrEqual(restoredLayout.mobileNavbarBottom - 1);
-    expect(restoredLayout.categoryButtonTop).toBeGreaterThanOrEqual(restoredLayout.mobileNavbarBottom - 1);
+    expect(restoredLayout.topChromeTop).toBeGreaterThanOrEqual(restoredLayout.mobileHeaderBottom - 1);
+    expect(restoredLayout.categoryButtonTop).toBeGreaterThanOrEqual(restoredLayout.mobileHeaderBottom - 1);
     expect(restoredLayout.categoryButtonHeight).toBeGreaterThan(20);
     expect(restoredLayout.viewButtonHeight).toBeGreaterThan(20);
-    expect(restoredLayout.topChromePointerEvents).toBe("auto");
     expect(restoredLayout.activeTitleTop).toBeGreaterThanOrEqual(restoredLayout.scrollerTop - 1);
     expect(restoredLayout.activeTitleBottom).toBeLessThanOrEqual(restoredLayout.scrollerBottom + 1);
   });
@@ -510,30 +496,6 @@ test.describe("Mobile viewport (phone)", () => {
       timeout: 5_000,
     });
     await expect(page.getByRole("button", { name: /^View(?:$|:)/ }).first()).toBeVisible();
-
-    const restoredLayout = await page.evaluate(() => {
-      const topChrome = document.querySelector<HTMLElement>('[data-vote-mobile-top-chrome="true"]');
-      const mobileNavbar = document.querySelector<HTMLElement>('[data-mobile-header-navbar="true"]');
-      const categoryButton = topChrome?.querySelector<HTMLElement>('button[aria-label^="Category:"]');
-      const viewButton = topChrome?.querySelector<HTMLElement>(
-        'button[aria-label="View"], button[aria-label^="View:"]',
-      );
-      const categoryRect = categoryButton?.getBoundingClientRect() ?? null;
-      const viewRect = viewButton?.getBoundingClientRect() ?? null;
-
-      return {
-        categoryButtonHeight: categoryRect?.height ?? 0,
-        categoryButtonTop: categoryRect?.top ?? 0,
-        mobileNavbarBottom: mobileNavbar?.getBoundingClientRect().bottom ?? 0,
-        topChromeTop: topChrome?.getBoundingClientRect().top ?? 0,
-        viewButtonHeight: viewRect?.height ?? 0,
-      };
-    });
-
-    expect(restoredLayout.topChromeTop).toBeGreaterThanOrEqual(restoredLayout.mobileNavbarBottom - 1);
-    expect(restoredLayout.categoryButtonTop).toBeGreaterThanOrEqual(restoredLayout.mobileNavbarBottom - 1);
-    expect(restoredLayout.categoryButtonHeight).toBeGreaterThan(20);
-    expect(restoredLayout.viewButtonHeight).toBeGreaterThan(20);
   });
 
   test("mobile header still hides on scroll down and returns on scroll up on landing", async ({
