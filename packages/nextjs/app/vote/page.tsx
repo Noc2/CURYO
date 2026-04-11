@@ -125,7 +125,7 @@ const HomeInner = () => {
 
   const { address } = useAccount();
   const { targetNetwork } = useTargetNetwork();
-  const { isMobileHeaderVisible } = useMobileHeaderVisibility();
+  const { isMobileHeaderVisible, setIsMobileHeaderVisible } = useMobileHeaderVisibility();
   const nowSeconds = useUnixTime(60_000);
   const { openConnectModal } = useCuryoConnectModal();
   const { isFirstVote, markVoteCompleted } = useOnboarding();
@@ -1024,22 +1024,24 @@ const HomeInner = () => {
     (nextSortBy: SearchSortOption) => {
       if (nextSortBy === effectiveSearchSortBy) return;
 
+      setIsMobileHeaderVisible(true);
       clearActiveContentPin();
       setSortBy(nextSortBy);
     },
-    [clearActiveContentPin, effectiveSearchSortBy],
+    [clearActiveContentPin, effectiveSearchSortBy, setIsMobileHeaderVisible],
   );
 
   // Sync category selection with URL hash (e.g. /#books, /#board-games)
   const selectCategory = useCallback(
     (name: string) => {
+      setIsMobileHeaderVisible(true);
       setActiveCategory(name);
       replaceVoteLocation({
         contentId: null,
         categoryHash: name === ALL_FILTER ? null : slugify(name),
       });
     },
-    [replaceVoteLocation],
+    [replaceVoteLocation, setIsMobileHeaderVisible],
   );
 
   const setActiveFeedIndex = useCallback(
@@ -1257,12 +1259,14 @@ const HomeInner = () => {
           return;
         }
 
+        setIsMobileHeaderVisible(true);
         clearActiveContentPin();
         setView("watched");
         return;
       }
 
       if (nextView !== "followed_curators") {
+        setIsMobileHeaderVisible(true);
         clearActiveContentPin();
         setView(nextView);
         return;
@@ -1282,10 +1286,17 @@ const HomeInner = () => {
         return;
       }
 
+      setIsMobileHeaderVisible(true);
       clearActiveContentPin();
       setView("followed_curators");
     },
-    [clearActiveContentPin, openConnectModal, requestFollowReadAccess, requestWatchReadAccess],
+    [
+      clearActiveContentPin,
+      openConnectModal,
+      requestFollowReadAccess,
+      requestWatchReadAccess,
+      setIsMobileHeaderVisible,
+    ],
   );
 
   // Count broken URLs for the filter pill
@@ -1521,6 +1532,7 @@ const HomeInner = () => {
                       ) : (
                         <VoteFeedStage
                           displayFeed={displayFeed}
+                          sessionKey={feedSessionKey}
                           activeSourceIndex={activeSourceIndex}
                           loadedCount={visibleCount}
                           mobileDockReservedSpace={mobileDockReservedSpace}
@@ -1574,7 +1586,11 @@ const HomeInner = () => {
       </div>
 
       {primaryItem ? (
-        <div ref={mobileDockContainerRef} className="fixed inset-x-0 bottom-0 z-30 xl:hidden">
+        <div
+          ref={mobileDockContainerRef}
+          data-testid="vote-mobile-dock"
+          className="fixed inset-x-0 bottom-0 z-30 xl:hidden"
+        >
           <div className="w-full">
             <div className="overflow-visible">
               <VotingQuestionCard
