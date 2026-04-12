@@ -23,7 +23,7 @@ export function shouldExpectThirdwebGasMode(params: {
 }) {
   return (
     params.includeExternalSendCalls &&
-    (params.connectorId === "in-app-wallet" || params.isThirdwebInApp) &&
+    (params.connectorId === "in-app-wallet" || (!params.connectorId && params.isThirdwebInApp)) &&
     typeof params.chainId === "number" &&
     supportsThirdwebExecutionCapabilities(params.chainId)
   );

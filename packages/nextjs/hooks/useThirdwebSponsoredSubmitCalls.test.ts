@@ -42,6 +42,17 @@ test("expects sponsored submit calls from active in-app wallet before wagmi conn
   );
 });
 
+test("does not expect sponsored submit calls from stale in-app wallet after external connector settles", () => {
+  assert.equal(
+    shouldExpectSponsoredSubmitCalls({
+      chainId: 42220,
+      connectorId: "injected",
+      isThirdwebInApp: true,
+    }),
+    false,
+  );
+});
+
 test("does not prefer sponsored submit calls without free transaction allowance", () => {
   assert.equal(
     shouldPreferSponsoredSubmitCalls({
@@ -160,6 +171,20 @@ test("awaits self-funded reconnect after exhausted free transactions before wagm
       isThirdwebInApp: true,
     }),
     true,
+  );
+});
+
+test("does not await self-funded reconnect after exhausted free transactions once external connector settles", () => {
+  assert.equal(
+    shouldAwaitSelfFundedSubmitCalls({
+      canUseFreeTransactions: false,
+      chainId: 42220,
+      connectorId: "injected",
+      executionMode: "sponsored_7702",
+      freeTransactionAllowanceResolved: true,
+      isThirdwebInApp: true,
+    }),
+    false,
   );
 });
 

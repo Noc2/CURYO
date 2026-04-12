@@ -26,6 +26,18 @@ test("does not expect thirdweb gas mode without external send-call support", () 
   );
 });
 
+test("does not expect thirdweb gas mode from stale in-app wallet after external connector settles", () => {
+  assert.equal(
+    shouldExpectThirdwebGasMode({
+      chainId: 42220,
+      connectorId: "injected",
+      includeExternalSendCalls: true,
+      isThirdwebInApp: true,
+    }),
+    false,
+  );
+});
+
 test("awaits self-funded reconnect for exhausted free transactions before wagmi connector settles", () => {
   assert.equal(
     shouldAwaitSelfFundedGasModeReconnect({
@@ -38,6 +50,21 @@ test("awaits self-funded reconnect for exhausted free transactions before wagmi 
       isThirdwebInApp: true,
     }),
     true,
+  );
+});
+
+test("does not await self-funded reconnect after external connector settles", () => {
+  assert.equal(
+    shouldAwaitSelfFundedGasModeReconnect({
+      canUseFreeTransactions: false,
+      chainId: 42220,
+      connectorId: "injected",
+      executionMode: "sponsored_7702",
+      freeTransactionAllowanceResolved: true,
+      includeExternalSendCalls: true,
+      isThirdwebInApp: true,
+    }),
+    false,
   );
 });
 

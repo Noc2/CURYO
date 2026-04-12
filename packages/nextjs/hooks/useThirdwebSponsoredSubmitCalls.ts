@@ -55,7 +55,7 @@ export function shouldExpectSponsoredSubmitCalls(params: {
   isThirdwebInApp?: boolean;
 }) {
   return (
-    (params.connectorId === "in-app-wallet" || params.isThirdwebInApp === true) &&
+    (params.connectorId === "in-app-wallet" || (!params.connectorId && params.isThirdwebInApp === true)) &&
     typeof params.chainId === "number" &&
     supportsThirdwebExecutionCapabilities(params.chainId)
   );
