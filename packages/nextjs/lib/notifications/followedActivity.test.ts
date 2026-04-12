@@ -105,6 +105,37 @@ test("pickFollowedActivityNotification skips followed curator history from befor
   assert.equal(picked?.item.contentId, "3");
 });
 
+test("pickFollowedActivityNotification parses epoch-second activity timestamps", () => {
+  const curator = "0x1111111111111111111111111111111111111111";
+  const preFollowSubmission = makeSubmission({
+    contentId: "1",
+    submitter: curator,
+    createdAt: "1775718000",
+  });
+  const preFollowResolution = makeResolution({
+    id: "vote-1",
+    contentId: "2",
+    voter: curator,
+    settledAt: "1775718060",
+  });
+  const postFollowSubmission = makeSubmission({
+    contentId: "3",
+    submitter: curator,
+    createdAt: "1775718180",
+  });
+
+  const picked = pickFollowedActivityNotification({
+    submissions: [preFollowSubmission, postFollowSubmission],
+    resolutions: [preFollowResolution],
+    seenSubmissionKeys: new Set(),
+    seenResolutionKeys: new Set(),
+    followedSinceByAddress: new Map([[curator, "2026-04-09T07:02:00.000Z"]]),
+  });
+
+  assert.equal(picked?.kind, "submission");
+  assert.equal(picked?.item.contentId, "3");
+});
+
 test("pickFollowedActivityNotification ignores already seen submissions and resolutions", () => {
   const submission = makeSubmission({ contentId: "1" });
   const resolution = makeResolution({ id: "vote-1", contentId: "2", settledAt: "2026-04-09T07:01:00.000Z" });

@@ -20,7 +20,15 @@ export function getFollowedResolutionNotificationKey(item: PonderDiscoverSignals
 function parseNotificationTime(value: string | null | undefined): number | null {
   if (!value) return null;
 
-  const timestamp = Date.parse(value);
+  const trimmedValue = value.trim();
+  if (/^\d+$/.test(trimmedValue)) {
+    const numericTimestamp = Number(trimmedValue);
+    if (!Number.isFinite(numericTimestamp)) return null;
+
+    return numericTimestamp < 10_000_000_000 ? numericTimestamp * 1000 : numericTimestamp;
+  }
+
+  const timestamp = Date.parse(trimmedValue);
   return Number.isFinite(timestamp) ? timestamp : null;
 }
 
