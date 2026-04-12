@@ -1,13 +1,13 @@
 import { isAddress } from "viem";
 
-export const REFERRAL_QUERY_PARAM = "ref";
+const REFERRAL_QUERY_PARAM = "ref";
 export const REFERRAL_ATTRIBUTION_STORAGE_KEY = "curyo_referral_attribution";
 export const LEGACY_REFERRER_STORAGE_KEY = "curyo_referrer";
 export const REFERRAL_ATTRIBUTION_TTL_MS = 30 * 24 * 60 * 60 * 1000;
 
-export type ReferralAttributionSource = "url" | "manual";
+type ReferralAttributionSource = "url" | "manual";
 
-export type ReferralAttribution = {
+type ReferralAttribution = {
   version: 1;
   referrer: string;
   capturedAt: number;
@@ -92,7 +92,7 @@ export function normalizeReferralAddress(value: string | null | undefined): stri
   return candidate;
 }
 
-export function createReferralAttribution(
+function createReferralAttribution(
   value: string | null | undefined,
   options: ReferralStorageOptions = {},
 ): ReferralAttribution | null {
@@ -191,7 +191,7 @@ export function getStoredReferralAddress(options: ReferralStorageOptions = {}): 
   return readStoredReferralAttribution(options)?.referrer ?? null;
 }
 
-export function writeReferralAttribution(
+function writeReferralAttribution(
   attribution: ReferralAttribution,
   options: ReferralStorageOptions = {},
 ): ReferralAttribution {
