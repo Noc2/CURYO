@@ -1,10 +1,15 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import {
+  getFollowedResolutionNotificationKey,
   getFollowedSubmissionNotificationKey,
+  pickFollowedActivityNotification,
   pickFollowedSubmissionNotifications,
 } from "~~/lib/notifications/followedActivity";
-import type { PonderDiscoverSignalsSubmissionItem } from "~~/services/ponder/client";
+import type {
+  PonderDiscoverSignalsResolutionItem,
+  PonderDiscoverSignalsSubmissionItem,
+} from "~~/services/ponder/client";
 
 function makeSubmission(overrides: Partial<PonderDiscoverSignalsSubmissionItem>): PonderDiscoverSignalsSubmissionItem {
   return {
@@ -16,6 +21,24 @@ function makeSubmission(overrides: Partial<PonderDiscoverSignalsSubmissionItem>)
     categoryId: overrides.categoryId ?? "1",
     submitter: overrides.submitter ?? "0x0000000000000000000000000000000000000001",
     profileName: overrides.profileName ?? null,
+  };
+}
+
+function makeResolution(overrides: Partial<PonderDiscoverSignalsResolutionItem>): PonderDiscoverSignalsResolutionItem {
+  return {
+    id: overrides.id ?? "vote-1",
+    contentId: overrides.contentId ?? "1",
+    roundId: overrides.roundId ?? "1",
+    voter: overrides.voter ?? "0x0000000000000000000000000000000000000001",
+    isUp: overrides.isUp ?? true,
+    title: overrides.title ?? "Example",
+    description: overrides.description ?? "Example description",
+    url: overrides.url ?? "https://example.com",
+    settledAt: overrides.settledAt ?? "2026-04-09T07:00:00.000Z",
+    roundState: overrides.roundState ?? null,
+    roundUpWins: overrides.roundUpWins ?? true,
+    profileName: overrides.profileName ?? null,
+    outcome: overrides.outcome ?? "won",
   };
 }
 
@@ -33,6 +56,124 @@ test("pickFollowedSubmissionNotifications limits bursts to one submission per cu
     pickFollowedSubmissionNotifications(items, new Set()).map(item => item.contentId),
     ["1", "3"],
   );
+});
+
+test("pickFollowedActivityNotification returns at most one newest followed activity", () => {
+  const olderSubmission = makeSubmission({ contentId: "1", createdAt: "2026-04-09T07:01:00.000Z" });
+  const newerResolution = makeResolution({ id: "vote-2", contentId: "2", settledAt: "2026-04-09T07:03:00.000Z" });
+  const newestSubmission = makeSubmission({ contentId: "3", createdAt: "2026-04-09T07:05:00.000Z" });
+
+  const picked = pickFollowedActivityNotification({
+    submissions: [olderSubmission, newestSubmission],
+    resolutions: [newerResolution],
+    seenSubmissionKeys: new Set(),
+    seenResolutionKeys: new Set(),
+  });
+
+  assert.equal(picked?.kind, "submission");
+  assert.equal(picked?.item.contentId, "3");
+});
+
+test("pickFollowedActivityNotification skips followed curator history from before the follow", () => {
+  const curator = "0x1111111111111111111111111111111111111111";
+  const preFollowSubmission = makeSubmission({
+    contentId: "1",
+    submitter: curator,
+    createdAt: "2026-04-09T07:00:00.000Z",
+  });
+  const preFollowResolution = makeResolution({
+    id: "vote-1",
+    contentId: "2",
+    voter: curator,
+    settledAt: "2026-04-09T07:01:00.000Z",
+  });
+  const postFollowSubmission = makeSubmission({
+    contentId: "3",
+    submitter: curator,
+    createdAt: "2026-04-09T07:03:00.000Z",
+  });
+
+  const picked = pickFollowedActivityNotification({
+    submissions: [preFollowSubmission, postFollowSubmission],
+    resolutions: [preFollowResolution],
+    seenSubmissionKeys: new Set(),
+    seenResolutionKeys: new Set(),
+    followedSinceByAddress: new Map([[curator, "2026-04-09T07:02:00.000Z"]]),
+  });
+
+  assert.equal(picked?.kind, "submission");
+  assert.equal(picked?.item.contentId, "3");
+});
+
+test("pickFollowedActivityNotification parses epoch-second activity timestamps", () => {
+  const curator = "0x1111111111111111111111111111111111111111";
+  const preFollowSubmission = makeSubmission({
+    contentId: "1",
+    submitter: curator,
+    createdAt: "1775718000",
+  });
+  const preFollowResolution = makeResolution({
+    id: "vote-1",
+    contentId: "2",
+    voter: curator,
+    settledAt: "1775718060",
+  });
+  const postFollowSubmission = makeSubmission({
+    contentId: "3",
+    submitter: curator,
+    createdAt: "1775718180",
+  });
+
+  const picked = pickFollowedActivityNotification({
+    submissions: [preFollowSubmission, postFollowSubmission],
+    resolutions: [preFollowResolution],
+    seenSubmissionKeys: new Set(),
+    seenResolutionKeys: new Set(),
+    followedSinceByAddress: new Map([[curator, "2026-04-09T07:02:00.000Z"]]),
+  });
+
+  assert.equal(picked?.kind, "submission");
+  assert.equal(picked?.item.contentId, "3");
+});
+
+test("pickFollowedActivityNotification ignores activity outside the current followed set", () => {
+  const unfollowedCurator = "0x1111111111111111111111111111111111111111";
+  const followedCurator = "0x2222222222222222222222222222222222222222";
+  const stalePlaceholderSubmission = makeSubmission({
+    contentId: "1",
+    submitter: unfollowedCurator,
+    createdAt: "2026-04-09T07:03:00.000Z",
+  });
+  const currentSubmission = makeSubmission({
+    contentId: "2",
+    submitter: followedCurator,
+    createdAt: "2026-04-09T07:02:00.000Z",
+  });
+
+  const picked = pickFollowedActivityNotification({
+    submissions: [stalePlaceholderSubmission, currentSubmission],
+    resolutions: [],
+    seenSubmissionKeys: new Set(),
+    seenResolutionKeys: new Set(),
+    followedSinceByAddress: new Map([[followedCurator, "2026-04-09T07:01:00.000Z"]]),
+  });
+
+  assert.equal(picked?.kind, "submission");
+  assert.equal(picked?.item.contentId, "2");
+});
+
+test("pickFollowedActivityNotification ignores already seen submissions and resolutions", () => {
+  const submission = makeSubmission({ contentId: "1" });
+  const resolution = makeResolution({ id: "vote-1", contentId: "2", settledAt: "2026-04-09T07:01:00.000Z" });
+
+  const picked = pickFollowedActivityNotification({
+    submissions: [submission],
+    resolutions: [resolution],
+    seenSubmissionKeys: new Set([getFollowedSubmissionNotificationKey(submission)]),
+    seenResolutionKeys: new Set([getFollowedResolutionNotificationKey(resolution)]),
+  });
+
+  assert.equal(picked, null);
 });
 
 test("pickFollowedSubmissionNotifications ignores submissions that were already seen", () => {

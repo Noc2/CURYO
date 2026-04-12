@@ -22,8 +22,10 @@ import {
   writeLastClaimRewardNotificationAt,
 } from "~~/lib/notifications/claimRewards";
 import {
+  FOLLOWED_CURATOR_TOAST_ID,
+  getFollowedResolutionNotificationKey,
   getFollowedSubmissionNotificationKey,
-  pickFollowedSubmissionNotifications,
+  pickFollowedActivityNotification,
 } from "~~/lib/notifications/followedActivity";
 import { pickSettlingSoonNotification } from "~~/lib/notifications/settlingSoon";
 import { notification } from "~~/utils/scaffold-eth";
@@ -91,7 +93,7 @@ export function SettlementNotifier() {
   }, []);
 
   const notifyWithLink = useCallback(
-    (kind: "info" | "success", title: string, body: string, href: string) => {
+    (kind: "info" | "success", title: string, body: string, href: string, toastId?: string) => {
       const toastBody = (
         <Link href={href} className="font-medium underline">
           {body}
@@ -99,9 +101,9 @@ export function SettlementNotifier() {
       );
 
       if (kind === "success") {
-        notification.success(toastBody, { duration: 8000 });
+        notification.success(toastBody, { duration: 8000, id: toastId });
       } else {
-        notification.info(toastBody, { duration: 8000 });
+        notification.info(toastBody, { duration: 8000, id: toastId });
       }
 
       openBrowserNotification(title, body, href);
@@ -141,6 +143,11 @@ export function SettlementNotifier() {
   useEffect(() => {
     watchedContentIdsRef.current = watchedContentIds;
   }, [watchedContentIds]);
+
+  const followedSinceByAddress = useMemo(
+    () => new Map(followedItems.map(item => [item.walletAddress.toLowerCase(), item.createdAt])),
+    [followedItems],
+  );
 
   useEffect(() => {
     if (!address) {
@@ -210,44 +217,47 @@ export function SettlementNotifier() {
       currentSubmissionKeys.add(getFollowedSubmissionNotificationKey(item));
     }
 
-    if (discoverSignalsInitializedRef.current && preferences.followedSubmission) {
-      const submissionNotifications = pickFollowedSubmissionNotifications(
-        discoverSignals.followedSubmissions,
-        seenFollowedSubmissionKeysRef.current,
-      );
+    const followedActivityNotification = discoverSignalsInitializedRef.current
+      ? pickFollowedActivityNotification({
+          submissions: preferences.followedSubmission ? discoverSignals.followedSubmissions : [],
+          resolutions: preferences.followedResolution ? discoverSignals.followedResolutions : [],
+          seenSubmissionKeys: seenFollowedSubmissionKeysRef.current,
+          seenResolutionKeys: seenFollowedResolutionKeysRef.current,
+          followedSinceByAddress,
+        })
+      : null;
 
-      for (const item of submissionNotifications) {
-        const displayName = item.profileName || `${item.submitter.slice(0, 6)}...${item.submitter.slice(-4)}`;
-        const shortTitle = truncateContentTitle(item.title);
-        notifyWithLink(
-          "success",
-          "Followed curator submitted",
-          `${displayName} submitted "${shortTitle}".`,
-          `/vote?content=${item.contentId}`,
-        );
-      }
+    if (followedActivityNotification?.kind === "submission") {
+      const item = followedActivityNotification.item;
+      const displayName = item.profileName || `${item.submitter.slice(0, 6)}...${item.submitter.slice(-4)}`;
+      const shortTitle = truncateContentTitle(item.title);
+      notifyWithLink(
+        "success",
+        "Followed curator submitted",
+        `${displayName} submitted "${shortTitle}".`,
+        `/vote?content=${item.contentId}`,
+        FOLLOWED_CURATOR_TOAST_ID,
+      );
     }
 
     for (const item of discoverSignals.followedResolutions) {
-      const key = `${item.id}-${item.settledAt ?? ""}`;
+      const key = getFollowedResolutionNotificationKey(item);
       currentResolutionKeys.add(key);
+    }
 
-      if (
-        discoverSignalsInitializedRef.current &&
-        preferences.followedResolution &&
-        !seenFollowedResolutionKeysRef.current.has(key)
-      ) {
-        const displayName = item.profileName || `${item.voter.slice(0, 6)}...${item.voter.slice(-4)}`;
-        const shortTitle = truncateContentTitle(item.title);
-        const action = item.outcome === "won" ? "won" : item.outcome === "lost" ? "lost" : "resolved";
+    if (followedActivityNotification?.kind === "resolution") {
+      const item = followedActivityNotification.item;
+      const displayName = item.profileName || `${item.voter.slice(0, 6)}...${item.voter.slice(-4)}`;
+      const shortTitle = truncateContentTitle(item.title);
+      const action = item.outcome === "won" ? "won" : item.outcome === "lost" ? "lost" : "resolved";
 
-        notifyWithLink(
-          "success",
-          "Followed curator resolved",
-          `${displayName} ${action} a call on "${shortTitle}".`,
-          `/vote?content=${item.contentId}`,
-        );
-      }
+      notifyWithLink(
+        "success",
+        "Followed curator resolved",
+        `${displayName} ${action} a call on "${shortTitle}".`,
+        `/vote?content=${item.contentId}`,
+        FOLLOWED_CURATOR_TOAST_ID,
+      );
     }
 
     if (!discoverSignalsInitializedRef.current) {
@@ -264,7 +274,7 @@ export function SettlementNotifier() {
       ...seenFollowedResolutionKeysRef.current,
       ...currentResolutionKeys,
     ]);
-  }, [address, discoverSignals, notifyWithLink, preferences]);
+  }, [address, discoverSignals, followedSinceByAddress, notifyWithLink, preferences]);
 
   useEffect(() => {
     if (!address || pendingClaimCount === 0) return;

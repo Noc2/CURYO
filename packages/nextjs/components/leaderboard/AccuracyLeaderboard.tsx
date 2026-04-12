@@ -10,6 +10,7 @@ import { useTargetNetwork } from "~~/hooks/scaffold-eth/useTargetNetwork";
 import { useCategoryRegistry } from "~~/hooks/useCategoryRegistry";
 import { useCuryoConnectModal } from "~~/hooks/useCuryoConnectModal";
 import { useFollowedProfiles } from "~~/hooks/useFollowedProfiles";
+import { FOLLOWED_CURATOR_TOAST_ID } from "~~/lib/notifications/followedActivity";
 import { PonderAccuracyLeaderboardItem, PonderAccuracyLeaderboardWindow, ponderApi } from "~~/services/ponder/client";
 import { getReputationAvatarUrl } from "~~/utils/profileImage";
 import { notification } from "~~/utils/scaffold-eth";
@@ -96,7 +97,7 @@ export function AccuracyLeaderboard() {
 
       if (!result.ok) {
         if (result.reason === "not_connected") {
-          notification.info("Sign in to follow curators.");
+          notification.info("Sign in to follow curators.", { id: FOLLOWED_CURATOR_TOAST_ID });
           void openConnectModal();
           return;
         }
@@ -105,13 +106,18 @@ export function AccuracyLeaderboard() {
           return;
         }
 
-        notification.error(result.error || "Failed to update follows");
+        notification.error(result.error || "Failed to update follows", { id: FOLLOWED_CURATOR_TOAST_ID });
         return;
       }
 
-      notification.success(result.following ? "Following curator" : "Unfollowed curator");
+      const curatorName =
+        items.find(entry => entry.voter.toLowerCase() === targetAddress.toLowerCase())?.profileName || "curator";
+      const followMessage = result.following ? `Following ${curatorName}` : `Unfollowed ${curatorName}`;
+      notification.success(followMessage, {
+        id: FOLLOWED_CURATOR_TOAST_ID,
+      });
     },
-    [openConnectModal, toggleFollow],
+    [items, openConnectModal, toggleFollow],
   );
 
   const handleScopeChange = useCallback(

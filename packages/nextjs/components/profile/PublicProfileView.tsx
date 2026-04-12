@@ -38,6 +38,7 @@ import { useVoterAccuracy } from "~~/hooks/useVoterAccuracy";
 import { useVoterIdNFT } from "~~/hooks/useVoterIdNFT";
 import { useVoterStreak } from "~~/hooks/useVoterStreak";
 import { avatarAccentHexToRgb, normalizeAvatarAccentHex } from "~~/lib/avatar/avatarAccent";
+import { FOLLOWED_CURATOR_TOAST_ID } from "~~/lib/notifications/followedActivity";
 import { MAX_PROFILE_STRATEGY_LENGTH } from "~~/lib/profile/profileValidation";
 import { AVATAR_WIN_RATE_TOOLTIP } from "~~/lib/profile/winRateTooltip";
 import { formatRatingScoreOutOfTen } from "~~/lib/ui/ratingDisplay";
@@ -284,7 +285,7 @@ export function PublicProfileView({ address, embedded = false }: PublicProfileVi
 
     if (!result.ok) {
       if (result.reason === "not_connected") {
-        notification.info("Sign in to follow curators.");
+        notification.info("Sign in to follow curators.", { id: FOLLOWED_CURATOR_TOAST_ID });
         void openConnectModal();
         return;
       }
@@ -293,16 +294,14 @@ export function PublicProfileView({ address, embedded = false }: PublicProfileVi
         return;
       }
 
-      notification.error(result.error || "Failed to update follows");
+      notification.error(result.error || "Failed to update follows", { id: FOLLOWED_CURATOR_TOAST_ID });
       return;
     }
 
-    notification.success(
-      result.following
-        ? "Following curator. Their new submissions will show up in Curators You Follow."
-        : "Unfollowed curator",
-    );
-  }, [normalizedAddress, openConnectModal, toggleFollow]);
+    notification.success(result.following ? `Following ${displayName}` : `Unfollowed ${displayName}`, {
+      id: FOLLOWED_CURATOR_TOAST_ID,
+    });
+  }, [displayName, normalizedAddress, openConnectModal, toggleFollow]);
 
   const openEditMode = useCallback(() => {
     setNameInput(currentName);

@@ -34,6 +34,7 @@ import { useVoterAccuracyBatch } from "~~/hooks/useVoterAccuracyBatch";
 import { useVoterIdNFT } from "~~/hooks/useVoterIdNFT";
 import { useWatchedContent } from "~~/hooks/useWatchedContent";
 import { mergeVoteHistoryItems } from "~~/hooks/voteHistory/shared";
+import { FOLLOWED_CURATOR_TOAST_ID } from "~~/lib/notifications/followedActivity";
 import {
   VOTE_COOLDOWN_SECONDS,
   formatVoteCooldownRemaining,
@@ -1295,7 +1296,7 @@ const HomeInner = () => {
 
       if (!result.ok) {
         if (result.reason === "not_connected") {
-          notification.info("Sign in to follow curators.");
+          notification.info("Sign in to follow curators.", { id: FOLLOWED_CURATOR_TOAST_ID });
           void openConnectModal();
           return;
         }
@@ -1304,7 +1305,7 @@ const HomeInner = () => {
           return;
         }
 
-        notification.error(result.error || "Failed to update follows");
+        notification.error(result.error || "Failed to update follows", { id: FOLLOWED_CURATOR_TOAST_ID });
         return;
       }
 
@@ -1314,9 +1315,21 @@ const HomeInner = () => {
         markPrimaryInteraction(item.id);
         recordRecommendationSignal(item, "follow_toggle", { selected: result.following });
       }
-      notification.success(result.following ? "Following curator" : "Unfollowed curator");
+      const curatorName = enrichedProfiles[targetAddress.toLowerCase()]?.username || "curator";
+      const followMessage = result.following ? `Following ${curatorName}` : `Unfollowed ${curatorName}`;
+      notification.success(followMessage, {
+        id: FOLLOWED_CURATOR_TOAST_ID,
+      });
     },
-    [displayFeed, markPrimaryInteraction, openConnectModal, primaryItem, recordRecommendationSignal, toggleFollow],
+    [
+      displayFeed,
+      enrichedProfiles,
+      markPrimaryInteraction,
+      openConnectModal,
+      primaryItem,
+      recordRecommendationSignal,
+      toggleFollow,
+    ],
   );
 
   const handleContentIntent = useCallback(
