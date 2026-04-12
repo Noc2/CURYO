@@ -13,12 +13,14 @@ type NotificationProps = {
   status: "success" | "info" | "loading" | "error" | "warning";
   duration?: number;
   icon?: string;
+  id?: string;
   position?: ToastPosition;
 };
 
 type NotificationOptions = {
   duration?: number;
   icon?: string;
+  id?: string;
   position?: ToastPosition;
 };
 
@@ -41,6 +43,7 @@ const Notification = ({
   status,
   duration = DEFAULT_DURATION,
   icon,
+  id,
   position = DEFAULT_POSITION,
 }: NotificationProps) => {
   return toast.custom(
@@ -63,6 +66,7 @@ const Notification = ({
     ),
     {
       duration: status === "loading" ? Infinity : duration,
+      id,
       position,
     },
   );
