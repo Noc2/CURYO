@@ -37,7 +37,9 @@ function isAfterFollow(
   activityAt: string | null | undefined,
   followedSinceByAddress?: ReadonlyMap<string, string>,
 ) {
-  const followedAt = followedSinceByAddress?.get(activityAddress.toLowerCase());
+  const normalizedAddress = activityAddress.toLowerCase();
+  const followedAt = followedSinceByAddress?.get(normalizedAddress);
+  if (followedSinceByAddress && !followedAt) return false;
   if (!followedAt) return true;
 
   const followedAtMs = parseNotificationTime(followedAt);

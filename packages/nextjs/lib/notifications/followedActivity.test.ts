@@ -136,6 +136,32 @@ test("pickFollowedActivityNotification parses epoch-second activity timestamps",
   assert.equal(picked?.item.contentId, "3");
 });
 
+test("pickFollowedActivityNotification ignores activity outside the current followed set", () => {
+  const unfollowedCurator = "0x1111111111111111111111111111111111111111";
+  const followedCurator = "0x2222222222222222222222222222222222222222";
+  const stalePlaceholderSubmission = makeSubmission({
+    contentId: "1",
+    submitter: unfollowedCurator,
+    createdAt: "2026-04-09T07:03:00.000Z",
+  });
+  const currentSubmission = makeSubmission({
+    contentId: "2",
+    submitter: followedCurator,
+    createdAt: "2026-04-09T07:02:00.000Z",
+  });
+
+  const picked = pickFollowedActivityNotification({
+    submissions: [stalePlaceholderSubmission, currentSubmission],
+    resolutions: [],
+    seenSubmissionKeys: new Set(),
+    seenResolutionKeys: new Set(),
+    followedSinceByAddress: new Map([[followedCurator, "2026-04-09T07:01:00.000Z"]]),
+  });
+
+  assert.equal(picked?.kind, "submission");
+  assert.equal(picked?.item.contentId, "2");
+});
+
 test("pickFollowedActivityNotification ignores already seen submissions and resolutions", () => {
   const submission = makeSubmission({ contentId: "1" });
   const resolution = makeResolution({ id: "vote-1", contentId: "2", settledAt: "2026-04-09T07:01:00.000Z" });
