@@ -44,6 +44,7 @@ export function shouldPreferSponsoredSubmitCalls(params: {
   canUseFreeTransactions: boolean;
   chainId: number | undefined;
   connectorId: string | undefined;
+  isThirdwebInApp?: boolean;
 }) {
   return params.canUseFreeTransactions && shouldExpectSponsoredSubmitCalls(params);
 }
@@ -51,9 +52,10 @@ export function shouldPreferSponsoredSubmitCalls(params: {
 export function shouldExpectSponsoredSubmitCalls(params: {
   chainId: number | undefined;
   connectorId: string | undefined;
+  isThirdwebInApp?: boolean;
 }) {
   return (
-    params.connectorId === "in-app-wallet" &&
+    (params.connectorId === "in-app-wallet" || params.isThirdwebInApp === true) &&
     typeof params.chainId === "number" &&
     supportsThirdwebExecutionCapabilities(params.chainId)
   );
@@ -94,6 +96,7 @@ export function shouldAwaitSelfFundedSubmitCalls(params: {
   connectorId: string | undefined;
   executionMode: WalletExecutionMode;
   freeTransactionAllowanceResolved: boolean;
+  isThirdwebInApp?: boolean;
 }) {
   return (
     shouldExpectSponsoredSubmitCalls(params) &&
@@ -116,7 +119,7 @@ export function useThirdwebSponsoredSubmitCalls() {
   const statusToast = useTransactionStatusToast();
   const { address, chainId: wagmiChainId, connector } = useAccount();
   const freeTransactionAllowance = useFreeTransactionAllowance();
-  const { executionMode, hasSendCalls } = useWalletExecutionCapabilities();
+  const { executionMode, hasSendCalls, isThirdwebInApp } = useWalletExecutionCapabilities();
   const chainId = resolveWalletExecutionChainId(wagmiChainId, activeWalletChain?.id);
 
   const expectsSponsoredSubmitCalls = useMemo(
@@ -124,8 +127,9 @@ export function useThirdwebSponsoredSubmitCalls() {
       shouldExpectSponsoredSubmitCalls({
         chainId,
         connectorId: connector?.id,
+        isThirdwebInApp,
       }),
-    [chainId, connector?.id],
+    [chainId, connector?.id, isThirdwebInApp],
   );
 
   const prefersSponsoredSubmitCalls = useMemo(
@@ -134,8 +138,9 @@ export function useThirdwebSponsoredSubmitCalls() {
         canUseFreeTransactions: freeTransactionAllowance.canUseFreeTransactions,
         chainId,
         connectorId: connector?.id,
+        isThirdwebInApp,
       }),
-    [chainId, connector?.id, freeTransactionAllowance.canUseFreeTransactions],
+    [chainId, connector?.id, freeTransactionAllowance.canUseFreeTransactions, isThirdwebInApp],
   );
 
   const canUseGaslessSubmitTransactions = useMemo(
@@ -161,6 +166,7 @@ export function useThirdwebSponsoredSubmitCalls() {
         connectorId: connector?.id,
         executionMode,
         freeTransactionAllowanceResolved: freeTransactionAllowance.isResolved,
+        isThirdwebInApp,
       }),
     [
       chainId,
@@ -168,6 +174,7 @@ export function useThirdwebSponsoredSubmitCalls() {
       executionMode,
       freeTransactionAllowance.canUseFreeTransactions,
       freeTransactionAllowance.isResolved,
+      isThirdwebInApp,
     ],
   );
 
