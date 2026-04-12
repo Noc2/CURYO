@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { SafeExternalLink } from "~~/components/shared/SafeExternalLink";
 import { getEmbedImageLoadingProps } from "~~/lib/content/embedLoadStrategy";
+import { shouldFillRawgMediaSurface } from "~~/lib/content/rawgLayout";
 import { useEmbedImageLoadState } from "~~/lib/content/useEmbedImageLoadState";
 import type { ContentMetadataResult } from "~~/lib/contentMetadata/types";
 import type { PlatformInfo } from "~~/utils/platforms";
@@ -168,7 +169,7 @@ export function RawgEmbed({
     );
   }
 
-  const shouldFillImageSurface = fillMediaSurface || !compact;
+  const shouldFillImageSurface = shouldFillRawgMediaSurface(compact, fillMediaSurface);
 
   // Image card with background image and attribution
   return (
