@@ -11,12 +11,11 @@ export function getVoteCooldownRemainingSeconds(committedAt: string, nowSeconds:
 export function formatVoteCooldownRemaining(seconds: number) {
   if (seconds <= 0) return "less than a minute";
 
-  const totalMinutes = Math.ceil(seconds / 60);
-  const days = Math.floor(totalMinutes / (24 * 60));
-  const hours = Math.floor((totalMinutes % (24 * 60)) / 60);
-  const minutes = totalMinutes % 60;
+  const totalMinutes = Math.floor(seconds / 60);
+  if (totalMinutes <= 0) return "less than a minute";
 
-  if (days > 0) return `${days}d ${hours}h`;
+  const hours = Math.floor(totalMinutes / 60);
+  const minutes = totalMinutes % 60;
   if (hours > 0) return `${hours}h ${minutes}m`;
   return `${minutes}m`;
 }
