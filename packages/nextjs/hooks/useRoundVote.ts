@@ -22,6 +22,7 @@ import {
   persistWalletDisplaySummarySnapshot,
 } from "~~/hooks/useWalletDisplaySummary";
 import { isFreeTransactionExhaustedError } from "~~/lib/transactionErrors";
+import { recordLocalVoteCooldown } from "~~/lib/vote/localCooldown";
 import { normalizeRoundVoteError } from "~~/lib/vote/roundVoteErrors";
 import { resolveRoundVoteRuntime } from "~~/lib/vote/roundVoteRuntime";
 import scaffoldConfig from "~~/scaffold.config";
@@ -216,6 +217,12 @@ export function useRoundVote() {
       }
 
       addOptimisticVote(contentId, stakeWei);
+      recordLocalVoteCooldown({
+        address,
+        chainId: targetNetwork.id,
+        contentId,
+        voterIdTokenId: tokenId,
+      });
       void queryClient.invalidateQueries({ queryKey: FREE_TRANSACTION_ALLOWANCE_QUERY_KEY });
 
       queryClient.setQueryData<WalletDisplaySummary | undefined>(

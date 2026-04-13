@@ -493,6 +493,16 @@ export interface PonderVotesResponse {
   total: number;
 }
 
+export interface PonderVoteCooldownItem {
+  contentId: string;
+  latestCommittedAt: string;
+  cooldownEndsAt: string;
+}
+
+export interface PonderVoteCooldownsResponse {
+  items: PonderVoteCooldownItem[];
+}
+
 export interface PonderProfileDetailResponse {
   profile: PonderProfile | null;
   summary: PonderProfileSummary;
@@ -736,6 +746,10 @@ export const ponderApi = {
     offset?: string;
   }) {
     return ponderGet<PonderVotesResponse>("/votes", params);
+  },
+
+  getVoteCooldowns(params?: { voters?: string; contentIds?: string }) {
+    return ponderGet<PonderVoteCooldownsResponse>("/vote-cooldowns", params);
   },
 
   async getVotesWindow(params?: {

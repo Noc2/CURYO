@@ -400,6 +400,46 @@ describe("registerLeaderboardRoutes", () => {
   });
 });
 
+describe("registerDataRoutes", () => {
+  it("rejects vote cooldown requests without valid voters before querying the database", async () => {
+    const { db } = mockPonderModules([]);
+    const { registerDataRoutes } = await import("../src/api/routes/data-routes.js");
+
+    const app = new Hono();
+    registerDataRoutes(app);
+
+    const response = await app.request("http://localhost/vote-cooldowns?contentIds=1,2");
+
+    expect(response.status).toBe(400);
+    expect(await response.json()).toEqual({ error: "voters parameter required" });
+    expect(db.select).not.toHaveBeenCalled();
+  });
+
+  it("groups vote cooldown requests by content id", async () => {
+    const { queryBuilder } = mockPonderModules([{ contentId: 1n, latestCommittedAt: 1000n }]);
+    const { registerDataRoutes } = await import("../src/api/routes/data-routes.js");
+
+    const app = new Hono();
+    registerDataRoutes(app);
+
+    const response = await app.request(
+      "http://localhost/vote-cooldowns?voters=0x0000000000000000000000000000000000000001&contentIds=1,2",
+    );
+
+    expect(response.status).toBe(200);
+    expect(await response.json()).toEqual({
+      items: [
+        {
+          contentId: "1",
+          latestCommittedAt: "1000",
+          cooldownEndsAt: "87400",
+        },
+      ],
+    });
+    expect(queryBuilder.groupBy).toHaveBeenCalledWith("vote.contentId");
+  });
+});
+
 describe("registerDiscoveryRoutes", () => {
   it("adds moderation predicates to discover signals queries", async () => {
     const { queryBuilder } = mockPonderModules([]);
