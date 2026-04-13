@@ -1,6 +1,7 @@
 "use client";
 
 import { ROUND_STATE, type RoundState } from "@curyo/contracts/protocol";
+import { normalizeVoteCommittedAt } from "~~/lib/vote/cooldown";
 
 export interface VoteHistoryItem {
   contentId: bigint;
@@ -72,6 +73,6 @@ export function mapVoteHistoryItem(vote: {
     isSettled: claimType !== null,
     roundState: vote.roundState as RoundState | null,
     claimType,
-    committedAt: vote.committedAt ?? null,
+    committedAt: normalizeVoteCommittedAt(vote.committedAt),
   };
 }

@@ -36,6 +36,18 @@ test("mapVoteHistoryItem preserves terminal round state and claim type", () => {
   assert.equal(rewardVote.roundState, ROUND_STATE.Settled);
 });
 
+test("mapVoteHistoryItem normalizes Ponder Unix-second vote timestamps", () => {
+  const vote = mapVoteHistoryItem({
+    contentId: "42",
+    roundId: "7",
+    stake: "1000",
+    roundState: ROUND_STATE.Open,
+    committedAt: "1710000000",
+  });
+
+  assert.equal(vote.committedAt, "2024-03-09T16:00:00.000Z");
+});
+
 test("mergeVoteHistoryItems deduplicates overlapping votes and keeps newest votes first", () => {
   const merged = mergeVoteHistoryItems([
     [
