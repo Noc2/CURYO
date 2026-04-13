@@ -5,7 +5,7 @@ type VoteCommittedLogLike = {
 };
 
 export function shouldUseAddressLogCooldownFallback(params: { hasVoterId: boolean; isIdentityResolved: boolean }) {
-  return params.isIdentityResolved && !params.hasVoterId;
+  return params.isIdentityResolved;
 }
 
 export function pickLatestVoteCommittedLog<T extends VoteCommittedLogLike>(logs: readonly T[]): T | null {

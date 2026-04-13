@@ -394,7 +394,7 @@ export function VotingQuestionCard({
   const { roundId, isRoundFull, phase, voteCount, minVoters } = roundSnapshot;
   const { filled: filledVoteIcons, empty: emptyVoteIcons } = computeVoteProgressIconCounts({ voteCount, minVoters });
   const cooldownActive = cooldownSecondsRemaining > 0;
-  const cooldownCheckLoading = isCooldownLoading && !cooldownActive;
+  const cooldownStatusPending = Boolean(address && isCooldownLoading && !cooldownActive);
   const cooldownLabel = formatVoteCooldownRemaining(cooldownSecondsRemaining);
   const displayError =
     cooldownActive && error?.includes("You already voted on this content within the last") ? null : error;
@@ -467,16 +467,15 @@ export function VotingQuestionCard({
           </span>
         )}
       </HoverTooltip>
-    ) : cooldownCheckLoading ? (
-      <HoverTooltip text="Checking your linked-wallet vote history before enabling this vote." position="bottom">
+    ) : cooldownStatusPending ? (
+      <HoverTooltip text="Checking whether this content is available to vote on." position="bottom">
         {usesDockStatusText ? (
           <span className={DOCK_STATUS_TEXT_CLASS_NAME}>
             <span className="text-[0.95rem] font-medium leading-none text-base-content/75">Checking</span>
-            <span className="text-[0.95rem] leading-none text-base-content/60">history</span>
           </span>
         ) : (
           <span className={STATUS_PILL_CLASS_NAME}>
-            <span className="text-base font-medium text-base-content/75">Checking vote history</span>
+            <span className="text-base font-medium text-base-content/75">Checking</span>
           </span>
         )}
       </HoverTooltip>

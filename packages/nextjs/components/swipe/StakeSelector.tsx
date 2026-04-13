@@ -99,12 +99,12 @@ export function StakeSelector({
   const sliderMax = Math.max(1, maxStake);
   const isCapacityLimited = maxByCapacity < maxByBalance;
   const cooldownActive = cooldownSecondsRemaining > 0;
-  const cooldownCheckLoading = isCooldownLoading && !cooldownActive;
+  const cooldownStatusPending = isCooldownLoading && !cooldownActive;
   const confirmDisabled =
     isConfirming ||
-    cooldownCheckLoading ||
     !hasVoterId ||
     cooldownActive ||
+    cooldownStatusPending ||
     amount < 1 ||
     amount > maxStake ||
     maxStake < 1;
@@ -327,10 +327,10 @@ export function StakeSelector({
                 className={`btn flex-1 text-primary-content ${isUp ? "bg-success hover:bg-success/90" : "bg-error hover:bg-error/90"}`}
                 disabled={confirmDisabled}
               >
-                {isConfirming || cooldownCheckLoading ? (
+                {isConfirming ? (
                   <span className="flex items-center gap-2">
                     <span className="loading loading-spinner loading-xs" />
-                    <span>{isConfirming ? "Submitting..." : "Checking..."}</span>
+                    <span>Submitting...</span>
                   </span>
                 ) : (
                   `Stake ${amount} ${symbol}`
@@ -338,11 +338,12 @@ export function StakeSelector({
               </button>
             </div>
 
+            {cooldownStatusPending && !isConfirming ? (
+              <p className="mt-3 text-center text-base text-base-content/70">
+                Checking whether this content is available to vote on.
+              </p>
+            ) : null}
             {confirmError && !isConfirming && <p className="mt-3 text-center text-base text-error">{confirmError}</p>}
-
-            {cooldownCheckLoading && !isConfirming && (
-              <p className="mt-3 text-center text-base text-base-content/60">Checking vote history...</p>
-            )}
 
             {!hasVoterId && (
               <p className="mt-3 text-center text-base text-warning">

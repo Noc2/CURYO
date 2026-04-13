@@ -22,7 +22,7 @@ export function VoteSignalRail({
   isCommitting,
   voteError,
   cooldownSecondsRemaining,
-  isCooldownLoading = false,
+  isCooldownLoading,
   attentionToken,
   onVote,
 }: VoteSignalRailProps) {
