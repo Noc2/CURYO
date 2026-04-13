@@ -56,6 +56,7 @@ import { type DiscoverFeedMode, sortDiscoverFeed } from "~~/lib/vote/feedModes";
 import { rankForYouFeed } from "~~/lib/vote/forYouRanker";
 import { buildLinkedWalletAddresses } from "~~/lib/vote/linkedWalletAddresses";
 import { shouldUseAddressLogCooldownFallback } from "~~/lib/vote/liveCooldown";
+import { getLocalVoteCooldownsByContentId } from "~~/lib/vote/localCooldown";
 import { buildVoteContentPinKey, buildVoteContentPinKeyFromUrl, buildVoteLocation } from "~~/lib/vote/location";
 import { mergeRequestedContentIntoFeed } from "~~/lib/vote/requestedContent";
 import { resolveStableSessionFeedOrder } from "~~/lib/vote/stableFeedOrder";
@@ -219,6 +220,7 @@ const HomeInner = () => {
   const [voteAttention, setVoteAttention] = useState<{ contentId: string; token: number } | null>(null);
   const [optimisticOwnContentIds, setOptimisticOwnContentIds] = useState<Set<string>>(() => new Set());
   const [optimisticVotedContentIds, setOptimisticVotedContentIds] = useState<Set<string>>(() => new Set());
+  const [localVoteCooldownVersion, setLocalVoteCooldownVersion] = useState(0);
   const desktopScrollContainerRef = useRef<HTMLDivElement | null>(null);
   const mobileDockContainerRef = useRef<HTMLDivElement | null>(null);
   const voteAttentionTimeoutRef = useRef<number | null>(null);
@@ -232,7 +234,11 @@ const HomeInner = () => {
   const { delegateTo, delegateOf, hasDelegate, isDelegate, isLoading: delegationLoading } = useDelegation(address);
   const delegateVoteAddress = hasDelegate ? delegateTo : undefined;
   const delegatorVoteAddress = isDelegate ? delegateOf : undefined;
-  const { hasVoterId: voteCooldownHasVoterId, isResolved: voteCooldownIdentityResolved } = useVoterIdNFT(address);
+  const {
+    hasVoterId: voteCooldownHasVoterId,
+    isResolved: voteCooldownIdentityResolved,
+    tokenId: voteCooldownVoterIdTokenId,
+  } = useVoterIdNFT(address);
   const canUseAddressLogVoteCooldownFallback = shouldUseAddressLogCooldownFallback({
     hasVoterId: voteCooldownHasVoterId,
     isIdentityResolved: voteCooldownIdentityResolved,
@@ -241,6 +247,15 @@ const HomeInner = () => {
     () => buildLinkedWalletAddresses(address, delegateVoteAddress, delegatorVoteAddress),
     [address, delegateVoteAddress, delegatorVoteAddress],
   );
+  const localVoteCooldownIdentities = useMemo(() => {
+    const identities: { address?: string; voterIdTokenId?: string }[] = voteCooldownAddresses.map(voterAddress => ({
+      address: voterAddress,
+    }));
+    if (voteCooldownVoterIdTokenId > 0n) {
+      identities.push({ voterIdTokenId: voteCooldownVoterIdTokenId.toString() });
+    }
+    return identities;
+  }, [voteCooldownAddresses, voteCooldownVoterIdTokenId]);
   const ownSubmitterAddresses = useMemo(
     () => buildLinkedWalletAddresses(address, delegateVoteAddress, delegatorVoteAddress),
     [address, delegateVoteAddress, delegatorVoteAddress],
@@ -417,8 +432,16 @@ const HomeInner = () => {
     signalVersion: interactionVersion,
   });
   const voteCounts = useCategoryPopularity(feed);
+  const localVoteCooldownByContentId = useMemo(() => {
+    void localVoteCooldownVersion;
+    return getLocalVoteCooldownsByContentId({
+      chainId: targetNetwork.id,
+      identities: localVoteCooldownIdentities,
+      nowSeconds,
+    });
+  }, [localVoteCooldownIdentities, localVoteCooldownVersion, nowSeconds, targetNetwork.id]);
   const voteCooldownByContentId = useMemo(() => {
-    const cooldowns = new Map<string, number>();
+    const cooldowns = new Map(localVoteCooldownByContentId);
 
     for (const vote of votes) {
       if (!vote.committedAt) continue;
@@ -433,7 +456,7 @@ const HomeInner = () => {
     }
 
     return cooldowns;
-  }, [nowSeconds, votes]);
+  }, [localVoteCooldownByContentId, nowSeconds, votes]);
   useEffect(() => {
     setOptimisticOwnContentIds(previous => (previous.size === 0 ? previous : new Set()));
     setOptimisticVotedContentIds(previous => (previous.size === 0 ? previous : new Set()));
@@ -1238,6 +1261,7 @@ const HomeInner = () => {
         next.add(stakeModal.contentId.toString());
         return next;
       });
+      setLocalVoteCooldownVersion(version => version + 1);
       if (item) {
         markPrimaryInteraction(item.id, { isVote: true });
         recordRecommendationSignal(item, "vote_commit", { isUp: stakeModal.isUp });
