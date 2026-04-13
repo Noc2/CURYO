@@ -888,6 +888,42 @@ const HomeInner = () => {
     visibleCount,
     requestedActiveId: effectiveRequestedActiveId,
   });
+  const primaryContentId = primaryItem?.id;
+  const primaryContentCooldownQueryEnabled = primaryContentId !== undefined;
+  const { votes: directPrimaryContentVotes } = useVoteHistoryQuery(address, {
+    contentId: primaryContentId,
+    enabled: primaryContentCooldownQueryEnabled,
+    limit: 1,
+  });
+  const { votes: delegatePrimaryContentVotes } = useVoteHistoryQuery(delegateVoteAddress, {
+    contentId: primaryContentId,
+    enabled: primaryContentCooldownQueryEnabled,
+    limit: 1,
+  });
+  const { votes: delegatorPrimaryContentVotes } = useVoteHistoryQuery(delegatorVoteAddress, {
+    contentId: primaryContentId,
+    enabled: primaryContentCooldownQueryEnabled,
+    limit: 1,
+  });
+  const primaryContentVotes = useMemo(
+    () => mergeVoteHistoryItems([directPrimaryContentVotes, delegatePrimaryContentVotes, delegatorPrimaryContentVotes]),
+    [delegatePrimaryContentVotes, delegatorPrimaryContentVotes, directPrimaryContentVotes],
+  );
+  const primaryContentVoteCooldownSeconds = useMemo(() => {
+    if (primaryContentId === undefined) return 0;
+
+    let cooldownSeconds = 0;
+    for (const vote of primaryContentVotes) {
+      if (vote.contentId !== primaryContentId || !vote.committedAt) continue;
+
+      const remainingSeconds = getVoteCooldownRemainingSeconds(vote.committedAt, nowSeconds);
+      if (remainingSeconds > cooldownSeconds) {
+        cooldownSeconds = remainingSeconds;
+      }
+    }
+
+    return cooldownSeconds;
+  }, [nowSeconds, primaryContentId, primaryContentVotes]);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -994,7 +1030,9 @@ const HomeInner = () => {
     [resolvedVoteCooldownByContentId],
   );
 
-  const primaryItemKnownCooldownSeconds = primaryItem ? getContentCooldownSeconds(primaryItem.id) : 0;
+  const primaryItemKnownCooldownSeconds = primaryItem
+    ? Math.max(getContentCooldownSeconds(primaryItem.id), primaryContentVoteCooldownSeconds)
+    : 0;
   const { cooldownSecondsRemaining: primaryItemLiveCooldownSeconds } = useLiveVoteCooldown({
     contentId: primaryItem?.id,
     voters: voteCooldownAddresses,
