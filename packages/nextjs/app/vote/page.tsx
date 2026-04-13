@@ -35,11 +35,7 @@ import { useVoterIdNFT } from "~~/hooks/useVoterIdNFT";
 import { useWatchedContent } from "~~/hooks/useWatchedContent";
 import { mergeVoteHistoryItems } from "~~/hooks/voteHistory/shared";
 import { FOLLOWED_CURATOR_TOAST_ID } from "~~/lib/notifications/followedActivity";
-import {
-  VOTE_COOLDOWN_SECONDS,
-  formatVoteCooldownRemaining,
-  getVoteCooldownRemainingSeconds,
-} from "~~/lib/vote/cooldown";
+import { formatVoteCooldownRemaining, getVoteCooldownRemainingSeconds } from "~~/lib/vote/cooldown";
 import {
   DISCOVER_ALL_FILTER,
   DISCOVER_BROKEN_FILTER,
@@ -224,9 +220,6 @@ const HomeInner = () => {
   const voteAttentionTimeoutRef = useRef<number | null>(null);
   const voteAttentionTokenRef = useRef(0);
   const [mobileDockReservedSpace, setMobileDockReservedSpace] = useState<number | null>(null);
-  const [optimisticCooldownUntilByContentId, setOptimisticCooldownUntilByContentId] = useState<Map<string, number>>(
-    () => new Map(),
-  );
   const trimmedSearchQuery = searchQuery.trim();
   const isSearchMode = trimmedSearchQuery.length > 0;
   const isShortSearchQuery = isContentSearchQueryTooShort(trimmedSearchQuery);
@@ -437,25 +430,9 @@ const HomeInner = () => {
 
     return cooldowns;
   }, [nowSeconds, votes]);
-  const resolvedVoteCooldownByContentId = useMemo(() => {
-    const cooldowns = new Map(voteCooldownByContentId);
-
-    optimisticCooldownUntilByContentId.forEach((cooldownUntil, contentId) => {
-      if (cooldowns.has(contentId)) return;
-
-      const remainingSeconds = Math.max(0, cooldownUntil - nowSeconds);
-      if (remainingSeconds > 0) {
-        cooldowns.set(contentId, remainingSeconds);
-      }
-    });
-
-    return cooldowns;
-  }, [nowSeconds, optimisticCooldownUntilByContentId, voteCooldownByContentId]);
-
   useEffect(() => {
     setOptimisticOwnContentIds(previous => (previous.size === 0 ? previous : new Set()));
     setOptimisticVotedContentIds(previous => (previous.size === 0 ? previous : new Set()));
-    setOptimisticCooldownUntilByContentId(previous => (previous.size === 0 ? previous : new Map()));
   }, [address, targetNetwork.id]);
 
   useEffect(() => {
@@ -481,25 +458,6 @@ const HomeInner = () => {
       return changed ? next : previous;
     });
   }, [optimisticVotedContentIds.size, votes]);
-
-  useEffect(() => {
-    if (optimisticCooldownUntilByContentId.size === 0) return;
-
-    setOptimisticCooldownUntilByContentId(previous => {
-      let changed = false;
-      const next = new Map<string, number>();
-
-      previous.forEach((cooldownUntil, contentId) => {
-        if (voteCooldownByContentId.has(contentId) || cooldownUntil <= nowSeconds) {
-          changed = true;
-          return;
-        }
-        next.set(contentId, cooldownUntil);
-      });
-
-      return changed ? next : previous;
-    });
-  }, [nowSeconds, optimisticCooldownUntilByContentId.size, voteCooldownByContentId]);
 
   // Filter & sort state
   const fetchedVotedContentIds = useMemo(() => new Set(votes.map(vote => vote.contentId.toString())), [votes]);
@@ -890,21 +848,32 @@ const HomeInner = () => {
   });
   const primaryContentId = primaryItem?.id;
   const primaryContentCooldownQueryEnabled = primaryContentId !== undefined;
-  const { votes: directPrimaryContentVotes } = useVoteHistoryQuery(address, {
-    contentId: primaryContentId,
-    enabled: primaryContentCooldownQueryEnabled,
-    limit: 1,
-  });
-  const { votes: delegatePrimaryContentVotes } = useVoteHistoryQuery(delegateVoteAddress, {
-    contentId: primaryContentId,
-    enabled: primaryContentCooldownQueryEnabled,
-    limit: 1,
-  });
-  const { votes: delegatorPrimaryContentVotes } = useVoteHistoryQuery(delegatorVoteAddress, {
-    contentId: primaryContentId,
-    enabled: primaryContentCooldownQueryEnabled,
-    limit: 1,
-  });
+  const { votes: directPrimaryContentVotes, isLoading: directPrimaryContentVotesLoading } = useVoteHistoryQuery(
+    address,
+    {
+      contentId: primaryContentId,
+      enabled: primaryContentCooldownQueryEnabled,
+      limit: 1,
+    },
+  );
+  const { votes: delegatePrimaryContentVotes, isLoading: delegatePrimaryContentVotesLoading } = useVoteHistoryQuery(
+    delegateVoteAddress,
+    {
+      contentId: primaryContentId,
+      enabled: primaryContentCooldownQueryEnabled,
+      limit: 1,
+    },
+  );
+  const { votes: delegatorPrimaryContentVotes, isLoading: delegatorPrimaryContentVotesLoading } = useVoteHistoryQuery(
+    delegatorVoteAddress,
+    {
+      contentId: primaryContentId,
+      enabled: primaryContentCooldownQueryEnabled,
+      limit: 1,
+    },
+  );
+  const primaryContentVotesLoading =
+    directPrimaryContentVotesLoading || delegatePrimaryContentVotesLoading || delegatorPrimaryContentVotesLoading;
   const primaryContentVotes = useMemo(
     () => mergeVoteHistoryItems([directPrimaryContentVotes, delegatePrimaryContentVotes, delegatorPrimaryContentVotes]),
     [delegatePrimaryContentVotes, delegatorPrimaryContentVotes, directPrimaryContentVotes],
@@ -1026,68 +995,67 @@ const HomeInner = () => {
 
   const canLoadMore = visibleCount < displayFeed.length || hasMoreFeed;
   const getContentCooldownSeconds = useCallback(
-    (contentId: bigint) => resolvedVoteCooldownByContentId.get(contentId.toString()) ?? 0,
-    [resolvedVoteCooldownByContentId],
+    (contentId: bigint) => voteCooldownByContentId.get(contentId.toString()) ?? 0,
+    [voteCooldownByContentId],
   );
 
   const primaryItemKnownCooldownSeconds = primaryItem
     ? Math.max(getContentCooldownSeconds(primaryItem.id), primaryContentVoteCooldownSeconds)
     : 0;
-  const { cooldownSecondsRemaining: primaryItemLiveCooldownSeconds } = useLiveVoteCooldown({
-    contentId: primaryItem?.id,
-    voters: voteCooldownAddresses,
-    nowSeconds,
-    enabled:
-      primaryItem !== null &&
-      primaryItem !== undefined &&
-      primaryItemKnownCooldownSeconds === 0 &&
-      canUseAddressLogVoteCooldownFallback &&
-      voteCooldownAddresses.length > 0,
-  });
+  const { cooldownSecondsRemaining: primaryItemLiveCooldownSeconds, isLoading: primaryItemLiveCooldownLoading } =
+    useLiveVoteCooldown({
+      contentId: primaryItem?.id,
+      voters: voteCooldownAddresses,
+      nowSeconds,
+      enabled:
+        primaryItem !== null &&
+        primaryItem !== undefined &&
+        primaryItemKnownCooldownSeconds === 0 &&
+        canUseAddressLogVoteCooldownFallback &&
+        voteCooldownAddresses.length > 0,
+    });
   const primaryItemCooldownSeconds = Math.max(primaryItemKnownCooldownSeconds, primaryItemLiveCooldownSeconds);
+  const primaryItemCooldownStatusPending =
+    Boolean(address && primaryItem) &&
+    primaryItemKnownCooldownSeconds === 0 &&
+    primaryItemLiveCooldownSeconds === 0 &&
+    (primaryContentVotesLoading ||
+      primaryItemLiveCooldownLoading ||
+      delegationLoading ||
+      !voteCooldownIdentityResolved);
   const primaryAttentionToken =
     primaryItem && voteAttention?.contentId === primaryItem.id.toString() ? voteAttention.token : null;
   const stakeModalNeedsLiveCooldown =
     stakeModal.contentId > 0n && (primaryItem?.id === undefined || stakeModal.contentId !== primaryItem.id);
   const stakeModalKnownCooldownSeconds =
     stakeModal.contentId > 0n ? getContentCooldownSeconds(stakeModal.contentId) : 0;
-  const { cooldownSecondsRemaining: stakeModalLiveCooldownSeconds } = useLiveVoteCooldown({
-    contentId: stakeModalNeedsLiveCooldown ? stakeModal.contentId : undefined,
-    voters: voteCooldownAddresses,
-    nowSeconds,
-    enabled:
-      stakeModalNeedsLiveCooldown &&
-      stakeModalKnownCooldownSeconds === 0 &&
-      canUseAddressLogVoteCooldownFallback &&
-      voteCooldownAddresses.length > 0,
-  });
+  const { cooldownSecondsRemaining: stakeModalLiveCooldownSeconds, isLoading: stakeModalLiveCooldownLoading } =
+    useLiveVoteCooldown({
+      contentId: stakeModalNeedsLiveCooldown ? stakeModal.contentId : undefined,
+      voters: voteCooldownAddresses,
+      nowSeconds,
+      enabled:
+        stakeModalNeedsLiveCooldown &&
+        stakeModalKnownCooldownSeconds === 0 &&
+        canUseAddressLogVoteCooldownFallback &&
+        voteCooldownAddresses.length > 0,
+    });
   const stakeModalCooldownSeconds = Math.max(
     stakeModalKnownCooldownSeconds,
     stakeModalNeedsLiveCooldown ? stakeModalLiveCooldownSeconds : primaryItemLiveCooldownSeconds,
   );
+  const stakeModalCooldownStatusPending =
+    Boolean(address && stakeModal.contentId > 0n) &&
+    stakeModalKnownCooldownSeconds === 0 &&
+    stakeModalCooldownSeconds === 0 &&
+    (stakeModalNeedsLiveCooldown
+      ? stakeModalLiveCooldownLoading || delegationLoading || !voteCooldownIdentityResolved
+      : primaryItemCooldownStatusPending);
 
   // Reset visible count when filters change
   useEffect(() => {
     setVisibleCount(FEED_PAGE_SIZE);
   }, [searchQuery, activeCategory, view, sortBy]);
-
-  useEffect(() => {
-    if (!voteError?.includes("You already voted on this content within the last")) return;
-
-    const contentId =
-      stakeModal.contentId > 0n ? stakeModal.contentId : primaryItem?.id !== undefined ? primaryItem.id : null;
-    if (contentId === null) return;
-
-    const key = contentId.toString();
-    if (voteCooldownByContentId.has(key)) return;
-
-    setOptimisticCooldownUntilByContentId(previous => {
-      if (previous.get(key) !== undefined) return previous;
-      const next = new Map(previous);
-      next.set(key, nowSeconds + VOTE_COOLDOWN_SECONDS);
-      return next;
-    });
-  }, [nowSeconds, primaryItem?.id, stakeModal.contentId, voteCooldownByContentId, voteError]);
 
   useEffect(() => {
     if (!voteError?.toLowerCase().includes("own content")) return;
@@ -1115,6 +1083,13 @@ const HomeInner = () => {
 
       const cooldownSeconds =
         primaryItem && item.id === primaryItem.id ? primaryItemCooldownSeconds : getContentCooldownSeconds(item.id);
+      const cooldownStatusPending =
+        primaryItem && item.id === primaryItem.id ? primaryItemCooldownStatusPending : false;
+      if (cooldownStatusPending) {
+        notification.info("Checking whether this content is available to vote on.", { duration: 4000 });
+        return;
+      }
+
       if (cooldownSeconds > 0) {
         notification.info(getVoteCooldownMessage(cooldownSeconds), { duration: 6000 });
         return;
@@ -1137,6 +1112,7 @@ const HomeInner = () => {
       markPrimaryInteraction,
       openConnectModal,
       primaryItem,
+      primaryItemCooldownStatusPending,
       primaryItemCooldownSeconds,
       recordRecommendationSignal,
     ],
@@ -1235,6 +1211,11 @@ const HomeInner = () => {
 
   const handleConfirmStake = useCallback(
     async (stakeAmount: number) => {
+      if (stakeModalCooldownStatusPending) {
+        notification.info("Checking whether this content is available to vote on.", { duration: 4000 });
+        return;
+      }
+
       const cooldownSeconds = stakeModalCooldownSeconds;
       if (cooldownSeconds > 0) {
         notification.info(getVoteCooldownMessage(cooldownSeconds), { duration: 6000 });
@@ -1295,6 +1276,7 @@ const HomeInner = () => {
       markPrimaryInteraction,
       recordRecommendationSignal,
       stakeModal,
+      stakeModalCooldownStatusPending,
       stakeModalCooldownSeconds,
     ],
   );
@@ -1759,6 +1741,7 @@ const HomeInner = () => {
                 isCommitting={isCommitting}
                 voteError={voteError}
                 cooldownSecondsRemaining={primaryItemCooldownSeconds}
+                isCooldownLoading={primaryItemCooldownStatusPending}
                 attentionToken={primaryAttentionToken}
                 onVote={handleButtonVote}
               />
@@ -1785,6 +1768,7 @@ const HomeInner = () => {
                 address={address}
                 error={voteError}
                 cooldownSecondsRemaining={primaryItemCooldownSeconds}
+                isCooldownLoading={primaryItemCooldownStatusPending}
                 isOwnContent={primaryItem.isOwnContent}
                 embedded
                 compact
@@ -1804,6 +1788,7 @@ const HomeInner = () => {
           contentId={stakeModal.contentId}
           categoryId={stakeModal.categoryId}
           cooldownSecondsRemaining={stakeModalCooldownSeconds}
+          isCooldownLoading={stakeModalCooldownStatusPending}
           isConfirming={isCommitting}
           confirmError={voteError}
           onConfirm={handleConfirmStake}

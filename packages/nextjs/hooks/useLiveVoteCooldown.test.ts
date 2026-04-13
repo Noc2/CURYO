@@ -17,8 +17,8 @@ test("pickLatestVoteCommittedLog prefers the newest block and log index", () => 
   assert.deepEqual(latest, { blockNumber: 12n, logIndex: 3, blockHash: "0x3" });
 });
 
-test("shouldUseAddressLogCooldownFallback disables address logs for token identities", () => {
-  assert.equal(shouldUseAddressLogCooldownFallback({ hasVoterId: true, isIdentityResolved: true }), false);
+test("shouldUseAddressLogCooldownFallback waits for identity resolution", () => {
+  assert.equal(shouldUseAddressLogCooldownFallback({ hasVoterId: true, isIdentityResolved: true }), true);
   assert.equal(shouldUseAddressLogCooldownFallback({ hasVoterId: false, isIdentityResolved: true }), true);
   assert.equal(shouldUseAddressLogCooldownFallback({ hasVoterId: false, isIdentityResolved: false }), false);
 });
