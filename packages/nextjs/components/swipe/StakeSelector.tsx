@@ -20,6 +20,7 @@ interface StakeSelectorProps {
   contentId: bigint;
   categoryId?: bigint;
   cooldownSecondsRemaining?: number;
+  isCooldownLoading?: boolean;
   isConfirming?: boolean;
   confirmError?: string | null;
   onConfirm: (stakeAmount: number) => void;
@@ -37,6 +38,7 @@ export function StakeSelector({
   contentId,
   categoryId,
   cooldownSecondsRemaining = 0,
+  isCooldownLoading = false,
   isConfirming = false,
   confirmError = null,
   onConfirm,
@@ -97,8 +99,15 @@ export function StakeSelector({
   const sliderMax = Math.max(1, maxStake);
   const isCapacityLimited = maxByCapacity < maxByBalance;
   const cooldownActive = cooldownSecondsRemaining > 0;
+  const cooldownCheckLoading = isCooldownLoading && !cooldownActive;
   const confirmDisabled =
-    isConfirming || !hasVoterId || cooldownActive || amount < 1 || amount > maxStake || maxStake < 1;
+    isConfirming ||
+    cooldownCheckLoading ||
+    !hasVoterId ||
+    cooldownActive ||
+    amount < 1 ||
+    amount > maxStake ||
+    maxStake < 1;
   const phaseHeadline = effectiveIsBlind ? "Blind phase" : "Open phase";
   const phaseToneClassName = isUp ? (effectiveIsBlind ? "bg-primary/10" : "bg-warning/10") : "bg-error/10";
   const phaseHeadlineClassName = isUp ? (effectiveIsBlind ? "text-primary" : "text-warning") : "text-error";
@@ -318,10 +327,10 @@ export function StakeSelector({
                 className={`btn flex-1 text-primary-content ${isUp ? "bg-success hover:bg-success/90" : "bg-error hover:bg-error/90"}`}
                 disabled={confirmDisabled}
               >
-                {isConfirming ? (
+                {isConfirming || cooldownCheckLoading ? (
                   <span className="flex items-center gap-2">
                     <span className="loading loading-spinner loading-xs" />
-                    <span>Submitting...</span>
+                    <span>{isConfirming ? "Submitting..." : "Checking..."}</span>
                   </span>
                 ) : (
                   `Stake ${amount} ${symbol}`
@@ -330,6 +339,10 @@ export function StakeSelector({
             </div>
 
             {confirmError && !isConfirming && <p className="mt-3 text-center text-base text-error">{confirmError}</p>}
+
+            {cooldownCheckLoading && !isConfirming && (
+              <p className="mt-3 text-center text-base text-base-content/60">Checking vote history...</p>
+            )}
 
             {!hasVoterId && (
               <p className="mt-3 text-center text-base text-warning">

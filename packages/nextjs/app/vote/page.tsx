@@ -33,7 +33,7 @@ import { useVoteHistoryQuery } from "~~/hooks/useVoteHistoryQuery";
 import { useVoterAccuracyBatch } from "~~/hooks/useVoterAccuracyBatch";
 import { useVoterIdNFT } from "~~/hooks/useVoterIdNFT";
 import { useWatchedContent } from "~~/hooks/useWatchedContent";
-import { mergeVoteHistoryItems } from "~~/hooks/voteHistory/shared";
+import { type VoteHistoryItem, mergeVoteHistoryItems } from "~~/hooks/voteHistory/shared";
 import { FOLLOWED_CURATOR_TOAST_ID } from "~~/lib/notifications/followedActivity";
 import {
   VOTE_COOLDOWN_SECONDS,
@@ -112,6 +112,26 @@ function areIdListsEqual(left: readonly string[], right: readonly string[]) {
 
 function getVoteCooldownMessage(seconds: number) {
   return `You already voted on this content recently. Try again in ${formatVoteCooldownRemaining(seconds)}.`;
+}
+
+function getVoteCooldownLoadingMessage() {
+  return "Checking vote history. Try again in a moment.";
+}
+
+function getContentVoteCooldownSeconds(votes: VoteHistoryItem[], contentId: bigint | undefined, nowSeconds: number) {
+  if (contentId === undefined) return 0;
+
+  let cooldownSeconds = 0;
+  for (const vote of votes) {
+    if (vote.contentId !== contentId || !vote.committedAt) continue;
+
+    const remainingSeconds = getVoteCooldownRemainingSeconds(vote.committedAt, nowSeconds);
+    if (remainingSeconds > cooldownSeconds) {
+      cooldownSeconds = remainingSeconds;
+    }
+  }
+
+  return cooldownSeconds;
 }
 
 function readInternalContentPinKey(contentPinKey: string | null) {
@@ -890,40 +910,88 @@ const HomeInner = () => {
   });
   const primaryContentId = primaryItem?.id;
   const primaryContentCooldownQueryEnabled = primaryContentId !== undefined;
-  const { votes: directPrimaryContentVotes } = useVoteHistoryQuery(address, {
-    contentId: primaryContentId,
-    enabled: primaryContentCooldownQueryEnabled,
-    limit: 1,
-  });
-  const { votes: delegatePrimaryContentVotes } = useVoteHistoryQuery(delegateVoteAddress, {
-    contentId: primaryContentId,
-    enabled: primaryContentCooldownQueryEnabled,
-    limit: 1,
-  });
-  const { votes: delegatorPrimaryContentVotes } = useVoteHistoryQuery(delegatorVoteAddress, {
-    contentId: primaryContentId,
-    enabled: primaryContentCooldownQueryEnabled,
-    limit: 1,
-  });
+  const { votes: directPrimaryContentVotes, isLoading: directPrimaryContentVotesLoading } = useVoteHistoryQuery(
+    address,
+    {
+      contentId: primaryContentId,
+      enabled: primaryContentCooldownQueryEnabled,
+      limit: 1,
+    },
+  );
+  const { votes: delegatePrimaryContentVotes, isLoading: delegatePrimaryContentVotesLoading } = useVoteHistoryQuery(
+    delegateVoteAddress,
+    {
+      contentId: primaryContentId,
+      enabled: primaryContentCooldownQueryEnabled,
+      limit: 1,
+    },
+  );
+  const { votes: delegatorPrimaryContentVotes, isLoading: delegatorPrimaryContentVotesLoading } = useVoteHistoryQuery(
+    delegatorVoteAddress,
+    {
+      contentId: primaryContentId,
+      enabled: primaryContentCooldownQueryEnabled,
+      limit: 1,
+    },
+  );
   const primaryContentVotes = useMemo(
     () => mergeVoteHistoryItems([directPrimaryContentVotes, delegatePrimaryContentVotes, delegatorPrimaryContentVotes]),
     [delegatePrimaryContentVotes, delegatorPrimaryContentVotes, directPrimaryContentVotes],
   );
-  const primaryContentVoteCooldownSeconds = useMemo(() => {
-    if (primaryContentId === undefined) return 0;
-
-    let cooldownSeconds = 0;
-    for (const vote of primaryContentVotes) {
-      if (vote.contentId !== primaryContentId || !vote.committedAt) continue;
-
-      const remainingSeconds = getVoteCooldownRemainingSeconds(vote.committedAt, nowSeconds);
-      if (remainingSeconds > cooldownSeconds) {
-        cooldownSeconds = remainingSeconds;
-      }
-    }
-
-    return cooldownSeconds;
-  }, [nowSeconds, primaryContentId, primaryContentVotes]);
+  const primaryContentVoteCooldownSeconds = useMemo(
+    () => getContentVoteCooldownSeconds(primaryContentVotes, primaryContentId, nowSeconds),
+    [nowSeconds, primaryContentId, primaryContentVotes],
+  );
+  const primaryContentVoteCooldownLoading =
+    primaryContentCooldownQueryEnabled &&
+    (delegationLoading ||
+      directPrimaryContentVotesLoading ||
+      delegatePrimaryContentVotesLoading ||
+      delegatorPrimaryContentVotesLoading);
+  const stakeModalContentCooldownQueryEnabled =
+    stakeModal.isOpen &&
+    stakeModal.contentId > 0n &&
+    (primaryContentId === undefined || stakeModal.contentId !== primaryContentId);
+  const stakeModalCooldownContentId = stakeModalContentCooldownQueryEnabled ? stakeModal.contentId : undefined;
+  const { votes: directStakeModalContentVotes, isLoading: directStakeModalContentVotesLoading } = useVoteHistoryQuery(
+    address,
+    {
+      contentId: stakeModalCooldownContentId,
+      enabled: stakeModalContentCooldownQueryEnabled,
+      limit: 1,
+    },
+  );
+  const { votes: delegateStakeModalContentVotes, isLoading: delegateStakeModalContentVotesLoading } =
+    useVoteHistoryQuery(delegateVoteAddress, {
+      contentId: stakeModalCooldownContentId,
+      enabled: stakeModalContentCooldownQueryEnabled,
+      limit: 1,
+    });
+  const { votes: delegatorStakeModalContentVotes, isLoading: delegatorStakeModalContentVotesLoading } =
+    useVoteHistoryQuery(delegatorVoteAddress, {
+      contentId: stakeModalCooldownContentId,
+      enabled: stakeModalContentCooldownQueryEnabled,
+      limit: 1,
+    });
+  const stakeModalContentVotes = useMemo(
+    () =>
+      mergeVoteHistoryItems([
+        directStakeModalContentVotes,
+        delegateStakeModalContentVotes,
+        delegatorStakeModalContentVotes,
+      ]),
+    [delegateStakeModalContentVotes, delegatorStakeModalContentVotes, directStakeModalContentVotes],
+  );
+  const stakeModalContentVoteCooldownSeconds = useMemo(
+    () => getContentVoteCooldownSeconds(stakeModalContentVotes, stakeModalCooldownContentId, nowSeconds),
+    [nowSeconds, stakeModalContentVotes, stakeModalCooldownContentId],
+  );
+  const stakeModalContentVoteCooldownLoading =
+    stakeModalContentCooldownQueryEnabled &&
+    (delegationLoading ||
+      directStakeModalContentVotesLoading ||
+      delegateStakeModalContentVotesLoading ||
+      delegatorStakeModalContentVotesLoading);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -1033,6 +1101,7 @@ const HomeInner = () => {
   const primaryItemKnownCooldownSeconds = primaryItem
     ? Math.max(getContentCooldownSeconds(primaryItem.id), primaryContentVoteCooldownSeconds)
     : 0;
+  const primaryItemCooldownLoading = primaryContentVoteCooldownLoading && primaryItemKnownCooldownSeconds === 0;
   const { cooldownSecondsRemaining: primaryItemLiveCooldownSeconds } = useLiveVoteCooldown({
     contentId: primaryItem?.id,
     voters: voteCooldownAddresses,
@@ -1049,8 +1118,18 @@ const HomeInner = () => {
     primaryItem && voteAttention?.contentId === primaryItem.id.toString() ? voteAttention.token : null;
   const stakeModalNeedsLiveCooldown =
     stakeModal.contentId > 0n && (primaryItem?.id === undefined || stakeModal.contentId !== primaryItem.id);
+  const stakeModalLinkedHistoryCooldownSeconds = stakeModalNeedsLiveCooldown
+    ? stakeModalContentVoteCooldownSeconds
+    : primaryContentVoteCooldownSeconds;
   const stakeModalKnownCooldownSeconds =
-    stakeModal.contentId > 0n ? getContentCooldownSeconds(stakeModal.contentId) : 0;
+    stakeModal.contentId > 0n
+      ? Math.max(getContentCooldownSeconds(stakeModal.contentId), stakeModalLinkedHistoryCooldownSeconds)
+      : 0;
+  const stakeModalLinkedHistoryCooldownLoading = stakeModalNeedsLiveCooldown
+    ? stakeModalContentVoteCooldownLoading
+    : primaryContentVoteCooldownLoading;
+  const stakeModalCooldownLoading =
+    stakeModal.contentId > 0n && stakeModalLinkedHistoryCooldownLoading && stakeModalKnownCooldownSeconds === 0;
   const { cooldownSecondsRemaining: stakeModalLiveCooldownSeconds } = useLiveVoteCooldown({
     contentId: stakeModalNeedsLiveCooldown ? stakeModal.contentId : undefined,
     voters: voteCooldownAddresses,
@@ -1115,6 +1194,12 @@ const HomeInner = () => {
 
       const cooldownSeconds =
         primaryItem && item.id === primaryItem.id ? primaryItemCooldownSeconds : getContentCooldownSeconds(item.id);
+      const cooldownLoading = primaryItem && item.id === primaryItem.id ? primaryItemCooldownLoading : false;
+      if (cooldownLoading) {
+        notification.info(getVoteCooldownLoadingMessage(), { duration: 4000 });
+        return;
+      }
+
       if (cooldownSeconds > 0) {
         notification.info(getVoteCooldownMessage(cooldownSeconds), { duration: 6000 });
         return;
@@ -1137,6 +1222,7 @@ const HomeInner = () => {
       markPrimaryInteraction,
       openConnectModal,
       primaryItem,
+      primaryItemCooldownLoading,
       primaryItemCooldownSeconds,
       recordRecommendationSignal,
     ],
@@ -1236,6 +1322,11 @@ const HomeInner = () => {
   const handleConfirmStake = useCallback(
     async (stakeAmount: number) => {
       const cooldownSeconds = stakeModalCooldownSeconds;
+      if (stakeModalCooldownLoading) {
+        notification.info(getVoteCooldownLoadingMessage(), { duration: 4000 });
+        return;
+      }
+
       if (cooldownSeconds > 0) {
         notification.info(getVoteCooldownMessage(cooldownSeconds), { duration: 6000 });
         setStakeModal(prev => ({ ...prev, isOpen: false }));
@@ -1295,6 +1386,7 @@ const HomeInner = () => {
       markPrimaryInteraction,
       recordRecommendationSignal,
       stakeModal,
+      stakeModalCooldownLoading,
       stakeModalCooldownSeconds,
     ],
   );
@@ -1759,6 +1851,7 @@ const HomeInner = () => {
                 isCommitting={isCommitting}
                 voteError={voteError}
                 cooldownSecondsRemaining={primaryItemCooldownSeconds}
+                isCooldownLoading={primaryItemCooldownLoading}
                 attentionToken={primaryAttentionToken}
                 onVote={handleButtonVote}
               />
@@ -1785,6 +1878,7 @@ const HomeInner = () => {
                 address={address}
                 error={voteError}
                 cooldownSecondsRemaining={primaryItemCooldownSeconds}
+                isCooldownLoading={primaryItemCooldownLoading}
                 isOwnContent={primaryItem.isOwnContent}
                 embedded
                 compact
@@ -1804,6 +1898,7 @@ const HomeInner = () => {
           contentId={stakeModal.contentId}
           categoryId={stakeModal.categoryId}
           cooldownSecondsRemaining={stakeModalCooldownSeconds}
+          isCooldownLoading={stakeModalCooldownLoading}
           isConfirming={isCommitting}
           confirmError={voteError}
           onConfirm={handleConfirmStake}
