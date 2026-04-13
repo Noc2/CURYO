@@ -38,6 +38,7 @@ import { FOLLOWED_CURATOR_TOAST_ID } from "~~/lib/notifications/followedActivity
 import {
   VOTE_COOLDOWN_SECONDS,
   formatVoteCooldownRemaining,
+  getMaxVoteCooldownRemainingSeconds,
   getVoteCooldownRemainingSeconds,
 } from "~~/lib/vote/cooldown";
 import {
@@ -909,21 +910,10 @@ const HomeInner = () => {
     () => mergeVoteHistoryItems([directPrimaryContentVotes, delegatePrimaryContentVotes, delegatorPrimaryContentVotes]),
     [delegatePrimaryContentVotes, delegatorPrimaryContentVotes, directPrimaryContentVotes],
   );
-  const primaryContentVoteCooldownSeconds = useMemo(() => {
-    if (primaryContentId === undefined) return 0;
-
-    let cooldownSeconds = 0;
-    for (const vote of primaryContentVotes) {
-      if (vote.contentId !== primaryContentId || !vote.committedAt) continue;
-
-      const remainingSeconds = getVoteCooldownRemainingSeconds(vote.committedAt, nowSeconds);
-      if (remainingSeconds > cooldownSeconds) {
-        cooldownSeconds = remainingSeconds;
-      }
-    }
-
-    return cooldownSeconds;
-  }, [nowSeconds, primaryContentId, primaryContentVotes]);
+  const primaryContentVoteCooldownSeconds = useMemo(
+    () => getMaxVoteCooldownRemainingSeconds(primaryContentVotes, primaryContentId, nowSeconds),
+    [nowSeconds, primaryContentId, primaryContentVotes],
+  );
 
   useEffect(() => {
     if (typeof window === "undefined") return;

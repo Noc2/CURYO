@@ -1,4 +1,4 @@
-import { formatVoteCooldownRemaining } from "./cooldown";
+import { VOTE_COOLDOWN_SECONDS, formatVoteCooldownRemaining, getMaxVoteCooldownRemainingSeconds } from "./cooldown";
 import assert from "node:assert/strict";
 import test from "node:test";
 
@@ -15,4 +15,36 @@ test("formatVoteCooldownRemaining uses minutes below one hour", () => {
   assert.equal(formatVoteCooldownRemaining(59), "less than a minute");
   assert.equal(formatVoteCooldownRemaining(60), "1m");
   assert.equal(formatVoteCooldownRemaining(59 * 60 + 59), "59m");
+});
+
+test("getMaxVoteCooldownRemainingSeconds only considers the requested content", () => {
+  const nowSeconds = 1_000_000;
+  const olderTargetCommit = new Date((nowSeconds - 60 * 60) * 1000).toISOString();
+  const newerTargetCommit = new Date((nowSeconds - 15 * 60) * 1000).toISOString();
+  const otherContentCommit = new Date((nowSeconds - 5 * 60) * 1000).toISOString();
+
+  const cooldownSeconds = getMaxVoteCooldownRemainingSeconds(
+    [
+      { contentId: 7n, committedAt: olderTargetCommit },
+      { contentId: 8n, committedAt: otherContentCommit },
+      { contentId: 7n, committedAt: newerTargetCommit },
+      { contentId: 7n, committedAt: null },
+      { contentId: 7n, committedAt: "not-a-date" },
+    ],
+    7n,
+    nowSeconds,
+  );
+
+  assert.equal(cooldownSeconds, VOTE_COOLDOWN_SECONDS - 15 * 60);
+});
+
+test("getMaxVoteCooldownRemainingSeconds returns zero without a requested content id", () => {
+  assert.equal(
+    getMaxVoteCooldownRemainingSeconds(
+      [{ contentId: 7n, committedAt: new Date(1_000_000 * 1000).toISOString() }],
+      undefined,
+      1_000_000,
+    ),
+    0,
+  );
 });

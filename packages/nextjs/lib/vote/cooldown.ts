@@ -8,6 +8,31 @@ export function getVoteCooldownRemainingSeconds(committedAt: string, nowSeconds:
   return Math.max(0, committedSeconds + VOTE_COOLDOWN_SECONDS - nowSeconds);
 }
 
+interface VoteCooldownHistoryItem {
+  contentId: bigint;
+  committedAt: string | null;
+}
+
+export function getMaxVoteCooldownRemainingSeconds(
+  votes: Iterable<VoteCooldownHistoryItem>,
+  contentId: bigint | undefined,
+  nowSeconds: number,
+) {
+  if (contentId === undefined) return 0;
+
+  let cooldownSeconds = 0;
+  for (const vote of votes) {
+    if (vote.contentId !== contentId || !vote.committedAt) continue;
+
+    const remainingSeconds = getVoteCooldownRemainingSeconds(vote.committedAt, nowSeconds);
+    if (remainingSeconds > cooldownSeconds) {
+      cooldownSeconds = remainingSeconds;
+    }
+  }
+
+  return cooldownSeconds;
+}
+
 export function formatVoteCooldownRemaining(seconds: number) {
   if (seconds <= 0) return "less than a minute";
 
