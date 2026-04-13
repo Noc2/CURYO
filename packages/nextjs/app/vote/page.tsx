@@ -874,12 +874,17 @@ const HomeInner = () => {
     }
     return Array.from(ids.values());
   }, [loadedItems, primaryContentId, stakeModal.contentId]);
-  const { cooldownByContentId: indexedVoteCooldownByContentId } = useVoteCooldowns({
-    contentIds: voteCooldownContentIds,
-    voters: voteCooldownAddresses,
-    nowSeconds,
-    enabled: voteCooldownAddresses.length > 0,
-  });
+  const voteCooldownContentIdSet = useMemo(
+    () => new Set(voteCooldownContentIds.map(contentId => contentId.toString())),
+    [voteCooldownContentIds],
+  );
+  const { cooldownByContentId: indexedVoteCooldownByContentId, isLoading: indexedVoteCooldownLoading } =
+    useVoteCooldowns({
+      contentIds: voteCooldownContentIds,
+      voters: voteCooldownAddresses,
+      nowSeconds,
+      enabled: voteCooldownAddresses.length > 0,
+    });
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -988,6 +993,10 @@ const HomeInner = () => {
     },
     [indexedVoteCooldownByContentId, voteCooldownByContentId],
   );
+  const isVoteCooldownCheckPendingForContent = useCallback(
+    (contentId: bigint) => indexedVoteCooldownLoading && voteCooldownContentIdSet.has(contentId.toString()),
+    [indexedVoteCooldownLoading, voteCooldownContentIdSet],
+  );
 
   const primaryItemCooldownSeconds = primaryItem ? getContentCooldownSeconds(primaryItem.id) : 0;
   const primaryAttentionToken =
@@ -1035,6 +1044,11 @@ const HomeInner = () => {
         return;
       }
 
+      if (isVoteCooldownCheckPendingForContent(item.id)) {
+        notification.info("Still checking your recent votes. Try again in a moment.", { duration: 3000 });
+        return;
+      }
+
       clearVoteError();
       markPrimaryInteraction(item.id);
       recordRecommendationSignal(item, "vote_intent", { isUp });
@@ -1044,6 +1058,7 @@ const HomeInner = () => {
       address,
       clearVoteError,
       getContentCooldownSeconds,
+      isVoteCooldownCheckPendingForContent,
       markPrimaryInteraction,
       openConnectModal,
       primaryItem,
@@ -1158,6 +1173,12 @@ const HomeInner = () => {
         setStakeModal(prev => ({ ...prev, isOpen: false }));
         return;
       }
+
+      if (isVoteCooldownCheckPendingForContent(stakeModal.contentId)) {
+        notification.info("Still checking your recent votes. Try again in a moment.", { duration: 3000 });
+        return;
+      }
+
       const committedIndex = displayFeed.findIndex(i => i.id === stakeModal.contentId);
       const success = await commitVote({
         contentId: stakeModal.contentId,
@@ -1201,6 +1222,7 @@ const HomeInner = () => {
       commitVote,
       displayFeed,
       handleSelectByIndex,
+      isVoteCooldownCheckPendingForContent,
       isFirstVote,
       markVoteCompleted,
       markPrimaryInteraction,
