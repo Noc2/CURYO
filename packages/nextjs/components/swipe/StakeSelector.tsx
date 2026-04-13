@@ -12,7 +12,6 @@ import { useContentLabel } from "~~/hooks/useCategoryRegistry";
 import { useParticipationRate } from "~~/hooks/useParticipationRate";
 import { useRoundSnapshot } from "~~/hooks/useRoundSnapshot";
 import { useVoterIdNFT, useVoterIdStake } from "~~/hooks/useVoterIdNFT";
-import { formatVoteCooldownRemaining } from "~~/lib/vote/cooldown";
 import { estimateVoteReturn, formatCrepAmount } from "~~/lib/vote/voteIncentives";
 
 interface StakeSelectorProps {
@@ -98,7 +97,6 @@ export function StakeSelector({
   const sliderMax = Math.max(1, maxStake);
   const isCapacityLimited = maxByCapacity < maxByBalance;
   const cooldownActive = cooldownSecondsRemaining > 0;
-  const cooldownLabel = formatVoteCooldownRemaining(cooldownSecondsRemaining);
   const confirmDisabled =
     isConfirming || !hasVoterId || cooldownActive || amount < 1 || amount > maxStake || maxStake < 1;
   const phaseHeadline = effectiveIsBlind ? "Blind phase" : "Open phase";
@@ -333,11 +331,6 @@ export function StakeSelector({
 
             {confirmError && !isConfirming && <p className="mt-3 text-center text-base text-error">{confirmError}</p>}
 
-            {cooldownActive && (
-              <p className="mt-3 text-center text-base text-warning">
-                You already voted on this content recently. Try again in {cooldownLabel}.
-              </p>
-            )}
             {!hasVoterId && (
               <p className="mt-3 text-center text-base text-warning">
                 Voter ID required.{" "}

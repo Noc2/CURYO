@@ -413,6 +413,7 @@ export function VotingQuestionCard({
     myCommitHash != null &&
     (myCommitHash as unknown as string) !== "0x0000000000000000000000000000000000000000000000000000000000000000";
   const usesDockStatusText = isDockVariant;
+  const isDesktopSignalRailCard = compact && isSignalVariant;
 
   const centerStatusContent = address ? (
     hasMyVote ? (
@@ -486,13 +487,14 @@ export function VotingQuestionCard({
   const actionStackClassName = compact ? "mt-2.5 gap-1.5" : "mt-3 gap-2";
   const footerStackClassName = compact ? "mt-2.5 gap-2" : "mt-3 gap-3 xl:mt-2.5 xl:gap-2.5 2xl:mt-3 2xl:gap-3";
   const activitySummary = <LiveRoundActivity snapshot={roundSnapshot} compact={compact} condensed />;
-  const isDesktopSignalRailCard = compact && isSignalVariant;
   const isLeftAlignedDockDetails = isDockVariant;
   const showInlineVotingSummary = phase === "voting" || roundSnapshot.round.revealedCount > 0;
   const { ratePercent } = useParticipationRate();
   const progressMessaging = getRoundProgressMessaging(roundSnapshot, ratePercent);
   const showInlineProgress = showInlineVotingSummary && Boolean(progressMessaging);
   const showInlineRevealedBreakdown = showInlineVotingSummary && roundSnapshot.round.revealedCount > 0;
+  const inlineStatusContent =
+    hasMyVote || (isDesktopSignalRailCard && cooldownActive) ? centerStatusContent : undefined;
   const inlineVotingSummary = (
     <InlineVotingSummary
       snapshot={roundSnapshot}
@@ -501,12 +503,12 @@ export function VotingQuestionCard({
       compact={compact}
       stackForNarrowRail={isDesktopSignalRailCard}
       alignLeft={isLeftAlignedDockDetails}
-      statusContent={hasMyVote ? centerStatusContent : undefined}
-      statusPlacement={hasMyVote ? "beforeProgress" : "afterProgress"}
+      statusContent={inlineStatusContent}
+      statusPlacement={inlineStatusContent ? "beforeProgress" : "afterProgress"}
     />
   );
   const showExpandedDetails = isSignalVariant || (isDetailsOpen && !isDockVariant);
-  const inlineSummaryIncludesStatus = hasMyVote && showInlineVotingSummary;
+  const inlineSummaryIncludesStatus = Boolean(inlineStatusContent) && showInlineVotingSummary;
   const showVoteAttentionHint = isAttentionActive && !centerStatusContent;
 
   useEffect(() => {
