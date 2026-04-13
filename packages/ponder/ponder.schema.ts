@@ -130,6 +130,7 @@ export const vote = onchainTable(
     contentIdx: index().on(table.contentId),
     roundIdx: index().on(table.roundId),
     contentRoundIdx: index().on(table.contentId, table.roundId),
+    voterContentCommittedAtIdx: index().on(table.voter, table.contentId, table.committedAt),
     commitHashIdx: index().on(table.commitHash),
     revealedIdx: index().on(table.revealed),
   }),

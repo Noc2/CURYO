@@ -18,9 +18,11 @@ import {
   voterStreak,
 } from "ponder:schema";
 import type { ApiApp } from "../shared.js";
-import { AVATAR_CATEGORY_WINDOW_SECONDS, jsonBig } from "../shared.js";
+import { AVATAR_CATEGORY_WINDOW_SECONDS, jsonBig, parseAddressList, parseBigIntList } from "../shared.js";
 import { isValidAddress, safeBigInt, safeLimit, safeOffset } from "../utils.js";
 import { deriveEffectiveVoterStreak } from "../../streak-utils.js";
+
+const VOTE_COOLDOWN_SECONDS = 24 * 60 * 60;
 
 const STREAK_MILESTONES = [
   { days: 7, baseBonus: 10 },
@@ -293,6 +295,41 @@ export function registerDataRoutes(app: ApiApp) {
       settledTotal: countResult?.settledTotal ?? 0,
       limit,
       offset,
+    });
+  });
+
+  app.get("/vote-cooldowns", async (c) => {
+    const voters = parseAddressList(c.req.query("voters"), 20);
+    const contentIds = parseBigIntList(c.req.query("contentIds"), 200);
+
+    if (voters.length === 0) {
+      return c.json({ error: "voters parameter required" }, 400);
+    }
+    if (contentIds.length === 0) {
+      return c.json({ error: "contentIds parameter required" }, 400);
+    }
+
+    const activeCooldownCutoff = BigInt(Math.max(0, Math.floor(Date.now() / 1000) - VOTE_COOLDOWN_SECONDS));
+    const items = await db
+      .select({
+        contentId: vote.contentId,
+        latestCommittedAt: sql<bigint>`max(${vote.committedAt})`,
+      })
+      .from(vote)
+      .where(
+        and(
+          inArray(vote.voter, voters),
+          inArray(vote.contentId, contentIds),
+          gte(vote.committedAt, activeCooldownCutoff),
+        ),
+      )
+      .groupBy(vote.contentId);
+
+    return jsonBig(c, {
+      items: items.map(item => ({
+        ...item,
+        cooldownEndsAt: item.latestCommittedAt + BigInt(VOTE_COOLDOWN_SECONDS),
+      })),
     });
   });
 

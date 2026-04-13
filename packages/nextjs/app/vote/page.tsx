@@ -23,11 +23,11 @@ import { useDelegation } from "~~/hooks/useDelegation";
 import { useDiscoverSignals } from "~~/hooks/useDiscoverSignals";
 import { useFollowedProfiles } from "~~/hooks/useFollowedProfiles";
 import { useInterestProfile } from "~~/hooks/useInterestProfile";
-import { useLiveVoteCooldown } from "~~/hooks/useLiveVoteCooldown";
 import { useOnboarding } from "~~/hooks/useOnboarding";
 import { useRoundVote } from "~~/hooks/useRoundVote";
 import { SubmitterProfile, useSubmitterProfiles } from "~~/hooks/useSubmitterProfiles";
 import { useUnixTime } from "~~/hooks/useUnixTime";
+import { useVoteCooldowns } from "~~/hooks/useVoteCooldowns";
 import { useVoteFeedStage } from "~~/hooks/useVoteFeedStage";
 import { useVoteHistoryQuery } from "~~/hooks/useVoteHistoryQuery";
 import { useVoterAccuracyBatch } from "~~/hooks/useVoterAccuracyBatch";
@@ -35,11 +35,7 @@ import { useVoterIdNFT } from "~~/hooks/useVoterIdNFT";
 import { useWatchedContent } from "~~/hooks/useWatchedContent";
 import { mergeVoteHistoryItems } from "~~/hooks/voteHistory/shared";
 import { FOLLOWED_CURATOR_TOAST_ID } from "~~/lib/notifications/followedActivity";
-import {
-  formatVoteCooldownRemaining,
-  getMaxVoteCooldownRemainingSeconds,
-  getVoteCooldownRemainingSeconds,
-} from "~~/lib/vote/cooldown";
+import { formatVoteCooldownRemaining, getVoteCooldownRemainingSeconds } from "~~/lib/vote/cooldown";
 import {
   DISCOVER_ALL_FILTER,
   DISCOVER_BROKEN_FILTER,
@@ -55,7 +51,6 @@ import {
 import { type DiscoverFeedMode, sortDiscoverFeed } from "~~/lib/vote/feedModes";
 import { rankForYouFeed } from "~~/lib/vote/forYouRanker";
 import { buildLinkedWalletAddresses } from "~~/lib/vote/linkedWalletAddresses";
-import { shouldUseAddressLogCooldownFallback } from "~~/lib/vote/liveCooldown";
 import { getLocalVoteCooldownsByContentId } from "~~/lib/vote/localCooldown";
 import { buildVoteContentPinKey, buildVoteContentPinKeyFromUrl, buildVoteLocation } from "~~/lib/vote/location";
 import { mergeRequestedContentIntoFeed } from "~~/lib/vote/requestedContent";
@@ -234,15 +229,7 @@ const HomeInner = () => {
   const { delegateTo, delegateOf, hasDelegate, isDelegate, isLoading: delegationLoading } = useDelegation(address);
   const delegateVoteAddress = hasDelegate ? delegateTo : undefined;
   const delegatorVoteAddress = isDelegate ? delegateOf : undefined;
-  const {
-    hasVoterId: voteCooldownHasVoterId,
-    isResolved: voteCooldownIdentityResolved,
-    tokenId: voteCooldownVoterIdTokenId,
-  } = useVoterIdNFT(address);
-  const canUseAddressLogVoteCooldownFallback = shouldUseAddressLogCooldownFallback({
-    hasVoterId: voteCooldownHasVoterId,
-    isIdentityResolved: voteCooldownIdentityResolved,
-  });
+  const { tokenId: voteCooldownVoterIdTokenId } = useVoterIdNFT(address);
   const voteCooldownAddresses = useMemo(
     () => buildLinkedWalletAddresses(address, delegateVoteAddress, delegatorVoteAddress),
     [address, delegateVoteAddress, delegatorVoteAddress],
@@ -874,63 +861,25 @@ const HomeInner = () => {
     requestedActiveId: effectiveRequestedActiveId,
   });
   const primaryContentId = primaryItem?.id;
-  const primaryContentCooldownQueryEnabled = primaryContentId !== undefined;
-  const { votes: directPrimaryContentVotes } = useVoteHistoryQuery(address, {
-    contentId: primaryContentId,
-    enabled: primaryContentCooldownQueryEnabled,
-    limit: 1,
+  const voteCooldownContentIds = useMemo(() => {
+    const ids = new Map<string, bigint>();
+    for (const item of loadedItems) {
+      ids.set(item.id.toString(), item.id);
+    }
+    if (primaryContentId !== undefined) {
+      ids.set(primaryContentId.toString(), primaryContentId);
+    }
+    if (stakeModal.contentId > 0n) {
+      ids.set(stakeModal.contentId.toString(), stakeModal.contentId);
+    }
+    return Array.from(ids.values());
+  }, [loadedItems, primaryContentId, stakeModal.contentId]);
+  const { cooldownByContentId: indexedVoteCooldownByContentId } = useVoteCooldowns({
+    contentIds: voteCooldownContentIds,
+    voters: voteCooldownAddresses,
+    nowSeconds,
+    enabled: voteCooldownAddresses.length > 0,
   });
-  const { votes: delegatePrimaryContentVotes } = useVoteHistoryQuery(delegateVoteAddress, {
-    contentId: primaryContentId,
-    enabled: primaryContentCooldownQueryEnabled,
-    limit: 1,
-  });
-  const { votes: delegatorPrimaryContentVotes } = useVoteHistoryQuery(delegatorVoteAddress, {
-    contentId: primaryContentId,
-    enabled: primaryContentCooldownQueryEnabled,
-    limit: 1,
-  });
-  const primaryContentVotes = useMemo(
-    () => mergeVoteHistoryItems([directPrimaryContentVotes, delegatePrimaryContentVotes, delegatorPrimaryContentVotes]),
-    [delegatePrimaryContentVotes, delegatorPrimaryContentVotes, directPrimaryContentVotes],
-  );
-  const primaryContentVoteCooldownSeconds = useMemo(
-    () => getMaxVoteCooldownRemainingSeconds(primaryContentVotes, primaryContentId, nowSeconds),
-    [nowSeconds, primaryContentId, primaryContentVotes],
-  );
-  const stakeModalContentCooldownQueryEnabled =
-    stakeModal.isOpen &&
-    stakeModal.contentId > 0n &&
-    (primaryContentId === undefined || stakeModal.contentId !== primaryContentId);
-  const stakeModalCooldownContentId = stakeModalContentCooldownQueryEnabled ? stakeModal.contentId : undefined;
-  const { votes: directStakeModalContentVotes } = useVoteHistoryQuery(address, {
-    contentId: stakeModalCooldownContentId,
-    enabled: stakeModalContentCooldownQueryEnabled,
-    limit: 1,
-  });
-  const { votes: delegateStakeModalContentVotes } = useVoteHistoryQuery(delegateVoteAddress, {
-    contentId: stakeModalCooldownContentId,
-    enabled: stakeModalContentCooldownQueryEnabled,
-    limit: 1,
-  });
-  const { votes: delegatorStakeModalContentVotes } = useVoteHistoryQuery(delegatorVoteAddress, {
-    contentId: stakeModalCooldownContentId,
-    enabled: stakeModalContentCooldownQueryEnabled,
-    limit: 1,
-  });
-  const stakeModalContentVotes = useMemo(
-    () =>
-      mergeVoteHistoryItems([
-        directStakeModalContentVotes,
-        delegateStakeModalContentVotes,
-        delegatorStakeModalContentVotes,
-      ]),
-    [delegateStakeModalContentVotes, delegatorStakeModalContentVotes, directStakeModalContentVotes],
-  );
-  const stakeModalContentVoteCooldownSeconds = useMemo(
-    () => getMaxVoteCooldownRemainingSeconds(stakeModalContentVotes, stakeModalCooldownContentId, nowSeconds),
-    [nowSeconds, stakeModalContentVotes, stakeModalCooldownContentId],
-  );
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -1033,50 +982,17 @@ const HomeInner = () => {
 
   const canLoadMore = visibleCount < displayFeed.length || hasMoreFeed;
   const getContentCooldownSeconds = useCallback(
-    (contentId: bigint) => voteCooldownByContentId.get(contentId.toString()) ?? 0,
-    [voteCooldownByContentId],
+    (contentId: bigint) => {
+      const key = contentId.toString();
+      return Math.max(voteCooldownByContentId.get(key) ?? 0, indexedVoteCooldownByContentId.get(key) ?? 0);
+    },
+    [indexedVoteCooldownByContentId, voteCooldownByContentId],
   );
 
-  const primaryItemKnownCooldownSeconds = primaryItem
-    ? Math.max(getContentCooldownSeconds(primaryItem.id), primaryContentVoteCooldownSeconds)
-    : 0;
-  const { cooldownSecondsRemaining: primaryItemLiveCooldownSeconds } = useLiveVoteCooldown({
-    contentId: primaryItem?.id,
-    voters: voteCooldownAddresses,
-    nowSeconds,
-    enabled:
-      primaryItem !== null &&
-      primaryItem !== undefined &&
-      primaryItemKnownCooldownSeconds === 0 &&
-      canUseAddressLogVoteCooldownFallback &&
-      voteCooldownAddresses.length > 0,
-  });
-  const primaryItemCooldownSeconds = Math.max(primaryItemKnownCooldownSeconds, primaryItemLiveCooldownSeconds);
+  const primaryItemCooldownSeconds = primaryItem ? getContentCooldownSeconds(primaryItem.id) : 0;
   const primaryAttentionToken =
     primaryItem && voteAttention?.contentId === primaryItem.id.toString() ? voteAttention.token : null;
-  const stakeModalNeedsLiveCooldown =
-    stakeModal.contentId > 0n && (primaryItem?.id === undefined || stakeModal.contentId !== primaryItem.id);
-  const stakeModalLinkedHistoryCooldownSeconds = stakeModalNeedsLiveCooldown
-    ? stakeModalContentVoteCooldownSeconds
-    : primaryContentVoteCooldownSeconds;
-  const stakeModalKnownCooldownSeconds =
-    stakeModal.contentId > 0n
-      ? Math.max(getContentCooldownSeconds(stakeModal.contentId), stakeModalLinkedHistoryCooldownSeconds)
-      : 0;
-  const { cooldownSecondsRemaining: stakeModalLiveCooldownSeconds } = useLiveVoteCooldown({
-    contentId: stakeModalNeedsLiveCooldown ? stakeModal.contentId : undefined,
-    voters: voteCooldownAddresses,
-    nowSeconds,
-    enabled:
-      stakeModalNeedsLiveCooldown &&
-      stakeModalKnownCooldownSeconds === 0 &&
-      canUseAddressLogVoteCooldownFallback &&
-      voteCooldownAddresses.length > 0,
-  });
-  const stakeModalCooldownSeconds = Math.max(
-    stakeModalKnownCooldownSeconds,
-    stakeModalNeedsLiveCooldown ? stakeModalLiveCooldownSeconds : primaryItemLiveCooldownSeconds,
-  );
+  const stakeModalCooldownSeconds = stakeModal.contentId > 0n ? getContentCooldownSeconds(stakeModal.contentId) : 0;
 
   // Reset visible count when filters change
   useEffect(() => {
