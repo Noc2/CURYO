@@ -12,7 +12,6 @@ interface VoteSignalRailProps {
   isCommitting: boolean;
   voteError?: string | null;
   cooldownSecondsRemaining: number;
-  isCooldownLoading?: boolean;
   attentionToken?: number | null;
   onVote: (item: ContentItem, isUp: boolean) => void;
 }
@@ -22,7 +21,6 @@ export function VoteSignalRail({
   isCommitting,
   voteError,
   cooldownSecondsRemaining,
-  isCooldownLoading,
   attentionToken,
   onVote,
 }: VoteSignalRailProps) {
@@ -46,7 +44,6 @@ export function VoteSignalRail({
             address={address}
             error={voteError}
             cooldownSecondsRemaining={cooldownSecondsRemaining}
-            isCooldownLoading={isCooldownLoading}
             isOwnContent={primaryItem.isOwnContent}
             embedded
             compact

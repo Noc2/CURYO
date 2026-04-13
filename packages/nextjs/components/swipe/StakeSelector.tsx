@@ -20,7 +20,6 @@ interface StakeSelectorProps {
   contentId: bigint;
   categoryId?: bigint;
   cooldownSecondsRemaining?: number;
-  isCooldownLoading?: boolean;
   isConfirming?: boolean;
   confirmError?: string | null;
   onConfirm: (stakeAmount: number) => void;
@@ -38,7 +37,6 @@ export function StakeSelector({
   contentId,
   categoryId,
   cooldownSecondsRemaining = 0,
-  isCooldownLoading = false,
   isConfirming = false,
   confirmError = null,
   onConfirm,
@@ -99,15 +97,8 @@ export function StakeSelector({
   const sliderMax = Math.max(1, maxStake);
   const isCapacityLimited = maxByCapacity < maxByBalance;
   const cooldownActive = cooldownSecondsRemaining > 0;
-  const cooldownStatusPending = isCooldownLoading && !cooldownActive;
   const confirmDisabled =
-    isConfirming ||
-    !hasVoterId ||
-    cooldownActive ||
-    cooldownStatusPending ||
-    amount < 1 ||
-    amount > maxStake ||
-    maxStake < 1;
+    isConfirming || !hasVoterId || cooldownActive || amount < 1 || amount > maxStake || maxStake < 1;
   const phaseHeadline = effectiveIsBlind ? "Blind phase" : "Open phase";
   const phaseToneClassName = isUp ? (effectiveIsBlind ? "bg-primary/10" : "bg-warning/10") : "bg-error/10";
   const phaseHeadlineClassName = isUp ? (effectiveIsBlind ? "text-primary" : "text-warning") : "text-error";
@@ -338,11 +329,6 @@ export function StakeSelector({
               </button>
             </div>
 
-            {cooldownStatusPending && !isConfirming ? (
-              <p className="mt-3 text-center text-base text-base-content/70">
-                Checking whether this content is available to vote on.
-              </p>
-            ) : null}
             {confirmError && !isConfirming && <p className="mt-3 text-center text-base text-error">{confirmError}</p>}
 
             {!hasVoterId && (
