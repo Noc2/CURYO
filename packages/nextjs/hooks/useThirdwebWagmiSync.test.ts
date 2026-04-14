@@ -162,11 +162,20 @@ test("getThirdwebWagmiSyncOptions keeps manual in-app wallet sync on the direct 
   );
 });
 
-test("getThirdwebWagmiSyncOptions treats manual external wallet sync as a wagmi reconnect", () => {
+test("getThirdwebWagmiSyncOptions treats manual targeted external wallet sync as a wagmi reconnect", () => {
   assert.deepEqual(
     getThirdwebWagmiSyncOptions({ id: "io.metamask" } as any, {
       source: "manualConnect",
     }),
     { reconnect: true },
+  );
+});
+
+test("getThirdwebWagmiSyncOptions keeps manual unknown external wallet sync on the direct connect path", () => {
+  assert.equal(
+    getThirdwebWagmiSyncOptions({ id: "walletConnect" } as any, {
+      source: "manualConnect",
+    }),
+    undefined,
   );
 });

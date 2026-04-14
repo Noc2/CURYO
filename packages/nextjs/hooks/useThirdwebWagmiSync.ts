@@ -10,6 +10,12 @@ import {
   hasTargetedInjectedProvider,
 } from "~~/services/web3/injectedWalletProviders";
 
+function isTargetedInjectedThirdwebWallet(wallet: Pick<Wallet, "id">) {
+  return TARGETED_INJECTED_THIRDWEB_WALLET_IDS.includes(
+    wallet.id as (typeof TARGETED_INJECTED_THIRDWEB_WALLET_IDS)[number],
+  );
+}
+
 export function getWagmiConnectorIdForThirdwebWallet(wallet: Wallet, options?: { window?: unknown }): string | null {
   if (wallet.id === "inApp") {
     return "in-app-wallet";
@@ -19,11 +25,7 @@ export function getWagmiConnectorIdForThirdwebWallet(wallet: Wallet, options?: {
     return wallet.id;
   }
 
-  return TARGETED_INJECTED_THIRDWEB_WALLET_IDS.includes(
-    wallet.id as (typeof TARGETED_INJECTED_THIRDWEB_WALLET_IDS)[number],
-  )
-    ? null
-    : "injected";
+  return isTargetedInjectedThirdwebWallet(wallet) ? null : "injected";
 }
 
 export function shouldSkipThirdwebWagmiSync(params: {
@@ -50,7 +52,7 @@ export function getThirdwebWagmiSyncOptions(
   wallet: Pick<Wallet, "id">,
   options: { source: "autoConnect" | "manualConnect" },
 ): { reconnect: true } | undefined {
-  if (options.source === "autoConnect" || wallet.id !== "inApp") {
+  if (options.source === "autoConnect" || isTargetedInjectedThirdwebWallet(wallet)) {
     return { reconnect: true };
   }
 
