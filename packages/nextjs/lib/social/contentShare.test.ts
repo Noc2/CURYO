@@ -69,6 +69,16 @@ test("buildContentShareRatingVersion changes when rating signals change", () => 
   assert.notEqual(first, second);
 });
 
+test("buildContentShareRatingVersion accepts Ponder epoch-second timestamps", () => {
+  assert.equal(
+    buildContentShareRatingVersion({
+      ...baseContent,
+      lastActivityAt: "1776160800",
+    }),
+    "r-88-6700-12-0-1776160800",
+  );
+});
+
 test("buildContentShareData includes the rating in metadata and versioned share urls", () => {
   const data = buildContentShareData(baseContent, "https://www.curyo.xyz");
   const shareUrl = new URL(data.shareUrl);

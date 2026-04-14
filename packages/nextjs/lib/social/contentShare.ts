@@ -65,6 +65,21 @@ function normalizeRatingBps(value: number | undefined): number | null {
   return Math.min(10_000, Math.max(0, Math.round(value)));
 }
 
+function normalizeActivitySeconds(value: string | null | undefined): number {
+  const trimmed = value?.trim();
+  if (!trimmed) return 0;
+
+  if (/^\d+$/.test(trimmed)) {
+    const timestamp = Number(trimmed);
+    if (!Number.isFinite(timestamp) || timestamp < 0) return 0;
+
+    return Math.floor(timestamp > 10_000_000_000 ? timestamp / 1000 : timestamp);
+  }
+
+  const activityMs = Date.parse(trimmed);
+  return Number.isFinite(activityMs) ? Math.floor(activityMs / 1000) : 0;
+}
+
 export function normalizeContentShareContentId(value: unknown): string | null {
   const candidate = Array.isArray(value) ? value[0] : value;
   if (typeof candidate !== "string") return null;
@@ -101,8 +116,7 @@ export function buildContentShareRatingVersion(
   content: ContentShareContentInput,
   rating = resolveContentShareRating(content),
 ): string {
-  const activityMs = content.lastActivityAt ? Date.parse(content.lastActivityAt) : Number.NaN;
-  const activitySeconds = Number.isFinite(activityMs) ? Math.floor(activityMs / 1000) : 0;
+  const activitySeconds = normalizeActivitySeconds(content.lastActivityAt);
   const totalVotes = normalizeFiniteInteger(content.totalVotes);
   const openRoundVoteCount = normalizeFiniteInteger(content.openRound?.voteCount);
 

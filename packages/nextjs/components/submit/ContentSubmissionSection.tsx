@@ -188,6 +188,7 @@ export function ContentSubmissionSection() {
     id: bigint;
     title: string;
     description: string;
+    lastActivityAt: string;
   } | null>(null);
   const [platformSearch, setPlatformSearch] = useState("");
   const [isPlatformDropdownOpen, setIsPlatformDropdownOpen] = useState(false);
@@ -728,7 +729,14 @@ export function ContentSubmissionSection() {
       statusToast.dismiss();
       notification.success("Content submitted! Staked 10 cREP.");
       setSubmittedContent(
-        contentId !== null ? { id: contentId, title: submittedTitle, description: submittedDescription } : null,
+        contentId !== null
+          ? {
+              id: contentId,
+              title: submittedTitle,
+              description: submittedDescription,
+              lastActivityAt: new Date().toISOString(),
+            }
+          : null,
       );
       setUrl("");
       setUrlError(null);
@@ -1134,6 +1142,7 @@ export function ContentSubmissionSection() {
           contentId={submittedContent.id}
           title={submittedContent.title}
           description={submittedContent.description}
+          lastActivityAt={submittedContent.lastActivityAt}
           onClose={handleCloseShareModal}
         />
       ) : null}
