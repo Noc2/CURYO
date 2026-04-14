@@ -7,7 +7,7 @@
 
 Decentralized content curation protocol where verified humans stake cREP on content quality predictions.
 
-The web is drowning in clickbait and fake engagement. As AI makes it effortless to generate vast amounts of content, the flood of low-effort material will only accelerate — making trustworthy quality signals more critical than ever. Curyo fights back by tying every vote to a verified reputation. When you stake real tokens on your judgment, low-quality content loses and high-quality content rises — no algorithms, no ads, no manipulation.
+The web is drowning in clickbait and fake engagement. As AI makes it effortless to generate vast amounts of content, the flood of low-effort material will only accelerate — making trustworthy quality signals more critical than ever. Curyo fights back by tying every vote to a verified human.
 
 ## Table of Contents
 
@@ -21,13 +21,12 @@ The web is drowning in clickbait and fake engagement. As AI makes it effortless 
 
 ## Background
 
-Curyo replaces passive likes with **prediction games**. Voters predict whether content's rating will go up or down and back their predictions with cREP token stakes. The majority side wins the content-specific voter pool: revealed losers can reclaim a fixed rebate, and the remaining losing pool is split across winners and protocol-defined contributor shares.
+Voters predict whether content's rating will go up or down and back their predictions with cREP token stakes. 
 
-- **Skin in the Game** — every vote requires a token stake
+- **Skin in the Game** — every vote requires a token stake as a conviction signal 
 - **Sybil Resistant** — one soulbound Voter ID NFT per verified human
 - **Per-Content Rounds** — each content item accumulates votes; rounds settle once the revealed-vote threshold is reached and past-epoch reveal constraints are satisfied
 - **tlock Commit-Reveal** — votes are encrypted with timelock encryption, commits bind explicit drand metadata (`targetRound`, `drandChainHash`), and malformed/non-armored ciphertexts are rejected on-chain; the keeper-assisted/self-reveal path still hides vote directions until reveal and keeps zk-style proofing as a future hardening path
-- **Governance-Native Controls** — launch deployments keep upgrades, config, and treasury routing under the governor/timelock, with deployer setup roles renounced after deployment
 
 See the in-app documentation at `/docs` for detailed game theory analysis and security information.
 
@@ -59,23 +58,6 @@ mcp-server (tools)   → exposes MCP tools backed by the Ponder API, plus option
 ```
 
 Built with Next.js, Foundry, Ponder, thirdweb, wagmi, viem, Drizzle ORM, and PostgreSQL.
-
-### Vendored And Upstream Code
-
-Not every directory in this repository is first-party Curyo source.
-
-- `packages/foundry/lib/self/` is vendored upstream Self.xyz code used for identity verification integration.
-- `packages/foundry/lib/openzeppelin-*` and other `packages/foundry/lib/*` entries are upstream dependency submodules.
-
-For protocol review, security review, and contribution planning, treat Curyo-owned code as the primary focus:
-
-- `packages/foundry/contracts/`
-- `packages/foundry/test/`
-- `packages/nextjs/`
-- `packages/ponder/`
-- `packages/keeper/`
-- `packages/bot/`
-- `packages/mcp-server/`
 
 ## Install
 
@@ -206,16 +188,7 @@ CI runs the smoke, lifecycle, and keeper-backed E2E suites separately, so `yarn 
 
 ## Docs and APIs
 
-In-app documentation is available at `/docs` when running the frontend, covering:
-
-- Getting Started
-- Funding Your Wallet
-- How It Works
-- Tokenomics
-- Governance
-- SDK
-- Frontend Integrations
-- Smart Contracts
+In-app documentation is available at `/docs` when running the frontend.
 
 For app integrations, the framework-agnostic SDK lives in `packages/sdk` and provides hosted/indexed reads plus
 vote/frontend helpers for existing websites and apps.
