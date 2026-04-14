@@ -1,18 +1,34 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useMemo } from "react";
 import { CheckIcon, ClipboardIcon, XMarkIcon } from "@heroicons/react/24/outline";
 import { useCopyToClipboard } from "~~/hooks/scaffold-eth";
 import { truncateContentTitle } from "~~/lib/contentTitle";
+import { type ContentShareContentInput, buildContentShareData } from "~~/lib/social/contentShare";
 
 interface ShareContentModalProps {
   contentId: bigint;
   title: string;
   description: string;
+  rating?: number;
+  ratingBps?: number;
+  totalVotes?: number;
+  lastActivityAt?: string | null;
+  openRound?: ContentShareContentInput["openRound"];
   onClose: () => void;
 }
 
-export function ShareContentModal({ contentId, title, description, onClose }: ShareContentModalProps) {
+export function ShareContentModal({
+  contentId,
+  title,
+  description,
+  rating,
+  ratingBps,
+  totalVotes,
+  lastActivityAt,
+  openRound,
+  onClose,
+}: ShareContentModalProps) {
   const { copyToClipboard, isCopiedToClipboard: copied } = useCopyToClipboard({ successDurationMs: 2000 });
 
   // Close on Escape key
@@ -24,14 +40,40 @@ export function ShareContentModal({ contentId, title, description, onClose }: Sh
     return () => document.removeEventListener("keydown", handleKeyDown);
   }, [onClose]);
 
-  const shareUrl = typeof window !== "undefined" ? `${window.location.origin}/vote?content=${contentId}` : "";
+  const shareDetails = useMemo(() => {
+    if (typeof window === "undefined") return { ratingLabel: null, url: "" };
+
+    const fallbackUrl = `${window.location.origin}/vote?content=${contentId}`;
+    const hasRatingSignal =
+      rating !== undefined || ratingBps !== undefined || openRound?.referenceRatingBps !== undefined;
+    if (!hasRatingSignal) return { ratingLabel: null, url: fallbackUrl };
+
+    const shareData = buildContentShareData(
+      {
+        id: contentId.toString(),
+        title,
+        description,
+        rating: rating ?? (ratingBps ?? 5_000) / 100,
+        ratingBps,
+        totalVotes,
+        lastActivityAt,
+        openRound,
+      },
+      window.location.origin,
+    );
+
+    return { ratingLabel: shareData.rating.label, url: shareData.shareUrl };
+  }, [contentId, description, lastActivityAt, openRound, rating, ratingBps, title, totalVotes]);
+  const shareUrl = shareDetails.url;
   const truncatedTitle = truncateContentTitle(title);
 
   const handleCopyLink = async () => {
     await copyToClipboard(shareUrl);
   };
 
-  const tweetText = `Check out "${truncatedTitle}" on Curyo! ${shareUrl}`;
+  const tweetText = shareDetails.ratingLabel
+    ? `Rated ${shareDetails.ratingLabel}/10 on Curyo: "${truncatedTitle}" ${shareUrl}`
+    : `Check out "${truncatedTitle}" on Curyo! ${shareUrl}`;
 
   return (
     <div
