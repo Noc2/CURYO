@@ -143,14 +143,9 @@ export function useThirdwebSponsoredSubmitCalls() {
     [chainId, connector?.id, freeTransactionAllowance.canUseFreeTransactions, isThirdwebInApp],
   );
 
-  const canUseGaslessSubmitTransactions = useMemo(
-    () =>
-      freeTransactionAllowance.canUseFreeTransactions &&
-      (executionMode === "sponsored_7702" || expectsSponsoredSubmitCalls),
-    [expectsSponsoredSubmitCalls, executionMode, freeTransactionAllowance.canUseFreeTransactions],
-  );
+  const canUseGaslessSubmitTransactions = prefersSponsoredSubmitCalls;
 
-  const isEligibleForGaslessSubmitTransactions = executionMode === "sponsored_7702" || expectsSponsoredSubmitCalls;
+  const isEligibleForGaslessSubmitTransactions = expectsSponsoredSubmitCalls;
 
   const canUseSponsoredSubmitCalls = Boolean(
     thirdwebClient && activeWallet && typeof chainId === "number" && hasSendCalls && canUseGaslessSubmitTransactions,
