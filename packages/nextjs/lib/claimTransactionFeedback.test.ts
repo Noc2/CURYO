@@ -8,6 +8,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 
 const BASE_CONTEXT: ClaimTransactionFeedbackContext = {
+  canShowFreeTransactionAllowance: true,
   canSponsorTransactions: false,
   freeTransactionRemaining: 3,
   freeTransactionVerified: true,
@@ -37,6 +38,17 @@ test("getClaimGasErrorMessage does not ask funded wallets to add CELO", () => {
       hasNativeGasBalance: true,
     }),
     "Free transactions used up. Retry to use CELO for gas.",
+  );
+});
+
+test("getClaimGasErrorMessage uses normal gas guidance when free transactions are hidden", () => {
+  assert.equal(
+    getClaimGasErrorMessage({
+      ...BASE_CONTEXT,
+      canShowFreeTransactionAllowance: false,
+      freeTransactionRemaining: 0,
+    }),
+    "Add some CELO for gas, then retry.",
   );
 });
 
@@ -89,6 +101,7 @@ test("isClaimGasShortageError treats unsupported RPC methods as gas shortage aft
 
   assert.equal(
     isClaimGasShortageError(error, {
+      canShowFreeTransactionAllowance: true,
       freeTransactionRemaining: 0,
       freeTransactionVerified: true,
     }),
@@ -103,7 +116,23 @@ test("isClaimGasShortageError ignores unsupported RPC methods while free transac
 
   assert.equal(
     isClaimGasShortageError(error, {
+      canShowFreeTransactionAllowance: true,
       freeTransactionRemaining: 2,
+      freeTransactionVerified: true,
+    }),
+    false,
+  );
+});
+
+test("isClaimGasShortageError ignores unsupported RPC methods when free transactions are hidden", () => {
+  const error = {
+    details: "this request method is not supported",
+  };
+
+  assert.equal(
+    isClaimGasShortageError(error, {
+      canShowFreeTransactionAllowance: false,
+      freeTransactionRemaining: 0,
       freeTransactionVerified: true,
     }),
     false,

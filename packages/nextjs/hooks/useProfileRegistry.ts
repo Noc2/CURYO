@@ -3,8 +3,10 @@
 import { useCallback, useState } from "react";
 import type { Abi } from "viem";
 import { useDeployedContractInfo, useScaffoldReadContract, useScaffoldWriteContract } from "~~/hooks/scaffold-eth";
+import { useGasBalanceStatus } from "~~/hooks/useGasBalanceStatus";
 import { useThirdwebSponsoredSubmitCalls } from "~~/hooks/useThirdwebSponsoredSubmitCalls";
 import { avatarAccentRgbToHex } from "~~/lib/avatar/avatarAccent";
+import { getGasBalanceErrorMessage } from "~~/lib/transactionErrors";
 
 interface Profile {
   name: string;
@@ -27,10 +29,17 @@ function useProfileRegistryWrite() {
     contractName: "ProfileRegistry" as any,
   });
   const { canUseSponsoredSubmitCalls, executeSponsoredCalls } = useThirdwebSponsoredSubmitCalls();
+  const { canSponsorTransactions, isMissingGasBalance, nativeTokenSymbol } = useGasBalanceStatus({
+    includeExternalSendCalls: true,
+  });
   const [isSponsoredWritePending, setIsSponsoredWritePending] = useState(false);
 
   const writeProfileRegistry = useCallback(
     async (functionName: string, args: readonly unknown[], action: string) => {
+      if (isMissingGasBalance) {
+        throw new Error(getGasBalanceErrorMessage(nativeTokenSymbol, { canSponsorTransactions }));
+      }
+
       if (canUseSponsoredSubmitCalls && profileRegistryContract) {
         setIsSponsoredWritePending(true);
         try {
@@ -59,7 +68,15 @@ function useProfileRegistryWrite() {
         { action },
       );
     },
-    [canUseSponsoredSubmitCalls, executeSponsoredCalls, profileRegistryContract, writeContractAsync],
+    [
+      canSponsorTransactions,
+      canUseSponsoredSubmitCalls,
+      executeSponsoredCalls,
+      isMissingGasBalance,
+      nativeTokenSymbol,
+      profileRegistryContract,
+      writeContractAsync,
+    ],
   );
 
   return {

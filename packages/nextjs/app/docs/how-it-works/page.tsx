@@ -116,8 +116,8 @@ const HowItWorks: NextPage = () => {
 
       <h2 id="transaction-costs">Transaction Costs</h2>
       <p>
-        After ID verification, Curyo sponsors your first <strong>{freeTransactionLimit}</strong> app transactions. After
-        that, you pay normal Celo network fees from the same wallet you use in Curyo.
+        With Curyo Wallet, ID-verified accounts get <strong>{freeTransactionLimit}</strong> sponsored app transactions.
+        Other wallets use normal Celo network fees.
       </p>
       <p>
         You only need a small CELO balance for gas on Celo mainnet. cREP is for voting stake, not gas. If you top up

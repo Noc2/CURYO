@@ -29,6 +29,17 @@ export function shouldExpectThirdwebGasMode(params: {
   );
 }
 
+export function shouldShowFreeTransactionAllowance(params: {
+  chainId: number | undefined;
+  connectorId: string | undefined;
+  isThirdwebInApp: boolean;
+}) {
+  return shouldExpectThirdwebGasMode({
+    ...params,
+    includeExternalSendCalls: true,
+  });
+}
+
 export function shouldAwaitSelfFundedGasModeReconnect(params: {
   canUseFreeTransactions: boolean;
   chainId: number | undefined;
@@ -71,7 +82,7 @@ export function useGasBalanceStatus(options: GasBalanceStatusOptions = {}) {
       isThirdwebInApp,
     });
     const hasExecutableSponsoredCalls = executionMode === "sponsored_7702";
-    const supportsSponsoredCalls = hasExecutableSponsoredCalls || expectsThirdwebGasMode;
+    const supportsSponsoredCalls = expectsThirdwebGasMode;
     const canSponsorTransactions = supportsSponsoredCalls && freeTransactionAllowance.canUseFreeTransactions;
     const isAwaitingFreeTransactionAllowance = supportsSponsoredCalls && !freeTransactionAllowance.isResolved;
     const isAwaitingSponsoredWalletReconnect =
@@ -92,9 +103,15 @@ export function useGasBalanceStatus(options: GasBalanceStatusOptions = {}) {
       !isAwaitingFreeTransactionAllowance &&
       !isAwaitingSponsoredWalletReconnect &&
       !isAwaitingSelfFundedWalletReconnect;
+    const canShowFreeTransactionAllowance = shouldShowFreeTransactionAllowance({
+      chainId: resolvedChainId,
+      connectorId: connector?.id,
+      isThirdwebInApp,
+    });
 
     return {
       canSponsorTransactions,
+      canShowFreeTransactionAllowance,
       executionMode,
       freeTransactionLimit: freeTransactionAllowance.limit,
       freeTransactionRemaining: freeTransactionAllowance.remaining,

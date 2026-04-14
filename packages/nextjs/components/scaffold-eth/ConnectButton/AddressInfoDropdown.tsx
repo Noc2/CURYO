@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { useActiveWalletChain } from "thirdweb/react";
 import { getAddress } from "viem";
 import { Address } from "viem";
 import { hardhat } from "viem/chains";
@@ -10,7 +11,9 @@ import { InfoTooltip } from "~~/components/ui/InfoTooltip";
 import { useTargetNetwork } from "~~/hooks/scaffold-eth/useTargetNetwork";
 import { useCuryoDisconnect } from "~~/hooks/useCuryoDisconnect";
 import { useFreeTransactionAllowance } from "~~/hooks/useFreeTransactionAllowance";
+import { shouldShowFreeTransactionAllowance } from "~~/hooks/useGasBalanceStatus";
 import { useVoterAccuracy } from "~~/hooks/useVoterAccuracy";
+import { resolveWalletExecutionChainId, useWalletExecutionCapabilities } from "~~/hooks/useWalletExecutionCapabilities";
 import { useWalletSummaryData } from "~~/hooks/useWalletSummaryData";
 import { AVATAR_WIN_RATE_TOOLTIP } from "~~/lib/profile/winRateTooltip";
 import { isENS } from "~~/utils/scaffold-eth/common";
@@ -43,9 +46,18 @@ function formatWinRate(value: number) {
 }
 
 function FreeTransactionAllowanceText({ className }: { className?: string }) {
+  const { chain, connector } = useAccount();
+  const activeWalletChain = useActiveWalletChain();
   const { isResolved, limit, remaining, verified } = useFreeTransactionAllowance();
+  const { isThirdwebInApp } = useWalletExecutionCapabilities();
+  const chainId = resolveWalletExecutionChainId(chain?.id, activeWalletChain?.id);
+  const canShowFreeTransactionAllowance = shouldShowFreeTransactionAllowance({
+    chainId,
+    connectorId: connector?.id,
+    isThirdwebInApp,
+  });
 
-  if (!isResolved || !verified) {
+  if (!isResolved || !verified || !canShowFreeTransactionAllowance) {
     return null;
   }
 
@@ -55,7 +67,7 @@ function FreeTransactionAllowanceText({ className }: { className?: string }) {
         {remaining}/{limit}
       </span>
       <span className="text-base-content/48">free tx</span>
-      <InfoTooltip text={`Verified wallets get ${limit} free app transactions. Add CELO for gas after that.`} />
+      <InfoTooltip text={`Curyo Wallet gets ${limit} sponsored app transactions after ID verification.`} />
     </div>
   );
 }

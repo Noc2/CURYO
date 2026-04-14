@@ -99,6 +99,10 @@ function getVoteOutcome(vote: PonderVoteItem) {
   return { label: "Open", className: "text-primary" };
 }
 
+function getProfileWriteErrorMessage(error: any, fallback: string) {
+  return error?.shortMessage || error?.message || fallback;
+}
+
 export function PublicProfileView({ address, embedded = false }: PublicProfileViewProps) {
   const normalizedAddress = address.toLowerCase() as `0x${string}`;
   const isPageVisible = usePageVisibility();
@@ -359,7 +363,7 @@ export function PublicProfileView({ address, embedded = false }: PublicProfileVi
       refetchLiveProfile();
     } catch (error: any) {
       console.error("Profile update failed:", error);
-      setProfileError(error?.shortMessage || "Failed to update profile");
+      setProfileError(getProfileWriteErrorMessage(error, "Failed to update profile"));
     }
   }, [hasLiveProfile, hasVoterId, isNameTaken, isOwnName, nameInput, refetchLiveProfile, setProfile, strategyInput]);
 
@@ -422,7 +426,7 @@ export function PublicProfileView({ address, embedded = false }: PublicProfileVi
       refetchAvatarAccent();
     } catch (error: any) {
       console.error("Avatar accent update failed:", error);
-      setAccentError(error?.shortMessage || "Failed to update avatar color");
+      setAccentError(getProfileWriteErrorMessage(error, "Failed to update avatar color"));
     }
   }, [avatarAccentInput, refetchAvatarAccent, setAvatarAccent]);
 
@@ -445,7 +449,7 @@ export function PublicProfileView({ address, embedded = false }: PublicProfileVi
       refetchAvatarAccent();
     } catch (error: any) {
       console.error("Avatar accent reset failed:", error);
-      setAccentError(error?.shortMessage || "Failed to reset avatar color");
+      setAccentError(getProfileWriteErrorMessage(error, "Failed to reset avatar color"));
     }
   }, [clearAvatarAccent, committedAvatarAccentHex, refetchAvatarAccent]);
 

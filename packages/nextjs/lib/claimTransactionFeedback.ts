@@ -6,6 +6,7 @@ import {
 } from "./transactionErrors";
 
 export type ClaimTransactionFeedbackContext = {
+  canShowFreeTransactionAllowance: boolean;
   canSponsorTransactions: boolean;
   freeTransactionRemaining: number;
   freeTransactionVerified: boolean;
@@ -20,6 +21,7 @@ export type ClaimTransactionFeedbackContext = {
 export function getClaimGasErrorMessage(
   context: Pick<
     ClaimTransactionFeedbackContext,
+    | "canShowFreeTransactionAllowance"
     | "canSponsorTransactions"
     | "freeTransactionRemaining"
     | "freeTransactionVerified"
@@ -27,7 +29,11 @@ export function getClaimGasErrorMessage(
     | "nativeTokenSymbol"
   >,
 ) {
-  if (context.freeTransactionVerified && context.freeTransactionRemaining === 0) {
+  if (
+    context.canShowFreeTransactionAllowance &&
+    context.freeTransactionVerified &&
+    context.freeTransactionRemaining === 0
+  ) {
     if (context.hasNativeGasBalance) {
       return `Free transactions used up. Retry to use ${context.nativeTokenSymbol} for gas.`;
     }
@@ -62,13 +68,19 @@ export function getClaimPreflightErrorMessage(context: ClaimTransactionFeedbackC
 
 export function isClaimGasShortageError(
   error: unknown,
-  context: Pick<ClaimTransactionFeedbackContext, "freeTransactionRemaining" | "freeTransactionVerified">,
+  context: Pick<
+    ClaimTransactionFeedbackContext,
+    "canShowFreeTransactionAllowance" | "freeTransactionRemaining" | "freeTransactionVerified"
+  >,
 ) {
   if (isFreeTransactionExhaustedError(error) || isInsufficientFundsError(error)) {
     return true;
   }
 
   return (
-    context.freeTransactionVerified && context.freeTransactionRemaining === 0 && isUnsupportedRpcMethodError(error)
+    context.canShowFreeTransactionAllowance &&
+    context.freeTransactionVerified &&
+    context.freeTransactionRemaining === 0 &&
+    isUnsupportedRpcMethodError(error)
   );
 }

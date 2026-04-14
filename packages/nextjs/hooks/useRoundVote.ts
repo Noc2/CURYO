@@ -10,6 +10,7 @@ import { useTermsAcceptance } from "~~/contexts/TermsAcceptanceContext";
 import { useDeployedContractInfo, useTransactor } from "~~/hooks/scaffold-eth";
 import { useTargetNetwork } from "~~/hooks/scaffold-eth/useTargetNetwork";
 import { FREE_TRANSACTION_ALLOWANCE_QUERY_KEY } from "~~/hooks/useFreeTransactionAllowance";
+import { useGasBalanceStatus } from "~~/hooks/useGasBalanceStatus";
 import { getRecentUserVotesQueryKey } from "~~/hooks/useRecentUserVotes";
 import { useThirdwebSponsoredSubmitCalls } from "~~/hooks/useThirdwebSponsoredSubmitCalls";
 import { getVoteHistoryQueryKey } from "~~/hooks/useVoteHistoryQuery";
@@ -21,7 +22,7 @@ import {
   getWalletDisplaySummaryQueryKey,
   persistWalletDisplaySummarySnapshot,
 } from "~~/hooks/useWalletDisplaySummary";
-import { isFreeTransactionExhaustedError } from "~~/lib/transactionErrors";
+import { getGasBalanceErrorMessage, isFreeTransactionExhaustedError } from "~~/lib/transactionErrors";
 import { recordLocalVoteCooldown } from "~~/lib/vote/localCooldown";
 import { normalizeRoundVoteError } from "~~/lib/vote/roundVoteErrors";
 import { resolveRoundVoteRuntime } from "~~/lib/vote/roundVoteRuntime";
@@ -64,6 +65,9 @@ export function useRoundVote() {
     isAwaitingSelfFundedSubmitCalls,
     isAwaitingSponsoredSubmitCalls,
   } = useThirdwebSponsoredSubmitCalls();
+  const { canSponsorTransactions, isMissingGasBalance, nativeTokenSymbol } = useGasBalanceStatus({
+    includeExternalSendCalls: true,
+  });
 
   const { data: votingEngineInfo, isLoading: isVotingEngineLoading } = useDeployedContractInfo({
     contractName: "RoundVotingEngine",
@@ -115,6 +119,11 @@ export function useRoundVote() {
 
     if (isAwaitingSelfFundedSubmitCalls) {
       setError("Wallet switching to paid gas. Retry in a moment.");
+      return false;
+    }
+
+    if (isMissingGasBalance) {
+      setError(getGasBalanceErrorMessage(nativeTokenSymbol, { canSponsorTransactions }));
       return false;
     }
 
