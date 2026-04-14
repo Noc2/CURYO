@@ -53,6 +53,18 @@ test("does not expect sponsored submit calls from stale in-app wallet after exte
   );
 });
 
+test("does not prefer sponsored submit calls from stale in-app wallet after external connector settles", () => {
+  assert.equal(
+    shouldPreferSponsoredSubmitCalls({
+      canUseFreeTransactions: true,
+      chainId: 42220,
+      connectorId: "io.metamask",
+      isThirdwebInApp: true,
+    }),
+    false,
+  );
+});
+
 test("does not prefer sponsored submit calls without free transaction allowance", () => {
   assert.equal(
     shouldPreferSponsoredSubmitCalls({

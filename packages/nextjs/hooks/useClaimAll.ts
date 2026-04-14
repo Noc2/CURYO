@@ -22,6 +22,7 @@ export function useClaimAll() {
   const [progress, setProgress] = useState({ current: 0, total: 0 });
   const { requireAcceptance } = useTermsAcceptance();
   const {
+    canShowFreeTransactionAllowance,
     canSponsorTransactions,
     freeTransactionRemaining,
     freeTransactionVerified,
@@ -58,6 +59,7 @@ export function useClaimAll() {
     if (!accepted) return;
 
     const transactionFeedback = {
+      canShowFreeTransactionAllowance,
       canSponsorTransactions,
       freeTransactionRemaining,
       freeTransactionVerified,
