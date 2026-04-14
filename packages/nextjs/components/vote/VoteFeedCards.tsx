@@ -427,6 +427,21 @@ function FeedContentMetaCard({
           contentId={item.id}
           title={item.title}
           description={item.description}
+          rating={item.rating}
+          ratingBps={item.ratingBps !== undefined ? Number(item.ratingBps) : undefined}
+          totalVotes={item.totalVotes}
+          lastActivityAt={item.lastActivityAt}
+          openRound={
+            item.openRound
+              ? {
+                  referenceRatingBps:
+                    item.openRound.referenceRatingBps !== undefined
+                      ? Number(item.openRound.referenceRatingBps)
+                      : undefined,
+                  voteCount: item.openRound.voteCount,
+                }
+              : null
+          }
           onClose={() => setShowShare(false)}
         />
       ) : null}

@@ -1,3 +1,5 @@
+import { VOTE_SHARE_RATING_VERSION_PARAM } from "../social/contentShare";
+
 interface VoteLocationUpdate {
   contentId?: bigint | null;
   categoryHash?: string | null;
@@ -24,6 +26,8 @@ export function buildVoteLocation(currentUrl: string, update: VoteLocationUpdate
   const url = new URL(currentUrl);
 
   if (update.contentId !== undefined) {
+    url.searchParams.delete(VOTE_SHARE_RATING_VERSION_PARAM);
+
     if (update.contentId === null) {
       url.searchParams.delete("content");
     } else {
@@ -41,6 +45,7 @@ export function buildVoteLocation(currentUrl: string, update: VoteLocationUpdate
 export function buildVoteContentPinKey(pathname: string, searchParams: VoteSearchParamsLike) {
   const params = new URLSearchParams(Array.from(searchParams.entries()));
   if (!params.has("content")) return null;
+  params.delete(VOTE_SHARE_RATING_VERSION_PARAM);
 
   const query = normalizeSearchParams(params);
   return query ? `${pathname}?${query}` : pathname;

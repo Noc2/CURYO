@@ -1,19 +1,35 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useMemo } from "react";
 import Link from "next/link";
 import { CheckIcon, ClipboardIcon, XMarkIcon } from "@heroicons/react/24/outline";
 import { useCopyToClipboard } from "~~/hooks/scaffold-eth";
 import { truncateContentTitle } from "~~/lib/contentTitle";
+import { type ContentShareContentInput, buildContentShareData } from "~~/lib/social/contentShare";
 
 interface ShareModalProps {
   contentId: bigint;
   title: string;
   description: string;
+  rating?: number;
+  ratingBps?: number;
+  totalVotes?: number;
+  lastActivityAt?: string | null;
+  openRound?: ContentShareContentInput["openRound"];
   onClose: () => void;
 }
 
-export function ShareModal({ contentId, title, description, onClose }: ShareModalProps) {
+export function ShareModal({
+  contentId,
+  title,
+  description,
+  rating = 50,
+  ratingBps,
+  totalVotes = 0,
+  lastActivityAt,
+  openRound,
+  onClose,
+}: ShareModalProps) {
   const { copyToClipboard, isCopiedToClipboard: copied } = useCopyToClipboard({ successDurationMs: 2000 });
 
   useEffect(() => {
@@ -24,9 +40,30 @@ export function ShareModal({ contentId, title, description, onClose }: ShareModa
     return () => document.removeEventListener("keydown", handleKeyDown);
   }, [onClose]);
 
-  const shareUrl = typeof window !== "undefined" ? `${window.location.origin}/vote?content=${contentId}` : "";
+  const shareDetails = useMemo(() => {
+    if (typeof window === "undefined") return { ratingLabel: null, url: "" };
+
+    const shareData = buildContentShareData(
+      {
+        id: contentId.toString(),
+        title,
+        description,
+        rating,
+        ratingBps,
+        totalVotes,
+        lastActivityAt,
+        openRound,
+      },
+      window.location.origin,
+    );
+
+    return { ratingLabel: shareData.rating.label, url: shareData.shareUrl };
+  }, [contentId, description, lastActivityAt, openRound, rating, ratingBps, title, totalVotes]);
+  const shareUrl = shareDetails.url;
   const truncatedTitle = truncateContentTitle(title);
-  const tweetText = `I just submitted "${truncatedTitle}" on Curyo! Vote and build your reputation: ${shareUrl}`;
+  const tweetText = shareDetails.ratingLabel
+    ? `I just submitted "${truncatedTitle}" on Curyo. Current rating: ${shareDetails.ratingLabel}/10. Vote and build your reputation: ${shareUrl}`
+    : `I just submitted "${truncatedTitle}" on Curyo! Vote and build your reputation: ${shareUrl}`;
 
   const handleCopyLink = async () => {
     await copyToClipboard(shareUrl);
