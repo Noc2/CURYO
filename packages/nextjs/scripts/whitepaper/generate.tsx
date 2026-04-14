@@ -11,7 +11,6 @@ import {
   Defs,
   Document,
   Ellipse,
-  LinearGradient,
   Page,
   Path,
   RadialGradient,
@@ -120,12 +119,6 @@ function CoverLogo() {
           <Stop offset="55%" stopColor="#FFF8F3" stopOpacity={0.16} />
           <Stop offset="100%" stopColor="#FFF8F3" stopOpacity={0} />
         </RadialGradient>
-        <LinearGradient id="cover-flare" x1="38" y1="10" x2="76" y2="46" gradientUnits="userSpaceOnUse">
-          <Stop offset="0%" stopColor="#F45C4D" />
-          <Stop offset="28%" stopColor="#FF8A5D" />
-          <Stop offset="62%" stopColor="#FFC37A" />
-          <Stop offset="100%" stopColor="#FFF4DB" />
-        </LinearGradient>
       </Defs>
 
       <Circle cx="42" cy="42" r="24" fill="url(#cover-orb)" />
@@ -134,8 +127,19 @@ function CoverLogo() {
       <Path d="M27 57C35 52 43 49 54 48C51 53 47 58 41 62C35 64 30 63 27 57Z" fill="#6B37A5" fillOpacity={0.22} />
       <Path
         d="M60.5 16.5C67 18.5 72.5 22.5 76 28.5"
-        stroke="url(#cover-flare)"
-        strokeWidth={4.75}
+        stroke="#6D352A"
+        strokeOpacity={0.26}
+        strokeWidth={5.75}
+        strokeLinecap="round"
+      />
+      <Path d="M60.5 16.5C63.1 17.3 65.4 18.4 67.5 20" stroke="#F45C4D" strokeWidth={4.75} strokeLinecap="round" />
+      <Path d="M67.1 19.7C70.2 21.8 72.6 24.3 74.5 27" stroke="#FF8A5D" strokeWidth={4.75} strokeLinecap="round" />
+      <Path d="M74.1 26.4C74.8 27.1 75.4 27.8 76 28.5" stroke="#FFC37A" strokeWidth={4.75} strokeLinecap="round" />
+      <Path
+        d="M60.5 16.5C67 18.5 72.5 22.5 76 28.5"
+        stroke="#FFF0CF"
+        strokeOpacity={0.76}
+        strokeWidth={1.35}
         strokeLinecap="round"
       />
       <Circle cx="77.5" cy="31" r="3.5" fill="#FFF4DB" />
