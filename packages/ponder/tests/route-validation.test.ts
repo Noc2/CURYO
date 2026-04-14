@@ -415,6 +415,22 @@ describe("registerDataRoutes", () => {
     expect(db.select).not.toHaveBeenCalled();
   });
 
+  it("rejects vote cooldown requests without valid content ids before querying the database", async () => {
+    const { db } = mockPonderModules([]);
+    const { registerDataRoutes } = await import("../src/api/routes/data-routes.js");
+
+    const app = new Hono();
+    registerDataRoutes(app);
+
+    const response = await app.request(
+      "http://localhost/vote-cooldowns?voters=0x0000000000000000000000000000000000000001&contentIds=not-a-number",
+    );
+
+    expect(response.status).toBe(400);
+    expect(await response.json()).toEqual({ error: "contentIds parameter required" });
+    expect(db.select).not.toHaveBeenCalled();
+  });
+
   it("groups vote cooldown requests by content id", async () => {
     const { queryBuilder } = mockPonderModules([{ contentId: 1n, latestCommittedAt: 1000n }]);
     const { registerDataRoutes } = await import("../src/api/routes/data-routes.js");
