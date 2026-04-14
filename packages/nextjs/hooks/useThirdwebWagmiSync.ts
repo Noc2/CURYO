@@ -52,7 +52,11 @@ export function getThirdwebWagmiSyncOptions(
   wallet: Pick<Wallet, "id">,
   options: { source: "autoConnect" | "manualConnect" },
 ): { reconnect: true } | undefined {
-  if (options.source === "autoConnect" || isTargetedInjectedThirdwebWallet(wallet)) {
+  if (wallet.id === "inApp" && options.source === "autoConnect") {
+    return { reconnect: true };
+  }
+
+  if (isTargetedInjectedThirdwebWallet(wallet)) {
     return { reconnect: true };
   }
 

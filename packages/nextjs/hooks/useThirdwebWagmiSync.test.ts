@@ -138,18 +138,30 @@ test("shouldSkipThirdwebWagmiSync returns false when the requested chain differs
   );
 });
 
-test("getThirdwebWagmiSyncOptions treats auto-connect as a wagmi reconnect", () => {
-  assert.deepEqual(
-    getThirdwebWagmiSyncOptions({ id: "io.metamask" } as any, {
-      source: "autoConnect",
-    }),
-    { reconnect: true },
-  );
+test("getThirdwebWagmiSyncOptions treats supported auto-connect wallets as wagmi reconnects", () => {
   assert.deepEqual(
     getThirdwebWagmiSyncOptions({ id: "inApp" } as any, {
       source: "autoConnect",
     }),
     { reconnect: true },
+  );
+
+  for (const walletId of ["io.metamask", "com.coinbase.wallet", "me.rainbow"]) {
+    assert.deepEqual(
+      getThirdwebWagmiSyncOptions({ id: walletId } as any, {
+        source: "autoConnect",
+      }),
+      { reconnect: true },
+    );
+  }
+});
+
+test("getThirdwebWagmiSyncOptions keeps auto-connected unknown external wallets on the direct connect path", () => {
+  assert.equal(
+    getThirdwebWagmiSyncOptions({ id: "walletConnect" } as any, {
+      source: "autoConnect",
+    }),
+    undefined,
   );
 });
 
@@ -163,12 +175,14 @@ test("getThirdwebWagmiSyncOptions keeps manual in-app wallet sync on the direct 
 });
 
 test("getThirdwebWagmiSyncOptions treats manual targeted external wallet sync as a wagmi reconnect", () => {
-  assert.deepEqual(
-    getThirdwebWagmiSyncOptions({ id: "io.metamask" } as any, {
-      source: "manualConnect",
-    }),
-    { reconnect: true },
-  );
+  for (const walletId of ["io.metamask", "com.coinbase.wallet", "me.rainbow"]) {
+    assert.deepEqual(
+      getThirdwebWagmiSyncOptions({ id: walletId } as any, {
+        source: "manualConnect",
+      }),
+      { reconnect: true },
+    );
+  }
 });
 
 test("getThirdwebWagmiSyncOptions keeps manual unknown external wallet sync on the direct connect path", () => {
