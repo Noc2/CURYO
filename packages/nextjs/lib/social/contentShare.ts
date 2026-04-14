@@ -38,6 +38,8 @@ export interface ContentShareData {
   imageAlt: string;
   rating: ContentShareRating;
   ratingVersion: string;
+  totalVotes: number;
+  openRoundVoteCount: number;
   shareUrl: string;
   imageUrl: string;
 }
@@ -129,6 +131,7 @@ export function buildContentShareData(content: ContentShareContentInput, origin:
   const rating = resolveContentShareRating(content);
   const ratingVersion = buildContentShareRatingVersion(content, rating);
   const totalVotes = normalizeFiniteInteger(content.totalVotes);
+  const openRoundVoteCount = normalizeFiniteInteger(content.openRound?.voteCount);
   const voteLabel = `${totalVotes} vote${totalVotes === 1 ? "" : "s"}`;
   const title = truncateText(`Rated ${rating.label}/10 on Curyo: ${contentTitle}`, TITLE_MAX_LENGTH);
   const description = truncateText(
@@ -149,6 +152,8 @@ export function buildContentShareData(content: ContentShareContentInput, origin:
     imageAlt,
     rating,
     ratingVersion,
+    totalVotes,
+    openRoundVoteCount,
     shareUrl: buildVoteShareUrl(origin, content.id, ratingVersion),
     imageUrl: buildVoteShareImageUrl(origin, content.id, ratingVersion),
   };
