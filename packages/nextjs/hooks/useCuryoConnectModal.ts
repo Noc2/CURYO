@@ -3,7 +3,7 @@
 import { useCallback, useMemo } from "react";
 import { useConnectModal } from "thirdweb/react";
 import { useTargetNetwork } from "~~/hooks/scaffold-eth/useTargetNetwork";
-import { useThirdwebWagmiSync } from "~~/hooks/useThirdwebWagmiSync";
+import { getThirdwebWagmiSyncOptions, useThirdwebWagmiSync } from "~~/hooks/useThirdwebWagmiSync";
 import { getThirdwebConnectOptions, isThirdwebWalletChain } from "~~/services/thirdweb/client";
 
 export function useCuryoConnectModal() {
@@ -20,7 +20,11 @@ export function useCuryoConnectModal() {
       }
 
       const wallet = await connect(connectOptions);
-      await syncWalletToWagmi(wallet, targetNetwork.id);
+      await syncWalletToWagmi(
+        wallet,
+        targetNetwork.id,
+        getThirdwebWagmiSyncOptions(wallet, { source: "manualConnect" }),
+      );
       return wallet;
     } catch {
       return null;

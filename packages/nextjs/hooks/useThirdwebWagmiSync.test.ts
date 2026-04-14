@@ -1,4 +1,8 @@
-import { getWagmiConnectorIdForThirdwebWallet, shouldSkipThirdwebWagmiSync } from "./useThirdwebWagmiSync";
+import {
+  getThirdwebWagmiSyncOptions,
+  getWagmiConnectorIdForThirdwebWallet,
+  shouldSkipThirdwebWagmiSync,
+} from "./useThirdwebWagmiSync";
 import assert from "node:assert/strict";
 import test from "node:test";
 
@@ -131,5 +135,38 @@ test("shouldSkipThirdwebWagmiSync returns false when the requested chain differs
       requestedChainId: 11142220,
     }),
     false,
+  );
+});
+
+test("getThirdwebWagmiSyncOptions treats auto-connect as a wagmi reconnect", () => {
+  assert.deepEqual(
+    getThirdwebWagmiSyncOptions({ id: "io.metamask" } as any, {
+      source: "autoConnect",
+    }),
+    { reconnect: true },
+  );
+  assert.deepEqual(
+    getThirdwebWagmiSyncOptions({ id: "inApp" } as any, {
+      source: "autoConnect",
+    }),
+    { reconnect: true },
+  );
+});
+
+test("getThirdwebWagmiSyncOptions keeps manual in-app wallet sync on the direct adapter path", () => {
+  assert.equal(
+    getThirdwebWagmiSyncOptions({ id: "inApp" } as any, {
+      source: "manualConnect",
+    }),
+    undefined,
+  );
+});
+
+test("getThirdwebWagmiSyncOptions treats manual external wallet sync as a wagmi reconnect", () => {
+  assert.deepEqual(
+    getThirdwebWagmiSyncOptions({ id: "io.metamask" } as any, {
+      source: "manualConnect",
+    }),
+    { reconnect: true },
   );
 });

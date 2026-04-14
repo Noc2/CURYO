@@ -46,6 +46,17 @@ export function shouldSkipThirdwebWagmiSync(params: {
   );
 }
 
+export function getThirdwebWagmiSyncOptions(
+  wallet: Pick<Wallet, "id">,
+  options: { source: "autoConnect" | "manualConnect" },
+): { reconnect: true } | undefined {
+  if (options.source === "autoConnect" || wallet.id !== "inApp") {
+    return { reconnect: true };
+  }
+
+  return undefined;
+}
+
 export function useThirdwebWagmiSync() {
   const { connectAsync, connectors } = useConnect();
   const { address, chainId, connector: activeConnector } = useAccount();
