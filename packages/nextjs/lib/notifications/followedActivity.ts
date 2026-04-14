@@ -5,7 +5,7 @@ import type {
 
 export const FOLLOWED_CURATOR_TOAST_ID = "followed-curator-feedback";
 
-export type FollowedActivityNotification =
+type FollowedActivityNotification =
   | { kind: "submission"; item: PonderDiscoverSignalsSubmissionItem }
   | { kind: "resolution"; item: PonderDiscoverSignalsResolutionItem };
 

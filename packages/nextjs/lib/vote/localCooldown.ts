@@ -19,12 +19,12 @@ interface LocalVoteCooldownRecord {
   voterIdTokenId?: string;
 }
 
-export interface VoteCooldownIdentity {
+interface VoteCooldownIdentity {
   address?: string | null;
   voterIdTokenId?: bigint | string | number | null;
 }
 
-export interface RecordLocalVoteCooldownParams extends VoteCooldownIdentity {
+interface RecordLocalVoteCooldownParams extends VoteCooldownIdentity {
   chainId: number;
   committedAtSeconds?: number;
   contentId: bigint | string | number;
@@ -32,7 +32,7 @@ export interface RecordLocalVoteCooldownParams extends VoteCooldownIdentity {
   storage?: StorageLike | null;
 }
 
-export interface GetLocalVoteCooldownsParams {
+interface GetLocalVoteCooldownsParams {
   chainId: number;
   contentIds?: readonly (bigint | string | number)[];
   identities: readonly VoteCooldownIdentity[];
