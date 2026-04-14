@@ -43,7 +43,7 @@ async function fetchContentForShare(
   contentId: string,
   fetchImpl: typeof fetch,
 ): Promise<ContentShareContentInput | null> {
-  const url = new URL(`/content/${contentId}`, `${ponderUrl.replace(/\/+$/, "")}/`);
+  const url = new URL(`content/${contentId}`, `${ponderUrl.replace(/\/+$/, "")}/`);
   const response = await fetchImpl(url, {
     cache: "no-store",
     signal: AbortSignal.timeout(CONTENT_SHARE_FETCH_TIMEOUT_MS),
