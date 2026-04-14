@@ -10,6 +10,12 @@ import {
   hasTargetedInjectedProvider,
 } from "~~/services/web3/injectedWalletProviders";
 
+function isTargetedInjectedThirdwebWallet(wallet: Pick<Wallet, "id">) {
+  return TARGETED_INJECTED_THIRDWEB_WALLET_IDS.includes(
+    wallet.id as (typeof TARGETED_INJECTED_THIRDWEB_WALLET_IDS)[number],
+  );
+}
+
 export function getWagmiConnectorIdForThirdwebWallet(wallet: Wallet, options?: { window?: unknown }): string | null {
   if (wallet.id === "inApp") {
     return "in-app-wallet";
@@ -19,11 +25,7 @@ export function getWagmiConnectorIdForThirdwebWallet(wallet: Wallet, options?: {
     return wallet.id;
   }
 
-  return TARGETED_INJECTED_THIRDWEB_WALLET_IDS.includes(
-    wallet.id as (typeof TARGETED_INJECTED_THIRDWEB_WALLET_IDS)[number],
-  )
-    ? null
-    : "injected";
+  return isTargetedInjectedThirdwebWallet(wallet) ? null : "injected";
 }
 
 export function shouldSkipThirdwebWagmiSync(params: {
@@ -44,6 +46,21 @@ export function shouldSkipThirdwebWagmiSync(params: {
     params.currentChainId === params.requestedChainId &&
     params.currentAddress?.toLowerCase() === params.requestedAddress?.toLowerCase()
   );
+}
+
+export function getThirdwebWagmiSyncOptions(
+  wallet: Pick<Wallet, "id">,
+  options: { source: "autoConnect" | "manualConnect" },
+): { reconnect: true } | undefined {
+  if (wallet.id === "inApp" && options.source === "autoConnect") {
+    return { reconnect: true };
+  }
+
+  if (isTargetedInjectedThirdwebWallet(wallet)) {
+    return { reconnect: true };
+  }
+
+  return undefined;
 }
 
 export function useThirdwebWagmiSync() {

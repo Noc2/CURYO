@@ -3,7 +3,7 @@
 import { useMemo } from "react";
 import { AutoConnect } from "thirdweb/react";
 import type { Wallet } from "thirdweb/wallets";
-import { useThirdwebWagmiSync } from "~~/hooks/useThirdwebWagmiSync";
+import { getThirdwebWagmiSyncOptions, useThirdwebWagmiSync } from "~~/hooks/useThirdwebWagmiSync";
 import { getThirdwebAutoConnectOptions } from "~~/services/thirdweb/client";
 import { CURYO_E2E_TEST_WALLET_PRIVATE_KEY_STORAGE_KEY } from "~~/services/thirdweb/testWalletStorage";
 
@@ -25,7 +25,7 @@ export function ThirdwebAutoConnectBridge() {
     <AutoConnect
       {...autoConnectOptions}
       onConnect={(wallet: Wallet) => {
-        void syncWalletToWagmi(wallet);
+        void syncWalletToWagmi(wallet, undefined, getThirdwebWagmiSyncOptions(wallet, { source: "autoConnect" }));
       }}
     />
   );
