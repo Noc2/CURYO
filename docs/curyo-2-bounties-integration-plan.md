@@ -218,6 +218,8 @@ Recommended functions:
 - `pauseFunding(bool paused)`.
 - `pauseClaims(bool paused)`, only if legal or emergency review requires it. Prefer keeping claims and refunds available when possible.
 
+If batched claims are added, they should enforce a small maximum batch length. Do not add an unbounded loop over rounds, voters, or bounties.
+
 Recommended events:
 
 - `BountyCreated`.
@@ -233,7 +235,7 @@ Recommended events:
 
 The launch payout model should be deliberately simple:
 
-1. A bounty starts at the current or next round for the question.
+1. A bounty starts at the next round after funding is finalized. It should not apply retroactively to a round that already has commits.
 2. A round qualifies only if it reaches the normal cREP settlement path, has at least `requiredVoters` revealed votes, and is at or after the bounty start round.
 3. Tied, cancelled, and reveal-failed rounds do not qualify at launch.
 4. Each qualifying round receives `amount / requiredSettledRounds`, with the final qualifying round receiving dust.
@@ -244,7 +246,7 @@ The launch payout model should be deliberately simple:
 
 This per-round model avoids unbounded on-chain iteration and avoids needing a unique-voter set across many rounds in v1. `claimBountyReward(bountyId, roundId)` can verify the caller's revealed commit through the voting engine and the stored round state, then transfer the user's share if it has not already been claimed.
 
-Claim identity should resolve to the underlying Voter ID, not just the current wallet address. The claim key should be `claimed[bountyId][roundId][voterId]` or equivalent, so a voter cannot claim twice by rotating delegated wallets. A delegated wallet should be able to claim only if it can prove it is authorized for the same Voter ID that produced the eligible vote, or if the Voter ID holder explicitly claims to a payout address.
+Claim identity should resolve to the underlying Voter ID, not just the current wallet address. The claim key should be `claimed[bountyId][roundId][voterId]` or equivalent, so a voter cannot claim twice by rotating delegated wallets. The voting engine should snapshot the Voter ID used for the eligible commit or reveal. A delegated wallet should be able to claim only if it can prove it is authorized for the same Voter ID that produced the eligible vote, or if the Voter ID holder explicitly signs a payout authorization.
 
 Recommended refund and cancellation behavior:
 
@@ -302,6 +304,100 @@ Recommended controls:
 - Resolve bounty claims through the underlying Voter ID holder so delegated wallets remain safe without enabling duplicate claims across wallets.
 
 Self.xyz should be treated as an important control layer, not a complete stablecoin compliance answer. Wallet screening, issuer controls, country rules, and legal review still need their own workstream.
+
+## Security Review Notes
+
+This section captures security issues found during plan review and turns them into implementation requirements.
+
+### Bounty Eligibility Snapshot
+
+The bounty should not apply to a round that already has commits. If a bounty can be attached to the current round, funders and voters can disagree about whether earlier voters were eligible, and funders can selectively fund after observing round activity. The contract should set `startRoundId` to the next round after the bounty deposit is finalized.
+
+Round qualification should be snapshotted once:
+
+- Store the round allocation.
+- Store the eligible revealed voter count.
+- Store the qualifying round state.
+- Store whether the round has already been qualified for that bounty.
+
+Claims should read the snapshot. They should not recompute a mutable denominator on every claim.
+
+### Voter ID Claim Safety
+
+Claims should key off the Voter ID that was eligible during the vote, not just `msg.sender`.
+
+Requirements:
+
+- Snapshot the Voter ID at commit or reveal time.
+- Use `claimed[bountyId][roundId][voterId]` or equivalent.
+- Reject claims if the caller cannot prove current authority for the snapshotted Voter ID.
+- Bind any off-chain payout authorization to chain ID, escrow contract, bounty ID, round ID, Voter ID, payout address, nonce, and deadline.
+- Reject replayed authorizations.
+- Test delegation changes between commit, reveal, settlement, and claim.
+
+### Self-Funding And Conflict Exclusion
+
+A question submitter, bounty funder, and Voter IDs associated with them should not be eligible to claim that question's bounty unless governance deliberately enables self-review for a category. Otherwise a funder can recycle their own bounty through controlled Voter IDs and distort feed incentives or metrics.
+
+The launch rule should be:
+
+- Submitter Voter ID cannot claim its own question bounty.
+- Funder Voter ID cannot claim the bounty it funded.
+- If multiple funders add separate bounties to the same question, each funder is excluded only from the bounty they funded unless a stricter category policy applies.
+- The UI should disclose funder and submitter conflicts where possible.
+
+### Reentrancy, State Ordering, And Refund Races
+
+The escrow must follow checks-effects-interactions:
+
+- Validate bounty, round, claim authority, eligibility, and pause state first.
+- Mark the Voter ID as claimed and update claimed totals before transferring USDC.
+- Use `nonReentrant` on deposit, claim, refund, and sweep functions.
+- Keep claims pull-based; do not push payments during settlement.
+- Ensure refund functions cannot withdraw funds already allocated to qualified rounds.
+- Separate unallocated refundable amount from allocated claimable amount.
+- Do not let funding pause block already-qualified claims or valid refunds unless an emergency legal pause explicitly requires it.
+
+Sources: [Solidity security considerations](https://docs.solidity.org/en/latest/security-considerations.html), [OpenZeppelin security utilities](https://docs.openzeppelin.com/contracts/5.x/api/utils#ReentrancyGuard), and [OpenZeppelin SafeERC20](https://docs.openzeppelin.com/contracts/5.x/api/token/erc20#SafeERC20).
+
+### No Hard Bounty Caps
+
+No hard bounty caps is a product decision, but it increases security and abuse blast radius. The launch plan should compensate without silently reintroducing a cap:
+
+- Show stronger warnings and recommended parameters for larger bounties.
+- Monitor large bounty creation, rapid repeated funding, and funder/voter clustering.
+- Keep emergency pause for new funding.
+- Keep token allowlist to Celo USDC only.
+- Preserve full on-chain and indexed records for funder, submitter, Voter ID claim key, token amount, and question.
+- Treat large-bounty categories such as trust and safety, public allegations, or financial claims as moderation-sensitive.
+
+### Media And Link Handling
+
+Text-only questions are safe only if rendered as plain text. Media and link previews add web security risk.
+
+Implementation requirements:
+
+- Render question and description as escaped plain text unless a separately audited markdown renderer is introduced.
+- Do not render arbitrary HTML from metadata.
+- Do not iframe arbitrary URLs. YouTube embeds should be restricted to recognized YouTube hosts and preferably privacy-enhanced embed URLs.
+- Do not server-fetch arbitrary URLs without SSRF controls. If a preview fetcher is needed, block private IP ranges, localhost, link-local addresses, non-HTTP(S) schemes, redirects to blocked destinations, oversized responses, and unexpected content types.
+- Do not inline user-controlled SVG as an image preview.
+- Set strict content security policy rules for embeds and images.
+- Cache only sanitized metadata and avoid storing untrusted preview HTML.
+
+Source: [OWASP SSRF overview](https://owasp.org/www-community/attacks/Server_Side_Request_Forgery).
+
+### Indexer Trust Boundary
+
+Ponder and API responses should improve UX, not become the source of truth for claims. The contract must recompute or verify every claim-critical fact on chain:
+
+- Bounty exists and is funded.
+- Round qualifies.
+- Voter ID was eligible for the round.
+- Claim has not already happened.
+- Reward amount is bounded by the escrow's remaining allocated amount.
+
+The UI can display indexed amounts, but the transaction path should tolerate stale or reorged API data and surface contract reverts clearly.
 
 ## Ponder And API Plan
 
@@ -377,8 +473,11 @@ The implementation should stay split into narrow commits. A recommended sequence
 2. `contracts: add question bounty escrow`
    - Add Celo USDC escrow, bounty creation, per-round qualification, pull-based claims, refunds, pause controls, and events.
    - Enforce `requiredVoters >= 3` and `requiredSettledRounds >= 1`.
+   - Start bounties at the next round after funding finalizes, never retroactively on an active round.
+   - Snapshot qualified round allocation and eligible revealed voter count before claims.
    - Key claims by underlying Voter ID so delegated wallets cannot double-claim.
-   - Add Foundry unit tests for token allowlist, deposit accounting, claim rules, Voter ID claim identity, and refund paths.
+   - Exclude submitter and funder Voter IDs from claiming their own bounty unless a future category policy explicitly allows it.
+   - Add Foundry unit tests for token allowlist, deposit accounting, claim rules, Voter ID claim identity, self-funding exclusion, and refund paths.
 
 3. `contracts: wire curyo 2 deployment`
    - Update deployment scripts, local mocks, protocol config wiring, ABI export, deployed contract metadata, and contract-size checks.
@@ -393,6 +492,7 @@ The implementation should stay split into narrow commits. A recommended sequence
    - Remove the Platform tab and platform-domain validation.
    - Change fields to question, optional link, category/frame, description, and tags.
    - Support text-only questions plus image and YouTube links initially.
+   - Render text as escaped plain text and restrict YouTube embeds to recognized YouTube hosts.
 
 6. `nextjs: add bounty funding UI`
    - Add optional bounty funding after submission.
@@ -403,6 +503,7 @@ The implementation should stay split into narrow commits. A recommended sequence
    - Add compact bounty badges to feed/vote cards.
    - Render text-only feed cards with the description body instead of an empty image area.
    - Render image and YouTube previews when those links are available.
+   - Add SSRF and content-type controls to any server-side preview fetcher.
    - Add "Add bounty" in the More section and open the funding modal from there.
    - Add responsive coverage for dense laptop and mobile vote surfaces.
 
@@ -428,6 +529,8 @@ Foundry tests:
 - Bounty creation with required voters and required settled rounds.
 - Rejection for bounties below 3 required voters.
 - Rejection for bounties below 1 required settled round.
+- Bounty starts at the next round after funding finalizes and does not apply to active rounds with existing commits.
+- Qualified round snapshot stores allocation and eligible revealed count before claims.
 - Multiple bounties on one question.
 - Top-ups with distinct terms.
 - Claim by revealed winning voter.
@@ -435,10 +538,14 @@ Foundry tests:
 - Rejection for unrevealed voter.
 - Double-claim prevention.
 - Double-claim prevention across delegated wallets for the same Voter ID.
+- Submitter Voter ID cannot claim its own question bounty.
+- Funder Voter ID cannot claim the bounty it funded.
 - Tied, cancelled, and reveal-failed rounds not qualifying at launch.
 - Expiry refund.
 - Question cancellation refund.
+- Refund cannot withdraw allocated claimable funds.
 - Funding pause and claim/refund behavior.
+- Reentrancy-style malicious token mock cannot double-claim or corrupt accounting, even though production token allowlist is Celo USDC only.
 - Solvency invariant: escrow token balance must cover remaining claimable and refundable amounts.
 
 Ponder tests:
@@ -456,9 +563,12 @@ Next.js tests:
 - Submit question with YouTube link.
 - Submit question and continue into optional bounty funding.
 - Remove platform-domain validation without weakening generic URL safety checks.
+- Escape question and description text; do not render untrusted HTML.
 - Render bounty badges on vote cards without layout shift.
 - Render description text in feed cards when no media preview is present.
 - Render image and YouTube previews when media links are present.
+- Reject non-YouTube iframe/embed URLs.
+- Block unsafe preview URLs, including private IPs, localhost, link-local addresses, non-HTTP(S) schemes, oversized responses, and unexpected content types.
 - Open the Add Bounty modal from the More section.
 - Handle USDC allowance and deposit.
 - Default bounty form to 5 required voters and 2 settled rounds.
@@ -471,9 +581,12 @@ End-to-end tests:
 - Submit question, fund USDC bounty, vote, reveal, settle, and claim stablecoin reward.
 - Submit a text-only question and verify the feed renders description text instead of an empty image.
 - Submit an image link and a YouTube link and verify previews render.
+- Submit HTML/script-like text and verify it renders as inert text.
 - Verify a voter on the losing cREP side can still claim the stablecoin participation reward after revealing.
 - Verify an unrevealed voter cannot claim.
 - Verify a delegated wallet can claim only for the underlying eligible Voter ID and cannot double-claim across wallets.
+- Verify submitter and funder Voter IDs cannot claim excluded bounties.
+- Verify a bounty funded mid-round only starts with the following round.
 - Verify required voters and required settled rounds block payout until satisfied.
 - Verify refund after expiry or cancellation.
 - Check mobile and laptop layouts for bounty badges, More modal, and claim rows.
