@@ -23,7 +23,7 @@ Voters predict whether content's rating will go up or down and back their predic
 
 - **Skin in the Game** — every vote requires a token stake as a conviction signal 
 - **Sybil Resistant** — one soulbound Voter ID NFT per verified human
-- **Trust Verticals** — discovery is organized around Products, Investment, Health, News, Software, Entertainment, and People, while the on-chain category registry still anchors submissions to approved source domains
+- **Trust Verticals** — discovery is organized around Products, Investment, Health, Software, Entertainment, and People, while the on-chain category registry still anchors submissions to approved source domains
 - **Per-Content Rounds** — each content item accumulates votes; rounds settle once the revealed-vote threshold is reached and past-epoch reveal constraints are satisfied
 - **tlock Commit-Reveal** — votes are encrypted with timelock encryption, commits bind explicit drand metadata (`targetRound`, `drandChainHash`), and malformed/non-armored ciphertexts are rejected on-chain; the keeper-assisted/self-reveal path still hides vote directions until reveal and keeps zk-style proofing as a future hardening path
 

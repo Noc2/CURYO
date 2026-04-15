@@ -20,12 +20,6 @@ export const TRUST_VERTICALS = [
     prompt: "Is this health claim evidence-backed, safe, and not misleading?",
   },
   {
-    slug: "news",
-    label: "News",
-    description: "Current events, public claims, civic information, and source trust.",
-    prompt: "Is this claim or source likely accurate and responsibly produced?",
-  },
-  {
     slug: "software",
     label: "Software",
     description: "Developer tools, repositories, packages, models, and supply-chain trust.",
@@ -66,7 +60,7 @@ const LEGACY_CATEGORY_ID_TO_VERTICAL: Record<string, TrustVerticalSlug> = {
   "7": "entertainment",
   "8": "software",
   "9": "investment",
-  "10": "news",
+  "10": "entertainment",
   "11": "software",
   "12": "entertainment",
   "13": "software",
@@ -86,7 +80,7 @@ const LEGACY_CATEGORY_NAME_TO_VERTICAL: Record<string, TrustVerticalSlug> = {
   "pypi packages": "software",
   "spotify podcasts": "entertainment",
   "twitch": "entertainment",
-  "tweets": "news",
+  "tweets": "entertainment",
   "youtube": "entertainment",
 };
 
@@ -104,8 +98,8 @@ const LEGACY_DOMAIN_TO_VERTICAL: Record<string, TrustVerticalSlug> = {
   "scryfall.com": "entertainment",
   "themoviedb.org": "entertainment",
   "twitch.tv": "entertainment",
-  "twitter.com": "news",
-  "x.com": "news",
+  "twitter.com": "entertainment",
+  "x.com": "entertainment",
   "youtube.com": "entertainment",
   "youtu.be": "entertainment",
 };
@@ -185,6 +179,10 @@ export function parseTrustVerticalTag(tag: string): TrustVerticalSlug | null {
   return isTrustVerticalSlug(slug) ? slug : null;
 }
 
+function isReservedTrustVerticalTag(tag: string) {
+  return normalizeLookupValue(tag).startsWith(TRUST_VERTICAL_TAG_PREFIX);
+}
+
 export function parseTagsValue(tags: readonly string[] | string | null | undefined): string[] {
   if (!tags) return [];
 
@@ -208,7 +206,7 @@ export function extractTrustVerticalFromTags(tags: readonly string[] | string | 
 }
 
 export function stripTrustVerticalTags(tags: readonly string[] | string | null | undefined): string[] {
-  return parseTagsValue(tags).filter(tag => parseTrustVerticalTag(tag) === null);
+  return parseTagsValue(tags).filter(tag => !isReservedTrustVerticalTag(tag));
 }
 
 export function mergeTrustVerticalTag(tags: readonly string[] | string | null | undefined, slug: TrustVerticalSlug) {

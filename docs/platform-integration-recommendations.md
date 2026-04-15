@@ -2,7 +2,9 @@
 
 Last checked: 2026-04-15
 
-This note turns the proposed Products, Investment, Health, and News verticals into concrete source/platform recommendations for Curyo.
+This note turns the proposed Products, Investment, and Health verticals into concrete source/platform recommendations for Curyo.
+
+News is intentionally excluded for now. The current voting UI does not show enough category-specific guidance to make clear whether voters should rate article accuracy, source quality, event sentiment, or personal agreement. News platforms should wait until the product can surface a clear news-rating rubric at the moment of voting.
 
 The most important update from the second research pass is that new platforms should be image-native whenever possible. Curyo's vote/discover surfaces are visual, and human verification is more useful when a submitted item has a recognizable source image, product image, logo, chart, or article thumbnail.
 
@@ -43,8 +45,6 @@ Avoid relying on scraped Open Graph images as the primary strategy. OG images ar
 | Health | FDA/openFDA | `fda.gov` | Conditional text-first exception | Weak to mixed. openFDA is excellent for labels, recalls, and safety data, but reliable image support is sparse compared with DailyMed and CPSC. | Use later for evidence data; avoid treating it as an image-native platform unless a specific FDA dataset has images. |
 | Health | PubMed | `pubmed.ncbi.nlm.nih.gov` | Defer from image-first wave | Weak. PubMed metadata is not reliably image-native and article figures usually belong to publishers. | Valuable for evidence quality later, but better as a text-first research source than a platform tab addition. |
 | Health | ClinicalTrials.gov | `clinicaltrials.gov` | Defer from image-first wave | Weak. Trial records are structured and useful but not visual. | Valuable later as a text-first source for trial interpretation. |
-| News | The Guardian | `theguardian.com` | Conditional | Strong with the right key. Guardian Open Platform stores articles, images, audio, and videos; commercial tier includes images/media. | Curyo should request a commercial key before reproducing API-derived Guardian images or article content. |
-| News | AP News / AP Media API | `apnews.com` | Conditional | Strong with a contract. AP Media API supports pictures, graphics, video, audio, text, and linked curated content. | API/media access depends on AP contract terms and must run through secure server middleware, not browser calls. |
 
 ## Image-Native First Wave
 
@@ -202,42 +202,17 @@ Sources: [Product Hunt API docs](https://www.producthunt.com/v2/docs), [Product 
 
 Sources: [Polygon ticker overview docs](https://polygon.io/docs/rest/stocks/tickers/ticker-overview/), [Polygon/Massive site](https://polygon.io/).
 
-### The Guardian
+## News Platforms Deferred
 
-**Why it fits Curyo:** News source trust is directly aligned with Curyo's blind phase and human verification. Users can rate whether an article is responsibly sourced, current, and not misleading.
+Do not add a News vertical or news-first platform categories in this implementation slice. Guardian and AP both have strong image/API stories with the right commercial access, but they should stay out of the platform recommendation list until Curyo can tell voters exactly what a News vote means.
 
-**Integration fit:** Conditional. Add as a News platform after selecting the correct access tier. A commercial Curyo deployment should request a commercial key before reproducing Guardian journalism, media, or API-derived content.
+When the product adds category-specific voting guidance, revisit:
 
-**Image support:** Strong with the right key. The Open Platform says it stores articles, images, audio, and videos, and the commercial tier includes access to article text, images, audio, and videos.
+- **The Guardian:** strong Open Platform media support, but commercial Curyo usage should request the right access tier before reproducing API-derived article text, images, audio, or video.
+- **AP News / AP Media API:** strong licensed media support, but API-backed ingestion requires contract terms, server-side keys, and secure middleware.
+- **News aggregators:** useful for discovery, but submitted content should point to the original publisher whenever possible.
 
-**Compliance notes:**
-
-- The developer key is for non-commercial usage with limited quotas.
-- The commercial tier covers commercial enterprises and products derived from Guardian content, with custom quotas and pricing.
-- Avoid copying article bodies/images unless covered by the selected key and terms.
-
-**Suggested subcategories:** World, Politics, Climate, Business, Technology.
-
-Sources: [Guardian Open Platform](https://open-platform.theguardian.com/), [Guardian Open Platform access tiers](https://open-platform.theguardian.com/access/).
-
-### AP News / AP Media API
-
-**Why it fits Curyo:** AP is a strong source for high-signal news and election data, where verified human rating can help distinguish original reporting, syndicated summaries, and public claims.
-
-**Integration fit:** Conditional. API-backed ingestion requires an AP license/contract. Until then, keep AP as URL-only at most, with outbound links and Curyo-native submission text.
-
-**Image support:** Strong with contract. AP Media API supports text/story content, pictures, graphics, video, and audio depending on contract terms.
-
-**Compliance notes:**
-
-- AP Media API access is for licensed multimedia content and depends on contract terms.
-- AP API calls require a server-side API key.
-- AP advises against direct browser integrations; use secure middleware.
-- Account quotas apply.
-
-**Suggested subcategories:** Politics, World, Business, Science, Health.
-
-Sources: [AP Developer](https://developer.ap.org/), [AP Media API getting started](https://api.ap.org/media/v/docs/Getting_Started_API.htm).
+Sources: [Guardian Open Platform](https://open-platform.theguardian.com/), [Guardian Open Platform access tiers](https://open-platform.theguardian.com/access/), [AP Developer](https://developer.ap.org/), [AP Media API getting started](https://api.ap.org/media/v/docs/Getting_Started_API.htm).
 
 ## Text-First Exceptions To Defer
 
@@ -272,7 +247,7 @@ Sources: [openFDA APIs](https://open.fda.gov/apis/), [openFDA terms](https://ope
 - **Amazon:** product images and product data are useful, but Product Advertising API, affiliate requirements, and commerce constraints make it a worse first Products source than Open Food Facts, Best Buy, or CPSC.
 - **WebMD, Healthline, supplement blogs, and wellness marketplaces:** health content is high-liability and SEO-spam-prone. Use official health sources first.
 - **Yahoo Finance as a primary Investment source:** useful URLs, but no clean official API for Curyo-style automated ingestion. Prefer CoinGecko, FRED, SEC later, and carefully licensed market-data/logo providers.
-- **GDELT/NewsAPI-style aggregators as source categories:** useful for discovery, but submitted content should point to the original publisher whenever possible. Image rights usually belong to publishers, not aggregators.
+- **News and news aggregators:** defer until Curyo has category-specific voting guidance for accuracy, sourcing, and misleadingness. Image rights usually belong to publishers, not aggregators.
 
 ## Suggested First Implementation Slice
 
@@ -283,12 +258,13 @@ Sources: [openFDA APIs](https://open.fda.gov/apis/), [openFDA terms](https://ope
    - DailyMed: `dailymed.nlm.nih.gov`
    - FRED: `fred.stlouisfed.org`
    - CoinGecko already exists and should map to Investment.
-2. Do not add Product Hunt, Guardian, AP, or Polygon/Massive as automated adapters until the required commercial/API permissions or paid plans are confirmed. URL-only submission can be considered separately, but it should not be presented as image-native.
+2. Do not add Product Hunt or Polygon/Massive as automated adapters until the required commercial/API permissions or paid plans are confirmed. URL-only submission can be considered separately, but it should not be presented as image-native.
 3. Keep SEC EDGAR, PubMed, ClinicalTrials.gov, and openFDA out of the first platform batch. Add them later as text-first exceptions once the product explicitly supports non-image evidence cards.
-4. Update `packages/node-utils/src/trustVerticals.ts` with domain-to-vertical mappings for the added domains.
-5. Update the submit page platform hints/placeholders in `packages/nextjs/components/submit/ContentSubmissionSection.tsx`.
-6. Update local/deploy seeding scripts so new development chains include the same approved source categories as production.
-7. For source adapters, start with Open Food Facts, CPSC, DailyMed, CoinGecko, and FRED. Treat Best Buy as URL-plus-metadata first because its terms are tied to product offers/sales and temporary caching.
+4. Keep Guardian, AP, and other news-first sources out of the first platform batch until the voting UI has a clear News rubric.
+5. Update `packages/node-utils/src/trustVerticals.ts` with domain-to-vertical mappings for the added domains.
+6. Update the submit page platform hints/placeholders in `packages/nextjs/components/submit/ContentSubmissionSection.tsx`.
+7. Update local/deploy seeding scripts so new development chains include the same approved source categories as production.
+8. For source adapters, start with Open Food Facts, CPSC, DailyMed, CoinGecko, and FRED. Treat Best Buy as URL-plus-metadata first because its terms are tied to product offers/sales and temporary caching.
 
 ## Practical Policy For Curyo
 
