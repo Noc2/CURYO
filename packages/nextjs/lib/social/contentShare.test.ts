@@ -79,6 +79,16 @@ test("buildContentShareRatingVersion accepts Ponder epoch-second timestamps", ()
   );
 });
 
+test("buildContentShareRatingVersion accepts Ponder epoch-millisecond timestamps", () => {
+  assert.equal(
+    buildContentShareRatingVersion({
+      ...baseContent,
+      lastActivityAt: "1776160800000",
+    }),
+    "r-88-6700-12-0-1776160800",
+  );
+});
+
 test("buildContentShareData includes the rating in metadata and versioned share urls", () => {
   const data = buildContentShareData(baseContent, "https://www.curyo.xyz");
   const shareUrl = new URL(data.shareUrl);
