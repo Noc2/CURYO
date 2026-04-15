@@ -5,9 +5,87 @@ import type {
 
 export const FOLLOWED_CURATOR_TOAST_ID = "followed-curator-feedback";
 
+const FOLLOWED_ACTIVITY_SEEN_STORAGE_PREFIX = "curyo_seen_followed_activity_notifications";
+const MAX_STORED_FOLLOWED_ACTIVITY_KEYS = 100;
+
 type FollowedActivityNotification =
   | { kind: "submission"; item: PonderDiscoverSignalsSubmissionItem }
   | { kind: "resolution"; item: PonderDiscoverSignalsResolutionItem };
+
+export interface SeenFollowedActivityNotificationKeys {
+  submissionKeys: Set<string>;
+  resolutionKeys: Set<string>;
+}
+
+function getSeenFollowedActivityStorageKey(address: string) {
+  return `${FOLLOWED_ACTIVITY_SEEN_STORAGE_PREFIX}:${address.toLowerCase()}`;
+}
+
+function getBrowserLocalStorage() {
+  if (typeof window === "undefined") return null;
+
+  try {
+    return window.localStorage;
+  } catch {
+    return null;
+  }
+}
+
+function toStringArray(value: unknown) {
+  return Array.isArray(value)
+    ? value.filter((item): item is string => typeof item === "string" && item.length > 0)
+    : [];
+}
+
+function trimStoredKeys(keys: ReadonlySet<string>) {
+  return [...keys].slice(-MAX_STORED_FOLLOWED_ACTIVITY_KEYS);
+}
+
+export function readSeenFollowedActivityNotificationKeys(
+  address: string,
+  storage?: Pick<Storage, "getItem"> | null,
+): SeenFollowedActivityNotificationKeys {
+  const storageRef = storage ?? getBrowserLocalStorage();
+  if (!storageRef) {
+    return { submissionKeys: new Set(), resolutionKeys: new Set() };
+  }
+
+  try {
+    const rawValue = storageRef.getItem(getSeenFollowedActivityStorageKey(address));
+    if (!rawValue) {
+      return { submissionKeys: new Set(), resolutionKeys: new Set() };
+    }
+
+    const parsed = JSON.parse(rawValue) as { submissions?: unknown; resolutions?: unknown };
+    return {
+      submissionKeys: new Set(toStringArray(parsed.submissions)),
+      resolutionKeys: new Set(toStringArray(parsed.resolutions)),
+    };
+  } catch {
+    return { submissionKeys: new Set(), resolutionKeys: new Set() };
+  }
+}
+
+export function writeSeenFollowedActivityNotificationKeys(
+  address: string,
+  keys: SeenFollowedActivityNotificationKeys,
+  storage?: Pick<Storage, "setItem"> | null,
+) {
+  const storageRef = storage ?? getBrowserLocalStorage();
+  if (!storageRef) return;
+
+  try {
+    storageRef.setItem(
+      getSeenFollowedActivityStorageKey(address),
+      JSON.stringify({
+        submissions: trimStoredKeys(keys.submissionKeys),
+        resolutions: trimStoredKeys(keys.resolutionKeys),
+      }),
+    );
+  } catch {
+    // localStorage can be disabled or full. The in-memory refs still prevent repeats during this page session.
+  }
+}
 
 export function getFollowedSubmissionNotificationKey(item: PonderDiscoverSignalsSubmissionItem): string {
   return `${item.contentId}-${item.createdAt}`;

@@ -5,6 +5,8 @@ import {
   getFollowedSubmissionNotificationKey,
   pickFollowedActivityNotification,
   pickFollowedSubmissionNotifications,
+  readSeenFollowedActivityNotificationKeys,
+  writeSeenFollowedActivityNotificationKeys,
 } from "~~/lib/notifications/followedActivity";
 import type {
   PonderDiscoverSignalsResolutionItem,
@@ -40,6 +42,18 @@ function makeResolution(overrides: Partial<PonderDiscoverSignalsResolutionItem>)
     profileName: overrides.profileName ?? null,
     outcome: overrides.outcome ?? "won",
   };
+}
+
+class MemoryStorage implements Pick<Storage, "getItem" | "setItem"> {
+  private values = new Map<string, string>();
+
+  getItem(key: string) {
+    return this.values.get(key) ?? null;
+  }
+
+  setItem(key: string, value: string) {
+    this.values.set(key, value);
+  }
 }
 
 test("pickFollowedSubmissionNotifications limits bursts to one submission per curator", () => {
@@ -183,5 +197,27 @@ test("pickFollowedSubmissionNotifications ignores submissions that were already 
   assert.deepEqual(
     pickFollowedSubmissionNotifications([seenItem, newItem], new Set([getFollowedSubmissionNotificationKey(seenItem)])),
     [newItem],
+  );
+});
+
+test("seen followed activity notification keys persist per wallet", () => {
+  const storage = new MemoryStorage();
+  const address = "0xAbC0000000000000000000000000000000000000";
+
+  writeSeenFollowedActivityNotificationKeys(
+    address,
+    {
+      submissionKeys: new Set(["submission-1", "submission-2"]),
+      resolutionKeys: new Set(["resolution-1"]),
+    },
+    storage,
+  );
+
+  const seenKeys = readSeenFollowedActivityNotificationKeys(address.toLowerCase(), storage);
+  assert.deepEqual([...seenKeys.submissionKeys], ["submission-1", "submission-2"]);
+  assert.deepEqual([...seenKeys.resolutionKeys], ["resolution-1"]);
+  assert.equal(
+    readSeenFollowedActivityNotificationKeys("0xdef0000000000000000000000000000000000000", storage).submissionKeys.size,
+    0,
   );
 });
