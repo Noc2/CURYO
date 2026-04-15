@@ -28,16 +28,17 @@ const WhitepaperPage: NextPage = () => {
       <p>The whitepaper opens with an executive summary, followed by {SECTIONS.length} sections:</p>
       <ol>
         <li>
-          <strong>Introduction</strong> &mdash; Mission, key principles, and voting flow overview
+          <strong>Introduction</strong> &mdash; Mission, key principles, and question-first flow overview
         </li>
         <li>
-          <strong>How It Works</strong> &mdash; Round mechanics, voter ID, reward distribution, content rating
+          <strong>How It Works</strong> &mdash; Round mechanics, voter ID, reward distribution, question submissions
         </li>
         <li>
           <strong>tlock Commit-Reveal Voting</strong> &mdash; Encrypted voting, phase-weighted rewards, and resolution
         </li>
         <li>
-          <strong>Tokenomics</strong> &mdash; Token distribution, faucet tiers, participation rewards
+          <strong>Tokenomics</strong> &mdash; Token distribution, faucet tiers, participation rewards, and question
+          bounties
         </li>
         <li>
           <strong>Governance</strong> &mdash; Community governance, treasury, and collusion prevention

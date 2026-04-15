@@ -91,7 +91,12 @@ const SmartContracts: NextPage = () => {
             </tr>
             <tr>
               <td className="font-mono text-primary">ParticipationPool</td>
-              <td>Halving-tier participation rewards used by submitter and voter reward claims</td>
+              <td>Halving-tier cREP participation rewards used by submitter and voter reward claims</td>
+              <td>No</td>
+            </tr>
+            <tr>
+              <td className="font-mono text-primary">QuestionBountyEscrow</td>
+              <td>Question-scoped Celo USDC bounty custody and equal per-round bounty claims</td>
               <td>No</td>
             </tr>
             <tr>
@@ -245,8 +250,11 @@ const SmartContracts: NextPage = () => {
         emitted via events.
       </p>
       <p>
-        Submission canonicalization is delegated to <code>SubmissionCanonicalizer</code>, which normalizes supported
-        platform URLs into a deterministic submission key before duplicate checks are applied.
+        Submission canonicalization is delegated to <code>SubmissionCanonicalizer</code> when a URL is present, so
+        supported URLs and media links resolve to the correct category before the question submission key is derived
+        from the submitted metadata. The docs now describe the question-first flow: text-only submissions or optional
+        evidence, image, and YouTube links, with the bounty displayed in USD even though settlement is funded in Celo
+        USDC.
       </p>
       <div className="not-prose overflow-x-auto my-6 rounded-xl bg-base-200">
         <table className="table table-zebra [&_th]:text-base [&_td]:text-base [&_.badge]:text-base [&_th]:bg-base-300">
@@ -285,10 +293,11 @@ const SmartContracts: NextPage = () => {
       <ul>
         <li>
           <code>reserveSubmission(revealCommitment)</code>, then{" "}
-          <code>submitContent(url, title, description, tags, categoryId, salt)</code> &mdash; Reserve a hidden content
-          submission, then reveal it with a 10 cREP stake. Requires Voter ID. Duplicate URLs are rejected, and the title
-          plus description are emitted in the canonical <code>ContentSubmitted</code> event for indexers and alternate
-          frontends.
+          <code>submitQuestion(url, title, description, tags, categoryId, salt)</code> &mdash; Reserve a hidden
+          question-first submission, then reveal it with a 10 cREP stake. Requires Voter ID. The question submission key
+          is checked for duplicates, and the title plus description are emitted in the canonical{" "}
+          <code>ContentSubmitted</code> event for indexers and alternate frontends. Celo USDC bounties are funded in a
+          separate escrow transaction.
         </li>
         <li>
           <code>cancelContent(contentId)</code> &mdash; Cancel own content (1 cREP fee to the configured
@@ -495,6 +504,10 @@ const SmartContracts: NextPage = () => {
         <li>
           <code>claimReward(contentId, roundId)</code> &mdash; Claim settled-round voter payouts. Winners receive stake
           plus winnings; revealed losers receive a fixed {protocolDocFacts.revealedLoserRefundPercentLabel} rebate.
+        </li>
+        <li>
+          <code>claimParticipationReward(contentId, roundId)</code> &mdash; Claim the cREP participation reward for
+          eligible winning revealed voters, using the rate snapshotted at settlement.
         </li>
         <li>
           <code>claimSubmitterReward(contentId, roundId)</code> &mdash; Claim submitter&apos;s 10% share.
@@ -718,7 +731,7 @@ const SmartContracts: NextPage = () => {
         </li>
         <li>
           <strong>Sybil Resistance:</strong> VoterIdNFT (soulbound) required for all user actions. Per-identity stake
-          cap of 100 cREP per content per round.
+          cap of 100 cREP per content per round, plus question-first submission guardrails and claim gating.
         </li>
         <li>
           <strong>Governance Lock:</strong> Tokens are transfer-locked for 7 days when proposing or voting on

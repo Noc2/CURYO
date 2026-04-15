@@ -4,7 +4,7 @@ import type { ContentBlock } from "./types";
 export const META = {
   title: "Curyo",
   subtitle: "Human Reputation at Stake",
-  deck: "Get Verified, Claim cREP, and Rate with Stake",
+  deck: "Get Verified, Ask Questions, and Rate with Stake",
   author: "AI",
   version: "0.4",
   date: "April 2026",
@@ -17,7 +17,7 @@ export const EXECUTIVE_SUMMARY: ContentBlock[] = [
   },
   {
     type: "paragraph",
-    text: `Curyo is a decentralized content curation protocol that replaces passive engagement metrics with stake-weighted prediction games. In the redeployed rating model, voters judge whether the currently displayed community score for a content item is too low or too high and back that judgment with cREP token stakes. Each round snapshots a canonical reference score on-chain, and the settlement logic updates the next score from that anchor rather than recomputing from scratch. Votes are encrypted via tlock (time-lock encryption) and hidden until each ${protocolDocFacts.blindPhaseDurationLabel} epoch ends, preventing herding. Commits in the redeployed stack bind the reference score together with explicit drand metadata (targetRound and drandChainHash), and on-chain logic rejects malformed or non-armored ciphertexts while the keeper/runtime layer still performs deeper stanza checks before reveal. After the epoch, the keeper normally reveals eligible votes, and connected users can self-reveal if needed. The side with the larger epoch-weighted stake wins -- early (blind) voters earn full reward weight, while later voters who saw epoch-1 results earn ${protocolDocFacts.openPhaseWeightLabel} weight, creating a ${protocolDocFacts.earlyVoterAdvantageLabel} incentive to vote early.`,
+    text: `Curyo is a decentralized content curation protocol that combines question-first submissions, optional bounties, and stake-weighted prediction games. Submissions start as a question and can be text only or include a regular evidence link, direct image link, or YouTube link. Optional bounties are funded in Celo USDC and displayed as USD, while voters judge whether the currently displayed community score for a content item is too low or too high and back that judgment with cREP token stakes. Each round snapshots a canonical reference score on-chain, and the settlement logic updates the next score from that anchor rather than recomputing from scratch. Votes are encrypted via tlock (time-lock encryption) and hidden until each ${protocolDocFacts.blindPhaseDurationLabel} epoch ends, preventing herding. Commits in the redeployed stack bind the reference score together with explicit drand metadata (targetRound and drandChainHash), and on-chain logic rejects malformed or non-armored ciphertexts while the keeper/runtime layer still performs deeper stanza checks before reveal. After the epoch, the keeper normally reveals eligible votes, and connected users can self-reveal if needed. The side with the larger epoch-weighted stake wins -- early (blind) voters earn full reward weight, while later voters who saw epoch-1 results earn ${protocolDocFacts.openPhaseWeightLabel} weight, creating a ${protocolDocFacts.earlyVoterAdvantageLabel} incentive to vote early. Question-specific USDC bounties pay equal stablecoin shares to eligible revealed Voter ID holders in qualified bounty rounds, independent of cREP outcome.`,
   },
   {
     type: "paragraph",

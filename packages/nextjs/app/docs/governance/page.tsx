@@ -200,8 +200,8 @@ const GovernanceDocs: NextPage = () => {
           the treasury.
         </li>
         <li>
-          <strong>Forfeited submitter deposits</strong> &mdash; when content is flagged for policy violations or
-          receives unfavorable ratings, the submitter&apos;s 10 cREP stake is forfeited to the treasury.
+          <strong>Forfeited submitter stakes</strong> &mdash; when content is flagged for policy violations or receives
+          unfavorable ratings, the submitter&apos;s 10 cREP stake is forfeited to the treasury.
         </li>
         <li>
           <strong>Forfeited unrevealed votes</strong> &mdash; unrevealed past-epoch stakes that miss the reveal window

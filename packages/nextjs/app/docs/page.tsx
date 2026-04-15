@@ -1,7 +1,6 @@
 import Link from "next/link";
 import type { NextPage } from "next";
 import { protocolCopy } from "~~/lib/docs/protocolCopy";
-import { protocolDocFacts } from "~~/lib/docs/protocolFacts";
 
 const DocsIntro: NextPage = () => {
   return (
@@ -23,15 +22,15 @@ const DocsIntro: NextPage = () => {
         />
         <FeatureCard
           title="Voter ID (One Person, One Vote)"
-          description="Each verified human gets one non-transferable Voter ID with a per-round stake cap."
+          description="Each verified human gets one non-transferable Voter ID that gates claims and per-round influence."
         />
         <FeatureCard
-          title="Per-Content Rounds"
-          description={`Each content item has its own blind-voting rounds, and early voters earn ${protocolDocFacts.earlyVoterAdvantageLabel} more reward weight.`}
+          title="Question-First Submissions"
+          description="Questions can be text only or include a regular link, direct image link, or YouTube link."
         />
         <FeatureCard
-          title="Contributor Rewards"
-          description="Submitters and accurate voters earn when rounds settle."
+          title="Question Bounties"
+          description="Eligible revealed participants claim equal USDC bounty shares in qualified question rounds."
         />
       </div>
       <p>

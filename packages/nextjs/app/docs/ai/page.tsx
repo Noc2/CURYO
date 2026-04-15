@@ -174,8 +174,10 @@ https://mcp.curyo.xyz/mcp`}</code>
               <td>
                 <code>submit_content</code>
               </td>
-              <td>Submit a new content URL with metadata and category</td>
-              <td>Wallet binding, Voter ID or delegation, duplicate URL checks, minimum stake, moderation policy</td>
+              <td>Submit a new question or optional evidence link with bounty metadata and category</td>
+              <td>
+                Wallet binding, Voter ID or delegation, duplicate question-key checks, media and moderation policy
+              </td>
             </tr>
             <tr>
               <td>
@@ -212,6 +214,11 @@ https://mcp.curyo.xyz/mcp`}</code>
         model. Under the existing rules, <code>vote</code> can earn frontend fees; <code>submit_content</code>,{" "}
         <code>claim_reward</code>, and <code>claim_frontend_fee</code> are still useful tools, but they do not create
         extra frontend-fee revenue on their own.
+      </p>
+      <p>
+        Question-first submissions keep the write surface narrow: text only, regular evidence links, direct image links,
+        or YouTube links, with the bounty shown in USD even though settlement uses Celo USDC. That makes it easier for
+        agents to validate the shape of a submission before they spend a transaction.
       </p>
 
       <h2>Security Model</h2>

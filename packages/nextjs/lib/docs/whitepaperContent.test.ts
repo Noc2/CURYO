@@ -42,7 +42,7 @@ function collectWhitepaperText(): string {
 
 test("whitepaper metadata reflects the updated title-case brand deck", () => {
   assert.equal(META.subtitle, "Human Reputation at Stake");
-  assert.equal(META.deck, "Get Verified, Claim cREP, and Rate with Stake");
+  assert.equal(META.deck, "Get Verified, Ask Questions, and Rate with Stake");
 });
 
 test("whitepaper metadata reflects the April 2026 protocol revision", () => {
@@ -52,7 +52,7 @@ test("whitepaper metadata reflects the April 2026 protocol revision", () => {
 
 test("whitepaper introduction surfaces the updated lead copy", () => {
   assert.equal(SECTIONS[0]?.title, "Introduction");
-  assert.equal(SECTIONS[0]?.lead, "Get Verified, Claim cREP, and Rate with Stake");
+  assert.equal(SECTIONS[0]?.lead, "Get Verified, Ask Questions, and Rate with Stake");
 });
 
 test("whitepaper contents include the current eight sections", () => {
@@ -80,8 +80,9 @@ test("whitepaper executive summary preserves the updated brand framing", () => {
     throw new Error("Expected executive summary block to be a paragraph");
   }
 
-  assert.match(summaryBlock.text, /stake-weighted prediction games/i);
+  assert.match(summaryBlock.text, /question-first submissions, optional bounties/i);
   assert.match(summaryBlock.text, /preventing herding/i);
+  assert.match(summaryBlock.text, /equal stablecoin shares/i);
 });
 
 test("whitepaper avoids stale protocol audit phrases", () => {
@@ -102,4 +103,6 @@ test("whitepaper avoids stale protocol audit phrases", () => {
 
   assert.match(whitepaperText, /49-scenario/i);
   assert.match(whitepaperText, /SDK, MCP & Reference Stack/i);
+  assert.match(whitepaperText, /question-first/i);
+  assert.match(whitepaperText, /Celo USDC/i);
 });
