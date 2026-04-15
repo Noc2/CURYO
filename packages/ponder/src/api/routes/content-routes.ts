@@ -276,6 +276,7 @@ export function registerContentRoutes(app: ApiApp) {
   app.get("/rounds", async (c) => {
     const contentId = c.req.query("contentId");
     const stateFilter = c.req.query("state");
+    const submitter = c.req.query("submitter");
     const limit = safeLimit(c.req.query("limit"), 50, 200);
     const offset = safeOffset(c.req.query("offset"));
     if (Number.isNaN(offset)) return c.json({ error: "Invalid offset" }, 400);
@@ -290,6 +291,10 @@ export function registerContentRoutes(app: ApiApp) {
       const parsed = parseInt(stateFilter);
       if (isNaN(parsed)) return c.json({ error: "Invalid state filter" }, 400);
       conditions.push(eq(round.state, parsed));
+    }
+    if (submitter) {
+      if (!isValidAddress(submitter)) return c.json({ error: "Invalid submitter address" }, 400);
+      conditions.push(eq(content.submitter, submitter.toLowerCase() as `0x${string}`));
     }
 
     const where = conditions.length > 0 ? and(...conditions) : undefined;
@@ -339,6 +344,7 @@ export function registerContentRoutes(app: ApiApp) {
     const [countResult] = await db
       .select({ count: sql<number>`count(*)` })
       .from(round)
+      .leftJoin(content, eq(round.contentId, content.id))
       .where(where);
 
     return jsonBig(c, {

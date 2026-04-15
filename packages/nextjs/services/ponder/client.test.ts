@@ -99,9 +99,11 @@ test("ponderApi.getContentWindow respects hasMore when search totals are omitted
 test("ponderApi.getAllRounds paginates every round for a content item", async () => {
   const originalGetRounds = ponderApi.getRounds;
   const offsets: string[] = [];
+  const submitters: Array<string | undefined> = [];
 
   ponderApi.getRounds = async params => {
     offsets.push(params?.offset ?? "0");
+    submitters.push(params?.submitter);
     const offset = Number(params?.offset ?? 0);
     const length = offset === 0 ? 200 : 25;
 
@@ -114,10 +116,18 @@ test("ponderApi.getAllRounds paginates every round for a content item", async ()
   };
 
   try {
-    const rounds = await ponderApi.getAllRounds({ contentId: "7", state: "2" });
+    const rounds = await ponderApi.getAllRounds({
+      contentId: "7",
+      state: "2",
+      submitter: "0x0000000000000000000000000000000000000001",
+    });
 
     assert.equal(rounds.length, 225);
     assert.deepEqual(offsets, ["0", "200"]);
+    assert.deepEqual(submitters, [
+      "0x0000000000000000000000000000000000000001",
+      "0x0000000000000000000000000000000000000001",
+    ]);
   } finally {
     ponderApi.getRounds = originalGetRounds;
   }

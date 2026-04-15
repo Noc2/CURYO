@@ -600,11 +600,11 @@ export const ponderApi = {
     } satisfies PonderContentResponse;
   },
 
-  getRounds(params?: { contentId?: string; state?: string; limit?: string; offset?: string }) {
+  getRounds(params?: { contentId?: string; state?: string; submitter?: string; limit?: string; offset?: string }) {
     return ponderGet<PonderRoundsResponse>("/rounds", params);
   },
 
-  async getAllRounds(params?: { contentId?: string; state?: string }) {
+  async getAllRounds(params?: { contentId?: string; state?: string; submitter?: string }) {
     return getAllPages(offset =>
       this.getRounds({
         ...params,

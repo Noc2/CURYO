@@ -49,27 +49,23 @@ export function useClaimableSubmitterRewards() {
         return { settledRounds: [] };
       }
 
-      const contentResponse = await ponderApi.getAllContent({
+      const rounds = await ponderApi.getAllRounds({
         submitter: address,
-        status: "all",
+        state: String(ROUND_STATE.Settled),
       });
 
-      const settledRounds = await Promise.all(
-        contentResponse.map(async contentItem => {
-          const rounds = await ponderApi.getAllRounds({
-            contentId: contentItem.id,
-            state: String(ROUND_STATE.Settled),
-          });
-
-          return {
-            contentId: contentItem.id,
-            rounds,
-          };
-        }),
-      );
+      const roundsByContentId = new Map<string, PonderRoundsResponse["items"]>();
+      for (const round of rounds) {
+        const existing = roundsByContentId.get(round.contentId) ?? [];
+        existing.push(round);
+        roundsByContentId.set(round.contentId, existing);
+      }
 
       return {
-        settledRounds,
+        settledRounds: Array.from(roundsByContentId, ([contentId, rounds]) => ({
+          contentId,
+          rounds,
+        })),
       };
     },
     rpcFn: async () => ({ settledRounds: [] }),
