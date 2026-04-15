@@ -4,6 +4,8 @@ Last checked: 2026-04-15
 
 This note turns the proposed Products, Investment, Health, and News verticals into concrete source/platform recommendations for Curyo.
 
+The most important update from the second research pass is that new platforms should be image-native whenever possible. Curyo's vote/discover surfaces are visual, and human verification is more useful when a submitted item has a recognizable source image, product image, logo, chart, or article thumbnail.
+
 Important distinction: Curyo has two layers now.
 
 - Trust verticals are the user-facing discovery buckets, stored for new submissions as reserved `vertical:<slug>` tags.
@@ -15,147 +17,162 @@ The recommendations below separate three integration levels:
 - **Metadata/API:** Curyo can enrich submissions or validate URLs using an official API.
 - **Automated source adapter:** the bot can discover and submit items periodically.
 
-## Recommendation summary
+## Image Policy
 
-| Vertical | Platform | Domain to register | Recommendation | Integration check |
-| --- | --- | --- | --- | --- |
-| Products | Open Food Facts | `openfoodfacts.org` | Add now | API and data reuse are intentionally open, with ODbL/DBCL and image license obligations. |
-| Products | Best Buy | `bestbuy.com` | Add now, with constraints | Official product API allows applications/websites, but requires an API key, attribution, limited caching, and careful category exclusions. |
-| Products | Product Hunt | `producthunt.com` | Add URL-only now; API only after approval | Public API exists, but Product Hunt says commercial/business API use requires contacting them. |
-| Investment | SEC EDGAR | `sec.gov` | Add now | Official REST APIs expose public filings and XBRL JSON without auth keys, subject to fair access. |
-| Investment | FRED | `fred.stlouisfed.org` | Add now | Official API permits applications that interoperate with FRED, but requires API keys and source/endorsement notices. |
-| Investment | Nasdaq Data Link | `data.nasdaq.com` | Defer unless using a specific licensed/free dataset | API integration is supported, but free/premium dataset rights vary by feed and use case. |
-| Health | PubMed | `pubmed.ncbi.nlm.nih.gov` | Add now | NCBI E-utilities are public APIs for PubMed, subject to tool/email identification and request limits. |
-| Health | ClinicalTrials.gov | `clinicaltrials.gov` | Add now | API v2 is a public REST/OpenAPI service for trial records. |
-| Health | FDA/openFDA | `fda.gov` | Add now | openFDA data is generally CC0/public-domain-like, with explicit caveats for some third-party data. |
-| News | The Guardian | `theguardian.com` | Add URL-only now; API only with the right key | Developer API is for non-commercial usage; commercial Curyo use should request a commercial key. |
-| News | AP News | `apnews.com` | Add URL-only only; API after contract | AP supports licensed API integrations, but API access and content use depend on contract terms. |
+For new platform integrations, prefer sources that satisfy at least one of these conditions:
 
-## Add now
+- An official API returns an image, logo, media URL, or thumbnail field.
+- The official platform publishes a deterministic visual from official data, such as a FRED chart generated from a series page.
+- Curyo has a commercial/license agreement that permits API-derived images or media display.
+
+Avoid relying on scraped Open Graph images as the primary strategy. OG images are fine as a best-effort preview for generic URLs, but they should not be the reason to approve a new platform category. Store canonical source URLs, store image URLs only when permitted, and avoid long-lived image caching unless the source terms explicitly allow it.
+
+## Recommendation Summary
+
+| Vertical | Platform | Domain to register | Recommendation | Image support | Integration check |
+| --- | --- | --- | --- | --- | --- |
+| Products | Open Food Facts | `openfoodfacts.org` | Add now | Strong. Product image URLs are available in product data and images are also published through an AWS image dataset. | Open reuse model, but honor ODbL/DBCL and CC BY-SA obligations for product images. |
+| Products | Best Buy | `bestbuy.com` | Add with constraints | Strong. Products API exposes many image URL fields, including front, large, medium, thumbnail, alternate, 360, and EnergyGuide images. | API key required. Terms permit use in apps/websites connected to Best Buy product offers/sales; attribution, links, and temporary caching constraints apply. |
+| Products | CPSC Recalls | `cpsc.gov` | Add now | Good. Recall records and pages can include product image URLs, though older recalls may not have images. | Public CPSC recall API is available in XML/JSON and is intended for consumers, businesses, and developers. |
+| Products / Software | Product Hunt | `producthunt.com` | Conditional | Strong technically. GraphQL `Media` exposes public media URLs and thumbnails. | Not first wave unless Curyo gets approval: Product Hunt says business/commercial API use requires contacting them. |
+| Investment | CoinGecko | `coingecko.com` | Already integrated; keep as Investment | Strong. Coin APIs expose coin image URLs. | Terms require "Powered by CoinGecko" attribution and careful cache refresh/deletion behavior. |
+| Investment | FRED | `fred.stlouisfed.org` | Add now if chart thumbnailing is acceptable | Medium. The source is data-first, but Curyo can render official series data as a chart thumbnail and link to the FRED graph. | Official API supports applications retrieving FRED data; API key and FRED terms/third-party data restrictions apply. |
+| Investment | Polygon.io / Massive | `polygon.io` or `massive.com` | Conditional | Strong for equities. Ticker details expose branding assets such as logos/icons. | Use only after confirming plan/licensing for Curyo's commercial/tokenized use case. |
+| Investment | SEC EDGAR | `sec.gov` | Defer from image-first wave | Weak. EDGAR is highly valuable but has no reliable first-party image/logo support for filings. | Keep as a later text-first exception for filings, not as an image-native launch platform. |
+| Health | DailyMed | `dailymed.nlm.nih.gov` | Add now | Strong. DailyMed `/spls/{SETID}/media` returns links to label media, including JPEG image URLs when present. | Public NLM REST API; best source for official drug-label and pill/label imagery. |
+| Health | FDA/openFDA | `fda.gov` | Conditional text-first exception | Weak to mixed. openFDA is excellent for labels, recalls, and safety data, but reliable image support is sparse compared with DailyMed and CPSC. | Use later for evidence data; avoid treating it as an image-native platform unless a specific FDA dataset has images. |
+| Health | PubMed | `pubmed.ncbi.nlm.nih.gov` | Defer from image-first wave | Weak. PubMed metadata is not reliably image-native and article figures usually belong to publishers. | Valuable for evidence quality later, but better as a text-first research source than a platform tab addition. |
+| Health | ClinicalTrials.gov | `clinicaltrials.gov` | Defer from image-first wave | Weak. Trial records are structured and useful but not visual. | Valuable later as a text-first source for trial interpretation. |
+| News | The Guardian | `theguardian.com` | Conditional | Strong with the right key. Guardian Open Platform stores articles, images, audio, and videos; commercial tier includes images/media. | Curyo should request a commercial key before reproducing API-derived Guardian images or article content. |
+| News | AP News / AP Media API | `apnews.com` | Conditional | Strong with a contract. AP Media API supports pictures, graphics, video, audio, text, and linked curated content. | API/media access depends on AP contract terms and must run through secure server middleware, not browser calls. |
+
+## Image-Native First Wave
+
+These are the platforms I would implement first because they are useful to Curyo's verified-human thesis and can support visual cards without brittle scraping.
 
 ### Open Food Facts
 
 **Why it fits Curyo:** Product labels, nutrition claims, ingredients, allergens, and environmental labels are exactly the kind of evidence-heavy product information where verified human raters matter. Bots can parse labels, but humans are better at spotting misleading framing and deciding whether a product page is trustworthy.
 
-**Integration fit:** Add as a Products platform now. Start with URL-only submissions and a lightweight API adapter later.
+**Integration fit:** Add as a Products platform now. Start with URL submissions plus API-backed metadata/image lookup by barcode or product URL.
+
+**Image support:** Strong. Open Food Facts documents product image downloads, selected image URLs in product data, and an AWS image dataset. Use resized images where possible instead of full-resolution downloads.
 
 **Compliance notes:**
 
-- The API docs say Open Food Facts is open data and that anyone can reuse it for any purpose, but the database is under the Open Database License, database contents are under the Database Contents License, and product images are Creative Commons Attribution-ShareAlike with possible additional rights.
+- The database is available under ODbL, individual database contents under DBCL, and product images under Creative Commons Attribution-ShareAlike with possible extra third-party rights.
 - Read API calls do not require authentication beyond a custom User-Agent. Write calls require authentication.
 - Rate limits are explicit: 100 read product requests per minute, 10 search requests per minute, and 2 facet requests per minute.
 - Fill out their API usage form before production automation.
 
 **Suggested subcategories:** Food, Nutrition, Ingredients, Allergens, Labels.
 
-Sources: [Open Food Facts API docs](https://openfoodfacts.github.io/openfoodfacts-server/api/), [Open Food Facts data page](https://world.openfoodfacts.org/data).
+Sources: [Open Food Facts API docs](https://openfoodfacts.github.io/openfoodfacts-server/api/), [Open Food Facts image download docs](https://openfoodfacts.github.io/openfoodfacts-server/api/how-to-download-images/), [Open Food Facts AWS images dataset](https://openfoodfacts.github.io/openfoodfacts-server/api/aws-images-dataset/), [Open Food Facts license notes](https://openfoodfacts.github.io/openfoodfacts-server/api/tutorials/license-be-on-the-legal-side/).
 
 ### Best Buy
 
 **Why it fits Curyo:** Consumer electronics and appliances are high-stakes enough for human judgement. Verified raters can evaluate whether a product looks reliable, overpriced, obsolete, or review-gamed without Curyo needing to ingest user reviews.
 
-**Integration fit:** Add as a Products platform now. Prefer URL-only first, then an API-backed metadata adapter for product name, SKU, category, price, and canonical links.
+**Integration fit:** Add as a Products platform with constraints. URL-only submissions are safe. API-backed enrichment should link back to Best Buy product pages and respect the API terms.
+
+**Image support:** Strong. The Products API exposes many image URL fields, including product detail, large, medium, thumbnail, front, side, rear, alternate, 360-degree, remote-control, and EnergyGuide images.
 
 **Compliance notes:**
 
-- Best Buy provides Products, Stores, and Categories APIs and lets developers query product data.
+- Best Buy provides Products, Stores, and Categories APIs and returns JSON/XML.
 - The API terms grant a limited license for applications/websites connected to Best Buy product/service offers or sales.
-- Content must be attributed to Best Buy, links and notices must not be obscured, and API content may only be cached temporarily, not beyond 72 hours.
+- Content must preserve attribution, notices, and links. Do not obscure Best Buy links.
+- API content should be cached only temporarily. The documentation notes that response links expire after seven days.
 - The terms exclude Games, CDs, DVDs, and Blu-ray content unless Curyo is an affiliate or has a separate signed agreement. Keep the initial scope to electronics, computing, appliances, smart home, and similar hard goods.
 
 **Suggested subcategories:** Electronics, Computing, Appliances, Gaming Hardware, Smart Home.
 
 Sources: [Best Buy Developer API documentation](https://developer.bestbuy.com/documentation/products-api), [Best Buy API terms](https://developers.bestbuy.com/legal).
 
-### SEC EDGAR
+### CPSC Recalls
 
-**Why it fits Curyo:** Filings are public, consequential, and hard to interpret. Verified humans can rate whether a filing, risk disclosure, S-1, 8-K, or shareholder communication is clear, material, and not being misrepresented by surrounding hype.
+**Why it fits Curyo:** Product safety recalls are highly consequential, public, and often visually identifiable. Verified humans can rate whether the recall, hazard, remedy, and product context are being represented accurately.
 
-**Integration fit:** Add as an Investment platform now. A bot adapter can later ingest recent filings, but human submit is already useful.
+**Integration fit:** Add as a Products platform now. It can also feed Health-adjacent product safety items, but the default vertical should be Products because the source category is consumer products.
+
+**Image support:** Good. The official recall API exposes structured recall records and the programmer guide includes an `Images` collection with image URLs; CPSC recall pages also display product images when available. Older records may have empty image arrays.
 
 **Compliance notes:**
 
-- SEC publishes RESTful JSON APIs for submissions and XBRL data via `data.sec.gov`; no authentication or API key is required.
-- SEC fair access guidance asks developers to use efficient scripting and limits users to no more than 10 requests per second.
-- Automated tools should identify themselves with a clear User-Agent/contact and avoid broad crawling.
+- CPSC says recall data is publicly available to consumers, businesses, and developers.
+- The recall API returns XML or JSON and exposes machine-readable recall information visible on CPSC.gov.
+- Use CPSC as the canonical source, link to the official recall URL, and do not transform recall language in a way that changes the safety meaning.
 
-**Suggested subcategories:** 10-K, 10-Q, 8-K, S-1, Proxy.
+**Suggested subcategories:** Recalls, Safety, Hazards, Remedies, Consumer Products.
 
-Sources: [SEC EDGAR API documentation](https://www.sec.gov/edgar/sec-api-documentation), [SEC developer resources](https://www.sec.gov/about/developer-resources).
+Sources: [CPSC Recalls API information](https://www.cpsc.gov/Recalls/CPSC-Recalls-Application-Program-Interface-API-Information), [CPSC recalls page](https://www.cpsc.gov/Recalls/).
+
+### DailyMed
+
+**Why it fits Curyo:** Official drug labels, boxed warnings, indications, adverse reactions, packaging, and pill images are a strong fit for verified human rating. This is meaningfully more appropriate than general wellness content because the source is official and auditable.
+
+**Integration fit:** Add as a Health platform now. Use URL submissions first, then API-backed metadata/media lookup by SET ID, drug name, NDC, RxCUI, or label page URL.
+
+**Image support:** Strong. DailyMed's `/spls/{SETID}/media` endpoint returns links to all media for a specified SPL, including JPEG image URLs when present.
+
+**Compliance notes:**
+
+- DailyMed REST services are public, versioned, GET-only endpoints that return XML or JSON.
+- Keep health disclaimers visible. Curyo ratings should be presented as trust/context signals, not medical advice.
+- Store the DailyMed URL, SET ID, title, and permitted media URL. Avoid copying large label sections into Curyo.
+
+**Suggested subcategories:** Drug Label, Boxed Warning, OTC, Pill Image, Packaging.
+
+Sources: [DailyMed web services](https://dailymed.nlm.nih.gov/dailymed/app-support-web-services.cfm), [DailyMed `/spls` API](https://dailymed.nlm.nih.gov/dailymed/webservices-help/v2/spls_api.cfm), [DailyMed `/spls/{SETID}/media` API](https://dailymed.nlm.nih.gov/dailymed/webservices-help/v2/spls_setid_media_api.cfm).
+
+### CoinGecko
+
+**Why it fits Curyo:** Crypto tokens are already part of Curyo, and the vertical taxonomy should move them into Investment. Human verification is useful because crypto data is bot-heavy, hype-heavy, and vulnerable to coordinated promotion.
+
+**Integration fit:** Keep as an Investment platform and continue using official API metadata where possible.
+
+**Image support:** Strong. CoinGecko's market-data endpoints include a coin image URL field.
+
+**Compliance notes:**
+
+- Attribute CoinGecko prominently where API data is used.
+- CoinGecko allows products that incorporate the API, but does not allow resale, redistribution, or syndication of API access itself.
+- If Curyo stores CoinGecko data, refresh cached data at least every 24 hours and honor deletion requirements if access ends.
+
+**Suggested subcategories:** Token, Protocol, Exchange, DeFi, NFT.
+
+Sources: [CoinGecko coins markets API](https://docs.coingecko.com/reference/coins-markets), [CoinGecko coin data API](https://docs.coingecko.com/reference/coins-id), [CoinGecko API terms](https://www.coingecko.com/en/api_terms).
 
 ### FRED
 
 **Why it fits Curyo:** Macro series are important in investment discussions but easy to cherry-pick. Verified raters can score whether a submitted chart, series, or economic claim is responsibly contextualized.
 
-**Integration fit:** Add as an Investment platform now. Use official FRED series pages for submissions and the API for metadata/observations.
+**Integration fit:** Add as an Investment platform if Curyo accepts chart thumbnails as image support. The platform is data-first, but the UI can render a chart image from official FRED series data and link to the canonical FRED graph.
+
+**Image support:** Medium. FRED is not a media API, but the content is inherently visual when represented as a chart. Curyo should generate the chart thumbnail from official series observations rather than scraping arbitrary graph images.
 
 **Compliance notes:**
 
-- FRED API v2 is explicitly meant for programs and applications that retrieve economic data from FRED.
-- All web service requests require an API key, and each application should use a distinct key.
-- The API terms require a notice that the product uses the FRED API and is not endorsed/certified by the Federal Reserve Bank of St. Louis.
-- Some FRED series are owned by third parties and may have copyright restrictions. For Curyo, store source URLs and metadata, but avoid redistributing copyrighted series data unless the series terms allow it.
+- FRED API v2 supports applications retrieving economic data from FRED.
+- API requests require an API key.
+- FRED terms warn that some series are owned by third parties and may have copyright restrictions. Store source URLs and metadata, but avoid redistributing restricted series data beyond what the terms allow.
+- Include the required notice that the product uses the FRED API and is not endorsed/certified by the Federal Reserve Bank of St. Louis.
 
 **Suggested subcategories:** Inflation, Rates, Labor, GDP, Housing.
 
-Sources: [FRED API v2 docs](https://fred.stlouisfed.org/docs/api/fred/v2/), [FRED API keys](https://fred.stlouisfed.org/docs/api/api_key.html), [FRED API terms](https://fred.stlouisfed.org/docs/api/terms_of_use.html).
+Sources: [FRED API docs](https://fred.stlouisfed.org/docs/api/fred/), [FRED API v2 docs](https://fred.stlouisfed.org/docs/api/fred/v2/), [FRED API terms](https://fred.stlouisfed.org/docs/api/terms_of_use.html).
 
-### PubMed
+## Conditional Image-Native Additions
 
-**Why it fits Curyo:** Health claims need evidence quality. Human-verified ratings are useful for distinguishing clinical studies, reviews, weak associations, preclinical findings, and overclaimed conclusions.
-
-**Integration fit:** Add as a Health platform now. Start URL-only for PubMed pages; later add E-utilities metadata lookup by PMID.
-
-**Compliance notes:**
-
-- NCBI provides public E-utilities APIs that include PubMed.
-- NCBI recommends no more than 3 requests per second, with large jobs run off-hours.
-- E-utility requests should include `tool` and `email`; API keys are recommended for higher request rates.
-- Do not reproduce abstracts or article text broadly. Store the PMID, source URL, title when permitted, and Curyo's own user-submitted framing.
-
-**Suggested subcategories:** Clinical Study, Review, Meta-analysis, Guideline, Case Report.
-
-Sources: [NCBI APIs](https://www.ncbi.nlm.nih.gov/home/develop/api/), [NCBI E-utilities guide](https://www.ncbi.nlm.nih.gov/books/NBK25497/), [E-utilities parameters](https://www.ncbi.nlm.nih.gov/books/NBK25499/).
-
-### ClinicalTrials.gov
-
-**Why it fits Curyo:** Trials are public but often misunderstood. Verified raters can evaluate whether a study is recruiting, completed, has results, is powered enough to support claims, or is being used as hype.
-
-**Integration fit:** Add as a Health platform now. URL-only and API-backed metadata are both reasonable.
-
-**Compliance notes:**
-
-- ClinicalTrials.gov API v2 is a public REST API using OpenAPI 3.0 and JSON responses.
-- Treat records as source material, not medical advice. Curyo UI should avoid implying treatment recommendations.
-
-**Suggested subcategories:** Interventional, Observational, Recruiting, Completed, Results.
-
-Sources: [ClinicalTrials.gov API v2 announcement](https://www.nlm.nih.gov/pubs/techbull/ma24/ma24_clinicaltrials_api_beta.html), [ClinicalTrials.gov data API](https://clinicaltrials.gov/data-api/api).
-
-### FDA/openFDA
-
-**Why it fits Curyo:** Recalls, safety alerts, drug labels, device notices, adverse-event data, and food safety updates all benefit from verified human context and careful rating.
-
-**Integration fit:** Add as a Health platform now. Register `fda.gov` so public FDA pages, `open.fda.gov`, and `api.fda.gov` can be handled under one source category.
-
-**Compliance notes:**
-
-- openFDA states that its public data is generally unrestricted and, unless otherwise noted, public domain under CC0.
-- The terms warn that some included material may not be public domain, especially third-party/copyrightable content supplied to FDA.
-- openFDA may limit or restrict use to manage load and prevent abuse.
-- Include source attribution even when not required.
-
-**Suggested subcategories:** Drug, Device, Food, Recall, Safety Alert.
-
-Sources: [openFDA APIs](https://open.fda.gov/apis/), [openFDA terms](https://open.fda.gov/terms/).
-
-## Conditional additions
+These platforms support images technically, but should not be automated until permissions, plan terms, or contracts are confirmed.
 
 ### Product Hunt
 
 **Why it fits Curyo:** Product Hunt is vulnerable to launch-day hype, coordinated promotion, and shallow popularity metrics. Verified human ratings would be meaningful for judging whether a product is real, useful, and trustworthy.
 
-**Integration fit:** Add as URL-only if Curyo only stores submitted Product Hunt URLs plus Curyo-native title/description. Do not build automated API ingestion until Product Hunt approves Curyo's use case.
+**Integration fit:** Conditional. A manual URL-only Product Hunt category is possible, but if the goal is image-native metadata, wait until Curyo has Product Hunt's approval for business/commercial API use.
+
+**Image support:** Strong. Product Hunt's GraphQL `Media` object exposes a public media URL and supports width/height arguments; video media returns a generated thumbnail URL.
 
 **Compliance notes:**
 
@@ -165,17 +182,37 @@ Sources: [openFDA APIs](https://open.fda.gov/apis/), [openFDA terms](https://ope
 
 **Suggested subcategories:** AI Tools, Developer Tools, Productivity, SaaS, Consumer Apps.
 
-Source: [Product Hunt API docs](https://www.producthunt.com/v2/docs).
+Sources: [Product Hunt API docs](https://www.producthunt.com/v2/docs), [Product Hunt GraphQL Media object](https://api-v2-docs.producthunt.com/object/media/).
+
+### Polygon.io / Massive
+
+**Why it fits Curyo:** Equities and public-company profiles fit the Investment vertical, and logos help make the voting surface understandable without relying on SEC filings alone.
+
+**Integration fit:** Conditional. Use for equity profile/logo enrichment only after choosing the correct commercial plan and confirming redistribution/display terms.
+
+**Image support:** Strong. Polygon/Massive ticker details expose branding assets such as logos and icons for supported tickers.
+
+**Compliance notes:**
+
+- Treat market data and branding assets as licensed data.
+- Keep SEC EDGAR as the canonical filing source when rating filings, but use a licensed provider like Polygon/Massive only for logos/profile enrichment.
+- Do not expose API keys in the browser.
+
+**Suggested subcategories:** Equity, ETF, Company Profile, Earnings, Filing Context.
+
+Sources: [Polygon ticker overview docs](https://polygon.io/docs/rest/stocks/tickers/ticker-overview/), [Polygon/Massive site](https://polygon.io/).
 
 ### The Guardian
 
 **Why it fits Curyo:** News source trust is directly aligned with Curyo's blind phase and human verification. Users can rate whether an article is responsibly sourced, current, and not misleading.
 
-**Integration fit:** Add as URL-only first. Use the Guardian API only after selecting the correct access tier. A commercial Curyo deployment should request a commercial key before reproducing Guardian journalism, media, or API-derived content.
+**Integration fit:** Conditional. Add as a News platform after selecting the correct access tier. A commercial Curyo deployment should request a commercial key before reproducing Guardian journalism, media, or API-derived content.
+
+**Image support:** Strong with the right key. The Open Platform says it stores articles, images, audio, and videos, and the commercial tier includes access to article text, images, audio, and videos.
 
 **Compliance notes:**
 
-- The Open Platform offers a developer key for non-commercial usage with limited quotas.
+- The developer key is for non-commercial usage with limited quotas.
 - The commercial tier covers commercial enterprises and products derived from Guardian content, with custom quotas and pricing.
 - Avoid copying article bodies/images unless covered by the selected key and terms.
 
@@ -183,67 +220,82 @@ Source: [Product Hunt API docs](https://www.producthunt.com/v2/docs).
 
 Sources: [Guardian Open Platform](https://open-platform.theguardian.com/), [Guardian Open Platform access tiers](https://open-platform.theguardian.com/access/).
 
-### AP News
+### AP News / AP Media API
 
 **Why it fits Curyo:** AP is a strong source for high-signal news and election data, where verified human rating can help distinguish original reporting, syndicated summaries, and public claims.
 
-**Integration fit:** Add only as URL-only at first, and only render outbound links plus Curyo-native submission text. API-backed ingestion requires an AP license/contract.
+**Integration fit:** Conditional. API-backed ingestion requires an AP license/contract. Until then, keep AP as URL-only at most, with outbound links and Curyo-native submission text.
+
+**Image support:** Strong with contract. AP Media API supports text/story content, pictures, graphics, video, and audio depending on contract terms.
 
 **Compliance notes:**
 
-- AP Developer explicitly offers content, metadata, elections, and newsroom APIs.
 - AP Media API access is for licensed multimedia content and depends on contract terms.
-- AP API calls require a server-side API key; AP advises against direct browser integrations.
+- AP API calls require a server-side API key.
+- AP advises against direct browser integrations; use secure middleware.
 - Account quotas apply.
 
 **Suggested subcategories:** Politics, World, Business, Science, Health.
 
 Sources: [AP Developer](https://developer.ap.org/), [AP Media API getting started](https://api.ap.org/media/v/docs/Getting_Started_API.htm).
 
-### Nasdaq Data Link
+## Text-First Exceptions To Defer
 
-**Why it fits Curyo:** It can become useful for market data, index data, and investment dashboards, but it is less urgent than SEC/FRED because data licensing is more complex.
+These sources are still high-value for the trust thesis, but they do not satisfy the image-native preference well enough to be first-wave platform categories.
 
-**Integration fit:** Defer until Curyo picks a specific free or paid dataset and reviews that dataset's license. Do not scrape Nasdaq pages for market data.
+### SEC EDGAR
 
-**Compliance notes:**
+SEC filings are public, consequential, and hard to interpret, but EDGAR has no reliable first-party image/logo field. Keep it as a later Investment exception for filings, and pair it with a licensed logo/profile source if the UI needs images.
 
-- Nasdaq Data Link supports API access to free and premium datasets.
-- Free datasets are presented as usable with few restrictions, but most datasets are premium and premium terms vary by data feed and use case.
-- Professional investment applications should assume licensing review is needed.
+Sources: [SEC EDGAR API documentation](https://www.sec.gov/edgar/sec-api-documentation), [SEC developer resources](https://www.sec.gov/about/developer-resources).
 
-**Suggested subcategories:** Equities, Funds, Indexes, Market Data, Fundamentals.
+### PubMed
 
-Sources: [Nasdaq Data Link docs](https://docs.data.nasdaq.com/docs/getting-started), [Nasdaq Data Link premium terms help](https://help.data.nasdaq.com/article/566-what-are-the-terms-of-use-for-premium-data).
+PubMed is excellent for evidence quality, but it is not reliably image-native. Article figures usually belong to publishers, and PubMed metadata should not be treated as a free image source. Add later as a Health research source if Curyo is ready for text-first evidence rating.
 
-## Defer or avoid for now
+Sources: [NCBI APIs](https://www.ncbi.nlm.nih.gov/home/develop/api/), [NCBI E-utilities guide](https://www.ncbi.nlm.nih.gov/books/NBK25497/).
 
-- **Amazon:** product data is useful, but affiliate and Product Advertising API requirements make it a worse first Products source than Open Food Facts or Best Buy.
+### ClinicalTrials.gov
+
+ClinicalTrials.gov records are structured and useful, but trial records generally do not include source images. Add later for health evidence interpretation, not as an image-native launch platform.
+
+Sources: [ClinicalTrials.gov data API](https://clinicaltrials.gov/data-api/api), [ClinicalTrials.gov API v2 announcement](https://www.nlm.nih.gov/pubs/techbull/ma24/ma24_clinicaltrials_api_beta.html).
+
+### FDA/openFDA
+
+openFDA is excellent for labels, recalls, adverse events, and safety data, and its terms are generally permissive. The issue is not API access; it is sparse image support. Prefer DailyMed for drug-label media and CPSC for consumer-product recall images, then add openFDA later as an evidence/data adapter.
+
+Sources: [openFDA APIs](https://open.fda.gov/apis/), [openFDA terms](https://open.fda.gov/terms/).
+
+## Avoid For Now
+
+- **Amazon:** product images and product data are useful, but Product Advertising API, affiliate requirements, and commerce constraints make it a worse first Products source than Open Food Facts, Best Buy, or CPSC.
 - **WebMD, Healthline, supplement blogs, and wellness marketplaces:** health content is high-liability and SEO-spam-prone. Use official health sources first.
-- **Yahoo Finance as a primary Investment source:** useful URLs, but no clean official API for Curyo-style automated ingestion. Prefer SEC, FRED, and carefully licensed market data.
-- **GDELT/NewsAPI-style aggregators as source categories:** useful for discovery, but submitted content should point to the original publisher whenever possible.
+- **Yahoo Finance as a primary Investment source:** useful URLs, but no clean official API for Curyo-style automated ingestion. Prefer CoinGecko, FRED, SEC later, and carefully licensed market-data/logo providers.
+- **GDELT/NewsAPI-style aggregators as source categories:** useful for discovery, but submitted content should point to the original publisher whenever possible. Image rights usually belong to publishers, not aggregators.
 
-## Suggested first implementation slice
+## Suggested First Implementation Slice
 
-1. Add approved CategoryRegistry entries for:
+1. Add approved CategoryRegistry entries for image-native first-wave platforms:
    - Open Food Facts: `openfoodfacts.org`
    - Best Buy: `bestbuy.com`
-   - SEC EDGAR: `sec.gov`
+   - CPSC Recalls: `cpsc.gov`
+   - DailyMed: `dailymed.nlm.nih.gov`
    - FRED: `fred.stlouisfed.org`
-   - PubMed: `pubmed.ncbi.nlm.nih.gov`
-   - ClinicalTrials.gov: `clinicaltrials.gov`
-   - FDA/openFDA: `fda.gov`
-2. Add conditional URL-only categories for Product Hunt, The Guardian, and AP News only if the submit UI does not scrape/copy their content. Otherwise defer them until API/commercial permissions are in place.
-3. Update `packages/node-utils/src/trustVerticals.ts` with domain-to-vertical mappings for all added domains.
-4. Update the submit page platform hints/placeholders in `packages/nextjs/components/submit/ContentSubmissionSection.tsx`.
-5. Update local/deploy seeding scripts so new development chains include the same approved source categories as production.
-6. Add bot source adapters only for the "add now" API-friendly sources, starting with SEC EDGAR, FRED, PubMed, ClinicalTrials.gov, FDA, and Open Food Facts. Treat Best Buy as a metadata adapter first because its terms are tied to product/service offers and temporary caching.
+   - CoinGecko already exists and should map to Investment.
+2. Do not add Product Hunt, Guardian, AP, or Polygon/Massive as automated adapters until the required commercial/API permissions or paid plans are confirmed. URL-only submission can be considered separately, but it should not be presented as image-native.
+3. Keep SEC EDGAR, PubMed, ClinicalTrials.gov, and openFDA out of the first platform batch. Add them later as text-first exceptions once the product explicitly supports non-image evidence cards.
+4. Update `packages/node-utils/src/trustVerticals.ts` with domain-to-vertical mappings for the added domains.
+5. Update the submit page platform hints/placeholders in `packages/nextjs/components/submit/ContentSubmissionSection.tsx`.
+6. Update local/deploy seeding scripts so new development chains include the same approved source categories as production.
+7. For source adapters, start with Open Food Facts, CPSC, DailyMed, CoinGecko, and FRED. Treat Best Buy as URL-plus-metadata first because its terms are tied to product offers/sales and temporary caching.
 
-## Practical policy for Curyo
+## Practical Policy For Curyo
 
-- Store canonical source URLs and Curyo-native submission text.
 - Prefer official APIs over scraping.
+- Store canonical source URLs and Curyo-native submission text.
+- Store image URLs only when the source terms allow it.
+- Cache only when the source terms allow it, and expire cached metadata aggressively for conditional/commercial sources.
 - Use server-side API keys only; never expose third-party keys in the browser.
 - Include source attribution and outbound links.
-- Cache only when the source terms allow it, and expire cached metadata aggressively for conditional/commercial sources.
 - Keep health and investment disclaimers visible: ratings are human trust signals, not medical or financial advice.
