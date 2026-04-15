@@ -6,7 +6,8 @@
   "exports": {
     "./contentModeration": "./src/contentModeration.ts",
     "./keystore": "./src/keystore.ts",
-    "./mcpSessionToken": "./src/mcpSessionToken.ts"
+    "./mcpSessionToken": "./src/mcpSessionToken.ts",
+    "./trustVerticals": "./src/trustVerticals.ts"
   },
   "scripts": {
     "check-types": "tsc --noEmit"
