@@ -1,15 +1,21 @@
 "use client";
 
 import { useMemo } from "react";
-import { type Abi, type AbiEvent, type Address } from "viem";
+import { type Address } from "viem";
 import { usePublicClient } from "wagmi";
 import { useDeployedContractInfo } from "~~/hooks/scaffold-eth";
 import { useTargetNetwork } from "~~/hooks/scaffold-eth/useTargetNetwork";
 import { usePageVisibility } from "~~/hooks/usePageVisibility";
 import { usePonderQuery } from "~~/hooks/usePonderQuery";
 import { getVoteCooldownRemainingSeconds } from "~~/lib/vote/cooldown";
+import {
+  type VoteCooldownContractInfo,
+  findVoteCommittedEvent,
+  pickVoteCooldownFallbackContract,
+} from "~~/lib/vote/cooldownFallback";
 import { type VoteCooldownLogLike, buildVoteCooldownItemsFromLogs } from "~~/lib/vote/cooldownLogs";
 import { type PonderVoteCooldownsResponse, ponderApi } from "~~/services/ponder/client";
+import { contracts } from "~~/utils/scaffold-eth/contract";
 
 interface UseVoteCooldownsParams {
   contentIds: readonly bigint[];
@@ -60,16 +66,18 @@ export function useVoteCooldowns({ contentIds, voters, nowSeconds, enabled = tru
   const contentIdsKey = normalizedContentIds.join(",");
   const votersKey = normalizedVoters.join(",");
   const queryEnabled = enabled && normalizedContentIds.length > 0 && normalizedVoters.length > 0;
-  const voteCommittedEvent = useMemo(() => {
-    if (!votingEngineInfo) return undefined;
-    return (votingEngineInfo.abi as Abi).find(
-      abiItem => abiItem.type === "event" && abiItem.name === "VoteCommitted",
-    ) as AbiEvent | undefined;
-  }, [votingEngineInfo]);
-  const rpcCooldownFallbackEnabled = Boolean(publicClient && votingEngineInfo?.address && voteCommittedEvent);
+  const configuredVotingEngineInfo = contracts?.[targetNetwork.id]?.RoundVotingEngine as
+    | VoteCooldownContractInfo
+    | undefined;
+  const voteCooldownContractInfo = pickVoteCooldownFallbackContract(votingEngineInfo, configuredVotingEngineInfo);
+  const voteCommittedEvent = useMemo(
+    () => findVoteCommittedEvent(voteCooldownContractInfo),
+    [voteCooldownContractInfo],
+  );
+  const rpcCooldownFallbackEnabled = Boolean(publicClient && voteCooldownContractInfo?.address && voteCommittedEvent);
 
   const { data: result, isLoading } = usePonderQuery<PonderVoteCooldownsResponse, PonderVoteCooldownsResponse>({
-    queryKey: ["voteCooldowns", targetNetwork.id, votingEngineInfo?.address ?? null, contentIdsKey, votersKey],
+    queryKey: ["voteCooldowns", targetNetwork.id, voteCooldownContractInfo?.address ?? null, contentIdsKey, votersKey],
     enabled: queryEnabled,
     ponderFn: async () => {
       const batches = chunkList(normalizedContentIds, PONDER_VOTE_COOLDOWN_CONTENT_ID_BATCH_SIZE);
@@ -87,16 +95,16 @@ export function useVoteCooldowns({ contentIds, voters, nowSeconds, enabled = tru
       };
     },
     rpcFn: async () => {
-      if (!publicClient || !votingEngineInfo?.address || !voteCommittedEvent) {
+      if (!publicClient || !voteCooldownContractInfo?.address || !voteCommittedEvent) {
         return { items: [] };
       }
 
-      const fromBlock = BigInt(votingEngineInfo.deployedOnBlock ?? 0);
+      const fromBlock = BigInt(voteCooldownContractInfo.deployedOnBlock ?? 0);
       const logGroups = await Promise.all(
         normalizedContentIds.flatMap(contentId =>
           normalizedVoters.map(voter =>
             publicClient.getLogs({
-              address: votingEngineInfo.address,
+              address: voteCooldownContractInfo.address,
               event: voteCommittedEvent,
               fromBlock,
               args: {
