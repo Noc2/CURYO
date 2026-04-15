@@ -28,7 +28,7 @@ The target product is not a prediction market. Curyo 2.0 should pay verified hum
 3. Extend Ponder, API routes, and generated ABIs.
 4. Reuse and refactor frontend submit, voting, bounty funding, and reward claiming flows.
 5. Update docs, READMEs, whitepaper content, tests, and deployment playbooks.
-6. Launch on testnet with conservative bounty caps before mainnet.
+6. Launch on testnet with monitoring, pause controls, and no hard bounty caps.
 
 ## Product Model
 
@@ -37,13 +37,34 @@ Curyo 2.0 should treat each submitted item as a question with optional supportin
 Recommended question fields:
 
 - Question: the binary judgment voters answer with thumbs up or thumbs down.
-- Link: an optional source, listing, image, product page, hotel page, documentation page, or other evidence URL.
+- Link: an optional source, listing, image, YouTube video, product page, hotel page, documentation page, or other evidence URL.
 - Category: the review domain or question frame, not a source-platform registry entry.
 - Description: context, review instructions, conflict disclosures, and criteria for interpreting the question.
 - Tags: optional subcategories or routing hints for discovery.
 - Bounty: optional USD-denominated Celo USDC funding attached during submission.
 
+Text-only subjective questions should be valid. A link should be optional, not required. Image links and YouTube links should be supported first for media-backed questions; broader video uploads or arbitrary hosted media should wait for a separate moderation and storage review.
+
 The submitter should understand that Curyo reports stake-backed voter judgment at vote time. For subjective use cases like product ratings, hotel ratings, aesthetics, trust, or usefulness, that is the core value. For future events or fact-based outcomes, submitter copy should clarify that Curyo is not guaranteeing future correctness and that prediction markets or oracle systems may be better tools.
+
+## Categories
+
+Curyo 2.0 should launch with governance-created categories. The first deployment should seed a useful default category set so the product is immediately usable without requiring users to create categories during onboarding.
+
+Recommended default categories:
+
+- Products.
+- Hotels and travel.
+- Restaurants and local places.
+- Design and aesthetics.
+- Apps and websites.
+- AI answers.
+- Documentation and developer help.
+- Media and images.
+- Trust and safety.
+- General opinion.
+
+Later governance can add, rename, pause, or retire categories based on actual demand and moderation load.
 
 ## USD-First Bounty UX
 
@@ -68,7 +89,7 @@ Recommended changes:
 
 - Rename the visible flow from "Submit Content" to "Submit Question" or similar product copy.
 - Replace the title field with a question field, while preserving existing validation patterns for length and required content.
-- Keep the URL/link input, but remove approved-platform domain matching from the user journey.
+- Keep the URL/link input as optional, but remove approved-platform domain matching from the user journey.
 - Keep description and category selection, but reinterpret category as the review domain or question frame.
 - Remove the Platform tab from `/submit#category`; platform onboarding should not be part of the first Curyo 2.0 submit flow.
 - Consider retaining frontend registration elsewhere if it remains part of the protocol economy.
@@ -79,9 +100,11 @@ The optional bounty panel should support:
 
 - Token: fixed to Celo USDC at launch. Do not show a USDT option in v1.
 - Amount: entered and displayed as USD, then submitted as USDC smallest units.
-- Required voters: minimum number of valid revealed voters before the bounty can pay.
-- Required settled rounds: number of settled question rounds that must complete before payout unlocks.
+- Required voters: minimum number of valid revealed voters before the bounty can pay. Protocol minimum is 3.
+- Required settled rounds: number of settled question rounds that must complete before payout unlocks. Protocol minimum is 1.
 - Refund/expiry expectation: short copy explaining when funds are refundable or claimable.
+
+The default UI preset should be stronger than the protocol minimum. A sensible first default is 5 required voters and 2 settled rounds, with lower custom values allowed down to 3 voters and 1 settled round. Higher-value bounties should show product guidance nudging submitters toward more voters and more rounds, without enforcing a hard bounty cap.
 
 Question creation and bounty funding can be two transactions at launch:
 
@@ -106,6 +129,20 @@ Areas that should change:
 - Rename content-centric copy where it confuses question semantics.
 - Update API and TypeScript models so feed items expose question text, link, description, category/frame, and bounty summary.
 - Keep internal `contentId` naming only if it reduces churn; otherwise use `questionId` at new API boundaries and contract events.
+
+## Feed Rendering
+
+The feed should evolve from the current media-card emphasis toward a Twitter-like question feed that can handle text-first submissions gracefully.
+
+Recommended rendering rules:
+
+- If the question has a supported image link, render the image preview.
+- If the question has a supported YouTube link, render the YouTube preview.
+- If the question has a regular link with available metadata, render a compact link preview.
+- If the question has no image or media preview, render the description text in the body area instead of showing an empty image placeholder.
+- Keep the question itself as the primary text, with description/context below it.
+- Keep bounty badges, category, rating, round status, and vote actions visible without making text-only cards feel broken or sparse.
+- Make text-only cards layout-stable on mobile and dense laptop feed surfaces.
 
 ## Vote Card Changes
 
@@ -163,8 +200,8 @@ Recommended bounty fields:
 - `funder`: original funder.
 - `amount`: total received token amount credited to the bounty.
 - `remainingAmount`: unclaimed or refundable token amount.
-- `requiredVoters`: minimum valid revealed voters for a round to qualify.
-- `requiredSettledRounds`: number of qualifying settled rounds funded by the bounty.
+- `requiredVoters`: minimum valid revealed voters for a round to qualify. Must be at least 3.
+- `requiredSettledRounds`: number of qualifying settled rounds funded by the bounty. Must be at least 1.
 - `startRoundId`: first round eligible for this bounty.
 - `expiry`: deadline after which unmet bounties can be refunded.
 - `refundMode`: v1 should prefer explicit refund on expiry or cancellation, not automatic rollover.
@@ -206,6 +243,8 @@ The launch payout model should be deliberately simple:
 8. cREP rewards, losses, rebates, and participation rewards remain governed by the existing round settlement model.
 
 This per-round model avoids unbounded on-chain iteration and avoids needing a unique-voter set across many rounds in v1. `claimBountyReward(bountyId, roundId)` can verify the caller's revealed commit through the voting engine and the stored round state, then transfer the user's share if it has not already been claimed.
+
+Claim identity should resolve to the underlying Voter ID, not just the current wallet address. The claim key should be `claimed[bountyId][roundId][voterId]` or equivalent, so a voter cannot claim twice by rotating delegated wallets. A delegated wallet should be able to claim only if it can prove it is authorized for the same Voter ID that produced the eligible vote, or if the Voter ID holder explicitly claims to a payout address.
 
 Recommended refund and cancellation behavior:
 
@@ -258,8 +297,9 @@ Recommended controls:
 - Version the Self.xyz eligibility configuration so bounty participation can require a newer OFAC and excluded-country policy than older Voter IDs.
 - Apply stablecoin eligibility checks to bounty funding and bounty claims.
 - Add contract pause controls for new funding and claim emergencies, with claims/refunds kept available by default where possible.
-- Keep bounty caps low at launch until legal, moderation, and issuer-policy risk is better understood.
+- Do not enforce hard bounty caps at launch. Use eligibility checks, public bounty terms, monitoring, and emergency pause controls instead.
 - Preserve transaction records needed for user tax reporting: token, amount, date, question, and claim transaction.
+- Resolve bounty claims through the underlying Voter ID holder so delegated wallets remain safe without enabling duplicate claims across wallets.
 
 Self.xyz should be treated as an important control layer, not a complete stablecoin compliance answer. Wallet screening, issuer controls, country rules, and legal review still need their own workstream.
 
@@ -269,16 +309,18 @@ Ponder should index bounties directly rather than deriving them ad hoc in the fr
 
 Recommended schema additions:
 
+- `question_media`: optional media kind, normalized URL, preview metadata, and render strategy for text-only, image, YouTube, and link-preview cards.
 - `bounty`: bounty terms, funding state, token, question/content ID, funder, amount, remaining amount, required voters, required settled rounds, expiry, status.
 - `bounty_deposit`: original funding and top-up events.
 - `bounty_round`: per-round qualification, round allocation, revealed voter count, claimed count, and claimed amount.
-- `bounty_claim`: voter claims by bounty and round.
+- `bounty_claim`: voter claims by bounty, round, and Voter ID.
 - `bounty_refund`: funder refunds and cancelled/expired bounty recovery.
 - `bounty_token`: allowlisted token metadata by chain.
 
 Recommended API additions:
 
 - Add active bounty summaries to content/feed items.
+- Add media render metadata so cards can choose image preview, YouTube preview, compact link preview, or description text.
 - Add exact USDC token amounts so the UI can show USD-primary labels and USDC details.
 - Add bounty terms for the More section and modal review screen.
 - Add user-specific claimable bounty rewards to existing reward aggregation.
@@ -300,7 +342,7 @@ type BountySummary = {
 };
 ```
 
-Question feed responses should include `activeBounties`, a formatted `totalBountyLabel` such as `$125`, and user-specific `claimableBounties` where available.
+Question feed responses should include `activeBounties`, a formatted `totalBountyLabel` such as `$125`, media render metadata, and user-specific `claimableBounties` where available.
 
 ## Deployment And Generated Artifacts
 
@@ -311,6 +353,7 @@ Deployment updates:
 - Deploy `QuestionRegistry` or updated `ContentRegistry`.
 - Deploy `QuestionBountyEscrow` and optional `QuestionBountyDistributor`.
 - Wire the voting engine, registry, bounty escrow, reward distributor, participation pool, and protocol config.
+- Seed the governance-created default categories in the first deployment.
 - Initialize the Celo USDC allowlist address for Celo mainnet and Celo Sepolia.
 - Deploy a local mock USDC for Anvil.
 - Export ABIs for the new bounty contracts.
@@ -327,11 +370,15 @@ The implementation should stay split into narrow commits. A recommended sequence
 1. `contracts: introduce question registry model`
    - Rename or evolve content metadata into question/link/description/category/frame.
    - Remove platform-domain coupling from question submission.
+   - Allow text-only questions and optional image, YouTube, and link metadata.
+   - Seed governance-created default categories during the first deployment.
    - Preserve cREP submitter stake, lifecycle, rating state, and voting engine integration.
 
 2. `contracts: add question bounty escrow`
    - Add Celo USDC escrow, bounty creation, per-round qualification, pull-based claims, refunds, pause controls, and events.
-   - Add Foundry unit tests for token allowlist, deposit accounting, claim rules, and refund paths.
+   - Enforce `requiredVoters >= 3` and `requiredSettledRounds >= 1`.
+   - Key claims by underlying Voter ID so delegated wallets cannot double-claim.
+   - Add Foundry unit tests for token allowlist, deposit accounting, claim rules, Voter ID claim identity, and refund paths.
 
 3. `contracts: wire curyo 2 deployment`
    - Update deployment scripts, local mocks, protocol config wiring, ABI export, deployed contract metadata, and contract-size checks.
@@ -344,14 +391,18 @@ The implementation should stay split into narrow commits. A recommended sequence
 5. `nextjs: convert submit flow to questions`
    - Reuse the submit page and form shell.
    - Remove the Platform tab and platform-domain validation.
-   - Change fields to question, link, category/frame, description, and tags.
+   - Change fields to question, optional link, category/frame, description, and tags.
+   - Support text-only questions plus image and YouTube links initially.
 
 6. `nextjs: add bounty funding UI`
    - Add optional bounty funding after submission.
    - Add USD amount input, required voter input, required settled round input, and USDC approve/deposit flow.
+   - Default new bounties to 5 required voters and 2 settled rounds, while allowing custom values down to 3 voters and 1 settled round.
 
 7. `nextjs: show and fund bounties from vote cards`
    - Add compact bounty badges to feed/vote cards.
+   - Render text-only feed cards with the description body instead of an empty image area.
+   - Render image and YouTube previews when those links are available.
    - Add "Add bounty" in the More section and open the funding modal from there.
    - Add responsive coverage for dense laptop and mobile vote surfaces.
 
@@ -375,12 +426,15 @@ Foundry tests:
 - Invalid token rejection.
 - Actual-received accounting on deposit.
 - Bounty creation with required voters and required settled rounds.
+- Rejection for bounties below 3 required voters.
+- Rejection for bounties below 1 required settled round.
 - Multiple bounties on one question.
 - Top-ups with distinct terms.
 - Claim by revealed winning voter.
 - Claim by revealed losing voter.
 - Rejection for unrevealed voter.
 - Double-claim prevention.
+- Double-claim prevention across delegated wallets for the same Voter ID.
 - Tied, cancelled, and reveal-failed rounds not qualifying at launch.
 - Expiry refund.
 - Question cancellation refund.
@@ -397,19 +451,29 @@ Ponder tests:
 Next.js tests:
 
 - Submit question without a bounty.
+- Submit text-only subjective question.
+- Submit question with image link.
+- Submit question with YouTube link.
 - Submit question and continue into optional bounty funding.
 - Remove platform-domain validation without weakening generic URL safety checks.
 - Render bounty badges on vote cards without layout shift.
+- Render description text in feed cards when no media preview is present.
+- Render image and YouTube previews when media links are present.
 - Open the Add Bounty modal from the More section.
 - Handle USDC allowance and deposit.
+- Default bounty form to 5 required voters and 2 settled rounds.
+- Allow custom bounty values down to 3 voters and 1 settled round.
 - Confirm no USDT or generic token selector appears in the launch funding UI.
 - Show stablecoin bounty reward claims separately from cREP.
 
 End-to-end tests:
 
 - Submit question, fund USDC bounty, vote, reveal, settle, and claim stablecoin reward.
+- Submit a text-only question and verify the feed renders description text instead of an empty image.
+- Submit an image link and a YouTube link and verify previews render.
 - Verify a voter on the losing cREP side can still claim the stablecoin participation reward after revealing.
 - Verify an unrevealed voter cannot claim.
+- Verify a delegated wallet can claim only for the underlying eligible Voter ID and cannot double-claim across wallets.
 - Verify required voters and required settled rounds block payout until satisfied.
 - Verify refund after expiry or cancellation.
 - Check mobile and laptop layouts for bounty badges, More modal, and claim rows.
@@ -439,7 +503,7 @@ Repository docs:
 - `docs/curyo-2-bounties-integration-plan.md`: update as implementation decisions land.
 - `packages/foundry/README.md`: document `QuestionRegistry`, bounty escrow/distributor, Celo USDC allowlist, deployment config, and test commands.
 - `packages/ponder/README.md`: document bounty tables, handlers, API fields, and env vars.
-- `packages/nextjs/README.md`: document submit, bounty funding, reward claim, and whitepaper generation flows.
+- `packages/nextjs/README.md`: document text-only questions, image and YouTube link previews, submit, bounty funding, reward claim, and whitepaper generation flows.
 - `packages/sdk/README.md`: document question and bounty helper APIs.
 - `packages/bot/README.md`: update only if bots can submit, monitor, or claim bounties.
 - `packages/keeper/README.md`: update only if keeper gets bounty qualification or repair duties.
@@ -447,9 +511,9 @@ Repository docs:
 App docs:
 
 - `packages/nextjs/app/docs/how-it-works/page.tsx`: explain question submission, cREP voting, and stablecoin bounty participation rewards.
-- `packages/nextjs/app/docs/smart-contracts/page.tsx`: add new contracts, token allowlist, claim model, and pause/refund controls.
+- `packages/nextjs/app/docs/smart-contracts/page.tsx`: add new contracts, token allowlist, Voter ID based claim model, and pause/refund controls.
 - `packages/nextjs/app/docs/tokenomics/page.tsx`: clarify that stablecoin bounties are external question-scoped funds, not cREP emissions or the global Participation Reward Pool.
-- `packages/nextjs/app/docs/governance/page.tsx`: document token allowlist governance, bounty caps, Self.xyz eligibility config, and emergency controls.
+- `packages/nextjs/app/docs/governance/page.tsx`: document default category creation, token allowlist governance, no hard bounty caps, Self.xyz eligibility config, and emergency controls.
 - `packages/nextjs/app/docs/frontend-codes/page.tsx`: update only if frontend fee or registration behavior changes after removing platform submission from `/submit`.
 - `packages/nextjs/app/legal/terms/page.tsx`: add stablecoin bounty, prohibited-use, tax-record, and jurisdiction eligibility language for legal review.
 
@@ -470,31 +534,35 @@ Recommended rollout:
 2. Add Ponder indexing and API responses against local deployment artifacts.
 3. Convert submit and vote card UI behind a Curyo 2.0 feature branch or feature flag.
 4. Add USDC mocks for local e2e.
-5. Deploy to Celo Sepolia with low bounty caps.
+5. Deploy to Celo Sepolia with default categories seeded and no hard bounty caps.
 6. Run a controlled testnet pilot with known voters and small bounties.
 7. Review moderation, compliance, claim, refund, and layout issues.
 8. Freeze contract interfaces for audit.
-9. Deploy to Celo mainnet with conservative caps and allowlisted Celo USDC only.
-10. Raise caps only after observed claim behavior, issuer risk, and moderation workload are understood.
+9. Deploy to Celo mainnet with allowlisted Celo USDC only and no hard bounty caps.
+10. Keep monitoring bounty sizes, issuer risk, and moderation workload after launch.
 
 Launch guardrails:
 
-- Low default bounty cap.
+- No hard bounty caps.
 - No arbitrary ERC20 tokens.
 - No USDT at launch.
 - No stablecoin coherence bonus.
 - No future-event or market-like category promotion.
 - No secondary trading or transfer of yes/no exposure.
 - Claims are pull-based.
+- Claims resolve through the underlying Voter ID.
 - Funding and claiming require bounty eligibility checks.
 - Emergency pause for new bounty funding.
 - Public docs explain that consensus is not truth.
 
-## Open Product Questions
+## Settled Product Decisions
 
-- Should the first submit flow require a link, or allow text-only subjective questions?
-- Should question categories be fixed templates, governance-created categories, or a hybrid?
-- Should v1 use equal per-round stablecoin splits as recommended here, or add a capped cREP-weighted stablecoin split later?
-- What are the default required voter and required settled round values for low-value bounties?
-- What bounty caps should apply before moderation, anomaly detection, and legal review are mature?
-- Should claim eligibility be by wallet address only at launch, or should claims resolve the underlying Voter ID holder to support delegated wallets safely?
+- Text-only subjective questions are valid.
+- Image links and YouTube links are supported media inputs at launch.
+- The feed should render description text when no media preview exists.
+- Categories are governance-created, with a default category set seeded in the first deployment.
+- Stablecoin bounty rewards use equal per-round splits at launch.
+- The protocol minimum is 3 required voters and 1 required settled round.
+- The bounty creation UI should default higher than the protocol minimum, initially 5 required voters and 2 settled rounds.
+- No hard bounty caps at launch.
+- Claims resolve through the underlying Voter ID holder so delegated wallets can be supported safely.
