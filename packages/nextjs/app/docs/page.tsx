@@ -29,8 +29,8 @@ const DocsIntro: NextPage = () => {
           description="Questions can be text only or include a regular link, direct image link, or YouTube link."
         />
         <FeatureCard
-          title="Question Bounties"
-          description="Eligible revealed participants claim equal USDC bounty shares in qualified question rounds."
+          title="Question Reward Pools"
+          description="Eligible revealed participants claim equal USDC-backed question rewards in qualified rounds."
         />
       </div>
       <p>

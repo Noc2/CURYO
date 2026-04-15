@@ -95,8 +95,8 @@ const SmartContracts: NextPage = () => {
               <td>No</td>
             </tr>
             <tr>
-              <td className="font-mono text-primary">QuestionBountyEscrow</td>
-              <td>Question-scoped Celo USDC bounty custody and equal per-round bounty claims</td>
+              <td className="font-mono text-primary">QuestionRewardPoolEscrow</td>
+              <td>Question-scoped Celo USDC reward pool custody and equal per-round question rewards</td>
               <td>No</td>
             </tr>
             <tr>
@@ -253,7 +253,7 @@ const SmartContracts: NextPage = () => {
         Submission canonicalization is delegated to <code>SubmissionCanonicalizer</code> when a URL is present, so
         supported URLs and media links resolve to the correct category before the question submission key is derived
         from the submitted metadata. The docs now describe the question-first flow: text-only submissions or optional
-        evidence, image, and YouTube links, with the bounty displayed in USD even though settlement is funded in Celo
+        evidence, image, and YouTube links, with reward pools displayed in USD even though settlement is funded in Celo
         USDC.
       </p>
       <div className="not-prose overflow-x-auto my-6 rounded-xl bg-base-200">
@@ -296,8 +296,8 @@ const SmartContracts: NextPage = () => {
           <code>submitQuestion(url, title, description, tags, categoryId, salt)</code> &mdash; Reserve a hidden
           question-first submission, then reveal it with a 10 cREP stake. Requires Voter ID. The question submission key
           is checked for duplicates, and the title plus description are emitted in the canonical{" "}
-          <code>ContentSubmitted</code> event for indexers and alternate frontends. Celo USDC bounties are funded in a
-          separate escrow transaction.
+          <code>ContentSubmitted</code> event for indexers and alternate frontends. Question Reward Pools are funded in
+          a separate escrow transaction.
         </li>
         <li>
           <code>cancelContent(contentId)</code> &mdash; Cancel own content (1 cREP fee to the configured

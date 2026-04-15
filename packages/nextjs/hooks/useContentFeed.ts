@@ -126,7 +126,7 @@ export function useContentFeed(voterAddress?: string, options: UseContentFeedOpt
           openRound: null,
           isValidUrl: null,
           thumbnailUrl: null,
-          bountySummary: null,
+          rewardPoolSummary: null,
         };
       })
       .filter((item): item is ContentItem => item !== null);

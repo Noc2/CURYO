@@ -1,6 +1,6 @@
 # Curyo — Next.js (Frontend)
 
-Full-stack web application built with Next.js 15 and React 19. Provides the UI for voting on content, question-first submissions with text-only or media-linked entries, managing profiles, and reading in-app documentation. The UI surfaces Celo USDC bounties as USD, keeps claim flows tied to Voter ID, and includes server-side API routes plus a PostgreSQL database via Drizzle ORM.
+Full-stack web application built with Next.js 15 and React 19. Provides the UI for voting on content, question-first submissions with text-only or media-linked entries, managing profiles, and reading in-app documentation. The UI surfaces Question Reward Pools as USD, discloses that rewards are paid in USDC on Celo, keeps claim flows tied to Voter ID, and includes server-side API routes plus a PostgreSQL database via Drizzle ORM.
 
 ## Quick Start
 

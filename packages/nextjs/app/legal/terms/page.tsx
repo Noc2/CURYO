@@ -187,14 +187,14 @@ const TermsPage: NextPage = () => {
           <li>A financial product or investment vehicle</li>
         </ul>
         <p>
-          Submission and bounty features are question-first: a submission may be text-only or include one image or one
-          YouTube link, and the bounty is denominated in Celo USDC while displayed to users as USD. The Interface does
-          not impose a hard bounty cap, but it may apply moderation, duplicate-detection, media-type, and eligibility
-          checks before a submission is accepted or a claim is processed.
+          Submission and Question Reward Pool features are question-first: a submission may be text-only or include one
+          image or one YouTube link, and the reward pool is paid in USDC on Celo while displayed to users as USD. The
+          Interface does not impose a hard reward pool cap, but it may apply moderation, duplicate-detection,
+          media-type, and eligibility checks before a submission is accepted or a claim is processed.
         </p>
         <p>
-          Question bounty rewards are equal within each qualified bounty round for eligible revealed Voter ID holders,
-          and claims are gated by Voter ID and related protocol checks. These guardrails are intended to reduce spam,
+          Question rewards are equal within each qualified reward-pool round for eligible revealed Voter ID holders, and
+          claims are gated by Voter ID and related protocol checks. These guardrails are intended to reduce spam,
           preserve Sybil resistance, and keep the submission surface narrow.
         </p>
 

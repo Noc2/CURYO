@@ -90,7 +90,7 @@ test("mapContentItem marks linked submitter addresses as own content", () => {
   assert.equal(item.isOwnContent, true);
 });
 
-test("mapContentItem supports text-only questions and Ponder bounty summaries", () => {
+test("mapContentItem supports text-only questions and Ponder reward pool summaries", () => {
   const item = mapContentItem({
     id: "2",
     url: null,
@@ -101,17 +101,17 @@ test("mapContentItem supports text-only questions and Ponder bounty summaries", 
     contentHash: "hash-2",
     categoryId: "2",
     rating: 50,
-    bountySummary: {
+    rewardPoolSummary: {
       totalFundedAmount: "25000000",
-      currentBountyAmount: "18000000",
-      activeBountyCount: 1,
+      currentRewardPoolAmount: "18000000",
+      activeRewardPoolCount: 1,
     },
   });
 
   assert.equal(item.url, "");
-  assert.equal(item.bountySummary?.totalFunded, 25_000_000n);
-  assert.equal(item.bountySummary?.totalAvailable, 18_000_000n);
-  assert.equal(item.bountySummary?.activeBountyCount, 1);
+  assert.equal(item.rewardPoolSummary?.totalFunded, 25_000_000n);
+  assert.equal(item.rewardPoolSummary?.totalAvailable, 18_000_000n);
+  assert.equal(item.rewardPoolSummary?.activeRewardPoolCount, 1);
 });
 
 test("filterRpcFeed matches any address in the submitters filter", () => {

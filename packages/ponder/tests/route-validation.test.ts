@@ -86,26 +86,26 @@ function mockPonderModules<T>(result: T) {
       totalRewardsClaimed: "profile.totalRewardsClaimed",
       totalVotes: "profile.totalVotes",
     },
-    questionBounty: {
-      allocatedAmount: "questionBounty.allocatedAmount",
-      claimedAmount: "questionBounty.claimedAmount",
-      contentId: "questionBounty.contentId",
-      createdAt: "questionBounty.createdAt",
-      fundedAmount: "questionBounty.fundedAmount",
-      id: "questionBounty.id",
-      qualifiedRounds: "questionBounty.qualifiedRounds",
-      refunded: "questionBounty.refunded",
-      refundedAmount: "questionBounty.refundedAmount",
-      requiredVoters: "questionBounty.requiredVoters",
-      requiredSettledRounds: "questionBounty.requiredSettledRounds",
-      startRoundId: "questionBounty.startRoundId",
-      unallocatedAmount: "questionBounty.unallocatedAmount",
+    questionRewardPool: {
+      allocatedAmount: "questionRewardPool.allocatedAmount",
+      claimedAmount: "questionRewardPool.claimedAmount",
+      contentId: "questionRewardPool.contentId",
+      createdAt: "questionRewardPool.createdAt",
+      fundedAmount: "questionRewardPool.fundedAmount",
+      id: "questionRewardPool.id",
+      qualifiedRounds: "questionRewardPool.qualifiedRounds",
+      refunded: "questionRewardPool.refunded",
+      refundedAmount: "questionRewardPool.refundedAmount",
+      requiredVoters: "questionRewardPool.requiredVoters",
+      requiredSettledRounds: "questionRewardPool.requiredSettledRounds",
+      startRoundId: "questionRewardPool.startRoundId",
+      unallocatedAmount: "questionRewardPool.unallocatedAmount",
     },
-    questionBountyRound: {
-      allocation: "questionBountyRound.allocation",
-      bountyId: "questionBountyRound.bountyId",
-      eligibleVoters: "questionBountyRound.eligibleVoters",
-      roundId: "questionBountyRound.roundId",
+    questionRewardPoolRound: {
+      allocation: "questionRewardPoolRound.allocation",
+      rewardPoolId: "questionRewardPoolRound.rewardPoolId",
+      eligibleVoters: "questionRewardPoolRound.eligibleVoters",
+      roundId: "questionRewardPoolRound.roundId",
     },
     ratingChange: {
       confidenceMass: "ratingChange.confidenceMass",
@@ -552,15 +552,15 @@ describe("registerDataRoutes", () => {
     expect(queryBuilder.groupBy).toHaveBeenCalledWith("vote.contentId");
   });
 
-  it("rejects bounty claim candidate requests without a valid voter", async () => {
+  it("rejects question reward claim candidate requests without a valid voter", async () => {
     const { db } = mockPonderModules([]);
     const { registerDataRoutes } = await import("../src/api/routes/data-routes.js");
 
     const app = new Hono();
     registerDataRoutes(app);
 
-    const missingResponse = await app.request("http://localhost/bounty-claim-candidates");
-    const invalidResponse = await app.request("http://localhost/bounty-claim-candidates?voter=not-an-address");
+    const missingResponse = await app.request("http://localhost/question-reward-claim-candidates");
+    const invalidResponse = await app.request("http://localhost/question-reward-claim-candidates?voter=not-an-address");
 
     expect(missingResponse.status).toBe(400);
     expect(await missingResponse.json()).toEqual({ error: "voter parameter required" });
@@ -569,15 +569,15 @@ describe("registerDataRoutes", () => {
     expect(db.select).not.toHaveBeenCalled();
   });
 
-  it("queries bounty claim candidates from revealed settled votes", async () => {
-    const { queryBuilder } = mockPonderModules([{ bountyId: 1n, contentId: 2n, roundId: 3n }]);
+  it("queries question reward claim candidates from revealed settled votes", async () => {
+    const { queryBuilder } = mockPonderModules([{ rewardPoolId: 1n, contentId: 2n, roundId: 3n }]);
     const { registerDataRoutes } = await import("../src/api/routes/data-routes.js");
 
     const app = new Hono();
     registerDataRoutes(app);
 
     const response = await app.request(
-      "http://localhost/bounty-claim-candidates?voter=0x0000000000000000000000000000000000000001&limit=25&offset=5",
+      "http://localhost/question-reward-claim-candidates?voter=0x0000000000000000000000000000000000000001&limit=25&offset=5",
     );
 
     expect(response.status).toBe(200);
@@ -591,7 +591,7 @@ describe("registerDataRoutes", () => {
     expect(serialized).toContain("vote.voter");
     expect(serialized).toContain("vote.revealed");
     expect(serialized).toContain("round.state");
-    expect(serialized).toContain("questionBounty.startRoundId");
+    expect(serialized).toContain("questionRewardPool.startRoundId");
   });
 });
 

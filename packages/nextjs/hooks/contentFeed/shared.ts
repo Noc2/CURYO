@@ -49,10 +49,10 @@ export interface ContentItem {
   isValidUrl: boolean | null;
   thumbnailUrl: string | null;
   contentMetadata?: ContentMetadataResult;
-  bountySummary?: {
+  rewardPoolSummary?: {
     totalFunded: bigint;
     totalAvailable: bigint;
-    activeBountyCount: number;
+    activeRewardPoolCount: number;
   } | null;
 }
 
@@ -123,12 +123,12 @@ export function mapContentItem(
       startTime: string | null;
       estimatedSettlementTime: string | null;
     } | null;
-    bountySummary?: {
+    rewardPoolSummary?: {
       totalFunded?: string | number | bigint | null;
       totalFundedAmount?: string | number | bigint | null;
       totalAvailable?: string | number | bigint | null;
-      currentBountyAmount?: string | number | bigint | null;
-      activeBountyCount?: number | null;
+      currentRewardPoolAmount?: string | number | bigint | null;
+      activeRewardPoolCount?: number | null;
     } | null;
   },
   voterAddress?: string,
@@ -187,11 +187,13 @@ export function mapContentItem(
     openRound: mappedOpenRound,
     isValidUrl: null,
     thumbnailUrl: null,
-    bountySummary: item.bountySummary
+    rewardPoolSummary: item.rewardPoolSummary
       ? {
-          totalFunded: BigInt(item.bountySummary.totalFunded ?? item.bountySummary.totalFundedAmount ?? 0),
-          totalAvailable: BigInt(item.bountySummary.totalAvailable ?? item.bountySummary.currentBountyAmount ?? 0),
-          activeBountyCount: item.bountySummary.activeBountyCount ?? 0,
+          totalFunded: BigInt(item.rewardPoolSummary.totalFunded ?? item.rewardPoolSummary.totalFundedAmount ?? 0),
+          totalAvailable: BigInt(
+            item.rewardPoolSummary.totalAvailable ?? item.rewardPoolSummary.currentRewardPoolAmount ?? 0,
+          ),
+          activeRewardPoolCount: item.rewardPoolSummary.activeRewardPoolCount ?? 0,
         }
       : null,
   };

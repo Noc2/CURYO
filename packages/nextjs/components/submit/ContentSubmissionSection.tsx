@@ -18,8 +18,8 @@ import { decodeEventLog } from "viem";
 import { useAccount, useConfig } from "wagmi";
 import { readContract, waitForTransactionReceipt, writeContract } from "wagmi/actions";
 import { ChevronDownIcon, MagnifyingGlassIcon, XMarkIcon } from "@heroicons/react/24/outline";
-import { AddBountyModal } from "~~/components/bounty/AddBountyModal";
 import { ContentEmbed } from "~~/components/content/ContentEmbed";
+import { FundQuestionModal } from "~~/components/reward-pool/FundQuestionModal";
 import { GasBalanceWarning } from "~~/components/shared/GasBalanceWarning";
 import { surfaceSectionHeadingClassName } from "~~/components/shared/sectionHeading";
 import { InfoTooltip } from "~~/components/ui/InfoTooltip";
@@ -42,7 +42,7 @@ import {
   getContentTagValidationError,
   getContentTitleValidationError,
 } from "~~/lib/moderation/submissionValidation";
-import { QUESTION_SUBMISSION_ABI } from "~~/lib/questionBounties";
+import { QUESTION_SUBMISSION_ABI } from "~~/lib/questionRewardPools";
 import {
   getGasBalanceErrorMessage,
   isFreeTransactionExhaustedError,
@@ -130,11 +130,11 @@ export function ContentSubmissionSection() {
     description: string;
     lastActivityAt: string;
   } | null>(null);
-  const [bountyContent, setBountyContent] = useState<{
+  const [fundingContent, setFundingContent] = useState<{
     id: bigint;
     title: string;
   } | null>(null);
-  const [openBountyAfterSubmit, setOpenBountyAfterSubmit] = useState(false);
+  const [openRewardPoolAfterSubmit, setOpenRewardPoolAfterSubmit] = useState(false);
   const [platformSearch, setPlatformSearch] = useState("");
   const [isPlatformDropdownOpen, setIsPlatformDropdownOpen] = useState(false);
   const platformDropdownRef = useRef<HTMLDivElement>(null);
@@ -593,8 +593,8 @@ export function ContentSubmissionSection() {
               lastActivityAt: new Date().toISOString(),
             }
           : null;
-      setSubmittedContent(openBountyAfterSubmit ? null : submittedQuestion);
-      setBountyContent(openBountyAfterSubmit && submittedQuestion ? submittedQuestion : null);
+      setSubmittedContent(openRewardPoolAfterSubmit ? null : submittedQuestion);
+      setFundingContent(openRewardPoolAfterSubmit && submittedQuestion ? submittedQuestion : null);
       setUrl("");
       setUrlError(null);
       setTitle("");
@@ -604,7 +604,7 @@ export function ContentSubmissionSection() {
       setSelectedCategory(null);
       setSelectedSubcategories([]);
       setCustomSubcategory("");
-      setOpenBountyAfterSubmit(false);
+      setOpenRewardPoolAfterSubmit(false);
       setSubmitAttempted(false);
     } catch (e: unknown) {
       console.error("Submit failed:", e);
@@ -961,13 +961,13 @@ export function ContentSubmissionSection() {
               <input
                 type="checkbox"
                 className="checkbox checkbox-primary mt-0.5"
-                checked={openBountyAfterSubmit}
-                onChange={event => setOpenBountyAfterSubmit(event.target.checked)}
+                checked={openRewardPoolAfterSubmit}
+                onChange={event => setOpenRewardPoolAfterSubmit(event.target.checked)}
               />
               <span>
-                <span className="block font-medium text-base-content">Add a USDC bounty after submission</span>
+                <span className="block font-medium text-base-content">Add a reward pool after submission</span>
                 <span className="mt-1 block text-sm text-base-content/60">
-                  Fund this specific question once the submission transaction succeeds.
+                  Paid in USDC on Celo. Fund this specific question once the submission transaction succeeds.
                 </span>
               </span>
             </label>
@@ -1002,11 +1002,11 @@ export function ContentSubmissionSection() {
         />
       ) : null}
 
-      {bountyContent ? (
-        <AddBountyModal
-          contentId={bountyContent.id}
-          title={bountyContent.title}
-          onClose={() => setBountyContent(null)}
+      {fundingContent ? (
+        <FundQuestionModal
+          contentId={fundingContent.id}
+          title={fundingContent.title}
+          onClose={() => setFundingContent(null)}
         />
       ) : null}
     </>

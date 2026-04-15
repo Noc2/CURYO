@@ -2,7 +2,7 @@
 
 import { useAllClaimableRewards } from "~~/hooks/useAllClaimableRewards";
 import { useClaimAll } from "~~/hooks/useClaimAll";
-import { formatUsdAmount } from "~~/lib/questionBounties";
+import { formatUsdAmount } from "~~/lib/questionRewardPools";
 
 function formatCrepAmount(value: bigint) {
   return (Number(value) / 1e6).toLocaleString(undefined, { maximumFractionDigits: 0 });

@@ -188,11 +188,11 @@ export const submitterRewardClaim = onchainTable(
 );
 
 // ============================================================
-// QUESTION BOUNTIES (USDC)
+// QUESTION REWARD POOLS (USDC)
 // ============================================================
 
-export const questionBounty = onchainTable(
-  "question_bounty",
+export const questionRewardPool = onchainTable(
+  "question_reward_pool",
   (t) => ({
     id: t.bigint().primaryKey(),
     contentId: t.bigint().notNull(),
@@ -220,11 +220,11 @@ export const questionBounty = onchainTable(
   }),
 );
 
-export const questionBountyRound = onchainTable(
-  "question_bounty_round",
+export const questionRewardPoolRound = onchainTable(
+  "question_reward_pool_round",
   (t) => ({
-    id: t.text().primaryKey(), // `${bountyId}-${roundId}`
-    bountyId: t.bigint().notNull(),
+    id: t.text().primaryKey(), // `${rewardPoolId}-${roundId}`
+    rewardPoolId: t.bigint().notNull(),
     contentId: t.bigint().notNull(),
     roundId: t.bigint().notNull(),
     allocation: t.bigint().notNull(),
@@ -234,17 +234,17 @@ export const questionBountyRound = onchainTable(
     qualifiedAt: t.bigint().notNull(),
   }),
   (table) => ({
-    bountyIdx: index().on(table.bountyId),
+    rewardPoolIdx: index().on(table.rewardPoolId),
     contentIdx: index().on(table.contentId),
     roundIdx: index().on(table.contentId, table.roundId),
   }),
 );
 
-export const questionBountyClaim = onchainTable(
-  "question_bounty_claim",
+export const questionRewardPoolClaim = onchainTable(
+  "question_reward_pool_claim",
   (t) => ({
-    id: t.text().primaryKey(), // `${bountyId}-${roundId}-${voterId}`
-    bountyId: t.bigint().notNull(),
+    id: t.text().primaryKey(), // `${rewardPoolId}-${roundId}-${voterId}`
+    rewardPoolId: t.bigint().notNull(),
     contentId: t.bigint().notNull(),
     roundId: t.bigint().notNull(),
     claimant: t.hex().notNull(),
@@ -253,7 +253,7 @@ export const questionBountyClaim = onchainTable(
     claimedAt: t.bigint().notNull(),
   }),
   (table) => ({
-    bountyIdx: index().on(table.bountyId),
+    rewardPoolIdx: index().on(table.rewardPoolId),
     claimantIdx: index().on(table.claimant),
     voterIdIdx: index().on(table.voterId),
     contentIdx: index().on(table.contentId),

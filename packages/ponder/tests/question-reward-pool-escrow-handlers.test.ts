@@ -20,9 +20,9 @@ vi.mock("ponder:registry", () => ({
 
 vi.mock("ponder:schema", () => ({
   content: "content",
-  questionBounty: "questionBounty",
-  questionBountyClaim: "questionBountyClaim",
-  questionBountyRound: "questionBountyRound",
+  questionRewardPool: "questionRewardPool",
+  questionRewardPoolClaim: "questionRewardPoolClaim",
+  questionRewardPoolRound: "questionRewardPoolRound",
 }));
 
 function resolveSetter(valuesOrUpdater: Record<string, unknown> | ((row: any) => Record<string, unknown>)) {
@@ -69,7 +69,7 @@ function createDb(findResults: Record<string, unknown> = {}) {
 
 async function loadHandlers() {
   handlers.clear();
-  await import("../src/QuestionBountyEscrow.js");
+  await import("../src/QuestionRewardPoolEscrow.js");
   return handlers;
 }
 
@@ -79,18 +79,18 @@ afterEach(() => {
   vi.clearAllMocks();
 });
 
-describe("QuestionBountyEscrow ponder handlers", () => {
-  it("indexes created bounties with USDC accounting fields", async () => {
+describe("QuestionRewardPoolEscrow ponder handlers", () => {
+  it("indexes created reward pools with USDC accounting fields", async () => {
     const { db, inserts, updates } = createDb({ content: { id: 1n } });
     const registeredHandlers = await loadHandlers();
-    const handler = registeredHandlers.get("QuestionBountyEscrow:BountyCreated");
+    const handler = registeredHandlers.get("QuestionRewardPoolEscrow:RewardPoolCreated");
 
     expect(handler).toBeDefined();
 
     await handler!({
       event: {
         args: {
-          bountyId: 7n,
+          rewardPoolId: 7n,
           contentId: 1n,
           funder: "0x0000000000000000000000000000000000000001",
           funderVoterId: 11n,
@@ -106,7 +106,7 @@ describe("QuestionBountyEscrow ponder handlers", () => {
     });
 
     expect(inserts).toContainEqual({
-      table: "questionBounty",
+      table: "questionRewardPool",
       values: expect.objectContaining({
         id: 7n,
         contentId: 1n,
@@ -120,17 +120,17 @@ describe("QuestionBountyEscrow ponder handlers", () => {
     expect(updates).toContainEqual(expect.objectContaining({ table: "content" }));
   });
 
-  it("updates bounty and round accounting for qualifications, claims, and refunds", async () => {
+  it("updates reward pool and round accounting for qualifications, claims, and refunds", async () => {
     const { db, inserts, updates } = createDb({
-      'questionBounty:{"id":"7"}': { id: 7n, contentId: 1n },
+      'questionRewardPool:{"id":"7"}': { id: 7n, contentId: 1n },
       content: { id: 1n },
     });
     const registeredHandlers = await loadHandlers();
 
-    await registeredHandlers.get("QuestionBountyEscrow:BountyRoundQualified")!({
+    await registeredHandlers.get("QuestionRewardPoolEscrow:RewardPoolRoundQualified")!({
       event: {
         args: {
-          bountyId: 7n,
+          rewardPoolId: 7n,
           contentId: 1n,
           roundId: 3n,
           allocation: 50_000_000n,
@@ -141,10 +141,10 @@ describe("QuestionBountyEscrow ponder handlers", () => {
       context: { db },
     });
 
-    await registeredHandlers.get("QuestionBountyEscrow:BountyRewardClaimed")!({
+    await registeredHandlers.get("QuestionRewardPoolEscrow:QuestionRewardClaimed")!({
       event: {
         args: {
-          bountyId: 7n,
+          rewardPoolId: 7n,
           contentId: 1n,
           roundId: 3n,
           claimant: "0x0000000000000000000000000000000000000002",
@@ -156,10 +156,10 @@ describe("QuestionBountyEscrow ponder handlers", () => {
       context: { db },
     });
 
-    await registeredHandlers.get("QuestionBountyEscrow:BountyRefunded")!({
+    await registeredHandlers.get("QuestionRewardPoolEscrow:RewardPoolRefunded")!({
       event: {
         args: {
-          bountyId: 7n,
+          rewardPoolId: 7n,
           funder: "0x0000000000000000000000000000000000000001",
           amount: 50_000_000n,
         },
@@ -171,11 +171,11 @@ describe("QuestionBountyEscrow ponder handlers", () => {
     expect(inserts).toEqual(
       expect.arrayContaining([
         expect.objectContaining({
-          table: "questionBountyRound",
+          table: "questionRewardPoolRound",
           values: expect.objectContaining({ id: "7-3", allocation: 50_000_000n, eligibleVoters: 5 }),
         }),
         expect.objectContaining({
-          table: "questionBountyClaim",
+          table: "questionRewardPoolClaim",
           values: expect.objectContaining({ id: "7-3-12", amount: 10_000_000n }),
         }),
       ]),
@@ -183,15 +183,15 @@ describe("QuestionBountyEscrow ponder handlers", () => {
     expect(updates).toEqual(
       expect.arrayContaining([
         expect.objectContaining({
-          table: "questionBounty",
+          table: "questionRewardPool",
           values: expect.objectContaining({ allocatedAmount: 50_000_000n, qualifiedRounds: 1 }),
         }),
         expect.objectContaining({
-          table: "questionBountyRound",
+          table: "questionRewardPoolRound",
           values: expect.objectContaining({ claimedAmount: 10_000_000n, claimedCount: 1 }),
         }),
         expect.objectContaining({
-          table: "questionBounty",
+          table: "questionRewardPool",
           values: expect.objectContaining({ refunded: true, refundedAmount: 50_000_000n }),
         }),
       ]),

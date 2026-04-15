@@ -18,7 +18,7 @@ import {
   getSharedDeploymentAddress as getSharedArtifactAddress,
   getSharedDeploymentStartBlock as getSharedArtifactStartBlock,
 } from "@curyo/contracts/deployments";
-import { QuestionBountyEscrowAbi } from "./src/abis/QuestionBountyEscrowAbi.js";
+import { QuestionRewardPoolEscrowAbi } from "./src/abis/QuestionRewardPoolEscrowAbi.js";
 
 type PonderNetworkName = "celoSepolia" | "hardhat" | "celo";
 
@@ -203,7 +203,7 @@ const addresses = {
   curyoReputation: resolveAddress("PONDER_CREP_ADDRESS", "CuryoReputation"),
   humanFaucet: resolveAddress("PONDER_HUMAN_FAUCET_ADDRESS", "HumanFaucet"),
   participationPool: resolveAddress("PONDER_PARTICIPATION_POOL_ADDRESS", "ParticipationPool"),
-  questionBountyEscrow: resolveAddress("PONDER_QUESTION_BOUNTY_ESCROW_ADDRESS", "QuestionBountyEscrow"),
+  questionRewardPoolEscrow: resolveAddress("PONDER_QUESTION_REWARD_POOL_ESCROW_ADDRESS", "QuestionRewardPoolEscrow"),
 };
 
 const startBlocks = {
@@ -217,7 +217,7 @@ const startBlocks = {
   curyoReputation: resolveStartBlock("PONDER_CREP_START_BLOCK", "CuryoReputation"),
   humanFaucet: resolveStartBlock("PONDER_HUMAN_FAUCET_START_BLOCK", "HumanFaucet"),
   participationPool: resolveStartBlock("PONDER_PARTICIPATION_POOL_START_BLOCK", "ParticipationPool"),
-  questionBountyEscrow: resolveStartBlock("PONDER_QUESTION_BOUNTY_ESCROW_START_BLOCK", "QuestionBountyEscrow"),
+  questionRewardPoolEscrow: resolveStartBlock("PONDER_QUESTION_REWARD_POOL_ESCROW_START_BLOCK", "QuestionRewardPoolEscrow"),
 };
 
 function contractOnActiveNetwork(address: `0x${string}`, startBlock: number) {
@@ -279,9 +279,9 @@ export default createConfig({
       abi: ParticipationPoolAbi,
       network: contractOnActiveNetwork(addresses.participationPool, startBlocks.participationPool),
     },
-    QuestionBountyEscrow: {
-      abi: QuestionBountyEscrowAbi,
-      network: contractOnActiveNetwork(addresses.questionBountyEscrow, startBlocks.questionBountyEscrow),
+    QuestionRewardPoolEscrow: {
+      abi: QuestionRewardPoolEscrowAbi,
+      network: contractOnActiveNetwork(addresses.questionRewardPoolEscrow, startBlocks.questionRewardPoolEscrow),
     },
   },
 });

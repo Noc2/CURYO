@@ -4,16 +4,16 @@ import { memo, useEffect, useState } from "react";
 import dynamic from "next/dynamic";
 import { ArrowTopRightOnSquareIcon, ChevronLeftIcon, ChevronRightIcon } from "@heroicons/react/24/outline";
 import { ShareIcon } from "@heroicons/react/24/outline";
-import { AddBountyModal } from "~~/components/bounty/AddBountyModal";
 import { ContentEmbed } from "~~/components/content/ContentEmbed";
 import { SubmitterBadge } from "~~/components/content/SubmitterBadge";
+import { FundQuestionModal } from "~~/components/reward-pool/FundQuestionModal";
 import { FollowProfileButton } from "~~/components/shared/FollowProfileButton";
 import { MoreToggleButton } from "~~/components/shared/MoreToggleButton";
 import { SafeExternalLink } from "~~/components/shared/SafeExternalLink";
 import { WatchContentButton } from "~~/components/shared/WatchContentButton";
 import type { ContentItem } from "~~/hooks/useContentFeed";
 import type { SubmitterProfile } from "~~/hooks/useSubmitterProfiles";
-import { formatUsdAmount } from "~~/lib/questionBounties";
+import { formatUsdAmount } from "~~/lib/questionRewardPools";
 import { detectPlatform } from "~~/utils/platforms";
 
 const ShareContentModal = dynamic(
@@ -317,7 +317,7 @@ function FeedContentMetaCard({
   collapseDescription = true,
 }: FeedContentMetaCardProps) {
   const [showShare, setShowShare] = useState(false);
-  const [showBountyModal, setShowBountyModal] = useState(false);
+  const [showFundQuestionModal, setShowFundQuestionModal] = useState(false);
   const [isExpanded, setIsExpanded] = useState(false);
   const platformType = item.url ? detectPlatform(item.url).type : "text";
   const detailsId = `content-details-${item.id.toString()}`;
@@ -325,9 +325,9 @@ function FeedContentMetaCard({
   const description = item.description.trim();
   const hasDescription = description.length > 0;
   const sourceLabel = getSourceLabel(item.url);
-  const bountyTotal = item.bountySummary?.totalAvailable ?? item.bountySummary?.totalFunded ?? 0n;
+  const rewardPoolTotal = item.rewardPoolSummary?.totalAvailable ?? item.rewardPoolSummary?.totalFunded ?? 0n;
   const hasSourceDetails = sourceLabel.trim().length > 0;
-  const hasBounty = bountyTotal > 0n;
+  const hasRewardPool = rewardPoolTotal > 0n;
   const hasMagicDisclaimer = platformType === "scryfall";
   const hasExpandableDetails = true;
   const showExpandedDetails = !collapseDescription || isExpanded;
@@ -357,9 +357,9 @@ function FeedContentMetaCard({
             />
           </div>
           <div className="ml-auto flex shrink-0 items-center gap-0.5 sm:gap-1">
-            {hasBounty ? (
+            {hasRewardPool ? (
               <span className="rounded-full bg-success/15 px-2.5 py-1 text-sm font-semibold leading-none text-success">
-                {formatUsdAmount(bountyTotal)}
+                {formatUsdAmount(rewardPoolTotal)} reward pool
               </span>
             ) : null}
             {hasFollowButton ? (
@@ -408,17 +408,17 @@ function FeedContentMetaCard({
                   <span className="max-w-[12rem] truncate">{sourceLabel}</span>
                 </SafeExternalLink>
               ) : null}
-              {hasBounty ? (
+              {hasRewardPool ? (
                 <span className="rounded-full bg-success/15 px-2.5 py-1 text-sm font-semibold leading-none text-success">
-                  {formatUsdAmount(bountyTotal)} bounty
+                  Backed by {formatUsdAmount(rewardPoolTotal)} USDC on Celo
                 </span>
               ) : null}
               <button
                 type="button"
-                onClick={() => setShowBountyModal(true)}
+                onClick={() => setShowFundQuestionModal(true)}
                 className="rounded-full bg-primary/10 px-2.5 py-1 text-sm font-semibold leading-none text-primary transition-colors hover:bg-primary/15"
               >
-                Add bounty
+                Fund this question
               </button>
               {visibleTags.map(tag => (
                 <span key={tag} className="text-sm text-base-content/70">
@@ -472,8 +472,8 @@ function FeedContentMetaCard({
         />
       ) : null}
 
-      {showBountyModal ? (
-        <AddBountyModal contentId={item.id} title={item.title} onClose={() => setShowBountyModal(false)} />
+      {showFundQuestionModal ? (
+        <FundQuestionModal contentId={item.id} title={item.title} onClose={() => setShowFundQuestionModal(false)} />
       ) : null}
     </>
   );

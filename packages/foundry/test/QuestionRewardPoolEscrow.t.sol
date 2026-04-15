@@ -8,18 +8,18 @@ import { CuryoReputation } from "../contracts/CuryoReputation.sol";
 import { MockCategoryRegistry } from "../contracts/mocks/MockCategoryRegistry.sol";
 import { MockERC20 } from "../contracts/mocks/MockERC20.sol";
 import { ProtocolConfig } from "../contracts/ProtocolConfig.sol";
-import { QuestionBountyEscrow } from "../contracts/QuestionBountyEscrow.sol";
+import { QuestionRewardPoolEscrow } from "../contracts/QuestionRewardPoolEscrow.sol";
 import { RoundRewardDistributor } from "../contracts/RoundRewardDistributor.sol";
 import { RoundVotingEngine } from "../contracts/RoundVotingEngine.sol";
 import { RoundEngineReadHelpers } from "./helpers/RoundEngineReadHelpers.sol";
 import { MockVoterIdNFT } from "./mocks/MockVoterIdNFT.sol";
 
-contract QuestionBountyEscrowTest is VotingTestBase {
+contract QuestionRewardPoolEscrowTest is VotingTestBase {
     CuryoReputation public crepToken;
     ContentRegistry public registry;
     RoundVotingEngine public votingEngine;
     RoundRewardDistributor public rewardDistributor;
-    QuestionBountyEscrow public bountyEscrow;
+    QuestionRewardPoolEscrow public rewardPoolEscrow;
     MockERC20 public usdc;
     MockVoterIdNFT public voterIdNFT;
 
@@ -35,7 +35,7 @@ contract QuestionBountyEscrowTest is VotingTestBase {
 
     uint256 public constant STAKE = 5e6;
     uint256 public constant EPOCH_DURATION = 10 minutes;
-    uint256 public constant BOUNTY_AMOUNT = 100e6;
+    uint256 public constant REWARD_POOL_AMOUNT = 100e6;
 
     string internal constant QUESTION = "Would you recommend this hotel?";
     string internal constant DESCRIPTION = "Vote based on the overall stay quality.";
@@ -70,7 +70,7 @@ contract QuestionBountyEscrowTest is VotingTestBase {
         ContentRegistry registryImpl = new ContentRegistry();
         RoundVotingEngine engineImpl = new RoundVotingEngine();
         RoundRewardDistributor distImpl = new RoundRewardDistributor();
-        QuestionBountyEscrow bountyImpl = new QuestionBountyEscrow();
+        QuestionRewardPoolEscrow rewardPoolImpl = new QuestionRewardPoolEscrow();
 
         ProtocolConfig protocolConfig = _deployProtocolConfig(owner);
         registry = ContentRegistry(
@@ -106,12 +106,12 @@ contract QuestionBountyEscrowTest is VotingTestBase {
 
         usdc = new MockERC20("USD Coin", "USDC", 6);
         voterIdNFT = new MockVoterIdNFT();
-        bountyEscrow = QuestionBountyEscrow(
+        rewardPoolEscrow = QuestionRewardPoolEscrow(
             address(
                 new ERC1967Proxy(
-                    address(bountyImpl),
+                    address(rewardPoolImpl),
                     abi.encodeCall(
-                        QuestionBountyEscrow.initialize,
+                        QuestionRewardPoolEscrow.initialize,
                         (owner, address(usdc), address(registry), address(votingEngine), address(voterIdNFT))
                     )
                 )
@@ -149,31 +149,31 @@ contract QuestionBountyEscrowTest is VotingTestBase {
         vm.stopPrank();
     }
 
-    function testTextOnlyQuestionCanReceiveBountyAndPayRevealedVotersEqually() public {
+    function testTextOnlyQuestionCanReceiveRewardPoolAndPayRevealedVotersEqually() public {
         uint256 contentId = _submitQuestion("");
-        uint256 bountyId = _createBounty(contentId, BOUNTY_AMOUNT, 3, 1);
+        uint256 rewardPoolId = _createRewardPool(contentId, REWARD_POOL_AMOUNT, 3, 1);
 
         address[] memory voters = _threeVoters();
         bool[] memory directions = _directions(true, true, false);
         uint256 roundId = _settleRoundWith(voters, contentId, directions);
 
         vm.prank(voter1);
-        uint256 reward1 = bountyEscrow.claimBountyReward(bountyId, roundId);
+        uint256 reward1 = rewardPoolEscrow.claimQuestionReward(rewardPoolId, roundId);
         vm.prank(voter2);
-        uint256 reward2 = bountyEscrow.claimBountyReward(bountyId, roundId);
+        uint256 reward2 = rewardPoolEscrow.claimQuestionReward(rewardPoolId, roundId);
         vm.prank(voter3);
-        uint256 reward3 = bountyEscrow.claimBountyReward(bountyId, roundId);
+        uint256 reward3 = rewardPoolEscrow.claimQuestionReward(rewardPoolId, roundId);
 
-        assertEq(reward1, BOUNTY_AMOUNT / 3);
-        assertEq(reward2, BOUNTY_AMOUNT / 3);
-        assertEq(reward1 + reward2 + reward3, BOUNTY_AMOUNT);
+        assertEq(reward1, REWARD_POOL_AMOUNT / 3);
+        assertEq(reward2, REWARD_POOL_AMOUNT / 3);
+        assertEq(reward1 + reward2 + reward3, REWARD_POOL_AMOUNT);
         assertEq(usdc.balanceOf(voter1), 1_000e6 + reward1);
-        assertEq(usdc.balanceOf(address(bountyEscrow)), 0);
+        assertEq(usdc.balanceOf(address(rewardPoolEscrow)), 0);
     }
 
     function testDelegateCanClaimByUnderlyingVoterIdOnlyOnce() public {
         uint256 contentId = _submitQuestion("");
-        uint256 bountyId = _createBounty(contentId, BOUNTY_AMOUNT, 3, 1);
+        uint256 rewardPoolId = _createRewardPool(contentId, REWARD_POOL_AMOUNT, 3, 1);
 
         vm.prank(voter1);
         voterIdNFT.setDelegate(delegate1);
@@ -183,17 +183,17 @@ contract QuestionBountyEscrowTest is VotingTestBase {
         uint256 roundId = _settleRoundWith(voters, contentId, directions);
 
         vm.prank(delegate1);
-        uint256 reward = bountyEscrow.claimBountyReward(bountyId, roundId);
+        uint256 reward = rewardPoolEscrow.claimQuestionReward(rewardPoolId, roundId);
         assertEq(usdc.balanceOf(delegate1), 1_000e6 + reward);
 
         vm.prank(voter1);
         vm.expectRevert("Already claimed");
-        bountyEscrow.claimBountyReward(bountyId, roundId);
+        rewardPoolEscrow.claimQuestionReward(rewardPoolId, roundId);
     }
 
-    function testFunderAndSubmitterVoterIdsAreExcludedFromBountyClaims() public {
+    function testFunderAndSubmitterVoterIdsAreExcludedFromRewardPoolClaims() public {
         uint256 contentId = _submitQuestion("");
-        uint256 bountyId = _createBounty(contentId, BOUNTY_AMOUNT, 3, 1);
+        uint256 rewardPoolId = _createRewardPool(contentId, REWARD_POOL_AMOUNT, 3, 1);
 
         address[] memory voters = new address[](4);
         voters[0] = funder;
@@ -209,11 +209,11 @@ contract QuestionBountyEscrowTest is VotingTestBase {
 
         vm.prank(funder);
         vm.expectRevert("Excluded voter");
-        bountyEscrow.claimBountyReward(bountyId, roundId);
+        rewardPoolEscrow.claimQuestionReward(rewardPoolId, roundId);
 
         vm.prank(voter1);
-        uint256 reward = bountyEscrow.claimBountyReward(bountyId, roundId);
-        assertEq(reward, BOUNTY_AMOUNT / 3);
+        uint256 reward = rewardPoolEscrow.claimQuestionReward(rewardPoolId, roundId);
+        assertEq(reward, REWARD_POOL_AMOUNT / 3);
     }
 
     function _submitQuestion(string memory url) internal returns (uint256 contentId) {
@@ -231,13 +231,13 @@ contract QuestionBountyEscrowTest is VotingTestBase {
         vm.stopPrank();
     }
 
-    function _createBounty(uint256 contentId, uint256 amount, uint256 requiredVoters, uint256 requiredSettledRounds)
+    function _createRewardPool(uint256 contentId, uint256 amount, uint256 requiredVoters, uint256 requiredSettledRounds)
         internal
-        returns (uint256 bountyId)
+        returns (uint256 rewardPoolId)
     {
         vm.startPrank(funder);
-        usdc.approve(address(bountyEscrow), amount);
-        bountyId = bountyEscrow.createBounty(contentId, amount, requiredVoters, requiredSettledRounds, 0);
+        usdc.approve(address(rewardPoolEscrow), amount);
+        rewardPoolId = rewardPoolEscrow.createRewardPool(contentId, amount, requiredVoters, requiredSettledRounds, 0);
         vm.stopPrank();
     }
 

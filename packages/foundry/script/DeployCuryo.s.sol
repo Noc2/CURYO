@@ -16,7 +16,7 @@ import { FrontendRegistry } from "../contracts/FrontendRegistry.sol";
 import { CategoryRegistry } from "../contracts/CategoryRegistry.sol";
 import { ProfileRegistry } from "../contracts/ProfileRegistry.sol";
 import { ProtocolConfig } from "../contracts/ProtocolConfig.sol";
-import { QuestionBountyEscrow } from "../contracts/QuestionBountyEscrow.sol";
+import { QuestionRewardPoolEscrow } from "../contracts/QuestionRewardPoolEscrow.sol";
 import { VoterIdNFT } from "../contracts/VoterIdNFT.sol";
 import { CuryoGovernor } from "../contracts/governance/CuryoGovernor.sol";
 import { ParticipationPool } from "../contracts/ParticipationPool.sol";
@@ -123,7 +123,7 @@ contract DeployCuryo is ScaffoldETHDeploy {
         FrontendRegistry frontendRegistryImpl = new FrontendRegistry();
         ProfileRegistry profileRegistryImpl = new ProfileRegistry();
         ProtocolConfig protocolConfigImpl = new ProtocolConfig();
-        QuestionBountyEscrow questionBountyEscrowImpl = new QuestionBountyEscrow();
+        QuestionRewardPoolEscrow questionRewardPoolEscrowImpl = new QuestionRewardPoolEscrow();
 
         // 5. Deploy transparent proxies with initialization (governance owns each ProxyAdmin)
         TransparentUpgradeableProxy frontendRegistryProxy = new TransparentUpgradeableProxy(
@@ -188,7 +188,7 @@ contract DeployCuryo is ScaffoldETHDeploy {
         VoterIdNFT voterIdNFT = new VoterIdNFT(deployer, governance);
         voterIdNFT.setStakeRecorder(address(votingEngine));
 
-        // 7a. Deploy Curyo 2 USDC bounty escrow.
+        // 7a. Deploy Curyo 2 USDC reward pool escrow.
         address usdcTokenAddress;
         MockERC20 localUsdcToken;
         if (isLocalDev) {
@@ -200,15 +200,15 @@ contract DeployCuryo is ScaffoldETHDeploy {
             console.log("Circle USDC resolved at:", usdcTokenAddress);
         }
 
-        TransparentUpgradeableProxy questionBountyEscrowProxy = new TransparentUpgradeableProxy(
-            address(questionBountyEscrowImpl),
+        TransparentUpgradeableProxy questionRewardPoolEscrowProxy = new TransparentUpgradeableProxy(
+            address(questionRewardPoolEscrowImpl),
             governance,
             abi.encodeCall(
-                QuestionBountyEscrow.initialize,
+                QuestionRewardPoolEscrow.initialize,
                 (governance, usdcTokenAddress, address(registry), address(votingEngine), address(voterIdNFT))
             )
         );
-        QuestionBountyEscrow questionBountyEscrow = QuestionBountyEscrow(address(questionBountyEscrowProxy));
+        QuestionRewardPoolEscrow questionRewardPoolEscrow = QuestionRewardPoolEscrow(address(questionRewardPoolEscrowProxy));
 
         // 8. Wire contracts together (deployer uses temporary config/admin roles where needed)
         registry.setVotingEngine(address(votingEngine));
@@ -415,7 +415,7 @@ contract DeployCuryo is ScaffoldETHDeploy {
                 votingEngine: votingEngine,
                 protocolConfig: protocolConfig,
                 rewardDistributor: rewardDistributor,
-                questionBountyEscrow: questionBountyEscrow,
+                questionRewardPoolEscrow: questionRewardPoolEscrow,
                 frontendRegistry: frontendRegistry,
                 profileRegistry: profileRegistry,
                 categoryRegistry: categoryRegistry,
@@ -443,7 +443,7 @@ contract DeployCuryo is ScaffoldETHDeploy {
         deployments.push(Deployment("RoundVotingEngine", address(votingEngineProxy)));
         deployments.push(Deployment("ProtocolConfig", address(protocolConfigProxy)));
         deployments.push(Deployment("RoundRewardDistributor", address(rewardDistributorProxy)));
-        deployments.push(Deployment("QuestionBountyEscrow", address(questionBountyEscrowProxy)));
+        deployments.push(Deployment("QuestionRewardPoolEscrow", address(questionRewardPoolEscrowProxy)));
         deployments.push(Deployment("CategoryRegistry", address(categoryRegistry)));
         deployments.push(Deployment("VoterIdNFT", address(voterIdNFT)));
         deployments.push(Deployment("ParticipationPool", address(participationPool)));
@@ -460,7 +460,7 @@ contract DeployCuryo is ScaffoldETHDeploy {
         console.log("RoundVotingEngine:", address(votingEngine));
         console.log("ProtocolConfig:", address(protocolConfig));
         console.log("RoundRewardDistributor:", address(rewardDistributor));
-        console.log("QuestionBountyEscrow:", address(questionBountyEscrow));
+        console.log("QuestionRewardPoolEscrow:", address(questionRewardPoolEscrow));
         console.log("USDC token:", usdcTokenAddress);
         console.log("CategoryRegistry:", address(categoryRegistry));
         console.log("VoterIdNFT:", address(voterIdNFT));
@@ -555,7 +555,7 @@ contract DeployCuryo is ScaffoldETHDeploy {
         RoundVotingEngine votingEngine,
         ProtocolConfig protocolConfig,
         RoundRewardDistributor rewardDistributor,
-        QuestionBountyEscrow questionBountyEscrow,
+        QuestionRewardPoolEscrow questionRewardPoolEscrow,
         FrontendRegistry frontendRegistry,
         ProfileRegistry profileRegistry,
         CategoryRegistry categoryRegistry,
@@ -633,24 +633,24 @@ contract DeployCuryo is ScaffoldETHDeploy {
         _requireProxyAdminOwner(address(rewardDistributor), governance, "RoundRewardDistributor proxy admin owner");
 
         _requireHasRole(
-            address(questionBountyEscrow),
-            questionBountyEscrow.DEFAULT_ADMIN_ROLE(),
+            address(questionRewardPoolEscrow),
+            questionRewardPoolEscrow.DEFAULT_ADMIN_ROLE(),
             governance,
-            "QuestionBountyEscrow governance default admin"
+            "QuestionRewardPoolEscrow governance default admin"
         );
         _requireHasRole(
-            address(questionBountyEscrow),
-            questionBountyEscrow.CONFIG_ROLE(),
+            address(questionRewardPoolEscrow),
+            questionRewardPoolEscrow.CONFIG_ROLE(),
             governance,
-            "QuestionBountyEscrow governance config"
+            "QuestionRewardPoolEscrow governance config"
         );
         _requireHasRole(
-            address(questionBountyEscrow),
-            questionBountyEscrow.PAUSER_ROLE(),
+            address(questionRewardPoolEscrow),
+            questionRewardPoolEscrow.PAUSER_ROLE(),
             governance,
-            "QuestionBountyEscrow governance pauser"
+            "QuestionRewardPoolEscrow governance pauser"
         );
-        _requireProxyAdminOwner(address(questionBountyEscrow), governance, "QuestionBountyEscrow proxy admin owner");
+        _requireProxyAdminOwner(address(questionRewardPoolEscrow), governance, "QuestionRewardPoolEscrow proxy admin owner");
 
         _requireHasRole(
             address(frontendRegistry),
@@ -707,12 +707,12 @@ contract DeployCuryo is ScaffoldETHDeploy {
         _require(address(categoryRegistry.voterIdNFT()) == address(voterIdNFT), "CategoryRegistry voterIdNFT");
         _require(address(frontendRegistry.voterIdNFT()) == address(voterIdNFT), "FrontendRegistry voterIdNFT");
         _require(address(profileRegistry.voterIdNFT()) == address(voterIdNFT), "ProfileRegistry voterIdNFT");
-        _require(address(questionBountyEscrow.voterIdNFT()) == address(voterIdNFT), "QuestionBountyEscrow voterIdNFT");
-        _require(address(questionBountyEscrow.registry()) == address(registry), "QuestionBountyEscrow registry");
+        _require(address(questionRewardPoolEscrow.voterIdNFT()) == address(voterIdNFT), "QuestionRewardPoolEscrow voterIdNFT");
+        _require(address(questionRewardPoolEscrow.registry()) == address(registry), "QuestionRewardPoolEscrow registry");
         _require(
-            address(questionBountyEscrow.votingEngine()) == address(votingEngine), "QuestionBountyEscrow voting engine"
+            address(questionRewardPoolEscrow.votingEngine()) == address(votingEngine), "QuestionRewardPoolEscrow voting engine"
         );
-        _require(address(questionBountyEscrow.usdcToken()) == _resolveCeloUsdcAddress(), "QuestionBountyEscrow USDC");
+        _require(address(questionRewardPoolEscrow.usdcToken()) == _resolveCeloUsdcAddress(), "QuestionRewardPoolEscrow USDC");
         _require(voterIdNFT.owner() == governance, "VoterIdNFT governance owner");
         _require(participationPool.owner() == governance, "ParticipationPool governance owner");
         if (address(humanFaucet) != address(0)) {

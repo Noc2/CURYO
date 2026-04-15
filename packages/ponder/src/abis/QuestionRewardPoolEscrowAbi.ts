@@ -1,9 +1,9 @@
-export const QuestionBountyEscrowAbi = [
+export const QuestionRewardPoolEscrowAbi = [
   {
     type: "event",
-    name: "BountyCreated",
+    name: "RewardPoolCreated",
     inputs: [
-      { name: "bountyId", type: "uint256", indexed: true },
+      { name: "rewardPoolId", type: "uint256", indexed: true },
       { name: "contentId", type: "uint256", indexed: true },
       { name: "funder", type: "address", indexed: true },
       { name: "funderVoterId", type: "uint256", indexed: false },
@@ -16,9 +16,9 @@ export const QuestionBountyEscrowAbi = [
   },
   {
     type: "event",
-    name: "BountyRoundQualified",
+    name: "RewardPoolRoundQualified",
     inputs: [
-      { name: "bountyId", type: "uint256", indexed: true },
+      { name: "rewardPoolId", type: "uint256", indexed: true },
       { name: "contentId", type: "uint256", indexed: true },
       { name: "roundId", type: "uint256", indexed: true },
       { name: "allocation", type: "uint256", indexed: false },
@@ -27,9 +27,9 @@ export const QuestionBountyEscrowAbi = [
   },
   {
     type: "event",
-    name: "BountyRewardClaimed",
+    name: "QuestionRewardClaimed",
     inputs: [
-      { name: "bountyId", type: "uint256", indexed: true },
+      { name: "rewardPoolId", type: "uint256", indexed: true },
       { name: "contentId", type: "uint256", indexed: true },
       { name: "roundId", type: "uint256", indexed: true },
       { name: "claimant", type: "address", indexed: false },
@@ -39,9 +39,9 @@ export const QuestionBountyEscrowAbi = [
   },
   {
     type: "event",
-    name: "BountyRefunded",
+    name: "RewardPoolRefunded",
     inputs: [
-      { name: "bountyId", type: "uint256", indexed: true },
+      { name: "rewardPoolId", type: "uint256", indexed: true },
       { name: "funder", type: "address", indexed: true },
       { name: "amount", type: "uint256", indexed: false },
     ],

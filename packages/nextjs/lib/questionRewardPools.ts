@@ -4,8 +4,8 @@ import { isAddress, parseUnits } from "viem";
 import { contracts } from "~~/utils/scaffold-eth/contract";
 
 export const USDC_DECIMALS = 6;
-export const MIN_BOUNTY_REQUIRED_VOTERS = 3;
-export const MIN_BOUNTY_SETTLED_ROUNDS = 1;
+export const MIN_REWARD_POOL_REQUIRED_VOTERS = 3;
+export const MIN_REWARD_POOL_SETTLED_ROUNDS = 1;
 
 export const QUESTION_SUBMISSION_ABI = [
   {
@@ -40,10 +40,10 @@ export const QUESTION_SUBMISSION_ABI = [
   },
 ] as const;
 
-export const QUESTION_BOUNTY_ESCROW_ABI = [
+export const QUESTION_REWARD_POOL_ESCROW_ABI = [
   {
     type: "function",
-    name: "createBounty",
+    name: "createRewardPool",
     inputs: [
       { name: "contentId", type: "uint256" },
       { name: "amount", type: "uint256" },
@@ -51,14 +51,14 @@ export const QUESTION_BOUNTY_ESCROW_ABI = [
       { name: "requiredSettledRounds", type: "uint256" },
       { name: "expiresAt", type: "uint256" },
     ],
-    outputs: [{ name: "bountyId", type: "uint256" }],
+    outputs: [{ name: "rewardPoolId", type: "uint256" }],
     stateMutability: "nonpayable",
   },
   {
     type: "function",
-    name: "claimBountyReward",
+    name: "claimQuestionReward",
     inputs: [
-      { name: "bountyId", type: "uint256" },
+      { name: "rewardPoolId", type: "uint256" },
       { name: "roundId", type: "uint256" },
     ],
     outputs: [{ name: "rewardAmount", type: "uint256" }],
@@ -66,9 +66,9 @@ export const QUESTION_BOUNTY_ESCROW_ABI = [
   },
   {
     type: "function",
-    name: "claimableBountyReward",
+    name: "claimableQuestionReward",
     inputs: [
-      { name: "bountyId", type: "uint256" },
+      { name: "rewardPoolId", type: "uint256" },
       { name: "roundId", type: "uint256" },
       { name: "account", type: "address" },
     ],
@@ -117,11 +117,11 @@ function normalizeAddress(value: string | undefined): `0x${string}` | undefined 
   return trimmed && isAddress(trimmed) ? (trimmed as `0x${string}`) : undefined;
 }
 
-export function getConfiguredQuestionBountyEscrowAddress(chainId: number): `0x${string}` | undefined {
-  const envAddress = normalizeAddress(process.env.NEXT_PUBLIC_QUESTION_BOUNTY_ESCROW_ADDRESS);
+export function getConfiguredQuestionRewardPoolEscrowAddress(chainId: number): `0x${string}` | undefined {
+  const envAddress = normalizeAddress(process.env.NEXT_PUBLIC_QUESTION_REWARD_POOL_ESCROW_ADDRESS);
   if (envAddress) return envAddress;
 
-  const deployedAddress = (contracts?.[chainId]?.QuestionBountyEscrow as { address?: string } | undefined)?.address;
+  const deployedAddress = (contracts?.[chainId]?.QuestionRewardPoolEscrow as { address?: string } | undefined)?.address;
   return normalizeAddress(deployedAddress);
 }
 
@@ -129,7 +129,7 @@ export function getDefaultUsdcAddress(chainId: number): `0x${string}` | undefine
   return normalizeAddress(process.env.NEXT_PUBLIC_CELO_USDC_ADDRESS) ?? CELO_USDC_BY_CHAIN_ID[chainId];
 }
 
-export function parseUsdBountyAmount(value: string): bigint | null {
+export function parseUsdRewardPoolAmount(value: string): bigint | null {
   const normalized = value.trim().replace(/,/g, ".");
   if (!/^\d+(?:\.\d{0,6})?$/.test(normalized)) return null;
   try {

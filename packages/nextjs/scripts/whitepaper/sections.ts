@@ -124,7 +124,7 @@ export const SECTIONS: Section[] = [
         blocks: [
           {
             type: "paragraph",
-            text: "Submitting a question starts with the question itself: the entry can be text-only or include a regular evidence link, direct image link, or YouTube link. An optional bounty attached to that question is funded in Celo USDC and displayed as USD. The question submission key must be unique, and title plus description are emitted in the on-chain ContentSubmitted event so any frontend or indexer can reconstruct the same canonical metadata; the title is the primary label shown above the content, while the description gives longer context below it. There is no hard bounty cap -- moderation, funding, and validation guardrails do the real work instead.",
+            text: "Submitting a question starts with the question itself: the entry can be text-only or include a regular evidence link, direct image link, or YouTube link. An optional Question Reward Pool attached to that question is paid in USDC on Celo and displayed as USD. The question submission key must be unique, and title plus description are emitted in the on-chain ContentSubmitted event so any frontend or indexer can reconstruct the same canonical metadata; the title is the primary label shown above the content, while the description gives longer context below it. There is no hard reward pool cap -- moderation, funding, and validation guardrails do the real work instead.",
           },
           {
             type: "paragraph",
@@ -136,7 +136,7 @@ export const SECTIONS: Section[] = [
               "Commit (any time during the round): Choose up or down. The UI encrypts your direction and submits a single transferAndCall transaction carrying (contentId, roundReferenceRatingBps, commitHash, ciphertext, frontend, targetRound, drandChainHash). Your stake is locked; your direction is hidden on-chain until the epoch ends.",
               `Epoch ends (every ${protocolDocFacts.blindPhaseDurationLabel}): The drand beacon publishes a randomness value. The keeper fetches it, validates the stored AGE/tlock stanza against the commit metadata, decrypts eligible ciphertexts off-chain, and calls revealVoteByCommitKey() for unrevealed commits.`,
               `Settlement: After at least ${protocolDocFacts.minVotersLabel} votes are revealed and all past-epoch votes are revealed (or the ${protocolDocFacts.revealGracePeriodLabel} reveal grace period expires), anyone may call settleRound(contentId, roundId). The side with the larger epoch-weighted stake wins. The content rating updates from the round reference score using epoch-weighted revealed stake evidence.`,
-              `Claim: Winners call claimReward(contentId, roundId) to receive their original stake plus an epoch-weighted share of the remaining losing pool. Revealed losers may also call claimReward(contentId, roundId) to recover a fixed ${protocolDocFacts.revealedLoserRefundPercentLabel} rebate. If the question has a qualifying USDC bounty, eligible revealed Voter ID holders can also claim an equal bounty share independent of cREP outcome. Content submitters may claim a separate submitter reward.`,
+              `Claim: Winners call claimReward(contentId, roundId) to receive their original stake plus an epoch-weighted share of the remaining losing pool. Revealed losers may also call claimReward(contentId, roundId) to recover a fixed ${protocolDocFacts.revealedLoserRefundPercentLabel} rebate. If the question has a qualifying Question Reward Pool, eligible revealed Voter ID holders can also claim an equal question reward independent of cREP outcome. Content submitters may claim a separate submitter reward.`,
             ],
           },
         ],
@@ -811,7 +811,7 @@ export const SECTIONS: Section[] = [
                 [
                   "Submit content",
                   "10 cREP",
-                  "Returned after a healthy settled round once no later round remains open, or at dormancy if no round ever settles; optional USDC bounties are funded separately",
+                  "Returned after a healthy settled round once no later round remains open, or at dormancy if no round ever settles; optional Question Reward Pools are funded separately",
                 ],
                 ["Register as frontend", "1,000 cREP", "Returned on exit unless slashed"],
               ],

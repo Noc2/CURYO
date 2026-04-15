@@ -6,8 +6,8 @@ import {
   content,
   frontend,
   globalStats,
-  questionBounty,
-  questionBountyRound,
+  questionRewardPool,
+  questionRewardPoolRound,
   rewardClaim,
   round,
   submitterRewardClaim,
@@ -335,7 +335,7 @@ export function registerDataRoutes(app: ApiApp) {
     });
   });
 
-  app.get("/bounty-claim-candidates", async (c) => {
+  app.get("/question-reward-claim-candidates", async (c) => {
     const voterRaw = c.req.query("voter");
     const limit = safeLimit(c.req.query("limit"), 100, 200);
     const offset = safeOffset(c.req.query("offset"));
@@ -351,42 +351,42 @@ export function registerDataRoutes(app: ApiApp) {
     const voterAddr = voterRaw.toLowerCase() as `0x${string}`;
     const items = await db
       .select({
-        bountyId: questionBounty.id,
-        contentId: questionBounty.contentId,
+        rewardPoolId: questionRewardPool.id,
+        contentId: questionRewardPool.contentId,
         roundId: vote.roundId,
         title: content.title,
-        allocation: questionBountyRound.allocation,
-        eligibleVoters: questionBountyRound.eligibleVoters,
-        qualified: sql<boolean>`${questionBountyRound.bountyId} is not null`,
+        allocation: questionRewardPoolRound.allocation,
+        eligibleVoters: questionRewardPoolRound.eligibleVoters,
+        qualified: sql<boolean>`${questionRewardPoolRound.rewardPoolId} is not null`,
       })
       .from(vote)
       .innerJoin(
         round,
         and(eq(vote.contentId, round.contentId), eq(vote.roundId, round.roundId)),
       )
-      .innerJoin(questionBounty, eq(vote.contentId, questionBounty.contentId))
+      .innerJoin(questionRewardPool, eq(vote.contentId, questionRewardPool.contentId))
       .innerJoin(content, eq(vote.contentId, content.id))
       .leftJoin(
-        questionBountyRound,
-        and(eq(questionBountyRound.bountyId, questionBounty.id), eq(questionBountyRound.roundId, vote.roundId)),
+        questionRewardPoolRound,
+        and(eq(questionRewardPoolRound.rewardPoolId, questionRewardPool.id), eq(questionRewardPoolRound.roundId, vote.roundId)),
       )
       .where(
         and(
           eq(vote.voter, voterAddr),
           eq(vote.revealed, true),
           eq(round.state, ROUND_STATE.Settled),
-          sql`${vote.roundId} >= ${questionBounty.startRoundId}`,
+          sql`${vote.roundId} >= ${questionRewardPool.startRoundId}`,
           or(
-            sql`${questionBountyRound.bountyId} is not null`,
+            sql`${questionRewardPoolRound.rewardPoolId} is not null`,
             and(
-              eq(questionBounty.refunded, false),
-              sql`${questionBounty.qualifiedRounds} < ${questionBounty.requiredSettledRounds}`,
-              sql`${round.revealedCount} >= ${questionBounty.requiredVoters}`,
+              eq(questionRewardPool.refunded, false),
+              sql`${questionRewardPool.qualifiedRounds} < ${questionRewardPool.requiredSettledRounds}`,
+              sql`${round.revealedCount} >= ${questionRewardPool.requiredVoters}`,
             ),
           ),
         ),
       )
-      .orderBy(desc(round.settledAt), desc(questionBounty.createdAt))
+      .orderBy(desc(round.settledAt), desc(questionRewardPool.createdAt))
       .limit(limit)
       .offset(offset);
 

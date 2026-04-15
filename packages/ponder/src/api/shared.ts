@@ -2,7 +2,7 @@ import { DEFAULT_REVEAL_GRACE_PERIOD_SECONDS, DEFAULT_ROUND_CONFIG, ROUND_STATE 
 import type { Context, Hono } from "hono";
 import { and, desc, eq, inArray, replaceBigInts, sql } from "ponder";
 import { db } from "ponder:api";
-import { questionBounty, round } from "ponder:schema";
+import { questionRewardPool, round } from "ponder:schema";
 import { isValidAddress, safeBigInt } from "./utils.js";
 
 export type ApiApp = Hono;
@@ -81,31 +81,31 @@ export async function attachOpenRoundSummary<T extends { id: bigint }>(items: T[
       contentId: item.id,
       question: "title" in item ? item.title : undefined,
       link: "url" in item ? item.url || null : undefined,
-      bountySummary: emptyBountySummary(),
+      rewardPoolSummary: emptyRewardPoolSummary(),
       openRound: null,
     }));
   }
 
   const contentIds = items.map(item => item.id);
-  const bountyRows = await db
+  const rewardPoolRows = await db
     .select({
-      contentId: questionBounty.contentId,
-      bountyCount: sql<number>`count(*)`,
-      activeBountyCount: sql<number>`sum(case when ${questionBounty.refunded} = false and ${questionBounty.qualifiedRounds} < ${questionBounty.requiredSettledRounds} then 1 else 0 end)`,
-      totalFundedAmount: sql<bigint>`coalesce(sum(${questionBounty.fundedAmount}), 0)`,
-      totalUnallocatedAmount: sql<bigint>`coalesce(sum(${questionBounty.unallocatedAmount}), 0)`,
-      totalAllocatedAmount: sql<bigint>`coalesce(sum(${questionBounty.allocatedAmount}), 0)`,
-      totalClaimedAmount: sql<bigint>`coalesce(sum(${questionBounty.claimedAmount}), 0)`,
-      totalRefundedAmount: sql<bigint>`coalesce(sum(${questionBounty.refundedAmount}), 0)`,
-      qualifiedRoundCount: sql<number>`coalesce(sum(${questionBounty.qualifiedRounds}), 0)`,
+      contentId: questionRewardPool.contentId,
+      rewardPoolCount: sql<number>`count(*)`,
+      activeRewardPoolCount: sql<number>`sum(case when ${questionRewardPool.refunded} = false and ${questionRewardPool.qualifiedRounds} < ${questionRewardPool.requiredSettledRounds} then 1 else 0 end)`,
+      totalFundedAmount: sql<bigint>`coalesce(sum(${questionRewardPool.fundedAmount}), 0)`,
+      totalUnallocatedAmount: sql<bigint>`coalesce(sum(${questionRewardPool.unallocatedAmount}), 0)`,
+      totalAllocatedAmount: sql<bigint>`coalesce(sum(${questionRewardPool.allocatedAmount}), 0)`,
+      totalClaimedAmount: sql<bigint>`coalesce(sum(${questionRewardPool.claimedAmount}), 0)`,
+      totalRefundedAmount: sql<bigint>`coalesce(sum(${questionRewardPool.refundedAmount}), 0)`,
+      qualifiedRoundCount: sql<number>`coalesce(sum(${questionRewardPool.qualifiedRounds}), 0)`,
     })
-    .from(questionBounty)
-    .where(inArray(questionBounty.contentId, contentIds))
-    .groupBy(questionBounty.contentId);
+    .from(questionRewardPool)
+    .where(inArray(questionRewardPool.contentId, contentIds))
+    .groupBy(questionRewardPool.contentId);
 
-  const bountySummaryByContentId = new Map<bigint, ReturnType<typeof formatBountySummary>>();
-  for (const row of bountyRows) {
-    bountySummaryByContentId.set(row.contentId, formatBountySummary(row));
+  const rewardPoolSummaryByContentId = new Map<bigint, ReturnType<typeof formatRewardPoolSummary>>();
+  for (const row of rewardPoolRows) {
+    rewardPoolSummaryByContentId.set(row.contentId, formatRewardPoolSummary(row));
   }
 
   const openRounds = await db
@@ -141,14 +141,14 @@ export async function attachOpenRoundSummary<T extends { id: bigint }>(items: T[
 
   return items.map(item => {
     const openRound = latestOpenRoundByContentId.get(item.id);
-    const bountySummary = bountySummaryByContentId.get(item.id) ?? emptyBountySummary();
+    const rewardPoolSummary = rewardPoolSummaryByContentId.get(item.id) ?? emptyRewardPoolSummary();
 
     return {
       ...item,
       contentId: item.id,
       question: "title" in item ? item.title : undefined,
       link: "url" in item ? item.url || null : undefined,
-      bountySummary,
+      rewardPoolSummary,
       openRound: openRound
         ? {
             roundId: openRound.roundId,
@@ -174,20 +174,20 @@ export async function attachOpenRoundSummary<T extends { id: bigint }>(items: T[
   });
 }
 
-function emptyBountySummary() {
+function emptyRewardPoolSummary() {
   return {
     currency: "USDC",
     displayCurrency: "USD",
     decimals: 6,
-    bountyCount: 0,
-    activeBountyCount: 0,
+    rewardPoolCount: 0,
+    activeRewardPoolCount: 0,
     totalFundedAmount: 0n,
     totalUnallocatedAmount: 0n,
     totalAllocatedAmount: 0n,
     totalClaimedAmount: 0n,
     totalRefundedAmount: 0n,
     qualifiedRoundCount: 0,
-    currentBountyAmount: 0n,
+    currentRewardPoolAmount: 0n,
   };
 }
 
@@ -205,9 +205,9 @@ function toNumberValue(value: number | string | bigint | null | undefined) {
   return 0;
 }
 
-function formatBountySummary(row: {
-  bountyCount: number | string | bigint | null;
-  activeBountyCount: number | string | bigint | null;
+function formatRewardPoolSummary(row: {
+  rewardPoolCount: number | string | bigint | null;
+  activeRewardPoolCount: number | string | bigint | null;
   totalFundedAmount: bigint | string | number | null;
   totalUnallocatedAmount: bigint | string | number | null;
   totalAllocatedAmount: bigint | string | number | null;
@@ -223,14 +223,14 @@ function formatBountySummary(row: {
     currency: "USDC",
     displayCurrency: "USD",
     decimals: 6,
-    bountyCount: toNumberValue(row.bountyCount),
-    activeBountyCount: toNumberValue(row.activeBountyCount),
+    rewardPoolCount: toNumberValue(row.rewardPoolCount),
+    activeRewardPoolCount: toNumberValue(row.activeRewardPoolCount),
     totalFundedAmount: toBigIntValue(row.totalFundedAmount),
     totalUnallocatedAmount,
     totalAllocatedAmount,
     totalClaimedAmount,
     totalRefundedAmount: toBigIntValue(row.totalRefundedAmount),
     qualifiedRoundCount: toNumberValue(row.qualifiedRoundCount),
-    currentBountyAmount: totalUnallocatedAmount + totalAllocatedAmount - totalClaimedAmount,
+    currentRewardPoolAmount: totalUnallocatedAmount + totalAllocatedAmount - totalClaimedAmount,
   };
 }

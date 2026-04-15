@@ -38,7 +38,7 @@ const WhitepaperPage: NextPage = () => {
         </li>
         <li>
           <strong>Tokenomics</strong> &mdash; Token distribution, faucet tiers, participation rewards, and question
-          bounties
+          reward pools
         </li>
         <li>
           <strong>Governance</strong> &mdash; Community governance, treasury, and collusion prevention

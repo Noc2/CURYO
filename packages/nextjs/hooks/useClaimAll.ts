@@ -13,7 +13,10 @@ import {
   getClaimPreflightErrorMessage,
   isClaimGasShortageError,
 } from "~~/lib/claimTransactionFeedback";
-import { QUESTION_BOUNTY_ESCROW_ABI, getConfiguredQuestionBountyEscrowAddress } from "~~/lib/questionBounties";
+import {
+  QUESTION_REWARD_POOL_ESCROW_ABI,
+  getConfiguredQuestionRewardPoolEscrowAddress,
+} from "~~/lib/questionRewardPools";
 import { isWalletRpcOverloadedError } from "~~/lib/transactionErrors";
 import { notification } from "~~/utils/scaffold-eth";
 
@@ -157,18 +160,20 @@ export function useClaimAll() {
               },
               { getErrorMessage: getTransactionErrorMessage },
             );
-          } else if (item.claimType === "question_bounty_reward") {
-            const escrowAddress = getConfiguredQuestionBountyEscrowAddress(chain?.id ?? wagmiConfig.chains[0]?.id ?? 0);
+          } else if (item.claimType === "question_reward") {
+            const escrowAddress = getConfiguredQuestionRewardPoolEscrowAddress(
+              chain?.id ?? wagmiConfig.chains[0]?.id ?? 0,
+            );
             if (!escrowAddress) {
-              notification.error("Question bounties are not deployed on this network yet.");
+              notification.error("Question Reward Pools are not deployed on this network yet.");
               continue;
             }
 
             const hash = await writeDirectContractAsync({
               address: escrowAddress,
-              abi: QUESTION_BOUNTY_ESCROW_ABI,
-              functionName: "claimBountyReward",
-              args: [item.bountyId, item.roundId],
+              abi: QUESTION_REWARD_POOL_ESCROW_ABI,
+              functionName: "claimQuestionReward",
+              args: [item.rewardPoolId, item.roundId],
             });
             await waitForTransactionReceipt(wagmiConfig, { hash });
           } else {
@@ -186,8 +191,8 @@ export function useClaimAll() {
               ? `participation reward for content #${item.contentId} round ${item.roundId}`
               : item.claimType === "submitter_participation_reward"
                 ? `submitter participation reward for content #${item.contentId}`
-                : item.claimType === "question_bounty_reward"
-                  ? `USDC bounty for content #${item.contentId} round ${item.roundId}`
+                : item.claimType === "question_reward"
+                  ? `question reward for content #${item.contentId} round ${item.roundId}`
                   : item.claimType === "frontend_registry_fee"
                     ? `frontend registry fees for ${item.frontend}`
                     : item.claimType === "frontend_round_fee"

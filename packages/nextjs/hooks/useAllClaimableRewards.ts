@@ -6,7 +6,7 @@ import { useAccount, useReadContracts } from "wagmi";
 import { type ClaimableRewardItem, buildVoterParticipationClaimableRewards } from "~~/hooks/claimableRewards";
 import { useDeployedContractInfo } from "~~/hooks/scaffold-eth";
 import { useClaimableFrontendRewards } from "~~/hooks/useClaimableFrontendRewards";
-import { useClaimableQuestionBountyRewards } from "~~/hooks/useClaimableQuestionBountyRewards";
+import { useClaimableQuestionRewards } from "~~/hooks/useClaimableQuestionRewards";
 import { useClaimableSubmitterParticipationRewards } from "~~/hooks/useClaimableSubmitterParticipationRewards";
 import { useClaimableSubmitterRewards } from "~~/hooks/useClaimableSubmitterRewards";
 import { useRecentUserVotes } from "~~/hooks/useRecentUserVotes";
@@ -38,11 +38,11 @@ export function useAllClaimableRewards() {
     refetch: refetchFrontendClaimables,
   } = useClaimableFrontendRewards();
   const {
-    claimableItems: questionBountyClaimableItems,
-    totalClaimable: totalQuestionBountyClaimable,
-    isLoading: questionBountyClaimableLoading,
-    refetch: refetchQuestionBountyClaimables,
-  } = useClaimableQuestionBountyRewards();
+    claimableItems: questionRewardPoolClaimableItems,
+    totalClaimable: totalQuestionRewardPoolClaimable,
+    isLoading: questionRewardPoolClaimableLoading,
+    refetch: refetchQuestionRewardPoolClaimables,
+  } = useClaimableQuestionRewards();
 
   // --- Step 2: Filter to terminal rounds only ---
   const terminalVotes = useMemo(() => {
@@ -327,7 +327,7 @@ export function useAllClaimableRewards() {
       ...submitterClaimableItems,
       ...submitterParticipationClaimableItems,
       ...frontendClaimableItems,
-      ...questionBountyClaimableItems,
+      ...questionRewardPoolClaimableItems,
     ],
     [
       claimableItems,
@@ -335,7 +335,7 @@ export function useAllClaimableRewards() {
       submitterClaimableItems,
       submitterParticipationClaimableItems,
       frontendClaimableItems,
-      questionBountyClaimableItems,
+      questionRewardPoolClaimableItems,
     ],
   );
 
@@ -364,7 +364,7 @@ export function useAllClaimableRewards() {
     submitterLoading ||
     submitterParticipationLoading ||
     frontendClaimableLoading ||
-    questionBountyClaimableLoading;
+    questionRewardPoolClaimableLoading;
 
   const refetch = useCallback(() => {
     refetchVotes();
@@ -373,7 +373,7 @@ export function useAllClaimableRewards() {
     refetchSubmitterClaimables();
     refetchSubmitterParticipationClaimables();
     refetchFrontendClaimables();
-    refetchQuestionBountyClaimables();
+    refetchQuestionRewardPoolClaimables();
   }, [
     refetchVotes,
     refetchClaimed,
@@ -381,14 +381,14 @@ export function useAllClaimableRewards() {
     refetchSubmitterClaimables,
     refetchSubmitterParticipationClaimables,
     refetchFrontendClaimables,
-    refetchQuestionBountyClaimables,
+    refetchQuestionRewardPoolClaimables,
   ]);
 
   return {
     claimableItems: combinedClaimableItems,
     totalClaimable: combinedCrepClaimable,
     totalCrepClaimable: combinedCrepClaimable,
-    totalUsdcClaimable: totalQuestionBountyClaimable,
+    totalUsdcClaimable: totalQuestionRewardPoolClaimable,
     activeStake,
     isLoading,
     refetch,

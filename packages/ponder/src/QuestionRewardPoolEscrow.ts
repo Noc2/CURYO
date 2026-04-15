@@ -1,9 +1,9 @@
 import { ponder } from "ponder:registry";
-import { content, questionBounty, questionBountyClaim, questionBountyRound } from "ponder:schema";
+import { content, questionRewardPool, questionRewardPoolClaim, questionRewardPoolRound } from "ponder:schema";
 
-ponder.on("QuestionBountyEscrow:BountyCreated", async ({ event, context }) => {
+ponder.on("QuestionRewardPoolEscrow:RewardPoolCreated", async ({ event, context }) => {
   const {
-    bountyId,
+    rewardPoolId,
     contentId,
     funder,
     funderVoterId,
@@ -15,9 +15,9 @@ ponder.on("QuestionBountyEscrow:BountyCreated", async ({ event, context }) => {
   } = event.args;
 
   await context.db
-    .insert(questionBounty)
+    .insert(questionRewardPool)
     .values({
-      id: bountyId,
+      id: rewardPoolId,
       contentId,
       funder,
       funderVoterId,
@@ -45,14 +45,14 @@ ponder.on("QuestionBountyEscrow:BountyCreated", async ({ event, context }) => {
   }
 });
 
-ponder.on("QuestionBountyEscrow:BountyRoundQualified", async ({ event, context }) => {
-  const { bountyId, contentId, roundId, allocation, eligibleVoters } = event.args;
+ponder.on("QuestionRewardPoolEscrow:RewardPoolRoundQualified", async ({ event, context }) => {
+  const { rewardPoolId, contentId, roundId, allocation, eligibleVoters } = event.args;
 
   await context.db
-    .insert(questionBountyRound)
+    .insert(questionRewardPoolRound)
     .values({
-      id: `${bountyId}-${roundId}`,
-      bountyId,
+      id: `${rewardPoolId}-${roundId}`,
+      rewardPoolId,
       contentId,
       roundId,
       allocation,
@@ -63,7 +63,7 @@ ponder.on("QuestionBountyEscrow:BountyRoundQualified", async ({ event, context }
     })
     .onConflictDoNothing();
 
-  await context.db.update(questionBounty, { id: bountyId }).set((row) => ({
+  await context.db.update(questionRewardPool, { id: rewardPoolId }).set((row) => ({
     unallocatedAmount: row.unallocatedAmount - allocation,
     allocatedAmount: row.allocatedAmount + allocation,
     qualifiedRounds: row.qualifiedRounds + 1,
@@ -78,14 +78,14 @@ ponder.on("QuestionBountyEscrow:BountyRoundQualified", async ({ event, context }
   }
 });
 
-ponder.on("QuestionBountyEscrow:BountyRewardClaimed", async ({ event, context }) => {
-  const { bountyId, contentId, roundId, claimant, voterId, amount } = event.args;
+ponder.on("QuestionRewardPoolEscrow:QuestionRewardClaimed", async ({ event, context }) => {
+  const { rewardPoolId, contentId, roundId, claimant, voterId, amount } = event.args;
 
   await context.db
-    .insert(questionBountyClaim)
+    .insert(questionRewardPoolClaim)
     .values({
-      id: `${bountyId}-${roundId}-${voterId}`,
-      bountyId,
+      id: `${rewardPoolId}-${roundId}-${voterId}`,
+      rewardPoolId,
       contentId,
       roundId,
       claimant,
@@ -95,32 +95,32 @@ ponder.on("QuestionBountyEscrow:BountyRewardClaimed", async ({ event, context })
     })
     .onConflictDoNothing();
 
-  await context.db.update(questionBountyRound, { id: `${bountyId}-${roundId}` }).set((row) => ({
+  await context.db.update(questionRewardPoolRound, { id: `${rewardPoolId}-${roundId}` }).set((row) => ({
     claimedAmount: row.claimedAmount + amount,
     claimedCount: row.claimedCount + 1,
   }));
 
-  await context.db.update(questionBounty, { id: bountyId }).set((row) => ({
+  await context.db.update(questionRewardPool, { id: rewardPoolId }).set((row) => ({
     claimedAmount: row.claimedAmount + amount,
     updatedAt: event.block.timestamp,
   }));
 });
 
-ponder.on("QuestionBountyEscrow:BountyRefunded", async ({ event, context }) => {
-  const { bountyId, amount } = event.args;
-  const existingBounty = await context.db.find(questionBounty, { id: bountyId });
+ponder.on("QuestionRewardPoolEscrow:RewardPoolRefunded", async ({ event, context }) => {
+  const { rewardPoolId, amount } = event.args;
+  const existingRewardPool = await context.db.find(questionRewardPool, { id: rewardPoolId });
 
-  await context.db.update(questionBounty, { id: bountyId }).set((row) => ({
+  await context.db.update(questionRewardPool, { id: rewardPoolId }).set((row) => ({
     unallocatedAmount: 0n,
     refundedAmount: row.refundedAmount + amount,
     refunded: true,
     updatedAt: event.block.timestamp,
   }));
 
-  if (existingBounty) {
-    const existingContent = await context.db.find(content, { id: existingBounty.contentId });
+  if (existingRewardPool) {
+    const existingContent = await context.db.find(content, { id: existingRewardPool.contentId });
     if (existingContent) {
-      await context.db.update(content, { id: existingBounty.contentId }).set({
+      await context.db.update(content, { id: existingRewardPool.contentId }).set({
         lastActivityAt: event.block.timestamp,
       });
     }

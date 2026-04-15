@@ -21,7 +21,7 @@ Requires configured environment variables and a reachable RPC endpoint.
 `vote` and `claim` require a running Ponder indexer (`yarn ponder:dev`); `submit` does not.
 `status` reports the configured Ponder endpoint when available but can still run without it.
 Public submission sources still work without third-party API keys, but source coverage and automated rating breadth are reduced.
-Question submissions may be text-only or include a regular link, direct image link, or YouTube link, and bounty amounts are shown as USD even though settlement happens in Celo USDC.
+Question submissions may be text-only or include a regular link, direct image link, or YouTube link, and reward pool amounts are shown as USD even though settlement happens in USDC on Celo.
 
 ## Scripts
 
@@ -139,7 +139,7 @@ Deployed default categories that are already on-chain but still missing automate
 For each `submit` run, the bot:
 
 1. Loads the wallet configured in `SUBMIT_*` and checks that it can submit. The on-chain `hasVoterId(address)` check resolves delegated identities, so a delegated hot wallet can submit on behalf of the Voter ID holder.
-2. Checks that the wallet has enough cREP for the next submission. Each successful question submission stakes **10 cREP**, and the wallet also needs native gas for `approve`, `reserveSubmission`, and `submitQuestion`. Optional bounties are funded separately in Celo USDC and shown as USD.
+2. Checks that the wallet has enough cREP for the next submission. Each successful question submission stakes **10 cREP**, and the wallet also needs native gas for `approve`, `reserveSubmission`, and `submitQuestion`. Optional reward pools are paid separately in USDC on Celo and shown as USD.
 3. Chooses the enabled source adapters and fetches trending content. For movies, the `tmdb` source reads TMDB's `/movie/popular` feed.
 4. Skips URLs that were already submitted by calling `isUrlSubmitted(url)` before attempting a transaction.
 5. Calls `previewQuestionSubmissionKey(url, title, description, tags, categoryId)` to verify the canonical category, reserves the hidden submission commitment, waits a little over one second for the reservation age check, and then submits the question or supported media link with the matching salt.
@@ -192,7 +192,7 @@ yarn bot:claim
 
 - Send enough cREP for the batch you want to test. The bot stakes `10 cREP` per successful question submission, so `--max-submissions 5` needs at least `50 cREP`.
 - Send enough native gas token as well so the bot can pay for approvals and submission transactions.
-- Fund Celo USDC only if your workflow also creates question bounties; plain bot submissions do not attach a bounty.
+- Fund USDC on Celo only if your workflow also creates question reward pools; plain bot submissions do not attach a reward pool.
 - The same `/settings?tab=delegation` screen can still manage the delegate wallet for vote and claim flows.
 
 6. Re-run the status command and confirm the bot wallet is ready.
@@ -224,7 +224,7 @@ Expected behavior:
 - The bot fetches TMDB's current popular movies.
 - Already-submitted movie URLs are skipped automatically.
 - Only fresh items are submitted, so the run may submit fewer than the requested max if duplicates are common.
-- Each successful submission stakes `10 cREP`; optional Celo USDC bounty funding is separate.
+- Each successful submission stakes `10 cREP`; optional Question Reward Pool funding is separate.
 - If `TMDB_API_KEY` is missing, the TMDB source will return no items.
 
 ## Project Structure

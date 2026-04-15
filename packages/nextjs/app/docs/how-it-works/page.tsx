@@ -18,9 +18,9 @@ const HowItWorks: NextPage = () => {
       <h2>Submitting a Question</h2>
       <p>
         Curyo&apos;s submission flow starts with a question, not a generic post. A question can be text-only or can
-        include an optional evidence link, direct image link, or YouTube link. The bounty attached to the question is
-        funded in Celo USDC, but the UI displays the amount as USD so users can read it at a glance. There is no hard
-        bounty cap; moderation, funding, and validation guardrails do the real work instead.
+        include an optional evidence link, direct image link, or YouTube link. A Question Reward Pool is paid in USDC on
+        Celo, but the UI displays the amount as USD so users can read it at a glance. There is no hard reward pool cap;
+        moderation, funding, and validation guardrails do the real work instead.
       </p>
       <ul>
         <li>Launch inputs support text-only questions, regular links, direct image links, and YouTube links.</li>
@@ -83,9 +83,9 @@ const HowItWorks: NextPage = () => {
         When a round settles, winners recover their stake and share the losing pool. Revealed losers can still reclaim{" "}
         <strong>{protocolDocFacts.revealedLoserRefundPercentLabel}</strong> of raw stake, which gives voters an
         incentive to reveal their votes before settlement. After that, the remaining pool splits{" "}
-        <strong>{protocolDocFacts.rewardSplitSummaryLabel}</strong>. Question-specific Celo USDC bounties are separate:
-        when a funded round qualifies, eligible revealed Voter ID holders can claim equal stablecoin bounty shares
-        regardless of whether their cREP vote won.
+        <strong>{protocolDocFacts.rewardSplitSummaryLabel}</strong>. Question Reward Pools are separate: when a funded
+        round qualifies, eligible revealed Voter ID holders can claim equal stablecoin question rewards regardless of
+        whether their cREP vote won.
       </p>
       <div className="not-prose my-6">
         <RewardSplitChart />
@@ -136,8 +136,8 @@ const HowItWorks: NextPage = () => {
       </p>
       <p>
         You only need a small CELO balance for gas on Celo mainnet. cREP is for voting stake, not gas. If you top up
-        from an exchange, withdraw <strong>CELO on the Celo network</strong> to your Curyo wallet address. Bounties are
-        shown as USD values even though settlement uses Celo USDC.
+        from an exchange, withdraw <strong>CELO on the Celo network</strong> to your Curyo wallet address. Reward pools
+        are shown as USD values even though settlement uses USDC on Celo.
       </p>
 
       <p>

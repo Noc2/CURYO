@@ -186,11 +186,11 @@ const Tokenomics = () => {
       </div>
       <p>Participation rewards are paid only after a round or submitter stake resolves successfully.</p>
 
-      <h3>Question Bounties</h3>
+      <h3>Question Reward Pools</h3>
       <p>
-        Question bounties are separate from cREP participation rewards. They are funded in Celo USDC, displayed as USD,
-        scoped to one question, and split equally among eligible revealed Voter ID holders in each qualified bounty
-        round. There is no stablecoin coherence bonus at launch.
+        Question Reward Pools are separate from cREP participation rewards. They are paid in USDC on Celo, displayed as
+        USD, scoped to one question, and split equally among eligible revealed Voter ID holders in each qualified
+        reward-pool round. There is no stablecoin coherence bonus at launch.
       </p>
 
       <h3>Treasury</h3>
@@ -236,7 +236,7 @@ const Tokenomics = () => {
               <td className="font-mono">10 cREP</td>
               <td>
                 Returned after a healthy settled round once no later round remains open, or at dormancy if no round ever
-                settles. Question bounties are optional USDC funding added through a separate escrow.
+                settles. Question Reward Pools are optional USDC funding added through a separate escrow.
               </td>
             </tr>
             <tr>

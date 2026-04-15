@@ -5,7 +5,7 @@ export { CuryoReputationAbi } from "./CuryoReputationAbi";
 export { FrontendRegistryAbi } from "./FrontendRegistryAbi";
 export { ProfileRegistryAbi } from "./ProfileRegistryAbi";
 export { ProtocolConfigAbi } from "./ProtocolConfigAbi";
-export { QuestionBountyEscrowAbi } from "./QuestionBountyEscrowAbi";
+export { QuestionRewardPoolEscrowAbi } from "./QuestionRewardPoolEscrowAbi";
 export { RoundRewardDistributorAbi } from "./RoundRewardDistributorAbi";
 export { RoundVotingEngineAbi } from "./RoundVotingEngineAbi";
 export { VoterIdNFTAbi } from "./VoterIdNFTAbi";

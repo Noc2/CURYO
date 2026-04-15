@@ -5,7 +5,7 @@
   <a href="LICENSE"><img src="https://img.shields.io/badge/License-MIT-yellow.svg?style=flat-square" alt="License: MIT"></a>
 </p>
 
-The web is drowning in clickbait and fake engagement. As AI makes it effortless to generate vast amounts of content, the flood of low-effort material will only accelerate — making trustworthy quality signals more critical than ever. Curyo fights back by tying every vote to a verified human and letting questions carry funded bounties.
+The web is drowning in clickbait and fake engagement. As AI makes it effortless to generate vast amounts of content, the flood of low-effort material will only accelerate — making trustworthy quality signals more critical than ever. Curyo fights back by tying every vote to a verified human and letting questions carry funded reward pools.
 
 ## Table of Contents
 
@@ -19,15 +19,15 @@ The web is drowning in clickbait and fake engagement. As AI makes it effortless 
 
 ## Background
 
-Voters predict whether content's rating will go up or down and back their predictions with cREP token stakes. Submissions start as questions, and any bounty attached to a question is funded in Celo USDC and displayed in USD.
+Voters predict whether content's rating will go up or down and back their predictions with cREP token stakes. Submissions start as questions, and any reward pool attached to a question is paid in USDC on Celo and displayed in USD.
 
 - **Skin in the Game** — every vote requires a token stake as a conviction signal 
 - **Sybil Resistant** — one soulbound Voter ID NFT per verified human
 - **Per-Content Rounds** — each content item accumulates votes; rounds settle once the revealed-vote threshold is reached and past-epoch reveal constraints are satisfied
 - **tlock Commit-Reveal** — votes are encrypted with timelock encryption, commits bind explicit drand metadata (`targetRound`, `drandChainHash`), and malformed/non-armored ciphertexts are rejected on-chain; the keeper-assisted/self-reveal path still hides vote directions until reveal and keeps zk-style proofing as a future hardening path
 - **Question-First Submissions** — content starts as a question, with text-only submissions or optional image/YouTube links
-- **Celo USDC Bounties** — bounty amounts are funded in Celo USDC and shown to users as USD, with no hard bounty cap
-- **Equal Bounty Rewards** — eligible revealed Voter ID holders claim the same USDC bounty share within a qualified question round
+- **Question Reward Pools** — fund specific questions, pay in USDC on Celo, and show users USD amounts with no hard reward pool cap
+- **Equal Question Rewards** — eligible revealed Voter ID holders claim the same reward share within a qualified question round
 - **Security Guardrails** — duplicate checks, moderation policy, and claim gating keep the submission surface narrow
 
 See the in-app documentation at `/docs` for detailed game theory analysis and security information.

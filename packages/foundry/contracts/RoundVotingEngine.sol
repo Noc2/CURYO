@@ -145,7 +145,7 @@ contract RoundVotingEngine is
     // Voter to commit hash lookup: contentId => roundId => voter => commitHash (O(1) claim lookups)
     mapping(uint256 => mapping(uint256 => mapping(address => bytes32))) public voterCommitHash;
 
-    // Voter ID keyed commit lookups for stablecoin bounty claims through delegated wallets.
+    // Voter ID keyed commit lookups for stablecoin question rewards through delegated wallets.
     mapping(uint256 => mapping(uint256 => mapping(uint256 => bytes32))) public voterIdCommitKey;
     mapping(uint256 => mapping(uint256 => mapping(bytes32 => uint256))) public commitVoterId;
 

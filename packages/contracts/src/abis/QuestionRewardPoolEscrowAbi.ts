@@ -1,4 +1,4 @@
-export const QuestionBountyEscrowAbi = [
+export const QuestionRewardPoolEscrowAbi = [
   {
     "type": "constructor",
     "inputs": [],
@@ -71,7 +71,7 @@ export const QuestionBountyEscrowAbi = [
   },
   {
     "type": "function",
-    "name": "bounties",
+    "name": "rewardPools",
     "inputs": [
       {
         "name": "",
@@ -155,10 +155,10 @@ export const QuestionBountyEscrowAbi = [
   },
   {
     "type": "function",
-    "name": "claimBountyReward",
+    "name": "claimQuestionReward",
     "inputs": [
       {
-        "name": "bountyId",
+        "name": "rewardPoolId",
         "type": "uint256",
         "internalType": "uint256"
       },
@@ -179,10 +179,10 @@ export const QuestionBountyEscrowAbi = [
   },
   {
     "type": "function",
-    "name": "claimableBountyReward",
+    "name": "claimableQuestionReward",
     "inputs": [
       {
-        "name": "bountyId",
+        "name": "rewardPoolId",
         "type": "uint256",
         "internalType": "uint256"
       },
@@ -208,7 +208,7 @@ export const QuestionBountyEscrowAbi = [
   },
   {
     "type": "function",
-    "name": "createBounty",
+    "name": "createRewardPool",
     "inputs": [
       {
         "name": "contentId",
@@ -238,7 +238,7 @@ export const QuestionBountyEscrowAbi = [
     ],
     "outputs": [
       {
-        "name": "bountyId",
+        "name": "rewardPoolId",
         "type": "uint256",
         "internalType": "uint256"
       }
@@ -341,7 +341,7 @@ export const QuestionBountyEscrowAbi = [
   },
   {
     "type": "function",
-    "name": "nextBountyId",
+    "name": "nextRewardPoolId",
     "inputs": [],
     "outputs": [
       {
@@ -377,7 +377,7 @@ export const QuestionBountyEscrowAbi = [
     "name": "qualifyRound",
     "inputs": [
       {
-        "name": "bountyId",
+        "name": "rewardPoolId",
         "type": "uint256",
         "internalType": "uint256"
       },
@@ -392,10 +392,10 @@ export const QuestionBountyEscrowAbi = [
   },
   {
     "type": "function",
-    "name": "refundExpiredBounty",
+    "name": "refundExpiredRewardPool",
     "inputs": [
       {
-        "name": "bountyId",
+        "name": "rewardPoolId",
         "type": "uint256",
         "internalType": "uint256"
       }
@@ -611,10 +611,10 @@ export const QuestionBountyEscrowAbi = [
   },
   {
     "type": "event",
-    "name": "BountyCreated",
+    "name": "RewardPoolCreated",
     "inputs": [
       {
-        "name": "bountyId",
+        "name": "rewardPoolId",
         "type": "uint256",
         "indexed": true,
         "internalType": "uint256"
@@ -672,10 +672,10 @@ export const QuestionBountyEscrowAbi = [
   },
   {
     "type": "event",
-    "name": "BountyRefunded",
+    "name": "RewardPoolRefunded",
     "inputs": [
       {
-        "name": "bountyId",
+        "name": "rewardPoolId",
         "type": "uint256",
         "indexed": true,
         "internalType": "uint256"
@@ -697,10 +697,10 @@ export const QuestionBountyEscrowAbi = [
   },
   {
     "type": "event",
-    "name": "BountyRewardClaimed",
+    "name": "QuestionRewardClaimed",
     "inputs": [
       {
-        "name": "bountyId",
+        "name": "rewardPoolId",
         "type": "uint256",
         "indexed": true,
         "internalType": "uint256"
@@ -740,10 +740,10 @@ export const QuestionBountyEscrowAbi = [
   },
   {
     "type": "event",
-    "name": "BountyRoundQualified",
+    "name": "RewardPoolRoundQualified",
     "inputs": [
       {
-        "name": "bountyId",
+        "name": "rewardPoolId",
         "type": "uint256",
         "indexed": true,
         "internalType": "uint256"

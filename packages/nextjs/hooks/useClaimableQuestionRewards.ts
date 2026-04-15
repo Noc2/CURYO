@@ -5,11 +5,14 @@ import { useAccount, useReadContracts } from "wagmi";
 import { type ClaimableRewardItem } from "~~/hooks/claimableRewards";
 import { useTargetNetwork } from "~~/hooks/scaffold-eth/useTargetNetwork";
 import { usePonderQuery } from "~~/hooks/usePonderQuery";
-import { QUESTION_BOUNTY_ESCROW_ABI, getConfiguredQuestionBountyEscrowAddress } from "~~/lib/questionBounties";
+import {
+  QUESTION_REWARD_POOL_ESCROW_ABI,
+  getConfiguredQuestionRewardPoolEscrowAddress,
+} from "~~/lib/questionRewardPools";
 import { ponderApi } from "~~/services/ponder/client";
 
-export function getClaimableQuestionBountyRewardsQueryKey(address?: string, chainId?: number) {
-  return ["claimableQuestionBountyRewards", address?.toLowerCase() ?? null, chainId ?? null] as const;
+export function getClaimableQuestionRewardsQueryKey(address?: string, chainId?: number) {
+  return ["claimableQuestionRewards", address?.toLowerCase() ?? null, chainId ?? null] as const;
 }
 
 function safeBigInt(value: unknown): bigint {
@@ -20,21 +23,24 @@ function safeBigInt(value: unknown): bigint {
   }
 }
 
-export function useClaimableQuestionBountyRewards() {
+export function useClaimableQuestionRewards() {
   const { address } = useAccount();
   const { targetNetwork } = useTargetNetwork();
   const normalizedAddress = address?.toLowerCase();
-  const escrowAddress = useMemo(() => getConfiguredQuestionBountyEscrowAddress(targetNetwork.id), [targetNetwork.id]);
+  const escrowAddress = useMemo(
+    () => getConfiguredQuestionRewardPoolEscrowAddress(targetNetwork.id),
+    [targetNetwork.id],
+  );
 
   const {
     data: result,
     isLoading: candidatesLoading,
     refetch: refetchCandidates,
   } = usePonderQuery({
-    queryKey: getClaimableQuestionBountyRewardsQueryKey(normalizedAddress, targetNetwork.id),
+    queryKey: getClaimableQuestionRewardsQueryKey(normalizedAddress, targetNetwork.id),
     ponderFn: async () => {
       if (!normalizedAddress) return [];
-      const response = await ponderApi.getBountyClaimCandidates(normalizedAddress, { limit: "200" });
+      const response = await ponderApi.getQuestionRewardClaimCandidates(normalizedAddress, { limit: "200" });
       return response.items;
     },
     rpcFn: async () => [],
@@ -47,9 +53,9 @@ export function useClaimableQuestionBountyRewards() {
     if (!address || !escrowAddress || candidates.length === 0) return [];
     return candidates.map(candidate => ({
       address: escrowAddress,
-      abi: QUESTION_BOUNTY_ESCROW_ABI,
-      functionName: "claimableBountyReward" as const,
-      args: [safeBigInt(candidate.bountyId), safeBigInt(candidate.roundId), address],
+      abi: QUESTION_REWARD_POOL_ESCROW_ABI,
+      functionName: "claimableQuestionReward" as const,
+      args: [safeBigInt(candidate.rewardPoolId), safeBigInt(candidate.roundId), address],
     }));
   }, [address, candidates, escrowAddress]);
 
@@ -70,12 +76,12 @@ export function useClaimableQuestionBountyRewards() {
       if (reward <= 0n) return [];
       return [
         {
-          bountyId: safeBigInt(candidate.bountyId),
+          rewardPoolId: safeBigInt(candidate.rewardPoolId),
           contentId: safeBigInt(candidate.contentId),
           roundId: safeBigInt(candidate.roundId),
           reward,
           title: candidate.title,
-          claimType: "question_bounty_reward" as const,
+          claimType: "question_reward" as const,
         },
       ];
     });

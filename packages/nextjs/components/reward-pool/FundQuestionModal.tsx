@@ -6,17 +6,17 @@ import { readContract, waitForTransactionReceipt } from "wagmi/actions";
 import { XMarkIcon } from "@heroicons/react/24/outline";
 import {
   ERC20_APPROVAL_ABI,
-  MIN_BOUNTY_REQUIRED_VOTERS,
-  MIN_BOUNTY_SETTLED_ROUNDS,
-  QUESTION_BOUNTY_ESCROW_ABI,
+  MIN_REWARD_POOL_REQUIRED_VOTERS,
+  MIN_REWARD_POOL_SETTLED_ROUNDS,
+  QUESTION_REWARD_POOL_ESCROW_ABI,
   formatUsdAmount,
-  getConfiguredQuestionBountyEscrowAddress,
+  getConfiguredQuestionRewardPoolEscrowAddress,
   getDefaultUsdcAddress,
-  parseUsdBountyAmount,
-} from "~~/lib/questionBounties";
+  parseUsdRewardPoolAmount,
+} from "~~/lib/questionRewardPools";
 import { notification } from "~~/utils/scaffold-eth";
 
-type AddBountyModalProps = {
+type FundQuestionModalProps = {
   contentId: bigint;
   title: string;
   onClose: () => void;
@@ -28,7 +28,7 @@ function getExpiryTimestamp(days: number): bigint {
   return BigInt(Math.floor(Date.now() / 1000) + Math.floor(days * 24 * 60 * 60));
 }
 
-export function AddBountyModal({ contentId, title, onClose, onCreated }: AddBountyModalProps) {
+export function FundQuestionModal({ contentId, title, onClose, onCreated }: FundQuestionModalProps) {
   const wagmiConfig = useConfig();
   const { address, chain } = useAccount();
   const { writeContractAsync } = useWriteContract();
@@ -39,27 +39,27 @@ export function AddBountyModal({ contentId, title, onClose, onCreated }: AddBoun
   const [isFunding, setIsFunding] = useState(false);
 
   const chainId = chain?.id ?? wagmiConfig.chains[0]?.id ?? 0;
-  const escrowAddress = useMemo(() => getConfiguredQuestionBountyEscrowAddress(chainId), [chainId]);
+  const escrowAddress = useMemo(() => getConfiguredQuestionRewardPoolEscrowAddress(chainId), [chainId]);
   const fallbackUsdcAddress = useMemo(() => getDefaultUsdcAddress(chainId), [chainId]);
-  const parsedAmount = useMemo(() => parseUsdBountyAmount(amount), [amount]);
-  const voterCount = Math.max(MIN_BOUNTY_REQUIRED_VOTERS, Math.floor(Number(requiredVoters) || 0));
-  const settledRounds = Math.max(MIN_BOUNTY_SETTLED_ROUNDS, Math.floor(Number(requiredRounds) || 0));
+  const parsedAmount = useMemo(() => parseUsdRewardPoolAmount(amount), [amount]);
+  const voterCount = Math.max(MIN_REWARD_POOL_REQUIRED_VOTERS, Math.floor(Number(requiredVoters) || 0));
+  const settledRounds = Math.max(MIN_REWARD_POOL_SETTLED_ROUNDS, Math.floor(Number(requiredRounds) || 0));
   const expiry = Math.max(0, Math.floor(Number(expiryDays) || 0));
   const canSubmit = Boolean(
     address &&
       escrowAddress &&
       parsedAmount &&
-      voterCount >= MIN_BOUNTY_REQUIRED_VOTERS &&
-      settledRounds >= MIN_BOUNTY_SETTLED_ROUNDS,
+      voterCount >= MIN_REWARD_POOL_REQUIRED_VOTERS &&
+      settledRounds >= MIN_REWARD_POOL_SETTLED_ROUNDS,
   );
 
-  const handleCreateBounty = async () => {
+  const handleFundQuestion = async () => {
     if (!address) {
-      notification.error("Connect your wallet to fund a bounty.");
+      notification.error("Connect your wallet to fund this question.");
       return;
     }
     if (!escrowAddress) {
-      notification.error("Question bounties are not deployed on this network yet.");
+      notification.error("Question Reward Pools are not deployed on this network yet.");
       return;
     }
     if (!parsedAmount) {
@@ -73,7 +73,7 @@ export function AddBountyModal({ contentId, title, onClose, onCreated }: AddBoun
       try {
         usdcAddress = (await readContract(wagmiConfig, {
           address: escrowAddress,
-          abi: QUESTION_BOUNTY_ESCROW_ABI,
+          abi: QUESTION_REWARD_POOL_ESCROW_ABI,
           functionName: "usdcToken",
         })) as `0x${string}`;
       } catch {
@@ -102,22 +102,22 @@ export function AddBountyModal({ contentId, title, onClose, onCreated }: AddBoun
         await waitForTransactionReceipt(wagmiConfig, { hash: approveHash });
       }
 
-      const bountyHash = await writeContractAsync({
+      const rewardPoolHash = await writeContractAsync({
         address: escrowAddress,
-        abi: QUESTION_BOUNTY_ESCROW_ABI,
-        functionName: "createBounty",
+        abi: QUESTION_REWARD_POOL_ESCROW_ABI,
+        functionName: "createRewardPool",
         args: [contentId, parsedAmount, BigInt(voterCount), BigInt(settledRounds), getExpiryTimestamp(expiry)],
       });
-      await waitForTransactionReceipt(wagmiConfig, { hash: bountyHash });
+      await waitForTransactionReceipt(wagmiConfig, { hash: rewardPoolHash });
 
-      notification.success(`Bounty funded with ${formatUsdAmount(parsedAmount)} USDC.`);
+      notification.success(`Question Reward Pool funded with ${formatUsdAmount(parsedAmount)}. Paid in USDC on Celo.`);
       onCreated?.();
       onClose();
     } catch (error) {
       notification.error(
         (error as { shortMessage?: string; message?: string } | undefined)?.shortMessage ||
           (error as { shortMessage?: string; message?: string } | undefined)?.message ||
-          "Failed to create bounty",
+          "Failed to fund this question",
       );
     } finally {
       setIsFunding(false);
@@ -125,7 +125,7 @@ export function AddBountyModal({ contentId, title, onClose, onCreated }: AddBoun
   };
 
   return (
-    <div className="modal modal-open" role="dialog" aria-modal="true" aria-label="Add bounty">
+    <div className="modal modal-open" role="dialog" aria-modal="true" aria-label="Fund this question">
       <div className="modal-box w-[calc(100vw-2rem)] max-w-lg overflow-x-hidden bg-base-200 px-5 py-6 shadow-2xl sm:px-6">
         <button
           type="button"
@@ -139,12 +139,12 @@ export function AddBountyModal({ contentId, title, onClose, onCreated }: AddBoun
         <p className="text-sm font-semibold uppercase text-base-content/50">Fund this question</p>
         <h3 className="mt-1 line-clamp-2 text-xl font-semibold text-base-content">{title}</h3>
         <p className="mt-2 text-base text-base-content/70">
-          Rewards are paid equally to eligible revealed voters for each qualifying settled round.
+          Paid in USDC on Celo. Split equally among eligible revealed voters in qualified rounds.
         </p>
 
         <div className="mt-5 grid gap-4">
           <label className="form-control">
-            <span className="label-text">Bounty size</span>
+            <span className="label-text">Reward amount</span>
             <div className="input input-bordered flex items-center gap-2 bg-base-100">
               <span className="text-base-content/50">$</span>
               <input
@@ -163,7 +163,7 @@ export function AddBountyModal({ contentId, title, onClose, onCreated }: AddBoun
               <span className="label-text">Required voters</span>
               <input
                 type="number"
-                min={MIN_BOUNTY_REQUIRED_VOTERS}
+                min={MIN_REWARD_POOL_REQUIRED_VOTERS}
                 step={1}
                 value={requiredVoters}
                 onChange={event => setRequiredVoters(event.target.value)}
@@ -174,7 +174,7 @@ export function AddBountyModal({ contentId, title, onClose, onCreated }: AddBoun
               <span className="label-text">Settled rounds</span>
               <input
                 type="number"
-                min={MIN_BOUNTY_SETTLED_ROUNDS}
+                min={MIN_REWARD_POOL_SETTLED_ROUNDS}
                 step={1}
                 value={requiredRounds}
                 onChange={event => setRequiredRounds(event.target.value)}
@@ -198,7 +198,7 @@ export function AddBountyModal({ contentId, title, onClose, onCreated }: AddBoun
 
           {!escrowAddress ? (
             <p className="rounded-lg bg-warning/10 p-3 text-sm text-warning">
-              Bounty funding is not available on this network yet.
+              Question Reward Pool funding is not available on this network yet.
             </p>
           ) : null}
         </div>
@@ -206,11 +206,11 @@ export function AddBountyModal({ contentId, title, onClose, onCreated }: AddBoun
         <div className="mt-6 flex flex-col gap-2 sm:flex-row-reverse">
           <button
             type="button"
-            onClick={handleCreateBounty}
+            onClick={handleFundQuestion}
             disabled={!canSubmit || isFunding}
             className="btn btn-primary"
           >
-            {isFunding ? "Funding..." : "Fund bounty"}
+            {isFunding ? "Funding..." : "Fund this question"}
           </button>
           <button type="button" onClick={onClose} className="btn btn-ghost">
             Cancel

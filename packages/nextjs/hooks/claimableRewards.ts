@@ -27,13 +27,13 @@ export interface FrontendRegistryClaimableRewardItem {
   claimType: "frontend_registry_fee";
 }
 
-export interface QuestionBountyClaimableRewardItem {
-  bountyId: bigint;
+export interface QuestionRewardPoolClaimableRewardItem {
+  rewardPoolId: bigint;
   contentId: bigint;
   roundId: bigint;
   reward: bigint;
   title: string;
-  claimType: "question_bounty_reward";
+  claimType: "question_reward";
 }
 
 export type ClaimableRewardItem =
@@ -41,7 +41,7 @@ export type ClaimableRewardItem =
   | SubmitterParticipationClaimableRewardItem
   | FrontendRoundFeeClaimableRewardItem
   | FrontendRegistryClaimableRewardItem
-  | QuestionBountyClaimableRewardItem;
+  | QuestionRewardPoolClaimableRewardItem;
 
 interface SubmitterRewardClaimCandidate {
   contentId: bigint;
@@ -161,8 +161,8 @@ export function buildSubmitterParticipationClaimableRewards(
 }
 
 export function getClaimableRoundKey(item: ClaimableRewardItem) {
-  if (item.claimType === "question_bounty_reward") {
-    return `bounty:${item.bountyId.toString()}-${item.roundId.toString()}`;
+  if (item.claimType === "question_reward") {
+    return `question-reward:${item.rewardPoolId.toString()}-${item.roundId.toString()}`;
   }
   return "roundId" in item ? `${item.contentId.toString()}-${item.roundId.toString()}` : null;
 }
@@ -179,7 +179,7 @@ function claimExecutionPriority(item: ClaimableRewardItem) {
       return 3;
     case "submitter_participation_reward":
       return 4;
-    case "question_bounty_reward":
+    case "question_reward":
       return 5;
     case "frontend_round_fee":
       return 6;

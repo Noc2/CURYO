@@ -313,26 +313,26 @@ export interface PonderContentItem {
   totalVotes: number;
   totalRounds: number;
   openRound: PonderContentOpenRoundSummary | null;
-  bountySummary?: PonderBountySummary | null;
+  rewardPoolSummary?: PonderRewardPoolSummary | null;
 }
 
-export interface PonderBountySummary {
+export interface PonderRewardPoolSummary {
   currency: "USDC";
   displayCurrency: "USD";
   decimals: 6;
-  bountyCount: number;
-  activeBountyCount: number;
+  rewardPoolCount: number;
+  activeRewardPoolCount: number;
   totalFundedAmount: string;
   totalUnallocatedAmount: string;
   totalAllocatedAmount: string;
   totalClaimedAmount: string;
   totalRefundedAmount: string;
   qualifiedRoundCount: number;
-  currentBountyAmount: string;
+  currentRewardPoolAmount: string;
 }
 
-export interface PonderBountyClaimCandidate {
-  bountyId: string;
+export interface PonderQuestionRewardClaimCandidate {
+  rewardPoolId: string;
   contentId: string;
   roundId: string;
   title: string;
@@ -344,8 +344,8 @@ export interface PonderBountyClaimCandidate {
   decimals: 6;
 }
 
-export interface PonderBountyClaimCandidatesResponse {
-  items: PonderBountyClaimCandidate[];
+export interface PonderQuestionRewardClaimCandidatesResponse {
+  items: PonderQuestionRewardClaimCandidate[];
   limit: number;
   offset: number;
 }
@@ -977,8 +977,8 @@ export const ponderApi = {
     return ponderGet<PonderVoteCooldownsResponse>("/vote-cooldowns", params);
   },
 
-  getBountyClaimCandidates(voter: string, params?: { limit?: string; offset?: string }) {
-    return ponderGet<PonderBountyClaimCandidatesResponse>("/bounty-claim-candidates", {
+  getQuestionRewardClaimCandidates(voter: string, params?: { limit?: string; offset?: string }) {
+    return ponderGet<PonderQuestionRewardClaimCandidatesResponse>("/question-reward-claim-candidates", {
       ...params,
       voter,
     });
