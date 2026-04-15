@@ -10,6 +10,7 @@ import { useTargetNetwork } from "~~/hooks/scaffold-eth/useTargetNetwork";
 import { useCategoryRegistry } from "~~/hooks/useCategoryRegistry";
 import { useCuryoConnectModal } from "~~/hooks/useCuryoConnectModal";
 import { useFollowedProfiles } from "~~/hooks/useFollowedProfiles";
+import { getCategoryDisplayName } from "~~/lib/categoryDisplay";
 import { FOLLOWED_CURATOR_TOAST_ID } from "~~/lib/notifications/followedActivity";
 import { PonderAccuracyLeaderboardItem, PonderAccuracyLeaderboardWindow, ponderApi } from "~~/services/ponder/client";
 import { getReputationAvatarUrl } from "~~/utils/profileImage";
@@ -177,7 +178,7 @@ export function AccuracyLeaderboard() {
           <option value="">All categories</option>
           {approvedCategories.map(cat => (
             <option key={String(cat.id)} value={String(cat.id)}>
-              {cat.name}
+              {getCategoryDisplayName(cat) ?? cat.name}
             </option>
           ))}
         </select>

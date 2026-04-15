@@ -67,6 +67,7 @@ async function isPersonArticle(title: string): Promise<string | null> {
 export const wikipediaSource: ContentSource = {
   name: "wikipedia-people",
   categoryId: CATEGORY_ID,
+  // Legacy on-chain category name. The frontend presents this platform as Wiki.
   categoryName: "People",
 
   async fetchTrending(limit: number): Promise<ContentItem[]> {

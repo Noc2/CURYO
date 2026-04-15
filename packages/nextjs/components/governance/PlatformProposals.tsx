@@ -7,6 +7,7 @@ import { surfaceSectionHeadingClassName } from "~~/components/shared/sectionHead
 import { useScaffoldEventHistory, useScaffoldReadContract } from "~~/hooks/scaffold-eth";
 import { usePonderAvailability } from "~~/hooks/usePonderAvailability";
 import { usePonderQuery } from "~~/hooks/usePonderQuery";
+import { getCategoryDisplayName } from "~~/lib/categoryDisplay";
 import { ponderApi } from "~~/services/ponder/client";
 import { publicEnv } from "~~/utils/env/public";
 
@@ -166,6 +167,7 @@ function PlatformProposalCard({ categoryId, filter }: { categoryId: bigint; filt
 
   const status = STATUS_MAP[category.status] || "pending";
   if (filter !== "all" && status !== filter) return null;
+  const categoryName = getCategoryDisplayName(category) ?? category.name;
 
   // Status badge
   const getStatusBadge = () => {
@@ -204,7 +206,7 @@ function PlatformProposalCard({ categoryId, filter }: { categoryId: bigint; filt
       <div className="flex items-start justify-between">
         <div>
           <div className="flex items-center gap-2">
-            <h3 className="font-semibold">{category.name}</h3>
+            <h3 className="font-semibold">{categoryName}</h3>
             {getStatusBadge()}
           </div>
           <p className="text-base text-base-content/75">{category.domain}</p>

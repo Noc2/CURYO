@@ -38,6 +38,7 @@ import { useVoterAccuracy } from "~~/hooks/useVoterAccuracy";
 import { useVoterIdNFT } from "~~/hooks/useVoterIdNFT";
 import { useVoterStreak } from "~~/hooks/useVoterStreak";
 import { avatarAccentHexToRgb, normalizeAvatarAccentHex } from "~~/lib/avatar/avatarAccent";
+import { getCategoryDisplayName } from "~~/lib/categoryDisplay";
 import { FOLLOWED_CURATOR_TOAST_ID } from "~~/lib/notifications/followedActivity";
 import { MAX_PROFILE_STRATEGY_LENGTH } from "~~/lib/profile/profileValidation";
 import { AVATAR_WIN_RATE_TOOLTIP } from "~~/lib/profile/winRateTooltip";
@@ -765,7 +766,8 @@ export function PublicProfileView({ address, embedded = false }: PublicProfileVi
           ) : (
             <div className="grid gap-3 md:grid-cols-2">
               {recentSubmissions.map(submission => {
-                const categoryName = submission.categoryName || `Category #${submission.categoryId}`;
+                const categoryName =
+                  getCategoryDisplayName(submission) || submission.categoryName || `Category #${submission.categoryId}`;
                 const ratingScore = formatRatingScoreOutOfTen(submission.rating);
                 return (
                   <Link

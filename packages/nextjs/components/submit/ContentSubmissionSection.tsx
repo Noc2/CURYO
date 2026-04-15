@@ -19,7 +19,6 @@ import {
   type TrustVerticalSlug,
   buildTrustVerticalTag,
   getTrustVertical,
-  resolveTrustVerticalSlug,
 } from "@curyo/node-utils/trustVerticals";
 import { decodeEventLog } from "viem";
 import { useAccount, useConfig } from "wagmi";
@@ -45,6 +44,7 @@ import { useParticipationRate } from "~~/hooks/useParticipationRate";
 import { useThirdwebSponsoredSubmitCalls } from "~~/hooks/useThirdwebSponsoredSubmitCalls";
 import { useTransactionStatusToast } from "~~/hooks/useTransactionStatusToast";
 import { useWalletRpcRecovery } from "~~/hooks/useWalletRpcRecovery";
+import { getCategoryDisplayName } from "~~/lib/categoryDisplay";
 import { MAX_CONTENT_DESCRIPTION_LENGTH } from "~~/lib/contentDescription";
 import { MAX_CONTENT_TITLE_LENGTH } from "~~/lib/contentTitle";
 import { protocolDocFacts } from "~~/lib/docs/protocolFacts";
@@ -79,8 +79,8 @@ const PLATFORM_CONFIG: Record<string, { urlPlaceholder: string; urlHint: string 
     urlHint: "Paste a Scryfall card URL",
   },
   "en.wikipedia.org": {
-    urlPlaceholder: "https://en.wikipedia.org/wiki/Lionel_Messi",
-    urlHint: "Paste a Wikipedia article URL for a person",
+    urlPlaceholder: "https://en.wikipedia.org/wiki/Tesla,_Inc.",
+    urlHint: "Paste an English Wikipedia article URL",
   },
   "rawg.io": {
     urlPlaceholder: "https://rawg.io/games/elden-ring",
@@ -214,7 +214,9 @@ export function ContentSubmissionSection() {
     if (!platformSearch.trim()) return websiteCategories;
     const search = platformSearch.toLowerCase();
     return websiteCategories.filter(
-      cat => cat.name.toLowerCase().includes(search) || cat.domain.toLowerCase().includes(search),
+      cat =>
+        (getCategoryDisplayName(cat) ?? cat.name).toLowerCase().includes(search) ||
+        cat.domain.toLowerCase().includes(search),
     );
   }, [websiteCategories, platformSearch]);
 
@@ -231,14 +233,7 @@ export function ContentSubmissionSection() {
   useEffect(() => {
     if (detectedCategory && (!selectedCategory || selectedCategory.id !== detectedCategory.id)) {
       setSelectedCategory(detectedCategory);
-      setSelectedVerticalSlug(
-        resolveTrustVerticalSlug({
-          categoryId: detectedCategory.id,
-          categoryName: detectedCategory.name,
-          domain: detectedCategory.domain,
-          url,
-        }),
-      );
+      setSelectedVerticalSlug(null);
     }
   }, [detectedCategory, selectedCategory, url]);
 
@@ -281,7 +276,7 @@ export function ContentSubmissionSection() {
     if (domainToCategoryId.size > 0) {
       const categoryId = getCategoryIdFromUrl(sanitizedUrl, domainToCategoryId);
       if (categoryId === 0n) {
-        const platformNames = websiteCategories.map(c => c.name).join(", ");
+        const platformNames = websiteCategories.map(c => getCategoryDisplayName(c) ?? c.name).join(", ");
         return `Please enter a URL from an approved platform (${platformNames})`;
       }
       return null;
@@ -309,14 +304,7 @@ export function ContentSubmissionSection() {
 
   const handleCategorySelect = (category: Category) => {
     setSelectedCategory(category);
-    setSelectedVerticalSlug(
-      resolveTrustVerticalSlug({
-        categoryId: category.id,
-        categoryName: category.name,
-        domain: category.domain,
-        url,
-      }),
-    );
+    setSelectedVerticalSlug(null);
     if (url) {
       try {
         const urlDomain = extractDomain(url);
@@ -798,7 +786,7 @@ export function ContentSubmissionSection() {
                     {selectedCategory ? (
                       <div className="flex items-center gap-2">
                         <PlatformIcon domain={selectedCategory.domain} className="h-5 w-5" />
-                        <span>{selectedCategory.name}</span>
+                        <span>{getCategoryDisplayName(selectedCategory) ?? selectedCategory.name}</span>
                       </div>
                     ) : (
                       <span className="text-base-content/50">Select a platform...</span>
@@ -840,6 +828,7 @@ export function ContentSubmissionSection() {
                         {filteredPlatforms.length > 0 ? (
                           filteredPlatforms.map(cat => {
                             const isSelected = selectedCategory?.id === cat.id;
+                            const platformName = getCategoryDisplayName(cat) ?? cat.name;
                             return (
                               <button
                                 key={cat.id.toString()}
@@ -855,7 +844,7 @@ export function ContentSubmissionSection() {
                               >
                                 <PlatformIcon domain={cat.domain} className="h-5 w-5" />
                                 <div className="flex flex-col">
-                                  <span className="font-medium">{cat.name}</span>
+                                  <span className="font-medium">{platformName}</span>
                                   <span className="text-base text-base-content/50">{cat.domain}</span>
                                 </div>
                                 {isSelected ? <span className="ml-auto text-primary">✓</span> : null}

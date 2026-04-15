@@ -22,13 +22,13 @@ test("resolveTrustVerticalSlug prefers explicit vertical tags", () => {
 test("resolveTrustVerticalSlug maps legacy categories and domains", () => {
   assert.equal(resolveTrustVerticalSlug({ categoryId: 9n }), "investment");
   assert.equal(resolveTrustVerticalSlug({ categoryName: "GitHub Repos" }), "software");
-  assert.equal(resolveTrustVerticalSlug({ categoryName: "Tweets" }), "entertainment");
+  assert.equal(resolveTrustVerticalSlug({ categoryName: "Tweets" }), "news");
   assert.equal(resolveTrustVerticalSlug({ url: "https://www.coingecko.com/en/coins/bitcoin" }), "investment");
 });
 
-test("news is not a trust vertical", () => {
-  assert.equal(isTrustVerticalSlug("news"), false);
-  assert.equal(extractTrustVerticalFromTags("vertical:news"), null);
+test("news is a trust vertical", () => {
+  assert.equal(isTrustVerticalSlug("news"), true);
+  assert.equal(extractTrustVerticalFromTags("vertical:news"), "news");
 });
 
 test("vertical tags are reserved system tags", () => {

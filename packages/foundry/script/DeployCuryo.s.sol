@@ -780,7 +780,7 @@ contract DeployCuryo is ScaffoldETHDeploy {
         movieSubcats[9] = "Fantasy";
         registry.addApprovedCategory("Movies", "themoviedb.org", movieSubcats);
 
-        // People - Wikipedia (categoryId: 5)
+        // Legacy People category for Wikipedia. Frontends display this source platform as "Wiki".
         string[] memory peopleSubcats = new string[](8);
         peopleSubcats[0] = "Athletes";
         peopleSubcats[1] = "Musicians";

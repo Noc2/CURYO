@@ -242,7 +242,7 @@ export function CategoryFilter({ categories, activeCategory, onSelect, pillClass
           }`}
           aria-haspopup="dialog"
           aria-expanded={mobileOpen}
-          aria-label={`Category: ${activeCategory}`}
+          aria-label={`Trust vertical: ${activeCategory}`}
         >
           {activeCategory}
           <ChevronDownIcon className="w-3.5 h-3.5" />
@@ -260,11 +260,11 @@ export function CategoryFilter({ categories, activeCategory, onSelect, pillClass
               <div
                 className="fixed inset-x-0 bottom-0 z-40 rounded-t-3xl bg-base-200 p-4 shadow-2xl sm:hidden"
                 role="dialog"
-                aria-label="Category options"
+                aria-label="Trust vertical options"
               >
                 <div className="mx-auto mb-3 h-1.5 w-12 rounded-full bg-base-content/10" />
                 <div className="mb-3 flex items-center justify-between">
-                  <p className="text-sm font-semibold text-base-content">Categories</p>
+                  <p className="text-sm font-semibold text-base-content">Trust verticals</p>
                   <button
                     type="button"
                     onClick={() => {
@@ -272,7 +272,7 @@ export function CategoryFilter({ categories, activeCategory, onSelect, pillClass
                       setSearch("");
                     }}
                     className="rounded-full bg-base-300 p-2 text-base-content/75"
-                    aria-label="Close categories"
+                    aria-label="Close trust verticals"
                   >
                     <XMarkIcon className="h-5 w-5" />
                   </button>
@@ -280,7 +280,7 @@ export function CategoryFilter({ categories, activeCategory, onSelect, pillClass
 
                 <div className="relative">
                   <label htmlFor={mobileSearchInputId} className="sr-only">
-                    Search categories
+                    Search trust verticals
                   </label>
                   <MagnifyingGlassIcon className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-base-content/40" />
                   <input
@@ -288,8 +288,8 @@ export function CategoryFilter({ categories, activeCategory, onSelect, pillClass
                     ref={mobileSearchInputRef}
                     name="category-search-mobile"
                     type="text"
-                    placeholder="Search categories..."
-                    aria-label="Search categories"
+                    placeholder="Search trust verticals..."
+                    aria-label="Search trust verticals"
                     value={search}
                     onChange={e => setSearch(e.target.value)}
                     className="input h-12 w-full rounded-2xl border-none bg-base-300 pl-10 text-base"
@@ -372,7 +372,7 @@ export function CategoryFilter({ categories, activeCategory, onSelect, pillClass
                     <div className="p-2">
                       <div className="relative">
                         <label htmlFor={desktopSearchInputId} className="sr-only">
-                          Search categories
+                          Search trust verticals
                         </label>
                         <MagnifyingGlassIcon className="absolute left-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-base-content/40" />
                         <input
@@ -380,8 +380,8 @@ export function CategoryFilter({ categories, activeCategory, onSelect, pillClass
                           ref={searchInputRef}
                           name="category-search-desktop"
                           type="text"
-                          placeholder="Search categories..."
-                          aria-label="Search categories"
+                          placeholder="Search trust verticals..."
+                          aria-label="Search trust verticals"
                           value={search}
                           onChange={e => setSearch(e.target.value)}
                           className="input input-sm w-full pl-8 bg-base-300 border-none text-base"

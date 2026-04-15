@@ -46,21 +46,9 @@ test.describe("Content submission", () => {
     await expect(descInput).toBeVisible({ timeout: 3_000 });
     await descInput.fill(`E2E Test Content ${uniqueId}`);
 
-    // 4. Select at least one subcategory tag
-    // Subcategory buttons appear below "Select Categories" after a platform is selected.
-    // Use specific known YouTube subcategory names to avoid matching sidebar buttons.
-    const tagLabel = page.getByText("Select Categories");
-    await expect(tagLabel).toBeVisible({ timeout: 3_000 });
-    // Try common YouTube subcategories in order — click the first visible one
-    const subcatNames = ["Education", "Entertainment", "Music", "Technology", "Science", "Gaming"];
-    for (const name of subcatNames) {
-      // Scope to the form area to avoid matching sidebar/navigation buttons
-      const btn = page.locator("form button", { hasText: new RegExp(`^${name}$`) });
-      if (await btn.isVisible({ timeout: 1_000 }).catch(() => false)) {
-        await btn.click();
-        break;
-      }
-    }
+    // 4. Select a trust vertical. Source-specific legacy subcategories should not be required.
+    await expect(page.getByText("Trust Vertical")).toBeVisible({ timeout: 3_000 });
+    await page.locator("form button", { hasText: /^Entertainment$/ }).click();
 
     // 5. Click Submit Content
     const submitBtn = page.getByRole("button", { name: /^Submit Content/i });

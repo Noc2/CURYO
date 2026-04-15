@@ -10,11 +10,11 @@ import { ANVIL_ACCOUNTS, DEPLOYER } from "../helpers/anvil-accounts";
 import { newE2EContext } from "../helpers/browser-context";
 import { CONTRACT_ADDRESSES } from "../helpers/contracts";
 import { waitForSettlementIndexed } from "../helpers/keeper";
+import { getContentById, getContentList } from "../helpers/ponder-api";
 import { PONDER_URL } from "../helpers/ponder-url";
+import { voteOnSpecificContent } from "../helpers/vote-helpers";
 import { gotoWithRetry } from "../helpers/wait-helpers";
 import { setupWallet } from "../helpers/wallet-session";
-import { getContentById, getContentList } from "../helpers/ponder-api";
-import { voteOnSpecificContent } from "../helpers/vote-helpers";
 import { expect, test } from "@playwright/test";
 
 /**
@@ -90,15 +90,9 @@ test.describe("Tied round lifecycle", () => {
     await expect(descInput).toBeVisible({ timeout: 3_000 });
     await descInput.fill(`Tie Test ${uniqueId}`);
 
-    // Select a subcategory
-    const subcatNames = ["Education", "Entertainment", "Music", "Technology", "Science", "Gaming"];
-    for (const name of subcatNames) {
-      const btn = page.locator("form button", { hasText: new RegExp(`^${name}$`) });
-      if (await btn.isVisible().catch(() => false)) {
-        await btn.click();
-        break;
-      }
-    }
+    // Select a trust vertical. Source-specific legacy subcategories should not be required.
+    await expect(page.getByText("Trust Vertical")).toBeVisible({ timeout: 3_000 });
+    await page.locator("form button", { hasText: /^Entertainment$/ }).click();
 
     // Submit
     const submitBtn = page.getByRole("button", { name: /^Submit Content/i });

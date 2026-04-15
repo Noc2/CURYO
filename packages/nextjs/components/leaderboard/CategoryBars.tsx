@@ -1,5 +1,7 @@
 "use client";
 
+import { getCategoryDisplayName } from "~~/lib/categoryDisplay";
+
 interface CategoryStat {
   id: string;
   categoryName: string | null;
@@ -26,12 +28,13 @@ export function CategoryBars({ categories }: { categories: CategoryStat[] }) {
           const total = cat.totalWins + cat.totalLosses;
           const winPct = total > 0 ? (cat.totalWins / total) * 100 : 0;
           const lossPct = total > 0 ? (cat.totalLosses / total) * 100 : 0;
+          const categoryName = getCategoryDisplayName(cat) ?? cat.categoryName ?? `#${cat.categoryId}`;
 
           return (
             <div key={cat.id} className="space-y-0.5">
               {/* Label row */}
               <div className="flex items-center justify-between text-base">
-                <span className="text-base-content/60 truncate mr-2">{cat.categoryName ?? `#${cat.categoryId}`}</span>
+                <span className="text-base-content/60 truncate mr-2">{categoryName}</span>
                 <span className="font-mono tabular-nums text-base-content/50 shrink-0">
                   {formatRate(cat.winRate)}
                   <span className="text-base-content/30 ml-1.5">

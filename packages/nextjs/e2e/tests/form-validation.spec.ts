@@ -60,8 +60,7 @@ test.describe("Submit form validation", () => {
     if (await platformBtn.isVisible({ timeout: 5_000 }).catch(() => false)) {
       await platformBtn.click();
 
-      // The dropdown should show category-based platform names.
-      // From the screenshot: AI, Books, Crypto Tokens, Games, Movies, Videos, etc.
+      // The dropdown should show approved platform names such as Wiki, Books, Movies, and YouTube.
       // Just verify that at least 3 options are visible in the dropdown
       const searchInput = page.getByPlaceholder("Search platforms...");
       await expect(searchInput).toBeVisible({ timeout: 3_000 });

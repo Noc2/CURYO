@@ -14,10 +14,10 @@ test("switching vertical filters clears the requested content query param", () =
 
 test("switching feed views clears requested content without changing the active route filters", () => {
   assert.equal(
-    buildVoteLocation("https://www.curyo.xyz/vote?content=82&q=ed-sheeran#youtube", {
+    buildVoteLocation("https://www.curyo.xyz/vote?content=82&q=ed-sheeran#entertainment", {
       contentId: null,
     }),
-    "https://www.curyo.xyz/vote?q=ed-sheeran#youtube",
+    "https://www.curyo.xyz/vote?q=ed-sheeran#entertainment",
   );
 });
 
@@ -32,16 +32,16 @@ test("selecting content preserves the active filter hash", () => {
 
 test("content location updates clear social rating version params", () => {
   assert.equal(
-    buildVoteLocation("https://www.curyo.xyz/vote?content=6&rv=r-6-5000-1-0&q=openlaw#youtube", {
+    buildVoteLocation("https://www.curyo.xyz/vote?content=6&rv=r-6-5000-1-0&q=openlaw#software", {
       contentId: 9n,
     }),
-    "https://www.curyo.xyz/vote?content=9&q=openlaw#youtube",
+    "https://www.curyo.xyz/vote?content=9&q=openlaw#software",
   );
   assert.equal(
-    buildVoteLocation("https://www.curyo.xyz/vote?content=6&rv=r-6-5000-1-0&q=openlaw#youtube", {
+    buildVoteLocation("https://www.curyo.xyz/vote?content=6&rv=r-6-5000-1-0&q=openlaw#software", {
       contentId: null,
     }),
-    "https://www.curyo.xyz/vote?q=openlaw#youtube",
+    "https://www.curyo.xyz/vote?q=openlaw#software",
   );
 });
 
@@ -56,7 +56,7 @@ test("persisting a selected card adds the content query param to a plain vote ur
 
 test("content pin keys normalize query order and ignore hash changes", () => {
   assert.equal(
-    buildVoteContentPinKeyFromUrl("https://www.curyo.xyz/vote?q=openlaw&content=6#youtube"),
+    buildVoteContentPinKeyFromUrl("https://www.curyo.xyz/vote?q=openlaw&content=6#software"),
     "/vote?content=6&q=openlaw",
   );
   assert.equal(
@@ -67,7 +67,7 @@ test("content pin keys normalize query order and ignore hash changes", () => {
 
 test("content pin keys ignore social rating version params", () => {
   assert.equal(
-    buildVoteContentPinKeyFromUrl("https://www.curyo.xyz/vote?rv=r-6-5000-1-0&q=openlaw&content=6#youtube"),
+    buildVoteContentPinKeyFromUrl("https://www.curyo.xyz/vote?rv=r-6-5000-1-0&q=openlaw&content=6#software"),
     "/vote?content=6&q=openlaw",
   );
 });
