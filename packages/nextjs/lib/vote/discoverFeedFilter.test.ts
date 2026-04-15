@@ -2,11 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import type { ContentItem } from "~~/hooks/useContentFeed";
 import { buildInterestProfile } from "~~/hooks/useInterestProfile";
-import {
-  DISCOVER_ALL_FILTER,
-  DISCOVER_BROKEN_FILTER,
-  filterDiscoverCategoryItems,
-} from "~~/lib/vote/discoverFeedFilter";
+import { DISCOVER_ALL_FILTER, DISCOVER_BROKEN_FILTER, filterDiscoverFeedItems } from "~~/lib/vote/discoverFeedFilter";
 import { rankForYouFeed } from "~~/lib/vote/forYouRanker";
 
 function makeContentItem(overrides: Partial<ContentItem> & Pick<ContentItem, "id" | "url" | "title">): ContentItem {
@@ -32,7 +28,7 @@ function makeContentItem(overrides: Partial<ContentItem> & Pick<ContentItem, "id
   };
 }
 
-test("For You never receives broken links while the default category is active", () => {
+test("For You never receives broken links while the default filter is active", () => {
   const profile = buildInterestProfile({ feed: [], votes: [] });
   const feed = [
     makeContentItem({
@@ -67,7 +63,7 @@ test("For You never receives broken links while the default category is active",
     }),
   ];
 
-  const filtered = filterDiscoverCategoryItems(feed, DISCOVER_ALL_FILTER);
+  const filtered = filterDiscoverFeedItems(feed, DISCOVER_ALL_FILTER);
   const ranked = rankForYouFeed(filtered, {
     nowSeconds: 10_000,
     profile,
@@ -104,7 +100,7 @@ test("Broken filter isolates invalid links into the separate feed bucket", () =>
     }),
   ];
 
-  const filtered = filterDiscoverCategoryItems(feed, DISCOVER_BROKEN_FILTER);
+  const filtered = filterDiscoverFeedItems(feed, DISCOVER_BROKEN_FILTER);
 
   assert.deepEqual(
     filtered.map(item => item.id),
@@ -112,7 +108,7 @@ test("Broken filter isolates invalid links into the separate feed bucket", () =>
   );
 });
 
-test("filterDiscoverCategoryItems leaves moderation ownership to the feed layer", () => {
+test("filterDiscoverFeedItems leaves moderation ownership to the feed layer", () => {
   const feed = [
     makeContentItem({
       id: 1n,
@@ -129,7 +125,7 @@ test("filterDiscoverCategoryItems leaves moderation ownership to the feed layer"
   ];
 
   assert.deepEqual(
-    filterDiscoverCategoryItems(feed, DISCOVER_ALL_FILTER).map(item => item.id),
+    filterDiscoverFeedItems(feed, DISCOVER_ALL_FILTER).map(item => item.id),
     [1n, 2n],
   );
 });

@@ -163,13 +163,13 @@ export function CategoryFilter({ categories, activeCategory, onSelect, pillClass
     return () => observer.disconnect();
   }, [pillWidths]);
 
-  // If the active category would be hidden in overflow, swap it into the visible set
+  // If the active option would be hidden in overflow, swap it into the visible set.
   const { visible, overflow } = useMemo(() => {
     const vis = categories.slice(0, visibleCount);
     const ovf = categories.slice(visibleCount);
 
     if (ovf.includes(activeCategory)) {
-      // Swap: replace last visible pill with active category
+      // Swap: replace the last visible pill with the active option.
       const swappedOut = vis[vis.length - 1];
       vis[vis.length - 1] = activeCategory;
       ovf[ovf.indexOf(activeCategory)] = swappedOut;

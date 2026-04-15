@@ -2,13 +2,13 @@ import { buildVoteContentPinKey, buildVoteContentPinKeyFromUrl, buildVoteLocatio
 import assert from "node:assert/strict";
 import test from "node:test";
 
-test("switching categories clears the requested content query param", () => {
+test("switching vertical filters clears the requested content query param", () => {
   assert.equal(
     buildVoteLocation("https://www.curyo.xyz/vote?content=6&q=openlaw", {
       contentId: null,
-      categoryHash: "youtube",
+      filterHash: "software",
     }),
-    "https://www.curyo.xyz/vote?q=openlaw#youtube",
+    "https://www.curyo.xyz/vote?q=openlaw#software",
   );
 });
 
@@ -21,12 +21,12 @@ test("switching feed views clears requested content without changing the active 
   );
 });
 
-test("selecting content preserves the active category hash", () => {
+test("selecting content preserves the active filter hash", () => {
   assert.equal(
-    buildVoteLocation("https://www.curyo.xyz/vote?q=openlaw#youtube", {
+    buildVoteLocation("https://www.curyo.xyz/vote?q=openlaw#software", {
       contentId: 9n,
     }),
-    "https://www.curyo.xyz/vote?q=openlaw&content=9#youtube",
+    "https://www.curyo.xyz/vote?q=openlaw&content=9#software",
   );
 });
 

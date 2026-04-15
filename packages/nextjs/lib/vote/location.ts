@@ -2,7 +2,7 @@ import { VOTE_SHARE_RATING_VERSION_PARAM } from "../social/contentShare";
 
 interface VoteLocationUpdate {
   contentId?: bigint | null;
-  categoryHash?: string | null;
+  filterHash?: string | null;
 }
 
 interface VoteSearchParamsLike {
@@ -35,8 +35,8 @@ export function buildVoteLocation(currentUrl: string, update: VoteLocationUpdate
     }
   }
 
-  if (update.categoryHash !== undefined) {
-    url.hash = update.categoryHash ? `#${update.categoryHash}` : "";
+  if (update.filterHash !== undefined) {
+    url.hash = update.filterHash ? `#${update.filterHash}` : "";
   }
 
   return url.toString();

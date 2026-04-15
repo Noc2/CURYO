@@ -3,6 +3,7 @@
 import { Suspense, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import dynamic from "next/dynamic";
 import { usePathname, useSearchParams } from "next/navigation";
+import { TRUST_VERTICALS, type TrustVerticalSlug } from "@curyo/node-utils/trustVerticals";
 import type { NextPage } from "next";
 import { useAccount } from "wagmi";
 import { CategoryFilter } from "~~/components/CategoryFilter";
@@ -14,8 +15,6 @@ import { VoteSignalRail } from "~~/components/vote/VoteSignalRail";
 import { useMobileHeaderVisibility } from "~~/contexts/MobileHeaderVisibilityContext";
 import { MIN_CONTENT_SEARCH_QUERY_LENGTH, isContentSearchQueryTooShort } from "~~/hooks/contentFeed/shared";
 import { useTargetNetwork } from "~~/hooks/scaffold-eth/useTargetNetwork";
-import { useCategoryPopularity } from "~~/hooks/useCategoryPopularity";
-import { useCategoryRegistry } from "~~/hooks/useCategoryRegistry";
 import type { ContentItem } from "~~/hooks/useContentFeed";
 import { useContentFeed } from "~~/hooks/useContentFeed";
 import { useCuryoConnectModal } from "~~/hooks/useCuryoConnectModal";
@@ -36,11 +35,7 @@ import { useWatchedContent } from "~~/hooks/useWatchedContent";
 import { mergeVoteHistoryItems } from "~~/hooks/voteHistory/shared";
 import { FOLLOWED_CURATOR_TOAST_ID } from "~~/lib/notifications/followedActivity";
 import { formatVoteCooldownRemaining, getVoteCooldownRemainingSeconds } from "~~/lib/vote/cooldown";
-import {
-  DISCOVER_ALL_FILTER,
-  DISCOVER_BROKEN_FILTER,
-  filterDiscoverCategoryItems,
-} from "~~/lib/vote/discoverFeedFilter";
+import { DISCOVER_ALL_FILTER, DISCOVER_BROKEN_FILTER, filterDiscoverFeedItems } from "~~/lib/vote/discoverFeedFilter";
 import {
   type FeedExposureScope,
   applyFeedExposurePolicy,
@@ -78,6 +73,10 @@ const StakeSelector = dynamic(() => import("~~/components/swipe/StakeSelector").
 const ALL_FILTER = DISCOVER_ALL_FILTER;
 const BROKEN_FILTER = DISCOVER_BROKEN_FILTER;
 const slugify = (name: string) => name.toLowerCase().replace(/\s+/g, "-");
+const VERTICAL_FILTER_LABELS = TRUST_VERTICALS.map(vertical => vertical.label);
+const VERTICAL_SLUG_BY_LABEL = new Map<string, TrustVerticalSlug>(
+  TRUST_VERTICALS.map(vertical => [vertical.label, vertical.slug]),
+);
 type SortOption = "for_you" | "relevance" | "newest" | "oldest" | "highest_rated" | "lowest_rated";
 type SearchSortOption = Exclude<SortOption, "for_you">;
 type ScopeOption = "all" | "watched" | "my_votes" | "my_submissions" | "settling_soon" | "followed_curators";
@@ -225,7 +224,6 @@ const HomeInner = () => {
   const isSearchMode = trimmedSearchQuery.length > 0;
   const isShortSearchQuery = isContentSearchQueryTooShort(trimmedSearchQuery);
   const effectiveSearchSortBy: SearchSortOption = sortBy === "for_you" ? "relevance" : sortBy;
-  const { categories: websiteCategories, categoryNameToId, isLoading: categoriesLoading } = useCategoryRegistry();
   const { delegateTo, delegateOf, hasDelegate, isDelegate, isLoading: delegationLoading } = useDelegation(address);
   const delegateVoteAddress = hasDelegate ? delegateTo : undefined;
   const delegatorVoteAddress = isDelegate ? delegateOf : undefined;
@@ -336,12 +334,7 @@ const HomeInner = () => {
     return ids;
   }, [discoverSignals.followedSubmissions]);
 
-  const activeCategoryId = useMemo(() => {
-    if (activeCategory === ALL_FILTER || activeCategory === BROKEN_FILTER) {
-      return undefined;
-    }
-    return categoryNameToId.get(activeCategory);
-  }, [activeCategory, categoryNameToId]);
+  const activeVerticalSlug = VERTICAL_SLUG_BY_LABEL.get(activeCategory);
 
   const scopedContentIds = useMemo(() => {
     switch (activeScope) {
@@ -376,13 +369,13 @@ const HomeInner = () => {
     totalContent: serverTotalContent,
     hasMore: serverHasMoreFeed,
   } = useContentFeed(address, {
-    categoryId: activeCategoryId,
     contentIds: feedContentIds,
     limit: feedRequestLimit,
     ownSubmitterAddresses,
     searchQuery: searchQuery.trim() || undefined,
     sortBy: isSearchMode ? effectiveSearchSortBy : "newest",
     submitters: activeScope === "my_submissions" ? ownSubmitterAddresses : undefined,
+    vertical: activeVerticalSlug,
   });
   const feed = useMemo(
     () =>
@@ -418,7 +411,6 @@ const HomeInner = () => {
     votes,
     signalVersion: interactionVersion,
   });
-  const voteCounts = useCategoryPopularity(feed);
   const localVoteCooldownByContentId = useMemo(() => {
     void localVoteCooldownVersion;
     return getLocalVoteCooldownsByContentId({
@@ -641,9 +633,9 @@ const HomeInner = () => {
     categoryId: bigint;
   }>({ isOpen: false, isUp: false, contentId: 0n, categoryId: 0n });
   const { commitVote, isCommitting, error: voteError, clearError: clearVoteError } = useRoundVote();
-  // Apply search, category filter, and the selected view before sorting
+  // Apply vertical/broken filtering and the selected view before sorting.
   const filteredFeed = useMemo(() => {
-    let items = filterDiscoverCategoryItems(feed, activeCategory, activeCategoryId);
+    let items = filterDiscoverFeedItems(feed, activeCategory);
 
     switch (activeScope) {
       case "watched":
@@ -669,7 +661,6 @@ const HomeInner = () => {
   }, [
     feed,
     activeCategory,
-    activeCategoryId,
     activeScope,
     watchedContentIds,
     votedContentIds,
@@ -1072,7 +1063,7 @@ const HomeInner = () => {
     setStakeModal(prev => ({ ...prev, isOpen: false }));
   };
 
-  const replaceVoteLocation = useCallback((update: { contentId?: bigint | null; categoryHash?: string | null }) => {
+  const replaceVoteLocation = useCallback((update: { contentId?: bigint | null; filterHash?: string | null }) => {
     const nextUrl = buildVoteLocation(window.location.href, update);
     history.replaceState(null, "", nextUrl);
 
@@ -1099,14 +1090,14 @@ const HomeInner = () => {
     [clearActiveContentPin, effectiveSearchSortBy, setIsMobileHeaderVisible],
   );
 
-  // Sync category selection with URL hash (e.g. /#books, /#board-games)
+  // Sync vertical selection with the URL hash (e.g. /#software, /#investment).
   const selectCategory = useCallback(
     (name: string) => {
       setIsMobileHeaderVisible(true);
       setActiveCategory(name);
       replaceVoteLocation({
         contentId: null,
-        categoryHash: name === ALL_FILTER ? null : slugify(name),
+        filterHash: name === ALL_FILTER ? null : slugify(name),
       });
     },
     [replaceVoteLocation, setIsMobileHeaderVisible],
@@ -1387,22 +1378,17 @@ const HomeInner = () => {
     ],
   );
 
-  // Count broken URLs for the filter pill
+  // Count broken URLs for the separate system bucket.
   const brokenCount = useMemo(() => {
-    return filterDiscoverCategoryItems(feed, BROKEN_FILTER).length;
+    return filterDiscoverFeedItems(feed, BROKEN_FILTER).length;
   }, [feed]);
 
-  // Build category filter list sorted by popularity (vote count)
+  // Build the public trust-vertical filter list.
   const categories = useMemo(() => {
-    const sorted = [...websiteCategories].sort((a, b) => {
-      const countA = voteCounts.get(a.id.toString()) ?? 0;
-      const countB = voteCounts.get(b.id.toString()) ?? 0;
-      return countB - countA;
-    });
-    const cats = [ALL_FILTER, ...sorted.map(cat => cat.name)];
+    const cats = [ALL_FILTER, ...VERTICAL_FILTER_LABELS];
     if (brokenCount > 0) cats.push(BROKEN_FILTER);
     return cats;
-  }, [websiteCategories, voteCounts, brokenCount]);
+  }, [brokenCount]);
   const renderVoteTopControls = useCallback(
     (variant: "mobile" | "desktop") => {
       const isMobileVariant = variant === "mobile";
@@ -1508,7 +1494,7 @@ const HomeInner = () => {
     return () => setMobileHeaderVoteControls(null);
   }, [setMobileHeaderVoteControls]);
 
-  // Apply URL hash to category selection (on mount and hash change)
+  // Apply URL hash to vertical selection (on mount and hash change).
   useEffect(() => {
     const applyHash = () => {
       const hash = window.location.hash.replace(/^#/, "");
@@ -1632,8 +1618,7 @@ const HomeInner = () => {
                   >
                     <div className="min-w-0 flex-1 min-h-0 xl:flex-none">
                       {/* Main content */}
-                      {categoriesLoading ||
-                      scopeLoading ||
+                      {scopeLoading ||
                       showRequestedContentLoading ||
                       (effectiveRequestedActiveId === null && isLoading) ? (
                         <div className="flex justify-center py-16 xl:h-full xl:items-center xl:py-10">
