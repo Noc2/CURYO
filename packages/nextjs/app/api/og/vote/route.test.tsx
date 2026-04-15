@@ -5,12 +5,16 @@ import { after, beforeEach, test } from "node:test";
 
 const originalFetch = globalThis.fetch;
 const originalPonderUrl = process.env.NEXT_PUBLIC_PONDER_URL;
+const onePixelPng = Uint8Array.from(
+  Buffer.from("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+/p9sAAAAASUVORK5CYII=", "base64"),
+);
 
-function buildContentResponse() {
+function buildContentResponse(overrides: Record<string, unknown> = {}) {
   return new Response(
     JSON.stringify({
       content: {
         id: "88",
+        url: "https://www.youtube.com/watch?v=qRv7G7WpOoU",
         title: "A disputed piece of content",
         description: "A compact summary for social previews.",
         rating: 50,
@@ -18,6 +22,7 @@ function buildContentResponse() {
         totalVotes: 1,
         lastActivityAt: "1776160800",
         openRound: null,
+        ...overrides,
       },
     }),
     {
@@ -46,8 +51,22 @@ after(() => {
 test("caches versioned vote social cards for crawlers", async () => {
   const requestedUrls: string[] = [];
   globalThis.fetch = (async (input: RequestInfo | URL) => {
-    requestedUrls.push(input.toString());
-    return buildContentResponse();
+    const url = typeof input === "string" || input instanceof URL ? input.toString() : input.url;
+    requestedUrls.push(url);
+
+    if (url === "https://ponder.example/api/content/88") {
+      return buildContentResponse();
+    }
+
+    if (url === "https://img.youtube.com/vi/qRv7G7WpOoU/hqdefault.jpg") {
+      return new Response(onePixelPng, {
+        headers: {
+          "content-type": "image/png",
+        },
+      });
+    }
+
+    throw new Error(`Unexpected fetch: ${url}`);
   }) as typeof fetch;
 
   const response = await GET(
@@ -65,7 +84,11 @@ test("caches versioned vote social cards for crawlers", async () => {
     response.headers.get("vercel-cdn-cache-control"),
     "public, max-age=86400, stale-while-revalidate=604800, stale-if-error=604800",
   );
-  assert.deepEqual(requestedUrls, ["https://ponder.example/api/content/88"]);
+  assert.ok((await response.arrayBuffer()).byteLength > 0);
+  assert.deepEqual(requestedUrls, [
+    "https://ponder.example/api/content/88",
+    "https://img.youtube.com/vi/qRv7G7WpOoU/hqdefault.jpg",
+  ]);
 });
 
 test("keeps fallback vote social cards uncached", async () => {
