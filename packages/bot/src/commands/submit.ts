@@ -1,4 +1,5 @@
 import { randomBytes } from "node:crypto";
+import { mergeTrustVerticalTag, resolveTrustVerticalSlug } from "@curyo/node-utils/trustVerticals";
 import { encodeAbiParameters, keccak256, type Hex } from "viem";
 import { ensureCrepAllowance } from "../allowance.js";
 import { publicClient, getWalletClient, getAccount } from "../client.js";
@@ -238,6 +239,13 @@ export async function runSubmit(options: SubmitRunOptions = {}) {
         const requestedCategoryId = item.categoryId;
         const title = truncateContentTitle(item.title);
         const description = truncateContentDescription(item.description);
+        const verticalSlug = resolveTrustVerticalSlug({
+          categoryId: requestedCategoryId,
+          categoryName: source.categoryName,
+          tags: item.tags,
+          url: item.url,
+        });
+        const submissionTags = mergeTrustVerticalTag(item.tags, verticalSlug).join(",");
         const [resolvedCategoryId, submissionKey] = (await publicClient.readContract({
           ...contractConfig.registry,
           functionName: "previewSubmissionKey",
@@ -255,7 +263,7 @@ export async function runSubmit(options: SubmitRunOptions = {}) {
           submissionKey,
           title,
           description,
-          tags: item.tags,
+          tags: submissionTags,
           categoryId: requestedCategoryId,
           salt,
           submitter: account.address,
@@ -292,7 +300,7 @@ export async function runSubmit(options: SubmitRunOptions = {}) {
           submitTx = await wallet.writeContract({
             ...contractConfig.registry,
             functionName: "submitContent",
-            args: [item.url, title, description, item.tags, requestedCategoryId, salt],
+            args: [item.url, title, description, submissionTags, requestedCategoryId, salt],
           });
         } catch (error) {
           if (!isReservationTooNewError(error)) {
@@ -304,7 +312,7 @@ export async function runSubmit(options: SubmitRunOptions = {}) {
           submitTx = await wallet.writeContract({
             ...contractConfig.registry,
             functionName: "submitContent",
-            args: [item.url, title, description, item.tags, requestedCategoryId, salt],
+            args: [item.url, title, description, submissionTags, requestedCategoryId, salt],
           });
         }
         await waitForTransactionReceipt({

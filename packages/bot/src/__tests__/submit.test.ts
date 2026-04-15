@@ -12,6 +12,7 @@ const ITEM = {
   tags: "Sci-Fi",
   categoryId: 4n,
 };
+const ITEM_SUBMISSION_TAGS = "Sci-Fi,vertical:entertainment";
 
 type SubmitCommandOptions = {
   allowance?: bigint;
@@ -165,7 +166,7 @@ function buildExpectedRevealCommitment(): Hex {
         { type: "bytes32" },
         { type: "address" },
       ],
-      [SUBMISSION_KEY, ITEM.title, ITEM.description, ITEM.tags, ITEM.categoryId, FIXED_SALT, ADDRESS],
+      [SUBMISSION_KEY, ITEM.title, ITEM.description, ITEM_SUBMISSION_TAGS, ITEM.categoryId, FIXED_SALT, ADDRESS],
     ),
   );
 }
@@ -201,7 +202,7 @@ describe("runSubmit", () => {
       3,
       expect.objectContaining({
         functionName: "submitContent",
-        args: [ITEM.url, ITEM.title, ITEM.description, ITEM.tags, ITEM.categoryId, FIXED_SALT],
+        args: [ITEM.url, ITEM.title, ITEM.description, ITEM_SUBMISSION_TAGS, ITEM.categoryId, FIXED_SALT],
       }),
     );
     expect(submitCommand.mocks.log.info).toHaveBeenCalledWith(`Processing tmdb item 1/1: "${ITEM.title}"`);
