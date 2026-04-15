@@ -41,36 +41,195 @@ let availabilityPromise: Promise<boolean> | null = null;
 const HEALTH_CHECK_TIMEOUT = 2000;
 const PONDER_REQUEST_TIMEOUT = 10_000;
 const CACHE_DURATION = 30_000;
+const PONDER_MAX_REQUEST_ATTEMPTS = 3;
+const PONDER_RETRY_BASE_DELAY_MS = 600;
+const PONDER_RETRY_MAX_DELAY_MS = 5_000;
+const PONDER_MAX_CONCURRENT_REQUESTS = 4;
+const PONDER_MIN_REQUEST_SPACING_MS = 75;
+
+interface FetchPonderJsonOptions {
+  dedupe?: boolean;
+  maxAttempts?: number;
+  queue?: boolean;
+  retryBaseDelayMs?: number;
+  sleep?: (ms: number) => Promise<void>;
+  random?: () => number;
+}
+
+export class PonderHttpError extends Error {
+  readonly status: number;
+  readonly statusText: string;
+  readonly retryAfterMs: number | null;
+
+  constructor(response: Response) {
+    const statusText = response.statusText || "Unknown Error";
+    super(`Ponder request failed: ${response.status} ${statusText}`);
+    this.name = "PonderHttpError";
+    this.status = response.status;
+    this.statusText = statusText;
+    this.retryAfterMs = parseRetryAfterMs(response.headers.get("retry-after"));
+  }
+}
+
+const inFlightPonderJsonRequests = new Map<string, Promise<unknown>>();
+const pendingPonderRequestQueue: Array<() => void> = [];
+let activePonderRequestCount = 0;
+let nextPonderRequestStartAt = 0;
 
 function isAbortError(error: unknown): boolean {
   return error instanceof Error && error.name === "AbortError";
+}
+
+function parseRetryAfterMs(value: string | null): number | null {
+  if (!value) return null;
+
+  const seconds = Number(value);
+  if (Number.isFinite(seconds)) {
+    return Math.max(0, seconds * 1000);
+  }
+
+  const dateMs = Date.parse(value);
+  if (Number.isFinite(dateMs)) {
+    return Math.max(0, dateMs - Date.now());
+  }
+
+  return null;
+}
+
+function sleep(ms: number) {
+  return new Promise<void>(resolve => setTimeout(resolve, ms));
+}
+
+function drainPonderRequestQueue() {
+  while (activePonderRequestCount < PONDER_MAX_CONCURRENT_REQUESTS && pendingPonderRequestQueue.length > 0) {
+    const startRequest = pendingPonderRequestQueue.shift();
+    startRequest?.();
+  }
+}
+
+function schedulePonderRequest<T>(task: () => Promise<T>): Promise<T> {
+  return new Promise<T>((resolve, reject) => {
+    pendingPonderRequestQueue.push(() => {
+      activePonderRequestCount += 1;
+
+      const now = Date.now();
+      const delayMs = Math.max(0, nextPonderRequestStartAt - now);
+      nextPonderRequestStartAt = Math.max(nextPonderRequestStartAt, now) + PONDER_MIN_REQUEST_SPACING_MS;
+
+      setTimeout(() => {
+        task()
+          .then(resolve, reject)
+          .finally(() => {
+            activePonderRequestCount -= 1;
+            drainPonderRequestQueue();
+          });
+      }, delayMs);
+    });
+
+    drainPonderRequestQueue();
+  });
+}
+
+function shouldQueuePonderRequest(fetchImpl: typeof fetch, options: FetchPonderJsonOptions) {
+  return options.queue !== false && fetchImpl === fetch;
+}
+
+async function fetchPonderResponse(
+  url: string,
+  timeoutMs: number,
+  fetchImpl: typeof fetch,
+  options: FetchPonderJsonOptions,
+) {
+  const fetchWithTimeout = () =>
+    fetchImpl(url, {
+      signal: AbortSignal.timeout(timeoutMs),
+    });
+
+  if (shouldQueuePonderRequest(fetchImpl, options)) {
+    return schedulePonderRequest(fetchWithTimeout);
+  }
+
+  return fetchWithTimeout();
+}
+
+function isRetryablePonderError(error: unknown) {
+  return error instanceof PonderHttpError && (error.status === 429 || error.status === 502 || error.status === 503);
+}
+
+function getPonderRetryDelayMs(error: unknown, attempt: number, options: FetchPonderJsonOptions) {
+  if (error instanceof PonderHttpError && error.retryAfterMs !== null) {
+    return Math.min(error.retryAfterMs, PONDER_RETRY_MAX_DELAY_MS);
+  }
+
+  const baseDelay = options.retryBaseDelayMs ?? PONDER_RETRY_BASE_DELAY_MS;
+  const jitter = 0.8 + (options.random ?? Math.random)() * 0.4;
+  return Math.min(PONDER_RETRY_MAX_DELAY_MS, Math.round(baseDelay * 2 ** (attempt - 1) * jitter));
+}
+
+async function fetchPonderJsonWithRetry<T>(
+  url: string,
+  timeoutMs: number,
+  fetchImpl: typeof fetch,
+  options: FetchPonderJsonOptions,
+): Promise<T> {
+  const maxAttempts = Math.max(1, Math.floor(options.maxAttempts ?? PONDER_MAX_REQUEST_ATTEMPTS));
+
+  for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+    let response: Response;
+
+    try {
+      response = await fetchPonderResponse(url, timeoutMs, fetchImpl, options);
+    } catch (error) {
+      if (isAbortError(error)) {
+        throw new Error(`Ponder request timed out after ${timeoutMs}ms`);
+      }
+
+      const message = error instanceof Error ? error.message : "Unknown fetch error";
+      throw new Error(`Ponder request failed: ${message}`);
+    }
+
+    if (response.ok) {
+      return response.json();
+    }
+
+    const error = new PonderHttpError(response);
+    if (attempt >= maxAttempts || !isRetryablePonderError(error)) {
+      throw error;
+    }
+
+    await (options.sleep ?? sleep)(getPonderRetryDelayMs(error, attempt, options));
+  }
+
+  throw new Error("Ponder request failed.");
+}
+
+export function isPonderRateLimitError(error: unknown): boolean {
+  return error instanceof PonderHttpError && error.status === 429;
 }
 
 export async function fetchPonderJson<T>(
   url: string | URL,
   timeoutMs = PONDER_REQUEST_TIMEOUT,
   fetchImpl: typeof fetch = fetch,
+  options: FetchPonderJsonOptions = {},
 ): Promise<T> {
-  let response: Response;
-
-  try {
-    response = await fetchImpl(url.toString(), {
-      signal: AbortSignal.timeout(timeoutMs),
-    });
-  } catch (error) {
-    if (isAbortError(error)) {
-      throw new Error(`Ponder request timed out after ${timeoutMs}ms`);
+  const requestUrl = url.toString();
+  if (options.dedupe !== false) {
+    const inFlightRequest = inFlightPonderJsonRequests.get(requestUrl);
+    if (inFlightRequest) {
+      return inFlightRequest as Promise<T>;
     }
-
-    const message = error instanceof Error ? error.message : "Unknown fetch error";
-    throw new Error(`Ponder request failed: ${message}`);
   }
 
-  if (!response.ok) {
-    throw new Error(`Ponder request failed: ${response.status} ${response.statusText}`);
+  const request = fetchPonderJsonWithRetry<T>(requestUrl, timeoutMs, fetchImpl, options).finally(() => {
+    inFlightPonderJsonRequests.delete(requestUrl);
+  });
+
+  if (options.dedupe !== false) {
+    inFlightPonderJsonRequests.set(requestUrl, request);
   }
 
-  return response.json();
+  return request;
 }
 
 export async function isPonderAvailable(): Promise<boolean> {

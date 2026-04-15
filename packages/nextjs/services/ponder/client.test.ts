@@ -59,6 +59,93 @@ test("fetchPonderJson wraps fetch failures", async () => {
   );
 });
 
+test("fetchPonderJson retries rate-limited responses using Retry-After", async () => {
+  const sleeps: number[] = [];
+  let calls = 0;
+
+  const result = await fetchPonderJson<{ ok: boolean }>(
+    "https://ponder.curyo.xyz/content",
+    1000,
+    async () => {
+      calls += 1;
+      if (calls === 1) {
+        return new Response("rate limited", {
+          status: 429,
+          headers: { "retry-after": "2" },
+        });
+      }
+
+      return new Response(JSON.stringify({ ok: true }), {
+        status: 200,
+        headers: { "content-type": "application/json" },
+      });
+    },
+    {
+      queue: false,
+      sleep: async ms => {
+        sleeps.push(ms);
+      },
+    },
+  );
+
+  assert.deepEqual(result, { ok: true });
+  assert.equal(calls, 2);
+  assert.deepEqual(sleeps, [2000]);
+});
+
+test("fetchPonderJson stops retrying rate limits after the configured attempts", async () => {
+  let calls = 0;
+
+  await assert.rejects(
+    () =>
+      fetchPonderJson(
+        "https://ponder.curyo.xyz/content",
+        1000,
+        async () => {
+          calls += 1;
+          return new Response("rate limited", { status: 429 });
+        },
+        {
+          maxAttempts: 2,
+          queue: false,
+          sleep: async () => {},
+        },
+      ),
+    /Ponder request failed: 429/,
+  );
+
+  assert.equal(calls, 2);
+});
+
+test("fetchPonderJson dedupes in-flight identical requests", async () => {
+  let calls = 0;
+  let resolveFetch: (response: Response) => void = () => {};
+  const fetchPromise = new Promise<Response>(resolve => {
+    resolveFetch = resolve;
+  });
+  const fetchImpl = async () => {
+    calls += 1;
+    return fetchPromise;
+  };
+
+  const first = fetchPonderJson<{ ok: boolean }>("https://ponder.curyo.xyz/content", 1000, fetchImpl, {
+    queue: false,
+  });
+  const second = fetchPonderJson<{ ok: boolean }>("https://ponder.curyo.xyz/content", 1000, fetchImpl, {
+    queue: false,
+  });
+
+  resolveFetch(
+    new Response(JSON.stringify({ ok: true }), {
+      status: 200,
+      headers: { "content-type": "application/json" },
+    }),
+  );
+
+  assert.deepEqual(await Promise.all([first, second]), [{ ok: true }, { ok: true }]);
+  assert.equal(calls, 1);
+});
+
 test("ponderApi.getContentWindow respects hasMore when search totals are omitted", async () => {
   const originalGetContent = ponderApi.getContent;
   let callCount = 0;

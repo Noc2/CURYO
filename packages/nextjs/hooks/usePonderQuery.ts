@@ -1,7 +1,7 @@
 "use client";
 
 import { keepPreviousData, useQuery } from "@tanstack/react-query";
-import { invalidatePonderCache, isPonderAvailable } from "~~/services/ponder/client";
+import { invalidatePonderCache, isPonderAvailable, isPonderRateLimitError } from "~~/services/ponder/client";
 
 interface UsePonderQueryOptions<TPonder, TRpc> {
   queryKey: readonly unknown[];
@@ -63,8 +63,10 @@ export function usePonderQuery<TPonder, TRpc>({
           if (process.env.NODE_ENV !== "production") {
             console.warn("[Ponder] Query failed, falling back to RPC:", e);
           }
-          // Invalidate cache so next query re-checks availability
-          invalidatePonderCache();
+          if (!isPonderRateLimitError(e)) {
+            // Invalidate cache so next query re-checks availability.
+            invalidatePonderCache();
+          }
         }
       }
 
@@ -78,6 +80,7 @@ export function usePonderQuery<TPonder, TRpc>({
     enabled,
     staleTime,
     refetchInterval,
+    retry: false,
     placeholderData: keepPrevious ? keepPreviousData : undefined,
   });
 }
