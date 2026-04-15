@@ -10,6 +10,8 @@ The proposed Curyo 2.0 design would let users create binary questions that can b
 
 The direction is promising because it turns Curyo from a general content-rating protocol into a demand-driven human judgment network. The main caution is that "any question, any link, any bounty" creates legal, moderation, and incentive risks. A safer first version would constrain the question types, pay mostly for valid participation and review work, and avoid future-event or wager-like markets.
 
+Additional research strengthens the core recommendation: Curyo 2.0 should launch as bountied review questions, not as a user-created prediction market. The product should pay verified humans to review bounded evidence under explicit rules. It should not let reviewers buy tradable yes/no positions, stake stablecoins to enter, or receive winner-takes-most payouts from future-event outcomes.
+
 ## Current Curyo Fit
 
 Curyo already has primitives that map well onto bountied human judgment:
@@ -54,6 +56,35 @@ This design moves Curyo toward a general-purpose human consensus oracle for boun
 
 Protocol and frontend fees can be taken from bounty flow as payment for routing, moderation, settlement, indexing, and reputation infrastructure. That may be easier to justify than extracting value from ordinary rating activity.
 
+## Precedent Takeaways
+
+### UMA Optimistic Oracle
+
+UMA's optimistic oracle is the closest design precedent for "human judgment only when needed." Assertions are bonded, then accepted unless disputed during a liveness period; disputes escalate to human voting. Two lessons map directly to Curyo:
+
+- The question creator should post a separate bond that can be lost for malformed, abusive, or wrong assertions.
+- Bounty size should affect dispute liveness, required quorum, and security parameters.
+
+UMA's bond guidance is especially relevant: higher value at stake should generally mean higher bonds or longer challenge windows, but bonds that are too high can deter honest challengers. Curyo should avoid one static configuration for every bounty size.
+
+### Kleros
+
+Kleros shows that subjective human resolution needs policies, evidence rules, appeal paths, and incentives for third parties to correct bad early rulings. Its appeal crowdfunding model is useful because outsiders who identify an obviously bad ruling can help fund the opposite side and share rewards if the appeal succeeds.
+
+The risk is that coherent-vote rewards can drift into "vote with the expected majority." Curyo should therefore avoid vague prompts and add an invalid/cannot-resolve outcome for malformed questions.
+
+### MACI
+
+MACI exists because public blockchain voting makes bribery easy: voters can prove how they voted. Curyo's tlock commit-reveal model already helps against early herding, but it is not full receipt-free voting. For high-value bounties, Curyo should consider stronger privacy or receipt-freeness later.
+
+### Gitcoin
+
+Gitcoin's quadratic funding research generalizes to bountied questions: when rewards depend on many unique humans, fake or controlled identities become economically valuable. One Voter ID per human is important, but valuable bounties still need layered defenses such as pattern detection, source-of-funds clustering, community flagging, and category-specific reputation.
+
+### Prediction Markets
+
+Prediction markets show why binary outcomes are powerful and dangerous. CFTC materials describe event contracts as often yes/no, fixed-payout instruments tied to event outcomes. CFTC also penalized Polymarket for off-exchange event-based binary options tied to future yes/no outcomes. Curyo should avoid markets, odds, positions, order books, secondary trading, and future-event questions in v1.
+
 ## Potential Issues
 
 ### Consensus Is Not Truth
@@ -82,11 +113,22 @@ This is most risky for questions about:
 
 The safer initial framing is "paid human review of bounded evidence" rather than "bet on an outcome." Bounty distribution should include a meaningful participation/review component and should avoid winner-takes-all stablecoin mechanics.
 
+Additional regulatory red lines:
+
+- Do not create tradable yes/no shares.
+- Do not create an order book or secondary market.
+- Do not use odds, position, market, bet, wager, or fixed-payout copy.
+- Do not let reviewers pay stablecoins to enter.
+- Do not let creators, subjects, insiders, or parties who can influence the outcome claim outcome-weighted rewards.
+- Do not launch future-event questions without a separate legal workstream.
+
 ### Stablecoin Compliance and Issuer Controls
 
 Stablecoin flows introduce sanctions, blocked-address, prohibited-activity, tax, and issuer-policy considerations. As of this research pass, the U.S. GENIUS Act has created a federal payment-stablecoin framework, and EU MiCA rules regulate asset-referenced tokens and e-money tokens. Even if Curyo is not issuing stablecoins, escrowing and distributing stablecoin bounties can still require legal review.
 
 Stablecoin issuers may also monitor or block prohibited transactions, including certain gambling or unlawful activity categories. That makes arbitrary bounties riskier than cREP-only rewards.
+
+Stablecoin bounty claims may also create tax reporting expectations for users. IRS guidance treats digital assets, including stablecoins, as reportable digital assets and explicitly references rewards, awards, and payment for services. Product copy should assume bounty recipients may need records of claim amounts, dates, token symbols, and fair market values.
 
 ### Ambiguity Attacks
 
@@ -135,6 +177,13 @@ The question creator may have a direct interest in the answer. At minimum:
 
 Curyo already has URL-safety code for SSRF-style risk. Bountied questions would need product-level content policy, reporting, takedowns, and evidence retention rules.
 
+If Curyo hosts, proxies, or caches user media instead of only linking out, the safety burden increases sharply:
+
+- CSAM handling needs a documented escalation and reporting playbook before image uploads or media proxying launch.
+- Copyright handling needs a DMCA agent, takedown workflow, repeat-infringer policy, and removal process if user media is hosted.
+- EU-facing platform risk increases under the Digital Services Act, which expects notice/action mechanisms, appeal paths, and stronger safeguards at scale.
+- Media previews should be disabled or scanned for untrusted arbitrary URLs until moderation infrastructure exists.
+
 ### Bounty Size Can Overwhelm cREP Incentives
 
 If the stablecoin bounty is much larger than the cREP at risk, voters may optimize for bounty capture instead of reputation or rating accuracy. The stablecoin layer should be capped at launch and should scale with quorum, stake, and reviewer quality.
@@ -152,6 +201,16 @@ Start with constrained question types that are evidence-bound:
 - Listing accuracy: "Does this listing materially match the linked official record?"
 
 Avoid general-purpose political, medical, legal, and personal reputation questions in the first version.
+
+Every template should require:
+
+- Exact binary claim.
+- Accepted evidence sources.
+- Yes criteria.
+- No criteria.
+- Invalid/cannot-resolve criteria.
+- Resolution timestamp or evidence snapshot time.
+- Conflict-of-interest disclosure.
 
 ### 2. Treat the Result as Confidence, Not Final Truth
 
@@ -176,6 +235,8 @@ A first split could be:
 - 5% to 10% for protocol, frontend, moderation, or treasury.
 
 This makes the product look more like paid review work and less like a binary wager.
+
+The exact split should vary by risk. Highly objective, evidence-bound questions can tolerate a larger coherence bonus. Ambiguous or high-value questions should shift more reward into valid participation and reserve more for challenge/appeal.
 
 ### 5. Tranche Large Bounties
 
@@ -204,6 +265,8 @@ Initial blocked categories should include:
 - Legal guilt or liability.
 - Personal allegations.
 - Explicit gambling or lottery mechanics.
+- Death, violent harm, assassination, terrorism, war, or unlawful acts.
+- Questions where the creator or subject can directly influence the answer.
 
 ### 8. Add Question Lifecycle States
 
@@ -224,12 +287,15 @@ Refund rules should be explicit for moderation removal, quorum failure, reveal f
 ## Open Design Questions
 
 - Should every bounty require a cREP stake from the question creator?
+- Should every bounty require a separate creator bond that can be slashed independently of the voter bounty?
 - Should voters stake cREP in addition to earning stablecoins?
 - Should stablecoin rewards go only to winning voters, all valid revealers, or a hybrid?
 - Should creators be able to add bounty after a question is open?
 - Should third parties be able to add bounty to existing questions?
 - Should a question support multiple evidence links or only one canonical link?
 - Should high-stakes bounties require a moderator or curator precheck?
+- Should the protocol support an invalid/cannot-resolve outcome in addition to yes/no?
+- Should high-value questions have an optimistic answer plus challenge window before the Curyo vote, similar to UMA?
 - Should Curyo add category-specific voter reputation before routing bounties?
 - Should there be an appeal court, expert panel, or governance escalation path?
 - How should Curyo handle takedowns when bounty funds are already escrowed?
@@ -239,12 +305,24 @@ Refund rules should be explicit for moderation removal, quorum failure, reveal f
 
 Likely new or changed components:
 
-- A `BountyEscrow` contract or module that holds stablecoin funds per question.
-- A question schema that captures prompt, template type, linked evidence, media metadata, category, creator, bounty token, and bounty amount.
-- Ponder/indexer tables for bounty state, payout state, source evidence, and moderation status.
+- A `BountiedQuestionRegistry` or `QuestionRegistry` that stores question metadata, template type, rubric, evidence URI, creator, moderation status, and optional content linkage.
+- A `BountyEscrow` contract that holds allowlisted stablecoin funds per question and tracks deposits, refunds, tranches, and protocol fees.
+- A `BountyRewardDistributor` that offers pull-based stablecoin claims keyed by `contentId`, `roundId`, and token, using settled round outcomes and revealed-vote data.
+- Ponder/indexer tables such as `bounty_question`, `bounty_deposit`, `bounty_round_snapshot`, `bounty_claim`, and possibly `bounty_token`.
 - Frontend flows for question creation, funding, voting, reveal, claim, cancellation, and dispute.
 - Keeper support for settlement and possibly bounty tranche release.
 - Tests for solvency, refund paths, partial payout, stablecoin decimals, non-standard ERC20 behavior, and moderation removal.
+
+The strongest architecture recommendation is to keep `RoundVotingEngine` unchanged for v1 bounties. Curyo's settlement path is already complex and bytecode-sensitive, and stablecoin custody should not be added to the voting engine. Keep cREP voting as the judgment layer and add a separate escrow/distributor that reads settled outcomes.
+
+Current integration points:
+
+- `ContentRegistry` manages URL/title/description/tags/category submissions and fixed cREP submitter stake. A question can fit as a content subtype, but arbitrary questions and images conflict with the current approved-platform and canonical-URL model.
+- `RoundVotingEngine` manages 1-100 cREP voting, tlock commit-reveal, settlement, and rating updates. It should remain the source of judgment, not stablecoin custody.
+- `RoundRewardDistributor` is cREP-only and pull-based. The stablecoin bounty distributor should copy the pull-based pattern without replacing it.
+- Ponder currently indexes content, rounds, votes, and cREP rewards. Bounties need new schema and event handlers rather than overloading existing reward tables.
+- The Next submit flow assumes an approved platform URL and category. A bountied-question flow should likely be a separate tab or route.
+- Free transaction sponsorship should not cover stablecoin approvals or bounty deposits in v1. Bounty funding should be self-funded until abuse and compliance economics are clearer.
 
 High-risk test areas:
 
@@ -257,16 +335,77 @@ High-risk test areas:
 - Creator self-vote restrictions.
 - Appeal/dispute payout freezing.
 - Frontend and Ponder state alignment.
+- Sanctions/blocklist handling for token funding and claiming.
+- Stablecoin allowlist enforcement.
+- Conflict-of-interest blocking beyond direct creator self-voting.
+- Invalid/cannot-resolve payout and refund behavior.
+
+## Proposed Product Constraints
+
+Recommended v1 constraints:
+
+- Launch as "bountied review questions" or "verification bounties."
+- Allow only present-tense or past-tense evidence-linked claims.
+- Require a template and rubric for every question.
+- Include an invalid/cannot-resolve path.
+- Keep stablecoin bounty funding separate from cREP vote staking.
+- Keep cREP voting required for judgment and anti-spam pressure.
+- Pay mostly for valid participation, with a smaller coherence bonus.
+- Cap bounty size and per-user payout size.
+- Allow only one or two allowlisted stablecoins at launch.
+- Use pull-based claims.
+- Prohibit creator voting and creator claiming.
+- Require conflict disclosure for question creators.
+- Escalate high-value questions through longer windows, higher quorum, and manual review.
+- Avoid arbitrary media uploads until scanning, takedown, and reporting workflows exist.
+- Add emergency controls to pause question creation, bounty funding, media previewing, and claims separately.
+
+Recommended v1 copy constraints:
+
+- Use "review," "question," "confidence," "claim," "bounty," and "reward."
+- Avoid "market," "bet," "wager," "odds," "shares," "positions," "trade," and "jackpot."
+- Avoid "truth" unless there is a category-specific expert or appeal process behind it.
+
+## Proposed Implementation Phases
+
+### Phase 0: Product Semantics
+
+Keep existing contracts unchanged. Define the bountied-question model in docs and product requirements. Decide allowed templates, disallowed categories, payout split, invalid outcome, refund rules, and moderation policy.
+
+### Phase 1: Question Metadata Without Stablecoin Claims
+
+Create bountied questions with escrowed funds, but keep cREP voting unchanged and do not yet enable stablecoin reward claims. Show bounty metadata in Ponder and the feed. Allow creator refund under clearly defined cancellation rules.
+
+### Phase 2: Settled-Round Pull Claims
+
+Enable pull-based bounty claims after settled rounds only. Start with one allowlisted 6-decimal stablecoin and low caps. No sponsored bounty actions. No arbitrary tokens. No media uploads.
+
+### Phase 3: Tranches, Challenges, And Fees
+
+Add tranche release, protocol/frontend fees, creator top-ups, challenge/appeal flow, larger bounty tiers, and stronger anomaly monitoring.
+
+### Phase 4: Advanced Privacy And Reputation
+
+Evaluate MACI-like receipt-freeness for high-value bounties, category-specific reviewer reputation, expert queues, and broader media support.
 
 ## Research Sources
 
 - Curyo repo docs and contracts: `README.md`, `packages/nextjs/app/docs/how-it-works/page.tsx`, `packages/nextjs/app/docs/smart-contracts/page.tsx`, `packages/foundry/contracts/RoundVotingEngine.sol`, and `packages/foundry/contracts/RoundRewardDistributor.sol`.
 - CFTC, prediction markets overview: https://www.cftc.gov/LearnandProtect/PredictionMarkets
 - CFTC, 2026 prediction markets advisory: https://www.cftc.gov/PressRoom/PressReleases/9185-26
+- CFTC, Polymarket event-based binary options order announcement: https://www.cftc.gov/PressRoom/PressReleases/8478-22
 - Congress CRS, GENIUS Act stablecoin overview: https://www.congress.gov/crs-product/IN12553
+- Congress, GENIUS Act public law text: https://www.congress.gov/bill/119th-congress/senate-bill/1582/text/pl
 - European Banking Authority, MiCA asset-referenced and e-money tokens: https://www.eba.europa.eu/regulation-and-policy/asset-referenced-and-e-money-tokens-mica
 - FinCEN, convertible virtual currency guidance: https://www.fincen.gov/resources/statutes-regulations/guidance/application-fincens-regulations-persons-administering
+- OFAC, sanctions compliance guidance for the virtual currency industry: https://ofac.treasury.gov/recent-actions/20211015
+- IRS, digital asset reporting and tax requirements: https://www.irs.gov/newsroom/what-taxpayers-need-to-know-about-digital-asset-reporting-and-tax-requirements
 - UMA, optimistic oracle overview: https://docs.uma.xyz/protocol-overview/how-does-umas-oracle-work
+- UMA, bond and liveness parameter guidance: https://docs.uma.xyz/developers/setting-custom-bond-and-liveness-parameters
 - Kleros FAQ and juror docs: https://docs.kleros.io/kleros-faq and https://docs.kleros.io/products/court/kleros-juror-tutorial
+- MACI, introduction and voting privacy/collusion resistance: https://maci.pse.dev/docs/introduction
 - Gitcoin, sybil resistance in quadratic funding: https://gitcoin.co/research/quadratic-funding-sybil-resistance
 - Circle, bridged USDC terms: https://www.circle.com/legal/bridged-usdc-terms
+- NCMEC CyberTipline: https://www.missingkids.org/gethelpnow/cybertipline
+- U.S. Copyright Office, DMCA Section 512 resources: https://www.copyright.gov/512/index.html
+- European Commission, Digital Services Act overview: https://digital-strategy.ec.europa.eu/en/policies/digital-services-act
