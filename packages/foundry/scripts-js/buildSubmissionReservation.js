@@ -16,10 +16,10 @@ const publicClient = createPublicClient({
 const [, submissionKey] = await publicClient.readContract({
   address: registry,
   abi: parseAbi([
-    "function previewSubmissionKey(string url, uint256 categoryId) view returns (uint256 resolvedCategoryId, bytes32 submissionKey)",
+    "function previewQuestionSubmissionKey(string url, string title, string description, string tags, uint256 categoryId) view returns (uint256 resolvedCategoryId, bytes32 submissionKey)",
   ]),
-  functionName: "previewSubmissionKey",
-  args: [url, BigInt(categoryId)],
+  functionName: "previewQuestionSubmissionKey",
+  args: [url, title, description, tags, BigInt(categoryId)],
 });
 
 const revealCommitment = keccak256(

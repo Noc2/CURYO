@@ -544,15 +544,9 @@ contract ContentRegistry is Initializable, AccessControlUpgradeable, PausableUpg
         view
         returns (uint256 resolvedCategoryId)
     {
-        if (bytes(metadata.url).length == 0) {
-            require(metadata.categoryId != 0, "Category required");
-            require(categoryRegistry.isApprovedCategory(metadata.categoryId), "Category not approved");
-            return metadata.categoryId;
-        }
-
-        (resolvedCategoryId,) = SUBMISSION_CANONICALIZER.resolveCategoryAndSubmissionKey(
-            categoryRegistry, metadata.url, metadata.categoryId
-        );
+        require(metadata.categoryId != 0, "Category required");
+        require(categoryRegistry.isApprovedCategory(metadata.categoryId), "Category not approved");
+        return metadata.categoryId;
     }
 
     function _deriveQuestionSubmissionKey(SubmissionMetadata memory metadata, uint256 resolvedCategoryId)

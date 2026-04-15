@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Seed script: submits example content from different accounts and platforms.
+# Seed script: submits example question-first content from different accounts and sources.
 # Uses foundry's default anvil/hardhat accounts (indices 2-10 for content, 9-10 also for voting).
 # Only runs on localhost (chain 31337).
 
@@ -40,7 +40,7 @@ echo "RoundVotingEngine: $VOTING_ENGINE"
 echo ""
 
 # Anvil/hardhat default private keys
-# Accounts 2-10 for content submission (2-5 reused for Games & Books), 9-10 also for voting
+# Accounts 2-10 for question submission (some reused for later sources), 9-10 also for voting
 # Note: These accounts are pre-funded with cREP during deployment (see DeployCuryo.s.sol)
 KEYS=(
   "0x5de4111afa1a4b94908f83103eb1f1706367c2e68ca870fc3fb9a804cdab365a"  # Account 2
@@ -61,8 +61,11 @@ KEYS=(
   "0xdbda1821b80551c9d65939329250298aa3472ba22feea921c0cf5d620ea67b97"  # Account 8 (reused for Spotify)
 )
 
-# Example content from multiple platforms: (url, title, description, tags, categoryId)
-# CategoryIds: 1=YouTube, 2=Twitch, 3=MTG, 4=Movies (TMDB), 5=People (Wikipedia), 6=Games (RAWG), 7=Books (Open Library), 8=AI (HuggingFace), 9=Crypto Tokens (CoinGecko), 10=Tweets (X), 11=GitHub Repos, 12=Spotify Podcasts
+# Example questions from multiple sources: (url, title, description, tags, categoryId)
+# Curyo 2 default categoryIds:
+# 1=Products, 2=Hotels and Travel, 3=Restaurants and Local Places, 4=Design and Aesthetics,
+# 5=Apps and Websites, 6=AI Answers, 7=Documentation and Developer Help, 8=Media and Images,
+# 9=Trust and Safety, 10=General Opinion
 URLS=(
   "https://www.youtube.com/watch?v=rUCAdMnb1Oc"
   "https://www.youtube.com/watch?v=M7lc1UVf-VE"
@@ -139,27 +142,27 @@ TAGS=(
   "Technology,Culture"
 )
 
-# CategoryIds mapping to URLs (1=YouTube, 2=Twitch, 3=MTG, 4=Movies, 5=People, 6=Games, 7=Books, 8=AI, 9=Crypto, 10=Tweets, 11=GitHub, 12=Spotify)
+# CategoryIds mapping to seeded questions.
 CATEGORY_IDS=(
-  1   # YouTube
-  1   # YouTube
-  1   # YouTube
-  3   # MTG (Scryfall)
-  4   # Movies (TMDB)
-  5   # People (Wikipedia)
-  5   # People (Wikipedia)
-  6   # Games (RAWG)
-  6   # Games (RAWG)
-  7   # Books (Open Library)
-  7   # Books (Open Library)
-  9   # Crypto Tokens (CoinGecko)
-  9   # Crypto Tokens (CoinGecko)
-  11  # GitHub Repos
-  11  # GitHub Repos
-  12  # Spotify Podcasts
+  8   # Media and Images: YouTube
+  8   # Media and Images: YouTube
+  8   # Media and Images: YouTube
+  1   # Products: MTG card
+  8   # Media and Images: TMDB movie
+  10  # General Opinion: Wikipedia person
+  10  # General Opinion: Wikipedia person
+  1   # Products: game
+  1   # Products: game
+  8   # Media and Images: book
+  8   # Media and Images: book
+  1   # Products: crypto asset
+  1   # Products: crypto asset
+  7   # Documentation and Developer Help: GitHub repo
+  7   # Documentation and Developer Help: GitHub repo
+  8   # Media and Images: Spotify podcast
 )
 
-echo "=== Seeding example content from multiple platforms ==="
+echo "=== Seeding example question content from multiple sources ==="
 echo "(Test accounts were pre-funded with cREP during deployment)"
 echo ""
 
@@ -188,7 +191,7 @@ for ((i = 0; i < TOTAL_ITEMS; i++)); do
   echo "  Approving cREP..."
   cast send "$TOKEN" "approve(address,uint256)" "$REGISTRY" "$SUBMITTER_STAKE" --private-key "$KEY" --rpc-url "$RPC" > /dev/null 2>&1
 
-  # 2. Reserve the hidden submission commitment before revealing the content metadata
+  # 2. Reserve the hidden submission commitment before revealing the question metadata
   printf -v SALT "%064x" "$((i + 1))"
   REVEAL_COMMITMENT=$(node "$SCRIPT_DIR/../scripts-js/buildSubmissionReservation.js" \
     "$RPC" "$REGISTRY" "$ADDR" "$URL" "$TITLE" "$DESCRIPTION" "$TAG" "$CATEGORY_ID" "0x$SALT")
@@ -201,14 +204,14 @@ for ((i = 0; i < TOTAL_ITEMS; i++)); do
 
   # 3. Reveal the submission with the same deterministic salt used for the reservation
   echo "  Submitting: $URL (categoryId: $CATEGORY_ID)"
-  cast send "$REGISTRY" "submitContent(string,string,string,string,uint256,bytes32)" \
+  cast send "$REGISTRY" "submitQuestion(string,string,string,string,uint256,bytes32)" \
     "$URL" "$TITLE" "$DESCRIPTION" "$TAG" "$CATEGORY_ID" "0x$SALT" \
     --private-key "$KEY" --rpc-url "$RPC" > /dev/null 2>&1
   echo "  Done!"
   echo ""
 done
 
-echo "=== Seed complete: $TOTAL_ITEMS content items submitted ==="
+echo "=== Seed complete: $TOTAL_ITEMS question items submitted ==="
 echo ""
 
 # --- Voting Section ---

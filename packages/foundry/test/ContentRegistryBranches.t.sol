@@ -182,6 +182,29 @@ contract ContentRegistryBranchesTest is VotingTestBase {
     // submitContent BRANCHES
     // =========================================================================
 
+    function test_SubmitQuestion_AllowsArbitraryHttpsUrlWithApprovedCategory() public {
+        string memory url = "https://unmapped.example/reviews/widget-1";
+        string memory title = "Does this product look useful?";
+        string memory description = "A subjective product review question with an external evidence link.";
+        string memory tags = "Products,Review";
+        uint256 categoryId = 1;
+        bytes32 salt = keccak256("arbitrary-question-url");
+
+        vm.startPrank(submitter);
+        crepToken.approve(address(registry), 10e6);
+        (, bytes32 submissionKey) = registry.previewQuestionSubmissionKey(url, title, description, tags, categoryId);
+        bytes32 revealCommitment =
+            keccak256(abi.encode(submissionKey, title, description, tags, categoryId, salt, submitter));
+        registry.reserveSubmission(revealCommitment);
+        vm.warp(block.timestamp + 1);
+        uint256 id = registry.submitQuestion(url, title, description, tags, categoryId, salt);
+        vm.stopPrank();
+
+        (,,,,,,,,,,, uint256 storedCategoryId) = registry.contents(id);
+        assertEq(storedCategoryId, categoryId);
+        assertTrue(registry.submissionKeyUsed(submissionKey));
+    }
+
     function test_SubmitContent_VoterIdRequired_RevertsWithoutId() public {
         vm.prank(owner);
         registry.setVoterIdNFT(address(mockVoterIdNFT));
@@ -783,7 +806,9 @@ contract ContentRegistryBranchesTest is VotingTestBase {
         );
         (,,,,,,,,, bool submitterStakeReturned,,) = registry.contents(1);
         assertTrue(submitterStakeReturned, "stake should resolve after dormant fallback");
-        assertFalse(registry.isSubmitterStakeSlashable(1), "manual display rating changes should not make content slashable");
+        assertFalse(
+            registry.isSubmitterStakeSlashable(1), "manual display rating changes should not make content slashable"
+        );
     }
 
     function test_SubmitContent_NoParticipationPool_NoReward() public {
@@ -1185,8 +1210,7 @@ contract ContentRegistryBranchesTest is VotingTestBase {
 
     function test_ResolveSubmissionKey_WikipediaDotSegmentsCanonicalizesEquivalentUrls() public view {
         bytes32 canonicalKey = registry.resolveSubmissionKey("https://en.wikipedia.org/wiki/Lionel_Messi");
-        bytes32 malformedKey =
-            registry.resolveSubmissionKey("https://en.wikipedia.org/wiki/./players/../Lionel_Messi");
+        bytes32 malformedKey = registry.resolveSubmissionKey("https://en.wikipedia.org/wiki/./players/../Lionel_Messi");
 
         assertEq(canonicalKey, malformedKey);
     }
