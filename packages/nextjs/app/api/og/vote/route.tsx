@@ -1,7 +1,7 @@
 import React from "react";
 import { ImageResponse } from "next/og";
 import type { NextRequest } from "next/server";
-import type { ContentShareData } from "~~/lib/social/contentShare";
+import { type ContentShareData, VOTE_SHARE_RATING_VERSION_PARAM } from "~~/lib/social/contentShare";
 import { getContentShareDataForParam } from "~~/lib/social/contentShare.server";
 
 export const runtime = "nodejs";
@@ -236,9 +236,11 @@ export async function GET(request: NextRequest) {
   const shareData = await getContentShareDataForParam(request.nextUrl.searchParams.get("content"), {
     origin: request.nextUrl.origin,
   });
+  const requestedRatingVersion = request.nextUrl.searchParams.get(VOTE_SHARE_RATING_VERSION_PARAM);
+  const hasCurrentRatingVersion = Boolean(shareData && requestedRatingVersion === shareData.ratingVersion);
 
   return new ImageResponse(shareData ? <RatingShareImage shareData={shareData} /> : <FallbackShareImage />, {
     ...imageSize,
-    headers: shareData ? versionedResponseHeaders : fallbackResponseHeaders,
+    headers: hasCurrentRatingVersion ? versionedResponseHeaders : fallbackResponseHeaders,
   });
 }

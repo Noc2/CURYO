@@ -33,23 +33,7 @@ function buildContentResponse(overrides: Record<string, unknown> = {}) {
   );
 }
 
-beforeEach(() => {
-  process.env.NEXT_PUBLIC_PONDER_URL = "https://ponder.example/api";
-  globalThis.fetch = originalFetch;
-});
-
-after(() => {
-  globalThis.fetch = originalFetch;
-
-  if (originalPonderUrl === undefined) {
-    delete process.env.NEXT_PUBLIC_PONDER_URL;
-  } else {
-    process.env.NEXT_PUBLIC_PONDER_URL = originalPonderUrl;
-  }
-});
-
-test("caches versioned vote social cards for crawlers", async () => {
-  const requestedUrls: string[] = [];
+function mockShareContentFetch(requestedUrls: string[] = []) {
   globalThis.fetch = (async (input: RequestInfo | URL) => {
     const url = typeof input === "string" || input instanceof URL ? input.toString() : input.url;
     requestedUrls.push(url);
@@ -68,6 +52,26 @@ test("caches versioned vote social cards for crawlers", async () => {
 
     throw new Error(`Unexpected fetch: ${url}`);
   }) as typeof fetch;
+}
+
+beforeEach(() => {
+  process.env.NEXT_PUBLIC_PONDER_URL = "https://ponder.example/api";
+  globalThis.fetch = originalFetch;
+});
+
+after(() => {
+  globalThis.fetch = originalFetch;
+
+  if (originalPonderUrl === undefined) {
+    delete process.env.NEXT_PUBLIC_PONDER_URL;
+  } else {
+    process.env.NEXT_PUBLIC_PONDER_URL = originalPonderUrl;
+  }
+});
+
+test("caches versioned vote social cards for crawlers", async () => {
+  const requestedUrls: string[] = [];
+  mockShareContentFetch(requestedUrls);
 
   const response = await GET(
     new NextRequest("https://www.curyo.xyz/api/og/vote?content=88&rv=r-88-5000-1-0-1776160800"),
@@ -89,6 +93,24 @@ test("caches versioned vote social cards for crawlers", async () => {
     "https://ponder.example/api/content/88",
     "https://img.youtube.com/vi/qRv7G7WpOoU/hqdefault.jpg",
   ]);
+});
+
+test("keeps content vote social cards uncached without the current rating version", async () => {
+  for (const url of [
+    "https://www.curyo.xyz/api/og/vote?content=88",
+    "https://www.curyo.xyz/api/og/vote?content=88&rv=r-88-4900-1-0-1776160800",
+  ]) {
+    mockShareContentFetch();
+
+    const response = await GET(new NextRequest(url));
+
+    assert.equal(response.status, 200);
+    assert.equal(response.headers.get("content-type"), "image/png");
+    assert.equal(response.headers.get("cache-control"), "no-store, max-age=0");
+    assert.equal(response.headers.get("cdn-cache-control"), null);
+    assert.equal(response.headers.get("vercel-cdn-cache-control"), null);
+    assert.ok((await response.arrayBuffer()).byteLength > 0);
+  }
 });
 
 test("keeps fallback vote social cards uncached", async () => {
