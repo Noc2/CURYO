@@ -118,12 +118,186 @@ Recommended changes:
 - Explain that stablecoin reward eligibility is based on valid reveal participation, not whether the voter chose the settled side.
 - Preserve cREP outcome-risk messaging so voters understand that a wrong cREP vote can still reduce their future participation power.
 
+## Contract Architecture
+
+Because Curyo 2.0 contracts will be redeployed, the contract surface can use question-first names without preserving old storage layout. The implementation should still preserve the proven separation between submission, voting, and pull-based reward claims.
+
+Recommended contracts:
+
+- `QuestionRegistry`: replacement or renamed evolution of `ContentRegistry`. Stores question metadata, linked content, description, category/frame, submitter, lifecycle status, and rating state.
+- `RoundVotingEngine`: reused as the cREP judgment layer with minimal semantic changes. It still handles commit, reveal, settlement, cREP stake accounting, rating updates, cancelled rounds, tied rounds, and reveal-failed rounds.
+- `QuestionBountyEscrow`: new stablecoin custody contract for question-scoped bounty deposits, top-ups, token allowlist config, refund rules, and pause controls.
+- `QuestionBountyDistributor`: optional separate pull-claim contract. This can be folded into `QuestionBountyEscrow` if bytecode size is manageable, but keeping it separate mirrors the current `RoundRewardDistributor` pattern.
+- `ProtocolConfig`: add bounty contract addresses only where shared address lookup is useful. Avoid making the voting engine responsible for stablecoin custody.
+
+Stablecoin transfer logic should not be added to `RoundVotingEngine.settleRound`. Settlement is already the highest-risk path and the current codebase already extracts settlement accounting into libraries to keep runtime size under control. The stablecoin layer should read settled round state and voter reveal state, then let eligible voters claim through a pull path.
+
+## Bounty Contract Model
+
+Each bounty should be scoped to one question. Top-ups with different terms should create a new bounty rather than mutating the economic rules of an existing bounty.
+
+Recommended bounty fields:
+
+- `questionId` or `contentId`: the funded question.
+- `token`: allowlisted USDC or USDT address.
+- `funder`: original funder.
+- `amount`: total received token amount credited to the bounty.
+- `remainingAmount`: unclaimed or refundable token amount.
+- `requiredVoters`: minimum valid revealed voters for a round to qualify.
+- `requiredSettledRounds`: number of qualifying settled rounds funded by the bounty.
+- `startRoundId`: first round eligible for this bounty.
+- `expiry`: deadline after which unmet bounties can be refunded.
+- `refundMode`: v1 should prefer explicit refund on expiry or cancellation, not automatic rollover.
+- `eligibilityConfigVersion`: Self.xyz and jurisdiction/sanctions policy version required for claims.
+- `paused` or global pause state: separate funding pause from claim/refund availability.
+
+Recommended functions:
+
+- `setTokenAllowed(address token, bool allowed, uint8 decimals, string symbol)`.
+- `createBounty(uint256 questionId, address token, uint256 amount, uint32 requiredVoters, uint32 requiredSettledRounds, uint64 expiry)`.
+- `addBounty(uint256 questionId, address token, uint256 amount, uint32 requiredVoters, uint32 requiredSettledRounds, uint64 expiry)`.
+- `claimBountyReward(uint256 bountyId, uint256 roundId)`.
+- `refundExpiredBounty(uint256 bountyId)`.
+- `pauseFunding(bool paused)`.
+- `pauseClaims(bool paused)`, only if legal or emergency review requires it. Prefer keeping claims and refunds available when possible.
+
+Recommended events:
+
+- `BountyCreated`.
+- `BountyFunded`.
+- `BountyRoundQualified`.
+- `BountyRewardClaimed`.
+- `BountyRefunded`.
+- `BountyTokenAllowed`.
+- `BountyFundingPaused`.
+- `BountyClaimsPaused`.
+
+## Bounty Payout Rules
+
+The launch payout model should be deliberately simple:
+
+1. A bounty starts at the current or next round for the question.
+2. A round qualifies only if it reaches the normal cREP settlement path, has at least `requiredVoters` revealed votes, and is at or after the bounty start round.
+3. Tied, cancelled, and reveal-failed rounds do not qualify at launch.
+4. Each qualifying round receives `amount / requiredSettledRounds`, with the final qualifying round receiving dust.
+5. Every voter who committed and revealed in that qualifying round can claim an equal share of that round allocation.
+6. Vote direction does not matter.
+7. Stablecoin rewards never depend on winning side at launch.
+8. cREP rewards, losses, rebates, and participation rewards remain governed by the existing round settlement model.
+
+This per-round model avoids unbounded on-chain iteration and avoids needing a unique-voter set across many rounds in v1. `claimBountyReward(bountyId, roundId)` can verify the caller's revealed commit through the voting engine and the stored round state, then transfer the user's share if it has not already been claimed.
+
+Recommended refund and cancellation behavior:
+
+- If the question is cancelled before the bounty qualifies, the funder can refund.
+- If expiry passes before enough qualifying rounds complete, the funder can refund the unallocated remainder.
+- If a round qualifies, its allocated rewards stay claimable by eligible voters.
+- Do not auto-roll bounties into future questions or the global Participation Reward Pool.
+- Dust should remain with the final claimant for a qualifying round, or be sweepable only after a long governance-controlled timeout.
+
+## Stablecoin Support On Celo
+
+Curyo 2.0 should support only explicitly allowlisted stablecoins at launch.
+
+The current Celo token contract docs list these token addresses:
+
+| Network | Token | Address |
+| --- | --- | --- |
+| Celo Mainnet | USDC | `0xcebA9300f2b948710d2653dD7B07f33A8B32118C` |
+| Celo Mainnet | USDT | `0x48065fbBE25f71C9282ddf5e1cD6D6A887483D5e` |
+| Celo Sepolia | USDC | `0x01C5C0122039549AD1493B8220cABEdD739BC44E` |
+| Celo Sepolia | USDT | `0xd077A400968890Eacc75cdc901F0356c943e4fDb` |
+
+Source: [Celo token contracts](https://docs.celo.org/tooling/contracts/token-contracts).
+
+Implementation rules:
+
+- Use the ERC20 token addresses for deposits and claims. Do not use Celo fee-currency adapter addresses for bounty custody.
+- Use OpenZeppelin `SafeERC20` for all token transfers. Its docs cover tokens that do not return values and provide `forceApprove` for tokens that require resetting allowance to zero, such as USDT.
+- Store all bounty accounting in the token's smallest unit.
+- Keep token decimals for display and validation, not for core accounting.
+- Measure the actual received balance delta on deposit and credit the actual received amount. This protects accounting even if a future allowlisted token behaves unexpectedly.
+- Do not support arbitrary ERC20 tokens, fee-on-transfer tokens, rebasing tokens, bridged lookalike tokens, or user-provided token addresses in v1.
+- Add local USDC and USDT mock tokens for Anvil and Foundry tests.
+
+Source: [OpenZeppelin SafeERC20 docs](https://docs.openzeppelin.com/contracts/5.x/api/token/erc20#SafeERC20).
+
+## Eligibility And Compliance Controls
+
+Stablecoin funding and claims should require a bounty-specific eligibility gate.
+
+Recommended controls:
+
+- Require Voter ID for voting, and require bounty claim eligibility at claim time.
+- Version the Self.xyz eligibility configuration so bounty participation can require a newer OFAC and excluded-country policy than older Voter IDs.
+- Apply stablecoin eligibility checks to bounty funding and bounty claims.
+- Add contract pause controls for new funding and claim emergencies, with claims/refunds kept available by default where possible.
+- Keep bounty caps low at launch until legal, moderation, and issuer-policy risk is better understood.
+- Preserve transaction records needed for user tax reporting: token, amount, date, question, and claim transaction.
+
+Self.xyz should be treated as an important control layer, not a complete stablecoin compliance answer. Wallet screening, issuer controls, country rules, and legal review still need their own workstream.
+
+## Ponder And API Plan
+
+Ponder should index bounties directly rather than deriving them ad hoc in the frontend.
+
+Recommended schema additions:
+
+- `bounty`: bounty terms, funding state, token, question/content ID, funder, amount, remaining amount, required voters, required settled rounds, expiry, status.
+- `bounty_deposit`: original funding and top-up events.
+- `bounty_round`: per-round qualification, round allocation, revealed voter count, claimed count, and claimed amount.
+- `bounty_claim`: voter claims by bounty and round.
+- `bounty_refund`: funder refunds and cancelled/expired bounty recovery.
+- `bounty_token`: allowlisted token metadata by chain.
+
+Recommended API additions:
+
+- Add active bounty summaries to content/feed items.
+- Add token breakdowns so the UI can show USDC and USDT separately.
+- Add bounty terms for the More section and modal review screen.
+- Add user-specific claimable bounty rewards to existing reward aggregation.
+- Add refundability and expiry state for funder views.
+
+Suggested feed item fields:
+
+```ts
+type BountySummary = {
+  id: string;
+  token: `0x${string}`;
+  symbol: "USDC" | "USDT";
+  amountRemaining: string;
+  activeAmount: string;
+  requiredVoters: number;
+  requiredSettledRounds: number;
+  qualifiedRounds: number;
+};
+```
+
+Question feed responses should include `activeBounties`, a formatted `totalBountyLabel`, and user-specific `claimableBounties` where available.
+
+## Deployment And Generated Artifacts
+
+The Curyo 2.0 deployment script should deploy the new contract surface in one pass and export all artifacts needed by Next.js, Ponder, keeper, bot, and SDK packages.
+
+Deployment updates:
+
+- Deploy `QuestionRegistry` or updated `ContentRegistry`.
+- Deploy `QuestionBountyEscrow` and optional `QuestionBountyDistributor`.
+- Wire the voting engine, registry, bounty escrow, reward distributor, participation pool, and protocol config.
+- Initialize USDC and USDT allowlist addresses for Celo mainnet and Celo Sepolia.
+- Deploy local mock USDC and USDT for Anvil.
+- Export ABIs for the new bounty contracts.
+- Update generated deployed-contract files and start block metadata.
+- Update Ponder env vars and config for the new contracts.
+- Update thirdweb contract typing and any sponsored transaction allowlist decisions.
+
+Stablecoin approval and bounty funding should not be sponsored at launch. The existing sponsored/free transaction logic should remain conservative and can continue covering known cREP and registry flows only.
+
 ## Open Product Questions
 
 - Should the first submit flow require a link, or allow text-only subjective questions?
 - Should question categories be fixed templates, governance-created categories, or a hybrid?
-- Should a bounty fund one future eligible round, the next N settled rounds, or all eligible voters who participated before unlock?
-- Should stablecoin rewards be equal per eligible Voter ID at launch, or pro-rata by capped cREP stake?
+- Should v1 use equal per-round stablecoin splits as recommended here, or add a capped cREP-weighted stablecoin split later?
 - What are the default required voter and required settled round values for low-value bounties?
 - What bounty caps should apply before moderation, anomaly detection, and legal review are mature?
-
+- Should claim eligibility be by wallet address only at launch, or should claims resolve the underlying Voter ID holder to support delegated wallets safely?
