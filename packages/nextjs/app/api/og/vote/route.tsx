@@ -1,5 +1,6 @@
 import { ImageResponse } from "next/og";
 import type { NextRequest } from "next/server";
+import React from "react";
 import type { ContentShareData } from "~~/lib/social/contentShare";
 import { getContentShareDataForParam } from "~~/lib/social/contentShare.server";
 
@@ -12,7 +13,13 @@ const imageSize = {
   height: 630,
 };
 
-const responseHeaders = {
+const versionedResponseHeaders = {
+  "Cache-Control": "public, max-age=86400, immutable",
+  "CDN-Cache-Control": "public, max-age=86400, stale-while-revalidate=604800, stale-if-error=604800",
+  "Vercel-CDN-Cache-Control": "public, max-age=86400, stale-while-revalidate=604800, stale-if-error=604800",
+};
+
+const fallbackResponseHeaders = {
   "Cache-Control": "no-store, max-age=0",
 };
 
@@ -166,6 +173,6 @@ export async function GET(request: NextRequest) {
 
   return new ImageResponse(shareData ? <RatingShareImage shareData={shareData} /> : <FallbackShareImage />, {
     ...imageSize,
-    headers: responseHeaders,
+    headers: shareData ? versionedResponseHeaders : fallbackResponseHeaders,
   });
 }
