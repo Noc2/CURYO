@@ -1,6 +1,6 @@
 import { ROUND_STATE } from "@curyo/contracts/protocol";
 import {
-  TRUST_VERTICAL_TAG_PREFIX,
+  TRUST_VERTICALS,
   buildTrustVerticalTag,
   getLegacyCategoryIdsForTrustVertical,
   getLegacyDomainsForTrustVertical,
@@ -75,11 +75,13 @@ function hasExactTrustVerticalTagCondition(verticalTag: string) {
   )`;
 }
 
-function hasAnyTrustVerticalTagCondition() {
+const recognizedTrustVerticalTags = TRUST_VERTICALS.map(vertical => buildTrustVerticalTag(vertical.slug));
+
+function hasRecognizedTrustVerticalTagCondition() {
   return sql<boolean>`exists (
     select 1
     from unnest(string_to_array(lower(coalesce(${content.tags}, '')), ',')) as tag(value)
-    where btrim(tag.value) like ${`${TRUST_VERTICAL_TAG_PREFIX}%`}
+    where ${inArray(sql<string>`btrim(tag.value)`, recognizedTrustVerticalTags)}
   )`;
 }
 
@@ -100,7 +102,7 @@ function buildTrustVerticalCondition(slug: Parameters<typeof buildTrustVerticalT
   }
 
   const legacyCondition = legacyConditions.length === 1 ? legacyConditions[0] : or(...legacyConditions);
-  return or(exactVerticalTag, and(sql<boolean>`not (${hasAnyTrustVerticalTagCondition()})`, legacyCondition));
+  return or(exactVerticalTag, and(sql<boolean>`not (${hasRecognizedTrustVerticalTagCondition()})`, legacyCondition));
 }
 
 export function registerContentRoutes(app: ApiApp) {

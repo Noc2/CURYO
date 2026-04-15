@@ -320,7 +320,7 @@ describe("registerContentRoutes", () => {
     expect(serialized).toContain("content.tags");
   });
 
-  it("filters content by trust vertical tags with legacy category fallback", async () => {
+  it("filters content by recognized trust vertical tags with legacy category fallback", async () => {
     const { queryBuilder } = mockPonderModules([{ id: 1n }]);
     mockSharedModule();
     const { registerContentRoutes } = await import("../src/api/routes/content-routes.js");
@@ -336,7 +336,8 @@ describe("registerContentRoutes", () => {
     const serialized = serializeExpression(whereArg);
 
     expect(serialized).toContain("vertical:software");
-    expect(serialized).toContain("vertical:%");
+    expect(serialized).toContain("vertical:products");
+    expect(serialized).not.toContain("vertical:%");
     expect(serialized).toContain("content.categoryId");
     expect(serialized).toContain("content.urlHost");
     expect(serialized).toContain("github.com");
