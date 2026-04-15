@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { createPortal } from "react-dom";
 import { CheckIcon, ClipboardIcon, XMarkIcon } from "@heroicons/react/24/outline";
 import { useCopyToClipboard } from "~~/hooks/scaffold-eth";
 import { truncateContentTitle } from "~~/lib/contentTitle";
@@ -30,9 +31,12 @@ export function ShareContentModal({
   onClose,
 }: ShareContentModalProps) {
   const { copyToClipboard, isCopiedToClipboard: copied } = useCopyToClipboard({ successDurationMs: 2000 });
+  const [isMounted, setIsMounted] = useState(false);
 
   // Close on Escape key
   useEffect(() => {
+    setIsMounted(true);
+
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === "Escape") onClose();
     };
@@ -75,15 +79,24 @@ export function ShareContentModal({
     ? `Rated ${shareDetails.ratingLabel}/10 on Curyo: "${truncatedTitle}" ${shareUrl}`
     : `Check out "${truncatedTitle}" on Curyo! ${shareUrl}`;
 
-  return (
+  if (!isMounted) {
+    return null;
+  }
+
+  return createPortal(
     <div
-      className="modal modal-open"
-      style={{ zIndex: 100 }}
+      className="fixed inset-0 z-[1000] flex items-center justify-center p-4"
       role="dialog"
       aria-modal="true"
       aria-label="Share content"
     >
-      <div className="modal-box max-w-sm bg-base-200 shadow-2xl">
+      <button
+        type="button"
+        className="absolute inset-0 cursor-default bg-black/60 backdrop-blur-sm"
+        aria-label="Close share dialog"
+        onClick={onClose}
+      />
+      <div className="relative z-10 w-[calc(100vw-2rem)] max-w-sm rounded-lg bg-base-200 p-6 shadow-2xl">
         {/* Close button */}
         <button onClick={onClose} className="btn btn-sm btn-circle btn-ghost absolute right-2 top-2" aria-label="Close">
           <XMarkIcon className="w-5 h-5" />
@@ -150,7 +163,7 @@ export function ShareContentModal({
           </button>
         </div>
       </div>
-      <div className="modal-backdrop bg-black/60 backdrop-blur-sm" onClick={onClose} />
-    </div>
+    </div>,
+    document.body,
   );
 }
