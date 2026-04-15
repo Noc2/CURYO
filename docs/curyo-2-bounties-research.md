@@ -6,11 +6,11 @@ Status: Initial product and mechanism-design research. This is not legal advice.
 
 ## Summary
 
-The proposed Curyo 2.0 design would let users create binary questions that can be answered with thumbs up or thumbs down, attach links or images as evidence, and fund those questions with stablecoin bounties. The rating flow would remain similar to Curyo's current per-content voting model, while bounty distribution would borrow ideas from the Consensus Subsidy Reserve and Participation Pool.
+The proposed Curyo 2.0 design would let users create binary questions that can be answered with thumbs up or thumbs down, attach links or images as evidence, and fund those questions with stablecoin bounties. The rating flow would remain similar to Curyo's current per-content voting model, but launch-time stablecoin bounties should pay valid revealed participation only. cREP should remain the conviction layer where voters risk losing stake when their side loses the settled round.
 
 The direction is promising because it turns Curyo from a general content-rating protocol into a demand-driven human judgment network. The main caution is that "any question, any link, any bounty" creates legal, moderation, and incentive risks. A safer first version would constrain the question types, pay mostly for valid participation and review work, and avoid future-event or wager-like markets.
 
-Additional research strengthens the core recommendation: Curyo 2.0 should launch as bountied review questions, not as a user-created prediction market. The product should pay verified humans to review bounded evidence under explicit rules. It should not let reviewers buy tradable yes/no positions, stake stablecoins to enter, or receive winner-takes-most payouts from future-event outcomes.
+Additional research strengthens the core recommendation: Curyo 2.0 should launch as bountied review questions, not as a user-created prediction market. The product should pay verified humans to review bounded evidence under explicit rules. It should not let reviewers buy tradable yes/no positions, stake stablecoins to enter, or receive stablecoin payouts for being on the winning side.
 
 ## Current Curyo Fit
 
@@ -111,7 +111,7 @@ This is most risky for questions about:
 - Lawsuits, enforcement actions, or regulatory outcomes.
 - Celebrity, reputation, or personal allegations.
 
-The safer initial framing is "paid human review of bounded evidence" rather than "bet on an outcome." Bounty distribution should include a meaningful participation/review component and should avoid winner-takes-all stablecoin mechanics.
+The safer initial framing is "paid human review of bounded evidence" rather than "bet on an outcome." Bounty distribution should be participation-only at launch: every eligible voter who submits a valid vote and reveals properly can claim the same capped stablecoin review reward or a pro-rata share of the bounty, independent of whether the round settles up or down. cREP remains the outcome-risk mechanism.
 
 Additional regulatory red lines:
 
@@ -120,6 +120,7 @@ Additional regulatory red lines:
 - Do not use odds, position, market, bet, wager, or fixed-payout copy.
 - Do not let reviewers pay stablecoins to enter.
 - Do not let creators, subjects, insiders, or parties who can influence the outcome claim outcome-weighted rewards.
+- Do not pay any stablecoin coherence, correctness, or winning-side bonus at launch.
 - Do not launch future-event questions without a separate legal workstream.
 
 ### Stablecoin Compliance and Issuer Controls
@@ -238,17 +239,19 @@ Avoid "truth score" unless the category has a strong oracle or appeal process.
 
 Create a separate bounty escrow per question. Do not fund it from or deposit it into the Consensus Subsidy Reserve or Participation Pool. The cREP system should continue to provide conviction, reputation, and anti-spam pressure.
 
-### 4. Use Participation-Weighted Payouts
+### 4. Use Participation-Only Stablecoin Payouts
 
-A first split could be:
+At launch, stablecoin rewards should be independent of vote direction and settlement side:
 
-- 50% to 70% for valid revealed participation.
-- 20% to 40% for coherent/winning-side reward.
-- 5% to 10% for protocol, frontend, moderation, or treasury.
+- 90% to 95% for valid revealed participation.
+- 5% to 10% for protocol, frontend, moderation, treasury, or appeal reserves.
+- 0% for coherent/winning-side stablecoin rewards.
 
-This makes the product look more like paid review work and less like a binary wager.
+This makes the product look more like paid review work and less like a binary wager. The stablecoin reward should require a valid commit and reveal, but should not depend on whether the voter voted up or down. The cREP stake remains the correctness/conviction layer: voters on the losing side still lose most of their cREP stake under the existing round mechanics.
 
-The exact split should vary by risk. Highly objective, evidence-bound questions can tolerate a larger coherence bonus. Ambiguous or high-value questions should shift more reward into valid participation and reserve more for challenge/appeal.
+Losing a round should reduce a voter's future capacity by depleting their cREP balance, not by revoking their Voter ID. Voter ID revocation should stay reserved for fraud, collusion, identity abuse, or other governance-confirmed misconduct.
+
+Future versions could revisit stablecoin coherence bonuses only after legal review and live abuse data. They should not be part of the launch design.
 
 ### 5. Tranche Large Bounties
 
@@ -301,7 +304,7 @@ Refund rules should be explicit for moderation removal, quorum failure, reveal f
 - Should every bounty require a cREP stake from the question creator?
 - Should every bounty require a separate creator bond that can be slashed independently of the voter bounty?
 - Should voters stake cREP in addition to earning stablecoins?
-- Should stablecoin rewards go only to winning voters, all valid revealers, or a hybrid?
+- Should stablecoin participation rewards be split equally among all valid revealers, pro-rata by capped cREP stake, or through a fixed per-voter reward with unused bounty refunded or rolled forward?
 - Should creators be able to add bounty after a question is open?
 - Should third parties be able to add bounty to existing questions?
 - Should a question support multiple evidence links or only one canonical link?
@@ -322,7 +325,7 @@ Likely new or changed components:
 
 - A `BountiedQuestionRegistry` or `QuestionRegistry` that stores question metadata, template type, rubric, evidence URI, creator, moderation status, and optional content linkage.
 - A `BountyEscrow` contract that holds allowlisted stablecoin funds per question and tracks deposits, refunds, tranches, and protocol fees.
-- A `BountyRewardDistributor` that offers pull-based stablecoin claims keyed by `contentId`, `roundId`, and token, using settled round outcomes and revealed-vote data.
+- A `BountyRewardDistributor` that offers pull-based stablecoin participation claims keyed by `contentId`, `roundId`, and token, using terminal round state and revealed-vote data but not paying based on winning side.
 - Ponder/indexer tables such as `bounty_question`, `bounty_deposit`, `bounty_round_snapshot`, `bounty_claim`, and possibly `bounty_token`.
 - Frontend flows for question creation, funding, voting, reveal, claim, cancellation, and dispute.
 - Keeper support for settlement and possibly bounty tranche release.
@@ -343,6 +346,8 @@ High-risk test areas:
 
 - Bounty escrow solvency.
 - Pull-based stablecoin claims.
+- Participation-only stablecoin reward math.
+- No stablecoin winner/coherence-bonus path at launch.
 - Reentrancy around ERC20 transfers.
 - Fee-on-transfer or blacklistable token behavior.
 - Quorum failure refund behavior.
@@ -365,7 +370,10 @@ Recommended v1 constraints:
 - Include an invalid/cannot-resolve path.
 - Keep stablecoin bounty funding separate from cREP vote staking.
 - Keep cREP voting required for judgment and anti-spam pressure.
-- Pay mostly for valid participation, with a smaller coherence bonus.
+- Pay stablecoins only for valid revealed participation at launch.
+- Keep all outcome risk in cREP: losing-side voters lose cREP stake, but they can still claim the stablecoin review reward if they participated validly.
+- Do not revoke Voter IDs for honest losing votes; depletion of cREP stake is the intended future-participation limiter.
+- Do not add a stablecoin coherence, correctness, or winning-side bonus at launch.
 - Cap bounty size and per-user payout size.
 - Allow only one or two allowlisted stablecoins at launch.
 - Use pull-based claims.
@@ -396,7 +404,7 @@ Create bountied questions with escrowed funds, but keep cREP voting unchanged an
 
 ### Phase 2: Settled-Round Pull Claims
 
-Enable pull-based bounty claims after settled rounds only. Start with one allowlisted 6-decimal stablecoin and low caps. No sponsored bounty actions. No arbitrary tokens. No media uploads.
+Enable pull-based, participation-only bounty claims after terminal round resolution. Start with one allowlisted 6-decimal stablecoin and low caps. No stablecoin coherence bonus, no sponsored bounty actions, no arbitrary tokens, and no media uploads.
 
 ### Phase 3: Tranches, Challenges, And Fees
 
