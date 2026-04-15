@@ -3,12 +3,12 @@ import { truncateContentDescription, truncateContentTitle } from "../contentLimi
 import { fetchWithTimeout } from "../utils.js";
 import type { ContentSource, ContentItem } from "./types.js";
 
-const CATEGORY_ID = 9n; // Crypto Tokens
+const CATEGORY_ID = 1n; // Products
 
 export const coinGeckoSource: ContentSource = {
   name: "coingecko",
   categoryId: CATEGORY_ID,
-  categoryName: "Crypto Tokens",
+  categoryName: "Products",
 
   async fetchTrending(limit: number): Promise<ContentItem[]> {
     try {

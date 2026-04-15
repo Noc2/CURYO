@@ -45,11 +45,11 @@ export const WRITE_TOOL_CATALOG = [
   },
   {
     name: "submit_content",
-    title: "Submit Curyo Content",
-    description: "Reserve and reveal a new Curyo content submission using the on-chain submission flow.",
-    upstream: "ContentRegistry.reserveSubmission + submitContent",
+    title: "Submit A Curyo Question",
+    description: "Reserve and reveal a new Curyo question submission using the on-chain question flow.",
+    upstream: "ContentRegistry.reserveSubmission + submitQuestion",
     input: {
-      url: { type: "string", format: "url" },
+      url: { type: "string", format: "url", optional: true },
       title: { type: "string" },
       description: { type: "string" },
       tags: { type: "string|string[]" },
@@ -118,10 +118,10 @@ export function registerWriteTools(server: McpServer, config: ServerConfig, writ
   server.registerTool(
     "submit_content",
     {
-      title: "Submit Curyo Content",
-      description: "Reserve and reveal a new Curyo content submission using the on-chain submission flow.",
+      title: "Submit A Curyo Question",
+      description: "Reserve and reveal a new Curyo question submission using the on-chain question flow.",
       inputSchema: {
-        url: z.string().url(),
+        url: z.string().url().optional(),
         title: z.string().min(1),
         description: z.string().min(1),
         tags: z.union([z.string().min(1), z.array(z.string().min(1)).min(1).max(12)]),

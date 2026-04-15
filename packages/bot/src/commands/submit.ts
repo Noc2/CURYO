@@ -240,8 +240,8 @@ export async function runSubmit(options: SubmitRunOptions = {}) {
         const description = truncateContentDescription(item.description);
         const [resolvedCategoryId, submissionKey] = (await publicClient.readContract({
           ...contractConfig.registry,
-          functionName: "previewSubmissionKey",
-          args: [item.url, requestedCategoryId],
+          functionName: "previewQuestionSubmissionKey",
+          args: [item.url, title, description, item.tags, requestedCategoryId],
         })) as PreviewSubmissionResult;
         if (resolvedCategoryId !== requestedCategoryId) {
           log.warn(
@@ -286,12 +286,12 @@ export async function runSubmit(options: SubmitRunOptions = {}) {
         // ContentRegistry requires the reservation to age by at least one second.
         await sleep(RESERVED_SUBMISSION_WAIT_MS);
 
-        // Submit content with the exact metadata used in the reservation commitment.
+        // Submit question with the exact metadata used in the reservation commitment.
         let submitTx: Hex;
         try {
           submitTx = await wallet.writeContract({
             ...contractConfig.registry,
-            functionName: "submitContent",
+            functionName: "submitQuestion",
             args: [item.url, title, description, item.tags, requestedCategoryId, salt],
           });
         } catch (error) {
@@ -303,7 +303,7 @@ export async function runSubmit(options: SubmitRunOptions = {}) {
           await sleep(RESERVED_SUBMISSION_WAIT_MS);
           submitTx = await wallet.writeContract({
             ...contractConfig.registry,
-            functionName: "submitContent",
+            functionName: "submitQuestion",
             args: [item.url, title, description, item.tags, requestedCategoryId, salt],
           });
         }

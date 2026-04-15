@@ -1,6 +1,6 @@
 # Curyo — Bot (CLI Voting & Content Submission)
 
-Command-line tool for automated content submission and voting. Discovers trending content from external platforms, submits it to the ContentRegistry, and rates content using pluggable strategies backed by external APIs. Votes use **tlock commit-reveal**: the bot encrypts vote directions with timelock encryption, binds the redeployed drand metadata into the commit payload, and commits them on-chain; the keeper-assisted/self-reveal flow reveals votes after each epoch once the on-chain and off-chain checks are satisfied.
+Command-line tool for automated content submission and voting. Discovers trending content from external platforms, submits question-first entries to the ContentRegistry, and rates content using pluggable strategies backed by external APIs. Votes use **tlock commit-reveal**: the bot encrypts vote directions with timelock encryption, binds the redeployed drand metadata into the commit payload, and commits them on-chain; the keeper-assisted/self-reveal flow reveals votes after each epoch once the on-chain and off-chain checks are satisfied.
 
 ## Quick Start
 
@@ -12,22 +12,23 @@ yarn bot:claim    # Claim rewards earned by the configured bot wallets
 yarn bot:status   # Check bot account balances and Voter ID status
 
 # Target a single category/source with an explicit cap:
-yarn workspace @curyo/bot submit --category Movies --max-submissions 5
+yarn workspace @curyo/bot submit --category "Media and Images" --max-submissions 5
 yarn workspace @curyo/bot submit --source coingecko --max-submissions 2
-yarn workspace @curyo/bot submit --category "GitHub Repos" --source github --max-submissions 2
+yarn workspace @curyo/bot submit --category "Documentation and Developer Help" --source github --max-submissions 2
 ```
 
 Requires configured environment variables and a reachable RPC endpoint.
 `vote` and `claim` require a running Ponder indexer (`yarn ponder:dev`); `submit` does not.
 `status` reports the configured Ponder endpoint when available but can still run without it.
 Public submission sources still work without third-party API keys, but source coverage and automated rating breadth are reduced.
+Question submissions may be text-only or include a regular link, direct image link, or YouTube link, and bounty amounts are shown as USD even though settlement happens in Celo USDC.
 
 ## Scripts
 
 | Command | Description |
 |---|---|
-| `yarn bot:submit` | Discover trending content from platforms and submit to registry |
-| `yarn workspace @curyo/bot submit --category Movies --max-submissions 5` | Submit up to 5 items from the `Movies` category |
+| `yarn bot:submit` | Discover trending content from platforms and submit question-first entries to registry |
+| `yarn workspace @curyo/bot submit --category "Media and Images" --max-submissions 5` | Submit up to 5 items from the `Media and Images` category |
 | `yarn workspace @curyo/bot submit --source coingecko --max-submissions 2` | Submit up to 2 items from the CoinGecko source |
 | `yarn bot:vote` | Rate content and commit encrypted votes via tlock commit-reveal |
 | `yarn bot:claim` | Claim voter and submitter rewards for the configured bot wallets |
@@ -94,7 +95,7 @@ Without these keys the bot can still submit from public sources such as CoinGeck
 
 `submit` also supports one-off CLI overrides:
 
-- `--category <id|name>` to target a specific category such as `4`, `Movies`, or `Crypto Tokens`
+- `--category <id|name>` to target a specific category such as `1`, `Products`, or `Media and Images`
 - `--source <name>` to target a specific source adapter such as `tmdb` or `coingecko`
 - `--max-submissions <count>` to override the per-run cap for that invocation
 - `--help` to print the submit-specific usage text, including the full category/source catalog below
@@ -119,38 +120,34 @@ Frontend fee sweeping remains a keeper responsibility when the keeper wallet is 
 
 | ID | Category | `--source` | Availability |
 |---|---|---|---|
-| `1` | YouTube | `youtube` | Requires `YOUTUBE_API_KEY` |
-| `2` | Twitch | `twitch` | Requires `TWITCH_CLIENT_ID` and `TWITCH_CLIENT_SECRET` |
-| `3` | Magic: The Gathering | `scryfall` | Public |
-| `4` | Movies | `tmdb` | Requires `TMDB_API_KEY` |
-| `5` | People | `wikipedia-people` | Public |
-| `6` | Games | `rawg` | Requires `RAWG_API_KEY` |
-| `7` | Books | `openlibrary` | Public |
-| `8` | AI | `huggingface` | Public |
-| `9` | Crypto Tokens | `coingecko` | Public |
-| `11` | GitHub Repos | `github` | Requires `GITHUB_TOKEN` |
+| `1` | Products | `scryfall`, `rawg`, `coingecko` | Public; RAWG requires `RAWG_API_KEY` |
+| `6` | AI Answers | `huggingface` | Public |
+| `7` | Documentation and Developer Help | `github` | Requires `GITHUB_TOKEN` |
+| `8` | Media and Images | `youtube`, `twitch`, `tmdb`, `openlibrary` | YouTube/Twitch/TMDB require their API keys |
+| `10` | General Opinion | `wikipedia-people` | Public |
 
-Deployed categories that are already on-chain but still missing automated `submit` coverage:
+Deployed default categories that are already on-chain but still missing automated `submit` coverage:
 
-- `10` Tweets
-- `12` Spotify Podcasts
-- `13` npm Packages
-- `14` PyPI Packages
+- `2` Hotels and Travel
+- `3` Restaurants and Local Places
+- `4` Design and Aesthetics
+- `5` Apps and Websites
+- `9` Trust and Safety
 
 ## How Submission Works
 
 For each `submit` run, the bot:
 
 1. Loads the wallet configured in `SUBMIT_*` and checks that it can submit. The on-chain `hasVoterId(address)` check resolves delegated identities, so a delegated hot wallet can submit on behalf of the Voter ID holder.
-2. Checks that the wallet has enough cREP for the next submission. Each successful content submission stakes **10 cREP**, and the wallet also needs native gas for `approve`, `reserveSubmission`, and `submitContent`.
+2. Checks that the wallet has enough cREP for the next submission. Each successful question submission stakes **10 cREP**, and the wallet also needs native gas for `approve`, `reserveSubmission`, and `submitQuestion`. Optional bounties are funded separately in Celo USDC and shown as USD.
 3. Chooses the enabled source adapters and fetches trending content. For movies, the `tmdb` source reads TMDB's `/movie/popular` feed.
 4. Skips URLs that were already submitted by calling `isUrlSubmitted(url)` before attempting a transaction.
-5. Calls `previewSubmissionKey(url, categoryId)` to verify the canonical category, reserves the hidden submission commitment, waits a little over one second for the reservation age check, and then submits the content with the matching salt.
+5. Calls `previewQuestionSubmissionKey(url, title, description, tags, categoryId)` to verify the canonical category, reserves the hidden submission commitment, waits a little over one second for the reservation age check, and then submits the question or supported media link with the matching salt.
 6. Stops when it reaches the configured limit, runs out of cREP, or runs out of fresh items. If a reveal transaction fails after reservation, the bot attempts to cancel the reservation.
 
-## Testing Popular Movies With A Delegated Bot Wallet
+## Testing TMDB Questions With A Delegated Bot Wallet
 
-This is the quickest way to test the bot against the current "popular movies" feed.
+This is the quickest way to test the bot against the current TMDB popular movies feed, now submitted under the broad `Media and Images` review category.
 
 1. Configure the bot wallet in `packages/bot/.env`.
 
@@ -193,9 +190,10 @@ yarn bot:claim
 
 5. Fund the bot wallet.
 
-- Send enough cREP for the batch you want to test. The bot stakes `10 cREP` per successful submission, so `--max-submissions 5` needs at least `50 cREP`.
-- Send a small amount of native gas token as well so the bot can pay for approvals and submission transactions.
-- The same `/settings?tab=delegation` screen can send cREP to the delegate wallet, or you can transfer cREP directly from any funded wallet.
+- Send enough cREP for the batch you want to test. The bot stakes `10 cREP` per successful question submission, so `--max-submissions 5` needs at least `50 cREP`.
+- Send enough native gas token as well so the bot can pay for approvals and submission transactions.
+- Fund Celo USDC only if your workflow also creates question bounties; plain bot submissions do not attach a bounty.
+- The same `/settings?tab=delegation` screen can still manage the delegate wallet for vote and claim flows.
 
 6. Re-run the status command and confirm the bot wallet is ready.
 
@@ -212,13 +210,13 @@ You want to see:
 7. Run a focused TMDB movie submission.
 
 ```bash
-yarn workspace @curyo/bot submit --source tmdb --category Movies --max-submissions 1
+yarn workspace @curyo/bot submit --source tmdb --category "Media and Images" --max-submissions 1
 ```
 
 Once the one-item smoke test looks good, increase the cap:
 
 ```bash
-yarn workspace @curyo/bot submit --source tmdb --category Movies --max-submissions 5
+yarn workspace @curyo/bot submit --source tmdb --category "Media and Images" --max-submissions 5
 ```
 
 Expected behavior:
@@ -226,7 +224,7 @@ Expected behavior:
 - The bot fetches TMDB's current popular movies.
 - Already-submitted movie URLs are skipped automatically.
 - Only fresh items are submitted, so the run may submit fewer than the requested max if duplicates are common.
-- Each successful submission consumes a new `10 cREP` stake.
+- Each successful submission stakes `10 cREP`; optional Celo USDC bounty funding is separate.
 - If `TMDB_API_KEY` is missing, the TMDB source will return no items.
 
 ## Project Structure

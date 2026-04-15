@@ -3,7 +3,7 @@ import { truncateContentDescription, truncateContentTitle } from "../contentLimi
 import { fetchWithTimeout } from "../utils.js";
 import type { ContentSource, ContentItem } from "./types.js";
 
-const CATEGORY_ID = 5n;
+const CATEGORY_ID = 10n;
 
 // Map Wikidata occupation (P106) QIDs to on-chain subcategory names
 const OCCUPATION_MAP: Record<string, string> = {
@@ -67,7 +67,7 @@ async function isPersonArticle(title: string): Promise<string | null> {
 export const wikipediaSource: ContentSource = {
   name: "wikipedia-people",
   categoryId: CATEGORY_ID,
-  categoryName: "People",
+  categoryName: "General Opinion",
 
   async fetchTrending(limit: number): Promise<ContentItem[]> {
     try {

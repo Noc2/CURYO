@@ -3,7 +3,7 @@ import { truncateContentDescription, truncateContentTitle } from "../contentLimi
 import { fetchWithTimeout } from "../utils.js";
 import type { ContentSource, ContentItem } from "./types.js";
 
-const CATEGORY_ID = 3n; // Magic: The Gathering
+const CATEGORY_ID = 1n; // Products
 
 // Match the deployed MTG subcategories, which are based on card types.
 function getSubcategory(typeLine: string, legalities: Record<string, string>): string {
@@ -21,7 +21,7 @@ function getSubcategory(typeLine: string, legalities: Record<string, string>): s
 export const scryfallSource: ContentSource = {
   name: "scryfall",
   categoryId: CATEGORY_ID,
-  categoryName: "Magic: The Gathering",
+  categoryName: "Products",
 
   async fetchTrending(limit: number): Promise<ContentItem[]> {
     try {

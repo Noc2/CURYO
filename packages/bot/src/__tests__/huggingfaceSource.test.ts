@@ -67,7 +67,7 @@ describe("huggingFaceSource", () => {
 
     expect(items).toEqual([
       expect.objectContaining({
-        categoryId: 8n,
+        categoryId: 6n,
         tags: "Chatbots",
         title: "openai/gpt-oss-20b",
         url: "https://huggingface.co/openai/gpt-oss-20b",

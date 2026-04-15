@@ -46,7 +46,7 @@ export function formatSubmitUsage(): string {
       `  ${entry.sourceName.padEnd(SUBMIT_SOURCE_NAME_WIDTH)} -> ${entry.categoryName} (${entry.authRequirement})`,
   ).join("\n");
   const pendingCoverage = PENDING_SUBMIT_CATEGORIES.map(
-    entry => `  ${String(entry.categoryId).padEnd(2)} ${entry.categoryName}`,
+    entry => `  ${entry.sourceName.padEnd(SUBMIT_SOURCE_NAME_WIDTH)} -> ${entry.categoryName}`,
   ).join("\n");
 
   return `Usage: yarn submit [options]
@@ -54,7 +54,7 @@ export function formatSubmitUsage(): string {
 Discover trending content and submit it to ContentRegistry.
 
 Options:
-  --category <id|name>       Limit submission to one category (for example: 4, Movies, "Crypto Tokens")
+  --category <id|name>       Limit submission to one category (for example: 1, Products, "Media and Images")
   --source <name>            Limit submission to one source adapter (for example: tmdb, coingecko)
   --max-submissions <count>  Override the per-run submission cap for this execution
   -h, --help                 Show this help
@@ -65,13 +65,13 @@ ${categories}
 Available sources:
 ${sources}
 
-Deployed categories without automated submit support yet:
+Additional source adapters without automated submit support yet:
 ${pendingCoverage}
 
 Examples:
-  yarn submit --category Movies --source tmdb --max-submissions 3
-  yarn workspace @curyo/bot submit --category Movies --source tmdb --max-submissions 3
-  yarn workspace @curyo/bot submit --category "GitHub Repos" --source github --max-submissions 2`;
+  yarn submit --category "Media and Images" --source tmdb --max-submissions 3
+  yarn workspace @curyo/bot submit --category Products --source coingecko --max-submissions 3
+  yarn workspace @curyo/bot submit --category "Documentation and Developer Help" --source github --max-submissions 2`;
 }
 
 export function parseSubmitCommandArgs(argv: string[]): ParsedSubmitCommand {

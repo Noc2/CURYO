@@ -3,9 +3,9 @@ import { formatSubmitUsage, parseSubmitCommandArgs } from "../submitOptions.js";
 
 describe("submit options", () => {
   it("parses category, source, and max submission overrides", () => {
-    expect(parseSubmitCommandArgs(["--category", "Movies", "--source", "tmdb", "--max-submissions", "5"])).toEqual({
+    expect(parseSubmitCommandArgs(["--category", "Media and Images", "--source", "tmdb", "--max-submissions", "5"])).toEqual({
       options: {
-        category: "Movies",
+        category: "Media and Images",
         source: "tmdb",
         maxSubmissions: 5,
       },
@@ -19,13 +19,14 @@ describe("submit options", () => {
     });
     expect(formatSubmitUsage()).toContain("--category <id|name>");
     expect(formatSubmitUsage()).toContain("Available categories:");
-    expect(formatSubmitUsage()).toContain("1  YouTube");
-    expect(formatSubmitUsage()).toContain("11 GitHub Repos");
+    expect(formatSubmitUsage()).toContain("1  Products");
+    expect(formatSubmitUsage()).toContain("8  Media and Images");
+    expect(formatSubmitUsage()).toContain("7  Documentation and Developer Help");
     expect(formatSubmitUsage()).toContain("wikipedia-people");
     expect(formatSubmitUsage()).toContain("requires YOUTUBE_API_KEY");
     expect(formatSubmitUsage()).toContain("requires GITHUB_TOKEN");
-    expect(formatSubmitUsage()).toContain("Deployed categories without automated submit support yet:");
-    expect(formatSubmitUsage()).toContain("10 Tweets");
+    expect(formatSubmitUsage()).toContain("Additional source adapters without automated submit support yet:");
+    expect(formatSubmitUsage()).toContain("twitter");
   });
 
   it("rejects malformed submit options", () => {

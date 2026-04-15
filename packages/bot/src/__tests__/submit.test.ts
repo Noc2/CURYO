@@ -10,7 +10,7 @@ const ITEM = {
   title: "The Matrix",
   description: "A computer hacker learns the truth.",
   tags: "Sci-Fi",
-  categoryId: 4n,
+  categoryId: 8n,
 };
 
 type SubmitCommandOptions = {
@@ -48,7 +48,7 @@ async function loadSubmitCommand(options: SubmitCommandOptions = {}) {
           throw options.isUrlSubmittedError;
         }
         return options.isUrlSubmitted ?? false;
-      case "previewSubmissionKey":
+      case "previewQuestionSubmissionKey":
         return [options.previewCategoryId ?? ITEM.categoryId, SUBMISSION_KEY] as const;
       default:
         throw new Error(`Unexpected readContract: ${functionName}`);
@@ -59,7 +59,7 @@ async function loadSubmitCommand(options: SubmitCommandOptions = {}) {
   }));
   let submitAttempts = 0;
   const writeContract = vi.fn(async ({ functionName }: { functionName: string }) => {
-    if (functionName === "submitContent" && options.submitError && submitAttempts < (options.submitErrorCount ?? 1)) {
+    if (functionName === "submitQuestion" && options.submitError && submitAttempts < (options.submitErrorCount ?? 1)) {
       submitAttempts += 1;
       throw options.submitError;
     }
@@ -69,7 +69,7 @@ async function loadSubmitCommand(options: SubmitCommandOptions = {}) {
         return "0xapprove";
       case "reserveSubmission":
         return "0xreserve";
-      case "submitContent":
+      case "submitQuestion":
         return "0xsubmit";
       case "cancelReservedSubmission":
         return "0xcancel";
@@ -122,7 +122,7 @@ async function loadSubmitCommand(options: SubmitCommandOptions = {}) {
         {
           name: "tmdb",
           categoryId: ITEM.categoryId,
-          categoryName: "Movies",
+          categoryName: "Media and Images",
           fetchTrending: vi.fn().mockResolvedValue([ITEM]),
         },
       ],
@@ -171,15 +171,15 @@ function buildExpectedRevealCommitment(): Hex {
 }
 
 describe("runSubmit", () => {
-  it("uses the reserved submission flow before submitting content", async () => {
+  it("uses the reserved submission flow before submitting a question", async () => {
     const submitCommand = await loadSubmitCommand();
 
     await submitCommand.runSubmit();
 
     expect(submitCommand.mocks.readContract).toHaveBeenCalledWith(
       expect.objectContaining({
-        functionName: "previewSubmissionKey",
-        args: [ITEM.url, ITEM.categoryId],
+        functionName: "previewQuestionSubmissionKey",
+        args: [ITEM.url, ITEM.title, ITEM.description, ITEM.tags, ITEM.categoryId],
       }),
     );
     expect(submitCommand.mocks.sleep).toHaveBeenCalledWith(1_100);
@@ -200,7 +200,7 @@ describe("runSubmit", () => {
     expect(submitCommand.mocks.writeContract).toHaveBeenNthCalledWith(
       3,
       expect.objectContaining({
-        functionName: "submitContent",
+        functionName: "submitQuestion",
         args: [ITEM.url, ITEM.title, ITEM.description, ITEM.tags, ITEM.categoryId, FIXED_SALT],
       }),
     );
@@ -266,11 +266,11 @@ describe("runSubmit", () => {
 
     expect(submitCommand.mocks.writeContract).not.toHaveBeenCalled();
     expect(submitCommand.mocks.log.warn).toHaveBeenCalledWith(
-      `Skipping "${ITEM.title}" (resolved category 9 does not match requested category 4)`,
+      `Skipping "${ITEM.title}" (resolved category 9 does not match requested category 8)`,
     );
   });
 
-  it("cancels the reservation when submitContent fails after reserving", async () => {
+  it("cancels the reservation when submitQuestion fails after reserving", async () => {
     const submitCommand = await loadSubmitCommand({ submitError: new Error("submit failed") });
 
     await submitCommand.runSubmit();
@@ -319,7 +319,7 @@ describe("runSubmit", () => {
     expect(submitCommand.mocks.sleep).toHaveBeenNthCalledWith(2, 1_100);
     expect(
       submitCommand.mocks.writeContract.mock.calls.filter(
-        ([call]) => call.functionName === "submitContent",
+        ([call]) => call.functionName === "submitQuestion",
       ),
     ).toHaveLength(2);
     expect(submitCommand.mocks.writeContract).not.toHaveBeenCalledWith(
@@ -336,26 +336,26 @@ describe("runSubmit", () => {
       sources: [
         {
           name: "tmdb",
-          categoryId: 4n,
-          categoryName: "Movies",
+          categoryId: 8n,
+          categoryName: "Media and Images",
           items: [tmdbItem, secondTmdbItem, thirdTmdbItem],
         },
         {
           name: "coingecko",
-          categoryId: 9n,
-          categoryName: "Crypto Tokens",
-          items: [{ ...ITEM, url: "https://www.coingecko.com/en/coins/bitcoin", title: "Bitcoin", categoryId: 9n }],
+          categoryId: 1n,
+          categoryName: "Products",
+          items: [{ ...ITEM, url: "https://www.coingecko.com/en/coins/bitcoin", title: "Bitcoin", categoryId: 1n }],
         },
       ],
     });
 
-    await submitCommand.runSubmit({ category: "Movies", maxSubmissions: 2 });
+    await submitCommand.runSubmit({ category: "Media and Images", maxSubmissions: 2 });
 
     expect(
       submitCommand.mocks.writeContract.mock.calls.filter(
-        ([call]) => call.functionName === "submitContent",
+        ([call]) => call.functionName === "submitQuestion",
       ),
     ).toHaveLength(2);
-    expect(submitCommand.mocks.log.info).toHaveBeenCalledWith("Category filter: Movies");
+    expect(submitCommand.mocks.log.info).toHaveBeenCalledWith("Category filter: Media and Images");
   });
 });

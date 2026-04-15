@@ -49,40 +49,50 @@ describe("content sources", () => {
     );
 
     expect(categoryMetadataBySource).toEqual({
-      youtube: { categoryId: 1n, categoryName: "YouTube" },
-      twitch: { categoryId: 2n, categoryName: "Twitch" },
-      scryfall: { categoryId: 3n, categoryName: "Magic: The Gathering" },
-      tmdb: { categoryId: 4n, categoryName: "Movies" },
-      "wikipedia-people": { categoryId: 5n, categoryName: "People" },
-      rawg: { categoryId: 6n, categoryName: "Games" },
-      openlibrary: { categoryId: 7n, categoryName: "Books" },
-      huggingface: { categoryId: 8n, categoryName: "AI" },
-      coingecko: { categoryId: 9n, categoryName: "Crypto Tokens" },
-      github: { categoryId: 11n, categoryName: "GitHub Repos" },
+      youtube: { categoryId: 8n, categoryName: "Media and Images" },
+      twitch: { categoryId: 8n, categoryName: "Media and Images" },
+      scryfall: { categoryId: 1n, categoryName: "Products" },
+      tmdb: { categoryId: 8n, categoryName: "Media and Images" },
+      "wikipedia-people": { categoryId: 10n, categoryName: "General Opinion" },
+      rawg: { categoryId: 1n, categoryName: "Products" },
+      openlibrary: { categoryId: 8n, categoryName: "Media and Images" },
+      huggingface: { categoryId: 6n, categoryName: "AI Answers" },
+      coingecko: { categoryId: 1n, categoryName: "Products" },
+      github: { categoryId: 7n, categoryName: "Documentation and Developer Help" },
     });
   });
 
-  it("does not register duplicate source category IDs", async () => {
-    const { getAllSources } = await loadSources();
-    const categoryIds = getAllSources().map(source => source.categoryId.toString());
-    expect(new Set(categoryIds).size).toBe(categoryIds.length);
-  });
-
-  it("tracks deployed category coverage explicitly", async () => {
-    const { getCategoryCoverageCatalog } = await import("../sourceCatalog.js");
-    const coverageCatalog = getCategoryCoverageCatalog();
+  it("deduplicates the submit category catalog", async () => {
+    const { getSubmitCategoryCatalog } = await import("../sourceCatalog.js");
 
     expect(
-      coverageCatalog.map(entry => ({
+      getSubmitCategoryCatalog().map(entry => ({
         categoryId: entry.categoryId,
         categoryName: entry.categoryName,
       })),
-    ).toEqual(readDeployedCategoryCatalog());
+    ).toEqual([
+      { categoryId: 8n, categoryName: "Media and Images" },
+      { categoryId: 1n, categoryName: "Products" },
+      { categoryId: 10n, categoryName: "General Opinion" },
+      { categoryId: 6n, categoryName: "AI Answers" },
+      { categoryId: 7n, categoryName: "Documentation and Developer Help" },
+    ]);
+  });
+
+  it("tracks submit coverage against deployed review categories", async () => {
+    const { getCategoryCoverageCatalog, getSubmitCategoryCatalog } = await import("../sourceCatalog.js");
+    const coverageCatalog = getCategoryCoverageCatalog();
+    const deployedCategories = readDeployedCategoryCatalog();
+    const deployedById = new Map(deployedCategories.map(entry => [entry.categoryId.toString(), entry.categoryName]));
+
+    for (const entry of getSubmitCategoryCatalog()) {
+      expect(deployedById.get(entry.categoryId.toString())).toBe(entry.categoryName);
+    }
 
     expect(
       coverageCatalog
         .filter(entry => !entry.supportsSubmit)
-        .map(entry => `${entry.categoryId.toString()} ${entry.categoryName}`),
-    ).toEqual(["10 Tweets", "12 Spotify Podcasts", "13 npm Packages", "14 PyPI Packages"]);
+        .map(entry => entry.sourceName),
+    ).toEqual(["twitter", "spotify", "npm", "pypi"]);
   });
 });

@@ -3,7 +3,7 @@ import { truncateContentDescription, truncateContentTitle } from "../contentLimi
 import { fetchWithTimeout } from "../utils.js";
 import type { ContentSource, ContentItem } from "./types.js";
 
-const CATEGORY_ID = 2n;
+const CATEGORY_ID = 8n;
 
 // Map Twitch game/category names to on-chain subcategory names
 const GAME_TO_SUBCATEGORY: Record<string, string> = {
@@ -70,7 +70,7 @@ async function getTwitchToken(): Promise<string | null> {
 export const twitchSource: ContentSource = {
   name: "twitch",
   categoryId: CATEGORY_ID,
-  categoryName: "Twitch",
+  categoryName: "Media and Images",
 
   async fetchTrending(limit: number): Promise<ContentItem[]> {
     if (!config.twitchClientId || !config.twitchClientSecret) {

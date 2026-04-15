@@ -3,7 +3,7 @@ import { truncateContentDescription, truncateContentTitle } from "../contentLimi
 import { fetchWithTimeout } from "../utils.js";
 import type { ContentSource, ContentItem } from "./types.js";
 
-const CATEGORY_ID = 8n;
+const CATEGORY_ID = 6n;
 
 // Map HuggingFace pipeline_tag to on-chain subcategory names
 const PIPELINE_MAP: Record<string, string> = {
@@ -37,7 +37,7 @@ const PIPELINE_MAP: Record<string, string> = {
 export const huggingFaceSource: ContentSource = {
   name: "huggingface",
   categoryId: CATEGORY_ID,
-  categoryName: "AI",
+  categoryName: "AI Answers",
 
   async fetchTrending(limit: number): Promise<ContentItem[]> {
     try {

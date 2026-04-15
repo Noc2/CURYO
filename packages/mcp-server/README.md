@@ -123,7 +123,7 @@ The server reads from the environment at startup.
 | `CURYO_MCP_CHAIN_NAME` | auto-derived | Optional human-readable chain label for write mode |
 | `CURYO_MCP_MAX_GAS_PER_TX` | `2000000` | Per-transaction gas cap for hosted writes |
 | `CURYO_MCP_WRITE_MAX_VOTE_STAKE` | — | Optional protocol-side cap for hosted `vote` stake amounts |
-| `CURYO_MCP_WRITE_SUBMISSION_HOST_ALLOWLIST` | — | Optional CSV allowlist for `submit_content` URL hostnames |
+| `CURYO_MCP_WRITE_SUBMISSION_HOST_ALLOWLIST` | — | Optional CSV allowlist for non-empty `submit_content` URL hostnames |
 | `CURYO_MCP_WRITE_SUBMISSION_REVEAL_POLL_MS` | `500` | Poll interval while waiting for `submit_content` reveal readiness |
 | `CURYO_MCP_WRITE_SUBMISSION_REVEAL_TIMEOUT_MS` | `30000` | Timeout while waiting for `submit_content` reveal readiness |
 | `CURYO_MCP_CREP_TOKEN_ADDRESS` | auto-derived on supported chains | Fallback cREP token address for write mode |
@@ -292,8 +292,8 @@ Cursor / editor MCP clients:
 Optional hosted write tools:
 
 - `vote`: commit a tlock vote with a scoped authenticated identity and the redeployed drand metadata bindings
-- `submit_content`: reserve and reveal a submission through `ContentRegistry`
-- `claim_reward`: claim voter, submitter, participation, or cancelled-round refund rewards
+- `submit_content`: reserve and reveal a question-first submission through `ContentRegistry.submitQuestion`, with text-only, link, image, or YouTube-link inputs and optional bounties displayed as USD even though settlement is funded in Celo USDC
+- `claim_reward`: claim voter, submitter, cREP participation, or cancelled-round refund rewards through a Voter ID-gated flow
 - `claim_frontend_fee`: claim round frontend fees and optionally withdraw accumulated registry credits
 
 ### Resources
@@ -320,6 +320,7 @@ scoped:
 - no write tools without explicit bearer scopes
 - no write execution without a bound signer identity
 - only `vote`, `submit_content`, `claim_reward`, and `claim_frontend_fee` are exposed
+- submission guardrails keep the write surface narrow: duplicate checks, media-type checks, and claim gating still apply
 
 ## Project Structure
 

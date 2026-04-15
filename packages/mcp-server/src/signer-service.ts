@@ -276,7 +276,7 @@ export class CuryoWriteService {
   async submitContent(
     identityId: string,
     params: {
-      url: string;
+      url?: string;
       title: string;
       description: string;
       tags: string | string[];
@@ -285,14 +285,11 @@ export class CuryoWriteService {
     },
   ): Promise<Record<string, unknown>> {
     const requestedCategoryId = BigInt(params.categoryId);
-    const url = params.url.trim();
+    const url = params.url?.trim() ?? "";
     const title = params.title.trim();
     const description = params.description.trim();
     const tags = normalizeTags(params.tags);
 
-    if (!url) {
-      throw new McpWriteServiceError("url is required");
-    }
     if (!title) {
       throw new McpWriteServiceError("title is required");
     }
@@ -306,9 +303,11 @@ export class CuryoWriteService {
       throw new McpWriteServiceError("categoryId must be greater than zero");
     }
 
-    const submissionHost = getNormalizedUrlHost(url);
-    if (!isAllowedSubmissionHost(submissionHost, this.config.policy.allowedSubmissionHosts)) {
-      throw new McpWriteServiceError(`Submission host "${submissionHost}" is not allowed by MCP policy`);
+    if (url) {
+      const submissionHost = getNormalizedUrlHost(url);
+      if (!isAllowedSubmissionHost(submissionHost, this.config.policy.allowedSubmissionHosts)) {
+        throw new McpWriteServiceError(`Submission host "${submissionHost}" is not allowed by MCP policy`);
+      }
     }
 
     const context = await this.getContext(identityId);
@@ -331,7 +330,6 @@ export class CuryoWriteService {
       maxDescriptionLength,
       maxTagsLength,
       reservedSubmissionMinAge,
-      isUrlSubmitted,
       preview,
     ] = await Promise.all([
       this.readContract<bigint>(context, {
@@ -376,17 +374,11 @@ export class CuryoWriteService {
         functionName: "RESERVED_SUBMISSION_MIN_AGE",
         args: [],
       }),
-      this.readContract<boolean>(context, {
-        address: this.requireContracts().contentRegistry,
-        abi: ContentRegistryAbi,
-        functionName: "isUrlSubmitted",
-        args: [url],
-      }),
       this.readContract<readonly [bigint, `0x${string}`]>(context, {
         address: this.requireContracts().contentRegistry,
         abi: ContentRegistryAbi,
-        functionName: "previewSubmissionKey",
-        args: [url, requestedCategoryId],
+        functionName: "previewQuestionSubmissionKey",
+        args: [url, title, description, tags, requestedCategoryId],
       }),
     ]);
 
@@ -394,9 +386,6 @@ export class CuryoWriteService {
       throw new McpWriteServiceError(
         `Insufficient cREP balance for submission stake (${minSubmitterStake.toString()} required, ${balance.toString()} available)`,
       );
-    }
-    if (isUrlSubmitted) {
-      throw new McpWriteServiceError("This URL is already submitted");
     }
     if (title.length > Number(maxTitleLength)) {
       throw new McpWriteServiceError(`title exceeds the on-chain maximum length of ${maxTitleLength.toString()} characters`);
@@ -410,7 +399,17 @@ export class CuryoWriteService {
       throw new McpWriteServiceError(`tags exceed the on-chain maximum length of ${maxTagsLength.toString()} characters`);
     }
 
-    const [, submissionKey] = preview;
+    const [resolvedCategoryId, submissionKey] = preview;
+    const questionAlreadySubmitted = await this.readContract<boolean>(context, {
+      address: this.requireContracts().contentRegistry,
+      abi: ContentRegistryAbi,
+      functionName: "submissionKeyUsed",
+      args: [submissionKey],
+    });
+    if (questionAlreadySubmitted) {
+      throw new McpWriteServiceError("This question is already submitted");
+    }
+
     const salt = `0x${randomBytes(32).toString("hex")}` as `0x${string}`;
     const revealCommitment = keccak256(
       encodeAbiParameters(
@@ -438,6 +437,7 @@ export class CuryoWriteService {
       description,
       tags,
       categoryId: params.categoryId,
+      resolvedCategoryId: resolvedCategoryId.toString(),
       approvalRequired,
       allowanceBefore: allowance.toString(),
       submitterStake: minSubmitterStake.toString(),
@@ -449,7 +449,7 @@ export class CuryoWriteService {
 
     if (params.dryRun) {
       result.simulation = "preflight-only";
-      result.simulationNote = "Submission requires a reserveSubmission step before submitContent";
+      result.simulationNote = "Submission requires a reserveSubmission step before submitQuestion";
       return result;
     }
 
@@ -483,7 +483,7 @@ export class CuryoWriteService {
     const submitRequest = {
       address: this.requireContracts().contentRegistry,
       abi: ContentRegistryAbi,
-      functionName: "submitContent",
+      functionName: "submitQuestion",
       args: [url, title, description, tags, requestedCategoryId, salt],
     } as const;
     const revealReadiness = await this.waitForSubmissionRevealReady(context, submitRequest, waitMs);

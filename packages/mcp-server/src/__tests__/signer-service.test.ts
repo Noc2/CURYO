@@ -123,6 +123,56 @@ describe("CuryoWriteService", () => {
     ).rejects.toThrow('Submission host "example.com" is not allowed by MCP policy');
   });
 
+  it("preflights question submissions with the Curyo 2 question key", async () => {
+    const { service, internals } = createService();
+    const submissionKey = `0x${"aa".repeat(32)}` as const;
+    internals.getContext = vi.fn(() => mockContext);
+    internals.readContract = vi
+      .fn()
+      .mockResolvedValueOnce(true)
+      .mockResolvedValueOnce(20_000_000n)
+      .mockResolvedValueOnce(0n)
+      .mockResolvedValueOnce(10_000_000n)
+      .mockResolvedValueOnce(120n)
+      .mockResolvedValueOnce(500n)
+      .mockResolvedValueOnce(120n)
+      .mockResolvedValueOnce(1n)
+      .mockResolvedValueOnce([8n, submissionKey] as const)
+      .mockResolvedValueOnce(false);
+    internals.writeContract = vi.fn(async () => `0x${"bb".repeat(32)}`);
+
+    const result = await service.submitContent("writer", {
+      title: "Does this look useful?",
+      description: "Subjective product review question.",
+      tags: ["products"],
+      categoryId: "8",
+      dryRun: true,
+    });
+
+    expect(internals.readContract).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({
+        functionName: "previewQuestionSubmissionKey",
+        args: ["", "Does this look useful?", "Subjective product review question.", "products", 8n],
+      }),
+    );
+    expect(internals.readContract).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({
+        functionName: "submissionKeyUsed",
+        args: [submissionKey],
+      }),
+    );
+    expect(internals.writeContract).not.toHaveBeenCalled();
+    expect(result).toMatchObject({
+      action: "submit_content",
+      mode: "dry-run",
+      url: "",
+      resolvedCategoryId: "8",
+      simulationNote: "Submission requires a reserveSubmission step before submitQuestion",
+    });
+  });
+
   it("simulates a reward claim before sending the live transaction", async () => {
     const { service, internals } = createService();
     internals.getContext = vi.fn(() => mockContext);

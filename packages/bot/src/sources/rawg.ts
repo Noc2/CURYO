@@ -3,7 +3,7 @@ import { truncateContentDescription, truncateContentTitle } from "../contentLimi
 import { fetchWithTimeout } from "../utils.js";
 import type { ContentSource, ContentItem } from "./types.js";
 
-const CATEGORY_ID = 6n;
+const CATEGORY_ID = 1n;
 
 // Map RAWG genre names to on-chain subcategory names
 const GENRE_MAP: Record<string, string> = {
@@ -31,7 +31,7 @@ const GENRE_MAP: Record<string, string> = {
 export const rawgSource: ContentSource = {
   name: "rawg",
   categoryId: CATEGORY_ID,
-  categoryName: "Games",
+  categoryName: "Products",
 
   async fetchTrending(limit: number): Promise<ContentItem[]> {
     if (!config.rawgApiKey) {

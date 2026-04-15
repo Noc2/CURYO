@@ -3,7 +3,7 @@ import { truncateContentDescription, truncateContentTitle } from "../contentLimi
 import { fetchWithTimeout } from "../utils.js";
 import type { ContentSource, ContentItem } from "./types.js";
 
-const CATEGORY_ID = 4n; // Movies
+const CATEGORY_ID = 8n; // Media and Images
 
 // Map TMDB genre IDs to on-chain subcategory names
 const GENRE_MAP: Record<number, string> = {
@@ -30,7 +30,7 @@ const GENRE_MAP: Record<number, string> = {
 export const tmdbSource: ContentSource = {
   name: "tmdb",
   categoryId: CATEGORY_ID,
-  categoryName: "Movies",
+  categoryName: "Media and Images",
 
   async fetchTrending(limit: number): Promise<ContentItem[]> {
     if (!config.tmdbApiKey) {
