@@ -8,9 +8,9 @@ Status: Initial product and mechanism-design research. This is not legal advice.
 
 The proposed Curyo 2.0 design would let users create binary questions that can be answered with thumbs up or thumbs down, attach links or images as evidence, and fund those questions with stablecoin bounties. The rating flow would remain similar to Curyo's current per-content voting model, but launch-time stablecoin bounties should pay valid revealed participation only from a question-scoped bounty pool. cREP should remain the conviction layer where voters risk losing stake when their side loses the settled round.
 
-The direction is promising because it turns Curyo from a general content-rating protocol into a demand-driven human judgment network. The main caution is that "any question, any link, any bounty" creates legal, moderation, and incentive risks. A safer first version would constrain the question types, pay mostly for valid participation and review work, and avoid future-event or wager-like markets.
+The direction is promising because it turns Curyo from a general content-rating protocol into a demand-driven human judgment network. The main caution is that "any question, any link, any bounty" creates legal, moderation, and incentive risks. A safer first version would guide question framing, pay for valid participation and review work, and avoid event-market or wager-like product patterns.
 
-Additional research strengthens the core recommendation: Curyo 2.0 should launch as bountied review questions, not as a user-created prediction market. The product should pay verified humans to review bounded evidence under explicit rules. It should not let reviewers buy tradable yes/no positions, stake stablecoins to enter, or receive stablecoin payouts for being on the winning side.
+Additional research strengthens the core recommendation: Curyo 2.0 should launch as bountied review questions, not as a user-created prediction market. The product should pay verified humans to share bounded judgment under explicit context. It should not let reviewers buy tradable yes/no positions, stake stablecoins to enter, or receive stablecoin payouts for being on the winning side.
 
 ## Current Curyo Fit
 
@@ -83,7 +83,7 @@ Gitcoin's quadratic funding research generalizes to bountied questions: when rew
 
 ### Prediction Markets
 
-Prediction markets show why binary outcomes are powerful and dangerous. CFTC materials describe event contracts as often yes/no, fixed-payout instruments tied to event outcomes. CFTC also penalized Polymarket for off-exchange event-based binary options tied to future yes/no outcomes. Curyo should avoid markets, odds, positions, order books, secondary trading, and future-event questions in v1.
+Prediction markets show why binary outcomes are powerful and dangerous. CFTC materials describe event contracts as often yes/no, fixed-payout instruments tied to event outcomes. CFTC also penalized Polymarket for off-exchange event-based binary options tied to future yes/no outcomes. Curyo should avoid markets, odds, positions, order books, secondary trading, and event-resolution framing in v1.
 
 ## Potential Issues
 
@@ -91,17 +91,20 @@ Prediction markets show why binary outcomes are powerful and dangerous. CFTC mat
 
 The system will answer what verified and economically incentivized participants converge on. That can be useful, but it should not be marketed as objective truth. For subjective, political, medical, legal, identity-sensitive, or reputation-sensitive questions, consensus can collapse into popularity, ideology, coordinated pressure, or fear of being on the wrong side.
 
+Curyo's useful core is closer to a Keynesian beauty contest than a truth oracle. The goal is often not to prove an objective fact, but to surface what honest, verified voters currently think other honest voters will consider good, bad, trustworthy, useful, attractive, or worth recommending. That makes Curyo a natural fit for product ratings, hotel ratings, subjective content quality, aesthetics, usefulness, and other domains where no single canonical answer exists.
+
 Product copy and protocol docs should distinguish:
 
 - Objective answer: externally verifiable fact.
 - Bounded judgment: answerable with a rubric and evidence.
 - Community confidence: what Curyo can safely claim.
+- Opinion/rating signal: a stake-backed aggregate of honest voter judgment, not a guarantee of correctness.
 
 ### Regulatory Risk From Binary Stablecoin Payouts
 
 If users fund yes/no questions and voters receive stablecoin payouts for choosing the winning side, the design can start to resemble prediction markets, event contracts, gambling, contests, or binary options.
 
-This is most risky for questions about:
+This is most risky for questions that look like objective event resolution or regulated outcome wagering, including:
 
 - Future events.
 - Elections or politics.
@@ -111,7 +114,9 @@ This is most risky for questions about:
 - Lawsuits, enforcement actions, or regulatory outcomes.
 - Celebrity, reputation, or personal allegations.
 
-The safer initial framing is "paid human review of bounded evidence" rather than "bet on an outcome." Bounty distribution should be participation-only at launch: every eligible voter who submits a valid vote and reveals properly on the funded question can claim the same capped stablecoin review reward or a pro-rata share of that question's bounty, independent of whether the round settles up or down. cREP remains the outcome-risk mechanism.
+Fact-based future events are usually a poor Curyo fit because specialized prediction markets or oracle systems can resolve them against a later objective outcome. Curyo can only capture voter judgment at the time of voting. If someone asks about a future event before it happens, the result should be understood as "what verified voters currently believe or expect," not a guarantee that the event will resolve that way.
+
+The safer initial framing is "paid human review of bounded judgment" rather than "bet on an outcome." Bounty distribution should be participation-only at launch: every eligible voter who submits a valid vote and reveals properly on the funded question can claim the same capped stablecoin review reward or a pro-rata share of that question's bounty, independent of whether the round settles up or down. cREP remains the outcome-risk mechanism.
 
 Additional regulatory red lines:
 
@@ -121,7 +126,7 @@ Additional regulatory red lines:
 - Do not let reviewers pay stablecoins to enter.
 - Do not let creators, subjects, insiders, or parties who can influence the outcome claim outcome-weighted rewards.
 - Do not pay any stablecoin coherence, correctness, or winning-side bonus at launch.
-- Do not launch future-event questions without a separate legal workstream.
+- Do not launch future-event bounty categories that look like event contracts, prediction markets, or objective event-resolution products without a separate legal workstream.
 
 ### Stablecoin Compliance and Issuer Controls
 
@@ -145,14 +150,24 @@ Self.xyz is therefore a strong control, but not a complete answer. Country-of-do
 
 ### Ambiguity Attacks
 
-Open-ended questions create attack surfaces:
+Open-ended questions are not automatically bad. They are central to Curyo's strongest use cases: products, hotels, design, usefulness, taste, and reputation-like community judgment. The attack surface appears when the question is vague enough that voters cannot tell what they are supposed to judge or submitters imply an objective guarantee that Curyo cannot provide.
+
+Bad open-ended prompts include:
 
 - "Is this good?"
 - "Is this trustworthy?"
 - "Is this person dangerous?"
 - "Is this project a scam?"
 
-Ambiguous prompts let voters coordinate around vibe, tribal identity, or expected majority behavior. Bounties should require question templates, evidence fields, and acceptance criteria.
+Better subjective prompts name the dimension of judgment:
+
+- "Would you recommend this hotel to a friend at this price?"
+- "Does this product listing look trustworthy enough to buy from?"
+- "Does this design look polished?"
+- "Is this answer useful for a beginner?"
+- "Does this restaurant look worth visiting?"
+
+Templates should reduce mismatched expectations, not force every question into objective fact-checking. Bounties should require a prompt frame, category, context, and invalid/cannot-resolve criteria, but subjective opinion/rating templates should be first-class.
 
 ### Collusion and Bribery
 
@@ -203,26 +218,36 @@ If the stablecoin bounty is much larger than the cREP at risk, voters may optimi
 
 ## Recommended First Version
 
-### 1. Launch With Question Templates
+### 1. Launch With Question Frames
 
-Start with constrained question types that are evidence-bound:
+Start with guided question frames rather than an unrestricted text box. This can still feel open to submitters: the user writes the concrete question, but must choose a frame that explains what kind of judgment voters are making. Frames should include subjective rating questions as first-class use cases:
 
+- Product rating: "Would you recommend this product?"
+- Hotel or venue rating: "Would you stay here or visit this place?"
+- Aesthetic judgment: "Does this look polished, appealing, or high quality?"
+- Usefulness judgment: "Is this answer useful for the intended audience?"
+- Trust judgment: "Does this listing or page look trustworthy enough to engage with?"
 - Source support: "Is claim X supported by source Y as of date Z?"
-- Media classification: "Does this image/video contain X?"
-- Impersonation: "Is this page likely impersonating the official entity?"
-- Documentation correctness: "Is this answer materially correct according to linked docs?"
-- Listing accuracy: "Does this listing materially match the linked official record?"
+- Media classification: "Does this image/video appear to contain X?"
+- Impersonation: "Does this page look like it is impersonating the official entity?"
 
-Avoid general-purpose political, medical, legal, and personal reputation questions in the first version.
+Future-event, election, sports, asset-price, legal-outcome, and enforcement-outcome questions should not be positioned as objective event-resolution markets. If they are allowed at all, they should be clearly labeled as current community expectation/opinion, not as a promise of future correctness, and they should remain outside any market-like stablecoin payout model.
 
-Every template should require:
+Submitter-facing copy should make the expectation explicit:
+
+- Curyo does not guarantee that an answer is objectively correct.
+- Voters are sharing a stake-backed opinion or expectation at the time they vote.
+- Future events may resolve differently later.
+- For fact-based future outcomes with objective settlement, prediction markets or oracle systems may be better tools.
+
+Every frame should require:
 
 - Exact binary claim.
-- Accepted evidence sources.
+- Rating dimension or accepted evidence sources.
 - Yes criteria.
 - No criteria.
 - Invalid/cannot-resolve criteria.
-- Resolution timestamp or evidence snapshot time.
+- Vote-time context, evidence snapshot time, or expectation that the answer reflects current voter judgment.
 - Conflict-of-interest disclosure.
 
 ### 2. Treat the Result as Confidence, Not Final Truth
@@ -232,6 +257,8 @@ The rating can still start at 50 and move based on thumbs up/down. The user-faci
 - Yes confidence.
 - Community confidence.
 - Evidence confidence.
+- Recommendation confidence.
+- Current voter expectation.
 
 Avoid "truth score" unless the category has a strong oracle or appeal process.
 
@@ -378,8 +405,10 @@ High-risk test areas:
 Recommended v1 constraints:
 
 - Launch as "bountied review questions" or "verification bounties."
-- Allow only present-tense or past-tense evidence-linked claims.
-- Require a template and rubric for every question.
+- Make subjective opinion/rating questions first-class, especially products, hotels, places, aesthetics, usefulness, and trust signals.
+- Require a guided question frame and rubric/context for every question.
+- Clearly label results as community judgment or current expectation, not objective truth or guaranteed future outcome.
+- Tell submitters that Curyo measures current voter judgment; it does not guarantee future correctness.
 - Include an invalid/cannot-resolve path.
 - Keep stablecoin bounty funding separate from cREP vote staking.
 - Keep stablecoin bounty funds question-scoped; no global stablecoin ParticipationPool.
