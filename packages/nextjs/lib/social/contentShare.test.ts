@@ -2,6 +2,7 @@ import {
   buildContentShareData,
   buildContentShareRatingVersion,
   normalizeContentShareContentId,
+  resolveContentShareImageUrl,
   resolveContentShareRating,
 } from "./contentShare";
 import assert from "node:assert/strict";
@@ -103,4 +104,51 @@ test("buildContentShareData includes the rating in metadata and versioned share 
   assert.equal(imageUrl.pathname, "/api/og/vote");
   assert.equal(imageUrl.searchParams.get("content"), "88");
   assert.equal(imageUrl.searchParams.get("rv"), data.ratingVersion);
+});
+
+test("resolveContentShareImageUrl prefers explicit HTTPS image metadata", () => {
+  assert.equal(
+    resolveContentShareImageUrl({
+      ...baseContent,
+      imageUrl: "https://upload.wikimedia.org/example/full.png",
+      thumbnailUrl: "https://upload.wikimedia.org/example/thumb.png",
+      url: "https://www.youtube.com/watch?v=qRv7G7WpOoU",
+    }),
+    "https://upload.wikimedia.org/example/full.png",
+  );
+});
+
+test("resolveContentShareImageUrl derives predictable platform thumbnails", () => {
+  const data = buildContentShareData(
+    {
+      ...baseContent,
+      url: "https://www.youtube.com/watch?v=qRv7G7WpOoU",
+    },
+    "https://www.curyo.xyz",
+  );
+
+  assert.equal(data.contentUrl, "https://www.youtube.com/watch?v=qRv7G7WpOoU");
+  assert.equal(data.contentImageUrl, "https://img.youtube.com/vi/qRv7G7WpOoU/hqdefault.jpg");
+});
+
+test("resolveContentShareImageUrl ignores non-HTTPS image metadata", () => {
+  assert.equal(
+    resolveContentShareImageUrl({
+      ...baseContent,
+      imageUrl: "http://images.example/full.png",
+      thumbnailUrl: "https://upload.wikimedia.org/example/thumb.png",
+    }),
+    "https://upload.wikimedia.org/example/thumb.png",
+  );
+});
+
+test("resolveContentShareImageUrl ignores untrusted image hosts", () => {
+  assert.equal(
+    resolveContentShareImageUrl({
+      ...baseContent,
+      imageUrl: "https://images.example/full.png",
+      thumbnailUrl: "https://images.example/thumb.png",
+    }),
+    null,
+  );
 });

@@ -1,6 +1,7 @@
+import React from "react";
 import { ImageResponse } from "next/og";
 import type { NextRequest } from "next/server";
-import type { ContentShareData } from "~~/lib/social/contentShare";
+import { type ContentShareData, VOTE_SHARE_RATING_VERSION_PARAM } from "~~/lib/social/contentShare";
 import { getContentShareDataForParam } from "~~/lib/social/contentShare.server";
 
 export const runtime = "nodejs";
@@ -12,7 +13,13 @@ const imageSize = {
   height: 630,
 };
 
-const responseHeaders = {
+const versionedResponseHeaders = {
+  "Cache-Control": "public, max-age=86400, immutable",
+  "CDN-Cache-Control": "public, max-age=86400, stale-while-revalidate=604800, stale-if-error=604800",
+  "Vercel-CDN-Cache-Control": "public, max-age=86400, stale-while-revalidate=604800, stale-if-error=604800",
+};
+
+const fallbackResponseHeaders = {
   "Cache-Control": "no-store, max-age=0",
 };
 
@@ -41,6 +48,13 @@ function RatingShareImage({ shareData }: { shareData: ContentShareData }) {
     shareData.openRoundVoteCount > 0
       ? `${shareData.openRoundVoteCount} hidden vote${shareData.openRoundVoteCount === 1 ? "" : "s"} in the open round`
       : "Open round ready for your vote";
+
+  const ratingMetrics = (
+    <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+      <Metric label="Total votes" value={shareData.totalVotes.toLocaleString("en-US")} />
+      <Metric label="Open round" value={openRoundLabel} valueFontSize={24} />
+    </div>
+  );
 
   return (
     <div
@@ -109,29 +123,88 @@ function RatingShareImage({ shareData }: { shareData: ContentShareData }) {
           </div>
         </div>
 
-        <div
-          style={{
-            display: "flex",
-            flexDirection: "column",
-            width: 330,
-            borderRadius: 8,
-            border: "2px solid #50f29a",
-            background: "#f7fff5",
-            color: "#10130f",
-            padding: 28,
-            gap: 20,
-          }}
-        >
-          <div style={{ fontSize: 26, fontWeight: 900, color: "#10130f" }}>Current rating</div>
-          <div style={{ display: "flex", alignItems: "flex-end", gap: 10 }}>
-            <div style={{ fontSize: 104, fontWeight: 900, lineHeight: 0.9 }}>{shareData.rating.label}</div>
-            <div style={{ fontSize: 36, fontWeight: 900, lineHeight: 1.1, paddingBottom: 8 }}>/10</div>
+        {shareData.contentImageUrl ? (
+          <div
+            style={{
+              display: "flex",
+              flexDirection: "column",
+              width: 360,
+              borderRadius: 8,
+              border: "2px solid #50f29a",
+              background: "#f7fff5",
+              color: "#10130f",
+              overflow: "hidden",
+            }}
+          >
+            <div
+              style={{
+                display: "flex",
+                position: "relative",
+                width: "100%",
+                height: 244,
+                background: "#161a16",
+              }}
+            >
+              <img
+                src={shareData.contentImageUrl}
+                alt=""
+                width={360}
+                height={244}
+                style={{
+                  width: "100%",
+                  height: "100%",
+                  objectFit: "cover",
+                }}
+              />
+              <div
+                style={{
+                  position: "absolute",
+                  right: 18,
+                  bottom: 18,
+                  width: 150,
+                  height: 150,
+                  borderRadius: 999,
+                  border: "3px solid #50f29a",
+                  background: "#f7fff5",
+                  color: "#10130f",
+                  display: "flex",
+                  flexDirection: "column",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  boxShadow: "0 16px 42px rgba(0,0,0,0.34)",
+                }}
+              >
+                <div style={{ fontSize: 64, fontWeight: 900, lineHeight: 0.86 }}>{shareData.rating.label}</div>
+                <div style={{ fontSize: 24, fontWeight: 900, lineHeight: 1.1 }}>/10</div>
+              </div>
+            </div>
+            <div style={{ display: "flex", flexDirection: "column", gap: 16, padding: 22 }}>
+              <div style={{ fontSize: 24, fontWeight: 900, color: "#10130f" }}>Current rating</div>
+              {ratingMetrics}
+            </div>
           </div>
-          <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
-            <Metric label="Total votes" value={shareData.totalVotes.toLocaleString("en-US")} />
-            <Metric label="Open round" value={openRoundLabel} valueFontSize={24} />
+        ) : (
+          <div
+            style={{
+              display: "flex",
+              flexDirection: "column",
+              width: 330,
+              borderRadius: 8,
+              border: "2px solid #50f29a",
+              background: "#f7fff5",
+              color: "#10130f",
+              padding: 28,
+              gap: 20,
+            }}
+          >
+            <div style={{ fontSize: 26, fontWeight: 900, color: "#10130f" }}>Current rating</div>
+            <div style={{ display: "flex", alignItems: "flex-end", gap: 10 }}>
+              <div style={{ fontSize: 104, fontWeight: 900, lineHeight: 0.9 }}>{shareData.rating.label}</div>
+              <div style={{ fontSize: 36, fontWeight: 900, lineHeight: 1.1, paddingBottom: 8 }}>/10</div>
+            </div>
+            {ratingMetrics}
           </div>
-        </div>
+        )}
       </div>
     </div>
   );
@@ -163,9 +236,11 @@ export async function GET(request: NextRequest) {
   const shareData = await getContentShareDataForParam(request.nextUrl.searchParams.get("content"), {
     origin: request.nextUrl.origin,
   });
+  const requestedRatingVersion = request.nextUrl.searchParams.get(VOTE_SHARE_RATING_VERSION_PARAM);
+  const hasCurrentRatingVersion = Boolean(shareData && requestedRatingVersion === shareData.ratingVersion);
 
   return new ImageResponse(shareData ? <RatingShareImage shareData={shareData} /> : <FallbackShareImage />, {
     ...imageSize,
-    headers: responseHeaders,
+    headers: hasCurrentRatingVersion ? versionedResponseHeaders : fallbackResponseHeaders,
   });
 }

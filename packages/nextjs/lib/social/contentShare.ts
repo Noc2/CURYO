@@ -1,19 +1,45 @@
 import { clampContentRating, formatRatingScoreOutOfTen } from "../ui/ratingDisplay";
+import { detectPlatform, getThumbnailUrl } from "~~/utils/platforms";
 
 export const VOTE_SHARE_RATING_VERSION_PARAM = "rv";
 
 const TITLE_MAX_LENGTH = 96;
 const DESCRIPTION_MAX_LENGTH = 180;
 const ALT_MAX_LENGTH = 180;
+const ALLOWED_SHARE_IMAGE_HOSTS = new Set([
+  "api.scryfall.com",
+  "assets.coingecko.com",
+  "avatars.githubusercontent.com",
+  "cards.scryfall.io",
+  "cdn-avatars.huggingface.co",
+  "cdn-thumbnails.huggingface.co",
+  "coin-images.coingecko.com",
+  "covers.openlibrary.org",
+  "huggingface.co",
+  "i.scdn.co",
+  "i.ytimg.com",
+  "image.tmdb.org",
+  "img.youtube.com",
+  "media.rawg.io",
+  "pbs.twimg.com",
+  "upload.wikimedia.org",
+]);
 
 export type ContentShareRatingSource = "open_round_reference" | "content_rating_bps" | "content_rating";
 
 export interface ContentShareContentInput {
   id: string;
+  url?: string | null;
   title: string;
   description: string;
   rating: number;
   ratingBps?: number;
+  thumbnailUrl?: string | null;
+  imageUrl?: string | null;
+  contentMetadata?: {
+    thumbnailUrl?: string | null;
+    imageUrl?: string | null;
+  } | null;
   totalVotes?: number;
   lastActivityAt?: string | null;
   openRound?: {
@@ -31,8 +57,10 @@ export interface ContentShareRating {
 
 export interface ContentShareData {
   contentId: string;
+  contentUrl: string;
   contentTitle: string;
   contentDescription: string;
+  contentImageUrl: string | null;
   title: string;
   description: string;
   imageAlt: string;
@@ -78,6 +106,45 @@ function normalizeActivitySeconds(value: string | null | undefined): number {
 
   const activityMs = Date.parse(trimmed);
   return Number.isFinite(activityMs) ? Math.floor(activityMs / 1000) : 0;
+}
+
+function normalizeHttpsImageUrl(value: string | null | undefined): string | null {
+  const trimmed = value?.trim();
+  if (!trimmed) return null;
+
+  try {
+    const parsed = new URL(trimmed);
+    if (parsed.protocol !== "https:" || !ALLOWED_SHARE_IMAGE_HOSTS.has(parsed.hostname)) return null;
+    return parsed.toString();
+  } catch {
+    return null;
+  }
+}
+
+function getPlatformShareImageUrl(url: string | null | undefined): string | null {
+  const trimmed = url?.trim();
+  if (!trimmed) return null;
+
+  const platform = detectPlatform(trimmed);
+  const thumbnailUrl = getThumbnailUrl(trimmed, platform.type === "youtube" ? "hqdefault" : undefined);
+  return normalizeHttpsImageUrl(thumbnailUrl);
+}
+
+export function resolveContentShareImageUrl(content: ContentShareContentInput): string | null {
+  const candidates = [
+    content.imageUrl,
+    content.thumbnailUrl,
+    content.contentMetadata?.imageUrl,
+    content.contentMetadata?.thumbnailUrl,
+    getPlatformShareImageUrl(content.url),
+  ];
+
+  for (const candidate of candidates) {
+    const imageUrl = normalizeHttpsImageUrl(candidate);
+    if (imageUrl) return imageUrl;
+  }
+
+  return null;
 }
 
 export function normalizeContentShareContentId(value: unknown): string | null {
@@ -142,6 +209,8 @@ export function buildVoteShareImageUrl(origin: string, contentId: string, rating
 export function buildContentShareData(content: ContentShareContentInput, origin: string): ContentShareData {
   const contentTitle = truncateText(content.title || `Content #${content.id}`, TITLE_MAX_LENGTH);
   const contentDescription = truncateText(content.description, DESCRIPTION_MAX_LENGTH);
+  const contentUrl = content.url?.trim() ?? "";
+  const contentImageUrl = resolveContentShareImageUrl(content);
   const rating = resolveContentShareRating(content);
   const ratingVersion = buildContentShareRatingVersion(content, rating);
   const totalVotes = normalizeFiniteInteger(content.totalVotes);
@@ -159,8 +228,10 @@ export function buildContentShareData(content: ContentShareContentInput, origin:
 
   return {
     contentId: content.id,
+    contentUrl,
     contentTitle,
     contentDescription,
+    contentImageUrl,
     title,
     description,
     imageAlt,
