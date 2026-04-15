@@ -130,6 +130,18 @@ Stablecoin issuers may also monitor or block prohibited transactions, including 
 
 Stablecoin bounty claims may also create tax reporting expectations for users. IRS guidance treats digital assets, including stablecoins, as reportable digital assets and explicitly references rewards, awards, and payment for services. Product copy should assume bounty recipients may need records of claim amounts, dates, token symbols, and fair market values.
 
+Self.xyz can mitigate part of this risk. Self's disclosure and verification flow supports `excludedCountries` rules and OFAC checks, and the IdentityVerificationHub applies geographic and sanctions requirements from the stored verification configuration. Curyo already uses Self.xyz for Voter ID issuance, with frontend OFAC checking enabled in `packages/nextjs/lib/governance/selfVerificationApp.ts` and on-chain deployment config enabling all three Self OFAC modes in `packages/foundry/script/DeployCuryo.s.sol`. However, the current Curyo config leaves `excludedCountries` empty and `forbiddenCountriesEnabled` false, so sanctioned-country exclusion would need to be explicitly enabled for bounty participation.
+
+Recommended bounty-specific approach:
+
+- Require a Voter ID or fresh bounty eligibility proof minted under a Self configuration that enables OFAC checks and excludes sanctioned or unsupported jurisdictions.
+- Version the eligibility config so old Voter IDs minted before the bounty restrictions can be re-checked before stablecoin funding or claiming.
+- Keep the proof privacy-preserving: use country exclusion and OFAC pass/fail checks where possible instead of revealing nationality, name, passport number, or date of birth.
+- Apply the gate to bounty funding, bounty claiming, and possibly bounty voting, not only to initial faucet claims.
+- Continue wallet-level screening at funding and claim time, because a person can pass document checks while the wallet, counterparty, or token transfer still creates sanctions or issuer-policy risk.
+
+Self.xyz is therefore a strong control, but not a complete answer. Country-of-document or nationality is not always the same as residence, sanctions lists and issuer rules change, delegated wallets can complicate attribution, and stablecoin issuers can still freeze or block assets. It should be treated as one layer alongside stablecoin allowlists, address screening, bounty caps, transaction logs, and emergency pause controls.
+
 ### Ambiguity Attacks
 
 Open-ended questions create attack surfaces:
@@ -296,6 +308,9 @@ Refund rules should be explicit for moderation removal, quorum failure, reveal f
 - Should high-stakes bounties require a moderator or curator precheck?
 - Should the protocol support an invalid/cannot-resolve outcome in addition to yes/no?
 - Should high-value questions have an optimistic answer plus challenge window before the Curyo vote, similar to UMA?
+- Should bounty funding and claiming require a fresh Self.xyz proof under a bounty-specific OFAC and excluded-country configuration?
+- Which jurisdictions should be excluded, who updates that list, and how are existing Voter IDs re-checked when the list changes?
+- Should delegated wallets be allowed to fund or claim stablecoin bounties, or should claims require the direct Voter ID holder?
 - Should Curyo add category-specific voter reputation before routing bounties?
 - Should there be an appeal court, expert panel, or governance escalation path?
 - How should Curyo handle takedowns when bounty funds are already escrowed?
@@ -354,6 +369,9 @@ Recommended v1 constraints:
 - Cap bounty size and per-user payout size.
 - Allow only one or two allowlisted stablecoins at launch.
 - Use pull-based claims.
+- Gate bounty funding and claims with Self.xyz OFAC and excluded-country checks, ideally through a bounty-specific eligibility config.
+- Re-check or version eligibility before stablecoin claims when country or sanctions rules change.
+- Screen wallet addresses at funding and claim time even when Self.xyz verification passes.
 - Prohibit creator voting and creator claiming.
 - Require conflict disclosure for question creators.
 - Escalate high-value questions through longer windows, higher quorum, and manual review.
@@ -406,6 +424,8 @@ Evaluate MACI-like receipt-freeness for high-value bounties, category-specific r
 - MACI, introduction and voting privacy/collusion resistance: https://maci.pse.dev/docs/introduction
 - Gitcoin, sybil resistance in quadratic funding: https://gitcoin.co/research/quadratic-funding-sybil-resistance
 - Circle, bridged USDC terms: https://www.circle.com/legal/bridged-usdc-terms
+- Self.xyz, disclosures and verification requirements: https://docs.self.xyz/use-self/disclosures
+- Self.xyz, IdentityVerificationHub verification flow: https://docs.self.xyz/technical-docs/verification-in-the-identityverificationhub
 - NCMEC CyberTipline: https://www.missingkids.org/gethelpnow/cybertipline
 - U.S. Copyright Office, DMCA Section 512 resources: https://www.copyright.gov/512/index.html
 - European Commission, Digital Services Act overview: https://digital-strategy.ec.europa.eu/en/policies/digital-services-act
