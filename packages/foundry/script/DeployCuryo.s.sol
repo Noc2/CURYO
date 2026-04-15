@@ -805,178 +805,114 @@ contract DeployCuryo is ScaffoldETHDeploy {
     }
 
     function _seedCategories(CategoryRegistry registry) internal {
-        // YouTube (categoryId: 1)
-        string[] memory youtubeSubcats = new string[](12);
-        youtubeSubcats[0] = "Education";
-        youtubeSubcats[1] = "Entertainment";
-        youtubeSubcats[2] = "Technology";
-        youtubeSubcats[3] = "Science";
-        youtubeSubcats[4] = "Music";
-        youtubeSubcats[5] = "Art";
-        youtubeSubcats[6] = "Gaming";
-        youtubeSubcats[7] = "News";
-        youtubeSubcats[8] = "Sports";
-        youtubeSubcats[9] = "Lifestyle";
-        youtubeSubcats[10] = "Finance";
-        youtubeSubcats[11] = "Health";
-        registry.addApprovedCategory("YouTube", "youtube.com", youtubeSubcats);
+        string[] memory productSubcats = new string[](8);
+        productSubcats[0] = "Value";
+        productSubcats[1] = "Quality";
+        productSubcats[2] = "Usability";
+        productSubcats[3] = "Durability";
+        productSubcats[4] = "Design";
+        productSubcats[5] = "Support";
+        productSubcats[6] = "Safety";
+        productSubcats[7] = "Sustainability";
+        registry.addApprovedCategory("Products", "products.curyo.xyz", productSubcats);
 
-        // Twitch (categoryId: 2)
-        string[] memory twitchSubcats = new string[](5);
-        twitchSubcats[0] = "Gaming";
-        twitchSubcats[1] = "Music";
-        twitchSubcats[2] = "Talk Shows";
-        twitchSubcats[3] = "Sports";
-        twitchSubcats[4] = "Creative";
-        registry.addApprovedCategory("Twitch", "twitch.tv", twitchSubcats);
+        string[] memory travelSubcats = new string[](8);
+        travelSubcats[0] = "Hotels";
+        travelSubcats[1] = "Location";
+        travelSubcats[2] = "Cleanliness";
+        travelSubcats[3] = "Service";
+        travelSubcats[4] = "Comfort";
+        travelSubcats[5] = "Value";
+        travelSubcats[6] = "Family";
+        travelSubcats[7] = "Solo Travel";
+        registry.addApprovedCategory("Hotels and Travel", "travel.curyo.xyz", travelSubcats);
 
-        // Magic: The Gathering - Scryfall (categoryId: 3)
-        string[] memory mtgSubcats = new string[](8);
-        mtgSubcats[0] = "Creatures";
-        mtgSubcats[1] = "Instants";
-        mtgSubcats[2] = "Sorceries";
-        mtgSubcats[3] = "Enchantments";
-        mtgSubcats[4] = "Artifacts";
-        mtgSubcats[5] = "Lands";
-        mtgSubcats[6] = "Planeswalkers";
-        mtgSubcats[7] = "Commanders";
-        registry.addApprovedCategory("Magic: The Gathering", "scryfall.com", mtgSubcats);
+        string[] memory localSubcats = new string[](8);
+        localSubcats[0] = "Restaurants";
+        localSubcats[1] = "Cafes";
+        localSubcats[2] = "Nightlife";
+        localSubcats[3] = "Service";
+        localSubcats[4] = "Atmosphere";
+        localSubcats[5] = "Accessibility";
+        localSubcats[6] = "Value";
+        localSubcats[7] = "Local Tips";
+        registry.addApprovedCategory("Restaurants and Local Places", "local.curyo.xyz", localSubcats);
 
-        // Movies - TMDB (categoryId: 4)
-        string[] memory movieSubcats = new string[](10);
-        movieSubcats[0] = "Action";
-        movieSubcats[1] = "Comedy";
-        movieSubcats[2] = "Drama";
-        movieSubcats[3] = "Horror";
-        movieSubcats[4] = "Sci-Fi";
-        movieSubcats[5] = "Documentary";
-        movieSubcats[6] = "Animation";
-        movieSubcats[7] = "Thriller";
-        movieSubcats[8] = "Romance";
-        movieSubcats[9] = "Fantasy";
-        registry.addApprovedCategory("Movies", "themoviedb.org", movieSubcats);
+        string[] memory designSubcats = new string[](8);
+        designSubcats[0] = "Visual Design";
+        designSubcats[1] = "Brand";
+        designSubcats[2] = "Typography";
+        designSubcats[3] = "Layout";
+        designSubcats[4] = "Accessibility";
+        designSubcats[5] = "Photography";
+        designSubcats[6] = "Fashion";
+        designSubcats[7] = "Architecture";
+        registry.addApprovedCategory("Design and Aesthetics", "design.curyo.xyz", designSubcats);
 
-        // People - Wikipedia (categoryId: 5)
-        string[] memory peopleSubcats = new string[](8);
-        peopleSubcats[0] = "Athletes";
-        peopleSubcats[1] = "Musicians";
-        peopleSubcats[2] = "Politicians";
-        peopleSubcats[3] = "Scientists";
-        peopleSubcats[4] = "Actors";
-        peopleSubcats[5] = "Business";
-        peopleSubcats[6] = "Artists";
-        peopleSubcats[7] = "Authors";
-        registry.addApprovedCategory("People", "en.wikipedia.org", peopleSubcats);
+        string[] memory appsSubcats = new string[](8);
+        appsSubcats[0] = "Web Apps";
+        appsSubcats[1] = "Mobile Apps";
+        appsSubcats[2] = "Developer Tools";
+        appsSubcats[3] = "Productivity";
+        appsSubcats[4] = "Onboarding";
+        appsSubcats[5] = "Performance";
+        appsSubcats[6] = "Trust";
+        appsSubcats[7] = "Pricing";
+        registry.addApprovedCategory("Apps and Websites", "apps.curyo.xyz", appsSubcats);
 
-        // Games - RAWG (categoryId: 6)
-        string[] memory gameSubcats = new string[](8);
-        gameSubcats[0] = "Action";
-        gameSubcats[1] = "RPG";
-        gameSubcats[2] = "Strategy";
-        gameSubcats[3] = "Simulation";
-        gameSubcats[4] = "Adventure";
-        gameSubcats[5] = "Indie";
-        gameSubcats[6] = "Sports";
-        gameSubcats[7] = "Puzzle";
-        registry.addApprovedCategory("Games", "rawg.io", gameSubcats);
+        string[] memory aiAnswerSubcats = new string[](8);
+        aiAnswerSubcats[0] = "Helpfulness";
+        aiAnswerSubcats[1] = "Clarity";
+        aiAnswerSubcats[2] = "Safety";
+        aiAnswerSubcats[3] = "Creativity";
+        aiAnswerSubcats[4] = "Reasoning";
+        aiAnswerSubcats[5] = "Code";
+        aiAnswerSubcats[6] = "Images";
+        aiAnswerSubcats[7] = "Research";
+        registry.addApprovedCategory("AI Answers", "ai-answers.curyo.xyz", aiAnswerSubcats);
 
-        // Books - Open Library (categoryId: 7)
-        string[] memory bookSubcats = new string[](8);
-        bookSubcats[0] = "Fiction";
-        bookSubcats[1] = "Non-Fiction";
-        bookSubcats[2] = "Science Fiction";
-        bookSubcats[3] = "Fantasy";
-        bookSubcats[4] = "Biography";
-        bookSubcats[5] = "History";
-        bookSubcats[6] = "Science";
-        bookSubcats[7] = "Philosophy";
-        registry.addApprovedCategory("Books", "openlibrary.org", bookSubcats);
+        string[] memory docsSubcats = new string[](8);
+        docsSubcats[0] = "Getting Started";
+        docsSubcats[1] = "API Reference";
+        docsSubcats[2] = "Tutorials";
+        docsSubcats[3] = "Examples";
+        docsSubcats[4] = "Accuracy";
+        docsSubcats[5] = "Completeness";
+        docsSubcats[6] = "Readability";
+        docsSubcats[7] = "Troubleshooting";
+        registry.addApprovedCategory("Documentation and Developer Help", "docs.curyo.xyz", docsSubcats);
 
-        // AI - Hugging Face (categoryId: 8)
-        string[] memory aiSubcats = new string[](9);
-        aiSubcats[0] = "Chatbots";
-        aiSubcats[1] = "Image Generation";
-        aiSubcats[2] = "Coding";
-        aiSubcats[3] = "Writing";
-        aiSubcats[4] = "Research";
-        aiSubcats[5] = "Music";
-        aiSubcats[6] = "Video";
-        aiSubcats[7] = "Productivity";
-        aiSubcats[8] = "Agents";
-        registry.addApprovedCategory("AI", "huggingface.co", aiSubcats);
+        string[] memory mediaSubcats = new string[](8);
+        mediaSubcats[0] = "Images";
+        mediaSubcats[1] = "YouTube";
+        mediaSubcats[2] = "Education";
+        mediaSubcats[3] = "Entertainment";
+        mediaSubcats[4] = "Art";
+        mediaSubcats[5] = "Photography";
+        mediaSubcats[6] = "Audio";
+        mediaSubcats[7] = "Culture";
+        registry.addApprovedCategory("Media and Images", "media.curyo.xyz", mediaSubcats);
 
-        // Crypto Tokens - CoinGecko (categoryId: 9)
-        string[] memory cryptoSubcats = new string[](8);
-        cryptoSubcats[0] = "Layer 1";
-        cryptoSubcats[1] = "Layer 2";
-        cryptoSubcats[2] = "DeFi";
-        cryptoSubcats[3] = "Memecoins";
-        cryptoSubcats[4] = "Stablecoins";
-        cryptoSubcats[5] = "Gaming/NFT";
-        cryptoSubcats[6] = "Infrastructure";
-        cryptoSubcats[7] = "Privacy";
-        registry.addApprovedCategory("Crypto Tokens", "coingecko.com", cryptoSubcats);
+        string[] memory safetySubcats = new string[](8);
+        safetySubcats[0] = "Trust";
+        safetySubcats[1] = "Spam";
+        safetySubcats[2] = "Harassment";
+        safetySubcats[3] = "Moderation";
+        safetySubcats[4] = "Privacy";
+        safetySubcats[5] = "Disclosure";
+        safetySubcats[6] = "Risk";
+        safetySubcats[7] = "Policy";
+        registry.addApprovedCategory("Trust and Safety", "safety.curyo.xyz", safetySubcats);
 
-        // Tweets - X/Twitter (categoryId: 10)
-        string[] memory tweetSubcats = new string[](10);
-        tweetSubcats[0] = "News";
-        tweetSubcats[1] = "Commentary";
-        tweetSubcats[2] = "Tech";
-        tweetSubcats[3] = "Science";
-        tweetSubcats[4] = "Politics";
-        tweetSubcats[5] = "Sports";
-        tweetSubcats[6] = "Humor";
-        tweetSubcats[7] = "Culture";
-        tweetSubcats[8] = "Threads";
-        tweetSubcats[9] = "Announcements";
-        registry.addApprovedCategory("Tweets", "x.com", tweetSubcats);
-
-        // GitHub Repos (categoryId: 11)
-        string[] memory githubSubcats = new string[](8);
-        githubSubcats[0] = "Libraries";
-        githubSubcats[1] = "Developer Tools";
-        githubSubcats[2] = "Frameworks";
-        githubSubcats[3] = "DeFi/Web3";
-        githubSubcats[4] = "AI/ML";
-        githubSubcats[5] = "Infrastructure";
-        githubSubcats[6] = "Security";
-        githubSubcats[7] = "Education";
-        registry.addApprovedCategory("GitHub Repos", "github.com", githubSubcats);
-
-        // Spotify Podcasts (categoryId: 12)
-        string[] memory spotifySubcats = new string[](8);
-        spotifySubcats[0] = "Technology";
-        spotifySubcats[1] = "Business";
-        spotifySubcats[2] = "Comedy";
-        spotifySubcats[3] = "News";
-        spotifySubcats[4] = "Science";
-        spotifySubcats[5] = "Health";
-        spotifySubcats[6] = "Sports";
-        spotifySubcats[7] = "Culture";
-        registry.addApprovedCategory("Spotify Podcasts", "open.spotify.com", spotifySubcats);
-
-        // npm Packages (categoryId: 13)
-        string[] memory npmSubcats = new string[](8);
-        npmSubcats[0] = "Frameworks";
-        npmSubcats[1] = "UI Libraries";
-        npmSubcats[2] = "Developer Tools";
-        npmSubcats[3] = "Build Tooling";
-        npmSubcats[4] = "Testing";
-        npmSubcats[5] = "Backend/Data";
-        npmSubcats[6] = "AI/ML";
-        npmSubcats[7] = "Web3";
-        registry.addApprovedCategory("npm Packages", "npmjs.com", npmSubcats);
-
-        // PyPI Packages (categoryId: 14)
-        string[] memory pypiSubcats = new string[](8);
-        pypiSubcats[0] = "AI/ML";
-        pypiSubcats[1] = "Data Science";
-        pypiSubcats[2] = "Web Frameworks";
-        pypiSubcats[3] = "Automation";
-        pypiSubcats[4] = "Developer Tools";
-        pypiSubcats[5] = "Scientific Computing";
-        pypiSubcats[6] = "Security";
-        pypiSubcats[7] = "LLM/Agents";
-        registry.addApprovedCategory("PyPI Packages", "pypi.org", pypiSubcats);
+        string[] memory opinionSubcats = new string[](8);
+        opinionSubcats[0] = "Taste";
+        opinionSubcats[1] = "Usefulness";
+        opinionSubcats[2] = "Interesting";
+        opinionSubcats[3] = "Clear";
+        opinionSubcats[4] = "Fun";
+        opinionSubcats[5] = "Convincing";
+        opinionSubcats[6] = "Worthwhile";
+        opinionSubcats[7] = "Other";
+        registry.addApprovedCategory("General Opinion", "opinion.curyo.xyz", opinionSubcats);
     }
 }
