@@ -73,7 +73,8 @@ export function SettlementNotifier() {
   const { preferences } = useNotificationPreferences(address, { autoRead: false });
   const { claimableItems, refetch: refetchClaimable } = useAllClaimableRewards();
   const hasTrackedDiscoverSignals = watchedItems.length > 0 || followedItems.length > 0;
-  const discoverSignalsReady = !watchedContentLoading && !followedProfilesLoading && !discoverSignalsLoading;
+  const trackedSignalSourcesLoading = watchedContentLoading || followedProfilesLoading;
+  const discoverSignalsReady = !trackedSignalSourcesLoading && !discoverSignalsLoading;
 
   const claimableRoundKeys = useMemo(
     () => new Set(claimableItems.map(item => getClaimableRoundKey(item)).filter((key): key is string => key !== null)),
@@ -189,7 +190,9 @@ export function SettlementNotifier() {
       return;
     }
     if (!hasTrackedDiscoverSignals) {
-      discoverSignalsInitializedRef.current = false;
+      if (!trackedSignalSourcesLoading) {
+        discoverSignalsInitializedRef.current = true;
+      }
       return;
     }
     if (!discoverSignalsReady) return;
@@ -318,6 +321,7 @@ export function SettlementNotifier() {
     hasTrackedDiscoverSignals,
     notifyWithLink,
     preferences,
+    trackedSignalSourcesLoading,
   ]);
 
   useEffect(() => {
