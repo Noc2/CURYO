@@ -59,6 +59,93 @@ test("fetchPonderJson wraps fetch failures", async () => {
   );
 });
 
+test("fetchPonderJson retries rate-limited responses using Retry-After", async () => {
+  const sleeps: number[] = [];
+  let calls = 0;
+
+  const result = await fetchPonderJson<{ ok: boolean }>(
+    "https://ponder.curyo.xyz/content",
+    1000,
+    async () => {
+      calls += 1;
+      if (calls === 1) {
+        return new Response("rate limited", {
+          status: 429,
+          headers: { "retry-after": "2" },
+        });
+      }
+
+      return new Response(JSON.stringify({ ok: true }), {
+        status: 200,
+        headers: { "content-type": "application/json" },
+      });
+    },
+    {
+      queue: false,
+      sleep: async ms => {
+        sleeps.push(ms);
+      },
+    },
+  );
+
+  assert.deepEqual(result, { ok: true });
+  assert.equal(calls, 2);
+  assert.deepEqual(sleeps, [2000]);
+});
+
+test("fetchPonderJson stops retrying rate limits after the configured attempts", async () => {
+  let calls = 0;
+
+  await assert.rejects(
+    () =>
+      fetchPonderJson(
+        "https://ponder.curyo.xyz/content",
+        1000,
+        async () => {
+          calls += 1;
+          return new Response("rate limited", { status: 429 });
+        },
+        {
+          maxAttempts: 2,
+          queue: false,
+          sleep: async () => {},
+        },
+      ),
+    /Ponder request failed: 429/,
+  );
+
+  assert.equal(calls, 2);
+});
+
+test("fetchPonderJson dedupes in-flight identical requests", async () => {
+  let calls = 0;
+  let resolveFetch: (response: Response) => void = () => {};
+  const fetchPromise = new Promise<Response>(resolve => {
+    resolveFetch = resolve;
+  });
+  const fetchImpl = async () => {
+    calls += 1;
+    return fetchPromise;
+  };
+
+  const first = fetchPonderJson<{ ok: boolean }>("https://ponder.curyo.xyz/content", 1000, fetchImpl, {
+    queue: false,
+  });
+  const second = fetchPonderJson<{ ok: boolean }>("https://ponder.curyo.xyz/content", 1000, fetchImpl, {
+    queue: false,
+  });
+
+  resolveFetch(
+    new Response(JSON.stringify({ ok: true }), {
+      status: 200,
+      headers: { "content-type": "application/json" },
+    }),
+  );
+
+  assert.deepEqual(await Promise.all([first, second]), [{ ok: true }, { ok: true }]);
+  assert.equal(calls, 1);
+});
+
 test("ponderApi.getContentWindow respects hasMore when search totals are omitted", async () => {
   const originalGetContent = ponderApi.getContent;
   let callCount = 0;
@@ -99,9 +186,11 @@ test("ponderApi.getContentWindow respects hasMore when search totals are omitted
 test("ponderApi.getAllRounds paginates every round for a content item", async () => {
   const originalGetRounds = ponderApi.getRounds;
   const offsets: string[] = [];
+  const submitters: Array<string | undefined> = [];
 
   ponderApi.getRounds = async params => {
     offsets.push(params?.offset ?? "0");
+    submitters.push(params?.submitter);
     const offset = Number(params?.offset ?? 0);
     const length = offset === 0 ? 200 : 25;
 
@@ -114,11 +203,55 @@ test("ponderApi.getAllRounds paginates every round for a content item", async ()
   };
 
   try {
-    const rounds = await ponderApi.getAllRounds({ contentId: "7", state: "2" });
+    const rounds = await ponderApi.getAllRounds({
+      contentId: "7",
+      state: "2",
+      submitter: "0x0000000000000000000000000000000000000001",
+    });
 
     assert.equal(rounds.length, 225);
     assert.deepEqual(offsets, ["0", "200"]);
+    assert.deepEqual(submitters, [
+      "0x0000000000000000000000000000000000000001",
+      "0x0000000000000000000000000000000000000001",
+    ]);
   } finally {
     ponderApi.getRounds = originalGetRounds;
+  }
+});
+
+test("ponderApi.getAllSubmitterSettledRounds paginates a dedicated submitter endpoint", async () => {
+  const originalGetSubmitterSettledRounds = ponderApi.getSubmitterSettledRounds;
+  const offsets: string[] = [];
+  const submitters: string[] = [];
+
+  ponderApi.getSubmitterSettledRounds = async (submitter, params) => {
+    submitters.push(submitter);
+    offsets.push(params?.offset ?? "0");
+    const offset = Number(params?.offset ?? 0);
+    const length = offset === 0 ? 200 : 1;
+
+    return {
+      items: Array.from({ length }, (_, index) => ({
+        contentId: String(offset + index + 1),
+        roundId: "1",
+      })),
+      total: 201,
+      limit: 200,
+      offset,
+    };
+  };
+
+  try {
+    const rounds = await ponderApi.getAllSubmitterSettledRounds("0x0000000000000000000000000000000000000001");
+
+    assert.equal(rounds.length, 201);
+    assert.deepEqual(offsets, ["0", "200"]);
+    assert.deepEqual(submitters, [
+      "0x0000000000000000000000000000000000000001",
+      "0x0000000000000000000000000000000000000001",
+    ]);
+  } finally {
+    ponderApi.getSubmitterSettledRounds = originalGetSubmitterSettledRounds;
   }
 });

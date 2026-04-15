@@ -1,13 +1,12 @@
 "use client";
 
 import { useCallback, useMemo } from "react";
-import { ROUND_STATE } from "@curyo/contracts/protocol";
 import { useAccount, useReadContracts } from "wagmi";
 import { type ClaimableRewardItem, buildSubmitterClaimableRewards } from "~~/hooks/claimableRewards";
 import { useDeployedContractInfo } from "~~/hooks/scaffold-eth";
 import { useTargetNetwork } from "~~/hooks/scaffold-eth/useTargetNetwork";
 import { usePonderQuery } from "~~/hooks/usePonderQuery";
-import { type PonderRoundsResponse, ponderApi } from "~~/services/ponder/client";
+import { type PonderSubmitterSettledRoundItem, ponderApi } from "~~/services/ponder/client";
 
 interface SubmitterRewardClaimCandidate {
   contentId: bigint;
@@ -39,8 +38,8 @@ export function useClaimableSubmitterRewards() {
     isLoading: submissionsLoading,
     refetch: refetchSubmissions,
   } = usePonderQuery<
-    { settledRounds: Array<{ contentId: string; rounds: PonderRoundsResponse["items"] }> },
-    { settledRounds: Array<{ contentId: string; rounds: PonderRoundsResponse["items"] }> }
+    { settledRounds: Array<{ contentId: string; rounds: PonderSubmitterSettledRoundItem[] }> },
+    { settledRounds: Array<{ contentId: string; rounds: PonderSubmitterSettledRoundItem[] }> }
   >({
     queryKey: getClaimableSubmitterRewardsQueryKey(address, targetNetwork.id),
     enabled: Boolean(address),
@@ -49,27 +48,20 @@ export function useClaimableSubmitterRewards() {
         return { settledRounds: [] };
       }
 
-      const contentResponse = await ponderApi.getAllContent({
-        submitter: address,
-        status: "all",
-      });
+      const rounds = await ponderApi.getAllSubmitterSettledRounds(address);
 
-      const settledRounds = await Promise.all(
-        contentResponse.map(async contentItem => {
-          const rounds = await ponderApi.getAllRounds({
-            contentId: contentItem.id,
-            state: String(ROUND_STATE.Settled),
-          });
-
-          return {
-            contentId: contentItem.id,
-            rounds,
-          };
-        }),
-      );
+      const roundsByContentId = new Map<string, PonderSubmitterSettledRoundItem[]>();
+      for (const round of rounds) {
+        const existing = roundsByContentId.get(round.contentId) ?? [];
+        existing.push(round);
+        roundsByContentId.set(round.contentId, existing);
+      }
 
       return {
-        settledRounds,
+        settledRounds: Array.from(roundsByContentId, ([contentId, rounds]) => ({
+          contentId,
+          rounds,
+        })),
       };
     },
     rpcFn: async () => ({ settledRounds: [] }),

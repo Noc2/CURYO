@@ -1,6 +1,7 @@
 import { type Page, expect, test } from "../fixtures/wallet";
 import { expectNoHorizontalOverflow, expectNoNextErrorOverlay } from "../helpers/layout";
-import { findVoteableContent, gotoWithRetry, waitForFeedLoaded } from "../helpers/wait-helpers";
+import { ensureVoteableContent } from "../helpers/voteable-content";
+import { gotoWithRetry, waitForFeedLoaded } from "../helpers/wait-helpers";
 
 const VIEWPORTS = [
   { name: "small phone", width: 360, height: 640 },
@@ -100,7 +101,7 @@ test.describe("Responsive layout", () => {
     await gotoWithRetry(page, "/vote", { ensureWalletConnected: true, timeout: 45_000 });
     await waitForFeedLoaded(page, 30_000);
 
-    const canVote = await findVoteableContent(page);
+    const canVote = await ensureVoteableContent(page);
     expect(canVote, "Should find at least one voteable content before checking dialog layout").toBeTruthy();
 
     await page.getByRole("button", { name: VOTE_UP_BUTTON }).click();

@@ -366,6 +366,82 @@ describe("registerContentRoutes", () => {
     expect(serialized).toContain("category.domain");
     expect(serialized).toContain("category.name");
   });
+
+  it("rejects invalid round submitter filters before querying the database", async () => {
+    const { db } = mockPonderModules([]);
+    const { registerContentRoutes } = await import("../src/api/routes/content-routes.js");
+
+    const app = new Hono();
+    registerContentRoutes(app);
+
+    const response = await app.request("http://localhost/rounds?submitter=not-an-address");
+
+    expect(response.status).toBe(400);
+    expect(await response.json()).toEqual({ error: "Invalid submitter address" });
+    expect(db.select).not.toHaveBeenCalled();
+  });
+
+  it("filters rounds by submitter in the database query", async () => {
+    const { queryBuilder } = mockPonderModules([{ id: "1-1" }]);
+    const { registerContentRoutes } = await import("../src/api/routes/content-routes.js");
+
+    const app = new Hono();
+    registerContentRoutes(app);
+
+    const response = await app.request(
+      "http://localhost/rounds?submitter=0x0000000000000000000000000000000000000001&state=1",
+    );
+
+    expect(response.status).toBe(200);
+
+    const whereArg = queryBuilder.where.mock.calls[0]?.[0];
+    const serialized = serializeExpression(whereArg);
+
+    expect(serialized).toContain("content.submitter");
+    expect(serialized).toContain("0x0000000000000000000000000000000000000001");
+    expect(serialized).toContain("round.state");
+  });
+
+  it("rejects submitter settled round requests without a valid submitter", async () => {
+    const { db } = mockPonderModules([]);
+    const { registerContentRoutes } = await import("../src/api/routes/content-routes.js");
+
+    const app = new Hono();
+    registerContentRoutes(app);
+
+    const missingResponse = await app.request("http://localhost/submitter-settled-rounds");
+    const invalidResponse = await app.request("http://localhost/submitter-settled-rounds?submitter=not-an-address");
+
+    expect(missingResponse.status).toBe(400);
+    expect(await missingResponse.json()).toEqual({ error: "submitter parameter required" });
+    expect(invalidResponse.status).toBe(400);
+    expect(await invalidResponse.json()).toEqual({ error: "Invalid submitter address" });
+    expect(db.select).not.toHaveBeenCalled();
+  });
+
+  it("queries settled rounds through the dedicated submitter endpoint", async () => {
+    const { queryBuilder } = mockPonderModules([{ contentId: 1n, roundId: 2n }]);
+    const { registerContentRoutes } = await import("../src/api/routes/content-routes.js");
+
+    const app = new Hono();
+    registerContentRoutes(app);
+
+    const response = await app.request(
+      "http://localhost/submitter-settled-rounds?submitter=0x0000000000000000000000000000000000000001&limit=25&offset=5",
+    );
+
+    expect(response.status).toBe(200);
+    expect(queryBuilder.innerJoin).toHaveBeenCalled();
+    expect(queryBuilder.limit).toHaveBeenCalledWith(25);
+    expect(queryBuilder.offset).toHaveBeenCalledWith(5);
+
+    const whereArg = queryBuilder.where.mock.calls[0]?.[0];
+    const serialized = serializeExpression(whereArg);
+
+    expect(serialized).toContain("content.submitter");
+    expect(serialized).toContain("0x0000000000000000000000000000000000000001");
+    expect(serialized).toContain("round.state");
+  });
 });
 
 describe("registerLeaderboardRoutes", () => {
