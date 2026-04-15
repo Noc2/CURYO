@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo } from "react";
+import { resolveTrustVerticalSlug, stripTrustVerticalTags } from "@curyo/node-utils/trustVerticals";
 import { parseTags } from "~~/constants/categories";
 import {
   type ContentItem,
@@ -43,6 +44,7 @@ export function useContentFeed(voterAddress?: string, options: UseContentFeedOpt
   const sortBy = options.sortBy ?? "newest";
   const submitter = options.submitter?.trim();
   const submitters = options.submitters;
+  const vertical = options.vertical;
   const normalizedOwnSubmitterAddresses = useMemo(() => {
     const values = new Set<string>();
 
@@ -104,16 +106,25 @@ export function useContentFeed(voterAddress?: string, options: UseContentFeedOpt
         if (!args.contentId || !args.url || !args.title || !args.description) return null;
 
         const eventSubmitter = args.submitter || "";
+        const rawTags = parseTags(args.tags || "");
+        const categoryId = args.categoryId ?? 0n;
+        const verticalSlug = resolveTrustVerticalSlug({
+          categoryId,
+          tags: rawTags,
+          url: args.url,
+        });
+
         return {
           id: args.contentId,
           url: args.url,
           title: args.title,
           description: args.description,
-          tags: parseTags(args.tags || ""),
+          tags: stripTrustVerticalTags(rawTags),
+          verticalSlug,
           submitter: eventSubmitter,
           contentHash: args.contentHash || "",
           isOwnContent: ownSubmitterAddressSet.has(eventSubmitter.toLowerCase()),
-          categoryId: args.categoryId ?? 0n,
+          categoryId,
           rating: 50,
           createdAt: event.blockData?.timestamp
             ? new Date(Number(event.blockData.timestamp) * 1000).toISOString()
@@ -139,9 +150,10 @@ export function useContentFeed(voterAddress?: string, options: UseContentFeedOpt
           contentIds,
           submitters: normalizedSubmitterFilters,
           searchQuery,
+          vertical,
         }),
       ),
-    [categoryId, contentIds, normalizedSubmitterFilters, rpcFeed, searchQuery],
+    [categoryId, contentIds, normalizedSubmitterFilters, rpcFeed, searchQuery, vertical],
   );
   const sortedRpcFeed = useMemo(
     () => sortRpcFeed(filteredRpcFeed, sortBy, searchQuery),
@@ -162,6 +174,7 @@ export function useContentFeed(voterAddress?: string, options: UseContentFeedOpt
       limit ?? "all",
       offset,
       categoryId?.toString() ?? "all",
+      vertical ?? "all",
       submittersKey || "all",
       searchQuery ?? "",
       contentIdsParam ?? "",
@@ -183,6 +196,7 @@ export function useContentFeed(voterAddress?: string, options: UseContentFeedOpt
         status: "all",
         submitter: normalizedSubmitterFilters.length === 1 ? normalizedSubmitterFilters[0] : undefined,
         submitters: normalizedSubmitterFilters.length > 1 ? normalizedSubmitterFilters.join(",") : undefined,
+        vertical,
       };
 
       if (limit !== undefined) {

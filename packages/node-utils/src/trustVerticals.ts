@@ -110,6 +110,26 @@ const LEGACY_DOMAIN_TO_VERTICAL: Record<string, TrustVerticalSlug> = {
   "youtu.be": "entertainment",
 };
 
+const LEGACY_CATEGORY_IDS_BY_VERTICAL = TRUST_VERTICALS.reduce(
+  (acc, vertical) => {
+    acc[vertical.slug] = Object.entries(LEGACY_CATEGORY_ID_TO_VERTICAL)
+      .filter(([, slug]) => slug === vertical.slug)
+      .map(([categoryId]) => categoryId);
+    return acc;
+  },
+  {} as Record<TrustVerticalSlug, string[]>,
+);
+
+const LEGACY_DOMAINS_BY_VERTICAL = TRUST_VERTICALS.reduce(
+  (acc, vertical) => {
+    acc[vertical.slug] = Object.entries(LEGACY_DOMAIN_TO_VERTICAL)
+      .filter(([, slug]) => slug === vertical.slug)
+      .map(([domain]) => domain);
+    return acc;
+  },
+  {} as Record<TrustVerticalSlug, string[]>,
+);
+
 export interface ResolveTrustVerticalInput {
   categoryId?: string | number | bigint | null;
   categoryName?: string | null;
@@ -219,4 +239,12 @@ export function resolveTrustVerticalSlug(input: ResolveTrustVerticalInput): Trus
 
 export function getTrustVerticalLabel(slug: TrustVerticalSlug) {
   return getTrustVertical(slug).label;
+}
+
+export function getLegacyCategoryIdsForTrustVertical(slug: TrustVerticalSlug): readonly string[] {
+  return LEGACY_CATEGORY_IDS_BY_VERTICAL[slug] ?? [];
+}
+
+export function getLegacyDomainsForTrustVertical(slug: TrustVerticalSlug): readonly string[] {
+  return LEGACY_DOMAINS_BY_VERTICAL[slug] ?? [];
 }

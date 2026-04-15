@@ -331,6 +331,7 @@ export interface PonderContentQuery {
   status?: string;
   submitter?: string;
   submitters?: string;
+  vertical?: string;
 }
 
 export interface PonderContentOpenRoundSummary {

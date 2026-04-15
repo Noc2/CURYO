@@ -225,6 +225,20 @@ describe("registerContentRoutes", () => {
     expect(db.select).not.toHaveBeenCalled();
   });
 
+  it("rejects invalid trust vertical filters before querying the database", async () => {
+    const { db } = mockPonderModules([]);
+    const { registerContentRoutes } = await import("../src/api/routes/content-routes.js");
+
+    const app = new Hono();
+    registerContentRoutes(app);
+
+    const response = await app.request("http://localhost/content?vertical=books");
+
+    expect(response.status).toBe(400);
+    expect(await response.json()).toEqual({ error: "Invalid vertical" });
+    expect(db.select).not.toHaveBeenCalled();
+  });
+
   it("uses bounded search pagination without running an exact count", async () => {
     const { db, queryBuilder } = mockPonderModules([{ id: 1n }]);
     mockSharedModule();
@@ -304,6 +318,28 @@ describe("registerContentRoutes", () => {
     expect(serialized).toContain("content.title");
     expect(serialized).toContain("content.description");
     expect(serialized).toContain("content.tags");
+  });
+
+  it("filters content by trust vertical tags with legacy category fallback", async () => {
+    const { queryBuilder } = mockPonderModules([{ id: 1n }]);
+    mockSharedModule();
+    const { registerContentRoutes } = await import("../src/api/routes/content-routes.js");
+
+    const app = new Hono();
+    registerContentRoutes(app);
+
+    const response = await app.request("http://localhost/content?vertical=software");
+
+    expect(response.status).toBe(200);
+
+    const whereArg = queryBuilder.where.mock.calls[0]?.[0];
+    const serialized = serializeExpression(whereArg);
+
+    expect(serialized).toContain("vertical:software");
+    expect(serialized).toContain("vertical:%");
+    expect(serialized).toContain("content.categoryId");
+    expect(serialized).toContain("content.urlHost");
+    expect(serialized).toContain("github.com");
   });
 
   it("supports filtering content by multiple raw submitter wallets", async () => {

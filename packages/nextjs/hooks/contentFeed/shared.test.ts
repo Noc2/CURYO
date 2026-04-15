@@ -90,6 +90,42 @@ test("mapContentItem marks linked submitter addresses as own content", () => {
   assert.equal(item.isOwnContent, true);
 });
 
+test("mapContentItem extracts vertical tags without exposing them as display tags", () => {
+  const item = mapContentItem({
+    id: "2",
+    url: "https://github.com/curyo/curyo",
+    title: "Repository",
+    description: "Developer tool",
+    tags: "vertical:software, open-source",
+    submitter: "0x00000000000000000000000000000000000000aa",
+    contentHash: "hash-2",
+    categoryId: "1",
+    rating: 50,
+  });
+
+  assert.equal(item.verticalSlug, "software");
+  assert.deepEqual(item.tags, ["open-source"]);
+});
+
+test("filterRpcFeed filters by explicit and legacy trust verticals", () => {
+  const software = {
+    ...buildItem(1n, "Package", "Developer package", ["npm"]),
+    categoryId: 13n,
+  };
+  const investment = {
+    ...buildItem(2n, "Token", "Crypto token", ["vertical:investment"]),
+    categoryId: 1n,
+    verticalSlug: "investment" as const,
+  };
+
+  assert.deepEqual(
+    filterRpcFeed([software, investment], {
+      vertical: "software",
+    }).map(item => item.id),
+    [1n],
+  );
+});
+
 test("filterRpcFeed matches any address in the submitters filter", () => {
   const matching = {
     ...buildItem(1n, "Delegated", "Bot-submitted content", []),

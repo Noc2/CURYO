@@ -1,5 +1,10 @@
 "use client";
 
+import {
+  type TrustVerticalSlug,
+  resolveTrustVerticalSlug,
+  stripTrustVerticalTags,
+} from "@curyo/node-utils/trustVerticals";
 import { parseTags } from "~~/constants/categories";
 import type { ContentMetadataResult } from "~~/lib/contentMetadata/types";
 import { isContentItemBlocked } from "~~/utils/contentFilter";
@@ -34,6 +39,7 @@ export interface ContentItem {
   title: string;
   description: string;
   tags: string[];
+  verticalSlug?: TrustVerticalSlug;
   submitter: string;
   contentHash: string;
   isOwnContent: boolean;
@@ -65,6 +71,7 @@ export interface UseContentFeedOptions {
   sortBy?: FeedSort;
   submitter?: string;
   submitters?: string[];
+  vertical?: TrustVerticalSlug;
 }
 
 function buildNormalizedAddressSet(addresses: readonly string[] | undefined, fallbackAddress?: string): Set<string> {
@@ -154,13 +161,20 @@ export function mapContentItem(
     item.conservativeRatingBps !== undefined ? BigInt(item.conservativeRatingBps) : undefined;
   const displayedRating =
     mappedOpenRound?.referenceRatingBps !== undefined ? Number(mappedOpenRound.referenceRatingBps) / 100 : item.rating;
+  const rawTags = parseTags(item.tags);
+  const verticalSlug = resolveTrustVerticalSlug({
+    categoryId: item.categoryId,
+    tags: rawTags,
+    url: item.url,
+  });
 
   return {
     id: BigInt(item.id),
     url: item.url,
     title: item.title,
     description: item.description,
-    tags: parseTags(item.tags),
+    tags: stripTrustVerticalTags(rawTags),
+    verticalSlug,
     submitter: item.submitter,
     contentHash: item.contentHash,
     isOwnContent: ownSubmitterAddressSet.has(item.submitter.toLowerCase()),
@@ -343,7 +357,7 @@ export function isContentSearchQueryTooShort(value: string | undefined): boolean
 }
 
 export function filterRpcFeed(feed: ContentItem[], options: UseContentFeedOptions): ContentItem[] {
-  const { categoryId, contentIds, searchQuery, submitter, submitters } = options;
+  const { categoryId, contentIds, searchQuery, submitter, submitters, vertical } = options;
   if (isContentSearchQueryTooShort(searchQuery)) {
     return [];
   }
@@ -355,6 +369,19 @@ export function filterRpcFeed(feed: ContentItem[], options: UseContentFeedOption
   return feed.filter(item => {
     if (categoryId !== undefined && item.categoryId !== categoryId) {
       return false;
+    }
+
+    if (vertical !== undefined) {
+      const itemVertical =
+        item.verticalSlug ??
+        resolveTrustVerticalSlug({
+          categoryId: item.categoryId,
+          tags: item.tags,
+          url: item.url,
+        });
+      if (itemVertical !== vertical) {
+        return false;
+      }
     }
 
     if (contentIdSet && !contentIdSet.has(item.id.toString())) {

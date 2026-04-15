@@ -1,4 +1,11 @@
 import { ROUND_STATE } from "@curyo/contracts/protocol";
+import {
+  TRUST_VERTICAL_TAG_PREFIX,
+  buildTrustVerticalTag,
+  getLegacyCategoryIdsForTrustVertical,
+  getLegacyDomainsForTrustVertical,
+  isTrustVerticalSlug,
+} from "@curyo/node-utils/trustVerticals";
 import { and, asc, desc, eq, inArray, or, sql } from "ponder";
 import { db } from "ponder:api";
 import { category, content, profile, ratingChange, rewardClaim, round, vote } from "ponder:schema";
@@ -60,6 +67,42 @@ function getSearchOrderBy(searchRank: ReturnType<typeof sql<number>>, sortBy: st
   }
 }
 
+function hasExactTrustVerticalTagCondition(verticalTag: string) {
+  return sql<boolean>`exists (
+    select 1
+    from unnest(string_to_array(lower(coalesce(${content.tags}, '')), ',')) as tag(value)
+    where btrim(tag.value) = ${verticalTag}
+  )`;
+}
+
+function hasAnyTrustVerticalTagCondition() {
+  return sql<boolean>`exists (
+    select 1
+    from unnest(string_to_array(lower(coalesce(${content.tags}, '')), ',')) as tag(value)
+    where btrim(tag.value) like ${`${TRUST_VERTICAL_TAG_PREFIX}%`}
+  )`;
+}
+
+function buildTrustVerticalCondition(slug: Parameters<typeof buildTrustVerticalTag>[0]) {
+  const exactVerticalTag = hasExactTrustVerticalTagCondition(buildTrustVerticalTag(slug));
+  const legacyCategoryIds = getLegacyCategoryIdsForTrustVertical(slug).map(categoryId => BigInt(categoryId));
+  const legacyDomains = getLegacyDomainsForTrustVertical(slug);
+  const legacyConditions = [];
+
+  if (legacyCategoryIds.length > 0) {
+    legacyConditions.push(inArray(content.categoryId, legacyCategoryIds));
+  }
+  if (legacyDomains.length > 0) {
+    legacyConditions.push(inArray(content.urlHost, [...legacyDomains]));
+  }
+  if (legacyConditions.length === 0) {
+    return exactVerticalTag;
+  }
+
+  const legacyCondition = legacyConditions.length === 1 ? legacyConditions[0] : or(...legacyConditions);
+  return or(exactVerticalTag, and(sql<boolean>`not (${hasAnyTrustVerticalTagCondition()})`, legacyCondition));
+}
+
 export function registerContentRoutes(app: ApiApp) {
   app.get("/content", async (c) => {
     const categoryId = c.req.query("categoryId");
@@ -71,6 +114,7 @@ export function registerContentRoutes(app: ApiApp) {
     const submitterQuery = c.req.query("submitter");
     const submittersQuery = c.req.query("submitters");
     const sortBy = c.req.query("sortBy") ?? "newest";
+    const vertical = c.req.query("vertical")?.trim();
     const limit = safeLimit(c.req.query("limit"), 50, 200);
     const offset = safeOffset(c.req.query("offset"));
     if (Number.isNaN(offset)) return c.json({ error: "Invalid offset" }, 400);
@@ -103,6 +147,10 @@ export function registerContentRoutes(app: ApiApp) {
       const parsed = safeBigInt(categoryId);
       if (parsed === null) return c.json({ error: "Invalid categoryId" }, 400);
       conditions.push(eq(content.categoryId, parsed));
+    }
+    if (vertical) {
+      if (!isTrustVerticalSlug(vertical)) return c.json({ error: "Invalid vertical" }, 400);
+      conditions.push(buildTrustVerticalCondition(vertical));
     }
     if (contentIds.length > 0) {
       conditions.push(inArray(content.id, contentIds));
