@@ -29,14 +29,34 @@ const STEPS = [
 const FALLBACK_SOCIAL_PROOF_STATS = {
   totalVotes: 3482,
   totalVoterIds: 287,
-  totalRoundsSettled: 912,
+  totalQuestionRewardsPaid: "0",
 };
+
+function formatUsdcPaidOut(rawAmount: unknown) {
+  let amount: bigint;
+  try {
+    amount = BigInt(String(rawAmount ?? 0));
+  } catch {
+    amount = 0n;
+  }
+
+  const nonNegativeAmount = amount > 0n ? amount : 0n;
+  const cents = nonNegativeAmount > 0n ? (nonNegativeAmount + 5_000n) / 10_000n : 0n;
+  const dollars = cents / 100n;
+  const centsPart = cents % 100n;
+
+  if (centsPart === 0n) {
+    return `$${dollars.toLocaleString("en-US")}`;
+  }
+
+  return `$${dollars.toLocaleString("en-US")}.${centsPart.toString().padStart(2, "0")}`;
+}
 
 async function getLandingPageSocialProofItems() {
   const fallbackItems = [
     { value: FALLBACK_SOCIAL_PROOF_STATS.totalVoterIds.toLocaleString("en-US"), label: "verified humans" },
     { value: FALLBACK_SOCIAL_PROOF_STATS.totalVotes.toLocaleString("en-US"), label: "votes" },
-    { value: FALLBACK_SOCIAL_PROOF_STATS.totalRoundsSettled.toLocaleString("en-US"), label: "rounds settled" },
+    { value: formatUsdcPaidOut(FALLBACK_SOCIAL_PROOF_STATS.totalQuestionRewardsPaid), label: "paid out" },
   ];
 
   const ponderUrl = getOptionalPonderUrl();
@@ -56,15 +76,15 @@ async function getLandingPageSocialProofItems() {
     const stats = (await response.json()) as {
       totalVotes?: number;
       totalVoterIds?: number;
-      totalRoundsSettled?: number;
+      totalQuestionRewardsPaid?: string;
     };
 
     return [
       { value: Math.max(0, Number(stats.totalVoterIds ?? 0)).toLocaleString("en-US"), label: "verified humans" },
       { value: Math.max(0, Number(stats.totalVotes ?? 0)).toLocaleString("en-US"), label: "votes" },
       {
-        value: Math.max(0, Number(stats.totalRoundsSettled ?? 0)).toLocaleString("en-US"),
-        label: "rounds settled",
+        value: formatUsdcPaidOut(stats.totalQuestionRewardsPaid),
+        label: "paid out",
       },
     ];
   } catch {

@@ -7,6 +7,7 @@ import {
   frontend,
   globalStats,
   questionRewardPool,
+  questionRewardPoolClaim,
   questionRewardPoolRound,
   rewardClaim,
   round,
@@ -467,21 +468,33 @@ export function registerDataRoutes(app: ApiApp) {
   });
 
   app.get("/stats", async (c) => {
-    const [stats] = await db
-      .select()
-      .from(globalStats)
-      .where(eq(globalStats.id, "global"))
-      .limit(1);
+    const [[stats], [rewardPoolStats]] = await Promise.all([
+      db
+        .select()
+        .from(globalStats)
+        .where(eq(globalStats.id, "global"))
+        .limit(1),
+      db
+        .select({
+          totalQuestionRewardsPaid: sql<bigint>`coalesce(sum(${questionRewardPoolClaim.amount}), 0)`,
+        })
+        .from(questionRewardPoolClaim),
+    ]);
+
+    const fallbackStats = {
+      totalContent: 0,
+      totalVotes: 0,
+      totalRoundsSettled: 0,
+      totalRewardsClaimed: "0",
+      totalProfiles: 0,
+      totalVoterIds: 0,
+    };
 
     return jsonBig(
       c,
-      stats ?? {
-        totalContent: 0,
-        totalVotes: 0,
-        totalRoundsSettled: 0,
-        totalRewardsClaimed: "0",
-        totalProfiles: 0,
-        totalVoterIds: 0,
+      {
+        ...(stats ?? fallbackStats),
+        totalQuestionRewardsPaid: rewardPoolStats?.totalQuestionRewardsPaid ?? 0n,
       },
     );
   });

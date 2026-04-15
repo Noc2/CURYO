@@ -79,6 +79,9 @@ function mockPonderModules<T>(result: T) {
       url: "content.url",
       urlHost: "content.urlHost",
     },
+    globalStats: {
+      id: "globalStats.id",
+    },
     profile: {
       address: "profile.address",
       name: "profile.name",
@@ -100,6 +103,9 @@ function mockPonderModules<T>(result: T) {
       requiredSettledRounds: "questionRewardPool.requiredSettledRounds",
       startRoundId: "questionRewardPool.startRoundId",
       unallocatedAmount: "questionRewardPool.unallocatedAmount",
+    },
+    questionRewardPoolClaim: {
+      amount: "questionRewardPoolClaim.amount",
     },
     questionRewardPoolRound: {
       allocation: "questionRewardPoolRound.allocation",
@@ -498,6 +504,31 @@ describe("registerLeaderboardRoutes", () => {
 });
 
 describe("registerDataRoutes", () => {
+  it("includes question reward pool payouts in global stats", async () => {
+    mockPonderModules([
+      {
+        totalContent: 2,
+        totalVotes: 3,
+        totalRoundsSettled: 1,
+        totalRewardsClaimed: 0n,
+        totalProfiles: 4,
+        totalVoterIds: 5,
+        totalQuestionRewardsPaid: 123_450_000n,
+      },
+    ]);
+    const { registerDataRoutes } = await import("../src/api/routes/data-routes.js");
+
+    const app = new Hono();
+    registerDataRoutes(app);
+
+    const response = await app.request("http://localhost/stats");
+
+    expect(response.status).toBe(200);
+    expect(await response.json()).toMatchObject({
+      totalQuestionRewardsPaid: "123450000",
+    });
+  });
+
   it("rejects vote cooldown requests without valid voters before querying the database", async () => {
     const { db } = mockPonderModules([]);
     const { registerDataRoutes } = await import("../src/api/routes/data-routes.js");

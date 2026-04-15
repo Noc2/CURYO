@@ -934,6 +934,7 @@ export const ponderApi = {
       totalVotes: number;
       totalRoundsSettled: number;
       totalRewardsClaimed: string;
+      totalQuestionRewardsPaid: string;
       totalProfiles: number;
       totalVoterIds: number;
     }>("/stats");

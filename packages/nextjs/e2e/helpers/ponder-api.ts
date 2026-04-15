@@ -119,7 +119,12 @@ export async function getVotes(
  */
 export async function getStats(
   baseURL = PONDER_URL,
-): Promise<{ totalContent: number; totalVotes: number; totalRoundsSettled: number }> {
+): Promise<{
+  totalContent: number;
+  totalVotes: number;
+  totalRoundsSettled: number;
+  totalQuestionRewardsPaid: string;
+}> {
   const res = await fetchWithRetry(`${baseURL}/stats`);
   if (!res.ok) throw new Error(`GET /stats returned ${res.status}`);
   return res.json();
