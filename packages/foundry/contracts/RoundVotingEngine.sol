@@ -145,6 +145,10 @@ contract RoundVotingEngine is
     // Voter to commit hash lookup: contentId => roundId => voter => commitHash (O(1) claim lookups)
     mapping(uint256 => mapping(uint256 => mapping(address => bytes32))) public voterCommitHash;
 
+    // Voter ID keyed commit lookups for stablecoin bounty claims through delegated wallets.
+    mapping(uint256 => mapping(uint256 => mapping(uint256 => bytes32))) public voterIdCommitKey;
+    mapping(uint256 => mapping(uint256 => mapping(bytes32 => uint256))) public commitVoterId;
+
     // Frontend fee aggregation (computed incrementally during revealVote for O(1) settlement)
     mapping(uint256 => mapping(uint256 => uint256)) public roundStakeWithEligibleFrontend;
     mapping(uint256 => mapping(uint256 => mapping(address => uint256))) public roundPerFrontendStake;
@@ -412,14 +416,7 @@ contract RoundVotingEngine is
         );
 
         emit VoteCommitted(
-            contentId,
-            roundId,
-            voter,
-            commitHash,
-            expectedReferenceRatingBps,
-            targetRound,
-            drandChainHash,
-            stakeAmount
+            contentId, roundId, voter, commitHash, expectedReferenceRatingBps, targetRound, drandChainHash, stakeAmount
         );
     }
 
@@ -549,6 +546,8 @@ contract RoundVotingEngine is
         }
         if (useTokenIdentity) {
             hasTokenIdCommitted[contentId][roundId][voterId] = true;
+            voterIdCommitKey[contentId][roundId][voterId] = commitKey;
+            commitVoterId[contentId][roundId][commitKey] = voterId;
         }
     }
 
@@ -817,8 +816,7 @@ contract RoundVotingEngine is
         uint256 len = commitKeys.length;
         if (startIndex >= len) revert IndexOutOfBounds();
 
-        (uint256 forfeitedCrep, uint256 refundedCrep, uint256 updatedConsensusReserve) = RoundCleanupLib
-            .processUnrevealedVotes(
+        (uint256 forfeitedCrep, uint256 refundedCrep, uint256 updatedConsensusReserve) = RoundCleanupLib.processUnrevealedVotes(
             round,
             commitKeys,
             commits[contentId][roundId],
@@ -991,23 +989,22 @@ contract RoundVotingEngine is
         RoundLib.Commit storage commit = commits[contentId][roundId][commitKey];
         RoundLib.RoundConfig memory roundCfg = _getRoundConfig(contentId, roundId);
         uint256 targetRoundRevealableAt = _targetRoundRevealableAt(contentId, roundId, commit.targetRound);
-        (uint256 eligibleFrontendStake, uint256 eligibleFrontendCount, address voter) =
-            RoundRevealLib.revealVote(
-                round,
-                commit,
-                epochUnrevealedCount[contentId][roundId],
-                frontendEligibleAtCommit[contentId][roundId],
-                roundPerFrontendStake[contentId][roundId],
-                roundStakeWithEligibleFrontend[contentId][roundId],
-                roundEligibleFrontendCount[contentId][roundId],
-                contentId,
-                commitKey,
-                isUp,
-                salt,
-                _getRoundReferenceRatingBps(contentId, roundId),
-                roundCfg.minVoters,
-                targetRoundRevealableAt
-            );
+        (uint256 eligibleFrontendStake, uint256 eligibleFrontendCount, address voter) = RoundRevealLib.revealVote(
+            round,
+            commit,
+            epochUnrevealedCount[contentId][roundId],
+            frontendEligibleAtCommit[contentId][roundId],
+            roundPerFrontendStake[contentId][roundId],
+            roundStakeWithEligibleFrontend[contentId][roundId],
+            roundEligibleFrontendCount[contentId][roundId],
+            contentId,
+            commitKey,
+            isUp,
+            salt,
+            _getRoundReferenceRatingBps(contentId, roundId),
+            roundCfg.minVoters,
+            targetRoundRevealableAt
+        );
         roundStakeWithEligibleFrontend[contentId][roundId] = eligibleFrontendStake;
         roundEligibleFrontendCount[contentId][roundId] = eligibleFrontendCount;
 
@@ -1027,6 +1024,16 @@ contract RoundVotingEngine is
 
     function previewCommitReferenceRatingBps(uint256 contentId) external view returns (uint16) {
         return _previewCommitReferenceRatingBps(contentId);
+    }
+
+    function getRoundCommitCount(uint256 contentId, uint256 roundId) external view returns (uint256) {
+        return roundCommitHashes[contentId][roundId].length;
+    }
+
+    function getRoundCommitKey(uint256 contentId, uint256 roundId, uint256 index) external view returns (bytes32) {
+        bytes32[] storage commitKeys = roundCommitHashes[contentId][roundId];
+        if (index >= commitKeys.length) revert IndexOutOfBounds();
+        return commitKeys[index];
     }
 
     // --- Admin ---
@@ -1074,5 +1081,5 @@ contract RoundVotingEngine is
     mapping(uint256 => bool) internal contentHasSettledRound;
 
     // --- Storage gap reserved for future upgrades ---
-    uint256[47] private __gap;
+    uint256[45] private __gap;
 }

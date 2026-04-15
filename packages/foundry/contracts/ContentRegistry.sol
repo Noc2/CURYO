@@ -375,6 +375,28 @@ contract ContentRegistry is Initializable, AccessControlUpgradeable, PausableUpg
         return _submitValidatedContent(metadata, salt);
     }
 
+    function submitQuestion(
+        string calldata url,
+        string calldata title,
+        string calldata description,
+        string calldata tags,
+        uint256 categoryId,
+        bytes32 salt
+    ) external nonReentrant whenNotPaused returns (uint256) {
+        // Require Voter ID if VoterIdNFT is configured
+        if (address(voterIdNFT) != address(0)) {
+            require(voterIdNFT.hasVoterId(msg.sender), "Voter ID required");
+        }
+
+        SubmissionMetadata memory metadata = SubmissionMetadata({
+            url: url, title: title, description: description, tags: tags, categoryId: categoryId
+        });
+        _validateQuestionSubmissionMetadata(metadata);
+
+        require(address(categoryRegistry) != address(0), "CategoryRegistry not set");
+        return _submitValidatedQuestion(metadata, salt);
+    }
+
     /// @notice Cancel content before any votes. Returns submitter stake in cREP.
     /// @dev Only callable by the submitter. VotingEngine must confirm 0 votes.
     function cancelContent(uint256 contentId) external nonReentrant whenNotPaused {
@@ -414,6 +436,18 @@ contract ContentRegistry is Initializable, AccessControlUpgradeable, PausableUpg
         require(bytes(metadata.url).length > 0, "URL required");
         require(bytes(metadata.url).length <= MAX_URL_LENGTH, "URL too long");
         require(_isValidSubmissionUrl(metadata.url), "Invalid URL");
+        _validateTextFields(metadata);
+    }
+
+    function _validateQuestionSubmissionMetadata(SubmissionMetadata memory metadata) internal pure {
+        if (bytes(metadata.url).length > 0) {
+            require(bytes(metadata.url).length <= MAX_URL_LENGTH, "URL too long");
+            require(_isValidSubmissionUrl(metadata.url), "Invalid URL");
+        }
+        _validateTextFields(metadata);
+    }
+
+    function _validateTextFields(SubmissionMetadata memory metadata) internal pure {
         require(bytes(metadata.title).length > 0, "Title required");
         require(bytes(metadata.title).length <= MAX_TITLE_LENGTH, "Title too long");
         require(bytes(metadata.description).length > 0, "Description required");
@@ -429,6 +463,28 @@ contract ContentRegistry is Initializable, AccessControlUpgradeable, PausableUpg
         (uint256 resolvedCategoryId, bytes32 submissionKey, PendingSubmission memory pending) =
             _prepareSubmission(metadata, salt);
         bytes32 contentHash = keccak256(abi.encode(metadata.url, metadata.title, metadata.description, metadata.tags));
+        contentId = _storeSubmittedContent(submissionKey, pending, contentHash, resolvedCategoryId);
+        emit ContentSubmitted(
+            contentId,
+            msg.sender,
+            contentHash,
+            metadata.url,
+            metadata.title,
+            metadata.description,
+            metadata.tags,
+            resolvedCategoryId
+        );
+    }
+
+    function _submitValidatedQuestion(SubmissionMetadata memory metadata, bytes32 salt)
+        internal
+        returns (uint256 contentId)
+    {
+        (uint256 resolvedCategoryId, bytes32 submissionKey, PendingSubmission memory pending) =
+            _prepareQuestionSubmission(metadata, salt);
+        bytes32 contentHash = keccak256(
+            abi.encode(metadata.url, metadata.title, metadata.description, metadata.tags, resolvedCategoryId)
+        );
         contentId = _storeSubmittedContent(submissionKey, pending, contentHash, resolvedCategoryId);
         emit ContentSubmitted(
             contentId,
@@ -461,6 +517,59 @@ contract ContentRegistry is Initializable, AccessControlUpgradeable, PausableUpg
 
         delete pendingSubmissions[revealCommitment];
         submissionKeyUsed[submissionKey] = true;
+    }
+
+    function _prepareQuestionSubmission(SubmissionMetadata memory metadata, bytes32 salt)
+        internal
+        returns (uint256 resolvedCategoryId, bytes32 submissionKey, PendingSubmission memory pending)
+    {
+        resolvedCategoryId = _resolveQuestionSubmissionCategory(metadata);
+        submissionKey = _deriveQuestionSubmissionKey(metadata, resolvedCategoryId);
+        require(!submissionKeyUsed[submissionKey], "Question already submitted");
+
+        bytes32 revealCommitment = _computeRevealCommitment(
+            submissionKey, metadata.title, metadata.description, metadata.tags, metadata.categoryId, salt, msg.sender
+        );
+        pending = pendingSubmissions[revealCommitment];
+        require(pending.submitter == msg.sender, "Reservation not found");
+        require(block.timestamp <= pending.expiresAt, "Reservation expired");
+        require(block.timestamp >= pending.reservedAt + RESERVED_SUBMISSION_MIN_AGE, "Reservation too new");
+
+        delete pendingSubmissions[revealCommitment];
+        submissionKeyUsed[submissionKey] = true;
+    }
+
+    function _resolveQuestionSubmissionCategory(SubmissionMetadata memory metadata)
+        internal
+        view
+        returns (uint256 resolvedCategoryId)
+    {
+        if (bytes(metadata.url).length == 0) {
+            require(metadata.categoryId != 0, "Category required");
+            require(categoryRegistry.isApprovedCategory(metadata.categoryId), "Category not approved");
+            return metadata.categoryId;
+        }
+
+        (resolvedCategoryId,) = SUBMISSION_CANONICALIZER.resolveCategoryAndSubmissionKey(
+            categoryRegistry, metadata.url, metadata.categoryId
+        );
+    }
+
+    function _deriveQuestionSubmissionKey(SubmissionMetadata memory metadata, uint256 resolvedCategoryId)
+        internal
+        pure
+        returns (bytes32)
+    {
+        return keccak256(
+            abi.encode(
+                "curyo-question-v1",
+                resolvedCategoryId,
+                metadata.url,
+                metadata.title,
+                metadata.description,
+                metadata.tags
+            )
+        );
     }
 
     function _storeSubmittedContent(
@@ -752,7 +861,10 @@ contract ContentRegistry is Initializable, AccessControlUpgradeable, PausableUpg
         require(rewardPool != address(0), "No milestone-zero pool");
         require(milestoneZeroSubmitterParticipationRateBps[contentId] == 0, "Repair not needed");
         require(rewardRateBps > 0 && rewardRateBps <= 9000, "Invalid reward rate");
-        require(ratingState[contentId].conservativeRatingBps >= _getSlashConfigForContent(contentId).slashThresholdBps, "Slashable milestone-zero");
+        require(
+            ratingState[contentId].conservativeRatingBps >= _getSlashConfigForContent(contentId).slashThresholdBps,
+            "Slashable milestone-zero"
+        );
         require(submitterParticipationRewardOwed[contentId] == 0, "Reward already accrued");
         require(submitterParticipationRewardPaid[contentId] == 0, "Reward already claimed");
         require(submitterParticipationRewardReserved[contentId] == 0, "Reward already reserved");
@@ -930,7 +1042,11 @@ contract ContentRegistry is Initializable, AccessControlUpgradeable, PausableUpg
         state = ratingState[contentId];
     }
 
-    function getSlashConfigForContent(uint256 contentId) external view returns (RatingLib.SlashConfig memory slashConfig) {
+    function getSlashConfigForContent(uint256 contentId)
+        external
+        view
+        returns (RatingLib.SlashConfig memory slashConfig)
+    {
         slashConfig = _getSlashConfigForContent(contentId);
     }
 
@@ -1000,6 +1116,24 @@ contract ContentRegistry is Initializable, AccessControlUpgradeable, PausableUpg
         require(address(categoryRegistry) != address(0), "CategoryRegistry not set");
         (resolvedCategoryId, submissionKey) =
             SUBMISSION_CANONICALIZER.resolveCategoryAndSubmissionKey(categoryRegistry, url, categoryId);
+    }
+
+    /// @notice Preview the resolved category and question-level submission key for a future reveal.
+    /// @dev Curyo 2 keys uniqueness by the submitted question, so URLs are optional and no longer globally unique.
+    function previewQuestionSubmissionKey(
+        string calldata url,
+        string calldata title,
+        string calldata description,
+        string calldata tags,
+        uint256 categoryId
+    ) external view returns (uint256 resolvedCategoryId, bytes32 submissionKey) {
+        SubmissionMetadata memory metadata = SubmissionMetadata({
+            url: url, title: title, description: description, tags: tags, categoryId: categoryId
+        });
+        _validateQuestionSubmissionMetadata(metadata);
+        require(address(categoryRegistry) != address(0), "CategoryRegistry not set");
+        resolvedCategoryId = _resolveQuestionSubmissionCategory(metadata);
+        submissionKey = _deriveQuestionSubmissionKey(metadata, resolvedCategoryId);
     }
 
     /// @notice Resolve the canonical submission key for a URL using the configured CategoryRegistry.
@@ -1086,11 +1220,19 @@ contract ContentRegistry is Initializable, AccessControlUpgradeable, PausableUpg
             return slashConfig;
         }
 
-        (slashConfig.slashThresholdBps, slashConfig.minSlashSettledRounds, slashConfig.minSlashLowDuration, slashConfig.minSlashEvidence) =
-            protocolConfig.slashConfig();
+        (
+            slashConfig.slashThresholdBps,
+            slashConfig.minSlashSettledRounds,
+            slashConfig.minSlashLowDuration,
+            slashConfig.minSlashEvidence
+        ) = protocolConfig.slashConfig();
     }
 
-    function _getSlashConfigForContent(uint256 contentId) internal view returns (RatingLib.SlashConfig memory slashConfig) {
+    function _getSlashConfigForContent(uint256 contentId)
+        internal
+        view
+        returns (RatingLib.SlashConfig memory slashConfig)
+    {
         slashConfig = contentSlashConfigSnapshot[contentId];
         if (slashConfig.slashThresholdBps == 0) {
             return _getCurrentSlashConfig();
