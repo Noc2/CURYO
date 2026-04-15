@@ -219,3 +219,39 @@ test("ponderApi.getAllRounds paginates every round for a content item", async ()
     ponderApi.getRounds = originalGetRounds;
   }
 });
+
+test("ponderApi.getAllSubmitterSettledRounds paginates a dedicated submitter endpoint", async () => {
+  const originalGetSubmitterSettledRounds = ponderApi.getSubmitterSettledRounds;
+  const offsets: string[] = [];
+  const submitters: string[] = [];
+
+  ponderApi.getSubmitterSettledRounds = async (submitter, params) => {
+    submitters.push(submitter);
+    offsets.push(params?.offset ?? "0");
+    const offset = Number(params?.offset ?? 0);
+    const length = offset === 0 ? 200 : 1;
+
+    return {
+      items: Array.from({ length }, (_, index) => ({
+        contentId: String(offset + index + 1),
+        roundId: "1",
+      })),
+      total: 201,
+      limit: 200,
+      offset,
+    };
+  };
+
+  try {
+    const rounds = await ponderApi.getAllSubmitterSettledRounds("0x0000000000000000000000000000000000000001");
+
+    assert.equal(rounds.length, 201);
+    assert.deepEqual(offsets, ["0", "200"]);
+    assert.deepEqual(submitters, [
+      "0x0000000000000000000000000000000000000001",
+      "0x0000000000000000000000000000000000000001",
+    ]);
+  } finally {
+    ponderApi.getSubmitterSettledRounds = originalGetSubmitterSettledRounds;
+  }
+});

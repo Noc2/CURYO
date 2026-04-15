@@ -390,6 +390,18 @@ export interface PonderRoundsResponse {
   offset: number;
 }
 
+export interface PonderSubmitterSettledRoundItem {
+  contentId: string;
+  roundId: string;
+}
+
+export interface PonderSubmitterSettledRoundsResponse {
+  items: PonderSubmitterSettledRoundItem[];
+  total: number;
+  limit: number;
+  offset: number;
+}
+
 export interface PonderRatingChange {
   id: string;
   contentId: string;
@@ -767,6 +779,22 @@ export const ponderApi = {
     return getAllPages(offset =>
       this.getRounds({
         ...params,
+        limit: String(PONDER_PAGE_LIMIT),
+        offset: String(offset),
+      }),
+    );
+  },
+
+  getSubmitterSettledRounds(submitter: string, params?: { limit?: string; offset?: string }) {
+    return ponderGet<PonderSubmitterSettledRoundsResponse>("/submitter-settled-rounds", {
+      ...params,
+      submitter,
+    });
+  },
+
+  async getAllSubmitterSettledRounds(submitter: string) {
+    return getAllPages(offset =>
+      this.getSubmitterSettledRounds(submitter, {
         limit: String(PONDER_PAGE_LIMIT),
         offset: String(offset),
       }),

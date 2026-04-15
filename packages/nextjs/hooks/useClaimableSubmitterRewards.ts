@@ -1,13 +1,12 @@
 "use client";
 
 import { useCallback, useMemo } from "react";
-import { ROUND_STATE } from "@curyo/contracts/protocol";
 import { useAccount, useReadContracts } from "wagmi";
 import { type ClaimableRewardItem, buildSubmitterClaimableRewards } from "~~/hooks/claimableRewards";
 import { useDeployedContractInfo } from "~~/hooks/scaffold-eth";
 import { useTargetNetwork } from "~~/hooks/scaffold-eth/useTargetNetwork";
 import { usePonderQuery } from "~~/hooks/usePonderQuery";
-import { type PonderRoundsResponse, ponderApi } from "~~/services/ponder/client";
+import { type PonderSubmitterSettledRoundItem, ponderApi } from "~~/services/ponder/client";
 
 interface SubmitterRewardClaimCandidate {
   contentId: bigint;
@@ -39,8 +38,8 @@ export function useClaimableSubmitterRewards() {
     isLoading: submissionsLoading,
     refetch: refetchSubmissions,
   } = usePonderQuery<
-    { settledRounds: Array<{ contentId: string; rounds: PonderRoundsResponse["items"] }> },
-    { settledRounds: Array<{ contentId: string; rounds: PonderRoundsResponse["items"] }> }
+    { settledRounds: Array<{ contentId: string; rounds: PonderSubmitterSettledRoundItem[] }> },
+    { settledRounds: Array<{ contentId: string; rounds: PonderSubmitterSettledRoundItem[] }> }
   >({
     queryKey: getClaimableSubmitterRewardsQueryKey(address, targetNetwork.id),
     enabled: Boolean(address),
@@ -49,12 +48,9 @@ export function useClaimableSubmitterRewards() {
         return { settledRounds: [] };
       }
 
-      const rounds = await ponderApi.getAllRounds({
-        submitter: address,
-        state: String(ROUND_STATE.Settled),
-      });
+      const rounds = await ponderApi.getAllSubmitterSettledRounds(address);
 
-      const roundsByContentId = new Map<string, PonderRoundsResponse["items"]>();
+      const roundsByContentId = new Map<string, PonderSubmitterSettledRoundItem[]>();
       for (const round of rounds) {
         const existing = roundsByContentId.get(round.contentId) ?? [];
         existing.push(round);
