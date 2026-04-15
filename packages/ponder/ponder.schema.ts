@@ -188,6 +188,79 @@ export const submitterRewardClaim = onchainTable(
 );
 
 // ============================================================
+// QUESTION BOUNTIES (USDC)
+// ============================================================
+
+export const questionBounty = onchainTable(
+  "question_bounty",
+  (t) => ({
+    id: t.bigint().primaryKey(),
+    contentId: t.bigint().notNull(),
+    funder: t.hex().notNull(),
+    funderVoterId: t.bigint().notNull(),
+    fundedAmount: t.bigint().notNull(),
+    unallocatedAmount: t.bigint().notNull(),
+    allocatedAmount: t.bigint().notNull(),
+    claimedAmount: t.bigint().notNull(),
+    refundedAmount: t.bigint().notNull(),
+    requiredVoters: t.integer().notNull(),
+    requiredSettledRounds: t.integer().notNull(),
+    qualifiedRounds: t.integer().notNull(),
+    startRoundId: t.bigint().notNull(),
+    expiresAt: t.bigint().notNull(),
+    refunded: t.boolean().notNull(),
+    createdAt: t.bigint().notNull(),
+    updatedAt: t.bigint().notNull(),
+  }),
+  (table) => ({
+    contentIdx: index().on(table.contentId),
+    funderIdx: index().on(table.funder),
+    refundedIdx: index().on(table.refunded),
+    createdAtIdx: index().on(table.createdAt),
+  }),
+);
+
+export const questionBountyRound = onchainTable(
+  "question_bounty_round",
+  (t) => ({
+    id: t.text().primaryKey(), // `${bountyId}-${roundId}`
+    bountyId: t.bigint().notNull(),
+    contentId: t.bigint().notNull(),
+    roundId: t.bigint().notNull(),
+    allocation: t.bigint().notNull(),
+    eligibleVoters: t.integer().notNull(),
+    claimedAmount: t.bigint().notNull(),
+    claimedCount: t.integer().notNull(),
+    qualifiedAt: t.bigint().notNull(),
+  }),
+  (table) => ({
+    bountyIdx: index().on(table.bountyId),
+    contentIdx: index().on(table.contentId),
+    roundIdx: index().on(table.contentId, table.roundId),
+  }),
+);
+
+export const questionBountyClaim = onchainTable(
+  "question_bounty_claim",
+  (t) => ({
+    id: t.text().primaryKey(), // `${bountyId}-${roundId}-${voterId}`
+    bountyId: t.bigint().notNull(),
+    contentId: t.bigint().notNull(),
+    roundId: t.bigint().notNull(),
+    claimant: t.hex().notNull(),
+    voterId: t.bigint().notNull(),
+    amount: t.bigint().notNull(),
+    claimedAt: t.bigint().notNull(),
+  }),
+  (table) => ({
+    bountyIdx: index().on(table.bountyId),
+    claimantIdx: index().on(table.claimant),
+    voterIdIdx: index().on(table.voterId),
+    contentIdx: index().on(table.contentId),
+  }),
+);
+
+// ============================================================
 // CATEGORY
 // ============================================================
 

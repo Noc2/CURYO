@@ -1082,6 +1082,50 @@ export const ContentRegistryAbi = [
   },
   {
     "type": "function",
+    "name": "previewQuestionSubmissionKey",
+    "inputs": [
+      {
+        "name": "url",
+        "type": "string",
+        "internalType": "string"
+      },
+      {
+        "name": "title",
+        "type": "string",
+        "internalType": "string"
+      },
+      {
+        "name": "description",
+        "type": "string",
+        "internalType": "string"
+      },
+      {
+        "name": "tags",
+        "type": "string",
+        "internalType": "string"
+      },
+      {
+        "name": "categoryId",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "resolvedCategoryId",
+        "type": "uint256",
+        "internalType": "uint256"
+      },
+      {
+        "name": "submissionKey",
+        "type": "bytes32",
+        "internalType": "bytes32"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
     "name": "previewSubmissionKey",
     "inputs": [
       {
@@ -1528,6 +1572,50 @@ export const ContentRegistryAbi = [
   {
     "type": "function",
     "name": "submitContent",
+    "inputs": [
+      {
+        "name": "url",
+        "type": "string",
+        "internalType": "string"
+      },
+      {
+        "name": "title",
+        "type": "string",
+        "internalType": "string"
+      },
+      {
+        "name": "description",
+        "type": "string",
+        "internalType": "string"
+      },
+      {
+        "name": "tags",
+        "type": "string",
+        "internalType": "string"
+      },
+      {
+        "name": "categoryId",
+        "type": "uint256",
+        "internalType": "uint256"
+      },
+      {
+        "name": "salt",
+        "type": "bytes32",
+        "internalType": "bytes32"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "stateMutability": "nonpayable"
+  },
+  {
+    "type": "function",
+    "name": "submitQuestion",
     "inputs": [
       {
         "name": "url",

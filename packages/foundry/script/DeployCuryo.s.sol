@@ -16,10 +16,12 @@ import { FrontendRegistry } from "../contracts/FrontendRegistry.sol";
 import { CategoryRegistry } from "../contracts/CategoryRegistry.sol";
 import { ProfileRegistry } from "../contracts/ProfileRegistry.sol";
 import { ProtocolConfig } from "../contracts/ProtocolConfig.sol";
+import { QuestionBountyEscrow } from "../contracts/QuestionBountyEscrow.sol";
 import { VoterIdNFT } from "../contracts/VoterIdNFT.sol";
 import { CuryoGovernor } from "../contracts/governance/CuryoGovernor.sol";
 import { ParticipationPool } from "../contracts/ParticipationPool.sol";
 import { HumanFaucet } from "../contracts/HumanFaucet.sol";
+import { MockERC20 } from "../contracts/mocks/MockERC20.sol";
 import { MockIdentityVerificationHub } from "../contracts/mocks/MockIdentityVerificationHub.sol";
 import { IIdentityVerificationHubV2 } from "@selfxyz/contracts/contracts/interfaces/IIdentityVerificationHubV2.sol";
 import { SelfStructs } from "@selfxyz/contracts/contracts/libraries/SelfStructs.sol";
@@ -48,6 +50,10 @@ contract DeployCuryo is ScaffoldETHDeploy {
     // Self.xyz IdentityVerificationHub addresses
     address constant CELO_MAINNET_HUB = 0xe57F4773bd9c9d8b6Cd70431117d353298B9f5BF;
     address constant CELO_SEPOLIA_HUB = 0x16ECBA51e18a4a7e61fdC417f0d47AFEeDfbed74;
+
+    // Native Circle USDC on Celo. Testnet address follows Circle's published testnet contract list.
+    address constant CELO_MAINNET_USDC = 0xcebA9300f2b948710d2653dD7B07f33A8B32118C;
+    address constant CELO_SEPOLIA_USDC = 0x01C5C0122039549AD1493B8220cABEdD739BC44E;
 
     function _preBroadcastChecks() internal view override {
         _resolveHumanFaucetConfig(block.chainid == 31337);
@@ -117,6 +123,7 @@ contract DeployCuryo is ScaffoldETHDeploy {
         FrontendRegistry frontendRegistryImpl = new FrontendRegistry();
         ProfileRegistry profileRegistryImpl = new ProfileRegistry();
         ProtocolConfig protocolConfigImpl = new ProtocolConfig();
+        QuestionBountyEscrow questionBountyEscrowImpl = new QuestionBountyEscrow();
 
         // 5. Deploy transparent proxies with initialization (governance owns each ProxyAdmin)
         TransparentUpgradeableProxy frontendRegistryProxy = new TransparentUpgradeableProxy(
@@ -180,6 +187,28 @@ contract DeployCuryo is ScaffoldETHDeploy {
         // 7. Deploy VoterIdNFT (soulbound identity for verified humans)
         VoterIdNFT voterIdNFT = new VoterIdNFT(deployer, governance);
         voterIdNFT.setStakeRecorder(address(votingEngine));
+
+        // 7a. Deploy Curyo 2 USDC bounty escrow.
+        address usdcTokenAddress;
+        MockERC20 localUsdcToken;
+        if (isLocalDev) {
+            localUsdcToken = new MockERC20("USD Coin", "USDC", 6);
+            usdcTokenAddress = address(localUsdcToken);
+            console.log("Mock USDC deployed at:", usdcTokenAddress);
+        } else {
+            usdcTokenAddress = _resolveCeloUsdcAddress();
+            console.log("Circle USDC resolved at:", usdcTokenAddress);
+        }
+
+        TransparentUpgradeableProxy questionBountyEscrowProxy = new TransparentUpgradeableProxy(
+            address(questionBountyEscrowImpl),
+            governance,
+            abi.encodeCall(
+                QuestionBountyEscrow.initialize,
+                (governance, usdcTokenAddress, address(registry), address(votingEngine), address(voterIdNFT))
+            )
+        );
+        QuestionBountyEscrow questionBountyEscrow = QuestionBountyEscrow(address(questionBountyEscrowProxy));
 
         // 8. Wire contracts together (deployer uses temporary config/admin roles where needed)
         registry.setVotingEngine(address(votingEngine));
@@ -321,8 +350,9 @@ contract DeployCuryo is ScaffoldETHDeploy {
             ];
             for (uint256 i = 0; i < testAccounts.length; i++) {
                 crepToken.transfer(testAccounts[i], testAmount);
+                localUsdcToken.mint(testAccounts[i], 10_000 * 1e6);
             }
-            console.log("Transferred 1000 cREP to 9 test accounts from treasury");
+            console.log("Transferred 1000 cREP and minted 10000 mock USDC to 9 test accounts");
 
             voterIdNFT.addMinter(deployer);
             for (uint256 i = 0; i < testAccounts.length; i++) {
@@ -342,7 +372,9 @@ contract DeployCuryo is ScaffoldETHDeploy {
             address devFaucet = vm.envOr("DEV_FAUCET_ADDRESS", address(0));
             bool isTestnet = (block.chainid == 44787 || block.chainid == 11142220);
             if (devFaucet != address(0) && isTestnet) {
-                console.log("DEV_FAUCET_ADDRESS configured; grant MINTER_ROLE/VoterId minter via governance post-deploy:");
+                console.log(
+                    "DEV_FAUCET_ADDRESS configured; grant MINTER_ROLE/VoterId minter via governance post-deploy:"
+                );
                 console.logAddress(devFaucet);
             }
 
@@ -383,6 +415,7 @@ contract DeployCuryo is ScaffoldETHDeploy {
                 votingEngine: votingEngine,
                 protocolConfig: protocolConfig,
                 rewardDistributor: rewardDistributor,
+                questionBountyEscrow: questionBountyEscrow,
                 frontendRegistry: frontendRegistry,
                 profileRegistry: profileRegistry,
                 categoryRegistry: categoryRegistry,
@@ -410,6 +443,7 @@ contract DeployCuryo is ScaffoldETHDeploy {
         deployments.push(Deployment("RoundVotingEngine", address(votingEngineProxy)));
         deployments.push(Deployment("ProtocolConfig", address(protocolConfigProxy)));
         deployments.push(Deployment("RoundRewardDistributor", address(rewardDistributorProxy)));
+        deployments.push(Deployment("QuestionBountyEscrow", address(questionBountyEscrowProxy)));
         deployments.push(Deployment("CategoryRegistry", address(categoryRegistry)));
         deployments.push(Deployment("VoterIdNFT", address(voterIdNFT)));
         deployments.push(Deployment("ParticipationPool", address(participationPool)));
@@ -426,6 +460,8 @@ contract DeployCuryo is ScaffoldETHDeploy {
         console.log("RoundVotingEngine:", address(votingEngine));
         console.log("ProtocolConfig:", address(protocolConfig));
         console.log("RoundRewardDistributor:", address(rewardDistributor));
+        console.log("QuestionBountyEscrow:", address(questionBountyEscrow));
+        console.log("USDC token:", usdcTokenAddress);
         console.log("CategoryRegistry:", address(categoryRegistry));
         console.log("VoterIdNFT:", address(voterIdNFT));
         console.log("ParticipationPool:", address(participationPool));
@@ -451,6 +487,16 @@ contract DeployCuryo is ScaffoldETHDeploy {
         }
         if (block.chainid == 11142220) {
             return (CELO_SEPOLIA_HUB, false);
+        }
+        revert UnsupportedHumanFaucetChain(block.chainid);
+    }
+
+    function _resolveCeloUsdcAddress() internal view returns (address) {
+        if (block.chainid == 42220) {
+            return CELO_MAINNET_USDC;
+        }
+        if (block.chainid == 11142220) {
+            return CELO_SEPOLIA_USDC;
         }
         revert UnsupportedHumanFaucetChain(block.chainid);
     }
@@ -489,7 +535,10 @@ contract DeployCuryo is ScaffoldETHDeploy {
         );
     }
 
-    function _assertExactExcludedHolders(CuryoGovernor governor, address[] memory expectedExcludedHolders) internal view {
+    function _assertExactExcludedHolders(CuryoGovernor governor, address[] memory expectedExcludedHolders)
+        internal
+        view
+    {
         address[] memory actualExcludedHolders = governor.getExcludedHolders();
         _require(actualExcludedHolders.length == expectedExcludedHolders.length, "Governor excluded holders length");
         for (uint256 i = 0; i < expectedExcludedHolders.length; i++) {
@@ -506,6 +555,7 @@ contract DeployCuryo is ScaffoldETHDeploy {
         RoundVotingEngine votingEngine,
         ProtocolConfig protocolConfig,
         RoundRewardDistributor rewardDistributor,
+        QuestionBountyEscrow questionBountyEscrow,
         FrontendRegistry frontendRegistry,
         ProfileRegistry profileRegistry,
         CategoryRegistry categoryRegistry,
@@ -583,6 +633,26 @@ contract DeployCuryo is ScaffoldETHDeploy {
         _requireProxyAdminOwner(address(rewardDistributor), governance, "RoundRewardDistributor proxy admin owner");
 
         _requireHasRole(
+            address(questionBountyEscrow),
+            questionBountyEscrow.DEFAULT_ADMIN_ROLE(),
+            governance,
+            "QuestionBountyEscrow governance default admin"
+        );
+        _requireHasRole(
+            address(questionBountyEscrow),
+            questionBountyEscrow.CONFIG_ROLE(),
+            governance,
+            "QuestionBountyEscrow governance config"
+        );
+        _requireHasRole(
+            address(questionBountyEscrow),
+            questionBountyEscrow.PAUSER_ROLE(),
+            governance,
+            "QuestionBountyEscrow governance pauser"
+        );
+        _requireProxyAdminOwner(address(questionBountyEscrow), governance, "QuestionBountyEscrow proxy admin owner");
+
+        _requireHasRole(
             address(frontendRegistry),
             frontendRegistry.DEFAULT_ADMIN_ROLE(),
             governance,
@@ -637,6 +707,12 @@ contract DeployCuryo is ScaffoldETHDeploy {
         _require(address(categoryRegistry.voterIdNFT()) == address(voterIdNFT), "CategoryRegistry voterIdNFT");
         _require(address(frontendRegistry.voterIdNFT()) == address(voterIdNFT), "FrontendRegistry voterIdNFT");
         _require(address(profileRegistry.voterIdNFT()) == address(voterIdNFT), "ProfileRegistry voterIdNFT");
+        _require(address(questionBountyEscrow.voterIdNFT()) == address(voterIdNFT), "QuestionBountyEscrow voterIdNFT");
+        _require(address(questionBountyEscrow.registry()) == address(registry), "QuestionBountyEscrow registry");
+        _require(
+            address(questionBountyEscrow.votingEngine()) == address(votingEngine), "QuestionBountyEscrow voting engine"
+        );
+        _require(address(questionBountyEscrow.usdcToken()) == _resolveCeloUsdcAddress(), "QuestionBountyEscrow USDC");
         _require(voterIdNFT.owner() == governance, "VoterIdNFT governance owner");
         _require(participationPool.owner() == governance, "ParticipationPool governance owner");
         if (address(humanFaucet) != address(0)) {

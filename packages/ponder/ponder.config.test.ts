@@ -34,6 +34,8 @@ const VALID_ENV = {
     chain11142220?.FrontendRegistry?.address ?? "0x6666666666666666666666666666666666666666",
   PONDER_VOTER_ID_NFT_ADDRESS: chain11142220?.VoterIdNFT?.address ?? "0x7777777777777777777777777777777777777777",
   PONDER_CREP_ADDRESS: chain11142220?.CuryoReputation?.address ?? "0x8888888888888888888888888888888888888888",
+  PONDER_QUESTION_BOUNTY_ESCROW_ADDRESS:
+    chain11142220?.QuestionBountyEscrow?.address ?? "0xbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
   PONDER_CONTENT_REGISTRY_START_BLOCK: String(expectedContentRegistryStartBlock),
 };
 

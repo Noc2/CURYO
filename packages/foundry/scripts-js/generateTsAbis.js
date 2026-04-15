@@ -18,6 +18,11 @@ const generatedContractComment = `
  * You should not edit it manually or your changes might be overwritten.
  */`;
 
+const RAW_DEPLOYMENT_CONTRACTS_TO_SKIP = new Set([
+  "ERC1967Proxy",
+  "TransparentUpgradeableProxy",
+]);
+
 function getDirectories(path) {
   if (!existsSync(path)) {
     return [];
@@ -196,6 +201,7 @@ function processAllDeployments(broadcastPath) {
 
   allDeployments.forEach((deployment) => {
     const { chainId, contractName } = deployment;
+    if (RAW_DEPLOYMENT_CONTRACTS_TO_SKIP.has(contractName)) return;
 
     // Capture deployer address from first CREATE transaction per chain
     if (!deployers[chainId]) {
@@ -381,6 +387,7 @@ const PONDER_CONTRACT_ENV_KEYS = {
   ContentRegistry: "PONDER_CONTENT_REGISTRY_ADDRESS",
   RoundVotingEngine: "PONDER_ROUND_VOTING_ENGINE_ADDRESS",
   RoundRewardDistributor: "PONDER_ROUND_REWARD_DISTRIBUTOR_ADDRESS",
+  QuestionBountyEscrow: "PONDER_QUESTION_BOUNTY_ESCROW_ADDRESS",
   CategoryRegistry: "PONDER_CATEGORY_REGISTRY_ADDRESS",
   ProfileRegistry: "PONDER_PROFILE_REGISTRY_ADDRESS",
   FrontendRegistry: "PONDER_FRONTEND_REGISTRY_ADDRESS",
@@ -395,6 +402,7 @@ const PONDER_START_BLOCK_ENV_KEYS = {
   ContentRegistry: "PONDER_CONTENT_REGISTRY_START_BLOCK",
   RoundVotingEngine: "PONDER_ROUND_VOTING_ENGINE_START_BLOCK",
   RoundRewardDistributor: "PONDER_ROUND_REWARD_DISTRIBUTOR_START_BLOCK",
+  QuestionBountyEscrow: "PONDER_QUESTION_BOUNTY_ESCROW_START_BLOCK",
   CategoryRegistry: "PONDER_CATEGORY_REGISTRY_START_BLOCK",
   ProfileRegistry: "PONDER_PROFILE_REGISTRY_START_BLOCK",
   FrontendRegistry: "PONDER_FRONTEND_REGISTRY_START_BLOCK",
@@ -538,6 +546,7 @@ const ABI_TARGETS = [
   { contract: "VoterIdNFT", targets: ["contracts/src/abis"] },
   { contract: "FrontendRegistry", targets: ["contracts/src/abis"] },
   { contract: "RoundRewardDistributor", targets: ["contracts/src/abis"] },
+  { contract: "QuestionBountyEscrow", targets: ["contracts/src/abis"] },
   { contract: "ProfileRegistry", targets: ["contracts/src/abis"] },
   { contract: "ProtocolConfig", targets: ["contracts/src/abis"] },
   { contract: "HumanFaucet", targets: ["contracts/src/abis"] },

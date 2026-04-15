@@ -289,9 +289,12 @@ export async function ponderGet<T>(path: string, params?: Record<string, string 
 
 export interface PonderContentItem {
   id: string; // bigint serialized as string
+  contentId?: string;
+  question?: string;
+  link?: string | null;
   submitter: string;
   contentHash: string;
-  url: string;
+  url: string | null;
   title: string;
   description: string;
   tags: string;
@@ -310,6 +313,22 @@ export interface PonderContentItem {
   totalVotes: number;
   totalRounds: number;
   openRound: PonderContentOpenRoundSummary | null;
+  bountySummary?: PonderBountySummary | null;
+}
+
+export interface PonderBountySummary {
+  currency: "USDC";
+  displayCurrency: "USD";
+  decimals: 6;
+  bountyCount: number;
+  activeBountyCount: number;
+  totalFundedAmount: string;
+  totalUnallocatedAmount: string;
+  totalAllocatedAmount: string;
+  totalClaimedAmount: string;
+  totalRefundedAmount: string;
+  qualifiedRoundCount: number;
+  currentBountyAmount: string;
 }
 
 export interface PonderContentResponse {

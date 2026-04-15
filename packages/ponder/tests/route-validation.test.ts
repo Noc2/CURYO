@@ -86,6 +86,17 @@ function mockPonderModules<T>(result: T) {
       totalRewardsClaimed: "profile.totalRewardsClaimed",
       totalVotes: "profile.totalVotes",
     },
+    questionBounty: {
+      allocatedAmount: "questionBounty.allocatedAmount",
+      claimedAmount: "questionBounty.claimedAmount",
+      contentId: "questionBounty.contentId",
+      fundedAmount: "questionBounty.fundedAmount",
+      qualifiedRounds: "questionBounty.qualifiedRounds",
+      refunded: "questionBounty.refunded",
+      refundedAmount: "questionBounty.refundedAmount",
+      requiredSettledRounds: "questionBounty.requiredSettledRounds",
+      unallocatedAmount: "questionBounty.unallocatedAmount",
+    },
     ratingChange: {
       confidenceMass: "ratingChange.confidenceMass",
       conservativeRatingBps: "ratingChange.conservativeRatingBps",
