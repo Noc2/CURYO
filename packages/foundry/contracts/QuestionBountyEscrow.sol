@@ -243,19 +243,24 @@ contract QuestionBountyEscrow is
         returns (uint256 claimableAmount)
     {
         Bounty storage bounty = bounties[bountyId];
-        if (bounty.id == 0) return 0;
+        if (bounty.id == 0 || bounty.refunded) return 0;
 
         uint256 voterId = voterIdNFT.getTokenId(account);
         if (voterId == 0 || _isExcludedVoter(bounty, voterId) || rewardClaimed[bountyId][roundId][voterId]) return 0;
 
+        if (!_hasRevealedCommit(bounty.contentId, roundId, voterId)) return 0;
+
         RoundSnapshot storage snapshot = roundSnapshots[bountyId][roundId];
-        if (!snapshot.qualified || snapshot.eligibleVoters == 0) return 0;
+        if (!snapshot.qualified) {
+            if (roundId < bounty.startRoundId || bounty.qualifiedRounds >= bounty.requiredSettledRounds) return 0;
+            (, bool canQualify, uint256 eligibleVoters) = _previewRoundQualification(bounty, roundId);
+            if (!canQualify) return 0;
 
-        bytes32 commitKey = votingEngine.voterIdCommitKey(bounty.contentId, roundId, voterId);
-        if (commitKey == bytes32(0)) return 0;
-        (address voter,,,,,,, bool revealed,,) = votingEngine.commits(bounty.contentId, roundId, commitKey);
-        if (voter == address(0) || !revealed) return 0;
-
+            uint256 allocation = _previewRoundAllocation(bounty);
+            if (allocation == 0) return 0;
+            return allocation / eligibleVoters;
+        }
+        if (snapshot.eligibleVoters == 0) return 0;
         claimableAmount = snapshot.allocation / snapshot.eligibleVoters;
         if (snapshot.claimedCount + 1 == snapshot.eligibleVoters) {
             claimableAmount = snapshot.allocation - snapshot.claimedAmount;
@@ -304,15 +309,11 @@ contract QuestionBountyEscrow is
         require(roundId >= bounty.startRoundId, "Round too early");
         require(!roundSnapshots[bountyId][roundId].qualified, "Round qualified");
 
-        (, RoundLib.RoundState state,,,,,,,,,,,,) = votingEngine.rounds(bounty.contentId, roundId);
-        require(state == RoundLib.RoundState.Settled, "Round not settled");
+        (bool roundSettled, bool canQualify, uint256 eligibleVoters) = _previewRoundQualification(bounty, roundId);
+        require(roundSettled, "Round not settled");
+        require(canQualify, "Too few eligible voters");
 
-        uint256 eligibleVoters = _countEligibleVoters(bounty, roundId);
-        require(eligibleVoters >= bounty.requiredVoters, "Too few eligible voters");
-
-        uint256 remainingRounds = uint256(bounty.requiredSettledRounds) - bounty.qualifiedRounds;
-        uint256 allocation =
-            remainingRounds == 1 ? bounty.unallocatedAmount : bounty.fundedAmount / bounty.requiredSettledRounds;
+        uint256 allocation = _previewRoundAllocation(bounty);
         require(allocation > 0 && allocation <= bounty.unallocatedAmount, "No allocation");
 
         bounty.qualifiedRounds++;
@@ -330,22 +331,43 @@ contract QuestionBountyEscrow is
         emit BountyRoundQualified(bountyId, bounty.contentId, roundId, allocation, eligibleVoters);
     }
 
-    function _countEligibleVoters(Bounty storage bounty, uint256 roundId)
+    function _previewRoundQualification(Bounty storage bounty, uint256 roundId)
         internal
         view
-        returns (uint256 eligibleVoters)
+        returns (bool roundSettled, bool canQualify, uint256 eligibleVoters)
     {
-        uint256 commitCount = votingEngine.getRoundCommitCount(bounty.contentId, roundId);
-        uint256 submitterVoterId = _submitterVoterId(bounty.contentId);
-        for (uint256 i = 0; i < commitCount; i++) {
-            bytes32 commitKey = votingEngine.getRoundCommitKey(bounty.contentId, roundId, i);
-            uint256 voterId = votingEngine.commitVoterId(bounty.contentId, roundId, commitKey);
-            if (voterId == 0 || voterId == bounty.funderVoterId || voterId == submitterVoterId) continue;
-            (address voter,,,,,,, bool revealed,,) = votingEngine.commits(bounty.contentId, roundId, commitKey);
-            if (voter != address(0) && revealed) {
-                eligibleVoters++;
-            }
+        (, RoundLib.RoundState state,, uint16 revealedCount,,,,,,,,,,) = votingEngine.rounds(bounty.contentId, roundId);
+        if (state != RoundLib.RoundState.Settled) return (false, false, 0);
+
+        roundSettled = true;
+        eligibleVoters = revealedCount;
+        if (eligibleVoters == 0) return (true, false, 0);
+        if (_hasRevealedCommit(bounty.contentId, roundId, bounty.funderVoterId)) {
+            eligibleVoters--;
         }
+        uint256 submitterVoterId = _submitterVoterId(bounty.contentId);
+        if (
+            submitterVoterId != 0 && submitterVoterId != bounty.funderVoterId
+                && _hasRevealedCommit(bounty.contentId, roundId, submitterVoterId)
+        ) {
+            eligibleVoters--;
+        }
+        canQualify = eligibleVoters >= bounty.requiredVoters;
+    }
+
+    function _previewRoundAllocation(Bounty storage bounty) internal view returns (uint256 allocation) {
+        if (bounty.qualifiedRounds >= bounty.requiredSettledRounds) return 0;
+        uint256 remainingRounds = uint256(bounty.requiredSettledRounds) - bounty.qualifiedRounds;
+        allocation = remainingRounds == 1 ? bounty.unallocatedAmount : bounty.fundedAmount / bounty.requiredSettledRounds;
+        if (allocation > bounty.unallocatedAmount) return 0;
+    }
+
+    function _hasRevealedCommit(uint256 contentId, uint256 roundId, uint256 voterId) internal view returns (bool) {
+        if (voterId == 0) return false;
+        bytes32 commitKey = votingEngine.voterIdCommitKey(contentId, roundId, voterId);
+        if (commitKey == bytes32(0)) return false;
+        (address voter,,,,,,, bool revealed,,) = votingEngine.commits(contentId, roundId, commitKey);
+        return voter != address(0) && revealed;
     }
 
     function _isExcludedVoter(Bounty storage bounty, uint256 voterId) internal view returns (bool) {
