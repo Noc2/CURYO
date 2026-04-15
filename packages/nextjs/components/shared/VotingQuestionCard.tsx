@@ -26,6 +26,7 @@ interface VotingQuestionCardProps {
   address?: string;
   error?: string | null;
   cooldownSecondsRemaining?: number;
+  isVoteEligibilityPending?: boolean;
   isOwnContent?: boolean;
   openRound?: ContentOpenRoundSummary | null;
   /** When true, removes card background/rounding (parent provides it). */
@@ -376,6 +377,7 @@ export function VotingQuestionCard({
   address,
   error,
   cooldownSecondsRemaining = 0,
+  isVoteEligibilityPending = false,
   isOwnContent,
   openRound,
   embedded,
@@ -395,6 +397,7 @@ export function VotingQuestionCard({
   const cooldownLabel = formatVoteCooldownRemaining(cooldownSecondsRemaining);
   const displayError =
     cooldownActive && error?.includes("You already voted on this content within the last") ? null : error;
+  const voteActionDisabled = isCommitting || isVoteEligibilityPending;
   const [isDetailsOpen, setIsDetailsOpen] = useState(isSignalVariant);
   const [isAttentionActive, setIsAttentionActive] = useState(false);
   const detailsId = `voting-card-details-${contentId.toString()}`;
@@ -528,7 +531,7 @@ export function VotingQuestionCard({
   }, [attentionToken]);
 
   if (isDockVariant) {
-    const dockVoteDisabled = isCommitting || Boolean(centerStatusContent);
+    const dockVoteDisabled = voteActionDisabled || Boolean(centerStatusContent);
     const dockNotchRadius = compact ? 58 : 66;
     const dockNotchCutout = compact ? 52 : 60;
     const dockWrapperTopPaddingClassName = compact ? (isDetailsOpen ? "pt-8" : "pt-10") : "pt-14";
@@ -722,14 +725,14 @@ export function VotingQuestionCard({
               <CuryoVoteButton
                 direction="up"
                 onClick={() => onVote(true)}
-                disabled={isCommitting}
-                attention={isAttentionActive && !isCommitting}
+                disabled={voteActionDisabled}
+                attention={isAttentionActive && !voteActionDisabled}
               />
               <CuryoVoteButton
                 direction="down"
                 onClick={() => onVote(false)}
-                disabled={isCommitting}
-                attention={isAttentionActive && !isCommitting}
+                disabled={voteActionDisabled}
+                attention={isAttentionActive && !voteActionDisabled}
               />
             </div>
           ) : null}
@@ -754,14 +757,14 @@ export function VotingQuestionCard({
                     <CuryoVoteButton
                       direction="up"
                       onClick={() => onVote(true)}
-                      disabled={isCommitting}
-                      attention={isAttentionActive && !isCommitting}
+                      disabled={voteActionDisabled}
+                      attention={isAttentionActive && !voteActionDisabled}
                     />
                     <CuryoVoteButton
                       direction="down"
                       onClick={() => onVote(false)}
-                      disabled={isCommitting}
-                      attention={isAttentionActive && !isCommitting}
+                      disabled={voteActionDisabled}
+                      attention={isAttentionActive && !voteActionDisabled}
                     />
                   </>
                 ) : (

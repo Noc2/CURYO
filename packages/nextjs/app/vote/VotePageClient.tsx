@@ -999,6 +999,7 @@ const HomeInner = () => {
   );
 
   const primaryItemCooldownSeconds = primaryItem ? getContentCooldownSeconds(primaryItem.id) : 0;
+  const primaryVoteEligibilityPending = primaryItem ? isVoteCooldownCheckPendingForContent(primaryItem.id) : false;
   const primaryAttentionToken =
     primaryItem && voteAttention?.contentId === primaryItem.id.toString() ? voteAttention.token : null;
   const stakeModalCooldownSeconds = stakeModal.contentId > 0n ? getContentCooldownSeconds(stakeModal.contentId) : 0;
@@ -1692,6 +1693,7 @@ const HomeInner = () => {
                 isCommitting={isCommitting}
                 voteError={voteError}
                 cooldownSecondsRemaining={primaryItemCooldownSeconds}
+                isVoteEligibilityPending={primaryVoteEligibilityPending}
                 attentionToken={primaryAttentionToken}
                 onVote={handleButtonVote}
               />
@@ -1718,6 +1720,7 @@ const HomeInner = () => {
                 address={address}
                 error={voteError}
                 cooldownSecondsRemaining={primaryItemCooldownSeconds}
+                isVoteEligibilityPending={primaryVoteEligibilityPending}
                 isOwnContent={primaryItem.isOwnContent}
                 embedded
                 compact

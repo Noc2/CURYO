@@ -45,21 +45,31 @@ export async function ensureVoteableContent(page: Page): Promise<boolean> {
       continue;
     }
 
+    let indexedContentId: string | null = null;
     const indexed = await waitForPonderIndexed(
       async () => {
         const { items } = await getContentList({ status: "all", limit: 100 });
-        return items.some(item => item.title === title && item.submitter.toLowerCase() === submitter.toLowerCase());
+        const match = items.find(
+          item => item.title === title && item.submitter.toLowerCase() === submitter.toLowerCase(),
+        );
+        indexedContentId = match?.id ?? null;
+        return Boolean(indexedContentId);
       },
       90_000,
       2_000,
       "ensureVoteableContent",
     );
-    if (!indexed) {
+    if (!indexed || !indexedContentId) {
       return false;
     }
 
-    await gotoWithRetry(page, "/vote", { ensureWalletConnected: true, timeout: 45_000 });
+    await gotoWithRetry(page, `/vote?content=${indexedContentId}`, { ensureWalletConnected: true, timeout: 45_000 });
     await waitForFeedLoaded(page, 30_000);
+    await page
+      .getByRole("heading", { name: title })
+      .first()
+      .waitFor({ state: "visible", timeout: 30_000 })
+      .catch(() => undefined);
 
     return findVoteableContent(page);
   }
