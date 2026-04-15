@@ -331,6 +331,25 @@ export interface PonderBountySummary {
   currentBountyAmount: string;
 }
 
+export interface PonderBountyClaimCandidate {
+  bountyId: string;
+  contentId: string;
+  roundId: string;
+  title: string;
+  allocation: string | null;
+  eligibleVoters: number | null;
+  qualified: boolean;
+  currency: "USDC";
+  displayCurrency: "USD";
+  decimals: 6;
+}
+
+export interface PonderBountyClaimCandidatesResponse {
+  items: PonderBountyClaimCandidate[];
+  limit: number;
+  offset: number;
+}
+
 export interface PonderContentResponse {
   items: PonderContentItem[];
   total: number | null;
@@ -956,6 +975,13 @@ export const ponderApi = {
 
   getVoteCooldowns(params?: { voters?: string; contentIds?: string }) {
     return ponderGet<PonderVoteCooldownsResponse>("/vote-cooldowns", params);
+  },
+
+  getBountyClaimCandidates(voter: string, params?: { limit?: string; offset?: string }) {
+    return ponderGet<PonderBountyClaimCandidatesResponse>("/bounty-claim-candidates", {
+      ...params,
+      voter,
+    });
   },
 
   async getVotesWindow(params?: {

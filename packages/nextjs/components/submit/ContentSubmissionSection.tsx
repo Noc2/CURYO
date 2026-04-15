@@ -16,8 +16,9 @@ import {
 } from "./submissionReservation";
 import { decodeEventLog } from "viem";
 import { useAccount, useConfig } from "wagmi";
-import { readContract, waitForTransactionReceipt } from "wagmi/actions";
+import { readContract, waitForTransactionReceipt, writeContract } from "wagmi/actions";
 import { ChevronDownIcon, MagnifyingGlassIcon, XMarkIcon } from "@heroicons/react/24/outline";
+import { AddBountyModal } from "~~/components/bounty/AddBountyModal";
 import { ContentEmbed } from "~~/components/content/ContentEmbed";
 import { GasBalanceWarning } from "~~/components/shared/GasBalanceWarning";
 import { surfaceSectionHeadingClassName } from "~~/components/shared/sectionHeading";
@@ -26,13 +27,7 @@ import { serializeTags } from "~~/constants/categories";
 import { useTermsAcceptance } from "~~/contexts/TermsAcceptanceContext";
 import { useDeployedContractInfo, useScaffoldReadContract, useScaffoldWriteContract } from "~~/hooks/scaffold-eth";
 import { useTargetNetwork } from "~~/hooks/scaffold-eth/useTargetNetwork";
-import {
-  type Category,
-  extractDomain,
-  getCategoryIdFromUrl,
-  resolveCanonicalDomain,
-  useCategoryRegistry,
-} from "~~/hooks/useCategoryRegistry";
+import { type Category, useCategoryRegistry } from "~~/hooks/useCategoryRegistry";
 import { useGasBalanceStatus } from "~~/hooks/useGasBalanceStatus";
 import { useParticipationRate } from "~~/hooks/useParticipationRate";
 import { useThirdwebSponsoredSubmitCalls } from "~~/hooks/useThirdwebSponsoredSubmitCalls";
@@ -47,6 +42,7 @@ import {
   getContentTagValidationError,
   getContentTitleValidationError,
 } from "~~/lib/moderation/submissionValidation";
+import { QUESTION_SUBMISSION_ABI } from "~~/lib/questionBounties";
 import {
   getGasBalanceErrorMessage,
   isFreeTransactionExhaustedError,
@@ -55,69 +51,14 @@ import {
 } from "~~/lib/transactionErrors";
 import { containsBlockedUrl } from "~~/utils/contentFilter";
 import { sanitizeExternalUrl } from "~~/utils/externalUrl";
-import { canonicalizeUrl, isSupportedVideoPlatform } from "~~/utils/platforms";
+import { canonicalizeUrl } from "~~/utils/platforms";
 import { notification } from "~~/utils/scaffold-eth";
 
 const ShareModal = dynamic(() => import("~~/components/submit/ShareModal").then(m => m.ShareModal), { ssr: false });
 
-const PLATFORM_CONFIG: Record<string, { urlPlaceholder: string; urlHint: string }> = {
-  "youtube.com": {
-    urlPlaceholder: "https://youtube.com/watch?v=dQw4w9WgXcQ",
-    urlHint: "Paste a YouTube video URL",
-  },
-  "twitch.tv": {
-    urlPlaceholder: "https://twitch.tv/videos/123456789",
-    urlHint: "Paste a Twitch video or clip URL",
-  },
-  "scryfall.com": {
-    urlPlaceholder: "https://scryfall.com/card/lea/232/black-lotus",
-    urlHint: "Paste a Scryfall card URL",
-  },
-  "en.wikipedia.org": {
-    urlPlaceholder: "https://en.wikipedia.org/wiki/Lionel_Messi",
-    urlHint: "Paste a Wikipedia article URL for a person",
-  },
-  "rawg.io": {
-    urlPlaceholder: "https://rawg.io/games/elden-ring",
-    urlHint: "Paste a RAWG game page URL",
-  },
-  "openlibrary.org": {
-    urlPlaceholder: "https://openlibrary.org/works/OL45804W/Fahrenheit_451",
-    urlHint: "Paste an Open Library book URL",
-  },
-  "themoviedb.org": {
-    urlPlaceholder: "https://www.themoviedb.org/movie/238-the-godfather",
-    urlHint: "Paste a TMDB movie URL",
-  },
-  "coingecko.com": {
-    urlPlaceholder: "https://www.coingecko.com/en/coins/bitcoin",
-    urlHint: "Paste a CoinGecko token page URL",
-  },
-  "huggingface.co": {
-    urlPlaceholder: "https://huggingface.co/Qwen/Qwen3.5-397B-A17B",
-    urlHint: "Paste a Hugging Face model URL",
-  },
-  "open.spotify.com": {
-    urlPlaceholder: "https://open.spotify.com/show/5eXZwvvxt3K2dxha3BSaAe",
-    urlHint: "Paste a Spotify podcast show or episode URL",
-  },
-  "x.com": {
-    urlPlaceholder: "https://x.com/elonmusk/status/1234567890",
-    urlHint: "Paste a tweet URL",
-  },
-  "twitter.com": {
-    urlPlaceholder: "https://twitter.com/elonmusk/status/1234567890",
-    urlHint: "Paste a tweet URL",
-  },
-  "github.com": {
-    urlPlaceholder: "https://github.com/ethereum/go-ethereum",
-    urlHint: "Paste a GitHub repository URL",
-  },
-};
-
 const DEFAULT_URL_CONFIG = {
-  urlPlaceholder: "https://...",
-  urlHint: "Select a platform first, then paste your URL",
+  urlPlaceholder: "https://youtube.com/watch?v=... or https://example.com/image.jpg",
+  urlHint: "Optional. Add a YouTube link, direct image URL, or evidence link when the question needs context.",
 };
 
 function isReservationExistsError(error: unknown): boolean {
@@ -145,16 +86,15 @@ function getPendingSubmissionSubmitter(pendingSubmission: unknown): string | nul
   return typeof submitter === "string" ? submitter : null;
 }
 
-function PlatformIcon({ domain, className }: { domain: string; className?: string }) {
-  const iconClass = className || "w-4 h-4";
-  const faviconDomain = domain.replace(/^(www\.|en\.)/, "");
+function CategoryIcon({ name, className }: { name: string; className?: string }) {
+  const initial = name.trim().slice(0, 1).toUpperCase() || "?";
   return (
-    <img
-      src={`https://www.google.com/s2/favicons?domain=${faviconDomain}&sz=64`}
-      alt={`${domain} icon`}
-      className={`${iconClass} rounded-sm`}
-      loading="lazy"
-    />
+    <span
+      className={`${className || "h-5 w-5"} inline-flex shrink-0 items-center justify-center rounded-md bg-primary/10 text-xs font-semibold text-primary`}
+      aria-hidden="true"
+    >
+      {initial}
+    </span>
   );
 }
 
@@ -190,11 +130,16 @@ export function ContentSubmissionSection() {
     description: string;
     lastActivityAt: string;
   } | null>(null);
+  const [bountyContent, setBountyContent] = useState<{
+    id: bigint;
+    title: string;
+  } | null>(null);
+  const [openBountyAfterSubmit, setOpenBountyAfterSubmit] = useState(false);
   const [platformSearch, setPlatformSearch] = useState("");
   const [isPlatformDropdownOpen, setIsPlatformDropdownOpen] = useState(false);
   const platformDropdownRef = useRef<HTMLDivElement>(null);
 
-  const { categories: websiteCategories, domainToCategoryId, isLoading: categoriesLoading } = useCategoryRegistry();
+  const { categories: websiteCategories, isLoading: categoriesLoading } = useCategoryRegistry();
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -214,42 +159,7 @@ export function ContentSubmissionSection() {
     );
   }, [websiteCategories, platformSearch]);
 
-  const detectedCategoryId = useMemo(() => {
-    if (!url || urlError) return 0n;
-    return getCategoryIdFromUrl(url, domainToCategoryId);
-  }, [url, urlError, domainToCategoryId]);
-
-  const detectedCategory = useMemo(() => {
-    if (detectedCategoryId === 0n) return null;
-    return websiteCategories.find(cat => cat.id === detectedCategoryId);
-  }, [detectedCategoryId, websiteCategories]);
-
-  useEffect(() => {
-    if (detectedCategory && (!selectedCategory || selectedCategory.id !== detectedCategory.id)) {
-      setSelectedCategory(detectedCategory);
-      setSelectedSubcategories([]);
-    }
-  }, [detectedCategory, selectedCategory]);
-
-  const urlCategoryMismatch = useMemo(() => {
-    if (!url || urlError || !selectedCategory) return false;
-    try {
-      const urlDomain = extractDomain(url);
-      if (!urlDomain) return false;
-      return resolveCanonicalDomain(urlDomain) !== resolveCanonicalDomain(selectedCategory.domain);
-    } catch {
-      return false;
-    }
-  }, [url, urlError, selectedCategory]);
-
-  const urlConfig = useMemo(() => {
-    if (!selectedCategory) return DEFAULT_URL_CONFIG;
-    return (
-      PLATFORM_CONFIG[selectedCategory.domain] ??
-      PLATFORM_CONFIG[resolveCanonicalDomain(selectedCategory.domain)] ??
-      DEFAULT_URL_CONFIG
-    );
-  }, [selectedCategory]);
+  const urlConfig = DEFAULT_URL_CONFIG;
   const customSubcategoryError = customSubcategory ? getContentTagValidationError(customSubcategory) : null;
 
   const getUrlValidationError = (value: string): string | null => {
@@ -267,19 +177,6 @@ export function ContentSubmissionSection() {
       return "This URL contains prohibited content and cannot be submitted";
     }
 
-    if (domainToCategoryId.size > 0) {
-      const categoryId = getCategoryIdFromUrl(sanitizedUrl, domainToCategoryId);
-      if (categoryId === 0n) {
-        const platformNames = websiteCategories.map(c => c.name).join(", ");
-        return `Please enter a URL from an approved platform (${platformNames})`;
-      }
-      return null;
-    }
-
-    if (!isSupportedVideoPlatform(sanitizedUrl)) {
-      return "Please enter a URL from YouTube or Twitch";
-    }
-
     return null;
   };
 
@@ -294,22 +191,11 @@ export function ContentSubmissionSection() {
     else setUrlError(null);
   };
 
-  const isValidUrl = url && !urlError;
+  const isValidUrl = Boolean(url && !urlError);
 
   const handleCategorySelect = (category: Category) => {
     setSelectedCategory(category);
     setSelectedSubcategories([]);
-    if (url) {
-      try {
-        const urlDomain = extractDomain(url);
-        if (urlDomain && resolveCanonicalDomain(urlDomain) !== resolveCanonicalDomain(category.domain)) {
-          setUrl("");
-          setUrlError(null);
-        }
-      } catch {
-        // Keep URL if extraction fails.
-      }
-    }
   };
 
   const handleSubcategoryToggle = (subcategory: string) => {
@@ -356,17 +242,6 @@ export function ContentSubmissionSection() {
     if (!url || urlError) return undefined;
     return canonicalizeUrl(url);
   }, [url, urlError]);
-  const { data: isUrlSubmitted } = useScaffoldReadContract({
-    contractName: "ContentRegistry",
-    functionName: "isUrlSubmitted",
-    args: [canonicalUrl as string],
-    query: {
-      enabled: Boolean(canonicalUrl),
-      staleTime: 30_000,
-    },
-  });
-  const isUrlAlreadySubmitted = Boolean(canonicalUrl && isUrlSubmitted);
-
   const extractSubmittedContentId = (logs: { address: string; data: `0x${string}`; topics: `0x${string}`[] }[]) => {
     if (!registryInfo) {
       return null;
@@ -438,7 +313,7 @@ export function ContentSubmissionSection() {
     setTitleError(nextTitleError);
     setDescriptionError(nextDescriptionError);
 
-    if (!selectedCategory || !url || !trimmedTitle || !trimmedDescription || selectedSubcategories.length === 0) {
+    if (!selectedCategory || !trimmedTitle || !trimmedDescription || selectedSubcategories.length === 0) {
       notification.warning("Fill in the highlighted fields before submitting.");
       return;
     }
@@ -448,24 +323,10 @@ export function ContentSubmissionSection() {
       return;
     }
 
-    const normalizedSubmissionUrl = canonicalUrl;
-    if (!normalizedSubmissionUrl) {
-      notification.warning("Please fix the highlighted fields before submitting.");
-      return;
-    }
+    const normalizedSubmissionUrl = canonicalUrl ?? "";
 
     if (nextUrlError || nextTitleError || nextDescriptionError) {
       notification.warning("Please fix the highlighted fields before submitting.");
-      return;
-    }
-
-    if (isUrlAlreadySubmitted) {
-      notification.warning("This content has already been submitted.");
-      return;
-    }
-
-    if (urlCategoryMismatch) {
-      notification.error("URL doesn't match the selected platform");
       return;
     }
 
@@ -487,10 +348,10 @@ export function ContentSubmissionSection() {
       }
 
       const [, submissionKey] = (await readContract(wagmiConfig, {
-        abi: registryInfo.abi,
+        abi: QUESTION_SUBMISSION_ABI,
         address: registryAddress,
-        functionName: "previewSubmissionKey",
-        args: [normalizedSubmissionUrl, selectedCategory.id],
+        functionName: "previewQuestionSubmissionKey",
+        args: [normalizedSubmissionUrl, submittedTitle, submittedDescription, submissionTags, selectedCategory.id],
       })) as readonly [bigint, `0x${string}`];
       const submissionDraft = {
         categoryId: selectedCategory.id,
@@ -670,14 +531,14 @@ export function ContentSubmissionSection() {
       }
 
       // ContentRegistry enforces a minimum reservation age before reveal.
-      // Give the next block timestamp enough room to advance before submitContent.
+      // Give the next block timestamp enough room to advance before submitQuestion.
       await new Promise(resolve => setTimeout(resolve, 1_100));
 
       if (canUseSponsoredSubmitCalls) {
         const callsResult = await executeSponsoredCalls(
           [
             {
-              abi: registryInfo.abi,
+              abi: QUESTION_SUBMISSION_ABI,
               address: registryAddress,
               args: [
                 normalizedSubmissionUrl,
@@ -687,7 +548,7 @@ export function ContentSubmissionSection() {
                 selectedCategory.id,
                 activeReservation.salt,
               ],
-              functionName: "submitContent",
+              functionName: "submitQuestion",
             },
           ],
           {
@@ -698,24 +559,19 @@ export function ContentSubmissionSection() {
 
         contentId = extractSubmittedContentId((callsResult.receipts ?? []).flatMap(receipt => receipt.logs));
       } else {
-        const submitTxHash = await writeRegistry(
-          {
-            functionName: "submitContent",
-            args: [
-              normalizedSubmissionUrl,
-              submittedTitle,
-              submittedDescription,
-              submissionTags,
-              selectedCategory.id,
-              activeReservation.salt,
-            ],
-          },
-          {
-            suppressErrorToast: true,
-            suppressStatusToast: true,
-            suppressSuccessToast: true,
-          },
-        );
+        const submitTxHash = await writeContract(wagmiConfig, {
+          address: registryAddress,
+          abi: QUESTION_SUBMISSION_ABI,
+          functionName: "submitQuestion",
+          args: [
+            normalizedSubmissionUrl,
+            submittedTitle,
+            submittedDescription,
+            submissionTags,
+            selectedCategory.id,
+            activeReservation.salt,
+          ],
+        });
 
         if (submitTxHash) {
           const submitReceipt = await waitForTransactionReceipt(wagmiConfig, { hash: submitTxHash });
@@ -727,8 +583,8 @@ export function ContentSubmissionSection() {
       clearStoredSubmissionReservation(reservationStorageKey);
 
       statusToast.dismiss();
-      notification.success("Content submitted! Staked 10 cREP.");
-      setSubmittedContent(
+      notification.success("Question submitted! Staked 10 cREP.");
+      const submittedQuestion =
         contentId !== null
           ? {
               id: contentId,
@@ -736,8 +592,9 @@ export function ContentSubmissionSection() {
               description: submittedDescription,
               lastActivityAt: new Date().toISOString(),
             }
-          : null,
-      );
+          : null;
+      setSubmittedContent(openBountyAfterSubmit ? null : submittedQuestion);
+      setBountyContent(openBountyAfterSubmit && submittedQuestion ? submittedQuestion : null);
       setUrl("");
       setUrlError(null);
       setTitle("");
@@ -747,6 +604,7 @@ export function ContentSubmissionSection() {
       setSelectedCategory(null);
       setSelectedSubcategories([]);
       setCustomSubcategory("");
+      setOpenBountyAfterSubmit(false);
       setSubmitAttempted(false);
     } catch (e: unknown) {
       console.error("Submit failed:", e);
@@ -782,7 +640,7 @@ export function ContentSubmissionSection() {
   return (
     <>
       <div className="surface-card rounded-2xl p-6 space-y-5">
-        <h1 className={surfaceSectionHeadingClassName}>Submit Content</h1>
+        <h1 className={surfaceSectionHeadingClassName}>Submit Question</h1>
 
         <form
           onSubmit={handleSubmit}
@@ -794,7 +652,7 @@ export function ContentSubmissionSection() {
               <label
                 className={`mb-2 block text-base font-medium ${submitAttempted && !selectedCategory ? "text-error" : ""}`}
               >
-                Select Platform
+                Select Category
               </label>
               {categoriesLoading ? (
                 <div className="input input-bordered flex w-full items-center bg-base-100">
@@ -811,18 +669,18 @@ export function ContentSubmissionSection() {
                   >
                     {selectedCategory ? (
                       <div className="flex items-center gap-2">
-                        <PlatformIcon domain={selectedCategory.domain} className="h-5 w-5" />
+                        <CategoryIcon name={selectedCategory.name} />
                         <span>{selectedCategory.name}</span>
                       </div>
                     ) : (
-                      <span className="text-base-content/50">Select a platform...</span>
+                      <span className="text-base-content/50">Select a category...</span>
                     )}
                     <ChevronDownIcon
                       className={`h-5 w-5 text-base-content/50 transition-transform ${isPlatformDropdownOpen ? "rotate-180" : ""}`}
                     />
                   </button>
                   {submitAttempted && !selectedCategory ? (
-                    <p className="mt-1 text-base text-error">Select a platform before submitting.</p>
+                    <p className="mt-1 text-base text-error">Select a category before submitting.</p>
                   ) : null}
 
                   {isPlatformDropdownOpen ? (
@@ -832,7 +690,7 @@ export function ContentSubmissionSection() {
                           <MagnifyingGlassIcon className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-base-content/50" />
                           <input
                             type="text"
-                            placeholder="Search platforms..."
+                            placeholder="Search categories..."
                             className="input input-sm w-full bg-base-200 pl-9 pr-8"
                             value={platformSearch}
                             onChange={e => setPlatformSearch(e.target.value)}
@@ -867,10 +725,9 @@ export function ContentSubmissionSection() {
                                   isSelected ? "bg-primary/10 text-primary" : "text-base-content hover:bg-base-200"
                                 }`}
                               >
-                                <PlatformIcon domain={cat.domain} className="h-5 w-5" />
+                                <CategoryIcon name={cat.name} />
                                 <div className="flex flex-col">
                                   <span className="font-medium">{cat.name}</span>
-                                  <span className="text-base text-base-content/50">{cat.domain}</span>
                                 </div>
                                 {isSelected ? <span className="ml-auto text-primary">✓</span> : null}
                               </button>
@@ -878,7 +735,7 @@ export function ContentSubmissionSection() {
                           })
                         ) : (
                           <div className="px-4 py-3 text-base text-base-content/50">
-                            No platforms found for &quot;{platformSearch}&quot;
+                            No categories found for &quot;{platformSearch}&quot;
                           </div>
                         )}
                       </div>
@@ -886,46 +743,35 @@ export function ContentSubmissionSection() {
                   ) : null}
                 </>
               ) : (
-                <p className="text-base text-base-content/50">No platforms available. Propose one!</p>
+                <p className="text-base text-base-content/50">No categories available. Propose one!</p>
               )}
             </div>
 
             <div>
-              <label
-                className={`mb-2 flex items-center gap-1.5 text-base font-medium ${submitAttempted && !url ? "text-error" : ""}`}
-              >
-                URL
+              <label className="mb-2 flex items-center gap-1.5 text-base font-medium">
+                Media Link <span className="font-normal text-base-content/40">(optional)</span>
                 <InfoTooltip text={urlConfig.urlHint} />
               </label>
               <input
                 type="url"
                 placeholder={urlConfig.urlPlaceholder}
-                className={`input input-bordered w-full bg-base-100 ${urlError || (submitAttempted && !url) ? "input-error" : ""}`}
+                className={`input input-bordered w-full bg-base-100 ${urlError ? "input-error" : ""}`}
                 value={url}
                 onChange={handleUrlChange}
                 onBlur={() => validateUrl(url)}
               />
-              {submitAttempted && !url ? <p className="mt-1 text-base text-error">URL is required.</p> : null}
               {urlError ? <p className="mt-1 text-base text-error">{urlError}</p> : null}
-              {!urlError && isUrlAlreadySubmitted ? (
-                <p className="mt-1 text-base text-error">This content has already been submitted</p>
-              ) : null}
-              {urlCategoryMismatch ? (
-                <p className="mt-1 text-base text-warning">
-                  Warning: The URL domain doesn&apos;t match the selected platform
-                </p>
-              ) : null}
             </div>
 
             <div>
               <label
                 className={`mb-2 block text-base font-medium ${submitAttempted && !title.trim() ? "text-error" : ""}`}
               >
-                Title
+                Question
               </label>
               <input
                 type="text"
-                placeholder="Add a short title for this content"
+                placeholder="Ask something subjective that voters can rate"
                 className={`input input-bordered w-full bg-base-100 ${
                   titleError || (submitAttempted && !title.trim()) ? "input-error" : ""
                 }`}
@@ -951,7 +797,7 @@ export function ContentSubmissionSection() {
                 Description
               </label>
               <textarea
-                placeholder="Add a description to help others discover this content"
+                placeholder="Add context voters should consider"
                 className={`textarea textarea-bordered h-24 w-full bg-base-100 ${
                   descriptionError || (submitAttempted && !description.trim()) ? "textarea-error" : ""
                 }`}
@@ -1047,12 +893,12 @@ export function ContentSubmissionSection() {
           </div>
 
           <div className="space-y-4 xl:sticky xl:top-24">
-            {url && isValidUrl ? (
+            {(url && isValidUrl) || title || description ? (
               <div className="surface-card rounded-2xl p-4 space-y-3">
                 <p className="text-base font-medium uppercase tracking-wider text-base-content/40">Preview</p>
                 {title ? <h3 className="line-clamp-2 text-lg font-semibold text-base-content">{title}</h3> : null}
-                <ContentEmbed url={url} compact />
-                {description ? <p className="text-base text-base-content/70">{description}</p> : null}
+                <ContentEmbed url={isValidUrl ? url : ""} title={title} description={description} compact />
+                {description && isValidUrl ? <p className="text-base text-base-content/70">{description}</p> : null}
                 {selectedSubcategories.length > 0 ? (
                   <div className="flex flex-wrap gap-1.5">
                     {selectedSubcategories.map(tag => (
@@ -1070,7 +916,7 @@ export function ContentSubmissionSection() {
               <div className="surface-card rounded-2xl p-4 space-y-3">
                 <p className="text-base font-medium uppercase tracking-wider text-base-content/40">Preview</p>
                 <p className="text-base text-base-content/50">
-                  Pick a platform and paste a supported URL to preview how your submission will appear.
+                  Write a question and optional media link to preview how it will appear.
                 </p>
               </div>
             )}
@@ -1111,18 +957,27 @@ export function ContentSubmissionSection() {
               ) : null}
             </div>
 
+            <label className="flex items-start gap-3 rounded-lg bg-base-200 p-4">
+              <input
+                type="checkbox"
+                className="checkbox checkbox-primary mt-0.5"
+                checked={openBountyAfterSubmit}
+                onChange={event => setOpenBountyAfterSubmit(event.target.checked)}
+              />
+              <span>
+                <span className="block font-medium text-base-content">Add a USDC bounty after submission</span>
+                <span className="mt-1 block text-sm text-base-content/60">
+                  Fund this specific question once the submission transaction succeeds.
+                </span>
+              </span>
+            </label>
+
             {isMissingGasBalance ? <GasBalanceWarning nativeTokenSymbol={nativeTokenSymbol} /> : null}
 
             <button
               type="submit"
               className="btn btn-submit w-full"
-              disabled={
-                isSubmitting ||
-                isAwaitingSponsoredSubmitCalls ||
-                isUrlAlreadySubmitted ||
-                urlCategoryMismatch ||
-                isMissingGasBalance
-              }
+              disabled={isSubmitting || isAwaitingSponsoredSubmitCalls || isMissingGasBalance}
             >
               {isSubmitting ? (
                 <span className="flex items-center gap-2">
@@ -1130,7 +985,7 @@ export function ContentSubmissionSection() {
                   Submitting...
                 </span>
               ) : (
-                "Submit Content"
+                "Submit Question"
               )}
             </button>
           </div>
@@ -1144,6 +999,14 @@ export function ContentSubmissionSection() {
           description={submittedContent.description}
           lastActivityAt={submittedContent.lastActivityAt}
           onClose={handleCloseShareModal}
+        />
+      ) : null}
+
+      {bountyContent ? (
+        <AddBountyModal
+          contentId={bountyContent.id}
+          title={bountyContent.title}
+          onClose={() => setBountyContent(null)}
         />
       ) : null}
     </>

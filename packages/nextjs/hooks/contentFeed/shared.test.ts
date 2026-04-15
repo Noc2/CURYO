@@ -90,6 +90,30 @@ test("mapContentItem marks linked submitter addresses as own content", () => {
   assert.equal(item.isOwnContent, true);
 });
 
+test("mapContentItem supports text-only questions and Ponder bounty summaries", () => {
+  const item = mapContentItem({
+    id: "2",
+    url: null,
+    title: "Would you book this hotel?",
+    description: "Assume a weekend stay with a family.",
+    tags: "Hotels,Value",
+    submitter: "0x00000000000000000000000000000000000000aa",
+    contentHash: "hash-2",
+    categoryId: "2",
+    rating: 50,
+    bountySummary: {
+      totalFundedAmount: "25000000",
+      currentBountyAmount: "18000000",
+      activeBountyCount: 1,
+    },
+  });
+
+  assert.equal(item.url, "");
+  assert.equal(item.bountySummary?.totalFunded, 25_000_000n);
+  assert.equal(item.bountySummary?.totalAvailable, 18_000_000n);
+  assert.equal(item.bountySummary?.activeBountyCount, 1);
+});
+
 test("filterRpcFeed matches any address in the submitters filter", () => {
   const matching = {
     ...buildItem(1n, "Delegated", "Bot-submitted content", []),

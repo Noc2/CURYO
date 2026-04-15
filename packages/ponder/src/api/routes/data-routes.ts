@@ -6,6 +6,8 @@ import {
   content,
   frontend,
   globalStats,
+  questionBounty,
+  questionBountyRound,
   rewardClaim,
   round,
   submitterRewardClaim,
@@ -330,6 +332,73 @@ export function registerDataRoutes(app: ApiApp) {
         ...item,
         cooldownEndsAt: item.latestCommittedAt + BigInt(VOTE_COOLDOWN_SECONDS),
       })),
+    });
+  });
+
+  app.get("/bounty-claim-candidates", async (c) => {
+    const voterRaw = c.req.query("voter");
+    const limit = safeLimit(c.req.query("limit"), 100, 200);
+    const offset = safeOffset(c.req.query("offset"));
+    if (Number.isNaN(offset)) return c.json({ error: "Invalid offset" }, 400);
+
+    if (!voterRaw) {
+      return c.json({ error: "voter parameter required" }, 400);
+    }
+    if (!isValidAddress(voterRaw)) {
+      return c.json({ error: "Invalid voter address" }, 400);
+    }
+
+    const voterAddr = voterRaw.toLowerCase() as `0x${string}`;
+    const items = await db
+      .select({
+        bountyId: questionBounty.id,
+        contentId: questionBounty.contentId,
+        roundId: vote.roundId,
+        title: content.title,
+        allocation: questionBountyRound.allocation,
+        eligibleVoters: questionBountyRound.eligibleVoters,
+        qualified: sql<boolean>`${questionBountyRound.bountyId} is not null`,
+      })
+      .from(vote)
+      .innerJoin(
+        round,
+        and(eq(vote.contentId, round.contentId), eq(vote.roundId, round.roundId)),
+      )
+      .innerJoin(questionBounty, eq(vote.contentId, questionBounty.contentId))
+      .innerJoin(content, eq(vote.contentId, content.id))
+      .leftJoin(
+        questionBountyRound,
+        and(eq(questionBountyRound.bountyId, questionBounty.id), eq(questionBountyRound.roundId, vote.roundId)),
+      )
+      .where(
+        and(
+          eq(vote.voter, voterAddr),
+          eq(vote.revealed, true),
+          eq(round.state, ROUND_STATE.Settled),
+          sql`${vote.roundId} >= ${questionBounty.startRoundId}`,
+          or(
+            sql`${questionBountyRound.bountyId} is not null`,
+            and(
+              eq(questionBounty.refunded, false),
+              sql`${questionBounty.qualifiedRounds} < ${questionBounty.requiredSettledRounds}`,
+              sql`${round.revealedCount} >= ${questionBounty.requiredVoters}`,
+            ),
+          ),
+        ),
+      )
+      .orderBy(desc(round.settledAt), desc(questionBounty.createdAt))
+      .limit(limit)
+      .offset(offset);
+
+    return jsonBig(c, {
+      items: items.map(item => ({
+        ...item,
+        currency: "USDC",
+        displayCurrency: "USD",
+        decimals: 6,
+      })),
+      limit,
+      offset,
     });
   });
 

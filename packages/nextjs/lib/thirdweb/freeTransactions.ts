@@ -589,7 +589,8 @@ function validateSponsoredCalls(
           functionName === "claimSubmitterParticipationReward" ||
           functionName === "cancelReservedSubmission" ||
           functionName === "reserveSubmission" ||
-          functionName === "submitContent"
+          functionName === "submitContent" ||
+          functionName === "submitQuestion"
         ) {
           continue;
         }

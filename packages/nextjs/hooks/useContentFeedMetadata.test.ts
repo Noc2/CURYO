@@ -38,6 +38,7 @@ test("getContentFeedMetadataCacheKey stays stable when the feed order changes", 
     makeContentItem({ id: 1n, url: "https://example.com/b" }),
     makeContentItem({ id: 2n, url: "https://example.com/a" }),
     makeContentItem({ id: 3n, url: "https://example.com/b" }),
+    makeContentItem({ id: 6n, url: "" }),
   ];
   const secondFeed = [
     makeContentItem({ id: 4n, url: "https://example.com/a" }),

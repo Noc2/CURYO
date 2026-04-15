@@ -6,6 +6,7 @@ import { useAccount, useReadContracts } from "wagmi";
 import { type ClaimableRewardItem, buildVoterParticipationClaimableRewards } from "~~/hooks/claimableRewards";
 import { useDeployedContractInfo } from "~~/hooks/scaffold-eth";
 import { useClaimableFrontendRewards } from "~~/hooks/useClaimableFrontendRewards";
+import { useClaimableQuestionBountyRewards } from "~~/hooks/useClaimableQuestionBountyRewards";
 import { useClaimableSubmitterParticipationRewards } from "~~/hooks/useClaimableSubmitterParticipationRewards";
 import { useClaimableSubmitterRewards } from "~~/hooks/useClaimableSubmitterRewards";
 import { useRecentUserVotes } from "~~/hooks/useRecentUserVotes";
@@ -36,6 +37,12 @@ export function useAllClaimableRewards() {
     isLoading: frontendClaimableLoading,
     refetch: refetchFrontendClaimables,
   } = useClaimableFrontendRewards();
+  const {
+    claimableItems: questionBountyClaimableItems,
+    totalClaimable: totalQuestionBountyClaimable,
+    isLoading: questionBountyClaimableLoading,
+    refetch: refetchQuestionBountyClaimables,
+  } = useClaimableQuestionBountyRewards();
 
   // --- Step 2: Filter to terminal rounds only ---
   const terminalVotes = useMemo(() => {
@@ -320,7 +327,27 @@ export function useAllClaimableRewards() {
       ...submitterClaimableItems,
       ...submitterParticipationClaimableItems,
       ...frontendClaimableItems,
+      ...questionBountyClaimableItems,
     ],
+    [
+      claimableItems,
+      participationClaimableItems,
+      submitterClaimableItems,
+      submitterParticipationClaimableItems,
+      frontendClaimableItems,
+      questionBountyClaimableItems,
+    ],
+  );
+
+  const combinedCrepClaimable = useMemo(
+    () =>
+      [
+        ...claimableItems,
+        ...participationClaimableItems,
+        ...submitterClaimableItems,
+        ...submitterParticipationClaimableItems,
+        ...frontendClaimableItems,
+      ].reduce((sum, item) => sum + item.reward, 0n),
     [
       claimableItems,
       participationClaimableItems,
@@ -330,18 +357,14 @@ export function useAllClaimableRewards() {
     ],
   );
 
-  const combinedTotalClaimable = useMemo(
-    () => combinedClaimableItems.reduce((sum, item) => sum + item.reward, 0n),
-    [combinedClaimableItems],
-  );
-
   const isLoading =
     claimedLoading ||
     rewardsLoading ||
     participationRewardsLoading ||
     submitterLoading ||
     submitterParticipationLoading ||
-    frontendClaimableLoading;
+    frontendClaimableLoading ||
+    questionBountyClaimableLoading;
 
   const refetch = useCallback(() => {
     refetchVotes();
@@ -350,6 +373,7 @@ export function useAllClaimableRewards() {
     refetchSubmitterClaimables();
     refetchSubmitterParticipationClaimables();
     refetchFrontendClaimables();
+    refetchQuestionBountyClaimables();
   }, [
     refetchVotes,
     refetchClaimed,
@@ -357,11 +381,14 @@ export function useAllClaimableRewards() {
     refetchSubmitterClaimables,
     refetchSubmitterParticipationClaimables,
     refetchFrontendClaimables,
+    refetchQuestionBountyClaimables,
   ]);
 
   return {
     claimableItems: combinedClaimableItems,
-    totalClaimable: combinedTotalClaimable,
+    totalClaimable: combinedCrepClaimable,
+    totalCrepClaimable: combinedCrepClaimable,
+    totalUsdcClaimable: totalQuestionBountyClaimable,
     activeStake,
     isLoading,
     refetch,

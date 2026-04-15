@@ -2,6 +2,7 @@
 
 import { useAllClaimableRewards } from "~~/hooks/useAllClaimableRewards";
 import { useClaimAll } from "~~/hooks/useClaimAll";
+import { formatUsdAmount } from "~~/lib/questionBounties";
 
 function formatCrepAmount(value: bigint) {
   return (Number(value) / 1e6).toLocaleString(undefined, { maximumFractionDigits: 0 });
@@ -14,10 +15,15 @@ type ClaimRewardsButtonProps = {
 };
 
 export function ClaimRewardsButton({ buttonClassName, className, showTokenSymbol = true }: ClaimRewardsButtonProps) {
-  const { claimableItems, totalClaimable, refetch: refetchClaimable } = useAllClaimableRewards();
+  const {
+    claimableItems,
+    totalCrepClaimable,
+    totalUsdcClaimable,
+    refetch: refetchClaimable,
+  } = useAllClaimableRewards();
   const { claimAll, isClaiming, isPreparingClaim, progress } = useClaimAll();
 
-  if (totalClaimable <= 0n) {
+  if (claimableItems.length === 0 || (totalCrepClaimable <= 0n && totalUsdcClaimable <= 0n)) {
     return null;
   }
 
@@ -33,11 +39,16 @@ export function ClaimRewardsButton({ buttonClassName, className, showTokenSymbol
         disabled={isClaiming || isPreparingClaim}
         className={buttonClassName ?? "btn btn-primary btn-sm w-full"}
       >
-        {isPreparingClaim
-          ? "Preparing..."
-          : isClaiming
-            ? `Claim ${progress.current}/${progress.total}`
-            : `Claim ${formatCrepAmount(totalClaimable)}${showTokenSymbol ? " cREP" : ""}`}
+        {isPreparingClaim ? "Preparing..." : isClaiming ? `Claim ${progress.current}/${progress.total}` : null}
+        {!isPreparingClaim && !isClaiming && totalCrepClaimable > 0n && totalUsdcClaimable > 0n
+          ? `Claim ${formatCrepAmount(totalCrepClaimable)}${showTokenSymbol ? " cREP" : ""} + ${formatUsdAmount(totalUsdcClaimable)}`
+          : null}
+        {!isPreparingClaim && !isClaiming && totalCrepClaimable > 0n && totalUsdcClaimable <= 0n
+          ? `Claim ${formatCrepAmount(totalCrepClaimable)}${showTokenSymbol ? " cREP" : ""}`
+          : null}
+        {!isPreparingClaim && !isClaiming && totalCrepClaimable <= 0n && totalUsdcClaimable > 0n
+          ? `Claim ${formatUsdAmount(totalUsdcClaimable)}`
+          : null}
       </button>
     </div>
   );

@@ -101,12 +101,12 @@ export function useContentFeed(voterAddress?: string, options: UseContentFeedOpt
           categoryId?: bigint;
         };
 
-        if (!args.contentId || !args.url || !args.title || !args.description) return null;
+        if (!args.contentId || !args.title || !args.description) return null;
 
         const eventSubmitter = args.submitter || "";
         return {
           id: args.contentId,
-          url: args.url,
+          url: args.url ?? "",
           title: args.title,
           description: args.description,
           tags: parseTags(args.tags || ""),
@@ -126,6 +126,7 @@ export function useContentFeed(voterAddress?: string, options: UseContentFeedOpt
           openRound: null,
           isValidUrl: null,
           thumbnailUrl: null,
+          bountySummary: null,
         };
       })
       .filter((item): item is ContentItem => item !== null);

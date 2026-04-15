@@ -1,6 +1,8 @@
 "use client";
 
 import { useState } from "react";
+import { useAccount, useConfig, useWriteContract } from "wagmi";
+import { waitForTransactionReceipt } from "wagmi/actions";
 import { useTermsAcceptance } from "~~/contexts/TermsAcceptanceContext";
 import { type ClaimableRewardItem, sortClaimableRewardItems } from "~~/hooks/claimableRewards";
 import { useScaffoldWriteContract } from "~~/hooks/scaffold-eth";
@@ -11,6 +13,7 @@ import {
   getClaimPreflightErrorMessage,
   isClaimGasShortageError,
 } from "~~/lib/claimTransactionFeedback";
+import { QUESTION_BOUNTY_ESCROW_ABI, getConfiguredQuestionBountyEscrowAddress } from "~~/lib/questionBounties";
 import { isWalletRpcOverloadedError } from "~~/lib/transactionErrors";
 import { notification } from "~~/utils/scaffold-eth";
 
@@ -18,6 +21,9 @@ import { notification } from "~~/utils/scaffold-eth";
  * Hook for claiming all outstanding rewards in sequence.
  */
 export function useClaimAll() {
+  const { chain } = useAccount();
+  const wagmiConfig = useConfig();
+  const { writeContractAsync: writeDirectContractAsync } = useWriteContract();
   const [isClaiming, setIsClaiming] = useState(false);
   const [progress, setProgress] = useState({ current: 0, total: 0 });
   const { requireAcceptance } = useTermsAcceptance();
@@ -151,6 +157,20 @@ export function useClaimAll() {
               },
               { getErrorMessage: getTransactionErrorMessage },
             );
+          } else if (item.claimType === "question_bounty_reward") {
+            const escrowAddress = getConfiguredQuestionBountyEscrowAddress(chain?.id ?? wagmiConfig.chains[0]?.id ?? 0);
+            if (!escrowAddress) {
+              notification.error("Question bounties are not deployed on this network yet.");
+              continue;
+            }
+
+            const hash = await writeDirectContractAsync({
+              address: escrowAddress,
+              abi: QUESTION_BOUNTY_ESCROW_ABI,
+              functionName: "claimBountyReward",
+              args: [item.bountyId, item.roundId],
+            });
+            await waitForTransactionReceipt(wagmiConfig, { hash });
           } else {
             await (writeDistributor as any)(
               {
@@ -166,11 +186,13 @@ export function useClaimAll() {
               ? `participation reward for content #${item.contentId} round ${item.roundId}`
               : item.claimType === "submitter_participation_reward"
                 ? `submitter participation reward for content #${item.contentId}`
-                : item.claimType === "frontend_registry_fee"
-                  ? `frontend registry fees for ${item.frontend}`
-                  : item.claimType === "frontend_round_fee"
-                    ? `frontend round fee for content #${item.contentId} round ${item.roundId}`
-                    : `content #${item.contentId} round ${item.roundId}`;
+                : item.claimType === "question_bounty_reward"
+                  ? `USDC bounty for content #${item.contentId} round ${item.roundId}`
+                  : item.claimType === "frontend_registry_fee"
+                    ? `frontend registry fees for ${item.frontend}`
+                    : item.claimType === "frontend_round_fee"
+                      ? `frontend round fee for content #${item.contentId} round ${item.roundId}`
+                      : `content #${item.contentId} round ${item.roundId}`;
           console.error(`Claim failed for ${claimLabel}:`, e?.shortMessage || e?.message);
           if (isClaimGasShortageError(e, transactionFeedback)) {
             break;

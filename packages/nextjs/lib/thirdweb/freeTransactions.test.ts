@@ -422,6 +422,16 @@ test("supported sponsored operation families are allowlisted", async () => {
     ],
     [encodeCall(contentRegistryContract, "cancelReservedSubmission", [`0x${"2".repeat(64)}`])],
     [
+      encodeCall(contentRegistryContract, "submitQuestion", [
+        "",
+        "Is this product worth recommending?",
+        "Vote based on the description.",
+        "Products,Value",
+        1n,
+        `0x${"3".repeat(64)}`,
+      ]),
+    ],
+    [
       encodeCall(crepContract, "approve", [categoryRegistryContract.address, 10n]),
       encodeCall(categoryRegistryContract, "submitCategory", ["Security", "security.example", ["Smart Contracts"]]),
     ],

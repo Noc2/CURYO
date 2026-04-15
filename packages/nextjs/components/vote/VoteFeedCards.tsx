@@ -4,6 +4,7 @@ import { memo, useEffect, useState } from "react";
 import dynamic from "next/dynamic";
 import { ArrowTopRightOnSquareIcon, ChevronLeftIcon, ChevronRightIcon } from "@heroicons/react/24/outline";
 import { ShareIcon } from "@heroicons/react/24/outline";
+import { AddBountyModal } from "~~/components/bounty/AddBountyModal";
 import { ContentEmbed } from "~~/components/content/ContentEmbed";
 import { SubmitterBadge } from "~~/components/content/SubmitterBadge";
 import { FollowProfileButton } from "~~/components/shared/FollowProfileButton";
@@ -12,6 +13,7 @@ import { SafeExternalLink } from "~~/components/shared/SafeExternalLink";
 import { WatchContentButton } from "~~/components/shared/WatchContentButton";
 import type { ContentItem } from "~~/hooks/useContentFeed";
 import type { SubmitterProfile } from "~~/hooks/useSubmitterProfiles";
+import { formatUsdAmount } from "~~/lib/questionBounties";
 import { detectPlatform } from "~~/utils/platforms";
 
 const ShareContentModal = dynamic(
@@ -25,6 +27,7 @@ const CONTENT_INTENT_INTERACTIVE_SELECTOR =
   "a[href],button,input,select,textarea,summary,iframe,[role='button'],[role='link']";
 
 function getSourceLabel(url: string) {
+  if (!url) return "";
   try {
     return new URL(url).hostname.replace(/^www\./, "");
   } catch {
@@ -79,7 +82,7 @@ export const FeedVoteCard = memo(function FeedVoteCard({
 }: FeedVoteCardProps) {
   const [isLaptopCompact, setIsLaptopCompact] = useState(false);
   const [isMobileViewport, setIsMobileViewport] = useState(false);
-  const platformType = detectPlatform(item.url).type;
+  const platformType = item.url ? detectPlatform(item.url).type : "text";
 
   useEffect(() => {
     if (typeof window === "undefined" || typeof window.matchMedia !== "function") return;
@@ -132,7 +135,7 @@ export const FeedVoteCard = memo(function FeedVoteCard({
   const contentStackClassName = useCompactCard ? "gap-2" : "gap-3 xl:gap-2.5";
   const contentGridClassName = "grid min-h-0 flex-1 grid-cols-1 gap-3";
   const usesIntrinsicMediaHeight = platformType === "youtube";
-  const contentIntentEnabled = platformType !== "youtube";
+  const contentIntentEnabled = Boolean(item.url) && platformType !== "youtube";
   const mediaHeightClassName = usesIntrinsicMediaHeight
     ? "w-full"
     : isMobileViewport
@@ -192,6 +195,8 @@ export const FeedVoteCard = memo(function FeedVoteCard({
           >
             <ContentEmbed
               url={item.url}
+              title={item.title}
+              description={item.description}
               compact={useCompactEmbed}
               isActive={isActive}
               interactionMode={contentIntentEnabled ? "vote" : "default"}
@@ -312,17 +317,19 @@ function FeedContentMetaCard({
   collapseDescription = true,
 }: FeedContentMetaCardProps) {
   const [showShare, setShowShare] = useState(false);
+  const [showBountyModal, setShowBountyModal] = useState(false);
   const [isExpanded, setIsExpanded] = useState(false);
-  const platformType = detectPlatform(item.url).type;
+  const platformType = item.url ? detectPlatform(item.url).type : "text";
   const detailsId = `content-details-${item.id.toString()}`;
   const hasFollowButton = !(normalizedAddress && item.submitter.toLowerCase() === normalizedAddress);
   const description = item.description.trim();
   const hasDescription = description.length > 0;
-  const hasTags = item.tags.length > 0;
-  const hasMagicDisclaimer = item.categoryId === 3n;
   const sourceLabel = getSourceLabel(item.url);
+  const bountyTotal = item.bountySummary?.totalAvailable ?? item.bountySummary?.totalFunded ?? 0n;
   const hasSourceDetails = sourceLabel.trim().length > 0;
-  const hasExpandableDetails = hasSourceDetails || hasDescription || hasTags || hasMagicDisclaimer;
+  const hasBounty = bountyTotal > 0n;
+  const hasMagicDisclaimer = platformType === "scryfall";
+  const hasExpandableDetails = true;
   const showExpandedDetails = !collapseDescription || isExpanded;
   const visibleTags = showExpandedDetails ? item.tags.filter(Boolean) : [];
   const wrapperClassName = embedded
@@ -350,6 +357,11 @@ function FeedContentMetaCard({
             />
           </div>
           <div className="ml-auto flex shrink-0 items-center gap-0.5 sm:gap-1">
+            {hasBounty ? (
+              <span className="rounded-full bg-success/15 px-2.5 py-1 text-sm font-semibold leading-none text-success">
+                {formatUsdAmount(bountyTotal)}
+              </span>
+            ) : null}
             {hasFollowButton ? (
               <FollowProfileButton
                 following={following}
@@ -380,20 +392,34 @@ function FeedContentMetaCard({
           <div id={detailsId} className={compact ? "mt-2.5 space-y-2" : "mt-3 space-y-2.5"}>
             <div className="flex flex-wrap items-center gap-2">
               <span className="inline-flex items-center rounded-full bg-base-300 px-2.5 py-1 text-sm font-medium leading-none text-base-content/80">
-                {platformType}
+                {platformType === "text" ? "text" : platformType}
               </span>
-              <SafeExternalLink
-                href={item.url}
-                allowExternalOpen
-                testId="content-source-link"
-                title={`Open source: ${sourceLabel}`}
-                ariaLabel={`Open source: ${sourceLabel}`}
-                onClick={() => onSourceOpen?.(item)}
-                className="inline-flex items-center gap-1.5 rounded-full bg-base-content/[0.06] px-2.5 py-1 text-sm font-medium leading-none text-base-content/78 transition-colors hover:bg-base-content/[0.1] hover:text-base-content"
+              {hasSourceDetails ? (
+                <SafeExternalLink
+                  href={item.url}
+                  allowExternalOpen
+                  testId="content-source-link"
+                  title={`Open source: ${sourceLabel}`}
+                  ariaLabel={`Open source: ${sourceLabel}`}
+                  onClick={() => onSourceOpen?.(item)}
+                  className="inline-flex items-center gap-1.5 rounded-full bg-base-content/[0.06] px-2.5 py-1 text-sm font-medium leading-none text-base-content/78 transition-colors hover:bg-base-content/[0.1] hover:text-base-content"
+                >
+                  <ArrowTopRightOnSquareIcon className="h-3.5 w-3.5" />
+                  <span className="max-w-[12rem] truncate">{sourceLabel}</span>
+                </SafeExternalLink>
+              ) : null}
+              {hasBounty ? (
+                <span className="rounded-full bg-success/15 px-2.5 py-1 text-sm font-semibold leading-none text-success">
+                  {formatUsdAmount(bountyTotal)} bounty
+                </span>
+              ) : null}
+              <button
+                type="button"
+                onClick={() => setShowBountyModal(true)}
+                className="rounded-full bg-primary/10 px-2.5 py-1 text-sm font-semibold leading-none text-primary transition-colors hover:bg-primary/15"
               >
-                <ArrowTopRightOnSquareIcon className="h-3.5 w-3.5" />
-                <span className="max-w-[12rem] truncate">{sourceLabel}</span>
-              </SafeExternalLink>
+                Add bounty
+              </button>
               {visibleTags.map(tag => (
                 <span key={tag} className="text-sm text-base-content/70">
                   #{tag}
@@ -444,6 +470,10 @@ function FeedContentMetaCard({
           }
           onClose={() => setShowShare(false)}
         />
+      ) : null}
+
+      {showBountyModal ? (
+        <AddBountyModal contentId={item.id} title={item.title} onClose={() => setShowBountyModal(false)} />
       ) : null}
     </>
   );

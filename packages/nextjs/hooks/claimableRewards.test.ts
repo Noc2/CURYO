@@ -208,6 +208,14 @@ test("sortClaimableRewardItems keeps frontend round credits ahead of the final f
       claimType: "frontend_round_fee",
     },
     {
+      bountyId: 9n,
+      contentId: 5n,
+      roundId: 1n,
+      reward: 2n,
+      title: "Is this worth it?",
+      claimType: "question_bounty_reward",
+    },
+    {
       contentId: 2n,
       roundId: 1n,
       reward: 4n,
@@ -233,6 +241,14 @@ test("sortClaimableRewardItems keeps frontend round credits ahead of the final f
       roundId: 1n,
       reward: 1n,
       claimType: "participation_reward",
+    },
+    {
+      bountyId: 9n,
+      contentId: 5n,
+      roundId: 1n,
+      reward: 2n,
+      title: "Is this worth it?",
+      claimType: "question_bounty_reward",
     },
     {
       contentId: 8n,

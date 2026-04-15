@@ -50,7 +50,9 @@ const TwitterEmbed = dynamic(() => import("./embeds/TwitterEmbed").then(m => m.T
 });
 
 interface ContentEmbedProps {
-  url: string;
+  url?: string | null;
+  title?: string;
+  description?: string;
   compact?: boolean;
   isActive?: boolean;
   deferClientFetch?: boolean;
@@ -83,15 +85,43 @@ class EmbedErrorBoundary extends React.Component<
  */
 export function ContentEmbed({
   url,
+  title,
+  description,
   compact = false,
   isActive = true,
   deferClientFetch = false,
   prefetchedMetadata,
   interactionMode = "default",
 }: ContentEmbedProps) {
+  if (!url?.trim()) {
+    return (
+      <div className={`flex h-full min-h-[12rem] flex-col justify-center bg-base-100 ${compact ? "p-4" : "p-6"}`}>
+        {title ? <p className="text-sm font-semibold uppercase text-base-content/45">Question</p> : null}
+        {title ? <h3 className="mt-2 text-xl font-semibold leading-tight text-base-content">{title}</h3> : null}
+        {description ? (
+          <p className="mt-3 whitespace-pre-wrap break-words text-base leading-relaxed text-base-content/75">
+            {description}
+          </p>
+        ) : null}
+      </div>
+    );
+  }
+
   const platformInfo = detectPlatform(url);
   const usablePrefetchedMetadata = getUsablePrefetchedMetadata(platformInfo.type, prefetchedMetadata);
   const disableExternalNavigation = interactionMode === "vote";
+  const isDirectImage = /^https:\/\/.+\.(?:avif|gif|jpe?g|png|webp)(?:[?#].*)?$/i.test(url);
+
+  if (isDirectImage) {
+    return (
+      <img
+        src={url}
+        alt={title || "Question media"}
+        className="h-full w-full object-cover"
+        loading={isActive ? "eager" : "lazy"}
+      />
+    );
+  }
 
   if (shouldWaitForPrefetchedMetadata(platformInfo.type, deferClientFetch, usablePrefetchedMetadata)) {
     return (

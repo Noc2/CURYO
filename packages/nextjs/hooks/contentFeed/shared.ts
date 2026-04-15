@@ -49,6 +49,11 @@ export interface ContentItem {
   isValidUrl: boolean | null;
   thumbnailUrl: string | null;
   contentMetadata?: ContentMetadataResult;
+  bountySummary?: {
+    totalFunded: bigint;
+    totalAvailable: bigint;
+    activeBountyCount: number;
+  } | null;
 }
 
 export type FeedSort = "newest" | "oldest" | "highest_rated" | "lowest_rated" | "most_votes" | "relevance";
@@ -85,7 +90,7 @@ function buildNormalizedAddressSet(addresses: readonly string[] | undefined, fal
 export function mapContentItem(
   item: {
     id: string;
-    url: string;
+    url?: string | null;
     title: string;
     description: string;
     tags: string;
@@ -117,6 +122,13 @@ export function mapContentItem(
       lowSince?: string;
       startTime: string | null;
       estimatedSettlementTime: string | null;
+    } | null;
+    bountySummary?: {
+      totalFunded?: string | number | bigint | null;
+      totalFundedAmount?: string | number | bigint | null;
+      totalAvailable?: string | number | bigint | null;
+      currentBountyAmount?: string | number | bigint | null;
+      activeBountyCount?: number | null;
     } | null;
   },
   voterAddress?: string,
@@ -157,7 +169,7 @@ export function mapContentItem(
 
   return {
     id: BigInt(item.id),
-    url: item.url,
+    url: item.url ?? "",
     title: item.title,
     description: item.description,
     tags: parseTags(item.tags),
@@ -175,6 +187,13 @@ export function mapContentItem(
     openRound: mappedOpenRound,
     isValidUrl: null,
     thumbnailUrl: null,
+    bountySummary: item.bountySummary
+      ? {
+          totalFunded: BigInt(item.bountySummary.totalFunded ?? item.bountySummary.totalFundedAmount ?? 0),
+          totalAvailable: BigInt(item.bountySummary.totalAvailable ?? item.bountySummary.currentBountyAmount ?? 0),
+          activeBountyCount: item.bountySummary.activeBountyCount ?? 0,
+        }
+      : null,
   };
 }
 
@@ -184,6 +203,10 @@ export function mergeContentFeedMetadata(
   validationMap: Record<string, boolean | null>,
 ): ContentItem[] {
   return feed.map(item => {
+    if (!item.url) {
+      return item;
+    }
+
     const contentMetadata = metadataMap[item.url] ?? item.contentMetadata;
 
     return {

@@ -76,7 +76,7 @@ function mergeBatchMaps<T>(batches: Record<string, T>[]): Record<string, T> {
 }
 
 export function getContentFeedMetadataUrls(feed: ContentItem[]): string[] {
-  return [...new Set(feed.map(item => item.url))].sort();
+  return [...new Set(feed.map(item => item.url).filter(Boolean))].sort();
 }
 
 export function getContentFeedMetadataCacheKey(urls: string[]): string {

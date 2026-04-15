@@ -1,0 +1,150 @@
+"use client";
+
+import { isAddress, parseUnits } from "viem";
+import { contracts } from "~~/utils/scaffold-eth/contract";
+
+export const USDC_DECIMALS = 6;
+export const MIN_BOUNTY_REQUIRED_VOTERS = 3;
+export const MIN_BOUNTY_SETTLED_ROUNDS = 1;
+
+export const QUESTION_SUBMISSION_ABI = [
+  {
+    type: "function",
+    name: "previewQuestionSubmissionKey",
+    inputs: [
+      { name: "url", type: "string" },
+      { name: "title", type: "string" },
+      { name: "description", type: "string" },
+      { name: "tags", type: "string" },
+      { name: "categoryId", type: "uint256" },
+    ],
+    outputs: [
+      { name: "resolvedCategoryId", type: "uint256" },
+      { name: "submissionKey", type: "bytes32" },
+    ],
+    stateMutability: "view",
+  },
+  {
+    type: "function",
+    name: "submitQuestion",
+    inputs: [
+      { name: "url", type: "string" },
+      { name: "title", type: "string" },
+      { name: "description", type: "string" },
+      { name: "tags", type: "string" },
+      { name: "categoryId", type: "uint256" },
+      { name: "salt", type: "bytes32" },
+    ],
+    outputs: [{ name: "", type: "uint256" }],
+    stateMutability: "nonpayable",
+  },
+] as const;
+
+export const QUESTION_BOUNTY_ESCROW_ABI = [
+  {
+    type: "function",
+    name: "createBounty",
+    inputs: [
+      { name: "contentId", type: "uint256" },
+      { name: "amount", type: "uint256" },
+      { name: "requiredVoters", type: "uint256" },
+      { name: "requiredSettledRounds", type: "uint256" },
+      { name: "expiresAt", type: "uint256" },
+    ],
+    outputs: [{ name: "bountyId", type: "uint256" }],
+    stateMutability: "nonpayable",
+  },
+  {
+    type: "function",
+    name: "claimBountyReward",
+    inputs: [
+      { name: "bountyId", type: "uint256" },
+      { name: "roundId", type: "uint256" },
+    ],
+    outputs: [{ name: "rewardAmount", type: "uint256" }],
+    stateMutability: "nonpayable",
+  },
+  {
+    type: "function",
+    name: "claimableBountyReward",
+    inputs: [
+      { name: "bountyId", type: "uint256" },
+      { name: "roundId", type: "uint256" },
+      { name: "account", type: "address" },
+    ],
+    outputs: [{ name: "claimableAmount", type: "uint256" }],
+    stateMutability: "view",
+  },
+  {
+    type: "function",
+    name: "usdcToken",
+    inputs: [],
+    outputs: [{ name: "", type: "address" }],
+    stateMutability: "view",
+  },
+] as const;
+
+export const ERC20_APPROVAL_ABI = [
+  {
+    type: "function",
+    name: "allowance",
+    inputs: [
+      { name: "owner", type: "address" },
+      { name: "spender", type: "address" },
+    ],
+    outputs: [{ name: "", type: "uint256" }],
+    stateMutability: "view",
+  },
+  {
+    type: "function",
+    name: "approve",
+    inputs: [
+      { name: "spender", type: "address" },
+      { name: "amount", type: "uint256" },
+    ],
+    outputs: [{ name: "", type: "bool" }],
+    stateMutability: "nonpayable",
+  },
+] as const;
+
+const CELO_USDC_BY_CHAIN_ID: Record<number, `0x${string}`> = {
+  42220: "0xcebA9300f2b948710d2653dD7B07f33A8B32118C",
+  11142220: "0x01C5C0122039549AD1493B8220cABEdD739BC44E",
+};
+
+function normalizeAddress(value: string | undefined): `0x${string}` | undefined {
+  const trimmed = value?.trim();
+  return trimmed && isAddress(trimmed) ? (trimmed as `0x${string}`) : undefined;
+}
+
+export function getConfiguredQuestionBountyEscrowAddress(chainId: number): `0x${string}` | undefined {
+  const envAddress = normalizeAddress(process.env.NEXT_PUBLIC_QUESTION_BOUNTY_ESCROW_ADDRESS);
+  if (envAddress) return envAddress;
+
+  const deployedAddress = (contracts?.[chainId]?.QuestionBountyEscrow as { address?: string } | undefined)?.address;
+  return normalizeAddress(deployedAddress);
+}
+
+export function getDefaultUsdcAddress(chainId: number): `0x${string}` | undefined {
+  return normalizeAddress(process.env.NEXT_PUBLIC_CELO_USDC_ADDRESS) ?? CELO_USDC_BY_CHAIN_ID[chainId];
+}
+
+export function parseUsdBountyAmount(value: string): bigint | null {
+  const normalized = value.trim().replace(/,/g, ".");
+  if (!/^\d+(?:\.\d{0,6})?$/.test(normalized)) return null;
+  try {
+    const parsed = parseUnits(normalized, USDC_DECIMALS);
+    return parsed > 0n ? parsed : null;
+  } catch {
+    return null;
+  }
+}
+
+export function formatUsdAmount(value: bigint | number | string | undefined | null): string {
+  const raw = typeof value === "bigint" ? value : BigInt(value ?? 0);
+  const whole = raw / 1_000_000n;
+  const fractional = raw % 1_000_000n;
+  const groupedWhole = whole.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+  const cents = (fractional / 10_000n).toString().padStart(2, "0");
+  return fractional > 0n ? `$${groupedWhole}.${cents}` : `$${groupedWhole}`;
+}

@@ -90,12 +90,22 @@ function mockPonderModules<T>(result: T) {
       allocatedAmount: "questionBounty.allocatedAmount",
       claimedAmount: "questionBounty.claimedAmount",
       contentId: "questionBounty.contentId",
+      createdAt: "questionBounty.createdAt",
       fundedAmount: "questionBounty.fundedAmount",
+      id: "questionBounty.id",
       qualifiedRounds: "questionBounty.qualifiedRounds",
       refunded: "questionBounty.refunded",
       refundedAmount: "questionBounty.refundedAmount",
+      requiredVoters: "questionBounty.requiredVoters",
       requiredSettledRounds: "questionBounty.requiredSettledRounds",
+      startRoundId: "questionBounty.startRoundId",
       unallocatedAmount: "questionBounty.unallocatedAmount",
+    },
+    questionBountyRound: {
+      allocation: "questionBountyRound.allocation",
+      bountyId: "questionBountyRound.bountyId",
+      eligibleVoters: "questionBountyRound.eligibleVoters",
+      roundId: "questionBountyRound.roundId",
     },
     ratingChange: {
       confidenceMass: "ratingChange.confidenceMass",
@@ -540,6 +550,48 @@ describe("registerDataRoutes", () => {
       ],
     });
     expect(queryBuilder.groupBy).toHaveBeenCalledWith("vote.contentId");
+  });
+
+  it("rejects bounty claim candidate requests without a valid voter", async () => {
+    const { db } = mockPonderModules([]);
+    const { registerDataRoutes } = await import("../src/api/routes/data-routes.js");
+
+    const app = new Hono();
+    registerDataRoutes(app);
+
+    const missingResponse = await app.request("http://localhost/bounty-claim-candidates");
+    const invalidResponse = await app.request("http://localhost/bounty-claim-candidates?voter=not-an-address");
+
+    expect(missingResponse.status).toBe(400);
+    expect(await missingResponse.json()).toEqual({ error: "voter parameter required" });
+    expect(invalidResponse.status).toBe(400);
+    expect(await invalidResponse.json()).toEqual({ error: "Invalid voter address" });
+    expect(db.select).not.toHaveBeenCalled();
+  });
+
+  it("queries bounty claim candidates from revealed settled votes", async () => {
+    const { queryBuilder } = mockPonderModules([{ bountyId: 1n, contentId: 2n, roundId: 3n }]);
+    const { registerDataRoutes } = await import("../src/api/routes/data-routes.js");
+
+    const app = new Hono();
+    registerDataRoutes(app);
+
+    const response = await app.request(
+      "http://localhost/bounty-claim-candidates?voter=0x0000000000000000000000000000000000000001&limit=25&offset=5",
+    );
+
+    expect(response.status).toBe(200);
+    expect(queryBuilder.innerJoin).toHaveBeenCalled();
+    expect(queryBuilder.leftJoin).toHaveBeenCalled();
+    expect(queryBuilder.limit).toHaveBeenCalledWith(25);
+    expect(queryBuilder.offset).toHaveBeenCalledWith(5);
+
+    const whereArg = queryBuilder.where.mock.calls[0]?.[0];
+    const serialized = serializeExpression(whereArg);
+    expect(serialized).toContain("vote.voter");
+    expect(serialized).toContain("vote.revealed");
+    expect(serialized).toContain("round.state");
+    expect(serialized).toContain("questionBounty.startRoundId");
   });
 });
 
