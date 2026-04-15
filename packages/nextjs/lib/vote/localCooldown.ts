@@ -40,9 +40,13 @@ interface GetLocalVoteCooldownsParams {
   storage?: StorageLike | null;
 }
 
-function getDefaultStorage(): StorageLike | null {
+export function getDefaultStorage(): StorageLike | null {
   if (typeof window === "undefined") return null;
-  return window.localStorage;
+  try {
+    return window.localStorage;
+  } catch {
+    return null;
+  }
 }
 
 function normalizeAddress(address?: string | null) {
