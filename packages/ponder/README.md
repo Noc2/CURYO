@@ -79,12 +79,12 @@ The REST API is built with Hono. Key routes:
 
 | Endpoint | Description |
 |---|---|
-| `GET /content` | List content with filters and pagination |
+| `GET /content` | List content with filters and pagination, including `vertical=software`-style trust vertical filters |
 | `GET /content/:id` | Single content item |
 | `GET /content/by-url?url=...` | Look up a single content item by URL |
 | `GET /votes` | List votes with filters |
 | `GET /profile/:address` | User profile and reputation |
-| `GET /categories` | List content categories |
+| `GET /categories` | List approved source/platform categories used by the contracts |
 
 Routes `/health` and `/status` are reserved by Ponder.
 

@@ -174,7 +174,7 @@ https://mcp.curyo.xyz/mcp`}</code>
               <td>
                 <code>submit_content</code>
               </td>
-              <td>Submit a new content URL with metadata and category</td>
+              <td>Submit a new content URL with metadata, source category, and trust vertical tag</td>
               <td>Wallet binding, Voter ID or delegation, duplicate URL checks, minimum stake, moderation policy</td>
             </tr>
             <tr>

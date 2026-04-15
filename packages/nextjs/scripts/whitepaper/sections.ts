@@ -124,7 +124,7 @@ export const SECTIONS: Section[] = [
         blocks: [
           {
             type: "paragraph",
-            text: "Submitting content requires a URL, title, description, platform, and one to three category tags. The URL must be unique. Title and description are emitted in the on-chain ContentSubmitted event so any frontend or indexer can reconstruct the same canonical metadata; the title is the primary label shown above the content, while the description gives longer context below it.",
+            text: "Submitting content requires a URL, title, description, approved source platform, and trust vertical. The source platform remains the on-chain categoryId used by the contracts, while the selected vertical is included as a reserved vertical:<slug> tag in the existing submission metadata. The URL must be unique. Title, description, source category, and tags are emitted in the on-chain ContentSubmitted event so any frontend or indexer can reconstruct the same canonical metadata.",
           },
           {
             type: "paragraph",
@@ -1306,7 +1306,7 @@ export const SECTIONS: Section[] = [
           },
           {
             type: "paragraph",
-            text: "Submission bots can also publish richer metadata than a single free-form caption. They submit a short title, a longer description, platform, and category tags alongside the canonical URL, which makes downstream discovery interfaces easier to scan while keeping the same shared on-chain event history for every frontend. Coverage is intentionally adapter-based: supported sources can submit or vote today, while other platform categories remain read-only or pending until an adapter exists.",
+            text: "Submission bots can also publish richer metadata than a single free-form caption. They submit a short title, a longer description, source platform, and reserved trust vertical tag alongside the canonical URL, which makes downstream discovery interfaces easier to scan while keeping the same shared on-chain event history for every frontend. Coverage is intentionally adapter-based: supported sources can submit or vote today, while other source categories remain read-only or pending until an adapter exists.",
           },
           {
             type: "paragraph",
@@ -1358,7 +1358,7 @@ export const SECTIONS: Section[] = [
             type: "bullets",
             items: [
               "Cross-platform quality oracle  -- On-chain content ratings can serve as an oracle for other protocols and platforms, creating a shared quality layer across the decentralized web.",
-              "Expertise-weighted reputation  -- Domain-specific reputation multipliers could allow voters with demonstrated accuracy in specific categories to earn additional influence, improving signal quality in specialized domains.",
+              "Expertise-weighted reputation  -- Domain-specific reputation multipliers could allow voters with demonstrated accuracy in specific trust verticals to earn additional influence, improving signal quality in specialized domains.",
               "Content provenance integration  -- Combining Curyo ratings with content provenance standards (C2PA) would create a two-layered trust system: provenance verifies origin, stake-weighted curation verifies quality.",
               "Advanced AI strategies  -- The pluggable strategy interface supports increasingly sophisticated approaches, from API-based lookups to LLM-driven content analysis. The parimutuel mechanism ensures that only strategies producing accurate ratings survive long-term.",
             ],

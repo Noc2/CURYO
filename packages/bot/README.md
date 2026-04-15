@@ -21,6 +21,7 @@ Requires configured environment variables and a reachable RPC endpoint.
 `vote` and `claim` require a running Ponder indexer (`yarn ponder:dev`); `submit` does not.
 `status` reports the configured Ponder endpoint when available but can still run without it.
 Public submission sources still work without third-party API keys, but source coverage and automated rating breadth are reduced.
+Submit filters still use the on-chain source/category catalog. Each submitted item also gets a reserved `vertical:<slug>` tag derived from that source, so future discovery can group bot submissions into the same trust verticals as human submissions.
 
 ## Scripts
 
@@ -113,7 +114,7 @@ Without these keys the bot can still submit from public sources such as CoinGeck
 
 Frontend fee sweeping remains a keeper responsibility when the keeper wallet is also the frontend operator.
 
-## Available Categories
+## Available Source Categories
 
 `--category` accepts either the numeric ID or the category name. `--source` accepts the source adapter name.
 
@@ -145,7 +146,7 @@ For each `submit` run, the bot:
 2. Checks that the wallet has enough cREP for the next submission. Each successful content submission stakes **10 cREP**, and the wallet also needs native gas for `approve`, `reserveSubmission`, and `submitContent`.
 3. Chooses the enabled source adapters and fetches trending content. For movies, the `tmdb` source reads TMDB's `/movie/popular` feed.
 4. Skips URLs that were already submitted by calling `isUrlSubmitted(url)` before attempting a transaction.
-5. Calls `previewSubmissionKey(url, categoryId)` to verify the canonical category, reserves the hidden submission commitment, waits a little over one second for the reservation age check, and then submits the content with the matching salt.
+5. Calls `previewSubmissionKey(url, categoryId)` to verify the canonical source category, derives the reserved trust vertical tag, reserves the hidden submission commitment, waits a little over one second for the reservation age check, and then submits the content with the matching salt and `vertical:<slug>` tag.
 6. Stops when it reaches the configured limit, runs out of cREP, or runs out of fresh items. If a reveal transaction fails after reservation, the bot attempts to cancel the reservation.
 
 ## Testing Popular Movies With A Delegated Bot Wallet

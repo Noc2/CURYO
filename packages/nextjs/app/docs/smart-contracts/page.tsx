@@ -288,7 +288,8 @@ const SmartContracts: NextPage = () => {
           <code>submitContent(url, title, description, tags, categoryId, salt)</code> &mdash; Reserve a hidden content
           submission, then reveal it with a 10 cREP stake. Requires Voter ID. Duplicate URLs are rejected, and the title
           plus description are emitted in the canonical <code>ContentSubmitted</code> event for indexers and alternate
-          frontends.
+          frontends. Current frontends reserve <code>vertical:&lt;slug&gt;</code> tags for trust vertical discovery
+          while keeping <code>categoryId</code> as the approved source/platform category.
         </li>
         <li>
           <code>cancelContent(contentId)</code> &mdash; Cancel own content (1 cREP fee to the configured
@@ -538,8 +539,9 @@ const SmartContracts: NextPage = () => {
 
       <h2>CategoryRegistry</h2>
       <p>
-        Manages content categories. New categories require a governance proposal and on-chain vote for approval. Each
-        category maps to a domain and includes subcategories that help voters interpret the type of content being rated.
+        Manages approved source/platform categories. New categories require a governance proposal and on-chain vote for
+        approval. Each category maps to a domain and includes legacy subcategories. Public discovery verticals are an
+        application/indexer taxonomy layered through reserved submission tags, not a separate contract registry.
       </p>
       <h3>Key Functions</h3>
       <ul>

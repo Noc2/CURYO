@@ -224,7 +224,7 @@ const FrontendCodes: NextPage = () => {
       <ul>
         <li>
           <strong>Blocks submissions</strong> containing prohibited terms or blocked domains in URLs, titles,
-          descriptions, custom content categories, platform names, domains, and platform subcategories.
+          descriptions, platform names, domains, and platform subcategories.
         </li>
         <li>
           <strong>Filters indexed reads centrally</strong> in the bundled Ponder query layer so blocked content stays
