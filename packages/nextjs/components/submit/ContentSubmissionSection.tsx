@@ -14,6 +14,13 @@ import {
   setStoredSubmissionReservation,
   submissionReservationMatchesDraft,
 } from "./submissionReservation";
+import {
+  TRUST_VERTICALS,
+  type TrustVerticalSlug,
+  buildTrustVerticalTag,
+  getTrustVertical,
+  resolveTrustVerticalSlug,
+} from "@curyo/node-utils/trustVerticals";
 import { decodeEventLog } from "viem";
 import { useAccount, useConfig } from "wagmi";
 import { readContract, waitForTransactionReceipt } from "wagmi/actions";
@@ -42,9 +49,7 @@ import { MAX_CONTENT_DESCRIPTION_LENGTH } from "~~/lib/contentDescription";
 import { MAX_CONTENT_TITLE_LENGTH } from "~~/lib/contentTitle";
 import { protocolDocFacts } from "~~/lib/docs/protocolFacts";
 import {
-  findBlockedContentTags,
   getContentDescriptionValidationError,
-  getContentTagValidationError,
   getContentTitleValidationError,
 } from "~~/lib/moderation/submissionValidation";
 import {
@@ -180,8 +185,7 @@ export function ContentSubmissionSection() {
   const [description, setDescription] = useState("");
   const [descriptionError, setDescriptionError] = useState<string | null>(null);
   const [selectedCategory, setSelectedCategory] = useState<Category | null>(null);
-  const [selectedSubcategories, setSelectedSubcategories] = useState<string[]>([]);
-  const [customSubcategory, setCustomSubcategory] = useState("");
+  const [selectedVerticalSlug, setSelectedVerticalSlug] = useState<TrustVerticalSlug | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitAttempted, setSubmitAttempted] = useState(false);
   const [submittedContent, setSubmittedContent] = useState<{
@@ -227,9 +231,16 @@ export function ContentSubmissionSection() {
   useEffect(() => {
     if (detectedCategory && (!selectedCategory || selectedCategory.id !== detectedCategory.id)) {
       setSelectedCategory(detectedCategory);
-      setSelectedSubcategories([]);
+      setSelectedVerticalSlug(
+        resolveTrustVerticalSlug({
+          categoryId: detectedCategory.id,
+          categoryName: detectedCategory.name,
+          domain: detectedCategory.domain,
+          url,
+        }),
+      );
     }
-  }, [detectedCategory, selectedCategory]);
+  }, [detectedCategory, selectedCategory, url]);
 
   const urlCategoryMismatch = useMemo(() => {
     if (!url || urlError || !selectedCategory) return false;
@@ -250,7 +261,7 @@ export function ContentSubmissionSection() {
       DEFAULT_URL_CONFIG
     );
   }, [selectedCategory]);
-  const customSubcategoryError = customSubcategory ? getContentTagValidationError(customSubcategory) : null;
+  const selectedVertical = selectedVerticalSlug ? getTrustVertical(selectedVerticalSlug) : null;
 
   const getUrlValidationError = (value: string): string | null => {
     if (!value) {
@@ -298,7 +309,14 @@ export function ContentSubmissionSection() {
 
   const handleCategorySelect = (category: Category) => {
     setSelectedCategory(category);
-    setSelectedSubcategories([]);
+    setSelectedVerticalSlug(
+      resolveTrustVerticalSlug({
+        categoryId: category.id,
+        categoryName: category.name,
+        domain: category.domain,
+        url,
+      }),
+    );
     if (url) {
       try {
         const urlDomain = extractDomain(url);
@@ -309,31 +327,6 @@ export function ContentSubmissionSection() {
       } catch {
         // Keep URL if extraction fails.
       }
-    }
-  };
-
-  const handleSubcategoryToggle = (subcategory: string) => {
-    setSelectedSubcategories(prev => {
-      if (prev.includes(subcategory)) {
-        return prev.filter(s => s !== subcategory);
-      }
-      if (prev.length < 3) {
-        return [...prev, subcategory];
-      }
-      return prev;
-    });
-  };
-
-  const handleAddCustomSubcategory = () => {
-    const trimmed = customSubcategory.trim();
-    if (
-      trimmed &&
-      !selectedSubcategories.includes(trimmed) &&
-      selectedSubcategories.length < 3 &&
-      getContentTagValidationError(trimmed) === null
-    ) {
-      setSelectedSubcategories(prev => [...prev, trimmed]);
-      setCustomSubcategory("");
     }
   };
 
@@ -432,19 +425,13 @@ export function ContentSubmissionSection() {
     const nextUrlError = getUrlValidationError(url);
     const nextTitleError = trimmedTitle ? getContentTitleValidationError(trimmedTitle) : null;
     const nextDescriptionError = trimmedDescription ? getContentDescriptionValidationError(trimmedDescription) : null;
-    const blockedContentTags = findBlockedContentTags(selectedSubcategories);
 
     setUrlError(nextUrlError);
     setTitleError(nextTitleError);
     setDescriptionError(nextDescriptionError);
 
-    if (!selectedCategory || !url || !trimmedTitle || !trimmedDescription || selectedSubcategories.length === 0) {
+    if (!selectedCategory || !selectedVerticalSlug || !url || !trimmedTitle || !trimmedDescription) {
       notification.warning("Fill in the highlighted fields before submitting.");
-      return;
-    }
-
-    if (blockedContentTags.length > 0) {
-      notification.warning("Remove categories with prohibited content before submitting.");
       return;
     }
 
@@ -480,7 +467,7 @@ export function ContentSubmissionSection() {
     try {
       let contentId: bigint | null = null;
       const stakeAmount = BigInt(10 * 1e6);
-      const submissionTags = serializeTags(selectedSubcategories);
+      const submissionTags = serializeTags([buildTrustVerticalTag(selectedVerticalSlug)]);
       const submitterAddress = connectedAddress as `0x${string}` | undefined;
       if (!submitterAddress) {
         throw new Error("Wallet not connected");
@@ -745,8 +732,7 @@ export function ContentSubmissionSection() {
       setDescription("");
       setDescriptionError(null);
       setSelectedCategory(null);
-      setSelectedSubcategories([]);
-      setCustomSubcategory("");
+      setSelectedVerticalSlug(null);
       setSubmitAttempted(false);
     } catch (e: unknown) {
       console.error("Submit failed:", e);
@@ -974,73 +960,34 @@ export function ContentSubmissionSection() {
               <div>
                 <label
                   className={`mb-2 block text-base font-medium ${
-                    submitAttempted && selectedSubcategories.length === 0 ? "text-error" : ""
+                    submitAttempted && !selectedVerticalSlug ? "text-error" : ""
                   }`}
                 >
-                  Select Categories <span className="font-normal text-base-content/40">(1-3)</span>
+                  Trust Vertical
                 </label>
                 <div className="flex flex-wrap gap-2">
-                  {selectedCategory.subcategories.map(subcat => {
-                    const isSelected = selectedSubcategories.includes(subcat);
+                  {TRUST_VERTICALS.map(vertical => {
+                    const isSelected = selectedVerticalSlug === vertical.slug;
                     return (
                       <button
-                        key={subcat}
+                        key={vertical.slug}
                         type="button"
-                        onClick={() => handleSubcategoryToggle(subcat)}
-                        className={`rounded-full px-3 py-1.5 text-base font-medium transition-colors ${
+                        onClick={() => setSelectedVerticalSlug(vertical.slug)}
+                        title={vertical.description}
+                        className={`rounded-lg px-3 py-1.5 text-base font-medium transition-colors ${
                           isSelected ? "pill-active" : "pill-inactive"
                         }`}
                       >
-                        {subcat}
+                        {vertical.label}
                       </button>
                     );
                   })}
-                  {selectedSubcategories
-                    .filter(s => !selectedCategory.subcategories.includes(s))
-                    .map(subcat => (
-                      <button
-                        key={subcat}
-                        type="button"
-                        onClick={() => handleSubcategoryToggle(subcat)}
-                        className="pill-active flex items-center gap-1 rounded-full px-3 py-1.5 text-base font-medium transition-colors"
-                      >
-                        {subcat}
-                        <span className="opacity-70">×</span>
-                      </button>
-                    ))}
                 </div>
-                <div className="mt-3 flex gap-2">
-                  <input
-                    type="text"
-                    placeholder="Add custom category..."
-                    className={`input input-bordered input-sm flex-1 bg-base-100 ${customSubcategoryError ? "input-error" : ""}`}
-                    value={customSubcategory}
-                    onChange={e => setCustomSubcategory(e.target.value)}
-                    onKeyDown={e => {
-                      if (e.key === "Enter") {
-                        e.preventDefault();
-                        handleAddCustomSubcategory();
-                      }
-                    }}
-                    disabled={selectedSubcategories.length >= 3}
-                  />
-                  <button
-                    type="button"
-                    onClick={handleAddCustomSubcategory}
-                    disabled={
-                      !customSubcategory.trim() ||
-                      customSubcategoryError !== null ||
-                      selectedSubcategories.length >= 3 ||
-                      selectedSubcategories.includes(customSubcategory.trim())
-                    }
-                    className="btn btn-outline btn-sm"
-                  >
-                    Add
-                  </button>
-                </div>
-                {customSubcategoryError ? <p className="mt-2 text-base text-error">{customSubcategoryError}</p> : null}
-                {submitAttempted && selectedSubcategories.length === 0 ? (
-                  <p className="mt-2 text-base text-error">Pick at least one category before submitting.</p>
+                {selectedVertical ? (
+                  <p className="mt-2 text-base text-base-content/50">{selectedVertical.description}</p>
+                ) : null}
+                {submitAttempted && !selectedVerticalSlug ? (
+                  <p className="mt-2 text-base text-error">Pick a trust vertical before submitting.</p>
                 ) : null}
               </div>
             ) : null}
@@ -1053,16 +1000,11 @@ export function ContentSubmissionSection() {
                 {title ? <h3 className="line-clamp-2 text-lg font-semibold text-base-content">{title}</h3> : null}
                 <ContentEmbed url={url} compact />
                 {description ? <p className="text-base text-base-content/70">{description}</p> : null}
-                {selectedSubcategories.length > 0 ? (
+                {selectedVertical ? (
                   <div className="flex flex-wrap gap-1.5">
-                    {selectedSubcategories.map(tag => (
-                      <span
-                        key={tag}
-                        className="rounded-full bg-primary/10 px-2 py-0.5 text-base font-medium text-primary"
-                      >
-                        {tag}
-                      </span>
-                    ))}
+                    <span className="rounded-lg bg-primary/10 px-2 py-0.5 text-base font-medium text-primary">
+                      {selectedVertical.label}
+                    </span>
                   </div>
                 ) : null}
               </div>
