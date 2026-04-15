@@ -17,7 +17,8 @@ The target product is not a prediction market. Curyo 2.0 should pay verified hum
 - Add stablecoin bounties as a separate question-scoped escrow layer.
 - Pay stablecoin bounty rewards for valid participation only at launch. Do not add a stablecoin coherence, correctness, or winning-side bonus.
 - Fund only specific questions. Do not route bounty funds into the protocol-wide Participation Reward Pool.
-- Support USDC and USDT on Celo from launch through an explicit token allowlist.
+- Use Celo USDC as the only launch settlement asset. Do not support USDT initially.
+- Show bounty amounts as USD in primary product surfaces, with receipts and details disclosing that funds are settled in USDC on Celo.
 - Keep question results framed as community judgment or confidence, not guaranteed truth.
 
 ## Implementation Phases
@@ -40,9 +41,24 @@ Recommended question fields:
 - Category: the review domain or question frame, not a source-platform registry entry.
 - Description: context, review instructions, conflict disclosures, and criteria for interpreting the question.
 - Tags: optional subcategories or routing hints for discovery.
-- Bounty: optional USDC or USDT funding attached during submission.
+- Bounty: optional USD-denominated Celo USDC funding attached during submission.
 
 The submitter should understand that Curyo reports stake-backed voter judgment at vote time. For subjective use cases like product ratings, hotel ratings, aesthetics, trust, or usefulness, that is the core value. For future events or fact-based outcomes, submitter copy should clarify that Curyo is not guaranteeing future correctness and that prediction markets or oracle systems may be better tools.
+
+## USD-First Bounty UX
+
+Prediction-market products often make the primary experience feel dollar-denominated while settlement details live one layer deeper. Curyo should borrow that clarity without copying prediction-market mechanics.
+
+Launch UX rules:
+
+- Use `$` labels in high-level product surfaces: `$125 bounty`, `Add $50`, `Claim $3.25`.
+- Disclose exact settlement in details, receipts, exports, and support surfaces: `125 USDC on Celo`.
+- Do not add an internal USD account balance at launch.
+- Do not add swaps or multi-token routing at launch.
+- Do not call USDC bank USD. Product copy can use dollar labels, but docs and receipts should make the USDC settlement asset clear.
+- Keep all contract accounting in USDC units and all legal/tax records token-specific.
+
+Reference patterns: [Polymarket positions](https://docs.polymarket.com/concepts/positions-tokens), [Limitless docs](https://docs.limitless.exchange/), and [Kalshi orderbook API](https://docs.kalshi.com/api-reference/market/get-market-orderbook).
 
 ## Submit Flow
 
@@ -61,8 +77,8 @@ Recommended changes:
 
 The optional bounty panel should support:
 
-- Token: USDC or USDT.
-- Amount: entered in token units and formatted with the token decimals.
+- Token: fixed to Celo USDC at launch. Do not show a USDT option in v1.
+- Amount: entered and displayed as USD, then submitted as USDC smallest units.
 - Required voters: minimum number of valid revealed voters before the bounty can pay.
 - Required settled rounds: number of settled question rounds that must complete before payout unlocks.
 - Refund/expiry expectation: short copy explaining when funds are refundable or claimable.
@@ -97,13 +113,16 @@ Voting surfaces should make bounty funding visible without crowding the dense vo
 
 Recommended changes:
 
-- Show a compact bounty badge on each voting card, for example "125 USDC bounty" or a token breakdown if both USDC and USDT are funded.
+- Show a compact bounty badge on each voting card, for example "$125 bounty".
 - Place the badge near the title, current rating, or round status so voters see why a question is prioritized.
 - Do not let the badge resize the card between loading and loaded states; reserve stable space for it.
 - In the existing "more" or details surface, add an "Add bounty" action.
-- The "Add bounty" action should open a modal with token, amount, required voters, and required settled rounds.
+- The "Add bounty" action should open a modal with USD amount, required voters, and required settled rounds.
+- The modal should hide token selection at launch and state that bounties are funded and paid in USDC on Celo.
 - The modal should explain that stablecoin rewards are participation-only and question-scoped.
-- The modal should surface allowance, approval, funding, and failure states separately, especially for USDT.
+- The modal should surface USDC allowance, approval, funding, and failure states separately.
+
+Expanded details, receipts, and claim rows should disclose the exact token, for example "Backed by 125 USDC on Celo." Primary feed and card copy can use "$" to reduce token-specific clutter.
 
 The feed should still rank content by the protocol's normal discovery logic, but bounty size can become an additional ranking or filter signal once abuse controls are in place.
 
@@ -113,8 +132,9 @@ Stablecoin bounty rewards should be shown separately from cREP rewards.
 
 Recommended changes:
 
-- Add claimable USDC and USDT bounty rows to the rewards or profile claim area.
+- Add claimable USDC bounty rows to the rewards or profile claim area.
 - Show the source question, token, amount, and claim status.
+- Use USD as the primary label, with USDC on Celo shown in details and receipts.
 - Explain that stablecoin reward eligibility is based on valid reveal participation, not whether the voter chose the settled side.
 - Preserve cREP outcome-risk messaging so voters understand that a wrong cREP vote can still reduce their future participation power.
 
@@ -139,7 +159,7 @@ Each bounty should be scoped to one question. Top-ups with different terms shoul
 Recommended bounty fields:
 
 - `questionId` or `contentId`: the funded question.
-- `token`: allowlisted USDC or USDT address.
+- `token`: Celo USDC address at launch. The field can stay in the contract for future allowlisted tokens, but only USDC should be enabled in v1.
 - `funder`: original funder.
 - `amount`: total received token amount credited to the bounty.
 - `remainingAmount`: unclaimed or refundable token amount.
@@ -195,30 +215,36 @@ Recommended refund and cancellation behavior:
 - Do not auto-roll bounties into future questions or the global Participation Reward Pool.
 - Dust should remain with the final claimant for a qualifying round, or be sweepable only after a long governance-controlled timeout.
 
-## Stablecoin Support On Celo
+## USDC Support And USD Display
 
-Curyo 2.0 should support only explicitly allowlisted stablecoins at launch.
+Curyo 2.0 should launch with Celo USDC as the only stablecoin bounty asset. USDT should not be supported initially.
+
+The product should still feel USD-native in normal use:
+
+- Feed, vote cards, submit forms, and bounty modals should show primary amounts as `$125 bounty`, `Add $50`, or `Claim $3.25`.
+- Details, receipts, exports, and support surfaces should disclose `125 USDC on Celo`.
+- Contract and indexer accounting should always use exact USDC token units.
+- If USDC is paused, depegs materially, or becomes unavailable, the UI should stop treating the balance as a generic `$` amount and show exact token state until governance chooses a new policy.
 
 The current Celo token contract docs list these token addresses:
 
 | Network | Token | Address |
 | --- | --- | --- |
 | Celo Mainnet | USDC | `0xcebA9300f2b948710d2653dD7B07f33A8B32118C` |
-| Celo Mainnet | USDT | `0x48065fbBE25f71C9282ddf5e1cD6D6A887483D5e` |
 | Celo Sepolia | USDC | `0x01C5C0122039549AD1493B8220cABEdD739BC44E` |
-| Celo Sepolia | USDT | `0xd077A400968890Eacc75cdc901F0356c943e4fDb` |
 
 Source: [Celo token contracts](https://docs.celo.org/tooling/contracts/token-contracts).
 
 Implementation rules:
 
-- Use the ERC20 token addresses for deposits and claims. Do not use Celo fee-currency adapter addresses for bounty custody.
-- Use OpenZeppelin `SafeERC20` for all token transfers. Its docs cover tokens that do not return values and provide `forceApprove` for tokens that require resetting allowance to zero, such as USDT.
+- Use the Celo USDC ERC20 token addresses for deposits and claims. Do not use Celo fee-currency adapter addresses for bounty custody.
+- Use OpenZeppelin `SafeERC20` for all token transfers.
 - Store all bounty accounting in the token's smallest unit.
 - Keep token decimals for display and validation, not for core accounting.
-- Measure the actual received balance delta on deposit and credit the actual received amount. This protects accounting even if a future allowlisted token behaves unexpectedly.
-- Do not support arbitrary ERC20 tokens, fee-on-transfer tokens, rebasing tokens, bridged lookalike tokens, or user-provided token addresses in v1.
-- Add local USDC and USDT mock tokens for Anvil and Foundry tests.
+- Measure the actual received balance delta on deposit and credit the actual received amount.
+- Do not support USDT, arbitrary ERC20 tokens, fee-on-transfer tokens, rebasing tokens, bridged lookalike tokens, or user-provided token addresses in v1.
+- Add a local USDC mock token for Anvil and Foundry tests.
+- Keep future USDT or multi-token support behind a separate product, legal, and governance decision.
 
 Source: [OpenZeppelin SafeERC20 docs](https://docs.openzeppelin.com/contracts/5.x/api/token/erc20#SafeERC20).
 
@@ -253,7 +279,7 @@ Recommended schema additions:
 Recommended API additions:
 
 - Add active bounty summaries to content/feed items.
-- Add token breakdowns so the UI can show USDC and USDT separately.
+- Add exact USDC token amounts so the UI can show USD-primary labels and USDC details.
 - Add bounty terms for the More section and modal review screen.
 - Add user-specific claimable bounty rewards to existing reward aggregation.
 - Add refundability and expiry state for funder views.
@@ -264,7 +290,8 @@ Suggested feed item fields:
 type BountySummary = {
   id: string;
   token: `0x${string}`;
-  symbol: "USDC" | "USDT";
+  symbol: "USDC";
+  usdLabel: string;
   amountRemaining: string;
   activeAmount: string;
   requiredVoters: number;
@@ -273,7 +300,7 @@ type BountySummary = {
 };
 ```
 
-Question feed responses should include `activeBounties`, a formatted `totalBountyLabel`, and user-specific `claimableBounties` where available.
+Question feed responses should include `activeBounties`, a formatted `totalBountyLabel` such as `$125`, and user-specific `claimableBounties` where available.
 
 ## Deployment And Generated Artifacts
 
@@ -284,8 +311,8 @@ Deployment updates:
 - Deploy `QuestionRegistry` or updated `ContentRegistry`.
 - Deploy `QuestionBountyEscrow` and optional `QuestionBountyDistributor`.
 - Wire the voting engine, registry, bounty escrow, reward distributor, participation pool, and protocol config.
-- Initialize USDC and USDT allowlist addresses for Celo mainnet and Celo Sepolia.
-- Deploy local mock USDC and USDT for Anvil.
+- Initialize the Celo USDC allowlist address for Celo mainnet and Celo Sepolia.
+- Deploy a local mock USDC for Anvil.
 - Export ABIs for the new bounty contracts.
 - Update generated deployed-contract files and start block metadata.
 - Update Ponder env vars and config for the new contracts.
@@ -303,12 +330,12 @@ The implementation should stay split into narrow commits. A recommended sequence
    - Preserve cREP submitter stake, lifecycle, rating state, and voting engine integration.
 
 2. `contracts: add question bounty escrow`
-   - Add USDC/USDT allowlisted escrow, bounty creation, per-round qualification, pull-based claims, refunds, pause controls, and events.
+   - Add Celo USDC escrow, bounty creation, per-round qualification, pull-based claims, refunds, pause controls, and events.
    - Add Foundry unit tests for token allowlist, deposit accounting, claim rules, and refund paths.
 
 3. `contracts: wire curyo 2 deployment`
    - Update deployment scripts, local mocks, protocol config wiring, ABI export, deployed contract metadata, and contract-size checks.
-   - Add Celo mainnet and Celo Sepolia USDC/USDT allowlist initialization.
+   - Add Celo mainnet and Celo Sepolia USDC allowlist initialization.
 
 4. `ponder: index question bounties`
    - Add bounty schema tables, event handlers, contract config, tests, and API fields.
@@ -321,7 +348,7 @@ The implementation should stay split into narrow commits. A recommended sequence
 
 6. `nextjs: add bounty funding UI`
    - Add optional bounty funding after submission.
-   - Add token selector, amount input, required voter input, required settled round input, approve/deposit flow, and USDT allowance reset UX.
+   - Add USD amount input, required voter input, required settled round input, and USDC approve/deposit flow.
 
 7. `nextjs: show and fund bounties from vote cards`
    - Add compact bounty badges to feed/vote cards.
@@ -329,7 +356,7 @@ The implementation should stay split into narrow commits. A recommended sequence
    - Add responsive coverage for dense laptop and mobile vote surfaces.
 
 8. `nextjs: add stablecoin bounty claims`
-   - Extend claimable reward types and claim-all behavior for USDC/USDT bounty participation rewards.
+   - Extend claimable reward types and claim-all behavior for USDC bounty participation rewards.
    - Keep cREP and stablecoin rewards visually and semantically separate.
 
 9. `sdk/bot/keeper: expose bounty helpers`
@@ -344,7 +371,7 @@ The implementation should stay split into narrow commits. A recommended sequence
 
 Foundry tests:
 
-- USDC and USDT mock deposits.
+- USDC mock deposits.
 - Invalid token rejection.
 - Actual-received accounting on deposit.
 - Bounty creation with required voters and required settled rounds.
@@ -364,7 +391,7 @@ Ponder tests:
 
 - Index `BountyCreated`, `BountyFunded`, `BountyRoundQualified`, `BountyRewardClaimed`, `BountyRefunded`, and token allowlist events.
 - Rebuild active bounty aggregate after reorg-safe event replay.
-- Return token breakdowns in feed responses.
+- Return USDC amounts and USD labels in feed responses.
 - Return user claimable bounty rewards.
 
 Next.js tests:
@@ -375,13 +402,12 @@ Next.js tests:
 - Render bounty badges on vote cards without layout shift.
 - Open the Add Bounty modal from the More section.
 - Handle USDC allowance and deposit.
-- Handle USDT allowance reset before deposit when needed.
+- Confirm no USDT or generic token selector appears in the launch funding UI.
 - Show stablecoin bounty reward claims separately from cREP.
 
 End-to-end tests:
 
 - Submit question, fund USDC bounty, vote, reveal, settle, and claim stablecoin reward.
-- Repeat with USDT.
 - Verify a voter on the losing cREP side can still claim the stablecoin participation reward after revealing.
 - Verify an unrevealed voter cannot claim.
 - Verify required voters and required settled rounds block payout until satisfied.
@@ -411,7 +437,7 @@ Repository docs:
 - `README.md`: explain Curyo 2.0 as bountied questions and summarize the new package responsibilities.
 - `docs/curyo-2-bounties-research.md`: keep the research memo aligned with final decisions if the plan changes.
 - `docs/curyo-2-bounties-integration-plan.md`: update as implementation decisions land.
-- `packages/foundry/README.md`: document `QuestionRegistry`, bounty escrow/distributor, USDC/USDT allowlist, deployment config, and test commands.
+- `packages/foundry/README.md`: document `QuestionRegistry`, bounty escrow/distributor, Celo USDC allowlist, deployment config, and test commands.
 - `packages/ponder/README.md`: document bounty tables, handlers, API fields, and env vars.
 - `packages/nextjs/README.md`: document submit, bounty funding, reward claim, and whitepaper generation flows.
 - `packages/sdk/README.md`: document question and bounty helper APIs.
@@ -443,18 +469,19 @@ Recommended rollout:
 1. Implement contracts and Foundry tests locally against Anvil.
 2. Add Ponder indexing and API responses against local deployment artifacts.
 3. Convert submit and vote card UI behind a Curyo 2.0 feature branch or feature flag.
-4. Add USDC/USDT mocks for local e2e.
+4. Add USDC mocks for local e2e.
 5. Deploy to Celo Sepolia with low bounty caps.
 6. Run a controlled testnet pilot with known voters and small bounties.
 7. Review moderation, compliance, claim, refund, and layout issues.
 8. Freeze contract interfaces for audit.
-9. Deploy to Celo mainnet with conservative caps and allowlisted USDC/USDT only.
+9. Deploy to Celo mainnet with conservative caps and allowlisted Celo USDC only.
 10. Raise caps only after observed claim behavior, issuer risk, and moderation workload are understood.
 
 Launch guardrails:
 
 - Low default bounty cap.
 - No arbitrary ERC20 tokens.
+- No USDT at launch.
 - No stablecoin coherence bonus.
 - No future-event or market-like category promotion.
 - No secondary trading or transfer of yes/no exposure.
