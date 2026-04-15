@@ -293,6 +293,176 @@ Deployment updates:
 
 Stablecoin approval and bounty funding should not be sponsored at launch. The existing sponsored/free transaction logic should remain conservative and can continue covering known cREP and registry flows only.
 
+## Implementation Commit Sequence
+
+The implementation should stay split into narrow commits. A recommended sequence:
+
+1. `contracts: introduce question registry model`
+   - Rename or evolve content metadata into question/link/description/category/frame.
+   - Remove platform-domain coupling from question submission.
+   - Preserve cREP submitter stake, lifecycle, rating state, and voting engine integration.
+
+2. `contracts: add question bounty escrow`
+   - Add USDC/USDT allowlisted escrow, bounty creation, per-round qualification, pull-based claims, refunds, pause controls, and events.
+   - Add Foundry unit tests for token allowlist, deposit accounting, claim rules, and refund paths.
+
+3. `contracts: wire curyo 2 deployment`
+   - Update deployment scripts, local mocks, protocol config wiring, ABI export, deployed contract metadata, and contract-size checks.
+   - Add Celo mainnet and Celo Sepolia USDC/USDT allowlist initialization.
+
+4. `ponder: index question bounties`
+   - Add bounty schema tables, event handlers, contract config, tests, and API fields.
+   - Include active bounty summaries and user claim state in feed/reward responses.
+
+5. `nextjs: convert submit flow to questions`
+   - Reuse the submit page and form shell.
+   - Remove the Platform tab and platform-domain validation.
+   - Change fields to question, link, category/frame, description, and tags.
+
+6. `nextjs: add bounty funding UI`
+   - Add optional bounty funding after submission.
+   - Add token selector, amount input, required voter input, required settled round input, approve/deposit flow, and USDT allowance reset UX.
+
+7. `nextjs: show and fund bounties from vote cards`
+   - Add compact bounty badges to feed/vote cards.
+   - Add "Add bounty" in the More section and open the funding modal from there.
+   - Add responsive coverage for dense laptop and mobile vote surfaces.
+
+8. `nextjs: add stablecoin bounty claims`
+   - Extend claimable reward types and claim-all behavior for USDC/USDT bounty participation rewards.
+   - Keep cREP and stablecoin rewards visually and semantically separate.
+
+9. `sdk/bot/keeper: expose bounty helpers`
+   - Add SDK reads for questions, bounty summaries, and claimable bounty rewards.
+   - Add bot support only if automated bounty monitoring is needed.
+   - Add keeper support only if bounty qualification snapshots, retries, or repair jobs become necessary.
+
+10. `docs: update curyo 2 documentation`
+    - Update READMEs, app docs, legal copy, whitepaper source, and regenerated whitepaper PDF.
+
+## Test Plan
+
+Foundry tests:
+
+- USDC and USDT mock deposits.
+- Invalid token rejection.
+- Actual-received accounting on deposit.
+- Bounty creation with required voters and required settled rounds.
+- Multiple bounties on one question.
+- Top-ups with distinct terms.
+- Claim by revealed winning voter.
+- Claim by revealed losing voter.
+- Rejection for unrevealed voter.
+- Double-claim prevention.
+- Tied, cancelled, and reveal-failed rounds not qualifying at launch.
+- Expiry refund.
+- Question cancellation refund.
+- Funding pause and claim/refund behavior.
+- Solvency invariant: escrow token balance must cover remaining claimable and refundable amounts.
+
+Ponder tests:
+
+- Index `BountyCreated`, `BountyFunded`, `BountyRoundQualified`, `BountyRewardClaimed`, `BountyRefunded`, and token allowlist events.
+- Rebuild active bounty aggregate after reorg-safe event replay.
+- Return token breakdowns in feed responses.
+- Return user claimable bounty rewards.
+
+Next.js tests:
+
+- Submit question without a bounty.
+- Submit question and continue into optional bounty funding.
+- Remove platform-domain validation without weakening generic URL safety checks.
+- Render bounty badges on vote cards without layout shift.
+- Open the Add Bounty modal from the More section.
+- Handle USDC allowance and deposit.
+- Handle USDT allowance reset before deposit when needed.
+- Show stablecoin bounty reward claims separately from cREP.
+
+End-to-end tests:
+
+- Submit question, fund USDC bounty, vote, reveal, settle, and claim stablecoin reward.
+- Repeat with USDT.
+- Verify a voter on the losing cREP side can still claim the stablecoin participation reward after revealing.
+- Verify an unrevealed voter cannot claim.
+- Verify required voters and required settled rounds block payout until satisfied.
+- Verify refund after expiry or cancellation.
+- Check mobile and laptop layouts for bounty badges, More modal, and claim rows.
+
+Suggested validation commands:
+
+- `yarn foundry:compile`
+- `yarn foundry:test`
+- `yarn workspace @curyo/foundry check:sizes`
+- `yarn contracts:check-types`
+- `yarn contracts:test`
+- `yarn ponder:codegen`
+- `yarn workspace @curyo/ponder test`
+- `yarn next:test`
+- `yarn next:check-types`
+- `yarn workspace @curyo/nextjs whitepaper`
+- `yarn workspace @curyo/nextjs e2e:ci:lifecycle`
+
+## Documentation And Whitepaper Updates
+
+The implementation should update documentation in the same PR series, not after launch.
+
+Repository docs:
+
+- `README.md`: explain Curyo 2.0 as bountied questions and summarize the new package responsibilities.
+- `docs/curyo-2-bounties-research.md`: keep the research memo aligned with final decisions if the plan changes.
+- `docs/curyo-2-bounties-integration-plan.md`: update as implementation decisions land.
+- `packages/foundry/README.md`: document `QuestionRegistry`, bounty escrow/distributor, USDC/USDT allowlist, deployment config, and test commands.
+- `packages/ponder/README.md`: document bounty tables, handlers, API fields, and env vars.
+- `packages/nextjs/README.md`: document submit, bounty funding, reward claim, and whitepaper generation flows.
+- `packages/sdk/README.md`: document question and bounty helper APIs.
+- `packages/bot/README.md`: update only if bots can submit, monitor, or claim bounties.
+- `packages/keeper/README.md`: update only if keeper gets bounty qualification or repair duties.
+
+App docs:
+
+- `packages/nextjs/app/docs/how-it-works/page.tsx`: explain question submission, cREP voting, and stablecoin bounty participation rewards.
+- `packages/nextjs/app/docs/smart-contracts/page.tsx`: add new contracts, token allowlist, claim model, and pause/refund controls.
+- `packages/nextjs/app/docs/tokenomics/page.tsx`: clarify that stablecoin bounties are external question-scoped funds, not cREP emissions or the global Participation Reward Pool.
+- `packages/nextjs/app/docs/governance/page.tsx`: document token allowlist governance, bounty caps, Self.xyz eligibility config, and emergency controls.
+- `packages/nextjs/app/docs/frontend-codes/page.tsx`: update only if frontend fee or registration behavior changes after removing platform submission from `/submit`.
+- `packages/nextjs/app/legal/terms/page.tsx`: add stablecoin bounty, prohibited-use, tax-record, and jurisdiction eligibility language for legal review.
+
+Whitepaper:
+
+- Update `packages/nextjs/scripts/whitepaper/summary.ts`.
+- Update `packages/nextjs/scripts/whitepaper/sections.ts`.
+- Update `packages/nextjs/scripts/whitepaper/content.ts` if metadata, deck, or section assembly changes.
+- Update `packages/nextjs/lib/docs/whitepaperContent.test.ts`.
+- Regenerate `packages/nextjs/public/curyo-whitepaper.pdf` with `yarn workspace @curyo/nextjs whitepaper`.
+- Do not edit the generated PDF by hand.
+
+## Rollout Plan
+
+Recommended rollout:
+
+1. Implement contracts and Foundry tests locally against Anvil.
+2. Add Ponder indexing and API responses against local deployment artifacts.
+3. Convert submit and vote card UI behind a Curyo 2.0 feature branch or feature flag.
+4. Add USDC/USDT mocks for local e2e.
+5. Deploy to Celo Sepolia with low bounty caps.
+6. Run a controlled testnet pilot with known voters and small bounties.
+7. Review moderation, compliance, claim, refund, and layout issues.
+8. Freeze contract interfaces for audit.
+9. Deploy to Celo mainnet with conservative caps and allowlisted USDC/USDT only.
+10. Raise caps only after observed claim behavior, issuer risk, and moderation workload are understood.
+
+Launch guardrails:
+
+- Low default bounty cap.
+- No arbitrary ERC20 tokens.
+- No stablecoin coherence bonus.
+- No future-event or market-like category promotion.
+- No secondary trading or transfer of yes/no exposure.
+- Claims are pull-based.
+- Funding and claiming require bounty eligibility checks.
+- Emergency pause for new bounty funding.
+- Public docs explain that consensus is not truth.
+
 ## Open Product Questions
 
 - Should the first submit flow require a link, or allow text-only subjective questions?
