@@ -8,17 +8,29 @@ const DocsIntro: NextPage = () => {
       <h1>Introduction</h1>
       <p className="lead text-base-content/60 text-lg">Human Reputation at Stake.</p>
 
+      <h2>Why Curyo?</h2>
+      <p>{protocolCopy.whyNowOverview}</p>
+      <p>
+        Curyo&apos;s mission is to make public quality signals harder to fake by tying judgment to verified humans,
+        transparent records, and real economic consequences.
+      </p>
+
       <h2>What is Curyo?</h2>
       <p>
-        {protocolCopy.whyNowOverview} {protocolCopy.strongerSignalOverview}
+        Curyo is a question-first content curation protocol. People submit a question, optionally with an evidence link,
+        direct image link, or YouTube link. Verified voters then use cREP to judge whether the current rating should
+        move up or down.
       </p>
-      <p>{protocolCopy.predictionGamesOverview}</p>
+      <p>
+        Optional Question Reward Pools add a separate Celo USDC reward path for funded questions. They pay eligible
+        revealed participants equally in qualified rounds, independent of whether their cREP vote won.
+      </p>
 
       <h2>Key Principles</h2>
       <div className="not-prose grid sm:grid-cols-2 gap-4 my-6">
         <FeatureCard
           title="Skin in the Game"
-          description="Every vote requires cREP. Good judgment earns rewards; bad judgment loses stake."
+          description="Every vote requires cREP. Winning votes can earn from losing cREP stakes; losing votes can lose stake."
         />
         <FeatureCard
           title="Voter ID (One Person, One Vote)"
@@ -30,7 +42,7 @@ const DocsIntro: NextPage = () => {
         />
         <FeatureCard
           title="Question Reward Pools"
-          description="Eligible revealed participants claim equal USDC-backed question rewards in qualified rounds."
+          description="Optional Celo USDC pools fund specific questions and pay eligible revealed participants equally."
         />
       </div>
       <p>

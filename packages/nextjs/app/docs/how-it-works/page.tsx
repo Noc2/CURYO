@@ -12,7 +12,7 @@ const HowItWorks: NextPage = () => {
     <article className="prose max-w-none">
       <h1>How It Works</h1>
       <p className="lead text-base-content/60 text-lg">
-        Per-content round voting with blind voting and phase-weighted rewards.
+        Question-first voting with blind cREP stakes and optional USDC question rewards.
       </p>
 
       <h2>Submitting a Question</h2>
@@ -78,18 +78,31 @@ const HowItWorks: NextPage = () => {
         </li>
       </ul>
 
-      <h2>Reward Distribution</h2>
+      <h2>cREP Stake Settlement</h2>
       <p>
-        When a round settles, winners recover their stake and share the losing pool. Revealed losers can still reclaim{" "}
+        When a round settles, the cREP system handles stake recovery and cREP payouts. Winners recover their stake and
+        share the losing cREP pool. Revealed losers can still reclaim{" "}
         <strong>{protocolDocFacts.revealedLoserRefundPercentLabel}</strong> of raw stake, which gives voters an
-        incentive to reveal their votes before settlement. After that, the remaining pool splits{" "}
-        <strong>{protocolDocFacts.rewardSplitSummaryLabel}</strong>. Question Reward Pools are separate: when a funded
-        round qualifies, eligible revealed Voter ID holders can claim equal stablecoin question rewards regardless of
-        whether their cREP vote won.
+        incentive to reveal their votes before settlement. After that, the remaining losing pool splits{" "}
+        <strong>{protocolDocFacts.rewardSplitSummaryLabel}</strong>. This split is cREP-only and does not include USDC
+        Question Reward Pools.
       </p>
       <div className="not-prose my-6">
         <RewardSplitChart />
       </div>
+
+      <h2>USDC Question Rewards</h2>
+      <p>
+        Question Reward Pools are separate from cREP stake settlement. A funder can attach Celo USDC to a specific
+        question, and the app displays that amount as USD for readability. When a funded round qualifies, eligible
+        revealed Voter ID holders can claim equal USDC-backed question rewards regardless of whether their cREP vote won
+        or lost.
+      </p>
+      <ul>
+        <li>Reward pools are scoped to one question, not the global cREP participation pools.</li>
+        <li>Claims depend on eligibility, reveal participation, and the reward pool&apos;s round requirements.</li>
+        <li>There is no stablecoin bonus for being on the winning cREP side at launch.</li>
+      </ul>
 
       <h2>Content Rating</h2>
       <p>
@@ -141,7 +154,7 @@ const HowItWorks: NextPage = () => {
       </p>
 
       <p>
-        See <Link href="/docs/tokenomics">Tokenomics</Link> for pool-level payout details and{" "}
+        See <Link href="/docs/tokenomics">Tokenomics</Link> for cREP economics and USDC question reward details, and{" "}
         <Link href="/docs/smart-contracts">Smart Contracts</Link> for advanced lifecycle rules.
       </p>
     </article>

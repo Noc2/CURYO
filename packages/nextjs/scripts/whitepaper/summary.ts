@@ -33,6 +33,6 @@ export const EXECUTIVE_SUMMARY: ContentBlock[] = [
   },
   {
     type: "paragraph",
-    text: "This paper describes the protocol's mechanisms in detail: the tlock commit-reveal voting flow, the score-relative rating update, epoch-weighted reward distribution, parimutuel stake settlement, governance-tunable rating parameters, tokenomics, on-chain governance, and the role of SDK, MCP, keeper, bot, and indexer services in building trustworthy quality infrastructure for the age of AI.",
+    text: "This paper describes the protocol's mechanisms in detail: the tlock commit-reveal voting flow, the score-relative rating update, epoch-weighted cREP payout weights, parimutuel stake settlement, governance-tunable rating parameters, tokenomics, on-chain governance, and the role of SDK, MCP, keeper, bot, and indexer services in building trustworthy quality infrastructure for the age of AI.",
   },
 ];

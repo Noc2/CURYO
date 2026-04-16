@@ -195,11 +195,11 @@ export const SECTIONS: Section[] = [
         ],
       },
       {
-        heading: "Reward Distribution",
+        heading: "cREP Stake Settlement",
         blocks: [
           {
             type: "paragraph",
-            text: "The losing pool is split as follows:",
+            text: "The losing cREP pool is split as follows:",
           },
           {
             type: "table",
@@ -213,7 +213,7 @@ export const SECTIONS: Section[] = [
           },
           {
             type: "paragraph",
-            text: `A revealed losing vote can reclaim ${protocolDocFacts.revealedLoserRefundPercentLabel} of its original stake. The remaining losing pool then feeds the content-specific reward split: the ${protocolDocFacts.voterPoolNetSharePercentLabel} voter share goes to winning voters on that content, distributed proportionally by epoch-weighted effective stake. Tier 1 voters (first epoch, blind) have full weight (effectiveStake = rawStake). Tier 2+ voters (subsequent epochs, saw results) have ${protocolDocFacts.openPhaseWeightLabel} weight (effectiveStake = rawStake * 0.25). Because each content item has independent rounds, rewards are calculated and claimable immediately after a round settles  -- no waiting for other content. The ${protocolDocFacts.consensusNetSharePercentLabel} consensus subsidy share accumulates in a reserve that funds rewards for one-sided rounds (see Consensus Subsidy Pool).`,
+            text: `A revealed losing vote can reclaim ${protocolDocFacts.revealedLoserRefundPercentLabel} of its original stake. The remaining losing cREP pool then feeds the content-specific reward split: the ${protocolDocFacts.voterPoolNetSharePercentLabel} voter share goes to winning voters on that content, distributed proportionally by epoch-weighted effective stake. Tier 1 voters (first epoch, blind) have full weight (effectiveStake = rawStake). Tier 2+ voters (subsequent epochs, saw results) have ${protocolDocFacts.openPhaseWeightLabel} weight (effectiveStake = rawStake * 0.25). Because each content item has independent rounds, cREP rewards are calculated and claimable immediately after a round settles  -- no waiting for other content. The ${protocolDocFacts.consensusNetSharePercentLabel} consensus subsidy share accumulates in a reserve that funds rewards for one-sided rounds (see Consensus Subsidy Pool). USDC Question Reward Pools are funded separately and do not change this cREP stake settlement split.`,
           },
         ],
       },
@@ -467,7 +467,7 @@ export const SECTIONS: Section[] = [
           },
           {
             type: "paragraph",
-            text: "The epoch-weighted effective stake is used for both the win condition and reward distribution:",
+            text: "The epoch-weighted effective stake is used for both the win condition and cREP payout weights:",
           },
           {
             type: "formula",
@@ -476,7 +476,7 @@ export const SECTIONS: Section[] = [
           },
           {
             type: "paragraph",
-            text: "The winner is determined by comparing total epoch-weighted stakes: upWins iff sum(e_i : d_i = up) > sum(e_i : d_i = down). Rewards are distributed proportionally to e_i / W_e among winners, where W_e is the total effective stake on the winning side.",
+            text: "The winner is determined by comparing total epoch-weighted stakes: upWins iff sum(e_i : d_i = up) > sum(e_i : d_i = down). cREP rewards are distributed proportionally to e_i / W_e among winners, where W_e is the total effective stake on the winning side.",
           },
           {
             type: "table",

@@ -31,7 +31,7 @@ const WhitepaperPage: NextPage = () => {
           <strong>Introduction</strong> &mdash; Mission, key principles, and question-first flow overview
         </li>
         <li>
-          <strong>How It Works</strong> &mdash; Round mechanics, voter ID, reward distribution, question submissions
+          <strong>How It Works</strong> &mdash; Round mechanics, voter ID, cREP settlement, question submissions
         </li>
         <li>
           <strong>tlock Commit-Reveal Voting</strong> &mdash; Encrypted voting, phase-weighted rewards, and resolution
