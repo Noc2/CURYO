@@ -1342,7 +1342,9 @@ contract ContentRegistryCoverageTest is VotingTestBase {
         vm.startPrank(submitter);
         crep.approve(address(registry), 10e6);
         vm.expectRevert();
-        registry.submitContent("https://example.com/paused", "goal", "goal", "tag1", 0, bytes32(0));
+        registry.submitQuestionWithMedia(
+            _singleImageUrls("https://example.com/paused.jpg"), "", "goal", "goal", "tag1", 1, bytes32(0)
+        );
         vm.stopPrank();
     }
 

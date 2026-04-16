@@ -283,7 +283,7 @@ contract AuditGapTests is VotingTestBase {
         votingEngine.claimCancelledRoundRefund(contentId, 1);
     }
 
-    /// @notice ContentRegistry.submitContent respects whenNotPaused
+    /// @notice ContentRegistry.submitQuestionWithMedia respects whenNotPaused
     function test_Paused_ContentRegistrySubmit_Reverts() public {
         vm.prank(owner);
         registry.pause();
@@ -291,7 +291,9 @@ contract AuditGapTests is VotingTestBase {
         vm.startPrank(submitter);
         crepToken.approve(address(registry), 10e6);
         vm.expectRevert(); // EnforcedPause
-        registry.submitContent("https://pause-test-6.com", "goal", "goal", "tag", 0, bytes32(0));
+        registry.submitQuestionWithMedia(
+            _singleImageUrls("https://pause-test-6.com/image.jpg"), "", "goal", "goal", "tag", 1, bytes32(0)
+        );
         vm.stopPrank();
     }
 

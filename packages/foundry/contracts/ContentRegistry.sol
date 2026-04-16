@@ -354,40 +354,6 @@ contract ContentRegistry is Initializable, AccessControlUpgradeable, PausableUpg
         emit SubmissionReservationExpired(pending.submitter, revealCommitment, refund);
     }
 
-    function submitContent(
-        string calldata url,
-        string calldata title,
-        string calldata description,
-        string calldata tags,
-        uint256 categoryId,
-        bytes32 salt
-    ) external pure returns (uint256) {
-        url;
-        title;
-        description;
-        tags;
-        categoryId;
-        salt;
-        revert("Use submitQuestionWithMedia");
-    }
-
-    function submitQuestion(
-        string calldata url,
-        string calldata title,
-        string calldata description,
-        string calldata tags,
-        uint256 categoryId,
-        bytes32 salt
-    ) external pure returns (uint256) {
-        url;
-        title;
-        description;
-        tags;
-        categoryId;
-        salt;
-        revert("Use submitQuestionWithMedia");
-    }
-
     function submitQuestionWithMedia(
         string[] calldata imageUrls,
         string calldata videoUrl,
@@ -1040,43 +1006,6 @@ contract ContentRegistry is Initializable, AccessControlUpgradeable, PausableUpg
         return !_hasOpenRound(contentId);
     }
 
-    function isUrlSubmitted(string calldata url) external pure returns (bool) {
-        url;
-        return false;
-    }
-
-    /// @notice Preview the resolved category and canonical submission key for a future reveal.
-    function previewSubmissionKey(string calldata url, uint256 categoryId)
-        external
-        pure
-        returns (uint256 resolvedCategoryId, bytes32 submissionKey)
-    {
-        url;
-        categoryId;
-        resolvedCategoryId;
-        submissionKey;
-        revert("Use previewQuestionMediaSubmissionKey");
-    }
-
-    /// @notice Preview the resolved category and question-level submission key for a future reveal.
-    /// @dev Curyo 2 keys uniqueness by the submitted question and its required media URL.
-    function previewQuestionSubmissionKey(
-        string calldata url,
-        string calldata title,
-        string calldata description,
-        string calldata tags,
-        uint256 categoryId
-    ) external pure returns (uint256 resolvedCategoryId, bytes32 submissionKey) {
-        url;
-        title;
-        description;
-        tags;
-        categoryId;
-        resolvedCategoryId;
-        submissionKey;
-        revert("Use previewQuestionMediaSubmissionKey");
-    }
-
     /// @notice Preview the resolved category and question-level submission key for a future multi-media reveal.
     function previewQuestionMediaSubmissionKey(
         string[] calldata imageUrls,
@@ -1098,13 +1027,6 @@ contract ContentRegistry is Initializable, AccessControlUpgradeable, PausableUpg
         require(address(categoryRegistry) != address(0), "CategoryRegistry not set");
         resolvedCategoryId = _resolveQuestionSubmissionCategory(metadata);
         submissionKey = _deriveQuestionMediaSubmissionKey(metadata, imageUrls, videoUrl, resolvedCategoryId);
-    }
-
-    /// @notice Resolve the canonical submission key for a URL using the configured CategoryRegistry.
-    function resolveSubmissionKey(string calldata url) external pure returns (bytes32 submissionKey) {
-        url;
-        submissionKey;
-        revert("Use previewQuestionMediaSubmissionKey");
     }
 
     function _computeRevealCommitment(
