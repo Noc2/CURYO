@@ -99,6 +99,9 @@ contract QuestionRewardPoolEscrow is
         uint256 eligibleVoters,
         uint256 frontendFeeAllocation
     );
+    event RewardPoolCursorAdvanced(
+        uint256 indexed rewardPoolId, uint256 indexed contentId, uint256 fromRoundId, uint256 toRoundId, uint256 skipped
+    );
     event QuestionRewardClaimed(
         uint256 indexed rewardPoolId,
         uint256 indexed contentId,
@@ -209,6 +212,32 @@ contract QuestionRewardPoolEscrow is
     function qualifyRound(uint256 rewardPoolId, uint256 roundId) external nonReentrant whenNotPaused {
         RewardPool storage rewardPool = _getIncompleteRewardPoolForQualification(rewardPoolId);
         _qualifyRound(rewardPoolId, rewardPool, roundId);
+    }
+
+    function advanceQualificationCursor(uint256 rewardPoolId, uint256 maxRounds)
+        external
+        nonReentrant
+        whenNotPaused
+        returns (uint256 skipped, uint256 nextRoundToEvaluate)
+    {
+        require(maxRounds > 0, "No rounds");
+        RewardPool storage rewardPool = _getIncompleteRewardPoolForQualification(rewardPoolId);
+
+        uint256 fromRoundId = rewardPool.nextRoundToEvaluate;
+        nextRoundToEvaluate = fromRoundId;
+        while (skipped < maxRounds) {
+            (bool roundFinished, bool canQualify,) = _roundQualificationStatus(rewardPool, nextRoundToEvaluate);
+            if (!roundFinished || canQualify) break;
+            nextRoundToEvaluate++;
+            skipped++;
+        }
+
+        if (skipped > 0) {
+            rewardPool.nextRoundToEvaluate = nextRoundToEvaluate.toUint64();
+            emit RewardPoolCursorAdvanced(
+                rewardPoolId, rewardPool.contentId, fromRoundId, nextRoundToEvaluate, skipped
+            );
+        }
     }
 
     function claimQuestionReward(uint256 rewardPoolId, uint256 roundId)
@@ -408,7 +437,6 @@ contract QuestionRewardPoolEscrow is
     function _qualifyRound(uint256 rewardPoolId, RewardPool storage rewardPool, uint256 roundId) internal {
         require(roundId >= rewardPool.startRoundId, "Round too early");
         require(!roundSnapshots[rewardPoolId][roundId].qualified, "Round qualified");
-        _advancePastIneligibleRounds(rewardPool, roundId);
         require(roundId == rewardPool.nextRoundToEvaluate, "Round out of order");
 
         (bool roundSettled, bool canQualify, uint256 eligibleVoters) = _previewRoundQualification(rewardPool, roundId);
@@ -441,34 +469,11 @@ contract QuestionRewardPoolEscrow is
         );
     }
 
-    function _advancePastIneligibleRounds(RewardPool storage rewardPool, uint256 targetRoundId) internal {
-        uint256 nextRoundId = rewardPool.nextRoundToEvaluate;
-        require(targetRoundId >= nextRoundId, "Round already skipped");
-
-        while (nextRoundId < targetRoundId) {
-            (bool roundFinished, bool canQualify,) = _roundQualificationStatus(rewardPool, nextRoundId);
-            require(roundFinished, "Earlier round unfinished");
-            require(!canQualify, "Earlier round qualifies");
-            nextRoundId++;
-        }
-
-        if (nextRoundId != rewardPool.nextRoundToEvaluate) {
-            rewardPool.nextRoundToEvaluate = nextRoundId.toUint64();
-        }
-    }
-
     function _canPreviewNewQualification(RewardPool storage rewardPool, uint256 roundId) internal view returns (bool) {
         if (rewardPool.refunded || rewardPool.qualifiedRounds >= rewardPool.requiredSettledRounds) return false;
         if (rewardPool.expiresAt != 0 && block.timestamp > rewardPool.expiresAt) return false;
         if (!registry.isContentActive(rewardPool.contentId)) return false;
-        if (roundId < rewardPool.startRoundId || roundId < rewardPool.nextRoundToEvaluate) return false;
-
-        for (uint256 nextRoundId = rewardPool.nextRoundToEvaluate; nextRoundId < roundId; nextRoundId++) {
-            (bool roundFinished, bool canQualify,) = _roundQualificationStatus(rewardPool, nextRoundId);
-            if (!roundFinished || canQualify) return false;
-        }
-
-        return true;
+        return roundId >= rewardPool.startRoundId && roundId == rewardPool.nextRoundToEvaluate;
     }
 
     function _previewRoundQualification(RewardPool storage rewardPool, uint256 roundId)

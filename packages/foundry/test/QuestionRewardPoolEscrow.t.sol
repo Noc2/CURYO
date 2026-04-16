@@ -341,8 +341,12 @@ contract QuestionRewardPoolEscrowTest is VotingTestBase {
         vm.warp(block.timestamp + 25 hours);
         uint256 secondRoundId = _settleRoundWith(voters, contentId, directions);
 
+        (uint256 skipped, uint256 nextRoundToEvaluate) = rewardPoolEscrow.advanceQualificationCursor(rewardPoolId, 1);
+        assertEq(skipped, 0);
+        assertEq(nextRoundToEvaluate, firstRoundId);
+
         vm.prank(voter1);
-        vm.expectRevert("Earlier round qualifies");
+        vm.expectRevert("Round out of order");
         rewardPoolEscrow.claimQuestionReward(rewardPoolId, secondRoundId);
 
         vm.prank(voter1);
@@ -363,6 +367,41 @@ contract QuestionRewardPoolEscrowTest is VotingTestBase {
 
         vm.warp(block.timestamp + 25 hours);
         uint256 eligibleRoundId = _settleRoundWith(_threeVoters(), contentId, directions);
+
+        (uint256 skipped, uint256 nextRoundToEvaluate) = rewardPoolEscrow.advanceQualificationCursor(rewardPoolId, 1);
+        assertEq(skipped, 1);
+        assertEq(nextRoundToEvaluate, eligibleRoundId);
+
+        vm.prank(voter1);
+        uint256 reward = rewardPoolEscrow.claimQuestionReward(rewardPoolId, eligibleRoundId);
+        assertEq(reward, REWARD_POOL_AMOUNT / 3);
+    }
+
+    function testAdvanceQualificationCursorSkipsIneligibleRoundsInChunks() public {
+        uint256 contentId = _submitQuestion("");
+        uint256 rewardPoolId = _createRewardPool(contentId, REWARD_POOL_AMOUNT, 3, 1);
+
+        uint256 nextCommitAt = block.timestamp;
+        bool[] memory directions = _directions(true, true, false);
+        for (uint256 i = 0; i < 5; i++) {
+            vm.warp(nextCommitAt);
+            _settleRoundWith(_ineligibleVoters(), contentId, directions);
+            nextCommitAt += 25 hours;
+        }
+        vm.warp(nextCommitAt);
+        uint256 eligibleRoundId = _settleRoundWith(_threeVoters(), contentId, directions);
+
+        (uint256 skipped, uint256 nextRoundToEvaluate) = rewardPoolEscrow.advanceQualificationCursor(rewardPoolId, 2);
+        assertEq(skipped, 2);
+        assertEq(nextRoundToEvaluate, 3);
+
+        (skipped, nextRoundToEvaluate) = rewardPoolEscrow.advanceQualificationCursor(rewardPoolId, 2);
+        assertEq(skipped, 2);
+        assertEq(nextRoundToEvaluate, 5);
+
+        (skipped, nextRoundToEvaluate) = rewardPoolEscrow.advanceQualificationCursor(rewardPoolId, 2);
+        assertEq(skipped, 1);
+        assertEq(nextRoundToEvaluate, eligibleRoundId);
 
         vm.prank(voter1);
         uint256 reward = rewardPoolEscrow.claimQuestionReward(rewardPoolId, eligibleRoundId);
@@ -422,6 +461,10 @@ contract QuestionRewardPoolEscrowTest is VotingTestBase {
 
         vm.warp(block.timestamp + 25 hours);
         uint256 eligibleRoundId = _settleRoundWith(_threeVoters(), contentId, _directions(true, true, false));
+
+        (uint256 skipped, uint256 nextRoundToEvaluate) = rewardPoolEscrow.advanceQualificationCursor(rewardPoolId, 1);
+        assertEq(skipped, 1);
+        assertEq(nextRoundToEvaluate, eligibleRoundId);
 
         vm.prank(voter1);
         uint256 reward = rewardPoolEscrow.claimQuestionReward(rewardPoolId, eligibleRoundId);
@@ -523,6 +566,13 @@ contract QuestionRewardPoolEscrowTest is VotingTestBase {
         voters[0] = voter1;
         voters[1] = voter2;
         voters[2] = voter3;
+    }
+
+    function _ineligibleVoters() internal view returns (address[] memory voters) {
+        voters = new address[](3);
+        voters[0] = funder;
+        voters[1] = voter1;
+        voters[2] = voter2;
     }
 
     function _fourVoters() internal view returns (address[] memory voters) {
