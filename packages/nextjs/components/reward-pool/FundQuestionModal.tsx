@@ -4,6 +4,7 @@ import { useMemo, useState } from "react";
 import { useAccount, useConfig, useWriteContract } from "wagmi";
 import { readContract, waitForTransactionReceipt } from "wagmi/actions";
 import { XMarkIcon } from "@heroicons/react/24/outline";
+import { useVoterIdNFT } from "~~/hooks/useVoterIdNFT";
 import {
   DEFAULT_REWARD_POOL_FRONTEND_FEE_BPS,
   ERC20_APPROVAL_ABI,
@@ -35,6 +36,7 @@ export function FundQuestionModal({ contentId, title, onClose, onCreated }: Fund
   const wagmiConfig = useConfig();
   const { address, chain } = useAccount();
   const { writeContractAsync } = useWriteContract();
+  const { hasVoterId, isLoading: voterIdLoading, refetch: refetchVoterId } = useVoterIdNFT(address);
   const [amount, setAmount] = useState("10");
   const [requiredVoters, setRequiredVoters] = useState("5");
   const [requiredRounds, setRequiredRounds] = useState("2");
@@ -51,6 +53,8 @@ export function FundQuestionModal({ contentId, title, onClose, onCreated }: Fund
   const canSubmit = Boolean(
     address &&
       escrowAddress &&
+      !voterIdLoading &&
+      hasVoterId &&
       parsedAmount &&
       voterCount >= MIN_REWARD_POOL_REQUIRED_VOTERS &&
       settledRounds >= MIN_REWARD_POOL_SETTLED_ROUNDS,
@@ -72,6 +76,12 @@ export function FundQuestionModal({ contentId, title, onClose, onCreated }: Fund
 
     setIsFunding(true);
     try {
+      const voterIdResult = await refetchVoterId();
+      if (!voterIdResult.hasVoterId) {
+        notification.error("Verify your Voter ID before funding a reward pool.");
+        return;
+      }
+
       let usdcAddress = fallbackUsdcAddress;
       try {
         usdcAddress = (await readContract(wagmiConfig, {
@@ -205,6 +215,11 @@ export function FundQuestionModal({ contentId, title, onClose, onCreated }: Fund
               Question Reward Pool funding is not available on this network yet.
             </p>
           ) : null}
+          {address && escrowAddress && !voterIdLoading && !hasVoterId ? (
+            <p className="rounded-lg bg-warning/10 p-3 text-sm text-warning">
+              Verify your Voter ID before funding a reward pool.
+            </p>
+          ) : null}
         </div>
 
         <div className="mt-6 flex flex-col gap-2 sm:flex-row-reverse">
@@ -214,7 +229,7 @@ export function FundQuestionModal({ contentId, title, onClose, onCreated }: Fund
             disabled={!canSubmit || isFunding}
             className="btn btn-primary"
           >
-            {isFunding ? "Funding..." : "Fund this question"}
+            {isFunding ? "Funding..." : voterIdLoading ? "Checking Voter ID..." : "Fund this question"}
           </button>
           <button type="button" onClick={onClose} className="btn btn-ghost">
             Cancel
