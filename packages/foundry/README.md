@@ -13,19 +13,19 @@ yarn foundry:test # Run test suite
 
 ## Scripts
 
-| Command | Description |
-|---|---|
-| `yarn chain` | Start a local Anvil chain with Scaffold-ETH scaffolding |
-| `yarn deploy` | Deploy contracts via Forge script |
-| `yarn compile` | Compile Solidity contracts |
-| `yarn foundry:test` | Run the Foundry test suite |
-| `yarn format` | Format Solidity and JS files |
-| `yarn lint` | Check code formatting |
-| `yarn flatten` | Output flattened contracts |
-| `yarn verify` | Verify contracts on Etherscan-compatible networks |
-| `yarn account` | Check keystore account balance |
-| `yarn account:generate` | Create a new keystore account |
-| `yarn account:import` | Import an existing account into keystore |
+| Command                 | Description                                             |
+| ----------------------- | ------------------------------------------------------- |
+| `yarn chain`            | Start a local Anvil chain with Scaffold-ETH scaffolding |
+| `yarn deploy`           | Deploy contracts via Forge script                       |
+| `yarn compile`          | Compile Solidity contracts                              |
+| `yarn foundry:test`     | Run the Foundry test suite                              |
+| `yarn format`           | Format Solidity and JS files                            |
+| `yarn lint`             | Check code formatting                                   |
+| `yarn flatten`          | Output flattened contracts                              |
+| `yarn verify`           | Verify contracts on Etherscan-compatible networks       |
+| `yarn account`          | Check keystore account balance                          |
+| `yarn account:generate` | Create a new keystore account                           |
+| `yarn account:import`   | Import an existing account into keystore                |
 
 On Celo and Celo Sepolia, deploys use a Foundry keystore selected via `--keystore <name>` and skip Forge's
 auto-verification flow. Verify those contracts manually with
@@ -35,11 +35,13 @@ auto-verification flow. Verify those contracts manually with
 
 Create a `.env` file (see `.env.example`):
 
-| Variable | Description |
-|---|---|
-| `ALCHEMY_API_KEY` | Optional RPC provider key for testnet/mainnet deploys |
+| Variable            | Description                                                 |
+| ------------------- | ----------------------------------------------------------- |
+| `ALCHEMY_API_KEY`   | Optional RPC provider key for testnet/mainnet deploys       |
 | `ETHERSCAN_API_KEY` | Optional explorer API key for Etherscan-compatible networks |
-| `LOCALHOST_KEYSTORE_ACCOUNT` | Keystore account name for local development |
+
+Localhost deploys use the standard Anvil private key directly, so `yarn deploy` does not need a keystore password
+when deploying to `localhost`.
 
 Live-network deploys are keystore-based rather than private-key-based. Generate or import a Foundry keystore, then run
 `yarn deploy --network <network> --keystore <name>`.

@@ -7,6 +7,7 @@ test("parseDeployArgs returns defaults with no options", () => {
     showHelp: false,
     network: "localhost",
     keystoreArg: null,
+    resume: false,
   });
 });
 
@@ -17,8 +18,18 @@ test("parseDeployArgs reads supported options", () => {
       showHelp: false,
       network: "sepolia",
       keystoreArg: "deployer",
+      resume: false,
     }
   );
+});
+
+test("parseDeployArgs reads resume", () => {
+  assert.deepEqual(parseDeployArgs(["--resume"]), {
+    showHelp: false,
+    network: "localhost",
+    keystoreArg: null,
+    resume: true,
+  });
 });
 
 test("parseDeployArgs handles help", () => {
@@ -26,6 +37,7 @@ test("parseDeployArgs handles help", () => {
     showHelp: true,
     network: "localhost",
     keystoreArg: null,
+    resume: false,
   });
 });
 

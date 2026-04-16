@@ -2,7 +2,7 @@ export const DEPLOY_HELP_TEXT = `
 Usage: yarn deploy [options]
 Options:
   --network <network>   Specify the network (default: localhost)
-  --keystore <name>     Specify the keystore account to use (bypasses selection prompt)
+  --keystore <name>     Specify the live-network keystore account to use (bypasses selection prompt)
   --resume              Resume a partial broadcast for the current network + account
   --help, -h           Show this help message
 Examples:
