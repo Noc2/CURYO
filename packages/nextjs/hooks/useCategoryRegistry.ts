@@ -11,7 +11,7 @@ export interface Category {
   id: bigint;
   name: string;
   slug: string;
-  subcategories: string[];
+  subcategories: readonly string[];
   createdAt: bigint;
 }
 
@@ -82,7 +82,7 @@ export function useCategoryRegistry() {
           id: bigint;
           name: string;
           domain: string;
-          subcategories: string[];
+          subcategories: readonly string[];
           createdAt: bigint;
         };
         return {
