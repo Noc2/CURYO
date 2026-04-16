@@ -7,6 +7,7 @@ set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 DEPLOY_JSON="$SCRIPT_DIR/../deployments/31337.json"
+CATEGORY_ID_RESOLVER="$SCRIPT_DIR/../scripts-js/resolveCategoryId.js"
 
 RPC="http://127.0.0.1:8545"
 SUBMITTER_STAKE="10000000" # 10 cREP in 6 decimals (MIN_SUBMITTER_STAKE)
@@ -166,18 +167,10 @@ CATEGORY_DOMAINS=(
 
 resolve_category_id() {
   local domain="$1"
-  local output
-  output=$(cast call "$CATEGORY_REGISTRY" \
-    "getCategoryByDomain(string)((uint256,string,string,string[],address,uint256,uint8,uint256,uint256))" \
-    "$domain" --rpc-url "$RPC" 2>/dev/null || true)
-
   local category_id
-  category_id=$(printf "%s\n" "$output" | sed -nE 's/^[[:space:]]*[\[\(]?([0-9]+)([,[:space:]].*)?$/\1/p' | head -n 1)
-  if [ -z "$category_id" ]; then
-    echo "ERROR: Could not resolve category domain $domain from CategoryRegistry" >&2
+  if ! category_id=$(node "$CATEGORY_ID_RESOLVER" "$CATEGORY_REGISTRY" "$domain" "$RPC"); then
     exit 1
   fi
-
   printf "%s" "$category_id"
 }
 
