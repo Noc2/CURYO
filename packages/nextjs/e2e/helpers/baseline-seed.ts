@@ -203,6 +203,14 @@ const BASELINE_CONTENT = [
     categorySlug: "products",
     submitter: ANVIL_ACCOUNTS.account8.address,
   },
+  {
+    url: "https://en.wikipedia.org/wiki/Marie_Curie",
+    title: "Marie Curie",
+    description: "Pioneer in radioactivity research and the first person to win two Nobel Prizes.",
+    tags: "Scientists,History",
+    categorySlug: "general",
+    submitter: ANVIL_ACCOUNTS.account10.address,
+  },
 ] as const;
 
 const BASELINE_COMMITS = [
