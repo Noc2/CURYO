@@ -13,13 +13,25 @@ const publicClient = createPublicClient({
   transport: http(rpcUrl),
 });
 
+function toSubmissionMedia(value) {
+  try {
+    const parsed = new URL(value);
+    const hostname = parsed.hostname.toLowerCase();
+    const isYouTube = hostname === "youtu.be" || hostname === "youtube.com" || hostname.endsWith(".youtube.com");
+    return isYouTube ? { imageUrls: [], videoUrl: value } : { imageUrls: [value], videoUrl: "" };
+  } catch {
+    return { imageUrls: [value], videoUrl: "" };
+  }
+}
+
+const media = toSubmissionMedia(url);
 const [, submissionKey] = await publicClient.readContract({
   address: registry,
   abi: parseAbi([
-    "function previewQuestionSubmissionKey(string url, string title, string description, string tags, uint256 categoryId) view returns (uint256 resolvedCategoryId, bytes32 submissionKey)",
+    "function previewQuestionMediaSubmissionKey(string[] imageUrls, string videoUrl, string title, string description, string tags, uint256 categoryId) view returns (uint256 resolvedCategoryId, bytes32 submissionKey)",
   ]),
-  functionName: "previewQuestionSubmissionKey",
-  args: [url, title, description, tags, BigInt(categoryId)],
+  functionName: "previewQuestionMediaSubmissionKey",
+  args: [media.imageUrls, media.videoUrl, title, description, tags, BigInt(categoryId)],
 });
 
 const revealCommitment = keccak256(

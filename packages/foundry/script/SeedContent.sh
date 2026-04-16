@@ -64,26 +64,26 @@ KEYS=(
   "0xdbda1821b80551c9d65939329250298aa3472ba22feea921c0cf5d620ea67b97"  # Account 8 (reused)
 )
 
-# Example Curyo 2 questions: text-only entries use an empty URL; media-backed entries use image or video URLs.
+# Example Curyo 2 questions use either a direct image URL or a YouTube URL.
 # Curyo 2 default categoryIds:
 # 1=Products, 2=Local Places, 3=Travel, 4=Apps, 5=Media,
 # 6=Design, 7=AI Answers, 8=Developer Docs, 9=Trust, 10=General
 URLS=(
-  ""
+  "https://picsum.photos/seed/curyo-refund-policy/1200/800.jpg"
   "https://picsum.photos/seed/curyo-workspace/1200/800.jpg"
-  ""
+  "https://picsum.photos/seed/curyo-api-docs/1200/800.jpg"
   "https://picsum.photos/seed/curyo-product-label/1200/800.jpg"
-  ""
+  "https://picsum.photos/seed/curyo-cafe-review/1200/800.jpg"
   "https://picsum.photos/seed/curyo-hotel-room/1200/800.jpg"
   "https://www.youtube.com/watch?v=jNQXAC9IVRw"
-  ""
+  "https://picsum.photos/seed/curyo-app-onboarding/1200/800.jpg"
   "https://picsum.photos/seed/curyo-event-poster/1200/800.jpg"
-  ""
+  "https://picsum.photos/seed/curyo-weeknight-dinner/1200/800.jpg"
   "https://picsum.photos/seed/curyo-media-hero/1200/800.jpg"
   "https://www.youtube.com/watch?v=aqz-KE-bpKQ"
   "https://picsum.photos/seed/curyo-street-guide/1200/800.jpg"
-  ""
-  ""
+  "https://picsum.photos/seed/curyo-accessibility-checklist/1200/800.jpg"
+  "https://picsum.photos/seed/curyo-moderation-rules/1200/800.jpg"
   "https://picsum.photos/seed/curyo-product-photo/1200/800.jpg"
 )
 
@@ -179,7 +179,7 @@ for CATEGORY_SLUG in "${CATEGORY_SLUGS[@]}"; do
   CATEGORY_IDS+=("$(resolve_category_id "$CATEGORY_SLUG")")
 done
 
-echo "=== Seeding example text, image, and video questions ==="
+echo "=== Seeding example image and video questions ==="
 echo "(Test accounts were pre-funded with cREP during deployment)"
 echo ""
 
@@ -206,13 +206,19 @@ for ((i = 0; i < TOTAL_ITEMS; i++)); do
   TAG="${TAGS[$i]}"
   CATEGORY_ID="${CATEGORY_IDS[$i]}"
   CATEGORY_SLUG="${CATEGORY_SLUGS[$i]}"
-  MEDIA_KIND="text-only"
-  if [ -n "$URL" ]; then
-    case "$URL" in
-      *youtube.com*|*youtu.be*) MEDIA_KIND="video" ;;
-      *) MEDIA_KIND="image" ;;
-    esac
-  fi
+  MEDIA_KIND="image"
+  IMAGE_URLS_ARG="[\"$URL\"]"
+  VIDEO_URL_ARG=""
+  case "$URL" in
+    *youtube.com*|*youtu.be*)
+      MEDIA_KIND="video"
+      IMAGE_URLS_ARG="[]"
+      VIDEO_URL_ARG="$URL"
+      ;;
+    *)
+      MEDIA_KIND="image"
+      ;;
+  esac
 
   ADDR=$(cast wallet address "$KEY")
   echo "[$((i+1))/$TOTAL_ITEMS] Account: $ADDR"
@@ -240,13 +246,9 @@ for ((i = 0; i < TOTAL_ITEMS; i++)); do
   sleep 1
 
   # 3. Reveal the submission with the same deterministic salt used for the reservation
-  if [ -n "$URL" ]; then
-    echo "  Submitting question: $TITLE ($MEDIA_KIND: $URL, category: $CATEGORY_SLUG -> $CATEGORY_ID)"
-  else
-    echo "  Submitting question: $TITLE (text-only, category: $CATEGORY_SLUG -> $CATEGORY_ID)"
-  fi
-  cast send "$REGISTRY" "submitQuestion(string,string,string,string,uint256,bytes32)" \
-    "$URL" "$TITLE" "$DESCRIPTION" "$TAG" "$CATEGORY_ID" "0x$SALT" \
+  echo "  Submitting question: $TITLE ($MEDIA_KIND: $URL, category: $CATEGORY_SLUG -> $CATEGORY_ID)"
+  cast send "$REGISTRY" "submitQuestionWithMedia(string[],string,string,string,string,uint256,bytes32)" \
+    "$IMAGE_URLS_ARG" "$VIDEO_URL_ARG" "$TITLE" "$DESCRIPTION" "$TAG" "$CATEGORY_ID" "0x$SALT" \
     --private-key "$KEY" --rpc-url "$RPC" > /dev/null 2>&1
   echo "  Done!"
   echo ""

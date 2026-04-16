@@ -95,10 +95,11 @@ async function buildSubmissionReservation(
 
   const previewAbi = [
     {
-      name: "previewQuestionSubmissionKey",
+      name: "previewQuestionMediaSubmissionKey",
       type: "function",
       inputs: [
-        { name: "url", type: "string" },
+        { name: "imageUrls", type: "string[]" },
+        { name: "videoUrl", type: "string" },
         { name: "title", type: "string" },
         { name: "description", type: "string" },
         { name: "tags", type: "string" },
@@ -111,11 +112,12 @@ async function buildSubmissionReservation(
       stateMutability: "view",
     },
   ] as const;
+  const media = toSubmissionMedia(url);
 
   const previewData = encodeFunctionData({
     abi: previewAbi,
-    functionName: "previewQuestionSubmissionKey",
-    args: [url, title, description, tags, categoryId],
+    functionName: "previewQuestionMediaSubmissionKey",
+    args: [media.imageUrls, media.videoUrl, title, description, tags, categoryId],
   });
 
   const previewResult = await rpcRequest<`0x${string}`>("eth_call", [
@@ -126,7 +128,7 @@ async function buildSubmissionReservation(
 
   const [, submissionKey] = decodeFunctionResult({
     abi: previewAbi,
-    functionName: "previewQuestionSubmissionKey",
+    functionName: "previewQuestionMediaSubmissionKey",
     data: previewResult,
   }) as readonly [bigint, `0x${string}`];
 
@@ -147,6 +149,20 @@ async function buildSubmissionReservation(
   );
 
   return { revealCommitment, salt };
+}
+
+function toSubmissionMedia(url: string): { imageUrls: string[]; videoUrl: string } {
+  try {
+    const parsed = new URL(url);
+    const hostname = parsed.hostname.toLowerCase();
+    const isYouTube =
+      hostname === "youtu.be" ||
+      hostname === "youtube.com" ||
+      hostname.endsWith(".youtube.com");
+    return isYouTube ? { imageUrls: [], videoUrl: url } : { imageUrls: [url], videoUrl: "" };
+  } catch {
+    return { imageUrls: [url], videoUrl: "" };
+  }
 }
 
 /** Send a raw transaction to the Anvil RPC and report whether its outcome is known. */
@@ -473,6 +489,7 @@ export async function submitContentDirect(
 ): Promise<boolean> {
   const { encodeFunctionData } = await import("viem");
   const resolvedCategoryId = BigInt(categoryId);
+  const media = toSubmissionMedia(url);
   const reservation = await buildSubmissionReservation(
     url,
     title,
@@ -505,10 +522,11 @@ export async function submitContentDirect(
   const data = encodeFunctionData({
     abi: [
       {
-        name: "submitQuestion",
+        name: "submitQuestionWithMedia",
         type: "function",
         inputs: [
-          { name: "url", type: "string" },
+          { name: "imageUrls", type: "string[]" },
+          { name: "videoUrl", type: "string" },
           { name: "title", type: "string" },
           { name: "description", type: "string" },
           { name: "tags", type: "string" },
@@ -519,8 +537,8 @@ export async function submitContentDirect(
         stateMutability: "nonpayable",
       },
     ],
-    functionName: "submitQuestion",
-    args: [url, title, description, tags, resolvedCategoryId, reservation.salt],
+    functionName: "submitQuestionWithMedia",
+    args: [media.imageUrls, media.videoUrl, title, description, tags, resolvedCategoryId, reservation.salt],
   });
   return sendTx(fromAddress, contractAddress, data);
 }

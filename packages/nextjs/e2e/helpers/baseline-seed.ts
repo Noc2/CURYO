@@ -54,7 +54,7 @@ async function resolveCategoryIdBySlug(slug: string): Promise<bigint> {
 
 const BASELINE_CONTENT = [
   {
-    url: "",
+    url: "https://picsum.photos/seed/curyo-refund-policy/1200/800.jpg",
     title: "Is this refund policy easy to understand?",
     description:
       "Voters should judge whether the plain-language summary explains refunds, timelines, and exceptions clearly enough for a first-time buyer.",
@@ -72,7 +72,7 @@ const BASELINE_CONTENT = [
     submitter: ANVIL_ACCOUNTS.account3.address,
   },
   {
-    url: "",
+    url: "https://picsum.photos/seed/curyo-api-docs/1200/800.jpg",
     title: "Is this API quickstart beginner friendly?",
     description:
       "Judge whether a new developer could complete the first request without missing setup, authentication, or error handling steps.",
@@ -90,7 +90,7 @@ const BASELINE_CONTENT = [
     submitter: ANVIL_ACCOUNTS.account5.address,
   },
   {
-    url: "",
+    url: "https://picsum.photos/seed/curyo-cafe-review/1200/800.jpg",
     title: "Would this cafe review help locals choose?",
     description:
       "The review mentions noise, service speed, seating, and price. Vote on whether it is specific enough to guide a nearby visitor.",
@@ -117,7 +117,7 @@ const BASELINE_CONTENT = [
     submitter: ANVIL_ACCOUNTS.account8.address,
   },
   {
-    url: "",
+    url: "https://picsum.photos/seed/curyo-app-onboarding/1200/800.jpg",
     title: "Should this app onboarding copy be shorter?",
     description:
       "The flow explains wallet connection, Voter ID, and staking in one screen. Judge whether the copy reduces friction or overloads new users.",
@@ -135,7 +135,7 @@ const BASELINE_CONTENT = [
     submitter: ANVIL_ACCOUNTS.account10.address,
   },
   {
-    url: "",
+    url: "https://picsum.photos/seed/curyo-weeknight-dinner/1200/800.jpg",
     title: "Is this dinner plan practical for a weeknight?",
     description:
       "Rate whether the plan balances prep time, nutrition, cleanup, and ingredient availability for a busy household.",
@@ -171,7 +171,7 @@ const BASELINE_CONTENT = [
     submitter: ANVIL_ACCOUNTS.account5.address,
   },
   {
-    url: "",
+    url: "https://picsum.photos/seed/curyo-accessibility-checklist/1200/800.jpg",
     title: "Is this accessibility checklist launch ready?",
     description:
       "Review the checklist for keyboard support, focus states, text contrast, reduced motion, and mobile overflow coverage.",
@@ -180,7 +180,7 @@ const BASELINE_CONTENT = [
     submitter: ANVIL_ACCOUNTS.account6.address,
   },
   {
-    url: "",
+    url: "https://picsum.photos/seed/curyo-moderation-rules/1200/800.jpg",
     title: "Does this moderation rule set clear voter expectations?",
     description:
       "Judge whether the rule tells voters when to downvote illegal, unsafe, misleading, or mismatched submissions.",
