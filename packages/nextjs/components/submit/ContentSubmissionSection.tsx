@@ -19,7 +19,6 @@ import { useAccount, useConfig } from "wagmi";
 import { readContract, waitForTransactionReceipt, writeContract } from "wagmi/actions";
 import { ChevronDownIcon, MagnifyingGlassIcon, XMarkIcon } from "@heroicons/react/24/outline";
 import { ContentEmbed } from "~~/components/content/ContentEmbed";
-import { FundQuestionModal } from "~~/components/reward-pool/FundQuestionModal";
 import { GasBalanceWarning } from "~~/components/shared/GasBalanceWarning";
 import { surfaceSectionHeadingClassName } from "~~/components/shared/sectionHeading";
 import { InfoTooltip } from "~~/components/ui/InfoTooltip";
@@ -141,11 +140,6 @@ export function ContentSubmissionSection() {
     description: string;
     lastActivityAt: string;
   } | null>(null);
-  const [fundingContent, setFundingContent] = useState<{
-    id: bigint;
-    title: string;
-  } | null>(null);
-  const [openRewardPoolAfterSubmit, setOpenRewardPoolAfterSubmit] = useState(false);
   const [categorySearch, setCategorySearch] = useState("");
   const [isCategoryDropdownOpen, setIsCategoryDropdownOpen] = useState(false);
   const categoryDropdownRef = useRef<HTMLDivElement>(null);
@@ -703,8 +697,7 @@ export function ContentSubmissionSection() {
               lastActivityAt: new Date().toISOString(),
             }
           : null;
-      setSubmittedContent(openRewardPoolAfterSubmit ? null : submittedQuestion);
-      setFundingContent(openRewardPoolAfterSubmit && submittedQuestion ? submittedQuestion : null);
+      setSubmittedContent(submittedQuestion);
       setMediaMode("images");
       setImageUrls([""]);
       setImageUrlErrors([null]);
@@ -717,7 +710,6 @@ export function ContentSubmissionSection() {
       setSelectedCategory(null);
       setSelectedSubcategories([]);
       setCustomSubcategory("");
-      setOpenRewardPoolAfterSubmit(false);
       setSubmitAttempted(false);
     } catch (e: unknown) {
       console.error("Submit failed:", e);
@@ -1161,22 +1153,6 @@ export function ContentSubmissionSection() {
               ) : null}
             </div>
 
-            <label className="flex items-start gap-3 rounded-lg bg-base-200 p-4">
-              <input
-                type="checkbox"
-                className="checkbox checkbox-primary mt-0.5"
-                checked={openRewardPoolAfterSubmit}
-                onChange={event => setOpenRewardPoolAfterSubmit(event.target.checked)}
-              />
-              <span>
-                <span className="block font-medium text-base-content">Add a reward pool after submission</span>
-                <span className="mt-1 block text-sm text-base-content/60">
-                  Paid in USDC on Celo. Fund this question and reserve 3% of qualified claims for eligible frontend
-                  operators.
-                </span>
-              </span>
-            </label>
-
             {isMissingGasBalance ? <GasBalanceWarning nativeTokenSymbol={nativeTokenSymbol} /> : null}
 
             <button
@@ -1204,14 +1180,6 @@ export function ContentSubmissionSection() {
           description={submittedContent.description}
           lastActivityAt={submittedContent.lastActivityAt}
           onClose={handleCloseShareModal}
-        />
-      ) : null}
-
-      {fundingContent ? (
-        <FundQuestionModal
-          contentId={fundingContent.id}
-          title={fundingContent.title}
-          onClose={() => setFundingContent(null)}
         />
       ) : null}
     </>
