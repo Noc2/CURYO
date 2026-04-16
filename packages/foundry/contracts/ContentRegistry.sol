@@ -514,6 +514,7 @@ contract ContentRegistry is Initializable, AccessControlUpgradeable, PausableUpg
         require(pending.submitter == msg.sender, "Reservation not found");
         require(block.timestamp <= pending.expiresAt, "Reservation expired");
         require(block.timestamp >= pending.reservedAt + RESERVED_SUBMISSION_MIN_AGE, "Reservation too new");
+        require(_resolveSubmitterIdentity(msg.sender) == pending.submitterIdentity, "Submitter identity changed");
 
         delete pendingSubmissions[revealCommitment];
         submissionKeyUsed[submissionKey] = true;
@@ -534,6 +535,7 @@ contract ContentRegistry is Initializable, AccessControlUpgradeable, PausableUpg
         require(pending.submitter == msg.sender, "Reservation not found");
         require(block.timestamp <= pending.expiresAt, "Reservation expired");
         require(block.timestamp >= pending.reservedAt + RESERVED_SUBMISSION_MIN_AGE, "Reservation too new");
+        require(_resolveSubmitterIdentity(msg.sender) == pending.submitterIdentity, "Submitter identity changed");
 
         delete pendingSubmissions[revealCommitment];
         submissionKeyUsed[submissionKey] = true;
