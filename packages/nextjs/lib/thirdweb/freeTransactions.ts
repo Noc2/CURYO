@@ -534,11 +534,10 @@ function validateSponsoredCalls(
   const contracts = getContractsForChain(chainId);
   const contractsByAddress = getContractsByAddress(chainId);
   const contentRegistry = contracts?.ContentRegistry;
-  const categoryRegistry = contracts?.CategoryRegistry;
   const frontendRegistry = contracts?.FrontendRegistry;
   const votingEngine = contracts?.RoundVotingEngine;
   const allowedApproveSpenders = new Set(
-    [contentRegistry?.address, categoryRegistry?.address, frontendRegistry?.address]
+    [contentRegistry?.address, frontendRegistry?.address]
       .filter((value): value is Address => Boolean(value))
       .map(value => value.toLowerCase()),
   );
@@ -595,11 +594,6 @@ function validateSponsoredCalls(
           continue;
         }
         return { ok: false, debugCode: "unsupported_operation" };
-      case "CategoryRegistry":
-        if (functionName === "submitCategory" || functionName === "linkApprovalProposal") {
-          continue;
-        }
-        return { ok: false, debugCode: "unsupported_operation" };
       case "FrontendRegistry":
         if (
           functionName === "register" ||
@@ -631,11 +625,6 @@ function validateSponsoredCalls(
           functionName === "claimReward" ||
           functionName === "claimSubmitterReward"
         ) {
-          continue;
-        }
-        return { ok: false, debugCode: "unsupported_operation" };
-      case "CuryoGovernor":
-        if (functionName === "proposeCategoryApproval") {
           continue;
         }
         return { ok: false, debugCode: "unsupported_operation" };

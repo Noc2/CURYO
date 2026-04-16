@@ -1,7 +1,6 @@
 "use client";
 
 import { type FormEvent, useMemo, useState } from "react";
-import { CategoryRegistryAbi } from "@curyo/contracts/abis";
 import { useQueryClient } from "@tanstack/react-query";
 import { Address, encodeFunctionData, isAddress, parseUnits } from "viem";
 import { useAccount, useConfig } from "wagmi";
@@ -42,8 +41,7 @@ type GovernanceActionTemplate = {
   group: string;
   label: string;
   mode: "proposal" | "direct";
-  proposalMode?: "generic" | "categoryApproval";
-  contractName: "CuryoGovernor" | "CategoryRegistry" | "FrontendRegistry" | "ContentRegistry";
+  contractName: "CuryoGovernor" | "FrontendRegistry" | "ContentRegistry";
   functionName: string;
   description: string;
   allowCustomDescription?: boolean;
@@ -106,131 +104,6 @@ const actionTemplates: readonly GovernanceActionTemplate[] = [
     fields: [{ key: "quorum", label: "Quorum numerator (%)", type: "uint", required: true }],
     buildArgs: (_, parser) => [parser.uint("quorum", "Quorum numerator")],
     buildDescription: values => `Update governor quorum numerator to ${values.quorum || "0"}%`,
-  },
-  {
-    id: "category-approve",
-    group: "Category Registry",
-    label: "Approve category",
-    mode: "proposal",
-    proposalMode: "categoryApproval",
-    contractName: "CuryoGovernor",
-    functionName: "proposeCategoryApproval",
-    description: "Create a lower-threshold governor proposal to sponsor and approve a pending category submission.",
-    allowCustomDescription: false,
-    note: "The description is fixed and the proposal is bound to the current pending submission, so stale category approvals cannot be reused.",
-    fields: [{ key: "categoryId", label: "Category ID", type: "uint", required: true }],
-    buildArgs: (_, parser) => [parser.uint("categoryId", "Category ID")],
-    buildDescription: values => `Approve category #${values.categoryId || "0"}`,
-  },
-  {
-    id: "category-link-approval",
-    group: "Category Registry",
-    label: "Link approval proposal",
-    mode: "direct",
-    contractName: "CategoryRegistry",
-    functionName: "linkApprovalProposal",
-    description:
-      "Directly link an existing governor proposal to a pending category when the proposal was created outside this composer.",
-    note: "Must be called by the original category submitter. Only proposals created after the current submission can link.",
-    advanced: true,
-    fields: [
-      { key: "categoryId", label: "Category ID", type: "uint", required: true },
-      {
-        key: "descriptionHash",
-        label: "Description hash",
-        type: "bytes32",
-        required: true,
-        helperText: "keccak256 hash of the exact governor proposal description string.",
-      },
-    ],
-    buildArgs: (_, parser) => [
-      parser.uint("categoryId", "Category ID"),
-      parser.bytes32("descriptionHash", "Description hash"),
-    ],
-  },
-  {
-    id: "category-clear-approval",
-    group: "Category Registry",
-    label: "Clear canceled or expired approval",
-    mode: "direct",
-    contractName: "CategoryRegistry",
-    functionName: "clearApprovalProposal",
-    description:
-      "Clear a linked approval proposal after it was canceled or expired so the submitter can retry within 7 days or cancel and reclaim stake afterward.",
-    note: "Must be called by the original category submitter.",
-    advanced: true,
-    fields: [{ key: "categoryId", label: "Category ID", type: "uint", required: true }],
-    buildArgs: (_, parser) => [parser.uint("categoryId", "Category ID")],
-  },
-  {
-    id: "category-reject",
-    group: "Category Registry",
-    label: "Reject failed category",
-    mode: "direct",
-    contractName: "CategoryRegistry",
-    functionName: "rejectCategory",
-    description: "Directly reject a category whose linked governance proposal has been defeated.",
-    fields: [{ key: "categoryId", label: "Category ID", type: "uint", required: true }],
-    buildArgs: (_, parser) => [parser.uint("categoryId", "Category ID")],
-  },
-  {
-    id: "category-cancel-unlinked",
-    group: "Category Registry",
-    label: "Cancel unsponsored category",
-    mode: "direct",
-    contractName: "CategoryRegistry",
-    functionName: "cancelUnlinkedCategory",
-    description:
-      "Cancel your pending category submission and reclaim the 500 cREP stake after 7 days if no approval proposal was linked.",
-    fields: [{ key: "categoryId", label: "Category ID", type: "uint", required: true }],
-    buildArgs: (_, parser) => [parser.uint("categoryId", "Category ID")],
-  },
-  {
-    id: "category-add-approved",
-    group: "Category Registry",
-    label: "Add approved category",
-    mode: "proposal",
-    contractName: "CategoryRegistry",
-    functionName: "addApprovedCategory",
-    description: "Create a proposal to seed an already-approved category directly.",
-    advanced: true,
-    fields: [
-      { key: "name", label: "Name", type: "string", required: true },
-      { key: "domain", label: "Domain", type: "string", required: true },
-      { key: "subcategories", label: "Subcategories", type: "csv", required: true, helperText: "Comma-separated" },
-    ],
-    buildArgs: (_, parser) => [
-      parser.string("name", "Name"),
-      parser.string("domain", "Domain").toLowerCase(),
-      parser.csv("subcategories"),
-    ],
-    buildDescription: values => `Add approved category: ${values.name || "Unnamed"} (${values.domain || "domain"})`,
-  },
-  {
-    id: "category-set-voter-id",
-    group: "Category Registry",
-    label: "Set category Voter ID contract",
-    mode: "proposal",
-    contractName: "CategoryRegistry",
-    functionName: "setVoterIdNFT",
-    description: "Create a proposal to update the VoterIdNFT used by CategoryRegistry.",
-    advanced: true,
-    fields: [{ key: "voterId", label: "VoterIdNFT address", type: "address", required: true }],
-    buildArgs: (_, parser) => [parser.address("voterId", "VoterIdNFT address")],
-    buildDescription: values => `Set CategoryRegistry VoterIdNFT to ${values.voterId || "address"}`,
-  },
-  {
-    id: "category-set-voting-engine",
-    group: "Category Registry",
-    label: "Set category voting engine",
-    mode: "proposal",
-    contractName: "CategoryRegistry",
-    functionName: "setVotingEngine",
-    description: "Create a proposal to update the voting engine used by CategoryRegistry.",
-    advanced: true,
-    fields: [{ key: "votingEngine", label: "Voting engine address", type: "address", required: true }],
-    buildArgs: (_, parser) => [parser.address("votingEngine", "Voting engine address")],
-    buildDescription: values => `Set CategoryRegistry voting engine to ${values.votingEngine || "address"}`,
   },
   {
     id: "frontend-slash",
@@ -365,19 +238,6 @@ const actionTemplates: readonly GovernanceActionTemplate[] = [
     buildDescription: values => `Set ContentRegistry voting engine to ${values.votingEngine || "address"}`,
   },
   {
-    id: "content-set-category-registry",
-    group: "Content Registry",
-    label: "Set content category registry",
-    mode: "proposal",
-    contractName: "ContentRegistry",
-    functionName: "setCategoryRegistry",
-    description: "Create a proposal to update the CategoryRegistry used by ContentRegistry.",
-    advanced: true,
-    fields: [{ key: "categoryRegistry", label: "CategoryRegistry address", type: "address", required: true }],
-    buildArgs: (_, parser) => [parser.address("categoryRegistry", "CategoryRegistry address")],
-    buildDescription: values => `Set ContentRegistry CategoryRegistry to ${values.categoryRegistry || "address"}`,
-  },
-  {
     id: "content-set-voter-id",
     group: "Content Registry",
     label: "Set content Voter ID contract",
@@ -432,19 +292,13 @@ const actionTemplates: readonly GovernanceActionTemplate[] = [
   },
 ];
 
-const CATEGORY_REGISTRY_EXTENDED_FUNCTIONS = new Set([
-  "linkApprovalProposal",
-  "clearApprovalProposal",
-  "cancelUnlinkedCategory",
-]);
-
 export function GovernanceActionComposer() {
   const queryClient = useQueryClient();
   const { address } = useAccount();
   const wagmiConfig = useConfig();
   const { governorAddress, hasGovernorContract, isGovernorContractLoading, knownContractsByName } =
     useGovernanceContracts();
-  const { proposalThreshold, categoryProposalThreshold: categoryProposalThresholdRaw } = useGovernanceStats();
+  const { proposalThreshold } = useGovernanceStats();
   const { writeContractAsync, isPending } = useGovernanceWrite();
   const [selectedActionId, setSelectedActionId] = useState("");
   const [showAdvanced, setShowAdvanced] = useState(false);
@@ -470,10 +324,7 @@ export function GovernanceActionComposer() {
 
   const defaultDescription = selectedTemplate?.buildDescription?.(formValues) ?? selectedTemplate?.label ?? "";
   const effectiveDescription = customDescription.trim() || defaultDescription;
-  const activeProposalThreshold =
-    selectedTemplate?.proposalMode === "categoryApproval"
-      ? (categoryProposalThresholdRaw ?? 500n * 1_000_000n)
-      : proposalThreshold;
+  const activeProposalThreshold = proposalThreshold;
 
   const groupedTemplates = useMemo(() => {
     const grouped = new Map<string, GovernanceActionTemplate[]>();
@@ -556,12 +407,6 @@ export function GovernanceActionComposer() {
         throw new Error("This action is unavailable on this network.");
       }
 
-      const actionAbi =
-        selectedTemplate.contractName === "CategoryRegistry" &&
-        CATEGORY_REGISTRY_EXTENDED_FUNCTIONS.has(selectedTemplate.functionName)
-          ? CategoryRegistryAbi
-          : targetContract.abi;
-
       if (selectedTemplate.mode === "proposal" && isGovernorContractLoading) {
         throw new Error("Checking governance availability. Try again in a moment.");
       }
@@ -581,39 +426,29 @@ export function GovernanceActionComposer() {
       }
 
       const proposalDescriptionHash =
-        selectedTemplate.mode === "proposal" &&
-        selectedTemplate.proposalMode !== "categoryApproval" &&
-        effectiveDescription
+        selectedTemplate.mode === "proposal" && effectiveDescription
           ? getProposalDescriptionHash(effectiveDescription)
           : undefined;
       const args = selectedTemplate.buildArgs(formValues, parser, proposalDescriptionHash);
 
       if (selectedTemplate.mode === "proposal") {
-        const txHash =
-          selectedTemplate.proposalMode === "categoryApproval"
-            ? await writeContractAsync({
-                address: governorAddress!,
-                abi: governorAbi,
-                functionName: "proposeCategoryApproval",
+        const txHash = await writeContractAsync({
+          address: governorAddress!,
+          abi: governorAbi,
+          functionName: "propose",
+          args: [
+            [targetContract.address],
+            [0n],
+            [
+              encodeFunctionData({
+                abi: targetContract.abi,
+                functionName: selectedTemplate.functionName,
                 args,
-              })
-            : await writeContractAsync({
-                address: governorAddress!,
-                abi: governorAbi,
-                functionName: "propose",
-                args: [
-                  [targetContract.address],
-                  [0n],
-                  [
-                    encodeFunctionData({
-                      abi: targetContract.abi,
-                      functionName: selectedTemplate.functionName,
-                      args,
-                    } as any),
-                  ],
-                  effectiveDescription,
-                ],
-              });
+              } as any),
+            ],
+            effectiveDescription,
+          ],
+        });
 
         if (!txHash) return;
 
@@ -621,7 +456,7 @@ export function GovernanceActionComposer() {
       } else {
         const txHash = await writeContractAsync({
           address: targetContract.address,
-          abi: actionAbi,
+          abi: targetContract.abi,
           functionName: selectedTemplate.functionName,
           args,
         });
@@ -752,9 +587,7 @@ export function GovernanceActionComposer() {
               </div>
               <p className="text-base text-base-content/70">
                 {selectedTemplate.mode === "proposal"
-                  ? selectedTemplate.proposalMode === "categoryApproval"
-                    ? "Create a category approval proposal using the lower category threshold."
-                    : `Create a proposal targeting ${selectedTemplate.contractName}.${selectedTemplate.functionName}.`
+                  ? `Create a proposal targeting ${selectedTemplate.contractName}.${selectedTemplate.functionName}.`
                   : `Send a direct transaction to ${selectedTemplate.contractName}.${selectedTemplate.functionName}.`}
               </p>
               {selectedTemplate.mode === "proposal" && (
@@ -770,9 +603,7 @@ export function GovernanceActionComposer() {
               )}
               {proposalBlocked && (
                 <p className="text-base text-warning">
-                  Your current voting power is below the live{" "}
-                  {selectedTemplate.proposalMode === "categoryApproval" ? "category proposal" : "governor"} threshold,
-                  so this proposal would revert.
+                  Your current voting power is below the live governor threshold, so this proposal would revert.
                 </p>
               )}
             </div>

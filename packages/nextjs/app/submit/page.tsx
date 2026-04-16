@@ -15,16 +15,12 @@ const ContentSubmissionSection = dynamic(
   () => import("~~/components/submit/ContentSubmissionSection").then(mod => mod.ContentSubmissionSection),
   { loading: () => <SubmitSectionLoading /> },
 );
-const CategorySubmissionForm = dynamic(
-  () => import("~~/components/governance/CategorySubmissionForm").then(mod => mod.CategorySubmissionForm),
-  { loading: () => <SubmitSectionLoading /> },
-);
 const FrontendRegistration = dynamic(
   () => import("~~/components/governance/FrontendRegistration").then(mod => mod.FrontendRegistration),
   { loading: () => <SubmitSectionLoading /> },
 );
 
-type SubmissionType = "content" | "category" | "frontend";
+type SubmissionType = "content" | "frontend";
 
 function SubmitSectionLoading() {
   return (
@@ -52,7 +48,7 @@ const SubmitPage: NextPage = () => {
   useEffect(() => {
     const applyHash = () => {
       const hash = window.location.hash.replace(/^#/, "") as SubmissionType;
-      if (hash && ["content", "category", "frontend"].includes(hash)) {
+      if (hash && ["content", "frontend"].includes(hash)) {
         setSubmissionType(hash);
       }
     };
@@ -62,7 +58,7 @@ const SubmitPage: NextPage = () => {
   }, []);
 
   if (!address) {
-    return <ConnectWalletCard title="Submit" message="Sign in to submit content or propose new categories." />;
+    return <ConnectWalletCard title="Submit" message="Sign in to submit content or register as a frontend operator." />;
   }
 
   if (requiresPageLevelVoterId && !voterIdResolved) {
@@ -83,8 +79,8 @@ const SubmitPage: NextPage = () => {
           <IdentificationIcon className="w-12 h-12 text-warning mx-auto" />
           <h1 className={surfaceSectionHeadingClassName}>Voter ID Required</h1>
           <p className="text-base-content/60">
-            You need a Voter ID to submit content, propose platforms, or register as a frontend operator. Verify your
-            identity with Self.xyz to receive your Voter ID.
+            You need a Voter ID to submit content or register as a frontend operator. Verify your identity with Self.xyz
+            to receive your Voter ID.
           </p>
           <Link href="/governance" className="btn btn-submit">
             <IdentificationIcon className="w-5 h-5" />
@@ -107,14 +103,6 @@ const SubmitPage: NextPage = () => {
           Content
         </button>
         <button
-          onClick={() => selectTab("category")}
-          className={`px-4 py-1.5 rounded-full text-base font-medium transition-colors ${
-            submissionType === "category" ? "pill-active" : "pill-inactive"
-          }`}
-        >
-          Platform
-        </button>
-        <button
           onClick={() => selectTab("frontend")}
           className={`px-4 py-1.5 rounded-full text-base font-medium transition-colors ${
             submissionType === "frontend" ? "pill-active" : "pill-inactive"
@@ -124,13 +112,7 @@ const SubmitPage: NextPage = () => {
         </button>
       </div>
 
-      {submissionType === "content" ? (
-        <ContentSubmissionSection />
-      ) : submissionType === "category" ? (
-        <CategorySubmissionForm />
-      ) : (
-        <FrontendRegistration />
-      )}
+      {submissionType === "content" ? <ContentSubmissionSection /> : <FrontendRegistration />}
     </AppPageShell>
   );
 };

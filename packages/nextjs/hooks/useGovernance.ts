@@ -17,7 +17,6 @@ import { ZERO_ADDRESS } from "~~/utils/scaffold-eth/common";
 import { TransactorFuncOptions } from "~~/utils/scaffold-eth/contract";
 
 export const governorAbi = parseAbi([
-  "function categoryProposalThreshold() view returns (uint256)",
   "event ProposalCreated(uint256 proposalId, address proposer, address[] targets, uint256[] values, string[] signatures, bytes[] calldatas, uint256 voteStart, uint256 voteEnd, string description)",
   "function castVote(uint256 proposalId, uint8 support) returns (uint256)",
   "function execute(address[] targets, uint256[] values, bytes[] calldatas, bytes32 descriptionHash) payable returns (uint256)",
@@ -29,7 +28,6 @@ export const governorAbi = parseAbi([
   "function proposalSnapshot(uint256 proposalId) view returns (uint256)",
   "function proposalThreshold() view returns (uint256)",
   "function proposalVotes(uint256 proposalId) view returns (uint256 againstVotes, uint256 forVotes, uint256 abstainVotes)",
-  "function proposeCategoryApproval(uint256 categoryId) returns (uint256)",
   "function propose(address[] targets, uint256[] values, bytes[] calldatas, string description) returns (uint256)",
   "function queue(address[] targets, uint256[] values, bytes[] calldatas, bytes32 descriptionHash) returns (uint256)",
   "function quorum(uint256 blockNumber) view returns (uint256)",
@@ -47,7 +45,7 @@ export const governorAbi = parseAbi([
 
 const timelockAbi = parseAbi(["function getMinDelay() view returns (uint256)"]);
 
-type GovernanceManagedContractName = "CuryoGovernor" | "CategoryRegistry" | "FrontendRegistry" | "ContentRegistry";
+type GovernanceManagedContractName = "CuryoGovernor" | "FrontendRegistry" | "ContentRegistry";
 
 type GovernanceTargetContract = {
   name: GovernanceManagedContractName;
@@ -127,7 +125,6 @@ export function useGovernanceContracts() {
   const { targetNetwork } = useTargetNetwork();
   const publicClient = usePublicClient({ chainId: targetNetwork.id });
   const token = useDeployedContractInfo({ contractName: "CuryoReputation" });
-  const categoryRegistry = useDeployedContractInfo({ contractName: "CategoryRegistry" });
   const frontendRegistry = useDeployedContractInfo({ contractName: "FrontendRegistry" });
   const contentRegistry = useDeployedContractInfo({ contractName: "ContentRegistry" });
 
@@ -187,13 +184,6 @@ export function useGovernanceContracts() {
         abi: governorAbi,
       });
     }
-    if (categoryRegistry.data) {
-      items.push({
-        name: "CategoryRegistry",
-        address: categoryRegistry.data.address,
-        abi: categoryRegistry.data.abi as Abi,
-      });
-    }
     if (frontendRegistry.data) {
       items.push({
         name: "FrontendRegistry",
@@ -209,7 +199,7 @@ export function useGovernanceContracts() {
       });
     }
     return items;
-  }, [categoryRegistry.data, contentRegistry.data, frontendRegistry.data, governorAddress, hasGovernorContract]);
+  }, [contentRegistry.data, frontendRegistry.data, governorAddress, hasGovernorContract]);
 
   const knownContractsByAddress = useMemo(
     () =>
@@ -231,7 +221,6 @@ export function useGovernanceContracts() {
   return {
     targetNetwork,
     token,
-    categoryRegistry,
     frontendRegistry,
     contentRegistry,
     governorAddress,
@@ -283,11 +272,6 @@ export function useGovernanceStats() {
     functionName: "proposalThreshold",
   } as any);
 
-  const { data: categoryProposalThreshold } = useReadContract({
-    ...governorReadConfig,
-    functionName: "categoryProposalThreshold",
-  } as any);
-
   const { data: quorumNumerator } = useReadContract({
     ...governorReadConfig,
     functionName: "quorumNumerator",
@@ -325,7 +309,6 @@ export function useGovernanceStats() {
     votingDelay: (votingDelay as bigint | undefined) ?? undefined,
     votingPeriod: (votingPeriod as bigint | undefined) ?? undefined,
     proposalThreshold: (proposalThreshold as bigint | undefined) ?? undefined,
-    categoryProposalThreshold: (categoryProposalThreshold as bigint | undefined) ?? undefined,
     quorumNumerator: (quorumNumerator as bigint | undefined) ?? undefined,
     minimumQuorum: (minimumQuorum as bigint | undefined) ?? undefined,
     currentQuorum: (currentQuorum as bigint | undefined) ?? undefined,

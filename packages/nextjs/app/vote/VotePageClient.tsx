@@ -225,7 +225,7 @@ const HomeInner = () => {
   const isSearchMode = trimmedSearchQuery.length > 0;
   const isShortSearchQuery = isContentSearchQueryTooShort(trimmedSearchQuery);
   const effectiveSearchSortBy: SearchSortOption = sortBy === "for_you" ? "relevance" : sortBy;
-  const { categories: websiteCategories, categoryNameToId, isLoading: categoriesLoading } = useCategoryRegistry();
+  const { categories: discoveryCategories, categoryNameToId, isLoading: categoriesLoading } = useCategoryRegistry();
   const { delegateTo, delegateOf, hasDelegate, isDelegate, isLoading: delegationLoading } = useDelegation(address);
   const delegateVoteAddress = hasDelegate ? delegateTo : undefined;
   const delegatorVoteAddress = isDelegate ? delegateOf : undefined;
@@ -1401,7 +1401,7 @@ const HomeInner = () => {
 
   // Build category filter list sorted by popularity (vote count)
   const categories = useMemo(() => {
-    const sorted = [...websiteCategories].sort((a, b) => {
+    const sorted = [...discoveryCategories].sort((a, b) => {
       const countA = voteCounts.get(a.id.toString()) ?? 0;
       const countB = voteCounts.get(b.id.toString()) ?? 0;
       return countB - countA;
@@ -1409,7 +1409,7 @@ const HomeInner = () => {
     const cats = [ALL_FILTER, ...sorted.map(cat => cat.name)];
     if (brokenCount > 0) cats.push(BROKEN_FILTER);
     return cats;
-  }, [websiteCategories, voteCounts, brokenCount]);
+  }, [discoveryCategories, voteCounts, brokenCount]);
   const renderVoteTopControls = useCallback(
     (variant: "mobile" | "desktop") => {
       const isMobileVariant = variant === "mobile";

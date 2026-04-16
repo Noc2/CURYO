@@ -135,29 +135,32 @@ export function ContentSubmissionSection() {
     title: string;
   } | null>(null);
   const [openRewardPoolAfterSubmit, setOpenRewardPoolAfterSubmit] = useState(false);
-  const [platformSearch, setPlatformSearch] = useState("");
-  const [isPlatformDropdownOpen, setIsPlatformDropdownOpen] = useState(false);
-  const platformDropdownRef = useRef<HTMLDivElement>(null);
+  const [categorySearch, setCategorySearch] = useState("");
+  const [isCategoryDropdownOpen, setIsCategoryDropdownOpen] = useState(false);
+  const categoryDropdownRef = useRef<HTMLDivElement>(null);
 
-  const { categories: websiteCategories, isLoading: categoriesLoading } = useCategoryRegistry();
+  const { categories, isLoading: categoriesLoading } = useCategoryRegistry();
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
-      if (platformDropdownRef.current && !platformDropdownRef.current.contains(event.target as Node)) {
-        setIsPlatformDropdownOpen(false);
+      if (categoryDropdownRef.current && !categoryDropdownRef.current.contains(event.target as Node)) {
+        setIsCategoryDropdownOpen(false);
       }
     };
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-  const filteredPlatforms = useMemo(() => {
-    if (!platformSearch.trim()) return websiteCategories;
-    const search = platformSearch.toLowerCase();
-    return websiteCategories.filter(
-      cat => cat.name.toLowerCase().includes(search) || cat.domain.toLowerCase().includes(search),
+  const filteredCategories = useMemo(() => {
+    if (!categorySearch.trim()) return categories;
+    const search = categorySearch.toLowerCase();
+    return categories.filter(
+      cat =>
+        cat.name.toLowerCase().includes(search) ||
+        cat.domain.toLowerCase().includes(search) ||
+        cat.subcategories.some(subcategory => subcategory.toLowerCase().includes(search)),
     );
-  }, [websiteCategories, platformSearch]);
+  }, [categories, categorySearch]);
 
   const urlConfig = DEFAULT_URL_CONFIG;
   const customSubcategoryError = customSubcategory ? getContentTagValidationError(customSubcategory) : null;
@@ -648,7 +651,7 @@ export function ContentSubmissionSection() {
           className="grid gap-6 xl:grid-cols-[minmax(0,1.5fr)_minmax(18rem,0.9fr)] xl:items-start"
         >
           <div className="space-y-5">
-            <div ref={platformDropdownRef} className="relative">
+            <div ref={categoryDropdownRef} className="relative">
               <label
                 className={`mb-2 block text-base font-medium ${submitAttempted && !selectedCategory ? "text-error" : ""}`}
               >
@@ -658,11 +661,11 @@ export function ContentSubmissionSection() {
                 <div className="input input-bordered flex w-full items-center bg-base-100">
                   <span className="loading loading-spinner loading-sm"></span>
                 </div>
-              ) : websiteCategories.length > 0 ? (
+              ) : categories.length > 0 ? (
                 <>
                   <button
                     type="button"
-                    onClick={() => setIsPlatformDropdownOpen(!isPlatformDropdownOpen)}
+                    onClick={() => setIsCategoryDropdownOpen(!isCategoryDropdownOpen)}
                     className={`input input-bordered flex w-full cursor-pointer items-center justify-between bg-base-100 transition-colors hover:bg-base-200 ${
                       submitAttempted && !selectedCategory ? "input-error" : ""
                     }`}
@@ -676,14 +679,14 @@ export function ContentSubmissionSection() {
                       <span className="text-base-content/50">Select a category...</span>
                     )}
                     <ChevronDownIcon
-                      className={`h-5 w-5 text-base-content/50 transition-transform ${isPlatformDropdownOpen ? "rotate-180" : ""}`}
+                      className={`h-5 w-5 text-base-content/50 transition-transform ${isCategoryDropdownOpen ? "rotate-180" : ""}`}
                     />
                   </button>
                   {submitAttempted && !selectedCategory ? (
                     <p className="mt-1 text-base text-error">Select a category before submitting.</p>
                   ) : null}
 
-                  {isPlatformDropdownOpen ? (
+                  {isCategoryDropdownOpen ? (
                     <div className="absolute z-50 mt-1 w-full overflow-hidden rounded-lg border border-base-300 bg-base-100 shadow-lg">
                       <div className="border-b border-base-300 p-2">
                         <div className="relative">
@@ -692,14 +695,14 @@ export function ContentSubmissionSection() {
                             type="text"
                             placeholder="Search categories..."
                             className="input input-sm w-full bg-base-200 pl-9 pr-8"
-                            value={platformSearch}
-                            onChange={e => setPlatformSearch(e.target.value)}
+                            value={categorySearch}
+                            onChange={e => setCategorySearch(e.target.value)}
                             autoFocus
                           />
-                          {platformSearch ? (
+                          {categorySearch ? (
                             <button
                               type="button"
-                              onClick={() => setPlatformSearch("")}
+                              onClick={() => setCategorySearch("")}
                               className="absolute right-2 top-1/2 -translate-y-1/2 text-base-content/50 hover:text-base-content"
                             >
                               <XMarkIcon className="h-4 w-4" />
@@ -709,8 +712,8 @@ export function ContentSubmissionSection() {
                       </div>
 
                       <div className="max-h-60 overflow-y-auto">
-                        {filteredPlatforms.length > 0 ? (
-                          filteredPlatforms.map(cat => {
+                        {filteredCategories.length > 0 ? (
+                          filteredCategories.map(cat => {
                             const isSelected = selectedCategory?.id === cat.id;
                             return (
                               <button
@@ -718,8 +721,8 @@ export function ContentSubmissionSection() {
                                 type="button"
                                 onClick={() => {
                                   handleCategorySelect(cat);
-                                  setIsPlatformDropdownOpen(false);
-                                  setPlatformSearch("");
+                                  setIsCategoryDropdownOpen(false);
+                                  setCategorySearch("");
                                 }}
                                 className={`flex w-full items-center gap-3 px-4 py-2.5 text-left transition-colors ${
                                   isSelected ? "bg-primary/10 text-primary" : "text-base-content hover:bg-base-200"
@@ -735,7 +738,7 @@ export function ContentSubmissionSection() {
                           })
                         ) : (
                           <div className="px-4 py-3 text-base text-base-content/50">
-                            No categories found for &quot;{platformSearch}&quot;
+                            No categories found for &quot;{categorySearch}&quot;
                           </div>
                         )}
                       </div>
@@ -743,7 +746,7 @@ export function ContentSubmissionSection() {
                   ) : null}
                 </>
               ) : (
-                <p className="text-base text-base-content/50">No categories available. Propose one!</p>
+                <p className="text-base text-base-content/50">No categories available.</p>
               )}
             </div>
 

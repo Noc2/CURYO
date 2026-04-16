@@ -59,10 +59,6 @@ const GovernanceActionComposer = dynamic(
 const ProposalList = dynamic(() => import("~~/components/governance/ProposalList").then(mod => mod.ProposalList), {
   loading: GovernanceSectionLoading,
 });
-const PlatformProposals = dynamic(
-  () => import("~~/components/governance/PlatformProposals").then(mod => mod.PlatformProposals),
-  { loading: GovernanceSectionLoading },
-);
 
 function getGovernanceHash(tab: GovernanceTab) {
   return tab === "profile" ? "" : `#${tab}`;
@@ -281,7 +277,6 @@ function GovernancePageInner() {
           </div>
           <GovernanceActionComposer />
           <ProposalList />
-          <PlatformProposals />
         </div>
       )}
     </AppPageShell>

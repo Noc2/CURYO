@@ -48,7 +48,6 @@ const EXECUTED_EVENT = parseAbiItem(
 const contractsForChain = (deployedContracts as Record<number, Record<string, ContractRecord>>)[CHAIN_ID];
 const crepContract = contractsForChain.CuryoReputation;
 const contentRegistryContract = contractsForChain.ContentRegistry;
-const categoryRegistryContract = contractsForChain.CategoryRegistry;
 const frontendRegistryContract = contractsForChain.FrontendRegistry;
 const profileRegistryContract = contractsForChain.ProfileRegistry;
 const rewardDistributorContract = contractsForChain.RoundRewardDistributor;
@@ -430,10 +429,6 @@ test("supported sponsored operation families are allowlisted", async () => {
         1n,
         `0x${"3".repeat(64)}`,
       ]),
-    ],
-    [
-      encodeCall(crepContract, "approve", [categoryRegistryContract.address, 10n]),
-      encodeCall(categoryRegistryContract, "submitCategory", ["Security", "security.example", ["Smart Contracts"]]),
     ],
     [encodeCall(frontendRegistryContract, "register")],
     [encodeCall(frontendRegistryContract, "claimFees")],

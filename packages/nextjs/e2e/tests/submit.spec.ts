@@ -14,19 +14,19 @@ test.describe("Content submission", () => {
     // Wait for the form to appear (requires wallet + VoterID)
     await expect(page.getByRole("heading", { name: "Submit Content" })).toBeVisible({ timeout: 15_000 });
 
-    // 1. Select platform — click the platform dropdown trigger
+    // 1. Select category — click the category dropdown trigger
     // Categories load from Ponder (or RPC fallback). If neither is ready yet,
-    // the page shows "No platforms available. Propose one!" instead of the dropdown.
-    const platformBtn = page.getByText("Select a platform...");
-    const noPlatforms = page.getByText("No platforms available");
-    const platformOrEmpty = platformBtn.or(noPlatforms);
-    await expect(platformOrEmpty).toBeVisible({ timeout: 10_000 });
+    // the page shows the category empty state instead of the dropdown.
+    const categoryBtn = page.getByText("Select a category...");
+    const noCategories = page.getByText("No categories available");
+    const categoryOrEmpty = categoryBtn.or(noCategories);
+    await expect(categoryOrEmpty).toBeVisible({ timeout: 10_000 });
 
     // Skip if categories haven't loaded (Ponder down + RPC not yet returned)
-    const hasPlatforms = await platformBtn.isVisible().catch(() => false);
-    test.skip(!hasPlatforms, "Categories not loaded — Ponder and RPC fallback both unavailable");
+    const hasCategories = await categoryBtn.isVisible().catch(() => false);
+    test.skip(!hasCategories, "Categories not loaded — Ponder and RPC fallback both unavailable");
 
-    await platformBtn.click();
+    await categoryBtn.click();
     // Pick "YouTube" from the dropdown options
     const youtubeOption = page.getByText("YouTube").first();
     await youtubeOption.click();
