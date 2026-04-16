@@ -64,7 +64,7 @@ KEYS=(
   "0xdbda1821b80551c9d65939329250298aa3472ba22feea921c0cf5d620ea67b97"  # Account 8 (reused)
 )
 
-# Example Curyo 2 questions use either a direct image URL or a YouTube URL.
+# Example Curyo 2 questions use direct image URLs, one multi-image set, or a YouTube URL.
 # Curyo 2 default categoryIds:
 # 1=Products, 2=Local Places, 3=Travel, 4=Apps, 5=Media,
 # 6=Design, 7=AI Answers, 8=Developer Docs, 9=Trust, 10=General
@@ -79,7 +79,7 @@ URLS=(
   "https://picsum.photos/seed/curyo-app-onboarding/1200/800.jpg"
   "https://picsum.photos/seed/curyo-event-poster/1200/800.jpg"
   "https://picsum.photos/seed/curyo-weeknight-dinner/1200/800.jpg"
-  "https://picsum.photos/seed/curyo-media-hero/1200/800.jpg"
+  '["https://picsum.photos/seed/curyo-media-hero-primary/1200/800.jpg","https://picsum.photos/seed/curyo-media-hero-detail/1200/800.jpg","https://picsum.photos/seed/curyo-media-hero-contrast/1200/800.jpg","https://picsum.photos/seed/curyo-media-hero-mobile/1200/800.jpg"]'
   "https://www.youtube.com/watch?v=aqz-KE-bpKQ"
   "https://picsum.photos/seed/curyo-street-guide/1200/800.jpg"
   "https://picsum.photos/seed/curyo-accessibility-checklist/1200/800.jpg"
@@ -98,7 +98,7 @@ TITLES=(
   "Should this app onboarding copy be shorter?"
   "Does this poster make the event easy to grasp?"
   "Is this dinner plan practical for a weeknight?"
-  "Does this image work as a hero visual?"
+  "Does this image set work as a hero gallery?"
   "Does this animated clip hold attention?"
   "Does this street scene feel welcoming?"
   "Is this accessibility checklist launch ready?"
@@ -117,7 +117,7 @@ DESCRIPTIONS=(
   "The flow explains wallet connection, Voter ID, and staking in one screen. Judge whether the copy reduces friction or overloads new users."
   "Voters should judge hierarchy, contrast, and whether date, place, and purpose are legible at a glance."
   "Rate whether the plan balances prep time, nutrition, cleanup, and ingredient availability for a busy household."
-  "Judge whether the image has enough focus, contrast, and mood to support a question about human review quality."
+  "Judge whether the image set has enough focus, contrast, variety, and mobile-safe composition to support a hero gallery."
   "Vote on whether the movement, pacing, and visual focus make the clip engaging enough for a general audience."
   "Use the image as travel context. Vote on whether it would make a neighborhood guide feel inviting and credible."
   "Review the checklist for keyboard support, focus states, text contrast, reduced motion, and mobile overflow coverage."
@@ -136,7 +136,7 @@ TAGS=(
   "Onboarding,Trust,Usability"
   "Visual Design,Typography,Layout"
   "Usefulness,Clear,Worthwhile"
-  "Images,Art,Photography"
+  "Images,Gallery,Photography"
   "Video,Animation,Engagement"
   "Location,Photography,Solo Travel"
   "Accessibility,Quality,Testing"
@@ -179,7 +179,7 @@ for CATEGORY_SLUG in "${CATEGORY_SLUGS[@]}"; do
   CATEGORY_IDS+=("$(resolve_category_id "$CATEGORY_SLUG")")
 done
 
-echo "=== Seeding example image and video questions ==="
+echo "=== Seeding example image, multi-image, and video questions ==="
 echo "(Test accounts were pre-funded with cREP during deployment)"
 echo ""
 
@@ -210,6 +210,10 @@ for ((i = 0; i < TOTAL_ITEMS; i++)); do
   IMAGE_URLS_ARG="[\"$URL\"]"
   VIDEO_URL_ARG=""
   case "$URL" in
+    \[*)
+      MEDIA_KIND="multi-image"
+      IMAGE_URLS_ARG="$URL"
+      ;;
     *youtube.com*|*youtu.be*)
       MEDIA_KIND="video"
       IMAGE_URLS_ARG="[]"

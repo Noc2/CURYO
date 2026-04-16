@@ -3,7 +3,7 @@ import { createPublicClient, encodeAbiParameters, http, keccak256, parseAbi } fr
 const args = process.argv.slice(2);
 if (args.length !== 9) {
   console.error(
-    "Usage: node buildSubmissionReservation.js <rpcUrl> <registry> <submitter> <url> <title> <description> <tags> <categoryId> <salt>",
+    "Usage: node buildSubmissionReservation.js <rpcUrl> <registry> <submitter> <mediaUrlOrImageArrayJson> <title> <description> <tags> <categoryId> <salt>",
   );
   process.exit(1);
 }
@@ -14,6 +14,25 @@ const publicClient = createPublicClient({
 });
 
 function toSubmissionMedia(value) {
+  const trimmed = value.trim();
+  if (trimmed.startsWith("[")) {
+    try {
+      const parsed = JSON.parse(trimmed);
+      if (
+        Array.isArray(parsed) &&
+        parsed.length > 0 &&
+        parsed.every(item => typeof item === "string" && item.trim().length > 0)
+      ) {
+        return { imageUrls: parsed, videoUrl: "" };
+      }
+    } catch {
+      // Fall through to the explicit error below.
+    }
+
+    console.error("Invalid image URL array JSON. Expected a non-empty JSON string array.");
+    process.exit(1);
+  }
+
   try {
     const parsed = new URL(value);
     const hostname = parsed.hostname.toLowerCase();

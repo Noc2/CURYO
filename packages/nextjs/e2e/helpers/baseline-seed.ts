@@ -144,11 +144,17 @@ const BASELINE_CONTENT = [
     submitter: ANVIL_ACCOUNTS.account2.address,
   },
   {
-    url: "https://picsum.photos/seed/curyo-media-hero/1200/800.jpg",
-    title: "Does this image work as a hero visual?",
+    url: "https://picsum.photos/seed/curyo-media-hero-primary/1200/800.jpg",
+    imageUrls: [
+      "https://picsum.photos/seed/curyo-media-hero-primary/1200/800.jpg",
+      "https://picsum.photos/seed/curyo-media-hero-detail/1200/800.jpg",
+      "https://picsum.photos/seed/curyo-media-hero-contrast/1200/800.jpg",
+      "https://picsum.photos/seed/curyo-media-hero-mobile/1200/800.jpg",
+    ],
+    title: "Does this image set work as a hero gallery?",
     description:
-      "Judge whether the image has enough focus, contrast, and mood to support a question about human review quality.",
-    tags: "Images,Art,Photography",
+      "Judge whether the image set has enough focus, contrast, variety, and mobile-safe composition to support a hero gallery.",
+    tags: "Images,Gallery,Photography",
     categorySlug: "media",
     submitter: ANVIL_ACCOUNTS.account3.address,
   },
@@ -257,6 +263,7 @@ export async function ensureBaselineSeedData(): Promise<void> {
       categoryId,
       item.submitter,
       CONTRACT_ADDRESSES.ContentRegistry,
+      "imageUrls" in item ? { imageUrls: item.imageUrls } : undefined,
     );
     if (!submitted) {
       throw new Error(`Failed to seed baseline content: ${item.title}`);

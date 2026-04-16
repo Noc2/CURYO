@@ -28,6 +28,9 @@ const ANVIL_PRIVATE_KEYS_BY_ADDRESS = new Map(
   Object.values(ANVIL_ACCOUNTS).map(account => [account.address.toLowerCase(), account.privateKey as `0x${string}`]),
 );
 
+type SubmissionMedia = { imageUrls: string[]; videoUrl: string };
+type SubmissionMediaInput = { imageUrls?: readonly string[]; videoUrl?: string };
+
 async function rpcRequest<T = any>(method: string, params: unknown[]): Promise<T | null> {
   const res = await fetch(ANVIL_RPC, {
     method: "POST",
@@ -88,6 +91,7 @@ async function buildSubmissionReservation(
   categoryId: bigint,
   fromAddress: string,
   contractAddress: string,
+  media: SubmissionMedia,
 ): Promise<{ revealCommitment: `0x${string}`; salt: `0x${string}` } | null> {
   const { decodeFunctionResult, encodeAbiParameters, encodeFunctionData, keccak256, stringToHex } = await import(
     "viem"
@@ -112,8 +116,6 @@ async function buildSubmissionReservation(
       stateMutability: "view",
     },
   ] as const;
-  const media = toSubmissionMedia(url);
-
   const previewData = encodeFunctionData({
     abi: previewAbi,
     functionName: "previewQuestionMediaSubmissionKey",
@@ -132,7 +134,7 @@ async function buildSubmissionReservation(
     data: previewResult,
   }) as readonly [bigint, `0x${string}`];
 
-  const salt = keccak256(stringToHex(`${fromAddress}:${categoryId}:${url}:${title}:${Date.now()}`));
+  const salt = keccak256(stringToHex(`${fromAddress}:${categoryId}:${JSON.stringify(media)}:${title}:${Date.now()}`));
   const revealCommitment = keccak256(
     encodeAbiParameters(
       [
@@ -151,7 +153,14 @@ async function buildSubmissionReservation(
   return { revealCommitment, salt };
 }
 
-function toSubmissionMedia(url: string): { imageUrls: string[]; videoUrl: string } {
+function toSubmissionMedia(url: string, media?: SubmissionMediaInput): SubmissionMedia {
+  if (media) {
+    return {
+      imageUrls: media.imageUrls ? [...media.imageUrls] : [],
+      videoUrl: media.videoUrl ?? "",
+    };
+  }
+
   try {
     const parsed = new URL(url);
     const hostname = parsed.hostname.toLowerCase();
@@ -486,10 +495,11 @@ export async function submitContentDirect(
   categoryId: number | bigint,
   fromAddress: string,
   contractAddress: string,
+  mediaInput?: SubmissionMediaInput,
 ): Promise<boolean> {
   const { encodeFunctionData } = await import("viem");
   const resolvedCategoryId = BigInt(categoryId);
-  const media = toSubmissionMedia(url);
+  const media = toSubmissionMedia(url, mediaInput);
   const reservation = await buildSubmissionReservation(
     url,
     title,
@@ -498,6 +508,7 @@ export async function submitContentDirect(
     resolvedCategoryId,
     fromAddress,
     contractAddress,
+    media,
   );
   if (!reservation) return false;
 
