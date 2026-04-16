@@ -25,7 +25,7 @@ interface ICategoryRegistry {
 
     event CategoryAdded(uint256 indexed categoryId, string name, string slug);
 
-    /// @notice Check if a category is approved and active
+    /// @notice Check if a seeded category exists and is active. Legacy approved naming retained for compatibility.
     function isApprovedCategory(uint256 categoryId) external view returns (bool);
 
     /// @notice Get category details by ID
@@ -34,7 +34,7 @@ interface ICategoryRegistry {
     /// @notice Get category by slug. Legacy name retained while callers migrate away from domain language.
     function getCategoryByDomain(string calldata slug) external view returns (Category memory);
 
-    /// @notice Get approved category IDs with pagination
+    /// @notice Get seeded category IDs with pagination. Legacy approved naming retained for compatibility.
     function getApprovedCategoryIdsPaginated(uint256 offset, uint256 limit)
         external
         view
@@ -43,6 +43,6 @@ interface ICategoryRegistry {
     /// @notice Check if a category slug is already registered. Legacy name retained while callers migrate.
     function isDomainRegistered(string calldata slug) external view returns (bool);
 
-    /// @notice Get the current status for a category
+    /// @notice Get the legacy status for a category. Seed-only categories return Approved.
     function getCategoryStatus(uint256 categoryId) external view returns (CategoryStatus);
 }

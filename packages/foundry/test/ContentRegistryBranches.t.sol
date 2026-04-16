@@ -280,14 +280,14 @@ contract ContentRegistryBranchesTest is VotingTestBase {
         vm.stopPrank();
     }
 
-    function test_SubmitContent_CategoryNotApproved_Reverts() public {
+    function test_SubmitContent_CategoryNotRegistered_Reverts() public {
         vm.prank(owner);
         registry.setCategoryRegistry(address(mockCategoryRegistry));
         mockCategoryRegistry.setDomain(99, "example.com");
 
         vm.startPrank(submitter);
         crepToken.approve(address(registry), 10e6);
-        vm.expectRevert("Category not approved");
+        vm.expectRevert("Category not registered");
         registry.submitContent("https://example.com/1", "goal", "goal", "tags", 99, bytes32(0));
         vm.stopPrank();
     }
@@ -1215,10 +1215,10 @@ contract ContentRegistryBranchesTest is VotingTestBase {
         assertEq(canonicalKey, malformedKey);
     }
 
-    function test_IsUrlSubmitted_ReturnsFalseForInvalidOrUnapprovedUrls() public view {
+    function test_IsUrlSubmitted_ReturnsFalseForInvalidOrUnregisteredUrls() public view {
         assertFalse(registry.isUrlSubmitted(""));
         assertFalse(registry.isUrlSubmitted("javascript:alert(1)"));
-        assertFalse(registry.isUrlSubmitted("https://not-approved.example/path"));
+        assertFalse(registry.isUrlSubmitted("https://not-registered.example/path"));
     }
 
     function test_MarkDormant_LowDisplayRatingWithoutEvidenceReturnsStake() public {
@@ -1360,7 +1360,7 @@ contract ContentRegistryBranchesTest is VotingTestBase {
         assertEq(rating, 50); // unchanged
     }
 
-    function test_SubmitContent_CategoryApproved_Succeeds() public {
+    function test_SubmitContent_SeededCategory_Succeeds() public {
         vm.prank(owner);
         registry.setCategoryRegistry(address(mockCategoryRegistry));
         mockCategoryRegistry.setDomain(1, "example.com");
@@ -1391,7 +1391,7 @@ contract ContentRegistryBranchesTest is VotingTestBase {
         assertEq(categoryId, 7, "configured registries should derive the category from the URL");
     }
 
-    function test_SubmitContent_CategoryRegistryConfigured_UnapprovedDomainReverts() public {
+    function test_SubmitContent_CategoryRegistryConfigured_UnregisteredDomainReverts() public {
         vm.prank(owner);
         registry.setCategoryRegistry(address(mockCategoryRegistry));
         mockCategoryRegistry.setDomain(1, "youtube.com");
@@ -1399,8 +1399,8 @@ contract ContentRegistryBranchesTest is VotingTestBase {
 
         vm.startPrank(submitter);
         crepToken.approve(address(registry), 10e6);
-        vm.expectRevert("Domain not approved");
-        registry.submitContent("https://example.com/not-approved", "goal", "goal", "tags", 0, bytes32(0));
+        vm.expectRevert("Domain not registered");
+        registry.submitContent("https://example.com/not-registered", "goal", "goal", "tags", 0, bytes32(0));
         vm.stopPrank();
     }
 

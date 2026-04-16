@@ -4,7 +4,7 @@ pragma solidity ^0.8.24;
 import { ICategoryRegistry } from "./interfaces/ICategoryRegistry.sol";
 
 /// @title SubmissionCanonicalizer
-/// @notice Resolves approved categories and canonical submission keys for submitted URLs.
+/// @notice Resolves registered URL-domain categories and canonical submission keys for legacy URL submissions.
 /// @dev Stateless helper extracted from ContentRegistry to keep ContentRegistry under EIP-170.
 contract SubmissionCanonicalizer {
     function resolveSubmissionKey(ICategoryRegistry categoryRegistry, string calldata url, uint256 categoryIdHint)
@@ -30,8 +30,8 @@ contract SubmissionCanonicalizer {
     ) internal view returns (uint256 resolvedCategoryId, bytes32 submissionKey) {
         ICategoryRegistry.Category memory category = _resolveApprovedCategory(categoryRegistry, url);
         resolvedCategoryId = category.id;
-        require(resolvedCategoryId != 0, "Domain not approved");
-        require(categoryRegistry.isApprovedCategory(resolvedCategoryId), "Category not approved");
+        require(resolvedCategoryId != 0, "Domain not registered");
+        require(categoryRegistry.isApprovedCategory(resolvedCategoryId), "Category not registered");
         if (categoryIdHint != 0) {
             require(categoryIdHint == resolvedCategoryId, "Category mismatch");
         }
@@ -56,7 +56,7 @@ contract SubmissionCanonicalizer {
             } catch { }
         }
 
-        revert("Domain not approved");
+        revert("Domain not registered");
     }
 
     function _deriveSubmissionKey(string memory url, string memory resolvedDomain) internal pure returns (bytes32) {

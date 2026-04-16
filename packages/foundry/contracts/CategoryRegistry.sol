@@ -19,7 +19,7 @@ contract CategoryRegistry is ICategoryRegistry, AccessControl {
 
     mapping(uint256 => Category) private _categories;
     mapping(bytes32 => uint256) private _slugToCategoryId;
-    uint256[] private _approvedCategoryIds;
+    uint256[] private _categoryIds;
 
     constructor(address _admin, address _governance) {
         require(_admin != address(0), "Invalid admin");
@@ -75,7 +75,7 @@ contract CategoryRegistry is ICategoryRegistry, AccessControl {
         });
 
         _slugToCategoryId[slugHash] = categoryId;
-        _approvedCategoryIds.push(categoryId);
+        _categoryIds.push(categoryId);
 
         emit CategoryAdded(categoryId, name, normalizedSlug);
     }
@@ -102,7 +102,7 @@ contract CategoryRegistry is ICategoryRegistry, AccessControl {
         view
         returns (uint256[] memory categoryIds, uint256 total)
     {
-        total = _approvedCategoryIds.length;
+        total = _categoryIds.length;
         if (offset >= total || limit == 0) {
             return (new uint256[](0), total);
         }
@@ -115,7 +115,7 @@ contract CategoryRegistry is ICategoryRegistry, AccessControl {
         uint256 resultLength = end - offset;
         categoryIds = new uint256[](resultLength);
         for (uint256 i = 0; i < resultLength; i++) {
-            categoryIds[i] = _approvedCategoryIds[offset + i];
+            categoryIds[i] = _categoryIds[offset + i];
         }
     }
 

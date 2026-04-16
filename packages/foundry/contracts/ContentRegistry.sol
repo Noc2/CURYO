@@ -76,7 +76,7 @@ contract ContentRegistry is Initializable, AccessControlUpgradeable, PausableUpg
         address reviver;
         bool submitterStakeReturned;
         uint8 rating; // 0-100, starts at 50
-        uint64 categoryId; // Reference to approved category
+        uint64 categoryId; // Reference to seeded discovery category
     }
 
     struct PendingSubmission {
@@ -547,7 +547,7 @@ contract ContentRegistry is Initializable, AccessControlUpgradeable, PausableUpg
         returns (uint256 resolvedCategoryId)
     {
         require(metadata.categoryId != 0, "Category required");
-        require(categoryRegistry.isApprovedCategory(metadata.categoryId), "Category not approved");
+        require(categoryRegistry.isApprovedCategory(metadata.categoryId), "Category not registered");
         return metadata.categoryId;
     }
 

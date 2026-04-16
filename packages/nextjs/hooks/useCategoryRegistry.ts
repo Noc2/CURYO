@@ -23,7 +23,7 @@ export function useCategoryRegistry() {
   const { data: registryInfo } = useDeployedContractInfo({ contractName: "CategoryRegistry" });
 
   const {
-    data: approvedIdsMeta,
+    data: categoryIdsMeta,
     isLoading: metaLoading,
     refetch: refetchMeta,
   } = useReadContract({
@@ -37,34 +37,34 @@ export function useCategoryRegistry() {
     },
   });
 
-  const approvedCategoryTotal = (approvedIdsMeta?.[1] as bigint | undefined) ?? 0n;
+  const categoryTotal = (categoryIdsMeta?.[1] as bigint | undefined) ?? 0n;
 
   const {
-    data: approvedIdsPage,
+    data: categoryIdsPage,
     isLoading: idsPageLoading,
     refetch: refetchIds,
   } = useReadContract({
     address: registryInfo?.address,
     abi: CategoryRegistryAbi,
     functionName: "getApprovedCategoryIdsPaginated",
-    args: [0n, approvedCategoryTotal],
+    args: [0n, categoryTotal],
     query: {
-      enabled: Boolean(registryInfo?.address) && approvedCategoryTotal > 0n,
+      enabled: Boolean(registryInfo?.address) && categoryTotal > 0n,
       refetchInterval: 300_000,
     },
   });
 
-  const approvedIds = useMemo(() => (approvedIdsPage?.[0] as bigint[] | undefined) ?? [], [approvedIdsPage]);
+  const categoryIds = useMemo(() => (categoryIdsPage?.[0] as bigint[] | undefined) ?? [], [categoryIdsPage]);
 
   const categoryCalls = useMemo(() => {
-    if (!registryInfo || approvedIds.length === 0) return [];
-    return approvedIds.map(id => ({
+    if (!registryInfo || categoryIds.length === 0) return [];
+    return categoryIds.map(id => ({
       address: registryInfo.address,
       abi: CategoryRegistryAbi,
       functionName: "getCategory" as const,
       args: [id],
     }));
-  }, [registryInfo, approvedIds]);
+  }, [registryInfo, categoryIds]);
 
   const { data: categoriesData, isLoading: categoriesLoading } = useReadContracts({
     contracts: categoryCalls,
