@@ -46,6 +46,8 @@ interface VotingQuestionCardProps {
 
 const RATING_GUIDANCE_TEXT =
   "The community score runs from 0.0 to 10.0, where higher means better. Vote up when content deserves a better score and vote down when it deserves a worse one. Always vote down illegal, broken, or misdescribed content.";
+const REWARD_POOL_TOOLTIP_TEXT =
+  "This question's reward pool is shown in USD and backed by USDC on Celo. Eligible revealed voters can claim from it in qualified rounds.";
 export const VOTING_SURFACE_BACKGROUND = "var(--curyo-surface-elevated)";
 const STATUS_PILL_CLASS_NAME =
   "inline-flex items-center gap-2 rounded-full border border-base-content/10 bg-base-content/5 px-4 py-2";
@@ -373,79 +375,32 @@ function LiveRoundActivity({
   );
 }
 
-function RewardPoolBadge({ amount, compact }: { amount: bigint; compact: boolean }) {
-  const hasRewardPool = amount > 0n;
+function RewardPoolAmountDisplay({ amount }: { amount: bigint }) {
   const amountLabel = formatUsdAmount(amount);
 
   return (
-    <span
-      className={`inline-flex max-w-full items-center justify-center rounded-full px-3 py-1 text-center font-semibold leading-none ${
-        compact ? "text-xs" : "text-sm"
-      } ${hasRewardPool ? "bg-success/15 text-success" : "bg-base-content/[0.06] text-base-content/58"}`}
-      aria-label={
-        hasRewardPool ? `${amountLabel} reward pool funded in Celo USDC` : "$0 reward pool funded for this question"
-      }
+    <div
+      className="flex max-w-full items-center gap-2 text-[0.68rem] font-semibold uppercase tracking-[0.2em] text-base-content/65"
+      aria-label={`Reward pool: ${amountLabel}`}
     >
-      {amountLabel} reward pool
-    </span>
-  );
-}
-
-function RewardPoolAmountDisplay({ amount, compact }: { amount: bigint; compact: boolean }) {
-  const amountLabel = formatUsdAmount(amount);
-
-  return (
-    <div className="flex max-w-full flex-col items-center text-center" aria-label={`${amountLabel} reward pool`}>
-      <span className={`font-display leading-none text-base-content ${compact ? "text-[2rem]" : "text-[2.6rem]"}`}>
-        {amountLabel}
+      <span>
+        Reward Pool: <span className="tabular-nums">{amountLabel}</span>
       </span>
-      <span className="sr-only">reward pool for this question</span>
+      <InfoTooltip text={REWARD_POOL_TOOLTIP_TEXT} position="bottom" />
     </div>
   );
 }
 
-function RewardPoolDetails({
-  amount,
-  activeRewardPoolCount,
-  compact,
-  onFundQuestion,
-}: {
-  amount: bigint;
-  activeRewardPoolCount: number;
-  compact: boolean;
-  onFundQuestion: () => void;
-}) {
-  const hasRewardPool = amount > 0n;
-  const activePoolLabel =
-    activeRewardPoolCount > 0
-      ? `${activeRewardPoolCount} active pool${activeRewardPoolCount === 1 ? "" : "s"}`
-      : "No active pool";
-
+function AddRewardPoolLink({ onFundQuestion }: { onFundQuestion: () => void }) {
   return (
-    <div className={`border-t border-base-content/10 ${compact ? "pt-2.5" : "pt-3"}`}>
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        <div className="min-w-0">
-          <p className="text-[0.64rem] font-semibold uppercase text-base-content/40">USD reward pool</p>
-          <p className="mt-1 text-sm leading-snug text-base-content/72">
-            {hasRewardPool
-              ? `${formatUsdAmount(amount)} available for this question.`
-              : "No reward pool is funding this question yet."}
-          </p>
-        </div>
-        <RewardPoolBadge amount={amount} compact={compact} />
-      </div>
-      <div className="mt-2 flex flex-wrap items-center gap-x-2 gap-y-1 text-sm leading-snug text-base-content/58">
-        <span>{activePoolLabel}</span>
-        <span aria-hidden="true">·</span>
-        <span>Paid in USDC on Celo</span>
-        <button
-          type="button"
-          onClick={onFundQuestion}
-          className="font-semibold text-primary underline-offset-4 transition-colors hover:text-primary-focus hover:underline"
-        >
-          Add reward pool
-        </button>
-      </div>
+    <div className="flex justify-center">
+      <button
+        type="button"
+        onClick={onFundQuestion}
+        className="font-semibold text-primary underline-offset-4 transition-colors hover:text-primary-focus hover:underline"
+      >
+        Add reward pool
+      </button>
     </div>
   );
 }
@@ -602,9 +557,8 @@ export function VotingQuestionCard({
   const inlineSummaryIncludesStatus = Boolean(inlineStatusContent) && showInlineVotingSummary;
   const showVoteAttentionHint = isAttentionActive && !centerStatusContent;
   const rewardPoolTotal = rewardPoolSummary?.totalAvailable ?? 0n;
-  const activeRewardPoolCount = rewardPoolSummary?.activeRewardPoolCount ?? 0;
   const fundQuestionTitle = questionTitle?.trim() || `Question #${contentId.toString()}`;
-  const rewardPoolAmountDisplay = <RewardPoolAmountDisplay amount={rewardPoolTotal} compact={compact} />;
+  const rewardPoolAmountDisplay = <RewardPoolAmountDisplay amount={rewardPoolTotal} />;
   const ratingOrb = (
     <TooltipAnchor
       text={RATING_GUIDANCE_TEXT}
@@ -614,14 +568,7 @@ export function VotingQuestionCard({
       <RatingOrb rating={currentRating} size={orbSize} />
     </TooltipAnchor>
   );
-  const rewardPoolDetails = (
-    <RewardPoolDetails
-      amount={rewardPoolTotal}
-      activeRewardPoolCount={activeRewardPoolCount}
-      compact={compact}
-      onFundQuestion={() => setShowFundQuestionModal(true)}
-    />
-  );
+  const addRewardPoolLink = <AddRewardPoolLink onFundQuestion={() => setShowFundQuestionModal(true)} />;
 
   useEffect(() => {
     setIsDetailsOpen(isSignalVariant);
@@ -786,7 +733,6 @@ export function VotingQuestionCard({
                     <div className="px-4">
                       <div className="max-h-[34svh] overflow-y-auto [scrollbar-gutter:stable]">
                         <div className="flex flex-col gap-2.5 pb-1">
-                          {rewardPoolDetails}
                           {showInlineVotingSummary ? inlineVotingSummary : null}
                           {activitySummary}
                           {!showInlineProgress ? <RoundProgress snapshot={roundSnapshot} /> : null}
@@ -797,6 +743,7 @@ export function VotingQuestionCard({
                             variant={embedded ? "dark" : "default"}
                             fallbackRating={currentRating}
                           />
+                          {addRewardPoolLink}
                         </div>
                       </div>
                     </div>
@@ -918,12 +865,12 @@ export function VotingQuestionCard({
                   <RoundRevealedBreakdown snapshot={roundSnapshot} stacked={isDesktopSignalRailCard} />
                 ) : null}
                 <RoundStats categoryId={categoryId} snapshot={roundSnapshot} />
-                {rewardPoolDetails}
                 <RatingHistory
                   contentId={contentId}
                   variant={embedded || isSignalVariant ? "dark" : "default"}
                   fallbackRating={currentRating}
                 />
+                {addRewardPoolLink}
               </div>
             ) : null}
           </div>
