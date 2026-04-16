@@ -202,6 +202,7 @@ export const FeedVoteCard = memo(function FeedVoteCard({
               title={item.title}
               description={item.description}
               compact={useCompactEmbed}
+              showTextHeading={false}
               isActive={isActive}
               interactionMode={contentIntentEnabled ? "vote" : "default"}
               prefetchedMetadata={item.contentMetadata}

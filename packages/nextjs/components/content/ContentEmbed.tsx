@@ -54,6 +54,7 @@ interface ContentEmbedProps {
   title?: string;
   description?: string;
   compact?: boolean;
+  showTextHeading?: boolean;
   isActive?: boolean;
   deferClientFetch?: boolean;
   prefetchedMetadata?: ContentMetadataResult;
@@ -88,6 +89,7 @@ export function ContentEmbed({
   title,
   description,
   compact = false,
+  showTextHeading = true,
   isActive = true,
   deferClientFetch = false,
   prefetchedMetadata,
@@ -96,10 +98,18 @@ export function ContentEmbed({
   if (!url?.trim()) {
     return (
       <div className={`flex h-full min-h-[12rem] flex-col justify-center bg-base-100 ${compact ? "p-4" : "p-6"}`}>
-        {title ? <p className="text-sm font-semibold uppercase text-base-content/45">Question</p> : null}
-        {title ? <h3 className="mt-2 text-xl font-semibold leading-tight text-base-content">{title}</h3> : null}
+        {showTextHeading && title ? (
+          <p className="text-sm font-semibold uppercase text-base-content/45">Question</p>
+        ) : null}
+        {showTextHeading && title ? (
+          <h3 className="mt-2 text-xl font-semibold leading-tight text-base-content">{title}</h3>
+        ) : null}
         {description ? (
-          <p className="mt-3 whitespace-pre-wrap break-words text-base leading-relaxed text-base-content/75">
+          <p
+            className={`whitespace-pre-wrap break-words text-base leading-relaxed text-base-content/75 ${
+              showTextHeading && title ? "mt-3" : ""
+            }`}
+          >
             {description}
           </p>
         ) : null}
