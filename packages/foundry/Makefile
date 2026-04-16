@@ -6,7 +6,7 @@ COVERAGE_ARGS ?=
 RESUME_FLAG ?=
 DEPLOY_FLOW_FLAGS ?=
 DEPLOY_PROFILE ?= deploy
-LOCALHOST_EVM_SIZE_FLAGS ?= --disable-code-size-limit
+LOCALHOST_EVM_SIZE_FLAGS ?=
 
 # setup wallet for anvil
 setup-anvil-wallet:
@@ -27,7 +27,7 @@ deploy:
 	@if [ "$(RPC_URL)" = "localhost" ]; then 		if [ "$(ETH_KEYSTORE_ACCOUNT)" = "scaffold-eth-default" ]; then 			FOUNDRY_PROFILE=$(DEPLOY_PROFILE) forge script $(DEPLOY_SCRIPT) --rpc-url localhost --password localhost --broadcast --ffi --slow --non-interactive $(LOCALHOST_EVM_SIZE_FLAGS) $(RESUME_FLAG); 		else 			FOUNDRY_PROFILE=$(DEPLOY_PROFILE) forge script $(DEPLOY_SCRIPT) --rpc-url localhost --broadcast --ffi --slow --non-interactive $(LOCALHOST_EVM_SIZE_FLAGS) $(RESUME_FLAG); 		fi 	else 		FOUNDRY_PROFILE=$(DEPLOY_PROFILE) forge script $(DEPLOY_SCRIPT) --rpc-url $(RPC_URL) --account $(ETH_KEYSTORE_ACCOUNT) --broadcast --ffi --gas-estimate-multiplier 200 $(DEPLOY_FLOW_FLAGS) $(RESUME_FLAG) $(VERIFY_FLAGS); 	fi
 
 # Deploy and generate ABIs
-deploy-and-generate-abis: deploy generate-abis 
+deploy-and-generate-abis: check-contract-sizes deploy generate-abis
 
 # Generate TypeScript ABIs
 generate-abis:
