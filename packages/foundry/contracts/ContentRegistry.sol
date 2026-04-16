@@ -16,7 +16,6 @@ import { RoundLib } from "./libraries/RoundLib.sol";
 import { RatingLib } from "./libraries/RatingLib.sol";
 import { RatingMath } from "./libraries/RatingMath.sol";
 import { ProtocolConfig } from "./ProtocolConfig.sol";
-import { SubmissionCanonicalizer } from "./SubmissionCanonicalizer.sol";
 import { SubmissionMediaValidator } from "./SubmissionMediaValidator.sol";
 
 /// @title ContentRegistry
@@ -54,7 +53,6 @@ contract ContentRegistry is Initializable, AccessControlUpgradeable, PausableUpg
     // String length limits (prevent storage bloat)
     uint256 public constant MAX_URL_LENGTH = 2048;
     uint256 public constant MAX_QUESTION_LENGTH = 120;
-    uint256 public constant MAX_TITLE_LENGTH = MAX_QUESTION_LENGTH;
     uint256 public constant MAX_DESCRIPTION_LENGTH = 280;
     uint256 public constant MAX_TAGS_LENGTH = 256;
     uint256 public constant MAX_IMAGE_URLS = 4;
@@ -168,8 +166,6 @@ contract ContentRegistry is Initializable, AccessControlUpgradeable, PausableUpg
     /// @notice Frozen participation reward pool from the first settled round (milestone 0).
     mapping(uint256 => address) public milestoneZeroSubmitterParticipationPool;
 
-    /// @dev Stateless helper used to resolve canonical submission keys without bloating the registry runtime.
-    SubmissionCanonicalizer internal immutable SUBMISSION_CANONICALIZER;
     SubmissionMediaValidator internal immutable SUBMISSION_MEDIA_VALIDATOR;
 
     /// @dev Reserved storage gap for future upgrades
@@ -222,7 +218,6 @@ contract ContentRegistry is Initializable, AccessControlUpgradeable, PausableUpg
 
     /// @custom:oz-upgrades-unsafe-allow constructor state-variable-immutable
     constructor() {
-        SUBMISSION_CANONICALIZER = new SubmissionCanonicalizer();
         SUBMISSION_MEDIA_VALIDATOR = new SubmissionMediaValidator();
         _disableInitializers();
     }
@@ -366,19 +361,14 @@ contract ContentRegistry is Initializable, AccessControlUpgradeable, PausableUpg
         string calldata tags,
         uint256 categoryId,
         bytes32 salt
-    ) external nonReentrant whenNotPaused returns (uint256) {
-        // Require Voter ID if VoterIdNFT is configured
-        if (address(voterIdNFT) != address(0)) {
-            require(voterIdNFT.hasVoterId(msg.sender), "Voter ID required");
-        }
-
-        SubmissionMetadata memory metadata = SubmissionMetadata({
-            url: url, title: title, description: description, tags: tags, categoryId: categoryId
-        });
-        _validateSubmissionMetadata(metadata);
-
-        require(address(categoryRegistry) != address(0), "CategoryRegistry not set");
-        return _submitValidatedContent(metadata, salt);
+    ) external pure returns (uint256) {
+        url;
+        title;
+        description;
+        tags;
+        categoryId;
+        salt;
+        revert("Use submitQuestionWithMedia");
     }
 
     function submitQuestion(
@@ -388,20 +378,14 @@ contract ContentRegistry is Initializable, AccessControlUpgradeable, PausableUpg
         string calldata tags,
         uint256 categoryId,
         bytes32 salt
-    ) external nonReentrant whenNotPaused returns (uint256) {
-        // Require Voter ID if VoterIdNFT is configured
-        if (address(voterIdNFT) != address(0)) {
-            require(voterIdNFT.hasVoterId(msg.sender), "Voter ID required");
-        }
-
-        SubmissionMetadata memory metadata = SubmissionMetadata({
-            url: url, title: title, description: description, tags: tags, categoryId: categoryId
-        });
-        _validateQuestionSubmissionMetadata(metadata);
-        SUBMISSION_MEDIA_VALIDATOR.validateSingleMediaUrl(url);
-
-        require(address(categoryRegistry) != address(0), "CategoryRegistry not set");
-        return _submitValidatedQuestion(metadata, salt);
+    ) external pure returns (uint256) {
+        url;
+        title;
+        description;
+        tags;
+        categoryId;
+        salt;
+        revert("Use submitQuestionWithMedia");
     }
 
     function submitQuestionWithMedia(
@@ -467,19 +451,6 @@ contract ContentRegistry is Initializable, AccessControlUpgradeable, PausableUpg
         emit ContentCancelled(contentId);
     }
 
-    function _validateSubmissionMetadata(SubmissionMetadata memory metadata) internal pure {
-        require(bytes(metadata.url).length > 0, "URL required");
-        require(bytes(metadata.url).length <= MAX_URL_LENGTH, "URL too long");
-        require(_isValidSubmissionUrl(metadata.url), "Invalid URL");
-        _validateTextFields(metadata);
-    }
-
-    function _validateQuestionSubmissionMetadata(SubmissionMetadata memory metadata) internal pure {
-        require(bytes(metadata.url).length > 0, "Media required");
-        require(bytes(metadata.url).length <= MAX_URL_LENGTH, "URL too long");
-        _validateTextFields(metadata);
-    }
-
     function _validateTextFields(SubmissionMetadata memory metadata) internal pure {
         require(bytes(metadata.title).length > 0, "Question required");
         require(bytes(metadata.title).length <= MAX_QUESTION_LENGTH, "Question too long");
@@ -487,49 +458,6 @@ contract ContentRegistry is Initializable, AccessControlUpgradeable, PausableUpg
         require(bytes(metadata.description).length <= MAX_DESCRIPTION_LENGTH, "Description too long");
         require(bytes(metadata.tags).length > 0, "Tags required");
         require(bytes(metadata.tags).length <= MAX_TAGS_LENGTH, "Tags too long");
-    }
-
-    function _submitValidatedContent(SubmissionMetadata memory metadata, bytes32 salt)
-        internal
-        returns (uint256 contentId)
-    {
-        (uint256 resolvedCategoryId, bytes32 submissionKey, PendingSubmission memory pending) =
-            _prepareSubmission(metadata, salt);
-        bytes32 contentHash = keccak256(abi.encode(metadata.url, metadata.title, metadata.description, metadata.tags));
-        contentId = _storeSubmittedContent(submissionKey, pending, contentHash, resolvedCategoryId);
-        emit ContentSubmitted(
-            contentId,
-            msg.sender,
-            contentHash,
-            metadata.url,
-            metadata.title,
-            metadata.description,
-            metadata.tags,
-            resolvedCategoryId
-        );
-    }
-
-    function _submitValidatedQuestion(SubmissionMetadata memory metadata, bytes32 salt)
-        internal
-        returns (uint256 contentId)
-    {
-        (uint256 resolvedCategoryId, bytes32 submissionKey, PendingSubmission memory pending) =
-            _prepareQuestionSubmission(metadata, salt);
-        bytes32 contentHash = keccak256(
-            abi.encode(metadata.url, metadata.title, metadata.description, metadata.tags, resolvedCategoryId)
-        );
-        contentId = _storeSubmittedContent(submissionKey, pending, contentHash, resolvedCategoryId);
-        emit ContentSubmitted(
-            contentId,
-            msg.sender,
-            contentHash,
-            metadata.url,
-            metadata.title,
-            metadata.description,
-            metadata.tags,
-            resolvedCategoryId
-        );
-        _emitSingleContentMediaSubmitted(contentId, metadata.url);
     }
 
     function _submitValidatedQuestionWithMedia(
@@ -565,49 +493,6 @@ contract ContentRegistry is Initializable, AccessControlUpgradeable, PausableUpg
         emit ContentMediaSubmitted(contentId, imageUrls, videoUrl);
     }
 
-    function _prepareSubmission(SubmissionMetadata memory metadata, bytes32 salt)
-        internal
-        returns (uint256 resolvedCategoryId, bytes32 submissionKey, PendingSubmission memory pending)
-    {
-        (resolvedCategoryId, submissionKey) = SUBMISSION_CANONICALIZER.resolveCategoryAndSubmissionKey(
-            categoryRegistry, metadata.url, metadata.categoryId
-        );
-        require(!submissionKeyUsed[submissionKey], "URL already submitted");
-
-        bytes32 revealCommitment = _computeRevealCommitment(
-            submissionKey, metadata.title, metadata.description, metadata.tags, metadata.categoryId, salt, msg.sender
-        );
-        pending = pendingSubmissions[revealCommitment];
-        require(pending.submitter == msg.sender, "Reservation not found");
-        require(block.timestamp <= pending.expiresAt, "Reservation expired");
-        require(block.timestamp >= pending.reservedAt + RESERVED_SUBMISSION_MIN_AGE, "Reservation too new");
-        require(_resolveSubmitterIdentity(msg.sender) == pending.submitterIdentity, "Submitter identity changed");
-
-        delete pendingSubmissions[revealCommitment];
-        submissionKeyUsed[submissionKey] = true;
-    }
-
-    function _prepareQuestionSubmission(SubmissionMetadata memory metadata, bytes32 salt)
-        internal
-        returns (uint256 resolvedCategoryId, bytes32 submissionKey, PendingSubmission memory pending)
-    {
-        resolvedCategoryId = _resolveQuestionSubmissionCategory(metadata);
-        submissionKey = _deriveQuestionSubmissionKey(metadata, resolvedCategoryId);
-        require(!submissionKeyUsed[submissionKey], "Question already submitted");
-
-        bytes32 revealCommitment = _computeRevealCommitment(
-            submissionKey, metadata.title, metadata.description, metadata.tags, metadata.categoryId, salt, msg.sender
-        );
-        pending = pendingSubmissions[revealCommitment];
-        require(pending.submitter == msg.sender, "Reservation not found");
-        require(block.timestamp <= pending.expiresAt, "Reservation expired");
-        require(block.timestamp >= pending.reservedAt + RESERVED_SUBMISSION_MIN_AGE, "Reservation too new");
-        require(_resolveSubmitterIdentity(msg.sender) == pending.submitterIdentity, "Submitter identity changed");
-
-        delete pendingSubmissions[revealCommitment];
-        submissionKeyUsed[submissionKey] = true;
-    }
-
     function _prepareQuestionMediaSubmission(
         SubmissionMetadata memory metadata,
         string[] calldata imageUrls,
@@ -641,23 +526,6 @@ contract ContentRegistry is Initializable, AccessControlUpgradeable, PausableUpg
         return metadata.categoryId;
     }
 
-    function _deriveQuestionSubmissionKey(SubmissionMetadata memory metadata, uint256 resolvedCategoryId)
-        internal
-        pure
-        returns (bytes32)
-    {
-        return keccak256(
-            abi.encode(
-                "curyo-question-v1",
-                resolvedCategoryId,
-                metadata.url,
-                metadata.title,
-                metadata.description,
-                metadata.tags
-            )
-        );
-    }
-
     function _deriveQuestionMediaSubmissionKey(
         SubmissionMetadata memory metadata,
         string[] calldata imageUrls,
@@ -675,17 +543,6 @@ contract ContentRegistry is Initializable, AccessControlUpgradeable, PausableUpg
                 metadata.tags
             )
         );
-    }
-
-    function _emitSingleContentMediaSubmitted(uint256 contentId, string memory url) internal {
-        if (SUBMISSION_MEDIA_VALIDATOR.isSupportedVideoUrl(url)) {
-            emit ContentMediaSubmitted(contentId, new string[](0), url);
-            return;
-        }
-
-        string[] memory imageUrls = new string[](1);
-        imageUrls[0] = url;
-        emit ContentMediaSubmitted(contentId, imageUrls, "");
     }
 
     function _storeSubmittedContent(
@@ -724,29 +581,6 @@ contract ContentRegistry is Initializable, AccessControlUpgradeable, PausableUpg
         contentSlashConfigSnapshot[contentId] = _getCurrentSlashConfig();
         dormancyAnchorAt[contentId] = block.timestamp;
         delete dormantKeyReleasableAt[contentId];
-    }
-
-    function _isValidSubmissionUrl(string memory url) internal pure returns (bool) {
-        bytes memory urlBytes = bytes(url);
-        bytes memory prefix = bytes("https://");
-        if (urlBytes.length < prefix.length) {
-            return false;
-        }
-
-        for (uint256 i = 0; i < prefix.length; i++) {
-            if (urlBytes[i] != prefix[i]) {
-                return false;
-            }
-        }
-
-        for (uint256 i = 0; i < urlBytes.length; i++) {
-            bytes1 char = urlBytes[i];
-            if (char <= 0x20 || char == 0x7F) {
-                return false;
-            }
-        }
-
-        return true;
     }
 
     /// @notice Mark content as dormant if it hasn't reached milestone 0 within DORMANCY_PERIOD.
@@ -1206,32 +1040,22 @@ contract ContentRegistry is Initializable, AccessControlUpgradeable, PausableUpg
         return !_hasOpenRound(contentId);
     }
 
-    function isUrlSubmitted(string calldata url) external view returns (bool) {
-        if (bytes(url).length == 0 || !_isValidSubmissionUrl(url)) return false;
-
-        if (address(categoryRegistry) == address(0)) {
-            return submissionKeyUsed[keccak256(abi.encodePacked(url))];
-        }
-
-        try SUBMISSION_CANONICALIZER.resolveSubmissionKey(categoryRegistry, url, 0) returns (bytes32 submissionKey) {
-            return submissionKeyUsed[submissionKey];
-        } catch {
-            return false;
-        }
+    function isUrlSubmitted(string calldata url) external pure returns (bool) {
+        url;
+        return false;
     }
 
     /// @notice Preview the resolved category and canonical submission key for a future reveal.
     function previewSubmissionKey(string calldata url, uint256 categoryId)
         external
-        view
+        pure
         returns (uint256 resolvedCategoryId, bytes32 submissionKey)
     {
-        require(bytes(url).length > 0, "URL required");
-        require(bytes(url).length <= MAX_URL_LENGTH, "URL too long");
-        require(_isValidSubmissionUrl(url), "Invalid URL");
-        require(address(categoryRegistry) != address(0), "CategoryRegistry not set");
-        (resolvedCategoryId, submissionKey) =
-            SUBMISSION_CANONICALIZER.resolveCategoryAndSubmissionKey(categoryRegistry, url, categoryId);
+        url;
+        categoryId;
+        resolvedCategoryId;
+        submissionKey;
+        revert("Use previewQuestionMediaSubmissionKey");
     }
 
     /// @notice Preview the resolved category and question-level submission key for a future reveal.
@@ -1242,15 +1066,15 @@ contract ContentRegistry is Initializable, AccessControlUpgradeable, PausableUpg
         string calldata description,
         string calldata tags,
         uint256 categoryId
-    ) external view returns (uint256 resolvedCategoryId, bytes32 submissionKey) {
-        SubmissionMetadata memory metadata = SubmissionMetadata({
-            url: url, title: title, description: description, tags: tags, categoryId: categoryId
-        });
-        _validateQuestionSubmissionMetadata(metadata);
-        SUBMISSION_MEDIA_VALIDATOR.validateSingleMediaUrl(url);
-        require(address(categoryRegistry) != address(0), "CategoryRegistry not set");
-        resolvedCategoryId = _resolveQuestionSubmissionCategory(metadata);
-        submissionKey = _deriveQuestionSubmissionKey(metadata, resolvedCategoryId);
+    ) external pure returns (uint256 resolvedCategoryId, bytes32 submissionKey) {
+        url;
+        title;
+        description;
+        tags;
+        categoryId;
+        resolvedCategoryId;
+        submissionKey;
+        revert("Use previewQuestionMediaSubmissionKey");
     }
 
     /// @notice Preview the resolved category and question-level submission key for a future multi-media reveal.
@@ -1277,9 +1101,10 @@ contract ContentRegistry is Initializable, AccessControlUpgradeable, PausableUpg
     }
 
     /// @notice Resolve the canonical submission key for a URL using the configured CategoryRegistry.
-    function resolveSubmissionKey(string calldata url) external view returns (bytes32 submissionKey) {
-        require(address(categoryRegistry) != address(0), "CategoryRegistry not set");
-        return SUBMISSION_CANONICALIZER.resolveSubmissionKey(categoryRegistry, url, 0);
+    function resolveSubmissionKey(string calldata url) external pure returns (bytes32 submissionKey) {
+        url;
+        submissionKey;
+        revert("Use previewQuestionMediaSubmissionKey");
     }
 
     function _computeRevealCommitment(

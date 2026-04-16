@@ -394,11 +394,13 @@ contract QuestionRewardPoolEscrowTest is VotingTestBase {
 
     function _submitQuestion(string memory url) internal returns (uint256 contentId) {
         string memory mediaUrl = bytes(url).length == 0 ? DEFAULT_MEDIA_URL : url;
+        string[] memory imageUrls = new string[](1);
+        imageUrls[0] = mediaUrl;
         activeTlockContentRegistry = registry;
         bytes32 salt =
             keccak256(abi.encode(mediaUrl, QUESTION, DESCRIPTION, TAGS, CATEGORY_ID, submitter, block.timestamp));
         (, bytes32 submissionKey) =
-            registry.previewQuestionSubmissionKey(mediaUrl, QUESTION, DESCRIPTION, TAGS, CATEGORY_ID);
+            registry.previewQuestionMediaSubmissionKey(imageUrls, "", QUESTION, DESCRIPTION, TAGS, CATEGORY_ID);
         bytes32 revealCommitment =
             keccak256(abi.encode(submissionKey, QUESTION, DESCRIPTION, TAGS, CATEGORY_ID, salt, submitter));
 
@@ -406,7 +408,7 @@ contract QuestionRewardPoolEscrowTest is VotingTestBase {
         crepToken.approve(address(registry), 10e6);
         registry.reserveSubmission(revealCommitment);
         vm.warp(block.timestamp + 1);
-        contentId = registry.submitQuestion(mediaUrl, QUESTION, DESCRIPTION, TAGS, CATEGORY_ID, salt);
+        contentId = registry.submitQuestionWithMedia(imageUrls, "", QUESTION, DESCRIPTION, TAGS, CATEGORY_ID, salt);
         vm.stopPrank();
     }
 

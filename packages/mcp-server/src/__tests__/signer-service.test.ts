@@ -114,7 +114,7 @@ describe("CuryoWriteService", () => {
 
     await expect(
       service.submitContent("writer", {
-        url: "https://example.com/post",
+        url: "https://example.com/post.jpg",
         title: "Example",
         description: "Example description",
         tags: ["tag"],
@@ -142,6 +142,7 @@ describe("CuryoWriteService", () => {
     internals.writeContract = vi.fn(async () => `0x${"bb".repeat(32)}`);
 
     const result = await service.submitContent("writer", {
+      url: "https://example.com/product.png",
       title: "Does this look useful?",
       description: "Subjective product review question.",
       tags: ["products"],
@@ -152,8 +153,8 @@ describe("CuryoWriteService", () => {
     expect(internals.readContract).toHaveBeenCalledWith(
       expect.anything(),
       expect.objectContaining({
-        functionName: "previewQuestionSubmissionKey",
-        args: ["", "Does this look useful?", "Subjective product review question.", "products", 8n],
+        functionName: "previewQuestionMediaSubmissionKey",
+        args: [["https://example.com/product.png"], "", "Does this look useful?", "Subjective product review question.", "products", 8n],
       }),
     );
     expect(internals.readContract).toHaveBeenCalledWith(
@@ -167,9 +168,9 @@ describe("CuryoWriteService", () => {
     expect(result).toMatchObject({
       action: "submit_content",
       mode: "dry-run",
-      url: "",
+      url: "https://example.com/product.png",
       resolvedCategoryId: "8",
-      simulationNote: "Submission requires a reserveSubmission step before submitQuestion",
+      simulationNote: "Submission requires a reserveSubmission step before submitQuestionWithMedia",
     });
   });
 

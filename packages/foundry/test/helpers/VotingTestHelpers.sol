@@ -45,23 +45,42 @@ abstract contract ContentSubmissionTestBase {
             normalizedPrank = true;
         }
 
-        (, bytes32 submissionKey) = registry.previewSubmissionKey(url, categoryId);
-
         address submitter =
             mode == VmSafe.CallerMode.None ? address(this) : (msgSender != address(0) ? msgSender : address(this));
+        uint256 submissionCategoryId = categoryId == 0 ? 1 : categoryId;
+        string memory mediaUrl = _submissionImageUrl(url);
+        string[] memory imageUrls = new string[](1);
+        imageUrls[0] = mediaUrl;
         bytes32 salt = keccak256(
-            abi.encode(url, title, description, tags, categoryId, submitter, block.timestamp, block.number, gasleft())
+            abi.encode(
+                mediaUrl,
+                title,
+                description,
+                tags,
+                submissionCategoryId,
+                submitter,
+                block.timestamp,
+                block.number,
+                gasleft()
+            )
         );
+        (, bytes32 submissionKey) =
+            registry.previewQuestionMediaSubmissionKey(imageUrls, "", title, description, tags, submissionCategoryId);
         bytes32 revealCommitment =
-            keccak256(abi.encode(submissionKey, title, description, tags, categoryId, salt, submitter));
+            keccak256(abi.encode(submissionKey, title, description, tags, submissionCategoryId, salt, submitter));
 
         registry.reserveSubmission(revealCommitment);
         HEVM.warp(block.timestamp + 1);
-        contentId = registry.submitContent(url, title, description, tags, categoryId, salt);
+        contentId =
+            registry.submitQuestionWithMedia(imageUrls, "", title, description, tags, submissionCategoryId, salt);
 
         if (normalizedPrank) {
             HEVM.stopPrank();
         }
+    }
+
+    function _submissionImageUrl(string memory url) private pure returns (string memory) {
+        return bytes(url).length == 0 ? "https://example.com/test.jpg" : string.concat(url, ".jpg");
     }
 }
 
@@ -283,16 +302,17 @@ abstract contract VotingTestBase is Test, ContentSubmissionTestBase {
 
         vm.startPrank(request.voter);
         request.crepToken.approve(address(request.engine), request.stake);
-        request.engine.commitVote(
-            request.contentId,
-            artifacts.roundReferenceRatingBps,
-            artifacts.targetRound,
-            artifacts.drandChainHash,
-            artifacts.commitHash,
-            artifacts.ciphertext,
-            request.stake,
-            request.frontend
-        );
+        request.engine
+            .commitVote(
+                request.contentId,
+                artifacts.roundReferenceRatingBps,
+                artifacts.targetRound,
+                artifacts.drandChainHash,
+                artifacts.commitHash,
+                artifacts.ciphertext,
+                request.stake,
+                request.frontend
+            );
         vm.stopPrank();
 
         return artifacts.commitKey;
@@ -363,13 +383,7 @@ abstract contract VotingTestBase is Test, ContentSubmissionTestBase {
         bytes memory ciphertext
     ) internal view returns (bytes32) {
         return _commitHash(
-            isUp,
-            salt,
-            contentId,
-            _currentRatingReferenceBps(contentId),
-            targetRound,
-            drandChainHash,
-            ciphertext
+            isUp, salt, contentId, _currentRatingReferenceBps(contentId), targetRound, drandChainHash, ciphertext
         );
     }
 
@@ -381,11 +395,7 @@ abstract contract VotingTestBase is Test, ContentSubmissionTestBase {
         uint64 targetRound,
         bytes32 drandChainHash,
         bytes memory ciphertext
-    )
-        internal
-        pure
-        returns (bytes32)
-    {
+    ) internal pure returns (bytes32) {
         return keccak256(
             abi.encodePacked(
                 isUp, salt, contentId, roundReferenceRatingBps, targetRound, drandChainHash, keccak256(ciphertext)
@@ -587,8 +597,7 @@ abstract contract VotingTestBase is Test, ContentSubmissionTestBase {
             bytes1 fourth = clean[i + 3];
             if (third == "=" && fourth != "=") revert("Invalid test ciphertext");
 
-            uint24 chunk =
-                (uint24(_base64Value(clean[i])) << 18) | (uint24(_base64Value(clean[i + 1])) << 12);
+            uint24 chunk = (uint24(_base64Value(clean[i])) << 18) | (uint24(_base64Value(clean[i + 1])) << 12);
             if (third != "=") {
                 chunk |= uint24(_base64Value(third)) << 6;
             }
@@ -606,7 +615,11 @@ abstract contract VotingTestBase is Test, ContentSubmissionTestBase {
         }
     }
 
-    function _stripBase64Whitespace(bytes memory data, uint256 start, uint256 end) private pure returns (bytes memory clean) {
+    function _stripBase64Whitespace(bytes memory data, uint256 start, uint256 end)
+        private
+        pure
+        returns (bytes memory clean)
+    {
         uint256 cleanLength = 0;
         for (uint256 i = start; i < end; i++) {
             bytes1 ch = data[i];

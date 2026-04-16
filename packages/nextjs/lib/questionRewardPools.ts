@@ -11,36 +11,6 @@ export const DEFAULT_REWARD_POOL_FRONTEND_FEE_BPS = 300;
 export const QUESTION_SUBMISSION_ABI = [
   {
     type: "function",
-    name: "previewQuestionSubmissionKey",
-    inputs: [
-      { name: "url", type: "string" },
-      { name: "title", type: "string" },
-      { name: "description", type: "string" },
-      { name: "tags", type: "string" },
-      { name: "categoryId", type: "uint256" },
-    ],
-    outputs: [
-      { name: "resolvedCategoryId", type: "uint256" },
-      { name: "submissionKey", type: "bytes32" },
-    ],
-    stateMutability: "view",
-  },
-  {
-    type: "function",
-    name: "submitQuestion",
-    inputs: [
-      { name: "url", type: "string" },
-      { name: "title", type: "string" },
-      { name: "description", type: "string" },
-      { name: "tags", type: "string" },
-      { name: "categoryId", type: "uint256" },
-      { name: "salt", type: "bytes32" },
-    ],
-    outputs: [{ name: "", type: "uint256" }],
-    stateMutability: "nonpayable",
-  },
-  {
-    type: "function",
     name: "previewQuestionMediaSubmissionKey",
     inputs: [
       { name: "imageUrls", type: "string[]" },

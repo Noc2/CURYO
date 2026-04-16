@@ -29,8 +29,10 @@ const ZERO_ADDRESS = "0x0000000000000000000000000000000000000000" as const;
 const ZERO_HASH = "0x0000000000000000000000000000000000000000000000000000000000000000" as const;
 const DEFAULT_SUBMISSION_REVEAL_WAIT_MS = 1_100;
 const FRONTEND_FEE_DISPOSITIONS = ["direct", "credit_registry", "protocol"] as const;
+const DIRECT_IMAGE_URL_PATTERN = /^https:\/\/.+\.(?:avif|gif|jpe?g|png|webp)(?:[?#].*)?$/i;
 
 type FrontendFeeDisposition = (typeof FRONTEND_FEE_DISPOSITIONS)[number];
+type SubmissionMedia = { imageUrls: string[]; videoUrl: string };
 
 interface ExecutionContext {
   account: PrivateKeyAccount;
@@ -45,6 +47,26 @@ export class McpWriteServiceError extends Error {
     super(message);
     this.name = "McpWriteServiceError";
   }
+}
+
+function isYouTubeVideoUrl(url: string): boolean {
+  try {
+    const parsed = new URL(url);
+    const host = parsed.hostname.toLowerCase();
+    return host === "youtu.be" || host === "youtube.com" || host === "www.youtube.com" || host === "m.youtube.com";
+  } catch {
+    return false;
+  }
+}
+
+function getSubmissionMedia(url: string): SubmissionMedia | null {
+  if (DIRECT_IMAGE_URL_PATTERN.test(url)) {
+    return { imageUrls: [url], videoUrl: "" };
+  }
+  if (isYouTubeVideoUrl(url)) {
+    return { imageUrls: [], videoUrl: url };
+  }
+  return null;
 }
 
 type WriteChainValidationClient = Pick<ReturnType<typeof createPublicClient>, "getChainId">;
@@ -303,11 +325,17 @@ export class CuryoWriteService {
       throw new McpWriteServiceError("categoryId must be greater than zero");
     }
 
-    if (url) {
-      const submissionHost = getNormalizedUrlHost(url);
-      if (!isAllowedSubmissionHost(submissionHost, this.config.policy.allowedSubmissionHosts)) {
-        throw new McpWriteServiceError(`Submission host "${submissionHost}" is not allowed by MCP policy`);
-      }
+    if (!url) {
+      throw new McpWriteServiceError("media URL is required");
+    }
+    const media = getSubmissionMedia(url);
+    if (!media) {
+      throw new McpWriteServiceError("Submission URL must be a direct image or YouTube video");
+    }
+
+    const submissionHost = getNormalizedUrlHost(url);
+    if (!isAllowedSubmissionHost(submissionHost, this.config.policy.allowedSubmissionHosts)) {
+      throw new McpWriteServiceError(`Submission host "${submissionHost}" is not allowed by MCP policy`);
     }
 
     const context = await this.getContext(identityId);
@@ -377,8 +405,8 @@ export class CuryoWriteService {
       this.readContract<readonly [bigint, `0x${string}`]>(context, {
         address: this.requireContracts().contentRegistry,
         abi: ContentRegistryAbi,
-        functionName: "previewQuestionSubmissionKey",
-        args: [url, title, description, tags, requestedCategoryId],
+        functionName: "previewQuestionMediaSubmissionKey",
+        args: [media.imageUrls, media.videoUrl, title, description, tags, requestedCategoryId],
       }),
     ]);
 
@@ -451,7 +479,7 @@ export class CuryoWriteService {
 
     if (params.dryRun) {
       result.simulation = "preflight-only";
-      result.simulationNote = "Submission requires a reserveSubmission step before submitQuestion";
+      result.simulationNote = "Submission requires a reserveSubmission step before submitQuestionWithMedia";
       return result;
     }
 
@@ -485,8 +513,8 @@ export class CuryoWriteService {
     const submitRequest = {
       address: this.requireContracts().contentRegistry,
       abi: ContentRegistryAbi,
-      functionName: "submitQuestion",
-      args: [url, title, description, tags, requestedCategoryId, salt],
+      functionName: "submitQuestionWithMedia",
+      args: [media.imageUrls, media.videoUrl, title, description, tags, requestedCategoryId, salt],
     } as const;
     const revealReadiness = await this.waitForSubmissionRevealReady(context, submitRequest, waitMs);
     result.submitSimulationAttempts = revealReadiness.attempts;

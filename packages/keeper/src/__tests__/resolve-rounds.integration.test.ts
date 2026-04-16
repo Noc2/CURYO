@@ -1,5 +1,5 @@
 import { beforeAll, describe, expect, it, vi } from "vitest";
-import { createPublicClient, createWalletClient, defineChain, http, stringToHex } from "viem";
+import { createPublicClient, createWalletClient, defineChain, encodeAbiParameters, http, keccak256, stringToHex } from "viem";
 import { privateKeyToAccount } from "viem/accounts";
 import { ContentRegistryAbi, CuryoReputationAbi, ProtocolConfigAbi, RoundVotingEngineAbi } from "@curyo/contracts/abis";
 import deployedContracts from "@curyo/contracts/deployedContracts";
@@ -236,6 +236,41 @@ describe("resolveRounds integration", () => {
       }),
     );
 
+    const submissionImageUrl = `https://example.com/keeper-integration-${Date.now()}.jpg`;
+    const submissionTitle = "Keeper integration test";
+    const submissionDescription = "integration";
+    const submissionTags = "keeper,integration";
+    const submissionCategoryId = 1n;
+    const submissionSalt = `0x${"44".repeat(32)}` as `0x${string}`;
+    const [, submissionKey] = (await publicClient.readContract({
+      address: CONTRACTS.contentRegistry,
+      abi: ContentRegistryAbi,
+      functionName: "previewQuestionMediaSubmissionKey",
+      args: [[submissionImageUrl], "", submissionTitle, submissionDescription, submissionTags, submissionCategoryId],
+    })) as readonly [bigint, `0x${string}`];
+    const revealCommitment = keccak256(
+      encodeAbiParameters(
+        [
+          { type: "bytes32" },
+          { type: "string" },
+          { type: "string" },
+          { type: "string" },
+          { type: "uint256" },
+          { type: "bytes32" },
+          { type: "address" },
+        ],
+        [
+          submissionKey,
+          submissionTitle,
+          submissionDescription,
+          submissionTags,
+          submissionCategoryId,
+          submissionSalt,
+          ACCOUNTS.submitter.address,
+        ],
+      ),
+    );
+
     await waitForReceipt(
       publicClient,
       await submitterClient.writeContract({
@@ -243,14 +278,28 @@ describe("resolveRounds integration", () => {
         chain: CHAIN,
         address: CONTRACTS.contentRegistry,
         abi: ContentRegistryAbi,
-        functionName: "submitContent",
+        functionName: "reserveSubmission",
+        args: [revealCommitment],
+      }),
+    );
+    await increaseTime(publicClient, 2);
+
+    await waitForReceipt(
+      publicClient,
+      await submitterClient.writeContract({
+        account: ACCOUNTS.submitter,
+        chain: CHAIN,
+        address: CONTRACTS.contentRegistry,
+        abi: ContentRegistryAbi,
+        functionName: "submitQuestionWithMedia",
         args: [
-          `https://example.com/keeper-integration-${Date.now()}`,
-          "Keeper integration test",
-          "integration",
-          "keeper,integration",
-          1n,
-          `0x${"44".repeat(32)}` as `0x${string}`,
+          [submissionImageUrl],
+          "",
+          submissionTitle,
+          submissionDescription,
+          submissionTags,
+          submissionCategoryId,
+          submissionSalt,
         ],
       }),
     );

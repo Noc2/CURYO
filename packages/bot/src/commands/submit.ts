@@ -15,6 +15,29 @@ const RESERVED_SUBMISSION_WAIT_MS = 1_100;
 const TX_RECEIPT_TIMEOUT_MS = 180_000;
 
 type PreviewSubmissionResult = readonly [bigint, Hex];
+type SubmissionMedia = { imageUrls: string[]; videoUrl: string };
+
+const DIRECT_IMAGE_URL_PATTERN = /^https:\/\/.+\.(?:avif|gif|jpe?g|png|webp)(?:[?#].*)?$/i;
+
+function isYouTubeVideoUrl(url: string): boolean {
+  try {
+    const parsed = new URL(url);
+    const host = parsed.hostname.toLowerCase();
+    return host === "youtu.be" || host === "youtube.com" || host === "www.youtube.com" || host === "m.youtube.com";
+  } catch {
+    return false;
+  }
+}
+
+function getSubmissionMedia(url: string): SubmissionMedia | null {
+  if (DIRECT_IMAGE_URL_PATTERN.test(url)) {
+    return { imageUrls: [url], videoUrl: "" };
+  }
+  if (isYouTubeVideoUrl(url)) {
+    return { imageUrls: [], videoUrl: url };
+  }
+  return null;
+}
 
 function createSubmissionSalt(): Hex {
   return `0x${randomBytes(32).toString("hex")}` as Hex;
@@ -207,19 +230,9 @@ export async function runSubmit(options: SubmitRunOptions = {}) {
 
       log.info(`Processing ${source.name} item ${itemIndex + 1}/${items.length}: "${item.title}"`);
 
-      // Check if URL already submitted
-      try {
-        const isSubmitted = await publicClient.readContract({
-          ...contractConfig.registry,
-          functionName: "isUrlSubmitted",
-          args: [item.url],
-        });
-        if (isSubmitted) {
-          log.debug(`Skipping "${item.title}" (URL already submitted)`);
-          continue;
-        }
-      } catch (err: any) {
-        log.warn(`Skipping "${item.title}" (failed to check existing submission: ${err.message})`);
+      const media = getSubmissionMedia(item.url);
+      if (!media) {
+        log.warn(`Skipping "${item.title}" (submission URL must be a direct image or YouTube video)`);
         continue;
       }
 
@@ -240,13 +253,22 @@ export async function runSubmit(options: SubmitRunOptions = {}) {
         const description = truncateContentDescription(item.description);
         const [resolvedCategoryId, submissionKey] = (await publicClient.readContract({
           ...contractConfig.registry,
-          functionName: "previewQuestionSubmissionKey",
-          args: [item.url, title, description, item.tags, requestedCategoryId],
+          functionName: "previewQuestionMediaSubmissionKey",
+          args: [media.imageUrls, media.videoUrl, title, description, item.tags, requestedCategoryId],
         })) as PreviewSubmissionResult;
         if (resolvedCategoryId !== requestedCategoryId) {
           log.warn(
             `Skipping "${item.title}" (resolved category ${resolvedCategoryId} does not match requested category ${requestedCategoryId})`,
           );
+          continue;
+        }
+        const questionAlreadySubmitted = (await publicClient.readContract({
+          ...contractConfig.registry,
+          functionName: "submissionKeyUsed",
+          args: [submissionKey],
+        })) as boolean;
+        if (questionAlreadySubmitted) {
+          log.debug(`Skipping "${item.title}" (question already submitted)`);
           continue;
         }
 
@@ -291,8 +313,8 @@ export async function runSubmit(options: SubmitRunOptions = {}) {
         try {
           submitTx = await wallet.writeContract({
             ...contractConfig.registry,
-            functionName: "submitQuestion",
-            args: [item.url, title, description, item.tags, requestedCategoryId, salt],
+            functionName: "submitQuestionWithMedia",
+            args: [media.imageUrls, media.videoUrl, title, description, item.tags, requestedCategoryId, salt],
           });
         } catch (error) {
           if (!isReservationTooNewError(error)) {
@@ -303,8 +325,8 @@ export async function runSubmit(options: SubmitRunOptions = {}) {
           await sleep(RESERVED_SUBMISSION_WAIT_MS);
           submitTx = await wallet.writeContract({
             ...contractConfig.registry,
-            functionName: "submitQuestion",
-            args: [item.url, title, description, item.tags, requestedCategoryId, salt],
+            functionName: "submitQuestionWithMedia",
+            args: [media.imageUrls, media.videoUrl, title, description, item.tags, requestedCategoryId, salt],
           });
         }
         await waitForTransactionReceipt({

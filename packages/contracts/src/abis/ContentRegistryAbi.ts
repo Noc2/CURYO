@@ -214,19 +214,6 @@ export const ContentRegistryAbi = [
   },
   {
     "type": "function",
-    "name": "MAX_TITLE_LENGTH",
-    "inputs": [],
-    "outputs": [
-      {
-        "name": "",
-        "type": "uint256",
-        "internalType": "uint256"
-      }
-    ],
-    "stateMutability": "view"
-  },
-  {
-    "type": "function",
     "name": "MAX_URL_LENGTH",
     "inputs": [],
     "outputs": [
@@ -930,7 +917,7 @@ export const ContentRegistryAbi = [
         "internalType": "bool"
       }
     ],
-    "stateMutability": "view"
+    "stateMutability": "pure"
   },
   {
     "type": "function",
@@ -1197,7 +1184,7 @@ export const ContentRegistryAbi = [
         "internalType": "bytes32"
       }
     ],
-    "stateMutability": "view"
+    "stateMutability": "pure"
   },
   {
     "type": "function",
@@ -1226,7 +1213,7 @@ export const ContentRegistryAbi = [
         "internalType": "bytes32"
       }
     ],
-    "stateMutability": "view"
+    "stateMutability": "pure"
   },
   {
     "type": "function",
@@ -1400,7 +1387,7 @@ export const ContentRegistryAbi = [
         "internalType": "bytes32"
       }
     ],
-    "stateMutability": "view"
+    "stateMutability": "pure"
   },
   {
     "type": "function",
@@ -1686,7 +1673,7 @@ export const ContentRegistryAbi = [
         "internalType": "uint256"
       }
     ],
-    "stateMutability": "nonpayable"
+    "stateMutability": "pure"
   },
   {
     "type": "function",
@@ -1730,7 +1717,7 @@ export const ContentRegistryAbi = [
         "internalType": "uint256"
       }
     ],
-    "stateMutability": "nonpayable"
+    "stateMutability": "pure"
   },
   {
     "type": "function",

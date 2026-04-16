@@ -6,7 +6,7 @@ const SUBMISSION_KEY = `0x${"aa".repeat(32)}` as const;
 const FIXED_SALT = `0x${"11".repeat(32)}` as const;
 const CONTENT_REGISTRY = "0x2222222222222222222222222222222222222222" as const;
 const ITEM = {
-  url: "https://www.themoviedb.org/movie/603",
+  url: "https://image.tmdb.org/t/p/original/matrix.jpg",
   title: "The Matrix",
   description: "A computer hacker learns the truth.",
   tags: "Sci-Fi",
@@ -17,8 +17,7 @@ type SubmitCommandOptions = {
   allowance?: bigint;
   balance?: bigint;
   hasVoterId?: boolean;
-  isUrlSubmittedError?: Error;
-  isUrlSubmitted?: boolean;
+  submissionKeyUsed?: boolean;
   previewCategoryId?: bigint;
   receiptStatusByHash?: Record<string, "success" | "reverted">;
   sources?: Array<{
@@ -43,13 +42,10 @@ async function loadSubmitCommand(options: SubmitCommandOptions = {}) {
         return options.balance ?? 20_000_000n;
       case "allowance":
         return options.allowance ?? 0n;
-      case "isUrlSubmitted":
-        if (options.isUrlSubmittedError) {
-          throw options.isUrlSubmittedError;
-        }
-        return options.isUrlSubmitted ?? false;
-      case "previewQuestionSubmissionKey":
+      case "previewQuestionMediaSubmissionKey":
         return [options.previewCategoryId ?? ITEM.categoryId, SUBMISSION_KEY] as const;
+      case "submissionKeyUsed":
+        return options.submissionKeyUsed ?? false;
       default:
         throw new Error(`Unexpected readContract: ${functionName}`);
     }
@@ -59,7 +55,11 @@ async function loadSubmitCommand(options: SubmitCommandOptions = {}) {
   }));
   let submitAttempts = 0;
   const writeContract = vi.fn(async ({ functionName }: { functionName: string }) => {
-    if (functionName === "submitQuestion" && options.submitError && submitAttempts < (options.submitErrorCount ?? 1)) {
+    if (
+      functionName === "submitQuestionWithMedia" &&
+      options.submitError &&
+      submitAttempts < (options.submitErrorCount ?? 1)
+    ) {
       submitAttempts += 1;
       throw options.submitError;
     }
@@ -69,7 +69,7 @@ async function loadSubmitCommand(options: SubmitCommandOptions = {}) {
         return "0xapprove";
       case "reserveSubmission":
         return "0xreserve";
-      case "submitQuestion":
+      case "submitQuestionWithMedia":
         return "0xsubmit";
       case "cancelReservedSubmission":
         return "0xcancel";
@@ -171,15 +171,21 @@ function buildExpectedRevealCommitment(): Hex {
 }
 
 describe("runSubmit", () => {
-  it("uses the reserved submission flow before submitting a question", async () => {
+  it("uses the reserved submission flow before submitting a media-backed question", async () => {
     const submitCommand = await loadSubmitCommand();
 
     await submitCommand.runSubmit();
 
     expect(submitCommand.mocks.readContract).toHaveBeenCalledWith(
       expect.objectContaining({
-        functionName: "previewQuestionSubmissionKey",
-        args: [ITEM.url, ITEM.title, ITEM.description, ITEM.tags, ITEM.categoryId],
+        functionName: "previewQuestionMediaSubmissionKey",
+        args: [[ITEM.url], "", ITEM.title, ITEM.description, ITEM.tags, ITEM.categoryId],
+      }),
+    );
+    expect(submitCommand.mocks.readContract).toHaveBeenCalledWith(
+      expect.objectContaining({
+        functionName: "submissionKeyUsed",
+        args: [SUBMISSION_KEY],
       }),
     );
     expect(submitCommand.mocks.sleep).toHaveBeenCalledWith(1_100);
@@ -200,8 +206,8 @@ describe("runSubmit", () => {
     expect(submitCommand.mocks.writeContract).toHaveBeenNthCalledWith(
       3,
       expect.objectContaining({
-        functionName: "submitQuestion",
-        args: [ITEM.url, ITEM.title, ITEM.description, ITEM.tags, ITEM.categoryId, FIXED_SALT],
+        functionName: "submitQuestionWithMedia",
+        args: [[ITEM.url], "", ITEM.title, ITEM.description, ITEM.tags, ITEM.categoryId, FIXED_SALT],
       }),
     );
     expect(submitCommand.mocks.log.info).toHaveBeenCalledWith(`Processing tmdb item 1/1: "${ITEM.title}"`);
@@ -237,25 +243,32 @@ describe("runSubmit", () => {
     );
   });
 
-  it("skips URLs that are already submitted", async () => {
-    const submitCommand = await loadSubmitCommand({ isUrlSubmitted: true });
+  it("skips questions that are already submitted", async () => {
+    const submitCommand = await loadSubmitCommand({ submissionKeyUsed: true });
 
     await submitCommand.runSubmit();
 
     expect(submitCommand.mocks.writeContract).not.toHaveBeenCalled();
-    expect(submitCommand.mocks.log.debug).toHaveBeenCalledWith(`Skipping "${ITEM.title}" (URL already submitted)`);
+    expect(submitCommand.mocks.log.debug).toHaveBeenCalledWith(`Skipping "${ITEM.title}" (question already submitted)`);
   });
 
-  it("warns when checking whether a URL is already submitted fails", async () => {
+  it("skips unsupported submission URLs before reserving", async () => {
     const submitCommand = await loadSubmitCommand({
-      isUrlSubmittedError: new Error("registry lookup failed"),
+      sources: [
+        {
+          name: "tmdb",
+          categoryId: ITEM.categoryId,
+          categoryName: "Media",
+          items: [{ ...ITEM, url: "https://www.themoviedb.org/movie/603" }],
+        },
+      ],
     });
 
     await submitCommand.runSubmit();
 
     expect(submitCommand.mocks.writeContract).not.toHaveBeenCalled();
     expect(submitCommand.mocks.log.warn).toHaveBeenCalledWith(
-      `Skipping "${ITEM.title}" (failed to check existing submission: registry lookup failed)`,
+      `Skipping "${ITEM.title}" (submission URL must be a direct image or YouTube video)`,
     );
   });
 
@@ -270,7 +283,7 @@ describe("runSubmit", () => {
     );
   });
 
-  it("cancels the reservation when submitQuestion fails after reserving", async () => {
+  it("cancels the reservation when submitQuestionWithMedia fails after reserving", async () => {
     const submitCommand = await loadSubmitCommand({ submitError: new Error("submit failed") });
 
     await submitCommand.runSubmit();
@@ -319,7 +332,7 @@ describe("runSubmit", () => {
     expect(submitCommand.mocks.sleep).toHaveBeenNthCalledWith(2, 1_100);
     expect(
       submitCommand.mocks.writeContract.mock.calls.filter(
-        ([call]) => call.functionName === "submitQuestion",
+        ([call]) => call.functionName === "submitQuestionWithMedia",
       ),
     ).toHaveLength(2);
     expect(submitCommand.mocks.writeContract).not.toHaveBeenCalledWith(
@@ -330,8 +343,16 @@ describe("runSubmit", () => {
 
   it("supports category filtering and uses the explicit max for a single selected source", async () => {
     const tmdbItem = { ...ITEM };
-    const secondTmdbItem = { ...ITEM, url: "https://www.themoviedb.org/movie/604", title: "The Matrix Reloaded" };
-    const thirdTmdbItem = { ...ITEM, url: "https://www.themoviedb.org/movie/605", title: "The Matrix Revolutions" };
+    const secondTmdbItem = {
+      ...ITEM,
+      url: "https://image.tmdb.org/t/p/original/matrix-reloaded.jpg",
+      title: "The Matrix Reloaded",
+    };
+    const thirdTmdbItem = {
+      ...ITEM,
+      url: "https://image.tmdb.org/t/p/original/matrix-revolutions.jpg",
+      title: "The Matrix Revolutions",
+    };
     const submitCommand = await loadSubmitCommand({
       sources: [
         {
@@ -353,7 +374,7 @@ describe("runSubmit", () => {
 
     expect(
       submitCommand.mocks.writeContract.mock.calls.filter(
-        ([call]) => call.functionName === "submitQuestion",
+        ([call]) => call.functionName === "submitQuestionWithMedia",
       ),
     ).toHaveLength(2);
     expect(submitCommand.mocks.log.info).toHaveBeenCalledWith("Category filter: Media");

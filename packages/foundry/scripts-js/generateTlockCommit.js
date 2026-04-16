@@ -29,6 +29,7 @@ if (isUpArg !== "true" && isUpArg !== "false") {
 const votingEngineAbi = parseAbi([
   "function protocolConfig() view returns (address)",
   "function currentRoundId(uint256 contentId) view returns (uint256)",
+  "function previewCommitReferenceRatingBps(uint256 contentId) view returns (uint16)",
   "function rounds(uint256 contentId, uint256 roundId) view returns (uint48 startTime, uint8 state, uint16 voteCount, uint16 revealedCount, uint64 totalStake, uint64 upPool, uint64 downPool, uint16 upCount, uint16 downCount, bool upWins, uint48 settledAt, uint48 thresholdReachedAt, uint64 weightedUpPool, uint64 weightedDownPool)",
 ]);
 const protocolConfigAbi = parseAbi([
@@ -77,6 +78,12 @@ const drandPeriodRaw = await chainClient.readContract({
   functionName: "drandPeriod",
 });
 const drandPeriod = BigInt(drandPeriodRaw);
+const roundReferenceRatingBps = await chainClient.readContract({
+  address: votingEngine,
+  abi: votingEngineAbi,
+  functionName: "previewCommitReferenceRatingBps",
+  args: [contentId],
+});
 const currentRoundId = await chainClient.readContract({
   address: votingEngine,
   abi: votingEngineAbi,
@@ -140,9 +147,9 @@ const armored = await timelockEncrypt(Number(targetRound), plaintext, client);
 const ciphertext = `0x${Buffer.from(armored, "utf-8").toString("hex")}`;
 const commitHash = keccak256(
   encodePacked(
-    ["bool", "bytes32", "uint256", "uint64", "bytes32", "bytes32"],
-    [isUp, salt, contentId, targetRound, drandChainHash, keccak256(ciphertext)]
+    ["bool", "bytes32", "uint256", "uint16", "uint64", "bytes32", "bytes32"],
+    [isUp, salt, contentId, roundReferenceRatingBps, targetRound, drandChainHash, keccak256(ciphertext)]
   )
 );
 
-process.stdout.write(`${commitHash}\n${ciphertext}\n${targetRound}\n${drandChainHash}\n`);
+process.stdout.write(`${commitHash}\n${ciphertext}\n${targetRound}\n${drandChainHash}\n${roundReferenceRatingBps}\n`);

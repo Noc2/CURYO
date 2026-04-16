@@ -259,8 +259,7 @@ contract RoundVotingEngine is
         );
     }
 
-    /// @notice Backward-compatible direct commit path that derives the canonical round reference score on-chain.
-    /// @dev Legacy callers must still build `commitHash` with the derived reference score or reveal will fail.
+    /// @notice Deprecated direct commit path. Use the round-reference-aware overload.
     function commitVote(
         uint256 contentId,
         uint64 targetRound,
@@ -269,19 +268,15 @@ contract RoundVotingEngine is
         bytes memory ciphertext,
         uint256 stakeAmount,
         address frontend
-    ) public nonReentrant whenNotPaused {
-        _commitVote(
-            msg.sender,
-            contentId,
-            _previewCommitReferenceRatingBps(contentId),
-            targetRound,
-            drandChainHash,
-            commitHash,
-            ciphertext,
-            stakeAmount,
-            frontend,
-            false
-        );
+    ) public pure {
+        contentId;
+        targetRound;
+        drandChainHash;
+        commitHash;
+        ciphertext;
+        stakeAmount;
+        frontend;
+        revert ReferenceRatingMismatch();
     }
 
     function onTransferReceived(address operator, address from, uint256 value, bytes calldata data)

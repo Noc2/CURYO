@@ -292,7 +292,7 @@ Cursor / editor MCP clients:
 Optional hosted write tools:
 
 - `vote`: commit a tlock vote with a scoped authenticated identity and the redeployed drand metadata bindings
-- `submit_content`: reserve and reveal a question-first submission through `ContentRegistry.submitQuestion`, with the question capped at 120 characters, text-only, link, image, or YouTube-link inputs, and optional reward pools displayed as USD even though settlement is paid in USDC on Celo with the default eligible frontend-operator share
+- `submit_content`: reserve and reveal a media-backed question through `ContentRegistry.submitQuestionWithMedia`, with the question capped at 120 characters, a required direct image or YouTube URL, and optional reward pools displayed as USD even though settlement is paid in USDC on Celo with the default eligible frontend-operator share
 - `claim_reward`: claim voter, submitter, cREP participation, or cancelled-round refund rewards through a Voter ID-gated flow
 - `claim_frontend_fee`: claim round frontend fees and optionally withdraw accumulated registry credits
 

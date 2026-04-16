@@ -139,10 +139,10 @@ Deployed default categories that are already on-chain but still missing automate
 For each `submit` run, the bot:
 
 1. Loads the wallet configured in `SUBMIT_*` and checks that it can submit. The on-chain `hasVoterId(address)` check resolves delegated identities, so a delegated hot wallet can submit on behalf of the Voter ID holder.
-2. Checks that the wallet has enough cREP for the next submission. Each successful question submission stakes **10 cREP**, and the wallet also needs native gas for `approve`, `reserveSubmission`, and `submitQuestion`. Optional reward pools are paid separately in USDC on Celo, shown as USD, and reserve the default frontend-operator share on qualified claims.
+2. Checks that the wallet has enough cREP for the next submission. Each successful question submission stakes **10 cREP**, and the wallet also needs native gas for `approve`, `reserveSubmission`, and `submitQuestionWithMedia`. Optional reward pools are paid separately in USDC on Celo, shown as USD, and reserve the default frontend-operator share on qualified claims.
 3. Chooses the enabled source adapters and fetches trending content. For movies, the `tmdb` source reads TMDB's `/movie/popular` feed.
-4. Skips URLs that were already submitted by calling `isUrlSubmitted(url)` before attempting a transaction.
-5. Truncates generated questions to the 120-character on-chain maximum, calls `previewQuestionSubmissionKey(url, title, description, tags, categoryId)` to verify the canonical category, reserves the hidden submission commitment, waits a little over one second for the reservation age check, and then submits the question or supported media link with the matching salt.
+4. Skips items that do not provide a direct image URL or YouTube URL, then checks the media-backed submission key for duplicates before attempting a transaction.
+5. Truncates generated questions to the 120-character on-chain maximum, calls `previewQuestionMediaSubmissionKey(imageUrls, videoUrl, title, description, tags, categoryId)` to verify the canonical category, reserves the hidden submission commitment, waits a little over one second for the reservation age check, and then submits the media-backed question with the matching salt.
 6. Stops when it reaches the configured limit, runs out of cREP, or runs out of fresh items. If a reveal transaction fails after reservation, the bot attempts to cancel the reservation.
 
 ## Testing TMDB Questions With A Delegated Bot Wallet

@@ -6,6 +6,267 @@ import type { GenericContractsDeclaration } from "./types";
 
 const deployedContracts: GenericContractsDeclaration = {
   31337: {
+    SubmitterStakeLib: {
+      address: "0x239fa05f1d8b55828f9bdea2e6db91ba40e3ffc4",
+      abi: [
+        {
+          type: "error",
+          name: "ContentNotFound",
+          inputs: [],
+        },
+      ],
+      inheritedFunctions: {},
+      deployedOnBlock: 1,
+    },
+    RoundSettlementSideEffectsLib: {
+      address: "0xf78efaed1171676b80784ea5ef66a51f3e821cde",
+      abi: [
+        {
+          type: "event",
+          name: "SettlementSideEffectFailed",
+          inputs: [
+            {
+              name: "contentId",
+              type: "uint256",
+              indexed: true,
+              internalType: "uint256",
+            },
+            {
+              name: "roundId",
+              type: "uint256",
+              indexed: true,
+              internalType: "uint256",
+            },
+            {
+              name: "target",
+              type: "address",
+              indexed: true,
+              internalType: "address",
+            },
+            {
+              name: "stage",
+              type: "uint8",
+              indexed: false,
+              internalType:
+                "enum RoundSettlementSideEffectsLib.SideEffectFailureStage",
+            },
+          ],
+          anonymous: false,
+        },
+        {
+          type: "error",
+          name: "PRBMath_MulDiv18_Overflow",
+          inputs: [
+            {
+              name: "x",
+              type: "uint256",
+              internalType: "uint256",
+            },
+            {
+              name: "y",
+              type: "uint256",
+              internalType: "uint256",
+            },
+          ],
+        },
+        {
+          type: "error",
+          name: "PRBMath_MulDiv_Overflow",
+          inputs: [
+            {
+              name: "x",
+              type: "uint256",
+              internalType: "uint256",
+            },
+            {
+              name: "y",
+              type: "uint256",
+              internalType: "uint256",
+            },
+            {
+              name: "denominator",
+              type: "uint256",
+              internalType: "uint256",
+            },
+          ],
+        },
+        {
+          type: "error",
+          name: "PRBMath_SD59x18_Abs_MinSD59x18",
+          inputs: [],
+        },
+        {
+          type: "error",
+          name: "PRBMath_SD59x18_Convert_Overflow",
+          inputs: [
+            {
+              name: "x",
+              type: "int256",
+              internalType: "int256",
+            },
+          ],
+        },
+        {
+          type: "error",
+          name: "PRBMath_SD59x18_Convert_Underflow",
+          inputs: [
+            {
+              name: "x",
+              type: "int256",
+              internalType: "int256",
+            },
+          ],
+        },
+        {
+          type: "error",
+          name: "PRBMath_SD59x18_Div_InputTooSmall",
+          inputs: [],
+        },
+        {
+          type: "error",
+          name: "PRBMath_SD59x18_Div_Overflow",
+          inputs: [
+            {
+              name: "x",
+              type: "int256",
+              internalType: "SD59x18",
+            },
+            {
+              name: "y",
+              type: "int256",
+              internalType: "SD59x18",
+            },
+          ],
+        },
+        {
+          type: "error",
+          name: "PRBMath_SD59x18_Exp2_InputTooBig",
+          inputs: [
+            {
+              name: "x",
+              type: "int256",
+              internalType: "SD59x18",
+            },
+          ],
+        },
+        {
+          type: "error",
+          name: "PRBMath_SD59x18_Exp_InputTooBig",
+          inputs: [
+            {
+              name: "x",
+              type: "int256",
+              internalType: "SD59x18",
+            },
+          ],
+        },
+        {
+          type: "error",
+          name: "PRBMath_SD59x18_Log_InputTooSmall",
+          inputs: [
+            {
+              name: "x",
+              type: "int256",
+              internalType: "SD59x18",
+            },
+          ],
+        },
+        {
+          type: "error",
+          name: "PRBMath_SD59x18_Mul_InputTooSmall",
+          inputs: [],
+        },
+        {
+          type: "error",
+          name: "PRBMath_SD59x18_Mul_Overflow",
+          inputs: [
+            {
+              name: "x",
+              type: "int256",
+              internalType: "SD59x18",
+            },
+            {
+              name: "y",
+              type: "int256",
+              internalType: "SD59x18",
+            },
+          ],
+        },
+        {
+          type: "error",
+          name: "RatingMathOverflow",
+          inputs: [],
+        },
+      ],
+      inheritedFunctions: {},
+      deployedOnBlock: 2,
+    },
+    TokenTransferLib: {
+      address: "0x4cb9617b87685b9c949ca2f5cc616a7755dd8fe8",
+      abi: [
+        {
+          type: "error",
+          name: "SafeERC20FailedOperation",
+          inputs: [
+            {
+              name: "token",
+              type: "address",
+              internalType: "address",
+            },
+          ],
+        },
+      ],
+      inheritedFunctions: {},
+      deployedOnBlock: 3,
+    },
+    RoundCleanupLib: {
+      address: "0xcda4dc725a88562f5b465a68207f23d3591b3107",
+      abi: [
+        {
+          type: "error",
+          name: "AlreadyClaimed",
+          inputs: [],
+        },
+        {
+          type: "error",
+          name: "NoCommit",
+          inputs: [],
+        },
+        {
+          type: "error",
+          name: "NoStake",
+          inputs: [],
+        },
+        {
+          type: "error",
+          name: "NothingProcessed",
+          inputs: [],
+        },
+        {
+          type: "error",
+          name: "RoundNotCancelledOrTied",
+          inputs: [],
+        },
+        {
+          type: "error",
+          name: "SafeERC20FailedOperation",
+          inputs: [
+            {
+              name: "token",
+              type: "address",
+              internalType: "address",
+            },
+          ],
+        },
+        {
+          type: "error",
+          name: "VoteNotRevealed",
+          inputs: [],
+        },
+      ],
+      inheritedFunctions: {},
+      deployedOnBlock: 4,
+    },
     VotePreflightLib: {
       address: "0x9e7cbe199233d0688cb058f4501c796152991849",
       abi: [
@@ -109,25 +370,7 @@ const deployedContracts: GenericContractsDeclaration = {
         },
       ],
       inheritedFunctions: {},
-      deployedOnBlock: 2,
-    },
-    TokenTransferLib: {
-      address: "0x4cb9617b87685b9c949ca2f5cc616a7755dd8fe8",
-      abi: [
-        {
-          type: "error",
-          name: "SafeERC20FailedOperation",
-          inputs: [
-            {
-              name: "token",
-              type: "address",
-              internalType: "address",
-            },
-          ],
-        },
-      ],
-      inheritedFunctions: {},
-      deployedOnBlock: 3,
+      deployedOnBlock: 5,
     },
     TlockVoteLib: {
       address: "0xcc15a7efdb32eaef1c13b126908fb4ae8751bbde",
@@ -329,205 +572,10 @@ const deployedContracts: GenericContractsDeclaration = {
         },
       ],
       inheritedFunctions: {},
-      deployedOnBlock: 4,
-    },
-    SubmitterStakeLib: {
-      address: "0x239fa05f1d8b55828f9bdea2e6db91ba40e3ffc4",
-      abi: [
-        {
-          type: "error",
-          name: "ContentNotFound",
-          inputs: [],
-        },
-      ],
-      inheritedFunctions: {},
-      deployedOnBlock: 5,
-    },
-    RoundSettlementSideEffectsLib: {
-      address: "0xf78efaed1171676b80784ea5ef66a51f3e821cde",
-      abi: [
-        {
-          type: "event",
-          name: "SettlementSideEffectFailed",
-          inputs: [
-            {
-              name: "contentId",
-              type: "uint256",
-              indexed: true,
-              internalType: "uint256",
-            },
-            {
-              name: "roundId",
-              type: "uint256",
-              indexed: true,
-              internalType: "uint256",
-            },
-            {
-              name: "target",
-              type: "address",
-              indexed: true,
-              internalType: "address",
-            },
-            {
-              name: "stage",
-              type: "uint8",
-              indexed: false,
-              internalType:
-                "enum RoundSettlementSideEffectsLib.SideEffectFailureStage",
-            },
-          ],
-          anonymous: false,
-        },
-        {
-          type: "error",
-          name: "PRBMath_MulDiv18_Overflow",
-          inputs: [
-            {
-              name: "x",
-              type: "uint256",
-              internalType: "uint256",
-            },
-            {
-              name: "y",
-              type: "uint256",
-              internalType: "uint256",
-            },
-          ],
-        },
-        {
-          type: "error",
-          name: "PRBMath_MulDiv_Overflow",
-          inputs: [
-            {
-              name: "x",
-              type: "uint256",
-              internalType: "uint256",
-            },
-            {
-              name: "y",
-              type: "uint256",
-              internalType: "uint256",
-            },
-            {
-              name: "denominator",
-              type: "uint256",
-              internalType: "uint256",
-            },
-          ],
-        },
-        {
-          type: "error",
-          name: "PRBMath_SD59x18_Abs_MinSD59x18",
-          inputs: [],
-        },
-        {
-          type: "error",
-          name: "PRBMath_SD59x18_Convert_Overflow",
-          inputs: [
-            {
-              name: "x",
-              type: "int256",
-              internalType: "int256",
-            },
-          ],
-        },
-        {
-          type: "error",
-          name: "PRBMath_SD59x18_Convert_Underflow",
-          inputs: [
-            {
-              name: "x",
-              type: "int256",
-              internalType: "int256",
-            },
-          ],
-        },
-        {
-          type: "error",
-          name: "PRBMath_SD59x18_Div_InputTooSmall",
-          inputs: [],
-        },
-        {
-          type: "error",
-          name: "PRBMath_SD59x18_Div_Overflow",
-          inputs: [
-            {
-              name: "x",
-              type: "int256",
-              internalType: "SD59x18",
-            },
-            {
-              name: "y",
-              type: "int256",
-              internalType: "SD59x18",
-            },
-          ],
-        },
-        {
-          type: "error",
-          name: "PRBMath_SD59x18_Exp2_InputTooBig",
-          inputs: [
-            {
-              name: "x",
-              type: "int256",
-              internalType: "SD59x18",
-            },
-          ],
-        },
-        {
-          type: "error",
-          name: "PRBMath_SD59x18_Exp_InputTooBig",
-          inputs: [
-            {
-              name: "x",
-              type: "int256",
-              internalType: "SD59x18",
-            },
-          ],
-        },
-        {
-          type: "error",
-          name: "PRBMath_SD59x18_Log_InputTooSmall",
-          inputs: [
-            {
-              name: "x",
-              type: "int256",
-              internalType: "SD59x18",
-            },
-          ],
-        },
-        {
-          type: "error",
-          name: "PRBMath_SD59x18_Mul_InputTooSmall",
-          inputs: [],
-        },
-        {
-          type: "error",
-          name: "PRBMath_SD59x18_Mul_Overflow",
-          inputs: [
-            {
-              name: "x",
-              type: "int256",
-              internalType: "SD59x18",
-            },
-            {
-              name: "y",
-              type: "int256",
-              internalType: "SD59x18",
-            },
-          ],
-        },
-        {
-          type: "error",
-          name: "RatingMathOverflow",
-          inputs: [],
-        },
-      ],
-      inheritedFunctions: {},
       deployedOnBlock: 6,
     },
     RoundSettlementDistributionLib: {
-      address: "0x164467a217f6776997b58373f9079ec7006eca4d",
+      address: "0x2e4320f0561f9d91b66ec8dbd33024c18c6cca0b",
       abi: [
         {
           type: "event",
@@ -656,56 +704,8 @@ const deployedContracts: GenericContractsDeclaration = {
       inheritedFunctions: {},
       deployedOnBlock: 8,
     },
-    RoundCleanupLib: {
-      address: "0xcda4dc725a88562f5b465a68207f23d3591b3107",
-      abi: [
-        {
-          type: "error",
-          name: "AlreadyClaimed",
-          inputs: [],
-        },
-        {
-          type: "error",
-          name: "NoCommit",
-          inputs: [],
-        },
-        {
-          type: "error",
-          name: "NoStake",
-          inputs: [],
-        },
-        {
-          type: "error",
-          name: "NothingProcessed",
-          inputs: [],
-        },
-        {
-          type: "error",
-          name: "RoundNotCancelledOrTied",
-          inputs: [],
-        },
-        {
-          type: "error",
-          name: "SafeERC20FailedOperation",
-          inputs: [
-            {
-              name: "token",
-              type: "address",
-              internalType: "address",
-            },
-          ],
-        },
-        {
-          type: "error",
-          name: "VoteNotRevealed",
-          inputs: [],
-        },
-      ],
-      inheritedFunctions: {},
-      deployedOnBlock: 9,
-    },
     CuryoReputation: {
-      address: "0x12975173B87F7595EE45dFFb2Ab812ECE596Bf84",
+      address: "0xf7Cd8fa9b94DB2Aa972023b379c7f72c65E4De9D",
       abi: [
         {
           type: "constructor",
@@ -2406,10 +2406,10 @@ const deployedContracts: GenericContractsDeclaration = {
         revokeRole:
           "lib/openzeppelin-contracts/contracts/access/AccessControl.sol",
       },
-      deployedOnBlock: 10,
+      deployedOnBlock: 9,
     },
     ContentRegistry: {
-      address: "0x5B3120d0dA5FDcBA7aef87A9c3c64829C1c0D76B",
+      address: "0x6379ebD504941f50D5BfDE9348B37593bd29C835",
       abi: [
         {
           type: "constructor",
@@ -2614,19 +2614,6 @@ const deployedContracts: GenericContractsDeclaration = {
         {
           type: "function",
           name: "MAX_TAGS_LENGTH",
-          inputs: [],
-          outputs: [
-            {
-              name: "",
-              type: "uint256",
-              internalType: "uint256",
-            },
-          ],
-          stateMutability: "view",
-        },
-        {
-          type: "function",
-          name: "MAX_TITLE_LENGTH",
           inputs: [],
           outputs: [
             {
@@ -3342,7 +3329,7 @@ const deployedContracts: GenericContractsDeclaration = {
               internalType: "bool",
             },
           ],
-          stateMutability: "view",
+          stateMutability: "pure",
         },
         {
           type: "function",
@@ -3609,7 +3596,7 @@ const deployedContracts: GenericContractsDeclaration = {
               internalType: "bytes32",
             },
           ],
-          stateMutability: "view",
+          stateMutability: "pure",
         },
         {
           type: "function",
@@ -3638,7 +3625,7 @@ const deployedContracts: GenericContractsDeclaration = {
               internalType: "bytes32",
             },
           ],
-          stateMutability: "view",
+          stateMutability: "pure",
         },
         {
           type: "function",
@@ -3812,7 +3799,7 @@ const deployedContracts: GenericContractsDeclaration = {
               internalType: "bytes32",
             },
           ],
-          stateMutability: "view",
+          stateMutability: "pure",
         },
         {
           type: "function",
@@ -4098,7 +4085,7 @@ const deployedContracts: GenericContractsDeclaration = {
               internalType: "uint256",
             },
           ],
-          stateMutability: "nonpayable",
+          stateMutability: "pure",
         },
         {
           type: "function",
@@ -4142,7 +4129,7 @@ const deployedContracts: GenericContractsDeclaration = {
               internalType: "uint256",
             },
           ],
-          stateMutability: "nonpayable",
+          stateMutability: "pure",
         },
         {
           type: "function",
@@ -5254,10 +5241,10 @@ const deployedContracts: GenericContractsDeclaration = {
         paused:
           "lib/openzeppelin-contracts-upgradeable/contracts/utils/PausableUpgradeable.sol",
       },
-      deployedOnBlock: 20,
+      deployedOnBlock: 19,
     },
     RoundVotingEngine: {
-      address: "0x19A1c09fE3399C4Daaa2C98b936a8E460fC5Eaa4",
+      address: "0x33b1B5Aa9Aa4Da83a332F0bC5cAC6A903FDE5d92",
       abi: [
         {
           type: "constructor",
@@ -5409,7 +5396,7 @@ const deployedContracts: GenericContractsDeclaration = {
             },
           ],
           outputs: [],
-          stateMutability: "nonpayable",
+          stateMutability: "pure",
         },
         {
           type: "function",
@@ -7268,10 +7255,10 @@ const deployedContracts: GenericContractsDeclaration = {
         paused:
           "lib/openzeppelin-contracts-upgradeable/contracts/utils/PausableUpgradeable.sol",
       },
-      deployedOnBlock: 22,
+      deployedOnBlock: 21,
     },
     RoundRewardDistributor: {
-      address: "0x49B8E3b089d4ebf9F37B1dA9B839Ec013C2cD8c9",
+      address: "0x19A1c09fE3399C4Daaa2C98b936a8E460fC5Eaa4",
       abi: [
         {
           type: "constructor",
@@ -8708,10 +8695,10 @@ const deployedContracts: GenericContractsDeclaration = {
         supportsInterface:
           "lib/openzeppelin-contracts-upgradeable/contracts/access/AccessControlUpgradeable.sol",
       },
-      deployedOnBlock: 23,
+      deployedOnBlock: 22,
     },
     FrontendRegistry: {
-      address: "0x29a79095352a718B3D7Fe84E1F14E9F34A35598e",
+      address: "0xc6B8FBF96CF7bbE45576417EC2163AcecFA88ECC",
       abi: [
         {
           type: "constructor",
@@ -9669,10 +9656,10 @@ const deployedContracts: GenericContractsDeclaration = {
         supportsInterface:
           "lib/openzeppelin-contracts-upgradeable/contracts/access/AccessControlUpgradeable.sol",
       },
-      deployedOnBlock: 18,
+      deployedOnBlock: 17,
     },
     ProfileRegistry: {
-      address: "0x6379ebD504941f50D5BfDE9348B37593bd29C835",
+      address: "0x29a79095352a718B3D7Fe84E1F14E9F34A35598e",
       abi: [
         {
           type: "constructor",
@@ -10332,10 +10319,10 @@ const deployedContracts: GenericContractsDeclaration = {
         supportsInterface:
           "lib/openzeppelin-contracts-upgradeable/contracts/access/AccessControlUpgradeable.sol",
       },
-      deployedOnBlock: 19,
+      deployedOnBlock: 18,
     },
     ProtocolConfig: {
-      address: "0x33b1B5Aa9Aa4Da83a332F0bC5cAC6A903FDE5d92",
+      address: "0x5B3120d0dA5FDcBA7aef87A9c3c64829C1c0D76B",
       abi: [
         {
           type: "constructor",
@@ -11590,10 +11577,10 @@ const deployedContracts: GenericContractsDeclaration = {
         supportsInterface:
           "lib/openzeppelin-contracts/contracts/access/AccessControl.sol",
       },
-      deployedOnBlock: 21,
+      deployedOnBlock: 20,
     },
     QuestionRewardPoolEscrow: {
-      address: "0xDFD787c807DEA8d7e53311b779BC0c6a4704D286",
+      address: "0xdBD296711eC8eF9Aacb623ee3F1C0922dce0D7b2",
       abi: [
         {
           type: "constructor",
@@ -12647,10 +12634,10 @@ const deployedContracts: GenericContractsDeclaration = {
         paused:
           "lib/openzeppelin-contracts-upgradeable/contracts/utils/PausableUpgradeable.sol",
       },
-      deployedOnBlock: 28,
+      deployedOnBlock: 27,
     },
     CategoryRegistry: {
-      address: "0x067c804bb006836469379D4A2A69a81803bd1F45",
+      address: "0x49B8E3b089d4ebf9F37B1dA9B839Ec013C2cD8c9",
       abi: [
         {
           type: "constructor",
@@ -13286,10 +13273,10 @@ const deployedContracts: GenericContractsDeclaration = {
         supportsInterface:
           "lib/openzeppelin-contracts/contracts/access/AccessControl.sol",
       },
-      deployedOnBlock: 24,
+      deployedOnBlock: 23,
     },
     VoterIdNFT: {
-      address: "0x45009DD3aBBE29Db54fc5D893CeAa98a624882DF",
+      address: "0x067c804bb006836469379D4A2A69a81803bd1F45",
       abi: [
         {
           type: "constructor",
@@ -14573,10 +14560,10 @@ const deployedContracts: GenericContractsDeclaration = {
         revokeVoterId: "contracts/interfaces/IVoterIdNFT.sol",
         setDelegate: "contracts/interfaces/IVoterIdNFT.sol",
       },
-      deployedOnBlock: 25,
+      deployedOnBlock: 24,
     },
     MockERC20: {
-      address: "0xdbd296711ec8ef9aacb623ee3f1c0922dce0d7b2",
+      address: "0xf56AA3aCedDf88Ab12E494d0B96DA3C09a5d264e",
       abi: [
         {
           type: "constructor",
@@ -14977,10 +14964,10 @@ const deployedContracts: GenericContractsDeclaration = {
         transferFrom:
           "lib/openzeppelin-contracts/contracts/token/ERC20/ERC20.sol",
       },
-      deployedOnBlock: 27,
+      deployedOnBlock: 26,
     },
     ParticipationPool: {
-      address: "0xDcE79D5f359C7aB52e3d6B45be2D0D382696D323",
+      address: "0xD18E3F31bD50B5c6e4cC740CB9Ca637F6eCC2944",
       abi: [
         {
           type: "constructor",
@@ -15659,10 +15646,10 @@ const deployedContracts: GenericContractsDeclaration = {
         transferOwnership:
           "lib/openzeppelin-contracts/contracts/access/Ownable.sol",
       },
-      deployedOnBlock: 59,
+      deployedOnBlock: 57,
     },
     MockIdentityVerificationHub: {
-      address: "0x270fbc6a0f1007eb41863237eefb773795fd1f9c",
+      address: "0x2fb5e98f1efe95ae50f9becafce660701ad8d9be",
       abi: [
         {
           type: "function",
@@ -16071,10 +16058,10 @@ const deployedContracts: GenericContractsDeclaration = {
         },
       ],
       inheritedFunctions: {},
-      deployedOnBlock: 67,
+      deployedOnBlock: 65,
     },
     HumanFaucet: {
-      address: "0x9DB9797733FE5F734724Aa05D29Fa39563563Af5",
+      address: "0x5E388db7c3aef7deA9585FbE3c077f0c98857d0d",
       abi: [
         {
           type: "constructor",
@@ -17418,7 +17405,7 @@ const deployedContracts: GenericContractsDeclaration = {
           "lib/openzeppelin-contracts/contracts/access/Ownable.sol",
         paused: "lib/openzeppelin-contracts/contracts/utils/Pausable.sol",
       },
-      deployedOnBlock: 68,
+      deployedOnBlock: 66,
     },
   },
   42220: {
@@ -22312,19 +22299,6 @@ const deployedContracts: GenericContractsDeclaration = {
         },
         {
           type: "function",
-          name: "MAX_TITLE_LENGTH",
-          inputs: [],
-          outputs: [
-            {
-              name: "",
-              type: "uint256",
-              internalType: "uint256",
-            },
-          ],
-          stateMutability: "view",
-        },
-        {
-          type: "function",
           name: "MAX_URL_LENGTH",
           inputs: [],
           outputs: [
@@ -23028,7 +23002,7 @@ const deployedContracts: GenericContractsDeclaration = {
               internalType: "bool",
             },
           ],
-          stateMutability: "view",
+          stateMutability: "pure",
         },
         {
           type: "function",
@@ -23295,7 +23269,7 @@ const deployedContracts: GenericContractsDeclaration = {
               internalType: "bytes32",
             },
           ],
-          stateMutability: "view",
+          stateMutability: "pure",
         },
         {
           type: "function",
@@ -23324,7 +23298,7 @@ const deployedContracts: GenericContractsDeclaration = {
               internalType: "bytes32",
             },
           ],
-          stateMutability: "view",
+          stateMutability: "pure",
         },
         {
           type: "function",
@@ -23498,7 +23472,7 @@ const deployedContracts: GenericContractsDeclaration = {
               internalType: "bytes32",
             },
           ],
-          stateMutability: "view",
+          stateMutability: "pure",
         },
         {
           type: "function",
@@ -23784,7 +23758,7 @@ const deployedContracts: GenericContractsDeclaration = {
               internalType: "uint256",
             },
           ],
-          stateMutability: "nonpayable",
+          stateMutability: "pure",
         },
         {
           type: "function",
@@ -23828,7 +23802,7 @@ const deployedContracts: GenericContractsDeclaration = {
               internalType: "uint256",
             },
           ],
-          stateMutability: "nonpayable",
+          stateMutability: "pure",
         },
         {
           type: "function",
@@ -25095,7 +25069,7 @@ const deployedContracts: GenericContractsDeclaration = {
             },
           ],
           outputs: [],
-          stateMutability: "nonpayable",
+          stateMutability: "pure",
         },
         {
           type: "function",
@@ -40793,19 +40767,6 @@ const deployedContracts: GenericContractsDeclaration = {
         },
         {
           type: "function",
-          name: "MAX_TITLE_LENGTH",
-          inputs: [],
-          outputs: [
-            {
-              name: "",
-              type: "uint256",
-              internalType: "uint256",
-            },
-          ],
-          stateMutability: "view",
-        },
-        {
-          type: "function",
           name: "MAX_URL_LENGTH",
           inputs: [],
           outputs: [
@@ -41509,7 +41470,7 @@ const deployedContracts: GenericContractsDeclaration = {
               internalType: "bool",
             },
           ],
-          stateMutability: "view",
+          stateMutability: "pure",
         },
         {
           type: "function",
@@ -41776,7 +41737,7 @@ const deployedContracts: GenericContractsDeclaration = {
               internalType: "bytes32",
             },
           ],
-          stateMutability: "view",
+          stateMutability: "pure",
         },
         {
           type: "function",
@@ -41805,7 +41766,7 @@ const deployedContracts: GenericContractsDeclaration = {
               internalType: "bytes32",
             },
           ],
-          stateMutability: "view",
+          stateMutability: "pure",
         },
         {
           type: "function",
@@ -41979,7 +41940,7 @@ const deployedContracts: GenericContractsDeclaration = {
               internalType: "bytes32",
             },
           ],
-          stateMutability: "view",
+          stateMutability: "pure",
         },
         {
           type: "function",
@@ -42265,7 +42226,7 @@ const deployedContracts: GenericContractsDeclaration = {
               internalType: "uint256",
             },
           ],
-          stateMutability: "nonpayable",
+          stateMutability: "pure",
         },
         {
           type: "function",
@@ -42309,7 +42270,7 @@ const deployedContracts: GenericContractsDeclaration = {
               internalType: "uint256",
             },
           ],
-          stateMutability: "nonpayable",
+          stateMutability: "pure",
         },
         {
           type: "function",
@@ -43576,7 +43537,7 @@ const deployedContracts: GenericContractsDeclaration = {
             },
           ],
           outputs: [],
-          stateMutability: "nonpayable",
+          stateMutability: "pure",
         },
         {
           type: "function",
