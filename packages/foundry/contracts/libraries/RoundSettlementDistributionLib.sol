@@ -115,7 +115,9 @@ library RoundSettlementDistributionLib {
         if (frontendShare > 0) {
             if (roundStakeWithEligibleFrontend[contentId][roundId] > 0) {
                 roundFrontendPool[contentId][roundId] = frontendShare;
-                roundFrontendRegistrySnapshot[contentId][roundId] = address(currentFrontendRegistry);
+                if (roundFrontendRegistrySnapshot[contentId][roundId] == address(0)) {
+                    roundFrontendRegistrySnapshot[contentId][roundId] = address(currentFrontendRegistry);
+                }
             } else {
                 roundVoterPool[contentId][roundId] += frontendShare;
             }
