@@ -9,7 +9,7 @@ import { RatingHistory } from "~~/components/shared/RatingHistory";
 import { RatingOrb } from "~~/components/shared/RatingOrb";
 import { RoundProgress } from "~~/components/shared/RoundProgress";
 import { RoundRevealedBreakdown, RoundStats } from "~~/components/shared/RoundStats";
-import { HoverTooltip, InfoTooltip } from "~~/components/ui/InfoTooltip";
+import { HoverTooltip, InfoTooltip, TooltipAnchor } from "~~/components/ui/InfoTooltip";
 import type { ContentOpenRoundSummary } from "~~/hooks/contentFeed/shared";
 import { useScaffoldReadContract } from "~~/hooks/scaffold-eth";
 import { useParticipationRate } from "~~/hooks/useParticipationRate";
@@ -375,16 +375,32 @@ function LiveRoundActivity({
 
 function RewardPoolBadge({ amount, compact }: { amount: bigint; compact: boolean }) {
   const hasRewardPool = amount > 0n;
+  const amountLabel = formatUsdAmount(amount);
 
   return (
     <span
       className={`inline-flex max-w-full items-center justify-center rounded-full px-3 py-1 text-center font-semibold leading-none ${
         compact ? "text-xs" : "text-sm"
       } ${hasRewardPool ? "bg-success/15 text-success" : "bg-base-content/[0.06] text-base-content/58"}`}
-      aria-label={hasRewardPool ? `${formatUsdAmount(amount)} reward pool funded in Celo USDC` : "No reward pool yet"}
+      aria-label={
+        hasRewardPool ? `${amountLabel} reward pool funded in Celo USDC` : "$0 reward pool funded for this question"
+      }
     >
-      {hasRewardPool ? `${formatUsdAmount(amount)} reward pool` : "No reward pool yet"}
+      {amountLabel} reward pool
     </span>
+  );
+}
+
+function RewardPoolAmountDisplay({ amount, compact }: { amount: bigint; compact: boolean }) {
+  const amountLabel = formatUsdAmount(amount);
+
+  return (
+    <div className="flex max-w-full flex-col items-center text-center" aria-label={`${amountLabel} reward pool`}>
+      <span className={`font-display leading-none text-base-content ${compact ? "text-[2rem]" : "text-[2.6rem]"}`}>
+        {amountLabel}
+      </span>
+      <span className="sr-only">reward pool for this question</span>
+    </div>
   );
 }
 
@@ -588,7 +604,16 @@ export function VotingQuestionCard({
   const rewardPoolTotal = rewardPoolSummary?.totalAvailable ?? 0n;
   const activeRewardPoolCount = rewardPoolSummary?.activeRewardPoolCount ?? 0;
   const fundQuestionTitle = questionTitle?.trim() || `Question #${contentId.toString()}`;
-  const rewardPoolBadge = <RewardPoolBadge amount={rewardPoolTotal} compact={compact} />;
+  const rewardPoolAmountDisplay = <RewardPoolAmountDisplay amount={rewardPoolTotal} compact={compact} />;
+  const ratingOrb = (
+    <TooltipAnchor
+      text={RATING_GUIDANCE_TEXT}
+      position="bottom"
+      className="pointer-events-auto cursor-help rounded-full"
+    >
+      <RatingOrb rating={currentRating} size={orbSize} />
+    </TooltipAnchor>
+  );
   const rewardPoolDetails = (
     <RewardPoolDetails
       amount={rewardPoolTotal}
@@ -669,7 +694,13 @@ export function VotingQuestionCard({
             />
           ) : null}
           <div className="pointer-events-none absolute left-1/2 top-0 z-20 -translate-x-1/2">
-            <RatingOrb rating={currentRating} size={orbSize} showGlow={compact} className={mobileOrbClassName} />
+            <TooltipAnchor
+              text={RATING_GUIDANCE_TEXT}
+              position="bottom"
+              className="pointer-events-auto cursor-help rounded-full"
+            >
+              <RatingOrb rating={currentRating} size={orbSize} showGlow={compact} className={mobileOrbClassName} />
+            </TooltipAnchor>
           </div>
 
           <div className="relative z-10">
@@ -693,7 +724,7 @@ export function VotingQuestionCard({
             >
               <div style={dockContentStyle}>
                 <div className={dockControlsPaddingClassName}>
-                  <div className="mb-2 flex justify-center">{rewardPoolBadge}</div>
+                  <div className="mb-2 flex justify-center">{rewardPoolAmountDisplay}</div>
                   {!centerStatusContent ? (
                     <div className="grid grid-cols-[auto_minmax(0,1fr)_auto] items-end gap-3">
                       <div className="justify-self-start">
@@ -805,14 +836,8 @@ export function VotingQuestionCard({
         {/* Content */}
         <div className="relative z-10 flex min-h-0 flex-1 flex-col overflow-hidden">
           <div className="flex shrink-0 flex-col items-center text-center">
-            <div
-              className={`${headingRowClassName} flex items-center gap-2 text-[0.68rem] font-semibold uppercase tracking-[0.2em] text-base-content/65`}
-            >
-              <span>Community rating</span>
-              <InfoTooltip text={RATING_GUIDANCE_TEXT} position="bottom" />
-            </div>
-            <div className={headingRowClassName}>{rewardPoolBadge}</div>
-            <RatingOrb rating={currentRating} size={orbSize} />
+            <div className={headingRowClassName}>{rewardPoolAmountDisplay}</div>
+            {ratingOrb}
             {showVoteAttentionHint && isSignalVariant ? (
               <p className="vote-attention-hint mt-3 text-[0.72rem] font-semibold uppercase tracking-[0.16em] text-primary/90">
                 Rate this content here
