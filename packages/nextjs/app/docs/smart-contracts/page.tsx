@@ -86,7 +86,7 @@ const SmartContracts: NextPage = () => {
             </tr>
             <tr>
               <td className="font-mono text-primary">CategoryRegistry</td>
-              <td>Category/platform management via governance proposals</td>
+              <td>Seeded discovery category metadata</td>
               <td>No</td>
             </tr>
             <tr>
@@ -126,12 +126,7 @@ const SmartContracts: NextPage = () => {
             </tr>
             <tr>
               <td className="font-mono text-primary">RewardMath</td>
-              <td>Library: pool split (82/5/10/2/1) and reward calculations</td>
-              <td>&mdash;</td>
-            </tr>
-            <tr>
-              <td className="font-mono text-primary">CategoryFeeLib</td>
-              <td>Library: category-fee routing for settled rounds</td>
+              <td>Library: pool split (82/5/10/4/1) and reward calculations</td>
               <td>&mdash;</td>
             </tr>
             <tr>
@@ -556,39 +551,13 @@ const SmartContracts: NextPage = () => {
 
       <h2>CategoryRegistry</h2>
       <p>
-        Manages content categories. New categories require a governance proposal and on-chain vote for approval. Each
-        category maps to a domain and includes subcategories that help voters interpret the type of content being rated.
+        Stores simple seeded discovery categories. Categories are metadata used to help people find and interpret
+        content; they do not require user staking, governance approval proposals, or category submitter rewards.
       </p>
       <h3>Key Functions</h3>
       <ul>
         <li>
-          <code>submitCategory(name, domain, subcategories)</code> &mdash; Submit category for governance sponsorship
-          (500 cREP stake). Requires Voter ID.
-        </li>
-        <li>
-          <code>linkApprovalProposal(categoryId, descriptionHash)</code> &mdash; Link the separately created governor
-          approval proposal to the pending category. Submitter only, and only for proposals created after that
-          submission.
-        </li>
-        <li>
-          <code>clearApprovalProposal(categoryId)</code> &mdash; Clear a linked approval proposal after it was canceled
-          or expired, or after it stayed succeeded but unqueued past the timeout, so the submitter can retry or cancel.
-        </li>
-        <li>
-          <code>cancelUnlinkedCategory(categoryId)</code> &mdash; Reclaim stake after 7 days if no approval proposal was
-          linked.
-        </li>
-        <li>
-          <code>approveCategory(categoryId, descriptionHash, approvalDigest)</code> &mdash; Approve after successful
-          governance vote for the exact linked proposal and current submission binding (timelock only).
-        </li>
-        <li>
-          <code>rejectCategory(categoryId)</code> &mdash; Reject after a defeated vote (permissionless, checks proposal
-          state).
-        </li>
-        <li>
-          <code>addApprovedCategory(name, domain, subcategories)</code> &mdash; Add category directly (ADMIN_ROLE, for
-          bootstrapping).
+          <code>addApprovedCategory(name, slug, subcategories)</code> &mdash; Add seeded category metadata (ADMIN_ROLE).
         </li>
       </ul>
 
@@ -698,8 +667,7 @@ const SmartContracts: NextPage = () => {
       <ul>
         <li>
           <code>splitPoolAfterLoserRefund(losingPool)</code> &mdash; Reserve a 5% rebate for revealed losers, then split
-          the remaining pool into 80% voters / 5% consensus subsidy / 10% submitter / 4% platform (3% frontend + 1%
-          category) / 1% treasury.
+          the remaining pool into 80% voters / 5% consensus subsidy / 10% submitter / 4% frontend / 1% treasury.
         </li>
         <li>
           <code>calculateVoterReward(shares, totalWinningShares, voterPool)</code> &mdash; Share-proportional reward

@@ -218,8 +218,8 @@ const Tokenomics = () => {
       <p>
         When a round is resolved, winners recover their original stake and claim from the content-specific voter pool.
         Revealed losers can reclaim <strong>{protocolDocFacts.revealedLoserRefundPercentLabel}</strong> of raw stake,
-        and the remaining losing pool is split across voters, submitter, frontend, category submitter, consensus
-        reserve, and treasury.
+        and the remaining losing pool is split across voters, content submitter, frontend operators, consensus reserve,
+        and treasury.
       </p>
 
       <hr />
