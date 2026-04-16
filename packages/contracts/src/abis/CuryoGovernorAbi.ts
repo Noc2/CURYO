@@ -1629,6 +1629,17 @@ export const CuryoGovernorAbi = [
   },
   {
     "type": "error",
+    "name": "ExcludedHolderCannotGovern",
+    "inputs": [
+      {
+        "name": "holder",
+        "type": "address",
+        "internalType": "address"
+      }
+    ]
+  },
+  {
+    "type": "error",
     "name": "FailedCall",
     "inputs": []
   },
