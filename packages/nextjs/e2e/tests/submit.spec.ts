@@ -47,7 +47,7 @@ test.describe("Content submission", () => {
     await descInput.fill(`E2E Test Content ${uniqueId}`);
 
     // 4. Select at least one subcategory tag
-    // Subcategory buttons appear below "Select Categories" after a platform is selected.
+    // Subcategory buttons appear below "Select Categories" after a category is selected.
     // Use specific known YouTube subcategory names to avoid matching sidebar buttons.
     const tagLabel = page.getByText("Select Categories");
     await expect(tagLabel).toBeVisible({ timeout: 3_000 });

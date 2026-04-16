@@ -403,77 +403,12 @@ async function readRoundAtBlock(
 }
 
 /**
- * Approve a pending category via the timelock.
- * Calls CategoryRegistry.approveCategory(uint256 categoryId, bytes32 descriptionHash, bytes32 approvalDigest).
- * In local dev, deployer == timelock so account #0 can call directly.
- */
-export async function approveCategory(
-  categoryId: number | bigint,
-  descriptionHash: `0x${string}`,
-  fromAddress: string,
-  contractAddress: string,
-): Promise<boolean> {
-  const { decodeFunctionResult, encodeFunctionData } = await import("viem");
-  const digestData = encodeFunctionData({
-    abi: [
-      {
-        name: "getCategoryApprovalDigest",
-        type: "function",
-        inputs: [{ name: "categoryId", type: "uint256" }],
-        outputs: [{ name: "", type: "bytes32" }],
-        stateMutability: "view",
-      },
-    ],
-    functionName: "getCategoryApprovalDigest",
-    args: [BigInt(categoryId)],
-  });
-  const digestResult = await rpcRequest<`0x${string}`>("eth_call", [
-    { to: contractAddress, data: digestData },
-    "latest",
-  ]);
-  if (!digestResult) return false;
-
-  const approvalDigest = decodeFunctionResult({
-    abi: [
-      {
-        name: "getCategoryApprovalDigest",
-        type: "function",
-        inputs: [{ name: "categoryId", type: "uint256" }],
-        outputs: [{ name: "", type: "bytes32" }],
-        stateMutability: "view",
-      },
-    ],
-    functionName: "getCategoryApprovalDigest",
-    data: digestResult,
-  }) as `0x${string}`;
-
-  const data = encodeFunctionData({
-    abi: [
-      {
-        name: "approveCategory",
-        type: "function",
-        inputs: [
-          { name: "categoryId", type: "uint256" },
-          { name: "descriptionHash", type: "bytes32" },
-          { name: "approvalDigest", type: "bytes32" },
-        ],
-        outputs: [],
-        stateMutability: "nonpayable",
-      },
-    ],
-    functionName: "approveCategory",
-    args: [BigInt(categoryId), descriptionHash, approvalDigest],
-  });
-  return sendTx(fromAddress, contractAddress, data);
-}
-
-/**
- * Add an approved category directly (admin fast-path, no stake required).
+ * Add seeded category metadata directly.
  * Calls CategoryRegistry.addApprovedCategory(string, string, string[]).
  */
 export async function addApprovedCategory(
   name: string,
-  domain: string,
+  slug: string,
   subcategories: string[],
   fromAddress: string,
   contractAddress: string,
@@ -486,7 +421,7 @@ export async function addApprovedCategory(
         type: "function",
         inputs: [
           { name: "name", type: "string" },
-          { name: "domain", type: "string" },
+          { name: "slug", type: "string" },
           { name: "subcategories", type: "string[]" },
         ],
         outputs: [{ name: "categoryId", type: "uint256" }],
@@ -494,7 +429,7 @@ export async function addApprovedCategory(
       },
     ],
     functionName: "addApprovedCategory",
-    args: [name, domain, subcategories],
+    args: [name, slug, subcategories],
   });
   return sendTx(fromAddress, contractAddress, data);
 }

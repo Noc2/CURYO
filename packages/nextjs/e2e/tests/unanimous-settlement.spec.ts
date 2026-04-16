@@ -22,7 +22,7 @@ import { expect, test } from "@playwright/test";
  * When all voters agree (losingPool == 0), there's no losing pool to
  * redistribute. Instead, the consensus reserve subsidizes the round:
  *   subsidy = 5% of totalStake (capped by reserve balance)
- *   ~89.1% → voter pool, ~10.9% → submitter reward
+ *   ~89.1% -> voter pool, ~10.9% -> content submitter reward
  *
  * This test verifies:
  * 1. Consensus reserve decreases after unanimous settlement

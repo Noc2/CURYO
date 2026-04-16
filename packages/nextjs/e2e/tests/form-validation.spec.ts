@@ -1,7 +1,7 @@
 import { expect, test } from "../fixtures/wallet";
 
 test.describe("Submit form validation", () => {
-  test("submit shows a platform validation error before submission", async ({ connectedPage: page }) => {
+  test("submit shows a category validation error before submission", async ({ connectedPage: page }) => {
     await page.goto("/submit");
     await page.waitForLoadState("domcontentloaded");
 
@@ -13,7 +13,7 @@ test.describe("Submit form validation", () => {
     await expect(submitBtn).toBeEnabled();
     await submitBtn.click();
 
-    await expect(page.getByText("Select a platform before submitting.")).toBeVisible({ timeout: 5_000 });
+    await expect(page.getByText("Select a category before submitting.")).toBeVisible({ timeout: 5_000 });
   });
 
   test("submit shows a URL validation error before submission", async ({ connectedPage: page }) => {
@@ -21,10 +21,10 @@ test.describe("Submit form validation", () => {
 
     await expect(page.getByRole("heading", { name: "Submit Content" })).toBeVisible({ timeout: 15_000 });
 
-    // Select a platform — dropdown shows category names like "AI", "Books", "Videos", etc.
-    const platformBtn = page.getByText("Select a platform...");
-    if (await platformBtn.isVisible({ timeout: 5_000 }).catch(() => false)) {
-      await platformBtn.click();
+    // Select a category.
+    const categoryBtn = page.getByText("Select a category...");
+    if (await categoryBtn.isVisible({ timeout: 5_000 }).catch(() => false)) {
+      await categoryBtn.click();
       // Click the first available option in the dropdown
       const firstOption = page.locator("[role='option'], [role='listbox'] > *").first();
       if (await firstOption.isVisible({ timeout: 3_000 }).catch(() => false)) {
@@ -50,28 +50,24 @@ test.describe("Submit form validation", () => {
     await expect(page.getByText("URL is required.")).toBeVisible({ timeout: 5_000 });
   });
 
-  test("platform dropdown shows options", async ({ connectedPage: page }) => {
+  test("category dropdown shows options", async ({ connectedPage: page }) => {
     await page.goto("/submit");
 
     await expect(page.getByRole("heading", { name: "Submit Content" })).toBeVisible({ timeout: 15_000 });
 
-    // Click platform dropdown
-    const platformBtn = page.getByText("Select a platform...");
-    if (await platformBtn.isVisible({ timeout: 5_000 }).catch(() => false)) {
-      await platformBtn.click();
+    // Click category dropdown
+    const categoryBtn = page.getByText("Select a category...");
+    if (await categoryBtn.isVisible({ timeout: 5_000 }).catch(() => false)) {
+      await categoryBtn.click();
 
-      // The dropdown should show category-based platform names.
-      // From the screenshot: AI, Books, Crypto Tokens, Games, Movies, Videos, etc.
-      // Just verify that at least 3 options are visible in the dropdown
-      const searchInput = page.getByPlaceholder("Search platforms...");
+      const searchInput = page.getByPlaceholder("Search categories...");
       await expect(searchInput).toBeVisible({ timeout: 3_000 });
 
-      // Count visible options by looking for text items below the search
-      // The dropdown contains items with category name + domain
+      // Just verify that at least 3 category buttons are visible in the dropdown.
       const options = page
-        .locator(".absolute, [data-radix-popper-content-wrapper]")
-        .locator("div")
-        .filter({ hasText: /\.(com|co|org|io)/ });
+        .locator(".absolute")
+        .locator("button")
+        .filter({ hasText: /Products|Media|General|Apps/ });
       const optionCount = await options.count();
       expect(optionCount).toBeGreaterThanOrEqual(3);
 
@@ -84,12 +80,11 @@ test.describe("Submit form validation", () => {
 
     await expect(page.getByRole("heading", { name: "Submit Content" })).toBeVisible({ timeout: 15_000 });
 
-    // Select a platform
-    const platformBtn = page.getByText("Select a platform...");
-    if (await platformBtn.isVisible({ timeout: 5_000 }).catch(() => false)) {
-      await platformBtn.click();
-      // Click first option with a domain
-      const option = page.getByText(/huggingface|openlibrary|coingecko/i).first();
+    // Select a category.
+    const categoryBtn = page.getByText("Select a category...");
+    if (await categoryBtn.isVisible({ timeout: 5_000 }).catch(() => false)) {
+      await categoryBtn.click();
+      const option = page.getByText(/Media|General|Apps/i).first();
       if (await option.isVisible({ timeout: 3_000 }).catch(() => false)) {
         await option.click();
       }

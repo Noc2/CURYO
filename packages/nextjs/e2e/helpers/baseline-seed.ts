@@ -12,7 +12,7 @@ const CATEGORY_REGISTRY_ABI = [
   {
     name: "getCategoryByDomain",
     type: "function",
-    inputs: [{ name: "domain", type: "string" }],
+    inputs: [{ name: "slug", type: "string" }],
     outputs: [
       {
         name: "",
@@ -33,10 +33,10 @@ const CATEGORY_REGISTRY_ABI = [
     stateMutability: "view",
   },
 ] as const;
-const categoryIdByDomain = new Map<string, bigint>();
+const categoryIdBySlug = new Map<string, bigint>();
 
-async function resolveCategoryIdByDomain(domain: string): Promise<bigint> {
-  const cached = categoryIdByDomain.get(domain);
+async function resolveCategoryIdBySlug(slug: string): Promise<bigint> {
+  const cached = categoryIdBySlug.get(slug);
   if (cached !== undefined) return cached;
 
   const [{ createPublicClient, http }, { foundry }] = await Promise.all([import("viem"), import("viem/chains")]);
@@ -45,10 +45,10 @@ async function resolveCategoryIdByDomain(domain: string): Promise<bigint> {
     address: CONTRACT_ADDRESSES.CategoryRegistry as `0x${string}`,
     abi: CATEGORY_REGISTRY_ABI,
     functionName: "getCategoryByDomain",
-    args: [domain],
+    args: [slug],
   });
   const categoryId = "id" in category ? category.id : category[0];
-  categoryIdByDomain.set(domain, categoryId);
+  categoryIdBySlug.set(slug, categoryId);
   return categoryId;
 }
 
@@ -59,7 +59,7 @@ const BASELINE_CONTENT = [
     description:
       "Voters should judge whether the plain-language summary explains refunds, timelines, and exceptions clearly enough for a first-time buyer.",
     tags: "Policy,Clarity,Trust",
-    categoryDomain: "safety.curyo.xyz",
+    categorySlug: "trust",
     submitter: ANVIL_ACCOUNTS.account2.address,
   },
   {
@@ -68,7 +68,7 @@ const BASELINE_CONTENT = [
     description:
       "Rate the image and context as a calm workspace for focused technical writing, not as a luxury interior shot.",
     tags: "Photography,Usefulness,Atmosphere",
-    categoryDomain: "design.curyo.xyz",
+    categorySlug: "design",
     submitter: ANVIL_ACCOUNTS.account3.address,
   },
   {
@@ -77,7 +77,7 @@ const BASELINE_CONTENT = [
     description:
       "Judge whether a new developer could complete the first request without missing setup, authentication, or error handling steps.",
     tags: "Getting Started,Readability,Examples",
-    categoryDomain: "docs.curyo.xyz",
+    categorySlug: "developer-docs",
     submitter: ANVIL_ACCOUNTS.account4.address,
   },
   {
@@ -86,7 +86,7 @@ const BASELINE_CONTENT = [
     description:
       "Focus on whether the label hierarchy, contrast, and key details would still be clear in a small shopping card.",
     tags: "Design,Usability,Quality",
-    categoryDomain: "products.curyo.xyz",
+    categorySlug: "products",
     submitter: ANVIL_ACCOUNTS.account5.address,
   },
   {
@@ -95,7 +95,7 @@ const BASELINE_CONTENT = [
     description:
       "The review mentions noise, service speed, seating, and price. Vote on whether it is specific enough to guide a nearby visitor.",
     tags: "Local Tips,Service,Value",
-    categoryDomain: "local.curyo.xyz",
+    categorySlug: "local-places",
     submitter: ANVIL_ACCOUNTS.account6.address,
   },
   {
@@ -104,16 +104,16 @@ const BASELINE_CONTENT = [
     description:
       "Use the visible room condition and the written context to judge whether the listing earns a higher community rating.",
     tags: "Hotels,Cleanliness,Comfort",
-    categoryDomain: "travel.curyo.xyz",
+    categorySlug: "travel",
     submitter: ANVIL_ACCOUNTS.account7.address,
   },
   {
-    url: "",
-    title: "Is this AI answer careful enough to publish?",
+    url: "https://www.youtube.com/watch?v=jNQXAC9IVRw",
+    title: "Is this short video clear enough to share?",
     description:
-      "The answer gives a confident summary but leaves out uncertainty and source limits. Vote on helpfulness, clarity, and safety.",
-    tags: "Helpfulness,Clarity,Safety",
-    categoryDomain: "ai-answers.curyo.xyz",
+      "Judge whether the clip has enough context, pacing, and visual clarity for a viewer to understand it without extra explanation.",
+    tags: "Video,Clarity,Context",
+    categorySlug: "media",
     submitter: ANVIL_ACCOUNTS.account8.address,
   },
   {
@@ -122,7 +122,7 @@ const BASELINE_CONTENT = [
     description:
       "The flow explains wallet connection, Voter ID, and staking in one screen. Judge whether the copy reduces friction or overloads new users.",
     tags: "Onboarding,Trust,Usability",
-    categoryDomain: "apps.curyo.xyz",
+    categorySlug: "apps",
     submitter: ANVIL_ACCOUNTS.account9.address,
   },
   {
@@ -131,7 +131,7 @@ const BASELINE_CONTENT = [
     description:
       "Voters should judge hierarchy, contrast, and whether date, place, and purpose are legible at a glance.",
     tags: "Visual Design,Typography,Layout",
-    categoryDomain: "design.curyo.xyz",
+    categorySlug: "design",
     submitter: ANVIL_ACCOUNTS.account10.address,
   },
   {
@@ -140,7 +140,7 @@ const BASELINE_CONTENT = [
     description:
       "Rate whether the plan balances prep time, nutrition, cleanup, and ingredient availability for a busy household.",
     tags: "Usefulness,Clear,Worthwhile",
-    categoryDomain: "opinion.curyo.xyz",
+    categorySlug: "general",
     submitter: ANVIL_ACCOUNTS.account2.address,
   },
   {
@@ -149,16 +149,16 @@ const BASELINE_CONTENT = [
     description:
       "Judge whether the image has enough focus, contrast, and mood to support a question about human review quality.",
     tags: "Images,Art,Photography",
-    categoryDomain: "media.curyo.xyz",
+    categorySlug: "media",
     submitter: ANVIL_ACCOUNTS.account3.address,
   },
   {
-    url: "",
-    title: "Would this failed-vote message reduce support tickets?",
+    url: "https://www.youtube.com/watch?v=aqz-KE-bpKQ",
+    title: "Does this animated clip hold attention?",
     description:
-      "The message explains gas, wallet RPC issues, and retry timing. Vote on whether it is actionable without being too technical.",
-    tags: "Web Apps,Troubleshooting,Trust",
-    categoryDomain: "apps.curyo.xyz",
+      "Vote on whether the movement, pacing, and visual focus make the clip engaging enough for a general audience.",
+    tags: "Video,Animation,Engagement",
+    categorySlug: "media",
     submitter: ANVIL_ACCOUNTS.account4.address,
   },
   {
@@ -167,7 +167,7 @@ const BASELINE_CONTENT = [
     description:
       "Use the image as travel context. Vote on whether it would make a neighborhood guide feel inviting and credible.",
     tags: "Location,Photography,Solo Travel",
-    categoryDomain: "travel.curyo.xyz",
+    categorySlug: "travel",
     submitter: ANVIL_ACCOUNTS.account5.address,
   },
   {
@@ -176,7 +176,7 @@ const BASELINE_CONTENT = [
     description:
       "Review the checklist for keyboard support, focus states, text contrast, reduced motion, and mobile overflow coverage.",
     tags: "Accessibility,Quality,Testing",
-    categoryDomain: "apps.curyo.xyz",
+    categorySlug: "apps",
     submitter: ANVIL_ACCOUNTS.account6.address,
   },
   {
@@ -185,7 +185,7 @@ const BASELINE_CONTENT = [
     description:
       "Judge whether the rule tells voters when to downvote illegal, unsafe, misleading, or mismatched submissions.",
     tags: "Moderation,Policy,Risk",
-    categoryDomain: "safety.curyo.xyz",
+    categorySlug: "trust",
     submitter: ANVIL_ACCOUNTS.account7.address,
   },
   {
@@ -194,7 +194,7 @@ const BASELINE_CONTENT = [
     description:
       "Focus on scale, detail, lighting, and whether the photo helps a buyer compare the item without extra marketing claims.",
     tags: "Quality,Design,Value",
-    categoryDomain: "products.curyo.xyz",
+    categorySlug: "products",
     submitter: ANVIL_ACCOUNTS.account8.address,
   },
 ] as const;
@@ -238,7 +238,7 @@ export async function ensureBaselineSeedData(): Promise<void> {
   }
 
   for (const item of missingContent) {
-    const categoryId = await resolveCategoryIdByDomain(item.categoryDomain);
+    const categoryId = await resolveCategoryIdBySlug(item.categorySlug);
     const approved = await approveCREP(
       CONTRACT_ADDRESSES.ContentRegistry,
       SUBMIT_STAKE,

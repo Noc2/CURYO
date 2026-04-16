@@ -6,7 +6,7 @@ const CATEGORY_REGISTRY_ABI = [
   {
     name: "getCategoryByDomain",
     type: "function",
-    inputs: [{ name: "domain", type: "string" }],
+    inputs: [{ name: "slug", type: "string" }],
     outputs: [
       {
         name: "",
@@ -28,15 +28,16 @@ const CATEGORY_REGISTRY_ABI = [
   },
 ];
 
-const [, , registryAddress, domain, rpcUrl = "http://127.0.0.1:8545"] = process.argv;
+const [, , registryAddress, slug, rpcUrl = "http://127.0.0.1:8545"] =
+  process.argv;
 
 if (!isAddress(registryAddress || "")) {
   console.error("ERROR: resolveCategoryId requires a CategoryRegistry address");
   process.exit(64);
 }
 
-if (!domain) {
-  console.error("ERROR: resolveCategoryId requires a category domain");
+if (!slug) {
+  console.error("ERROR: resolveCategoryId requires a category slug");
   process.exit(64);
 }
 
@@ -50,7 +51,7 @@ try {
     address: registryAddress,
     abi: CATEGORY_REGISTRY_ABI,
     functionName: "getCategoryByDomain",
-    args: [domain],
+    args: [slug],
   });
   const categoryId = "id" in category ? category.id : category[0];
   if (categoryId === 0n) {
@@ -58,7 +59,9 @@ try {
   }
   process.stdout.write(categoryId.toString());
 } catch (error) {
-  console.error(`ERROR: Could not resolve category domain ${domain} from CategoryRegistry`);
+  console.error(
+    `ERROR: Could not resolve category slug ${slug} from CategoryRegistry`,
+  );
   if (error instanceof Error && error.shortMessage) {
     console.error(error.shortMessage);
   } else if (error instanceof Error && error.message) {

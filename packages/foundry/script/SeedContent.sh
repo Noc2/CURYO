@@ -64,7 +64,7 @@ KEYS=(
   "0xdbda1821b80551c9d65939329250298aa3472ba22feea921c0cf5d620ea67b97"  # Account 8 (reused)
 )
 
-# Example Curyo 2 questions: text-only entries use an empty URL; media-backed entries use direct image URLs.
+# Example Curyo 2 questions: text-only entries use an empty URL; media-backed entries use image or video URLs.
 # Curyo 2 default categoryIds:
 # 1=Products, 2=Local Places, 3=Travel, 4=Apps, 5=Media,
 # 6=Design, 7=AI Answers, 8=Developer Docs, 9=Trust, 10=General
@@ -75,12 +75,12 @@ URLS=(
   "https://picsum.photos/seed/curyo-product-label/1200/800.jpg"
   ""
   "https://picsum.photos/seed/curyo-hotel-room/1200/800.jpg"
-  ""
+  "https://www.youtube.com/watch?v=jNQXAC9IVRw"
   ""
   "https://picsum.photos/seed/curyo-event-poster/1200/800.jpg"
   ""
   "https://picsum.photos/seed/curyo-media-hero/1200/800.jpg"
-  ""
+  "https://www.youtube.com/watch?v=aqz-KE-bpKQ"
   "https://picsum.photos/seed/curyo-street-guide/1200/800.jpg"
   ""
   ""
@@ -94,12 +94,12 @@ TITLES=(
   "Is this product label readable on mobile?"
   "Would this cafe review help locals choose?"
   "Does this hotel room look clean and comfortable?"
-  "Is this AI answer careful enough to publish?"
+  "Is this short video clear enough to share?"
   "Should this app onboarding copy be shorter?"
   "Does this poster make the event easy to grasp?"
   "Is this dinner plan practical for a weeknight?"
   "Does this image work as a hero visual?"
-  "Would this failed-vote message reduce support tickets?"
+  "Does this animated clip hold attention?"
   "Does this street scene feel welcoming?"
   "Is this accessibility checklist launch ready?"
   "Does this moderation rule set clear voter expectations?"
@@ -113,12 +113,12 @@ DESCRIPTIONS=(
   "Focus on whether the label hierarchy, contrast, and key details would still be clear in a small shopping card."
   "The review mentions noise, service speed, seating, and price. Vote on whether it is specific enough to guide a nearby visitor."
   "Use the visible room condition and the written context to judge whether the listing earns a higher community rating."
-  "The answer gives a confident summary but leaves out uncertainty and source limits. Vote on helpfulness, clarity, and safety."
+  "Judge whether the clip has enough context, pacing, and visual clarity for a viewer to understand it without extra explanation."
   "The flow explains wallet connection, Voter ID, and staking in one screen. Judge whether the copy reduces friction or overloads new users."
   "Voters should judge hierarchy, contrast, and whether date, place, and purpose are legible at a glance."
   "Rate whether the plan balances prep time, nutrition, cleanup, and ingredient availability for a busy household."
   "Judge whether the image has enough focus, contrast, and mood to support a question about human review quality."
-  "The message explains gas, wallet RPC issues, and retry timing. Vote on whether it is actionable without being too technical."
+  "Vote on whether the movement, pacing, and visual focus make the clip engaging enough for a general audience."
   "Use the image as travel context. Vote on whether it would make a neighborhood guide feel inviting and credible."
   "Review the checklist for keyboard support, focus states, text contrast, reduced motion, and mobile overflow coverage."
   "Judge whether the rule tells voters when to downvote illegal, unsafe, misleading, or mismatched submissions."
@@ -132,54 +132,54 @@ TAGS=(
   "Design,Usability,Quality"
   "Local Tips,Service,Value"
   "Hotels,Cleanliness,Comfort"
-  "Helpfulness,Clarity,Safety"
+  "Video,Clarity,Context"
   "Onboarding,Trust,Usability"
   "Visual Design,Typography,Layout"
   "Usefulness,Clear,Worthwhile"
   "Images,Art,Photography"
-  "Web Apps,Troubleshooting,Trust"
+  "Video,Animation,Engagement"
   "Location,Photography,Solo Travel"
   "Accessibility,Quality,Testing"
   "Moderation,Policy,Risk"
   "Quality,Design,Value"
 )
 
-# Stable category domains for each seeded question. The deployed category names/ids may differ
-# between local branches, so resolve IDs from domains instead of assuming deploy order.
-CATEGORY_DOMAINS=(
-  "safety.curyo.xyz"      # Trust / Trust and Safety
-  "design.curyo.xyz"      # Design / Design and Aesthetics
-  "docs.curyo.xyz"        # Developer Docs / Documentation and Developer Help
-  "products.curyo.xyz"    # Products
-  "local.curyo.xyz"       # Local Places / Restaurants and Local Places
-  "travel.curyo.xyz"      # Travel / Hotels and Travel
-  "ai-answers.curyo.xyz"  # AI Answers
-  "apps.curyo.xyz"        # Apps / Apps and Websites
-  "design.curyo.xyz"      # Design / Design and Aesthetics
-  "opinion.curyo.xyz"     # General / General Opinion
-  "media.curyo.xyz"       # Media / Media and Images
-  "apps.curyo.xyz"        # Apps / Apps and Websites
-  "travel.curyo.xyz"      # Travel / Hotels and Travel
-  "apps.curyo.xyz"        # Apps / Apps and Websites
-  "safety.curyo.xyz"      # Trust / Trust and Safety
-  "products.curyo.xyz"    # Products
+# Stable category slugs for each seeded question. The deployed category names/ids may differ
+# between local branches, so resolve IDs from slugs instead of assuming deploy order.
+CATEGORY_SLUGS=(
+  "trust"           # Trust
+  "design"          # Design
+  "developer-docs"  # Developer Docs
+  "products"        # Products
+  "local-places"    # Local Places
+  "travel"          # Travel
+  "media"           # Media
+  "apps"            # Apps
+  "design"          # Design
+  "general"         # General
+  "media"           # Media
+  "media"           # Media
+  "travel"          # Travel
+  "apps"            # Apps
+  "trust"           # Trust
+  "products"        # Products
 )
 
 resolve_category_id() {
-  local domain="$1"
+  local slug="$1"
   local category_id
-  if ! category_id=$(node "$CATEGORY_ID_RESOLVER" "$CATEGORY_REGISTRY" "$domain" "$RPC"); then
+  if ! category_id=$(node "$CATEGORY_ID_RESOLVER" "$CATEGORY_REGISTRY" "$slug" "$RPC"); then
     exit 1
   fi
   printf "%s" "$category_id"
 }
 
 CATEGORY_IDS=()
-for CATEGORY_DOMAIN in "${CATEGORY_DOMAINS[@]}"; do
-  CATEGORY_IDS+=("$(resolve_category_id "$CATEGORY_DOMAIN")")
+for CATEGORY_SLUG in "${CATEGORY_SLUGS[@]}"; do
+  CATEGORY_IDS+=("$(resolve_category_id "$CATEGORY_SLUG")")
 done
 
-echo "=== Seeding example text and image questions ==="
+echo "=== Seeding example text, image, and video questions ==="
 echo "(Test accounts were pre-funded with cREP during deployment)"
 echo ""
 
@@ -187,7 +187,7 @@ TOTAL_ITEMS="${#URLS[@]}"
 if [ "$TOTAL_ITEMS" -ne "${#TITLES[@]}" ] ||
   [ "$TOTAL_ITEMS" -ne "${#DESCRIPTIONS[@]}" ] ||
   [ "$TOTAL_ITEMS" -ne "${#TAGS[@]}" ] ||
-  [ "$TOTAL_ITEMS" -ne "${#CATEGORY_DOMAINS[@]}" ] ||
+  [ "$TOTAL_ITEMS" -ne "${#CATEGORY_SLUGS[@]}" ] ||
   [ "$TOTAL_ITEMS" -ne "${#CATEGORY_IDS[@]}" ]; then
   echo "ERROR: Seed content arrays must have the same length"
   exit 1
@@ -205,7 +205,14 @@ for ((i = 0; i < TOTAL_ITEMS; i++)); do
   DESCRIPTION="${DESCRIPTIONS[$i]}"
   TAG="${TAGS[$i]}"
   CATEGORY_ID="${CATEGORY_IDS[$i]}"
-  CATEGORY_DOMAIN="${CATEGORY_DOMAINS[$i]}"
+  CATEGORY_SLUG="${CATEGORY_SLUGS[$i]}"
+  MEDIA_KIND="text-only"
+  if [ -n "$URL" ]; then
+    case "$URL" in
+      *youtube.com*|*youtu.be*) MEDIA_KIND="video" ;;
+      *) MEDIA_KIND="image" ;;
+    esac
+  fi
 
   ADDR=$(cast wallet address "$KEY")
   echo "[$((i+1))/$TOTAL_ITEMS] Account: $ADDR"
@@ -234,9 +241,9 @@ for ((i = 0; i < TOTAL_ITEMS; i++)); do
 
   # 3. Reveal the submission with the same deterministic salt used for the reservation
   if [ -n "$URL" ]; then
-    echo "  Submitting question: $TITLE (image: $URL, category: $CATEGORY_DOMAIN -> $CATEGORY_ID)"
+    echo "  Submitting question: $TITLE ($MEDIA_KIND: $URL, category: $CATEGORY_SLUG -> $CATEGORY_ID)"
   else
-    echo "  Submitting question: $TITLE (text-only, category: $CATEGORY_DOMAIN -> $CATEGORY_ID)"
+    echo "  Submitting question: $TITLE (text-only, category: $CATEGORY_SLUG -> $CATEGORY_ID)"
   fi
   cast send "$REGISTRY" "submitQuestion(string,string,string,string,uint256,bytes32)" \
     "$URL" "$TITLE" "$DESCRIPTION" "$TAG" "$CATEGORY_ID" "0x$SALT" \

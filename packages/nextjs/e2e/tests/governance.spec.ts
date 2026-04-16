@@ -86,8 +86,8 @@ test.describe("Governance page", () => {
     await expect(governanceTabBtn).toBeVisible({ timeout: 15_000 });
     await governanceTabBtn.click();
 
-    // Governance tab shows treasury, proposal, platform, and related governance surfaces.
-    const govContent = page.locator("main").getByText(/treasury|proposal|platform|delegate|token/i);
+    // Governance tab shows treasury, proposal, delegation, and token surfaces.
+    const govContent = page.locator("main").getByText(/treasury|proposal|delegate|token/i);
     await expect(govContent.first()).toBeVisible({ timeout: 15_000 });
   });
 });

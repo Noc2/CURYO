@@ -10,11 +10,11 @@ import { ANVIL_ACCOUNTS, DEPLOYER } from "../helpers/anvil-accounts";
 import { newE2EContext } from "../helpers/browser-context";
 import { CONTRACT_ADDRESSES } from "../helpers/contracts";
 import { waitForSettlementIndexed } from "../helpers/keeper";
+import { getContentById, getContentList } from "../helpers/ponder-api";
 import { PONDER_URL } from "../helpers/ponder-url";
+import { voteOnSpecificContent } from "../helpers/vote-helpers";
 import { gotoWithRetry } from "../helpers/wait-helpers";
 import { setupWallet } from "../helpers/wallet-session";
-import { getContentById, getContentList } from "../helpers/ponder-api";
-import { voteOnSpecificContent } from "../helpers/vote-helpers";
 import { expect, test } from "@playwright/test";
 
 /**
@@ -60,20 +60,20 @@ test.describe("Tied round lifecycle", () => {
     await gotoWithRetry(page, "/submit", { ensureWalletConnected: true });
     await expect(page.getByRole("heading", { name: "Submit Content" })).toBeVisible({ timeout: 15_000 });
 
-    // Select YouTube platform — handle "No platforms available" if categories not loaded
-    const platformBtn = page.getByText("Select a platform...");
-    const noPlatforms = page.getByText("No platforms available");
-    await expect(platformBtn.or(noPlatforms)).toBeVisible({ timeout: 10_000 });
+    // Select Media category — handle "No categories available" if categories are not loaded.
+    const categoryBtn = page.getByText("Select a category...");
+    const noCategories = page.getByText("No categories available");
+    await expect(categoryBtn.or(noCategories)).toBeVisible({ timeout: 10_000 });
 
-    const hasPlatforms = await platformBtn.isVisible().catch(() => false);
-    if (!hasPlatforms) {
+    const hasCategories = await categoryBtn.isVisible().catch(() => false);
+    if (!hasCategories) {
       await context.close();
       test.skip(true, "Categories not loaded — cannot submit content for tie test");
       return;
     }
 
-    await platformBtn.click();
-    await page.getByText("YouTube").first().click();
+    await categoryBtn.click();
+    await page.getByText("Media").first().click();
 
     // Enter a unique URL
     const uniqueId = Date.now();

@@ -117,9 +117,7 @@ export async function getVotes(
 /**
  * Fetch global stats.
  */
-export async function getStats(
-  baseURL = PONDER_URL,
-): Promise<{
+export async function getStats(baseURL = PONDER_URL): Promise<{
   totalContent: number;
   totalVotes: number;
   totalRoundsSettled: number;
@@ -148,23 +146,14 @@ export async function ponderGet(path: string, baseURL = PONDER_URL): Promise<any
 export type CategoryItem = {
   id: string;
   name: string;
-  domain: string;
-  status: number; // 0=Pending, 1=Approved, 2=Rejected
-  submitter: string;
-  proposalId: string | null;
+  domain: string; // legacy API field name; stores the seeded category slug
   totalVotes: number;
   totalContent: number;
   createdAt: string;
 };
 
-/**
- * Fetch categories, optionally filtered by status.
- * Status: 0=Pending, 1=Approved (default), 2=Rejected, "all" for all.
- */
-export async function getCategories(status?: string, baseURL = PONDER_URL): Promise<{ items: CategoryItem[] }> {
-  const params = new URLSearchParams();
-  if (status !== undefined) params.set("status", status);
-  const res = await fetchWithRetry(`${baseURL}/categories?${params}`);
+export async function getCategories(baseURL = PONDER_URL): Promise<{ items: CategoryItem[] }> {
+  const res = await fetchWithRetry(`${baseURL}/categories`);
   if (!res.ok) throw new Error(`GET /categories returned ${res.status}`);
   return res.json();
 }
