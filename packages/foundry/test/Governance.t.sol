@@ -1,15 +1,14 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.20;
 
-import { Test } from "forge-std/Test.sol";
-import { TimelockController } from "@openzeppelin/contracts/governance/TimelockController.sol";
-import { IVotes } from "@openzeppelin/contracts/governance/utils/IVotes.sol";
-import { IGovernor } from "@openzeppelin/contracts/governance/IGovernor.sol";
+import {Test} from "forge-std/Test.sol";
+import {TimelockController} from "@openzeppelin/contracts/governance/TimelockController.sol";
+import {IVotes} from "@openzeppelin/contracts/governance/utils/IVotes.sol";
+import {IGovernor} from "@openzeppelin/contracts/governance/IGovernor.sol";
 
-import { CuryoReputation } from "../contracts/CuryoReputation.sol";
-import { CuryoGovernor } from "../contracts/governance/CuryoGovernor.sol";
-import { VoterIdNFT } from "../contracts/VoterIdNFT.sol";
-import { MockCategoryRegistry } from "../contracts/mocks/MockCategoryRegistry.sol";
+import {CuryoReputation} from "../contracts/CuryoReputation.sol";
+import {CuryoGovernor} from "../contracts/governance/CuryoGovernor.sol";
+import {VoterIdNFT} from "../contracts/VoterIdNFT.sol";
 
 contract GovernanceTest is Test {
     CuryoReputation public token;
@@ -29,7 +28,6 @@ contract GovernanceTest is Test {
     address public mockTreasury = address(14);
     address public mockContentRegistry = address(15);
     address public mockFrontendRegistry = address(16);
-    MockCategoryRegistry public mockCategoryRegistry;
 
     // Protocol-controlled balances excluded from quorum
     uint256 public constant FAUCET_BALANCE = 30_000_000 * 1e6;
@@ -39,13 +37,11 @@ contract GovernanceTest is Test {
     uint256 public constant TREASURY_BALANCE = 10_000_000 * 1e6;
     uint256 public constant CONTENT_REGISTRY_BALANCE = 20_000 * 1e6;
     uint256 public constant FRONTEND_REGISTRY_BALANCE = 10_000 * 1e6;
-    uint256 public constant CATEGORY_REGISTRY_BALANCE = 500 * 1e6;
 
     // Voter balances — circulating supply is 6M after excluded protocol balances are removed.
     uint256 public constant VOTER_BALANCE = 2_000_000 * 1e6; // 2M tokens each
     uint256 public constant TOTAL_MINTED = FAUCET_BALANCE + PARTICIPATION_BALANCE + REWARD_BALANCE + ENGINE_BALANCE
-        + TREASURY_BALANCE + CONTENT_REGISTRY_BALANCE + FRONTEND_REGISTRY_BALANCE + CATEGORY_REGISTRY_BALANCE
-        + 6_000_000 * 1e6;
+        + TREASURY_BALANCE + CONTENT_REGISTRY_BALANCE + FRONTEND_REGISTRY_BALANCE + 6_000_000 * 1e6;
 
     function setUp() public {
         vm.startPrank(deployer);
@@ -66,11 +62,6 @@ contract GovernanceTest is Test {
 
         // Deploy Governor with cREP directly (no wrapper needed)
         governor = new CuryoGovernor(IVotes(address(token)), timelock);
-        mockCategoryRegistry = new MockCategoryRegistry();
-        mockCategoryRegistry.setDomain(7, "pending-category.test");
-        mockCategoryRegistry.setCreatedBlock(7, block.number);
-        mockCategoryRegistry.setApprovalDigest(7, keccak256("pending-category-7"));
-        governor.setCategoryRegistry(address(mockCategoryRegistry));
 
         // Initialize protocol-controlled holders excluded from dynamic quorum
         governor.initializePools(_excludedHolders());
@@ -90,7 +81,6 @@ contract GovernanceTest is Test {
         token.mint(mockTreasury, TREASURY_BALANCE);
         token.mint(mockContentRegistry, CONTENT_REGISTRY_BALANCE);
         token.mint(mockFrontendRegistry, FRONTEND_REGISTRY_BALANCE);
-        token.mint(address(mockCategoryRegistry), CATEGORY_REGISTRY_BALANCE);
 
         // Mint tokens to voters (circulating supply)
         token.mint(voter1, VOTER_BALANCE);
@@ -255,10 +245,6 @@ contract GovernanceTest is Test {
         assertEq(governor.proposalThreshold(), 10_000e6);
     }
 
-    function test_CategoryProposalThreshold() public view {
-        assertEq(governor.categoryProposalThreshold(), 500e6);
-    }
-
     function test_GovernorVotingPeriod() public view {
         // Voting period should be ~1 week (50400 blocks)
         assertEq(governor.votingPeriod(), 50400);
@@ -274,8 +260,7 @@ contract GovernanceTest is Test {
         vm.roll(block.number + 1);
 
         uint256 circulatingSupply = TOTAL_MINTED - FAUCET_BALANCE - PARTICIPATION_BALANCE - REWARD_BALANCE
-            - ENGINE_BALANCE - TREASURY_BALANCE - CONTENT_REGISTRY_BALANCE - FRONTEND_REGISTRY_BALANCE
-            - CATEGORY_REGISTRY_BALANCE;
+            - ENGINE_BALANCE - TREASURY_BALANCE - CONTENT_REGISTRY_BALANCE - FRONTEND_REGISTRY_BALANCE;
         uint256 expectedDynamicQuorum = (circulatingSupply * 4) / 100; // 4% of 6M = 240K
         assertEq(expectedDynamicQuorum, 240_000 * 1e6);
         assertEq(governor.quorum(block.number - 1), expectedDynamicQuorum);
@@ -316,53 +301,6 @@ contract GovernanceTest is Test {
 
         vm.roll(block.number + 1);
         assertEq(smallGovernor.quorum(block.number - 1), 100_000 * 1e6); // bootstrap floor
-    }
-
-    function test_CategoryApprovalProposal_UsesLowerThresholdAndLocksThreshold() public {
-        vm.startPrank(deployer);
-        CuryoReputation smallToken = new CuryoReputation(deployer, deployer);
-        smallToken.grantRole(smallToken.MINTER_ROLE(), deployer);
-
-        TimelockController smallTimelock = new TimelockController(2 days, new address[](0), new address[](0), deployer);
-        CuryoGovernor smallGovernor = new CuryoGovernor(IVotes(address(smallToken)), smallTimelock);
-        smallGovernor.setCategoryRegistry(address(mockCategoryRegistry));
-
-        address[] memory holders = new address[](1);
-        holders[0] = address(100);
-        smallGovernor.initializePools(holders);
-        smallToken.setGovernor(address(smallGovernor));
-        smallToken.mint(address(200), 500e6);
-        vm.stopPrank();
-
-        vm.roll(block.number + 1);
-
-        address[] memory targets = new address[](1);
-        targets[0] = address(smallTimelock);
-        uint256[] memory values = new uint256[](1);
-        bytes[] memory calldatas = new bytes[](1);
-
-        vm.prank(address(200));
-        vm.expectRevert();
-        smallGovernor.propose(targets, values, calldatas, "Generic proposal");
-
-        vm.prank(address(200));
-        uint256 proposalId = smallGovernor.proposeCategoryApproval(7);
-
-        assertTrue(proposalId != 0);
-        assertEq(uint256(smallGovernor.state(proposalId)), uint256(IGovernor.ProposalState.Pending));
-        assertEq(smallToken.getLockedBalance(address(200)), 500e6);
-    }
-
-    function test_CategoryApprovalProposal_RevertsInSubmissionBlock() public {
-        vm.roll(block.number + 1);
-
-        mockCategoryRegistry.setDomain(8, "same-block-category.test");
-        mockCategoryRegistry.setCreatedBlock(8, block.number);
-        mockCategoryRegistry.setApprovalDigest(8, keccak256("same-block-category-8"));
-
-        vm.prank(voter1);
-        vm.expectRevert("Category proposal too early");
-        governor.proposeCategoryApproval(8);
     }
 
     function test_GovernorQuorumGrowsAsPoolsDrain() public {
@@ -480,14 +418,12 @@ contract GovernanceTest is Test {
         holders[1] = address(101);
         holders[2] = address(102);
 
-        address[] memory targets = new address[](2);
+        address[] memory targets = new address[](1);
         targets[0] = address(freshGovernor);
-        targets[1] = address(freshGovernor);
 
-        uint256[] memory values = new uint256[](2);
-        bytes[] memory calldatas = new bytes[](2);
+        uint256[] memory values = new uint256[](1);
+        bytes[] memory calldatas = new bytes[](1);
         calldatas[0] = abi.encodeCall(CuryoGovernor.initializePools, (holders));
-        calldatas[1] = abi.encodeCall(CuryoGovernor.setCategoryRegistry, (address(mockCategoryRegistry)));
 
         string memory description = "Recover bootstrap";
         vm.prank(voter1);
@@ -509,7 +445,6 @@ contract GovernanceTest is Test {
         freshGovernor.execute(targets, values, calldatas, descriptionHash);
 
         assertTrue(freshGovernor.poolsInitialized());
-        assertEq(freshGovernor.categoryRegistry(), address(mockCategoryRegistry));
         assertTrue(freshGovernor.isExcludedHolder(address(100)));
         assertTrue(freshGovernor.isExcludedHolder(address(101)));
         assertTrue(freshGovernor.isExcludedHolder(address(102)));
@@ -517,7 +452,7 @@ contract GovernanceTest is Test {
 
     function test_GovernorGetExcludedHolders() public view {
         address[] memory holders = governor.getExcludedHolders();
-        assertEq(holders.length, 8);
+        assertEq(holders.length, 7);
         assertEq(holders[0], mockFaucet);
         assertEq(holders[1], mockParticipationPool);
         assertEq(holders[2], mockRewardDistributor);
@@ -525,7 +460,6 @@ contract GovernanceTest is Test {
         assertEq(holders[4], mockTreasury);
         assertEq(holders[5], mockContentRegistry);
         assertEq(holders[6], mockFrontendRegistry);
-        assertEq(holders[7], address(mockCategoryRegistry));
     }
 
     function test_GovernorExcludedHolderCannotPropose() public {
@@ -561,16 +495,8 @@ contract GovernanceTest is Test {
         governor.castVote(proposalId, 1);
     }
 
-    function test_GovernorExcludedHolderCannotProposeCategoryApproval() public {
-        vm.roll(block.number + 1);
-
-        vm.prank(mockTreasury);
-        vm.expectRevert(abi.encodeWithSelector(CuryoGovernor.ExcludedHolderCannotGovern.selector, mockTreasury));
-        governor.proposeCategoryApproval(7);
-    }
-
     function test_GovernorRejectsLegacyExcludedHolderReplacementSelector() public {
-        address replacement = address(new MockCategoryRegistry());
+        address replacement = address(99);
 
         (bool success,) = address(governor)
             .call(abi.encodeWithSignature("replaceExcludedHolder(address,address)", mockFaucet, replacement));
@@ -582,12 +508,11 @@ contract GovernanceTest is Test {
 
     function test_GovernorExcludedHoldersRemainFixedAcrossGovernanceActions() public {
         address[] memory beforeHolders = governor.getExcludedHolders();
-        address replacementCategoryRegistry = address(new MockCategoryRegistry());
 
         _executeSingleCallProposal(
             address(governor),
-            abi.encodeCall(CuryoGovernor.setCategoryRegistry, (replacementCategoryRegistry)),
-            "Update category registry",
+            abi.encodeWithSignature("setProposalThreshold(uint256)", 10_001e6),
+            "Update proposal threshold",
             false
         );
 
@@ -617,7 +542,7 @@ contract GovernanceTest is Test {
     }
 
     function _excludedHolders() internal view returns (address[] memory holders) {
-        holders = new address[](8);
+        holders = new address[](7);
         holders[0] = mockFaucet;
         holders[1] = mockParticipationPool;
         holders[2] = mockRewardDistributor;
@@ -625,7 +550,6 @@ contract GovernanceTest is Test {
         holders[4] = mockTreasury;
         holders[5] = mockContentRegistry;
         holders[6] = mockFrontendRegistry;
-        holders[7] = address(mockCategoryRegistry);
     }
 
     function _executeSingleCallProposal(

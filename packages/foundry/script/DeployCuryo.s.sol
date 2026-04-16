@@ -1,30 +1,30 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.20;
 
-import { ScaffoldETHDeploy } from "./DeployHelpers.s.sol";
-import { console } from "forge-std/console.sol";
-import { TransparentUpgradeableProxy } from "@openzeppelin/contracts/proxy/transparent/TransparentUpgradeableProxy.sol";
-import { ProxyAdmin } from "@openzeppelin/contracts/proxy/transparent/ProxyAdmin.sol";
-import { IAccessControl } from "@openzeppelin/contracts/access/IAccessControl.sol";
-import { TimelockController } from "@openzeppelin/contracts/governance/TimelockController.sol";
-import { IVotes } from "@openzeppelin/contracts/governance/utils/IVotes.sol";
-import { CuryoReputation } from "../contracts/CuryoReputation.sol";
-import { ContentRegistry } from "../contracts/ContentRegistry.sol";
-import { RoundVotingEngine } from "../contracts/RoundVotingEngine.sol";
-import { RoundRewardDistributor } from "../contracts/RoundRewardDistributor.sol";
-import { FrontendRegistry } from "../contracts/FrontendRegistry.sol";
-import { CategoryRegistry } from "../contracts/CategoryRegistry.sol";
-import { ProfileRegistry } from "../contracts/ProfileRegistry.sol";
-import { ProtocolConfig } from "../contracts/ProtocolConfig.sol";
-import { QuestionRewardPoolEscrow } from "../contracts/QuestionRewardPoolEscrow.sol";
-import { VoterIdNFT } from "../contracts/VoterIdNFT.sol";
-import { CuryoGovernor } from "../contracts/governance/CuryoGovernor.sol";
-import { ParticipationPool } from "../contracts/ParticipationPool.sol";
-import { HumanFaucet } from "../contracts/HumanFaucet.sol";
-import { MockERC20 } from "../contracts/mocks/MockERC20.sol";
-import { MockIdentityVerificationHub } from "../contracts/mocks/MockIdentityVerificationHub.sol";
-import { IIdentityVerificationHubV2 } from "@selfxyz/contracts/contracts/interfaces/IIdentityVerificationHubV2.sol";
-import { SelfStructs } from "@selfxyz/contracts/contracts/libraries/SelfStructs.sol";
+import {ScaffoldETHDeploy} from "./DeployHelpers.s.sol";
+import {console} from "forge-std/console.sol";
+import {TransparentUpgradeableProxy} from "@openzeppelin/contracts/proxy/transparent/TransparentUpgradeableProxy.sol";
+import {ProxyAdmin} from "@openzeppelin/contracts/proxy/transparent/ProxyAdmin.sol";
+import {IAccessControl} from "@openzeppelin/contracts/access/IAccessControl.sol";
+import {TimelockController} from "@openzeppelin/contracts/governance/TimelockController.sol";
+import {IVotes} from "@openzeppelin/contracts/governance/utils/IVotes.sol";
+import {CuryoReputation} from "../contracts/CuryoReputation.sol";
+import {ContentRegistry} from "../contracts/ContentRegistry.sol";
+import {RoundVotingEngine} from "../contracts/RoundVotingEngine.sol";
+import {RoundRewardDistributor} from "../contracts/RoundRewardDistributor.sol";
+import {FrontendRegistry} from "../contracts/FrontendRegistry.sol";
+import {CategoryRegistry} from "../contracts/CategoryRegistry.sol";
+import {ProfileRegistry} from "../contracts/ProfileRegistry.sol";
+import {ProtocolConfig} from "../contracts/ProtocolConfig.sol";
+import {QuestionRewardPoolEscrow} from "../contracts/QuestionRewardPoolEscrow.sol";
+import {VoterIdNFT} from "../contracts/VoterIdNFT.sol";
+import {CuryoGovernor} from "../contracts/governance/CuryoGovernor.sol";
+import {ParticipationPool} from "../contracts/ParticipationPool.sol";
+import {HumanFaucet} from "../contracts/HumanFaucet.sol";
+import {MockERC20} from "../contracts/mocks/MockERC20.sol";
+import {MockIdentityVerificationHub} from "../contracts/mocks/MockIdentityVerificationHub.sol";
+import {IIdentityVerificationHubV2} from "@selfxyz/contracts/contracts/interfaces/IIdentityVerificationHubV2.sol";
+import {SelfStructs} from "@selfxyz/contracts/contracts/libraries/SelfStructs.sol";
 
 /// @notice Deploy script for all Curyo contracts with transparent proxies.
 /// @dev All protocol operations use cREP token only (no stablecoins).
@@ -184,16 +184,7 @@ contract DeployCuryo is ScaffoldETHDeploy {
         RoundRewardDistributor rewardDistributor = RoundRewardDistributor(address(rewardDistributorProxy));
 
         // 6. Deploy CategoryRegistry (non-upgradeable)
-        CategoryRegistry categoryRegistry = new CategoryRegistry(
-            deployer,
-            address(crepToken),
-            governorAddr,
-            governance, // timelock as governance
-            address(votingEngine)
-        );
-        if (!isLocalDev) {
-            CuryoGovernor(payable(governorAddr)).setCategoryRegistry(address(categoryRegistry));
-        }
+        CategoryRegistry categoryRegistry = new CategoryRegistry(deployer, governance);
 
         // 7. Deploy VoterIdNFT (soulbound identity for verified humans)
         VoterIdNFT voterIdNFT = new VoterIdNFT(deployer, governance);
@@ -233,7 +224,6 @@ contract DeployCuryo is ScaffoldETHDeploy {
         // Wire VoterIdNFT to all contracts
         ProtocolConfig(address(votingEngine.protocolConfig())).setVoterIdNFT(address(voterIdNFT));
         registry.setVoterIdNFT(address(voterIdNFT));
-        categoryRegistry.setVoterIdNFT(address(voterIdNFT));
         frontendRegistry.setVoterIdNFT(address(voterIdNFT));
         profileRegistry.setVoterIdNFT(address(voterIdNFT));
 
@@ -352,8 +342,7 @@ contract DeployCuryo is ScaffoldETHDeploy {
                 address(votingEngine),
                 governance,
                 address(registry),
-                address(frontendRegistry),
-                address(categoryRegistry)
+                address(frontendRegistry)
             );
             CuryoGovernor(payable(governorAddr)).initializePools(excludedHolders);
             console.log("Governor excluded holders initialized for dynamic quorum");
@@ -824,7 +813,6 @@ contract DeployCuryo is ScaffoldETHDeploy {
         _require(address(registry.voterIdNFT()) == address(voterIdNFT), "ContentRegistry voterIdNFT");
         _require(registry.treasury() == governance, "ContentRegistry treasury");
         _require(registry.bonusPool() == governance, "ContentRegistry bonus pool");
-        _require(address(categoryRegistry.voterIdNFT()) == address(voterIdNFT), "CategoryRegistry voterIdNFT");
         _require(address(frontendRegistry.voterIdNFT()) == address(voterIdNFT), "FrontendRegistry voterIdNFT");
         _require(address(profileRegistry.voterIdNFT()) == address(voterIdNFT), "ProfileRegistry voterIdNFT");
         _require(
@@ -848,7 +836,6 @@ contract DeployCuryo is ScaffoldETHDeploy {
 
         _require(governorAddr != address(0), "Governor deployed");
         CuryoGovernor governor = CuryoGovernor(payable(governorAddr));
-        _require(governor.categoryRegistry() == address(categoryRegistry), "Governor category registry");
         _require(governor.poolsInitialized(), "Governor pools initialized");
         _assertExactExcludedHolders(
             governor,
@@ -859,8 +846,7 @@ contract DeployCuryo is ScaffoldETHDeploy {
                 address(votingEngine),
                 governance,
                 address(registry),
-                address(frontendRegistry),
-                address(categoryRegistry)
+                address(frontendRegistry)
             )
         );
         TimelockController timelock = TimelockController(payable(governance));
@@ -907,10 +893,9 @@ contract DeployCuryo is ScaffoldETHDeploy {
         address votingEngine,
         address treasury,
         address contentRegistry,
-        address frontendRegistry,
-        address categoryRegistry
+        address frontendRegistry
     ) internal pure returns (address[] memory holders) {
-        address[] memory temp = new address[](8);
+        address[] memory temp = new address[](7);
         uint256 count;
 
         if (humanFaucet != address(0)) {
@@ -922,7 +907,6 @@ contract DeployCuryo is ScaffoldETHDeploy {
         temp[count++] = treasury;
         temp[count++] = contentRegistry;
         temp[count++] = frontendRegistry;
-        temp[count++] = categoryRegistry;
 
         holders = new address[](count);
         for (uint256 i = 0; i < count; i++) {
@@ -940,7 +924,7 @@ contract DeployCuryo is ScaffoldETHDeploy {
         productSubcats[5] = "Support";
         productSubcats[6] = "Safety";
         productSubcats[7] = "Sustainability";
-        registry.addApprovedCategory("Products", "products.curyo.xyz", productSubcats);
+        registry.addApprovedCategory("Products", "products", productSubcats);
 
         string[] memory localSubcats = new string[](8);
         localSubcats[0] = "Restaurants";
@@ -951,7 +935,7 @@ contract DeployCuryo is ScaffoldETHDeploy {
         localSubcats[5] = "Accessibility";
         localSubcats[6] = "Value";
         localSubcats[7] = "Local Tips";
-        registry.addApprovedCategory("Local Places", "local.curyo.xyz", localSubcats);
+        registry.addApprovedCategory("Local Places", "local-places", localSubcats);
 
         string[] memory travelSubcats = new string[](8);
         travelSubcats[0] = "Hotels";
@@ -962,7 +946,7 @@ contract DeployCuryo is ScaffoldETHDeploy {
         travelSubcats[5] = "Value";
         travelSubcats[6] = "Family";
         travelSubcats[7] = "Solo Travel";
-        registry.addApprovedCategory("Travel", "travel.curyo.xyz", travelSubcats);
+        registry.addApprovedCategory("Travel", "travel", travelSubcats);
 
         string[] memory appsSubcats = new string[](8);
         appsSubcats[0] = "Web Apps";
@@ -973,7 +957,7 @@ contract DeployCuryo is ScaffoldETHDeploy {
         appsSubcats[5] = "Performance";
         appsSubcats[6] = "Trust";
         appsSubcats[7] = "Pricing";
-        registry.addApprovedCategory("Apps", "apps.curyo.xyz", appsSubcats);
+        registry.addApprovedCategory("Apps", "apps", appsSubcats);
 
         string[] memory mediaSubcats = new string[](8);
         mediaSubcats[0] = "Images";
@@ -984,7 +968,7 @@ contract DeployCuryo is ScaffoldETHDeploy {
         mediaSubcats[5] = "Photography";
         mediaSubcats[6] = "Audio";
         mediaSubcats[7] = "Culture";
-        registry.addApprovedCategory("Media", "media.curyo.xyz", mediaSubcats);
+        registry.addApprovedCategory("Media", "media", mediaSubcats);
 
         string[] memory designSubcats = new string[](8);
         designSubcats[0] = "Visual Design";
@@ -995,7 +979,7 @@ contract DeployCuryo is ScaffoldETHDeploy {
         designSubcats[5] = "Photography";
         designSubcats[6] = "Fashion";
         designSubcats[7] = "Architecture";
-        registry.addApprovedCategory("Design", "design.curyo.xyz", designSubcats);
+        registry.addApprovedCategory("Design", "design", designSubcats);
 
         string[] memory aiAnswerSubcats = new string[](8);
         aiAnswerSubcats[0] = "Helpfulness";
@@ -1006,7 +990,7 @@ contract DeployCuryo is ScaffoldETHDeploy {
         aiAnswerSubcats[5] = "Code";
         aiAnswerSubcats[6] = "Images";
         aiAnswerSubcats[7] = "Research";
-        registry.addApprovedCategory("AI Answers", "ai-answers.curyo.xyz", aiAnswerSubcats);
+        registry.addApprovedCategory("AI Answers", "ai-answers", aiAnswerSubcats);
 
         string[] memory docsSubcats = new string[](8);
         docsSubcats[0] = "Getting Started";
@@ -1017,7 +1001,7 @@ contract DeployCuryo is ScaffoldETHDeploy {
         docsSubcats[5] = "Completeness";
         docsSubcats[6] = "Readability";
         docsSubcats[7] = "Troubleshooting";
-        registry.addApprovedCategory("Developer Docs", "docs.curyo.xyz", docsSubcats);
+        registry.addApprovedCategory("Developer Docs", "developer-docs", docsSubcats);
 
         string[] memory safetySubcats = new string[](8);
         safetySubcats[0] = "Trust";
@@ -1028,7 +1012,7 @@ contract DeployCuryo is ScaffoldETHDeploy {
         safetySubcats[5] = "Disclosure";
         safetySubcats[6] = "Risk";
         safetySubcats[7] = "Policy";
-        registry.addApprovedCategory("Trust", "safety.curyo.xyz", safetySubcats);
+        registry.addApprovedCategory("Trust", "trust", safetySubcats);
 
         string[] memory opinionSubcats = new string[](8);
         opinionSubcats[0] = "Taste";
@@ -1039,6 +1023,6 @@ contract DeployCuryo is ScaffoldETHDeploy {
         opinionSubcats[5] = "Convincing";
         opinionSubcats[6] = "Worthwhile";
         opinionSubcats[7] = "Other";
-        registry.addApprovedCategory("General", "opinion.curyo.xyz", opinionSubcats);
+        registry.addApprovedCategory("General", "general", opinionSubcats);
     }
 }

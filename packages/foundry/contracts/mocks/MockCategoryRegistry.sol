@@ -1,19 +1,15 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.20;
 
-import { ICategoryRegistry } from "../interfaces/ICategoryRegistry.sol";
+import {ICategoryRegistry} from "../interfaces/ICategoryRegistry.sol";
 
 contract MockCategoryRegistry is ICategoryRegistry {
     mapping(uint256 => bool) public approved;
-    mapping(uint256 => address) public submitters;
     mapping(uint256 => string) public domains;
     mapping(bytes32 => uint256) public domainToId;
-    mapping(uint256 => bytes32) public approvalDigests;
-    mapping(uint256 => uint256) public createdBlocks;
 
-    function seedApprovedCategory(uint256 id, string memory domain, address submitter) external {
+    function seedApprovedCategory(uint256 id, string memory domain) external {
         setDomain(id, domain);
-        setSubmitter(id, submitter);
         setApproved(id, true);
     }
 
@@ -82,18 +78,6 @@ contract MockCategoryRegistry is ICategoryRegistry {
         domainToId[keccak256(bytes(normalized))] = id;
     }
 
-    function setSubmitter(uint256 id, address s) public {
-        submitters[id] = s;
-    }
-
-    function setApprovalDigest(uint256 id, bytes32 digest) external {
-        approvalDigests[id] = digest;
-    }
-
-    function setCreatedBlock(uint256 id, uint256 createdBlock) external {
-        createdBlocks[id] = createdBlock;
-    }
-
     function isApprovedCategory(uint256 categoryId) external view override returns (bool) {
         return approved[categoryId];
     }
@@ -122,23 +106,9 @@ contract MockCategoryRegistry is ICategoryRegistry {
         return domainToId[keccak256(bytes(_normalizeDomain(domain)))] != 0;
     }
 
-    function getSubmitter(uint256 categoryId) external view override returns (address) {
-        return submitters[categoryId];
-    }
-
     function getCategoryStatus(uint256 categoryId) external view override returns (CategoryStatus) {
         require(bytes(domains[categoryId]).length != 0, "Category does not exist");
         return approved[categoryId] ? CategoryStatus.Approved : CategoryStatus.Pending;
-    }
-
-    function getCategoryApprovalDigest(uint256 categoryId) external view override returns (bytes32) {
-        require(bytes(domains[categoryId]).length != 0, "Category does not exist");
-        return approvalDigests[categoryId];
-    }
-
-    function getCategoryCreatedBlock(uint256 categoryId) external view override returns (uint256) {
-        require(bytes(domains[categoryId]).length != 0, "Category does not exist");
-        return createdBlocks[categoryId];
     }
 
     function _category(uint256 categoryId) internal view returns (Category memory) {
@@ -148,7 +118,7 @@ contract MockCategoryRegistry is ICategoryRegistry {
             name: "",
             domain: domains[categoryId],
             subcategories: subcategories,
-            submitter: submitters[categoryId],
+            submitter: address(0),
             stakeAmount: 0,
             status: approved[categoryId] ? CategoryStatus.Approved : CategoryStatus.Pending,
             proposalId: 0,

@@ -2,7 +2,7 @@
 pragma solidity ^0.8.20;
 
 /// @title ICategoryRegistry Interface
-/// @notice Interface for the CategoryRegistry contract that manages content categories/platforms
+/// @notice Interface for seed-only discovery category metadata.
 interface ICategoryRegistry {
     enum CategoryStatus {
         Pending,
@@ -14,24 +14,16 @@ interface ICategoryRegistry {
     struct Category {
         uint256 id;
         string name;
-        string domain;
+        string domain; // Legacy field name; now stores the category slug.
         string[] subcategories;
-        address submitter;
-        uint256 stakeAmount;
+        address submitter; // Always zero for seed-only categories.
+        uint256 stakeAmount; // Always zero for seed-only categories.
         CategoryStatus status;
-        uint256 proposalId;
+        uint256 proposalId; // Always zero for seed-only categories.
         uint256 createdAt;
     }
 
-    // Events
-    event CategorySubmitted(
-        uint256 indexed categoryId, address indexed submitter, string name, string domain, uint256 proposalId
-    );
-    event CategoryProposalLinked(uint256 indexed categoryId, uint256 indexed proposalId, bytes32 descriptionHash);
-    event CategoryApproved(uint256 indexed categoryId);
-    event CategoryRejected(uint256 indexed categoryId);
-    event CategoryCanceled(uint256 indexed categoryId);
-    event CategoryAdded(uint256 indexed categoryId, string name, string domain);
+    event CategoryAdded(uint256 indexed categoryId, string name, string slug);
 
     /// @notice Check if a category is approved and active
     function isApprovedCategory(uint256 categoryId) external view returns (bool);
@@ -39,8 +31,8 @@ interface ICategoryRegistry {
     /// @notice Get category details by ID
     function getCategory(uint256 categoryId) external view returns (Category memory);
 
-    /// @notice Get category by domain
-    function getCategoryByDomain(string calldata domain) external view returns (Category memory);
+    /// @notice Get category by slug. Legacy name retained while callers migrate away from domain language.
+    function getCategoryByDomain(string calldata slug) external view returns (Category memory);
 
     /// @notice Get approved category IDs with pagination
     function getApprovedCategoryIdsPaginated(uint256 offset, uint256 limit)
@@ -48,18 +40,9 @@ interface ICategoryRegistry {
         view
         returns (uint256[] memory categoryIds, uint256 total);
 
-    /// @notice Check if a domain is already registered
-    function isDomainRegistered(string calldata domain) external view returns (bool);
-
-    /// @notice Get the submitter address for a category
-    function getSubmitter(uint256 categoryId) external view returns (address);
+    /// @notice Check if a category slug is already registered. Legacy name retained while callers migrate.
+    function isDomainRegistered(string calldata slug) external view returns (bool);
 
     /// @notice Get the current status for a category
     function getCategoryStatus(uint256 categoryId) external view returns (CategoryStatus);
-
-    /// @notice Get the current approval digest that governance proposals must bind to for this category
-    function getCategoryApprovalDigest(uint256 categoryId) external view returns (bytes32);
-
-    /// @notice Get the block number where the category was submitted
-    function getCategoryCreatedBlock(uint256 categoryId) external view returns (uint256);
 }
