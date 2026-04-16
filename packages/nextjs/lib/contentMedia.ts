@@ -25,7 +25,7 @@ export function isYouTubeVideoUrl(url: string): boolean {
   return detectPlatform(url).type === "youtube";
 }
 
-export function getContentMediaType(url: string): ContentMediaType | null {
+function getContentMediaType(url: string): ContentMediaType | null {
   if (isDirectImageUrl(url)) return "image";
   if (isYouTubeVideoUrl(url)) return "video";
   return null;

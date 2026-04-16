@@ -3,7 +3,7 @@
 import { isAddress, parseUnits } from "viem";
 import { contracts } from "~~/utils/scaffold-eth/contract";
 
-export const USDC_DECIMALS = 6;
+const USDC_DECIMALS = 6;
 export const MIN_REWARD_POOL_REQUIRED_VOTERS = 3;
 export const MIN_REWARD_POOL_SETTLED_ROUNDS = 1;
 export const DEFAULT_REWARD_POOL_FRONTEND_FEE_BPS = 300;
