@@ -1,6 +1,6 @@
 "use client";
 
-import React, { Suspense, useCallback, useEffect, useId, useLayoutEffect, useRef, useState } from "react";
+import React, { Suspense, useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { motion } from "framer-motion";
@@ -208,9 +208,17 @@ const MOBILE_HEADER_SCROLL_SOURCE_ATTRIBUTE = "data-mobile-header-scroll-source"
 const MOBILE_HEADER_SCROLL_SYNC_ATTRIBUTE = "data-mobile-header-scroll-sync";
 const MOBILE_HEADER_SCROLL_SYNC_OFFSET_ATTRIBUTE = "data-mobile-header-scroll-sync-offset";
 
-const HeaderBrand = ({ className, compact = false }: { className?: string; compact?: boolean }) => (
+const HeaderBrand = ({
+  brandIdPrefix,
+  className,
+  compact = false,
+}: {
+  brandIdPrefix: string;
+  className?: string;
+  compact?: boolean;
+}) => (
   <Link href={EXPLICIT_LANDING_HREF} className={`flex min-w-0 items-center gap-2 ${className ?? ""}`}>
-    <CuryoLogo className={compact ? "h-8 w-8 shrink-0" : "h-9 w-9 shrink-0"} />
+    <CuryoLogo className={compact ? "h-8 w-8 shrink-0" : "h-9 w-9 shrink-0"} idPrefix={brandIdPrefix} />
     <div className={`flex min-w-0 flex-col gap-0.5 ${compact ? "" : "items-start"}`}>
       <span
         className={`font-display leading-none tracking-[0.08em] text-base-content ${
@@ -229,7 +237,8 @@ const HeaderBrand = ({ className, compact = false }: { className?: string; compa
 const HeaderSearchBar = ({ className }: { className?: string }) => {
   const { activeQuery, commitSearch } = useVoteSearch();
   const [inputValue, setInputValue] = useState(activeQuery);
-  const searchInputId = useId();
+  const isSidebar = className?.includes("sidebar");
+  const searchInputId = isSidebar ? "header-search-sidebar-input" : "header-search-top-input";
 
   useEffect(() => {
     setInputValue(activeQuery);
@@ -256,7 +265,6 @@ const HeaderSearchBar = ({ className }: { className?: string }) => {
     };
   }, [activeQuery, commitSearch, inputValue]);
 
-  const isSidebar = className?.includes("sidebar");
   return (
     <div className={`relative ${className ?? ""} ${isSidebar ? "w-full min-w-0" : "hidden sm:block"}`}>
       <label htmlFor={searchInputId} className="sr-only">
@@ -297,7 +305,7 @@ const HeaderSearchBar = ({ className }: { className?: string }) => {
 const MobileHeaderSearch = ({ onClose }: { onClose: () => void }) => {
   const { activeQuery, commitSearch } = useVoteSearch();
   const [draftValue, setDraftValue] = useState(activeQuery);
-  const searchInputId = useId();
+  const searchInputId = "header-search-mobile-input";
 
   useEffect(() => {
     setDraftValue(activeQuery);
@@ -810,7 +818,7 @@ export const Header = () => {
                       </Suspense>
                     </ul>
                   </details>
-                  <HeaderBrand compact />
+                  <HeaderBrand brandIdPrefix="curyo-mobile-header-logo" compact />
                 </div>
                 <div className="flex items-center gap-2 shrink-0">
                   <button
@@ -852,7 +860,7 @@ export const Header = () => {
       <aside
         className={`fixed left-0 top-0 z-20 hidden h-screen w-52 shrink-0 flex-col items-stretch border-r py-4 shadow-[18px_0_48px_rgba(9,10,12,0.24)] backdrop-blur-xl xl:flex ${headerChromeSurfaceClassName} ${headerChromeBorderClassName}`}
       >
-        <HeaderBrand className="mb-4 shrink-0 px-4" />
+        <HeaderBrand brandIdPrefix="curyo-sidebar-logo" className="mb-4 shrink-0 px-4" />
         <div className="mb-4 w-full min-w-0 px-2.5">
           <Suspense>
             <HeaderSearchBar className="sidebar" />

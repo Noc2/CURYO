@@ -1,7 +1,6 @@
-import { useId } from "react";
-
 interface CuryoBrandMarkProps {
   className?: string;
+  idPrefix?: string;
   title?: string;
   animated?: boolean;
   animationPreset?: "orbit";
@@ -56,12 +55,13 @@ function scaleAroundCenter(scale: number) {
  */
 export function CuryoBrandMark({
   className = "h-8 w-8",
+  idPrefix,
   title,
   animated = false,
   animationPreset,
   variant = "default",
 }: CuryoBrandMarkProps) {
-  const id = useId().replace(/:/g, "");
+  const id = idPrefix ?? `curyo-brand-mark-${variant}`;
   const orbBaseId = `${id}-orb-base`;
   const orbRimId = `${id}-orb-rim`;
   const softWhiteId = `${id}-soft-white`;

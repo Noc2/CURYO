@@ -35,7 +35,7 @@ const ScaffoldEthApp = ({ children }: { children: React.ReactNode }) => {
       data-theme="dark"
       style={{ colorScheme: "dark" }}
     >
-      <body>
+      <body suppressHydrationWarning>
         <ScaffoldEthAppWithProviders>
           <main id="main-content" className="relative flex min-h-0 flex-1 flex-col overflow-x-hidden">
             {children}
