@@ -87,9 +87,37 @@ const voterIdNFTAbi = [
 ] as const;
 
 /**
+ * Shared ID used by faucet triggers and the single app-level modal.
+ */
+export const FAUCET_MODAL_ID = "faucet-modal";
+
+type FaucetTriggerProps = {
+  className?: string;
+  textClassName?: string;
+};
+
+export const FaucetTrigger = ({
+  className = "flex items-center justify-center xl:justify-start gap-3 xl:px-4 py-3 rounded-xl transition-colors text-base-content/60 hover:text-base-content hover:bg-base-200 w-full cursor-pointer",
+  textClassName = "hidden xl:inline",
+}: FaucetTriggerProps) => {
+  const { chain: connectedChain } = useAccount();
+
+  if (connectedChain?.id !== hardhat.id) {
+    return null;
+  }
+
+  return (
+    <label htmlFor={FAUCET_MODAL_ID} className={className}>
+      <GiftIcon className="w-6 h-6 shrink-0" />
+      <span className={textClassName}>Faucet</span>
+    </label>
+  );
+};
+
+/**
  * Faucet modal which lets you send ETH and claim cREP tokens on local testnet.
  */
-export const Faucet = () => {
+export const FaucetModal = () => {
   const [loading, setLoading] = useState(false);
   const [curyoLoading, setCuryoLoading] = useState(false);
   const [voterIdLoading, setVoterIdLoading] = useState(false);
@@ -311,21 +339,14 @@ export const Faucet = () => {
   }
 
   return (
-    <div className="w-full">
-      <label
-        htmlFor="faucet-modal"
-        className="flex items-center justify-center xl:justify-start gap-3 xl:px-4 py-3 rounded-xl transition-colors text-base-content/60 hover:text-base-content hover:bg-base-200 w-full cursor-pointer"
-      >
-        <GiftIcon className="w-6 h-6 shrink-0" />
-        <span className="hidden xl:inline">Faucet</span>
-      </label>
-      <input type="checkbox" id="faucet-modal" className="modal-toggle" />
-      <label htmlFor="faucet-modal" className="modal cursor-pointer">
+    <div>
+      <input type="checkbox" id={FAUCET_MODAL_ID} className="modal-toggle" />
+      <label htmlFor={FAUCET_MODAL_ID} className="modal cursor-pointer">
         <label className="modal-box relative">
           {/* dummy input to capture event onclick on modal box */}
           <input className="h-0 w-0 absolute top-0 left-0" />
           <h3 className="text-xl font-bold mb-3">Local Testnet Faucet</h3>
-          <label htmlFor="faucet-modal" className="btn btn-ghost btn-sm btn-circle absolute right-3 top-3">
+          <label htmlFor={FAUCET_MODAL_ID} className="btn btn-ghost btn-sm btn-circle absolute right-3 top-3">
             ✕
           </label>
           <div className="space-y-4">
@@ -443,3 +464,5 @@ export const Faucet = () => {
     </div>
   );
 };
+
+export const Faucet = FaucetTrigger;

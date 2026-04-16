@@ -4,8 +4,9 @@ import { getAddress } from "viem";
 import { Address } from "viem";
 import { hardhat } from "viem/chains";
 import { useAccount } from "wagmi";
-import { ArrowLeftOnRectangleIcon, Cog6ToothIcon, GiftIcon } from "@heroicons/react/24/outline";
+import { ArrowLeftOnRectangleIcon, Cog6ToothIcon } from "@heroicons/react/24/outline";
 import { BlockieAvatar } from "~~/components/scaffold-eth";
+import { FaucetTrigger } from "~~/components/scaffold-eth/Faucet";
 import { ClaimRewardsButton } from "~~/components/shared/ClaimRewardsButton";
 import { InfoTooltip } from "~~/components/ui/InfoTooltip";
 import { useTargetNetwork } from "~~/hooks/scaffold-eth/useTargetNetwork";
@@ -157,10 +158,7 @@ function MenuItems({
     <>
       {showFaucet && (
         <li>
-          <label htmlFor="faucet-modal" className={menuItemClass}>
-            <GiftIcon className="w-6 h-6 shrink-0" />
-            <span className={textClass}>Faucet</span>
-          </label>
+          <FaucetTrigger className={menuItemClass} textClassName={textClass} />
         </li>
       )}
       <li>

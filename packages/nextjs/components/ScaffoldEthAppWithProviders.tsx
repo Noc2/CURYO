@@ -13,7 +13,7 @@ import { Footer } from "~~/components/Footer";
 import { Header } from "~~/components/Header";
 import { RouteScopedNotifiers } from "~~/components/RouteScopedNotifiers";
 import { ReferralAttributionCapture } from "~~/components/referrals/ReferralAttributionCapture";
-import { Faucet } from "~~/components/scaffold-eth";
+import { FaucetModal, FaucetTrigger } from "~~/components/scaffold-eth";
 import { ClearLegacyBurnerSession } from "~~/components/thirdweb/ClearLegacyBurnerSession";
 import { LocalTestWalletBridge } from "~~/components/thirdweb/LocalTestWalletBridge";
 import { ThirdwebAutoConnectBridge } from "~~/components/thirdweb/ThirdwebAutoConnectBridge";
@@ -52,7 +52,7 @@ const ScaffoldEthApp = ({ children }: { children: React.ReactNode }) => {
             <div className="xl:hidden">
               <div className="pointer-events-none fixed bottom-0 left-0 z-10 flex w-full items-center justify-between p-4">
                 <div className="pointer-events-auto">
-                  <Faucet />
+                  <FaucetTrigger />
                 </div>
               </div>
             </div>
@@ -64,6 +64,7 @@ const ScaffoldEthApp = ({ children }: { children: React.ReactNode }) => {
       </div>
       <Toaster />
       <RouteScopedNotifiers />
+      <FaucetModal />
     </MobileHeaderVisibilityProvider>
   );
 };
