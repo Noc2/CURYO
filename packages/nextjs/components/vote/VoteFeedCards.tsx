@@ -6,7 +6,6 @@ import { ArrowTopRightOnSquareIcon, ChevronLeftIcon, ChevronRightIcon } from "@h
 import { ShareIcon } from "@heroicons/react/24/outline";
 import { ContentEmbed } from "~~/components/content/ContentEmbed";
 import { SubmitterBadge } from "~~/components/content/SubmitterBadge";
-import { FundQuestionModal } from "~~/components/reward-pool/FundQuestionModal";
 import { FollowProfileButton } from "~~/components/shared/FollowProfileButton";
 import { MoreToggleButton } from "~~/components/shared/MoreToggleButton";
 import { SafeExternalLink } from "~~/components/shared/SafeExternalLink";
@@ -375,7 +374,6 @@ function FeedContentMetaCard({
   collapseDescription = true,
 }: FeedContentMetaCardProps) {
   const [showShare, setShowShare] = useState(false);
-  const [showFundQuestionModal, setShowFundQuestionModal] = useState(false);
   const [isExpanded, setIsExpanded] = useState(false);
   const primaryMedia = getPrimaryMediaItem(item);
   const primaryMediaUrl = primaryMedia?.url ?? item.url;
@@ -474,13 +472,6 @@ function FeedContentMetaCard({
                   Backed by {formatUsdAmount(rewardPoolTotal)} USDC on Celo; 3% supports the eligible frontend operator
                 </span>
               ) : null}
-              <button
-                type="button"
-                onClick={() => setShowFundQuestionModal(true)}
-                className="rounded-full bg-primary/10 px-2.5 py-1 text-sm font-semibold leading-none text-primary transition-colors hover:bg-primary/15"
-              >
-                Fund this question
-              </button>
               {visibleTags.map(tag => (
                 <span key={tag} className="text-sm text-base-content/70">
                   #{tag}
@@ -531,10 +522,6 @@ function FeedContentMetaCard({
           }
           onClose={() => setShowShare(false)}
         />
-      ) : null}
-
-      {showFundQuestionModal ? (
-        <FundQuestionModal contentId={item.id} title={item.title} onClose={() => setShowFundQuestionModal(false)} />
       ) : null}
     </>
   );
