@@ -154,6 +154,7 @@ contract RoundVotingEngine is
     mapping(uint256 => mapping(uint256 => mapping(address => uint256))) public roundPerFrontendStake;
     mapping(uint256 => mapping(uint256 => uint256)) public roundFrontendPool;
     mapping(uint256 => mapping(uint256 => uint256)) public roundEligibleFrontendCount;
+    mapping(uint256 => mapping(uint256 => address)) public roundVoterIdNFTSnapshot;
 
     // --- Events ---
     event VoteCommitted(
@@ -329,9 +330,6 @@ contract RoundVotingEngine is
         if (commitHash == bytes32(0)) revert InvalidCommitHash();
 
         uint64 stakeAmount64 = uint64(stakeAmount);
-        IVoterIdNFT currentVoterIdNft = _getVoterIdNft();
-        (uint256 voterId, bool useTokenIdentity) =
-            VotePreflightLib.validateVoterAndContent(currentVoterIdNft, registry, voter, contentId);
 
         // Get or create active round
         uint256 currentOpenRoundId = currentRoundId[contentId];
@@ -356,12 +354,16 @@ contract RoundVotingEngine is
         // Round must be Open and not expired
         if (!RoundLib.acceptsVotes(round, roundCfg.maxDuration)) revert RoundNotAccepting();
 
+        IVoterIdNFT roundVoterIdNft = _getRoundVoterIdNft(contentId, roundId);
+        (uint256 voterId, bool useTokenIdentity) =
+            VotePreflightLib.validateVoterAndContent(roundVoterIdNft, registry, voter, contentId);
+
         bytes32 commitKey = VotePreflightLib.prepareCommit(
             voterCommitHash,
             hasTokenIdCommitted,
             lastVoteTimestamp,
             lastVoteTimestampByToken,
-            currentVoterIdNft,
+            roundVoterIdNft,
             VotePreflightLib.CommitPreflightParams({
                 voter: voter,
                 contentId: contentId,
@@ -404,7 +406,7 @@ contract RoundVotingEngine is
             useTokenIdentity
         );
         _recordCommitAccounting(
-            round, currentVoterIdNft, contentId, roundId, voter, voterId, useTokenIdentity, stakeAmount64, stakeAmount
+            round, roundVoterIdNft, contentId, roundId, voter, voterId, useTokenIdentity, stakeAmount64, stakeAmount
         );
 
         emit VoteCommitted(
@@ -604,6 +606,7 @@ contract RoundVotingEngine is
         roundDrandChainHashSnapshot[contentId][roundId] = protocolConfig.drandChainHash();
         roundDrandGenesisTimeSnapshot[contentId][roundId] = protocolConfig.drandGenesisTime();
         roundDrandPeriodSnapshot[contentId][roundId] = protocolConfig.drandPeriod();
+        roundVoterIdNFTSnapshot[contentId][roundId] = protocolConfig.voterIdNFT();
         emit RoundReferenceSnapshotted(contentId, roundId, roundReferenceRatingBpsSnapshot[contentId][roundId]);
 
         return roundId;
@@ -930,6 +933,14 @@ contract RoundVotingEngine is
 
     function _getVoterIdNft() internal view returns (IVoterIdNFT) {
         return IVoterIdNFT(protocolConfig.voterIdNFT());
+    }
+
+    function _getRoundVoterIdNft(uint256 contentId, uint256 roundId) internal view returns (IVoterIdNFT) {
+        address snapshot = roundVoterIdNFTSnapshot[contentId][roundId];
+        if (snapshot == address(0)) {
+            return _getVoterIdNft();
+        }
+        return IVoterIdNFT(snapshot);
     }
 
     function _getParticipationPool() internal view returns (IParticipationPool) {

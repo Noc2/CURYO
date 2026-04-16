@@ -249,8 +249,9 @@ contract QuestionRewardPoolEscrow is
         RewardPool storage rewardPool = _getExistingRewardPool(rewardPoolId);
         _qualifyRoundIfNeeded(rewardPoolId, rewardPool, roundId);
 
-        uint256 voterId = _requireVoterId(msg.sender);
-        require(!_isExcludedVoter(rewardPool, voterId), "Excluded voter");
+        IVoterIdNFT roundVoterIdNft = _roundVoterIdNft(rewardPool.contentId, roundId);
+        uint256 voterId = _requireVoterId(roundVoterIdNft, msg.sender);
+        require(!_isExcludedVoter(rewardPool, roundId, voterId), "Excluded voter");
         require(!rewardClaimed[rewardPoolId][roundId][voterId], "Already claimed");
 
         bytes32 commitKey = votingEngine.voterIdCommitKey(rewardPool.contentId, roundId, voterId);
@@ -343,8 +344,12 @@ contract QuestionRewardPoolEscrow is
         RewardPool storage rewardPool = rewardPools[rewardPoolId];
         if (rewardPool.id == 0) return 0;
 
-        uint256 voterId = voterIdNFT.getTokenId(account);
-        if (voterId == 0 || _isExcludedVoter(rewardPool, voterId) || rewardClaimed[rewardPoolId][roundId][voterId]) {
+        IVoterIdNFT roundVoterIdNft = _roundVoterIdNft(rewardPool.contentId, roundId);
+        uint256 voterId = roundVoterIdNft.getTokenId(account);
+        if (
+            voterId == 0 || _isExcludedVoter(rewardPool, roundId, voterId)
+                || rewardClaimed[rewardPoolId][roundId][voterId]
+        ) {
             return 0;
         }
 
@@ -488,12 +493,13 @@ contract QuestionRewardPoolEscrow is
         roundSettled = true;
         eligibleVoters = revealedCount;
         if (eligibleVoters == 0) return (true, false, 0);
-        if (_hasRevealedCommit(rewardPool.contentId, roundId, rewardPool.funderVoterId)) {
+        uint256 funderVoterId = _voterIdForRound(rewardPool.contentId, roundId, rewardPool.funder);
+        if (funderVoterId != 0 && _hasRevealedCommit(rewardPool.contentId, roundId, funderVoterId)) {
             eligibleVoters--;
         }
-        uint256 submitterVoterId = _submitterVoterId(rewardPool.contentId);
+        uint256 submitterVoterId = _submitterVoterId(rewardPool.contentId, roundId);
         if (
-            submitterVoterId != 0 && submitterVoterId != rewardPool.funderVoterId
+            submitterVoterId != 0 && submitterVoterId != funderVoterId
                 && _hasRevealedCommit(rewardPool.contentId, roundId, submitterVoterId)
         ) {
             eligibleVoters--;
@@ -616,18 +622,39 @@ contract QuestionRewardPoolEscrow is
         return address(0);
     }
 
-    function _isExcludedVoter(RewardPool storage rewardPool, uint256 voterId) internal view returns (bool) {
-        return voterId == rewardPool.funderVoterId || voterId == _submitterVoterId(rewardPool.contentId);
+    function _isExcludedVoter(RewardPool storage rewardPool, uint256 roundId, uint256 voterId)
+        internal
+        view
+        returns (bool)
+    {
+        return voterId == _voterIdForRound(rewardPool.contentId, roundId, rewardPool.funder)
+            || voterId == _submitterVoterId(rewardPool.contentId, roundId);
     }
 
-    function _submitterVoterId(uint256 contentId) internal view returns (uint256) {
+    function _submitterVoterId(uint256 contentId, uint256 roundId) internal view returns (uint256) {
         address submitterIdentity = registry.getSubmitterIdentity(contentId);
         if (submitterIdentity == address(0)) return 0;
-        return voterIdNFT.getTokenId(submitterIdentity);
+        return _voterIdForRound(contentId, roundId, submitterIdentity);
     }
 
     function _requireVoterId(address account) internal view returns (uint256 voterId) {
-        voterId = voterIdNFT.getTokenId(account);
+        return _requireVoterId(voterIdNFT, account);
+    }
+
+    function _requireVoterId(IVoterIdNFT voterIdNft_, address account) internal view returns (uint256 voterId) {
+        voterId = voterIdNft_.getTokenId(account);
         require(voterId != 0, "Voter ID required");
+    }
+
+    function _voterIdForRound(uint256 contentId, uint256 roundId, address account) internal view returns (uint256) {
+        return _roundVoterIdNft(contentId, roundId).getTokenId(account);
+    }
+
+    function _roundVoterIdNft(uint256 contentId, uint256 roundId) internal view returns (IVoterIdNFT) {
+        address snapshot = votingEngine.roundVoterIdNFTSnapshot(contentId, roundId);
+        if (snapshot == address(0)) {
+            return voterIdNFT;
+        }
+        return IVoterIdNFT(snapshot);
     }
 }

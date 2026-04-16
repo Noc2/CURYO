@@ -273,6 +273,88 @@ contract QuestionRewardPoolEscrowTest is VotingTestBase {
         rewardPoolEscrow.claimQuestionReward(rewardPoolId, roundId);
     }
 
+    function testOpenRoundUsesVoterIdSnapshotAfterMigration() public {
+        uint256 contentId = _submitQuestion("");
+        uint256 rewardPoolId = _createRewardPool(contentId, REWARD_POOL_AMOUNT, 3, 1);
+
+        bytes32 salt1 = keccak256("snapshot-voter-1");
+        bytes32 commitKey1 = _commitTestVote(
+            DirectTestCommitRequest({
+                engine: votingEngine,
+                crepToken: crepToken,
+                voter: voter1,
+                contentId: contentId,
+                isUp: true,
+                stake: STAKE,
+                frontend: address(0),
+                salt: salt1
+            })
+        );
+        uint256 roundId = RoundEngineReadHelpers.activeRoundId(votingEngine, contentId);
+        assertEq(votingEngine.roundVoterIdNFTSnapshot(contentId, roundId), address(voterIdNFT));
+
+        MockVoterIdNFT migratedVoterIdNFT = _migrateVoterIdsWithDifferentIds();
+        assertNotEq(migratedVoterIdNFT.getTokenId(voter2), voterIdNFT.getTokenId(voter2));
+
+        bytes32 salt2 = keccak256("snapshot-voter-2");
+        bytes32 commitKey2 = _commitTestVote(
+            DirectTestCommitRequest({
+                engine: votingEngine,
+                crepToken: crepToken,
+                voter: voter2,
+                contentId: contentId,
+                isUp: true,
+                stake: STAKE,
+                frontend: address(0),
+                salt: salt2
+            })
+        );
+        bytes32 salt3 = keccak256("snapshot-voter-3");
+        bytes32 commitKey3 = _commitTestVote(
+            DirectTestCommitRequest({
+                engine: votingEngine,
+                crepToken: crepToken,
+                voter: voter3,
+                contentId: contentId,
+                isUp: false,
+                stake: STAKE,
+                frontend: address(0),
+                salt: salt3
+            })
+        );
+
+        vm.warp(block.timestamp + EPOCH_DURATION + 1);
+        votingEngine.revealVoteByCommitKey(contentId, roundId, commitKey1, true, salt1);
+        votingEngine.revealVoteByCommitKey(contentId, roundId, commitKey2, true, salt2);
+        votingEngine.revealVoteByCommitKey(contentId, roundId, commitKey3, false, salt3);
+        votingEngine.settleRound(contentId, roundId);
+
+        vm.prank(voter2);
+        uint256 reward = rewardPoolEscrow.claimQuestionReward(rewardPoolId, roundId);
+        assertEq(reward, REWARD_POOL_AMOUNT / 3);
+    }
+
+    function testFunderExclusionUsesRoundVoterIdSnapshotAfterMigration() public {
+        uint256 contentId = _submitQuestion("");
+        uint256 rewardPoolId = _createRewardPool(contentId, REWARD_POOL_AMOUNT, 3, 1);
+
+        address[] memory voters = new address[](4);
+        voters[0] = funder;
+        voters[1] = voter1;
+        voters[2] = voter2;
+        voters[3] = voter3;
+        bool[] memory directions = _directions(true, true, true, false);
+        uint256 roundId = _settleRoundWith(voters, contentId, directions);
+
+        MockVoterIdNFT migratedVoterIdNFT = _migrateVoterIdsWithDifferentIds();
+        assertNotEq(migratedVoterIdNFT.getTokenId(funder), voterIdNFT.getTokenId(funder));
+
+        assertEq(rewardPoolEscrow.claimableQuestionReward(rewardPoolId, roundId, funder), 0);
+        vm.prank(funder);
+        vm.expectRevert("Excluded voter");
+        rewardPoolEscrow.claimQuestionReward(rewardPoolId, roundId);
+    }
+
     function testFunderAndSubmitterVoterIdsAreExcludedFromRewardPoolClaims() public {
         uint256 contentId = _submitQuestion("");
         uint256 rewardPoolId = _createRewardPool(contentId, REWARD_POOL_AMOUNT, 3, 1);
@@ -558,6 +640,21 @@ contract QuestionRewardPoolEscrowTest is VotingTestBase {
         vm.startPrank(frontend);
         crepToken.approve(address(frontendRegistry), frontendRegistry.STAKE_AMOUNT());
         frontendRegistry.register();
+        vm.stopPrank();
+    }
+
+    function _migrateVoterIdsWithDifferentIds() internal returns (MockVoterIdNFT migratedVoterIdNFT) {
+        migratedVoterIdNFT = new MockVoterIdNFT();
+        address[7] memory migratedHumans = [voter3, voter2, voter1, submitter, funder, voter4, frontend1];
+        for (uint256 i = 0; i < migratedHumans.length; i++) {
+            migratedVoterIdNFT.setHolder(migratedHumans[i]);
+        }
+
+        vm.startPrank(owner);
+        protocolConfig.setVoterIdNFT(address(migratedVoterIdNFT));
+        registry.setVoterIdNFT(address(migratedVoterIdNFT));
+        frontendRegistry.setVoterIdNFT(address(migratedVoterIdNFT));
+        rewardPoolEscrow.setVoterIdNFT(address(migratedVoterIdNFT));
         vm.stopPrank();
     }
 
