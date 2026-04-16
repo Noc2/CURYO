@@ -28,8 +28,9 @@ fi
 TOKEN=$(grep -o '"0x[^"]*": "CuryoReputation"' "$DEPLOY_JSON" | grep -o '0x[^"]*' || true)
 REGISTRY=$(grep -o '"0x[^"]*": "ContentRegistry"' "$DEPLOY_JSON" | grep -o '0x[^"]*' || true)
 VOTING_ENGINE=$(grep -o '"0x[^"]*": "RoundVotingEngine"' "$DEPLOY_JSON" | grep -o '0x[^"]*' || true)
+CATEGORY_REGISTRY=$(grep -o '"0x[^"]*": "CategoryRegistry"' "$DEPLOY_JSON" | grep -o '0x[^"]*' || true)
 
-if [ -z "$TOKEN" ] || [ -z "$REGISTRY" ]; then
+if [ -z "$TOKEN" ] || [ -z "$REGISTRY" ] || [ -z "$CATEGORY_REGISTRY" ]; then
   echo "ERROR: Could not read contract addresses from $DEPLOY_JSON"
   exit 1
 fi
@@ -37,10 +38,11 @@ fi
 echo "CuryoReputation:         $TOKEN"
 echo "ContentRegistry:   $REGISTRY"
 echo "RoundVotingEngine: $VOTING_ENGINE"
+echo "CategoryRegistry:  $CATEGORY_REGISTRY"
 echo ""
 
 # Anvil/hardhat default private keys
-# Accounts 2-10 for question submission (some reused for later sources), 9-10 also for voting
+# Accounts 2-10 for question submission (some reused for later questions), 9-10 also for voting
 # Note: These accounts are pre-funded with cREP during deployment (see DeployCuryo.s.sol)
 KEYS=(
   "0x5de4111afa1a4b94908f83103eb1f1706367c2e68ca870fc3fb9a804cdab365a"  # Account 2
@@ -141,25 +143,48 @@ TAGS=(
   "Quality,Design,Value"
 )
 
-# CategoryIds mapping to seeded questions.
-CATEGORY_IDS=(
-  9   # Trust
-  6   # Design
-  8   # Developer Docs
-  1   # Products
-  2   # Local Places
-  3   # Travel
-  7   # AI Answers
-  4   # Apps
-  6   # Design
-  10  # General
-  5   # Media
-  4   # Apps
-  3   # Travel
-  4   # Apps
-  9   # Trust
-  1   # Products
+# Stable category domains for each seeded question. The deployed category names/ids may differ
+# between local branches, so resolve IDs from domains instead of assuming deploy order.
+CATEGORY_DOMAINS=(
+  "safety.curyo.xyz"      # Trust / Trust and Safety
+  "design.curyo.xyz"      # Design / Design and Aesthetics
+  "docs.curyo.xyz"        # Developer Docs / Documentation and Developer Help
+  "products.curyo.xyz"    # Products
+  "local.curyo.xyz"       # Local Places / Restaurants and Local Places
+  "travel.curyo.xyz"      # Travel / Hotels and Travel
+  "ai-answers.curyo.xyz"  # AI Answers
+  "apps.curyo.xyz"        # Apps / Apps and Websites
+  "design.curyo.xyz"      # Design / Design and Aesthetics
+  "opinion.curyo.xyz"     # General / General Opinion
+  "media.curyo.xyz"       # Media / Media and Images
+  "apps.curyo.xyz"        # Apps / Apps and Websites
+  "travel.curyo.xyz"      # Travel / Hotels and Travel
+  "apps.curyo.xyz"        # Apps / Apps and Websites
+  "safety.curyo.xyz"      # Trust / Trust and Safety
+  "products.curyo.xyz"    # Products
 )
+
+resolve_category_id() {
+  local domain="$1"
+  local output
+  output=$(cast call "$CATEGORY_REGISTRY" \
+    "getCategoryByDomain(string)((uint256,string,string,string[],address,uint256,uint8,uint256,uint256))" \
+    "$domain" --rpc-url "$RPC" 2>/dev/null || true)
+
+  local category_id
+  category_id=$(printf "%s\n" "$output" | sed -nE 's/^[[:space:]]*[\[\(]?([0-9]+)([,[:space:]].*)?$/\1/p' | head -n 1)
+  if [ -z "$category_id" ]; then
+    echo "ERROR: Could not resolve category domain $domain from CategoryRegistry" >&2
+    exit 1
+  fi
+
+  printf "%s" "$category_id"
+}
+
+CATEGORY_IDS=()
+for CATEGORY_DOMAIN in "${CATEGORY_DOMAINS[@]}"; do
+  CATEGORY_IDS+=("$(resolve_category_id "$CATEGORY_DOMAIN")")
+done
 
 echo "=== Seeding example text and image questions ==="
 echo "(Test accounts were pre-funded with cREP during deployment)"
@@ -169,6 +194,7 @@ TOTAL_ITEMS="${#URLS[@]}"
 if [ "$TOTAL_ITEMS" -ne "${#TITLES[@]}" ] ||
   [ "$TOTAL_ITEMS" -ne "${#DESCRIPTIONS[@]}" ] ||
   [ "$TOTAL_ITEMS" -ne "${#TAGS[@]}" ] ||
+  [ "$TOTAL_ITEMS" -ne "${#CATEGORY_DOMAINS[@]}" ] ||
   [ "$TOTAL_ITEMS" -ne "${#CATEGORY_IDS[@]}" ]; then
   echo "ERROR: Seed content arrays must have the same length"
   exit 1
@@ -186,6 +212,7 @@ for ((i = 0; i < TOTAL_ITEMS; i++)); do
   DESCRIPTION="${DESCRIPTIONS[$i]}"
   TAG="${TAGS[$i]}"
   CATEGORY_ID="${CATEGORY_IDS[$i]}"
+  CATEGORY_DOMAIN="${CATEGORY_DOMAINS[$i]}"
 
   ADDR=$(cast wallet address "$KEY")
   echo "[$((i+1))/$TOTAL_ITEMS] Account: $ADDR"
@@ -214,9 +241,9 @@ for ((i = 0; i < TOTAL_ITEMS; i++)); do
 
   # 3. Reveal the submission with the same deterministic salt used for the reservation
   if [ -n "$URL" ]; then
-    echo "  Submitting question: $TITLE (image: $URL, categoryId: $CATEGORY_ID)"
+    echo "  Submitting question: $TITLE (image: $URL, category: $CATEGORY_DOMAIN -> $CATEGORY_ID)"
   else
-    echo "  Submitting question: $TITLE (text-only, categoryId: $CATEGORY_ID)"
+    echo "  Submitting question: $TITLE (text-only, category: $CATEGORY_DOMAIN -> $CATEGORY_ID)"
   fi
   cast send "$REGISTRY" "submitQuestion(string,string,string,string,uint256,bytes32)" \
     "$URL" "$TITLE" "$DESCRIPTION" "$TAG" "$CATEGORY_ID" "0x$SALT" \

@@ -9,7 +9,6 @@
  * the call with viem and send via eth_sendTransaction.
  */
 import { parseRound } from "../../lib/contracts/roundVotingEngine";
-import { createTlockVoteCommit, encodeVoteTransferPayload } from "@curyo/contracts/voting";
 import { ANVIL_ACCOUNTS } from "./anvil-accounts";
 import { runCommitAttempts } from "./commit-attempts";
 import { type RpcSendResult, isRetryableDirectCommitSendResult } from "./direct-commit-retry";
@@ -17,6 +16,7 @@ import "./fetch-shim";
 import { PONDER_URL } from "./ponder-url";
 import { E2E_RPC_URL } from "./service-urls";
 import { deriveAnchoredTlockRuntimeNowMs } from "./tlockRuntime";
+import { createTlockVoteCommit, encodeVoteTransferPayload } from "@curyo/contracts/voting";
 
 const ANVIL_RPC = E2E_RPC_URL;
 // Contract gas costs shift as local protocol code evolves, so E2E helpers estimate
@@ -95,10 +95,13 @@ async function buildSubmissionReservation(
 
   const previewAbi = [
     {
-      name: "previewSubmissionKey",
+      name: "previewQuestionSubmissionKey",
       type: "function",
       inputs: [
         { name: "url", type: "string" },
+        { name: "title", type: "string" },
+        { name: "description", type: "string" },
+        { name: "tags", type: "string" },
         { name: "categoryId", type: "uint256" },
       ],
       outputs: [
@@ -111,8 +114,8 @@ async function buildSubmissionReservation(
 
   const previewData = encodeFunctionData({
     abi: previewAbi,
-    functionName: "previewSubmissionKey",
-    args: [url, categoryId],
+    functionName: "previewQuestionSubmissionKey",
+    args: [url, title, description, tags, categoryId],
   });
 
   const previewResult = await rpcRequest<`0x${string}`>("eth_call", [
@@ -123,7 +126,7 @@ async function buildSubmissionReservation(
 
   const [, submissionKey] = decodeFunctionResult({
     abi: previewAbi,
-    functionName: "previewSubmissionKey",
+    functionName: "previewQuestionSubmissionKey",
     data: previewResult,
   }) as readonly [bigint, `0x${string}`];
 
@@ -520,9 +523,9 @@ export async function registerFrontend(fromAddress: string, contractAddress: str
 }
 
 /**
- * Submit content directly via contract call.
+ * Submit a question directly via contract call.
  * Caller must have approved MIN_SUBMITTER_STAKE (10 cREP = 10e6) to ContentRegistry.
- * Returns the transaction hash on success, or null on failure.
+ * Returns true when the submission transaction succeeds.
  */
 export async function submitContentDirect(
   url: string,
@@ -567,7 +570,7 @@ export async function submitContentDirect(
   const data = encodeFunctionData({
     abi: [
       {
-        name: "submitContent",
+        name: "submitQuestion",
         type: "function",
         inputs: [
           { name: "url", type: "string" },
@@ -581,7 +584,7 @@ export async function submitContentDirect(
         stateMutability: "nonpayable",
       },
     ],
-    functionName: "submitContent",
+    functionName: "submitQuestion",
     args: [url, title, description, tags, resolvedCategoryId, reservation.salt],
   });
   return sendTx(fromAddress, contractAddress, data);

@@ -660,7 +660,7 @@ test.describe("Mobile viewport (phone)", () => {
   });
 
   test("preview clicks keep the user on /vote and emphasize the mobile dock", async ({ connectedPage: page }) => {
-    await gotoWithRetry(page, "/vote?q=go-ethereum", { ensureWalletConnected: true, timeout: 45_000 });
+    await gotoWithRetry(page, "/vote?q=workspace", { ensureWalletConnected: true, timeout: 45_000 });
     await waitForFeedLoaded(page, 30_000);
 
     const activeSurface = page.locator('[aria-current="true"] [data-testid="vote-content-surface"]').first();
@@ -674,7 +674,7 @@ test.describe("Mobile viewport (phone)", () => {
 
     const popup = await popupPromise;
     expect(popup).toBeNull();
-    await expect(page).toHaveURL(/\/vote\?.*q=go-ethereum.*content=/, { timeout: 10_000 });
+    await expect(page).toHaveURL(/\/vote\?.*q=workspace.*content=/, { timeout: 10_000 });
     await expect(page.locator('[data-vote-attention="true"]').first()).toBeVisible({ timeout: 5_000 });
   });
 

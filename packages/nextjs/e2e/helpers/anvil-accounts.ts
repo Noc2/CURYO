@@ -9,19 +9,22 @@
  * - Account #0 gets MINTER_ROLE on CuryoReputation + VoterIdNFT.addMinter()
  *
  * Content seeded by `SeedContent.sh`:
- *   #1 = Account #2 (YouTube/Ethereum)           [cat 1: YouTube]
- *   #2 = Account #3 (YouTube/API Demo)           [cat 1: YouTube]
- *   #3 = Account #4 (YouTube/Neural Networks)     [cat 1: YouTube]
- *   #4 = Account #5 (Scryfall/Black Lotus)        [cat 3: MTG]
- *   #5 = Account #6 (TMDB/Godfather)              [cat 4: Movies]
- *   #6 = Account #7 (Wikipedia/Messi)             [cat 5: People]
- *   #7 = Account #8 (Wikipedia/Curie)             [cat 5: People]
- *   #8 = Account #9 (RAWG/Elden Ring)             [cat 6: Games]
- *   #9 = Account #10 (RAWG/Baldur's Gate 3)       [cat 6: Games]
- *  #10 = Account #2 (Open Library/Mr Fox)          [cat 7: Books]
- *  #11 = Account #3 (Open Library/Hitchhiker's)    [cat 7: Books]
- *  #12 = Account #4 (CoinGecko/Bitcoin)            [cat 9: Crypto Tokens]
- *  #13 = Account #5 (CoinGecko/Ethereum)           [cat 9: Crypto Tokens]
+ *   #1 = Account #2 (text question)                [safety.curyo.xyz]
+ *   #2 = Account #3 (image question)               [design.curyo.xyz]
+ *   #3 = Account #4 (text question)                [docs.curyo.xyz]
+ *   #4 = Account #5 (image question)               [products.curyo.xyz]
+ *   #5 = Account #6 (text question)                [local.curyo.xyz]
+ *   #6 = Account #7 (image question)               [travel.curyo.xyz]
+ *   #7 = Account #8 (text question)                [ai-answers.curyo.xyz]
+ *   #8 = Account #9 (text question)                [apps.curyo.xyz]
+ *   #9 = Account #10 (image question)              [design.curyo.xyz]
+ *  #10 = Account #2 (text question)                [opinion.curyo.xyz]
+ *  #11 = Account #3 (image question)               [media.curyo.xyz]
+ *  #12 = Account #4 (text question)                [apps.curyo.xyz]
+ *  #13 = Account #5 (image question)               [travel.curyo.xyz]
+ *  #14 = Account #6 (text question)                [apps.curyo.xyz]
+ *  #15 = Account #7 (text question)                [safety.curyo.xyz]
+ *  #16 = Account #8 (image question)               [products.curyo.xyz]
  */
 
 export const ANVIL_ACCOUNTS = {
@@ -55,17 +58,17 @@ export const ANVIL_ACCOUNTS = {
     privateKey: "0x8b3a350cf5c34c9194ca85829a2df0ec3153be0318b5e2d3348e872092edffba",
     address: "0x9965507D1a55bcC2695C58ba16FB37d819B0A4dc",
   },
-  /** 1000 cREP + VoterID #104 — submitted content #5 */
+  /** 1000 cREP + VoterID #104 — submitted content #5 and #14 */
   account6: {
     privateKey: "0x92db14e403b83dfe3df233f83dfa3a0d7096f21ca9b0d6d6b8d88b2b4ec1564e",
     address: "0x976EA74026E726554dB657fA54763abd0C3a0aa9",
   },
-  /** 1000 cREP + VoterID #105 — submitted content #6 */
+  /** 1000 cREP + VoterID #105 — submitted content #6 and #15 */
   account7: {
     privateKey: "0x4bbbf85ce3377467afe5d46f804f221813b2bb87f24d81f60f1fcdbf7cbf4356",
     address: "0x14dC79964da2C08b23698B3D3cc7Ca32193d9955",
   },
-  /** 1000 cREP + VoterID #106 — submitted content #7 */
+  /** 1000 cREP + VoterID #106 — submitted content #7 and #16 */
   account8: {
     privateKey: "0xdbda1821b80551c9d65939329250298aa3472ba22feea921c0cf5d620ea67b97",
     address: "0x23618e81E3f5cdF7f54C3d65f7FBc0aBf5B21E8f",

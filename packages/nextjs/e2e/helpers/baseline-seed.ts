@@ -2,178 +2,243 @@ import { approveCREP, commitVoteDirect, submitContentDirect, waitForPonderIndexe
 import { ANVIL_ACCOUNTS } from "./anvil-accounts";
 import { CONTRACT_ADDRESSES } from "./contracts";
 import { getContentById, getContentList } from "./ponder-api";
+import { E2E_RPC_URL } from "./service-urls";
 
 const SUBMIT_STAKE = BigInt(10e6);
 const VOTE_STAKE = BigInt(5e6);
 const DEFAULT_EPOCH_DURATION_SECONDS = 20 * 60;
 const ZERO_ADDRESS = "0x0000000000000000000000000000000000000000";
+const CATEGORY_REGISTRY_ABI = [
+  {
+    name: "getCategoryByDomain",
+    type: "function",
+    inputs: [{ name: "domain", type: "string" }],
+    outputs: [
+      {
+        name: "",
+        type: "tuple",
+        components: [
+          { name: "id", type: "uint256" },
+          { name: "name", type: "string" },
+          { name: "domain", type: "string" },
+          { name: "subcategories", type: "string[]" },
+          { name: "submitter", type: "address" },
+          { name: "stakeAmount", type: "uint256" },
+          { name: "status", type: "uint8" },
+          { name: "proposalId", type: "uint256" },
+          { name: "createdAt", type: "uint256" },
+        ],
+      },
+    ],
+    stateMutability: "view",
+  },
+] as const;
+const categoryIdByDomain = new Map<string, bigint>();
+
+async function resolveCategoryIdByDomain(domain: string): Promise<bigint> {
+  const cached = categoryIdByDomain.get(domain);
+  if (cached !== undefined) return cached;
+
+  const [{ createPublicClient, http }, { foundry }] = await Promise.all([import("viem"), import("viem/chains")]);
+  const publicClient = createPublicClient({ chain: foundry, transport: http(E2E_RPC_URL) });
+  const category = await publicClient.readContract({
+    address: CONTRACT_ADDRESSES.CategoryRegistry as `0x${string}`,
+    abi: CATEGORY_REGISTRY_ABI,
+    functionName: "getCategoryByDomain",
+    args: [domain],
+  });
+  const categoryId = "id" in category ? category.id : category[0];
+  categoryIdByDomain.set(domain, categoryId);
+  return categoryId;
+}
 
 const BASELINE_CONTENT = [
   {
-    url: "https://www.youtube.com/watch?v=rUCAdMnb1Oc",
-    title: "Ethereum in Practice",
-    description: "Learn how Ethereum works under the hood - from transactions to the EVM.",
-    tags: "Technology,Education",
-    categoryId: 1,
+    url: "",
+    title: "Is this refund policy easy to understand?",
+    description:
+      "Voters should judge whether the plain-language summary explains refunds, timelines, and exceptions clearly enough for a first-time buyer.",
+    tags: "Policy,Clarity,Trust",
+    categoryDomain: "safety.curyo.xyz",
     submitter: ANVIL_ACCOUNTS.account2.address,
   },
   {
-    url: "https://www.youtube.com/watch?v=M7lc1UVf-VE",
-    title: "YouTube Player API Demo",
-    description: "Official demo video used for testing YouTube embeds and player integrations.",
-    tags: "Technology,Testing,Video",
-    categoryId: 1,
+    url: "https://picsum.photos/seed/curyo-workspace/1200/800.jpg",
+    title: "Does this workspace feel ready for deep work?",
+    description:
+      "Rate the image and context as a calm workspace for focused technical writing, not as a luxury interior shot.",
+    tags: "Photography,Usefulness,Atmosphere",
+    categoryDomain: "design.curyo.xyz",
     submitter: ANVIL_ACCOUNTS.account3.address,
   },
   {
-    url: "https://www.youtube.com/watch?v=aircAruvnKk",
-    title: "Neural Networks, Visualized",
-    description: "A visual introduction to neural networks and deep learning fundamentals.",
-    tags: "Science,Education,Technology",
-    categoryId: 1,
+    url: "",
+    title: "Is this API quickstart beginner friendly?",
+    description:
+      "Judge whether a new developer could complete the first request without missing setup, authentication, or error handling steps.",
+    tags: "Getting Started,Readability,Examples",
+    categoryDomain: "docs.curyo.xyz",
     submitter: ANVIL_ACCOUNTS.account4.address,
   },
   {
-    url: "https://scryfall.com/card/lea/232/black-lotus",
-    title: "Black Lotus",
-    description: "The most iconic and valuable card in Magic history - the legendary Black Lotus.",
-    tags: "Artifacts,Commanders",
-    categoryId: 3,
+    url: "https://picsum.photos/seed/curyo-product-label/1200/800.jpg",
+    title: "Is this product label readable on mobile?",
+    description:
+      "Focus on whether the label hierarchy, contrast, and key details would still be clear in a small shopping card.",
+    tags: "Design,Usability,Quality",
+    categoryDomain: "products.curyo.xyz",
     submitter: ANVIL_ACCOUNTS.account5.address,
   },
   {
-    url: "https://www.themoviedb.org/movie/238-the-godfather",
-    title: "The Godfather",
-    description: "Francis Ford Coppola's masterpiece - widely considered one of the greatest films ever made.",
-    tags: "Drama,Crime",
-    categoryId: 4,
+    url: "",
+    title: "Would this cafe review help locals choose?",
+    description:
+      "The review mentions noise, service speed, seating, and price. Vote on whether it is specific enough to guide a nearby visitor.",
+    tags: "Local Tips,Service,Value",
+    categoryDomain: "local.curyo.xyz",
     submitter: ANVIL_ACCOUNTS.account6.address,
   },
   {
-    url: "https://en.wikipedia.org/wiki/Lionel_Messi",
-    title: "Lionel Messi",
-    description: "Widely regarded as one of the greatest footballers of all time.",
-    tags: "Athletes,Sports",
-    categoryId: 5,
+    url: "https://picsum.photos/seed/curyo-hotel-room/1200/800.jpg",
+    title: "Does this hotel room look clean and comfortable?",
+    description:
+      "Use the visible room condition and the written context to judge whether the listing earns a higher community rating.",
+    tags: "Hotels,Cleanliness,Comfort",
+    categoryDomain: "travel.curyo.xyz",
     submitter: ANVIL_ACCOUNTS.account7.address,
   },
   {
-    url: "https://en.wikipedia.org/wiki/Marie_Curie",
-    title: "Marie Curie",
-    description: "Pioneer in radioactivity research and the first person to win two Nobel Prizes.",
-    tags: "Scientists,History",
-    categoryId: 5,
+    url: "",
+    title: "Is this AI answer careful enough to publish?",
+    description:
+      "The answer gives a confident summary but leaves out uncertainty and source limits. Vote on helpfulness, clarity, and safety.",
+    tags: "Helpfulness,Clarity,Safety",
+    categoryDomain: "ai-answers.curyo.xyz",
     submitter: ANVIL_ACCOUNTS.account8.address,
   },
   {
-    url: "https://rawg.io/games/elden-ring",
-    title: "Elden Ring",
-    description: "FromSoftware's epic open-world action RPG - a landmark in modern game design.",
-    tags: "Action,RPG",
-    categoryId: 6,
+    url: "",
+    title: "Should this app onboarding copy be shorter?",
+    description:
+      "The flow explains wallet connection, Voter ID, and staking in one screen. Judge whether the copy reduces friction or overloads new users.",
+    tags: "Onboarding,Trust,Usability",
+    categoryDomain: "apps.curyo.xyz",
     submitter: ANVIL_ACCOUNTS.account9.address,
   },
   {
-    url: "https://rawg.io/games/baldurs-gate-3",
-    title: "Baldur's Gate 3",
-    description: "Larian Studios' critically acclaimed RPG - a masterclass in player choice and storytelling.",
-    tags: "RPG,Adventure",
-    categoryId: 6,
+    url: "https://picsum.photos/seed/curyo-event-poster/1200/800.jpg",
+    title: "Does this poster make the event easy to grasp?",
+    description:
+      "Voters should judge hierarchy, contrast, and whether date, place, and purpose are legible at a glance.",
+    tags: "Visual Design,Typography,Layout",
+    categoryDomain: "design.curyo.xyz",
     submitter: ANVIL_ACCOUNTS.account10.address,
   },
   {
-    url: "https://openlibrary.org/works/OL45883W/Fantastic_Mr_Fox",
-    title: "Fantastic Mr. Fox",
-    description: "Roald Dahl's beloved tale of a clever fox outsmarting three mean farmers.",
-    tags: "Fiction,Fantasy",
-    categoryId: 7,
+    url: "",
+    title: "Is this dinner plan practical for a weeknight?",
+    description:
+      "Rate whether the plan balances prep time, nutrition, cleanup, and ingredient availability for a busy household.",
+    tags: "Usefulness,Clear,Worthwhile",
+    categoryDomain: "opinion.curyo.xyz",
     submitter: ANVIL_ACCOUNTS.account2.address,
   },
   {
-    url: "https://openlibrary.org/works/OL27516W/The_Hitchhikers_Guide_to_the_Galaxy",
-    title: "The Hitchhiker's Guide to the Galaxy",
-    description: "Douglas Adams' comedic sci-fi classic - the answer is 42.",
-    tags: "Science Fiction,Fiction",
-    categoryId: 7,
+    url: "https://picsum.photos/seed/curyo-media-hero/1200/800.jpg",
+    title: "Does this image work as a hero visual?",
+    description:
+      "Judge whether the image has enough focus, contrast, and mood to support a question about human review quality.",
+    tags: "Images,Art,Photography",
+    categoryDomain: "media.curyo.xyz",
     submitter: ANVIL_ACCOUNTS.account3.address,
   },
   {
-    url: "https://www.coingecko.com/en/coins/bitcoin",
-    title: "Bitcoin",
+    url: "",
+    title: "Would this failed-vote message reduce support tickets?",
     description:
-      "The original cryptocurrency - a peer-to-peer electronic cash system that pioneered decentralized finance.",
-    tags: "Layer 1,Infrastructure",
-    categoryId: 9,
+      "The message explains gas, wallet RPC issues, and retry timing. Vote on whether it is actionable without being too technical.",
+    tags: "Web Apps,Troubleshooting,Trust",
+    categoryDomain: "apps.curyo.xyz",
     submitter: ANVIL_ACCOUNTS.account4.address,
   },
   {
-    url: "https://www.coingecko.com/en/coins/ethereum",
-    title: "Ethereum",
+    url: "https://picsum.photos/seed/curyo-street-guide/1200/800.jpg",
+    title: "Does this street scene feel welcoming?",
     description:
-      "The world's leading smart contract platform - powering DeFi, NFTs, and decentralized applications.",
-    tags: "Layer 1,DeFi",
-    categoryId: 9,
+      "Use the image as travel context. Vote on whether it would make a neighborhood guide feel inviting and credible.",
+    tags: "Location,Photography,Solo Travel",
+    categoryDomain: "travel.curyo.xyz",
     submitter: ANVIL_ACCOUNTS.account5.address,
   },
   {
-    url: "https://github.com/ethereum/go-ethereum",
-    title: "go-ethereum",
-    description: "Official Go implementation of Ethereum - the backbone of most Ethereum nodes worldwide.",
-    tags: "Infrastructure,DeFi/Web3",
-    categoryId: 11,
+    url: "",
+    title: "Is this accessibility checklist launch ready?",
+    description:
+      "Review the checklist for keyboard support, focus states, text contrast, reduced motion, and mobile overflow coverage.",
+    tags: "Accessibility,Quality,Testing",
+    categoryDomain: "apps.curyo.xyz",
     submitter: ANVIL_ACCOUNTS.account6.address,
   },
   {
-    url: "https://github.com/foundry-rs/foundry",
-    title: "Foundry",
-    description: "Blazing-fast Solidity toolkit - forge, cast, anvil, and chisel for smart contract development.",
-    tags: "Developer Tools,Infrastructure",
-    categoryId: 11,
+    url: "",
+    title: "Does this moderation rule set clear voter expectations?",
+    description:
+      "Judge whether the rule tells voters when to downvote illegal, unsafe, misleading, or mismatched submissions.",
+    tags: "Moderation,Policy,Risk",
+    categoryDomain: "safety.curyo.xyz",
     submitter: ANVIL_ACCOUNTS.account7.address,
   },
   {
-    url: "https://open.spotify.com/show/5eXZwvvxt3K2dxha3BSaAe",
-    title: "Spotify Engineering Stories",
-    description: "Engineering stories and behind-the-scenes conversations from Spotify's own podcast feed.",
-    tags: "Technology,Culture",
-    categoryId: 12,
+    url: "https://picsum.photos/seed/curyo-product-photo/1200/800.jpg",
+    title: "Is this product photo useful enough to compare?",
+    description:
+      "Focus on scale, detail, lighting, and whether the photo helps a buyer compare the item without extra marketing claims.",
+    tags: "Quality,Design,Value",
+    categoryDomain: "products.curyo.xyz",
     submitter: ANVIL_ACCOUNTS.account8.address,
   },
 ] as const;
 
 const BASELINE_COMMITS = [
   {
-    contentId: 1n,
+    title: "Is this refund policy easy to understand?",
     voter: ANVIL_ACCOUNTS.account9.address,
     isUp: true,
   },
   {
-    contentId: 2n,
+    title: "Does this workspace feel ready for deep work?",
     voter: ANVIL_ACCOUNTS.account9.address,
     isUp: true,
   },
   {
-    contentId: 1n,
+    title: "Is this refund policy easy to understand?",
     voter: ANVIL_ACCOUNTS.account10.address,
     isUp: false,
   },
   {
-    contentId: 3n,
+    title: "Is this API quickstart beginner friendly?",
     voter: ANVIL_ACCOUNTS.account10.address,
     isUp: true,
   },
 ] as const;
 
+async function getBaselineContentByTitle(): Promise<Map<string, { id: string; title: string }>> {
+  const { items } = await getContentList({ status: "all", limit: 500 });
+  return new Map(items.map(item => [item.title, { id: item.id, title: item.title }]));
+}
+
 export async function ensureBaselineSeedData(): Promise<void> {
-  const existing = await getContentList({ status: "all", limit: 100 });
-  const existingUrls = new Set(existing.items.map(item => item.url));
-  const missingContent = BASELINE_CONTENT.filter(item => !existingUrls.has(item.url));
+  const baselineTitles = new Set(BASELINE_CONTENT.map(item => item.title));
+  const existing = await getContentList({ status: "all", limit: 500 });
+  const existingTitles = new Set(existing.items.map(item => item.title));
+  const missingContent = BASELINE_CONTENT.filter(item => !existingTitles.has(item.title));
 
   if (missingContent.length > 0) {
     console.log(`  ⓘ Seeding ${missingContent.length} baseline content item(s) for E2E...`);
   }
 
   for (const item of missingContent) {
+    const categoryId = await resolveCategoryIdByDomain(item.categoryDomain);
     const approved = await approveCREP(
       CONTRACT_ADDRESSES.ContentRegistry,
       SUBMIT_STAKE,
@@ -189,7 +254,7 @@ export async function ensureBaselineSeedData(): Promise<void> {
       item.title,
       item.description,
       item.tags,
-      item.categoryId,
+      categoryId,
       item.submitter,
       CONTRACT_ADDRESSES.ContentRegistry,
     );
@@ -201,8 +266,8 @@ export async function ensureBaselineSeedData(): Promise<void> {
   if (missingContent.length > 0) {
     const contentIndexed = await waitForPonderIndexed(
       async () => {
-        const { items } = await getContentList({ status: "all", limit: 100 });
-        return items.length >= BASELINE_CONTENT.length;
+        const indexedByTitle = await getBaselineContentByTitle();
+        return [...baselineTitles].every(title => indexedByTitle.has(title));
       },
       120_000,
       2_000,
@@ -213,13 +278,31 @@ export async function ensureBaselineSeedData(): Promise<void> {
     }
   }
 
-  const [{ rounds: rounds1 }, { rounds: rounds2 }, { rounds: rounds3 }] = await Promise.all([
-    getContentById(1),
-    getContentById(2),
-    getContentById(3),
-  ]);
-  const seededVoteCounts = [Number(rounds1[0]?.voteCount ?? "0"), Number(rounds2[0]?.voteCount ?? "0"), Number(rounds3[0]?.voteCount ?? "0")];
-  const votesAlreadySeeded = seededVoteCounts[0] >= 2 && seededVoteCounts[1] >= 1 && seededVoteCounts[2] >= 1;
+  const contentByTitle = await getBaselineContentByTitle();
+  const voteTargetsByTitle = new Map<string, bigint>();
+  for (const vote of BASELINE_COMMITS) {
+    const item = contentByTitle.get(vote.title);
+    if (!item) throw new Error(`Missing baseline content for seeded vote: ${vote.title}`);
+    voteTargetsByTitle.set(vote.title, BigInt(item.id));
+  }
+
+  const expectedVoteCountsById = new Map<bigint, number>();
+  for (const contentId of voteTargetsByTitle.values()) {
+    expectedVoteCountsById.set(
+      contentId,
+      BASELINE_COMMITS.filter(vote => voteTargetsByTitle.get(vote.title) === contentId).length,
+    );
+  }
+
+  const seededVoteCounts = await Promise.all(
+    [...expectedVoteCountsById.keys()].map(async contentId => {
+      const { rounds } = await getContentById(contentId.toString());
+      return Number(rounds[0]?.voteCount ?? "0");
+    }),
+  );
+  const votesAlreadySeeded = seededVoteCounts.every(
+    (count, index) => count >= [...expectedVoteCountsById.values()][index],
+  );
   const hasPartialSeedVotes = seededVoteCounts.some(count => count > 0) && !votesAlreadySeeded;
 
   if (hasPartialSeedVotes) {
@@ -251,8 +334,11 @@ export async function ensureBaselineSeedData(): Promise<void> {
   }
 
   for (const vote of BASELINE_COMMITS) {
+    const contentId = voteTargetsByTitle.get(vote.title);
+    if (contentId === undefined) throw new Error(`Missing vote target for ${vote.title}`);
+
     const { success } = await commitVoteDirect(
-      vote.contentId,
+      contentId,
       vote.isUp,
       VOTE_STAKE,
       ZERO_ADDRESS,
@@ -261,20 +347,19 @@ export async function ensureBaselineSeedData(): Promise<void> {
       DEFAULT_EPOCH_DURATION_SECONDS,
     );
     if (!success) {
-      throw new Error(`Failed to seed vote for content ${vote.contentId.toString()}`);
+      throw new Error(`Failed to seed vote for content ${contentId.toString()}`);
     }
   }
 
   const votesIndexed = await waitForPonderIndexed(
     async () => {
-      const [{ rounds: updatedRounds1 }, { rounds: updatedRounds2 }, { rounds: updatedRounds3 }] = await Promise.all([
-        getContentById(1),
-        getContentById(2),
-        getContentById(3),
-      ]);
-
-      const voteCount = (rounds: Array<{ voteCount: string }>) => Number(rounds[0]?.voteCount ?? "0");
-      return voteCount(updatedRounds1) >= 2 && voteCount(updatedRounds2) >= 1 && voteCount(updatedRounds3) >= 1;
+      const updatedVoteCounts = await Promise.all(
+        [...expectedVoteCountsById.keys()].map(async contentId => {
+          const { rounds } = await getContentById(contentId.toString());
+          return Number(rounds[0]?.voteCount ?? "0");
+        }),
+      );
+      return updatedVoteCounts.every((count, index) => count >= [...expectedVoteCountsById.values()][index]);
     },
     120_000,
     2_000,

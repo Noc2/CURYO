@@ -42,13 +42,13 @@ test.describe("Accessibility basics", () => {
 
   test("non-video previews expose focusable preview and source actions", async ({ page }) => {
     await setupWallet(page, ANVIL_ACCOUNTS.account2.privateKey);
-    await gotoPath(page, "/vote?q=go-ethereum", { ensureWalletConnected: true });
+    await gotoPath(page, "/vote?q=workspace", { ensureWalletConnected: true });
     await waitForFeedLoaded(page, 30_000);
 
     const activeCard = page.locator('article[aria-current="true"]').first();
     await expect(activeCard.locator('[data-content-intent-surface="true"]').first()).toBeVisible({ timeout: 10_000 });
     await activeCard.getByRole("button", { name: "Expand details" }).click();
-    await expect(activeCard.getByRole("link", { name: /Open source: github\.com/i }).first()).toBeVisible({
+    await expect(activeCard.getByRole("link", { name: /Open source: picsum\.photos/i }).first()).toBeVisible({
       timeout: 10_000,
     });
   });
