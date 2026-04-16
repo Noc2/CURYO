@@ -91,7 +91,7 @@ const SmartContracts: NextPage = () => {
             </tr>
             <tr>
               <td className="font-mono text-primary">ParticipationPool</td>
-              <td>Halving-tier cREP participation rewards used by submitter and voter reward claims</td>
+              <td>Halving-tier cREP Bootstrap Pool rewards used by submitter and voter reward claims</td>
               <td>No</td>
             </tr>
             <tr>
@@ -333,9 +333,9 @@ const SmartContracts: NextPage = () => {
           reaches dormancy after all open rounds have been closed.
         </li>
         <li>
-          <strong>Submitter participation reward:</strong> Healthy submitter rewards are snapshotted when the stake
-          returns. If the ParticipationPool is temporarily depleted, the remaining amount stays claimable later instead
-          of being lost.
+          <strong>Submitter bootstrap reward:</strong> Healthy submitter rewards are snapshotted when the stake returns.
+          If the ParticipationPool is temporarily depleted, the remaining amount stays claimable later instead of being
+          lost.
         </li>
       </ul>
 
@@ -448,12 +448,12 @@ const SmartContracts: NextPage = () => {
         </li>
         <li>
           <code>RoundRewardDistributor.claimParticipationReward(contentId, roundId)</code> &mdash; Voters claim
-          participation rewards (rate snapshotted at settlement time for fairness). Pull-based.
+          bootstrap rewards (rate snapshotted at settlement time for fairness). Pull-based.
         </li>
         <li>
           <code>ContentRegistry.claimSubmitterParticipationReward(contentId)</code> &mdash; Claim the snapshotted
-          submitter participation reward after a healthy stake return. Any amount the pool could already fund is
-          reserved up front for that claim instead of depending entirely on future pool authorization state.
+          submitter bootstrap reward after a healthy stake return. Any amount the pool could already fund is reserved up
+          front for that claim instead of depending entirely on future pool authorization state.
         </li>
         <li>
           <code>cancelExpiredRound(contentId, roundId)</code> &mdash; Cancel a round that exceeded maxDuration (
@@ -506,8 +506,8 @@ const SmartContracts: NextPage = () => {
           plus winnings; revealed losers receive a fixed {protocolDocFacts.revealedLoserRefundPercentLabel} rebate.
         </li>
         <li>
-          <code>claimParticipationReward(contentId, roundId)</code> &mdash; Claim the cREP participation reward for
-          eligible winning revealed voters, using the rate snapshotted at settlement.
+          <code>claimParticipationReward(contentId, roundId)</code> &mdash; Claim the cREP bootstrap reward for eligible
+          winning revealed voters, using the rate snapshotted at settlement.
         </li>
         <li>
           <code>claimSubmitterReward(contentId, roundId)</code> &mdash; Claim submitter&apos;s 10% share.
@@ -675,15 +675,15 @@ const SmartContracts: NextPage = () => {
 
       <h2>ParticipationPool</h2>
       <p>
-        Distributes participation rewards to both voters and content submitters. Voter rewards are claimed after round
-        settlement using the rate snapshotted at settlement time. Submitter rewards are snapshotted only when a healthy
-        submitter stake return resolves after a settled round. Funded with 34M cREP. Uses a halving schedule: starting
-        at 90% reward rate, halving each time a tier threshold is reached (2M, 6M, 14M, 30M cumulative), with a 1% floor
-        rate.
+        Implements the user-facing Bootstrap Pool for both voters and content submitters. Voter rewards are claimed
+        after round settlement using the rate snapshotted at settlement time. Submitter rewards are snapshotted only
+        when a healthy submitter stake return resolves after a settled round. Funded with 24M cREP. Uses a halving
+        schedule: starting at 90% reward rate, halving each time a tier threshold is reached (1.5M, 4.5M, 10.5M, 22.5M
+        cumulative), with a 1% floor rate.
       </p>
       <p>
-        Privileged sweeps of accounted participation rewards are disabled; only reward accounting and surplus recovery
-        move funds.
+        Privileged sweeps of accounted bootstrap rewards are disabled; only reward accounting and surplus recovery move
+        funds.
       </p>
 
       <hr />
@@ -744,7 +744,7 @@ const SmartContracts: NextPage = () => {
         </li>
         <li>
           <strong>Governance-owned access control:</strong> The governor/timelock owns upgrade, config, and treasury
-          roles from launch. The initial 10M treasury allocation also sits there, while the deployer receives only
+          roles from launch. The initial 20M treasury allocation also sits there, while the deployer receives only
           temporary setup roles and renounces them after deployment.
         </li>
       </ul>

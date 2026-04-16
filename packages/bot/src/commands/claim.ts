@@ -279,7 +279,7 @@ async function buildRateBotClaimPlan(address: `0x${string}`): Promise<ClaimPlanI
       contentId,
       roundId,
       estimatedReward: claimableNow,
-      label: `participation reward for content #${contentId} round #${roundId}`,
+      label: `bootstrap reward for content #${contentId} round #${roundId}`,
       write: {
         ...contractConfig.distributor,
         functionName: "claimParticipationReward",
@@ -360,7 +360,7 @@ async function buildSubmitterParticipationClaimItems(
       claimType: "submitter_participation_reward",
       contentId,
       estimatedReward: claimableReward,
-      label: `submitter participation reward for content #${contentId}`,
+      label: `submitter bootstrap reward for content #${contentId}`,
       write: {
         ...contractConfig.registry,
         functionName: "claimSubmitterParticipationReward",

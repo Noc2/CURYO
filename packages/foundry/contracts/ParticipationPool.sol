@@ -1,15 +1,15 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.28;
 
-import { Ownable } from "@openzeppelin/contracts/access/Ownable.sol";
-import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import { SafeERC20 } from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
-import { ReentrancyGuardTransient } from "@openzeppelin/contracts/utils/ReentrancyGuardTransient.sol";
-import { IParticipationPool } from "./interfaces/IParticipationPool.sol";
+import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
+import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
+import {ReentrancyGuardTransient} from "@openzeppelin/contracts/utils/ReentrancyGuardTransient.sol";
+import {IParticipationPool} from "./interfaces/IParticipationPool.sol";
 
 /// @title ParticipationPool
 /// @notice Distributes cREP rewards proportional to stake for voting and submitting content, with distribution-based halving.
-/// @dev Funded with 34M cREP. Early participants earn more — the reward rate halves as cumulative cREP distributed grows.
+/// @dev Funded with 24M cREP. Early participants earn more — the reward rate halves as cumulative cREP distributed grows.
 ///      Reward = stakeAmount × currentRateBps / 10000. Rate starts at 90% and halves per tier.
 contract ParticipationPool is IParticipationPool, Ownable, ReentrancyGuardTransient {
     using SafeERC20 for IERC20;
@@ -19,8 +19,8 @@ contract ParticipationPool is IParticipationPool, Ownable, ReentrancyGuardTransi
     /// @notice Initial reward rate in basis points (90%)
     uint256 public constant INITIAL_RATE_BPS = 9000;
 
-    /// @notice cREP distributed in the first halving tier (2M cREP, 6 decimals)
-    uint256 public constant INITIAL_TIER_AMOUNT = 2_000_000e6;
+    /// @notice cREP distributed in the first halving tier (1.5M cREP, 6 decimals)
+    uint256 public constant INITIAL_TIER_AMOUNT = 1_500_000e6;
 
     /// @notice Minimum reward rate floor in basis points (1%)
     uint256 public constant MIN_RATE_BPS = 100;

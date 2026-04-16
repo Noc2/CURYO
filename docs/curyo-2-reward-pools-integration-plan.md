@@ -250,7 +250,7 @@ The launch payout model should be deliberately simple:
 5. Every voter who committed and revealed in that qualifying round can claim an equal share of that round allocation.
 6. Vote direction does not matter.
 7. Stablecoin rewards never depend on winning side at launch.
-8. cREP rewards, losses, rebates, and participation rewards remain governed by the existing round settlement model.
+8. cREP rewards, losses, rebates, and Bootstrap Pool rewards remain governed by the existing round settlement model.
 
 This per-round model avoids unbounded on-chain iteration and avoids needing a unique-voter set across many rounds in v1. `claimQuestionReward(rewardPoolId, roundId)` can verify the caller's revealed commit through the voting engine and the stored round state, then transfer the user's share if it has not already been claimed.
 
@@ -516,7 +516,7 @@ The implementation should stay split into narrow commits. A recommended sequence
    - Add responsive coverage for dense laptop and mobile vote surfaces.
 
 8. `nextjs: add stablecoin-funded question reward claims`
-   - Extend claimable reward types and claim-all behavior for question reward participation rewards.
+   - Extend claimable reward types and claim-all behavior for question reward stablecoin participation rewards.
    - Keep cREP and stablecoin rewards visually and semantically separate.
 
 9. `sdk/bot/keeper: expose reward pool helpers`
@@ -633,7 +633,7 @@ App docs:
 
 - `packages/nextjs/app/docs/how-it-works/page.tsx`: explain question submission, cREP voting, and stablecoin-funded reward pool participation rewards.
 - `packages/nextjs/app/docs/smart-contracts/page.tsx`: add new contracts, token allowlist, Voter ID based claim model, and pause/refund controls.
-- `packages/nextjs/app/docs/tokenomics/page.tsx`: clarify that stablecoin-funded reward pools are external question-scoped funds, not cREP emissions or the global Participation Reward Pool.
+- `packages/nextjs/app/docs/tokenomics/page.tsx`: clarify that stablecoin-funded reward pools are external question-scoped funds, not cREP emissions or the global Bootstrap Pool.
 - `packages/nextjs/app/docs/governance/page.tsx`: document default category creation, token allowlist governance, no hard reward pool caps, Self.xyz eligibility config, and emergency controls.
 - `packages/nextjs/app/docs/frontend-codes/page.tsx`: update only if frontend fee or registration behavior changes after removing platform submission from `/submit`.
 - `packages/nextjs/app/legal/terms/page.tsx`: add stablecoin-funded reward pool, prohibited-use, tax-record, and jurisdiction eligibility language for legal review.

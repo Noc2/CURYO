@@ -323,11 +323,11 @@ export const SECTIONS: Section[] = [
           },
           {
             type: "sub_heading",
-            text: "Participation Pool Sustainability",
+            text: "Bootstrap Pool Sustainability",
           },
           {
             type: "paragraph",
-            text: "Under modeled usage of 1,000 votes per day at an average stake of 50 cREP, the participation pool (34M cREP) sustains tier-0 rewards (90%) for approximately 44 days before the first halving. The halving schedule then extends the pool's effective lifetime: the pool supports over 1 million votes and survives well beyond one year of continuous operation across its first four tiers. Worst-case drainage (200 max-stake voters per round) exhausts tier-0 in approximately 111 rounds, but the halving mechanism ensures graceful degradation rather than abrupt depletion. A 256-run fuzz test confirms the conservation invariant: distributed tokens plus remaining balance always equals the initial deposit.",
+            text: "Under modeled usage of 1,000 votes per day at an average stake of 50 cREP, the Bootstrap Pool (24M cREP) sustains tier-0 rewards (90%) for approximately 33 days before the first halving. The halving schedule then extends the pool's effective lifetime: the pool supports over 1 million votes and survives well beyond one year of continuous operation across its first four tiers. Worst-case drainage (200 max-stake voters per round) exhausts tier-0 in approximately 83 rounds, but the halving mechanism ensures graceful degradation rather than abrupt depletion. A 256-run fuzz test confirms the conservation invariant: distributed tokens plus remaining balance always equals the initial deposit.",
           },
           {
             type: "sub_heading",
@@ -352,7 +352,7 @@ export const SECTIONS: Section[] = [
           },
           {
             type: "paragraph",
-            text: "Despite the multiplicity of equilibria in abstract game theory (contrarian voting or random voting are also self-consistent), the honest voting equilibrium from the formal analysis serves as the focal (Schelling) point. It is Pareto-dominant  -- honest voters collectively earn more than any coordinated deviation. This focal point is reinforced by winner participation rewards, revealed-loser rebates that reduce but do not remove downside risk, and the threat of governance Voter ID revocation for detected manipulation.",
+            text: "Despite the multiplicity of equilibria in abstract game theory (contrarian voting or random voting are also self-consistent), the honest voting equilibrium from the formal analysis serves as the focal (Schelling) point. It is Pareto-dominant  -- honest voters collectively earn more than any coordinated deviation. This focal point is reinforced by winner bootstrap rewards, revealed-loser rebates that reduce but do not remove downside risk, and the threat of governance Voter ID revocation for detected manipulation.",
           },
         ],
       },
@@ -701,7 +701,7 @@ export const SECTIONS: Section[] = [
         ],
       },
       {
-        heading: "Participation Pool",
+        heading: "Bootstrap Pool",
         blocks: [
           {
             type: "paragraph",
@@ -724,16 +724,17 @@ export const SECTIONS: Section[] = [
             data: {
               headers: ["Tier", "cREP Distributed", "Cumulative", "Rate", "Stake 10", "Stake 100"],
               rows: [
-                ["0", "2,000,000", "2,000,000", "90%", "9 cREP", "90 cREP"],
-                ["1", "4,000,000", "6,000,000", "45%", "4.5 cREP", "45 cREP"],
-                ["2", "8,000,000", "14,000,000", "22.5%", "2.25 cREP", "22.5 cREP"],
-                ["3", "16,000,000", "30,000,000", "11.25%", "1.125 cREP", "11.25 cREP"],
+                ["0", "1,500,000", "1,500,000", "90%", "9 cREP", "90 cREP"],
+                ["1", "3,000,000", "4,500,000", "45%", "4.5 cREP", "45 cREP"],
+                ["2", "6,000,000", "10,500,000", "22.5%", "2.25 cREP", "22.5 cREP"],
+                ["3", "12,000,000", "22,500,000", "11.25%", "1.125 cREP", "11.25 cREP"],
+                ["Tail", "1,500,000", "24,000,000", "5.62%", "0.562 cREP", "5.62 cREP"],
               ],
             },
           },
           {
             type: "paragraph",
-            text: "Voter participation rewards are distributed when a round settles  -- deferred from vote time to prevent exploitation where attackers could vote, collect immediate participation rewards, and then have rounds cancel without risk. Submitter participation rewards are paid only when the submitter stake resolves on the healthy path after a settled round. The pool is funded with 34M cREP and governed by the same timelock as all other protocol contracts.",
+            text: "Voter bootstrap rewards are distributed when a round settles  -- deferred from vote time to prevent exploitation where attackers could vote, collect immediate bootstrap rewards, and then have rounds cancel without risk. Submitter bootstrap rewards are paid only when the submitter stake resolves on the healthy path after a settled round. The pool is funded with 24M cREP and governed by the same timelock as all other protocol contracts.",
           },
         ],
       },
@@ -787,15 +788,15 @@ export const SECTIONS: Section[] = [
         ],
       },
       {
-        heading: "Deferred Participation Rewards",
+        heading: "Deferred Bootstrap Rewards",
         blocks: [
           {
             type: "paragraph",
-            text: "Voter participation rewards are distributed at round settlement, not at vote time. This design choice eliminates a critical attack vector: if voters received an immediate participation bonus at vote time, it would reduce their at-risk capital. This could create exploitation opportunities for coordinated minorities who could stake on low-liquidity content, collect the participation reward immediately, and profit regardless of outcome.",
+            text: "Voter bootstrap rewards are distributed at round settlement, not at vote time. This design choice eliminates a critical attack vector: if voters received an immediate bootstrap bonus at vote time, it would reduce their at-risk capital. This could create exploitation opportunities for coordinated minorities who could stake on low-liquidity content, collect the bootstrap reward immediately, and profit regardless of outcome.",
           },
           {
             type: "paragraph",
-            text: `By deferring voter rewards to settlement, the full vote stake stays at risk until the round completes. Combined with the epoch-weighted reward structure (which penalizes late entrants with ${protocolDocFacts.openPhaseWeightLabel} weight vs ${protocolDocFacts.blindPhaseWeightLabel} for early voters) and deterministic epoch-based settlement (which prevents strategic timing of entries), the deferred model ensures voter participation rewards flow only to genuine, successful curation activity while submitter bonuses unlock only after healthy settled validation.`,
+            text: `By deferring voter rewards to settlement, the full vote stake stays at risk until the round completes. Combined with the epoch-weighted reward structure (which penalizes late entrants with ${protocolDocFacts.openPhaseWeightLabel} weight vs ${protocolDocFacts.blindPhaseWeightLabel} for early voters) and deterministic epoch-based settlement (which prevents strategic timing of entries), the deferred model ensures voter bootstrap rewards flow only to genuine, successful curation activity while submitter bonuses unlock only after healthy settled validation.`,
           },
         ],
       },
@@ -819,7 +820,7 @@ export const SECTIONS: Section[] = [
           },
           {
             type: "paragraph",
-            text: "Submitter stakes are slashed (100% to treasury) only when the content's conservative rating bound stays below the slash threshold after the 24-hour grace period and enough evidence has accumulated to make that signal credible. The redeployed design therefore gates slashability on a conservative low-score bound plus minimum evidence, minimum settled rounds, and a dwell period below threshold. Stakes are returned after roughly 4 days once a settled round confirms a healthy conservative rating and no later round remains open. If no round ever settles, the stake instead resolves when the content reaches dormancy. Healthy submitter participation rewards are snapshotted at that return point and claimed later; whatever the pool can already fund is reserved immediately so later claims do not depend entirely on future authorization state.",
+            text: "Submitter stakes are slashed (100% to treasury) only when the content's conservative rating bound stays below the slash threshold after the 24-hour grace period and enough evidence has accumulated to make that signal credible. The redeployed design therefore gates slashability on a conservative low-score bound plus minimum evidence, minimum settled rounds, and a dwell period below threshold. Stakes are returned after roughly 4 days once a settled round confirms a healthy conservative rating and no later round remains open. If no round ever settles, the stake instead resolves when the content reaches dormancy. Healthy submitter bootstrap rewards are snapshotted at that return point and claimed later; whatever the pool can already fund is reserved immediately so later claims do not depend entirely on future authorization state.",
           },
         ],
       },
@@ -1012,7 +1013,7 @@ export const SECTIONS: Section[] = [
         blocks: [
           {
             type: "paragraph",
-            text: "The treasury starts with 10M cREP routed directly to the governance timelock. It grows over time through four primary ongoing inflow sources:",
+            text: "The treasury starts with 20M cREP routed directly to the governance timelock. It grows over time through four primary ongoing inflow sources:",
           },
           {
             type: "bullets",

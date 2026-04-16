@@ -102,8 +102,8 @@ export const TreasuryBalance = () => {
           Icon={ShieldCheckIcon}
         />
         <PoolStat
-          title="Participation Pool"
-          tooltip="Internal remaining-balance accounting held by ParticipationPool."
+          title="Bootstrap Pool"
+          tooltip="Internal remaining-balance accounting held by ParticipationPool, shown as the Bootstrap Pool in the product."
           value={participationPoolBalance}
           isLoading={participationPoolLoading}
           Icon={UserGroupIcon}

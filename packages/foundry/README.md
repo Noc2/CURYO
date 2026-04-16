@@ -57,7 +57,7 @@ contracts/
 ├── VoterIdNFT.sol               # Soulbound NFT for verified voters
 ├── CuryoReputation.sol          # cREP token (staking & reputation)
 ├── HumanFaucet.sol              # Passport-verified faucet for cREP + Voter ID
-├── ParticipationPool.sol        # Halving-tier cREP participation rewards
+├── ParticipationPool.sol        # Halving-tier cREP Bootstrap Pool rewards
 ├── QuestionRewardPoolEscrow.sol     # Question Reward Pool custody and claims
 ├── governance/                  # Governor contracts
 ├── interfaces/                  # Contract interfaces

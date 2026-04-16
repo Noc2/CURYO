@@ -1,10 +1,10 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.28;
 
-import { Test, console } from "forge-std/Test.sol";
-import { ParticipationPool } from "../contracts/ParticipationPool.sol";
-import { CuryoReputation } from "../contracts/CuryoReputation.sol";
-import { Ownable } from "@openzeppelin/contracts/access/Ownable.sol";
+import {Test, console} from "forge-std/Test.sol";
+import {ParticipationPool} from "../contracts/ParticipationPool.sol";
+import {CuryoReputation} from "../contracts/CuryoReputation.sol";
+import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 
 /// @title ParticipationPool Test Suite — Distribution-Based Halving
 contract ParticipationPoolTest is Test {
@@ -19,10 +19,10 @@ contract ParticipationPoolTest is Test {
     address public user2 = address(6);
     address public unauthorized = address(7);
 
-    uint256 public constant POOL_AMOUNT = 34_000_000 * 1e6; // 34M cREP
+    uint256 public constant POOL_AMOUNT = 24_000_000 * 1e6; // 24M cREP
     uint256 public constant INITIAL_RATE_BPS = 9000; // 90%
     uint256 public constant MIN_RATE_BPS = 100; // 1%
-    uint256 public constant INITIAL_TIER_AMOUNT = 2_000_000e6; // 2M cREP
+    uint256 public constant INITIAL_TIER_AMOUNT = 1_500_000e6; // 1.5M cREP
 
     function setUp() public {
         vm.startPrank(admin);
@@ -77,33 +77,33 @@ contract ParticipationPoolTest is Test {
     }
 
     function test_HalvingAtTier0Boundary() public {
-        // After 2M cREP distributed: rate halves to 4500 (45%)
-        _setTotalDistributed(2_000_000e6);
+        // After 1.5M cREP distributed: rate halves to 4500 (45%)
+        _setTotalDistributed(1_500_000e6);
         assertEq(pool.getCurrentRateBps(), 4500);
     }
 
     function test_HalvingAtTier1Boundary() public {
-        // Tier 0: 2M, tier 1: 4M more = 6M cumulative
-        _setTotalDistributed(6_000_000e6);
+        // Tier 0: 1.5M, tier 1: 3M more = 4.5M cumulative
+        _setTotalDistributed(4_500_000e6);
         assertEq(pool.getCurrentRateBps(), 2250); // 22.5%
     }
 
     function test_HalvingAtTier2Boundary() public {
-        // Tier 0: 2M, tier 1: 4M, tier 2: 8M = 14M cumulative
-        _setTotalDistributed(14_000_000e6);
+        // Tier 0: 1.5M, tier 1: 3M, tier 2: 6M = 10.5M cumulative
+        _setTotalDistributed(10_500_000e6);
         assertEq(pool.getCurrentRateBps(), 1125); // 11.25%
     }
 
     function test_HalvingAtTier3Boundary() public {
-        // 2M + 4M + 8M + 16M = 30M cumulative
-        _setTotalDistributed(30_000_000e6);
+        // 1.5M + 3M + 6M + 12M = 22.5M cumulative
+        _setTotalDistributed(22_500_000e6);
         assertEq(pool.getCurrentRateBps(), 562); // 5.62%
     }
 
     function test_MinRateFloor() public {
         // 9000 / 2^7 = 70 < 100 → floor
-        // Tier boundaries: 2M + 4M + 8M + 16M + 32M + 64M + 128M = 254M
-        _setTotalDistributed(254_000_000e6);
+        // Tier boundaries: 1.5M + 3M + 6M + 12M + 24M + 48M + 96M = 190.5M
+        _setTotalDistributed(190_500_000e6);
         assertEq(pool.getCurrentRateBps(), MIN_RATE_BPS); // 100 = 1%
     }
 
@@ -113,8 +113,8 @@ contract ParticipationPoolTest is Test {
     }
 
     function test_RateBeforeFirstHalving() public {
-        // Just under 2M — still tier 0
-        _setTotalDistributed(1_999_999e6);
+        // Just under 1.5M — still tier 0
+        _setTotalDistributed(1_499_999e6);
         assertEq(pool.getCurrentRateBps(), INITIAL_RATE_BPS);
     }
 
@@ -180,7 +180,7 @@ contract ParticipationPoolTest is Test {
     }
 
     function test_RewardVote_AtFloor_Stake100() public {
-        _setTotalDistributed(254_000_000e6); // At floor rate (100 BPS = 1%)
+        _setTotalDistributed(190_500_000e6); // At floor rate (100 BPS = 1%)
 
         uint256 stakeAmount = 100e6;
         uint256 expectedReward = stakeAmount * MIN_RATE_BPS / 10000; // 1 cREP
@@ -244,7 +244,7 @@ contract ParticipationPoolTest is Test {
     }
 
     function test_RewardSubmission_AtFloor() public {
-        _setTotalDistributed(254_000_000e6); // Floor rate
+        _setTotalDistributed(190_500_000e6); // Floor rate
 
         uint256 stakeAmount = 10e6;
         uint256 expectedReward = stakeAmount * MIN_RATE_BPS / 10000; // 0.1 cREP = 100_000
@@ -311,10 +311,10 @@ contract ParticipationPoolTest is Test {
         // Tier boundaries in cREP distributed
         uint256[] memory tiers = new uint256[](5);
         tiers[0] = 0;
-        tiers[1] = 2_000_000e6; // 2M
-        tiers[2] = 6_000_000e6; // 6M
-        tiers[3] = 14_000_000e6; // 14M
-        tiers[4] = 30_000_000e6; // 30M
+        tiers[1] = 1_500_000e6; // 1.5M
+        tiers[2] = 4_500_000e6; // 4.5M
+        tiers[3] = 10_500_000e6; // 10.5M
+        tiers[4] = 22_500_000e6; // 22.5M
 
         uint256 stakeAmount = 100e6;
 

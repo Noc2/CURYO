@@ -948,7 +948,7 @@ export function ContentSubmissionSection() {
                 <div className="mt-2 flex items-center justify-between border-t border-white/10 pt-2">
                   <p className="flex items-center gap-1.5 text-sm text-base-content/60">
                     Participation Bonus
-                    <InfoTooltip text="Projected cREP reward from the Participation Pool, paid only when the submitter stake resolves on the healthy path after a settled round. Rate decreases as more cREP is distributed." />
+                    <InfoTooltip text="Projected cREP reward from the Bootstrap Pool, paid only when the submitter stake resolves on the healthy path after a settled round. Rate decreases as more cREP is distributed." />
                   </p>
                   <span className="text-sm font-semibold text-success">
                     +{submissionBonus} cREP ({ratePercent}%)

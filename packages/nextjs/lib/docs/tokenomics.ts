@@ -25,14 +25,14 @@ const tokenDistributionEntries: readonly TokenDistributionEntry[] = [
     color: "#7E8996",
   },
   {
-    label: "Participation Pool",
-    amount: 34_000_000,
+    label: "Bootstrap Pool",
+    amount: 24_000_000,
     purpose: protocolCopy.participationPoolPurpose,
     color: "#F26426",
   },
   {
     label: "Treasury",
-    amount: 10_000_000,
+    amount: 20_000_000,
     purpose: "Governance-controlled cREP tokens for grants, whistleblower rewards, and protocol development",
     color: "#F5F0EB",
   },

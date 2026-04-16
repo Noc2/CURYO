@@ -22,9 +22,9 @@ Curyo already has primitives that map well onto funded human judgment:
 - tlock commit-reveal voting that hides direction during the blind phase.
 - Early-voter weighting to reduce herding.
 - A 24-hour same-content vote cooldown.
-- Reward accounting through round settlement, the Consensus Subsidy Reserve, and the Participation Pool.
+- Reward accounting through round settlement, the Consensus Subsidy Reserve, and the Bootstrap Pool.
 
-Those pieces give Curyo a credible base for paying humans to evaluate bounded questions. The new design should treat stablecoin-funded reward pools as a separate escrowed reward layer rather than mixing them directly into the existing cREP reserve or participation pools. Stablecoin rewards should be scoped to the specific question that was funded, not distributed across the protocol-wide voter base.
+Those pieces give Curyo a credible base for paying humans to evaluate bounded questions. The new design should treat stablecoin-funded reward pools as a separate escrowed reward layer rather than mixing them directly into the existing cREP reserve or Bootstrap Pool. Stablecoin rewards should be scoped to the specific question that was funded, not distributed across the protocol-wide voter base.
 
 ## Potential Advantages
 
@@ -264,14 +264,14 @@ Avoid "truth score" unless the category has a strong oracle or appeal process.
 
 ### 3. Keep Stablecoin Reward Pools Separate From cREP Pools
 
-Create a separate reward pool escrow per question. Do not fund it from or deposit it into the Consensus Subsidy Reserve or global Participation Pool. The cREP system should continue to provide conviction, reputation, and anti-spam pressure.
+Create a separate reward pool escrow per question. Do not fund it from or deposit it into the Consensus Subsidy Reserve or global Bootstrap Pool. The cREP system should continue to provide conviction, reputation, and anti-spam pressure.
 
 Conceptually, each funded question should have its own mini participation pool:
 
 - Funders deposit stablecoins into one specific question.
 - Only eligible voters who validly commit and reveal on that question can claim from that question's pool.
 - Unused stablecoins stay attached to that question for later rounds, roll into an explicit follow-up tranche, or return to funders under defined refund rules.
-- Funding one question should not subsidize unrelated questions, the global Participation Pool, or protocol-wide voter participation.
+- Funding one question should not subsidize unrelated questions, the global Bootstrap Pool, or protocol-wide voter participation.
 - Third-party top-ups can be allowed, but they should top up a specific question and inherit that question's template, restrictions, refund rules, and claim rules.
 
 ### 4. Use Participation-Only Stablecoin Payouts
@@ -411,7 +411,7 @@ Recommended v1 constraints:
 - Tell submitters that Curyo measures current voter judgment; it does not guarantee future correctness.
 - Include an invalid/cannot-resolve path.
 - Keep stablecoin-funded reward pool funding separate from cREP vote staking.
-- Keep stablecoin-funded reward pool funds question-scoped; no global stablecoin ParticipationPool.
+- Keep stablecoin-funded reward pool funds question-scoped; no global stablecoin Bootstrap Pool.
 - Keep cREP voting required for judgment and anti-spam pressure.
 - Pay stablecoins only for valid revealed participation at launch.
 - Keep all outcome risk in cREP: losing-side voters lose cREP stake, but they can still claim the stablecoin review reward if they participated validly.

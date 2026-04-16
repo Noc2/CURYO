@@ -1,19 +1,19 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.20;
 
-import { Test, console2 } from "forge-std/Test.sol";
-import { ERC1967Proxy } from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
-import { ContentRegistry } from "../contracts/ContentRegistry.sol";
-import { RoundVotingEngine } from "../contracts/RoundVotingEngine.sol";
-import { ProtocolConfig } from "../contracts/ProtocolConfig.sol";
-import { RoundRewardDistributor } from "../contracts/RoundRewardDistributor.sol";
-import { CuryoReputation } from "../contracts/CuryoReputation.sol";
-import { ParticipationPool } from "../contracts/ParticipationPool.sol";
-import { RoundLib } from "../contracts/libraries/RoundLib.sol";
-import { RoundEngineReadHelpers } from "./helpers/RoundEngineReadHelpers.sol";
-import { RewardMath } from "../contracts/libraries/RewardMath.sol";
-import { VotingTestBase } from "./helpers/VotingTestHelpers.sol";
-import { MockCategoryRegistry } from "../contracts/mocks/MockCategoryRegistry.sol";
+import {Test, console2} from "forge-std/Test.sol";
+import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
+import {ContentRegistry} from "../contracts/ContentRegistry.sol";
+import {RoundVotingEngine} from "../contracts/RoundVotingEngine.sol";
+import {ProtocolConfig} from "../contracts/ProtocolConfig.sol";
+import {RoundRewardDistributor} from "../contracts/RoundRewardDistributor.sol";
+import {CuryoReputation} from "../contracts/CuryoReputation.sol";
+import {ParticipationPool} from "../contracts/ParticipationPool.sol";
+import {RoundLib} from "../contracts/libraries/RoundLib.sol";
+import {RoundEngineReadHelpers} from "./helpers/RoundEngineReadHelpers.sol";
+import {RewardMath} from "../contracts/libraries/RewardMath.sol";
+import {VotingTestBase} from "./helpers/VotingTestHelpers.sol";
+import {MockCategoryRegistry} from "../contracts/mocks/MockCategoryRegistry.sol";
 
 /// @title Self-Opposition Profitability Analysis (Post-Fix)
 /// @notice Verifies that the NotWinningSide fix blocks self-opposition attacks.
@@ -102,10 +102,10 @@ contract SelfOppositionProfitabilityTest is VotingTestBase {
         pool = new ParticipationPool(address(crepToken), owner);
         pool.setAuthorizedCaller(address(distributor), true);
 
-        // Fund participation pool with 34M cREP
-        crepToken.mint(owner, 34_000_000e6);
-        crepToken.approve(address(pool), 34_000_000e6);
-        pool.depositPool(34_000_000e6);
+        // Fund participation pool with 24M cREP
+        crepToken.mint(owner, 24_000_000e6);
+        crepToken.approve(address(pool), 24_000_000e6);
+        pool.depositPool(24_000_000e6);
 
         // Connect pool to engine
         ProtocolConfig(address(engine.protocolConfig())).setParticipationPool(address(pool));
@@ -149,7 +149,9 @@ contract SelfOppositionProfitabilityTest is VotingTestBase {
         vm.prank(voter);
         crepToken.approve(address(engine), stake);
         vm.prank(voter);
-        engine.commitVote(cid, _tlockCommitTargetRound(), _tlockDrandChainHash(), commitHash, ciphertext, stake, address(0));
+        engine.commitVote(
+            cid, _tlockCommitTargetRound(), _tlockDrandChainHash(), commitHash, ciphertext, stake, address(0)
+        );
         commitKey = keccak256(abi.encodePacked(voter, commitHash));
     }
 
@@ -163,12 +165,12 @@ contract SelfOppositionProfitabilityTest is VotingTestBase {
             RoundLib.Commit memory c = RoundEngineReadHelpers.commit(engine, cid, roundId, keys[i]);
             if (!c.revealed && c.stakeAmount > 0) {
                 (bool up, bytes32 s) = _decodeTestCiphertext(c.ciphertext);
-                try engine.revealVoteByCommitKey(cid, roundId, keys[i], up, s) { } catch { }
+                try engine.revealVoteByCommitKey(cid, roundId, keys[i], up, s) {} catch {}
             }
         }
         RoundLib.Round memory r2 = RoundEngineReadHelpers.round(engine, cid, roundId);
         if (r2.thresholdReachedAt > 0) {
-            try engine.settleRound(cid, roundId) { } catch { }
+            try engine.settleRound(cid, roundId) {} catch {}
         }
     }
 
@@ -389,14 +391,14 @@ contract SelfOppositionProfitabilityTest is VotingTestBase {
     }
 
     function test_Tier1_OppositionBlocked() public {
-        _assertOppositionBlockedAtTier(2_000_000e6);
+        _assertOppositionBlockedAtTier(1_500_000e6);
     }
 
     function test_Tier2_OppositionBlocked() public {
-        _assertOppositionBlockedAtTier(6_000_000e6);
+        _assertOppositionBlockedAtTier(4_500_000e6);
     }
 
     function test_Tier3_OppositionBlocked() public {
-        _assertOppositionBlockedAtTier(14_000_000e6);
+        _assertOppositionBlockedAtTier(10_500_000e6);
     }
 }

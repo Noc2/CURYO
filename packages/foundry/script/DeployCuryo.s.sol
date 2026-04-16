@@ -42,8 +42,8 @@ contract DeployCuryo is ScaffoldETHDeploy {
     // Launch token allocations (6 decimals)
     uint256 public constant TOTAL_SUPPLY_CAP = 100_000_000 * 1e6;
     uint256 public constant CONSENSUS_POOL_AMOUNT = 4_000_000 * 1e6;
-    uint256 public constant TREASURY_AMOUNT = 10_000_000 * 1e6;
-    uint256 public constant PARTICIPATION_POOL_AMOUNT = 34_000_000 * 1e6;
+    uint256 public constant TREASURY_AMOUNT = 20_000_000 * 1e6;
+    uint256 public constant PARTICIPATION_POOL_AMOUNT = 24_000_000 * 1e6;
     uint256 public constant FAUCET_POOL_AMOUNT =
         TOTAL_SUPPLY_CAP - CONSENSUS_POOL_AMOUNT - TREASURY_AMOUNT - PARTICIPATION_POOL_AMOUNT;
 
@@ -261,11 +261,11 @@ contract DeployCuryo is ScaffoldETHDeploy {
         votingEngine.addToConsensusReserve(CONSENSUS_POOL_AMOUNT);
         console.log("Funded 4M cREP to consensus reserve");
 
-        // 12a. Fund treasury (10M cREP to governance treasury)
+        // 12a. Fund treasury (20M cREP to governance treasury)
         crepToken.mint(governance, TREASURY_AMOUNT);
-        console.log("Minted 10M cREP to governance treasury");
+        console.log("Minted 20M cREP to governance treasury");
 
-        // 12b. Deploy and fund ParticipationPool (34M cREP)
+        // 12b. Deploy and fund ParticipationPool (24M cREP, user-facing Bootstrap Pool)
         ParticipationPool participationPool = new ParticipationPool(address(crepToken), governance);
         participationPool.setAuthorizedCaller(address(rewardDistributor), true);
         participationPool.setAuthorizedCaller(address(registry), true);
@@ -277,7 +277,7 @@ contract DeployCuryo is ScaffoldETHDeploy {
         if (!isLocalDev) {
             participationPool.transferOwnership(governance);
         }
-        console.log("ParticipationPool deployed and funded with 34M cREP");
+        console.log("ParticipationPool deployed and funded with 24M cREP");
 
         // 12c. Deploy and fund HumanFaucet (52,000,000 cREP, Self.xyz identity verification)
         HumanFaucet humanFaucet;

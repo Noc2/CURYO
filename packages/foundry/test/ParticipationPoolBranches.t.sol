@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.28;
 
-import { Test } from "forge-std/Test.sol";
-import { CuryoReputation } from "../contracts/CuryoReputation.sol";
-import { ParticipationPool } from "../contracts/ParticipationPool.sol";
+import {Test} from "forge-std/Test.sol";
+import {CuryoReputation} from "../contracts/CuryoReputation.sol";
+import {ParticipationPool} from "../contracts/ParticipationPool.sol";
 
 /// @title ParticipationPool branch coverage tests
 contract ParticipationPoolBranchesTest is Test {
@@ -16,6 +16,7 @@ contract ParticipationPoolBranchesTest is Test {
     address public user1 = address(4);
 
     uint256 public constant T0 = 1000;
+    uint256 public constant POOL_AMOUNT = 24_000_000e6;
 
     function setUp() public {
         vm.warp(T0);
@@ -27,8 +28,8 @@ contract ParticipationPoolBranchesTest is Test {
         pool = new ParticipationPool(address(crepToken), governance);
         pool.setAuthorizedCaller(authorizedCaller, true);
 
-        crepToken.approve(address(pool), 34_000_000e6);
-        pool.depositPool(34_000_000e6);
+        crepToken.approve(address(pool), POOL_AMOUNT);
+        pool.depositPool(POOL_AMOUNT);
 
         vm.stopPrank();
     }
@@ -42,35 +43,35 @@ contract ParticipationPoolBranchesTest is Test {
         assertEq(pool.getCurrentRateBps(), 9000);
     }
 
-    function test_GetCurrentRateBps_ExactBoundary_2M() public {
-        // Set totalDistributed to 2M (first tier boundary)
-        _setTotalDistributed(2_000_000e6);
-        // After 2M distributed, rate halves to 4500
+    function test_GetCurrentRateBps_ExactBoundary_1_5M() public {
+        // Set totalDistributed to 1.5M (first tier boundary)
+        _setTotalDistributed(1_500_000e6);
+        // After 1.5M distributed, rate halves to 4500
         assertEq(pool.getCurrentRateBps(), 4500);
     }
 
-    function test_GetCurrentRateBps_ExactBoundary_6M() public {
-        // 2M + 4M = 6M → second halving
-        _setTotalDistributed(6_000_000e6);
+    function test_GetCurrentRateBps_ExactBoundary_4_5M() public {
+        // 1.5M + 3M = 4.5M → second halving
+        _setTotalDistributed(4_500_000e6);
         assertEq(pool.getCurrentRateBps(), 2250);
     }
 
-    function test_GetCurrentRateBps_ExactBoundary_14M() public {
-        // 2M + 4M + 8M = 14M → third halving
-        _setTotalDistributed(14_000_000e6);
+    function test_GetCurrentRateBps_ExactBoundary_10_5M() public {
+        // 1.5M + 3M + 6M = 10.5M → third halving
+        _setTotalDistributed(10_500_000e6);
         assertEq(pool.getCurrentRateBps(), 1125);
     }
 
-    function test_GetCurrentRateBps_ExactBoundary_30M() public {
-        // 2M + 4M + 8M + 16M = 30M → fourth halving
-        _setTotalDistributed(30_000_000e6);
+    function test_GetCurrentRateBps_ExactBoundary_22_5M() public {
+        // 1.5M + 3M + 6M + 12M = 22.5M → fourth halving
+        _setTotalDistributed(22_500_000e6);
         assertEq(pool.getCurrentRateBps(), 562);
     }
 
     function test_GetCurrentRateBps_MinFloor() public {
         // Set totalDistributed high enough to halve rate below MIN_RATE_BPS (100)
-        // Tiers: 2M→4500, 6M→2250, 14M→1125, 30M→562, 62M→281, 126M→140, 254M→70 → clamped to 100
-        _setTotalDistributed(254_000_000e6);
+        // Tiers: 1.5M→4500, 4.5M→2250, 10.5M→1125, 22.5M→562, 46.5M→281, 94.5M→140, 190.5M→70 → clamped to 100
+        _setTotalDistributed(190_500_000e6);
         uint256 rate = pool.getCurrentRateBps();
         assertEq(rate, 100); // MIN_RATE_BPS
     }
@@ -138,7 +139,7 @@ contract ParticipationPoolBranchesTest is Test {
         assertEq(reserved, 5e6);
         assertEq(pool.reservedRewards(authorizedCaller), 5e6);
         assertEq(pool.reservedBalance(), 5e6);
-        assertEq(pool.poolBalance(), 34_000_000e6 - 5e6);
+        assertEq(pool.poolBalance(), POOL_AMOUNT - 5e6);
     }
 
     function test_WithdrawReservedReward_PaysBeneficiaryBalance() public {

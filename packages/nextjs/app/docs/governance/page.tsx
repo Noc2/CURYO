@@ -187,7 +187,7 @@ const GovernanceDocs: NextPage = () => {
 
       <h2>Treasury</h2>
       <p>
-        The protocol treasury starts with <strong>10M cREP</strong> routed to the governor/timelock itself. It grows
+        The protocol treasury starts with <strong>20M cREP</strong> routed to the governor/timelock itself. It grows
         over time through four main ongoing inflow sources:
       </p>
       <ul>

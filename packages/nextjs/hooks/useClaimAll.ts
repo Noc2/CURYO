@@ -188,9 +188,9 @@ export function useClaimAll() {
         } catch (e: any) {
           const claimLabel =
             item.claimType === "participation_reward"
-              ? `participation reward for content #${item.contentId} round ${item.roundId}`
+              ? `bootstrap reward for content #${item.contentId} round ${item.roundId}`
               : item.claimType === "submitter_participation_reward"
-                ? `submitter participation reward for content #${item.contentId}`
+                ? `submitter bootstrap reward for content #${item.contentId}`
                 : item.claimType === "question_reward"
                   ? `question reward for content #${item.contentId} round ${item.roundId}`
                   : item.claimType === "frontend_registry_fee"

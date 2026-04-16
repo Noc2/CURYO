@@ -2,7 +2,7 @@
 pragma solidity ^0.8.20;
 
 /// @title IParticipationPool
-/// @notice Interface for the Participation Pool — proportional-to-stake rewards with halving schedule
+/// @notice Interface for the user-facing Bootstrap Pool — proportional-to-stake rewards with halving schedule
 interface IParticipationPool {
     /// @notice Reward a voter for casting a vote
     /// @param voter The address to reward
@@ -19,7 +19,7 @@ interface IParticipationPool {
     function getCurrentRateBps() external view returns (uint256);
 
     /// @notice Distribute a pre-computed reward amount to a voter.
-    /// @dev Called by RoundVotingEngine for pull-based participation reward claims.
+    /// @dev Called by RoundVotingEngine for pull-based bootstrap reward claims.
     /// @param voter The address to reward.
     /// @param amount The pre-computed reward amount.
     /// @return paidAmount The actual amount distributed (can be less than requested if pool is depleted).

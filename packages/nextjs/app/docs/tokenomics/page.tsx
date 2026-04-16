@@ -128,13 +128,13 @@ const Tokenomics = () => {
           </tbody>
         </table>
       </div>
-      <h3>Participation Rewards</h3>
+      <h3>Bootstrap Rewards</h3>
       <p>{protocolCopy.participationPoolOverview}</p>
       <p>
         Reward formula: <code>reward = stakeAmount &times; currentRate</code>. The rate starts at <strong>90%</strong>{" "}
         and halves based on cumulative cREP distributed from the pool &mdash; making the pool&apos;s lifetime
         predictable regardless of individual stake sizes. Rewards are always less than the staked amount, ensuring
-        participation rewards are a bonus, not a primary incentive.
+        bootstrap rewards are a bonus, not a primary incentive.
       </p>
       <div className="not-prose overflow-x-auto my-6 rounded-xl bg-base-200">
         <table className="table table-zebra [&_th]:text-base [&_td]:text-base [&_.badge]:text-base [&_th]:bg-base-300">
@@ -151,51 +151,59 @@ const Tokenomics = () => {
           <tbody>
             <tr>
               <td>0</td>
-              <td className="font-mono">2,000,000</td>
-              <td className="font-mono">2,000,000</td>
+              <td className="font-mono">1,500,000</td>
+              <td className="font-mono">1,500,000</td>
               <td className="font-mono">90%</td>
               <td className="font-mono">9 cREP</td>
               <td className="font-mono">90 cREP</td>
             </tr>
             <tr>
               <td>1</td>
-              <td className="font-mono">4,000,000</td>
-              <td className="font-mono">6,000,000</td>
+              <td className="font-mono">3,000,000</td>
+              <td className="font-mono">4,500,000</td>
               <td className="font-mono">45%</td>
               <td className="font-mono">4.5 cREP</td>
               <td className="font-mono">45 cREP</td>
             </tr>
             <tr>
               <td>2</td>
-              <td className="font-mono">8,000,000</td>
-              <td className="font-mono">14,000,000</td>
+              <td className="font-mono">6,000,000</td>
+              <td className="font-mono">10,500,000</td>
               <td className="font-mono">22.5%</td>
               <td className="font-mono">2.25 cREP</td>
               <td className="font-mono">22.5 cREP</td>
             </tr>
             <tr>
               <td>3</td>
-              <td className="font-mono">16,000,000</td>
-              <td className="font-mono">30,000,000</td>
+              <td className="font-mono">12,000,000</td>
+              <td className="font-mono">22,500,000</td>
               <td className="font-mono">11.25%</td>
               <td className="font-mono">1.125 cREP</td>
               <td className="font-mono">11.25 cREP</td>
             </tr>
+            <tr>
+              <td>Tail</td>
+              <td className="font-mono">1,500,000</td>
+              <td className="font-mono">24,000,000</td>
+              <td className="font-mono">5.62%</td>
+              <td className="font-mono">0.562 cREP</td>
+              <td className="font-mono">5.62 cREP</td>
+            </tr>
           </tbody>
         </table>
       </div>
-      <p>Participation rewards are paid only after a round or submitter stake resolves successfully.</p>
+      <p>Bootstrap rewards are paid only after a round or submitter stake resolves successfully.</p>
 
       <h3>Question Reward Pools</h3>
       <p>
-        Question Reward Pools are separate from cREP participation rewards. They are paid in USDC on Celo, displayed as
-        USD, scoped to one question, and split equally among eligible revealed Voter ID holders in each qualified
-        reward-pool round. There is no stablecoin coherence bonus at launch.
+        Question Reward Pools are separate from cREP bootstrap rewards. They are paid in USDC on Celo, displayed as USD,
+        scoped to one question, and split equally among eligible revealed Voter ID holders in each qualified reward-pool
+        round. There is no stablecoin coherence bonus at launch.
       </p>
 
       <h3>Treasury</h3>
       <p>
-        The protocol treasury starts with <strong>10M cREP</strong> on the governor/timelock from launch. It grows over
+        The protocol treasury starts with <strong>20M cREP</strong> on the governor/timelock from launch. It grows over
         time through four main ongoing inflow sources: a 1% treasury fee on contested losing pools, cancellation fees
         from voluntary content withdrawals, forfeited submitter deposits (when a content item&apos;s conservative rating
         bound stays below the governed slash threshold long enough with enough evidence), and forfeited unrevealed

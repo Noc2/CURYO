@@ -37,8 +37,8 @@ const WhitepaperPage: NextPage = () => {
           <strong>tlock Commit-Reveal Voting</strong> &mdash; Encrypted voting, phase-weighted rewards, and resolution
         </li>
         <li>
-          <strong>Tokenomics</strong> &mdash; Token distribution, faucet tiers, participation rewards, and question
-          reward pools
+          <strong>Tokenomics</strong> &mdash; Token distribution, faucet tiers, bootstrap rewards, and question reward
+          pools
         </li>
         <li>
           <strong>Governance</strong> &mdash; Community governance, treasury, and collusion prevention
