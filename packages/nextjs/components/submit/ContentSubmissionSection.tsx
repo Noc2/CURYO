@@ -764,6 +764,153 @@ export function ContentSubmissionSection() {
           className="grid gap-6 xl:grid-cols-[minmax(0,1.5fr)_minmax(18rem,0.9fr)] xl:items-start"
         >
           <div className="space-y-5">
+            <div>
+              <label
+                className={`mb-2 block text-base font-medium ${submitAttempted && !title.trim() ? "text-error" : ""}`}
+              >
+                Question
+              </label>
+              <input
+                type="text"
+                placeholder="Ask something subjective that voters can rate"
+                className={`input input-bordered w-full bg-base-100 ${
+                  titleError || (submitAttempted && !title.trim()) ? "input-error" : ""
+                }`}
+                value={title}
+                onChange={e => handleTitleChange(e.target.value)}
+                maxLength={MAX_QUESTION_LENGTH}
+              />
+              {submitAttempted && !title.trim() ? (
+                <p className="mt-1 text-base text-error">Question is required.</p>
+              ) : null}
+              {titleError ? <p className="mt-1 text-base text-error">{titleError}</p> : null}
+              <div className="mt-1 text-right">
+                <span className="text-base text-base-content/30">
+                  {title.length}/{MAX_QUESTION_LENGTH}
+                </span>
+              </div>
+            </div>
+
+            <div>
+              <label
+                className={`mb-2 block text-base font-medium ${submitAttempted && !description.trim() ? "text-error" : ""}`}
+              >
+                Description
+              </label>
+              <textarea
+                placeholder="Add context voters should consider"
+                className={`textarea textarea-bordered h-24 w-full bg-base-100 ${
+                  descriptionError || (submitAttempted && !description.trim()) ? "textarea-error" : ""
+                }`}
+                value={description}
+                onChange={e => handleDescriptionChange(e.target.value)}
+                maxLength={MAX_CONTENT_DESCRIPTION_LENGTH}
+              />
+              {submitAttempted && !description.trim() ? (
+                <p className="mt-1 text-base text-error">Description is required.</p>
+              ) : null}
+              {descriptionError ? <p className="mt-1 text-base text-error">{descriptionError}</p> : null}
+              <div className="mt-1 text-right">
+                <span className="text-base text-base-content/30">
+                  {description.length}/{MAX_CONTENT_DESCRIPTION_LENGTH}
+                </span>
+              </div>
+            </div>
+
+            <div>
+              <label
+                className={`mb-2 flex items-center gap-1.5 text-base font-medium ${
+                  imageMediaMissing || videoMediaMissing ? "text-error" : ""
+                }`}
+              >
+                Media
+                <span className="font-normal text-base-content/40">
+                  {mediaMode === "images" ? `(1-${MAX_SUBMISSION_IMAGE_URLS} images)` : "(YouTube)"}
+                </span>
+                <InfoTooltip text={urlConfig.urlHint} />
+              </label>
+              <div className="mb-3 grid grid-cols-2 gap-2">
+                <button
+                  type="button"
+                  aria-pressed={mediaMode === "images"}
+                  onClick={() => setMediaMode("images")}
+                  className={`btn btn-sm ${mediaMode === "images" ? "btn-primary" : "btn-outline"}`}
+                >
+                  Images
+                </button>
+                <button
+                  type="button"
+                  aria-pressed={mediaMode === "video"}
+                  onClick={() => setMediaMode("video")}
+                  className={`btn btn-sm ${mediaMode === "video" ? "btn-primary" : "btn-outline"}`}
+                >
+                  YouTube
+                </button>
+              </div>
+
+              {mediaMode === "images" ? (
+                <div className="space-y-2">
+                  {imageUrls.map((imageUrl, index) => (
+                    <div key={index} className="flex gap-2">
+                      <input
+                        type="url"
+                        placeholder={urlConfig.imagePlaceholder}
+                        className={`input input-bordered min-w-0 flex-1 bg-base-100 ${
+                          imageUrlErrors[index] || (imageMediaMissing && index === 0) ? "input-error" : ""
+                        }`}
+                        value={imageUrl}
+                        onChange={event => handleImageUrlChange(index, event.target.value)}
+                        onBlur={() => validateImageUrl(index, imageUrl, imageMediaMissing && index === 0)}
+                      />
+                      <button
+                        type="button"
+                        onClick={() => handleRemoveImageUrl(index)}
+                        className="btn btn-outline btn-square"
+                        aria-label={imageUrls.length === 1 ? "Clear image URL" : "Remove image URL"}
+                      >
+                        <XMarkIcon className="h-4 w-4" />
+                      </button>
+                    </div>
+                  ))}
+                  {imageUrlErrors.map((error, index) =>
+                    error ? (
+                      <p key={index} className="text-base text-error">
+                        {error}
+                      </p>
+                    ) : null,
+                  )}
+                  {imageMediaMissing && !imageUrlErrors.some(Boolean) ? (
+                    <p className="text-base text-error">Add at least one image URL before submitting.</p>
+                  ) : null}
+                  <button
+                    type="button"
+                    onClick={handleAddImageUrl}
+                    disabled={imageUrls.length >= MAX_SUBMISSION_IMAGE_URLS}
+                    className="btn btn-outline btn-sm"
+                  >
+                    Add image
+                  </button>
+                </div>
+              ) : (
+                <div>
+                  <input
+                    type="url"
+                    placeholder={urlConfig.videoPlaceholder}
+                    className={`input input-bordered w-full bg-base-100 ${
+                      videoUrlError || videoMediaMissing ? "input-error" : ""
+                    }`}
+                    value={videoUrl}
+                    onChange={handleVideoUrlChange}
+                    onBlur={() => validateVideoUrl(videoUrl, videoMediaMissing)}
+                  />
+                  {videoUrlError ? <p className="mt-1 text-base text-error">{videoUrlError}</p> : null}
+                  {videoMediaMissing && !videoUrlError ? (
+                    <p className="mt-1 text-base text-error">Add a YouTube URL before submitting.</p>
+                  ) : null}
+                </div>
+              )}
+            </div>
+
             <div ref={categoryDropdownRef} className="relative">
               <label
                 className={`mb-2 block text-base font-medium ${submitAttempted && !selectedCategory ? "text-error" : ""}`}
@@ -861,153 +1008,6 @@ export function ContentSubmissionSection() {
               ) : (
                 <p className="text-base text-base-content/50">No categories available.</p>
               )}
-            </div>
-
-            <div>
-              <label
-                className={`mb-2 flex items-center gap-1.5 text-base font-medium ${
-                  imageMediaMissing || videoMediaMissing ? "text-error" : ""
-                }`}
-              >
-                Media
-                <span className="font-normal text-base-content/40">
-                  {mediaMode === "images" ? `(1-${MAX_SUBMISSION_IMAGE_URLS} images)` : "(YouTube)"}
-                </span>
-                <InfoTooltip text={urlConfig.urlHint} />
-              </label>
-              <div className="mb-3 grid grid-cols-2 gap-2">
-                <button
-                  type="button"
-                  aria-pressed={mediaMode === "images"}
-                  onClick={() => setMediaMode("images")}
-                  className={`btn btn-sm ${mediaMode === "images" ? "btn-primary" : "btn-outline"}`}
-                >
-                  Images
-                </button>
-                <button
-                  type="button"
-                  aria-pressed={mediaMode === "video"}
-                  onClick={() => setMediaMode("video")}
-                  className={`btn btn-sm ${mediaMode === "video" ? "btn-primary" : "btn-outline"}`}
-                >
-                  YouTube
-                </button>
-              </div>
-
-              {mediaMode === "images" ? (
-                <div className="space-y-2">
-                  {imageUrls.map((imageUrl, index) => (
-                    <div key={index} className="flex gap-2">
-                      <input
-                        type="url"
-                        placeholder={urlConfig.imagePlaceholder}
-                        className={`input input-bordered min-w-0 flex-1 bg-base-100 ${
-                          imageUrlErrors[index] || (imageMediaMissing && index === 0) ? "input-error" : ""
-                        }`}
-                        value={imageUrl}
-                        onChange={event => handleImageUrlChange(index, event.target.value)}
-                        onBlur={() => validateImageUrl(index, imageUrl, imageMediaMissing && index === 0)}
-                      />
-                      <button
-                        type="button"
-                        onClick={() => handleRemoveImageUrl(index)}
-                        className="btn btn-outline btn-square"
-                        aria-label={imageUrls.length === 1 ? "Clear image URL" : "Remove image URL"}
-                      >
-                        <XMarkIcon className="h-4 w-4" />
-                      </button>
-                    </div>
-                  ))}
-                  {imageUrlErrors.map((error, index) =>
-                    error ? (
-                      <p key={index} className="text-base text-error">
-                        {error}
-                      </p>
-                    ) : null,
-                  )}
-                  {imageMediaMissing && !imageUrlErrors.some(Boolean) ? (
-                    <p className="text-base text-error">Add at least one image URL before submitting.</p>
-                  ) : null}
-                  <button
-                    type="button"
-                    onClick={handleAddImageUrl}
-                    disabled={imageUrls.length >= MAX_SUBMISSION_IMAGE_URLS}
-                    className="btn btn-outline btn-sm"
-                  >
-                    Add image
-                  </button>
-                </div>
-              ) : (
-                <div>
-                  <input
-                    type="url"
-                    placeholder={urlConfig.videoPlaceholder}
-                    className={`input input-bordered w-full bg-base-100 ${
-                      videoUrlError || videoMediaMissing ? "input-error" : ""
-                    }`}
-                    value={videoUrl}
-                    onChange={handleVideoUrlChange}
-                    onBlur={() => validateVideoUrl(videoUrl, videoMediaMissing)}
-                  />
-                  {videoUrlError ? <p className="mt-1 text-base text-error">{videoUrlError}</p> : null}
-                  {videoMediaMissing && !videoUrlError ? (
-                    <p className="mt-1 text-base text-error">Add a YouTube URL before submitting.</p>
-                  ) : null}
-                </div>
-              )}
-            </div>
-
-            <div>
-              <label
-                className={`mb-2 block text-base font-medium ${submitAttempted && !title.trim() ? "text-error" : ""}`}
-              >
-                Question
-              </label>
-              <input
-                type="text"
-                placeholder="Ask something subjective that voters can rate"
-                className={`input input-bordered w-full bg-base-100 ${
-                  titleError || (submitAttempted && !title.trim()) ? "input-error" : ""
-                }`}
-                value={title}
-                onChange={e => handleTitleChange(e.target.value)}
-                maxLength={MAX_QUESTION_LENGTH}
-              />
-              {submitAttempted && !title.trim() ? (
-                <p className="mt-1 text-base text-error">Question is required.</p>
-              ) : null}
-              {titleError ? <p className="mt-1 text-base text-error">{titleError}</p> : null}
-              <div className="mt-1 text-right">
-                <span className="text-base text-base-content/30">
-                  {title.length}/{MAX_QUESTION_LENGTH}
-                </span>
-              </div>
-            </div>
-
-            <div>
-              <label
-                className={`mb-2 block text-base font-medium ${submitAttempted && !description.trim() ? "text-error" : ""}`}
-              >
-                Description
-              </label>
-              <textarea
-                placeholder="Add context voters should consider"
-                className={`textarea textarea-bordered h-24 w-full bg-base-100 ${
-                  descriptionError || (submitAttempted && !description.trim()) ? "textarea-error" : ""
-                }`}
-                value={description}
-                onChange={e => handleDescriptionChange(e.target.value)}
-                maxLength={MAX_CONTENT_DESCRIPTION_LENGTH}
-              />
-              {submitAttempted && !description.trim() ? (
-                <p className="mt-1 text-base text-error">Description is required.</p>
-              ) : null}
-              {descriptionError ? <p className="mt-1 text-base text-error">{descriptionError}</p> : null}
-              <div className="mt-1 text-right">
-                <span className="text-base text-base-content/30">
-                  {description.length}/{MAX_CONTENT_DESCRIPTION_LENGTH}
-                </span>
-              </div>
             </div>
 
             {selectedCategory ? (
