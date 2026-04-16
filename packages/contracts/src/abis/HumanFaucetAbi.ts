@@ -35,6 +35,19 @@ export const HumanFaucetAbi = [
   },
   {
     "type": "function",
+    "name": "KYC_ATTESTATION_ID",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "bytes32",
+        "internalType": "bytes32"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
     "name": "PASSPORT_ATTESTATION_ID",
     "inputs": [],
     "outputs": [
@@ -197,6 +210,44 @@ export const HumanFaucetAbi = [
   },
   {
     "type": "function",
+    "name": "bootstrapMigratedClaims",
+    "inputs": [
+      {
+        "name": "users",
+        "type": "address[]",
+        "internalType": "address[]"
+      },
+      {
+        "name": "nullifiers",
+        "type": "uint256[]",
+        "internalType": "uint256[]"
+      },
+      {
+        "name": "amounts",
+        "type": "uint256[]",
+        "internalType": "uint256[]"
+      },
+      {
+        "name": "referrers",
+        "type": "address[]",
+        "internalType": "address[]"
+      },
+      {
+        "name": "claimantBonuses",
+        "type": "uint256[]",
+        "internalType": "uint256[]"
+      },
+      {
+        "name": "referrerRewards",
+        "type": "uint256[]",
+        "internalType": "uint256[]"
+      }
+    ],
+    "outputs": [],
+    "stateMutability": "nonpayable"
+  },
+  {
+    "type": "function",
     "name": "claimNullifier",
     "inputs": [
       {
@@ -216,6 +267,13 @@ export const HumanFaucetAbi = [
   },
   {
     "type": "function",
+    "name": "closeMigrationBootstrap",
+    "inputs": [],
+    "outputs": [],
+    "stateMutability": "nonpayable"
+  },
+  {
+    "type": "function",
     "name": "crepToken",
     "inputs": [],
     "outputs": [
@@ -223,6 +281,30 @@ export const HumanFaucetAbi = [
         "name": "",
         "type": "address",
         "internalType": "contract IERC20"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "getAttestationPolicy",
+    "inputs": [
+      {
+        "name": "attestationId",
+        "type": "bytes32",
+        "internalType": "bytes32"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "enabled",
+        "type": "bool",
+        "internalType": "bool"
+      },
+      {
+        "name": "requiredOfac",
+        "type": "bool[3]",
+        "internalType": "bool[3]"
       }
     ],
     "stateMutability": "view"
@@ -473,6 +555,19 @@ export const HumanFaucetAbi = [
   },
   {
     "type": "function",
+    "name": "migrationBootstrapClosed",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "bool",
+        "internalType": "bool"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
     "name": "nullifierUsed",
     "inputs": [
       {
@@ -630,6 +725,29 @@ export const HumanFaucetAbi = [
       }
     ],
     "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "setAttestationPolicy",
+    "inputs": [
+      {
+        "name": "attestationId",
+        "type": "bytes32",
+        "internalType": "bytes32"
+      },
+      {
+        "name": "enabled",
+        "type": "bool",
+        "internalType": "bool"
+      },
+      {
+        "name": "requiredOfac",
+        "type": "bool[3]",
+        "internalType": "bool[3]"
+      }
+    ],
+    "outputs": [],
+    "stateMutability": "nonpayable"
   },
   {
     "type": "function",
@@ -793,6 +911,31 @@ export const HumanFaucetAbi = [
   },
   {
     "type": "event",
+    "name": "AttestationPolicyUpdated",
+    "inputs": [
+      {
+        "name": "attestationId",
+        "type": "bytes32",
+        "indexed": true,
+        "internalType": "bytes32"
+      },
+      {
+        "name": "enabled",
+        "type": "bool",
+        "indexed": false,
+        "internalType": "bool"
+      },
+      {
+        "name": "requiredOfac",
+        "type": "bool[3]",
+        "indexed": false,
+        "internalType": "bool[3]"
+      }
+    ],
+    "anonymous": false
+  },
+  {
+    "type": "event",
     "name": "ConfigIdUpdated",
     "inputs": [
       {
@@ -815,6 +958,61 @@ export const HumanFaucetAbi = [
         "internalType": "address"
       }
     ],
+    "anonymous": false
+  },
+  {
+    "type": "event",
+    "name": "MigratedClaimBootstrapped",
+    "inputs": [
+      {
+        "name": "user",
+        "type": "address",
+        "indexed": true,
+        "internalType": "address"
+      },
+      {
+        "name": "nullifier",
+        "type": "uint256",
+        "indexed": true,
+        "internalType": "uint256"
+      },
+      {
+        "name": "amount",
+        "type": "uint256",
+        "indexed": false,
+        "internalType": "uint256"
+      },
+      {
+        "name": "referrer",
+        "type": "address",
+        "indexed": false,
+        "internalType": "address"
+      },
+      {
+        "name": "claimantBonus",
+        "type": "uint256",
+        "indexed": false,
+        "internalType": "uint256"
+      },
+      {
+        "name": "referrerReward",
+        "type": "uint256",
+        "indexed": false,
+        "internalType": "uint256"
+      },
+      {
+        "name": "tokenId",
+        "type": "uint256",
+        "indexed": false,
+        "internalType": "uint256"
+      }
+    ],
+    "anonymous": false
+  },
+  {
+    "type": "event",
+    "name": "MigrationBootstrapClosed",
+    "inputs": [],
     "anonymous": false
   },
   {
@@ -1041,12 +1239,37 @@ export const HumanFaucetAbi = [
   },
   {
     "type": "error",
+    "name": "InvalidAttestationPolicy",
+    "inputs": []
+  },
+  {
+    "type": "error",
     "name": "InvalidDataFormat",
     "inputs": []
   },
   {
     "type": "error",
+    "name": "InvalidMigrationClaim",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "InvalidMigrationReferrer",
+    "inputs": []
+  },
+  {
+    "type": "error",
     "name": "InvalidUserIdentifier",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "MigrationArrayLengthMismatch",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "MigrationBootstrapAlreadyClosed",
     "inputs": []
   },
   {
@@ -1086,6 +1309,11 @@ export const HumanFaucetAbi = [
         "internalType": "address"
       }
     ]
+  },
+  {
+    "type": "error",
+    "name": "SanctionsCheckFailed",
+    "inputs": []
   },
   {
     "type": "error",

@@ -11,7 +11,7 @@ export function resolveSelfVerificationErrorMessage(error: SelfVerificationError
   const code = getSelfVerificationErrorCode(error);
 
   if (code.includes("UnsupportedDocumentType")) {
-    return "Use a supported Self credential: passport, biometric ID card, or KYC.";
+    return "This Self credential is not currently accepted by Curyo governance.";
   }
 
   if (code.includes("SanctionsCheckFailed")) {

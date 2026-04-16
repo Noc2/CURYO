@@ -8,7 +8,7 @@ test("resolveSelfVerificationErrorMessage explains unsupported document types", 
       error_code: "UnsupportedDocumentType()",
       reason: "Transaction failed with error: UnsupportedDocumentType()",
     }),
-    "Use a supported Self credential: passport, biometric ID card, or KYC.",
+    "This Self credential is not currently accepted by Curyo governance.",
   );
 });
 

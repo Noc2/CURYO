@@ -10,7 +10,7 @@ import { ISelfVerificationRoot } from "@selfxyz/contracts/contracts/interfaces/I
 import { IVoterIdNFT } from "./interfaces/IVoterIdNFT.sol";
 
 /// @title HumanFaucet
-/// @notice Allows verified humans (via Self.xyz passport, biometric ID card, or KYC verification) to claim cREP tokens once.
+/// @notice Allows verified humans with governance-approved Self.xyz credentials to claim cREP tokens once.
 /// @dev Uses Self.xyz zero-knowledge identity verification for sybil resistance.
 ///      One claim per document nullifier (the same verified identity document can't claim twice).
 ///      This contract holds the 52M faucet allocation minted at launch.
@@ -41,6 +41,11 @@ contract HumanFaucet is SelfVerificationRoot, Ownable, Pausable {
     bytes32 public constant PASSPORT_ATTESTATION_ID = bytes32(uint256(1));
     bytes32 public constant BIOMETRIC_ID_CARD_ATTESTATION_ID = bytes32(uint256(2));
     bytes32 public constant KYC_ATTESTATION_ID = bytes32(uint256(4));
+
+    struct AttestationPolicy {
+        bool enabled;
+        bool[3] requiredOfac;
+    }
 
     // --- State ---
 
@@ -89,6 +94,9 @@ contract HumanFaucet is SelfVerificationRoot, Ownable, Pausable {
     /// @notice One-way switch that disables deploy-time migrated claim bootstrapping.
     bool public migrationBootstrapClosed;
 
+    /// @notice Governance-controlled acceptance and sanctions requirements for Self.xyz attestation IDs.
+    mapping(bytes32 => AttestationPolicy) private _attestationPolicies;
+
     // --- Events ---
 
     /// @notice Emitted when tokens are successfully claimed
@@ -134,6 +142,9 @@ contract HumanFaucet is SelfVerificationRoot, Ownable, Pausable {
     /// @notice Emitted when migrated claim bootstrapping is permanently closed
     event MigrationBootstrapClosed();
 
+    /// @notice Emitted when governance updates which Self.xyz credentials can claim.
+    event AttestationPolicyUpdated(bytes32 indexed attestationId, bool enabled, bool[3] requiredOfac);
+
     // --- Errors ---
 
     /// @notice Thrown when a nullifier has already been used
@@ -153,6 +164,9 @@ contract HumanFaucet is SelfVerificationRoot, Ownable, Pausable {
 
     /// @notice Thrown when Self.xyz output does not confirm sanctions screening passed
     error SanctionsCheckFailed();
+
+    /// @notice Thrown when governance attempts to configure an invalid attestation policy
+    error InvalidAttestationPolicy();
 
     /// @notice Thrown when migrated claim bootstrap has been closed
     error MigrationBootstrapAlreadyClosed();
@@ -182,6 +196,10 @@ contract HumanFaucet is SelfVerificationRoot, Ownable, Pausable {
         require(_governance != address(0), "Invalid governance");
         crepToken = IERC20(_crepToken);
         governance = _governance;
+
+        _setAttestationPolicy(PASSPORT_ATTESTATION_ID, true, [true, true, true]);
+        _setAttestationPolicy(BIOMETRIC_ID_CARD_ATTESTATION_ID, true, [false, true, true]);
+        _setAttestationPolicy(KYC_ATTESTATION_ID, true, [false, true, true]);
     }
 
     /// @notice Update the governance address that ownership may migrate to.
@@ -212,6 +230,16 @@ contract HumanFaucet is SelfVerificationRoot, Ownable, Pausable {
         require(_identityVerificationHubV2.verificationConfigV2Exists(_configId), "Unknown config");
         verificationConfigId = _configId;
         emit ConfigIdUpdated(_configId);
+    }
+
+    /// @notice Update which Self.xyz attestation IDs may claim and which sanctions checks must pass.
+    /// @dev Owner is governance after deployment, so production changes go through timelock governance.
+    ///      `requiredOfac` indexes follow Self.xyz's output: [document number, name+DOB, name+YOB].
+    function setAttestationPolicy(bytes32 attestationId, bool enabled, bool[3] memory requiredOfac)
+        external
+        onlyOwner
+    {
+        _setAttestationPolicy(attestationId, enabled, requiredOfac);
     }
 
     /// @notice Withdraw remaining cREP tokens (e.g., after faucet decommissioning)
@@ -430,6 +458,16 @@ contract HumanFaucet is SelfVerificationRoot, Ownable, Pausable {
         return balance / currentAmount;
     }
 
+    /// @notice Read the current policy for a Self.xyz attestation ID.
+    function getAttestationPolicy(bytes32 attestationId)
+        external
+        view
+        returns (bool enabled, bool[3] memory requiredOfac)
+    {
+        AttestationPolicy memory policy = _attestationPolicies[attestationId];
+        return (policy.enabled, policy.requiredOfac);
+    }
+
     // --- SelfVerificationRoot Overrides ---
 
     /// @notice Returns the verification config ID for the hub
@@ -463,13 +501,8 @@ contract HumanFaucet is SelfVerificationRoot, Ownable, Pausable {
             revert InvalidUserIdentifier();
         }
 
-        // Defense-in-depth: allow only supported Self.xyz credential types and require sanctions clearance.
-        if (!_isSupportedAttestation(output.attestationId)) {
-            revert UnsupportedDocumentType();
-        }
-        if (!_hasRequiredSanctionsClearance(output.attestationId, output.ofac)) {
-            revert SanctionsCheckFailed();
-        }
+        // Defense-in-depth: allow only governance-approved Self.xyz credentials and require sanctions clearance.
+        _validateAttestationPolicy(output.attestationId, output.ofac);
 
         // Check nullifier hasn't been used (same passport can't claim twice)
         if (nullifierUsed[output.nullifier]) {
@@ -670,22 +703,44 @@ contract HumanFaucet is SelfVerificationRoot, Ownable, Pausable {
         return type(uint8).max;
     }
 
-    function _isSupportedAttestation(bytes32 attestationId) internal pure returns (bool) {
-        return attestationId == PASSPORT_ATTESTATION_ID || attestationId == BIOMETRIC_ID_CARD_ATTESTATION_ID
-            || attestationId == KYC_ATTESTATION_ID;
+    function _setAttestationPolicy(bytes32 attestationId, bool enabled, bool[3] memory requiredOfac) internal {
+        if (attestationId == bytes32(0) || (enabled && !_hasAnyRequiredOfac(requiredOfac))) {
+            revert InvalidAttestationPolicy();
+        }
+
+        AttestationPolicy storage policy = _attestationPolicies[attestationId];
+        policy.enabled = enabled;
+        for (uint256 i = 0; i < 3; ++i) {
+            policy.requiredOfac[i] = requiredOfac[i];
+        }
+
+        emit AttestationPolicyUpdated(attestationId, enabled, requiredOfac);
     }
 
-    function _hasRequiredSanctionsClearance(bytes32 attestationId, bool[3] memory ofac)
+    function _validateAttestationPolicy(bytes32 attestationId, bool[3] memory ofac) internal view {
+        AttestationPolicy memory policy = _attestationPolicies[attestationId];
+        if (!policy.enabled) {
+            revert UnsupportedDocumentType();
+        }
+        if (!_hasRequiredSanctionsClearance(policy.requiredOfac, ofac)) {
+            revert SanctionsCheckFailed();
+        }
+    }
+
+    function _hasAnyRequiredOfac(bool[3] memory requiredOfac) internal pure returns (bool) {
+        return requiredOfac[0] || requiredOfac[1] || requiredOfac[2];
+    }
+
+    function _hasRequiredSanctionsClearance(bool[3] memory requiredOfac, bool[3] memory ofac)
         internal
         pure
         returns (bool)
     {
-        if (attestationId == PASSPORT_ATTESTATION_ID) {
-            return ofac[0] && ofac[1] && ofac[2];
+        for (uint256 i = 0; i < 3; ++i) {
+            if (requiredOfac[i] && !ofac[i]) {
+                return false;
+            }
         }
-        if (attestationId == BIOMETRIC_ID_CARD_ATTESTATION_ID || attestationId == KYC_ATTESTATION_ID) {
-            return ofac[1] && ofac[2];
-        }
-        return false;
+        return true;
     }
 }

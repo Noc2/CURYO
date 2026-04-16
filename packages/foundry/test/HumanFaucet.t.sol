@@ -437,6 +437,85 @@ contract HumanFaucetTest is Test {
         faucet.setConfigId(newConfigId);
     }
 
+    function test_AttestationPolicies_Defaults() public view {
+        (bool passportEnabled, bool[3] memory passportOfac) = faucet.getAttestationPolicy(PASSPORT_ATTESTATION_ID);
+        assertTrue(passportEnabled);
+        assertTrue(passportOfac[0]);
+        assertTrue(passportOfac[1]);
+        assertTrue(passportOfac[2]);
+
+        (bool biometricEnabled, bool[3] memory biometricOfac) =
+            faucet.getAttestationPolicy(BIOMETRIC_ID_CARD_ATTESTATION_ID);
+        assertTrue(biometricEnabled);
+        assertFalse(biometricOfac[0]);
+        assertTrue(biometricOfac[1]);
+        assertTrue(biometricOfac[2]);
+
+        (bool kycEnabled, bool[3] memory kycOfac) = faucet.getAttestationPolicy(KYC_ATTESTATION_ID);
+        assertTrue(kycEnabled);
+        assertFalse(kycOfac[0]);
+        assertTrue(kycOfac[1]);
+        assertTrue(kycOfac[2]);
+    }
+
+    function test_SetAttestationPolicy_AllowsOwnerToDisableKyc() public {
+        vm.prank(admin);
+        vm.expectEmit(true, false, false, true);
+        emit HumanFaucet.AttestationPolicyUpdated(KYC_ATTESTATION_ID, false, [false, false, false]);
+        faucet.setAttestationPolicy(KYC_ATTESTATION_ID, false, [false, false, false]);
+
+        (bool enabled, bool[3] memory requiredOfac) = faucet.getAttestationPolicy(KYC_ATTESTATION_ID);
+        assertFalse(enabled);
+        assertFalse(requiredOfac[0]);
+        assertFalse(requiredOfac[1]);
+        assertFalse(requiredOfac[2]);
+
+        ISelfVerificationRoot.GenericDiscloseOutputV2 memory output;
+        output.attestationId = KYC_ATTESTATION_ID;
+        output.userIdentifier = uint256(uint160(user1));
+        output.nullifier = 999780;
+        output.olderThan = 18;
+        output.ofac = [false, true, true];
+
+        vm.expectRevert(HumanFaucet.UnsupportedDocumentType.selector);
+        mockHub.simulateVerificationWithOutput(address(faucet), output);
+    }
+
+    function test_SetAttestationPolicy_AllowsOwnerToEnableNewCredentialKind() public {
+        vm.prank(admin);
+        faucet.setAttestationPolicy(UNSUPPORTED_ATTESTATION_ID, true, [false, true, false]);
+
+        ISelfVerificationRoot.GenericDiscloseOutputV2 memory output;
+        output.attestationId = UNSUPPORTED_ATTESTATION_ID;
+        output.userIdentifier = uint256(uint160(user1));
+        output.nullifier = 999781;
+        output.olderThan = 18;
+        output.ofac = [false, true, false];
+
+        mockHub.simulateVerificationWithOutput(address(faucet), output);
+
+        assertEq(crepToken.balanceOf(user1), TIER_0_AMOUNT);
+        assertTrue(faucet.hasClaimed(user1));
+    }
+
+    function test_SetAttestationPolicy_RevertNotOwner() public {
+        vm.prank(user1);
+        vm.expectRevert();
+        faucet.setAttestationPolicy(KYC_ATTESTATION_ID, false, [false, false, false]);
+    }
+
+    function test_SetAttestationPolicy_RevertZeroAttestationId() public {
+        vm.prank(admin);
+        vm.expectRevert(HumanFaucet.InvalidAttestationPolicy.selector);
+        faucet.setAttestationPolicy(bytes32(0), true, [true, false, false]);
+    }
+
+    function test_SetAttestationPolicy_RevertEnabledWithoutSanctionsRequirement() public {
+        vm.prank(admin);
+        vm.expectRevert(HumanFaucet.InvalidAttestationPolicy.selector);
+        faucet.setAttestationPolicy(KYC_ATTESTATION_ID, true, [false, false, false]);
+    }
+
     // --- Stats Tests ---
 
     function test_TotalClaimed_Increments() public {
