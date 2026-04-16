@@ -172,7 +172,7 @@ contract FrontendRegistrySnapshotTest is VotingTestBase {
         vm.startPrank(voter);
         crepToken.approve(address(votingEngine), STAKE);
         votingEngine.commitVote(
-            contentId, _tlockCommitTargetRound(), _tlockDrandChainHash(), commitHash, ciphertext, STAKE, frontendOp
+            contentId, _defaultRatingReferenceBps(), _tlockCommitTargetRound(), _tlockDrandChainHash(), commitHash, ciphertext, STAKE, frontendOp
         );
         vm.stopPrank();
 

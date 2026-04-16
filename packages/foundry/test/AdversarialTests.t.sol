@@ -160,10 +160,14 @@ contract AdversarialTests is VotingTestBase {
         bytes memory ciphertext = _testCiphertext(isUp, salt, contentId);
         uint64 targetRound = _tlockCommitTargetRound();
         bytes32 drandChainHash = _tlockDrandChainHash();
-        bytes32 commitHash = _commitHash(isUp, salt, contentId, targetRound, drandChainHash, ciphertext);
+        uint16 referenceRatingBps = _currentRatingReferenceBps(contentId);
+        bytes32 commitHash =
+            _commitHash(isUp, salt, contentId, referenceRatingBps, targetRound, drandChainHash, ciphertext);
         vm.startPrank(voter);
         crepToken.approve(address(engine), stake);
-        engine.commitVote(contentId, targetRound, drandChainHash, commitHash, ciphertext, stake, address(0));
+        engine.commitVote(
+            contentId, referenceRatingBps, targetRound, drandChainHash, commitHash, ciphertext, stake, address(0)
+        );
         vm.stopPrank();
         commitKey = _commitKey(voter, commitHash);
         commitDirections[commitKey] = isUp;
@@ -622,7 +626,7 @@ contract AdversarialTests is VotingTestBase {
 
         vm.startPrank(voter1);
         token2.approve(address(eng2), STAKE);
-        eng2.commitVote(1, _tlockCommitTargetRound(), _tlockDrandChainHash(), ch1, ct1, STAKE, address(0));
+        eng2.commitVote(1, _defaultRatingReferenceBps(), _tlockCommitTargetRound(), _tlockDrandChainHash(), ch1, ct1, STAKE, address(0));
         vm.stopPrank();
 
         bytes32 salt2 = keccak256(abi.encodePacked(voter2, block.timestamp, uint256(1)));
@@ -631,7 +635,7 @@ contract AdversarialTests is VotingTestBase {
 
         vm.startPrank(voter2);
         token2.approve(address(eng2), STAKE);
-        eng2.commitVote(1, _tlockCommitTargetRound(), _tlockDrandChainHash(), ch2, ct2, STAKE, address(0));
+        eng2.commitVote(1, _defaultRatingReferenceBps(), _tlockCommitTargetRound(), _tlockDrandChainHash(), ch2, ct2, STAKE, address(0));
         vm.stopPrank();
 
         bytes32 ck1 = _commitKey(voter1, ch1);
@@ -785,7 +789,7 @@ contract AdversarialTests is VotingTestBase {
         bytes memory ciphertext = _testCiphertext(true, salt, contentId);
         vm.startPrank(holder);
         crepToken.approve(address(engine), STAKE);
-        engine.commitVote(contentId, _tlockCommitTargetRound(), _tlockDrandChainHash(), commitHash, ciphertext, STAKE, address(0));
+        engine.commitVote(contentId, _defaultRatingReferenceBps(), _tlockCommitTargetRound(), _tlockDrandChainHash(), commitHash, ciphertext, STAKE, address(0));
         vm.stopPrank();
 
         // Delegate tries to vote immediately on DIFFERENT content (same tokenId → blocked by IdentityAlreadyCommitted
@@ -803,7 +807,7 @@ contract AdversarialTests is VotingTestBase {
         vm.startPrank(delegate);
         crepToken.approve(address(engine), STAKE);
         vm.expectRevert(RoundVotingEngine.CooldownActive.selector);
-        engine.commitVote(contentId, _tlockCommitTargetRound(), _tlockDrandChainHash(), commitHash3, ciphertext3, STAKE, address(0));
+        engine.commitVote(contentId, _defaultRatingReferenceBps(), _tlockCommitTargetRound(), _tlockDrandChainHash(), commitHash3, ciphertext3, STAKE, address(0));
         vm.stopPrank();
     }
 
@@ -853,12 +857,30 @@ contract AdversarialTests is VotingTestBase {
         // Cooldown = 24h = 86400s. We're at ~1601, cooldown expires at ~87400.
         // So delegate should be blocked.
         bytes32 salt2 = keccak256(abi.encodePacked(delegate, block.timestamp, contentId, false));
-        bytes32 commitHash2 = _commitHash(false, salt2, contentId);
         bytes memory ciphertext2 = _testCiphertext(false, salt2, contentId);
+        uint16 referenceRatingBps2 = _currentRatingReferenceBps(contentId);
+        bytes32 commitHash2 = _commitHash(
+            false,
+            salt2,
+            contentId,
+            referenceRatingBps2,
+            _tlockCommitTargetRound(),
+            _tlockDrandChainHash(),
+            ciphertext2
+        );
         vm.startPrank(delegate);
         crepToken.approve(address(engine), STAKE);
         vm.expectRevert(RoundVotingEngine.CooldownActive.selector);
-        engine.commitVote(contentId, _tlockCommitTargetRound(), _tlockDrandChainHash(), commitHash2, ciphertext2, STAKE, address(0));
+        engine.commitVote(
+            contentId,
+            referenceRatingBps2,
+            _tlockCommitTargetRound(),
+            _tlockDrandChainHash(),
+            commitHash2,
+            ciphertext2,
+            STAKE,
+            address(0)
+        );
         vm.stopPrank();
     }
 
@@ -966,7 +988,7 @@ contract AdversarialTests is VotingTestBase {
 
         vm.startPrank(voter1);
         crepToken.approve(address(engine), STAKE);
-        engine.commitVote(contentId, _tlockCommitTargetRound(), _tlockDrandChainHash(), commitHash, ciphertext, STAKE, address(0));
+        engine.commitVote(contentId, _defaultRatingReferenceBps(), _tlockCommitTargetRound(), _tlockDrandChainHash(), commitHash, ciphertext, STAKE, address(0));
         vm.stopPrank();
 
         uint256 roundId = RoundEngineReadHelpers.activeRoundId(engine, contentId);
@@ -987,7 +1009,7 @@ contract AdversarialTests is VotingTestBase {
 
         vm.startPrank(voter1);
         crepToken.approve(address(engine), STAKE);
-        engine.commitVote(contentId, _tlockCommitTargetRound(), _tlockDrandChainHash(), commitHash, ciphertext, STAKE, address(0));
+        engine.commitVote(contentId, _defaultRatingReferenceBps(), _tlockCommitTargetRound(), _tlockDrandChainHash(), commitHash, ciphertext, STAKE, address(0));
         vm.stopPrank();
 
         uint256 roundId = RoundEngineReadHelpers.activeRoundId(engine, contentId);
@@ -1011,7 +1033,7 @@ contract AdversarialTests is VotingTestBase {
 
         vm.startPrank(voter1);
         crepToken.approve(address(engine), STAKE);
-        engine.commitVote(contentId, _tlockCommitTargetRound(), _tlockDrandChainHash(), commitHash, ciphertext, STAKE, address(0));
+        engine.commitVote(contentId, _defaultRatingReferenceBps(), _tlockCommitTargetRound(), _tlockDrandChainHash(), commitHash, ciphertext, STAKE, address(0));
         vm.stopPrank();
 
         uint256 roundId = RoundEngineReadHelpers.activeRoundId(engine, contentId);
@@ -1039,7 +1061,7 @@ contract AdversarialTests is VotingTestBase {
         vm.startPrank(voter1);
         crepToken.approve(address(engine), STAKE);
         vm.expectRevert(RoundVotingEngine.InvalidCiphertext.selector);
-        engine.commitVote(contentId, targetRound, drandChainHash, commitHash, opaqueCiphertext, STAKE, address(0));
+        engine.commitVote(contentId, _defaultRatingReferenceBps(), targetRound, drandChainHash, commitHash, opaqueCiphertext, STAKE, address(0));
         vm.stopPrank();
     }
 
@@ -1097,7 +1119,7 @@ contract AdversarialTests is VotingTestBase {
         vm.startPrank(submitter);
         crepToken.approve(address(engine), STAKE);
         vm.expectRevert(RoundVotingEngine.SelfVote.selector);
-        engine.commitVote(contentId, _tlockCommitTargetRound(), _tlockDrandChainHash(), commitHash, ciphertext, STAKE, address(0));
+        engine.commitVote(contentId, _defaultRatingReferenceBps(), _tlockCommitTargetRound(), _tlockDrandChainHash(), commitHash, ciphertext, STAKE, address(0));
         vm.stopPrank();
     }
 
@@ -1116,7 +1138,7 @@ contract AdversarialTests is VotingTestBase {
         vm.startPrank(voter1);
         crepToken.approve(address(engine), 1); // tiny amount
         vm.expectRevert(RoundVotingEngine.InvalidStake.selector);
-        engine.commitVote(contentId, _tlockCommitTargetRound(), _tlockDrandChainHash(), commitHash, ciphertext, 1, address(0));
+        engine.commitVote(contentId, _defaultRatingReferenceBps(), _tlockCommitTargetRound(), _tlockDrandChainHash(), commitHash, ciphertext, 1, address(0));
         vm.stopPrank();
     }
 
@@ -1132,7 +1154,7 @@ contract AdversarialTests is VotingTestBase {
         vm.startPrank(voter1);
         crepToken.approve(address(engine), tooMuch);
         vm.expectRevert(RoundVotingEngine.InvalidStake.selector);
-        engine.commitVote(contentId, _tlockCommitTargetRound(), _tlockDrandChainHash(), commitHash, ciphertext, tooMuch, address(0));
+        engine.commitVote(contentId, _defaultRatingReferenceBps(), _tlockCommitTargetRound(), _tlockDrandChainHash(), commitHash, ciphertext, tooMuch, address(0));
         vm.stopPrank();
     }
 

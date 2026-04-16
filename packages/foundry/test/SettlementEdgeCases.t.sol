@@ -143,11 +143,29 @@ contract SettlementEdgeCasesTest is VotingTestBase {
     {
         salt = keccak256(abi.encodePacked(voter, block.timestamp));
         bytes memory ciphertext = _testCiphertext(isUp, salt, contentId);
-        bytes32 commitHash = _commitHash(isUp, salt, contentId, ciphertext);
+        uint16 referenceRatingBps = _currentRatingReferenceBps(contentId);
+        bytes32 commitHash = _commitHash(
+            isUp,
+            salt,
+            contentId,
+            referenceRatingBps,
+            _tlockCommitTargetRound(),
+            _tlockDrandChainHash(),
+            ciphertext
+        );
         vm.prank(voter);
         crepToken.approve(address(engine), stakeAmt);
         vm.prank(voter);
-        engine.commitVote(contentId, _tlockCommitTargetRound(), _tlockDrandChainHash(), commitHash, ciphertext, stakeAmt, address(0));
+        engine.commitVote(
+            contentId,
+            referenceRatingBps,
+            _tlockCommitTargetRound(),
+            _tlockDrandChainHash(),
+            commitHash,
+            ciphertext,
+            stakeAmt,
+            address(0)
+        );
         commitKey = keccak256(abi.encodePacked(voter, commitHash));
     }
 
@@ -184,11 +202,15 @@ contract SettlementEdgeCasesTest is VotingTestBase {
         salt = keccak256(abi.encodePacked(voter, block.timestamp));
         targetRound = _tlockCommitTargetRound();
         bytes memory ciphertext = _testCiphertext(isUp, salt, contentId, targetRound, drandChainHash);
-        bytes32 commitHash = _commitHash(isUp, salt, contentId, targetRound, drandChainHash, ciphertext);
+        uint16 referenceRatingBps = _currentRatingReferenceBps(contentId);
+        bytes32 commitHash =
+            _commitHash(isUp, salt, contentId, referenceRatingBps, targetRound, drandChainHash, ciphertext);
         vm.prank(voter);
         token.approve(address(votingEngine), stakeAmt);
         vm.prank(voter);
-        votingEngine.commitVote(contentId, targetRound, drandChainHash, commitHash, ciphertext, stakeAmt, address(0));
+        votingEngine.commitVote(
+            contentId, referenceRatingBps, targetRound, drandChainHash, commitHash, ciphertext, stakeAmt, address(0)
+        );
         commitKey = keccak256(abi.encodePacked(voter, commitHash));
     }
 

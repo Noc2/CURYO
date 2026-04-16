@@ -127,7 +127,7 @@ contract GasBudgetTest is RoundIntegrationTest {
 
         vm.startPrank(voter1);
         crepToken.approve(address(votingEngine), STAKE);
-        votingEngine.commitVote(contentId, _tlockCommitTargetRound(), _tlockDrandChainHash(), commitHash, ciphertext, STAKE, address(0));
+        votingEngine.commitVote(contentId, _defaultRatingReferenceBps(), _tlockCommitTargetRound(), _tlockDrandChainHash(), commitHash, ciphertext, STAKE, address(0));
         vm.stopPrank();
 
         uint256 roundId = RoundEngineReadHelpers.activeRoundId(votingEngine, contentId);
@@ -209,17 +209,17 @@ contract GasBudgetTest is RoundIntegrationTest {
 
         vm.startPrank(voter1);
         crepToken.approve(address(votingEngine), STAKE);
-        votingEngine.commitVote(contentId, _tlockCommitTargetRound(), _tlockDrandChainHash(), ch1, _testCiphertext(true, s1, contentId), STAKE, address(0));
+        votingEngine.commitVote(contentId, _defaultRatingReferenceBps(), _tlockCommitTargetRound(), _tlockDrandChainHash(), ch1, _testCiphertext(true, s1, contentId), STAKE, address(0));
         vm.stopPrank();
 
         vm.startPrank(voter2);
         crepToken.approve(address(votingEngine), STAKE);
-        votingEngine.commitVote(contentId, _tlockCommitTargetRound(), _tlockDrandChainHash(), ch2, _testCiphertext(true, s2, contentId), STAKE, address(0));
+        votingEngine.commitVote(contentId, _defaultRatingReferenceBps(), _tlockCommitTargetRound(), _tlockDrandChainHash(), ch2, _testCiphertext(true, s2, contentId), STAKE, address(0));
         vm.stopPrank();
 
         vm.startPrank(voter3);
         crepToken.approve(address(votingEngine), STAKE);
-        votingEngine.commitVote(contentId, _tlockCommitTargetRound(), _tlockDrandChainHash(), ch3, _testCiphertext(false, s3, contentId), STAKE, address(0));
+        votingEngine.commitVote(contentId, _defaultRatingReferenceBps(), _tlockCommitTargetRound(), _tlockDrandChainHash(), ch3, _testCiphertext(false, s3, contentId), STAKE, address(0));
         vm.stopPrank();
 
         uint256 roundId = RoundEngineReadHelpers.activeRoundId(votingEngine, contentId);
@@ -250,7 +250,7 @@ contract GasBudgetTest is RoundIntegrationTest {
 
         vm.startPrank(voter1);
         crepToken.approve(address(votingEngine), STAKE);
-        votingEngine.commitVote(contentId, _tlockCommitTargetRound(), _tlockDrandChainHash(), commitHash, _testCiphertext(true, salt, contentId), STAKE, address(0));
+        votingEngine.commitVote(contentId, _defaultRatingReferenceBps(), _tlockCommitTargetRound(), _tlockDrandChainHash(), commitHash, _testCiphertext(true, salt, contentId), STAKE, address(0));
         vm.stopPrank();
 
         uint256 roundId = RoundEngineReadHelpers.activeRoundId(votingEngine, contentId);

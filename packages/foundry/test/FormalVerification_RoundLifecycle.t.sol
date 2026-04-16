@@ -124,11 +124,16 @@ contract FormalVerification_RoundLifecycleTest is VotingTestBase {
     {
         salt = keccak256(abi.encodePacked(voter, block.timestamp, cid));
         bytes memory ciphertext = _testCiphertext(up, salt, cid);
-        bytes32 commitHash = _commitHash(up, salt, cid, ciphertext);
+        uint16 referenceRatingBps = _currentRatingReferenceBps(cid);
+        bytes32 commitHash = _commitHash(
+            up, salt, cid, referenceRatingBps, _tlockCommitTargetRound(), _tlockDrandChainHash(), ciphertext
+        );
         vm.prank(voter);
         crepToken.approve(address(engine), stake);
         vm.prank(voter);
-        engine.commitVote(cid, _tlockCommitTargetRound(), _tlockDrandChainHash(), commitHash, ciphertext, stake, address(0));
+        engine.commitVote(
+            cid, referenceRatingBps, _tlockCommitTargetRound(), _tlockDrandChainHash(), commitHash, ciphertext, stake, address(0)
+        );
         commitKey = keccak256(abi.encodePacked(voter, commitHash));
     }
 

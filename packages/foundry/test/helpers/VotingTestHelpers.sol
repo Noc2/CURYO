@@ -408,8 +408,11 @@ abstract contract VotingTestBase is Test, ContentSubmissionTestBase {
             return RatingLib.DEFAULT_RATING_BPS;
         }
 
-        uint16 ratingBps = activeTlockContentRegistry.getRating(contentId);
-        return ratingBps == 0 ? RatingLib.DEFAULT_RATING_BPS : ratingBps;
+        return activeTlockContentRegistry.getRating(contentId);
+    }
+
+    function _defaultRatingReferenceBps() internal pure returns (uint16) {
+        return RatingLib.DEFAULT_RATING_BPS;
     }
 
     function _decodeTestCiphertext(bytes memory ciphertext) internal pure returns (bool isUp, bytes32 salt) {

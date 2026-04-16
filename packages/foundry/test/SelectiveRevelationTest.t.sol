@@ -139,7 +139,7 @@ contract SelectiveRevelationTest is VotingTestBase {
         vm.startPrank(voter);
         crepToken.approve(address(engine), stake);
         engine.commitVote(
-            contentId,
+            contentId, _defaultRatingReferenceBps(),
             artifacts.targetRound,
             artifacts.drandChainHash,
             artifacts.commitHash,

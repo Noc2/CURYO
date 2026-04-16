@@ -187,7 +187,7 @@ contract SecurityReentrancyTest is SecurityHarnessBase {
         bytes32 commitHash = _commitHash(isUp, salt, contentId, targetRound, drandChainHash, ciphertext);
         vm.startPrank(voter);
         crepToken.approve(address(votingEngine), STAKE);
-        votingEngine.commitVote(contentId, targetRound, drandChainHash, commitHash, ciphertext, STAKE, address(0));
+        votingEngine.commitVote(contentId, _defaultRatingReferenceBps(), targetRound, drandChainHash, commitHash, ciphertext, STAKE, address(0));
         vm.stopPrank();
         return keccak256(abi.encodePacked(voter, commitHash));
     }
@@ -475,7 +475,7 @@ contract SecuritySettlementTimingTest is SecurityHarnessBase {
         bytes32 commitHash = _commitHash(isUp, salt, contentId, targetRound, drandChainHash, ciphertext);
         vm.startPrank(voter);
         crepToken.approve(address(votingEngine), STAKE);
-        votingEngine.commitVote(contentId, targetRound, drandChainHash, commitHash, ciphertext, STAKE, address(0));
+        votingEngine.commitVote(contentId, _defaultRatingReferenceBps(), targetRound, drandChainHash, commitHash, ciphertext, STAKE, address(0));
         vm.stopPrank();
         return keccak256(abi.encodePacked(voter, commitHash));
     }

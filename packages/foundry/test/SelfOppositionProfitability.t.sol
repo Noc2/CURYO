@@ -150,7 +150,7 @@ contract SelfOppositionProfitabilityTest is VotingTestBase {
         crepToken.approve(address(engine), stake);
         vm.prank(voter);
         engine.commitVote(
-            cid, _tlockCommitTargetRound(), _tlockDrandChainHash(), commitHash, ciphertext, stake, address(0)
+            cid, _defaultRatingReferenceBps(), _tlockCommitTargetRound(), _tlockDrandChainHash(), commitHash, ciphertext, stake, address(0)
         );
         commitKey = keccak256(abi.encodePacked(voter, commitHash));
     }

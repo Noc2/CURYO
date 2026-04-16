@@ -377,12 +377,21 @@ contract SubmitterStakeResolutionTest is VotingTestBase {
     {
         salt = keccak256(abi.encodePacked(voter, block.timestamp, contentId, isUp));
         bytes memory ciphertext = _testCiphertext(isUp, salt, contentId);
-        bytes32 commitHash = _commitHash(isUp, salt, contentId, ciphertext);
+        uint16 referenceRatingBps = _currentRatingReferenceBps(contentId);
+        bytes32 commitHash = _commitHash(
+            isUp,
+            salt,
+            contentId,
+            referenceRatingBps,
+            _tlockCommitTargetRound(),
+            _tlockDrandChainHash(),
+            ciphertext
+        );
 
         vm.startPrank(voter);
         crepToken.approve(address(votingEngine), stake);
         votingEngine.commitVote(
-            contentId, _tlockCommitTargetRound(), _tlockDrandChainHash(), commitHash, ciphertext, stake, address(0)
+            contentId, referenceRatingBps, _tlockCommitTargetRound(), _tlockDrandChainHash(), commitHash, ciphertext, stake, address(0)
         );
         vm.stopPrank();
 

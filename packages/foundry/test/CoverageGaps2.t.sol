@@ -1815,7 +1815,7 @@ contract RoundSettlementBranchTest is VotingTestBase {
         bytes memory ciphertext = abi.encodePacked(uint8(1), salt, contentId);
         vm.startPrank(voter1);
         vm.expectRevert(RoundVotingEngine.InvalidStake.selector);
-        engine.commitVote(contentId, _tlockCommitTargetRound(), _tlockDrandChainHash(), commitHash, ciphertext, 0, address(0));
+        engine.commitVote(contentId, _defaultRatingReferenceBps(), _tlockCommitTargetRound(), _tlockDrandChainHash(), commitHash, ciphertext, 0, address(0));
         vm.stopPrank();
     }
 
@@ -2002,11 +2002,29 @@ contract RoundSettlementBranchTest is VotingTestBase {
     {
         salt = keccak256(abi.encodePacked(voter, block.timestamp, contentId));
         bytes memory ciphertext = _testCiphertext(isUp, salt, contentId);
-        bytes32 commitHash = _commitHash(isUp, salt, contentId, ciphertext);
+        uint16 referenceRatingBps = _currentRatingReferenceBps(contentId);
+        bytes32 commitHash = _commitHash(
+            isUp,
+            salt,
+            contentId,
+            referenceRatingBps,
+            _tlockCommitTargetRound(),
+            _tlockDrandChainHash(),
+            ciphertext
+        );
         vm.prank(voter);
         crep.approve(address(engine), amount);
         vm.prank(voter);
-        engine.commitVote(contentId, _tlockCommitTargetRound(), _tlockDrandChainHash(), commitHash, ciphertext, amount, address(0));
+        engine.commitVote(
+            contentId,
+            referenceRatingBps,
+            _tlockCommitTargetRound(),
+            _tlockDrandChainHash(),
+            commitHash,
+            ciphertext,
+            amount,
+            address(0)
+        );
         commitKey = keccak256(abi.encodePacked(voter, commitHash));
     }
 

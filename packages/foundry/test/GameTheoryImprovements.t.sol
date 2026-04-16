@@ -136,7 +136,7 @@ contract GameTheoryImprovementsTest is VotingTestBase {
 
         vm.startPrank(voter);
         crepToken.approve(address(engine), stake);
-        engine.commitVote(contentId, _tlockCommitTargetRound(), _tlockDrandChainHash(), ch, ct, stake, address(0));
+        engine.commitVote(contentId, _defaultRatingReferenceBps(), _tlockCommitTargetRound(), _tlockDrandChainHash(), ch, ct, stake, address(0));
         vm.stopPrank();
     }
 

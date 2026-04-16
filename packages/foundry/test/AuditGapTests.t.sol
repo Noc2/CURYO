@@ -160,7 +160,7 @@ contract AuditGapTests is VotingTestBase {
         bytes32 hash = _commitHash(isUp, salt, contentId, ciphertext);
         vm.startPrank(voter);
         crepToken.approve(address(votingEngine), stakeAmt);
-        votingEngine.commitVote(contentId, _tlockCommitTargetRound(), _tlockDrandChainHash(), hash, ciphertext, stakeAmt, fe);
+        votingEngine.commitVote(contentId, _defaultRatingReferenceBps(), _tlockCommitTargetRound(), _tlockDrandChainHash(), hash, ciphertext, stakeAmt, fe);
         vm.stopPrank();
         commitKey = keccak256(abi.encodePacked(voter, hash));
     }
@@ -188,7 +188,7 @@ contract AuditGapTests is VotingTestBase {
         vm.startPrank(voter1);
         crepToken.approve(address(votingEngine), STAKE);
         vm.expectRevert(); // EnforcedPause
-        votingEngine.commitVote(contentId, _tlockCommitTargetRound(), _tlockDrandChainHash(), hash, ct, STAKE, address(0));
+        votingEngine.commitVote(contentId, _defaultRatingReferenceBps(), _tlockCommitTargetRound(), _tlockDrandChainHash(), hash, ct, STAKE, address(0));
         vm.stopPrank();
     }
 
@@ -519,7 +519,7 @@ contract AuditGapTests is VotingTestBase {
         vm.startPrank(voter1);
         crepToken.approve(address(votingEngine), STAKE);
         vm.expectRevert(RoundVotingEngine.CooldownActive.selector);
-        votingEngine.commitVote(contentId, _tlockCommitTargetRound(), _tlockDrandChainHash(), hash, ct, STAKE, address(0));
+        votingEngine.commitVote(contentId, _defaultRatingReferenceBps(), _tlockCommitTargetRound(), _tlockDrandChainHash(), hash, ct, STAKE, address(0));
         vm.stopPrank();
 
         // At exactly 24h: should succeed (on different content since already committed on contentId round)
