@@ -77,12 +77,15 @@ contract SubmitterIdentityReservationTest is Test, ContentSubmissionTestBase {
         string memory description = "goal";
         string memory tags = "tags";
         bytes32 salt = keccak256("delegate-content-salt");
+        string memory imageUrl = _submissionImageUrl(url);
+        string[] memory imageUrls = _singleImageUrls(imageUrl);
 
         vm.startPrank(delegate);
         crepToken.approve(address(registry), 10e6);
-        (uint256 resolvedCategoryId, bytes32 submissionKey) = registry.previewSubmissionKey(url, 0);
+        (uint256 resolvedCategoryId, bytes32 submissionKey) =
+            registry.previewQuestionMediaSubmissionKey(imageUrls, "", title, description, tags, 1);
         assertEq(resolvedCategoryId, 1);
-        bytes32 revealCommitment = keccak256(abi.encode(submissionKey, title, description, tags, 0, salt, delegate));
+        bytes32 revealCommitment = keccak256(abi.encode(submissionKey, title, description, tags, 1, salt, delegate));
         registry.reserveSubmission(revealCommitment);
         vm.stopPrank();
 
@@ -96,7 +99,7 @@ contract SubmitterIdentityReservationTest is Test, ContentSubmissionTestBase {
 
         vm.startPrank(delegate);
         vm.expectRevert("Submitter identity changed");
-        registry.submitContent(url, title, description, tags, 0, salt);
+        registry.submitQuestionWithMedia(imageUrls, "", title, description, tags, 1, salt);
         vm.stopPrank();
     }
 
@@ -112,11 +115,12 @@ contract SubmitterIdentityReservationTest is Test, ContentSubmissionTestBase {
         string memory tags = "identity";
         string memory url = "https://example.com/identity-check.jpg";
         bytes32 salt = keccak256("delegate-question-salt");
+        string[] memory imageUrls = _singleImageUrls(url);
 
         vm.startPrank(delegate);
         crepToken.approve(address(registry), 10e6);
         (uint256 resolvedCategoryId, bytes32 submissionKey) =
-            registry.previewQuestionSubmissionKey(url, title, description, tags, 1);
+            registry.previewQuestionMediaSubmissionKey(imageUrls, "", title, description, tags, 1);
         bytes32 revealCommitment = keccak256(abi.encode(submissionKey, title, description, tags, 1, salt, delegate));
         registry.reserveSubmission(revealCommitment);
         vm.stopPrank();
@@ -131,7 +135,7 @@ contract SubmitterIdentityReservationTest is Test, ContentSubmissionTestBase {
 
         vm.startPrank(delegate);
         vm.expectRevert("Submitter identity changed");
-        registry.submitQuestion(url, title, description, tags, resolvedCategoryId, salt);
+        registry.submitQuestionWithMedia(imageUrls, "", title, description, tags, resolvedCategoryId, salt);
         vm.stopPrank();
     }
 }

@@ -79,8 +79,75 @@ abstract contract ContentSubmissionTestBase {
         }
     }
 
-    function _submissionImageUrl(string memory url) private pure returns (string memory) {
-        return bytes(url).length == 0 ? "https://example.com/test.jpg" : string.concat(url, ".jpg");
+    function _reserveQuestionMediaSubmission(
+        ContentRegistry registry,
+        string[] memory imageUrls,
+        string memory videoUrl,
+        string memory title,
+        string memory description,
+        string memory tags,
+        uint256 categoryId,
+        bytes32 salt,
+        address submitter
+    ) internal returns (bytes32 submissionKey) {
+        (, submissionKey) =
+            registry.previewQuestionMediaSubmissionKey(imageUrls, videoUrl, title, description, tags, categoryId);
+        bytes32 revealCommitment =
+            keccak256(abi.encode(submissionKey, title, description, tags, categoryId, salt, submitter));
+        registry.reserveSubmission(revealCommitment);
+    }
+
+    function _submitQuestionImageWithReservation(
+        ContentRegistry registry,
+        string memory imageUrl,
+        string memory title,
+        string memory description,
+        string memory tags,
+        uint256 categoryId,
+        bytes32 salt,
+        address submitter
+    ) internal returns (uint256 contentId, bytes32 submissionKey) {
+        string[] memory imageUrls = _singleImageUrls(imageUrl);
+        submissionKey =
+            _reserveQuestionMediaSubmission(registry, imageUrls, "", title, description, tags, categoryId, salt, submitter);
+        HEVM.warp(block.timestamp + 1);
+        contentId = registry.submitQuestionWithMedia(imageUrls, "", title, description, tags, categoryId, salt);
+    }
+
+    function _singleImageUrls(string memory imageUrl) internal pure returns (string[] memory imageUrls) {
+        imageUrls = new string[](1);
+        imageUrls[0] = imageUrl;
+    }
+
+    function _emptyImageUrls() internal pure returns (string[] memory imageUrls) {
+        imageUrls = new string[](0);
+    }
+
+    function _submissionImageUrl(string memory url) internal pure returns (string memory) {
+        bytes memory urlBytes = bytes(url);
+        if (urlBytes.length == 0) return "https://example.com/test.jpg";
+
+        uint256 suffixOffset = urlBytes.length;
+        for (uint256 i = 0; i < urlBytes.length; i++) {
+            if (urlBytes[i] == "?" || urlBytes[i] == "#") {
+                suffixOffset = i;
+                break;
+            }
+        }
+        if (suffixOffset == urlBytes.length) return string.concat(url, ".jpg");
+
+        bytes memory suffix = ".jpg";
+        bytes memory out = new bytes(urlBytes.length + suffix.length);
+        for (uint256 i = 0; i < suffixOffset; i++) {
+            out[i] = urlBytes[i];
+        }
+        for (uint256 i = 0; i < suffix.length; i++) {
+            out[suffixOffset + i] = suffix[i];
+        }
+        for (uint256 i = suffixOffset; i < urlBytes.length; i++) {
+            out[i + suffix.length] = urlBytes[i];
+        }
+        return string(out);
     }
 }
 

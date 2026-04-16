@@ -54,21 +54,24 @@ contract GasBudgetTest is RoundIntegrationTest {
         crepToken.approve(address(registry), 10e6);
         vm.stopPrank();
 
-        (, bytes32 submissionKey) = registry.previewSubmissionKey("https://example.com/gas-submit", 0);
+        string memory imageUrl = "https://example.com/gas-submit.jpg";
+        string[] memory imageUrls = _singleImageUrls(imageUrl);
+        (, bytes32 submissionKey) =
+            registry.previewQuestionMediaSubmissionKey(imageUrls, "", "test goal", "test goal", "test", 1);
         bytes32 salt = keccak256(
             abi.encode(
-                "https://example.com/gas-submit",
+                imageUrl,
                 "test goal",
                 "test goal",
                 "test",
-                uint256(0),
+                uint256(1),
                 submitter,
                 block.timestamp,
                 block.number
             )
         );
         bytes32 revealCommitment =
-            keccak256(abi.encode(submissionKey, "test goal", "test goal", "test", uint256(0), salt, submitter));
+            keccak256(abi.encode(submissionKey, "test goal", "test goal", "test", uint256(1), salt, submitter));
 
         uint256 reserveGasUsed = _measureCallAs(
             submitter, address(registry), abi.encodeCall(ContentRegistry.reserveSubmission, (revealCommitment))
@@ -78,8 +81,8 @@ contract GasBudgetTest is RoundIntegrationTest {
             submitter,
             address(registry),
             abi.encodeCall(
-                ContentRegistry.submitContent,
-                ("https://example.com/gas-submit", "test goal", "test goal", "test", 0, salt)
+                ContentRegistry.submitQuestionWithMedia,
+                (imageUrls, "", "test goal", "test goal", "test", 1, salt)
             )
         );
         uint256 gasUsed = reserveGasUsed + revealGasUsed;
