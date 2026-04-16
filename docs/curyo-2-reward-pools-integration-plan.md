@@ -37,7 +37,7 @@ Curyo 2.0 should treat each submitted item as a question with optional supportin
 
 Recommended question fields:
 
-- Question: the binary judgment voters answer with thumbs up or thumbs down.
+- Question: the binary judgment voters answer with thumbs up or thumbs down, capped at 120 characters so it remains scannable in the feed.
 - Link: an optional source, listing, image, YouTube video, product page, hotel page, documentation page, or other evidence URL.
 - Category: the review domain or question frame, not a source-platform registry entry.
 - Description: context, review instructions, conflict disclosures, and criteria for interpreting the question.
@@ -97,7 +97,7 @@ The current `/submit` route can remain the entry point, but the form should chan
 Recommended changes:
 
 - Rename the visible flow from "Submit Content" to "Submit Question" or similar product copy.
-- Replace the title field with a question field, while preserving existing validation patterns for length and required content.
+- Replace the title field with a required question field capped at 120 characters.
 - Keep the URL/link input as optional, but remove approved-platform domain matching from the user journey.
 - Keep description and category selection, but reinterpret category as the review domain or question frame.
 - Remove the Platform tab from `/submit#category`; platform onboarding should not be part of the first Curyo 2.0 submit flow.

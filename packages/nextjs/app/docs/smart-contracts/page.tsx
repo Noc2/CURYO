@@ -289,10 +289,10 @@ const SmartContracts: NextPage = () => {
         <li>
           <code>reserveSubmission(revealCommitment)</code>, then{" "}
           <code>submitQuestion(url, title, description, tags, categoryId, salt)</code> &mdash; Reserve a hidden
-          question-first submission, then reveal it with a 10 cREP stake. Requires Voter ID. The question submission key
-          is checked for duplicates, and the title plus description are emitted in the canonical{" "}
-          <code>ContentSubmitted</code> event for indexers and alternate frontends. Question Reward Pools are funded in
-          a separate escrow transaction.
+          question-first submission, then reveal it with a 10 cREP stake. Requires Voter ID. Question text is capped at
+          120 characters, the question submission key is checked for duplicates, and the question plus description are
+          emitted in the canonical <code>ContentSubmitted</code> event for indexers and alternate frontends. Question
+          Reward Pools are funded in a separate escrow transaction.
         </li>
         <li>
           <code>cancelContent(contentId)</code> &mdash; Cancel own content (1 cREP fee to the configured

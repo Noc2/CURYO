@@ -729,22 +729,22 @@ contract ContentRegistryCoverageTest is VotingTestBase {
     function test_SubmitContentEmptyTitleReverts_LegacyShape() public {
         vm.startPrank(submitter);
         crep.approve(address(registry), 10e6);
-        vm.expectRevert("Title required");
+        vm.expectRevert("Question required");
         registry.submitContent("https://example.com/test", "", "", "tag1", 0, bytes32(0));
         vm.stopPrank();
     }
 
-    // --- submitContent: title too long ---
+    // --- submitContent: question too long ---
 
     function test_SubmitContentTitleTooLongReverts_LegacyShape() public {
-        uint256 maxTitleLength = registry.MAX_TITLE_LENGTH() + 1;
-        bytes memory longGoal = new bytes(maxTitleLength);
-        for (uint256 i = 0; i < maxTitleLength; i++) {
+        uint256 maxQuestionLength = registry.MAX_QUESTION_LENGTH() + 1;
+        bytes memory longGoal = new bytes(maxQuestionLength);
+        for (uint256 i = 0; i < maxQuestionLength; i++) {
             longGoal[i] = "b";
         }
         vm.startPrank(submitter);
         crep.approve(address(registry), 10e6);
-        vm.expectRevert("Title too long");
+        vm.expectRevert("Question too long");
         registry.submitContent("https://example.com/test", string(longGoal), string(longGoal), "tag1", 0, bytes32(0));
         vm.stopPrank();
     }
@@ -752,7 +752,7 @@ contract ContentRegistryCoverageTest is VotingTestBase {
     function test_SubmitContentEmptyTitleReverts() public {
         vm.startPrank(submitter);
         crep.approve(address(registry), 10e6);
-        vm.expectRevert("Title required");
+        vm.expectRevert("Question required");
         registry.submitContent("https://example.com/test", "", "description", "tag1", 0, bytes32(0));
         vm.stopPrank();
     }
@@ -766,22 +766,22 @@ contract ContentRegistryCoverageTest is VotingTestBase {
     }
 
     function test_SubmitContentTitleTooLongReverts() public {
-        uint256 maxTitleLength = registry.MAX_TITLE_LENGTH() + 1;
-        bytes memory longTitle = new bytes(maxTitleLength);
-        for (uint256 i = 0; i < maxTitleLength; i++) {
+        uint256 maxQuestionLength = registry.MAX_QUESTION_LENGTH() + 1;
+        bytes memory longTitle = new bytes(maxQuestionLength);
+        for (uint256 i = 0; i < maxQuestionLength; i++) {
             longTitle[i] = "b";
         }
         vm.startPrank(submitter);
         crep.approve(address(registry), 10e6);
-        vm.expectRevert("Title too long");
+        vm.expectRevert("Question too long");
         registry.submitContent("https://example.com/test", string(longTitle), "description", "tag1", 0, bytes32(0));
         vm.stopPrank();
     }
 
     function test_SubmitContentTitleAtMaxLengthSucceeds() public {
-        uint256 maxTitleLength = registry.MAX_TITLE_LENGTH();
-        bytes memory title = new bytes(maxTitleLength);
-        for (uint256 i = 0; i < maxTitleLength; i++) {
+        uint256 maxQuestionLength = registry.MAX_QUESTION_LENGTH();
+        bytes memory title = new bytes(maxQuestionLength);
+        for (uint256 i = 0; i < maxQuestionLength; i++) {
             title[i] = "c";
         }
 
@@ -796,15 +796,15 @@ contract ContentRegistryCoverageTest is VotingTestBase {
     }
 
     function test_SubmitContentTitleLongerThanMaxByOneReverts() public {
-        uint256 maxTitleLength = registry.MAX_TITLE_LENGTH();
-        bytes memory title = new bytes(maxTitleLength + 1);
-        for (uint256 i = 0; i < maxTitleLength + 1; i++) {
+        uint256 maxQuestionLength = registry.MAX_QUESTION_LENGTH();
+        bytes memory title = new bytes(maxQuestionLength + 1);
+        for (uint256 i = 0; i < maxQuestionLength + 1; i++) {
             title[i] = "d";
         }
 
         vm.startPrank(submitter);
         crep.approve(address(registry), 10e6);
-        vm.expectRevert("Title too long");
+        vm.expectRevert("Question too long");
         registry.submitContent(
             "https://example.com/over-max-title", string(title), "description", "tag1", 0, bytes32(0)
         );

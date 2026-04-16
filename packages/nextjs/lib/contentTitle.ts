@@ -1,4 +1,5 @@
-export const MAX_CONTENT_TITLE_LENGTH = 72;
+export const MAX_QUESTION_LENGTH = 120;
+export const MAX_CONTENT_TITLE_LENGTH = MAX_QUESTION_LENGTH;
 
 export function truncateContentTitle(title: string, maxLength = MAX_CONTENT_TITLE_LENGTH) {
   if (title.length <= maxLength) return title;

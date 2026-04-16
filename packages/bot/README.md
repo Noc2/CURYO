@@ -21,7 +21,7 @@ Requires configured environment variables and a reachable RPC endpoint.
 `vote` and `claim` require a running Ponder indexer (`yarn ponder:dev`); `submit` does not.
 `status` reports the configured Ponder endpoint when available but can still run without it.
 Public submission sources still work without third-party API keys, but source coverage and automated rating breadth are reduced.
-Question submissions may be text-only or include a regular link, direct image link, or YouTube link, and reward pool amounts are shown as USD even though settlement happens in USDC on Celo with a default 3% eligible frontend-operator share.
+Question submissions use a question capped at 120 characters. They may be text-only or include a regular link, direct image link, or YouTube link, and reward pool amounts are shown as USD even though settlement happens in USDC on Celo with a default 3% eligible frontend-operator share.
 
 ## Scripts
 
@@ -142,7 +142,7 @@ For each `submit` run, the bot:
 2. Checks that the wallet has enough cREP for the next submission. Each successful question submission stakes **10 cREP**, and the wallet also needs native gas for `approve`, `reserveSubmission`, and `submitQuestion`. Optional reward pools are paid separately in USDC on Celo, shown as USD, and reserve the default frontend-operator share on qualified claims.
 3. Chooses the enabled source adapters and fetches trending content. For movies, the `tmdb` source reads TMDB's `/movie/popular` feed.
 4. Skips URLs that were already submitted by calling `isUrlSubmitted(url)` before attempting a transaction.
-5. Calls `previewQuestionSubmissionKey(url, title, description, tags, categoryId)` to verify the canonical category, reserves the hidden submission commitment, waits a little over one second for the reservation age check, and then submits the question or supported media link with the matching salt.
+5. Truncates generated questions to the 120-character on-chain maximum, calls `previewQuestionSubmissionKey(url, title, description, tags, categoryId)` to verify the canonical category, reserves the hidden submission commitment, waits a little over one second for the reservation age check, and then submits the question or supported media link with the matching salt.
 6. Stops when it reaches the configured limit, runs out of cREP, or runs out of fresh items. If a reveal transaction fails after reservation, the bot attempts to cancel the reservation.
 
 ## Testing TMDB Questions With A Delegated Bot Wallet

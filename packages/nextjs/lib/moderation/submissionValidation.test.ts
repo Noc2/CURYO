@@ -8,7 +8,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 
 test("getContentTitleValidationError rejects prohibited terms", () => {
-  assert.equal(getContentTitleValidationError("NSFW highlights"), "Your title contains prohibited content");
+  assert.equal(getContentTitleValidationError("NSFW highlights"), "Your question contains prohibited content");
 });
 
 test("getContentDescriptionValidationError rejects prohibited terms", () => {

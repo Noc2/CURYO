@@ -373,7 +373,7 @@ The strongest architecture recommendation is to keep `RoundVotingEngine` unchang
 
 Current integration points:
 
-- `ContentRegistry` manages URL/title/description/tags/category submissions and fixed cREP submitter stake. A question can fit as a content subtype, but arbitrary questions and images conflict with the current approved-platform and canonical-URL model.
+- `ContentRegistry` manages URL/question/description/tags/category submissions and fixed cREP submitter stake. A question can fit as a content subtype, but arbitrary questions and images conflict with the current approved-platform and canonical-URL model.
 - `RoundVotingEngine` manages 1-100 cREP voting, tlock commit-reveal, settlement, and rating updates. It should remain the source of judgment, not stablecoin custody.
 - `RoundRewardDistributor` is cREP-only and pull-based. The stablecoin-funded reward pool distributor should copy the pull-based pattern without replacing it.
 - Ponder currently indexes content, rounds, votes, and cREP rewards. Reward Pools need new schema and event handlers rather than overloading existing reward tables.

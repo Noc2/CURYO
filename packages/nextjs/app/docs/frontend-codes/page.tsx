@@ -225,7 +225,7 @@ const FrontendCodes: NextPage = () => {
       <p>The reference implementation includes a policy-driven moderation layer that:</p>
       <ul>
         <li>
-          <strong>Blocks submissions</strong> containing prohibited terms or blocked domains in URLs, titles,
+          <strong>Blocks submissions</strong> containing prohibited terms or blocked domains in URLs, questions,
           descriptions, seeded category names, category tags, or unsafe media embeds.
         </li>
         <li>

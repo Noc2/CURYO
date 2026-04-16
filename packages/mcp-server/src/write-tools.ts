@@ -13,6 +13,7 @@ import { CuryoWriteService, McpWriteServiceError } from "./signer-service.js";
 const addressSchema = z.string().regex(/^0x[0-9a-fA-F]{40}$/i, "Expected a 0x-prefixed address");
 const bigintStringSchema = z.string().regex(/^\d+$/, "Expected an unsigned integer string");
 const rewardKinds = ["voter", "submitter", "participation", "cancelled_refund"] as const;
+const MAX_SUBMISSION_QUESTION_LENGTH = 120;
 
 const writeToolAnnotations = {
   readOnlyHint: false,
@@ -50,7 +51,7 @@ export const WRITE_TOOL_CATALOG = [
     upstream: "ContentRegistry.reserveSubmission + submitQuestion",
     input: {
       url: { type: "string", format: "url", optional: true },
-      title: { type: "string" },
+      title: { type: "string", maxLength: MAX_SUBMISSION_QUESTION_LENGTH },
       description: { type: "string" },
       tags: { type: "string|string[]" },
       categoryId: { type: "string", pattern: "^\\d+$" },
@@ -122,7 +123,7 @@ export function registerWriteTools(server: McpServer, config: ServerConfig, writ
       description: "Reserve and reveal a new Curyo question submission using the on-chain question flow.",
       inputSchema: {
         url: z.string().url().optional(),
-        title: z.string().min(1),
+        title: z.string().min(1).max(MAX_SUBMISSION_QUESTION_LENGTH),
         description: z.string().min(1),
         tags: z.union([z.string().min(1), z.array(z.string().min(1)).min(1).max(12)]),
         categoryId: bigintStringSchema,

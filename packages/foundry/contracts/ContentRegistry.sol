@@ -21,7 +21,7 @@ import { SubmissionMediaValidator } from "./SubmissionMediaValidator.sol";
 
 /// @title ContentRegistry
 /// @notice Manages content lifecycle: submission → active → dormant → revived / cancelled.
-/// @dev Stores only a metadata hash on-chain; full URL/title/description are emitted in events.
+/// @dev Stores only a metadata hash on-chain; full URL/question/description are emitted in events.
 contract ContentRegistry is Initializable, AccessControlUpgradeable, PausableUpgradeable, ReentrancyGuardTransient {
     using SafeERC20 for IERC20;
     using SafeCast for uint256;
@@ -53,7 +53,8 @@ contract ContentRegistry is Initializable, AccessControlUpgradeable, PausableUpg
 
     // String length limits (prevent storage bloat)
     uint256 public constant MAX_URL_LENGTH = 2048;
-    uint256 public constant MAX_TITLE_LENGTH = 72;
+    uint256 public constant MAX_QUESTION_LENGTH = 120;
+    uint256 public constant MAX_TITLE_LENGTH = MAX_QUESTION_LENGTH;
     uint256 public constant MAX_DESCRIPTION_LENGTH = 280;
     uint256 public constant MAX_TAGS_LENGTH = 256;
     uint256 public constant MAX_IMAGE_URLS = 4;
@@ -480,8 +481,8 @@ contract ContentRegistry is Initializable, AccessControlUpgradeable, PausableUpg
     }
 
     function _validateTextFields(SubmissionMetadata memory metadata) internal pure {
-        require(bytes(metadata.title).length > 0, "Title required");
-        require(bytes(metadata.title).length <= MAX_TITLE_LENGTH, "Title too long");
+        require(bytes(metadata.title).length > 0, "Question required");
+        require(bytes(metadata.title).length <= MAX_QUESTION_LENGTH, "Question too long");
         require(bytes(metadata.description).length > 0, "Description required");
         require(bytes(metadata.description).length <= MAX_DESCRIPTION_LENGTH, "Description too long");
         require(bytes(metadata.tags).length > 0, "Tags required");

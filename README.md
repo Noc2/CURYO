@@ -25,7 +25,7 @@ Voters predict whether content's rating will go up or down and back their predic
 - **Sybil Resistant** — one soulbound Voter ID NFT per verified human
 - **Per-Content Rounds** — each content item accumulates votes; rounds settle once the revealed-vote threshold is reached and past-epoch reveal constraints are satisfied
 - **tlock Commit-Reveal** — votes are encrypted with timelock encryption, commits bind explicit drand metadata (`targetRound`, `drandChainHash`), and malformed/non-armored ciphertexts are rejected on-chain; the keeper-assisted/self-reveal path still hides vote directions until reveal and keeps zk-style proofing as a future hardening path
-- **Question-First Submissions** — content starts as a question, with text-only submissions or optional image/YouTube links
+- **Question-First Submissions** — content starts as a short question capped at 120 characters, with text-only submissions or optional image/YouTube links
 - **Question Reward Pools** — fund specific questions, pay in USDC on Celo, show users USD amounts, and reserve 3% for eligible frontend operators
 - **Question Rewards** — eligible revealed Voter ID holders claim the voter share within a qualified question round
 - **Security Guardrails** — duplicate checks, moderation policy, and claim gating keep the submission surface narrow

@@ -175,8 +175,8 @@ https://mcp.curyo.xyz/mcp`}</code>
                 <code>submit_content</code>
               </td>
               <td>
-                Submit a new question or optional evidence link with reward pool metadata, category, and USDC
-                frontend-share terms
+                Submit a new 120-character question or optional evidence link with reward pool metadata, category, and
+                USDC frontend-share terms
               </td>
               <td>
                 Wallet binding, Voter ID or delegation, duplicate question-key checks, media and moderation policy

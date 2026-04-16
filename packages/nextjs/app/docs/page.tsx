@@ -39,7 +39,7 @@ const DocsIntro: NextPage = () => {
         />
         <FeatureCard
           title="Question-First Submissions"
-          description="Questions can be text only or include a regular link, direct image link, or YouTube link."
+          description="Questions are capped at 120 characters and can be text only or include a regular link, direct image link, or YouTube link."
         />
         <FeatureCard
           title="Question Reward Pools"

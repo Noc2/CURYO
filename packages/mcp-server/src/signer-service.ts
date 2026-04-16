@@ -291,7 +291,7 @@ export class CuryoWriteService {
     const tags = normalizeTags(params.tags);
 
     if (!title) {
-      throw new McpWriteServiceError("title is required");
+      throw new McpWriteServiceError("question is required");
     }
     if (!description) {
       throw new McpWriteServiceError("description is required");
@@ -353,7 +353,7 @@ export class CuryoWriteService {
       this.readContract<bigint>(context, {
         address: this.requireContracts().contentRegistry,
         abi: ContentRegistryAbi,
-        functionName: "MAX_TITLE_LENGTH",
+        functionName: "MAX_QUESTION_LENGTH",
         args: [],
       }),
       this.readContract<bigint>(context, {
@@ -388,7 +388,9 @@ export class CuryoWriteService {
       );
     }
     if (title.length > Number(maxTitleLength)) {
-      throw new McpWriteServiceError(`title exceeds the on-chain maximum length of ${maxTitleLength.toString()} characters`);
+      throw new McpWriteServiceError(
+        `question exceeds the on-chain maximum length of ${maxTitleLength.toString()} characters`,
+      );
     }
     if (description.length > Number(maxDescriptionLength)) {
       throw new McpWriteServiceError(

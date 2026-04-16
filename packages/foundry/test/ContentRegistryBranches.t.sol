@@ -925,15 +925,15 @@ contract ContentRegistryBranchesTest is VotingTestBase {
     }
 
     function test_SubmitContent_TitleTooLong_Reverts() public {
-        uint256 maxTitleLength = registry.MAX_TITLE_LENGTH() + 1;
-        bytes memory longGoal = new bytes(maxTitleLength);
-        for (uint256 i = 0; i < maxTitleLength; i++) {
+        uint256 maxQuestionLength = registry.MAX_QUESTION_LENGTH() + 1;
+        bytes memory longGoal = new bytes(maxQuestionLength);
+        for (uint256 i = 0; i < maxQuestionLength; i++) {
             longGoal[i] = "a";
         }
 
         vm.startPrank(submitter);
         crepToken.approve(address(registry), 10e6);
-        vm.expectRevert("Title too long");
+        vm.expectRevert("Question too long");
         registry.submitContent("https://example.com/1", string(longGoal), string(longGoal), "tags", 0, bytes32(0));
         vm.stopPrank();
     }
@@ -971,7 +971,7 @@ contract ContentRegistryBranchesTest is VotingTestBase {
     function test_SubmitContent_EmptyTitle_Reverts() public {
         vm.startPrank(submitter);
         crepToken.approve(address(registry), 10e6);
-        vm.expectRevert("Title required");
+        vm.expectRevert("Question required");
         registry.submitContent("https://example.com/1", "", "", "tags", 0, bytes32(0));
         vm.stopPrank();
     }

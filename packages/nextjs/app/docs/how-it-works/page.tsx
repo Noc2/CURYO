@@ -17,13 +17,14 @@ const HowItWorks: NextPage = () => {
 
       <h2>Submitting a Question</h2>
       <p>
-        Curyo&apos;s submission flow starts with a question, not a generic post. A question can be text-only or can
-        include an optional evidence link, direct image link, or YouTube link. A Question Reward Pool is paid in USDC on
-        Celo, but the UI displays the amount as USD so users can read it at a glance. There is no hard reward pool cap;
-        moderation, funding, and validation guardrails do the real work instead.
+        Curyo&apos;s submission flow starts with a question, not a generic post. The question is capped at 120
+        characters so it stays readable in discovery, and longer context belongs in the description. A question can be
+        text-only or can include an optional evidence link, direct image link, or YouTube link. A Question Reward Pool
+        is paid in USDC on Celo, but the UI displays the amount as USD so users can read it at a glance. There is no
+        hard reward pool cap; moderation, funding, and validation guardrails do the real work instead.
       </p>
       <ul>
-        <li>Launch inputs support text-only questions, regular links, direct image links, and YouTube links.</li>
+        <li>Launch inputs support 120-character questions, regular links, direct image links, and YouTube links.</li>
         <li>The question owner and later claimants both need a Voter ID to participate in claims.</li>
         <li>Duplicate checks and moderation rules keep the submission surface narrow.</li>
       </ul>
