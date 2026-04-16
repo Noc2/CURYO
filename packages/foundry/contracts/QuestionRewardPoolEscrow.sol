@@ -74,7 +74,7 @@ contract QuestionRewardPoolEscrow is
     IVoterIdNFT public voterIdNFT;
     uint256 public nextRewardPoolId;
 
-    mapping(uint256 => RewardPool) public rewardPools;
+    mapping(uint256 => RewardPool) private rewardPools;
     mapping(uint256 => mapping(uint256 => RoundSnapshot)) public roundSnapshots;
     mapping(uint256 => mapping(uint256 => mapping(uint256 => bool))) public rewardClaimed;
     uint16 public defaultFrontendFeeBps;
