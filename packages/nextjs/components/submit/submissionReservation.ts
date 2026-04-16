@@ -8,22 +8,26 @@ const RESERVED_SUBMISSION_SECRET_STORAGE_KEY = `${RESERVED_SUBMISSION_STORAGE_PR
 type SubmissionDraft = {
   categoryId: bigint;
   description: string;
+  imageUrls: string[];
   submissionKey: `0x${string}`;
   tags: string;
   title: string;
   url: string;
+  videoUrl: string;
 };
 
 type StoredSubmissionReservation = {
   categoryId: string;
   chainId: number;
   description: string;
+  imageUrls: string[];
   revealCommitment: `0x${string}`;
   salt: `0x${string}`;
   submissionKey: `0x${string}`;
   tags: string;
   title: string;
   url: string;
+  videoUrl: string;
 };
 
 type LegacyStoredSubmissionReservation = Omit<StoredSubmissionReservation, "chainId">;
@@ -133,13 +137,19 @@ export function createStoredSubmissionReservation(
     categoryId: draft.categoryId.toString(),
     chainId,
     description: draft.description,
+    imageUrls: draft.imageUrls,
     revealCommitment,
     salt,
     submissionKey: draft.submissionKey,
     tags: draft.tags,
     title: draft.title,
     url: draft.url,
+    videoUrl: draft.videoUrl,
   };
+}
+
+function stringArraysEqual(left: readonly string[], right: readonly string[]): boolean {
+  return left.length === right.length && left.every((value, index) => value === right[index]);
 }
 
 export function submissionReservationMatchesDraft(
@@ -152,7 +162,9 @@ export function submissionReservationMatchesDraft(
     reservation.submissionKey === draft.submissionKey &&
     reservation.tags === draft.tags &&
     reservation.title === draft.title &&
-    reservation.url === draft.url
+    reservation.url === draft.url &&
+    reservation.videoUrl === draft.videoUrl &&
+    stringArraysEqual(reservation.imageUrls, draft.imageUrls)
   );
 }
 
@@ -183,7 +195,15 @@ function parseStoredSubmissionReservation(value: unknown): StoredSubmissionReser
     return null;
   }
 
-  return parsedValue as StoredSubmissionReservation;
+  return {
+    ...parsedValue,
+    imageUrls: Array.isArray(parsedValue.imageUrls)
+      ? parsedValue.imageUrls.filter((url): url is string => typeof url === "string")
+      : parsedValue.url
+        ? [parsedValue.url]
+        : [],
+    videoUrl: typeof parsedValue.videoUrl === "string" ? parsedValue.videoUrl : "",
+  } as StoredSubmissionReservation;
 }
 
 function parseLegacyStoredSubmissionReservation(value: unknown, chainId: number): StoredSubmissionReservation | null {
@@ -204,6 +224,12 @@ function parseLegacyStoredSubmissionReservation(value: unknown, chainId: number)
   return {
     ...parsedValue,
     chainId,
+    imageUrls: Array.isArray(parsedValue.imageUrls)
+      ? parsedValue.imageUrls.filter((url): url is string => typeof url === "string")
+      : parsedValue.url
+        ? [parsedValue.url]
+        : [],
+    videoUrl: typeof parsedValue.videoUrl === "string" ? parsedValue.videoUrl : "",
   } as StoredSubmissionReservation;
 }
 

@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import type { ContentItem } from "~~/hooks/useContentFeed";
 import { buildInterestProfile } from "~~/hooks/useInterestProfile";
+import { buildFallbackMediaItems } from "~~/lib/contentMedia";
 import {
   DISCOVER_ALL_FILTER,
   DISCOVER_BROKEN_FILTER,
@@ -13,6 +14,7 @@ function makeContentItem(overrides: Partial<ContentItem> & Pick<ContentItem, "id
   return {
     id: overrides.id,
     url: overrides.url,
+    media: overrides.media ?? buildFallbackMediaItems(overrides.url),
     title: overrides.title,
     description: overrides.description ?? "Example description",
     tags: overrides.tags ?? [],

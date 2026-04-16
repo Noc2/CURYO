@@ -59,6 +59,7 @@ interface ContentEmbedProps {
   deferClientFetch?: boolean;
   prefetchedMetadata?: ContentMetadataResult;
   interactionMode?: "default" | "vote";
+  imageFit?: "cover" | "contain";
 }
 
 /** Error boundary that catches render errors in embed components and falls back to a link card. */
@@ -94,6 +95,7 @@ export function ContentEmbed({
   deferClientFetch = false,
   prefetchedMetadata,
   interactionMode = "default",
+  imageFit = "cover",
 }: ContentEmbedProps) {
   if (!url?.trim()) {
     return (
@@ -127,7 +129,7 @@ export function ContentEmbed({
       <img
         src={url}
         alt={title || "Question media"}
-        className="h-full w-full object-cover"
+        className={`h-full w-full ${imageFit === "contain" ? "object-contain" : "object-cover"}`}
         loading={isActive ? "eager" : "lazy"}
       />
     );

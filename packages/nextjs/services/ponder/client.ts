@@ -295,6 +295,14 @@ export interface PonderContentItem {
   submitter: string;
   contentHash: string;
   url: string | null;
+  media?: Array<{
+    index?: number;
+    mediaIndex?: number;
+    mediaType: "image" | "video";
+    url: string;
+    canonicalUrl: string | null;
+    urlHost: string | null;
+  }>;
   title: string;
   description: string;
   tags: string;

@@ -1,6 +1,6 @@
 "use client";
 
-import { memo, useEffect, useState } from "react";
+import { type MouseEvent, memo, useEffect, useState } from "react";
 import dynamic from "next/dynamic";
 import { ArrowTopRightOnSquareIcon, ChevronLeftIcon, ChevronRightIcon } from "@heroicons/react/24/outline";
 import { ShareIcon } from "@heroicons/react/24/outline";
@@ -13,6 +13,7 @@ import { SafeExternalLink } from "~~/components/shared/SafeExternalLink";
 import { WatchContentButton } from "~~/components/shared/WatchContentButton";
 import type { ContentItem } from "~~/hooks/useContentFeed";
 import type { SubmitterProfile } from "~~/hooks/useSubmitterProfiles";
+import { type ContentMediaItem, buildFallbackMediaItems, isDirectImageUrl } from "~~/lib/contentMedia";
 import { formatUsdAmount } from "~~/lib/questionRewardPools";
 import { detectPlatform } from "~~/utils/platforms";
 
@@ -43,6 +44,27 @@ function getQuestionText(item: ContentItem) {
   return item.question?.trim() || item.title;
 }
 
+function getCardMediaItems(item: ContentItem): ContentMediaItem[] {
+  return item.media.length > 0 ? item.media : buildFallbackMediaItems(item.url);
+}
+
+function getPrimaryMediaItem(item: ContentItem): ContentMediaItem | null {
+  return getCardMediaItems(item)[0] ?? null;
+}
+
+function getMediaPlatformType(media: ContentMediaItem | null) {
+  if (!media?.url) return "text";
+  if (media.mediaType === "video") return "youtube";
+  if (isDirectImageUrl(media.url)) return "image";
+  return detectPlatform(media.url).type;
+}
+
+function getMediaBadgeLabel(item: ContentItem) {
+  const mediaItems = getCardMediaItems(item);
+  if (mediaItems.length > 1) return `${mediaItems.length} images`;
+  return getMediaPlatformType(mediaItems[0] ?? null);
+}
+
 interface FeedVoteCardProps {
   item: ContentItem;
   submitterProfile?: SubmitterProfile;
@@ -57,10 +79,6 @@ interface FeedVoteCardProps {
   following: boolean;
   followPending: boolean;
   normalizedAddress?: string;
-  onPrevious?: () => void;
-  onNext?: () => void;
-  canPrevious?: boolean;
-  canNext?: boolean;
   deferEmbedClientFetch?: boolean;
 }
 
@@ -78,15 +96,12 @@ export const FeedVoteCard = memo(function FeedVoteCard({
   following,
   followPending,
   normalizedAddress,
-  onPrevious,
-  onNext,
-  canPrevious = false,
-  canNext = false,
   deferEmbedClientFetch = false,
 }: FeedVoteCardProps) {
   const [isLaptopCompact, setIsLaptopCompact] = useState(false);
   const [isMobileViewport, setIsMobileViewport] = useState(false);
-  const platformType = item.url ? detectPlatform(item.url).type : "text";
+  const primaryMedia = getPrimaryMediaItem(item);
+  const platformType = getMediaPlatformType(primaryMedia);
 
   useEffect(() => {
     if (typeof window === "undefined" || typeof window.matchMedia !== "function") return;
@@ -150,15 +165,7 @@ export const FeedVoteCard = memo(function FeedVoteCard({
 
   return (
     <div className={`flex min-h-0 flex-col ${contentStackClassName}`}>
-      <FeedContentHeader
-        item={item}
-        titleId={titleId}
-        onPrevious={onPrevious}
-        onNext={onNext}
-        canPrevious={canPrevious}
-        canNext={canNext}
-        compact={useCompactCard}
-      />
+      <FeedContentHeader item={item} titleId={titleId} compact={useCompactCard} />
 
       <div className={contentGridClassName}>
         <div
@@ -197,16 +204,12 @@ export const FeedVoteCard = memo(function FeedVoteCard({
               onContentIntent(item);
             }}
           >
-            <ContentEmbed
-              url={item.url}
-              title={item.title}
-              description={item.description}
+            <ContentMediaCarousel
+              item={item}
               compact={useCompactEmbed}
-              showTextHeading={false}
               isActive={isActive}
               interactionMode={contentIntentEnabled ? "vote" : "default"}
-              prefetchedMetadata={item.contentMetadata}
-              deferClientFetch={deferEmbedClientFetch}
+              deferEmbedClientFetch={deferEmbedClientFetch}
             />
           </div>
           <FeedContentMetaCard
@@ -249,60 +252,110 @@ interface FeedContentMetaCardProps {
 interface FeedContentHeaderProps {
   item: ContentItem;
   titleId?: string;
-  onPrevious?: () => void;
-  onNext?: () => void;
-  canPrevious: boolean;
-  canNext: boolean;
   compact?: boolean;
 }
 
-function FeedContentHeader({
-  item,
-  titleId,
-  onPrevious,
-  onNext,
-  canPrevious,
-  canNext,
-  compact,
-}: FeedContentHeaderProps) {
+function FeedContentHeader({ item, titleId, compact }: FeedContentHeaderProps) {
   const questionText = getQuestionText(item);
+  const isLongQuestion = questionText.length > 90;
+  const headlineSizeClassName = compact
+    ? isLongQuestion
+      ? "text-base leading-snug sm:text-lg xl:text-base"
+      : "text-lg leading-tight sm:text-xl xl:text-lg"
+    : isLongQuestion
+      ? "text-lg leading-snug sm:text-xl xl:text-lg"
+      : "text-xl leading-tight sm:text-2xl xl:text-xl";
 
   return (
     <div
       data-testid="vote-content-header"
       className={`rounded-2xl bg-base-200 ${compact ? "px-4 py-3" : "px-5 py-4 xl:px-4 xl:py-3"}`}
     >
-      <div className="flex items-center justify-between gap-3">
-        <button
-          type="button"
-          onClick={onPrevious}
-          disabled={!canPrevious}
-          aria-label="Show previous card"
-          className="btn btn-circle btn-sm shrink-0 border-0 bg-base-300 text-base-content/80 hover:bg-base-content/20 hover:text-primary disabled:cursor-not-allowed disabled:opacity-30"
-        >
-          <ChevronLeftIcon className="h-4 w-4" />
-        </button>
-        <div className="min-w-0 flex-1">
-          <h2
-            id={titleId}
-            className={`text-balance break-words text-center font-sans font-semibold leading-tight tracking-normal text-base-content ${
-              compact ? "text-lg sm:text-xl xl:text-lg" : "text-xl sm:text-2xl xl:text-xl"
-            }`}
-          >
-            {questionText}
-          </h2>
-        </div>
-        <button
-          type="button"
-          onClick={onNext}
-          disabled={!canNext}
-          aria-label="Show next card"
-          className="btn btn-circle btn-sm shrink-0 border-0 bg-base-300 text-base-content/80 hover:bg-base-content/20 hover:text-primary disabled:cursor-not-allowed disabled:opacity-30"
-        >
-          <ChevronRightIcon className="h-4 w-4" />
-        </button>
-      </div>
+      <h2
+        id={titleId}
+        className={`text-balance break-words text-center font-sans font-semibold tracking-normal text-base-content ${headlineSizeClassName}`}
+      >
+        {questionText}
+      </h2>
     </div>
+  );
+}
+
+function ContentMediaCarousel({
+  item,
+  compact,
+  isActive,
+  interactionMode,
+  deferEmbedClientFetch,
+}: {
+  item: ContentItem;
+  compact: boolean;
+  isActive: boolean;
+  interactionMode: "default" | "vote";
+  deferEmbedClientFetch: boolean;
+}) {
+  const mediaItems = getCardMediaItems(item);
+  const [activeIndex, setActiveIndex] = useState(0);
+  const activeMedia = mediaItems[activeIndex] ?? mediaItems[0] ?? null;
+  const hasCarouselControls = mediaItems.length > 1;
+
+  useEffect(() => {
+    setActiveIndex(0);
+  }, [item.id, mediaItems.length]);
+
+  const showPrevious = (event: MouseEvent<HTMLButtonElement>) => {
+    event.preventDefault();
+    event.stopPropagation();
+    setActiveIndex(current => (current - 1 + mediaItems.length) % mediaItems.length);
+  };
+
+  const showNext = (event: MouseEvent<HTMLButtonElement>) => {
+    event.preventDefault();
+    event.stopPropagation();
+    setActiveIndex(current => (current + 1) % mediaItems.length);
+  };
+
+  return (
+    <>
+      <ContentEmbed
+        url={activeMedia?.url ?? ""}
+        title={item.title}
+        description={item.description}
+        compact={compact}
+        showTextHeading={false}
+        isActive={isActive}
+        interactionMode={interactionMode}
+        imageFit="contain"
+        prefetchedMetadata={activeMedia?.url === item.url ? item.contentMetadata : undefined}
+        deferClientFetch={deferEmbedClientFetch}
+      />
+      {hasCarouselControls ? (
+        <>
+          <button
+            type="button"
+            onClick={showPrevious}
+            aria-label="Show previous image"
+            className="btn btn-circle btn-sm absolute left-3 top-1/2 z-10 -translate-y-1/2 border-0 bg-base-300/85 text-base-content/85 shadow hover:bg-base-content/20 hover:text-primary"
+          >
+            <ChevronLeftIcon className="h-4 w-4" />
+          </button>
+          <button
+            type="button"
+            onClick={showNext}
+            aria-label="Show next image"
+            className="btn btn-circle btn-sm absolute right-3 top-1/2 z-10 -translate-y-1/2 border-0 bg-base-300/85 text-base-content/85 shadow hover:bg-base-content/20 hover:text-primary"
+          >
+            <ChevronRightIcon className="h-4 w-4" />
+          </button>
+          <span
+            className="absolute bottom-3 left-1/2 z-10 -translate-x-1/2 rounded-full bg-base-300/85 px-2.5 py-1 text-xs font-semibold leading-none text-base-content/80"
+            aria-live="polite"
+          >
+            {activeIndex + 1} / {mediaItems.length}
+          </span>
+        </>
+      ) : null}
+    </>
   );
 }
 
@@ -324,12 +377,15 @@ function FeedContentMetaCard({
   const [showShare, setShowShare] = useState(false);
   const [showFundQuestionModal, setShowFundQuestionModal] = useState(false);
   const [isExpanded, setIsExpanded] = useState(false);
-  const platformType = item.url ? detectPlatform(item.url).type : "text";
+  const primaryMedia = getPrimaryMediaItem(item);
+  const primaryMediaUrl = primaryMedia?.url ?? item.url;
+  const platformType = getMediaPlatformType(primaryMedia);
+  const mediaBadgeLabel = getMediaBadgeLabel(item);
   const detailsId = `content-details-${item.id.toString()}`;
   const hasFollowButton = !(normalizedAddress && item.submitter.toLowerCase() === normalizedAddress);
   const description = item.description.trim();
   const hasDescription = description.length > 0;
-  const sourceLabel = getSourceLabel(item.url);
+  const sourceLabel = getSourceLabel(primaryMediaUrl);
   const rewardPoolTotal = item.rewardPoolSummary?.totalAvailable ?? item.rewardPoolSummary?.totalFunded ?? 0n;
   const hasSourceDetails = sourceLabel.trim().length > 0;
   const hasRewardPool = rewardPoolTotal > 0n;
@@ -397,11 +453,11 @@ function FeedContentMetaCard({
           <div id={detailsId} className={compact ? "mt-2.5 space-y-2" : "mt-3 space-y-2.5"}>
             <div className="flex flex-wrap items-center gap-2">
               <span className="inline-flex items-center rounded-full bg-base-300 px-2.5 py-1 text-sm font-medium leading-none text-base-content/80">
-                {platformType === "text" ? "text" : platformType}
+                {mediaBadgeLabel}
               </span>
               {hasSourceDetails ? (
                 <SafeExternalLink
-                  href={item.url}
+                  href={primaryMediaUrl}
                   allowExternalOpen
                   testId="content-source-link"
                   title={`Open source: ${sourceLabel}`}

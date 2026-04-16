@@ -1157,8 +1157,6 @@ export function VoteFeedStage({
       ) : null}
 
       {feedItems.map(({ actualIndex, item }) => {
-        const canPrevious = actualIndex > 0 && !isCommitting && !navigationLocked;
-        const canNext = actualIndex < displayFeed.length - 1 && !isCommitting && !navigationLocked;
         const isActiveCard = actualIndex === renderedActiveIndex;
         const titleId = `vote-feed-title-${item.id.toString()}`;
 
@@ -1195,10 +1193,6 @@ export function VoteFeedStage({
               followPending={isFollowPending(item.submitter)}
               normalizedAddress={normalizedAddress}
               deferEmbedClientFetch={isMetadataPrefetchPending && actualIndex !== renderedActiveIndex}
-              onPrevious={canPrevious ? () => void scrollToIndex(actualIndex - 1) : undefined}
-              onNext={canNext ? () => void scrollToIndex(actualIndex + 1) : undefined}
-              canPrevious={canPrevious}
-              canNext={canNext}
             />
             {!isActiveCard ? (
               <div

@@ -8,6 +8,7 @@ import {
 } from "./shared";
 import assert from "node:assert/strict";
 import test from "node:test";
+import { buildFallbackMediaItems } from "~~/lib/contentMedia";
 
 function buildItem(
   id: bigint,
@@ -19,6 +20,7 @@ function buildItem(
   return {
     id,
     url,
+    media: buildFallbackMediaItems(url),
     title,
     description,
     tags,
@@ -142,6 +144,7 @@ test("mapContentItem supports text-only questions and Ponder reward pool summari
   });
 
   assert.equal(item.url, "");
+  assert.deepEqual(item.media, []);
   assert.equal(item.question, "Would you book this hotel?");
   assert.equal(item.rewardPoolSummary?.totalFunded, 25_000_000n);
   assert.equal(item.rewardPoolSummary?.totalAvailable, 18_000_000n);

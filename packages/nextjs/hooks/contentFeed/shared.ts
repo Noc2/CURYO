@@ -1,6 +1,7 @@
 "use client";
 
 import { parseTags } from "~~/constants/categories";
+import { type ContentMediaItem, buildFallbackMediaItems } from "~~/lib/contentMedia";
 import type { ContentMetadataResult } from "~~/lib/contentMetadata/types";
 import { isContentItemBlocked } from "~~/utils/contentFilter";
 
@@ -31,6 +32,7 @@ export interface ContentOpenRoundSummary {
 export interface ContentItem {
   id: bigint;
   url: string;
+  media: ContentMediaItem[];
   question?: string;
   title: string;
   description: string;
@@ -102,6 +104,14 @@ export function mapContentItem(
   item: {
     id: string;
     url?: string | null;
+    media?: Array<{
+      index?: number;
+      mediaIndex?: number;
+      mediaType?: "image" | "video";
+      url?: string | null;
+      canonicalUrl?: string | null;
+      urlHost?: string | null;
+    }> | null;
     question?: string | null;
     title: string;
     description: string;
@@ -181,10 +191,21 @@ export function mapContentItem(
     item.conservativeRatingBps !== undefined ? BigInt(item.conservativeRatingBps) : undefined;
   const displayedRating =
     mappedOpenRound?.referenceRatingBps !== undefined ? Number(mappedOpenRound.referenceRatingBps) / 100 : item.rating;
+  const url = item.url ?? "";
+  const media = (item.media ?? [])
+    .filter(mediaItem => mediaItem.url)
+    .map((mediaItem, index) => ({
+      mediaIndex: mediaItem.mediaIndex ?? mediaItem.index ?? index,
+      mediaType: mediaItem.mediaType ?? "image",
+      url: mediaItem.url ?? "",
+      canonicalUrl: mediaItem.canonicalUrl ?? mediaItem.url ?? "",
+      urlHost: mediaItem.urlHost ?? null,
+    }));
 
   return {
     id: BigInt(item.id),
-    url: item.url ?? "",
+    url,
+    media: media.length > 0 ? media : buildFallbackMediaItems(url),
     question: item.question?.trim() || item.title,
     title: item.title,
     description: item.description,

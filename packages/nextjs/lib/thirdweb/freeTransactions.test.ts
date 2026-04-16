@@ -422,12 +422,23 @@ test("supported sponsored operation families are allowlisted", async () => {
     [encodeCall(contentRegistryContract, "cancelReservedSubmission", [`0x${"2".repeat(64)}`])],
     [
       encodeCall(contentRegistryContract, "submitQuestion", [
-        "",
+        "https://example.com/question.jpg",
         "Is this product worth recommending?",
         "Vote based on the description.",
         "Products,Value",
         1n,
         `0x${"3".repeat(64)}`,
+      ]),
+    ],
+    [
+      encodeCall(contentRegistryContract, "submitQuestionWithMedia", [
+        ["https://example.com/question-a.jpg", "https://example.com/question-b.jpg"],
+        "",
+        "Is this product worth recommending?",
+        "Vote based on the images.",
+        "Products,Value",
+        1n,
+        `0x${"4".repeat(64)}`,
       ]),
     ],
     [encodeCall(frontendRegistryContract, "register")],

@@ -17,6 +17,7 @@ import { useContentFeedMetadata } from "~~/hooks/useContentFeedMetadata";
 import { usePageVisibility } from "~~/hooks/usePageVisibility";
 import { usePonderAvailability } from "~~/hooks/usePonderAvailability";
 import { usePonderQuery } from "~~/hooks/usePonderQuery";
+import { buildFallbackMediaItems } from "~~/lib/contentMedia";
 import { ponderApi } from "~~/services/ponder/client";
 import { publicEnv } from "~~/utils/env/public";
 
@@ -107,6 +108,7 @@ export function useContentFeed(voterAddress?: string, options: UseContentFeedOpt
         return {
           id: args.contentId,
           url: args.url ?? "",
+          media: buildFallbackMediaItems(args.url),
           question: args.title,
           title: args.title,
           description: args.description,

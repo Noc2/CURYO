@@ -41,10 +41,12 @@ test("buildSubmissionRevealCommitment changes when the reserved metadata changes
     {
       categoryId: 1n,
       description: "first description",
+      imageUrls: ["https://example.com/demo.jpg"],
       submissionKey: SUBMISSION_KEY,
       tags: "alpha,beta",
       title: "First title",
-      url: "https://example.com/demo",
+      url: "https://example.com/demo.jpg",
+      videoUrl: "",
     },
     SALT,
     ADDRESS,
@@ -54,10 +56,12 @@ test("buildSubmissionRevealCommitment changes when the reserved metadata changes
     {
       categoryId: 1n,
       description: "edited description",
+      imageUrls: ["https://example.com/demo.jpg"],
       submissionKey: SUBMISSION_KEY,
       tags: "alpha,beta",
       title: "First title",
-      url: "https://example.com/demo",
+      url: "https://example.com/demo.jpg",
+      videoUrl: "",
     },
     SALT,
     ADDRESS,
@@ -71,20 +75,24 @@ test("submissionReservationMatchesDraft only reuses reservations for the exact s
     {
       categoryId: 1n,
       description: "first description",
+      imageUrls: ["https://example.com/demo.jpg"],
       submissionKey: SUBMISSION_KEY,
       tags: "alpha,beta",
       title: "First title",
-      url: "https://example.com/demo",
+      url: "https://example.com/demo.jpg",
+      videoUrl: "",
     },
     SALT,
     buildSubmissionRevealCommitment(
       {
         categoryId: 1n,
         description: "first description",
+        imageUrls: ["https://example.com/demo.jpg"],
         submissionKey: SUBMISSION_KEY,
         tags: "alpha,beta",
         title: "First title",
-        url: "https://example.com/demo",
+        url: "https://example.com/demo.jpg",
+        videoUrl: "",
       },
       SALT,
       ADDRESS,
@@ -96,10 +104,12 @@ test("submissionReservationMatchesDraft only reuses reservations for the exact s
     submissionReservationMatchesDraft(reservation, {
       categoryId: 1n,
       description: "first description",
+      imageUrls: ["https://example.com/demo.jpg"],
       submissionKey: SUBMISSION_KEY,
       tags: "alpha,beta",
       title: "First title",
-      url: "https://example.com/demo",
+      url: "https://example.com/demo.jpg",
+      videoUrl: "",
     }),
     true,
   );
@@ -108,10 +118,12 @@ test("submissionReservationMatchesDraft only reuses reservations for the exact s
     submissionReservationMatchesDraft(reservation, {
       categoryId: 1n,
       description: "first description",
+      imageUrls: ["https://example.com/demo.jpg"],
       submissionKey: SUBMISSION_KEY,
       tags: "alpha,beta",
       title: "Edited title",
-      url: "https://example.com/demo",
+      url: "https://example.com/demo.jpg",
+      videoUrl: "",
     }),
     false,
   );
@@ -149,10 +161,12 @@ test("deriveSubmissionReservationSalt recreates the same salt for the same draft
     const draft = {
       categoryId: 1n,
       description: "first description",
+      imageUrls: ["https://example.com/demo.jpg"],
       submissionKey: SUBMISSION_KEY,
       tags: "alpha,beta",
       title: "First title",
-      url: "https://example.com/demo",
+      url: "https://example.com/demo.jpg",
+      videoUrl: "",
     };
 
     const first = deriveSubmissionReservationSalt(draft, ADDRESS, CHAIN_ID);
@@ -212,12 +226,14 @@ test("getLegacyStoredSubmissionReservation upgrades pre-chain-scope entries with
       categoryId: "1",
       chainId: CHAIN_ID,
       description: "first description",
+      imageUrls: ["https://example.com/demo"],
       revealCommitment: SUBMISSION_KEY,
       salt: SALT,
       submissionKey: SUBMISSION_KEY,
       tags: "alpha,beta",
       title: "First title",
       url: "https://example.com/demo",
+      videoUrl: "",
     });
   } finally {
     if (originalWindowDescriptor) {

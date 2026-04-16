@@ -9,11 +9,13 @@ import {
   isContentFeedMetadataPrefetchPending,
   normalizeValidationBatchResults,
 } from "~~/hooks/useContentFeedMetadata";
+import { buildFallbackMediaItems } from "~~/lib/contentMedia";
 
 function makeContentItem(overrides: Partial<ContentItem> & Pick<ContentItem, "id" | "url">): ContentItem {
   return {
     id: overrides.id,
     url: overrides.url,
+    media: overrides.media ?? buildFallbackMediaItems(overrides.url),
     title: overrides.title ?? "Example title",
     description: overrides.description ?? "Example description",
     tags: overrides.tags ?? [],

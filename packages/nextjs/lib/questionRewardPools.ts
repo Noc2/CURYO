@@ -39,6 +39,38 @@ export const QUESTION_SUBMISSION_ABI = [
     outputs: [{ name: "", type: "uint256" }],
     stateMutability: "nonpayable",
   },
+  {
+    type: "function",
+    name: "previewQuestionMediaSubmissionKey",
+    inputs: [
+      { name: "imageUrls", type: "string[]" },
+      { name: "videoUrl", type: "string" },
+      { name: "title", type: "string" },
+      { name: "description", type: "string" },
+      { name: "tags", type: "string" },
+      { name: "categoryId", type: "uint256" },
+    ],
+    outputs: [
+      { name: "resolvedCategoryId", type: "uint256" },
+      { name: "submissionKey", type: "bytes32" },
+    ],
+    stateMutability: "view",
+  },
+  {
+    type: "function",
+    name: "submitQuestionWithMedia",
+    inputs: [
+      { name: "imageUrls", type: "string[]" },
+      { name: "videoUrl", type: "string" },
+      { name: "title", type: "string" },
+      { name: "description", type: "string" },
+      { name: "tags", type: "string" },
+      { name: "categoryId", type: "uint256" },
+      { name: "salt", type: "bytes32" },
+    ],
+    outputs: [{ name: "", type: "uint256" }],
+    stateMutability: "nonpayable",
+  },
 ] as const;
 
 export const QUESTION_REWARD_POOL_ESCROW_ABI = [

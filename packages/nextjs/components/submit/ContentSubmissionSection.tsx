@@ -34,7 +34,13 @@ import { useThirdwebSponsoredSubmitCalls } from "~~/hooks/useThirdwebSponsoredSu
 import { useTransactionStatusToast } from "~~/hooks/useTransactionStatusToast";
 import { useWalletRpcRecovery } from "~~/hooks/useWalletRpcRecovery";
 import { MAX_CONTENT_DESCRIPTION_LENGTH } from "~~/lib/contentDescription";
-import { MAX_CONTENT_TITLE_LENGTH } from "~~/lib/contentTitle";
+import {
+  MAX_SUBMISSION_IMAGE_URLS,
+  isDirectImageUrl,
+  isYouTubeVideoUrl,
+  normalizeSubmissionMediaUrl,
+} from "~~/lib/contentMedia";
+import { MAX_QUESTION_LENGTH } from "~~/lib/contentTitle";
 import { protocolDocFacts } from "~~/lib/docs/protocolFacts";
 import {
   findBlockedContentTags,
@@ -51,14 +57,16 @@ import {
 } from "~~/lib/transactionErrors";
 import { containsBlockedUrl } from "~~/utils/contentFilter";
 import { sanitizeExternalUrl } from "~~/utils/externalUrl";
-import { canonicalizeUrl } from "~~/utils/platforms";
 import { notification } from "~~/utils/scaffold-eth";
 
 const ShareModal = dynamic(() => import("~~/components/submit/ShareModal").then(m => m.ShareModal), { ssr: false });
 
-const DEFAULT_URL_CONFIG = {
-  urlPlaceholder: "https://youtube.com/watch?v=... or https://example.com/image.jpg",
-  urlHint: "Optional. Add a YouTube link, direct image URL, or evidence link when the question needs context.",
+type MediaMode = "images" | "video";
+
+const MEDIA_URL_CONFIG = {
+  imagePlaceholder: "Paste a direct image URL, e.g. https://example.com/image.jpg",
+  videoPlaceholder: "Paste a YouTube URL, e.g. https://youtube.com/watch?v=...",
+  urlHint: "Required. Add up to four direct image URLs or one YouTube link for voters to judge.",
 };
 
 function isReservationExistsError(error: unknown): boolean {
@@ -113,8 +121,11 @@ export function ContentSubmissionSection() {
   const submissionBonus = calculateBonus(10);
   const { requireAcceptance } = useTermsAcceptance();
 
-  const [url, setUrl] = useState("");
-  const [urlError, setUrlError] = useState<string | null>(null);
+  const [mediaMode, setMediaMode] = useState<MediaMode>("images");
+  const [imageUrls, setImageUrls] = useState<string[]>([""]);
+  const [imageUrlErrors, setImageUrlErrors] = useState<(string | null)[]>([null]);
+  const [videoUrl, setVideoUrl] = useState("");
+  const [videoUrlError, setVideoUrlError] = useState<string | null>(null);
   const [title, setTitle] = useState("");
   const [titleError, setTitleError] = useState<string | null>(null);
   const [description, setDescription] = useState("");
@@ -162,15 +173,24 @@ export function ContentSubmissionSection() {
     );
   }, [categories, categorySearch]);
 
-  const urlConfig = DEFAULT_URL_CONFIG;
+  const urlConfig = MEDIA_URL_CONFIG;
   const customSubcategoryError = customSubcategory ? getContentTagValidationError(customSubcategory) : null;
 
-  const getUrlValidationError = (value: string): string | null => {
-    if (!value) {
-      return null;
+  const getMediaUrlValidationError = (
+    value: string,
+    expectedType: MediaMode,
+    options: { required?: boolean } = {},
+  ): string | null => {
+    const trimmedValue = value.trim();
+    if (!trimmedValue) {
+      return options.required
+        ? expectedType === "video"
+          ? "Add a YouTube URL before submitting."
+          : "Add at least one image URL before submitting."
+        : null;
     }
 
-    const sanitizedUrl = sanitizeExternalUrl(value);
+    const sanitizedUrl = sanitizeExternalUrl(trimmedValue);
     if (!sanitizedUrl) {
       return "Please enter a valid HTTPS URL";
     }
@@ -180,21 +200,82 @@ export function ContentSubmissionSection() {
       return "This URL contains prohibited content and cannot be submitted";
     }
 
+    const normalizedUrl = normalizeSubmissionMediaUrl(trimmedValue);
+    if (!normalizedUrl) {
+      return "Please enter a valid HTTPS URL";
+    }
+
+    if (expectedType === "images" && !isDirectImageUrl(normalizedUrl)) {
+      return "Use a direct image URL ending in JPG, PNG, WEBP, GIF, or AVIF.";
+    }
+
+    if (expectedType === "video" && !isYouTubeVideoUrl(normalizedUrl)) {
+      return "Use a YouTube URL.";
+    }
+
     return null;
   };
 
-  const validateUrl = (value: string) => {
-    setUrlError(getUrlValidationError(value));
+  const validateImageUrl = (index: number, value: string, required = false) => {
+    const nextError = getMediaUrlValidationError(value, "images", { required });
+    setImageUrlErrors(prev => {
+      const next = [...prev];
+      next[index] = nextError;
+      return next;
+    });
   };
 
-  const handleUrlChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleImageUrlChange = (index: number, value: string) => {
+    setImageUrls(prev => prev.map((url, itemIndex) => (itemIndex === index ? value : url)));
+    validateImageUrl(index, value);
+  };
+
+  const handleAddImageUrl = () => {
+    if (imageUrls.length >= MAX_SUBMISSION_IMAGE_URLS) return;
+    setImageUrls(prev => [...prev, ""]);
+    setImageUrlErrors(prev => [...prev, null]);
+  };
+
+  const handleRemoveImageUrl = (index: number) => {
+    if (imageUrls.length === 1) {
+      setImageUrls([""]);
+      setImageUrlErrors([null]);
+      return;
+    }
+
+    setImageUrls(prev => prev.filter((_, itemIndex) => itemIndex !== index));
+    setImageUrlErrors(prev => prev.filter((_, itemIndex) => itemIndex !== index));
+  };
+
+  const validateVideoUrl = (value: string, required = false) => {
+    setVideoUrlError(getMediaUrlValidationError(value, "video", { required }));
+  };
+
+  const handleVideoUrlChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value;
-    setUrl(value);
-    if (value) validateUrl(value);
-    else setUrlError(null);
+    setVideoUrl(value);
+    validateVideoUrl(value);
   };
 
-  const isValidUrl = Boolean(url && !urlError);
+  const normalizedImageUrls = useMemo(
+    () =>
+      imageUrls
+        .map(value => value.trim())
+        .filter(Boolean)
+        .map(value => normalizeSubmissionMediaUrl(value))
+        .filter((value): value is string => Boolean(value)),
+    [imageUrls],
+  );
+  const normalizedVideoUrl = useMemo(
+    () => (videoUrl.trim() ? (normalizeSubmissionMediaUrl(videoUrl) ?? "") : ""),
+    [videoUrl],
+  );
+  const previewMediaUrl = mediaMode === "video" ? normalizedVideoUrl : (normalizedImageUrls[0] ?? "");
+  const hasValidPreviewMedia =
+    Boolean(previewMediaUrl) &&
+    (mediaMode === "video"
+      ? !videoUrlError && isYouTubeVideoUrl(previewMediaUrl)
+      : !imageUrlErrors.some(Boolean) && isDirectImageUrl(previewMediaUrl));
 
   const handleCategorySelect = (category: Category) => {
     setSelectedCategory(category);
@@ -241,10 +322,6 @@ export function ContentSubmissionSection() {
     contractName: "ContentRegistry",
     functionName: "nextContentId",
   });
-  const canonicalUrl = useMemo(() => {
-    if (!url || urlError) return undefined;
-    return canonicalizeUrl(url);
-  }, [url, urlError]);
   const extractSubmittedContentId = (logs: { address: string; data: `0x${string}`; topics: `0x${string}`[] }[]) => {
     if (!registryInfo) {
       return null;
@@ -307,12 +384,33 @@ export function ContentSubmissionSection() {
 
     const trimmedTitle = title.trim();
     const trimmedDescription = description.trim();
-    const nextUrlError = getUrlValidationError(url);
+    const submittedImageUrls =
+      mediaMode === "images"
+        ? imageUrls
+            .map(value => value.trim())
+            .filter(Boolean)
+            .map(value => normalizeSubmissionMediaUrl(value))
+            .filter((value): value is string => Boolean(value))
+        : [];
+    const submittedVideoUrl = mediaMode === "video" ? (normalizeSubmissionMediaUrl(videoUrl) ?? "") : "";
+    const nextImageUrlErrors = imageUrls.map(value =>
+      value.trim() ? getMediaUrlValidationError(value, "images") : null,
+    );
+    const nextVideoUrlError = getMediaUrlValidationError(videoUrl, "video", { required: mediaMode === "video" });
+
+    if (mediaMode === "images" && submittedImageUrls.length === 0) {
+      nextImageUrlErrors[0] = "Add at least one image URL before submitting.";
+    }
+
     const nextTitleError = trimmedTitle ? getContentTitleValidationError(trimmedTitle) : null;
     const nextDescriptionError = trimmedDescription ? getContentDescriptionValidationError(trimmedDescription) : null;
     const blockedContentTags = findBlockedContentTags(selectedSubcategories);
+    const hasMediaError =
+      mediaMode === "images" ? nextImageUrlErrors.some(Boolean) : Boolean(nextVideoUrlError) || !submittedVideoUrl;
+    const normalizedSubmissionUrl = mediaMode === "video" ? submittedVideoUrl : (submittedImageUrls[0] ?? "");
 
-    setUrlError(nextUrlError);
+    setImageUrlErrors(nextImageUrlErrors);
+    setVideoUrlError(nextVideoUrlError);
     setTitleError(nextTitleError);
     setDescriptionError(nextDescriptionError);
 
@@ -326,9 +424,7 @@ export function ContentSubmissionSection() {
       return;
     }
 
-    const normalizedSubmissionUrl = canonicalUrl ?? "";
-
-    if (nextUrlError || nextTitleError || nextDescriptionError) {
+    if (hasMediaError || nextTitleError || nextDescriptionError) {
       notification.warning("Please fix the highlighted fields before submitting.");
       return;
     }
@@ -338,8 +434,8 @@ export function ContentSubmissionSection() {
 
     setIsSubmitting(true);
     statusToast.showSubmitting({ action: "content" });
-    const submittedTitle = title;
-    const submittedDescription = description;
+    const submittedTitle = trimmedTitle;
+    const submittedDescription = trimmedDescription;
     let reservationStorageKey: string | null = null;
     try {
       let contentId: bigint | null = null;
@@ -353,16 +449,25 @@ export function ContentSubmissionSection() {
       const [, submissionKey] = (await readContract(wagmiConfig, {
         abi: QUESTION_SUBMISSION_ABI,
         address: registryAddress,
-        functionName: "previewQuestionSubmissionKey",
-        args: [normalizedSubmissionUrl, submittedTitle, submittedDescription, submissionTags, selectedCategory.id],
+        functionName: "previewQuestionMediaSubmissionKey",
+        args: [
+          submittedImageUrls,
+          submittedVideoUrl,
+          submittedTitle,
+          submittedDescription,
+          submissionTags,
+          selectedCategory.id,
+        ],
       })) as readonly [bigint, `0x${string}`];
       const submissionDraft = {
         categoryId: selectedCategory.id,
         description: submittedDescription,
+        imageUrls: submittedImageUrls,
         submissionKey,
         tags: submissionTags,
         title: submittedTitle,
         url: normalizedSubmissionUrl,
+        videoUrl: submittedVideoUrl,
       };
       const currentReservationStorageKey = buildSubmissionReservationStorageKey(
         submitterAddress,
@@ -544,14 +649,15 @@ export function ContentSubmissionSection() {
               abi: QUESTION_SUBMISSION_ABI,
               address: registryAddress,
               args: [
-                normalizedSubmissionUrl,
+                submittedImageUrls,
+                submittedVideoUrl,
                 submittedTitle,
                 submittedDescription,
                 submissionTags,
                 selectedCategory.id,
                 activeReservation.salt,
               ],
-              functionName: "submitQuestion",
+              functionName: "submitQuestionWithMedia",
             },
           ],
           {
@@ -565,9 +671,10 @@ export function ContentSubmissionSection() {
         const submitTxHash = await writeContract(wagmiConfig, {
           address: registryAddress,
           abi: QUESTION_SUBMISSION_ABI,
-          functionName: "submitQuestion",
+          functionName: "submitQuestionWithMedia",
           args: [
-            normalizedSubmissionUrl,
+            submittedImageUrls,
+            submittedVideoUrl,
             submittedTitle,
             submittedDescription,
             submissionTags,
@@ -598,8 +705,11 @@ export function ContentSubmissionSection() {
           : null;
       setSubmittedContent(openRewardPoolAfterSubmit ? null : submittedQuestion);
       setFundingContent(openRewardPoolAfterSubmit && submittedQuestion ? submittedQuestion : null);
-      setUrl("");
-      setUrlError(null);
+      setMediaMode("images");
+      setImageUrls([""]);
+      setImageUrlErrors([null]);
+      setVideoUrl("");
+      setVideoUrlError(null);
       setTitle("");
       setTitleError(null);
       setDescription("");
@@ -639,6 +749,9 @@ export function ContentSubmissionSection() {
   const handleCloseShareModal = () => {
     setSubmittedContent(null);
   };
+
+  const imageMediaMissing = submitAttempted && mediaMode === "images" && !normalizedImageUrls.some(isDirectImageUrl);
+  const videoMediaMissing = submitAttempted && mediaMode === "video" && !normalizedVideoUrl;
 
   return (
     <>
@@ -751,19 +864,97 @@ export function ContentSubmissionSection() {
             </div>
 
             <div>
-              <label className="mb-2 flex items-center gap-1.5 text-base font-medium">
-                Media Link <span className="font-normal text-base-content/40">(optional)</span>
+              <label
+                className={`mb-2 flex items-center gap-1.5 text-base font-medium ${
+                  imageMediaMissing || videoMediaMissing ? "text-error" : ""
+                }`}
+              >
+                Media
+                <span className="font-normal text-base-content/40">
+                  {mediaMode === "images" ? `(1-${MAX_SUBMISSION_IMAGE_URLS} images)` : "(YouTube)"}
+                </span>
                 <InfoTooltip text={urlConfig.urlHint} />
               </label>
-              <input
-                type="url"
-                placeholder={urlConfig.urlPlaceholder}
-                className={`input input-bordered w-full bg-base-100 ${urlError ? "input-error" : ""}`}
-                value={url}
-                onChange={handleUrlChange}
-                onBlur={() => validateUrl(url)}
-              />
-              {urlError ? <p className="mt-1 text-base text-error">{urlError}</p> : null}
+              <div className="mb-3 grid grid-cols-2 gap-2">
+                <button
+                  type="button"
+                  aria-pressed={mediaMode === "images"}
+                  onClick={() => setMediaMode("images")}
+                  className={`btn btn-sm ${mediaMode === "images" ? "btn-primary" : "btn-outline"}`}
+                >
+                  Images
+                </button>
+                <button
+                  type="button"
+                  aria-pressed={mediaMode === "video"}
+                  onClick={() => setMediaMode("video")}
+                  className={`btn btn-sm ${mediaMode === "video" ? "btn-primary" : "btn-outline"}`}
+                >
+                  YouTube
+                </button>
+              </div>
+
+              {mediaMode === "images" ? (
+                <div className="space-y-2">
+                  {imageUrls.map((imageUrl, index) => (
+                    <div key={index} className="flex gap-2">
+                      <input
+                        type="url"
+                        placeholder={urlConfig.imagePlaceholder}
+                        className={`input input-bordered min-w-0 flex-1 bg-base-100 ${
+                          imageUrlErrors[index] || (imageMediaMissing && index === 0) ? "input-error" : ""
+                        }`}
+                        value={imageUrl}
+                        onChange={event => handleImageUrlChange(index, event.target.value)}
+                        onBlur={() => validateImageUrl(index, imageUrl, imageMediaMissing && index === 0)}
+                      />
+                      <button
+                        type="button"
+                        onClick={() => handleRemoveImageUrl(index)}
+                        className="btn btn-outline btn-square"
+                        aria-label={imageUrls.length === 1 ? "Clear image URL" : "Remove image URL"}
+                      >
+                        <XMarkIcon className="h-4 w-4" />
+                      </button>
+                    </div>
+                  ))}
+                  {imageUrlErrors.map((error, index) =>
+                    error ? (
+                      <p key={index} className="text-base text-error">
+                        {error}
+                      </p>
+                    ) : null,
+                  )}
+                  {imageMediaMissing && !imageUrlErrors.some(Boolean) ? (
+                    <p className="text-base text-error">Add at least one image URL before submitting.</p>
+                  ) : null}
+                  <button
+                    type="button"
+                    onClick={handleAddImageUrl}
+                    disabled={imageUrls.length >= MAX_SUBMISSION_IMAGE_URLS}
+                    className="btn btn-outline btn-sm"
+                  >
+                    Add image
+                  </button>
+                </div>
+              ) : (
+                <div>
+                  <input
+                    type="url"
+                    placeholder={urlConfig.videoPlaceholder}
+                    className={`input input-bordered w-full bg-base-100 ${
+                      videoUrlError || videoMediaMissing ? "input-error" : ""
+                    }`}
+                    value={videoUrl}
+                    onChange={handleVideoUrlChange}
+                    onBlur={() => validateVideoUrl(videoUrl, videoMediaMissing)}
+                  />
+                  {videoUrlError ? <p className="mt-1 text-base text-error">{videoUrlError}</p> : null}
+                  {videoMediaMissing && !videoUrlError ? (
+                    <p className="mt-1 text-base text-error">Add a YouTube URL before submitting.</p>
+                  ) : null}
+                </div>
+              )}
             </div>
 
             <div>
@@ -780,15 +971,15 @@ export function ContentSubmissionSection() {
                 }`}
                 value={title}
                 onChange={e => handleTitleChange(e.target.value)}
-                maxLength={MAX_CONTENT_TITLE_LENGTH}
+                maxLength={MAX_QUESTION_LENGTH}
               />
               {submitAttempted && !title.trim() ? (
-                <p className="mt-1 text-base text-error">Title is required.</p>
+                <p className="mt-1 text-base text-error">Question is required.</p>
               ) : null}
               {titleError ? <p className="mt-1 text-base text-error">{titleError}</p> : null}
               <div className="mt-1 text-right">
                 <span className="text-base text-base-content/30">
-                  {title.length}/{MAX_CONTENT_TITLE_LENGTH}
+                  {title.length}/{MAX_QUESTION_LENGTH}
                 </span>
               </div>
             </div>
@@ -896,12 +1087,19 @@ export function ContentSubmissionSection() {
           </div>
 
           <div className="space-y-4 xl:sticky xl:top-24">
-            {(url && isValidUrl) || title || description ? (
+            {hasValidPreviewMedia || title || description ? (
               <div className="surface-card rounded-2xl p-4 space-y-3">
                 <p className="text-base font-medium uppercase tracking-wider text-base-content/40">Preview</p>
                 {title ? <h3 className="line-clamp-2 text-lg font-semibold text-base-content">{title}</h3> : null}
-                <ContentEmbed url={isValidUrl ? url : ""} title={title} description={description} compact />
-                {description && isValidUrl ? <p className="text-base text-base-content/70">{description}</p> : null}
+                <ContentEmbed
+                  url={hasValidPreviewMedia ? previewMediaUrl : ""}
+                  title={title}
+                  description={description}
+                  compact
+                />
+                {description && hasValidPreviewMedia ? (
+                  <p className="text-base text-base-content/70">{description}</p>
+                ) : null}
                 {selectedSubcategories.length > 0 ? (
                   <div className="flex flex-wrap gap-1.5">
                     {selectedSubcategories.map(tag => (
@@ -919,7 +1117,7 @@ export function ContentSubmissionSection() {
               <div className="surface-card rounded-2xl p-4 space-y-3">
                 <p className="text-base font-medium uppercase tracking-wider text-base-content/40">Preview</p>
                 <p className="text-base text-base-content/50">
-                  Write a question and optional media link to preview how it will appear.
+                  Add the question and media to preview how it will appear.
                 </p>
               </div>
             )}

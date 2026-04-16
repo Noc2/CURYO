@@ -3,6 +3,7 @@
 import { useMemo } from "react";
 import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import type { ContentItem } from "~~/hooks/contentFeed/shared";
+import { isDirectImageUrl } from "~~/lib/contentMedia";
 import type { ContentMetadataResult } from "~~/lib/contentMetadata/types";
 import { detectPlatform } from "~~/utils/platforms";
 
@@ -46,7 +47,7 @@ export function normalizeValidationBatchResults(
   );
 
   for (const url of batch) {
-    if (!(url in normalized) && detectPlatform(url).type === "generic") {
+    if (!(url in normalized) && detectPlatform(url).type === "generic" && !isDirectImageUrl(url)) {
       normalized[url] = false;
     }
   }
@@ -76,7 +77,13 @@ function mergeBatchMaps<T>(batches: Record<string, T>[]): Record<string, T> {
 }
 
 export function getContentFeedMetadataUrls(feed: ContentItem[]): string[] {
-  return [...new Set(feed.map(item => item.url).filter(Boolean))].sort();
+  return [
+    ...new Set(
+      feed
+        .flatMap(item => [item.url, ...item.media.map(mediaItem => mediaItem.url)])
+        .filter((url): url is string => Boolean(url)),
+    ),
+  ].sort();
 }
 
 export function getContentFeedMetadataCacheKey(urls: string[]): string {
@@ -84,11 +91,13 @@ export function getContentFeedMetadataCacheKey(urls: string[]): string {
 }
 
 export function getContentFeedValidationUrls(urls: string[]): string[] {
-  return urls.filter(url => detectPlatform(url).type !== "generic");
+  return urls.filter(url => detectPlatform(url).type !== "generic" && !isDirectImageUrl(url));
 }
 
 export function getGenericValidationMap(urls: string[]): Record<string, boolean | null> {
-  return Object.fromEntries(urls.filter(url => detectPlatform(url).type === "generic").map(url => [url, false]));
+  return Object.fromEntries(
+    urls.filter(url => detectPlatform(url).type === "generic" && !isDirectImageUrl(url)).map(url => [url, false]),
+  );
 }
 
 function getCachedValidationMap(urls: string[], now = Date.now()): Record<string, boolean | null> {
