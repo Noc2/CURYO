@@ -2,7 +2,8 @@ import { ponder } from "ponder:registry";
 import { category } from "ponder:schema";
 
 ponder.on("CategoryRegistry:CategoryAdded", async ({ event, context }) => {
-  const { categoryId, name, domain } = event.args;
+  const { categoryId, name, slug } = event.args;
+  const domain = slug;
 
   // CategoryAdded is now the only category path: seed-only discovery metadata.
   await context.db
