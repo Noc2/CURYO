@@ -326,6 +326,8 @@ export interface PonderRewardPoolSummary {
   totalUnallocatedAmount: string;
   totalAllocatedAmount: string;
   totalClaimedAmount: string;
+  totalVoterClaimedAmount: string;
+  totalFrontendClaimedAmount: string;
   totalRefundedAmount: string;
   qualifiedRoundCount: number;
   currentRewardPoolAmount: string;
@@ -935,6 +937,8 @@ export const ponderApi = {
       totalRoundsSettled: number;
       totalRewardsClaimed: string;
       totalQuestionRewardsPaid: string;
+      totalQuestionRewardsPaidToVoters: string;
+      totalQuestionRewardsPaidToFrontends: string;
       totalProfiles: number;
       totalVoterIds: number;
     }>("/stats");

@@ -96,6 +96,8 @@ export async function attachOpenRoundSummary<T extends { id: bigint }>(items: T[
       totalUnallocatedAmount: sql<bigint>`coalesce(sum(${questionRewardPool.unallocatedAmount}), 0)`,
       totalAllocatedAmount: sql<bigint>`coalesce(sum(${questionRewardPool.allocatedAmount}), 0)`,
       totalClaimedAmount: sql<bigint>`coalesce(sum(${questionRewardPool.claimedAmount}), 0)`,
+      totalVoterClaimedAmount: sql<bigint>`coalesce(sum(${questionRewardPool.voterClaimedAmount}), 0)`,
+      totalFrontendClaimedAmount: sql<bigint>`coalesce(sum(${questionRewardPool.frontendClaimedAmount}), 0)`,
       totalRefundedAmount: sql<bigint>`coalesce(sum(${questionRewardPool.refundedAmount}), 0)`,
       qualifiedRoundCount: sql<number>`coalesce(sum(${questionRewardPool.qualifiedRounds}), 0)`,
     })
@@ -185,6 +187,8 @@ function emptyRewardPoolSummary() {
     totalUnallocatedAmount: 0n,
     totalAllocatedAmount: 0n,
     totalClaimedAmount: 0n,
+    totalVoterClaimedAmount: 0n,
+    totalFrontendClaimedAmount: 0n,
     totalRefundedAmount: 0n,
     qualifiedRoundCount: 0,
     currentRewardPoolAmount: 0n,
@@ -212,6 +216,8 @@ function formatRewardPoolSummary(row: {
   totalUnallocatedAmount: bigint | string | number | null;
   totalAllocatedAmount: bigint | string | number | null;
   totalClaimedAmount: bigint | string | number | null;
+  totalVoterClaimedAmount: bigint | string | number | null;
+  totalFrontendClaimedAmount: bigint | string | number | null;
   totalRefundedAmount: bigint | string | number | null;
   qualifiedRoundCount: number | string | bigint | null;
 }) {
@@ -229,6 +235,8 @@ function formatRewardPoolSummary(row: {
     totalUnallocatedAmount,
     totalAllocatedAmount,
     totalClaimedAmount,
+    totalVoterClaimedAmount: toBigIntValue(row.totalVoterClaimedAmount),
+    totalFrontendClaimedAmount: toBigIntValue(row.totalFrontendClaimedAmount),
     totalRefundedAmount: toBigIntValue(row.totalRefundedAmount),
     qualifiedRoundCount: toNumberValue(row.qualifiedRoundCount),
     currentRewardPoolAmount: totalUnallocatedAmount + totalAllocatedAmount - totalClaimedAmount,

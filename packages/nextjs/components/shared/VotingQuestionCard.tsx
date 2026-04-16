@@ -47,7 +47,7 @@ interface VotingQuestionCardProps {
 const RATING_GUIDANCE_TEXT =
   "The community score runs from 0.0 to 10.0, where higher means better. Vote up when content deserves a better score and vote down when it deserves a worse one. Always vote down illegal, broken, or misdescribed content.";
 const REWARD_POOL_TOOLTIP_TEXT =
-  "This question's reward pool is shown in USD and backed by USDC on Celo. Eligible revealed voters can claim from it in qualified rounds.";
+  "This question's reward pool is shown in USD and backed by USDC on Celo. Eligible revealed voters can claim from it in qualified rounds, with 3% reserved for the eligible frontend operator.";
 export const VOTING_SURFACE_BACKGROUND = "var(--curyo-surface-elevated)";
 const STATUS_PILL_CLASS_NAME =
   "inline-flex items-center gap-2 rounded-full border border-base-content/10 bg-base-content/5 px-4 py-2";
@@ -391,6 +391,44 @@ function RewardPoolAmountDisplay({ amount }: { amount: bigint }) {
   );
 }
 
+function formatDockRewardPoolAmount(amount: bigint) {
+  const wholeDollars = amount / 1_000_000n;
+
+  if (wholeDollars >= 1_000_000n) {
+    const tenths = (wholeDollars * 10n) / 1_000_000n;
+    const decimal = tenths % 10n;
+    return decimal === 0n ? `$${tenths / 10n}M` : `$${tenths / 10n}.${decimal}M`;
+  }
+
+  if (wholeDollars >= 1_000n) {
+    const tenths = (wholeDollars * 10n) / 1_000n;
+    const decimal = tenths % 10n;
+    return decimal === 0n ? `$${tenths / 10n}K` : `$${tenths / 10n}.${decimal}K`;
+  }
+
+  if (wholeDollars >= 100n) {
+    return `$${wholeDollars}`;
+  }
+
+  return formatUsdAmount(amount);
+}
+
+function RewardPoolDockBadge({ amount }: { amount: bigint }) {
+  const amountLabel = formatUsdAmount(amount);
+  const compactAmountLabel = formatDockRewardPoolAmount(amount);
+
+  return (
+    <TooltipAnchor text={REWARD_POOL_TOOLTIP_TEXT} position="top" className="shrink-0 rounded-full">
+      <span
+        className="flex h-11 w-11 items-center justify-center rounded-full bg-base-content/[0.08] px-1 text-center text-[0.7rem] font-semibold leading-none text-base-content/72 ring-1 ring-base-content/10"
+        aria-label={`Reward pool: ${amountLabel}`}
+      >
+        {compactAmountLabel}
+      </span>
+    </TooltipAnchor>
+  );
+}
+
 function AddRewardPoolLink({ onFundQuestion }: { onFundQuestion: () => void }) {
   return (
     <div className="flex justify-center">
@@ -559,6 +597,7 @@ export function VotingQuestionCard({
   const rewardPoolTotal = rewardPoolSummary?.totalAvailable ?? 0n;
   const fundQuestionTitle = questionTitle?.trim() || `Question #${contentId.toString()}`;
   const rewardPoolAmountDisplay = <RewardPoolAmountDisplay amount={rewardPoolTotal} />;
+  const rewardPoolDockBadge = <RewardPoolDockBadge amount={rewardPoolTotal} />;
   const ratingOrb = (
     <TooltipAnchor
       text={RATING_GUIDANCE_TEXT}
@@ -671,8 +710,42 @@ export function VotingQuestionCard({
             >
               <div style={dockContentStyle}>
                 <div className={dockControlsPaddingClassName}>
-                  <div className="mb-2 flex justify-center">{rewardPoolAmountDisplay}</div>
-                  {!centerStatusContent ? (
+                  {compact ? null : <div className="mb-2 flex justify-center">{rewardPoolAmountDisplay}</div>}
+                  {compact && !centerStatusContent ? (
+                    <div className="grid grid-cols-[2.75rem_minmax(0,1fr)_5.5rem_minmax(0,1fr)_2.75rem] items-center gap-2">
+                      <div className="justify-self-start">{rewardPoolDockBadge}</div>
+                      <div className="justify-self-end">
+                        <CuryoVoteButton
+                          direction="up"
+                          size="sm"
+                          onClick={() => onVote(true)}
+                          disabled={dockVoteDisabled}
+                          attention={isAttentionActive && !dockVoteDisabled}
+                          tooltipPosition="top"
+                        />
+                      </div>
+                      <div aria-hidden className="h-11 w-[5.5rem]" />
+                      <div className="justify-self-start">
+                        <CuryoVoteButton
+                          direction="down"
+                          size="sm"
+                          onClick={() => onVote(false)}
+                          disabled={dockVoteDisabled}
+                          attention={isAttentionActive && !dockVoteDisabled}
+                          tooltipPosition="top"
+                        />
+                      </div>
+                      <div className="justify-self-end">
+                        <MoreToggleButton
+                          expanded={isDetailsOpen}
+                          onClick={() => setIsDetailsOpen(current => !current)}
+                          controlsId={detailsId}
+                          iconOnly
+                          className="h-11 w-11 justify-center gap-0 rounded-full bg-base-content/[0.08] p-0 text-base-content/72 ring-1 ring-base-content/10 hover:bg-base-content/[0.12] hover:text-base-content/90"
+                        />
+                      </div>
+                    </div>
+                  ) : !centerStatusContent ? (
                     <div className="grid grid-cols-[auto_minmax(0,1fr)_auto] items-end gap-3">
                       <div className="justify-self-start">
                         <CuryoVoteButton
@@ -700,6 +773,20 @@ export function VotingQuestionCard({
                           disabled={dockVoteDisabled}
                           attention={isAttentionActive && !dockVoteDisabled}
                           tooltipPosition="top"
+                        />
+                      </div>
+                    </div>
+                  ) : compact ? (
+                    <div className="grid grid-cols-[2.75rem_minmax(0,1fr)_2.75rem] items-center gap-3">
+                      <div className="justify-self-start">{rewardPoolDockBadge}</div>
+                      <div className="min-w-0 justify-self-center [&>button]:max-w-full">{centerStatusContent}</div>
+                      <div className="justify-self-end">
+                        <MoreToggleButton
+                          expanded={isDetailsOpen}
+                          onClick={() => setIsDetailsOpen(current => !current)}
+                          controlsId={detailsId}
+                          iconOnly
+                          className="h-11 w-11 justify-center gap-0 rounded-full bg-base-content/[0.08] p-0 text-base-content/72 ring-1 ring-base-content/10 hover:bg-base-content/[0.12] hover:text-base-content/90"
                         />
                       </div>
                     </div>

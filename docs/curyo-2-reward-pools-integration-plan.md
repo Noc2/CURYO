@@ -16,6 +16,7 @@ The target product is not a prediction market. Curyo 2.0 should pay verified hum
 - Keep cREP as the outcome-risk layer: voters can still lose cREP when they vote on the losing side of a settled round.
 - Add stablecoin-funded reward pools as a separate question-scoped escrow layer.
 - Pay stablecoin-funded question rewards for valid participation only at launch. Do not add a stablecoin coherence, correctness, or winning-side bonus.
+- Reserve a default 3% of qualified USDC claims for the eligible frontend operator attributed at vote commit time.
 - Fund only specific questions. Do not route reward pool funds into the protocol-wide Participation Reward Pool.
 - Use Celo USDC as the only launch settlement asset. Do not support USDT initially.
 - Show reward pool amounts as USD in primary product surfaces, with receipts and details disclosing that funds are settled in USDC on Celo.
@@ -110,6 +111,7 @@ The optional reward pool panel should support:
 - Amount: entered and displayed as USD, then submitted as USDC smallest units.
 - Required voters: minimum number of valid revealed voters before the reward pool can pay. Protocol minimum is 3.
 - Required settled rounds: number of settled question rounds that must complete before payout unlocks. Protocol minimum is 1.
+- Frontend share: default 3% of qualified claims, paid to the eligible commit-attributed frontend operator when payable.
 - Refund/expiry expectation: short copy explaining when funds are refundable or claimable.
 
 The default UI preset should be stronger than the protocol minimum. A sensible first default is 5 required voters and 2 settled rounds, with lower custom values allowed down to 3 voters and 1 settled round. Higher-value reward pools should show product guidance nudging submitters toward more voters and more rounds, without enforcing a hard reward pool cap.
@@ -207,6 +209,7 @@ Recommended reward pool fields:
 - `token`: Celo USDC address at launch. The field can stay in the contract for future allowlisted tokens, but only USDC should be enabled in v1.
 - `funder`: original funder.
 - `amount`: total received token amount credited to the reward pool.
+- `frontendFeeBps`: frontend-operator share snapshotted when the reward pool is created. Default 300 bps; governance can configure future pools within the cap.
 - `remainingAmount`: unclaimed or refundable token amount.
 - `requiredVoters`: minimum valid revealed voters for a round to qualify. Must be at least 3.
 - `requiredSettledRounds`: number of qualifying settled rounds funded by the reward pool. Must be at least 1.
@@ -325,6 +328,7 @@ Round qualification should be snapshotted once:
 
 - Store the round allocation.
 - Store the eligible revealed voter count.
+- Store the frontend-fee allocation separately from the gross round allocation.
 - Store the qualifying round state.
 - Store whether the round has already been qualified for that reward pool.
 
@@ -360,6 +364,7 @@ The escrow must follow checks-effects-interactions:
 
 - Validate reward pool, round, claim authority, eligibility, and pause state first.
 - Mark the Voter ID as claimed and update claimed totals before transferring USDC.
+- Pay the voter amount and frontend amount in the same claim transaction. If the frontend was not eligible at commit time or is not payable at claim time, keep that share with the voter.
 - Use `nonReentrant` on deposit, claim, refund, and sweep functions.
 - Keep claims pull-based; do not push payments during settlement.
 - Ensure refund functions cannot withdraw funds already allocated to qualified rounds.
@@ -414,7 +419,7 @@ Ponder should index reward pools directly rather than deriving them ad hoc in th
 Recommended schema additions:
 
 - `question_media`: optional media kind, normalized URL, preview metadata, and render strategy for text-only, image, YouTube, and link-preview cards.
-- `reward pool`: reward pool terms, funding state, token, question/content ID, funder, amount, remaining amount, required voters, required settled rounds, expiry, status.
+- `reward pool`: reward pool terms, funding state, token, question/content ID, funder, amount, remaining amount, frontend fee bps, required voters, required settled rounds, expiry, status.
 - `reward_pool_deposit`: original funding and top-up events.
 - `reward_pool_round`: per-round qualification, round allocation, revealed voter count, claimed count, and claimed amount.
 - `reward_pool_claim`: voter claims by reward pool, round, and Voter ID.
@@ -480,6 +485,7 @@ The implementation should stay split into narrow commits. A recommended sequence
 
 2. `contracts: add question reward pool escrow`
    - Add Celo USDC escrow, reward pool creation, per-round qualification, pull-based claims, refunds, pause controls, and events.
+   - Snapshot the reward pool frontend-fee bps and pay the eligible commit-attributed frontend operator from qualified claims.
    - Enforce `requiredVoters >= 3` and `requiredSettledRounds >= 1`.
    - Start reward pools at the next round after funding finalizes, never retroactively on an active round.
    - Snapshot qualified round allocation and eligible revealed voter count before claims.
@@ -537,6 +543,7 @@ Foundry tests:
 - Reward Pool creation with required voters and required settled rounds.
 - Rejection for reward pools below 3 required voters.
 - Rejection for reward pools below 1 required settled round.
+- Eligible frontend receives the default 3% USDC share; unpayable frontend shares fall back to the voter claim.
 - Reward Pool starts at the next round after funding finalizes and does not apply to active rounds with existing commits.
 - Qualified round snapshot stores allocation and eligible revealed count before claims.
 - Multiple reward pools on one question.
@@ -682,7 +689,7 @@ Launch guardrails:
 - Image links and YouTube links are supported media inputs at launch.
 - The feed should render description text when no media preview exists.
 - Categories are governance-created, with a default category set seeded in the first deployment.
-- Stablecoin-funded question rewards use equal per-round splits at launch.
+- Stablecoin-funded question rewards use participation-only per-round splits at launch after the default frontend-operator share.
 - The protocol minimum is 3 required voters and 1 required settled round.
 - The reward pool creation UI should default higher than the protocol minimum, initially 5 required voters and 2 settled rounds.
 - No hard reward pool caps at launch.

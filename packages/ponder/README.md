@@ -59,6 +59,7 @@ src/
 ├── ContentRegistry.ts        # Content submission & lifecycle events
 ├── RoundVotingEngine.ts      # Commit, reveal, settle, cancel events
 ├── RoundRewardDistributor.ts # Reward distribution events
+├── QuestionRewardPoolEscrow.ts # USDC reward pool funding, voter claims, and frontend shares
 ├── CategoryRegistry.ts       # Category registration events
 ├── ProfileRegistry.ts       # Profile update events
 ├── FrontendRegistry.ts       # Frontend fee events
@@ -83,8 +84,12 @@ The REST API is built with Hono. Key routes:
 | `GET /content/:id` | Single content item |
 | `GET /content/by-url?url=...` | Look up a single content item by URL |
 | `GET /votes` | List votes with filters |
+| `GET /question-reward-claim-candidates` | Claimable USDC reward-pool rounds for a revealed voter |
 | `GET /profile/:address` | User profile and reputation |
 | `GET /categories` | List content categories |
+
+Question Reward Pool tables track gross USDC allocation, voter payouts, and the default eligible frontend-operator
+share separately so API consumers can display both voter rewards and operator fees.
 
 Routes `/health` and `/status` are reserved by Ponder.
 

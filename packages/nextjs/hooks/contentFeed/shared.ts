@@ -53,6 +53,9 @@ export interface ContentItem {
   rewardPoolSummary?: {
     totalFunded: bigint;
     totalAvailable: bigint;
+    totalClaimed?: bigint;
+    totalVoterClaimed?: bigint;
+    totalFrontendClaimed?: bigint;
     activeRewardPoolCount: number;
   } | null;
 }
@@ -130,6 +133,9 @@ export function mapContentItem(
       totalFundedAmount?: string | number | bigint | null;
       totalAvailable?: string | number | bigint | null;
       currentRewardPoolAmount?: string | number | bigint | null;
+      totalClaimedAmount?: string | number | bigint | null;
+      totalVoterClaimedAmount?: string | number | bigint | null;
+      totalFrontendClaimedAmount?: string | number | bigint | null;
       activeRewardPoolCount?: number | null;
     } | null;
   },
@@ -196,6 +202,9 @@ export function mapContentItem(
           totalAvailable: BigInt(
             item.rewardPoolSummary.totalAvailable ?? item.rewardPoolSummary.currentRewardPoolAmount ?? 0,
           ),
+          totalClaimed: BigInt(item.rewardPoolSummary.totalClaimedAmount ?? 0),
+          totalVoterClaimed: BigInt(item.rewardPoolSummary.totalVoterClaimedAmount ?? 0),
+          totalFrontendClaimed: BigInt(item.rewardPoolSummary.totalFrontendClaimedAmount ?? 0),
           activeRewardPoolCount: item.rewardPoolSummary.activeRewardPoolCount ?? 0,
         }
       : null,

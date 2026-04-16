@@ -12,6 +12,7 @@ ponder.on("QuestionRewardPoolEscrow:RewardPoolCreated", async ({ event, context 
     requiredSettledRounds,
     startRoundId,
     expiresAt,
+    frontendFeeBps,
   } = event.args;
 
   await context.db
@@ -25,10 +26,13 @@ ponder.on("QuestionRewardPoolEscrow:RewardPoolCreated", async ({ event, context 
       unallocatedAmount: amount,
       allocatedAmount: 0n,
       claimedAmount: 0n,
+      voterClaimedAmount: 0n,
+      frontendClaimedAmount: 0n,
       refundedAmount: 0n,
       requiredVoters: Number(requiredVoters),
       requiredSettledRounds: Number(requiredSettledRounds),
       qualifiedRounds: 0,
+      frontendFeeBps: Number(frontendFeeBps),
       startRoundId,
       expiresAt,
       refunded: false,
@@ -46,7 +50,7 @@ ponder.on("QuestionRewardPoolEscrow:RewardPoolCreated", async ({ event, context 
 });
 
 ponder.on("QuestionRewardPoolEscrow:RewardPoolRoundQualified", async ({ event, context }) => {
-  const { rewardPoolId, contentId, roundId, allocation, eligibleVoters } = event.args;
+  const { rewardPoolId, contentId, roundId, allocation, eligibleVoters, frontendFeeAllocation } = event.args;
 
   await context.db
     .insert(questionRewardPoolRound)
@@ -56,8 +60,11 @@ ponder.on("QuestionRewardPoolEscrow:RewardPoolRoundQualified", async ({ event, c
       contentId,
       roundId,
       allocation,
+      frontendFeeAllocation,
       eligibleVoters: Number(eligibleVoters),
       claimedAmount: 0n,
+      voterClaimedAmount: 0n,
+      frontendClaimedAmount: 0n,
       claimedCount: 0,
       qualifiedAt: event.block.timestamp,
     })
@@ -79,7 +86,18 @@ ponder.on("QuestionRewardPoolEscrow:RewardPoolRoundQualified", async ({ event, c
 });
 
 ponder.on("QuestionRewardPoolEscrow:QuestionRewardClaimed", async ({ event, context }) => {
-  const { rewardPoolId, contentId, roundId, claimant, voterId, amount } = event.args;
+  const {
+    rewardPoolId,
+    contentId,
+    roundId,
+    claimant,
+    voterId,
+    amount,
+    frontend,
+    frontendRecipient,
+    frontendFee,
+    grossAmount,
+  } = event.args;
 
   await context.db
     .insert(questionRewardPoolClaim)
@@ -91,17 +109,25 @@ ponder.on("QuestionRewardPoolEscrow:QuestionRewardClaimed", async ({ event, cont
       claimant,
       voterId,
       amount,
+      grossAmount,
+      frontend,
+      frontendRecipient,
+      frontendFee,
       claimedAt: event.block.timestamp,
     })
     .onConflictDoNothing();
 
   await context.db.update(questionRewardPoolRound, { id: `${rewardPoolId}-${roundId}` }).set((row) => ({
-    claimedAmount: row.claimedAmount + amount,
+    claimedAmount: row.claimedAmount + grossAmount,
+    voterClaimedAmount: row.voterClaimedAmount + amount,
+    frontendClaimedAmount: row.frontendClaimedAmount + frontendFee,
     claimedCount: row.claimedCount + 1,
   }));
 
   await context.db.update(questionRewardPool, { id: rewardPoolId }).set((row) => ({
-    claimedAmount: row.claimedAmount + amount,
+    claimedAmount: row.claimedAmount + grossAmount,
+    voterClaimedAmount: row.voterClaimedAmount + amount,
+    frontendClaimedAmount: row.frontendClaimedAmount + frontendFee,
     updatedAt: event.block.timestamp,
   }));
 });

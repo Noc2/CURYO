@@ -967,7 +967,8 @@ export function ContentSubmissionSection() {
               <span>
                 <span className="block font-medium text-base-content">Add a reward pool after submission</span>
                 <span className="mt-1 block text-sm text-base-content/60">
-                  Paid in USDC on Celo. Fund this specific question once the submission transaction succeeds.
+                  Paid in USDC on Celo. Fund this question and reserve 3% of qualified claims for eligible frontend
+                  operators.
                 </span>
               </span>
             </label>

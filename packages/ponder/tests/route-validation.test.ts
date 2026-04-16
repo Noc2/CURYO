@@ -514,6 +514,8 @@ describe("registerDataRoutes", () => {
         totalProfiles: 4,
         totalVoterIds: 5,
         totalQuestionRewardsPaid: 123_450_000n,
+        totalQuestionRewardsPaidToVoters: 119_746_500n,
+        totalQuestionRewardsPaidToFrontends: 3_703_500n,
       },
     ]);
     const { registerDataRoutes } = await import("../src/api/routes/data-routes.js");
@@ -526,6 +528,8 @@ describe("registerDataRoutes", () => {
     expect(response.status).toBe(200);
     expect(await response.json()).toMatchObject({
       totalQuestionRewardsPaid: "123450000",
+      totalQuestionRewardsPaidToVoters: "119746500",
+      totalQuestionRewardsPaidToFrontends: "3703500",
     });
   });
 

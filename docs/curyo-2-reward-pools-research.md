@@ -116,7 +116,7 @@ This is most risky for questions that look like objective event resolution or re
 
 Fact-based future events are usually a poor Curyo fit because specialized prediction markets or oracle systems can resolve them against a later objective outcome. Curyo can only capture voter judgment at the time of voting. If someone asks about a future event before it happens, the result should be understood as "what verified voters currently believe or expect," not a guarantee that the event will resolve that way.
 
-The safer initial framing is "paid human review of bounded judgment" rather than "bet on an outcome." Question Reward Pool distribution should be participation-only at launch: every eligible voter who submits a valid vote and reveals properly on the funded question can claim an equal share of that question's reward pool allocation, independent of whether the round settles up or down. cREP remains the outcome-risk mechanism.
+The safer initial framing is "paid human review of bounded judgment" rather than "bet on an outcome." Question Reward Pool distribution should be participation-only at launch: every eligible voter who submits a valid vote and reveals properly on the funded question can claim the voter share of that question's reward pool allocation, independent of whether the round settles up or down. New pools reserve a small frontend-operator share, currently 3%, for the eligible frontend attached to the vote commit; if that frontend is not payable, the share stays with the voter claim. cREP remains the outcome-risk mechanism.
 
 Additional regulatory red lines:
 
@@ -452,7 +452,7 @@ Enable pull-based, participation-only reward pool claims after terminal round re
 
 ### Phase 3: Tranches, Challenges, And Fees
 
-Add tranche release, protocol/frontend fees, creator top-ups, challenge/appeal flow, larger reward pool tiers, and stronger anomaly monitoring.
+Add tranche release, configurable protocol-level reward-pool fees beyond the default frontend share, creator top-ups, challenge/appeal flow, larger reward pool tiers, and stronger anomaly monitoring.
 
 ### Phase 4: Advanced Privacy And Reputation
 

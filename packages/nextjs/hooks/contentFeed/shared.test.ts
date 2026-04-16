@@ -104,6 +104,9 @@ test("mapContentItem supports text-only questions and Ponder reward pool summari
     rewardPoolSummary: {
       totalFundedAmount: "25000000",
       currentRewardPoolAmount: "18000000",
+      totalClaimedAmount: "7000000",
+      totalVoterClaimedAmount: "6790000",
+      totalFrontendClaimedAmount: "210000",
       activeRewardPoolCount: 1,
     },
   });
@@ -112,6 +115,9 @@ test("mapContentItem supports text-only questions and Ponder reward pool summari
   assert.equal(item.question, "Would you book this hotel?");
   assert.equal(item.rewardPoolSummary?.totalFunded, 25_000_000n);
   assert.equal(item.rewardPoolSummary?.totalAvailable, 18_000_000n);
+  assert.equal(item.rewardPoolSummary?.totalClaimed, 7_000_000n);
+  assert.equal(item.rewardPoolSummary?.totalVoterClaimed, 6_790_000n);
+  assert.equal(item.rewardPoolSummary?.totalFrontendClaimed, 210_000n);
   assert.equal(item.rewardPoolSummary?.activeRewardPoolCount, 1);
 });
 

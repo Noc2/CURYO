@@ -197,8 +197,9 @@ const Tokenomics = () => {
       <h3>Question Reward Pools</h3>
       <p>
         Question Reward Pools are separate from cREP bootstrap rewards. They are paid in USDC on Celo, displayed as USD,
-        scoped to one question, and split equally among eligible revealed Voter ID holders in each qualified reward-pool
-        round. There is no stablecoin coherence bonus at launch.
+        scoped to one question, and split across eligible revealed Voter ID holders in each qualified reward-pool round
+        after a 3% frontend-operator share. If the commit-attributed frontend is not payable, that share stays with the
+        voter claim. There is no stablecoin coherence bonus at launch.
       </p>
 
       <h3>Treasury</h3>

@@ -95,8 +95,9 @@ const HowItWorks: NextPage = () => {
       <p>
         Question Reward Pools are separate from cREP stake settlement. A funder can attach Celo USDC to a specific
         question, and the app displays that amount as USD for readability. When a funded round qualifies, eligible
-        revealed Voter ID holders can claim equal USDC-backed question rewards regardless of whether their cREP vote won
-        or lost.
+        revealed Voter ID holders can claim the voter share of USDC-backed question rewards regardless of whether their
+        cREP vote won or lost. Each new pool reserves 3% of qualified claim value for the eligible frontend operator
+        attached at vote commit time; if no eligible frontend can be paid, that share remains with the voter claim.
       </p>
       <ul>
         <li>Reward pools are scoped to one question, not the global cREP participation pools.</li>

@@ -6,6 +6,19 @@ export const QuestionRewardPoolEscrowAbi = [
   },
   {
     "type": "function",
+    "name": "BPS_SCALE",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
     "name": "CONFIG_ROLE",
     "inputs": [],
     "outputs": [
@@ -26,6 +39,32 @@ export const QuestionRewardPoolEscrowAbi = [
         "name": "",
         "type": "bytes32",
         "internalType": "bytes32"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "DEFAULT_FRONTEND_FEE_BPS",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "MAX_FRONTEND_FEE_BPS",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "uint256",
+        "internalType": "uint256"
       }
     ],
     "stateMutability": "view"
@@ -65,90 +104,6 @@ export const QuestionRewardPoolEscrowAbi = [
         "name": "",
         "type": "bytes32",
         "internalType": "bytes32"
-      }
-    ],
-    "stateMutability": "view"
-  },
-  {
-    "type": "function",
-    "name": "rewardPools",
-    "inputs": [
-      {
-        "name": "",
-        "type": "uint256",
-        "internalType": "uint256"
-      }
-    ],
-    "outputs": [
-      {
-        "name": "id",
-        "type": "uint64",
-        "internalType": "uint64"
-      },
-      {
-        "name": "contentId",
-        "type": "uint64",
-        "internalType": "uint64"
-      },
-      {
-        "name": "startRoundId",
-        "type": "uint64",
-        "internalType": "uint64"
-      },
-      {
-        "name": "expiresAt",
-        "type": "uint64",
-        "internalType": "uint64"
-      },
-      {
-        "name": "funder",
-        "type": "address",
-        "internalType": "address"
-      },
-      {
-        "name": "funderVoterId",
-        "type": "uint256",
-        "internalType": "uint256"
-      },
-      {
-        "name": "fundedAmount",
-        "type": "uint256",
-        "internalType": "uint256"
-      },
-      {
-        "name": "unallocatedAmount",
-        "type": "uint256",
-        "internalType": "uint256"
-      },
-      {
-        "name": "allocatedAmount",
-        "type": "uint256",
-        "internalType": "uint256"
-      },
-      {
-        "name": "claimedAmount",
-        "type": "uint256",
-        "internalType": "uint256"
-      },
-      {
-        "name": "requiredVoters",
-        "type": "uint32",
-        "internalType": "uint32"
-      },
-      {
-        "name": "requiredSettledRounds",
-        "type": "uint32",
-        "internalType": "uint32"
-      },
-      {
-        "name": "qualifiedRounds",
-        "type": "uint32",
-        "internalType": "uint32"
-      },
-      {
-        "name": "refunded",
-        "type": "bool",
-        "internalType": "bool"
       }
     ],
     "stateMutability": "view"
@@ -244,6 +199,19 @@ export const QuestionRewardPoolEscrowAbi = [
       }
     ],
     "stateMutability": "nonpayable"
+  },
+  {
+    "type": "function",
+    "name": "defaultFrontendFeeBps",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "uint16",
+        "internalType": "uint16"
+      }
+    ],
+    "stateMutability": "view"
   },
   {
     "type": "function",
@@ -489,6 +457,105 @@ export const QuestionRewardPoolEscrowAbi = [
   },
   {
     "type": "function",
+    "name": "rewardPools",
+    "inputs": [
+      {
+        "name": "",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "id",
+        "type": "uint64",
+        "internalType": "uint64"
+      },
+      {
+        "name": "contentId",
+        "type": "uint64",
+        "internalType": "uint64"
+      },
+      {
+        "name": "startRoundId",
+        "type": "uint64",
+        "internalType": "uint64"
+      },
+      {
+        "name": "expiresAt",
+        "type": "uint64",
+        "internalType": "uint64"
+      },
+      {
+        "name": "funder",
+        "type": "address",
+        "internalType": "address"
+      },
+      {
+        "name": "funderVoterId",
+        "type": "uint256",
+        "internalType": "uint256"
+      },
+      {
+        "name": "fundedAmount",
+        "type": "uint256",
+        "internalType": "uint256"
+      },
+      {
+        "name": "unallocatedAmount",
+        "type": "uint256",
+        "internalType": "uint256"
+      },
+      {
+        "name": "allocatedAmount",
+        "type": "uint256",
+        "internalType": "uint256"
+      },
+      {
+        "name": "claimedAmount",
+        "type": "uint256",
+        "internalType": "uint256"
+      },
+      {
+        "name": "requiredVoters",
+        "type": "uint32",
+        "internalType": "uint32"
+      },
+      {
+        "name": "requiredSettledRounds",
+        "type": "uint32",
+        "internalType": "uint32"
+      },
+      {
+        "name": "qualifiedRounds",
+        "type": "uint32",
+        "internalType": "uint32"
+      },
+      {
+        "name": "refunded",
+        "type": "bool",
+        "internalType": "bool"
+      },
+      {
+        "name": "frontendFeeBps",
+        "type": "uint16",
+        "internalType": "uint16"
+      },
+      {
+        "name": "voterClaimedAmount",
+        "type": "uint256",
+        "internalType": "uint256"
+      },
+      {
+        "name": "frontendClaimedAmount",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
     "name": "roundSnapshots",
     "inputs": [
       {
@@ -527,9 +594,37 @@ export const QuestionRewardPoolEscrowAbi = [
         "name": "claimedCount",
         "type": "uint32",
         "internalType": "uint32"
+      },
+      {
+        "name": "frontendFeeAllocation",
+        "type": "uint256",
+        "internalType": "uint256"
+      },
+      {
+        "name": "voterClaimedAmount",
+        "type": "uint256",
+        "internalType": "uint256"
+      },
+      {
+        "name": "frontendClaimedAmount",
+        "type": "uint256",
+        "internalType": "uint256"
       }
     ],
     "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "setDefaultFrontendFeeBps",
+    "inputs": [
+      {
+        "name": "frontendFeeBps_",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "outputs": [],
+    "stateMutability": "nonpayable"
   },
   {
     "type": "function",
@@ -611,6 +706,118 @@ export const QuestionRewardPoolEscrowAbi = [
   },
   {
     "type": "event",
+    "name": "DefaultFrontendFeeBpsUpdated",
+    "inputs": [
+      {
+        "name": "previousFrontendFeeBps",
+        "type": "uint256",
+        "indexed": false,
+        "internalType": "uint256"
+      },
+      {
+        "name": "newFrontendFeeBps",
+        "type": "uint256",
+        "indexed": false,
+        "internalType": "uint256"
+      }
+    ],
+    "anonymous": false
+  },
+  {
+    "type": "event",
+    "name": "Initialized",
+    "inputs": [
+      {
+        "name": "version",
+        "type": "uint64",
+        "indexed": false,
+        "internalType": "uint64"
+      }
+    ],
+    "anonymous": false
+  },
+  {
+    "type": "event",
+    "name": "Paused",
+    "inputs": [
+      {
+        "name": "account",
+        "type": "address",
+        "indexed": false,
+        "internalType": "address"
+      }
+    ],
+    "anonymous": false
+  },
+  {
+    "type": "event",
+    "name": "QuestionRewardClaimed",
+    "inputs": [
+      {
+        "name": "rewardPoolId",
+        "type": "uint256",
+        "indexed": true,
+        "internalType": "uint256"
+      },
+      {
+        "name": "contentId",
+        "type": "uint256",
+        "indexed": true,
+        "internalType": "uint256"
+      },
+      {
+        "name": "roundId",
+        "type": "uint256",
+        "indexed": true,
+        "internalType": "uint256"
+      },
+      {
+        "name": "claimant",
+        "type": "address",
+        "indexed": false,
+        "internalType": "address"
+      },
+      {
+        "name": "voterId",
+        "type": "uint256",
+        "indexed": false,
+        "internalType": "uint256"
+      },
+      {
+        "name": "amount",
+        "type": "uint256",
+        "indexed": false,
+        "internalType": "uint256"
+      },
+      {
+        "name": "frontend",
+        "type": "address",
+        "indexed": false,
+        "internalType": "address"
+      },
+      {
+        "name": "frontendRecipient",
+        "type": "address",
+        "indexed": false,
+        "internalType": "address"
+      },
+      {
+        "name": "frontendFee",
+        "type": "uint256",
+        "indexed": false,
+        "internalType": "uint256"
+      },
+      {
+        "name": "grossAmount",
+        "type": "uint256",
+        "indexed": false,
+        "internalType": "uint256"
+      }
+    ],
+    "anonymous": false
+  },
+  {
+    "type": "event",
     "name": "RewardPoolCreated",
     "inputs": [
       {
@@ -666,6 +873,12 @@ export const QuestionRewardPoolEscrowAbi = [
         "type": "uint256",
         "indexed": false,
         "internalType": "uint256"
+      },
+      {
+        "name": "frontendFeeBps",
+        "type": "uint256",
+        "indexed": false,
+        "internalType": "uint256"
       }
     ],
     "anonymous": false
@@ -685,49 +898,6 @@ export const QuestionRewardPoolEscrowAbi = [
         "type": "address",
         "indexed": true,
         "internalType": "address"
-      },
-      {
-        "name": "amount",
-        "type": "uint256",
-        "indexed": false,
-        "internalType": "uint256"
-      }
-    ],
-    "anonymous": false
-  },
-  {
-    "type": "event",
-    "name": "QuestionRewardClaimed",
-    "inputs": [
-      {
-        "name": "rewardPoolId",
-        "type": "uint256",
-        "indexed": true,
-        "internalType": "uint256"
-      },
-      {
-        "name": "contentId",
-        "type": "uint256",
-        "indexed": true,
-        "internalType": "uint256"
-      },
-      {
-        "name": "roundId",
-        "type": "uint256",
-        "indexed": true,
-        "internalType": "uint256"
-      },
-      {
-        "name": "claimant",
-        "type": "address",
-        "indexed": false,
-        "internalType": "address"
-      },
-      {
-        "name": "voterId",
-        "type": "uint256",
-        "indexed": false,
-        "internalType": "uint256"
       },
       {
         "name": "amount",
@@ -771,32 +941,12 @@ export const QuestionRewardPoolEscrowAbi = [
         "type": "uint256",
         "indexed": false,
         "internalType": "uint256"
-      }
-    ],
-    "anonymous": false
-  },
-  {
-    "type": "event",
-    "name": "Initialized",
-    "inputs": [
+      },
       {
-        "name": "version",
-        "type": "uint64",
+        "name": "frontendFeeAllocation",
+        "type": "uint256",
         "indexed": false,
-        "internalType": "uint64"
-      }
-    ],
-    "anonymous": false
-  },
-  {
-    "type": "event",
-    "name": "Paused",
-    "inputs": [
-      {
-        "name": "account",
-        "type": "address",
-        "indexed": false,
-        "internalType": "address"
+        "internalType": "uint256"
       }
     ],
     "anonymous": false

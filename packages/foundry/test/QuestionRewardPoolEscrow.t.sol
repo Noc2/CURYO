@@ -5,6 +5,7 @@ import { ERC1967Proxy } from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy
 import { VotingTestBase } from "./helpers/VotingTestHelpers.sol";
 import { ContentRegistry } from "../contracts/ContentRegistry.sol";
 import { CuryoReputation } from "../contracts/CuryoReputation.sol";
+import { FrontendRegistry } from "../contracts/FrontendRegistry.sol";
 import { MockCategoryRegistry } from "../contracts/mocks/MockCategoryRegistry.sol";
 import { MockERC20 } from "../contracts/mocks/MockERC20.sol";
 import { ProtocolConfig } from "../contracts/ProtocolConfig.sol";
@@ -19,6 +20,7 @@ contract QuestionRewardPoolEscrowTest is VotingTestBase {
     ContentRegistry public registry;
     RoundVotingEngine public votingEngine;
     RoundRewardDistributor public rewardDistributor;
+    FrontendRegistry public frontendRegistry;
     QuestionRewardPoolEscrow public rewardPoolEscrow;
     MockERC20 public usdc;
     MockVoterIdNFT public voterIdNFT;
@@ -31,6 +33,7 @@ contract QuestionRewardPoolEscrowTest is VotingTestBase {
     address public voter3 = address(6);
     address public voter4 = address(7);
     address public delegate1 = address(8);
+    address public frontend1 = address(9);
     address public treasury = address(100);
 
     uint256 public constant STAKE = 5e6;
@@ -70,6 +73,7 @@ contract QuestionRewardPoolEscrowTest is VotingTestBase {
         ContentRegistry registryImpl = new ContentRegistry();
         RoundVotingEngine engineImpl = new RoundVotingEngine();
         RoundRewardDistributor distImpl = new RoundRewardDistributor();
+        FrontendRegistry frontendRegistryImpl = new FrontendRegistry();
         QuestionRewardPoolEscrow rewardPoolImpl = new QuestionRewardPoolEscrow();
 
         ProtocolConfig protocolConfig = _deployProtocolConfig(owner);
@@ -106,6 +110,14 @@ contract QuestionRewardPoolEscrowTest is VotingTestBase {
 
         usdc = new MockERC20("USD Coin", "USDC", 6);
         voterIdNFT = new MockVoterIdNFT();
+        frontendRegistry = FrontendRegistry(
+            address(
+                new ERC1967Proxy(
+                    address(frontendRegistryImpl),
+                    abi.encodeCall(FrontendRegistry.initialize, (owner, owner, address(crepToken)))
+                )
+            )
+        );
         rewardPoolEscrow = QuestionRewardPoolEscrow(
             address(
                 new ERC1967Proxy(
@@ -126,8 +138,12 @@ contract QuestionRewardPoolEscrowTest is VotingTestBase {
         registry.setCategoryRegistry(address(mockCategoryRegistry));
         registry.setVoterIdNFT(address(voterIdNFT));
 
+        frontendRegistry.setVotingEngine(address(votingEngine));
+        frontendRegistry.setVoterIdNFT(address(voterIdNFT));
+
         protocolConfig.setRewardDistributor(address(rewardDistributor));
         protocolConfig.setCategoryRegistry(address(mockCategoryRegistry));
+        protocolConfig.setFrontendRegistry(address(frontendRegistry));
         protocolConfig.setTreasury(treasury);
         protocolConfig.setVoterIdNFT(address(voterIdNFT));
         _setTlockDrandConfig(protocolConfig, DEFAULT_DRAND_CHAIN_HASH, DEFAULT_DRAND_GENESIS_TIME, DEFAULT_DRAND_PERIOD);
@@ -138,7 +154,7 @@ contract QuestionRewardPoolEscrowTest is VotingTestBase {
         crepToken.approve(address(votingEngine), reserveAmount);
         votingEngine.addToConsensusReserve(reserveAmount);
 
-        address[6] memory humans = [submitter, funder, voter1, voter2, voter3, voter4];
+        address[7] memory humans = [submitter, funder, voter1, voter2, voter3, voter4, frontend1];
         for (uint256 i = 0; i < humans.length; i++) {
             voterIdNFT.setHolder(humans[i]);
             crepToken.mint(humans[i], 10_000e6);
@@ -169,6 +185,70 @@ contract QuestionRewardPoolEscrowTest is VotingTestBase {
         assertEq(reward1 + reward2 + reward3, REWARD_POOL_AMOUNT);
         assertEq(usdc.balanceOf(voter1), 1_000e6 + reward1);
         assertEq(usdc.balanceOf(address(rewardPoolEscrow)), 0);
+    }
+
+    function testEligibleFrontendReceivesThreePercentFromQuestionRewardClaims() public {
+        _registerFrontend(frontend1);
+
+        uint256 contentId = _submitQuestion("");
+        uint256 rewardPoolId = _createRewardPool(contentId, REWARD_POOL_AMOUNT, 3, 1);
+
+        address[] memory voters = _threeVoters();
+        bool[] memory directions = _directions(true, true, false);
+        uint256 roundId = _settleRoundWithFrontend(voters, contentId, directions, frontend1);
+
+        uint256 frontendBalanceBefore = usdc.balanceOf(frontend1);
+        assertEq(rewardPoolEscrow.claimableQuestionReward(rewardPoolId, roundId, voter1), 32_333_333);
+
+        vm.prank(voter1);
+        uint256 reward1 = rewardPoolEscrow.claimQuestionReward(rewardPoolId, roundId);
+        vm.prank(voter2);
+        uint256 reward2 = rewardPoolEscrow.claimQuestionReward(rewardPoolId, roundId);
+        vm.prank(voter3);
+        uint256 reward3 = rewardPoolEscrow.claimQuestionReward(rewardPoolId, roundId);
+
+        assertEq(reward1, 32_333_333);
+        assertEq(reward2, 32_333_333);
+        assertEq(reward3, 32_333_334);
+        assertEq(reward1 + reward2 + reward3, 97e6);
+        assertEq(usdc.balanceOf(frontend1), frontendBalanceBefore + 3e6);
+        assertEq(usdc.balanceOf(address(rewardPoolEscrow)), 0);
+
+        (,,,,, uint256 frontendFeeAllocation, uint256 voterClaimedAmount, uint256 frontendClaimedAmount) =
+            rewardPoolEscrow.roundSnapshots(rewardPoolId, roundId);
+        assertEq(frontendFeeAllocation, 3e6);
+        assertEq(voterClaimedAmount, 97e6);
+        assertEq(frontendClaimedAmount, 3e6);
+    }
+
+    function testUnregisteredFrontendFeeShareFallsBackToVoterReward() public {
+        uint256 contentId = _submitQuestion("");
+        uint256 rewardPoolId = _createRewardPool(contentId, REWARD_POOL_AMOUNT, 3, 1);
+
+        address[] memory voters = _threeVoters();
+        bool[] memory directions = _directions(true, true, false);
+        uint256 roundId = _settleRoundWithFrontend(voters, contentId, directions, frontend1);
+
+        uint256 frontendBalanceBefore = usdc.balanceOf(frontend1);
+        assertEq(rewardPoolEscrow.claimableQuestionReward(rewardPoolId, roundId, voter1), REWARD_POOL_AMOUNT / 3);
+
+        vm.prank(voter1);
+        uint256 reward = rewardPoolEscrow.claimQuestionReward(rewardPoolId, roundId);
+
+        assertEq(reward, REWARD_POOL_AMOUNT / 3);
+        assertEq(usdc.balanceOf(frontend1), frontendBalanceBefore);
+    }
+
+    function testDefaultFrontendFeeCanBeConfiguredWithinCap() public {
+        assertEq(rewardPoolEscrow.defaultFrontendFeeBps(), 300);
+
+        vm.prank(owner);
+        rewardPoolEscrow.setDefaultFrontendFeeBps(500);
+        assertEq(rewardPoolEscrow.defaultFrontendFeeBps(), 500);
+
+        vm.prank(owner);
+        vm.expectRevert("Fee too high");
+        rewardPoolEscrow.setDefaultFrontendFeeBps(501);
     }
 
     function testDelegateCanClaimByUnderlyingVoterIdOnlyOnce() public {
@@ -245,6 +325,18 @@ contract QuestionRewardPoolEscrowTest is VotingTestBase {
         internal
         returns (uint256 roundId)
     {
+        return _settleRoundWithFrontend(voters, contentId, directions, address(0));
+    }
+
+    function _settleRoundWithFrontend(
+        address[] memory voters,
+        uint256 contentId,
+        bool[] memory directions,
+        address frontend
+    )
+        internal
+        returns (uint256 roundId)
+    {
         bytes32[] memory salts = new bytes32[](voters.length);
         bytes32[] memory commitKeys = new bytes32[](voters.length);
 
@@ -258,7 +350,7 @@ contract QuestionRewardPoolEscrowTest is VotingTestBase {
                     contentId: contentId,
                     isUp: directions[i],
                     stake: STAKE,
-                    frontend: address(0),
+                    frontend: frontend,
                     salt: salts[i]
                 })
             );
@@ -272,6 +364,13 @@ contract QuestionRewardPoolEscrowTest is VotingTestBase {
         }
 
         votingEngine.settleRound(contentId, roundId);
+    }
+
+    function _registerFrontend(address frontend) internal {
+        vm.startPrank(frontend);
+        crepToken.approve(address(frontendRegistry), frontendRegistry.STAKE_AMOUNT());
+        frontendRegistry.register();
+        vm.stopPrank();
     }
 
     function _threeVoters() internal view returns (address[] memory voters) {

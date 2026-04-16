@@ -12,6 +12,7 @@ export const QuestionRewardPoolEscrowAbi = [
       { name: "requiredSettledRounds", type: "uint256", indexed: false },
       { name: "startRoundId", type: "uint256", indexed: false },
       { name: "expiresAt", type: "uint256", indexed: false },
+      { name: "frontendFeeBps", type: "uint256", indexed: false },
     ],
   },
   {
@@ -23,6 +24,7 @@ export const QuestionRewardPoolEscrowAbi = [
       { name: "roundId", type: "uint256", indexed: true },
       { name: "allocation", type: "uint256", indexed: false },
       { name: "eligibleVoters", type: "uint256", indexed: false },
+      { name: "frontendFeeAllocation", type: "uint256", indexed: false },
     ],
   },
   {
@@ -35,6 +37,10 @@ export const QuestionRewardPoolEscrowAbi = [
       { name: "claimant", type: "address", indexed: false },
       { name: "voterId", type: "uint256", indexed: false },
       { name: "amount", type: "uint256", indexed: false },
+      { name: "frontend", type: "address", indexed: false },
+      { name: "frontendRecipient", type: "address", indexed: false },
+      { name: "frontendFee", type: "uint256", indexed: false },
+      { name: "grossAmount", type: "uint256", indexed: false },
     ],
   },
   {

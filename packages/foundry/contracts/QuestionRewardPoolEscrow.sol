@@ -11,6 +11,7 @@ import { SafeCast } from "@openzeppelin/contracts/utils/math/SafeCast.sol";
 
 import { ContentRegistry } from "./ContentRegistry.sol";
 import { RoundVotingEngine } from "./RoundVotingEngine.sol";
+import { IFrontendRegistry } from "./interfaces/IFrontendRegistry.sol";
 import { IVoterIdNFT } from "./interfaces/IVoterIdNFT.sol";
 import { RoundLib } from "./libraries/RoundLib.sol";
 
@@ -31,6 +32,9 @@ contract QuestionRewardPoolEscrow is
 
     uint256 public constant MIN_REQUIRED_VOTERS = 3;
     uint256 public constant MIN_REQUIRED_SETTLED_ROUNDS = 1;
+    uint256 public constant BPS_SCALE = 10_000;
+    uint256 public constant DEFAULT_FRONTEND_FEE_BPS = 300;
+    uint256 public constant MAX_FRONTEND_FEE_BPS = 500;
 
     struct RewardPool {
         uint64 id;
@@ -47,6 +51,9 @@ contract QuestionRewardPoolEscrow is
         uint32 requiredSettledRounds;
         uint32 qualifiedRounds;
         bool refunded;
+        uint16 frontendFeeBps;
+        uint256 voterClaimedAmount;
+        uint256 frontendClaimedAmount;
     }
 
     struct RoundSnapshot {
@@ -55,6 +62,9 @@ contract QuestionRewardPoolEscrow is
         uint256 allocation;
         uint256 claimedAmount;
         uint32 claimedCount;
+        uint256 frontendFeeAllocation;
+        uint256 voterClaimedAmount;
+        uint256 frontendClaimedAmount;
     }
 
     IERC20 public usdcToken;
@@ -66,6 +76,7 @@ contract QuestionRewardPoolEscrow is
     mapping(uint256 => RewardPool) public rewardPools;
     mapping(uint256 => mapping(uint256 => RoundSnapshot)) public roundSnapshots;
     mapping(uint256 => mapping(uint256 => mapping(uint256 => bool))) public rewardClaimed;
+    uint16 public defaultFrontendFeeBps;
 
     event RewardPoolCreated(
         uint256 indexed rewardPoolId,
@@ -76,14 +87,16 @@ contract QuestionRewardPoolEscrow is
         uint256 requiredVoters,
         uint256 requiredSettledRounds,
         uint256 startRoundId,
-        uint256 expiresAt
+        uint256 expiresAt,
+        uint256 frontendFeeBps
     );
     event RewardPoolRoundQualified(
         uint256 indexed rewardPoolId,
         uint256 indexed contentId,
         uint256 indexed roundId,
         uint256 allocation,
-        uint256 eligibleVoters
+        uint256 eligibleVoters,
+        uint256 frontendFeeAllocation
     );
     event QuestionRewardClaimed(
         uint256 indexed rewardPoolId,
@@ -91,9 +104,14 @@ contract QuestionRewardPoolEscrow is
         uint256 indexed roundId,
         address claimant,
         uint256 voterId,
-        uint256 amount
+        uint256 amount,
+        address frontend,
+        address frontendRecipient,
+        uint256 frontendFee,
+        uint256 grossAmount
     );
     event RewardPoolRefunded(uint256 indexed rewardPoolId, address indexed funder, uint256 amount);
+    event DefaultFrontendFeeBpsUpdated(uint256 previousFrontendFeeBps, uint256 newFrontendFeeBps);
 
     /// @custom:oz-upgrades-unsafe-allow constructor
     constructor() {
@@ -125,6 +143,7 @@ contract QuestionRewardPoolEscrow is
         votingEngine = RoundVotingEngine(votingEngine_);
         voterIdNFT = IVoterIdNFT(voterIdNFT_);
         nextRewardPoolId = 1;
+        defaultFrontendFeeBps = uint16(DEFAULT_FRONTEND_FEE_BPS);
     }
 
     function createRewardPool(
@@ -163,7 +182,10 @@ contract QuestionRewardPoolEscrow is
             requiredVoters: requiredVoters.toUint32(),
             requiredSettledRounds: requiredSettledRounds.toUint32(),
             qualifiedRounds: 0,
-            refunded: false
+            refunded: false,
+            frontendFeeBps: defaultFrontendFeeBps,
+            voterClaimedAmount: 0,
+            frontendClaimedAmount: 0
         });
 
         emit RewardPoolCreated(
@@ -175,7 +197,8 @@ contract QuestionRewardPoolEscrow is
             requiredVoters,
             requiredSettledRounds,
             startRoundId,
-            expiresAt
+            expiresAt,
+            defaultFrontendFeeBps
         );
     }
 
@@ -201,24 +224,47 @@ contract QuestionRewardPoolEscrow is
         require(commitKey != bytes32(0), "No commit");
         require(votingEngine.commitVoterId(rewardPool.contentId, roundId, commitKey) == voterId, "Wrong Voter ID");
 
-        (address voter,,,,,,, bool revealed,,) = votingEngine.commits(rewardPool.contentId, roundId, commitKey);
-        require(voter != address(0), "No commit");
+        (bool revealed, address frontend) = _revealedCommitFrontend(rewardPool.contentId, roundId, commitKey);
         require(revealed, "Vote not revealed");
 
         RoundSnapshot storage snapshot = roundSnapshots[rewardPoolId][roundId];
-        rewardAmount = snapshot.allocation / snapshot.eligibleVoters;
-        if (snapshot.claimedCount + 1 == snapshot.eligibleVoters) {
-            rewardAmount = snapshot.allocation - snapshot.claimedAmount;
-        }
-        require(rewardAmount > 0, "No reward");
+        uint256 grossAmount = _nextEqualShare(snapshot.allocation, snapshot.eligibleVoters, snapshot.claimedCount);
+        uint256 reservedFrontendFee =
+            _nextEqualShare(snapshot.frontendFeeAllocation, snapshot.eligibleVoters, snapshot.claimedCount);
+        uint256 frontendFee;
+        address frontendRecipient;
+        (rewardAmount, frontendFee, frontendRecipient) = _splitClaimAmounts(
+            rewardPool, roundId, commitKey, frontend, grossAmount, reservedFrontendFee
+        );
+        require(grossAmount > 0, "No reward");
 
         rewardClaimed[rewardPoolId][roundId][voterId] = true;
         snapshot.claimedCount++;
-        snapshot.claimedAmount += rewardAmount;
-        rewardPool.claimedAmount += rewardAmount;
+        snapshot.claimedAmount += grossAmount;
+        snapshot.voterClaimedAmount += rewardAmount;
+        snapshot.frontendClaimedAmount += frontendFee;
+        rewardPool.claimedAmount += grossAmount;
+        rewardPool.voterClaimedAmount += rewardAmount;
+        rewardPool.frontendClaimedAmount += frontendFee;
 
-        usdcToken.safeTransfer(msg.sender, rewardAmount);
-        emit QuestionRewardClaimed(rewardPoolId, rewardPool.contentId, roundId, msg.sender, voterId, rewardAmount);
+        if (rewardAmount > 0) {
+            usdcToken.safeTransfer(msg.sender, rewardAmount);
+        }
+        if (frontendFee > 0) {
+            usdcToken.safeTransfer(frontendRecipient, frontendFee);
+        }
+        emit QuestionRewardClaimed(
+            rewardPoolId,
+            rewardPool.contentId,
+            roundId,
+            msg.sender,
+            voterId,
+            rewardAmount,
+            frontend,
+            frontendRecipient,
+            frontendFee,
+            grossAmount
+        );
     }
 
     function refundExpiredRewardPool(uint256 rewardPoolId) external nonReentrant whenNotPaused returns (uint256 refundAmount) {
@@ -248,7 +294,10 @@ contract QuestionRewardPoolEscrow is
         uint256 voterId = voterIdNFT.getTokenId(account);
         if (voterId == 0 || _isExcludedVoter(rewardPool, voterId) || rewardClaimed[rewardPoolId][roundId][voterId]) return 0;
 
-        if (!_hasRevealedCommit(rewardPool.contentId, roundId, voterId)) return 0;
+        bytes32 commitKey = votingEngine.voterIdCommitKey(rewardPool.contentId, roundId, voterId);
+        if (commitKey == bytes32(0)) return 0;
+        (bool revealed, address frontend) = _revealedCommitFrontend(rewardPool.contentId, roundId, commitKey);
+        if (!revealed) return 0;
 
         RoundSnapshot storage snapshot = roundSnapshots[rewardPoolId][roundId];
         if (!snapshot.qualified) {
@@ -258,18 +307,33 @@ contract QuestionRewardPoolEscrow is
 
             uint256 allocation = _previewRoundAllocation(rewardPool);
             if (allocation == 0) return 0;
-            return allocation / eligibleVoters;
+            uint256 previewGrossAmount = _nextEqualShare(allocation, eligibleVoters, 0);
+            uint256 previewReservedFrontendFee =
+                _nextEqualShare(_frontendFeeAllocation(rewardPool, allocation), eligibleVoters, 0);
+            (claimableAmount,,) =
+                _splitClaimAmounts(
+                    rewardPool, roundId, commitKey, frontend, previewGrossAmount, previewReservedFrontendFee
+                );
+            return claimableAmount;
         }
-        if (snapshot.eligibleVoters == 0) return 0;
-        claimableAmount = snapshot.allocation / snapshot.eligibleVoters;
-        if (snapshot.claimedCount + 1 == snapshot.eligibleVoters) {
-            claimableAmount = snapshot.allocation - snapshot.claimedAmount;
-        }
+        if (snapshot.eligibleVoters == 0 || snapshot.claimedCount >= snapshot.eligibleVoters) return 0;
+        uint256 grossAmount = _nextEqualShare(snapshot.allocation, snapshot.eligibleVoters, snapshot.claimedCount);
+        uint256 reservedFrontendFee =
+            _nextEqualShare(snapshot.frontendFeeAllocation, snapshot.eligibleVoters, snapshot.claimedCount);
+        (claimableAmount,,) =
+            _splitClaimAmounts(rewardPool, roundId, commitKey, frontend, grossAmount, reservedFrontendFee);
     }
 
     function setVoterIdNFT(address voterIdNFT_) external onlyRole(CONFIG_ROLE) {
         require(voterIdNFT_ != address(0), "Invalid Voter ID");
         voterIdNFT = IVoterIdNFT(voterIdNFT_);
+    }
+
+    function setDefaultFrontendFeeBps(uint256 frontendFeeBps_) external onlyRole(CONFIG_ROLE) {
+        require(frontendFeeBps_ <= MAX_FRONTEND_FEE_BPS, "Fee too high");
+        uint256 previousFrontendFeeBps = defaultFrontendFeeBps;
+        defaultFrontendFeeBps = frontendFeeBps_.toUint16();
+        emit DefaultFrontendFeeBpsUpdated(previousFrontendFeeBps, frontendFeeBps_);
     }
 
     function pause() external onlyRole(PAUSER_ROLE) {
@@ -315,6 +379,7 @@ contract QuestionRewardPoolEscrow is
 
         uint256 allocation = _previewRoundAllocation(rewardPool);
         require(allocation > 0 && allocation <= rewardPool.unallocatedAmount, "No allocation");
+        uint256 frontendFeeAllocation = _frontendFeeAllocation(rewardPool, allocation);
 
         rewardPool.qualifiedRounds++;
         rewardPool.unallocatedAmount -= allocation;
@@ -325,10 +390,15 @@ contract QuestionRewardPoolEscrow is
             eligibleVoters: eligibleVoters.toUint32(),
             allocation: allocation,
             claimedAmount: 0,
-            claimedCount: 0
+            claimedCount: 0,
+            frontendFeeAllocation: frontendFeeAllocation,
+            voterClaimedAmount: 0,
+            frontendClaimedAmount: 0
         });
 
-        emit RewardPoolRoundQualified(rewardPoolId, rewardPool.contentId, roundId, allocation, eligibleVoters);
+        emit RewardPoolRoundQualified(
+            rewardPoolId, rewardPool.contentId, roundId, allocation, eligibleVoters, frontendFeeAllocation
+        );
     }
 
     function _previewRoundQualification(RewardPool storage rewardPool, uint256 roundId)
@@ -366,8 +436,96 @@ contract QuestionRewardPoolEscrow is
         if (voterId == 0) return false;
         bytes32 commitKey = votingEngine.voterIdCommitKey(contentId, roundId, voterId);
         if (commitKey == bytes32(0)) return false;
-        (address voter,,,,,,, bool revealed,,) = votingEngine.commits(contentId, roundId, commitKey);
-        return voter != address(0) && revealed;
+        (bool revealed,) = _revealedCommitFrontend(contentId, roundId, commitKey);
+        return revealed;
+    }
+
+    function _revealedCommitFrontend(uint256 contentId, uint256 roundId, bytes32 commitKey)
+        internal
+        view
+        returns (bool revealed, address frontend)
+    {
+        (address voter,,,,, address commitFrontend,, bool commitRevealed,,) =
+            votingEngine.commits(contentId, roundId, commitKey);
+        return (voter != address(0) && commitRevealed, commitFrontend);
+    }
+
+    function _frontendFeeAllocation(RewardPool storage rewardPool, uint256 allocation)
+        internal
+        view
+        returns (uint256)
+    {
+        return (allocation * rewardPool.frontendFeeBps) / BPS_SCALE;
+    }
+
+    function _nextEqualShare(uint256 totalAmount, uint256 eligibleVoters, uint256 claimedCount)
+        internal
+        pure
+        returns (uint256)
+    {
+        if (totalAmount == 0 || eligibleVoters == 0 || claimedCount >= eligibleVoters) return 0;
+        uint256 baseShare = totalAmount / eligibleVoters;
+        if (claimedCount + 1 == eligibleVoters) {
+            return totalAmount - (baseShare * claimedCount);
+        }
+        return baseShare;
+    }
+
+    function _splitClaimAmounts(
+        RewardPool storage rewardPool,
+        uint256 roundId,
+        bytes32 commitKey,
+        address frontend,
+        uint256 grossAmount,
+        uint256 reservedFrontendFee
+    ) internal view returns (uint256 voterReward, uint256 frontendFee, address frontendRecipient) {
+        if (
+            reservedFrontendFee == 0 || rewardPool.frontendFeeBps == 0 || frontend == address(0)
+                || !votingEngine.frontendEligibleAtCommit(rewardPool.contentId, roundId, commitKey)
+        ) {
+            return (grossAmount, 0, address(0));
+        }
+
+        if (reservedFrontendFee > grossAmount) {
+            reservedFrontendFee = grossAmount;
+        }
+
+        frontendRecipient = _resolveFrontendRewardRecipient(rewardPool.contentId, roundId, frontend);
+        if (frontendRecipient == address(0)) {
+            return (grossAmount, 0, address(0));
+        }
+
+        frontendFee = reservedFrontendFee;
+        voterReward = grossAmount - frontendFee;
+    }
+
+    function _resolveFrontendRewardRecipient(uint256 contentId, uint256 roundId, address frontend)
+        internal
+        view
+        returns (address)
+    {
+        if (frontend == address(0)) return address(0);
+
+        address frontendRegistry = votingEngine.roundFrontendRegistrySnapshot(contentId, roundId);
+        if (frontendRegistry == address(0)) {
+            return frontend;
+        }
+
+        try IFrontendRegistry(frontendRegistry).getFrontendInfo(frontend) returns (
+            address operator,
+            uint256 stakedAmount,
+            bool eligible,
+            bool slashed
+        ) {
+            stakedAmount;
+            if (operator != address(0) && eligible && !slashed) {
+                return operator;
+            }
+        } catch {
+            return address(0);
+        }
+
+        return address(0);
     }
 
     function _isExcludedVoter(RewardPool storage rewardPool, uint256 voterId) internal view returns (bool) {

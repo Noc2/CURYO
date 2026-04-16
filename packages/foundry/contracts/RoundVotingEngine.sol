@@ -521,6 +521,9 @@ contract RoundVotingEngine is
         IFrontendRegistry currentFrontendRegistry = _getFrontendRegistry();
         if (VotePreflightLib.isFrontendEligible(currentFrontendRegistry, frontend)) {
             frontendEligibleAtCommit[contentId][roundId][commitKey] = true;
+            if (roundFrontendRegistrySnapshot[contentId][roundId] == address(0)) {
+                roundFrontendRegistrySnapshot[contentId][roundId] = address(currentFrontendRegistry);
+            }
         }
     }
 
@@ -1072,7 +1075,7 @@ contract RoundVotingEngine is
     mapping(uint256 => mapping(uint256 => uint256)) public lastCommitRevealableAfter;
 
     // Commit-time frontend eligibility snapshot to prevent retroactive fee eligibility changes.
-    mapping(uint256 => mapping(uint256 => mapping(bytes32 => bool))) internal frontendEligibleAtCommit;
+    mapping(uint256 => mapping(uint256 => mapping(bytes32 => bool))) public frontendEligibleAtCommit;
 
     // Frontend registry snapshot per round so historical fee claims do not depend on live registry replacement.
     mapping(uint256 => mapping(uint256 => address)) public roundFrontendRegistrySnapshot;

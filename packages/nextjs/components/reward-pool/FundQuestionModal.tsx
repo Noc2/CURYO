@@ -5,6 +5,7 @@ import { useAccount, useConfig, useWriteContract } from "wagmi";
 import { readContract, waitForTransactionReceipt } from "wagmi/actions";
 import { XMarkIcon } from "@heroicons/react/24/outline";
 import {
+  DEFAULT_REWARD_POOL_FRONTEND_FEE_BPS,
   ERC20_APPROVAL_ABI,
   MIN_REWARD_POOL_REQUIRED_VOTERS,
   MIN_REWARD_POOL_SETTLED_ROUNDS,
@@ -27,6 +28,8 @@ function getExpiryTimestamp(days: number): bigint {
   if (!Number.isFinite(days) || days <= 0) return 0n;
   return BigInt(Math.floor(Date.now() / 1000) + Math.floor(days * 24 * 60 * 60));
 }
+
+const FRONTEND_FEE_PERCENT = DEFAULT_REWARD_POOL_FRONTEND_FEE_BPS / 100;
 
 export function FundQuestionModal({ contentId, title, onClose, onCreated }: FundQuestionModalProps) {
   const wagmiConfig = useConfig();
@@ -139,7 +142,8 @@ export function FundQuestionModal({ contentId, title, onClose, onCreated }: Fund
         <p className="text-sm font-semibold uppercase text-base-content/50">Fund this question</p>
         <h3 className="mt-1 line-clamp-2 text-xl font-semibold text-base-content">{title}</h3>
         <p className="mt-2 text-base text-base-content/70">
-          Paid in USDC on Celo. Split equally among eligible revealed voters in qualified rounds.
+          Paid in USDC on Celo. Qualified claims reserve {FRONTEND_FEE_PERCENT}% for the eligible frontend operator; the
+          rest goes to eligible revealed voters.
         </p>
 
         <div className="mt-5 grid gap-4">

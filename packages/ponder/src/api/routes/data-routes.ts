@@ -476,7 +476,9 @@ export function registerDataRoutes(app: ApiApp) {
         .limit(1),
       db
         .select({
-          totalQuestionRewardsPaid: sql<bigint>`coalesce(sum(${questionRewardPoolClaim.amount}), 0)`,
+          totalQuestionRewardsPaid: sql<bigint>`coalesce(sum(${questionRewardPoolClaim.grossAmount}), 0)`,
+          totalQuestionRewardsPaidToVoters: sql<bigint>`coalesce(sum(${questionRewardPoolClaim.amount}), 0)`,
+          totalQuestionRewardsPaidToFrontends: sql<bigint>`coalesce(sum(${questionRewardPoolClaim.frontendFee}), 0)`,
         })
         .from(questionRewardPoolClaim),
     ]);
@@ -495,6 +497,8 @@ export function registerDataRoutes(app: ApiApp) {
       {
         ...(stats ?? fallbackStats),
         totalQuestionRewardsPaid: rewardPoolStats?.totalQuestionRewardsPaid ?? 0n,
+        totalQuestionRewardsPaidToVoters: rewardPoolStats?.totalQuestionRewardsPaidToVoters ?? 0n,
+        totalQuestionRewardsPaidToFrontends: rewardPoolStats?.totalQuestionRewardsPaidToFrontends ?? 0n,
       },
     );
   });

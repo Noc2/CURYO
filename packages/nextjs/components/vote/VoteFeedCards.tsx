@@ -414,7 +414,7 @@ function FeedContentMetaCard({
               ) : null}
               {hasRewardPool ? (
                 <span className="rounded-full bg-success/15 px-2.5 py-1 text-sm font-semibold leading-none text-success">
-                  Backed by {formatUsdAmount(rewardPoolTotal)} USDC on Celo
+                  Backed by {formatUsdAmount(rewardPoolTotal)} USDC on Celo; 3% supports the eligible frontend operator
                 </span>
               ) : null}
               <button

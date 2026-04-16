@@ -23,7 +23,8 @@ const DocsIntro: NextPage = () => {
       </p>
       <p>
         Optional Question Reward Pools add a separate Celo USDC reward path for funded questions. They pay eligible
-        revealed participants equally in qualified rounds, independent of whether their cREP vote won.
+        revealed participants in qualified rounds, reserve 3% for eligible frontend operators, and stay independent of
+        whether the cREP vote won.
       </p>
 
       <h2>Key Principles</h2>
@@ -42,7 +43,7 @@ const DocsIntro: NextPage = () => {
         />
         <FeatureCard
           title="Question Reward Pools"
-          description="Optional Celo USDC pools fund specific questions and pay eligible revealed participants equally."
+          description="Optional Celo USDC pools fund specific questions, pay eligible revealed participants, and support eligible frontend operators."
         />
       </div>
       <p>

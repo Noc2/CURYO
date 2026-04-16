@@ -82,7 +82,7 @@ test("whitepaper executive summary preserves the updated brand framing", () => {
 
   assert.match(summaryBlock.text, /question-first submissions, optional Question Reward Pools/i);
   assert.match(summaryBlock.text, /preventing herding/i);
-  assert.match(summaryBlock.text, /equal stablecoin-backed question rewards/i);
+  assert.match(summaryBlock.text, /reserve 3% for eligible frontend operators/i);
 });
 
 test("whitepaper avoids stale protocol audit phrases", () => {

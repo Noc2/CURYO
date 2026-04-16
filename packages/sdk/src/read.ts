@@ -159,6 +159,8 @@ export interface CuryoGlobalStats {
   totalRoundsSettled?: number;
   totalRewardsClaimed?: string;
   totalQuestionRewardsPaid?: string;
+  totalQuestionRewardsPaidToVoters?: string;
+  totalQuestionRewardsPaidToFrontends?: string;
   totalProfiles?: number;
   totalVoterIds?: number;
   [key: string]: unknown;

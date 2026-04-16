@@ -96,7 +96,7 @@ const SmartContracts: NextPage = () => {
             </tr>
             <tr>
               <td className="font-mono text-primary">QuestionRewardPoolEscrow</td>
-              <td>Question-scoped Celo USDC reward pool custody and equal per-round question rewards</td>
+              <td>Question-scoped Celo USDC custody, voter rewards, and the frontend-operator reward share</td>
               <td>No</td>
             </tr>
             <tr>
@@ -445,6 +445,11 @@ const SmartContracts: NextPage = () => {
           claim their proportional share of the 3% frontend fee pool. Pull-based and operator-only. Historical fee
           shares still follow the commit-time eligibility snapshot, but if the frontend is slashed or underbonded at
           claim time, governance can route the claim to the protocol instead of accruing it to the operator.
+        </li>
+        <li>
+          <code>QuestionRewardPoolEscrow.claimQuestionReward(rewardPoolId, roundId)</code> &mdash; Claim the USDC-backed
+          question reward for a revealed Voter ID. New pools default to a 3% frontend-operator share, attributed from
+          the vote commit; unpayable frontend shares remain with the voter claim.
         </li>
         <li>
           <code>RoundRewardDistributor.claimParticipationReward(contentId, roundId)</code> &mdash; Voters claim

@@ -124,6 +124,8 @@ export async function getStats(
   totalVotes: number;
   totalRoundsSettled: number;
   totalQuestionRewardsPaid: string;
+  totalQuestionRewardsPaidToVoters: string;
+  totalQuestionRewardsPaidToFrontends: string;
 }> {
   const res = await fetchWithRetry(`${baseURL}/stats`);
   if (!res.ok) throw new Error(`GET /stats returned ${res.status}`);

@@ -32,9 +32,11 @@ function resolveSetter(valuesOrUpdater: Record<string, unknown> | ((row: any) =>
     allocatedAmount: 0n,
     claimedAmount: 0n,
     claimedCount: 0,
+    frontendClaimedAmount: 0n,
     qualifiedRounds: 0,
     refundedAmount: 0n,
     unallocatedAmount: 100_000_000n,
+    voterClaimedAmount: 0n,
   });
 }
 
@@ -99,6 +101,7 @@ describe("QuestionRewardPoolEscrow ponder handlers", () => {
           requiredSettledRounds: 2n,
           startRoundId: 3n,
           expiresAt: 0n,
+          frontendFeeBps: 300n,
         },
         block: { number: 10n, timestamp: 1_700n },
       },
@@ -112,6 +115,7 @@ describe("QuestionRewardPoolEscrow ponder handlers", () => {
         contentId: 1n,
         fundedAmount: 100_000_000n,
         unallocatedAmount: 100_000_000n,
+        frontendFeeBps: 300,
         requiredVoters: 5,
         requiredSettledRounds: 2,
         startRoundId: 3n,
@@ -135,6 +139,7 @@ describe("QuestionRewardPoolEscrow ponder handlers", () => {
           roundId: 3n,
           allocation: 50_000_000n,
           eligibleVoters: 5n,
+          frontendFeeAllocation: 1_500_000n,
         },
         block: { number: 11n, timestamp: 1_800n },
       },
@@ -149,7 +154,11 @@ describe("QuestionRewardPoolEscrow ponder handlers", () => {
           roundId: 3n,
           claimant: "0x0000000000000000000000000000000000000002",
           voterId: 12n,
-          amount: 10_000_000n,
+          amount: 9_700_000n,
+          frontend: "0x00000000000000000000000000000000000000f1",
+          frontendRecipient: "0x00000000000000000000000000000000000000f1",
+          frontendFee: 300_000n,
+          grossAmount: 10_000_000n,
         },
         block: { number: 12n, timestamp: 1_900n },
       },
@@ -172,11 +181,21 @@ describe("QuestionRewardPoolEscrow ponder handlers", () => {
       expect.arrayContaining([
         expect.objectContaining({
           table: "questionRewardPoolRound",
-          values: expect.objectContaining({ id: "7-3", allocation: 50_000_000n, eligibleVoters: 5 }),
+          values: expect.objectContaining({
+            id: "7-3",
+            allocation: 50_000_000n,
+            frontendFeeAllocation: 1_500_000n,
+            eligibleVoters: 5,
+          }),
         }),
         expect.objectContaining({
           table: "questionRewardPoolClaim",
-          values: expect.objectContaining({ id: "7-3-12", amount: 10_000_000n }),
+          values: expect.objectContaining({
+            id: "7-3-12",
+            amount: 9_700_000n,
+            grossAmount: 10_000_000n,
+            frontendFee: 300_000n,
+          }),
         }),
       ]),
     );
@@ -188,7 +207,20 @@ describe("QuestionRewardPoolEscrow ponder handlers", () => {
         }),
         expect.objectContaining({
           table: "questionRewardPoolRound",
-          values: expect.objectContaining({ claimedAmount: 10_000_000n, claimedCount: 1 }),
+          values: expect.objectContaining({
+            claimedAmount: 10_000_000n,
+            voterClaimedAmount: 9_700_000n,
+            frontendClaimedAmount: 300_000n,
+            claimedCount: 1,
+          }),
+        }),
+        expect.objectContaining({
+          table: "questionRewardPool",
+          values: expect.objectContaining({
+            claimedAmount: 10_000_000n,
+            voterClaimedAmount: 9_700_000n,
+            frontendClaimedAmount: 300_000n,
+          }),
         }),
         expect.objectContaining({
           table: "questionRewardPool",
