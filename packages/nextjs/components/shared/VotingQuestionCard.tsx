@@ -608,6 +608,15 @@ export function VotingQuestionCard({
     </TooltipAnchor>
   );
   const addRewardPoolLink = <AddRewardPoolLink onFundQuestion={() => setShowFundQuestionModal(true)} />;
+  const renderRewardPoolDetailsRow = (historyVariant: "default" | "dark") => (
+    <div className="grid gap-3 sm:grid-cols-[minmax(0,1fr)_max-content] sm:items-start sm:gap-x-4">
+      <div className="flex min-w-0 flex-col gap-3">
+        <RoundStats categoryId={categoryId} snapshot={roundSnapshot} />
+        <RatingHistory contentId={contentId} variant={historyVariant} fallbackRating={currentRating} />
+      </div>
+      <div className="sm:justify-self-end sm:pt-0.5">{addRewardPoolLink}</div>
+    </div>
+  );
 
   useEffect(() => {
     setIsDetailsOpen(isSignalVariant);
@@ -824,13 +833,7 @@ export function VotingQuestionCard({
                           {activitySummary}
                           {!showInlineProgress ? <RoundProgress snapshot={roundSnapshot} /> : null}
                           {!showInlineRevealedBreakdown ? <RoundRevealedBreakdown snapshot={roundSnapshot} /> : null}
-                          <RoundStats categoryId={categoryId} snapshot={roundSnapshot} />
-                          <RatingHistory
-                            contentId={contentId}
-                            variant={embedded ? "dark" : "default"}
-                            fallbackRating={currentRating}
-                          />
-                          {addRewardPoolLink}
+                          {renderRewardPoolDetailsRow(embedded ? "dark" : "default")}
                         </div>
                       </div>
                     </div>
@@ -951,13 +954,7 @@ export function VotingQuestionCard({
                 {!isSignalVariant && !showInlineRevealedBreakdown ? (
                   <RoundRevealedBreakdown snapshot={roundSnapshot} stacked={isDesktopSignalRailCard} />
                 ) : null}
-                <RoundStats categoryId={categoryId} snapshot={roundSnapshot} />
-                <RatingHistory
-                  contentId={contentId}
-                  variant={embedded || isSignalVariant ? "dark" : "default"}
-                  fallbackRating={currentRating}
-                />
-                {addRewardPoolLink}
+                {renderRewardPoolDetailsRow(embedded || isSignalVariant ? "dark" : "default")}
               </div>
             ) : null}
           </div>
