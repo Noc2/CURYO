@@ -15,14 +15,14 @@ const STEPS = [
   },
   {
     icon: EyeSlashIcon,
-    title: "Blind Vote with Stake",
-    description: "Vote up or down on content with cREP. Your direction stays hidden during the 20-minute blind phase.",
+    title: "Rate with Stake",
+    description: "Rate content up or down with cREP. Your direction stays hidden during the 20-minute blind phase.",
   },
   {
     icon: ScaleIcon,
-    title: "Reveal and Settle",
+    title: "Settle and Earn",
     description:
-      "After the blind phase, votes are revealed, and once the round reaches 3 votes, it settles. Winning voters earn rewards.",
+      "Reveal after the blind phase. Winning voters earn cREP rewards; funded questions can also pay eligible voters in USDC.",
   },
 ];
 
