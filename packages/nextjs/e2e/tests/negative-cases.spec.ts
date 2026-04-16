@@ -49,7 +49,7 @@ test.describe("Negative cases", () => {
     await page.goto("/submit");
 
     const voterIdRequired = page.getByRole("heading", { name: /Voter ID Required/i });
-    const submitForm = page.getByRole("heading", { name: "Submit Content" });
+    const submitForm = page.getByRole("heading", { name: "Submit Question" });
     const signedOutHeading = page.getByRole("heading", { name: "Submit" });
     const signInButton = page.getByRole("button", { name: "Sign In" }).first();
 

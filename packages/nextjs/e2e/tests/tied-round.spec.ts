@@ -58,7 +58,7 @@ test.describe("Tied round lifecycle", () => {
     await setupWallet(page, ANVIL_ACCOUNTS.account2.privateKey);
 
     await gotoWithRetry(page, "/submit", { ensureWalletConnected: true });
-    await expect(page.getByRole("heading", { name: "Submit Content" })).toBeVisible({ timeout: 15_000 });
+    await expect(page.getByRole("heading", { name: "Submit Question" })).toBeVisible({ timeout: 15_000 });
 
     // Select Media category — handle "No categories available" if categories are not loaded.
     const categoryBtn = page.getByText("Select a category...");
@@ -75,14 +75,14 @@ test.describe("Tied round lifecycle", () => {
     await categoryBtn.click();
     await page.getByText("Media").first().click();
 
-    // Enter a unique URL
+    // Enter a unique direct image URL
     const uniqueId = Date.now();
     const urlInput = page.locator("input[type='url']").first();
     await expect(urlInput).toBeVisible({ timeout: 5_000 });
-    await urlInput.fill(`https://www.youtube.com/watch?v=tie_test_${uniqueId}`);
+    await urlInput.fill(`https://picsum.photos/seed/tie-test-${uniqueId}/1200/800.jpg`);
 
     // Enter title and description
-    const titleInput = page.getByPlaceholder("Add a short title for this content");
+    const titleInput = page.getByPlaceholder("Ask something subjective that voters can rate");
     await expect(titleInput).toBeVisible({ timeout: 3_000 });
     await titleInput.fill(`Tie Test Title ${uniqueId}`);
 
@@ -91,7 +91,7 @@ test.describe("Tied round lifecycle", () => {
     await descInput.fill(`Tie Test ${uniqueId}`);
 
     // Select a subcategory
-    const subcatNames = ["Education", "Entertainment", "Music", "Technology", "Science", "Gaming"];
+    const subcatNames = ["Images", "YouTube", "Education", "Entertainment", "Photography", "Culture"];
     for (const name of subcatNames) {
       const btn = page.locator("form button", { hasText: new RegExp(`^${name}$`) });
       if (await btn.isVisible().catch(() => false)) {
@@ -101,7 +101,7 @@ test.describe("Tied round lifecycle", () => {
     }
 
     // Submit
-    const submitBtn = page.getByRole("button", { name: /^Submit Content/i });
+    const submitBtn = page.getByRole("button", { name: /^Submit Question/i });
     await expect(submitBtn).toBeEnabled({ timeout: 5_000 });
     await submitBtn.click();
 

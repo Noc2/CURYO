@@ -412,17 +412,17 @@ test.describe("Mobile viewport (phone)", () => {
   });
 
   test("last category card snaps above the mobile dock and opens More", async ({ connectedPage: page }) => {
-    await gotoWithRetry(page, "/vote#crypto-tokens", { ensureWalletConnected: true });
+    await gotoWithRetry(page, "/vote#media", { ensureWalletConnected: true });
     await waitForFeedLoaded(page);
 
-    await expect(page.getByRole("button", { name: /^Category: Crypto Tokens$/ }).first()).toBeVisible({
+    await expect(page.getByRole("button", { name: /^Category: Media$/ }).first()).toBeVisible({
       timeout: 10_000,
     });
 
     const lastIndex = await page.evaluate(() => {
       const articles = Array.from(document.querySelectorAll<HTMLElement>("article[data-feed-card-index]"));
       if (articles.length < 2) {
-        throw new Error("Expected multiple Crypto Tokens cards in the mobile feed");
+        throw new Error("Expected multiple Media cards in the mobile feed");
       }
 
       return Number(articles.at(-1)?.getAttribute("data-feed-card-index") ?? -1);
@@ -491,7 +491,7 @@ test.describe("Mobile viewport (phone)", () => {
   });
 
   test("category switches keep the mobile feed controls visible", async ({ connectedPage: page }) => {
-    await gotoWithRetry(page, "/vote#games", { ensureWalletConnected: true });
+    await gotoWithRetry(page, "/vote#products", { ensureWalletConnected: true });
     await waitForFeedLoaded(page);
 
     const voteTopChrome = page.locator('[data-vote-mobile-top-chrome="true"]');
@@ -534,18 +534,18 @@ test.describe("Mobile viewport (phone)", () => {
 
     await expect(voteTopChrome).toHaveAttribute("data-visible", "true");
 
-    const categoryButton = voteTopChrome.getByRole("button", { name: /^Category: Games$/ }).first();
+    const categoryButton = voteTopChrome.getByRole("button", { name: /^Category: Products$/ }).first();
     await expect(categoryButton).toBeVisible({ timeout: 10_000 });
     await expectHeaderTabsStable();
 
     await categoryButton.click();
     const categoryDialog = page.getByRole("dialog", { name: "Category options" });
     await expect(categoryDialog).toBeVisible({ timeout: 5_000 });
-    await categoryDialog.getByRole("button", { name: "Crypto Tokens" }).click();
+    await categoryDialog.getByRole("button", { name: "Media" }).click();
 
-    await expect(page).toHaveURL(/#crypto-tokens$/, { timeout: 5_000 });
+    await expect(page).toHaveURL(/#media$/, { timeout: 5_000 });
     await expectHeaderTabsStable();
-    await expect(voteTopChrome.getByRole("button", { name: /^Category: Crypto Tokens$/ }).first()).toBeVisible({
+    await expect(voteTopChrome.getByRole("button", { name: /^Category: Media$/ }).first()).toBeVisible({
       timeout: 5_000,
     });
     const viewButton = voteTopChrome.getByRole("button", { name: /^View(?:$|:)/ }).first();

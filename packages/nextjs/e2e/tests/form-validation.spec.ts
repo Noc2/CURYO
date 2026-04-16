@@ -6,9 +6,9 @@ test.describe("Submit form validation", () => {
     await page.waitForLoadState("domcontentloaded");
 
     // Wait for form to load
-    await expect(page.getByRole("heading", { name: "Submit Content" })).toBeVisible({ timeout: 15_000 });
+    await expect(page.getByRole("heading", { name: "Submit Question" })).toBeVisible({ timeout: 15_000 });
 
-    const submitBtn = page.getByRole("button", { name: /^Submit Content/i });
+    const submitBtn = page.getByRole("button", { name: /^Submit Question/i });
     await expect(submitBtn).toBeVisible({ timeout: 5_000 });
     await expect(submitBtn).toBeEnabled();
     await submitBtn.click();
@@ -19,41 +19,28 @@ test.describe("Submit form validation", () => {
   test("submit shows a URL validation error before submission", async ({ connectedPage: page }) => {
     await page.goto("/submit");
 
-    await expect(page.getByRole("heading", { name: "Submit Content" })).toBeVisible({ timeout: 15_000 });
+    await expect(page.getByRole("heading", { name: "Submit Question" })).toBeVisible({ timeout: 15_000 });
 
     // Select a category.
     const categoryBtn = page.getByText("Select a category...");
     if (await categoryBtn.isVisible({ timeout: 5_000 }).catch(() => false)) {
       await categoryBtn.click();
-      // Click the first available option in the dropdown
-      const firstOption = page.locator("[role='option'], [role='listbox'] > *").first();
-      if (await firstOption.isVisible({ timeout: 3_000 }).catch(() => false)) {
-        await firstOption.click();
-      } else {
-        // Fallback: click any visible option text in the dropdown
-        const anyOption = page
-          .locator(".absolute, [data-radix-popper-content-wrapper]")
-          .locator("div[role='option'], div:has-text('.')")
-          .first();
-        if (await anyOption.isVisible({ timeout: 2_000 }).catch(() => false)) {
-          await anyOption.click();
-        }
-      }
+      await page.getByText("Media").first().click();
     }
 
     // Leave the URL blank and submit to trigger inline validation
-    const submitBtn = page.getByRole("button", { name: /^Submit Content/i });
+    const submitBtn = page.getByRole("button", { name: /^Submit Question/i });
     await expect(submitBtn).toBeVisible({ timeout: 5_000 });
     await expect(submitBtn).toBeEnabled();
     await submitBtn.click();
 
-    await expect(page.getByText("URL is required.")).toBeVisible({ timeout: 5_000 });
+    await expect(page.getByText("Add at least one image URL before submitting.")).toBeVisible({ timeout: 5_000 });
   });
 
   test("category dropdown shows options", async ({ connectedPage: page }) => {
     await page.goto("/submit");
 
-    await expect(page.getByRole("heading", { name: "Submit Content" })).toBeVisible({ timeout: 15_000 });
+    await expect(page.getByRole("heading", { name: "Submit Question" })).toBeVisible({ timeout: 15_000 });
 
     // Click category dropdown
     const categoryBtn = page.getByText("Select a category...");
@@ -78,7 +65,7 @@ test.describe("Submit form validation", () => {
   test("invalid URL shows validation feedback", async ({ connectedPage: page }) => {
     await page.goto("/submit");
 
-    await expect(page.getByRole("heading", { name: "Submit Content" })).toBeVisible({ timeout: 15_000 });
+    await expect(page.getByRole("heading", { name: "Submit Question" })).toBeVisible({ timeout: 15_000 });
 
     // Select a category.
     const categoryBtn = page.getByText("Select a category...");
@@ -99,7 +86,7 @@ test.describe("Submit form validation", () => {
     await urlInput.press("Tab");
 
     // Submit button should still be disabled with invalid URL
-    const submitBtn = page.getByRole("button", { name: /^Submit Content/i });
+    const submitBtn = page.getByRole("button", { name: /^Submit Question/i });
     await expect(submitBtn).toBeVisible({ timeout: 5_000 });
     const isDisabled = await submitBtn.isDisabled().catch(() => false);
     // Either the button is disabled or there's a validation error visible

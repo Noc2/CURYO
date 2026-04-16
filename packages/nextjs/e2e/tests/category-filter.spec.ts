@@ -22,16 +22,16 @@ test.describe("Category filter", () => {
     // Prefer categories that the local deploy helper seeds with content so the
     // filter assertions don't pick an empty category and stall on a blank feed.
     const knownCategories = [
-      "YouTube",
-      "Magic: The Gathering",
-      "Movies",
-      "People",
-      "Games",
-      "Books",
-      "Crypto Tokens",
-      "AI",
-      "Music",
-      "Twitch",
+      "Products",
+      "Local Places",
+      "Travel",
+      "Apps",
+      "Media",
+      "Design",
+      "AI Answers",
+      "Developer Docs",
+      "Trust",
+      "General",
     ];
 
     const deadline = Date.now() + 10_000;
@@ -86,7 +86,7 @@ test.describe("Category filter", () => {
 
   test("clicking All clears URL hash", async ({ connectedPage: page }) => {
     // Start with a category hash
-    await loadVoteFeed(page, "/vote#youtube");
+    await loadVoteFeed(page, "/vote#media");
 
     // Click "All" pill
     const allPill = page.getByRole("button", { name: /^All$/i }).first();

@@ -15,7 +15,7 @@ test.describe("Error states and edge cases", () => {
     // Without VoterID, should show "Voter ID Required" heading
     const voterIdRequired = page.getByRole("heading", { name: /Voter ID Required/i });
     const getVoterIdLink = page.getByRole("link", { name: /Get Voter ID/i });
-    const submitForm = page.getByRole("heading", { name: "Submit Content" });
+    const submitForm = page.getByRole("heading", { name: "Submit Question" });
     const signedOutHeading = page.getByRole("heading", { name: "Submit" });
     // Local wallet auto-connect is best-effort in E2E. Accept either the
     // connected no-VoterID prompt, the full submit form, or the signed-out shell.
