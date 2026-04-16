@@ -43,6 +43,7 @@ contract QuestionRewardPoolEscrowTest is VotingTestBase {
     string internal constant QUESTION = "Would you recommend this hotel?";
     string internal constant DESCRIPTION = "Vote based on the overall stay quality.";
     string internal constant TAGS = "travel";
+    string internal constant DEFAULT_MEDIA_URL = "https://example.com/hotel-room.jpg";
     uint256 internal constant CATEGORY_ID = 1;
 
     function _tlockDrandChainHash() internal pure override returns (bytes32) {
@@ -165,7 +166,7 @@ contract QuestionRewardPoolEscrowTest is VotingTestBase {
         vm.stopPrank();
     }
 
-    function testTextOnlyQuestionCanReceiveRewardPoolAndPayRevealedVotersEqually() public {
+    function testMediaQuestionCanReceiveRewardPoolAndPayRevealedVotersEqually() public {
         uint256 contentId = _submitQuestion("");
         uint256 rewardPoolId = _createRewardPool(contentId, REWARD_POOL_AMOUNT, 3, 1);
 
@@ -392,9 +393,12 @@ contract QuestionRewardPoolEscrowTest is VotingTestBase {
     }
 
     function _submitQuestion(string memory url) internal returns (uint256 contentId) {
+        string memory mediaUrl = bytes(url).length == 0 ? DEFAULT_MEDIA_URL : url;
         activeTlockContentRegistry = registry;
-        bytes32 salt = keccak256(abi.encode(url, QUESTION, DESCRIPTION, TAGS, CATEGORY_ID, submitter, block.timestamp));
-        (, bytes32 submissionKey) = registry.previewQuestionSubmissionKey(url, QUESTION, DESCRIPTION, TAGS, CATEGORY_ID);
+        bytes32 salt =
+            keccak256(abi.encode(mediaUrl, QUESTION, DESCRIPTION, TAGS, CATEGORY_ID, submitter, block.timestamp));
+        (, bytes32 submissionKey) =
+            registry.previewQuestionSubmissionKey(mediaUrl, QUESTION, DESCRIPTION, TAGS, CATEGORY_ID);
         bytes32 revealCommitment =
             keccak256(abi.encode(submissionKey, QUESTION, DESCRIPTION, TAGS, CATEGORY_ID, salt, submitter));
 
@@ -402,7 +406,7 @@ contract QuestionRewardPoolEscrowTest is VotingTestBase {
         crepToken.approve(address(registry), 10e6);
         registry.reserveSubmission(revealCommitment);
         vm.warp(block.timestamp + 1);
-        contentId = registry.submitQuestion(url, QUESTION, DESCRIPTION, TAGS, CATEGORY_ID, salt);
+        contentId = registry.submitQuestion(mediaUrl, QUESTION, DESCRIPTION, TAGS, CATEGORY_ID, salt);
         vm.stopPrank();
     }
 

@@ -182,10 +182,10 @@ contract ContentRegistryBranchesTest is VotingTestBase {
     // submitContent BRANCHES
     // =========================================================================
 
-    function test_SubmitQuestion_AllowsArbitraryHttpsUrlWithApprovedCategory() public {
-        string memory url = "https://unmapped.example/reviews/widget-1";
+    function test_SubmitQuestion_AllowsImageUrlWithApprovedCategory() public {
+        string memory url = "https://unmapped.example/reviews/widget-1.jpg";
         string memory title = "Does this product look useful?";
-        string memory description = "A subjective product review question with an external evidence link.";
+        string memory description = "A subjective product review question with a required image link.";
         string memory tags = "Products,Review";
         uint256 categoryId = 1;
         bytes32 salt = keccak256("arbitrary-question-url");
@@ -203,6 +203,94 @@ contract ContentRegistryBranchesTest is VotingTestBase {
         (,,,,,,,,,,, uint256 storedCategoryId) = registry.contents(id);
         assertEq(storedCategoryId, categoryId);
         assertTrue(registry.submissionKeyUsed(submissionKey));
+    }
+
+    function test_SubmitQuestion_EmptyMedia_Reverts() public {
+        vm.startPrank(submitter);
+        crepToken.approve(address(registry), 10e6);
+        vm.expectRevert("Media required");
+        registry.submitQuestion("", "Question?", "Context", "Products", 1, bytes32(0));
+        vm.stopPrank();
+    }
+
+    function test_SubmitQuestion_GenericEvidenceUrl_Reverts() public {
+        vm.startPrank(submitter);
+        crepToken.approve(address(registry), 10e6);
+        vm.expectRevert("Invalid media URL");
+        registry.submitQuestion(
+            "https://example.com/reviews/widget-1", "Question?", "Context", "Products", 1, bytes32(0)
+        );
+        vm.stopPrank();
+    }
+
+    function test_SubmitQuestion_AllowsYouTubeVideoWithApprovedCategory() public {
+        string memory url = "https://www.youtube.com/watch?v=jNQXAC9IVRw";
+        string memory title = "Is this video clear?";
+        string memory description = "A subjective video review question.";
+        string memory tags = "Video,Review";
+        uint256 categoryId = 5;
+        bytes32 salt = keccak256("youtube-question-url");
+
+        vm.startPrank(submitter);
+        crepToken.approve(address(registry), 10e6);
+        (, bytes32 submissionKey) = registry.previewQuestionSubmissionKey(url, title, description, tags, categoryId);
+        bytes32 revealCommitment =
+            keccak256(abi.encode(submissionKey, title, description, tags, categoryId, salt, submitter));
+        registry.reserveSubmission(revealCommitment);
+        vm.warp(block.timestamp + 1);
+        uint256 id = registry.submitQuestion(url, title, description, tags, categoryId, salt);
+        vm.stopPrank();
+
+        (,,,,,,,,,,, uint256 storedCategoryId) = registry.contents(id);
+        assertEq(storedCategoryId, categoryId);
+        assertTrue(registry.submissionKeyUsed(submissionKey));
+    }
+
+    function test_SubmitQuestionWithMedia_AllowsMultipleImages() public {
+        string[] memory imageUrls = new string[](2);
+        imageUrls[0] = "https://example.com/a.jpg";
+        imageUrls[1] = "https://example.com/b.webp";
+        string memory title = "Which product image works better?";
+        string memory description = "Compare the two images for usefulness.";
+        string memory tags = "Products,Images";
+        uint256 categoryId = 1;
+        bytes32 salt = keccak256("multi-image-question");
+
+        vm.startPrank(submitter);
+        crepToken.approve(address(registry), 10e6);
+        (, bytes32 submissionKey) =
+            registry.previewQuestionMediaSubmissionKey(imageUrls, "", title, description, tags, categoryId);
+        bytes32 revealCommitment =
+            keccak256(abi.encode(submissionKey, title, description, tags, categoryId, salt, submitter));
+        registry.reserveSubmission(revealCommitment);
+        vm.warp(block.timestamp + 1);
+        uint256 id = registry.submitQuestionWithMedia(imageUrls, "", title, description, tags, categoryId, salt);
+        vm.stopPrank();
+
+        (,, address rawSubmitter,,,,,,,,, uint64 storedCategoryId) = registry.contents(id);
+        assertEq(rawSubmitter, submitter);
+        assertEq(storedCategoryId, categoryId);
+        assertTrue(registry.submissionKeyUsed(submissionKey));
+    }
+
+    function test_SubmitQuestionWithMedia_RejectsMixedImagesAndVideo() public {
+        string[] memory imageUrls = new string[](1);
+        imageUrls[0] = "https://example.com/a.jpg";
+
+        vm.expectRevert("Choose images or video");
+        registry.previewQuestionMediaSubmissionKey(
+            imageUrls, "https://www.youtube.com/watch?v=jNQXAC9IVRw", "Question?", "Context", "Media", 5
+        );
+    }
+
+    function test_SubmitQuestionWithMedia_RejectsTooManyImages() public {
+        string[] memory imageUrls = new string[](5);
+        for (uint256 i = 0; i < imageUrls.length; i++) {
+            imageUrls[i] = "https://example.com/a.jpg";
+        }
+
+        vm.expectRevert("Too many images");
+        registry.previewQuestionMediaSubmissionKey(imageUrls, "", "Question?", "Context", "Media", 5);
     }
 
     function test_SubmitContent_VoterIdRequired_RevertsWithoutId() public {
