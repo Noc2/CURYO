@@ -67,7 +67,7 @@ async function isPersonArticle(title: string): Promise<string | null> {
 export const wikipediaSource: ContentSource = {
   name: "wikipedia-people",
   categoryId: CATEGORY_ID,
-  categoryName: "General Opinion",
+  categoryName: "General",
 
   async fetchTrending(limit: number): Promise<ContentItem[]> {
     try {

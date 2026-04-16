@@ -49,16 +49,16 @@ describe("content sources", () => {
     );
 
     expect(categoryMetadataBySource).toEqual({
-      youtube: { categoryId: 8n, categoryName: "Media and Images" },
-      twitch: { categoryId: 8n, categoryName: "Media and Images" },
+      youtube: { categoryId: 5n, categoryName: "Media" },
+      twitch: { categoryId: 5n, categoryName: "Media" },
       scryfall: { categoryId: 1n, categoryName: "Products" },
-      tmdb: { categoryId: 8n, categoryName: "Media and Images" },
-      "wikipedia-people": { categoryId: 10n, categoryName: "General Opinion" },
+      tmdb: { categoryId: 5n, categoryName: "Media" },
+      "wikipedia-people": { categoryId: 10n, categoryName: "General" },
       rawg: { categoryId: 1n, categoryName: "Products" },
-      openlibrary: { categoryId: 8n, categoryName: "Media and Images" },
-      huggingface: { categoryId: 6n, categoryName: "AI Answers" },
+      openlibrary: { categoryId: 5n, categoryName: "Media" },
+      huggingface: { categoryId: 7n, categoryName: "AI Answers" },
       coingecko: { categoryId: 1n, categoryName: "Products" },
-      github: { categoryId: 7n, categoryName: "Documentation and Developer Help" },
+      github: { categoryId: 8n, categoryName: "Developer Docs" },
     });
   });
 
@@ -71,11 +71,11 @@ describe("content sources", () => {
         categoryName: entry.categoryName,
       })),
     ).toEqual([
-      { categoryId: 8n, categoryName: "Media and Images" },
       { categoryId: 1n, categoryName: "Products" },
-      { categoryId: 10n, categoryName: "General Opinion" },
-      { categoryId: 6n, categoryName: "AI Answers" },
-      { categoryId: 7n, categoryName: "Documentation and Developer Help" },
+      { categoryId: 5n, categoryName: "Media" },
+      { categoryId: 7n, categoryName: "AI Answers" },
+      { categoryId: 8n, categoryName: "Developer Docs" },
+      { categoryId: 10n, categoryName: "General" },
     ]);
   });
 

@@ -54,7 +54,7 @@ export function formatSubmitUsage(): string {
 Discover trending content and submit it to ContentRegistry.
 
 Options:
-  --category <id|name>       Limit submission to one category (for example: 1, Products, "Media and Images")
+  --category <id|name>       Limit submission to one category (for example: 1, Products, "Media")
   --source <name>            Limit submission to one source adapter (for example: tmdb, coingecko)
   --max-submissions <count>  Override the per-run submission cap for this execution
   -h, --help                 Show this help
@@ -69,9 +69,9 @@ Additional source adapters without automated submit support yet:
 ${pendingCoverage}
 
 Examples:
-  yarn submit --category "Media and Images" --source tmdb --max-submissions 3
+  yarn submit --category "Media" --source tmdb --max-submissions 3
   yarn workspace @curyo/bot submit --category Products --source coingecko --max-submissions 3
-  yarn workspace @curyo/bot submit --category "Documentation and Developer Help" --source github --max-submissions 2`;
+  yarn workspace @curyo/bot submit --category "Developer Docs" --source github --max-submissions 2`;
 }
 
 export function parseSubmitCommandArgs(argv: string[]): ParsedSubmitCommand {

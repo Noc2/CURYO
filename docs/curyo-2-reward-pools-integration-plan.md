@@ -54,15 +54,23 @@ Curyo 2.0 should launch with governance-created categories. The first deployment
 Recommended default categories:
 
 - Products.
-- Hotels and travel.
-- Restaurants and local places.
-- Design and aesthetics.
-- Apps and websites.
+- Local places.
+- Travel.
+- Apps.
+- Media.
+- Design.
 - AI answers.
-- Documentation and developer help.
-- Media and images.
-- Trust and safety.
-- General opinion.
+- Developer docs.
+- Trust.
+- General.
+
+The launch order should prioritize high-intent review domains first. Product reviews remain one of the strongest fits for Curyo-style subjective aggregation: PowerReviews found that 80% of consumers are less likely to buy products with no reviews and 79% regularly consider review volume. Local places should follow immediately because BrightLocal's 2026 local review survey reports that 97% of consumers read reviews for local businesses. Travel is still a strong review category, but "Local Places" is broader and avoids a long restaurant/local label. Apps should sit in the top half because software buyers already rely heavily on peer review surfaces; G2 reports more than 100 million annual users making software decisions from authentic peer reviews. Media, design, AI answers, developer docs, trust, and general questions remain useful, but they are either narrower, more subjective, more specialized, or heavier moderation surfaces.
+
+Source notes:
+
+- PowerReviews, "Stale Product Reviews Are a Big Turn-Off for Shoppers": https://www.powerreviews.com/stale-product-reviews-turn-off-shoppers/
+- BrightLocal, "Local Consumer Review Survey 2026": https://www.brightlocal.com/research/local-consumer-review-survey/
+- G2, "2025 Buyer Behavior Report" release: https://www.businesswire.com/news/home/20250514382531/en/G2-Report-AI-Now-Means-Always-Included-Disrupting-All-Stages-of-the-B2B-Software-Buying-Journey
 
 Later governance can add, rename, pause, or retire categories based on actual demand and moderation load.
 

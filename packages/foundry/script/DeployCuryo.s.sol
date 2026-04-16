@@ -55,8 +55,19 @@ contract DeployCuryo is ScaffoldETHDeploy {
     address constant CELO_MAINNET_USDC = 0xcebA9300f2b948710d2653dD7B07f33A8B32118C;
     address constant CELO_SEPOLIA_USDC = 0x01C5C0122039549AD1493B8220cABEdD739BC44E;
 
+    struct MigrationBootstrapConfig {
+        address[] users;
+        uint256[] nullifiers;
+        uint256[] amounts;
+        address[] referrers;
+        uint256[] claimantBonuses;
+        uint256[] referrerRewards;
+    }
+
     function _preBroadcastChecks() internal view override {
         _resolveHumanFaucetConfig(block.chainid == 31337);
+        MigrationBootstrapConfig memory migrationConfig = _loadMigrationBootstrapConfig();
+        _validateMigrationBootstrapConfig(migrationConfig);
     }
 
     function run() external ScaffoldEthDeployerRunner {
@@ -208,7 +219,8 @@ contract DeployCuryo is ScaffoldETHDeploy {
                 (governance, usdcTokenAddress, address(registry), address(votingEngine), address(voterIdNFT))
             )
         );
-        QuestionRewardPoolEscrow questionRewardPoolEscrow = QuestionRewardPoolEscrow(address(questionRewardPoolEscrowProxy));
+        QuestionRewardPoolEscrow questionRewardPoolEscrow =
+            QuestionRewardPoolEscrow(address(questionRewardPoolEscrowProxy));
 
         // 8. Wire contracts together (deployer uses temporary config/admin roles where needed)
         registry.setVotingEngine(address(votingEngine));
@@ -308,6 +320,21 @@ contract DeployCuryo is ScaffoldETHDeploy {
                 _assertFaucetVerificationConfig(humanFaucet, hubAddress, mockConfigId);
                 console.log("Set mock configId on HumanFaucet");
             }
+
+            MigrationBootstrapConfig memory migrationConfig = _loadMigrationBootstrapConfig();
+            if (migrationConfig.users.length > 0) {
+                humanFaucet.bootstrapMigratedClaims(
+                    migrationConfig.users,
+                    migrationConfig.nullifiers,
+                    migrationConfig.amounts,
+                    migrationConfig.referrers,
+                    migrationConfig.claimantBonuses,
+                    migrationConfig.referrerRewards
+                );
+                console.log("Bootstrapped migrated HumanFaucet claims:", migrationConfig.users.length);
+            }
+            humanFaucet.closeMigrationBootstrap();
+            console.log("Closed HumanFaucet migration bootstrap");
 
             // Transfer ownership to governance (production only)
             if (!isLocalDev) {
@@ -501,6 +528,49 @@ contract DeployCuryo is ScaffoldETHDeploy {
         revert UnsupportedHumanFaucetChain(block.chainid);
     }
 
+    function _loadMigrationBootstrapConfig() internal view returns (MigrationBootstrapConfig memory migrationConfig) {
+        string memory filePath = vm.envOr("MIGRATION_BOOTSTRAP_FILE", string(""));
+        if (bytes(filePath).length == 0) {
+            return migrationConfig;
+        }
+
+        string memory json = vm.readFile(filePath);
+        migrationConfig.users = vm.parseJsonAddressArray(json, ".users");
+        migrationConfig.nullifiers = vm.parseJsonUintArray(json, ".nullifiers");
+        migrationConfig.amounts = vm.parseJsonUintArray(json, ".amounts");
+        migrationConfig.referrers = vm.parseJsonAddressArray(json, ".referrers");
+        migrationConfig.claimantBonuses = vm.parseJsonUintArray(json, ".claimantBonuses");
+        migrationConfig.referrerRewards = vm.parseJsonUintArray(json, ".referrerRewards");
+    }
+
+    function _validateMigrationBootstrapConfig(MigrationBootstrapConfig memory migrationConfig) internal pure {
+        uint256 claimCount = migrationConfig.users.length;
+        _require(migrationConfig.nullifiers.length == claimCount, "Migration nullifiers length");
+        _require(migrationConfig.amounts.length == claimCount, "Migration amounts length");
+        _require(migrationConfig.referrers.length == claimCount, "Migration referrers length");
+        _require(migrationConfig.claimantBonuses.length == claimCount, "Migration claimant bonuses length");
+        _require(migrationConfig.referrerRewards.length == claimCount, "Migration referrer rewards length");
+
+        for (uint256 i = 0; i < claimCount; ++i) {
+            _require(migrationConfig.users[i] != address(0), "Migration user zero");
+            _require(migrationConfig.nullifiers[i] != 0, "Migration nullifier zero");
+            _require(migrationConfig.amounts[i] > 0, "Migration amount zero");
+            _require(
+                migrationConfig.claimantBonuses[i] <= migrationConfig.amounts[i],
+                "Migration claimant bonus exceeds amount"
+            );
+
+            if (migrationConfig.referrers[i] == address(0)) {
+                _require(migrationConfig.claimantBonuses[i] == 0, "Migration bonus without referrer");
+                _require(migrationConfig.referrerRewards[i] == 0, "Migration reward without referrer");
+            } else {
+                _require(migrationConfig.referrers[i] != migrationConfig.users[i], "Migration self referral");
+                _require(migrationConfig.claimantBonuses[i] > 0, "Migration referral bonus zero");
+                _require(migrationConfig.referrerRewards[i] > 0, "Migration referral reward zero");
+            }
+        }
+    }
+
     function _verifyLaunchMintAllocation(
         CuryoReputation crepToken,
         address governance,
@@ -650,7 +720,9 @@ contract DeployCuryo is ScaffoldETHDeploy {
             governance,
             "QuestionRewardPoolEscrow governance pauser"
         );
-        _requireProxyAdminOwner(address(questionRewardPoolEscrow), governance, "QuestionRewardPoolEscrow proxy admin owner");
+        _requireProxyAdminOwner(
+            address(questionRewardPoolEscrow), governance, "QuestionRewardPoolEscrow proxy admin owner"
+        );
 
         _requireHasRole(
             address(frontendRegistry),
@@ -707,17 +779,23 @@ contract DeployCuryo is ScaffoldETHDeploy {
         _require(address(categoryRegistry.voterIdNFT()) == address(voterIdNFT), "CategoryRegistry voterIdNFT");
         _require(address(frontendRegistry.voterIdNFT()) == address(voterIdNFT), "FrontendRegistry voterIdNFT");
         _require(address(profileRegistry.voterIdNFT()) == address(voterIdNFT), "ProfileRegistry voterIdNFT");
-        _require(address(questionRewardPoolEscrow.voterIdNFT()) == address(voterIdNFT), "QuestionRewardPoolEscrow voterIdNFT");
+        _require(
+            address(questionRewardPoolEscrow.voterIdNFT()) == address(voterIdNFT), "QuestionRewardPoolEscrow voterIdNFT"
+        );
         _require(address(questionRewardPoolEscrow.registry()) == address(registry), "QuestionRewardPoolEscrow registry");
         _require(
-            address(questionRewardPoolEscrow.votingEngine()) == address(votingEngine), "QuestionRewardPoolEscrow voting engine"
+            address(questionRewardPoolEscrow.votingEngine()) == address(votingEngine),
+            "QuestionRewardPoolEscrow voting engine"
         );
-        _require(address(questionRewardPoolEscrow.usdcToken()) == _resolveCeloUsdcAddress(), "QuestionRewardPoolEscrow USDC");
+        _require(
+            address(questionRewardPoolEscrow.usdcToken()) == _resolveCeloUsdcAddress(), "QuestionRewardPoolEscrow USDC"
+        );
         _require(voterIdNFT.owner() == governance, "VoterIdNFT governance owner");
         _require(participationPool.owner() == governance, "ParticipationPool governance owner");
         if (address(humanFaucet) != address(0)) {
             _require(address(humanFaucet.voterIdNFT()) == address(voterIdNFT), "HumanFaucet voterIdNFT");
             _require(humanFaucet.owner() == governance, "HumanFaucet governance owner");
+            _require(humanFaucet.migrationBootstrapClosed(), "HumanFaucet migration bootstrap closed");
         }
 
         _require(governorAddr != address(0), "Governor deployed");
@@ -816,17 +894,6 @@ contract DeployCuryo is ScaffoldETHDeploy {
         productSubcats[7] = "Sustainability";
         registry.addApprovedCategory("Products", "products.curyo.xyz", productSubcats);
 
-        string[] memory travelSubcats = new string[](8);
-        travelSubcats[0] = "Hotels";
-        travelSubcats[1] = "Location";
-        travelSubcats[2] = "Cleanliness";
-        travelSubcats[3] = "Service";
-        travelSubcats[4] = "Comfort";
-        travelSubcats[5] = "Value";
-        travelSubcats[6] = "Family";
-        travelSubcats[7] = "Solo Travel";
-        registry.addApprovedCategory("Hotels and Travel", "travel.curyo.xyz", travelSubcats);
-
         string[] memory localSubcats = new string[](8);
         localSubcats[0] = "Restaurants";
         localSubcats[1] = "Cafes";
@@ -836,18 +903,18 @@ contract DeployCuryo is ScaffoldETHDeploy {
         localSubcats[5] = "Accessibility";
         localSubcats[6] = "Value";
         localSubcats[7] = "Local Tips";
-        registry.addApprovedCategory("Restaurants and Local Places", "local.curyo.xyz", localSubcats);
+        registry.addApprovedCategory("Local Places", "local.curyo.xyz", localSubcats);
 
-        string[] memory designSubcats = new string[](8);
-        designSubcats[0] = "Visual Design";
-        designSubcats[1] = "Brand";
-        designSubcats[2] = "Typography";
-        designSubcats[3] = "Layout";
-        designSubcats[4] = "Accessibility";
-        designSubcats[5] = "Photography";
-        designSubcats[6] = "Fashion";
-        designSubcats[7] = "Architecture";
-        registry.addApprovedCategory("Design and Aesthetics", "design.curyo.xyz", designSubcats);
+        string[] memory travelSubcats = new string[](8);
+        travelSubcats[0] = "Hotels";
+        travelSubcats[1] = "Location";
+        travelSubcats[2] = "Cleanliness";
+        travelSubcats[3] = "Service";
+        travelSubcats[4] = "Comfort";
+        travelSubcats[5] = "Value";
+        travelSubcats[6] = "Family";
+        travelSubcats[7] = "Solo Travel";
+        registry.addApprovedCategory("Travel", "travel.curyo.xyz", travelSubcats);
 
         string[] memory appsSubcats = new string[](8);
         appsSubcats[0] = "Web Apps";
@@ -858,7 +925,29 @@ contract DeployCuryo is ScaffoldETHDeploy {
         appsSubcats[5] = "Performance";
         appsSubcats[6] = "Trust";
         appsSubcats[7] = "Pricing";
-        registry.addApprovedCategory("Apps and Websites", "apps.curyo.xyz", appsSubcats);
+        registry.addApprovedCategory("Apps", "apps.curyo.xyz", appsSubcats);
+
+        string[] memory mediaSubcats = new string[](8);
+        mediaSubcats[0] = "Images";
+        mediaSubcats[1] = "YouTube";
+        mediaSubcats[2] = "Education";
+        mediaSubcats[3] = "Entertainment";
+        mediaSubcats[4] = "Art";
+        mediaSubcats[5] = "Photography";
+        mediaSubcats[6] = "Audio";
+        mediaSubcats[7] = "Culture";
+        registry.addApprovedCategory("Media", "media.curyo.xyz", mediaSubcats);
+
+        string[] memory designSubcats = new string[](8);
+        designSubcats[0] = "Visual Design";
+        designSubcats[1] = "Brand";
+        designSubcats[2] = "Typography";
+        designSubcats[3] = "Layout";
+        designSubcats[4] = "Accessibility";
+        designSubcats[5] = "Photography";
+        designSubcats[6] = "Fashion";
+        designSubcats[7] = "Architecture";
+        registry.addApprovedCategory("Design", "design.curyo.xyz", designSubcats);
 
         string[] memory aiAnswerSubcats = new string[](8);
         aiAnswerSubcats[0] = "Helpfulness";
@@ -880,18 +969,7 @@ contract DeployCuryo is ScaffoldETHDeploy {
         docsSubcats[5] = "Completeness";
         docsSubcats[6] = "Readability";
         docsSubcats[7] = "Troubleshooting";
-        registry.addApprovedCategory("Documentation and Developer Help", "docs.curyo.xyz", docsSubcats);
-
-        string[] memory mediaSubcats = new string[](8);
-        mediaSubcats[0] = "Images";
-        mediaSubcats[1] = "YouTube";
-        mediaSubcats[2] = "Education";
-        mediaSubcats[3] = "Entertainment";
-        mediaSubcats[4] = "Art";
-        mediaSubcats[5] = "Photography";
-        mediaSubcats[6] = "Audio";
-        mediaSubcats[7] = "Culture";
-        registry.addApprovedCategory("Media and Images", "media.curyo.xyz", mediaSubcats);
+        registry.addApprovedCategory("Developer Docs", "docs.curyo.xyz", docsSubcats);
 
         string[] memory safetySubcats = new string[](8);
         safetySubcats[0] = "Trust";
@@ -902,7 +980,7 @@ contract DeployCuryo is ScaffoldETHDeploy {
         safetySubcats[5] = "Disclosure";
         safetySubcats[6] = "Risk";
         safetySubcats[7] = "Policy";
-        registry.addApprovedCategory("Trust and Safety", "safety.curyo.xyz", safetySubcats);
+        registry.addApprovedCategory("Trust", "safety.curyo.xyz", safetySubcats);
 
         string[] memory opinionSubcats = new string[](8);
         opinionSubcats[0] = "Taste";
@@ -913,6 +991,6 @@ contract DeployCuryo is ScaffoldETHDeploy {
         opinionSubcats[5] = "Convincing";
         opinionSubcats[6] = "Worthwhile";
         opinionSubcats[7] = "Other";
-        registry.addApprovedCategory("General Opinion", "opinion.curyo.xyz", opinionSubcats);
+        registry.addApprovedCategory("General", "opinion.curyo.xyz", opinionSubcats);
     }
 }

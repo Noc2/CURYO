@@ -3,7 +3,7 @@ import { truncateContentDescription, truncateContentTitle } from "../contentLimi
 import { fetchWithTimeout } from "../utils.js";
 import type { ContentSource, ContentItem } from "./types.js";
 
-const CATEGORY_ID = 6n;
+const CATEGORY_ID = 7n;
 
 // Map HuggingFace pipeline_tag to on-chain subcategory names
 const PIPELINE_MAP: Record<string, string> = {

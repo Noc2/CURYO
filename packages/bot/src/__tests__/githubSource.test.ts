@@ -92,13 +92,13 @@ describe("githubSource", () => {
 
     expect(items).toEqual([
       expect.objectContaining({
-        categoryId: 7n,
+        categoryId: 8n,
         tags: "AI/ML",
         title: "vercel/ai",
         url: "https://github.com/vercel/ai",
       }),
       expect.objectContaining({
-        categoryId: 7n,
+        categoryId: 8n,
         tags: "Frameworks",
         title: "vercel/next.js",
         url: "https://github.com/vercel/next.js",

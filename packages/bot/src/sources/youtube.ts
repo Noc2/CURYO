@@ -3,7 +3,7 @@ import { truncateContentDescription, truncateContentTitle } from "../contentLimi
 import { fetchWithTimeout } from "../utils.js";
 import type { ContentSource, ContentItem } from "./types.js";
 
-const CATEGORY_ID = 8n;
+const CATEGORY_ID = 5n;
 
 // Map YouTube video category IDs to on-chain subcategory names
 const YOUTUBE_CATEGORY_MAP: Record<number, string> = {
@@ -27,7 +27,7 @@ const YOUTUBE_CATEGORY_MAP: Record<number, string> = {
 export const youtubeSource: ContentSource = {
   name: "youtube",
   categoryId: CATEGORY_ID,
-  categoryName: "Media and Images",
+  categoryName: "Media",
 
   async fetchTrending(limit: number): Promise<ContentItem[]> {
     if (!config.youtubeApiKey) {

@@ -12,9 +12,9 @@ yarn bot:claim    # Claim rewards earned by the configured bot wallets
 yarn bot:status   # Check bot account balances and Voter ID status
 
 # Target a single category/source with an explicit cap:
-yarn workspace @curyo/bot submit --category "Media and Images" --max-submissions 5
+yarn workspace @curyo/bot submit --category "Media" --max-submissions 5
 yarn workspace @curyo/bot submit --source coingecko --max-submissions 2
-yarn workspace @curyo/bot submit --category "Documentation and Developer Help" --source github --max-submissions 2
+yarn workspace @curyo/bot submit --category "Developer Docs" --source github --max-submissions 2
 ```
 
 Requires configured environment variables and a reachable RPC endpoint.
@@ -28,7 +28,7 @@ Question submissions may be text-only or include a regular link, direct image li
 | Command | Description |
 |---|---|
 | `yarn bot:submit` | Discover trending content from platforms and submit question-first entries to registry |
-| `yarn workspace @curyo/bot submit --category "Media and Images" --max-submissions 5` | Submit up to 5 items from the `Media and Images` category |
+| `yarn workspace @curyo/bot submit --category "Media" --max-submissions 5` | Submit up to 5 items from the `Media` category |
 | `yarn workspace @curyo/bot submit --source coingecko --max-submissions 2` | Submit up to 2 items from the CoinGecko source |
 | `yarn bot:vote` | Rate content and commit encrypted votes via tlock commit-reveal |
 | `yarn bot:claim` | Claim voter and submitter rewards for the configured bot wallets |
@@ -95,7 +95,7 @@ Without these keys the bot can still submit from public sources such as CoinGeck
 
 `submit` also supports one-off CLI overrides:
 
-- `--category <id|name>` to target a specific category such as `1`, `Products`, or `Media and Images`
+- `--category <id|name>` to target a specific category such as `1`, `Products`, or `Media`
 - `--source <name>` to target a specific source adapter such as `tmdb` or `coingecko`
 - `--max-submissions <count>` to override the per-run cap for that invocation
 - `--help` to print the submit-specific usage text, including the full category/source catalog below
@@ -121,18 +121,18 @@ Frontend fee sweeping remains a keeper responsibility when the keeper wallet is 
 | ID | Category | `--source` | Availability |
 |---|---|---|---|
 | `1` | Products | `scryfall`, `rawg`, `coingecko` | Public; RAWG requires `RAWG_API_KEY` |
-| `6` | AI Answers | `huggingface` | Public |
-| `7` | Documentation and Developer Help | `github` | Requires `GITHUB_TOKEN` |
-| `8` | Media and Images | `youtube`, `twitch`, `tmdb`, `openlibrary` | YouTube/Twitch/TMDB require their API keys |
-| `10` | General Opinion | `wikipedia-people` | Public |
+| `5` | Media | `youtube`, `twitch`, `tmdb`, `openlibrary` | YouTube/Twitch/TMDB require their API keys |
+| `7` | AI Answers | `huggingface` | Public |
+| `8` | Developer Docs | `github` | Requires `GITHUB_TOKEN` |
+| `10` | General | `wikipedia-people` | Public |
 
 Deployed default categories that are already on-chain but still missing automated `submit` coverage:
 
-- `2` Hotels and Travel
-- `3` Restaurants and Local Places
-- `4` Design and Aesthetics
-- `5` Apps and Websites
-- `9` Trust and Safety
+- `2` Local Places
+- `3` Travel
+- `4` Apps
+- `6` Design
+- `9` Trust
 
 ## How Submission Works
 
@@ -147,7 +147,7 @@ For each `submit` run, the bot:
 
 ## Testing TMDB Questions With A Delegated Bot Wallet
 
-This is the quickest way to test the bot against the current TMDB popular movies feed, now submitted under the broad `Media and Images` review category.
+This is the quickest way to test the bot against the current TMDB popular movies feed, now submitted under the broad `Media` review category.
 
 1. Configure the bot wallet in `packages/bot/.env`.
 
@@ -210,13 +210,13 @@ You want to see:
 7. Run a focused TMDB movie submission.
 
 ```bash
-yarn workspace @curyo/bot submit --source tmdb --category "Media and Images" --max-submissions 1
+yarn workspace @curyo/bot submit --source tmdb --category "Media" --max-submissions 1
 ```
 
 Once the one-item smoke test looks good, increase the cap:
 
 ```bash
-yarn workspace @curyo/bot submit --source tmdb --category "Media and Images" --max-submissions 5
+yarn workspace @curyo/bot submit --source tmdb --category "Media" --max-submissions 5
 ```
 
 Expected behavior:

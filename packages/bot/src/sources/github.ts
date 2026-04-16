@@ -9,7 +9,7 @@ import {
 import { fetchWithTimeout } from "../utils.js";
 import type { ContentItem, ContentSource } from "./types.js";
 
-const CATEGORY_ID = 7n;
+const CATEGORY_ID = 8n;
 const SEARCH_WINDOW_DAYS = 30;
 
 interface GitHubSearchResponse {
@@ -31,7 +31,7 @@ function buildTrendingGitHubQuery(limit: number): string {
 export const githubSource: ContentSource = {
   name: "github",
   categoryId: CATEGORY_ID,
-  categoryName: "Documentation and Developer Help",
+  categoryName: "Developer Docs",
 
   async fetchTrending(limit: number): Promise<ContentItem[]> {
     if (!config.githubToken) {

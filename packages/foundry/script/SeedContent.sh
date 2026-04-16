@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Seed script: submits example question-first content from different accounts and sources.
+# Seed script: submits example question-first content from different accounts.
 # Uses foundry's default anvil/hardhat accounts (indices 2-10 for content, 9-10 also for voting).
 # Only runs on localhost (chain 31337).
 
@@ -54,121 +54,131 @@ KEYS=(
   "0xf214f2b2cd398c806f84e317254e0f0b801d0643303237d97a22a48e01628897"  # Account 10 (voter)
   "0x5de4111afa1a4b94908f83103eb1f1706367c2e68ca870fc3fb9a804cdab365a"  # Account 2 (reused)
   "0x7c852118294e51e653712a81e05800f419141751be58f605c371e15141b007a6"  # Account 3 (reused)
-  "0x47e179ec197488593b187f80a00eb0da91f1b9d0b13f8733639f19c30a34926a"  # Account 4 (reused for Crypto)
-  "0x8b3a350cf5c34c9194ca85829a2df0ec3153be0318b5e2d3348e872092edffba"  # Account 5 (reused for Crypto)
-  "0x92db14e403b83dfe3df233f83dfa3a0d7096f21ca9b0d6d6b8d88b2b4ec1564e"  # Account 6 (reused for GitHub)
-  "0x4bbbf85ce3377467afe5d46f804f221813b2bb87f24d81f60f1fcdbf7cbf4356"  # Account 7 (reused for GitHub)
-  "0xdbda1821b80551c9d65939329250298aa3472ba22feea921c0cf5d620ea67b97"  # Account 8 (reused for Spotify)
+  "0x47e179ec197488593b187f80a00eb0da91f1b9d0b13f8733639f19c30a34926a"  # Account 4 (reused)
+  "0x8b3a350cf5c34c9194ca85829a2df0ec3153be0318b5e2d3348e872092edffba"  # Account 5 (reused)
+  "0x92db14e403b83dfe3df233f83dfa3a0d7096f21ca9b0d6d6b8d88b2b4ec1564e"  # Account 6 (reused)
+  "0x4bbbf85ce3377467afe5d46f804f221813b2bb87f24d81f60f1fcdbf7cbf4356"  # Account 7 (reused)
+  "0xdbda1821b80551c9d65939329250298aa3472ba22feea921c0cf5d620ea67b97"  # Account 8 (reused)
 )
 
-# Example questions from multiple sources: (url, title, description, tags, categoryId)
+# Example Curyo 2 questions: text-only entries use an empty URL; media-backed entries use direct image URLs.
 # Curyo 2 default categoryIds:
-# 1=Products, 2=Hotels and Travel, 3=Restaurants and Local Places, 4=Design and Aesthetics,
-# 5=Apps and Websites, 6=AI Answers, 7=Documentation and Developer Help, 8=Media and Images,
-# 9=Trust and Safety, 10=General Opinion
+# 1=Products, 2=Local Places, 3=Travel, 4=Apps, 5=Media,
+# 6=Design, 7=AI Answers, 8=Developer Docs, 9=Trust, 10=General
 URLS=(
-  "https://www.youtube.com/watch?v=rUCAdMnb1Oc"
-  "https://www.youtube.com/watch?v=M7lc1UVf-VE"
-  "https://www.youtube.com/watch?v=aircAruvnKk"
-  "https://scryfall.com/card/lea/232/black-lotus"
-  "https://www.themoviedb.org/movie/238-the-godfather"
-  "https://en.wikipedia.org/wiki/Lionel_Messi"
-  "https://en.wikipedia.org/wiki/Marie_Curie"
-  "https://rawg.io/games/elden-ring"
-  "https://rawg.io/games/baldurs-gate-3"
-  "https://openlibrary.org/works/OL45883W/Fantastic_Mr_Fox"
-  "https://openlibrary.org/works/OL27516W/The_Hitchhikers_Guide_to_the_Galaxy"
-  "https://www.coingecko.com/en/coins/bitcoin"
-  "https://www.coingecko.com/en/coins/ethereum"
-  "https://github.com/ethereum/go-ethereum"
-  "https://github.com/foundry-rs/foundry"
-  "https://open.spotify.com/show/5eXZwvvxt3K2dxha3BSaAe"
+  ""
+  "https://picsum.photos/seed/curyo-workspace/1200/800.jpg"
+  ""
+  "https://picsum.photos/seed/curyo-product-label/1200/800.jpg"
+  ""
+  "https://picsum.photos/seed/curyo-hotel-room/1200/800.jpg"
+  ""
+  ""
+  "https://picsum.photos/seed/curyo-event-poster/1200/800.jpg"
+  ""
+  "https://picsum.photos/seed/curyo-media-hero/1200/800.jpg"
+  ""
+  "https://picsum.photos/seed/curyo-street-guide/1200/800.jpg"
+  ""
+  ""
+  "https://picsum.photos/seed/curyo-product-photo/1200/800.jpg"
 )
 
 TITLES=(
-  "Ethereum in Practice"
-  "YouTube Player API Demo"
-  "Neural Networks, Visualized"
-  "Black Lotus"
-  "The Godfather"
-  "Lionel Messi"
-  "Marie Curie"
-  "Elden Ring"
-  "Baldur's Gate 3"
-  "Fantastic Mr. Fox"
-  "The Hitchhiker's Guide to the Galaxy"
-  "Bitcoin"
-  "Ethereum"
-  "go-ethereum"
-  "Foundry"
-  "Spotify Engineering Stories"
+  "Is this refund policy easy to understand?"
+  "Does this workspace feel ready for deep work?"
+  "Is this API quickstart beginner friendly?"
+  "Is this product label readable on mobile?"
+  "Would this cafe review help locals choose?"
+  "Does this hotel room look clean and comfortable?"
+  "Is this AI answer careful enough to publish?"
+  "Should this app onboarding copy be shorter?"
+  "Does this poster make the event easy to grasp?"
+  "Is this dinner plan practical for a weeknight?"
+  "Does this image work as a hero visual?"
+  "Would this failed-vote message reduce support tickets?"
+  "Does this street scene feel welcoming?"
+  "Is this accessibility checklist launch ready?"
+  "Does this moderation rule set clear voter expectations?"
+  "Is this product photo useful enough to compare?"
 )
 
 DESCRIPTIONS=(
-  "Learn how Ethereum works under the hood — from transactions to the EVM."
-  "Official demo video used for testing YouTube embeds and player integrations."
-  "A visual introduction to neural networks and deep learning fundamentals."
-  "The most iconic and valuable card in Magic history — the legendary Black Lotus."
-  "Francis Ford Coppola's masterpiece — widely considered one of the greatest films ever made."
-  "Widely regarded as one of the greatest footballers of all time."
-  "Pioneer in radioactivity research and the first person to win two Nobel Prizes."
-  "FromSoftware's epic open-world action RPG — a landmark in modern game design."
-  "Larian Studios' critically acclaimed RPG — a masterclass in player choice and storytelling."
-  "Roald Dahl's beloved tale of a clever fox outsmarting three mean farmers."
-  "Douglas Adams' comedic sci-fi classic — the answer is 42."
-  "The original cryptocurrency — a peer-to-peer electronic cash system that pioneered decentralized finance."
-  "The world's leading smart contract platform — powering DeFi, NFTs, and decentralized applications."
-  "Official Go implementation of Ethereum — the backbone of most Ethereum nodes worldwide."
-  "Blazing-fast Solidity toolkit — forge, cast, anvil, and chisel for smart contract development."
-  "Engineering stories and behind-the-scenes conversations from Spotify's own podcast feed."
+  "Voters should judge whether the plain-language summary explains refunds, timelines, and exceptions clearly enough for a first-time buyer."
+  "Rate the image and context as a calm workspace for focused technical writing, not as a luxury interior shot."
+  "Judge whether a new developer could complete the first request without missing setup, authentication, or error handling steps."
+  "Focus on whether the label hierarchy, contrast, and key details would still be clear in a small shopping card."
+  "The review mentions noise, service speed, seating, and price. Vote on whether it is specific enough to guide a nearby visitor."
+  "Use the visible room condition and the written context to judge whether the listing earns a higher community rating."
+  "The answer gives a confident summary but leaves out uncertainty and source limits. Vote on helpfulness, clarity, and safety."
+  "The flow explains wallet connection, Voter ID, and staking in one screen. Judge whether the copy reduces friction or overloads new users."
+  "Voters should judge hierarchy, contrast, and whether date, place, and purpose are legible at a glance."
+  "Rate whether the plan balances prep time, nutrition, cleanup, and ingredient availability for a busy household."
+  "Judge whether the image has enough focus, contrast, and mood to support a question about human review quality."
+  "The message explains gas, wallet RPC issues, and retry timing. Vote on whether it is actionable without being too technical."
+  "Use the image as travel context. Vote on whether it would make a neighborhood guide feel inviting and credible."
+  "Review the checklist for keyboard support, focus states, text contrast, reduced motion, and mobile overflow coverage."
+  "Judge whether the rule tells voters when to downvote illegal, unsafe, misleading, or mismatched submissions."
+  "Focus on scale, detail, lighting, and whether the photo helps a buyer compare the item without extra marketing claims."
 )
 
 TAGS=(
-  "Technology,Education"
-  "Technology,Testing,Video"
-  "Science,Education,Technology"
-  "Artifacts,Commanders"
-  "Drama,Crime"
-  "Athletes,Sports"
-  "Scientists,History"
-  "Action,RPG"
-  "RPG,Adventure"
-  "Fiction,Fantasy"
-  "Science Fiction,Fiction"
-  "Layer 1,Infrastructure"
-  "Layer 1,DeFi"
-  "Infrastructure,DeFi/Web3"
-  "Developer Tools,Infrastructure"
-  "Technology,Culture"
+  "Policy,Clarity,Trust"
+  "Photography,Usefulness,Atmosphere"
+  "Getting Started,Readability,Examples"
+  "Design,Usability,Quality"
+  "Local Tips,Service,Value"
+  "Hotels,Cleanliness,Comfort"
+  "Helpfulness,Clarity,Safety"
+  "Onboarding,Trust,Usability"
+  "Visual Design,Typography,Layout"
+  "Usefulness,Clear,Worthwhile"
+  "Images,Art,Photography"
+  "Web Apps,Troubleshooting,Trust"
+  "Location,Photography,Solo Travel"
+  "Accessibility,Quality,Testing"
+  "Moderation,Policy,Risk"
+  "Quality,Design,Value"
 )
 
 # CategoryIds mapping to seeded questions.
 CATEGORY_IDS=(
-  8   # Media and Images: YouTube
-  8   # Media and Images: YouTube
-  8   # Media and Images: YouTube
-  1   # Products: MTG card
-  8   # Media and Images: TMDB movie
-  10  # General Opinion: Wikipedia person
-  10  # General Opinion: Wikipedia person
-  1   # Products: game
-  1   # Products: game
-  8   # Media and Images: book
-  8   # Media and Images: book
-  1   # Products: crypto asset
-  1   # Products: crypto asset
-  7   # Documentation and Developer Help: GitHub repo
-  7   # Documentation and Developer Help: GitHub repo
-  8   # Media and Images: Spotify podcast
+  9   # Trust
+  6   # Design
+  8   # Developer Docs
+  1   # Products
+  2   # Local Places
+  3   # Travel
+  7   # AI Answers
+  4   # Apps
+  6   # Design
+  10  # General
+  5   # Media
+  4   # Apps
+  3   # Travel
+  4   # Apps
+  9   # Trust
+  1   # Products
 )
 
-echo "=== Seeding example question content from multiple sources ==="
+echo "=== Seeding example text and image questions ==="
 echo "(Test accounts were pre-funded with cREP during deployment)"
 echo ""
 
 TOTAL_ITEMS="${#URLS[@]}"
+if [ "$TOTAL_ITEMS" -ne "${#TITLES[@]}" ] ||
+  [ "$TOTAL_ITEMS" -ne "${#DESCRIPTIONS[@]}" ] ||
+  [ "$TOTAL_ITEMS" -ne "${#TAGS[@]}" ] ||
+  [ "$TOTAL_ITEMS" -ne "${#CATEGORY_IDS[@]}" ]; then
+  echo "ERROR: Seed content arrays must have the same length"
+  exit 1
+fi
+if [ "$TOTAL_ITEMS" -gt "${#KEYS[@]}" ]; then
+  echo "ERROR: Not enough seeded account keys for $TOTAL_ITEMS questions"
+  exit 1
+fi
 
-# Submit content from accounts 2-10 (some reused for later categories)
+# Submit questions from accounts 2-10 (some reused for later categories)
 for ((i = 0; i < TOTAL_ITEMS; i++)); do
   KEY="${KEYS[$i]}"
   URL="${URLS[$i]}"
@@ -203,7 +213,11 @@ for ((i = 0; i < TOTAL_ITEMS; i++)); do
   sleep 1
 
   # 3. Reveal the submission with the same deterministic salt used for the reservation
-  echo "  Submitting: $URL (categoryId: $CATEGORY_ID)"
+  if [ -n "$URL" ]; then
+    echo "  Submitting question: $TITLE (image: $URL, categoryId: $CATEGORY_ID)"
+  else
+    echo "  Submitting question: $TITLE (text-only, categoryId: $CATEGORY_ID)"
+  fi
   cast send "$REGISTRY" "submitQuestion(string,string,string,string,uint256,bytes32)" \
     "$URL" "$TITLE" "$DESCRIPTION" "$TAG" "$CATEGORY_ID" "0x$SALT" \
     --private-key "$KEY" --rpc-url "$RPC" > /dev/null 2>&1

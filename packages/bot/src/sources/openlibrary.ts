@@ -3,7 +3,7 @@ import { truncateContentDescription, truncateContentTitle } from "../contentLimi
 import { fetchWithTimeout } from "../utils.js";
 import type { ContentSource, ContentItem } from "./types.js";
 
-const CATEGORY_ID = 8n;
+const CATEGORY_ID = 5n;
 
 // Map common subject keywords to on-chain subcategory names
 const SUBJECT_MAP: Record<string, string> = {
@@ -38,7 +38,7 @@ function matchSubcategory(subjects: string[]): string {
 export const openLibrarySource: ContentSource = {
   name: "openlibrary",
   categoryId: CATEGORY_ID,
-  categoryName: "Media and Images",
+  categoryName: "Media",
 
   async fetchTrending(limit: number): Promise<ContentItem[]> {
     try {

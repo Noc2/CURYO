@@ -11,8 +11,8 @@ interface BotCategoryCatalogEntry {
 const CATEGORY_CATALOG: readonly BotCategoryCatalogEntry[] = [
   {
     authRequirement: "requires YOUTUBE_API_KEY",
-    categoryId: 8n,
-    categoryName: "Media and Images",
+    categoryId: 5n,
+    categoryName: "Media",
     sourceName: "youtube",
     strategyName: "youtube",
     supportsSubmit: true,
@@ -20,8 +20,8 @@ const CATEGORY_CATALOG: readonly BotCategoryCatalogEntry[] = [
   },
   {
     authRequirement: "requires TWITCH_CLIENT_ID and TWITCH_CLIENT_SECRET",
-    categoryId: 8n,
-    categoryName: "Media and Images",
+    categoryId: 5n,
+    categoryName: "Media",
     sourceName: "twitch",
     supportsSubmit: true,
     supportsVote: false,
@@ -37,8 +37,8 @@ const CATEGORY_CATALOG: readonly BotCategoryCatalogEntry[] = [
   },
   {
     authRequirement: "requires TMDB_API_KEY",
-    categoryId: 8n,
-    categoryName: "Media and Images",
+    categoryId: 5n,
+    categoryName: "Media",
     sourceName: "tmdb",
     strategyName: "tmdb",
     supportsSubmit: true,
@@ -47,7 +47,7 @@ const CATEGORY_CATALOG: readonly BotCategoryCatalogEntry[] = [
   {
     authRequirement: "public",
     categoryId: 10n,
-    categoryName: "General Opinion",
+    categoryName: "General",
     sourceName: "wikipedia-people",
     strategyName: "wikipedia",
     supportsSubmit: true,
@@ -64,8 +64,8 @@ const CATEGORY_CATALOG: readonly BotCategoryCatalogEntry[] = [
   },
   {
     authRequirement: "public",
-    categoryId: 8n,
-    categoryName: "Media and Images",
+    categoryId: 5n,
+    categoryName: "Media",
     sourceName: "openlibrary",
     strategyName: "openlibrary",
     supportsSubmit: true,
@@ -73,7 +73,7 @@ const CATEGORY_CATALOG: readonly BotCategoryCatalogEntry[] = [
   },
   {
     authRequirement: "public",
-    categoryId: 6n,
+    categoryId: 7n,
     categoryName: "AI Answers",
     sourceName: "huggingface",
     strategyName: "huggingface",
@@ -91,8 +91,8 @@ const CATEGORY_CATALOG: readonly BotCategoryCatalogEntry[] = [
   },
   {
     authRequirement: "submit automation not implemented yet",
-    categoryId: 8n,
-    categoryName: "Media and Images",
+    categoryId: 5n,
+    categoryName: "Media",
     sourceName: "twitter",
     strategyName: "twitter",
     supportsSubmit: false,
@@ -100,8 +100,8 @@ const CATEGORY_CATALOG: readonly BotCategoryCatalogEntry[] = [
   },
   {
     authRequirement: "requires GITHUB_TOKEN",
-    categoryId: 7n,
-    categoryName: "Documentation and Developer Help",
+    categoryId: 8n,
+    categoryName: "Developer Docs",
     sourceName: "github",
     strategyName: "github",
     supportsSubmit: true,
@@ -109,24 +109,24 @@ const CATEGORY_CATALOG: readonly BotCategoryCatalogEntry[] = [
   },
   {
     authRequirement: "submit automation not implemented yet",
-    categoryId: 8n,
-    categoryName: "Media and Images",
+    categoryId: 5n,
+    categoryName: "Media",
     sourceName: "spotify",
     supportsSubmit: false,
     supportsVote: false,
   },
   {
     authRequirement: "submit automation not implemented yet",
-    categoryId: 7n,
-    categoryName: "Documentation and Developer Help",
+    categoryId: 8n,
+    categoryName: "Developer Docs",
     sourceName: "npm",
     supportsSubmit: false,
     supportsVote: false,
   },
   {
     authRequirement: "submit automation not implemented yet",
-    categoryId: 7n,
-    categoryName: "Documentation and Developer Help",
+    categoryId: 8n,
+    categoryName: "Developer Docs",
     sourceName: "pypi",
     supportsSubmit: false,
     supportsVote: false,
@@ -149,7 +149,7 @@ export function getSubmitCategoryCatalog(): readonly Pick<BotCategoryCatalogEntr
         { categoryId: entry.categoryId, categoryName: entry.categoryName },
       ]),
     ).values(),
-  );
+  ).sort((a, b) => Number(a.categoryId - b.categoryId));
 }
 
 export function getPendingSubmitCoverageCatalog(): readonly BotCategoryCatalogEntry[] {

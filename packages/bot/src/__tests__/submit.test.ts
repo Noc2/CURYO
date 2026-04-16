@@ -10,7 +10,7 @@ const ITEM = {
   title: "The Matrix",
   description: "A computer hacker learns the truth.",
   tags: "Sci-Fi",
-  categoryId: 8n,
+  categoryId: 5n,
 };
 
 type SubmitCommandOptions = {
@@ -122,7 +122,7 @@ async function loadSubmitCommand(options: SubmitCommandOptions = {}) {
         {
           name: "tmdb",
           categoryId: ITEM.categoryId,
-          categoryName: "Media and Images",
+          categoryName: "Media",
           fetchTrending: vi.fn().mockResolvedValue([ITEM]),
         },
       ],
@@ -266,7 +266,7 @@ describe("runSubmit", () => {
 
     expect(submitCommand.mocks.writeContract).not.toHaveBeenCalled();
     expect(submitCommand.mocks.log.warn).toHaveBeenCalledWith(
-      `Skipping "${ITEM.title}" (resolved category 9 does not match requested category 8)`,
+      `Skipping "${ITEM.title}" (resolved category 9 does not match requested category 5)`,
     );
   });
 
@@ -336,8 +336,8 @@ describe("runSubmit", () => {
       sources: [
         {
           name: "tmdb",
-          categoryId: 8n,
-          categoryName: "Media and Images",
+          categoryId: 5n,
+          categoryName: "Media",
           items: [tmdbItem, secondTmdbItem, thirdTmdbItem],
         },
         {
@@ -349,13 +349,13 @@ describe("runSubmit", () => {
       ],
     });
 
-    await submitCommand.runSubmit({ category: "Media and Images", maxSubmissions: 2 });
+    await submitCommand.runSubmit({ category: "Media", maxSubmissions: 2 });
 
     expect(
       submitCommand.mocks.writeContract.mock.calls.filter(
         ([call]) => call.functionName === "submitQuestion",
       ),
     ).toHaveLength(2);
-    expect(submitCommand.mocks.log.info).toHaveBeenCalledWith("Category filter: Media and Images");
+    expect(submitCommand.mocks.log.info).toHaveBeenCalledWith("Category filter: Media");
   });
 });
