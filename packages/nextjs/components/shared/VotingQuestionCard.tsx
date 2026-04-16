@@ -1,6 +1,7 @@
 "use client";
 
 import { type ReactNode, useEffect, useState } from "react";
+import { FundQuestionModal } from "~~/components/reward-pool/FundQuestionModal";
 import { CuryoConnectButton } from "~~/components/scaffold-eth";
 import { CuryoVoteButton } from "~~/components/shared/CuryoVoteButton";
 import { MoreToggleButton } from "~~/components/shared/MoreToggleButton";
@@ -13,6 +14,7 @@ import type { ContentOpenRoundSummary } from "~~/hooks/contentFeed/shared";
 import { useScaffoldReadContract } from "~~/hooks/scaffold-eth";
 import { useParticipationRate } from "~~/hooks/useParticipationRate";
 import { useRoundSnapshot } from "~~/hooks/useRoundSnapshot";
+import { formatUsdAmount } from "~~/lib/questionRewardPools";
 import { formatVoteCooldownRemaining } from "~~/lib/vote/cooldown";
 import { describeOpenRoundActivity, formatCrepAmount, getRoundProgressMessaging } from "~~/lib/vote/voteIncentives";
 import { computeVoteProgressIconCounts } from "~~/lib/vote/voteProgressIcons";
@@ -20,7 +22,13 @@ import { computeVoteProgressIconCounts } from "~~/lib/vote/voteProgressIcons";
 interface VotingQuestionCardProps {
   contentId: bigint;
   categoryId: bigint;
+  questionTitle?: string;
   currentRating: number;
+  rewardPoolSummary?: {
+    totalFunded: bigint;
+    totalAvailable: bigint;
+    activeRewardPoolCount: number;
+  } | null;
   onVote: (isUp: boolean) => void;
   isCommitting: boolean;
   address?: string;
@@ -365,13 +373,76 @@ function LiveRoundActivity({
   );
 }
 
+function RewardPoolBadge({ amount, compact }: { amount: bigint; compact: boolean }) {
+  const hasRewardPool = amount > 0n;
+
+  return (
+    <span
+      className={`inline-flex max-w-full items-center justify-center rounded-full px-3 py-1 text-center font-semibold leading-none ${
+        compact ? "text-xs" : "text-sm"
+      } ${hasRewardPool ? "bg-success/15 text-success" : "bg-base-content/[0.06] text-base-content/58"}`}
+      aria-label={hasRewardPool ? `${formatUsdAmount(amount)} reward pool funded in Celo USDC` : "No reward pool yet"}
+    >
+      {hasRewardPool ? `${formatUsdAmount(amount)} reward pool` : "No reward pool yet"}
+    </span>
+  );
+}
+
+function RewardPoolDetails({
+  amount,
+  activeRewardPoolCount,
+  compact,
+  onFundQuestion,
+}: {
+  amount: bigint;
+  activeRewardPoolCount: number;
+  compact: boolean;
+  onFundQuestion: () => void;
+}) {
+  const hasRewardPool = amount > 0n;
+  const activePoolLabel =
+    activeRewardPoolCount > 0
+      ? `${activeRewardPoolCount} active pool${activeRewardPoolCount === 1 ? "" : "s"}`
+      : "No active pool";
+
+  return (
+    <div className={`border-t border-base-content/10 ${compact ? "pt-2.5" : "pt-3"}`}>
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <div className="min-w-0">
+          <p className="text-[0.64rem] font-semibold uppercase text-base-content/40">USD reward pool</p>
+          <p className="mt-1 text-sm leading-snug text-base-content/72">
+            {hasRewardPool
+              ? `${formatUsdAmount(amount)} available for this question.`
+              : "No reward pool is funding this question yet."}
+          </p>
+        </div>
+        <RewardPoolBadge amount={amount} compact={compact} />
+      </div>
+      <div className="mt-2 flex flex-wrap items-center gap-x-2 gap-y-1 text-sm leading-snug text-base-content/58">
+        <span>{activePoolLabel}</span>
+        <span aria-hidden="true">·</span>
+        <span>Paid in USDC on Celo</span>
+        <button
+          type="button"
+          onClick={onFundQuestion}
+          className="font-semibold text-primary underline-offset-4 transition-colors hover:text-primary-focus hover:underline"
+        >
+          Add reward pool
+        </button>
+      </div>
+    </div>
+  );
+}
+
 /**
  * Displays the live rating signal and all voting controls in a separate card.
  */
 export function VotingQuestionCard({
   contentId,
   categoryId,
+  questionTitle,
   currentRating,
+  rewardPoolSummary,
   onVote,
   isCommitting,
   address,
@@ -400,6 +471,7 @@ export function VotingQuestionCard({
   const voteActionDisabled = isCommitting || isVoteEligibilityPending;
   const [isDetailsOpen, setIsDetailsOpen] = useState(isSignalVariant);
   const [isAttentionActive, setIsAttentionActive] = useState(false);
+  const [showFundQuestionModal, setShowFundQuestionModal] = useState(false);
   const detailsId = `voting-card-details-${contentId.toString()}`;
 
   // Check if user has committed to this round (direction hidden until reveal)
@@ -513,6 +585,18 @@ export function VotingQuestionCard({
   const showExpandedDetails = isSignalVariant || (isDetailsOpen && !isDockVariant);
   const inlineSummaryIncludesStatus = Boolean(inlineStatusContent) && showInlineVotingSummary;
   const showVoteAttentionHint = isAttentionActive && !centerStatusContent;
+  const rewardPoolTotal = rewardPoolSummary?.totalAvailable ?? 0n;
+  const activeRewardPoolCount = rewardPoolSummary?.activeRewardPoolCount ?? 0;
+  const fundQuestionTitle = questionTitle?.trim() || `Question #${contentId.toString()}`;
+  const rewardPoolBadge = <RewardPoolBadge amount={rewardPoolTotal} compact={compact} />;
+  const rewardPoolDetails = (
+    <RewardPoolDetails
+      amount={rewardPoolTotal}
+      activeRewardPoolCount={activeRewardPoolCount}
+      compact={compact}
+      onFundQuestion={() => setShowFundQuestionModal(true)}
+    />
+  );
 
   useEffect(() => {
     setIsDetailsOpen(isSignalVariant);
@@ -573,235 +657,261 @@ export function VotingQuestionCard({
     const mobileOrbClassName = compact ? "drop-shadow-[0_14px_28px_rgba(9,10,12,0.7)]" : "";
 
     return (
-      <div
-        className={`relative ${embedded ? "" : "rounded-2xl"} flex min-h-0 flex-col transition-[padding-top] duration-200 ease-out ${dockWrapperTopPaddingClassName}`}
-      >
-        {compact ? (
-          <div
-            aria-hidden
-            className="pointer-events-none absolute left-1/2 top-2 z-10 -translate-x-1/2 rounded-full bg-[rgba(9,10,12,0.46)] blur-[12px]"
-            style={{ width: `${orbSize * 0.84}px`, height: `${orbSize * 0.84}px` }}
-          />
-        ) : null}
-        <div className="pointer-events-none absolute left-1/2 top-0 z-20 -translate-x-1/2">
-          <RatingOrb rating={currentRating} size={orbSize} showGlow={compact} className={mobileOrbClassName} />
-        </div>
-
-        <div className="relative z-10">
-          {dockTopBorderOverlayStyle ? (
+      <>
+        <div
+          className={`relative ${embedded ? "" : "rounded-2xl"} flex min-h-0 flex-col transition-[padding-top] duration-200 ease-out ${dockWrapperTopPaddingClassName}`}
+        >
+          {compact ? (
             <div
               aria-hidden
-              className="pointer-events-none absolute inset-x-0 top-0 z-10 overflow-hidden"
-              style={dockTopBorderOverlayStyle}
-            >
-              <div className="absolute left-0 top-0 border-t" style={dockTopBorderSegmentStyle} />
-              <div className="absolute right-0 top-0 border-t" style={dockTopBorderSegmentStyle} />
-              <div className="absolute left-1/2 -translate-x-1/2 rounded-full border" style={dockTopBorderArcStyle} />
-            </div>
+              className="pointer-events-none absolute left-1/2 top-2 z-10 -translate-x-1/2 rounded-full bg-[rgba(9,10,12,0.46)] blur-[12px]"
+              style={{ width: `${orbSize * 0.84}px`, height: `${orbSize * 0.84}px` }}
+            />
           ) : null}
-          <div
-            className={`relative overflow-hidden shadow-[0_16px_36px_rgb(0_0_0_/_0.28)] ${
-              isAttentionActive ? "vote-surface-attention" : ""
-            } ${dockShellClassName} ${dockShellBorderClassName}`}
-            data-vote-attention={isAttentionActive ? "true" : undefined}
-            style={{ ...dockShellMaskStyle, ...dockSurfaceStyle }}
-          >
-            <div style={dockContentStyle}>
-              <div className={dockControlsPaddingClassName}>
-                {!centerStatusContent ? (
-                  <div className="grid grid-cols-[auto_minmax(0,1fr)_auto] items-end gap-3">
-                    <div className="justify-self-start">
-                      <CuryoVoteButton
-                        direction="up"
-                        size="sm"
-                        onClick={() => onVote(true)}
-                        disabled={dockVoteDisabled}
-                        attention={isAttentionActive && !dockVoteDisabled}
-                        tooltipPosition="top"
-                      />
-                    </div>
-                    <div className="justify-self-end translate-y-1">
-                      <MoreToggleButton
-                        expanded={isDetailsOpen}
-                        onClick={() => setIsDetailsOpen(current => !current)}
-                        controlsId={detailsId}
-                        className={dockMoreClassName}
-                      />
-                    </div>
-                    <div className="justify-self-end">
-                      <CuryoVoteButton
-                        direction="down"
-                        size="sm"
-                        onClick={() => onVote(false)}
-                        disabled={dockVoteDisabled}
-                        attention={isAttentionActive && !dockVoteDisabled}
-                        tooltipPosition="top"
-                      />
-                    </div>
-                  </div>
-                ) : (
-                  <div className="grid grid-cols-[minmax(0,1fr)_auto_auto] items-center gap-3">
-                    <div className="min-w-0 justify-self-start [&>button]:max-w-full">{centerStatusContent}</div>
-                    <div className="self-center">
-                      <MoreToggleButton
-                        expanded={isDetailsOpen}
-                        onClick={() => setIsDetailsOpen(current => !current)}
-                        controlsId={detailsId}
-                        className={dockMoreClassName}
-                      />
-                    </div>
-                    <div aria-hidden className={`${dockVoteSpacerClassName} justify-self-end`} />
-                  </div>
-                )}
+          <div className="pointer-events-none absolute left-1/2 top-0 z-20 -translate-x-1/2">
+            <RatingOrb rating={currentRating} size={orbSize} showGlow={compact} className={mobileOrbClassName} />
+          </div>
+
+          <div className="relative z-10">
+            {dockTopBorderOverlayStyle ? (
+              <div
+                aria-hidden
+                className="pointer-events-none absolute inset-x-0 top-0 z-10 overflow-hidden"
+                style={dockTopBorderOverlayStyle}
+              >
+                <div className="absolute left-0 top-0 border-t" style={dockTopBorderSegmentStyle} />
+                <div className="absolute right-0 top-0 border-t" style={dockTopBorderSegmentStyle} />
+                <div className="absolute left-1/2 -translate-x-1/2 rounded-full border" style={dockTopBorderArcStyle} />
               </div>
-
-              {showVoteAttentionHint ? (
-                <p className="vote-attention-hint px-4 pb-1 text-center text-[0.72rem] font-semibold uppercase tracking-[0.16em] text-primary/90">
-                  Rate this content here
-                </p>
-              ) : null}
-
-              {displayError ? <p className="px-4 pb-1 text-center text-sm text-error">{displayError}</p> : null}
-
-              {isDetailsOpen ? (
-                <div id={detailsId} className="relative z-10 pb-3 pt-1">
-                  <div aria-hidden="true" className="mx-4 mb-3 h-px bg-[color:var(--curyo-shell-border-strong)]" />
-                  <div className="px-4">
-                    <div className="max-h-[34svh] overflow-y-auto [scrollbar-gutter:stable]">
-                      <div className="flex flex-col gap-2.5 pb-1">
-                        {showInlineVotingSummary ? inlineVotingSummary : null}
-                        {activitySummary}
-                        {!showInlineProgress ? <RoundProgress snapshot={roundSnapshot} /> : null}
-                        {!showInlineRevealedBreakdown ? <RoundRevealedBreakdown snapshot={roundSnapshot} /> : null}
-                        <RoundStats categoryId={categoryId} snapshot={roundSnapshot} />
-                        <RatingHistory
-                          contentId={contentId}
-                          variant={embedded ? "dark" : "default"}
-                          fallbackRating={currentRating}
+            ) : null}
+            <div
+              className={`relative overflow-hidden shadow-[0_16px_36px_rgb(0_0_0_/_0.28)] ${
+                isAttentionActive ? "vote-surface-attention" : ""
+              } ${dockShellClassName} ${dockShellBorderClassName}`}
+              data-vote-attention={isAttentionActive ? "true" : undefined}
+              style={{ ...dockShellMaskStyle, ...dockSurfaceStyle }}
+            >
+              <div style={dockContentStyle}>
+                <div className={dockControlsPaddingClassName}>
+                  <div className="mb-2 flex justify-center">{rewardPoolBadge}</div>
+                  {!centerStatusContent ? (
+                    <div className="grid grid-cols-[auto_minmax(0,1fr)_auto] items-end gap-3">
+                      <div className="justify-self-start">
+                        <CuryoVoteButton
+                          direction="up"
+                          size="sm"
+                          onClick={() => onVote(true)}
+                          disabled={dockVoteDisabled}
+                          attention={isAttentionActive && !dockVoteDisabled}
+                          tooltipPosition="top"
+                        />
+                      </div>
+                      <div className="justify-self-end translate-y-1">
+                        <MoreToggleButton
+                          expanded={isDetailsOpen}
+                          onClick={() => setIsDetailsOpen(current => !current)}
+                          controlsId={detailsId}
+                          className={dockMoreClassName}
+                        />
+                      </div>
+                      <div className="justify-self-end">
+                        <CuryoVoteButton
+                          direction="down"
+                          size="sm"
+                          onClick={() => onVote(false)}
+                          disabled={dockVoteDisabled}
+                          attention={isAttentionActive && !dockVoteDisabled}
+                          tooltipPosition="top"
                         />
                       </div>
                     </div>
-                  </div>
+                  ) : (
+                    <div className="grid grid-cols-[minmax(0,1fr)_auto_auto] items-center gap-3">
+                      <div className="min-w-0 justify-self-start [&>button]:max-w-full">{centerStatusContent}</div>
+                      <div className="self-center">
+                        <MoreToggleButton
+                          expanded={isDetailsOpen}
+                          onClick={() => setIsDetailsOpen(current => !current)}
+                          controlsId={detailsId}
+                          className={dockMoreClassName}
+                        />
+                      </div>
+                      <div aria-hidden className={`${dockVoteSpacerClassName} justify-self-end`} />
+                    </div>
+                  )}
                 </div>
-              ) : null}
+
+                {showVoteAttentionHint ? (
+                  <p className="vote-attention-hint px-4 pb-1 text-center text-[0.72rem] font-semibold uppercase tracking-[0.16em] text-primary/90">
+                    Rate this content here
+                  </p>
+                ) : null}
+
+                {displayError ? <p className="px-4 pb-1 text-center text-sm text-error">{displayError}</p> : null}
+
+                {isDetailsOpen ? (
+                  <div id={detailsId} className="relative z-10 pb-3 pt-1">
+                    <div aria-hidden="true" className="mx-4 mb-3 h-px bg-[color:var(--curyo-shell-border-strong)]" />
+                    <div className="px-4">
+                      <div className="max-h-[34svh] overflow-y-auto [scrollbar-gutter:stable]">
+                        <div className="flex flex-col gap-2.5 pb-1">
+                          {rewardPoolDetails}
+                          {showInlineVotingSummary ? inlineVotingSummary : null}
+                          {activitySummary}
+                          {!showInlineProgress ? <RoundProgress snapshot={roundSnapshot} /> : null}
+                          {!showInlineRevealedBreakdown ? <RoundRevealedBreakdown snapshot={roundSnapshot} /> : null}
+                          <RoundStats categoryId={categoryId} snapshot={roundSnapshot} />
+                          <RatingHistory
+                            contentId={contentId}
+                            variant={embedded ? "dark" : "default"}
+                            fallbackRating={currentRating}
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                ) : null}
+              </div>
             </div>
           </div>
         </div>
-      </div>
+
+        {showFundQuestionModal ? (
+          <FundQuestionModal
+            contentId={contentId}
+            title={fundQuestionTitle}
+            onClose={() => setShowFundQuestionModal(false)}
+          />
+        ) : null}
+      </>
     );
   }
 
   return (
-    <div
-      className={`relative ${embedded ? "" : "rounded-2xl"} flex h-full min-h-0 flex-col overflow-hidden ${
-        isAttentionActive ? "vote-surface-attention" : ""
-      } ${shellClassName}`}
-      data-vote-attention={isAttentionActive ? "true" : undefined}
-      style={embedded ? {} : { background: "var(--curyo-surface-elevated)" }}
-    >
-      {!hideEmbeddedSignalSurface ? (
-        <div
-          aria-hidden
-          className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_50%_14%,rgba(255,153,104,0.18),transparent_34%),radial-gradient(circle_at_50%_58%,rgba(255,241,216,0.08),transparent_40%)]"
-        />
-      ) : null}
-      {/* Content */}
-      <div className="relative z-10 flex min-h-0 flex-1 flex-col overflow-hidden">
-        <div className="flex shrink-0 flex-col items-center text-center">
+    <>
+      <div
+        className={`relative ${embedded ? "" : "rounded-2xl"} flex h-full min-h-0 flex-col overflow-hidden ${
+          isAttentionActive ? "vote-surface-attention" : ""
+        } ${shellClassName}`}
+        data-vote-attention={isAttentionActive ? "true" : undefined}
+        style={embedded ? {} : { background: "var(--curyo-surface-elevated)" }}
+      >
+        {!hideEmbeddedSignalSurface ? (
           <div
-            className={`${headingRowClassName} flex items-center gap-2 text-[0.68rem] font-semibold uppercase tracking-[0.2em] text-base-content/65`}
-          >
-            <span>Community rating</span>
-            <InfoTooltip text={RATING_GUIDANCE_TEXT} position="bottom" />
-          </div>
-          <RatingOrb rating={currentRating} size={orbSize} />
-          {showVoteAttentionHint && isSignalVariant ? (
-            <p className="vote-attention-hint mt-3 text-[0.72rem] font-semibold uppercase tracking-[0.16em] text-primary/90">
-              Rate this content here
-            </p>
-          ) : null}
-          {!(address && hasMyVote) && !centerStatusContent && isSignalVariant ? (
-            <div className="mt-3 flex items-center justify-center gap-3">
-              <CuryoVoteButton
-                direction="up"
-                onClick={() => onVote(true)}
-                disabled={voteActionDisabled}
-                attention={isAttentionActive && !voteActionDisabled}
-              />
-              <CuryoVoteButton
-                direction="down"
-                onClick={() => onVote(false)}
-                disabled={voteActionDisabled}
-                attention={isAttentionActive && !voteActionDisabled}
-              />
+            aria-hidden
+            className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_50%_14%,rgba(255,153,104,0.18),transparent_34%),radial-gradient(circle_at_50%_58%,rgba(255,241,216,0.08),transparent_40%)]"
+          />
+        ) : null}
+        {/* Content */}
+        <div className="relative z-10 flex min-h-0 flex-1 flex-col overflow-hidden">
+          <div className="flex shrink-0 flex-col items-center text-center">
+            <div
+              className={`${headingRowClassName} flex items-center gap-2 text-[0.68rem] font-semibold uppercase tracking-[0.2em] text-base-content/65`}
+            >
+              <span>Community rating</span>
+              <InfoTooltip text={RATING_GUIDANCE_TEXT} position="bottom" />
             </div>
-          ) : null}
-          <div className={`flex w-full shrink-0 flex-col items-center ${actionStackClassName}`}>
-            {phase === "voting" || hasMyVote ? (
-              <div className="flex w-full flex-col items-center gap-2">
-                {showInlineVotingSummary ? inlineVotingSummary : null}
-                {!inlineSummaryIncludesStatus ? centerStatusContent : null}
-              </div>
-            ) : centerStatusContent ? (
-              centerStatusContent
+            <div className={headingRowClassName}>{rewardPoolBadge}</div>
+            <RatingOrb rating={currentRating} size={orbSize} />
+            {showVoteAttentionHint && isSignalVariant ? (
+              <p className="vote-attention-hint mt-3 text-[0.72rem] font-semibold uppercase tracking-[0.16em] text-primary/90">
+                Rate this content here
+              </p>
             ) : null}
-
-            {/* Vote error message */}
-            {displayError && <p className="text-center text-base text-error">{displayError}</p>}
-
-            {/* Voting arrows - centered below the rating stack */}
-            {!(address && hasMyVote) && !centerStatusContent && !isSignalVariant && !isDockVariant && (
-              <div className="flex shrink-0 items-center justify-center gap-2 lg:gap-3">
-                {address ? (
-                  <>
-                    <CuryoVoteButton
-                      direction="up"
-                      onClick={() => onVote(true)}
-                      disabled={voteActionDisabled}
-                      attention={isAttentionActive && !voteActionDisabled}
-                    />
-                    <CuryoVoteButton
-                      direction="down"
-                      onClick={() => onVote(false)}
-                      disabled={voteActionDisabled}
-                      attention={isAttentionActive && !voteActionDisabled}
-                    />
-                  </>
-                ) : (
-                  <CuryoConnectButton />
-                )}
+            {!(address && hasMyVote) && !centerStatusContent && isSignalVariant ? (
+              <div className="mt-3 flex items-center justify-center gap-3">
+                <CuryoVoteButton
+                  direction="up"
+                  onClick={() => onVote(true)}
+                  disabled={voteActionDisabled}
+                  attention={isAttentionActive && !voteActionDisabled}
+                />
+                <CuryoVoteButton
+                  direction="down"
+                  onClick={() => onVote(false)}
+                  disabled={voteActionDisabled}
+                  attention={isAttentionActive && !voteActionDisabled}
+                />
               </div>
-            )}
-          </div>
-        </div>
-
-        <div className={`flex shrink-0 flex-col ${footerStackClassName}`}>
-          {!isSignalVariant ? <LiveRoundActivity snapshot={roundSnapshot} compact={compact} condensed={false} /> : null}
-          {!isSignalVariant && !showInlineProgress ? <RoundProgress snapshot={roundSnapshot} /> : null}
-          {!isSignalVariant ? (
-            <div className={compact ? "pt-0.5" : "pt-1"}>
-              <MoreToggleButton
-                expanded={isDetailsOpen}
-                onClick={() => setIsDetailsOpen(current => !current)}
-                controlsId={detailsId}
-              />
-            </div>
-          ) : null}
-          {showExpandedDetails ? (
-            <div id={detailsId} className={`flex flex-col ${compact ? "gap-2.5" : "gap-3"}`}>
-              {!isSignalVariant && !showInlineRevealedBreakdown ? (
-                <RoundRevealedBreakdown snapshot={roundSnapshot} stacked={isDesktopSignalRailCard} />
+            ) : null}
+            <div className={`flex w-full shrink-0 flex-col items-center ${actionStackClassName}`}>
+              {phase === "voting" || hasMyVote ? (
+                <div className="flex w-full flex-col items-center gap-2">
+                  {showInlineVotingSummary ? inlineVotingSummary : null}
+                  {!inlineSummaryIncludesStatus ? centerStatusContent : null}
+                </div>
+              ) : centerStatusContent ? (
+                centerStatusContent
               ) : null}
-              <RoundStats categoryId={categoryId} snapshot={roundSnapshot} />
-              <RatingHistory
-                contentId={contentId}
-                variant={embedded || isSignalVariant ? "dark" : "default"}
-                fallbackRating={currentRating}
-              />
+
+              {/* Vote error message */}
+              {displayError && <p className="text-center text-base text-error">{displayError}</p>}
+
+              {/* Voting arrows - centered below the rating stack */}
+              {!(address && hasMyVote) && !centerStatusContent && !isSignalVariant && !isDockVariant && (
+                <div className="flex shrink-0 items-center justify-center gap-2 lg:gap-3">
+                  {address ? (
+                    <>
+                      <CuryoVoteButton
+                        direction="up"
+                        onClick={() => onVote(true)}
+                        disabled={voteActionDisabled}
+                        attention={isAttentionActive && !voteActionDisabled}
+                      />
+                      <CuryoVoteButton
+                        direction="down"
+                        onClick={() => onVote(false)}
+                        disabled={voteActionDisabled}
+                        attention={isAttentionActive && !voteActionDisabled}
+                      />
+                    </>
+                  ) : (
+                    <CuryoConnectButton />
+                  )}
+                </div>
+              )}
             </div>
-          ) : null}
+          </div>
+
+          <div className={`flex shrink-0 flex-col ${footerStackClassName}`}>
+            {!isSignalVariant ? (
+              <LiveRoundActivity snapshot={roundSnapshot} compact={compact} condensed={false} />
+            ) : null}
+            {!isSignalVariant && !showInlineProgress ? <RoundProgress snapshot={roundSnapshot} /> : null}
+            {!isSignalVariant ? (
+              <div className={compact ? "pt-0.5" : "pt-1"}>
+                <MoreToggleButton
+                  expanded={isDetailsOpen}
+                  onClick={() => setIsDetailsOpen(current => !current)}
+                  controlsId={detailsId}
+                />
+              </div>
+            ) : null}
+            {showExpandedDetails ? (
+              <div id={detailsId} className={`flex flex-col ${compact ? "gap-2.5" : "gap-3"}`}>
+                {!isSignalVariant && !showInlineRevealedBreakdown ? (
+                  <RoundRevealedBreakdown snapshot={roundSnapshot} stacked={isDesktopSignalRailCard} />
+                ) : null}
+                <RoundStats categoryId={categoryId} snapshot={roundSnapshot} />
+                {rewardPoolDetails}
+                <RatingHistory
+                  contentId={contentId}
+                  variant={embedded || isSignalVariant ? "dark" : "default"}
+                  fallbackRating={currentRating}
+                />
+              </div>
+            ) : null}
+          </div>
         </div>
       </div>
-    </div>
+
+      {showFundQuestionModal ? (
+        <FundQuestionModal
+          contentId={contentId}
+          title={fundQuestionTitle}
+          onClose={() => setShowFundQuestionModal(false)}
+        />
+      ) : null}
+    </>
   );
 }

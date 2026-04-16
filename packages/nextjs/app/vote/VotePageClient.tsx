@@ -1713,7 +1713,9 @@ const HomeInner = () => {
               <VotingQuestionCard
                 contentId={primaryItem.id}
                 categoryId={primaryItem.categoryId}
+                questionTitle={primaryItem.question || primaryItem.title}
                 currentRating={primaryItem.rating}
+                rewardPoolSummary={primaryItem.rewardPoolSummary}
                 openRound={primaryItem.openRound}
                 onVote={isUp => handleButtonVote(primaryItem, isUp)}
                 isCommitting={isCommitting}
