@@ -8,22 +8,7 @@ export const CategoryRegistryAbi = [
         "internalType": "address"
       },
       {
-        "name": "_token",
-        "type": "address",
-        "internalType": "address"
-      },
-      {
-        "name": "_governor",
-        "type": "address",
-        "internalType": "address"
-      },
-      {
-        "name": "_timelock",
-        "type": "address",
-        "internalType": "address"
-      },
-      {
-        "name": "_votingEngine",
+        "name": "_governance",
         "type": "address",
         "internalType": "address"
       }
@@ -45,19 +30,6 @@ export const CategoryRegistryAbi = [
   },
   {
     "type": "function",
-    "name": "CATEGORY_STAKE",
-    "inputs": [],
-    "outputs": [
-      {
-        "name": "",
-        "type": "uint256",
-        "internalType": "uint256"
-      }
-    ],
-    "stateMutability": "view"
-  },
-  {
-    "type": "function",
     "name": "DEFAULT_ADMIN_ROLE",
     "inputs": [],
     "outputs": [
@@ -71,7 +43,7 @@ export const CategoryRegistryAbi = [
   },
   {
     "type": "function",
-    "name": "MAX_DOMAIN_LENGTH",
+    "name": "MAX_NAME_LENGTH",
     "inputs": [],
     "outputs": [
       {
@@ -84,7 +56,7 @@ export const CategoryRegistryAbi = [
   },
   {
     "type": "function",
-    "name": "MAX_NAME_LENGTH",
+    "name": "MAX_SLUG_LENGTH",
     "inputs": [],
     "outputs": [
       {
@@ -123,32 +95,6 @@ export const CategoryRegistryAbi = [
   },
   {
     "type": "function",
-    "name": "SPONSORSHIP_WINDOW",
-    "inputs": [],
-    "outputs": [
-      {
-        "name": "",
-        "type": "uint256",
-        "internalType": "uint256"
-      }
-    ],
-    "stateMutability": "view"
-  },
-  {
-    "type": "function",
-    "name": "STALE_LINKED_PROPOSAL_TIMEOUT",
-    "inputs": [],
-    "outputs": [
-      {
-        "name": "",
-        "type": "uint256",
-        "internalType": "uint256"
-      }
-    ],
-    "stateMutability": "view"
-  },
-  {
-    "type": "function",
     "name": "addApprovedCategory",
     "inputs": [
       {
@@ -157,7 +103,7 @@ export const CategoryRegistryAbi = [
         "internalType": "string"
       },
       {
-        "name": "domain",
+        "name": "slug",
         "type": "string",
         "internalType": "string"
       },
@@ -175,79 +121,6 @@ export const CategoryRegistryAbi = [
       }
     ],
     "stateMutability": "nonpayable"
-  },
-  {
-    "type": "function",
-    "name": "approveCategory",
-    "inputs": [
-      {
-        "name": "categoryId",
-        "type": "uint256",
-        "internalType": "uint256"
-      },
-      {
-        "name": "descriptionHash",
-        "type": "bytes32",
-        "internalType": "bytes32"
-      },
-      {
-        "name": "approvalDigest",
-        "type": "bytes32",
-        "internalType": "bytes32"
-      }
-    ],
-    "outputs": [],
-    "stateMutability": "nonpayable"
-  },
-  {
-    "type": "function",
-    "name": "cancelUnlinkedCategory",
-    "inputs": [
-      {
-        "name": "categoryId",
-        "type": "uint256",
-        "internalType": "uint256"
-      }
-    ],
-    "outputs": [],
-    "stateMutability": "nonpayable"
-  },
-  {
-    "type": "function",
-    "name": "clearApprovalProposal",
-    "inputs": [
-      {
-        "name": "categoryId",
-        "type": "uint256",
-        "internalType": "uint256"
-      }
-    ],
-    "outputs": [],
-    "stateMutability": "nonpayable"
-  },
-  {
-    "type": "function",
-    "name": "getApprovalProposalId",
-    "inputs": [
-      {
-        "name": "categoryId",
-        "type": "uint256",
-        "internalType": "uint256"
-      },
-      {
-        "name": "descriptionHash",
-        "type": "bytes32",
-        "internalType": "bytes32"
-      }
-    ],
-    "outputs": [
-      {
-        "name": "proposalId",
-        "type": "uint256",
-        "internalType": "uint256"
-      }
-    ],
-    "stateMutability": "view"
   },
   {
     "type": "function",
@@ -346,29 +219,10 @@ export const CategoryRegistryAbi = [
   },
   {
     "type": "function",
-    "name": "getCategoryApprovalDigest",
-    "inputs": [
-      {
-        "name": "categoryId",
-        "type": "uint256",
-        "internalType": "uint256"
-      }
-    ],
-    "outputs": [
-      {
-        "name": "",
-        "type": "bytes32",
-        "internalType": "bytes32"
-      }
-    ],
-    "stateMutability": "view"
-  },
-  {
-    "type": "function",
     "name": "getCategoryByDomain",
     "inputs": [
       {
-        "name": "domain",
+        "name": "slug",
         "type": "string",
         "internalType": "string"
       }
@@ -431,25 +285,6 @@ export const CategoryRegistryAbi = [
   },
   {
     "type": "function",
-    "name": "getCategoryCreatedBlock",
-    "inputs": [
-      {
-        "name": "categoryId",
-        "type": "uint256",
-        "internalType": "uint256"
-      }
-    ],
-    "outputs": [
-      {
-        "name": "",
-        "type": "uint256",
-        "internalType": "uint256"
-      }
-    ],
-    "stateMutability": "view"
-  },
-  {
-    "type": "function",
     "name": "getCategoryStatus",
     "inputs": [
       {
@@ -501,38 +336,6 @@ export const CategoryRegistryAbi = [
         "name": "",
         "type": "string[]",
         "internalType": "string[]"
-      }
-    ],
-    "stateMutability": "view"
-  },
-  {
-    "type": "function",
-    "name": "getSubmitter",
-    "inputs": [
-      {
-        "name": "categoryId",
-        "type": "uint256",
-        "internalType": "uint256"
-      }
-    ],
-    "outputs": [
-      {
-        "name": "",
-        "type": "address",
-        "internalType": "address"
-      }
-    ],
-    "stateMutability": "view"
-  },
-  {
-    "type": "function",
-    "name": "governor",
-    "inputs": [],
-    "outputs": [
-      {
-        "name": "",
-        "type": "address",
-        "internalType": "contract IGovernor"
       }
     ],
     "stateMutability": "view"
@@ -603,7 +406,7 @@ export const CategoryRegistryAbi = [
     "name": "isDomainRegistered",
     "inputs": [
       {
-        "name": "domain",
+        "name": "slug",
         "type": "string",
         "internalType": "string"
       }
@@ -619,30 +422,6 @@ export const CategoryRegistryAbi = [
   },
   {
     "type": "function",
-    "name": "linkApprovalProposal",
-    "inputs": [
-      {
-        "name": "categoryId",
-        "type": "uint256",
-        "internalType": "uint256"
-      },
-      {
-        "name": "descriptionHash",
-        "type": "bytes32",
-        "internalType": "bytes32"
-      }
-    ],
-    "outputs": [
-      {
-        "name": "proposalId",
-        "type": "uint256",
-        "internalType": "uint256"
-      }
-    ],
-    "stateMutability": "nonpayable"
-  },
-  {
-    "type": "function",
     "name": "nextCategoryId",
     "inputs": [],
     "outputs": [
@@ -653,19 +432,6 @@ export const CategoryRegistryAbi = [
       }
     ],
     "stateMutability": "view"
-  },
-  {
-    "type": "function",
-    "name": "rejectCategory",
-    "inputs": [
-      {
-        "name": "categoryId",
-        "type": "uint256",
-        "internalType": "uint256"
-      }
-    ],
-    "outputs": [],
-    "stateMutability": "nonpayable"
   },
   {
     "type": "function",
@@ -705,61 +471,6 @@ export const CategoryRegistryAbi = [
   },
   {
     "type": "function",
-    "name": "setVoterIdNFT",
-    "inputs": [
-      {
-        "name": "_voterIdNFT",
-        "type": "address",
-        "internalType": "address"
-      }
-    ],
-    "outputs": [],
-    "stateMutability": "nonpayable"
-  },
-  {
-    "type": "function",
-    "name": "setVotingEngine",
-    "inputs": [
-      {
-        "name": "_votingEngine",
-        "type": "address",
-        "internalType": "address"
-      }
-    ],
-    "outputs": [],
-    "stateMutability": "nonpayable"
-  },
-  {
-    "type": "function",
-    "name": "submitCategory",
-    "inputs": [
-      {
-        "name": "name",
-        "type": "string",
-        "internalType": "string"
-      },
-      {
-        "name": "domain",
-        "type": "string",
-        "internalType": "string"
-      },
-      {
-        "name": "subcategories",
-        "type": "string[]",
-        "internalType": "string[]"
-      }
-    ],
-    "outputs": [
-      {
-        "name": "categoryId",
-        "type": "uint256",
-        "internalType": "uint256"
-      }
-    ],
-    "stateMutability": "nonpayable"
-  },
-  {
-    "type": "function",
     "name": "supportsInterface",
     "inputs": [
       {
@@ -773,76 +484,6 @@ export const CategoryRegistryAbi = [
         "name": "",
         "type": "bool",
         "internalType": "bool"
-      }
-    ],
-    "stateMutability": "view"
-  },
-  {
-    "type": "function",
-    "name": "timelock",
-    "inputs": [],
-    "outputs": [
-      {
-        "name": "",
-        "type": "address",
-        "internalType": "address"
-      }
-    ],
-    "stateMutability": "view"
-  },
-  {
-    "type": "function",
-    "name": "token",
-    "inputs": [],
-    "outputs": [
-      {
-        "name": "",
-        "type": "address",
-        "internalType": "contract IERC20"
-      }
-    ],
-    "stateMutability": "view"
-  },
-  {
-    "type": "function",
-    "name": "updateGovernance",
-    "inputs": [
-      {
-        "name": "_governor",
-        "type": "address",
-        "internalType": "address"
-      },
-      {
-        "name": "_timelock",
-        "type": "address",
-        "internalType": "address"
-      }
-    ],
-    "outputs": [],
-    "stateMutability": "nonpayable"
-  },
-  {
-    "type": "function",
-    "name": "voterIdNFT",
-    "inputs": [],
-    "outputs": [
-      {
-        "name": "",
-        "type": "address",
-        "internalType": "contract IVoterIdNFT"
-      }
-    ],
-    "stateMutability": "view"
-  },
-  {
-    "type": "function",
-    "name": "votingEngine",
-    "inputs": [],
-    "outputs": [
-      {
-        "name": "",
-        "type": "address",
-        "internalType": "contract IRoundVotingEngine"
       }
     ],
     "stateMutability": "view"
@@ -864,130 +505,10 @@ export const CategoryRegistryAbi = [
         "internalType": "string"
       },
       {
-        "name": "domain",
+        "name": "slug",
         "type": "string",
         "indexed": false,
         "internalType": "string"
-      }
-    ],
-    "anonymous": false
-  },
-  {
-    "type": "event",
-    "name": "CategoryApproved",
-    "inputs": [
-      {
-        "name": "categoryId",
-        "type": "uint256",
-        "indexed": true,
-        "internalType": "uint256"
-      }
-    ],
-    "anonymous": false
-  },
-  {
-    "type": "event",
-    "name": "CategoryCanceled",
-    "inputs": [
-      {
-        "name": "categoryId",
-        "type": "uint256",
-        "indexed": true,
-        "internalType": "uint256"
-      }
-    ],
-    "anonymous": false
-  },
-  {
-    "type": "event",
-    "name": "CategoryProposalLinked",
-    "inputs": [
-      {
-        "name": "categoryId",
-        "type": "uint256",
-        "indexed": true,
-        "internalType": "uint256"
-      },
-      {
-        "name": "proposalId",
-        "type": "uint256",
-        "indexed": true,
-        "internalType": "uint256"
-      },
-      {
-        "name": "descriptionHash",
-        "type": "bytes32",
-        "indexed": false,
-        "internalType": "bytes32"
-      }
-    ],
-    "anonymous": false
-  },
-  {
-    "type": "event",
-    "name": "CategoryRejected",
-    "inputs": [
-      {
-        "name": "categoryId",
-        "type": "uint256",
-        "indexed": true,
-        "internalType": "uint256"
-      }
-    ],
-    "anonymous": false
-  },
-  {
-    "type": "event",
-    "name": "CategorySubmitted",
-    "inputs": [
-      {
-        "name": "categoryId",
-        "type": "uint256",
-        "indexed": true,
-        "internalType": "uint256"
-      },
-      {
-        "name": "submitter",
-        "type": "address",
-        "indexed": true,
-        "internalType": "address"
-      },
-      {
-        "name": "name",
-        "type": "string",
-        "indexed": false,
-        "internalType": "string"
-      },
-      {
-        "name": "domain",
-        "type": "string",
-        "indexed": false,
-        "internalType": "string"
-      },
-      {
-        "name": "proposalId",
-        "type": "uint256",
-        "indexed": false,
-        "internalType": "uint256"
-      }
-    ],
-    "anonymous": false
-  },
-  {
-    "type": "event",
-    "name": "GovernanceUpdated",
-    "inputs": [
-      {
-        "name": "governor",
-        "type": "address",
-        "indexed": true,
-        "internalType": "address"
-      },
-      {
-        "name": "timelock",
-        "type": "address",
-        "indexed": true,
-        "internalType": "address"
       }
     ],
     "anonymous": false
@@ -1068,19 +589,6 @@ export const CategoryRegistryAbi = [
     "anonymous": false
   },
   {
-    "type": "event",
-    "name": "VoterIdNFTUpdated",
-    "inputs": [
-      {
-        "name": "voterIdNFT",
-        "type": "address",
-        "indexed": false,
-        "internalType": "address"
-      }
-    ],
-    "anonymous": false
-  },
-  {
     "type": "error",
     "name": "AccessControlBadConfirmation",
     "inputs": []
@@ -1098,22 +606,6 @@ export const CategoryRegistryAbi = [
         "name": "neededRole",
         "type": "bytes32",
         "internalType": "bytes32"
-      }
-    ]
-  },
-  {
-    "type": "error",
-    "name": "ReentrancyGuardReentrantCall",
-    "inputs": []
-  },
-  {
-    "type": "error",
-    "name": "SafeERC20FailedOperation",
-    "inputs": [
-      {
-        "name": "token",
-        "type": "address",
-        "internalType": "address"
       }
     ]
   }

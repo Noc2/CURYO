@@ -6,24 +6,6 @@ import type { GenericContractsDeclaration } from "./types";
 
 const deployedContracts: GenericContractsDeclaration = {
   31337: {
-    CategoryFeeLib: {
-      address: "0x4bf588f853c2e54adce7e8904c3b81844ed7963a",
-      abi: [
-        {
-          type: "error",
-          name: "SafeERC20FailedOperation",
-          inputs: [
-            {
-              name: "token",
-              type: "address",
-              internalType: "address",
-            },
-          ],
-        },
-      ],
-      inheritedFunctions: {},
-      deployedOnBlock: 1,
-    },
     VotePreflightLib: {
       address: "0x9e7cbe199233d0688cb058f4501c796152991849",
       abi: [
@@ -545,39 +527,8 @@ const deployedContracts: GenericContractsDeclaration = {
       deployedOnBlock: 6,
     },
     RoundSettlementDistributionLib: {
-      address: "0xfc5a5de8c1596cb103605487d49ba61eae1efb93",
+      address: "0x164467a217f6776997b58373f9079ec7006eca4d",
       abi: [
-        {
-          type: "event",
-          name: "CategorySubmitterRewarded",
-          inputs: [
-            {
-              name: "contentId",
-              type: "uint256",
-              indexed: true,
-              internalType: "uint256",
-            },
-            {
-              name: "categoryId",
-              type: "uint256",
-              indexed: true,
-              internalType: "uint256",
-            },
-            {
-              name: "submitter",
-              type: "address",
-              indexed: true,
-              internalType: "address",
-            },
-            {
-              name: "amount",
-              type: "uint256",
-              indexed: false,
-              internalType: "uint256",
-            },
-          ],
-          anonymous: false,
-        },
         {
           type: "event",
           name: "ConsensusReserveFunded",
@@ -754,7 +705,7 @@ const deployedContracts: GenericContractsDeclaration = {
       deployedOnBlock: 9,
     },
     CuryoReputation: {
-      address: "0xdA2bA35B865178C0b772F0FdA8cf9bE297f71312",
+      address: "0x12975173B87F7595EE45dFFb2Ab812ECE596Bf84",
       abi: [
         {
           type: "constructor",
@@ -2455,10 +2406,10 @@ const deployedContracts: GenericContractsDeclaration = {
         revokeRole:
           "lib/openzeppelin-contracts/contracts/access/AccessControl.sol",
       },
-      deployedOnBlock: 200,
+      deployedOnBlock: 10,
     },
     ContentRegistry: {
-      address: "0x889cc60f3D1bC55c189271c59848E6289785f34f",
+      address: "0x5B3120d0dA5FDcBA7aef87A9c3c64829C1c0D76B",
       abi: [
         {
           type: "constructor",
@@ -5154,10 +5105,10 @@ const deployedContracts: GenericContractsDeclaration = {
         paused:
           "lib/openzeppelin-contracts-upgradeable/contracts/utils/PausableUpgradeable.sol",
       },
-      deployedOnBlock: 210,
+      deployedOnBlock: 20,
     },
     RoundVotingEngine: {
-      address: "0x276357700891Ae176d4AD836fde51dC44f2494f1",
+      address: "0x19A1c09fE3399C4Daaa2C98b936a8E460fC5Eaa4",
       abi: [
         {
           type: "constructor",
@@ -6453,37 +6404,6 @@ const deployedContracts: GenericContractsDeclaration = {
         },
         {
           type: "event",
-          name: "CategorySubmitterRewarded",
-          inputs: [
-            {
-              name: "contentId",
-              type: "uint256",
-              indexed: true,
-              internalType: "uint256",
-            },
-            {
-              name: "categoryId",
-              type: "uint256",
-              indexed: true,
-              internalType: "uint256",
-            },
-            {
-              name: "submitter",
-              type: "address",
-              indexed: true,
-              internalType: "address",
-            },
-            {
-              name: "amount",
-              type: "uint256",
-              indexed: false,
-              internalType: "uint256",
-            },
-          ],
-          anonymous: false,
-        },
-        {
-          type: "event",
           name: "ConsensusReserveFunded",
           inputs: [
             {
@@ -7199,10 +7119,10 @@ const deployedContracts: GenericContractsDeclaration = {
         paused:
           "lib/openzeppelin-contracts-upgradeable/contracts/utils/PausableUpgradeable.sol",
       },
-      deployedOnBlock: 212,
+      deployedOnBlock: 22,
     },
     RoundRewardDistributor: {
-      address: "0x4b17f186f793FCB28bF243a7E67f0012B8D6eFAe",
+      address: "0x49B8E3b089d4ebf9F37B1dA9B839Ec013C2cD8c9",
       abi: [
         {
           type: "constructor",
@@ -8639,10 +8559,10 @@ const deployedContracts: GenericContractsDeclaration = {
         supportsInterface:
           "lib/openzeppelin-contracts-upgradeable/contracts/access/AccessControlUpgradeable.sol",
       },
-      deployedOnBlock: 213,
+      deployedOnBlock: 23,
     },
     FrontendRegistry: {
-      address: "0xCa4A123095419d9387F9f49d618b33cBaf46b626",
+      address: "0x29a79095352a718B3D7Fe84E1F14E9F34A35598e",
       abi: [
         {
           type: "constructor",
@@ -9600,10 +9520,10 @@ const deployedContracts: GenericContractsDeclaration = {
         supportsInterface:
           "lib/openzeppelin-contracts-upgradeable/contracts/access/AccessControlUpgradeable.sol",
       },
-      deployedOnBlock: 208,
+      deployedOnBlock: 18,
     },
     ProfileRegistry: {
-      address: "0xe7B2d9331728219853eD5fb5F294350Ea680C5c0",
+      address: "0x6379ebD504941f50D5BfDE9348B37593bd29C835",
       abi: [
         {
           type: "constructor",
@@ -10263,10 +10183,10 @@ const deployedContracts: GenericContractsDeclaration = {
         supportsInterface:
           "lib/openzeppelin-contracts-upgradeable/contracts/access/AccessControlUpgradeable.sol",
       },
-      deployedOnBlock: 209,
+      deployedOnBlock: 19,
     },
     ProtocolConfig: {
-      address: "0xe986765Bd00ece21565e6E438Ace940B8c332d82",
+      address: "0x33b1B5Aa9Aa4Da83a332F0bC5cAC6A903FDE5d92",
       abi: [
         {
           type: "constructor",
@@ -11521,10 +11441,10 @@ const deployedContracts: GenericContractsDeclaration = {
         supportsInterface:
           "lib/openzeppelin-contracts/contracts/access/AccessControl.sol",
       },
-      deployedOnBlock: 211,
+      deployedOnBlock: 21,
     },
     QuestionRewardPoolEscrow: {
-      address: "0x399D46544Ea7E29A6854a9533d6adccEf8DD5097",
+      address: "0xDFD787c807DEA8d7e53311b779BC0c6a4704D286",
       abi: [
         {
           type: "constructor",
@@ -12578,10 +12498,10 @@ const deployedContracts: GenericContractsDeclaration = {
         paused:
           "lib/openzeppelin-contracts-upgradeable/contracts/utils/PausableUpgradeable.sol",
       },
-      deployedOnBlock: 218,
+      deployedOnBlock: 28,
     },
     CategoryRegistry: {
-      address: "0x7De270E6ed1517a4bDD194eA3af72Bdae6D6e49c",
+      address: "0x067c804bb006836469379D4A2A69a81803bd1F45",
       abi: [
         {
           type: "constructor",
@@ -12592,22 +12512,7 @@ const deployedContracts: GenericContractsDeclaration = {
               internalType: "address",
             },
             {
-              name: "_token",
-              type: "address",
-              internalType: "address",
-            },
-            {
-              name: "_governor",
-              type: "address",
-              internalType: "address",
-            },
-            {
-              name: "_timelock",
-              type: "address",
-              internalType: "address",
-            },
-            {
-              name: "_votingEngine",
+              name: "_governance",
               type: "address",
               internalType: "address",
             },
@@ -12629,19 +12534,6 @@ const deployedContracts: GenericContractsDeclaration = {
         },
         {
           type: "function",
-          name: "CATEGORY_STAKE",
-          inputs: [],
-          outputs: [
-            {
-              name: "",
-              type: "uint256",
-              internalType: "uint256",
-            },
-          ],
-          stateMutability: "view",
-        },
-        {
-          type: "function",
           name: "DEFAULT_ADMIN_ROLE",
           inputs: [],
           outputs: [
@@ -12655,7 +12547,7 @@ const deployedContracts: GenericContractsDeclaration = {
         },
         {
           type: "function",
-          name: "MAX_DOMAIN_LENGTH",
+          name: "MAX_NAME_LENGTH",
           inputs: [],
           outputs: [
             {
@@ -12668,7 +12560,7 @@ const deployedContracts: GenericContractsDeclaration = {
         },
         {
           type: "function",
-          name: "MAX_NAME_LENGTH",
+          name: "MAX_SLUG_LENGTH",
           inputs: [],
           outputs: [
             {
@@ -12707,32 +12599,6 @@ const deployedContracts: GenericContractsDeclaration = {
         },
         {
           type: "function",
-          name: "SPONSORSHIP_WINDOW",
-          inputs: [],
-          outputs: [
-            {
-              name: "",
-              type: "uint256",
-              internalType: "uint256",
-            },
-          ],
-          stateMutability: "view",
-        },
-        {
-          type: "function",
-          name: "STALE_LINKED_PROPOSAL_TIMEOUT",
-          inputs: [],
-          outputs: [
-            {
-              name: "",
-              type: "uint256",
-              internalType: "uint256",
-            },
-          ],
-          stateMutability: "view",
-        },
-        {
-          type: "function",
           name: "addApprovedCategory",
           inputs: [
             {
@@ -12741,7 +12607,7 @@ const deployedContracts: GenericContractsDeclaration = {
               internalType: "string",
             },
             {
-              name: "domain",
+              name: "slug",
               type: "string",
               internalType: "string",
             },
@@ -12759,79 +12625,6 @@ const deployedContracts: GenericContractsDeclaration = {
             },
           ],
           stateMutability: "nonpayable",
-        },
-        {
-          type: "function",
-          name: "approveCategory",
-          inputs: [
-            {
-              name: "categoryId",
-              type: "uint256",
-              internalType: "uint256",
-            },
-            {
-              name: "descriptionHash",
-              type: "bytes32",
-              internalType: "bytes32",
-            },
-            {
-              name: "approvalDigest",
-              type: "bytes32",
-              internalType: "bytes32",
-            },
-          ],
-          outputs: [],
-          stateMutability: "nonpayable",
-        },
-        {
-          type: "function",
-          name: "cancelUnlinkedCategory",
-          inputs: [
-            {
-              name: "categoryId",
-              type: "uint256",
-              internalType: "uint256",
-            },
-          ],
-          outputs: [],
-          stateMutability: "nonpayable",
-        },
-        {
-          type: "function",
-          name: "clearApprovalProposal",
-          inputs: [
-            {
-              name: "categoryId",
-              type: "uint256",
-              internalType: "uint256",
-            },
-          ],
-          outputs: [],
-          stateMutability: "nonpayable",
-        },
-        {
-          type: "function",
-          name: "getApprovalProposalId",
-          inputs: [
-            {
-              name: "categoryId",
-              type: "uint256",
-              internalType: "uint256",
-            },
-            {
-              name: "descriptionHash",
-              type: "bytes32",
-              internalType: "bytes32",
-            },
-          ],
-          outputs: [
-            {
-              name: "proposalId",
-              type: "uint256",
-              internalType: "uint256",
-            },
-          ],
-          stateMutability: "view",
         },
         {
           type: "function",
@@ -12930,29 +12723,10 @@ const deployedContracts: GenericContractsDeclaration = {
         },
         {
           type: "function",
-          name: "getCategoryApprovalDigest",
-          inputs: [
-            {
-              name: "categoryId",
-              type: "uint256",
-              internalType: "uint256",
-            },
-          ],
-          outputs: [
-            {
-              name: "",
-              type: "bytes32",
-              internalType: "bytes32",
-            },
-          ],
-          stateMutability: "view",
-        },
-        {
-          type: "function",
           name: "getCategoryByDomain",
           inputs: [
             {
-              name: "domain",
+              name: "slug",
               type: "string",
               internalType: "string",
             },
@@ -13015,25 +12789,6 @@ const deployedContracts: GenericContractsDeclaration = {
         },
         {
           type: "function",
-          name: "getCategoryCreatedBlock",
-          inputs: [
-            {
-              name: "categoryId",
-              type: "uint256",
-              internalType: "uint256",
-            },
-          ],
-          outputs: [
-            {
-              name: "",
-              type: "uint256",
-              internalType: "uint256",
-            },
-          ],
-          stateMutability: "view",
-        },
-        {
-          type: "function",
           name: "getCategoryStatus",
           inputs: [
             {
@@ -13085,38 +12840,6 @@ const deployedContracts: GenericContractsDeclaration = {
               name: "",
               type: "string[]",
               internalType: "string[]",
-            },
-          ],
-          stateMutability: "view",
-        },
-        {
-          type: "function",
-          name: "getSubmitter",
-          inputs: [
-            {
-              name: "categoryId",
-              type: "uint256",
-              internalType: "uint256",
-            },
-          ],
-          outputs: [
-            {
-              name: "",
-              type: "address",
-              internalType: "address",
-            },
-          ],
-          stateMutability: "view",
-        },
-        {
-          type: "function",
-          name: "governor",
-          inputs: [],
-          outputs: [
-            {
-              name: "",
-              type: "address",
-              internalType: "contract IGovernor",
             },
           ],
           stateMutability: "view",
@@ -13187,7 +12910,7 @@ const deployedContracts: GenericContractsDeclaration = {
           name: "isDomainRegistered",
           inputs: [
             {
-              name: "domain",
+              name: "slug",
               type: "string",
               internalType: "string",
             },
@@ -13203,30 +12926,6 @@ const deployedContracts: GenericContractsDeclaration = {
         },
         {
           type: "function",
-          name: "linkApprovalProposal",
-          inputs: [
-            {
-              name: "categoryId",
-              type: "uint256",
-              internalType: "uint256",
-            },
-            {
-              name: "descriptionHash",
-              type: "bytes32",
-              internalType: "bytes32",
-            },
-          ],
-          outputs: [
-            {
-              name: "proposalId",
-              type: "uint256",
-              internalType: "uint256",
-            },
-          ],
-          stateMutability: "nonpayable",
-        },
-        {
-          type: "function",
           name: "nextCategoryId",
           inputs: [],
           outputs: [
@@ -13237,19 +12936,6 @@ const deployedContracts: GenericContractsDeclaration = {
             },
           ],
           stateMutability: "view",
-        },
-        {
-          type: "function",
-          name: "rejectCategory",
-          inputs: [
-            {
-              name: "categoryId",
-              type: "uint256",
-              internalType: "uint256",
-            },
-          ],
-          outputs: [],
-          stateMutability: "nonpayable",
         },
         {
           type: "function",
@@ -13289,61 +12975,6 @@ const deployedContracts: GenericContractsDeclaration = {
         },
         {
           type: "function",
-          name: "setVoterIdNFT",
-          inputs: [
-            {
-              name: "_voterIdNFT",
-              type: "address",
-              internalType: "address",
-            },
-          ],
-          outputs: [],
-          stateMutability: "nonpayable",
-        },
-        {
-          type: "function",
-          name: "setVotingEngine",
-          inputs: [
-            {
-              name: "_votingEngine",
-              type: "address",
-              internalType: "address",
-            },
-          ],
-          outputs: [],
-          stateMutability: "nonpayable",
-        },
-        {
-          type: "function",
-          name: "submitCategory",
-          inputs: [
-            {
-              name: "name",
-              type: "string",
-              internalType: "string",
-            },
-            {
-              name: "domain",
-              type: "string",
-              internalType: "string",
-            },
-            {
-              name: "subcategories",
-              type: "string[]",
-              internalType: "string[]",
-            },
-          ],
-          outputs: [
-            {
-              name: "categoryId",
-              type: "uint256",
-              internalType: "uint256",
-            },
-          ],
-          stateMutability: "nonpayable",
-        },
-        {
-          type: "function",
           name: "supportsInterface",
           inputs: [
             {
@@ -13357,76 +12988,6 @@ const deployedContracts: GenericContractsDeclaration = {
               name: "",
               type: "bool",
               internalType: "bool",
-            },
-          ],
-          stateMutability: "view",
-        },
-        {
-          type: "function",
-          name: "timelock",
-          inputs: [],
-          outputs: [
-            {
-              name: "",
-              type: "address",
-              internalType: "address",
-            },
-          ],
-          stateMutability: "view",
-        },
-        {
-          type: "function",
-          name: "token",
-          inputs: [],
-          outputs: [
-            {
-              name: "",
-              type: "address",
-              internalType: "contract IERC20",
-            },
-          ],
-          stateMutability: "view",
-        },
-        {
-          type: "function",
-          name: "updateGovernance",
-          inputs: [
-            {
-              name: "_governor",
-              type: "address",
-              internalType: "address",
-            },
-            {
-              name: "_timelock",
-              type: "address",
-              internalType: "address",
-            },
-          ],
-          outputs: [],
-          stateMutability: "nonpayable",
-        },
-        {
-          type: "function",
-          name: "voterIdNFT",
-          inputs: [],
-          outputs: [
-            {
-              name: "",
-              type: "address",
-              internalType: "contract IVoterIdNFT",
-            },
-          ],
-          stateMutability: "view",
-        },
-        {
-          type: "function",
-          name: "votingEngine",
-          inputs: [],
-          outputs: [
-            {
-              name: "",
-              type: "address",
-              internalType: "contract IRoundVotingEngine",
             },
           ],
           stateMutability: "view",
@@ -13448,130 +13009,10 @@ const deployedContracts: GenericContractsDeclaration = {
               internalType: "string",
             },
             {
-              name: "domain",
+              name: "slug",
               type: "string",
               indexed: false,
               internalType: "string",
-            },
-          ],
-          anonymous: false,
-        },
-        {
-          type: "event",
-          name: "CategoryApproved",
-          inputs: [
-            {
-              name: "categoryId",
-              type: "uint256",
-              indexed: true,
-              internalType: "uint256",
-            },
-          ],
-          anonymous: false,
-        },
-        {
-          type: "event",
-          name: "CategoryCanceled",
-          inputs: [
-            {
-              name: "categoryId",
-              type: "uint256",
-              indexed: true,
-              internalType: "uint256",
-            },
-          ],
-          anonymous: false,
-        },
-        {
-          type: "event",
-          name: "CategoryProposalLinked",
-          inputs: [
-            {
-              name: "categoryId",
-              type: "uint256",
-              indexed: true,
-              internalType: "uint256",
-            },
-            {
-              name: "proposalId",
-              type: "uint256",
-              indexed: true,
-              internalType: "uint256",
-            },
-            {
-              name: "descriptionHash",
-              type: "bytes32",
-              indexed: false,
-              internalType: "bytes32",
-            },
-          ],
-          anonymous: false,
-        },
-        {
-          type: "event",
-          name: "CategoryRejected",
-          inputs: [
-            {
-              name: "categoryId",
-              type: "uint256",
-              indexed: true,
-              internalType: "uint256",
-            },
-          ],
-          anonymous: false,
-        },
-        {
-          type: "event",
-          name: "CategorySubmitted",
-          inputs: [
-            {
-              name: "categoryId",
-              type: "uint256",
-              indexed: true,
-              internalType: "uint256",
-            },
-            {
-              name: "submitter",
-              type: "address",
-              indexed: true,
-              internalType: "address",
-            },
-            {
-              name: "name",
-              type: "string",
-              indexed: false,
-              internalType: "string",
-            },
-            {
-              name: "domain",
-              type: "string",
-              indexed: false,
-              internalType: "string",
-            },
-            {
-              name: "proposalId",
-              type: "uint256",
-              indexed: false,
-              internalType: "uint256",
-            },
-          ],
-          anonymous: false,
-        },
-        {
-          type: "event",
-          name: "GovernanceUpdated",
-          inputs: [
-            {
-              name: "governor",
-              type: "address",
-              indexed: true,
-              internalType: "address",
-            },
-            {
-              name: "timelock",
-              type: "address",
-              indexed: true,
-              internalType: "address",
             },
           ],
           anonymous: false,
@@ -13652,19 +13093,6 @@ const deployedContracts: GenericContractsDeclaration = {
           anonymous: false,
         },
         {
-          type: "event",
-          name: "VoterIdNFTUpdated",
-          inputs: [
-            {
-              name: "voterIdNFT",
-              type: "address",
-              indexed: false,
-              internalType: "address",
-            },
-          ],
-          anonymous: false,
-        },
-        {
           type: "error",
           name: "AccessControlBadConfirmation",
           inputs: [],
@@ -13685,32 +13113,13 @@ const deployedContracts: GenericContractsDeclaration = {
             },
           ],
         },
-        {
-          type: "error",
-          name: "ReentrancyGuardReentrantCall",
-          inputs: [],
-        },
-        {
-          type: "error",
-          name: "SafeERC20FailedOperation",
-          inputs: [
-            {
-              name: "token",
-              type: "address",
-              internalType: "address",
-            },
-          ],
-        },
       ],
       inheritedFunctions: {
         getApprovedCategoryIdsPaginated:
           "contracts/interfaces/ICategoryRegistry.sol",
         getCategory: "contracts/interfaces/ICategoryRegistry.sol",
-        getCategoryApprovalDigest: "contracts/interfaces/ICategoryRegistry.sol",
         getCategoryByDomain: "contracts/interfaces/ICategoryRegistry.sol",
-        getCategoryCreatedBlock: "contracts/interfaces/ICategoryRegistry.sol",
         getCategoryStatus: "contracts/interfaces/ICategoryRegistry.sol",
-        getSubmitter: "contracts/interfaces/ICategoryRegistry.sol",
         isApprovedCategory: "contracts/interfaces/ICategoryRegistry.sol",
         isDomainRegistered: "contracts/interfaces/ICategoryRegistry.sol",
         DEFAULT_ADMIN_ROLE:
@@ -13728,10 +13137,10 @@ const deployedContracts: GenericContractsDeclaration = {
         supportsInterface:
           "lib/openzeppelin-contracts/contracts/access/AccessControl.sol",
       },
-      deployedOnBlock: 214,
+      deployedOnBlock: 24,
     },
     VoterIdNFT: {
-      address: "0xca5C4f9BDcA4E752E9d65FeEdB28ee732BdB96f5",
+      address: "0x45009DD3aBBE29Db54fc5D893CeAa98a624882DF",
       abi: [
         {
           type: "constructor",
@@ -15015,10 +14424,10 @@ const deployedContracts: GenericContractsDeclaration = {
         revokeVoterId: "contracts/interfaces/IVoterIdNFT.sol",
         setDelegate: "contracts/interfaces/IVoterIdNFT.sol",
       },
-      deployedOnBlock: 215,
+      deployedOnBlock: 25,
     },
     MockERC20: {
-      address: "0x7b260debd6d0256575e19344bf08d93761269a0e",
+      address: "0xdbd296711ec8ef9aacb623ee3f1c0922dce0d7b2",
       abi: [
         {
           type: "constructor",
@@ -15419,10 +14828,10 @@ const deployedContracts: GenericContractsDeclaration = {
         transferFrom:
           "lib/openzeppelin-contracts/contracts/token/ERC20/ERC20.sol",
       },
-      deployedOnBlock: 217,
+      deployedOnBlock: 27,
     },
     ParticipationPool: {
-      address: "0x1c88a07B5de5e04D64622E4eb14d1E20daf36b91",
+      address: "0xDcE79D5f359C7aB52e3d6B45be2D0D382696D323",
       abi: [
         {
           type: "constructor",
@@ -16101,10 +15510,10 @@ const deployedContracts: GenericContractsDeclaration = {
         transferOwnership:
           "lib/openzeppelin-contracts/contracts/access/Ownable.sol",
       },
-      deployedOnBlock: 249,
+      deployedOnBlock: 59,
     },
     MockIdentityVerificationHub: {
-      address: "0xdb5f39950233483d859b7663613ac4413ec8f853",
+      address: "0x270fbc6a0f1007eb41863237eefb773795fd1f9c",
       abi: [
         {
           type: "function",
@@ -16513,10 +15922,10 @@ const deployedContracts: GenericContractsDeclaration = {
         },
       ],
       inheritedFunctions: {},
-      deployedOnBlock: 257,
+      deployedOnBlock: 67,
     },
     HumanFaucet: {
-      address: "0x83974Cf0d2c08648E315dE15a7A1518C420dA7D8",
+      address: "0x9DB9797733FE5F734724Aa05D29Fa39563563Af5",
       abi: [
         {
           type: "constructor",
@@ -17860,28 +17269,10 @@ const deployedContracts: GenericContractsDeclaration = {
           "lib/openzeppelin-contracts/contracts/access/Ownable.sol",
         paused: "lib/openzeppelin-contracts/contracts/utils/Pausable.sol",
       },
-      deployedOnBlock: 258,
+      deployedOnBlock: 68,
     },
   },
   42220: {
-    CategoryFeeLib: {
-      address: "0x4bf588f853c2e54adce7e8904c3b81844ed7963a",
-      abi: [
-        {
-          type: "error",
-          name: "SafeERC20FailedOperation",
-          inputs: [
-            {
-              name: "token",
-              type: "address",
-              internalType: "address",
-            },
-          ],
-        },
-      ],
-      inheritedFunctions: {},
-      deployedOnBlock: 63407999,
-    },
     TokenTransferLib: {
       address: "0x493d3bc4cdd9875d737892c72a7a6193d7589ffa",
       abi: [
@@ -20691,19 +20082,6 @@ const deployedContracts: GenericContractsDeclaration = {
         },
         {
           type: "function",
-          name: "CATEGORY_PROPOSAL_THRESHOLD",
-          inputs: [],
-          outputs: [
-            {
-              name: "",
-              type: "uint256",
-              internalType: "uint256",
-            },
-          ],
-          stateMutability: "view",
-        },
-        {
-          type: "function",
           name: "CLOCK_MODE",
           inputs: [],
           outputs: [
@@ -20965,32 +20343,6 @@ const deployedContracts: GenericContractsDeclaration = {
             },
           ],
           stateMutability: "nonpayable",
-        },
-        {
-          type: "function",
-          name: "categoryProposalThreshold",
-          inputs: [],
-          outputs: [
-            {
-              name: "",
-              type: "uint256",
-              internalType: "uint256",
-            },
-          ],
-          stateMutability: "pure",
-        },
-        {
-          type: "function",
-          name: "categoryRegistry",
-          inputs: [],
-          outputs: [
-            {
-              name: "",
-              type: "address",
-              internalType: "address",
-            },
-          ],
-          stateMutability: "view",
         },
         {
           type: "function",
@@ -21647,25 +20999,6 @@ const deployedContracts: GenericContractsDeclaration = {
         },
         {
           type: "function",
-          name: "proposeCategoryApproval",
-          inputs: [
-            {
-              name: "categoryId",
-              type: "uint256",
-              internalType: "uint256",
-            },
-          ],
-          outputs: [
-            {
-              name: "proposalId",
-              type: "uint256",
-              internalType: "uint256",
-            },
-          ],
-          stateMutability: "nonpayable",
-        },
-        {
-          type: "function",
           name: "queue",
           inputs: [
             {
@@ -21784,19 +21117,6 @@ const deployedContracts: GenericContractsDeclaration = {
           ],
           outputs: [],
           stateMutability: "payable",
-        },
-        {
-          type: "function",
-          name: "setCategoryRegistry",
-          inputs: [
-            {
-              name: "_categoryRegistry",
-              type: "address",
-              internalType: "address",
-            },
-          ],
-          outputs: [],
-          stateMutability: "nonpayable",
         },
         {
           type: "function",
@@ -21965,19 +21285,6 @@ const deployedContracts: GenericContractsDeclaration = {
             },
           ],
           stateMutability: "view",
-        },
-        {
-          type: "event",
-          name: "CategoryRegistryUpdated",
-          inputs: [
-            {
-              name: "categoryRegistry",
-              type: "address",
-              indexed: true,
-              internalType: "address",
-            },
-          ],
-          anonymous: false,
         },
         {
           type: "event",
@@ -26619,37 +25926,6 @@ const deployedContracts: GenericContractsDeclaration = {
             },
             {
               name: "voter",
-              type: "address",
-              indexed: true,
-              internalType: "address",
-            },
-            {
-              name: "amount",
-              type: "uint256",
-              indexed: false,
-              internalType: "uint256",
-            },
-          ],
-          anonymous: false,
-        },
-        {
-          type: "event",
-          name: "CategorySubmitterRewarded",
-          inputs: [
-            {
-              name: "contentId",
-              type: "uint256",
-              indexed: true,
-              internalType: "uint256",
-            },
-            {
-              name: "categoryId",
-              type: "uint256",
-              indexed: true,
-              internalType: "uint256",
-            },
-            {
-              name: "submitter",
               type: "address",
               indexed: true,
               internalType: "address",
@@ -31716,22 +30992,7 @@ const deployedContracts: GenericContractsDeclaration = {
               internalType: "address",
             },
             {
-              name: "_token",
-              type: "address",
-              internalType: "address",
-            },
-            {
-              name: "_governor",
-              type: "address",
-              internalType: "address",
-            },
-            {
-              name: "_timelock",
-              type: "address",
-              internalType: "address",
-            },
-            {
-              name: "_votingEngine",
+              name: "_governance",
               type: "address",
               internalType: "address",
             },
@@ -31753,19 +31014,6 @@ const deployedContracts: GenericContractsDeclaration = {
         },
         {
           type: "function",
-          name: "CATEGORY_STAKE",
-          inputs: [],
-          outputs: [
-            {
-              name: "",
-              type: "uint256",
-              internalType: "uint256",
-            },
-          ],
-          stateMutability: "view",
-        },
-        {
-          type: "function",
           name: "DEFAULT_ADMIN_ROLE",
           inputs: [],
           outputs: [
@@ -31779,7 +31027,7 @@ const deployedContracts: GenericContractsDeclaration = {
         },
         {
           type: "function",
-          name: "MAX_DOMAIN_LENGTH",
+          name: "MAX_NAME_LENGTH",
           inputs: [],
           outputs: [
             {
@@ -31792,7 +31040,7 @@ const deployedContracts: GenericContractsDeclaration = {
         },
         {
           type: "function",
-          name: "MAX_NAME_LENGTH",
+          name: "MAX_SLUG_LENGTH",
           inputs: [],
           outputs: [
             {
@@ -31831,32 +31079,6 @@ const deployedContracts: GenericContractsDeclaration = {
         },
         {
           type: "function",
-          name: "SPONSORSHIP_WINDOW",
-          inputs: [],
-          outputs: [
-            {
-              name: "",
-              type: "uint256",
-              internalType: "uint256",
-            },
-          ],
-          stateMutability: "view",
-        },
-        {
-          type: "function",
-          name: "STALE_LINKED_PROPOSAL_TIMEOUT",
-          inputs: [],
-          outputs: [
-            {
-              name: "",
-              type: "uint256",
-              internalType: "uint256",
-            },
-          ],
-          stateMutability: "view",
-        },
-        {
-          type: "function",
           name: "addApprovedCategory",
           inputs: [
             {
@@ -31865,7 +31087,7 @@ const deployedContracts: GenericContractsDeclaration = {
               internalType: "string",
             },
             {
-              name: "domain",
+              name: "slug",
               type: "string",
               internalType: "string",
             },
@@ -31883,79 +31105,6 @@ const deployedContracts: GenericContractsDeclaration = {
             },
           ],
           stateMutability: "nonpayable",
-        },
-        {
-          type: "function",
-          name: "approveCategory",
-          inputs: [
-            {
-              name: "categoryId",
-              type: "uint256",
-              internalType: "uint256",
-            },
-            {
-              name: "descriptionHash",
-              type: "bytes32",
-              internalType: "bytes32",
-            },
-            {
-              name: "approvalDigest",
-              type: "bytes32",
-              internalType: "bytes32",
-            },
-          ],
-          outputs: [],
-          stateMutability: "nonpayable",
-        },
-        {
-          type: "function",
-          name: "cancelUnlinkedCategory",
-          inputs: [
-            {
-              name: "categoryId",
-              type: "uint256",
-              internalType: "uint256",
-            },
-          ],
-          outputs: [],
-          stateMutability: "nonpayable",
-        },
-        {
-          type: "function",
-          name: "clearApprovalProposal",
-          inputs: [
-            {
-              name: "categoryId",
-              type: "uint256",
-              internalType: "uint256",
-            },
-          ],
-          outputs: [],
-          stateMutability: "nonpayable",
-        },
-        {
-          type: "function",
-          name: "getApprovalProposalId",
-          inputs: [
-            {
-              name: "categoryId",
-              type: "uint256",
-              internalType: "uint256",
-            },
-            {
-              name: "descriptionHash",
-              type: "bytes32",
-              internalType: "bytes32",
-            },
-          ],
-          outputs: [
-            {
-              name: "proposalId",
-              type: "uint256",
-              internalType: "uint256",
-            },
-          ],
-          stateMutability: "view",
         },
         {
           type: "function",
@@ -32054,29 +31203,10 @@ const deployedContracts: GenericContractsDeclaration = {
         },
         {
           type: "function",
-          name: "getCategoryApprovalDigest",
-          inputs: [
-            {
-              name: "categoryId",
-              type: "uint256",
-              internalType: "uint256",
-            },
-          ],
-          outputs: [
-            {
-              name: "",
-              type: "bytes32",
-              internalType: "bytes32",
-            },
-          ],
-          stateMutability: "view",
-        },
-        {
-          type: "function",
           name: "getCategoryByDomain",
           inputs: [
             {
-              name: "domain",
+              name: "slug",
               type: "string",
               internalType: "string",
             },
@@ -32139,25 +31269,6 @@ const deployedContracts: GenericContractsDeclaration = {
         },
         {
           type: "function",
-          name: "getCategoryCreatedBlock",
-          inputs: [
-            {
-              name: "categoryId",
-              type: "uint256",
-              internalType: "uint256",
-            },
-          ],
-          outputs: [
-            {
-              name: "",
-              type: "uint256",
-              internalType: "uint256",
-            },
-          ],
-          stateMutability: "view",
-        },
-        {
-          type: "function",
           name: "getCategoryStatus",
           inputs: [
             {
@@ -32209,38 +31320,6 @@ const deployedContracts: GenericContractsDeclaration = {
               name: "",
               type: "string[]",
               internalType: "string[]",
-            },
-          ],
-          stateMutability: "view",
-        },
-        {
-          type: "function",
-          name: "getSubmitter",
-          inputs: [
-            {
-              name: "categoryId",
-              type: "uint256",
-              internalType: "uint256",
-            },
-          ],
-          outputs: [
-            {
-              name: "",
-              type: "address",
-              internalType: "address",
-            },
-          ],
-          stateMutability: "view",
-        },
-        {
-          type: "function",
-          name: "governor",
-          inputs: [],
-          outputs: [
-            {
-              name: "",
-              type: "address",
-              internalType: "contract IGovernor",
             },
           ],
           stateMutability: "view",
@@ -32311,7 +31390,7 @@ const deployedContracts: GenericContractsDeclaration = {
           name: "isDomainRegistered",
           inputs: [
             {
-              name: "domain",
+              name: "slug",
               type: "string",
               internalType: "string",
             },
@@ -32327,30 +31406,6 @@ const deployedContracts: GenericContractsDeclaration = {
         },
         {
           type: "function",
-          name: "linkApprovalProposal",
-          inputs: [
-            {
-              name: "categoryId",
-              type: "uint256",
-              internalType: "uint256",
-            },
-            {
-              name: "descriptionHash",
-              type: "bytes32",
-              internalType: "bytes32",
-            },
-          ],
-          outputs: [
-            {
-              name: "proposalId",
-              type: "uint256",
-              internalType: "uint256",
-            },
-          ],
-          stateMutability: "nonpayable",
-        },
-        {
-          type: "function",
           name: "nextCategoryId",
           inputs: [],
           outputs: [
@@ -32361,19 +31416,6 @@ const deployedContracts: GenericContractsDeclaration = {
             },
           ],
           stateMutability: "view",
-        },
-        {
-          type: "function",
-          name: "rejectCategory",
-          inputs: [
-            {
-              name: "categoryId",
-              type: "uint256",
-              internalType: "uint256",
-            },
-          ],
-          outputs: [],
-          stateMutability: "nonpayable",
         },
         {
           type: "function",
@@ -32413,61 +31455,6 @@ const deployedContracts: GenericContractsDeclaration = {
         },
         {
           type: "function",
-          name: "setVoterIdNFT",
-          inputs: [
-            {
-              name: "_voterIdNFT",
-              type: "address",
-              internalType: "address",
-            },
-          ],
-          outputs: [],
-          stateMutability: "nonpayable",
-        },
-        {
-          type: "function",
-          name: "setVotingEngine",
-          inputs: [
-            {
-              name: "_votingEngine",
-              type: "address",
-              internalType: "address",
-            },
-          ],
-          outputs: [],
-          stateMutability: "nonpayable",
-        },
-        {
-          type: "function",
-          name: "submitCategory",
-          inputs: [
-            {
-              name: "name",
-              type: "string",
-              internalType: "string",
-            },
-            {
-              name: "domain",
-              type: "string",
-              internalType: "string",
-            },
-            {
-              name: "subcategories",
-              type: "string[]",
-              internalType: "string[]",
-            },
-          ],
-          outputs: [
-            {
-              name: "categoryId",
-              type: "uint256",
-              internalType: "uint256",
-            },
-          ],
-          stateMutability: "nonpayable",
-        },
-        {
-          type: "function",
           name: "supportsInterface",
           inputs: [
             {
@@ -32481,76 +31468,6 @@ const deployedContracts: GenericContractsDeclaration = {
               name: "",
               type: "bool",
               internalType: "bool",
-            },
-          ],
-          stateMutability: "view",
-        },
-        {
-          type: "function",
-          name: "timelock",
-          inputs: [],
-          outputs: [
-            {
-              name: "",
-              type: "address",
-              internalType: "address",
-            },
-          ],
-          stateMutability: "view",
-        },
-        {
-          type: "function",
-          name: "token",
-          inputs: [],
-          outputs: [
-            {
-              name: "",
-              type: "address",
-              internalType: "contract IERC20",
-            },
-          ],
-          stateMutability: "view",
-        },
-        {
-          type: "function",
-          name: "updateGovernance",
-          inputs: [
-            {
-              name: "_governor",
-              type: "address",
-              internalType: "address",
-            },
-            {
-              name: "_timelock",
-              type: "address",
-              internalType: "address",
-            },
-          ],
-          outputs: [],
-          stateMutability: "nonpayable",
-        },
-        {
-          type: "function",
-          name: "voterIdNFT",
-          inputs: [],
-          outputs: [
-            {
-              name: "",
-              type: "address",
-              internalType: "contract IVoterIdNFT",
-            },
-          ],
-          stateMutability: "view",
-        },
-        {
-          type: "function",
-          name: "votingEngine",
-          inputs: [],
-          outputs: [
-            {
-              name: "",
-              type: "address",
-              internalType: "contract IRoundVotingEngine",
             },
           ],
           stateMutability: "view",
@@ -32572,130 +31489,10 @@ const deployedContracts: GenericContractsDeclaration = {
               internalType: "string",
             },
             {
-              name: "domain",
+              name: "slug",
               type: "string",
               indexed: false,
               internalType: "string",
-            },
-          ],
-          anonymous: false,
-        },
-        {
-          type: "event",
-          name: "CategoryApproved",
-          inputs: [
-            {
-              name: "categoryId",
-              type: "uint256",
-              indexed: true,
-              internalType: "uint256",
-            },
-          ],
-          anonymous: false,
-        },
-        {
-          type: "event",
-          name: "CategoryCanceled",
-          inputs: [
-            {
-              name: "categoryId",
-              type: "uint256",
-              indexed: true,
-              internalType: "uint256",
-            },
-          ],
-          anonymous: false,
-        },
-        {
-          type: "event",
-          name: "CategoryProposalLinked",
-          inputs: [
-            {
-              name: "categoryId",
-              type: "uint256",
-              indexed: true,
-              internalType: "uint256",
-            },
-            {
-              name: "proposalId",
-              type: "uint256",
-              indexed: true,
-              internalType: "uint256",
-            },
-            {
-              name: "descriptionHash",
-              type: "bytes32",
-              indexed: false,
-              internalType: "bytes32",
-            },
-          ],
-          anonymous: false,
-        },
-        {
-          type: "event",
-          name: "CategoryRejected",
-          inputs: [
-            {
-              name: "categoryId",
-              type: "uint256",
-              indexed: true,
-              internalType: "uint256",
-            },
-          ],
-          anonymous: false,
-        },
-        {
-          type: "event",
-          name: "CategorySubmitted",
-          inputs: [
-            {
-              name: "categoryId",
-              type: "uint256",
-              indexed: true,
-              internalType: "uint256",
-            },
-            {
-              name: "submitter",
-              type: "address",
-              indexed: true,
-              internalType: "address",
-            },
-            {
-              name: "name",
-              type: "string",
-              indexed: false,
-              internalType: "string",
-            },
-            {
-              name: "domain",
-              type: "string",
-              indexed: false,
-              internalType: "string",
-            },
-            {
-              name: "proposalId",
-              type: "uint256",
-              indexed: false,
-              internalType: "uint256",
-            },
-          ],
-          anonymous: false,
-        },
-        {
-          type: "event",
-          name: "GovernanceUpdated",
-          inputs: [
-            {
-              name: "governor",
-              type: "address",
-              indexed: true,
-              internalType: "address",
-            },
-            {
-              name: "timelock",
-              type: "address",
-              indexed: true,
-              internalType: "address",
             },
           ],
           anonymous: false,
@@ -32776,19 +31573,6 @@ const deployedContracts: GenericContractsDeclaration = {
           anonymous: false,
         },
         {
-          type: "event",
-          name: "VoterIdNFTUpdated",
-          inputs: [
-            {
-              name: "voterIdNFT",
-              type: "address",
-              indexed: false,
-              internalType: "address",
-            },
-          ],
-          anonymous: false,
-        },
-        {
           type: "error",
           name: "AccessControlBadConfirmation",
           inputs: [],
@@ -32809,32 +31593,13 @@ const deployedContracts: GenericContractsDeclaration = {
             },
           ],
         },
-        {
-          type: "error",
-          name: "ReentrancyGuardReentrantCall",
-          inputs: [],
-        },
-        {
-          type: "error",
-          name: "SafeERC20FailedOperation",
-          inputs: [
-            {
-              name: "token",
-              type: "address",
-              internalType: "address",
-            },
-          ],
-        },
       ],
       inheritedFunctions: {
         getApprovedCategoryIdsPaginated:
           "contracts/interfaces/ICategoryRegistry.sol",
         getCategory: "contracts/interfaces/ICategoryRegistry.sol",
-        getCategoryApprovalDigest: "contracts/interfaces/ICategoryRegistry.sol",
         getCategoryByDomain: "contracts/interfaces/ICategoryRegistry.sol",
-        getCategoryCreatedBlock: "contracts/interfaces/ICategoryRegistry.sol",
         getCategoryStatus: "contracts/interfaces/ICategoryRegistry.sol",
-        getSubmitter: "contracts/interfaces/ICategoryRegistry.sol",
         isApprovedCategory: "contracts/interfaces/ICategoryRegistry.sol",
         isDomainRegistered: "contracts/interfaces/ICategoryRegistry.sol",
         DEFAULT_ADMIN_ROLE:
@@ -36665,37 +35430,6 @@ const deployedContracts: GenericContractsDeclaration = {
       abi: [
         {
           type: "event",
-          name: "CategorySubmitterRewarded",
-          inputs: [
-            {
-              name: "contentId",
-              type: "uint256",
-              indexed: true,
-              internalType: "uint256",
-            },
-            {
-              name: "categoryId",
-              type: "uint256",
-              indexed: true,
-              internalType: "uint256",
-            },
-            {
-              name: "submitter",
-              type: "address",
-              indexed: true,
-              internalType: "address",
-            },
-            {
-              name: "amount",
-              type: "uint256",
-              indexed: false,
-              internalType: "uint256",
-            },
-          ],
-          anonymous: false,
-        },
-        {
-          type: "event",
           name: "ConsensusReserveFunded",
           inputs: [
             {
@@ -36871,24 +35605,6 @@ const deployedContracts: GenericContractsDeclaration = {
     },
   },
   11142220: {
-    CategoryFeeLib: {
-      address: "0x99a9634e3b14971ee57a97bdaf0f9e3fe7493751",
-      abi: [
-        {
-          type: "error",
-          name: "SafeERC20FailedOperation",
-          inputs: [
-            {
-              name: "token",
-              type: "address",
-              internalType: "address",
-            },
-          ],
-        },
-      ],
-      inheritedFunctions: {},
-      deployedOnBlock: 20996051,
-    },
     TokenTransferLib: {
       address: "0x05b7e0e01dd70628ee883eb41fcdaf5cfca1b8ff",
       abi: [
@@ -39698,19 +38414,6 @@ const deployedContracts: GenericContractsDeclaration = {
         },
         {
           type: "function",
-          name: "CATEGORY_PROPOSAL_THRESHOLD",
-          inputs: [],
-          outputs: [
-            {
-              name: "",
-              type: "uint256",
-              internalType: "uint256",
-            },
-          ],
-          stateMutability: "view",
-        },
-        {
-          type: "function",
           name: "CLOCK_MODE",
           inputs: [],
           outputs: [
@@ -39972,32 +38675,6 @@ const deployedContracts: GenericContractsDeclaration = {
             },
           ],
           stateMutability: "nonpayable",
-        },
-        {
-          type: "function",
-          name: "categoryProposalThreshold",
-          inputs: [],
-          outputs: [
-            {
-              name: "",
-              type: "uint256",
-              internalType: "uint256",
-            },
-          ],
-          stateMutability: "pure",
-        },
-        {
-          type: "function",
-          name: "categoryRegistry",
-          inputs: [],
-          outputs: [
-            {
-              name: "",
-              type: "address",
-              internalType: "address",
-            },
-          ],
-          stateMutability: "view",
         },
         {
           type: "function",
@@ -40654,25 +39331,6 @@ const deployedContracts: GenericContractsDeclaration = {
         },
         {
           type: "function",
-          name: "proposeCategoryApproval",
-          inputs: [
-            {
-              name: "categoryId",
-              type: "uint256",
-              internalType: "uint256",
-            },
-          ],
-          outputs: [
-            {
-              name: "proposalId",
-              type: "uint256",
-              internalType: "uint256",
-            },
-          ],
-          stateMutability: "nonpayable",
-        },
-        {
-          type: "function",
           name: "queue",
           inputs: [
             {
@@ -40791,19 +39449,6 @@ const deployedContracts: GenericContractsDeclaration = {
           ],
           outputs: [],
           stateMutability: "payable",
-        },
-        {
-          type: "function",
-          name: "setCategoryRegistry",
-          inputs: [
-            {
-              name: "_categoryRegistry",
-              type: "address",
-              internalType: "address",
-            },
-          ],
-          outputs: [],
-          stateMutability: "nonpayable",
         },
         {
           type: "function",
@@ -40972,19 +39617,6 @@ const deployedContracts: GenericContractsDeclaration = {
             },
           ],
           stateMutability: "view",
-        },
-        {
-          type: "event",
-          name: "CategoryRegistryUpdated",
-          inputs: [
-            {
-              name: "categoryRegistry",
-              type: "address",
-              indexed: true,
-              internalType: "address",
-            },
-          ],
-          anonymous: false,
         },
         {
           type: "event",
@@ -45626,37 +44258,6 @@ const deployedContracts: GenericContractsDeclaration = {
             },
             {
               name: "voter",
-              type: "address",
-              indexed: true,
-              internalType: "address",
-            },
-            {
-              name: "amount",
-              type: "uint256",
-              indexed: false,
-              internalType: "uint256",
-            },
-          ],
-          anonymous: false,
-        },
-        {
-          type: "event",
-          name: "CategorySubmitterRewarded",
-          inputs: [
-            {
-              name: "contentId",
-              type: "uint256",
-              indexed: true,
-              internalType: "uint256",
-            },
-            {
-              name: "categoryId",
-              type: "uint256",
-              indexed: true,
-              internalType: "uint256",
-            },
-            {
-              name: "submitter",
               type: "address",
               indexed: true,
               internalType: "address",
@@ -50723,22 +49324,7 @@ const deployedContracts: GenericContractsDeclaration = {
               internalType: "address",
             },
             {
-              name: "_token",
-              type: "address",
-              internalType: "address",
-            },
-            {
-              name: "_governor",
-              type: "address",
-              internalType: "address",
-            },
-            {
-              name: "_timelock",
-              type: "address",
-              internalType: "address",
-            },
-            {
-              name: "_votingEngine",
+              name: "_governance",
               type: "address",
               internalType: "address",
             },
@@ -50760,19 +49346,6 @@ const deployedContracts: GenericContractsDeclaration = {
         },
         {
           type: "function",
-          name: "CATEGORY_STAKE",
-          inputs: [],
-          outputs: [
-            {
-              name: "",
-              type: "uint256",
-              internalType: "uint256",
-            },
-          ],
-          stateMutability: "view",
-        },
-        {
-          type: "function",
           name: "DEFAULT_ADMIN_ROLE",
           inputs: [],
           outputs: [
@@ -50786,7 +49359,7 @@ const deployedContracts: GenericContractsDeclaration = {
         },
         {
           type: "function",
-          name: "MAX_DOMAIN_LENGTH",
+          name: "MAX_NAME_LENGTH",
           inputs: [],
           outputs: [
             {
@@ -50799,7 +49372,7 @@ const deployedContracts: GenericContractsDeclaration = {
         },
         {
           type: "function",
-          name: "MAX_NAME_LENGTH",
+          name: "MAX_SLUG_LENGTH",
           inputs: [],
           outputs: [
             {
@@ -50838,32 +49411,6 @@ const deployedContracts: GenericContractsDeclaration = {
         },
         {
           type: "function",
-          name: "SPONSORSHIP_WINDOW",
-          inputs: [],
-          outputs: [
-            {
-              name: "",
-              type: "uint256",
-              internalType: "uint256",
-            },
-          ],
-          stateMutability: "view",
-        },
-        {
-          type: "function",
-          name: "STALE_LINKED_PROPOSAL_TIMEOUT",
-          inputs: [],
-          outputs: [
-            {
-              name: "",
-              type: "uint256",
-              internalType: "uint256",
-            },
-          ],
-          stateMutability: "view",
-        },
-        {
-          type: "function",
           name: "addApprovedCategory",
           inputs: [
             {
@@ -50872,7 +49419,7 @@ const deployedContracts: GenericContractsDeclaration = {
               internalType: "string",
             },
             {
-              name: "domain",
+              name: "slug",
               type: "string",
               internalType: "string",
             },
@@ -50890,79 +49437,6 @@ const deployedContracts: GenericContractsDeclaration = {
             },
           ],
           stateMutability: "nonpayable",
-        },
-        {
-          type: "function",
-          name: "approveCategory",
-          inputs: [
-            {
-              name: "categoryId",
-              type: "uint256",
-              internalType: "uint256",
-            },
-            {
-              name: "descriptionHash",
-              type: "bytes32",
-              internalType: "bytes32",
-            },
-            {
-              name: "approvalDigest",
-              type: "bytes32",
-              internalType: "bytes32",
-            },
-          ],
-          outputs: [],
-          stateMutability: "nonpayable",
-        },
-        {
-          type: "function",
-          name: "cancelUnlinkedCategory",
-          inputs: [
-            {
-              name: "categoryId",
-              type: "uint256",
-              internalType: "uint256",
-            },
-          ],
-          outputs: [],
-          stateMutability: "nonpayable",
-        },
-        {
-          type: "function",
-          name: "clearApprovalProposal",
-          inputs: [
-            {
-              name: "categoryId",
-              type: "uint256",
-              internalType: "uint256",
-            },
-          ],
-          outputs: [],
-          stateMutability: "nonpayable",
-        },
-        {
-          type: "function",
-          name: "getApprovalProposalId",
-          inputs: [
-            {
-              name: "categoryId",
-              type: "uint256",
-              internalType: "uint256",
-            },
-            {
-              name: "descriptionHash",
-              type: "bytes32",
-              internalType: "bytes32",
-            },
-          ],
-          outputs: [
-            {
-              name: "proposalId",
-              type: "uint256",
-              internalType: "uint256",
-            },
-          ],
-          stateMutability: "view",
         },
         {
           type: "function",
@@ -51061,29 +49535,10 @@ const deployedContracts: GenericContractsDeclaration = {
         },
         {
           type: "function",
-          name: "getCategoryApprovalDigest",
-          inputs: [
-            {
-              name: "categoryId",
-              type: "uint256",
-              internalType: "uint256",
-            },
-          ],
-          outputs: [
-            {
-              name: "",
-              type: "bytes32",
-              internalType: "bytes32",
-            },
-          ],
-          stateMutability: "view",
-        },
-        {
-          type: "function",
           name: "getCategoryByDomain",
           inputs: [
             {
-              name: "domain",
+              name: "slug",
               type: "string",
               internalType: "string",
             },
@@ -51146,25 +49601,6 @@ const deployedContracts: GenericContractsDeclaration = {
         },
         {
           type: "function",
-          name: "getCategoryCreatedBlock",
-          inputs: [
-            {
-              name: "categoryId",
-              type: "uint256",
-              internalType: "uint256",
-            },
-          ],
-          outputs: [
-            {
-              name: "",
-              type: "uint256",
-              internalType: "uint256",
-            },
-          ],
-          stateMutability: "view",
-        },
-        {
-          type: "function",
           name: "getCategoryStatus",
           inputs: [
             {
@@ -51216,38 +49652,6 @@ const deployedContracts: GenericContractsDeclaration = {
               name: "",
               type: "string[]",
               internalType: "string[]",
-            },
-          ],
-          stateMutability: "view",
-        },
-        {
-          type: "function",
-          name: "getSubmitter",
-          inputs: [
-            {
-              name: "categoryId",
-              type: "uint256",
-              internalType: "uint256",
-            },
-          ],
-          outputs: [
-            {
-              name: "",
-              type: "address",
-              internalType: "address",
-            },
-          ],
-          stateMutability: "view",
-        },
-        {
-          type: "function",
-          name: "governor",
-          inputs: [],
-          outputs: [
-            {
-              name: "",
-              type: "address",
-              internalType: "contract IGovernor",
             },
           ],
           stateMutability: "view",
@@ -51318,7 +49722,7 @@ const deployedContracts: GenericContractsDeclaration = {
           name: "isDomainRegistered",
           inputs: [
             {
-              name: "domain",
+              name: "slug",
               type: "string",
               internalType: "string",
             },
@@ -51334,30 +49738,6 @@ const deployedContracts: GenericContractsDeclaration = {
         },
         {
           type: "function",
-          name: "linkApprovalProposal",
-          inputs: [
-            {
-              name: "categoryId",
-              type: "uint256",
-              internalType: "uint256",
-            },
-            {
-              name: "descriptionHash",
-              type: "bytes32",
-              internalType: "bytes32",
-            },
-          ],
-          outputs: [
-            {
-              name: "proposalId",
-              type: "uint256",
-              internalType: "uint256",
-            },
-          ],
-          stateMutability: "nonpayable",
-        },
-        {
-          type: "function",
           name: "nextCategoryId",
           inputs: [],
           outputs: [
@@ -51368,19 +49748,6 @@ const deployedContracts: GenericContractsDeclaration = {
             },
           ],
           stateMutability: "view",
-        },
-        {
-          type: "function",
-          name: "rejectCategory",
-          inputs: [
-            {
-              name: "categoryId",
-              type: "uint256",
-              internalType: "uint256",
-            },
-          ],
-          outputs: [],
-          stateMutability: "nonpayable",
         },
         {
           type: "function",
@@ -51420,61 +49787,6 @@ const deployedContracts: GenericContractsDeclaration = {
         },
         {
           type: "function",
-          name: "setVoterIdNFT",
-          inputs: [
-            {
-              name: "_voterIdNFT",
-              type: "address",
-              internalType: "address",
-            },
-          ],
-          outputs: [],
-          stateMutability: "nonpayable",
-        },
-        {
-          type: "function",
-          name: "setVotingEngine",
-          inputs: [
-            {
-              name: "_votingEngine",
-              type: "address",
-              internalType: "address",
-            },
-          ],
-          outputs: [],
-          stateMutability: "nonpayable",
-        },
-        {
-          type: "function",
-          name: "submitCategory",
-          inputs: [
-            {
-              name: "name",
-              type: "string",
-              internalType: "string",
-            },
-            {
-              name: "domain",
-              type: "string",
-              internalType: "string",
-            },
-            {
-              name: "subcategories",
-              type: "string[]",
-              internalType: "string[]",
-            },
-          ],
-          outputs: [
-            {
-              name: "categoryId",
-              type: "uint256",
-              internalType: "uint256",
-            },
-          ],
-          stateMutability: "nonpayable",
-        },
-        {
-          type: "function",
           name: "supportsInterface",
           inputs: [
             {
@@ -51488,76 +49800,6 @@ const deployedContracts: GenericContractsDeclaration = {
               name: "",
               type: "bool",
               internalType: "bool",
-            },
-          ],
-          stateMutability: "view",
-        },
-        {
-          type: "function",
-          name: "timelock",
-          inputs: [],
-          outputs: [
-            {
-              name: "",
-              type: "address",
-              internalType: "address",
-            },
-          ],
-          stateMutability: "view",
-        },
-        {
-          type: "function",
-          name: "token",
-          inputs: [],
-          outputs: [
-            {
-              name: "",
-              type: "address",
-              internalType: "contract IERC20",
-            },
-          ],
-          stateMutability: "view",
-        },
-        {
-          type: "function",
-          name: "updateGovernance",
-          inputs: [
-            {
-              name: "_governor",
-              type: "address",
-              internalType: "address",
-            },
-            {
-              name: "_timelock",
-              type: "address",
-              internalType: "address",
-            },
-          ],
-          outputs: [],
-          stateMutability: "nonpayable",
-        },
-        {
-          type: "function",
-          name: "voterIdNFT",
-          inputs: [],
-          outputs: [
-            {
-              name: "",
-              type: "address",
-              internalType: "contract IVoterIdNFT",
-            },
-          ],
-          stateMutability: "view",
-        },
-        {
-          type: "function",
-          name: "votingEngine",
-          inputs: [],
-          outputs: [
-            {
-              name: "",
-              type: "address",
-              internalType: "contract IRoundVotingEngine",
             },
           ],
           stateMutability: "view",
@@ -51579,130 +49821,10 @@ const deployedContracts: GenericContractsDeclaration = {
               internalType: "string",
             },
             {
-              name: "domain",
+              name: "slug",
               type: "string",
               indexed: false,
               internalType: "string",
-            },
-          ],
-          anonymous: false,
-        },
-        {
-          type: "event",
-          name: "CategoryApproved",
-          inputs: [
-            {
-              name: "categoryId",
-              type: "uint256",
-              indexed: true,
-              internalType: "uint256",
-            },
-          ],
-          anonymous: false,
-        },
-        {
-          type: "event",
-          name: "CategoryCanceled",
-          inputs: [
-            {
-              name: "categoryId",
-              type: "uint256",
-              indexed: true,
-              internalType: "uint256",
-            },
-          ],
-          anonymous: false,
-        },
-        {
-          type: "event",
-          name: "CategoryProposalLinked",
-          inputs: [
-            {
-              name: "categoryId",
-              type: "uint256",
-              indexed: true,
-              internalType: "uint256",
-            },
-            {
-              name: "proposalId",
-              type: "uint256",
-              indexed: true,
-              internalType: "uint256",
-            },
-            {
-              name: "descriptionHash",
-              type: "bytes32",
-              indexed: false,
-              internalType: "bytes32",
-            },
-          ],
-          anonymous: false,
-        },
-        {
-          type: "event",
-          name: "CategoryRejected",
-          inputs: [
-            {
-              name: "categoryId",
-              type: "uint256",
-              indexed: true,
-              internalType: "uint256",
-            },
-          ],
-          anonymous: false,
-        },
-        {
-          type: "event",
-          name: "CategorySubmitted",
-          inputs: [
-            {
-              name: "categoryId",
-              type: "uint256",
-              indexed: true,
-              internalType: "uint256",
-            },
-            {
-              name: "submitter",
-              type: "address",
-              indexed: true,
-              internalType: "address",
-            },
-            {
-              name: "name",
-              type: "string",
-              indexed: false,
-              internalType: "string",
-            },
-            {
-              name: "domain",
-              type: "string",
-              indexed: false,
-              internalType: "string",
-            },
-            {
-              name: "proposalId",
-              type: "uint256",
-              indexed: false,
-              internalType: "uint256",
-            },
-          ],
-          anonymous: false,
-        },
-        {
-          type: "event",
-          name: "GovernanceUpdated",
-          inputs: [
-            {
-              name: "governor",
-              type: "address",
-              indexed: true,
-              internalType: "address",
-            },
-            {
-              name: "timelock",
-              type: "address",
-              indexed: true,
-              internalType: "address",
             },
           ],
           anonymous: false,
@@ -51783,19 +49905,6 @@ const deployedContracts: GenericContractsDeclaration = {
           anonymous: false,
         },
         {
-          type: "event",
-          name: "VoterIdNFTUpdated",
-          inputs: [
-            {
-              name: "voterIdNFT",
-              type: "address",
-              indexed: false,
-              internalType: "address",
-            },
-          ],
-          anonymous: false,
-        },
-        {
           type: "error",
           name: "AccessControlBadConfirmation",
           inputs: [],
@@ -51816,32 +49925,13 @@ const deployedContracts: GenericContractsDeclaration = {
             },
           ],
         },
-        {
-          type: "error",
-          name: "ReentrancyGuardReentrantCall",
-          inputs: [],
-        },
-        {
-          type: "error",
-          name: "SafeERC20FailedOperation",
-          inputs: [
-            {
-              name: "token",
-              type: "address",
-              internalType: "address",
-            },
-          ],
-        },
       ],
       inheritedFunctions: {
         getApprovedCategoryIdsPaginated:
           "contracts/interfaces/ICategoryRegistry.sol",
         getCategory: "contracts/interfaces/ICategoryRegistry.sol",
-        getCategoryApprovalDigest: "contracts/interfaces/ICategoryRegistry.sol",
         getCategoryByDomain: "contracts/interfaces/ICategoryRegistry.sol",
-        getCategoryCreatedBlock: "contracts/interfaces/ICategoryRegistry.sol",
         getCategoryStatus: "contracts/interfaces/ICategoryRegistry.sol",
-        getSubmitter: "contracts/interfaces/ICategoryRegistry.sol",
         isApprovedCategory: "contracts/interfaces/ICategoryRegistry.sol",
         isDomainRegistered: "contracts/interfaces/ICategoryRegistry.sol",
         DEFAULT_ADMIN_ROLE:
