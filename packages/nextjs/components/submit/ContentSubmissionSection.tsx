@@ -766,9 +766,12 @@ export function ContentSubmissionSection() {
           <div className="space-y-5">
             <div>
               <label
-                className={`mb-2 block text-base font-medium ${submitAttempted && !title.trim() ? "text-error" : ""}`}
+                className={`mb-2 flex items-center gap-1.5 text-base font-medium ${
+                  submitAttempted && !title.trim() ? "text-error" : ""
+                }`}
               >
                 Question
+                <InfoTooltip text="Good questions are specific, subjective, and easy to compare. Focus on one clear thing voters can rate, avoid yes/no or factual prompts, and add context below." />
               </label>
               <input
                 type="text"
