@@ -605,6 +605,14 @@ contract DeployCuryo is ScaffoldETHDeploy {
                 _require(migrationConfig.referrerRewards[i] == 0, "Migration reward without referrer");
             } else {
                 _require(migrationConfig.referrers[i] != migrationConfig.users[i], "Migration self referral");
+                bool referrerSeen;
+                for (uint256 j = 0; j < i; ++j) {
+                    if (migrationConfig.users[j] == migrationConfig.referrers[i]) {
+                        referrerSeen = true;
+                        break;
+                    }
+                }
+                _require(referrerSeen, "Migration referrer order");
                 _require(migrationConfig.claimantBonuses[i] > 0, "Migration referral bonus zero");
                 _require(migrationConfig.referrerRewards[i] > 0, "Migration referral reward zero");
             }

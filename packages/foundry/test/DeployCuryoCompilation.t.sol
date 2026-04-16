@@ -141,6 +141,35 @@ contract DeployCuryoCompilationTest is Test {
         );
     }
 
+    function test_MigrationBootstrapValidation_RejectsForwardReferrerReference() public {
+        DeployCuryoHarness deployScript = new DeployCuryoHarness();
+        address[] memory users = new address[](2);
+        users[0] = address(0x1111);
+        users[1] = address(0x2222);
+        uint256[] memory nullifiers = new uint256[](2);
+        nullifiers[0] = 123456;
+        nullifiers[1] = 789012;
+        uint256[] memory amounts = new uint256[](2);
+        amounts[0] = 100;
+        amounts[1] = 200;
+        address[] memory referrers = new address[](2);
+        referrers[0] = address(0x2222);
+        referrers[1] = address(0);
+        uint256[] memory claimantBonuses = new uint256[](2);
+        claimantBonuses[0] = 10;
+        claimantBonuses[1] = 0;
+        uint256[] memory referrerRewards = new uint256[](2);
+        referrerRewards[0] = 5;
+        referrerRewards[1] = 0;
+
+        vm.expectRevert(
+            abi.encodeWithSelector(DeployCuryo.DeploymentRoleVerificationFailed.selector, "Migration referrer order")
+        );
+        deployScript.exposedValidateMigrationBootstrapConfig(
+            users, nullifiers, amounts, referrers, claimantBonuses, referrerRewards
+        );
+    }
+
     function test_MigrationBootstrapParser_RejectsOversizedHexUint() public {
         DeployCuryoHarness deployScript = new DeployCuryoHarness();
 
