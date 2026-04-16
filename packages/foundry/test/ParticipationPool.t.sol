@@ -137,8 +137,7 @@ contract ParticipationPoolTest is Test {
 
         uint256 balanceBefore = crepToken.balanceOf(user1);
 
-        vm.prank(votingEngine);
-        pool.rewardVote(user1, stakeAmount);
+        _distributeStakeReward(votingEngine, user1, stakeAmount);
 
         assertEq(crepToken.balanceOf(user1), balanceBefore + expectedReward);
         assertEq(pool.totalDistributed(), expectedReward);
@@ -150,8 +149,7 @@ contract ParticipationPoolTest is Test {
         uint256 expectedReward = stakeAmount * INITIAL_RATE_BPS / 10000; // 0.9 cREP = 900000
         assertEq(expectedReward, 900_000);
 
-        vm.prank(votingEngine);
-        pool.rewardVote(user1, stakeAmount);
+        _distributeStakeReward(votingEngine, user1, stakeAmount);
 
         assertEq(crepToken.balanceOf(user1), expectedReward);
         assertEq(pool.totalDistributed(), expectedReward);
@@ -161,8 +159,7 @@ contract ParticipationPoolTest is Test {
         uint256 stakeAmount = 50e6;
         uint256 expectedReward = stakeAmount * INITIAL_RATE_BPS / 10000; // 45 cREP
 
-        vm.prank(votingEngine);
-        pool.rewardVote(user1, stakeAmount);
+        _distributeStakeReward(votingEngine, user1, stakeAmount);
 
         assertEq(crepToken.balanceOf(user1), expectedReward);
     }
@@ -173,8 +170,7 @@ contract ParticipationPoolTest is Test {
         uint256 stakeAmount = 100e6;
         uint256 expectedReward = stakeAmount * 4500 / 10000; // 45 cREP
 
-        vm.prank(votingEngine);
-        pool.rewardVote(user1, stakeAmount);
+        _distributeStakeReward(votingEngine, user1, stakeAmount);
 
         assertEq(crepToken.balanceOf(user1), expectedReward);
     }
@@ -185,8 +181,7 @@ contract ParticipationPoolTest is Test {
         uint256 stakeAmount = 100e6;
         uint256 expectedReward = stakeAmount * MIN_RATE_BPS / 10000; // 1 cREP
 
-        vm.prank(votingEngine);
-        pool.rewardVote(user1, stakeAmount);
+        _distributeStakeReward(votingEngine, user1, stakeAmount);
 
         assertEq(crepToken.balanceOf(user1), expectedReward);
         assertEq(expectedReward, 1e6);
@@ -197,16 +192,15 @@ contract ParticipationPoolTest is Test {
         uint256 expectedReward = 90e6;
 
         vm.expectEmit(true, false, false, true);
-        emit ParticipationPool.ParticipationReward(user1, expectedReward, false, expectedReward);
+        emit ParticipationPool.ParticipationReward(user1, expectedReward, expectedReward);
 
-        vm.prank(votingEngine);
-        pool.rewardVote(user1, stakeAmount);
+        _distributeStakeReward(votingEngine, user1, stakeAmount);
     }
 
     function test_RewardVote_OnlyAuthorized() public {
         vm.prank(unauthorized);
         vm.expectRevert("Not authorized");
-        pool.rewardVote(user1, 100e6);
+        pool.distributeReward(user1, 90e6);
     }
 
     // --- Submit Reward Tests (same rate, applied to submitter stake) ---
@@ -217,8 +211,7 @@ contract ParticipationPoolTest is Test {
 
         uint256 balanceBefore = crepToken.balanceOf(user1);
 
-        vm.prank(contentRegistry);
-        pool.rewardSubmission(user1, stakeAmount);
+        _distributeStakeReward(contentRegistry, user1, stakeAmount);
 
         assertEq(crepToken.balanceOf(user1), balanceBefore + expectedReward);
         assertEq(expectedReward, 9e6);
@@ -231,16 +224,15 @@ contract ParticipationPoolTest is Test {
         uint256 expectedReward = 9e6;
 
         vm.expectEmit(true, false, false, true);
-        emit ParticipationPool.ParticipationReward(user1, expectedReward, true, expectedReward);
+        emit ParticipationPool.ParticipationReward(user1, expectedReward, expectedReward);
 
-        vm.prank(contentRegistry);
-        pool.rewardSubmission(user1, stakeAmount);
+        _distributeStakeReward(contentRegistry, user1, stakeAmount);
     }
 
     function test_RewardSubmission_OnlyAuthorized() public {
         vm.prank(unauthorized);
         vm.expectRevert("Not authorized");
-        pool.rewardSubmission(user1, 10e6);
+        pool.distributeReward(user1, 9e6);
     }
 
     function test_RewardSubmission_AtFloor() public {
@@ -249,8 +241,7 @@ contract ParticipationPoolTest is Test {
         uint256 stakeAmount = 10e6;
         uint256 expectedReward = stakeAmount * MIN_RATE_BPS / 10000; // 0.1 cREP = 100_000
 
-        vm.prank(contentRegistry);
-        pool.rewardSubmission(user1, stakeAmount);
+        _distributeStakeReward(contentRegistry, user1, stakeAmount);
 
         assertEq(crepToken.balanceOf(user1), expectedReward);
         assertEq(expectedReward, 100_000);
@@ -264,8 +255,7 @@ contract ParticipationPoolTest is Test {
         assertEq(pool.poolBalance(), 50e6);
 
         // Stake 100, reward would be 90 cREP but only 50 left — cap at 50
-        vm.prank(votingEngine);
-        pool.rewardVote(user1, 100e6);
+        _distributeStakeReward(votingEngine, user1, 100e6);
 
         assertEq(crepToken.balanceOf(user1), 50e6);
         assertEq(pool.poolBalance(), 0);
@@ -280,8 +270,7 @@ contract ParticipationPoolTest is Test {
         uint256 balanceBefore = crepToken.balanceOf(user1);
 
         // Should silently do nothing
-        vm.prank(votingEngine);
-        pool.rewardVote(user1, 100e6);
+        _distributeStakeReward(votingEngine, user1, 100e6);
 
         assertEq(crepToken.balanceOf(user1), balanceBefore);
         // totalDistributed should NOT change when reward is 0
@@ -292,8 +281,7 @@ contract ParticipationPoolTest is Test {
         // Leave only 5 cREP tracked in the pool - submit reward (9 cREP) gets capped.
         _setPoolBalance(5e6);
 
-        vm.prank(contentRegistry);
-        pool.rewardSubmission(user1, 10e6);
+        _distributeStakeReward(contentRegistry, user1, 10e6);
 
         assertEq(crepToken.balanceOf(user1), 5e6);
         assertEq(pool.poolBalance(), 0);
@@ -330,20 +318,16 @@ contract ParticipationPoolTest is Test {
 
     function test_TotalDistributedAccumulatesRewardAmounts() public {
         // Two votes with stake 100 → each distributes 90 cREP
-        vm.startPrank(votingEngine);
-        pool.rewardVote(user1, 100e6);
-        pool.rewardVote(user2, 100e6);
-        vm.stopPrank();
+        _distributeStakeReward(votingEngine, user1, 100e6);
+        _distributeStakeReward(votingEngine, user2, 100e6);
 
         assertEq(pool.totalDistributed(), 180e6); // 90 + 90 = 180 cREP
     }
 
     function test_TotalDistributedAccumulatesDifferentStakes() public {
         // Vote with stake 1 → distributes 0.9, vote with stake 100 → distributes 90
-        vm.startPrank(votingEngine);
-        pool.rewardVote(user1, 1e6);
-        pool.rewardVote(user2, 100e6);
-        vm.stopPrank();
+        _distributeStakeReward(votingEngine, user1, 1e6);
+        _distributeStakeReward(votingEngine, user2, 100e6);
 
         assertEq(pool.totalDistributed(), 900_000 + 90e6);
     }
@@ -353,8 +337,7 @@ contract ParticipationPoolTest is Test {
     function test_RewardVote_ZeroStake_NoReward() public {
         uint256 balBefore = crepToken.balanceOf(user1);
 
-        vm.prank(votingEngine);
-        pool.rewardVote(user1, 0);
+        _distributeStakeReward(votingEngine, user1, 0);
 
         assertEq(crepToken.balanceOf(user1), balBefore);
         assertEq(pool.totalDistributed(), 0);
@@ -518,16 +501,11 @@ contract ParticipationPoolTest is Test {
 
     function test_MixedVotesAndSubmissions() public {
         // 3 votes (stake 100 each) + 2 submissions (stake 10 each)
-        vm.startPrank(votingEngine);
-        pool.rewardVote(user1, 100e6);
-        pool.rewardVote(user1, 100e6);
-        pool.rewardVote(user2, 100e6);
-        vm.stopPrank();
-
-        vm.startPrank(contentRegistry);
-        pool.rewardSubmission(user1, 10e6);
-        pool.rewardSubmission(user2, 10e6);
-        vm.stopPrank();
+        _distributeStakeReward(votingEngine, user1, 100e6);
+        _distributeStakeReward(votingEngine, user1, 100e6);
+        _distributeStakeReward(votingEngine, user2, 100e6);
+        _distributeStakeReward(contentRegistry, user1, 10e6);
+        _distributeStakeReward(contentRegistry, user2, 10e6);
 
         uint256 voteReward = 100e6 * INITIAL_RATE_BPS / 10000; // 90 cREP
         uint256 submitReward = 10e6 * INITIAL_RATE_BPS / 10000; // 9 cREP
@@ -575,14 +553,12 @@ contract ParticipationPoolTest is Test {
     // --- Reentrancy Guard Tests (L-2) ---
 
     function test_RewardVote_FunctionalWithNonReentrant() public {
-        vm.prank(votingEngine);
-        pool.rewardVote(user1, 100e6);
+        _distributeStakeReward(votingEngine, user1, 100e6);
         assertEq(crepToken.balanceOf(user1), 90e6);
     }
 
     function test_RewardSubmission_FunctionalWithNonReentrant() public {
-        vm.prank(contentRegistry);
-        pool.rewardSubmission(user1, 10e6);
+        _distributeStakeReward(contentRegistry, user1, 10e6);
         assertEq(crepToken.balanceOf(user1), 9e6);
     }
 
@@ -601,6 +577,15 @@ contract ParticipationPoolTest is Test {
     }
 
     // --- Helpers ---
+
+    function _distributeStakeReward(address caller, address recipient, uint256 stakeAmount)
+        internal
+        returns (uint256 paidAmount)
+    {
+        uint256 reward = stakeAmount * pool.getCurrentRateBps() / 10000;
+        vm.prank(caller);
+        return pool.distributeReward(recipient, reward);
+    }
 
     /// @dev Directly set totalDistributed for gas-efficient tier testing
     function _setTotalDistributed(uint256 n) internal {

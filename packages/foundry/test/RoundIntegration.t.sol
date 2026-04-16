@@ -30,14 +30,6 @@ contract RevertingParticipationPool {
         revert("rate unavailable");
     }
 
-    function rewardVote(address voter, uint256 stakeAmount) external returns (uint256 paidAmount) {
-        return distributeReward(voter, stakeAmount);
-    }
-
-    function rewardSubmission(address submitter, uint256 stakeAmount) external returns (uint256 paidAmount) {
-        return distributeReward(submitter, stakeAmount);
-    }
-
     function distributeReward(address voter, uint256 amount) public returns (uint256 paidAmount) {
         uint256 balance = token.balanceOf(address(this));
         paidAmount = amount > balance ? balance : amount;

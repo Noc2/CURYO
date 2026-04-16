@@ -85,8 +85,7 @@ contract ParticipationPoolBranchesTest is Test {
         _setPoolBalance(1e6); // only 1 cREP left
 
         uint256 balBefore = crepToken.balanceOf(user1);
-        vm.prank(authorizedCaller);
-        pool.rewardVote(user1, 10e6); // would reward 9 cREP at 90%, but pool only has 1
+        _distributeStakeReward(authorizedCaller, user1, 10e6); // would reward 9 cREP at 90%, but pool only has 1
 
         uint256 balAfter = crepToken.balanceOf(user1);
         assertEq(balAfter - balBefore, 1e6); // capped at pool balance
@@ -96,8 +95,7 @@ contract ParticipationPoolBranchesTest is Test {
         _setPoolBalance(0);
 
         uint256 balBefore = crepToken.balanceOf(user1);
-        vm.prank(authorizedCaller);
-        pool.rewardVote(user1, 10e6);
+        _distributeStakeReward(authorizedCaller, user1, 10e6);
         assertEq(crepToken.balanceOf(user1), balBefore); // no reward
     }
 
@@ -105,8 +103,7 @@ contract ParticipationPoolBranchesTest is Test {
         _setPoolBalance(2e6);
 
         uint256 balBefore = crepToken.balanceOf(user1);
-        vm.prank(authorizedCaller);
-        pool.rewardSubmission(user1, 100e6);
+        _distributeStakeReward(authorizedCaller, user1, 100e6);
 
         uint256 balAfter = crepToken.balanceOf(user1);
         assertEq(balAfter - balBefore, 2e6); // capped
@@ -294,12 +291,21 @@ contract ParticipationPoolBranchesTest is Test {
     function test_RewardVote_NotAuthorized_Reverts() public {
         vm.prank(user1);
         vm.expectRevert("Not authorized");
-        pool.rewardVote(user1, 10e6);
+        pool.distributeReward(user1, 9e6);
     }
 
     // =========================================================================
     // Helpers
     // =========================================================================
+
+    function _distributeStakeReward(address caller, address recipient, uint256 stakeAmount)
+        internal
+        returns (uint256 paidAmount)
+    {
+        uint256 reward = stakeAmount * pool.getCurrentRateBps() / 10000;
+        vm.prank(caller);
+        return pool.distributeReward(recipient, reward);
+    }
 
     /// @dev Use vm.store to set totalDistributed (slot 2 after immutables)
     function _setTotalDistributed(uint256 value) internal {

@@ -51,9 +51,7 @@ contract ParticipationPool is IParticipationPool, Ownable, ReentrancyGuardTransi
     // --- Events ---
 
     /// @notice Emitted when a participation reward is distributed
-    event ParticipationReward(
-        address indexed recipient, uint256 amount, bool isSubmission, uint256 totalDistributedAfter
-    );
+    event ParticipationReward(address indexed recipient, uint256 amount, uint256 totalDistributedAfter);
 
     /// @notice Emitted when an authorized caller is added or removed
     event AuthorizedCallerUpdated(address indexed caller, bool authorized);
@@ -186,22 +184,6 @@ contract ParticipationPool is IParticipationPool, Ownable, ReentrancyGuardTransi
 
     // --- Reward Functions ---
 
-    /// @notice Reward a voter for casting a vote. Called by RoundVotingEngine.
-    /// @param voter The address to reward
-    /// @param stakeAmount The amount staked on this vote
-    function rewardVote(address voter, uint256 stakeAmount) external onlyAuthorized nonReentrant {
-        uint256 reward = stakeAmount * getCurrentRateBps() / 10000;
-        _distribute(voter, reward, false);
-    }
-
-    /// @notice Reward a submitter for submitting content. Called by ContentRegistry.
-    /// @param submitter The address to reward
-    /// @param stakeAmount The submitter stake amount
-    function rewardSubmission(address submitter, uint256 stakeAmount) external onlyAuthorized nonReentrant {
-        uint256 reward = stakeAmount * getCurrentRateBps() / 10000;
-        _distribute(submitter, reward, true);
-    }
-
     /// @notice Distribute a pre-computed reward amount. Called by RoundVotingEngine for pull-based claims.
     /// @dev Uses a rate snapshotted at settlement time rather than the live rate.
     /// @param voter The address to reward
@@ -213,7 +195,7 @@ contract ParticipationPool is IParticipationPool, Ownable, ReentrancyGuardTransi
         nonReentrant
         returns (uint256 paidAmount)
     {
-        return _distribute(voter, amount, false);
+        return _distribute(voter, amount);
     }
 
     /// @inheritdoc IParticipationPool
@@ -274,7 +256,7 @@ contract ParticipationPool is IParticipationPool, Ownable, ReentrancyGuardTransi
     }
 
     /// @dev Internal distribution logic — caps at remaining pool balance
-    function _distribute(address recipient, uint256 reward, bool isSubmission) internal returns (uint256 paidAmount) {
+    function _distribute(address recipient, uint256 reward) internal returns (uint256 paidAmount) {
         if (reward > poolBalance) {
             emit RewardCapped(recipient, reward, poolBalance);
             reward = poolBalance;
@@ -285,7 +267,7 @@ contract ParticipationPool is IParticipationPool, Ownable, ReentrancyGuardTransi
         poolBalance -= reward;
         crepToken.safeTransfer(recipient, reward);
 
-        emit ParticipationReward(recipient, reward, isSubmission, totalDistributed);
+        emit ParticipationReward(recipient, reward, totalDistributed);
         return reward;
     }
 }

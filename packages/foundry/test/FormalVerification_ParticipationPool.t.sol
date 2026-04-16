@@ -182,11 +182,9 @@ contract FormalVerification_ParticipationPoolTest is Test {
 
         uint256 initialPool = pool.poolBalance();
 
-        vm.startPrank(caller);
         for (uint256 i = 0; i < numRewards; i++) {
-            pool.rewardVote(user, stakeAmount);
+            _distributeStakeReward(user, stakeAmount);
         }
-        vm.stopPrank();
 
         // Conservation: totalDistributed + poolBalance == initialPool
         assertEq(
@@ -205,8 +203,7 @@ contract FormalVerification_ParticipationPoolTest is Test {
         assertEq(pool.getCurrentRateBps(), 9000, "Still tier 0 before reward");
 
         // Reward with 100 cREP stake -> reward = 90 cREP at 90% rate
-        vm.prank(caller);
-        pool.rewardVote(user, 100e6);
+        _distributeStakeReward(user, 100e6);
 
         assertEq(crepToken.balanceOf(user), 90e6, "Full 90 cREP reward at tier 0 rate");
 
@@ -226,8 +223,7 @@ contract FormalVerification_ParticipationPoolTest is Test {
         uint256 balBefore = crepToken.balanceOf(user);
 
         // Reward attempt should silently do nothing
-        vm.prank(caller);
-        pool.rewardVote(user, 100e6);
+        _distributeStakeReward(user, 100e6);
 
         assertEq(crepToken.balanceOf(user), balBefore, "No tokens transferred");
         assertEq(pool.totalDistributed(), 0, "totalDistributed unchanged");
@@ -247,5 +243,11 @@ contract FormalVerification_ParticipationPoolTest is Test {
         assertEq(pool.reservedBalance(), 7e6, "reserved accounting must remain intact");
         assertEq(pool.reservedRewards(caller), 7e6, "beneficiary reservation must remain intact");
         assertEq(crepToken.balanceOf(address(pool)), 7e6, "contract should retain reserved funds only");
+    }
+
+    function _distributeStakeReward(address recipient, uint256 stakeAmount) internal returns (uint256 paidAmount) {
+        uint256 reward = stakeAmount * pool.getCurrentRateBps() / 10000;
+        vm.prank(caller);
+        return pool.distributeReward(recipient, reward);
     }
 }

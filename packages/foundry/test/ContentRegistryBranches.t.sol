@@ -723,8 +723,9 @@ contract ContentRegistryBranchesTest is VotingTestBase {
             registry.submitterParticipationSnapshotRateBps(1), 9000, "healthy settlement should snapshot the live rate"
         );
 
+        uint256 rateDecayReward = 2_300_000e6 * shiftingPool.getCurrentRateBps() / 10000;
         vm.prank(owner);
-        shiftingPool.rewardSubmission(owner, 2_300_000e6);
+        shiftingPool.distributeReward(owner, rateDecayReward);
         assertEq(shiftingPool.getCurrentRateBps(), 4500, "live pool rate should have decayed before delayed resolution");
 
         vm.warp(T0 + 4 days + 1);
@@ -767,8 +768,9 @@ contract ContentRegistryBranchesTest is VotingTestBase {
             registry.submitterParticipationSnapshotRateBps(1), 9000, "first settlement should snapshot the live rate"
         );
 
+        uint256 rateDecayReward = 2_300_000e6 * shiftingPool.getCurrentRateBps() / 10000;
         vm.prank(owner);
-        shiftingPool.rewardSubmission(owner, 2_300_000e6);
+        shiftingPool.distributeReward(owner, rateDecayReward);
         assertEq(shiftingPool.getCurrentRateBps(), 4500, "live pool rate should decay before the later settlement");
 
         _settleHealthyRoundWithVoters(1, voter4, voter5, voter6);
