@@ -21,10 +21,11 @@ contract DeployCuryoHarness is DeployCuryo {
         _preBroadcastChecks();
     }
 
-    function exposedAssertFaucetVerificationConfig(HumanFaucet humanFaucet, address hubAddress, bytes32 expectedConfigId)
-        external
-        view
-    {
+    function exposedAssertFaucetVerificationConfig(
+        HumanFaucet humanFaucet,
+        address hubAddress,
+        bytes32 expectedConfigId
+    ) external view {
         _assertFaucetVerificationConfig(humanFaucet, hubAddress, expectedConfigId);
     }
 
@@ -33,6 +34,30 @@ contract DeployCuryoHarness is DeployCuryo {
         view
     {
         _assertExactExcludedHolders(governor, expectedExcludedHolders);
+    }
+
+    function exposedMigrationBootstrapUserCount() external view returns (uint256) {
+        MigrationBootstrapConfig memory migrationConfig = _loadMigrationBootstrapConfig();
+        return migrationConfig.users.length;
+    }
+
+    function exposedValidateMigrationBootstrapConfig(
+        address[] memory users,
+        uint256[] memory nullifiers,
+        uint256[] memory amounts,
+        address[] memory referrers,
+        uint256[] memory claimantBonuses,
+        uint256[] memory referrerRewards
+    ) external pure {
+        MigrationBootstrapConfig memory migrationConfig = MigrationBootstrapConfig({
+            users: users,
+            nullifiers: nullifiers,
+            amounts: amounts,
+            referrers: referrers,
+            claimantBonuses: claimantBonuses,
+            referrerRewards: referrerRewards
+        });
+        _validateMigrationBootstrapConfig(migrationConfig);
     }
 }
 
@@ -66,6 +91,52 @@ contract DeployCuryoCompilationTest is Test {
         deployScript.exposedPreBroadcastChecks();
     }
 
+    function test_PreBroadcastChecks_AcceptsMigrationBootstrapManifest() public {
+        DeployCuryoHarness deployScript = new DeployCuryoHarness();
+        string memory path = "./out/curyo-migration-bootstrap-valid.json";
+        vm.writeFile(
+            path,
+            string.concat(
+                '{"users":["0x0000000000000000000000000000000000000001"],',
+                '"nullifiers":["123456"],',
+                '"amounts":["10000000000"],',
+                '"referrers":["0x0000000000000000000000000000000000000000"],',
+                '"claimantBonuses":["0"],',
+                '"referrerRewards":["0"]}'
+            )
+        );
+        vm.setEnv("MIGRATION_BOOTSTRAP_FILE", path);
+
+        vm.chainId(31337);
+        assertEq(deployScript.exposedMigrationBootstrapUserCount(), 1);
+        deployScript.exposedPreBroadcastChecks();
+
+        vm.setEnv("MIGRATION_BOOTSTRAP_FILE", "");
+        vm.removeFile(path);
+    }
+
+    function test_MigrationBootstrapValidation_RejectsLengthMismatch() public {
+        DeployCuryoHarness deployScript = new DeployCuryoHarness();
+        address[] memory users = new address[](1);
+        users[0] = address(1);
+        uint256[] memory nullifiers = new uint256[](1);
+        nullifiers[0] = 123456;
+        uint256[] memory amounts = new uint256[](0);
+        address[] memory referrers = new address[](1);
+        referrers[0] = address(0);
+        uint256[] memory claimantBonuses = new uint256[](1);
+        claimantBonuses[0] = 0;
+        uint256[] memory referrerRewards = new uint256[](1);
+        referrerRewards[0] = 0;
+
+        vm.expectRevert(
+            abi.encodeWithSelector(DeployCuryo.DeploymentRoleVerificationFailed.selector, "Migration amounts length")
+        );
+        deployScript.exposedValidateMigrationBootstrapConfig(
+            users, nullifiers, amounts, referrers, claimantBonuses, referrerRewards
+        );
+    }
+
     function test_AssertFaucetVerificationConfig_PassesForStoredHubConfig() public {
         DeployCuryoHarness deployScript = new DeployCuryoHarness();
         MockIdentityVerificationHub mockHub = new MockIdentityVerificationHub();
@@ -85,7 +156,9 @@ contract DeployCuryoCompilationTest is Test {
         HumanFaucet faucet = new HumanFaucet(address(crepToken), address(mockHub), address(this));
         bytes32 configId = mockHub.MOCK_CONFIG_ID();
 
-        vm.expectRevert(abi.encodeWithSelector(DeployCuryo.DeploymentRoleVerificationFailed.selector, "HumanFaucet config stored"));
+        vm.expectRevert(
+            abi.encodeWithSelector(DeployCuryo.DeploymentRoleVerificationFailed.selector, "HumanFaucet config stored")
+        );
         deployScript.exposedAssertFaucetVerificationConfig(faucet, address(mockHub), configId);
     }
 
@@ -100,7 +173,9 @@ contract DeployCuryoCompilationTest is Test {
         faucet.setConfigId(configId);
 
         vm.expectRevert(
-            abi.encodeWithSelector(DeployCuryo.DeploymentRoleVerificationFailed.selector, "HumanFaucet config exists on hub")
+            abi.encodeWithSelector(
+                DeployCuryo.DeploymentRoleVerificationFailed.selector, "HumanFaucet config exists on hub"
+            )
         );
         deployScript.exposedAssertFaucetVerificationConfig(faucet, address(missingConfigHub), configId);
     }
@@ -133,7 +208,9 @@ contract DeployCuryoCompilationTest is Test {
         governor.initializePools(initializedExcludedHolders);
 
         vm.expectRevert(
-            abi.encodeWithSelector(DeployCuryo.DeploymentRoleVerificationFailed.selector, "Governor excluded holder mismatch")
+            abi.encodeWithSelector(
+                DeployCuryo.DeploymentRoleVerificationFailed.selector, "Governor excluded holder mismatch"
+            )
         );
         deployScript.exposedAssertExactExcludedHolders(governor, expectedExcludedHolders);
     }

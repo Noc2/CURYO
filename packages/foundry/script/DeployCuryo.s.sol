@@ -536,11 +536,50 @@ contract DeployCuryo is ScaffoldETHDeploy {
 
         string memory json = vm.readFile(filePath);
         migrationConfig.users = vm.parseJsonAddressArray(json, ".users");
-        migrationConfig.nullifiers = vm.parseJsonUintArray(json, ".nullifiers");
-        migrationConfig.amounts = vm.parseJsonUintArray(json, ".amounts");
+        migrationConfig.nullifiers = _parseJsonUintStringArray(json, ".nullifiers");
+        migrationConfig.amounts = _parseJsonUintStringArray(json, ".amounts");
         migrationConfig.referrers = vm.parseJsonAddressArray(json, ".referrers");
-        migrationConfig.claimantBonuses = vm.parseJsonUintArray(json, ".claimantBonuses");
-        migrationConfig.referrerRewards = vm.parseJsonUintArray(json, ".referrerRewards");
+        migrationConfig.claimantBonuses = _parseJsonUintStringArray(json, ".claimantBonuses");
+        migrationConfig.referrerRewards = _parseJsonUintStringArray(json, ".referrerRewards");
+    }
+
+    function _parseJsonUintStringArray(string memory json, string memory key)
+        internal
+        view
+        returns (uint256[] memory values)
+    {
+        string[] memory rawValues = vm.parseJsonStringArray(json, key);
+        values = new uint256[](rawValues.length);
+        for (uint256 i = 0; i < rawValues.length; ++i) {
+            values[i] = _parseUintString(rawValues[i]);
+        }
+    }
+
+    function _parseUintString(string memory value) internal pure returns (uint256 parsed) {
+        bytes memory raw = bytes(value);
+        _require(raw.length > 0, "Migration uint empty");
+
+        if (raw.length > 2 && raw[0] == bytes1("0") && (raw[1] == bytes1("x") || raw[1] == bytes1("X"))) {
+            for (uint256 i = 2; i < raw.length; ++i) {
+                uint8 nibble = _hexNibble(uint8(raw[i]));
+                _require(nibble != type(uint8).max, "Migration uint invalid hex");
+                parsed = (parsed << 4) | uint256(nibble);
+            }
+            return parsed;
+        }
+
+        for (uint256 i = 0; i < raw.length; ++i) {
+            uint8 charCode = uint8(raw[i]);
+            _require(charCode >= 48 && charCode <= 57, "Migration uint invalid decimal");
+            parsed = parsed * 10 + uint256(charCode - 48);
+        }
+    }
+
+    function _hexNibble(uint8 charCode) internal pure returns (uint8) {
+        if (charCode >= 48 && charCode <= 57) return charCode - 48;
+        if (charCode >= 65 && charCode <= 70) return charCode - 55;
+        if (charCode >= 97 && charCode <= 102) return charCode - 87;
+        return type(uint8).max;
     }
 
     function _validateMigrationBootstrapConfig(MigrationBootstrapConfig memory migrationConfig) internal pure {

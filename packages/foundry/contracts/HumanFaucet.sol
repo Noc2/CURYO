@@ -85,6 +85,9 @@ contract HumanFaucet is SelfVerificationRoot, Ownable, Pausable {
     /// @notice Track which nullifier each address used (for retryVoterIdMint)
     mapping(address => uint256) public claimNullifier;
 
+    /// @notice One-way switch that disables deploy-time migrated claim bootstrapping.
+    bool public migrationBootstrapClosed;
+
     // --- Events ---
 
     /// @notice Emitted when tokens are successfully claimed
@@ -116,6 +119,20 @@ contract HumanFaucet is SelfVerificationRoot, Ownable, Pausable {
     /// @notice Emitted when governance withdraws remaining faucet funds while paused
     event RemainingWithdrawn(address indexed to, uint256 amount);
 
+    /// @notice Emitted when a prior deployment claim is replayed during a redeploy migration
+    event MigratedClaimBootstrapped(
+        address indexed user,
+        uint256 indexed nullifier,
+        uint256 amount,
+        address referrer,
+        uint256 claimantBonus,
+        uint256 referrerReward,
+        uint256 tokenId
+    );
+
+    /// @notice Emitted when migrated claim bootstrapping is permanently closed
+    event MigrationBootstrapClosed();
+
     // --- Errors ---
 
     /// @notice Thrown when a nullifier has already been used
@@ -132,6 +149,18 @@ contract HumanFaucet is SelfVerificationRoot, Ownable, Pausable {
 
     /// @notice Thrown when the proof was generated from an unsupported document type
     error UnsupportedDocumentType();
+
+    /// @notice Thrown when migrated claim bootstrap has been closed
+    error MigrationBootstrapAlreadyClosed();
+
+    /// @notice Thrown when migration array lengths do not match
+    error MigrationArrayLengthMismatch();
+
+    /// @notice Thrown when a migrated claim contains invalid data
+    error InvalidMigrationClaim();
+
+    /// @notice Thrown when migrated referral data is not valid
+    error InvalidMigrationReferrer();
 
     // --- Constructor ---
 
@@ -216,6 +245,42 @@ contract HumanFaucet is SelfVerificationRoot, Ownable, Pausable {
 
         uint256 tokenId = voterIdNFT.mint(user, nullifier);
         emit VoterIdMinted(user, tokenId, nullifier);
+    }
+
+    /// @notice Replay verified faucet claims from a prior deployment during a controlled redeploy migration.
+    /// @dev Intended to run before governance handoff and before the public faucet opens. Amounts are explicit so the
+    ///      migration can preserve historical referral bonuses or exact claim amounts from old events.
+    function bootstrapMigratedClaims(
+        address[] calldata users,
+        uint256[] calldata nullifiers,
+        uint256[] calldata amounts,
+        address[] calldata referrers,
+        uint256[] calldata claimantBonuses,
+        uint256[] calldata referrerRewards
+    ) external onlyOwner {
+        if (migrationBootstrapClosed) revert MigrationBootstrapAlreadyClosed();
+        if (
+            users.length != nullifiers.length || users.length != amounts.length || users.length != referrers.length
+                || users.length != claimantBonuses.length || users.length != referrerRewards.length
+        ) {
+            revert MigrationArrayLengthMismatch();
+        }
+        require(address(voterIdNFT) != address(0), "VoterIdNFT not set");
+
+        for (uint256 i = 0; i < users.length; ++i) {
+            _bootstrapMigratedClaim(
+                users[i], nullifiers[i], amounts[i], referrers[i], claimantBonuses[i], referrerRewards[i]
+            );
+        }
+    }
+
+    /// @notice Permanently close migrated-claim bootstrapping.
+    /// @dev The deploy script closes this before transferring ownership to governance.
+    function closeMigrationBootstrap() external onlyOwner {
+        if (!migrationBootstrapClosed) {
+            migrationBootstrapClosed = true;
+            emit MigrationBootstrapClosed();
+        }
     }
 
     /// @notice Pause the faucet (blocks new claims)
@@ -485,12 +550,83 @@ contract HumanFaucet is SelfVerificationRoot, Ownable, Pausable {
         _claiming = false;
     }
 
+    function _bootstrapMigratedClaim(
+        address user,
+        uint256 nullifier,
+        uint256 amount,
+        address referrer,
+        uint256 claimantBonus,
+        uint256 referrerReward
+    ) internal {
+        if (user == address(0) || nullifier == 0 || amount == 0 || claimantBonus > amount) {
+            revert InvalidMigrationClaim();
+        }
+        if (nullifierUsed[nullifier]) {
+            revert NullifierAlreadyUsed();
+        }
+        if (addressClaimed[user]) {
+            revert AddressAlreadyClaimed();
+        }
+
+        if (referrer == address(0)) {
+            if (claimantBonus != 0 || referrerReward != 0) {
+                revert InvalidMigrationClaim();
+            }
+        } else if (
+            referrer == user || claimantBonus == 0 || referrerReward == 0 || !addressClaimed[referrer]
+                || !voterIdNFT.hasVoterId(referrer)
+        ) {
+            revert InvalidMigrationReferrer();
+        }
+
+        uint256 totalRequired = amount + referrerReward;
+        if (crepToken.balanceOf(address(this)) < totalRequired) {
+            revert InsufficientFaucetBalance();
+        }
+
+        nullifierUsed[nullifier] = true;
+        addressClaimed[user] = true;
+        claimNullifier[user] = nullifier;
+
+        if (referrer != address(0)) {
+            referredBy[user] = referrer;
+            referralCount[referrer]++;
+            referralEarnings[referrer] += referrerReward;
+            totalReferralRewards += referrerReward + claimantBonus;
+        }
+
+        totalClaimed += totalRequired;
+        totalClaimants++;
+
+        if (
+            totalClaimants == TIER_0_THRESHOLD || totalClaimants == TIER_1_THRESHOLD
+                || totalClaimants == TIER_2_THRESHOLD || totalClaimants == TIER_3_THRESHOLD
+        ) {
+            emit TierChanged(getCurrentTier(), getCurrentClaimAmount(), totalClaimants);
+        }
+
+        crepToken.safeTransfer(user, amount);
+        if (referrerReward > 0) {
+            crepToken.safeTransfer(referrer, referrerReward);
+            emit ReferralRewardPaid(referrer, user, referrerReward, claimantBonus);
+        }
+
+        emit TokensClaimed(user, nullifier, amount);
+
+        uint256 tokenId = voterIdNFT.mint(user, nullifier);
+        emit VoterIdMinted(user, tokenId, nullifier);
+        emit MigratedClaimBootstrapped(user, nullifier, amount, referrer, claimantBonus, referrerReward, tokenId);
+    }
+
     /// @notice Decode referrer address from userData
     /// @param userData The user data bytes containing referrer address
     /// @return The referrer address (or zero address if invalid)
     function _decodeReferrer(bytes memory userData) internal pure returns (address) {
         if (userData.length == 0) return address(0);
-        if (userData.length == 42 && userData[0] == bytes1("0") && (userData[1] == bytes1("x") || userData[1] == bytes1("X"))) {
+        if (
+            userData.length == 42 && userData[0] == bytes1("0")
+                && (userData[1] == bytes1("x") || userData[1] == bytes1("X"))
+        ) {
             return _decodeHexStringAddress(userData, 2);
         }
         if (userData.length == 40) {

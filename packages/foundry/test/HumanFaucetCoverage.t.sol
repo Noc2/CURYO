@@ -160,6 +160,103 @@ contract HumanFaucetCoverageTest is Test {
         mockHub.simulateVerification(address(faucet), user1);
     }
 
+    function test_BootstrapMigratedClaims_ReplaysClaimAndVoterIdState() public {
+        VoterIdNFT realVoterIdNFT = _deployRealVoterIdNFT();
+
+        vm.prank(admin);
+        faucet.setVoterIdNFT(address(realVoterIdNFT));
+
+        _bootstrapSingleClaim(user1, 111111, TIER_0_AMOUNT);
+
+        assertEq(crepToken.balanceOf(user1), TIER_0_AMOUNT);
+        assertTrue(faucet.hasClaimed(user1));
+        assertTrue(faucet.isNullifierUsed(111111));
+        assertEq(faucet.claimNullifier(user1), 111111);
+        assertEq(faucet.totalClaimants(), 1);
+        assertEq(faucet.totalClaimed(), TIER_0_AMOUNT);
+        assertEq(realVoterIdNFT.getTokenId(user1), 1);
+        assertTrue(realVoterIdNFT.hasVoterId(user1));
+
+        mockHub.setVerifiedWithNullifier(user2, 111111);
+        vm.expectRevert(HumanFaucet.NullifierAlreadyUsed.selector);
+        mockHub.simulateVerification(address(faucet), user2);
+
+        mockHub.setVerified(user1);
+        vm.expectRevert(HumanFaucet.AddressAlreadyClaimed.selector);
+        mockHub.simulateVerification(address(faucet), user1);
+    }
+
+    function test_BootstrapMigratedClaims_ReplaysReferralState() public {
+        VoterIdNFT realVoterIdNFT = _deployRealVoterIdNFT();
+
+        vm.prank(admin);
+        faucet.setVoterIdNFT(address(realVoterIdNFT));
+
+        _bootstrapSingleClaim(user1, 111111, TIER_0_AMOUNT);
+
+        address[] memory users = new address[](1);
+        users[0] = user2;
+        uint256[] memory nullifiers = new uint256[](1);
+        nullifiers[0] = 222222;
+        uint256[] memory amounts = new uint256[](1);
+        amounts[0] = TIER_0_AMOUNT + 5_000e6;
+        address[] memory referrers = new address[](1);
+        referrers[0] = user1;
+        uint256[] memory claimantBonuses = new uint256[](1);
+        claimantBonuses[0] = 5_000e6;
+        uint256[] memory referrerRewards = new uint256[](1);
+        referrerRewards[0] = 5_000e6;
+
+        vm.prank(admin);
+        faucet.bootstrapMigratedClaims(users, nullifiers, amounts, referrers, claimantBonuses, referrerRewards);
+
+        assertEq(crepToken.balanceOf(user1), TIER_0_AMOUNT + 5_000e6);
+        assertEq(crepToken.balanceOf(user2), TIER_0_AMOUNT + 5_000e6);
+        assertEq(faucet.referredBy(user2), user1);
+        assertEq(faucet.referralCount(user1), 1);
+        assertEq(faucet.referralEarnings(user1), 5_000e6);
+        assertEq(faucet.totalReferralRewards(), 10_000e6);
+        assertEq(faucet.totalClaimed(), TIER_0_AMOUNT + (TIER_0_AMOUNT + 5_000e6) + 5_000e6);
+        assertEq(faucet.totalClaimants(), 2);
+        assertTrue(realVoterIdNFT.hasVoterId(user2));
+    }
+
+    function test_BootstrapMigratedClaims_CloseBlocksFurtherBootstrap() public {
+        VoterIdNFT realVoterIdNFT = _deployRealVoterIdNFT();
+
+        vm.startPrank(admin);
+        faucet.setVoterIdNFT(address(realVoterIdNFT));
+        faucet.closeMigrationBootstrap();
+        vm.expectRevert(HumanFaucet.MigrationBootstrapAlreadyClosed.selector);
+        faucet.bootstrapMigratedClaims(
+            _singleAddressArray(user1),
+            _singleUintArray(111111),
+            _singleUintArray(TIER_0_AMOUNT),
+            _singleAddressArray(address(0)),
+            _singleUintArray(0),
+            _singleUintArray(0)
+        );
+        vm.stopPrank();
+    }
+
+    function test_BootstrapMigratedClaims_RevertsInvalidReferrer() public {
+        VoterIdNFT realVoterIdNFT = _deployRealVoterIdNFT();
+
+        vm.prank(admin);
+        faucet.setVoterIdNFT(address(realVoterIdNFT));
+
+        vm.prank(admin);
+        vm.expectRevert(HumanFaucet.InvalidMigrationReferrer.selector);
+        faucet.bootstrapMigratedClaims(
+            _singleAddressArray(user2),
+            _singleUintArray(222222),
+            _singleUintArray(TIER_0_AMOUNT + 5_000e6),
+            _singleAddressArray(user1),
+            _singleUintArray(5_000e6),
+            _singleUintArray(5_000e6)
+        );
+    }
+
     // =========================================================================
     // 3. transferOwnership — governance restriction
     // =========================================================================
@@ -616,5 +713,27 @@ contract HumanFaucetCoverageTest is Test {
         realVoterIdNFT.addMinter(admin);
         realVoterIdNFT.addMinter(address(faucet));
         vm.stopPrank();
+    }
+
+    function _bootstrapSingleClaim(address user, uint256 nullifier, uint256 amount) internal {
+        vm.prank(admin);
+        faucet.bootstrapMigratedClaims(
+            _singleAddressArray(user),
+            _singleUintArray(nullifier),
+            _singleUintArray(amount),
+            _singleAddressArray(address(0)),
+            _singleUintArray(0),
+            _singleUintArray(0)
+        );
+    }
+
+    function _singleAddressArray(address value) internal pure returns (address[] memory values) {
+        values = new address[](1);
+        values[0] = value;
+    }
+
+    function _singleUintArray(uint256 value) internal pure returns (uint256[] memory values) {
+        values = new uint256[](1);
+        values[0] = value;
     }
 }
