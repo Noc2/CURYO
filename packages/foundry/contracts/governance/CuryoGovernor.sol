@@ -54,6 +54,8 @@ contract CuryoGovernor is
     /// @notice Block number where each proposal was created.
     mapping(uint256 => uint256) public proposalCreatedBlock;
 
+    error ExcludedHolderCannotGovern(address holder);
+
     event CategoryRegistryUpdated(address indexed categoryRegistry);
 
     /// @notice Deploy the governor with cREP token and timelock
@@ -198,6 +200,12 @@ contract CuryoGovernor is
 
     // --- Governance Lock Integration ---
 
+    function _requireNonExcludedGovernor(address account) internal view {
+        if (isExcludedHolder[account]) {
+            revert ExcludedHolderCannotGovern(account);
+        }
+    }
+
     /// @dev Override _castVote to lock the voting power used for 7 days
     function _castVote(uint256 proposalId, address account, uint8 support, string memory reason, bytes memory params)
         internal
@@ -205,6 +213,8 @@ contract CuryoGovernor is
         override
         returns (uint256 weight)
     {
+        _requireNonExcludedGovernor(account);
+
         weight = super._castVote(proposalId, account, support, reason, params);
 
         // Lock the voting power that was used
@@ -222,6 +232,8 @@ contract CuryoGovernor is
         bytes[] memory calldatas,
         string memory description
     ) public virtual override(Governor) returns (uint256) {
+        _requireNonExcludedGovernor(msg.sender);
+
         uint256 proposalId = super.propose(targets, values, calldatas, description);
         proposalCreatedBlock[proposalId] = block.number;
 
@@ -239,10 +251,14 @@ contract CuryoGovernor is
         require(categoryRegistry != address(0), "Category registry not set");
 
         ICategoryRegistry registry = ICategoryRegistry(categoryRegistry);
-        require(registry.getCategoryStatus(categoryId) == ICategoryRegistry.CategoryStatus.Pending, "Category not pending");
+        require(
+            registry.getCategoryStatus(categoryId) == ICategoryRegistry.CategoryStatus.Pending, "Category not pending"
+        );
         require(block.number > registry.getCategoryCreatedBlock(categoryId), "Category proposal too early");
 
         address proposer = _msgSender();
+        _requireNonExcludedGovernor(proposer);
+
         uint256 threshold = categoryProposalThreshold();
         uint256 proposerVotes = getVotes(proposer, clock() - 1);
         if (proposerVotes < threshold) {
@@ -263,8 +279,9 @@ contract CuryoGovernor is
         values[0] = 0;
 
         bytes[] memory calldatas = new bytes[](1);
-        calldatas[0] =
-            abi.encodeWithSignature("approveCategory(uint256,bytes32,bytes32)", categoryId, descriptionHash, approvalDigest);
+        calldatas[0] = abi.encodeWithSignature(
+            "approveCategory(uint256,bytes32,bytes32)", categoryId, descriptionHash, approvalDigest
+        );
 
         proposalId = _propose(targets, values, calldatas, description, proposer);
         proposalCreatedBlock[proposalId] = block.number;

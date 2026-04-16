@@ -528,11 +528,52 @@ contract GovernanceTest is Test {
         assertEq(holders[7], address(mockCategoryRegistry));
     }
 
+    function test_GovernorExcludedHolderCannotPropose() public {
+        vm.roll(block.number + 1);
+
+        address[] memory targets = new address[](1);
+        targets[0] = address(timelock);
+
+        uint256[] memory values = new uint256[](1);
+        bytes[] memory calldatas = new bytes[](1);
+
+        vm.prank(mockTreasury);
+        vm.expectRevert(abi.encodeWithSelector(CuryoGovernor.ExcludedHolderCannotGovern.selector, mockTreasury));
+        governor.propose(targets, values, calldatas, "Excluded treasury proposal");
+    }
+
+    function test_GovernorExcludedHolderCannotVote() public {
+        vm.roll(block.number + 1);
+
+        address[] memory targets = new address[](1);
+        targets[0] = address(timelock);
+
+        uint256[] memory values = new uint256[](1);
+        bytes[] memory calldatas = new bytes[](1);
+
+        vm.prank(voter1);
+        uint256 proposalId = governor.propose(targets, values, calldatas, "User proposal");
+
+        vm.roll(block.number + governor.votingDelay() + 1);
+
+        vm.prank(mockTreasury);
+        vm.expectRevert(abi.encodeWithSelector(CuryoGovernor.ExcludedHolderCannotGovern.selector, mockTreasury));
+        governor.castVote(proposalId, 1);
+    }
+
+    function test_GovernorExcludedHolderCannotProposeCategoryApproval() public {
+        vm.roll(block.number + 1);
+
+        vm.prank(mockTreasury);
+        vm.expectRevert(abi.encodeWithSelector(CuryoGovernor.ExcludedHolderCannotGovern.selector, mockTreasury));
+        governor.proposeCategoryApproval(7);
+    }
+
     function test_GovernorRejectsLegacyExcludedHolderReplacementSelector() public {
         address replacement = address(new MockCategoryRegistry());
 
-        (bool success,) =
-            address(governor).call(abi.encodeWithSignature("replaceExcludedHolder(address,address)", mockFaucet, replacement));
+        (bool success,) = address(governor)
+            .call(abi.encodeWithSignature("replaceExcludedHolder(address,address)", mockFaucet, replacement));
 
         assertFalse(success);
         assertTrue(governor.isExcludedHolder(mockFaucet));
@@ -587,9 +628,12 @@ contract GovernanceTest is Test {
         holders[7] = address(mockCategoryRegistry);
     }
 
-    function _executeSingleCallProposal(address target, bytes memory callData, string memory description, bool expectRevert_)
-        internal
-    {
+    function _executeSingleCallProposal(
+        address target,
+        bytes memory callData,
+        string memory description,
+        bool expectRevert_
+    ) internal {
         vm.roll(block.number + 1);
 
         address[] memory targets = new address[](1);
