@@ -178,9 +178,6 @@ contract RoundVotingEngine is
     event ForfeitedFundsAddedToTreasury(uint256 indexed contentId, uint256 indexed roundId, uint256 amount);
     event CurrentEpochRefunded(uint256 indexed contentId, uint256 indexed roundId, uint256 amount);
     event TreasuryFeeDistributed(uint256 indexed contentId, uint256 indexed roundId, uint256 amount);
-    event CategorySubmitterRewarded(
-        uint256 indexed contentId, uint256 indexed categoryId, address indexed submitter, uint256 amount
-    );
     event ConsensusReserveFunded(uint256 indexed contentId, uint256 indexed roundId, uint256 amount);
     event ConsensusSubsidyDistributed(uint256 indexed contentId, uint256 indexed roundId, uint256 amount);
 
@@ -728,7 +725,6 @@ contract RoundVotingEngine is
 
         consensusReserve = RoundSettlementDistributionLib.distribute(
             crepToken,
-            registry,
             protocolConfig,
             round,
             roundVoterPool,

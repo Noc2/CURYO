@@ -8,7 +8,6 @@ import {
   category,
   profile,
   rewardClaim,
-  submitterRewardClaim,
   globalStats,
   voterStats,
   voterCategoryStats,
@@ -477,25 +476,6 @@ ponder.on("RoundVotingEngine:CancelledRoundRefundClaimed", async ({ event, conte
       voter,
       stakeReturned: amount,
       crepReward: 0n,
-      claimedAt: event.block.timestamp,
-    })
-    .onConflictDoNothing();
-});
-
-
-ponder.on("RoundVotingEngine:CategorySubmitterRewarded", async ({ event, context }) => {
-  const { contentId, categoryId, submitter, amount } = event.args;
-
-  await context.db
-    .insert(submitterRewardClaim)
-    .values({
-      id: `cat-${contentId}-${categoryId}-${event.block.number}`,
-      contentId,
-      roundId: 0n,
-      epochId: null,
-      source: "category",
-      submitter,
-      crepAmount: amount,
       claimedAt: event.block.timestamp,
     })
     .onConflictDoNothing();
