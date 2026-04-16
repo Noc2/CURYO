@@ -107,6 +107,7 @@ export function useContentFeed(voterAddress?: string, options: UseContentFeedOpt
         return {
           id: args.contentId,
           url: args.url ?? "",
+          question: args.title,
           title: args.title,
           description: args.description,
           tags: parseTags(args.tags || ""),

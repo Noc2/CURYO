@@ -39,6 +39,10 @@ function isInteractiveTarget(target: EventTarget | null) {
   return target instanceof Element && target.closest(CONTENT_INTENT_INTERACTIVE_SELECTOR) !== null;
 }
 
+function getQuestionText(item: ContentItem) {
+  return item.question?.trim() || item.title;
+}
+
 interface FeedVoteCardProps {
   item: ContentItem;
   submitterProfile?: SubmitterProfile;
@@ -260,6 +264,8 @@ function FeedContentHeader({
   canNext,
   compact,
 }: FeedContentHeaderProps) {
+  const questionText = getQuestionText(item);
+
   return (
     <div
       data-testid="vote-content-header"
@@ -278,13 +284,11 @@ function FeedContentHeader({
         <div className="min-w-0 flex-1">
           <h2
             id={titleId}
-            className={`break-words text-center font-display leading-[0.94] tracking-[0.02em] text-base-content ${
-              compact
-                ? "text-[1.55rem] sm:text-[1.7rem] xl:text-[1.62rem]"
-                : "text-[1.7rem] sm:text-[1.9rem] xl:text-[1.75rem]"
+            className={`text-balance break-words text-center font-sans font-semibold leading-tight tracking-normal text-base-content ${
+              compact ? "text-lg sm:text-xl xl:text-lg" : "text-xl sm:text-2xl xl:text-xl"
             }`}
           >
-            {item.title}
+            {questionText}
           </h2>
         </div>
         <button

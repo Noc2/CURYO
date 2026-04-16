@@ -31,6 +31,7 @@ export interface ContentOpenRoundSummary {
 export interface ContentItem {
   id: bigint;
   url: string;
+  question?: string;
   title: string;
   description: string;
   tags: string[];
@@ -91,6 +92,7 @@ export function mapContentItem(
   item: {
     id: string;
     url?: string | null;
+    question?: string | null;
     title: string;
     description: string;
     tags: string;
@@ -170,6 +172,7 @@ export function mapContentItem(
   return {
     id: BigInt(item.id),
     url: item.url ?? "",
+    question: item.question?.trim() || item.title,
     title: item.title,
     description: item.description,
     tags: parseTags(item.tags),

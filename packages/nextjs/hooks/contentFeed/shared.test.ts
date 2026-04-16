@@ -109,9 +109,28 @@ test("mapContentItem supports text-only questions and Ponder reward pool summari
   });
 
   assert.equal(item.url, "");
+  assert.equal(item.question, "Would you book this hotel?");
   assert.equal(item.rewardPoolSummary?.totalFunded, 25_000_000n);
   assert.equal(item.rewardPoolSummary?.totalAvailable, 18_000_000n);
   assert.equal(item.rewardPoolSummary?.activeRewardPoolCount, 1);
+});
+
+test("mapContentItem prefers Ponder question text when present", () => {
+  const item = mapContentItem({
+    id: "3",
+    url: "https://example.com/evidence",
+    question: "Would this itinerary be worth the extra transfer time?",
+    title: "Example evidence link",
+    description: "Compare the cheaper route with the direct route.",
+    tags: "Travel",
+    submitter: "0x00000000000000000000000000000000000000aa",
+    contentHash: "hash-3",
+    categoryId: "2",
+    rating: 50,
+  });
+
+  assert.equal(item.question, "Would this itinerary be worth the extra transfer time?");
+  assert.equal(item.title, "Example evidence link");
 });
 
 test("filterRpcFeed matches any address in the submitters filter", () => {
