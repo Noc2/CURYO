@@ -133,8 +133,12 @@ export function getDefaultUsdcAddress(chainId: number): `0x${string}` | undefine
 }
 
 export function parseUsdRewardPoolAmount(value: string): bigint | null {
-  const normalized = value.trim().replace(/,/g, ".");
-  if (!/^\d+(?:\.\d{0,6})?$/.test(normalized)) return null;
+  const trimmed = value.trim();
+  const hasCommas = trimmed.includes(",");
+  const normalized = hasCommas ? trimmed.replace(/,/g, "") : trimmed;
+  const validGroupedAmount = /^\d{1,3}(?:,\d{3})+(?:\.\d{0,6})?$/.test(trimmed);
+  const validPlainAmount = /^\d+(?:\.\d{0,6})?$/.test(trimmed);
+  if (hasCommas ? !validGroupedAmount : !validPlainAmount) return null;
   try {
     const parsed = parseUnits(normalized, USDC_DECIMALS);
     return parsed > 0n ? parsed : null;
