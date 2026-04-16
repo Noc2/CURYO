@@ -21,6 +21,7 @@ vi.mock("ponder:registry", () => ({
 vi.mock("ponder:schema", () => ({
   category: "category",
   content: "content",
+  contentMedia: "contentMedia",
   globalStats: "globalStats",
   profile: "profile",
   ratingChange: "ratingChange",
@@ -47,6 +48,7 @@ function createDb(existingRound = { id: "1-2" }) {
           insertCalls.push({ table, values });
           return {
             onConflictDoNothing: vi.fn(async () => undefined),
+            onConflictDoUpdate: vi.fn(async () => undefined),
           };
         }),
       })),
@@ -74,6 +76,55 @@ afterEach(() => {
 });
 
 describe("ContentRegistry ponder handlers", () => {
+  it("indexes content media rows from ContentMediaSubmitted events", async () => {
+    const { db, insertCalls } = createDb();
+
+    const registeredHandlers = await loadHandlers();
+    const handler = registeredHandlers.get("ContentRegistry:ContentMediaSubmitted");
+
+    expect(handler).toBeDefined();
+
+    await handler!({
+      event: {
+        args: {
+          contentId: 7n,
+          imageUrls: ["https://example.com/a.jpg", "https://example.com/b.webp"],
+          videoUrl: "",
+        },
+        block: {
+          number: 42n,
+          timestamp: 999n,
+        },
+      },
+      context: { db },
+    });
+
+    expect(insertCalls).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          table: "contentMedia",
+          values: expect.objectContaining({
+            id: "7-0",
+            contentId: 7n,
+            mediaIndex: 0,
+            mediaType: "image",
+            url: "https://example.com/a.jpg",
+          }),
+        }),
+        expect.objectContaining({
+          table: "contentMedia",
+          values: expect.objectContaining({
+            id: "7-1",
+            contentId: 7n,
+            mediaIndex: 1,
+            mediaType: "image",
+            url: "https://example.com/b.webp",
+          }),
+        }),
+      ]),
+    );
+  });
+
   it("does not create synthetic rating history rows for RatingUpdated display refreshes", async () => {
     const { db, insertCalls, updateCalls } = createDb();
 

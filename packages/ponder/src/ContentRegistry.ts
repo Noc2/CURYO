@@ -1,7 +1,7 @@
 import { ContentRegistryAbi } from "@curyo/contracts/abis";
 import { ROUND_STATE } from "@curyo/contracts/protocol";
 import { ponder } from "ponder:registry";
-import { content, category, profile, globalStats, ratingChange, round } from "ponder:schema";
+import { content, contentMedia, category, profile, globalStats, ratingChange, round } from "ponder:schema";
 import { getCanonicalUrlParts } from "./urlCanonicalization.js";
 
 function displayRatingFromBps(ratingBps: number) {
@@ -26,6 +26,37 @@ async function readRatingStateAtEventBlock(
     functionName: "getRatingState",
     args: [contentId],
   });
+}
+
+function mediaRowId(contentId: bigint, mediaIndex: number) {
+  return `${contentId.toString()}-${mediaIndex}`;
+}
+
+async function upsertContentMedia(
+  context: Parameters<Parameters<typeof ponder.on>[1]>[0]["context"],
+  contentId: bigint,
+  mediaIndex: number,
+  mediaType: "image" | "video",
+  url: string,
+) {
+  const canonicalUrl = getCanonicalUrlParts(url);
+  await context.db
+    .insert(contentMedia)
+    .values({
+      id: mediaRowId(contentId, mediaIndex),
+      contentId,
+      mediaIndex,
+      mediaType,
+      url,
+      canonicalUrl: canonicalUrl?.canonicalUrl ?? url.trim(),
+      urlHost: canonicalUrl?.urlHost ?? "",
+    })
+    .onConflictDoUpdate(() => ({
+      mediaType,
+      url,
+      canonicalUrl: canonicalUrl?.canonicalUrl ?? url.trim(),
+      urlHost: canonicalUrl?.urlHost ?? "",
+    }));
 }
 
 ponder.on("ContentRegistry:ContentSubmitted", async ({ event, context }) => {
@@ -62,6 +93,10 @@ ponder.on("ContentRegistry:ContentSubmitted", async ({ event, context }) => {
     })
     .onConflictDoNothing();
 
+  if (url.trim()) {
+    await upsertContentMedia(context, contentId, 0, "image", url);
+  }
+
   // Increment category content count (skip if category not yet indexed)
   const existingCategory = await context.db.find(category, { id: categoryId });
   if (existingCategory) {
@@ -93,6 +128,19 @@ ponder.on("ContentRegistry:ContentSubmitted", async ({ event, context }) => {
     .onConflictDoUpdate((row) => ({
       totalContent: row.totalContent + 1,
     }));
+});
+
+ponder.on("ContentRegistry:ContentMediaSubmitted", async ({ event, context }) => {
+  const { contentId, imageUrls, videoUrl } = event.args;
+  const trimmedVideoUrl = videoUrl.trim();
+  if (trimmedVideoUrl) {
+    await upsertContentMedia(context, contentId, 0, "video", trimmedVideoUrl);
+    return;
+  }
+
+  for (let i = 0; i < imageUrls.length; i++) {
+    await upsertContentMedia(context, contentId, i, "image", imageUrls[i]);
+  }
 });
 
 ponder.on("ContentRegistry:ContentDormant", async ({ event, context }) => {

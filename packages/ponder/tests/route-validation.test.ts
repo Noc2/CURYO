@@ -78,6 +78,15 @@ function mockPonderModules<T>(result: T) {
       url: "content.url",
       urlHost: "content.urlHost",
     },
+    contentMedia: {
+      canonicalUrl: "contentMedia.canonicalUrl",
+      contentId: "contentMedia.contentId",
+      id: "contentMedia.id",
+      mediaIndex: "contentMedia.mediaIndex",
+      mediaType: "contentMedia.mediaType",
+      url: "contentMedia.url",
+      urlHost: "contentMedia.urlHost",
+    },
     globalStats: {
       id: "globalStats.id",
     },
@@ -263,7 +272,7 @@ describe("registerContentRoutes", () => {
     const body = await response.json();
 
     expect(response.status).toBe(200);
-    expect(db.select).toHaveBeenCalledTimes(1);
+    expect(db.select).toHaveBeenCalledTimes(2);
     expect(queryBuilder.limit).toHaveBeenCalledWith(6);
     expect(body).toMatchObject({
       total: null,

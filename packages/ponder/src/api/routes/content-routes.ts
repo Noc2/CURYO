@@ -1,7 +1,7 @@
 import { ROUND_STATE } from "@curyo/contracts/protocol";
 import { and, asc, desc, eq, inArray, or, sql } from "ponder";
 import { db } from "ponder:api";
-import { category, content, profile, questionRewardPool, ratingChange, rewardClaim, round, vote } from "ponder:schema";
+import { category, content, contentMedia, profile, questionRewardPool, ratingChange, rewardClaim, round, vote } from "ponder:schema";
 import { buildAllowedCategoryCondition, buildAllowedContentCondition } from "../moderation.js";
 import type { ApiApp } from "../shared.js";
 import { attachOpenRoundSummary, jsonBig, parseBigIntList } from "../shared.js";
@@ -70,6 +70,64 @@ function getSearchOrderBy(searchRank: ReturnType<typeof sql<number>>, sortBy: st
     default:
       return [desc(searchRank), desc(content.createdAt), desc(content.id)];
   }
+}
+
+function inferMediaTypeFromHost(urlHost: string): "image" | "video" {
+  return urlHost === "youtube.com" || urlHost === "www.youtube.com" || urlHost === "m.youtube.com" || urlHost === "youtu.be"
+    ? "video"
+    : "image";
+}
+
+function fallbackMediaForItem<T extends { url?: string; canonicalUrl?: string; urlHost?: string }>(item: T) {
+  if (!item.url) return [];
+  return [
+    {
+      index: 0,
+      mediaIndex: 0,
+      mediaType: inferMediaTypeFromHost(item.urlHost ?? ""),
+      url: item.url,
+      canonicalUrl: item.canonicalUrl ?? item.url,
+      urlHost: item.urlHost ?? "",
+    },
+  ];
+}
+
+async function attachContentMedia<T extends { id: bigint; url?: string; canonicalUrl?: string; urlHost?: string }>(
+  items: T[],
+) {
+  if (items.length === 0) {
+    return items.map(item => ({ ...item, media: fallbackMediaForItem(item) }));
+  }
+
+  const rows = await db
+    .select()
+    .from(contentMedia)
+    .where(inArray(contentMedia.contentId, items.map(item => item.id)))
+    .orderBy(asc(contentMedia.contentId), asc(contentMedia.mediaIndex));
+  const rowsByContentId = new Map<bigint, typeof rows>();
+
+  for (const row of rows) {
+    const existing = rowsByContentId.get(row.contentId) ?? [];
+    existing.push(row);
+    rowsByContentId.set(row.contentId, existing);
+  }
+
+  return items.map(item => {
+    const mediaRows = rowsByContentId.get(item.id);
+    return {
+      ...item,
+      media: mediaRows?.length
+        ? mediaRows.map(row => ({
+            index: row.mediaIndex,
+            mediaIndex: row.mediaIndex,
+            mediaType: row.mediaType,
+            url: row.url,
+            canonicalUrl: row.canonicalUrl,
+            urlHost: row.urlHost,
+          }))
+        : fallbackMediaForItem(item),
+    };
+  });
 }
 
 export function registerContentRoutes(app: ApiApp) {
@@ -165,6 +223,7 @@ export function registerContentRoutes(app: ApiApp) {
     const hasMore = items.length > limit;
     const pageItems = hasMore ? items.slice(0, limit) : items;
     const itemsWithOpenRound = await attachOpenRoundSummary(pageItems);
+    const itemsWithMedia = await attachContentMedia(itemsWithOpenRound);
     const total =
       search === null
         ? (
@@ -176,7 +235,7 @@ export function registerContentRoutes(app: ApiApp) {
         : null;
 
     return jsonBig(c, {
-      items: itemsWithOpenRound,
+      items: itemsWithMedia,
       total,
       limit,
       offset,
@@ -195,12 +254,25 @@ export function registerContentRoutes(app: ApiApp) {
       return c.json({ error: "Invalid URL" }, 400);
     }
 
+    const mediaMatches = await db
+      .select({ contentId: contentMedia.contentId })
+      .from(contentMedia)
+      .where(or(inArray(contentMedia.canonicalUrl, candidates), inArray(contentMedia.url, candidates)))
+      .limit(20);
+    const matchedMediaContentIds = [...new Set(mediaMatches.map(item => item.contentId))];
+
     const matches = await db
       .select()
       .from(content)
       .where(
         and(
-          or(inArray(content.canonicalUrl, candidates), inArray(content.url, candidates)),
+          matchedMediaContentIds.length > 0
+            ? or(
+                inArray(content.canonicalUrl, candidates),
+                inArray(content.url, candidates),
+                inArray(content.id, matchedMediaContentIds),
+              )
+            : or(inArray(content.canonicalUrl, candidates), inArray(content.url, candidates)),
           buildAllowedContentCondition({
             canonicalUrl: content.canonicalUrl,
             description: content.description,
@@ -220,6 +292,7 @@ export function registerContentRoutes(app: ApiApp) {
     }
 
     const [contentWithOpenRound] = await attachOpenRoundSummary([item]);
+    const [contentWithMedia] = await attachContentMedia([contentWithOpenRound]);
 
     const rounds = await db
       .select()
@@ -236,7 +309,7 @@ export function registerContentRoutes(app: ApiApp) {
       .limit(50);
 
     return jsonBig(c, {
-      content: contentWithOpenRound,
+      content: contentWithMedia,
       rounds,
       ratings,
       matchCount: matches.length,
@@ -270,6 +343,7 @@ export function registerContentRoutes(app: ApiApp) {
     }
 
     const [contentWithOpenRound] = await attachOpenRoundSummary([item]);
+    const [contentWithMedia] = await attachContentMedia([contentWithOpenRound]);
 
     const rounds = await db
       .select()
@@ -285,7 +359,7 @@ export function registerContentRoutes(app: ApiApp) {
       .orderBy(desc(ratingChange.timestamp))
       .limit(50);
 
-    return jsonBig(c, { content: contentWithOpenRound, rounds, ratings });
+    return jsonBig(c, { content: contentWithMedia, rounds, ratings });
   });
 
   app.get("/rounds", async (c) => {

@@ -52,9 +52,36 @@ export const content = onchainTable(
 
 export const contentRelations = relations(content, ({ many, one }) => ({
   rounds: many(round),
+  media: many(contentMedia),
   category: one(category, {
     fields: [content.categoryId],
     references: [category.id],
+  }),
+}));
+
+export const contentMedia = onchainTable(
+  "content_media",
+  (t) => ({
+    id: t.text().primaryKey(), // `${contentId}-${mediaIndex}`
+    contentId: t.bigint().notNull(),
+    mediaIndex: t.integer().notNull(),
+    mediaType: t.text().notNull(), // "image" or "video"
+    url: t.text().notNull(),
+    canonicalUrl: t.text().notNull(),
+    urlHost: t.text().notNull(),
+  }),
+  (table) => ({
+    contentIdx: index().on(table.contentId),
+    contentIndexIdx: index().on(table.contentId, table.mediaIndex),
+    canonicalUrlIdx: index().on(table.canonicalUrl),
+    urlHostIdx: index().on(table.urlHost),
+  }),
+);
+
+export const contentMediaRelations = relations(contentMedia, ({ one }) => ({
+  contentRef: one(content, {
+    fields: [contentMedia.contentId],
+    references: [content.id],
   }),
 }));
 
