@@ -41,6 +41,10 @@ contract DeployCuryoHarness is DeployCuryo {
         return migrationConfig.users.length;
     }
 
+    function exposedParseUintString(string memory value) external pure returns (uint256) {
+        return _parseUintString(value);
+    }
+
     function exposedValidateMigrationBootstrapConfig(
         address[] memory users,
         uint256[] memory nullifiers,
@@ -135,6 +139,17 @@ contract DeployCuryoCompilationTest is Test {
         deployScript.exposedValidateMigrationBootstrapConfig(
             users, nullifiers, amounts, referrers, claimantBonuses, referrerRewards
         );
+    }
+
+    function test_MigrationBootstrapParser_RejectsOversizedHexUint() public {
+        DeployCuryoHarness deployScript = new DeployCuryoHarness();
+
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                DeployCuryo.DeploymentRoleVerificationFailed.selector, "Migration uint invalid hex length"
+            )
+        );
+        deployScript.exposedParseUintString("0x10000000000000000000000000000000000000000000000000000000000000000");
     }
 
     function test_AssertFaucetVerificationConfig_PassesForStoredHubConfig() public {

@@ -560,6 +560,7 @@ contract DeployCuryo is ScaffoldETHDeploy {
         _require(raw.length > 0, "Migration uint empty");
 
         if (raw.length > 2 && raw[0] == bytes1("0") && (raw[1] == bytes1("x") || raw[1] == bytes1("X"))) {
+            _require(raw.length <= 66, "Migration uint invalid hex length");
             for (uint256 i = 2; i < raw.length; ++i) {
                 uint8 nibble = _hexNibble(uint8(raw[i]));
                 _require(nibble != type(uint8).max, "Migration uint invalid hex");
