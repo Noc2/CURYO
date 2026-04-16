@@ -3,7 +3,7 @@
 import { DEFAULT_ROUND_CONFIG } from "@curyo/contracts/protocol";
 import type { ContentItem } from "~~/hooks/useContentFeed";
 
-export type DiscoverFeedMode = "for_you" | "trending" | "contested" | "latest" | "near_settlement";
+export type DiscoverFeedMode = "for_you" | "trending" | "highest_rewards" | "contested" | "latest" | "near_settlement";
 
 interface DiscoverFeedModeOption {
   value: DiscoverFeedMode;
@@ -21,6 +21,11 @@ export const DISCOVER_FEED_MODE_OPTIONS: DiscoverFeedModeOption[] = [
     value: "trending",
     label: "Trending",
     description: "Most active content right now, weighted by recent feed momentum.",
+  },
+  {
+    value: "highest_rewards",
+    label: "Top USD Rewards",
+    description: "Content with the largest available USDC question reward pools.",
   },
   {
     value: "contested",
@@ -85,6 +90,17 @@ function getRoundCloseness(item: ContentItem): number {
   return 0;
 }
 
+function getRewardPoolAmount(item: ContentItem) {
+  return item.rewardPoolSummary?.totalAvailable ?? item.rewardPoolSummary?.totalFunded ?? 0n;
+}
+
+function compareRewardPoolAmountDesc(a: ContentItem, b: ContentItem) {
+  const aAmount = getRewardPoolAmount(a);
+  const bAmount = getRewardPoolAmount(b);
+  if (aAmount === bAmount) return 0;
+  return aAmount > bAmount ? -1 : 1;
+}
+
 function getTrendingScore(item: ContentItem, nowSeconds: number): number {
   const activitySeconds = parseTimestampSeconds(item.lastActivityAt ?? item.createdAt);
   const recency = getRecencyScore(activitySeconds, nowSeconds, TRENDING_WINDOW_SECONDS);
@@ -146,12 +162,17 @@ export function sortDiscoverFeed(items: ContentItem[], mode: Exclude<DiscoverFee
       if (mode === "contested" || mode === "near_settlement") {
         return item.openRound !== null;
       }
+      if (mode === "highest_rewards") {
+        return getRewardPoolAmount(item) > 0n;
+      }
       return true;
     })
     .map(item => {
       switch (mode) {
         case "trending":
           return { item, score: getTrendingScore(item, nowSeconds) };
+        case "highest_rewards":
+          return { item, score: 0 };
         case "contested":
           return { item, score: getContestedScore(item, nowSeconds) };
         case "latest":
@@ -163,6 +184,17 @@ export function sortDiscoverFeed(items: ContentItem[], mode: Exclude<DiscoverFee
     .sort((a, b) => {
       if (mode === "latest") {
         return compareCreatedAtDesc(a.item, b.item);
+      }
+      if (mode === "highest_rewards") {
+        const rewardDifference = compareRewardPoolAmountDesc(a.item, b.item);
+        if (rewardDifference !== 0) return rewardDifference;
+
+        const activePoolDifference =
+          (b.item.rewardPoolSummary?.activeRewardPoolCount ?? 0) -
+          (a.item.rewardPoolSummary?.activeRewardPoolCount ?? 0);
+        if (activePoolDifference !== 0) return activePoolDifference;
+
+        return compareTimestampDesc(a.item, b.item);
       }
       if (a.score !== b.score) {
         return b.score - a.score;

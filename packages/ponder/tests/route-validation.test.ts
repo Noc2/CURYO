@@ -333,6 +333,31 @@ describe("registerContentRoutes", () => {
     expect(serialized).toContain("content.tags");
   });
 
+  it("orders highest reward content by available question reward pool amount", async () => {
+    const { queryBuilder } = mockPonderModules([{ id: 1n }]);
+    mockSharedModule();
+    const { registerContentRoutes } = await import("../src/api/routes/content-routes.js");
+
+    const app = new Hono();
+    registerContentRoutes(app);
+
+    const response = await app.request("http://localhost/content?sortBy=highest_rewards");
+
+    expect(response.status).toBe(200);
+
+    const serializedWhere = serializeExpression(queryBuilder.where.mock.calls[0]?.[0]);
+    expect(serializedWhere).toContain("questionRewardPool.unallocatedAmount");
+    expect(serializedWhere).toContain("questionRewardPool.allocatedAmount");
+    expect(serializedWhere).toContain("questionRewardPool.claimedAmount");
+    expect(serializedWhere).toContain("content.id");
+
+    const serializedOrderBy = serializeExpression(queryBuilder.orderBy.mock.calls[0] ?? []);
+    expect(serializedOrderBy).toContain("questionRewardPool.unallocatedAmount");
+    expect(serializedOrderBy).toContain("questionRewardPool.allocatedAmount");
+    expect(serializedOrderBy).toContain("questionRewardPool.claimedAmount");
+    expect(serializedOrderBy).toContain("content.createdAt");
+  });
+
   it("supports filtering content by multiple raw submitter wallets", async () => {
     const { queryBuilder } = mockPonderModules([{ id: 1n }]);
     mockSharedModule();

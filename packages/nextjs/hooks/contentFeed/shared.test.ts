@@ -34,6 +34,7 @@ function buildItem(
     openRound: null,
     isValidUrl: true,
     thumbnailUrl: null,
+    rewardPoolSummary: null,
   };
 }
 
@@ -51,6 +52,35 @@ test("sortRpcFeed prioritizes stronger relevance matches for rpc search fallback
   ];
 
   const sorted = sortRpcFeed(feed, "relevance", "radioactivity research");
+
+  assert.deepEqual(
+    sorted.map(item => item.id),
+    [2n, 1n, 3n],
+  );
+});
+
+test("sortRpcFeed orders reward-backed items by available USD rewards", () => {
+  const feed = [
+    {
+      ...buildItem(1n, "Funded", "A funded question", ["markets"]),
+      rewardPoolSummary: {
+        totalFunded: 12_000_000n,
+        totalAvailable: 5_000_000n,
+        activeRewardPoolCount: 1,
+      },
+    },
+    {
+      ...buildItem(2n, "Bigger funded", "A more funded question", ["markets"]),
+      rewardPoolSummary: {
+        totalFunded: 30_000_000n,
+        totalAvailable: 22_000_000n,
+        activeRewardPoolCount: 1,
+      },
+    },
+    buildItem(3n, "Unfunded", "No reward pool", ["markets"]),
+  ];
+
+  const sorted = sortRpcFeed(feed, "highest_rewards");
 
   assert.deepEqual(
     sorted.map(item => item.id),

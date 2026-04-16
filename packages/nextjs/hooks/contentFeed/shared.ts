@@ -60,7 +60,14 @@ export interface ContentItem {
   } | null;
 }
 
-export type FeedSort = "newest" | "oldest" | "highest_rated" | "lowest_rated" | "most_votes" | "relevance";
+export type FeedSort =
+  | "newest"
+  | "oldest"
+  | "highest_rewards"
+  | "highest_rated"
+  | "lowest_rated"
+  | "most_votes"
+  | "relevance";
 
 export interface UseContentFeedOptions {
   categoryId?: bigint;
@@ -236,6 +243,10 @@ export function filterModeratedContentItems(feed: ContentItem[]): ContentItem[] 
   return feed.filter(item => !isContentItemBlocked(item));
 }
 
+function getRewardPoolAmount(item: ContentItem) {
+  return item.rewardPoolSummary?.totalAvailable ?? item.rewardPoolSummary?.totalFunded ?? 0n;
+}
+
 function getSearchTokens(value: string): string[] {
   return Array.from(
     new Set(
@@ -349,6 +360,16 @@ export function sortRpcFeed(feed: ContentItem[], sortBy: FeedSort, searchQuery?:
       });
       break;
     }
+    case "highest_rewards":
+      items.sort((a, b) => {
+        const aAmount = getRewardPoolAmount(a);
+        const bAmount = getRewardPoolAmount(b);
+        if (aAmount !== bAmount) {
+          return aAmount > bAmount ? -1 : 1;
+        }
+        return Number(b.id - a.id);
+      });
+      break;
     case "newest":
     case "highest_rated":
     case "lowest_rated":

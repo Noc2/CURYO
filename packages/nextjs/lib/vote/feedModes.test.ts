@@ -23,6 +23,7 @@ function makeContentItem(overrides: Partial<ContentItem> & Pick<ContentItem, "id
     isValidUrl: overrides.isValidUrl ?? true,
     thumbnailUrl: overrides.thumbnailUrl ?? null,
     contentMetadata: overrides.contentMetadata,
+    rewardPoolSummary: overrides.rewardPoolSummary ?? null,
   };
 }
 
@@ -156,6 +157,48 @@ test("latest breaks created-time ties with the newer id", () => {
       }),
     ],
     "latest",
+    nowSeconds,
+  );
+
+  assert.deepEqual(
+    ranked.map(item => item.id),
+    [2n, 1n],
+  );
+});
+
+test("highest rewards ranks funded content by available USD rewards", () => {
+  const nowSeconds = 10_000;
+  const ranked = sortDiscoverFeed(
+    [
+      makeContentItem({
+        id: 1n,
+        url: "https://example.com/funded",
+        title: "Funded",
+        createdAt: "9600",
+        rewardPoolSummary: {
+          totalFunded: 25_000_000n,
+          totalAvailable: 8_000_000n,
+          activeRewardPoolCount: 1,
+        },
+      }),
+      makeContentItem({
+        id: 2n,
+        url: "https://example.com/bigger",
+        title: "Bigger pool",
+        createdAt: "9400",
+        rewardPoolSummary: {
+          totalFunded: 40_000_000n,
+          totalAvailable: 18_000_000n,
+          activeRewardPoolCount: 1,
+        },
+      }),
+      makeContentItem({
+        id: 3n,
+        url: "https://example.com/unfunded",
+        title: "Unfunded",
+      }),
+    ],
+    "highest_rewards",
     nowSeconds,
   );
 

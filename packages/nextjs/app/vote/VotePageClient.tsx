@@ -368,6 +368,12 @@ const HomeInner = () => {
     () => (effectiveRequestedActiveId !== null ? [effectiveRequestedActiveId] : undefined),
     [effectiveRequestedActiveId],
   );
+  const contentFeedSortBy =
+    !isSearchMode && activeScope === "all" && activeFeedMode === "highest_rewards"
+      ? "highest_rewards"
+      : isSearchMode
+        ? effectiveSearchSortBy
+        : "newest";
 
   const {
     feed: rawFeed,
@@ -381,7 +387,7 @@ const HomeInner = () => {
     limit: feedRequestLimit,
     ownSubmitterAddresses,
     searchQuery: searchQuery.trim() || undefined,
-    sortBy: isSearchMode ? effectiveSearchSortBy : "newest",
+    sortBy: contentFeedSortBy,
     submitters: activeScope === "my_submissions" ? ownSubmitterAddresses : undefined,
   });
   const feed = useMemo(
@@ -1565,6 +1571,10 @@ const HomeInner = () => {
 
     if (activeScope === "all" && activeFeedMode === "contested") {
       return "No live rounds look meaningfully contested right now.";
+    }
+
+    if (activeScope === "all" && activeFeedMode === "highest_rewards") {
+      return "No funded USD reward pools are available right now.";
     }
 
     if (activeScope === "all" && activeFeedMode === "latest") {
