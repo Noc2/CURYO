@@ -684,26 +684,6 @@ contract ContentRegistry is Initializable, AccessControlUpgradeable, PausableUpg
         );
     }
 
-    /// @notice Called by VotingEngine to return submitter stake with a snapshotted submission reward rate.
-    /// @dev This avoids coupling the submitter reward to whatever the live participation rate is when the
-    ///      stake finally gets returned.
-    function returnSubmitterStakeWithRewardRate(uint256 contentId, uint256 rewardRateBps) external {
-        address rewardPool = submitterParticipationSnapshotPool[contentId];
-        if (rewardPool == address(0)) {
-            rewardPool = address(participationPool);
-        }
-        _returnSubmitterStake(contentId, rewardPool, rewardRateBps);
-    }
-
-    /// @notice Called by VotingEngine to return submitter stake using frozen milestone-0 reward terms.
-    function returnSubmitterStakeWithMilestoneZeroTerms(uint256 contentId) external {
-        address rewardPool = milestoneZeroSubmitterParticipationPool[contentId];
-        if (rewardPool == address(0)) {
-            rewardPool = address(participationPool);
-        }
-        _returnSubmitterStake(contentId, rewardPool, milestoneZeroSubmitterParticipationRateBps[contentId]);
-    }
-
     /// @notice Called by VotingEngine to snapshot the submitter participation terms at settlement time.
     function snapshotSubmitterParticipationTerms(uint256 contentId, address rewardPool, uint256 rewardRateBps)
         external
@@ -778,19 +758,6 @@ contract ContentRegistry is Initializable, AccessControlUpgradeable, PausableUpg
         Content storage c = contents[contentId];
         require(c.id != 0, "Content does not exist");
         _resolvePendingSubmitterStake(contentId, c);
-    }
-
-    function _returnSubmitterStake(uint256 contentId, address rewardPool, uint256 rewardRateBps) internal {
-        require(msg.sender == votingEngine, "Only VotingEngine");
-        Content storage c = contents[contentId];
-        require(!c.submitterStakeReturned, "Already returned");
-
-        c.submitterStakeReturned = true;
-        crepToken.safeTransfer(c.submitter, c.submitterStake);
-
-        _accrueSubmitterParticipationReward(contentId, c, rewardPool, rewardRateBps);
-
-        emit SubmitterStakeReturned(contentId, c.submitterStake);
     }
 
     /// @notice Claim a snapshotted submitter participation reward after the healthy submitter path resolves.

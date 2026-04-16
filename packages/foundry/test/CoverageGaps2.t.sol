@@ -1126,27 +1126,6 @@ contract ContentRegistryCoverageTest is VotingTestBase {
         registry.updateActivity(id);
     }
 
-    // --- returnSubmitterStakeWithRewardRate: only voting engine ---
-
-    function test_ReturnSubmitterStakeWithRewardRateOnlyVotingEngine() public {
-        uint256 id = _submitContent(submitter, "https://example.com/return");
-        vm.prank(other);
-        vm.expectRevert("Only VotingEngine");
-        registry.returnSubmitterStakeWithRewardRate(id, 0);
-    }
-
-    // --- returnSubmitterStakeWithRewardRate: already returned ---
-
-    function test_ReturnSubmitterStakeWithRewardRateAlreadyReturnedReverts() public {
-        uint256 id = _submitContent(submitter, "https://example.com/double");
-        vm.prank(admin);
-        registry.setVotingEngine(address(this));
-
-        registry.returnSubmitterStakeWithRewardRate(id, 0);
-        vm.expectRevert("Already returned");
-        registry.returnSubmitterStakeWithRewardRate(id, 0);
-    }
-
     // --- slashSubmitterStake: success ---
 
     function test_SlashSubmitterStakeSuccess() public {
@@ -1186,7 +1165,7 @@ contract ContentRegistryCoverageTest is VotingTestBase {
         vm.prank(admin);
         registry.setVotingEngine(address(this));
 
-        registry.returnSubmitterStakeWithRewardRate(id, 0);
+        registry.resolvePendingSubmitterStake(id);
         vm.expectRevert("Already returned");
         registry.slashSubmitterStake(id);
     }
