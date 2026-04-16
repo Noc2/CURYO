@@ -379,6 +379,25 @@ export const QuestionRewardPoolEscrowAbi = [
   },
   {
     "type": "function",
+    "name": "refundInactiveRewardPool",
+    "inputs": [
+      {
+        "name": "rewardPoolId",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "refundAmount",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "stateMutability": "nonpayable"
+  },
+  {
+    "type": "function",
     "name": "registry",
     "inputs": [],
     "outputs": [
@@ -478,6 +497,11 @@ export const QuestionRewardPoolEscrowAbi = [
       },
       {
         "name": "startRoundId",
+        "type": "uint64",
+        "internalType": "uint64"
+      },
+      {
+        "name": "nextRoundToEvaluate",
         "type": "uint64",
         "internalType": "uint64"
       },

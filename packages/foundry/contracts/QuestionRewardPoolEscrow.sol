@@ -40,6 +40,7 @@ contract QuestionRewardPoolEscrow is
         uint64 id;
         uint64 contentId;
         uint64 startRoundId;
+        uint64 nextRoundToEvaluate;
         uint64 expiresAt;
         address funder;
         uint256 funderVoterId;
@@ -157,6 +158,7 @@ contract QuestionRewardPoolEscrow is
         require(registry.isContentActive(contentId), "Content not active");
         require(requiredVoters >= MIN_REQUIRED_VOTERS, "Too few voters");
         require(requiredSettledRounds >= MIN_REQUIRED_SETTLED_ROUNDS, "Too few rounds");
+        require(amount >= requiredSettledRounds, "Amount too small");
         if (expiresAt != 0) {
             require(expiresAt > block.timestamp, "Invalid expiry");
         }
@@ -172,6 +174,7 @@ contract QuestionRewardPoolEscrow is
             id: rewardPoolId.toUint64(),
             contentId: contentId.toUint64(),
             startRoundId: startRoundId.toUint64(),
+            nextRoundToEvaluate: startRoundId.toUint64(),
             expiresAt: expiresAt.toUint64(),
             funder: msg.sender,
             funderVoterId: funderVoterId,
@@ -203,7 +206,7 @@ contract QuestionRewardPoolEscrow is
     }
 
     function qualifyRound(uint256 rewardPoolId, uint256 roundId) external nonReentrant whenNotPaused {
-        RewardPool storage rewardPool = _getIncompleteRewardPool(rewardPoolId);
+        RewardPool storage rewardPool = _getIncompleteRewardPoolForQualification(rewardPoolId);
         _qualifyRound(rewardPoolId, rewardPool, roundId);
     }
 
@@ -213,7 +216,7 @@ contract QuestionRewardPoolEscrow is
         whenNotPaused
         returns (uint256 rewardAmount)
     {
-        RewardPool storage rewardPool = _getActiveRewardPool(rewardPoolId);
+        RewardPool storage rewardPool = _getExistingRewardPool(rewardPoolId);
         _qualifyRoundIfNeeded(rewardPoolId, rewardPool, roundId);
 
         uint256 voterId = _requireVoterId(msg.sender);
@@ -233,9 +236,8 @@ contract QuestionRewardPoolEscrow is
             _nextEqualShare(snapshot.frontendFeeAllocation, snapshot.eligibleVoters, snapshot.claimedCount);
         uint256 frontendFee;
         address frontendRecipient;
-        (rewardAmount, frontendFee, frontendRecipient) = _splitClaimAmounts(
-            rewardPool, roundId, commitKey, frontend, grossAmount, reservedFrontendFee
-        );
+        (rewardAmount, frontendFee, frontendRecipient) =
+            _splitClaimAmounts(rewardPool, roundId, commitKey, frontend, grossAmount, reservedFrontendFee);
         require(grossAmount > 0, "No reward");
 
         rewardClaimed[rewardPoolId][roundId][voterId] = true;
@@ -267,16 +269,36 @@ contract QuestionRewardPoolEscrow is
         );
     }
 
-    function refundExpiredRewardPool(uint256 rewardPoolId) external nonReentrant whenNotPaused returns (uint256 refundAmount) {
-        RewardPool storage rewardPool = rewardPools[rewardPoolId];
-        require(rewardPool.id != 0, "Reward pool not found");
-        require(!rewardPool.refunded, "Already refunded");
+    function refundExpiredRewardPool(uint256 rewardPoolId)
+        external
+        nonReentrant
+        whenNotPaused
+        returns (uint256 refundAmount)
+    {
+        RewardPool storage rewardPool = _getExistingRewardPool(rewardPoolId);
         require(rewardPool.expiresAt != 0 && block.timestamp > rewardPool.expiresAt, "Not expired");
-        require(rewardPool.qualifiedRounds < rewardPool.requiredSettledRounds, "Reward pool complete");
+        refundAmount = _refundUnallocatedRewardPool(rewardPoolId, rewardPool);
+    }
 
+    function refundInactiveRewardPool(uint256 rewardPoolId)
+        external
+        nonReentrant
+        whenNotPaused
+        returns (uint256 refundAmount)
+    {
+        RewardPool storage rewardPool = _getExistingRewardPool(rewardPoolId);
+        require(!registry.isContentActive(rewardPool.contentId), "Content active");
+        refundAmount = _refundUnallocatedRewardPool(rewardPoolId, rewardPool);
+    }
+
+    function _refundUnallocatedRewardPool(uint256 rewardPoolId, RewardPool storage rewardPool)
+        internal
+        returns (uint256 refundAmount)
+    {
+        require(!rewardPool.refunded, "Already refunded");
+        require(rewardPool.qualifiedRounds < rewardPool.requiredSettledRounds, "Reward pool complete");
         refundAmount = rewardPool.unallocatedAmount;
         require(refundAmount > 0, "No refund");
-
         rewardPool.refunded = true;
         rewardPool.unallocatedAmount = 0;
         usdcToken.safeTransfer(rewardPool.funder, refundAmount);
@@ -289,10 +311,12 @@ contract QuestionRewardPoolEscrow is
         returns (uint256 claimableAmount)
     {
         RewardPool storage rewardPool = rewardPools[rewardPoolId];
-        if (rewardPool.id == 0 || rewardPool.refunded) return 0;
+        if (rewardPool.id == 0) return 0;
 
         uint256 voterId = voterIdNFT.getTokenId(account);
-        if (voterId == 0 || _isExcludedVoter(rewardPool, voterId) || rewardClaimed[rewardPoolId][roundId][voterId]) return 0;
+        if (voterId == 0 || _isExcludedVoter(rewardPool, voterId) || rewardClaimed[rewardPoolId][roundId][voterId]) {
+            return 0;
+        }
 
         bytes32 commitKey = votingEngine.voterIdCommitKey(rewardPool.contentId, roundId, voterId);
         if (commitKey == bytes32(0)) return 0;
@@ -301,7 +325,7 @@ contract QuestionRewardPoolEscrow is
 
         RoundSnapshot storage snapshot = roundSnapshots[rewardPoolId][roundId];
         if (!snapshot.qualified) {
-            if (roundId < rewardPool.startRoundId || rewardPool.qualifiedRounds >= rewardPool.requiredSettledRounds) return 0;
+            if (!_canPreviewNewQualification(rewardPool, roundId)) return 0;
             (, bool canQualify, uint256 eligibleVoters) = _previewRoundQualification(rewardPool, roundId);
             if (!canQualify) return 0;
 
@@ -310,10 +334,9 @@ contract QuestionRewardPoolEscrow is
             uint256 previewGrossAmount = _nextEqualShare(allocation, eligibleVoters, 0);
             uint256 previewReservedFrontendFee =
                 _nextEqualShare(_frontendFeeAllocation(rewardPool, allocation), eligibleVoters, 0);
-            (claimableAmount,,) =
-                _splitClaimAmounts(
-                    rewardPool, roundId, commitKey, frontend, previewGrossAmount, previewReservedFrontendFee
-                );
+            (claimableAmount,,) = _splitClaimAmounts(
+                rewardPool, roundId, commitKey, frontend, previewGrossAmount, previewReservedFrontendFee
+            );
             return claimableAmount;
         }
         if (snapshot.eligibleVoters == 0 || snapshot.claimedCount >= snapshot.eligibleVoters) return 0;
@@ -351,27 +374,40 @@ contract QuestionRewardPoolEscrow is
         require(receivedAmount == amount, "Fee token unsupported");
     }
 
-    function _getActiveRewardPool(uint256 rewardPoolId) internal view returns (RewardPool storage rewardPool) {
+    function _getExistingRewardPool(uint256 rewardPoolId) internal view returns (RewardPool storage rewardPool) {
         rewardPool = rewardPools[rewardPoolId];
         require(rewardPool.id != 0, "Reward pool not found");
-        require(!rewardPool.refunded, "Reward pool refunded");
     }
 
-    function _getIncompleteRewardPool(uint256 rewardPoolId) internal view returns (RewardPool storage rewardPool) {
-        rewardPool = _getActiveRewardPool(rewardPoolId);
+    function _getIncompleteRewardPoolForQualification(uint256 rewardPoolId)
+        internal
+        view
+        returns (RewardPool storage rewardPool)
+    {
+        rewardPool = _getExistingRewardPool(rewardPoolId);
+        _requirePoolOpenForQualification(rewardPool);
         require(rewardPool.qualifiedRounds < rewardPool.requiredSettledRounds, "Reward pool complete");
     }
 
     function _qualifyRoundIfNeeded(uint256 rewardPoolId, RewardPool storage rewardPool, uint256 roundId) internal {
         if (!roundSnapshots[rewardPoolId][roundId].qualified) {
+            _requirePoolOpenForQualification(rewardPool);
             require(rewardPool.qualifiedRounds < rewardPool.requiredSettledRounds, "Reward pool complete");
             _qualifyRound(rewardPoolId, rewardPool, roundId);
         }
     }
 
+    function _requirePoolOpenForQualification(RewardPool storage rewardPool) internal view {
+        require(!rewardPool.refunded, "Reward pool refunded");
+        require(rewardPool.expiresAt == 0 || block.timestamp <= rewardPool.expiresAt, "Reward pool expired");
+        require(registry.isContentActive(rewardPool.contentId), "Content not active");
+    }
+
     function _qualifyRound(uint256 rewardPoolId, RewardPool storage rewardPool, uint256 roundId) internal {
         require(roundId >= rewardPool.startRoundId, "Round too early");
         require(!roundSnapshots[rewardPoolId][roundId].qualified, "Round qualified");
+        _advancePastIneligibleRounds(rewardPool, roundId);
+        require(roundId == rewardPool.nextRoundToEvaluate, "Round out of order");
 
         (bool roundSettled, bool canQualify, uint256 eligibleVoters) = _previewRoundQualification(rewardPool, roundId);
         require(roundSettled, "Round not settled");
@@ -382,6 +418,7 @@ contract QuestionRewardPoolEscrow is
         uint256 frontendFeeAllocation = _frontendFeeAllocation(rewardPool, allocation);
 
         rewardPool.qualifiedRounds++;
+        rewardPool.nextRoundToEvaluate = (roundId + 1).toUint64();
         rewardPool.unallocatedAmount -= allocation;
         rewardPool.allocatedAmount += allocation;
 
@@ -401,12 +438,43 @@ contract QuestionRewardPoolEscrow is
         );
     }
 
+    function _advancePastIneligibleRounds(RewardPool storage rewardPool, uint256 targetRoundId) internal {
+        uint256 nextRoundId = rewardPool.nextRoundToEvaluate;
+        require(targetRoundId >= nextRoundId, "Round already skipped");
+
+        while (nextRoundId < targetRoundId) {
+            (bool roundFinished, bool canQualify,) = _roundQualificationStatus(rewardPool, nextRoundId);
+            require(roundFinished, "Earlier round unfinished");
+            require(!canQualify, "Earlier round qualifies");
+            nextRoundId++;
+        }
+
+        if (nextRoundId != rewardPool.nextRoundToEvaluate) {
+            rewardPool.nextRoundToEvaluate = nextRoundId.toUint64();
+        }
+    }
+
+    function _canPreviewNewQualification(RewardPool storage rewardPool, uint256 roundId) internal view returns (bool) {
+        if (rewardPool.refunded || rewardPool.qualifiedRounds >= rewardPool.requiredSettledRounds) return false;
+        if (rewardPool.expiresAt != 0 && block.timestamp > rewardPool.expiresAt) return false;
+        if (!registry.isContentActive(rewardPool.contentId)) return false;
+        if (roundId < rewardPool.startRoundId || roundId < rewardPool.nextRoundToEvaluate) return false;
+
+        for (uint256 nextRoundId = rewardPool.nextRoundToEvaluate; nextRoundId < roundId; nextRoundId++) {
+            (bool roundFinished, bool canQualify,) = _roundQualificationStatus(rewardPool, nextRoundId);
+            if (!roundFinished || canQualify) return false;
+        }
+
+        return true;
+    }
+
     function _previewRoundQualification(RewardPool storage rewardPool, uint256 roundId)
         internal
         view
         returns (bool roundSettled, bool canQualify, uint256 eligibleVoters)
     {
-        (, RoundLib.RoundState state,, uint16 revealedCount,,,,,,,,,,) = votingEngine.rounds(rewardPool.contentId, roundId);
+        (, RoundLib.RoundState state,, uint16 revealedCount,,,,,,,,,,) =
+            votingEngine.rounds(rewardPool.contentId, roundId);
         if (state != RoundLib.RoundState.Settled) return (false, false, 0);
 
         roundSettled = true;
@@ -425,10 +493,25 @@ contract QuestionRewardPoolEscrow is
         canQualify = eligibleVoters >= rewardPool.requiredVoters;
     }
 
+    function _roundQualificationStatus(RewardPool storage rewardPool, uint256 roundId)
+        internal
+        view
+        returns (bool roundFinished, bool canQualify, uint256 eligibleVoters)
+    {
+        (, RoundLib.RoundState state,,,,,,,,,,,,) = votingEngine.rounds(rewardPool.contentId, roundId);
+        if (state == RoundLib.RoundState.Open) return (false, false, 0);
+        if (state != RoundLib.RoundState.Settled) return (true, false, 0);
+
+        (, canQualify, eligibleVoters) = _previewRoundQualification(rewardPool, roundId);
+        return (true, canQualify, eligibleVoters);
+    }
+
     function _previewRoundAllocation(RewardPool storage rewardPool) internal view returns (uint256 allocation) {
         if (rewardPool.qualifiedRounds >= rewardPool.requiredSettledRounds) return 0;
         uint256 remainingRounds = uint256(rewardPool.requiredSettledRounds) - rewardPool.qualifiedRounds;
-        allocation = remainingRounds == 1 ? rewardPool.unallocatedAmount : rewardPool.fundedAmount / rewardPool.requiredSettledRounds;
+        allocation = remainingRounds == 1
+            ? rewardPool.unallocatedAmount
+            : rewardPool.fundedAmount / rewardPool.requiredSettledRounds;
         if (allocation > rewardPool.unallocatedAmount) return 0;
     }
 
@@ -450,11 +533,7 @@ contract QuestionRewardPoolEscrow is
         return (voter != address(0) && commitRevealed, commitFrontend);
     }
 
-    function _frontendFeeAllocation(RewardPool storage rewardPool, uint256 allocation)
-        internal
-        view
-        returns (uint256)
-    {
+    function _frontendFeeAllocation(RewardPool storage rewardPool, uint256 allocation) internal view returns (uint256) {
         return (allocation * rewardPool.frontendFeeBps) / BPS_SCALE;
     }
 
@@ -512,10 +591,7 @@ contract QuestionRewardPoolEscrow is
         }
 
         try IFrontendRegistry(frontendRegistry).getFrontendInfo(frontend) returns (
-            address operator,
-            uint256 stakedAmount,
-            bool eligible,
-            bool slashed
+            address operator, uint256 stakedAmount, bool eligible, bool slashed
         ) {
             stakedAmount;
             if (operator != address(0) && eligible && !slashed) {

@@ -296,6 +296,101 @@ contract QuestionRewardPoolEscrowTest is VotingTestBase {
         assertEq(reward, REWARD_POOL_AMOUNT / 3);
     }
 
+    function testExpiredPoolBlocksNewQualificationButLeavesQualifiedClaimsPayable() public {
+        uint256 contentId = _submitQuestion("");
+        uint256 expiresAt = block.timestamp + 1 days;
+        uint256 rewardPoolId = _createRewardPoolWithExpiry(contentId, REWARD_POOL_AMOUNT, 3, 2, expiresAt);
+
+        address[] memory voters = _threeVoters();
+        bool[] memory directions = _directions(true, true, false);
+        uint256 firstRoundId = _settleRoundWith(voters, contentId, directions);
+        rewardPoolEscrow.qualifyRound(rewardPoolId, firstRoundId);
+
+        vm.warp(expiresAt + 1);
+        vm.warp(block.timestamp + 25 hours);
+        uint256 secondRoundId = _settleRoundWith(voters, contentId, directions);
+
+        vm.prank(voter1);
+        vm.expectRevert("Reward pool expired");
+        rewardPoolEscrow.claimQuestionReward(rewardPoolId, secondRoundId);
+
+        uint256 funderBalanceBefore = usdc.balanceOf(funder);
+        uint256 refundAmount = rewardPoolEscrow.refundExpiredRewardPool(rewardPoolId);
+        assertEq(refundAmount, REWARD_POOL_AMOUNT / 2);
+        assertEq(usdc.balanceOf(funder), funderBalanceBefore + refundAmount);
+
+        assertEq(
+            rewardPoolEscrow.claimableQuestionReward(rewardPoolId, firstRoundId, voter1), (REWARD_POOL_AMOUNT / 2) / 3
+        );
+
+        vm.prank(voter1);
+        uint256 reward = rewardPoolEscrow.claimQuestionReward(rewardPoolId, firstRoundId);
+        assertEq(reward, (REWARD_POOL_AMOUNT / 2) / 3);
+    }
+
+    function testLaterEligibleRoundCannotSkipEarlierEligibleRound() public {
+        uint256 contentId = _submitQuestion("");
+        uint256 rewardPoolId = _createRewardPool(contentId, REWARD_POOL_AMOUNT, 3, 1);
+
+        address[] memory voters = _threeVoters();
+        bool[] memory directions = _directions(true, true, false);
+        uint256 firstRoundId = _settleRoundWith(voters, contentId, directions);
+
+        vm.warp(block.timestamp + 25 hours);
+        uint256 secondRoundId = _settleRoundWith(voters, contentId, directions);
+
+        vm.prank(voter1);
+        vm.expectRevert("Earlier round qualifies");
+        rewardPoolEscrow.claimQuestionReward(rewardPoolId, secondRoundId);
+
+        vm.prank(voter1);
+        uint256 reward = rewardPoolEscrow.claimQuestionReward(rewardPoolId, firstRoundId);
+        assertEq(reward, REWARD_POOL_AMOUNT / 3);
+    }
+
+    function testIneligibleEarlierRoundCanBeSkippedForLaterEligibleRound() public {
+        uint256 contentId = _submitQuestion("");
+        uint256 rewardPoolId = _createRewardPool(contentId, REWARD_POOL_AMOUNT, 3, 1);
+
+        address[] memory ineligibleVoters = new address[](3);
+        ineligibleVoters[0] = funder;
+        ineligibleVoters[1] = voter1;
+        ineligibleVoters[2] = voter2;
+        bool[] memory directions = _directions(true, true, false);
+        _settleRoundWith(ineligibleVoters, contentId, directions);
+
+        vm.warp(block.timestamp + 25 hours);
+        uint256 eligibleRoundId = _settleRoundWith(_threeVoters(), contentId, directions);
+
+        vm.prank(voter1);
+        uint256 reward = rewardPoolEscrow.claimQuestionReward(rewardPoolId, eligibleRoundId);
+        assertEq(reward, REWARD_POOL_AMOUNT / 3);
+    }
+
+    function testInactiveNoExpiryPoolCanRefundUnallocatedFunds() public {
+        uint256 contentId = _submitQuestion("");
+        uint256 rewardPoolId = _createRewardPool(contentId, REWARD_POOL_AMOUNT, 3, 1);
+
+        vm.prank(submitter);
+        registry.cancelContent(contentId);
+
+        uint256 funderBalanceBefore = usdc.balanceOf(funder);
+        uint256 refundAmount = rewardPoolEscrow.refundInactiveRewardPool(rewardPoolId);
+
+        assertEq(refundAmount, REWARD_POOL_AMOUNT);
+        assertEq(usdc.balanceOf(funder), funderBalanceBefore + REWARD_POOL_AMOUNT);
+    }
+
+    function testRewardPoolAmountMustCoverEachRequiredRound() public {
+        uint256 contentId = _submitQuestion("");
+
+        vm.startPrank(funder);
+        usdc.approve(address(rewardPoolEscrow), 1);
+        vm.expectRevert("Amount too small");
+        rewardPoolEscrow.createRewardPool(contentId, 1, 3, 2, 0);
+        vm.stopPrank();
+    }
+
     function _submitQuestion(string memory url) internal returns (uint256 contentId) {
         activeTlockContentRegistry = registry;
         bytes32 salt = keccak256(abi.encode(url, QUESTION, DESCRIPTION, TAGS, CATEGORY_ID, submitter, block.timestamp));
@@ -315,9 +410,20 @@ contract QuestionRewardPoolEscrowTest is VotingTestBase {
         internal
         returns (uint256 rewardPoolId)
     {
+        return _createRewardPoolWithExpiry(contentId, amount, requiredVoters, requiredSettledRounds, 0);
+    }
+
+    function _createRewardPoolWithExpiry(
+        uint256 contentId,
+        uint256 amount,
+        uint256 requiredVoters,
+        uint256 requiredSettledRounds,
+        uint256 expiresAt
+    ) internal returns (uint256 rewardPoolId) {
         vm.startPrank(funder);
         usdc.approve(address(rewardPoolEscrow), amount);
-        rewardPoolId = rewardPoolEscrow.createRewardPool(contentId, amount, requiredVoters, requiredSettledRounds, 0);
+        rewardPoolId =
+            rewardPoolEscrow.createRewardPool(contentId, amount, requiredVoters, requiredSettledRounds, expiresAt);
         vm.stopPrank();
     }
 
@@ -333,10 +439,7 @@ contract QuestionRewardPoolEscrowTest is VotingTestBase {
         uint256 contentId,
         bool[] memory directions,
         address frontend
-    )
-        internal
-        returns (uint256 roundId)
-    {
+    ) internal returns (uint256 roundId) {
         bytes32[] memory salts = new bytes32[](voters.length);
         bytes32[] memory commitKeys = new bytes32[](voters.length);
 
