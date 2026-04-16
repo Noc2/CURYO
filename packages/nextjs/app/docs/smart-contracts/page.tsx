@@ -21,10 +21,6 @@ const SmartContracts: NextPage = () => {
         non-upgradeable.
       </p>
       <p>
-        The current production surface also includes one stateless helper contract, <code>SubmissionCanonicalizer</code>
-        , plus the protocol libraries used by the registries and voting engine.
-      </p>
-      <p>
         The Solidity sources live in{" "}
         <a href={contractsSourceHref} target="_blank" rel="noopener noreferrer" className="link link-primary">
           packages/foundry/contracts
@@ -107,11 +103,6 @@ const SmartContracts: NextPage = () => {
             <tr>
               <td className="font-mono text-primary">HumanFaucet</td>
               <td>Sybil-resistant token distribution via Self.xyz passport or biometric ID verification</td>
-              <td>No</td>
-            </tr>
-            <tr>
-              <td className="font-mono text-primary">SubmissionCanonicalizer</td>
-              <td>Stateless URL/domain canonicalization helper used by ContentRegistry submissions</td>
               <td>No</td>
             </tr>
             <tr>
@@ -245,11 +236,10 @@ const SmartContracts: NextPage = () => {
         emitted via events.
       </p>
       <p>
-        Submission canonicalization is delegated to <code>SubmissionCanonicalizer</code> when a URL is present, so
-        supported URLs and media links resolve to the correct category before the question submission key is derived
-        from the submitted metadata. The docs now describe the question-first flow: text-only submissions or optional
-        evidence, image, and YouTube links, with reward pools displayed in USD even though settlement is funded in Celo
-        USDC.
+        ContentRegistry validates submitted media links against CategoryRegistry before deriving the question submission
+        key from the submitted metadata. The docs now describe the question-first flow: text-only submissions or
+        optional evidence, image, and YouTube links, with reward pools displayed in USD even though settlement is funded
+        in Celo USDC.
       </p>
       <div className="not-prose overflow-x-auto my-6 rounded-xl bg-base-200">
         <table className="table table-zebra [&_th]:text-base [&_td]:text-base [&_.badge]:text-base [&_th]:bg-base-300">

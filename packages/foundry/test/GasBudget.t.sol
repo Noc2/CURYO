@@ -11,9 +11,8 @@ import { RoundEngineReadHelpers } from "./helpers/RoundEngineReadHelpers.sol";
 import { FrontendRegistry } from "../contracts/FrontendRegistry.sol";
 
 contract GasBudgetTest is RoundIntegrationTest {
-    // Content submission now resolves canonical URLs through SubmissionCanonicalizer
-    // and a live CategoryRegistry lookup, so the baseline is higher than the initial
-    // pre-extraction measurement.
+    // Content submission validates media URLs and uses a live CategoryRegistry lookup,
+    // so the baseline is higher than the initial pre-media measurement.
     uint256 internal constant MAX_SUBMIT_CONTENT_GAS = 700_000;
     // commitVote now validates the full armored AGE envelope and persists the ciphertext payload,
     // so the post-tlock baseline is materially higher than the earlier pre-parser threshold.
