@@ -629,7 +629,7 @@ describe("registerDataRoutes", () => {
     expect(db.select).not.toHaveBeenCalled();
   });
 
-  it("queries question reward claim candidates from revealed settled votes", async () => {
+  it("queries question reward claim candidates across linked voter identities", async () => {
     const { queryBuilder } = mockPonderModules([{ rewardPoolId: 1n, contentId: 2n, roundId: 3n }]);
     const { registerDataRoutes } = await import("../src/api/routes/data-routes.js");
 
@@ -637,7 +637,7 @@ describe("registerDataRoutes", () => {
     registerDataRoutes(app);
 
     const response = await app.request(
-      "http://localhost/question-reward-claim-candidates?voter=0x0000000000000000000000000000000000000001&limit=25&offset=5",
+      "http://localhost/question-reward-claim-candidates?voter=0x0000000000000000000000000000000000000001,0x0000000000000000000000000000000000000002&limit=25&offset=5",
     );
 
     expect(response.status).toBe(200);
@@ -648,7 +648,9 @@ describe("registerDataRoutes", () => {
 
     const whereArg = queryBuilder.where.mock.calls[0]?.[0];
     const serialized = serializeExpression(whereArg);
-    expect(serialized).toContain("vote.voter");
+    expect(serialized).toContain("inArray");
+    expect(serialized).toContain("0x0000000000000000000000000000000000000001");
+    expect(serialized).toContain("0x0000000000000000000000000000000000000002");
     expect(serialized).toContain("vote.revealed");
     expect(serialized).toContain("round.state");
     expect(serialized).toContain("questionRewardPool.startRoundId");

@@ -1,9 +1,11 @@
 "use client";
 
 import { useMemo } from "react";
+import { isAddress, zeroAddress } from "viem";
 import { useAccount, useReadContracts } from "wagmi";
 import { type ClaimableRewardItem } from "~~/hooks/claimableRewards";
 import { useTargetNetwork } from "~~/hooks/scaffold-eth/useTargetNetwork";
+import { useDelegation } from "~~/hooks/useDelegation";
 import { usePonderQuery } from "~~/hooks/usePonderQuery";
 import {
   QUESTION_REWARD_POOL_ESCROW_ABI,
@@ -11,8 +13,20 @@ import {
 } from "~~/lib/questionRewardPools";
 import { ponderApi } from "~~/services/ponder/client";
 
-export function getClaimableQuestionRewardsQueryKey(address?: string, chainId?: number) {
-  return ["claimableQuestionRewards", address?.toLowerCase() ?? null, chainId ?? null] as const;
+export function getClaimableQuestionRewardsQueryKey(addresses?: readonly string[], chainId?: number) {
+  return ["claimableQuestionRewards", addresses?.join(",") ?? null, chainId ?? null] as const;
+}
+
+export function buildClaimableQuestionRewardCandidateVoters(params: {
+  address?: string | null;
+  delegateTo?: string | null;
+  delegateOf?: string | null;
+}) {
+  const voters = [params.address, params.delegateTo, params.delegateOf]
+    .map(value => value?.toLowerCase())
+    .filter((value): value is string => !!value && isAddress(value) && value !== zeroAddress);
+
+  return [...new Set(voters)];
 }
 
 function safeBigInt(value: unknown): bigint {
@@ -27,24 +41,35 @@ export function useClaimableQuestionRewards() {
   const { address } = useAccount();
   const { targetNetwork } = useTargetNetwork();
   const normalizedAddress = address?.toLowerCase();
+  const { delegateTo, delegateOf, isLoading: delegationLoading } = useDelegation(normalizedAddress);
   const escrowAddress = useMemo(
     () => getConfiguredQuestionRewardPoolEscrowAddress(targetNetwork.id),
     [targetNetwork.id],
   );
+  const candidateVoters = useMemo(
+    () =>
+      buildClaimableQuestionRewardCandidateVoters({
+        address: normalizedAddress,
+        delegateTo,
+        delegateOf,
+      }),
+    [delegateOf, delegateTo, normalizedAddress],
+  );
+  const voterQuery = useMemo(() => candidateVoters.join(","), [candidateVoters]);
 
   const {
     data: result,
     isLoading: candidatesLoading,
     refetch: refetchCandidates,
   } = usePonderQuery({
-    queryKey: getClaimableQuestionRewardsQueryKey(normalizedAddress, targetNetwork.id),
+    queryKey: getClaimableQuestionRewardsQueryKey(candidateVoters, targetNetwork.id),
     ponderFn: async () => {
-      if (!normalizedAddress) return [];
-      const response = await ponderApi.getQuestionRewardClaimCandidates(normalizedAddress, { limit: "200" });
+      if (!voterQuery) return [];
+      const response = await ponderApi.getQuestionRewardClaimCandidates(voterQuery, { limit: "200" });
       return response.items;
     },
     rpcFn: async () => [],
-    enabled: Boolean(normalizedAddress),
+    enabled: candidateVoters.length > 0 && !delegationLoading,
     staleTime: 30_000,
   });
 
@@ -92,7 +117,7 @@ export function useClaimableQuestionRewards() {
   return {
     claimableItems,
     totalClaimable,
-    isLoading: candidatesLoading || claimablesLoading,
+    isLoading: candidatesLoading || claimablesLoading || delegationLoading,
     refetch: () => {
       refetchCandidates();
       refetchClaimables();

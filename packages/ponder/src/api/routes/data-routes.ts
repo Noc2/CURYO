@@ -345,11 +345,10 @@ export function registerDataRoutes(app: ApiApp) {
     if (!voterRaw) {
       return c.json({ error: "voter parameter required" }, 400);
     }
-    if (!isValidAddress(voterRaw)) {
+    const voterAddrs = parseAddressList(voterRaw);
+    if (voterAddrs.length === 0) {
       return c.json({ error: "Invalid voter address" }, 400);
     }
-
-    const voterAddr = voterRaw.toLowerCase() as `0x${string}`;
     const items = await db
       .select({
         rewardPoolId: questionRewardPool.id,
@@ -373,7 +372,7 @@ export function registerDataRoutes(app: ApiApp) {
       )
       .where(
         and(
-          eq(vote.voter, voterAddr),
+          inArray(vote.voter, voterAddrs),
           eq(vote.revealed, true),
           eq(round.state, ROUND_STATE.Settled),
           sql`${vote.roundId} >= ${questionRewardPool.startRoundId}`,
