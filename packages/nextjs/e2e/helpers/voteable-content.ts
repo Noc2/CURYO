@@ -8,17 +8,48 @@ import type { Page } from "@playwright/test";
 const SUBMIT_STAKE = BigInt(10e6);
 const FALLBACK_CONTENT_ATTEMPTS = 3;
 
+type ContentListItem = {
+  id: string;
+  title: string;
+  submitter: string;
+};
+
+type EnsureVoteableContentDeps = {
+  approveCREP: typeof approveCREP;
+  submitContentDirect: typeof submitContentDirect;
+  waitForPonderIndexed: typeof waitForPonderIndexed;
+  getContentList: (params: { status: "all"; limit: number }) => Promise<{ items: ContentListItem[] }>;
+  findVoteableContent: typeof findVoteableContent;
+  gotoWithRetry: typeof gotoWithRetry;
+  waitForFeedLoaded: typeof waitForFeedLoaded;
+  now: () => number;
+};
+
+const defaultDeps: EnsureVoteableContentDeps = {
+  approveCREP,
+  submitContentDirect,
+  waitForPonderIndexed,
+  getContentList,
+  findVoteableContent,
+  gotoWithRetry,
+  waitForFeedLoaded,
+  now: () => Date.now(),
+};
+
 function createFallbackContentUrl(uniqueId: string, attempt: number): string {
   return `https://www.youtube.com/watch?v=responsive${uniqueId}${attempt}`;
 }
 
-export async function ensureVoteableContent(page: Page): Promise<boolean> {
-  if (await findVoteableContent(page)) {
+export async function ensureVoteableContentWithDeps(
+  page: Page,
+  deps: EnsureVoteableContentDeps = defaultDeps,
+): Promise<boolean> {
+  if (await deps.findVoteableContent(page)) {
     return true;
   }
 
   const submitter = ANVIL_ACCOUNTS.account3.address;
-  const approved = await approveCREP(
+  const approved = await deps.approveCREP(
     CONTRACT_ADDRESSES.ContentRegistry,
     SUBMIT_STAKE,
     submitter,
@@ -28,11 +59,11 @@ export async function ensureVoteableContent(page: Page): Promise<boolean> {
     return false;
   }
 
-  const uniqueId = Date.now().toString(36);
+  const uniqueId = deps.now().toString(36);
   for (let index = 0; index < FALLBACK_CONTENT_ATTEMPTS; index += 1) {
     const attempt = index + 1;
     const title = `Responsive Vote Layout ${uniqueId}-${attempt}`;
-    const submitted = await submitContentDirect(
+    const submitted = await deps.submitContentDirect(
       createFallbackContentUrl(uniqueId, attempt),
       title,
       "Deterministic content for responsive stake selector layout checks.",
@@ -46,9 +77,9 @@ export async function ensureVoteableContent(page: Page): Promise<boolean> {
     }
 
     let indexedContentId: string | null = null;
-    const indexed = await waitForPonderIndexed(
+    const indexed = await deps.waitForPonderIndexed(
       async () => {
-        const { items } = await getContentList({ status: "all", limit: 100 });
+        const { items } = await deps.getContentList({ status: "all", limit: 100 });
         const match = items.find(
           item => item.title === title && item.submitter.toLowerCase() === submitter.toLowerCase(),
         );
@@ -63,16 +94,23 @@ export async function ensureVoteableContent(page: Page): Promise<boolean> {
       return false;
     }
 
-    await gotoWithRetry(page, `/vote?content=${indexedContentId}`, { ensureWalletConnected: true, timeout: 45_000 });
-    await waitForFeedLoaded(page, 30_000);
+    await deps.gotoWithRetry(page, `/vote?content=${indexedContentId}`, {
+      ensureWalletConnected: true,
+      timeout: 45_000,
+    });
+    await deps.waitForFeedLoaded(page, 30_000);
     await page
       .getByRole("heading", { name: title })
       .first()
       .waitFor({ state: "visible", timeout: 30_000 })
       .catch(() => undefined);
 
-    return findVoteableContent(page);
+    return deps.findVoteableContent(page);
   }
 
   return false;
+}
+
+export async function ensureVoteableContent(page: Page): Promise<boolean> {
+  return ensureVoteableContentWithDeps(page);
 }
