@@ -380,7 +380,7 @@ function RewardPoolAmountDisplay({ amount }: { amount: bigint }) {
 
   return (
     <div
-      className="flex max-w-full items-center gap-2 text-[0.68rem] font-semibold uppercase tracking-[0.2em] text-base-content/65"
+      className="flex max-w-full items-center gap-2 text-[0.68rem] font-semibold uppercase tracking-[0.2em] text-base-content/65 lg:text-sm"
       aria-label={`Reward pool: ${amountLabel}`}
     >
       <span>
