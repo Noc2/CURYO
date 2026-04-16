@@ -89,7 +89,7 @@ const voterIdNFTAbi = [
 /**
  * Shared ID used by faucet triggers and the single app-level modal.
  */
-export const FAUCET_MODAL_ID = "faucet-modal";
+const FAUCET_MODAL_ID = "faucet-modal";
 
 type FaucetTriggerProps = {
   className?: string;
@@ -464,5 +464,3 @@ export const FaucetModal = () => {
     </div>
   );
 };
-
-export const Faucet = FaucetTrigger;

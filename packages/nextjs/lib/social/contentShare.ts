@@ -190,7 +190,7 @@ export function buildContentShareRatingVersion(
   return `r-${content.id}-${rating.ratingBps}-${totalVotes}-${openRoundVoteCount}-${activitySeconds}`;
 }
 
-export function buildVoteShareUrl(origin: string, contentId: string, ratingVersion?: string): string {
+function buildVoteShareUrl(origin: string, contentId: string, ratingVersion?: string): string {
   const url = new URL("/vote", `${origin.replace(/\/+$/, "")}/`);
   url.searchParams.set("content", contentId);
   if (ratingVersion) {
@@ -199,7 +199,7 @@ export function buildVoteShareUrl(origin: string, contentId: string, ratingVersi
   return url.toString();
 }
 
-export function buildVoteShareImageUrl(origin: string, contentId: string, ratingVersion: string): string {
+function buildVoteShareImageUrl(origin: string, contentId: string, ratingVersion: string): string {
   const url = new URL("/api/og/vote", `${origin.replace(/\/+$/, "")}/`);
   url.searchParams.set("content", contentId);
   url.searchParams.set(VOTE_SHARE_RATING_VERSION_PARAM, ratingVersion);

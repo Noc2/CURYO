@@ -37,19 +37,6 @@ const handlers: PlatformHandler[] = [
 ];
 
 /**
- * Check if a URL is from a supported video platform.
- * Returns true only for YouTube and Twitch URLs.
- */
-export function isSupportedVideoPlatform(url: string): boolean {
-  for (const handler of videoHandlers) {
-    if (handler.matches(url)) {
-      return true;
-    }
-  }
-  return false;
-}
-
-/**
  * Detect platform and extract info from a URL.
  * Returns platform info with type, ID, and available metadata.
  */
