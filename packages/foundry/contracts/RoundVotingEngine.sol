@@ -260,26 +260,6 @@ contract RoundVotingEngine is
         );
     }
 
-    /// @notice Deprecated direct commit path. Use the round-reference-aware overload.
-    function commitVote(
-        uint256 contentId,
-        uint64 targetRound,
-        bytes32 drandChainHash,
-        bytes32 commitHash,
-        bytes memory ciphertext,
-        uint256 stakeAmount,
-        address frontend
-    ) public pure {
-        contentId;
-        targetRound;
-        drandChainHash;
-        commitHash;
-        ciphertext;
-        stakeAmount;
-        frontend;
-        revert ReferenceRatingMismatch();
-    }
-
     function onTransferReceived(address operator, address from, uint256 value, bytes calldata data)
         external
         nonReentrant
