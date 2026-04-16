@@ -470,25 +470,10 @@ export function registerContentRoutes(app: ApiApp) {
   });
 
   app.get("/categories", async (c) => {
-    const statusFilter = c.req.query("status") ?? "1";
-
-    let where;
-    if (statusFilter !== "all") {
-      const parsed = parseInt(statusFilter);
-      if (isNaN(parsed)) return c.json({ error: "Invalid status filter" }, 400);
-      where = and(
-        eq(category.status, parsed),
-        buildAllowedCategoryCondition({
-          domain: category.domain,
-          name: category.name,
-        }),
-      );
-    } else {
-      where = buildAllowedCategoryCondition({
-        domain: category.domain,
-        name: category.name,
-      });
-    }
+    const where = buildAllowedCategoryCondition({
+      slug: category.domain,
+      name: category.name,
+    });
     const offset = safeOffset(c.req.query("offset"));
     if (Number.isNaN(offset)) return c.json({ error: "Invalid offset" }, 400);
 
@@ -509,8 +494,7 @@ export function registerContentRoutes(app: ApiApp) {
         id: category.id,
         totalVotes: category.totalVotes,
       })
-      .from(category)
-      .where(eq(category.status, 1));
+      .from(category);
 
     const popularity: Record<string, number> = {};
     for (const item of items) {

@@ -55,7 +55,6 @@ function mockPonderModules<T>(result: T) {
       domain: "category.domain",
       id: "category.id",
       name: "category.name",
-      status: "category.status",
       totalVotes: "category.totalVotes",
     },
     content: {
@@ -400,7 +399,7 @@ describe("registerContentRoutes", () => {
     expect(serialized).toContain("content.canonicalUrl");
   });
 
-  it("filters categories with the moderation predicate", async () => {
+  it("filters seed categories with the moderation predicate", async () => {
     const { queryBuilder } = mockPonderModules([{ id: 1n }]);
     mockSharedModule();
     const { registerContentRoutes } = await import("../src/api/routes/content-routes.js");

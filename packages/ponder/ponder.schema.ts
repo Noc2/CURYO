@@ -279,17 +279,13 @@ export const category = onchainTable(
   (t) => ({
     id: t.bigint().primaryKey(),
     name: t.text().notNull(),
-    domain: t.text().notNull(),
-    submitter: t.hex().notNull(),
-    status: t.integer().notNull(), // 0=Pending, 1=Approved, 2=Rejected, 3=Canceled
-    proposalId: t.bigint(),
+    domain: t.text().notNull(), // Legacy contract tuple field; stores the seeded category slug.
     createdAt: t.bigint().notNull(),
     totalVotes: t.integer().notNull(),
     totalContent: t.integer().notNull(),
   }),
   (table) => ({
-    statusIdx: index().on(table.status),
-    domainIdx: index().on(table.domain),
+    slugIdx: index().on(table.domain),
   }),
 );
 

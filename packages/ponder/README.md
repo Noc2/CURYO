@@ -61,7 +61,7 @@ src/
 ├── RoundVotingEngine.ts      # Commit, reveal, settle, cancel events
 ├── RoundRewardDistributor.ts # Reward distribution events
 ├── QuestionRewardPoolEscrow.ts # USDC reward pool funding, voter claims, and frontend shares
-├── CategoryRegistry.ts       # Category registration events
+├── CategoryRegistry.ts       # Seeded discovery category metadata
 ├── ProfileRegistry.ts       # Profile update events
 ├── FrontendRegistry.ts       # Frontend fee events
 ├── VoterIdNFT.ts             # NFT minting events
