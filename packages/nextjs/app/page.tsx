@@ -22,7 +22,7 @@ const STEPS = [
     icon: ScaleIcon,
     title: "Settle and Earn",
     description:
-      "Reveal after the blind phase. Winning voters earn cREP rewards; funded questions can also pay eligible voters in USDC.",
+      "Reveal after the blind phase. Winning voters earn cREP rewards; funded questions also pay voters in USDC.",
   },
 ];
 
