@@ -20,14 +20,16 @@ contract FormalVerification_GovernanceTest is Test {
 
     // Mock pool addresses
     address mockFaucet = address(10);
-    address mockParticipation = address(11);
-    address mockDistributor = address(12);
+    address mockBootstrapPool = address(11);
+    address mockConsensusReserve = address(12);
+    address mockTreasury = address(13);
 
-    // Realistic initial pool balances
+    // Realistic launch balances excluded from dynamic quorum.
     uint256 constant FAUCET_BAL = 52_000_000e6;
-    uint256 constant PARTICIPATION_BAL = 30_000_000e6;
-    uint256 constant DISTRIBUTOR_BAL = 14_000_000e6;
-    // Total locked in pools = 96M
+    uint256 constant BOOTSTRAP_POOL_BAL = 24_000_000e6;
+    uint256 constant CONSENSUS_RESERVE_BAL = 4_000_000e6;
+    uint256 constant TREASURY_BAL = 20_000_000e6;
+    // Total excluded at launch = 100M
 
     function setUp() public {
         vm.startPrank(deployer);
@@ -39,20 +41,22 @@ contract FormalVerification_GovernanceTest is Test {
         timelock = new TimelockController(2 days, empty, empty, deployer);
 
         governor = new CuryoGovernor(IVotes(address(token)), timelock);
-        address[] memory holders = new address[](3);
+        address[] memory holders = new address[](4);
         holders[0] = mockFaucet;
-        holders[1] = mockParticipation;
-        holders[2] = mockDistributor;
+        holders[1] = mockBootstrapPool;
+        holders[2] = mockConsensusReserve;
+        holders[3] = mockTreasury;
         governor.initializePools(holders);
 
         token.setGovernor(address(governor));
         timelock.grantRole(timelock.PROPOSER_ROLE(), address(governor));
         timelock.grantRole(timelock.EXECUTOR_ROLE(), address(0)); // anyone can execute
 
-        // Fund pools with realistic balances
+        // Fund excluded launch holders with realistic balances.
         token.mint(mockFaucet, FAUCET_BAL);
-        token.mint(mockParticipation, PARTICIPATION_BAL);
-        token.mint(mockDistributor, DISTRIBUTOR_BAL);
+        token.mint(mockBootstrapPool, BOOTSTRAP_POOL_BAL);
+        token.mint(mockConsensusReserve, CONSENSUS_RESERVE_BAL);
+        token.mint(mockTreasury, TREASURY_BAL);
 
         vm.stopPrank();
     }
@@ -60,8 +64,8 @@ contract FormalVerification_GovernanceTest is Test {
     // ==================== Helpers ====================
 
     function _mintCirculating(address to, uint256 amount) internal {
-        vm.prank(deployer);
-        token.mint(to, amount);
+        vm.prank(mockFaucet);
+        token.transfer(to, amount);
     }
 
     function _propose(address proposer, string memory desc) internal returns (uint256) {
@@ -133,22 +137,22 @@ contract FormalVerification_GovernanceTest is Test {
 
     // ==================== Test 4: Mature Protocol Quorum ====================
 
-    /// @notice At maturity: faucet drained 30M, participation drained 20M.
+    /// @notice At maturity: faucet drained 30M, bootstrap pool drained 20M.
     ///         Circulating = total - remaining_pools. Quorum scales with circulating.
     function test_QuorumGrows_MatureProtocol() public {
         // Simulate faucet draining 30M to users (faucet had 52M, now has 22M)
         vm.prank(mockFaucet);
         token.transfer(address(100), 30_000_000e6);
 
-        // Simulate participation pool draining 20M (pool had 30M, now has 10M)
-        vm.prank(mockParticipation);
+        // Simulate bootstrap pool draining 20M (pool had 24M, now has 4M)
+        vm.prank(mockBootstrapPool);
         token.transfer(address(101), 20_000_000e6);
 
         vm.roll(block.number + 1);
 
-        // Pools now hold: faucet=22M, participation=10M, distributor=14M = 46M locked
-        // Total supply = 96M (no new mints)
-        // Circulating = 96M - 46M = 50M
+        // Excluded holders now hold: faucet=22M, bootstrap=4M, consensus=4M, treasury=20M = 50M locked
+        // Total supply = 100M
+        // Circulating = 100M - 50M = 50M
         // Quorum = 4% of 50M = 2M
         uint256 q = governor.quorum(block.number - 1);
         assertEq(q, 2_000_000e6, "Mature quorum = 2M cREP");
