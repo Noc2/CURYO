@@ -80,7 +80,7 @@ export function AccuracyLeaderboard() {
     return num.toLocaleString(undefined, { maximumFractionDigits: 0 });
   };
 
-  const approvedCategories = categories.filter(c => c.status === 1);
+  const approvedCategories = categories;
   const showStreakColumn = window === "all" && !categoryId;
   const visibleItems = useMemo(() => {
     return items.flatMap((entry, index) => {

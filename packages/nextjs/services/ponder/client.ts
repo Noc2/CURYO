@@ -463,9 +463,6 @@ export interface PonderCategory {
   id: string;
   name: string;
   domain: string;
-  submitter: string;
-  status: number;
-  proposalId: string | null;
   createdAt: string;
   totalVotes: number;
   totalContent: number;
@@ -851,8 +848,8 @@ export const ponderApi = {
     );
   },
 
-  getCategories(status?: string) {
-    return ponderGet<{ items: PonderCategory[] }>("/categories", { status });
+  getCategories() {
+    return ponderGet<{ items: PonderCategory[] }>("/categories");
   },
 
   getCategoryPopularity() {

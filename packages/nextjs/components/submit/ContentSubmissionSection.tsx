@@ -157,7 +157,7 @@ export function ContentSubmissionSection() {
     return categories.filter(
       cat =>
         cat.name.toLowerCase().includes(search) ||
-        cat.domain.toLowerCase().includes(search) ||
+        cat.slug.toLowerCase().includes(search) ||
         cat.subcategories.some(subcategory => subcategory.toLowerCase().includes(search)),
     );
   }, [categories, categorySearch]);

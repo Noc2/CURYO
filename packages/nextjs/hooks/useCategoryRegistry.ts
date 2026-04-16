@@ -10,17 +10,13 @@ import { ponderApi } from "~~/services/ponder/client";
 export interface Category {
   id: bigint;
   name: string;
-  domain: string;
+  slug: string;
   subcategories: string[];
-  submitter: string;
-  stakeAmount: bigint;
-  status: number; // 0 = Pending, 1 = Approved, 2 = Rejected, 3 = Canceled
-  proposalId: bigint;
   createdAt: bigint;
 }
 
 /**
- * Hook to fetch approved categories.
+ * Hook to fetch seeded discovery categories.
  * Uses Ponder API when available, falls back to on-chain multicall.
  */
 export function useCategoryRegistry() {
@@ -87,21 +83,13 @@ export function useCategoryRegistry() {
           name: string;
           domain: string;
           subcategories: string[];
-          submitter: string;
-          stakeAmount: bigint;
-          status: number;
-          proposalId: bigint;
           createdAt: bigint;
         };
         return {
           id: cat.id,
           name: cat.name,
-          domain: cat.domain,
+          slug: cat.domain,
           subcategories: cat.subcategories,
-          submitter: cat.submitter,
-          stakeAmount: cat.stakeAmount,
-          status: cat.status,
-          proposalId: cat.proposalId,
           createdAt: cat.createdAt,
         } as Category;
       })
@@ -112,19 +100,14 @@ export function useCategoryRegistry() {
   const { data: result, isLoading: ponderLoading } = usePonderQuery({
     queryKey: ["categories"],
     ponderFn: async () => {
-      const response = await ponderApi.getCategories("1");
-      // Ponder doesn't have subcategories/stakeAmount — fill defaults.
-      // These fields are only used on the submit page and can be fetched from RPC there.
+      const response = await ponderApi.getCategories();
+      // Ponder doesn't have subcategories; RPC enrichment below fills them when available.
       return response.items.map(
         (cat): Category => ({
           id: BigInt(cat.id),
           name: cat.name,
-          domain: cat.domain,
+          slug: cat.domain,
           subcategories: [],
-          submitter: cat.submitter,
-          stakeAmount: 0n,
-          status: cat.status,
-          proposalId: cat.proposalId ? BigInt(cat.proposalId) : 0n,
           createdAt: BigInt(cat.createdAt),
         }),
       );
@@ -134,7 +117,7 @@ export function useCategoryRegistry() {
     refetchInterval: 300_000,
   });
 
-  // Merge Ponder categories with RPC data to fill in subcategories/stakeAmount.
+  // Merge Ponder categories with RPC data to fill in subcategories.
   // Also include RPC-only categories that Ponder may have missed (e.g. due to incomplete indexing).
   const categories = useMemo(() => {
     const ponderCategories = result?.data;
@@ -154,7 +137,6 @@ export function useCategoryRegistry() {
       return {
         ...cat,
         subcategories: rpcCat.subcategories,
-        stakeAmount: rpcCat.stakeAmount,
       };
     });
 
@@ -167,15 +149,6 @@ export function useCategoryRegistry() {
     return merged;
   }, [result?.data, rpcCategories]);
 
-  // Create domain lookup map for submit page
-  const domainToCategoryId = useMemo(() => {
-    const map = new Map<string, bigint>();
-    categories.forEach(cat => {
-      map.set(cat.domain.toLowerCase(), cat.id);
-    });
-    return map;
-  }, [categories]);
-
   // Create name to ID lookup for filtering
   const categoryNameToId = useMemo(() => {
     const map = new Map<string, bigint>();
@@ -187,7 +160,6 @@ export function useCategoryRegistry() {
 
   return {
     categories,
-    domainToCategoryId,
     categoryNameToId,
     isLoading: ponderLoading && (metaLoading || idsPageLoading || categoriesLoading),
     refetch: async () => {
@@ -197,96 +169,29 @@ export function useCategoryRegistry() {
   };
 }
 
-/**
- * Extract domain from a URL, normalized (lowercase, www stripped).
- */
-export function extractDomain(url: string): string | null {
-  try {
-    const parsed = new URL(url);
-    let hostname = parsed.hostname.toLowerCase();
-    // Remove www. prefix
-    if (hostname.startsWith("www.")) {
-      hostname = hostname.slice(4);
-    }
-    return hostname;
-  } catch {
-    return null;
-  }
-}
-
-// Domain aliases for common shortlinks and subdomains
-const DOMAIN_ALIASES: Record<string, string> = {
-  "youtu.be": "youtube.com",
-  "m.youtube.com": "youtube.com",
-  "m.twitch.tv": "twitch.tv",
-  "clips.twitch.tv": "twitch.tv",
-  "twitter.com": "x.com",
-  "mobile.twitter.com": "x.com",
+/** Category slugs to human-friendly content type labels. */
+const CATEGORY_CONTENT_LABELS: Record<string, string> = {
+  products: "product",
+  "local-places": "place",
+  travel: "travel item",
+  apps: "app",
+  media: "media item",
+  design: "design",
+  "ai-answers": "AI answer",
+  "developer-docs": "document",
+  trust: "trust item",
+  general: "content",
 };
 
 /**
- * Resolve a domain to its canonical form using known aliases.
- */
-export function resolveCanonicalDomain(domain: string): string {
-  return DOMAIN_ALIASES[domain] ?? domain;
-}
-
-/**
- * Find categoryId from a URL using the domain map.
- * Returns 0n when no known category matches.
- */
-export function getCategoryIdFromUrl(url: string, domainMap: Map<string, bigint>): bigint {
-  const domain = extractDomain(url);
-  if (!domain) return 0n;
-
-  // Check direct match
-  if (domainMap.has(domain)) {
-    return domainMap.get(domain)!;
-  }
-
-  // Check for known aliases
-  const aliasedDomain = DOMAIN_ALIASES[domain];
-  if (aliasedDomain && domainMap.has(aliasedDomain)) {
-    return domainMap.get(aliasedDomain)!;
-  }
-
-  // Fallback: try parent domains (e.g. clips.twitch.tv → twitch.tv)
-  const parts = domain.split(".");
-  for (let i = 1; i < parts.length - 1; i++) {
-    const parent = parts.slice(i).join(".");
-    if (domainMap.has(parent)) {
-      return domainMap.get(parent)!;
-    }
-  }
-
-  return 0n; // Legacy/unknown category
-}
-
-/** Map platform domains to human-friendly content type labels. */
-const DOMAIN_CONTENT_LABELS: Record<string, string> = {
-  "youtube.com": "video",
-  "twitch.tv": "video",
-  "scryfall.com": "card",
-  "en.wikipedia.org": "article",
-  "rawg.io": "game",
-  "openlibrary.org": "book",
-  "huggingface.co": "ai",
-  "themoviedb.org": "movie",
-  "www.themoviedb.org": "movie",
-  "coingecko.com": "token",
-  "open.spotify.com": "podcast",
-  "x.com": "tweet",
-};
-
-/**
- * Get a human-friendly content type label for a category (e.g. "video", "card", "book").
+ * Get a human-friendly content type label for a category (e.g. "product", "app", "media item").
  * Falls back to "content" for unknown categories.
  */
 function getContentLabel(categoryId: bigint | undefined, categories: Category[]): string {
   if (!categoryId) return "content";
   const category = categories.find(c => c.id === categoryId);
   if (!category) return "content";
-  return DOMAIN_CONTENT_LABELS[category.domain] ?? "content";
+  return CATEGORY_CONTENT_LABELS[category.slug] ?? "content";
 }
 
 /**
