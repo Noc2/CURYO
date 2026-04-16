@@ -13,6 +13,7 @@ import { ISelfVerificationRoot } from "@selfxyz/contracts/contracts/interfaces/I
 contract HumanFaucetTest is Test {
     bytes32 internal constant PASSPORT_ATTESTATION_ID = bytes32(uint256(1));
     bytes32 internal constant BIOMETRIC_ID_CARD_ATTESTATION_ID = bytes32(uint256(2));
+    bytes32 internal constant KYC_ATTESTATION_ID = bytes32(uint256(4));
     bytes32 internal constant UNSUPPORTED_ATTESTATION_ID = bytes32(uint256(99));
 
     HumanFaucet public faucet;
@@ -349,6 +350,7 @@ contract HumanFaucetTest is Test {
         output.userIdentifier = uint256(uint160(user2));
         output.nullifier = nullifier;
         output.olderThan = 18;
+        output.ofac = [true, true, true];
 
         vm.expectRevert(HumanFaucet.NullifierAlreadyUsed.selector);
         mockHub.simulateVerificationWithOutput(address(faucet), output);
@@ -359,6 +361,7 @@ contract HumanFaucetTest is Test {
         output.attestationId = PASSPORT_ATTESTATION_ID;
         output.userIdentifier = 0;
         output.nullifier = 99999;
+        output.ofac = [true, true, true];
 
         vm.expectRevert(HumanFaucet.InvalidUserIdentifier.selector);
         mockHub.simulateVerificationWithOutput(address(faucet), output);
@@ -369,6 +372,7 @@ contract HumanFaucetTest is Test {
         output.attestationId = PASSPORT_ATTESTATION_ID;
         output.userIdentifier = uint256(uint160(user1));
         output.nullifier = 12345;
+        output.ofac = [true, true, true];
 
         bytes memory encodedOutput = abi.encode(output);
 
@@ -508,6 +512,7 @@ contract HumanFaucetTest is Test {
         output.userIdentifier = uint256(uint160(user1));
         output.nullifier = 99999;
         output.olderThan = 15;
+        output.ofac = [true, true, true];
 
         mockHub.simulateVerificationWithOutput(address(faucet), output);
 
@@ -521,11 +526,50 @@ contract HumanFaucetTest is Test {
         output.userIdentifier = uint256(uint160(user1));
         output.nullifier = 77777;
         output.olderThan = 18;
+        output.ofac = [false, true, true];
 
         mockHub.simulateVerificationWithOutput(address(faucet), output);
 
         assertEq(crepToken.balanceOf(user1), TIER_0_AMOUNT);
         assertTrue(faucet.hasClaimed(user1));
+    }
+
+    function test_Claim_SuccessWithKyc() public {
+        ISelfVerificationRoot.GenericDiscloseOutputV2 memory output;
+        output.attestationId = KYC_ATTESTATION_ID;
+        output.userIdentifier = uint256(uint160(user1));
+        output.nullifier = 999777;
+        output.olderThan = 18;
+        output.ofac = [false, true, true];
+
+        mockHub.simulateVerificationWithOutput(address(faucet), output);
+
+        assertEq(crepToken.balanceOf(user1), TIER_0_AMOUNT);
+        assertTrue(faucet.hasClaimed(user1));
+    }
+
+    function test_Claim_RevertSanctionsCheckFailed_Passport() public {
+        ISelfVerificationRoot.GenericDiscloseOutputV2 memory output;
+        output.attestationId = PASSPORT_ATTESTATION_ID;
+        output.userIdentifier = uint256(uint160(user1));
+        output.nullifier = 999778;
+        output.olderThan = 18;
+        output.ofac = [true, false, true];
+
+        vm.expectRevert(HumanFaucet.SanctionsCheckFailed.selector);
+        mockHub.simulateVerificationWithOutput(address(faucet), output);
+    }
+
+    function test_Claim_RevertSanctionsCheckFailed_Kyc() public {
+        ISelfVerificationRoot.GenericDiscloseOutputV2 memory output;
+        output.attestationId = KYC_ATTESTATION_ID;
+        output.userIdentifier = uint256(uint160(user1));
+        output.nullifier = 999779;
+        output.olderThan = 18;
+        output.ofac = [false, true, false];
+
+        vm.expectRevert(HumanFaucet.SanctionsCheckFailed.selector);
+        mockHub.simulateVerificationWithOutput(address(faucet), output);
     }
 
     function test_Claim_RevertUnsupportedDocumentType() public {

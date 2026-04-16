@@ -10,9 +10,9 @@ import { ISelfVerificationRoot } from "@selfxyz/contracts/contracts/interfaces/I
 import { IVoterIdNFT } from "./interfaces/IVoterIdNFT.sol";
 
 /// @title HumanFaucet
-/// @notice Allows verified humans (via Self.xyz passport or biometric ID card verification) to claim cREP tokens once.
+/// @notice Allows verified humans (via Self.xyz passport, biometric ID card, or KYC verification) to claim cREP tokens once.
 /// @dev Uses Self.xyz zero-knowledge identity verification for sybil resistance.
-///      One claim per document nullifier (the same passport or biometric ID card can't claim twice).
+///      One claim per document nullifier (the same verified identity document can't claim twice).
 ///      This contract holds the 52M faucet allocation minted at launch.
 contract HumanFaucet is SelfVerificationRoot, Ownable, Pausable {
     using SafeERC20 for IERC20;
@@ -40,6 +40,7 @@ contract HumanFaucet is SelfVerificationRoot, Ownable, Pausable {
     /// @notice Allowed Self.xyz attestation IDs
     bytes32 public constant PASSPORT_ATTESTATION_ID = bytes32(uint256(1));
     bytes32 public constant BIOMETRIC_ID_CARD_ATTESTATION_ID = bytes32(uint256(2));
+    bytes32 public constant KYC_ATTESTATION_ID = bytes32(uint256(4));
 
     // --- State ---
 
@@ -149,6 +150,9 @@ contract HumanFaucet is SelfVerificationRoot, Ownable, Pausable {
 
     /// @notice Thrown when the proof was generated from an unsupported document type
     error UnsupportedDocumentType();
+
+    /// @notice Thrown when Self.xyz output does not confirm sanctions screening passed
+    error SanctionsCheckFailed();
 
     /// @notice Thrown when migrated claim bootstrap has been closed
     error MigrationBootstrapAlreadyClosed();
@@ -459,9 +463,12 @@ contract HumanFaucet is SelfVerificationRoot, Ownable, Pausable {
             revert InvalidUserIdentifier();
         }
 
-        // Defense-in-depth: allow only passports and biometric ID cards.
+        // Defense-in-depth: allow only supported Self.xyz credential types and require sanctions clearance.
         if (!_isSupportedAttestation(output.attestationId)) {
             revert UnsupportedDocumentType();
+        }
+        if (!_hasRequiredSanctionsClearance(output.attestationId, output.ofac)) {
+            revert SanctionsCheckFailed();
         }
 
         // Check nullifier hasn't been used (same passport can't claim twice)
@@ -664,6 +671,21 @@ contract HumanFaucet is SelfVerificationRoot, Ownable, Pausable {
     }
 
     function _isSupportedAttestation(bytes32 attestationId) internal pure returns (bool) {
-        return attestationId == PASSPORT_ATTESTATION_ID || attestationId == BIOMETRIC_ID_CARD_ATTESTATION_ID;
+        return attestationId == PASSPORT_ATTESTATION_ID || attestationId == BIOMETRIC_ID_CARD_ATTESTATION_ID
+            || attestationId == KYC_ATTESTATION_ID;
+    }
+
+    function _hasRequiredSanctionsClearance(bytes32 attestationId, bool[3] memory ofac)
+        internal
+        pure
+        returns (bool)
+    {
+        if (attestationId == PASSPORT_ATTESTATION_ID) {
+            return ofac[0] && ofac[1] && ofac[2];
+        }
+        if (attestationId == BIOMETRIC_ID_CARD_ATTESTATION_ID || attestationId == KYC_ATTESTATION_ID) {
+            return ofac[1] && ofac[2];
+        }
+        return false;
     }
 }

@@ -8,7 +8,17 @@ test("resolveSelfVerificationErrorMessage explains unsupported document types", 
       error_code: "UnsupportedDocumentType()",
       reason: "Transaction failed with error: UnsupportedDocumentType()",
     }),
-    "Use a passport or biometric ID card in Self.",
+    "Use a supported Self credential: passport, biometric ID card, or KYC.",
+  );
+});
+
+test("resolveSelfVerificationErrorMessage explains sanctions clearance failures", () => {
+  assert.equal(
+    resolveSelfVerificationErrorMessage({
+      error_code: "SanctionsCheckFailed()",
+      reason: "Transaction failed with error: SanctionsCheckFailed()",
+    }),
+    "Self could not confirm sanctions clearance for this verification.",
   );
 });
 
@@ -18,7 +28,7 @@ test("resolveSelfVerificationErrorMessage keeps the existing passport reuse guid
       error_code: "NullifierAlreadyUsed()",
       reason: "Transaction failed with error: NullifierAlreadyUsed()",
     }),
-    "This document has already been used to verify. Each passport or biometric ID card can only be used once.",
+    "This document has already been used to verify. Each supported Self credential can only be used once.",
   );
 });
 

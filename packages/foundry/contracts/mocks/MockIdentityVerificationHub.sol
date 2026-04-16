@@ -7,13 +7,14 @@ import { SelfStructs } from "@selfxyz/contracts/contracts/libraries/SelfStructs.
 
 /// @title MockIdentityVerificationHub
 /// @notice Mock implementation of Self.xyz IdentityVerificationHub for local testing
-/// @dev Allows simulating passport or biometric ID card verification without actual ZK proofs
+/// @dev Allows simulating passport, biometric ID card, or KYC verification without actual ZK proofs
 contract MockIdentityVerificationHub {
     // --- Constants ---
 
     bytes32 public constant MOCK_CONFIG_ID = keccak256("mock-config");
     bytes32 public constant MOCK_PASSPORT_ATTESTATION_ID = bytes32(uint256(1));
     bytes32 public constant MOCK_BIOMETRIC_ID_CARD_ATTESTATION_ID = bytes32(uint256(2));
+    bytes32 public constant MOCK_KYC_ATTESTATION_ID = bytes32(uint256(4));
 
     // --- State ---
 
@@ -100,7 +101,7 @@ contract MockIdentityVerificationHub {
             gender: "",
             expiryDate: "",
             olderThan: olderThan,
-            ofac: [false, false, false]
+            ofac: [true, true, true]
         });
     }
 

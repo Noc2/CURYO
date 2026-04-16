@@ -11,11 +11,15 @@ export function resolveSelfVerificationErrorMessage(error: SelfVerificationError
   const code = getSelfVerificationErrorCode(error);
 
   if (code.includes("UnsupportedDocumentType")) {
-    return "Use a passport or biometric ID card in Self.";
+    return "Use a supported Self credential: passport, biometric ID card, or KYC.";
+  }
+
+  if (code.includes("SanctionsCheckFailed")) {
+    return "Self could not confirm sanctions clearance for this verification.";
   }
 
   if (code.includes("NullifierAlreadyUsed")) {
-    return "This document has already been used to verify. Each passport or biometric ID card can only be used once.";
+    return "This document has already been used to verify. Each supported Self credential can only be used once.";
   }
 
   if (code.includes("InvalidUserIdentifier")) {
