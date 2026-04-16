@@ -1,4 +1,4 @@
-![CURYO — Human Reputation at Stake. Get Verified, Claim cREP, and Rate with Stake](packages/nextjs/public/banner.svg)
+![CURYO — Human Reputation at Stake. Get Verified, Rate with Stake, and Earn USDC](packages/nextjs/public/banner.svg)
 
 <p align="center">
   <a href="https://github.com/RichardLitt/standard-readme"><img src="https://img.shields.io/badge/readme%20style-standard-brightgreen.svg?style=flat-square" alt="standard-readme compliant"></a>

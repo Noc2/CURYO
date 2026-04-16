@@ -3,7 +3,7 @@ import { spawnSync } from "node:child_process";
 import test from "node:test";
 
 const socialImageAlt =
-  "Curyo brand banner with the headline Human Reputation at Stake and the subline Get Verified, Claim cREP, and Rate with Stake";
+  "Curyo brand banner with the headline Human Reputation at Stake and the subline Get Verified, Rate with Stake, and Earn USDC";
 
 type MetadataSnapshot = {
   description?: string | null;
@@ -102,7 +102,7 @@ test("getMetadata uses localhost URLs and the updated brand copy when no product
     },
     {
       title: "Curyo — Human Reputation at Stake",
-      description: "Get Verified, Claim cREP, and Rate with Stake.",
+      description: "Get Verified, Rate with Stake, and Earn USDC.",
     },
   );
 
@@ -112,8 +112,8 @@ test("getMetadata uses localhost URLs and the updated brand copy when no product
     default: "Curyo — Human Reputation at Stake",
     template: "%s | Curyo",
   });
-  assert.equal(metadata.description, "Get Verified, Claim cREP, and Rate with Stake.");
-  assert.equal(metadata.openGraph?.description, "Get Verified, Claim cREP, and Rate with Stake.");
+  assert.equal(metadata.description, "Get Verified, Rate with Stake, and Earn USDC.");
+  assert.equal(metadata.openGraph?.description, "Get Verified, Rate with Stake, and Earn USDC.");
   assert.equal(metadata.openGraph?.images?.[0]?.url, "http://localhost:4321/og-image.png");
   assert.equal(metadata.twitter?.images?.[0]?.url, "http://localhost:4321/twitter-image.png");
   assert.equal(metadata.openGraph?.images?.[0]?.alt, socialImageAlt);
@@ -128,7 +128,7 @@ test("getMetadata prefers the production hostname for social metadata", () => {
     },
     {
       title: "Curyo — Human Reputation at Stake",
-      description: "Get Verified, Claim cREP, and Rate with Stake",
+      description: "Get Verified, Rate with Stake, and Earn USDC",
     },
   );
 
