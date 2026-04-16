@@ -897,34 +897,6 @@ contract ContentRegistryBranchesTest is VotingTestBase {
         );
     }
 
-    function test_ResolveSubmitterStake_NoSettledRound_LowDisplayRatingStillReturnsAfterDormancyPeriod() public {
-        uint256 treasuryBefore = crepToken.balanceOf(treasury);
-        uint256 submitterBefore = crepToken.balanceOf(submitter);
-
-        vm.startPrank(submitter);
-        crepToken.approve(address(registry), 10e6);
-        _submitContentWithReservation(registry, "https://example.com/dormancy-slash", "goal", "goal", "tags", 0);
-        vm.stopPrank();
-
-        vm.prank(address(votingEngine));
-        registry.updateRatingDirect(1, 10);
-
-        vm.warp(T0 + 31 days);
-        votingEngine.resolveSubmitterStake(1);
-
-        assertEq(crepToken.balanceOf(treasury) - treasuryBefore, 0, "display rating alone should not slash");
-        assertEq(
-            crepToken.balanceOf(submitter),
-            submitterBefore,
-            "submitter should recover stake when no settled evidence exists"
-        );
-        (,,,,,,,,, bool submitterStakeReturned,,) = registry.contents(1);
-        assertTrue(submitterStakeReturned, "stake should resolve after dormant fallback");
-        assertFalse(
-            registry.isSubmitterStakeSlashable(1), "manual display rating changes should not make content slashable"
-        );
-    }
-
     function test_SubmitContent_NoParticipationPool_NoReward() public {
         // Don't set participation pool — reward is skipped
         uint256 balBefore = crepToken.balanceOf(submitter);
@@ -1299,29 +1271,6 @@ contract ContentRegistryBranchesTest is VotingTestBase {
         assertEq(uint256(status), uint256(ContentRegistry.ContentStatus.Active));
     }
 
-    function test_MarkDormant_LowDisplayRatingWithoutEvidenceReturnsStake() public {
-        vm.startPrank(submitter);
-        crepToken.approve(address(registry), 10e6);
-        _submitContentWithReservation(registry, "https://example.com/dormant-slash", "goal", "goal", "tags", 0);
-        vm.stopPrank();
-
-        uint256 treasuryBefore = crepToken.balanceOf(treasury);
-        uint256 submitterBefore = crepToken.balanceOf(submitter);
-
-        vm.prank(address(votingEngine));
-        registry.updateRatingDirect(1, 10);
-
-        vm.warp(T0 + 31 days);
-        registry.markDormant(1);
-
-        assertEq(crepToken.balanceOf(treasury) - treasuryBefore, 0, "display rating alone should not slash");
-        assertEq(
-            crepToken.balanceOf(submitter),
-            submitterBefore + 10e6,
-            "submitter should recover stake when dormancy resolves without settled evidence"
-        );
-    }
-
     function test_ReviveContent_ReservesUrlAgain() public {
         string memory url = "https://example.com/revive-url";
 
@@ -1392,52 +1341,6 @@ contract ContentRegistryBranchesTest is VotingTestBase {
 
         assertEq(reg2.treasury(), treasury);
         assertEq(reg2.bonusPool(), treasury);
-    }
-
-    // =========================================================================
-    // updateRating BRANCHES
-    // =========================================================================
-
-    function test_UpdateRatingDirect_CappedAt100() public {
-        vm.startPrank(submitter);
-        crepToken.approve(address(registry), 10e6);
-        _submitContentWithReservation(registry, "https://example.com/1", "goal", "goal", "tags", 0);
-        vm.stopPrank();
-
-        // Set rating to 110 → should clamp to 100
-        vm.prank(address(votingEngine));
-        registry.updateRatingDirect(1, 110);
-
-        (,,,,,,,,,, uint256 rating,) = registry.contents(1);
-        assertEq(rating, 100);
-    }
-
-    function test_UpdateRatingDirect_FlooredAt0() public {
-        vm.startPrank(submitter);
-        crepToken.approve(address(registry), 10e6);
-        _submitContentWithReservation(registry, "https://example.com/1", "goal", "goal", "tags", 0);
-        vm.stopPrank();
-
-        // Set rating to 0
-        vm.prank(address(votingEngine));
-        registry.updateRatingDirect(1, 0);
-
-        (,,,,,,,,,, uint256 rating,) = registry.contents(1);
-        assertEq(rating, 0);
-    }
-
-    function test_UpdateRatingDirect_SameValue_NoChange() public {
-        vm.startPrank(submitter);
-        crepToken.approve(address(registry), 10e6);
-        _submitContentWithReservation(registry, "https://example.com/1", "goal", "goal", "tags", 0);
-        vm.stopPrank();
-
-        // Set same rating (50) → no change, no event
-        vm.prank(address(votingEngine));
-        registry.updateRatingDirect(1, 50);
-
-        (,,,,,,,,,, uint256 rating,) = registry.contents(1);
-        assertEq(rating, 50); // unchanged
     }
 
     function test_SubmitContent_SeededCategory_Succeeds() public {

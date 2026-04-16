@@ -638,29 +638,6 @@ contract ContentRegistry is Initializable, AccessControlUpgradeable, PausableUpg
         dormancyAnchorAt[contentId] = block.timestamp;
     }
 
-    /// @notice Called by VotingEngine to set content rating directly (live updates on each vote).
-    /// @param contentId The content ID.
-    /// @param newRating The new rating value [0, 100].
-    function updateRatingDirect(uint256 contentId, uint16 newRating) external {
-        require(msg.sender == votingEngine, "Only VotingEngine");
-
-        Content storage c = contents[contentId];
-        uint8 oldRating = c.rating;
-        uint8 clampedRating = newRating > 100 ? 100 : uint8(newRating);
-
-        if (clampedRating == oldRating) return;
-
-        c.rating = clampedRating;
-        RatingLib.RatingState storage state = ratingState[contentId];
-        state.ratingBps = uint16(uint256(clampedRating) * 100);
-        state.ratingLogitX18 = int128(RatingMath.ratingBpsToLogitX18(state.ratingBps));
-        if (state.conservativeRatingBps == 0 || state.conservativeRatingBps > state.ratingBps) {
-            state.conservativeRatingBps = state.ratingBps;
-        }
-        state.lastUpdatedAt = uint48(block.timestamp);
-        emit RatingUpdated(contentId, oldRating, clampedRating);
-    }
-
     function updateRatingState(
         uint256 contentId,
         uint256 roundId,

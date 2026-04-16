@@ -297,9 +297,9 @@ const SmartContracts: NextPage = () => {
           submitter identity can do this, and only during the 1-day exclusive revival window.
         </li>
         <li>
-          <code>updateRatingDirect(contentId, newRating)</code> &mdash; Called by RoundVotingEngine after settlement
-          with the new rating data. In the planned redeploy, this becomes a richer score-relative update path fed by the
-          round&apos;s snapshotted reference score, epoch-weighted revealed evidence, and conservative rating bound.
+          <code>updateRatingState(contentId, roundId, referenceRatingBps, nextState)</code> &mdash; Called by
+          RoundVotingEngine after settlement with the score-relative update derived from the round&apos;s snapshotted
+          reference score, epoch-weighted revealed evidence, and conservative rating bound.
         </li>
       </ul>
       <h3>Submitter Stake</h3>
