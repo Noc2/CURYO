@@ -902,25 +902,6 @@ export const ContentRegistryAbi = [
   },
   {
     "type": "function",
-    "name": "isUrlSubmitted",
-    "inputs": [
-      {
-        "name": "url",
-        "type": "string",
-        "internalType": "string"
-      }
-    ],
-    "outputs": [
-      {
-        "name": "",
-        "type": "bool",
-        "internalType": "bool"
-      }
-    ],
-    "stateMutability": "pure"
-  },
-  {
-    "type": "function",
     "name": "markDormant",
     "inputs": [
       {
@@ -1144,79 +1125,6 @@ export const ContentRegistryAbi = [
   },
   {
     "type": "function",
-    "name": "previewQuestionSubmissionKey",
-    "inputs": [
-      {
-        "name": "url",
-        "type": "string",
-        "internalType": "string"
-      },
-      {
-        "name": "title",
-        "type": "string",
-        "internalType": "string"
-      },
-      {
-        "name": "description",
-        "type": "string",
-        "internalType": "string"
-      },
-      {
-        "name": "tags",
-        "type": "string",
-        "internalType": "string"
-      },
-      {
-        "name": "categoryId",
-        "type": "uint256",
-        "internalType": "uint256"
-      }
-    ],
-    "outputs": [
-      {
-        "name": "resolvedCategoryId",
-        "type": "uint256",
-        "internalType": "uint256"
-      },
-      {
-        "name": "submissionKey",
-        "type": "bytes32",
-        "internalType": "bytes32"
-      }
-    ],
-    "stateMutability": "pure"
-  },
-  {
-    "type": "function",
-    "name": "previewSubmissionKey",
-    "inputs": [
-      {
-        "name": "url",
-        "type": "string",
-        "internalType": "string"
-      },
-      {
-        "name": "categoryId",
-        "type": "uint256",
-        "internalType": "uint256"
-      }
-    ],
-    "outputs": [
-      {
-        "name": "resolvedCategoryId",
-        "type": "uint256",
-        "internalType": "uint256"
-      },
-      {
-        "name": "submissionKey",
-        "type": "bytes32",
-        "internalType": "bytes32"
-      }
-    ],
-    "stateMutability": "pure"
-  },
-  {
-    "type": "function",
     "name": "protocolConfig",
     "inputs": [],
     "outputs": [
@@ -1363,56 +1271,6 @@ export const ContentRegistryAbi = [
     "inputs": [
       {
         "name": "contentId",
-        "type": "uint256",
-        "internalType": "uint256"
-      }
-    ],
-    "outputs": [],
-    "stateMutability": "nonpayable"
-  },
-  {
-    "type": "function",
-    "name": "resolveSubmissionKey",
-    "inputs": [
-      {
-        "name": "url",
-        "type": "string",
-        "internalType": "string"
-      }
-    ],
-    "outputs": [
-      {
-        "name": "submissionKey",
-        "type": "bytes32",
-        "internalType": "bytes32"
-      }
-    ],
-    "stateMutability": "pure"
-  },
-  {
-    "type": "function",
-    "name": "returnSubmitterStakeWithMilestoneZeroTerms",
-    "inputs": [
-      {
-        "name": "contentId",
-        "type": "uint256",
-        "internalType": "uint256"
-      }
-    ],
-    "outputs": [],
-    "stateMutability": "nonpayable"
-  },
-  {
-    "type": "function",
-    "name": "returnSubmitterStakeWithRewardRate",
-    "inputs": [
-      {
-        "name": "contentId",
-        "type": "uint256",
-        "internalType": "uint256"
-      },
-      {
-        "name": "rewardRateBps",
         "type": "uint256",
         "internalType": "uint256"
       }
@@ -1633,94 +1491,6 @@ export const ContentRegistryAbi = [
   },
   {
     "type": "function",
-    "name": "submitContent",
-    "inputs": [
-      {
-        "name": "url",
-        "type": "string",
-        "internalType": "string"
-      },
-      {
-        "name": "title",
-        "type": "string",
-        "internalType": "string"
-      },
-      {
-        "name": "description",
-        "type": "string",
-        "internalType": "string"
-      },
-      {
-        "name": "tags",
-        "type": "string",
-        "internalType": "string"
-      },
-      {
-        "name": "categoryId",
-        "type": "uint256",
-        "internalType": "uint256"
-      },
-      {
-        "name": "salt",
-        "type": "bytes32",
-        "internalType": "bytes32"
-      }
-    ],
-    "outputs": [
-      {
-        "name": "",
-        "type": "uint256",
-        "internalType": "uint256"
-      }
-    ],
-    "stateMutability": "pure"
-  },
-  {
-    "type": "function",
-    "name": "submitQuestion",
-    "inputs": [
-      {
-        "name": "url",
-        "type": "string",
-        "internalType": "string"
-      },
-      {
-        "name": "title",
-        "type": "string",
-        "internalType": "string"
-      },
-      {
-        "name": "description",
-        "type": "string",
-        "internalType": "string"
-      },
-      {
-        "name": "tags",
-        "type": "string",
-        "internalType": "string"
-      },
-      {
-        "name": "categoryId",
-        "type": "uint256",
-        "internalType": "uint256"
-      },
-      {
-        "name": "salt",
-        "type": "bytes32",
-        "internalType": "bytes32"
-      }
-    ],
-    "outputs": [
-      {
-        "name": "",
-        "type": "uint256",
-        "internalType": "uint256"
-      }
-    ],
-    "stateMutability": "pure"
-  },
-  {
-    "type": "function",
     "name": "submitQuestionWithMedia",
     "inputs": [
       {
@@ -1929,24 +1699,6 @@ export const ContentRegistryAbi = [
         "name": "contentId",
         "type": "uint256",
         "internalType": "uint256"
-      }
-    ],
-    "outputs": [],
-    "stateMutability": "nonpayable"
-  },
-  {
-    "type": "function",
-    "name": "updateRatingDirect",
-    "inputs": [
-      {
-        "name": "contentId",
-        "type": "uint256",
-        "internalType": "uint256"
-      },
-      {
-        "name": "newRating",
-        "type": "uint16",
-        "internalType": "uint16"
       }
     ],
     "outputs": [],
@@ -2702,81 +2454,6 @@ export const ContentRegistryAbi = [
     "type": "error",
     "name": "NotInitializing",
     "inputs": []
-  },
-  {
-    "type": "error",
-    "name": "PRBMath_MulDiv_Overflow",
-    "inputs": [
-      {
-        "name": "x",
-        "type": "uint256",
-        "internalType": "uint256"
-      },
-      {
-        "name": "y",
-        "type": "uint256",
-        "internalType": "uint256"
-      },
-      {
-        "name": "denominator",
-        "type": "uint256",
-        "internalType": "uint256"
-      }
-    ]
-  },
-  {
-    "type": "error",
-    "name": "PRBMath_SD59x18_Convert_Overflow",
-    "inputs": [
-      {
-        "name": "x",
-        "type": "int256",
-        "internalType": "int256"
-      }
-    ]
-  },
-  {
-    "type": "error",
-    "name": "PRBMath_SD59x18_Convert_Underflow",
-    "inputs": [
-      {
-        "name": "x",
-        "type": "int256",
-        "internalType": "int256"
-      }
-    ]
-  },
-  {
-    "type": "error",
-    "name": "PRBMath_SD59x18_Div_InputTooSmall",
-    "inputs": []
-  },
-  {
-    "type": "error",
-    "name": "PRBMath_SD59x18_Div_Overflow",
-    "inputs": [
-      {
-        "name": "x",
-        "type": "int256",
-        "internalType": "SD59x18"
-      },
-      {
-        "name": "y",
-        "type": "int256",
-        "internalType": "SD59x18"
-      }
-    ]
-  },
-  {
-    "type": "error",
-    "name": "PRBMath_SD59x18_Log_InputTooSmall",
-    "inputs": [
-      {
-        "name": "x",
-        "type": "int256",
-        "internalType": "SD59x18"
-      }
-    ]
   },
   {
     "type": "error",

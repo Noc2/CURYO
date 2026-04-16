@@ -118,49 +118,6 @@ export const RoundVotingEngineAbi = [
         "internalType": "uint256"
       },
       {
-        "name": "targetRound",
-        "type": "uint64",
-        "internalType": "uint64"
-      },
-      {
-        "name": "drandChainHash",
-        "type": "bytes32",
-        "internalType": "bytes32"
-      },
-      {
-        "name": "commitHash",
-        "type": "bytes32",
-        "internalType": "bytes32"
-      },
-      {
-        "name": "ciphertext",
-        "type": "bytes",
-        "internalType": "bytes"
-      },
-      {
-        "name": "stakeAmount",
-        "type": "uint256",
-        "internalType": "uint256"
-      },
-      {
-        "name": "frontend",
-        "type": "address",
-        "internalType": "address"
-      }
-    ],
-    "outputs": [],
-    "stateMutability": "pure"
-  },
-  {
-    "type": "function",
-    "name": "commitVote",
-    "inputs": [
-      {
-        "name": "contentId",
-        "type": "uint256",
-        "internalType": "uint256"
-      },
-      {
         "name": "roundReferenceRatingBps",
         "type": "uint16",
         "internalType": "uint16"

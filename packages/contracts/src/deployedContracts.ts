@@ -3314,25 +3314,6 @@ const deployedContracts: GenericContractsDeclaration = {
         },
         {
           type: "function",
-          name: "isUrlSubmitted",
-          inputs: [
-            {
-              name: "url",
-              type: "string",
-              internalType: "string",
-            },
-          ],
-          outputs: [
-            {
-              name: "",
-              type: "bool",
-              internalType: "bool",
-            },
-          ],
-          stateMutability: "pure",
-        },
-        {
-          type: "function",
           name: "markDormant",
           inputs: [
             {
@@ -3556,79 +3537,6 @@ const deployedContracts: GenericContractsDeclaration = {
         },
         {
           type: "function",
-          name: "previewQuestionSubmissionKey",
-          inputs: [
-            {
-              name: "url",
-              type: "string",
-              internalType: "string",
-            },
-            {
-              name: "title",
-              type: "string",
-              internalType: "string",
-            },
-            {
-              name: "description",
-              type: "string",
-              internalType: "string",
-            },
-            {
-              name: "tags",
-              type: "string",
-              internalType: "string",
-            },
-            {
-              name: "categoryId",
-              type: "uint256",
-              internalType: "uint256",
-            },
-          ],
-          outputs: [
-            {
-              name: "resolvedCategoryId",
-              type: "uint256",
-              internalType: "uint256",
-            },
-            {
-              name: "submissionKey",
-              type: "bytes32",
-              internalType: "bytes32",
-            },
-          ],
-          stateMutability: "pure",
-        },
-        {
-          type: "function",
-          name: "previewSubmissionKey",
-          inputs: [
-            {
-              name: "url",
-              type: "string",
-              internalType: "string",
-            },
-            {
-              name: "categoryId",
-              type: "uint256",
-              internalType: "uint256",
-            },
-          ],
-          outputs: [
-            {
-              name: "resolvedCategoryId",
-              type: "uint256",
-              internalType: "uint256",
-            },
-            {
-              name: "submissionKey",
-              type: "bytes32",
-              internalType: "bytes32",
-            },
-          ],
-          stateMutability: "pure",
-        },
-        {
-          type: "function",
           name: "protocolConfig",
           inputs: [],
           outputs: [
@@ -3775,56 +3683,6 @@ const deployedContracts: GenericContractsDeclaration = {
           inputs: [
             {
               name: "contentId",
-              type: "uint256",
-              internalType: "uint256",
-            },
-          ],
-          outputs: [],
-          stateMutability: "nonpayable",
-        },
-        {
-          type: "function",
-          name: "resolveSubmissionKey",
-          inputs: [
-            {
-              name: "url",
-              type: "string",
-              internalType: "string",
-            },
-          ],
-          outputs: [
-            {
-              name: "submissionKey",
-              type: "bytes32",
-              internalType: "bytes32",
-            },
-          ],
-          stateMutability: "pure",
-        },
-        {
-          type: "function",
-          name: "returnSubmitterStakeWithMilestoneZeroTerms",
-          inputs: [
-            {
-              name: "contentId",
-              type: "uint256",
-              internalType: "uint256",
-            },
-          ],
-          outputs: [],
-          stateMutability: "nonpayable",
-        },
-        {
-          type: "function",
-          name: "returnSubmitterStakeWithRewardRate",
-          inputs: [
-            {
-              name: "contentId",
-              type: "uint256",
-              internalType: "uint256",
-            },
-            {
-              name: "rewardRateBps",
               type: "uint256",
               internalType: "uint256",
             },
@@ -4045,94 +3903,6 @@ const deployedContracts: GenericContractsDeclaration = {
         },
         {
           type: "function",
-          name: "submitContent",
-          inputs: [
-            {
-              name: "url",
-              type: "string",
-              internalType: "string",
-            },
-            {
-              name: "title",
-              type: "string",
-              internalType: "string",
-            },
-            {
-              name: "description",
-              type: "string",
-              internalType: "string",
-            },
-            {
-              name: "tags",
-              type: "string",
-              internalType: "string",
-            },
-            {
-              name: "categoryId",
-              type: "uint256",
-              internalType: "uint256",
-            },
-            {
-              name: "salt",
-              type: "bytes32",
-              internalType: "bytes32",
-            },
-          ],
-          outputs: [
-            {
-              name: "",
-              type: "uint256",
-              internalType: "uint256",
-            },
-          ],
-          stateMutability: "pure",
-        },
-        {
-          type: "function",
-          name: "submitQuestion",
-          inputs: [
-            {
-              name: "url",
-              type: "string",
-              internalType: "string",
-            },
-            {
-              name: "title",
-              type: "string",
-              internalType: "string",
-            },
-            {
-              name: "description",
-              type: "string",
-              internalType: "string",
-            },
-            {
-              name: "tags",
-              type: "string",
-              internalType: "string",
-            },
-            {
-              name: "categoryId",
-              type: "uint256",
-              internalType: "uint256",
-            },
-            {
-              name: "salt",
-              type: "bytes32",
-              internalType: "bytes32",
-            },
-          ],
-          outputs: [
-            {
-              name: "",
-              type: "uint256",
-              internalType: "uint256",
-            },
-          ],
-          stateMutability: "pure",
-        },
-        {
-          type: "function",
           name: "submitQuestionWithMedia",
           inputs: [
             {
@@ -4341,24 +4111,6 @@ const deployedContracts: GenericContractsDeclaration = {
               name: "contentId",
               type: "uint256",
               internalType: "uint256",
-            },
-          ],
-          outputs: [],
-          stateMutability: "nonpayable",
-        },
-        {
-          type: "function",
-          name: "updateRatingDirect",
-          inputs: [
-            {
-              name: "contentId",
-              type: "uint256",
-              internalType: "uint256",
-            },
-            {
-              name: "newRating",
-              type: "uint16",
-              internalType: "uint16",
             },
           ],
           outputs: [],
@@ -5117,81 +4869,6 @@ const deployedContracts: GenericContractsDeclaration = {
         },
         {
           type: "error",
-          name: "PRBMath_MulDiv_Overflow",
-          inputs: [
-            {
-              name: "x",
-              type: "uint256",
-              internalType: "uint256",
-            },
-            {
-              name: "y",
-              type: "uint256",
-              internalType: "uint256",
-            },
-            {
-              name: "denominator",
-              type: "uint256",
-              internalType: "uint256",
-            },
-          ],
-        },
-        {
-          type: "error",
-          name: "PRBMath_SD59x18_Convert_Overflow",
-          inputs: [
-            {
-              name: "x",
-              type: "int256",
-              internalType: "int256",
-            },
-          ],
-        },
-        {
-          type: "error",
-          name: "PRBMath_SD59x18_Convert_Underflow",
-          inputs: [
-            {
-              name: "x",
-              type: "int256",
-              internalType: "int256",
-            },
-          ],
-        },
-        {
-          type: "error",
-          name: "PRBMath_SD59x18_Div_InputTooSmall",
-          inputs: [],
-        },
-        {
-          type: "error",
-          name: "PRBMath_SD59x18_Div_Overflow",
-          inputs: [
-            {
-              name: "x",
-              type: "int256",
-              internalType: "SD59x18",
-            },
-            {
-              name: "y",
-              type: "int256",
-              internalType: "SD59x18",
-            },
-          ],
-        },
-        {
-          type: "error",
-          name: "PRBMath_SD59x18_Log_InputTooSmall",
-          inputs: [
-            {
-              name: "x",
-              type: "int256",
-              internalType: "SD59x18",
-            },
-          ],
-        },
-        {
-          type: "error",
           name: "ReentrancyGuardReentrantCall",
           inputs: [],
         },
@@ -5354,49 +5031,6 @@ const deployedContracts: GenericContractsDeclaration = {
           ],
           outputs: [],
           stateMutability: "nonpayable",
-        },
-        {
-          type: "function",
-          name: "commitVote",
-          inputs: [
-            {
-              name: "contentId",
-              type: "uint256",
-              internalType: "uint256",
-            },
-            {
-              name: "targetRound",
-              type: "uint64",
-              internalType: "uint64",
-            },
-            {
-              name: "drandChainHash",
-              type: "bytes32",
-              internalType: "bytes32",
-            },
-            {
-              name: "commitHash",
-              type: "bytes32",
-              internalType: "bytes32",
-            },
-            {
-              name: "ciphertext",
-              type: "bytes",
-              internalType: "bytes",
-            },
-            {
-              name: "stakeAmount",
-              type: "uint256",
-              internalType: "uint256",
-            },
-            {
-              name: "frontend",
-              type: "address",
-              internalType: "address",
-            },
-          ],
-          outputs: [],
-          stateMutability: "pure",
         },
         {
           type: "function",
@@ -15343,42 +14977,6 @@ const deployedContracts: GenericContractsDeclaration = {
         },
         {
           type: "function",
-          name: "rewardSubmission",
-          inputs: [
-            {
-              name: "submitter",
-              type: "address",
-              internalType: "address",
-            },
-            {
-              name: "stakeAmount",
-              type: "uint256",
-              internalType: "uint256",
-            },
-          ],
-          outputs: [],
-          stateMutability: "nonpayable",
-        },
-        {
-          type: "function",
-          name: "rewardVote",
-          inputs: [
-            {
-              name: "voter",
-              type: "address",
-              internalType: "address",
-            },
-            {
-              name: "stakeAmount",
-              type: "uint256",
-              internalType: "uint256",
-            },
-          ],
-          outputs: [],
-          stateMutability: "nonpayable",
-        },
-        {
-          type: "function",
           name: "setAuthorizedCaller",
           inputs: [
             {
@@ -15516,12 +15114,6 @@ const deployedContracts: GenericContractsDeclaration = {
               type: "uint256",
               indexed: false,
               internalType: "uint256",
-            },
-            {
-              name: "isSubmission",
-              type: "bool",
-              indexed: false,
-              internalType: "bool",
             },
             {
               name: "totalDistributedAfter",
@@ -15727,8 +15319,6 @@ const deployedContracts: GenericContractsDeclaration = {
         getCurrentRateBps: "contracts/interfaces/IParticipationPool.sol",
         releaseReservedReward: "contracts/interfaces/IParticipationPool.sol",
         reserveReward: "contracts/interfaces/IParticipationPool.sol",
-        rewardSubmission: "contracts/interfaces/IParticipationPool.sol",
-        rewardVote: "contracts/interfaces/IParticipationPool.sol",
         withdrawReservedReward: "contracts/interfaces/IParticipationPool.sol",
         owner: "lib/openzeppelin-contracts/contracts/access/Ownable.sol",
         renounceOwnership:
@@ -23077,25 +22667,6 @@ const deployedContracts: GenericContractsDeclaration = {
         },
         {
           type: "function",
-          name: "isUrlSubmitted",
-          inputs: [
-            {
-              name: "url",
-              type: "string",
-              internalType: "string",
-            },
-          ],
-          outputs: [
-            {
-              name: "",
-              type: "bool",
-              internalType: "bool",
-            },
-          ],
-          stateMutability: "pure",
-        },
-        {
-          type: "function",
           name: "markDormant",
           inputs: [
             {
@@ -23319,79 +22890,6 @@ const deployedContracts: GenericContractsDeclaration = {
         },
         {
           type: "function",
-          name: "previewQuestionSubmissionKey",
-          inputs: [
-            {
-              name: "url",
-              type: "string",
-              internalType: "string",
-            },
-            {
-              name: "title",
-              type: "string",
-              internalType: "string",
-            },
-            {
-              name: "description",
-              type: "string",
-              internalType: "string",
-            },
-            {
-              name: "tags",
-              type: "string",
-              internalType: "string",
-            },
-            {
-              name: "categoryId",
-              type: "uint256",
-              internalType: "uint256",
-            },
-          ],
-          outputs: [
-            {
-              name: "resolvedCategoryId",
-              type: "uint256",
-              internalType: "uint256",
-            },
-            {
-              name: "submissionKey",
-              type: "bytes32",
-              internalType: "bytes32",
-            },
-          ],
-          stateMutability: "pure",
-        },
-        {
-          type: "function",
-          name: "previewSubmissionKey",
-          inputs: [
-            {
-              name: "url",
-              type: "string",
-              internalType: "string",
-            },
-            {
-              name: "categoryId",
-              type: "uint256",
-              internalType: "uint256",
-            },
-          ],
-          outputs: [
-            {
-              name: "resolvedCategoryId",
-              type: "uint256",
-              internalType: "uint256",
-            },
-            {
-              name: "submissionKey",
-              type: "bytes32",
-              internalType: "bytes32",
-            },
-          ],
-          stateMutability: "pure",
-        },
-        {
-          type: "function",
           name: "protocolConfig",
           inputs: [],
           outputs: [
@@ -23538,56 +23036,6 @@ const deployedContracts: GenericContractsDeclaration = {
           inputs: [
             {
               name: "contentId",
-              type: "uint256",
-              internalType: "uint256",
-            },
-          ],
-          outputs: [],
-          stateMutability: "nonpayable",
-        },
-        {
-          type: "function",
-          name: "resolveSubmissionKey",
-          inputs: [
-            {
-              name: "url",
-              type: "string",
-              internalType: "string",
-            },
-          ],
-          outputs: [
-            {
-              name: "submissionKey",
-              type: "bytes32",
-              internalType: "bytes32",
-            },
-          ],
-          stateMutability: "pure",
-        },
-        {
-          type: "function",
-          name: "returnSubmitterStakeWithMilestoneZeroTerms",
-          inputs: [
-            {
-              name: "contentId",
-              type: "uint256",
-              internalType: "uint256",
-            },
-          ],
-          outputs: [],
-          stateMutability: "nonpayable",
-        },
-        {
-          type: "function",
-          name: "returnSubmitterStakeWithRewardRate",
-          inputs: [
-            {
-              name: "contentId",
-              type: "uint256",
-              internalType: "uint256",
-            },
-            {
-              name: "rewardRateBps",
               type: "uint256",
               internalType: "uint256",
             },
@@ -23808,94 +23256,6 @@ const deployedContracts: GenericContractsDeclaration = {
         },
         {
           type: "function",
-          name: "submitContent",
-          inputs: [
-            {
-              name: "url",
-              type: "string",
-              internalType: "string",
-            },
-            {
-              name: "title",
-              type: "string",
-              internalType: "string",
-            },
-            {
-              name: "description",
-              type: "string",
-              internalType: "string",
-            },
-            {
-              name: "tags",
-              type: "string",
-              internalType: "string",
-            },
-            {
-              name: "categoryId",
-              type: "uint256",
-              internalType: "uint256",
-            },
-            {
-              name: "salt",
-              type: "bytes32",
-              internalType: "bytes32",
-            },
-          ],
-          outputs: [
-            {
-              name: "",
-              type: "uint256",
-              internalType: "uint256",
-            },
-          ],
-          stateMutability: "pure",
-        },
-        {
-          type: "function",
-          name: "submitQuestion",
-          inputs: [
-            {
-              name: "url",
-              type: "string",
-              internalType: "string",
-            },
-            {
-              name: "title",
-              type: "string",
-              internalType: "string",
-            },
-            {
-              name: "description",
-              type: "string",
-              internalType: "string",
-            },
-            {
-              name: "tags",
-              type: "string",
-              internalType: "string",
-            },
-            {
-              name: "categoryId",
-              type: "uint256",
-              internalType: "uint256",
-            },
-            {
-              name: "salt",
-              type: "bytes32",
-              internalType: "bytes32",
-            },
-          ],
-          outputs: [
-            {
-              name: "",
-              type: "uint256",
-              internalType: "uint256",
-            },
-          ],
-          stateMutability: "pure",
-        },
-        {
-          type: "function",
           name: "submitQuestionWithMedia",
           inputs: [
             {
@@ -24104,24 +23464,6 @@ const deployedContracts: GenericContractsDeclaration = {
               name: "contentId",
               type: "uint256",
               internalType: "uint256",
-            },
-          ],
-          outputs: [],
-          stateMutability: "nonpayable",
-        },
-        {
-          type: "function",
-          name: "updateRatingDirect",
-          inputs: [
-            {
-              name: "contentId",
-              type: "uint256",
-              internalType: "uint256",
-            },
-            {
-              name: "newRating",
-              type: "uint16",
-              internalType: "uint16",
             },
           ],
           outputs: [],
@@ -24880,81 +24222,6 @@ const deployedContracts: GenericContractsDeclaration = {
         },
         {
           type: "error",
-          name: "PRBMath_MulDiv_Overflow",
-          inputs: [
-            {
-              name: "x",
-              type: "uint256",
-              internalType: "uint256",
-            },
-            {
-              name: "y",
-              type: "uint256",
-              internalType: "uint256",
-            },
-            {
-              name: "denominator",
-              type: "uint256",
-              internalType: "uint256",
-            },
-          ],
-        },
-        {
-          type: "error",
-          name: "PRBMath_SD59x18_Convert_Overflow",
-          inputs: [
-            {
-              name: "x",
-              type: "int256",
-              internalType: "int256",
-            },
-          ],
-        },
-        {
-          type: "error",
-          name: "PRBMath_SD59x18_Convert_Underflow",
-          inputs: [
-            {
-              name: "x",
-              type: "int256",
-              internalType: "int256",
-            },
-          ],
-        },
-        {
-          type: "error",
-          name: "PRBMath_SD59x18_Div_InputTooSmall",
-          inputs: [],
-        },
-        {
-          type: "error",
-          name: "PRBMath_SD59x18_Div_Overflow",
-          inputs: [
-            {
-              name: "x",
-              type: "int256",
-              internalType: "SD59x18",
-            },
-            {
-              name: "y",
-              type: "int256",
-              internalType: "SD59x18",
-            },
-          ],
-        },
-        {
-          type: "error",
-          name: "PRBMath_SD59x18_Log_InputTooSmall",
-          inputs: [
-            {
-              name: "x",
-              type: "int256",
-              internalType: "SD59x18",
-            },
-          ],
-        },
-        {
-          type: "error",
           name: "ReentrancyGuardReentrantCall",
           inputs: [],
         },
@@ -25117,49 +24384,6 @@ const deployedContracts: GenericContractsDeclaration = {
           ],
           outputs: [],
           stateMutability: "nonpayable",
-        },
-        {
-          type: "function",
-          name: "commitVote",
-          inputs: [
-            {
-              name: "contentId",
-              type: "uint256",
-              internalType: "uint256",
-            },
-            {
-              name: "targetRound",
-              type: "uint64",
-              internalType: "uint64",
-            },
-            {
-              name: "drandChainHash",
-              type: "bytes32",
-              internalType: "bytes32",
-            },
-            {
-              name: "commitHash",
-              type: "bytes32",
-              internalType: "bytes32",
-            },
-            {
-              name: "ciphertext",
-              type: "bytes",
-              internalType: "bytes",
-            },
-            {
-              name: "stakeAmount",
-              type: "uint256",
-              internalType: "uint256",
-            },
-            {
-              name: "frontend",
-              type: "address",
-              internalType: "address",
-            },
-          ],
-          outputs: [],
-          stateMutability: "pure",
         },
         {
           type: "function",
@@ -33579,42 +32803,6 @@ const deployedContracts: GenericContractsDeclaration = {
         },
         {
           type: "function",
-          name: "rewardSubmission",
-          inputs: [
-            {
-              name: "submitter",
-              type: "address",
-              internalType: "address",
-            },
-            {
-              name: "stakeAmount",
-              type: "uint256",
-              internalType: "uint256",
-            },
-          ],
-          outputs: [],
-          stateMutability: "nonpayable",
-        },
-        {
-          type: "function",
-          name: "rewardVote",
-          inputs: [
-            {
-              name: "voter",
-              type: "address",
-              internalType: "address",
-            },
-            {
-              name: "stakeAmount",
-              type: "uint256",
-              internalType: "uint256",
-            },
-          ],
-          outputs: [],
-          stateMutability: "nonpayable",
-        },
-        {
-          type: "function",
           name: "setAuthorizedCaller",
           inputs: [
             {
@@ -33752,12 +32940,6 @@ const deployedContracts: GenericContractsDeclaration = {
               type: "uint256",
               indexed: false,
               internalType: "uint256",
-            },
-            {
-              name: "isSubmission",
-              type: "bool",
-              indexed: false,
-              internalType: "bool",
             },
             {
               name: "totalDistributedAfter",
@@ -33963,8 +33145,6 @@ const deployedContracts: GenericContractsDeclaration = {
         getCurrentRateBps: "contracts/interfaces/IParticipationPool.sol",
         releaseReservedReward: "contracts/interfaces/IParticipationPool.sol",
         reserveReward: "contracts/interfaces/IParticipationPool.sol",
-        rewardSubmission: "contracts/interfaces/IParticipationPool.sol",
-        rewardVote: "contracts/interfaces/IParticipationPool.sol",
         withdrawReservedReward: "contracts/interfaces/IParticipationPool.sol",
         owner: "lib/openzeppelin-contracts/contracts/access/Ownable.sol",
         renounceOwnership:
@@ -41569,25 +40749,6 @@ const deployedContracts: GenericContractsDeclaration = {
         },
         {
           type: "function",
-          name: "isUrlSubmitted",
-          inputs: [
-            {
-              name: "url",
-              type: "string",
-              internalType: "string",
-            },
-          ],
-          outputs: [
-            {
-              name: "",
-              type: "bool",
-              internalType: "bool",
-            },
-          ],
-          stateMutability: "pure",
-        },
-        {
-          type: "function",
           name: "markDormant",
           inputs: [
             {
@@ -41811,79 +40972,6 @@ const deployedContracts: GenericContractsDeclaration = {
         },
         {
           type: "function",
-          name: "previewQuestionSubmissionKey",
-          inputs: [
-            {
-              name: "url",
-              type: "string",
-              internalType: "string",
-            },
-            {
-              name: "title",
-              type: "string",
-              internalType: "string",
-            },
-            {
-              name: "description",
-              type: "string",
-              internalType: "string",
-            },
-            {
-              name: "tags",
-              type: "string",
-              internalType: "string",
-            },
-            {
-              name: "categoryId",
-              type: "uint256",
-              internalType: "uint256",
-            },
-          ],
-          outputs: [
-            {
-              name: "resolvedCategoryId",
-              type: "uint256",
-              internalType: "uint256",
-            },
-            {
-              name: "submissionKey",
-              type: "bytes32",
-              internalType: "bytes32",
-            },
-          ],
-          stateMutability: "pure",
-        },
-        {
-          type: "function",
-          name: "previewSubmissionKey",
-          inputs: [
-            {
-              name: "url",
-              type: "string",
-              internalType: "string",
-            },
-            {
-              name: "categoryId",
-              type: "uint256",
-              internalType: "uint256",
-            },
-          ],
-          outputs: [
-            {
-              name: "resolvedCategoryId",
-              type: "uint256",
-              internalType: "uint256",
-            },
-            {
-              name: "submissionKey",
-              type: "bytes32",
-              internalType: "bytes32",
-            },
-          ],
-          stateMutability: "pure",
-        },
-        {
-          type: "function",
           name: "protocolConfig",
           inputs: [],
           outputs: [
@@ -42030,56 +41118,6 @@ const deployedContracts: GenericContractsDeclaration = {
           inputs: [
             {
               name: "contentId",
-              type: "uint256",
-              internalType: "uint256",
-            },
-          ],
-          outputs: [],
-          stateMutability: "nonpayable",
-        },
-        {
-          type: "function",
-          name: "resolveSubmissionKey",
-          inputs: [
-            {
-              name: "url",
-              type: "string",
-              internalType: "string",
-            },
-          ],
-          outputs: [
-            {
-              name: "submissionKey",
-              type: "bytes32",
-              internalType: "bytes32",
-            },
-          ],
-          stateMutability: "pure",
-        },
-        {
-          type: "function",
-          name: "returnSubmitterStakeWithMilestoneZeroTerms",
-          inputs: [
-            {
-              name: "contentId",
-              type: "uint256",
-              internalType: "uint256",
-            },
-          ],
-          outputs: [],
-          stateMutability: "nonpayable",
-        },
-        {
-          type: "function",
-          name: "returnSubmitterStakeWithRewardRate",
-          inputs: [
-            {
-              name: "contentId",
-              type: "uint256",
-              internalType: "uint256",
-            },
-            {
-              name: "rewardRateBps",
               type: "uint256",
               internalType: "uint256",
             },
@@ -42300,94 +41338,6 @@ const deployedContracts: GenericContractsDeclaration = {
         },
         {
           type: "function",
-          name: "submitContent",
-          inputs: [
-            {
-              name: "url",
-              type: "string",
-              internalType: "string",
-            },
-            {
-              name: "title",
-              type: "string",
-              internalType: "string",
-            },
-            {
-              name: "description",
-              type: "string",
-              internalType: "string",
-            },
-            {
-              name: "tags",
-              type: "string",
-              internalType: "string",
-            },
-            {
-              name: "categoryId",
-              type: "uint256",
-              internalType: "uint256",
-            },
-            {
-              name: "salt",
-              type: "bytes32",
-              internalType: "bytes32",
-            },
-          ],
-          outputs: [
-            {
-              name: "",
-              type: "uint256",
-              internalType: "uint256",
-            },
-          ],
-          stateMutability: "pure",
-        },
-        {
-          type: "function",
-          name: "submitQuestion",
-          inputs: [
-            {
-              name: "url",
-              type: "string",
-              internalType: "string",
-            },
-            {
-              name: "title",
-              type: "string",
-              internalType: "string",
-            },
-            {
-              name: "description",
-              type: "string",
-              internalType: "string",
-            },
-            {
-              name: "tags",
-              type: "string",
-              internalType: "string",
-            },
-            {
-              name: "categoryId",
-              type: "uint256",
-              internalType: "uint256",
-            },
-            {
-              name: "salt",
-              type: "bytes32",
-              internalType: "bytes32",
-            },
-          ],
-          outputs: [
-            {
-              name: "",
-              type: "uint256",
-              internalType: "uint256",
-            },
-          ],
-          stateMutability: "pure",
-        },
-        {
-          type: "function",
           name: "submitQuestionWithMedia",
           inputs: [
             {
@@ -42596,24 +41546,6 @@ const deployedContracts: GenericContractsDeclaration = {
               name: "contentId",
               type: "uint256",
               internalType: "uint256",
-            },
-          ],
-          outputs: [],
-          stateMutability: "nonpayable",
-        },
-        {
-          type: "function",
-          name: "updateRatingDirect",
-          inputs: [
-            {
-              name: "contentId",
-              type: "uint256",
-              internalType: "uint256",
-            },
-            {
-              name: "newRating",
-              type: "uint16",
-              internalType: "uint16",
             },
           ],
           outputs: [],
@@ -43372,81 +42304,6 @@ const deployedContracts: GenericContractsDeclaration = {
         },
         {
           type: "error",
-          name: "PRBMath_MulDiv_Overflow",
-          inputs: [
-            {
-              name: "x",
-              type: "uint256",
-              internalType: "uint256",
-            },
-            {
-              name: "y",
-              type: "uint256",
-              internalType: "uint256",
-            },
-            {
-              name: "denominator",
-              type: "uint256",
-              internalType: "uint256",
-            },
-          ],
-        },
-        {
-          type: "error",
-          name: "PRBMath_SD59x18_Convert_Overflow",
-          inputs: [
-            {
-              name: "x",
-              type: "int256",
-              internalType: "int256",
-            },
-          ],
-        },
-        {
-          type: "error",
-          name: "PRBMath_SD59x18_Convert_Underflow",
-          inputs: [
-            {
-              name: "x",
-              type: "int256",
-              internalType: "int256",
-            },
-          ],
-        },
-        {
-          type: "error",
-          name: "PRBMath_SD59x18_Div_InputTooSmall",
-          inputs: [],
-        },
-        {
-          type: "error",
-          name: "PRBMath_SD59x18_Div_Overflow",
-          inputs: [
-            {
-              name: "x",
-              type: "int256",
-              internalType: "SD59x18",
-            },
-            {
-              name: "y",
-              type: "int256",
-              internalType: "SD59x18",
-            },
-          ],
-        },
-        {
-          type: "error",
-          name: "PRBMath_SD59x18_Log_InputTooSmall",
-          inputs: [
-            {
-              name: "x",
-              type: "int256",
-              internalType: "SD59x18",
-            },
-          ],
-        },
-        {
-          type: "error",
           name: "ReentrancyGuardReentrantCall",
           inputs: [],
         },
@@ -43609,49 +42466,6 @@ const deployedContracts: GenericContractsDeclaration = {
           ],
           outputs: [],
           stateMutability: "nonpayable",
-        },
-        {
-          type: "function",
-          name: "commitVote",
-          inputs: [
-            {
-              name: "contentId",
-              type: "uint256",
-              internalType: "uint256",
-            },
-            {
-              name: "targetRound",
-              type: "uint64",
-              internalType: "uint64",
-            },
-            {
-              name: "drandChainHash",
-              type: "bytes32",
-              internalType: "bytes32",
-            },
-            {
-              name: "commitHash",
-              type: "bytes32",
-              internalType: "bytes32",
-            },
-            {
-              name: "ciphertext",
-              type: "bytes",
-              internalType: "bytes",
-            },
-            {
-              name: "stakeAmount",
-              type: "uint256",
-              internalType: "uint256",
-            },
-            {
-              name: "frontend",
-              type: "address",
-              internalType: "address",
-            },
-          ],
-          outputs: [],
-          stateMutability: "pure",
         },
         {
           type: "function",
@@ -52071,42 +50885,6 @@ const deployedContracts: GenericContractsDeclaration = {
         },
         {
           type: "function",
-          name: "rewardSubmission",
-          inputs: [
-            {
-              name: "submitter",
-              type: "address",
-              internalType: "address",
-            },
-            {
-              name: "stakeAmount",
-              type: "uint256",
-              internalType: "uint256",
-            },
-          ],
-          outputs: [],
-          stateMutability: "nonpayable",
-        },
-        {
-          type: "function",
-          name: "rewardVote",
-          inputs: [
-            {
-              name: "voter",
-              type: "address",
-              internalType: "address",
-            },
-            {
-              name: "stakeAmount",
-              type: "uint256",
-              internalType: "uint256",
-            },
-          ],
-          outputs: [],
-          stateMutability: "nonpayable",
-        },
-        {
-          type: "function",
           name: "setAuthorizedCaller",
           inputs: [
             {
@@ -52244,12 +51022,6 @@ const deployedContracts: GenericContractsDeclaration = {
               type: "uint256",
               indexed: false,
               internalType: "uint256",
-            },
-            {
-              name: "isSubmission",
-              type: "bool",
-              indexed: false,
-              internalType: "bool",
             },
             {
               name: "totalDistributedAfter",
@@ -52455,8 +51227,6 @@ const deployedContracts: GenericContractsDeclaration = {
         getCurrentRateBps: "contracts/interfaces/IParticipationPool.sol",
         releaseReservedReward: "contracts/interfaces/IParticipationPool.sol",
         reserveReward: "contracts/interfaces/IParticipationPool.sol",
-        rewardSubmission: "contracts/interfaces/IParticipationPool.sol",
-        rewardVote: "contracts/interfaces/IParticipationPool.sol",
         withdrawReservedReward: "contracts/interfaces/IParticipationPool.sol",
         owner: "lib/openzeppelin-contracts/contracts/access/Ownable.sol",
         renounceOwnership:

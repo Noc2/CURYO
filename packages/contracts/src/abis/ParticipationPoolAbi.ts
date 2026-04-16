@@ -283,42 +283,6 @@ export const ParticipationPoolAbi = [
   },
   {
     "type": "function",
-    "name": "rewardSubmission",
-    "inputs": [
-      {
-        "name": "submitter",
-        "type": "address",
-        "internalType": "address"
-      },
-      {
-        "name": "stakeAmount",
-        "type": "uint256",
-        "internalType": "uint256"
-      }
-    ],
-    "outputs": [],
-    "stateMutability": "nonpayable"
-  },
-  {
-    "type": "function",
-    "name": "rewardVote",
-    "inputs": [
-      {
-        "name": "voter",
-        "type": "address",
-        "internalType": "address"
-      },
-      {
-        "name": "stakeAmount",
-        "type": "uint256",
-        "internalType": "uint256"
-      }
-    ],
-    "outputs": [],
-    "stateMutability": "nonpayable"
-  },
-  {
-    "type": "function",
     "name": "setAuthorizedCaller",
     "inputs": [
       {
@@ -456,12 +420,6 @@ export const ParticipationPoolAbi = [
         "type": "uint256",
         "indexed": false,
         "internalType": "uint256"
-      },
-      {
-        "name": "isSubmission",
-        "type": "bool",
-        "indexed": false,
-        "internalType": "bool"
       },
       {
         "name": "totalDistributedAfter",
