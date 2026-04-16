@@ -158,7 +158,8 @@ contract QuestionRewardPoolEscrow is
         require(registry.isContentActive(contentId), "Content not active");
         require(requiredVoters >= MIN_REQUIRED_VOTERS, "Too few voters");
         require(requiredSettledRounds >= MIN_REQUIRED_SETTLED_ROUNDS, "Too few rounds");
-        require(amount >= requiredSettledRounds, "Amount too small");
+        (,,, uint16 maxVoters) = votingEngine.protocolConfig().config();
+        require(amount >= requiredSettledRounds * uint256(maxVoters), "Amount too small");
         if (expiresAt != 0) {
             require(expiresAt > block.timestamp, "Invalid expiry");
         }
@@ -331,6 +332,7 @@ contract QuestionRewardPoolEscrow is
 
             uint256 allocation = _previewRoundAllocation(rewardPool);
             if (allocation == 0) return 0;
+            if (allocation < eligibleVoters) return 0;
             uint256 previewGrossAmount = _nextEqualShare(allocation, eligibleVoters, 0);
             uint256 previewReservedFrontendFee =
                 _nextEqualShare(_frontendFeeAllocation(rewardPool, allocation), eligibleVoters, 0);
@@ -415,6 +417,7 @@ contract QuestionRewardPoolEscrow is
 
         uint256 allocation = _previewRoundAllocation(rewardPool);
         require(allocation > 0 && allocation <= rewardPool.unallocatedAmount, "No allocation");
+        require(allocation >= eligibleVoters, "Reward allocation too small");
         uint256 frontendFeeAllocation = _frontendFeeAllocation(rewardPool, allocation);
 
         rewardPool.qualifiedRounds++;
@@ -503,6 +506,10 @@ contract QuestionRewardPoolEscrow is
         if (state != RoundLib.RoundState.Settled) return (true, false, 0);
 
         (, canQualify, eligibleVoters) = _previewRoundQualification(rewardPool, roundId);
+        if (canQualify) {
+            uint256 allocation = _previewRoundAllocation(rewardPool);
+            canQualify = allocation >= eligibleVoters;
+        }
         return (true, canQualify, eligibleVoters);
     }
 

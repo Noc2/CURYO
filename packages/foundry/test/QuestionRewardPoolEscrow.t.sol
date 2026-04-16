@@ -22,6 +22,7 @@ contract QuestionRewardPoolEscrowTest is VotingTestBase {
     RoundRewardDistributor public rewardDistributor;
     FrontendRegistry public frontendRegistry;
     QuestionRewardPoolEscrow public rewardPoolEscrow;
+    ProtocolConfig public protocolConfig;
     MockERC20 public usdc;
     MockVoterIdNFT public voterIdNFT;
 
@@ -77,7 +78,7 @@ contract QuestionRewardPoolEscrowTest is VotingTestBase {
         FrontendRegistry frontendRegistryImpl = new FrontendRegistry();
         QuestionRewardPoolEscrow rewardPoolImpl = new QuestionRewardPoolEscrow();
 
-        ProtocolConfig protocolConfig = _deployProtocolConfig(owner);
+        protocolConfig = _deployProtocolConfig(owner);
         registry = ContentRegistry(
             address(
                 new ERC1967Proxy(
@@ -392,6 +393,41 @@ contract QuestionRewardPoolEscrowTest is VotingTestBase {
         vm.stopPrank();
     }
 
+    function testRewardPoolAmountMustCoverMaxVotersForEachRequiredRound() public {
+        uint256 contentId = _submitQuestion("");
+
+        vm.startPrank(funder);
+        usdc.approve(address(rewardPoolEscrow), 199);
+        vm.expectRevert("Amount too small");
+        rewardPoolEscrow.createRewardPool(contentId, 199, 3, 1, 0);
+        vm.stopPrank();
+    }
+
+    function testUnderfundedRoundDoesNotQualifyAndCanBeSkipped() public {
+        vm.prank(owner);
+        protocolConfig.setConfig(EPOCH_DURATION, 7 days, 3, 3);
+
+        uint256 contentId = _submitQuestion("");
+        uint256 rewardPoolId = _createRewardPool(contentId, 3, 3, 1);
+
+        vm.prank(owner);
+        protocolConfig.setConfig(EPOCH_DURATION, 7 days, 3, 200);
+
+        uint256 underfundedRoundId = _settleRoundWith(_fourVoters(), contentId, _directions(true, true, false, true));
+
+        assertEq(rewardPoolEscrow.claimableQuestionReward(rewardPoolId, underfundedRoundId, voter1), 0);
+        vm.prank(voter1);
+        vm.expectRevert("Reward allocation too small");
+        rewardPoolEscrow.claimQuestionReward(rewardPoolId, underfundedRoundId);
+
+        vm.warp(block.timestamp + 25 hours);
+        uint256 eligibleRoundId = _settleRoundWith(_threeVoters(), contentId, _directions(true, true, false));
+
+        vm.prank(voter1);
+        uint256 reward = rewardPoolEscrow.claimQuestionReward(rewardPoolId, eligibleRoundId);
+        assertEq(reward, 1);
+    }
+
     function _submitQuestion(string memory url) internal returns (uint256 contentId) {
         string memory mediaUrl = bytes(url).length == 0 ? DEFAULT_MEDIA_URL : url;
         string[] memory imageUrls = new string[](1);
@@ -489,10 +525,26 @@ contract QuestionRewardPoolEscrowTest is VotingTestBase {
         voters[2] = voter3;
     }
 
+    function _fourVoters() internal view returns (address[] memory voters) {
+        voters = new address[](4);
+        voters[0] = voter1;
+        voters[1] = voter2;
+        voters[2] = voter3;
+        voters[3] = voter4;
+    }
+
     function _directions(bool a, bool b, bool c) internal pure returns (bool[] memory directions) {
         directions = new bool[](3);
         directions[0] = a;
         directions[1] = b;
         directions[2] = c;
+    }
+
+    function _directions(bool a, bool b, bool c, bool d) internal pure returns (bool[] memory directions) {
+        directions = new bool[](4);
+        directions[0] = a;
+        directions[1] = b;
+        directions[2] = c;
+        directions[3] = d;
     }
 }
