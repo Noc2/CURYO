@@ -5,6 +5,7 @@ const DEV_FAUCET_ENABLED = process.env.DEV_FAUCET_ENABLED === "true" && process.
 const RATE_LIMIT = { limit: 10, windowMs: 60_000 }; // 10 req/min per IP
 
 const CREP_DECIMALS = 6;
+const USDC_DECIMALS = 6;
 const MAX_MINT_AMOUNT = 10_000; // Cap per request
 
 const mintERC20Abi = [
@@ -43,6 +44,16 @@ const hasVoterIdAbi = [
   },
 ] as const;
 
+const questionRewardPoolEscrowAbi = [
+  {
+    type: "function",
+    name: "usdcToken",
+    inputs: [],
+    outputs: [{ name: "", type: "address" }],
+    stateMutability: "view",
+  },
+] as const;
+
 export const dynamic = "force-dynamic";
 
 export async function POST(request: NextRequest) {
@@ -65,7 +76,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Invalid wallet address" }, { status: 400 });
     }
 
-    if (!["mint-crep", "mint-voter-id"].includes(action)) {
+    if (!["mint-crep", "mint-voter-id", "mint-usdc"].includes(action)) {
       return NextResponse.json({ error: "Invalid action" }, { status: 400 });
     }
 
@@ -137,6 +148,45 @@ export async function POST(request: NextRequest) {
         success: true,
         txHash,
         action: "mint-crep",
+        amount: requestedAmount.toString(),
+      });
+    }
+
+    if (action === "mint-usdc") {
+      let usdcAddress = contracts.MockERC20?.address as `0x${string}` | undefined;
+
+      if (!usdcAddress) {
+        const escrowAddress = contracts.QuestionRewardPoolEscrow?.address as `0x${string}` | undefined;
+        if (!escrowAddress) {
+          return NextResponse.json({ error: "QuestionRewardPoolEscrow not deployed on localhost" }, { status: 500 });
+        }
+
+        usdcAddress = (await publicClient.readContract({
+          address: escrowAddress,
+          abi: questionRewardPoolEscrowAbi,
+          functionName: "usdcToken",
+        })) as `0x${string}`;
+      }
+
+      const requestedAmount = Number(amount) || 1000;
+      if (requestedAmount <= 0 || requestedAmount > MAX_MINT_AMOUNT) {
+        return NextResponse.json({ error: `Amount must be between 1 and ${MAX_MINT_AMOUNT}` }, { status: 400 });
+      }
+      const mintAmount = parseUnits(requestedAmount.toString(), USDC_DECIMALS);
+
+      const txHash = await walletClient.writeContract({
+        address: usdcAddress,
+        abi: mintERC20Abi,
+        functionName: "mint",
+        args: [address as `0x${string}`, mintAmount],
+      });
+
+      await publicClient.waitForTransactionReceipt({ hash: txHash });
+
+      return NextResponse.json({
+        success: true,
+        txHash,
+        action: "mint-usdc",
         amount: requestedAmount.toString(),
       });
     }

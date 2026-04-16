@@ -460,6 +460,9 @@ contract DeployCuryo is ScaffoldETHDeploy {
         deployments.push(Deployment("ProtocolConfig", address(protocolConfigProxy)));
         deployments.push(Deployment("RoundRewardDistributor", address(rewardDistributorProxy)));
         deployments.push(Deployment("QuestionRewardPoolEscrow", address(questionRewardPoolEscrowProxy)));
+        if (isLocalDev && usdcTokenAddress != address(0)) {
+            deployments.push(Deployment("MockERC20", usdcTokenAddress));
+        }
         deployments.push(Deployment("CategoryRegistry", address(categoryRegistry)));
         deployments.push(Deployment("VoterIdNFT", address(voterIdNFT)));
         deployments.push(Deployment("ParticipationPool", address(participationPool)));

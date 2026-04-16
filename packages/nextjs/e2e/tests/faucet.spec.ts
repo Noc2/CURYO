@@ -44,4 +44,26 @@ test.describe("Dev faucet API", () => {
       expect([403, 409, 500]).toContain(status);
     }
   });
+
+  test("can mint mock USDC via API route", async ({ request }) => {
+    const response = await request.post(`${E2E_BASE_URL}/api/dev-faucet`, {
+      data: {
+        address: ANVIL_ACCOUNTS.account1.address,
+        action: "mint-usdc",
+        amount: 100,
+      },
+    });
+
+    const status = response.status();
+
+    if (status === 200) {
+      const body = await response.json();
+      expect(body.success).toBe(true);
+      expect(body.action).toBe("mint-usdc");
+      expect(body.txHash).toBeTruthy();
+    } else {
+      // Dev faucet disabled (403), not configured (500), or contract not deployed
+      expect([403, 500]).toContain(status);
+    }
+  });
 });

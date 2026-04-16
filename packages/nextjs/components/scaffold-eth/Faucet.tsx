@@ -16,6 +16,7 @@ const FAUCET_ACCOUNT_INDEX = 0;
 
 // cREP token has 6 decimals
 const CREP_DECIMALS = 6;
+const USDC_DECIMALS = 6;
 
 const localWalletClient = createWalletClient({
   chain: hardhat,
@@ -27,8 +28,8 @@ const localPublicClient = createPublicClient({
   transport: http(),
 });
 
-// Minimal ABI for CuryoReputation token functions we need
-const curyoBetaAbi = [
+// Minimal ABI for local mintable ERC20 token functions we need
+const localMintableTokenAbi = [
   {
     type: "function",
     name: "mint",
@@ -54,6 +55,16 @@ const curyoBetaAbi = [
     name: "balanceOf",
     inputs: [{ name: "account", type: "address" }],
     outputs: [{ name: "", type: "uint256" }],
+    stateMutability: "view",
+  },
+] as const;
+
+const questionRewardPoolEscrowAbi = [
+  {
+    type: "function",
+    name: "usdcToken",
+    inputs: [],
+    outputs: [{ name: "", type: "address" }],
     stateMutability: "view",
   },
 ] as const;
@@ -120,11 +131,14 @@ export const FaucetTrigger = ({
 export const FaucetModal = () => {
   const [loading, setLoading] = useState(false);
   const [curyoLoading, setCuryoLoading] = useState(false);
+  const [usdcLoading, setUsdcLoading] = useState(false);
   const [voterIdLoading, setVoterIdLoading] = useState(false);
   const [inputAddress, setInputAddress] = useState<AddressType>();
   const [faucetAddress, setFaucetAddress] = useState<AddressType>();
   const [sendValue, setSendValue] = useState("");
   const [curyoAmount, setCuryoAmount] = useState("1000");
+  const [usdcAmount, setUsdcAmount] = useState("1000");
+  const [mockUsdcTokenAddress, setMockUsdcTokenAddress] = useState<AddressType>();
   const [hasVoterId, setHasVoterId] = useState<boolean | null>(null);
   const [voterIdTokenId, setVoterIdTokenId] = useState<bigint | null>(null);
   const { chain: ConnectedChain, address: connectedAddress } = useAccount();
@@ -137,6 +151,10 @@ export const FaucetModal = () => {
   // Get contract addresses from localhost deployment
   const crepTokenAddress = (deployedContracts as any)[31337]?.CuryoReputation?.address as AddressType | undefined;
   const voterIdNFTAddress = (deployedContracts as any)[31337]?.VoterIdNFT?.address as AddressType | undefined;
+  const directMockUsdcTokenAddress = (deployedContracts as any)[31337]?.MockERC20?.address as AddressType | undefined;
+  const questionRewardPoolEscrowAddress = (deployedContracts as any)[31337]?.QuestionRewardPoolEscrow?.address as
+    | AddressType
+    | undefined;
 
   useEffect(() => {
     if (!isHardhat) return;
@@ -161,6 +179,47 @@ export const FaucetModal = () => {
     };
     getFaucetAddress();
   }, [isHardhat]);
+
+  useEffect(() => {
+    if (!isHardhat) {
+      setMockUsdcTokenAddress(undefined);
+      return;
+    }
+
+    if (directMockUsdcTokenAddress) {
+      setMockUsdcTokenAddress(directMockUsdcTokenAddress);
+      return;
+    }
+
+    if (!questionRewardPoolEscrowAddress) {
+      setMockUsdcTokenAddress(undefined);
+      return;
+    }
+
+    let active = true;
+    const resolveMockUsdcAddress = async () => {
+      try {
+        const address = await localPublicClient.readContract({
+          address: questionRewardPoolEscrowAddress,
+          abi: questionRewardPoolEscrowAbi,
+          functionName: "usdcToken",
+        });
+        if (active) {
+          setMockUsdcTokenAddress(address as AddressType);
+        }
+      } catch {
+        if (active) {
+          setMockUsdcTokenAddress(undefined);
+        }
+      }
+    };
+
+    void resolveMockUsdcAddress();
+
+    return () => {
+      active = false;
+    };
+  }, [directMockUsdcTokenAddress, isHardhat, questionRewardPoolEscrowAddress]);
 
   // Set input address to connected address by default
   useEffect(() => {
@@ -253,7 +312,7 @@ export const FaucetModal = () => {
         });
         const txHash = await localWalletClient.writeContract({
           address: crepTokenAddress,
-          abi: curyoBetaAbi,
+          abi: localMintableTokenAbi,
           functionName: "transfer",
           args: [inputAddress, amount],
           account: humanFaucetAddr,
@@ -267,7 +326,7 @@ export const FaucetModal = () => {
         // Fallback: try mint (works only if supply allows)
         const txHash = await localWalletClient.writeContract({
           address: crepTokenAddress,
-          abi: curyoBetaAbi,
+          abi: localMintableTokenAbi,
           functionName: "mint",
           args: [inputAddress, amount],
           account: faucetAddress,
@@ -285,6 +344,38 @@ export const FaucetModal = () => {
     } catch (error: any) {
       notification.error(error?.message || "Failed to claim cREP tokens");
       setCuryoLoading(false);
+    }
+  };
+
+  const claimUSDC = async () => {
+    if (!inputAddress || !mockUsdcTokenAddress) {
+      notification.error("Missing destination address or mock USDC contract");
+      return;
+    }
+    if (!faucetAddress) {
+      notification.error("Missing faucet address");
+      return;
+    }
+
+    try {
+      setUsdcLoading(true);
+      const amount = parseUnits(usdcAmount, USDC_DECIMALS);
+
+      const txHash = await localWalletClient.writeContract({
+        address: mockUsdcTokenAddress,
+        abi: localMintableTokenAbi,
+        functionName: "mint",
+        args: [inputAddress, amount],
+        account: faucetAddress,
+      });
+      await localPublicClient.waitForTransactionReceipt({ hash: txHash });
+
+      queryClient.invalidateQueries();
+      notification.success(`Sent ${usdcAmount} mock USDC to ${inputAddress.slice(0, 6)}...${inputAddress.slice(-4)}`);
+      setUsdcLoading(false);
+    } catch (error: any) {
+      notification.error(error?.message || "Failed to claim mock USDC");
+      setUsdcLoading(false);
     }
   };
 
@@ -423,6 +514,37 @@ export const FaucetModal = () => {
                   <span className="loading loading-spinner loading-sm"></span>
                 )}
                 <span>Claim cREP</span>
+              </button>
+            </div>
+
+            {/* Mock USDC Faucet Section */}
+            <div className="bg-accent/10 rounded-xl p-4 space-y-3">
+              <h4 className="font-semibold text-accent">Claim Mock USDC</h4>
+              <p className="text-base text-base-content/60">
+                Fund local question reward pools without using real USDC.
+              </p>
+              <div className="flex gap-2">
+                <input
+                  type="number"
+                  className="input input-bordered input-sm flex-1"
+                  placeholder="Amount"
+                  value={usdcAmount}
+                  onChange={e => setUsdcAmount(e.target.value)}
+                  min="1"
+                />
+                <span className="self-center text-base font-medium">USDC</span>
+              </div>
+              <button
+                className="h-10 btn btn-accent btn-sm px-4 rounded-full w-full"
+                onClick={claimUSDC}
+                disabled={usdcLoading || !usdcAmount || !inputAddress || !mockUsdcTokenAddress}
+              >
+                {!usdcLoading ? (
+                  <GiftIcon className="h-5 w-5" />
+                ) : (
+                  <span className="loading loading-spinner loading-sm"></span>
+                )}
+                <span>Claim Mock USDC</span>
               </button>
             </div>
 

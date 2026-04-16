@@ -89,7 +89,7 @@ Key environment variables (see `.env.example` for the full list):
 | `CURYO_MCP_SESSION_TTL_MS`              | Lifetime for minted wallet-bound MCP bearer sessions                          |
 | `KEYSTORE_ACCOUNT`                      | Optional Foundry keystore name used by the development faucet                 |
 | `KEYSTORE_PASSWORD`                     | Optional password used to decrypt the development faucet keystore             |
-| `DEV_FAUCET_ENABLED`                    | Enable the development-only faucet route                                      |
+| `DEV_FAUCET_ENABLED`                    | Enable the development-only cREP, mock USDC, and Voter ID faucet route        |
 | `FAUCET_PRIVATE_KEY`                    | Server-side faucet wallet key                                                 |
 
 Notes:
