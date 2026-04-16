@@ -466,20 +466,6 @@ function updatePonderEnv(allGeneratedContracts, deployers = {}) {
     ? parseEnvFile(readFileSync(ponderEnvPath, "utf8"))
     : {};
 
-  // Respect explicit remote-network testing:
-  // If deploying localhost while Ponder is pinned to a non-local network
-  // (e.g. celoSepolia), do not rewrite .env.local to hardhat addresses.
-  if (
-    ponderNetwork === "hardhat" &&
-    existingEnv.PONDER_NETWORK &&
-    existingEnv.PONDER_NETWORK !== "hardhat"
-  ) {
-    console.log(
-      `ℹ️  Skipping Ponder .env.local rewrite for localhost deploy because PONDER_NETWORK is pinned to ${existingEnv.PONDER_NETWORK}.`
-    );
-    return;
-  }
-
   existingEnv.PONDER_NETWORK = ponderNetwork;
 
   const rpcEnvKey = `PONDER_RPC_URL_${chainId}`;

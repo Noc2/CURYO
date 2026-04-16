@@ -46,8 +46,9 @@ Within the package directory, additional scripts are available:
 | `RATE_LIMIT_TRUSTED_IP_HEADERS` | Comma-separated proxy IP headers to trust for API rate limiting in production |
 
 For supported chains, Ponder treats `@curyo/contracts` as the source of truth and ignores stale address/start-block env values.
-After `yarn deploy --network celoSepolia --keystore <name>`, the Foundry deployment script refreshes
-`packages/ponder/.env.local` to match those shared deployment values.
+After `yarn deploy`, the Foundry deployment script refreshes `packages/ponder/.env.local` to match the deployment
+target. Local deploys set `PONDER_NETWORK=hardhat`; live deploys such as
+`yarn deploy --network celoSepolia --keystore <name>` set the matching live network.
 
 ## Project Structure
 
