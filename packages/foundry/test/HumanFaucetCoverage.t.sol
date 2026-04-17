@@ -8,6 +8,9 @@ import { CuryoReputation } from "../contracts/CuryoReputation.sol";
 import { VoterIdNFT } from "../contracts/VoterIdNFT.sol";
 import { ISelfVerificationRoot } from "@selfxyz/contracts/contracts/interfaces/ISelfVerificationRoot.sol";
 import { MockVoterIdNFT } from "./mocks/MockVoterIdNFT.sol";
+import { IERC721Errors } from "@openzeppelin/contracts/interfaces/draft-IERC6093.sol";
+
+contract NonERC721Receiver { }
 
 // =========================================================================
 // TEST CONTRACT: HumanFaucet Coverage Gaps
@@ -101,6 +104,27 @@ contract HumanFaucetCoverageTest is Test {
 
         assertEq(crepToken.balanceOf(user1), TIER_0_AMOUNT);
         // No revert, no minting
+    }
+
+    function test_Claim_RevertsAtomicallyWhenVoterIdMintFails() public {
+        VoterIdNFT realVoterIdNFT = _deployRealVoterIdNFT();
+        NonERC721Receiver nonReceiver = new NonERC721Receiver();
+        address user = address(nonReceiver);
+        uint256 nullifier = 123456;
+
+        vm.prank(admin);
+        faucet.setVoterIdNFT(address(realVoterIdNFT));
+
+        mockHub.setVerifiedWithNullifier(user, nullifier);
+
+        vm.expectRevert(abi.encodeWithSelector(IERC721Errors.ERC721InvalidReceiver.selector, user));
+        mockHub.simulateVerification(address(faucet), user);
+
+        assertEq(crepToken.balanceOf(user), 0);
+        assertFalse(faucet.hasClaimed(user));
+        assertFalse(faucet.isNullifierUsed(nullifier));
+        assertEq(faucet.totalClaimants(), 0);
+        assertEq(faucet.totalClaimed(), 0);
     }
 
     function test_Claim_ClearsInboundDelegation_WhenUsingRealVoterIdNFT() public {
