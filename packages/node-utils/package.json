@@ -5,8 +5,7 @@
   "type": "module",
   "exports": {
     "./contentModeration": "./src/contentModeration.ts",
-    "./keystore": "./src/keystore.ts",
-    "./mcpSessionToken": "./src/mcpSessionToken.ts"
+    "./keystore": "./src/keystore.ts"
   },
   "scripts": {
     "check-types": "tsc --noEmit"

@@ -10,7 +10,6 @@ test.describe("Documentation pages", () => {
     "/docs/how-it-works",
     "/docs/tokenomics",
     "/docs/governance",
-    "/docs/ai",
     "/docs/sdk",
     "/docs/smart-contracts",
     "/docs/frontend-codes",
@@ -36,18 +35,6 @@ test.describe("Documentation pages", () => {
     await page.goto("/docs/funding-wallet");
     await page.waitForURL(/\/docs\/how-it-works#transaction-costs$/);
     await expect(page.locator("h1").first()).toBeVisible({ timeout: 10_000 });
-  });
-
-  test("legacy AI agents docs redirect to the canonical AI page", async ({ page }) => {
-    await page.goto("/docs/ai-agents");
-    await page.waitForURL(/\/docs\/ai$/);
-    await expect(page.getByRole("heading", { name: /^AI & MCP$/i }).first()).toBeVisible({ timeout: 10_000 });
-  });
-
-  test("legacy Curyo and AI docs redirect to the canonical AI page", async ({ page }) => {
-    await page.goto("/docs/curyo-and-ai");
-    await page.waitForURL(/\/docs\/ai$/);
-    await expect(page.getByRole("heading", { name: /^AI & MCP$/i }).first()).toBeVisible({ timeout: 10_000 });
   });
 
   test("docs sidebar navigation works", async ({ page }) => {

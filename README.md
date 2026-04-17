@@ -34,7 +34,7 @@ See the in-app documentation at `/docs` for detailed game theory analysis and se
 
 ## Architecture
 
-Curyo is a monorepo with nine packages:
+Curyo is a monorepo with eight packages:
 
 | Package | Description |
 |---|---|
@@ -45,7 +45,6 @@ Curyo is a monorepo with nine packages:
 | `packages/ponder` | Ponder indexer for on-chain event processing and API |
 | `packages/keeper` | Standalone keeper service for keeper-assisted round settlement |
 | `packages/bot` | Manual CLI bot for content submission and voting |
-| `packages/mcp-server` | MCP server exposing Curyo data and optional hosted write tools to AI agents |
 | `packages/node-utils` | Shared Node.js utilities used by services and scripts |
 
 ```
@@ -56,7 +55,6 @@ sdk        (shared)  → hosted read client + vote/frontend integration helpers
 ponder     (index)   → REST API at localhost:42069
 nextjs     (frontend)→ reads contracts via thirdweb, wagmi, and the Ponder API
 keeper     (service) → settles rounds, finalizes reveal failures, cleans up unrevealed votes, marks dormant content
-mcp-server (tools)   → exposes MCP tools backed by the Ponder API, plus optional hosted write tools
 ```
 
 Built with Next.js, Foundry, Ponder, thirdweb, wagmi, viem, Drizzle ORM, and PostgreSQL.
@@ -195,10 +193,9 @@ In-app documentation is available at `/docs` when running the frontend.
 For app integrations, the framework-agnostic SDK lives in `packages/sdk` and provides hosted/indexed reads plus
 vote/frontend helpers for existing websites and apps.
 
-Additional local interfaces:
+Additional local interface:
 
 - Ponder REST API at `http://localhost:42069` after `yarn ponder:dev`
-- MCP server via `yarn mcp:dev` (stdio) or `yarn mcp:dev:http` (streamable HTTP)
 
 ## Contributing
 

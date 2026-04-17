@@ -79,12 +79,6 @@ Key environment variables (see `.env.example` for the full list):
 | `THIRDWEB_SERVER_VERIFIER_SECRET`       | Shared secret used by the thirdweb server verifier webhook                    |
 | `FREE_TRANSACTION_LIMIT`                | Free sponsored app transactions per verified Voter ID (defaults to `25`)      |
 | `RATE_LIMIT_TRUSTED_IP_HEADERS`         | Comma-separated proxy IP headers to trust for API rate limiting in production |
-| `CURYO_MCP_HTTP_SESSION_SECRET`         | Shared HMAC secret used to mint wallet-bound MCP bearer sessions              |
-| `CURYO_MCP_HTTP_SESSION_KEY_ID`         | Session signing key id advertised in MCP bearer session headers               |
-| `CURYO_MCP_HTTP_SESSION_ISSUER`         | Issuer claim for wallet-bound MCP bearer sessions                             |
-| `CURYO_MCP_HTTP_SESSION_AUDIENCE`       | Audience claim for wallet-bound MCP bearer sessions                           |
-| `CURYO_MCP_SESSION_WALLET_BINDINGS`     | JSON array mapping wallet addresses to allowed MCP scopes and optional write identity ids |
-| `CURYO_MCP_SESSION_TTL_MS`              | Lifetime for minted wallet-bound MCP bearer sessions                          |
 | `KEYSTORE_ACCOUNT`                      | Optional Foundry keystore name used by the development faucet                 |
 | `KEYSTORE_PASSWORD`                     | Optional password used to decrypt the development faucet keystore             |
 | `DEV_FAUCET_ENABLED`                    | Enable the development-only cREP, mock USDC, and Voter ID faucet route        |
@@ -101,7 +95,6 @@ Notes:
 - On Next.js 15, `NextRequest.ip` is not reliably populated. On non-Vercel production hosts you must configure `RATE_LIMIT_TRUSTED_IP_HEADERS` to the header(s) your hosting proxy overwrites. Vercel auto-trusts `x-real-ip`, and localhost shortcuts are only enabled for development or explicit local production-style E2E builds. Protected API routes fail closed when no trusted client IP can be derived or when the rate-limit store is unavailable.
 - The free transaction quota is enforced by the thirdweb server verifier route at `/api/thirdweb/verify-transaction`. Configure the same secret in thirdweb’s dashboard and in `THIRDWEB_SERVER_VERIFIER_SECRET`.
 - The Next.js dev faucet reads `KEYSTORE_ACCOUNT`/`KEYSTORE_PASSWORD` or `FAUCET_PRIVATE_KEY` from `packages/nextjs/.env.local`. Keeper wallet settings live separately in `packages/keeper/.env.local`.
-- Wallet-bound MCP session issuance lives at `/api/mcp/session/challenge` and `/api/mcp/session/token`. Keep `CURYO_MCP_HTTP_SESSION_*` aligned with the MCP server so the issued bearer sessions verify server-side, and use `CURYO_MCP_SESSION_WALLET_BINDINGS` to pin each wallet to the exact scopes and optional write identity it may use.
 
 ## Project Structure
 
@@ -114,7 +107,7 @@ app/                          # Next.js App Router
 └── profiles/, settings/      # User profile and preference routes
 
 components/                   # React components
-├── content/embeds/           # Platform-specific embeds (YouTube, Twitter, etc.)
+├── content/embeds/           # Media embeds
 ├── home/, leaderboard/       # Home and leaderboard UIs
 ├── profile/, submit/, vote/  # Feature-specific flows
 ├── shared/, ui/              # Shared presentation primitives

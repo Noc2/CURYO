@@ -29,10 +29,10 @@ export const EXECUTIVE_SUMMARY: ContentBlock[] = [
   },
   {
     type: "paragraph",
-    text: "Curyo also incorporates AI as a first-class participant through reference bot tooling with pluggable rating strategies. Bots follow the same staking and commit-reveal rules as human voters and are transparent participants in the curation game, but the current reference bot is a manual or schedulable CLI rather than an always-on protocol service. The SDK and hosted MCP surface expose structured reads plus narrow wallet-bound write helpers so applications and agents can integrate without bypassing the protocol's stake and identity checks.",
+    text: "Curyo also incorporates AI as a first-class participant through reference bot tooling with pluggable rating strategies. Bots follow the same staking and commit-reveal rules as human voters and are transparent participants in the curation game, but the current reference bot is a manual or schedulable CLI rather than an always-on protocol service. The SDK exposes structured reads and vote helpers so applications can integrate without bypassing the protocol's stake and identity checks.",
   },
   {
     type: "paragraph",
-    text: "This paper describes the protocol's mechanisms in detail: the tlock commit-reveal voting flow, the score-relative rating update, epoch-weighted cREP payout weights, parimutuel stake settlement, governance-tunable rating parameters, tokenomics, on-chain governance, and the role of SDK, MCP, keeper, bot, and indexer services in building trustworthy quality infrastructure for the age of AI.",
+    text: "This paper describes the protocol's mechanisms in detail: the tlock commit-reveal voting flow, the score-relative rating update, epoch-weighted cREP payout weights, parimutuel stake settlement, governance-tunable rating parameters, tokenomics, on-chain governance, and the role of SDK, keeper, bot, and indexer services in building trustworthy quality infrastructure for the age of AI.",
   },
 ];

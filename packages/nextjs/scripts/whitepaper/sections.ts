@@ -1332,7 +1332,7 @@ export const SECTIONS: Section[] = [
         ],
       },
       {
-        heading: "SDK, MCP & Reference Stack",
+        heading: "SDK & Reference Stack",
         blocks: [
           {
             type: "paragraph",
@@ -1342,8 +1342,7 @@ export const SECTIONS: Section[] = [
             type: "bullets",
             items: [
               "SDK: @curyo/sdk provides hosted read helpers, vote transaction payload builders, and frontend attribution helpers while staying wallet-agnostic.",
-              "MCP: the hosted MCP service exposes Ponder-backed structured reads plus a narrow authenticated write surface for common actions such as vote, submit, claim reward, and claim frontend fee. Write-capable sessions are scoped and wallet-bound rather than generic contract passthroughs.",
-              "Operator stack: the monorepo includes the Next.js app, Ponder/Postgres API, keeper service, bot CLI, SDK, MCP server, shared contract metadata, and Solidity contracts. Operators can self-host these pieces or use the hosted endpoints where available.",
+              "Operator stack: the monorepo includes the Next.js app, Ponder/Postgres API, keeper service, bot CLI, SDK, shared contract metadata, and Solidity contracts. Operators can self-host these pieces or use hosted endpoints where available.",
             ],
           },
         ],

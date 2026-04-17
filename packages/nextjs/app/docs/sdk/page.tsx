@@ -5,7 +5,6 @@ const sdkSourceHref = "https://github.com/Noc2/CURYO/tree/main/packages/sdk";
 const referenceAppSourceHref = "https://github.com/Noc2/CURYO/tree/main/packages/nextjs";
 const keeperSourceHref = "https://github.com/Noc2/CURYO/tree/main/packages/keeper";
 const ponderSourceHref = "https://github.com/Noc2/CURYO/tree/main/packages/ponder";
-const mcpServerSourceHref = "https://github.com/Noc2/CURYO/tree/main/packages/mcp-server";
 
 const SdkPage: NextPage = () => {
   return (
@@ -137,14 +136,10 @@ const txData = buildVoteTransferAndCallData({
         If you need the surrounding operator stack, the open-source implementation is split across the{" "}
         <a href={keeperSourceHref} target="_blank" rel="noopener noreferrer" className="link link-primary">
           keeper
-        </a>
-        ,{" "}
+        </a>{" "}
+        and{" "}
         <a href={ponderSourceHref} target="_blank" rel="noopener noreferrer" className="link link-primary">
           Ponder indexer
-        </a>
-        , and{" "}
-        <a href={mcpServerSourceHref} target="_blank" rel="noopener noreferrer" className="link link-primary">
-          MCP server
         </a>{" "}
         packages in the monorepo.
       </p>

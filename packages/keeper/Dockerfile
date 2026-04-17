@@ -14,7 +14,6 @@ COPY packages/contracts/src ./packages/contracts/src
 COPY packages/keeper/package.json ./packages/keeper/package.json
 COPY packages/keeper/tsconfig.json ./packages/keeper/tsconfig.json
 COPY packages/keeper/src ./packages/keeper/src
-COPY packages/mcp-server/package.json ./packages/mcp-server/package.json
 COPY packages/nextjs/package.json ./packages/nextjs/package.json
 COPY packages/node-utils/package.json ./packages/node-utils/package.json
 COPY packages/node-utils/tsconfig.json ./packages/node-utils/tsconfig.json

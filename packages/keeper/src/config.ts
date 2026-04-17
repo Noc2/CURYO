@@ -232,7 +232,7 @@ function loadConfig() {
     // Logging
     logFormat: (process.env.LOG_FORMAT || "json") as "json" | "text",
 
-    // Hosted MCP frontend-fee ops
+    // Frontend-fee ops
     frontendFees: {
       enabled: frontendFeeEnabled,
       frontendAddress: readOptionalAddressEnv("KEEPER_FRONTEND_ADDRESS", errors),

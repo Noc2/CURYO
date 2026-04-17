@@ -71,20 +71,13 @@
     "bot:status": "yarn workspace @curyo/bot status",
     "keeper:start": "yarn workspace @curyo/keeper start",
     "keeper:dev": "yarn workspace @curyo/keeper dev",
-    "mcp:build": "yarn workspace @curyo/mcp-server build",
-    "mcp:start": "yarn workspace @curyo/mcp-server start",
-    "mcp:start:http": "yarn workspace @curyo/mcp-server start:http",
-    "mcp:dev": "yarn workspace @curyo/mcp-server dev",
-    "mcp:dev:http": "yarn workspace @curyo/mcp-server dev:http",
-    "mcp:test": "yarn workspace @curyo/mcp-server test",
-    "mcp:check-types": "yarn workspace @curyo/mcp-server check-types",
     "node-utils:check-types": "yarn workspace @curyo/node-utils check-types",
     "sdk:test": "yarn workspace @curyo/sdk test",
     "sdk:check-types": "yarn workspace @curyo/sdk check-types",
     "e2e": "yarn workspace @curyo/nextjs e2e",
     "e2e:ci:full": "yarn workspace @curyo/nextjs e2e:ci:full",
     "e2e:ui": "yarn workspace @curyo/nextjs e2e:ui",
-    "test:ts": "yarn contracts:check-types && yarn node-utils:check-types && yarn sdk:check-types && yarn contracts:test && yarn sdk:test && yarn next:test && yarn workspace @curyo/keeper test && yarn workspace @curyo/bot test && yarn workspace @curyo/ponder test && yarn workspace @curyo/mcp-server test"
+    "test:ts": "yarn contracts:check-types && yarn node-utils:check-types && yarn sdk:check-types && yarn contracts:test && yarn sdk:test && yarn next:test && yarn workspace @curyo/keeper test && yarn workspace @curyo/bot test && yarn workspace @curyo/ponder test"
   },
   "devDependencies": {
     "husky": "~9.1.6",

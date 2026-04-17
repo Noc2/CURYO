@@ -102,7 +102,7 @@ test("whitepaper avoids stale protocol audit phrases", () => {
   }
 
   assert.match(whitepaperText, /49-scenario/i);
-  assert.match(whitepaperText, /SDK, MCP & Reference Stack/i);
+  assert.match(whitepaperText, /SDK & Reference Stack/i);
   assert.match(whitepaperText, /question-first/i);
   assert.match(whitepaperText, /USDC on Celo/i);
 });
