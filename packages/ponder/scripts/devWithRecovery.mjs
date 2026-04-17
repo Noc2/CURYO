@@ -1,5 +1,6 @@
 import { spawn } from "node:child_process";
 import { existsSync, rmSync } from "node:fs";
+import { createConnection } from "node:net";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -12,6 +13,9 @@ const PONDER_SHUTDOWN_ERROR_MARKER = "PONDER_SHUTDOWN_ERROR_STUCK";
 const SHUTDOWN_STATUS_GRACE_MS = 10_000;
 const SHUTDOWN_STATUS_POLL_MS = 2_000;
 const SHUTDOWN_STATUS_TIMEOUT_MS = 1_500;
+const PONDER_PORT_RELEASE_TIMEOUT_MS = 10_000;
+const PONDER_PORT_RELEASE_POLL_MS = 250;
+const PONDER_PORT_CHECK_TIMEOUT_MS = 500;
 
 function isLocalHardhatRpc(env = process.env) {
   const network = env.PONDER_NETWORK ?? "hardhat";
@@ -93,16 +97,77 @@ async function fetchStatusText(statusUrl) {
   }
 }
 
+function wait(ms) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+function getLocalPort(statusUrl) {
+  const port = Number(statusUrl.port || (statusUrl.protocol === "https:" ? 443 : 80));
+  return Number.isInteger(port) && port > 0 ? port : null;
+}
+
+function canConnectToLocalPort(statusUrl) {
+  const port = getLocalPort(statusUrl);
+  if (!port) return Promise.resolve(false);
+
+  return new Promise((resolve) => {
+    let settled = false;
+    const host = statusUrl.hostname === "localhost" ? "127.0.0.1" : statusUrl.hostname;
+    const socket = createConnection({ host, port });
+
+    const finish = (canConnect) => {
+      if (settled) return;
+      settled = true;
+      socket.destroy();
+      resolve(canConnect);
+    };
+
+    socket.setTimeout(PONDER_PORT_CHECK_TIMEOUT_MS);
+    socket.once("connect", () => finish(true));
+    socket.once("timeout", () => finish(false));
+    socket.once("error", () => finish(false));
+  });
+}
+
+async function waitForPonderPortRelease(statusUrl, env = process.env) {
+  if (!shouldPollPonderStatus(statusUrl, env)) return true;
+
+  const deadline = Date.now() + PONDER_PORT_RELEASE_TIMEOUT_MS;
+  while (Date.now() < deadline) {
+    if (!(await canConnectToLocalPort(statusUrl))) return true;
+    await wait(PONDER_PORT_RELEASE_POLL_MS);
+  }
+
+  return false;
+}
+
 function runDevRaw() {
   return new Promise((resolve, reject) => {
+    const useProcessGroup = process.platform !== "win32";
     const child = spawn("yarn", ["run", "dev:raw"], {
       cwd: ponderDir,
       stdio: ["inherit", "pipe", "pipe"],
       env: process.env,
+      detached: useProcessGroup,
     });
 
     let combinedOutput = "";
     let shutdownRequested = false;
+
+    const stopChild = (signal) => {
+      if (child.exitCode !== null || child.signalCode !== null) return;
+
+      if (useProcessGroup && child.pid) {
+        try {
+          process.kill(-child.pid, signal);
+          return;
+        } catch {
+          // Fall back to the direct child if the process group is already gone.
+        }
+      }
+
+      child.kill(signal);
+    };
 
     const capture = (chunk) => {
       combinedOutput += chunk.toString();
@@ -139,10 +204,10 @@ function runDevRaw() {
               capture(`${message}${PONDER_SHUTDOWN_ERROR_MARKER}\n`);
               process.stderr.write(message);
 
-              child.kill("SIGTERM");
+              stopChild("SIGTERM");
               setTimeout(() => {
                 if (child.exitCode === null && child.signalCode === null) {
-                  child.kill("SIGKILL");
+                  stopChild("SIGKILL");
                 }
               }, 5_000).unref();
             }
@@ -158,9 +223,7 @@ function runDevRaw() {
 
     const forwardSignal = (signal) => {
       shutdownRequested = true;
-      if (!child.killed) {
-        child.kill(signal);
-      }
+      stopChild(signal);
     };
 
     process.once("SIGINT", forwardSignal);
@@ -206,6 +269,11 @@ async function main() {
     );
   } else {
     console.warn(`\nWarning: Detected ${recoveryReason}. Retrying Ponder once...\n`);
+  }
+
+  const releasedPort = await waitForPonderPortRelease(resolvePonderStatusUrl(process.env), process.env);
+  if (!releasedPort) {
+    console.warn("\nWarning: Ponder port is still occupied after recovery stop; retrying anyway...\n");
   }
 
   const secondRun = await runDevRaw();
