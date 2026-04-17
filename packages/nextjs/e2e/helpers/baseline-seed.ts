@@ -204,7 +204,7 @@ const BASELINE_CONTENT = [
     submitter: ANVIL_ACCOUNTS.account8.address,
   },
   {
-    url: "https://en.wikipedia.org/wiki/Marie_Curie",
+    url: "https://picsum.photos/seed/curyo-marie-curie/1200/800.jpg",
     title: "Marie Curie",
     description: "Pioneer in radioactivity research and the first person to win two Nobel Prizes.",
     tags: "Scientists,History",

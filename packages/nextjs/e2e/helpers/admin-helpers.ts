@@ -30,6 +30,61 @@ const ANVIL_PRIVATE_KEYS_BY_ADDRESS = new Map(
 
 type SubmissionMedia = { imageUrls: string[]; videoUrl: string };
 type SubmissionMediaInput = { imageUrls?: readonly string[]; videoUrl?: string };
+const MAX_SUBMISSION_IMAGE_URLS = 4;
+const DIRECT_IMAGE_URL_PATTERN = /^https:\/\/\S+\.(?:avif|gif|jpe?g|png|webp)(?:[?#]\S*)?$/i;
+
+function isSupportedImageUrl(url: string): boolean {
+  return DIRECT_IMAGE_URL_PATTERN.test(url);
+}
+
+function isSupportedYouTubeUrl(url: string): boolean {
+  try {
+    const parsed = new URL(url);
+    if (parsed.protocol !== "https:") return false;
+
+    if (parsed.hostname === "youtu.be") {
+      return parsed.pathname.length > 1;
+    }
+
+    if (parsed.hostname === "www.youtube.com" && parsed.pathname.startsWith("/embed/")) {
+      return parsed.pathname.length > "/embed/".length;
+    }
+
+    const isWatchHost =
+      parsed.hostname === "youtube.com" ||
+      parsed.hostname === "www.youtube.com" ||
+      parsed.hostname === "m.youtube.com";
+    return isWatchHost && parsed.pathname === "/watch" && parsed.searchParams.has("v");
+  } catch {
+    return false;
+  }
+}
+
+function assertSupportedSubmissionMedia(media: SubmissionMedia): SubmissionMedia {
+  const hasVideo = media.videoUrl.trim().length > 0;
+  if (hasVideo) {
+    if (media.imageUrls.length > 0) {
+      throw new Error("E2E submissions must choose images or video, not both.");
+    }
+    if (!isSupportedYouTubeUrl(media.videoUrl)) {
+      throw new Error(`Unsupported E2E submission video URL: ${media.videoUrl}`);
+    }
+    return media;
+  }
+
+  if (media.imageUrls.length === 0) {
+    throw new Error("E2E submissions require at least one image or one YouTube video.");
+  }
+  if (media.imageUrls.length > MAX_SUBMISSION_IMAGE_URLS) {
+    throw new Error(`E2E submissions support at most ${MAX_SUBMISSION_IMAGE_URLS} images.`);
+  }
+  const unsupportedImageUrl = media.imageUrls.find(url => !isSupportedImageUrl(url));
+  if (unsupportedImageUrl) {
+    throw new Error(`Unsupported E2E submission image URL: ${unsupportedImageUrl}`);
+  }
+
+  return media;
+}
 
 async function rpcRequest<T = any>(method: string, params: unknown[]): Promise<T | null> {
   const res = await fetch(ANVIL_RPC, {
@@ -155,23 +210,15 @@ async function buildSubmissionReservation(
 
 function toSubmissionMedia(url: string, media?: SubmissionMediaInput): SubmissionMedia {
   if (media) {
-    return {
+    return assertSupportedSubmissionMedia({
       imageUrls: media.imageUrls ? [...media.imageUrls] : [],
       videoUrl: media.videoUrl ?? "",
-    };
+    });
   }
 
-  try {
-    const parsed = new URL(url);
-    const hostname = parsed.hostname.toLowerCase();
-    const isYouTube =
-      hostname === "youtu.be" ||
-      hostname === "youtube.com" ||
-      hostname.endsWith(".youtube.com");
-    return isYouTube ? { imageUrls: [], videoUrl: url } : { imageUrls: [url], videoUrl: "" };
-  } catch {
-    return { imageUrls: [url], videoUrl: "" };
-  }
+  if (isSupportedYouTubeUrl(url)) return { imageUrls: [], videoUrl: url };
+  if (isSupportedImageUrl(url)) return { imageUrls: [url], videoUrl: "" };
+  throw new Error(`Unsupported E2E submission media URL: ${url}`);
 }
 
 /** Send a raw transaction to the Anvil RPC and report whether its outcome is known. */

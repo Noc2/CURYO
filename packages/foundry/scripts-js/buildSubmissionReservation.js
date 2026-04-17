@@ -13,6 +13,48 @@ const publicClient = createPublicClient({
   transport: http(rpcUrl),
 });
 
+const MAX_SUBMISSION_IMAGE_URLS = 4;
+const DIRECT_IMAGE_URL_PATTERN = /^https:\/\/\S+\.(?:avif|gif|jpe?g|png|webp)(?:[?#]\S*)?$/i;
+
+function isSupportedYouTubeUrl(value) {
+  try {
+    const parsed = new URL(value);
+    if (parsed.protocol !== "https:") return false;
+
+    if (parsed.hostname === "youtu.be") {
+      return parsed.pathname.length > 1;
+    }
+
+    if (parsed.hostname === "www.youtube.com" && parsed.pathname.startsWith("/embed/")) {
+      return parsed.pathname.length > "/embed/".length;
+    }
+
+    const isWatchHost =
+      parsed.hostname === "youtube.com" ||
+      parsed.hostname === "www.youtube.com" ||
+      parsed.hostname === "m.youtube.com";
+    return isWatchHost && parsed.pathname === "/watch" && parsed.searchParams.has("v");
+  } catch {
+    return false;
+  }
+}
+
+function assertSupportedImageUrls(imageUrls) {
+  if (imageUrls.length === 0) {
+    console.error("At least one image URL is required when no YouTube URL is provided.");
+    process.exit(1);
+  }
+  if (imageUrls.length > MAX_SUBMISSION_IMAGE_URLS) {
+    console.error(`Expected at most ${MAX_SUBMISSION_IMAGE_URLS} image URLs.`);
+    process.exit(1);
+  }
+  const unsupportedImageUrl = imageUrls.find(item => !DIRECT_IMAGE_URL_PATTERN.test(item));
+  if (unsupportedImageUrl) {
+    console.error(`Unsupported image URL: ${unsupportedImageUrl}`);
+    process.exit(1);
+  }
+}
+
 function toSubmissionMedia(value) {
   const trimmed = value.trim();
   if (trimmed.startsWith("[")) {
@@ -23,6 +65,7 @@ function toSubmissionMedia(value) {
         parsed.length > 0 &&
         parsed.every(item => typeof item === "string" && item.trim().length > 0)
       ) {
+        assertSupportedImageUrls(parsed);
         return { imageUrls: parsed, videoUrl: "" };
       }
     } catch {
@@ -33,14 +76,12 @@ function toSubmissionMedia(value) {
     process.exit(1);
   }
 
-  try {
-    const parsed = new URL(value);
-    const hostname = parsed.hostname.toLowerCase();
-    const isYouTube = hostname === "youtu.be" || hostname === "youtube.com" || hostname.endsWith(".youtube.com");
-    return isYouTube ? { imageUrls: [], videoUrl: value } : { imageUrls: [value], videoUrl: "" };
-  } catch {
-    return { imageUrls: [value], videoUrl: "" };
+  if (isSupportedYouTubeUrl(trimmed)) {
+    return { imageUrls: [], videoUrl: trimmed };
   }
+
+  assertSupportedImageUrls([trimmed]);
+  return { imageUrls: [trimmed], videoUrl: "" };
 }
 
 const media = toSubmissionMedia(url);
