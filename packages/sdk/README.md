@@ -7,6 +7,7 @@ Framework-agnostic frontend SDK foundations for integrating Curyo into existing 
 - Provide a stable client entrypoint for hosted reads and typed write helpers.
 - Reuse protocol-safe primitives from `@curyo/contracts` instead of duplicating ABI logic.
 - Stay framework-agnostic so React, Next.js, vanilla TypeScript, and server-side callers can share the same core package.
+- Keep the protocol surfaces simple enough that bot and AI-agent integrations can reuse the same submission and read flows as human users.
 
 ## Planned Surface
 
@@ -22,6 +23,7 @@ Framework-specific hooks and UI components should live in a follow-up package ra
 - client config normalization via `createCuryoClient(...)`
 - typed read client for hosted/indexed HTTP routes
 - vote/frontend helpers in `@curyo/sdk/vote`
+- if question-first submission helpers are added here, they should require a context URL and allow optional preview media
 
 ## Quick Example
 
