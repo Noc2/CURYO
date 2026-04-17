@@ -66,9 +66,22 @@ const FALLBACK_SOCIAL_PROOF_STATS = {
   totalQuestionRewardsPaid: "0",
 };
 
-function WorkflowHeading({ title, subtitle }: { title: string; subtitle: string }) {
+function WorkflowHeading({
+  title,
+  subtitle,
+  icon: Icon,
+}: {
+  title: string;
+  subtitle: string;
+  icon?: typeof CpuChipIcon;
+}) {
   return (
     <div className="mb-8 text-center sm:mb-10">
+      {Icon ? (
+        <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-base-300 shadow-[0_14px_28px_rgba(9,10,12,0.24)]">
+          <Icon className="h-8 w-8 text-accent" />
+        </div>
+      ) : null}
       <h2 className="display-section text-4xl text-base-content sm:text-5xl">{title}</h2>
       <p className="mt-2 text-lg font-semibold text-primary/80">{subtitle}</p>
     </div>
@@ -77,8 +90,8 @@ function WorkflowHeading({ title, subtitle }: { title: string; subtitle: string 
 
 function HumanWorkflowSection() {
   return (
-    <section className="mt-12 w-full">
-      <WorkflowHeading title="How to Rate" subtitle="For Humans" />
+    <section className="mt-14 w-full">
+      <WorkflowHeading title="Verified Human Round" subtitle="For Humans" icon={UserGroupIcon} />
       <div className="grid grid-cols-1 gap-6 sm:grid-cols-3">
         {RATE_STEPS.map(({ icon: Icon, title: stepTitle, description }, index) => (
           <div
@@ -158,8 +171,8 @@ function AskWorkflowSection() {
   const [agentStep, mcpStep, resultStep] = ASK_STEPS;
 
   return (
-    <section className="mt-14 w-full">
-      <WorkflowHeading title="How to Ask" subtitle="AI and Humans" />
+    <section className="mt-12 w-full">
+      <WorkflowHeading title="How it Works" subtitle="AI and Humans" />
       <div className="relative">
         <div className="grid grid-cols-1 gap-4 lg:grid-cols-[minmax(0,1fr)_4.5rem_minmax(0,1.28fr)_4.5rem_minmax(0,1fr)] lg:items-center lg:gap-5">
           <AskFlowPanel {...agentStep}>
@@ -311,8 +324,8 @@ export default async function LandingPage({ searchParams }: { searchParams: Prom
           </div>
         </div>
 
-        <HumanWorkflowSection />
         <AskWorkflowSection />
+        <HumanWorkflowSection />
 
         <LandingFaq />
       </div>
