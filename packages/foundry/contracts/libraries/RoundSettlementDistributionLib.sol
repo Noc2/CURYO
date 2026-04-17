@@ -35,14 +35,8 @@ library RoundSettlementDistributionLib {
 
         if (losingPool > 0) {
             uint256 loserRefundShare = RewardMath.calculateRevealedLoserRefund(losingPool);
-            (
-                uint256 voterShare,
-                uint256 submitterShare,
-                uint256 platformShare,
-                uint256 treasuryShare,
-                uint256 consensusShare
-            ) = RewardMath.splitPool(losingPool - loserRefundShare);
-            submitterShare;
+            (uint256 voterShare, uint256 platformShare, uint256 treasuryShare, uint256 consensusShare) =
+                RewardMath.splitPool(losingPool - loserRefundShare);
 
             roundVoterPool[contentId][roundId] = voterShare;
             roundWinningStake[contentId][roundId] = weightedWinningStake;
@@ -76,8 +70,7 @@ library RoundSettlementDistributionLib {
         uint256 subsidy = RewardMath.calculateConsensusSubsidy(totalStake, consensusReserve);
         if (subsidy > 0) {
             updatedConsensusReserve -= subsidy;
-            (uint256 voterSubsidy,) = RewardMath.splitConsensusSubsidy(subsidy);
-            roundVoterPool[contentId][roundId] = voterSubsidy;
+            roundVoterPool[contentId][roundId] = subsidy;
             emit ConsensusSubsidyDistributed(contentId, roundId, subsidy);
         }
 

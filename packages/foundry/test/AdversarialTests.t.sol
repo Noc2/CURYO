@@ -1254,8 +1254,8 @@ contract AdversarialTests is VotingTestBase {
         uint256[5] memory inputs = [uint256(100e6), 1e6, 1, 999_999e6, 10_000_000e6];
 
         for (uint256 i = 0; i < inputs.length; i++) {
-            (uint256 v, uint256 s, uint256 p, uint256 t, uint256 c) = RewardMath.splitPool(inputs[i]);
-            assertEq(v + s + p + t + c, inputs[i], "Split must sum to input");
+            (uint256 v, uint256 p, uint256 t, uint256 c) = RewardMath.splitPool(inputs[i]);
+            assertEq(v + p + t + c, inputs[i], "Split must sum to input");
         }
     }
 
@@ -1271,7 +1271,7 @@ contract AdversarialTests is VotingTestBase {
         stake3 = bound(stake3, 1e6, 100e6);
         losingPool = bound(losingPool, 1e6, 1_000_000e6);
 
-        (uint256 voterPool,,,,) = RewardMath.splitPool(losingPool);
+        (uint256 voterPool,,,) = RewardMath.splitPool(losingPool);
 
         // All three are winners with epoch-1 weight (10000 BPS)
         uint256 eff1 = stake1; // weight 100% → same as stake

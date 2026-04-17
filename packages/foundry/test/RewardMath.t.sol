@@ -7,20 +7,12 @@ import { RoundLib } from "../contracts/libraries/RoundLib.sol";
 
 /// @title Harness to expose RewardMath internal functions for testing
 contract RewardMathHarness {
-    function splitPool(uint256 losingPool) external pure returns (uint256, uint256, uint256, uint256, uint256) {
+    function splitPool(uint256 losingPool) external pure returns (uint256, uint256, uint256, uint256) {
         return RewardMath.splitPool(losingPool);
     }
 
     function calculateRevealedLoserRefund(uint256 losingStake) external pure returns (uint256) {
         return RewardMath.calculateRevealedLoserRefund(losingStake);
-    }
-
-    function splitPoolAfterLoserRefund(uint256 losingPool)
-        external
-        pure
-        returns (uint256, uint256, uint256, uint256, uint256, uint256)
-    {
-        return RewardMath.splitPoolAfterLoserRefund(losingPool);
     }
 
     function calculateConsensusSubsidy(uint256 totalStake, uint256 reserveBalance) external pure returns (uint256) {
@@ -37,10 +29,6 @@ contract RewardMathHarness {
 
     function calculateRating(uint256 totalUpStake, uint256 totalDownStake) external pure returns (uint16) {
         return RewardMath.calculateRating(totalUpStake, totalDownStake);
-    }
-
-    function splitConsensusSubsidy(uint256 subsidy) external pure returns (uint256, uint256) {
-        return RewardMath.splitConsensusSubsidy(subsidy);
     }
 
     function epochWeightBps(uint8 epochIndex) external pure returns (uint256) {
@@ -63,35 +51,25 @@ contract RewardMathTest is Test {
     function testFuzz_SplitPool_Conservation(uint256 losingPool) public view {
         losingPool = bound(losingPool, 0, type(uint128).max);
 
-        (
-            uint256 voterShare,
-            uint256 submitterShare,
-            uint256 platformShare,
-            uint256 treasuryShare,
-            uint256 consensusShare
-        ) = harness.splitPool(losingPool);
+        (uint256 voterShare, uint256 platformShare, uint256 treasuryShare, uint256 consensusShare) =
+            harness.splitPool(losingPool);
 
         assertEq(
-            voterShare + submitterShare + platformShare + treasuryShare + consensusShare,
+            voterShare + platformShare + treasuryShare + consensusShare,
             losingPool,
             "Pool split must conserve total"
         );
     }
 
-    function testFuzz_SplitPoolAfterLoserRefund_Conservation(uint256 losingPool) public view {
+    function testFuzz_LoserRefundThenSplit_Conservation(uint256 losingPool) public view {
         losingPool = bound(losingPool, 0, type(uint128).max);
 
-        (
-            uint256 loserRefundShare,
-            uint256 voterShare,
-            uint256 submitterShare,
-            uint256 platformShare,
-            uint256 treasuryShare,
-            uint256 consensusShare
-        ) = harness.splitPoolAfterLoserRefund(losingPool);
+        uint256 loserRefundShare = harness.calculateRevealedLoserRefund(losingPool);
+        (uint256 voterShare, uint256 platformShare, uint256 treasuryShare, uint256 consensusShare) =
+            harness.splitPool(losingPool - loserRefundShare);
 
         assertEq(
-            loserRefundShare + voterShare + submitterShare + platformShare + treasuryShare + consensusShare,
+            loserRefundShare + voterShare + platformShare + treasuryShare + consensusShare,
             losingPool,
             "Pool split with loser refund must conserve total"
         );
@@ -104,15 +82,9 @@ contract RewardMathTest is Test {
     function testFuzz_SplitPool_VoterShareDominates(uint256 losingPool) public view {
         losingPool = bound(losingPool, 1, type(uint128).max);
 
-        (
-            uint256 voterShare,
-            uint256 submitterShare,
-            uint256 platformShare,
-            uint256 treasuryShare,
-            uint256 consensusShare
-        ) = harness.splitPool(losingPool);
+        (uint256 voterShare, uint256 platformShare, uint256 treasuryShare, uint256 consensusShare) =
+            harness.splitPool(losingPool);
 
-        assertGe(voterShare, submitterShare, "Voter share must be >= submitter share");
         assertGe(voterShare, platformShare, "Voter share must be >= platform share");
         assertGe(voterShare, treasuryShare, "Voter share must be >= treasury share");
         assertGe(voterShare, consensusShare, "Voter share must be >= consensus share");
@@ -121,21 +93,15 @@ contract RewardMathTest is Test {
     function testFuzz_SplitPool_Proportions(uint256 losingPool) public view {
         losingPool = bound(losingPool, 10000, type(uint128).max);
 
-        (
-            uint256 voterShare,
-            uint256 submitterShare,
-            uint256 platformShare,
-            uint256 treasuryShare,
-            uint256 consensusShare
-        ) = harness.splitPool(losingPool);
+        (uint256 voterShare, uint256 platformShare, uint256 treasuryShare, uint256 consensusShare) =
+            harness.splitPool(losingPool);
 
-        assertEq(submitterShare, 0, "Submitter share must be removed");
         assertEq(platformShare, (losingPool * 400) / 10000, "Platform share must be 4%");
         assertEq(treasuryShare, (losingPool * 100) / 10000, "Treasury share must be 1%");
         assertEq(consensusShare, (losingPool * 500) / 10000, "Consensus share must be 5%");
         assertEq(
             voterShare,
-            losingPool - submitterShare - platformShare - treasuryShare - consensusShare,
+            losingPool - platformShare - treasuryShare - consensusShare,
             "Voter share must be remainder"
         );
     }
@@ -242,32 +208,20 @@ contract RewardMathTest is Test {
     // ====================================================
 
     function test_SplitPool_Zero() public view {
-        (
-            uint256 voterShare,
-            uint256 submitterShare,
-            uint256 platformShare,
-            uint256 treasuryShare,
-            uint256 consensusShare
-        ) = harness.splitPool(0);
+        (uint256 voterShare, uint256 platformShare, uint256 treasuryShare, uint256 consensusShare) =
+            harness.splitPool(0);
 
         assertEq(voterShare, 0);
-        assertEq(submitterShare, 0);
         assertEq(platformShare, 0);
         assertEq(treasuryShare, 0);
         assertEq(consensusShare, 0);
     }
 
     function test_SplitPool_SmallValues() public view {
-        // With 100 tokens: submitter = 0, platform = 4, treasury = 1, consensus = 5, voter = 90
-        (
-            uint256 voterShare,
-            uint256 submitterShare,
-            uint256 platformShare,
-            uint256 treasuryShare,
-            uint256 consensusShare
-        ) = harness.splitPool(100);
+        // With 100 tokens: platform = 4, treasury = 1, consensus = 5, voter = 90
+        (uint256 voterShare, uint256 platformShare, uint256 treasuryShare, uint256 consensusShare) =
+            harness.splitPool(100);
 
-        assertEq(submitterShare, 0);
         assertEq(platformShare, 4);
         assertEq(treasuryShare, 1);
         assertEq(consensusShare, 5);
@@ -275,16 +229,10 @@ contract RewardMathTest is Test {
     }
 
     function test_SplitPool_One() public view {
-        // With 1 token: rounding means submitter=0, platform=0, treasury=0, consensus=0, voter=1
-        (
-            uint256 voterShare,
-            uint256 submitterShare,
-            uint256 platformShare,
-            uint256 treasuryShare,
-            uint256 consensusShare
-        ) = harness.splitPool(1);
+        // With 1 token: rounding means platform=0, treasury=0, consensus=0, voter=1
+        (uint256 voterShare, uint256 platformShare, uint256 treasuryShare, uint256 consensusShare) =
+            harness.splitPool(1);
 
-        assertEq(submitterShare, 0);
         assertEq(platformShare, 0);
         assertEq(treasuryShare, 0);
         assertEq(consensusShare, 0);
@@ -321,49 +269,6 @@ contract RewardMathTest is Test {
         // 2000 cREP total stake, 5% = 100 cREP desired, but cap is 50 cREP
         uint256 subsidy = harness.calculateConsensusSubsidy(2000e6, 1_000_000e6);
         assertEq(subsidy, 50e6, "Subsidy capped at 50 cREP (MAX_CONSENSUS_SUBSIDY)");
-    }
-
-    // ====================================================
-    // splitConsensusSubsidy — Unit & Fuzz Tests
-    // ====================================================
-
-    function testFuzz_SplitConsensusSubsidy_Conservation(uint256 subsidy) public view {
-        subsidy = bound(subsidy, 0, type(uint128).max);
-
-        (uint256 voterShare, uint256 submitterShare) = harness.splitConsensusSubsidy(subsidy);
-
-        assertEq(voterShare + submitterShare, subsidy, "Subsidy split must conserve total");
-    }
-
-    function testFuzz_SplitConsensusSubsidy_VoterDominates(uint256 subsidy) public view {
-        subsidy = bound(subsidy, 1, type(uint128).max);
-
-        (uint256 voterShare, uint256 submitterShare) = harness.splitConsensusSubsidy(subsidy);
-
-        assertGe(voterShare, submitterShare, "Voter share must be >= submitter share");
-    }
-
-    function test_SplitConsensusSubsidy_Zero() public view {
-        (uint256 voterShare, uint256 submitterShare) = harness.splitConsensusSubsidy(0);
-
-        assertEq(voterShare, 0);
-        assertEq(submitterShare, 0);
-    }
-
-    function test_SplitConsensusSubsidy_Ratio() public view {
-        // Submitter rewards are removed, so all subsidy goes to voters.
-        (uint256 voterShare, uint256 submitterShare) = harness.splitConsensusSubsidy(9000);
-
-        assertEq(submitterShare, 0, "Submitter subsidy share should be removed");
-        assertEq(voterShare, 9000, "Voter should get the full subsidy");
-    }
-
-    function test_SplitConsensusSubsidy_SmallValue() public view {
-        // subsidy = 1 → submitter = 1 * 1000 / 9000 = 0, voter = 1
-        (uint256 voterShare, uint256 submitterShare) = harness.splitConsensusSubsidy(1);
-
-        assertEq(submitterShare, 0);
-        assertEq(voterShare, 1);
     }
 
     // ====================================================
