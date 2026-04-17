@@ -78,6 +78,8 @@ contract QuestionRewardPoolEscrow is
     mapping(uint256 => mapping(uint256 => RoundSnapshot)) public roundSnapshots;
     mapping(uint256 => mapping(uint256 => mapping(uint256 => bool))) public rewardClaimed;
     uint16 public defaultFrontendFeeBps;
+    mapping(uint256 => address) private rewardPoolFunderHolders;
+    mapping(uint256 => address) private rewardPoolFunderVoterIdNfts;
 
     event RewardPoolCreated(
         uint256 indexed rewardPoolId,
@@ -168,6 +170,8 @@ contract QuestionRewardPoolEscrow is
         }
 
         uint256 funderVoterId = _requireVoterId(msg.sender);
+        address funderHolder = voterIdNFT.getHolder(funderVoterId);
+        require(funderHolder != address(0), "Funder holder required");
         uint256 fundedAmount = _pullExactUsdc(amount);
 
         uint256 currentRoundId = votingEngine.currentRoundId(contentId);
@@ -194,6 +198,8 @@ contract QuestionRewardPoolEscrow is
             voterClaimedAmount: 0,
             frontendClaimedAmount: 0
         });
+        rewardPoolFunderHolders[rewardPoolId] = funderHolder;
+        rewardPoolFunderVoterIdNfts[rewardPoolId] = address(voterIdNFT);
 
         emit RewardPoolCreated(
             rewardPoolId,
@@ -234,9 +240,7 @@ contract QuestionRewardPoolEscrow is
 
         if (skipped > 0) {
             rewardPool.nextRoundToEvaluate = nextRoundToEvaluate.toUint64();
-            emit RewardPoolCursorAdvanced(
-                rewardPoolId, rewardPool.contentId, fromRoundId, nextRoundToEvaluate, skipped
-            );
+            emit RewardPoolCursorAdvanced(rewardPoolId, rewardPool.contentId, fromRoundId, nextRoundToEvaluate, skipped);
         }
     }
 
@@ -493,7 +497,7 @@ contract QuestionRewardPoolEscrow is
         roundSettled = true;
         eligibleVoters = revealedCount;
         if (eligibleVoters == 0) return (true, false, 0);
-        uint256 funderVoterId = _voterIdForRound(rewardPool.contentId, roundId, rewardPool.funder);
+        uint256 funderVoterId = _funderVoterIdForRound(rewardPool, roundId);
         if (funderVoterId != 0 && _hasRevealedCommit(rewardPool.contentId, roundId, funderVoterId)) {
             eligibleVoters--;
         }
@@ -627,8 +631,21 @@ contract QuestionRewardPoolEscrow is
         view
         returns (bool)
     {
-        return voterId == _voterIdForRound(rewardPool.contentId, roundId, rewardPool.funder)
+        return voterId == _funderVoterIdForRound(rewardPool, roundId)
             || voterId == _submitterVoterId(rewardPool.contentId, roundId);
+    }
+
+    function _funderVoterIdForRound(RewardPool storage rewardPool, uint256 roundId) internal view returns (uint256) {
+        address originalVoterIdNft = rewardPoolFunderVoterIdNfts[rewardPool.id];
+        address roundVoterIdNft = votingEngine.roundVoterIdNFTSnapshot(rewardPool.contentId, roundId);
+        if (originalVoterIdNft == address(0) || roundVoterIdNft == address(0) || roundVoterIdNft == originalVoterIdNft)
+        {
+            return rewardPool.funderVoterId;
+        }
+
+        address funderHolder = rewardPoolFunderHolders[rewardPool.id];
+        if (funderHolder == address(0)) return rewardPool.funderVoterId;
+        return _voterIdForRound(rewardPool.contentId, roundId, funderHolder);
     }
 
     function _submitterVoterId(uint256 contentId, uint256 roundId) internal view returns (uint256) {

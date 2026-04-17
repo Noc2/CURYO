@@ -380,6 +380,83 @@ contract QuestionRewardPoolEscrowTest is VotingTestBase {
         assertEq(reward, REWARD_POOL_AMOUNT / 3);
     }
 
+    function testDelegatedFunderStaysExcludedAfterDelegateRemoval() public {
+        uint256 contentId = _submitQuestion("");
+
+        vm.prank(voter1);
+        voterIdNFT.setDelegate(delegate1);
+        uint256 rewardPoolId = _createRewardPoolAs(delegate1, contentId, REWARD_POOL_AMOUNT, 3, 1);
+        vm.prank(voter1);
+        voterIdNFT.removeDelegate();
+
+        address[] memory voters = new address[](4);
+        voters[0] = voter1;
+        voters[1] = voter2;
+        voters[2] = voter3;
+        voters[3] = voter4;
+        uint256 roundId = _settleRoundWith(voters, contentId, _directions(true, true, true, false));
+
+        assertEq(rewardPoolEscrow.claimableQuestionReward(rewardPoolId, roundId, voter1), 0);
+        vm.prank(voter1);
+        vm.expectRevert("Excluded voter");
+        rewardPoolEscrow.claimQuestionReward(rewardPoolId, roundId);
+
+        vm.prank(voter2);
+        uint256 reward = rewardPoolEscrow.claimQuestionReward(rewardPoolId, roundId);
+        assertEq(reward, REWARD_POOL_AMOUNT / 3);
+    }
+
+    function testDelegatedFunderCannotQualifyRoundAfterDelegateRemoval() public {
+        uint256 contentId = _submitQuestion("");
+
+        vm.prank(voter1);
+        voterIdNFT.setDelegate(delegate1);
+        uint256 rewardPoolId = _createRewardPoolAs(delegate1, contentId, REWARD_POOL_AMOUNT, 3, 1);
+        vm.prank(voter1);
+        voterIdNFT.removeDelegate();
+
+        address[] memory voters = new address[](3);
+        voters[0] = voter1;
+        voters[1] = voter2;
+        voters[2] = voter3;
+        uint256 roundId = _settleRoundWith(voters, contentId, _directions(true, true, false));
+
+        assertEq(rewardPoolEscrow.claimableQuestionReward(rewardPoolId, roundId, voter2), 0);
+        vm.prank(voter2);
+        vm.expectRevert("Too few eligible voters");
+        rewardPoolEscrow.claimQuestionReward(rewardPoolId, roundId);
+    }
+
+    function testDelegatedFunderStaysExcludedAfterDelegateRemovalAndVoterIdMigration() public {
+        uint256 contentId = _submitQuestion("");
+
+        vm.prank(voter2);
+        voterIdNFT.setDelegate(delegate1);
+        uint256 originalVoterId = voterIdNFT.getTokenId(voter2);
+        uint256 rewardPoolId = _createRewardPoolAs(delegate1, contentId, REWARD_POOL_AMOUNT, 3, 1);
+        vm.prank(voter2);
+        voterIdNFT.removeDelegate();
+
+        MockVoterIdNFT migratedVoterIdNFT = _migrateVoterIdsWithDifferentIds();
+        assertNotEq(migratedVoterIdNFT.getTokenId(voter2), originalVoterId);
+
+        address[] memory voters = new address[](4);
+        voters[0] = voter2;
+        voters[1] = voter1;
+        voters[2] = voter3;
+        voters[3] = voter4;
+        uint256 roundId = _settleRoundWith(voters, contentId, _directions(true, true, true, false));
+
+        assertEq(rewardPoolEscrow.claimableQuestionReward(rewardPoolId, roundId, voter2), 0);
+        vm.prank(voter2);
+        vm.expectRevert("Excluded voter");
+        rewardPoolEscrow.claimQuestionReward(rewardPoolId, roundId);
+
+        vm.prank(voter1);
+        uint256 reward = rewardPoolEscrow.claimQuestionReward(rewardPoolId, roundId);
+        assertEq(reward, REWARD_POOL_AMOUNT / 3);
+    }
+
     function testExpiredPoolBlocksNewQualificationButLeavesQualifiedClaimsPayable() public {
         uint256 contentId = _submitQuestion("");
         uint256 expiresAt = block.timestamp + 1 days;
@@ -587,7 +664,28 @@ contract QuestionRewardPoolEscrowTest is VotingTestBase {
         uint256 requiredSettledRounds,
         uint256 expiresAt
     ) internal returns (uint256 rewardPoolId) {
-        vm.startPrank(funder);
+        rewardPoolId = _createRewardPoolAs(funder, contentId, amount, requiredVoters, requiredSettledRounds, expiresAt);
+    }
+
+    function _createRewardPoolAs(
+        address poolFunder,
+        uint256 contentId,
+        uint256 amount,
+        uint256 requiredVoters,
+        uint256 requiredSettledRounds
+    ) internal returns (uint256 rewardPoolId) {
+        rewardPoolId = _createRewardPoolAs(poolFunder, contentId, amount, requiredVoters, requiredSettledRounds, 0);
+    }
+
+    function _createRewardPoolAs(
+        address poolFunder,
+        uint256 contentId,
+        uint256 amount,
+        uint256 requiredVoters,
+        uint256 requiredSettledRounds,
+        uint256 expiresAt
+    ) internal returns (uint256 rewardPoolId) {
+        vm.startPrank(poolFunder);
         usdc.approve(address(rewardPoolEscrow), amount);
         rewardPoolId =
             rewardPoolEscrow.createRewardPool(contentId, amount, requiredVoters, requiredSettledRounds, expiresAt);
