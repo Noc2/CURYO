@@ -165,9 +165,7 @@ contract QuestionRewardPoolEscrow is
         require(requiredSettledRounds >= MIN_REQUIRED_SETTLED_ROUNDS, "Too few rounds");
         (,,, uint16 maxVoters) = votingEngine.protocolConfig().config();
         require(amount >= requiredSettledRounds * uint256(maxVoters), "Amount too small");
-        if (expiresAt != 0) {
-            require(expiresAt > block.timestamp, "Invalid expiry");
-        }
+        require(expiresAt > block.timestamp, "Invalid expiry");
 
         uint256 funderVoterId = _requireVoterId(msg.sender);
         address funderHolder = voterIdNFT.getHolder(funderVoterId);

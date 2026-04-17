@@ -567,7 +567,7 @@ contract QuestionRewardPoolEscrowTest is VotingTestBase {
         assertEq(reward, REWARD_POOL_AMOUNT / 3);
     }
 
-    function testInactiveNoExpiryPoolCanRefundUnallocatedFunds() public {
+    function testInactiveUnexpiredPoolCanRefundUnallocatedFunds() public {
         uint256 contentId = _submitQuestion("");
         uint256 rewardPoolId = _createRewardPool(contentId, REWARD_POOL_AMOUNT, 3, 1);
 
@@ -581,13 +581,23 @@ contract QuestionRewardPoolEscrowTest is VotingTestBase {
         assertEq(usdc.balanceOf(funder), funderBalanceBefore + REWARD_POOL_AMOUNT);
     }
 
+    function testRewardPoolRequiresExpiry() public {
+        uint256 contentId = _submitQuestion("");
+
+        vm.startPrank(funder);
+        usdc.approve(address(rewardPoolEscrow), REWARD_POOL_AMOUNT);
+        vm.expectRevert("Invalid expiry");
+        rewardPoolEscrow.createRewardPool(contentId, REWARD_POOL_AMOUNT, 3, 1, 0);
+        vm.stopPrank();
+    }
+
     function testRewardPoolAmountMustCoverEachRequiredRound() public {
         uint256 contentId = _submitQuestion("");
 
         vm.startPrank(funder);
         usdc.approve(address(rewardPoolEscrow), 1);
         vm.expectRevert("Amount too small");
-        rewardPoolEscrow.createRewardPool(contentId, 1, 3, 2, 0);
+        rewardPoolEscrow.createRewardPool(contentId, 1, 3, 2, block.timestamp + 30 days);
         vm.stopPrank();
     }
 
@@ -597,7 +607,7 @@ contract QuestionRewardPoolEscrowTest is VotingTestBase {
         vm.startPrank(funder);
         usdc.approve(address(rewardPoolEscrow), 199);
         vm.expectRevert("Amount too small");
-        rewardPoolEscrow.createRewardPool(contentId, 199, 3, 1, 0);
+        rewardPoolEscrow.createRewardPool(contentId, 199, 3, 1, block.timestamp + 30 days);
         vm.stopPrank();
     }
 
@@ -654,7 +664,9 @@ contract QuestionRewardPoolEscrowTest is VotingTestBase {
         internal
         returns (uint256 rewardPoolId)
     {
-        return _createRewardPoolWithExpiry(contentId, amount, requiredVoters, requiredSettledRounds, 0);
+        return _createRewardPoolWithExpiry(
+            contentId, amount, requiredVoters, requiredSettledRounds, block.timestamp + 30 days
+        );
     }
 
     function _createRewardPoolWithExpiry(
@@ -674,7 +686,9 @@ contract QuestionRewardPoolEscrowTest is VotingTestBase {
         uint256 requiredVoters,
         uint256 requiredSettledRounds
     ) internal returns (uint256 rewardPoolId) {
-        rewardPoolId = _createRewardPoolAs(poolFunder, contentId, amount, requiredVoters, requiredSettledRounds, 0);
+        rewardPoolId = _createRewardPoolAs(
+            poolFunder, contentId, amount, requiredVoters, requiredSettledRounds, block.timestamp + 30 days
+        );
     }
 
     function _createRewardPoolAs(

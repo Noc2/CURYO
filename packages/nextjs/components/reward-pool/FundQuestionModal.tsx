@@ -26,7 +26,7 @@ type FundQuestionModalProps = {
 };
 
 function getExpiryTimestamp(days: number): bigint {
-  if (!Number.isFinite(days) || days <= 0) return 0n;
+  if (!Number.isFinite(days) || days < 1) return 0n;
   return BigInt(Math.floor(Date.now() / 1000) + Math.floor(days * 24 * 60 * 60));
 }
 
@@ -49,7 +49,7 @@ export function FundQuestionModal({ contentId, title, onClose, onCreated }: Fund
   const parsedAmount = useMemo(() => parseUsdRewardPoolAmount(amount), [amount]);
   const voterCount = Math.max(MIN_REWARD_POOL_REQUIRED_VOTERS, Math.floor(Number(requiredVoters) || 0));
   const settledRounds = Math.max(MIN_REWARD_POOL_SETTLED_ROUNDS, Math.floor(Number(requiredRounds) || 0));
-  const expiry = Math.max(0, Math.floor(Number(expiryDays) || 0));
+  const expiry = Math.floor(Number(expiryDays) || 0);
   const canSubmit = Boolean(
     address &&
       escrowAddress &&
@@ -57,7 +57,8 @@ export function FundQuestionModal({ contentId, title, onClose, onCreated }: Fund
       hasVoterId &&
       parsedAmount &&
       voterCount >= MIN_REWARD_POOL_REQUIRED_VOTERS &&
-      settledRounds >= MIN_REWARD_POOL_SETTLED_ROUNDS,
+      settledRounds >= MIN_REWARD_POOL_SETTLED_ROUNDS &&
+      expiry >= 1,
   );
 
   const handleFundQuestion = async () => {
@@ -71,6 +72,10 @@ export function FundQuestionModal({ contentId, title, onClose, onCreated }: Fund
     }
     if (!parsedAmount) {
       notification.warning("Enter a positive USD amount.");
+      return;
+    }
+    if (expiry < 1) {
+      notification.warning("Choose at least 1 day before refund.");
       return;
     }
 
@@ -201,13 +206,13 @@ export function FundQuestionModal({ contentId, title, onClose, onCreated }: Fund
             <span className="label-text">Refund if not filled after</span>
             <input
               type="number"
-              min={0}
+              min={1}
               step={1}
               value={expiryDays}
               onChange={event => setExpiryDays(event.target.value)}
               className="input input-bordered bg-base-100"
             />
-            <span className="label-text-alt text-base-content/50">Days. Use 0 for no expiry.</span>
+            <span className="label-text-alt text-base-content/50">Days before unclaimed funds can be refunded.</span>
           </label>
 
           {!escrowAddress ? (

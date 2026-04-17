@@ -100,7 +100,7 @@ describe("QuestionRewardPoolEscrow ponder handlers", () => {
           requiredVoters: 5n,
           requiredSettledRounds: 2n,
           startRoundId: 3n,
-          expiresAt: 0n,
+          expiresAt: 2_592_000n,
           frontendFeeBps: 300n,
         },
         block: { number: 10n, timestamp: 1_700n },
