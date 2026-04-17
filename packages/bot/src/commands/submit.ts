@@ -1,7 +1,10 @@
-import { randomBytes } from "node:crypto";
+import { createHash, randomBytes } from "node:crypto";
 import { encodeAbiParameters, erc20Abi, isAddress, keccak256, type Address, type Hex } from "viem";
+import { createThirdwebClient, defineChain, type Chain, type ThirdwebClient } from "thirdweb";
+import { type Account as ThirdwebAccount, type Wallet, privateKeyToAccount as thirdwebPrivateKeyToAccount } from "thirdweb/wallets";
+import { wrapFetchWithPayment } from "thirdweb/x402";
 import { ensureCrepAllowance } from "../allowance.js";
-import { publicClient, getWalletClient, getAccount } from "../client.js";
+import { publicClient, getWalletClient, getAccount, getIdentityPrivateKey } from "../client.js";
 import { contractConfig } from "../contracts.js";
 import { config, log } from "../config.js";
 import { truncateContentDescription, truncateContentTitle } from "../contentLimits.js";
@@ -18,6 +21,43 @@ const TX_RECEIPT_TIMEOUT_MS = 180_000;
 
 type PreviewSubmissionResult = readonly [bigint, Hex];
 type SubmissionMedia = { imageUrls: string[]; videoUrl: string };
+type SubmissionRewardFunding = {
+  assetId: number;
+  amount: bigint;
+  label: string;
+  token: { address: Address; abi: typeof erc20Abi };
+};
+type X402SubmitClient = {
+  maxPaymentUsdc: bigint;
+  submitQuestion: (payload: X402QuestionRequestPayload) => Promise<X402QuestionResponse>;
+};
+type X402QuestionRequestPayload = {
+  bounty: {
+    amount: string;
+    asset: "USDC";
+    requiredSettledRounds: string;
+    requiredVoters: string;
+    rewardPoolExpiresAt: string;
+  };
+  chainId: number;
+  clientRequestId: string;
+  question: {
+    categoryId: string;
+    contextUrl: string;
+    description: string;
+    imageUrls: string[];
+    tags: string;
+    title: string;
+    videoUrl: string;
+  };
+};
+type X402QuestionResponse = {
+  contentId?: string | null;
+  operationKey?: string;
+  rewardPoolId?: string | null;
+  status?: string;
+  transactionHashes?: string[];
+};
 
 const DIRECT_IMAGE_URL_PATTERN = /^https:\/\/.+\.(?:avif|gif|jpe?g|png|webp)(?:[?#].*)?$/i;
 
@@ -116,13 +156,8 @@ function buildSubmissionRevealCommitment(params: {
   );
 }
 
-async function getSubmissionRewardFunding(): Promise<{
-  assetId: number;
-  amount: bigint;
-  label: string;
-  token: { address: Address; abi: typeof erc20Abi };
-}> {
-  const rewardAsset = config.submitRewardAsset;
+async function getSubmissionRewardFunding(assetOverride = config.submitRewardAsset): Promise<SubmissionRewardFunding> {
+  const rewardAsset = assetOverride;
   const protocolConfigAddress = (await publicClient.readContract({
     ...contractConfig.registry,
     functionName: "protocolConfig",
@@ -167,6 +202,137 @@ function formatMicroTokenAmount(amount: bigint) {
   const fractional = amount % 1_000_000n;
   const fractionalText = fractional.toString().padStart(6, "0").replace(/0+$/, "");
   return fractionalText ? `${whole}.${fractionalText}` : whole.toString();
+}
+
+function createBotThirdwebWallet(params: {
+  chain: Chain;
+  client: ThirdwebClient;
+  privateKey: `0x${string}`;
+}): Wallet<"inApp"> {
+  const baseAccount = thirdwebPrivateKeyToAccount({
+    client: params.client,
+    privateKey: params.privateKey,
+  });
+  let account: ThirdwebAccount | undefined = baseAccount;
+  let chain = params.chain;
+
+  const wallet = {
+    autoConnect: async (options?: { chain?: Chain }) => {
+      if (options?.chain) chain = options.chain;
+      account = baseAccount;
+      return account;
+    },
+    connect: async (options?: { chain?: Chain }) => {
+      if (options?.chain) chain = options.chain;
+      account = baseAccount;
+      return account;
+    },
+    disconnect: async () => {
+      account = undefined;
+    },
+    getAccount: () => account,
+    getChain: () => chain,
+    getConfig: () => ({}) as never,
+    id: "inApp" as const,
+    subscribe: () => () => undefined,
+    switchChain: async nextChain => {
+      chain = nextChain;
+    },
+  } satisfies Wallet<"inApp">;
+
+  return wallet;
+}
+
+function buildX402ClientRequestId(params: { categoryId: bigint; contextUrl: string; sourceName: string }): string {
+  const sourceName = params.sourceName.toLowerCase().replace(/[^a-z0-9._:-]/g, "-") || "source";
+  const digest = createHash("sha256")
+    .update(`${params.sourceName}\n${params.contextUrl}\n${params.categoryId.toString()}`)
+    .digest("hex")
+    .slice(0, 32);
+  return `${sourceName}:${digest}`;
+}
+
+function createX402SubmitPayload(params: {
+  categoryId: bigint;
+  contextUrl: string;
+  description: string;
+  media: SubmissionMedia;
+  rewardFunding: SubmissionRewardFunding;
+  sourceName: string;
+  tags: string;
+  title: string;
+}): X402QuestionRequestPayload {
+  return {
+    bounty: {
+      amount: params.rewardFunding.amount.toString(),
+      asset: "USDC",
+      requiredSettledRounds: String(config.submitRewardRequiredSettledRounds),
+      requiredVoters: String(config.submitRewardRequiredVoters),
+      rewardPoolExpiresAt: config.submitRewardPoolExpiresAt.toString(),
+    },
+    chainId: config.chainId,
+    clientRequestId: buildX402ClientRequestId({
+      categoryId: params.categoryId,
+      contextUrl: params.contextUrl,
+      sourceName: params.sourceName,
+    }),
+    question: {
+      categoryId: params.categoryId.toString(),
+      contextUrl: params.contextUrl,
+      description: params.description,
+      imageUrls: params.media.imageUrls,
+      tags: params.tags,
+      title: params.title,
+      videoUrl: params.media.videoUrl,
+    },
+  };
+}
+
+function createX402SubmitClient(rewardFunding: SubmissionRewardFunding): X402SubmitClient {
+  if (!config.x402.apiUrl) {
+    throw new Error("X402_API_URL is required when using x402 submission transport.");
+  }
+  if (!config.x402.thirdwebClientId) {
+    throw new Error("THIRDWEB_CLIENT_ID is required when using x402 submission transport.");
+  }
+
+  const privateKey = getIdentityPrivateKey(config.submitBot);
+  const thirdwebClient = createThirdwebClient({ clientId: config.x402.thirdwebClientId });
+  const thirdwebChain = defineChain({
+    id: config.chainId,
+    name: `Chain ${config.chainId}`,
+    nativeCurrency: { decimals: 18, name: "CELO", symbol: "CELO" },
+    rpcUrls: {
+      default: { http: [config.rpcUrl] },
+    },
+  });
+  const wallet = createBotThirdwebWallet({
+    chain: thirdwebChain,
+    client: thirdwebClient,
+    privateKey,
+  });
+  const maxPaymentUsdc = config.x402.maxPaymentUsdc ?? rewardFunding.amount;
+  const fetchWithPayment = wrapFetchWithPayment(fetch, thirdwebClient, wallet, {
+    maxValue: maxPaymentUsdc,
+  });
+
+  return {
+    maxPaymentUsdc,
+    submitQuestion: async payload => {
+      const response = await fetchWithPayment(config.x402.apiUrl!, {
+        body: JSON.stringify(payload),
+        headers: {
+          "Content-Type": "application/json",
+        },
+        method: "POST",
+      });
+      const responseBody = (await response.json().catch(() => ({}))) as X402QuestionResponse & { error?: string };
+      if (!response.ok) {
+        throw new Error(responseBody.error ?? `x402 API returned HTTP ${response.status}`);
+      }
+      return responseBody;
+    },
+  };
 }
 
 async function cancelReservedSubmission(
@@ -253,10 +419,12 @@ export async function runSubmit(options: SubmitRunOptions = {}) {
   }
   log.info(`Submission bot address: ${account.address}`);
   const maxSubmissions = options.maxSubmissions ?? config.maxSubmissionsPerRun;
-  const rewardFunding = await getSubmissionRewardFunding();
+  const transport = options.transport ?? "onchain";
+  const rewardFunding = await getSubmissionRewardFunding(transport === "x402" ? "usdc" : undefined);
   log.info(
     `Submission Bounty: ${formatMicroTokenAmount(rewardFunding.amount)} ${rewardFunding.label} per question`,
   );
+  log.info(`Submission transport: ${transport === "x402" ? "x402 paid API" : "direct on-chain"}`);
   log.info(
     `Submission terms: ${config.submitRewardRequiredVoters} voters, ${config.submitRewardRequiredSettledRounds} rounds, ${
       config.submitRewardPoolExpiresAt === 0n
@@ -265,7 +433,9 @@ export async function runSubmit(options: SubmitRunOptions = {}) {
     }`,
   );
 
-  // 1. Check balance for the mandatory Bounty.
+  const x402Client = transport === "x402" ? createX402SubmitClient(rewardFunding) : null;
+
+  // 1. Check balance for the mandatory Bounty or x402 payment ceiling.
   const balance = (await publicClient.readContract({
     ...rewardFunding.token,
     functionName: "balanceOf",
@@ -273,9 +443,10 @@ export async function runSubmit(options: SubmitRunOptions = {}) {
   })) as bigint;
   log.info(`${rewardFunding.label} balance: ${formatMicroTokenAmount(balance)} ${rewardFunding.label}`);
 
-  if (balance < rewardFunding.amount) {
+  const requiredBalance = x402Client?.maxPaymentUsdc ?? rewardFunding.amount;
+  if (balance < requiredBalance) {
     log.error(
-      `Insufficient ${rewardFunding.label} for even one submission (need ${formatMicroTokenAmount(rewardFunding.amount)} ${rewardFunding.label} Bounty).`,
+      `Insufficient ${rewardFunding.label} for even one submission (need ${formatMicroTokenAmount(requiredBalance)} ${rewardFunding.label}).`,
     );
     return;
   }
@@ -347,7 +518,7 @@ export async function runSubmit(options: SubmitRunOptions = {}) {
         functionName: "balanceOf",
         args: [account.address],
       })) as bigint;
-      if (currentBalance < rewardFunding.amount) {
+      if (currentBalance < requiredBalance) {
         log.error(`Insufficient ${rewardFunding.label} for next submission. Stopping.`);
         return;
       }
@@ -377,6 +548,28 @@ export async function runSubmit(options: SubmitRunOptions = {}) {
           continue;
         }
 
+        if (x402Client) {
+          const x402Payload = createX402SubmitPayload({
+            categoryId: requestedCategoryId,
+            contextUrl,
+            description,
+            media,
+            rewardFunding,
+            sourceName: source.name,
+            tags: item.tags,
+            title,
+          });
+          const x402Result = await x402Client.submitQuestion(x402Payload);
+          log.info(
+            `Submitted "${item.title}" [${source.name}] via x402 content=${x402Result.contentId ?? "unknown"} rewardPool=${
+              x402Result.rewardPoolId ?? "none"
+            } operation=${x402Result.operationKey ?? x402Payload.clientRequestId}`,
+          );
+          totalSubmitted++;
+          sourceSubmitted++;
+          continue;
+        }
+
         const salt = createSubmissionSalt();
         const revealCommitment = buildSubmissionRevealCommitment({
           submissionKey,
@@ -398,10 +591,10 @@ export async function runSubmit(options: SubmitRunOptions = {}) {
           spender: rewardEscrowAddress,
           requiredAmount: rewardFunding.amount,
           token: rewardFunding.token,
-          wallet,
+          wallet: wallet as never,
         });
         if (approveTx) {
-          log.debug(`Approved cREP: ${approveTx}`);
+          log.debug(`Approved ${rewardFunding.label}: ${approveTx}`);
         }
 
         const reserveTx = await wallet.writeContract({
@@ -436,8 +629,8 @@ export async function runSubmit(options: SubmitRunOptions = {}) {
               salt,
               rewardFunding.assetId,
               rewardFunding.amount,
-              config.submitRewardRequiredVoters,
-              config.submitRewardRequiredSettledRounds,
+              BigInt(config.submitRewardRequiredVoters),
+              BigInt(config.submitRewardRequiredSettledRounds),
               config.submitRewardPoolExpiresAt,
             ],
           });
@@ -462,8 +655,8 @@ export async function runSubmit(options: SubmitRunOptions = {}) {
               salt,
               rewardFunding.assetId,
               rewardFunding.amount,
-              config.submitRewardRequiredVoters,
-              config.submitRewardRequiredSettledRounds,
+              BigInt(config.submitRewardRequiredVoters),
+              BigInt(config.submitRewardRequiredSettledRounds),
               config.submitRewardPoolExpiresAt,
             ],
           });

@@ -31,6 +31,7 @@ type SubmitCommandOptions = {
   }>;
   submitErrorCount?: number;
   submitError?: Error;
+  x402Response?: Record<string, unknown>;
 };
 
 async function loadSubmitCommand(options: SubmitCommandOptions = {}) {
@@ -90,12 +91,42 @@ async function loadSubmitCommand(options: SubmitCommandOptions = {}) {
     error: vi.fn(),
     debug: vi.fn(),
   };
+  const paidFetch = vi.fn(async (_input: RequestInfo | URL, _init?: RequestInit) => {
+    return new Response(
+      JSON.stringify(
+        options.x402Response ?? {
+          contentId: "123",
+          operationKey: "0xx402",
+          rewardPoolId: "456",
+          status: "submitted",
+          transactionHashes: ["0xsubmit"],
+        },
+      ),
+      { status: 200 },
+    );
+  });
+  const wrapFetchWithPayment = vi.fn(() => paidFetch);
 
   vi.doMock("node:crypto", () => ({
+    createHash: vi.fn(() => ({
+      digest: vi.fn(() => "abcd".repeat(16)),
+      update: vi.fn().mockReturnThis(),
+    })),
     randomBytes: vi.fn(() => Buffer.from(FIXED_SALT.slice(2), "hex")),
+  }));
+  vi.doMock("thirdweb", () => ({
+    createThirdwebClient: vi.fn(() => ({ clientId: "thirdweb-client" })),
+    defineChain: vi.fn(chain => chain),
+  }));
+  vi.doMock("thirdweb/wallets", () => ({
+    privateKeyToAccount: vi.fn(() => ({ address: ADDRESS })),
+  }));
+  vi.doMock("thirdweb/x402", () => ({
+    wrapFetchWithPayment,
   }));
   vi.doMock("../client.js", () => ({
     getAccount: vi.fn(() => ({ address: ADDRESS })),
+    getIdentityPrivateKey: vi.fn(() => `0x${"22".repeat(32)}`),
     getWalletClient: vi.fn(() => ({ writeContract })),
     publicClient: {
       readContract,
@@ -112,7 +143,9 @@ async function loadSubmitCommand(options: SubmitCommandOptions = {}) {
   }));
   vi.doMock("../config.js", () => ({
     config: {
-      submitBot: {},
+      submitBot: { privateKey: `0x${"22".repeat(32)}` },
+      chainId: 42220,
+      rpcUrl: "https://forno.celo.org",
       contracts: { contentRegistry: CONTENT_REGISTRY, questionRewardPoolEscrow: REWARD_ESCROW },
       submitRewardAsset: "usdc",
       submitRewardRequiredVoters: 3,
@@ -120,6 +153,11 @@ async function loadSubmitCommand(options: SubmitCommandOptions = {}) {
       submitRewardPoolExpiresAt: 0n,
       maxSubmissionsPerRun: 5,
       maxSubmissionsPerCategory: 3,
+      x402: {
+        apiUrl: "https://curyo.example/api/x402/questions",
+        maxPaymentUsdc: 1_000_000n,
+        thirdwebClientId: "thirdweb-client",
+      },
     },
     log,
   }));
@@ -156,6 +194,8 @@ async function loadSubmitCommand(options: SubmitCommandOptions = {}) {
       sleep,
       waitForTransactionReceipt,
       writeContract,
+      paidFetch,
+      wrapFetchWithPayment,
     },
   };
 }
@@ -248,8 +288,8 @@ describe("runSubmit", () => {
           FIXED_SALT,
           1,
           1_000_000n,
-          3,
-          1,
+          3n,
+          1n,
           0n,
         ],
       }),
@@ -422,5 +462,45 @@ describe("runSubmit", () => {
       ),
     ).toHaveLength(2);
     expect(submitCommand.mocks.log.info).toHaveBeenCalledWith("Category filter: Media");
+  });
+
+  it("submits discovered questions through x402 without broadcasting direct write calls", async () => {
+    const submitCommand = await loadSubmitCommand();
+
+    await submitCommand.runSubmit({ transport: "x402" });
+
+    expect(submitCommand.mocks.wrapFetchWithPayment).toHaveBeenCalledWith(
+      expect.any(Function),
+      expect.objectContaining({ clientId: "thirdweb-client" }),
+      expect.objectContaining({ id: "inApp" }),
+      expect.objectContaining({ maxValue: 1_000_000n }),
+    );
+    expect(submitCommand.mocks.writeContract).not.toHaveBeenCalled();
+    expect(submitCommand.mocks.paidFetch).toHaveBeenCalledWith(
+      "https://curyo.example/api/x402/questions",
+      expect.objectContaining({
+        method: "POST",
+      }),
+    );
+    const requestBody = JSON.parse(String(submitCommand.mocks.paidFetch.mock.calls[0]?.[1]?.body));
+    expect(requestBody).toMatchObject({
+      bounty: {
+        amount: "1000000",
+        asset: "USDC",
+        requiredSettledRounds: "1",
+        requiredVoters: "3",
+        rewardPoolExpiresAt: "0",
+      },
+      chainId: 42220,
+      clientRequestId: "youtube:abcdabcdabcdabcdabcdabcdabcdabcd",
+      question: {
+        categoryId: "5",
+        contextUrl: ITEM.contextUrl,
+        title: ITEM.title,
+      },
+    });
+    expect(submitCommand.mocks.log.info).toHaveBeenCalledWith(
+      `Submitted "${ITEM.title}" [youtube] via x402 content=123 rewardPool=456 operation=0xx402`,
+    );
   });
 });

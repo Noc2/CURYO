@@ -6,6 +6,7 @@
   "scripts": {
     "vote": "tsx src/index.ts vote",
     "submit": "tsx src/index.ts submit",
+    "submit:x402": "tsx src/index.ts submit:x402",
     "claim": "tsx src/index.ts claim",
     "status": "tsx src/index.ts status",
     "test": "vitest run",
@@ -15,6 +16,7 @@
     "@curyo/contracts": "workspace:*",
     "@curyo/node-utils": "workspace:*",
     "dotenv": "^16.4.5",
+    "thirdweb": "5.119.1",
     "viem": "2.39.0"
   },
   "devDependencies": {

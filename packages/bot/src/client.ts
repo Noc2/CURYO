@@ -7,7 +7,7 @@ import {
   type BotIdentityConfig,
   type BotRole,
 } from "./config.js";
-import { getKeystoreAccount } from "./keystore.js";
+import { getKeystoreAccount, getKeystorePrivateKey } from "./keystore.js";
 
 const CHAIN_NAMES: Record<number, string> = {
   31337: "Foundry",
@@ -35,6 +35,19 @@ export function getAccount(identity: BotIdentityConfig) {
   }
 
   throw new Error("No wallet configured. Set keystore account+password or private key in .env");
+}
+
+export function getIdentityPrivateKey(identity: BotIdentityConfig): `0x${string}` {
+  if (identity.privateKey) {
+    return identity.privateKey;
+  }
+
+  if (identity.keystoreAccount && identity.keystorePassword) {
+    const privateKey = getKeystorePrivateKey(identity.keystoreAccount, identity.keystorePassword);
+    if (privateKey) return privateKey;
+  }
+
+  throw new Error("No wallet private key available. Set keystore account+password or private key in .env");
 }
 
 export const publicClient = createPublicClient({

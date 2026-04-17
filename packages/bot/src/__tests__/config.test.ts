@@ -67,6 +67,7 @@ describe("bot config", () => {
     expect(config.submitRewardRequiredVoters).toBe(3);
     expect(config.submitRewardRequiredSettledRounds).toBe(1);
     expect(config.submitRewardPoolExpiresAt).toBe(0n);
+    expect(config.x402.apiUrl).toBeUndefined();
   });
 
   it("parses numeric bot config values strictly", async () => {
@@ -79,6 +80,10 @@ describe("bot config", () => {
       SUBMIT_REWARD_REQUIRED_VOTERS: "4",
       SUBMIT_REWARD_REQUIRED_SETTLED_ROUNDS: "2",
       SUBMIT_REWARD_POOL_EXPIRES_AT: "1234567890",
+      X402_API_URL: "https://curyo.example/api/x402/questions",
+      X402_MAX_PAYMENT_USDC: "1500000",
+      THIRDWEB_CLIENT_ID: "thirdweb-client",
+      X402_USDC_TOKEN_ADDRESS: "0x8888888888888888888888888888888888888888",
     });
 
     expect(config.voteStake).toBe(2500000n);
@@ -89,6 +94,12 @@ describe("bot config", () => {
     expect(config.submitRewardRequiredVoters).toBe(4);
     expect(config.submitRewardRequiredSettledRounds).toBe(2);
     expect(config.submitRewardPoolExpiresAt).toBe(1234567890n);
+    expect(config.x402).toMatchObject({
+      apiUrl: "https://curyo.example/api/x402/questions",
+      maxPaymentUsdc: 1_500_000n,
+      thirdwebClientId: "thirdweb-client",
+      usdcTokenAddress: "0x8888888888888888888888888888888888888888",
+    });
   });
 
   it("rejects malformed numeric bot config values", async () => {
@@ -102,6 +113,7 @@ describe("bot config", () => {
         SUBMIT_REWARD_REQUIRED_VOTERS: "0",
         SUBMIT_REWARD_REQUIRED_SETTLED_ROUNDS: "0",
         SUBMIT_REWARD_POOL_EXPIRES_AT: "-1",
+        X402_MAX_PAYMENT_USDC: "0",
       }),
     ).rejects.toThrow("Invalid bot configuration");
 
@@ -115,6 +127,7 @@ describe("bot config", () => {
         SUBMIT_REWARD_REQUIRED_VOTERS: "0",
         SUBMIT_REWARD_REQUIRED_SETTLED_ROUNDS: "0",
         SUBMIT_REWARD_POOL_EXPIRES_AT: "-1",
+        X402_MAX_PAYMENT_USDC: "0",
       }),
     ).rejects.toThrow("VOTE_STAKE must be a positive integer");
   });

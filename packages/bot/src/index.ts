@@ -43,7 +43,8 @@ switch (command) {
     await runVote();
     break;
   }
-  case "submit": {
+  case "submit":
+  case "submit:x402": {
     const { formatSubmitUsage, parseSubmitCommandArgs } = await import("./submitOptions.js");
     let parsedSubmitCommand;
     try {
@@ -62,7 +63,10 @@ switch (command) {
 
     await ensureBotRuntime("submit");
     const { runSubmit } = await import("./commands/submit.js");
-    await runSubmit(parsedSubmitCommand.options);
+    await runSubmit({
+      ...parsedSubmitCommand.options,
+      transport: command === "submit:x402" ? "x402" : parsedSubmitCommand.options.transport,
+    });
     break;
   }
   case "status": {
@@ -73,11 +77,12 @@ switch (command) {
   }
   default:
     console.log(`Usage:
-  yarn submit|vote|claim|status
+  yarn submit|submit:x402|vote|claim|status
   yarn bot:submit|bot:vote|bot:claim|bot:status
 
 Commands:
   submit  Discover trending content from all platforms, submit to ContentRegistry
+  submit:x402  Submit questions through the hosted x402 API with Celo USDC
   vote    Rate content using external APIs, commit one initial vote per item
   claim   Claim bot rewards for configured submit/rate wallets
   status  Check both bot account statuses (balances, voting identity)`);

@@ -12,6 +12,13 @@ export interface BotIdentityConfig {
 
 export type SubmissionRewardAsset = "crep" | "usdc";
 
+export interface BotX402Config {
+  apiUrl?: string;
+  maxPaymentUsdc?: bigint;
+  thirdwebClientId?: string;
+  usdcTokenAddress?: `0x${string}`;
+}
+
 const CONTRACT_ENV_NAMES = {
   categoryRegistry: "CATEGORY_REGISTRY_ADDRESS",
   contentRegistry: "CONTENT_REGISTRY_ADDRESS",
@@ -179,6 +186,26 @@ function parseNonNegativeBigIntEnv(name: string, fallback: bigint, errors: strin
   return parsed;
 }
 
+function parseOptionalPositiveBigIntEnv(name: string, errors: string[]): bigint | undefined {
+  const value = readEnv(name);
+  if (!value) {
+    return undefined;
+  }
+
+  if (!/^\d+$/.test(value)) {
+    errors.push(`${name} must be a positive integer`);
+    return undefined;
+  }
+
+  const parsed = BigInt(value);
+  if (parsed <= 0n) {
+    errors.push(`${name} must be a positive integer`);
+    return undefined;
+  }
+
+  return parsed;
+}
+
 function parseSubmissionRewardAssetEnv(name: string, fallback: SubmissionRewardAsset, errors: string[]) {
   const value = readEnv(name)?.toLowerCase();
   if (!value) {
@@ -337,6 +364,12 @@ function loadConfig() {
       errors,
     ),
     submitRewardPoolExpiresAt: parseNonNegativeBigIntEnv("SUBMIT_REWARD_POOL_EXPIRES_AT", 0n, errors),
+    x402: {
+      apiUrl: readOptionalUrlEnv("X402_API_URL", errors),
+      maxPaymentUsdc: parseOptionalPositiveBigIntEnv("X402_MAX_PAYMENT_USDC", errors),
+      thirdwebClientId: readEnv("THIRDWEB_CLIENT_ID") ?? readEnv("NEXT_PUBLIC_THIRDWEB_CLIENT_ID"),
+      usdcTokenAddress: readOptionalAddressEnv("X402_USDC_TOKEN_ADDRESS", errors),
+    } satisfies BotX402Config,
   };
 
   if (errors.length > 0) {

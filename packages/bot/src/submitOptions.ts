@@ -4,6 +4,7 @@ export interface SubmitRunOptions {
   category?: string;
   maxSubmissions?: number;
   source?: string;
+  transport?: "onchain" | "x402";
 }
 
 interface ParsedSubmitCommand {
@@ -49,6 +50,7 @@ Options:
   --category <id|name>       Limit submission to one category (for example: 5, "Media")
   --source <name>            Limit submission to one source adapter (for example: youtube)
   --max-submissions <count>  Override the per-run submission cap for this execution
+  --transport <onchain|x402> Submit directly on-chain or through the hosted x402 API
   -h, --help                 Show this help
 
 Available categories:
@@ -92,6 +94,16 @@ export function parseSubmitCommandArgs(argv: string[]): ParsedSubmitCommand {
 
     if (arg === "--max-submissions") {
       options.maxSubmissions = parsePositiveIntegerOption(arg, argv[index + 1]);
+      index += 1;
+      continue;
+    }
+
+    if (arg === "--transport") {
+      const transport = argv[index + 1]?.trim();
+      if (transport !== "onchain" && transport !== "x402") {
+        throw new Error("--transport must be either onchain or x402");
+      }
+      options.transport = transport;
       index += 1;
       continue;
     }

@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 type BotIndexOptions = {
-  command: "claim" | "status" | "submit" | "vote";
+  command: "claim" | "status" | "submit" | "submit:x402" | "vote";
   connectivityError?: Error;
 };
 
@@ -109,5 +109,13 @@ describe("bot index", () => {
     expect(bot.exitSpy).toHaveBeenCalledWith(1);
     expect(bot.validateBotConnectivity).toHaveBeenCalledWith("submit");
     expect(bot.runSubmit).not.toHaveBeenCalled();
+  });
+
+  it("runs submit:x402 with x402 transport selected", async () => {
+    const bot = await loadBotIndex({ command: "submit:x402" });
+
+    expect(bot.validateConfig).toHaveBeenCalledWith("submit");
+    expect(bot.validateBotConnectivity).toHaveBeenCalledWith("submit");
+    expect(bot.runSubmit).toHaveBeenCalledWith({ transport: "x402" });
   });
 });

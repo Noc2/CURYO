@@ -67,6 +67,7 @@
     "ponder:codegen": "yarn workspace @curyo/ponder codegen",
     "bot:vote": "yarn workspace @curyo/bot vote",
     "bot:submit": "yarn workspace @curyo/bot submit",
+    "bot:submit:x402": "yarn workspace @curyo/bot submit:x402",
     "bot:claim": "yarn workspace @curyo/bot claim",
     "bot:status": "yarn workspace @curyo/bot status",
     "keeper:start": "yarn workspace @curyo/keeper start",
