@@ -69,6 +69,7 @@ Key environment variables (see `.env.example` for the full list):
 | `NEXT_PUBLIC_RPC_URL_42220`             | Optional browser RPC override for Celo mainnet                                |
 | `NEXT_PUBLIC_WALLET_CONNECT_PROJECT_ID` | Optional WalletConnect project ID for external wallet discovery               |
 | `NEXT_PUBLIC_THIRDWEB_CLIENT_ID`        | thirdweb client ID for in-app wallets and sponsored transactions              |
+| `THIRDWEB_SECRET_KEY`                   | thirdweb server secret used by the hosted x402 question endpoint              |
 | `NEXT_PUBLIC_TARGET_NETWORKS`           | Comma-separated deployed chain IDs exposed in the UI (required in production) |
 | `DATABASE_URL`                          | PostgreSQL URL for the Next app logical database                              |
 | `RESEND_API_KEY`                        | Resend API key for email notification delivery                                |
@@ -77,6 +78,10 @@ Key environment variables (see `.env.example` for the full list):
 | `NOTIFICATION_DELIVERY_SECRET`          | Secret for the email delivery cron endpoint                                   |
 | `NEXT_PUBLIC_PONDER_URL`                | Public Ponder indexer URL (required in production)                            |
 | `THIRDWEB_SERVER_VERIFIER_SECRET`       | Shared secret used by the thirdweb server verifier webhook                    |
+| `CURYO_X402_EXECUTOR_PRIVATE_KEY`       | Server executor key that receives x402 USDC and submits paid questions        |
+| `CURYO_X402_SERVICE_FEE_USDC`           | Optional x402 service fee in atomic USDC, added to the requested Bounty       |
+| `CURYO_X402_PAYMENT_WAIT_UNTIL`         | x402 settlement wait mode; defaults to `confirmed` so the executor has USDC before submitting |
+| `CURYO_X402_USDC_ADDRESS`               | Optional USDC override for x402 payments; Celo and Celo Sepolia default automatically |
 | `FREE_TRANSACTION_LIMIT`                | Free sponsored app transactions per verified wallet or identity-gated flow (defaults to `25`) |
 | `RATE_LIMIT_TRUSTED_IP_HEADERS`         | Comma-separated proxy IP headers to trust for API rate limiting in production |
 | `KEYSTORE_ACCOUNT`                      | Optional Foundry keystore name used by the development faucet                 |
@@ -94,6 +99,7 @@ Notes:
 - For local development, `yarn dev:db` and `yarn dev:stack` manage a Docker Postgres container when `DATABASE_URL` points to localhost. `yarn dev:stack` only runs `db:push` automatically for local databases; non-local databases require a manual `yarn workspace @curyo/nextjs db:push` or the explicit `CURYO_DEV_STACK_ALLOW_REMOTE_DB_PUSH=1` opt-in.
 - On Next.js 15, `NextRequest.ip` is not reliably populated. On non-Vercel production hosts you must configure `RATE_LIMIT_TRUSTED_IP_HEADERS` to the header(s) your hosting proxy overwrites. Vercel auto-trusts `x-real-ip`, and localhost shortcuts are only enabled for development or explicit local production-style E2E builds. Protected API routes fail closed when no trusted client IP can be derived or when the rate-limit store is unavailable.
 - The free transaction quota is enforced by the thirdweb server verifier route at `/api/thirdweb/verify-transaction`. Configure the same secret in thirdweb’s dashboard and in `THIRDWEB_SERVER_VERIFIER_SECRET`.
+- The hosted x402 question route lives at `/api/x402/questions`. It accepts a normalized question payload, returns x402 `402 Payment Required` challenges, settles Celo USDC through thirdweb, then submits `submitQuestionWithReward` from `CURYO_X402_EXECUTOR_PRIVATE_KEY`. Keep that executor funded with native gas, and keep the x402 pay-to wallet/executor able to fund the USDC Bounty.
 - The Next.js dev faucet reads `KEYSTORE_ACCOUNT`/`KEYSTORE_PASSWORD` or `FAUCET_PRIVATE_KEY` from `packages/nextjs/.env.local`. Keeper wallet settings live separately in `packages/keeper/.env.local`.
 
 ## Project Structure

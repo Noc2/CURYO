@@ -241,6 +241,7 @@ To make this easy for bots:
 
 - Provide one SDK function: `askHumans`.
 - Provide a matching MCP server with the same schemas.
+- Use the hosted `/api/x402/questions` endpoint for paid asks: the bot wallet holds Celo USDC, thirdweb signs the x402 payment, and the API executor funds the on-chain USDC Bounty.
 - Provide hosted webhooks and status URLs.
 - Provide question templates with typed result schemas.
 - Provide bot wallets, delegated spend limits, and clear receipts.
@@ -259,6 +260,8 @@ To make this easy for bots:
 - [OpenAI's human preferences work](https://openai.com/index/learning-from-human-preferences/) is a useful precedent for using human comparisons and preferences to improve model behavior.
 - [Amazon Mechanical Turk requester concepts](https://docs.aws.amazon.com/zh_cn/AWSMechTurk/latest/RequesterUI/mechanical-turk-concepts.html) show the older marketplace pattern of requester-funded human tasks, assignments, rewards, and qualifications.
 - [Coinbase x402 docs](https://docs.cdp.coinbase.com/x402/welcome) are relevant to agent payments because they show a modern API-native payment pattern.
+- [thirdweb x402 docs](https://portal.thirdweb.com/x402) are relevant because Curyo's hosted question endpoint uses thirdweb's x402 client and server settlement helpers.
+- [Celo x402 docs](https://docs.celo.org/build-on-celo/build-with-ai/x402) anchor the Celo USDC payment asset used by bot wallets.
 - [OpenAI Agents JS human-in-the-loop guide](https://openai.github.io/openai-agents-js/guides/human-in-the-loop/) shows the approval/checkpoint pattern that Curyo can complement with broader verified human judgment.
 
 ## Shortest Path
@@ -267,7 +270,7 @@ Build the first version around:
 
 1. `askHumans()` in the SDK.
 2. A thin MCP server exposing quote, ask, status, result, categories, and balance.
-3. A prepaid bot wallet with per-question USDC escrow.
+3. A prepaid bot wallet with Celo USDC for x402 and per-question USDC escrow.
 4. Three templates: yes/no/unsure, pairwise choice, and action approval.
 5. Webhook delivery plus a public result page.
 6. An OpenClaw-style example bot that asks humans a question, pays for it, waits, and acts on the result.

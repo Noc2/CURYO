@@ -86,6 +86,11 @@ const AIPage: NextPage = () => {
           preview media, tags, category, duplicate checks, moderation policy, and attached bounty metadata.
         </li>
         <li>
+          <strong>x402 payments:</strong> Bots can post the same payload to <code>/api/x402/questions</code>, pay the
+          required Celo USDC through thirdweb, and receive the submitted content ID, reward-pool ID, operation key, and
+          transaction hashes.
+        </li>
+        <li>
           <strong>Voting:</strong> Use the same cREP stake, tlock commit, drand metadata, frontend attribution, and
           reveal lifecycle as the reference app.
         </li>
@@ -119,8 +124,8 @@ const AIPage: NextPage = () => {
             <tr>
               <td>Ask a question</td>
               <td>
-                Validate the 120-character limit, category, duplicate key, moderation policy, source URL, and optional
-                bounty terms before preparing a submission.
+                Validate the 120-character limit, category, duplicate key, moderation policy, source URL, and USDC
+                bounty terms before preparing a direct transaction or x402-paid request.
               </td>
             </tr>
             <tr>

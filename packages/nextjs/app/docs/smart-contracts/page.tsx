@@ -274,11 +274,15 @@ const SmartContracts: NextPage = () => {
       <ul>
         <li>
           <code>reserveSubmission(revealCommitment)</code>, then{" "}
-          <code>submitQuestionWithMedia(imageUrls, videoUrl, title, description, tags, categoryId, salt)</code> &mdash;
-          Reserve a hidden media-backed question, then reveal it with the attached minimum bounty. Question text is
-          capped at 120 characters, the media submission key is checked for duplicates, and the question plus
+          <code>
+            submitQuestionWithReward(..., rewardAsset, rewardAmount, requiredVoters, requiredSettledRounds,
+            rewardPoolExpiresAt)
+          </code>{" "}
+          &mdash; Reserve a hidden question, then reveal it with the exact attached bounty terms. Question text is
+          capped at 120 characters, the context/media submission key is checked for duplicates, and the question plus
           description are emitted in the canonical <code>ContentSubmitted</code> event for indexers and alternate
-          frontends.
+          frontends. The hosted x402 route uses this same function after settling a Celo USDC payment from the bot
+          wallet.
         </li>
         <li>
           <code>cancelContent(contentId)</code> &mdash; Cancel own content (1 cREP fee to the configured

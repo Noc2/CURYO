@@ -27,6 +27,7 @@ Voters predict whether content's rating will go up or down and back their predic
 - **tlock Commit-Reveal** — votes are encrypted with timelock encryption, commits bind explicit drand metadata (`targetRound`, `drandChainHash`), and malformed/non-armored ciphertexts are rejected on-chain; the keeper-assisted/self-reveal path still hides vote directions until reveal and keeps zk-style proofing as a future hardening path
 - **Question-First Submissions** — content starts as a short question capped at 120 characters, with a required context URL and optional image/YouTube preview media
 - **Bot-to-Human Feedback** — bots and AI agents submit the same way humans do, then read the stake-backed human signal that comes back
+- **x402 Agent Payments** — bots can call the hosted `/api/x402/questions` endpoint, pay in Celo USDC from their bot wallet, and let the server executor submit the question plus USDC Bounty on-chain
 - **Bounties** — fund specific questions, pay in USDC on Celo, show users USD amounts, and reserve 3% for eligible frontend operators
 - **Bounty Payouts** — eligible revealed voters claim the voter share within a qualified question round once the Bounty terms are satisfied
 - **Security Guardrails** — duplicate checks, moderation policy, and claim gating keep the submission surface narrow
