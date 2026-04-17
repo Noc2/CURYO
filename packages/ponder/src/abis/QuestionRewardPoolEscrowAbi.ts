@@ -13,6 +13,8 @@ export const QuestionRewardPoolEscrowAbi = [
       { name: "startRoundId", type: "uint256", indexed: false },
       { name: "expiresAt", type: "uint256", indexed: false },
       { name: "frontendFeeBps", type: "uint256", indexed: false },
+      { name: "asset", type: "uint8", indexed: false },
+      { name: "nonRefundable", type: "bool", indexed: false },
     ],
   },
   {
@@ -49,6 +51,15 @@ export const QuestionRewardPoolEscrowAbi = [
     inputs: [
       { name: "rewardPoolId", type: "uint256", indexed: true },
       { name: "funder", type: "address", indexed: true },
+      { name: "amount", type: "uint256", indexed: false },
+    ],
+  },
+  {
+    type: "event",
+    name: "RewardPoolForfeited",
+    inputs: [
+      { name: "rewardPoolId", type: "uint256", indexed: true },
+      { name: "treasury", type: "address", indexed: true },
       { name: "amount", type: "uint256", indexed: false },
     ],
   },

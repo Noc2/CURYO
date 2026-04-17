@@ -381,6 +381,32 @@ export const ProtocolConfigAbi = [
   },
   {
     "type": "function",
+    "name": "minSubmissionCrepPool",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "minSubmissionUsdcPool",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
     "name": "participationPool",
     "inputs": [],
     "outputs": [
@@ -737,6 +763,24 @@ export const ProtocolConfigAbi = [
       },
       {
         "name": "minSlashEvidence",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "outputs": [],
+    "stateMutability": "nonpayable"
+  },
+  {
+    "type": "function",
+    "name": "setSubmissionRewardMinimums",
+    "inputs": [
+      {
+        "name": "minCrepPool",
+        "type": "uint256",
+        "internalType": "uint256"
+      },
+      {
+        "name": "minUsdcPool",
         "type": "uint256",
         "internalType": "uint256"
       }
@@ -1161,6 +1205,25 @@ export const ProtocolConfigAbi = [
       },
       {
         "name": "minSlashEvidence",
+        "type": "uint256",
+        "indexed": false,
+        "internalType": "uint256"
+      }
+    ],
+    "anonymous": false
+  },
+  {
+    "type": "event",
+    "name": "SubmissionRewardMinimumsUpdated",
+    "inputs": [
+      {
+        "name": "minCrepPool",
+        "type": "uint256",
+        "indexed": false,
+        "internalType": "uint256"
+      },
+      {
+        "name": "minUsdcPool",
         "type": "uint256",
         "indexed": false,
         "internalType": "uint256"

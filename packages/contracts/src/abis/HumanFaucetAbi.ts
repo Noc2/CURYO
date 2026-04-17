@@ -48,6 +48,19 @@ export const HumanFaucetAbi = [
   },
   {
     "type": "function",
+    "name": "MINIMUM_FAUCET_AGE",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
     "name": "PASSPORT_ATTESTATION_ID",
     "inputs": [],
     "outputs": [
@@ -1270,6 +1283,11 @@ export const HumanFaucetAbi = [
   {
     "type": "error",
     "name": "MigrationBootstrapAlreadyClosed",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "MinimumAgeNotMet",
     "inputs": []
   },
   {
