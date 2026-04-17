@@ -32,7 +32,7 @@ type HeaderMenuLink = {
 };
 
 const menuLinks: HeaderMenuLink[] = [
-  { label: "Rate", href: RATE_ROUTE, icon: GlobeAltIcon },
+  { label: "Discover", href: RATE_ROUTE, icon: GlobeAltIcon },
   { label: "Ask", href: ASK_ROUTE, icon: PlusCircleIcon },
   { label: "cREP", href: "/governance", icon: IdentificationIcon },
   { label: "Docs", href: "/docs", icon: BookOpenIcon },
