@@ -19,6 +19,7 @@ import { CuryoReputation } from "../contracts/CuryoReputation.sol";
 import { IProfileRegistry } from "../contracts/interfaces/IProfileRegistry.sol";
 import { IRoundVotingEngine } from "../contracts/interfaces/IRoundVotingEngine.sol";
 import { RoundLib } from "../contracts/libraries/RoundLib.sol";
+import { MockVoterIdNFT } from "./mocks/MockVoterIdNFT.sol";
 
 /// @title Minimal mock for RoundVotingEngine interface (used by FrontendRegistry)
 contract MockVotingEngineForUpgrade is IRoundVotingEngine {
@@ -152,6 +153,11 @@ contract UpgradeTest is Test {
         );
         frontendRegistry = FrontendRegistry(address(frProxy));
         frontendRegistryAdmin = _proxyAdmin(address(frProxy));
+
+        MockVoterIdNFT voterIdNFT = new MockVoterIdNFT();
+        profileRegistry.setVoterIdNFT(address(voterIdNFT));
+        frontendRegistry.setVoterIdNFT(address(voterIdNFT));
+        voterIdNFT.setHolder(address(10));
 
         vm.stopPrank();
     }

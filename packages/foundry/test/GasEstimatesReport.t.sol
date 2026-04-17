@@ -12,6 +12,7 @@ import { FrontendRegistry } from "../contracts/FrontendRegistry.sol";
 import { CuryoReputation } from "../contracts/CuryoReputation.sol";
 import { VoterIdNFT } from "../contracts/VoterIdNFT.sol";
 import { MockCategoryRegistry } from "../contracts/mocks/MockCategoryRegistry.sol";
+import { MockVoterIdNFT } from "./mocks/MockVoterIdNFT.sol";
 import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
 contract MockVotingEngineForFrontendGas {
@@ -254,6 +255,7 @@ contract FrontendTransactionGasEstimatesTest is Test {
     FrontendRegistry public registry;
     CuryoReputation public crepToken;
     MockVotingEngineForFrontendGas public votingEngine;
+    MockVoterIdNFT public voterIdNFT;
 
     address public admin = address(1);
     address public frontend = address(3);
@@ -267,6 +269,7 @@ contract FrontendTransactionGasEstimatesTest is Test {
         crepToken.grantRole(crepToken.MINTER_ROLE(), admin);
 
         votingEngine = new MockVotingEngineForFrontendGas();
+        voterIdNFT = new MockVoterIdNFT();
 
         FrontendRegistry impl = new FrontendRegistry();
         registry = FrontendRegistry(
@@ -279,9 +282,11 @@ contract FrontendTransactionGasEstimatesTest is Test {
 
         registry.setVotingEngine(address(votingEngine));
         registry.addFeeCreditor(feeCreditor);
+        registry.setVoterIdNFT(address(voterIdNFT));
 
         crepToken.mint(frontend, 10_000e6);
         crepToken.mint(address(registry), 1_000_000e6);
+        voterIdNFT.setHolder(frontend);
         vm.stopPrank();
     }
 

@@ -18,6 +18,7 @@ import { FrontendRegistry } from "../contracts/FrontendRegistry.sol";
 import { IFrontendRegistry } from "../contracts/interfaces/IFrontendRegistry.sol";
 import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import { MockCategoryRegistry } from "../contracts/mocks/MockCategoryRegistry.sol";
+import { MockVoterIdNFT } from "./mocks/MockVoterIdNFT.sol";
 
 contract RevertingParticipationPool {
     IERC20 public immutable token;
@@ -1978,9 +1979,12 @@ contract RoundIntegrationTest is VotingTestBase {
         ProtocolConfig(address(votingEngine.protocolConfig())).setFrontendRegistry(address(frontendReg));
         frontendReg.setVotingEngine(address(votingEngine));
         frontendReg.addFeeCreditor(address(rewardDistributor));
+        MockVoterIdNFT voterIdNFT = new MockVoterIdNFT();
+        frontendReg.setVoterIdNFT(address(voterIdNFT));
 
         frontendOp = address(200);
         crepToken.mint(frontendOp, 2000e6);
+        voterIdNFT.setHolder(frontendOp);
         vm.stopPrank();
 
         vm.startPrank(frontendOp);

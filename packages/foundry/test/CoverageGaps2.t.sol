@@ -103,10 +103,13 @@ contract FrontendRegistryBranchTest is Test {
         );
         reg.setVotingEngine(address(engine));
         reg.addFeeCreditor(creditor);
+        reg.setVoterIdNFT(address(voterNFT));
 
         crep.mint(frontend1, 200_000e6);
         crep.mint(frontend2, 200_000e6);
         crep.mint(address(reg), 1_000_000e6);
+        voterNFT.setHolder(frontend1);
+        voterNFT.setHolder(frontend2);
         vm.stopPrank();
     }
 
@@ -320,6 +323,7 @@ contract FrontendRegistryBranchTest is Test {
     }
 
     function _registerFrontend(address fe) internal {
+        voterNFT.setHolder(fe);
         vm.startPrank(fe);
         crep.approve(address(reg), STAKE);
         reg.register();

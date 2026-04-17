@@ -13,6 +13,7 @@ import {MockCategoryRegistry} from "../contracts/mocks/MockCategoryRegistry.sol"
 import {RoundLib} from "../contracts/libraries/RoundLib.sol";
 import {RoundEngineReadHelpers} from "./helpers/RoundEngineReadHelpers.sol";
 import {VotingTestBase} from "./helpers/VotingTestHelpers.sol";
+import {MockVoterIdNFT} from "./mocks/MockVoterIdNFT.sol";
 
 /// @title FrontendRegistrySnapshotTest
 /// @notice Guards the settlement-time snapshot preservation for frontend registry rotations.
@@ -104,6 +105,8 @@ contract FrontendRegistrySnapshotTest is VotingTestBase {
         FrontendRegistry originalFrontendRegistry = _deployFrontendRegistry();
         originalFrontendRegistry.setVotingEngine(address(votingEngine));
         originalFrontendRegistry.addFeeCreditor(address(rewardDistributor));
+        MockVoterIdNFT originalVoterIdNFT = new MockVoterIdNFT();
+        originalFrontendRegistry.setVoterIdNFT(address(originalVoterIdNFT));
         ProtocolConfig(address(protocolConfig)).setFrontendRegistry(address(originalFrontendRegistry));
 
         crepToken.mint(owner, 100_000e6);
@@ -112,6 +115,7 @@ contract FrontendRegistrySnapshotTest is VotingTestBase {
         crepToken.mint(voter2, 10_000e6);
         crepToken.mint(voter3, 10_000e6);
         crepToken.mint(frontendOp, 5_000e6);
+        originalVoterIdNFT.setHolder(frontendOp);
 
         vm.stopPrank();
 
@@ -136,6 +140,9 @@ contract FrontendRegistrySnapshotTest is VotingTestBase {
         vm.startPrank(owner);
         replacementRegistry.setVotingEngine(address(votingEngine));
         replacementRegistry.addFeeCreditor(address(rewardDistributor));
+        MockVoterIdNFT replacementVoterIdNFT = new MockVoterIdNFT();
+        replacementRegistry.setVoterIdNFT(address(replacementVoterIdNFT));
+        replacementVoterIdNFT.setHolder(frontendOp);
         ProtocolConfig(address(protocolConfig)).setFrontendRegistry(address(replacementRegistry));
         vm.stopPrank();
 

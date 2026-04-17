@@ -140,6 +140,8 @@ contract RoundVotingEngineBranchesTest is VotingTestBase {
         );
         frontendRegistry.setVotingEngine(address(engine));
         frontendRegistry.addFeeCreditor(address(rewardDistributor));
+        frontendRegistry.setVoterIdNFT(address(mockVoterIdNFT));
+        mockVoterIdNFT.setHolder(frontend1);
         ProtocolConfig(protocolConfigAddress).setFrontendRegistry(address(frontendRegistry));
 
         participationPool = new ParticipationPool(address(crepToken), owner);
@@ -302,6 +304,7 @@ contract RoundVotingEngineBranchesTest is VotingTestBase {
 
     /// @dev Register a frontend operator.
     function _registerFrontend(address fe) internal {
+        mockVoterIdNFT.setHolder(fe);
         vm.startPrank(fe);
         crepToken.approve(address(frontendRegistry), 1000e6);
         frontendRegistry.register();
