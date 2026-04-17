@@ -80,6 +80,6 @@ Commands:
   submit  Discover trending content from all platforms, submit to ContentRegistry
   vote    Rate content using external APIs, commit one initial vote per item
   claim   Claim bot rewards for configured submit/rate wallets
-  status  Check both bot account statuses (balances, voter ID)`);
+  status  Check both bot account statuses (balances, voting identity)`);
     process.exit(command ? 1 : 0);
 }

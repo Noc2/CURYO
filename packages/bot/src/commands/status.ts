@@ -32,7 +32,7 @@ async function showIdentity(label: string, identity: BotIdentityConfig) {
       functionName: "hasVoterId",
       args: [account.address],
     });
-    console.log(`  Voter ID: ${hasVoterId ? "YES" : "NO (required for voting and submission)"}`);
+    console.log(`  Voter ID: ${hasVoterId ? "YES" : "NO (required for voting)"}`);
   } catch (err: any) {
     console.log(`  Voter ID: ERROR (${err.message})`);
   }

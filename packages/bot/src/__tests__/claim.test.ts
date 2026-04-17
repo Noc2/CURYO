@@ -97,141 +97,24 @@ afterEach(() => {
 });
 
 describe("runClaim", () => {
-  it("claims submitter round rewards and reserved submitter participation rewards", async () => {
+  it("does not claim submission-side rewards after submitter upside removal", async () => {
     const claimCommand = await loadClaimCommand({
       rateBotConfigured: false,
-      getAllContent: async () => [
-        {
-          id: "5",
-          submitter: ADDRESS,
-          title: "Reserved reward content",
-          description: "",
-          url: "https://example.com/content",
-          tags: "",
-          categoryId: "1",
-          status: 0,
-          rating: 50,
-          createdAt: "1",
-          totalVotes: 1,
-          totalRounds: 1,
-          submitterStakeReturned: true,
-        },
-      ],
-      getAllRounds: async () => [
-        {
-          id: "5-1",
-          contentId: "5",
-          roundId: "1",
-          state: 3,
-          voteCount: 1,
-          revealedCount: 1,
-          totalStake: "1000000",
-          upPool: "1000000",
-          downPool: "0",
-          upCount: 1,
-          downCount: 0,
-          upWins: true,
-          settledAt: "2",
-        },
-      ],
+      getAllContent: async () => {
+        throw new Error("Submission bot claim planning should not read content");
+      },
+      getAllRounds: async () => {
+        throw new Error("Submission bot claim planning should not read rounds");
+      },
       readContract: async ({ functionName }) => {
-        switch (functionName) {
-          case "pendingSubmitterReward":
-            return 3_000_000n;
-          case "submitterRewardClaimed":
-            return false;
-          case "submitterParticipationRewardOwed":
-            return 9_000_000n;
-          case "submitterParticipationRewardPaid":
-            return 0n;
-          case "submitterParticipationRewardReserved":
-            return 4_000_000n;
-          case "submitterParticipationRewardPool":
-            return POOL_ADDRESS;
-          case "authorizedCallers":
-            return false;
-          case "poolBalance":
-            return 9_000_000n;
-          default:
-            throw new Error(`Unexpected readContract: ${functionName}`);
-        }
+        throw new Error(`Unexpected readContract: ${functionName}`);
       },
     });
 
     await claimCommand.runClaim();
 
-    expect(claimCommand.mocks.writeContract).toHaveBeenNthCalledWith(
-      1,
-      expect.objectContaining({
-        functionName: "claimSubmitterReward",
-        args: [5n, 1n],
-      }),
-    );
-    expect(claimCommand.mocks.writeContract).toHaveBeenNthCalledWith(
-      2,
-      expect.objectContaining({
-        functionName: "claimSubmitterParticipationReward",
-        args: [5n],
-      }),
-    );
-    expect(claimCommand.mocks.log.info).toHaveBeenCalledWith(
-      "Found 2 claim(s) for submission bot worth about 7.00 cREP.",
-    );
-    expect(claimCommand.mocks.waitForTransactionReceipt).toHaveBeenCalledTimes(2);
-  });
-
-  it("includes streamed submitter participation rewards when the reward pool is authorized", async () => {
-    const claimCommand = await loadClaimCommand({
-      rateBotConfigured: false,
-      getAllContent: async () => [
-        {
-          id: "7",
-          submitter: ADDRESS,
-          title: "Streamed reward content",
-          description: "",
-          url: "https://example.com/streamed",
-          tags: "",
-          categoryId: "1",
-          status: 0,
-          rating: 80,
-          createdAt: "1",
-          totalVotes: 3,
-          totalRounds: 0,
-          submitterStakeReturned: true,
-        },
-      ],
-      readContract: async ({ functionName }) => {
-        switch (functionName) {
-          case "submitterParticipationRewardOwed":
-            return 9_000_000n;
-          case "submitterParticipationRewardPaid":
-            return 0n;
-          case "submitterParticipationRewardReserved":
-            return 2_000_000n;
-          case "submitterParticipationRewardPool":
-            return POOL_ADDRESS;
-          case "authorizedCallers":
-            return true;
-          case "poolBalance":
-            return 3_000_000n;
-          default:
-            throw new Error(`Unexpected readContract: ${functionName}`);
-        }
-      },
-    });
-
-    await claimCommand.runClaim();
-
-    expect(claimCommand.mocks.writeContract).toHaveBeenCalledOnce();
-    expect(claimCommand.mocks.writeContract).toHaveBeenCalledWith(
-      expect.objectContaining({
-        functionName: "claimSubmitterParticipationReward",
-        args: [7n],
-      }),
-    );
-    expect(claimCommand.mocks.log.info).toHaveBeenCalledWith(
-      "Found 1 claim(s) for submission bot worth about 5.00 cREP.",
-    );
+    expect(claimCommand.mocks.writeContract).not.toHaveBeenCalled();
+    expect(claimCommand.mocks.log.info).toHaveBeenCalledWith("No claimable rewards found for submission bot.");
   });
 
   it("claims rating bot refunds, round payouts, and participation rewards", async () => {

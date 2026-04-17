@@ -1,21 +1,15 @@
-import { ParticipationPoolAbi } from "@curyo/contracts/abis";
 import { EPOCH_WEIGHT_BPS, REWARD_SPLIT_BPS, ROUND_STATE } from "@curyo/contracts/protocol";
 import type { Hex } from "viem";
 import { getAccount, getWalletClient, publicClient, validateContractKeys } from "../client.js";
 import { getIdentityConfig, log, type BotContractKey, type BotRole, config } from "../config.js";
 import { contractConfig } from "../contracts.js";
-import { type PonderContentItem, type PonderVoteItem, ponder } from "../ponder.js";
+import { type PonderVoteItem, ponder } from "../ponder.js";
 
-const ZERO_ADDRESS = "0x0000000000000000000000000000000000000000" as const;
 const TX_RECEIPT_TIMEOUT_MS = 180_000;
+const ZERO_ADDRESS = "0x0000000000000000000000000000000000000000" as const;
 
 type ClaimPlanItem = {
-  claimType:
-    | "refund"
-    | "reward"
-    | "participation_reward"
-    | "submitter_reward"
-    | "submitter_participation_reward";
+  claimType: "refund" | "reward" | "participation_reward";
   contentId: bigint;
   roundId?: bigint;
   estimatedReward: bigint;
@@ -26,19 +20,6 @@ type ClaimPlanItem = {
     args: readonly unknown[];
     functionName: string;
   };
-};
-
-type SubmitterParticipationCandidate = {
-  content: PonderContentItem;
-  alreadyPaid: bigint;
-  reservedReward: bigint;
-  rewardPool: `0x${string}` | null;
-  totalReward: bigint;
-};
-
-type ParticipationPoolClaimState = {
-  authorized: boolean;
-  poolBalance: bigint;
 };
 
 function safeBigInt(value: string | number | bigint | null | undefined): bigint {
@@ -59,7 +40,7 @@ function epochWeightBps(epochIndex: number): number {
 
 function configuredContractKeysForClaim(role: BotRole): readonly BotContractKey[] {
   return role === "submit"
-    ? (["contentRegistry", "roundRewardDistributor"] as const)
+    ? ([] as const)
     : (["votingEngine", "roundRewardDistributor"] as const);
 }
 
@@ -71,10 +52,6 @@ function claimPriority(item: ClaimPlanItem) {
       return 1;
     case "participation_reward":
       return 2;
-    case "submitter_reward":
-      return 3;
-    case "submitter_participation_reward":
-      return 4;
   }
 }
 
@@ -291,180 +268,9 @@ async function buildRateBotClaimPlan(address: `0x${string}`): Promise<ClaimPlanI
   return sortClaimPlan(items);
 }
 
-async function buildSubmitterParticipationClaimItems(
-  candidates: readonly SubmitterParticipationCandidate[],
-): Promise<ClaimPlanItem[]> {
-  const uniqueRewardPools = [...new Set(candidates.map(candidate => candidate.rewardPool).filter(Boolean))] as `0x${string}`[];
-  const poolStates = new Map<`0x${string}`, ParticipationPoolClaimState>();
-
-  for (const rewardPool of uniqueRewardPools) {
-    const [authorized, poolBalance] = (await Promise.all([
-      publicClient.readContract({
-        address: rewardPool,
-        abi: ParticipationPoolAbi,
-        functionName: "authorizedCallers",
-        args: [contractConfig.registry.address],
-      }),
-      publicClient.readContract({
-        address: rewardPool,
-        abi: ParticipationPoolAbi,
-        functionName: "poolBalance",
-        args: [],
-      }),
-    ])) as readonly [boolean, bigint];
-
-    poolStates.set(rewardPool, {
-      authorized,
-      poolBalance,
-    });
-  }
-
-  const availableStreamingByPool = new Map<`0x${string}`, bigint>();
-  const items: ClaimPlanItem[] = [];
-
-  for (const candidate of [...candidates].sort((left, right) => {
-    const leftId = safeBigInt(left.content.id);
-    const rightId = safeBigInt(right.content.id);
-    if (leftId === rightId) {
-      return 0;
-    }
-    return leftId < rightId ? -1 : 1;
-  })) {
-    const rewardPool = candidate.rewardPool;
-    if (!rewardPool || candidate.totalReward <= candidate.alreadyPaid) {
-      continue;
-    }
-
-    const reservedRemaining =
-      candidate.reservedReward > candidate.alreadyPaid ? candidate.reservedReward - candidate.alreadyPaid : 0n;
-    const remainingAfterReserved =
-      candidate.totalReward > candidate.alreadyPaid + reservedRemaining
-        ? candidate.totalReward - candidate.alreadyPaid - reservedRemaining
-        : 0n;
-
-    const poolState = poolStates.get(rewardPool);
-    const initialStreamingBalance = poolState?.authorized ? poolState.poolBalance : 0n;
-    const streamingBalance = availableStreamingByPool.has(rewardPool)
-      ? availableStreamingByPool.get(rewardPool)!
-      : initialStreamingBalance;
-    const streamedReward = remainingAfterReserved > streamingBalance ? streamingBalance : remainingAfterReserved;
-    availableStreamingByPool.set(rewardPool, streamingBalance - streamedReward);
-
-    const claimableReward = reservedRemaining + streamedReward;
-    if (claimableReward <= 0n) {
-      continue;
-    }
-
-    const contentId = safeBigInt(candidate.content.id);
-    items.push({
-      claimType: "submitter_participation_reward",
-      contentId,
-      estimatedReward: claimableReward,
-      label: `submitter bootstrap reward for content #${contentId}`,
-      write: {
-        ...contractConfig.registry,
-        functionName: "claimSubmitterParticipationReward",
-        args: [contentId],
-      },
-    });
-  }
-
-  return items;
-}
-
 async function buildSubmitBotClaimPlan(address: `0x${string}`): Promise<ClaimPlanItem[]> {
-  const contentItems = await ponder.getAllContent({ submitter: address, status: "all" });
-  const items: ClaimPlanItem[] = [];
-  const participationCandidates: SubmitterParticipationCandidate[] = [];
-
-  for (const content of contentItems) {
-    const contentId = safeBigInt(content.id);
-    if (contentId <= 0n) {
-      continue;
-    }
-
-    if (content.totalRounds > 0) {
-      const settledRounds = await ponder.getAllRounds({
-        contentId: content.id,
-        state: String(ROUND_STATE.Settled),
-      });
-
-      for (const round of settledRounds) {
-        const roundId = safeBigInt(round.roundId);
-        if (roundId <= 0n) {
-          continue;
-        }
-
-        const [pendingReward, alreadyClaimed] = (await Promise.all([
-          publicClient.readContract({
-            ...contractConfig.votingEngine,
-            functionName: "pendingSubmitterReward",
-            args: [contentId, roundId],
-          }),
-          publicClient.readContract({
-            ...contractConfig.distributor,
-            functionName: "submitterRewardClaimed",
-            args: [contentId, roundId],
-          }),
-        ])) as readonly [bigint, boolean];
-
-        if (pendingReward <= 0n || alreadyClaimed) {
-          continue;
-        }
-
-        items.push({
-          claimType: "submitter_reward",
-          contentId,
-          roundId,
-          estimatedReward: pendingReward,
-          label: `submitter round reward for content #${contentId} round #${roundId}`,
-          write: {
-            ...contractConfig.distributor,
-            functionName: "claimSubmitterReward",
-            args: [contentId, roundId],
-          },
-        });
-      }
-    }
-
-    if (!content.submitterStakeReturned) {
-      continue;
-    }
-
-    const [totalReward, alreadyPaid, reservedReward, rewardPool] = (await Promise.all([
-      publicClient.readContract({
-        ...contractConfig.registry,
-        functionName: "submitterParticipationRewardOwed",
-        args: [contentId],
-      }),
-      publicClient.readContract({
-        ...contractConfig.registry,
-        functionName: "submitterParticipationRewardPaid",
-        args: [contentId],
-      }),
-      publicClient.readContract({
-        ...contractConfig.registry,
-        functionName: "submitterParticipationRewardReserved",
-        args: [contentId],
-      }),
-      publicClient.readContract({
-        ...contractConfig.registry,
-        functionName: "submitterParticipationRewardPool",
-        args: [contentId],
-      }),
-    ])) as readonly [bigint, bigint, bigint, `0x${string}`];
-
-    participationCandidates.push({
-      content,
-      totalReward,
-      alreadyPaid,
-      reservedReward,
-      rewardPool: rewardPool !== ZERO_ADDRESS ? rewardPool : null,
-    });
-  }
-
-  const participationItems = await buildSubmitterParticipationClaimItems(participationCandidates);
-  return sortClaimPlan([...items, ...participationItems]);
+  void address;
+  return [];
 }
 
 async function executeClaimPlan(
