@@ -64,11 +64,11 @@ KEYS=(
   "0xdbda1821b80551c9d65939329250298aa3472ba22feea921c0cf5d620ea67b97"  # Account 8 (reused)
 )
 
-# Example Curyo 2 questions use direct image URLs, one multi-image set, or a YouTube URL.
+# Example Curyo 2 questions always include a context URL. Preview media is optional.
 # Curyo 2 default categoryIds:
 # 1=Products, 2=Local Places, 3=Travel, 4=Apps, 5=Media,
 # 6=Design, 7=AI Answers, 8=Developer Docs, 9=Trust, 10=General
-URLS=(
+CONTEXT_URLS=(
   "https://picsum.photos/seed/curyo-refund-policy/1200/800.jpg"
   "https://picsum.photos/seed/curyo-workspace/1200/800.jpg"
   "https://picsum.photos/seed/curyo-api-docs/1200/800.jpg"
@@ -79,12 +79,50 @@ URLS=(
   "https://picsum.photos/seed/curyo-app-onboarding/1200/800.jpg"
   "https://picsum.photos/seed/curyo-event-poster/1200/800.jpg"
   "https://picsum.photos/seed/curyo-weeknight-dinner/1200/800.jpg"
-  '["https://picsum.photos/seed/curyo-media-hero-primary/1200/800.jpg","https://picsum.photos/seed/curyo-media-hero-detail/1200/800.jpg","https://picsum.photos/seed/curyo-media-hero-contrast/1200/800.jpg","https://picsum.photos/seed/curyo-media-hero-mobile/1200/800.jpg"]'
+  "https://picsum.photos/seed/curyo-media-hero-primary/1200/800.jpg"
   "https://www.youtube.com/watch?v=aqz-KE-bpKQ"
   "https://picsum.photos/seed/curyo-street-guide/1200/800.jpg"
   "https://picsum.photos/seed/curyo-accessibility-checklist/1200/800.jpg"
   "https://picsum.photos/seed/curyo-moderation-rules/1200/800.jpg"
   "https://picsum.photos/seed/curyo-product-photo/1200/800.jpg"
+)
+
+IMAGE_URLS=(
+  "[]"
+  "[]"
+  "[]"
+  "[]"
+  "[]"
+  "[]"
+  "[]"
+  "[]"
+  "[]"
+  "[]"
+  '["https://picsum.photos/seed/curyo-media-hero-primary/1200/800.jpg","https://picsum.photos/seed/curyo-media-hero-detail/1200/800.jpg","https://picsum.photos/seed/curyo-media-hero-contrast/1200/800.jpg","https://picsum.photos/seed/curyo-media-hero-mobile/1200/800.jpg"]'
+  "[]"
+  "[]"
+  "[]"
+  "[]"
+  "[]"
+)
+
+VIDEO_URLS=(
+  ""
+  ""
+  ""
+  ""
+  ""
+  ""
+  ""
+  ""
+  ""
+  ""
+  ""
+  ""
+  ""
+  ""
+  ""
+  ""
 )
 
 TITLES=(
@@ -183,10 +221,12 @@ echo "=== Seeding example image, multi-image, and video questions ==="
 echo "(Test accounts were pre-funded with cREP during deployment)"
 echo ""
 
-TOTAL_ITEMS="${#URLS[@]}"
+TOTAL_ITEMS="${#CONTEXT_URLS[@]}"
 if [ "$TOTAL_ITEMS" -ne "${#TITLES[@]}" ] ||
   [ "$TOTAL_ITEMS" -ne "${#DESCRIPTIONS[@]}" ] ||
   [ "$TOTAL_ITEMS" -ne "${#TAGS[@]}" ] ||
+  [ "$TOTAL_ITEMS" -ne "${#IMAGE_URLS[@]}" ] ||
+  [ "$TOTAL_ITEMS" -ne "${#VIDEO_URLS[@]}" ] ||
   [ "$TOTAL_ITEMS" -ne "${#CATEGORY_SLUGS[@]}" ] ||
   [ "$TOTAL_ITEMS" -ne "${#CATEGORY_IDS[@]}" ]; then
   echo "ERROR: Seed content arrays must have the same length"
@@ -200,29 +240,20 @@ fi
 # Submit questions from accounts 2-10 (some reused for later categories)
 for ((i = 0; i < TOTAL_ITEMS; i++)); do
   KEY="${KEYS[$i]}"
-  URL="${URLS[$i]}"
+  CONTEXT_URL="${CONTEXT_URLS[$i]}"
+  IMAGE_URLS_ARG="${IMAGE_URLS[$i]}"
+  VIDEO_URL_ARG="${VIDEO_URLS[$i]}"
   TITLE="${TITLES[$i]}"
   DESCRIPTION="${DESCRIPTIONS[$i]}"
   TAG="${TAGS[$i]}"
   CATEGORY_ID="${CATEGORY_IDS[$i]}"
   CATEGORY_SLUG="${CATEGORY_SLUGS[$i]}"
-  MEDIA_KIND="image"
-  IMAGE_URLS_ARG="[\"$URL\"]"
-  VIDEO_URL_ARG=""
-  case "$URL" in
-    \[*)
-      MEDIA_KIND="multi-image"
-      IMAGE_URLS_ARG="$URL"
-      ;;
-    *youtube.com*|*youtu.be*)
-      MEDIA_KIND="video"
-      IMAGE_URLS_ARG="[]"
-      VIDEO_URL_ARG="$URL"
-      ;;
-    *)
-      MEDIA_KIND="image"
-      ;;
-  esac
+  MEDIA_KIND="context-only"
+  if [ "$IMAGE_URLS_ARG" != "[]" ]; then
+    MEDIA_KIND="preview-images"
+  elif [ -n "$VIDEO_URL_ARG" ]; then
+    MEDIA_KIND="preview-video"
+  fi
 
   ADDR=$(cast wallet address "$KEY")
   echo "[$((i+1))/$TOTAL_ITEMS] Account: $ADDR"
@@ -241,7 +272,7 @@ for ((i = 0; i < TOTAL_ITEMS; i++)); do
   # 2. Reserve the hidden submission commitment before revealing the question metadata
   printf -v SALT "%064x" "$((i + 1))"
   REVEAL_COMMITMENT=$(node "$SCRIPT_DIR/../scripts-js/buildSubmissionReservation.js" \
-    "$RPC" "$REGISTRY" "$ADDR" "$URL" "$TITLE" "$DESCRIPTION" "$TAG" "$CATEGORY_ID" "0x$SALT")
+    "$RPC" "$REGISTRY" "$ADDR" "$CONTEXT_URL" "$IMAGE_URLS_ARG" "$VIDEO_URL_ARG" "$TITLE" "$DESCRIPTION" "$TAG" "$CATEGORY_ID" "0x$SALT")
   echo "  Reserving submission..."
   cast send "$REGISTRY" "reserveSubmission(bytes32)" "$REVEAL_COMMITMENT" \
     --private-key "$KEY" --rpc-url "$RPC" > /dev/null 2>&1
@@ -250,9 +281,9 @@ for ((i = 0; i < TOTAL_ITEMS; i++)); do
   sleep 1
 
   # 3. Reveal the submission with the same deterministic salt used for the reservation
-  echo "  Submitting question: $TITLE ($MEDIA_KIND: $URL, category: $CATEGORY_SLUG -> $CATEGORY_ID)"
-  cast send "$REGISTRY" "submitQuestionWithMedia(string[],string,string,string,string,uint256,bytes32)" \
-    "$IMAGE_URLS_ARG" "$VIDEO_URL_ARG" "$TITLE" "$DESCRIPTION" "$TAG" "$CATEGORY_ID" "0x$SALT" \
+  echo "  Submitting question: $TITLE ($MEDIA_KIND, context: $CONTEXT_URL, category: $CATEGORY_SLUG -> $CATEGORY_ID)"
+  cast send "$REGISTRY" "submitQuestion(string,string[],string,string,string,string,uint256,bytes32)" \
+    "$CONTEXT_URL" "$IMAGE_URLS_ARG" "$VIDEO_URL_ARG" "$TITLE" "$DESCRIPTION" "$TAG" "$CATEGORY_ID" "0x$SALT" \
     --private-key "$KEY" --rpc-url "$RPC" > /dev/null 2>&1
   echo "  Done!"
   echo ""

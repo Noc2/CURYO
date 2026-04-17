@@ -13,6 +13,7 @@ import { RoundLib } from "../contracts/libraries/RoundLib.sol";
 import { RoundEngineReadHelpers } from "./helpers/RoundEngineReadHelpers.sol";
 import { MockVoterIdNFT } from "./mocks/MockVoterIdNFT.sol";
 import { MockCategoryRegistry } from "../contracts/mocks/MockCategoryRegistry.sol";
+import { MockQuestionRewardPoolEscrow } from "./mocks/MockQuestionRewardPoolEscrow.sol";
 import { VotingTestBase } from "./helpers/VotingTestHelpers.sol";
 
 // =========================================================================
@@ -28,6 +29,7 @@ contract ContentRegistryBranchesTest is VotingTestBase {
     RoundRewardDistributor public rewardDistributor;
     MockVoterIdNFT public mockVoterIdNFT;
     MockCategoryRegistry public mockCategoryRegistry;
+    MockQuestionRewardPoolEscrow public mockQuestionRewardPoolEscrow;
     ParticipationPool public participationPool;
 
     address public owner = address(1);
@@ -98,7 +100,9 @@ contract ContentRegistryBranchesTest is VotingTestBase {
         mockVoterIdNFT = new MockVoterIdNFT();
         mockCategoryRegistry = new MockCategoryRegistry();
         mockCategoryRegistry.seedDefaultTestCategories();
+        mockQuestionRewardPoolEscrow = new MockQuestionRewardPoolEscrow();
         registry.setCategoryRegistry(address(mockCategoryRegistry));
+        registry.setQuestionRewardPoolEscrow(address(mockQuestionRewardPoolEscrow));
         ProtocolConfig(address(votingEngine.protocolConfig())).setCategoryRegistry(address(mockCategoryRegistry));
 
         participationPool = new ParticipationPool(address(crepToken), owner);
@@ -271,8 +275,21 @@ contract ContentRegistryBranchesTest is VotingTestBase {
         crepToken.approve(address(registry), 10e6);
         (, bytes32 submissionKey) =
             registry.previewQuestionMediaSubmissionKey(imageUrls, "", title, description, tags, categoryId);
+        uint256 rewardAmount = _defaultSubmissionRewardAmount(registry);
         bytes32 revealCommitment =
-            keccak256(abi.encode(submissionKey, title, description, tags, categoryId, salt, submitter));
+            keccak256(
+                abi.encode(
+                    submissionKey,
+                    title,
+                    description,
+                    tags,
+                    categoryId,
+                    salt,
+                    submitter,
+                    DEFAULT_SUBMISSION_REWARD_ASSET_CREP,
+                    rewardAmount
+                )
+            );
         registry.reserveSubmission(revealCommitment);
         vm.warp(block.timestamp + 1);
         uint256 id = registry.submitQuestionWithMedia(imageUrls, "", title, description, tags, categoryId, salt);
@@ -415,7 +432,20 @@ contract ContentRegistryBranchesTest is VotingTestBase {
         string memory imageUrl = _submissionImageUrl(url);
         string[] memory imageUrls = _singleImageUrls(imageUrl);
         (, bytes32 submissionKey) = registry.previewQuestionMediaSubmissionKey(imageUrls, "", title, description, tags, 1);
-        bytes32 revealCommitment = keccak256(abi.encode(submissionKey, title, description, tags, 1, salt, submitter));
+        uint256 rewardAmount = _defaultSubmissionRewardAmount(registry);
+        bytes32 revealCommitment = keccak256(
+            abi.encode(
+                submissionKey,
+                title,
+                description,
+                tags,
+                uint256(1),
+                salt,
+                submitter,
+                DEFAULT_SUBMISSION_REWARD_ASSET_CREP,
+                rewardAmount
+            )
+        );
         registry.reserveSubmission(revealCommitment);
         vm.warp(block.timestamp + 1);
         vm.expectRevert();
@@ -440,8 +470,21 @@ contract ContentRegistryBranchesTest is VotingTestBase {
         string[] memory imageUrls = _singleImageUrls(imageUrl);
         (, bytes32 submissionKey) =
             registry.previewQuestionMediaSubmissionKey(imageUrls, "", title, description, tags, oversizedCategoryId);
+        uint256 rewardAmount = _defaultSubmissionRewardAmount(registry);
         bytes32 revealCommitment =
-            keccak256(abi.encode(submissionKey, title, description, tags, oversizedCategoryId, salt, submitter));
+            keccak256(
+                abi.encode(
+                    submissionKey,
+                    title,
+                    description,
+                    tags,
+                    oversizedCategoryId,
+                    salt,
+                    submitter,
+                    DEFAULT_SUBMISSION_REWARD_ASSET_CREP,
+                    rewardAmount
+                )
+            );
         registry.reserveSubmission(revealCommitment);
         vm.warp(block.timestamp + 1);
         vm.expectRevert();
