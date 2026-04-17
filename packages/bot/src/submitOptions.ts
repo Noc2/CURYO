@@ -1,8 +1,4 @@
-import {
-  getPendingSubmitCoverageCatalog,
-  getSubmitCategoryCatalog,
-  getSubmitSourceCatalog,
-} from "./sourceCatalog.js";
+import { getSubmitCategoryCatalog, getSubmitSourceCatalog } from "./sourceCatalog.js";
 
 export interface SubmitRunOptions {
   category?: string;
@@ -17,7 +13,6 @@ interface ParsedSubmitCommand {
 
 const SUBMIT_SOURCE_CATALOG = getSubmitSourceCatalog();
 const SUBMIT_CATEGORY_CATALOG = getSubmitCategoryCatalog();
-const PENDING_SUBMIT_CATEGORIES = getPendingSubmitCoverageCatalog();
 const SUBMIT_SOURCE_NAME_WIDTH = Math.max(...SUBMIT_SOURCE_CATALOG.map(entry => entry.sourceName.length));
 
 function parsePositiveIntegerOption(flag: string, value: string | undefined): number {
@@ -45,17 +40,14 @@ export function formatSubmitUsage(): string {
     entry =>
       `  ${entry.sourceName.padEnd(SUBMIT_SOURCE_NAME_WIDTH)} -> ${entry.categoryName} (${entry.authRequirement})`,
   ).join("\n");
-  const pendingCoverage = PENDING_SUBMIT_CATEGORIES.map(
-    entry => `  ${entry.sourceName.padEnd(SUBMIT_SOURCE_NAME_WIDTH)} -> ${entry.categoryName}`,
-  ).join("\n");
 
   return `Usage: yarn submit [options]
 
 Discover trending content and submit it to ContentRegistry.
 
 Options:
-  --category <id|name>       Limit submission to one category (for example: 1, Products, "Media")
-  --source <name>            Limit submission to one source adapter (for example: tmdb, coingecko)
+  --category <id|name>       Limit submission to one category (for example: 5, "Media")
+  --source <name>            Limit submission to one source adapter (for example: youtube)
   --max-submissions <count>  Override the per-run submission cap for this execution
   -h, --help                 Show this help
 
@@ -65,13 +57,9 @@ ${categories}
 Available sources:
 ${sources}
 
-Additional source adapters without automated submit support yet:
-${pendingCoverage}
-
 Examples:
-  yarn submit --category "Media" --source tmdb --max-submissions 3
-  yarn workspace @curyo/bot submit --category Products --source coingecko --max-submissions 3
-  yarn workspace @curyo/bot submit --category "Developer Docs" --source github --max-submissions 2`;
+  yarn submit --category "Media" --source youtube --max-submissions 3
+  yarn workspace @curyo/bot submit --category "Media" --source youtube --max-submissions 3`;
 }
 
 export function parseSubmitCommandArgs(argv: string[]): ParsedSubmitCommand {

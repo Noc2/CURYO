@@ -275,12 +275,7 @@ function loadConfig() {
     ponderUrl: readOptionalUrlEnv("PONDER_URL", errors),
 
     // External APIs
-    tmdbApiKey: readEnv("TMDB_API_KEY"),
     youtubeApiKey: readEnv("YOUTUBE_API_KEY"),
-    twitchClientId: readEnv("TWITCH_CLIENT_ID"),
-    twitchClientSecret: readEnv("TWITCH_CLIENT_SECRET"),
-    rawgApiKey: readEnv("RAWG_API_KEY"),
-    githubToken: readEnv("GITHUB_TOKEN"),
 
     // Voting
     voteStake: parsePositiveBigIntEnv("VOTE_STAKE", 1000000n, errors),
@@ -300,16 +295,8 @@ function loadConfig() {
     console.warn(`[Bot] WARN: ${warning}`);
   }
 
-  const hasApiKey =
-    loadedConfig.tmdbApiKey ||
-    loadedConfig.youtubeApiKey ||
-    loadedConfig.twitchClientId ||
-    loadedConfig.rawgApiKey ||
-    loadedConfig.githubToken;
-  if (!hasApiKey) {
-    console.warn(
-      "[Bot] WARN: No keyed content-source API keys configured — public sources still work, but some sources and rating strategies will be unavailable",
-    );
+  if (!loadedConfig.youtubeApiKey) {
+    console.warn("[Bot] WARN: YOUTUBE_API_KEY is not configured — submit and rating sources will return no items");
   }
 
   return loadedConfig;

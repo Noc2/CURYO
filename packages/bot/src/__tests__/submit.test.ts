@@ -6,10 +6,10 @@ const SUBMISSION_KEY = `0x${"aa".repeat(32)}` as const;
 const FIXED_SALT = `0x${"11".repeat(32)}` as const;
 const CONTENT_REGISTRY = "0x2222222222222222222222222222222222222222" as const;
 const ITEM = {
-  url: "https://image.tmdb.org/t/p/original/matrix.jpg",
-  title: "The Matrix",
-  description: "A computer hacker learns the truth.",
-  tags: "Sci-Fi",
+  url: "https://www.youtube.com/watch?v=dQw4w9WgXcQ",
+  title: "Never Gonna Give You Up",
+  description: "A music video with persistent cultural staying power.",
+  tags: "Music",
   categoryId: 5n,
 };
 
@@ -120,7 +120,7 @@ async function loadSubmitCommand(options: SubmitCommandOptions = {}) {
         fetchTrending: vi.fn().mockResolvedValue(source.items),
       })) ?? [
         {
-          name: "tmdb",
+          name: "youtube",
           categoryId: ITEM.categoryId,
           categoryName: "Media",
           fetchTrending: vi.fn().mockResolvedValue([ITEM]),
@@ -179,7 +179,7 @@ describe("runSubmit", () => {
     expect(submitCommand.mocks.readContract).toHaveBeenCalledWith(
       expect.objectContaining({
         functionName: "previewQuestionMediaSubmissionKey",
-        args: [[ITEM.url], "", ITEM.title, ITEM.description, ITEM.tags, ITEM.categoryId],
+        args: [[], ITEM.url, ITEM.title, ITEM.description, ITEM.tags, ITEM.categoryId],
       }),
     );
     expect(submitCommand.mocks.readContract).toHaveBeenCalledWith(
@@ -207,10 +207,10 @@ describe("runSubmit", () => {
       3,
       expect.objectContaining({
         functionName: "submitQuestionWithMedia",
-        args: [[ITEM.url], "", ITEM.title, ITEM.description, ITEM.tags, ITEM.categoryId, FIXED_SALT],
+        args: [[], ITEM.url, ITEM.title, ITEM.description, ITEM.tags, ITEM.categoryId, FIXED_SALT],
       }),
     );
-    expect(submitCommand.mocks.log.info).toHaveBeenCalledWith(`Processing tmdb item 1/1: "${ITEM.title}"`);
+    expect(submitCommand.mocks.log.info).toHaveBeenCalledWith(`Processing youtube item 1/1: "${ITEM.title}"`);
     expect(submitCommand.mocks.log.info).toHaveBeenCalledWith(
       `Waiting for reservation receipt for "${ITEM.title}": 0xreserve`,
     );
@@ -256,7 +256,7 @@ describe("runSubmit", () => {
     const submitCommand = await loadSubmitCommand({
       sources: [
         {
-          name: "tmdb",
+          name: "youtube",
           categoryId: ITEM.categoryId,
           categoryName: "Media",
           items: [{ ...ITEM, url: "https://www.themoviedb.org/movie/603" }],
@@ -342,30 +342,30 @@ describe("runSubmit", () => {
   });
 
   it("supports category filtering and uses the explicit max for a single selected source", async () => {
-    const tmdbItem = { ...ITEM };
-    const secondTmdbItem = {
+    const youtubeItem = { ...ITEM };
+    const secondYoutubeItem = {
       ...ITEM,
-      url: "https://image.tmdb.org/t/p/original/matrix-reloaded.jpg",
-      title: "The Matrix Reloaded",
+      url: "https://www.youtube.com/watch?v=9bZkp7q19f0",
+      title: "Gangnam Style",
     };
-    const thirdTmdbItem = {
+    const thirdYoutubeItem = {
       ...ITEM,
-      url: "https://image.tmdb.org/t/p/original/matrix-revolutions.jpg",
-      title: "The Matrix Revolutions",
+      url: "https://www.youtube.com/watch?v=kJQP7kiw5Fk",
+      title: "Despacito",
     };
     const submitCommand = await loadSubmitCommand({
       sources: [
         {
-          name: "tmdb",
+          name: "youtube",
           categoryId: 5n,
           categoryName: "Media",
-          items: [tmdbItem, secondTmdbItem, thirdTmdbItem],
+          items: [youtubeItem, secondYoutubeItem, thirdYoutubeItem],
         },
         {
-          name: "coingecko",
-          categoryId: 1n,
-          categoryName: "Products",
-          items: [{ ...ITEM, url: "https://www.coingecko.com/en/coins/bitcoin", title: "Bitcoin", categoryId: 1n }],
+          name: "archive",
+          categoryId: 10n,
+          categoryName: "General",
+          items: [{ ...ITEM, url: "https://example.com/archive.jpg", title: "Archive", categoryId: 10n }],
         },
       ],
     });

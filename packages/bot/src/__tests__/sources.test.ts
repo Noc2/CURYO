@@ -3,7 +3,7 @@ import { fileURLToPath } from "node:url";
 import deployedContracts from "@curyo/contracts/deployedContracts";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-const chain11142220 = (deployedContracts as Record<number, Record<string, { address: `0x${string}` }>>)[11142220];
+const chain31337 = (deployedContracts as Record<number, Record<string, { address: `0x${string}` }>>)[31337];
 const ORIGINAL_ENV = { ...process.env };
 
 async function loadSources() {
@@ -11,13 +11,13 @@ async function loadSources() {
   process.env = {
     ...ORIGINAL_ENV,
     RPC_URL: "https://rpc.example.com",
-    CHAIN_ID: "11142220",
+    CHAIN_ID: "31337",
     PONDER_URL: "https://ponder.example.com",
-    CREP_TOKEN_ADDRESS: chain11142220?.CuryoReputation?.address ?? "0x1111111111111111111111111111111111111111",
-    CONTENT_REGISTRY_ADDRESS: chain11142220?.ContentRegistry?.address ?? "0x2222222222222222222222222222222222222222",
-    VOTING_ENGINE_ADDRESS: chain11142220?.RoundVotingEngine?.address ?? "0x3333333333333333333333333333333333333333",
-    VOTER_ID_NFT_ADDRESS: chain11142220?.VoterIdNFT?.address ?? "0x4444444444444444444444444444444444444444",
-    CATEGORY_REGISTRY_ADDRESS: chain11142220?.CategoryRegistry?.address ?? "0x5555555555555555555555555555555555555555",
+    CREP_TOKEN_ADDRESS: chain31337?.CuryoReputation?.address ?? "0x1111111111111111111111111111111111111111",
+    CONTENT_REGISTRY_ADDRESS: chain31337?.ContentRegistry?.address ?? "0x2222222222222222222222222222222222222222",
+    VOTING_ENGINE_ADDRESS: chain31337?.RoundVotingEngine?.address ?? "0x3333333333333333333333333333333333333333",
+    VOTER_ID_NFT_ADDRESS: chain31337?.VoterIdNFT?.address ?? "0x4444444444444444444444444444444444444444",
+    CATEGORY_REGISTRY_ADDRESS: chain31337?.CategoryRegistry?.address ?? "0x5555555555555555555555555555555555555555",
     RATE_PRIVATE_KEY: `0x${"11".repeat(32)}`,
     YOUTUBE_API_KEY: "youtube-key",
   };
@@ -50,15 +50,6 @@ describe("content sources", () => {
 
     expect(categoryMetadataBySource).toEqual({
       youtube: { categoryId: 5n, categoryName: "Media" },
-      twitch: { categoryId: 5n, categoryName: "Media" },
-      scryfall: { categoryId: 1n, categoryName: "Products" },
-      tmdb: { categoryId: 5n, categoryName: "Media" },
-      "wikipedia-people": { categoryId: 10n, categoryName: "General" },
-      rawg: { categoryId: 1n, categoryName: "Products" },
-      openlibrary: { categoryId: 5n, categoryName: "Media" },
-      huggingface: { categoryId: 7n, categoryName: "AI Answers" },
-      coingecko: { categoryId: 1n, categoryName: "Products" },
-      github: { categoryId: 8n, categoryName: "Developer Docs" },
     });
   });
 
@@ -71,28 +62,17 @@ describe("content sources", () => {
         categoryName: entry.categoryName,
       })),
     ).toEqual([
-      { categoryId: 1n, categoryName: "Products" },
       { categoryId: 5n, categoryName: "Media" },
-      { categoryId: 7n, categoryName: "AI Answers" },
-      { categoryId: 8n, categoryName: "Developer Docs" },
-      { categoryId: 10n, categoryName: "General" },
     ]);
   });
 
-  it("tracks submit coverage against deployed review categories", async () => {
-    const { getCategoryCoverageCatalog, getSubmitCategoryCatalog } = await import("../sourceCatalog.js");
-    const coverageCatalog = getCategoryCoverageCatalog();
+  it("keeps submit categories present in deployed review categories", async () => {
+    const { getSubmitCategoryCatalog } = await import("../sourceCatalog.js");
     const deployedCategories = readDeployedCategoryCatalog();
     const deployedById = new Map(deployedCategories.map(entry => [entry.categoryId.toString(), entry.categoryName]));
 
     for (const entry of getSubmitCategoryCatalog()) {
       expect(deployedById.get(entry.categoryId.toString())).toBe(entry.categoryName);
     }
-
-    expect(
-      coverageCatalog
-        .filter(entry => !entry.supportsSubmit)
-        .map(entry => entry.sourceName),
-    ).toEqual(["twitter", "spotify", "npm", "pypi"]);
   });
 });

@@ -1,6 +1,6 @@
 # Curyo — Bot (CLI Voting & Content Submission)
 
-Command-line tool for automated content submission and voting. Discovers trending content from external platforms, submits question-first entries to the ContentRegistry, and rates content using pluggable strategies backed by external APIs. Votes use **tlock commit-reveal**: the bot encrypts vote directions with timelock encryption, binds the redeployed drand metadata into the commit payload, and commits them on-chain; the keeper-assisted/self-reveal flow reveals votes after each epoch once the on-chain and off-chain checks are satisfied.
+Command-line tool for automated YouTube question submission and voting. Discovers trending videos, submits question-first entries to the ContentRegistry, and rates YouTube content with the configured strategy. Votes use **tlock commit-reveal**: the bot encrypts vote directions with timelock encryption, binds the redeployed drand metadata into the commit payload, and commits them on-chain; the keeper-assisted/self-reveal flow reveals votes after each epoch once the on-chain and off-chain checks are satisfied.
 
 ## Quick Start
 
@@ -13,15 +13,13 @@ yarn bot:status   # Check bot account balances and Voter ID status
 
 # Target a single category/source with an explicit cap:
 yarn workspace @curyo/bot submit --category "Media" --max-submissions 5
-yarn workspace @curyo/bot submit --source coingecko --max-submissions 2
-yarn workspace @curyo/bot submit --category "Developer Docs" --source github --max-submissions 2
+yarn workspace @curyo/bot submit --source youtube --max-submissions 2
 ```
 
 Requires configured environment variables and a reachable RPC endpoint.
 `vote` and `claim` require a running Ponder indexer (`yarn ponder:dev`); `submit` does not.
 `status` reports the configured Ponder endpoint when available but can still run without it.
-Public submission sources still work without third-party API keys, but source coverage and automated rating breadth are reduced.
-Question submissions use a question capped at 120 characters. They may be text-only or include a regular link, direct image link, or YouTube link, and reward pool amounts are shown as USD even though settlement happens in USDC on Celo with a default 3% eligible frontend-operator share.
+Question submissions use a question capped at 120 characters. Automated submissions currently use YouTube videos, and reward pool amounts are shown as USD even though settlement happens in USDC on Celo with a default 3% eligible frontend-operator share.
 
 ## Scripts
 
@@ -29,7 +27,7 @@ Question submissions use a question capped at 120 characters. They may be text-o
 |---|---|
 | `yarn bot:submit` | Discover trending content from platforms and submit question-first entries to registry |
 | `yarn workspace @curyo/bot submit --category "Media" --max-submissions 5` | Submit up to 5 items from the `Media` category |
-| `yarn workspace @curyo/bot submit --source coingecko --max-submissions 2` | Submit up to 2 items from the CoinGecko source |
+| `yarn workspace @curyo/bot submit --source youtube --max-submissions 2` | Submit up to 2 items from the YouTube source |
 | `yarn bot:vote` | Rate content and commit encrypted votes via tlock commit-reveal |
 | `yarn bot:claim` | Claim voter and submitter rewards for the configured bot wallets |
 | `yarn bot:status` | Check wallet balances and Voter ID ownership |
@@ -70,18 +68,11 @@ Copy `.env.example` to `.env` in the package directory and fill in the deployed 
 | `PONDER_URL` | — | Ponder indexer URL |
 | `RATE_FRONTEND_ADDRESS` | — | Optional frontend code/operator address attributed on `commitVote()` calls |
 
-**Optional External API Keys:**
+**Optional External API Key:**
 
 | Variable | Description |
 |---|---|
-| `TMDB_API_KEY` | TheMovieDB API key (movies & TV) |
 | `YOUTUBE_API_KEY` | YouTube Data API key |
-| `TWITCH_CLIENT_ID` | Twitch API client ID |
-| `TWITCH_CLIENT_SECRET` | Twitch API client secret |
-| `RAWG_API_KEY` | RAWG API key (games) |
-| `GITHUB_TOKEN` | GitHub REST API token for GitHub repo discovery and rating |
-
-Without these keys the bot can still submit from public sources such as CoinGecko, Open Library, Hugging Face, Scryfall, and Wikipedia, but keyed sources and some rating strategies will be unavailable.
 
 **Tuning (optional):**
 
@@ -95,8 +86,8 @@ Without these keys the bot can still submit from public sources such as CoinGeck
 
 `submit` also supports one-off CLI overrides:
 
-- `--category <id|name>` to target a specific category such as `1`, `Products`, or `Media`
-- `--source <name>` to target a specific source adapter such as `tmdb` or `coingecko`
+- `--category <id|name>` to target a specific category such as `5` or `Media`
+- `--source <name>` to target a specific source adapter such as `youtube`
 - `--max-submissions <count>` to override the per-run cap for that invocation
 - `--help` to print the submit-specific usage text, including the full category/source catalog below
 
@@ -120,19 +111,7 @@ Frontend fee sweeping remains a keeper responsibility when the keeper wallet is 
 
 | ID | Category | `--source` | Availability |
 |---|---|---|---|
-| `1` | Products | `scryfall`, `rawg`, `coingecko` | Public; RAWG requires `RAWG_API_KEY` |
-| `5` | Media | `youtube`, `twitch`, `tmdb`, `openlibrary` | YouTube/Twitch/TMDB require their API keys |
-| `7` | AI Answers | `huggingface` | Public |
-| `8` | Developer Docs | `github` | Requires `GITHUB_TOKEN` |
-| `10` | General | `wikipedia-people` | Public |
-
-Deployed default categories that are already on-chain but still missing automated `submit` coverage:
-
-- `2` Local Places
-- `3` Travel
-- `4` Apps
-- `6` Design
-- `9` Trust
+| `5` | Media | `youtube` | Requires `YOUTUBE_API_KEY` |
 
 ## How Submission Works
 
@@ -140,14 +119,14 @@ For each `submit` run, the bot:
 
 1. Loads the wallet configured in `SUBMIT_*` and checks that it can submit. The on-chain `hasVoterId(address)` check resolves delegated identities, so a delegated hot wallet can submit on behalf of the Voter ID holder.
 2. Checks that the wallet has enough cREP for the next submission. Each successful question submission stakes **10 cREP**, and the wallet also needs native gas for `approve`, `reserveSubmission`, and `submitQuestionWithMedia`. Optional reward pools are paid separately in USDC on Celo, shown as USD, and reserve the default frontend-operator share on qualified claims.
-3. Chooses the enabled source adapters and fetches trending content. For movies, the `tmdb` source reads TMDB's `/movie/popular` feed.
-4. Skips items that do not provide a direct image URL or YouTube URL, then checks the media-backed submission key for duplicates before attempting a transaction.
+3. Chooses the enabled source adapters and fetches trending content. The current bot source reads YouTube's most-popular video feed.
+4. Skips items that do not provide a YouTube URL, then checks the media-backed submission key for duplicates before attempting a transaction.
 5. Truncates generated questions to the 120-character on-chain maximum, calls `previewQuestionMediaSubmissionKey(imageUrls, videoUrl, title, description, tags, categoryId)` to verify the canonical category, reserves the hidden submission commitment, waits a little over one second for the reservation age check, and then submits the media-backed question with the matching salt.
 6. Stops when it reaches the configured limit, runs out of cREP, or runs out of fresh items. If a reveal transaction fails after reservation, the bot attempts to cancel the reservation.
 
-## Testing TMDB Questions With A Delegated Bot Wallet
+## Testing YouTube Questions With A Delegated Bot Wallet
 
-This is the quickest way to test the bot against the current TMDB popular movies feed, now submitted under the broad `Media` review category.
+This is the quickest way to test the bot against the current YouTube popular videos feed, submitted under the broad `Media` review category.
 
 1. Configure the bot wallet in `packages/bot/.env`.
 
@@ -162,7 +141,7 @@ SUBMIT_PRIVATE_KEY=0x...
 RPC_URL=...
 CHAIN_ID=...
 PONDER_URL=...
-TMDB_API_KEY=...
+YOUTUBE_API_KEY=...
 ```
 
 You can use a Foundry keystore instead of `SUBMIT_PRIVATE_KEY` if you prefer.
@@ -207,25 +186,25 @@ You want to see:
 - enough `cREP`
 - enough native gas for the target chain
 
-7. Run a focused TMDB movie submission.
+7. Run a focused YouTube submission.
 
 ```bash
-yarn workspace @curyo/bot submit --source tmdb --category "Media" --max-submissions 1
+yarn workspace @curyo/bot submit --source youtube --category "Media" --max-submissions 1
 ```
 
 Once the one-item smoke test looks good, increase the cap:
 
 ```bash
-yarn workspace @curyo/bot submit --source tmdb --category "Media" --max-submissions 5
+yarn workspace @curyo/bot submit --source youtube --category "Media" --max-submissions 5
 ```
 
 Expected behavior:
 
-- The bot fetches TMDB's current popular movies.
-- Already-submitted movie URLs are skipped automatically.
+- The bot fetches YouTube's current popular videos.
+- Already-submitted video URLs are skipped automatically.
 - Only fresh items are submitted, so the run may submit fewer than the requested max if duplicates are common.
 - Each successful submission stakes `10 cREP`; optional Question Reward Pool funding is separate.
-- If `TMDB_API_KEY` is missing, the TMDB source will return no items.
+- If `YOUTUBE_API_KEY` is missing, the YouTube source will return no items.
 
 ## Project Structure
 

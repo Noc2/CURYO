@@ -1,20 +1,19 @@
 import deployedContracts from "@curyo/contracts/deployedContracts";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-const chain42220 = (deployedContracts as Record<number, Record<string, { address: `0x${string}` }>>)[42220];
-const chain11142220 = (deployedContracts as Record<number, Record<string, { address: `0x${string}` }>>)[11142220];
+const chain31337 = (deployedContracts as Record<number, Record<string, { address: `0x${string}` }>>)[31337];
 const ORIGINAL_ENV = { ...process.env };
 const VALID_ENV = {
   RPC_URL: "https://rpc.example.com",
-  CHAIN_ID: "11142220",
+  CHAIN_ID: "31337",
   PONDER_URL: "https://ponder.example.com",
-  CREP_TOKEN_ADDRESS: chain11142220?.CuryoReputation?.address ?? "0x1111111111111111111111111111111111111111",
-  CONTENT_REGISTRY_ADDRESS: chain11142220?.ContentRegistry?.address ?? "0x2222222222222222222222222222222222222222",
-  VOTING_ENGINE_ADDRESS: chain11142220?.RoundVotingEngine?.address ?? "0x3333333333333333333333333333333333333333",
+  CREP_TOKEN_ADDRESS: chain31337?.CuryoReputation?.address ?? "0x1111111111111111111111111111111111111111",
+  CONTENT_REGISTRY_ADDRESS: chain31337?.ContentRegistry?.address ?? "0x2222222222222222222222222222222222222222",
+  VOTING_ENGINE_ADDRESS: chain31337?.RoundVotingEngine?.address ?? "0x3333333333333333333333333333333333333333",
   ROUND_REWARD_DISTRIBUTOR_ADDRESS:
-    chain11142220?.RoundRewardDistributor?.address ?? "0x6666666666666666666666666666666666666666",
-  VOTER_ID_NFT_ADDRESS: chain11142220?.VoterIdNFT?.address ?? "0x4444444444444444444444444444444444444444",
-  CATEGORY_REGISTRY_ADDRESS: chain11142220?.CategoryRegistry?.address ?? "0x5555555555555555555555555555555555555555",
+    chain31337?.RoundRewardDistributor?.address ?? "0x6666666666666666666666666666666666666666",
+  VOTER_ID_NFT_ADDRESS: chain31337?.VoterIdNFT?.address ?? "0x4444444444444444444444444444444444444444",
+  CATEGORY_REGISTRY_ADDRESS: chain31337?.CategoryRegistry?.address ?? "0x5555555555555555555555555555555555555555",
   RATE_PRIVATE_KEY: `0x${"11".repeat(32)}`,
   YOUTUBE_API_KEY: "youtube-key",
 };
@@ -60,14 +59,6 @@ describe("bot config", () => {
     expect(config.voteFrontendAddress).toBe(frontendAddress);
   });
 
-  it("loads an optional GitHub token", async () => {
-    const { config } = await loadBotConfig({
-      GITHUB_TOKEN: "github-token",
-    });
-
-    expect(config.githubToken).toBe("github-token");
-  });
-
   it("parses numeric bot config values strictly", async () => {
     const { config } = await loadBotConfig({
       VOTE_STAKE: "2500000",
@@ -109,13 +100,10 @@ describe("bot config", () => {
   it("warns when no source API keys are configured", async () => {
     const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
 
-    await loadBotConfig(
-      {},
-      ["TMDB_API_KEY", "YOUTUBE_API_KEY", "TWITCH_CLIENT_ID", "TWITCH_CLIENT_SECRET", "RAWG_API_KEY", "GITHUB_TOKEN"],
-    );
+    await loadBotConfig({}, ["YOUTUBE_API_KEY"]);
 
     expect(warnSpy).toHaveBeenCalledWith(
-      "[Bot] WARN: No keyed content-source API keys configured — public sources still work, but some sources and rating strategies will be unavailable",
+      "[Bot] WARN: YOUTUBE_API_KEY is not configured — submit and rating sources will return no items",
     );
   });
 
@@ -185,35 +173,12 @@ describe("bot config", () => {
       ],
     );
 
-    expect(config.contracts.crepToken).toBe(chain11142220.CuryoReputation.address);
-    expect(config.contracts.contentRegistry).toBe(chain11142220.ContentRegistry.address);
-    expect(config.contracts.votingEngine).toBe(chain11142220.RoundVotingEngine.address);
-    expect(config.contracts.roundRewardDistributor).toBe(chain11142220.RoundRewardDistributor.address);
-    expect(config.contracts.voterIdNFT).toBe(chain11142220.VoterIdNFT.address);
-    expect(config.contracts.categoryRegistry).toBe(chain11142220.CategoryRegistry.address);
-  });
-
-  it("derives Celo mainnet contract addresses from shared deployment artifacts", async () => {
-    const { config } = await loadBotConfig(
-      {
-        CHAIN_ID: "42220",
-      },
-      [
-        "CREP_TOKEN_ADDRESS",
-        "CONTENT_REGISTRY_ADDRESS",
-        "VOTING_ENGINE_ADDRESS",
-        "ROUND_REWARD_DISTRIBUTOR_ADDRESS",
-        "VOTER_ID_NFT_ADDRESS",
-        "CATEGORY_REGISTRY_ADDRESS",
-      ],
-    );
-
-    expect(config.contracts.crepToken).toBe(chain42220.CuryoReputation.address);
-    expect(config.contracts.contentRegistry).toBe(chain42220.ContentRegistry.address);
-    expect(config.contracts.votingEngine).toBe(chain42220.RoundVotingEngine.address);
-    expect(config.contracts.roundRewardDistributor).toBe(chain42220.RoundRewardDistributor.address);
-    expect(config.contracts.voterIdNFT).toBe(chain42220.VoterIdNFT.address);
-    expect(config.contracts.categoryRegistry).toBe(chain42220.CategoryRegistry.address);
+    expect(config.contracts.crepToken).toBe(chain31337.CuryoReputation.address);
+    expect(config.contracts.contentRegistry).toBe(chain31337.ContentRegistry.address);
+    expect(config.contracts.votingEngine).toBe(chain31337.RoundVotingEngine.address);
+    expect(config.contracts.roundRewardDistributor).toBe(chain31337.RoundRewardDistributor.address);
+    expect(config.contracts.voterIdNFT).toBe(chain31337.VoterIdNFT.address);
+    expect(config.contracts.categoryRegistry).toBe(chain31337.CategoryRegistry.address);
   });
 
   it("ignores stale contract env values in favor of shared deployment artifacts", async () => {
@@ -227,12 +192,12 @@ describe("bot config", () => {
       CATEGORY_REGISTRY_ADDRESS: "0x5555555555555555555555555555555555555555",
     });
 
-    expect(config.contracts.crepToken).toBe(chain11142220.CuryoReputation.address);
-    expect(config.contracts.contentRegistry).toBe(chain11142220.ContentRegistry.address);
-    expect(config.contracts.votingEngine).toBe(chain11142220.RoundVotingEngine.address);
-    expect(config.contracts.roundRewardDistributor).toBe(chain11142220.RoundRewardDistributor.address);
-    expect(config.contracts.voterIdNFT).toBe(chain11142220.VoterIdNFT.address);
-    expect(config.contracts.categoryRegistry).toBe(chain11142220.CategoryRegistry.address);
+    expect(config.contracts.crepToken).toBe(chain31337.CuryoReputation.address);
+    expect(config.contracts.contentRegistry).toBe(chain31337.ContentRegistry.address);
+    expect(config.contracts.votingEngine).toBe(chain31337.RoundVotingEngine.address);
+    expect(config.contracts.roundRewardDistributor).toBe(chain31337.RoundRewardDistributor.address);
+    expect(config.contracts.voterIdNFT).toBe(chain31337.VoterIdNFT.address);
+    expect(config.contracts.categoryRegistry).toBe(chain31337.CategoryRegistry.address);
     expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining("Ignoring CREP_TOKEN_ADDRESS"));
     expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining("Ignoring CONTENT_REGISTRY_ADDRESS"));
     expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining("Ignoring VOTING_ENGINE_ADDRESS"));

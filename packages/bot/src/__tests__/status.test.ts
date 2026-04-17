@@ -62,10 +62,7 @@ async function loadStatusCommand(options: StatusCommandOptions = {}) {
       maxVotesPerRun: 10,
       maxSubmissionsPerRun: 5,
       maxSubmissionsPerCategory: 3,
-      githubToken: "github-token",
-      tmdbApiKey: "tmdb-key",
       youtubeApiKey: undefined,
-      twitchClientId: undefined,
     },
     log: {
       info: vi.fn(),
@@ -127,7 +124,7 @@ describe("runStatus", () => {
     );
     expect(statusCommand.mocks.consoleLog).toHaveBeenCalledWith("=== Round Config ===");
     expect(statusCommand.mocks.consoleLog).toHaveBeenCalledWith("Epoch dur:  20m (tlock tier window)");
-    expect(statusCommand.mocks.consoleLog).toHaveBeenCalledWith("GitHub token:    set");
+    expect(statusCommand.mocks.consoleLog).toHaveBeenCalledWith("YouTube API key: NOT SET");
   });
 
   it("reports round config failures under the correct label", async () => {

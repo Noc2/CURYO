@@ -13,19 +13,13 @@ vi.mock("../config.js", () => ({
       categoryRegistry: "0x0000000000000000000000000000000000000005",
     },
     ponderUrl: "http://localhost:42069",
-    githubToken: "github-token",
-    tmdbApiKey: "test-key",
     youtubeApiKey: undefined,
-    rawgApiKey: undefined,
   },
   log: { info: vi.fn(), warn: vi.fn(), error: vi.fn(), debug: vi.fn() },
 }));
 
 import { getStrategy } from "../strategies/index.js";
-import { githubStrategy } from "../strategies/github.js";
 import { youtubeStrategy } from "../strategies/youtube.js";
-import { wikipediaStrategy } from "../strategies/wikipedia.js";
-import { tmdbStrategy } from "../strategies/tmdb.js";
 
 describe("youtubeStrategy.canRate", () => {
   it("accepts youtube.com watch URLs", () => {
@@ -42,43 +36,6 @@ describe("youtubeStrategy.canRate", () => {
   });
 });
 
-describe("wikipediaStrategy.canRate", () => {
-  it("accepts en.wikipedia.org articles", () => {
-    expect(wikipediaStrategy.canRate("https://en.wikipedia.org/wiki/Solidity")).toBe(true);
-  });
-
-  it("accepts other language wikis", () => {
-    expect(wikipediaStrategy.canRate("https://de.wikipedia.org/wiki/Ethereum")).toBe(true);
-  });
-
-  it("rejects non-Wikipedia URLs", () => {
-    expect(wikipediaStrategy.canRate("https://wikimedia.org/something")).toBe(false);
-    expect(wikipediaStrategy.canRate("https://example.com")).toBe(false);
-  });
-});
-
-describe("tmdbStrategy.canRate", () => {
-  it("accepts themoviedb.org movie URLs", () => {
-    expect(tmdbStrategy.canRate("https://www.themoviedb.org/movie/550")).toBe(true);
-  });
-
-  it("rejects non-TMDB URLs", () => {
-    expect(tmdbStrategy.canRate("https://imdb.com/title/tt0137523")).toBe(false);
-  });
-});
-
-describe("githubStrategy.canRate", () => {
-  it("accepts GitHub repository URLs", () => {
-    expect(githubStrategy.canRate("https://github.com/vercel/ai")).toBe(true);
-    expect(githubStrategy.canRate("https://github.com/vercel/ai/tree/main/packages/core")).toBe(true);
-  });
-
-  it("rejects non-repository GitHub URLs", () => {
-    expect(githubStrategy.canRate("https://github.com/explore")).toBe(false);
-    expect(githubStrategy.canRate("https://gitlab.com/vercel/ai")).toBe(false);
-  });
-});
-
 describe("getStrategy", () => {
   it("returns youtubeStrategy for YouTube URLs", () => {
     const strategy = getStrategy("https://www.youtube.com/watch?v=abc123");
@@ -86,25 +43,8 @@ describe("getStrategy", () => {
     expect(strategy!.name).toBe("youtube");
   });
 
-  it("returns wikipediaStrategy for Wikipedia URLs", () => {
-    const strategy = getStrategy("https://en.wikipedia.org/wiki/Test");
-    expect(strategy).not.toBeNull();
-    expect(strategy!.name).toBe("wikipedia");
-  });
-
-  it("returns tmdbStrategy for TMDB URLs", () => {
-    const strategy = getStrategy("https://www.themoviedb.org/movie/550");
-    expect(strategy).not.toBeNull();
-    expect(strategy!.name).toBe("tmdb");
-  });
-
-  it("returns githubStrategy for GitHub URLs", () => {
-    const strategy = getStrategy("https://github.com/vercel/ai");
-    expect(strategy).not.toBeNull();
-    expect(strategy!.name).toBe("github");
-  });
-
   it("returns null for unknown URLs", () => {
     expect(getStrategy("https://example.com")).toBeNull();
+    expect(getStrategy("https://github.com/vercel/ai")).toBeNull();
   });
 });
