@@ -431,7 +431,7 @@ function RewardPoolDockBadge({ amount }: { amount: bigint }) {
 
 function AddRewardPoolLink({ onFundQuestion }: { onFundQuestion: () => void }) {
   return (
-    <div className="flex justify-center">
+    <div className="flex justify-start">
       <button
         type="button"
         onClick={onFundQuestion}
@@ -609,12 +609,12 @@ export function VotingQuestionCard({
   );
   const addRewardPoolLink = <AddRewardPoolLink onFundQuestion={() => setShowFundQuestionModal(true)} />;
   const renderRewardPoolDetailsRow = (historyVariant: "default" | "dark") => (
-    <div className="grid gap-3 sm:grid-cols-[minmax(0,1fr)_max-content] sm:items-start sm:gap-x-4">
+    <div className="flex min-w-0 flex-col gap-3">
       <div className="flex min-w-0 flex-col gap-3">
         <RoundStats categoryId={categoryId} snapshot={roundSnapshot} />
         <RatingHistory contentId={contentId} variant={historyVariant} fallbackRating={currentRating} />
       </div>
-      <div className="sm:justify-self-end sm:pt-0.5">{addRewardPoolLink}</div>
+      {addRewardPoolLink}
     </div>
   );
 
