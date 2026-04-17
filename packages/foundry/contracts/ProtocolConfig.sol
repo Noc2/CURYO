@@ -30,9 +30,11 @@ contract ProtocolConfig is Initializable, AccessControlUpgradeable {
     uint64 public drandPeriod;
     RatingLib.RatingConfig public ratingConfig;
     RatingLib.SlashConfig public slashConfig;
+    uint256 public minSubmissionCrepPool;
+    uint256 public minSubmissionUsdcPool;
 
     /// @dev Reserved storage gap for future proxy-safe upgrades.
-    uint256[35] private __gap;
+    uint256[33] private __gap;
 
     event RewardDistributorUpdated(address rewardDistributor);
     event FrontendRegistryUpdated(address frontendRegistry);
@@ -61,6 +63,7 @@ contract ProtocolConfig is Initializable, AccessControlUpgradeable {
     event SlashConfigUpdated(
         uint16 slashThresholdBps, uint16 minSlashSettledRounds, uint48 minSlashLowDuration, uint256 minSlashEvidence
     );
+    event SubmissionRewardMinimumsUpdated(uint256 minCrepPool, uint256 minUsdcPool);
 
     /// @custom:oz-upgrades-unsafe-allow constructor
     constructor() {
@@ -123,6 +126,8 @@ contract ProtocolConfig is Initializable, AccessControlUpgradeable {
             minSlashLowDuration: uint48(7 days),
             minSlashEvidence: 200e6
         });
+        minSubmissionCrepPool = 1e6;
+        minSubmissionUsdcPool = 1e6;
         _setTreasury(treasuryAuthority);
     }
 
@@ -204,6 +209,13 @@ contract ProtocolConfig is Initializable, AccessControlUpgradeable {
         uint256 minSlashEvidence
     ) external onlyRole(CONFIG_ROLE) {
         _setSlashConfig(slashThresholdBps, minSlashSettledRounds, minSlashLowDuration, minSlashEvidence);
+    }
+
+    function setSubmissionRewardMinimums(uint256 minCrepPool, uint256 minUsdcPool) external onlyRole(CONFIG_ROLE) {
+        if (minCrepPool == 0 || minUsdcPool == 0) revert InvalidConfig();
+        minSubmissionCrepPool = minCrepPool;
+        minSubmissionUsdcPool = minUsdcPool;
+        emit SubmissionRewardMinimumsUpdated(minCrepPool, minUsdcPool);
     }
 
     function getRatingConfig() external view returns (RatingLib.RatingConfig memory cfg) {
@@ -310,9 +322,13 @@ contract ProtocolConfig is Initializable, AccessControlUpgradeable {
         uint16 conservativePenaltyMaxBps,
         uint16 conservativePenaltyMinBps
     ) internal {
-        if (smoothingAlpha > type(uint128).max || smoothingBeta > type(uint128).max) revert InvalidConfig();
-        if (confidenceMassMin == 0 || confidenceMassInitial < confidenceMassMin || confidenceMassMax < confidenceMassInitial)
-        {
+        if (smoothingAlpha > type(uint128).max || smoothingBeta > type(uint128).max) {
+            revert InvalidConfig();
+        }
+        if (
+            confidenceMassMin == 0 || confidenceMassInitial < confidenceMassMin
+                || confidenceMassMax < confidenceMassInitial
+        ) {
             revert InvalidConfig();
         }
         if (
@@ -327,8 +343,7 @@ contract ProtocolConfig is Initializable, AccessControlUpgradeable {
         if (surpriseReferenceX18 == 0) revert InvalidConfig();
         if (maxAbsLogitX18 > uint256(uint128(type(int128).max))) revert InvalidConfig();
         if (maxDeltaLogitX18 == 0 || maxAbsLogitX18 == 0 || maxDeltaLogitX18 > maxAbsLogitX18) revert InvalidConfig();
-        if (conservativePenaltyMaxBps > RatingLib.BPS_SCALE || conservativePenaltyMinBps > conservativePenaltyMaxBps)
-        {
+        if (conservativePenaltyMaxBps > RatingLib.BPS_SCALE || conservativePenaltyMinBps > conservativePenaltyMaxBps) {
             revert InvalidConfig();
         }
 
@@ -371,7 +386,9 @@ contract ProtocolConfig is Initializable, AccessControlUpgradeable {
         uint48 minSlashLowDuration,
         uint256 minSlashEvidence
     ) internal {
-        if (slashThresholdBps == 0 || slashThresholdBps >= RatingLib.BPS_SCALE) revert InvalidConfig();
+        if (slashThresholdBps == 0 || slashThresholdBps >= RatingLib.BPS_SCALE) {
+            revert InvalidConfig();
+        }
         if (minSlashSettledRounds == 0) revert InvalidConfig();
         if (minSlashLowDuration == 0) revert InvalidConfig();
 

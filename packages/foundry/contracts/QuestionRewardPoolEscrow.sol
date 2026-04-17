@@ -11,6 +11,7 @@ import { SafeCast } from "@openzeppelin/contracts/utils/math/SafeCast.sol";
 
 import { ContentRegistry } from "./ContentRegistry.sol";
 import { RoundVotingEngine } from "./RoundVotingEngine.sol";
+import { ProtocolConfig } from "./ProtocolConfig.sol";
 import { IFrontendRegistry } from "./interfaces/IFrontendRegistry.sol";
 import { IVoterIdNFT } from "./interfaces/IVoterIdNFT.sol";
 import { RoundLib } from "./libraries/RoundLib.sol";
@@ -35,6 +36,8 @@ contract QuestionRewardPoolEscrow is
     uint256 public constant BPS_SCALE = 10_000;
     uint256 public constant DEFAULT_FRONTEND_FEE_BPS = 300;
     uint256 public constant MAX_FRONTEND_FEE_BPS = 500;
+    uint8 public constant REWARD_ASSET_CREP = 0;
+    uint8 public constant REWARD_ASSET_USDC = 1;
 
     struct RewardPool {
         uint64 id;
@@ -44,6 +47,7 @@ contract QuestionRewardPoolEscrow is
         uint64 expiresAt;
         address funder;
         uint256 funderVoterId;
+        uint8 asset;
         uint256 fundedAmount;
         uint256 unallocatedAmount;
         uint256 allocatedAmount;
@@ -55,6 +59,7 @@ contract QuestionRewardPoolEscrow is
         uint16 frontendFeeBps;
         uint256 voterClaimedAmount;
         uint256 frontendClaimedAmount;
+        bool nonRefundable;
     }
 
     struct RoundSnapshot {
@@ -68,6 +73,7 @@ contract QuestionRewardPoolEscrow is
         uint256 frontendClaimedAmount;
     }
 
+    IERC20 public crepToken;
     IERC20 public usdcToken;
     ContentRegistry public registry;
     RoundVotingEngine public votingEngine;
@@ -78,8 +84,6 @@ contract QuestionRewardPoolEscrow is
     mapping(uint256 => mapping(uint256 => RoundSnapshot)) public roundSnapshots;
     mapping(uint256 => mapping(uint256 => mapping(uint256 => bool))) public rewardClaimed;
     uint16 public defaultFrontendFeeBps;
-    mapping(uint256 => address) private rewardPoolFunderHolders;
-    mapping(uint256 => address) private rewardPoolFunderVoterIdNfts;
 
     event RewardPoolCreated(
         uint256 indexed rewardPoolId,
@@ -91,7 +95,9 @@ contract QuestionRewardPoolEscrow is
         uint256 requiredSettledRounds,
         uint256 startRoundId,
         uint256 expiresAt,
-        uint256 frontendFeeBps
+        uint256 frontendFeeBps,
+        uint8 asset,
+        bool nonRefundable
     );
     event RewardPoolRoundQualified(
         uint256 indexed rewardPoolId,
@@ -117,6 +123,7 @@ contract QuestionRewardPoolEscrow is
         uint256 grossAmount
     );
     event RewardPoolRefunded(uint256 indexed rewardPoolId, address indexed funder, uint256 amount);
+    event RewardPoolForfeited(uint256 indexed rewardPoolId, address indexed treasury, uint256 amount);
     event DefaultFrontendFeeBpsUpdated(uint256 previousFrontendFeeBps, uint256 newFrontendFeeBps);
 
     /// @custom:oz-upgrades-unsafe-allow constructor
@@ -126,12 +133,14 @@ contract QuestionRewardPoolEscrow is
 
     function initialize(
         address admin,
+        address crepToken_,
         address usdcToken_,
         address registry_,
         address votingEngine_,
         address voterIdNFT_
     ) external initializer {
         require(admin != address(0), "Invalid admin");
+        require(crepToken_ != address(0), "Invalid cREP token");
         require(usdcToken_ != address(0), "Invalid token");
         require(registry_ != address(0), "Invalid registry");
         require(votingEngine_ != address(0), "Invalid engine");
@@ -144,6 +153,7 @@ contract QuestionRewardPoolEscrow is
         _grantRole(CONFIG_ROLE, admin);
         _grantRole(PAUSER_ROLE, admin);
 
+        crepToken = IERC20(crepToken_);
         usdcToken = IERC20(usdcToken_);
         registry = ContentRegistry(registry_);
         votingEngine = RoundVotingEngine(votingEngine_);
@@ -159,18 +169,59 @@ contract QuestionRewardPoolEscrow is
         uint256 requiredSettledRounds,
         uint256 expiresAt
     ) external nonReentrant whenNotPaused returns (uint256 rewardPoolId) {
+        rewardPoolId = _createRewardPool(
+            contentId, msg.sender, REWARD_ASSET_USDC, amount, requiredVoters, requiredSettledRounds, expiresAt, false
+        );
+    }
+
+    function createRewardPoolWithAsset(
+        uint256 contentId,
+        uint8 asset,
+        uint256 amount,
+        uint256 requiredVoters,
+        uint256 requiredSettledRounds,
+        uint256 expiresAt
+    ) external nonReentrant whenNotPaused returns (uint256 rewardPoolId) {
+        rewardPoolId = _createRewardPool(
+            contentId, msg.sender, asset, amount, requiredVoters, requiredSettledRounds, expiresAt, false
+        );
+    }
+
+    function createSubmissionRewardPoolFromRegistry(uint256 contentId, address funder, uint8 asset, uint256 amount)
+        external
+        nonReentrant
+        whenNotPaused
+        returns (uint256 rewardPoolId)
+    {
+        require(msg.sender == address(registry), "Only registry");
+        require(funder != address(0), "Invalid funder");
+        rewardPoolId = _createRewardPool(
+            contentId, funder, asset, amount, MIN_REQUIRED_VOTERS, MIN_REQUIRED_SETTLED_ROUNDS, 0, true
+        );
+    }
+
+    function _createRewardPool(
+        uint256 contentId,
+        address funder,
+        uint8 asset,
+        uint256 amount,
+        uint256 requiredVoters,
+        uint256 requiredSettledRounds,
+        uint256 expiresAt,
+        bool nonRefundable
+    ) internal returns (uint256 rewardPoolId) {
         require(amount > 0, "Amount required");
+        require(asset == REWARD_ASSET_CREP || asset == REWARD_ASSET_USDC, "Invalid asset");
         require(registry.isContentActive(contentId), "Content not active");
         require(requiredVoters >= MIN_REQUIRED_VOTERS, "Too few voters");
         require(requiredSettledRounds >= MIN_REQUIRED_SETTLED_ROUNDS, "Too few rounds");
-        (,,, uint16 maxVoters) = votingEngine.protocolConfig().config();
-        require(amount >= requiredSettledRounds * uint256(maxVoters), "Amount too small");
-        require(expiresAt > block.timestamp, "Invalid expiry");
+        if (!nonRefundable) {
+            (,,, uint16 maxVoters) = votingEngine.protocolConfig().config();
+            require(amount >= requiredSettledRounds * uint256(maxVoters), "Amount too small");
+            require(expiresAt > block.timestamp, "Invalid expiry");
+        }
 
-        uint256 funderVoterId = _requireVoterId(msg.sender);
-        address funderHolder = voterIdNFT.getHolder(funderVoterId);
-        require(funderHolder != address(0), "Funder holder required");
-        uint256 fundedAmount = _pullExactUsdc(amount);
+        uint256 fundedAmount = _pullExactToken(funder, asset, amount);
 
         uint256 currentRoundId = votingEngine.currentRoundId(contentId);
         uint256 startRoundId = currentRoundId == 0 ? 1 : currentRoundId + 1;
@@ -182,8 +233,9 @@ contract QuestionRewardPoolEscrow is
             startRoundId: startRoundId.toUint64(),
             nextRoundToEvaluate: startRoundId.toUint64(),
             expiresAt: expiresAt.toUint64(),
-            funder: msg.sender,
-            funderVoterId: funderVoterId,
+            funder: funder,
+            funderVoterId: 0,
+            asset: asset,
             fundedAmount: fundedAmount,
             unallocatedAmount: fundedAmount,
             allocatedAmount: 0,
@@ -194,22 +246,23 @@ contract QuestionRewardPoolEscrow is
             refunded: false,
             frontendFeeBps: defaultFrontendFeeBps,
             voterClaimedAmount: 0,
-            frontendClaimedAmount: 0
+            frontendClaimedAmount: 0,
+            nonRefundable: nonRefundable
         });
-        rewardPoolFunderHolders[rewardPoolId] = funderHolder;
-        rewardPoolFunderVoterIdNfts[rewardPoolId] = address(voterIdNFT);
 
         emit RewardPoolCreated(
             rewardPoolId,
             contentId,
-            msg.sender,
-            funderVoterId,
+            funder,
+            0,
             fundedAmount,
             requiredVoters,
             requiredSettledRounds,
             startRoundId,
             expiresAt,
-            defaultFrontendFeeBps
+            defaultFrontendFeeBps,
+            asset,
+            nonRefundable
         );
     }
 
@@ -282,11 +335,12 @@ contract QuestionRewardPoolEscrow is
         rewardPool.voterClaimedAmount += rewardAmount;
         rewardPool.frontendClaimedAmount += frontendFee;
 
+        IERC20 rewardToken = _rewardToken(rewardPool.asset);
         if (rewardAmount > 0) {
-            usdcToken.safeTransfer(msg.sender, rewardAmount);
+            rewardToken.safeTransfer(msg.sender, rewardAmount);
         }
         if (frontendFee > 0) {
-            usdcToken.safeTransfer(frontendRecipient, frontendFee);
+            rewardToken.safeTransfer(frontendRecipient, frontendFee);
         }
         emit QuestionRewardClaimed(
             rewardPoolId,
@@ -334,8 +388,15 @@ contract QuestionRewardPoolEscrow is
         require(refundAmount > 0, "No refund");
         rewardPool.refunded = true;
         rewardPool.unallocatedAmount = 0;
-        usdcToken.safeTransfer(rewardPool.funder, refundAmount);
-        emit RewardPoolRefunded(rewardPoolId, rewardPool.funder, refundAmount);
+        if (rewardPool.nonRefundable) {
+            address treasury = _protocolTreasury();
+            require(treasury != address(0), "Treasury not set");
+            _rewardToken(rewardPool.asset).safeTransfer(treasury, refundAmount);
+            emit RewardPoolForfeited(rewardPoolId, treasury, refundAmount);
+        } else {
+            _rewardToken(rewardPool.asset).safeTransfer(rewardPool.funder, refundAmount);
+            emit RewardPoolRefunded(rewardPoolId, rewardPool.funder, refundAmount);
+        }
     }
 
     function claimableQuestionReward(uint256 rewardPoolId, uint256 roundId, address account)
@@ -405,11 +466,25 @@ contract QuestionRewardPoolEscrow is
         _unpause();
     }
 
-    function _pullExactUsdc(uint256 amount) internal returns (uint256 receivedAmount) {
-        uint256 balanceBefore = usdcToken.balanceOf(address(this));
-        usdcToken.safeTransferFrom(msg.sender, address(this), amount);
-        receivedAmount = usdcToken.balanceOf(address(this)) - balanceBefore;
+    function _pullExactToken(address funder, uint8 asset, uint256 amount) internal returns (uint256 receivedAmount) {
+        IERC20 token = _rewardToken(asset);
+        uint256 balanceBefore = token.balanceOf(address(this));
+        token.safeTransferFrom(funder, address(this), amount);
+        receivedAmount = token.balanceOf(address(this)) - balanceBefore;
         require(receivedAmount == amount, "Fee token unsupported");
+    }
+
+    function _rewardToken(uint8 asset) internal view returns (IERC20 token) {
+        if (asset == REWARD_ASSET_CREP) return crepToken;
+        if (asset == REWARD_ASSET_USDC) return usdcToken;
+        revert("Invalid asset");
+    }
+
+    function _protocolTreasury() internal view returns (address treasury) {
+        ProtocolConfig cfg = votingEngine.protocolConfig();
+        if (address(cfg) != address(0)) {
+            treasury = cfg.treasury();
+        }
     }
 
     function _getExistingRewardPool(uint256 rewardPoolId) internal view returns (RewardPool storage rewardPool) {
@@ -629,21 +704,12 @@ contract QuestionRewardPoolEscrow is
         view
         returns (bool)
     {
-        return voterId == _funderVoterIdForRound(rewardPool, roundId)
+        return voterId != 0 && voterId == _funderVoterIdForRound(rewardPool, roundId)
             || voterId == _submitterVoterId(rewardPool.contentId, roundId);
     }
 
     function _funderVoterIdForRound(RewardPool storage rewardPool, uint256 roundId) internal view returns (uint256) {
-        address originalVoterIdNft = rewardPoolFunderVoterIdNfts[rewardPool.id];
-        address roundVoterIdNft = votingEngine.roundVoterIdNFTSnapshot(rewardPool.contentId, roundId);
-        if (originalVoterIdNft == address(0) || roundVoterIdNft == address(0) || roundVoterIdNft == originalVoterIdNft)
-        {
-            return rewardPool.funderVoterId;
-        }
-
-        address funderHolder = rewardPoolFunderHolders[rewardPool.id];
-        if (funderHolder == address(0)) return rewardPool.funderVoterId;
-        return _voterIdForRound(rewardPool.contentId, roundId, funderHolder);
+        return _voterIdForRound(rewardPool.contentId, roundId, rewardPool.funder);
     }
 
     function _submitterVoterId(uint256 contentId, uint256 roundId) internal view returns (uint256) {

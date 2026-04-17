@@ -59,9 +59,6 @@ contract RoundRewardDistributor is Initializable, AccessControlUpgradeable, Reen
     // Track claimed rewards: contentId => roundId => voter => claimed
     mapping(uint256 => mapping(uint256 => mapping(address => bool))) public rewardClaimed;
 
-    // Track submitter reward claims: contentId => roundId => claimed
-    mapping(uint256 => mapping(uint256 => bool)) public submitterRewardClaimed;
-
     // Track frontend fee claims: contentId => roundId => frontend => claimed
     mapping(uint256 => mapping(uint256 => mapping(address => bool))) public frontendFeeClaimed;
 
@@ -85,9 +82,6 @@ contract RoundRewardDistributor is Initializable, AccessControlUpgradeable, Reen
         uint256 indexed contentId, uint256 indexed roundId, address indexed voter, uint256 stakeReturned, uint256 reward
     );
     event LoserNotified(uint256 indexed contentId, uint256 indexed roundId, address indexed voter);
-    event SubmitterRewardClaimed(
-        uint256 indexed contentId, uint256 indexed roundId, address indexed submitter, uint256 crepAmount
-    );
     event FrontendFeeClaimed(
         uint256 indexed contentId, uint256 indexed roundId, address indexed frontend, uint256 amount
     );
@@ -222,29 +216,14 @@ contract RoundRewardDistributor is Initializable, AccessControlUpgradeable, Reen
         emit RewardClaimed(contentId, roundId, msg.sender, commit.stakeAmount, reward);
     }
 
-    // --- Submitter Reward Claiming ---
+    /// @notice Deprecated; submitter cREP rewards have been removed.
+    function submitterRewardClaimed(uint256, uint256) external pure returns (bool) {
+        return true;
+    }
 
-    /// @notice Content submitter claims their 10% reward from a settled round.
-    /// @param contentId The content ID.
-    /// @param roundId The round ID.
-    function claimSubmitterReward(uint256 contentId, uint256 roundId) external nonReentrant {
-        require(!submitterRewardClaimed[contentId][roundId], "Already claimed");
-
-        address submitter = registry.getContentSubmitter(contentId);
-        require(msg.sender == submitter, "Not submitter");
-
-        RoundLib.Round memory round = _readRound(contentId, roundId);
-        require(round.state == RoundLib.RoundState.Settled, "Round not settled");
-
-        submitterRewardClaimed[contentId][roundId] = true;
-
-        uint256 crepAmount = votingEngine.pendingSubmitterReward(contentId, roundId);
-
-        if (crepAmount > 0) {
-            votingEngine.transferReward(submitter, crepAmount);
-        }
-
-        emit SubmitterRewardClaimed(contentId, roundId, submitter, crepAmount);
+    /// @notice Deprecated; submitter cREP rewards have been removed.
+    function claimSubmitterReward(uint256, uint256) external pure {
+        revert("Submitter rewards removed");
     }
 
     // --- Frontend Fee Claims ---

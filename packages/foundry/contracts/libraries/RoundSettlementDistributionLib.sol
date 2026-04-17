@@ -22,7 +22,6 @@ library RoundSettlementDistributionLib {
         RoundLib.Round storage round,
         mapping(uint256 => mapping(uint256 => uint256)) storage roundVoterPool,
         mapping(uint256 => mapping(uint256 => uint256)) storage roundWinningStake,
-        mapping(uint256 => mapping(uint256 => uint256)) storage pendingSubmitterReward,
         mapping(uint256 => mapping(uint256 => uint256)) storage roundStakeWithEligibleFrontend,
         mapping(uint256 => mapping(uint256 => uint256)) storage roundFrontendPool,
         mapping(uint256 => mapping(uint256 => address)) storage roundFrontendRegistrySnapshot,
@@ -42,11 +41,12 @@ library RoundSettlementDistributionLib {
                 uint256 platformShare,
                 uint256 treasuryShare,
                 uint256 consensusShare
-            ) = RewardMath.splitPool(losingPool - loserRefundShare);
+            ) =
+                RewardMath.splitPool(losingPool - loserRefundShare);
+            submitterShare;
 
             roundVoterPool[contentId][roundId] = voterShare;
             roundWinningStake[contentId][roundId] = weightedWinningStake;
-            pendingSubmitterReward[contentId][roundId] = submitterShare;
 
             if (consensusShare > 0) {
                 updatedConsensusReserve += consensusShare;
@@ -77,9 +77,8 @@ library RoundSettlementDistributionLib {
         uint256 subsidy = RewardMath.calculateConsensusSubsidy(totalStake, consensusReserve);
         if (subsidy > 0) {
             updatedConsensusReserve -= subsidy;
-            (uint256 voterSubsidy, uint256 submitterSubsidy) = RewardMath.splitConsensusSubsidy(subsidy);
+            (uint256 voterSubsidy,) = RewardMath.splitConsensusSubsidy(subsidy);
             roundVoterPool[contentId][roundId] = voterSubsidy;
-            pendingSubmitterReward[contentId][roundId] = submitterSubsidy;
             emit ConsensusSubsidyDistributed(contentId, roundId, subsidy);
         }
 

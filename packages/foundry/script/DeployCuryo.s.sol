@@ -210,7 +210,14 @@ contract DeployCuryo is ScaffoldETHDeploy {
             governance,
             abi.encodeCall(
                 QuestionRewardPoolEscrow.initialize,
-                (governance, usdcTokenAddress, address(registry), address(votingEngine), address(voterIdNFT))
+                (
+                    governance,
+                    address(crepToken),
+                    usdcTokenAddress,
+                    address(registry),
+                    address(votingEngine),
+                    address(voterIdNFT)
+                )
             )
         );
         QuestionRewardPoolEscrow questionRewardPoolEscrow =
@@ -220,6 +227,7 @@ contract DeployCuryo is ScaffoldETHDeploy {
         registry.setVotingEngine(address(votingEngine));
         registry.setProtocolConfig(address(votingEngine.protocolConfig()));
         registry.setCategoryRegistry(address(categoryRegistry));
+        registry.setQuestionRewardPoolEscrow(address(questionRewardPoolEscrow));
         ProtocolConfig(address(votingEngine.protocolConfig())).setRewardDistributor(address(rewardDistributor));
         ProtocolConfig(address(votingEngine.protocolConfig())).setFrontendRegistry(address(frontendRegistry));
         ProtocolConfig(address(votingEngine.protocolConfig())).setCategoryRegistry(address(categoryRegistry));
@@ -261,12 +269,10 @@ contract DeployCuryo is ScaffoldETHDeploy {
         // 12b. Deploy and fund ParticipationPool (24M cREP, user-facing Bootstrap Pool)
         ParticipationPool participationPool = new ParticipationPool(address(crepToken), governance);
         participationPool.setAuthorizedCaller(address(rewardDistributor), true);
-        participationPool.setAuthorizedCaller(address(registry), true);
         crepToken.mint(deployer, PARTICIPATION_POOL_AMOUNT);
         crepToken.approve(address(participationPool), PARTICIPATION_POOL_AMOUNT);
         participationPool.depositPool(PARTICIPATION_POOL_AMOUNT);
         ProtocolConfig(address(votingEngine.protocolConfig())).setParticipationPool(address(participationPool));
-        registry.setParticipationPool(address(participationPool));
         if (!isLocalDev) {
             participationPool.transferOwnership(governance);
         }

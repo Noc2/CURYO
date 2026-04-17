@@ -126,7 +126,7 @@ contract QuestionRewardPoolEscrowTest is VotingTestBase {
                     address(rewardPoolImpl),
                     abi.encodeCall(
                         QuestionRewardPoolEscrow.initialize,
-                        (owner, address(usdc), address(registry), address(votingEngine), address(voterIdNFT))
+                        (owner, address(crepToken), address(usdc), address(registry), address(votingEngine), address(voterIdNFT))
                     )
                 )
             )

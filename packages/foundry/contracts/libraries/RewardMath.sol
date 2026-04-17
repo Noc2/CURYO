@@ -3,7 +3,7 @@ pragma solidity ^0.8.20;
 
 /// @title RewardMath
 /// @notice Pure functions for parimutuel reward calculations with epoch-weighted stake.
-/// @dev Pool split: 80% voters, 10% submitter, 4% frontend, 1% treasury, 5% consensus subsidy.
+/// @dev Pool split: 90% voters, 4% frontend, 1% treasury, 5% consensus subsidy.
 ///      Voter rewards are distributed proportional to epoch-weighted effective stake.
 ///      Epoch 1 (blind) = 100% weight; Epoch 2+ (saw results) = 25% weight.
 ///      This creates a 4:1 reward ratio for early blind voters vs late informed voters.
@@ -11,8 +11,7 @@ library RewardMath {
     uint256 internal constant PRECISION = 1e18;
 
     // Pool split percentages
-    uint256 internal constant VOTER_BPS = 8000; // 80%
-    uint256 internal constant SUBMITTER_BPS = 1000; // 10%
+    uint256 internal constant VOTER_BPS = 9000; // 90%
     uint256 internal constant PLATFORM_BPS = 400; // 4% frontend fee share
     uint256 internal constant TREASURY_BPS = 100; // 1% treasury
     uint256 internal constant CONSENSUS_BPS = 500; // 5% consensus subsidy reserve
@@ -58,7 +57,7 @@ library RewardMath {
     /// @notice Calculate a voter's reward from the voter pool (epoch-weighted-stake-proportional).
     /// @param effectiveStake The voter's epoch-weighted effective stake (stake × epochWeightBps / 10000).
     /// @param totalWeightedWinningStake Sum of all winning voters' effective stakes.
-    /// @param voterPool The portion of losing stakes allocated to voters (80%).
+    /// @param voterPool The portion of losing stakes allocated to voters (90%).
     /// @return reward Amount of tokens the voter earns (excludes original stake return).
     function calculateVoterReward(uint256 effectiveStake, uint256 totalWeightedWinningStake, uint256 voterPool)
         internal
@@ -79,8 +78,8 @@ library RewardMath {
     /// @notice Reserve loser rebates first, then split the remaining losing pool into protocol buckets.
     /// @param losingPool Total tokens from the revealed losing side.
     /// @return loserRefundShare 5% reserved for revealed losing voters.
-    /// @return voterShare 80% of the net losing pool for winning voters.
-    /// @return submitterShare 10% of the net losing pool for the content submitter.
+    /// @return voterShare 90% of the net losing pool for winning voters.
+    /// @return submitterShare Deprecated; always 0.
     /// @return platformShare 4% of the net losing pool for platform fees.
     /// @return treasuryShare 1% of the net losing pool for the treasury.
     /// @return consensusShare 5% of the net losing pool for the consensus reserve.
@@ -101,10 +100,10 @@ library RewardMath {
             splitPool(losingPool - loserRefundShare);
     }
 
-    /// @notice Split the losing pool into the 5 reward buckets.
+    /// @notice Split the losing pool into voter and protocol buckets.
     /// @param losingPool Total tokens from losing side.
-    /// @return voterShare 80% for winning voters (100% content-specific).
-    /// @return submitterShare 10% for content submitter.
+    /// @return voterShare 90% for winning voters (100% content-specific).
+    /// @return submitterShare Deprecated; always 0.
     /// @return platformShare 4% for frontend fees.
     /// @return treasuryShare 1% for governance treasury.
     /// @return consensusShare 5% for consensus subsidy reserve.
@@ -119,11 +118,11 @@ library RewardMath {
             uint256 consensusShare
         )
     {
-        submitterShare = (losingPool * SUBMITTER_BPS) / BPS_TOTAL;
+        submitterShare = 0;
         platformShare = (losingPool * PLATFORM_BPS) / BPS_TOTAL;
         treasuryShare = (losingPool * TREASURY_BPS) / BPS_TOTAL;
         consensusShare = (losingPool * CONSENSUS_BPS) / BPS_TOTAL;
-        voterShare = losingPool - submitterShare - platformShare - treasuryShare - consensusShare; // remainder = 80%
+        voterShare = losingPool - platformShare - treasuryShare - consensusShare; // remainder = 90%
     }
 
     /// @notice Calculate the consensus subsidy for a unanimous round.
@@ -136,13 +135,12 @@ library RewardMath {
         return desired > reserveBalance ? reserveBalance : desired;
     }
 
-    /// @notice Split a consensus subsidy between voter and submitter shares.
-    /// @dev Uses the same voter:submitter ratio as the normal fee split (80:10).
+    /// @notice Route the entire consensus subsidy to voter rewards.
     /// @param subsidy Total consensus subsidy amount.
-    /// @return voterShare Amount for winning voters (~88.9%).
-    /// @return submitterShare Amount for content submitter (~11.1%).
+    /// @return voterShare Amount for winning voters.
+    /// @return submitterShare Deprecated; always 0.
     function splitConsensusSubsidy(uint256 subsidy) internal pure returns (uint256 voterShare, uint256 submitterShare) {
-        submitterShare = (subsidy * SUBMITTER_BPS) / (VOTER_BPS + SUBMITTER_BPS);
-        voterShare = subsidy - submitterShare;
+        voterShare = subsidy;
+        submitterShare = 0;
     }
 }

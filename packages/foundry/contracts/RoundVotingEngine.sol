@@ -16,7 +16,6 @@ import { RoundLib } from "./libraries/RoundLib.sol";
 import { RatingLib } from "./libraries/RatingLib.sol";
 import { RoundSettlementSideEffectsLib } from "./libraries/RoundSettlementSideEffectsLib.sol";
 import { RoundSettlementDistributionLib } from "./libraries/RoundSettlementDistributionLib.sol";
-import { SubmitterStakeLib } from "./libraries/SubmitterStakeLib.sol";
 import { RoundCleanupLib } from "./libraries/RoundCleanupLib.sol";
 import { RoundRevealLib } from "./libraries/RoundRevealLib.sol";
 import { TlockVoteLib } from "./libraries/TlockVoteLib.sol";
@@ -124,7 +123,6 @@ contract RoundVotingEngine is
     // Reward accounting per round
     mapping(uint256 => mapping(uint256 => uint256)) public roundVoterPool; // contentId => roundId => voter pool
     mapping(uint256 => mapping(uint256 => uint256)) public roundWinningStake; // contentId => roundId => epoch-weighted winning stake
-    mapping(uint256 => mapping(uint256 => uint256)) public pendingSubmitterReward; // contentId => roundId => amount
 
     // Cancelled/tied round refund claims: contentId => roundId => voter => claimed
     mapping(uint256 => mapping(uint256 => mapping(address => bool))) public cancelledRoundRefundClaimed;
@@ -688,7 +686,6 @@ contract RoundVotingEngine is
 
         // Determine winner: weighted majority wins (anti-herding)
         bool upWins = round.weightedUpPool > round.weightedDownPool;
-        bool isFirstSettledRound = !contentHasSettledRound[contentId];
         round.upWins = upWins;
         round.state = RoundLib.RoundState.Settled;
         round.settledAt = block.timestamp.toUint48();
@@ -707,7 +704,6 @@ contract RoundVotingEngine is
             round,
             roundVoterPool,
             roundWinningStake,
-            pendingSubmitterReward,
             roundStakeWithEligibleFrontend,
             roundFrontendPool,
             roundFrontendRegistrySnapshot,
@@ -725,7 +721,6 @@ contract RoundVotingEngine is
             _getRoundRatingConfig(contentId, roundId),
             currentParticipationPool,
             currentRewardDistributor,
-            isFirstSettledRound,
             contentId,
             roundId,
             _getRoundReferenceRatingBps(contentId, roundId),
@@ -759,12 +754,14 @@ contract RoundVotingEngine is
         emit CancelledRoundRefundClaimed(contentId, roundId, msg.sender, refundAmount);
     }
 
-    /// @notice Resolve submitter stake once the slash or healthy-return window has elapsed.
-    /// @dev Permissionless so idle content cannot bypass the submitter stake policy.
+    /// @notice Deprecated; submitter stake resolution has been removed.
     function resolveSubmitterStake(uint256 contentId) external nonReentrant whenNotPaused {
-        bool hasSettledRound = contentHasSettledRound[contentId];
-        if (!hasSettledRound && _hasOpenRound(contentId)) revert ActiveRoundStillOpen();
-        SubmitterStakeLib.resolve(registry, hasSettledRound, contentId);
+        contentId;
+    }
+
+    /// @notice Deprecated; submitter reward buckets have been removed.
+    function pendingSubmitterReward(uint256, uint256) external pure returns (uint256) {
+        return 0;
     }
 
     // =========================================================================
