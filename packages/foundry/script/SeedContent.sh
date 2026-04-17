@@ -10,7 +10,10 @@ DEPLOY_JSON="$SCRIPT_DIR/../deployments/31337.json"
 CATEGORY_ID_RESOLVER="$SCRIPT_DIR/../scripts-js/resolveCategoryId.js"
 
 RPC="http://127.0.0.1:8545"
-SUBMISSION_REWARD_POOL="1000000" # 1 cREP in 6 decimals (default minimum submission bounty)
+SUBMISSION_BOUNTY_AMOUNT="1000000" # 1 cREP in 6 decimals (default minimum submission Bounty)
+SUBMISSION_BOUNTY_REQUIRED_VOTERS="3"
+SUBMISSION_BOUNTY_REQUIRED_SETTLED_ROUNDS="1"
+SUBMISSION_BOUNTY_EXPIRES_AT="0"
 VOTE_STAKE="5000000" # 5 cREP for votes
 
 # Check if localhost deployment exists
@@ -267,14 +270,15 @@ for ((i = 0; i < TOTAL_ITEMS; i++)); do
     cast rpc anvil_setBalance "$ADDR" "0x8AC7230489E80000" --rpc-url "$RPC" > /dev/null 2>&1
   fi
 
-  # 1. Approve the bounty escrow to pull the non-refundable cREP submission bounty
-  echo "  Approving cREP bounty..."
-  cast send "$TOKEN" "approve(address,uint256)" "$QUESTION_REWARD_POOL_ESCROW" "$SUBMISSION_REWARD_POOL" --private-key "$KEY" --rpc-url "$RPC" > /dev/null 2>&1
+  # 1. Approve the Bounty escrow to pull the non-refundable cREP submission Bounty
+  echo "  Approving cREP Bounty..."
+  cast send "$TOKEN" "approve(address,uint256)" "$QUESTION_REWARD_POOL_ESCROW" "$SUBMISSION_BOUNTY_AMOUNT" --private-key "$KEY" --rpc-url "$RPC" > /dev/null 2>&1
 
   # 2. Reserve the hidden submission commitment before revealing the question metadata
   printf -v SALT "%064x" "$((i + 1))"
   REVEAL_COMMITMENT=$(node "$SCRIPT_DIR/../scripts-js/buildSubmissionReservation.js" \
-    "$RPC" "$REGISTRY" "$ADDR" "$CONTEXT_URL" "$IMAGE_URLS_ARG" "$VIDEO_URL_ARG" "$TITLE" "$DESCRIPTION" "$TAG" "$CATEGORY_ID" "0x$SALT")
+    "$RPC" "$REGISTRY" "$ADDR" "$CONTEXT_URL" "$IMAGE_URLS_ARG" "$VIDEO_URL_ARG" "$TITLE" "$DESCRIPTION" "$TAG" "$CATEGORY_ID" "0x$SALT" \
+    "0" "$SUBMISSION_BOUNTY_AMOUNT" "$SUBMISSION_BOUNTY_REQUIRED_VOTERS" "$SUBMISSION_BOUNTY_REQUIRED_SETTLED_ROUNDS" "$SUBMISSION_BOUNTY_EXPIRES_AT")
   echo "  Reserving submission..."
   cast send "$REGISTRY" "reserveSubmission(bytes32)" "$REVEAL_COMMITMENT" \
     --private-key "$KEY" --rpc-url "$RPC" > /dev/null 2>&1
@@ -284,8 +288,8 @@ for ((i = 0; i < TOTAL_ITEMS; i++)); do
 
   # 3. Reveal the submission with the same deterministic salt used for the reservation
   echo "  Submitting question: $TITLE ($MEDIA_KIND, context: $CONTEXT_URL, category: $CATEGORY_SLUG -> $CATEGORY_ID)"
-  cast send "$REGISTRY" "submitQuestionWithReward(string,string[],string,string,string,string,uint256,bytes32,uint8,uint256)" \
-    "$CONTEXT_URL" "$IMAGE_URLS_ARG" "$VIDEO_URL_ARG" "$TITLE" "$DESCRIPTION" "$TAG" "$CATEGORY_ID" "0x$SALT" "0" "$SUBMISSION_REWARD_POOL" \
+  cast send "$REGISTRY" "submitQuestionWithReward(string,string[],string,string,string,string,uint256,bytes32,uint8,uint256,uint256,uint256,uint256)" \
+    "$CONTEXT_URL" "$IMAGE_URLS_ARG" "$VIDEO_URL_ARG" "$TITLE" "$DESCRIPTION" "$TAG" "$CATEGORY_ID" "0x$SALT" "0" "$SUBMISSION_BOUNTY_AMOUNT" "$SUBMISSION_BOUNTY_REQUIRED_VOTERS" "$SUBMISSION_BOUNTY_REQUIRED_SETTLED_ROUNDS" "$SUBMISSION_BOUNTY_EXPIRES_AT" \
     --private-key "$KEY" --rpc-url "$RPC" > /dev/null 2>&1
   echo "  Done!"
   echo ""

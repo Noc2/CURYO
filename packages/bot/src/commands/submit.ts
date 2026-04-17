@@ -78,6 +78,9 @@ function buildSubmissionRevealCommitment(params: {
   title: string;
   rewardAsset: number;
   rewardAmount: bigint;
+  requiredVoters: number;
+  requiredSettledRounds: number;
+  rewardPoolExpiresAt: bigint;
 }): Hex {
   return keccak256(
     encodeAbiParameters(
@@ -91,6 +94,9 @@ function buildSubmissionRevealCommitment(params: {
         { type: "address" },
         { type: "uint8" },
         { type: "uint256" },
+        { type: "uint256" },
+        { type: "uint256" },
+        { type: "uint256" },
       ],
       [
         params.submissionKey,
@@ -102,6 +108,9 @@ function buildSubmissionRevealCommitment(params: {
         params.submitter,
         params.rewardAsset,
         params.rewardAmount,
+        BigInt(params.requiredVoters),
+        BigInt(params.requiredSettledRounds),
+        params.rewardPoolExpiresAt,
       ],
     ),
   );
@@ -246,10 +255,17 @@ export async function runSubmit(options: SubmitRunOptions = {}) {
   const maxSubmissions = options.maxSubmissions ?? config.maxSubmissionsPerRun;
   const rewardFunding = await getSubmissionRewardFunding();
   log.info(
-    `Submission bounty: ${formatMicroTokenAmount(rewardFunding.amount)} ${rewardFunding.label} per question`,
+    `Submission Bounty: ${formatMicroTokenAmount(rewardFunding.amount)} ${rewardFunding.label} per question`,
+  );
+  log.info(
+    `Submission terms: ${config.submitRewardRequiredVoters} voters, ${config.submitRewardRequiredSettledRounds} rounds, ${
+      config.submitRewardPoolExpiresAt === 0n
+        ? "no expiry"
+        : `expires at ${config.submitRewardPoolExpiresAt}`
+    }`,
   );
 
-  // 1. Check balance for the mandatory bounty.
+  // 1. Check balance for the mandatory Bounty.
   const balance = (await publicClient.readContract({
     ...rewardFunding.token,
     functionName: "balanceOf",
@@ -259,7 +275,7 @@ export async function runSubmit(options: SubmitRunOptions = {}) {
 
   if (balance < rewardFunding.amount) {
     log.error(
-      `Insufficient ${rewardFunding.label} for even one submission (need ${formatMicroTokenAmount(rewardFunding.amount)} ${rewardFunding.label} bounty).`,
+      `Insufficient ${rewardFunding.label} for even one submission (need ${formatMicroTokenAmount(rewardFunding.amount)} ${rewardFunding.label} Bounty).`,
     );
     return;
   }
@@ -372,6 +388,9 @@ export async function runSubmit(options: SubmitRunOptions = {}) {
           submitter: account.address,
           rewardAsset: rewardFunding.assetId,
           rewardAmount: rewardFunding.amount,
+          requiredVoters: config.submitRewardRequiredVoters,
+          requiredSettledRounds: config.submitRewardRequiredSettledRounds,
+          rewardPoolExpiresAt: config.submitRewardPoolExpiresAt,
         });
 
         const approveTx = await ensureCrepAllowance({
@@ -417,6 +436,9 @@ export async function runSubmit(options: SubmitRunOptions = {}) {
               salt,
               rewardFunding.assetId,
               rewardFunding.amount,
+              config.submitRewardRequiredVoters,
+              config.submitRewardRequiredSettledRounds,
+              config.submitRewardPoolExpiresAt,
             ],
           });
         } catch (error) {
@@ -440,6 +462,9 @@ export async function runSubmit(options: SubmitRunOptions = {}) {
               salt,
               rewardFunding.assetId,
               rewardFunding.amount,
+              config.submitRewardRequiredVoters,
+              config.submitRewardRequiredSettledRounds,
+              config.submitRewardPoolExpiresAt,
             ],
           });
         }

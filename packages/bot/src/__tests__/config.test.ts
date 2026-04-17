@@ -61,6 +61,14 @@ describe("bot config", () => {
     expect(config.voteFrontendAddress).toBe(frontendAddress);
   });
 
+  it("uses the default submit bounty terms when no overrides are present", async () => {
+    const { config } = await loadBotConfig();
+
+    expect(config.submitRewardRequiredVoters).toBe(3);
+    expect(config.submitRewardRequiredSettledRounds).toBe(1);
+    expect(config.submitRewardPoolExpiresAt).toBe(0n);
+  });
+
   it("parses numeric bot config values strictly", async () => {
     const { config } = await loadBotConfig({
       VOTE_STAKE: "2500000",
@@ -68,6 +76,9 @@ describe("bot config", () => {
       MAX_VOTES_PER_RUN: "12",
       MAX_SUBMISSIONS_PER_RUN: "7",
       MAX_SUBMISSIONS_PER_CATEGORY: "4",
+      SUBMIT_REWARD_REQUIRED_VOTERS: "4",
+      SUBMIT_REWARD_REQUIRED_SETTLED_ROUNDS: "2",
+      SUBMIT_REWARD_POOL_EXPIRES_AT: "1234567890",
     });
 
     expect(config.voteStake).toBe(2500000n);
@@ -75,6 +86,9 @@ describe("bot config", () => {
     expect(config.maxVotesPerRun).toBe(12);
     expect(config.maxSubmissionsPerRun).toBe(7);
     expect(config.maxSubmissionsPerCategory).toBe(4);
+    expect(config.submitRewardRequiredVoters).toBe(4);
+    expect(config.submitRewardRequiredSettledRounds).toBe(2);
+    expect(config.submitRewardPoolExpiresAt).toBe(1234567890n);
   });
 
   it("rejects malformed numeric bot config values", async () => {
@@ -85,6 +99,9 @@ describe("bot config", () => {
         MAX_VOTES_PER_RUN: "0",
         MAX_SUBMISSIONS_PER_RUN: "-1",
         MAX_SUBMISSIONS_PER_CATEGORY: "many",
+        SUBMIT_REWARD_REQUIRED_VOTERS: "0",
+        SUBMIT_REWARD_REQUIRED_SETTLED_ROUNDS: "0",
+        SUBMIT_REWARD_POOL_EXPIRES_AT: "-1",
       }),
     ).rejects.toThrow("Invalid bot configuration");
 
@@ -95,6 +112,9 @@ describe("bot config", () => {
         MAX_VOTES_PER_RUN: "0",
         MAX_SUBMISSIONS_PER_RUN: "-1",
         MAX_SUBMISSIONS_PER_CATEGORY: "many",
+        SUBMIT_REWARD_REQUIRED_VOTERS: "0",
+        SUBMIT_REWARD_REQUIRED_SETTLED_ROUNDS: "0",
+        SUBMIT_REWARD_POOL_EXPIRES_AT: "-1",
       }),
     ).rejects.toThrow("VOTE_STAKE must be a positive integer");
   });

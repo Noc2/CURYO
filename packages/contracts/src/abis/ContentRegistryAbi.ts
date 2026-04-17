@@ -1710,6 +1710,21 @@ export const ContentRegistryAbi = [
         "name": "rewardAmount",
         "type": "uint256",
         "internalType": "uint256"
+      },
+      {
+        "name": "requiredVoters",
+        "type": "uint256",
+        "internalType": "uint256"
+      },
+      {
+        "name": "requiredSettledRounds",
+        "type": "uint256",
+        "internalType": "uint256"
+      },
+      {
+        "name": "rewardPoolExpiresAt",
+        "type": "uint256",
+        "internalType": "uint256"
       }
     ],
     "outputs": [
@@ -1772,6 +1787,21 @@ export const ContentRegistryAbi = [
       },
       {
         "name": "rewardAmount",
+        "type": "uint256",
+        "internalType": "uint256"
+      },
+      {
+        "name": "requiredVoters",
+        "type": "uint256",
+        "internalType": "uint256"
+      },
+      {
+        "name": "requiredSettledRounds",
+        "type": "uint256",
+        "internalType": "uint256"
+      },
+      {
+        "name": "rewardPoolExpiresAt",
         "type": "uint256",
         "internalType": "uint256"
       }

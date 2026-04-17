@@ -1,15 +1,18 @@
 import { createPublicClient, encodeAbiParameters, http, keccak256, parseAbi } from "viem";
 
 const args = process.argv.slice(2);
-if (![9, 11, 13].includes(args.length)) {
+if (args.length < 9 || args.length === 10) {
   console.error(
-    "Usage: node buildSubmissionReservation.js <rpcUrl> <registry> <submitter> <contextUrl> <imageUrlsJson> <videoUrl> <title> <description> <tags> <categoryId> <salt> [rewardAsset] [rewardAmount]",
+    "Usage: node buildSubmissionReservation.js <rpcUrl> <registry> <submitter> <contextUrl> <imageUrlsJson> <videoUrl> <title> <description> <tags> <categoryId> <salt> [rewardAsset] [rewardAmount] [requiredVoters] [requiredSettledRounds] [rewardPoolExpiresAt]",
   );
   process.exit(1);
 }
 
 const DEFAULT_REWARD_ASSET = 0n;
 const DEFAULT_REWARD_AMOUNT = 1_000_000n;
+const DEFAULT_REQUIRED_VOTERS = 3n;
+const DEFAULT_REQUIRED_SETTLED_ROUNDS = 1n;
+const DEFAULT_REWARD_POOL_EXPIRES_AT = 0n;
 
 const MAX_SUBMISSION_IMAGE_URLS = 4;
 const DIRECT_IMAGE_URL_PATTERN = /^https:\/\/\S+\.(?:avif|gif|jpe?g|png|webp)(?:[?#]\S*)?$/i;
@@ -122,6 +125,9 @@ function parseArgs(rawArgs) {
       salt,
       rewardAsset: DEFAULT_REWARD_ASSET,
       rewardAmount: DEFAULT_REWARD_AMOUNT,
+      requiredVoters: DEFAULT_REQUIRED_VOTERS,
+      requiredSettledRounds: DEFAULT_REQUIRED_SETTLED_ROUNDS,
+      rewardPoolExpiresAt: DEFAULT_REWARD_POOL_EXPIRES_AT,
     };
   }
 
@@ -139,6 +145,9 @@ function parseArgs(rawArgs) {
     salt,
     rewardAsset = DEFAULT_REWARD_ASSET.toString(),
     rewardAmount = DEFAULT_REWARD_AMOUNT.toString(),
+    requiredVoters = DEFAULT_REQUIRED_VOTERS.toString(),
+    requiredSettledRounds = DEFAULT_REQUIRED_SETTLED_ROUNDS.toString(),
+    rewardPoolExpiresAt = DEFAULT_REWARD_POOL_EXPIRES_AT.toString(),
   ] = rawArgs;
   const imageUrls = parseImageUrls(imageUrlsJson, { allowEmpty: true });
   const trimmedVideoUrl = videoUrl.trim();
@@ -163,6 +172,9 @@ function parseArgs(rawArgs) {
     salt,
     rewardAsset: BigInt(rewardAsset),
     rewardAmount: BigInt(rewardAmount),
+    requiredVoters: BigInt(requiredVoters),
+    requiredSettledRounds: BigInt(requiredSettledRounds),
+    rewardPoolExpiresAt: BigInt(rewardPoolExpiresAt),
   };
 }
 
@@ -179,6 +191,9 @@ const {
   salt,
   rewardAsset,
   rewardAmount,
+  requiredVoters,
+  requiredSettledRounds,
+  rewardPoolExpiresAt,
 } = parseArgs(args);
 const publicClient = createPublicClient({
   transport: http(rpcUrl),
@@ -205,8 +220,24 @@ const revealCommitment = keccak256(
       { type: "address" },
       { type: "uint8" },
       { type: "uint256" },
+      { type: "uint256" },
+      { type: "uint256" },
+      { type: "uint256" },
     ],
-    [submissionKey, title, description, tags, BigInt(categoryId), salt, submitter, Number(rewardAsset), rewardAmount],
+    [
+      submissionKey,
+      title,
+      description,
+      tags,
+      BigInt(categoryId),
+      salt,
+      submitter,
+      Number(rewardAsset),
+      rewardAmount,
+      requiredVoters,
+      requiredSettledRounds,
+      rewardPoolExpiresAt,
+    ],
   ),
 );
 

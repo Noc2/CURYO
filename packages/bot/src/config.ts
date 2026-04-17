@@ -159,6 +159,26 @@ function parsePositiveBigIntEnv(name: string, fallback: bigint, errors: string[]
   return parsed;
 }
 
+function parseNonNegativeBigIntEnv(name: string, fallback: bigint, errors: string[]): bigint {
+  const value = readEnv(name);
+  if (!value) {
+    return fallback;
+  }
+
+  if (!/^\d+$/.test(value)) {
+    errors.push(`${name} must be a non-negative integer`);
+    return fallback;
+  }
+
+  const parsed = BigInt(value);
+  if (parsed < 0n) {
+    errors.push(`${name} must be a non-negative integer`);
+    return fallback;
+  }
+
+  return parsed;
+}
+
 function parseSubmissionRewardAssetEnv(name: string, fallback: SubmissionRewardAsset, errors: string[]) {
   const value = readEnv(name)?.toLowerCase();
   if (!value) {
@@ -310,6 +330,13 @@ function loadConfig() {
     maxSubmissionsPerRun: parseOptionalPositiveIntegerEnv("MAX_SUBMISSIONS_PER_RUN", 5, errors),
     maxSubmissionsPerCategory: parseOptionalPositiveIntegerEnv("MAX_SUBMISSIONS_PER_CATEGORY", 3, errors),
     submitRewardAsset: parseSubmissionRewardAssetEnv("SUBMIT_REWARD_ASSET", "usdc", errors),
+    submitRewardRequiredVoters: parseOptionalPositiveIntegerEnv("SUBMIT_REWARD_REQUIRED_VOTERS", 3, errors),
+    submitRewardRequiredSettledRounds: parseOptionalPositiveIntegerEnv(
+      "SUBMIT_REWARD_REQUIRED_SETTLED_ROUNDS",
+      1,
+      errors,
+    ),
+    submitRewardPoolExpiresAt: parseNonNegativeBigIntEnv("SUBMIT_REWARD_POOL_EXPIRES_AT", 0n, errors),
   };
 
   if (errors.length > 0) {
