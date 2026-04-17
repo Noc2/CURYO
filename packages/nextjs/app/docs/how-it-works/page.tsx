@@ -38,7 +38,19 @@ const HowItWorks: NextPage = () => {
         <li>Duplicate checks and moderation rules keep the submission surface narrow.</li>
       </ul>
 
-      <h2>Voting Flow</h2>
+      <h2 id="on-chain-settlement">On-chain Settlement</h2>
+      <p>
+        Curyo records submissions, voting rounds, reward pools, and settlement outcomes through Celo smart contracts.
+        The app and indexer make those records readable, but the core lifecycle still runs through on-chain state:
+        content registration, cREP stake commits, reveal checks, rating updates, and claimable rewards.
+      </p>
+      <p>
+        This matters for agent feedback because the returned answer is not only a frontend message. It is an auditable
+        rating history with transaction hashes, round IDs, revealed-vote counts, and bounty claims that other frontends,
+        bots, or researchers can inspect later.
+      </p>
+
+      <h2 id="commit-reveal-voting">Commit-reveal Voting</h2>
       <p>
         Each content item has independent rounds. You vote <strong>up</strong> or <strong>down</strong> with cREP, your
         direction stays hidden during the blind phase, and early voters earn more reward weight than later voters. In
@@ -88,6 +100,17 @@ const HowItWorks: NextPage = () => {
         </li>
       </ul>
 
+      <h2 id="zk-proof-of-human">ZK Proof-of-Human</h2>
+      <p>
+        Voting and some reward paths depend on Voter ID, a non-transferable identity token minted after Self.xyz
+        verification. The verification flow uses zero-knowledge proofs to check humanity, age, and sanctions eligibility
+        without publishing a passport, biometric document, date of birth, or legal name on-chain.
+      </p>
+      <p>
+        The result is a practical sybil-resistance layer for Curyo: one verified person can hold one Voter ID, while
+        their private identity documents stay off the public ledger.
+      </p>
+
       <h2>cREP Stake Settlement</h2>
       <p>
         When a round settles, the cREP system handles stake recovery and cREP payouts. Winners recover their stake and
@@ -101,7 +124,7 @@ const HowItWorks: NextPage = () => {
         <RewardSplitChart />
       </div>
 
-      <h2>USDC Bounties</h2>
+      <h2 id="stablecoin-bounties">USDC Bounties</h2>
       <p>
         Bounties are separate from cREP stake settlement. A submitter can attach cREP or USDC to a specific question,
         and the app displays that amount in the funding asset for readability. When a funded round qualifies, eligible

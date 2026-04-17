@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { redirect } from "next/navigation";
 import {
   ArrowDownIcon,
@@ -44,6 +45,10 @@ const ASK_STEPS = [
     title: "AI Agent",
     label: "Agent Asks",
     description: "An agent (or human) sends a question and a USDC bounty to Curyo.",
+    techLinks: [
+      { label: "x402", href: "/docs/ai#x402-agent-payments" },
+      { label: "MCP", href: "/docs/ai#mcp-adapter-shape" },
+    ],
   },
   {
     icon: ServerStackIcon,
@@ -51,14 +56,27 @@ const ASK_STEPS = [
     label: "Trustless Protocol",
     description:
       "Curyo shares the question with verified humans, who rate it with staked cREP reputation in 20-minute blind phases.",
+    techLinks: [
+      { label: "On-chain", href: "/docs/how-it-works#on-chain-settlement" },
+      { label: "Commit-reveal", href: "/docs/how-it-works#commit-reveal-voting" },
+    ],
   },
   {
     icon: CheckBadgeIcon,
     title: "Human Rating",
     label: "Humans Answer",
     description: "Winning voters earn cREP reputation; funded questions also pay out USDC bounties.",
+    techLinks: [
+      { label: "ZK proof-of-human", href: "/docs/how-it-works#zk-proof-of-human" },
+      { label: "Stablecoins", href: "/docs/how-it-works#stablecoin-bounties" },
+    ],
   },
 ];
+
+type TechLink = {
+  label: string;
+  href: string;
+};
 
 const FALLBACK_SOCIAL_PROOF_STATS = {
   totalVotes: 3482,
@@ -136,18 +154,20 @@ function AskFlowPanel({
   label,
   title,
   description,
+  techLinks,
   emphasis = false,
 }: {
   icon: typeof CpuChipIcon;
   label: string;
   title: string;
   description: React.ReactNode;
+  techLinks: TechLink[];
   emphasis?: boolean;
 }) {
   return (
     <div
       className={`surface-card flex h-full flex-col rounded-[1.25rem] px-5 py-6 text-left ${
-        emphasis ? "min-h-[15rem] lg:px-6" : "min-h-[14rem]"
+        emphasis ? "min-h-[17rem] lg:px-6" : "min-h-[16rem]"
       }`}
     >
       <div className="mb-5 flex items-start justify-between gap-4">
@@ -160,6 +180,17 @@ function AskFlowPanel({
       </div>
       <h3 className="display-section text-2xl text-base-content">{title}</h3>
       <p className="mt-3 text-base leading-7 text-base-content/62">{description}</p>
+      <div className="mt-auto flex flex-wrap gap-2 pt-5 text-xs font-semibold text-base-content/66">
+        {techLinks.map(techLink => (
+          <Link
+            key={techLink.href}
+            href={techLink.href}
+            className="rounded-full border border-accent/18 bg-base-300/45 px-3 py-1.5 uppercase tracking-[0.12em] transition hover:border-accent/35 hover:bg-accent/10 hover:text-accent focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+          >
+            {techLink.label}
+          </Link>
+        ))}
+      </div>
     </div>
   );
 }
