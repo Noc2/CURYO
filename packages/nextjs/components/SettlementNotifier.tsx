@@ -27,6 +27,8 @@ import {
   getFollowedResolutionNotificationKey,
   getFollowedSubmissionNotificationKey,
   pickFollowedActivityNotification,
+  readSeenFollowedActivityNotificationKeys,
+  writeSeenFollowedActivityNotificationKeys,
 } from "~~/lib/notifications/followedActivity";
 import { pickSettlingSoonNotification } from "~~/lib/notifications/settlingSoon";
 import { notification } from "~~/utils/scaffold-eth";
@@ -59,11 +61,21 @@ export function SettlementNotifier() {
   const seenFollowedSubmissionKeysRef = useRef<Set<string>>(new Set());
   const seenFollowedResolutionKeysRef = useRef<Set<string>>(new Set());
   const roundResolvedEnabledRef = useRef(true);
-  const { watchedItems, watchedContentIds } = useWatchedContent(address, { autoRead: false });
-  const { followedItems } = useFollowedProfiles(address, { autoRead: false });
-  const { discoverSignals } = useDiscoverSignals(address, { watchedItems, followedItems });
+  const {
+    watchedItems,
+    watchedContentIds,
+    isLoading: watchedContentLoading,
+  } = useWatchedContent(address, { autoRead: false });
+  const { followedItems, isLoading: followedProfilesLoading } = useFollowedProfiles(address, { autoRead: false });
+  const { discoverSignals, isLoading: discoverSignalsLoading } = useDiscoverSignals(address, {
+    watchedItems,
+    followedItems,
+  });
   const { preferences } = useNotificationPreferences(address, { autoRead: false });
   const { claimableItems, refetch: refetchClaimable } = useAllClaimableRewards();
+  const hasTrackedDiscoverSignals = watchedItems.length > 0 || followedItems.length > 0;
+  const trackedSignalSourcesLoading = watchedContentLoading || followedProfilesLoading;
+  const discoverSignalsReady = !trackedSignalSourcesLoading && !discoverSignalsLoading;
 
   const claimableRoundKeys = useMemo(
     () => new Set(claimableItems.map(item => getClaimableRoundKey(item)).filter((key): key is string => key !== null)),
@@ -73,6 +85,22 @@ export function SettlementNotifier() {
   useEffect(() => {
     roundResolvedEnabledRef.current = preferences.roundResolved;
   }, [preferences.roundResolved]);
+
+  useEffect(() => {
+    discoverSignalsInitializedRef.current = false;
+    seenSettlingDayKeysRef.current = new Set();
+    seenSettlingHourKeysRef.current = new Set();
+
+    if (!address) {
+      seenFollowedSubmissionKeysRef.current = new Set();
+      seenFollowedResolutionKeysRef.current = new Set();
+      return;
+    }
+
+    const seenFollowedActivityKeys = readSeenFollowedActivityNotificationKeys(address);
+    seenFollowedSubmissionKeysRef.current = seenFollowedActivityKeys.submissionKeys;
+    seenFollowedResolutionKeysRef.current = seenFollowedActivityKeys.resolutionKeys;
+  }, [address]);
 
   const openBrowserNotification = useCallback((title: string, body: string, href: string) => {
     if (typeof window === "undefined" || permissionRef.current !== "granted") return;
@@ -162,6 +190,13 @@ export function SettlementNotifier() {
       seenFollowedResolutionKeysRef.current = new Set();
       return;
     }
+    if (!hasTrackedDiscoverSignals) {
+      if (!trackedSignalSourcesLoading) {
+        discoverSignalsInitializedRef.current = true;
+      }
+      return;
+    }
+    if (!discoverSignalsReady) return;
 
     const nowSeconds = Math.floor(Date.now() / 1000);
     const currentSettlingDayKeys = new Set<string>();
@@ -275,7 +310,20 @@ export function SettlementNotifier() {
       ...seenFollowedResolutionKeysRef.current,
       ...currentResolutionKeys,
     ]);
-  }, [address, discoverSignals, followedSinceByAddress, notifyWithLink, preferences]);
+    writeSeenFollowedActivityNotificationKeys(address, {
+      submissionKeys: seenFollowedSubmissionKeysRef.current,
+      resolutionKeys: seenFollowedResolutionKeysRef.current,
+    });
+  }, [
+    address,
+    discoverSignals,
+    discoverSignalsReady,
+    followedSinceByAddress,
+    hasTrackedDiscoverSignals,
+    notifyWithLink,
+    preferences,
+    trackedSignalSourcesLoading,
+  ]);
 
   useEffect(() => {
     if (!address || pendingClaimCount === 0) return;
