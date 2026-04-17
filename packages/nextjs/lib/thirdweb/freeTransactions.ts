@@ -125,6 +125,94 @@ const EXECUTED_RECEIPT_EVENT_ABI = parseAbi([
   "event Executed(address indexed user, address indexed signer, address indexed executor, uint256 batchSize)",
 ]);
 const ERC20_APPROVAL_ABI = parseAbi(["function approve(address spender, uint256 amount) returns (bool)"]);
+const CONTENT_REGISTRY_SUBMISSION_ABI = [
+  {
+    type: "function",
+    name: "cancelReservedSubmission",
+    inputs: [{ name: "revealCommitment", type: "bytes32" }],
+    outputs: [],
+    stateMutability: "nonpayable",
+  },
+  {
+    type: "function",
+    name: "reserveSubmission",
+    inputs: [{ name: "revealCommitment", type: "bytes32" }],
+    outputs: [],
+    stateMutability: "nonpayable",
+  },
+  {
+    type: "function",
+    name: "submitQuestion",
+    inputs: [
+      { name: "contextUrl", type: "string" },
+      { name: "imageUrls", type: "string[]" },
+      { name: "videoUrl", type: "string" },
+      { name: "title", type: "string" },
+      { name: "description", type: "string" },
+      { name: "tags", type: "string" },
+      { name: "categoryId", type: "uint256" },
+      { name: "salt", type: "bytes32" },
+    ],
+    outputs: [{ name: "", type: "uint256" }],
+    stateMutability: "nonpayable",
+  },
+  {
+    type: "function",
+    name: "submitQuestionWithMedia",
+    inputs: [
+      { name: "imageUrls", type: "string[]" },
+      { name: "videoUrl", type: "string" },
+      { name: "title", type: "string" },
+      { name: "description", type: "string" },
+      { name: "tags", type: "string" },
+      { name: "categoryId", type: "uint256" },
+      { name: "salt", type: "bytes32" },
+    ],
+    outputs: [{ name: "", type: "uint256" }],
+    stateMutability: "nonpayable",
+  },
+  {
+    type: "function",
+    name: "submitQuestionWithReward",
+    inputs: [
+      { name: "contextUrl", type: "string" },
+      { name: "imageUrls", type: "string[]" },
+      { name: "videoUrl", type: "string" },
+      { name: "title", type: "string" },
+      { name: "description", type: "string" },
+      { name: "tags", type: "string" },
+      { name: "categoryId", type: "uint256" },
+      { name: "salt", type: "bytes32" },
+      { name: "rewardAsset", type: "uint8" },
+      { name: "rewardAmount", type: "uint256" },
+      { name: "requiredVoters", type: "uint256" },
+      { name: "requiredSettledRounds", type: "uint256" },
+      { name: "rewardPoolExpiresAt", type: "uint256" },
+    ],
+    outputs: [{ name: "", type: "uint256" }],
+    stateMutability: "nonpayable",
+  },
+  {
+    type: "function",
+    name: "submitQuestionWithMediaWithReward",
+    inputs: [
+      { name: "imageUrls", type: "string[]" },
+      { name: "videoUrl", type: "string" },
+      { name: "title", type: "string" },
+      { name: "description", type: "string" },
+      { name: "tags", type: "string" },
+      { name: "categoryId", type: "uint256" },
+      { name: "salt", type: "bytes32" },
+      { name: "rewardAsset", type: "uint8" },
+      { name: "rewardAmount", type: "uint256" },
+      { name: "requiredVoters", type: "uint256" },
+      { name: "requiredSettledRounds", type: "uint256" },
+      { name: "rewardPoolExpiresAt", type: "uint256" },
+    ],
+    outputs: [{ name: "", type: "uint256" }],
+    stateMutability: "nonpayable",
+  },
+] as const;
 
 let ensureFreeTransactionQuotaTablePromise: Promise<void> | null = null;
 let freeTransactionTestOverrides: {
@@ -167,6 +255,13 @@ function getContractsByAddress(chainId: number): Map<string, { name: string; add
         { name, address: contract.address, abi: contract.abi },
       ]),
   );
+}
+
+function decodeContentRegistryCallData(data: Hex) {
+  return decodeFunctionData({
+    abi: CONTENT_REGISTRY_SUBMISSION_ABI,
+    data,
+  }) as { functionName: string; args: readonly unknown[] | undefined };
 }
 
 function getRpcUrl(chainId: number) {
@@ -576,7 +671,15 @@ function validateSponsoredCalls(
         data: call.data,
       }) as { functionName: string; args: readonly unknown[] | undefined };
     } catch {
-      return { ok: false, debugCode: "unsupported_operation" };
+      if (contract.name === "ContentRegistry") {
+        try {
+          decoded = decodeContentRegistryCallData(call.data);
+        } catch {
+          return { ok: false, debugCode: "unsupported_operation" };
+        }
+      } else {
+        return { ok: false, debugCode: "unsupported_operation" };
+      }
     }
 
     const args = decoded.args ?? [];

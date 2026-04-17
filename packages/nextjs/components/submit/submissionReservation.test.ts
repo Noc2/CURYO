@@ -17,8 +17,11 @@ const DEFAULT_DRAFT = {
   contextUrl: "https://example.com/demo.jpg",
   description: "first description",
   imageUrls: ["https://example.com/demo.jpg"],
+  rewardPoolExpiresAt: 0n,
   rewardAmount: 1_000_000n,
   rewardAsset: 0,
+  requiredSettledRounds: 1n,
+  requiredVoters: 3n,
   submissionKey: SUBMISSION_KEY,
   tags: "alpha,beta",
   title: "First title",
@@ -60,6 +63,27 @@ test("buildSubmissionRevealCommitment changes when the reserved metadata changes
   assert.notEqual(initial, edited);
 });
 
+test("buildSubmissionRevealCommitment changes when bounty terms change", () => {
+  const initial = buildSubmissionRevealCommitment(
+    {
+      ...DEFAULT_DRAFT,
+    },
+    SALT,
+    ADDRESS,
+  );
+
+  const edited = buildSubmissionRevealCommitment(
+    {
+      ...DEFAULT_DRAFT,
+      requiredVoters: 5n,
+    },
+    SALT,
+    ADDRESS,
+  );
+
+  assert.notEqual(initial, edited);
+});
+
 test("submissionReservationMatchesDraft only reuses reservations for the exact same draft", () => {
   const reservation = createStoredSubmissionReservation(
     {
@@ -87,6 +111,14 @@ test("submissionReservationMatchesDraft only reuses reservations for the exact s
     submissionReservationMatchesDraft(reservation, {
       ...DEFAULT_DRAFT,
       title: "Edited title",
+    }),
+    false,
+  );
+
+  assert.equal(
+    submissionReservationMatchesDraft(reservation, {
+      ...DEFAULT_DRAFT,
+      requiredVoters: 4n,
     }),
     false,
   );

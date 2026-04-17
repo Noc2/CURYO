@@ -47,6 +47,8 @@ import {
 import {
   DEFAULT_SUBMISSION_REWARD_POOL,
   ERC20_APPROVAL_ABI,
+  MIN_REWARD_POOL_REQUIRED_VOTERS,
+  MIN_REWARD_POOL_SETTLED_ROUNDS,
   QUESTION_SUBMISSION_ABI,
   SUBMISSION_REWARD_ASSET_CREP,
   SUBMISSION_REWARD_ASSET_USDC,
@@ -74,6 +76,25 @@ const MEDIA_URL_CONFIG = {
   videoPlaceholder: "Paste a YouTube URL, e.g. https://youtube.com/watch?v=...",
   urlHint: "Optional. Add up to four direct image URLs or one YouTube link as a preview.",
 };
+
+type SubmissionStep = 1 | 2;
+type RewardExpiryMode = "none" | "days";
+
+function getRewardPoolExpiresAt(mode: RewardExpiryMode, daysText: string): bigint {
+  if (mode !== "days") return 0n;
+
+  const parsedDays = Math.floor(Number(daysText) || 0);
+  if (parsedDays < 1) return 0n;
+  return BigInt(Math.floor(Date.now() / 1000) + parsedDays * 24 * 60 * 60);
+}
+
+function parseIntegerInput(value: string): number {
+  const parsed = Number(value);
+  if (!Number.isFinite(parsed)) {
+    return 0;
+  }
+  return Math.floor(parsed);
+}
 
 function isReservationExistsError(error: unknown): boolean {
   const message =
@@ -132,8 +153,14 @@ export function ContentSubmissionSection() {
   const [customSubcategory, setCustomSubcategory] = useState("");
   const [rewardAsset, setRewardAsset] = useState<SubmissionRewardAsset>("usdc");
   const [rewardAmount, setRewardAmount] = useState("1");
+  const [rewardRequiredVoters, setRewardRequiredVoters] = useState("3");
+  const [rewardRequiredSettledRounds, setRewardRequiredSettledRounds] = useState("1");
+  const [rewardExpiryMode, setRewardExpiryMode] = useState<RewardExpiryMode>("none");
+  const [rewardExpiryDays, setRewardExpiryDays] = useState("30");
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [submitAttempted, setSubmitAttempted] = useState(false);
+  const [questionStepAttempted, setQuestionStepAttempted] = useState(false);
+  const [bountyStepAttempted, setBountyStepAttempted] = useState(false);
+  const [submissionStep, setSubmissionStep] = useState<SubmissionStep>(1);
   const [submittedContent, setSubmittedContent] = useState<{
     id: bigint;
     title: string;
@@ -370,6 +397,13 @@ export function ContentSubmissionSection() {
   } as any);
   const selectedRewardAssetId = rewardAsset === "crep" ? SUBMISSION_REWARD_ASSET_CREP : SUBMISSION_REWARD_ASSET_USDC;
   const selectedRewardAmount = useMemo(() => parseSubmissionRewardAmount(rewardAmount), [rewardAmount]);
+  const parsedRewardRequiredVoters = parseIntegerInput(rewardRequiredVoters);
+  const parsedRewardRequiredSettledRounds = parseIntegerInput(rewardRequiredSettledRounds);
+  const selectedRequiredVoters = BigInt(Math.max(MIN_REWARD_POOL_REQUIRED_VOTERS, parsedRewardRequiredVoters));
+  const selectedRequiredSettledRounds = BigInt(
+    Math.max(MIN_REWARD_POOL_SETTLED_ROUNDS, parsedRewardRequiredSettledRounds),
+  );
+  const bountyMinimumCoverageAmount = selectedRequiredVoters * selectedRequiredSettledRounds;
   const minimumRewardAmount =
     rewardAsset === "crep"
       ? typeof minSubmissionCrepPool === "bigint"
@@ -383,7 +417,35 @@ export function ContentSubmissionSection() {
       ? "Enter a positive amount with up to 6 decimals."
       : selectedRewardAmount < minimumRewardAmount
         ? `Minimum is ${formatSubmissionRewardAmount(minimumRewardAmount, rewardAsset)}.`
-        : null;
+        : selectedRewardAmount < bountyMinimumCoverageAmount
+          ? `Minimum is ${formatSubmissionRewardAmount(
+              bountyMinimumCoverageAmount,
+              rewardAsset,
+            )} for the selected voter requirements.`
+          : null;
+  const minimumBountyAmount =
+    minimumRewardAmount > bountyMinimumCoverageAmount ? minimumRewardAmount : bountyMinimumCoverageAmount;
+  const rewardRequiredVotersValidationError =
+    parsedRewardRequiredVoters < MIN_REWARD_POOL_REQUIRED_VOTERS
+      ? `Minimum is ${MIN_REWARD_POOL_REQUIRED_VOTERS} voters.`
+      : null;
+  const rewardRequiredVotersError = bountyStepAttempted ? rewardRequiredVotersValidationError : null;
+  const rewardRequiredSettledRoundsValidationError =
+    parsedRewardRequiredSettledRounds < MIN_REWARD_POOL_SETTLED_ROUNDS
+      ? `Minimum is ${MIN_REWARD_POOL_SETTLED_ROUNDS} round.`
+      : null;
+  const rewardRequiredSettledRoundsError = bountyStepAttempted ? rewardRequiredSettledRoundsValidationError : null;
+  const parsedRewardExpiryDays = parseIntegerInput(rewardExpiryDays);
+  const rewardExpiryValidationError =
+    rewardExpiryMode === "days" && parsedRewardExpiryDays < 1 ? "Enter at least 1 day or choose no expiry." : null;
+  const rewardExpiryError = bountyStepAttempted ? rewardExpiryValidationError : null;
+  const rewardPoolExpiresAt = getRewardPoolExpiresAt(rewardExpiryMode, rewardExpiryDays);
+  const bountySettingsValid =
+    rewardRequiredVotersValidationError === null &&
+    rewardRequiredSettledRoundsValidationError === null &&
+    rewardExpiryValidationError === null &&
+    rewardAmountError === null &&
+    selectedRewardAmount !== null;
   const rewardTokenAddress =
     rewardAsset === "crep" ? crepAddress : ((escrowUsdcToken as `0x${string}` | undefined) ?? undefined);
   const { refetch: refetchNextContentId } = useScaffoldReadContract({
@@ -425,6 +487,78 @@ export function ContentSubmissionSection() {
     setDescriptionError(getContentDescriptionValidationError(value));
   };
 
+  const validateQuestionSection = () => {
+    const trimmedTitle = title.trim();
+    const trimmedDescription = description.trim();
+    const trimmedContextUrl = contextUrl.trim();
+    const submittedContextUrl = normalizeSubmissionContextUrl(trimmedContextUrl) ?? "";
+    const submittedImageUrls =
+      mediaMode === "images"
+        ? imageUrls
+            .map(value => value.trim())
+            .filter(Boolean)
+            .map(value => normalizeSubmissionMediaUrl(value))
+            .filter((value): value is string => Boolean(value))
+        : [];
+    const submittedVideoUrl = mediaMode === "video" ? (normalizeSubmissionMediaUrl(videoUrl) ?? "") : "";
+    const nextImageUrlErrors = imageUrls.map(value =>
+      value.trim() ? getMediaUrlValidationError(value, "images") : null,
+    );
+    const nextVideoUrlError = getMediaUrlValidationError(videoUrl, "video");
+    const nextContextUrlError = getContextUrlValidationError(trimmedContextUrl);
+    const nextTitleError = trimmedTitle ? getContentTitleValidationError(trimmedTitle) : null;
+    const nextDescriptionError = trimmedDescription ? getContentDescriptionValidationError(trimmedDescription) : null;
+    const blockedContentTags = findBlockedContentTags(selectedSubcategories);
+    const hasMediaError =
+      mediaMode === "images"
+        ? nextImageUrlErrors.some(Boolean)
+        : Boolean(nextVideoUrlError) || Boolean(videoUrl.trim() && !submittedVideoUrl);
+
+    setImageUrlErrors(nextImageUrlErrors);
+    setVideoUrlError(nextVideoUrlError);
+    setContextUrlError(nextContextUrlError);
+    setTitleError(nextTitleError);
+    setDescriptionError(nextDescriptionError);
+
+    const questionFieldsComplete =
+      Boolean(selectedCategory) &&
+      Boolean(trimmedTitle) &&
+      Boolean(trimmedDescription) &&
+      selectedSubcategories.length > 0 &&
+      Boolean(submittedContextUrl);
+    const hasQuestionErrors =
+      !questionFieldsComplete ||
+      Boolean(nextContextUrlError) ||
+      Boolean(nextTitleError) ||
+      Boolean(nextDescriptionError) ||
+      hasMediaError ||
+      blockedContentTags.length > 0;
+
+    return {
+      blockedContentTags,
+      hasMediaError,
+      hasQuestionErrors,
+      submittedContextUrl,
+      submittedImageUrls,
+      submittedVideoUrl,
+      trimmedDescription,
+      trimmedTitle,
+    };
+  };
+
+  const handleContinueToBounty = () => {
+    setQuestionStepAttempted(true);
+    const questionValidation = validateQuestionSection();
+    if (questionValidation.hasQuestionErrors) {
+      setSubmissionStep(1);
+      notification.warning("Fill in the highlighted fields before continuing.");
+      return;
+    }
+
+    setSubmissionStep(2);
+    setBountyStepAttempted(false);
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
@@ -443,7 +577,7 @@ export function ContentSubmissionSection() {
       return;
     }
 
-    setSubmitAttempted(true);
+    setQuestionStepAttempted(true);
 
     if (isAwaitingSponsoredSubmitCalls) {
       notification.warning("Wallet reconnecting. Retry in a moment.");
@@ -455,56 +589,33 @@ export function ContentSubmissionSection() {
       return;
     }
 
-    const trimmedTitle = title.trim();
-    const trimmedDescription = description.trim();
-    const trimmedContextUrl = contextUrl.trim();
-    const submittedContextUrl = normalizeSubmissionContextUrl(trimmedContextUrl) ?? "";
-    const submittedImageUrls =
-      mediaMode === "images"
-        ? imageUrls
-            .map(value => value.trim())
-            .filter(Boolean)
-            .map(value => normalizeSubmissionMediaUrl(value))
-            .filter((value): value is string => Boolean(value))
-        : [];
-    const submittedVideoUrl = mediaMode === "video" ? (normalizeSubmissionMediaUrl(videoUrl) ?? "") : "";
-    const nextImageUrlErrors = imageUrls.map(value =>
-      value.trim() ? getMediaUrlValidationError(value, "images") : null,
-    );
-    const nextVideoUrlError = getMediaUrlValidationError(videoUrl, "video");
+    const questionValidation = validateQuestionSection();
+    setBountyStepAttempted(true);
+    const { submittedContextUrl, submittedImageUrls, submittedVideoUrl, trimmedDescription, trimmedTitle } =
+      questionValidation;
+    const submittedTitle = trimmedTitle;
+    const submittedDescription = trimmedDescription;
+    const currentCategory = selectedCategory;
 
-    const nextContextUrlError = getContextUrlValidationError(trimmedContextUrl);
-    const nextTitleError = trimmedTitle ? getContentTitleValidationError(trimmedTitle) : null;
-    const nextDescriptionError = trimmedDescription ? getContentDescriptionValidationError(trimmedDescription) : null;
-    const blockedContentTags = findBlockedContentTags(selectedSubcategories);
-    const hasMediaError =
-      mediaMode === "images"
-        ? nextImageUrlErrors.some(Boolean)
-        : Boolean(nextVideoUrlError) || Boolean(videoUrl.trim() && !submittedVideoUrl);
-
-    setImageUrlErrors(nextImageUrlErrors);
-    setVideoUrlError(nextVideoUrlError);
-    setContextUrlError(nextContextUrlError);
-    setTitleError(nextTitleError);
-    setDescriptionError(nextDescriptionError);
-
-    if (!selectedCategory || !trimmedTitle || !trimmedDescription || selectedSubcategories.length === 0) {
+    if (questionValidation.hasQuestionErrors) {
+      setSubmissionStep(1);
       notification.warning("Fill in the highlighted fields before asking.");
       return;
     }
 
-    if (blockedContentTags.length > 0) {
-      notification.warning("Remove categories with prohibited content before asking.");
+    if (!currentCategory) {
+      notification.warning("Select a category before asking.");
       return;
     }
 
-    if (hasMediaError || nextContextUrlError || nextTitleError || nextDescriptionError || rewardAmountError) {
+    if (!questionValidation.submittedContextUrl || !selectedRewardAmount) {
       notification.warning("Please fix the highlighted fields before asking.");
       return;
     }
 
-    if (!submittedContextUrl || !selectedRewardAmount) {
-      notification.warning("Please fix the highlighted fields before asking.");
+    if (!bountySettingsValid) {
+      setSubmissionStep(2);
+      notification.warning("Please fix the bounty details before asking.");
       return;
     }
 
@@ -513,8 +624,6 @@ export function ContentSubmissionSection() {
 
     setIsSubmitting(true);
     statusToast.showSubmitting({ action: "content" });
-    const submittedTitle = trimmedTitle;
-    const submittedDescription = trimmedDescription;
     let reservationStorageKey: string | null = null;
     try {
       let contentId: bigint | null = null;
@@ -535,15 +644,18 @@ export function ContentSubmissionSection() {
           submittedTitle,
           submittedDescription,
           submissionTags,
-          selectedCategory.id,
+          currentCategory.id,
         ],
       })) as readonly [bigint, `0x${string}`];
       const submissionDraft = {
-        categoryId: selectedCategory.id,
+        categoryId: currentCategory.id,
         description: submittedDescription,
         imageUrls: submittedImageUrls,
         rewardAmount: selectedRewardAmount,
+        rewardPoolExpiresAt,
         rewardAsset: selectedRewardAssetId,
+        requiredSettledRounds: selectedRequiredSettledRounds,
+        requiredVoters: selectedRequiredVoters,
         submissionKey,
         tags: submissionTags,
         title: submittedTitle,
@@ -688,10 +800,13 @@ export function ContentSubmissionSection() {
                 submittedTitle,
                 submittedDescription,
                 submissionTags,
-                selectedCategory.id,
+                currentCategory.id,
                 activeReservation.salt,
                 selectedRewardAssetId,
                 selectedRewardAmount,
+                selectedRequiredVoters,
+                selectedRequiredSettledRounds,
+                rewardPoolExpiresAt,
               ],
               functionName: "submitQuestionWithReward",
             },
@@ -726,10 +841,13 @@ export function ContentSubmissionSection() {
             submittedTitle,
             submittedDescription,
             submissionTags,
-            selectedCategory.id,
+            currentCategory.id,
             activeReservation.salt,
             selectedRewardAssetId,
             selectedRewardAmount,
+            selectedRequiredVoters,
+            selectedRequiredSettledRounds,
+            rewardPoolExpiresAt,
           ],
         });
 
@@ -770,7 +888,14 @@ export function ContentSubmissionSection() {
       setSelectedCategory(null);
       setSelectedSubcategories([]);
       setCustomSubcategory("");
-      setSubmitAttempted(false);
+      setRewardAmount("1");
+      setRewardRequiredVoters("3");
+      setRewardRequiredSettledRounds("1");
+      setRewardExpiryMode("none");
+      setRewardExpiryDays("30");
+      setQuestionStepAttempted(false);
+      setBountyStepAttempted(false);
+      setSubmissionStep(1);
     } catch (e: unknown) {
       console.error("Ask failed:", e);
       statusToast.dismiss();
@@ -802,7 +927,7 @@ export function ContentSubmissionSection() {
     setSubmittedContent(null);
   };
 
-  const contextMissing = submitAttempted && !normalizedContextUrl;
+  const contextMissing = questionStepAttempted && !normalizedContextUrl;
   const imageMediaMissing = false;
   const videoMediaMissing = false;
 
@@ -816,11 +941,17 @@ export function ContentSubmissionSection() {
           noValidate
           className="grid gap-6 xl:grid-cols-[minmax(0,1.5fr)_minmax(18rem,0.9fr)] xl:items-start"
         >
+          <div className="xl:col-span-2 flex items-center gap-2 text-sm font-medium text-base-content/55">
+            <span className={submissionStep === 1 ? "text-primary" : ""}>1. Question</span>
+            <span aria-hidden="true">→</span>
+            <span className={submissionStep === 2 ? "text-primary" : ""}>2. Bounty</span>
+          </div>
+
           <div className="space-y-5">
             <div>
               <label
                 className={`mb-2 flex items-center gap-1.5 text-base font-medium ${
-                  submitAttempted && !title.trim() ? "text-error" : ""
+                  questionStepAttempted && !title.trim() ? "text-error" : ""
                 }`}
               >
                 Question
@@ -830,13 +961,13 @@ export function ContentSubmissionSection() {
                 type="text"
                 placeholder="Ask something subjective that voters can rate"
                 className={`input input-bordered w-full bg-base-100 ${
-                  titleError || (submitAttempted && !title.trim()) ? "input-error" : ""
+                  titleError || (questionStepAttempted && !title.trim()) ? "input-error" : ""
                 }`}
                 value={title}
                 onChange={e => handleTitleChange(e.target.value)}
                 maxLength={MAX_QUESTION_LENGTH}
               />
-              {submitAttempted && !title.trim() ? (
+              {questionStepAttempted && !title.trim() ? (
                 <p className="mt-1 text-base text-error">Question is required.</p>
               ) : null}
               {titleError ? <p className="mt-1 text-base text-error">{titleError}</p> : null}
@@ -849,20 +980,20 @@ export function ContentSubmissionSection() {
 
             <div>
               <label
-                className={`mb-2 block text-base font-medium ${submitAttempted && !description.trim() ? "text-error" : ""}`}
+                className={`mb-2 block text-base font-medium ${questionStepAttempted && !description.trim() ? "text-error" : ""}`}
               >
                 Description
               </label>
               <textarea
                 placeholder="Add context voters should consider"
                 className={`textarea textarea-bordered h-24 w-full bg-base-100 ${
-                  descriptionError || (submitAttempted && !description.trim()) ? "textarea-error" : ""
+                  descriptionError || (questionStepAttempted && !description.trim()) ? "textarea-error" : ""
                 }`}
                 value={description}
                 onChange={e => handleDescriptionChange(e.target.value)}
                 maxLength={MAX_CONTENT_DESCRIPTION_LENGTH}
               />
-              {submitAttempted && !description.trim() ? (
+              {questionStepAttempted && !description.trim() ? (
                 <p className="mt-1 text-base text-error">Description is required.</p>
               ) : null}
               {descriptionError ? <p className="mt-1 text-base text-error">{descriptionError}</p> : null}
@@ -994,7 +1125,7 @@ export function ContentSubmissionSection() {
 
             <div ref={categoryDropdownRef} className="relative">
               <label
-                className={`mb-2 block text-base font-medium ${submitAttempted && !selectedCategory ? "text-error" : ""}`}
+                className={`mb-2 block text-base font-medium ${questionStepAttempted && !selectedCategory ? "text-error" : ""}`}
               >
                 Select Category
               </label>
@@ -1008,7 +1139,7 @@ export function ContentSubmissionSection() {
                     type="button"
                     onClick={() => setIsCategoryDropdownOpen(!isCategoryDropdownOpen)}
                     className={`input input-bordered flex w-full cursor-pointer items-center justify-between bg-base-100 transition-colors hover:bg-base-200 ${
-                      submitAttempted && !selectedCategory ? "input-error" : ""
+                      questionStepAttempted && !selectedCategory ? "input-error" : ""
                     }`}
                   >
                     {selectedCategory ? (
@@ -1023,7 +1154,7 @@ export function ContentSubmissionSection() {
                       className={`h-5 w-5 text-base-content/50 transition-transform ${isCategoryDropdownOpen ? "rotate-180" : ""}`}
                     />
                   </button>
-                  {submitAttempted && !selectedCategory ? (
+                  {questionStepAttempted && !selectedCategory ? (
                     <p className="mt-1 text-base text-error">Select a category before asking.</p>
                   ) : null}
 
@@ -1095,7 +1226,7 @@ export function ContentSubmissionSection() {
               <div>
                 <label
                   className={`mb-2 block text-base font-medium ${
-                    submitAttempted && selectedSubcategories.length === 0 ? "text-error" : ""
+                    questionStepAttempted && selectedSubcategories.length === 0 ? "text-error" : ""
                   }`}
                 >
                   Select Categories <span className="font-normal text-base-content/40">(1-3)</span>
@@ -1160,7 +1291,7 @@ export function ContentSubmissionSection() {
                   </button>
                 </div>
                 {customSubcategoryError ? <p className="mt-2 text-base text-error">{customSubcategoryError}</p> : null}
-                {submitAttempted && selectedSubcategories.length === 0 ? (
+                {questionStepAttempted && selectedSubcategories.length === 0 ? (
                   <p className="mt-2 text-base text-error">Pick at least one category before asking.</p>
                 ) : null}
               </div>
@@ -1206,78 +1337,192 @@ export function ContentSubmissionSection() {
               </p>
             </div>
 
-            <div className="surface-card-nested rounded-2xl p-4 space-y-3">
-              <div className="flex items-start justify-between gap-3">
-                <p className="flex items-center gap-1.5 text-base font-medium text-base-content">
-                  Bounty
-                  <InfoTooltip text="Required and non-refundable. The bounty prevents spam and pays eligible voters when the question settles." />
-                </p>
-                <span className="shrink-0 text-sm font-semibold text-base-content/60">
-                  Min {formatSubmissionRewardAmount(minimumRewardAmount, rewardAsset)}
-                </span>
-              </div>
+            {submissionStep === 2 ? (
+              <div className="surface-card-nested rounded-2xl p-4 space-y-4">
+                <div className="flex items-start justify-between gap-3">
+                  <p className="flex items-center gap-1.5 text-base font-medium text-base-content">
+                    Bounty
+                    <InfoTooltip text="Required and non-refundable. Set the terms that eligible voters must satisfy before payout." />
+                  </p>
+                  <span className="shrink-0 text-sm font-semibold text-base-content/60">
+                    Min {formatSubmissionRewardAmount(minimumBountyAmount, rewardAsset)}
+                  </span>
+                </div>
 
-              <div className="grid grid-cols-2 gap-2">
-                <button
-                  type="button"
-                  aria-pressed={rewardAsset === "usdc"}
-                  onClick={() => setRewardAsset("usdc")}
-                  className={`btn btn-sm ${rewardAsset === "usdc" ? "btn-primary" : "btn-outline"}`}
+                <div className="grid grid-cols-2 gap-2">
+                  <button
+                    type="button"
+                    aria-pressed={rewardAsset === "usdc"}
+                    onClick={() => setRewardAsset("usdc")}
+                    className={`btn btn-sm ${rewardAsset === "usdc" ? "btn-primary" : "btn-outline"}`}
+                  >
+                    USDC
+                  </button>
+                  <button
+                    type="button"
+                    aria-pressed={rewardAsset === "crep"}
+                    onClick={() => setRewardAsset("crep")}
+                    className={`btn btn-sm ${rewardAsset === "crep" ? "btn-primary" : "btn-outline"}`}
+                  >
+                    cREP
+                  </button>
+                </div>
+
+                <label
+                  className={`input input-bordered flex items-center gap-2 bg-base-100 ${
+                    bountyStepAttempted && rewardAmountError ? "input-error" : ""
+                  }`}
                 >
-                  USDC
-                </button>
-                <button
-                  type="button"
-                  aria-pressed={rewardAsset === "crep"}
-                  onClick={() => setRewardAsset("crep")}
-                  className={`btn btn-sm ${rewardAsset === "crep" ? "btn-primary" : "btn-outline"}`}
-                >
-                  cREP
+                  <input
+                    type="text"
+                    inputMode="decimal"
+                    value={rewardAmount}
+                    onChange={e => setRewardAmount(e.target.value)}
+                    className="grow bg-transparent"
+                    aria-label="Bounty amount"
+                  />
+                  <span className="text-sm font-semibold text-base-content/50">
+                    {rewardAsset === "crep" ? "cREP" : "USDC"}
+                  </span>
+                </label>
+                {bountyStepAttempted && rewardAmountError ? (
+                  <p className="text-base text-error">{rewardAmountError}</p>
+                ) : (
+                  <p className="text-sm text-base-content/55">
+                    Paid from your wallet into the escrow when the question is submitted.
+                  </p>
+                )}
+
+                <div className="grid gap-3 sm:grid-cols-2">
+                  <label className="form-control">
+                    <span className="label-text">Minimum voters</span>
+                    <input
+                      type="number"
+                      min={MIN_REWARD_POOL_REQUIRED_VOTERS}
+                      step={1}
+                      value={rewardRequiredVoters}
+                      onChange={e => setRewardRequiredVoters(e.target.value)}
+                      className={`input input-bordered bg-base-100 ${
+                        bountyStepAttempted && rewardRequiredVotersError ? "input-error" : ""
+                      }`}
+                    />
+                    <span className="label-text-alt text-base-content/50">
+                      At least {MIN_REWARD_POOL_REQUIRED_VOTERS} voters are required.
+                    </span>
+                  </label>
+
+                  <label className="form-control">
+                    <span className="label-text">Settlement rounds</span>
+                    <input
+                      type="number"
+                      min={MIN_REWARD_POOL_SETTLED_ROUNDS}
+                      step={1}
+                      value={rewardRequiredSettledRounds}
+                      onChange={e => setRewardRequiredSettledRounds(e.target.value)}
+                      className={`input input-bordered bg-base-100 ${
+                        bountyStepAttempted && rewardRequiredSettledRoundsError ? "input-error" : ""
+                      }`}
+                    />
+                    <span className="label-text-alt text-base-content/50">
+                      At least {MIN_REWARD_POOL_SETTLED_ROUNDS} round is required.
+                    </span>
+                  </label>
+                </div>
+                {bountyStepAttempted && rewardRequiredVotersError ? (
+                  <p className="text-base text-error">{rewardRequiredVotersError}</p>
+                ) : null}
+                {bountyStepAttempted && rewardRequiredSettledRoundsError ? (
+                  <p className="text-base text-error">{rewardRequiredSettledRoundsError}</p>
+                ) : null}
+
+                <div className="space-y-2">
+                  <div className="grid grid-cols-2 gap-2">
+                    <button
+                      type="button"
+                      aria-pressed={rewardExpiryMode === "none"}
+                      onClick={() => setRewardExpiryMode("none")}
+                      className={`btn btn-sm ${rewardExpiryMode === "none" ? "btn-primary" : "btn-outline"}`}
+                    >
+                      No expiry
+                    </button>
+                    <button
+                      type="button"
+                      aria-pressed={rewardExpiryMode === "days"}
+                      onClick={() => setRewardExpiryMode("days")}
+                      className={`btn btn-sm ${rewardExpiryMode === "days" ? "btn-primary" : "btn-outline"}`}
+                    >
+                      Duration
+                    </button>
+                  </div>
+                  {rewardExpiryMode === "days" ? (
+                    <label className="form-control">
+                      <span className="label-text">Expires after (days)</span>
+                      <input
+                        type="number"
+                        min={1}
+                        step={1}
+                        value={rewardExpiryDays}
+                        onChange={e => setRewardExpiryDays(e.target.value)}
+                        className={`input input-bordered bg-base-100 ${
+                          bountyStepAttempted && rewardExpiryError ? "input-error" : ""
+                        }`}
+                      />
+                      <span className="label-text-alt text-base-content/50">
+                        Leave it off to keep the bounty open-ended.
+                      </span>
+                    </label>
+                  ) : (
+                    <p className="text-sm text-base-content/55">
+                      The bounty stays open until it is filled or the contract rules move it along.
+                    </p>
+                  )}
+                  {bountyStepAttempted && rewardExpiryError ? (
+                    <p className="text-base text-error">{rewardExpiryError}</p>
+                  ) : null}
+                </div>
+              </div>
+            ) : (
+              <div className="surface-card-nested rounded-2xl p-4 space-y-3">
+                <p className="text-base font-medium text-base-content">Bounty</p>
+                <p className="text-base text-base-content/60">
+                  Finish the question step to configure the mandatory bounty, voters, and payout timing.
+                </p>
+                <button type="button" onClick={handleContinueToBounty} className="btn btn-primary w-full">
+                  Continue to bounty
                 </button>
               </div>
-
-              <label
-                className={`input input-bordered flex items-center gap-2 bg-base-100 ${
-                  submitAttempted && rewardAmountError ? "input-error" : ""
-                }`}
-              >
-                <input
-                  type="text"
-                  inputMode="decimal"
-                  value={rewardAmount}
-                  onChange={e => setRewardAmount(e.target.value)}
-                  className="grow bg-transparent"
-                  aria-label="Bounty amount"
-                />
-                <span className="text-sm font-semibold text-base-content/50">
-                  {rewardAsset === "crep" ? "cREP" : "USDC"}
-                </span>
-              </label>
-              {submitAttempted && rewardAmountError ? (
-                <p className="text-base text-error">{rewardAmountError}</p>
-              ) : (
-                <p className="text-sm text-base-content/55">
-                  Paid from your wallet into the escrow when the question is submitted.
-                </p>
-              )}
-            </div>
+            )}
 
             {isMissingGasBalance ? <GasBalanceWarning nativeTokenSymbol={nativeTokenSymbol} /> : null}
 
-            <button
-              type="submit"
-              className="btn btn-submit w-full"
-              disabled={isSubmitting || isAwaitingSponsoredSubmitCalls || isMissingGasBalance}
-            >
-              {isSubmitting ? (
-                <span className="flex items-center gap-2">
-                  <span className="loading loading-spinner loading-sm"></span>
-                  Asking...
-                </span>
-              ) : (
-                "Ask Question"
-              )}
-            </button>
+            {submissionStep === 2 ? (
+              <div className="flex flex-col gap-2 sm:flex-row">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setSubmissionStep(1);
+                    setBountyStepAttempted(false);
+                  }}
+                  className="btn btn-ghost w-full sm:w-auto"
+                >
+                  Back
+                </button>
+                <button
+                  type="submit"
+                  className="btn btn-submit w-full"
+                  disabled={isSubmitting || isAwaitingSponsoredSubmitCalls || isMissingGasBalance}
+                >
+                  {isSubmitting ? (
+                    <span className="flex items-center gap-2">
+                      <span className="loading loading-spinner loading-sm"></span>
+                      Asking...
+                    </span>
+                  ) : (
+                    "Ask Question"
+                  )}
+                </button>
+              </div>
+            ) : null}
           </div>
         </form>
       </div>

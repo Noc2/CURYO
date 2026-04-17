@@ -33,6 +33,9 @@ type SubmissionMediaInput = { imageUrls?: readonly string[]; videoUrl?: string }
 const MAX_SUBMISSION_IMAGE_URLS = 4;
 const DEFAULT_SUBMISSION_REWARD_ASSET_CREP = 0;
 const DEFAULT_SUBMISSION_REWARD_AMOUNT = 1_000_000n;
+const DEFAULT_SUBMISSION_REWARD_REQUIRED_VOTERS = 3n;
+const DEFAULT_SUBMISSION_REWARD_SETTLED_ROUNDS = 1n;
+const DEFAULT_SUBMISSION_REWARD_EXPIRES_AT = 0n;
 const DIRECT_IMAGE_URL_PATTERN = /^https:\/\/\S+\.(?:avif|gif|jpe?g|png|webp)(?:[?#]\S*)?$/i;
 
 function isSupportedImageUrl(url: string): boolean {
@@ -232,6 +235,9 @@ async function buildSubmissionReservation(
         { type: "address" },
         { type: "uint8" },
         { type: "uint256" },
+        { type: "uint256" },
+        { type: "uint256" },
+        { type: "uint256" },
       ],
       [
         submissionKey,
@@ -243,6 +249,9 @@ async function buildSubmissionReservation(
         fromAddress as `0x${string}`,
         DEFAULT_SUBMISSION_REWARD_ASSET_CREP,
         DEFAULT_SUBMISSION_REWARD_AMOUNT,
+        DEFAULT_SUBMISSION_REWARD_REQUIRED_VOTERS,
+        DEFAULT_SUBMISSION_REWARD_SETTLED_ROUNDS,
+        DEFAULT_SUBMISSION_REWARD_EXPIRES_AT,
       ],
     ),
   );
@@ -647,6 +656,9 @@ export async function submitContentDirect(
           { name: "salt", type: "bytes32" },
           { name: "rewardAsset", type: "uint8" },
           { name: "rewardAmount", type: "uint256" },
+          { name: "requiredVoters", type: "uint256" },
+          { name: "requiredSettledRounds", type: "uint256" },
+          { name: "rewardPoolExpiresAt", type: "uint256" },
         ],
         outputs: [{ name: "", type: "uint256" }],
         stateMutability: "nonpayable",
@@ -664,6 +676,9 @@ export async function submitContentDirect(
       reservation.salt,
       DEFAULT_SUBMISSION_REWARD_ASSET_CREP,
       DEFAULT_SUBMISSION_REWARD_AMOUNT,
+      DEFAULT_SUBMISSION_REWARD_REQUIRED_VOTERS,
+      DEFAULT_SUBMISSION_REWARD_SETTLED_ROUNDS,
+      DEFAULT_SUBMISSION_REWARD_EXPIRES_AT,
     ],
   });
   return sendTx(fromAddress, contractAddress, data);

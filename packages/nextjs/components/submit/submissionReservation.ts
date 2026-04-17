@@ -10,8 +10,11 @@ type SubmissionDraft = {
   contextUrl: string;
   description: string;
   imageUrls: string[];
+  rewardPoolExpiresAt: bigint;
   rewardAmount: bigint;
   rewardAsset: number;
+  requiredSettledRounds: bigint;
+  requiredVoters: bigint;
   submissionKey: `0x${string}`;
   tags: string;
   title: string;
@@ -24,10 +27,13 @@ type StoredSubmissionReservation = {
   contextUrl: string;
   description: string;
   imageUrls: string[];
+  rewardPoolExpiresAt: string;
   rewardAmount: string;
   rewardAsset: number;
   revealCommitment: `0x${string}`;
   salt: `0x${string}`;
+  requiredSettledRounds: string;
+  requiredVoters: string;
   submissionKey: `0x${string}`;
   tags: string;
   title: string;
@@ -86,6 +92,9 @@ export function deriveSubmissionReservationSalt(
         { type: "uint256" },
         { type: "uint8" },
         { type: "uint256" },
+        { type: "uint256" },
+        { type: "uint256" },
+        { type: "uint256" },
       ],
       [
         getSubmissionReservationSecret(),
@@ -98,6 +107,9 @@ export function deriveSubmissionReservationSalt(
         draft.categoryId,
         draft.rewardAsset,
         draft.rewardAmount,
+        draft.requiredVoters,
+        draft.requiredSettledRounds,
+        draft.rewardPoolExpiresAt,
       ],
     ),
   );
@@ -120,6 +132,9 @@ export function buildSubmissionRevealCommitment(
         { type: "address" },
         { type: "uint8" },
         { type: "uint256" },
+        { type: "uint256" },
+        { type: "uint256" },
+        { type: "uint256" },
       ],
       [
         draft.submissionKey,
@@ -131,6 +146,9 @@ export function buildSubmissionRevealCommitment(
         submitterAddress,
         draft.rewardAsset,
         draft.rewardAmount,
+        draft.requiredVoters,
+        draft.requiredSettledRounds,
+        draft.rewardPoolExpiresAt,
       ],
     ),
   );
@@ -152,6 +170,9 @@ export function createStoredSubmissionReservation(
     rewardAsset: draft.rewardAsset,
     revealCommitment,
     salt,
+    requiredSettledRounds: draft.requiredSettledRounds.toString(),
+    requiredVoters: draft.requiredVoters.toString(),
+    rewardPoolExpiresAt: draft.rewardPoolExpiresAt.toString(),
     submissionKey: draft.submissionKey,
     tags: draft.tags,
     title: draft.title,
@@ -173,6 +194,9 @@ export function submissionReservationMatchesDraft(
     reservation.description === draft.description &&
     reservation.rewardAmount === draft.rewardAmount.toString() &&
     reservation.rewardAsset === draft.rewardAsset &&
+    reservation.rewardPoolExpiresAt === draft.rewardPoolExpiresAt.toString() &&
+    reservation.requiredSettledRounds === draft.requiredSettledRounds.toString() &&
+    reservation.requiredVoters === draft.requiredVoters.toString() &&
     reservation.submissionKey === draft.submissionKey &&
     reservation.tags === draft.tags &&
     reservation.title === draft.title &&
@@ -203,6 +227,9 @@ function parseStoredSubmissionReservation(value: unknown): StoredSubmissionReser
     typeof parsedValue.rewardAmount !== "string" ||
     typeof parsedValue.rewardAsset !== "number" ||
     ![0, 1].includes(parsedValue.rewardAsset) ||
+    typeof parsedValue.requiredSettledRounds !== "string" ||
+    typeof parsedValue.requiredVoters !== "string" ||
+    typeof parsedValue.rewardPoolExpiresAt !== "string" ||
     !isHexValue(parsedValue.salt) ||
     !isHexValue(parsedValue.submissionKey) ||
     typeof parsedValue.tags !== "string" ||
