@@ -28,7 +28,7 @@ import { SelfStructs } from "@selfxyz/contracts/contracts/libraries/SelfStructs.
 import { SelfUtils } from "@selfxyz/contracts/contracts/libraries/SelfUtils.sol";
 
 /// @notice Deploy script for all Curyo contracts with transparent proxies.
-/// @dev All protocol operations use cREP token only (no stablecoins).
+/// @dev Core protocol voting uses cREP; bounty escrow deployments also wire USDC test collateral.
 ///      Local dev: deployer is governance (all roles go to deployer).
 ///      Production: TimelockController + CuryoGovernor are deployed, timelock gets all permanent roles including treasury routing.
 contract DeployCuryo is ScaffoldETHDeploy {

@@ -91,7 +91,7 @@ contract HumanFaucet is SelfVerificationRoot, Ownable, Pausable {
     /// @notice The Voter ID NFT contract (soulbound token for verified humans)
     IVoterIdNFT public voterIdNFT;
 
-    /// @notice Track which nullifier each address used (for retryVoterIdMint)
+    /// @notice Track which nullifier each claimed address used for migration and retry bookkeeping.
     mapping(address => uint256) public claimNullifier;
 
     /// @notice One-way switch that disables deploy-time migrated claim bootstrapping.
