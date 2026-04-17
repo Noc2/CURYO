@@ -7,7 +7,6 @@ import { ShareIcon } from "@heroicons/react/24/outline";
 import { ContentEmbed } from "~~/components/content/ContentEmbed";
 import { SubmitterBadge } from "~~/components/content/SubmitterBadge";
 import { FollowProfileButton } from "~~/components/shared/FollowProfileButton";
-import { MoreToggleButton } from "~~/components/shared/MoreToggleButton";
 import { SafeExternalLink } from "~~/components/shared/SafeExternalLink";
 import { WatchContentButton } from "~~/components/shared/WatchContentButton";
 import type { ContentItem } from "~~/hooks/useContentFeed";
@@ -67,12 +66,6 @@ function getMediaPlatformType(media: ContentMediaItem | null) {
   if (media.mediaType === "video") return "youtube";
   if (isDirectImageUrl(media.url)) return "image";
   return detectPlatform(media.url).type;
-}
-
-function getMediaBadgeLabel(item: ContentItem) {
-  const mediaItems = getCardMediaItems(item);
-  if (mediaItems.length > 1) return `${mediaItems.length} images`;
-  return getMediaPlatformType(mediaItems[0] ?? null);
 }
 
 interface FeedVoteCardProps {
@@ -232,7 +225,6 @@ export const FeedVoteCard = memo(function FeedVoteCard({
             onToggleWatch={onToggleWatch}
             compact={useCompactCard}
             embedded
-            collapseDescription
           />
         </div>
       </div>
@@ -253,7 +245,6 @@ interface FeedContentMetaCardProps {
   onToggleFollow: (address: string) => void;
   compact?: boolean;
   embedded?: boolean;
-  collapseDescription?: boolean;
 }
 
 interface FeedContentHeaderProps {
@@ -267,11 +258,11 @@ function FeedContentHeader({ item, titleId, compact }: FeedContentHeaderProps) {
   const isLongQuestion = questionText.length > 90;
   const headlineSizeClassName = compact
     ? isLongQuestion
-      ? "text-base leading-snug sm:text-lg xl:text-base"
-      : "text-lg leading-tight sm:text-xl xl:text-lg"
-    : isLongQuestion
       ? "text-lg leading-snug sm:text-xl xl:text-lg"
-      : "text-xl leading-tight sm:text-2xl xl:text-xl";
+      : "text-xl leading-tight sm:text-2xl xl:text-xl"
+    : isLongQuestion
+      ? "text-xl leading-snug sm:text-2xl xl:text-xl"
+      : "text-2xl leading-tight sm:text-3xl xl:text-2xl";
 
   return (
     <div
@@ -376,31 +367,20 @@ function FeedContentMetaCard({
   onToggleFollow,
   compact = false,
   embedded = false,
-  collapseDescription = true,
 }: FeedContentMetaCardProps) {
   const [showShare, setShowShare] = useState(false);
-  const [isExpanded, setIsExpanded] = useState(false);
-  const primaryMedia = getPrimaryMediaItem(item);
-  const primaryMediaUrl = primaryMedia?.url ?? item.url;
-  const mediaBadgeLabel = getMediaBadgeLabel(item);
-  const detailsId = `content-details-${item.id.toString()}`;
   const hasFollowButton = !(normalizedAddress && item.submitter.toLowerCase() === normalizedAddress);
   const description = item.description.trim();
   const hasDescription = description.length > 0;
-  const sourceLabel = getSourceLabel(primaryMediaUrl);
-  const hasSourceDetails = sourceLabel.trim().length > 0;
-  const hasExpandableDetails = true;
-  const showExpandedDetails = !collapseDescription || isExpanded;
-  const visibleTags = showExpandedDetails ? item.tags.filter(Boolean) : [];
+  const contextUrl = item.url.trim();
+  const contextLabel = getSourceLabel(contextUrl);
+  const hasContextLink = contextUrl.length > 0 && contextLabel.trim().length > 0;
+  const hasContextDetails = hasDescription || hasContextLink;
   const wrapperClassName = embedded
     ? compact
       ? "border-t border-base-content/10 px-3 py-3"
       : "border-t border-base-content/10 p-4"
     : `rounded-2xl bg-base-200 ${compact ? "p-3" : "p-4 xl:p-3"}`;
-
-  useEffect(() => {
-    setIsExpanded(false);
-  }, [item.id]);
 
   return (
     <>
@@ -433,44 +413,26 @@ function FeedContentMetaCard({
             >
               <ShareIcon className="h-4 w-4" />
             </button>
-            {hasExpandableDetails ? (
-              <MoreToggleButton
-                expanded={showExpandedDetails}
-                onClick={() => setIsExpanded(current => !current)}
-                controlsId={detailsId}
-              />
-            ) : null}
           </div>
         </div>
 
-        {showExpandedDetails ? (
-          <div id={detailsId} className={compact ? "mt-2.5 space-y-2" : "mt-3 space-y-2.5"}>
-            <div className="flex flex-wrap items-center gap-2">
-              <span className="inline-flex items-center rounded-full bg-base-300 px-2.5 py-1 text-sm font-medium leading-none text-base-content/80">
-                {mediaBadgeLabel}
-              </span>
-              {hasSourceDetails ? (
-                <SafeExternalLink
-                  href={primaryMediaUrl}
-                  allowExternalOpen
-                  testId="content-source-link"
-                  title={`Open source: ${sourceLabel}`}
-                  ariaLabel={`Open source: ${sourceLabel}`}
-                  onClick={() => onSourceOpen?.(item)}
-                  className="inline-flex items-center gap-1.5 rounded-full bg-base-content/[0.06] px-2.5 py-1 text-sm font-medium leading-none text-base-content/78 transition-colors hover:bg-base-content/[0.1] hover:text-base-content"
-                >
-                  <ArrowTopRightOnSquareIcon className="h-3.5 w-3.5" />
-                  <span className="max-w-[12rem] truncate">{sourceLabel}</span>
-                </SafeExternalLink>
-              ) : null}
-              {visibleTags.map(tag => (
-                <span key={tag} className="text-sm text-base-content/70">
-                  #{tag}
-                </span>
-              ))}
-            </div>
-
+        {hasContextDetails ? (
+          <div className={compact ? "mt-2.5 space-y-2" : "mt-3 space-y-2.5"}>
             {hasDescription ? <p className="text-base leading-relaxed text-base-content/85">{description}</p> : null}
+            {hasContextLink ? (
+              <SafeExternalLink
+                href={contextUrl}
+                allowExternalOpen
+                testId="content-source-link"
+                title={`Open context: ${contextLabel}`}
+                ariaLabel={`Open context: ${contextLabel}`}
+                onClick={() => onSourceOpen?.(item)}
+                className="inline-flex max-w-full items-center gap-1.5 text-base font-semibold leading-snug text-primary underline-offset-4 transition-colors hover:text-primary-focus hover:underline"
+              >
+                <ArrowTopRightOnSquareIcon className="h-4 w-4 shrink-0" />
+                <span className="min-w-0 truncate">Context: {contextLabel}</span>
+              </SafeExternalLink>
+            ) : null}
           </div>
         ) : null}
       </div>

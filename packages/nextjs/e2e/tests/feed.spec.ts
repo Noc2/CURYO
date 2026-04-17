@@ -65,8 +65,6 @@ test.describe("Content feed", () => {
     await waitForFeedLoaded(page, 30_000);
 
     const activeCard = page.locator('article[aria-current="true"]').first();
-    await activeCard.getByRole("button", { name: "Expand details" }).click();
-
     const sourceLink = activeCard.getByTestId("content-source-link").first();
     await expect(sourceLink).toBeVisible({ timeout: 10_000 });
 

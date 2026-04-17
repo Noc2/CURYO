@@ -411,7 +411,7 @@ test.describe("Mobile viewport (phone)", () => {
     expect(restoredLayout.activeTitleBottom).toBeLessThanOrEqual(restoredLayout.scrollerBottom + 1);
   });
 
-  test("last category card snaps above the mobile dock and opens More", async ({ connectedPage: page }) => {
+  test("last category card snaps above the mobile dock and shows context", async ({ connectedPage: page }) => {
     await gotoWithRetry(page, "/rate#media", { ensureWalletConnected: true });
     await waitForFeedLoaded(page);
 
@@ -452,10 +452,10 @@ test.describe("Mobile viewport (phone)", () => {
       )
       .toBe(lastIndex);
 
-    const activeMoreButton = page.locator('article[aria-current="true"] button[aria-label="Expand details"]').first();
-    await expect(activeMoreButton).toBeVisible({ timeout: 5_000 });
+    const activeContextLink = page.locator('article[aria-current="true"] [data-testid="content-source-link"]').first();
+    await expect(activeContextLink).toBeVisible({ timeout: 5_000 });
 
-    const layout = await activeMoreButton.evaluate(button => {
+    const layout = await activeContextLink.evaluate(link => {
       const scroller = document.querySelector<HTMLElement>('[data-mobile-header-scroll-source="true"]');
       const activeArticle = document.querySelector<HTMLElement>('article[aria-current="true"]');
       const mobileDock = document.querySelector<HTMLElement>('[data-testid="vote-mobile-dock"]');
@@ -466,16 +466,16 @@ test.describe("Mobile viewport (phone)", () => {
 
       const scrollerRect = scroller.getBoundingClientRect();
       const activeArticleRect = activeArticle.getBoundingClientRect();
-      const buttonRect = button.getBoundingClientRect();
+      const linkRect = link.getBoundingClientRect();
       const dockRect = mobileDock.getBoundingClientRect();
       const topElement = document.elementFromPoint(
-        buttonRect.left + buttonRect.width / 2,
-        buttonRect.top + buttonRect.height / 2,
+        linkRect.left + linkRect.width / 2,
+        linkRect.top + linkRect.height / 2,
       );
 
       return {
-        activeMoreBottom: buttonRect.bottom,
-        activeMoreCenterTopmost: topElement === button || button.contains(topElement),
+        activeContextBottom: linkRect.bottom,
+        activeContextCenterTopmost: topElement === link || link.contains(topElement),
         activeTop: activeArticleRect.top,
         dockTop: dockRect.top,
         scrollerTop: scrollerRect.top,
@@ -483,11 +483,8 @@ test.describe("Mobile viewport (phone)", () => {
     });
 
     expect(Math.abs(layout.activeTop - layout.scrollerTop - 12)).toBeLessThanOrEqual(24);
-    expect(layout.activeMoreBottom).toBeLessThanOrEqual(layout.dockTop - 1);
-    expect(layout.activeMoreCenterTopmost).toBe(true);
-
-    await activeMoreButton.click();
-    await expect(activeMoreButton).toHaveAttribute("aria-expanded", "true");
+    expect(layout.activeContextBottom).toBeLessThanOrEqual(layout.dockTop - 1);
+    expect(layout.activeContextCenterTopmost).toBe(true);
   });
 
   test("mobile voting dock keeps rating orb raised above equal action circles", async ({ connectedPage: page }) => {
