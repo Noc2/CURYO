@@ -8,7 +8,7 @@ This note captures the working strategy for making Curyo useful to bots and AI a
 
 Curyo is a verified human feedback oracle for autonomous agents.
 
-Agents already have tool calls, memory, search, wallets, and workflow runners. What they still lack is a clean way to ask humans a bounded question, attach the relevant context, pay for responses, and get back a structured result they can use in a later decision. Curyo is especially well suited to that role because the protocol already turns questions into public, stake-backed signals.
+Agents already have tool calls, memory, search, wallets, and workflow runners. What they still lack is a clean way to ask humans a bounded question, attach the relevant context, pay for responses, and get back a structured result they can use in a later decision. Curyo is especially well suited to that role because the protocol already turns questions into public, stake-backed signals, and now the same submission flow applies to both bots and humans.
 
 This is different from generic human-in-the-loop approval. Approval asks a single operator whether an agent may continue. Curyo can ask a market of verified humans what is true, useful, safe, interesting, locally relevant, or worth acting on.
 
@@ -154,10 +154,9 @@ When the result is ready:
 
 ## Templates
 
-Agents should not start from a blank text box. The SDK and MCP adapter should expose templates with clear answer schemas:
+Agents should not start from a blank text box. The SDK and MCP adapter should expose templates that keep the user-facing rating system simple while still letting the agent describe the question clearly:
 
 - Binary judgment: yes, no, unsure.
-- Quality score: 1 to 5 with optional rationale.
 - Pairwise choice: A, B, tie, neither.
 - Ranking: ordered list of options.
 - Fact check: supported, contradicted, unclear, source missing.
@@ -174,13 +173,15 @@ The payment flow should feel like an API call, not a crypto workflow.
 Recommended layers:
 
 - Prepaid bot wallet: agents deposit USDC or CELO once, then spend against a budget.
-- Per-question escrow: each submitted question creates or funds a Question Reward Pool.
+- Per-question escrow: each submitted question creates or funds a bounty.
 - Quote before submit: agents call `quoteQuestion` to estimate cost, expected voters, service fee, and deadline.
 - Budget caps: per-question, daily, weekly, and per-category limits.
 - Idempotency keys: retries must not double-pay.
 - Refund or rollover: unused funds return to the bot wallet or roll into the next question.
 - Webhooks: agents should not need to poll constantly.
 - Receipts: every paid question returns transaction hashes, protocol fees, reward distribution, and final settlement metadata.
+
+The user-facing rating system should stay the same everywhere: one 0-100 community rating, with templates used to describe the question rather than to introduce multiple scoring models.
 
 For agent adoption, payment should support both on-chain wallets and API-managed billing. The on-chain path is ideal for crypto-native bots like OpenClaw-style agents. A managed billing path helps non-crypto agents start quickly while still settling into protocol rails underneath.
 
@@ -211,7 +212,7 @@ An OpenClaw-style agent could use Curyo like this:
 
 1. The bot detects uncertainty in a task, such as suspicious media, unclear instructions, or a risky autonomous action.
 2. It calls `curyo_quote_question` with category, deadline, and desired voter count.
-3. It submits through `curyo_ask_humans`, funding the reward pool from a delegated bot wallet.
+3. It submits through `curyo_ask_humans`, funding the bounty from a delegated bot wallet.
 4. It receives a `questionId`, `publicUrl`, and `escrowTxHash`.
 5. It waits for a webhook or polls `curyo_get_question_status`.
 6. It calls `curyo_get_result` and maps the result into its own policy.
@@ -221,17 +222,18 @@ The whole experience should fit in one or two tool calls from the agent's perspe
 
 ## Media Policy
 
-It probably should not be mandatory to attach pictures or videos to every question. Instead, require sufficient context.
+Every question should carry a required context URL. Preview media should remain optional.
 
 Good rule:
 
-- Require media for visual, authenticity, design, product, place, and content-moderation categories.
-- Strongly encourage media or source links for factual and local-context questions.
-- Allow text-only questions for abstract judgment, governance, ranking, policy, and action approval.
+- Require a context URL for every question.
+- Allow optional image or video preview media when it helps discovery or visual judgment.
+- Strongly encourage previews or source links for visual, authenticity, design, product, place, and content-moderation categories.
+- Let abstract judgment, governance, ranking, policy, and action-approval questions ship without preview media.
 - Prefer questions with evidence in ranking and discovery.
 - Let agents attach structured artifacts such as screenshots, logs, diffs, source URLs, model outputs, and traces.
 
-Mandatory media everywhere would block many useful questions, especially abstract decisions, policy review, source ranking, and "should the agent do this?" approvals.
+Mandatory preview media everywhere would block many useful questions, especially abstract decisions, policy review, source ranking, and "should the agent do this?" approvals.
 
 ## Product Requirements
 
@@ -247,6 +249,7 @@ To make this easy for bots:
 - Make all writes idempotent.
 - Support media uploads, source links, and screenshots.
 - Expose public result pages for auditability.
+- Keep the question submission rules identical for humans and bots.
 
 ## Research Anchors
 

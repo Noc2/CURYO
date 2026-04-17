@@ -42,7 +42,7 @@ export const SECTIONS: Section[] = [
             type: "bullets",
             items: [
               "Skin in the Game  -- Every vote requires a token stake, aligning incentives. Rewards come from settled losing pools and participation incentives, not passive likes.",
-              "Voter ID (Sybil Resistance)  -- Each verified human gets one soulbound Voter ID NFT, limiting stake to 100 cREP per content per round.",
+              "Voter ID (Sybil Resistance)  -- Each verified human gets one soulbound Voter ID NFT for voting and other identity-gated actions, limiting stake to 100 cREP per content per round.",
               `Per-Content Rounds  -- Each content item has independent voting rounds. Votes are encrypted via tlock and hidden until each ${protocolDocFacts.blindPhaseDurationLabel} epoch ends. Commits bind the drand reveal target and chain hash, and the keeper/runtime layer checks the stored stanza metadata before reveal. After each epoch the keeper normally reveals eligible votes in the background, and connected users can self-reveal if needed. Settlement occurs after at least ${protocolDocFacts.minVotersLabel} votes are revealed and the reveal conditions are satisfied.`,
               `Contributor Rewards  -- ${protocolCopy.contributorRewardsOverview}`,
             ],
@@ -85,7 +85,7 @@ export const SECTIONS: Section[] = [
           },
           {
             type: "paragraph",
-            text: "Illegal content, content that doesn't load, or content with an incorrect description should always be downvoted regardless of the current rating. Submitter stakes are no longer meant to slash from the point estimate alone: after redeploy, slashability should require a conservative low-rating bound plus minimum evidence, minimum settled rounds, and dwell time below threshold.",
+            text: "Illegal content, content that doesn't load, or content with an incorrect description should always be downvoted regardless of the current rating. Question submission funding is no longer meant to slash from the point estimate alone: after redeploy, slashability should require a conservative low-rating bound plus minimum evidence, minimum settled rounds, and dwell time below threshold.",
           },
         ],
       },
@@ -115,7 +115,7 @@ export const SECTIONS: Section[] = [
           },
           {
             type: "paragraph",
-            text: "Voter ID is required to vote, submit content, create a profile, or register as a frontend operator. This ensures every vote represents a real human with a fair stake limit.",
+            text: "Voter ID is required to vote, create a profile, or register as a frontend operator. Question submission itself is permissionless and only requires the mandatory bounty. This ensures every vote represents a real human with a fair stake limit.",
           },
         ],
       },
@@ -124,7 +124,7 @@ export const SECTIONS: Section[] = [
         blocks: [
           {
             type: "paragraph",
-            text: "Submitting a question starts with the question itself: the entry can be text-only or include a regular evidence link, direct image link, or YouTube link. An optional Question Reward Pool attached to that question is paid in USDC on Celo and displayed as USD. The question submission key must be unique, and title plus description are emitted in the on-chain ContentSubmitted event so any frontend or indexer can reconstruct the same canonical metadata; the title is the primary label shown above the content, while the description gives longer context below it. There is no hard reward pool cap -- moderation, funding, and validation guardrails do the real work instead.",
+            text: "Submitting a question starts with the question itself: the entry requires a context URL and can optionally include image or YouTube preview media. A mandatory bounty is attached at submission and funded in cREP or USDC on Celo. The question submission key must be unique, and title plus description are emitted in the on-chain ContentSubmitted event so any frontend or indexer can reconstruct the same canonical metadata; the title is the primary label shown above the content, while the description gives longer context below it. There is no hard bounty cap -- moderation, funding, and validation guardrails do the real work instead.",
           },
           {
             type: "paragraph",
@@ -136,7 +136,7 @@ export const SECTIONS: Section[] = [
               "Commit (any time during the round): Choose up or down. The UI encrypts your direction and submits a single transferAndCall transaction carrying (contentId, roundReferenceRatingBps, commitHash, ciphertext, frontend, targetRound, drandChainHash). Your stake is locked; your direction is hidden on-chain until the epoch ends.",
               `Epoch ends (every ${protocolDocFacts.blindPhaseDurationLabel}): The drand beacon publishes a randomness value. The keeper fetches it, validates the stored AGE/tlock stanza against the commit metadata, decrypts eligible ciphertexts off-chain, and calls revealVoteByCommitKey() for unrevealed commits.`,
               `Settlement: After at least ${protocolDocFacts.minVotersLabel} votes are revealed and all past-epoch votes are revealed (or the ${protocolDocFacts.revealGracePeriodLabel} reveal grace period expires), anyone may call settleRound(contentId, roundId). The side with the larger epoch-weighted stake wins. The content rating updates from the round reference score using epoch-weighted revealed stake evidence.`,
-              `Claim: Winners call claimReward(contentId, roundId) to receive their original stake plus an epoch-weighted share of the remaining losing pool. Revealed losers may also call claimReward(contentId, roundId) to recover a fixed ${protocolDocFacts.revealedLoserRefundPercentLabel} rebate. If the question has a qualifying Question Reward Pool, eligible revealed Voter ID holders can also claim the voter share of a USDC question reward independent of cREP outcome; 3% is reserved for the eligible frontend operator when payable. Content submitters may claim a separate submitter reward.`,
+              `Claim: Winners call claimReward(contentId, roundId) to receive their original stake plus an epoch-weighted share of the remaining losing pool. Revealed losers may also call claimReward(contentId, roundId) to recover a fixed ${protocolDocFacts.revealedLoserRefundPercentLabel} rebate. If the question has a qualifying bounty, eligible revealed voters can also claim the voter share of the attached bounty independent of cREP outcome; 3% is reserved for the eligible frontend operator when payable. There is no submitter upside path.`,
             ],
           },
         ],
@@ -213,7 +213,7 @@ export const SECTIONS: Section[] = [
           },
           {
             type: "paragraph",
-            text: `A revealed losing vote can reclaim ${protocolDocFacts.revealedLoserRefundPercentLabel} of its original stake. The remaining losing cREP pool then feeds the content-specific reward split: the ${protocolDocFacts.voterPoolNetSharePercentLabel} voter share goes to winning voters on that content, distributed proportionally by epoch-weighted effective stake. Tier 1 voters (first epoch, blind) have full weight (effectiveStake = rawStake). Tier 2+ voters (subsequent epochs, saw results) have ${protocolDocFacts.openPhaseWeightLabel} weight (effectiveStake = rawStake * 0.25). Because each content item has independent rounds, cREP rewards are calculated and claimable immediately after a round settles  -- no waiting for other content. The ${protocolDocFacts.consensusNetSharePercentLabel} consensus subsidy share accumulates in a reserve that funds rewards for one-sided rounds (see Consensus Subsidy Pool). USDC Question Reward Pools are funded separately and do not change this cREP stake settlement split.`,
+            text: `A revealed losing vote can reclaim ${protocolDocFacts.revealedLoserRefundPercentLabel} of its original stake. The remaining losing cREP pool then feeds the content-specific reward split: the ${protocolDocFacts.voterPoolNetSharePercentLabel} voter share goes to winning voters on that content, distributed proportionally by epoch-weighted effective stake. Tier 1 voters (first epoch, blind) have full weight (effectiveStake = rawStake). Tier 2+ voters (subsequent epochs, saw results) have ${protocolDocFacts.openPhaseWeightLabel} weight (effectiveStake = rawStake * 0.25). Because each content item has independent rounds, cREP rewards are calculated and claimable immediately after a round settles  -- no waiting for other content. The ${protocolDocFacts.consensusNetSharePercentLabel} consensus subsidy share accumulates in a reserve that funds rewards for one-sided rounds (see Consensus Subsidy Pool). USDC bounties are funded separately and do not change this cREP stake settlement split.`,
           },
         ],
       },
@@ -319,7 +319,7 @@ export const SECTIONS: Section[] = [
           },
           {
             type: "paragraph",
-            text: `Numerical tests confirm honest voting profitability: in a 2-vs-1 split with 50 cREP stakes (all Tier 1), each winner receives their stake plus a proportional share of the loser's remaining 38 cREP reward pool (${protocolDocFacts.voterPoolNetSharePercentLabel} of the post-rebate 47.5 cREP) while the revealed loser only recovers the fixed 2.5 cREP rebate. Epoch-weight verification: with 1 Tier-1 voter and 4 Tier-2 voters on the winning side (each 50 cREP), the Tier-1 voter receives approximately ${protocolDocFacts.earlyVoterAdvantageLabel.replace(":1", "x")} the reward per cREP compared to each Tier-2 voter, confirming the ${protocolDocFacts.earlyVoterAdvantageLabel} weight ratio. The epoch-weighted win condition test: 1 Tier-1 down voter (100 cREP, effectiveStake 100) beats 3 Tier-2 up voters (100 cREP each, effectiveStake 25 each = 75 total) -- down wins despite raw majority being up.`,
+            text: `Numerical tests confirm honest voting profitability: in a 2-vs-1 split with 50 cREP stakes (all Tier 1), each winner receives their stake plus a proportional share of the loser's remaining 38 cREP payout (${protocolDocFacts.voterPoolNetSharePercentLabel} of the post-rebate 47.5 cREP) while the revealed loser only recovers the fixed 2.5 cREP rebate. Epoch-weight verification: with 1 Tier-1 voter and 4 Tier-2 voters on the winning side (each 50 cREP), the Tier-1 voter receives approximately ${protocolDocFacts.earlyVoterAdvantageLabel.replace(":1", "x")} the reward per cREP compared to each Tier-2 voter, confirming the ${protocolDocFacts.earlyVoterAdvantageLabel} weight ratio. The epoch-weighted win condition test: 1 Tier-1 down voter (100 cREP, effectiveStake 100) beats 3 Tier-2 up voters (100 cREP each, effectiveStake 25 each = 75 total) -- down wins despite raw majority being up.`,
           },
           {
             type: "sub_heading",
@@ -404,13 +404,13 @@ export const SECTIONS: Section[] = [
         blocks: [
           {
             type: "paragraph",
-            text: "Content that receives no voting activity for 30 days can be marked as dormant. This is a permissionless action  -- anyone can trigger it, and the Keeper service does so automatically. Dormancy prevents new votes on inactive content and returns the submitter's original stake.",
+            text: "Content that receives no voting activity for 30 days can be marked as dormant. This is a permissionless action  -- anyone can trigger it, and the Keeper service does so automatically. Dormancy prevents new votes on inactive content and leaves the attached bounty in place for eligible voter claims.",
           },
           {
             type: "bullets",
             items: [
               "Safety check: Content with an active unsettled round cannot be marked dormant, protecting voters from stranded stakes.",
-              "Revival: Dormant content can be revived by a Voter ID holder who proves the original submitter identity and stakes 5 cREP to the treasury. This resets the 30-day activity timer. Each content item can be revived up to 2 times.",
+              "Revival: Dormant content can be revived by a Voter ID holder who pays 5 cREP to the treasury. This resets the 30-day activity timer. Each content item can be revived up to 2 times.",
               "Exclusive window: The original submitter has a 1-day exclusive revival window before the dormant submission key can be released.",
               "Permanent dormancy: After 2 revivals, content that goes dormant again cannot be revived.",
             ],
@@ -545,7 +545,7 @@ export const SECTIONS: Section[] = [
           },
           {
             type: "paragraph",
-            text: "One-sided rounds (only up or only down votes revealed) settle normally with the revealed side as the winner and a zero losing pool. All stakes are returned, and voters receive a small reward from the consensus subsidy reserve -- 5% of the total stake (capped at 50 cREP per round), split between voters (~89%) and the content submitter (~11%). These rounds are consensus-subsidized settlements, not tied-round settlements.",
+            text: "One-sided rounds (only up or only down votes revealed) settle normally with the revealed side as the winner and a zero losing pool. All stakes are returned, and voters receive a small reward from the consensus subsidy reserve -- 5% of the total stake (capped at 50 cREP per round), routed entirely to voters. These rounds are consensus-subsidized settlements, not tied-round settlements.",
           },
           {
             type: "paragraph",
@@ -734,7 +734,7 @@ export const SECTIONS: Section[] = [
           },
           {
             type: "paragraph",
-            text: "Voter bootstrap rewards are distributed when a round settles  -- deferred from vote time to prevent exploitation where attackers could vote, collect immediate bootstrap rewards, and then have rounds cancel without risk. Submitter bootstrap rewards are paid only when the submitter stake resolves on the healthy path after a settled round. The pool is funded with 24M cREP and governed by the same timelock as all other protocol contracts.",
+            text: "Voter bootstrap rewards are distributed when a round settles  -- deferred from vote time to prevent exploitation where attackers could vote, collect immediate bootstrap rewards, and then have rounds cancel without risk. The pool is funded with 24M cREP and governed by the same timelock as all other protocol contracts.",
           },
         ],
       },
@@ -756,7 +756,7 @@ export const SECTIONS: Section[] = [
         blocks: [
           {
             type: "paragraph",
-            text: "Slashed submitter stakes, the 1% treasury fee on contested settlements, cancellation fees, and forfeited past-epoch unrevealed stakes all flow to the governance-controlled treasury. The consensus subsidy reserve is separate: it is pre-funded at launch and replenished by 5% of losing pools from two-sided rounds. Treasury spending follows the same governor proposal and timelock execution flow as upgrades and config changes.",
+            text: "The 1% treasury fee on contested settlements, cancellation fees, and forfeited past-epoch unrevealed stakes all flow to the governance-controlled treasury. The consensus subsidy reserve is separate: it is pre-funded at launch and replenished by 5% of losing pools from two-sided rounds. Treasury spending follows the same governor proposal and timelock execution flow as upgrades and config changes.",
           },
         ],
       },
@@ -783,7 +783,7 @@ export const SECTIONS: Section[] = [
           },
           {
             type: "paragraph",
-            text: `A revealed losing vote first recovers a fixed ${protocolDocFacts.revealedLoserRefundPercentLabel} rebate. The ${protocolDocFacts.voterPoolNetSharePercentLabel} voter share then goes to a content-specific pool, distributed proportionally by epoch-weighted effective stake to winning voters on that content. Tier-1 voters (who committed during epoch 1 with no information) earn full weight (${protocolDocFacts.blindPhaseWeightLabel} of their stake), while Tier-2 voters (who committed after epoch-1 results were visible) earn ${protocolDocFacts.openPhaseWeightLabel} weight. This ${protocolDocFacts.earlyVoterAdvantageLabel} ratio means early voters receive a larger portion of the reward pool per cREP staked. Because each content item has independent rounds that settle on their own timeline, rewards are claimable immediately after settlement  -- no waiting for other content. The ${protocolDocFacts.consensusNetSharePercentLabel} consensus subsidy share funds one-sided-round rewards (see Consensus Subsidy Pool). The ${protocolDocFacts.treasuryNetSharePercentLabel} treasury fee is routed to the governance timelock.`,
+            text: `A revealed losing vote first recovers a fixed ${protocolDocFacts.revealedLoserRefundPercentLabel} rebate. The ${protocolDocFacts.voterPoolNetSharePercentLabel} voter share then goes to a content-specific pool, distributed proportionally by epoch-weighted effective stake to winning voters on that content. Tier-1 voters (who committed during epoch 1 with no information) earn full weight (${protocolDocFacts.blindPhaseWeightLabel} of their stake), while Tier-2 voters (who committed after epoch-1 results were visible) earn ${protocolDocFacts.openPhaseWeightLabel} weight. This ${protocolDocFacts.earlyVoterAdvantageLabel} ratio means early voters receive a larger payout per cREP staked. Because each content item has independent rounds that settle on their own timeline, rewards are claimable immediately after settlement  -- no waiting for other content. The ${protocolDocFacts.consensusNetSharePercentLabel} consensus subsidy share funds one-sided-round rewards (see Consensus Subsidy Pool). The ${protocolDocFacts.treasuryNetSharePercentLabel} treasury fee is routed to the governance timelock.`,
           },
         ],
       },
@@ -796,7 +796,7 @@ export const SECTIONS: Section[] = [
           },
           {
             type: "paragraph",
-            text: `By deferring voter rewards to settlement, the full vote stake stays at risk until the round completes. Combined with the epoch-weighted reward structure (which penalizes late entrants with ${protocolDocFacts.openPhaseWeightLabel} weight vs ${protocolDocFacts.blindPhaseWeightLabel} for early voters) and deterministic epoch-based settlement (which prevents strategic timing of entries), the deferred model ensures voter bootstrap rewards flow only to genuine, successful curation activity while submitter bonuses unlock only after healthy settled validation.`,
+            text: `By deferring voter rewards to settlement, the full vote stake stays at risk until the round completes. Combined with the epoch-weighted reward structure (which penalizes late entrants with ${protocolDocFacts.openPhaseWeightLabel} weight vs ${protocolDocFacts.blindPhaseWeightLabel} for early voters) and deterministic epoch-based settlement (which prevents strategic timing of entries), the deferred model ensures voter bootstrap rewards flow only to genuine, successful curation activity.`,
           },
         ],
       },
@@ -811,8 +811,8 @@ export const SECTIONS: Section[] = [
                 ["Vote on content", "1-100 cREP", "Per vote, per round"],
                 [
                   "Ask question",
-                  "10 cREP",
-                  "Returned after a healthy settled round once no later round remains open, or at dormancy if no round ever settles; optional Question Reward Pools are funded separately",
+                  "1 cREP or 1 USDC",
+                  "Mandatory, non-refundable minimum bounty attached at submission; funds eligible voter claims if the question qualifies",
                 ],
                 ["Register as frontend", "1,000 cREP", "Returned on exit unless slashed"],
               ],
@@ -820,7 +820,7 @@ export const SECTIONS: Section[] = [
           },
           {
             type: "paragraph",
-            text: "Submitter stakes are slashed (100% to treasury) only when the content's conservative rating bound stays below the slash threshold after the 24-hour grace period and enough evidence has accumulated to make that signal credible. The redeployed design therefore gates slashability on a conservative low-score bound plus minimum evidence, minimum settled rounds, and a dwell period below threshold. Stakes are returned after roughly 4 days once a settled round confirms a healthy conservative rating and no later round remains open. If no round ever settles, the stake instead resolves when the content reaches dormancy. Healthy submitter bootstrap rewards are snapshotted at that return point and claimed later; whatever the pool can already fund is reserved immediately so later claims do not depend entirely on future authorization state.",
+            text: "Question submission funding is non-refundable. The minimum bounty is attached at submission and remains reserved for eligible voter claims. If no round ever settles, the attached bounty still does not return to the submitter; governance can only decide where any unclaimed remainder goes after expiry.",
           },
         ],
       },
@@ -852,9 +852,9 @@ export const SECTIONS: Section[] = [
             data: {
               headers: ["Identity cost (c)", "Honest losing stake (L)", "Max profitable identities (K)"],
               rows: [
-                ["10 cREP equiv.", "100 cREP", "8"],
+                ["1 cREP equiv.", "100 cREP", "8"],
                 ["50 cREP equiv.", "100 cREP", "1"],
-                ["10 cREP equiv.", "1,000 cREP", "82"],
+                ["1 cREP equiv.", "1,000 cREP", "82"],
                 ["50 cREP equiv.", "1,000 cREP", "16"],
               ],
             },
@@ -952,7 +952,7 @@ export const SECTIONS: Section[] = [
         blocks: [
           {
             type: "paragraph",
-            text: "The following parameters control per-content round-based voting. Core round settings are adjustable via governance proposals through setConfig(), while reveal timing, drand metadata, rating behavior, and submitter slash guardrails are configured through separate ProtocolConfig functions. New rounds snapshot the round, drand, and rating configuration they start with.",
+            text: "The following parameters control per-content round-based voting. Core round settings are adjustable via governance proposals through setConfig(), while reveal timing, drand metadata, rating behavior, and question submission funding minimums are configured through separate ProtocolConfig functions. New rounds snapshot the round, drand, and rating configuration they start with.",
           },
           {
             type: "table",
@@ -990,12 +990,12 @@ export const SECTIONS: Section[] = [
                 [
                   "Conservative slashing",
                   "15% max / 2.5% min penalty",
-                  "Derives the low-confidence rating bound used for submitter slashing",
+                  "Derives the low-confidence rating bound used for content moderation guardrails",
                 ],
                 [
                   "Slash guardrails",
                   "25 score, 2 settled rounds, 7 days low, 200 cREP evidence",
-                  "Gates submitter slashability",
+                  "Gates content slashability",
                 ],
                 ["Vote stake", "1-100 cREP", "Stake range per vote, capped per Voter ID"],
                 ["Vote cooldown", "24 hours", "Wait time before voting on the same content again"],
@@ -1020,7 +1020,7 @@ export const SECTIONS: Section[] = [
             items: [
               "1% settlement fee  -- 1% of contested losing pools is sent to the treasury when rounds settle.",
               "Cancellation fees  -- voluntary content withdrawals pay a fixed 1 cREP fee into the treasury.",
-              "Slashed submitter stakes  -- when content is flagged for policy violations or receives unfavorable ratings, the submitter's 10 cREP stake is slashed to the treasury.",
+              "Bounty minimums  -- mandatory minimum bounties are non-refundable and remain attached to the question.",
               "Forfeited unrevealed votes  -- past-epoch unrevealed stakes are swept to treasury during post-settlement cleanup.",
             ],
           },
@@ -1307,7 +1307,7 @@ export const SECTIONS: Section[] = [
           },
           {
             type: "paragraph",
-            text: "Submission bots can also publish richer metadata than a single free-form caption. They submit a question-first entry with either text only, a regular evidence link, a direct image link, or a YouTube link, plus a short title, longer description, and category tags alongside the canonical URL. That keeps downstream discovery interfaces easier to scan while preserving the same shared on-chain event history for every frontend. Coverage is intentionally adapter-based: supported sources can submit or vote today, while other platform categories remain read-only or pending until an adapter exists.",
+            text: "Submission bots can also publish richer metadata than a single free-form caption. They submit a question-first entry with a required context URL and optional image or YouTube preview media, plus a short title, longer description, and category tags alongside the canonical URL. That keeps downstream discovery interfaces easier to scan while preserving the same shared on-chain event history for every frontend. Coverage is intentionally adapter-based: supported sources can submit or vote today, while other platform categories remain read-only or pending until an adapter exists.",
           },
           {
             type: "paragraph",
@@ -1413,7 +1413,7 @@ export const SECTIONS: Section[] = [
           },
           {
             type: "paragraph",
-            text: "This subsidy is split between voters (~89%) and the content submitter (~11%), using the same 82:10 ratio as normal round rewards, and distributed proportionally by epoch-weighted effective stake within each group. Since all voters are on the winning side, every voter receives a share. The mechanism is self-sustaining: contentious rounds -- where parimutuel rewards function normally -- generate surplus that funds consensus rounds. Every two-sided round with L cREP in its losing pool contributes 0.05L to the reserve, which can fund approximately one one-sided round of equivalent total stake. The 4M initial pre-fund provides runway during early adoption when two-sided rounds may be infrequent.",
+            text: "This subsidy is routed entirely to voters using the same submitter-free reward split as normal round rewards, and distributed proportionally by epoch-weighted effective stake within the voter pool. Since all voters are on the winning side, every voter receives a share. The mechanism is self-sustaining: contentious rounds -- where parimutuel rewards function normally -- generate surplus that funds consensus rounds. Every two-sided round with L cREP in its losing pool contributes 0.05L to the reserve, which can fund approximately one one-sided round of equivalent total stake. The 4M initial pre-fund provides runway during early adoption when two-sided rounds may be infrequent.",
           },
           {
             type: "paragraph",
@@ -1426,7 +1426,7 @@ export const SECTIONS: Section[] = [
         blocks: [
           {
             type: "paragraph",
-            text: "Governance can change round parameters, reveal grace, drand metadata, rating configuration, and submitter slash configuration through the standard proposal process. Round, drand, and rating changes apply to new rounds only: each round snapshots configuration at creation time, so in-progress rounds keep the rules they started with. Submitter slash settings are snapshotted per content submission.",
+            text: "Governance can change round parameters, reveal grace, drand metadata, rating configuration, and question submission funding minimums through the standard proposal process. Round, drand, and rating changes apply to new rounds only: each round snapshots configuration at creation time, so in-progress rounds keep the rules they started with. Question funding settings are snapshotted per submission.",
           },
         ],
       },

@@ -215,15 +215,6 @@ test.describe("Reward claim lifecycle", () => {
     expect(success, "Voter reward claim should succeed for winning voter").toBe(true);
   });
 
-  test("submitter rewards visible in Ponder API", async () => {
-    test.skip(!settledContentId, "No settled content from previous test");
-
-    const address = ANVIL_ACCOUNTS.account2.address.toLowerCase();
-    const data = await ponderGet(`/rewards?voter=${address}`);
-    expect(data).toHaveProperty("items");
-    expect(Array.isArray(data.items)).toBe(true);
-  });
-
   test("losing voter claims the fixed rebate for the settled round", async () => {
     test.skip(!settledContentId || roundId === 0n, "No settled content from previous test");
     test.setTimeout(60_000);

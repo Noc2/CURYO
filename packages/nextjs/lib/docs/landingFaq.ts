@@ -10,7 +10,8 @@ type LandingFaqItem = {
 export const landingFaqItems: LandingFaqItem[] = [
   {
     question: "Why should I trust these ratings?",
-    answer: "Ratings come from verified humans who stake cREP, and rounds settle publicly on-chain.",
+    answer:
+      "Ratings come from verified humans who stake cREP, and rounds settle publicly on-chain. Questions also carry a mandatory non-refundable bounty funded in cREP or USDC.",
     learnMoreHref: "/docs/how-it-works",
     learnMoreLabel: "How It Works",
   },
@@ -44,7 +45,7 @@ export const landingFaqItems: LandingFaqItem[] = [
   {
     question: "How is the final rating decided?",
     answer:
-      "In the redeployed rating model, each round asks whether the current displayed score is too low or too high. The next score updates from that round anchor using epoch-weighted evidence and confidence, instead of being recomputed from scratch.",
+      "In the redeployed rating model, each round asks whether the current displayed 0-100 community score is too low or too high. The next score updates from that round anchor using epoch-weighted evidence and confidence, instead of being recomputed from scratch.",
     learnMoreHref: "/docs/how-it-works",
     learnMoreLabel: "Rating Formula",
   },

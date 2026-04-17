@@ -92,8 +92,8 @@ const FrontendCodes: NextPage = () => {
       <p>
         Frontend operators who build frontends, mobile apps, or integrations receive{" "}
         <strong>{protocolDocFacts.frontendShareLabel}</strong> from settled two-sided rounds on votes made through their
-        interface. Question Reward Pools also reserve a default 3% USDC share for the eligible frontend operator
-        attributed at vote commit time.
+        interface. Bounties also reserve a default 3% share for the eligible frontend operator attributed at vote commit
+        time.
       </p>
       <p>
         The reference app registration flow lives in{" "}
@@ -115,8 +115,8 @@ const FrontendCodes: NextPage = () => {
           <code>RoundRewardDistributor.claimFrontendFee(contentId, roundId, frontend)</code> from your operator address
           on each settled round, then withdraw your accumulated cREP from <code>FrontendRegistry.claimFees()</code>{" "}
           while active, or with <code>completeDeregister()</code> after exit. If governance slashes your frontend, you
-          must restore the full 1,000 cREP bond before fee claims can accrue to you again. USDC reward-pool frontend
-          shares are paid automatically when eligible voters claim.
+          must restore the full 1,000 cREP bond before fee claims can accrue to you again. Reward-pool frontend shares
+          are paid automatically when eligible voters claim.
         </li>
       </ol>
 

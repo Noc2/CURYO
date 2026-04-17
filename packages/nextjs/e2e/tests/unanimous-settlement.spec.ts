@@ -22,13 +22,13 @@ import { expect, test } from "@playwright/test";
  * When all voters agree (losingPool == 0), there's no losing pool to
  * redistribute. Instead, the consensus reserve subsidizes the round:
  *   subsidy = 5% of totalStake (capped by reserve balance)
- *   ~89.1% -> voter pool, ~10.9% -> content submitter reward
+ *   100% -> voter pool
  *
  * This test verifies:
  * 1. Consensus reserve decreases after unanimous settlement
  * 2. Round settles correctly with all votes on one side
  * 3. Rating updates despite no losers
- * 4. Submitter stake is returned
+ * 4. Submission bounty is attached without submitter upside
  *
  * Account allocation (exclusive to this file):
  * - Account #10 — submits fresh content
@@ -194,8 +194,7 @@ test.describe("Unanimous settlement (consensus reserve)", () => {
     const latestRating = data.ratings[data.ratings.length - 1];
     expect(latestRating.newRating).toBeGreaterThan(latestRating.oldRating);
 
-    // Submitter stake is NOT returned yet — _checkSubmitterStake only auto-returns
-    // after STAKE_RETURN_PERIOD (4 days). In tests, only ~30 min of chain time passes.
-    expect(data.content.submitterStakeReturned).toBe(false);
+    // Submitter stake tracking is retired; newly indexed content is marked resolved immediately.
+    expect(data.content.submitterStakeReturned).toBe(true);
   });
 });

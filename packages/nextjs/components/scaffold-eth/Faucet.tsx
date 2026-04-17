@@ -520,9 +520,7 @@ export const FaucetModal = () => {
             {/* Mock USDC Faucet Section */}
             <div className="bg-accent/10 rounded-xl p-4 space-y-3">
               <h4 className="font-semibold text-accent">Claim Mock USDC</h4>
-              <p className="text-base text-base-content/60">
-                Fund local question reward pools without using real USDC.
-              </p>
+              <p className="text-base text-base-content/60">Fund local bounties without using real USDC.</p>
               <div className="flex gap-2">
                 <input
                   type="number"
@@ -552,7 +550,7 @@ export const FaucetModal = () => {
             <div className="bg-secondary/10 rounded-xl p-4 space-y-3">
               <h4 className="font-semibold text-secondary">Claim Voter ID</h4>
               <p className="text-base text-base-content/60">
-                Create a non-transferable Voter ID. Required for voting and asking questions.
+                Create a non-transferable Voter ID. Required for voting and profile actions.
               </p>
               {hasVoterId === true && voterIdTokenId !== null ? (
                 <div className="flex items-center gap-2 text-success">

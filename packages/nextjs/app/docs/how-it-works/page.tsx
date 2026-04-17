@@ -12,24 +12,29 @@ const HowItWorks: NextPage = () => {
     <article className="prose max-w-none">
       <h1>How It Works</h1>
       <p className="lead text-base-content/60 text-lg">
-        Question-first voting with blind cREP stakes and optional USDC question rewards.
+        Question-first voting with blind cREP stakes and mandatory non-refundable bounties.
       </p>
 
       <h2>Asking a Question</h2>
       <p>
         Curyo&apos;s submission flow starts with a question, not a generic post. The question is capped at 120
-        characters so it stays readable in discovery, and longer context belongs in the description. A question can be
-        text-only or can include an optional evidence link, direct image link, or YouTube link. A Question Reward Pool
-        is paid in USDC on Celo, but the UI displays the amount as USD so users can read it at a glance. There is no
-        hard reward pool cap; moderation, funding, and validation guardrails do the real work instead.
+        characters so it stays readable in discovery, and longer context belongs in the description. Every question
+        requires a context URL, with optional image or YouTube preview media when it helps discovery. A bounty must be
+        attached at submission, funded in cREP or USDC on Celo, and is non-refundable after submission. The UI displays
+        the amount in the funding asset so users can read it at a glance. There is no hard bounty cap; moderation,
+        funding, and validation guardrails do the real work instead.
       </p>
       <p>
         The same question-first path is what makes the protocol useful to bots and AI agents: when an automated strategy
-        is unsure, it can submit the uncertainty as a question for verified humans to answer with stake.
+        is unsure, it can submit the uncertainty through the same human-facing flow as everyone else, for verified
+        humans to answer with stake, while the submission itself remains permissionless.
       </p>
       <ul>
-        <li>Launch inputs support 120-character questions, regular links, direct image links, and YouTube links.</li>
-        <li>The question owner and later claimants both need a Voter ID to participate in claims.</li>
+        <li>
+          Launch inputs support 120-character questions, a required context URL, and optional image or YouTube preview
+          media.
+        </li>
+        <li>Submitting a question does not require Voter ID; voting and some claims still do.</li>
         <li>Duplicate checks and moderation rules keep the submission surface narrow.</li>
       </ul>
 
@@ -89,24 +94,24 @@ const HowItWorks: NextPage = () => {
         share the losing cREP pool. Revealed losers can still reclaim{" "}
         <strong>{protocolDocFacts.revealedLoserRefundPercentLabel}</strong> of raw stake, which gives voters an
         incentive to reveal their votes before settlement. After that, the remaining losing pool splits{" "}
-        <strong>{protocolDocFacts.rewardSplitSummaryLabel}</strong>. This split is cREP-only and does not include USDC
-        Question Reward Pools.
+        <strong>{protocolDocFacts.rewardSplitSummaryLabel}</strong>. This split is cREP-only and does not include the
+        attached bounty.
       </p>
       <div className="not-prose my-6">
         <RewardSplitChart />
       </div>
 
-      <h2>USDC Question Rewards</h2>
+      <h2>USDC Bounties</h2>
       <p>
-        Question Reward Pools are separate from cREP stake settlement. A funder can attach Celo USDC to a specific
-        question, and the app displays that amount as USD for readability. When a funded round qualifies, eligible
-        revealed Voter ID holders can claim the voter share of USDC-backed question rewards regardless of whether their
-        cREP vote won or lost. Each new pool reserves 3% of qualified claim value for the eligible frontend operator
-        attached at vote commit time; if no eligible frontend can be paid, that share remains with the voter claim.
+        Bounties are separate from cREP stake settlement. A submitter can attach cREP or USDC to a specific question,
+        and the app displays that amount in the funding asset for readability. When a funded round qualifies, eligible
+        revealed voters can claim the voter share of the attached bounty regardless of whether their cREP vote won or
+        lost. Each new bounty reserves 3% of qualified claim value for the eligible frontend operator attached at vote
+        commit time; if no eligible frontend can be paid, that share remains with the voter claim.
       </p>
       <ul>
-        <li>Reward pools are scoped to one question, not the global cREP participation pools.</li>
-        <li>Claims depend on eligibility, reveal participation, and the reward pool&apos;s round requirements.</li>
+        <li>Bounties are scoped to one question, not the global cREP participation pools.</li>
+        <li>Claims depend on eligibility, reveal participation, and the bounty&apos;s round requirements.</li>
         <li>There is no stablecoin bonus for being on the winning cREP side at launch.</li>
       </ul>
 
@@ -114,8 +119,8 @@ const HowItWorks: NextPage = () => {
       <p>
         In the redeployed rating model, each content item still starts at <strong>50</strong>, but the protocol no
         longer recomputes a fresh absolute score from a single round. Instead, when a round opens it snapshots a
-        canonical <strong>round reference score</strong>, and voters decide whether that displayed score is too low or
-        too high.
+        canonical <strong>round reference score</strong>, and voters decide whether that displayed score in the single
+        0-100 community rating is too low or too high.
       </p>
       <p>
         When the round settles, the next score is updated from that round reference using epoch-weighted revealed
@@ -155,12 +160,12 @@ const HowItWorks: NextPage = () => {
       </p>
       <p>
         You only need a small CELO balance for gas on Celo mainnet. cREP is for voting stake, not gas. If you top up
-        from an exchange, withdraw <strong>CELO on the Celo network</strong> to your Curyo wallet address. Reward pools
-        are shown as USD values even though settlement uses USDC on Celo.
+        from an exchange, withdraw <strong>CELO on the Celo network</strong> to your Curyo wallet address. Bounties are
+        shown in the funding asset, and cREP or USDC can both be used at submission.
       </p>
 
       <p>
-        See <Link href="/docs/tokenomics">Tokenomics</Link> for cREP economics and USDC question reward details, and{" "}
+        See <Link href="/docs/tokenomics">Tokenomics</Link> for cREP economics and USDC bounty details, and{" "}
         <Link href="/docs/smart-contracts">Smart Contracts</Link> for advanced lifecycle rules.
       </p>
     </article>

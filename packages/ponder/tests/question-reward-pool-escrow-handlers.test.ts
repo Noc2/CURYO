@@ -82,7 +82,7 @@ afterEach(() => {
 });
 
 describe("QuestionRewardPoolEscrow ponder handlers", () => {
-  it("indexes created reward pools with USDC accounting fields", async () => {
+  it("indexes created bounties with USDC accounting fields", async () => {
     const { db, inserts, updates } = createDb({ content: { id: 1n } });
     const registeredHandlers = await loadHandlers();
     const handler = registeredHandlers.get("QuestionRewardPoolEscrow:RewardPoolCreated");
@@ -124,7 +124,7 @@ describe("QuestionRewardPoolEscrow ponder handlers", () => {
     expect(updates).toContainEqual(expect.objectContaining({ table: "content" }));
   });
 
-  it("updates reward pool and round accounting for qualifications, claims, and refunds", async () => {
+  it("updates bounty and round accounting for qualifications, claims, and refunds", async () => {
     const { db, inserts, updates } = createDb({
       'questionRewardPool:{"id":"7"}': { id: 7n, contentId: 1n },
       content: { id: 1n },

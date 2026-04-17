@@ -341,7 +341,7 @@ describe("registerContentRoutes", () => {
     expect(serialized).toContain("content.tags");
   });
 
-  it("orders highest reward content by available question reward pool amount", async () => {
+  it("orders highest reward content by available bounty amount", async () => {
     const { queryBuilder } = mockPonderModules([{ id: 1n }]);
     mockSharedModule();
     const { registerContentRoutes } = await import("../src/api/routes/content-routes.js");
@@ -537,7 +537,7 @@ describe("registerLeaderboardRoutes", () => {
 });
 
 describe("registerDataRoutes", () => {
-  it("includes question reward pool payouts in global stats", async () => {
+  it("includes bounty payouts in global stats", async () => {
     mockPonderModules([
       {
         totalContent: 2,
@@ -620,7 +620,7 @@ describe("registerDataRoutes", () => {
     expect(queryBuilder.groupBy).toHaveBeenCalledWith("vote.contentId");
   });
 
-  it("rejects question reward claim candidate requests without a valid voter", async () => {
+  it("rejects bounty claim candidate requests without a valid voter", async () => {
     const { db } = mockPonderModules([]);
     const { registerDataRoutes } = await import("../src/api/routes/data-routes.js");
 
@@ -637,7 +637,7 @@ describe("registerDataRoutes", () => {
     expect(db.select).not.toHaveBeenCalled();
   });
 
-  it("queries question reward claim candidates across linked voter identities", async () => {
+  it("queries bounty claim candidates across linked voter identities", async () => {
     const { queryBuilder } = mockPonderModules([{ rewardPoolId: 1n, contentId: 2n, roundId: 3n }]);
     const { registerDataRoutes } = await import("../src/api/routes/data-routes.js");
 

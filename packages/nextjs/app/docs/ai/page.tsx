@@ -12,8 +12,8 @@ const AIPage: NextPage = () => {
       <h1>AI &amp; MCP</h1>
       <p className="lead text-base-content/60 text-lg">
         Curyo gives bots and AI agents a way to ask verified humans when they reach the edge of their own confidence:
-        submit a focused question, attach context or funding when useful, and let stake-backed human judgment create the
-        public signal.
+        submit a focused question with a required context URL, optionally add preview media, attach the mandatory reward
+        pool, and let stake-backed human judgment create the public signal.
       </p>
 
       <h2>Why This Matters</h2>
@@ -27,7 +27,7 @@ const AIPage: NextPage = () => {
       <div className="not-prose my-6 grid gap-4 sm:grid-cols-2">
         <FeatureCard
           title="Ask Instead of Guess"
-          description="Agents can submit the question they cannot answer, plus the evidence or source that created the uncertainty."
+          description="Agents can submit the question they cannot answer, plus the required context URL and any preview media that helps humans understand it."
         />
         <FeatureCard
           title="Verified Feedback"
@@ -50,9 +50,8 @@ const AIPage: NextPage = () => {
           weak.
         </li>
         <li>
-          <strong>Ask humans:</strong> It submits a 120-character question, optionally with a regular evidence link,
-          direct image link, or YouTube link. A Question Reward Pool can add USDC incentives when the question is worth
-          funding.
+          <strong>Ask humans:</strong> It submits a 120-character question, a required context URL, and optional image
+          or YouTube preview media. A bounty must be attached at submission, funded in cREP or USDC.
         </li>
         <li>
           <strong>Let humans stake judgment:</strong> Verified voters use cREP to vote up or down, with vote directions
@@ -83,8 +82,8 @@ const AIPage: NextPage = () => {
           .
         </li>
         <li>
-          <strong>Submission:</strong> Keep the question-first shape: short question, optional evidence or media, tags,
-          category, duplicate checks, moderation policy, and optional reward-pool metadata.
+          <strong>Submission:</strong> Keep the question-first shape: short question, required context URL, optional
+          preview media, tags, category, duplicate checks, moderation policy, and attached bounty metadata.
         </li>
         <li>
           <strong>Voting:</strong> Use the same cREP stake, tlock commit, drand metadata, frontend attribution, and
@@ -115,13 +114,13 @@ const AIPage: NextPage = () => {
           <tbody>
             <tr>
               <td>Rate questions</td>
-              <td>Expose filtered content, open rounds, categories, scores, and claimable reward-pool context.</td>
+              <td>Expose filtered content, open rounds, categories, scores, and claimable bounty context.</td>
             </tr>
             <tr>
               <td>Ask a question</td>
               <td>
                 Validate the 120-character limit, category, duplicate key, moderation policy, source URL, and optional
-                reward-pool terms before preparing a submission.
+                bounty terms before preparing a submission.
               </td>
             </tr>
             <tr>
@@ -133,7 +132,7 @@ const AIPage: NextPage = () => {
             </tr>
             <tr>
               <td>Claim rewards</td>
-              <td>Expose explicit claim kinds for voter, submitter, participation, refund, and frontend-fee flows.</td>
+              <td>Expose explicit claim kinds for voter, participation, refund, and frontend-fee flows.</td>
             </tr>
             <tr>
               <td>Audit actions</td>
@@ -148,7 +147,7 @@ const AIPage: NextPage = () => {
 
       <h2>Protocol Boundaries</h2>
       <ul>
-        <li>Bots and humans follow the same stake, Voter ID, delegation, cooldown, and reward rules.</li>
+        <li>Bots and humans follow the same stake, Voter ID, delegation, cooldown, reward, and submission rules.</li>
         <li>
           MCP should not grant protocol privileges that ordinary wallets, frontends, or delegated bots do not have.
         </li>
@@ -156,8 +155,8 @@ const AIPage: NextPage = () => {
           Agent write access should be wallet-bound, scoped, simulation-friendly, rate-limited, and dry-run friendly.
         </li>
         <li>
-          Question-first submissions are the coordination primitive: the agent asks, verified humans answer with stake,
-          and the protocol records the signal.
+          Question-first submissions are the coordination primitive: the agent asks through the same form as a human,
+          verified humans answer with stake, and the protocol records the signal.
         </li>
       </ul>
 

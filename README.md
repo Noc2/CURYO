@@ -5,7 +5,7 @@
   <a href="LICENSE"><img src="https://img.shields.io/badge/License-MIT-yellow.svg?style=flat-square" alt="License: MIT"></a>
 </p>
 
-The web is drowning in clickbait and fake engagement. As AI makes it effortless to generate vast amounts of content, the flood of low-effort material will only accelerate — making trustworthy quality signals more critical than ever. Curyo fights back by tying every vote to a verified human and letting questions carry funded reward pools. Bots and AI agents can also use that question-first surface to ask humans for feedback when they cannot answer something confidently themselves.
+The web is drowning in clickbait and fake engagement. As AI makes it effortless to generate vast amounts of content, the flood of low-effort material will only accelerate — making trustworthy quality signals more critical than ever. Curyo fights back by tying every vote to a verified human and making every question submission carry a non-refundable bounty funded in cREP or USDC. Every submission starts from a required context URL, optional preview media, and the same public question flow for humans, bots, and AI agents when they need verified feedback instead of a guess.
 
 ## Table of Contents
 
@@ -19,16 +19,16 @@ The web is drowning in clickbait and fake engagement. As AI makes it effortless 
 
 ## Background
 
-Voters predict whether content's rating will go up or down and back their predictions with cREP token stakes. Submissions start as questions, and any reward pool attached to a question is paid in USDC on Celo, displayed in USD, and reserves a small frontend-operator share on qualified claims.
+Voters predict whether content's rating will go up or down and back their predictions with cREP token stakes. Submissions start as questions, and every question must attach a non-refundable bounty funded in cREP or USDC. Bounty payouts go to eligible voters, with frontend fees handled separately from the bounty itself.
 
 - **Skin in the Game** — every vote requires a token stake as a conviction signal
-- **Sybil Resistant** — one soulbound Voter ID NFT per verified human
+- **Sybil Resistant** — one soulbound Voter ID NFT per verified human for voting and other identity-gated actions
 - **Per-Content Rounds** — each content item accumulates votes; rounds settle once the revealed-vote threshold is reached and past-epoch reveal constraints are satisfied
 - **tlock Commit-Reveal** — votes are encrypted with timelock encryption, commits bind explicit drand metadata (`targetRound`, `drandChainHash`), and malformed/non-armored ciphertexts are rejected on-chain; the keeper-assisted/self-reveal path still hides vote directions until reveal and keeps zk-style proofing as a future hardening path
-- **Question-First Submissions** — content starts as a short question capped at 120 characters, with text-only submissions or optional image/YouTube links
-- **Bot-to-Human Feedback** — bots and AI agents can submit focused questions they cannot answer, then read the stake-backed human signal that comes back
-- **Question Reward Pools** — fund specific questions, pay in USDC on Celo, show users USD amounts, and reserve 3% for eligible frontend operators
-- **Question Rewards** — eligible revealed Voter ID holders claim the voter share within a qualified question round
+- **Question-First Submissions** — content starts as a short question capped at 120 characters, with a required context URL and optional image/YouTube preview media
+- **Bot-to-Human Feedback** — bots and AI agents submit the same way humans do, then read the stake-backed human signal that comes back
+- **Bounties** — fund specific questions, pay in USDC on Celo, show users USD amounts, and reserve 3% for eligible frontend operators
+- **Bounty Payouts** — eligible revealed voters claim the voter share within a qualified question round
 - **Security Guardrails** — duplicate checks, moderation policy, and claim gating keep the submission surface narrow
 
 See the in-app documentation at `/docs` for detailed game theory analysis and security information.
@@ -189,7 +189,7 @@ CI runs the smoke, lifecycle, and keeper-backed E2E suites separately, so `yarn 
 
 ## Docs and APIs
 
-In-app documentation is available at `/docs` when running the frontend. The `/docs/ai` page covers the AI/MCP integration shape and the bot-to-human feedback loop.
+In-app documentation is available at `/docs` when running the frontend. The `/docs/ai` page covers the AI/MCP integration shape, the bot-to-human feedback loop, and how agents ask humans for judgment through the same submission path as everyone else.
 
 For app integrations, the framework-agnostic SDK lives in `packages/sdk` and provides hosted/indexed reads plus
 vote/frontend helpers for existing websites and apps.

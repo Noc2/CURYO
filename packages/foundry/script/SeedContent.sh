@@ -10,7 +10,7 @@ DEPLOY_JSON="$SCRIPT_DIR/../deployments/31337.json"
 CATEGORY_ID_RESOLVER="$SCRIPT_DIR/../scripts-js/resolveCategoryId.js"
 
 RPC="http://127.0.0.1:8545"
-SUBMISSION_REWARD_POOL="1000000" # 1 cREP in 6 decimals (default minimum submission reward pool)
+SUBMISSION_REWARD_POOL="1000000" # 1 cREP in 6 decimals (default minimum submission bounty)
 VOTE_STAKE="5000000" # 5 cREP for votes
 
 # Check if localhost deployment exists
@@ -267,8 +267,8 @@ for ((i = 0; i < TOTAL_ITEMS; i++)); do
     cast rpc anvil_setBalance "$ADDR" "0x8AC7230489E80000" --rpc-url "$RPC" > /dev/null 2>&1
   fi
 
-  # 1. Approve the reward pool escrow to pull the non-refundable cREP submission reward pool
-  echo "  Approving cREP reward pool..."
+  # 1. Approve the bounty escrow to pull the non-refundable cREP submission bounty
+  echo "  Approving cREP bounty..."
   cast send "$TOKEN" "approve(address,uint256)" "$QUESTION_REWARD_POOL_ESCROW" "$SUBMISSION_REWARD_POOL" --private-key "$KEY" --rpc-url "$RPC" > /dev/null 2>&1
 
   # 2. Reserve the hidden submission commitment before revealing the question metadata

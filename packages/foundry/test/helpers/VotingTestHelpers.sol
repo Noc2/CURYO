@@ -175,7 +175,7 @@ abstract contract ContentSubmissionTestBase {
                 return address(mockRewardPoolEscrow);
             }
         }
-        revert("Reward pool escrow not set");
+        revert("Bounty escrow not set");
     }
 
     function _singleImageUrls(string memory imageUrl) internal pure returns (string[] memory imageUrls) {

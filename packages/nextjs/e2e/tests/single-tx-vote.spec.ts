@@ -1,5 +1,4 @@
 import {
-  approveCREP,
   commitVoteWithTransferAndCallDirect,
   getActiveRoundId,
   submitContentDirect,
@@ -22,8 +21,6 @@ test.describe("Single-transaction vote flow", () => {
 
     const submitter = ANVIL_ACCOUNTS.account10;
     const voter = ANVIL_ACCOUNTS.account4;
-    const submitStakeApproved = await approveCREP(CONTENT_REGISTRY, BigInt(10e6), submitter.address, CREP_TOKEN);
-    expect(submitStakeApproved, "Submission stake approval failed").toBe(true);
 
     const uniqueId = Date.now();
     const submitted = await submitContentDirect(

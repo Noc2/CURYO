@@ -1247,7 +1247,7 @@ export function ContentSubmissionSection() {
                   value={rewardAmount}
                   onChange={e => setRewardAmount(e.target.value)}
                   className="grow bg-transparent"
-                  aria-label="Reward pool amount"
+                  aria-label="Bounty amount"
                 />
                 <span className="text-sm font-semibold text-base-content/50">
                   {rewardAsset === "crep" ? "cREP" : "USDC"}

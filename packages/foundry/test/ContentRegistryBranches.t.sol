@@ -498,7 +498,7 @@ contract ContentRegistryBranchesTest is VotingTestBase {
 
         uint256 balAfter = crepToken.balanceOf(submitter);
         (,,,,,,,,, bool submitterStakeReturned,,) = registry.contents(1);
-        assertEq(balAfter, balBefore, "mock reward escrow does not pull funds in branch tests");
+        assertEq(balAfter, balBefore, "mock bounty escrow does not pull funds in branch tests");
         assertTrue(submitterStakeReturned, "submitter stake compatibility flag starts resolved");
         assertEq(registry.submitterParticipationRewardOwed(1), 0);
         assertEq(registry.submitterParticipationRewardReserved(1), 0);

@@ -246,10 +246,10 @@ export async function runSubmit(options: SubmitRunOptions = {}) {
   const maxSubmissions = options.maxSubmissions ?? config.maxSubmissionsPerRun;
   const rewardFunding = await getSubmissionRewardFunding();
   log.info(
-    `Submission reward pool: ${formatMicroTokenAmount(rewardFunding.amount)} ${rewardFunding.label} per question`,
+    `Submission bounty: ${formatMicroTokenAmount(rewardFunding.amount)} ${rewardFunding.label} per question`,
   );
 
-  // 1. Check balance for the mandatory question reward pool.
+  // 1. Check balance for the mandatory bounty.
   const balance = (await publicClient.readContract({
     ...rewardFunding.token,
     functionName: "balanceOf",
@@ -259,7 +259,7 @@ export async function runSubmit(options: SubmitRunOptions = {}) {
 
   if (balance < rewardFunding.amount) {
     log.error(
-      `Insufficient ${rewardFunding.label} for even one submission (need ${formatMicroTokenAmount(rewardFunding.amount)} ${rewardFunding.label} reward pool).`,
+      `Insufficient ${rewardFunding.label} for even one submission (need ${formatMicroTokenAmount(rewardFunding.amount)} ${rewardFunding.label} bounty).`,
     );
     return;
   }

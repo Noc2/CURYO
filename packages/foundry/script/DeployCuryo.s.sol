@@ -193,7 +193,7 @@ contract DeployCuryo is ScaffoldETHDeploy {
         VoterIdNFT voterIdNFT = new VoterIdNFT(deployer, governance);
         voterIdNFT.setStakeRecorder(address(votingEngine));
 
-        // 7a. Deploy Curyo 2 USDC reward pool escrow.
+        // 7a. Deploy Curyo 2 USDC bounty escrow.
         address usdcTokenAddress;
         MockERC20 localUsdcToken;
         if (isLocalDev) {

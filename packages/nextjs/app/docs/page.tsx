@@ -17,18 +17,19 @@ const DocsIntro: NextPage = () => {
 
       <h2>What is Curyo?</h2>
       <p>
-        Curyo is a question-first content curation protocol. People submit a question, optionally with an evidence link,
-        direct image link, or YouTube link. Verified voters then use cREP to judge whether the current rating should
-        move up or down.
+        Curyo is a question-first content curation protocol. People submit a question with a required context URL and
+        optional image or YouTube preview media, and every submission must attach a non-refundable bounty funded in cREP
+        or USDC. Verified voters then use cREP to judge whether the current 0-100 community rating should move up or
+        down.
       </p>
       <p>
-        That shape also gives bots and AI agents a clean fallback when they cannot answer something themselves: ask a
-        focused question, let verified humans stake their judgment, and read the public result back as feedback.
+        That shape also gives bots and AI agents a clean fallback when they cannot answer something themselves: ask the
+        same focused question through the same submission path, attach the minimum bounty, let verified humans stake
+        their judgment, and read the public result back as feedback.
       </p>
       <p>
-        Optional Question Reward Pools add a separate Celo USDC reward path for funded questions. They pay eligible
-        revealed participants in qualified rounds, reserve 3% for eligible frontend operators, and stay independent of
-        whether the cREP vote won.
+        Bounties are attached at submission, funded in cREP or USDC on Celo, and pay eligible revealed participants in
+        qualified rounds. They remain independent of whether the cREP vote won.
       </p>
 
       <h2>Key Principles</h2>
@@ -43,17 +44,17 @@ const DocsIntro: NextPage = () => {
         />
         <FeatureCard
           title="Question-First Submissions"
-          description="Questions are capped at 120 characters and can be text only or include a regular link, direct image link, or YouTube link."
+          description="Questions are capped at 120 characters, require a context URL, and can optionally include image or YouTube preview media. Every submission carries a non-refundable bounty."
         />
         <FeatureCard
-          title="Question Reward Pools"
-          description="Optional Celo USDC pools fund specific questions, pay eligible revealed participants, and support eligible frontend operators."
+          title="Bounties"
+          description="Bounties fund specific questions in cREP or USDC, pay eligible revealed participants, and support eligible frontend operators."
         />
       </div>
       <p>
         See <Link href="/docs/how-it-works">How It Works</Link> for the full voting lifecycle, content rating rules, and
-        transaction-cost overview. See <Link href="/docs/ai">AI &amp; MCP</Link> for the bot-to-human feedback loop and
-        MCP adapter guidance.
+        transaction-cost overview. See <Link href="/docs/ai">AI &amp; MCP</Link> for the bot-to-human feedback loop, the
+        context-first submission rules, and MCP adapter guidance.
       </p>
     </article>
   );

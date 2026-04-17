@@ -81,7 +81,7 @@ export const TreasuryBalance = () => {
       <div className="flex items-center gap-2">
         <h2 className={surfaceSectionHeadingClassName}>Protocol Pools</h2>
         <InfoTooltip
-          text="Live cREP balances across the treasury and protocol-controlled reward pools."
+          text="Live cREP balances across the treasury and protocol-controlled pools."
           className="[&>svg]:opacity-60"
         />
       </div>
@@ -89,7 +89,7 @@ export const TreasuryBalance = () => {
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-5">
         <PoolStat
           title="Treasury"
-          tooltip="Balance held by the governance-controlled treasury. Funded by the 1% settlement fee, cancellation fees, forfeited submitter stakes, and forfeited votes."
+          tooltip="Balance held by the governance-controlled treasury. Funded by the 1% settlement fee, cancellation fees, and forfeited votes."
           value={treasuryBalanceRaw}
           isLoading={treasuryLoading}
           Icon={BuildingLibraryIcon}

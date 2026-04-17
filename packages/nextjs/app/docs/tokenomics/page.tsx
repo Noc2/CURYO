@@ -7,7 +7,9 @@ const Tokenomics = () => {
   return (
     <article className="prose max-w-none">
       <h1>Tokenomics</h1>
-      <p className="lead text-base-content/60 text-lg">cREP token distribution and point mechanics.</p>
+      <p className="lead text-base-content/60 text-lg">
+        cREP token distribution, question funding, and point mechanics.
+      </p>
 
       <h2>Overview</h2>
       <p>
@@ -194,24 +196,22 @@ const Tokenomics = () => {
           </tbody>
         </table>
       </div>
-      <p>Bootstrap rewards are paid only after a round or submitter stake resolves successfully.</p>
+      <p>Bootstrap rewards are paid only after a round resolves successfully.</p>
 
-      <h3>Question Reward Pools</h3>
+      <h3>Bounties</h3>
       <p>
-        Question Reward Pools are separate from cREP bootstrap rewards. They are paid in USDC on Celo, displayed as USD,
-        scoped to one question, and split across eligible revealed Voter ID holders in each qualified reward-pool round
-        after a 3% frontend-operator share. If the commit-attributed frontend is not payable, that share stays with the
-        voter claim. There is no stablecoin coherence bonus at launch.
+        Bounties are separate from cREP bootstrap rewards. They are attached at submission, funded in cREP or USDC on
+        Celo, scoped to one question, and split across eligible revealed voters in each qualified bounty round after a
+        3% frontend-operator share. If the commit-attributed frontend is not payable, that share stays with the voter
+        claim. There is no stablecoin coherence bonus at launch.
       </p>
 
       <h3>Treasury</h3>
       <p>
         The protocol treasury starts with <strong>20M cREP</strong> on the governor/timelock from launch. It grows over
-        time through four main ongoing inflow sources: a 1% treasury fee on contested losing pools, cancellation fees
-        from voluntary content withdrawals, forfeited submitter deposits (when a content item&apos;s conservative rating
-        bound stays below the governed slash threshold long enough with enough evidence), and forfeited unrevealed
-        past-epoch votes swept during settlement cleanup. Treasury spending follows the same governance proposal path as
-        upgrades and other governed config changes.
+        time through three main ongoing inflow sources: a 1% treasury fee on contested losing pools, cancellation fees
+        from voluntary content withdrawals, and forfeited unrevealed past-epoch votes swept during settlement cleanup.
+        Treasury spending follows the same governance proposal path as upgrades and other governed config changes.
       </p>
 
       <hr />
@@ -220,8 +220,7 @@ const Tokenomics = () => {
       <p>
         When a round is resolved, winners recover their original stake and claim from the content-specific voter pool.
         Revealed losers can reclaim <strong>{protocolDocFacts.revealedLoserRefundPercentLabel}</strong> of raw stake,
-        and the remaining losing pool is split across voters, content submitter, frontend operators, consensus reserve,
-        and treasury.
+        and the remaining losing pool is split across voters, frontend operators, consensus reserve, and treasury.
       </p>
 
       <hr />
@@ -244,10 +243,10 @@ const Tokenomics = () => {
             </tr>
             <tr>
               <td>Ask a question</td>
-              <td className="font-mono">10 cREP</td>
+              <td className="font-mono">1 cREP or 1 USDC minimum</td>
               <td>
-                Returned after a healthy settled round once no later round remains open, or at dormancy if no round ever
-                settles. Question Reward Pools are optional USDC funding added through a separate escrow.
+                The minimum is non-refundable. It is attached at submission and pays eligible voters if the question
+                qualifies. Bounties can use cREP or USDC.
               </td>
             </tr>
             <tr>

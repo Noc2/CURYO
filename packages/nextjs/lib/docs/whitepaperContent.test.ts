@@ -80,7 +80,7 @@ test("whitepaper executive summary preserves the updated brand framing", () => {
     throw new Error("Expected executive summary block to be a paragraph");
   }
 
-  assert.match(summaryBlock.text, /question-first submissions, optional Question Reward Pools/i);
+  assert.match(summaryBlock.text, /question-first submissions, mandatory non-refundable bounties/i);
   assert.match(summaryBlock.text, /preventing herding/i);
   assert.match(summaryBlock.text, /reserve 3% for eligible frontend operators/i);
 });
@@ -97,6 +97,8 @@ test("whitepaper avoids stale protocol audit phrases", () => {
     /settle as tied\/consensus/i,
     /commitHash = keccak256\(isUp, salt, contentId, keccak256\(ciphertext\)\)/i,
     /participation rewards after round settlement regardless of vote outcome/i,
+    /submitter reward/i,
+    /submitter stake/i,
   ]) {
     assert.doesNotMatch(whitepaperText, stalePhrase);
   }

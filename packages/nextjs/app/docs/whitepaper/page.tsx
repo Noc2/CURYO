@@ -37,15 +37,15 @@ const WhitepaperPage: NextPage = () => {
           <strong>tlock Commit-Reveal Voting</strong> &mdash; Encrypted voting, phase-weighted rewards, and resolution
         </li>
         <li>
-          <strong>Tokenomics</strong> &mdash; Token distribution, faucet tiers, bootstrap rewards, and question reward
-          pools
+          <strong>Tokenomics</strong> &mdash; Token distribution, faucet tiers, bootstrap rewards, and bounties attached
+          at submission
         </li>
         <li>
           <strong>Governance</strong> &mdash; Community governance, treasury, and collusion prevention
         </li>
         <li>
           <strong>Curyo &amp; AI</strong> &mdash; Model collapse, stake-weighted curation as AI infrastructure, public
-          ratings as a public good, AI-assisted voting with human oversight
+          ratings as a public good, AI-assisted voting with human oversight, and the human-feedback loop for agents
         </li>
         <li>
           <strong>Known Limitations</strong> &mdash; Current constraints and open challenges

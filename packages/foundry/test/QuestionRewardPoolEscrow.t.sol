@@ -480,7 +480,7 @@ contract QuestionRewardPoolEscrowTest is VotingTestBase {
         uint256 secondRoundId = _settleRoundWith(voters, contentId, directions);
 
         vm.prank(voter1);
-        vm.expectRevert("Reward Pool expired");
+        vm.expectRevert("Bounty expired");
         rewardPoolEscrow.claimQuestionReward(rewardPoolId, secondRoundId);
 
         uint256 funderBalanceBefore = usdc.balanceOf(funder);

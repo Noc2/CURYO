@@ -28,7 +28,7 @@ function getClaimableRewardLabel(item: ClaimableRewardItem) {
     case "participation_reward":
       return `bootstrap reward for content #${item.contentId} round ${item.roundId}`;
     case "question_reward":
-      return `question reward for content #${item.contentId} round ${item.roundId}`;
+      return `bounty for content #${item.contentId} round ${item.roundId}`;
     case "frontend_registry_fee":
       return `frontend registry fees for ${item.frontend}`;
     case "frontend_round_fee":
@@ -163,7 +163,7 @@ export function useClaimAll() {
               chain?.id ?? wagmiConfig.chains[0]?.id ?? 0,
             );
             if (!escrowAddress) {
-              notification.error("Question Reward Pools are not deployed on this network yet.");
+              notification.error("Bounties are not deployed on this network yet.");
               continue;
             }
 

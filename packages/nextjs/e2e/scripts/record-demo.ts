@@ -1,4 +1,4 @@
-import { approveCREP, submitContentDirect, waitForPonderIndexed } from "../helpers/admin-helpers";
+import { submitContentDirect, waitForPonderIndexed } from "../helpers/admin-helpers";
 import { ANVIL_ACCOUNTS } from "../helpers/anvil-accounts";
 import { CONTRACT_ADDRESSES } from "../helpers/contracts";
 import { getContentList } from "../helpers/ponder-api";
@@ -14,7 +14,6 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const ARTIFACTS_DIR = path.resolve(__dirname, "../artifacts/demo");
 const VIEWPORT = { width: 1280, height: 800 };
 const CAPTION_ID = "curyo-demo-caption";
-const SUBMIT_STAKE = BigInt(10e6);
 const VERIFIED_DEMO_WALLETS = [
   ANVIL_ACCOUNTS.account3,
   ANVIL_ACCOUNTS.account4,
@@ -127,16 +126,6 @@ async function prepareDemoContent(): Promise<{ searchQuery: string }> {
   const uniqueId = Date.now();
   const title = `Curyo Demo ${uniqueId}`;
   const demoUrl = `https://www.youtube.com/watch?v=curyo_demo_${uniqueId}`;
-
-  const submissionApproved = await approveCREP(
-    CONTRACT_ADDRESSES.ContentRegistry,
-    SUBMIT_STAKE,
-    submitter.address,
-    CONTRACT_ADDRESSES.CuryoReputation,
-  );
-  if (!submissionApproved) {
-    throw new Error("Failed to approve submission stake for deterministic demo content");
-  }
 
   const submitted = await submitContentDirect(
     demoUrl,

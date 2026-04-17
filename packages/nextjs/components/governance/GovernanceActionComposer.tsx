@@ -284,7 +284,7 @@ const actionTemplates: readonly GovernanceActionTemplate[] = [
     mode: "proposal",
     contractName: "ContentRegistry",
     functionName: "setTreasury",
-    description: "Create a proposal to update the treasury that receives slashed submitter stakes.",
+    description: "Create a proposal to update the treasury that receives protocol fees.",
     advanced: true,
     fields: [{ key: "treasury", label: "Treasury address", type: "address", required: true }],
     buildArgs: (_, parser) => [parser.address("treasury", "Treasury address")],

@@ -61,7 +61,7 @@ test("sortRpcFeed prioritizes stronger relevance matches for rpc search fallback
   );
 });
 
-test("sortRpcFeed orders reward-backed items by available USD rewards", () => {
+test("sortRpcFeed orders bounty-backed items by available USD bounties", () => {
   const feed = [
     {
       ...buildItem(1n, "Funded", "A funded question", ["markets"]),
@@ -79,7 +79,7 @@ test("sortRpcFeed orders reward-backed items by available USD rewards", () => {
         activeRewardPoolCount: 1,
       },
     },
-    buildItem(3n, "Unfunded", "No reward pool", ["markets"]),
+    buildItem(3n, "Unfunded", "No bounty", ["markets"]),
   ];
 
   const sorted = sortRpcFeed(feed, "highest_rewards");
@@ -122,7 +122,7 @@ test("mapContentItem marks linked submitter addresses as own content", () => {
   assert.equal(item.isOwnContent, true);
 });
 
-test("mapContentItem supports text-only questions and Ponder reward pool summaries", () => {
+test("mapContentItem supports text-only questions and Ponder bounty summaries", () => {
   const item = mapContentItem({
     id: "2",
     url: null,

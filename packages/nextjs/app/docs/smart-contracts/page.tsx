@@ -87,12 +87,12 @@ const SmartContracts: NextPage = () => {
             </tr>
             <tr>
               <td className="font-mono text-primary">ParticipationPool</td>
-              <td>Halving-tier cREP Bootstrap Pool rewards used by submitter and voter reward claims</td>
+              <td>Halving-tier cREP Bootstrap Pool rewards used by voter reward claims</td>
               <td>No</td>
             </tr>
             <tr>
               <td className="font-mono text-primary">QuestionRewardPoolEscrow</td>
-              <td>Question-scoped Celo USDC custody, voter rewards, and the frontend-operator reward share</td>
+              <td>Question-scoped cREP or USDC custody, voter rewards, and the frontend-operator reward share</td>
               <td>No</td>
             </tr>
             <tr>
@@ -117,12 +117,7 @@ const SmartContracts: NextPage = () => {
             </tr>
             <tr>
               <td className="font-mono text-primary">RewardMath</td>
-              <td>Library: pool split (82/5/10/4/1) and reward calculations</td>
-              <td>&mdash;</td>
-            </tr>
-            <tr>
-              <td className="font-mono text-primary">SubmitterStakeLib</td>
-              <td>Library: submitter stake return/slash policy helpers</td>
+              <td>Library: pool split (90/5/4/1) and reward calculations</td>
               <td>&mdash;</td>
             </tr>
             <tr>
@@ -238,9 +233,9 @@ const SmartContracts: NextPage = () => {
       </p>
       <p>
         ContentRegistry validates submitted media links against CategoryRegistry before deriving the question submission
-        key from the submitted metadata. The docs now describe the question-first flow: text-only submissions or
-        optional evidence, image, and YouTube links, with reward pools displayed in USD even though settlement is funded
-        in Celo USDC.
+        key from the submitted metadata. The docs now describe the question-first flow: a required context URL with
+        optional image or YouTube preview media, plus a mandatory non-refundable bounty attached at submission in cREP
+        or USDC.
       </p>
       <div className="not-prose overflow-x-auto my-6 rounded-xl bg-base-200">
         <table className="table table-zebra [&_th]:text-base [&_td]:text-base [&_.badge]:text-base [&_th]:bg-base-300">
@@ -280,10 +275,10 @@ const SmartContracts: NextPage = () => {
         <li>
           <code>reserveSubmission(revealCommitment)</code>, then{" "}
           <code>submitQuestionWithMedia(imageUrls, videoUrl, title, description, tags, categoryId, salt)</code> &mdash;
-          Reserve a hidden media-backed question, then reveal it with a 10 cREP stake. Requires Voter ID. Question text
-          is capped at 120 characters, the media submission key is checked for duplicates, and the question plus
+          Reserve a hidden media-backed question, then reveal it with the attached minimum bounty. Question text is
+          capped at 120 characters, the media submission key is checked for duplicates, and the question plus
           description are emitted in the canonical <code>ContentSubmitted</code> event for indexers and alternate
-          frontends. Question Reward Pools are funded in a separate escrow transaction.
+          frontends.
         </li>
         <li>
           <code>cancelContent(contentId)</code> &mdash; Cancel own content (1 cREP fee to the configured
@@ -309,19 +304,13 @@ const SmartContracts: NextPage = () => {
           <strong>Grace period:</strong> 24 hours. No slash possible during this time.
         </li>
         <li>
-          <strong>Slash:</strong> In the redesigned redeploy, submitter stake only becomes slashable once a conservative
-          low-rating bound stays below the governed threshold after grace period and the content has accumulated enough
-          evidence, enough settled rounds, and enough time below threshold.
+          <strong>Slash:</strong> Removed. Question submissions no longer carry a refundable submitter stake.
         </li>
         <li>
-          <strong>Auto-return:</strong> After ~4 days once a settled round confirms the conservative rating bound is
-          healthy again and no later round remains open. If no round ever settles, the stake resolves when the content
-          reaches dormancy after all open rounds have been closed.
+          <strong>Auto-return:</strong> Removed. The mandatory bounty is non-refundable.
         </li>
         <li>
-          <strong>Submitter bootstrap reward:</strong> Healthy submitter rewards are snapshotted when the stake returns.
-          If the ParticipationPool is temporarily depleted, the remaining amount stays claimable later instead of being
-          lost.
+          <strong>Submitter bootstrap reward:</strong> Removed. Submitter upside now routes to voters only.
         </li>
       </ul>
 
@@ -423,8 +412,8 @@ const SmartContracts: NextPage = () => {
           <code>settleRound(contentId, roundId)</code> &mdash; Settle the current round once at least{" "}
           <code>minVoters</code> votes are revealed and all past-epoch votes have been revealed (or their{" "}
           {protocolDocFacts.revealGracePeriodLabel} reveal grace period has expired). Determines winners based on
-          epoch-weighted stakes, splits reward pools, and updates content rating from the round reference score using
-          the governed score-relative rating model.
+          epoch-weighted stakes, splits bounties, and updates content rating from the round reference score using the
+          governed score-relative rating model.
         </li>
         <li>
           <code>RoundRewardDistributor.claimFrontendFee(contentId, roundId, frontend)</code> &mdash; Frontend operators
@@ -434,17 +423,12 @@ const SmartContracts: NextPage = () => {
         </li>
         <li>
           <code>QuestionRewardPoolEscrow.claimQuestionReward(rewardPoolId, roundId)</code> &mdash; Claim the USDC-backed
-          question reward for a revealed Voter ID. New pools default to a 3% frontend-operator share, attributed from
-          the vote commit; unpayable frontend shares remain with the voter claim.
+          bounty for a revealed voter. New bounties default to a 3% frontend-operator share, attributed from the vote
+          commit; unpayable frontend shares remain with the voter claim.
         </li>
         <li>
           <code>RoundRewardDistributor.claimParticipationReward(contentId, roundId)</code> &mdash; Voters claim
           bootstrap rewards (rate snapshotted at settlement time for fairness). Pull-based.
-        </li>
-        <li>
-          <code>ContentRegistry.claimSubmitterParticipationReward(contentId)</code> &mdash; Claim the snapshotted
-          submitter bootstrap reward after a healthy stake return. Any amount the pool could already fund is reserved up
-          front for that claim instead of depending entirely on future pool authorization state.
         </li>
         <li>
           <code>cancelExpiredRound(contentId, roundId)</code> &mdash; Cancel a round that exceeded maxDuration (
@@ -501,9 +485,6 @@ const SmartContracts: NextPage = () => {
           winning revealed voters, using the rate snapshotted at settlement.
         </li>
         <li>
-          <code>claimSubmitterReward(contentId, roundId)</code> &mdash; Claim submitter&apos;s 10% share.
-        </li>
-        <li>
           <code>sweepStrandedCrepToTreasury()</code> &mdash; Governance-only recovery path for any cREP mistakenly sent
           directly to the distributor.
         </li>
@@ -543,7 +524,7 @@ const SmartContracts: NextPage = () => {
       <h2>CategoryRegistry</h2>
       <p>
         Stores simple seeded discovery categories. Categories are metadata used to help people find and interpret
-        content; they do not require user staking, governance approval proposals, or category submitter rewards.
+        content; they do not require user staking or governance approval proposals.
       </p>
       <h3>Key Functions</h3>
       <ul>
@@ -642,11 +623,9 @@ const SmartContracts: NextPage = () => {
 
       <h2>ParticipationPool</h2>
       <p>
-        Implements the user-facing Bootstrap Pool for both voters and content submitters. Voter rewards are claimed
-        after round settlement using the rate snapshotted at settlement time. Submitter rewards are snapshotted only
-        when a healthy submitter stake return resolves after a settled round. Funded with 24M cREP. Uses a halving
-        schedule: starting at 90% reward rate, halving each time a tier threshold is reached (1.5M, 4.5M, 10.5M, 22.5M
-        cumulative), with a 1% floor rate.
+        Implements the user-facing Bootstrap Pool for voters. Voter rewards are claimed after round settlement using the
+        rate snapshotted at settlement time. Funded with 24M cREP. Uses a halving schedule: starting at 90% reward rate,
+        halving each time a tier threshold is reached (1.5M, 4.5M, 10.5M, 22.5M cumulative), with a 1% floor rate.
       </p>
       <p>
         Privileged sweeps of accounted bootstrap rewards are disabled; only reward accounting and surplus recovery move
@@ -660,7 +639,7 @@ const SmartContracts: NextPage = () => {
       <ul>
         <li>
           <code>splitPoolAfterLoserRefund(losingPool)</code> &mdash; Reserve a 5% rebate for revealed losers, then split
-          the remaining pool into 80% voters / 5% consensus subsidy / 10% submitter / 4% frontend / 1% treasury.
+          the remaining pool into 90% voters / 5% consensus subsidy / 4% frontend / 1% treasury.
         </li>
         <li>
           <code>calculateVoterReward(shares, totalWinningShares, voterPool)</code> &mdash; Share-proportional reward
@@ -696,8 +675,9 @@ const SmartContracts: NextPage = () => {
           and governance participation also applies a 7-day cREP transfer lock.
         </li>
         <li>
-          <strong>Sybil Resistance:</strong> VoterIdNFT (soulbound) required for all user actions. Per-identity stake
-          cap of 100 cREP per content per round, plus question-first submission guardrails and claim gating.
+          <strong>Sybil Resistance:</strong> VoterIdNFT (soulbound) remains required for voting and other identity-gated
+          actions. Per-identity stake cap of 100 cREP per content per round, plus question-first submission guardrails
+          and claim gating. Question submission is the same for humans, bots, and delegated agents.
         </li>
         <li>
           <strong>Governance Lock:</strong> Tokens are transfer-locked for 7 days when proposing or voting on

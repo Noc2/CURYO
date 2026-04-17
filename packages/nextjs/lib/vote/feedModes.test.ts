@@ -168,7 +168,7 @@ test("latest breaks created-time ties with the newer id", () => {
   );
 });
 
-test("highest rewards ranks funded content by available USD rewards", () => {
+test("highest rewards ranks funded content by available USD bounties", () => {
   const nowSeconds = 10_000;
   const ranked = sortDiscoverFeed(
     [

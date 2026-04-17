@@ -24,8 +24,8 @@ export const DISCOVER_FEED_MODE_OPTIONS: DiscoverFeedModeOption[] = [
   },
   {
     value: "highest_rewards",
-    label: "Top USD Rewards",
-    description: "Content with the largest available USDC question reward pools.",
+    label: "Top Bounties",
+    description: "Content with the largest available USDC bounties.",
   },
   {
     value: "contested",

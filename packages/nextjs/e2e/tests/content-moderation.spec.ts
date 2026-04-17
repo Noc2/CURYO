@@ -1,5 +1,4 @@
 import {
-  approveCREP,
   cancelContent,
   submitContentDirect,
   transferCREP,
@@ -26,8 +25,7 @@ test.describe("Content moderation", () => {
   const CONTENT_REGISTRY = CONTRACT_ADDRESSES.ContentRegistry;
   const CREP_TOKEN = CONTRACT_ADDRESSES.CuryoReputation;
   const SUBMITTER = ANVIL_ACCOUNTS.account2.address;
-  // MIN_SUBMITTER_STAKE = 10 cREP = 10e6
-  const SUBMIT_STAKE = BigInt(10e6);
+  const SUBMISSION_REWARD_POOL = BigInt(1e6);
 
   let cancelledContentId: string | null = null;
 
@@ -45,11 +43,8 @@ test.describe("Content moderation", () => {
       // Ponder may not be available
     }
 
-    // Top up cREP for submission stake (deployer has ~10M)
-    await transferCREP(SUBMITTER, SUBMIT_STAKE * 2n, DEPLOYER.address, CREP_TOKEN);
-
-    // Approve cREP for ContentRegistry
-    await approveCREP(CONTENT_REGISTRY, SUBMIT_STAKE, SUBMITTER, CREP_TOKEN);
+    // Top up cREP for mandatory submission bounties (deployer has ~10M)
+    await transferCREP(SUBMITTER, SUBMISSION_REWARD_POOL * 2n, DEPLOYER.address, CREP_TOKEN);
 
     // Ask question
     const uniqueId = Date.now();

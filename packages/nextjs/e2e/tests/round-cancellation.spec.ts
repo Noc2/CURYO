@@ -1,4 +1,4 @@
-import { approveCREP, submitContentDirect } from "../helpers/admin-helpers";
+import { submitContentDirect } from "../helpers/admin-helpers";
 import { ANVIL_ACCOUNTS } from "../helpers/anvil-accounts";
 import { CONTRACT_ADDRESSES } from "../helpers/contracts";
 import { cancelExpiredRoundDirect, fastForwardTime } from "../helpers/keeper";
@@ -25,15 +25,6 @@ test.describe("Round cancellation", () => {
     // Step 1: Ask a new question via direct contract calls (avoids flaky UI submission)
     const submitter = ANVIL_ACCOUNTS.account2.address;
     const uniqueId = Date.now();
-
-    // Approve cREP for submission stake (10 cREP = 10e6)
-    const approved = await approveCREP(
-      CONTRACT_ADDRESSES.ContentRegistry,
-      BigInt(10e6),
-      submitter,
-      CONTRACT_ADDRESSES.CuryoReputation,
-    );
-    expect(approved, "cREP approval for submission stake").toBe(true);
 
     const submitted = await submitContentDirect(
       `https://www.youtube.com/watch?v=cancel_test_${uniqueId}`,

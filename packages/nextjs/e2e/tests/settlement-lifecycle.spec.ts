@@ -153,8 +153,8 @@ test.describe("Settlement lifecycle", () => {
     expect(ratings[0]).toHaveProperty("oldRating");
     expect(ratings[0]).toHaveProperty("newRating");
 
-    // Submitter stake is NOT returned yet (needs STAKE_RETURN_PERIOD = 4 days)
-    expect(settledContent.submitterStakeReturned).toBe(false);
+    // Submitter stake tracking is retired; newly indexed content is marked resolved immediately.
+    expect(settledContent.submitterStakeReturned).toBe(true);
   });
 
   test("governance profile shows vote history after voting", async ({ browser }) => {

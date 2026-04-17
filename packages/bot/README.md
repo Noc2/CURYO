@@ -1,6 +1,6 @@
 # Curyo — Bot (CLI Voting & Content Submission)
 
-Command-line tool for automated YouTube question submission and voting. Discovers trending videos, submits question-first entries to the ContentRegistry, and rates YouTube content with the configured strategy. The same question-first path is how bots and AI agents can ask verified humans for feedback when an automated strategy cannot answer with confidence. Votes use **tlock commit-reveal**: the bot encrypts vote directions with timelock encryption, binds the redeployed drand metadata into the commit payload, and commits them on-chain; the keeper-assisted/self-reveal flow reveals votes after each epoch once the on-chain and off-chain checks are satisfied.
+Command-line tool for automated YouTube question submission and voting. Discovers trending videos, submits question-first entries to the ContentRegistry, and rates YouTube content with the configured strategy. The same question-first path is how bots and AI agents can ask verified humans for feedback when an automated strategy cannot answer with confidence. Submissions use a required context URL plus optional preview media, so bot and human flows stay aligned. Votes use **tlock commit-reveal**: the bot encrypts vote directions with timelock encryption, binds the redeployed drand metadata into the commit payload, and commits them on-chain; the keeper-assisted/self-reveal flow reveals votes after each epoch once the on-chain and off-chain checks are satisfied.
 
 ## Quick Start
 
@@ -8,8 +8,8 @@ Command-line tool for automated YouTube question submission and voting. Discover
 # From the monorepo root:
 yarn bot:submit   # Discover and submit trending content
 yarn bot:vote     # Rate content and place votes on-chain
-yarn bot:claim    # Claim rewards earned by the configured bot wallets
-yarn bot:status   # Check bot account balances and Voter ID status
+yarn bot:claim    # Claim voter rewards earned by the configured rating bot wallet
+yarn bot:status   # Check bot account balances and voting identity status
 
 # Target a single category/source with an explicit cap:
 yarn workspace @curyo/bot submit --category "Media" --max-submissions 5
@@ -19,7 +19,7 @@ yarn workspace @curyo/bot submit --source youtube --max-submissions 2
 Requires configured environment variables and a reachable RPC endpoint.
 `vote` and `claim` require a running Ponder indexer (`yarn ponder:dev`); `submit` does not.
 `status` reports the configured Ponder endpoint when available but can still run without it.
-Question submissions use a question capped at 120 characters. Automated submissions currently use YouTube videos, and reward pool amounts are shown as USD even though settlement happens in USDC on Celo with a default 3% eligible frontend-operator share.
+Question submissions use a question capped at 120 characters. Automated submissions currently use YouTube videos, and each submission must attach a non-refundable bounty funded in cREP or USDC. The bot uses the same submission rules as a human: required context URL, optional preview media, and the same bounty guardrails.
 For MCP or other agent adapters, treat this as a typed bot-to-human feedback loop: the agent asks a narrow question, humans answer with stake, and downstream clients read the public rating result.
 
 ## Scripts
@@ -30,8 +30,8 @@ For MCP or other agent adapters, treat this as a typed bot-to-human feedback loo
 | `yarn workspace @curyo/bot submit --category "Media" --max-submissions 5` | Submit up to 5 items from the `Media` category |
 | `yarn workspace @curyo/bot submit --source youtube --max-submissions 2` | Submit up to 2 items from the YouTube source |
 | `yarn bot:vote` | Rate content and commit encrypted votes via tlock commit-reveal |
-| `yarn bot:claim` | Claim voter and submitter rewards for the configured bot wallets |
-| `yarn bot:status` | Check wallet balances and Voter ID ownership |
+| `yarn bot:claim` | Claim voter rewards for the configured rating bot wallet |
+| `yarn bot:status` | Check wallet balances and voting identity ownership |
 
 The bot is a manual CLI. `yarn dev:stack` starts Ponder, Next.js, and the keeper, but it does not start `submit` or `vote` automatically.
 
@@ -62,6 +62,7 @@ Copy `.env.example` to `.env` in the package directory and fill in the deployed 
 | `CHAIN_ID` | — | Network chain ID |
 | `CREP_TOKEN_ADDRESS` | Auto-derived for supported chains | Fallback cREP token address |
 | `CONTENT_REGISTRY_ADDRESS` | Auto-derived for supported chains | Fallback ContentRegistry address |
+| `QUESTION_REWARD_POOL_ESCROW_ADDRESS` | Auto-derived for supported chains | Fallback QuestionRewardPoolEscrow address |
 | `VOTING_ENGINE_ADDRESS` | Auto-derived for supported chains | Fallback RoundVotingEngine address |
 | `ROUND_REWARD_DISTRIBUTOR_ADDRESS` | Auto-derived for supported chains | Fallback RoundRewardDistributor address |
 | `VOTER_ID_NFT_ADDRESS` | Auto-derived for supported chains | Fallback VoterIdNFT address |
@@ -84,6 +85,7 @@ Copy `.env.example` to `.env` in the package directory and fill in the deployed 
 | `MAX_VOTES_PER_RUN` | — | Limit votes per execution |
 | `MAX_SUBMISSIONS_PER_RUN` | — | Limit submissions per execution |
 | `MAX_SUBMISSIONS_PER_CATEGORY` | — | Per-source cap during submission runs |
+| `SUBMIT_REWARD_ASSET` | `usdc` | Reward-pool asset for submissions: `usdc` or `crep` |
 
 `submit` also supports one-off CLI overrides:
 
@@ -96,9 +98,6 @@ Copy `.env.example` to `.env` in the package directory and fill in the deployed 
 
 `yarn bot:claim` scans Ponder history plus current on-chain claim state, then submits only the claims that are still outstanding for the configured bot wallets.
 
-- Submission bot claims:
-  - `RoundRewardDistributor.claimSubmitterReward(contentId, roundId)`
-  - `ContentRegistry.claimSubmitterParticipationReward(contentId)`
 - Rating bot claims:
   - `RoundVotingEngine.claimCancelledRoundRefund(contentId, roundId)`
   - `RoundRewardDistributor.claimReward(contentId, roundId)`
@@ -118,16 +117,16 @@ Frontend fee sweeping remains a keeper responsibility when the keeper wallet is 
 
 For each `submit` run, the bot:
 
-1. Loads the wallet configured in `SUBMIT_*` and checks that it can submit. The on-chain `hasVoterId(address)` check resolves delegated identities, so a delegated hot wallet can submit on behalf of the Voter ID holder.
-2. Checks that the wallet has enough cREP for the next submission. Each successful question submission stakes **10 cREP**, and the wallet also needs native gas for `approve`, `reserveSubmission`, and `submitQuestionWithMedia`. Optional reward pools are paid separately in USDC on Celo, shown as USD, and reserve the default frontend-operator share on qualified claims.
+1. Loads the wallet configured in `SUBMIT_*` and checks that it can submit. Submission no longer requires `hasVoterId(address)`, so a bot wallet can ask questions directly without a human identity gate.
+2. Checks that the wallet has enough cREP or USDC for the next submission. Each successful question submission must attach the minimum non-refundable bounty, and the wallet also needs native gas for the approval, reservation, and submit transactions.
 3. Chooses the enabled source adapters and fetches trending content. The current bot source reads YouTube's most-popular video feed.
-4. Skips items that do not provide a YouTube URL, then checks the media-backed submission key for duplicates before attempting a transaction.
-5. Truncates generated questions to the 120-character on-chain maximum, calls `previewQuestionMediaSubmissionKey(imageUrls, videoUrl, title, description, tags, categoryId)` to verify the canonical category, reserves the hidden submission commitment, waits a little over one second for the reservation age check, and then submits the media-backed question with the matching salt.
+4. Skips items that do not provide a usable context URL, then checks the context-backed submission key for duplicates before attempting a transaction.
+5. Truncates generated questions to the 120-character on-chain maximum, calls `previewQuestionSubmissionKey(contextUrl, imageUrls, videoUrl, title, description, tags, categoryId)` to verify the canonical category, reserves the hidden submission commitment, waits a little over one second for the reservation age check, and then submits the question with the matching salt and bounty metadata.
 6. Stops when it reaches the configured limit, runs out of cREP, or runs out of fresh items. If a reveal transaction fails after reservation, the bot attempts to cancel the reservation.
 
-## Testing YouTube Questions With A Delegated Bot Wallet
+## Testing YouTube Questions With A Bot Wallet
 
-This is the quickest way to test the bot against the current YouTube popular videos feed, submitted under the broad `Media` review category.
+This is the quickest way to test the bot against the current YouTube popular videos feed, submitted under the broad `Media` review category. The submit wallet does not need a Voter ID or delegation.
 
 1. Configure the bot wallet in `packages/bot/.env`.
 
@@ -153,29 +152,21 @@ You can use a Foundry keystore instead of `SUBMIT_PRIVATE_KEY` if you prefer.
 yarn ponder:dev # optional for submit, required for vote
 ```
 
-If you are testing locally through the web app as well, run the app and Ponder against the same chain so you can manage delegation and transfers from the UI.
+If you are testing locally through the web app as well, run the app and Ponder against the same chain so indexed content appears in the UI.
 
 3. Print the submit bot wallet address.
 
 ```bash
 yarn bot:status
-yarn bot:claim
 ```
 
-4. From the wallet that already holds your Voter ID, open `/settings?tab=delegation` in the app and set the bot wallet as your delegate.
+4. Fund the bot wallet.
 
-- Only the Voter ID holder can call `setDelegate(...)`.
-- The delegated bot wallet does not need to hold the NFT itself.
-- If your holder wallet does not have a Voter ID yet, claim one first through the faucet flow in the app.
-
-5. Fund the bot wallet.
-
-- Send enough cREP for the batch you want to test. The bot stakes `10 cREP` per successful question submission, so `--max-submissions 5` needs at least `50 cREP`.
+- Send enough cREP or USDC for the batch you want to test. Each successful question submission must attach at least the governance minimum bounty.
 - Send enough native gas token as well so the bot can pay for approvals and submission transactions.
-- Fund USDC on Celo only if your workflow also creates question reward pools; plain bot submissions do not attach a reward pool.
-- The same `/settings?tab=delegation` screen can still manage the delegate wallet for vote and claim flows.
+- Delegation is only needed if you also want the bot wallet to vote on behalf of a Voter ID holder.
 
-6. Re-run the status command and confirm the bot wallet is ready.
+5. Re-run the status command and confirm the bot wallet is ready.
 
 ```bash
 yarn bot:status
@@ -183,11 +174,10 @@ yarn bot:status
 
 You want to see:
 
-- `Voter ID: YES`
-- enough `cREP`
+- enough `USDC` or `cREP` for the configured `SUBMIT_REWARD_ASSET`
 - enough native gas for the target chain
 
-7. Run a focused YouTube submission.
+6. Run a focused YouTube submission.
 
 ```bash
 yarn workspace @curyo/bot submit --source youtube --category "Media" --max-submissions 1
@@ -202,9 +192,9 @@ yarn workspace @curyo/bot submit --source youtube --category "Media" --max-submi
 Expected behavior:
 
 - The bot fetches YouTube's current popular videos.
-- Already-submitted video URLs are skipped automatically.
+- Already-submitted context URLs are skipped automatically.
 - Only fresh items are submitted, so the run may submit fewer than the requested max if duplicates are common.
-- Each successful submission stakes `10 cREP`; optional Question Reward Pool funding is separate.
+- Each successful submission must attach the minimum non-refundable bounty in cREP or USDC.
 - If `YOUTUBE_API_KEY` is missing, the YouTube source will return no items.
 
 ## Project Structure
@@ -220,7 +210,7 @@ src/
 ├── commands/
 │   ├── submit.ts    # Discover trending content, submit to ContentRegistry
 │   ├── vote.ts      # Rate content, place votes on-chain
-│   ├── claim.ts     # Claim bot submitter and voter rewards
+│   ├── claim.ts     # Claim bot voter rewards
 │   └── status.ts    # Check balances and Voter ID
 ├── sources/         # Content platform adapters (public + API-backed)
 └── strategies/      # Platform-specific rating strategies

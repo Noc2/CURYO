@@ -200,8 +200,8 @@ const GovernanceDocs: NextPage = () => {
           the treasury.
         </li>
         <li>
-          <strong>Forfeited submitter stakes</strong> &mdash; when content is flagged for policy violations or receives
-          unfavorable ratings, the submitter&apos;s 10 cREP stake is forfeited to the treasury.
+          <strong>Bounty minimums</strong> &mdash; mandatory bounties are non-refundable and remain attached to the
+          submitted question.
         </li>
         <li>
           <strong>Forfeited unrevealed votes</strong> &mdash; unrevealed past-epoch stakes that miss the reveal window

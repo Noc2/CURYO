@@ -1575,7 +1575,7 @@ const HomeInner = () => {
     }
 
     if (activeScope === "all" && activeFeedMode === "highest_rewards") {
-      return "No funded USD reward pools are available right now.";
+      return "No funded USD bounties are available right now.";
     }
 
     if (activeScope === "all" && activeFeedMode === "latest") {

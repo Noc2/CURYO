@@ -1,6 +1,6 @@
 # Curyo — Ponder (Indexer & API)
 
-On-chain event indexer built with [Ponder](https://ponder.sh/). Listens to smart contract events, stores processed data, and exposes a REST API on port 42069 for consumption by the frontend and bot.
+On-chain event indexer built with [Ponder](https://ponder.sh/). Listens to smart contract events, stores processed data, and exposes a REST API on port 42069 for consumption by the frontend, bot, and AI/MCP adapters.
 
 ## Quick Start
 
@@ -60,7 +60,7 @@ src/
 ├── ContentRegistry.ts        # Content submission & lifecycle events
 ├── RoundVotingEngine.ts      # Commit, reveal, settle, cancel events
 ├── RoundRewardDistributor.ts # Reward distribution events
-├── QuestionRewardPoolEscrow.ts # USDC reward pool funding, voter claims, and frontend shares
+├── QuestionRewardPoolEscrow.ts # Bounty funding, voter claims, and frontend shares
 ├── CategoryRegistry.ts       # Seeded discovery category metadata
 ├── ProfileRegistry.ts       # Profile update events
 ├── FrontendRegistry.ts       # Frontend fee events
@@ -85,12 +85,11 @@ The REST API is built with Hono. Key routes:
 | `GET /content/:id` | Single content item |
 | `GET /content/by-url?url=...` | Look up a single content item by URL |
 | `GET /votes` | List votes with filters |
-| `GET /question-reward-claim-candidates` | Claimable USDC reward-pool rounds for a revealed voter |
+| `GET /question-reward-claim-candidates` | Claimable USDC bounty rounds for a revealed voter |
 | `GET /profile/:address` | User profile and reputation |
 | `GET /categories` | List content categories |
 
-Question Reward Pool tables track gross USDC allocation, voter payouts, and the default eligible frontend-operator
-share separately so API consumers can display both voter rewards and operator fees.
+Bounty tables track gross funding, voter payouts, and the default eligible frontend-operator share separately so API consumers can display both voter rewards and operator fees. Content submission events now revolve around the required context URL plus optional preview media, so indexers and clients can treat the source link as the canonical entry point for discovery and previews.
 
 Routes `/health` and `/status` are reserved by Ponder.
 

@@ -4,7 +4,6 @@ import { useMemo, useState } from "react";
 import { useAccount, useConfig, useWriteContract } from "wagmi";
 import { readContract, waitForTransactionReceipt } from "wagmi/actions";
 import { XMarkIcon } from "@heroicons/react/24/outline";
-import { useVoterIdNFT } from "~~/hooks/useVoterIdNFT";
 import {
   DEFAULT_REWARD_POOL_FRONTEND_FEE_BPS,
   ERC20_APPROVAL_ABI,
@@ -36,7 +35,6 @@ export function FundQuestionModal({ contentId, title, onClose, onCreated }: Fund
   const wagmiConfig = useConfig();
   const { address, chain } = useAccount();
   const { writeContractAsync } = useWriteContract();
-  const { hasVoterId, isLoading: voterIdLoading, refetch: refetchVoterId } = useVoterIdNFT(address);
   const [amount, setAmount] = useState("10");
   const [requiredVoters, setRequiredVoters] = useState("5");
   const [requiredRounds, setRequiredRounds] = useState("2");
@@ -53,8 +51,6 @@ export function FundQuestionModal({ contentId, title, onClose, onCreated }: Fund
   const canSubmit = Boolean(
     address &&
       escrowAddress &&
-      !voterIdLoading &&
-      hasVoterId &&
       parsedAmount &&
       voterCount >= MIN_REWARD_POOL_REQUIRED_VOTERS &&
       settledRounds >= MIN_REWARD_POOL_SETTLED_ROUNDS &&
@@ -67,7 +63,7 @@ export function FundQuestionModal({ contentId, title, onClose, onCreated }: Fund
       return;
     }
     if (!escrowAddress) {
-      notification.error("Question Reward Pools are not deployed on this network yet.");
+      notification.error("Bounties are not deployed on this network yet.");
       return;
     }
     if (!parsedAmount) {
@@ -81,12 +77,6 @@ export function FundQuestionModal({ contentId, title, onClose, onCreated }: Fund
 
     setIsFunding(true);
     try {
-      const voterIdResult = await refetchVoterId();
-      if (!voterIdResult.hasVoterId) {
-        notification.error("Verify your Voter ID before funding a reward pool.");
-        return;
-      }
-
       let usdcAddress = fallbackUsdcAddress;
       try {
         usdcAddress = (await readContract(wagmiConfig, {
@@ -128,7 +118,7 @@ export function FundQuestionModal({ contentId, title, onClose, onCreated }: Fund
       });
       await waitForTransactionReceipt(wagmiConfig, { hash: rewardPoolHash });
 
-      notification.success(`Question Reward Pool funded with ${formatUsdAmount(parsedAmount)}. Paid in USDC on Celo.`);
+      notification.success(`Bounty funded with ${formatUsdAmount(parsedAmount)}. Paid in USDC on Celo.`);
       onCreated?.();
       onClose();
     } catch (error) {
@@ -143,7 +133,7 @@ export function FundQuestionModal({ contentId, title, onClose, onCreated }: Fund
   };
 
   return (
-    <div className="modal modal-open" role="dialog" aria-modal="true" aria-label="Fund this question">
+    <div className="modal modal-open" role="dialog" aria-modal="true" aria-label="Fund a bounty">
       <div className="modal-box w-[calc(100vw-2rem)] max-w-lg overflow-x-hidden bg-base-200 px-5 py-6 shadow-2xl sm:px-6">
         <button
           type="button"
@@ -154,7 +144,7 @@ export function FundQuestionModal({ contentId, title, onClose, onCreated }: Fund
           <XMarkIcon className="h-5 w-5" />
         </button>
 
-        <p className="text-sm font-semibold uppercase text-base-content/50">Fund this question</p>
+        <p className="text-sm font-semibold uppercase text-base-content/50">Fund a bounty</p>
         <h3 className="mt-1 line-clamp-2 text-xl font-semibold text-base-content">{title}</h3>
         <p className="mt-2 text-base text-base-content/70">
           Paid in USDC on Celo. Qualified claims reserve {FRONTEND_FEE_PERCENT}% for the eligible frontend operator; the
@@ -163,7 +153,7 @@ export function FundQuestionModal({ contentId, title, onClose, onCreated }: Fund
 
         <div className="mt-5 grid gap-4">
           <label className="form-control">
-            <span className="label-text">Reward amount</span>
+            <span className="label-text">Bounty amount</span>
             <div className="input input-bordered flex items-center gap-2 bg-base-100">
               <span className="text-base-content/50">$</span>
               <input
@@ -217,12 +207,7 @@ export function FundQuestionModal({ contentId, title, onClose, onCreated }: Fund
 
           {!escrowAddress ? (
             <p className="rounded-lg bg-warning/10 p-3 text-sm text-warning">
-              Question Reward Pool funding is not available on this network yet.
-            </p>
-          ) : null}
-          {address && escrowAddress && !voterIdLoading && !hasVoterId ? (
-            <p className="rounded-lg bg-warning/10 p-3 text-sm text-warning">
-              Verify your Voter ID before funding a reward pool.
+              Bounty funding is not available on this network yet.
             </p>
           ) : null}
         </div>
@@ -234,7 +219,7 @@ export function FundQuestionModal({ contentId, title, onClose, onCreated }: Fund
             disabled={!canSubmit || isFunding}
             className="btn btn-primary"
           >
-            {isFunding ? "Funding..." : voterIdLoading ? "Checking Voter ID..." : "Fund this question"}
+            {isFunding ? "Funding..." : "Fund bounty"}
           </button>
           <button type="button" onClick={onClose} className="btn btn-ghost">
             Cancel

@@ -111,7 +111,7 @@ contract ContentRegistry is Initializable, AccessControlUpgradeable, PausableUpg
     mapping(bytes32 => bool) public submissionKeyUsed; // Canonical submission keys prevent duplicate content variants
     IVoterIdNFT public voterIdNFT; // Voter ID NFT for sybil resistance
 
-    /// @notice Escrow that holds mandatory reward pools.
+    /// @notice Escrow that holds mandatory bounties.
     address public questionRewardPoolEscrow;
 
     /// @notice Deprecated submitter reward state retained as zeroed compatibility getters.
@@ -272,7 +272,7 @@ contract ContentRegistry is Initializable, AccessControlUpgradeable, PausableUpg
         emit VoterIdNFTUpdated(_voterIdNFT);
     }
 
-    /// @notice Set or update the reward pool escrow.
+    /// @notice Set or update the bounty escrow.
     function setQuestionRewardPoolEscrow(address _questionRewardPoolEscrow) external onlyRole(CONFIG_ROLE) {
         require(_questionRewardPoolEscrow != address(0), "Invalid address");
         questionRewardPoolEscrow = _questionRewardPoolEscrow;
@@ -378,7 +378,7 @@ contract ContentRegistry is Initializable, AccessControlUpgradeable, PausableUpg
     }
 
     /// @notice Submit a question with a required context link and optional preview media.
-    /// @dev Attaches the governance minimum cREP reward pool.
+    /// @dev Attaches the governance minimum cREP bounty.
     function submitQuestion(
         string calldata contextUrl,
         string[] calldata imageUrls,
@@ -403,7 +403,7 @@ contract ContentRegistry is Initializable, AccessControlUpgradeable, PausableUpg
         );
     }
 
-    /// @notice Compatibility overload that attaches the governance minimum cREP reward pool.
+    /// @notice Compatibility overload that attaches the governance minimum cREP bounty.
     function submitQuestionWithMedia(
         string[] calldata imageUrls,
         string calldata videoUrl,
@@ -430,7 +430,7 @@ contract ContentRegistry is Initializable, AccessControlUpgradeable, PausableUpg
         );
     }
 
-    /// @notice Cancel content before any votes. Attached submission reward pools stay non-refundable.
+    /// @notice Cancel content before any votes. Attached submission bounties stay non-refundable.
     /// @dev Only callable by the submitter. VotingEngine must confirm 0 votes.
     function cancelContent(uint256 contentId) external nonReentrant whenNotPaused {
         require(bonusPool != address(0), "Bonus pool not set");
@@ -604,13 +604,13 @@ contract ContentRegistry is Initializable, AccessControlUpgradeable, PausableUpg
         internal
         returns (uint256 rewardPoolId)
     {
-        require(questionRewardPoolEscrow != address(0), "Reward Pool escrow not set");
+        require(questionRewardPoolEscrow != address(0), "Bounty escrow not set");
         rewardPoolId = IQuestionRewardPoolEscrow(questionRewardPoolEscrow)
             .createSubmissionRewardPoolFromRegistry(contentId, msg.sender, rewardAsset, rewardAmount);
     }
 
     /// @notice Mark content as dormant if it hasn't reached milestone 0 within DORMANCY_PERIOD.
-    /// @dev Anyone can call this. The mandatory submission reward pool is not refunded.
+    /// @dev Anyone can call this. The mandatory submission bounty is not refunded.
     function markDormant(uint256 contentId) external nonReentrant {
         Content storage c = contents[contentId];
         require(c.id != 0, "Content does not exist");
@@ -632,7 +632,7 @@ contract ContentRegistry is Initializable, AccessControlUpgradeable, PausableUpg
     /// @dev Resets the activity timer. Max MAX_REVIVALS revivals per content.
     ///      Revival stake is sent to treasury (non-refundable).
     function reviveContent(uint256 contentId) external nonReentrant whenNotPaused {
-        // Revivals still require Voter ID; fresh question submissions are permissionless with a reward pool.
+        // Revivals still require Voter ID; fresh question submissions are permissionless with a bounty.
         if (address(voterIdNFT) != address(0)) {
             require(voterIdNFT.hasVoterId(msg.sender), "Voter ID required");
         }

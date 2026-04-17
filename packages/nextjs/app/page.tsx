@@ -43,8 +43,7 @@ const ASK_STEPS = [
   {
     icon: CurrencyDollarIcon,
     title: "Add Context and Bounties",
-    description:
-      "Attach links, images, or video. Fund a bounty through the Question Reward Pool when human attention should be paid in USDC.",
+    description: "Attach links, images, or video. Fund a bounty when human attention should be paid in USDC.",
   },
   {
     icon: CpuChipIcon,

@@ -17,7 +17,7 @@ import { IVoterIdNFT } from "./interfaces/IVoterIdNFT.sol";
 import { RoundLib } from "./libraries/RoundLib.sol";
 
 /// @title QuestionRewardPoolEscrow
-/// @notice Holds per-question USDC reward pools and pays equal per-round rewards to revealed voters.
+/// @notice Holds per-question USDC bounties and pays equal per-round rewards to revealed voters.
 /// @dev Curyo 2 keeps cREP coherence penalties in the voting engine. Stablecoin payouts are participation rewards.
 contract QuestionRewardPoolEscrow is
     Initializable,
@@ -390,7 +390,7 @@ contract QuestionRewardPoolEscrow is
         returns (uint256 refundAmount)
     {
         require(!rewardPool.refunded, "Already refunded");
-        require(rewardPool.qualifiedRounds < rewardPool.requiredSettledRounds, "Reward Pool complete");
+        require(rewardPool.qualifiedRounds < rewardPool.requiredSettledRounds, "Bounty complete");
         refundAmount = rewardPool.unallocatedAmount;
         require(refundAmount > 0, "No refund");
         rewardPool.refunded = true;
@@ -496,7 +496,7 @@ contract QuestionRewardPoolEscrow is
 
     function _getExistingRewardPool(uint256 rewardPoolId) internal view returns (RewardPool storage rewardPool) {
         rewardPool = rewardPools[rewardPoolId];
-        require(rewardPool.id != 0, "Reward Pool not found");
+        require(rewardPool.id != 0, "Bounty not found");
     }
 
     function _getIncompleteRewardPoolForQualification(uint256 rewardPoolId)
@@ -506,20 +506,20 @@ contract QuestionRewardPoolEscrow is
     {
         rewardPool = _getExistingRewardPool(rewardPoolId);
         _requirePoolOpenForQualification(rewardPool);
-        require(rewardPool.qualifiedRounds < rewardPool.requiredSettledRounds, "Reward Pool complete");
+        require(rewardPool.qualifiedRounds < rewardPool.requiredSettledRounds, "Bounty complete");
     }
 
     function _qualifyRoundIfNeeded(uint256 rewardPoolId, RewardPool storage rewardPool, uint256 roundId) internal {
         if (!roundSnapshots[rewardPoolId][roundId].qualified) {
             _requirePoolOpenForQualification(rewardPool);
-            require(rewardPool.qualifiedRounds < rewardPool.requiredSettledRounds, "Reward Pool complete");
+            require(rewardPool.qualifiedRounds < rewardPool.requiredSettledRounds, "Bounty complete");
             _qualifyRound(rewardPoolId, rewardPool, roundId);
         }
     }
 
     function _requirePoolOpenForQualification(RewardPool storage rewardPool) internal view {
-        require(!rewardPool.refunded, "Reward Pool refunded");
-        require(rewardPool.expiresAt == 0 || block.timestamp <= rewardPool.expiresAt, "Reward Pool expired");
+        require(!rewardPool.refunded, "Bounty refunded");
+        require(rewardPool.expiresAt == 0 || block.timestamp <= rewardPool.expiresAt, "Bounty expired");
         require(registry.isContentActive(rewardPool.contentId), "Content not active");
     }
 
