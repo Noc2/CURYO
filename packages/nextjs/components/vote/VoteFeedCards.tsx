@@ -13,7 +13,6 @@ import { WatchContentButton } from "~~/components/shared/WatchContentButton";
 import type { ContentItem } from "~~/hooks/useContentFeed";
 import type { SubmitterProfile } from "~~/hooks/useSubmitterProfiles";
 import { type ContentMediaItem, buildFallbackMediaItems, isDirectImageUrl } from "~~/lib/contentMedia";
-import { formatUsdAmount } from "~~/lib/questionRewardPools";
 import { detectPlatform } from "~~/utils/platforms";
 
 const ShareContentModal = dynamic(
@@ -389,9 +388,7 @@ function FeedContentMetaCard({
   const description = item.description.trim();
   const hasDescription = description.length > 0;
   const sourceLabel = getSourceLabel(primaryMediaUrl);
-  const rewardPoolTotal = item.rewardPoolSummary?.totalAvailable ?? item.rewardPoolSummary?.totalFunded ?? 0n;
   const hasSourceDetails = sourceLabel.trim().length > 0;
-  const hasRewardPool = rewardPoolTotal > 0n;
   const hasExpandableDetails = true;
   const showExpandedDetails = !collapseDescription || isExpanded;
   const visibleTags = showExpandedDetails ? item.tags.filter(Boolean) : [];
@@ -465,11 +462,6 @@ function FeedContentMetaCard({
                   <ArrowTopRightOnSquareIcon className="h-3.5 w-3.5" />
                   <span className="max-w-[12rem] truncate">{sourceLabel}</span>
                 </SafeExternalLink>
-              ) : null}
-              {hasRewardPool ? (
-                <span className="rounded-full bg-success/15 px-2.5 py-1 text-sm font-semibold leading-none text-success">
-                  Backed by {formatUsdAmount(rewardPoolTotal)} USDC on Celo; 3% supports the eligible frontend operator
-                </span>
               ) : null}
               {visibleTags.map(tag => (
                 <span key={tag} className="text-sm text-base-content/70">
