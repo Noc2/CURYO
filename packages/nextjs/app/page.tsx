@@ -44,19 +44,7 @@ const ASK_STEPS = [
     icon: CpuChipIcon,
     title: "AI Agent",
     label: "Agent asks",
-    description: (
-      <>
-        An agent (or human) sends a question, context, and USDC bounty to Curyo. See{" "}
-        <Link href="/docs/ai#x402-agent-payments" className="link link-primary">
-          x402 payments
-        </Link>{" "}
-        and{" "}
-        <Link href="/docs/ai#mcp-adapter-shape" className="link link-primary">
-          MCP adapter guidance
-        </Link>{" "}
-        in the AI docs.
-      </>
-    ),
+    description: "An agent (or human) sends a question, context, and USDC bounty to Curyo.",
   },
   {
     icon: ServerStackIcon,
@@ -103,7 +91,7 @@ function WorkflowHeading({
 function HumanWorkflowSection() {
   return (
     <section className="mt-14 w-full">
-      <WorkflowHeading title="Verified Human Round" icon={UserGroupIcon} />
+      <WorkflowHeading title="Verified Human Round" subtitle="For Humans" icon={UserGroupIcon} />
       <div className="grid grid-cols-1 gap-6 sm:grid-cols-3">
         {RATE_STEPS.map(({ icon: Icon, title: stepTitle, description }, index) => (
           <div
@@ -184,10 +172,25 @@ function AskWorkflowSection() {
 
   return (
     <section className="mt-12 w-full">
-      <WorkflowHeading title="How it Works" />
+      <WorkflowHeading title="How it Works" subtitle="AI and Humans" />
       <div className="relative">
         <div className="grid grid-cols-1 gap-4 lg:grid-cols-[minmax(0,1fr)_4.5rem_minmax(0,1.28fr)_4.5rem_minmax(0,1fr)] lg:items-center lg:gap-5">
-          <AskFlowPanel {...agentStep} />
+          <AskFlowPanel {...agentStep}>
+            <div className="mt-5 flex flex-wrap gap-2 text-sm font-semibold text-base-content/66">
+              <Link
+                href="/docs/ai#x402-agent-payments"
+                className="rounded-full bg-base-300 px-3 py-1.5 transition hover:bg-primary/15 hover:text-primary focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+              >
+                x402
+              </Link>
+              <Link
+                href="/docs/ai#mcp-adapter-shape"
+                className="rounded-full bg-base-300 px-3 py-1.5 transition hover:bg-primary/15 hover:text-primary focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+              >
+                MCP
+              </Link>
+            </div>
+          </AskFlowPanel>
 
           <FlowConnector label="question + bounty" />
 
