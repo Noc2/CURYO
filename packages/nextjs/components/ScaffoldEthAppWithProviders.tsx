@@ -14,7 +14,6 @@ import { Header } from "~~/components/Header";
 import { RouteScopedNotifiers } from "~~/components/RouteScopedNotifiers";
 import { ReferralAttributionCapture } from "~~/components/referrals/ReferralAttributionCapture";
 import { FaucetModal, FaucetTrigger } from "~~/components/scaffold-eth";
-import { ClearLegacyBurnerSession } from "~~/components/thirdweb/ClearLegacyBurnerSession";
 import { LocalTestWalletBridge } from "~~/components/thirdweb/LocalTestWalletBridge";
 import { ThirdwebAutoConnectBridge } from "~~/components/thirdweb/ThirdwebAutoConnectBridge";
 import { ThirdwebConnectorWalletBridge } from "~~/components/thirdweb/ThirdwebConnectorWalletBridge";
@@ -84,7 +83,6 @@ export const ScaffoldEthAppWithProviders = ({ children }: { children: React.Reac
     <WagmiProvider config={wagmiConfig}>
       <QueryClientProvider client={queryClient}>
         <ThirdwebProvider>
-          <ClearLegacyBurnerSession />
           <LocalTestWalletBridge />
           <ThirdwebConnectorWalletBridge />
           <ThirdwebAutoConnectBridge />
