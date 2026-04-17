@@ -1,11 +1,16 @@
 import { redirect } from "next/navigation";
 import {
-  ChatBubbleLeftRightIcon,
+  ArrowDownIcon,
+  ArrowLeftIcon,
+  ArrowRightIcon,
+  CheckBadgeIcon,
   CpuChipIcon,
   CurrencyDollarIcon,
   EyeSlashIcon,
   ScaleIcon,
+  ServerStackIcon,
   ShieldCheckIcon,
+  UserGroupIcon,
 } from "@heroicons/react/24/outline";
 import { CuryoAnimation } from "~~/components/home/CuryoAnimation";
 import { LandingFaq } from "~~/components/home/LandingFaq";
@@ -36,33 +41,22 @@ const RATE_STEPS = [
 
 const ASK_STEPS = [
   {
-    icon: ChatBubbleLeftRightIcon,
-    title: "Ask a Focused Question",
-    description: "Write the claim you want rated. Keep it clear, subjective, and narrow enough for voters to judge.",
-  },
-  {
-    icon: CurrencyDollarIcon,
-    title: "Add Context and Bounties",
-    description: "Attach links, images, or video. Fund a bounty when human attention should be paid in USDC.",
-  },
-  {
     icon: CpuChipIcon,
-    title: "Connect the MCP Server",
-    description:
-      "AI agents can use the Curyo MCP server to ask questions, fund bounties, track status, and read settled human ratings.",
-  },
-];
-
-const LANDING_WORKFLOWS = [
-  {
-    title: "How to Rate",
-    subtitle: "For Humans",
-    steps: RATE_STEPS,
+    title: "AI Agent",
+    label: "Agent asks",
+    description: "An agent sends a focused question, context, and USDC bounty through Curyo MCP.",
   },
   {
-    title: "How to Ask",
-    subtitle: "AI and Humans",
-    steps: ASK_STEPS,
+    icon: ServerStackIcon,
+    title: "Curyo MCP",
+    label: "Humans settle",
+    description: "Curyo opens the funded question, tracks the voter round, and routes it to verified humans.",
+  },
+  {
+    icon: CheckBadgeIcon,
+    title: "Settled Rating",
+    label: "Agent reads",
+    description: "The settled human signal returns through MCP, so the same agent can act on trusted input.",
   },
 ];
 
@@ -71,6 +65,149 @@ const FALLBACK_SOCIAL_PROOF_STATS = {
   totalVoterIds: 287,
   totalQuestionRewardsPaid: "0",
 };
+
+function WorkflowHeading({ title, subtitle }: { title: string; subtitle: string }) {
+  return (
+    <div className="mb-8 text-center sm:mb-10">
+      <h2 className="display-section text-4xl text-base-content sm:text-5xl">{title}</h2>
+      <p className="mt-2 text-lg font-semibold text-primary/80">{subtitle}</p>
+    </div>
+  );
+}
+
+function HumanWorkflowSection() {
+  return (
+    <section className="mt-12 w-full">
+      <WorkflowHeading title="How to Rate" subtitle="For Humans" />
+      <div className="grid grid-cols-1 gap-6 sm:grid-cols-3">
+        {RATE_STEPS.map(({ icon: Icon, title: stepTitle, description }, index) => (
+          <div
+            key={stepTitle}
+            className="surface-card flex h-full flex-col items-center rounded-[1.75rem] px-6 py-7 text-center"
+          >
+            <div className="mb-4 flex h-20 w-20 items-center justify-center rounded-2xl bg-base-300 shadow-[0_14px_28px_rgba(9,10,12,0.24)]">
+              <Icon className="h-10 w-10 text-primary" />
+            </div>
+            <h3 className="display-section mb-3 text-2xl text-base-content">
+              {index + 1}. {stepTitle}
+            </h3>
+            <p className="text-lg text-base-content/60">{description}</p>
+          </div>
+        ))}
+      </div>
+    </section>
+  );
+}
+
+function FlowConnector({ label }: { label: string }) {
+  return (
+    <div className="flex items-center justify-center">
+      <div className="hidden w-full flex-col items-center gap-2 text-center lg:flex">
+        <span className="text-xs font-semibold uppercase tracking-[0.18em] text-base-content/45">{label}</span>
+        <div className="flex w-full items-center gap-2 text-primary/70">
+          <div className="h-px flex-1 bg-gradient-to-r from-primary/20 via-primary/60 to-[#50f29a]/70" />
+          <ArrowRightIcon className="h-5 w-5 shrink-0" />
+        </div>
+      </div>
+      <div className="flex flex-col items-center gap-2 text-center lg:hidden">
+        <span className="text-xs font-semibold uppercase tracking-[0.18em] text-base-content/45">{label}</span>
+        <div className="h-8 w-px bg-gradient-to-b from-primary/40 to-[#50f29a]/70" />
+        <ArrowDownIcon className="h-5 w-5 text-primary/70" />
+      </div>
+    </div>
+  );
+}
+
+function AskFlowPanel({
+  icon: Icon,
+  label,
+  title,
+  description,
+  children,
+  emphasis = false,
+}: {
+  icon: typeof CpuChipIcon;
+  label: string;
+  title: string;
+  description: string;
+  children?: React.ReactNode;
+  emphasis?: boolean;
+}) {
+  return (
+    <div
+      className={`surface-card flex h-full flex-col rounded-[1.25rem] px-5 py-6 text-left ${
+        emphasis ? "min-h-[19rem] lg:px-6" : "min-h-[17rem]"
+      }`}
+    >
+      <div className="mb-5 flex items-start justify-between gap-4">
+        <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-2xl bg-base-300 shadow-[0_14px_28px_rgba(9,10,12,0.24)]">
+          <Icon className="h-9 w-9 text-primary" />
+        </div>
+        <span className="rounded-full border border-[#50f29a]/25 px-3 py-1 text-xs font-semibold uppercase tracking-[0.16em] text-[#50f29a]/80">
+          {label}
+        </span>
+      </div>
+      <h3 className="display-section text-2xl text-base-content">{title}</h3>
+      <p className="mt-3 text-base leading-7 text-base-content/62">{description}</p>
+      {children}
+    </div>
+  );
+}
+
+function AskWorkflowSection() {
+  const [agentStep, mcpStep, resultStep] = ASK_STEPS;
+
+  return (
+    <section className="mt-14 w-full">
+      <WorkflowHeading title="How to Ask" subtitle="AI and Humans" />
+      <div className="relative">
+        <div className="grid grid-cols-1 gap-4 lg:grid-cols-[minmax(0,1fr)_4.5rem_minmax(0,1.28fr)_4.5rem_minmax(0,1fr)] lg:items-center lg:gap-5">
+          <AskFlowPanel {...agentStep}>
+            <div className="mt-5 flex flex-wrap gap-2 text-sm font-semibold text-base-content/66">
+              <span className="rounded-full bg-base-300 px-3 py-1.5">question</span>
+              <span className="rounded-full bg-base-300 px-3 py-1.5">context</span>
+              <span className="flex items-center gap-1 rounded-full bg-base-300 px-3 py-1.5">
+                <CurrencyDollarIcon className="h-4 w-4 text-primary" />
+                bounty
+              </span>
+            </div>
+          </AskFlowPanel>
+
+          <FlowConnector label="question + bounty" />
+
+          <AskFlowPanel {...mcpStep} emphasis>
+            <div className="mt-5 rounded-2xl bg-base-300/80 p-4">
+              <div className="flex items-center gap-2 text-sm font-semibold uppercase tracking-[0.16em] text-base-content/45">
+                <UserGroupIcon className="h-5 w-5 text-[#50f29a]/80" />
+                Verified human round
+              </div>
+              <div className="mt-4 grid grid-cols-3 gap-2 text-center text-sm font-semibold text-base-content/68">
+                <span className="rounded-xl bg-base-200 px-2 py-3">stake</span>
+                <span className="rounded-xl bg-base-200 px-2 py-3">reveal</span>
+                <span className="rounded-xl bg-base-200 px-2 py-3">settle</span>
+              </div>
+            </div>
+          </AskFlowPanel>
+
+          <FlowConnector label="settled rating" />
+
+          <AskFlowPanel {...resultStep}>
+            <div className="mt-5 rounded-2xl border border-[#50f29a]/20 bg-[#50f29a]/10 px-4 py-3">
+              <div className="text-xs font-semibold uppercase tracking-[0.16em] text-[#50f29a]/75">returned signal</div>
+              <div className="mt-2 text-lg font-semibold text-base-content">human-rated result</div>
+            </div>
+          </AskFlowPanel>
+        </div>
+
+        <div className="mt-5 flex items-center gap-3 rounded-full border border-[#50f29a]/20 bg-base-200/70 px-4 py-3 text-sm font-semibold text-[#50f29a]/80 lg:mx-6">
+          <ArrowLeftIcon className="h-5 w-5 shrink-0" />
+          <div className="hidden h-px flex-1 bg-gradient-to-l from-primary/20 via-[#50f29a]/55 to-[#50f29a]/80 sm:block" />
+          <span className="shrink-0 text-center">settled signal returns to the AI agent</span>
+        </div>
+      </div>
+    </section>
+  );
+}
 
 function formatUsdcPaidOut(rawAmount: unknown) {
   let amount: bigint;
@@ -174,30 +311,8 @@ export default async function LandingPage({ searchParams }: { searchParams: Prom
           </div>
         </div>
 
-        {LANDING_WORKFLOWS.map(({ title, subtitle, steps }, sectionIndex) => (
-          <section key={title} className={`w-full ${sectionIndex === 0 ? "mt-12" : "mt-14"}`}>
-            <div className="mb-8 text-center sm:mb-10">
-              <h2 className="display-section text-4xl text-base-content sm:text-5xl">{title}</h2>
-              <p className="mt-2 text-lg font-semibold text-primary/80">{subtitle}</p>
-            </div>
-            <div className="grid grid-cols-1 gap-6 sm:grid-cols-3">
-              {steps.map(({ icon: Icon, title: stepTitle, description }, index) => (
-                <div
-                  key={stepTitle}
-                  className="surface-card flex h-full flex-col items-center rounded-[1.75rem] px-6 py-7 text-center"
-                >
-                  <div className="mb-4 flex h-20 w-20 items-center justify-center rounded-2xl bg-base-300 shadow-[0_14px_28px_rgba(9,10,12,0.24)]">
-                    <Icon className="h-10 w-10 text-primary" />
-                  </div>
-                  <h3 className="display-section mb-3 text-2xl text-base-content">
-                    {index + 1}. {stepTitle}
-                  </h3>
-                  <p className="text-lg text-base-content/60">{description}</p>
-                </div>
-              ))}
-            </div>
-          </section>
-        ))}
+        <HumanWorkflowSection />
+        <AskWorkflowSection />
 
         <LandingFaq />
       </div>
