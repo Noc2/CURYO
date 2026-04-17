@@ -2627,6 +2627,32 @@ const deployedContracts: GenericContractsDeclaration = {
         },
         {
           type: "function",
+          name: "MIN_SUBMISSION_REWARD_REQUIRED_VOTERS",
+          inputs: [],
+          outputs: [
+            {
+              name: "",
+              type: "uint256",
+              internalType: "uint256",
+            },
+          ],
+          stateMutability: "view",
+        },
+        {
+          type: "function",
+          name: "MIN_SUBMISSION_REWARD_SETTLED_ROUNDS",
+          inputs: [],
+          outputs: [
+            {
+              name: "",
+              type: "uint256",
+              internalType: "uint256",
+            },
+          ],
+          stateMutability: "view",
+        },
+        {
+          type: "function",
           name: "PAUSER_ROLE",
           inputs: [],
           outputs: [
@@ -4111,6 +4137,21 @@ const deployedContracts: GenericContractsDeclaration = {
               type: "uint256",
               internalType: "uint256",
             },
+            {
+              name: "requiredVoters",
+              type: "uint256",
+              internalType: "uint256",
+            },
+            {
+              name: "requiredSettledRounds",
+              type: "uint256",
+              internalType: "uint256",
+            },
+            {
+              name: "rewardPoolExpiresAt",
+              type: "uint256",
+              internalType: "uint256",
+            },
           ],
           outputs: [
             {
@@ -4172,6 +4213,21 @@ const deployedContracts: GenericContractsDeclaration = {
             },
             {
               name: "rewardAmount",
+              type: "uint256",
+              internalType: "uint256",
+            },
+            {
+              name: "requiredVoters",
+              type: "uint256",
+              internalType: "uint256",
+            },
+            {
+              name: "requiredSettledRounds",
+              type: "uint256",
+              internalType: "uint256",
+            },
+            {
+              name: "rewardPoolExpiresAt",
               type: "uint256",
               internalType: "uint256",
             },
@@ -7723,6 +7779,54 @@ const deployedContracts: GenericContractsDeclaration = {
         {
           type: "function",
           name: "roundParticipationRewardReserved",
+          inputs: [
+            {
+              name: "",
+              type: "uint256",
+              internalType: "uint256",
+            },
+            {
+              name: "",
+              type: "uint256",
+              internalType: "uint256",
+            },
+          ],
+          outputs: [
+            {
+              name: "",
+              type: "uint256",
+              internalType: "uint256",
+            },
+          ],
+          stateMutability: "view",
+        },
+        {
+          type: "function",
+          name: "roundVoterRewardClaimedAmount",
+          inputs: [
+            {
+              name: "",
+              type: "uint256",
+              internalType: "uint256",
+            },
+            {
+              name: "",
+              type: "uint256",
+              internalType: "uint256",
+            },
+          ],
+          outputs: [
+            {
+              name: "",
+              type: "uint256",
+              internalType: "uint256",
+            },
+          ],
+          stateMutability: "view",
+        },
+        {
+          type: "function",
+          name: "roundVoterRewardClaimedCount",
           inputs: [
             {
               name: "",
@@ -11451,6 +11555,11 @@ const deployedContracts: GenericContractsDeclaration = {
           name: "NotInitializing",
           inputs: [],
         },
+        {
+          type: "error",
+          name: "RewardDistributorAlreadySet",
+          inputs: [],
+        },
       ],
       inheritedFunctions: {
         DEFAULT_ADMIN_ROLE:
@@ -11794,6 +11903,21 @@ const deployedContracts: GenericContractsDeclaration = {
             },
             {
               name: "amount",
+              type: "uint256",
+              internalType: "uint256",
+            },
+            {
+              name: "requiredVoters",
+              type: "uint256",
+              internalType: "uint256",
+            },
+            {
+              name: "requiredSettledRounds",
+              type: "uint256",
+              internalType: "uint256",
+            },
+            {
+              name: "expiresAt",
               type: "uint256",
               internalType: "uint256",
             },
@@ -14704,19 +14828,6 @@ const deployedContracts: GenericContractsDeclaration = {
         },
         {
           type: "function",
-          name: "FAUCET_AMOUNT",
-          inputs: [],
-          outputs: [
-            {
-              name: "",
-              type: "uint256",
-              internalType: "uint256",
-            },
-          ],
-          stateMutability: "view",
-        },
-        {
-          type: "function",
           name: "allowance",
           inputs: [
             {
@@ -14781,31 +14892,6 @@ const deployedContracts: GenericContractsDeclaration = {
             },
           ],
           stateMutability: "view",
-        },
-        {
-          type: "function",
-          name: "burn",
-          inputs: [
-            {
-              name: "from",
-              type: "address",
-              internalType: "address",
-            },
-            {
-              name: "amount",
-              type: "uint256",
-              internalType: "uint256",
-            },
-          ],
-          outputs: [],
-          stateMutability: "nonpayable",
-        },
-        {
-          type: "function",
-          name: "claimFaucet",
-          inputs: [],
-          outputs: [],
-          stateMutability: "nonpayable",
         },
         {
           type: "function",
@@ -15725,33 +15811,7 @@ const deployedContracts: GenericContractsDeclaration = {
       abi: [
         {
           type: "function",
-          name: "MOCK_BIOMETRIC_ID_CARD_ATTESTATION_ID",
-          inputs: [],
-          outputs: [
-            {
-              name: "",
-              type: "bytes32",
-              internalType: "bytes32",
-            },
-          ],
-          stateMutability: "view",
-        },
-        {
-          type: "function",
           name: "MOCK_CONFIG_ID",
-          inputs: [],
-          outputs: [
-            {
-              name: "",
-              type: "bytes32",
-              internalType: "bytes32",
-            },
-          ],
-          stateMutability: "view",
-        },
-        {
-          type: "function",
-          name: "MOCK_KYC_ATTESTATION_ID",
           inputs: [],
           outputs: [
             {
@@ -15774,19 +15834,6 @@ const deployedContracts: GenericContractsDeclaration = {
             },
           ],
           stateMutability: "view",
-        },
-        {
-          type: "function",
-          name: "removeVerification",
-          inputs: [
-            {
-              name: "user",
-              type: "address",
-              internalType: "address",
-            },
-          ],
-          outputs: [],
-          stateMutability: "nonpayable",
         },
         {
           type: "function",
@@ -22396,6 +22443,32 @@ const deployedContracts: GenericContractsDeclaration = {
         },
         {
           type: "function",
+          name: "MIN_SUBMISSION_REWARD_REQUIRED_VOTERS",
+          inputs: [],
+          outputs: [
+            {
+              name: "",
+              type: "uint256",
+              internalType: "uint256",
+            },
+          ],
+          stateMutability: "view",
+        },
+        {
+          type: "function",
+          name: "MIN_SUBMISSION_REWARD_SETTLED_ROUNDS",
+          inputs: [],
+          outputs: [
+            {
+              name: "",
+              type: "uint256",
+              internalType: "uint256",
+            },
+          ],
+          stateMutability: "view",
+        },
+        {
+          type: "function",
           name: "PAUSER_ROLE",
           inputs: [],
           outputs: [
@@ -23880,6 +23953,21 @@ const deployedContracts: GenericContractsDeclaration = {
               type: "uint256",
               internalType: "uint256",
             },
+            {
+              name: "requiredVoters",
+              type: "uint256",
+              internalType: "uint256",
+            },
+            {
+              name: "requiredSettledRounds",
+              type: "uint256",
+              internalType: "uint256",
+            },
+            {
+              name: "rewardPoolExpiresAt",
+              type: "uint256",
+              internalType: "uint256",
+            },
           ],
           outputs: [
             {
@@ -23941,6 +24029,21 @@ const deployedContracts: GenericContractsDeclaration = {
             },
             {
               name: "rewardAmount",
+              type: "uint256",
+              internalType: "uint256",
+            },
+            {
+              name: "requiredVoters",
+              type: "uint256",
+              internalType: "uint256",
+            },
+            {
+              name: "requiredSettledRounds",
+              type: "uint256",
+              internalType: "uint256",
+            },
+            {
+              name: "rewardPoolExpiresAt",
               type: "uint256",
               internalType: "uint256",
             },
@@ -27492,6 +27595,54 @@ const deployedContracts: GenericContractsDeclaration = {
         {
           type: "function",
           name: "roundParticipationRewardReserved",
+          inputs: [
+            {
+              name: "",
+              type: "uint256",
+              internalType: "uint256",
+            },
+            {
+              name: "",
+              type: "uint256",
+              internalType: "uint256",
+            },
+          ],
+          outputs: [
+            {
+              name: "",
+              type: "uint256",
+              internalType: "uint256",
+            },
+          ],
+          stateMutability: "view",
+        },
+        {
+          type: "function",
+          name: "roundVoterRewardClaimedAmount",
+          inputs: [
+            {
+              name: "",
+              type: "uint256",
+              internalType: "uint256",
+            },
+            {
+              name: "",
+              type: "uint256",
+              internalType: "uint256",
+            },
+          ],
+          outputs: [
+            {
+              name: "",
+              type: "uint256",
+              internalType: "uint256",
+            },
+          ],
+          stateMutability: "view",
+        },
+        {
+          type: "function",
+          name: "roundVoterRewardClaimedCount",
           inputs: [
             {
               name: "",
@@ -31218,6 +31369,11 @@ const deployedContracts: GenericContractsDeclaration = {
         {
           type: "error",
           name: "NotInitializing",
+          inputs: [],
+        },
+        {
+          type: "error",
+          name: "RewardDistributorAlreadySet",
           inputs: [],
         },
       ],
@@ -40735,6 +40891,32 @@ const deployedContracts: GenericContractsDeclaration = {
         },
         {
           type: "function",
+          name: "MIN_SUBMISSION_REWARD_REQUIRED_VOTERS",
+          inputs: [],
+          outputs: [
+            {
+              name: "",
+              type: "uint256",
+              internalType: "uint256",
+            },
+          ],
+          stateMutability: "view",
+        },
+        {
+          type: "function",
+          name: "MIN_SUBMISSION_REWARD_SETTLED_ROUNDS",
+          inputs: [],
+          outputs: [
+            {
+              name: "",
+              type: "uint256",
+              internalType: "uint256",
+            },
+          ],
+          stateMutability: "view",
+        },
+        {
+          type: "function",
           name: "PAUSER_ROLE",
           inputs: [],
           outputs: [
@@ -42219,6 +42401,21 @@ const deployedContracts: GenericContractsDeclaration = {
               type: "uint256",
               internalType: "uint256",
             },
+            {
+              name: "requiredVoters",
+              type: "uint256",
+              internalType: "uint256",
+            },
+            {
+              name: "requiredSettledRounds",
+              type: "uint256",
+              internalType: "uint256",
+            },
+            {
+              name: "rewardPoolExpiresAt",
+              type: "uint256",
+              internalType: "uint256",
+            },
           ],
           outputs: [
             {
@@ -42280,6 +42477,21 @@ const deployedContracts: GenericContractsDeclaration = {
             },
             {
               name: "rewardAmount",
+              type: "uint256",
+              internalType: "uint256",
+            },
+            {
+              name: "requiredVoters",
+              type: "uint256",
+              internalType: "uint256",
+            },
+            {
+              name: "requiredSettledRounds",
+              type: "uint256",
+              internalType: "uint256",
+            },
+            {
+              name: "rewardPoolExpiresAt",
               type: "uint256",
               internalType: "uint256",
             },
@@ -45831,6 +46043,54 @@ const deployedContracts: GenericContractsDeclaration = {
         {
           type: "function",
           name: "roundParticipationRewardReserved",
+          inputs: [
+            {
+              name: "",
+              type: "uint256",
+              internalType: "uint256",
+            },
+            {
+              name: "",
+              type: "uint256",
+              internalType: "uint256",
+            },
+          ],
+          outputs: [
+            {
+              name: "",
+              type: "uint256",
+              internalType: "uint256",
+            },
+          ],
+          stateMutability: "view",
+        },
+        {
+          type: "function",
+          name: "roundVoterRewardClaimedAmount",
+          inputs: [
+            {
+              name: "",
+              type: "uint256",
+              internalType: "uint256",
+            },
+            {
+              name: "",
+              type: "uint256",
+              internalType: "uint256",
+            },
+          ],
+          outputs: [
+            {
+              name: "",
+              type: "uint256",
+              internalType: "uint256",
+            },
+          ],
+          stateMutability: "view",
+        },
+        {
+          type: "function",
+          name: "roundVoterRewardClaimedCount",
           inputs: [
             {
               name: "",
@@ -49557,6 +49817,11 @@ const deployedContracts: GenericContractsDeclaration = {
         {
           type: "error",
           name: "NotInitializing",
+          inputs: [],
+        },
+        {
+          type: "error",
+          name: "RewardDistributorAlreadySet",
           inputs: [],
         },
       ],

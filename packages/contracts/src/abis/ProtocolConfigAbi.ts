@@ -1297,5 +1297,10 @@ export const ProtocolConfigAbi = [
     "type": "error",
     "name": "NotInitializing",
     "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "RewardDistributorAlreadySet",
+    "inputs": []
   }
 ] as const;

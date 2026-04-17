@@ -227,6 +227,32 @@ export const ContentRegistryAbi = [
   },
   {
     "type": "function",
+    "name": "MIN_SUBMISSION_REWARD_REQUIRED_VOTERS",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "MIN_SUBMISSION_REWARD_SETTLED_ROUNDS",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
     "name": "PAUSER_ROLE",
     "inputs": [],
     "outputs": [
