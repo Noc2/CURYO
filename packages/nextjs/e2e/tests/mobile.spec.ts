@@ -30,7 +30,7 @@ test.describe("Mobile viewport (phone)", () => {
 
     const dropdown = page.locator(".dropdown-content");
     await expect(dropdown.getByRole("link", { name: /Rate/i })).toBeVisible({ timeout: 5_000 });
-    await expect(dropdown.getByRole("link", { name: /Submit/i })).toBeVisible({ timeout: 3_000 });
+    await expect(dropdown.getByRole("link", { name: /Ask/i })).toBeVisible({ timeout: 3_000 });
     await expect(dropdown.getByRole("link", { name: /cREP/i })).toBeVisible({ timeout: 3_000 });
     const voteTopChrome = page.locator('[data-vote-mobile-top-chrome="true"]');
     await expect(voteTopChrome).toHaveAttribute("data-visible", "false");
@@ -588,11 +588,11 @@ test.describe("Mobile viewport (phone)", () => {
     await page.getByLabel("Open menu").click();
     await page
       .locator(".dropdown-content")
-      .getByRole("link", { name: /Submit/i })
+      .getByRole("link", { name: /Ask/i })
       .waitFor({ state: "visible", timeout: 3_000 });
     await page
       .locator(".dropdown-content")
-      .getByRole("link", { name: /Submit/i })
+      .getByRole("link", { name: /Ask/i })
       .click();
 
     await expect(page).toHaveURL(/\/ask/, { timeout: 15_000 });
@@ -678,7 +678,7 @@ test.describe("Mobile viewport (phone)", () => {
     await expect(page.locator('[data-vote-attention="true"]').first()).toBeVisible({ timeout: 5_000 });
   });
 
-  test("submit page form is usable", async ({ connectedPage: page }) => {
+  test("ask page form is usable", async ({ connectedPage: page }) => {
     await page.goto("/ask");
 
     const main = page.locator("main");

@@ -17,7 +17,7 @@ interface VoteViewGroup {
 const ACTIVITY_VIEW_OPTIONS: VoteViewOption[] = [
   { value: "watched", label: "Watched" },
   { value: "my_votes", label: "My Votes" },
-  { value: "my_submissions", label: "My Submissions" },
+  { value: "my_submissions", label: "My Questions" },
   { value: "settling_soon", label: "Your Settling Soon" },
   { value: "followed_curators", label: "Curators You Follow" },
 ];

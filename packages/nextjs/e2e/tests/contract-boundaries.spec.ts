@@ -63,7 +63,7 @@ test.describe("Contract boundary conditions", () => {
   test("double commit in same round reverts", async () => {
     test.setTimeout(60_000);
 
-    // Submit fresh content so we get a clean round with no existing votes
+    // Ask a fresh question so we get a clean round with no existing votes
     const submitter = ANVIL_ACCOUNTS.account10;
     await approveCREP(CONTENT_REGISTRY, BigInt(10e6), submitter.address, CREP_TOKEN);
 

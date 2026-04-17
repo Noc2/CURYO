@@ -5,7 +5,7 @@ import { setupWallet } from "../helpers/wallet-session";
 import { gotoWithRetry, waitForFeedLoaded } from "../helpers/wait-helpers";
 
 test.describe("Error states and edge cases", () => {
-  test("submit page without VoterID shows mint prompt", async ({ browser }) => {
+  test("ask page without VoterID shows mint prompt", async ({ browser }) => {
     // Account #0 has no VoterID and is otherwise idle in local E2E.
     const context = await newE2EContext(browser);
     const page = await context.newPage();
@@ -16,9 +16,9 @@ test.describe("Error states and edge cases", () => {
     const voterIdRequired = page.getByRole("heading", { name: /Voter ID Required/i });
     const getVoterIdLink = page.getByRole("link", { name: /Get Voter ID/i });
     const submitForm = page.getByRole("heading", { name: "Ask Question" });
-    const signedOutHeading = page.getByRole("heading", { name: "Submit" });
+    const signedOutHeading = page.getByRole("heading", { name: "Ask" });
     // Local wallet auto-connect is best-effort in E2E. Accept either the
-    // connected no-VoterID prompt, the full submit form, or the signed-out shell.
+    // connected no-VoterID prompt, the full ask form, or the signed-out shell.
     await expect(voterIdRequired.or(submitForm).or(signedOutHeading)).toBeVisible({ timeout: 15_000 });
 
     if (await voterIdRequired.isVisible()) {
@@ -30,7 +30,7 @@ test.describe("Error states and edge cases", () => {
     await context.close();
   });
 
-  test("own content shows 'Your submission' label", async ({ connectedPage: page }) => {
+  test("own content shows 'Your question' label", async ({ connectedPage: page }) => {
     test.setTimeout(120_000);
     await gotoWithRetry(page, "/rate", { ensureWalletConnected: true, timeout: 45_000 });
     await waitForFeedLoaded(page, 30_000);
@@ -39,13 +39,13 @@ test.describe("Error states and edge cases", () => {
     await expect(viewButton).toBeVisible({ timeout: 10_000 });
     await viewButton.click();
 
-    const mySubmissionsOption = page.getByRole("button", { name: "My Submissions" });
+    const mySubmissionsOption = page.getByRole("button", { name: "My Questions" });
     await expect(mySubmissionsOption).toBeVisible({ timeout: 10_000 });
     await mySubmissionsOption.click();
 
     await waitForFeedLoaded(page, 30_000);
-    const ownSubmission = page.getByText("Your submission").first();
-    const emptyState = page.getByText(/You haven't submitted any content yet\./i);
+    const ownSubmission = page.getByText("Your question").first();
+    const emptyState = page.getByText(/You haven't asked any questions yet\./i);
 
     const hasResult = await ownSubmission
       .or(emptyState)

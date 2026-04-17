@@ -1551,7 +1551,7 @@ const HomeInner = () => {
     }
 
     if (activeScope === "my_submissions") {
-      return address ? "You haven't submitted any content yet." : "Sign in to view your submissions.";
+      return address ? "You haven't asked any questions yet." : "Sign in to view your questions.";
     }
 
     if (activeScope === "settling_soon") {
@@ -1579,7 +1579,7 @@ const HomeInner = () => {
     }
 
     if (activeScope === "all" && activeFeedMode === "latest") {
-      return "No recent submissions are available right now.";
+      return "No recent questions are available right now.";
     }
 
     if (activeScope === "all" && activeFeedMode === "near_settlement") {
@@ -1591,7 +1591,7 @@ const HomeInner = () => {
     }
 
     if (activeCategory === ALL_FILTER) {
-      return "No content submitted yet. Be the first!";
+      return "No questions have been asked yet. Be the first!";
     }
 
     return `No content found in "${activeCategory}".`;

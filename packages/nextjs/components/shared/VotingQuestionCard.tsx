@@ -523,11 +523,11 @@ export function VotingQuestionCard({
           <span
             className={`${DOCK_STATUS_TEXT_CLASS_NAME} max-w-[7.25rem] text-[0.95rem] leading-tight text-base-content/68`}
           >
-            Your submission
+            Your question
           </span>
         ) : (
           <span className={STATUS_PILL_CLASS_NAME}>
-            <span className="text-base text-base-content/65">Your submission</span>
+            <span className="text-base text-base-content/65">Your question</span>
           </span>
         )}
       </HoverTooltip>

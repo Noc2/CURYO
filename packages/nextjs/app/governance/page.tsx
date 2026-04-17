@@ -2,10 +2,11 @@
 
 import { Suspense, useCallback, useEffect, useRef, useState } from "react";
 import dynamic from "next/dynamic";
-import { useSearchParams } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useAccount } from "wagmi";
 import { AppPageShell } from "~~/components/shared/AppPageShell";
 import { ConnectWalletCard } from "~~/components/shared/ConnectWalletCard";
+import { LEGACY_GOVERNANCE_OPERATOR_HASH, SETTINGS_FRONTEND_ROUTE } from "~~/constants/routes";
 import { useScaffoldReadContract } from "~~/hooks/scaffold-eth";
 import { useVoterIdNFT } from "~~/hooks/useVoterIdNFT";
 import {
@@ -13,9 +14,9 @@ import {
   getStoredReferralAddress,
 } from "~~/lib/referrals/referralAttribution";
 
-type GovernanceTab = "profile" | "leaderboard" | "governance" | "faucet" | "operator";
+type GovernanceTab = "profile" | "leaderboard" | "governance" | "faucet";
 
-const governanceTabs: GovernanceTab[] = ["profile", "leaderboard", "governance", "faucet", "operator"];
+const governanceTabs: GovernanceTab[] = ["profile", "leaderboard", "governance", "faucet"];
 const zeroBalanceTabs: GovernanceTab[] = ["profile", "faucet"];
 
 function GovernanceSectionLoading() {
@@ -59,10 +60,6 @@ const GovernanceActionComposer = dynamic(
 const ProposalList = dynamic(() => import("~~/components/governance/ProposalList").then(mod => mod.ProposalList), {
   loading: GovernanceSectionLoading,
 });
-const FrontendRegistration = dynamic(
-  () => import("~~/components/governance/FrontendRegistration").then(mod => mod.FrontendRegistration),
-  { loading: GovernanceSectionLoading },
-);
 
 function getGovernanceHash(tab: GovernanceTab) {
   return tab === "profile" ? "" : `#${tab}`;
@@ -76,6 +73,7 @@ function normalizeGovernanceHash(hash: string): GovernanceTab | null {
 
 function GovernancePageInner() {
   const { isConnected, address } = useAccount();
+  const router = useRouter();
   const searchParams = useSearchParams();
   const [activeTab, setActiveTab] = useState<GovernanceTab>("profile");
   const [hashInitialized, setHashInitialized] = useState(false);
@@ -92,6 +90,12 @@ function GovernancePageInner() {
   useEffect(() => {
     const applyHash = () => {
       const rawHash = window.location.hash.replace(/^#/, "");
+      if (rawHash === LEGACY_GOVERNANCE_OPERATOR_HASH) {
+        setHashInitialized(true);
+        router.replace(SETTINGS_FRONTEND_ROUTE);
+        return;
+      }
+
       const nextTab = normalizeGovernanceHash(rawHash);
       setHashInitialized(true);
 
@@ -107,7 +111,7 @@ function GovernancePageInner() {
     applyHash();
     window.addEventListener("hashchange", applyHash);
     return () => window.removeEventListener("hashchange", applyHash);
-  }, []);
+  }, [router]);
 
   // Extract and validate referral code from URL, then fall back to stored attribution.
   useEffect(() => {
@@ -258,14 +262,6 @@ function GovernancePageInner() {
             >
               Governance
             </button>
-            <button
-              onClick={() => selectTab("operator")}
-              className={`px-4 py-1.5 rounded-full text-base font-medium transition-colors ${
-                activeTab === "operator" ? "pill-active" : "pill-inactive"
-              }`}
-            >
-              Operator
-            </button>
           </>
         )}
       </div>
@@ -291,8 +287,6 @@ function GovernancePageInner() {
           <ProposalList />
         </div>
       )}
-
-      {activeTab === "operator" && <FrontendRegistration />}
     </AppPageShell>
   );
 }

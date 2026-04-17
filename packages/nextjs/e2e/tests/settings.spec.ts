@@ -17,7 +17,7 @@ test.describe("Settings page", () => {
     const senderBalanceBefore = await readTokenBalance(sender, tokenAddress);
     const recipientBalanceBefore = await readTokenBalance(recipient, tokenAddress);
 
-    await gotoWithRetry(page, "/settings?tab=delegation");
+    await gotoWithRetry(page, "/settings#delegation");
 
     await expect(page.getByRole("heading", { name: "Delegated Vote ID" })).toBeVisible({ timeout: 15_000 });
     await expect(page.getByRole("heading", { name: "Transfer cREP" })).toBeVisible({ timeout: 15_000 });
@@ -37,5 +37,13 @@ test.describe("Settings page", () => {
 
     expect(senderBalanceAfter).toBe(senderBalanceBefore - transferAmountMicro);
     expect(recipientBalanceAfter).toBe(recipientBalanceBefore + transferAmountMicro);
+  });
+
+  test("frontend tab shows the registration surface", async ({ connectedPage: page }) => {
+    await gotoWithRetry(page, "/settings#frontend");
+
+    await expect(page).toHaveURL(/\/settings#frontend$/);
+    await expect(page.getByRole("button", { name: "Frontend", exact: true })).toHaveClass(/pill-active/);
+    await expect(page.getByRole("heading", { name: "Frontend Registration" })).toBeVisible({ timeout: 15_000 });
   });
 });

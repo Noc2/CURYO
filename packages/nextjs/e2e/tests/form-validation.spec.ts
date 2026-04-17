@@ -1,7 +1,7 @@
 import { expect, test } from "../fixtures/wallet";
 
-test.describe("Submit form validation", () => {
-  test("submit shows a category validation error before submission", async ({ connectedPage: page }) => {
+test.describe("Ask form validation", () => {
+  test("ask shows a category validation error before asking", async ({ connectedPage: page }) => {
     await page.goto("/ask");
     await page.waitForLoadState("domcontentloaded");
 
@@ -13,10 +13,10 @@ test.describe("Submit form validation", () => {
     await expect(submitBtn).toBeEnabled();
     await submitBtn.click();
 
-    await expect(page.getByText("Select a category before submitting.")).toBeVisible({ timeout: 5_000 });
+    await expect(page.getByText("Select a category before asking.")).toBeVisible({ timeout: 5_000 });
   });
 
-  test("submit shows a URL validation error before submission", async ({ connectedPage: page }) => {
+  test("ask shows a URL validation error before asking", async ({ connectedPage: page }) => {
     await page.goto("/ask");
 
     await expect(page.getByRole("heading", { name: "Ask Question" })).toBeVisible({ timeout: 15_000 });
@@ -34,7 +34,7 @@ test.describe("Submit form validation", () => {
     await expect(submitBtn).toBeEnabled();
     await submitBtn.click();
 
-    await expect(page.getByText("Add at least one image URL before submitting.")).toBeVisible({ timeout: 5_000 });
+    await expect(page.getByText("Add at least one image URL before asking.")).toBeVisible({ timeout: 5_000 });
   });
 
   test("category dropdown shows options", async ({ connectedPage: page }) => {
@@ -85,7 +85,7 @@ test.describe("Submit form validation", () => {
     // Tab away to trigger validation
     await urlInput.press("Tab");
 
-    // Submit button should still be disabled with invalid URL
+    // Ask button should still be disabled with invalid URL
     const submitBtn = page.getByRole("button", { name: /^Ask Question/i });
     await expect(submitBtn).toBeVisible({ timeout: 5_000 });
     const isDisabled = await submitBtn.isDisabled().catch(() => false);

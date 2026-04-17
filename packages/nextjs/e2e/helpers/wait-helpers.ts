@@ -153,7 +153,7 @@ export async function gotoWithRetry(
 
 /**
  * Wait until the content feed has loaded — either content cards appear
- * or the "No content submitted yet" empty state shows.
+ * or the "No questions have been asked yet" empty state shows.
  */
 export async function waitForFeedLoaded(page: Page, timeout = 15_000): Promise<void> {
   const feedContent = () =>
@@ -161,10 +161,10 @@ export async function waitForFeedLoaded(page: Page, timeout = 15_000): Promise<v
       .getByRole("button", { name: "Vote up" })
       .or(page.getByRole("button", { name: "Vote down" }))
       .or(page.getByText(/Voted(?: hidden| Up| Down)?/i))
-      .or(page.getByText("Your submission"))
+      .or(page.getByText("Your question"))
       .or(page.getByText(/Cooldown/))
       .or(page.getByText("Round full"))
-      .or(page.getByText("No content submitted yet"))
+      .or(page.getByText("No questions have been asked yet"))
       .or(page.getByText(/No content found/i));
   const connectButton = getVisibleAuthConnectButton(page);
 

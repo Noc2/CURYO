@@ -37,7 +37,7 @@ test.describe("Browser compatibility smoke", () => {
       page
         .getByRole("button", { name: VOTE_UP_BUTTON })
         .or(page.getByRole("button", { name: VOTE_DOWN_BUTTON }))
-        .or(page.getByText(/No content submitted yet|No content found/i))
+        .or(page.getByText(/No questions have been asked yet|No content found/i))
         .first(),
     ).toBeVisible({ timeout: 15_000 });
     await expectNoHorizontalOverflow(page, "/rate browser compat");

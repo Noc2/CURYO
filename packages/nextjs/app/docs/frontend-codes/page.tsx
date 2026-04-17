@@ -1,5 +1,6 @@
 import Link from "next/link";
 import type { NextPage } from "next";
+import { SETTINGS_FRONTEND_ROUTE } from "~~/constants/routes";
 import { protocolDocFacts } from "~~/lib/docs/protocolFacts";
 
 const sdkSourceHref = "https://github.com/Noc2/CURYO/tree/main/packages/sdk";
@@ -47,9 +48,9 @@ const FrontendCodes: NextPage = () => {
             Register a frontend address when you want votes made through your interface to earn{" "}
             <strong>{protocolDocFacts.frontendShareLabel}</strong> from settled two-sided rounds.
           </p>
-          <a href="#register-a-frontend-operator" className="link link-primary">
-            Jump to operator setup
-          </a>
+          <Link href={SETTINGS_FRONTEND_ROUTE} className="link link-primary">
+            Open frontend settings
+          </Link>
         </div>
       </div>
 
@@ -93,6 +94,13 @@ const FrontendCodes: NextPage = () => {
         <strong>{protocolDocFacts.frontendShareLabel}</strong> from settled two-sided rounds on votes made through their
         interface. Question Reward Pools also reserve a default 3% USDC share for the eligible frontend operator
         attributed at vote commit time.
+      </p>
+      <p>
+        The reference app registration flow lives in{" "}
+        <Link href={SETTINGS_FRONTEND_ROUTE} className="link link-primary">
+          Settings
+        </Link>
+        .
       </p>
       <ol>
         <li>

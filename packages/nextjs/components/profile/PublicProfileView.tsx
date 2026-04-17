@@ -747,8 +747,8 @@ export function PublicProfileView({ address, embedded = false }: PublicProfileVi
         <div className="surface-card rounded-3xl p-6">
           <div className="mb-4 flex items-center justify-between gap-3">
             <div className="flex items-center gap-1.5">
-              <span className="text-base font-medium text-base-content/60">Recent submissions</span>
-              <InfoTooltip text="Latest content this curator has submitted. This is the clearest payoff from following them." />
+              <span className="text-base font-medium text-base-content/60">Recent questions</span>
+              <InfoTooltip text="Latest questions this curator has asked. This is the clearest payoff from following them." />
             </div>
             <span className="text-base tabular-nums text-base-content/45">
               {profileLoading ? "..." : recentSubmissions.length}
@@ -761,7 +761,7 @@ export function PublicProfileView({ address, embedded = false }: PublicProfileVi
             </div>
           ) : recentSubmissions.length === 0 ? (
             <div className="rounded-2xl bg-base-content/[0.04] px-4 py-8 text-center text-base text-base-content/55">
-              No submissions yet.
+              No questions yet.
             </div>
           ) : (
             <div className="grid gap-3 md:grid-cols-2">

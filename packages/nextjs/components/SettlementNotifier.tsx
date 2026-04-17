@@ -234,8 +234,8 @@ export function SettlementNotifier() {
       const shortTitle = truncateContentTitle(item.title);
       notifyWithLink(
         "success",
-        "Followed curator submitted",
-        `${displayName} submitted "${shortTitle}".`,
+        "Followed curator asked",
+        `${displayName} asked "${shortTitle}".`,
         buildRateContentHref(item.contentId),
         FOLLOWED_CURATOR_TOAST_ID,
       );

@@ -39,11 +39,11 @@ test.describe("Voting flow — 3-voter threshold", () => {
     const connectedIndicators = page
       .getByRole("button", { name: "Vote up" })
       .or(page.getByRole("button", { name: "Vote down" }))
-      .or(page.getByText("Your submission"))
+      .or(page.getByText("Your question"))
       .or(page.getByText(/Cooldown/))
       .or(page.getByText(/Voted(?: hidden| Up| Down)?/i))
       .or(page.getByText("Round full"))
-      .or(page.getByText("No content submitted yet"));
+      .or(page.getByText("No questions have been asked yet"));
 
     await expect(connectedIndicators.first()).toBeVisible({ timeout: 15_000 });
     await context.close();

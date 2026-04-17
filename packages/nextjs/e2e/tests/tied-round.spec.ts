@@ -23,7 +23,7 @@ import { expect, test } from "@playwright/test";
  * the content rating does NOT change, and rewards are handled correctly.
  *
  * Strategy:
- * 1. Submit fresh content via the UI to get a clean round with 0 votes
+ * 1. Ask a fresh question via the UI to get a clean round with 0 votes
  * 2. 4 accounts vote on the SAME content via UI: 2 UP + 2 DOWN, all 1 cREP
  *    (UI voting uses commitVote correctly via hooks)
  * 3. Fast-forward past epoch → keeper reveals via keeper API → fast-forward → settle
@@ -35,7 +35,7 @@ import { expect, test } from "@playwright/test";
  * - Accounts #5, #6 — vote DOWN (1 cREP each)
  *
  * NOTE: Uses accounts that may already have cooldowns from settlement-lifecycle
- * and reward-claim tests. The test submits fresh content to avoid cooldown issues.
+ * and reward-claim tests. The test asks a fresh question to avoid cooldown issues.
  */
 test.describe("Tied round lifecycle", () => {
   test.describe.configure({ mode: "serial" });
@@ -50,7 +50,7 @@ test.describe("Tied round lifecycle", () => {
 
   let newContentId: string | null = null;
 
-  test("submit fresh content for tie test", async ({ browser }) => {
+  test("ask a fresh question for tie test", async ({ browser }) => {
     test.setTimeout(120_000);
 
     const context = await newE2EContext(browser);
@@ -68,7 +68,7 @@ test.describe("Tied round lifecycle", () => {
     const hasCategories = await categoryBtn.isVisible().catch(() => false);
     if (!hasCategories) {
       await context.close();
-      test.skip(true, "Categories not loaded — cannot submit content for tie test");
+      test.skip(true, "Categories not loaded — cannot ask a question for tie test");
       return;
     }
 
@@ -100,7 +100,7 @@ test.describe("Tied round lifecycle", () => {
       }
     }
 
-    // Submit
+    // Ask
     const submitBtn = page.getByRole("button", { name: /^Ask Question/i });
     await expect(submitBtn).toBeEnabled({ timeout: 5_000 });
     await submitBtn.click();

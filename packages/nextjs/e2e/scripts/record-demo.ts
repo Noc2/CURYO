@@ -173,10 +173,10 @@ async function waitForVoteFeedScene(page: Page, timeout = 30_000): Promise<void>
     .getByRole("button", { name: "Vote up" })
     .or(page.getByRole("button", { name: "Vote down" }))
     .or(page.getByText(/Voted(?: hidden| Up| Down)?/i))
-    .or(page.getByText("Your submission"))
+    .or(page.getByText("Your question"))
     .or(page.getByText(/Cooldown/i))
     .or(page.getByText("Round full"))
-    .or(page.getByText("No content submitted yet"))
+    .or(page.getByText("No questions have been asked yet"))
     .or(page.getByText(/No content found/i));
 
   await indicators.first().waitFor({ state: "visible", timeout });

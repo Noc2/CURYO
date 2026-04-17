@@ -530,7 +530,7 @@ export async function registerFrontend(fromAddress: string, contractAddress: str
 }
 
 /**
- * Submit a question directly via contract call.
+ * Ask a question directly via contract call.
  * Caller must have approved MIN_SUBMITTER_STAKE (10 cREP = 10e6) to ContentRegistry.
  * Returns true when the submission transaction succeeds.
  */

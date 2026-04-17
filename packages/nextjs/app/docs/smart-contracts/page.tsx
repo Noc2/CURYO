@@ -189,8 +189,8 @@ const SmartContracts: NextPage = () => {
       </p>
       <h3>Sybil Resistance</h3>
       <p>
-        VoterIdNFT is required by most contracts to perform actions: submitting content, voting, registering frontends,
-        creating profiles, and submitting categories. It also enforces a per-Voter-ID stake cap of{" "}
+        VoterIdNFT is required by most contracts to perform actions: asking questions, voting, registering frontends,
+        creating profiles, and creating categories. It also enforces a per-Voter-ID stake cap of{" "}
         <strong>100 cREP per content per round</strong>, preventing a single identity from dominating any vote.
       </p>
       <h3>Key Functions</h3>

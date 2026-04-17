@@ -810,7 +810,7 @@ export const SECTIONS: Section[] = [
               rows: [
                 ["Vote on content", "1-100 cREP", "Per vote, per round"],
                 [
-                  "Submit content",
+                  "Ask question",
                   "10 cREP",
                   "Returned after a healthy settled round once no later round remains open, or at dormancy if no round ever settles; optional Question Reward Pools are funded separately",
                 ],

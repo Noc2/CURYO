@@ -51,7 +51,7 @@ test.describe("Content moderation", () => {
     // Approve cREP for ContentRegistry
     await approveCREP(CONTENT_REGISTRY, SUBMIT_STAKE, SUBMITTER, CREP_TOKEN);
 
-    // Submit content
+    // Ask question
     const uniqueId = Date.now();
     const url = `https://www.youtube.com/watch?v=${suffix}_${uniqueId}`;
     const ok = await submitContentDirect(

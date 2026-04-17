@@ -22,7 +22,7 @@ test.describe("Round cancellation", () => {
   test("round cancels when maxDuration expires without quorum", async () => {
     test.setTimeout(180_000);
 
-    // Step 1: Submit new content via direct contract calls (avoids flaky UI submission)
+    // Step 1: Ask a new question via direct contract calls (avoids flaky UI submission)
     const submitter = ANVIL_ACCOUNTS.account2.address;
     const uniqueId = Date.now();
 

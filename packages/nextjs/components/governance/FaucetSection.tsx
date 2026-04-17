@@ -590,8 +590,8 @@ export function FaucetSection({ referrer }: FaucetSectionProps) {
         <h2 className={surfaceSectionHeadingClassName}>cREP Claimed, Voter ID Pending</h2>
 
         <p className="text-base-content/70">
-          Your faucet claim succeeded, but your Voter ID was not minted. Voting, submitting, and referrals unlock after
-          the Voter ID mint is retried.
+          Your faucet claim succeeded, but your Voter ID was not minted. Voting, asking, and referrals unlock after the
+          Voter ID mint is retried.
         </p>
 
         {address && (

@@ -36,7 +36,7 @@ test.describe("Accessibility basics", () => {
     const searchInput = page.getByRole("textbox", { name: "Search content" });
     await expect(searchInput.first()).toBeVisible({ timeout: 10_000 });
     await expect(page.getByRole("link", { name: "Rate" })).toBeVisible({ timeout: 10_000 });
-    await expect(page.getByRole("link", { name: "Submit" })).toBeVisible({ timeout: 10_000 });
+    await expect(page.getByRole("link", { name: "Ask" })).toBeVisible({ timeout: 10_000 });
     await expect(page.getByRole("button", { name: /^View(?:: .+)?$/i }).first()).toBeVisible({ timeout: 10_000 });
   });
 
@@ -64,7 +64,7 @@ test.describe("Accessibility basics", () => {
       return;
     }
 
-    const emptyState = page.getByText(/No content submitted yet|No content found/i);
+    const emptyState = page.getByText(/No questions have been asked yet|No content found/i);
     const feed = page.locator('[role="feed"][aria-label="Content feed"]').first();
     const isFeedVisible = await feed.isVisible({ timeout: 5_000 }).catch(() => false);
 

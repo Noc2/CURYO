@@ -221,8 +221,8 @@ const TermsPage: NextPage = () => {
         <ul>
           <li>Provide false information regarding your identity or eligibility</li>
           <li>Attempt to manipulate content ratings through coordinated or automated activity</li>
-          <li>Submit content that violates intellectual property rights</li>
-          <li>Submit content that is illegal, harmful, or violates platform guidelines</li>
+          <li>Ask questions with content that violates intellectual property rights</li>
+          <li>Ask questions with content that is illegal, harmful, or violates platform guidelines</li>
           <li>Interfere with or disrupt the Service or its infrastructure</li>
           <li>Use the Service for money laundering, terrorist financing, or other illicit activities</li>
           <li>Exploit bugs, vulnerabilities, or errors in the Protocol or Interface</li>
@@ -253,8 +253,8 @@ const TermsPage: NextPage = () => {
           The Curyo Protocol smart contracts may be open source under their respective licenses.
         </p>
         <p>
-          Content submitted by users remains the property of the original creators. By submitting content URLs, you
-          represent that you have the right to share such content and that doing so does not violate any third-party
+          User-provided content remains the property of the original creators. By asking questions with content URLs,
+          you represent that you have the right to share such content and that doing so does not violate any third-party
           rights.
         </p>
 

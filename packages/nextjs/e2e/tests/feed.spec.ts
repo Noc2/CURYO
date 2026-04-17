@@ -10,10 +10,10 @@ test.describe("Content feed", () => {
     const anyState = page
       .getByRole("button", { name: "Vote up" })
       .or(page.getByText(/Voted(?: hidden| Up| Down)?/i))
-      .or(page.getByText("Your submission"))
+      .or(page.getByText("Your question"))
       .or(page.getByText("Round full"))
       .or(page.getByText(/Cooldown/))
-      .or(page.getByText("No content submitted yet"));
+      .or(page.getByText("No questions have been asked yet"));
     await expect(anyState.first()).toBeVisible({ timeout: 15_000 });
   });
 

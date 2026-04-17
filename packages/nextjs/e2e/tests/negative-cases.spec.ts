@@ -41,7 +41,7 @@ test.describe("Negative cases", () => {
     await context.close();
   });
 
-  test("submit page shows VoterID prompt for user without VoterID", async ({ browser }) => {
+  test("ask page shows VoterID prompt for user without VoterID", async ({ browser }) => {
     const context = await newE2EContext(browser);
     const page = await context.newPage();
     await setupWallet(page, ANVIL_ACCOUNTS.account0.privateKey, { bootstrap: false });
@@ -50,10 +50,10 @@ test.describe("Negative cases", () => {
 
     const voterIdRequired = page.getByRole("heading", { name: /Voter ID Required/i });
     const submitForm = page.getByRole("heading", { name: "Ask Question" });
-    const signedOutHeading = page.getByRole("heading", { name: "Submit" });
+    const signedOutHeading = page.getByRole("heading", { name: "Ask" });
     const signInButton = page.getByRole("button", { name: "Sign In" }).first();
 
-    // Accept either the connected no-VoterID prompt, the submit form, or the
+    // Accept either the connected no-VoterID prompt, the ask form, or the
     // signed-out shell if the local test wallet bridge doesn't attach.
     await expect(voterIdRequired.or(submitForm).or(signedOutHeading)).toBeVisible({ timeout: 15_000 });
 

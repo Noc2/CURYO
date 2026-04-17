@@ -358,7 +358,7 @@ const MobileHeaderSearch = ({ onClose }: { onClose: () => void }) => {
           </button>
         ) : null}
       </div>
-      <button type="submit" className="btn btn-sm btn-primary border-none px-3" aria-label="Submit search">
+      <button type="submit" className="btn btn-sm btn-primary border-none px-3" aria-label="Search">
         <MagnifyingGlassIcon className="h-4 w-4" />
       </button>
     </form>

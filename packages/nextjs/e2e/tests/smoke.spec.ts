@@ -21,12 +21,12 @@ test.describe("Smoke tests", () => {
     await waitForFeedLoaded(page, 30_000);
 
     // After feed loads, check for wallet connection indicators.
-    // If the feed is empty ("No content submitted yet"), the sort dropdown still renders,
+    // If the feed is empty ("No questions have been asked yet"), the sort dropdown still renders,
     // proving the wallet connected and the page loaded (just no content in Ponder yet).
     const voteUp = page.getByRole("button", { name: "Vote up" });
     const votedStatus = page.getByText(/Voted(?: hidden| Up| Down)?/i);
-    const ownContent = page.getByText("Your submission");
-    const emptyFeed = page.getByText("No content submitted yet");
+    const ownContent = page.getByText("Your question");
+    const emptyFeed = page.getByText("No questions have been asked yet");
     const sortDropdown = page.locator("select").first();
 
     const connectedIndicator = voteUp.or(votedStatus).or(ownContent).or(emptyFeed).or(sortDropdown);
@@ -36,7 +36,7 @@ test.describe("Smoke tests", () => {
     await expect(getVisibleAuthConnectButton(page)).toHaveCount(0);
   });
 
-  test("brand link can reopen landing page without redirecting connected users back to discover", async ({ page }) => {
+  test("brand link can reopen landing page without redirecting connected users back to rate", async ({ page }) => {
     await setupWallet(page, ANVIL_ACCOUNTS.account2.privateKey);
     await gotoWithRetry(page, "/rate", { ensureWalletConnected: true });
     await waitForWalletConnected(page);
@@ -50,13 +50,13 @@ test.describe("Smoke tests", () => {
     await expect(page).toHaveURL(/\/$/);
   });
 
-  test("navigation to submit page works", async ({ page }) => {
+  test("navigation to ask page works", async ({ page }) => {
     await setupWallet(page, ANVIL_ACCOUNTS.account2.privateKey);
     await gotoWithRetry(page, "/ask", { ensureWalletConnected: true });
 
     await expect(page).toHaveURL(/\/ask/);
-    // Verify the submit page rendered (form, VoterID prompt, or connect wallet prompt)
-    const heading = page.getByRole("heading", { name: /^Submit$|Submit (?:Content|Question)|Voter ID Required/i });
+    // Verify the ask page rendered (form, VoterID prompt, or connect wallet prompt)
+    const heading = page.getByRole("heading", { name: /^Ask$|Ask Question|Voter ID Required/i });
     await expect(heading).toBeVisible({ timeout: 15_000 });
   });
 });

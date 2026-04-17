@@ -41,7 +41,7 @@ async function expectRouteControls(page: Page, path: string, width: number): Pro
       page
         .getByRole("button", { name: VOTE_UP_BUTTON })
         .or(page.getByRole("button", { name: VOTE_DOWN_BUTTON }))
-        .or(page.getByText(/No content submitted yet|No content found/i))
+        .or(page.getByText(/No questions have been asked yet|No content found/i))
         .first(),
       "Vote route should keep its primary feed state visible",
     ).toBeVisible({ timeout: 15_000 });
@@ -50,7 +50,7 @@ async function expectRouteControls(page: Page, path: string, width: number): Pro
 
   if (path === "/ask") {
     const urlInput = main.getByPlaceholder(/paste/i).or(main.getByRole("textbox").first()).first();
-    await expect(urlInput, "Submit URL input should stay visible").toBeVisible({ timeout: 15_000 });
+    await expect(urlInput, "Ask URL input should stay visible").toBeVisible({ timeout: 15_000 });
     await urlInput.focus();
     await expect(urlInput).toBeFocused();
     return;

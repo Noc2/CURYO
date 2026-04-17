@@ -1,52 +1,92 @@
 "use client";
 
 import { Suspense, useCallback, useEffect, useState } from "react";
-import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import dynamic from "next/dynamic";
+import { usePathname, useSearchParams } from "next/navigation";
 import { useAccount } from "wagmi";
 import { DelegationSection } from "~~/components/profile/DelegationSection";
 import { CuryoConnectButton } from "~~/components/scaffold-eth";
 import { NotificationSettingsPanel } from "~~/components/settings/NotificationSettingsPanel";
 import { AppPageShell } from "~~/components/shared/AppPageShell";
+import { SETTINGS_FRONTEND_HASH, SETTINGS_ROUTE } from "~~/constants/routes";
 
-type SettingsTab = "delegation" | "notifications";
+type SettingsTab = "delegation" | "notifications" | typeof SETTINGS_FRONTEND_HASH;
 
-const settingsTabs: SettingsTab[] = ["notifications", "delegation"];
+const settingsTabs: SettingsTab[] = ["notifications", "delegation", SETTINGS_FRONTEND_HASH];
 
 const SETTINGS_TAB_LABELS: Record<SettingsTab, string> = {
   delegation: "Delegation",
+  frontend: "Frontend",
   notifications: "Notifications",
 };
 
-function normalizeSettingsTab(value: string | null): SettingsTab {
-  return settingsTabs.includes((value ?? "") as SettingsTab) ? (value as SettingsTab) : "notifications";
+function SettingsSectionLoading() {
+  return (
+    <div className="surface-card rounded-2xl p-6">
+      <div className="flex items-center gap-3 text-base-content/50">
+        <span className="loading loading-spinner loading-sm text-primary" />
+        <span>Loading...</span>
+      </div>
+    </div>
+  );
+}
+
+const FrontendRegistration = dynamic(
+  () => import("~~/components/governance/FrontendRegistration").then(mod => mod.FrontendRegistration),
+  { loading: SettingsSectionLoading },
+);
+
+function parseSettingsTab(value: string | null): SettingsTab | null {
+  return settingsTabs.includes((value ?? "") as SettingsTab) ? (value as SettingsTab) : null;
+}
+
+function getSettingsHash(tab: SettingsTab) {
+  return tab === "notifications" ? "" : `#${tab}`;
+}
+
+function buildSettingsTabUrl(pathname: string, searchParams: URLSearchParams, tab: SettingsTab) {
+  const nextParams = new URLSearchParams(searchParams.toString());
+  nextParams.delete("tab");
+
+  const query = nextParams.toString();
+  const hash = getSettingsHash(tab);
+  return `${pathname}${query ? `?${query}` : ""}${hash}`;
 }
 
 function SettingsPageInner() {
   const { isConnected, address } = useAccount();
-  const router = useRouter();
-  const pathname = usePathname() ?? "/settings";
+  const pathname = usePathname() ?? SETTINGS_ROUTE;
   const searchParams = useSearchParams();
   const [activeTab, setActiveTab] = useState<SettingsTab>("notifications");
 
   useEffect(() => {
-    const tabParam = searchParams?.get("tab") ?? null;
-    setActiveTab(normalizeSettingsTab(tabParam));
+    const syncTabFromLocation = () => {
+      const params = new URLSearchParams(searchParams?.toString() ?? "");
+      const hashTab = parseSettingsTab(window.location.hash.replace(/^#/, ""));
+      const queryTab = parseSettingsTab(params.get("tab"));
+      const nextTab = hashTab ?? queryTab ?? "notifications";
+
+      setActiveTab(nextTab);
+
+      const nextUrl = buildSettingsTabUrl(window.location.pathname, params, nextTab);
+      const currentUrl = `${window.location.pathname}${window.location.search}${window.location.hash}`;
+      if (currentUrl !== nextUrl) {
+        history.replaceState(null, "", nextUrl);
+      }
+    };
+
+    syncTabFromLocation();
+    window.addEventListener("hashchange", syncTabFromLocation);
+    return () => window.removeEventListener("hashchange", syncTabFromLocation);
   }, [searchParams]);
 
   const selectTab = useCallback(
     (tab: SettingsTab) => {
       setActiveTab(tab);
-      const nextParams = new URLSearchParams(searchParams?.toString() ?? "");
-      if (tab === "notifications") {
-        nextParams.delete("tab");
-      } else {
-        nextParams.set("tab", tab);
-      }
-
-      const query = nextParams.toString();
-      router.replace(query ? `${pathname}?${query}` : pathname, { scroll: false });
+      const params = new URLSearchParams(searchParams?.toString() ?? "");
+      history.replaceState(null, "", buildSettingsTabUrl(pathname, params, tab));
     },
-    [pathname, router, searchParams],
+    [pathname, searchParams],
   );
 
   if (!isConnected) {
@@ -75,6 +115,7 @@ function SettingsPageInner() {
       </div>
 
       {activeTab === "delegation" && <DelegationSection />}
+      {activeTab === SETTINGS_FRONTEND_HASH && <FrontendRegistration />}
       {activeTab === "notifications" && <NotificationSettingsPanel address={address} />}
     </AppPageShell>
   );

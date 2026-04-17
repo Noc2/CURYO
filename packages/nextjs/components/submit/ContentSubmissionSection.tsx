@@ -168,8 +168,8 @@ export function ContentSubmissionSection() {
     if (!trimmedValue) {
       return options.required
         ? expectedType === "video"
-          ? "Add a YouTube URL before submitting."
-          : "Add at least one image URL before submitting."
+          ? "Add a YouTube URL before asking."
+          : "Add at least one image URL before asking."
         : null;
     }
 
@@ -180,7 +180,7 @@ export function ContentSubmissionSection() {
 
     const urlCheck = containsBlockedUrl(sanitizedUrl);
     if (urlCheck.blocked) {
-      return "This URL contains prohibited content and cannot be submitted";
+      return "This URL contains prohibited content and cannot be used";
     }
 
     const normalizedUrl = normalizeSubmissionMediaUrl(trimmedValue);
@@ -382,7 +382,7 @@ export function ContentSubmissionSection() {
     const nextVideoUrlError = getMediaUrlValidationError(videoUrl, "video", { required: mediaMode === "video" });
 
     if (mediaMode === "images" && submittedImageUrls.length === 0) {
-      nextImageUrlErrors[0] = "Add at least one image URL before submitting.";
+      nextImageUrlErrors[0] = "Add at least one image URL before asking.";
     }
 
     const nextTitleError = trimmedTitle ? getContentTitleValidationError(trimmedTitle) : null;
@@ -398,17 +398,17 @@ export function ContentSubmissionSection() {
     setDescriptionError(nextDescriptionError);
 
     if (!selectedCategory || !trimmedTitle || !trimmedDescription || selectedSubcategories.length === 0) {
-      notification.warning("Fill in the highlighted fields before submitting.");
+      notification.warning("Fill in the highlighted fields before asking.");
       return;
     }
 
     if (blockedContentTags.length > 0) {
-      notification.warning("Remove categories with prohibited content before submitting.");
+      notification.warning("Remove categories with prohibited content before asking.");
       return;
     }
 
     if (hasMediaError || nextTitleError || nextDescriptionError) {
-      notification.warning("Please fix the highlighted fields before submitting.");
+      notification.warning("Please fix the highlighted fields before asking.");
       return;
     }
 
@@ -642,7 +642,7 @@ export function ContentSubmissionSection() {
       clearStoredSubmissionReservation(reservationStorageKey);
 
       statusToast.dismiss();
-      notification.success("Question submitted! Staked 10 cREP.");
+      notification.success("Question asked! Staked 10 cREP.");
       const submittedQuestion =
         contentId !== null
           ? {
@@ -667,7 +667,7 @@ export function ContentSubmissionSection() {
       setCustomSubcategory("");
       setSubmitAttempted(false);
     } catch (e: unknown) {
-      console.error("Submit failed:", e);
+      console.error("Ask failed:", e);
       statusToast.dismiss();
       if (isFreeTransactionExhaustedError(e) || isInsufficientFundsError(e)) {
         notification.error(getGasBalanceErrorMessage(nativeTokenSymbol, { canSponsorTransactions }));
@@ -830,7 +830,7 @@ export function ContentSubmissionSection() {
                     ) : null,
                   )}
                   {imageMediaMissing && !imageUrlErrors.some(Boolean) ? (
-                    <p className="text-base text-error">Add at least one image URL before submitting.</p>
+                    <p className="text-base text-error">Add at least one image URL before asking.</p>
                   ) : null}
                   <button
                     type="button"
@@ -855,7 +855,7 @@ export function ContentSubmissionSection() {
                   />
                   {videoUrlError ? <p className="mt-1 text-base text-error">{videoUrlError}</p> : null}
                   {videoMediaMissing && !videoUrlError ? (
-                    <p className="mt-1 text-base text-error">Add a YouTube URL before submitting.</p>
+                    <p className="mt-1 text-base text-error">Add a YouTube URL before asking.</p>
                   ) : null}
                 </div>
               )}
@@ -893,7 +893,7 @@ export function ContentSubmissionSection() {
                     />
                   </button>
                   {submitAttempted && !selectedCategory ? (
-                    <p className="mt-1 text-base text-error">Select a category before submitting.</p>
+                    <p className="mt-1 text-base text-error">Select a category before asking.</p>
                   ) : null}
 
                   {isCategoryDropdownOpen ? (
@@ -1030,7 +1030,7 @@ export function ContentSubmissionSection() {
                 </div>
                 {customSubcategoryError ? <p className="mt-2 text-base text-error">{customSubcategoryError}</p> : null}
                 {submitAttempted && selectedSubcategories.length === 0 ? (
-                  <p className="mt-2 text-base text-error">Pick at least one category before submitting.</p>
+                  <p className="mt-2 text-base text-error">Pick at least one category before asking.</p>
                 ) : null}
               </div>
             ) : null}
@@ -1075,9 +1075,10 @@ export function ContentSubmissionSection() {
             <div className="rounded-lg bg-error/10 p-4">
               <p className="mb-2 text-base font-medium text-error">Prohibited Content</p>
               <p className="text-base text-base-content/70">
-                Do not submit illegal or harmful content. This includes but is not limited to: child exploitation
-                material, non-consensual intimate imagery, content promoting violence or terrorism, doxxing, or
-                copyright-infringing material. Violations will result in stake slashing and potential legal action.
+                Do not ask questions with illegal or harmful content. This includes but is not limited to: child
+                exploitation material, non-consensual intimate imagery, content promoting violence or terrorism,
+                doxxing, or copyright-infringing material. Violations will result in stake slashing and potential legal
+                action.
               </p>
             </div>
 

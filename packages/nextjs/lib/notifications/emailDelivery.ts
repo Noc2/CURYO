@@ -266,8 +266,8 @@ function buildCandidates(
         eventKey,
         eventType: "followed_submission",
         contentId: item.contentId,
-        subject: `${displayName} submitted something new on Curyo`,
-        body: `${displayName} just submitted "${item.title}".`,
+        subject: `${displayName} asked something new on Curyo`,
+        body: `${displayName} just asked "${item.title}".`,
         href: getAbsoluteVoteUrl(item.contentId, appUrl),
       });
     }
