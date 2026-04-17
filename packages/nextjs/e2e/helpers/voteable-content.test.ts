@@ -109,3 +109,50 @@ test("ensureVoteableContent returns false without navigation when indexing never
   assert.equal(result, false);
   assert.equal(gotoCalled, false);
 });
+
+test("ensureVoteableContent retries with a distinct fallback when direct submission fails", async () => {
+  const { page } = createPageStub();
+  const findResults = [false, true];
+  const submittedUrls: string[] = [];
+  const submittedTitles: string[] = [];
+  const indexedTitles: string[] = [];
+  const gotoUrls: string[] = [];
+
+  const result = await ensureVoteableContentWithDeps(page, {
+    approveCREP: async () => true,
+    submitContentDirect: async (url, title) => {
+      submittedUrls.push(url);
+      submittedTitles.push(title);
+      return submittedUrls.length === 2;
+    },
+    waitForPonderIndexed: async callback => callback(),
+    getContentList: async () => {
+      const title = submittedTitles.at(-1) ?? "";
+      indexedTitles.push(title);
+      return {
+        items: [
+          {
+            id: "99",
+            title,
+            submitter: SUBMITTER,
+          },
+        ],
+      };
+    },
+    findVoteableContent: async () => findResults.shift() ?? false,
+    gotoWithRetry: async (_page, url) => {
+      gotoUrls.push(url);
+    },
+    waitForFeedLoaded: async () => undefined,
+    now: () => Number.parseInt("retry", 36),
+  });
+
+  assert.equal(result, true);
+  assert.deepEqual(submittedUrls, [
+    "https://www.youtube.com/watch?v=responsiveretry1",
+    "https://www.youtube.com/watch?v=responsiveretry2",
+  ]);
+  assert.deepEqual(submittedTitles, ["Responsive Vote Layout retry-1", "Responsive Vote Layout retry-2"]);
+  assert.deepEqual(indexedTitles, ["Responsive Vote Layout retry-2"]);
+  assert.deepEqual(gotoUrls, ["/vote?content=99"]);
+});
