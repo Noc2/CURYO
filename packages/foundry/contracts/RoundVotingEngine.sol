@@ -309,7 +309,7 @@ contract RoundVotingEngine is
         if (stakeAmount < MIN_STAKE || stakeAmount > MAX_STAKE) revert InvalidStake();
         if (commitHash == bytes32(0)) revert InvalidCommitHash();
 
-        uint64 stakeAmount64 = uint64(stakeAmount);
+        uint64 stakeAmount64 = stakeAmount.toUint64();
 
         // Get or create active round
         uint256 currentOpenRoundId = currentRoundId[contentId];

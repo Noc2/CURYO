@@ -72,7 +72,7 @@ library RoundRevealLib {
         }
 
         uint256 epochWeightBps = RoundLib.epochWeightBps(commit.epochIndex);
-        uint64 effectiveStake = uint64((uint256(commit.stakeAmount) * epochWeightBps) / 10_000);
+        uint64 effectiveStake = ((uint256(commit.stakeAmount) * epochWeightBps) / 10_000).toUint64();
         if (isUp) {
             round.weightedUpPool += effectiveStake;
         } else {

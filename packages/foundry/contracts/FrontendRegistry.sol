@@ -6,6 +6,7 @@ import { AccessControlUpgradeable } from "@openzeppelin/contracts-upgradeable/ac
 import { ReentrancyGuardTransient } from "@openzeppelin/contracts/utils/ReentrancyGuardTransient.sol";
 import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import { SafeERC20 } from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
+import { SafeCast } from "@openzeppelin/contracts/utils/math/SafeCast.sol";
 import { IFrontendRegistry } from "./interfaces/IFrontendRegistry.sol";
 import { IRoundVotingEngine } from "./interfaces/IRoundVotingEngine.sol";
 import { IVoterIdNFT } from "./interfaces/IVoterIdNFT.sol";
@@ -15,6 +16,7 @@ import { IVoterIdNFT } from "./interfaces/IVoterIdNFT.sol";
 /// @dev Frontend operators stake cREP, can be slashed by governance, and earn cREP fees from votes using their code.
 contract FrontendRegistry is IFrontendRegistry, Initializable, AccessControlUpgradeable, ReentrancyGuardTransient {
     using SafeERC20 for IERC20;
+    using SafeCast for uint256;
 
     // --- Access Control Roles ---
     bytes32 public constant ADMIN_ROLE = keccak256("ADMIN_ROLE");
@@ -160,10 +162,10 @@ contract FrontendRegistry is IFrontendRegistry, Initializable, AccessControlUpgr
 
         frontends[msg.sender] = Frontend({
             operator: msg.sender,
-            stakedAmount: uint64(STAKE_AMOUNT),
+            stakedAmount: STAKE_AMOUNT.toUint64(),
             crepFees: 0,
             slashed: false,
-            registeredAt: uint48(block.timestamp)
+            registeredAt: block.timestamp.toUint48()
         });
 
         registeredFrontends.push(msg.sender);
@@ -235,7 +237,7 @@ contract FrontendRegistry is IFrontendRegistry, Initializable, AccessControlUpgr
         require(f.operator != address(0), "Frontend not registered");
         require(!f.slashed, "Frontend is slashed");
         require(uint256(f.stakedAmount) >= STAKE_AMOUNT, "Frontend is underbonded");
-        f.crepFees += uint64(crepAmount);
+        f.crepFees = (uint256(f.crepFees) + crepAmount).toUint64();
         emit FeesCredited(frontend, crepAmount);
     }
 
@@ -252,7 +254,7 @@ contract FrontendRegistry is IFrontendRegistry, Initializable, AccessControlUpgr
         require(amount <= missingStake, "Top-up exceeds requirement");
 
         crepToken.safeTransferFrom(msg.sender, address(this), amount);
-        f.stakedAmount += uint64(amount);
+        f.stakedAmount += amount.toUint64();
 
         emit FrontendStakeToppedUp(msg.sender, amount, uint256(f.stakedAmount));
     }
@@ -274,7 +276,7 @@ contract FrontendRegistry is IFrontendRegistry, Initializable, AccessControlUpgr
         require(uint256(f.stakedAmount) >= amount, "Slash exceeds stake");
 
         uint256 confiscatedFees = uint256(f.crepFees);
-        f.stakedAmount -= uint64(amount);
+        f.stakedAmount -= amount.toUint64();
         f.crepFees = 0;
         f.slashed = true;
 
