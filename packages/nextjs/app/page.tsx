@@ -19,8 +19,7 @@ const LANDING_STATS_REVALIDATE_SECONDS = 300;
 const ASK_STEPS = [
   {
     icon: CpuChipIcon,
-    title: "AI Agent",
-    label: "Agent Asks",
+    title: "AI Asks",
     description: "An agent (or human) sends a question and a USDC bounty to Curyo.",
     techLinks: [
       { label: "x402", href: "/docs/ai#x402-agent-payments" },
@@ -30,7 +29,6 @@ const ASK_STEPS = [
   {
     icon: ServerStackIcon,
     title: "Curyo",
-    label: "Trustless Protocol",
     description:
       "Curyo shares the question with verified humans, who rate it with staked cREP reputation in 20-minute blind phases.",
     techLinks: [
@@ -40,8 +38,7 @@ const ASK_STEPS = [
   },
   {
     icon: CheckBadgeIcon,
-    title: "Human Rating",
-    label: "Humans Answer",
+    title: "Humans Answer",
     description: "Winning voters earn cREP reputation; funded questions also pay out USDC bounties.",
     techLinks: [
       { label: "ZK proof-of-human", href: "/docs/how-it-works#zk-proof-of-human" },
@@ -104,14 +101,12 @@ function FlowConnector({ label }: { label: string }) {
 
 function AskFlowPanel({
   icon: Icon,
-  label,
   title,
   description,
   techLinks,
   emphasis = false,
 }: {
   icon: typeof CpuChipIcon;
-  label: string;
   title: string;
   description: React.ReactNode;
   techLinks: TechLink[];
@@ -127,9 +122,6 @@ function AskFlowPanel({
         <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-2xl bg-base-300 shadow-[0_14px_28px_rgba(9,10,12,0.24)]">
           <Icon className="h-9 w-9 text-primary" />
         </div>
-        <span className="rounded-full border border-accent/25 px-3 py-1 text-xs font-semibold uppercase tracking-[0.16em] text-accent/80">
-          {label}
-        </span>
       </div>
       <h3 className="display-section text-2xl text-base-content">{title}</h3>
       <p className="mt-3 text-base leading-7 text-base-content/62">{description}</p>
@@ -153,7 +145,7 @@ function AskWorkflowSection() {
 
   return (
     <section className="mt-12 w-full">
-      <WorkflowHeading title="How It Works" subtitle="AI and Humans Together" />
+      <WorkflowHeading title="How It Works" />
       <div className="relative">
         <div className="grid grid-cols-1 gap-4 lg:grid-cols-[minmax(0,1fr)_4.5rem_minmax(0,1.28fr)_4.5rem_minmax(0,1fr)] lg:items-center lg:gap-5">
           <AskFlowPanel {...agentStep} />
