@@ -203,10 +203,7 @@ contract ProfileRegistry is IProfileRegistry, Initializable, AccessControlUpgrad
     // --- Internal Functions ---
 
     function _requireEligibleVoterIdHolder(address user) internal view {
-        if (address(voterIdNFT) == address(0)) {
-            return;
-        }
-
+        require(address(voterIdNFT) != address(0), "VoterIdNFT not set");
         require(voterIdNFT.hasVoterId(user), "Voter ID required");
         require(voterIdNFT.resolveHolder(user) == user, "Profile owner must hold Voter ID");
     }

@@ -8,6 +8,7 @@ import { CuryoReputation } from "../contracts/CuryoReputation.sol";
 import { IFrontendRegistry } from "../contracts/interfaces/IFrontendRegistry.sol";
 import { IRoundVotingEngine } from "../contracts/interfaces/IRoundVotingEngine.sol";
 import { RoundLib } from "../contracts/libraries/RoundLib.sol";
+import { MockVoterIdNFT } from "./mocks/MockVoterIdNFT.sol";
 
 /// @title Mock RoundVotingEngine for testing FrontendRegistry
 contract MockVotingEngine is IRoundVotingEngine {
@@ -57,6 +58,7 @@ contract FrontendRegistryTest is Test {
     FrontendRegistry public registry;
     CuryoReputation public crepToken;
     MockVotingEngine public votingEngine;
+    MockVoterIdNFT public mockVoterIdNFT;
 
     address public admin = address(1);
     address public frontend1 = address(3);
@@ -77,6 +79,7 @@ contract FrontendRegistryTest is Test {
 
         // Deploy mock voting engine
         votingEngine = new MockVotingEngine();
+        mockVoterIdNFT = new MockVoterIdNFT();
 
         // Deploy registry behind an ERC1967 proxy for upgradeable storage behavior
         FrontendRegistry impl = new FrontendRegistry();
@@ -90,6 +93,7 @@ contract FrontendRegistryTest is Test {
 
         // Set voting engine for slashing
         registry.setVotingEngine(address(votingEngine));
+        registry.setVoterIdNFT(address(mockVoterIdNFT));
 
         // Grant fee creditor role
         registry.addFeeCreditor(feeCreditor);
@@ -98,6 +102,9 @@ contract FrontendRegistryTest is Test {
         crepToken.mint(frontend1, 10_000e6);
         crepToken.mint(frontend2, 10_000e6);
         crepToken.mint(frontend3, 10_000e6);
+        mockVoterIdNFT.setHolder(frontend1);
+        mockVoterIdNFT.setHolder(frontend2);
+        mockVoterIdNFT.setHolder(frontend3);
 
         // Mint cREP for fee crediting (to registry)
         crepToken.mint(address(registry), 1_000_000e6);
@@ -646,6 +653,7 @@ contract FrontendRegistryTest is Test {
             )
         );
         // Do NOT call setVotingEngine
+        noEngineRegistry.setVoterIdNFT(address(mockVoterIdNFT));
 
         // Mint and register a frontend
         crepToken.mint(frontend1, 10_000e6);

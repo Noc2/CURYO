@@ -104,10 +104,12 @@ contract FrontendRegistryCoverageTest is Test {
 
         reg.setVotingEngine(address(engine));
         reg.addFeeCreditor(creditor);
+        reg.setVoterIdNFT(address(voterNFT));
 
         crep.mint(frontend1, 100_000e6);
         crep.mint(frontend2, 100_000e6);
         crep.mint(address(reg), 1_000_000e6);
+        voterNFT.setHolder(frontend1);
 
         vm.stopPrank();
     }
@@ -115,8 +117,7 @@ contract FrontendRegistryCoverageTest is Test {
     // --- VoterID branch in register() ---
 
     function test_RegisterRequiresVoterIdWhenSet() public {
-        vm.prank(admin);
-        reg.setVoterIdNFT(address(voterNFT));
+        voterNFT.removeHolder(frontend1);
 
         vm.startPrank(frontend1);
         crep.approve(address(reg), STAKE);
@@ -126,10 +127,6 @@ contract FrontendRegistryCoverageTest is Test {
     }
 
     function test_RegisterSucceedsWithVoterId() public {
-        vm.prank(admin);
-        reg.setVoterIdNFT(address(voterNFT));
-        voterNFT.setHolder(frontend1);
-
         vm.startPrank(frontend1);
         crep.approve(address(reg), STAKE);
         reg.register();
@@ -139,14 +136,21 @@ contract FrontendRegistryCoverageTest is Test {
         assertEq(op, frontend1);
     }
 
-    function test_RegisterWithoutVoterIdNFTConfigured() public {
-        vm.startPrank(frontend1);
-        crep.approve(address(reg), STAKE);
-        reg.register();
+    function test_RegisterWithoutVoterIdNFTConfiguredReverts() public {
+        vm.startPrank(admin);
+        FrontendRegistry impl = new FrontendRegistry();
+        FrontendRegistry unsetReg = FrontendRegistry(
+            address(
+                new ERC1967Proxy(address(impl), abi.encodeCall(FrontendRegistry.initialize, (admin, admin, address(crep))))
+            )
+        );
         vm.stopPrank();
 
-        (address op,,,) = reg.getFrontendInfo(frontend1);
-        assertEq(op, frontend1);
+        vm.startPrank(frontend1);
+        crep.approve(address(unsetReg), STAKE);
+        vm.expectRevert("VoterIdNFT not set");
+        unsetReg.register();
+        vm.stopPrank();
     }
 
     // --- MAX_FEE_CREDIT boundary ---
@@ -255,6 +259,7 @@ contract FrontendRegistryCoverageTest is Test {
     }
 
     function _registerFrontend(address fe) internal {
+        voterNFT.setHolder(fe);
         vm.startPrank(fe);
         crep.approve(address(reg), STAKE);
         reg.register();

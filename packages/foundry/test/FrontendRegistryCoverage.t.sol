@@ -100,11 +100,13 @@ contract FrontendRegistryCoverageTest is Test {
 
         registry.setVotingEngine(address(votingEngine));
         registry.addFeeCreditor(feeCreditor);
+        registry.setVoterIdNFT(address(mockVoterIdNFT));
 
         crepToken.mint(frontend1, 50_000e6);
         crepToken.mint(frontend2, 50_000e6);
         crepToken.mint(frontend3, 50_000e6);
         crepToken.mint(address(registry), 1_000_000e6);
+        mockVoterIdNFT.setHolder(frontend1);
 
         vm.stopPrank();
 
@@ -168,8 +170,7 @@ contract FrontendRegistryCoverageTest is Test {
     // =========================================================================
 
     function test_Register_WithVoterIdNFT_RequiresVoterId() public {
-        vm.prank(admin);
-        registry.setVoterIdNFT(address(mockVoterIdNFT));
+        mockVoterIdNFT.removeHolder(frontend1);
 
         // frontend1 doesn't have VoterId — should revert
         vm.startPrank(frontend1);
@@ -180,12 +181,6 @@ contract FrontendRegistryCoverageTest is Test {
     }
 
     function test_Register_WithVoterIdNFT_SucceedsWithVoterId() public {
-        vm.prank(admin);
-        registry.setVoterIdNFT(address(mockVoterIdNFT));
-
-        // Give frontend1 a VoterId
-        mockVoterIdNFT.setHolder(frontend1);
-
         vm.startPrank(frontend1);
         crepToken.approve(address(registry), STAKE);
         registry.register();
@@ -196,10 +191,6 @@ contract FrontendRegistryCoverageTest is Test {
     }
 
     function test_Register_WithDelegatedVoterId_Reverts() public {
-        vm.prank(admin);
-        registry.setVoterIdNFT(address(mockVoterIdNFT));
-
-        mockVoterIdNFT.setHolder(frontend1);
         vm.prank(frontend1);
         mockVoterIdNFT.setDelegate(frontend2);
 
@@ -211,11 +202,6 @@ contract FrontendRegistryCoverageTest is Test {
     }
 
     function test_Register_DelegateRotation_CannotCreateNewFrontendIdentity() public {
-        vm.prank(admin);
-        registry.setVoterIdNFT(address(mockVoterIdNFT));
-
-        mockVoterIdNFT.setHolder(frontend1);
-
         vm.prank(frontend1);
         mockVoterIdNFT.setDelegate(frontend2);
 
@@ -238,15 +224,23 @@ contract FrontendRegistryCoverageTest is Test {
         vm.stopPrank();
     }
 
-    function test_Register_WithoutVoterIdNFT_SkipsCheck() public {
-        // voterIdNFT is not set (address(0)) — registration should succeed without check
-        vm.startPrank(frontend1);
-        crepToken.approve(address(registry), STAKE);
-        registry.register();
+    function test_Register_WithoutVoterIdNFT_Reverts() public {
+        vm.startPrank(admin);
+        FrontendRegistry impl2 = new FrontendRegistry();
+        FrontendRegistry unsetRegistry = FrontendRegistry(
+            address(
+                new ERC1967Proxy(
+                    address(impl2), abi.encodeCall(FrontendRegistry.initialize, (admin, admin, address(crepToken)))
+                )
+            )
+        );
         vm.stopPrank();
 
-        (address operator,,,) = registry.getFrontendInfo(frontend1);
-        assertEq(operator, frontend1);
+        vm.startPrank(frontend1);
+        crepToken.approve(address(unsetRegistry), STAKE);
+        vm.expectRevert("VoterIdNFT not set");
+        unsetRegistry.register();
+        vm.stopPrank();
     }
 
     function test_Register_InsufficientApproval_Reverts() public {
@@ -759,6 +753,7 @@ contract FrontendRegistryCoverageTest is Test {
     // =========================================================================
 
     function _registerFrontend(address fe) internal {
+        mockVoterIdNFT.setHolder(fe);
         vm.startPrank(fe);
         crepToken.approve(address(registry), STAKE);
         registry.register();

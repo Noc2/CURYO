@@ -26,6 +26,12 @@ contract ProfileRegistryTest is Test {
             address(new ERC1967Proxy(address(impl), abi.encodeCall(ProfileRegistry.initialize, (admin, admin))))
         );
         voterIdNFT = new MockVoterIdNFT();
+        registry.setVoterIdNFT(address(voterIdNFT));
+        voterIdNFT.setHolder(user1);
+        voterIdNFT.setHolder(user2);
+        voterIdNFT.setHolder(address(6));
+        voterIdNFT.setHolder(address(7));
+        voterIdNFT.setHolder(address(8));
 
         vm.stopPrank();
     }
@@ -276,10 +282,6 @@ contract ProfileRegistryTest is Test {
     }
 
     function test_SetProfileRequiresHolderWhenVoterIdConfigured() public {
-        vm.prank(admin);
-        registry.setVoterIdNFT(address(voterIdNFT));
-
-        voterIdNFT.setHolder(user1);
         vm.prank(user1);
         voterIdNFT.setDelegate(delegate);
 
@@ -289,16 +291,25 @@ contract ProfileRegistryTest is Test {
     }
 
     function test_SetAvatarAccentRequiresHolderWhenVoterIdConfigured() public {
-        vm.prank(admin);
-        registry.setVoterIdNFT(address(voterIdNFT));
-
-        voterIdNFT.setHolder(user1);
         vm.prank(user1);
         voterIdNFT.setDelegate(delegate);
 
         vm.prank(delegate);
         vm.expectRevert("Profile owner must hold Voter ID");
         registry.setAvatarAccent(0xF26426);
+    }
+
+    function test_SetProfileRevertsWhenVoterIdNFTUnset() public {
+        vm.startPrank(admin);
+        ProfileRegistry impl = new ProfileRegistry();
+        ProfileRegistry unsetRegistry = ProfileRegistry(
+            address(new ERC1967Proxy(address(impl), abi.encodeCall(ProfileRegistry.initialize, (admin, admin))))
+        );
+        vm.stopPrank();
+
+        vm.prank(user1);
+        vm.expectRevert("VoterIdNFT not set");
+        unsetRegistry.setProfile("alice", "");
     }
 
     function test_GetAddressByName() public {

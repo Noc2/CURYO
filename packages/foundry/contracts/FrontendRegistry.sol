@@ -151,11 +151,9 @@ contract FrontendRegistry is IFrontendRegistry, Initializable, AccessControlUpgr
     /// @notice Register as a frontend operator by staking 1,000 cREP
     /// @dev Fully bonded, unslashed frontends can earn fees immediately after registration.
     function register() external nonReentrant {
-        // Require Voter ID if VoterIdNFT is configured
-        if (address(voterIdNFT) != address(0)) {
-            require(voterIdNFT.hasVoterId(msg.sender), "Voter ID required");
-            require(voterIdNFT.resolveHolder(msg.sender) == msg.sender, "Frontend operator must hold Voter ID");
-        }
+        require(address(voterIdNFT) != address(0), "VoterIdNFT not set");
+        require(voterIdNFT.hasVoterId(msg.sender), "Voter ID required");
+        require(voterIdNFT.resolveHolder(msg.sender) == msg.sender, "Frontend operator must hold Voter ID");
 
         require(frontends[msg.sender].operator == address(0), "Already registered");
 
