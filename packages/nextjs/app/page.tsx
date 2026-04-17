@@ -44,11 +44,11 @@ const ASK_STEPS = [
     icon: CpuChipIcon,
     title: "AI Agent",
     label: "Agent asks",
-    description: "An agent sends a focused question, context, and USDC bounty through Curyo MCP.",
+    description: "An agent sends a focused question, context, and USDC bounty to Curyo.",
   },
   {
     icon: ServerStackIcon,
-    title: "Curyo MCP",
+    title: "Curyo",
     label: "Humans settle",
     description: "Curyo opens the funded question, tracks the voter round, and routes it to verified humans.",
   },
@@ -56,7 +56,7 @@ const ASK_STEPS = [
     icon: CheckBadgeIcon,
     title: "Settled Rating",
     label: "Agent reads",
-    description: "The settled human signal returns through MCP, so the same agent can act on trusted input.",
+    description: "The settled human signal returns to the same agent, so it can act on trusted input.",
   },
 ];
 
@@ -105,13 +105,13 @@ function FlowConnector({ label }: { label: string }) {
       <div className="hidden w-full flex-col items-center gap-2 text-center lg:flex">
         <span className="text-xs font-semibold uppercase tracking-[0.18em] text-base-content/45">{label}</span>
         <div className="flex w-full items-center gap-2 text-primary/70">
-          <div className="h-px flex-1 bg-gradient-to-r from-primary/20 via-primary/60 to-[#50f29a]/70" />
+          <div className="h-px flex-1 bg-gradient-to-r from-primary/20 via-primary/60 to-accent/70" />
           <ArrowRightIcon className="h-5 w-5 shrink-0" />
         </div>
       </div>
       <div className="flex flex-col items-center gap-2 text-center lg:hidden">
         <span className="text-xs font-semibold uppercase tracking-[0.18em] text-base-content/45">{label}</span>
-        <div className="h-8 w-px bg-gradient-to-b from-primary/40 to-[#50f29a]/70" />
+        <div className="h-8 w-px bg-gradient-to-b from-primary/40 to-accent/70" />
         <ArrowDownIcon className="h-5 w-5 text-primary/70" />
       </div>
     </div>
@@ -143,7 +143,7 @@ function AskFlowPanel({
         <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-2xl bg-base-300 shadow-[0_14px_28px_rgba(9,10,12,0.24)]">
           <Icon className="h-9 w-9 text-primary" />
         </div>
-        <span className="rounded-full border border-[#50f29a]/25 px-3 py-1 text-xs font-semibold uppercase tracking-[0.16em] text-[#50f29a]/80">
+        <span className="rounded-full border border-accent/25 px-3 py-1 text-xs font-semibold uppercase tracking-[0.16em] text-accent/80">
           {label}
         </span>
       </div>
@@ -178,7 +178,7 @@ function AskWorkflowSection() {
           <AskFlowPanel {...mcpStep} emphasis>
             <div className="mt-5 rounded-2xl bg-base-300/80 p-4">
               <div className="flex items-center gap-2 text-sm font-semibold uppercase tracking-[0.16em] text-base-content/45">
-                <UserGroupIcon className="h-5 w-5 text-[#50f29a]/80" />
+                <UserGroupIcon className="h-5 w-5 text-accent/80" />
                 Verified human round
               </div>
               <div className="mt-4 grid grid-cols-3 gap-2 text-center text-sm font-semibold text-base-content/68">
@@ -192,16 +192,16 @@ function AskWorkflowSection() {
           <FlowConnector label="settled rating" />
 
           <AskFlowPanel {...resultStep}>
-            <div className="mt-5 rounded-2xl border border-[#50f29a]/20 bg-[#50f29a]/10 px-4 py-3">
-              <div className="text-xs font-semibold uppercase tracking-[0.16em] text-[#50f29a]/75">returned signal</div>
+            <div className="mt-5 rounded-2xl border border-accent/20 bg-accent/10 px-4 py-3">
+              <div className="text-xs font-semibold uppercase tracking-[0.16em] text-accent/75">returned signal</div>
               <div className="mt-2 text-lg font-semibold text-base-content">human-rated result</div>
             </div>
           </AskFlowPanel>
         </div>
 
-        <div className="mt-5 flex items-center gap-3 rounded-full border border-[#50f29a]/20 bg-base-200/70 px-4 py-3 text-sm font-semibold text-[#50f29a]/80 lg:mx-6">
+        <div className="mt-5 flex items-center gap-3 rounded-full border border-accent/20 bg-base-200/70 px-4 py-3 text-sm font-semibold text-accent/80 lg:mx-6">
           <ArrowLeftIcon className="h-5 w-5 shrink-0" />
-          <div className="hidden h-px flex-1 bg-gradient-to-l from-primary/20 via-[#50f29a]/55 to-[#50f29a]/80 sm:block" />
+          <div className="hidden h-px flex-1 bg-gradient-to-l from-primary/20 via-accent/55 to-accent/80 sm:block" />
           <span className="shrink-0 text-center">settled signal returns to the AI agent</span>
         </div>
       </div>
