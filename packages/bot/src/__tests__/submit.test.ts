@@ -43,14 +43,16 @@ async function loadSubmitCommand(options: SubmitCommandOptions = {}) {
         return options.balance ?? 20_000_000n;
       case "allowance":
         return options.allowance ?? 0n;
-      case "protocolConfig":
-        return "0x5555555555555555555555555555555555555555";
-      case "minSubmissionCrepPool":
+      case "minSubmissionUsdcPool":
         return 1_000_000n;
       case "previewQuestionSubmissionKey":
         return [options.previewCategoryId ?? ITEM.categoryId, SUBMISSION_KEY] as const;
+      case "protocolConfig":
+        return PROTOCOL_CONFIG;
       case "submissionKeyUsed":
         return options.submissionKeyUsed ?? false;
+      case "usdcToken":
+        return USDC_TOKEN;
       default:
         throw new Error(`Unexpected readContract: ${functionName}`);
     }
@@ -102,6 +104,8 @@ async function loadSubmitCommand(options: SubmitCommandOptions = {}) {
   }));
   vi.doMock("../contracts.js", () => ({
     contractConfig: {
+      protocolConfigAbi: [],
+      questionRewardPoolEscrow: { address: REWARD_ESCROW, abi: [] },
       registry: { address: CONTENT_REGISTRY, abi: [] },
       token: { address: "0x1111111111111111111111111111111111111111", abi: [] },
     },
@@ -110,7 +114,7 @@ async function loadSubmitCommand(options: SubmitCommandOptions = {}) {
     config: {
       submitBot: {},
       contracts: { contentRegistry: CONTENT_REGISTRY, questionRewardPoolEscrow: REWARD_ESCROW },
-      submitRewardAsset: "crep",
+      submitRewardAsset: "usdc",
       maxSubmissionsPerRun: 5,
       maxSubmissionsPerCategory: 3,
     },
@@ -172,7 +176,7 @@ function buildExpectedRevealCommitment(): Hex {
         { type: "uint8" },
         { type: "uint256" },
       ],
-      [SUBMISSION_KEY, ITEM.title, ITEM.description, ITEM.tags, ITEM.categoryId, FIXED_SALT, ADDRESS, 0, 1_000_000n],
+      [SUBMISSION_KEY, ITEM.title, ITEM.description, ITEM.tags, ITEM.categoryId, FIXED_SALT, ADDRESS, 1, 1_000_000n],
     ),
   );
 }
@@ -214,7 +218,7 @@ describe("runSubmit", () => {
       3,
       expect.objectContaining({
         functionName: "submitQuestionWithReward",
-        args: [ITEM.contextUrl, [], "", ITEM.title, ITEM.description, ITEM.tags, ITEM.categoryId, FIXED_SALT, 0, 1_000_000n],
+        args: [ITEM.contextUrl, [], "", ITEM.title, ITEM.description, ITEM.tags, ITEM.categoryId, FIXED_SALT, 1, 1_000_000n],
       }),
     );
     expect(submitCommand.mocks.log.info).toHaveBeenCalledWith(`Processing youtube item 1/1: "${ITEM.title}"`);
