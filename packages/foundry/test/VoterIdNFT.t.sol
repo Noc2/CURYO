@@ -235,9 +235,7 @@ contract VoterIdNFTTest is Test {
     function test_Mint_RevertForNonERC721ReceiverContract() public {
         vm.prank(minterAddr);
         vm.expectRevert(
-            abi.encodeWithSelector(
-                IERC721Errors.ERC721InvalidReceiver.selector, address(nonReceiverContract)
-            )
+            abi.encodeWithSelector(IERC721Errors.ERC721InvalidReceiver.selector, address(nonReceiverContract))
         );
         voterIdNFT.mint(address(nonReceiverContract), NULLIFIER_1);
     }
@@ -796,6 +794,26 @@ contract VoterIdNFTTest is Test {
         assertEq(newTokenId, 2);
         assertEq(voterIdNFT.getEpochContentStake(1, 100, newTokenId), 100e6);
         assertEq(voterIdNFT.getRemainingStakeCapacity(1, 100, newTokenId), 0);
+    }
+
+    function test_RevokeVoterId_ClearsRevokedTokenNullifierSnapshot() public {
+        vm.prank(minterAddr);
+        voterIdNFT.mint(user1, NULLIFIER_1);
+
+        vm.prank(admin);
+        voterIdNFT.revokeVoterId(user1);
+
+        vm.prank(admin);
+        voterIdNFT.resetNullifier(NULLIFIER_1);
+
+        vm.prank(minterAddr);
+        uint256 newTokenId = voterIdNFT.mint(user2, NULLIFIER_1);
+
+        vm.prank(recorderAddr);
+        voterIdNFT.recordStake(1, 100, newTokenId, 50e6);
+
+        assertEq(voterIdNFT.getEpochContentStake(1, 100, 1), 0);
+        assertEq(voterIdNFT.getEpochContentStake(1, 100, newTokenId), 50e6);
     }
 
     function test_ResetNullifier_RevertNotOwner() public {

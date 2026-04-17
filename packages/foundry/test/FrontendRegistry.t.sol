@@ -620,6 +620,8 @@ contract FrontendRegistryTest is Test {
         address newVotingEngine = address(100);
 
         vm.prank(admin);
+        vm.expectEmit(true, true, true, true);
+        emit FrontendRegistry.VotingEngineUpdated(newVotingEngine);
         registry.setVotingEngine(newVotingEngine);
 
         assertEq(address(registry.votingEngine()), newVotingEngine);

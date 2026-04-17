@@ -179,6 +179,8 @@ contract VoterIdNFT is ERC721, Ownable, IVoterIdNFT {
         // Clear bidirectional mappings
         delete holderToTokenId[holder];
         delete tokenIdToHolder[tokenId];
+        delete _tokenIdToNullifier[tokenId];
+        delete _tokenIdHasNullifier[tokenId];
 
         // Burn the NFT (calls _update with to=address(0))
         _burn(tokenId);

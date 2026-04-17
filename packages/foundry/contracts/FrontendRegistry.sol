@@ -64,6 +64,7 @@ contract FrontendRegistry is IFrontendRegistry, Initializable, AccessControlUpgr
     event FeesCredited(address indexed frontend, uint256 crepAmount);
     event FeesClaimed(address indexed frontend, uint256 crepAmount);
     event FeesConfiscated(address indexed frontend, uint256 crepAmount);
+    event VotingEngineUpdated(address votingEngine);
     event VoterIdNFTUpdated(address voterIdNFT);
 
     /// @custom:oz-upgrades-unsafe-allow constructor
@@ -311,6 +312,7 @@ contract FrontendRegistry is IFrontendRegistry, Initializable, AccessControlUpgr
     function setVotingEngine(address _votingEngine) external onlyRole(ADMIN_ROLE) {
         require(_votingEngine != address(0), "Invalid voting engine");
         votingEngine = IRoundVotingEngine(_votingEngine);
+        emit VotingEngineUpdated(_votingEngine);
     }
 
     /// @notice Set the Voter ID NFT contract for sybil resistance

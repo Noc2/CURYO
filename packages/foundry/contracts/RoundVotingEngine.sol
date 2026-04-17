@@ -209,7 +209,7 @@ contract RoundVotingEngine is
 
     /// @notice Add cREP to the consensus reserve.
     /// @dev Permissionless by design — treasury top-ups and slashed-stake routing both use this same path.
-    function addToConsensusReserve(uint256 amount) external {
+    function addToConsensusReserve(uint256 amount) external nonReentrant {
         _pullCrepFromSender(amount);
         consensusReserve += amount;
     }
