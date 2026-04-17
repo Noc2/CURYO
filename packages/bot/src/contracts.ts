@@ -2,6 +2,8 @@ import { config, getContractEnvName, type BotContractKey } from "./config.js";
 import {
   ContentRegistryAbi,
   CuryoReputationAbi,
+  ProtocolConfigAbi,
+  QuestionRewardPoolEscrowAbi,
   RoundRewardDistributorAbi,
   RoundVotingEngineAbi,
   VoterIdNFTAbi,
@@ -22,6 +24,12 @@ export const contractConfig = {
   },
   get registry() {
     return { address: requireContractAddress("contentRegistry"), abi: ContentRegistryAbi };
+  },
+  get protocolConfigAbi() {
+    return ProtocolConfigAbi;
+  },
+  get questionRewardPoolEscrow() {
+    return { address: requireContractAddress("questionRewardPoolEscrow"), abi: QuestionRewardPoolEscrowAbi };
   },
   get votingEngine() {
     return { address: requireContractAddress("votingEngine"), abi: RoundVotingEngineAbi };

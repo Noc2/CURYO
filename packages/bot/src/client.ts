@@ -46,6 +46,7 @@ const CONTRACT_DISPLAY_NAMES: Record<BotContractKey, string> = {
   categoryRegistry: "CategoryRegistry",
   contentRegistry: "ContentRegistry",
   crepToken: "CuryoReputation",
+  questionRewardPoolEscrow: "QuestionRewardPoolEscrow",
   roundRewardDistributor: "RoundRewardDistributor",
   voterIdNFT: "VoterIdNFT",
   votingEngine: "RoundVotingEngine",

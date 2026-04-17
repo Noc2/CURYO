@@ -54,6 +54,7 @@ export const youtubeSource: ContentSource = {
         const title = truncateContentTitle(snippet.title);
 
         items.push({
+          contextUrl: `https://www.youtube.com/watch?v=${video.id}`,
           url: `https://www.youtube.com/watch?v=${video.id}`,
           title,
           description: truncateContentDescription(snippet.description || title),

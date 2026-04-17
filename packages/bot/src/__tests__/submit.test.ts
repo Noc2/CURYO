@@ -5,7 +5,11 @@ const ADDRESS = "0x9999999999999999999999999999999999999999" as const;
 const SUBMISSION_KEY = `0x${"aa".repeat(32)}` as const;
 const FIXED_SALT = `0x${"11".repeat(32)}` as const;
 const CONTENT_REGISTRY = "0x2222222222222222222222222222222222222222" as const;
+const REWARD_ESCROW = "0x3333333333333333333333333333333333333333" as const;
+const USDC_TOKEN = "0x4444444444444444444444444444444444444444" as const;
+const PROTOCOL_CONFIG = "0x5555555555555555555555555555555555555555" as const;
 const ITEM = {
+  contextUrl: "https://www.youtube.com/watch?v=dQw4w9WgXcQ",
   url: "https://www.youtube.com/watch?v=dQw4w9WgXcQ",
   title: "Never Gonna Give You Up",
   description: "A music video with persistent cultural staying power.",
@@ -16,7 +20,6 @@ const ITEM = {
 type SubmitCommandOptions = {
   allowance?: bigint;
   balance?: bigint;
-  hasVoterId?: boolean;
   submissionKeyUsed?: boolean;
   previewCategoryId?: bigint;
   receiptStatusByHash?: Record<string, "success" | "reverted">;
@@ -36,13 +39,15 @@ async function loadSubmitCommand(options: SubmitCommandOptions = {}) {
   const sleep = vi.fn().mockResolvedValue(undefined);
   const readContract = vi.fn(async ({ functionName }: { functionName: string }) => {
     switch (functionName) {
-      case "hasVoterId":
-        return options.hasVoterId ?? true;
       case "balanceOf":
         return options.balance ?? 20_000_000n;
       case "allowance":
         return options.allowance ?? 0n;
-      case "previewQuestionMediaSubmissionKey":
+      case "protocolConfig":
+        return "0x5555555555555555555555555555555555555555";
+      case "minSubmissionCrepPool":
+        return 1_000_000n;
+      case "previewQuestionSubmissionKey":
         return [options.previewCategoryId ?? ITEM.categoryId, SUBMISSION_KEY] as const;
       case "submissionKeyUsed":
         return options.submissionKeyUsed ?? false;
@@ -56,7 +61,7 @@ async function loadSubmitCommand(options: SubmitCommandOptions = {}) {
   let submitAttempts = 0;
   const writeContract = vi.fn(async ({ functionName }: { functionName: string }) => {
     if (
-      functionName === "submitQuestionWithMedia" &&
+      functionName === "submitQuestionWithReward" &&
       options.submitError &&
       submitAttempts < (options.submitErrorCount ?? 1)
     ) {
@@ -69,7 +74,7 @@ async function loadSubmitCommand(options: SubmitCommandOptions = {}) {
         return "0xapprove";
       case "reserveSubmission":
         return "0xreserve";
-      case "submitQuestionWithMedia":
+      case "submitQuestionWithReward":
         return "0xsubmit";
       case "cancelReservedSubmission":
         return "0xcancel";
@@ -99,13 +104,13 @@ async function loadSubmitCommand(options: SubmitCommandOptions = {}) {
     contractConfig: {
       registry: { address: CONTENT_REGISTRY, abi: [] },
       token: { address: "0x1111111111111111111111111111111111111111", abi: [] },
-      voterIdNFT: { address: "0x4444444444444444444444444444444444444444", abi: [] },
     },
   }));
   vi.doMock("../config.js", () => ({
     config: {
       submitBot: {},
-      contracts: { contentRegistry: CONTENT_REGISTRY },
+      contracts: { contentRegistry: CONTENT_REGISTRY, questionRewardPoolEscrow: REWARD_ESCROW },
+      submitRewardAsset: "crep",
       maxSubmissionsPerRun: 5,
       maxSubmissionsPerCategory: 3,
     },
@@ -164,22 +169,24 @@ function buildExpectedRevealCommitment(): Hex {
         { type: "uint256" },
         { type: "bytes32" },
         { type: "address" },
+        { type: "uint8" },
+        { type: "uint256" },
       ],
-      [SUBMISSION_KEY, ITEM.title, ITEM.description, ITEM.tags, ITEM.categoryId, FIXED_SALT, ADDRESS],
+      [SUBMISSION_KEY, ITEM.title, ITEM.description, ITEM.tags, ITEM.categoryId, FIXED_SALT, ADDRESS, 0, 1_000_000n],
     ),
   );
 }
 
 describe("runSubmit", () => {
-  it("uses the reserved submission flow before submitting a media-backed question", async () => {
+  it("uses the reserved submission flow before submitting a context-backed question", async () => {
     const submitCommand = await loadSubmitCommand();
 
     await submitCommand.runSubmit();
 
     expect(submitCommand.mocks.readContract).toHaveBeenCalledWith(
       expect.objectContaining({
-        functionName: "previewQuestionMediaSubmissionKey",
-        args: [[], ITEM.url, ITEM.title, ITEM.description, ITEM.tags, ITEM.categoryId],
+        functionName: "previewQuestionSubmissionKey",
+        args: [ITEM.contextUrl, [], "", ITEM.title, ITEM.description, ITEM.tags, ITEM.categoryId],
       }),
     );
     expect(submitCommand.mocks.readContract).toHaveBeenCalledWith(
@@ -193,7 +200,7 @@ describe("runSubmit", () => {
       1,
       expect.objectContaining({
         functionName: "approve",
-        args: [CONTENT_REGISTRY, 10_000_000n],
+        args: [REWARD_ESCROW, 1_000_000n],
       }),
     );
     expect(submitCommand.mocks.writeContract).toHaveBeenNthCalledWith(
@@ -206,8 +213,8 @@ describe("runSubmit", () => {
     expect(submitCommand.mocks.writeContract).toHaveBeenNthCalledWith(
       3,
       expect.objectContaining({
-        functionName: "submitQuestionWithMedia",
-        args: [[], ITEM.url, ITEM.title, ITEM.description, ITEM.tags, ITEM.categoryId, FIXED_SALT],
+        functionName: "submitQuestionWithReward",
+        args: [ITEM.contextUrl, [], "", ITEM.title, ITEM.description, ITEM.tags, ITEM.categoryId, FIXED_SALT, 0, 1_000_000n],
       }),
     );
     expect(submitCommand.mocks.log.info).toHaveBeenCalledWith(`Processing youtube item 1/1: "${ITEM.title}"`);
@@ -226,7 +233,7 @@ describe("runSubmit", () => {
   });
 
   it("reuses an existing submission allowance when it is already sufficient", async () => {
-    const submitCommand = await loadSubmitCommand({ allowance: 10_000_000n });
+    const submitCommand = await loadSubmitCommand({ allowance: 1_000_000n });
 
     await submitCommand.runSubmit();
 
@@ -252,14 +259,14 @@ describe("runSubmit", () => {
     expect(submitCommand.mocks.log.debug).toHaveBeenCalledWith(`Skipping "${ITEM.title}" (question already submitted)`);
   });
 
-  it("skips unsupported submission URLs before reserving", async () => {
+  it("skips invalid context URLs before reserving", async () => {
     const submitCommand = await loadSubmitCommand({
       sources: [
         {
           name: "youtube",
           categoryId: ITEM.categoryId,
           categoryName: "Media",
-          items: [{ ...ITEM, url: "https://www.themoviedb.org/movie/603" }],
+          items: [{ ...ITEM, contextUrl: "http://www.themoviedb.org/movie/603", url: "http://www.themoviedb.org/movie/603" }],
         },
       ],
     });
@@ -268,7 +275,7 @@ describe("runSubmit", () => {
 
     expect(submitCommand.mocks.writeContract).not.toHaveBeenCalled();
     expect(submitCommand.mocks.log.warn).toHaveBeenCalledWith(
-      `Skipping "${ITEM.title}" (submission URL must be a direct image or YouTube video)`,
+      `Skipping "${ITEM.title}" (context URL must be a valid HTTPS URL)`,
     );
   });
 
@@ -283,7 +290,7 @@ describe("runSubmit", () => {
     );
   });
 
-  it("cancels the reservation when submitQuestionWithMedia fails after reserving", async () => {
+  it("cancels the reservation when submitQuestionWithReward fails after reserving", async () => {
     const submitCommand = await loadSubmitCommand({ submitError: new Error("submit failed") });
 
     await submitCommand.runSubmit();
@@ -332,7 +339,7 @@ describe("runSubmit", () => {
     expect(submitCommand.mocks.sleep).toHaveBeenNthCalledWith(2, 1_100);
     expect(
       submitCommand.mocks.writeContract.mock.calls.filter(
-        ([call]) => call.functionName === "submitQuestionWithMedia",
+        ([call]) => call.functionName === "submitQuestionWithReward",
       ),
     ).toHaveLength(2);
     expect(submitCommand.mocks.writeContract).not.toHaveBeenCalledWith(
@@ -374,7 +381,7 @@ describe("runSubmit", () => {
 
     expect(
       submitCommand.mocks.writeContract.mock.calls.filter(
-        ([call]) => call.functionName === "submitQuestionWithMedia",
+        ([call]) => call.functionName === "submitQuestionWithReward",
       ),
     ).toHaveLength(2);
     expect(submitCommand.mocks.log.info).toHaveBeenCalledWith("Category filter: Media");

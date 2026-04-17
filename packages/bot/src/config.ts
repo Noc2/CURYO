@@ -10,10 +10,13 @@ export interface BotIdentityConfig {
   privateKey?: `0x${string}`;
 }
 
+export type SubmissionRewardAsset = "crep" | "usdc";
+
 const CONTRACT_ENV_NAMES = {
   categoryRegistry: "CATEGORY_REGISTRY_ADDRESS",
   contentRegistry: "CONTENT_REGISTRY_ADDRESS",
   crepToken: "CREP_TOKEN_ADDRESS",
+  questionRewardPoolEscrow: "QUESTION_REWARD_POOL_ESCROW_ADDRESS",
   roundRewardDistributor: "ROUND_REWARD_DISTRIBUTOR_ADDRESS",
   voterIdNFT: "VOTER_ID_NFT_ADDRESS",
   votingEngine: "VOTING_ENGINE_ADDRESS",
@@ -22,7 +25,7 @@ const CONTRACT_ENV_NAMES = {
 export type BotContractKey = keyof typeof CONTRACT_ENV_NAMES;
 
 const REQUIRED_CONTRACTS_BY_ROLE: Record<BotRole, BotContractKey[]> = {
-  submit: ["crepToken", "contentRegistry", "voterIdNFT"],
+  submit: ["crepToken", "contentRegistry", "questionRewardPoolEscrow"],
   rate: ["crepToken", "votingEngine", "voterIdNFT"],
 };
 
@@ -156,6 +159,20 @@ function parsePositiveBigIntEnv(name: string, fallback: bigint, errors: string[]
   return parsed;
 }
 
+function parseSubmissionRewardAssetEnv(name: string, fallback: SubmissionRewardAsset, errors: string[]) {
+  const value = readEnv(name)?.toLowerCase();
+  if (!value) {
+    return fallback;
+  }
+
+  if (value !== "crep" && value !== "usdc") {
+    errors.push(`${name} must be either "crep" or "usdc"`);
+    return fallback;
+  }
+
+  return value;
+}
+
 function readOptionalAddressEnv(name: string, errors: string[]): `0x${string}` | undefined {
   const value = readEnv(name);
   if (!value) {
@@ -228,6 +245,13 @@ function loadConfig() {
         errors,
         warnings,
       }),
+      questionRewardPoolEscrow: resolveOptionalContractAddress({
+        chainId,
+        envName: "QUESTION_REWARD_POOL_ESCROW_ADDRESS",
+        contractName: "QuestionRewardPoolEscrow",
+        errors,
+        warnings,
+      }),
       votingEngine: resolveOptionalContractAddress({
         chainId,
         envName: "VOTING_ENGINE_ADDRESS",
@@ -285,6 +309,7 @@ function loadConfig() {
     maxVotesPerRun: parseOptionalPositiveIntegerEnv("MAX_VOTES_PER_RUN", 10, errors),
     maxSubmissionsPerRun: parseOptionalPositiveIntegerEnv("MAX_SUBMISSIONS_PER_RUN", 5, errors),
     maxSubmissionsPerCategory: parseOptionalPositiveIntegerEnv("MAX_SUBMISSIONS_PER_CATEGORY", 3, errors),
+    submitRewardAsset: parseSubmissionRewardAssetEnv("SUBMIT_REWARD_ASSET", "usdc", errors),
   };
 
   if (errors.length > 0) {

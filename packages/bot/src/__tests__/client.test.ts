@@ -45,13 +45,14 @@ async function loadBotClient(options: BotClientOptions = {}) {
         categoryRegistry: "0x5555555555555555555555555555555555555555",
         contentRegistry: "0x2222222222222222222222222222222222222222",
         crepToken: "0x1111111111111111111111111111111111111111",
+        questionRewardPoolEscrow: "0x7777777777777777777777777777777777777777",
         voterIdNFT: "0x4444444444444444444444444444444444444444",
         votingEngine: "0x3333333333333333333333333333333333333333",
       },
     },
     getRequiredContractKeys: (role: "submit" | "rate") =>
       role === "submit"
-        ? (["crepToken", "contentRegistry", "voterIdNFT"] as const)
+        ? (["crepToken", "contentRegistry", "questionRewardPoolEscrow"] as const)
         : (["crepToken", "votingEngine", "voterIdNFT"] as const),
   }));
   vi.doMock("../keystore.js", () => ({

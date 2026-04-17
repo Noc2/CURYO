@@ -9,6 +9,8 @@ const VALID_ENV = {
   PONDER_URL: "https://ponder.example.com",
   CREP_TOKEN_ADDRESS: chain31337?.CuryoReputation?.address ?? "0x1111111111111111111111111111111111111111",
   CONTENT_REGISTRY_ADDRESS: chain31337?.ContentRegistry?.address ?? "0x2222222222222222222222222222222222222222",
+  QUESTION_REWARD_POOL_ESCROW_ADDRESS:
+    chain31337?.QuestionRewardPoolEscrow?.address ?? "0x7777777777777777777777777777777777777777",
   VOTING_ENGINE_ADDRESS: chain31337?.RoundVotingEngine?.address ?? "0x3333333333333333333333333333333333333333",
   ROUND_REWARD_DISTRIBUTOR_ADDRESS:
     chain31337?.RoundRewardDistributor?.address ?? "0x6666666666666666666666666666666666666666",
@@ -166,6 +168,7 @@ describe("bot config", () => {
       [
         "CREP_TOKEN_ADDRESS",
         "CONTENT_REGISTRY_ADDRESS",
+        "QUESTION_REWARD_POOL_ESCROW_ADDRESS",
         "VOTING_ENGINE_ADDRESS",
         "ROUND_REWARD_DISTRIBUTOR_ADDRESS",
         "VOTER_ID_NFT_ADDRESS",
@@ -175,6 +178,7 @@ describe("bot config", () => {
 
     expect(config.contracts.crepToken).toBe(chain31337.CuryoReputation.address);
     expect(config.contracts.contentRegistry).toBe(chain31337.ContentRegistry.address);
+    expect(config.contracts.questionRewardPoolEscrow).toBe(chain31337.QuestionRewardPoolEscrow.address);
     expect(config.contracts.votingEngine).toBe(chain31337.RoundVotingEngine.address);
     expect(config.contracts.roundRewardDistributor).toBe(chain31337.RoundRewardDistributor.address);
     expect(config.contracts.voterIdNFT).toBe(chain31337.VoterIdNFT.address);
@@ -186,6 +190,7 @@ describe("bot config", () => {
     const { config } = await loadBotConfig({
       CREP_TOKEN_ADDRESS: "0x1111111111111111111111111111111111111111",
       CONTENT_REGISTRY_ADDRESS: "0x2222222222222222222222222222222222222222",
+      QUESTION_REWARD_POOL_ESCROW_ADDRESS: "0x7777777777777777777777777777777777777777",
       VOTING_ENGINE_ADDRESS: "0x3333333333333333333333333333333333333333",
       ROUND_REWARD_DISTRIBUTOR_ADDRESS: "0x6666666666666666666666666666666666666666",
       VOTER_ID_NFT_ADDRESS: "0x4444444444444444444444444444444444444444",
@@ -194,12 +199,14 @@ describe("bot config", () => {
 
     expect(config.contracts.crepToken).toBe(chain31337.CuryoReputation.address);
     expect(config.contracts.contentRegistry).toBe(chain31337.ContentRegistry.address);
+    expect(config.contracts.questionRewardPoolEscrow).toBe(chain31337.QuestionRewardPoolEscrow.address);
     expect(config.contracts.votingEngine).toBe(chain31337.RoundVotingEngine.address);
     expect(config.contracts.roundRewardDistributor).toBe(chain31337.RoundRewardDistributor.address);
     expect(config.contracts.voterIdNFT).toBe(chain31337.VoterIdNFT.address);
     expect(config.contracts.categoryRegistry).toBe(chain31337.CategoryRegistry.address);
     expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining("Ignoring CREP_TOKEN_ADDRESS"));
     expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining("Ignoring CONTENT_REGISTRY_ADDRESS"));
+    expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining("Ignoring QUESTION_REWARD_POOL_ESCROW_ADDRESS"));
     expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining("Ignoring VOTING_ENGINE_ADDRESS"));
     expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining("Ignoring ROUND_REWARD_DISTRIBUTOR_ADDRESS"));
     expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining("Ignoring VOTER_ID_NFT_ADDRESS"));
@@ -219,6 +226,7 @@ describe("bot config", () => {
       [
         "CREP_TOKEN_ADDRESS",
         "CONTENT_REGISTRY_ADDRESS",
+        "QUESTION_REWARD_POOL_ESCROW_ADDRESS",
         "VOTING_ENGINE_ADDRESS",
         "VOTER_ID_NFT_ADDRESS",
         "CATEGORY_REGISTRY_ADDRESS",
@@ -228,7 +236,8 @@ describe("bot config", () => {
     expect(() => botModule.validateConfig("submit")).toThrow("process.exit:1");
     expect(errorSpy).toHaveBeenCalledWith("[Bot] ERROR: CREP_TOKEN_ADDRESS is required");
     expect(errorSpy).toHaveBeenCalledWith("[Bot] ERROR: CONTENT_REGISTRY_ADDRESS is required");
-    expect(errorSpy).toHaveBeenCalledWith("[Bot] ERROR: VOTER_ID_NFT_ADDRESS is required");
+    expect(errorSpy).toHaveBeenCalledWith("[Bot] ERROR: QUESTION_REWARD_POOL_ESCROW_ADDRESS is required");
+    expect(errorSpy).not.toHaveBeenCalledWith("[Bot] ERROR: VOTER_ID_NFT_ADDRESS is required");
     expect(errorSpy).not.toHaveBeenCalledWith("[Bot] ERROR: VOTING_ENGINE_ADDRESS is required");
     expect(exitSpy).toHaveBeenCalledWith(1);
   });

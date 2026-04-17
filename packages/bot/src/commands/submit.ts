@@ -1,5 +1,5 @@
 import { randomBytes } from "node:crypto";
-import { encodeAbiParameters, keccak256, type Hex } from "viem";
+import { encodeAbiParameters, erc20Abi, isAddress, keccak256, type Address, type Hex } from "viem";
 import { ensureCrepAllowance } from "../allowance.js";
 import { publicClient, getWalletClient, getAccount } from "../client.js";
 import { contractConfig } from "../contracts.js";
@@ -10,7 +10,9 @@ import type { ContentSource } from "../sources/types.js";
 import type { SubmitRunOptions } from "../submitOptions.js";
 import { sleep } from "../utils.js";
 
-const MIN_SUBMITTER_STAKE = 10_000_000n; // 10 cREP (6 decimals)
+const SUBMISSION_REWARD_ASSET_CREP = 0;
+const SUBMISSION_REWARD_ASSET_USDC = 1;
+const DEFAULT_MIN_SUBMISSION_REWARD_POOL = 1_000_000n; // 1 token with 6 decimals
 const RESERVED_SUBMISSION_WAIT_MS = 1_100;
 const TX_RECEIPT_TIMEOUT_MS = 180_000;
 
@@ -29,14 +31,37 @@ function isYouTubeVideoUrl(url: string): boolean {
   }
 }
 
-function getSubmissionMedia(url: string): SubmissionMedia | null {
-  if (DIRECT_IMAGE_URL_PATTERN.test(url)) {
-    return { imageUrls: [url], videoUrl: "" };
+function normalizeHttpsUrl(url: string): string | null {
+  try {
+    const parsed = new URL(url.trim());
+    return parsed.protocol === "https:" ? parsed.toString() : null;
+  } catch {
+    return null;
   }
-  if (isYouTubeVideoUrl(url)) {
-    return { imageUrls: [], videoUrl: url };
+}
+
+function getContextUrl(item: { contextUrl?: string; url: string }): string | null {
+  return normalizeHttpsUrl(item.contextUrl ?? item.url);
+}
+
+function getSubmissionMedia(item: { imageUrls?: string[]; videoUrl?: string }): SubmissionMedia | null {
+  const imageUrls = (item.imageUrls ?? [])
+    .map(url => normalizeHttpsUrl(url))
+    .filter((url): url is string => Boolean(url));
+  const unsupportedImageUrl = imageUrls.find(url => !DIRECT_IMAGE_URL_PATTERN.test(url));
+  if (unsupportedImageUrl || imageUrls.length > 4) {
+    return null;
   }
-  return null;
+
+  const videoUrl = item.videoUrl ? normalizeHttpsUrl(item.videoUrl) : "";
+  if (videoUrl && !isYouTubeVideoUrl(videoUrl)) {
+    return null;
+  }
+  if (videoUrl && imageUrls.length > 0) {
+    return null;
+  }
+
+  return { imageUrls, videoUrl: videoUrl ?? "" };
 }
 
 function createSubmissionSalt(): Hex {
@@ -51,6 +76,8 @@ function buildSubmissionRevealCommitment(params: {
   submitter: Hex;
   tags: string;
   title: string;
+  rewardAsset: number;
+  rewardAmount: bigint;
 }): Hex {
   return keccak256(
     encodeAbiParameters(
@@ -62,6 +89,8 @@ function buildSubmissionRevealCommitment(params: {
         { type: "uint256" },
         { type: "bytes32" },
         { type: "address" },
+        { type: "uint8" },
+        { type: "uint256" },
       ],
       [
         params.submissionKey,
@@ -71,9 +100,64 @@ function buildSubmissionRevealCommitment(params: {
         params.categoryId,
         params.salt,
         params.submitter,
+        params.rewardAsset,
+        params.rewardAmount,
       ],
     ),
   );
+}
+
+async function getSubmissionRewardFunding(): Promise<{
+  assetId: number;
+  amount: bigint;
+  label: string;
+  token: { address: Address; abi: typeof erc20Abi };
+}> {
+  const rewardAsset = config.submitRewardAsset;
+  const protocolConfigAddress = (await publicClient.readContract({
+    ...contractConfig.registry,
+    functionName: "protocolConfig",
+  })) as Address;
+  const minimumFunctionName = rewardAsset === "crep" ? "minSubmissionCrepPool" : "minSubmissionUsdcPool";
+  const configuredMinimum =
+    protocolConfigAddress && isAddress(protocolConfigAddress)
+      ? ((await publicClient
+          .readContract({
+            address: protocolConfigAddress,
+            abi: contractConfig.protocolConfigAbi,
+            functionName: minimumFunctionName,
+          })
+          .catch(() => 0n)) as bigint)
+      : 0n;
+  const amount = configuredMinimum > 0n ? configuredMinimum : DEFAULT_MIN_SUBMISSION_REWARD_POOL;
+
+  if (rewardAsset === "crep") {
+    return {
+      assetId: SUBMISSION_REWARD_ASSET_CREP,
+      amount,
+      label: "cREP",
+      token: { address: contractConfig.token.address, abi: erc20Abi },
+    };
+  }
+
+  const usdcToken = (await publicClient.readContract({
+    ...contractConfig.questionRewardPoolEscrow,
+    functionName: "usdcToken",
+  })) as Address;
+
+  return {
+    assetId: SUBMISSION_REWARD_ASSET_USDC,
+    amount,
+    label: "USDC",
+    token: { address: usdcToken, abi: erc20Abi },
+  };
+}
+
+function formatMicroTokenAmount(amount: bigint) {
+  const whole = amount / 1_000_000n;
+  const fractional = amount % 1_000_000n;
+  const fractionalText = fractional.toString().padStart(6, "0").replace(/0+$/, "");
+  return fractionalText ? `${whole}.${fractionalText}` : whole.toString();
 }
 
 async function cancelReservedSubmission(
@@ -153,34 +237,34 @@ async function waitForTransactionReceipt(params: {
 export async function runSubmit(options: SubmitRunOptions = {}) {
   const account = getAccount(config.submitBot);
   const wallet = getWalletClient(config.submitBot, account);
-  log.info(`Submission bot address: ${account.address}`);
-  const maxSubmissions = options.maxSubmissions ?? config.maxSubmissionsPerRun;
-
-  // 1. Check Voter ID NFT
-  const hasVoterId = await publicClient.readContract({
-    ...contractConfig.voterIdNFT,
-    functionName: "hasVoterId",
-    args: [account.address],
-  });
-  if (!hasVoterId) {
-    log.error("Account does not have a Voter ID NFT. Cannot submit.");
+  const rewardEscrowAddress = config.contracts.questionRewardPoolEscrow;
+  if (!rewardEscrowAddress) {
+    log.error("QuestionRewardPoolEscrow address is not configured.");
     return;
   }
+  log.info(`Submission bot address: ${account.address}`);
+  const maxSubmissions = options.maxSubmissions ?? config.maxSubmissionsPerRun;
+  const rewardFunding = await getSubmissionRewardFunding();
+  log.info(
+    `Submission reward pool: ${formatMicroTokenAmount(rewardFunding.amount)} ${rewardFunding.label} per question`,
+  );
 
-  // 2. Check cREP balance
+  // 1. Check balance for the mandatory question reward pool.
   const balance = (await publicClient.readContract({
-    ...contractConfig.token,
+    ...rewardFunding.token,
     functionName: "balanceOf",
     args: [account.address],
   })) as bigint;
-  log.info(`cREP balance: ${Number(balance) / 1e6} cREP`);
+  log.info(`${rewardFunding.label} balance: ${formatMicroTokenAmount(balance)} ${rewardFunding.label}`);
 
-  if (balance < MIN_SUBMITTER_STAKE) {
-    log.error("Insufficient cREP for even one submission (need 10 cREP).");
+  if (balance < rewardFunding.amount) {
+    log.error(
+      `Insufficient ${rewardFunding.label} for even one submission (need ${formatMicroTokenAmount(rewardFunding.amount)} ${rewardFunding.label} reward pool).`,
+    );
     return;
   }
 
-  // 3. Iterate through all content sources
+  // 2. Iterate through all content sources
   const sources = selectSources(getAllSources(), options);
   if (options.category) {
     log.info(`Category filter: ${options.category}`);
@@ -230,20 +314,25 @@ export async function runSubmit(options: SubmitRunOptions = {}) {
 
       log.info(`Processing ${source.name} item ${itemIndex + 1}/${items.length}: "${item.title}"`);
 
-      const media = getSubmissionMedia(item.url);
+      const contextUrl = getContextUrl(item);
+      const media = getSubmissionMedia(item);
+      if (!contextUrl) {
+        log.warn(`Skipping "${item.title}" (context URL must be a valid HTTPS URL)`);
+        continue;
+      }
       if (!media) {
-        log.warn(`Skipping "${item.title}" (submission URL must be a direct image or YouTube video)`);
+        log.warn(`Skipping "${item.title}" (preview media must be direct images or one YouTube video)`);
         continue;
       }
 
       // Check balance before each submission
       const currentBalance = (await publicClient.readContract({
-        ...contractConfig.token,
+        ...rewardFunding.token,
         functionName: "balanceOf",
         args: [account.address],
       })) as bigint;
-      if (currentBalance < MIN_SUBMITTER_STAKE) {
-        log.error("Insufficient cREP for next submission. Stopping.");
+      if (currentBalance < rewardFunding.amount) {
+        log.error(`Insufficient ${rewardFunding.label} for next submission. Stopping.`);
         return;
       }
 
@@ -253,8 +342,8 @@ export async function runSubmit(options: SubmitRunOptions = {}) {
         const description = truncateContentDescription(item.description);
         const [resolvedCategoryId, submissionKey] = (await publicClient.readContract({
           ...contractConfig.registry,
-          functionName: "previewQuestionMediaSubmissionKey",
-          args: [media.imageUrls, media.videoUrl, title, description, item.tags, requestedCategoryId],
+          functionName: "previewQuestionSubmissionKey",
+          args: [contextUrl, media.imageUrls, media.videoUrl, title, description, item.tags, requestedCategoryId],
         })) as PreviewSubmissionResult;
         if (resolvedCategoryId !== requestedCategoryId) {
           log.warn(
@@ -281,12 +370,15 @@ export async function runSubmit(options: SubmitRunOptions = {}) {
           categoryId: requestedCategoryId,
           salt,
           submitter: account.address,
+          rewardAsset: rewardFunding.assetId,
+          rewardAmount: rewardFunding.amount,
         });
 
         const approveTx = await ensureCrepAllowance({
           owner: account.address,
-          spender: config.contracts.contentRegistry,
-          requiredAmount: MIN_SUBMITTER_STAKE,
+          spender: rewardEscrowAddress,
+          requiredAmount: rewardFunding.amount,
+          token: rewardFunding.token,
           wallet,
         });
         if (approveTx) {
@@ -313,8 +405,19 @@ export async function runSubmit(options: SubmitRunOptions = {}) {
         try {
           submitTx = await wallet.writeContract({
             ...contractConfig.registry,
-            functionName: "submitQuestionWithMedia",
-            args: [media.imageUrls, media.videoUrl, title, description, item.tags, requestedCategoryId, salt],
+            functionName: "submitQuestionWithReward",
+            args: [
+              contextUrl,
+              media.imageUrls,
+              media.videoUrl,
+              title,
+              description,
+              item.tags,
+              requestedCategoryId,
+              salt,
+              rewardFunding.assetId,
+              rewardFunding.amount,
+            ],
           });
         } catch (error) {
           if (!isReservationTooNewError(error)) {
@@ -325,8 +428,19 @@ export async function runSubmit(options: SubmitRunOptions = {}) {
           await sleep(RESERVED_SUBMISSION_WAIT_MS);
           submitTx = await wallet.writeContract({
             ...contractConfig.registry,
-            functionName: "submitQuestionWithMedia",
-            args: [media.imageUrls, media.videoUrl, title, description, item.tags, requestedCategoryId, salt],
+            functionName: "submitQuestionWithReward",
+            args: [
+              contextUrl,
+              media.imageUrls,
+              media.videoUrl,
+              title,
+              description,
+              item.tags,
+              requestedCategoryId,
+              salt,
+              rewardFunding.assetId,
+              rewardFunding.amount,
+            ],
           });
         }
         await waitForTransactionReceipt({
