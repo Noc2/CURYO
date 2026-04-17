@@ -528,6 +528,61 @@ contract RoundIntegrationTest is VotingTestBase {
         assertGt(reward1, reward2, "Voter1 (larger stake) should receive more");
     }
 
+    function test_MultipleWinners_FinalClaimantReceivesVoterPoolRemainder() public {
+        uint256 contentId = _submitContent();
+        uint256 stake1 = 1_000_001;
+        uint256 stake2 = 1_000_000;
+        uint256 stake3 = 1_000_000;
+
+        bytes32 salt1 = keccak256(abi.encodePacked("dust", voter1, contentId));
+        bytes32 salt2 = keccak256(abi.encodePacked("dust", voter2, contentId));
+        bytes32 salt3 = keccak256(abi.encodePacked("dust", voter3, contentId));
+
+        (, bytes32 ck1) = _commitWithSalt(voter1, contentId, true, stake1, salt1);
+        (, bytes32 ck2) = _commitWithSalt(voter2, contentId, true, stake2, salt2);
+        (, bytes32 ck3) = _commitWithSalt(voter3, contentId, false, stake3, salt3);
+
+        uint256 roundId = RoundEngineReadHelpers.activeRoundId(votingEngine, contentId);
+
+        RoundLib.Round memory openRound = RoundEngineReadHelpers.round(votingEngine, contentId, roundId);
+        vm.warp(openRound.startTime + EPOCH_DURATION + 1);
+        votingEngine.revealVoteByCommitKey(contentId, roundId, ck1, true, salt1);
+        votingEngine.revealVoteByCommitKey(contentId, roundId, ck2, true, salt2);
+        votingEngine.revealVoteByCommitKey(contentId, roundId, ck3, false, salt3);
+
+        votingEngine.settleRound(contentId, roundId);
+
+        RoundLib.Round memory round = RoundEngineReadHelpers.round(votingEngine, contentId, roundId);
+        assertTrue(round.upWins, "UP should win");
+
+        uint256 voterPool = votingEngine.roundVoterPool(contentId, roundId);
+
+        uint256 bal1Before = crepToken.balanceOf(voter1);
+        vm.prank(voter1);
+        rewardDistributor.claimReward(contentId, roundId);
+        uint256 reward1 = crepToken.balanceOf(voter1) - bal1Before - stake1;
+
+        uint256 bal2Before = crepToken.balanceOf(voter2);
+        vm.prank(voter2);
+        rewardDistributor.claimReward(contentId, roundId);
+        uint256 reward2 = crepToken.balanceOf(voter2) - bal2Before - stake2;
+
+        assertEq(reward1 + reward2, voterPool, "winner rewards should exhaust voter pool");
+        assertEq(rewardDistributor.roundVoterRewardClaimedCount(contentId, roundId), 2);
+        assertEq(rewardDistributor.roundVoterRewardClaimedAmount(contentId, roundId), voterPool);
+
+        uint256 loserBefore = crepToken.balanceOf(voter3);
+        vm.prank(voter3);
+        rewardDistributor.claimReward(contentId, roundId);
+        assertEq(crepToken.balanceOf(voter3) - loserBefore, stake3 / 20, "loser should receive fixed rebate");
+
+        assertEq(
+            crepToken.balanceOf(address(votingEngine)),
+            votingEngine.consensusReserve(),
+            "engine should not retain voter reward dust"
+        );
+    }
+
     // =========================================================================
     // 3. CONCURRENT ROUNDS ON DIFFERENT CONTENT
     // =========================================================================

@@ -639,8 +639,8 @@ contract AuditGapTests is VotingTestBase {
         // Engine should hold at least the remaining reserve.
         assertTrue(engineBalAfter >= consensusReserve, "Engine must hold at least the consensus reserve");
 
-        // Dust should be minimal (at most a few tokens from rounding)
+        // Final winner receives any voter-pool remainder, so no reward dust should remain.
         uint256 dust = engineBalAfter - consensusReserve;
-        assertTrue(dust < 10, "Dust from rounding should be minimal");
+        assertEq(dust, 0, "No voter reward dust should remain");
     }
 }

@@ -195,7 +195,7 @@ contract AdversarialTests is VotingTestBase {
     }
 
     // =========================================================================
-    // 1. REWARD EXHAUSTION — sum of all winner claims ≤ winningPool + voterPool
+    // 1. REWARD EXHAUSTION — sum of all winner claims equals winningPool + voterPool
     // =========================================================================
 
     /// @notice With 4 winners and 1 loser, total claimed must not exceed pool bounds
@@ -235,13 +235,13 @@ contract AdversarialTests is VotingTestBase {
             totalClaimed += crepToken.balanceOf(winners[i]) - before;
         }
 
-        // Total claimed = stake returns + rewards ≤ winningPool + voterPool
-        assertLe(totalClaimed, winningRawPool + voterPool, "Claims exceed pool bounds");
+        // Total claimed = stake returns + rewards, including the final-claimant remainder.
+        assertEq(totalClaimed, winningRawPool + voterPool, "Winner claims should exhaust voter pool exactly");
 
-        // Additionally: total rewards portion only ≤ voterPool
+        // Additionally: total rewards portion exactly exhausts voterPool.
         uint256 totalStakeReturned = 50e6 + 40e6 + 30e6 + 30e6; // winning stakes
         uint256 rewardOnly = totalClaimed - totalStakeReturned;
-        assertLe(rewardOnly, voterPool, "Reward-only portion exceeds voter pool");
+        assertEq(rewardOnly, voterPool, "Reward-only portion should exhaust voter pool exactly");
     }
 
     /// @notice Revealed losers get the fixed rebate and do not revert

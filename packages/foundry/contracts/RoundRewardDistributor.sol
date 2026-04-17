@@ -59,6 +59,10 @@ contract RoundRewardDistributor is Initializable, AccessControlUpgradeable, Reen
     // Track claimed rewards: contentId => roundId => voter => claimed
     mapping(uint256 => mapping(uint256 => mapping(address => bool))) public rewardClaimed;
 
+    // Track aggregate voter reward claim progress so the final winner receives the dust remainder.
+    mapping(uint256 => mapping(uint256 => uint256)) public roundVoterRewardClaimedCount;
+    mapping(uint256 => mapping(uint256 => uint256)) public roundVoterRewardClaimedAmount;
+
     // Track frontend fee claims: contentId => roundId => frontend => claimed
     mapping(uint256 => mapping(uint256 => mapping(address => bool))) public frontendFeeClaimed;
 
@@ -206,7 +210,21 @@ contract RoundRewardDistributor is Initializable, AccessControlUpgradeable, Reen
 
         uint256 voterPool = votingEngine.roundVoterPool(contentId, roundId);
         uint256 weightedWinningStake = votingEngine.roundWinningStake(contentId, roundId);
-        uint256 reward = RewardMath.calculateVoterReward(effectiveStake, weightedWinningStake, voterPool);
+        uint256 totalWinningClaimants = round.upWins ? round.upCount : round.downCount;
+        uint256 claimedCount = roundVoterRewardClaimedCount[contentId][roundId];
+        uint256 claimedAmount = roundVoterRewardClaimedAmount[contentId][roundId];
+        if (totalWinningClaimants == 0 || claimedCount >= totalWinningClaimants || claimedAmount > voterPool) {
+            revert PoolExhausted();
+        }
+
+        uint256 reward;
+        if (claimedCount + 1 == totalWinningClaimants) {
+            reward = voterPool - claimedAmount;
+        } else {
+            reward = RewardMath.calculateVoterReward(effectiveStake, weightedWinningStake, voterPool);
+        }
+        roundVoterRewardClaimedCount[contentId][roundId] = claimedCount + 1;
+        roundVoterRewardClaimedAmount[contentId][roundId] = claimedAmount + reward;
 
         // Total payout = original stake return + reward from voter pool
         uint256 totalPayout = commit.stakeAmount + reward;
@@ -643,5 +661,5 @@ contract RoundRewardDistributor is Initializable, AccessControlUpgradeable, Reen
     }
 
     // --- Storage Gap for Future Upgrades ---
-    uint256[38] private __gap;
+    uint256[36] private __gap;
 }
