@@ -490,6 +490,75 @@ test.describe("Mobile viewport (phone)", () => {
     await expect(activeMoreButton).toHaveAttribute("aria-expanded", "true");
   });
 
+  test("mobile voting dock keeps rating orb raised above equal action circles", async ({ connectedPage: page }) => {
+    await gotoWithRetry(page, "/rate", { ensureWalletConnected: true });
+    await waitForFeedLoaded(page);
+
+    const canVote = await findVoteableContent(page);
+    expect(canVote, "Should find at least one voteable content with dock vote controls").toBeTruthy();
+
+    const dock = page.locator('[data-testid="vote-mobile-dock"]');
+    await expect(dock).toBeVisible({ timeout: 5_000 });
+
+    const layout = await dock.evaluate(node => {
+      const dockElement = node as HTMLElement;
+      const ratingOrb = dockElement.querySelector<HTMLElement>(
+        '[data-mobile-dock-rating-orb="true"] [role="img"][aria-label^="Community rating"]',
+      );
+      const shell = dockElement.querySelector<HTMLElement>('[data-mobile-dock-shell="true"]');
+      const actionControls = [
+        dockElement.querySelector<HTMLElement>('[aria-label^="Bounty:"]'),
+        dockElement.querySelector<HTMLElement>('button[aria-label="Vote up and raise the score"]'),
+        dockElement.querySelector<HTMLElement>('button[aria-label="Vote down and lower the score"]'),
+        dockElement.querySelector<HTMLElement>(
+          'button[aria-label="Expand details"], button[aria-label="Collapse details"]',
+        ),
+      ];
+
+      if (!ratingOrb || !shell || actionControls.some(control => !control)) {
+        throw new Error("Missing mobile dock rating orb, shell, or action controls");
+      }
+
+      const toRect = (element: HTMLElement) => {
+        const rect = element.getBoundingClientRect();
+        return {
+          bottom: rect.bottom,
+          height: rect.height,
+          left: rect.left,
+          right: rect.right,
+          top: rect.top,
+          width: rect.width,
+        };
+      };
+      const dockRect = toRect(dockElement);
+      const ratingRect = toRect(ratingOrb);
+      const controlRects = actionControls.map(control => toRect(control as HTMLElement));
+      const shellStyle = getComputedStyle(shell);
+
+      return {
+        controlRects,
+        dockCenterX: dockRect.left + dockRect.width / 2,
+        maskImage: shellStyle.maskImage,
+        ratingRect,
+        webkitMaskImage: shellStyle.getPropertyValue("-webkit-mask-image"),
+      };
+    });
+
+    const firstControl = layout.controlRects[0];
+    for (const control of layout.controlRects.slice(1)) {
+      expect(Math.abs(control.width - firstControl.width)).toBeLessThanOrEqual(1);
+      expect(Math.abs(control.height - firstControl.height)).toBeLessThanOrEqual(1);
+      expect(Math.abs(control.top - firstControl.top)).toBeLessThanOrEqual(1);
+    }
+
+    const highestControlTop = Math.min(...layout.controlRects.map(rect => rect.top));
+    expect(layout.ratingRect.width).toBeGreaterThan(firstControl.width + 30);
+    expect(layout.ratingRect.height).toBeGreaterThan(firstControl.height + 30);
+    expect(layout.ratingRect.top).toBeLessThan(highestControlTop - 8);
+    expect(Math.abs(layout.ratingRect.left + layout.ratingRect.width / 2 - layout.dockCenterX)).toBeLessThanOrEqual(2);
+    expect(`${layout.maskImage} ${layout.webkitMaskImage}`).toContain("radial-gradient");
+  });
+
   test("category switches keep the mobile feed controls visible", async ({ connectedPage: page }) => {
     await gotoWithRetry(page, "/rate#products", { ensureWalletConnected: true });
     await waitForFeedLoaded(page);
@@ -590,10 +659,7 @@ test.describe("Mobile viewport (phone)", () => {
       .locator(".dropdown-content")
       .getByRole("link", { name: /Ask/i })
       .waitFor({ state: "visible", timeout: 3_000 });
-    await page
-      .locator(".dropdown-content")
-      .getByRole("link", { name: /Ask/i })
-      .click();
+    await page.locator(".dropdown-content").getByRole("link", { name: /Ask/i }).click();
 
     await expect(page).toHaveURL(/\/ask/, { timeout: 15_000 });
   });
