@@ -7,6 +7,8 @@ ponder.on("QuestionRewardPoolEscrow:RewardPoolCreated", async ({ event, context 
     contentId,
     funder,
     funderVoterId,
+    asset,
+    nonRefundable,
     amount,
     requiredVoters,
     requiredSettledRounds,
@@ -22,6 +24,8 @@ ponder.on("QuestionRewardPoolEscrow:RewardPoolCreated", async ({ event, context 
       contentId,
       funder,
       funderVoterId,
+      asset: Number(asset),
+      nonRefundable,
       fundedAmount: amount,
       unallocatedAmount: amount,
       allocatedAmount: 0n,
@@ -46,6 +50,27 @@ ponder.on("QuestionRewardPoolEscrow:RewardPoolCreated", async ({ event, context 
     await context.db.update(content, { id: contentId }).set({
       lastActivityAt: event.block.timestamp,
     });
+  }
+});
+
+ponder.on("QuestionRewardPoolEscrow:RewardPoolForfeited", async ({ event, context }) => {
+  const { rewardPoolId, amount } = event.args;
+  const existingRewardPool = await context.db.find(questionRewardPool, { id: rewardPoolId });
+
+  await context.db.update(questionRewardPool, { id: rewardPoolId }).set((row) => ({
+    unallocatedAmount: 0n,
+    refundedAmount: row.refundedAmount + amount,
+    refunded: true,
+    updatedAt: event.block.timestamp,
+  }));
+
+  if (existingRewardPool) {
+    const existingContent = await context.db.find(content, { id: existingRewardPool.contentId });
+    if (existingContent) {
+      await context.db.update(content, { id: existingRewardPool.contentId }).set({
+        lastActivityAt: event.block.timestamp,
+      });
+    }
   }
 });
 

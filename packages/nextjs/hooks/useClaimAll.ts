@@ -23,6 +23,22 @@ import { notification } from "~~/utils/scaffold-eth";
 /**
  * Hook for claiming all outstanding rewards in sequence.
  */
+function getClaimableRewardLabel(item: ClaimableRewardItem) {
+  switch (item.claimType) {
+    case "participation_reward":
+      return `bootstrap reward for content #${item.contentId} round ${item.roundId}`;
+    case "question_reward":
+      return `question reward for content #${item.contentId} round ${item.roundId}`;
+    case "frontend_registry_fee":
+      return `frontend registry fees for ${item.frontend}`;
+    case "frontend_round_fee":
+      return `frontend round fee for content #${item.contentId} round ${item.roundId}`;
+    case "refund":
+    case "reward":
+      return `content #${item.contentId} round ${item.roundId}`;
+  }
+}
+
 export function useClaimAll() {
   const { chain } = useAccount();
   const wagmiConfig = useConfig();
@@ -54,9 +70,6 @@ export function useClaimAll() {
     contractName: "RoundVotingEngine",
   } as any);
 
-  const { writeContractAsync: writeContentRegistry } = useScaffoldWriteContract({
-    contractName: "ContentRegistry",
-  } as any);
   const { writeContractAsync: writeFrontendRegistry } = useScaffoldWriteContract({
     contractName: "FrontendRegistry",
   } as any);
@@ -106,6 +119,7 @@ export function useClaimAll() {
       for (let i = 0; i < orderedItems.length; i++) {
         setProgress({ current: i + 1, total: orderedItems.length });
         const item = orderedItems[i];
+        const claimLabel = getClaimableRewardLabel(item);
 
         try {
           if (item.claimType === "refund") {
@@ -116,27 +130,11 @@ export function useClaimAll() {
               },
               { getErrorMessage: getTransactionErrorMessage },
             );
-          } else if (item.claimType === "submitter_reward") {
-            await (writeDistributor as any)(
-              {
-                functionName: "claimSubmitterReward",
-                args: [item.contentId, item.roundId],
-              },
-              { getErrorMessage: getTransactionErrorMessage },
-            );
           } else if (item.claimType === "participation_reward") {
             await (writeDistributor as any)(
               {
                 functionName: "claimParticipationReward",
                 args: [item.contentId, item.roundId],
-              },
-              { getErrorMessage: getTransactionErrorMessage },
-            );
-          } else if (item.claimType === "submitter_participation_reward") {
-            await (writeContentRegistry as any)(
-              {
-                functionName: "claimSubmitterParticipationReward",
-                args: [item.contentId],
               },
               { getErrorMessage: getTransactionErrorMessage },
             );
@@ -186,18 +184,6 @@ export function useClaimAll() {
             );
           }
         } catch (e: any) {
-          const claimLabel =
-            item.claimType === "participation_reward"
-              ? `bootstrap reward for content #${item.contentId} round ${item.roundId}`
-              : item.claimType === "submitter_participation_reward"
-                ? `submitter bootstrap reward for content #${item.contentId}`
-                : item.claimType === "question_reward"
-                  ? `question reward for content #${item.contentId} round ${item.roundId}`
-                  : item.claimType === "frontend_registry_fee"
-                    ? `frontend registry fees for ${item.frontend}`
-                    : item.claimType === "frontend_round_fee"
-                      ? `frontend round fee for content #${item.contentId} round ${item.roundId}`
-                      : `content #${item.contentId} round ${item.roundId}`;
           console.error(`Claim failed for ${claimLabel}:`, e?.shortMessage || e?.message);
           if (isClaimGasShortageError(e, transactionFeedback)) {
             break;

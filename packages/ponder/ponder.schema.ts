@@ -197,25 +197,8 @@ export const rewardClaim = onchainTable(
   }),
 );
 
-export const submitterRewardClaim = onchainTable(
-  "submitter_reward_claim",
-  (t) => ({
-    id: t.text().primaryKey(), // `${contentId}-${roundId}`
-    contentId: t.bigint().notNull(),
-    roundId: t.bigint().notNull(),
-    epochId: t.bigint(), // set only for epoch-based claims
-    source: t.text().notNull(), // "round" or "epoch"
-    submitter: t.hex().notNull(),
-    crepAmount: t.bigint().notNull(),
-    claimedAt: t.bigint().notNull(),
-  }),
-  (table) => ({
-    submitterIdx: index().on(table.submitter),
-  }),
-);
-
 // ============================================================
-// QUESTION REWARD POOLS (USDC)
+// QUESTION REWARD POOLS (cREP or USDC)
 // ============================================================
 
 export const questionRewardPool = onchainTable(
@@ -225,6 +208,8 @@ export const questionRewardPool = onchainTable(
     contentId: t.bigint().notNull(),
     funder: t.hex().notNull(),
     funderVoterId: t.bigint().notNull(),
+    asset: t.integer().notNull(),
+    nonRefundable: t.boolean().notNull(),
     fundedAmount: t.bigint().notNull(),
     unallocatedAmount: t.bigint().notNull(),
     allocatedAmount: t.bigint().notNull(),

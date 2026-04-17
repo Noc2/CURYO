@@ -150,13 +150,6 @@ test.describe("Ponder API endpoints", () => {
     expect(Array.isArray(data.items)).toBe(true);
   });
 
-  test("GET /submitter-rewards returns reward data for submitter", async () => {
-    const submitter = ANVIL_ACCOUNTS.account2.address.toLowerCase();
-    const data = await ponderGet(`/submitter-rewards?submitter=${submitter}`);
-    expect(data).toHaveProperty("items");
-    expect(Array.isArray(data.items)).toBe(true);
-  });
-
   test("GET /voting-stakes returns stake breakdown for voter", async () => {
     const voter = ANVIL_ACCOUNTS.account3.address.toLowerCase();
     const data = await ponderGet(`/voting-stakes?voter=${voter}`);

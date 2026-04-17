@@ -1,7 +1,6 @@
 import { ponder } from "ponder:registry";
 import {
   rewardClaim,
-  submitterRewardClaim,
   profile,
   globalStats,
 } from "ponder:schema";
@@ -55,27 +54,6 @@ ponder.on(
       .onConflictDoUpdate((row) => ({
         totalRewardsClaimed: row.totalRewardsClaimed + totalPayout,
       }));
-  },
-);
-
-ponder.on(
-  "RoundRewardDistributor:SubmitterRewardClaimed",
-  async ({ event, context }) => {
-    const { contentId, roundId, submitter, crepAmount } = event.args;
-
-    await context.db
-      .insert(submitterRewardClaim)
-      .values({
-        id: `${contentId}-${roundId}`,
-        contentId,
-        roundId,
-        epochId: null,
-        source: "round",
-        submitter,
-        crepAmount,
-        claimedAt: event.block.timestamp,
-      })
-      .onConflictDoNothing();
   },
 );
 

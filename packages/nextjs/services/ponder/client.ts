@@ -626,17 +626,6 @@ export interface PonderTokenHoldersResponse {
   offset: number;
 }
 
-export interface PonderSubmitterRewardClaim {
-  id: string;
-  contentId: string;
-  roundId: string;
-  epochId: string | null;
-  source: string;
-  submitter: string;
-  crepAmount: string;
-  claimedAt: string;
-}
-
 export interface PonderVoterStats {
   voter: string;
   totalSettledVotes: number;
@@ -919,13 +908,6 @@ export const ponderApi = {
 
   getVotingStakes(voter: string) {
     return ponderGet<PonderVotingStakes>("/voting-stakes", { voter });
-  },
-
-  getSubmitterRewards(submitter: string, limit?: string) {
-    return ponderGet<{ items: PonderSubmitterRewardClaim[] }>("/submitter-rewards", {
-      submitter,
-      limit,
-    });
   },
 
   getBalanceHistory(address: string, limit?: string) {

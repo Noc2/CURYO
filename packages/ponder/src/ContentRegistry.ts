@@ -85,7 +85,7 @@ ponder.on("ContentRegistry:ContentSubmitted", async ({ event, context }) => {
       ratingEffectiveEvidence: 0n,
       ratingSettledRounds: 0,
       ratingLowSince: 0n,
-      submitterStakeReturned: false,
+      submitterStakeReturned: true,
       createdAt: event.block.timestamp,
       lastActivityAt: event.block.timestamp,
       totalVotes: 0,
@@ -256,23 +256,3 @@ ponder.on("ContentRegistry:RatingStateUpdated", async ({ event, context }) => {
     })
     .onConflictDoNothing();
 });
-
-ponder.on(
-  "ContentRegistry:SubmitterStakeReturned",
-  async ({ event, context }) => {
-    const { contentId } = event.args;
-    await context.db.update(content, { id: contentId }).set({
-      submitterStakeReturned: true,
-    });
-  },
-);
-
-ponder.on(
-  "ContentRegistry:SubmitterStakeSlashed",
-  async ({ event, context }) => {
-    const { contentId } = event.args;
-    await context.db.update(content, { id: contentId }).set({
-      submitterStakeReturned: true,
-    });
-  },
-);

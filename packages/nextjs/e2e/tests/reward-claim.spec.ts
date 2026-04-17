@@ -1,7 +1,6 @@
 import {
   approveCREP,
   claimParticipationReward,
-  claimSubmitterReward,
   claimVoterReward,
   commitVoteDirect,
   evmIncreaseTime,
@@ -21,23 +20,23 @@ import { newE2EContext } from "../helpers/browser-context";
 import { CONTRACT_ADDRESSES } from "../helpers/contracts";
 import { gotoWithRetry } from "../helpers/wait-helpers";
 import { setupWallet } from "../helpers/wallet-session";
-import { getContentById, getContentList, getSubmitterRewards, ponderGet } from "../helpers/ponder-api";
+import { getContentById, getContentList, ponderGet } from "../helpers/ponder-api";
 import { expect, test } from "@playwright/test";
 
 /**
  * Reward claiming after settlement (tlock commit-reveal flow).
- * Triggers Ponder events: RewardClaimed, SubmitterRewardClaimed, RatingUpdated.
+ * Triggers Ponder events: RewardClaimed and RatingUpdated.
  *
  * Uses direct contract calls for the entire flow:
  *   commitVote → (epoch ends) → revealVoteByCommitKey → settleRound → claim
  *
  * Account allocation (exclusive to this file for voting):
- * - Account #2 — submits fresh content (also used for submitter reward tests)
+ * - Account #2 — submits fresh content
  * - Accounts #3, #4 — vote UP (winning side)
  * - Account #7 — votes DOWN (losing side, tests 5% rebate claims)
  * - Account #1 (keeper) — reveals votes and settles
  *
- * Tests run serially: submit → commit+reveal+settle → verify → claim → submitter claim.
+ * Tests run serially: submit → commit+reveal+settle → verify → claim.
  */
 test.describe("Reward claim lifecycle", () => {
   test.describe.configure({ mode: "serial" });
@@ -223,51 +222,6 @@ test.describe("Reward claim lifecycle", () => {
     const data = await ponderGet(`/rewards?voter=${address}`);
     expect(data).toHaveProperty("items");
     expect(Array.isArray(data.items)).toBe(true);
-  });
-
-  test("submitter claims reward via direct call and Ponder indexes it", async () => {
-    test.skip(!settledContentId, "No settled content from previous test");
-    test.setTimeout(60_000);
-
-    const REWARD_DISTRIBUTOR = CONTRACT_ADDRESSES.RoundRewardDistributor;
-
-    const data = await ponderGet(`/content/${settledContentId}`);
-    const settledRound = data.rounds?.find((r: { state: number }) => r.state === 1 || r.state === 3);
-
-    if (!settledRound) {
-      test.skip(true, "No settled round found for this content");
-      return;
-    }
-
-    const submitter = data.content.submitter;
-
-    const success = await claimSubmitterReward(
-      BigInt(settledContentId!),
-      BigInt(settledRound.roundId),
-      submitter,
-      REWARD_DISTRIBUTOR,
-    );
-
-    if (!success) {
-      const { items } = await getSubmitterRewards(submitter);
-      expect(Array.isArray(items)).toBe(true);
-      return;
-    }
-
-    const indexed = await waitForPonderIndexed(async () => {
-      const { items } = await getSubmitterRewards(submitter);
-      return items.some(r => r.contentId === settledContentId && r.roundId === settledRound.roundId);
-    });
-
-    if (!indexed) {
-      test.skip(true, "Ponder not indexing submitter reward claim — on-chain tx succeeded");
-      return;
-    }
-
-    const { items } = await getSubmitterRewards(submitter);
-    const claim = items.find(r => r.contentId === settledContentId && r.roundId === settledRound.roundId);
-    expect(claim).toBeTruthy();
-    expect(claim!.submitter.toLowerCase()).toBe(submitter.toLowerCase());
   });
 
   test("losing voter claims the fixed rebate for the settled round", async () => {

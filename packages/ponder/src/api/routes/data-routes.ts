@@ -11,7 +11,6 @@ import {
   questionRewardPoolRound,
   rewardClaim,
   round,
-  submitterRewardClaim,
   tokenTransfer,
   vote,
   voterCategoryStats,
@@ -353,6 +352,7 @@ export function registerDataRoutes(app: ApiApp) {
       .select({
         rewardPoolId: questionRewardPool.id,
         contentId: questionRewardPool.contentId,
+        asset: questionRewardPool.asset,
         roundId: vote.roundId,
         title: content.title,
         allocation: questionRewardPoolRound.allocation,
@@ -393,8 +393,8 @@ export function registerDataRoutes(app: ApiApp) {
     return jsonBig(c, {
       items: items.map(item => ({
         ...item,
-        currency: "USDC",
-        displayCurrency: "USD",
+        currency: item.asset === 0 ? "cREP" : "USDC",
+        displayCurrency: item.asset === 0 ? "cREP" : "USD",
         decimals: 6,
       })),
       limit,
@@ -418,27 +418,6 @@ export function registerDataRoutes(app: ApiApp) {
       .from(rewardClaim)
       .where(eq(rewardClaim.voter, voter.toLowerCase() as `0x${string}`))
       .orderBy(desc(rewardClaim.claimedAt))
-      .limit(limit);
-
-    return jsonBig(c, { items });
-  });
-
-  app.get("/submitter-rewards", async (c) => {
-    const submitter = c.req.query("submitter");
-    const limit = safeLimit(c.req.query("limit"), 50, 200);
-
-    if (!submitter) {
-      return c.json({ error: "submitter parameter required" }, 400);
-    }
-    if (!isValidAddress(submitter)) {
-      return c.json({ error: "Invalid submitter address" }, 400);
-    }
-
-    const items = await db
-      .select()
-      .from(submitterRewardClaim)
-      .where(eq(submitterRewardClaim.submitter, submitter.toLowerCase() as `0x${string}`))
-      .orderBy(desc(submitterRewardClaim.claimedAt))
       .limit(limit);
 
     return jsonBig(c, { items });

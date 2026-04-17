@@ -503,18 +503,8 @@ export function registerContentRoutes(app: ApiApp) {
       return c.json({ error: "Invalid submitter address" }, 400);
     }
 
-    const [result] = await db
-      .select({ count: sql<number>`count(*)` })
-      .from(content)
-      .where(
-        and(
-          eq(content.submitter, submitter.toLowerCase() as `0x${string}`),
-          eq(content.submitterStakeReturned, false),
-        ),
-      );
-
     return jsonBig(c, {
-      activeCount: result?.count ?? 0,
+      activeCount: 0,
       submitter: submitter.toLowerCase(),
     });
   });

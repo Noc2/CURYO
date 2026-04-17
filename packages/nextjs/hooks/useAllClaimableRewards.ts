@@ -7,8 +7,6 @@ import { type ClaimableRewardItem, buildVoterParticipationClaimableRewards } fro
 import { useDeployedContractInfo } from "~~/hooks/scaffold-eth";
 import { useClaimableFrontendRewards } from "~~/hooks/useClaimableFrontendRewards";
 import { useClaimableQuestionRewards } from "~~/hooks/useClaimableQuestionRewards";
-import { useClaimableSubmitterParticipationRewards } from "~~/hooks/useClaimableSubmitterParticipationRewards";
-import { useClaimableSubmitterRewards } from "~~/hooks/useClaimableSubmitterRewards";
 import { useRecentUserVotes } from "~~/hooks/useRecentUserVotes";
 
 function epochWeightBps(epochIndex: number): number {
@@ -22,16 +20,6 @@ function epochWeightBps(epochIndex: number): number {
 export function useAllClaimableRewards() {
   const { address } = useAccount();
   const { votes, refetch: refetchVotes } = useRecentUserVotes(address);
-  const {
-    claimableItems: submitterClaimableItems,
-    isLoading: submitterLoading,
-    refetch: refetchSubmitterClaimables,
-  } = useClaimableSubmitterRewards();
-  const {
-    claimableItems: submitterParticipationClaimableItems,
-    isLoading: submitterParticipationLoading,
-    refetch: refetchSubmitterParticipationClaimables,
-  } = useClaimableSubmitterParticipationRewards();
   const {
     claimableItems: frontendClaimableItems,
     isLoading: frontendClaimableLoading,
@@ -324,45 +312,25 @@ export function useAllClaimableRewards() {
     () => [
       ...claimableItems,
       ...participationClaimableItems,
-      ...submitterClaimableItems,
-      ...submitterParticipationClaimableItems,
       ...frontendClaimableItems,
       ...questionRewardPoolClaimableItems,
     ],
-    [
-      claimableItems,
-      participationClaimableItems,
-      submitterClaimableItems,
-      submitterParticipationClaimableItems,
-      frontendClaimableItems,
-      questionRewardPoolClaimableItems,
-    ],
+    [claimableItems, participationClaimableItems, frontendClaimableItems, questionRewardPoolClaimableItems],
   );
 
   const combinedCrepClaimable = useMemo(
     () =>
-      [
-        ...claimableItems,
-        ...participationClaimableItems,
-        ...submitterClaimableItems,
-        ...submitterParticipationClaimableItems,
-        ...frontendClaimableItems,
-      ].reduce((sum, item) => sum + item.reward, 0n),
-    [
-      claimableItems,
-      participationClaimableItems,
-      submitterClaimableItems,
-      submitterParticipationClaimableItems,
-      frontendClaimableItems,
-    ],
+      [...claimableItems, ...participationClaimableItems, ...frontendClaimableItems].reduce(
+        (sum, item) => sum + item.reward,
+        0n,
+      ),
+    [claimableItems, participationClaimableItems, frontendClaimableItems],
   );
 
   const isLoading =
     claimedLoading ||
     rewardsLoading ||
     participationRewardsLoading ||
-    submitterLoading ||
-    submitterParticipationLoading ||
     frontendClaimableLoading ||
     questionRewardPoolClaimableLoading;
 
@@ -370,16 +338,12 @@ export function useAllClaimableRewards() {
     refetchVotes();
     refetchClaimed();
     refetchParticipationRewards();
-    refetchSubmitterClaimables();
-    refetchSubmitterParticipationClaimables();
     refetchFrontendClaimables();
     refetchQuestionRewardPoolClaimables();
   }, [
     refetchVotes,
     refetchClaimed,
     refetchParticipationRewards,
-    refetchSubmitterClaimables,
-    refetchSubmitterParticipationClaimables,
     refetchFrontendClaimables,
     refetchQuestionRewardPoolClaimables,
   ]);

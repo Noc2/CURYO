@@ -183,31 +183,6 @@ export async function getFrontend(address: string, baseURL = PONDER_URL): Promis
 }
 
 // ============================================================
-// SUBMITTER REWARDS
-// ============================================================
-
-export type SubmitterRewardItem = {
-  id: string;
-  contentId: string;
-  roundId: string;
-  submitter: string;
-  crepAmount: string;
-  claimedAt: string;
-};
-
-/**
- * Fetch submitter reward claims by submitter address.
- */
-export async function getSubmitterRewards(
-  submitter: string,
-  baseURL = PONDER_URL,
-): Promise<{ items: SubmitterRewardItem[] }> {
-  const res = await fetchWithRetry(`${baseURL}/submitter-rewards?submitter=${submitter}`);
-  if (!res.ok) throw new Error(`GET /submitter-rewards returned ${res.status}`);
-  return res.json();
-}
-
-// ============================================================
 // VOTER IDS
 // ============================================================
 
