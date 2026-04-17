@@ -370,7 +370,6 @@ function FeedContentMetaCard({
   const [isExpanded, setIsExpanded] = useState(false);
   const primaryMedia = getPrimaryMediaItem(item);
   const primaryMediaUrl = primaryMedia?.url ?? item.url;
-  const platformType = getMediaPlatformType(primaryMedia);
   const mediaBadgeLabel = getMediaBadgeLabel(item);
   const detailsId = `content-details-${item.id.toString()}`;
   const hasFollowButton = !(normalizedAddress && item.submitter.toLowerCase() === normalizedAddress);
