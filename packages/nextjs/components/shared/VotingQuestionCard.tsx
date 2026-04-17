@@ -53,6 +53,9 @@ const STATUS_PILL_CLASS_NAME =
   "inline-flex items-center gap-2 rounded-full border border-base-content/10 bg-base-content/5 px-4 py-2";
 const DOCK_STATUS_TEXT_CLASS_NAME =
   "inline-flex max-w-full flex-wrap items-center gap-x-1.5 gap-y-0.5 py-0.5 text-left leading-none";
+const DOCK_CONTROL_SIZE = "2.75rem";
+const DOCK_CONTROL_CIRCLE_CLASS_NAME = "h-11 w-11";
+const MOBILE_DOCK_ICON_BUTTON_CLASS_NAME = `${DOCK_CONTROL_CIRCLE_CLASS_NAME} justify-center gap-0 rounded-full bg-base-content/[0.08] p-0 text-base-content/72 ring-1 ring-base-content/10 hover:bg-base-content/[0.12] hover:text-base-content/90`;
 
 type ActivityTone = "primary" | "warning" | "success" | "neutral";
 
@@ -422,9 +425,13 @@ function RewardPoolDockBadge({ amount }: { amount: bigint }) {
   const compactAmountLabel = formatDockRewardPoolAmount(amount);
 
   return (
-    <TooltipAnchor text={REWARD_POOL_TOOLTIP_TEXT} position="top" className="shrink-0 rounded-full">
+    <TooltipAnchor
+      text={REWARD_POOL_TOOLTIP_TEXT}
+      position="top"
+      className={`${DOCK_CONTROL_CIRCLE_CLASS_NAME} shrink-0 rounded-full`}
+    >
       <span
-        className="flex h-11 w-11 items-center justify-center rounded-full bg-base-content/[0.08] px-1 text-center text-[0.7rem] font-semibold leading-none text-base-content/72 ring-1 ring-base-content/10"
+        className={`flex ${DOCK_CONTROL_CIRCLE_CLASS_NAME} items-center justify-center rounded-full bg-base-content/[0.08] px-1 text-center text-[0.7rem] font-semibold leading-none text-base-content/72 ring-1 ring-base-content/10`}
         aria-label={`Bounty: ${amountLabel}`}
       >
         {compactAmountLabel}
@@ -645,7 +652,7 @@ export function VotingQuestionCard({
     const dockWrapperTopPaddingClassName = compact ? (isDetailsOpen ? "pt-8" : "pt-10") : "pt-14";
     const dockControlsPaddingClassName = compact ? "px-4 pb-2.5 pt-4" : "px-4 pb-3 pt-7";
     const dockMoreClassName = "text-base font-medium text-base-content/68 hover:text-base-content/88";
-    const dockVoteSpacerClassName = "h-11 w-11";
+    const dockVoteSpacerClassName = DOCK_CONTROL_CIRCLE_CLASS_NAME;
     const dockShellMaskStyle = {
       WebkitMaskImage: `radial-gradient(circle ${dockNotchRadius}px at 50% 0, transparent 0 ${dockNotchCutout}px, black ${dockNotchCutout + 1}px)`,
       maskImage: `radial-gradient(circle ${dockNotchRadius}px at 50% 0, transparent 0 ${dockNotchCutout}px, black ${dockNotchCutout + 1}px)`,
@@ -679,6 +686,9 @@ export function VotingQuestionCard({
         }
       : undefined;
     const mobileOrbClassName = compact ? "drop-shadow-[0_14px_28px_rgba(9,10,12,0.7)]" : "";
+    const compactDockControlsGridStyle = {
+      gridTemplateColumns: `minmax(0, 1fr) ${DOCK_CONTROL_SIZE} minmax(0, 1fr) ${DOCK_CONTROL_SIZE} ${dockNotchCutout * 2}px ${DOCK_CONTROL_SIZE} minmax(0, 1fr) ${DOCK_CONTROL_SIZE} minmax(0, 1fr)`,
+    };
 
     return (
       <>
@@ -725,9 +735,9 @@ export function VotingQuestionCard({
                 <div className={dockControlsPaddingClassName}>
                   {compact ? null : <div className="mb-2 flex justify-center">{rewardPoolAmountDisplay}</div>}
                   {compact && !centerStatusContent ? (
-                    <div className="grid grid-cols-[2.75rem_minmax(0,1fr)_5.5rem_minmax(0,1fr)_2.75rem] items-center gap-2">
-                      <div className="justify-self-start">{rewardPoolDockBadge}</div>
-                      <div className="justify-self-end">
+                    <div className="grid w-full items-center" style={compactDockControlsGridStyle}>
+                      <div className="col-start-2 justify-self-center">{rewardPoolDockBadge}</div>
+                      <div className="col-start-4 justify-self-center">
                         <CuryoVoteButton
                           direction="up"
                           size="sm"
@@ -737,8 +747,7 @@ export function VotingQuestionCard({
                           tooltipPosition="top"
                         />
                       </div>
-                      <div aria-hidden className="h-11 w-[5.5rem]" />
-                      <div className="justify-self-start">
+                      <div className="col-start-6 justify-self-center">
                         <CuryoVoteButton
                           direction="down"
                           size="sm"
@@ -748,13 +757,13 @@ export function VotingQuestionCard({
                           tooltipPosition="top"
                         />
                       </div>
-                      <div className="justify-self-end">
+                      <div className="col-start-8 justify-self-center">
                         <MoreToggleButton
                           expanded={isDetailsOpen}
                           onClick={() => setIsDetailsOpen(current => !current)}
                           controlsId={detailsId}
                           iconOnly
-                          className="h-11 w-11 justify-center gap-0 rounded-full bg-base-content/[0.08] p-0 text-base-content/72 ring-1 ring-base-content/10 hover:bg-base-content/[0.12] hover:text-base-content/90"
+                          className={MOBILE_DOCK_ICON_BUTTON_CLASS_NAME}
                         />
                       </div>
                     </div>
@@ -799,7 +808,7 @@ export function VotingQuestionCard({
                           onClick={() => setIsDetailsOpen(current => !current)}
                           controlsId={detailsId}
                           iconOnly
-                          className="h-11 w-11 justify-center gap-0 rounded-full bg-base-content/[0.08] p-0 text-base-content/72 ring-1 ring-base-content/10 hover:bg-base-content/[0.12] hover:text-base-content/90"
+                          className={MOBILE_DOCK_ICON_BUTTON_CLASS_NAME}
                         />
                       </div>
                     </div>
