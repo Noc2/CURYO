@@ -346,11 +346,11 @@ contract ContentRegistry is Initializable, AccessControlUpgradeable, PausableUpg
     }
 
     function submitQuestionWithMediaWithReward(
-        string[] calldata imageUrls,
-        string calldata videoUrl,
-        string calldata title,
-        string calldata description,
-        string calldata tags,
+        string[] memory imageUrls,
+        string memory videoUrl,
+        string memory title,
+        string memory description,
+        string memory tags,
         uint256 categoryId,
         bytes32 salt,
         uint8 rewardAsset,
@@ -358,35 +358,25 @@ contract ContentRegistry is Initializable, AccessControlUpgradeable, PausableUpg
         uint256 requiredVoters,
         uint256 requiredSettledRounds,
         uint256 rewardPoolExpiresAt
-    ) external nonReentrant whenNotPaused returns (uint256) {
-        SUBMISSION_MEDIA_VALIDATOR.validateMediaSet(imageUrls, videoUrl);
-        SubmissionMetadata memory metadata = SubmissionMetadata({
-            url: bytes(videoUrl).length != 0 ? videoUrl : imageUrls[0],
-            title: title,
-            description: description,
-            tags: tags,
-            categoryId: categoryId
-        });
-        _validateTextFields(metadata);
-
-        require(address(categoryRegistry) != address(0), "CategoryRegistry not set");
-        SubmissionRewardTerms memory rewardTerms = SubmissionRewardTerms({
-            asset: rewardAsset,
-            amount: rewardAmount,
-            requiredVoters: requiredVoters,
-            requiredSettledRounds: requiredSettledRounds,
-            expiresAt: rewardPoolExpiresAt
-        });
-        return _submitValidatedQuestionWithMedia(metadata, imageUrls, videoUrl, salt, rewardTerms);
+    ) public nonReentrant whenNotPaused returns (uint256) {
+        return _submitValidatedQuestionWithMedia(
+            _validatedMediaSubmissionMetadata(imageUrls, videoUrl, title, description, tags, categoryId),
+            imageUrls,
+            videoUrl,
+            salt,
+            _submissionRewardTerms(
+                rewardAsset, rewardAmount, requiredVoters, requiredSettledRounds, rewardPoolExpiresAt
+            )
+        );
     }
 
     function submitQuestionWithReward(
-        string calldata contextUrl,
-        string[] calldata imageUrls,
-        string calldata videoUrl,
-        string calldata title,
-        string calldata description,
-        string calldata tags,
+        string memory contextUrl,
+        string[] memory imageUrls,
+        string memory videoUrl,
+        string memory title,
+        string memory description,
+        string memory tags,
         uint256 categoryId,
         bytes32 salt,
         uint8 rewardAsset,
@@ -394,23 +384,16 @@ contract ContentRegistry is Initializable, AccessControlUpgradeable, PausableUpg
         uint256 requiredVoters,
         uint256 requiredSettledRounds,
         uint256 rewardPoolExpiresAt
-    ) external nonReentrant whenNotPaused returns (uint256) {
-        SUBMISSION_MEDIA_VALIDATOR.validateContextUrl(contextUrl);
-        SUBMISSION_MEDIA_VALIDATOR.validateOptionalMediaSet(imageUrls, videoUrl);
-        SubmissionMetadata memory metadata = SubmissionMetadata({
-            url: contextUrl, title: title, description: description, tags: tags, categoryId: categoryId
-        });
-        _validateTextFields(metadata);
-
-        require(address(categoryRegistry) != address(0), "CategoryRegistry not set");
-        SubmissionRewardTerms memory rewardTerms = SubmissionRewardTerms({
-            asset: rewardAsset,
-            amount: rewardAmount,
-            requiredVoters: requiredVoters,
-            requiredSettledRounds: requiredSettledRounds,
-            expiresAt: rewardPoolExpiresAt
-        });
-        return _submitValidatedQuestionWithMedia(metadata, imageUrls, videoUrl, salt, rewardTerms);
+    ) public nonReentrant whenNotPaused returns (uint256) {
+        return _submitValidatedQuestionWithMedia(
+            _validatedContextSubmissionMetadata(contextUrl, imageUrls, videoUrl, title, description, tags, categoryId),
+            imageUrls,
+            videoUrl,
+            salt,
+            _submissionRewardTerms(
+                rewardAsset, rewardAmount, requiredVoters, requiredSettledRounds, rewardPoolExpiresAt
+            )
+        );
     }
 
     /// @notice Submit a question with a required context link and optional preview media.
@@ -499,15 +482,69 @@ contract ContentRegistry is Initializable, AccessControlUpgradeable, PausableUpg
         require(bytes(metadata.tags).length <= MAX_TAGS_LENGTH, "Tags too long");
     }
 
+    function _validatedContextSubmissionMetadata(
+        string memory contextUrl,
+        string[] memory imageUrls,
+        string memory videoUrl,
+        string memory title,
+        string memory description,
+        string memory tags,
+        uint256 categoryId
+    ) internal view returns (SubmissionMetadata memory metadata) {
+        SUBMISSION_MEDIA_VALIDATOR.validateContextUrl(contextUrl);
+        SUBMISSION_MEDIA_VALIDATOR.validateOptionalMediaSet(imageUrls, videoUrl);
+        metadata = SubmissionMetadata({
+            url: contextUrl, title: title, description: description, tags: tags, categoryId: categoryId
+        });
+        _validateTextFields(metadata);
+        require(address(categoryRegistry) != address(0), "CategoryRegistry not set");
+    }
+
+    function _validatedMediaSubmissionMetadata(
+        string[] memory imageUrls,
+        string memory videoUrl,
+        string memory title,
+        string memory description,
+        string memory tags,
+        uint256 categoryId
+    ) internal view returns (SubmissionMetadata memory metadata) {
+        SUBMISSION_MEDIA_VALIDATOR.validateMediaSet(imageUrls, videoUrl);
+        metadata = SubmissionMetadata({
+            url: bytes(videoUrl).length != 0 ? videoUrl : imageUrls[0],
+            title: title,
+            description: description,
+            tags: tags,
+            categoryId: categoryId
+        });
+        _validateTextFields(metadata);
+        require(address(categoryRegistry) != address(0), "CategoryRegistry not set");
+    }
+
+    function _submissionRewardTerms(
+        uint8 rewardAsset,
+        uint256 rewardAmount,
+        uint256 requiredVoters,
+        uint256 requiredSettledRounds,
+        uint256 rewardPoolExpiresAt
+    ) internal pure returns (SubmissionRewardTerms memory rewardTerms) {
+        rewardTerms = SubmissionRewardTerms({
+            asset: rewardAsset,
+            amount: rewardAmount,
+            requiredVoters: requiredVoters,
+            requiredSettledRounds: requiredSettledRounds,
+            expiresAt: rewardPoolExpiresAt
+        });
+    }
+
     function _submitValidatedQuestionWithMedia(
         SubmissionMetadata memory metadata,
-        string[] calldata imageUrls,
-        string calldata videoUrl,
+        string[] memory imageUrls,
+        string memory videoUrl,
         bytes32 salt,
         SubmissionRewardTerms memory rewardTerms
     ) internal returns (uint256 contentId) {
         (uint256 resolvedCategoryId, bytes32 submissionKey, PendingSubmission memory pending) =
-            _prepareQuestionMediaSubmission(metadata, imageUrls, videoUrl, salt, rewardTerms);
+            _prepareQuestionMediaSubmission(metadata, salt, rewardTerms);
         bytes32 contentHash = keccak256(
             abi.encode(
                 "curyo-question-context-v1",
@@ -538,13 +575,11 @@ contract ContentRegistry is Initializable, AccessControlUpgradeable, PausableUpg
 
     function _prepareQuestionMediaSubmission(
         SubmissionMetadata memory metadata,
-        string[] calldata imageUrls,
-        string calldata videoUrl,
         bytes32 salt,
         SubmissionRewardTerms memory rewardTerms
     ) internal returns (uint256 resolvedCategoryId, bytes32 submissionKey, PendingSubmission memory pending) {
         resolvedCategoryId = _resolveQuestionSubmissionCategory(metadata);
-        submissionKey = _deriveQuestionMediaSubmissionKey(metadata, imageUrls, videoUrl, resolvedCategoryId);
+        submissionKey = _deriveQuestionMediaSubmissionKey(metadata, resolvedCategoryId);
         require(!submissionKeyUsed[submissionKey], "Question already submitted");
         _validateSubmissionReward(rewardTerms);
 
@@ -577,12 +612,11 @@ contract ContentRegistry is Initializable, AccessControlUpgradeable, PausableUpg
         return metadata.categoryId;
     }
 
-    function _deriveQuestionMediaSubmissionKey(
-        SubmissionMetadata memory metadata,
-        string[] calldata,
-        string calldata,
-        uint256 resolvedCategoryId
-    ) internal pure returns (bytes32) {
+    function _deriveQuestionMediaSubmissionKey(SubmissionMetadata memory metadata, uint256 resolvedCategoryId)
+        internal
+        pure
+        returns (bytes32)
+    {
         return keccak256(
             abi.encode(
                 "curyo-question-context-v1",
@@ -884,7 +918,7 @@ contract ContentRegistry is Initializable, AccessControlUpgradeable, PausableUpg
         _validateTextFields(metadata);
         require(address(categoryRegistry) != address(0), "CategoryRegistry not set");
         resolvedCategoryId = _resolveQuestionSubmissionCategory(metadata);
-        submissionKey = _deriveQuestionMediaSubmissionKey(metadata, imageUrls, videoUrl, resolvedCategoryId);
+        submissionKey = _deriveQuestionMediaSubmissionKey(metadata, resolvedCategoryId);
     }
 
     /// @notice Preview the resolved category and question-level submission key for a future media-backed reveal.
@@ -907,7 +941,7 @@ contract ContentRegistry is Initializable, AccessControlUpgradeable, PausableUpg
         _validateTextFields(metadata);
         require(address(categoryRegistry) != address(0), "CategoryRegistry not set");
         resolvedCategoryId = _resolveQuestionSubmissionCategory(metadata);
-        submissionKey = _deriveQuestionMediaSubmissionKey(metadata, imageUrls, videoUrl, resolvedCategoryId);
+        submissionKey = _deriveQuestionMediaSubmissionKey(metadata, resolvedCategoryId);
     }
 
     function _computeRevealCommitment(
