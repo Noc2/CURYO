@@ -933,7 +933,7 @@ export function ContentSubmissionSection() {
 
   return (
     <>
-      <div className="surface-card rounded-2xl p-6 space-y-5">
+      <div className="surface-card rounded-2xl p-6 space-y-5" style={{ overflow: "visible" }}>
         <h1 className={surfaceSectionHeadingClassName}>Ask Question</h1>
 
         <form
