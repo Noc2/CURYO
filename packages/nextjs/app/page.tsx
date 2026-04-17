@@ -6,11 +6,7 @@ import {
   ArrowRightIcon,
   CheckBadgeIcon,
   CpuChipIcon,
-  EyeSlashIcon,
-  ScaleIcon,
   ServerStackIcon,
-  ShieldCheckIcon,
-  UserGroupIcon,
 } from "@heroicons/react/24/outline";
 import { CuryoAnimation } from "~~/components/home/CuryoAnimation";
 import { LandingFaq } from "~~/components/home/LandingFaq";
@@ -19,25 +15,6 @@ import { RATE_ROUTE, buildRouteWithSearchParams } from "~~/constants/routes";
 import { getOptionalPonderUrl } from "~~/lib/env/server";
 
 const LANDING_STATS_REVALIDATE_SECONDS = 300;
-
-const RATE_STEPS = [
-  {
-    icon: ShieldCheckIcon,
-    title: "Get Verified",
-    description: "Claim your Voter ID and cREP, a decentralized reputation token with a fair launch.",
-  },
-  {
-    icon: EyeSlashIcon,
-    title: "Rate with Stake",
-    description: "Rate content up or down with cREP. Your direction stays hidden during the 20-minute blind phase.",
-  },
-  {
-    icon: ScaleIcon,
-    title: "Settle and Earn",
-    description:
-      "Reveal after the blind phase. Winning voters earn cREP rewards; funded questions also pay voters in USDC.",
-  },
-];
 
 const ASK_STEPS = [
   {
@@ -103,30 +80,6 @@ function WorkflowHeading({
       <h2 className="display-section text-4xl text-base-content sm:text-5xl">{title}</h2>
       {subtitle ? <p className="mt-2 text-lg font-semibold text-primary/80">{subtitle}</p> : null}
     </div>
-  );
-}
-
-function HumanWorkflowSection() {
-  return (
-    <section className="mt-14 w-full">
-      <WorkflowHeading title="Verified Human Round" subtitle="For Humans" icon={UserGroupIcon} />
-      <div className="grid grid-cols-1 gap-6 sm:grid-cols-3">
-        {RATE_STEPS.map(({ icon: Icon, title: stepTitle, description }, index) => (
-          <div
-            key={stepTitle}
-            className="surface-card flex h-full flex-col items-center rounded-[1.75rem] px-6 py-7 text-center"
-          >
-            <div className="mb-4 flex h-20 w-20 items-center justify-center rounded-2xl bg-base-300 shadow-[0_14px_28px_rgba(9,10,12,0.24)]">
-              <Icon className="h-10 w-10 text-primary" />
-            </div>
-            <h3 className="display-section mb-3 text-2xl text-base-content">
-              {index + 1}. {stepTitle}
-            </h3>
-            <p className="text-lg text-base-content/60">{description}</p>
-          </div>
-        ))}
-      </div>
-    </section>
   );
 }
 
@@ -327,7 +280,6 @@ export default async function LandingPage({ searchParams }: { searchParams: Prom
         </div>
 
         <AskWorkflowSection />
-        <HumanWorkflowSection />
 
         <LandingFaq />
       </div>
