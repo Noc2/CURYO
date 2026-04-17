@@ -9,6 +9,13 @@ type LandingFaqItem = {
 
 export const landingFaqItems: LandingFaqItem[] = [
   {
+    question: "Can AI agents ask questions on Curyo?",
+    answer:
+      "Yes. Agents can submit focused questions with a context link and a bounty, then verified humans answer with staked votes. The result becomes a public rating signal the agent can use later.",
+    learnMoreHref: "/docs/ai",
+    learnMoreLabel: "AI Feedback Loop",
+  },
+  {
     question: "Why should I trust these ratings?",
     answer:
       "Ratings come from verified humans who stake cREP, and rounds settle publicly on-chain. Questions also carry a mandatory non-refundable bounty funded in cREP or USDC.",
@@ -16,24 +23,18 @@ export const landingFaqItems: LandingFaqItem[] = [
     learnMoreLabel: "How It Works",
   },
   {
-    question: "What does verified human mean?",
+    question: "What does verified human mean, and what stays private?",
     answer:
-      "Each eligible person can claim one non-transferable Voter ID through Self.xyz passport or biometric ID card verification with 18+ and sanctions checks; configured sanctioned-country jurisdictions cannot claim.",
-    learnMoreHref: "/docs/how-it-works",
-    learnMoreLabel: "Voter ID",
+      "Each eligible person can claim one non-transferable Voter ID through Self.xyz verification. Zero-knowledge proofs check humanity, 18+ status, and sanctions eligibility without publishing identity documents or date of birth on-chain.",
+    learnMoreHref: "/docs/how-it-works#zk-proof-of-human",
+    learnMoreLabel: "Voter ID & Privacy",
   },
   {
-    question: "Do I need to reveal personal information to use Curyo?",
+    question: "How do bounties and x402 payments work?",
     answer:
-      "No. Self.xyz proves humanity, 18+ status, and sanctions eligibility with zero-knowledge proofs without publishing your documents or date of birth on-chain.",
-    learnMoreHref: "/docs/how-it-works",
-    learnMoreLabel: "Privacy & Verification",
-  },
-  {
-    question: "Can I lose cREP by voting?",
-    answer: `Yes. If you vote with the losing side, you can lose most of your stake. If your losing vote was revealed, you can still recover ${protocolDocFacts.revealedLoserRefundPercentLabel} of the amount you originally staked. If you vote with the winning side, you get your full stake back plus an extra payout funded by the losing side.`,
-    learnMoreHref: "/docs/tokenomics",
-    learnMoreLabel: "Rewards & Risk",
+      "Every question carries a non-refundable bounty funded in cREP or USDC. Agents can use x402 to pay the hosted question endpoint in Celo USDC, and the API submits the question and bounty on-chain after payment settles.",
+    learnMoreHref: "/docs/ai#x402-agent-payments",
+    learnMoreLabel: "x402 Agent Payments",
   },
   {
     question: "Why is voting blind?",
@@ -43,10 +44,9 @@ export const landingFaqItems: LandingFaqItem[] = [
     learnMoreLabel: "Blind Voting",
   },
   {
-    question: "How is the final rating decided?",
-    answer:
-      "In the redeployed rating model, each round asks whether the current displayed 0-100 community score is too low or too high. The next score updates from that round anchor using epoch-weighted evidence and confidence, instead of being recomputed from scratch.",
-    learnMoreHref: "/docs/how-it-works",
-    learnMoreLabel: "Rating Formula",
+    question: "Can I lose cREP by voting?",
+    answer: `Yes. If you vote with the losing side, you can lose most of your stake. If your losing vote was revealed, you can still recover ${protocolDocFacts.revealedLoserRefundPercentLabel} of the amount you originally staked. If you vote with the winning side, you get your full stake back plus an extra payout funded by the losing side.`,
+    learnMoreHref: "/docs/tokenomics",
+    learnMoreLabel: "Rewards & Risk",
   },
 ];
