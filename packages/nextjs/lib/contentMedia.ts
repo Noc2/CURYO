@@ -1,5 +1,3 @@
-"use client";
-
 import { sanitizeExternalUrl } from "~~/utils/externalUrl";
 import { canonicalizeUrl, detectPlatform } from "~~/utils/platforms";
 
