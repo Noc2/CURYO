@@ -10,7 +10,7 @@ DEPLOY_JSON="$SCRIPT_DIR/../deployments/31337.json"
 CATEGORY_ID_RESOLVER="$SCRIPT_DIR/../scripts-js/resolveCategoryId.js"
 
 RPC="http://127.0.0.1:8545"
-SUBMITTER_STAKE="10000000" # 10 cREP in 6 decimals (MIN_SUBMITTER_STAKE)
+SUBMISSION_REWARD_POOL="1000000" # 1 cREP in 6 decimals (default minimum submission reward pool)
 VOTE_STAKE="5000000" # 5 cREP for votes
 
 # Check if localhost deployment exists
@@ -28,18 +28,20 @@ fi
 # Read contract addresses from deployment file
 TOKEN=$(grep -o '"0x[^"]*": "CuryoReputation"' "$DEPLOY_JSON" | grep -o '0x[^"]*' || true)
 REGISTRY=$(grep -o '"0x[^"]*": "ContentRegistry"' "$DEPLOY_JSON" | grep -o '0x[^"]*' || true)
+QUESTION_REWARD_POOL_ESCROW=$(grep -o '"0x[^"]*": "QuestionRewardPoolEscrow"' "$DEPLOY_JSON" | grep -o '0x[^"]*' || true)
 VOTING_ENGINE=$(grep -o '"0x[^"]*": "RoundVotingEngine"' "$DEPLOY_JSON" | grep -o '0x[^"]*' || true)
 CATEGORY_REGISTRY=$(grep -o '"0x[^"]*": "CategoryRegistry"' "$DEPLOY_JSON" | grep -o '0x[^"]*' || true)
 
-if [ -z "$TOKEN" ] || [ -z "$REGISTRY" ] || [ -z "$CATEGORY_REGISTRY" ]; then
+if [ -z "$TOKEN" ] || [ -z "$REGISTRY" ] || [ -z "$QUESTION_REWARD_POOL_ESCROW" ] || [ -z "$CATEGORY_REGISTRY" ]; then
   echo "ERROR: Could not read contract addresses from $DEPLOY_JSON"
   exit 1
 fi
 
 echo "CuryoReputation:         $TOKEN"
-echo "ContentRegistry:   $REGISTRY"
-echo "RoundVotingEngine: $VOTING_ENGINE"
-echo "CategoryRegistry:  $CATEGORY_REGISTRY"
+echo "ContentRegistry:         $REGISTRY"
+echo "QuestionRewardPoolEscrow: $QUESTION_REWARD_POOL_ESCROW"
+echo "RoundVotingEngine:       $VOTING_ENGINE"
+echo "CategoryRegistry:        $CATEGORY_REGISTRY"
 echo ""
 
 # Anvil/hardhat default private keys
@@ -265,9 +267,9 @@ for ((i = 0; i < TOTAL_ITEMS; i++)); do
     cast rpc anvil_setBalance "$ADDR" "0x8AC7230489E80000" --rpc-url "$RPC" > /dev/null 2>&1
   fi
 
-  # 1. Approve registry to spend cREP for submission stake
-  echo "  Approving cREP..."
-  cast send "$TOKEN" "approve(address,uint256)" "$REGISTRY" "$SUBMITTER_STAKE" --private-key "$KEY" --rpc-url "$RPC" > /dev/null 2>&1
+  # 1. Approve the reward escrow to pull the non-refundable cREP submission pool
+  echo "  Approving cREP reward pool..."
+  cast send "$TOKEN" "approve(address,uint256)" "$QUESTION_REWARD_POOL_ESCROW" "$SUBMISSION_REWARD_POOL" --private-key "$KEY" --rpc-url "$RPC" > /dev/null 2>&1
 
   # 2. Reserve the hidden submission commitment before revealing the question metadata
   printf -v SALT "%064x" "$((i + 1))"
@@ -282,8 +284,8 @@ for ((i = 0; i < TOTAL_ITEMS; i++)); do
 
   # 3. Reveal the submission with the same deterministic salt used for the reservation
   echo "  Submitting question: $TITLE ($MEDIA_KIND, context: $CONTEXT_URL, category: $CATEGORY_SLUG -> $CATEGORY_ID)"
-  cast send "$REGISTRY" "submitQuestion(string,string[],string,string,string,string,uint256,bytes32)" \
-    "$CONTEXT_URL" "$IMAGE_URLS_ARG" "$VIDEO_URL_ARG" "$TITLE" "$DESCRIPTION" "$TAG" "$CATEGORY_ID" "0x$SALT" \
+  cast send "$REGISTRY" "submitQuestionWithReward(string,string[],string,string,string,string,uint256,bytes32,uint8,uint256)" \
+    "$CONTEXT_URL" "$IMAGE_URLS_ARG" "$VIDEO_URL_ARG" "$TITLE" "$DESCRIPTION" "$TAG" "$CATEGORY_ID" "0x$SALT" "0" "$SUBMISSION_REWARD_POOL" \
     --private-key "$KEY" --rpc-url "$RPC" > /dev/null 2>&1
   echo "  Done!"
   echo ""
