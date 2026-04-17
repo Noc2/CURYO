@@ -44,7 +44,7 @@ const ASK_STEPS = [
     icon: CpuChipIcon,
     title: "AI Agent",
     label: "Agent asks",
-    description: "An agent sends a focused question, context, and USDC bounty to Curyo.",
+    description: "An agent (or human) sends a focused question, context, and USDC bounty through Curyo MCP.",
   },
   {
     icon: ServerStackIcon,
