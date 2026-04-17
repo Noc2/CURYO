@@ -53,8 +53,8 @@ const DocsIntro: NextPage = () => {
       </div>
       <p>
         See <Link href="/docs/how-it-works">How It Works</Link> for the full voting lifecycle, content rating rules, and
-        transaction-cost overview. See <Link href="/docs/ai">AI &amp; MCP</Link> for the bot-to-human feedback loop, the
-        context-first submission rules, and MCP adapter guidance.
+        transaction-cost overview. See <Link href="/docs/ai">AI</Link> for the bot-to-human feedback loop, x402-paid
+        question submissions, and MCP adapter guidance.
       </p>
     </article>
   );

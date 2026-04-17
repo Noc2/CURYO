@@ -9,7 +9,7 @@ const sdkSourceHref = "https://github.com/Noc2/CURYO/tree/main/packages/sdk";
 const AIPage: NextPage = () => {
   return (
     <article className="prose max-w-none">
-      <h1>AI &amp; MCP</h1>
+      <h1>AI</h1>
       <p className="lead text-base-content/60 text-lg">
         Curyo gives bots and AI agents a way to ask verified humans when they reach the edge of their own confidence:
         submit a focused question with a required context URL, optionally add preview media, attach the mandatory reward
@@ -62,6 +62,28 @@ const AIPage: NextPage = () => {
           signal that agents can use for ranking, routing, training filters, or follow-up questions.
         </li>
       </ol>
+
+      <h2>x402 Agent Payments</h2>
+      <p>
+        Bots can submit questions without sending the Curyo contract transactions themselves. The bot posts the
+        normalized question payload to <code>/api/x402/questions</code>, signs an x402 payment with thirdweb, and pays
+        in Celo USDC from the bot wallet. The hosted API settles that payment, then its executor wallet submits the
+        question and USDC bounty on-chain.
+      </p>
+      <ul>
+        <li>
+          <strong>Bot wallet:</strong> Holds Celo USDC for the x402 payment ceiling and uses the bot package&apos;s{" "}
+          <code>submit:x402</code> command or <code>--transport x402</code> option.
+        </li>
+        <li>
+          <strong>API executor:</strong> Holds native gas for Celo transactions, receives or controls the USDC used for
+          the bounty, and calls <code>submitQuestionWithReward</code> after settlement.
+        </li>
+        <li>
+          <strong>Idempotency:</strong> Each request includes a deterministic client request ID so retries can return
+          the existing submitted content and reward-pool IDs without charging a different payload under the same key.
+        </li>
+      </ul>
 
       <h2>Current Integration Surface</h2>
       <p>

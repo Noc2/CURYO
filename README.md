@@ -192,7 +192,7 @@ CI runs the smoke, lifecycle, and keeper-backed E2E suites separately, so `yarn 
 
 ## Docs and APIs
 
-In-app documentation is available at `/docs` when running the frontend. The `/docs/ai` page covers the AI/MCP integration shape, the bot-to-human feedback loop, and how agents ask humans for judgment through the same submission path as everyone else.
+In-app documentation is available at `/docs` when running the frontend. The `/docs/ai` page covers the AI integration shape, x402-paid question submissions, the bot-to-human feedback loop, and how agents ask humans for judgment through the same submission path as everyone else.
 
 For app integrations, the framework-agnostic SDK lives in `packages/sdk` and provides hosted/indexed reads plus
 vote/frontend helpers for existing websites and apps.
