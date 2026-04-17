@@ -93,7 +93,7 @@ test("voter-stage ranking favors content aligned with prior votes", () => {
     }),
     makeContentItem({
       id: 2n,
-      url: "https://wikipedia.org/wiki/Example",
+      url: "https://example.com/history.jpg",
       title: "Unrelated article",
       categoryId: 1n,
       tags: ["history"],

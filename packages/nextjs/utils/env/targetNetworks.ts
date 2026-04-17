@@ -19,7 +19,7 @@ export const AVAILABLE_TARGET_NETWORKS = {
 
 export type SupportedTargetNetwork = (typeof AVAILABLE_TARGET_NETWORKS)[keyof typeof AVAILABLE_TARGET_NETWORKS];
 
-export const DEFAULT_DEV_TARGET_NETWORKS = `${chains.foundry.id},${chains.celoSepolia.id}`;
+export const DEFAULT_DEV_TARGET_NETWORKS = `${chains.foundry.id}`;
 
 function parseTargetNetworkIds(value: string): number[] {
   const ids = value

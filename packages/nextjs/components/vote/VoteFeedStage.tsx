@@ -1192,7 +1192,6 @@ export function VoteFeedStage({
               following={followedWallets.has(item.submitter.toLowerCase())}
               followPending={isFollowPending(item.submitter)}
               normalizedAddress={normalizedAddress}
-              deferEmbedClientFetch={isMetadataPrefetchPending && actualIndex !== renderedActiveIndex}
             />
             {!isActiveCard ? (
               <div

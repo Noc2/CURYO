@@ -152,34 +152,6 @@ export const notificationEmailDeliveryLeases = pgTable("notification_email_deliv
 export type NotificationEmailDelivery = typeof notificationEmailDeliveries.$inferSelect;
 export type NewNotificationEmailDelivery = typeof notificationEmailDeliveries.$inferInsert;
 
-export const urlValidations = pgTable("url_validations", {
-  id: serial("id").primaryKey(),
-  url: text("url").notNull().unique(),
-  isValid: boolean("is_valid").notNull(),
-  platform: text("platform").notNull(),
-  checkedAt: timestamp("checked_at", { mode: "date", withTimezone: true }).notNull(),
-});
-
-export type UrlValidation = typeof urlValidations.$inferSelect;
-
-export const contentMetadata = pgTable("content_metadata", {
-  id: serial("id").primaryKey(),
-  url: text("url").notNull().unique(),
-  thumbnailUrl: text("thumbnail_url"),
-  title: text("title"),
-  description: text("description"),
-  imageUrl: text("image_url"),
-  authors: text("authors"),
-  releaseYear: text("release_year"),
-  symbol: text("symbol"),
-  stars: integer("stars"),
-  forks: integer("forks"),
-  language: text("language"),
-  fetchedAt: timestamp("fetched_at", { mode: "date", withTimezone: true }).notNull(),
-});
-
-export type ContentMetadata = typeof contentMetadata.$inferSelect;
-
 export const apiRateLimits = pgTable(
   "api_rate_limits",
   {

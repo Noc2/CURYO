@@ -78,7 +78,6 @@ interface FeedVoteCardProps {
   following: boolean;
   followPending: boolean;
   normalizedAddress?: string;
-  deferEmbedClientFetch?: boolean;
 }
 
 export const FeedVoteCard = memo(function FeedVoteCard({
@@ -95,7 +94,6 @@ export const FeedVoteCard = memo(function FeedVoteCard({
   following,
   followPending,
   normalizedAddress,
-  deferEmbedClientFetch = false,
 }: FeedVoteCardProps) {
   const [isLaptopCompact, setIsLaptopCompact] = useState(false);
   const [isMobileViewport, setIsMobileViewport] = useState(false);
@@ -208,7 +206,6 @@ export const FeedVoteCard = memo(function FeedVoteCard({
               compact={useCompactEmbed}
               isActive={isActive}
               interactionMode={contentIntentEnabled ? "vote" : "default"}
-              deferEmbedClientFetch={deferEmbedClientFetch}
             />
           </div>
           <FeedContentMetaCard
@@ -285,13 +282,11 @@ function ContentMediaCarousel({
   compact,
   isActive,
   interactionMode,
-  deferEmbedClientFetch,
 }: {
   item: ContentItem;
   compact: boolean;
   isActive: boolean;
   interactionMode: "default" | "vote";
-  deferEmbedClientFetch: boolean;
 }) {
   const mediaItems = getCardMediaItems(item);
   const [activeIndex, setActiveIndex] = useState(0);
@@ -325,8 +320,6 @@ function ContentMediaCarousel({
         isActive={isActive}
         interactionMode={interactionMode}
         imageFit="contain"
-        prefetchedMetadata={activeMedia?.url === item.url ? item.contentMetadata : undefined}
-        deferClientFetch={deferEmbedClientFetch}
       />
       {hasCarouselControls ? (
         <>
@@ -387,7 +380,6 @@ function FeedContentMetaCard({
   const rewardPoolTotal = item.rewardPoolSummary?.totalAvailable ?? item.rewardPoolSummary?.totalFunded ?? 0n;
   const hasSourceDetails = sourceLabel.trim().length > 0;
   const hasRewardPool = rewardPoolTotal > 0n;
-  const hasMagicDisclaimer = platformType === "scryfall";
   const hasExpandableDetails = true;
   const showExpandedDetails = !collapseDescription || isExpanded;
   const visibleTags = showExpandedDetails ? item.tags.filter(Boolean) : [];
@@ -480,22 +472,6 @@ function FeedContentMetaCard({
             </div>
 
             {hasDescription ? <p className="text-base leading-relaxed text-base-content/85">{description}</p> : null}
-
-            {hasMagicDisclaimer ? (
-              <p className="text-base leading-tight text-base-content/70">
-                Magic: The Gathering content is unofficial Fan Content permitted under the{" "}
-                <a
-                  href="https://company.wizards.com/en/legal/fancontentpolicy"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  data-allow-external-open="true"
-                  className="underline hover:text-base-content/70"
-                >
-                  Fan Content Policy
-                </a>
-                . Not approved/endorsed by Wizards.
-              </p>
-            ) : null}
           </div>
         ) : null}
       </div>

@@ -1,40 +1,11 @@
-import { coingeckoHandler } from "./handlers/coingecko";
 import { genericHandler } from "./handlers/generic";
-import { githubHandler } from "./handlers/github";
-import { huggingfaceHandler } from "./handlers/huggingface";
-import { openLibraryHandler } from "./handlers/openlibrary";
-import { rawgHandler } from "./handlers/rawg";
-import { scryfallHandler } from "./handlers/scryfall";
-import { spotifyHandler } from "./handlers/spotify";
-import { tmdbHandler } from "./handlers/tmdb";
-import { twitchHandler } from "./handlers/twitch";
-import { twitterHandler } from "./handlers/twitter";
-import { wikipediaHandler } from "./handlers/wikipedia";
 import { youtubeHandler } from "./handlers/youtube";
 import type { PlatformHandler, PlatformInfo } from "./types";
 
 /**
- * Video platform handlers (in priority order).
+ * Supported platform handlers (in priority order).
  */
-const videoHandlers: PlatformHandler[] = [youtubeHandler, twitchHandler];
-
-/**
- * All handlers including generic fallback.
- */
-const handlers: PlatformHandler[] = [
-  ...videoHandlers,
-  scryfallHandler,
-  tmdbHandler,
-  wikipediaHandler,
-  rawgHandler,
-  openLibraryHandler,
-  coingeckoHandler,
-  huggingfaceHandler,
-  spotifyHandler,
-  twitterHandler,
-  githubHandler,
-  genericHandler, // Always last as fallback
-];
+const handlers: PlatformHandler[] = [youtubeHandler, genericHandler];
 
 /**
  * Detect platform and extract info from a URL.

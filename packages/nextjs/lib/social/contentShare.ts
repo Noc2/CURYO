@@ -6,24 +6,7 @@ export const VOTE_SHARE_RATING_VERSION_PARAM = "rv";
 const TITLE_MAX_LENGTH = 96;
 const DESCRIPTION_MAX_LENGTH = 180;
 const ALT_MAX_LENGTH = 180;
-const ALLOWED_SHARE_IMAGE_HOSTS = new Set([
-  "api.scryfall.com",
-  "assets.coingecko.com",
-  "avatars.githubusercontent.com",
-  "cards.scryfall.io",
-  "cdn-avatars.huggingface.co",
-  "cdn-thumbnails.huggingface.co",
-  "coin-images.coingecko.com",
-  "covers.openlibrary.org",
-  "huggingface.co",
-  "i.scdn.co",
-  "i.ytimg.com",
-  "image.tmdb.org",
-  "img.youtube.com",
-  "media.rawg.io",
-  "pbs.twimg.com",
-  "upload.wikimedia.org",
-]);
+const ALLOWED_SHARE_IMAGE_HOSTS = new Set(["i.ytimg.com", "img.youtube.com"]);
 
 export type ContentShareRatingSource = "open_round_reference" | "content_rating_bps" | "content_rating";
 

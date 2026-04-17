@@ -241,7 +241,7 @@ test("checkRateLimit fails closed when the backing store is unavailable in produ
   });
 
   const response = await rateLimit.checkRateLimit(
-    makeRequest("/api/image-proxy", "GET", {
+    makeRequest("/api/thumbnail", "GET", {
       "x-forwarded-for": "203.0.113.77",
     }),
     { limit: 1, windowMs: 60_000 },
@@ -260,7 +260,7 @@ test("checkRateLimit can fail open for opted-in endpoints when the backing store
   });
 
   const response = await rateLimit.checkRateLimit(
-    makeRequest("/api/image-proxy", "GET", {
+    makeRequest("/api/thumbnail", "GET", {
       "x-forwarded-for": "203.0.113.77",
     }),
     { limit: 1, windowMs: 60_000 },

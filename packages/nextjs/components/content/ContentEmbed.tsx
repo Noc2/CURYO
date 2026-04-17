@@ -4,8 +4,7 @@ import React from "react";
 import dynamic from "next/dynamic";
 import { GenericLinkCard } from "./embeds";
 import { ExternalLinkBehaviorProvider } from "~~/components/shared/SafeExternalLink";
-import { getUsablePrefetchedMetadata, shouldWaitForPrefetchedMetadata } from "~~/lib/content/embedLoadStrategy";
-import type { ContentMetadataResult } from "~~/lib/contentMetadata/types";
+import { isDirectImageUrl } from "~~/lib/contentMedia";
 import { detectPlatform } from "~~/utils/platforms";
 
 const EmbedSpinner = () => (
@@ -17,37 +16,6 @@ const EmbedSpinner = () => (
 const YouTubeEmbed = dynamic(() => import("./embeds/YouTubeEmbed").then(m => m.YouTubeEmbed), {
   loading: EmbedSpinner,
 });
-const TwitchEmbed = dynamic(() => import("./embeds/TwitchEmbed").then(m => m.TwitchEmbed), {
-  ssr: false,
-  loading: EmbedSpinner,
-});
-const ScryfallEmbed = dynamic(() => import("./embeds/ScryfallEmbed").then(m => m.ScryfallEmbed), {
-  loading: EmbedSpinner,
-});
-const TmdbEmbed = dynamic(() => import("./embeds/TmdbEmbed").then(m => m.TmdbEmbed), { loading: EmbedSpinner });
-const WikipediaEmbed = dynamic(() => import("./embeds/WikipediaEmbed").then(m => m.WikipediaEmbed), {
-  loading: EmbedSpinner,
-});
-const RawgEmbed = dynamic(() => import("./embeds/RawgEmbed").then(m => m.RawgEmbed), { loading: EmbedSpinner });
-const OpenLibraryEmbed = dynamic(() => import("./embeds/OpenLibraryEmbed").then(m => m.OpenLibraryEmbed), {
-  loading: EmbedSpinner,
-});
-const SpotifyEmbed = dynamic(() => import("./embeds/SpotifyEmbed").then(m => m.SpotifyEmbed), {
-  loading: EmbedSpinner,
-});
-const CoinGeckoEmbed = dynamic(() => import("./embeds/CoinGeckoEmbed").then(m => m.CoinGeckoEmbed), {
-  loading: EmbedSpinner,
-});
-const GitHubEmbed = dynamic(() => import("./embeds/GitHubEmbed").then(m => m.GitHubEmbed), {
-  loading: EmbedSpinner,
-});
-const HuggingFaceEmbed = dynamic(() => import("./embeds/HuggingFaceEmbed").then(m => m.HuggingFaceEmbed), {
-  loading: EmbedSpinner,
-});
-const TwitterEmbed = dynamic(() => import("./embeds/TwitterEmbed").then(m => m.TwitterEmbed), {
-  ssr: false,
-  loading: EmbedSpinner,
-});
 
 interface ContentEmbedProps {
   url?: string | null;
@@ -56,8 +24,6 @@ interface ContentEmbedProps {
   compact?: boolean;
   showTextHeading?: boolean;
   isActive?: boolean;
-  deferClientFetch?: boolean;
-  prefetchedMetadata?: ContentMetadataResult;
   interactionMode?: "default" | "vote";
   imageFit?: "cover" | "contain";
 }
@@ -92,8 +58,6 @@ export function ContentEmbed({
   compact = false,
   showTextHeading = true,
   isActive = true,
-  deferClientFetch = false,
-  prefetchedMetadata,
   interactionMode = "default",
   imageFit = "cover",
 }: ContentEmbedProps) {
@@ -119,12 +83,10 @@ export function ContentEmbed({
     );
   }
 
-  const platformInfo = detectPlatform(url);
-  const usablePrefetchedMetadata = getUsablePrefetchedMetadata(platformInfo.type, prefetchedMetadata);
   const disableExternalNavigation = interactionMode === "vote";
-  const isDirectImage = /^https:\/\/.+\.(?:avif|gif|jpe?g|png|webp)(?:[?#].*)?$/i.test(url);
+  const platformInfo = detectPlatform(url);
 
-  if (isDirectImage) {
+  if (isDirectImageUrl(url)) {
     return (
       <img
         src={url}
@@ -135,108 +97,10 @@ export function ContentEmbed({
     );
   }
 
-  if (shouldWaitForPrefetchedMetadata(platformInfo.type, deferClientFetch, usablePrefetchedMetadata)) {
-    return (
-      <ExternalLinkBehaviorProvider disableNavigation={disableExternalNavigation}>
-        <GenericLinkCard url={url} compact={compact} />
-      </ExternalLinkBehaviorProvider>
-    );
-  }
-
   let embed: React.ReactNode;
   switch (platformInfo.type) {
     case "youtube":
       embed = <YouTubeEmbed key={url} info={platformInfo} compact={compact} isActive={isActive} />;
-      break;
-    case "twitch":
-      embed = <TwitchEmbed key={url} info={platformInfo} compact={compact} />;
-      break;
-    case "scryfall":
-      embed = <ScryfallEmbed key={url} info={platformInfo} compact={compact} isActive={isActive} />;
-      break;
-    case "tmdb":
-      embed = (
-        <TmdbEmbed
-          key={url}
-          info={platformInfo}
-          compact={compact}
-          isActive={isActive}
-          prefetchedMetadata={usablePrefetchedMetadata}
-        />
-      );
-      break;
-    case "wikipedia":
-      embed = (
-        <WikipediaEmbed
-          key={url}
-          info={platformInfo}
-          compact={compact}
-          isActive={isActive}
-          prefetchedMetadata={usablePrefetchedMetadata}
-        />
-      );
-      break;
-    case "rawg":
-      embed = (
-        <RawgEmbed
-          key={url}
-          info={platformInfo}
-          compact={compact}
-          isActive={isActive}
-          prefetchedMetadata={usablePrefetchedMetadata}
-          fillMediaSurface={interactionMode === "vote"}
-        />
-      );
-      break;
-    case "openlibrary":
-      embed = (
-        <OpenLibraryEmbed
-          key={url}
-          info={platformInfo}
-          compact={compact}
-          isActive={isActive}
-          prefetchedMetadata={usablePrefetchedMetadata}
-        />
-      );
-      break;
-    case "spotify":
-      embed = <SpotifyEmbed key={url} info={platformInfo} compact={compact} />;
-      break;
-    case "coingecko":
-      embed = (
-        <CoinGeckoEmbed
-          key={url}
-          info={platformInfo}
-          compact={compact}
-          isActive={isActive}
-          prefetchedMetadata={usablePrefetchedMetadata}
-        />
-      );
-      break;
-    case "huggingface":
-      embed = (
-        <HuggingFaceEmbed
-          key={url}
-          info={platformInfo}
-          compact={compact}
-          isActive={isActive}
-          prefetchedMetadata={usablePrefetchedMetadata}
-        />
-      );
-      break;
-    case "twitter":
-      embed = <TwitterEmbed key={url} info={platformInfo} compact={compact} />;
-      break;
-    case "github":
-      embed = (
-        <GitHubEmbed
-          key={url}
-          info={platformInfo}
-          compact={compact}
-          isActive={isActive}
-          prefetchedMetadata={usablePrefetchedMetadata}
-        />
-      );
       break;
     default:
       return (

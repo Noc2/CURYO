@@ -6,13 +6,10 @@ import { isSafeUrl } from "~~/utils/urlSafety";
 const RATE_LIMIT = { limit: 200, windowMs: 60_000 }; // 200 req/min per IP
 
 /**
- * Embed metadata proxy — resolves thumbnails and metadata server-side.
- * Avoids CORS issues, hides API keys, and caches results via Next.js fetch cache.
+ * Media metadata proxy — resolves direct image and YouTube thumbnails server-side.
  *
- * Usage: GET /api/thumbnail?url=https://en.wikipedia.org/wiki/Bitcoin
- * Returns: `ContentMetadataResult` from `lib/contentMetadata/types.ts`, including
- * `thumbnailUrl`, `title`, `description`, `imageUrl`, `authors`, `releaseYear`,
- * `symbol`, `stars`, `forks`, and `language` when available.
+ * Usage: GET /api/thumbnail?url=https://www.youtube.com/watch?v=...
+ * Returns: `ContentMetadataResult` from `lib/contentMetadata/types.ts`.
  */
 export async function GET(request: NextRequest) {
   const limited = await checkRateLimit(request, RATE_LIMIT, { allowOnStoreUnavailable: true });

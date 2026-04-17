@@ -160,10 +160,6 @@ export function getDatabaseConfig() {
   };
 }
 
-export function getTmdbApiKey(): string | undefined {
-  return readEnv("TMDB_API_KEY");
-}
-
 export function getOptionalAppUrl(): string | undefined {
   return (
     resolveAppUrl(readEnv("APP_URL") ?? readEnv("NEXT_PUBLIC_APP_URL"), isProduction, allowLocalE2EProductionBuild) ??

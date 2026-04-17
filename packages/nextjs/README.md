@@ -70,8 +70,6 @@ Key environment variables (see `.env.example` for the full list):
 | `NEXT_PUBLIC_WALLET_CONNECT_PROJECT_ID` | Optional WalletConnect project ID for external wallet discovery               |
 | `NEXT_PUBLIC_THIRDWEB_CLIENT_ID`        | thirdweb client ID for in-app wallets and sponsored transactions              |
 | `NEXT_PUBLIC_TARGET_NETWORKS`           | Comma-separated deployed chain IDs exposed in the UI (required in production) |
-| `TMDB_API_KEY`                          | Server-side TMDB API key for movie metadata                                   |
-| `RAWG_API_KEY`                          | Server-side RAWG API key for games metadata                                   |
 | `DATABASE_URL`                          | PostgreSQL URL for the Next app logical database                              |
 | `RESEND_API_KEY`                        | Resend API key for email notification delivery                                |
 | `RESEND_FROM_EMAIL`                     | Verified sender address/domain used by Resend                                 |

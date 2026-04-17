@@ -1,17 +1,4 @@
-export type PlatformType =
-  | "youtube"
-  | "twitch"
-  | "scryfall"
-  | "tmdb"
-  | "wikipedia"
-  | "rawg"
-  | "openlibrary"
-  | "coingecko"
-  | "huggingface"
-  | "spotify"
-  | "twitter"
-  | "github"
-  | "generic";
+export type PlatformType = "youtube" | "generic";
 
 export interface PlatformInfo {
   type: PlatformType;

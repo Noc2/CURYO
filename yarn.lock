@@ -516,7 +516,6 @@ __metadata:
     react-dom: ~19.2.3
     react-hot-toast: ~2.4.0
     react-lite-youtube-embed: ^3.3.3
-    react-tweet: ^3.3.0
     server-only: 0.0.1
     tailwindcss: 4.1.3
     thirdweb: 5.119.1
@@ -7129,7 +7128,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@swc/helpers@npm:^0.5.11, @swc/helpers@npm:^0.5.12, @swc/helpers@npm:^0.5.3":
+"@swc/helpers@npm:^0.5.11, @swc/helpers@npm:^0.5.12":
   version: 0.5.18
   resolution: "@swc/helpers@npm:0.5.18"
   dependencies:
@@ -10379,13 +10378,6 @@ __metadata:
   languageName: node
   linkType: hard
 
-"clsx@npm:^2.0.0":
-  version: 2.1.1
-  resolution: "clsx@npm:2.1.1"
-  checksum: acd3e1ab9d8a433ecb3cc2f6a05ab95fe50b4a3cfc5ba47abb6cbf3754585fcb87b84e90c822a1f256c4198e3b41c7f6c391577ffc8678ad587fc0976b24fd57
-  languageName: node
-  linkType: hard
-
 "cluster-key-slot@npm:^1.1.0":
   version: 1.1.2
   resolution: "cluster-key-slot@npm:1.1.2"
@@ -10996,13 +10988,6 @@ __metadata:
   version: 1.1.2
   resolution: "depd@npm:1.1.2"
   checksum: 6b406620d269619852885ce15965272b829df6f409724415e0002c8632ab6a8c0a08ec1f0bd2add05dc7bd7507606f7e2cc034fa24224ab829580040b835ecd9
-  languageName: node
-  linkType: hard
-
-"dequal@npm:^2.0.3":
-  version: 2.0.3
-  resolution: "dequal@npm:2.0.3"
-  checksum: 8679b850e1a3d0ebbc46ee780d5df7b478c23f335887464023a631d1b9af051ad4a6595a44220f9ff8ff95a8ddccf019b5ad778a976fd7bbf77383d36f412f90
   languageName: node
   linkType: hard
 
@@ -19179,20 +19164,6 @@ __metadata:
   languageName: node
   linkType: hard
 
-"react-tweet@npm:^3.3.0":
-  version: 3.3.0
-  resolution: "react-tweet@npm:3.3.0"
-  dependencies:
-    "@swc/helpers": ^0.5.3
-    clsx: ^2.0.0
-    swr: ^2.2.4
-  peerDependencies:
-    react: ^18.0.0 || ^19.0.0
-    react-dom: ^18.0.0 || ^19.0.0
-  checksum: 6c3ece040d78275f53e85efbfb919b47520e2a15d76d23063f28b74dfd92334d09b7ec1418498ca9d48f1c5b723ac36ae8089385c85ca16cc1d3d9a3004928bc
-  languageName: node
-  linkType: hard
-
 "react@npm:~19.2.3":
   version: 19.2.4
   resolution: "react@npm:19.2.4"
@@ -20915,18 +20886,6 @@ __metadata:
   languageName: node
   linkType: hard
 
-"swr@npm:^2.2.4":
-  version: 2.4.0
-  resolution: "swr@npm:2.4.0"
-  dependencies:
-    dequal: ^2.0.3
-    use-sync-external-store: ^1.6.0
-  peerDependencies:
-    react: ^16.11.0 || ^17.0.0 || ^18.0.0 || ^19.0.0
-  checksum: de7239e787063f6150f4395c02dc6743df7b6749fa570c4bc9c6c72ca6a84da61350ded4c1a98675e9b58a8f112dbe5f1523d1f126aceeb2c9478b327cd62752
-  languageName: node
-  linkType: hard
-
 "synckit@npm:^0.11.0":
   version: 0.11.12
   resolution: "synckit@npm:0.11.12"
@@ -21978,15 +21937,6 @@ __metadata:
   peerDependencies:
     react: ^16.8.0 || ^17.0.0 || ^18.0.0 || ^19.0.0
   checksum: dc3843a1b59ac8bd01417bd79498d4c688d5df8bf4801be50008ef4bfaacb349058c0b1605b5b43c828e0a2d62722d7e861573b3f31cea77a7f23e8b0fc2f7e3
-  languageName: node
-  linkType: hard
-
-"use-sync-external-store@npm:^1.6.0":
-  version: 1.6.0
-  resolution: "use-sync-external-store@npm:1.6.0"
-  peerDependencies:
-    react: ^16.8.0 || ^17.0.0 || ^18.0.0 || ^19.0.0
-  checksum: 61a62e910713adfaf91bdb72ff2cd30e5ba83687accaf3b6e75a903b45bf635f5722e3694af30d83a03e92cb533c0a5c699298d2fef639a03ffc86b469f4eee2
   languageName: node
   linkType: hard
 

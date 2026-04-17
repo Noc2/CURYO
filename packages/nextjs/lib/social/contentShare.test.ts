@@ -110,11 +110,11 @@ test("resolveContentShareImageUrl prefers explicit HTTPS image metadata", () => 
   assert.equal(
     resolveContentShareImageUrl({
       ...baseContent,
-      imageUrl: "https://upload.wikimedia.org/example/full.png",
-      thumbnailUrl: "https://upload.wikimedia.org/example/thumb.png",
+      imageUrl: "https://img.youtube.com/vi/qRv7G7WpOoU/maxresdefault.jpg",
+      thumbnailUrl: "https://img.youtube.com/vi/qRv7G7WpOoU/hqdefault.jpg",
       url: "https://www.youtube.com/watch?v=qRv7G7WpOoU",
     }),
-    "https://upload.wikimedia.org/example/full.png",
+    "https://img.youtube.com/vi/qRv7G7WpOoU/maxresdefault.jpg",
   );
 });
 
@@ -136,9 +136,9 @@ test("resolveContentShareImageUrl ignores non-HTTPS image metadata", () => {
     resolveContentShareImageUrl({
       ...baseContent,
       imageUrl: "http://images.example/full.png",
-      thumbnailUrl: "https://upload.wikimedia.org/example/thumb.png",
+      thumbnailUrl: "https://img.youtube.com/vi/qRv7G7WpOoU/hqdefault.jpg",
     }),
-    "https://upload.wikimedia.org/example/thumb.png",
+    "https://img.youtube.com/vi/qRv7G7WpOoU/hqdefault.jpg",
   );
 });
 
