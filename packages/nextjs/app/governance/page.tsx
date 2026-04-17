@@ -13,9 +13,9 @@ import {
   getStoredReferralAddress,
 } from "~~/lib/referrals/referralAttribution";
 
-type GovernanceTab = "profile" | "leaderboard" | "governance" | "faucet";
+type GovernanceTab = "profile" | "leaderboard" | "governance" | "faucet" | "operator";
 
-const governanceTabs: GovernanceTab[] = ["profile", "leaderboard", "governance", "faucet"];
+const governanceTabs: GovernanceTab[] = ["profile", "leaderboard", "governance", "faucet", "operator"];
 const zeroBalanceTabs: GovernanceTab[] = ["profile", "faucet"];
 
 function GovernanceSectionLoading() {
@@ -59,6 +59,10 @@ const GovernanceActionComposer = dynamic(
 const ProposalList = dynamic(() => import("~~/components/governance/ProposalList").then(mod => mod.ProposalList), {
   loading: GovernanceSectionLoading,
 });
+const FrontendRegistration = dynamic(
+  () => import("~~/components/governance/FrontendRegistration").then(mod => mod.FrontendRegistration),
+  { loading: GovernanceSectionLoading },
+);
 
 function getGovernanceHash(tab: GovernanceTab) {
   return tab === "profile" ? "" : `#${tab}`;
@@ -254,6 +258,14 @@ function GovernancePageInner() {
             >
               Governance
             </button>
+            <button
+              onClick={() => selectTab("operator")}
+              className={`px-4 py-1.5 rounded-full text-base font-medium transition-colors ${
+                activeTab === "operator" ? "pill-active" : "pill-inactive"
+              }`}
+            >
+              Operator
+            </button>
           </>
         )}
       </div>
@@ -279,6 +291,8 @@ function GovernancePageInner() {
           <ProposalList />
         </div>
       )}
+
+      {activeTab === "operator" && <FrontendRegistration />}
     </AppPageShell>
   );
 }
