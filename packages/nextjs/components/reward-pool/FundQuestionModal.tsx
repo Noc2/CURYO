@@ -1,9 +1,10 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { type ReactNode, useId, useMemo, useState } from "react";
 import { useAccount, useConfig, useWriteContract } from "wagmi";
 import { readContract, waitForTransactionReceipt } from "wagmi/actions";
 import { XMarkIcon } from "@heroicons/react/24/outline";
+import { InfoTooltip } from "~~/components/ui/InfoTooltip";
 import {
   DEFAULT_REWARD_POOL_FRONTEND_FEE_BPS,
   ERC20_APPROVAL_ABI,
@@ -30,11 +31,32 @@ function getExpiryTimestamp(days: number): bigint {
 }
 
 const FRONTEND_FEE_PERCENT = DEFAULT_REWARD_POOL_FRONTEND_FEE_BPS / 100;
+const REQUIRED_VOTERS_TOOLTIP =
+  "How many eligible revealed voters a round needs before that round can count toward this bounty.";
+const SETTLED_ROUNDS_TOOLTIP =
+  "How many qualifying settled rounds must complete before the bounty is filled and funds can be paid out.";
+const REFUND_AFTER_TOOLTIP =
+  "Days before unclaimed funds can be refunded. If the bounty has not filled by then, remaining funds can be returned to you.";
+
+function BountyFieldLabel({ htmlFor, children, tooltip }: { htmlFor: string; children: ReactNode; tooltip?: string }) {
+  return (
+    <div className="label justify-start gap-1 px-0 py-0 pb-1">
+      <label htmlFor={htmlFor} className="label-text">
+        {children}
+      </label>
+      {tooltip ? <InfoTooltip text={tooltip} position="top" /> : null}
+    </div>
+  );
+}
 
 export function FundQuestionModal({ contentId, title, onClose, onCreated }: FundQuestionModalProps) {
   const wagmiConfig = useConfig();
   const { address, chain } = useAccount();
   const { writeContractAsync } = useWriteContract();
+  const amountInputId = useId();
+  const requiredVotersInputId = useId();
+  const requiredRoundsInputId = useId();
+  const expiryDaysInputId = useId();
   const [amount, setAmount] = useState("10");
   const [requiredVoters, setRequiredVoters] = useState("5");
   const [requiredRounds, setRequiredRounds] = useState("2");
@@ -144,7 +166,7 @@ export function FundQuestionModal({ contentId, title, onClose, onCreated }: Fund
           <XMarkIcon className="h-5 w-5" />
         </button>
 
-        <p className="text-sm font-semibold uppercase text-base-content/50">Fund a bounty</p>
+        <p className="text-sm font-semibold uppercase text-base-content/50">Fund a bounty for</p>
         <h3 className="mt-1 line-clamp-2 text-xl font-semibold text-base-content">{title}</h3>
         <p className="mt-2 text-base text-base-content/70">
           Paid in USDC on Celo. Qualified claims reserve {FRONTEND_FEE_PERCENT}% for the eligible frontend operator; the
@@ -152,11 +174,12 @@ export function FundQuestionModal({ contentId, title, onClose, onCreated }: Fund
         </p>
 
         <div className="mt-5 grid gap-4">
-          <label className="form-control">
-            <span className="label-text">Bounty amount</span>
+          <div className="form-control">
+            <BountyFieldLabel htmlFor={amountInputId}>Bounty amount</BountyFieldLabel>
             <div className="input input-bordered flex items-center gap-2 bg-base-100">
               <span className="text-base-content/50">$</span>
               <input
+                id={amountInputId}
                 inputMode="decimal"
                 value={amount}
                 onChange={event => setAmount(event.target.value)}
@@ -165,12 +188,15 @@ export function FundQuestionModal({ contentId, title, onClose, onCreated }: Fund
               />
               <span className="text-base-content/50">USDC</span>
             </div>
-          </label>
+          </div>
 
           <div className="grid gap-4 sm:grid-cols-2">
-            <label className="form-control">
-              <span className="label-text">Required voters</span>
+            <div className="form-control">
+              <BountyFieldLabel htmlFor={requiredVotersInputId} tooltip={REQUIRED_VOTERS_TOOLTIP}>
+                Required voters
+              </BountyFieldLabel>
               <input
+                id={requiredVotersInputId}
                 type="number"
                 min={MIN_REWARD_POOL_REQUIRED_VOTERS}
                 step={1}
@@ -178,10 +204,13 @@ export function FundQuestionModal({ contentId, title, onClose, onCreated }: Fund
                 onChange={event => setRequiredVoters(event.target.value)}
                 className="input input-bordered bg-base-100"
               />
-            </label>
-            <label className="form-control">
-              <span className="label-text">Settled rounds</span>
+            </div>
+            <div className="form-control">
+              <BountyFieldLabel htmlFor={requiredRoundsInputId} tooltip={SETTLED_ROUNDS_TOOLTIP}>
+                Settled rounds
+              </BountyFieldLabel>
               <input
+                id={requiredRoundsInputId}
                 type="number"
                 min={MIN_REWARD_POOL_SETTLED_ROUNDS}
                 step={1}
@@ -189,12 +218,15 @@ export function FundQuestionModal({ contentId, title, onClose, onCreated }: Fund
                 onChange={event => setRequiredRounds(event.target.value)}
                 className="input input-bordered bg-base-100"
               />
-            </label>
+            </div>
           </div>
 
-          <label className="form-control">
-            <span className="label-text">Refund if not filled after</span>
+          <div className="form-control">
+            <BountyFieldLabel htmlFor={expiryDaysInputId} tooltip={REFUND_AFTER_TOOLTIP}>
+              Refund if not filled after
+            </BountyFieldLabel>
             <input
+              id={expiryDaysInputId}
               type="number"
               min={1}
               step={1}
@@ -202,8 +234,7 @@ export function FundQuestionModal({ contentId, title, onClose, onCreated }: Fund
               onChange={event => setExpiryDays(event.target.value)}
               className="input input-bordered bg-base-100"
             />
-            <span className="label-text-alt text-base-content/50">Days before unclaimed funds can be refunded.</span>
-          </label>
+          </div>
 
           {!escrowAddress ? (
             <p className="rounded-lg bg-warning/10 p-3 text-sm text-warning">
