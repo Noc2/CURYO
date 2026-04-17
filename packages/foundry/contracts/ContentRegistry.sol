@@ -824,12 +824,12 @@ contract ContentRegistry is Initializable, AccessControlUpgradeable, PausableUpg
     }
 
     /// @notice Deprecated; submitter stake resolution has been removed.
-    function resolvePendingSubmitterStake(uint256) external {
+    function resolvePendingSubmitterStake(uint256) external view {
         require(msg.sender == votingEngine, "Only VotingEngine");
     }
 
     /// @notice Deprecated; submitter stake slashing has been removed.
-    function slashSubmitterStake(uint256) external returns (uint256) {
+    function slashSubmitterStake(uint256) external view returns (uint256) {
         require(msg.sender == votingEngine, "Only VotingEngine");
         return 0;
     }

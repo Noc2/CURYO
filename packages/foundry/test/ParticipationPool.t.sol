@@ -289,7 +289,7 @@ contract ParticipationPoolTest is Test {
 
     // --- Reward Always Below Stake ---
 
-    function test_RewardAlwaysBelowStake() public view {
+    function test_RewardAlwaysBelowStake() public pure {
         uint256 stakeAmount = 100e6;
         uint256 reward = stakeAmount * INITIAL_RATE_BPS / 10000;
         assertTrue(reward < stakeAmount, "Reward must be less than stake");

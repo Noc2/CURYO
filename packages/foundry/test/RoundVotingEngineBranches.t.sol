@@ -256,7 +256,7 @@ contract RoundVotingEngineBranchesTest is VotingTestBase {
         bytes32 drandChainHash,
         bytes32 salt,
         bool newlineAfterHeader
-    ) internal view returns (bytes memory exactMatch, bytes memory bestFit) {
+    ) internal pure returns (bytes memory exactMatch, bytes memory bestFit) {
         uint256 coarseStep = 32;
         uint256 filler = 0;
 
@@ -567,8 +567,6 @@ contract RoundVotingEngineBranchesTest is VotingTestBase {
     function test_CommitTwice_AfterCooldown_SameRound_RevertsAlreadyCommitted() public {
         uint256 contentId = _submitContent();
         _commit(voter1, contentId, true, STAKE);
-
-        uint256 roundId = RoundEngineReadHelpers.activeRoundId(engine, contentId);
 
         // Warp past 24h cooldown — but round is still open and voter already committed
         vm.warp(block.timestamp + 25 hours);
@@ -934,12 +932,12 @@ contract RoundVotingEngineBranchesTest is VotingTestBase {
         // 2 UP 2 DOWN same stake -> tie (4 voters, all equal weight)
         uint256 up = STAKE;
         uint256 dn = STAKE;
-        (bytes32 ck1, bytes32 s1) = _commit(voter1, contentId, true, up);
-        (bytes32 ck2, bytes32 s2) = _commit(voter2, contentId, false, dn);
+        _commit(voter1, contentId, true, up);
+        _commit(voter2, contentId, false, dn);
         // Use a different stake to force a 3-voter tie: up=STAKE, down=STAKE via voter2, voter3
         // Actually equal total: voter1 UP STAKE, voter2 DOWN STAKE is a 2-voter situation.
         // We need 3. Use voter1 UP 2*STAKE, voter2 DOWN STAKE, voter3 DOWN STAKE.
-        (bytes32 ck3, bytes32 s3) = _commit(voter3, contentId, true, up);
+        _commit(voter3, contentId, true, up);
         // up = 2*STAKE, down = STAKE -> NOT tied. Redo.
 
         // Reset contentId for a fresh tied scenario
@@ -949,9 +947,9 @@ contract RoundVotingEngineBranchesTest is VotingTestBase {
         uint256 cid2 = _submitContentWithUrl("https://example.com/tied");
 
         uint256 tieStake = 2e6;
-        (bytes32 tck1, bytes32 ts1) = _commit(voter4, cid2, true, tieStake);
-        (bytes32 tck2, bytes32 ts2) = _commit(voter5, cid2, false, tieStake);
-        (bytes32 tck3, bytes32 ts3) = _commit(voter6, cid2, true, tieStake);
+        _commit(voter4, cid2, true, tieStake);
+        _commit(voter5, cid2, false, tieStake);
+        _commit(voter6, cid2, true, tieStake);
         // up = 2*tieStake, down = tieStake -> NOT tied
 
         // Use content 3 with truly equal pools
@@ -1168,7 +1166,7 @@ contract RoundVotingEngineBranchesTest is VotingTestBase {
         // Warp past epoch 2 — voter4 commits in epoch 3
         // voter4's revealableAfter = rPU2start.startTime + 3 * EPOCH
         vm.warp(rPU2start.startTime + 2 * EPOCH + 1);
-        (bytes32 ck4,) = _commit(voter4, contentId, true, STAKE);
+        _commit(voter4, contentId, true, STAKE);
 
         // settledAt = rPU2start.startTime + 2 * EPOCH + 1 (current block.timestamp)
         // voter4 revealableAfter = rPU2start.startTime + 3 * EPOCH > settledAt => REFUNDED

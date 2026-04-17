@@ -28,7 +28,7 @@ contract MockVotingEngineForFrontendGas {
 contract UserTransactionGasEstimatesTest is RoundIntegrationTest {
     function _voteTransferPayload(uint256 contentId, TestCommitArtifacts memory artifacts, address frontend)
         internal
-        view
+        pure
         returns (bytes memory)
     {
         return abi.encode(

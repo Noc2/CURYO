@@ -99,7 +99,7 @@ contract FormalVerification_ParticipationPoolTest is Test {
     // ==================== Test 5: Drainage Model - 1000 Votes/Day at Tier 0 ====================
 
     /// @notice Tier 0 (90%) lasts ~33 days at 1000 votes/day with 50 cREP avg stake.
-    function test_DrainageModel_1000VotesPerDay_Tier0() public view {
+    function test_DrainageModel_1000VotesPerDay_Tier0() public pure {
         // Each vote: stake=50e6, reward=50e6 * 9000 / 10000 = 45e6
         uint256 rewardPerVote = 50e6 * INITIAL_RATE / 10000;
         assertEq(rewardPerVote, 45e6, "Each vote drains 45 cREP at tier 0");
@@ -120,7 +120,7 @@ contract FormalVerification_ParticipationPoolTest is Test {
     // ==================== Test 6: Full Lifecycle Drainage Model ====================
 
     /// @notice Pool survives > 1M votes total across all tiers.
-    function test_DrainageModel_FullLifecycle() public view {
+    function test_DrainageModel_FullLifecycle() public pure {
         // Model: 1000 votes/day at 50 cREP avg stake across all tiers
         uint256 avgStake = 50e6;
         uint256 votesPerDay = 1000;
@@ -159,7 +159,7 @@ contract FormalVerification_ParticipationPoolTest is Test {
     // ==================== Test 7: Worst Case - All Max Stake ====================
 
     /// @notice 200 max-stake voters per round at tier 0: exhausted in ~83 rounds.
-    function test_WorstCase_AllMaxStake() public view {
+    function test_WorstCase_AllMaxStake() public pure {
         // 200 voters x 100 cREP x 90% = 18,000 cREP per round
         uint256 maxStake = 100e6;
         uint256 maxVoters = 200;

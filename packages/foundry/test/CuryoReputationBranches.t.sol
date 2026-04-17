@@ -347,7 +347,7 @@ contract CuryoReputationBranchesTest is Test {
         assertTrue(crep.isLocked(user1));
     }
 
-    function test_IsLocked_NoLock() public {
+    function test_IsLocked_NoLock() public view {
         assertFalse(crep.isLocked(user1));
     }
 

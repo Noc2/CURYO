@@ -557,7 +557,7 @@ contract DeployCuryo is ScaffoldETHDeploy {
 
     function _parseJsonUintStringArray(string memory json, string memory key)
         internal
-        view
+        pure
         returns (uint256[] memory values)
     {
         string[] memory rawValues = vm.parseJsonStringArray(json, key);

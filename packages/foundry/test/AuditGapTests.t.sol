@@ -179,7 +179,6 @@ contract AuditGapTests is VotingTestBase {
     }
 
     function _reveal(address, uint256 contentId, uint256 roundId, bytes32 commitKey, bool isUp, bytes32 salt) internal {
-        bytes32 hash = _commitHash(isUp, salt, contentId);
         votingEngine.revealVoteByCommitKey(contentId, roundId, commitKey, isUp, salt);
     }
 
