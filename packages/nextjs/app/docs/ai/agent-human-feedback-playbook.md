@@ -1,0 +1,272 @@
+# AI Agent Human Feedback Playbook
+
+Status: draft research note
+
+This note captures the working strategy for making Curyo useful to bots and AI agents that need verified human judgment. The core idea is simple: Curyo can become the human feedback layer agents call when they should ask instead of guess.
+
+## Positioning
+
+Curyo is a verified human feedback oracle for autonomous agents.
+
+Agents already have tool calls, memory, search, wallets, and workflow runners. What they still lack is a clean way to ask humans a bounded question, attach the relevant context, pay for responses, and get back a structured result they can use in a later decision. Curyo is especially well suited to that role because the protocol already turns questions into public, stake-backed signals.
+
+This is different from generic human-in-the-loop approval. Approval asks a single operator whether an agent may continue. Curyo can ask a market of verified humans what is true, useful, safe, interesting, locally relevant, or worth acting on.
+
+## Questions Agents Would Ask Humans
+
+AI agents are most likely to ask humans questions in places where model confidence is not enough, where social judgment matters, or where the cost of a wrong answer is higher than the cost of asking.
+
+### Authenticity and Provenance
+
+- Is this image likely authentic?
+- Does this screenshot look manipulated?
+- Is this product review from a real user?
+- Does this social post look like spam, coordinated promotion, or normal behavior?
+- Is this profile, listing, ticket, or support request legitimate?
+
+These questions benefit from human pattern recognition, local context, and skepticism around artifacts that models may over-trust.
+
+### Relevance and Usefulness
+
+- Is this search result useful for the user's intent?
+- Is this answer actually helpful, or just plausible?
+- Which of these sources best answers the question?
+- Should this item be included in a digest, recommendation feed, or research memo?
+
+These fit agent pipelines that rank content, curate leads, build reports, or decide what to escalate.
+
+### Quality, Taste, and Preference
+
+- Which product photo looks more trustworthy?
+- Which landing page headline is clearer?
+- Which generated image best matches the prompt?
+- Which design feels more premium, more credible, or less confusing?
+- Would you click this recommendation?
+
+Models can generate options cheaply, but humans remain useful for taste, clarity, and cultural resonance.
+
+### Moderation and Norms
+
+- Is this content hateful, sexual, violent, misleading, or harassment?
+- Is this borderline content acceptable in this community?
+- Does this claim need a warning label?
+- Should this user report be escalated?
+
+This category should support policies, jurisdiction, community-specific rules, and evidence links. It should also allow "not enough context" as a valid answer.
+
+### Local and Real-World Context
+
+- Is this event still happening at this location?
+- Does this storefront look open?
+- Is this translation natural for local speakers?
+- Is this restaurant, venue, seller, or listing trustworthy?
+- Does this local instruction make sense to someone on the ground?
+
+Agents will ask these when web data is stale or when local nuance matters.
+
+### Ambiguous Factual Judgment
+
+- Is this claim supported by the linked source?
+- Does this summary misrepresent the article?
+- Is this data point likely a typo?
+- Which of these conflicting sources is more credible?
+
+Curyo should avoid presenting these as final truth. The safer framing is "verified human judgment signal with cited evidence."
+
+### Agent Action Review
+
+- Should this agent send this email?
+- Should this bot open this issue?
+- Should this trade, purchase, booking, or post be blocked for review?
+- Does this autonomous action look reasonable given the stated goal?
+
+This overlaps with human-in-the-loop approval, but Curyo can make it broader: instead of one owner approval, a bot can buy a small verified judgment quorum.
+
+### Training and Dataset Filtering
+
+- Is this example high-quality training data?
+- Does this label match the image?
+- Which answer is better?
+- Is this reasoning trace acceptable?
+- Should this generated sample be kept or discarded?
+
+This resembles classic human preference collection, but Curyo can add public incentives, reputation, and auditable reward flows.
+
+### Market, Social, and Community Judgment
+
+- Will people find this post interesting?
+- Is this proposal likely to be controversial?
+- Which feature request matters more?
+- Is this bounty clear enough for contributors?
+- Should this token, project, or claim be treated as suspicious?
+
+This is valuable for bots operating in social, DAO, creator, marketplace, or governance contexts.
+
+## Make Asking Easy
+
+The most important product decision is to give agents one obvious primitive:
+
+```ts
+const request = await curyo.askHumans({
+  question: "Does this image look AI-generated?",
+  context: "The agent is deciding whether to include it in a verified seller listing.",
+  mediaUrl: "https://example.com/image.jpg",
+  evidenceUrl: "https://example.com/listing",
+  category: "authenticity",
+  answerType: "yes_no_unsure",
+  budgetUsd: "5.00",
+  minVoters: 15,
+  deadlineMinutes: 60,
+  webhookUrl: "https://agent.example.com/curyo/webhook",
+  idempotencyKey: "listing-123-auth-check"
+});
+```
+
+The response should be immediately useful:
+
+```ts
+{
+  questionId: "0x...",
+  publicUrl: "https://curyo.example/questions/0x...",
+  escrowTxHash: "0x...",
+  estimatedResolution: "2026-04-17T14:30:00Z",
+  statusUrl: "https://api.curyo.example/questions/0x..."
+}
+```
+
+When the result is ready:
+
+```ts
+{
+  questionId: "0x...",
+  status: "settled",
+  answer: "yes",
+  confidence: 0.82,
+  votes: {
+    yes: 21,
+    no: 4,
+    unsure: 3
+  },
+  humanRationaleSummary: "Most voters cited inconsistent shadows and unnatural text artifacts.",
+  resultUrl: "https://curyo.example/questions/0x..."
+}
+```
+
+## Templates
+
+Agents should not start from a blank text box. The SDK and MCP adapter should expose templates with clear answer schemas:
+
+- Binary judgment: yes, no, unsure.
+- Quality score: 1 to 5 with optional rationale.
+- Pairwise choice: A, B, tie, neither.
+- Ranking: ordered list of options.
+- Fact check: supported, contradicted, unclear, source missing.
+- Moderation: allowed, restricted, remove, escalate.
+- Authenticity: likely real, likely synthetic, manipulated, unclear.
+- Action approval: approve, reject, revise, escalate.
+
+Templates reduce invalid questions, make pricing predictable, and help agents parse results without brittle natural-language scraping.
+
+## Payment Design
+
+The payment flow should feel like an API call, not a crypto workflow.
+
+Recommended layers:
+
+- Prepaid bot wallet: agents deposit USDC or CELO once, then spend against a budget.
+- Per-question escrow: each submitted question creates or funds a Question Reward Pool.
+- Quote before submit: agents call `quoteQuestion` to estimate cost, expected voters, service fee, and deadline.
+- Budget caps: per-question, daily, weekly, and per-category limits.
+- Idempotency keys: retries must not double-pay.
+- Refund or rollover: unused funds return to the bot wallet or roll into the next question.
+- Webhooks: agents should not need to poll constantly.
+- Receipts: every paid question returns transaction hashes, protocol fees, reward distribution, and final settlement metadata.
+
+For agent adoption, payment should support both on-chain wallets and API-managed billing. The on-chain path is ideal for crypto-native bots like OpenClaw-style agents. A managed billing path helps non-crypto agents start quickly while still settling into protocol rails underneath.
+
+## MCP Tool Surface
+
+An MCP adapter should expose narrow Curyo actions, not raw transaction access. A useful initial tool set:
+
+- `curyo_quote_question`: estimate cost and requirements before paying.
+- `curyo_ask_humans`: submit a validated question with budget, context, media, and webhook.
+- `curyo_get_question_status`: check lifecycle state.
+- `curyo_get_result`: fetch the settled human signal.
+- `curyo_list_categories`: discover supported categories and templates.
+- `curyo_estimate_budget`: ask "what budget gets me N voters in T minutes?"
+- `curyo_cancel_or_expire_question`: cancel when still allowed or expire stale work.
+- `curyo_get_bot_balance`: show spendable balance and caps.
+
+The adapter should be conservative around writes:
+
+- Simulate before submit.
+- Require explicit budget fields.
+- Enforce wallet scopes.
+- Log client name, source adapter, question body, category, transaction hash, and result.
+- Return machine-readable errors for duplicate, invalid media, insufficient funds, policy rejection, and rate limits.
+
+## OpenClaw-Style Bot Flow
+
+An OpenClaw-style agent could use Curyo like this:
+
+1. The bot detects uncertainty in a task, such as suspicious media, unclear instructions, or a risky autonomous action.
+2. It calls `curyo_quote_question` with category, deadline, and desired voter count.
+3. It submits through `curyo_ask_humans`, funding the reward pool from a delegated bot wallet.
+4. It receives a `questionId`, `publicUrl`, and `escrowTxHash`.
+5. It waits for a webhook or polls `curyo_get_question_status`.
+6. It calls `curyo_get_result` and maps the result into its own policy.
+7. It stores the result URL in its audit log so humans can inspect why the bot acted.
+
+The whole experience should fit in one or two tool calls from the agent's perspective.
+
+## Media Policy
+
+It probably should not be mandatory to attach pictures or videos to every question. Instead, require sufficient context.
+
+Good rule:
+
+- Require media for visual, authenticity, design, product, place, and content-moderation categories.
+- Strongly encourage media or source links for factual and local-context questions.
+- Allow text-only questions for abstract judgment, governance, ranking, policy, and action approval.
+- Prefer questions with evidence in ranking and discovery.
+- Let agents attach structured artifacts such as screenshots, logs, diffs, source URLs, model outputs, and traces.
+
+Mandatory media everywhere would block many useful questions, especially abstract decisions, policy review, source ranking, and "should the agent do this?" approvals.
+
+## Product Requirements
+
+To make this easy for bots:
+
+- Provide one SDK function: `askHumans`.
+- Provide a matching MCP server with the same schemas.
+- Provide hosted webhooks and status URLs.
+- Provide question templates with typed result schemas.
+- Provide bot wallets, delegated spend limits, and clear receipts.
+- Provide `quote -> submit -> wait -> result` as the golden path.
+- Provide examples for common agent frameworks.
+- Make all writes idempotent.
+- Support media uploads, source links, and screenshots.
+- Expose public result pages for auditability.
+
+## Research Anchors
+
+- [OpenClaw agents overview](https://openclawdoc.com/docs/agents/overview/) describes autonomous agents as goal-directed systems that interact with environments through tools.
+- [Model Context Protocol introduction](https://modelcontextprotocol.io/docs/getting-started/intro) frames MCP as a standard way for applications to provide context and tools to language models.
+- [MCP elicitation specification](https://modelcontextprotocol.io/specification/2025-11-25/client/elicitation) is relevant because it formalizes how tools can request additional user input, although Curyo's use case is broader: paid feedback from verified humans, not only the current local user.
+- [OpenAI's human preferences work](https://openai.com/index/learning-from-human-preferences/) is a useful precedent for using human comparisons and preferences to improve model behavior.
+- [Amazon Mechanical Turk requester concepts](https://docs.aws.amazon.com/zh_cn/AWSMechTurk/latest/RequesterUI/mechanical-turk-concepts.html) show the older marketplace pattern of requester-funded human tasks, assignments, rewards, and qualifications.
+- [Coinbase x402 docs](https://docs.cdp.coinbase.com/x402/welcome) are relevant to agent payments because they show a modern API-native payment pattern.
+- [OpenAI Agents JS human-in-the-loop guide](https://openai.github.io/openai-agents-js/guides/human-in-the-loop/) shows the approval/checkpoint pattern that Curyo can complement with broader verified human judgment.
+
+## Shortest Path
+
+Build the first version around:
+
+1. `askHumans()` in the SDK.
+2. A thin MCP server exposing quote, ask, status, result, categories, and balance.
+3. A prepaid bot wallet with per-question USDC escrow.
+4. Three templates: yes/no/unsure, pairwise choice, and action approval.
+5. Webhook delivery plus a public result page.
+6. An OpenClaw-style example bot that asks humans a question, pays for it, waits, and acts on the result.
+
+That would make the protocol legible to AI agents: when uncertain, ask humans, pay fairly, and consume a structured signal.
