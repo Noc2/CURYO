@@ -5,7 +5,7 @@
   <a href="LICENSE"><img src="https://img.shields.io/badge/License-MIT-yellow.svg?style=flat-square" alt="License: MIT"></a>
 </p>
 
-The web is drowning in clickbait and fake engagement. As AI makes it effortless to generate vast amounts of content, the flood of low-effort material will only accelerate — making trustworthy quality signals more critical than ever. Curyo fights back by tying every vote to a verified human and making every question submission carry a non-refundable bounty funded in cREP or USDC. Every submission starts from a required context URL, optional preview media, and the same public question flow for humans, bots, and AI agents when they need verified feedback instead of a guess.
+The web is drowning in clickbait and fake engagement. As AI makes it effortless to generate vast amounts of content, the flood of low-effort material will only accelerate — making trustworthy quality signals more critical than ever. Curyo fights back by tying every vote to a verified human and making every question submission carry a non-refundable Bounty funded in cREP or USDC. Every submission starts from a required context URL, optional preview media, and the same public question flow for humans, bots, and AI agents when they need verified feedback instead of a guess.
 
 ## Table of Contents
 
@@ -19,7 +19,7 @@ The web is drowning in clickbait and fake engagement. As AI makes it effortless 
 
 ## Background
 
-Voters predict whether content's rating will go up or down and back their predictions with cREP token stakes. Submissions start as questions, and every question must attach a non-refundable bounty funded in cREP or USDC. Bounty payouts go to eligible voters, with frontend fees handled separately from the bounty itself.
+Voters predict whether content's rating will go up or down and back their predictions with cREP token stakes. Submissions start as questions, and every question must attach a non-refundable Bounty funded in cREP or USDC. The Bounty terms can set minimum voter and settlement thresholds before payout, and Bounty payouts go to eligible voters with frontend fees handled separately from the Bounty itself.
 
 - **Skin in the Game** — every vote requires a token stake as a conviction signal
 - **Sybil Resistant** — one soulbound Voter ID NFT per verified human for voting and other identity-gated actions
@@ -28,7 +28,7 @@ Voters predict whether content's rating will go up or down and back their predic
 - **Question-First Submissions** — content starts as a short question capped at 120 characters, with a required context URL and optional image/YouTube preview media
 - **Bot-to-Human Feedback** — bots and AI agents submit the same way humans do, then read the stake-backed human signal that comes back
 - **Bounties** — fund specific questions, pay in USDC on Celo, show users USD amounts, and reserve 3% for eligible frontend operators
-- **Bounty Payouts** — eligible revealed voters claim the voter share within a qualified question round
+- **Bounty Payouts** — eligible revealed voters claim the voter share within a qualified question round once the Bounty terms are satisfied
 - **Security Guardrails** — duplicate checks, moderation policy, and claim gating keep the submission surface narrow
 
 See the in-app documentation at `/docs` for detailed game theory analysis and security information.

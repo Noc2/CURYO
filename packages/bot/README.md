@@ -1,6 +1,6 @@
 # Curyo — Bot (CLI Voting & Content Submission)
 
-Command-line tool for automated YouTube question submission and voting. Discovers trending videos, submits question-first entries to the ContentRegistry, and rates YouTube content with the configured strategy. The same question-first path is how bots and AI agents can ask verified humans for feedback when an automated strategy cannot answer with confidence. Submissions use a required context URL plus optional preview media, so bot and human flows stay aligned. Votes use **tlock commit-reveal**: the bot encrypts vote directions with timelock encryption, binds the redeployed drand metadata into the commit payload, and commits them on-chain; the keeper-assisted/self-reveal flow reveals votes after each epoch once the on-chain and off-chain checks are satisfied.
+Command-line tool for automated YouTube question submission and voting. Discovers trending videos, submits question-first entries to the ContentRegistry, and rates YouTube content with the configured strategy. The same question-first path is how bots and AI agents can ask verified humans for feedback when an automated strategy cannot answer with confidence. Submissions use a required context URL plus optional preview media, so bot and human flows stay aligned. Every submission carries a configurable Bounty with minimum voter and settlement thresholds, so operators can keep the on-chain economics aligned with the question they are asking. Votes use **tlock commit-reveal**: the bot encrypts vote directions with timelock encryption, binds the redeployed drand metadata into the commit payload, and commits them on-chain; the keeper-assisted/self-reveal flow reveals votes after each epoch once the on-chain and off-chain checks are satisfied.
 
 ## Quick Start
 
@@ -19,7 +19,7 @@ yarn workspace @curyo/bot submit --source youtube --max-submissions 2
 Requires configured environment variables and a reachable RPC endpoint.
 `vote` and `claim` require a running Ponder indexer (`yarn ponder:dev`); `submit` does not.
 `status` reports the configured Ponder endpoint when available but can still run without it.
-Question submissions use a question capped at 120 characters. Automated submissions currently use YouTube videos, and each submission must attach a non-refundable bounty funded in cREP or USDC. The bot uses the same submission rules as a human: required context URL, optional preview media, and the same bounty guardrails.
+Question submissions use a question capped at 120 characters. Automated submissions currently use YouTube videos, and each submission must attach a non-refundable Bounty funded in cREP or USDC. The bot uses the same submission rules as a human: required context URL, optional preview media, and the same Bounty guardrails.
 For MCP or other agent adapters, treat this as a typed bot-to-human feedback loop: the agent asks a narrow question, humans answer with stake, and downstream clients read the public rating result.
 
 ## Scripts
@@ -69,6 +69,9 @@ Copy `.env.example` to `.env` in the package directory and fill in the deployed 
 | `CATEGORY_REGISTRY_ADDRESS` | Auto-derived for supported chains | Fallback CategoryRegistry address |
 | `PONDER_URL` | — | Ponder indexer URL |
 | `RATE_FRONTEND_ADDRESS` | — | Optional frontend code/operator address attributed on `commitVote()` calls |
+| `SUBMIT_REWARD_REQUIRED_VOTERS` | `3` | Minimum voters required before a submission Bounty can pay out |
+| `SUBMIT_REWARD_REQUIRED_SETTLED_ROUNDS` | `1` | Minimum settled rounds required before a submission Bounty can pay out |
+| `SUBMIT_REWARD_POOL_EXPIRES_AT` | `0` | Optional Unix timestamp for the submission Bounty expiry; `0` keeps it open-ended |
 
 **Optional External API Key:**
 
@@ -118,10 +121,10 @@ Frontend fee sweeping remains a keeper responsibility when the keeper wallet is 
 For each `submit` run, the bot:
 
 1. Loads the wallet configured in `SUBMIT_*` and checks that it can submit. Submission no longer requires `hasVoterId(address)`, so a bot wallet can ask questions directly without a human identity gate.
-2. Checks that the wallet has enough cREP or USDC for the next submission. Each successful question submission must attach the minimum non-refundable bounty, and the wallet also needs native gas for the approval, reservation, and submit transactions.
+2. Checks that the wallet has enough cREP or USDC for the next submission. Each successful question submission must attach the minimum non-refundable Bounty, and the wallet also needs native gas for the approval, reservation, and submit transactions.
 3. Chooses the enabled source adapters and fetches trending content. The current bot source reads YouTube's most-popular video feed.
 4. Skips items that do not provide a usable context URL, then checks the context-backed submission key for duplicates before attempting a transaction.
-5. Truncates generated questions to the 120-character on-chain maximum, calls `previewQuestionSubmissionKey(contextUrl, imageUrls, videoUrl, title, description, tags, categoryId)` to verify the canonical category, reserves the hidden submission commitment, waits a little over one second for the reservation age check, and then submits the question with the matching salt and bounty metadata.
+5. Truncates generated questions to the 120-character on-chain maximum, calls `previewQuestionSubmissionKey(contextUrl, imageUrls, videoUrl, title, description, tags, categoryId)` to verify the canonical category, reserves the hidden submission commitment, waits a little over one second for the reservation age check, and then submits the question with the matching salt and Bounty metadata, including the minimum voters, minimum settled rounds, and optional expiry timestamp.
 6. Stops when it reaches the configured limit, runs out of cREP, or runs out of fresh items. If a reveal transaction fails after reservation, the bot attempts to cancel the reservation.
 
 ## Testing YouTube Questions With A Bot Wallet
@@ -162,7 +165,7 @@ yarn bot:status
 
 4. Fund the bot wallet.
 
-- Send enough cREP or USDC for the batch you want to test. Each successful question submission must attach at least the governance minimum bounty.
+- Send enough cREP or USDC for the batch you want to test. Each successful question submission must attach at least the governance minimum Bounty.
 - Send enough native gas token as well so the bot can pay for approvals and submission transactions.
 - Delegation is only needed if you also want the bot wallet to vote on behalf of a Voter ID holder.
 
@@ -194,7 +197,7 @@ Expected behavior:
 - The bot fetches YouTube's current popular videos.
 - Already-submitted context URLs are skipped automatically.
 - Only fresh items are submitted, so the run may submit fewer than the requested max if duplicates are common.
-- Each successful submission must attach the minimum non-refundable bounty in cREP or USDC.
+- Each successful submission must attach the minimum non-refundable Bounty in cREP or USDC.
 - If `YOUTUBE_API_KEY` is missing, the YouTube source will return no items.
 
 ## Project Structure
