@@ -53,9 +53,9 @@ const STATUS_PILL_CLASS_NAME =
   "inline-flex items-center gap-2 rounded-full border border-base-content/10 bg-base-content/5 px-4 py-2";
 const DOCK_STATUS_TEXT_CLASS_NAME =
   "inline-flex max-w-full flex-wrap items-center gap-x-1.5 gap-y-0.5 py-0.5 text-left leading-none";
-const DOCK_CONTROL_SIZE = "2.75rem";
-const DOCK_CONTROL_CIRCLE_CLASS_NAME = "h-11 w-11";
-const MOBILE_DOCK_ICON_BUTTON_CLASS_NAME = `${DOCK_CONTROL_CIRCLE_CLASS_NAME} justify-center gap-0 rounded-full bg-base-content/[0.08] p-0 text-base-content/72 ring-1 ring-base-content/10 hover:bg-base-content/[0.12] hover:text-base-content/90`;
+const DOCK_CONTROL_SIZE_PX = 44;
+const DOCK_CONTROL_CIRCLE_CLASS_NAME = "h-11 w-11 box-border";
+const MOBILE_DOCK_ICON_BUTTON_CLASS_NAME = `${DOCK_CONTROL_CIRCLE_CLASS_NAME} justify-center gap-0 rounded-full border border-base-content/10 bg-base-content/[0.08] p-0 text-base-content/72 hover:bg-base-content/[0.12] hover:text-base-content/90`;
 
 type ActivityTone = "primary" | "warning" | "success" | "neutral";
 
@@ -431,7 +431,7 @@ function RewardPoolDockBadge({ amount }: { amount: bigint }) {
       className={`${DOCK_CONTROL_CIRCLE_CLASS_NAME} shrink-0 rounded-full`}
     >
       <span
-        className={`flex ${DOCK_CONTROL_CIRCLE_CLASS_NAME} items-center justify-center rounded-full bg-base-content/[0.08] px-1 text-center text-[0.7rem] font-semibold leading-none text-base-content/72 ring-1 ring-base-content/10`}
+        className={`flex ${DOCK_CONTROL_CIRCLE_CLASS_NAME} items-center justify-center rounded-full border border-base-content/10 bg-base-content/[0.08] px-1 text-center text-[0.7rem] font-semibold leading-none text-base-content/72`}
         aria-label={`Bounty: ${amountLabel}`}
       >
         {compactAmountLabel}
@@ -576,7 +576,17 @@ export function VotingQuestionCard({
       </HoverTooltip>
     ) : null
   ) : null;
-  const orbSize = isDockVariant ? (compact ? 88 : 100) : isSignalVariant ? (compact ? 148 : 168) : compact ? 166 : 190;
+  const orbSize = isDockVariant
+    ? compact
+      ? DOCK_CONTROL_SIZE_PX
+      : 100
+    : isSignalVariant
+      ? compact
+        ? 148
+        : 168
+      : compact
+        ? 166
+        : 190;
   const shellClassName = compact ? "p-3 space-y-2.5" : "p-4 space-y-3 xl:p-3 xl:space-y-2.5 2xl:p-4 2xl:space-y-3";
   const headingRowClassName = compact ? "mb-2.5" : "mb-3";
   const actionStackClassName = compact ? "mt-2.5 gap-1.5" : "mt-3 gap-2";
@@ -615,7 +625,7 @@ export function VotingQuestionCard({
       position="bottom"
       className="pointer-events-auto cursor-help rounded-full"
     >
-      <RatingOrb rating={currentRating} size={orbSize} />
+      <RatingOrb rating={currentRating} size={orbSize} showGlow={!(isDockVariant && compact)} />
     </TooltipAnchor>
   );
   const addRewardPoolLink = <AddRewardPoolLink onFundQuestion={() => setShowFundQuestionModal(true)} />;
@@ -649,81 +659,37 @@ export function VotingQuestionCard({
     const dockVoteDisabled = voteActionDisabled || Boolean(centerStatusContent);
     const dockNotchRadius = compact ? 58 : 66;
     const dockNotchCutout = compact ? 52 : 60;
-    const dockWrapperTopPaddingClassName = compact ? (isDetailsOpen ? "pt-8" : "pt-10") : "pt-14";
-    const dockControlsPaddingClassName = compact ? "px-4 pb-2.5 pt-4" : "px-4 pb-3 pt-7";
+    const dockWrapperTopPaddingClassName = compact ? "pt-0" : "pt-14";
+    const dockControlsPaddingClassName = compact ? "px-4 pb-3 pt-3" : "px-4 pb-3 pt-7";
     const dockMoreClassName = "text-base font-medium text-base-content/68 hover:text-base-content/88";
     const dockVoteSpacerClassName = DOCK_CONTROL_CIRCLE_CLASS_NAME;
-    const dockShellMaskStyle = {
-      WebkitMaskImage: `radial-gradient(circle ${dockNotchRadius}px at 50% 0, transparent 0 ${dockNotchCutout}px, black ${dockNotchCutout + 1}px)`,
-      maskImage: `radial-gradient(circle ${dockNotchRadius}px at 50% 0, transparent 0 ${dockNotchCutout}px, black ${dockNotchCutout + 1}px)`,
-      WebkitMaskRepeat: "no-repeat",
-      maskRepeat: "no-repeat",
-    };
+    const dockShellMaskStyle = compact
+      ? {}
+      : {
+          WebkitMaskImage: `radial-gradient(circle ${dockNotchRadius}px at 50% 0, transparent 0 ${dockNotchCutout}px, black ${dockNotchCutout + 1}px)`,
+          maskImage: `radial-gradient(circle ${dockNotchRadius}px at 50% 0, transparent 0 ${dockNotchCutout}px, black ${dockNotchCutout + 1}px)`,
+          WebkitMaskRepeat: "no-repeat",
+          maskRepeat: "no-repeat",
+        };
     const dockSurfaceStyle = {
       background: compact ? "var(--curyo-surface)" : VOTING_SURFACE_BACKGROUND,
     };
     const dockContentStyle = compact ? { paddingBottom: "env(safe-area-inset-bottom)" } : undefined;
     const dockShellClassName = compact ? "rounded-none" : "rounded-[2rem]";
-    const dockShellBorderClassName = compact ? "" : "ring-1 ring-base-content/8";
-    const dockTopBorderArcRadius = dockNotchCutout;
-    const dockTopBorderOverlayStyle = compact
-      ? {
-          height: `${dockTopBorderArcRadius + 2}px`,
-        }
-      : undefined;
-    const dockTopBorderSegmentStyle = compact
-      ? {
-          width: `calc(50% - ${dockTopBorderArcRadius}px)`,
-          borderColor: "var(--curyo-shell-border-strong)",
-        }
-      : undefined;
-    const dockTopBorderArcStyle = compact
-      ? {
-          top: `${-dockTopBorderArcRadius}px`,
-          width: `${dockTopBorderArcRadius * 2}px`,
-          height: `${dockTopBorderArcRadius * 2}px`,
-          borderColor: "var(--curyo-shell-border-strong)",
-        }
-      : undefined;
-    const mobileOrbClassName = compact ? "drop-shadow-[0_14px_28px_rgba(9,10,12,0.7)]" : "";
-    const compactDockControlsGridStyle = {
-      gridTemplateColumns: `minmax(0, 1fr) ${DOCK_CONTROL_SIZE} minmax(0, 1fr) ${DOCK_CONTROL_SIZE} ${dockNotchCutout * 2}px ${DOCK_CONTROL_SIZE} minmax(0, 1fr) ${DOCK_CONTROL_SIZE} minmax(0, 1fr)`,
-    };
+    const dockShellBorderClassName = compact
+      ? "border-t border-[color:var(--curyo-shell-border-strong)]"
+      : "ring-1 ring-base-content/8";
 
     return (
       <>
         <div
           className={`relative ${embedded ? "" : "rounded-2xl"} flex min-h-0 flex-col transition-[padding-top] duration-200 ease-out ${dockWrapperTopPaddingClassName}`}
         >
-          {compact ? (
-            <div
-              aria-hidden
-              className="pointer-events-none absolute left-1/2 top-2 z-10 -translate-x-1/2 rounded-full bg-[rgba(9,10,12,0.46)] blur-[12px]"
-              style={{ width: `${orbSize * 0.84}px`, height: `${orbSize * 0.84}px` }}
-            />
+          {!compact ? (
+            <div className="pointer-events-none absolute left-1/2 top-0 z-20 -translate-x-1/2">{ratingOrb}</div>
           ) : null}
-          <div className="pointer-events-none absolute left-1/2 top-0 z-20 -translate-x-1/2">
-            <TooltipAnchor
-              text={RATING_GUIDANCE_TEXT}
-              position="bottom"
-              className="pointer-events-auto cursor-help rounded-full"
-            >
-              <RatingOrb rating={currentRating} size={orbSize} showGlow={compact} className={mobileOrbClassName} />
-            </TooltipAnchor>
-          </div>
 
           <div className="relative z-10">
-            {dockTopBorderOverlayStyle ? (
-              <div
-                aria-hidden
-                className="pointer-events-none absolute inset-x-0 top-0 z-10 overflow-hidden"
-                style={dockTopBorderOverlayStyle}
-              >
-                <div className="absolute left-0 top-0 border-t" style={dockTopBorderSegmentStyle} />
-                <div className="absolute right-0 top-0 border-t" style={dockTopBorderSegmentStyle} />
-                <div className="absolute left-1/2 -translate-x-1/2 rounded-full border" style={dockTopBorderArcStyle} />
-              </div>
-            ) : null}
             <div
               className={`relative overflow-hidden shadow-[0_16px_36px_rgb(0_0_0_/_0.28)] ${
                 isAttentionActive ? "vote-surface-attention" : ""
@@ -735,9 +701,9 @@ export function VotingQuestionCard({
                 <div className={dockControlsPaddingClassName}>
                   {compact ? null : <div className="mb-2 flex justify-center">{rewardPoolAmountDisplay}</div>}
                   {compact && !centerStatusContent ? (
-                    <div className="grid w-full items-center" style={compactDockControlsGridStyle}>
-                      <div className="col-start-2 justify-self-center">{rewardPoolDockBadge}</div>
-                      <div className="col-start-4 justify-self-center">
+                    <div className="grid h-11 w-full grid-cols-5 items-center">
+                      <div className="col-start-1 justify-self-center">{rewardPoolDockBadge}</div>
+                      <div className="col-start-2 justify-self-center">
                         <CuryoVoteButton
                           direction="up"
                           size="sm"
@@ -747,7 +713,8 @@ export function VotingQuestionCard({
                           tooltipPosition="top"
                         />
                       </div>
-                      <div className="col-start-6 justify-self-center">
+                      <div className="col-start-3 justify-self-center">{ratingOrb}</div>
+                      <div className="col-start-4 justify-self-center">
                         <CuryoVoteButton
                           direction="down"
                           size="sm"
@@ -757,7 +724,7 @@ export function VotingQuestionCard({
                           tooltipPosition="top"
                         />
                       </div>
-                      <div className="col-start-8 justify-self-center">
+                      <div className="col-start-5 justify-self-center">
                         <MoreToggleButton
                           expanded={isDetailsOpen}
                           onClick={() => setIsDetailsOpen(current => !current)}
@@ -799,10 +766,12 @@ export function VotingQuestionCard({
                       </div>
                     </div>
                   ) : compact ? (
-                    <div className="grid grid-cols-[2.75rem_minmax(0,1fr)_2.75rem] items-center gap-3">
-                      <div className="justify-self-start">{rewardPoolDockBadge}</div>
-                      <div className="min-w-0 justify-self-center [&>button]:max-w-full">{centerStatusContent}</div>
-                      <div className="justify-self-end">
+                    <div className="grid h-11 w-full grid-cols-5 items-center">
+                      <div className="col-start-1 justify-self-center">{rewardPoolDockBadge}</div>
+                      <div className="col-span-3 col-start-2 min-w-0 justify-self-center [&>button]:max-w-full">
+                        {centerStatusContent}
+                      </div>
+                      <div className="col-start-5 justify-self-center">
                         <MoreToggleButton
                           expanded={isDetailsOpen}
                           onClick={() => setIsDetailsOpen(current => !current)}

@@ -447,11 +447,16 @@ body {
 .vote-btn .vote-bg {
   position: absolute;
   inset: 0;
+  box-sizing: border-box;
   border-radius: 9999px;
   transition:
     transform 0.2s ease,
     box-shadow 0.2s ease,
     background 0.2s ease;
+}
+
+.vote-btn.vote-btn-sm .vote-bg {
+  border: 1px solid rgb(245 240 235 / 0.1);
 }
 
 .vote-btn.vote-yes .vote-bg {
