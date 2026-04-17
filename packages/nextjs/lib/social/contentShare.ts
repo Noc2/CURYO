@@ -1,4 +1,5 @@
 import { clampContentRating, formatRatingScoreOutOfTen } from "../ui/ratingDisplay";
+import { RATE_ROUTE } from "~~/constants/routes";
 import { detectPlatform, getThumbnailUrl } from "~~/utils/platforms";
 
 export const VOTE_SHARE_RATING_VERSION_PARAM = "rv";
@@ -174,7 +175,7 @@ export function buildContentShareRatingVersion(
 }
 
 function buildVoteShareUrl(origin: string, contentId: string, ratingVersion?: string): string {
-  const url = new URL("/vote", `${origin.replace(/\/+$/, "")}/`);
+  const url = new URL(RATE_ROUTE, `${origin.replace(/\/+$/, "")}/`);
   url.searchParams.set("content", contentId);
   if (ratingVersion) {
     url.searchParams.set(VOTE_SHARE_RATING_VERSION_PARAM, ratingVersion);

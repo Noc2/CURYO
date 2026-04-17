@@ -243,7 +243,7 @@ const Tokenomics = () => {
               <td>Per vote, per round</td>
             </tr>
             <tr>
-              <td>Submit content</td>
+              <td>Ask a question</td>
               <td className="font-mono">10 cREP</td>
               <td>
                 Returned after a healthy settled round once no later round remains open, or at dormancy if no round ever

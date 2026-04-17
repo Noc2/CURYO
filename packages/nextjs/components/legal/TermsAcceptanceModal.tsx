@@ -15,8 +15,8 @@ const ACTION_TEXT: Record<NonNullable<ActionType>, { title: string; intro: strin
     intro: "To vote on content, please review and accept:",
   },
   submit: {
-    title: "Before You Submit",
-    intro: "To submit content to cREP, please review and accept:",
+    title: "Before You Ask",
+    intro: "To ask a question on cREP, please review and accept:",
   },
   claim: {
     title: "Before You Claim Rewards",

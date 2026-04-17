@@ -211,7 +211,7 @@ async function recordVoteScene(page: Page, searchQuery?: string): Promise<void> 
 
   for (const wallet of VERIFIED_DEMO_WALLETS) {
     await swapWalletSession(page, wallet.privateKey);
-    const voteUrl = searchQuery ? `/vote?q=${encodeURIComponent(searchQuery)}` : "/vote";
+    const voteUrl = searchQuery ? `/rate?q=${encodeURIComponent(searchQuery)}` : "/rate";
     await gotoWithRetry(page, voteUrl, {
       ensureWalletConnected: true,
       timeout: 60_000,

@@ -62,10 +62,10 @@ test("gotoWithRetry retries transient goto failures before succeeding", async ()
     gotoResults: [new Error("net::ERR_ABORTED while navigating"), undefined],
   });
 
-  await gotoWithRetry(page, "/submit", { attempts: 2, timeout: 12_345 });
+  await gotoWithRetry(page, "/ask", { attempts: 2, timeout: 12_345 });
 
   assert.equal(gotoCalls.length, 2);
-  assert.deepEqual(gotoCalls.map(call => call.url), ["/submit", "/submit"]);
+  assert.deepEqual(gotoCalls.map(call => call.url), ["/ask", "/ask"]);
   assert.deepEqual(waits, [1_000]);
   assert.deepEqual(
     gotoCalls.map(call => call.options),
@@ -82,7 +82,7 @@ test("gotoWithRetry reloads when the application error heading is visible after 
     runtimeErrorVisible: true,
   });
 
-  await gotoWithRetry(page, "/vote", { timeout: 8_000, waitUntil: "load" });
+  await gotoWithRetry(page, "/rate", { timeout: 8_000, waitUntil: "load" });
 
   assert.deepEqual(reloadCalls, [{ timeout: 8_000, waitUntil: "domcontentloaded" }]);
 });
@@ -92,7 +92,7 @@ test("gotoWithRetry retries cold page.goto timeouts", async () => {
     gotoResults: [new Error("page.goto: Timeout 30000ms exceeded."), undefined],
   });
 
-  await gotoWithRetry(page, "/vote", { attempts: 2, timeout: 30_000 });
+  await gotoWithRetry(page, "/rate", { attempts: 2, timeout: 30_000 });
 
   assert.equal(gotoCalls.length, 2);
   assert.deepEqual(waits, [1_000]);

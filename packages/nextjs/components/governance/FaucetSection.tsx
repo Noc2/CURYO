@@ -16,6 +16,7 @@ import {
 import { SelfVerifyButton } from "~~/components/governance/SelfVerifyButton";
 import { surfaceSectionHeadingClassName } from "~~/components/shared/sectionHeading";
 import { InfoTooltip } from "~~/components/ui/InfoTooltip";
+import { RATE_ROUTE } from "~~/constants/routes";
 import { useTermsAcceptance } from "~~/contexts/TermsAcceptanceContext";
 import { useDeployedContractInfo, useScaffoldReadContract } from "~~/hooks/scaffold-eth";
 import { FREE_TRANSACTION_ALLOWANCE_QUERY_KEY } from "~~/hooks/useFreeTransactionAllowance";
@@ -43,7 +44,7 @@ const TIER_LABELS = ["Genesis", "Early Adopter", "Pioneer", "Explorer", "Settler
 const SELF_VERIFICATION_SESSION_KEY = "curyo_self_verification_session";
 const POLL_INTERVAL_MS = 4000;
 const POLL_TIMEOUT_MS = 600_000;
-const POST_CLAIM_ROUTE = "/vote";
+const POST_CLAIM_ROUTE = RATE_ROUTE;
 const FAUCET_EXCLUDED_COUNTRIES_LABEL = FAUCET_EXCLUDED_COUNTRY_NAMES.join(", ");
 
 type PendingSelfVerificationSession = {
@@ -569,14 +570,14 @@ export function FaucetSection({ referrer }: FaucetSectionProps) {
           <h3 className="font-semibold mb-2">Your Voter ID Unlocks:</h3>
           <ul className="space-y-1 text-base text-base-content/70">
             <li>Vote on content (up to 100 cREP per content per round)</li>
-            <li>Submit content to the platform</li>
+            <li>Ask questions for the platform to rate</li>
             <li>Create your profile</li>
             <li>Refer friends and gain reputation</li>
           </ul>
         </div>
 
-        <Link href="/vote" className="btn btn-primary w-full mt-4">
-          Start Voting
+        <Link href={RATE_ROUTE} className="btn btn-primary w-full mt-4">
+          Start Rating
         </Link>
       </div>
     );

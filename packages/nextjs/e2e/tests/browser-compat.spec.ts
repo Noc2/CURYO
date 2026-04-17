@@ -3,7 +3,7 @@ import { waitForFeedLoaded } from "../helpers/wait-helpers";
 import { expect, test } from "../fixtures/wallet";
 
 const PUBLIC_ROUTES = [
-  { path: "/", content: /Human Reputation at Stake|Discover|Vote/i },
+  { path: "/", content: /Human Reputation at Stake|Rate|Vote/i },
   { path: "/docs", content: /Introduction/i },
   { path: "/legal", content: /^Legal$/i },
   { path: "/legal/terms", content: /Terms of Service/i },
@@ -26,8 +26,8 @@ test.describe("Browser compatibility smoke", () => {
     });
   }
 
-  test("/vote loads the feed in a connected browser session", async ({ connectedPage: page }) => {
-    await page.goto("/vote", { waitUntil: "domcontentloaded" });
+  test("/rate loads the feed in a connected browser session", async ({ connectedPage: page }) => {
+    await page.goto("/rate", { waitUntil: "domcontentloaded" });
     await expectNoNextErrorOverlay(page);
     await waitForFeedLoaded(page, 30_000);
 
@@ -40,11 +40,11 @@ test.describe("Browser compatibility smoke", () => {
         .or(page.getByText(/No content submitted yet|No content found/i))
         .first(),
     ).toBeVisible({ timeout: 15_000 });
-    await expectNoHorizontalOverflow(page, "/vote browser compat");
+    await expectNoHorizontalOverflow(page, "/rate browser compat");
   });
 
-  test("/submit keeps the URL field usable in a connected browser session", async ({ connectedPage: page }) => {
-    await page.goto("/submit", { waitUntil: "domcontentloaded" });
+  test("/ask keeps the URL field usable in a connected browser session", async ({ connectedPage: page }) => {
+    await page.goto("/ask", { waitUntil: "domcontentloaded" });
     await expectNoNextErrorOverlay(page);
 
     const main = page.locator("main");
@@ -54,6 +54,6 @@ test.describe("Browser compatibility smoke", () => {
     await expect(urlInput).toBeVisible({ timeout: 15_000 });
     await urlInput.focus();
     await expect(urlInput).toBeFocused();
-    await expectNoHorizontalOverflow(page, "/submit browser compat");
+    await expectNoHorizontalOverflow(page, "/ask browser compat");
   });
 });

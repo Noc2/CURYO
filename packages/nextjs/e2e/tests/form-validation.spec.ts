@@ -2,13 +2,13 @@ import { expect, test } from "../fixtures/wallet";
 
 test.describe("Submit form validation", () => {
   test("submit shows a category validation error before submission", async ({ connectedPage: page }) => {
-    await page.goto("/submit");
+    await page.goto("/ask");
     await page.waitForLoadState("domcontentloaded");
 
     // Wait for form to load
-    await expect(page.getByRole("heading", { name: "Submit Question" })).toBeVisible({ timeout: 15_000 });
+    await expect(page.getByRole("heading", { name: "Ask Question" })).toBeVisible({ timeout: 15_000 });
 
-    const submitBtn = page.getByRole("button", { name: /^Submit Question/i });
+    const submitBtn = page.getByRole("button", { name: /^Ask Question/i });
     await expect(submitBtn).toBeVisible({ timeout: 5_000 });
     await expect(submitBtn).toBeEnabled();
     await submitBtn.click();
@@ -17,9 +17,9 @@ test.describe("Submit form validation", () => {
   });
 
   test("submit shows a URL validation error before submission", async ({ connectedPage: page }) => {
-    await page.goto("/submit");
+    await page.goto("/ask");
 
-    await expect(page.getByRole("heading", { name: "Submit Question" })).toBeVisible({ timeout: 15_000 });
+    await expect(page.getByRole("heading", { name: "Ask Question" })).toBeVisible({ timeout: 15_000 });
 
     // Select a category.
     const categoryBtn = page.getByText("Select a category...");
@@ -29,7 +29,7 @@ test.describe("Submit form validation", () => {
     }
 
     // Leave the URL blank and submit to trigger inline validation
-    const submitBtn = page.getByRole("button", { name: /^Submit Question/i });
+    const submitBtn = page.getByRole("button", { name: /^Ask Question/i });
     await expect(submitBtn).toBeVisible({ timeout: 5_000 });
     await expect(submitBtn).toBeEnabled();
     await submitBtn.click();
@@ -38,9 +38,9 @@ test.describe("Submit form validation", () => {
   });
 
   test("category dropdown shows options", async ({ connectedPage: page }) => {
-    await page.goto("/submit");
+    await page.goto("/ask");
 
-    await expect(page.getByRole("heading", { name: "Submit Question" })).toBeVisible({ timeout: 15_000 });
+    await expect(page.getByRole("heading", { name: "Ask Question" })).toBeVisible({ timeout: 15_000 });
 
     // Click category dropdown
     const categoryBtn = page.getByText("Select a category...");
@@ -63,9 +63,9 @@ test.describe("Submit form validation", () => {
   });
 
   test("invalid URL shows validation feedback", async ({ connectedPage: page }) => {
-    await page.goto("/submit");
+    await page.goto("/ask");
 
-    await expect(page.getByRole("heading", { name: "Submit Question" })).toBeVisible({ timeout: 15_000 });
+    await expect(page.getByRole("heading", { name: "Ask Question" })).toBeVisible({ timeout: 15_000 });
 
     // Select a category.
     const categoryBtn = page.getByText("Select a category...");
@@ -86,7 +86,7 @@ test.describe("Submit form validation", () => {
     await urlInput.press("Tab");
 
     // Submit button should still be disabled with invalid URL
-    const submitBtn = page.getByRole("button", { name: /^Submit Question/i });
+    const submitBtn = page.getByRole("button", { name: /^Ask Question/i });
     await expect(submitBtn).toBeVisible({ timeout: 5_000 });
     const isDisabled = await submitBtn.isDisabled().catch(() => false);
     // Either the button is disabled or there's a validation error visible

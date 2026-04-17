@@ -9,11 +9,11 @@ async function gotoPath(page: Page, path: string, options?: { ensureWalletConnec
 }
 
 const PRIMARY_HEADING_CASES: Array<{ path: string; heading: RegExp }> = [
-  { path: "/submit", heading: /^Submit$|Submit Question|Voter ID Required/i },
+  { path: "/ask", heading: /^Ask$|Ask Question|Voter ID Required/i },
   { path: "/docs", heading: /^Introduction$/i },
   { path: "/legal", heading: /^Legal$/i },
 ];
-const DUPLICATE_ID_PAGES = ["/vote", "/submit", "/governance", "/docs", "/legal"];
+const DUPLICATE_ID_PAGES = ["/rate", "/ask", "/governance", "/docs", "/legal"];
 
 test.describe("Accessibility basics", () => {
   for (const { path, heading } of PRIMARY_HEADING_CASES) {
@@ -31,18 +31,18 @@ test.describe("Accessibility basics", () => {
 
   test("interactive elements have accessible names", async ({ page }) => {
     await setupWallet(page, ANVIL_ACCOUNTS.account2.privateKey);
-    await gotoPath(page, "/vote", { ensureWalletConnected: true });
+    await gotoPath(page, "/rate", { ensureWalletConnected: true });
 
     const searchInput = page.getByRole("textbox", { name: "Search content" });
     await expect(searchInput.first()).toBeVisible({ timeout: 10_000 });
-    await expect(page.getByRole("link", { name: "Discover" })).toBeVisible({ timeout: 10_000 });
+    await expect(page.getByRole("link", { name: "Rate" })).toBeVisible({ timeout: 10_000 });
     await expect(page.getByRole("link", { name: "Submit" })).toBeVisible({ timeout: 10_000 });
     await expect(page.getByRole("button", { name: /^View(?:: .+)?$/i }).first()).toBeVisible({ timeout: 10_000 });
   });
 
   test("non-video previews expose focusable preview and source actions", async ({ page }) => {
     await setupWallet(page, ANVIL_ACCOUNTS.account2.privateKey);
-    await gotoPath(page, "/vote?q=workspace", { ensureWalletConnected: true });
+    await gotoPath(page, "/rate?q=workspace", { ensureWalletConnected: true });
     await waitForFeedLoaded(page, 30_000);
 
     const activeCard = page.locator('article[aria-current="true"]').first();
@@ -55,7 +55,7 @@ test.describe("Accessibility basics", () => {
 
   test("vote feed exposes feed and article semantics", async ({ page }) => {
     await setupWallet(page, ANVIL_ACCOUNTS.account2.privateKey);
-    await gotoPath(page, "/vote", { ensureWalletConnected: true });
+    await gotoPath(page, "/rate", { ensureWalletConnected: true });
 
     try {
       await waitForFeedLoaded(page, 30_000);
@@ -103,7 +103,7 @@ test.describe("Accessibility basics", () => {
 
   test("StakeSelector dialog has ARIA attributes", async ({ page }) => {
     await setupWallet(page, ANVIL_ACCOUNTS.account2.privateKey);
-    await gotoPath(page, "/vote", { ensureWalletConnected: true });
+    await gotoPath(page, "/rate", { ensureWalletConnected: true });
 
     try {
       await waitForFeedLoaded(page, 30_000);

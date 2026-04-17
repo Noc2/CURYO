@@ -12,7 +12,7 @@ test.describe("Mobile viewport (phone)", () => {
   });
 
   test("sidebar hidden and hamburger visible", async ({ connectedPage: page }) => {
-    await page.goto("/vote");
+    await page.goto("/rate");
     await waitForFeedLoaded(page);
 
     const sidebar = page.locator("aside");
@@ -23,13 +23,13 @@ test.describe("Mobile viewport (phone)", () => {
   });
 
   test("hamburger opens mobile menu with nav links", async ({ connectedPage: page }) => {
-    await page.goto("/vote");
+    await page.goto("/rate");
     await waitForFeedLoaded(page);
 
     await page.getByLabel("Open menu").click();
 
     const dropdown = page.locator(".dropdown-content");
-    await expect(dropdown.getByRole("link", { name: /Discover/i })).toBeVisible({ timeout: 5_000 });
+    await expect(dropdown.getByRole("link", { name: /Rate/i })).toBeVisible({ timeout: 5_000 });
     await expect(dropdown.getByRole("link", { name: /Submit/i })).toBeVisible({ timeout: 3_000 });
     await expect(dropdown.getByRole("link", { name: /cREP/i })).toBeVisible({ timeout: 3_000 });
     const voteTopChrome = page.locator('[data-vote-mobile-top-chrome="true"]');
@@ -38,7 +38,7 @@ test.describe("Mobile viewport (phone)", () => {
   });
 
   test("vote page mobile chrome collapses with feed scroll and reclaims space", async ({ connectedPage: page }) => {
-    await gotoWithRetry(page, "/vote", { ensureWalletConnected: true });
+    await gotoWithRetry(page, "/rate", { ensureWalletConnected: true });
     await waitForFeedLoaded(page);
 
     const mobileHeader = page.locator('[data-mobile-header="true"]');
@@ -412,7 +412,7 @@ test.describe("Mobile viewport (phone)", () => {
   });
 
   test("last category card snaps above the mobile dock and opens More", async ({ connectedPage: page }) => {
-    await gotoWithRetry(page, "/vote#media", { ensureWalletConnected: true });
+    await gotoWithRetry(page, "/rate#media", { ensureWalletConnected: true });
     await waitForFeedLoaded(page);
 
     await expect(page.getByRole("button", { name: /^Category: Media$/ }).first()).toBeVisible({
@@ -491,7 +491,7 @@ test.describe("Mobile viewport (phone)", () => {
   });
 
   test("category switches keep the mobile feed controls visible", async ({ connectedPage: page }) => {
-    await gotoWithRetry(page, "/vote#products", { ensureWalletConnected: true });
+    await gotoWithRetry(page, "/rate#products", { ensureWalletConnected: true });
     await waitForFeedLoaded(page);
 
     const voteTopChrome = page.locator('[data-vote-mobile-top-chrome="true"]');
@@ -582,7 +582,7 @@ test.describe("Mobile viewport (phone)", () => {
   });
 
   test("hamburger menu navigation works", async ({ connectedPage: page }) => {
-    await page.goto("/vote");
+    await page.goto("/rate");
     await waitForFeedLoaded(page);
 
     await page.getByLabel("Open menu").click();
@@ -595,11 +595,11 @@ test.describe("Mobile viewport (phone)", () => {
       .getByRole("link", { name: /Submit/i })
       .click();
 
-    await expect(page).toHaveURL(/\/submit/, { timeout: 15_000 });
+    await expect(page).toHaveURL(/\/ask/, { timeout: 15_000 });
   });
 
   test("vote page loads and content visible without overflow", async ({ connectedPage: page }) => {
-    await page.goto("/vote");
+    await page.goto("/rate");
     await waitForFeedLoaded(page);
 
     const main = page.locator("main");
@@ -612,7 +612,7 @@ test.describe("Mobile viewport (phone)", () => {
   });
 
   test("view filter sheet opens above the vote feed", async ({ connectedPage: page }) => {
-    await page.goto("/vote");
+    await page.goto("/rate");
     await waitForFeedLoaded(page);
 
     const viewButton = page.getByRole("button", { name: /^View$/i }).first();
@@ -638,7 +638,7 @@ test.describe("Mobile viewport (phone)", () => {
   });
 
   test("StakeSelector dialog opens on mobile", async ({ connectedPage: page }) => {
-    await page.goto("/vote");
+    await page.goto("/rate");
     await waitForFeedLoaded(page);
 
     const canVote = await findVoteableContent(page);
@@ -659,8 +659,8 @@ test.describe("Mobile viewport (phone)", () => {
     await page.keyboard.press("Escape");
   });
 
-  test("preview clicks keep the user on /vote and emphasize the mobile dock", async ({ connectedPage: page }) => {
-    await gotoWithRetry(page, "/vote?q=workspace", { ensureWalletConnected: true, timeout: 45_000 });
+  test("preview clicks keep the user on /rate and emphasize the mobile dock", async ({ connectedPage: page }) => {
+    await gotoWithRetry(page, "/rate?q=workspace", { ensureWalletConnected: true, timeout: 45_000 });
     await waitForFeedLoaded(page, 30_000);
 
     const activeSurface = page.locator('[aria-current="true"] [data-testid="vote-content-surface"]').first();
@@ -674,12 +674,12 @@ test.describe("Mobile viewport (phone)", () => {
 
     const popup = await popupPromise;
     expect(popup).toBeNull();
-    await expect(page).toHaveURL(/\/vote\?.*q=workspace.*content=/, { timeout: 10_000 });
+    await expect(page).toHaveURL(/\/rate\?.*q=workspace.*content=/, { timeout: 10_000 });
     await expect(page.locator('[data-vote-attention="true"]').first()).toBeVisible({ timeout: 5_000 });
   });
 
   test("submit page form is usable", async ({ connectedPage: page }) => {
-    await page.goto("/submit");
+    await page.goto("/ask");
 
     const main = page.locator("main");
     await expect(main).toBeVisible({ timeout: 10_000 });
@@ -726,7 +726,7 @@ test.describe("Tablet viewport", () => {
   });
 
   test("sidebar hidden on tablet width (xl breakpoint)", async ({ connectedPage: page }) => {
-    await page.goto("/vote");
+    await page.goto("/rate");
     await waitForFeedLoaded(page);
 
     // Sidebar uses xl:flex (1280px+). iPad Mini (768px) is below xl, so sidebar is hidden
@@ -739,7 +739,7 @@ test.describe("Tablet viewport", () => {
   });
 
   test("vote page layout on tablet", async ({ connectedPage: page }) => {
-    await page.goto("/vote");
+    await page.goto("/rate");
     await waitForFeedLoaded(page);
 
     const main = page.locator("main");
@@ -759,7 +759,7 @@ test.describe("Tablet viewport", () => {
       }
     });
 
-    await page.goto("/vote");
+    await page.goto("/rate");
     await waitForFeedLoaded(page);
 
     const voteTopChrome = page.locator('[data-vote-mobile-top-chrome="true"]');
@@ -816,7 +816,7 @@ test.describe("Tablet viewport", () => {
   });
 
   test("no horizontal overflow on key pages", async ({ connectedPage: page }) => {
-    const pages = ["/vote", "/submit", "/governance", "/docs"];
+    const pages = ["/rate", "/ask", "/governance", "/docs"];
 
     for (const path of pages) {
       await page.goto(path, { waitUntil: "domcontentloaded" });

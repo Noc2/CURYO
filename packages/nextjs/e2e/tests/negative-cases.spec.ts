@@ -32,7 +32,7 @@ test.describe("Negative cases", () => {
     const page = await context.newPage();
     await setupWallet(page, ANVIL_ACCOUNTS.account0.privateKey, { bootstrap: false });
 
-    await page.goto("/vote");
+    await page.goto("/rate");
 
     // The page should load safely even if the local wallet bridge doesn't attach.
     const main = page.locator("main");
@@ -46,10 +46,10 @@ test.describe("Negative cases", () => {
     const page = await context.newPage();
     await setupWallet(page, ANVIL_ACCOUNTS.account0.privateKey, { bootstrap: false });
 
-    await page.goto("/submit");
+    await page.goto("/ask");
 
     const voterIdRequired = page.getByRole("heading", { name: /Voter ID Required/i });
-    const submitForm = page.getByRole("heading", { name: "Submit Question" });
+    const submitForm = page.getByRole("heading", { name: "Ask Question" });
     const signedOutHeading = page.getByRole("heading", { name: "Submit" });
     const signInButton = page.getByRole("button", { name: "Sign In" }).first();
 
@@ -74,7 +74,7 @@ test.describe("Negative cases", () => {
     // Account #6 has VoterID #104 and cREP.
     await setupWallet(page, ANVIL_ACCOUNTS.account6.privateKey);
 
-    await gotoWithRetry(page, "/vote", { ensureWalletConnected: true, timeout: 30_000 });
+    await gotoWithRetry(page, "/rate", { ensureWalletConnected: true, timeout: 30_000 });
     await waitForFeedLoaded(page, 20_000);
 
     const voteUp = page.getByRole("button", { name: /^Vote up$/i });

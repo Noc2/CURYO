@@ -49,7 +49,7 @@ test("setupWallet skips bootstrap when explicitly disabled", async () => {
 });
 
 test("setupWallet does not re-bootstrap an already navigated page", async () => {
-  const { page, gotoCalls } = createPageStub("http://localhost:3000/vote");
+  const { page, gotoCalls } = createPageStub("http://localhost:3000/rate");
 
   await setupWallet(page, "0xabc123");
 

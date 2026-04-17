@@ -63,7 +63,7 @@ export async function ensureVoteableContent(page: Page): Promise<boolean> {
       return false;
     }
 
-    await gotoWithRetry(page, `/vote?content=${indexedContentId}`, { ensureWalletConnected: true, timeout: 45_000 });
+    await gotoWithRetry(page, `/rate?content=${indexedContentId}`, { ensureWalletConnected: true, timeout: 45_000 });
     await waitForFeedLoaded(page, 30_000);
     await page
       .getByRole("heading", { name: title })

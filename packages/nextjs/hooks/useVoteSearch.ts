@@ -2,6 +2,7 @@
 
 import { startTransition, useCallback } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import { RATE_ROUTE, buildRouteWithSearchParams } from "~~/constants/routes";
 import { isContentSearchQueryTooShort } from "~~/hooks/contentFeed/shared";
 
 type CommitVoteSearchOptions = {
@@ -10,7 +11,7 @@ type CommitVoteSearchOptions = {
 
 export function buildVoteSearchTarget(value: string): string {
   const trimmed = value.trim();
-  return trimmed ? `/vote?q=${encodeURIComponent(trimmed)}` : "/vote";
+  return buildRouteWithSearchParams(RATE_ROUTE, trimmed ? { q: trimmed } : undefined);
 }
 
 export function shouldSkipVoteSearchCommit(value: string, activeQuery: string): boolean {
@@ -35,12 +36,12 @@ export function useVoteSearch() {
       }
 
       const target = buildVoteSearchTarget(value);
-      if (options.skipIfUnchanged && pathname === "/vote" && target === buildVoteSearchTarget(activeQuery)) {
+      if (options.skipIfUnchanged && pathname === RATE_ROUTE && target === buildVoteSearchTarget(activeQuery)) {
         return;
       }
 
       startTransition(() => {
-        if (pathname === "/vote") {
+        if (pathname === RATE_ROUTE) {
           router.replace(target, { scroll: false });
         } else {
           router.push(target);

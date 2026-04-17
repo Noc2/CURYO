@@ -16,7 +16,7 @@ test.describe("Smoke tests", () => {
 
   test("wallet auto-connects via the localhost thirdweb test wallet", async ({ page }) => {
     await setupWallet(page, ANVIL_ACCOUNTS.account2.privateKey);
-    await gotoWithRetry(page, "/vote", { ensureWalletConnected: true });
+    await gotoWithRetry(page, "/rate", { ensureWalletConnected: true });
     await waitForWalletConnected(page);
     await waitForFeedLoaded(page, 30_000);
 
@@ -38,7 +38,7 @@ test.describe("Smoke tests", () => {
 
   test("brand link can reopen landing page without redirecting connected users back to discover", async ({ page }) => {
     await setupWallet(page, ANVIL_ACCOUNTS.account2.privateKey);
-    await gotoWithRetry(page, "/vote", { ensureWalletConnected: true });
+    await gotoWithRetry(page, "/rate", { ensureWalletConnected: true });
     await waitForWalletConnected(page);
     await waitForFeedLoaded(page, 30_000);
 
@@ -52,9 +52,9 @@ test.describe("Smoke tests", () => {
 
   test("navigation to submit page works", async ({ page }) => {
     await setupWallet(page, ANVIL_ACCOUNTS.account2.privateKey);
-    await gotoWithRetry(page, "/submit", { ensureWalletConnected: true });
+    await gotoWithRetry(page, "/ask", { ensureWalletConnected: true });
 
-    await expect(page).toHaveURL(/\/submit/);
+    await expect(page).toHaveURL(/\/ask/);
     // Verify the submit page rendered (form, VoterID prompt, or connect wallet prompt)
     const heading = page.getByRole("heading", { name: /^Submit$|Submit (?:Content|Question)|Voter ID Required/i });
     await expect(heading).toBeVisible({ timeout: 15_000 });

@@ -10,12 +10,12 @@ test.describe("Error states and edge cases", () => {
     const context = await newE2EContext(browser);
     const page = await context.newPage();
     await setupWallet(page, ANVIL_ACCOUNTS.account0.privateKey, { bootstrap: false });
-    await page.goto("/submit", { waitUntil: "domcontentloaded" });
+    await page.goto("/ask", { waitUntil: "domcontentloaded" });
 
     // Without VoterID, should show "Voter ID Required" heading
     const voterIdRequired = page.getByRole("heading", { name: /Voter ID Required/i });
     const getVoterIdLink = page.getByRole("link", { name: /Get Voter ID/i });
-    const submitForm = page.getByRole("heading", { name: "Submit Question" });
+    const submitForm = page.getByRole("heading", { name: "Ask Question" });
     const signedOutHeading = page.getByRole("heading", { name: "Submit" });
     // Local wallet auto-connect is best-effort in E2E. Accept either the
     // connected no-VoterID prompt, the full submit form, or the signed-out shell.
@@ -32,7 +32,7 @@ test.describe("Error states and edge cases", () => {
 
   test("own content shows 'Your submission' label", async ({ connectedPage: page }) => {
     test.setTimeout(120_000);
-    await gotoWithRetry(page, "/vote", { ensureWalletConnected: true, timeout: 45_000 });
+    await gotoWithRetry(page, "/rate", { ensureWalletConnected: true, timeout: 45_000 });
     await waitForFeedLoaded(page, 30_000);
 
     const viewButton = page.getByRole("button", { name: /^View(?:: .+)?$/i }).first();
@@ -62,7 +62,7 @@ test.describe("Error states and edge cases", () => {
     // This test verifies the page still loads without errors.
     const context = await newE2EContext(browser);
     const page = await context.newPage();
-    await gotoWithRetry(page, "/vote");
+    await gotoWithRetry(page, "/rate");
     await waitForFeedLoaded(page, 20_000);
 
     // Page should render main content

@@ -3,16 +3,16 @@ import { gotoWithRetry } from "../helpers/wait-helpers";
 
 test.describe("Content submission", () => {
   test("submit page shows form when connected with VoterID", async ({ connectedPage: page }) => {
-    await gotoWithRetry(page, "/submit", { ensureWalletConnected: true });
-    // Account #2 has a VoterID — the form should render with "Submit Question" heading.
-    await expect(page.getByRole("heading", { name: "Submit Question" })).toBeVisible({ timeout: 15_000 });
+    await gotoWithRetry(page, "/ask", { ensureWalletConnected: true });
+    // Account #2 has a VoterID — the form should render with "Ask Question" heading.
+    await expect(page.getByRole("heading", { name: "Ask Question" })).toBeVisible({ timeout: 15_000 });
   });
 
   test("can fill out and submit content", async ({ connectedPage: page }) => {
-    await gotoWithRetry(page, "/submit", { ensureWalletConnected: true });
+    await gotoWithRetry(page, "/ask", { ensureWalletConnected: true });
 
     // Wait for the form to appear (requires wallet + VoterID)
-    await expect(page.getByRole("heading", { name: "Submit Question" })).toBeVisible({ timeout: 15_000 });
+    await expect(page.getByRole("heading", { name: "Ask Question" })).toBeVisible({ timeout: 15_000 });
 
     // 1. Select category — click the category dropdown trigger
     // Categories load from Ponder (or RPC fallback). If neither is ready yet,
@@ -62,15 +62,15 @@ test.describe("Content submission", () => {
       }
     }
 
-    // 5. Click Submit Question
-    const submitBtn = page.getByRole("button", { name: /^Submit Question/i });
+    // 5. Click Ask Question
+    const submitBtn = page.getByRole("button", { name: /^Ask Question/i });
     await expect(submitBtn).toBeEnabled({ timeout: 5_000 });
     await submitBtn.click();
 
     // 6. Wait for the submission share modal to confirm success
     const successDialog = page.getByRole("dialog", { name: /Content submitted/i });
     await expect(successDialog).toBeVisible({ timeout: 60_000 });
-    await expect(successDialog.getByRole("heading", { name: /Content Submitted!/i })).toBeVisible();
+    await expect(successDialog.getByRole("heading", { name: /Question Asked!/i })).toBeVisible();
     await page.waitForTimeout(1_500);
     await expect(successDialog).toBeVisible();
   });

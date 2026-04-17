@@ -19,6 +19,7 @@ import { WinRateRing } from "~~/components/leaderboard/WinRateRing";
 import { FollowProfileButton } from "~~/components/shared/FollowProfileButton";
 import { ProfileImageLightbox } from "~~/components/shared/ProfileImageLightbox";
 import { InfoTooltip } from "~~/components/ui/InfoTooltip";
+import { buildRateContentHref } from "~~/constants/routes";
 import { useCopyToClipboard } from "~~/hooks/scaffold-eth";
 import { useTargetNetwork } from "~~/hooks/scaffold-eth/useTargetNetwork";
 import { useCuryoConnectModal } from "~~/hooks/useCuryoConnectModal";
@@ -770,7 +771,7 @@ export function PublicProfileView({ address, embedded = false }: PublicProfileVi
                 return (
                   <Link
                     key={submission.id}
-                    href={`/vote?content=${submission.id}`}
+                    href={buildRateContentHref(submission.id)}
                     className="rounded-2xl border border-base-content/10 bg-base-content/[0.03] p-4 transition-colors hover:bg-base-content/[0.05]"
                   >
                     <div className="flex items-start justify-between gap-3">
@@ -841,7 +842,7 @@ export function PublicProfileView({ address, embedded = false }: PublicProfileVi
                       <tr key={vote.id} className="hover:bg-base-200/40">
                         <td>
                           <Link
-                            href={`/vote?content=${vote.contentId}`}
+                            href={buildRateContentHref(vote.contentId)}
                             className="font-medium transition-colors hover:text-primary"
                           >
                             Content #{vote.contentId}

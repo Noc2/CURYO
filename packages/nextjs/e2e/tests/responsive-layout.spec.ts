@@ -13,7 +13,7 @@ const VIEWPORTS = [
   { name: "desktop", width: 1440, height: 900 },
 ];
 
-const ROUTES = ["/", "/vote", "/submit", "/governance", "/docs", "/legal"];
+const ROUTES = ["/", "/rate", "/ask", "/governance", "/docs", "/legal"];
 const VOTE_UP_BUTTON = /^Vote up\b/i;
 const VOTE_DOWN_BUTTON = /^Vote down\b/i;
 
@@ -34,7 +34,7 @@ async function expectNavigationForViewport(page: Page, width: number): Promise<v
 async function expectRouteControls(page: Page, path: string, width: number): Promise<void> {
   const main = page.locator("main");
 
-  if (path === "/vote") {
+  if (path === "/rate") {
     await waitForFeedLoaded(page, 30_000);
     await expectNavigationForViewport(page, width);
     await expect(
@@ -48,7 +48,7 @@ async function expectRouteControls(page: Page, path: string, width: number): Pro
     return;
   }
 
-  if (path === "/submit") {
+  if (path === "/ask") {
     const urlInput = main.getByPlaceholder(/paste/i).or(main.getByRole("textbox").first()).first();
     await expect(urlInput, "Submit URL input should stay visible").toBeVisible({ timeout: 15_000 });
     await urlInput.focus();
@@ -98,7 +98,7 @@ test.describe("Responsive layout", () => {
 
   test("stake selector dialog fits inside a phone viewport", async ({ connectedPage: page }) => {
     await page.setViewportSize({ width: 390, height: 844 });
-    await gotoWithRetry(page, "/vote", { ensureWalletConnected: true, timeout: 45_000 });
+    await gotoWithRetry(page, "/rate", { ensureWalletConnected: true, timeout: 45_000 });
     await waitForFeedLoaded(page, 30_000);
 
     const canVote = await ensureVoteableContent(page);
@@ -128,7 +128,7 @@ test.describe("Responsive layout", () => {
 
   test("desktop vote side padding remains inside the feed scroll hit area", async ({ connectedPage: page }) => {
     await page.setViewportSize({ width: 1366, height: 768 });
-    await gotoWithRetry(page, "/vote", { ensureWalletConnected: true, timeout: 45_000 });
+    await gotoWithRetry(page, "/rate", { ensureWalletConnected: true, timeout: 45_000 });
     await waitForFeedLoaded(page, 30_000);
 
     const metrics = await page.evaluate(() => {

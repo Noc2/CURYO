@@ -20,6 +20,7 @@ import { CuryoLogo } from "~~/components/CuryoLogo";
 import { CuryoConnectButton } from "~~/components/scaffold-eth";
 import { AddressInfoDropdown } from "~~/components/scaffold-eth/ConnectButton/AddressInfoDropdown";
 import { DOCS_NAV } from "~~/constants/docsNav";
+import { ASK_ROUTE, RATE_ROUTE } from "~~/constants/routes";
 import { useMobileHeaderVisibility, useMobileHeaderVoteControls } from "~~/contexts/MobileHeaderVisibilityContext";
 import { useOutsideClick } from "~~/hooks/scaffold-eth";
 import { useVoteSearch } from "~~/hooks/useVoteSearch";
@@ -31,8 +32,8 @@ type HeaderMenuLink = {
 };
 
 const menuLinks: HeaderMenuLink[] = [
-  { label: "Discover", href: "/vote", icon: GlobeAltIcon },
-  { label: "Submit", href: "/submit", icon: PlusCircleIcon },
+  { label: "Rate", href: RATE_ROUTE, icon: GlobeAltIcon },
+  { label: "Ask", href: ASK_ROUTE, icon: PlusCircleIcon },
   { label: "cREP", href: "/governance", icon: IdentificationIcon },
   { label: "Docs", href: "/docs", icon: BookOpenIcon },
 ];
@@ -373,7 +374,7 @@ export const Header = () => {
   const [mobileSearchOpen, setMobileSearchOpen] = useState(false);
   const { isMobileHeaderVisible, setIsMobileHeaderVisible, setMobileHeaderHeight } = useMobileHeaderVisibility();
   const mobileHeaderVoteControls = useMobileHeaderVoteControls();
-  const shouldUseVoteLayoutCollapse = pathname === "/vote";
+  const shouldUseVoteLayoutCollapse = pathname === RATE_ROUTE;
 
   const burgerMenuRef = useRef<HTMLDetailsElement>(null);
   const mobileHeaderMeasureRef = useRef<HTMLDivElement>(null);

@@ -9,7 +9,7 @@ import type { Page } from "@playwright/test";
  * Handles transaction reverts gracefully by returning false instead of throwing.
  */
 export async function voteOnContent(page: Page, direction: "up" | "down"): Promise<boolean> {
-  await gotoWithRetry(page, "/vote", { ensureWalletConnected: true });
+  await gotoWithRetry(page, "/rate", { ensureWalletConnected: true });
   await waitForFeedLoaded(page);
 
   const ariaLabel = direction === "up" ? "Vote up" : "Vote down";
@@ -116,7 +116,7 @@ export async function voteOnContent(page: Page, direction: "up" | "down"): Promi
 }
 
 /**
- * Vote on a specific content item by navigating to /vote?content={contentId}.
+ * Vote on a specific content item by navigating to /rate?content={contentId}.
  * Same flow as voteOnContent but targets a known content ID.
  *
  * Returns true if the vote was successfully placed, false otherwise.
@@ -126,7 +126,7 @@ export async function voteOnSpecificContent(
   contentId: string | number,
   direction: "up" | "down",
 ): Promise<boolean> {
-  await gotoWithRetry(page, `/vote?content=${contentId}`, { ensureWalletConnected: true });
+  await gotoWithRetry(page, `/rate?content=${contentId}`, { ensureWalletConnected: true });
   await waitForFeedLoaded(page);
 
   const ariaLabel = direction === "up" ? "Vote up" : "Vote down";

@@ -677,14 +677,14 @@ export function ContentSubmissionSection() {
         if (reservationStorageKey) {
           clearStoredSubmissionReservation(reservationStorageKey);
         }
-        notification.warning("Reservation expired. Retry submit.");
+        notification.warning("Reservation expired. Retry asking.");
       } else if (isReservationExistsError(e)) {
-        notification.warning("Reservation saved. Retry submit.");
+        notification.warning("Reservation saved. Retry asking.");
       } else {
         notification.error(
           (e as { shortMessage?: string; message?: string } | undefined)?.shortMessage ||
             (e as { shortMessage?: string; message?: string } | undefined)?.message ||
-            "Failed to submit content",
+            "Failed to ask question",
         );
       }
     } finally {
@@ -703,7 +703,7 @@ export function ContentSubmissionSection() {
   return (
     <>
       <div className="surface-card rounded-2xl p-6 space-y-5">
-        <h1 className={surfaceSectionHeadingClassName}>Submit Question</h1>
+        <h1 className={surfaceSectionHeadingClassName}>Ask Question</h1>
 
         <form
           onSubmit={handleSubmit}
@@ -1118,10 +1118,10 @@ export function ContentSubmissionSection() {
               {isSubmitting ? (
                 <span className="flex items-center gap-2">
                   <span className="loading loading-spinner loading-sm"></span>
-                  Submitting...
+                  Asking...
                 </span>
               ) : (
-                "Submit Question"
+                "Ask Question"
               )}
             </button>
           </div>

@@ -2,8 +2,8 @@ import { expect, test } from "../fixtures/wallet";
 import { gotoWithRetry, waitForFeedLoaded } from "../helpers/wait-helpers";
 
 test.describe("Content feed", () => {
-  test("displays content items at /vote", async ({ connectedPage: page }) => {
-    await gotoWithRetry(page, "/vote", { ensureWalletConnected: true, timeout: 45_000 });
+  test("displays content items at /rate", async ({ connectedPage: page }) => {
+    await gotoWithRetry(page, "/rate", { ensureWalletConnected: true, timeout: 45_000 });
     await waitForFeedLoaded(page, 30_000);
 
     // The feed should show vote UI or an empty state — one of these must be visible
@@ -18,7 +18,7 @@ test.describe("Content feed", () => {
   });
 
   test("category filter pills are visible", async ({ connectedPage: page }) => {
-    await gotoWithRetry(page, "/vote", { ensureWalletConnected: true, timeout: 45_000 });
+    await gotoWithRetry(page, "/rate", { ensureWalletConnected: true, timeout: 45_000 });
     await waitForFeedLoaded(page, 30_000);
 
     // "All" category pill should always be present — use .first() because the
@@ -28,7 +28,7 @@ test.describe("Content feed", () => {
   });
 
   test("connected users see the feed scope filter pill", async ({ connectedPage: page }) => {
-    await gotoWithRetry(page, "/vote", { ensureWalletConnected: true, timeout: 45_000 });
+    await gotoWithRetry(page, "/rate", { ensureWalletConnected: true, timeout: 45_000 });
     await waitForFeedLoaded(page, 30_000);
 
     const filterPill = page.getByRole("button", { name: /^View$/i }).first();
@@ -38,7 +38,7 @@ test.describe("Content feed", () => {
   test("clicking a non-video preview keeps users on the vote page and nudges the vote controls", async ({
     connectedPage: page,
   }) => {
-    await gotoWithRetry(page, "/vote?q=workspace", { ensureWalletConnected: true, timeout: 45_000 });
+    await gotoWithRetry(page, "/rate?q=workspace", { ensureWalletConnected: true, timeout: 45_000 });
     await waitForFeedLoaded(page, 30_000);
 
     await expect(page.getByRole("heading", { name: /workspace feel ready/i }).first()).toBeVisible({
@@ -56,12 +56,12 @@ test.describe("Content feed", () => {
 
     const popup = await popupPromise;
     expect(popup).toBeNull();
-    await expect(page).toHaveURL(/\/vote\?.*q=workspace.*content=/, { timeout: 10_000 });
+    await expect(page).toHaveURL(/\/rate\?.*q=workspace.*content=/, { timeout: 10_000 });
     await expect(page.locator('[data-vote-attention="true"]').first()).toBeVisible({ timeout: 5_000 });
   });
 
   test("explicit source links still open externally", async ({ connectedPage: page }) => {
-    await gotoWithRetry(page, "/vote?q=workspace", { ensureWalletConnected: true, timeout: 45_000 });
+    await gotoWithRetry(page, "/rate?q=workspace", { ensureWalletConnected: true, timeout: 45_000 });
     await waitForFeedLoaded(page, 30_000);
 
     const activeCard = page.locator('article[aria-current="true"]').first();

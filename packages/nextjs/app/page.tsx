@@ -3,6 +3,7 @@ import { EyeSlashIcon, ScaleIcon, ShieldCheckIcon } from "@heroicons/react/24/ou
 import { CuryoAnimation } from "~~/components/home/CuryoAnimation";
 import { LandingFaq } from "~~/components/home/LandingFaq";
 import { LandingPageActions } from "~~/components/home/LandingPageActions";
+import { RATE_ROUTE, buildRouteWithSearchParams } from "~~/constants/routes";
 import { getOptionalPonderUrl } from "~~/lib/env/server";
 
 const LANDING_STATS_REVALIDATE_SECONDS = 300;
@@ -95,7 +96,7 @@ async function getLandingPageSocialProofItems() {
 export default async function LandingPage({ searchParams }: { searchParams: Promise<{ content?: string }> }) {
   const params = await searchParams;
   if (params.content) {
-    redirect(`/vote?content=${encodeURIComponent(params.content)}`);
+    redirect(buildRouteWithSearchParams(RATE_ROUTE, { content: params.content }));
   }
 
   const socialProofItems = await getLandingPageSocialProofItems();

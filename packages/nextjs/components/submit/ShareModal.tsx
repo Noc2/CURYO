@@ -3,6 +3,7 @@
 import { useEffect, useMemo } from "react";
 import Link from "next/link";
 import { CheckIcon, ClipboardIcon, XMarkIcon } from "@heroicons/react/24/outline";
+import { buildRateContentHref } from "~~/constants/routes";
 import { useCopyToClipboard } from "~~/hooks/scaffold-eth";
 import { truncateContentTitle } from "~~/lib/contentTitle";
 import { type ContentShareContentInput, buildContentShareData } from "~~/lib/social/contentShare";
@@ -62,15 +63,15 @@ export function ShareModal({
   const shareUrl = shareDetails.url;
   const truncatedTitle = truncateContentTitle(title);
   const tweetText = shareDetails.ratingLabel
-    ? `I just submitted "${truncatedTitle}" on Curyo. Current rating: ${shareDetails.ratingLabel}/10. Vote and build your reputation: ${shareUrl}`
-    : `I just submitted "${truncatedTitle}" on Curyo! Vote and build your reputation: ${shareUrl}`;
+    ? `I just asked "${truncatedTitle}" on Curyo. Current rating: ${shareDetails.ratingLabel}/10. Rate and build your reputation: ${shareUrl}`
+    : `I just asked "${truncatedTitle}" on Curyo! Rate and build your reputation: ${shareUrl}`;
 
   const handleCopyLink = async () => {
     await copyToClipboard(shareUrl);
   };
 
   return (
-    <div className="modal modal-open" role="dialog" aria-modal="true" aria-label="Content submitted">
+    <div className="modal modal-open" role="dialog" aria-modal="true" aria-label="Question asked">
       <div className="modal-box w-[calc(100vw-2rem)] max-w-md overflow-x-hidden bg-base-200 px-5 py-6 shadow-2xl sm:px-6">
         {/* Close button */}
         <button onClick={onClose} className="btn btn-sm btn-circle btn-ghost absolute right-2 top-2" aria-label="Close">
@@ -84,7 +85,7 @@ export function ShareModal({
           </div>
         </div>
 
-        <h3 className="text-xl font-semibold text-center mb-2">Content Submitted!</h3>
+        <h3 className="text-xl font-semibold text-center mb-2">Question Asked!</h3>
         <p className="mb-2 text-center text-lg font-medium text-base-content line-clamp-2">{title}</p>
         <p className="text-base text-base-content/60 text-center mb-6">{description}</p>
 
@@ -119,7 +120,7 @@ export function ShareModal({
           </button>
 
           {/* View content */}
-          <Link href={`/vote?content=${contentId}`} className="btn btn-ghost w-full">
+          <Link href={buildRateContentHref(contentId)} className="btn btn-ghost w-full">
             View Content
           </Link>
         </div>
@@ -127,9 +128,9 @@ export function ShareModal({
         {/* Divider */}
         <div className="divider my-4">or</div>
 
-        {/* Submit another - 16px minimum */}
+        {/* Ask another - 16px minimum */}
         <button onClick={onClose} className="btn btn-ghost w-full text-base-content/60 text-base">
-          Submit Another
+          Ask Another
         </button>
       </div>
       <div className="modal-backdrop bg-black/60 backdrop-blur-sm" aria-hidden="true" />

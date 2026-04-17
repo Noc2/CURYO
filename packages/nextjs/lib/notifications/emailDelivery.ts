@@ -1,5 +1,6 @@
 import { and, eq, isNotNull, or } from "drizzle-orm";
 import "server-only";
+import { RATE_ROUTE } from "~~/constants/routes";
 import { db, dbClient } from "~~/lib/db";
 import { notificationEmailDeliveries, notificationEmailSubscriptions, watchedContent } from "~~/lib/db/schema";
 import { getNotificationDeliverySecret, getOptionalAppUrl } from "~~/lib/env/server";
@@ -175,7 +176,7 @@ function getDisplayName(address: string, profileName: string | null) {
 }
 
 function getAbsoluteVoteUrl(contentId: string, appUrl: string) {
-  const url = new URL("/vote", appUrl);
+  const url = new URL(RATE_ROUTE, appUrl);
   url.searchParams.set("content", contentId);
   return url.toString();
 }

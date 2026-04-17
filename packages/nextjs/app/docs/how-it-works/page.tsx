@@ -15,7 +15,7 @@ const HowItWorks: NextPage = () => {
         Question-first voting with blind cREP stakes and optional USDC question rewards.
       </p>
 
-      <h2>Submitting a Question</h2>
+      <h2>Asking a Question</h2>
       <p>
         Curyo&apos;s submission flow starts with a question, not a generic post. The question is capped at 120
         characters so it stays readable in discovery, and longer context belongs in the description. A question can be

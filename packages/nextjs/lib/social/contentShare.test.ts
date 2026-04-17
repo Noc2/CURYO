@@ -98,7 +98,7 @@ test("buildContentShareData includes the rating in metadata and versioned share 
   assert.match(data.title, /Rated 6\.7\/10/);
   assert.match(data.description, /Current rating 6\.7\/10/);
   assert.equal(data.totalVotes, 12);
-  assert.equal(shareUrl.pathname, "/vote");
+  assert.equal(shareUrl.pathname, "/rate");
   assert.equal(shareUrl.searchParams.get("content"), "88");
   assert.equal(shareUrl.searchParams.get("rv"), data.ratingVersion);
   assert.equal(imageUrl.pathname, "/api/og/vote");

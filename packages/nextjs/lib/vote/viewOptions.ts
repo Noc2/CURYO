@@ -37,7 +37,7 @@ export function isActivityViewOption(value: VoteView): value is ActivityViewOpti
 export function getVoteViewGroups(hasWallet: boolean): VoteViewGroup[] {
   const groups: VoteViewGroup[] = [
     {
-      label: "Discover",
+      label: "Rate",
       options: DISCOVER_FEED_MODE_OPTIONS.filter(option => option.value !== "contested").map(option => ({
         value: option.value,
         label: option.label,

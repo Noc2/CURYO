@@ -18,7 +18,7 @@ test.describe("Voting flow — 3-voter threshold", () => {
     });
 
     await setupWallet(page, ANVIL_ACCOUNTS.account3.privateKey);
-    await gotoWithRetry(page, "/vote", { ensureWalletConnected: true });
+    await gotoWithRetry(page, "/rate", { ensureWalletConnected: true });
     await waitForFeedLoaded(page);
     await page.waitForTimeout(1_000);
 
@@ -31,7 +31,7 @@ test.describe("Voting flow — 3-voter threshold", () => {
     const page = await context.newPage();
     // Account #3 viewing the feed
     await setupWallet(page, ANVIL_ACCOUNTS.account3.privateKey);
-    await gotoWithRetry(page, "/vote", { ensureWalletConnected: true });
+    await gotoWithRetry(page, "/rate", { ensureWalletConnected: true });
     await waitForFeedLoaded(page);
 
     // Verify the wallet is connected by checking for any voting-related UI,

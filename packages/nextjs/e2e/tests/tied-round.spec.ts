@@ -57,8 +57,8 @@ test.describe("Tied round lifecycle", () => {
     const page = await context.newPage();
     await setupWallet(page, ANVIL_ACCOUNTS.account2.privateKey);
 
-    await gotoWithRetry(page, "/submit", { ensureWalletConnected: true });
-    await expect(page.getByRole("heading", { name: "Submit Question" })).toBeVisible({ timeout: 15_000 });
+    await gotoWithRetry(page, "/ask", { ensureWalletConnected: true });
+    await expect(page.getByRole("heading", { name: "Ask Question" })).toBeVisible({ timeout: 15_000 });
 
     // Select Media category — handle "No categories available" if categories are not loaded.
     const categoryBtn = page.getByText("Select a category...");
@@ -101,11 +101,11 @@ test.describe("Tied round lifecycle", () => {
     }
 
     // Submit
-    const submitBtn = page.getByRole("button", { name: /^Submit Question/i });
+    const submitBtn = page.getByRole("button", { name: /^Ask Question/i });
     await expect(submitBtn).toBeEnabled({ timeout: 5_000 });
     await submitBtn.click();
 
-    await expect(page.getByRole("heading", { name: /Content Submitted/i })).toBeVisible({ timeout: 30_000 });
+    await expect(page.getByRole("heading", { name: /Question Asked/i })).toBeVisible({ timeout: 30_000 });
 
     await context.close();
 

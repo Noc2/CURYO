@@ -5,6 +5,7 @@ import { useAccount } from "wagmi";
 import { ArrowLeftIcon } from "@heroicons/react/24/outline";
 import { CuryoConnectButton } from "~~/components/scaffold-eth";
 import { InfoTooltip } from "~~/components/ui/InfoTooltip";
+import { RATE_ROUTE, buildRateContentHref } from "~~/constants/routes";
 import { formatTimeRemaining } from "~~/hooks/useActiveVotesWithDeadlines";
 import { ManualRevealVote, useManualRevealVotes } from "~~/hooks/useManualRevealVotes";
 
@@ -24,7 +25,7 @@ function RevealVoteCard({
       <div className="space-y-1">
         <div className="flex items-center gap-2 flex-wrap">
           <Link
-            href={`/vote?content=${vote.contentId.toString()}`}
+            href={buildRateContentHref(vote.contentId)}
             className="text-lg font-semibold hover:text-primary transition-colors"
           >
             Content #{vote.contentId.toString()}
@@ -74,11 +75,11 @@ export function ManualRevealPage() {
         <div className="flex items-center justify-between gap-4 flex-wrap">
           <div className="space-y-2">
             <Link
-              href="/vote"
+              href={RATE_ROUTE}
               className="inline-flex items-center gap-2 text-sm text-base-content/70 hover:text-base-content transition-colors"
             >
               <ArrowLeftIcon className="w-4 h-4" />
-              Back to vote
+              Back to rate
             </Link>
             <div className="flex items-center gap-2">
               <h1 className="text-3xl font-semibold">Reveal My Vote</h1>

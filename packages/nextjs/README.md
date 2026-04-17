@@ -103,13 +103,13 @@ app/                          # Next.js App Router
 ├── api/                      # Server-side API routes
 ├── debug/                    # Contract debugger
 ├── docs/                     # In-app documentation
-├── radar/, submit/, vote/    # Discovery and voting flows
+├── ask/, rate/               # Question asking and rating flows
 └── profiles/, settings/      # User profile and preference routes
 
 components/                   # React components
 ├── content/embeds/           # Media embeds
 ├── home/, leaderboard/       # Home and leaderboard UIs
-├── profile/, submit/, vote/  # Feature-specific flows
+├── profile/, submit/, vote/  # Feature-specific flow components
 ├── shared/, ui/              # Shared presentation primitives
 └── scaffold-eth/             # Wallet and contract interaction components
 

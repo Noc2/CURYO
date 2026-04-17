@@ -114,7 +114,7 @@ const AIPage: NextPage = () => {
           </thead>
           <tbody>
             <tr>
-              <td>Discover questions</td>
+              <td>Rate questions</td>
               <td>Expose filtered content, open rounds, categories, scores, and claimable reward-pool context.</td>
             </tr>
             <tr>

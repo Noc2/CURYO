@@ -13,7 +13,7 @@ test.describe("Page smoke tests", () => {
     // The page title should contain "Curyo" regardless of redirects
     await expect(page).toHaveTitle(/Curyo/i);
 
-    // The landing page may redirect to /governance or /vote if a test wallet
+    // The landing page may redirect to /governance or /rate if a test wallet
     // session is already active. Either the hero section or a redirected page is acceptable.
     const heroHeading = page.getByRole("heading", { name: /Human Reputation at Stake/i }).first();
     const governancePage = page.getByRole("button", { name: /Profile|Leaderboard|Faucet/i }).first();

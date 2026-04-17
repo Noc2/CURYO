@@ -17,6 +17,7 @@ import { FaucetModal, FaucetTrigger } from "~~/components/scaffold-eth";
 import { LocalTestWalletBridge } from "~~/components/thirdweb/LocalTestWalletBridge";
 import { ThirdwebAutoConnectBridge } from "~~/components/thirdweb/ThirdwebAutoConnectBridge";
 import { ThirdwebConnectorWalletBridge } from "~~/components/thirdweb/ThirdwebConnectorWalletBridge";
+import { RATE_ROUTE } from "~~/constants/routes";
 import { MobileHeaderVisibilityProvider } from "~~/contexts/MobileHeaderVisibilityContext";
 import { OptimisticVoteProvider } from "~~/contexts/OptimisticVoteContext";
 import { TermsAcceptanceProvider } from "~~/contexts/TermsAcceptanceContext";
@@ -30,7 +31,7 @@ const TermsAcceptanceModal = dynamic(
 
 const ScaffoldEthApp = ({ children }: { children: React.ReactNode }) => {
   const pathname = usePathname() ?? "";
-  const isVoteFeedRoute = pathname === "/vote";
+  const isVoteFeedRoute = pathname === RATE_ROUTE;
   const { targetNetwork } = useTargetNetwork();
   const showVoteFeedMobileFaucet = isVoteFeedRoute && targetNetwork.id === hardhat.id;
 
