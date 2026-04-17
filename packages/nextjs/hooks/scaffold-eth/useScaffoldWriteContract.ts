@@ -73,7 +73,7 @@ export function useScaffoldWriteContract<TContractName extends ContractName>(
 
 /**
  * Wrapper around wagmi's useWriteContract hook which automatically loads (by name) the contract ABI and address from
- * the contracts present in deployedContracts.ts & externalContracts.ts corresponding to targetNetworks configured in scaffold.config.ts
+ * the contracts present in deployedContracts.ts corresponding to targetNetworks configured in scaffold.config.ts
  * @param config.contractName - name of the contract to be written to
  * @param config.chainId - optional chainId that is configured with the scaffold project to make use for multi-chain interactions.
  * @param config.writeContractParams - wagmi's useWriteContract parameters

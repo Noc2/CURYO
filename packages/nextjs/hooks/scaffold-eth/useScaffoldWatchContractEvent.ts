@@ -8,7 +8,7 @@ import { ContractAbi, ContractName, UseScaffoldEventConfig } from "~~/utils/scaf
 
 /**
  * Wrapper around wagmi's useEventSubscriber hook which automatically loads (by name) the contract ABI and
- * address from the contracts present in deployedContracts.ts & externalContracts.ts
+ * address from the contracts present in deployedContracts.ts
  * @param config - The config settings
  * @param config.contractName - deployed contract name
  * @param config.eventName - name of the event to listen for
