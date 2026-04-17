@@ -380,13 +380,17 @@ function RewardPoolAmountDisplay({ amount }: { amount: bigint }) {
 
   return (
     <div
-      className="flex max-w-full items-center gap-2 text-[0.68rem] font-semibold uppercase tracking-[0.2em] text-base-content/65 lg:text-sm"
-      aria-label={`Bounty: ${amountLabel}`}
+      className="inline-flex max-w-full items-center gap-1.5 rounded-full border border-primary/25 bg-primary/12 px-3 py-1.5 text-sm font-semibold leading-none text-primary shadow-[0_0_18px_rgba(242,100,38,0.16)]"
+      aria-label={`${amountLabel} bounty`}
     >
       <span>
-        Bounty: <span className="tabular-nums">{amountLabel}</span>
+        <span className="tabular-nums">{amountLabel}</span> bounty
       </span>
-      <InfoTooltip text={REWARD_POOL_TOOLTIP_TEXT} position="bottom" />
+      <InfoTooltip
+        text={REWARD_POOL_TOOLTIP_TEXT}
+        position="bottom"
+        className="[&>svg]:text-primary/70 [&>svg]:hover:text-primary"
+      />
     </div>
   );
 }

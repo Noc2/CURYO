@@ -420,11 +420,6 @@ function FeedContentMetaCard({
             />
           </div>
           <div className="ml-auto flex shrink-0 items-center gap-0.5 sm:gap-1">
-            {hasRewardPool ? (
-              <span className="rounded-full bg-success/15 px-2.5 py-1 text-sm font-semibold leading-none text-success">
-                {formatUsdAmount(rewardPoolTotal)} bounty
-              </span>
-            ) : null}
             {hasFollowButton ? (
               <FollowProfileButton
                 following={following}
