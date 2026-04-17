@@ -187,14 +187,14 @@ export function DelegationSection() {
       <h2 className="text-xl font-semibold flex items-center gap-2">
         <ShieldCheckIcon className="w-6 h-6" />
         Delegated Vote ID
-        <InfoTooltip text="Authorize a delegate address (hot wallet) to vote and submit content on behalf of your Voter ID. Your main key stays safely offline." />
+        <InfoTooltip text="Authorize a delegate address (hot wallet) to vote on behalf of your Voter ID. Your main key stays safely offline." />
       </h2>
 
       <div className="rounded-xl border border-base-300 bg-base-200/40 p-4 text-base text-base-content/75 space-y-2">
         <p>Keep your Voter ID on a cold wallet and use a separate hot wallet for daily actions.</p>
         <p>
-          Your delegate can vote, submit content, and use profile or frontend actions, but only the Voter ID holder can
-          set or remove delegation.
+          Your delegate can vote and use profile or frontend actions, but only the Voter ID holder can set or remove
+          delegation. Submissions themselves do not need delegation.
         </p>
         <p>
           If the hot wallet is compromised, remove it here, set a new delegate, and only fund the delegate as needed.
@@ -235,7 +235,7 @@ export function DelegationSection() {
         <div className="space-y-3">
           <label className="flex items-center gap-1.5 text-base font-medium">
             Delegate Address
-            <InfoTooltip text="Enter the address of your secondary wallet. This address will be able to vote and submit content using your Voter ID." />
+            <InfoTooltip text="Enter the address of your secondary wallet. This address will be able to vote using your Voter ID." />
           </label>
           <input
             type="text"

@@ -6,9 +6,10 @@ import { SafeExternalLink } from "~~/components/shared/SafeExternalLink";
 interface GenericLinkCardProps {
   url: string;
   compact?: boolean;
+  thumbnailUrl?: string | null;
 }
 
-export function GenericLinkCard({ url, compact }: GenericLinkCardProps) {
+export function GenericLinkCard({ url, compact, thumbnailUrl }: GenericLinkCardProps) {
   let hostname = "";
   try {
     hostname = new URL(url).hostname;
@@ -19,16 +20,20 @@ export function GenericLinkCard({ url, compact }: GenericLinkCardProps) {
   return (
     <SafeExternalLink
       href={url}
-      className={`flex items-center gap-3 rounded-xl bg-base-200 embed-surface embed-surface-hover transition-colors ${
-        compact ? "p-3" : "p-5"
+      className={`flex h-full min-h-[8rem] overflow-hidden rounded-xl bg-base-200 embed-surface embed-surface-hover transition-colors ${
+        compact ? "text-sm" : ""
       }`}
     >
-      <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
-        <LinkIcon className="w-5 h-5 text-primary" />
-      </div>
-      <div className="min-w-0">
-        <p className="text-base font-medium truncate">{hostname}</p>
-        <p className="text-base text-base-content/50 mt-0.5">Click to view content</p>
+      {thumbnailUrl ? (
+        <img src={thumbnailUrl} alt="" className="h-full min-h-[8rem] w-1/2 object-cover" loading="lazy" />
+      ) : (
+        <div className="flex h-full min-h-[8rem] w-1/2 shrink-0 items-center justify-center bg-primary/10">
+          <LinkIcon className="h-8 w-8 text-primary" />
+        </div>
+      )}
+      <div className={`flex min-w-0 flex-1 flex-col justify-center ${compact ? "p-3" : "p-5"}`}>
+        <p className="truncate text-base font-medium">{hostname}</p>
+        <p className="mt-0.5 text-base text-base-content/50">Open context</p>
       </div>
     </SafeExternalLink>
   );

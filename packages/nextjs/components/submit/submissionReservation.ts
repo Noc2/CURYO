@@ -7,26 +7,30 @@ const RESERVED_SUBMISSION_SECRET_STORAGE_KEY = `${RESERVED_SUBMISSION_STORAGE_PR
 
 type SubmissionDraft = {
   categoryId: bigint;
+  contextUrl: string;
   description: string;
   imageUrls: string[];
+  rewardAmount: bigint;
+  rewardAsset: number;
   submissionKey: `0x${string}`;
   tags: string;
   title: string;
-  url: string;
   videoUrl: string;
 };
 
 type StoredSubmissionReservation = {
   categoryId: string;
   chainId: number;
+  contextUrl: string;
   description: string;
   imageUrls: string[];
+  rewardAmount: string;
+  rewardAsset: number;
   revealCommitment: `0x${string}`;
   salt: `0x${string}`;
   submissionKey: `0x${string}`;
   tags: string;
   title: string;
-  url: string;
   videoUrl: string;
 };
 
@@ -80,6 +84,8 @@ export function deriveSubmissionReservationSalt(
         { type: "string" },
         { type: "string" },
         { type: "uint256" },
+        { type: "uint8" },
+        { type: "uint256" },
       ],
       [
         getSubmissionReservationSecret(),
@@ -90,6 +96,8 @@ export function deriveSubmissionReservationSalt(
         draft.description,
         draft.tags,
         draft.categoryId,
+        draft.rewardAsset,
+        draft.rewardAmount,
       ],
     ),
   );
@@ -110,8 +118,20 @@ export function buildSubmissionRevealCommitment(
         { type: "uint256" },
         { type: "bytes32" },
         { type: "address" },
+        { type: "uint8" },
+        { type: "uint256" },
       ],
-      [draft.submissionKey, draft.title, draft.description, draft.tags, draft.categoryId, salt, submitterAddress],
+      [
+        draft.submissionKey,
+        draft.title,
+        draft.description,
+        draft.tags,
+        draft.categoryId,
+        salt,
+        submitterAddress,
+        draft.rewardAsset,
+        draft.rewardAmount,
+      ],
     ),
   );
 }
@@ -125,14 +145,16 @@ export function createStoredSubmissionReservation(
   return {
     categoryId: draft.categoryId.toString(),
     chainId,
+    contextUrl: draft.contextUrl,
     description: draft.description,
     imageUrls: draft.imageUrls,
+    rewardAmount: draft.rewardAmount.toString(),
+    rewardAsset: draft.rewardAsset,
     revealCommitment,
     salt,
     submissionKey: draft.submissionKey,
     tags: draft.tags,
     title: draft.title,
-    url: draft.url,
     videoUrl: draft.videoUrl,
   };
 }
@@ -147,11 +169,13 @@ export function submissionReservationMatchesDraft(
 ): boolean {
   return (
     reservation.categoryId === draft.categoryId.toString() &&
+    reservation.contextUrl === draft.contextUrl &&
     reservation.description === draft.description &&
+    reservation.rewardAmount === draft.rewardAmount.toString() &&
+    reservation.rewardAsset === draft.rewardAsset &&
     reservation.submissionKey === draft.submissionKey &&
     reservation.tags === draft.tags &&
     reservation.title === draft.title &&
-    reservation.url === draft.url &&
     reservation.videoUrl === draft.videoUrl &&
     stringArraysEqual(reservation.imageUrls, draft.imageUrls)
   );
@@ -173,23 +197,30 @@ function parseStoredSubmissionReservation(value: unknown): StoredSubmissionReser
   if (
     typeof parsedValue.categoryId !== "string" ||
     typeof parsedValue.chainId !== "number" ||
+    (typeof parsedValue.contextUrl !== "string" && typeof (parsedValue as { url?: unknown }).url !== "string") ||
     typeof parsedValue.description !== "string" ||
     !isHexValue(parsedValue.revealCommitment) ||
+    typeof parsedValue.rewardAmount !== "string" ||
+    typeof parsedValue.rewardAsset !== "number" ||
+    ![0, 1].includes(parsedValue.rewardAsset) ||
     !isHexValue(parsedValue.salt) ||
     !isHexValue(parsedValue.submissionKey) ||
     typeof parsedValue.tags !== "string" ||
-    typeof parsedValue.title !== "string" ||
-    typeof parsedValue.url !== "string"
+    typeof parsedValue.title !== "string"
   ) {
     return null;
   }
 
+  const legacyUrl = (parsedValue as { url?: unknown }).url;
+  const contextUrl = typeof parsedValue.contextUrl === "string" ? parsedValue.contextUrl : (legacyUrl as string);
+
   return {
     ...parsedValue,
+    contextUrl,
     imageUrls: Array.isArray(parsedValue.imageUrls)
       ? parsedValue.imageUrls.filter((url): url is string => typeof url === "string")
-      : parsedValue.url
-        ? [parsedValue.url]
+      : contextUrl
+        ? [contextUrl]
         : [],
     videoUrl: typeof parsedValue.videoUrl === "string" ? parsedValue.videoUrl : "",
   } as StoredSubmissionReservation;

@@ -50,6 +50,7 @@ const crepContract = contractsForChain.CuryoReputation;
 const contentRegistryContract = contractsForChain.ContentRegistry;
 const frontendRegistryContract = contractsForChain.FrontendRegistry;
 const profileRegistryContract = contractsForChain.ProfileRegistry;
+const rewardEscrowContract = contractsForChain.QuestionRewardPoolEscrow;
 const rewardDistributorContract = contractsForChain.RoundRewardDistributor;
 const votingEngineContract = contractsForChain.RoundVotingEngine;
 
@@ -416,12 +417,13 @@ test("supported sponsored operation families are allowlisted", async () => {
   const supportedCases = [
     [voteCall("0x07")],
     [
-      encodeCall(crepContract, "approve", [contentRegistryContract.address, 10n]),
+      encodeCall(crepContract, "approve", [rewardEscrowContract.address, 1_000_000n]),
       encodeCall(contentRegistryContract, "reserveSubmission", [`0x${"1".repeat(64)}`]),
     ],
     [encodeCall(contentRegistryContract, "cancelReservedSubmission", [`0x${"2".repeat(64)}`])],
     [
-      encodeCall(contentRegistryContract, "submitQuestionWithMedia", [
+      encodeCall(contentRegistryContract, "submitQuestionWithReward", [
+        "https://example.com/product",
         ["https://example.com/question-a.jpg", "https://example.com/question-b.jpg"],
         "",
         "Is this product worth recommending?",
@@ -429,6 +431,8 @@ test("supported sponsored operation families are allowlisted", async () => {
         "Products,Value",
         1n,
         `0x${"4".repeat(64)}`,
+        0,
+        1_000_000n,
       ]),
     ],
     [encodeCall(frontendRegistryContract, "register")],
@@ -436,12 +440,10 @@ test("supported sponsored operation families are allowlisted", async () => {
     [encodeCall(profileRegistryContract, "setProfile", ["EthHealth", "I check primary sources before rating."])],
     [encodeCall(profileRegistryContract, "setAvatarAccent", [0x76bb40])],
     [encodeCall(profileRegistryContract, "clearAvatarAccent")],
-    [encodeCall(contentRegistryContract, "claimSubmitterParticipationReward", [1n])],
     [encodeCall(votingEngineContract, "claimCancelledRoundRefund", [1n, 1n])],
     [encodeCall(rewardDistributorContract, "claimFrontendFee", [1n, 1n, WALLET])],
     [encodeCall(rewardDistributorContract, "claimParticipationReward", [1n, 1n])],
     [encodeCall(rewardDistributorContract, "claimReward", [1n, 1n])],
-    [encodeCall(rewardDistributorContract, "claimSubmitterReward", [1n, 1n])],
   ] as const;
 
   for (const calls of supportedCases) {

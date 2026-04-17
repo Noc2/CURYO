@@ -16,6 +16,7 @@ export const CONTRACT_ADDRESSES = {
   RoundRewardDistributor: chain31337.RoundRewardDistributor.address,
   FrontendRegistry: chain31337.FrontendRegistry.address,
   CategoryRegistry: chain31337.CategoryRegistry.address,
+  QuestionRewardPoolEscrow: chain31337.QuestionRewardPoolEscrow.address,
   VoterIdNFT: chain31337.VoterIdNFT.address,
   ParticipationPool: chain31337.ParticipationPool.address,
   HumanFaucet: chain31337.HumanFaucet.address,

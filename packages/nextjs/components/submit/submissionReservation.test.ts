@@ -12,6 +12,18 @@ const ADDRESS = "0x00000000000000000000000000000000000000aa" as const;
 const CHAIN_ID = 11142220;
 const SUBMISSION_KEY = "0x1111111111111111111111111111111111111111111111111111111111111111" as const;
 const SALT = "0x2222222222222222222222222222222222222222222222222222222222222222" as const;
+const DEFAULT_DRAFT = {
+  categoryId: 1n,
+  contextUrl: "https://example.com/demo.jpg",
+  description: "first description",
+  imageUrls: ["https://example.com/demo.jpg"],
+  rewardAmount: 1_000_000n,
+  rewardAsset: 0,
+  submissionKey: SUBMISSION_KEY,
+  tags: "alpha,beta",
+  title: "First title",
+  videoUrl: "",
+};
 
 test("buildSubmissionReservationStorageKey stays stable when mutable metadata changes", () => {
   const first = buildSubmissionReservationStorageKey(ADDRESS, CHAIN_ID, SUBMISSION_KEY);
@@ -30,14 +42,7 @@ test("buildSubmissionReservationStorageKey is chain-scoped", () => {
 test("buildSubmissionRevealCommitment changes when the reserved metadata changes", () => {
   const initial = buildSubmissionRevealCommitment(
     {
-      categoryId: 1n,
-      description: "first description",
-      imageUrls: ["https://example.com/demo.jpg"],
-      submissionKey: SUBMISSION_KEY,
-      tags: "alpha,beta",
-      title: "First title",
-      url: "https://example.com/demo.jpg",
-      videoUrl: "",
+      ...DEFAULT_DRAFT,
     },
     SALT,
     ADDRESS,
@@ -45,14 +50,8 @@ test("buildSubmissionRevealCommitment changes when the reserved metadata changes
 
   const edited = buildSubmissionRevealCommitment(
     {
-      categoryId: 1n,
+      ...DEFAULT_DRAFT,
       description: "edited description",
-      imageUrls: ["https://example.com/demo.jpg"],
-      submissionKey: SUBMISSION_KEY,
-      tags: "alpha,beta",
-      title: "First title",
-      url: "https://example.com/demo.jpg",
-      videoUrl: "",
     },
     SALT,
     ADDRESS,
@@ -64,26 +63,12 @@ test("buildSubmissionRevealCommitment changes when the reserved metadata changes
 test("submissionReservationMatchesDraft only reuses reservations for the exact same draft", () => {
   const reservation = createStoredSubmissionReservation(
     {
-      categoryId: 1n,
-      description: "first description",
-      imageUrls: ["https://example.com/demo.jpg"],
-      submissionKey: SUBMISSION_KEY,
-      tags: "alpha,beta",
-      title: "First title",
-      url: "https://example.com/demo.jpg",
-      videoUrl: "",
+      ...DEFAULT_DRAFT,
     },
     SALT,
     buildSubmissionRevealCommitment(
       {
-        categoryId: 1n,
-        description: "first description",
-        imageUrls: ["https://example.com/demo.jpg"],
-        submissionKey: SUBMISSION_KEY,
-        tags: "alpha,beta",
-        title: "First title",
-        url: "https://example.com/demo.jpg",
-        videoUrl: "",
+        ...DEFAULT_DRAFT,
       },
       SALT,
       ADDRESS,
@@ -93,28 +78,15 @@ test("submissionReservationMatchesDraft only reuses reservations for the exact s
 
   assert.equal(
     submissionReservationMatchesDraft(reservation, {
-      categoryId: 1n,
-      description: "first description",
-      imageUrls: ["https://example.com/demo.jpg"],
-      submissionKey: SUBMISSION_KEY,
-      tags: "alpha,beta",
-      title: "First title",
-      url: "https://example.com/demo.jpg",
-      videoUrl: "",
+      ...DEFAULT_DRAFT,
     }),
     true,
   );
 
   assert.equal(
     submissionReservationMatchesDraft(reservation, {
-      categoryId: 1n,
-      description: "first description",
-      imageUrls: ["https://example.com/demo.jpg"],
-      submissionKey: SUBMISSION_KEY,
-      tags: "alpha,beta",
+      ...DEFAULT_DRAFT,
       title: "Edited title",
-      url: "https://example.com/demo.jpg",
-      videoUrl: "",
     }),
     false,
   );
@@ -150,14 +122,7 @@ test("deriveSubmissionReservationSalt recreates the same salt for the same draft
 
   try {
     const draft = {
-      categoryId: 1n,
-      description: "first description",
-      imageUrls: ["https://example.com/demo.jpg"],
-      submissionKey: SUBMISSION_KEY,
-      tags: "alpha,beta",
-      title: "First title",
-      url: "https://example.com/demo.jpg",
-      videoUrl: "",
+      ...DEFAULT_DRAFT,
     };
 
     const first = deriveSubmissionReservationSalt(draft, ADDRESS, CHAIN_ID);

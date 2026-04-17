@@ -3,12 +3,35 @@
 import { isAddress, parseUnits } from "viem";
 import { contracts } from "~~/utils/scaffold-eth/contract";
 
-const USDC_DECIMALS = 6;
+const SUBMISSION_REWARD_DECIMALS = 6;
 export const MIN_REWARD_POOL_REQUIRED_VOTERS = 3;
 export const MIN_REWARD_POOL_SETTLED_ROUNDS = 1;
 export const DEFAULT_REWARD_POOL_FRONTEND_FEE_BPS = 300;
+export const DEFAULT_SUBMISSION_REWARD_POOL = 1_000_000n;
+export const SUBMISSION_REWARD_ASSET_CREP = 0;
+export const SUBMISSION_REWARD_ASSET_USDC = 1;
+
+export type SubmissionRewardAsset = "crep" | "usdc";
 
 export const QUESTION_SUBMISSION_ABI = [
+  {
+    type: "function",
+    name: "previewQuestionSubmissionKey",
+    inputs: [
+      { name: "contextUrl", type: "string" },
+      { name: "imageUrls", type: "string[]" },
+      { name: "videoUrl", type: "string" },
+      { name: "title", type: "string" },
+      { name: "description", type: "string" },
+      { name: "tags", type: "string" },
+      { name: "categoryId", type: "uint256" },
+    ],
+    outputs: [
+      { name: "resolvedCategoryId", type: "uint256" },
+      { name: "submissionKey", type: "bytes32" },
+    ],
+    stateMutability: "view",
+  },
   {
     type: "function",
     name: "previewQuestionMediaSubmissionKey",
@@ -28,6 +51,57 @@ export const QUESTION_SUBMISSION_ABI = [
   },
   {
     type: "function",
+    name: "submitQuestionWithReward",
+    inputs: [
+      { name: "contextUrl", type: "string" },
+      { name: "imageUrls", type: "string[]" },
+      { name: "videoUrl", type: "string" },
+      { name: "title", type: "string" },
+      { name: "description", type: "string" },
+      { name: "tags", type: "string" },
+      { name: "categoryId", type: "uint256" },
+      { name: "salt", type: "bytes32" },
+      { name: "rewardAsset", type: "uint8" },
+      { name: "rewardAmount", type: "uint256" },
+    ],
+    outputs: [{ name: "", type: "uint256" }],
+    stateMutability: "nonpayable",
+  },
+  {
+    type: "function",
+    name: "submitQuestion",
+    inputs: [
+      { name: "contextUrl", type: "string" },
+      { name: "imageUrls", type: "string[]" },
+      { name: "videoUrl", type: "string" },
+      { name: "title", type: "string" },
+      { name: "description", type: "string" },
+      { name: "tags", type: "string" },
+      { name: "categoryId", type: "uint256" },
+      { name: "salt", type: "bytes32" },
+    ],
+    outputs: [{ name: "", type: "uint256" }],
+    stateMutability: "nonpayable",
+  },
+  {
+    type: "function",
+    name: "submitQuestionWithMediaWithReward",
+    inputs: [
+      { name: "imageUrls", type: "string[]" },
+      { name: "videoUrl", type: "string" },
+      { name: "title", type: "string" },
+      { name: "description", type: "string" },
+      { name: "tags", type: "string" },
+      { name: "categoryId", type: "uint256" },
+      { name: "salt", type: "bytes32" },
+      { name: "rewardAsset", type: "uint8" },
+      { name: "rewardAmount", type: "uint256" },
+    ],
+    outputs: [{ name: "", type: "uint256" }],
+    stateMutability: "nonpayable",
+  },
+  {
+    type: "function",
     name: "submitQuestionWithMedia",
     inputs: [
       { name: "imageUrls", type: "string[]" },
@@ -39,6 +113,20 @@ export const QUESTION_SUBMISSION_ABI = [
       { name: "salt", type: "bytes32" },
     ],
     outputs: [{ name: "", type: "uint256" }],
+    stateMutability: "nonpayable",
+  },
+  {
+    type: "function",
+    name: "createRewardPoolWithAsset",
+    inputs: [
+      { name: "contentId", type: "uint256" },
+      { name: "asset", type: "uint8" },
+      { name: "amount", type: "uint256" },
+      { name: "requiredVoters", type: "uint256" },
+      { name: "requiredSettledRounds", type: "uint256" },
+      { name: "expiresAt", type: "uint256" },
+    ],
+    outputs: [{ name: "rewardPoolId", type: "uint256" }],
     stateMutability: "nonpayable",
   },
 ] as const;
@@ -76,6 +164,13 @@ export const QUESTION_REWARD_POOL_ESCROW_ABI = [
       { name: "account", type: "address" },
     ],
     outputs: [{ name: "claimableAmount", type: "uint256" }],
+    stateMutability: "view",
+  },
+  {
+    type: "function",
+    name: "crepToken",
+    inputs: [],
+    outputs: [{ name: "", type: "address" }],
     stateMutability: "view",
   },
   {
@@ -133,6 +228,14 @@ export function getDefaultUsdcAddress(chainId: number): `0x${string}` | undefine
 }
 
 export function parseUsdRewardPoolAmount(value: string): bigint | null {
+  return parseTokenAmount6(value);
+}
+
+export function parseSubmissionRewardAmount(value: string): bigint | null {
+  return parseTokenAmount6(value);
+}
+
+function parseTokenAmount6(value: string): bigint | null {
   const trimmed = value.trim();
   const hasCommas = trimmed.includes(",");
   const normalized = hasCommas ? trimmed.replace(/,/g, "") : trimmed;
@@ -140,11 +243,27 @@ export function parseUsdRewardPoolAmount(value: string): bigint | null {
   const validPlainAmount = /^\d+(?:\.\d{0,6})?$/.test(trimmed);
   if (hasCommas ? !validGroupedAmount : !validPlainAmount) return null;
   try {
-    const parsed = parseUnits(normalized, USDC_DECIMALS);
+    const parsed = parseUnits(normalized, SUBMISSION_REWARD_DECIMALS);
     return parsed > 0n ? parsed : null;
   } catch {
     return null;
   }
+}
+
+export function formatTokenAmount6(value: bigint | number | string | undefined | null): string {
+  const raw = typeof value === "bigint" ? value : BigInt(value ?? 0);
+  const whole = raw / 1_000_000n;
+  const fractional = raw % 1_000_000n;
+  const groupedWhole = whole.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+  const fractionalText = fractional.toString().padStart(6, "0").replace(/0+$/, "");
+  return fractionalText ? `${groupedWhole}.${fractionalText}` : groupedWhole;
+}
+
+export function formatSubmissionRewardAmount(
+  value: bigint | number | string | undefined | null,
+  asset: SubmissionRewardAsset,
+): string {
+  return `${formatTokenAmount6(value)} ${asset === "crep" ? "cREP" : "USDC"}`;
 }
 
 export function formatUsdAmount(value: bigint | number | string | undefined | null): string {

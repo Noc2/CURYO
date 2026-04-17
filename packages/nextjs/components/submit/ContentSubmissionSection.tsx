@@ -26,7 +26,6 @@ import { useDeployedContractInfo, useScaffoldReadContract, useScaffoldWriteContr
 import { useTargetNetwork } from "~~/hooks/scaffold-eth/useTargetNetwork";
 import { type Category, useCategoryRegistry } from "~~/hooks/useCategoryRegistry";
 import { useGasBalanceStatus } from "~~/hooks/useGasBalanceStatus";
-import { useParticipationRate } from "~~/hooks/useParticipationRate";
 import { useThirdwebSponsoredSubmitCalls } from "~~/hooks/useThirdwebSponsoredSubmitCalls";
 import { useTransactionStatusToast } from "~~/hooks/useTransactionStatusToast";
 import { useWalletRpcRecovery } from "~~/hooks/useWalletRpcRecovery";
@@ -35,17 +34,26 @@ import {
   MAX_SUBMISSION_IMAGE_URLS,
   isDirectImageUrl,
   isYouTubeVideoUrl,
+  normalizeSubmissionContextUrl,
   normalizeSubmissionMediaUrl,
 } from "~~/lib/contentMedia";
 import { MAX_QUESTION_LENGTH } from "~~/lib/contentTitle";
-import { protocolDocFacts } from "~~/lib/docs/protocolFacts";
 import {
   findBlockedContentTags,
   getContentDescriptionValidationError,
   getContentTagValidationError,
   getContentTitleValidationError,
 } from "~~/lib/moderation/submissionValidation";
-import { QUESTION_SUBMISSION_ABI } from "~~/lib/questionRewardPools";
+import {
+  DEFAULT_SUBMISSION_REWARD_POOL,
+  ERC20_APPROVAL_ABI,
+  QUESTION_SUBMISSION_ABI,
+  SUBMISSION_REWARD_ASSET_CREP,
+  SUBMISSION_REWARD_ASSET_USDC,
+  type SubmissionRewardAsset,
+  formatSubmissionRewardAmount,
+  parseSubmissionRewardAmount,
+} from "~~/lib/questionRewardPools";
 import {
   getGasBalanceErrorMessage,
   isFreeTransactionExhaustedError,
@@ -61,9 +69,10 @@ const ShareModal = dynamic(() => import("~~/components/submit/ShareModal").then(
 type MediaMode = "images" | "video";
 
 const MEDIA_URL_CONFIG = {
+  contextPlaceholder: "Paste the source or context link voters should judge",
   imagePlaceholder: "Paste a direct image URL, e.g. https://example.com/image.jpg",
   videoPlaceholder: "Paste a YouTube URL, e.g. https://youtube.com/watch?v=...",
-  urlHint: "Required. Add up to four direct image URLs or one YouTube link for voters to judge.",
+  urlHint: "Optional. Add up to four direct image URLs or one YouTube link as a preview.",
 };
 
 function isReservationExistsError(error: unknown): boolean {
@@ -102,14 +111,14 @@ export function ContentSubmissionSection() {
     includeExternalSendCalls: true,
   });
   const statusToast = useTransactionStatusToast();
-  const { ratePercent, calculateBonus } = useParticipationRate();
   const { canUseSponsoredSubmitCalls, executeSponsoredCalls, isAwaitingSponsoredSubmitCalls } =
     useThirdwebSponsoredSubmitCalls();
   const { showWalletRpcOverloadNotification } = useWalletRpcRecovery();
-  const submissionBonus = calculateBonus(10);
   const { requireAcceptance } = useTermsAcceptance();
 
   const [mediaMode, setMediaMode] = useState<MediaMode>("images");
+  const [contextUrl, setContextUrl] = useState("");
+  const [contextUrlError, setContextUrlError] = useState<string | null>(null);
   const [imageUrls, setImageUrls] = useState<string[]>([""]);
   const [imageUrlErrors, setImageUrlErrors] = useState<(string | null)[]>([null]);
   const [videoUrl, setVideoUrl] = useState("");
@@ -121,6 +130,8 @@ export function ContentSubmissionSection() {
   const [selectedCategory, setSelectedCategory] = useState<Category | null>(null);
   const [selectedSubcategories, setSelectedSubcategories] = useState<string[]>([]);
   const [customSubcategory, setCustomSubcategory] = useState("");
+  const [rewardAsset, setRewardAsset] = useState<SubmissionRewardAsset>("usdc");
+  const [rewardAmount, setRewardAmount] = useState("1");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitAttempted, setSubmitAttempted] = useState(false);
   const [submittedContent, setSubmittedContent] = useState<{
@@ -158,6 +169,30 @@ export function ContentSubmissionSection() {
 
   const urlConfig = MEDIA_URL_CONFIG;
   const customSubcategoryError = customSubcategory ? getContentTagValidationError(customSubcategory) : null;
+
+  const getContextUrlValidationError = (value: string): string | null => {
+    const trimmedValue = value.trim();
+    if (!trimmedValue) {
+      return "Add a context link before asking.";
+    }
+
+    const sanitizedUrl = sanitizeExternalUrl(trimmedValue);
+    if (!sanitizedUrl) {
+      return "Please enter a valid HTTPS URL";
+    }
+
+    const urlCheck = containsBlockedUrl(sanitizedUrl);
+    if (urlCheck.blocked) {
+      return "This URL contains prohibited content and cannot be used";
+    }
+
+    return normalizeSubmissionContextUrl(trimmedValue) ? null : "Please enter a valid HTTPS URL";
+  };
+
+  const handleContextUrlChange = (value: string) => {
+    setContextUrl(value);
+    setContextUrlError(value.trim() ? getContextUrlValidationError(value) : null);
+  };
 
   const getMediaUrlValidationError = (
     value: string,
@@ -253,12 +288,17 @@ export function ContentSubmissionSection() {
     () => (videoUrl.trim() ? (normalizeSubmissionMediaUrl(videoUrl) ?? "") : ""),
     [videoUrl],
   );
+  const normalizedContextUrl = useMemo(
+    () => (contextUrl.trim() ? (normalizeSubmissionContextUrl(contextUrl) ?? "") : ""),
+    [contextUrl],
+  );
   const previewMediaUrl = mediaMode === "video" ? normalizedVideoUrl : (normalizedImageUrls[0] ?? "");
   const hasValidPreviewMedia =
     Boolean(previewMediaUrl) &&
     (mediaMode === "video"
       ? !videoUrlError && isYouTubeVideoUrl(previewMediaUrl)
       : !imageUrlErrors.some(Boolean) && isDirectImageUrl(previewMediaUrl));
+  const previewUrl = hasValidPreviewMedia ? previewMediaUrl : normalizedContextUrl;
 
   const handleCategorySelect = (category: Category) => {
     setSelectedCategory(category);
@@ -290,7 +330,6 @@ export function ContentSubmissionSection() {
     }
   };
 
-  const { writeContractAsync: writeCRep } = useScaffoldWriteContract({ contractName: "CuryoReputation" });
   const { writeContractAsync: writeRegistry } = useScaffoldWriteContract({
     contractName: "ContentRegistry",
     disableSimulate: true,
@@ -299,8 +338,54 @@ export function ContentSubmissionSection() {
     contractName: "ContentRegistry",
   });
   const { data: crepInfo, isLoading: isCrepLoading } = useDeployedContractInfo({ contractName: "CuryoReputation" });
+  const { data: rewardEscrowInfo, isLoading: isRewardEscrowLoading } = useDeployedContractInfo({
+    contractName: "QuestionRewardPoolEscrow",
+  });
   const registryAddress = registryInfo?.address as `0x${string}` | undefined;
   const crepAddress = crepInfo?.address as `0x${string}` | undefined;
+  const rewardEscrowAddress = rewardEscrowInfo?.address as `0x${string}` | undefined;
+  const { data: escrowUsdcToken } = useScaffoldReadContract({
+    contractName: "QuestionRewardPoolEscrow" as any,
+    functionName: "usdcToken" as any,
+    watch: false,
+    query: {
+      staleTime: 300_000,
+    },
+  } as any);
+  const { data: minSubmissionCrepPool } = useScaffoldReadContract({
+    contractName: "ProtocolConfig" as any,
+    functionName: "minSubmissionCrepPool" as any,
+    watch: false,
+    query: {
+      staleTime: 300_000,
+    },
+  } as any);
+  const { data: minSubmissionUsdcPool } = useScaffoldReadContract({
+    contractName: "ProtocolConfig" as any,
+    functionName: "minSubmissionUsdcPool" as any,
+    watch: false,
+    query: {
+      staleTime: 300_000,
+    },
+  } as any);
+  const selectedRewardAssetId = rewardAsset === "crep" ? SUBMISSION_REWARD_ASSET_CREP : SUBMISSION_REWARD_ASSET_USDC;
+  const selectedRewardAmount = useMemo(() => parseSubmissionRewardAmount(rewardAmount), [rewardAmount]);
+  const minimumRewardAmount =
+    rewardAsset === "crep"
+      ? typeof minSubmissionCrepPool === "bigint"
+        ? minSubmissionCrepPool
+        : DEFAULT_SUBMISSION_REWARD_POOL
+      : typeof minSubmissionUsdcPool === "bigint"
+        ? minSubmissionUsdcPool
+        : DEFAULT_SUBMISSION_REWARD_POOL;
+  const rewardAmountError =
+    selectedRewardAmount === null
+      ? "Enter a positive amount with up to 6 decimals."
+      : selectedRewardAmount < minimumRewardAmount
+        ? `Minimum is ${formatSubmissionRewardAmount(minimumRewardAmount, rewardAsset)}.`
+        : null;
+  const rewardTokenAddress =
+    rewardAsset === "crep" ? crepAddress : ((escrowUsdcToken as `0x${string}` | undefined) ?? undefined);
   const { refetch: refetchNextContentId } = useScaffoldReadContract({
     contractName: "ContentRegistry",
     functionName: "nextContentId",
@@ -343,13 +428,18 @@ export function ContentSubmissionSection() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (isRegistryLoading || isCrepLoading) {
+    if (isRegistryLoading || isCrepLoading || isRewardEscrowLoading) {
       notification.warning("Submission is still loading. Try again in a moment.");
       return;
     }
 
-    if (!registryInfo || !registryAddress || !crepInfo || !crepAddress) {
+    if (!registryInfo || !registryAddress || !crepInfo || !crepAddress || !rewardEscrowInfo || !rewardEscrowAddress) {
       notification.error("Submission is unavailable right now.");
+      return;
+    }
+
+    if (!rewardTokenAddress) {
+      notification.error(`${rewardAsset === "crep" ? "cREP" : "USDC"} funding is unavailable right now.`);
       return;
     }
 
@@ -367,6 +457,8 @@ export function ContentSubmissionSection() {
 
     const trimmedTitle = title.trim();
     const trimmedDescription = description.trim();
+    const trimmedContextUrl = contextUrl.trim();
+    const submittedContextUrl = normalizeSubmissionContextUrl(trimmedContextUrl) ?? "";
     const submittedImageUrls =
       mediaMode === "images"
         ? imageUrls
@@ -379,21 +471,20 @@ export function ContentSubmissionSection() {
     const nextImageUrlErrors = imageUrls.map(value =>
       value.trim() ? getMediaUrlValidationError(value, "images") : null,
     );
-    const nextVideoUrlError = getMediaUrlValidationError(videoUrl, "video", { required: mediaMode === "video" });
+    const nextVideoUrlError = getMediaUrlValidationError(videoUrl, "video");
 
-    if (mediaMode === "images" && submittedImageUrls.length === 0) {
-      nextImageUrlErrors[0] = "Add at least one image URL before asking.";
-    }
-
+    const nextContextUrlError = getContextUrlValidationError(trimmedContextUrl);
     const nextTitleError = trimmedTitle ? getContentTitleValidationError(trimmedTitle) : null;
     const nextDescriptionError = trimmedDescription ? getContentDescriptionValidationError(trimmedDescription) : null;
     const blockedContentTags = findBlockedContentTags(selectedSubcategories);
     const hasMediaError =
-      mediaMode === "images" ? nextImageUrlErrors.some(Boolean) : Boolean(nextVideoUrlError) || !submittedVideoUrl;
-    const normalizedSubmissionUrl = mediaMode === "video" ? submittedVideoUrl : (submittedImageUrls[0] ?? "");
+      mediaMode === "images"
+        ? nextImageUrlErrors.some(Boolean)
+        : Boolean(nextVideoUrlError) || Boolean(videoUrl.trim() && !submittedVideoUrl);
 
     setImageUrlErrors(nextImageUrlErrors);
     setVideoUrlError(nextVideoUrlError);
+    setContextUrlError(nextContextUrlError);
     setTitleError(nextTitleError);
     setDescriptionError(nextDescriptionError);
 
@@ -407,7 +498,12 @@ export function ContentSubmissionSection() {
       return;
     }
 
-    if (hasMediaError || nextTitleError || nextDescriptionError) {
+    if (hasMediaError || nextContextUrlError || nextTitleError || nextDescriptionError || rewardAmountError) {
+      notification.warning("Please fix the highlighted fields before asking.");
+      return;
+    }
+
+    if (!submittedContextUrl || !selectedRewardAmount) {
       notification.warning("Please fix the highlighted fields before asking.");
       return;
     }
@@ -422,7 +518,6 @@ export function ContentSubmissionSection() {
     let reservationStorageKey: string | null = null;
     try {
       let contentId: bigint | null = null;
-      const stakeAmount = BigInt(10 * 1e6);
       const submissionTags = serializeTags(selectedSubcategories);
       const submitterAddress = connectedAddress as `0x${string}` | undefined;
       if (!submitterAddress) {
@@ -432,8 +527,9 @@ export function ContentSubmissionSection() {
       const [, submissionKey] = (await readContract(wagmiConfig, {
         abi: QUESTION_SUBMISSION_ABI,
         address: registryAddress,
-        functionName: "previewQuestionMediaSubmissionKey",
+        functionName: "previewQuestionSubmissionKey",
         args: [
+          submittedContextUrl,
           submittedImageUrls,
           submittedVideoUrl,
           submittedTitle,
@@ -446,10 +542,12 @@ export function ContentSubmissionSection() {
         categoryId: selectedCategory.id,
         description: submittedDescription,
         imageUrls: submittedImageUrls,
+        rewardAmount: selectedRewardAmount,
+        rewardAsset: selectedRewardAssetId,
         submissionKey,
         tags: submissionTags,
         title: submittedTitle,
-        url: normalizedSubmissionUrl,
+        contextUrl: submittedContextUrl,
         videoUrl: submittedVideoUrl,
       };
       const currentReservationStorageKey = buildSubmissionReservationStorageKey(
@@ -500,12 +598,6 @@ export function ContentSubmissionSection() {
           await executeSponsoredCalls(
             [
               {
-                abi: crepInfo.abi,
-                address: crepAddress,
-                args: [registryAddress, stakeAmount],
-                functionName: "approve",
-              },
-              {
                 abi: registryInfo.abi,
                 address: registryAddress,
                 args: [revealCommitment],
@@ -518,20 +610,6 @@ export function ContentSubmissionSection() {
             },
           );
           return;
-        }
-
-        const approveTxHash = await writeCRep(
-          { functionName: "approve", args: [registryAddress, stakeAmount] },
-          {
-            blockConfirmations: 1,
-            suppressErrorToast: true,
-            suppressStatusToast: true,
-            suppressSuccessToast: true,
-          },
-        );
-
-        if (approveTxHash) {
-          await waitForTransactionReceipt(wagmiConfig, { hash: approveTxHash });
         }
 
         const reserveTxHash = await writeRegistry(
@@ -588,16 +666,23 @@ export function ContentSubmissionSection() {
       }
 
       // ContentRegistry enforces a minimum reservation age before reveal.
-      // Give the next block timestamp enough room to advance before submitQuestionWithMedia.
+      // Give the next block timestamp enough room to advance before submitQuestionWithReward.
       await new Promise(resolve => setTimeout(resolve, 1_100));
 
       if (canUseSponsoredSubmitCalls) {
         const callsResult = await executeSponsoredCalls(
           [
             {
+              abi: ERC20_APPROVAL_ABI,
+              address: rewardTokenAddress,
+              args: [rewardEscrowAddress, selectedRewardAmount],
+              functionName: "approve",
+            },
+            {
               abi: QUESTION_SUBMISSION_ABI,
               address: registryAddress,
               args: [
+                submittedContextUrl,
                 submittedImageUrls,
                 submittedVideoUrl,
                 submittedTitle,
@@ -605,8 +690,10 @@ export function ContentSubmissionSection() {
                 submissionTags,
                 selectedCategory.id,
                 activeReservation.salt,
+                selectedRewardAssetId,
+                selectedRewardAmount,
               ],
-              functionName: "submitQuestionWithMedia",
+              functionName: "submitQuestionWithReward",
             },
           ],
           {
@@ -617,11 +704,23 @@ export function ContentSubmissionSection() {
 
         contentId = extractSubmittedContentId((callsResult.receipts ?? []).flatMap(receipt => receipt.logs));
       } else {
+        const approveTxHash = await writeContract(wagmiConfig, {
+          address: rewardTokenAddress,
+          abi: ERC20_APPROVAL_ABI,
+          functionName: "approve",
+          args: [rewardEscrowAddress, selectedRewardAmount],
+        });
+
+        if (approveTxHash) {
+          await waitForTransactionReceipt(wagmiConfig, { hash: approveTxHash });
+        }
+
         const submitTxHash = await writeContract(wagmiConfig, {
           address: registryAddress,
           abi: QUESTION_SUBMISSION_ABI,
-          functionName: "submitQuestionWithMedia",
+          functionName: "submitQuestionWithReward",
           args: [
+            submittedContextUrl,
             submittedImageUrls,
             submittedVideoUrl,
             submittedTitle,
@@ -629,6 +728,8 @@ export function ContentSubmissionSection() {
             submissionTags,
             selectedCategory.id,
             activeReservation.salt,
+            selectedRewardAssetId,
+            selectedRewardAmount,
           ],
         });
 
@@ -642,7 +743,9 @@ export function ContentSubmissionSection() {
       clearStoredSubmissionReservation(reservationStorageKey);
 
       statusToast.dismiss();
-      notification.success("Question asked! Staked 10 cREP.");
+      notification.success(
+        `Question asked with a ${formatSubmissionRewardAmount(selectedRewardAmount, rewardAsset)} voter bounty.`,
+      );
       const submittedQuestion =
         contentId !== null
           ? {
@@ -654,6 +757,8 @@ export function ContentSubmissionSection() {
           : null;
       setSubmittedContent(submittedQuestion);
       setMediaMode("images");
+      setContextUrl("");
+      setContextUrlError(null);
       setImageUrls([""]);
       setImageUrlErrors([null]);
       setVideoUrl("");
@@ -697,8 +802,9 @@ export function ContentSubmissionSection() {
     setSubmittedContent(null);
   };
 
-  const imageMediaMissing = submitAttempted && mediaMode === "images" && !normalizedImageUrls.some(isDirectImageUrl);
-  const videoMediaMissing = submitAttempted && mediaMode === "video" && !normalizedVideoUrl;
+  const contextMissing = submitAttempted && !normalizedContextUrl;
+  const imageMediaMissing = false;
+  const videoMediaMissing = false;
 
   return (
     <>
@@ -765,6 +871,31 @@ export function ContentSubmissionSection() {
                   {description.length}/{MAX_CONTENT_DESCRIPTION_LENGTH}
                 </span>
               </div>
+            </div>
+
+            <div>
+              <label
+                className={`mb-2 flex items-center gap-1.5 text-base font-medium ${
+                  contextMissing || contextUrlError ? "text-error" : ""
+                }`}
+              >
+                Context Link
+                <InfoTooltip text="Required. Use the canonical source, product page, article, proposal, or other HTTPS link that voters should judge." />
+              </label>
+              <input
+                type="url"
+                placeholder={urlConfig.contextPlaceholder}
+                className={`input input-bordered w-full bg-base-100 ${
+                  contextMissing || contextUrlError ? "input-error" : ""
+                }`}
+                value={contextUrl}
+                onChange={e => handleContextUrlChange(e.target.value)}
+                onBlur={() => setContextUrlError(getContextUrlValidationError(contextUrl))}
+              />
+              {contextMissing && !contextUrlError ? (
+                <p className="mt-1 text-base text-error">Add a context link before asking.</p>
+              ) : null}
+              {contextUrlError ? <p className="mt-1 text-base text-error">{contextUrlError}</p> : null}
             </div>
 
             <div>
@@ -1037,19 +1168,12 @@ export function ContentSubmissionSection() {
           </div>
 
           <div className="space-y-4 xl:sticky xl:top-24">
-            {hasValidPreviewMedia || title || description ? (
+            {previewUrl || title || description ? (
               <div className="surface-card rounded-2xl p-4 space-y-3">
                 <p className="text-base font-medium uppercase tracking-wider text-base-content/40">Preview</p>
                 {title ? <h3 className="line-clamp-2 text-lg font-semibold text-base-content">{title}</h3> : null}
-                <ContentEmbed
-                  url={hasValidPreviewMedia ? previewMediaUrl : ""}
-                  title={title}
-                  description={description}
-                  compact
-                />
-                {description && hasValidPreviewMedia ? (
-                  <p className="text-base text-base-content/70">{description}</p>
-                ) : null}
+                <ContentEmbed url={previewUrl} title={title} description={description} compact />
+                {description && previewUrl ? <p className="text-base text-base-content/70">{description}</p> : null}
                 {selectedSubcategories.length > 0 ? (
                   <div className="flex flex-wrap gap-1.5">
                     {selectedSubcategories.map(tag => (
@@ -1067,7 +1191,7 @@ export function ContentSubmissionSection() {
               <div className="surface-card rounded-2xl p-4 space-y-3">
                 <p className="text-base font-medium uppercase tracking-wider text-base-content/40">Preview</p>
                 <p className="text-base text-base-content/50">
-                  Add the question and media to preview how it will appear.
+                  Add the question and context link to preview how it will appear.
                 </p>
               </div>
             )}
@@ -1077,36 +1201,65 @@ export function ContentSubmissionSection() {
               <p className="text-base text-base-content/70">
                 Do not ask questions with illegal or harmful content. This includes but is not limited to: child
                 exploitation material, non-consensual intimate imagery, content promoting violence or terrorism,
-                doxxing, or copyright-infringing material. Violations will result in stake slashing and potential legal
-                action.
+                doxxing, or copyright-infringing material. Violations may result in removal, blocked access, and
+                potential legal action.
               </p>
             </div>
 
-            <div className="surface-card-nested rounded-2xl p-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="flex items-center gap-1.5 text-base font-medium text-base-content">
-                    Submission Stake
-                    <InfoTooltip
-                      text={`Returned after ~4 days once a settled round confirms rating stays above 25. If no round ever settles, the stake unlocks when the content reaches dormancy instead. Settled two-sided rounds allocate ${protocolDocFacts.submitterShareLabel} to the submitter.`}
-                    />
-                  </p>
-                </div>
-                <div className="text-right">
-                  <span className="text-xl font-bold text-base-content">10 cREP</span>
-                </div>
+            <div className="surface-card-nested rounded-2xl p-4 space-y-3">
+              <div className="flex items-start justify-between gap-3">
+                <p className="flex items-center gap-1.5 text-base font-medium text-base-content">
+                  Bounty
+                  <InfoTooltip text="Required and non-refundable. The bounty prevents spam and pays eligible voters when the question settles." />
+                </p>
+                <span className="shrink-0 text-sm font-semibold text-base-content/60">
+                  Min {formatSubmissionRewardAmount(minimumRewardAmount, rewardAsset)}
+                </span>
               </div>
-              {submissionBonus !== undefined ? (
-                <div className="mt-2 flex items-center justify-between border-t border-white/10 pt-2">
-                  <p className="flex items-center gap-1.5 text-sm text-base-content/60">
-                    Participation Bonus
-                    <InfoTooltip text="Projected cREP reward from the Bootstrap Pool, paid only when the submitter stake resolves on the healthy path after a settled round. Rate decreases as more cREP is distributed." />
-                  </p>
-                  <span className="text-sm font-semibold text-success">
-                    +{submissionBonus} cREP ({ratePercent}%)
-                  </span>
-                </div>
-              ) : null}
+
+              <div className="grid grid-cols-2 gap-2">
+                <button
+                  type="button"
+                  aria-pressed={rewardAsset === "usdc"}
+                  onClick={() => setRewardAsset("usdc")}
+                  className={`btn btn-sm ${rewardAsset === "usdc" ? "btn-primary" : "btn-outline"}`}
+                >
+                  USDC
+                </button>
+                <button
+                  type="button"
+                  aria-pressed={rewardAsset === "crep"}
+                  onClick={() => setRewardAsset("crep")}
+                  className={`btn btn-sm ${rewardAsset === "crep" ? "btn-primary" : "btn-outline"}`}
+                >
+                  cREP
+                </button>
+              </div>
+
+              <label
+                className={`input input-bordered flex items-center gap-2 bg-base-100 ${
+                  submitAttempted && rewardAmountError ? "input-error" : ""
+                }`}
+              >
+                <input
+                  type="text"
+                  inputMode="decimal"
+                  value={rewardAmount}
+                  onChange={e => setRewardAmount(e.target.value)}
+                  className="grow bg-transparent"
+                  aria-label="Reward pool amount"
+                />
+                <span className="text-sm font-semibold text-base-content/50">
+                  {rewardAsset === "crep" ? "cREP" : "USDC"}
+                </span>
+              </label>
+              {submitAttempted && rewardAmountError ? (
+                <p className="text-base text-error">{rewardAmountError}</p>
+              ) : (
+                <p className="text-sm text-base-content/55">
+                  Paid from your wallet into the escrow when the question is submitted.
+                </p>
+              )}
             </div>
 
             {isMissingGasBalance ? <GasBalanceWarning nativeTokenSymbol={nativeTokenSymbol} /> : null}

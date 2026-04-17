@@ -55,13 +55,11 @@ test("getContentFeedMetadataCacheKey stays stable when the feed order changes", 
   );
 });
 
-test("getGenericValidationMap keeps generic URLs broken without an API round-trip", () => {
+test("getGenericValidationMap leaves generic context links validatable by metadata", () => {
   const genericUrl = "https://example.com/articles/security";
   const platformUrl = "https://www.youtube.com/watch?v=dQw4w9WgXcQ";
 
-  assert.deepEqual(getGenericValidationMap([genericUrl, platformUrl]), {
-    [genericUrl]: false,
-  });
+  assert.deepEqual(getGenericValidationMap([genericUrl, platformUrl]), {});
 });
 
 test("mergeContentFeedMetadata adds rich metadata without dropping the existing thumbnail fallback", () => {

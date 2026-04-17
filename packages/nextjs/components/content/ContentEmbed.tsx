@@ -21,6 +21,7 @@ interface ContentEmbedProps {
   url?: string | null;
   title?: string;
   description?: string;
+  thumbnailUrl?: string | null;
   compact?: boolean;
   showTextHeading?: boolean;
   isActive?: boolean;
@@ -30,7 +31,7 @@ interface ContentEmbedProps {
 
 /** Error boundary that catches render errors in embed components and falls back to a link card. */
 class EmbedErrorBoundary extends React.Component<
-  { url: string; compact: boolean; children: React.ReactNode },
+  { url: string; compact: boolean; thumbnailUrl?: string | null; children: React.ReactNode },
   { hasError: boolean }
 > {
   state = { hasError: false };
@@ -41,7 +42,9 @@ class EmbedErrorBoundary extends React.Component<
 
   render() {
     if (this.state.hasError) {
-      return <GenericLinkCard url={this.props.url} compact={this.props.compact} />;
+      return (
+        <GenericLinkCard url={this.props.url} compact={this.props.compact} thumbnailUrl={this.props.thumbnailUrl} />
+      );
     }
     return this.props.children;
   }
@@ -55,6 +58,7 @@ export function ContentEmbed({
   url,
   title,
   description,
+  thumbnailUrl,
   compact = false,
   showTextHeading = true,
   isActive = true,
@@ -105,14 +109,14 @@ export function ContentEmbed({
     default:
       return (
         <ExternalLinkBehaviorProvider disableNavigation={disableExternalNavigation}>
-          <GenericLinkCard url={url} compact={compact} />
+          <GenericLinkCard url={url} compact={compact} thumbnailUrl={thumbnailUrl} />
         </ExternalLinkBehaviorProvider>
       );
   }
 
   return (
     <ExternalLinkBehaviorProvider disableNavigation={disableExternalNavigation}>
-      <EmbedErrorBoundary key={url} url={url} compact={compact}>
+      <EmbedErrorBoundary key={url} url={url} compact={compact} thumbnailUrl={thumbnailUrl}>
         {embed}
       </EmbedErrorBoundary>
     </ExternalLinkBehaviorProvider>

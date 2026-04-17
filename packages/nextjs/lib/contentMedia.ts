@@ -37,14 +37,23 @@ export function normalizeSubmissionMediaUrl(value: string): string | null {
   return canonicalizeUrl(sanitizedUrl);
 }
 
+export function normalizeSubmissionContextUrl(value: string): string | null {
+  const sanitizedUrl = sanitizeExternalUrl(value);
+  if (!sanitizedUrl) return null;
+  return canonicalizeUrl(sanitizedUrl);
+}
+
 export function buildFallbackMediaItems(url: string | null | undefined): ContentMediaItem[] {
   const trimmedUrl = url?.trim();
   if (!trimmedUrl) return [];
 
+  const mediaType = getContentMediaType(trimmedUrl);
+  if (!mediaType) return [];
+
   return [
     {
       mediaIndex: 0,
-      mediaType: getContentMediaType(trimmedUrl) ?? "image",
+      mediaType,
       url: trimmedUrl,
     },
   ];

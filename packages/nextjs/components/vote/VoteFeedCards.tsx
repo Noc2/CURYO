@@ -44,7 +44,19 @@ function getQuestionText(item: ContentItem) {
 }
 
 function getCardMediaItems(item: ContentItem): ContentMediaItem[] {
-  return item.media.length > 0 ? item.media : buildFallbackMediaItems(item.url);
+  if (item.media.length > 0) return item.media;
+  if (item.thumbnailUrl) {
+    return [
+      {
+        mediaIndex: 0,
+        mediaType: "image",
+        url: item.thumbnailUrl,
+        canonicalUrl: item.thumbnailUrl,
+        urlHost: null,
+      },
+    ];
+  }
+  return buildFallbackMediaItems(item.url);
 }
 
 function getPrimaryMediaItem(item: ContentItem): ContentMediaItem | null {
@@ -313,6 +325,7 @@ function ContentMediaCarousel({
     <>
       <ContentEmbed
         url={activeMedia?.url ?? ""}
+        thumbnailUrl={item.thumbnailUrl}
         title={item.title}
         description={item.description}
         compact={compact}
@@ -409,7 +422,7 @@ function FeedContentMetaCard({
           <div className="ml-auto flex shrink-0 items-center gap-0.5 sm:gap-1">
             {hasRewardPool ? (
               <span className="rounded-full bg-success/15 px-2.5 py-1 text-sm font-semibold leading-none text-success">
-                {formatUsdAmount(rewardPoolTotal)} reward pool
+                {formatUsdAmount(rewardPoolTotal)} bounty
               </span>
             ) : null}
             {hasFollowButton ? (

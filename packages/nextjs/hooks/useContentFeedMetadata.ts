@@ -3,9 +3,7 @@
 import { useMemo } from "react";
 import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import type { ContentItem } from "~~/hooks/contentFeed/shared";
-import { isDirectImageUrl } from "~~/lib/contentMedia";
 import type { ContentMetadataResult } from "~~/lib/contentMetadata/types";
-import { detectPlatform } from "~~/utils/platforms";
 
 const THUMBNAIL_BATCH_SIZE = 40;
 
@@ -49,7 +47,11 @@ function getContentFeedUrls(feed: ContentItem[]): string[] {
 }
 
 function shouldFetchMetadataUrl(url: string): boolean {
-  return isDirectImageUrl(url) || detectPlatform(url).type === "youtube";
+  try {
+    return new URL(url).protocol === "https:";
+  } catch {
+    return false;
+  }
 }
 
 export function getContentFeedMetadataUrls(feed: ContentItem[]): string[] {
@@ -61,9 +63,8 @@ export function getContentFeedMetadataCacheKey(urls: string[]): string {
 }
 
 export function getGenericValidationMap(urls: string[]): Record<string, boolean | null> {
-  return Object.fromEntries(
-    urls.filter(url => detectPlatform(url).type === "generic" && !isDirectImageUrl(url)).map(url => [url, false]),
-  );
+  void urls;
+  return {};
 }
 
 export function isContentFeedMetadataPrefetchPending(

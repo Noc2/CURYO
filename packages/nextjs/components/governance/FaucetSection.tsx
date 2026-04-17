@@ -570,7 +570,6 @@ export function FaucetSection({ referrer }: FaucetSectionProps) {
           <h3 className="font-semibold mb-2">Your Voter ID Unlocks:</h3>
           <ul className="space-y-1 text-base text-base-content/70">
             <li>Vote on content (up to 100 cREP per content per round)</li>
-            <li>Ask questions for the platform to rate</li>
             <li>Create your profile</li>
             <li>Refer friends and gain reputation</li>
           </ul>
@@ -590,8 +589,8 @@ export function FaucetSection({ referrer }: FaucetSectionProps) {
         <h2 className={surfaceSectionHeadingClassName}>cREP Claimed, Voter ID Pending</h2>
 
         <p className="text-base-content/70">
-          Your faucet claim succeeded, but your Voter ID was not minted. Voting, asking, and referrals unlock after the
-          Voter ID mint is retried.
+          Your faucet claim succeeded, but your Voter ID was not minted. Voting, profiles, and referrals unlock after
+          the Voter ID mint is retried.
         </p>
 
         {address && (

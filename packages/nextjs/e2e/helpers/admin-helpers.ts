@@ -31,6 +31,8 @@ const ANVIL_PRIVATE_KEYS_BY_ADDRESS = new Map(
 type SubmissionMedia = { imageUrls: string[]; videoUrl: string };
 type SubmissionMediaInput = { imageUrls?: readonly string[]; videoUrl?: string };
 const MAX_SUBMISSION_IMAGE_URLS = 4;
+const DEFAULT_SUBMISSION_REWARD_ASSET_CREP = 0;
+const DEFAULT_SUBMISSION_REWARD_AMOUNT = 1_000_000n;
 const DIRECT_IMAGE_URL_PATTERN = /^https:\/\/\S+\.(?:avif|gif|jpe?g|png|webp)(?:[?#]\S*)?$/i;
 
 function isSupportedImageUrl(url: string): boolean {
@@ -72,9 +74,6 @@ function assertSupportedSubmissionMedia(media: SubmissionMedia): SubmissionMedia
     return media;
   }
 
-  if (media.imageUrls.length === 0) {
-    throw new Error("E2E submissions require at least one image or one YouTube video.");
-  }
   if (media.imageUrls.length > MAX_SUBMISSION_IMAGE_URLS) {
     throw new Error(`E2E submissions support at most ${MAX_SUBMISSION_IMAGE_URLS} images.`);
   }
@@ -138,6 +137,36 @@ async function resolveProtocolConfigAddress(contractAddress: string): Promise<st
   }
 }
 
+async function resolveRegistryAddressGetter(
+  contractAddress: string,
+  functionName: "crepToken" | "questionRewardPoolEscrow",
+) {
+  const { decodeFunctionResult, encodeFunctionData } = await import("viem");
+  const abi = [
+    {
+      name: functionName,
+      type: "function",
+      inputs: [],
+      outputs: [{ name: "", type: "address" }],
+      stateMutability: "view",
+    },
+  ] as const;
+
+  const data = encodeFunctionData({ abi, functionName });
+  const result = await rpcRequest<`0x${string}`>("eth_call", [{ to: contractAddress, data }, "latest"]);
+  if (!result) return null;
+
+  try {
+    return decodeFunctionResult({
+      abi,
+      functionName,
+      data: result,
+    }) as string;
+  } catch {
+    return null;
+  }
+}
+
 async function buildSubmissionReservation(
   url: string,
   title: string,
@@ -154,9 +183,10 @@ async function buildSubmissionReservation(
 
   const previewAbi = [
     {
-      name: "previewQuestionMediaSubmissionKey",
+      name: "previewQuestionSubmissionKey",
       type: "function",
       inputs: [
+        { name: "contextUrl", type: "string" },
         { name: "imageUrls", type: "string[]" },
         { name: "videoUrl", type: "string" },
         { name: "title", type: "string" },
@@ -173,8 +203,8 @@ async function buildSubmissionReservation(
   ] as const;
   const previewData = encodeFunctionData({
     abi: previewAbi,
-    functionName: "previewQuestionMediaSubmissionKey",
-    args: [media.imageUrls, media.videoUrl, title, description, tags, categoryId],
+    functionName: "previewQuestionSubmissionKey",
+    args: [url, media.imageUrls, media.videoUrl, title, description, tags, categoryId],
   });
 
   const previewResult = await rpcRequest<`0x${string}`>("eth_call", [
@@ -185,7 +215,7 @@ async function buildSubmissionReservation(
 
   const [, submissionKey] = decodeFunctionResult({
     abi: previewAbi,
-    functionName: "previewQuestionMediaSubmissionKey",
+    functionName: "previewQuestionSubmissionKey",
     data: previewResult,
   }) as readonly [bigint, `0x${string}`];
 
@@ -200,15 +230,27 @@ async function buildSubmissionReservation(
         { type: "uint256" },
         { type: "bytes32" },
         { type: "address" },
+        { type: "uint8" },
+        { type: "uint256" },
       ],
-      [submissionKey, title, description, tags, categoryId, salt, fromAddress as `0x${string}`],
+      [
+        submissionKey,
+        title,
+        description,
+        tags,
+        categoryId,
+        salt,
+        fromAddress as `0x${string}`,
+        DEFAULT_SUBMISSION_REWARD_ASSET_CREP,
+        DEFAULT_SUBMISSION_REWARD_AMOUNT,
+      ],
     ),
   );
 
   return { revealCommitment, salt };
 }
 
-function toSubmissionMedia(url: string, media?: SubmissionMediaInput): SubmissionMedia {
+function toSubmissionMedia(_url: string, media?: SubmissionMediaInput): SubmissionMedia {
   if (media) {
     return assertSupportedSubmissionMedia({
       imageUrls: media.imageUrls ? [...media.imageUrls] : [],
@@ -216,9 +258,7 @@ function toSubmissionMedia(url: string, media?: SubmissionMediaInput): Submissio
     });
   }
 
-  if (isSupportedYouTubeUrl(url)) return { imageUrls: [], videoUrl: url };
-  if (isSupportedImageUrl(url)) return { imageUrls: [url], videoUrl: "" };
-  throw new Error(`Unsupported E2E submission media URL: ${url}`);
+  return { imageUrls: [], videoUrl: "" };
 }
 
 /** Send a raw transaction to the Anvil RPC and report whether its outcome is known. */
@@ -531,7 +571,7 @@ export async function registerFrontend(fromAddress: string, contractAddress: str
 
 /**
  * Ask a question directly via contract call.
- * Caller must have approved MIN_SUBMITTER_STAKE (10 cREP = 10e6) to ContentRegistry.
+ * Caller funds the mandatory non-refundable cREP bounty during submission.
  * Returns true when the submission transaction succeeds.
  */
 export async function submitContentDirect(
@@ -559,6 +599,20 @@ export async function submitContentDirect(
   );
   if (!reservation) return false;
 
+  const [crepTokenAddress, rewardEscrowAddress] = await Promise.all([
+    resolveRegistryAddressGetter(contractAddress, "crepToken"),
+    resolveRegistryAddressGetter(contractAddress, "questionRewardPoolEscrow"),
+  ]);
+  if (!crepTokenAddress || !rewardEscrowAddress) return false;
+
+  const rewardApproved = await approveCREP(
+    rewardEscrowAddress,
+    DEFAULT_SUBMISSION_REWARD_AMOUNT,
+    fromAddress,
+    crepTokenAddress,
+  );
+  if (!rewardApproved) return false;
+
   const reserveData = encodeFunctionData({
     abi: [
       {
@@ -580,9 +634,10 @@ export async function submitContentDirect(
   const data = encodeFunctionData({
     abi: [
       {
-        name: "submitQuestionWithMedia",
+        name: "submitQuestionWithReward",
         type: "function",
         inputs: [
+          { name: "contextUrl", type: "string" },
           { name: "imageUrls", type: "string[]" },
           { name: "videoUrl", type: "string" },
           { name: "title", type: "string" },
@@ -590,13 +645,26 @@ export async function submitContentDirect(
           { name: "tags", type: "string" },
           { name: "categoryId", type: "uint256" },
           { name: "salt", type: "bytes32" },
+          { name: "rewardAsset", type: "uint8" },
+          { name: "rewardAmount", type: "uint256" },
         ],
         outputs: [{ name: "", type: "uint256" }],
         stateMutability: "nonpayable",
       },
     ],
-    functionName: "submitQuestionWithMedia",
-    args: [media.imageUrls, media.videoUrl, title, description, tags, resolvedCategoryId, reservation.salt],
+    functionName: "submitQuestionWithReward",
+    args: [
+      url,
+      media.imageUrls,
+      media.videoUrl,
+      title,
+      description,
+      tags,
+      resolvedCategoryId,
+      reservation.salt,
+      DEFAULT_SUBMISSION_REWARD_ASSET_CREP,
+      DEFAULT_SUBMISSION_REWARD_AMOUNT,
+    ],
   });
   return sendTx(fromAddress, contractAddress, data);
 }
@@ -941,37 +1009,6 @@ export async function approveCREP(
     args: [spender as `0x${string}`, amount],
   });
   return sendTx(fromAddress, tokenAddress, data);
-}
-
-/**
- * Claim submitter reward after round settlement.
- * Calls RoundRewardDistributor.claimSubmitterReward(uint256 contentId, uint256 roundId).
- * Permissionless but only the submitter gets the reward.
- */
-export async function claimSubmitterReward(
-  contentId: number | bigint,
-  roundId: number | bigint,
-  fromAddress: string,
-  contractAddress: string,
-): Promise<boolean> {
-  const { encodeFunctionData } = await import("viem");
-  const data = encodeFunctionData({
-    abi: [
-      {
-        name: "claimSubmitterReward",
-        type: "function",
-        inputs: [
-          { name: "contentId", type: "uint256" },
-          { name: "roundId", type: "uint256" },
-        ],
-        outputs: [],
-        stateMutability: "nonpayable",
-      },
-    ],
-    functionName: "claimSubmitterReward",
-    args: [BigInt(contentId), BigInt(roundId)],
-  });
-  return sendTx(fromAddress, contractAddress, data);
 }
 
 /**
