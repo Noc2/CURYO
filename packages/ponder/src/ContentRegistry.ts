@@ -93,10 +93,6 @@ ponder.on("ContentRegistry:ContentSubmitted", async ({ event, context }) => {
     })
     .onConflictDoNothing();
 
-  if (url.trim()) {
-    await upsertContentMedia(context, contentId, 0, "image", url);
-  }
-
   // Increment category content count (skip if category not yet indexed)
   const existingCategory = await context.db.find(category, { id: categoryId });
   if (existingCategory) {
