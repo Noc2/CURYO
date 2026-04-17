@@ -32,16 +32,16 @@ import scaffoldConfig from "~~/scaffold.config";
 
 const contractsData = deployedContractsData;
 
-export type InheritedFunctions = { readonly [key: string]: string };
+type InheritedFunctions = { readonly [key: string]: string };
 
-export type GenericContract = {
+type GenericContract = {
   address: Address;
   abi: Abi;
   inheritedFunctions?: InheritedFunctions;
   deployedOnBlock?: number;
 };
 
-export type GenericContractsDeclaration = {
+type GenericContractsDeclaration = {
   [chainId: number]: {
     [contractName: string]: GenericContract;
   };
