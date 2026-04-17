@@ -30,8 +30,6 @@ type StoredSubmissionReservation = {
   videoUrl: string;
 };
 
-type LegacyStoredSubmissionReservation = Omit<StoredSubmissionReservation, "chainId">;
-
 function isHexValue(value: unknown): value is `0x${string}` {
   return typeof value === "string" && value.startsWith("0x");
 }
@@ -63,15 +61,6 @@ export function buildSubmissionReservationStorageKey(
       [{ type: "address" }, { type: "uint256" }, { type: "bytes32" }],
       [address, BigInt(chainId), submissionKey],
     ),
-  )}`;
-}
-
-export function buildLegacySubmissionReservationStorageKey(
-  address: `0x${string}`,
-  submissionKey: `0x${string}`,
-): string {
-  return `${RESERVED_SUBMISSION_STORAGE_PREFIX}${keccak256(
-    encodeAbiParameters([{ type: "address" }, { type: "bytes32" }], [address, submissionKey]),
   )}`;
 }
 
@@ -206,47 +195,9 @@ function parseStoredSubmissionReservation(value: unknown): StoredSubmissionReser
   } as StoredSubmissionReservation;
 }
 
-function parseLegacyStoredSubmissionReservation(value: unknown, chainId: number): StoredSubmissionReservation | null {
-  const parsedValue = value as Partial<LegacyStoredSubmissionReservation>;
-  if (
-    typeof parsedValue.categoryId !== "string" ||
-    typeof parsedValue.description !== "string" ||
-    !isHexValue(parsedValue.revealCommitment) ||
-    !isHexValue(parsedValue.salt) ||
-    !isHexValue(parsedValue.submissionKey) ||
-    typeof parsedValue.tags !== "string" ||
-    typeof parsedValue.title !== "string" ||
-    typeof parsedValue.url !== "string"
-  ) {
-    return null;
-  }
-
-  return {
-    ...parsedValue,
-    chainId,
-    imageUrls: Array.isArray(parsedValue.imageUrls)
-      ? parsedValue.imageUrls.filter((url): url is string => typeof url === "string")
-      : parsedValue.url
-        ? [parsedValue.url]
-        : [],
-    videoUrl: typeof parsedValue.videoUrl === "string" ? parsedValue.videoUrl : "",
-  } as StoredSubmissionReservation;
-}
-
 export function getStoredSubmissionReservation(storageKey: string): StoredSubmissionReservation | null {
   try {
     return parseStoredSubmissionReservation(readStoredSubmissionReservationValue(storageKey));
-  } catch {
-    return null;
-  }
-}
-
-export function getLegacyStoredSubmissionReservation(
-  storageKey: string,
-  chainId: number,
-): StoredSubmissionReservation | null {
-  try {
-    return parseLegacyStoredSubmissionReservation(readStoredSubmissionReservationValue(storageKey), chainId);
   } catch {
     return null;
   }

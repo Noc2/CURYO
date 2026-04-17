@@ -3,13 +3,11 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import dynamic from "next/dynamic";
 import {
-  buildLegacySubmissionReservationStorageKey,
   buildSubmissionReservationStorageKey,
   buildSubmissionRevealCommitment,
   clearStoredSubmissionReservation,
   createStoredSubmissionReservation,
   deriveSubmissionReservationSalt,
-  getLegacyStoredSubmissionReservation,
   getStoredSubmissionReservation,
   setStoredSubmissionReservation,
   submissionReservationMatchesDraft,
@@ -82,15 +80,6 @@ function isReservationNotFoundError(error: unknown): boolean {
     (error as { shortMessage?: string; message?: string } | undefined)?.message ??
     "";
   return message.includes("Reservation not found");
-}
-
-function getPendingSubmissionSubmitter(pendingSubmission: unknown): string | null {
-  if (Array.isArray(pendingSubmission)) {
-    return typeof pendingSubmission[0] === "string" ? pendingSubmission[0] : null;
-  }
-
-  const submitter = (pendingSubmission as { submitter?: unknown } | null | undefined)?.submitter;
-  return typeof submitter === "string" ? submitter : null;
 }
 
 function CategoryIcon({ name, className }: { name: string; className?: string }) {
@@ -469,7 +458,6 @@ export function ContentSubmissionSection() {
         submissionKey,
       );
       reservationStorageKey = currentReservationStorageKey;
-      const legacyReservationStorageKey = buildLegacySubmissionReservationStorageKey(submitterAddress, submissionKey);
 
       const cancelReservedSubmission = async (revealCommitment: `0x${string}`) => {
         if (canUseSponsoredSubmitCalls) {
@@ -563,40 +551,7 @@ export function ContentSubmissionSection() {
         }
       };
 
-      const migrateLegacyReservation = async () => {
-        if (legacyReservationStorageKey === currentReservationStorageKey) {
-          return null;
-        }
-
-        const legacyReservation = getLegacyStoredSubmissionReservation(legacyReservationStorageKey, targetNetwork.id);
-        if (!legacyReservation) {
-          return null;
-        }
-
-        try {
-          const pendingSubmission = await readContract(wagmiConfig, {
-            abi: registryInfo.abi,
-            address: registryAddress,
-            functionName: "pendingSubmissions",
-            args: [legacyReservation.revealCommitment],
-          });
-          const pendingSubmitter = getPendingSubmissionSubmitter(pendingSubmission);
-          if (!pendingSubmitter || pendingSubmitter.toLowerCase() !== submitterAddress.toLowerCase()) {
-            return null;
-          }
-        } catch {
-          return null;
-        }
-
-        setStoredSubmissionReservation(currentReservationStorageKey, legacyReservation);
-        clearStoredSubmissionReservation(legacyReservationStorageKey);
-        return legacyReservation;
-      };
-
       let activeReservation = getStoredSubmissionReservation(currentReservationStorageKey);
-      if (!activeReservation) {
-        activeReservation = await migrateLegacyReservation();
-      }
 
       if (activeReservation && !submissionReservationMatchesDraft(activeReservation, submissionDraft)) {
         try {
