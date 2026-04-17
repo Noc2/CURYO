@@ -16,6 +16,7 @@ contract ProtocolConfig is Initializable, AccessControlUpgradeable {
 
     error InvalidAddress();
     error InvalidConfig();
+    error RewardDistributorAlreadySet();
 
     address public rewardDistributor;
     address public categoryRegistry;
@@ -232,6 +233,7 @@ contract ProtocolConfig is Initializable, AccessControlUpgradeable {
 
     function _setRewardDistributor(address value) internal {
         if (value == address(0)) revert InvalidAddress();
+        if (rewardDistributor != address(0)) revert RewardDistributorAlreadySet();
         rewardDistributor = value;
         emit RewardDistributorUpdated(value);
     }

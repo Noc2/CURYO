@@ -56,7 +56,7 @@ contract ProtocolConfigBranchesTest is Test {
         assertEq(config.drandPeriod(), nextPeriod);
     }
 
-    function test_SetRewardDistributor_CanReplaceAddress() public {
+    function test_SetRewardDistributor_IsOneTimeOnly() public {
         ProtocolConfig config = deployInitializedProtocolConfig(address(this));
 
         address firstDistributor = address(0xBEEF);
@@ -67,10 +67,9 @@ contract ProtocolConfigBranchesTest is Test {
         config.setRewardDistributor(firstDistributor);
         assertEq(config.rewardDistributor(), firstDistributor);
 
-        vm.expectEmit(false, false, false, true);
-        emit RewardDistributorUpdated(replacementDistributor);
+        vm.expectRevert(ProtocolConfig.RewardDistributorAlreadySet.selector);
         config.setRewardDistributor(replacementDistributor);
-        assertEq(config.rewardDistributor(), replacementDistributor);
+        assertEq(config.rewardDistributor(), firstDistributor);
     }
 
     function test_SetDrandConfig_RejectsZeroHashOrPeriod() public {
