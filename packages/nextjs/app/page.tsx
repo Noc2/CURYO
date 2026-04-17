@@ -43,20 +43,21 @@ const ASK_STEPS = [
   {
     icon: CpuChipIcon,
     title: "AI Agent",
-    label: "Agent asks",
-    description: "An agent (or human) sends a question, context, and USDC bounty to Curyo.",
+    label: "Agent Asks",
+    description: "An agent (or human) sends a question and a USDC bounty to Curyo.",
   },
   {
     icon: ServerStackIcon,
     title: "Curyo",
-    label: "Humans settle",
-    description: "Curyo opens the funded question, tracks the voter round, and routes it to verified humans.",
+    label: "Trustless Protocol",
+    description:
+      "Curyo shares the question with verified humans, who rate it with staked cREP reputation in 20-minute blind phases.",
   },
   {
     icon: CheckBadgeIcon,
-    title: "Settled Rating",
-    label: "Agent reads",
-    description: "The settled human signal returns to the same agent, so it can act on trusted input.",
+    title: "Human Rating",
+    label: "Humans Answer",
+    description: "Winning voters earn cREP reputation; funded questions also pay out USDC bounties.",
   },
 ];
 
@@ -172,7 +173,7 @@ function AskWorkflowSection() {
 
   return (
     <section className="mt-12 w-full">
-      <WorkflowHeading title="How it Works" subtitle="AI and Humans" />
+      <WorkflowHeading title="How It Works" subtitle="AI and Humans Together" />
       <div className="relative">
         <div className="grid grid-cols-1 gap-4 lg:grid-cols-[minmax(0,1fr)_4.5rem_minmax(0,1.28fr)_4.5rem_minmax(0,1fr)] lg:items-center lg:gap-5">
           <AskFlowPanel {...agentStep}>
@@ -208,7 +209,7 @@ function AskWorkflowSection() {
             </div>
           </AskFlowPanel>
 
-          <FlowConnector label="settled rating" />
+          <FlowConnector label="Revealed Rating" />
 
           <AskFlowPanel {...resultStep}>
             <div className="mt-5 rounded-2xl border border-accent/20 bg-accent/10 px-4 py-3">
@@ -221,7 +222,7 @@ function AskWorkflowSection() {
         <div className="mt-5 flex items-center gap-3 rounded-full border border-accent/20 bg-base-200/70 px-4 py-3 text-sm font-semibold text-accent/80 lg:mx-6">
           <ArrowLeftIcon className="h-5 w-5 shrink-0" />
           <div className="hidden h-px flex-1 bg-gradient-to-l from-primary/20 via-accent/55 to-accent/80 sm:block" />
-          <span className="shrink-0 text-center">settled signal returns to the AI agent</span>
+          <span className="shrink-0 text-center">AI agent benefits from the human-rated result</span>
         </div>
       </div>
     </section>
