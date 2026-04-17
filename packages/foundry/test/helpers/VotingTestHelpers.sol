@@ -28,6 +28,8 @@ function deployInitializedProtocolConfig(address admin, address governance) retu
 abstract contract ContentSubmissionTestBase {
     Vm internal constant HEVM = Vm(address(uint160(uint256(keccak256("hevm cheat code")))));
     ContentRegistry internal activeTlockContentRegistry;
+    uint8 internal constant DEFAULT_SUBMISSION_REWARD_ASSET_CREP = 0;
+    uint256 internal constant DEFAULT_SUBMISSION_REWARD_POOL = 1e6;
 
     function _submitContentWithReservation(
         ContentRegistry registry,
@@ -48,31 +50,32 @@ abstract contract ContentSubmissionTestBase {
         address submitter =
             mode == VmSafe.CallerMode.None ? address(this) : (msgSender != address(0) ? msgSender : address(this));
         uint256 submissionCategoryId = categoryId == 0 ? 1 : categoryId;
-        string memory mediaUrl = _submissionImageUrl(url);
-        string[] memory imageUrls = new string[](1);
-        imageUrls[0] = mediaUrl;
+        string[] memory imageUrls = new string[](0);
         bytes32 salt = keccak256(
             abi.encode(
-                mediaUrl,
+                url, title, description, tags, submissionCategoryId, submitter, block.timestamp, block.number, gasleft()
+            )
+        );
+        (, bytes32 submissionKey) =
+            registry.previewQuestionSubmissionKey(url, imageUrls, "", title, description, tags, submissionCategoryId);
+        uint256 rewardAmount = _defaultSubmissionRewardAmount(registry);
+        bytes32 revealCommitment = keccak256(
+            abi.encode(
+                submissionKey,
                 title,
                 description,
                 tags,
                 submissionCategoryId,
+                salt,
                 submitter,
-                block.timestamp,
-                block.number,
-                gasleft()
+                DEFAULT_SUBMISSION_REWARD_ASSET_CREP,
+                rewardAmount
             )
         );
-        (, bytes32 submissionKey) =
-            registry.previewQuestionMediaSubmissionKey(imageUrls, "", title, description, tags, submissionCategoryId);
-        bytes32 revealCommitment =
-            keccak256(abi.encode(submissionKey, title, description, tags, submissionCategoryId, salt, submitter));
 
         registry.reserveSubmission(revealCommitment);
         HEVM.warp(block.timestamp + 1);
-        contentId =
-            registry.submitQuestionWithMedia(imageUrls, "", title, description, tags, submissionCategoryId, salt);
+        contentId = registry.submitQuestion(url, imageUrls, "", title, description, tags, submissionCategoryId, salt);
 
         if (normalizedPrank) {
             HEVM.stopPrank();
@@ -90,10 +93,24 @@ abstract contract ContentSubmissionTestBase {
         bytes32 salt,
         address submitter
     ) internal returns (bytes32 submissionKey) {
-        (, submissionKey) =
-            registry.previewQuestionMediaSubmissionKey(imageUrls, videoUrl, title, description, tags, categoryId);
-        bytes32 revealCommitment =
-            keccak256(abi.encode(submissionKey, title, description, tags, categoryId, salt, submitter));
+        string memory contextUrl = bytes(videoUrl).length != 0 ? videoUrl : imageUrls[0];
+        (, submissionKey) = registry.previewQuestionSubmissionKey(
+            contextUrl, imageUrls, videoUrl, title, description, tags, categoryId
+        );
+        uint256 rewardAmount = _defaultSubmissionRewardAmount(registry);
+        bytes32 revealCommitment = keccak256(
+            abi.encode(
+                submissionKey,
+                title,
+                description,
+                tags,
+                categoryId,
+                salt,
+                submitter,
+                DEFAULT_SUBMISSION_REWARD_ASSET_CREP,
+                rewardAmount
+            )
+        );
         registry.reserveSubmission(revealCommitment);
     }
 
@@ -108,10 +125,20 @@ abstract contract ContentSubmissionTestBase {
         address submitter
     ) internal returns (uint256 contentId, bytes32 submissionKey) {
         string[] memory imageUrls = _singleImageUrls(imageUrl);
-        submissionKey =
-            _reserveQuestionMediaSubmission(registry, imageUrls, "", title, description, tags, categoryId, salt, submitter);
+        submissionKey = _reserveQuestionMediaSubmission(
+            registry, imageUrls, "", title, description, tags, categoryId, salt, submitter
+        );
         HEVM.warp(block.timestamp + 1);
-        contentId = registry.submitQuestionWithMedia(imageUrls, "", title, description, tags, categoryId, salt);
+        contentId = registry.submitQuestion(imageUrl, imageUrls, "", title, description, tags, categoryId, salt);
+    }
+
+    function _defaultSubmissionRewardAmount(ContentRegistry registry) internal view returns (uint256) {
+        ProtocolConfig config = registry.protocolConfig();
+        if (address(config) != address(0)) {
+            uint256 configuredMinimum = config.minSubmissionCrepPool();
+            if (configuredMinimum != 0) return configuredMinimum;
+        }
+        return DEFAULT_SUBMISSION_REWARD_POOL;
     }
 
     function _singleImageUrls(string memory imageUrl) internal pure returns (string[] memory imageUrls) {

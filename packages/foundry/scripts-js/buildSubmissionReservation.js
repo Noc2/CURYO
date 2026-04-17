@@ -1,17 +1,15 @@
 import { createPublicClient, encodeAbiParameters, http, keccak256, parseAbi } from "viem";
 
 const args = process.argv.slice(2);
-if (args.length !== 9) {
+if (![9, 11, 13].includes(args.length)) {
   console.error(
-    "Usage: node buildSubmissionReservation.js <rpcUrl> <registry> <submitter> <mediaUrlOrImageArrayJson> <title> <description> <tags> <categoryId> <salt>",
+    "Usage: node buildSubmissionReservation.js <rpcUrl> <registry> <submitter> <contextUrl> <imageUrlsJson> <videoUrl> <title> <description> <tags> <categoryId> <salt> [rewardAsset] [rewardAmount]",
   );
   process.exit(1);
 }
 
-const [rpcUrl, registry, submitter, url, title, description, tags, categoryId, salt] = args;
-const publicClient = createPublicClient({
-  transport: http(rpcUrl),
-});
+const DEFAULT_REWARD_ASSET = 0n;
+const DEFAULT_REWARD_AMOUNT = 1_000_000n;
 
 const MAX_SUBMISSION_IMAGE_URLS = 4;
 const DIRECT_IMAGE_URL_PATTERN = /^https:\/\/\S+\.(?:avif|gif|jpe?g|png|webp)(?:[?#]\S*)?$/i;
@@ -39,9 +37,19 @@ function isSupportedYouTubeUrl(value) {
   }
 }
 
-function assertSupportedImageUrls(imageUrls) {
-  if (imageUrls.length === 0) {
-    console.error("At least one image URL is required when no YouTube URL is provided.");
+function assertHttpsUrl(value, label) {
+  try {
+    const parsed = new URL(value);
+    if (parsed.protocol !== "https:" || /\s/.test(value)) throw new Error("invalid");
+  } catch {
+    console.error(`${label} must be a valid HTTPS URL.`);
+    process.exit(1);
+  }
+}
+
+function assertSupportedImageUrls(imageUrls, { allowEmpty = false } = {}) {
+  if (!allowEmpty && imageUrls.length === 0) {
+    console.error("At least one image URL is required.");
     process.exit(1);
   }
   if (imageUrls.length > MAX_SUBMISSION_IMAGE_URLS) {
@@ -55,43 +63,134 @@ function assertSupportedImageUrls(imageUrls) {
   }
 }
 
-function toSubmissionMedia(value) {
+function parseImageUrls(value, { allowEmpty = false } = {}) {
   const trimmed = value.trim();
+  if (!trimmed) {
+    if (allowEmpty) return [];
+    console.error("Image URL array is required.");
+    process.exit(1);
+  }
   if (trimmed.startsWith("[")) {
     try {
       const parsed = JSON.parse(trimmed);
       if (
         Array.isArray(parsed) &&
-        parsed.length > 0 &&
         parsed.every(item => typeof item === "string" && item.trim().length > 0)
       ) {
-        assertSupportedImageUrls(parsed);
-        return { imageUrls: parsed, videoUrl: "" };
+        assertSupportedImageUrls(parsed, { allowEmpty });
+        return parsed;
       }
     } catch {
       // Fall through to the explicit error below.
     }
 
-    console.error("Invalid image URL array JSON. Expected a non-empty JSON string array.");
+    console.error("Invalid image URL array JSON. Expected a JSON string array.");
     process.exit(1);
+  }
+
+  assertSupportedImageUrls([trimmed], { allowEmpty });
+  return [trimmed];
+}
+
+function toSubmissionMedia(value) {
+  const trimmed = value.trim();
+  if (trimmed.startsWith("[")) {
+    return { imageUrls: parseImageUrls(trimmed), videoUrl: "" };
   }
 
   if (isSupportedYouTubeUrl(trimmed)) {
     return { imageUrls: [], videoUrl: trimmed };
   }
 
-  assertSupportedImageUrls([trimmed]);
-  return { imageUrls: [trimmed], videoUrl: "" };
+  return { imageUrls: parseImageUrls(trimmed), videoUrl: "" };
 }
 
-const media = toSubmissionMedia(url);
+function parseArgs(rawArgs) {
+  if (rawArgs.length === 9) {
+    const [rpcUrl, registry, submitter, mediaUrlOrImageArrayJson, title, description, tags, categoryId, salt] = rawArgs;
+    const media = toSubmissionMedia(mediaUrlOrImageArrayJson);
+    return {
+      rpcUrl,
+      registry,
+      submitter,
+      contextUrl: media.videoUrl || media.imageUrls[0],
+      media,
+      title,
+      description,
+      tags,
+      categoryId,
+      salt,
+      rewardAsset: DEFAULT_REWARD_ASSET,
+      rewardAmount: DEFAULT_REWARD_AMOUNT,
+    };
+  }
+
+  const [
+    rpcUrl,
+    registry,
+    submitter,
+    contextUrl,
+    imageUrlsJson,
+    videoUrl,
+    title,
+    description,
+    tags,
+    categoryId,
+    salt,
+    rewardAsset = DEFAULT_REWARD_ASSET.toString(),
+    rewardAmount = DEFAULT_REWARD_AMOUNT.toString(),
+  ] = rawArgs;
+  const imageUrls = parseImageUrls(imageUrlsJson, { allowEmpty: true });
+  const trimmedVideoUrl = videoUrl.trim();
+  if (trimmedVideoUrl && !isSupportedYouTubeUrl(trimmedVideoUrl)) {
+    console.error(`Unsupported video URL: ${trimmedVideoUrl}`);
+    process.exit(1);
+  }
+  if (trimmedVideoUrl && imageUrls.length > 0) {
+    console.error("Choose images or video, not both.");
+    process.exit(1);
+  }
+  return {
+    rpcUrl,
+    registry,
+    submitter,
+    contextUrl,
+    media: { imageUrls, videoUrl: trimmedVideoUrl },
+    title,
+    description,
+    tags,
+    categoryId,
+    salt,
+    rewardAsset: BigInt(rewardAsset),
+    rewardAmount: BigInt(rewardAmount),
+  };
+}
+
+const {
+  rpcUrl,
+  registry,
+  submitter,
+  contextUrl,
+  media,
+  title,
+  description,
+  tags,
+  categoryId,
+  salt,
+  rewardAsset,
+  rewardAmount,
+} = parseArgs(args);
+const publicClient = createPublicClient({
+  transport: http(rpcUrl),
+});
+assertHttpsUrl(contextUrl, "Context URL");
 const [, submissionKey] = await publicClient.readContract({
   address: registry,
   abi: parseAbi([
-    "function previewQuestionMediaSubmissionKey(string[] imageUrls, string videoUrl, string title, string description, string tags, uint256 categoryId) view returns (uint256 resolvedCategoryId, bytes32 submissionKey)",
+    "function previewQuestionSubmissionKey(string contextUrl, string[] imageUrls, string videoUrl, string title, string description, string tags, uint256 categoryId) view returns (uint256 resolvedCategoryId, bytes32 submissionKey)",
   ]),
-  functionName: "previewQuestionMediaSubmissionKey",
-  args: [media.imageUrls, media.videoUrl, title, description, tags, BigInt(categoryId)],
+  functionName: "previewQuestionSubmissionKey",
+  args: [contextUrl, media.imageUrls, media.videoUrl, title, description, tags, BigInt(categoryId)],
 });
 
 const revealCommitment = keccak256(
@@ -104,8 +203,10 @@ const revealCommitment = keccak256(
       { type: "uint256" },
       { type: "bytes32" },
       { type: "address" },
+      { type: "uint8" },
+      { type: "uint256" },
     ],
-    [submissionKey, title, description, tags, BigInt(categoryId), salt, submitter],
+    [submissionKey, title, description, tags, BigInt(categoryId), salt, submitter, Number(rewardAsset), rewardAmount],
   ),
 );
 

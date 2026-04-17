@@ -12,7 +12,23 @@ contract SubmissionMediaValidator {
         require(_isSupportedMediaUrl(url), "Invalid media URL");
     }
 
+    function validateContextUrl(string calldata url) external pure {
+        require(_isValidSubmissionUrl(url), "Invalid URL");
+    }
+
     function validateMediaSet(string[] calldata imageUrls, string calldata videoUrl) external pure {
+        _validateMediaSet(imageUrls, videoUrl, true);
+    }
+
+    function validateOptionalMediaSet(string[] calldata imageUrls, string calldata videoUrl) external pure {
+        _validateMediaSet(imageUrls, videoUrl, false);
+    }
+
+    function isSupportedVideoUrl(string calldata url) external pure returns (bool) {
+        return _isSupportedVideoUrl(url);
+    }
+
+    function _validateMediaSet(string[] calldata imageUrls, string calldata videoUrl, bool requireMedia) internal pure {
         bool hasVideo = bytes(videoUrl).length != 0;
 
         if (hasVideo) {
@@ -22,17 +38,15 @@ contract SubmissionMediaValidator {
             return;
         }
 
-        require(imageUrls.length > 0, "Media required");
+        if (requireMedia) {
+            require(imageUrls.length > 0, "Media required");
+        }
         require(imageUrls.length <= MAX_IMAGE_URLS, "Too many images");
 
         for (uint256 i = 0; i < imageUrls.length; i++) {
             require(_isValidSubmissionUrl(imageUrls[i]), "Invalid URL");
             require(_isSupportedImageUrl(imageUrls[i]), "Invalid media URL");
         }
-    }
-
-    function isSupportedVideoUrl(string calldata url) external pure returns (bool) {
-        return _isSupportedVideoUrl(url);
     }
 
     function _isSupportedMediaUrl(string memory url) internal pure returns (bool) {

@@ -280,7 +280,7 @@ contract ContentRegistry is Initializable, AccessControlUpgradeable, PausableUpg
     }
 
     /// @notice Deprecated compatibility hook. Submitter participation rewards have been removed.
-    function setParticipationPool(address) external onlyRole(CONFIG_ROLE) { }
+    function setParticipationPool(address) external onlyRole(CONFIG_ROLE) {}
 
     /// @notice Set the cancellation fee sink address (can only be called by TREASURY_ROLE).
     function setBonusPool(address _bonusPool) external onlyRole(TREASURY_ROLE) {
@@ -529,7 +529,9 @@ contract ContentRegistry is Initializable, AccessControlUpgradeable, PausableUpg
             metadata.tags,
             metadata.categoryId,
             salt,
-            msg.sender
+            msg.sender,
+            rewardAsset,
+            rewardAmount
         );
         pending = pendingSubmissions[revealCommitment];
         require(pending.submitter == msg.sender, "Reservation not found");
@@ -886,9 +888,13 @@ contract ContentRegistry is Initializable, AccessControlUpgradeable, PausableUpg
         string memory tags,
         uint256 categoryId,
         bytes32 salt,
-        address submitter
+        address submitter,
+        uint8 rewardAsset,
+        uint256 rewardAmount
     ) internal pure returns (bytes32) {
-        return keccak256(abi.encode(submissionKey, title, description, tags, categoryId, salt, submitter));
+        return keccak256(
+            abi.encode(submissionKey, title, description, tags, categoryId, salt, submitter, rewardAsset, rewardAmount)
+        );
     }
 
     function _validateSubmissionReward(uint8 rewardAsset, uint256 rewardAmount) internal view {
