@@ -31,7 +31,6 @@ contract VotingHandler is VotingTestBase {
     // --- Ghost variables (token flow accounting) ---
     uint256 public ghost_totalStaked;
     uint256 public ghost_totalClaimed; // voter rewards (stake return + pool share)
-    uint256 public ghost_totalSubmitterClaimed;
     uint256 public ghost_totalRefunded;
     uint256 public ghost_totalConsensusSubsidy;
 
@@ -41,7 +40,6 @@ contract VotingHandler is VotingTestBase {
         uint256 roundId;
         uint256 totalStaked;
         uint256 totalClaimed;
-        uint256 submitterClaimed;
         uint256 totalRefunded;
         bool settled;
         bool cancelled;
@@ -77,7 +75,6 @@ contract VotingHandler is VotingTestBase {
     uint256 public processCount;
     uint256 public cleanupRewardCount;
     uint256 public claimCount;
-    uint256 public submitterClaimCount;
     uint256 public refundCount;
     uint256 public timeAdvanceCount;
 
@@ -124,7 +121,16 @@ contract VotingHandler is VotingTestBase {
 
         vm.startPrank(voter);
         crepToken.approve(address(engine), stakeAmount);
-        try engine.commitVote(contentId, _defaultRatingReferenceBps(), _tlockCommitTargetRound(), _tlockDrandChainHash(), commitHash, ciphertext, stakeAmount, address(0)) {
+        try engine.commitVote(
+            contentId,
+            _defaultRatingReferenceBps(),
+            _tlockCommitTargetRound(),
+            _tlockDrandChainHash(),
+            commitHash,
+            ciphertext,
+            stakeAmount,
+            address(0)
+        ) {
             vm.stopPrank();
 
             // Get the round ID that was used/created
@@ -268,48 +274,7 @@ contract VotingHandler is VotingTestBase {
     }
 
     // =========================================================================
-    // ACTION 5: claimSubmitterReward
-    // =========================================================================
-
-    function claimSubmitterReward(uint256 contentSeed) external {
-        uint256 contentId = contentIds[contentSeed % contentIds.length];
-
-        // Find a settled round for this content
-        uint256 recordCount = roundRecords.length;
-        if (recordCount == 0) return;
-
-        for (uint256 i = 0; i < recordCount; i++) {
-            RoundRecord memory rec = roundRecords[i];
-            if (rec.contentId != contentId) continue;
-
-            uint256 roundId = rec.roundId;
-            RoundLib.Round memory round = RoundEngineReadHelpers.round(engine, contentId, roundId);
-            if (round.state != RoundLib.RoundState.Settled) continue;
-            if (distributor.submitterRewardClaimed(contentId, roundId)) continue;
-
-            (,, address submitter,,,,,,,,,) = registry.contents(contentId);
-            uint256 balBefore = crepToken.balanceOf(submitter);
-
-            vm.prank(submitter);
-            try distributor.claimSubmitterReward(contentId, roundId) {
-                uint256 balAfter = crepToken.balanceOf(submitter);
-                uint256 payout = balAfter - balBefore;
-
-                ghost_totalSubmitterClaimed += payout;
-                submitterClaimCount++;
-
-                _ensureRoundRecord(contentId, roundId);
-                uint256 idx = roundRecordIndex[contentId][roundId] - 1;
-                roundRecords[idx].submitterClaimed += payout;
-            } catch {
-                // Failed
-            }
-            break; // Only try one round per call
-        }
-    }
-
-    // =========================================================================
-    // ACTION 6: claimRefund
+    // ACTION 5: claimRefund
     // =========================================================================
 
     function claimRefund(uint256 contentSeed, uint256 voterSeed) external {
@@ -489,7 +454,6 @@ contract VotingHandler is VotingTestBase {
                     roundId: roundId,
                     totalStaked: 0,
                     totalClaimed: 0,
-                    submitterClaimed: 0,
                     totalRefunded: 0,
                     settled: false,
                     cancelled: false,

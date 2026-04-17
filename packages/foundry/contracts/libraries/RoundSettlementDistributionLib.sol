@@ -10,7 +10,7 @@ import { RewardMath } from "./RewardMath.sol";
 import { TokenTransferLib } from "./TokenTransferLib.sol";
 
 /// @title RoundSettlementDistributionLib
-/// @notice Extracts reward-pool accounting from RoundVotingEngine to keep runtime bytecode below EIP-170.
+/// @notice Extracts reward pool accounting from RoundVotingEngine to keep runtime bytecode below EIP-170.
 library RoundSettlementDistributionLib {
     event TreasuryFeeDistributed(uint256 indexed contentId, uint256 indexed roundId, uint256 amount);
     event ConsensusReserveFunded(uint256 indexed contentId, uint256 indexed roundId, uint256 amount);
@@ -41,8 +41,7 @@ library RoundSettlementDistributionLib {
                 uint256 platformShare,
                 uint256 treasuryShare,
                 uint256 consensusShare
-            ) =
-                RewardMath.splitPool(losingPool - loserRefundShare);
+            ) = RewardMath.splitPool(losingPool - loserRefundShare);
             submitterShare;
 
             roundVoterPool[contentId][roundId] = voterShare;

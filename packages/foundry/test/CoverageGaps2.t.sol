@@ -672,7 +672,7 @@ contract ContentRegistryCoverageTest is VotingTestBase {
         assertEq(storedSubmitter, submitter);
         assertEq(uint256(status), uint256(ContentRegistry.ContentStatus.Active));
         assertEq(rating, 50);
-        assertEq(submitterStake, 10e6);
+        assertEq(submitterStake, 0);
     }
 
     function test_SubmitContentSplitMetadataSuccess() public {
@@ -682,16 +682,14 @@ contract ContentRegistryCoverageTest is VotingTestBase {
         string memory title = "Ethereum reference client";
         string memory description = "Official Go implementation of Ethereum.";
         string memory tags = "tag1";
-        bytes32 expectedHash =
-            keccak256(abi.encode("curyo-question-media-v1", imageUrls, "", title, description, tags, uint256(1)));
+        bytes32 expectedHash = keccak256(
+            abi.encode("curyo-question-context-v1", imageUrl, imageUrls, "", title, description, tags, uint256(1))
+        );
         bytes32 salt = keccak256("split-metadata");
 
         vm.startPrank(submitter);
         crep.approve(address(registry), 10e6);
-        (, bytes32 submissionKey) = registry.previewQuestionMediaSubmissionKey(imageUrls, "", title, description, tags, 1);
-        bytes32 revealCommitment =
-            keccak256(abi.encode(submissionKey, title, description, tags, uint256(1), salt, submitter));
-        registry.reserveSubmission(revealCommitment);
+        _reserveQuestionMediaSubmission(registry, imageUrls, "", title, description, tags, 1, salt, submitter);
         vm.warp(block.timestamp + 1);
         vm.expectEmit(true, true, false, true);
         emit ContentSubmitted(1, submitter, expectedHash, imageUrl, title, description, tags, 1);
@@ -733,7 +731,9 @@ contract ContentRegistryCoverageTest is VotingTestBase {
         vm.startPrank(submitter);
         crep.approve(address(registry), 10e6);
         vm.expectRevert("Question required");
-        registry.submitQuestionWithMedia(_singleImageUrls("https://example.com/test.jpg"), "", "", "", "tag1", 1, bytes32(0));
+        registry.submitQuestionWithMedia(
+            _singleImageUrls("https://example.com/test.jpg"), "", "", "", "tag1", 1, bytes32(0)
+        );
         vm.stopPrank();
     }
 
@@ -884,7 +884,9 @@ contract ContentRegistryCoverageTest is VotingTestBase {
         vm.startPrank(submitter);
         crep.approve(address(registry), 10e6);
         vm.expectRevert("Tags required");
-        registry.submitQuestionWithMedia(_singleImageUrls("https://example.com/test.jpg"), "", "goal", "goal", "", 1, bytes32(0));
+        registry.submitQuestionWithMedia(
+            _singleImageUrls("https://example.com/test.jpg"), "", "goal", "goal", "", 1, bytes32(0)
+        );
         vm.stopPrank();
     }
 
@@ -911,31 +913,21 @@ contract ContentRegistryCoverageTest is VotingTestBase {
         crep.approve(address(registry), 20e6);
         _submitContentWithReservation(registry, "https://example.com/dup", "goal", "goal", "tag1", 0);
         vm.expectRevert("Question already submitted");
-        registry.submitQuestionWithMedia(
-            _singleImageUrls(_submissionImageUrl("https://example.com/dup")),
-            "",
-            "goal",
-            "goal",
-            "tag1",
-            1,
-            bytes32(0)
-        );
+        registry.submitQuestion("https://example.com/dup", _emptyImageUrls(), "", "goal", "goal", "tag1", 1, bytes32(0));
         vm.stopPrank();
     }
 
-    // --- submitContent: with VoterIdNFT required ---
+    // --- submitContent: VoterIdNFT no longer gates submissions ---
 
-    function test_SubmitContentRequiresVoterIdWhenSet() public {
+    function test_SubmitContentDoesNotRequireVoterIdWhenSet() public {
         vm.prank(admin);
         registry.setVoterIdNFT(address(voterNFT));
 
         vm.startPrank(submitter);
         crep.approve(address(registry), 10e6);
-        vm.expectRevert("Voter ID required");
-        registry.submitQuestionWithMedia(
-            _singleImageUrls("https://example.com/nft.jpg"), "", "goal", "goal", "tag1", 1, bytes32(0)
-        );
+        uint256 id = _submitContentWithReservation(registry, "https://example.com/nft", "goal", "goal", "tag1", 0);
         vm.stopPrank();
+        assertEq(id, 1);
     }
 
     function test_SubmitContentSucceedsWithVoterId() public {
@@ -974,9 +966,8 @@ contract ContentRegistryCoverageTest is VotingTestBase {
         (,,,,,, ContentRegistry.ContentStatus status,,,,,) = registry.contents(id);
         assertEq(uint256(status), uint256(ContentRegistry.ContentStatus.Cancelled));
 
-        // Gets refund minus 1 cREP cancellation fee
         uint256 balAfter = crep.balanceOf(submitter);
-        assertEq(balAfter - balBefore, 9e6); // 10 - 1 = 9
+        assertEq(balAfter - balBefore, 0);
     }
 
     // --- cancelContent: not submitter ---
@@ -1047,7 +1038,7 @@ contract ContentRegistryCoverageTest is VotingTestBase {
 
         (,,,,,, ContentRegistry.ContentStatus status,,,,,) = registry.contents(id);
         assertEq(uint256(status), uint256(ContentRegistry.ContentStatus.Dormant));
-        assertEq(balAfter - balBefore, 10e6); // Full stake return
+        assertEq(balAfter - balBefore, 0);
     }
 
     // --- markDormant: too early ---
@@ -1126,9 +1117,9 @@ contract ContentRegistryCoverageTest is VotingTestBase {
         registry.updateActivity(id);
     }
 
-    // --- slashSubmitterStake: success ---
+    // --- slashSubmitterStake: deprecated no-op ---
 
-    function test_SlashSubmitterStakeSuccess() public {
+    function test_SlashSubmitterStake_IsDeprecatedNoOp() public {
         uint256 id = _submitContent(submitter, "https://example.com/slash");
         vm.prank(admin);
         registry.setVotingEngine(address(this));
@@ -1149,30 +1140,29 @@ contract ContentRegistryCoverageTest is VotingTestBase {
                 lowSince: uint48(block.timestamp - 7 days - 1)
             })
         );
-        assertTrue(registry.isSubmitterStakeSlashable(id), "seeded rating state should unlock the slash path");
+        assertFalse(registry.isSubmitterStakeSlashable(id), "submitter stake slashing is removed");
 
         uint256 treasuryBefore = crep.balanceOf(treasury);
         uint256 slashed = registry.slashSubmitterStake(id);
 
-        assertEq(slashed, 10e6);
-        assertEq(crep.balanceOf(treasury) - treasuryBefore, 10e6);
+        assertEq(slashed, 0);
+        assertEq(crep.balanceOf(treasury) - treasuryBefore, 0);
     }
 
-    // --- slashSubmitterStake: already returned ---
+    // --- slashSubmitterStake: already returned compatibility ---
 
-    function test_SlashSubmitterStakeAlreadyReturnedReverts() public {
+    function test_SlashSubmitterStakeAlreadyReturned_IsDeprecatedNoOp() public {
         uint256 id = _submitContent(submitter, "https://example.com/slashret");
         vm.prank(admin);
         registry.setVotingEngine(address(this));
 
         registry.resolvePendingSubmitterStake(id);
-        vm.expectRevert("Already returned");
-        registry.slashSubmitterStake(id);
+        assertEq(registry.slashSubmitterStake(id), 0);
     }
 
-    // --- slashSubmitterStake: initialized treasury authority receives slash ---
+    // --- slashSubmitterStake: initialized treasury authority compatibility ---
 
-    function test_SlashSubmitterStakeUsesInitializedTreasury() public {
+    function test_SlashSubmitterStakeDoesNotUseInitializedTreasury() public {
         vm.startPrank(admin);
         ContentRegistry impl = new ContentRegistry();
         ContentRegistry reg2 = ContentRegistry(
@@ -1214,8 +1204,8 @@ contract ContentRegistryCoverageTest is VotingTestBase {
         uint256 treasuryBefore = crep.balanceOf(admin);
         uint256 slashed = reg2.slashSubmitterStake(id);
 
-        assertEq(slashed, 10e6);
-        assertEq(crep.balanceOf(admin) - treasuryBefore, 10e6);
+        assertEq(slashed, 0);
+        assertEq(crep.balanceOf(admin) - treasuryBefore, 0);
     }
 
     // --- View functions ---
@@ -1282,9 +1272,8 @@ contract ContentRegistryCoverageTest is VotingTestBase {
         registry.setVoterIdNFT(address(0));
     }
 
-    function test_SetParticipationPoolZeroReverts() public {
+    function test_SetParticipationPoolZero_IsDeprecatedNoOp() public {
         vm.prank(admin);
-        vm.expectRevert("Invalid address");
         registry.setParticipationPool(address(0));
     }
 
@@ -1782,7 +1771,16 @@ contract RoundSettlementBranchTest is VotingTestBase {
         bytes memory ciphertext = abi.encodePacked(uint8(1), salt, contentId);
         vm.startPrank(voter1);
         vm.expectRevert(RoundVotingEngine.InvalidStake.selector);
-        engine.commitVote(contentId, _defaultRatingReferenceBps(), _tlockCommitTargetRound(), _tlockDrandChainHash(), commitHash, ciphertext, 0, address(0));
+        engine.commitVote(
+            contentId,
+            _defaultRatingReferenceBps(),
+            _tlockCommitTargetRound(),
+            _tlockDrandChainHash(),
+            commitHash,
+            ciphertext,
+            0,
+            address(0)
+        );
         vm.stopPrank();
     }
 
@@ -1826,26 +1824,26 @@ contract RoundSettlementBranchTest is VotingTestBase {
         distributor.claimReward(contentId, roundId);
     }
 
-    // --- Submitter claim from distributor ---
+    // --- Deprecated submitter claim from distributor ---
 
-    function test_SubmitterClaimFromDistributor() public {
+    function test_SubmitterClaimFromDistributor_RevertsAsRemoved() public {
         (uint256 contentId, uint256 roundId) = _createAndSettleAsymmetricRound();
 
         uint256 balBefore = crep.balanceOf(submitter);
         vm.prank(submitter);
+        vm.expectRevert("Submitter rewards removed");
         distributor.claimSubmitterReward(contentId, roundId);
-        uint256 balAfter = crep.balanceOf(submitter);
 
-        assertGt(balAfter, balBefore);
+        assertEq(crep.balanceOf(submitter), balBefore);
     }
 
     // --- Non-submitter claiming submitter reward ---
 
-    function test_NonSubmitterClaimReverts() public {
+    function test_NonSubmitterClaim_RevertsAsRemoved() public {
         (uint256 contentId, uint256 roundId) = _createAndSettleAsymmetricRound();
 
         vm.prank(voter1);
-        vm.expectRevert("Not submitter");
+        vm.expectRevert("Submitter rewards removed");
         distributor.claimSubmitterReward(contentId, roundId);
     }
 
@@ -1971,13 +1969,7 @@ contract RoundSettlementBranchTest is VotingTestBase {
         bytes memory ciphertext = _testCiphertext(isUp, salt, contentId);
         uint16 referenceRatingBps = _currentRatingReferenceBps(contentId);
         bytes32 commitHash = _commitHash(
-            isUp,
-            salt,
-            contentId,
-            referenceRatingBps,
-            _tlockCommitTargetRound(),
-            _tlockDrandChainHash(),
-            ciphertext
+            isUp, salt, contentId, referenceRatingBps, _tlockCommitTargetRound(), _tlockDrandChainHash(), ciphertext
         );
         vm.prank(voter);
         crep.approve(address(engine), amount);

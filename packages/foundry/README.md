@@ -1,6 +1,6 @@
 # Curyo — Foundry (Smart Contracts)
 
-Solidity smart contracts implementing the Curyo protocol: voting engine, content registry, reputation token, cREP stake settlement, question reward pool escrow, and governance. Built with [Foundry](https://book.getfoundry.sh/). The docs now describe the question-first submission flow, Question Reward Pools displayed as USD, USDC-on-Celo settlement, Voter ID-gated claims, and the default 3% frontend-operator share on qualified USDC reward claims.
+Solidity smart contracts implementing the Curyo protocol: voting engine, content registry, reputation token, cREP stake settlement, bounty escrow, and governance. Built with [Foundry](https://book.getfoundry.sh/). The docs now describe the question-first submission flow, a required context URL with optional preview media, mandatory non-refundable bounties funded in cREP or USDC, Voter ID-gated claims where still needed, and the default frontend-operator fee on qualified bounty claims.
 
 ## Quick Start
 
@@ -60,7 +60,7 @@ contracts/
 ├── CuryoReputation.sol          # cREP token (staking & reputation)
 ├── HumanFaucet.sol              # Passport-verified faucet for cREP + Voter ID
 ├── ParticipationPool.sol        # Halving-tier cREP Bootstrap Pool rewards
-├── QuestionRewardPoolEscrow.sol     # Question Reward Pool custody and claims
+├── QuestionRewardPoolEscrow.sol     # Bounty custody and claims
 ├── governance/                  # Governor contracts
 ├── interfaces/                  # Contract interfaces
 ├── libraries/                   # RoundLib and utility functions

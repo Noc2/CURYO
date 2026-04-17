@@ -889,12 +889,11 @@ contract RoundSettlementEdgeCase3Test is VotingTestBase {
         assertEq(crep.balanceOf(voter2) - loserBefore, STAKE / 20);
     }
 
-    // --- Submitter reward from two-sided round ---
+    // --- Submitter rewards are removed ---
 
-    function test_SettledRound_SubmitterGetsReward() public {
+    function test_SettledRound_SubmitterRewardCompatibilityRemoved() public {
         uint256 contentId = _submitContent();
 
-        // Use larger stakes so submitter reward is meaningful
         (bytes32 ck1, bytes32 s1) = _commit(voter1, contentId, true, 100e6);
         (bytes32 ck2, bytes32 s2) = _commit(voter2, contentId, false, 50e6);
 
@@ -902,12 +901,11 @@ contract RoundSettlementEdgeCase3Test is VotingTestBase {
         _revealAndSettle(contentId, roundId, ck1, true, s1, ck2, false, s2);
 
         uint256 pendingReward = engine.pendingSubmitterReward(contentId, roundId);
-        assertGt(pendingReward, 0);
+        assertEq(pendingReward, 0);
 
-        uint256 balBefore = crep.balanceOf(submitter);
         vm.prank(submitter);
+        vm.expectRevert("Submitter rewards removed");
         distributor.claimSubmitterReward(contentId, roundId);
-        assertEq(crep.balanceOf(submitter) - balBefore, pendingReward);
     }
 
     // --- Consensus subsidy pays from reserve ---
@@ -955,7 +953,16 @@ contract RoundSettlementEdgeCase3Test is VotingTestBase {
         vm.startPrank(voter1);
         crep.approve(address(engine), 100e6);
         vm.expectRevert(RoundVotingEngine.InvalidStake.selector);
-        engine.commitVote(contentId, _defaultRatingReferenceBps(), _tlockCommitTargetRound(), _tlockDrandChainHash(), commitHash, ciphertext, 0, address(0));
+        engine.commitVote(
+            contentId,
+            _defaultRatingReferenceBps(),
+            _tlockCommitTargetRound(),
+            _tlockDrandChainHash(),
+            commitHash,
+            ciphertext,
+            0,
+            address(0)
+        );
         vm.stopPrank();
     }
 
@@ -970,7 +977,14 @@ contract RoundSettlementEdgeCase3Test is VotingTestBase {
         crep.approve(address(engine), STAKE);
         vm.expectRevert(RoundVotingEngine.ContentNotActive.selector);
         engine.commitVote(
-            999, referenceRatingBps, _tlockCommitTargetRound(), _tlockDrandChainHash(), commitHash, ciphertext, STAKE, address(0)
+            999,
+            referenceRatingBps,
+            _tlockCommitTargetRound(),
+            _tlockDrandChainHash(),
+            commitHash,
+            ciphertext,
+            STAKE,
+            address(0)
         );
         vm.stopPrank();
     }
@@ -1155,7 +1169,16 @@ contract RoundSettlementEdgeCase3Test is VotingTestBase {
         vm.startPrank(voter1);
         crep.approve(address(engine), STAKE);
         vm.expectRevert(RoundVotingEngine.VoterIdRequired.selector);
-        engine.commitVote(contentId, _defaultRatingReferenceBps(), _tlockCommitTargetRound(), _tlockDrandChainHash(), commitHash, ciphertext, STAKE, address(0));
+        engine.commitVote(
+            contentId,
+            _defaultRatingReferenceBps(),
+            _tlockCommitTargetRound(),
+            _tlockDrandChainHash(),
+            commitHash,
+            ciphertext,
+            STAKE,
+            address(0)
+        );
         vm.stopPrank();
     }
 
@@ -1212,13 +1235,7 @@ contract RoundSettlementEdgeCase3Test is VotingTestBase {
         bytes memory ciphertext = _testCiphertext(isUp, salt, contentId);
         uint16 referenceRatingBps = _currentRatingReferenceBps(contentId);
         bytes32 commitHash = _commitHash(
-            isUp,
-            salt,
-            contentId,
-            referenceRatingBps,
-            _tlockCommitTargetRound(),
-            _tlockDrandChainHash(),
-            ciphertext
+            isUp, salt, contentId, referenceRatingBps, _tlockCommitTargetRound(), _tlockDrandChainHash(), ciphertext
         );
         vm.prank(voter);
         crep.approve(address(engine), stake);

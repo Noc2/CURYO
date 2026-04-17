@@ -17,7 +17,7 @@ import { MockCategoryRegistry } from "../contracts/mocks/MockCategoryRegistry.so
 /// @title Audit Gap Tests — Priority-1 test coverage for gaps identified during security audit.
 /// @dev Covers:
 ///   1. Paused state enforcement — verify all critical functions respect whenNotPaused
-///   2. All 6 claim paths in a single settled round (voter + submitter + loser refund + participation + frontend fee + consensus)
+///   2. Claim paths in a single settled round (voter + loser refund + participation + frontend fee + consensus)
 ///   3. processUnrevealedVotes batch boundary edge cases
 ///   4. Tied + RevealFailed refund path precedence
 ///   5. Exact cooldown boundary timing
@@ -160,7 +160,16 @@ contract AuditGapTests is VotingTestBase {
         bytes32 hash = _commitHash(isUp, salt, contentId, ciphertext);
         vm.startPrank(voter);
         crepToken.approve(address(votingEngine), stakeAmt);
-        votingEngine.commitVote(contentId, _defaultRatingReferenceBps(), _tlockCommitTargetRound(), _tlockDrandChainHash(), hash, ciphertext, stakeAmt, fe);
+        votingEngine.commitVote(
+            contentId,
+            _defaultRatingReferenceBps(),
+            _tlockCommitTargetRound(),
+            _tlockDrandChainHash(),
+            hash,
+            ciphertext,
+            stakeAmt,
+            fe
+        );
         vm.stopPrank();
         commitKey = keccak256(abi.encodePacked(voter, hash));
     }
@@ -188,7 +197,16 @@ contract AuditGapTests is VotingTestBase {
         vm.startPrank(voter1);
         crepToken.approve(address(votingEngine), STAKE);
         vm.expectRevert(); // EnforcedPause
-        votingEngine.commitVote(contentId, _defaultRatingReferenceBps(), _tlockCommitTargetRound(), _tlockDrandChainHash(), hash, ct, STAKE, address(0));
+        votingEngine.commitVote(
+            contentId,
+            _defaultRatingReferenceBps(),
+            _tlockCommitTargetRound(),
+            _tlockDrandChainHash(),
+            hash,
+            ct,
+            STAKE,
+            address(0)
+        );
         vm.stopPrank();
     }
 
@@ -311,13 +329,13 @@ contract AuditGapTests is VotingTestBase {
     }
 
     // =========================================================================
-    // SECTION 2 — All 6 Claim Paths in a Single Round
+    // SECTION 2 — Claim Paths in a Single Round
     // =========================================================================
 
-    /// @notice Complete roundtrip: settle a round then claim voter reward, submitter reward,
+    /// @notice Complete roundtrip: settle a round then claim voter reward,
     ///         loser refund, participation reward, frontend fee, and verify consensus reserve
     ///         was funded — all in one round without double-counting.
-    function test_AllSixClaimPaths_SingleRound() public {
+    function test_ClaimPaths_SingleRound() public {
         uint256 contentId = _submitContent("https://full-claim-test.com");
 
         // voter1, voter2 = UP (winners), voter3 = DOWN (loser), all via frontend
@@ -364,12 +382,10 @@ contract AuditGapTests is VotingTestBase {
         assertTrue(v3After > v3Before, "Revealed loser should receive 5% rebate");
         assertEq(v3After - v3Before, STAKE * 500 / 10000, "Rebate should be 5% of stake");
 
-        // 4. Submitter reward
-        uint256 subBefore = crepToken.balanceOf(submitter);
+        // 4. Submitter rewards are removed.
         vm.prank(submitter);
+        vm.expectRevert("Submitter rewards removed");
         rewardDistributor.claimSubmitterReward(contentId, 1);
-        uint256 subAfter = crepToken.balanceOf(submitter);
-        assertTrue(subAfter > subBefore, "Submitter should receive reward");
 
         // 5. Frontend fee (credited to FrontendRegistry, then claimed by operator)
         vm.prank(frontend);
@@ -393,7 +409,7 @@ contract AuditGapTests is VotingTestBase {
         rewardDistributor.claimReward(contentId, 1);
 
         vm.prank(submitter);
-        vm.expectRevert();
+        vm.expectRevert("Submitter rewards removed");
         rewardDistributor.claimSubmitterReward(contentId, 1);
 
         vm.prank(voter1);
@@ -521,7 +537,16 @@ contract AuditGapTests is VotingTestBase {
         vm.startPrank(voter1);
         crepToken.approve(address(votingEngine), STAKE);
         vm.expectRevert(RoundVotingEngine.CooldownActive.selector);
-        votingEngine.commitVote(contentId, _defaultRatingReferenceBps(), _tlockCommitTargetRound(), _tlockDrandChainHash(), hash, ct, STAKE, address(0));
+        votingEngine.commitVote(
+            contentId,
+            _defaultRatingReferenceBps(),
+            _tlockCommitTargetRound(),
+            _tlockDrandChainHash(),
+            hash,
+            ct,
+            STAKE,
+            address(0)
+        );
         vm.stopPrank();
 
         // At exactly 24h: should succeed (on different content since already committed on contentId round)
@@ -596,8 +621,9 @@ contract AuditGapTests is VotingTestBase {
         vm.prank(voter3);
         rewardDistributor.claimReward(contentId, 1);
 
-        // Claim submitter reward
+        // Submitter rewards are removed.
         vm.prank(submitter);
+        vm.expectRevert("Submitter rewards removed");
         rewardDistributor.claimSubmitterReward(contentId, 1);
 
         uint256 engineBalAfter = crepToken.balanceOf(address(votingEngine));

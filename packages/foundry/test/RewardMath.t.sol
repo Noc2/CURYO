@@ -129,7 +129,7 @@ contract RewardMathTest is Test {
             uint256 consensusShare
         ) = harness.splitPool(losingPool);
 
-        assertEq(submitterShare, (losingPool * 1000) / 10000, "Submitter share must be 10%");
+        assertEq(submitterShare, 0, "Submitter share must be removed");
         assertEq(platformShare, (losingPool * 400) / 10000, "Platform share must be 4%");
         assertEq(treasuryShare, (losingPool * 100) / 10000, "Treasury share must be 1%");
         assertEq(consensusShare, (losingPool * 500) / 10000, "Consensus share must be 5%");
@@ -258,7 +258,7 @@ contract RewardMathTest is Test {
     }
 
     function test_SplitPool_SmallValues() public view {
-        // With 100 tokens: submitter = 10, platform = 4, treasury = 1, consensus = 5, voter = 80
+        // With 100 tokens: submitter = 0, platform = 4, treasury = 1, consensus = 5, voter = 90
         (
             uint256 voterShare,
             uint256 submitterShare,
@@ -267,11 +267,11 @@ contract RewardMathTest is Test {
             uint256 consensusShare
         ) = harness.splitPool(100);
 
-        assertEq(submitterShare, 10);
+        assertEq(submitterShare, 0);
         assertEq(platformShare, 4);
         assertEq(treasuryShare, 1);
         assertEq(consensusShare, 5);
-        assertEq(voterShare, 80);
+        assertEq(voterShare, 90);
     }
 
     function test_SplitPool_One() public view {
@@ -351,12 +351,11 @@ contract RewardMathTest is Test {
     }
 
     function test_SplitConsensusSubsidy_Ratio() public view {
-        // 9000 total (8000 voter + 1000 submitter)
-        // subsidy = 9000 → submitter = 9000 * 1000 / 9000 = 1000, voter = 8000
+        // Submitter rewards are removed, so all subsidy goes to voters.
         (uint256 voterShare, uint256 submitterShare) = harness.splitConsensusSubsidy(9000);
 
-        assertEq(submitterShare, 1000, "Submitter should get 1000/9000 of subsidy");
-        assertEq(voterShare, 8000, "Voter should get 8000/9000 of subsidy");
+        assertEq(submitterShare, 0, "Submitter subsidy share should be removed");
+        assertEq(voterShare, 9000, "Voter should get the full subsidy");
     }
 
     function test_SplitConsensusSubsidy_SmallValue() public view {

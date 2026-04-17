@@ -162,13 +162,12 @@ contract InvariantSolvency is VotingTestBase {
     // =========================================================================
 
     function invariant_C02_TokenConservation() public view {
-        // All stake-derived tokens that left the engine = voter claims + submitter claims
-        //   + refunds + treasury balance growth.
+        // All stake-derived tokens that left the engine = voter claims + refunds + treasury balance growth.
         // With rounding dust tolerance
 
         uint256 totalIn = handler.ghost_totalStaked();
-        uint256 totalClaimedOut = handler.ghost_totalClaimed() + handler.ghost_totalSubmitterClaimed()
-            + handler.ghost_totalRefunded() + crepToken.balanceOf(treasury);
+        uint256 totalClaimedOut =
+            handler.ghost_totalClaimed() + handler.ghost_totalRefunded() + crepToken.balanceOf(treasury);
 
         // totalIn >= totalClaimedOut (can't pay out more than staked, ignoring consensus subsidy)
         // Allow for consensus subsidy which adds extra tokens from the reserve
@@ -205,19 +204,18 @@ contract InvariantSolvency is VotingTestBase {
                 // Open rounds: full totalStake is held
                 obligations += round.totalStake;
             } else if (round.state == RoundLib.RoundState.Settled) {
-                // Settled rounds: unclaimed voter rewards + unclaimed submitter rewards
+                // Settled rounds: unclaimed voter rewards.
                 uint256 voterPool = engine.roundVoterPool(rec.contentId, rec.roundId);
                 uint256 winningPool = round.upWins ? round.upPool : round.downPool;
                 uint256 losingPool = round.upWins ? round.downPool : round.upPool;
                 uint256 loserRefundPool = RewardMath.calculateRevealedLoserRefund(losingPool);
-                uint256 submitterPending = engine.pendingSubmitterReward(rec.contentId, rec.roundId);
 
                 // Upper bound on remaining obligations: all winning stakes + full voter pool
-                // + loser rebates + submitter reward, minus amounts already claimed.
+                // + loser rebates, minus amounts already claimed.
                 // minus what's already been claimed
-                uint256 maxRemaining = winningPool + voterPool + loserRefundPool + submitterPending;
-                if (maxRemaining > rec.totalClaimed + rec.submitterClaimed) {
-                    obligations += maxRemaining - rec.totalClaimed - rec.submitterClaimed;
+                uint256 maxRemaining = winningPool + voterPool + loserRefundPool;
+                if (maxRemaining > rec.totalClaimed) {
+                    obligations += maxRemaining - rec.totalClaimed;
                 }
                 obligations += _pendingRefundObligations(rec.contentId, rec.roundId, round);
             } else if (

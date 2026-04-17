@@ -109,7 +109,16 @@ contract RoundRewardDistributorBranchesTest is VotingTestBase {
         vm.prank(voter);
         crepToken.approve(address(votingEngine), stake);
         vm.prank(voter);
-        votingEngine.commitVote(contentId, _defaultRatingReferenceBps(), _tlockCommitTargetRound(), _tlockDrandChainHash(), ch, ct, stake, address(0));
+        votingEngine.commitVote(
+            contentId,
+            _defaultRatingReferenceBps(),
+            _tlockCommitTargetRound(),
+            _tlockDrandChainHash(),
+            ch,
+            ct,
+            stake,
+            address(0)
+        );
         ck = _commitKey(voter, ch);
     }
 
@@ -219,61 +228,20 @@ contract RoundRewardDistributorBranchesTest is VotingTestBase {
     }
 
     // =========================================================================
-    // claimSubmitterReward BRANCHES
+    // Deprecated submitter reward compatibility
     // =========================================================================
 
-    function test_ClaimSubmitterReward_AlreadyClaimed_Reverts() public {
-        (uint256 contentId, uint256 roundId) = _setupSettledRound();
-
-        vm.prank(submitter);
-        rewardDistributor.claimSubmitterReward(contentId, roundId);
-
-        vm.prank(submitter);
-        vm.expectRevert("Already claimed");
-        rewardDistributor.claimSubmitterReward(contentId, roundId);
+    function test_ClaimSubmitterReward_RevertsAsRemoved() public {
+        vm.expectRevert("Submitter rewards removed");
+        rewardDistributor.claimSubmitterReward(1, 1);
     }
 
-    function test_ClaimSubmitterReward_NotSubmitter_Reverts() public {
-        (uint256 contentId, uint256 roundId) = _setupSettledRound();
-
-        vm.prank(voter1);
-        vm.expectRevert("Not submitter");
-        rewardDistributor.claimSubmitterReward(contentId, roundId);
+    function test_SubmitterRewardClaimed_ReturnsTrueForCompatibility() public view {
+        assertTrue(rewardDistributor.submitterRewardClaimed(1, 1));
     }
 
-    function test_ClaimSubmitterReward_RoundNotSettled_Reverts() public {
-        vm.startPrank(submitter);
-        crepToken.approve(address(registry), 10e6);
-        _submitContentWithReservation(registry, "https://example.com/1", "goal", "goal", "tags", 0);
-        vm.stopPrank();
-
-        _vote(voter1, 1, true);
-
-        uint256 roundId = RoundEngineReadHelpers.activeRoundId(votingEngine, 1);
-
-        vm.prank(submitter);
-        vm.expectRevert("Round not settled");
-        rewardDistributor.claimSubmitterReward(1, roundId);
-    }
-
-    function test_ClaimSubmitterReward_PositiveReward_Transfers() public {
-        (uint256 contentId, uint256 roundId) = _setupSettledRound();
-
-        uint256 reward = votingEngine.pendingSubmitterReward(contentId, roundId);
-        assertGt(reward, 0);
-
-        uint256 balBefore = crepToken.balanceOf(submitter);
-        vm.prank(submitter);
-        rewardDistributor.claimSubmitterReward(contentId, roundId);
-        assertGt(crepToken.balanceOf(submitter), balBefore);
-    }
-
-    function test_ClaimSubmitterReward_ZeroReward_NoTransfer() public {
-        (uint256 contentId, uint256 roundId) = _setupSettledRound();
-
-        vm.prank(submitter);
-        rewardDistributor.claimSubmitterReward(contentId, roundId);
-        assertTrue(rewardDistributor.submitterRewardClaimed(contentId, roundId));
+    function test_PendingSubmitterReward_ReturnsZeroForCompatibility() public view {
+        assertEq(votingEngine.pendingSubmitterReward(1, 1), 0);
     }
 
     // =========================================================================

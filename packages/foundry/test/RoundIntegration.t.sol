@@ -1425,7 +1425,7 @@ contract RoundIntegrationTest is VotingTestBase {
         assertGt(crepToken.balanceOf(voter1), balBefore, "Voter should receive consensus subsidy");
     }
 
-    function test_SubmitterStake_SlashesLowRatedFirstSettlementAfterDwellWhenGovernanceRelaxesSlashConfig() public {
+    function test_DeprecatedSubmitterStake_DoesNotSlashLowRatedFirstSettlement() public {
         ProtocolConfig protocolConfig = ProtocolConfig(address(votingEngine.protocolConfig()));
         vm.startPrank(owner);
         registry.setTreasury(treasury);
@@ -1460,26 +1460,23 @@ contract RoundIntegrationTest is VotingTestBase {
             "conservative rating should fall below the tuned threshold"
         );
         assertGt(uint256(ratingState.lowSince), 0, "first low settlement should start the low-rating dwell timer");
-        assertFalse(submitterStakeReturned, "dwell should keep the stake pending right after settlement");
+        assertTrue(submitterStakeReturned, "submitter stake compatibility flag starts resolved");
         assertEq(
             crepToken.balanceOf(treasury), treasuryBalanceBefore, "treasury should not be paid before the dwell window"
         );
 
         vm.warp(block.timestamp + 3 days + 1);
-        assertTrue(
-            registry.isSubmitterStakeSlashable(contentId),
-            "slashability should mature before the day-4 resolution window"
-        );
+        assertFalse(registry.isSubmitterStakeSlashable(contentId), "submitter stake slashing is removed");
         votingEngine.resolveSubmitterStake(contentId);
 
         (,,,,,,,,, submitterStakeReturned, rating,) = registry.contents(contentId);
         assertLt(uint256(rating), 40, "display rating should still reflect a low settlement");
         assertTrue(submitterStakeReturned, "submitter stake should be resolved");
-        assertEq(crepToken.balanceOf(submitter), submitterBalanceBefore, "submitter stake should not be returned");
-        assertEq(crepToken.balanceOf(treasury) - treasuryBalanceBefore, 10e6, "slash amount should be sent to treasury");
+        assertEq(crepToken.balanceOf(submitter), submitterBalanceBefore, "submitter receives no removed stake payout");
+        assertEq(crepToken.balanceOf(treasury), treasuryBalanceBefore, "treasury should not receive a removed slash");
     }
 
-    function test_SubmitterStake_ReturnsHealthyFirstSettlementAfterFourDays() public {
+    function test_DeprecatedSubmitterStake_DoesNotReturnHealthyFirstSettlement() public {
         uint256 contentId = _submitContent();
         uint256 submitterBalanceBefore = crepToken.balanceOf(submitter);
         uint256 treasuryBalanceBefore = crepToken.balanceOf(treasury);
@@ -1498,7 +1495,7 @@ contract RoundIntegrationTest is VotingTestBase {
         (,,,,,,,,, bool submitterStakeReturned, uint256 rating,) = registry.contents(contentId);
         assertGe(rating, registry.SLASH_RATING_THRESHOLD(), "round should not be slashable");
         assertTrue(submitterStakeReturned, "submitter stake should be resolved");
-        assertEq(crepToken.balanceOf(submitter) - submitterBalanceBefore, 10e6, "submitter stake should be returned");
+        assertEq(crepToken.balanceOf(submitter), submitterBalanceBefore, "submitter receives no removed stake payout");
         assertEq(crepToken.balanceOf(treasury), treasuryBalanceBefore, "treasury should not receive a slash");
     }
 

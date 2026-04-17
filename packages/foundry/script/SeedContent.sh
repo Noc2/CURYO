@@ -267,7 +267,7 @@ for ((i = 0; i < TOTAL_ITEMS; i++)); do
     cast rpc anvil_setBalance "$ADDR" "0x8AC7230489E80000" --rpc-url "$RPC" > /dev/null 2>&1
   fi
 
-  # 1. Approve the reward escrow to pull the non-refundable cREP submission pool
+  # 1. Approve the reward pool escrow to pull the non-refundable cREP submission reward pool
   echo "  Approving cREP reward pool..."
   cast send "$TOKEN" "approve(address,uint256)" "$QUESTION_REWARD_POOL_ESCROW" "$SUBMISSION_REWARD_POOL" --private-key "$KEY" --rpc-url "$RPC" > /dev/null 2>&1
 

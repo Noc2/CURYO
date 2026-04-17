@@ -131,7 +131,16 @@ contract FormalVerification_GameTheoryTest is VotingTestBase {
         vm.prank(voter);
         crepToken.approve(address(engine), stake);
         vm.prank(voter);
-        engine.commitVote(cid, _defaultRatingReferenceBps(), _tlockCommitTargetRound(), _tlockDrandChainHash(), commitHash, ciphertext, stake, address(0));
+        engine.commitVote(
+            cid,
+            _defaultRatingReferenceBps(),
+            _tlockCommitTargetRound(),
+            _tlockDrandChainHash(),
+            commitHash,
+            ciphertext,
+            stake,
+            address(0)
+        );
         commitKey = keccak256(abi.encodePacked(voter, commitHash));
     }
 
@@ -309,13 +318,12 @@ contract FormalVerification_GameTheoryTest is VotingTestBase {
         uint256 payout = crepToken.balanceOf(v[0]) - bal;
         assertGt(payout, 50e6, "Voter gets stake + subsidy reward");
 
-        // Submitter gets ~10.9% of subsidy
+        // Removed submitter upside: all consensus subsidy is routed to voters.
         uint256 subBal = crepToken.balanceOf(submitter);
         vm.prank(submitter);
+        vm.expectRevert("Submitter rewards removed");
         distributor.claimSubmitterReward(cid, rid);
-        uint256 submitterReward = crepToken.balanceOf(submitter) - subBal;
-        // submitterShare = 12_500_000 * 1000 / (8000 + 1000) = 1_388_888
-        assertEq(submitterReward, 1_388_888, "Submitter gets ~11.1% of subsidy");
+        assertEq(crepToken.balanceOf(submitter), subBal, "Submitter balance stays unchanged");
     }
 
     // ==================== Test 6: Share-Proportional ROI (Early Voter Advantage) ====================
@@ -468,9 +476,9 @@ contract FormalVerification_GameTheoryTest is VotingTestBase {
         assertLt(totalEnd, totalStart, "Manufactured dissent is a net loss for the attacker");
         // Attacker staked 150e6, the DOWN side (50e6) is the losing pool which funds rewards.
         // Attacker's wallet B loses 50e6 entirely. Wallet A gets stake + share of voterPool.
-        // The attacker only captures a fraction of the lost 50e6, so net loss > 30 cREP.
+        // The attacker only captures a fraction of the lost 50e6, so the strategy remains materially lossy.
         uint256 loss = totalStart - totalEnd;
-        assertGt(loss, 30e6, "Attacker loses > 30 cREP");
+        assertGt(loss, 29e6, "Attacker loses > 29 cREP");
     }
 
     // ==================== Test 10: Consensus Reserve Drain - 10 Rounds ====================

@@ -6,11 +6,13 @@ import { Vm, VmSafe } from "forge-std/Vm.sol";
 import { Base64 } from "@openzeppelin/contracts/utils/Base64.sol";
 import { Strings } from "@openzeppelin/contracts/utils/Strings.sol";
 import { ERC1967Proxy } from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
+import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import { CuryoReputation } from "../../contracts/CuryoReputation.sol";
 import { ContentRegistry } from "../../contracts/ContentRegistry.sol";
 import { ProtocolConfig } from "../../contracts/ProtocolConfig.sol";
 import { RoundVotingEngine } from "../../contracts/RoundVotingEngine.sol";
 import { RatingLib } from "../../contracts/libraries/RatingLib.sol";
+import { MockQuestionRewardPoolEscrow } from "../mocks/MockQuestionRewardPoolEscrow.sol";
 
 function deployInitializedProtocolConfig(address admin) returns (ProtocolConfig protocolConfig) {
     return deployInitializedProtocolConfig(admin, admin);
@@ -41,10 +43,15 @@ abstract contract ContentSubmissionTestBase {
     ) internal returns (uint256 contentId) {
         activeTlockContentRegistry = registry;
         (VmSafe.CallerMode mode, address msgSender, address txOrigin) = HEVM.readCallers();
-        bool normalizedPrank = false;
-        if (mode == VmSafe.CallerMode.Prank) {
+        bool hasActivePrank = mode == VmSafe.CallerMode.Prank || mode == VmSafe.CallerMode.RecurrentPrank;
+        if (hasActivePrank) {
+            HEVM.stopPrank();
+        }
+        address rewardEscrow = _ensureDefaultQuestionRewardPoolEscrow(registry);
+        bool stopNormalizedPrank = false;
+        if (hasActivePrank) {
             HEVM.startPrank(msgSender, txOrigin);
-            normalizedPrank = true;
+            stopNormalizedPrank = mode == VmSafe.CallerMode.Prank;
         }
 
         address submitter =
@@ -73,11 +80,12 @@ abstract contract ContentSubmissionTestBase {
             )
         );
 
+        IERC20(registry.crepToken()).approve(rewardEscrow, rewardAmount);
         registry.reserveSubmission(revealCommitment);
         HEVM.warp(block.timestamp + 1);
         contentId = registry.submitQuestion(url, imageUrls, "", title, description, tags, submissionCategoryId, salt);
 
-        if (normalizedPrank) {
+        if (stopNormalizedPrank) {
             HEVM.stopPrank();
         }
     }
@@ -111,6 +119,16 @@ abstract contract ContentSubmissionTestBase {
                 rewardAmount
             )
         );
+        (VmSafe.CallerMode mode, address msgSender, address txOrigin) = HEVM.readCallers();
+        bool hasActivePrank = mode == VmSafe.CallerMode.Prank || mode == VmSafe.CallerMode.RecurrentPrank;
+        if (hasActivePrank) {
+            HEVM.stopPrank();
+        }
+        address rewardEscrow = _ensureDefaultQuestionRewardPoolEscrow(registry);
+        if (hasActivePrank) {
+            HEVM.startPrank(msgSender, txOrigin);
+        }
+        IERC20(registry.crepToken()).approve(rewardEscrow, rewardAmount);
         registry.reserveSubmission(revealCommitment);
     }
 
@@ -139,6 +157,25 @@ abstract contract ContentSubmissionTestBase {
             if (configuredMinimum != 0) return configuredMinimum;
         }
         return DEFAULT_SUBMISSION_REWARD_POOL;
+    }
+
+    function _ensureDefaultQuestionRewardPoolEscrow(ContentRegistry registry) internal returns (address rewardEscrow) {
+        rewardEscrow = registry.questionRewardPoolEscrow();
+        if (rewardEscrow != address(0)) return rewardEscrow;
+
+        MockQuestionRewardPoolEscrow mockRewardPoolEscrow = new MockQuestionRewardPoolEscrow();
+        bytes32 configRole = registry.CONFIG_ROLE();
+        address[8] memory candidates = [
+            address(this), address(1), address(2), address(0xA), address(0xB), address(0xAA), address(0xBB), address(10)
+        ];
+        for (uint256 i = 0; i < candidates.length; i++) {
+            if (registry.hasRole(configRole, candidates[i])) {
+                HEVM.prank(candidates[i]);
+                registry.setQuestionRewardPoolEscrow(address(mockRewardPoolEscrow));
+                return address(mockRewardPoolEscrow);
+            }
+        }
+        revert("Reward pool escrow not set");
     }
 
     function _singleImageUrls(string memory imageUrl) internal pure returns (string[] memory imageUrls) {

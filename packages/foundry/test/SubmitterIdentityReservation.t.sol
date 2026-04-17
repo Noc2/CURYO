@@ -65,7 +65,7 @@ contract SubmitterIdentityReservationTest is Test, ContentSubmissionTestBase {
         assertEq(registry.getSubmitterIdentity(contentId), submitter);
     }
 
-    function test_SubmitContent_RevealRevertsWhenSubmitterIdentityChanges() public {
+    function test_SubmitContent_DoesNotRequireStableVoterIdIdentity() public {
         vm.prank(owner);
         mockVoterIdNFT.setHolder(submitter);
 
@@ -81,12 +81,7 @@ contract SubmitterIdentityReservationTest is Test, ContentSubmissionTestBase {
         string[] memory imageUrls = _singleImageUrls(imageUrl);
 
         vm.startPrank(delegate);
-        crepToken.approve(address(registry), 10e6);
-        (uint256 resolvedCategoryId, bytes32 submissionKey) =
-            registry.previewQuestionMediaSubmissionKey(imageUrls, "", title, description, tags, 1);
-        assertEq(resolvedCategoryId, 1);
-        bytes32 revealCommitment = keccak256(abi.encode(submissionKey, title, description, tags, 1, salt, delegate));
-        registry.reserveSubmission(revealCommitment);
+        _reserveQuestionMediaSubmission(registry, imageUrls, "", title, description, tags, 1, salt, delegate);
         vm.stopPrank();
 
         vm.prank(submitter);
@@ -98,12 +93,13 @@ contract SubmitterIdentityReservationTest is Test, ContentSubmissionTestBase {
         vm.warp(block.timestamp + 1);
 
         vm.startPrank(delegate);
-        vm.expectRevert("Submitter identity changed");
-        registry.submitQuestionWithMedia(imageUrls, "", title, description, tags, 1, salt);
+        uint256 contentId = registry.submitQuestionWithMedia(imageUrls, "", title, description, tags, 1, salt);
         vm.stopPrank();
+
+        assertEq(registry.getSubmitterIdentity(contentId), delegate);
     }
 
-    function test_SubmitQuestion_RevealRevertsWhenSubmitterIdentityChanges() public {
+    function test_SubmitQuestion_DoesNotRequireStableVoterIdIdentity() public {
         vm.prank(owner);
         mockVoterIdNFT.setHolder(submitter);
 
@@ -118,11 +114,7 @@ contract SubmitterIdentityReservationTest is Test, ContentSubmissionTestBase {
         string[] memory imageUrls = _singleImageUrls(url);
 
         vm.startPrank(delegate);
-        crepToken.approve(address(registry), 10e6);
-        (uint256 resolvedCategoryId, bytes32 submissionKey) =
-            registry.previewQuestionMediaSubmissionKey(imageUrls, "", title, description, tags, 1);
-        bytes32 revealCommitment = keccak256(abi.encode(submissionKey, title, description, tags, 1, salt, delegate));
-        registry.reserveSubmission(revealCommitment);
+        _reserveQuestionMediaSubmission(registry, imageUrls, "", title, description, tags, 1, salt, delegate);
         vm.stopPrank();
 
         vm.prank(submitter);
@@ -134,8 +126,9 @@ contract SubmitterIdentityReservationTest is Test, ContentSubmissionTestBase {
         vm.warp(block.timestamp + 1);
 
         vm.startPrank(delegate);
-        vm.expectRevert("Submitter identity changed");
-        registry.submitQuestionWithMedia(imageUrls, "", title, description, tags, resolvedCategoryId, salt);
+        uint256 contentId = registry.submitQuestion(url, imageUrls, "", title, description, tags, 1, salt);
         vm.stopPrank();
+
+        assertEq(registry.getSubmitterIdentity(contentId), delegate);
     }
 }

@@ -25,11 +25,11 @@ contract MockVotingEngineForFrontendGas {
 }
 
 contract UserTransactionGasEstimatesTest is RoundIntegrationTest {
-    function _voteTransferPayload(
-        uint256 contentId,
-        TestCommitArtifacts memory artifacts,
-        address frontend
-    ) internal view returns (bytes memory) {
+    function _voteTransferPayload(uint256 contentId, TestCommitArtifacts memory artifacts, address frontend)
+        internal
+        view
+        returns (bytes memory)
+    {
         return abi.encode(
             contentId,
             artifacts.roundReferenceRatingBps,
@@ -71,8 +71,10 @@ contract UserTransactionGasEstimatesTest is RoundIntegrationTest {
 
     function testGasEstimate_submitContent_logs() public {
         vm.pauseGasMetering();
+        uint256 rewardAmount = _defaultSubmissionRewardAmount(registry);
+        address rewardEscrow = _ensureDefaultQuestionRewardPoolEscrow(registry);
         vm.startPrank(submitter);
-        crepToken.approve(address(registry), 10e6);
+        crepToken.approve(rewardEscrow, rewardAmount);
         vm.stopPrank();
 
         string memory imageUrl = "https://example.com/gas-report.jpg";
@@ -80,19 +82,21 @@ contract UserTransactionGasEstimatesTest is RoundIntegrationTest {
         (, bytes32 submissionKey) =
             registry.previewQuestionMediaSubmissionKey(imageUrls, "", "test goal", "test goal", "test", 1);
         bytes32 salt = keccak256(
+            abi.encode(imageUrl, "test goal", "test goal", "test", uint256(1), submitter, block.timestamp, block.number)
+        );
+        bytes32 revealCommitment = keccak256(
             abi.encode(
-                imageUrl,
+                submissionKey,
                 "test goal",
                 "test goal",
                 "test",
                 uint256(1),
+                salt,
                 submitter,
-                block.timestamp,
-                block.number
+                DEFAULT_SUBMISSION_REWARD_ASSET_CREP,
+                rewardAmount
             )
         );
-        bytes32 revealCommitment =
-            keccak256(abi.encode(submissionKey, "test goal", "test goal", "test", uint256(1), salt, submitter));
 
         uint256 reserveGasUsed = _measureCallAs(
             submitter, address(registry), abi.encodeCall(ContentRegistry.reserveSubmission, (revealCommitment))
@@ -102,8 +106,7 @@ contract UserTransactionGasEstimatesTest is RoundIntegrationTest {
             submitter,
             address(registry),
             abi.encodeCall(
-                ContentRegistry.submitQuestionWithMedia,
-                (imageUrls, "", "test goal", "test goal", "test", 1, salt)
+                ContentRegistry.submitQuestionWithMedia, (imageUrls, "", "test goal", "test goal", "test", 1, salt)
             )
         );
         console2.log("reserve_submission_gas", reserveGasUsed);
@@ -241,29 +244,6 @@ contract UserTransactionGasEstimatesTest is RoundIntegrationTest {
             voter1, address(rewardDistributor), abi.encodeCall(RoundRewardDistributor.claimReward, (contentId, roundId))
         );
         console2.log("claim_reward_gas", gasUsed);
-    }
-
-    function testGasEstimate_claimSubmitterReward_logs() public {
-        vm.pauseGasMetering();
-        uint256 contentId = _submitContent();
-
-        address[] memory voters = new address[](3);
-        voters[0] = voter1;
-        voters[1] = voter2;
-        voters[2] = voter3;
-        bool[] memory directions = new bool[](3);
-        directions[0] = true;
-        directions[1] = true;
-        directions[2] = false;
-
-        uint256 roundId = _settleRoundWith(voters, contentId, directions, STAKE);
-
-        uint256 gasUsed = _measureCallAs(
-            submitter,
-            address(rewardDistributor),
-            abi.encodeCall(RoundRewardDistributor.claimSubmitterReward, (contentId, roundId))
-        );
-        console2.log("claim_submitter_reward_gas", gasUsed);
     }
 }
 

@@ -139,18 +139,19 @@ contract ContentRegistryBranchesTest is VotingTestBase {
         uint16 referenceRatingBps = _currentRatingReferenceBps(contentId);
         bytes memory ciphertext = _testCiphertext(isUp, salt, contentId);
         bytes32 commitHash = _commitHash(
-            isUp,
-            salt,
-            contentId,
-            referenceRatingBps,
-            _tlockCommitTargetRound(),
-            _tlockDrandChainHash(),
-            ciphertext
+            isUp, salt, contentId, referenceRatingBps, _tlockCommitTargetRound(), _tlockDrandChainHash(), ciphertext
         );
         vm.startPrank(voter);
         crepToken.approve(address(votingEngine), stake);
         votingEngine.commitVote(
-            contentId, referenceRatingBps, _tlockCommitTargetRound(), _tlockDrandChainHash(), commitHash, ciphertext, stake, address(0)
+            contentId,
+            referenceRatingBps,
+            _tlockCommitTargetRound(),
+            _tlockDrandChainHash(),
+            commitHash,
+            ciphertext,
+            stake,
+            address(0)
         );
         vm.stopPrank();
         commitKey = keccak256(abi.encodePacked(voter, commitHash));
@@ -276,20 +277,19 @@ contract ContentRegistryBranchesTest is VotingTestBase {
         (, bytes32 submissionKey) =
             registry.previewQuestionMediaSubmissionKey(imageUrls, "", title, description, tags, categoryId);
         uint256 rewardAmount = _defaultSubmissionRewardAmount(registry);
-        bytes32 revealCommitment =
-            keccak256(
-                abi.encode(
-                    submissionKey,
-                    title,
-                    description,
-                    tags,
-                    categoryId,
-                    salt,
-                    submitter,
-                    DEFAULT_SUBMISSION_REWARD_ASSET_CREP,
-                    rewardAmount
-                )
-            );
+        bytes32 revealCommitment = keccak256(
+            abi.encode(
+                submissionKey,
+                title,
+                description,
+                tags,
+                categoryId,
+                salt,
+                submitter,
+                DEFAULT_SUBMISSION_REWARD_ASSET_CREP,
+                rewardAmount
+            )
+        );
         registry.reserveSubmission(revealCommitment);
         vm.warp(block.timestamp + 1);
         uint256 id = registry.submitQuestionWithMedia(imageUrls, "", title, description, tags, categoryId, salt);
@@ -321,20 +321,18 @@ contract ContentRegistryBranchesTest is VotingTestBase {
         registry.previewQuestionMediaSubmissionKey(imageUrls, "", "Question?", "Context", "Media", 5);
     }
 
-    function test_SubmitContent_VoterIdRequired_RevertsWithoutId() public {
+    function test_SubmitContent_VoterIdConfigured_AllowsWithoutId() public {
         vm.prank(owner);
         registry.setVoterIdNFT(address(mockVoterIdNFT));
 
         vm.startPrank(submitter);
         crepToken.approve(address(registry), 10e6);
-        vm.expectRevert("Voter ID required");
-        registry.submitQuestionWithMedia(
-            _singleImageUrls("https://example.com/1.jpg"), "", "goal", "goal", "tags", 1, bytes32(0)
-        );
+        uint256 id = _submitContentWithReservation(registry, "https://example.com/no-id", "goal", "goal", "tags", 0);
         vm.stopPrank();
+        assertEq(id, 1);
     }
 
-    function test_SubmitContent_VoterIdRequired_SucceedsWithId() public {
+    function test_SubmitContent_VoterIdConfigured_SucceedsWithId() public {
         vm.prank(owner);
         registry.setVoterIdNFT(address(mockVoterIdNFT));
         mockVoterIdNFT.setHolder(submitter);
@@ -431,7 +429,8 @@ contract ContentRegistryBranchesTest is VotingTestBase {
         crepToken.approve(address(registry), 10e6);
         string memory imageUrl = _submissionImageUrl(url);
         string[] memory imageUrls = _singleImageUrls(imageUrl);
-        (, bytes32 submissionKey) = registry.previewQuestionMediaSubmissionKey(imageUrls, "", title, description, tags, 1);
+        (, bytes32 submissionKey) =
+            registry.previewQuestionMediaSubmissionKey(imageUrls, "", title, description, tags, 1);
         uint256 rewardAmount = _defaultSubmissionRewardAmount(registry);
         bytes32 revealCommitment = keccak256(
             abi.encode(
@@ -471,20 +470,19 @@ contract ContentRegistryBranchesTest is VotingTestBase {
         (, bytes32 submissionKey) =
             registry.previewQuestionMediaSubmissionKey(imageUrls, "", title, description, tags, oversizedCategoryId);
         uint256 rewardAmount = _defaultSubmissionRewardAmount(registry);
-        bytes32 revealCommitment =
-            keccak256(
-                abi.encode(
-                    submissionKey,
-                    title,
-                    description,
-                    tags,
-                    oversizedCategoryId,
-                    salt,
-                    submitter,
-                    DEFAULT_SUBMISSION_REWARD_ASSET_CREP,
-                    rewardAmount
-                )
-            );
+        bytes32 revealCommitment = keccak256(
+            abi.encode(
+                submissionKey,
+                title,
+                description,
+                tags,
+                oversizedCategoryId,
+                salt,
+                submitter,
+                DEFAULT_SUBMISSION_REWARD_ASSET_CREP,
+                rewardAmount
+            )
+        );
         registry.reserveSubmission(revealCommitment);
         vm.warp(block.timestamp + 1);
         vm.expectRevert();
@@ -492,466 +490,32 @@ contract ContentRegistryBranchesTest is VotingTestBase {
         vm.stopPrank();
     }
 
-    function test_SubmitContent_ParticipationPool_DoesNotRewardImmediately() public {
-        vm.prank(owner);
-        registry.setParticipationPool(address(participationPool));
-
+    function test_SubmitContent_DoesNotCreateSubmitterStakeOrReward() public {
         uint256 balBefore = crepToken.balanceOf(submitter);
         vm.startPrank(submitter);
-        crepToken.approve(address(registry), 10e6);
-        _submitContentWithReservation(registry, "https://example.com/1", "goal", "goal", "tags", 0);
+        _submitContentWithReservation(registry, "https://example.com/no-submitter-upside", "goal", "goal", "tags", 0);
         vm.stopPrank();
 
         uint256 balAfter = crepToken.balanceOf(submitter);
-        assertEq(balAfter, balBefore - 10e6, "submission should only lock stake until healthy resolution");
-    }
-
-    function test_ResolveSubmitterStake_NoSettledRound_LeavesStakeLocked() public {
-        vm.prank(owner);
-        registry.setParticipationPool(address(participationPool));
-
-        uint256 balBefore = crepToken.balanceOf(submitter);
-        vm.startPrank(submitter);
-        crepToken.approve(address(registry), 10e6);
-        _submitContentWithReservation(registry, "https://example.com/1", "goal", "goal", "tags", 0);
-        vm.stopPrank();
-
-        vm.warp(T0 + 4 days + 1);
-        votingEngine.resolveSubmitterStake(1);
-
-        uint256 balAfter = crepToken.balanceOf(submitter);
-        assertEq(balAfter, balBefore - 10e6, "no-vote content should not unlock through healthy resolution");
         (,,,,,,,,, bool submitterStakeReturned,,) = registry.contents(1);
-        assertFalse(submitterStakeReturned, "no-vote content should remain unresolved");
+        assertEq(balAfter, balBefore, "mock reward escrow does not pull funds in branch tests");
+        assertTrue(submitterStakeReturned, "submitter stake compatibility flag starts resolved");
+        assertEq(registry.submitterParticipationRewardOwed(1), 0);
+        assertEq(registry.submitterParticipationRewardReserved(1), 0);
     }
 
-    function test_ResolveSubmitterStake_NoSettledRound_ReturnsAfterDormancyPeriod() public {
-        vm.prank(owner);
-        registry.setParticipationPool(address(participationPool));
-
-        uint256 balBefore = crepToken.balanceOf(submitter);
+    function test_DeprecatedSubmitterParticipationRewardFunctions() public {
         vm.startPrank(submitter);
-        crepToken.approve(address(registry), 10e6);
-        _submitContentWithReservation(registry, "https://example.com/dormancy-return", "goal", "goal", "tags", 0);
-        vm.stopPrank();
-
-        vm.warp(T0 + 31 days);
-        votingEngine.resolveSubmitterStake(1);
-
-        uint256 balAfter = crepToken.balanceOf(submitter);
-        assertEq(balAfter, balBefore, "dormancy fallback should return the locked stake without a submission reward");
-        (,,,,,,,,, bool submitterStakeReturned,,) = registry.contents(1);
-        assertTrue(submitterStakeReturned, "stake should resolve after the dormancy period");
-    }
-
-    function test_HealthyResolution_SnapshotsAndAllowsRetryableSubmitterParticipationReward() public {
-        vm.startPrank(owner);
-        ParticipationPool tinyPool = new ParticipationPool(address(crepToken), owner);
-        tinyPool.setAuthorizedCaller(address(registry), true);
-        crepToken.approve(address(tinyPool), 4e6);
-        tinyPool.depositPool(4e6);
-        registry.setParticipationPool(address(tinyPool));
-        ProtocolConfig(address(votingEngine.protocolConfig())).setParticipationPool(address(tinyPool));
-        vm.stopPrank();
-
-        vm.startPrank(submitter);
-        crepToken.approve(address(registry), 10e6);
         _submitContentWithReservation(
-            registry, "https://example.com/retryable-submitter-reward", "goal", "goal", "tags", 0
+            registry, "https://example.com/removed-submitter-rewards", "goal", "goal", "tags", 0
         );
         vm.stopPrank();
 
-        vm.warp(T0 + 4 days + 1);
-        _settleHealthyRound(1);
-
-        (,,,,,,,,, bool submitterStakeReturned,,) = registry.contents(1);
-        assertTrue(submitterStakeReturned, "healthy settlement should return stake");
-        assertEq(registry.submitterParticipationRewardPool(1), address(tinyPool), "reward pool should be snapshotted");
-        assertEq(registry.submitterParticipationRewardOwed(1), 9e6, "reward should be snapshotted at the healthy rate");
-        assertEq(registry.submitterParticipationRewardReserved(1), 4e6, "available pool balance should be reserved");
-        assertEq(registry.submitterParticipationRewardPaid(1), 0, "submitter rewards should remain pull-based");
-
-        vm.startPrank(owner);
-        crepToken.approve(address(tinyPool), 5e6);
-        tinyPool.depositPool(5e6);
-        vm.stopPrank();
-
-        uint256 submitterBalanceBeforeClaim = crepToken.balanceOf(submitter);
-        vm.prank(submitter);
-        uint256 paidAmount = registry.claimSubmitterParticipationReward(1);
-        assertEq(paidAmount, 9e6, "claim should pay the reserved reward plus any newly available remainder");
-        assertEq(
-            crepToken.balanceOf(submitter) - submitterBalanceBeforeClaim,
-            9e6,
-            "submitter should receive the full snapshotted reward"
-        );
-        assertEq(registry.submitterParticipationRewardPaid(1), 9e6, "all snapshotted rewards should be accounted for");
-    }
-
-    function test_RepairMilestoneZeroSubmitterParticipationTerms_BeforeResolutionRestoresHealthyReward() public {
-        _configureParticipationPoolSnapshots();
-
-        vm.startPrank(submitter);
-        crepToken.approve(address(registry), 10e6);
-        _submitContentWithReservation(
-            registry, "https://example.com/m0-repair-before-resolution", "goal", "goal", "tags", 0
-        );
-        vm.stopPrank();
-
-        _mockParticipationRateUnavailable();
-        _settleHealthyRound(1);
-        vm.clearMockedCalls();
-
-        assertEq(
-            registry.milestoneZeroSubmitterParticipationPool(1),
-            address(participationPool),
-            "first settlement should still freeze the milestone-zero pool"
-        );
-        assertEq(registry.milestoneZeroSubmitterParticipationRateBps(1), 0, "failed lookup should freeze a zero rate");
-        assertEq(registry.submitterParticipationRewardOwed(1), 0, "no reward should accrue before the repair");
-
-        vm.prank(owner);
-        registry.repairMilestoneZeroSubmitterParticipationTerms(1, 9000);
-
-        assertEq(registry.milestoneZeroSubmitterParticipationRateBps(1), 9000, "repair should patch the frozen rate");
-        assertEq(
-            registry.submitterParticipationRewardOwed(1), 0, "repair should not accrue rewards before stake resolution"
-        );
-
-        vm.prank(owner);
-        vm.expectRevert("Repair not needed");
-        registry.repairMilestoneZeroSubmitterParticipationTerms(1, 9000);
-
-        vm.warp(T0 + 4 days + 1);
-        votingEngine.resolveSubmitterStake(1);
-
-        assertEq(
-            registry.submitterParticipationRewardOwed(1),
-            9e6,
-            "healthy resolution should accrue the repaired milestone-zero reward"
-        );
-        assertEq(
-            registry.submitterParticipationRewardReserved(1),
-            9e6,
-            "healthy resolution should reserve the repaired reward from the frozen pool"
-        );
-
-        uint256 submitterBalanceBeforeClaim = crepToken.balanceOf(submitter);
-        vm.prank(submitter);
-        uint256 paidAmount = registry.claimSubmitterParticipationReward(1);
-        assertEq(paidAmount, 9e6, "claim should pay the repaired milestone-zero reward");
-        assertEq(
-            crepToken.balanceOf(submitter) - submitterBalanceBeforeClaim,
-            9e6,
-            "submitter should receive the repaired milestone-zero reward"
-        );
-    }
-
-    function test_RepairMilestoneZeroSubmitterParticipationTerms_AfterHealthyResolutionAccruesRetroactively() public {
-        _configureParticipationPoolSnapshots();
-
-        vm.startPrank(submitter);
-        crepToken.approve(address(registry), 10e6);
-        _submitContentWithReservation(
-            registry, "https://example.com/m0-repair-after-resolution", "goal", "goal", "tags", 0
-        );
-        vm.stopPrank();
-
-        _mockParticipationRateUnavailable();
-        _settleHealthyRound(1);
-        vm.clearMockedCalls();
-
-        vm.warp(T0 + 4 days + 1);
-        votingEngine.resolveSubmitterStake(1);
-
-        (,,,,,,,,, bool submitterStakeReturned,,) = registry.contents(1);
-        assertTrue(submitterStakeReturned, "healthy milestone-zero resolution should still return stake");
-        assertEq(registry.submitterParticipationRewardOwed(1), 0, "zeroed milestone-zero rate should skip accrual");
-
-        vm.prank(owner);
-        registry.repairMilestoneZeroSubmitterParticipationTerms(1, 9000);
-
-        assertEq(
-            registry.submitterParticipationRewardPool(1),
-            address(participationPool),
-            "retroactive repair should reuse the frozen milestone-zero pool"
-        );
-        assertEq(
-            registry.submitterParticipationRewardOwed(1),
-            9e6,
-            "retroactive repair should accrue the missing submitter reward"
-        );
-        assertEq(
-            registry.submitterParticipationRewardReserved(1),
-            9e6,
-            "retroactive repair should reserve the missing reward when liquidity is available"
-        );
-
-        uint256 submitterBalanceBeforeClaim = crepToken.balanceOf(submitter);
-        vm.prank(submitter);
-        uint256 paidAmount = registry.claimSubmitterParticipationReward(1);
-        assertEq(paidAmount, 9e6, "claim should pay the retroactively accrued reward");
-        assertEq(
-            crepToken.balanceOf(submitter) - submitterBalanceBeforeClaim,
-            9e6,
-            "submitter should receive the retroactively repaired reward"
-        );
-    }
-
-    function test_RepairMilestoneZeroSubmitterParticipationTerms_RevertsWhenNoMilestoneZeroPoolWasFrozen() public {
-        vm.startPrank(submitter);
-        crepToken.approve(address(registry), 10e6);
-        _submitContentWithReservation(registry, "https://example.com/m0-no-pool", "goal", "goal", "tags", 0);
-        vm.stopPrank();
-
-        _settleHealthyRound(1);
-
-        vm.prank(owner);
-        vm.expectRevert("No milestone-zero pool");
-        registry.repairMilestoneZeroSubmitterParticipationTerms(1, 9000);
-    }
-
-    function test_RepairMilestoneZeroSubmitterParticipationTerms_RevertsAfterSlashPath() public {
-        _configureParticipationPoolSnapshots();
-        uint256 slashStake = 20e6;
-
-        vm.startPrank(submitter);
-        crepToken.approve(address(registry), 10e6);
-        _submitContentWithReservation(registry, "https://example.com/m0-slash-repair", "goal", "goal", "tags", 0);
-        vm.stopPrank();
-
-        (bytes32 ck1, bytes32 salt1) = _commitWithStake(voter1, 1, false, slashStake);
-        (bytes32 ck2, bytes32 salt2) = _commitWithStake(voter2, 1, false, slashStake);
-        (bytes32 ck3, bytes32 salt3) = _commitWithStake(voter3, 1, false, slashStake);
-
-        uint256 roundId = RoundEngineReadHelpers.activeRoundId(votingEngine, 1);
-        _mockParticipationRateUnavailable();
-        vm.warp(block.timestamp + 1 hours + 1);
-        votingEngine.revealVoteByCommitKey(1, roundId, ck1, false, salt1);
-        votingEngine.revealVoteByCommitKey(1, roundId, ck2, false, salt2);
-        votingEngine.revealVoteByCommitKey(1, roundId, ck3, false, salt3);
-        votingEngine.settleRound(1, roundId);
-        vm.clearMockedCalls();
-
-        vm.warp(T0 + 24 hours + 1);
-        votingEngine.resolveSubmitterStake(1);
-
-        vm.prank(owner);
-        vm.expectRevert("Slashable milestone-zero");
-        registry.repairMilestoneZeroSubmitterParticipationTerms(1, 9000);
-    }
-
-    function test_HealthyResolution_UsesSettlementSnapshotInsteadOfDelayedCurrentRate() public {
-        vm.startPrank(owner);
-        ParticipationPool shiftingPool = new ParticipationPool(address(crepToken), owner);
-        shiftingPool.setAuthorizedCaller(address(registry), true);
-        shiftingPool.setAuthorizedCaller(owner, true);
-        crepToken.mint(owner, 3_000_000e6);
-        crepToken.approve(address(shiftingPool), 3_000_000e6);
-        shiftingPool.depositPool(3_000_000e6);
-        registry.setParticipationPool(address(shiftingPool));
-        ProtocolConfig(address(votingEngine.protocolConfig())).setParticipationPool(address(shiftingPool));
-        vm.stopPrank();
-
-        vm.startPrank(submitter);
-        crepToken.approve(address(registry), 10e6);
-        _submitContentWithReservation(
-            registry, "https://example.com/snapshotted-submitter-rate", "goal", "goal", "tags", 0
-        );
-        vm.stopPrank();
-
-        _settleHealthyRound(1);
-
-        assertEq(
-            registry.submitterParticipationSnapshotRateBps(1), 9000, "healthy settlement should snapshot the live rate"
-        );
-
-        uint256 rateDecayReward = 2_300_000e6 * shiftingPool.getCurrentRateBps() / 10000;
-        vm.prank(owner);
-        shiftingPool.distributeReward(owner, rateDecayReward);
-        assertEq(shiftingPool.getCurrentRateBps(), 4500, "live pool rate should have decayed before delayed resolution");
-
-        vm.warp(T0 + 4 days + 1);
-        votingEngine.resolveSubmitterStake(1);
-
-        assertEq(
-            registry.submitterParticipationRewardPool(1),
-            address(shiftingPool),
-            "delayed healthy resolution should use the snapshotted pool"
-        );
-        assertEq(
-            registry.submitterParticipationRewardOwed(1),
-            9e6,
-            "delayed healthy resolution should keep the settlement-time reward rate"
-        );
-    }
-
-    function test_HealthyResolution_UsesMilestoneZeroSnapshotInsteadOfLaterSettlementRate() public {
-        vm.startPrank(owner);
-        ParticipationPool shiftingPool = new ParticipationPool(address(crepToken), owner);
-        shiftingPool.setAuthorizedCaller(address(registry), true);
-        shiftingPool.setAuthorizedCaller(address(rewardDistributor), true);
-        shiftingPool.setAuthorizedCaller(owner, true);
-        crepToken.mint(owner, 3_000_000e6);
-        crepToken.approve(address(shiftingPool), 3_000_000e6);
-        shiftingPool.depositPool(3_000_000e6);
-        registry.setParticipationPool(address(shiftingPool));
-        ProtocolConfig(address(votingEngine.protocolConfig())).setParticipationPool(address(shiftingPool));
-        vm.stopPrank();
-
-        vm.startPrank(submitter);
-        crepToken.approve(address(registry), 10e6);
-        _submitContentWithReservation(
-            registry, "https://example.com/milestone-zero-submitter-rate", "goal", "goal", "tags", 0
-        );
-        vm.stopPrank();
-
-        _settleHealthyRound(1);
-        assertEq(
-            registry.submitterParticipationSnapshotRateBps(1), 9000, "first settlement should snapshot the live rate"
-        );
-
-        uint256 rateDecayReward = 2_300_000e6 * shiftingPool.getCurrentRateBps() / 10000;
-        vm.prank(owner);
-        shiftingPool.distributeReward(owner, rateDecayReward);
-        assertEq(shiftingPool.getCurrentRateBps(), 4500, "live pool rate should decay before the later settlement");
-
-        _settleHealthyRoundWithVoters(1, voter4, voter5, voter6);
-        assertEq(
-            registry.submitterParticipationSnapshotRateBps(1), 4500, "latest snapshot should follow the later round"
-        );
-
-        vm.warp(T0 + 4 days + 1);
-        votingEngine.resolveSubmitterStake(1);
-
-        assertEq(
-            registry.submitterParticipationRewardPool(1),
-            address(shiftingPool),
-            "milestone-0 resolution should keep the first settled pool"
-        );
-        assertEq(
-            registry.submitterParticipationRewardOwed(1),
-            9e6,
-            "later settlements must not rewrite the milestone-0 reward rate"
-        );
-    }
-
-    function test_ClaimSubmitterParticipationReward_ReservedPortionSurvivesPoolDeauthorization() public {
-        vm.startPrank(owner);
-        ParticipationPool tinyPool = new ParticipationPool(address(crepToken), owner);
-        tinyPool.setAuthorizedCaller(address(registry), true);
-        crepToken.approve(address(tinyPool), 4e6);
-        tinyPool.depositPool(4e6);
-        registry.setParticipationPool(address(tinyPool));
-        ProtocolConfig(address(votingEngine.protocolConfig())).setParticipationPool(address(tinyPool));
-        vm.stopPrank();
-
-        vm.startPrank(submitter);
-        crepToken.approve(address(registry), 10e6);
-        _submitContentWithReservation(
-            registry, "https://example.com/submitter-reserved-reward", "goal", "goal", "tags", 0
-        );
-        vm.stopPrank();
-
-        vm.warp(T0 + 4 days + 1);
-        _settleHealthyRound(1);
-
-        vm.prank(owner);
-        tinyPool.setAuthorizedCaller(address(registry), false);
-
-        uint256 submitterBalanceBeforeClaim = crepToken.balanceOf(submitter);
-        vm.prank(submitter);
-        uint256 paidAmount = registry.claimSubmitterParticipationReward(1);
-
-        assertEq(paidAmount, 4e6, "reserved rewards should remain claimable even after deauthorization");
-        assertEq(
-            crepToken.balanceOf(submitter) - submitterBalanceBeforeClaim,
-            4e6,
-            "submitter should receive the reserved amount"
-        );
-        assertEq(registry.submitterParticipationRewardPaid(1), 4e6, "paid amount should track the reserved payout");
-    }
-
-    function test_ClaimSubmitterParticipationReward_OnlySubmitter() public {
-        vm.startPrank(owner);
-        ParticipationPool tinyPool = new ParticipationPool(address(crepToken), owner);
-        tinyPool.setAuthorizedCaller(address(registry), true);
-        crepToken.approve(address(tinyPool), 4e6);
-        tinyPool.depositPool(4e6);
-        registry.setParticipationPool(address(tinyPool));
-        ProtocolConfig(address(votingEngine.protocolConfig())).setParticipationPool(address(tinyPool));
-        vm.stopPrank();
-
-        vm.startPrank(submitter);
-        crepToken.approve(address(registry), 10e6);
-        _submitContentWithReservation(registry, "https://example.com/submitter-only", "goal", "goal", "tags", 0);
-        vm.stopPrank();
-
-        vm.warp(T0 + 4 days + 1);
-        _settleHealthyRound(1);
-
-        vm.prank(voter1);
-        vm.expectRevert("Not submitter");
+        vm.expectRevert("Submitter rewards removed");
         registry.claimSubmitterParticipationReward(1);
-    }
 
-    function test_MarkDormant_PreservesHealthySubmitterParticipationRewardSnapshot() public {
-        vm.startPrank(owner);
-        registry.setParticipationPool(address(participationPool));
-        ProtocolConfig(address(votingEngine.protocolConfig())).setParticipationPool(address(participationPool));
-        vm.stopPrank();
-
-        uint256 submitterBalanceBeforeSubmit = crepToken.balanceOf(submitter);
-        vm.startPrank(submitter);
-        crepToken.approve(address(registry), 10e6);
-        _submitContentWithReservation(
-            registry, "https://example.com/dormant-submitter-reward", "goal", "goal", "tags", 0
-        );
-        vm.stopPrank();
-
-        _settleHealthyRound(1);
-
-        vm.warp(block.timestamp + 30 days + 1);
-        registry.markDormant(1);
-
-        (,,,,,, ContentRegistry.ContentStatus status,,, bool submitterStakeReturned,,) = registry.contents(1);
-        assertEq(
-            uint256(status), uint256(ContentRegistry.ContentStatus.Dormant), "content should transition to dormant"
-        );
-        assertTrue(submitterStakeReturned, "dormancy should still resolve the submitter stake");
-        assertEq(
-            crepToken.balanceOf(submitter),
-            submitterBalanceBeforeSubmit,
-            "dormancy fallback should return the locked submitter stake"
-        );
-        assertEq(
-            registry.submitterParticipationRewardOwed(1),
-            9e6,
-            "healthy dormancy fallback should preserve the snapshotted submitter reward"
-        );
-
-        uint256 submitterBalanceBeforeClaim = crepToken.balanceOf(submitter);
-        vm.prank(submitter);
-        uint256 paidAmount = registry.claimSubmitterParticipationReward(1);
-
-        assertEq(paidAmount, 9e6, "submitter should still be able to claim the preserved reward after dormancy");
-        assertEq(
-            crepToken.balanceOf(submitter) - submitterBalanceBeforeClaim,
-            9e6,
-            "claim should transfer the full preserved reward after dormancy"
-        );
-    }
-
-    function test_SubmitContent_NoParticipationPool_NoReward() public {
-        // Don't set participation pool — reward is skipped
-        uint256 balBefore = crepToken.balanceOf(submitter);
-        vm.startPrank(submitter);
-        crepToken.approve(address(registry), 10e6);
-        _submitContentWithReservation(registry, "https://example.com/1", "goal", "goal", "tags", 0);
-        vm.stopPrank();
-
-        uint256 balAfter = crepToken.balanceOf(submitter);
-        assertEq(balAfter, balBefore - 10e6);
+        vm.expectRevert("Submitter rewards removed");
+        registry.repairMilestoneZeroSubmitterParticipationTerms(1, 9000);
     }
 
     function test_SubmitContent_UrlTooLong_Reverts() public {
@@ -1003,15 +567,7 @@ contract ContentRegistryBranchesTest is VotingTestBase {
         crepToken.approve(address(registry), 20e6);
         _submitContentWithReservation(registry, "https://example.com/1", "goal", "goal", "tags", 0);
         vm.expectRevert("Question already submitted");
-        registry.submitQuestionWithMedia(
-            _singleImageUrls(_submissionImageUrl("https://example.com/1")),
-            "",
-            "goal",
-            "goal",
-            "tags",
-            1,
-            bytes32(0)
-        );
+        registry.submitQuestion("https://example.com/1", _emptyImageUrls(), "", "goal", "goal", "tags", 1, bytes32(0));
         vm.stopPrank();
     }
 
@@ -1112,7 +668,7 @@ contract ContentRegistryBranchesTest is VotingTestBase {
         assertEq(uint256(status), uint256(ContentRegistry.ContentStatus.Cancelled));
     }
 
-    function test_CancelContent_FeeSentToConfiguredSink() public {
+    function test_CancelContent_DoesNotChargeDeprecatedFee() public {
         vm.startPrank(submitter);
         crepToken.approve(address(registry), 10e6);
         _submitContentWithReservation(registry, "https://example.com/1", "goal", "goal", "tags", 0);
@@ -1122,10 +678,10 @@ contract ContentRegistryBranchesTest is VotingTestBase {
         vm.stopPrank();
 
         uint256 bonusAfter = crepToken.balanceOf(bonusPool);
-        assertEq(bonusAfter - bonusBefore, 1e6); // CANCELLATION_FEE
+        assertEq(bonusAfter - bonusBefore, 0);
     }
 
-    function test_CancelContent_FeeCanBeSentToTreasury() public {
+    function test_CancelContent_DeprecatedFeeNotSentToTreasury() public {
         vm.prank(owner);
         registry.setBonusPool(treasury);
 
@@ -1138,7 +694,7 @@ contract ContentRegistryBranchesTest is VotingTestBase {
         vm.stopPrank();
 
         uint256 treasuryAfter = crepToken.balanceOf(treasury);
-        assertEq(treasuryAfter - treasuryBefore, 1e6);
+        assertEq(treasuryAfter - treasuryBefore, 0);
     }
 
     // =========================================================================
@@ -1287,7 +843,14 @@ contract ContentRegistryBranchesTest is VotingTestBase {
         crepToken.approve(address(votingEngine), STAKE);
         vm.expectRevert(RoundVotingEngine.DormancyWindowElapsed.selector);
         votingEngine.commitVote(
-            1, _defaultRatingReferenceBps(), _tlockCommitTargetRound(), _tlockDrandChainHash(), commitHash, ciphertext, STAKE, address(0)
+            1,
+            _defaultRatingReferenceBps(),
+            _tlockCommitTargetRound(),
+            _tlockDrandChainHash(),
+            commitHash,
+            ciphertext,
+            STAKE,
+            address(0)
         );
         vm.stopPrank();
     }
@@ -1335,9 +898,7 @@ contract ContentRegistryBranchesTest is VotingTestBase {
         vm.startPrank(voter2);
         crepToken.approve(address(registry), 10e6);
         vm.expectRevert("Question already submitted");
-        registry.submitQuestionWithMedia(
-            _singleImageUrls(_submissionImageUrl(url)), "", "goal", "goal", "tags", 1, bytes32(0)
-        );
+        registry.submitQuestion(url, _emptyImageUrls(), "", "goal", "goal", "tags", 1, bytes32(0));
         vm.stopPrank();
     }
 

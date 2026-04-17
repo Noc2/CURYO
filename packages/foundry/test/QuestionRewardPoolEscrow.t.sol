@@ -126,7 +126,14 @@ contract QuestionRewardPoolEscrowTest is VotingTestBase {
                     address(rewardPoolImpl),
                     abi.encodeCall(
                         QuestionRewardPoolEscrow.initialize,
-                        (owner, address(crepToken), address(usdc), address(registry), address(votingEngine), address(voterIdNFT))
+                        (
+                            owner,
+                            address(crepToken),
+                            address(usdc),
+                            address(registry),
+                            address(votingEngine),
+                            address(voterIdNFT)
+                        )
                     )
                 )
             )
@@ -139,6 +146,7 @@ contract QuestionRewardPoolEscrowTest is VotingTestBase {
         registry.setProtocolConfig(address(protocolConfig));
         registry.setCategoryRegistry(address(mockCategoryRegistry));
         registry.setVoterIdNFT(address(voterIdNFT));
+        registry.setQuestionRewardPoolEscrow(address(rewardPoolEscrow));
 
         frontendRegistry.setVotingEngine(address(votingEngine));
         frontendRegistry.setVoterIdNFT(address(voterIdNFT));
@@ -472,7 +480,7 @@ contract QuestionRewardPoolEscrowTest is VotingTestBase {
         uint256 secondRoundId = _settleRoundWith(voters, contentId, directions);
 
         vm.prank(voter1);
-        vm.expectRevert("Reward pool expired");
+        vm.expectRevert("Reward Pool expired");
         rewardPoolEscrow.claimQuestionReward(rewardPoolId, secondRoundId);
 
         uint256 funderBalanceBefore = usdc.balanceOf(funder);
@@ -647,14 +655,11 @@ contract QuestionRewardPoolEscrowTest is VotingTestBase {
         activeTlockContentRegistry = registry;
         bytes32 salt =
             keccak256(abi.encode(mediaUrl, QUESTION, DESCRIPTION, TAGS, CATEGORY_ID, submitter, block.timestamp));
-        (, bytes32 submissionKey) =
-            registry.previewQuestionMediaSubmissionKey(imageUrls, "", QUESTION, DESCRIPTION, TAGS, CATEGORY_ID);
-        bytes32 revealCommitment =
-            keccak256(abi.encode(submissionKey, QUESTION, DESCRIPTION, TAGS, CATEGORY_ID, salt, submitter));
 
         vm.startPrank(submitter);
-        crepToken.approve(address(registry), 10e6);
-        registry.reserveSubmission(revealCommitment);
+        _reserveQuestionMediaSubmission(
+            registry, imageUrls, "", QUESTION, DESCRIPTION, TAGS, CATEGORY_ID, salt, submitter
+        );
         vm.warp(block.timestamp + 1);
         contentId = registry.submitQuestionWithMedia(imageUrls, "", QUESTION, DESCRIPTION, TAGS, CATEGORY_ID, salt);
         vm.stopPrank();

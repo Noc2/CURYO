@@ -46,6 +46,7 @@ contract QuestionRewardPoolEscrow is
         uint64 nextRoundToEvaluate;
         uint64 expiresAt;
         address funder;
+        address funderIdentity;
         uint256 funderVoterId;
         uint8 asset;
         uint256 fundedAmount;
@@ -225,6 +226,11 @@ contract QuestionRewardPoolEscrow is
 
         uint256 currentRoundId = votingEngine.currentRoundId(contentId);
         uint256 startRoundId = currentRoundId == 0 ? 1 : currentRoundId + 1;
+        uint256 funderVoterId = voterIdNFT.getTokenId(funder);
+        address funderIdentity = funderVoterId == 0 ? address(0) : voterIdNFT.getHolder(funderVoterId);
+        if (funderVoterId != 0 && funderIdentity == address(0)) {
+            funderIdentity = funder;
+        }
 
         rewardPoolId = nextRewardPoolId++;
         rewardPools[rewardPoolId] = RewardPool({
@@ -234,7 +240,8 @@ contract QuestionRewardPoolEscrow is
             nextRoundToEvaluate: startRoundId.toUint64(),
             expiresAt: expiresAt.toUint64(),
             funder: funder,
-            funderVoterId: 0,
+            funderIdentity: funderIdentity,
+            funderVoterId: funderVoterId,
             asset: asset,
             fundedAmount: fundedAmount,
             unallocatedAmount: fundedAmount,
@@ -254,7 +261,7 @@ contract QuestionRewardPoolEscrow is
             rewardPoolId,
             contentId,
             funder,
-            0,
+            funderVoterId,
             fundedAmount,
             requiredVoters,
             requiredSettledRounds,
@@ -383,7 +390,7 @@ contract QuestionRewardPoolEscrow is
         returns (uint256 refundAmount)
     {
         require(!rewardPool.refunded, "Already refunded");
-        require(rewardPool.qualifiedRounds < rewardPool.requiredSettledRounds, "Reward pool complete");
+        require(rewardPool.qualifiedRounds < rewardPool.requiredSettledRounds, "Reward Pool complete");
         refundAmount = rewardPool.unallocatedAmount;
         require(refundAmount > 0, "No refund");
         rewardPool.refunded = true;
@@ -489,7 +496,7 @@ contract QuestionRewardPoolEscrow is
 
     function _getExistingRewardPool(uint256 rewardPoolId) internal view returns (RewardPool storage rewardPool) {
         rewardPool = rewardPools[rewardPoolId];
-        require(rewardPool.id != 0, "Reward pool not found");
+        require(rewardPool.id != 0, "Reward Pool not found");
     }
 
     function _getIncompleteRewardPoolForQualification(uint256 rewardPoolId)
@@ -499,20 +506,20 @@ contract QuestionRewardPoolEscrow is
     {
         rewardPool = _getExistingRewardPool(rewardPoolId);
         _requirePoolOpenForQualification(rewardPool);
-        require(rewardPool.qualifiedRounds < rewardPool.requiredSettledRounds, "Reward pool complete");
+        require(rewardPool.qualifiedRounds < rewardPool.requiredSettledRounds, "Reward Pool complete");
     }
 
     function _qualifyRoundIfNeeded(uint256 rewardPoolId, RewardPool storage rewardPool, uint256 roundId) internal {
         if (!roundSnapshots[rewardPoolId][roundId].qualified) {
             _requirePoolOpenForQualification(rewardPool);
-            require(rewardPool.qualifiedRounds < rewardPool.requiredSettledRounds, "Reward pool complete");
+            require(rewardPool.qualifiedRounds < rewardPool.requiredSettledRounds, "Reward Pool complete");
             _qualifyRound(rewardPoolId, rewardPool, roundId);
         }
     }
 
     function _requirePoolOpenForQualification(RewardPool storage rewardPool) internal view {
-        require(!rewardPool.refunded, "Reward pool refunded");
-        require(rewardPool.expiresAt == 0 || block.timestamp <= rewardPool.expiresAt, "Reward pool expired");
+        require(!rewardPool.refunded, "Reward Pool refunded");
+        require(rewardPool.expiresAt == 0 || block.timestamp <= rewardPool.expiresAt, "Reward Pool expired");
         require(registry.isContentActive(rewardPool.contentId), "Content not active");
     }
 
@@ -709,7 +716,15 @@ contract QuestionRewardPoolEscrow is
     }
 
     function _funderVoterIdForRound(RewardPool storage rewardPool, uint256 roundId) internal view returns (uint256) {
-        return _voterIdForRound(rewardPool.contentId, roundId, rewardPool.funder);
+        uint256 funderVoterId = _voterIdForRound(rewardPool.contentId, roundId, rewardPool.funder);
+        if (funderVoterId != 0) return funderVoterId;
+
+        if (rewardPool.funderIdentity != address(0)) {
+            uint256 identityVoterId = _voterIdForRound(rewardPool.contentId, roundId, rewardPool.funderIdentity);
+            if (identityVoterId != 0) return identityVoterId;
+        }
+
+        return rewardPool.funderVoterId;
     }
 
     function _submitterVoterId(uint256 contentId, uint256 roundId) internal view returns (uint256) {

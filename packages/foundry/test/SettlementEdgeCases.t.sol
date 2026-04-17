@@ -145,13 +145,7 @@ contract SettlementEdgeCasesTest is VotingTestBase {
         bytes memory ciphertext = _testCiphertext(isUp, salt, contentId);
         uint16 referenceRatingBps = _currentRatingReferenceBps(contentId);
         bytes32 commitHash = _commitHash(
-            isUp,
-            salt,
-            contentId,
-            referenceRatingBps,
-            _tlockCommitTargetRound(),
-            _tlockDrandChainHash(),
-            ciphertext
+            isUp, salt, contentId, referenceRatingBps, _tlockCommitTargetRound(), _tlockDrandChainHash(), ciphertext
         );
         vm.prank(voter);
         crepToken.approve(address(engine), stakeAmt);
@@ -230,8 +224,7 @@ contract SettlementEdgeCasesTest is VotingTestBase {
         registry_ = ContentRegistry(
             address(
                 new ERC1967Proxy(
-                    address(registryImpl),
-                    abi.encodeCall(ContentRegistry.initialize, (owner, owner, address(token)))
+                    address(registryImpl), abi.encodeCall(ContentRegistry.initialize, (owner, owner, address(token)))
                 )
             )
         );
@@ -291,11 +284,14 @@ contract SettlementEdgeCasesTest is VotingTestBase {
         internal
         returns (uint256 roundId)
     {
-        (bytes32 ck1, bytes32 s1, uint64 targetRound1) = _commitOnEngine(votingEngine, token, voter1, contentId, true, STAKE);
+        (bytes32 ck1, bytes32 s1, uint64 targetRound1) =
+            _commitOnEngine(votingEngine, token, voter1, contentId, true, STAKE);
         vm.warp(block.timestamp + 1);
-        (bytes32 ck2, bytes32 s2, uint64 targetRound2) = _commitOnEngine(votingEngine, token, voter2, contentId, true, STAKE);
+        (bytes32 ck2, bytes32 s2, uint64 targetRound2) =
+            _commitOnEngine(votingEngine, token, voter2, contentId, true, STAKE);
         vm.warp(block.timestamp + 1);
-        (bytes32 ck3, bytes32 s3, uint64 targetRound3) = _commitOnEngine(votingEngine, token, voter3, contentId, true, STAKE);
+        (bytes32 ck3, bytes32 s3, uint64 targetRound3) =
+            _commitOnEngine(votingEngine, token, voter3, contentId, true, STAKE);
 
         roundId = RoundEngineReadHelpers.activeRoundId(votingEngine, contentId);
         uint64 maxTargetRound = targetRound1;
@@ -802,57 +798,23 @@ contract SettlementEdgeCasesTest is VotingTestBase {
     }
 
     // =========================================================================
-    // 23. SUBMITTER REWARD: non-submitter reverts
+    // 23. SUBMITTER REWARD: deprecated compatibility path
     // =========================================================================
 
-    function test_SubmitterReward_NonSubmitter_Reverts() public {
-        (uint256 contentId, uint256 roundId) = _setupThreeVoterRound(true, true, false);
-        engine.settleRound(contentId, roundId);
-
-        vm.prank(voter1); // Not the submitter
-        vm.expectRevert("Not submitter");
-        rewardDistributor.claimSubmitterReward(contentId, roundId);
-    }
-
-    // =========================================================================
-    // 24. SUBMITTER REWARD: double claim reverts
-    // =========================================================================
-
-    function test_SubmitterReward_DoubleClaim_Reverts() public {
-        (uint256 contentId, uint256 roundId) = _setupThreeVoterRound(true, true, false);
-        engine.settleRound(contentId, roundId);
-
-        vm.prank(submitter);
-        rewardDistributor.claimSubmitterReward(contentId, roundId);
-
-        vm.prank(submitter);
-        vm.expectRevert("Already claimed");
-        rewardDistributor.claimSubmitterReward(contentId, roundId);
-    }
-
-    // =========================================================================
-    // 25. SUBMITTER REWARD: unanimous round has subsidy
-    // =========================================================================
-
-    function test_SubmitterReward_UnanimousRound_HasSubsidy() public {
+    function test_SubmitterReward_DeprecatedCompatibility() public {
         (uint256 contentId, uint256 roundId) = _setupThreeVoterRound(true, true, true);
         engine.settleRound(contentId, roundId);
 
-        uint256 pending = engine.pendingSubmitterReward(contentId, roundId);
-        // Unanimous rounds get consensus subsidy split into voter+submitter
-        assertGt(pending, 0);
-
-        uint256 balanceBefore = crepToken.balanceOf(submitter);
+        assertEq(engine.pendingSubmitterReward(contentId, roundId), 0);
+        assertTrue(rewardDistributor.submitterRewardClaimed(contentId, roundId));
 
         vm.prank(submitter);
+        vm.expectRevert("Submitter rewards removed");
         rewardDistributor.claimSubmitterReward(contentId, roundId);
-
-        uint256 balanceAfter = crepToken.balanceOf(submitter);
-        assertEq(balanceAfter - balanceBefore, pending);
     }
 
     // =========================================================================
-    // 26. REFUND ON TIED ROUND
+    // 24. REFUND ON TIED ROUND
     // =========================================================================
 
     function test_Refund_TiedRound_ReturnsStake() public {

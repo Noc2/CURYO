@@ -1,10 +1,10 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.28;
 
-import {Test, console} from "forge-std/Test.sol";
-import {ParticipationPool} from "../contracts/ParticipationPool.sol";
-import {CuryoReputation} from "../contracts/CuryoReputation.sol";
-import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
+import { Test, console } from "forge-std/Test.sol";
+import { ParticipationPool } from "../contracts/ParticipationPool.sol";
+import { CuryoReputation } from "../contracts/CuryoReputation.sol";
+import { Ownable } from "@openzeppelin/contracts/access/Ownable.sol";
 
 /// @title ParticipationPool Test Suite — Distribution-Based Halving
 contract ParticipationPoolTest is Test {
@@ -203,7 +203,7 @@ contract ParticipationPoolTest is Test {
         pool.distributeReward(user1, 90e6);
     }
 
-    // --- Submit Reward Tests (same rate, applied to submitter stake) ---
+    // --- Authorized ContentRegistry reward tests ---
 
     function test_RewardSubmission_Tier0_Stake10() public {
         uint256 stakeAmount = 10e6; // MIN_SUBMITTER_STAKE = 10 cREP

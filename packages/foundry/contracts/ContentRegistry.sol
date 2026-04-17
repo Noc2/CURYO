@@ -111,7 +111,7 @@ contract ContentRegistry is Initializable, AccessControlUpgradeable, PausableUpg
     mapping(bytes32 => bool) public submissionKeyUsed; // Canonical submission keys prevent duplicate content variants
     IVoterIdNFT public voterIdNFT; // Voter ID NFT for sybil resistance
 
-    /// @notice Escrow that holds mandatory question reward pools.
+    /// @notice Escrow that holds mandatory reward pools.
     address public questionRewardPoolEscrow;
 
     /// @notice Deprecated submitter reward state retained as zeroed compatibility getters.
@@ -272,7 +272,7 @@ contract ContentRegistry is Initializable, AccessControlUpgradeable, PausableUpg
         emit VoterIdNFTUpdated(_voterIdNFT);
     }
 
-    /// @notice Set or update the question reward pool escrow.
+    /// @notice Set or update the reward pool escrow.
     function setQuestionRewardPoolEscrow(address _questionRewardPoolEscrow) external onlyRole(CONFIG_ROLE) {
         require(_questionRewardPoolEscrow != address(0), "Invalid address");
         questionRewardPoolEscrow = _questionRewardPoolEscrow;
@@ -280,7 +280,7 @@ contract ContentRegistry is Initializable, AccessControlUpgradeable, PausableUpg
     }
 
     /// @notice Deprecated compatibility hook. Submitter participation rewards have been removed.
-    function setParticipationPool(address) external onlyRole(CONFIG_ROLE) {}
+    function setParticipationPool(address) external onlyRole(CONFIG_ROLE) { }
 
     /// @notice Set the cancellation fee sink address (can only be called by TREASURY_ROLE).
     function setBonusPool(address _bonusPool) external onlyRole(TREASURY_ROLE) {
@@ -369,11 +369,7 @@ contract ContentRegistry is Initializable, AccessControlUpgradeable, PausableUpg
         SUBMISSION_MEDIA_VALIDATOR.validateContextUrl(contextUrl);
         SUBMISSION_MEDIA_VALIDATOR.validateOptionalMediaSet(imageUrls, videoUrl);
         SubmissionMetadata memory metadata = SubmissionMetadata({
-            url: contextUrl,
-            title: title,
-            description: description,
-            tags: tags,
-            categoryId: categoryId
+            url: contextUrl, title: title, description: description, tags: tags, categoryId: categoryId
         });
         _validateTextFields(metadata);
 
@@ -396,11 +392,7 @@ contract ContentRegistry is Initializable, AccessControlUpgradeable, PausableUpg
         SUBMISSION_MEDIA_VALIDATOR.validateContextUrl(contextUrl);
         SUBMISSION_MEDIA_VALIDATOR.validateOptionalMediaSet(imageUrls, videoUrl);
         SubmissionMetadata memory metadata = SubmissionMetadata({
-            url: contextUrl,
-            title: title,
-            description: description,
-            tags: tags,
-            categoryId: categoryId
+            url: contextUrl, title: title, description: description, tags: tags, categoryId: categoryId
         });
         _validateTextFields(metadata);
 
@@ -612,7 +604,7 @@ contract ContentRegistry is Initializable, AccessControlUpgradeable, PausableUpg
         internal
         returns (uint256 rewardPoolId)
     {
-        require(questionRewardPoolEscrow != address(0), "Reward escrow not set");
+        require(questionRewardPoolEscrow != address(0), "Reward Pool escrow not set");
         rewardPoolId = IQuestionRewardPoolEscrow(questionRewardPoolEscrow)
             .createSubmissionRewardPoolFromRegistry(contentId, msg.sender, rewardAsset, rewardAmount);
     }
@@ -640,7 +632,7 @@ contract ContentRegistry is Initializable, AccessControlUpgradeable, PausableUpg
     /// @dev Resets the activity timer. Max MAX_REVIVALS revivals per content.
     ///      Revival stake is sent to treasury (non-refundable).
     function reviveContent(uint256 contentId) external nonReentrant whenNotPaused {
-        // M-4 fix: require Voter ID (same sybil check as submitContent)
+        // Revivals still require Voter ID; fresh question submissions are permissionless with a reward pool.
         if (address(voterIdNFT) != address(0)) {
             require(voterIdNFT.hasVoterId(msg.sender), "Voter ID required");
         }
@@ -846,11 +838,7 @@ contract ContentRegistry is Initializable, AccessControlUpgradeable, PausableUpg
         SUBMISSION_MEDIA_VALIDATOR.validateContextUrl(contextUrl);
         SUBMISSION_MEDIA_VALIDATOR.validateOptionalMediaSet(imageUrls, videoUrl);
         SubmissionMetadata memory metadata = SubmissionMetadata({
-            url: contextUrl,
-            title: title,
-            description: description,
-            tags: tags,
-            categoryId: categoryId
+            url: contextUrl, title: title, description: description, tags: tags, categoryId: categoryId
         });
         _validateTextFields(metadata);
         require(address(categoryRegistry) != address(0), "CategoryRegistry not set");
