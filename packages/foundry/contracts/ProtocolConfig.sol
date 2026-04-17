@@ -2,14 +2,14 @@
 pragma solidity ^0.8.24;
 
 import { Initializable } from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
-import { AccessControl } from "@openzeppelin/contracts/access/AccessControl.sol";
+import { AccessControlUpgradeable } from "@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol";
 import { RoundLib } from "./libraries/RoundLib.sol";
 import { RatingLib } from "./libraries/RatingLib.sol";
 
 /// @title ProtocolConfig
 /// @notice Governance-controlled configuration and address book for RoundVotingEngine.
 /// @dev Upgradeable behind a transparent proxy, so storage layout must remain stable across future upgrades.
-contract ProtocolConfig is Initializable, AccessControl {
+contract ProtocolConfig is Initializable, AccessControlUpgradeable {
     bytes32 public constant CONFIG_ROLE = keccak256("CONFIG_ROLE");
     bytes32 public constant TREASURY_ROLE = keccak256("TREASURY_ROLE");
     bytes32 public constant TREASURY_ADMIN_ROLE = keccak256("TREASURY_ADMIN_ROLE");
@@ -79,6 +79,8 @@ contract ProtocolConfig is Initializable, AccessControl {
         if (admin == address(0)) revert InvalidAddress();
         if (governance == address(0)) revert InvalidAddress();
         if (treasuryAuthority == address(0)) revert InvalidAddress();
+
+        __AccessControl_init();
 
         _grantRole(DEFAULT_ADMIN_ROLE, governance);
         _grantRole(CONFIG_ROLE, governance);
@@ -218,7 +220,6 @@ contract ProtocolConfig is Initializable, AccessControl {
 
     function _setRewardDistributor(address value) internal {
         if (value == address(0)) revert InvalidAddress();
-        if (rewardDistributor != address(0)) revert InvalidConfig();
         rewardDistributor = value;
         emit RewardDistributorUpdated(value);
     }

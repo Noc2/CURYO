@@ -862,10 +862,10 @@ contract RoundSettlementEdgeCaseTest is VotingTestBase {
         ProtocolConfig(protocolConfigAddress).setRewardDistributor(address(0));
     }
 
-    function test_SetRewardDistributorSecondCallReverts() public {
+    function test_SetRewardDistributorSecondCallUpdates() public {
         vm.prank(owner);
-        vm.expectRevert(ProtocolConfig.InvalidConfig.selector);
         ProtocolConfig(protocolConfigAddress).setRewardDistributor(address(0xBEEF));
+        assertEq(ProtocolConfig(protocolConfigAddress).rewardDistributor(), address(0xBEEF));
     }
 
     function test_SetFrontendRegistryZeroReverts() public {

@@ -11,6 +11,7 @@ contract ProtocolConfigBranchesTest is Test {
         0x52db9ba70e0cc0f6eaf7803dd07447a1f5477735fd3f661792ba94600c84e971;
 
     event DrandConfigUpdated(bytes32 drandChainHash, uint64 genesisTime, uint64 period);
+    event RewardDistributorUpdated(address rewardDistributor);
     event RatingConfigUpdated(
         uint256 smoothingAlpha,
         uint256 smoothingBeta,
@@ -53,6 +54,23 @@ contract ProtocolConfigBranchesTest is Test {
         assertEq(config.drandChainHash(), nextHash);
         assertEq(config.drandGenesisTime(), nextGenesis);
         assertEq(config.drandPeriod(), nextPeriod);
+    }
+
+    function test_SetRewardDistributor_CanReplaceAddress() public {
+        ProtocolConfig config = deployInitializedProtocolConfig(address(this));
+
+        address firstDistributor = address(0xBEEF);
+        address replacementDistributor = address(0xCAFE);
+
+        vm.expectEmit(false, false, false, true);
+        emit RewardDistributorUpdated(firstDistributor);
+        config.setRewardDistributor(firstDistributor);
+        assertEq(config.rewardDistributor(), firstDistributor);
+
+        vm.expectEmit(false, false, false, true);
+        emit RewardDistributorUpdated(replacementDistributor);
+        config.setRewardDistributor(replacementDistributor);
+        assertEq(config.rewardDistributor(), replacementDistributor);
     }
 
     function test_SetDrandConfig_RejectsZeroHashOrPeriod() public {
