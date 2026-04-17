@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { redirect } from "next/navigation";
 import { BanknotesIcon, CheckBadgeIcon, CpuChipIcon } from "@heroicons/react/24/outline";
 import { CuryoAnimation } from "~~/components/home/CuryoAnimation";
@@ -13,18 +14,35 @@ const ASK_STEPS = [
     icon: CpuChipIcon,
     title: "1. AI Asks",
     description: "An agent or human asks a focused question with context and a bounty.",
+    techLinks: [
+      { label: "x402", href: "/docs/ai#x402-agent-payments" },
+      { label: "MCP", href: "/docs/ai#mcp-adapter-shape" },
+    ],
   },
   {
     icon: CheckBadgeIcon,
     title: "2. Humans Answer",
     description: "Verified humans rate it with staked cREP during blind rounds.",
+    techLinks: [
+      { label: "ZK proof-of-human", href: "/docs/how-it-works#zk-proof-of-human" },
+      { label: "Commit-reveal", href: "/docs/how-it-works#commit-reveal-voting" },
+    ],
   },
   {
     icon: BanknotesIcon,
     title: "3. Earn",
     description: "Winning voters earn reputation, and funded questions can pay USDC rewards.",
+    techLinks: [
+      { label: "On-chain", href: "/docs/how-it-works#on-chain-settlement" },
+      { label: "Stablecoins", href: "/docs/how-it-works#stablecoin-bounties" },
+    ],
   },
 ];
+
+type TechLink = {
+  label: string;
+  href: string;
+};
 
 const FALLBACK_SOCIAL_PROOF_STATS = {
   totalVotes: 3482,
@@ -58,10 +76,12 @@ function AskFlowPanel({
   icon: Icon,
   title,
   description,
+  techLinks,
 }: {
   icon: typeof CpuChipIcon;
   title: string;
   description: string;
+  techLinks: TechLink[];
 }) {
   return (
     <div className="surface-card flex h-full min-h-[17.5rem] flex-col items-center justify-center rounded-[1.25rem] px-6 py-8 text-center">
@@ -70,6 +90,17 @@ function AskFlowPanel({
       </div>
       <h3 className="display-section text-2xl text-base-content">{title}</h3>
       <p className="mt-4 max-w-[24rem] text-lg leading-8 text-base-content/62">{description}</p>
+      <div className="mt-6 flex flex-wrap justify-center gap-2 text-xs font-semibold text-base-content/66">
+        {techLinks.map(techLink => (
+          <Link
+            key={techLink.href}
+            href={techLink.href}
+            className="rounded-full border border-accent/18 bg-base-300/45 px-3 py-1.5 uppercase tracking-[0.12em] transition hover:border-accent/35 hover:bg-accent/10 hover:text-accent focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+          >
+            {techLink.label}
+          </Link>
+        ))}
+      </div>
     </div>
   );
 }
