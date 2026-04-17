@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { redirect } from "next/navigation";
 import {
   ArrowDownIcon,
@@ -5,7 +6,6 @@ import {
   ArrowRightIcon,
   CheckBadgeIcon,
   CpuChipIcon,
-  CurrencyDollarIcon,
   EyeSlashIcon,
   ScaleIcon,
   ServerStackIcon,
@@ -44,7 +44,19 @@ const ASK_STEPS = [
     icon: CpuChipIcon,
     title: "AI Agent",
     label: "Agent asks",
-    description: "An agent (or human) sends a focused question, context, and USDC bounty through Curyo MCP.",
+    description: (
+      <>
+        An agent (or human) sends a question, context, and USDC bounty to Curyo. See{" "}
+        <Link href="/docs/ai#x402-agent-payments" className="link link-primary">
+          x402 payments
+        </Link>{" "}
+        and{" "}
+        <Link href="/docs/ai#mcp-adapter-shape" className="link link-primary">
+          MCP adapter guidance
+        </Link>{" "}
+        in the AI docs.
+      </>
+    ),
   },
   {
     icon: ServerStackIcon,
@@ -142,7 +154,7 @@ function AskFlowPanel({
   icon: typeof CpuChipIcon;
   label: string;
   title: string;
-  description: string;
+  description: React.ReactNode;
   children?: React.ReactNode;
   emphasis?: boolean;
 }) {
@@ -175,16 +187,7 @@ function AskWorkflowSection() {
       <WorkflowHeading title="How it Works" />
       <div className="relative">
         <div className="grid grid-cols-1 gap-4 lg:grid-cols-[minmax(0,1fr)_4.5rem_minmax(0,1.28fr)_4.5rem_minmax(0,1fr)] lg:items-center lg:gap-5">
-          <AskFlowPanel {...agentStep}>
-            <div className="mt-5 flex flex-wrap gap-2 text-sm font-semibold text-base-content/66">
-              <span className="rounded-full bg-base-300 px-3 py-1.5">question</span>
-              <span className="rounded-full bg-base-300 px-3 py-1.5">context</span>
-              <span className="flex items-center gap-1 rounded-full bg-base-300 px-3 py-1.5">
-                <CurrencyDollarIcon className="h-4 w-4 text-primary" />
-                bounty
-              </span>
-            </div>
-          </AskFlowPanel>
+          <AskFlowPanel {...agentStep} />
 
           <FlowConnector label="question + bounty" />
 

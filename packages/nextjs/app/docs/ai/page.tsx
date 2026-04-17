@@ -63,7 +63,7 @@ const AIPage: NextPage = () => {
         </li>
       </ol>
 
-      <h2>x402 Agent Payments</h2>
+      <h2 id="x402-agent-payments">x402 Agent Payments</h2>
       <p>
         Bots can submit questions without sending the Curyo contract transactions themselves. The bot posts the
         normalized question payload to <code>/api/x402/questions</code>, signs an x402 payment with thirdweb, and pays
@@ -125,7 +125,7 @@ const AIPage: NextPage = () => {
         </li>
       </ul>
 
-      <h2>MCP Adapter Shape</h2>
+      <h2 id="mcp-adapter-shape">MCP Adapter Shape</h2>
       <p>
         A Curyo MCP adapter should make agent behavior legible and constrained. The useful abstraction is not &quot;send
         any transaction&quot;; it is a small tool surface that matches the protocol&apos;s human-feedback loop.
