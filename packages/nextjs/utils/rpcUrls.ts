@@ -2,29 +2,8 @@ import type { Chain } from "viem";
 
 const RPC_CHAIN_NAMES: Record<number, string> = {
   1: "eth-mainnet",
-  5: "eth-goerli",
-  10: "opt-mainnet",
-  69: "opt-goerli",
-  1101: "polygonzkevm-mainnet",
-  1442: "polygonzkevm-testnet",
-  137: "polygon-mainnet",
-  280: "zksync-era-testnet",
-  420: "opt-sepolia",
-  8453: "base-mainnet",
-  84531: "base-goerli",
-  84532: "base-sepolia",
-  42161: "arb-mainnet",
-  421613: "arb-goerli",
-  421614: "arb-sepolia",
   42220: "celo-mainnet",
-  44787: "celo-alfajores",
-  11155111: "eth-sepolia",
-  11155420: "opt-sepolia",
   11142220: "celo-sepolia",
-  80001: "polygon-mumbai",
-  80002: "polygon-amoy",
-  81_437: "blast-sepolia",
-  59_140: "linea-sepolia",
 };
 
 type RpcPreferenceOptions = {

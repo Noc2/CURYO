@@ -13,6 +13,10 @@ test("buildAlchemyHttpUrl returns the expected Celo Sepolia RPC", () => {
   assert.equal(buildAlchemyHttpUrl(11142220, "test-key"), "https://celo-sepolia.g.alchemy.com/v2/test-key");
 });
 
+test("buildAlchemyHttpUrl ignores unsupported scaffold-era networks", () => {
+  assert.equal(buildAlchemyHttpUrl(137, "test-key"), undefined);
+});
+
 test("getPreferredHttpRpcUrls prioritizes overrides before Alchemy and defaults", () => {
   assert.deepEqual(
     getPreferredHttpRpcUrls(celoSepolia, {
