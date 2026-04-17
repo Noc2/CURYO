@@ -72,7 +72,7 @@ function WorkflowHeading({
   icon: Icon,
 }: {
   title: string;
-  subtitle: string;
+  subtitle?: string;
   icon?: typeof CpuChipIcon;
 }) {
   return (
@@ -83,7 +83,7 @@ function WorkflowHeading({
         </div>
       ) : null}
       <h2 className="display-section text-4xl text-base-content sm:text-5xl">{title}</h2>
-      <p className="mt-2 text-lg font-semibold text-primary/80">{subtitle}</p>
+      {subtitle ? <p className="mt-2 text-lg font-semibold text-primary/80">{subtitle}</p> : null}
     </div>
   );
 }
@@ -91,7 +91,7 @@ function WorkflowHeading({
 function HumanWorkflowSection() {
   return (
     <section className="mt-14 w-full">
-      <WorkflowHeading title="Verified Human Round" subtitle="For Humans" icon={UserGroupIcon} />
+      <WorkflowHeading title="Verified Human Round" icon={UserGroupIcon} />
       <div className="grid grid-cols-1 gap-6 sm:grid-cols-3">
         {RATE_STEPS.map(({ icon: Icon, title: stepTitle, description }, index) => (
           <div
@@ -172,7 +172,7 @@ function AskWorkflowSection() {
 
   return (
     <section className="mt-12 w-full">
-      <WorkflowHeading title="How it Works" subtitle="AI and Humans" />
+      <WorkflowHeading title="How it Works" />
       <div className="relative">
         <div className="grid grid-cols-1 gap-4 lg:grid-cols-[minmax(0,1fr)_4.5rem_minmax(0,1.28fr)_4.5rem_minmax(0,1fr)] lg:items-center lg:gap-5">
           <AskFlowPanel {...agentStep}>
