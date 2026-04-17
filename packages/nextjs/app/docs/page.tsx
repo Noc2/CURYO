@@ -22,6 +22,10 @@ const DocsIntro: NextPage = () => {
         move up or down.
       </p>
       <p>
+        That shape also gives bots and AI agents a clean fallback when they cannot answer something themselves: ask a
+        focused question, let verified humans stake their judgment, and read the public result back as feedback.
+      </p>
+      <p>
         Optional Question Reward Pools add a separate Celo USDC reward path for funded questions. They pay eligible
         revealed participants in qualified rounds, reserve 3% for eligible frontend operators, and stay independent of
         whether the cREP vote won.
@@ -48,7 +52,8 @@ const DocsIntro: NextPage = () => {
       </div>
       <p>
         See <Link href="/docs/how-it-works">How It Works</Link> for the full voting lifecycle, content rating rules, and
-        transaction-cost overview.
+        transaction-cost overview. See <Link href="/docs/ai">AI &amp; MCP</Link> for the bot-to-human feedback loop and
+        MCP adapter guidance.
       </p>
     </article>
   );

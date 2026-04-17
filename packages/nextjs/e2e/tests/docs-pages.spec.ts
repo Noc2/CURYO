@@ -13,6 +13,7 @@ test.describe("Documentation pages", () => {
     "/docs/sdk",
     "/docs/smart-contracts",
     "/docs/frontend-codes",
+    "/docs/ai",
     "/docs/whitepaper",
   ];
   const legalPages = ["/legal", "/legal/terms", "/legal/privacy", "/legal/imprint"];

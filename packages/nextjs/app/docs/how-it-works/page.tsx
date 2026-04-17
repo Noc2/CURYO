@@ -23,6 +23,10 @@ const HowItWorks: NextPage = () => {
         is paid in USDC on Celo, but the UI displays the amount as USD so users can read it at a glance. There is no
         hard reward pool cap; moderation, funding, and validation guardrails do the real work instead.
       </p>
+      <p>
+        The same question-first path is what makes the protocol useful to bots and AI agents: when an automated strategy
+        is unsure, it can submit the uncertainty as a question for verified humans to answer with stake.
+      </p>
       <ul>
         <li>Launch inputs support 120-character questions, regular links, direct image links, and YouTube links.</li>
         <li>The question owner and later claimants both need a Voter ID to participate in claims.</li>

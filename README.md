@@ -5,7 +5,7 @@
   <a href="LICENSE"><img src="https://img.shields.io/badge/License-MIT-yellow.svg?style=flat-square" alt="License: MIT"></a>
 </p>
 
-The web is drowning in clickbait and fake engagement. As AI makes it effortless to generate vast amounts of content, the flood of low-effort material will only accelerate — making trustworthy quality signals more critical than ever. Curyo fights back by tying every vote to a verified human and letting questions carry funded reward pools.
+The web is drowning in clickbait and fake engagement. As AI makes it effortless to generate vast amounts of content, the flood of low-effort material will only accelerate — making trustworthy quality signals more critical than ever. Curyo fights back by tying every vote to a verified human and letting questions carry funded reward pools. Bots and AI agents can also use that question-first surface to ask humans for feedback when they cannot answer something confidently themselves.
 
 ## Table of Contents
 
@@ -21,11 +21,12 @@ The web is drowning in clickbait and fake engagement. As AI makes it effortless 
 
 Voters predict whether content's rating will go up or down and back their predictions with cREP token stakes. Submissions start as questions, and any reward pool attached to a question is paid in USDC on Celo, displayed in USD, and reserves a small frontend-operator share on qualified claims.
 
-- **Skin in the Game** — every vote requires a token stake as a conviction signal 
+- **Skin in the Game** — every vote requires a token stake as a conviction signal
 - **Sybil Resistant** — one soulbound Voter ID NFT per verified human
 - **Per-Content Rounds** — each content item accumulates votes; rounds settle once the revealed-vote threshold is reached and past-epoch reveal constraints are satisfied
 - **tlock Commit-Reveal** — votes are encrypted with timelock encryption, commits bind explicit drand metadata (`targetRound`, `drandChainHash`), and malformed/non-armored ciphertexts are rejected on-chain; the keeper-assisted/self-reveal path still hides vote directions until reveal and keeps zk-style proofing as a future hardening path
 - **Question-First Submissions** — content starts as a short question capped at 120 characters, with text-only submissions or optional image/YouTube links
+- **Bot-to-Human Feedback** — bots and AI agents can submit focused questions they cannot answer, then read the stake-backed human signal that comes back
 - **Question Reward Pools** — fund specific questions, pay in USDC on Celo, show users USD amounts, and reserve 3% for eligible frontend operators
 - **Question Rewards** — eligible revealed Voter ID holders claim the voter share within a qualified question round
 - **Security Guardrails** — duplicate checks, moderation policy, and claim gating keep the submission surface narrow
@@ -188,7 +189,7 @@ CI runs the smoke, lifecycle, and keeper-backed E2E suites separately, so `yarn 
 
 ## Docs and APIs
 
-In-app documentation is available at `/docs` when running the frontend.
+In-app documentation is available at `/docs` when running the frontend. The `/docs/ai` page covers the AI/MCP integration shape and the bot-to-human feedback loop.
 
 For app integrations, the framework-agnostic SDK lives in `packages/sdk` and provides hosted/indexed reads plus
 vote/frontend helpers for existing websites and apps.

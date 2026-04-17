@@ -20,6 +20,7 @@ export const DOCS_NAV = [
       { label: "Smart Contracts", href: "/docs/smart-contracts" },
       { label: "Frontend Integrations", href: "/docs/frontend-codes" },
       { label: "SDK", href: "/docs/sdk" },
+      { label: "AI & MCP", href: "/docs/ai" },
     ],
   },
 ];
