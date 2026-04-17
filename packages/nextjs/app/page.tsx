@@ -1,5 +1,12 @@
 import { redirect } from "next/navigation";
-import { EyeSlashIcon, ScaleIcon, ShieldCheckIcon } from "@heroicons/react/24/outline";
+import {
+  ChatBubbleLeftRightIcon,
+  CpuChipIcon,
+  CurrencyDollarIcon,
+  EyeSlashIcon,
+  ScaleIcon,
+  ShieldCheckIcon,
+} from "@heroicons/react/24/outline";
 import { CuryoAnimation } from "~~/components/home/CuryoAnimation";
 import { LandingFaq } from "~~/components/home/LandingFaq";
 import { LandingPageActions } from "~~/components/home/LandingPageActions";
@@ -8,7 +15,7 @@ import { getOptionalPonderUrl } from "~~/lib/env/server";
 
 const LANDING_STATS_REVALIDATE_SECONDS = 300;
 
-const STEPS = [
+const RATE_STEPS = [
   {
     icon: ShieldCheckIcon,
     title: "Get Verified",
@@ -24,6 +31,39 @@ const STEPS = [
     title: "Settle and Earn",
     description:
       "Reveal after the blind phase. Winning voters earn cREP rewards; funded questions also pay voters in USDC.",
+  },
+];
+
+const ASK_STEPS = [
+  {
+    icon: ChatBubbleLeftRightIcon,
+    title: "Ask a Focused Question",
+    description: "Write the claim you want rated. Keep it clear, subjective, and narrow enough for voters to judge.",
+  },
+  {
+    icon: CurrencyDollarIcon,
+    title: "Add Context and Bounties",
+    description:
+      "Attach links, images, or video. Fund a bounty through the Question Reward Pool when human attention should be paid in USDC.",
+  },
+  {
+    icon: CpuChipIcon,
+    title: "Connect the MCP Server",
+    description:
+      "AI agents can use the Curyo MCP server to ask questions, fund bounties, track status, and read settled human ratings.",
+  },
+];
+
+const LANDING_WORKFLOWS = [
+  {
+    title: "How to Rate",
+    subtitle: "For Humans",
+    steps: RATE_STEPS,
+  },
+  {
+    title: "How to Ask",
+    subtitle: "AI and Humans",
+    steps: ASK_STEPS,
   },
 ];
 
@@ -135,28 +175,30 @@ export default async function LandingPage({ searchParams }: { searchParams: Prom
           </div>
         </div>
 
-        {/* How it works */}
-        <div className="w-full mt-12">
-          <h2 className="display-section mb-8 text-center text-4xl text-base-content sm:mb-10 sm:text-5xl">
-            How it <span className="text-base-content">Works</span>
-          </h2>
-          <div className="grid grid-cols-1 gap-6 sm:grid-cols-3">
-            {STEPS.map(({ icon: Icon, title, description }, index) => (
-              <div
-                key={title}
-                className="surface-card flex h-full flex-col items-center rounded-[1.75rem] px-6 py-7 text-center"
-              >
-                <div className="mb-4 flex h-20 w-20 items-center justify-center rounded-2xl bg-base-300 shadow-[0_14px_28px_rgba(9,10,12,0.24)]">
-                  <Icon className="h-10 w-10 text-primary" />
+        {LANDING_WORKFLOWS.map(({ title, subtitle, steps }, sectionIndex) => (
+          <section key={title} className={`w-full ${sectionIndex === 0 ? "mt-12" : "mt-14"}`}>
+            <div className="mb-8 text-center sm:mb-10">
+              <h2 className="display-section text-4xl text-base-content sm:text-5xl">{title}</h2>
+              <p className="mt-2 text-lg font-semibold text-primary/80">{subtitle}</p>
+            </div>
+            <div className="grid grid-cols-1 gap-6 sm:grid-cols-3">
+              {steps.map(({ icon: Icon, title: stepTitle, description }, index) => (
+                <div
+                  key={stepTitle}
+                  className="surface-card flex h-full flex-col items-center rounded-[1.75rem] px-6 py-7 text-center"
+                >
+                  <div className="mb-4 flex h-20 w-20 items-center justify-center rounded-2xl bg-base-300 shadow-[0_14px_28px_rgba(9,10,12,0.24)]">
+                    <Icon className="h-10 w-10 text-primary" />
+                  </div>
+                  <h3 className="display-section mb-3 text-2xl text-base-content">
+                    {index + 1}. {stepTitle}
+                  </h3>
+                  <p className="text-lg text-base-content/60">{description}</p>
                 </div>
-                <h3 className="display-section mb-3 text-2xl text-base-content">
-                  {index + 1}. {title}
-                </h3>
-                <p className="text-lg text-base-content/60">{description}</p>
-              </div>
-            ))}
-          </div>
-        </div>
+              ))}
+            </div>
+          </section>
+        ))}
 
         <LandingFaq />
       </div>
