@@ -102,7 +102,7 @@ const SmartContracts: NextPage = () => {
             </tr>
             <tr>
               <td className="font-mono text-primary">HumanFaucet</td>
-              <td>Sybil-resistant token distribution via Self.xyz passport or biometric ID verification</td>
+              <td>Sybil-resistant token distribution via Self.xyz age, document, and sanctions verification</td>
               <td>No</td>
             </tr>
             <tr>
@@ -184,7 +184,8 @@ const SmartContracts: NextPage = () => {
       <h2>VoterIdNFT</h2>
       <p>
         Soulbound (non-transferable) ERC-721 representing a verified human identity. Minted by HumanFaucet upon
-        successful Self.xyz passport or biometric ID verification. Token ID 0 is reserved (indicates no Voter ID).
+        successful Self.xyz passport or biometric ID verification for an eligible 18+ claimant. Token ID 0 is reserved
+        (indicates no Voter ID).
       </p>
       <h3>Sybil Resistance</h3>
       <p>
@@ -585,9 +586,11 @@ const SmartContracts: NextPage = () => {
       <h2>HumanFaucet</h2>
       <p>
         Sybil-resistant token distribution using Self.xyz zero-knowledge passport or biometric ID-card verification.
-        Five tiers run from Genesis (10,000 cREP for the first 10 users) down to Settler (1 cREP), with claim sizes
-        stepping down 10x at claimant thresholds 10 / 1,000 / 10,000 / 1,000,000. Referral bonuses are 50% of the claim
-        amount for both claimant and referrer.
+        Claims require a supported credential, proof that the claimant is 18 or older, OFAC sanctions clearance, and the
+        configured sanctioned-country exclusion check, currently covering Cuba, Iran, North Korea, and Syria. Five tiers
+        run from Genesis (10,000 cREP for the first 10 users) down to Settler (1 cREP), with claim sizes stepping down
+        10x at claimant thresholds 10 / 1,000 / 10,000 / 1,000,000. Referral bonuses are 50% of the claim amount for
+        both claimant and referrer.
       </p>
       <p>
         On a successful claim, HumanFaucet attempts to mint a <strong>VoterIdNFT</strong> for the claimant, enabling

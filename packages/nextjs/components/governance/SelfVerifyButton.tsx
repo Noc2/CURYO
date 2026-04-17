@@ -5,6 +5,7 @@ import dynamic from "next/dynamic";
 import type { SelfApp } from "@selfxyz/qrcode";
 import { useAccount } from "wagmi";
 import { useDeployedContractInfo } from "~~/hooks/scaffold-eth";
+import { FAUCET_MINIMUM_AGE } from "~~/lib/governance/faucetEligibility";
 import {
   buildSelfVerificationApp,
   getSelfVerificationUniversalLink,
@@ -97,7 +98,9 @@ export function SelfVerifyButton({ referrer, onStart, onSuccess }: SelfVerifyBut
         >
           Open Self App
         </a>
-        <p className="text-base text-base-content/60">Use a passport or biometric ID card in Self.</p>
+        <p className="text-base text-base-content/60">
+          Use a passport or biometric ID card in Self. You must be {FAUCET_MINIMUM_AGE}+ and sanctions eligible.
+        </p>
       </div>
     );
   }

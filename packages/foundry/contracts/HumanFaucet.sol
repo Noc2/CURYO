@@ -42,6 +42,9 @@ contract HumanFaucet is SelfVerificationRoot, Ownable, Pausable {
     bytes32 public constant BIOMETRIC_ID_CARD_ATTESTATION_ID = bytes32(uint256(2));
     bytes32 public constant KYC_ATTESTATION_ID = bytes32(uint256(4));
 
+    /// @notice Minimum Self.xyz age disclosure required for faucet claims
+    uint256 public constant MINIMUM_FAUCET_AGE = 18;
+
     struct AttestationPolicy {
         bool enabled;
         bool[3] requiredOfac;
@@ -165,6 +168,9 @@ contract HumanFaucet is SelfVerificationRoot, Ownable, Pausable {
     /// @notice Thrown when Self.xyz output does not confirm sanctions screening passed
     error SanctionsCheckFailed();
 
+    /// @notice Thrown when Self.xyz output does not prove the claimant is old enough
+    error MinimumAgeNotMet();
+
     /// @notice Thrown when governance attempts to configure an invalid attestation policy
     error InvalidAttestationPolicy();
 
@@ -235,10 +241,7 @@ contract HumanFaucet is SelfVerificationRoot, Ownable, Pausable {
     /// @notice Update which Self.xyz attestation IDs may claim and which sanctions checks must pass.
     /// @dev Owner is governance after deployment, so production changes go through timelock governance.
     ///      `requiredOfac` indexes follow Self.xyz's output: [document number, name+DOB, name+YOB].
-    function setAttestationPolicy(bytes32 attestationId, bool enabled, bool[3] memory requiredOfac)
-        external
-        onlyOwner
-    {
+    function setAttestationPolicy(bytes32 attestationId, bool enabled, bool[3] memory requiredOfac) external onlyOwner {
         _setAttestationPolicy(attestationId, enabled, requiredOfac);
     }
 
@@ -503,6 +506,10 @@ contract HumanFaucet is SelfVerificationRoot, Ownable, Pausable {
 
         // Defense-in-depth: allow only governance-approved Self.xyz credentials and require sanctions clearance.
         _validateAttestationPolicy(output.attestationId, output.ofac);
+
+        if (output.olderThan < MINIMUM_FAUCET_AGE) {
+            revert MinimumAgeNotMet();
+        }
 
         // Check nullifier hasn't been used (same passport can't claim twice)
         if (nullifierUsed[output.nullifier]) {

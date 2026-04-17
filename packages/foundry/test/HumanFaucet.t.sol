@@ -15,6 +15,7 @@ contract HumanFaucetTest is Test {
     bytes32 internal constant BIOMETRIC_ID_CARD_ATTESTATION_ID = bytes32(uint256(2));
     bytes32 internal constant KYC_ATTESTATION_ID = bytes32(uint256(4));
     bytes32 internal constant UNSUPPORTED_ATTESTATION_ID = bytes32(uint256(99));
+    uint256 internal constant MINIMUM_FAUCET_AGE = 18;
 
     HumanFaucet public faucet;
     MockIdentityVerificationHub public mockHub;
@@ -144,13 +145,14 @@ contract HumanFaucetTest is Test {
         bytes memory userContextData = abi.encodePacked(bytes32(uint256(block.chainid)));
 
         vm.prank(user1);
-        (bool success, bytes memory revertData) = address(faucet).call(
-            abi.encodeWithSelector(
-                SelfVerificationRoot.verifySelfProof.selector,
-                _buildProofPayload(PASSPORT_ATTESTATION_ID, _buildUserContextData(user1, "")),
-                userContextData
-            )
-        );
+        (bool success, bytes memory revertData) = address(faucet)
+            .call(
+                abi.encodeWithSelector(
+                    SelfVerificationRoot.verifySelfProof.selector,
+                    _buildProofPayload(PASSPORT_ATTESTATION_ID, _buildUserContextData(user1, "")),
+                    userContextData
+                )
+            );
 
         assertFalse(success);
         _assertRevertSelector(revertData, SelfVerificationRoot.InvalidDataFormat.selector);
@@ -162,13 +164,14 @@ contract HumanFaucetTest is Test {
         bytes memory mismatchedUserContextData = _buildUserContextData(user2, "");
 
         vm.prank(user1);
-        (bool success, bytes memory revertData) = address(faucet).call(
-            abi.encodeWithSelector(
-                SelfVerificationRoot.verifySelfProof.selector,
-                _buildProofPayload(PASSPORT_ATTESTATION_ID, proofContextData),
-                mismatchedUserContextData
-            )
-        );
+        (bool success, bytes memory revertData) = address(faucet)
+            .call(
+                abi.encodeWithSelector(
+                    SelfVerificationRoot.verifySelfProof.selector,
+                    _buildProofPayload(PASSPORT_ATTESTATION_ID, proofContextData),
+                    mismatchedUserContextData
+                )
+            );
 
         assertFalse(success);
         _assertRevertReason(revertData, "Invalid user identifier");
@@ -567,25 +570,27 @@ contract HumanFaucetTest is Test {
 
     // --- Age Disclosure Handling Tests ---
 
-    function test_Claim_SuccessWithoutAgeRequirement_Zero() public {
+    function test_Claim_RevertMinimumAgeNotMet_Zero() public {
         mockHub.setVerified(user1);
 
+        vm.expectRevert(HumanFaucet.MinimumAgeNotMet.selector);
         mockHub.simulateVerificationWithAge(address(faucet), user1, 0);
 
-        assertEq(crepToken.balanceOf(user1), TIER_0_AMOUNT);
-        assertTrue(faucet.hasClaimed(user1));
+        assertEq(crepToken.balanceOf(user1), 0);
+        assertFalse(faucet.hasClaimed(user1));
     }
 
-    function test_Claim_SuccessWithoutAgeRequirement_Seventeen() public {
+    function test_Claim_RevertMinimumAgeNotMet_Seventeen() public {
         mockHub.setVerified(user1);
 
+        vm.expectRevert(HumanFaucet.MinimumAgeNotMet.selector);
         mockHub.simulateVerificationWithAge(address(faucet), user1, 17);
 
-        assertEq(crepToken.balanceOf(user1), TIER_0_AMOUNT);
-        assertTrue(faucet.hasClaimed(user1));
+        assertEq(crepToken.balanceOf(user1), 0);
+        assertFalse(faucet.hasClaimed(user1));
     }
 
-    function test_Claim_SuccessWithoutAgeRequirement_ViaCustomOutput() public {
+    function test_Claim_RevertMinimumAgeNotMet_ViaCustomOutput() public {
         ISelfVerificationRoot.GenericDiscloseOutputV2 memory output;
         output.attestationId = PASSPORT_ATTESTATION_ID;
         output.userIdentifier = uint256(uint160(user1));
@@ -593,7 +598,26 @@ contract HumanFaucetTest is Test {
         output.olderThan = 15;
         output.ofac = [true, true, true];
 
+        vm.expectRevert(HumanFaucet.MinimumAgeNotMet.selector);
         mockHub.simulateVerificationWithOutput(address(faucet), output);
+
+        assertEq(crepToken.balanceOf(user1), 0);
+        assertFalse(faucet.hasClaimed(user1));
+    }
+
+    function test_Claim_SuccessWithMinimumAge() public {
+        mockHub.setVerified(user1);
+
+        mockHub.simulateVerificationWithAge(address(faucet), user1, MINIMUM_FAUCET_AGE);
+
+        assertEq(crepToken.balanceOf(user1), TIER_0_AMOUNT);
+        assertTrue(faucet.hasClaimed(user1));
+    }
+
+    function test_Claim_SuccessAboveMinimumAge() public {
+        mockHub.setVerified(user1);
+
+        mockHub.simulateVerificationWithAge(address(faucet), user1, 21);
 
         assertEq(crepToken.balanceOf(user1), TIER_0_AMOUNT);
         assertTrue(faucet.hasClaimed(user1));
@@ -927,7 +951,11 @@ contract HumanFaucetTest is Test {
         vm.store(address(faucet), bytes32(uint256(6)), bytes32(value));
     }
 
-    function _buildProofPayload(bytes32 attestationId, bytes memory userContextData) internal pure returns (bytes memory) {
+    function _buildProofPayload(bytes32 attestationId, bytes memory userContextData)
+        internal
+        pure
+        returns (bytes memory)
+    {
         return abi.encodePacked(attestationId, bytes32(_calculateBoundUserIdentifier(userContextData)));
     }
 

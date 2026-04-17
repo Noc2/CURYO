@@ -21,7 +21,7 @@ export const EXECUTIVE_SUMMARY: ContentBlock[] = [
   },
   {
     type: "paragraph",
-    text: "Sybil resistance is enforced through Voter ID NFTs -- soulbound tokens tied to verified human identities via zero-knowledge Self.xyz passport or biometric ID card verification. Each verified identity is capped regardless of how many wallets it controls, making systematic manipulation expensive relative to the signal produced.",
+    text: "Sybil resistance is enforced through Voter ID NFTs -- soulbound tokens tied to verified human identities via zero-knowledge Self.xyz passport or biometric ID card verification. Faucet claims require 18+ age proof, OFAC sanctions clearance, and configured sanctioned-country eligibility. Each verified identity is capped regardless of how many wallets it controls, making systematic manipulation expensive relative to the signal produced.",
   },
   {
     type: "paragraph",

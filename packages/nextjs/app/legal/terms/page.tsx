@@ -63,6 +63,7 @@ const TermsPage: NextPage = () => {
         <ul>
           <li>Persons under the age of 18 (or the age of majority in your jurisdiction)</li>
           <li>Persons in any jurisdiction where blockchain or decentralized application services are prohibited</li>
+          <li>Persons subject to sanctions or unable to pass configured sanctioned-country eligibility checks</li>
         </ul>
         <p>
           By using the Service, you represent and warrant that you meet all eligibility requirements and are legally
@@ -159,7 +160,9 @@ const TermsPage: NextPage = () => {
           </li>
           <li>
             <strong>Identity Verification:</strong> The faucet uses Self.xyz for zero-knowledge identity verification
-            using supported documents such as passports or biometric ID cards. While no personal data is shared with
+            using supported documents such as passports or biometric ID cards. Faucet eligibility also requires proof
+            that you are 18 or older, sanctions clearance, and configured sanctioned-country checks; sanctioned-country
+            jurisdictions such as Cuba, Iran, North Korea, and Syria cannot claim. While no personal data is shared with
             this Interface, the on-chain nullifier permanently links one verification per supported document. If
             Self.xyz&apos;s service becomes unavailable, alternative faucet mechanisms may not be available
           </li>
@@ -176,7 +179,8 @@ const TermsPage: NextPage = () => {
           <li>Distribution of token rewards based on curation outcomes</li>
           <li>Governance participation through token holding</li>
           <li>
-            Identity verification through third-party services (e.g., Self.xyz) for Sybil-resistant token distribution
+            Identity verification through third-party services (e.g., Self.xyz) for age-gated, sanctions-screened,
+            Sybil-resistant token distribution
           </li>
         </ul>
         <p>

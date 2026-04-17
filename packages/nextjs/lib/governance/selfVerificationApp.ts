@@ -1,3 +1,5 @@
+import { FAUCET_EXCLUDED_COUNTRIES, FAUCET_MINIMUM_AGE } from "./faucetEligibility";
+import type { FaucetExcludedCountryCode } from "./faucetEligibility";
 import { SelfAppBuilder, getUniversalLink } from "@selfxyz/qrcode";
 import type { SelfApp } from "@selfxyz/qrcode";
 import { isAddress } from "viem";
@@ -9,9 +11,9 @@ type SupportedSelfVerificationChainId = 42220 | 11142220;
 type SelfVerificationEndpointType = "celo" | "staging_celo";
 
 type SelfVerificationDisclosures = {
-  minimumAge?: number;
+  minimumAge: number;
   ofac: true;
-  excludedCountries: [];
+  excludedCountries: FaucetExcludedCountryCode[];
   issuing_state: false;
   name: false;
   passport_number: false;
@@ -93,8 +95,9 @@ export function buildSelfVerificationAppConfig({
     devMode: chainId === 11142220,
     version: 2,
     disclosures: {
+      minimumAge: FAUCET_MINIMUM_AGE,
       ofac: true,
-      excludedCountries: [],
+      excludedCountries: [...FAUCET_EXCLUDED_COUNTRIES],
       issuing_state: false,
       name: false,
       passport_number: false,

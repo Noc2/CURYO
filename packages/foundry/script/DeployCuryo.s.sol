@@ -1,30 +1,31 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.20;
 
-import {ScaffoldETHDeploy} from "./DeployHelpers.s.sol";
-import {console} from "forge-std/console.sol";
-import {TransparentUpgradeableProxy} from "@openzeppelin/contracts/proxy/transparent/TransparentUpgradeableProxy.sol";
-import {ProxyAdmin} from "@openzeppelin/contracts/proxy/transparent/ProxyAdmin.sol";
-import {IAccessControl} from "@openzeppelin/contracts/access/IAccessControl.sol";
-import {TimelockController} from "@openzeppelin/contracts/governance/TimelockController.sol";
-import {IVotes} from "@openzeppelin/contracts/governance/utils/IVotes.sol";
-import {CuryoReputation} from "../contracts/CuryoReputation.sol";
-import {ContentRegistry} from "../contracts/ContentRegistry.sol";
-import {RoundVotingEngine} from "../contracts/RoundVotingEngine.sol";
-import {RoundRewardDistributor} from "../contracts/RoundRewardDistributor.sol";
-import {FrontendRegistry} from "../contracts/FrontendRegistry.sol";
-import {CategoryRegistry} from "../contracts/CategoryRegistry.sol";
-import {ProfileRegistry} from "../contracts/ProfileRegistry.sol";
-import {ProtocolConfig} from "../contracts/ProtocolConfig.sol";
-import {QuestionRewardPoolEscrow} from "../contracts/QuestionRewardPoolEscrow.sol";
-import {VoterIdNFT} from "../contracts/VoterIdNFT.sol";
-import {CuryoGovernor} from "../contracts/governance/CuryoGovernor.sol";
-import {ParticipationPool} from "../contracts/ParticipationPool.sol";
-import {HumanFaucet} from "../contracts/HumanFaucet.sol";
-import {MockERC20} from "../contracts/mocks/MockERC20.sol";
-import {MockIdentityVerificationHub} from "../contracts/mocks/MockIdentityVerificationHub.sol";
-import {IIdentityVerificationHubV2} from "@selfxyz/contracts/contracts/interfaces/IIdentityVerificationHubV2.sol";
-import {SelfStructs} from "@selfxyz/contracts/contracts/libraries/SelfStructs.sol";
+import { ScaffoldETHDeploy } from "./DeployHelpers.s.sol";
+import { console } from "forge-std/console.sol";
+import { TransparentUpgradeableProxy } from "@openzeppelin/contracts/proxy/transparent/TransparentUpgradeableProxy.sol";
+import { ProxyAdmin } from "@openzeppelin/contracts/proxy/transparent/ProxyAdmin.sol";
+import { IAccessControl } from "@openzeppelin/contracts/access/IAccessControl.sol";
+import { TimelockController } from "@openzeppelin/contracts/governance/TimelockController.sol";
+import { IVotes } from "@openzeppelin/contracts/governance/utils/IVotes.sol";
+import { CuryoReputation } from "../contracts/CuryoReputation.sol";
+import { ContentRegistry } from "../contracts/ContentRegistry.sol";
+import { RoundVotingEngine } from "../contracts/RoundVotingEngine.sol";
+import { RoundRewardDistributor } from "../contracts/RoundRewardDistributor.sol";
+import { FrontendRegistry } from "../contracts/FrontendRegistry.sol";
+import { CategoryRegistry } from "../contracts/CategoryRegistry.sol";
+import { ProfileRegistry } from "../contracts/ProfileRegistry.sol";
+import { ProtocolConfig } from "../contracts/ProtocolConfig.sol";
+import { QuestionRewardPoolEscrow } from "../contracts/QuestionRewardPoolEscrow.sol";
+import { VoterIdNFT } from "../contracts/VoterIdNFT.sol";
+import { CuryoGovernor } from "../contracts/governance/CuryoGovernor.sol";
+import { ParticipationPool } from "../contracts/ParticipationPool.sol";
+import { HumanFaucet } from "../contracts/HumanFaucet.sol";
+import { MockERC20 } from "../contracts/mocks/MockERC20.sol";
+import { MockIdentityVerificationHub } from "../contracts/mocks/MockIdentityVerificationHub.sol";
+import { IIdentityVerificationHubV2 } from "@selfxyz/contracts/contracts/interfaces/IIdentityVerificationHubV2.sol";
+import { SelfStructs } from "@selfxyz/contracts/contracts/libraries/SelfStructs.sol";
+import { SelfUtils } from "@selfxyz/contracts/contracts/libraries/SelfUtils.sol";
 
 /// @notice Deploy script for all Curyo contracts with transparent proxies.
 /// @dev All protocol operations use cREP token only (no stablecoins).
@@ -54,6 +55,8 @@ contract DeployCuryo is ScaffoldETHDeploy {
     // Native Circle USDC on Celo. Testnet address follows Circle's published testnet contract list.
     address constant CELO_MAINNET_USDC = 0xcebA9300f2b948710d2653dD7B07f33A8B32118C;
     address constant CELO_SEPOLIA_USDC = 0x01C5C0122039549AD1493B8220cABEdD739BC44E;
+
+    uint256 public constant FAUCET_MINIMUM_AGE = 18;
 
     struct MigrationBootstrapConfig {
         address[] users;
@@ -293,13 +296,7 @@ contract DeployCuryo is ScaffoldETHDeploy {
 
             // Set verification config
             if (!isFaucetMock) {
-                SelfStructs.VerificationConfigV2 memory config = SelfStructs.VerificationConfigV2({
-                    olderThanEnabled: false,
-                    olderThan: 0,
-                    forbiddenCountriesEnabled: false,
-                    forbiddenCountriesListPacked: [uint256(0), uint256(0), uint256(0), uint256(0)],
-                    ofacEnabled: [true, true, true]
-                });
+                SelfStructs.VerificationConfigV2 memory config = _buildFaucetVerificationConfig();
                 bytes32 configId = IIdentityVerificationHubV2(hubAddress).setVerificationConfigV2(config);
                 humanFaucet.setConfigId(configId);
                 _assertFaucetVerificationConfig(humanFaucet, hubAddress, configId);
@@ -518,6 +515,22 @@ contract DeployCuryo is ScaffoldETHDeploy {
             return CELO_SEPOLIA_USDC;
         }
         revert UnsupportedHumanFaucetChain(block.chainid);
+    }
+
+    function _buildFaucetVerificationConfig() internal pure returns (SelfStructs.VerificationConfigV2 memory) {
+        return SelfUtils.formatVerificationConfigV2(
+            SelfUtils.UnformattedVerificationConfigV2({
+                olderThan: FAUCET_MINIMUM_AGE, forbiddenCountries: _buildFaucetForbiddenCountries(), ofacEnabled: true
+            })
+        );
+    }
+
+    function _buildFaucetForbiddenCountries() internal pure returns (string[] memory forbiddenCountries) {
+        forbiddenCountries = new string[](4);
+        forbiddenCountries[0] = "CUB";
+        forbiddenCountries[1] = "IRN";
+        forbiddenCountries[2] = "PRK";
+        forbiddenCountries[3] = "SYR";
     }
 
     function _loadMigrationBootstrapConfig() internal view returns (MigrationBootstrapConfig memory migrationConfig) {

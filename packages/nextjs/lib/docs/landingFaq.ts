@@ -17,14 +17,14 @@ export const landingFaqItems: LandingFaqItem[] = [
   {
     question: "What does verified human mean?",
     answer:
-      "Each person can claim one non-transferable Voter ID through Self.xyz passport or biometric ID card verification, which caps influence per round.",
+      "Each eligible person can claim one non-transferable Voter ID through Self.xyz passport or biometric ID card verification with 18+ and sanctions checks; configured sanctioned-country jurisdictions cannot claim.",
     learnMoreHref: "/docs/how-it-works",
     learnMoreLabel: "Voter ID",
   },
   {
     question: "Do I need to reveal personal information to use Curyo?",
     answer:
-      "No. Self.xyz verifies supported identity documents with zero-knowledge proofs without publishing your documents on-chain.",
+      "No. Self.xyz proves humanity, 18+ status, and sanctions eligibility with zero-knowledge proofs without publishing your documents or date of birth on-chain.",
     learnMoreHref: "/docs/how-it-works",
     learnMoreLabel: "Privacy & Verification",
   },

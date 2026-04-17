@@ -160,9 +160,10 @@ const PrivacyPage: NextPage = () => {
             , a third-party identity verification service for supported documents such as passports or biometric ID
             cards. Self.xyz uses zero-knowledge proofs &mdash; your document data is processed entirely on your mobile
             device and is never shared with this Interface or stored on the blockchain. Only a cryptographic proof of
-            humanity and an OFAC compliance result are transmitted on-chain. No personal information (name, document
-            number, date of birth, nationality, or gender) is collected, stored, or accessible by the Interface
-            operator. Self.xyz has its own privacy policy which we recommend reviewing.
+            humanity, 18+ status, sanctioned-country eligibility, and an OFAC compliance result are transmitted
+            on-chain. No personal information (name, document number, exact date of birth, nationality, or gender) is
+            collected, stored, or accessible by the Interface operator. Self.xyz has its own privacy policy which we
+            recommend reviewing.
           </li>
         </ul>
 

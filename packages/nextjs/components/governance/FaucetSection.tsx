@@ -20,6 +20,7 @@ import { useTermsAcceptance } from "~~/contexts/TermsAcceptanceContext";
 import { useDeployedContractInfo, useScaffoldReadContract } from "~~/hooks/scaffold-eth";
 import { FREE_TRANSACTION_ALLOWANCE_QUERY_KEY } from "~~/hooks/useFreeTransactionAllowance";
 import { useVoterIdNFT } from "~~/hooks/useVoterIdNFT";
+import { FAUCET_EXCLUDED_COUNTRY_NAMES, FAUCET_MINIMUM_AGE } from "~~/lib/governance/faucetEligibility";
 import { shouldRefreshAfterFaucetClaim } from "~~/lib/governance/faucetQueryInvalidation";
 import { buildSelfVerificationApp, getSelfVerificationUniversalLink } from "~~/lib/governance/selfVerificationApp";
 import {
@@ -43,6 +44,7 @@ const SELF_VERIFICATION_SESSION_KEY = "curyo_self_verification_session";
 const POLL_INTERVAL_MS = 4000;
 const POLL_TIMEOUT_MS = 600_000;
 const POST_CLAIM_ROUTE = "/vote";
+const FAUCET_EXCLUDED_COUNTRIES_LABEL = FAUCET_EXCLUDED_COUNTRY_NAMES.join(", ");
 
 type PendingSelfVerificationSession = {
   address: string;
@@ -618,7 +620,9 @@ export function FaucetSection({ referrer }: FaucetSectionProps) {
       <div className="flex items-center gap-2">
         <GiftIcon className="w-6 h-6 text-primary" />
         <h2 className={surfaceSectionHeadingClassName}>cREP Faucet</h2>
-        <InfoTooltip text="Claim free cREP with a Self.xyz passport or biometric ID card proof" />
+        <InfoTooltip
+          text={`Claim free cREP after proving you are ${FAUCET_MINIMUM_AGE}+, human, and sanctions eligible with Self.xyz.`}
+        />
       </div>
 
       <div className="rounded-xl bg-base-200/60 p-4 space-y-3">
@@ -755,7 +759,7 @@ export function FaucetSection({ referrer }: FaucetSectionProps) {
               <a href="https://self.xyz" target="_blank" rel="noopener noreferrer" className="link link-primary">
                 Self.xyz
               </a>{" "}
-              that you are a human
+              that you are an eligible human
             </p>
             <button
               className="btn btn-primary btn-lg"
@@ -776,7 +780,9 @@ export function FaucetSection({ referrer }: FaucetSectionProps) {
         <ol className="list-decimal list-inside space-y-2 text-base text-base-content/70">
           <li>Install the Self app and scan your passport or biometric ID card</li>
           <li>Scan the QR code above with the Self app</li>
-          <li>Self generates a zero-knowledge proof — no personal data is shared</li>
+          <li>Self proves you are {FAUCET_MINIMUM_AGE}+ without sharing your date of birth</li>
+          <li>Sanctions screening must pass, and claims are unavailable from {FAUCET_EXCLUDED_COUNTRIES_LABEL}</li>
+          <li>Self generates a zero-knowledge proof without sharing personal document data</li>
           <li>The proof is verified on the blockchain and you receive your cREP + Voter ID</li>
         </ol>
       </div>
@@ -785,7 +791,8 @@ export function FaucetSection({ referrer }: FaucetSectionProps) {
       <div className="bg-warning/10 rounded-lg p-4 text-base text-base-content/60">
         <p>
           <strong>Security &amp; Privacy:</strong> Your document data never leaves your device. The Self.xyz app
-          processes everything locally on your phone to generate a zero-knowledge proof of human.
+          processes everything locally on your phone to generate a zero-knowledge proof of humanity, age, and sanctions
+          eligibility.
         </p>
       </div>
     </div>

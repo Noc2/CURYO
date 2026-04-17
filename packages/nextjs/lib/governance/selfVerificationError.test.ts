@@ -22,6 +22,26 @@ test("resolveSelfVerificationErrorMessage explains sanctions clearance failures"
   );
 });
 
+test("resolveSelfVerificationErrorMessage explains minimum age failures", () => {
+  assert.equal(
+    resolveSelfVerificationErrorMessage({
+      error_code: "MinimumAgeNotMet()",
+      reason: "Transaction failed with error: MinimumAgeNotMet()",
+    }),
+    "You must be at least 18 to claim from the faucet.",
+  );
+});
+
+test("resolveSelfVerificationErrorMessage explains restricted country failures", () => {
+  assert.equal(
+    resolveSelfVerificationErrorMessage({
+      error_code: "InvalidForbiddenCountriesList",
+      reason: "Self configuration mismatch: InvalidForbiddenCountriesList",
+    }),
+    "This faucet claim is not available from restricted sanctioned-country jurisdictions.",
+  );
+});
+
 test("resolveSelfVerificationErrorMessage keeps the existing passport reuse guidance", () => {
   assert.equal(
     resolveSelfVerificationErrorMessage({

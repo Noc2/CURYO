@@ -76,7 +76,9 @@ const Tokenomics = () => {
         <a href="https://self.xyz" target="_blank" rel="noopener noreferrer" className="link link-primary">
           Self.xyz
         </a>{" "}
-        passport or biometric ID card verification. Claim size falls as adoption grows.
+        passport or biometric ID card verification. Claimants must prove they are 18 or older, pass sanctions screening,
+        and not be from a configured sanctioned-country jurisdiction such as Cuba, Iran, North Korea, or Syria. Claim
+        size falls as adoption grows.
       </p>
       <div className="not-prose overflow-x-auto my-6 rounded-xl bg-base-200">
         <table className="table table-zebra [&_th]:text-base [&_td]:text-base [&_.badge]:text-base [&_th]:bg-base-300">

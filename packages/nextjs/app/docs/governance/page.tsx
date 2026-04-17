@@ -247,7 +247,8 @@ const GovernanceDocs: NextPage = () => {
       </p>
       <ul>
         <li>
-          Identity verification &mdash; 1 person = 1 Voter ID via Self.xyz passport or biometric ID card verification.
+          Identity verification &mdash; 1 eligible 18+ person = 1 Voter ID via Self.xyz passport or biometric ID card
+          verification with sanctions checks.
         </li>
         <li>Stake caps &mdash; maximum 100 cREP per content per round limits single-voter influence.</li>
         <li>Vote cooldowns &mdash; 24-hour cooldown prevents rapid re-voting on the same content.</li>
@@ -300,7 +301,8 @@ const GovernanceDocs: NextPage = () => {
           commits in reveal-failed rounds are forfeited rather than refunded.
         </li>
         <li>
-          Identity verification &mdash; 1 person = 1 Voter ID via Self.xyz passport or biometric ID card verification.
+          Identity verification &mdash; 1 eligible 18+ person = 1 Voter ID via Self.xyz passport or biometric ID card
+          verification with sanctions checks.
         </li>
         <li>Stake caps &mdash; maximum 100 cREP per content per round limits damage from any one Voter ID.</li>
         <li>Permanent revocation &mdash; losing your Voter ID is irreversible and eliminates future voting ability.</li>

@@ -102,7 +102,7 @@ export const SECTIONS: Section[] = [
         blocks: [
           {
             type: "paragraph",
-            text: "To prevent manipulation through multiple wallets (sybil attacks), Curyo uses Voter ID NFTs  -- soulbound tokens tied to verified human identities via Self.xyz passport or biometric ID card verification.",
+            text: "To prevent manipulation through multiple wallets (sybil attacks), Curyo uses Voter ID NFTs  -- soulbound tokens tied to eligible 18+ verified human identities via Self.xyz passport or biometric ID card verification.",
           },
           {
             type: "bullets",
@@ -110,7 +110,7 @@ export const SECTIONS: Section[] = [
               "One verified claim path per wallet/document: each supported document can only mint once, and each wallet can only claim once.",
               "Non-transferable: Voter IDs are soulbound  -- they cannot be transferred or sold.",
               "Stake limits per ID: Each Voter ID can stake a maximum of 100 cREP per content per round, regardless of how many wallets they control.",
-              "Privacy-preserving: Self.xyz uses zero-knowledge proofs. Only the supported document proof is verified; no personal data is stored on-chain.",
+              "Privacy-preserving: Self.xyz uses zero-knowledge proofs. Humanity, 18+ status, and sanctions eligibility are verified without storing personal data on-chain.",
             ],
           },
           {
@@ -657,7 +657,7 @@ export const SECTIONS: Section[] = [
               "Reputation, not money. cREP represents your standing in the community. It is staked to curate and vote, not traded for profit.",
               "No issuer, no sale. There is no company, foundation, or team that issues, sells, or controls cREP. Distribution is handled entirely by on-chain protocol contracts.",
               `Governance-finalized deployments. ${protocolCopy.governanceDesignPrinciple}`,
-              "Sybil-resistant distribution. Tokens are claimed through Self.xyz passport or biometric ID card verification, reducing concentration and broadening distribution.",
+              "Sybil-resistant distribution. Tokens are claimed through Self.xyz passport or biometric ID card verification with 18+ and sanctions checks, reducing concentration and broadening distribution.",
             ],
           },
         ],
@@ -679,7 +679,7 @@ export const SECTIONS: Section[] = [
         blocks: [
           {
             type: "paragraph",
-            text: "Primary distribution via Self.xyz passport or biometric ID card verification. Each supported document can claim once, and each wallet can only claim once. Claim amounts decrease as more users join  -- rewarding early adopters who bootstrap the platform with content.",
+            text: "Primary distribution via Self.xyz passport or biometric ID card verification. Each supported document can claim once, each wallet can only claim once, and claimants must prove they are 18 or older, sanctions-cleared, and outside configured sanctioned-country restrictions. Claim amounts decrease as more users join  -- rewarding early adopters who bootstrap the platform with content.",
           },
           {
             type: "table",
@@ -1071,7 +1071,7 @@ export const SECTIONS: Section[] = [
           {
             type: "bullets",
             items: [
-              "Sybil resistance  -- 1 person = 1 Voter ID via Self.xyz passport or biometric ID card verification.",
+              "Sybil resistance  -- 1 eligible 18+ person = 1 Voter ID via Self.xyz passport or biometric ID card verification with sanctions checks.",
               "Stake caps  -- maximum 100 cREP per content per round limits single-voter influence.",
               "Vote cooldowns  -- a 24-hour cooldown on the same content prevents rapid re-voting and is enforced per effective Voter ID.",
               "Governance revocation  -- losing your Voter ID removes voting ability and makes recovery depend on a later governance action.",
@@ -1173,7 +1173,7 @@ export const SECTIONS: Section[] = [
             type: "bullets",
             items: [
               "Stake at risk  -- unrevealed past-epoch votes can be forfeited to treasury during cleanup, and unrevealed commits in reveal-failed rounds are forfeited rather than refunded.",
-              "Sybil resistance  -- 1 person = 1 Voter ID via Self.xyz passport or biometric ID card verification.",
+              "Sybil resistance  -- 1 eligible 18+ person = 1 Voter ID via Self.xyz passport or biometric ID card verification with sanctions checks.",
               "Stake caps  -- maximum 100 cREP per content per round limits damage from any one Voter ID.",
               "Governance revocation  -- losing your Voter ID eliminates future voting ability unless governance later restores a valid claim path.",
             ],
@@ -1266,7 +1266,7 @@ export const SECTIONS: Section[] = [
             items: [
               "Economic commitment  -- Each rating is backed by a token stake, making systematic manipulation expensive relative to the signal produced.",
               `Economic independence  -- tlock encryption hides votes during epoch 1, eliminating herd signals. Epoch-weighted rewards (${protocolDocFacts.earlyVoterAdvantageLabel} ratio) further penalize late followers, incentivizing genuine early assessment over copying.`,
-              "Sybil resistance  -- Self.xyz passport or biometric ID-card verification limits each verified identity's stake per content, preventing bot farms from flooding the signal.",
+              "Sybil resistance  -- Self.xyz passport or biometric ID-card verification with 18+ and sanctions checks limits each eligible verified identity's stake per content, preventing bot farms from flooding the signal.",
               "Verifiability  -- All votes, stakes, and outcomes are recorded on-chain with cryptographic integrity, enabling third-party audit and reproducibility.",
             ],
           },
@@ -1444,7 +1444,7 @@ export const SECTIONS: Section[] = [
         blocks: [
           {
             type: "paragraph",
-            text: "Document-based identity verification via Self.xyz provides strong Sybil resistance, but it still excludes people who lack supported documents or cannot complete the verification flow. The system has no documented appeal mechanism for false rejections, and recovery from a compromised or offline Self.xyz service is not described here. These are inherent trade-offs of document-gated identity systems.",
+            text: "Document-based identity verification via Self.xyz provides strong Sybil resistance, but it still excludes people who lack supported documents, cannot complete the verification flow, are under 18, or cannot pass sanctions and sanctioned-country eligibility checks. The system has no documented appeal mechanism for false rejections, and recovery from a compromised or offline Self.xyz service is not described here. These are inherent trade-offs of document-gated identity systems.",
           },
         ],
       },

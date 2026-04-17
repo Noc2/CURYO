@@ -9,6 +9,8 @@ import { MockIdentityVerificationHub } from "../contracts/mocks/MockIdentityVeri
 import { CuryoGovernor } from "../contracts/governance/CuryoGovernor.sol";
 import { TimelockController } from "@openzeppelin/contracts/governance/TimelockController.sol";
 import { IVotes } from "@openzeppelin/contracts/governance/utils/IVotes.sol";
+import { SelfStructs } from "@selfxyz/contracts/contracts/libraries/SelfStructs.sol";
+import { SelfUtils } from "@selfxyz/contracts/contracts/libraries/SelfUtils.sol";
 
 contract MissingConfigHub {
     function verificationConfigV2Exists(bytes32) external pure returns (bool) {
@@ -34,6 +36,10 @@ contract DeployCuryoHarness is DeployCuryo {
         view
     {
         _assertExactExcludedHolders(governor, expectedExcludedHolders);
+    }
+
+    function exposedBuildFaucetVerificationConfig() external pure returns (SelfStructs.VerificationConfigV2 memory) {
+        return _buildFaucetVerificationConfig();
     }
 
     function exposedMigrationBootstrapUserCount() external view returns (uint256) {
@@ -68,6 +74,23 @@ contract DeployCuryoHarness is DeployCuryo {
 contract DeployCuryoCompilationTest is Test {
     function test_DeployScript_Compiles() public pure {
         assertGt(type(DeployCuryo).creationCode.length, 0);
+    }
+
+    function test_FaucetVerificationConfig_RequiresAgeSanctionsAndRestrictedCountries() public {
+        DeployCuryoHarness deployScript = new DeployCuryoHarness();
+        SelfStructs.VerificationConfigV2 memory config = deployScript.exposedBuildFaucetVerificationConfig();
+        uint256[4] memory expectedForbiddenCountries =
+            SelfUtils.packForbiddenCountriesList(_expectedFaucetForbiddenCountries());
+
+        assertTrue(config.olderThanEnabled);
+        assertEq(config.olderThan, deployScript.FAUCET_MINIMUM_AGE());
+        assertTrue(config.forbiddenCountriesEnabled);
+        assertTrue(config.ofacEnabled[0]);
+        assertTrue(config.ofacEnabled[1]);
+        assertTrue(config.ofacEnabled[2]);
+        for (uint256 i = 0; i < 4; ++i) {
+            assertEq(config.forbiddenCountriesListPacked[i], expectedForbiddenCountries[i]);
+        }
     }
 
     function test_PreBroadcastChecks_AllowLocalChain() public {
@@ -267,5 +290,13 @@ contract DeployCuryoCompilationTest is Test {
         executors[0] = address(0);
         TimelockController timelock = new TimelockController(2 days, proposers, executors, address(this));
         governor = new CuryoGovernor(IVotes(address(crepToken)), timelock);
+    }
+
+    function _expectedFaucetForbiddenCountries() internal pure returns (string[] memory forbiddenCountries) {
+        forbiddenCountries = new string[](4);
+        forbiddenCountries[0] = "CUB";
+        forbiddenCountries[1] = "IRN";
+        forbiddenCountries[2] = "PRK";
+        forbiddenCountries[3] = "SYR";
     }
 }
