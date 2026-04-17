@@ -14,14 +14,14 @@ library RoundSettlementSideEffectsLib {
     enum SideEffectFailureStage {
         ParticipationRateQuery,
         SubmitterParticipationTermsSnapshot,
-        VoterParticipationRewardsSnapshot
+        VoterParticipationRewardsSnapshot,
+        RatingStateUpdate,
+        MeaningfulActivityRecord,
+        SubmitterStakeResolution
     }
 
     event SettlementSideEffectFailed(
-        uint256 indexed contentId,
-        uint256 indexed roundId,
-        address indexed target,
-        SideEffectFailureStage stage
+        uint256 indexed contentId, uint256 indexed roundId, address indexed target, SideEffectFailureStage stage
     );
 
     function recordSettlement(
@@ -61,10 +61,7 @@ library RoundSettlementSideEffectsLib {
                 hasParticipationRate = true;
             } catch {
                 emit SettlementSideEffectFailed(
-                    contentId,
-                    roundId,
-                    participationPoolAddress,
-                    SideEffectFailureStage.ParticipationRateQuery
+                    contentId, roundId, participationPoolAddress, SideEffectFailureStage.ParticipationRateQuery
                 );
             }
         }
@@ -75,38 +72,47 @@ library RoundSettlementSideEffectsLib {
             );
         }
 
-        try registry.updateRatingState(contentId, roundId, referenceRatingBps, nextState) { } catch { }
-        try registry.recordMeaningfulActivity(contentId) { } catch { }
+        try registry.updateRatingState(contentId, roundId, referenceRatingBps, nextState) { }
+        catch {
+            emit SettlementSideEffectFailed(
+                contentId, roundId, address(registry), SideEffectFailureStage.RatingStateUpdate
+            );
+        }
+        try registry.recordMeaningfulActivity(contentId) { }
+        catch {
+            emit SettlementSideEffectFailed(
+                contentId, roundId, address(registry), SideEffectFailureStage.MeaningfulActivityRecord
+            );
+        }
 
         if (participationPoolAddress != address(0) && hasParticipationRate) {
             try registry.snapshotSubmitterParticipationTerms(
                 contentId, participationPoolAddress, participationRateBps
             ) { }
-                catch {
-                    emit SettlementSideEffectFailed(
-                        contentId,
-                        roundId,
-                        address(registry),
-                        SideEffectFailureStage.SubmitterParticipationTermsSnapshot
-                    );
-                }
+            catch {
+                emit SettlementSideEffectFailed(
+                    contentId, roundId, address(registry), SideEffectFailureStage.SubmitterParticipationTermsSnapshot
+                );
+            }
             if (rewardDistributor != address(0)) {
                 uint256 winningStake = upWins ? upPool : downPool;
                 try IRoundRewardDistributor(rewardDistributor)
                     .snapshotParticipationRewards(
                         contentId, roundId, participationPoolAddress, participationRateBps, winningStake
                     ) { }
-                    catch {
-                        emit SettlementSideEffectFailed(
-                            contentId,
-                            roundId,
-                            rewardDistributor,
-                            SideEffectFailureStage.VoterParticipationRewardsSnapshot
-                        );
-                    }
+                catch {
+                    emit SettlementSideEffectFailed(
+                        contentId, roundId, rewardDistributor, SideEffectFailureStage.VoterParticipationRewardsSnapshot
+                    );
+                }
             }
         }
 
-        try SubmitterStakeLib.resolve(registry, true, contentId) { } catch { }
+        try SubmitterStakeLib.resolve(registry, true, contentId) { }
+        catch {
+            emit SettlementSideEffectFailed(
+                contentId, roundId, address(registry), SideEffectFailureStage.SubmitterStakeResolution
+            );
+        }
     }
 }

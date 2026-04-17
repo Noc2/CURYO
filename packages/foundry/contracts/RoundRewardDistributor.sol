@@ -94,6 +94,16 @@ contract RoundRewardDistributor is Initializable, AccessControlUpgradeable, Reen
     event FrontendFeeConfiscated(
         uint256 indexed contentId, uint256 indexed roundId, address indexed frontend, uint256 amount
     );
+    event FrontendRegistryLookupFailed(
+        uint256 indexed contentId, uint256 indexed roundId, address indexed frontend, address frontendRegistry
+    );
+    event FrontendFeeCreditFailed(
+        uint256 indexed contentId,
+        uint256 indexed roundId,
+        address indexed frontend,
+        address frontendRegistry,
+        uint256 amount
+    );
     event ParticipationRewardClaimed(
         uint256 indexed contentId, uint256 indexed roundId, address indexed voter, uint256 amount
     );
@@ -250,8 +260,14 @@ contract RoundRewardDistributor is Initializable, AccessControlUpgradeable, Reen
     {
         FrontendFeeDisposition disposition;
         address operator;
+        bool registryLookupFailed;
+        address snapshotRegistryAddress;
         fee = _quoteFrontendFee(contentId, roundId, frontend);
-        (disposition, operator) = _resolveFrontendFeeDisposition(contentId, roundId, frontend);
+        (disposition, operator, registryLookupFailed, snapshotRegistryAddress) =
+            _resolveFrontendFeeDisposition(contentId, roundId, frontend);
+        if (registryLookupFailed) {
+            emit FrontendRegistryLookupFailed(contentId, roundId, frontend, snapshotRegistryAddress);
+        }
         if (disposition == FrontendFeeDisposition.Protocol) revert FrontendFeeNotClaimable();
 
         address expectedCaller = operator != address(0) ? operator : frontend;
@@ -270,7 +286,7 @@ contract RoundRewardDistributor is Initializable, AccessControlUpgradeable, Reen
         returns (uint256 fee)
     {
         fee = _quoteFrontendFee(contentId, roundId, frontend);
-        (FrontendFeeDisposition disposition,) = _resolveFrontendFeeDisposition(contentId, roundId, frontend);
+        (FrontendFeeDisposition disposition,,,) = _resolveFrontendFeeDisposition(contentId, roundId, frontend);
         if (disposition != FrontendFeeDisposition.Protocol) revert FrontendFeeNotConfiscatable();
 
         _consumeFrontendFeeClaim(contentId, roundId, frontend, fee);
@@ -285,7 +301,7 @@ contract RoundRewardDistributor is Initializable, AccessControlUpgradeable, Reen
     {
         alreadyClaimed = frontendFeeClaimed[contentId][roundId][frontend];
         fee = _quoteFrontendFee(contentId, roundId, frontend);
-        (disposition, operator) = _resolveFrontendFeeDisposition(contentId, roundId, frontend);
+        (disposition, operator,,) = _resolveFrontendFeeDisposition(contentId, roundId, frontend);
     }
 
     /// @notice Snapshot and reserve voter participation rewards for a settled round.
@@ -516,11 +532,16 @@ contract RoundRewardDistributor is Initializable, AccessControlUpgradeable, Reen
     function _resolveFrontendFeeDisposition(uint256 contentId, uint256 roundId, address frontend)
         internal
         view
-        returns (FrontendFeeDisposition disposition, address operator)
+        returns (
+            FrontendFeeDisposition disposition,
+            address operator,
+            bool registryLookupFailed,
+            address snapshotRegistryAddress
+        )
     {
-        address snapshotRegistryAddress = votingEngine.roundFrontendRegistrySnapshot(contentId, roundId);
+        snapshotRegistryAddress = votingEngine.roundFrontendRegistrySnapshot(contentId, roundId);
         if (snapshotRegistryAddress == address(0)) {
-            return (FrontendFeeDisposition.Direct, frontend);
+            return (FrontendFeeDisposition.Direct, frontend, false, snapshotRegistryAddress);
         }
 
         IFrontendRegistry snapshotRegistry = IFrontendRegistry(snapshotRegistryAddress);
@@ -528,17 +549,17 @@ contract RoundRewardDistributor is Initializable, AccessControlUpgradeable, Reen
             address frontendOperator, uint256 stakedAmount, bool eligible, bool slashed
         ) {
             if (frontendOperator == address(0)) {
-                return (FrontendFeeDisposition.Direct, frontend);
+                return (FrontendFeeDisposition.Direct, frontend, false, snapshotRegistryAddress);
             }
             if (eligible) {
-                return (FrontendFeeDisposition.CreditRegistry, frontendOperator);
+                return (FrontendFeeDisposition.CreditRegistry, frontendOperator, false, snapshotRegistryAddress);
             }
             if (slashed || stakedAmount < snapshotRegistry.STAKE_AMOUNT()) {
-                return (FrontendFeeDisposition.Protocol, frontendOperator);
+                return (FrontendFeeDisposition.Protocol, frontendOperator, false, snapshotRegistryAddress);
             }
-            return (FrontendFeeDisposition.CreditRegistry, frontendOperator);
+            return (FrontendFeeDisposition.CreditRegistry, frontendOperator, false, snapshotRegistryAddress);
         } catch {
-            return (FrontendFeeDisposition.Direct, frontend);
+            return (FrontendFeeDisposition.Direct, frontend, true, snapshotRegistryAddress);
         }
     }
 
@@ -567,6 +588,7 @@ contract RoundRewardDistributor is Initializable, AccessControlUpgradeable, Reen
         try snapshotRegistry.creditFees(frontend, fee) {
             votingEngine.transferReward(snapshotRegistryAddress, fee);
         } catch {
+            emit FrontendFeeCreditFailed(contentId, roundId, frontend, snapshotRegistryAddress, fee);
             _routeFrontendFeeToProtocol(fee);
         }
     }
@@ -610,7 +632,8 @@ contract RoundRewardDistributor is Initializable, AccessControlUpgradeable, Reen
 
         reservedReward = roundParticipationRewardReserved[contentId][roundId];
         if (reservedReward < totalReward) {
-            uint256 additionalReserved = IParticipationPool(rewardPool).reserveReward(address(this), totalReward - reservedReward);
+            uint256 additionalReserved =
+                IParticipationPool(rewardPool).reserveReward(address(this), totalReward - reservedReward);
             if (additionalReserved > 0) {
                 uint256 nextReservedReward = reservedReward + additionalReserved;
                 if (nextReservedReward < totalReward) {

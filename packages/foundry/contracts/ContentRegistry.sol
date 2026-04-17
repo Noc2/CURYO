@@ -197,6 +197,9 @@ contract ContentRegistry is Initializable, AccessControlUpgradeable, PausableUpg
     );
     event SubmitterParticipationRewardClaimed(uint256 indexed contentId, address indexed submitter, uint256 amount);
     event SubmitterParticipationReservationFailed(uint256 indexed contentId, address rewardPool, uint256 amount);
+    event SubmitterParticipationRewardFallbackFailed(
+        uint256 indexed contentId, address indexed rewardPool, address indexed submitter, uint256 amount
+    );
     event MilestoneZeroSubmitterParticipationRepairNeeded(uint256 indexed contentId, address indexed rewardPool);
     event MilestoneZeroSubmitterParticipationTermsRepaired(
         uint256 indexed contentId, address indexed rewardPool, uint256 rewardRateBps, uint256 rewardAmount
@@ -860,7 +863,9 @@ contract ContentRegistry is Initializable, AccessControlUpgradeable, PausableUpg
             ) {
                 paidAmount += streamedReward;
                 alreadyPaid += streamedReward;
-            } catch { }
+            } catch {
+                emit SubmitterParticipationRewardFallbackFailed(contentId, rewardPool, c.submitter, remainingReward);
+            }
         }
 
         require(paidAmount > 0, "Pool depleted");

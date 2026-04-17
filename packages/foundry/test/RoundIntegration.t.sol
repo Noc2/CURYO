@@ -2068,6 +2068,24 @@ contract RoundIntegrationTest is VotingTestBase {
         assertGt(frontendReg.getAccumulatedFees(frontendOp) - feesBefore, 0, "Frontend fee should be credited");
     }
 
+    function test_ClaimFrontendFee_CreditFailureEmitsFallbackEvent() public {
+        (FrontendRegistry frontendReg, address frontendOp) = _setupFrontendRegistry();
+        (uint256 contentId, uint256 roundId) = _settleRoundWithFrontend(frontendOp);
+
+        vm.prank(owner);
+        frontendReg.removeFeeCreditor(address(rewardDistributor));
+
+        (uint256 fee,,,) = rewardDistributor.previewFrontendFee(contentId, roundId, frontendOp);
+        uint256 treasuryBalanceBefore = crepToken.balanceOf(treasury);
+
+        vm.expectEmit(true, true, true, true, address(rewardDistributor));
+        emit RoundRewardDistributor.FrontendFeeCreditFailed(contentId, roundId, frontendOp, address(frontendReg), fee);
+        _claimFrontendFeeAsOperator(contentId, roundId, frontendOp);
+
+        assertEq(frontendReg.getAccumulatedFees(frontendOp), 0, "failed registry credit should not accrue fees");
+        assertEq(crepToken.balanceOf(treasury), treasuryBalanceBefore + fee, "fee should route to protocol");
+    }
+
     function test_ClaimFrontendFee_DoubleClaimReverts() public {
         (, address frontendOp) = _setupFrontendRegistry();
         (uint256 contentId, uint256 roundId) = _settleRoundWithFrontend(frontendOp);
