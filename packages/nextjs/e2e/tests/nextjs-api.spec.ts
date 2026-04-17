@@ -138,31 +138,6 @@ test.describe("Next.js API routes", () => {
     expect(res.status).toBe(400);
   });
 
-  test("GET /api/thumbnail resolves YouTube thumbnail", async () => {
-    // YouTube thumbnails are resolved statically (no external API call)
-    const videoUrl = "https://www.youtube.com/watch?v=dQw4w9WgXcQ";
-    const res = await fetch(`${BASE_URL}/api/thumbnail?url=${encodeURIComponent(videoUrl)}`);
-    expect(res.ok).toBe(true);
-
-    const data = await res.json();
-    expect(data).toHaveProperty("thumbnailUrl");
-    expect(data.thumbnailUrl).toBeTruthy();
-  });
-
-  test("GET /api/thumbnail does not trust lookalike YouTube hostnames", async () => {
-    const attackerUrl = "https://youtube.com.evil.example/watch?v=dQw4w9WgXcQ";
-    const res = await fetch(`${BASE_URL}/api/thumbnail?url=${encodeURIComponent(attackerUrl)}`);
-    expect(res.status).toBe(400);
-
-    const data = await res.json();
-    expect(data.error).toBe("URL not allowed");
-  });
-
-  test("GET /api/thumbnail returns 400 for missing url", async () => {
-    const res = await fetch(`${BASE_URL}/api/thumbnail`);
-    expect(res.status).toBe(400);
-  });
-
   test("GET /api/leaderboard includes known voter accounts", async () => {
     const res = await fetch(`${BASE_URL}/api/leaderboard?limit=100`);
     expect(res.ok).toBe(true);

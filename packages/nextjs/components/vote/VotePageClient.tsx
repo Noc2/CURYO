@@ -11,6 +11,7 @@ import { StreakCounter } from "~~/components/shared/StreakCounter";
 import { VotingQuestionCard } from "~~/components/shared/VotingQuestionCard";
 import { FeedScopeFilter } from "~~/components/vote/FeedScopeFilter";
 import { VoteSignalRail } from "~~/components/vote/VoteSignalRail";
+import { RATE_ROUTE } from "~~/constants/routes";
 import { useMobileHeaderVisibility } from "~~/contexts/MobileHeaderVisibilityContext";
 import { MIN_CONTENT_SEARCH_QUERY_LENGTH, isContentSearchQueryTooShort } from "~~/hooks/contentFeed/shared";
 import { useTargetNetwork } from "~~/hooks/scaffold-eth/useTargetNetwork";
@@ -186,7 +187,7 @@ const HomeInner = () => {
   }, [contentParam]);
   const contentPinKey = useMemo(
     () =>
-      requestedActiveId !== null && searchParams ? buildVoteContentPinKey(pathname ?? "/vote", searchParams) : null,
+      requestedActiveId !== null && searchParams ? buildVoteContentPinKey(pathname ?? RATE_ROUTE, searchParams) : null,
     [pathname, requestedActiveId, searchParams],
   );
   const [internallySyncedContentPinKey, setInternallySyncedContentPinKey] = useState<string | null>(() =>
