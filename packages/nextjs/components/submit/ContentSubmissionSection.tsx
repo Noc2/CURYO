@@ -1481,21 +1481,15 @@ export function ContentSubmissionSection() {
                   ) : null}
                 </div>
               </div>
-            ) : (
-              <div className="surface-card-nested rounded-2xl p-4 space-y-3">
-                <p className="text-base font-medium text-base-content">Bounty</p>
-                <p className="text-base text-base-content/60">
-                  Finish the question step to configure the mandatory bounty, voters, and payout timing.
-                </p>
-                <button type="button" onClick={handleContinueToBounty} className="btn btn-primary w-full">
-                  Continue to bounty
-                </button>
-              </div>
-            )}
+            ) : null}
 
             {isMissingGasBalance ? <GasBalanceWarning nativeTokenSymbol={nativeTokenSymbol} /> : null}
 
-            {submissionStep === 2 ? (
+            {submissionStep === 1 ? (
+              <button type="button" onClick={handleContinueToBounty} className="btn btn-primary w-full">
+                Continue to bounty
+              </button>
+            ) : (
               <div className="flex flex-col gap-2 sm:flex-row">
                 <button
                   type="button"
@@ -1522,7 +1516,7 @@ export function ContentSubmissionSection() {
                   )}
                 </button>
               </div>
-            ) : null}
+            )}
           </div>
         </form>
       </div>
