@@ -157,6 +157,44 @@ contract ContentRegistryBranchesTest is VotingTestBase {
         commitKey = keccak256(abi.encodePacked(voter, commitHash));
     }
 
+    function _reserveQuestionSubmissionWithRewardTerms(
+        string memory contextUrl,
+        string[] memory imageUrls,
+        string memory videoUrl,
+        string memory title,
+        string memory description,
+        string memory tags,
+        uint256 categoryId,
+        bytes32 salt,
+        address submitterAddress,
+        uint8 rewardAsset,
+        uint256 rewardAmount,
+        uint256 requiredVoters,
+        uint256 requiredSettledRounds,
+        uint256 rewardPoolExpiresAt
+    ) internal returns (bytes32 submissionKey) {
+        (, submissionKey) = registry.previewQuestionSubmissionKey(
+            contextUrl, imageUrls, videoUrl, title, description, tags, categoryId
+        );
+        bytes32 revealCommitment = keccak256(
+            abi.encode(
+                submissionKey,
+                title,
+                description,
+                tags,
+                categoryId,
+                salt,
+                submitterAddress,
+                rewardAsset,
+                rewardAmount,
+                requiredVoters,
+                requiredSettledRounds,
+                rewardPoolExpiresAt
+            )
+        );
+        registry.reserveSubmission(revealCommitment);
+    }
+
     function _settleHealthyRound(uint256 contentId) internal returns (uint256 roundId) {
         return _settleHealthyRoundWithVoters(contentId, voter1, voter2, voter3);
     }
@@ -287,7 +325,10 @@ contract ContentRegistryBranchesTest is VotingTestBase {
                 salt,
                 submitter,
                 DEFAULT_SUBMISSION_REWARD_ASSET_CREP,
-                rewardAmount
+                rewardAmount,
+                DEFAULT_SUBMISSION_REWARD_REQUIRED_VOTERS,
+                DEFAULT_SUBMISSION_REWARD_SETTLED_ROUNDS,
+                DEFAULT_SUBMISSION_REWARD_EXPIRES_AT
             )
         );
         registry.reserveSubmission(revealCommitment);
@@ -299,6 +340,207 @@ contract ContentRegistryBranchesTest is VotingTestBase {
         assertEq(rawSubmitter, submitter);
         assertEq(storedCategoryId, categoryId);
         assertTrue(registry.submissionKeyUsed(submissionKey));
+    }
+
+    function test_SubmitQuestionWithReward_UsesFlexibleSubmissionBountyTerms() public {
+        string memory contextUrl = "https://example.com/flexible-bounty";
+        string memory title = "How useful is this comparison?";
+        string memory description = "Rate whether voters have enough detail.";
+        string memory tags = "Products,Bounty";
+        uint256 categoryId = 1;
+        bytes32 salt = keccak256("flexible-submission-bounty");
+        string[] memory imageUrls = _emptyImageUrls();
+        uint256 rewardAmount = _defaultSubmissionRewardAmount(registry);
+        uint256 requiredVoters = 5;
+        uint256 requiredSettledRounds = 2;
+        uint256 rewardPoolExpiresAt = block.timestamp + 14 days;
+
+        vm.startPrank(submitter);
+        crepToken.approve(address(mockQuestionRewardPoolEscrow), rewardAmount);
+        _reserveQuestionSubmissionWithRewardTerms(
+            contextUrl,
+            imageUrls,
+            "",
+            title,
+            description,
+            tags,
+            categoryId,
+            salt,
+            submitter,
+            DEFAULT_SUBMISSION_REWARD_ASSET_CREP,
+            rewardAmount,
+            requiredVoters,
+            requiredSettledRounds,
+            rewardPoolExpiresAt
+        );
+        vm.warp(block.timestamp + 1);
+        uint256 id = registry.submitQuestionWithReward(
+            contextUrl,
+            imageUrls,
+            "",
+            title,
+            description,
+            tags,
+            categoryId,
+            salt,
+            DEFAULT_SUBMISSION_REWARD_ASSET_CREP,
+            rewardAmount,
+            requiredVoters,
+            requiredSettledRounds,
+            rewardPoolExpiresAt
+        );
+        vm.stopPrank();
+
+        assertEq(mockQuestionRewardPoolEscrow.lastContentId(), id);
+        assertEq(mockQuestionRewardPoolEscrow.lastFunder(), submitter);
+        assertEq(mockQuestionRewardPoolEscrow.lastAsset(), DEFAULT_SUBMISSION_REWARD_ASSET_CREP);
+        assertEq(mockQuestionRewardPoolEscrow.lastAmount(), rewardAmount);
+        assertEq(mockQuestionRewardPoolEscrow.lastRequiredVoters(), requiredVoters);
+        assertEq(mockQuestionRewardPoolEscrow.lastRequiredSettledRounds(), requiredSettledRounds);
+        assertEq(mockQuestionRewardPoolEscrow.lastExpiresAt(), rewardPoolExpiresAt);
+    }
+
+    function test_SubmitQuestionWithReward_RejectsTooFewSubmissionBountyVoters() public {
+        string[] memory imageUrls = _emptyImageUrls();
+        uint256 rewardAmount = _defaultSubmissionRewardAmount(registry);
+
+        vm.startPrank(submitter);
+        vm.expectRevert("Too few voters");
+        registry.submitQuestionWithReward(
+            "https://example.com/too-few-voters",
+            imageUrls,
+            "",
+            "Question?",
+            "Context voters should consider",
+            "Products",
+            1,
+            keccak256("too-few-voters"),
+            DEFAULT_SUBMISSION_REWARD_ASSET_CREP,
+            rewardAmount,
+            2,
+            DEFAULT_SUBMISSION_REWARD_SETTLED_ROUNDS,
+            DEFAULT_SUBMISSION_REWARD_EXPIRES_AT
+        );
+        vm.stopPrank();
+    }
+
+    function test_SubmitQuestionWithReward_RejectsTooFewSubmissionBountyRounds() public {
+        string[] memory imageUrls = _emptyImageUrls();
+        uint256 rewardAmount = _defaultSubmissionRewardAmount(registry);
+
+        vm.startPrank(submitter);
+        vm.expectRevert("Too few rounds");
+        registry.submitQuestionWithReward(
+            "https://example.com/too-few-rounds",
+            imageUrls,
+            "",
+            "Question?",
+            "Context voters should consider",
+            "Products",
+            1,
+            keccak256("too-few-rounds"),
+            DEFAULT_SUBMISSION_REWARD_ASSET_CREP,
+            rewardAmount,
+            DEFAULT_SUBMISSION_REWARD_REQUIRED_VOTERS,
+            0,
+            DEFAULT_SUBMISSION_REWARD_EXPIRES_AT
+        );
+        vm.stopPrank();
+    }
+
+    function test_SubmitQuestionWithReward_RejectsRewardBelowFlexibleTerms() public {
+        string[] memory imageUrls = _emptyImageUrls();
+        uint256 rewardAmount = _defaultSubmissionRewardAmount(registry);
+
+        vm.startPrank(submitter);
+        vm.expectRevert("Reward too small");
+        registry.submitQuestionWithReward(
+            "https://example.com/reward-too-small",
+            imageUrls,
+            "",
+            "Question?",
+            "Context voters should consider",
+            "Products",
+            1,
+            keccak256("reward-too-small"),
+            DEFAULT_SUBMISSION_REWARD_ASSET_CREP,
+            rewardAmount,
+            rewardAmount + 1,
+            DEFAULT_SUBMISSION_REWARD_SETTLED_ROUNDS,
+            DEFAULT_SUBMISSION_REWARD_EXPIRES_AT
+        );
+        vm.stopPrank();
+    }
+
+    function test_SubmitQuestionWithReward_RejectsExpiredSubmissionBounty() public {
+        string[] memory imageUrls = _emptyImageUrls();
+        uint256 rewardAmount = _defaultSubmissionRewardAmount(registry);
+
+        vm.startPrank(submitter);
+        vm.expectRevert("Invalid bounty expiry");
+        registry.submitQuestionWithReward(
+            "https://example.com/expired-bounty",
+            imageUrls,
+            "",
+            "Question?",
+            "Context voters should consider",
+            "Products",
+            1,
+            keccak256("expired-bounty"),
+            DEFAULT_SUBMISSION_REWARD_ASSET_CREP,
+            rewardAmount,
+            DEFAULT_SUBMISSION_REWARD_REQUIRED_VOTERS,
+            DEFAULT_SUBMISSION_REWARD_SETTLED_ROUNDS,
+            block.timestamp
+        );
+        vm.stopPrank();
+    }
+
+    function test_SubmitQuestionWithReward_RequiresReservationForMatchingBountyTerms() public {
+        string memory contextUrl = "https://example.com/bounty-terms-mismatch";
+        string memory title = "Question?";
+        string memory description = "Context voters should consider";
+        string memory tags = "Products";
+        uint256 categoryId = 1;
+        bytes32 salt = keccak256("bounty-terms-mismatch");
+        string[] memory imageUrls = _emptyImageUrls();
+        uint256 rewardAmount = _defaultSubmissionRewardAmount(registry);
+
+        vm.startPrank(submitter);
+        _reserveQuestionSubmissionWithRewardTerms(
+            contextUrl,
+            imageUrls,
+            "",
+            title,
+            description,
+            tags,
+            categoryId,
+            salt,
+            submitter,
+            DEFAULT_SUBMISSION_REWARD_ASSET_CREP,
+            rewardAmount,
+            DEFAULT_SUBMISSION_REWARD_REQUIRED_VOTERS,
+            DEFAULT_SUBMISSION_REWARD_SETTLED_ROUNDS,
+            DEFAULT_SUBMISSION_REWARD_EXPIRES_AT
+        );
+        vm.warp(block.timestamp + 1);
+        vm.expectRevert("Reservation not found");
+        registry.submitQuestionWithReward(
+            contextUrl,
+            imageUrls,
+            "",
+            title,
+            description,
+            tags,
+            categoryId,
+            salt,
+            DEFAULT_SUBMISSION_REWARD_ASSET_CREP,
+            rewardAmount,
+            DEFAULT_SUBMISSION_REWARD_REQUIRED_VOTERS + 1,
+            DEFAULT_SUBMISSION_REWARD_SETTLED_ROUNDS,
+            DEFAULT_SUBMISSION_REWARD_EXPIRES_AT
+        );
+        vm.stopPrank();
     }
 
     function test_SubmitQuestionWithMedia_RejectsMixedImagesAndVideo() public {
@@ -442,7 +684,10 @@ contract ContentRegistryBranchesTest is VotingTestBase {
                 salt,
                 submitter,
                 DEFAULT_SUBMISSION_REWARD_ASSET_CREP,
-                rewardAmount
+                rewardAmount,
+                DEFAULT_SUBMISSION_REWARD_REQUIRED_VOTERS,
+                DEFAULT_SUBMISSION_REWARD_SETTLED_ROUNDS,
+                DEFAULT_SUBMISSION_REWARD_EXPIRES_AT
             )
         );
         registry.reserveSubmission(revealCommitment);
@@ -480,7 +725,10 @@ contract ContentRegistryBranchesTest is VotingTestBase {
                 salt,
                 submitter,
                 DEFAULT_SUBMISSION_REWARD_ASSET_CREP,
-                rewardAmount
+                rewardAmount,
+                DEFAULT_SUBMISSION_REWARD_REQUIRED_VOTERS,
+                DEFAULT_SUBMISSION_REWARD_SETTLED_ROUNDS,
+                DEFAULT_SUBMISSION_REWARD_EXPIRES_AT
             )
         );
         registry.reserveSubmission(revealCommitment);

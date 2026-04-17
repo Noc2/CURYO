@@ -32,6 +32,9 @@ abstract contract ContentSubmissionTestBase {
     ContentRegistry internal activeTlockContentRegistry;
     uint8 internal constant DEFAULT_SUBMISSION_REWARD_ASSET_CREP = 0;
     uint256 internal constant DEFAULT_SUBMISSION_REWARD_POOL = 1e6;
+    uint256 internal constant DEFAULT_SUBMISSION_REWARD_REQUIRED_VOTERS = 3;
+    uint256 internal constant DEFAULT_SUBMISSION_REWARD_SETTLED_ROUNDS = 1;
+    uint256 internal constant DEFAULT_SUBMISSION_REWARD_EXPIRES_AT = 0;
 
     function _submitContentWithReservation(
         ContentRegistry registry,
@@ -76,7 +79,10 @@ abstract contract ContentSubmissionTestBase {
                 salt,
                 submitter,
                 DEFAULT_SUBMISSION_REWARD_ASSET_CREP,
-                rewardAmount
+                rewardAmount,
+                DEFAULT_SUBMISSION_REWARD_REQUIRED_VOTERS,
+                DEFAULT_SUBMISSION_REWARD_SETTLED_ROUNDS,
+                DEFAULT_SUBMISSION_REWARD_EXPIRES_AT
             )
         );
 
@@ -116,7 +122,10 @@ abstract contract ContentSubmissionTestBase {
                 salt,
                 submitter,
                 DEFAULT_SUBMISSION_REWARD_ASSET_CREP,
-                rewardAmount
+                rewardAmount,
+                DEFAULT_SUBMISSION_REWARD_REQUIRED_VOTERS,
+                DEFAULT_SUBMISSION_REWARD_SETTLED_ROUNDS,
+                DEFAULT_SUBMISSION_REWARD_EXPIRES_AT
             )
         );
         (VmSafe.CallerMode mode, address msgSender, address txOrigin) = HEVM.readCallers();

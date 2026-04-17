@@ -188,16 +188,19 @@ contract QuestionRewardPoolEscrow is
         );
     }
 
-    function createSubmissionRewardPoolFromRegistry(uint256 contentId, address funder, uint8 asset, uint256 amount)
-        external
-        nonReentrant
-        whenNotPaused
-        returns (uint256 rewardPoolId)
-    {
+    function createSubmissionRewardPoolFromRegistry(
+        uint256 contentId,
+        address funder,
+        uint8 asset,
+        uint256 amount,
+        uint256 requiredVoters,
+        uint256 requiredSettledRounds,
+        uint256 expiresAt
+    ) external nonReentrant whenNotPaused returns (uint256 rewardPoolId) {
         require(msg.sender == address(registry), "Only registry");
         require(funder != address(0), "Invalid funder");
         rewardPoolId = _createRewardPool(
-            contentId, funder, asset, amount, MIN_REQUIRED_VOTERS, MIN_REQUIRED_SETTLED_ROUNDS, 0, true
+            contentId, funder, asset, amount, requiredVoters, requiredSettledRounds, expiresAt, true
         );
     }
 
@@ -216,6 +219,10 @@ contract QuestionRewardPoolEscrow is
         require(registry.isContentActive(contentId), "Content not active");
         require(requiredVoters >= MIN_REQUIRED_VOTERS, "Too few voters");
         require(requiredSettledRounds >= MIN_REQUIRED_SETTLED_ROUNDS, "Too few rounds");
+        require(amount >= requiredSettledRounds * requiredVoters, "Amount too small");
+        if (expiresAt != 0) {
+            require(expiresAt > block.timestamp, "Invalid expiry");
+        }
         if (!nonRefundable) {
             (,,, uint16 maxVoters) = votingEngine.protocolConfig().config();
             require(amount >= requiredSettledRounds * uint256(maxVoters), "Amount too small");

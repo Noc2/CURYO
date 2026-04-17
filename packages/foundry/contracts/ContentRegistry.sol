@@ -18,9 +18,15 @@ import { ProtocolConfig } from "./ProtocolConfig.sol";
 import { SubmissionMediaValidator } from "./SubmissionMediaValidator.sol";
 
 interface IQuestionRewardPoolEscrow {
-    function createSubmissionRewardPoolFromRegistry(uint256 contentId, address funder, uint8 asset, uint256 amount)
-        external
-        returns (uint256 rewardPoolId);
+    function createSubmissionRewardPoolFromRegistry(
+        uint256 contentId,
+        address funder,
+        uint8 asset,
+        uint256 amount,
+        uint256 requiredVoters,
+        uint256 requiredSettledRounds,
+        uint256 expiresAt
+    ) external returns (uint256 rewardPoolId);
 }
 
 /// @title ContentRegistry
@@ -47,6 +53,8 @@ contract ContentRegistry is Initializable, AccessControlUpgradeable, PausableUpg
     uint8 public constant SUBMISSION_REWARD_ASSET_CREP = 0;
     uint8 public constant SUBMISSION_REWARD_ASSET_USDC = 1;
     uint256 public constant DEFAULT_MIN_SUBMISSION_REWARD_POOL = 1e6;
+    uint256 public constant MIN_SUBMISSION_REWARD_REQUIRED_VOTERS = 3;
+    uint256 public constant MIN_SUBMISSION_REWARD_SETTLED_ROUNDS = 1;
 
     // Submitter stake rules
     uint256 public constant SLASH_RATING_THRESHOLD = 25; // Rating below this triggers slash
@@ -98,6 +106,14 @@ contract ContentRegistry is Initializable, AccessControlUpgradeable, PausableUpg
         string description;
         string tags;
         uint256 categoryId;
+    }
+
+    struct SubmissionRewardTerms {
+        uint8 asset;
+        uint256 amount;
+        uint256 requiredVoters;
+        uint256 requiredSettledRounds;
+        uint256 expiresAt;
     }
 
     // --- State ---
@@ -338,7 +354,10 @@ contract ContentRegistry is Initializable, AccessControlUpgradeable, PausableUpg
         uint256 categoryId,
         bytes32 salt,
         uint8 rewardAsset,
-        uint256 rewardAmount
+        uint256 rewardAmount,
+        uint256 requiredVoters,
+        uint256 requiredSettledRounds,
+        uint256 rewardPoolExpiresAt
     ) external nonReentrant whenNotPaused returns (uint256) {
         SUBMISSION_MEDIA_VALIDATOR.validateMediaSet(imageUrls, videoUrl);
         SubmissionMetadata memory metadata = SubmissionMetadata({
@@ -351,7 +370,14 @@ contract ContentRegistry is Initializable, AccessControlUpgradeable, PausableUpg
         _validateTextFields(metadata);
 
         require(address(categoryRegistry) != address(0), "CategoryRegistry not set");
-        return _submitValidatedQuestionWithMedia(metadata, imageUrls, videoUrl, salt, rewardAsset, rewardAmount);
+        SubmissionRewardTerms memory rewardTerms = SubmissionRewardTerms({
+            asset: rewardAsset,
+            amount: rewardAmount,
+            requiredVoters: requiredVoters,
+            requiredSettledRounds: requiredSettledRounds,
+            expiresAt: rewardPoolExpiresAt
+        });
+        return _submitValidatedQuestionWithMedia(metadata, imageUrls, videoUrl, salt, rewardTerms);
     }
 
     function submitQuestionWithReward(
@@ -364,7 +390,10 @@ contract ContentRegistry is Initializable, AccessControlUpgradeable, PausableUpg
         uint256 categoryId,
         bytes32 salt,
         uint8 rewardAsset,
-        uint256 rewardAmount
+        uint256 rewardAmount,
+        uint256 requiredVoters,
+        uint256 requiredSettledRounds,
+        uint256 rewardPoolExpiresAt
     ) external nonReentrant whenNotPaused returns (uint256) {
         SUBMISSION_MEDIA_VALIDATOR.validateContextUrl(contextUrl);
         SUBMISSION_MEDIA_VALIDATOR.validateOptionalMediaSet(imageUrls, videoUrl);
@@ -374,7 +403,14 @@ contract ContentRegistry is Initializable, AccessControlUpgradeable, PausableUpg
         _validateTextFields(metadata);
 
         require(address(categoryRegistry) != address(0), "CategoryRegistry not set");
-        return _submitValidatedQuestionWithMedia(metadata, imageUrls, videoUrl, salt, rewardAsset, rewardAmount);
+        SubmissionRewardTerms memory rewardTerms = SubmissionRewardTerms({
+            asset: rewardAsset,
+            amount: rewardAmount,
+            requiredVoters: requiredVoters,
+            requiredSettledRounds: requiredSettledRounds,
+            expiresAt: rewardPoolExpiresAt
+        });
+        return _submitValidatedQuestionWithMedia(metadata, imageUrls, videoUrl, salt, rewardTerms);
     }
 
     /// @notice Submit a question with a required context link and optional preview media.
@@ -399,7 +435,7 @@ contract ContentRegistry is Initializable, AccessControlUpgradeable, PausableUpg
         require(address(categoryRegistry) != address(0), "CategoryRegistry not set");
         uint8 rewardAsset = SUBMISSION_REWARD_ASSET_CREP;
         return _submitValidatedQuestionWithMedia(
-            metadata, imageUrls, videoUrl, salt, rewardAsset, _minimumSubmissionReward(rewardAsset)
+            metadata, imageUrls, videoUrl, salt, _defaultSubmissionRewardTerms(rewardAsset)
         );
     }
 
@@ -426,7 +462,7 @@ contract ContentRegistry is Initializable, AccessControlUpgradeable, PausableUpg
         require(address(categoryRegistry) != address(0), "CategoryRegistry not set");
         uint8 rewardAsset = SUBMISSION_REWARD_ASSET_CREP;
         return _submitValidatedQuestionWithMedia(
-            metadata, imageUrls, videoUrl, salt, rewardAsset, _minimumSubmissionReward(rewardAsset)
+            metadata, imageUrls, videoUrl, salt, _defaultSubmissionRewardTerms(rewardAsset)
         );
     }
 
@@ -468,11 +504,10 @@ contract ContentRegistry is Initializable, AccessControlUpgradeable, PausableUpg
         string[] calldata imageUrls,
         string calldata videoUrl,
         bytes32 salt,
-        uint8 rewardAsset,
-        uint256 rewardAmount
+        SubmissionRewardTerms memory rewardTerms
     ) internal returns (uint256 contentId) {
         (uint256 resolvedCategoryId, bytes32 submissionKey, PendingSubmission memory pending) =
-            _prepareQuestionMediaSubmission(metadata, imageUrls, videoUrl, salt, rewardAsset, rewardAmount);
+            _prepareQuestionMediaSubmission(metadata, imageUrls, videoUrl, salt, rewardTerms);
         bytes32 contentHash = keccak256(
             abi.encode(
                 "curyo-question-context-v1",
@@ -486,7 +521,7 @@ contract ContentRegistry is Initializable, AccessControlUpgradeable, PausableUpg
             )
         );
         contentId = _storeSubmittedContent(submissionKey, pending, contentHash, resolvedCategoryId);
-        uint256 rewardPoolId = _attachSubmissionRewardPool(contentId, rewardAsset, rewardAmount);
+        uint256 rewardPoolId = _attachSubmissionRewardPool(contentId, rewardTerms);
         emit ContentSubmitted(
             contentId,
             msg.sender,
@@ -498,7 +533,7 @@ contract ContentRegistry is Initializable, AccessControlUpgradeable, PausableUpg
             resolvedCategoryId
         );
         emit ContentMediaSubmitted(contentId, imageUrls, videoUrl);
-        emit SubmissionRewardPoolAttached(contentId, msg.sender, rewardAsset, rewardAmount, rewardPoolId);
+        emit SubmissionRewardPoolAttached(contentId, msg.sender, rewardTerms.asset, rewardTerms.amount, rewardPoolId);
     }
 
     function _prepareQuestionMediaSubmission(
@@ -506,13 +541,12 @@ contract ContentRegistry is Initializable, AccessControlUpgradeable, PausableUpg
         string[] calldata imageUrls,
         string calldata videoUrl,
         bytes32 salt,
-        uint8 rewardAsset,
-        uint256 rewardAmount
+        SubmissionRewardTerms memory rewardTerms
     ) internal returns (uint256 resolvedCategoryId, bytes32 submissionKey, PendingSubmission memory pending) {
         resolvedCategoryId = _resolveQuestionSubmissionCategory(metadata);
         submissionKey = _deriveQuestionMediaSubmissionKey(metadata, imageUrls, videoUrl, resolvedCategoryId);
         require(!submissionKeyUsed[submissionKey], "Question already submitted");
-        _validateSubmissionReward(rewardAsset, rewardAmount);
+        _validateSubmissionReward(rewardTerms);
 
         bytes32 revealCommitment = _computeRevealCommitment(
             submissionKey,
@@ -522,8 +556,7 @@ contract ContentRegistry is Initializable, AccessControlUpgradeable, PausableUpg
             metadata.categoryId,
             salt,
             msg.sender,
-            rewardAsset,
-            rewardAmount
+            rewardTerms
         );
         pending = pendingSubmissions[revealCommitment];
         require(pending.submitter == msg.sender, "Reservation not found");
@@ -600,13 +633,21 @@ contract ContentRegistry is Initializable, AccessControlUpgradeable, PausableUpg
         delete dormantKeyReleasableAt[contentId];
     }
 
-    function _attachSubmissionRewardPool(uint256 contentId, uint8 rewardAsset, uint256 rewardAmount)
+    function _attachSubmissionRewardPool(uint256 contentId, SubmissionRewardTerms memory rewardTerms)
         internal
         returns (uint256 rewardPoolId)
     {
         require(questionRewardPoolEscrow != address(0), "Bounty escrow not set");
         rewardPoolId = IQuestionRewardPoolEscrow(questionRewardPoolEscrow)
-            .createSubmissionRewardPoolFromRegistry(contentId, msg.sender, rewardAsset, rewardAmount);
+            .createSubmissionRewardPoolFromRegistry(
+                contentId,
+                msg.sender,
+                rewardTerms.asset,
+                rewardTerms.amount,
+                rewardTerms.requiredVoters,
+                rewardTerms.requiredSettledRounds,
+                rewardTerms.expiresAt
+            );
     }
 
     /// @notice Mark content as dormant if it hasn't reached milestone 0 within DORMANCY_PERIOD.
@@ -877,20 +918,38 @@ contract ContentRegistry is Initializable, AccessControlUpgradeable, PausableUpg
         uint256 categoryId,
         bytes32 salt,
         address submitter,
-        uint8 rewardAsset,
-        uint256 rewardAmount
+        SubmissionRewardTerms memory rewardTerms
     ) internal pure returns (bytes32) {
         return keccak256(
-            abi.encode(submissionKey, title, description, tags, categoryId, salt, submitter, rewardAsset, rewardAmount)
+            abi.encode(
+                submissionKey,
+                title,
+                description,
+                tags,
+                categoryId,
+                salt,
+                submitter,
+                rewardTerms.asset,
+                rewardTerms.amount,
+                rewardTerms.requiredVoters,
+                rewardTerms.requiredSettledRounds,
+                rewardTerms.expiresAt
+            )
         );
     }
 
-    function _validateSubmissionReward(uint8 rewardAsset, uint256 rewardAmount) internal view {
+    function _validateSubmissionReward(SubmissionRewardTerms memory rewardTerms) internal view {
         require(
-            rewardAsset == SUBMISSION_REWARD_ASSET_CREP || rewardAsset == SUBMISSION_REWARD_ASSET_USDC,
+            rewardTerms.asset == SUBMISSION_REWARD_ASSET_CREP || rewardTerms.asset == SUBMISSION_REWARD_ASSET_USDC,
             "Invalid reward asset"
         );
-        require(rewardAmount >= _minimumSubmissionReward(rewardAsset), "Reward below minimum");
+        require(rewardTerms.amount >= _minimumSubmissionReward(rewardTerms.asset), "Reward below minimum");
+        require(rewardTerms.requiredVoters >= MIN_SUBMISSION_REWARD_REQUIRED_VOTERS, "Too few voters");
+        require(rewardTerms.requiredSettledRounds >= MIN_SUBMISSION_REWARD_SETTLED_ROUNDS, "Too few rounds");
+        require(
+            rewardTerms.amount >= rewardTerms.requiredSettledRounds * rewardTerms.requiredVoters, "Reward too small"
+        );
+        require(rewardTerms.expiresAt == 0 || rewardTerms.expiresAt > block.timestamp, "Invalid bounty expiry");
     }
 
     function _minimumSubmissionReward(uint8 rewardAsset) internal view returns (uint256 minimum) {
@@ -900,6 +959,20 @@ contract ContentRegistry is Initializable, AccessControlUpgradeable, PausableUpg
                 : protocolConfig.minSubmissionUsdcPool();
         }
         return minimum == 0 ? DEFAULT_MIN_SUBMISSION_REWARD_POOL : minimum;
+    }
+
+    function _defaultSubmissionRewardTerms(uint8 rewardAsset)
+        internal
+        view
+        returns (SubmissionRewardTerms memory rewardTerms)
+    {
+        rewardTerms = SubmissionRewardTerms({
+            asset: rewardAsset,
+            amount: _minimumSubmissionReward(rewardAsset),
+            requiredVoters: MIN_SUBMISSION_REWARD_REQUIRED_VOTERS,
+            requiredSettledRounds: MIN_SUBMISSION_REWARD_SETTLED_ROUNDS,
+            expiresAt: 0
+        });
     }
 
     function _resolveSubmitterIdentity(address submitter) internal view returns (address) {

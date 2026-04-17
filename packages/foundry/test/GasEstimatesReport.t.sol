@@ -94,7 +94,10 @@ contract UserTransactionGasEstimatesTest is RoundIntegrationTest {
                 salt,
                 submitter,
                 DEFAULT_SUBMISSION_REWARD_ASSET_CREP,
-                rewardAmount
+                rewardAmount,
+                DEFAULT_SUBMISSION_REWARD_REQUIRED_VOTERS,
+                DEFAULT_SUBMISSION_REWARD_SETTLED_ROUNDS,
+                DEFAULT_SUBMISSION_REWARD_EXPIRES_AT
             )
         );
 
