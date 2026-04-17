@@ -233,3 +233,37 @@ export const freeTransactionReservations = pgTable(
 
 export type FreeTransactionReservation = typeof freeTransactionReservations.$inferSelect;
 export type NewFreeTransactionReservation = typeof freeTransactionReservations.$inferInsert;
+
+export const x402QuestionSubmissions = pgTable(
+  "x402_question_submissions",
+  {
+    operationKey: text("operation_key").primaryKey(),
+    clientRequestId: text("client_request_id").notNull(),
+    payloadHash: text("payload_hash").notNull(),
+    chainId: integer("chain_id").notNull(),
+    payerAddress: text("payer_address"),
+    paymentAsset: text("payment_asset").notNull(),
+    paymentAmount: text("payment_amount").notNull(),
+    bountyAmount: text("bounty_amount").notNull(),
+    serviceFeeAmount: text("service_fee_amount").notNull(),
+    status: text("status").notNull(),
+    contentId: text("content_id"),
+    rewardPoolId: text("reward_pool_id"),
+    transactionHashes: text("transaction_hashes"),
+    paymentReceipt: text("payment_receipt"),
+    error: text("error"),
+    createdAt: timestamp("created_at", { mode: "date", withTimezone: true }).notNull(),
+    updatedAt: timestamp("updated_at", { mode: "date", withTimezone: true }).notNull(),
+    submittedAt: timestamp("submitted_at", { mode: "date", withTimezone: true }),
+  },
+  table => ({
+    clientRequestUnique: uniqueIndex("x402_question_submissions_client_request_unique").on(
+      table.chainId,
+      table.clientRequestId,
+    ),
+    statusUpdatedIdx: index("x402_question_submissions_status_updated_idx").on(table.status, table.updatedAt),
+  }),
+);
+
+export type X402QuestionSubmission = typeof x402QuestionSubmissions.$inferSelect;
+export type NewX402QuestionSubmission = typeof x402QuestionSubmissions.$inferInsert;
