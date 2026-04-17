@@ -345,6 +345,7 @@ contract DeployCuryo is ScaffoldETHDeploy {
                 address(votingEngine),
                 governance,
                 address(registry),
+                address(questionRewardPoolEscrow),
                 address(frontendRegistry)
             );
             CuryoGovernor(payable(governorAddr)).initializePools(excludedHolders);
@@ -868,6 +869,7 @@ contract DeployCuryo is ScaffoldETHDeploy {
                 address(votingEngine),
                 governance,
                 address(registry),
+                address(questionRewardPoolEscrow),
                 address(frontendRegistry)
             )
         );
@@ -915,9 +917,10 @@ contract DeployCuryo is ScaffoldETHDeploy {
         address votingEngine,
         address treasury,
         address contentRegistry,
+        address questionRewardPoolEscrow,
         address frontendRegistry
     ) internal pure returns (address[] memory holders) {
-        address[] memory temp = new address[](7);
+        address[] memory temp = new address[](8);
         uint256 count;
 
         if (humanFaucet != address(0)) {
@@ -928,6 +931,7 @@ contract DeployCuryo is ScaffoldETHDeploy {
         temp[count++] = votingEngine;
         temp[count++] = treasury;
         temp[count++] = contentRegistry;
+        temp[count++] = questionRewardPoolEscrow;
         temp[count++] = frontendRegistry;
 
         holders = new address[](count);

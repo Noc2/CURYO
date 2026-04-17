@@ -28,6 +28,7 @@ contract GovernanceTest is Test {
     address public mockTreasury = address(14);
     address public mockContentRegistry = address(15);
     address public mockFrontendRegistry = address(16);
+    address public mockQuestionRewardEscrow = address(17);
 
     // Protocol-controlled balances excluded from quorum
     uint256 public constant FAUCET_BALANCE = 30_000_000 * 1e6;
@@ -37,11 +38,13 @@ contract GovernanceTest is Test {
     uint256 public constant TREASURY_BALANCE = 10_000_000 * 1e6;
     uint256 public constant CONTENT_REGISTRY_BALANCE = 20_000 * 1e6;
     uint256 public constant FRONTEND_REGISTRY_BALANCE = 10_000 * 1e6;
+    uint256 public constant QUESTION_REWARD_ESCROW_BALANCE = 1_000_000 * 1e6;
 
     // Voter balances — circulating supply is 6M after excluded protocol balances are removed.
     uint256 public constant VOTER_BALANCE = 2_000_000 * 1e6; // 2M tokens each
     uint256 public constant TOTAL_MINTED = FAUCET_BALANCE + PARTICIPATION_BALANCE + REWARD_BALANCE + ENGINE_BALANCE
-        + TREASURY_BALANCE + CONTENT_REGISTRY_BALANCE + FRONTEND_REGISTRY_BALANCE + 6_000_000 * 1e6;
+        + TREASURY_BALANCE + CONTENT_REGISTRY_BALANCE + FRONTEND_REGISTRY_BALANCE + QUESTION_REWARD_ESCROW_BALANCE
+        + 6_000_000 * 1e6;
 
     function setUp() public {
         vm.startPrank(deployer);
@@ -81,6 +84,7 @@ contract GovernanceTest is Test {
         token.mint(mockTreasury, TREASURY_BALANCE);
         token.mint(mockContentRegistry, CONTENT_REGISTRY_BALANCE);
         token.mint(mockFrontendRegistry, FRONTEND_REGISTRY_BALANCE);
+        token.mint(mockQuestionRewardEscrow, QUESTION_REWARD_ESCROW_BALANCE);
 
         // Mint tokens to voters (circulating supply)
         token.mint(voter1, VOTER_BALANCE);
@@ -260,7 +264,8 @@ contract GovernanceTest is Test {
         vm.roll(block.number + 1);
 
         uint256 circulatingSupply = TOTAL_MINTED - FAUCET_BALANCE - PARTICIPATION_BALANCE - REWARD_BALANCE
-            - ENGINE_BALANCE - TREASURY_BALANCE - CONTENT_REGISTRY_BALANCE - FRONTEND_REGISTRY_BALANCE;
+            - ENGINE_BALANCE - TREASURY_BALANCE - CONTENT_REGISTRY_BALANCE - FRONTEND_REGISTRY_BALANCE
+            - QUESTION_REWARD_ESCROW_BALANCE;
         uint256 expectedDynamicQuorum = (circulatingSupply * 4) / 100; // 4% of 6M = 240K
         assertEq(expectedDynamicQuorum, 240_000 * 1e6);
         assertEq(governor.quorum(block.number - 1), expectedDynamicQuorum);
@@ -274,6 +279,16 @@ contract GovernanceTest is Test {
 
         assertEq(governor.quorum(block.number - 1), expectedQuorum);
         assertEq(brokenQuorum - expectedQuorum, 564_000 * 1e6);
+    }
+
+    function test_GovernorQuorum_ExcludesQuestionRewardEscrowBalance() public {
+        vm.roll(block.number + 1);
+
+        uint256 expectedQuorum = 240_000 * 1e6;
+        uint256 brokenQuorum = ((6_000_000 * 1e6 + QUESTION_REWARD_ESCROW_BALANCE) * 4) / 100;
+
+        assertEq(governor.quorum(block.number - 1), expectedQuorum);
+        assertEq(brokenQuorum - expectedQuorum, 40_000 * 1e6);
     }
 
     function test_GovernorQuorumMinimumFloor() public {
@@ -452,14 +467,15 @@ contract GovernanceTest is Test {
 
     function test_GovernorGetExcludedHolders() public view {
         address[] memory holders = governor.getExcludedHolders();
-        assertEq(holders.length, 7);
+        assertEq(holders.length, 8);
         assertEq(holders[0], mockFaucet);
         assertEq(holders[1], mockParticipationPool);
         assertEq(holders[2], mockRewardDistributor);
         assertEq(holders[3], mockVotingEngine);
         assertEq(holders[4], mockTreasury);
         assertEq(holders[5], mockContentRegistry);
-        assertEq(holders[6], mockFrontendRegistry);
+        assertEq(holders[6], mockQuestionRewardEscrow);
+        assertEq(holders[7], mockFrontendRegistry);
     }
 
     function test_GovernorExcludedHolderCannotPropose() public {
@@ -542,14 +558,15 @@ contract GovernanceTest is Test {
     }
 
     function _excludedHolders() internal view returns (address[] memory holders) {
-        holders = new address[](7);
+        holders = new address[](8);
         holders[0] = mockFaucet;
         holders[1] = mockParticipationPool;
         holders[2] = mockRewardDistributor;
         holders[3] = mockVotingEngine;
         holders[4] = mockTreasury;
         holders[5] = mockContentRegistry;
-        holders[6] = mockFrontendRegistry;
+        holders[6] = mockQuestionRewardEscrow;
+        holders[7] = mockFrontendRegistry;
     }
 
     function _executeSingleCallProposal(
