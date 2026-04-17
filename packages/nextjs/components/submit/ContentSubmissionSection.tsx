@@ -1303,8 +1303,8 @@ export function ContentSubmissionSection() {
               <div className="surface-card rounded-2xl p-4 space-y-3">
                 <p className="text-base font-medium uppercase tracking-wider text-base-content/40">Preview</p>
                 {title ? <h3 className="line-clamp-2 text-lg font-semibold text-base-content">{title}</h3> : null}
-                <ContentEmbed url={previewUrl} title={title} description={description} compact />
-                {description && previewUrl ? <p className="text-base text-base-content/70">{description}</p> : null}
+                {previewUrl ? <ContentEmbed url={previewUrl} title={title} description={description} compact /> : null}
+                {description ? <p className="text-base text-base-content/70">{description}</p> : null}
                 {selectedSubcategories.length > 0 ? (
                   <div className="flex flex-wrap gap-1.5">
                     {selectedSubcategories.map(tag => (
