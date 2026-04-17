@@ -3759,7 +3759,7 @@ const deployedContracts: GenericContractsDeclaration = {
             },
           ],
           outputs: [],
-          stateMutability: "nonpayable",
+          stateMutability: "view",
         },
         {
           type: "function",
@@ -3913,7 +3913,7 @@ const deployedContracts: GenericContractsDeclaration = {
               internalType: "uint256",
             },
           ],
-          stateMutability: "nonpayable",
+          stateMutability: "view",
         },
         {
           type: "function",
@@ -23575,7 +23575,7 @@ const deployedContracts: GenericContractsDeclaration = {
             },
           ],
           outputs: [],
-          stateMutability: "nonpayable",
+          stateMutability: "view",
         },
         {
           type: "function",
@@ -23729,7 +23729,7 @@ const deployedContracts: GenericContractsDeclaration = {
               internalType: "uint256",
             },
           ],
-          stateMutability: "nonpayable",
+          stateMutability: "view",
         },
         {
           type: "function",
@@ -42023,7 +42023,7 @@ const deployedContracts: GenericContractsDeclaration = {
             },
           ],
           outputs: [],
-          stateMutability: "nonpayable",
+          stateMutability: "view",
         },
         {
           type: "function",
@@ -42177,7 +42177,7 @@ const deployedContracts: GenericContractsDeclaration = {
               internalType: "uint256",
             },
           ],
-          stateMutability: "nonpayable",
+          stateMutability: "view",
         },
         {
           type: "function",
