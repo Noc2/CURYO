@@ -74,21 +74,21 @@ KEYS=(
 # 1=Products, 2=Local Places, 3=Travel, 4=Apps, 5=Media,
 # 6=Design, 7=AI Answers, 8=Developer Docs, 9=Trust, 10=General
 CONTEXT_URLS=(
-  "https://picsum.photos/seed/curyo-refund-policy/1200/800.jpg"
+  "https://example.com/curyo-refund-policy"
   "https://picsum.photos/seed/curyo-workspace/1200/800.jpg"
-  "https://picsum.photos/seed/curyo-api-docs/1200/800.jpg"
+  "https://developer.mozilla.org/en-US/docs/Web/API/Fetch_API/Using_Fetch"
   "https://picsum.photos/seed/curyo-product-label/1200/800.jpg"
   "https://picsum.photos/seed/curyo-cafe-review/1200/800.jpg"
   "https://picsum.photos/seed/curyo-hotel-room/1200/800.jpg"
   "https://www.youtube.com/watch?v=jNQXAC9IVRw"
-  "https://picsum.photos/seed/curyo-app-onboarding/1200/800.jpg"
+  "https://docs.celo.org/build"
   "https://picsum.photos/seed/curyo-event-poster/1200/800.jpg"
   "https://picsum.photos/seed/curyo-weeknight-dinner/1200/800.jpg"
   "https://picsum.photos/seed/curyo-media-hero-primary/1200/800.jpg"
   "https://www.youtube.com/watch?v=aqz-KE-bpKQ"
   "https://picsum.photos/seed/curyo-street-guide/1200/800.jpg"
-  "https://picsum.photos/seed/curyo-accessibility-checklist/1200/800.jpg"
-  "https://picsum.photos/seed/curyo-moderation-rules/1200/800.jpg"
+  "https://www.w3.org/WAI/standards-guidelines/wcag/"
+  "https://example.com/curyo-moderation-rules"
   "https://picsum.photos/seed/curyo-product-photo/1200/800.jpg"
 )
 
@@ -108,7 +108,26 @@ IMAGE_URLS=(
   "[]"
   "[]"
   "[]"
-  "[]"
+  '["https://picsum.photos/seed/curyo-product-photo/1200/800.jpg","https://picsum.photos/seed/curyo-product-photo-detail/1200/800.jpg"]'
+)
+
+SUBMISSION_BOUNTY_AMOUNTS=(
+  "$SUBMISSION_BOUNTY_AMOUNT"
+  "2500000"
+  "5000000"
+  "10000000"
+  "1500000"
+  "3000000"
+  "4000000"
+  "6000000"
+  "2000000"
+  "8000000"
+  "12000000"
+  "1000000"
+  "7000000"
+  "3500000"
+  "5500000"
+  "9000000"
 )
 
 VIDEO_URLS=(
@@ -223,7 +242,7 @@ for CATEGORY_SLUG in "${CATEGORY_SLUGS[@]}"; do
 done
 
 echo "=== Seeding example image, multi-image, and video questions ==="
-echo "(Test accounts were pre-funded with cREP during deployment)"
+echo "(Test accounts were pre-funded with cREP during deployment; seeded Bounties use varied cREP amounts)"
 echo ""
 
 TOTAL_ITEMS="${#CONTEXT_URLS[@]}"
@@ -232,6 +251,7 @@ if [ "$TOTAL_ITEMS" -ne "${#TITLES[@]}" ] ||
   [ "$TOTAL_ITEMS" -ne "${#TAGS[@]}" ] ||
   [ "$TOTAL_ITEMS" -ne "${#IMAGE_URLS[@]}" ] ||
   [ "$TOTAL_ITEMS" -ne "${#VIDEO_URLS[@]}" ] ||
+  [ "$TOTAL_ITEMS" -ne "${#SUBMISSION_BOUNTY_AMOUNTS[@]}" ] ||
   [ "$TOTAL_ITEMS" -ne "${#CATEGORY_SLUGS[@]}" ] ||
   [ "$TOTAL_ITEMS" -ne "${#CATEGORY_IDS[@]}" ]; then
   echo "ERROR: Seed content arrays must have the same length"
@@ -251,6 +271,7 @@ for ((i = 0; i < TOTAL_ITEMS; i++)); do
   TITLE="${TITLES[$i]}"
   DESCRIPTION="${DESCRIPTIONS[$i]}"
   TAG="${TAGS[$i]}"
+  BOUNTY_AMOUNT="${SUBMISSION_BOUNTY_AMOUNTS[$i]}"
   CATEGORY_ID="${CATEGORY_IDS[$i]}"
   CATEGORY_SLUG="${CATEGORY_SLUGS[$i]}"
   MEDIA_KIND="context-only"
@@ -271,14 +292,14 @@ for ((i = 0; i < TOTAL_ITEMS; i++)); do
   fi
 
   # 1. Approve the Bounty escrow to pull the non-refundable cREP submission Bounty
-  echo "  Approving cREP Bounty..."
-  cast send "$TOKEN" "approve(address,uint256)" "$QUESTION_REWARD_POOL_ESCROW" "$SUBMISSION_BOUNTY_AMOUNT" --private-key "$KEY" --rpc-url "$RPC" > /dev/null 2>&1
+  echo "  Approving cREP Bounty: $BOUNTY_AMOUNT"
+  cast send "$TOKEN" "approve(address,uint256)" "$QUESTION_REWARD_POOL_ESCROW" "$BOUNTY_AMOUNT" --private-key "$KEY" --rpc-url "$RPC" > /dev/null 2>&1
 
   # 2. Reserve the hidden submission commitment before revealing the question metadata
   printf -v SALT "%064x" "$((i + 1))"
   REVEAL_COMMITMENT=$(node "$SCRIPT_DIR/../scripts-js/buildSubmissionReservation.js" \
     "$RPC" "$REGISTRY" "$ADDR" "$CONTEXT_URL" "$IMAGE_URLS_ARG" "$VIDEO_URL_ARG" "$TITLE" "$DESCRIPTION" "$TAG" "$CATEGORY_ID" "0x$SALT" \
-    "0" "$SUBMISSION_BOUNTY_AMOUNT" "$SUBMISSION_BOUNTY_REQUIRED_VOTERS" "$SUBMISSION_BOUNTY_REQUIRED_SETTLED_ROUNDS" "$SUBMISSION_BOUNTY_EXPIRES_AT")
+    "0" "$BOUNTY_AMOUNT" "$SUBMISSION_BOUNTY_REQUIRED_VOTERS" "$SUBMISSION_BOUNTY_REQUIRED_SETTLED_ROUNDS" "$SUBMISSION_BOUNTY_EXPIRES_AT")
   echo "  Reserving submission..."
   cast send "$REGISTRY" "reserveSubmission(bytes32)" "$REVEAL_COMMITMENT" \
     --private-key "$KEY" --rpc-url "$RPC" > /dev/null 2>&1
@@ -287,9 +308,9 @@ for ((i = 0; i < TOTAL_ITEMS; i++)); do
   sleep 1
 
   # 3. Reveal the submission with the same deterministic salt used for the reservation
-  echo "  Submitting question: $TITLE ($MEDIA_KIND, context: $CONTEXT_URL, category: $CATEGORY_SLUG -> $CATEGORY_ID)"
+  echo "  Submitting question: $TITLE ($MEDIA_KIND, bounty: $BOUNTY_AMOUNT, context: $CONTEXT_URL, category: $CATEGORY_SLUG -> $CATEGORY_ID)"
   cast send "$REGISTRY" "submitQuestionWithReward(string,string[],string,string,string,string,uint256,bytes32,uint8,uint256,uint256,uint256,uint256)" \
-    "$CONTEXT_URL" "$IMAGE_URLS_ARG" "$VIDEO_URL_ARG" "$TITLE" "$DESCRIPTION" "$TAG" "$CATEGORY_ID" "0x$SALT" "0" "$SUBMISSION_BOUNTY_AMOUNT" "$SUBMISSION_BOUNTY_REQUIRED_VOTERS" "$SUBMISSION_BOUNTY_REQUIRED_SETTLED_ROUNDS" "$SUBMISSION_BOUNTY_EXPIRES_AT" \
+    "$CONTEXT_URL" "$IMAGE_URLS_ARG" "$VIDEO_URL_ARG" "$TITLE" "$DESCRIPTION" "$TAG" "$CATEGORY_ID" "0x$SALT" "0" "$BOUNTY_AMOUNT" "$SUBMISSION_BOUNTY_REQUIRED_VOTERS" "$SUBMISSION_BOUNTY_REQUIRED_SETTLED_ROUNDS" "$SUBMISSION_BOUNTY_EXPIRES_AT" \
     --private-key "$KEY" --rpc-url "$RPC" > /dev/null 2>&1
   echo "  Done!"
   echo ""

@@ -54,12 +54,13 @@ async function resolveCategoryIdBySlug(slug: string): Promise<bigint> {
 
 const BASELINE_CONTENT = [
   {
-    url: "https://picsum.photos/seed/curyo-refund-policy/1200/800.jpg",
+    url: "https://example.com/curyo-refund-policy",
     title: "Is this refund policy easy to understand?",
     description:
       "Voters should judge whether the plain-language summary explains refunds, timelines, and exceptions clearly enough for a first-time buyer.",
     tags: "Policy,Clarity,Trust",
     categorySlug: "trust",
+    bountyAmount: 1_000_000n,
     submitter: ANVIL_ACCOUNTS.account2.address,
   },
   {
@@ -69,15 +70,17 @@ const BASELINE_CONTENT = [
       "Rate the image and context as a calm workspace for focused technical writing, not as a luxury interior shot.",
     tags: "Photography,Usefulness,Atmosphere",
     categorySlug: "design",
+    bountyAmount: 2_500_000n,
     submitter: ANVIL_ACCOUNTS.account3.address,
   },
   {
-    url: "https://picsum.photos/seed/curyo-api-docs/1200/800.jpg",
+    url: "https://developer.mozilla.org/en-US/docs/Web/API/Fetch_API/Using_Fetch",
     title: "Is this API quickstart beginner friendly?",
     description:
       "Judge whether a new developer could complete the first request without missing setup, authentication, or error handling steps.",
     tags: "Getting Started,Readability,Examples",
     categorySlug: "developer-docs",
+    bountyAmount: 5_000_000n,
     submitter: ANVIL_ACCOUNTS.account4.address,
   },
   {
@@ -87,6 +90,7 @@ const BASELINE_CONTENT = [
       "Focus on whether the label hierarchy, contrast, and key details would still be clear in a small shopping card.",
     tags: "Design,Usability,Quality",
     categorySlug: "products",
+    bountyAmount: 10_000_000n,
     submitter: ANVIL_ACCOUNTS.account5.address,
   },
   {
@@ -96,6 +100,7 @@ const BASELINE_CONTENT = [
       "The review mentions noise, service speed, seating, and price. Vote on whether it is specific enough to guide a nearby visitor.",
     tags: "Local Tips,Service,Value",
     categorySlug: "local-places",
+    bountyAmount: 1_500_000n,
     submitter: ANVIL_ACCOUNTS.account6.address,
   },
   {
@@ -105,6 +110,7 @@ const BASELINE_CONTENT = [
       "Use the visible room condition and the written context to judge whether the listing earns a higher community rating.",
     tags: "Hotels,Cleanliness,Comfort",
     categorySlug: "travel",
+    bountyAmount: 3_000_000n,
     submitter: ANVIL_ACCOUNTS.account7.address,
   },
   {
@@ -114,15 +120,17 @@ const BASELINE_CONTENT = [
       "Judge whether the clip has enough context, pacing, and visual clarity for a viewer to understand it without extra explanation.",
     tags: "Video,Clarity,Context",
     categorySlug: "media",
+    bountyAmount: 4_000_000n,
     submitter: ANVIL_ACCOUNTS.account8.address,
   },
   {
-    url: "https://picsum.photos/seed/curyo-app-onboarding/1200/800.jpg",
+    url: "https://docs.celo.org/build",
     title: "Should this app onboarding copy be shorter?",
     description:
       "The flow explains wallet connection, Voter ID, and staking in one screen. Judge whether the copy reduces friction or overloads new users.",
     tags: "Onboarding,Trust,Usability",
     categorySlug: "apps",
+    bountyAmount: 6_000_000n,
     submitter: ANVIL_ACCOUNTS.account9.address,
   },
   {
@@ -132,6 +140,7 @@ const BASELINE_CONTENT = [
       "Voters should judge hierarchy, contrast, and whether date, place, and purpose are legible at a glance.",
     tags: "Visual Design,Typography,Layout",
     categorySlug: "design",
+    bountyAmount: 2_000_000n,
     submitter: ANVIL_ACCOUNTS.account10.address,
   },
   {
@@ -141,6 +150,7 @@ const BASELINE_CONTENT = [
       "Rate whether the plan balances prep time, nutrition, cleanup, and ingredient availability for a busy household.",
     tags: "Usefulness,Clear,Worthwhile",
     categorySlug: "general",
+    bountyAmount: 8_000_000n,
     submitter: ANVIL_ACCOUNTS.account2.address,
   },
   {
@@ -156,6 +166,7 @@ const BASELINE_CONTENT = [
       "Judge whether the image set has enough focus, contrast, variety, and mobile-safe composition to support a hero gallery.",
     tags: "Images,Gallery,Photography",
     categorySlug: "media",
+    bountyAmount: 12_000_000n,
     submitter: ANVIL_ACCOUNTS.account3.address,
   },
   {
@@ -165,6 +176,7 @@ const BASELINE_CONTENT = [
       "Vote on whether the movement, pacing, and visual focus make the clip engaging enough for a general audience.",
     tags: "Video,Animation,Engagement",
     categorySlug: "media",
+    bountyAmount: 1_000_000n,
     submitter: ANVIL_ACCOUNTS.account4.address,
   },
   {
@@ -174,33 +186,41 @@ const BASELINE_CONTENT = [
       "Use the image as travel context. Vote on whether it would make a neighborhood guide feel inviting and credible.",
     tags: "Location,Photography,Solo Travel",
     categorySlug: "travel",
+    bountyAmount: 7_000_000n,
     submitter: ANVIL_ACCOUNTS.account5.address,
   },
   {
-    url: "https://picsum.photos/seed/curyo-accessibility-checklist/1200/800.jpg",
+    url: "https://www.w3.org/WAI/standards-guidelines/wcag/",
     title: "Is this accessibility checklist launch ready?",
     description:
       "Review the checklist for keyboard support, focus states, text contrast, reduced motion, and mobile overflow coverage.",
     tags: "Accessibility,Quality,Testing",
     categorySlug: "apps",
+    bountyAmount: 3_500_000n,
     submitter: ANVIL_ACCOUNTS.account6.address,
   },
   {
-    url: "https://picsum.photos/seed/curyo-moderation-rules/1200/800.jpg",
+    url: "https://example.com/curyo-moderation-rules",
     title: "Does this moderation rule set clear voter expectations?",
     description:
       "Judge whether the rule tells voters when to downvote illegal, unsafe, misleading, or mismatched submissions.",
     tags: "Moderation,Policy,Risk",
     categorySlug: "trust",
+    bountyAmount: 5_500_000n,
     submitter: ANVIL_ACCOUNTS.account7.address,
   },
   {
     url: "https://picsum.photos/seed/curyo-product-photo/1200/800.jpg",
+    imageUrls: [
+      "https://picsum.photos/seed/curyo-product-photo/1200/800.jpg",
+      "https://picsum.photos/seed/curyo-product-photo-detail/1200/800.jpg",
+    ],
     title: "Is this product photo useful enough to compare?",
     description:
       "Focus on scale, detail, lighting, and whether the photo helps a buyer compare the item without extra marketing claims.",
     tags: "Quality,Design,Value",
     categorySlug: "products",
+    bountyAmount: 9_000_000n,
     submitter: ANVIL_ACCOUNTS.account8.address,
   },
   {
@@ -209,6 +229,7 @@ const BASELINE_CONTENT = [
     description: "Pioneer in radioactivity research and the first person to win two Nobel Prizes.",
     tags: "Scientists,History",
     categorySlug: "general",
+    bountyAmount: 15_000_000n,
     submitter: ANVIL_ACCOUNTS.account10.address,
   },
 ] as const;
@@ -272,6 +293,7 @@ export async function ensureBaselineSeedData(): Promise<void> {
       item.submitter,
       CONTRACT_ADDRESSES.ContentRegistry,
       "imageUrls" in item ? { imageUrls: item.imageUrls } : undefined,
+      item.bountyAmount,
     );
     if (!submitted) {
       throw new Error(`Failed to seed baseline content: ${item.title}`);

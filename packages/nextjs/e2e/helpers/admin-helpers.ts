@@ -179,6 +179,7 @@ async function buildSubmissionReservation(
   fromAddress: string,
   contractAddress: string,
   media: SubmissionMedia,
+  rewardAmount: bigint = DEFAULT_SUBMISSION_REWARD_AMOUNT,
 ): Promise<{ revealCommitment: `0x${string}`; salt: `0x${string}` } | null> {
   const { decodeFunctionResult, encodeAbiParameters, encodeFunctionData, keccak256, stringToHex } = await import(
     "viem"
@@ -248,7 +249,7 @@ async function buildSubmissionReservation(
         salt,
         fromAddress as `0x${string}`,
         DEFAULT_SUBMISSION_REWARD_ASSET_CREP,
-        DEFAULT_SUBMISSION_REWARD_AMOUNT,
+        rewardAmount,
         DEFAULT_SUBMISSION_REWARD_REQUIRED_VOTERS,
         DEFAULT_SUBMISSION_REWARD_SETTLED_ROUNDS,
         DEFAULT_SUBMISSION_REWARD_EXPIRES_AT,
@@ -592,6 +593,7 @@ export async function submitContentDirect(
   fromAddress: string,
   contractAddress: string,
   mediaInput?: SubmissionMediaInput,
+  rewardAmount: bigint = DEFAULT_SUBMISSION_REWARD_AMOUNT,
 ): Promise<boolean> {
   const { encodeFunctionData } = await import("viem");
   const resolvedCategoryId = BigInt(categoryId);
@@ -605,6 +607,7 @@ export async function submitContentDirect(
     fromAddress,
     contractAddress,
     media,
+    rewardAmount,
   );
   if (!reservation) return false;
 
@@ -616,7 +619,7 @@ export async function submitContentDirect(
 
   const rewardApproved = await approveCREP(
     rewardEscrowAddress,
-    DEFAULT_SUBMISSION_REWARD_AMOUNT,
+    rewardAmount,
     fromAddress,
     crepTokenAddress,
   );
@@ -675,7 +678,7 @@ export async function submitContentDirect(
       resolvedCategoryId,
       reservation.salt,
       DEFAULT_SUBMISSION_REWARD_ASSET_CREP,
-      DEFAULT_SUBMISSION_REWARD_AMOUNT,
+      rewardAmount,
       DEFAULT_SUBMISSION_REWARD_REQUIRED_VOTERS,
       DEFAULT_SUBMISSION_REWARD_SETTLED_ROUNDS,
       DEFAULT_SUBMISSION_REWARD_EXPIRES_AT,
