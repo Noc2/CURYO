@@ -1,4 +1,3 @@
-import Link from "next/link";
 import { redirect } from "next/navigation";
 import {
   ArrowDownIcon,
@@ -137,20 +136,18 @@ function AskFlowPanel({
   label,
   title,
   description,
-  children,
   emphasis = false,
 }: {
   icon: typeof CpuChipIcon;
   label: string;
   title: string;
   description: React.ReactNode;
-  children?: React.ReactNode;
   emphasis?: boolean;
 }) {
   return (
     <div
       className={`surface-card flex h-full flex-col rounded-[1.25rem] px-5 py-6 text-left ${
-        emphasis ? "min-h-[19rem] lg:px-6" : "min-h-[17rem]"
+        emphasis ? "min-h-[15rem] lg:px-6" : "min-h-[14rem]"
       }`}
     >
       <div className="mb-5 flex items-start justify-between gap-4">
@@ -163,7 +160,6 @@ function AskFlowPanel({
       </div>
       <h3 className="display-section text-2xl text-base-content">{title}</h3>
       <p className="mt-3 text-base leading-7 text-base-content/62">{description}</p>
-      {children}
     </div>
   );
 }
@@ -176,47 +172,15 @@ function AskWorkflowSection() {
       <WorkflowHeading title="How It Works" subtitle="AI and Humans Together" />
       <div className="relative">
         <div className="grid grid-cols-1 gap-4 lg:grid-cols-[minmax(0,1fr)_4.5rem_minmax(0,1.28fr)_4.5rem_minmax(0,1fr)] lg:items-center lg:gap-5">
-          <AskFlowPanel {...agentStep}>
-            <div className="mt-5 flex flex-wrap gap-2 text-sm font-semibold text-base-content/66">
-              <Link
-                href="/docs/ai#x402-agent-payments"
-                className="rounded-full bg-base-300 px-3 py-1.5 transition hover:bg-primary/15 hover:text-primary focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
-              >
-                x402
-              </Link>
-              <Link
-                href="/docs/ai#mcp-adapter-shape"
-                className="rounded-full bg-base-300 px-3 py-1.5 transition hover:bg-primary/15 hover:text-primary focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
-              >
-                MCP
-              </Link>
-            </div>
-          </AskFlowPanel>
+          <AskFlowPanel {...agentStep} />
 
           <FlowConnector label="question + bounty" />
 
-          <AskFlowPanel {...mcpStep} emphasis>
-            <div className="mt-5 rounded-2xl bg-base-300/80 p-4">
-              <div className="flex items-center gap-2 text-sm font-semibold uppercase tracking-[0.16em] text-base-content/45">
-                <UserGroupIcon className="h-5 w-5 text-accent/80" />
-                Verified human round
-              </div>
-              <div className="mt-4 grid grid-cols-3 gap-2 text-center text-sm font-semibold text-base-content/68">
-                <span className="rounded-xl bg-base-200 px-2 py-3">stake</span>
-                <span className="rounded-xl bg-base-200 px-2 py-3">reveal</span>
-                <span className="rounded-xl bg-base-200 px-2 py-3">settle</span>
-              </div>
-            </div>
-          </AskFlowPanel>
+          <AskFlowPanel {...mcpStep} emphasis />
 
           <FlowConnector label="Revealed Rating" />
 
-          <AskFlowPanel {...resultStep}>
-            <div className="mt-5 rounded-2xl border border-accent/20 bg-accent/10 px-4 py-3">
-              <div className="text-xs font-semibold uppercase tracking-[0.16em] text-accent/75">returned signal</div>
-              <div className="mt-2 text-lg font-semibold text-base-content">human-rated result</div>
-            </div>
-          </AskFlowPanel>
+          <AskFlowPanel {...resultStep} />
         </div>
 
         <div className="mt-5 flex items-center gap-3 rounded-full border border-accent/20 bg-base-200/70 px-4 py-3 text-sm font-semibold text-accent/80 lg:mx-6">
