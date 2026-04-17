@@ -376,6 +376,9 @@ function FeedContentMetaCard({
   const contextLabel = getSourceLabel(contextUrl);
   const hasContextLink = contextUrl.length > 0 && contextLabel.trim().length > 0;
   const hasContextDetails = hasDescription || hasContextLink;
+  const actionRowClassName = `flex flex-wrap items-center gap-x-2 gap-y-2 ${
+    hasContextDetails ? (compact ? "mt-3" : "mt-4") : ""
+  }`;
   const wrapperClassName = embedded
     ? compact
       ? "border-t border-base-content/10 px-3 py-3"
@@ -385,7 +388,27 @@ function FeedContentMetaCard({
   return (
     <>
       <div className={wrapperClassName}>
-        <div className="flex flex-wrap items-center gap-x-2 gap-y-2">
+        {hasContextDetails ? (
+          <div className="space-y-2">
+            {hasDescription ? <p className="text-base leading-relaxed text-base-content/85">{description}</p> : null}
+            {hasContextLink ? (
+              <SafeExternalLink
+                href={contextUrl}
+                allowExternalOpen
+                testId="content-source-link"
+                title={`Open context: ${contextLabel}`}
+                ariaLabel={`Open context: ${contextLabel}`}
+                onClick={() => onSourceOpen?.(item)}
+                className="inline-flex max-w-full items-center gap-1.5 text-base font-semibold leading-snug text-primary underline-offset-4 transition-colors hover:text-primary-focus hover:underline"
+              >
+                <ArrowTopRightOnSquareIcon className="h-4 w-4 shrink-0" />
+                <span className="min-w-0 truncate">Context: {contextLabel}</span>
+              </SafeExternalLink>
+            ) : null}
+          </div>
+        ) : null}
+
+        <div className={actionRowClassName}>
           <div className="min-w-0 flex-[1_1_9rem]">
             <SubmitterBadge
               address={item.submitter}
@@ -415,26 +438,6 @@ function FeedContentMetaCard({
             </button>
           </div>
         </div>
-
-        {hasContextDetails ? (
-          <div className={compact ? "mt-2.5 space-y-2" : "mt-3 space-y-2.5"}>
-            {hasDescription ? <p className="text-base leading-relaxed text-base-content/85">{description}</p> : null}
-            {hasContextLink ? (
-              <SafeExternalLink
-                href={contextUrl}
-                allowExternalOpen
-                testId="content-source-link"
-                title={`Open context: ${contextLabel}`}
-                ariaLabel={`Open context: ${contextLabel}`}
-                onClick={() => onSourceOpen?.(item)}
-                className="inline-flex max-w-full items-center gap-1.5 text-base font-semibold leading-snug text-primary underline-offset-4 transition-colors hover:text-primary-focus hover:underline"
-              >
-                <ArrowTopRightOnSquareIcon className="h-4 w-4 shrink-0" />
-                <span className="min-w-0 truncate">Context: {contextLabel}</span>
-              </SafeExternalLink>
-            ) : null}
-          </div>
-        ) : null}
       </div>
 
       {showShare ? (
