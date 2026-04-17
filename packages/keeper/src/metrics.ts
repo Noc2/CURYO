@@ -12,7 +12,6 @@ const counters: Record<string, number> = {
   keeper_rounds_reveal_failed_finalized_total: 0,
   keeper_votes_revealed_total: 0,
   keeper_unrevealed_cleanup_batches_total: 0,
-  keeper_submitter_stakes_resolved_total: 0,
   keeper_content_marked_dormant_total: 0,
   keeper_runs_total: 0,
   keeper_errors_total: 0,
@@ -61,7 +60,6 @@ export function recordRun(result: KeeperResult, durationMs: number) {
   counters.keeper_rounds_reveal_failed_finalized_total += result.roundsRevealFailedFinalized;
   counters.keeper_votes_revealed_total += result.votesRevealed;
   counters.keeper_unrevealed_cleanup_batches_total += result.cleanupBatchesProcessed;
-  counters.keeper_submitter_stakes_resolved_total += result.submitterStakesResolved;
   counters.keeper_content_marked_dormant_total += result.contentMarkedDormant;
   gauges.keeper_last_run_duration_seconds = durationMs / 1000;
   gauges.keeper_last_successful_run_timestamp = Date.now() / 1000;
@@ -85,7 +83,6 @@ function renderMetrics(): string {
     keeper_rounds_reveal_failed_finalized_total: "Total rounds finalized as RevealFailed by keeper",
     keeper_votes_revealed_total: "Total votes revealed by keeper",
     keeper_unrevealed_cleanup_batches_total: "Total unrevealed-vote cleanup batches processed by keeper",
-    keeper_submitter_stakes_resolved_total: "Total submitter stakes resolved by keeper",
     keeper_content_marked_dormant_total: "Total content items marked dormant",
     keeper_runs_total: "Total keeper run cycles",
     keeper_errors_total: "Total keeper run errors",
@@ -136,7 +133,6 @@ function renderHealth(): { status: number; body: string } {
     totalRuns: counters.keeper_runs_total,
     roundsRevealFailedFinalized: counters.keeper_rounds_reveal_failed_finalized_total,
     cleanupBatchesProcessed: counters.keeper_unrevealed_cleanup_batches_total,
-    submitterStakesResolved: counters.keeper_submitter_stakes_resolved_total,
     decryptFailures: counters.keeper_decrypt_failures_total,
     walletBalanceWei: String(BigInt(Math.round(gauges.keeper_wallet_balance_wei))),
     consensusReserveWei: String(BigInt(Math.round(gauges.keeper_consensus_reserve_wei))),
