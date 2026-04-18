@@ -35,14 +35,19 @@ export async function selectAskCategory(page: Page, categoryNames = SEEDED_CATEG
 
 export async function selectAskSubcategory(page: Page, subcategoryNames = SEEDED_SUBCATEGORY_NAMES): Promise<boolean> {
   const form = page.locator("form").first();
-  await expect(form.getByText("Select Categories")).toBeVisible({ timeout: 5_000 });
+  const subcategoryList = form
+    .locator("label", { hasText: /^Select Categories/ })
+    .locator("xpath=following-sibling::div[1]");
+
+  await expect(subcategoryList).toBeVisible({ timeout: 5_000 });
 
   for (const subcategoryName of subcategoryNames) {
-    const button = form
+    const button = subcategoryList
       .getByRole("button", { name: new RegExp(`^${escapeRegExp(subcategoryName)}$`, "i") })
       .first();
     if (await button.isVisible({ timeout: 1_000 }).catch(() => false)) {
       await button.click();
+      await expect(button).toHaveClass(/pill-active/, { timeout: 2_000 });
       return true;
     }
   }
