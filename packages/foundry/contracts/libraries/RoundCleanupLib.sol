@@ -60,7 +60,16 @@ library RoundCleanupLib {
         uint256 consensusReserve,
         uint256 startIndex,
         uint256 count
-    ) external returns (uint256 forfeitedCrep, uint256 refundedCrep, uint256 updatedConsensusReserve) {
+    )
+        external
+        returns (
+            uint256 forfeitedToTreasury,
+            uint256 addedToVoterPool,
+            uint256 refundedCrep,
+            uint256 processedPastEpochCount,
+            uint256 updatedConsensusReserve
+        )
+    {
         uint256 len = commitKeys.length;
         uint256 endIndex = (count == 0 || startIndex + count > len) ? len : startIndex + count;
         updatedConsensusReserve = consensusReserve;
@@ -72,29 +81,34 @@ library RoundCleanupLib {
                 commit.stakeAmount = 0;
 
                 if (round.state == RoundLib.RoundState.RevealFailed || commit.revealableAfter <= round.settledAt) {
-                    forfeitedCrep += amount;
+                    processedPastEpochCount++;
+                    if (round.state == RoundLib.RoundState.Settled) {
+                        addedToVoterPool += amount;
+                    } else {
+                        forfeitedToTreasury += amount;
+                    }
                 } else {
                     try TokenTransferLib.safeTransfer(crepToken, commit.voter, amount) {
                         refundedCrep += amount;
                     } catch {
-                        forfeitedCrep += amount;
+                        forfeitedToTreasury += amount;
                     }
                 }
             }
         }
 
-        if (forfeitedCrep > 0) {
+        if (forfeitedToTreasury > 0) {
             address currentTreasury = protocolConfig.treasury();
             if (currentTreasury != address(0)) {
-                try TokenTransferLib.safeTransfer(crepToken, currentTreasury, forfeitedCrep) { }
+                try TokenTransferLib.safeTransfer(crepToken, currentTreasury, forfeitedToTreasury) { }
                 catch {
-                    updatedConsensusReserve += forfeitedCrep;
+                    updatedConsensusReserve += forfeitedToTreasury;
                 }
             } else {
-                updatedConsensusReserve += forfeitedCrep;
+                updatedConsensusReserve += forfeitedToTreasury;
             }
         }
 
-        if (forfeitedCrep == 0 && refundedCrep == 0) revert NothingProcessed();
+        if (forfeitedToTreasury == 0 && addedToVoterPool == 0 && refundedCrep == 0) revert NothingProcessed();
     }
 }

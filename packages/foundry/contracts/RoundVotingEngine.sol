@@ -175,6 +175,7 @@ contract RoundVotingEngine is
         uint256 indexed contentId, uint256 indexed roundId, address indexed voter, uint256 amount
     );
     event ForfeitedFundsAddedToTreasury(uint256 indexed contentId, uint256 indexed roundId, uint256 amount);
+    event UnrevealedStakeAddedToVoterPool(uint256 indexed contentId, uint256 indexed roundId, uint256 amount);
     event CurrentEpochRefunded(uint256 indexed contentId, uint256 indexed roundId, uint256 amount);
     event TreasuryFeeDistributed(uint256 indexed contentId, uint256 indexed roundId, uint256 amount);
     event ConsensusReserveFunded(uint256 indexed contentId, uint256 indexed roundId, uint256 amount);
@@ -663,14 +664,18 @@ contract RoundVotingEngine is
         // (or their grace period must have expired) before settlement is allowed.
         // Loop is bounded: votes can only be committed during maxDuration, so no
         // epochUnrevealedCount entries exist beyond startTime + maxDuration + epochDuration.
+        uint256 unrevealedCleanupRemaining;
         {
             uint256 _gracePeriod = _getRoundRevealGracePeriod(contentId, roundId);
             uint256 epochEnd = round.startTime + roundCfg.epochDuration;
             uint256 maxEpochEnd = round.startTime + roundCfg.maxDuration + roundCfg.epochDuration;
             while (epochEnd <= block.timestamp && epochEnd <= maxEpochEnd) {
-                if (epochUnrevealedCount[contentId][roundId][epochEnd] > 0 && block.timestamp < epochEnd + _gracePeriod)
-                {
-                    revert UnrevealedPastEpochVotes();
+                uint256 unrevealedCount = epochUnrevealedCount[contentId][roundId][epochEnd];
+                if (unrevealedCount > 0) {
+                    if (block.timestamp < epochEnd + _gracePeriod) {
+                        revert UnrevealedPastEpochVotes();
+                    }
+                    unrevealedCleanupRemaining += unrevealedCount;
                 }
                 epochEnd += roundCfg.epochDuration;
             }
@@ -689,6 +694,7 @@ contract RoundVotingEngine is
         round.upWins = upWins;
         round.state = RoundLib.RoundState.Settled;
         round.settledAt = block.timestamp.toUint48();
+        roundUnrevealedCleanupRemaining[contentId][roundId] = unrevealedCleanupRemaining;
         contentHasSettledRound[contentId] = true;
 
         // Epoch-weighted winning stake — used for proportional reward distribution
@@ -769,7 +775,8 @@ contract RoundVotingEngine is
     // =========================================================================
 
     /// @notice Process unrevealed votes in batches after settlement. Permissionless.
-    /// @dev For settled/tied rounds: unrevealed votes from past epochs are forfeited to treasury.
+    /// @dev For settled rounds: unrevealed votes from past epochs are credited to the winning voter pool.
+    ///      For tied rounds: unrevealed votes from past epochs are forfeited to treasury.
     ///      Current/future-epoch votes at settlement/tie time are refunded because they had no chance.
     ///      For reveal-failed rounds: all unrevealed votes are forfeited because the final reveal grace has passed.
     function processUnrevealedVotes(uint256 contentId, uint256 roundId, uint256 startIndex, uint256 count)
@@ -790,7 +797,13 @@ contract RoundVotingEngine is
         uint256 len = commitKeys.length;
         if (startIndex >= len) revert IndexOutOfBounds();
 
-        (uint256 forfeitedCrep, uint256 refundedCrep, uint256 updatedConsensusReserve) = RoundCleanupLib.processUnrevealedVotes(
+        (
+            uint256 forfeitedToTreasury,
+            uint256 addedToVoterPool,
+            uint256 refundedCrep,
+            uint256 processedPastEpochCount,
+            uint256 updatedConsensusReserve
+        ) = RoundCleanupLib.processUnrevealedVotes(
             round,
             commitKeys,
             commits[contentId][roundId],
@@ -801,11 +814,24 @@ contract RoundVotingEngine is
             count
         );
 
-        if (forfeitedCrep > 0) {
+        if (forfeitedToTreasury > 0) {
             if (updatedConsensusReserve == consensusReserve) {
-                emit ForfeitedFundsAddedToTreasury(contentId, roundId, forfeitedCrep);
+                emit ForfeitedFundsAddedToTreasury(contentId, roundId, forfeitedToTreasury);
             } else {
                 consensusReserve = updatedConsensusReserve;
+            }
+        }
+
+        if (addedToVoterPool > 0) {
+            roundVoterPool[contentId][roundId] += addedToVoterPool;
+            emit UnrevealedStakeAddedToVoterPool(contentId, roundId, addedToVoterPool);
+        }
+
+        if (processedPastEpochCount > 0) {
+            uint256 remaining = roundUnrevealedCleanupRemaining[contentId][roundId];
+            if (remaining > 0) {
+                roundUnrevealedCleanupRemaining[contentId][roundId] =
+                    processedPastEpochCount >= remaining ? 0 : remaining - processedPastEpochCount;
             }
         }
 
@@ -1062,6 +1088,9 @@ contract RoundVotingEngine is
     // Tracks whether a content item has produced at least one settled round.
     mapping(uint256 => bool) internal contentHasSettledRound;
 
+    // Settled rounds with expired unrevealed votes must be cleaned before reward claims.
+    mapping(uint256 => mapping(uint256 => uint256)) public roundUnrevealedCleanupRemaining;
+
     // --- Storage gap reserved for future upgrades ---
-    uint256[45] private __gap;
+    uint256[44] private __gap;
 }

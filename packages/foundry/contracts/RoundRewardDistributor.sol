@@ -44,6 +44,7 @@ contract RoundRewardDistributor is Initializable, AccessControlUpgradeable, Reen
     error FrontendFeeNotConfiscatable();
     error ParticipationRewardsOutstanding();
     error ParticipationRewardsAlreadyFinalized();
+    error UnrevealedCleanupPending();
 
     enum FrontendFeeDisposition {
         Direct,
@@ -184,6 +185,9 @@ contract RoundRewardDistributor is Initializable, AccessControlUpgradeable, Reen
 
         RoundLib.Round memory round = _readRound(contentId, roundId);
         require(round.state == RoundLib.RoundState.Settled, "Round not settled");
+        if (votingEngine.roundUnrevealedCleanupRemaining(contentId, roundId) > 0) {
+            revert UnrevealedCleanupPending();
+        }
 
         // Find voter's commit
         RoundLib.Commit memory commit = _findVoterCommit(contentId, roundId, msg.sender);
