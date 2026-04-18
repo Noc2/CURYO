@@ -77,6 +77,7 @@ function GovernancePageInner() {
   const searchParams = useSearchParams();
   const [activeTab, setActiveTab] = useState<GovernanceTab>("profile");
   const [hashInitialized, setHashInitialized] = useState(false);
+  const [isRedirectingLegacyHash, setIsRedirectingLegacyHash] = useState(false);
   const [referrer, setReferrer] = useState<string | null>(null);
   const autoSelectedEntryAddressRef = useRef<string | null>(null);
 
@@ -91,11 +92,13 @@ function GovernancePageInner() {
     const applyHash = () => {
       const rawHash = window.location.hash.replace(/^#/, "");
       if (rawHash === LEGACY_GOVERNANCE_OPERATOR_HASH) {
+        setIsRedirectingLegacyHash(true);
         setHashInitialized(true);
         router.replace(SETTINGS_FRONTEND_ROUTE);
         return;
       }
 
+      setIsRedirectingLegacyHash(false);
       const nextTab = normalizeGovernanceHash(rawHash);
       setHashInitialized(true);
 
@@ -139,7 +142,7 @@ function GovernancePageInner() {
   }, [addressKey]);
 
   useEffect(() => {
-    if (!addressKey || !hashInitialized || !hasResolvedBalance || !voterIdResolved) {
+    if (isRedirectingLegacyHash || !addressKey || !hashInitialized || !hasResolvedBalance || !voterIdResolved) {
       return;
     }
 
@@ -159,11 +162,19 @@ function GovernancePageInner() {
     }
 
     autoSelectedEntryAddressRef.current = addressKey;
-  }, [addressKey, faucetOnly, hasResolvedBalance, hashInitialized, selectTab, voterIdResolved]);
+  }, [
+    addressKey,
+    faucetOnly,
+    hasResolvedBalance,
+    hashInitialized,
+    isRedirectingLegacyHash,
+    selectTab,
+    voterIdResolved,
+  ]);
 
   // Update tab when balance changes
   useEffect(() => {
-    if (!hashInitialized) {
+    if (isRedirectingLegacyHash || !hashInitialized) {
       return;
     }
 
@@ -188,7 +199,16 @@ function GovernancePageInner() {
     if (!hasZeroBalance && activeTab === "faucet") {
       selectTab(hashTab && hashTab !== "faucet" ? hashTab : "profile");
     }
-  }, [faucetOnly, hasResolvedBalance, hasZeroBalance, activeTab, hashInitialized, selectTab]);
+  }, [faucetOnly, hasResolvedBalance, hasZeroBalance, activeTab, hashInitialized, isRedirectingLegacyHash, selectTab]);
+
+  // Keep the legacy settings redirect terminal while the router transition completes.
+  if (isRedirectingLegacyHash) {
+    return (
+      <AppPageShell contentClassName="space-y-6">
+        <GovernanceSectionLoading />
+      </AppPageShell>
+    );
+  }
 
   // Show connect wallet prompt if not connected
   if (!isConnected) {
