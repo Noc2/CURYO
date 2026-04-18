@@ -1,4 +1,5 @@
 import { expect, test } from "../fixtures/wallet";
+import { continueToBountyStep, selectAskCategory, selectAskSubcategory } from "../helpers/ask-form";
 import { gotoWithRetry } from "../helpers/wait-helpers";
 
 test.describe("Ask page", () => {
@@ -17,19 +18,8 @@ test.describe("Ask page", () => {
     // 1. Select category — click the category dropdown trigger
     // Categories load from Ponder (or RPC fallback). If neither is ready yet,
     // the page shows the category empty state instead of the dropdown.
-    const categoryBtn = page.getByText("Select a category...");
-    const noCategories = page.getByText("No categories available");
-    const categoryOrEmpty = categoryBtn.or(noCategories);
-    await expect(categoryOrEmpty).toBeVisible({ timeout: 10_000 });
-
-    // Skip if categories haven't loaded (Ponder down + RPC not yet returned)
-    const hasCategories = await categoryBtn.isVisible().catch(() => false);
+    const hasCategories = await selectAskCategory(page);
     test.skip(!hasCategories, "Categories not loaded — Ponder and RPC fallback both unavailable");
-
-    await categoryBtn.click();
-    // Pick a seeded category from the dropdown options.
-    const mediaOption = page.getByText("Media").first();
-    await mediaOption.click();
 
     // 2. Enter a unique direct image URL
     const uniqueId = Date.now();
@@ -47,23 +37,13 @@ test.describe("Ask page", () => {
     await descInput.fill(`E2E Test Content ${uniqueId}`);
 
     // 4. Select at least one subcategory tag
-    // Subcategory buttons appear below "Select Categories" after a category is selected.
-    // Use specific known Media subcategory names to avoid matching sidebar buttons.
-    const tagLabel = page.getByText("Select Categories");
-    await expect(tagLabel).toBeVisible({ timeout: 3_000 });
-    // Try common Media subcategories in order — click the first visible one
-    const subcatNames = ["Images", "YouTube", "Education", "Entertainment", "Photography", "Culture"];
-    for (const name of subcatNames) {
-      // Scope to the form area to avoid matching sidebar/navigation buttons
-      const btn = page.locator("form button", { hasText: new RegExp(`^${name}$`) });
-      if (await btn.isVisible({ timeout: 1_000 }).catch(() => false)) {
-        await btn.click();
-        break;
-      }
-    }
+    const hasSubcategory = await selectAskSubcategory(page);
+    test.skip(!hasSubcategory, "No seeded subcategory available for ask submission");
 
-    // 5. Click Ask Question
+    // 5. Continue to bounty details, then ask
+    await continueToBountyStep(page);
     const submitBtn = page.getByRole("button", { name: /^Ask Question/i });
+    await expect(submitBtn).toBeVisible({ timeout: 5_000 });
     await expect(submitBtn).toBeEnabled({ timeout: 5_000 });
     await submitBtn.click();
 

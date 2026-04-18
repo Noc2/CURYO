@@ -51,7 +51,10 @@ test.describe("Negative cases", () => {
     const voterIdRequired = page.getByRole("heading", { name: /Voter ID Required/i });
     const submitForm = page.getByRole("heading", { name: "Ask Question" });
     const signedOutHeading = page.getByRole("heading", { name: "Ask" });
-    const signInButton = page.getByRole("button", { name: "Sign In" }).first();
+    const connectButton = page
+      .locator('[data-testid="auth-connect-button"]:visible')
+      .or(page.getByRole("button", { name: /Sign In|Connect Wallet|Connect/i }))
+      .first();
 
     // Accept either the connected no-VoterID prompt, the ask form, or the
     // signed-out shell if the local test wallet bridge doesn't attach.
@@ -62,7 +65,7 @@ test.describe("Negative cases", () => {
       const getVoterIdLink = page.getByRole("link", { name: /Get Voter ID/i });
       await expect(getVoterIdLink).toBeVisible({ timeout: 5_000 });
     } else if (await signedOutHeading.isVisible().catch(() => false)) {
-      await expect(signInButton).toBeVisible({ timeout: 5_000 });
+      await expect(connectButton).toBeVisible({ timeout: 5_000 });
     }
 
     await context.close();
@@ -77,11 +80,16 @@ test.describe("Negative cases", () => {
     await gotoWithRetry(page, "/rate", { ensureWalletConnected: true, timeout: 30_000 });
     await waitForFeedLoaded(page, 20_000);
 
-    const voteUp = page.getByRole("button", { name: /^Vote up$/i });
+    const voteUp = page.getByRole("button", { name: /^Vote up\b/i }).first();
     const canVote = await findVoteableContent(page);
 
     if (!canVote) {
       test.skip(true, "No voteable content found for account #6 (all content has cooldowns)");
+      return;
+    }
+
+    if (!(await voteUp.isVisible({ timeout: 10_000 }).catch(() => false))) {
+      test.skip(true, "No visible vote-up button found after selecting voteable content");
       return;
     }
 

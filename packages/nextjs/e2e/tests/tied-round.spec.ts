@@ -7,6 +7,7 @@ import {
   waitForPonderSync,
 } from "../helpers/admin-helpers";
 import { ANVIL_ACCOUNTS, DEPLOYER } from "../helpers/anvil-accounts";
+import { continueToBountyStep, selectAskCategory, selectAskSubcategory } from "../helpers/ask-form";
 import { newE2EContext } from "../helpers/browser-context";
 import { CONTRACT_ADDRESSES } from "../helpers/contracts";
 import { waitForSettlementIndexed } from "../helpers/keeper";
@@ -61,19 +62,12 @@ test.describe("Tied round lifecycle", () => {
     await expect(page.getByRole("heading", { name: "Ask Question" })).toBeVisible({ timeout: 15_000 });
 
     // Select Media category — handle "No categories available" if categories are not loaded.
-    const categoryBtn = page.getByText("Select a category...");
-    const noCategories = page.getByText("No categories available");
-    await expect(categoryBtn.or(noCategories)).toBeVisible({ timeout: 10_000 });
-
-    const hasCategories = await categoryBtn.isVisible().catch(() => false);
+    const hasCategories = await selectAskCategory(page);
     if (!hasCategories) {
       await context.close();
       test.skip(true, "Categories not loaded — cannot ask a question for tie test");
       return;
     }
-
-    await categoryBtn.click();
-    await page.getByText("Media").first().click();
 
     // Enter a unique direct image URL
     const uniqueId = Date.now();
@@ -90,18 +84,17 @@ test.describe("Tied round lifecycle", () => {
     await expect(descInput).toBeVisible({ timeout: 3_000 });
     await descInput.fill(`Tie Test ${uniqueId}`);
 
-    // Select a subcategory
-    const subcatNames = ["Images", "YouTube", "Education", "Entertainment", "Photography", "Culture"];
-    for (const name of subcatNames) {
-      const btn = page.locator("form button", { hasText: new RegExp(`^${name}$`) });
-      if (await btn.isVisible().catch(() => false)) {
-        await btn.click();
-        break;
-      }
+    const hasSubcategory = await selectAskSubcategory(page);
+    if (!hasSubcategory) {
+      await context.close();
+      test.skip(true, "No seeded subcategory available for tie test");
+      return;
     }
 
     // Ask
+    await continueToBountyStep(page);
     const submitBtn = page.getByRole("button", { name: /^Ask Question/i });
+    await expect(submitBtn).toBeVisible({ timeout: 5_000 });
     await expect(submitBtn).toBeEnabled({ timeout: 5_000 });
     await submitBtn.click();
 
@@ -116,7 +109,7 @@ test.describe("Tied round lifecycle", () => {
     const indexed = await waitForPonderIndexed(
       async () => {
         const { items } = await getContentList({ status: "all", sortBy: "newest", limit: 5 });
-        const match = items.find(item => item.url.includes(`tie_test_${uniqueId}`));
+        const match = items.find(item => item.url.includes(`tie-test-${uniqueId}`));
         if (match) {
           newContentId = match.id;
           return true;
