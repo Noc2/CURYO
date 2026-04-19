@@ -1159,6 +1159,44 @@ contract RoundVotingEngineBranchesTest is VotingTestBase {
         assertGt(crepToken.balanceOf(voter2) - voter2Before, STAKE, "winner can claim stake plus boosted reward");
     }
 
+    function test_ProcessUnrevealed_KeepsRewardsLockedUntilAllExpiredSettledVotesProcessed() public {
+        uint256 contentId = _submitContent();
+
+        _commit(voter1, contentId, true, STAKE);
+        _commit(voter2, contentId, false, STAKE);
+        (bytes32 ck3, bytes32 s3) = _commit(voter3, contentId, true, STAKE);
+        (bytes32 ck4, bytes32 s4) = _commit(voter4, contentId, true, STAKE);
+        (bytes32 ck5, bytes32 s5) = _commit(voter5, contentId, false, STAKE);
+
+        uint256 roundId = RoundEngineReadHelpers.activeRoundId(engine, contentId);
+        RoundLib.Round memory roundStart = RoundEngineReadHelpers.round(engine, contentId, roundId);
+        vm.warp(roundStart.startTime + EPOCH + ProtocolConfig(protocolConfigAddress).revealGracePeriod() + 1);
+        _reveal(contentId, roundId, ck3, true, s3);
+        _reveal(contentId, roundId, ck4, true, s4);
+        _reveal(contentId, roundId, ck5, false, s5);
+
+        engine.settleRound(contentId, roundId);
+        assertEq(engine.roundUnrevealedCleanupRemaining(contentId, roundId), 2);
+
+        uint256 voterPoolBefore = engine.roundVoterPool(contentId, roundId);
+        engine.processUnrevealedVotes(contentId, roundId, 0, 1);
+        assertEq(engine.roundUnrevealedCleanupRemaining(contentId, roundId), 1);
+        assertEq(engine.roundVoterPool(contentId, roundId) - voterPoolBefore, STAKE);
+
+        vm.expectRevert(RoundRewardDistributor.UnrevealedCleanupPending.selector);
+        vm.prank(voter3);
+        rewardDistributor.claimReward(contentId, roundId);
+
+        engine.processUnrevealedVotes(contentId, roundId, 1, 1);
+        assertEq(engine.roundUnrevealedCleanupRemaining(contentId, roundId), 0);
+        assertEq(engine.roundVoterPool(contentId, roundId) - voterPoolBefore, STAKE * 2);
+
+        uint256 voter3Before = crepToken.balanceOf(voter3);
+        vm.prank(voter3);
+        rewardDistributor.claimReward(contentId, roundId);
+        assertGt(crepToken.balanceOf(voter3) - voter3Before, STAKE, "winner can claim after full cleanup");
+    }
+
     function test_ProcessUnrevealed_RefundsCurrentEpochVotes() public {
         uint256 contentId = _submitContent();
 
