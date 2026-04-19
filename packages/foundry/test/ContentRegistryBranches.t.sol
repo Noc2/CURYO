@@ -292,7 +292,7 @@ contract ContentRegistryBranchesTest is VotingTestBase {
             _submitQuestionImageWithReservation(registry, url, title, description, tags, categoryId, salt, submitter);
         vm.stopPrank();
 
-        (,,,,,,,,,, uint256 storedCategoryId) = registry.contents(id);
+        (,,,,,,,,, uint256 storedCategoryId) = registry.contents(id);
         assertEq(storedCategoryId, categoryId);
         assertTrue(registry.submissionKeyUsed(submissionKey));
     }
@@ -339,7 +339,7 @@ contract ContentRegistryBranchesTest is VotingTestBase {
         uint256 id = registry.submitQuestionWithMedia(imageUrls, url, title, description, tags, categoryId, salt);
         vm.stopPrank();
 
-        (,,,,,,,,,, uint256 storedCategoryId) = registry.contents(id);
+        (,,,,,,,,, uint256 storedCategoryId) = registry.contents(id);
         assertEq(storedCategoryId, categoryId);
         assertTrue(registry.submissionKeyUsed(submissionKey));
     }
@@ -380,7 +380,7 @@ contract ContentRegistryBranchesTest is VotingTestBase {
         uint256 id = registry.submitQuestionWithMedia(imageUrls, "", title, description, tags, categoryId, salt);
         vm.stopPrank();
 
-        (,, address rawSubmitter,,,,,,,, uint64 storedCategoryId) = registry.contents(id);
+        (,, address rawSubmitter,,,,,,, uint64 storedCategoryId) = registry.contents(id);
         assertEq(rawSubmitter, submitter);
         assertEq(storedCategoryId, categoryId);
         assertTrue(registry.submissionKeyUsed(submissionKey));
@@ -739,7 +739,7 @@ contract ContentRegistryBranchesTest is VotingTestBase {
             _submitContentWithReservation(registry, "https://example.com/delegate-submit", "goal", "goal", "tags", 0);
         vm.stopPrank();
 
-        (,, address rawSubmitter,,,,,,,,) = registry.contents(id);
+        (,, address rawSubmitter,,,,,,,) = registry.contents(id);
         assertEq(rawSubmitter, delegate, "raw submitter should remain delegate wallet");
         assertEq(registry.getSubmitterIdentity(id), submitter, "submitter identity should snapshot the holder");
     }
@@ -1033,7 +1033,7 @@ contract ContentRegistryBranchesTest is VotingTestBase {
         reg2.cancelContent(1);
         vm.stopPrank();
 
-        (,,,,,, ContentRegistry.ContentStatus status,,,,) = reg2.contents(1);
+        (,,,,, ContentRegistry.ContentStatus status,,,,) = reg2.contents(1);
         assertEq(uint256(status), uint256(ContentRegistry.ContentStatus.Cancelled));
     }
 
@@ -1105,7 +1105,7 @@ contract ContentRegistryBranchesTest is VotingTestBase {
         vm.warp(T0 + 31 days);
         reg2.markDormant(1);
 
-        (,,,,,, ContentRegistry.ContentStatus status,,,,) = reg2.contents(1);
+        (,,,,, ContentRegistry.ContentStatus status,,,,) = reg2.contents(1);
         assertEq(uint256(status), uint256(ContentRegistry.ContentStatus.Dormant));
     }
 
@@ -1118,7 +1118,7 @@ contract ContentRegistryBranchesTest is VotingTestBase {
         vm.warp(T0 + 31 days);
         registry.markDormant(1);
 
-        (,,,,,, ContentRegistry.ContentStatus status,,,,) = registry.contents(1);
+        (,,,,, ContentRegistry.ContentStatus status,,,,) = registry.contents(1);
         assertEq(uint256(status), uint256(ContentRegistry.ContentStatus.Dormant));
     }
 
@@ -1131,7 +1131,7 @@ contract ContentRegistryBranchesTest is VotingTestBase {
         vm.warp(T0 + 29 days);
         _vote(voter1, 1, true);
 
-        (,,,,, uint256 lastActivityAt,,,,,) = registry.contents(1);
+        (,,,, uint256 lastActivityAt,,,,,) = registry.contents(1);
         assertEq(lastActivityAt, block.timestamp, "Commit should refresh lastActivityAt");
     }
 
@@ -1187,7 +1187,7 @@ contract ContentRegistryBranchesTest is VotingTestBase {
 
         registry.markDormant(1);
 
-        (,,,,,, ContentRegistry.ContentStatus status,,,,) = registry.contents(1);
+        (,,,,, ContentRegistry.ContentStatus status,,,,) = registry.contents(1);
         assertEq(uint256(status), uint256(ContentRegistry.ContentStatus.Dormant));
     }
 
@@ -1244,7 +1244,7 @@ contract ContentRegistryBranchesTest is VotingTestBase {
         vm.stopPrank();
 
         // New content created with same URL
-        (,,,,,, ContentRegistry.ContentStatus status,,,,) = registry.contents(2);
+        (,,,,, ContentRegistry.ContentStatus status,,,,) = registry.contents(2);
         assertEq(uint256(status), uint256(ContentRegistry.ContentStatus.Active));
     }
 
@@ -1329,7 +1329,7 @@ contract ContentRegistryBranchesTest is VotingTestBase {
         uint256 id = _submitContentWithReservation(registry, "https://example.com/1", "goal", "goal", "tags", 1);
         vm.stopPrank();
         assertEq(id, 1);
-        (,,,,,,,,,, uint256 categoryId) = registry.contents(1);
+        (,,,,,,,,, uint256 categoryId) = registry.contents(1);
         assertEq(categoryId, 1);
     }
 
@@ -1345,7 +1345,7 @@ contract ContentRegistryBranchesTest is VotingTestBase {
         vm.stopPrank();
 
         assertEq(id, 1);
-        (,,,,,,,,,, uint256 categoryId) = registry.contents(id);
+        (,,,,,,,,, uint256 categoryId) = registry.contents(id);
         assertEq(categoryId, 1, "media questions use the explicit category selected by the submitter");
     }
 

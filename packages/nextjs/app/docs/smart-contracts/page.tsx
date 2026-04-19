@@ -304,21 +304,11 @@ const SmartContracts: NextPage = () => {
           reference score, epoch-weighted revealed evidence, and conservative rating bound.
         </li>
       </ul>
-      <h3>Submitter Stake</h3>
-      <ul>
-        <li>
-          <strong>Grace period:</strong> 24 hours. No slash possible during this time.
-        </li>
-        <li>
-          <strong>Slash:</strong> Removed. Question submissions no longer carry a refundable submitter stake.
-        </li>
-        <li>
-          <strong>Auto-return:</strong> Removed. The mandatory bounty is non-refundable.
-        </li>
-        <li>
-          <strong>Submitter bootstrap reward:</strong> Removed. Submitter upside now routes to voters only.
-        </li>
-      </ul>
+      <h3>Submission Economics</h3>
+      <p>
+        Question submissions no longer carry refundable creator deposits or creator-side bootstrap rewards. The attached
+        bounty is non-refundable and routes to eligible voters plus the eligible frontend operator.
+      </p>
 
       <hr />
 

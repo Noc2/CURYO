@@ -56,7 +56,7 @@ contract ContentRegistry is Initializable, AccessControlUpgradeable, PausableUpg
     uint256 internal constant MIN_SUBMISSION_REWARD_REQUIRED_VOTERS = 3;
     uint256 internal constant MIN_SUBMISSION_REWARD_SETTLED_ROUNDS = 1;
 
-    // Submitter stake rules
+    // Rating safety thresholds
     uint256 public constant SLASH_RATING_THRESHOLD = 25; // Rating below this triggers slash
     uint16 internal constant DEFAULT_SLASH_THRESHOLD_BPS = 2500;
     uint16 internal constant DEFAULT_MIN_SLASH_SETTLED_ROUNDS = 2;
@@ -83,7 +83,6 @@ contract ContentRegistry is Initializable, AccessControlUpgradeable, PausableUpg
         uint64 id;
         bytes32 contentHash;
         address submitter;
-        uint64 submitterStake;
         uint48 createdAt;
         uint48 lastActivityAt;
         ContentStatus status;
@@ -691,7 +690,6 @@ contract ContentRegistry is Initializable, AccessControlUpgradeable, PausableUpg
             id: contentId.toUint64(),
             contentHash: contentHash,
             submitter: msg.sender,
-            submitterStake: 0,
             createdAt: block.timestamp.toUint48(),
             lastActivityAt: block.timestamp.toUint48(),
             status: ContentStatus.Active,

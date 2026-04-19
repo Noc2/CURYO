@@ -1009,7 +1009,7 @@ contract RoundSettlementEdgeCase3Test is VotingTestBase {
         uint256 contentId = _submitContent();
 
         // Get initial rating
-        (,,,,,,,,, uint256 ratingBefore,) = registry.contents(contentId);
+        (,,,,,,,, uint256 ratingBefore,) = registry.contents(contentId);
 
         _commit(voter1, contentId, true, STAKE);
 
@@ -1020,7 +1020,7 @@ contract RoundSettlementEdgeCase3Test is VotingTestBase {
         engine.cancelExpiredRound(contentId, roundId);
 
         // Rating should be restored to epoch-start
-        (,,,,,,,,, uint256 ratingAfterCancel,) = registry.contents(contentId);
+        (,,,,,,,, uint256 ratingAfterCancel,) = registry.contents(contentId);
         assertEq(ratingAfterCancel, ratingBefore);
     }
 

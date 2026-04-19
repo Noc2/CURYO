@@ -281,11 +281,6 @@ export const ContentRegistryAbi = [
         "internalType": "address"
       },
       {
-        "name": "submitterStake",
-        "type": "uint64",
-        "internalType": "uint64"
-      },
-      {
         "name": "createdAt",
         "type": "uint48",
         "internalType": "uint48"

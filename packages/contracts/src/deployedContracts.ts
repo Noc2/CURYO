@@ -2681,11 +2681,6 @@ const deployedContracts: GenericContractsDeclaration = {
               internalType: "address",
             },
             {
-              name: "submitterStake",
-              type: "uint64",
-              internalType: "uint64",
-            },
-            {
               name: "createdAt",
               type: "uint48",
               internalType: "uint48",
@@ -22491,11 +22486,6 @@ const deployedContracts: GenericContractsDeclaration = {
               internalType: "address",
             },
             {
-              name: "submitterStake",
-              type: "uint64",
-              internalType: "uint64",
-            },
-            {
               name: "createdAt",
               type: "uint48",
               internalType: "uint48",
@@ -40931,11 +40921,6 @@ const deployedContracts: GenericContractsDeclaration = {
               name: "submitter",
               type: "address",
               internalType: "address",
-            },
-            {
-              name: "submitterStake",
-              type: "uint64",
-              internalType: "uint64",
             },
             {
               name: "createdAt",

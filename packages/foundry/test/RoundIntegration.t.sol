@@ -1508,7 +1508,7 @@ contract RoundIntegrationTest is VotingTestBase {
 
         _settleRoundWith(voters, contentId, dirs, 100e6);
 
-        (,,,,,,,,, uint256 rating,) = registry.contents(contentId);
+        (,,,,,,,, uint256 rating,) = registry.contents(contentId);
         RatingLib.RatingState memory ratingState = registry.getRatingState(contentId);
         assertLt(
             registry.getConservativeRating(contentId),
@@ -1520,7 +1520,7 @@ contract RoundIntegrationTest is VotingTestBase {
             crepToken.balanceOf(treasury), treasuryBalanceBefore, "treasury should not be paid before the dwell window"
         );
 
-        (,,,,,,,,, rating,) = registry.contents(contentId);
+        (,,,,,,,, rating,) = registry.contents(contentId);
         assertLt(uint256(rating), 40, "display rating should still reflect a low settlement");
         assertEq(crepToken.balanceOf(submitter), submitterBalanceBefore, "submitter receives no removed stake payout");
         assertEq(crepToken.balanceOf(treasury), treasuryBalanceBefore, "treasury should not receive a removed slash");
@@ -1542,7 +1542,7 @@ contract RoundIntegrationTest is VotingTestBase {
 
         _settleRoundWith(voters, contentId, dirs, 100e6);
 
-        (,,,,,,,,, uint256 rating,) = registry.contents(contentId);
+        (,,,,,,,, uint256 rating,) = registry.contents(contentId);
         assertGe(rating, registry.SLASH_RATING_THRESHOLD(), "round should not be slashable");
         assertEq(crepToken.balanceOf(submitter), submitterBalanceBefore, "submitter receives no removed stake payout");
         assertEq(crepToken.balanceOf(treasury), treasuryBalanceBefore, "treasury should not receive a slash");

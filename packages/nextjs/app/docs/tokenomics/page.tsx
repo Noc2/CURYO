@@ -259,8 +259,8 @@ const Tokenomics = () => {
         </table>
       </div>
       <p>
-        Submitter deposits are forfeited (100% to treasury) only once the content&apos;s conservative rating bound stays
-        below the governed slash threshold after a 24-hour grace period and enough evidence has accumulated.
+        Question creators no longer escrow separate capital beyond the bounty. Submission bounties are non-refundable
+        and route to eligible voters and the eligible frontend operator once the question resolves.
       </p>
     </article>
   );

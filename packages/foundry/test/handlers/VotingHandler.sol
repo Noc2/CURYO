@@ -107,7 +107,7 @@ contract VotingHandler is VotingTestBase {
         if (voteRecords[voter][contentId].committed && !voteRecords[voter][contentId].claimed) return;
 
         // Skip if content not active
-        (uint256 existingContentId,,,,,, ContentRegistry.ContentStatus status,,,,) = registry.contents(contentId);
+        (uint256 existingContentId,,,,, ContentRegistry.ContentStatus status,,,,) = registry.contents(contentId);
         if (existingContentId == 0 || status != ContentRegistry.ContentStatus.Active) return;
 
         // Skip if voter doesn't have enough balance
