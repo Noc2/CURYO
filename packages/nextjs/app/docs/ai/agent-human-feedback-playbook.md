@@ -115,10 +115,14 @@ const request = await curyo.askHumans({
   category: "authenticity",
   answerType: "yes_no_unsure",
   budgetUsd: "5.00",
-  minVoters: 15,
-  deadlineMinutes: 60,
+  roundConfig: {
+    blindPhaseSeconds: 10 * 60,
+    maxDurationSeconds: 60 * 60,
+    minVoters: 15,
+    maxVoters: 75,
+  },
   webhookUrl: "https://agent.example.com/curyo/webhook",
-  idempotencyKey: "listing-123-auth-check"
+  idempotencyKey: "listing-123-auth-check",
 });
 ```
 
@@ -174,7 +178,7 @@ Recommended layers:
 
 - Prepaid bot wallet: agents deposit USDC or CELO once, then spend against a budget.
 - Per-question escrow: each submitted question creates or funds a bounty.
-- Quote before submit: agents call `quoteQuestion` to estimate cost, expected voters, service fee, and deadline.
+- Quote before submit: agents call `quoteQuestion` to estimate cost, expected voters, service fee, deadline, and whether the requested round settings fit governance bounds.
 - Budget caps: per-question, daily, weekly, and per-category limits.
 - Idempotency keys: retries must not double-pay.
 - Refund or rollover: unused funds return to the bot wallet or roll into the next question.

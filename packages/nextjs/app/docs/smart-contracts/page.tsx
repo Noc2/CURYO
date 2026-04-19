@@ -274,15 +274,17 @@ const SmartContracts: NextPage = () => {
       <ul>
         <li>
           <code>reserveSubmission(revealCommitment)</code>, then{" "}
-          <code>
-            submitQuestionWithReward(..., rewardAsset, rewardAmount, requiredVoters, requiredSettledRounds,
-            rewardPoolExpiresAt)
-          </code>{" "}
-          &mdash; Reserve a hidden question, then reveal it with the exact attached bounty terms. Question text is
-          capped at 120 characters, the context/media submission key is checked for duplicates, and the question plus
+          <code>submitQuestionWithRewardAndRoundConfig(..., rewardTerms, roundConfig)</code> &mdash; Reserve a hidden
+          question, then reveal it with the exact attached bounty terms and creator-selected round config. Question text
+          is capped at 120 characters, the context/media submission key is checked for duplicates, and the question plus
           description are emitted in the canonical <code>ContentSubmitted</code> event for indexers and alternate
           frontends. The hosted x402 route uses this same function after settling a Celo USDC payment from the bot
           wallet.
+        </li>
+        <li>
+          <code>getContentRoundConfig(contentId)</code> &mdash; Returns the blind phase, maximum duration, settlement
+          voters, and voter cap selected for that question. Existing submit functions without an explicit round config
+          still use the governed default.
         </li>
         <li>
           <code>cancelContent(contentId)</code> &mdash; Cancel own content (1 cREP fee to the configured
@@ -350,22 +352,22 @@ const SmartContracts: NextPage = () => {
             <tr>
               <td className="font-mono">epochDuration</td>
               <td>{protocolDocFacts.blindPhaseDurationLabel}</td>
-              <td>Duration of each reward tier</td>
+              <td>Default duration of each reward tier; question creators can select within governance bounds.</td>
             </tr>
             <tr>
               <td className="font-mono">maxDuration</td>
               <td>{protocolDocFacts.maxRoundDurationLabel}</td>
-              <td>Maximum round lifetime &mdash; expired rounds can be cancelled</td>
+              <td>Default maximum round lifetime; question creators can select within governance bounds.</td>
             </tr>
             <tr>
               <td className="font-mono">minVoters</td>
               <td>{protocolDocFacts.minVotersLabel}</td>
-              <td>Minimum revealed votes required before settlement is allowed</td>
+              <td>Default minimum revealed votes required before settlement is allowed.</td>
             </tr>
             <tr>
               <td className="font-mono">maxVotersPerRound</td>
               <td>{protocolDocFacts.maxVotersLabel}</td>
-              <td>Cap on voters per content per round (O(1) settlement)</td>
+              <td>Default cap on voters per content per round and upper bound for bounty voter requirements.</td>
             </tr>
             <tr>
               <td className="font-mono">revealGracePeriod</td>
@@ -399,8 +401,9 @@ const SmartContracts: NextPage = () => {
         <li>
           <strong>VoteCommitted event:</strong> emits the commit hash, <code>targetRound</code>, and{" "}
           <code>drandChainHash</code> so indexers can observe the exact reveal metadata attached to each vote. The
-          planned redeploy also snapshots <code>roundReferenceRatingBps</code> per round so every frontend can recover
-          the exact score anchor users voted against.
+          redeployed engine also snapshots <code>roundReferenceRatingBps</code> and emits{" "}
+          <code>RoundConfigSnapshotted</code> per round so every frontend can recover the exact score anchor and round
+          settings users voted against.
         </li>
         <li>
           <code>revealVoteByCommitKey(contentId, roundId, commitKey, isUp, salt)</code> &mdash; Reveal a previously
@@ -414,9 +417,9 @@ const SmartContracts: NextPage = () => {
         </li>
         <li>
           <code>settleRound(contentId, roundId)</code> &mdash; Settle the current round once at least{" "}
-          <code>minVoters</code> votes are revealed and all past-epoch votes have been revealed (or their{" "}
-          {protocolDocFacts.revealGracePeriodLabel} reveal grace period has expired). Determines winners based on
-          epoch-weighted stakes, splits bounties, and updates content rating from the round reference score using the
+          <code>minVoters</code> votes from the round snapshot are revealed and all past-epoch votes have been revealed
+          (or their {protocolDocFacts.revealGracePeriodLabel} reveal grace period has expired). Determines winners based
+          on epoch-weighted stakes, splits bounties, and updates content rating from the round reference score using the
           governed score-relative rating model.
         </li>
         <li>
@@ -454,14 +457,19 @@ const SmartContracts: NextPage = () => {
 
       <h2>ProtocolConfig</h2>
       <p>
-        Governance-controlled address book and parameter store for <code>RoundVotingEngine</code>. The engine snapshots
-        round config and reveal grace period at round creation so mid-round governance changes do not change an already
-        open round.
+        Governance-controlled address book and parameter store for <code>RoundVotingEngine</code>. Governance sets the
+        default round config and creator bounds; each question then stores its selected config, and the engine snapshots
+        that config plus reveal grace at round creation so mid-round governance changes do not change an already open
+        round.
       </p>
       <ul>
         <li>
           <code>setConfig(epochDuration, maxDuration, minVoters, maxVoters)</code> &mdash; Update round parameters for
-          future rounds.
+          future questions that use the default config.
+        </li>
+        <li>
+          <code>setRoundConfigBounds(...)</code> and <code>validateRoundConfig(...)</code> &mdash; Define and enforce
+          the allowed creator-selected range for blind phase, max duration, settlement voters, and voter cap.
         </li>
         <li>
           <code>setRevealGracePeriod(seconds)</code> &mdash; Update the grace period used for future round snapshots.

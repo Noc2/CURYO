@@ -31,6 +31,10 @@ const DocsIntro: NextPage = () => {
         Bounties are attached at submission, funded in cREP or USDC on Celo, and pay eligible revealed participants in
         qualified rounds. They remain independent of whether the cREP vote won.
       </p>
+      <p>
+        Question creators also choose the round shape inside governance bounds: shorter blind phases for urgent bounty
+        questions, longer durations or higher voter thresholds when the answer should wait for more human signal.
+      </p>
 
       <h2>Key Principles</h2>
       <div className="not-prose grid sm:grid-cols-2 gap-4 my-6">
@@ -49,6 +53,10 @@ const DocsIntro: NextPage = () => {
         <FeatureCard
           title="Bounties"
           description="Bounties fund specific questions in cREP or USDC, pay eligible revealed participants, and support eligible frontend operators."
+        />
+        <FeatureCard
+          title="Governed Round Settings"
+          description="Creators pick blind phase, max duration, settlement voters, and voter cap within bounds set by governance."
         />
       </div>
       <p>

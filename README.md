@@ -5,7 +5,7 @@
   <a href="LICENSE"><img src="https://img.shields.io/badge/License-MIT-yellow.svg?style=flat-square" alt="License: MIT"></a>
 </p>
 
-The web is drowning in clickbait and fake engagement. As AI makes it effortless to generate vast amounts of content, the flood of low-effort material will only accelerate — making trustworthy quality signals more critical than ever. Curyo fights back by tying every vote to a verified human and making every question submission carry a non-refundable Bounty funded in cREP or USDC. Every submission starts from a required context URL, optional preview media, and the same public question flow for humans, bots, and AI agents when they need verified feedback instead of a guess.
+The web is drowning in clickbait and fake engagement. As AI makes it effortless to generate vast amounts of content, the flood of low-effort material will only accelerate — making trustworthy quality signals more critical than ever. Curyo fights back by tying every vote to a verified human and making every question submission carry a non-refundable Bounty funded in cREP or USDC. Every submission starts from a required context URL, optional preview media, governed per-question round settings, and the same public question flow for humans, bots, and AI agents when they need verified feedback instead of a guess.
 
 ## Table of Contents
 
@@ -19,13 +19,14 @@ The web is drowning in clickbait and fake engagement. As AI makes it effortless 
 
 ## Background
 
-Voters predict whether content's rating will go up or down and back their predictions with cREP token stakes. Submissions start as questions, and every question must attach a non-refundable Bounty funded in cREP or USDC. The Bounty terms can set minimum voter and settlement thresholds before payout, and Bounty payouts go to eligible voters with frontend fees handled separately from the Bounty itself.
+Voters predict whether content's rating will go up or down and back their predictions with cREP token stakes. Submissions start as questions, and every question must attach a non-refundable Bounty funded in cREP or USDC. The creator can select blind phase, maximum duration, settlement voters, and voter cap within governance-set bounds. Bounty terms can set minimum voter and settlement thresholds before payout, and Bounty payouts go to eligible voters with frontend fees handled separately from the Bounty itself.
 
 - **Skin in the Game** — every vote requires a token stake as a conviction signal
 - **Sybil Resistant** — one soulbound Voter ID NFT per verified human for voting and other identity-gated actions
 - **Per-Content Rounds** — each content item accumulates votes; rounds settle once the revealed-vote threshold is reached and past-epoch reveal constraints are satisfied
 - **tlock Commit-Reveal** — votes are encrypted with timelock encryption, commits bind explicit drand metadata (`targetRound`, `drandChainHash`), and malformed/non-armored ciphertexts are rejected on-chain; the keeper-assisted/self-reveal path still hides vote directions until reveal and keeps zk-style proofing as a future hardening path
 - **Question-First Submissions** — content starts as a short question capped at 120 characters, with a required context URL and optional image/YouTube preview media
+- **Governed Round Settings** — creators choose blind phase, max duration, settlement voters, and voter cap inside governance bounds
 - **Bot-to-Human Feedback** — bots and AI agents submit the same way humans do, then read the stake-backed human signal that comes back
 - **x402 Agent Payments** — bots can call the hosted `/api/x402/questions` endpoint, pay in Celo USDC from their bot wallet, and let the server executor submit the question plus USDC Bounty on-chain
 - **Bounties** — fund specific questions, pay in USDC on Celo, show users USD amounts, and reserve 3% for eligible frontend operators
@@ -38,16 +39,16 @@ See the in-app documentation at `/docs` for detailed game theory analysis and se
 
 Curyo is a monorepo with eight packages:
 
-| Package | Description |
-|---|---|
-| `packages/contracts` | Shared ABIs and deployed-address metadata consumed by the app and services |
-| `packages/foundry` | Solidity smart contracts, tests, and deployment scripts |
-| `packages/nextjs` | Next.js frontend with in-app documentation at `/docs` |
-| `packages/sdk` | Framework-agnostic frontend SDK for hosted reads, vote helpers, and frontend attribution |
-| `packages/ponder` | Ponder indexer for on-chain event processing and API |
-| `packages/keeper` | Standalone keeper service for keeper-assisted round settlement |
-| `packages/bot` | Manual CLI bot for content submission and voting |
-| `packages/node-utils` | Shared Node.js utilities used by services and scripts |
+| Package               | Description                                                                              |
+| --------------------- | ---------------------------------------------------------------------------------------- |
+| `packages/contracts`  | Shared ABIs and deployed-address metadata consumed by the app and services               |
+| `packages/foundry`    | Solidity smart contracts, tests, and deployment scripts                                  |
+| `packages/nextjs`     | Next.js frontend with in-app documentation at `/docs`                                    |
+| `packages/sdk`        | Framework-agnostic frontend SDK for hosted reads, vote helpers, and frontend attribution |
+| `packages/ponder`     | Ponder indexer for on-chain event processing and API                                     |
+| `packages/keeper`     | Standalone keeper service for keeper-assisted round settlement                           |
+| `packages/bot`        | Manual CLI bot for content submission and voting                                         |
+| `packages/node-utils` | Shared Node.js utilities used by services and scripts                                    |
 
 ```
 foundry    (compile) → deployments + artifacts
@@ -108,6 +109,7 @@ yarn dev:db:reset
 If you are using a local chain, keep Anvil and deployment separate:
 
 **1. Local chain:**
+
 ```bash
 yarn chain
 ```
@@ -115,11 +117,13 @@ yarn chain
 > The repo's chain helper starts Anvil with its default mining behavior. If you need automatic block production for long idle periods, start Anvil manually with a nonzero block time before running `yarn dev:stack`.
 
 **2. Deploy contracts:**
+
 ```bash
 yarn deploy
 ```
 
 **3. Start the app stack:**
+
 ```bash
 yarn dev:stack
 ```
@@ -192,7 +196,7 @@ CI runs the smoke, lifecycle, and keeper-backed E2E suites separately, so `yarn 
 
 ## Docs and APIs
 
-In-app documentation is available at `/docs` when running the frontend. The `/docs/ai` page covers the AI integration shape, x402-paid question submissions, the bot-to-human feedback loop, and how agents ask humans for judgment through the same submission path as everyone else.
+In-app documentation is available at `/docs` when running the frontend. The `/docs/ai` page covers the AI integration shape, x402-paid question submissions, governed per-question round settings, the bot-to-human feedback loop, and how agents ask humans for judgment through the same submission path as everyone else.
 
 For app integrations, the framework-agnostic SDK lives in `packages/sdk` and provides hosted/indexed reads plus
 vote/frontend helpers for existing websites and apps.

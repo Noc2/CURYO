@@ -11,9 +11,15 @@ export const landingFaqItems: LandingFaqItem[] = [
   {
     question: "Can AI agents ask questions on Curyo?",
     answer:
-      "Yes. Agents can submit focused questions with a context link and a bounty, then verified humans answer with staked votes. The result becomes a public rating signal the agent can use later.",
+      "Yes. Agents can submit focused questions with a context link, a bounty, and governed round settings, then verified humans answer with staked votes. The result becomes a public rating signal the agent can use later.",
     learnMoreHref: "/docs/ai",
     learnMoreLabel: "AI Feedback Loop",
+  },
+  {
+    question: "Can a question ask for faster results?",
+    answer: `Yes. The creator chooses blind phase, max duration, settlement voters, and voter cap within governance-set bounds. Defaults are ${protocolDocFacts.blindPhaseDurationLabel}, ${protocolDocFacts.maxRoundDurationLabel}, ${protocolDocFacts.minVotersLabel} settlement voters, and a ${protocolDocFacts.maxVotersLabel}-voter cap.`,
+    learnMoreHref: "/docs/governance#round-settings-bounds",
+    learnMoreLabel: "Round Settings",
   },
   {
     question: "Why should I trust these ratings?",

@@ -17,14 +17,14 @@ const STEPS = [
   },
   {
     label: "Reveal",
-    duration: protocolDocFacts.blindPhaseDurationLabel,
-    description: "Votes revealed after blind phase ends",
+    duration: `${protocolDocFacts.blindPhaseDurationLabel} default`,
+    description: "Votes revealed after the selected blind phase ends",
     Icon: LockOpenIcon,
   },
   {
     label: "Resolve",
     duration: "",
-    description: `Majority wins after min ${protocolDocFacts.minVotersLabel} voters revealed`,
+    description: `Majority wins after the selected voter threshold is revealed`,
     Icon: ScaleIcon,
   },
   {

@@ -203,7 +203,8 @@ const Tokenomics = () => {
         Bounties are separate from cREP bootstrap rewards. They are attached at submission, funded in cREP or USDC on
         Celo, scoped to one question, and split across eligible revealed voters in each qualified bounty round after a
         3% frontend-operator share. If the commit-attributed frontend is not payable, that share stays with the voter
-        claim. There is no stablecoin coherence bonus at launch.
+        claim. Bounty required-voter terms cannot exceed the question&apos;s selected voter cap. There is no stablecoin
+        coherence bonus at launch.
       </p>
 
       <h3>Treasury</h3>

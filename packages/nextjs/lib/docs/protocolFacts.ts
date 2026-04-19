@@ -39,6 +39,16 @@ function formatDurationLabel(seconds: number): string {
 }
 
 const remainingPoolBps = BPS_SCALE - REWARD_SPLIT_BPS.revealedLoserRefund;
+const ROUND_CONFIG_BOUNDS = {
+  minEpochDurationSeconds: 5 * 60,
+  maxEpochDurationSeconds: 60 * 60,
+  minRoundDurationSeconds: 60 * 60,
+  maxRoundDurationSeconds: 30 * 24 * 60 * 60,
+  minSettlementVoters: 2,
+  maxSettlementVoters: 100,
+  minVoterCap: 2,
+  maxVoterCap: 10_000,
+} as const;
 
 function effectiveRawSharePercent(bucketBps: number): number {
   return percentFromBps((remainingPoolBps * bucketBps) / BPS_SCALE);
@@ -54,6 +64,21 @@ export const protocolDocFacts = {
   maxRoundDurationLabel: formatDurationLabel(DEFAULT_ROUND_CONFIG.maxDurationSeconds),
   minVotersLabel: String(DEFAULT_ROUND_CONFIG.minVoters),
   maxVotersLabel: DEFAULT_ROUND_CONFIG.maxVoters.toLocaleString(),
+  minBlindPhaseDurationLabel: formatDurationLabel(ROUND_CONFIG_BOUNDS.minEpochDurationSeconds),
+  maxBlindPhaseDurationLabel: formatDurationLabel(ROUND_CONFIG_BOUNDS.maxEpochDurationSeconds),
+  minRoundDurationLabel: formatDurationLabel(ROUND_CONFIG_BOUNDS.minRoundDurationSeconds),
+  maxAllowedRoundDurationLabel: formatDurationLabel(ROUND_CONFIG_BOUNDS.maxRoundDurationSeconds),
+  minSettlementVotersLabel: String(ROUND_CONFIG_BOUNDS.minSettlementVoters),
+  maxSettlementVotersLabel: String(ROUND_CONFIG_BOUNDS.maxSettlementVoters),
+  minVoterCapLabel: String(ROUND_CONFIG_BOUNDS.minVoterCap),
+  maxVoterCapLabel: ROUND_CONFIG_BOUNDS.maxVoterCap.toLocaleString(),
+  roundConfigBoundsSummaryLabel: `${formatDurationLabel(
+    ROUND_CONFIG_BOUNDS.minEpochDurationSeconds,
+  )}-${formatDurationLabel(ROUND_CONFIG_BOUNDS.maxEpochDurationSeconds)} blind phase, ${formatDurationLabel(
+    ROUND_CONFIG_BOUNDS.minRoundDurationSeconds,
+  )}-${formatDurationLabel(ROUND_CONFIG_BOUNDS.maxRoundDurationSeconds)} max duration, ${
+    ROUND_CONFIG_BOUNDS.minSettlementVoters
+  }-${ROUND_CONFIG_BOUNDS.maxSettlementVoters} settlement voters, ${ROUND_CONFIG_BOUNDS.minVoterCap}-${ROUND_CONFIG_BOUNDS.maxVoterCap.toLocaleString()} voter cap`,
   revealedLoserRefundPercentLabel: formatPercent(percentFromBps(REWARD_SPLIT_BPS.revealedLoserRefund)),
   revealedLoserRefundLabel: `${formatPercent(percentFromBps(REWARD_SPLIT_BPS.revealedLoserRefund))} of raw losing stake`,
   revealedLoserRefundShortLabel: `${formatPercent(percentFromBps(REWARD_SPLIT_BPS.revealedLoserRefund))} of raw`,
@@ -128,16 +153,36 @@ export const whitepaperRewardSplitRows: string[][] = rewardSplitTableRows.map(([
 ]);
 
 export const whitepaperSettlementConfigRows: string[][] = [
-  ["epochDuration", protocolDocFacts.blindPhaseDurationLabel, "Duration of each reward tier"],
-  ["minVoters", protocolDocFacts.minVotersLabel, "Minimum revealed votes required for settlement"],
+  [
+    "epochDuration",
+    `${protocolDocFacts.blindPhaseDurationLabel} default`,
+    "Creator-selected blind/reward-tier duration within governance bounds",
+  ],
+  [
+    "minVoters",
+    `${protocolDocFacts.minVotersLabel} default`,
+    "Creator-selected minimum revealed votes required for settlement",
+  ],
   [
     "maxDuration",
-    protocolDocFacts.maxRoundDurationLabel,
-    "Maximum round lifetime  -- below commit quorum rounds cancel; commit-quorum rounds can end as RevealFailed",
+    `${protocolDocFacts.maxRoundDurationLabel} default`,
+    "Creator-selected maximum round lifetime  -- below commit quorum rounds cancel; commit-quorum rounds can end as RevealFailed",
+  ],
+  [
+    "maxVoters",
+    `${protocolDocFacts.maxVotersLabel} default`,
+    "Creator-selected cap on voters for the question and upper bound for bounty required-voter terms",
   ],
   [
     "revealGracePeriod",
     protocolDocFacts.revealGracePeriodLabel,
     "Time after each epoch during which all votes must be revealed before settlement",
   ],
+];
+
+export const whitepaperRoundConfigBoundsRows: string[][] = [
+  ["blind phase", `${protocolDocFacts.minBlindPhaseDurationLabel} to ${protocolDocFacts.maxBlindPhaseDurationLabel}`],
+  ["max duration", `${protocolDocFacts.minRoundDurationLabel} to ${protocolDocFacts.maxAllowedRoundDurationLabel}`],
+  ["settlement voters", `${protocolDocFacts.minSettlementVotersLabel} to ${protocolDocFacts.maxSettlementVotersLabel}`],
+  ["voter cap", `${protocolDocFacts.minVoterCapLabel} to ${protocolDocFacts.maxVoterCapLabel}`],
 ];

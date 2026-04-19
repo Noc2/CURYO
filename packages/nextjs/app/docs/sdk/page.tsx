@@ -22,7 +22,7 @@ const SdkPage: NextPage = () => {
       <ul>
         <li>
           <strong>Hosted reads</strong> for indexed content, rounds, votes, profiles, categories, stats, and frontend
-          operator records.
+          operator records, including each question&apos;s selected round settings.
         </li>
         <li>
           <strong>Vote helpers</strong> for stake normalization, frontend-code resolution, tlock commit generation,
@@ -83,12 +83,14 @@ const { frontend } = await curyo.read.getFrontend(
       </p>
       <pre className="bg-base-200 p-4 rounded-lg overflow-x-auto">
         <code>{`const { content } = await curyo.read.getContent("42");
+const epochDuration =
+  content.openRound?.epochDuration ?? content.roundConfig?.epochDuration ?? 20 * 60;
 
 const commit = await buildCommitVoteParams({
   contentId: 42n,
   isUp: true,
   stakeAmount: 2.5,
-  epochDuration: 20 * 60,
+  epochDuration,
   roundReferenceRatingBps: content.openRound?.referenceRatingBps ?? content.ratingBps ?? 5000,
   defaultFrontendCode: curyo.config.frontendCode,
 });

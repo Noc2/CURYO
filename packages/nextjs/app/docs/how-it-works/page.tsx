@@ -25,6 +25,13 @@ const HowItWorks: NextPage = () => {
         funding, and validation guardrails do the real work instead.
       </p>
       <p>
+        The creator also chooses the round settings inside governance bounds: blind phase length, maximum duration,
+        settlement voters, and voter cap. The defaults are {protocolDocFacts.blindPhaseDurationLabel},{" "}
+        {protocolDocFacts.maxRoundDurationLabel}, {protocolDocFacts.minVotersLabel} settlement voters, and a{" "}
+        {protocolDocFacts.maxVotersLabel}-voter cap, but high-urgency bounties can ask for a shorter clock while broader
+        questions can require more voters.
+      </p>
+      <p>
         The same question-first path is what makes the protocol useful to bots and AI agents: when an automated strategy
         is unsure, it can submit the uncertainty through the same human-facing flow as everyone else, for verified
         humans to answer with stake, while the submission itself remains permissionless.
@@ -52,10 +59,11 @@ const HowItWorks: NextPage = () => {
 
       <h2 id="commit-reveal-voting">Commit-reveal Voting</h2>
       <p>
-        Each content item has independent rounds. You vote <strong>up</strong> or <strong>down</strong> with cREP, your
-        direction stays hidden during the blind phase, and early voters earn more reward weight than later voters. In
-        the redeployed tlock model, commits also bind the target reveal round and drand chain hash, and malformed
-        ciphertexts are rejected on-chain.
+        Each content item has independent rounds. The selected question settings are snapshotted when a round opens, so
+        later governance changes or new defaults cannot move an active round&apos;s clock or settlement threshold. You
+        vote <strong>up</strong> or <strong>down</strong> with cREP, your direction stays hidden during the blind phase,
+        and early voters earn more reward weight than later voters. In the redeployed tlock model, commits also bind the
+        target reveal round and drand chain hash, and malformed ciphertexts are rejected on-chain.
       </p>
       <div className="not-prose">
         <VotingFlowDiagram />
@@ -70,15 +78,17 @@ const HowItWorks: NextPage = () => {
           metadata before decrypting.
         </li>
         <li>
-          <strong>Resolve:</strong> Once at least {protocolDocFacts.minVotersLabel} votes are revealed and reveal
-          conditions are met, the round settles, the rating updates, and rewards become claimable.
+          <strong>Resolve:</strong> Once the selected voter threshold is revealed and reveal conditions are met, the
+          round settles, the rating updates, and rewards become claimable.
         </li>
       </ol>
 
       <h3 id="blind-voting">Blind Voting</h3>
       <p>
-        Vote directions are encrypted during the first <strong>{protocolDocFacts.blindPhaseDurationLabel}</strong> to
-        prevent herding. After that, later votes may see revealed directions and only receive{" "}
+        Vote directions are encrypted during the selected blind phase. The default is{" "}
+        <strong>{protocolDocFacts.blindPhaseDurationLabel}</strong>, and governance bounds currently allow{" "}
+        {protocolDocFacts.minBlindPhaseDurationLabel} to {protocolDocFacts.maxBlindPhaseDurationLabel}. After that,
+        later votes may see revealed directions and only receive{" "}
         <strong>{protocolDocFacts.openPhaseWeightLabel}</strong> reward weight instead of full weight.
       </p>
       <p>

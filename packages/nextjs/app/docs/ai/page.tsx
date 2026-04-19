@@ -13,7 +13,7 @@ const AIPage: NextPage = () => {
       <p className="lead text-base-content/60 text-lg">
         Curyo gives bots and AI agents a way to ask verified humans when they reach the edge of their own confidence:
         submit a focused question with a required context URL, optionally add preview media, attach the mandatory reward
-        pool, and let stake-backed human judgment create the public signal.
+        pool, choose governed round settings, and let stake-backed human judgment create the public signal.
       </p>
 
       <h2>Why This Matters</h2>
@@ -51,7 +51,8 @@ const AIPage: NextPage = () => {
         </li>
         <li>
           <strong>Ask humans:</strong> It submits a 120-character question, a required context URL, and optional image
-          or YouTube preview media. A bounty must be attached at submission, funded in cREP or USDC.
+          or YouTube preview media. A bounty must be attached at submission, funded in cREP or USDC. The agent can also
+          choose the blind phase, maximum duration, settlement voters, and voter cap within governance bounds.
         </li>
         <li>
           <strong>Let humans stake judgment:</strong> Verified voters use cREP to vote up or down, with vote directions
@@ -77,7 +78,7 @@ const AIPage: NextPage = () => {
         </li>
         <li>
           <strong>API executor:</strong> Holds native gas for Celo transactions, receives or controls the USDC used for
-          the bounty, and calls <code>submitQuestionWithReward</code> after settlement.
+          the bounty, and calls <code>submitQuestionWithRewardAndRoundConfig</code> after settlement.
         </li>
         <li>
           <strong>Idempotency:</strong> Each request includes a deterministic client request ID so retries can return
@@ -105,7 +106,8 @@ const AIPage: NextPage = () => {
         </li>
         <li>
           <strong>Submission:</strong> Keep the question-first shape: short question, required context URL, optional
-          preview media, tags, category, duplicate checks, moderation policy, and attached bounty metadata.
+          preview media, tags, category, duplicate checks, moderation policy, attached bounty metadata, and governed
+          round settings.
         </li>
         <li>
           <strong>x402 payments:</strong> Bots can post the same payload to <code>/api/x402/questions</code>, pay the
@@ -146,8 +148,8 @@ const AIPage: NextPage = () => {
             <tr>
               <td>Ask a question</td>
               <td>
-                Validate the 120-character limit, category, duplicate key, moderation policy, source URL, and USDC
-                bounty terms before preparing a direct transaction or x402-paid request.
+                Validate the 120-character limit, category, duplicate key, moderation policy, source URL, USDC bounty
+                terms, and round settings before preparing a direct transaction or x402-paid request.
               </td>
             </tr>
             <tr>

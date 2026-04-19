@@ -111,11 +111,14 @@ const GovernanceDocs: NextPage = () => {
         separate operator key.
       </p>
 
-      <h2>Round Voting Parameters</h2>
+      <h2 id="round-settings-bounds">Round Settings Bounds</h2>
       <p>
-        The following parameters control per-content round-based voting. Core round settings are adjustable via
-        governance proposals through the <code className="bg-base-300 px-1 rounded text-base">setConfig()</code>{" "}
-        function on the RoundVotingEngine contract. The reveal grace period is updated separately through{" "}
+        Governance sets both the default round configuration and the allowed range that question creators can choose
+        from. This keeps protocol risk bounded while letting the creator match the round to the question: urgent
+        high-bounty work can choose a shorter blind phase, while open-ended questions can wait for more voters or a
+        longer duration. The default config is updated through{" "}
+        <code className="bg-base-300 px-1 rounded text-base">setConfig()</code>, creator bounds through{" "}
+        <code className="bg-base-300 px-1 rounded text-base">setRoundConfigBounds()</code>, and reveal grace through{" "}
         <code className="bg-base-300 px-1 rounded text-base">setRevealGracePeriod()</code>.
       </p>
       <div className="not-prose overflow-x-auto my-6 rounded-xl bg-base-200">
@@ -124,13 +127,37 @@ const GovernanceDocs: NextPage = () => {
             <tr>
               <th>Parameter</th>
               <th>Default</th>
+              <th>Creator bounds</th>
               <th>Description</th>
             </tr>
           </thead>
           <tbody>
             <tr>
-              <td className="font-mono">Minimum voters</td>
+              <td className="font-mono">Blind phase</td>
+              <td>{protocolDocFacts.blindPhaseDurationLabel}</td>
+              <td>
+                {protocolDocFacts.minBlindPhaseDurationLabel} to {protocolDocFacts.maxBlindPhaseDurationLabel}
+              </td>
+              <td>Length of the hidden-vote reward epoch before votes from that epoch can be revealed.</td>
+            </tr>
+            <tr>
+              <td className="font-mono">Max round duration</td>
+              <td>{protocolDocFacts.maxRoundDurationLabel}</td>
+              <td>
+                {protocolDocFacts.minRoundDurationLabel} to {protocolDocFacts.maxAllowedRoundDurationLabel}
+              </td>
+              <td>
+                Maximum time before a round expires. Below commit quorum the round is cancelled and refundable. At or
+                above commit quorum, missing reveal quorum after the last reveal grace window can finalize as
+                RevealFailed instead.
+              </td>
+            </tr>
+            <tr>
+              <td className="font-mono">Settlement voters</td>
               <td>{protocolDocFacts.minVotersLabel}</td>
+              <td>
+                {protocolDocFacts.minSettlementVotersLabel} to {protocolDocFacts.maxSettlementVotersLabel}
+              </td>
               <td>
                 Minimum revealed votes required before a round becomes eligible to settle. Past-epoch reveal checks may
                 still delay settlement. Rounds that stay below commit quorum within the maximum round duration are
@@ -139,50 +166,43 @@ const GovernanceDocs: NextPage = () => {
               </td>
             </tr>
             <tr>
-              <td className="font-mono">Epoch duration</td>
-              <td>{protocolDocFacts.blindPhaseDurationLabel}</td>
-              <td>Length of each blind-voting epoch before votes from that epoch can be revealed.</td>
+              <td className="font-mono">Voter cap</td>
+              <td>{protocolDocFacts.maxVotersLabel}</td>
+              <td>
+                {protocolDocFacts.minVoterCapLabel} to {protocolDocFacts.maxVoterCapLabel}
+              </td>
+              <td>Per-round cap and upper bound for bounty required-voter terms.</td>
             </tr>
             <tr>
               <td className="font-mono">Reveal grace period</td>
               <td>{protocolDocFacts.revealGracePeriodLabel}</td>
+              <td>Governance-only</td>
               <td>
                 After each epoch ends, past-epoch votes must be revealed before settlement, unless this grace period has
                 expired. This parameter is configured separately from <code>setConfig()</code>.
               </td>
             </tr>
             <tr>
-              <td className="font-mono">Max round duration</td>
-              <td>{protocolDocFacts.maxRoundDurationLabel}</td>
-              <td>
-                Maximum time before a round expires. Below commit quorum the round is cancelled and refundable. At or
-                above commit quorum, missing reveal quorum after the last reveal grace window can finalize as
-                RevealFailed instead.
-              </td>
-            </tr>
-            <tr>
-              <td className="font-mono">Max voters</td>
-              <td>{protocolDocFacts.maxVotersLabel}</td>
-              <td>Per-round cap. O(1) resolution enables higher limits without cost concerns.</td>
-            </tr>
-            <tr>
               <td className="font-mono">Vote stake</td>
               <td>1&ndash;100 cREP</td>
+              <td>Governance constant</td>
               <td>Stake range per vote per round. Capped per Voter ID to limit single-voter influence.</td>
             </tr>
             <tr>
               <td className="font-mono">Vote cooldown</td>
               <td>24 hours</td>
+              <td>Governance constant</td>
               <td>Time a voter must wait before voting on the same content again after their last vote.</td>
             </tr>
           </tbody>
         </table>
       </div>
       <p>
-        The {protocolDocFacts.minVotersLabel}-voter minimum is a deliberate balance between manipulation resistance and
-        early-stage practicality. With fewer than {protocolDocFacts.minVotersLabel} voters, a single actor could control
-        round outcomes. As the platform grows and rounds naturally attract more voters, governance can increase this
-        threshold to further strengthen agreement quality.
+        The default {protocolDocFacts.minVotersLabel}-voter threshold is a deliberate balance between manipulation
+        resistance and early-stage practicality. The important governance choice is now the allowed range: a creator can
+        pick more voters for higher confidence, but cannot lower the threshold beneath the community-approved minimum.
+        As the platform grows and rounds naturally attract more voters, governance can raise either the defaults or the
+        minimum bounds.
       </p>
 
       <h2>Treasury</h2>

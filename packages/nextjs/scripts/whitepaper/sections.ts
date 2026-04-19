@@ -2,6 +2,7 @@ import { protocolCopy } from "../../lib/docs/protocolCopy";
 import {
   protocolDocFacts,
   whitepaperRewardSplitRows,
+  whitepaperRoundConfigBoundsRows,
   whitepaperSettlementConfigRows,
 } from "../../lib/docs/protocolFacts";
 import {
@@ -43,7 +44,7 @@ export const SECTIONS: Section[] = [
             items: [
               "Skin in the Game  -- Every vote requires a token stake, aligning incentives. Rewards come from settled losing pools and participation incentives, not passive likes.",
               "Voter ID (Sybil Resistance)  -- Each verified human gets one soulbound Voter ID NFT for voting and other identity-gated actions, limiting stake to 100 cREP per content per round.",
-              `Per-Content Rounds  -- Each content item has independent voting rounds. Votes are encrypted via tlock and hidden until each ${protocolDocFacts.blindPhaseDurationLabel} epoch ends. Commits bind the drand reveal target and chain hash, and the keeper/runtime layer checks the stored stanza metadata before reveal. After each epoch the keeper normally reveals eligible votes in the background, and connected users can self-reveal if needed. Settlement occurs after at least ${protocolDocFacts.minVotersLabel} votes are revealed and the reveal conditions are satisfied.`,
+              `Per-Content Rounds  -- Each content item has independent voting rounds. The question creator selects blind phase, max duration, settlement voters, and voter cap within governance bounds, and each round snapshots those settings when it opens. Votes are encrypted via tlock and hidden until the selected epoch ends. Commits bind the drand reveal target and chain hash, and the keeper/runtime layer checks the stored stanza metadata before reveal. After each epoch the keeper normally reveals eligible votes in the background, and connected users can self-reveal if needed. Settlement occurs after the selected revealed-voter threshold and reveal conditions are satisfied.`,
               `Contributor Rewards  -- ${protocolCopy.contributorRewardsOverview}`,
             ],
           },
@@ -54,7 +55,7 @@ export const SECTIONS: Section[] = [
         blocks: [
           {
             type: "paragraph",
-            text: `Voters predict whether content's rating will go up or down and back their prediction with a cREP stake. Votes are encrypted with tlock and hidden until the epoch ends, preventing herding. Commits bind the drand metadata used for reveal, and malformed or non-armored ciphertexts are rejected on-chain. Voting early in the epoch earns full reward weight (Tier 1), while voting after seeing epoch-1 results earns only ${protocolDocFacts.openPhaseWeightLabel} weight (Tier 2).`,
+            text: `Voters predict whether content's rating will go up or down and back their prediction with a cREP stake. Votes are encrypted with tlock and hidden until the selected epoch ends, preventing herding. Commits bind the drand metadata used for reveal, and malformed or non-armored ciphertexts are rejected on-chain. Voting early in the epoch earns full reward weight (Tier 1), while voting after seeing epoch-1 results earns only ${protocolDocFacts.openPhaseWeightLabel} weight (Tier 2).`,
           },
           {
             type: "ordered",
@@ -62,7 +63,7 @@ export const SECTIONS: Section[] = [
               "Commit: Choose up or down, select stake (1-100 cREP per Voter ID). The UI encrypts the vote, encodes (contentId, roundReferenceRatingBps, commitHash, ciphertext, frontend, targetRound, drandChainHash), and submits it through CuryoReputation.transferAndCall(votingEngine, stakeAmount, payload). The vote direction stays hidden until the epoch ends.",
               `Accumulate: More voters commit during the ${protocolDocFacts.blindPhaseDurationLabel} epoch. No one can see anyone else's vote direction until the epoch ends.`,
               "Reveal: After the epoch ends, the keeper normally decrypts eligible ciphertexts off-chain, checks the stored drand stanza metadata, and submits reveals on-chain. Connected users can also self-reveal if they know their vote plaintext. The rating does not change yet -- it updates only when the round later settles.",
-              `Settle: Once at least ${protocolDocFacts.minVotersLabel} votes are revealed and all past-epoch votes are revealed (or the ${protocolDocFacts.revealGracePeriodLabel} reveal grace period expires), anyone can call settleRound(). The side with the larger epoch-weighted stake wins.`,
+              `Settle: Once the selected minVoters threshold is revealed (default ${protocolDocFacts.minVotersLabel}) and all past-epoch votes are revealed (or the ${protocolDocFacts.revealGracePeriodLabel} reveal grace period expires), anyone can call settleRound(). The side with the larger epoch-weighted stake wins.`,
               `Claim: Winners receive their original stake back plus an epoch-weighted share of the content-specific voter pool (Tier 1 = ${protocolDocFacts.earlyVoterAdvantageLabel.replace(":1", "x")} reward per cREP vs Tier 2). One-sided rounds receive a consensus subsidy.`,
             ],
           },
@@ -124,18 +125,18 @@ export const SECTIONS: Section[] = [
         blocks: [
           {
             type: "paragraph",
-            text: "Submitting a question starts with the question itself: the entry requires a context URL and can optionally include image or YouTube preview media. A mandatory bounty is attached at submission and funded in cREP or USDC on Celo. The question submission key must be unique, and title plus description are emitted in the on-chain ContentSubmitted event so any frontend or indexer can reconstruct the same canonical metadata; the title is the primary label shown above the content, while the description gives longer context below it. There is no hard bounty cap -- moderation, funding, and validation guardrails do the real work instead.",
+            text: "Submitting a question starts with the question itself: the entry requires a context URL and can optionally include image or YouTube preview media. A mandatory bounty is attached at submission and funded in cREP or USDC on Celo. The creator also selects the round's blind phase, maximum duration, settlement voters, and voter cap within governance bounds. The question submission key must be unique, and title plus description are emitted in the on-chain ContentSubmitted event so any frontend or indexer can reconstruct the same canonical metadata; the title is the primary label shown above the content, while the description gives longer context below it. There is no hard bounty cap -- moderation, funding, and validation guardrails do the real work instead.",
           },
           {
             type: "paragraph",
-            text: `Curyo uses tlock commit-reveal to prevent herding. Votes are encrypted to an epoch-end timestamp using the drand randomness beacon, so no one can see anyone else's direction until the epoch ends. Each ${protocolDocFacts.blindPhaseDurationLabel} epoch defines a reward tier: Tier 1 (first epoch, blind) earns ${protocolDocFacts.blindPhaseWeightLabel} weight; Tier 2+ (subsequent epochs, informed) earns ${protocolDocFacts.openPhaseWeightLabel} weight. The redeployed contracts keep the keeper-assisted/self-reveal model, but now bind drand metadata on-chain and reject malformed ciphertexts up front.`,
+            text: `Curyo uses tlock commit-reveal to prevent herding. Votes are encrypted to an epoch-end timestamp using the drand randomness beacon, so no one can see anyone else's direction until the selected epoch ends. The default epoch is ${protocolDocFacts.blindPhaseDurationLabel}, but creators can select a value inside governance bounds. Each epoch defines a reward tier: Tier 1 (first epoch, blind) earns ${protocolDocFacts.blindPhaseWeightLabel} weight; Tier 2+ (subsequent epochs, informed) earns ${protocolDocFacts.openPhaseWeightLabel} weight. The redeployed contracts keep the keeper-assisted/self-reveal model, but now bind drand metadata on-chain and reject malformed ciphertexts up front.`,
           },
           {
             type: "ordered",
             items: [
               "Commit (any time during the round): Choose up or down. The UI encrypts your direction and submits a single transferAndCall transaction carrying (contentId, roundReferenceRatingBps, commitHash, ciphertext, frontend, targetRound, drandChainHash). Your stake is locked; your direction is hidden on-chain until the epoch ends.",
               `Epoch ends (every ${protocolDocFacts.blindPhaseDurationLabel}): The drand beacon publishes a randomness value. The keeper fetches it, validates the stored AGE/tlock stanza against the commit metadata, decrypts eligible ciphertexts off-chain, and calls revealVoteByCommitKey() for unrevealed commits.`,
-              `Settlement: After at least ${protocolDocFacts.minVotersLabel} votes are revealed and all past-epoch votes are revealed (or the ${protocolDocFacts.revealGracePeriodLabel} reveal grace period expires), anyone may call settleRound(contentId, roundId). The side with the larger epoch-weighted stake wins. The content rating updates from the round reference score using epoch-weighted revealed stake evidence.`,
+              `Settlement: After the selected minVoters threshold is revealed (default ${protocolDocFacts.minVotersLabel}) and all past-epoch votes are revealed (or the ${protocolDocFacts.revealGracePeriodLabel} reveal grace period expires), anyone may call settleRound(contentId, roundId). The side with the larger epoch-weighted stake wins. The content rating updates from the round reference score using epoch-weighted revealed stake evidence.`,
               `Claim: Winners call claimReward(contentId, roundId) to receive their original stake plus an epoch-weighted share of the remaining losing pool. Revealed losers may also call claimReward(contentId, roundId) to recover a fixed ${protocolDocFacts.revealedLoserRefundPercentLabel} rebate. If the question has a qualifying bounty, eligible revealed voters can also claim the voter share of the attached bounty independent of cREP outcome; 3% is reserved for the eligible frontend operator when payable. There is no submitter upside path.`,
             ],
           },
@@ -190,7 +191,7 @@ export const SECTIONS: Section[] = [
           },
           {
             type: "paragraph",
-            text: `Settlement requires at least ${protocolDocFacts.minVotersLabel} voters revealed (minVoters threshold). It is only allowed once all past-epoch votes are revealed or their ${protocolDocFacts.revealGracePeriodLabel} reveal grace period has expired. A lightweight keeper service normally handles reveal, settlement, reveal-failed finalization, and cleanup automatically, but connected users also have a small manual fallback page if keeper reveal appears delayed. Winners receive their original stake plus an epoch-weighted share of the losing pool, and revealed losers can later reclaim a fixed ${protocolDocFacts.revealedLoserRefundPercentLabel} rebate.`,
+            text: `Settlement requires the selected minVoters threshold to be revealed (default ${protocolDocFacts.minVotersLabel}). It is only allowed once all past-epoch votes are revealed or their ${protocolDocFacts.revealGracePeriodLabel} reveal grace period has expired. A lightweight keeper service normally handles reveal, settlement, reveal-failed finalization, and cleanup automatically, but connected users also have a small manual fallback page if keeper reveal appears delayed. Winners receive their original stake plus an epoch-weighted share of the losing pool, and revealed losers can later reclaim a fixed ${protocolDocFacts.revealedLoserRefundPercentLabel} rebate.`,
           },
         ],
       },
@@ -386,7 +387,7 @@ export const SECTIONS: Section[] = [
           },
           {
             type: "paragraph",
-            text: `Settlement conditions: at least ${protocolDocFacts.minVotersLabel} votes must be revealed (minVoters), and all past-epoch votes must be revealed unless their ${protocolDocFacts.revealGracePeriodLabel} reveal grace period has expired. Rounds that expire (${protocolDocFacts.maxRoundDurationLabel}) below commit quorum are cancelled and refundable, while rounds that hit commit quorum but still miss reveal quorum can finalize as RevealFailed after the final reveal grace deadline.`,
+            text: `Settlement conditions: the selected minVoters threshold must be revealed (default ${protocolDocFacts.minVotersLabel}), and all past-epoch votes must be revealed unless their ${protocolDocFacts.revealGracePeriodLabel} reveal grace period has expired. Rounds that expire at their selected maxDuration (${protocolDocFacts.maxRoundDurationLabel} default) below commit quorum are cancelled and refundable, while rounds that hit commit quorum but still miss reveal quorum can finalize as RevealFailed after the final reveal grace deadline.`,
           },
         ],
       },
@@ -521,13 +522,24 @@ export const SECTIONS: Section[] = [
         blocks: [
           {
             type: "paragraph",
-            text: `Settlement requires at least ${protocolDocFacts.minVotersLabel} votes to be revealed (minVoters). Additionally, all votes from past epochs must be revealed before settlement is allowed during the reveal grace period (default: ${protocolDocFacts.revealGracePeriodLabel} after each epoch ends). This prevents selective revelation attacks where an attacker reveals only favorable votes. After the grace period, any remaining unrevealed votes no longer block settlement and are forfeited post-settlement.`,
+            text: `Settlement requires the question's selected minVoters threshold to be revealed (default: ${protocolDocFacts.minVotersLabel}). Additionally, all votes from past epochs must be revealed before settlement is allowed during the reveal grace period (default: ${protocolDocFacts.revealGracePeriodLabel} after each epoch ends). This prevents selective revelation attacks where an attacker reveals only favorable votes. After the grace period, any remaining unrevealed votes no longer block settlement and are forfeited post-settlement.`,
           },
           {
             type: "table",
             data: {
               headers: ["Parameter", "Value", "Effect"],
               rows: whitepaperSettlementConfigRows,
+            },
+          },
+          {
+            type: "paragraph",
+            text: `Creator-selected round settings must fit governance bounds. The current bounds are ${protocolDocFacts.roundConfigBoundsSummaryLabel}.`,
+          },
+          {
+            type: "table",
+            data: {
+              headers: ["Creator setting", "Allowed range"],
+              rows: whitepaperRoundConfigBoundsRows,
             },
           },
           {
@@ -579,7 +591,7 @@ export const SECTIONS: Section[] = [
           },
           {
             type: "paragraph",
-            text: `Rounds require a minimum of ${protocolDocFacts.minVotersLabel} revealed votes (minVoters) to settle as contested. If ${protocolDocFacts.maxRoundDurationLabel} pass below commit quorum, the round is cancelled and refundable. If commit quorum was reached but reveal quorum still never materializes by the final reveal grace deadline, the round can finalize as RevealFailed: revealed votes remain refundable, while unrevealed stakes are forfeited in cleanup. If all voters reveal in the same direction, the round settles with that side as the winner and receives a consensus subsidy payout.`,
+            text: `Rounds require the selected minVoters threshold to be revealed (default ${protocolDocFacts.minVotersLabel}) to settle as contested. If the selected maxDuration passes below commit quorum (${protocolDocFacts.maxRoundDurationLabel} default), the round is cancelled and refundable. If commit quorum was reached but reveal quorum still never materializes by the final reveal grace deadline, the round can finalize as RevealFailed: revealed votes remain refundable, while unrevealed stakes are forfeited in cleanup. If all voters reveal in the same direction, the round settles with that side as the winner and receives a consensus subsidy payout.`,
           },
           {
             type: "sub_heading",
@@ -747,7 +759,7 @@ export const SECTIONS: Section[] = [
           },
           {
             type: "paragraph",
-            text: "Keepers also perform housekeeping: cancelling expired rounds (rounds that exceed maxDuration without reaching minVoters) and marking dormant content. The drand randomness beacon is public, so anyone can run the off-chain decryption flow, but the current protocol verifies commit consistency and on-chain tlock metadata hygiene rather than proving on-chain that the stored ciphertext was honestly decryptable. In practice the reveal path is a keeper/drand-assisted off-chain flow with a user fallback, not a fully trustless ciphertext proof system. If Curyo later wants to close that trust gap entirely, zk proofs of correct decryption are the most natural upgrade path.",
+            text: "Keepers also perform housekeeping: cancelling expired rounds (rounds that exceed their selected maxDuration without reaching selected minVoters) and marking dormant content. The drand randomness beacon is public, so anyone can run the off-chain decryption flow, but the current protocol verifies commit consistency and on-chain tlock metadata hygiene rather than proving on-chain that the stored ciphertext was honestly decryptable. In practice the reveal path is a keeper/drand-assisted off-chain flow with a user fallback, not a fully trustless ciphertext proof system. If Curyo later wants to close that trust gap entirely, zk proofs of correct decryption are the most natural upgrade path.",
           },
         ],
       },
@@ -952,7 +964,7 @@ export const SECTIONS: Section[] = [
         blocks: [
           {
             type: "paragraph",
-            text: "The following parameters control per-content round-based voting. Core round settings are adjustable via governance proposals through setConfig(), while reveal timing, drand metadata, rating behavior, and question submission funding minimums are configured through separate ProtocolConfig functions. New rounds snapshot the round, drand, and rating configuration they start with.",
+            text: "The following parameters control per-content round-based voting. Governance sets default round settings through setConfig() and creator bounds through setRoundConfigBounds(). Question creators select blind phase, max duration, settlement voters, and voter cap inside those bounds, while reveal timing, drand metadata, rating behavior, and question submission funding minimums are configured through separate ProtocolConfig functions. New rounds snapshot the question-selected round config, drand config, and rating configuration they start with.",
           },
           {
             type: "table",
@@ -962,19 +974,23 @@ export const SECTIONS: Section[] = [
                 [
                   "epochDuration",
                   protocolDocFacts.blindPhaseDurationLabel,
-                  `Duration of each reward tier; commits in epoch 1 earn ${protocolDocFacts.blindPhaseWeightLabel} weight, later epochs ${protocolDocFacts.openPhaseWeightLabel}`,
+                  `Creator-selected duration of each reward tier; commits in epoch 1 earn ${protocolDocFacts.blindPhaseWeightLabel} weight, later epochs ${protocolDocFacts.openPhaseWeightLabel}`,
                 ],
                 [
                   "maxDuration",
                   protocolDocFacts.maxRoundDurationLabel,
-                  "Maximum round lifetime  -- below commit quorum rounds cancel; commit-quorum rounds can end as RevealFailed",
+                  "Creator-selected maximum round lifetime  -- below commit quorum rounds cancel; commit-quorum rounds can end as RevealFailed",
                 ],
                 [
                   "minVoters",
                   protocolDocFacts.minVotersLabel,
-                  "Minimum revealed votes required before settlement is allowed",
+                  "Creator-selected minimum revealed votes required before settlement is allowed",
                 ],
-                ["maxVoters", protocolDocFacts.maxVotersLabel, "Per-round cap on total commits"],
+                [
+                  "maxVoters",
+                  protocolDocFacts.maxVotersLabel,
+                  "Creator-selected per-round cap on total commits and bounty required-voter terms",
+                ],
                 ["Rating smoothing", "alpha=10 cREP / beta=10 cREP", "Dampens small or lopsided vote-share samples"],
                 ["Observation beta", "2.0", "Scales the score-gap signal before logit movement"],
                 [
@@ -1004,7 +1020,7 @@ export const SECTIONS: Section[] = [
           },
           {
             type: "paragraph",
-            text: `The epoch-based mechanism ensures rounds complete within a bounded timeframe. The epochDuration defines the reward tier window (${protocolDocFacts.blindPhaseDurationLabel} for full weight). Settlement becomes available once minVoters is reached and past-epoch reveal constraints are satisfied. The maxDuration hard cap prevents indefinite rounds. RatingConfig replaces the old single hardcoded smoothing constant with governance-controlled smoothing, confidence, movement-cap, and conservative-bound parameters. As the platform grows, governance can adjust the configurable parameters to optimize for the observed voter population while in-progress rounds keep their snapshotted rules.`,
+            text: `The epoch-based mechanism ensures rounds complete within a bounded timeframe. The epochDuration defines the reward tier window (${protocolDocFacts.blindPhaseDurationLabel} default for full weight). Settlement becomes available once the selected minVoters threshold is reached and past-epoch reveal constraints are satisfied. The maxDuration hard cap prevents indefinite rounds. RatingConfig replaces the old single hardcoded smoothing constant with governance-controlled smoothing, confidence, movement-cap, and conservative-bound parameters. As the platform grows, governance can adjust defaults and bounds to optimize for the observed voter population while in-progress rounds keep their snapshotted rules.`,
           },
         ],
       },
@@ -1426,7 +1442,7 @@ export const SECTIONS: Section[] = [
         blocks: [
           {
             type: "paragraph",
-            text: "Governance can change round parameters, reveal grace, drand metadata, rating configuration, and question submission funding minimums through the standard proposal process. Round, drand, and rating changes apply to new rounds only: each round snapshots configuration at creation time, so in-progress rounds keep the rules they started with. Question funding settings are snapshotted per submission.",
+            text: "Governance can change round defaults, creator bounds, reveal grace, drand metadata, rating configuration, and question submission funding minimums through the standard proposal process. Creator-selected round settings are validated at submission and stored per question. Each round snapshots that question config at creation time, so in-progress rounds keep the rules they started with even if governance changes defaults or bounds later. Question funding settings are snapshotted per submission.",
           },
         ],
       },

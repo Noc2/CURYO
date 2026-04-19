@@ -32,7 +32,7 @@ function getExpiryTimestamp(days: number): bigint {
 
 const FRONTEND_FEE_PERCENT = DEFAULT_REWARD_POOL_FRONTEND_FEE_BPS / 100;
 const REQUIRED_VOTERS_TOOLTIP =
-  "How many eligible revealed voters a round needs before that round can count toward this bounty.";
+  "How many eligible revealed voters a round needs before that round can count toward this bounty. This cannot exceed the question's selected voter cap.";
 const SETTLED_ROUNDS_TOOLTIP =
   "How many qualifying settled rounds must complete before the bounty is filled and funds can be paid out.";
 const REFUND_AFTER_TOOLTIP =
