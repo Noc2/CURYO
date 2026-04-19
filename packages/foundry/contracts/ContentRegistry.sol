@@ -336,55 +336,6 @@ contract ContentRegistry is Initializable, AccessControlUpgradeable, PausableUpg
         emit SubmissionReservationExpired(pending.submitter, revealCommitment);
     }
 
-    function submitQuestionWithMediaWithReward(
-        string[] memory imageUrls,
-        string memory videoUrl,
-        string memory title,
-        string memory description,
-        string memory tags,
-        uint256 categoryId,
-        bytes32 salt,
-        uint8 rewardAsset,
-        uint256 rewardAmount,
-        uint256 requiredVoters,
-        uint256 requiredSettledRounds,
-        uint256 rewardPoolExpiresAt
-    ) public nonReentrant whenNotPaused returns (uint256) {
-        return _submitValidatedQuestionWithMedia(
-            _validatedMediaSubmissionMetadata(imageUrls, videoUrl, title, description, tags, categoryId),
-            imageUrls,
-            videoUrl,
-            salt,
-            _submissionRewardTerms(
-                rewardAsset, rewardAmount, requiredVoters, requiredSettledRounds, rewardPoolExpiresAt
-            ),
-            _defaultRoundConfig(),
-            false
-        );
-    }
-
-    function submitQuestionWithMediaWithRewardAndRoundConfig(
-        string[] memory imageUrls,
-        string memory videoUrl,
-        string memory title,
-        string memory description,
-        string memory tags,
-        uint256 categoryId,
-        bytes32 salt,
-        SubmissionRewardTerms calldata rewardTerms,
-        RoundLib.RoundConfig calldata roundConfig
-    ) external nonReentrant whenNotPaused returns (uint256) {
-        return _submitValidatedQuestionWithMedia(
-            _validatedMediaSubmissionMetadata(imageUrls, videoUrl, title, description, tags, categoryId),
-            imageUrls,
-            videoUrl,
-            salt,
-            rewardTerms,
-            _validatedRoundConfig(roundConfig),
-            true
-        );
-    }
-
     function submitQuestionWithReward(
         string memory contextUrl,
         string[] memory imageUrls,

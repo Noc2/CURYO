@@ -229,26 +229,6 @@ const CONTENT_REGISTRY_SUBMISSION_ABI = [
     outputs: [{ name: "", type: "uint256" }],
     stateMutability: "nonpayable",
   },
-  {
-    type: "function",
-    name: "submitQuestionWithMediaWithReward",
-    inputs: [
-      { name: "imageUrls", type: "string[]" },
-      { name: "videoUrl", type: "string" },
-      { name: "title", type: "string" },
-      { name: "description", type: "string" },
-      { name: "tags", type: "string" },
-      { name: "categoryId", type: "uint256" },
-      { name: "salt", type: "bytes32" },
-      { name: "rewardAsset", type: "uint8" },
-      { name: "rewardAmount", type: "uint256" },
-      { name: "requiredVoters", type: "uint256" },
-      { name: "requiredSettledRounds", type: "uint256" },
-      { name: "rewardPoolExpiresAt", type: "uint256" },
-    ],
-    outputs: [{ name: "", type: "uint256" }],
-    stateMutability: "nonpayable",
-  },
 ] as const;
 
 let ensureFreeTransactionQuotaTablePromise: Promise<void> | null = null;
@@ -746,7 +726,6 @@ function validateSponsoredCalls(
           functionName === "submitQuestion" ||
           functionName === "submitQuestionWithReward" ||
           functionName === "submitQuestionWithRewardAndRoundConfig" ||
-          functionName === "submitQuestionWithMediaWithReward" ||
           functionName === "submitQuestionWithMedia"
         ) {
           continue;
