@@ -48,6 +48,9 @@ contract QuestionRewardPoolEscrow is
         address funder;
         address funderIdentity;
         uint256 funderVoterId;
+        address submitterIdentity;
+        uint256 submitterVoterId;
+        address submitterVoterIdNFT;
         uint8 asset;
         uint256 fundedAmount;
         uint256 unallocatedAmount;
@@ -238,6 +241,8 @@ contract QuestionRewardPoolEscrow is
         if (funderVoterId != 0 && funderIdentity == address(0)) {
             funderIdentity = funder;
         }
+        address submitterIdentity = registry.getSubmitterIdentity(contentId);
+        uint256 submitterVoterId = submitterIdentity == address(0) ? 0 : voterIdNFT.getTokenId(submitterIdentity);
 
         rewardPoolId = nextRewardPoolId++;
         rewardPools[rewardPoolId] = RewardPool({
@@ -249,6 +254,9 @@ contract QuestionRewardPoolEscrow is
             funder: funder,
             funderIdentity: funderIdentity,
             funderVoterId: funderVoterId,
+            submitterIdentity: submitterIdentity,
+            submitterVoterId: submitterVoterId,
+            submitterVoterIdNFT: address(voterIdNFT),
             asset: asset,
             fundedAmount: fundedAmount,
             unallocatedAmount: fundedAmount,
@@ -588,11 +596,7 @@ contract QuestionRewardPoolEscrow is
         if (funderVoterId != 0 && _hasRevealedCommit(rewardPool.contentId, roundId, funderVoterId)) {
             eligibleVoters--;
         }
-        uint256 submitterVoterId = _submitterVoterId(rewardPool.contentId, roundId);
-        if (
-            submitterVoterId != 0 && submitterVoterId != funderVoterId
-                && _hasRevealedCommit(rewardPool.contentId, roundId, submitterVoterId)
-        ) {
+        if (_submitterHasRevealedCommit(rewardPool, roundId, funderVoterId)) {
             eligibleVoters--;
         }
         canQualify = eligibleVoters >= rewardPool.requiredVoters;
@@ -718,8 +722,11 @@ contract QuestionRewardPoolEscrow is
         view
         returns (bool)
     {
-        return voterId != 0 && voterId == _funderVoterIdForRound(rewardPool, roundId)
-            || voterId == _submitterVoterId(rewardPool.contentId, roundId);
+        return voterId != 0
+            && (
+                voterId == _funderVoterIdForRound(rewardPool, roundId)
+                    || _isSubmitterVoterIdForRound(rewardPool, roundId, voterId)
+            );
     }
 
     function _funderVoterIdForRound(RewardPool storage rewardPool, uint256 roundId) internal view returns (uint256) {
@@ -734,10 +741,52 @@ contract QuestionRewardPoolEscrow is
         return rewardPool.funderVoterId;
     }
 
-    function _submitterVoterId(uint256 contentId, uint256 roundId) internal view returns (uint256) {
-        address submitterIdentity = registry.getSubmitterIdentity(contentId);
+    function _submitterHasRevealedCommit(RewardPool storage rewardPool, uint256 roundId, uint256 funderVoterId)
+        internal
+        view
+        returns (bool)
+    {
+        uint256 currentVoterId = _currentSubmitterVoterId(rewardPool, roundId);
+        if (
+            currentVoterId != 0 && currentVoterId != funderVoterId
+                && _hasRevealedCommit(rewardPool.contentId, roundId, currentVoterId)
+        ) {
+            return true;
+        }
+
+        uint256 snapshotVoterId = rewardPool.submitterVoterId;
+        return _submitterSnapshotAppliesToRound(rewardPool, roundId) && snapshotVoterId != 0
+            && snapshotVoterId != currentVoterId && snapshotVoterId != funderVoterId
+            && _hasRevealedCommit(rewardPool.contentId, roundId, snapshotVoterId);
+    }
+
+    function _isSubmitterVoterIdForRound(RewardPool storage rewardPool, uint256 roundId, uint256 voterId)
+        internal
+        view
+        returns (bool)
+    {
+        if (_submitterSnapshotAppliesToRound(rewardPool, roundId) && voterId == rewardPool.submitterVoterId) {
+            return true;
+        }
+        return voterId == _currentSubmitterVoterId(rewardPool, roundId);
+    }
+
+    function _submitterSnapshotAppliesToRound(RewardPool storage rewardPool, uint256 roundId)
+        internal
+        view
+        returns (bool)
+    {
+        return rewardPool.submitterVoterIdNFT != address(0)
+            && rewardPool.submitterVoterIdNFT == _roundVoterIdNftAddress(rewardPool.contentId, roundId);
+    }
+
+    function _currentSubmitterVoterId(RewardPool storage rewardPool, uint256 roundId) internal view returns (uint256) {
+        address submitterIdentity = rewardPool.submitterIdentity;
+        if (submitterIdentity == address(0)) {
+            submitterIdentity = registry.getSubmitterIdentity(rewardPool.contentId);
+        }
         if (submitterIdentity == address(0)) return 0;
-        return _voterIdForRound(contentId, roundId, submitterIdentity);
+        return _voterIdForRound(rewardPool.contentId, roundId, submitterIdentity);
     }
 
     function _requireVoterId(address account) internal view returns (uint256 voterId) {
@@ -754,10 +803,11 @@ contract QuestionRewardPoolEscrow is
     }
 
     function _roundVoterIdNft(uint256 contentId, uint256 roundId) internal view returns (IVoterIdNFT) {
+        return IVoterIdNFT(_roundVoterIdNftAddress(contentId, roundId));
+    }
+
+    function _roundVoterIdNftAddress(uint256 contentId, uint256 roundId) internal view returns (address) {
         address snapshot = votingEngine.roundVoterIdNFTSnapshot(contentId, roundId);
-        if (snapshot == address(0)) {
-            return voterIdNFT;
-        }
-        return IVoterIdNFT(snapshot);
+        return snapshot == address(0) ? address(voterIdNFT) : snapshot;
     }
 }

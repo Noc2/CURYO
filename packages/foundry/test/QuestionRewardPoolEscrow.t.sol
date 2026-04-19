@@ -401,6 +401,25 @@ contract QuestionRewardPoolEscrowTest is VotingTestBase {
         assertEq(reward, REWARD_POOL_AMOUNT / 3);
     }
 
+    function testSubmitterSnapshotKeepsOldVoterIdExcludedAfterRemint() public {
+        uint256 contentId = _submitQuestion("");
+        uint256 submitterSnapshotVoterId = voterIdNFT.getTokenId(submitter);
+        uint256 rewardPoolId = _createRewardPool(contentId, REWARD_POOL_AMOUNT, 3, 1);
+
+        voterIdNFT.mint(submitter, 999);
+        assertNotEq(voterIdNFT.getTokenId(submitter), submitterSnapshotVoterId);
+
+        uint256 roundId = 1;
+        _mockSettledRound(contentId, roundId, 3);
+        _mockRevealedCommitForVoterId(contentId, roundId, submitterSnapshotVoterId, submitter);
+        _mockRevealedCommitForVoterId(contentId, roundId, voterIdNFT.getTokenId(voter1), voter1);
+
+        assertEq(rewardPoolEscrow.claimableQuestionReward(rewardPoolId, roundId, voter1), 0);
+        vm.prank(voter1);
+        vm.expectRevert("Too few eligible voters");
+        rewardPoolEscrow.claimQuestionReward(rewardPoolId, roundId);
+    }
+
     function testDelegatedFunderStaysExcludedAfterDelegateRemoval() public {
         uint256 contentId = _submitQuestion("");
 
@@ -633,14 +652,19 @@ contract QuestionRewardPoolEscrowTest is VotingTestBase {
     }
 
     function testUnderfundedRoundDoesNotQualifyAndCanBeSkipped() public {
-        vm.prank(owner);
-        protocolConfig.setConfig(EPOCH_DURATION, 7 days, 3, 3);
+        vm.startPrank(owner);
+        protocolConfig.setSubmissionRewardMinimums(3, 3);
+        vm.stopPrank();
 
-        uint256 contentId = _submitQuestion("");
-        uint256 rewardPoolId = _createRewardPool(contentId, 3, 3, 1);
-
-        vm.prank(owner);
-        protocolConfig.setConfig(EPOCH_DURATION, 7 days, 3, 200);
+        RoundLib.RoundConfig memory roundConfig =
+            RoundLib.RoundConfig({
+                epochDuration: uint32(EPOCH_DURATION),
+                maxDuration: uint32(7 days),
+                minVoters: 3,
+                maxVoters: 4
+            });
+        uint256 contentId = _submitQuestionWithRoundConfig("https://example.com/underfunded.jpg", roundConfig);
+        uint256 rewardPoolId = 1;
 
         uint256 underfundedRoundId = _settleRoundWith(_fourVoters(), contentId, _directions(true, true, false, true));
 
@@ -813,6 +837,56 @@ contract QuestionRewardPoolEscrowTest is VotingTestBase {
         }
 
         votingEngine.settleRound(contentId, roundId);
+    }
+
+    function _mockSettledRound(uint256 contentId, uint256 roundId, uint16 revealedCount) internal {
+        vm.mockCall(
+            address(votingEngine),
+            abi.encodeWithSignature("rounds(uint256,uint256)", contentId, roundId),
+            abi.encode(
+                uint48(block.timestamp),
+                RoundLib.RoundState.Settled,
+                revealedCount,
+                revealedCount,
+                uint64(0),
+                uint64(0),
+                uint64(0),
+                uint16(0),
+                uint16(0),
+                true,
+                uint48(block.timestamp),
+                uint48(block.timestamp),
+                uint64(0),
+                uint64(0)
+            )
+        );
+    }
+
+    function _mockRevealedCommitForVoterId(uint256 contentId, uint256 roundId, uint256 voterId, address voter)
+        internal
+    {
+        bytes32 commitKey = keccak256(abi.encode(contentId, roundId, voterId, voter));
+        vm.mockCall(
+            address(votingEngine),
+            abi.encodeWithSignature("voterIdCommitKey(uint256,uint256,uint256)", contentId, roundId, voterId),
+            abi.encode(commitKey)
+        );
+        vm.mockCall(
+            address(votingEngine),
+            abi.encodeWithSignature("commits(uint256,uint256,bytes32)", contentId, roundId, commitKey),
+            abi.encode(
+                voter,
+                uint64(STAKE),
+                bytes(""),
+                uint64(0),
+                bytes32(0),
+                address(0),
+                uint48(0),
+                true,
+                true,
+                uint8(0)
+            )
+        );
     }
 
     function _registerFrontend(address frontend) internal {
