@@ -54,7 +54,11 @@ export function getRecoveryReason(output, env = process.env) {
 
 export function shouldResetPglite(output, env = process.env) {
   const reason = getRecoveryReason(output, env);
-  return reason === "corrupted PGlite state" || reason === "stale local Ponder sync state after the hardhat/anvil chain was reset";
+  return (
+    reason === "corrupted PGlite state" ||
+    reason === "stuck Ponder database shutdown state" ||
+    reason === "stale local Ponder sync state after the hardhat/anvil chain was reset"
+  );
 }
 
 export function shouldRecover(output, env = process.env) {

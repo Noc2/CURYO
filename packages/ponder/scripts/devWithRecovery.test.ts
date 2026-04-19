@@ -49,11 +49,11 @@ describe("devWithRecovery", () => {
     ).toBeNull();
   });
 
-  test("recovers from a stuck Ponder database shutdown without resetting PGlite", () => {
+  test("resets PGlite after a stuck Ponder database shutdown", () => {
     const output = "ShutdownError: occurred while handling /status\nPONDER_SHUTDOWN_ERROR_STUCK";
 
     expect(shouldRecover(output)).toBe(true);
     expect(getRecoveryReason(output)).toBe("stuck Ponder database shutdown state");
-    expect(shouldResetPglite(output)).toBe(false);
+    expect(shouldResetPglite(output)).toBe(true);
   });
 });
