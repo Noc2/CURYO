@@ -8,6 +8,7 @@ import {
   questionRoundConfigsEqual,
   serializeQuestionRoundConfig,
 } from "~~/lib/questionRoundConfig";
+import { buildQuestionSubmissionRevealCommitment } from "~~/lib/questionSubmissionCommitment";
 
 const RESERVED_SUBMISSION_STORAGE_PREFIX = "curyo:reserved-submission:";
 const RESERVED_SUBMISSION_SECRET_STORAGE_KEY = `${RESERVED_SUBMISSION_STORAGE_PREFIX}secret`;
@@ -137,51 +138,21 @@ export function buildSubmissionRevealCommitment(
   salt: `0x${string}`,
   submitterAddress: `0x${string}`,
 ): `0x${string}` {
-  const legacyCommitment = keccak256(
-    encodeAbiParameters(
-      [
-        { type: "bytes32" },
-        { type: "string" },
-        { type: "string" },
-        { type: "string" },
-        { type: "uint256" },
-        { type: "bytes32" },
-        { type: "address" },
-        { type: "uint8" },
-        { type: "uint256" },
-        { type: "uint256" },
-        { type: "uint256" },
-        { type: "uint256" },
-      ],
-      [
-        draft.submissionKey,
-        draft.title,
-        draft.description,
-        draft.tags,
-        draft.categoryId,
-        salt,
-        submitterAddress,
-        draft.rewardAsset,
-        draft.rewardAmount,
-        draft.requiredVoters,
-        draft.requiredSettledRounds,
-        draft.rewardPoolExpiresAt,
-      ],
-    ),
-  );
-
-  return keccak256(
-    encodeAbiParameters(
-      [{ type: "bytes32" }, { type: "uint32" }, { type: "uint32" }, { type: "uint16" }, { type: "uint16" }],
-      [
-        legacyCommitment,
-        Number(draft.roundConfig.epochDuration),
-        Number(draft.roundConfig.maxDuration),
-        Number(draft.roundConfig.minVoters),
-        Number(draft.roundConfig.maxVoters),
-      ],
-    ),
-  );
+  return buildQuestionSubmissionRevealCommitment({
+    categoryId: draft.categoryId,
+    description: draft.description,
+    rewardAmount: draft.rewardAmount,
+    rewardAsset: draft.rewardAsset,
+    requiredSettledRounds: draft.requiredSettledRounds,
+    requiredVoters: draft.requiredVoters,
+    rewardPoolExpiresAt: draft.rewardPoolExpiresAt,
+    roundConfig: draft.roundConfig,
+    salt,
+    submissionKey: draft.submissionKey,
+    submitter: submitterAddress,
+    tags: draft.tags,
+    title: draft.title,
+  });
 }
 
 export function createStoredSubmissionReservation(

@@ -9,6 +9,7 @@
  * the call with viem and send via eth_sendTransaction.
  */
 import { parseRound } from "../../lib/contracts/roundVotingEngine";
+import { buildQuestionSubmissionRevealCommitment } from "../../lib/questionSubmissionCommitment";
 import { ANVIL_ACCOUNTS } from "./anvil-accounts";
 import { runCommitAttempts } from "./commit-attempts";
 import { type RpcSendResult, isRetryableDirectCommitSendResult } from "./direct-commit-retry";
@@ -187,9 +188,7 @@ async function buildSubmissionReservation(
   rewardAmount: bigint = DEFAULT_SUBMISSION_REWARD_AMOUNT,
   roundConfig: SubmissionRoundConfig = DEFAULT_SUBMISSION_ROUND_CONFIG,
 ): Promise<{ revealCommitment: `0x${string}`; salt: `0x${string}` } | null> {
-  const { decodeFunctionResult, encodeAbiParameters, encodeFunctionData, keccak256, stringToHex } = await import(
-    "viem"
-  );
+  const { decodeFunctionResult, encodeFunctionData, keccak256, stringToHex } = await import("viem");
 
   const previewAbi = [
     {
@@ -230,50 +229,21 @@ async function buildSubmissionReservation(
   }) as readonly [bigint, `0x${string}`];
 
   const salt = keccak256(stringToHex(`${fromAddress}:${categoryId}:${JSON.stringify(media)}:${title}:${Date.now()}`));
-  const legacyCommitment = keccak256(
-    encodeAbiParameters(
-      [
-        { type: "bytes32" },
-        { type: "string" },
-        { type: "string" },
-        { type: "string" },
-        { type: "uint256" },
-        { type: "bytes32" },
-        { type: "address" },
-        { type: "uint8" },
-        { type: "uint256" },
-        { type: "uint256" },
-        { type: "uint256" },
-        { type: "uint256" },
-      ],
-      [
-        submissionKey,
-        title,
-        description,
-        tags,
-        categoryId,
-        salt,
-        fromAddress as `0x${string}`,
-        DEFAULT_SUBMISSION_REWARD_ASSET_CREP,
-        rewardAmount,
-        DEFAULT_SUBMISSION_REWARD_REQUIRED_VOTERS,
-        DEFAULT_SUBMISSION_REWARD_SETTLED_ROUNDS,
-        DEFAULT_SUBMISSION_REWARD_EXPIRES_AT,
-      ],
-    ),
-  );
-  const revealCommitment = keccak256(
-    encodeAbiParameters(
-      [{ type: "bytes32" }, { type: "uint32" }, { type: "uint32" }, { type: "uint16" }, { type: "uint16" }],
-      [
-        legacyCommitment,
-        roundConfig.epochDuration,
-        roundConfig.maxDuration,
-        roundConfig.minVoters,
-        roundConfig.maxVoters,
-      ],
-    ),
-  );
+  const revealCommitment = buildQuestionSubmissionRevealCommitment({
+    categoryId,
+    description,
+    rewardAmount,
+    rewardAsset: DEFAULT_SUBMISSION_REWARD_ASSET_CREP,
+    requiredSettledRounds: DEFAULT_SUBMISSION_REWARD_SETTLED_ROUNDS,
+    requiredVoters: DEFAULT_SUBMISSION_REWARD_REQUIRED_VOTERS,
+    rewardPoolExpiresAt: DEFAULT_SUBMISSION_REWARD_EXPIRES_AT,
+    roundConfig,
+    salt,
+    submissionKey,
+    submitter: fromAddress as `0x${string}`,
+    tags,
+    title,
+  });
 
   return { revealCommitment, salt };
 }

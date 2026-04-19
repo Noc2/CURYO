@@ -11,11 +11,9 @@ import {
   createPublicClient,
   createWalletClient,
   decodeEventLog,
-  encodeAbiParameters,
   erc20Abi,
   http,
   isAddress,
-  keccak256,
 } from "viem";
 import { privateKeyToAccount } from "viem/accounts";
 import { dbClient } from "~~/lib/db";
@@ -29,6 +27,7 @@ import {
   getX402UsdcAddressOverride,
 } from "~~/lib/env/server";
 import { questionRoundConfigToAbi, serializeQuestionRoundConfig } from "~~/lib/questionRoundConfig";
+import { buildQuestionSubmissionRevealCommitment } from "~~/lib/questionSubmissionCommitment";
 import {
   type X402QuestionOperation,
   type X402QuestionPayload,
@@ -320,67 +319,6 @@ function createViemClients(config: X402QuestionSubmissionConfig) {
 type X402PublicClient = ReturnType<typeof createViemClients>["publicClient"];
 type X402WalletClient = ReturnType<typeof createViemClients>["walletClient"];
 
-function buildSubmissionRevealCommitment(params: {
-  categoryId: bigint;
-  description: string;
-  rewardAmount: bigint;
-  requiredSettledRounds: bigint;
-  requiredVoters: bigint;
-  rewardPoolExpiresAt: bigint;
-  roundConfig: X402QuestionPayload["roundConfig"];
-  salt: Hex;
-  submissionKey: Hex;
-  submitter: Address;
-  tags: string;
-  title: string;
-}): Hex {
-  const legacyCommitment = keccak256(
-    encodeAbiParameters(
-      [
-        { type: "bytes32" },
-        { type: "string" },
-        { type: "string" },
-        { type: "string" },
-        { type: "uint256" },
-        { type: "bytes32" },
-        { type: "address" },
-        { type: "uint8" },
-        { type: "uint256" },
-        { type: "uint256" },
-        { type: "uint256" },
-        { type: "uint256" },
-      ],
-      [
-        params.submissionKey,
-        params.title,
-        params.description,
-        params.tags,
-        params.categoryId,
-        params.salt,
-        params.submitter,
-        X402_SUBMISSION_REWARD_ASSET_USDC,
-        params.rewardAmount,
-        params.requiredVoters,
-        params.requiredSettledRounds,
-        params.rewardPoolExpiresAt,
-      ],
-    ),
-  );
-
-  return keccak256(
-    encodeAbiParameters(
-      [{ type: "bytes32" }, { type: "uint32" }, { type: "uint32" }, { type: "uint16" }, { type: "uint16" }],
-      [
-        legacyCommitment,
-        Number(params.roundConfig.epochDuration),
-        Number(params.roundConfig.maxDuration),
-        Number(params.roundConfig.minVoters),
-        Number(params.roundConfig.maxVoters),
-      ],
-    ),
-  );
-}
-
 async function waitForSuccessfulReceipt(publicClient: X402PublicClient, hash: Hex): Promise<TransactionReceipt> {
   const receipt = await publicClient.waitForTransactionReceipt({
     hash,
@@ -531,10 +469,11 @@ export async function executeX402QuestionSubmission(params: {
   }
 
   const salt = `0x${randomBytes(32).toString("hex")}` as Hex;
-  const revealCommitment = buildSubmissionRevealCommitment({
+  const revealCommitment = buildQuestionSubmissionRevealCommitment({
     categoryId: params.payload.categoryId,
     description: params.payload.description,
     rewardAmount: params.payload.bounty.amount,
+    rewardAsset: X402_SUBMISSION_REWARD_ASSET_USDC,
     requiredSettledRounds: params.payload.bounty.requiredSettledRounds,
     requiredVoters: params.payload.bounty.requiredVoters,
     rewardPoolExpiresAt: params.payload.bounty.rewardPoolExpiresAt,
