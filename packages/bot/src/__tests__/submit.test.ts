@@ -211,9 +211,11 @@ afterEach(() => {
 });
 
 function buildExpectedRevealCommitment(): Hex {
+  const mediaHash = keccak256(encodeAbiParameters([{ type: "string[]" }, { type: "string" }], [[], ""]));
   const legacyCommitment = keccak256(
     encodeAbiParameters(
       [
+        { type: "bytes32" },
         { type: "bytes32" },
         { type: "string" },
         { type: "string" },
@@ -229,6 +231,7 @@ function buildExpectedRevealCommitment(): Hex {
       ],
       [
         SUBMISSION_KEY,
+        mediaHash,
         ITEM.title,
         ITEM.description,
         ITEM.tags,

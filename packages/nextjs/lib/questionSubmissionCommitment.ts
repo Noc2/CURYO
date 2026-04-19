@@ -10,6 +10,7 @@ type QuestionSubmissionRoundConfig = {
 type QuestionSubmissionRevealCommitmentParams = {
   categoryId: bigint;
   description: string;
+  imageUrls: readonly string[];
   rewardAmount: bigint;
   rewardAsset: number;
   requiredSettledRounds: bigint;
@@ -21,12 +22,17 @@ type QuestionSubmissionRevealCommitmentParams = {
   submitter: Address;
   tags: string;
   title: string;
+  videoUrl: string;
 };
 
 export function buildQuestionSubmissionRevealCommitment(params: QuestionSubmissionRevealCommitmentParams): Hex {
+  const mediaHash = keccak256(
+    encodeAbiParameters([{ type: "string[]" }, { type: "string" }], [[...params.imageUrls], params.videoUrl]),
+  );
   const legacyCommitment = keccak256(
     encodeAbiParameters(
       [
+        { type: "bytes32" },
         { type: "bytes32" },
         { type: "string" },
         { type: "string" },
@@ -42,6 +48,7 @@ export function buildQuestionSubmissionRevealCommitment(params: QuestionSubmissi
       ],
       [
         params.submissionKey,
+        mediaHash,
         params.title,
         params.description,
         params.tags,

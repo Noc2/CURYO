@@ -97,6 +97,8 @@ export function deriveSubmissionReservationSalt(
         { type: "address" },
         { type: "bytes32" },
         { type: "string" },
+        { type: "string[]" },
+        { type: "string" },
         { type: "string" },
         { type: "string" },
         { type: "uint256" },
@@ -116,6 +118,8 @@ export function deriveSubmissionReservationSalt(
         submitterAddress,
         draft.submissionKey,
         draft.title,
+        draft.imageUrls,
+        draft.videoUrl,
         draft.description,
         draft.tags,
         draft.categoryId,
@@ -141,6 +145,7 @@ export function buildSubmissionRevealCommitment(
   return buildQuestionSubmissionRevealCommitment({
     categoryId: draft.categoryId,
     description: draft.description,
+    imageUrls: draft.imageUrls,
     rewardAmount: draft.rewardAmount,
     rewardAsset: draft.rewardAsset,
     requiredSettledRounds: draft.requiredSettledRounds,
@@ -152,6 +157,7 @@ export function buildSubmissionRevealCommitment(
     submitter: submitterAddress,
     tags: draft.tags,
     title: draft.title,
+    videoUrl: draft.videoUrl,
   });
 }
 

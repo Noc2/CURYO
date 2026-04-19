@@ -64,6 +64,7 @@ const ACCOUNTS = {
 } as const;
 
 const STAKE = 10n * 10n ** 6n;
+const DEFAULT_SUBMISSION_REWARD_AMOUNT = 1_000_000n;
 
 function makeLogger() {
   return {
@@ -223,6 +224,12 @@ describe("resolveRounds integration", () => {
       functionName: "nextContentId",
       args: [],
     })) as bigint;
+    const questionRewardPoolEscrow = (await publicClient.readContract({
+      address: CONTRACTS.contentRegistry,
+      abi: ContentRegistryAbi,
+      functionName: "questionRewardPoolEscrow",
+      args: [],
+    })) as `0x${string}`;
 
     await waitForReceipt(
       publicClient,
@@ -232,7 +239,7 @@ describe("resolveRounds integration", () => {
         address: CONTRACTS.crep,
         abi: CuryoReputationAbi,
         functionName: "approve",
-        args: [CONTRACTS.contentRegistry, STAKE],
+        args: [questionRewardPoolEscrow, DEFAULT_SUBMISSION_REWARD_AMOUNT],
       }),
     );
 
@@ -248,9 +255,13 @@ describe("resolveRounds integration", () => {
       functionName: "previewQuestionMediaSubmissionKey",
       args: [[submissionImageUrl], "", submissionTitle, submissionDescription, submissionTags, submissionCategoryId],
     })) as readonly [bigint, `0x${string}`];
+    const submissionMediaHash = keccak256(
+      encodeAbiParameters([{ type: "string[]" }, { type: "string" }], [[submissionImageUrl], ""]),
+    );
     const revealCommitment = keccak256(
       encodeAbiParameters(
         [
+          { type: "bytes32" },
           { type: "bytes32" },
           { type: "string" },
           { type: "string" },
@@ -258,15 +269,26 @@ describe("resolveRounds integration", () => {
           { type: "uint256" },
           { type: "bytes32" },
           { type: "address" },
+          { type: "uint8" },
+          { type: "uint256" },
+          { type: "uint256" },
+          { type: "uint256" },
+          { type: "uint256" },
         ],
         [
           submissionKey,
+          submissionMediaHash,
           submissionTitle,
           submissionDescription,
           submissionTags,
           submissionCategoryId,
           submissionSalt,
           ACCOUNTS.submitter.address,
+          0,
+          DEFAULT_SUBMISSION_REWARD_AMOUNT,
+          3n,
+          1n,
+          0n,
         ],
       ),
     );

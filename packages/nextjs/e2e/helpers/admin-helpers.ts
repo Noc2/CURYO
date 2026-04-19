@@ -232,6 +232,7 @@ async function buildSubmissionReservation(
   const revealCommitment = buildQuestionSubmissionRevealCommitment({
     categoryId,
     description,
+    imageUrls: media.imageUrls,
     rewardAmount,
     rewardAsset: DEFAULT_SUBMISSION_REWARD_ASSET_CREP,
     requiredSettledRounds: DEFAULT_SUBMISSION_REWARD_SETTLED_ROUNDS,
@@ -243,6 +244,7 @@ async function buildSubmissionReservation(
     submitter: fromAddress as `0x${string}`,
     tags,
     title,
+    videoUrl: media.videoUrl,
   });
 
   return { revealCommitment, salt };

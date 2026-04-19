@@ -208,9 +208,13 @@ const [, submissionKey] = await publicClient.readContract({
   args: [contextUrl, media.imageUrls, media.videoUrl, title, description, tags, BigInt(categoryId)],
 });
 
+const mediaHash = keccak256(
+  encodeAbiParameters([{ type: "string[]" }, { type: "string" }], [media.imageUrls, media.videoUrl]),
+);
 const revealCommitment = keccak256(
   encodeAbiParameters(
     [
+      { type: "bytes32" },
       { type: "bytes32" },
       { type: "string" },
       { type: "string" },
@@ -226,6 +230,7 @@ const revealCommitment = keccak256(
     ],
     [
       submissionKey,
+      mediaHash,
       title,
       description,
       tags,

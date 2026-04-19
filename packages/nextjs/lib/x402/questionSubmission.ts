@@ -472,6 +472,7 @@ export async function executeX402QuestionSubmission(params: {
   const revealCommitment = buildQuestionSubmissionRevealCommitment({
     categoryId: params.payload.categoryId,
     description: params.payload.description,
+    imageUrls: params.payload.imageUrls,
     rewardAmount: params.payload.bounty.amount,
     rewardAsset: X402_SUBMISSION_REWARD_ASSET_USDC,
     requiredSettledRounds: params.payload.bounty.requiredSettledRounds,
@@ -483,6 +484,7 @@ export async function executeX402QuestionSubmission(params: {
     submitter: account.address,
     tags: params.payload.tags,
     title: params.payload.title,
+    videoUrl: params.payload.videoUrl,
   });
 
   const transactionHashes: Hex[] = [];

@@ -126,6 +126,7 @@ function createSubmissionSalt(): Hex {
 function buildSubmissionRevealCommitment(params: {
   categoryId: bigint;
   description: string;
+  imageUrls: readonly string[];
   salt: Hex;
   submissionKey: Hex;
   submitter: Hex;
@@ -137,10 +138,15 @@ function buildSubmissionRevealCommitment(params: {
   requiredSettledRounds: number;
   rewardPoolExpiresAt: bigint;
   roundConfig: BotRoundConfig;
+  videoUrl: string;
 }): Hex {
+  const mediaHash = keccak256(
+    encodeAbiParameters([{ type: "string[]" }, { type: "string" }], [[...params.imageUrls], params.videoUrl]),
+  );
   const legacyCommitment = keccak256(
     encodeAbiParameters(
       [
+        { type: "bytes32" },
         { type: "bytes32" },
         { type: "string" },
         { type: "string" },
@@ -156,6 +162,7 @@ function buildSubmissionRevealCommitment(params: {
       ],
       [
         params.submissionKey,
+        mediaHash,
         params.title,
         params.description,
         params.tags,
@@ -654,6 +661,7 @@ export async function runSubmit(options: SubmitRunOptions = {}) {
           submissionKey,
           title,
           description,
+          imageUrls: media.imageUrls,
           tags: item.tags,
           categoryId: requestedCategoryId,
           salt,
@@ -664,6 +672,7 @@ export async function runSubmit(options: SubmitRunOptions = {}) {
           requiredSettledRounds: config.submitRewardRequiredSettledRounds,
           rewardPoolExpiresAt: config.submitRewardPoolExpiresAt,
           roundConfig,
+          videoUrl: media.videoUrl,
         });
 
         const approveTx = await ensureCrepAllowance({

@@ -90,6 +90,27 @@ test("buildSubmissionRevealCommitment changes when bounty terms change", () => {
   assert.notEqual(initial, edited);
 });
 
+test("buildSubmissionRevealCommitment changes when media changes", () => {
+  const initial = buildSubmissionRevealCommitment(
+    {
+      ...DEFAULT_DRAFT,
+    },
+    SALT,
+    ADDRESS,
+  );
+
+  const edited = buildSubmissionRevealCommitment(
+    {
+      ...DEFAULT_DRAFT,
+      imageUrls: [...DEFAULT_DRAFT.imageUrls, "https://example.com/extra.jpg"],
+    },
+    SALT,
+    ADDRESS,
+  );
+
+  assert.notEqual(initial, edited);
+});
+
 test("buildSubmissionRevealCommitment changes when round config changes", () => {
   const initial = buildSubmissionRevealCommitment(
     {
