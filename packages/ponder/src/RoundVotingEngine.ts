@@ -1,6 +1,6 @@
 import { ponder } from "ponder:registry";
 import { eq, and } from "ponder";
-import { ROUND_STATE } from "@curyo/contracts/protocol";
+import { DEFAULT_ROUND_CONFIG, ROUND_STATE } from "@curyo/contracts/protocol";
 import {
   round,
   vote,
@@ -15,6 +15,59 @@ import {
   voterStreak,
 } from "ponder:schema";
 import { formatUtcDateKey, getPreviousUtcDateKey, normalizeUtcDateKey } from "./streak-utils.js";
+
+function defaultRoundConfigFields() {
+  return {
+    epochDuration: DEFAULT_ROUND_CONFIG.epochDurationSeconds,
+    maxDuration: DEFAULT_ROUND_CONFIG.maxDurationSeconds,
+    minVoters: DEFAULT_ROUND_CONFIG.minVoters,
+    maxVoters: DEFAULT_ROUND_CONFIG.maxVoters,
+  };
+}
+
+ponder.on("RoundVotingEngine:RoundConfigSnapshotted", async ({ event, context }) => {
+  const { contentId, roundId, epochDuration, maxDuration, minVoters, maxVoters } = event.args;
+  const roundKey = `${contentId}-${roundId}`;
+  const contentRecord = await context.db.find(content, { id: contentId });
+  const referenceRatingBps = contentRecord
+    ? (contentRecord.ratingBps > 0 ? contentRecord.ratingBps : contentRecord.rating * 100)
+    : 5000;
+  const roundConfigFields = {
+    epochDuration: Number(epochDuration),
+    maxDuration: Number(maxDuration),
+    minVoters: Number(minVoters),
+    maxVoters: Number(maxVoters),
+  };
+
+  const existingRound = await context.db.find(round, { id: roundKey });
+  if (existingRound) {
+    await context.db.update(round, { id: roundKey }).set(roundConfigFields);
+    return;
+  }
+
+  await context.db.insert(round).values({
+    id: roundKey,
+    contentId,
+    roundId,
+    state: ROUND_STATE.Open,
+    voteCount: 0,
+    revealedCount: 0,
+    totalStake: 0n,
+    upPool: 0n,
+    downPool: 0n,
+    upCount: 0,
+    downCount: 0,
+    referenceRatingBps,
+    ratingBps: referenceRatingBps,
+    conservativeRatingBps: referenceRatingBps,
+    confidenceMass: 0n,
+    effectiveEvidence: 0n,
+    settledRounds: 0,
+    lowSince: 0n,
+    startTime: event.block.timestamp,
+    ...roundConfigFields,
+  });
+});
 
 ponder.on("RoundVotingEngine:VoteCommitted", async ({ event, context }) => {
   const { contentId, roundId, voter, commitHash, targetRound, drandChainHash, stake } = event.args as {
@@ -62,6 +115,7 @@ ponder.on("RoundVotingEngine:VoteCommitted", async ({ event, context }) => {
       settledRounds: 0,
       lowSince: 0n,
       startTime: event.block.timestamp,
+      ...defaultRoundConfigFields(),
     });
   } else {
     await context.db.update(round, { id: roundKey }).set((row) => ({

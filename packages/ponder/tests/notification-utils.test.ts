@@ -10,4 +10,9 @@ describe("canRoundSettleSoon", () => {
     expect(canRoundSettleSoon(3)).toBe(true);
     expect(canRoundSettleSoon(4)).toBe(true);
   });
+
+  it("uses the round-specific minimum voter threshold when provided", () => {
+    expect(canRoundSettleSoon(3, 5)).toBe(false);
+    expect(canRoundSettleSoon(5, 5)).toBe(true);
+  });
 });

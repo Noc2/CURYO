@@ -28,6 +28,26 @@ async function readRatingStateAtEventBlock(
   });
 }
 
+async function readContentRoundConfigAtEventBlock(
+  context: Parameters<Parameters<typeof ponder.on>[1]>[0]["context"],
+  contentId: bigint,
+) {
+  const contentRegistryAddress = Array.isArray(context.contracts.ContentRegistry.address)
+    ? context.contracts.ContentRegistry.address[0]
+    : context.contracts.ContentRegistry.address;
+
+  if (!contentRegistryAddress) {
+    throw new Error("Missing ContentRegistry address in Ponder context");
+  }
+
+  return context.client.readContract({
+    abi: ContentRegistryAbi,
+    address: contentRegistryAddress,
+    functionName: "getContentRoundConfig",
+    args: [contentId],
+  });
+}
+
 function mediaRowId(contentId: bigint, mediaIndex: number) {
   return `${contentId.toString()}-${mediaIndex}`;
 }
@@ -63,6 +83,7 @@ ponder.on("ContentRegistry:ContentSubmitted", async ({ event, context }) => {
   const { contentId, submitter, contentHash, url, title, description, tags, categoryId } =
     event.args;
   const canonicalUrl = getCanonicalUrlParts(url);
+  const roundConfig = await readContentRoundConfigAtEventBlock(context, contentId);
 
   await context.db
     .insert(content)
@@ -90,6 +111,10 @@ ponder.on("ContentRegistry:ContentSubmitted", async ({ event, context }) => {
       lastActivityAt: event.block.timestamp,
       totalVotes: 0,
       totalRounds: 0,
+      roundEpochDuration: Number(roundConfig.epochDuration),
+      roundMaxDuration: Number(roundConfig.maxDuration),
+      roundMinVoters: Number(roundConfig.minVoters),
+      roundMaxVoters: Number(roundConfig.maxVoters),
     })
     .onConflictDoNothing();
 
@@ -124,6 +149,19 @@ ponder.on("ContentRegistry:ContentSubmitted", async ({ event, context }) => {
     .onConflictDoUpdate((row) => ({
       totalContent: row.totalContent + 1,
     }));
+});
+
+ponder.on("ContentRegistry:ContentRoundConfigSet", async ({ event, context }) => {
+  const { contentId, epochDuration, maxDuration, minVoters, maxVoters } = event.args;
+  const existingContent = await context.db.find(content, { id: contentId });
+  if (!existingContent) return;
+
+  await context.db.update(content, { id: contentId }).set({
+    roundEpochDuration: Number(epochDuration),
+    roundMaxDuration: Number(maxDuration),
+    roundMinVoters: Number(minVoters),
+    roundMaxVoters: Number(maxVoters),
+  });
 });
 
 ponder.on("ContentRegistry:ContentMediaSubmitted", async ({ event, context }) => {

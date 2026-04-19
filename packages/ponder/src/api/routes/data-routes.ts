@@ -266,6 +266,10 @@ export function registerDataRoutes(app: ApiApp) {
         committedAt: vote.committedAt,
         revealedAt: vote.revealedAt,
         roundStartTime: round.startTime,
+        roundEpochDuration: round.epochDuration,
+        roundMaxDuration: round.maxDuration,
+        roundMinVoters: round.minVoters,
+        roundMaxVoters: round.maxVoters,
         roundState: round.state,
         roundUpWins: round.upWins,
       })

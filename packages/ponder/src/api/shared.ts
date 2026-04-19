@@ -53,12 +53,15 @@ export function parseAddressList(value: string | undefined, max = 200) {
   return items;
 }
 
-export function getEstimatedSettlementTime(startTime: bigint | null | undefined) {
+export function getEstimatedSettlementTime(
+  startTime: bigint | null | undefined,
+  epochDurationSeconds = DEFAULT_ROUND_CONFIG.epochDurationSeconds,
+) {
   if (startTime === null || startTime === undefined) return null;
 
   return (
     startTime
-    + BigInt(DEFAULT_ROUND_CONFIG.epochDurationSeconds)
+    + BigInt(epochDurationSeconds)
     + BigInt(DEFAULT_REVEAL_GRACE_PERIOD_SECONDS)
   );
 }
@@ -129,6 +132,10 @@ export async function attachOpenRoundSummary<T extends { id: bigint }>(items: T[
       settledRounds: round.settledRounds,
       lowSince: round.lowSince,
       startTime: round.startTime,
+      epochDuration: round.epochDuration,
+      maxDuration: round.maxDuration,
+      minVoters: round.minVoters,
+      maxVoters: round.maxVoters,
     })
     .from(round)
     .where(and(inArray(round.contentId, contentIds), eq(round.state, ROUND_STATE.Open)))
@@ -169,7 +176,11 @@ export async function attachOpenRoundSummary<T extends { id: bigint }>(items: T[
             settledRounds: openRound.settledRounds,
             lowSince: openRound.lowSince,
             startTime: openRound.startTime,
-            estimatedSettlementTime: getEstimatedSettlementTime(openRound.startTime),
+            epochDuration: openRound.epochDuration,
+            maxDuration: openRound.maxDuration,
+            minVoters: openRound.minVoters,
+            maxVoters: openRound.maxVoters,
+            estimatedSettlementTime: getEstimatedSettlementTime(openRound.startTime, openRound.epochDuration),
           }
         : null,
     };

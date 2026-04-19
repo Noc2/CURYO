@@ -76,6 +76,109 @@ afterEach(() => {
 });
 
 describe("ContentRegistry ponder handlers", () => {
+  it("indexes selected round config when content is submitted", async () => {
+    const { db, insertCalls } = createDb();
+    const readContract = vi.fn(async () => ({
+      epochDuration: 600,
+      maxDuration: 7200,
+      minVoters: 5,
+      maxVoters: 50,
+    }));
+
+    const registeredHandlers = await loadHandlers();
+    const handler = registeredHandlers.get("ContentRegistry:ContentSubmitted");
+
+    expect(handler).toBeDefined();
+
+    await handler!({
+      event: {
+        args: {
+          contentId: 7n,
+          submitter: "0x0000000000000000000000000000000000000001",
+          contentHash: "0xabc",
+          url: "https://example.com/question",
+          title: "Question?",
+          description: "Context",
+          tags: "tag",
+          categoryId: 1n,
+        },
+        block: {
+          number: 42n,
+          timestamp: 999n,
+        },
+      },
+      context: {
+        client: { readContract },
+        contracts: {
+          ContentRegistry: {
+            address: "0x000000000000000000000000000000000000c0de",
+          },
+        },
+        db,
+      },
+    });
+
+    expect(readContract).toHaveBeenCalledWith({
+      abi: [],
+      address: "0x000000000000000000000000000000000000c0de",
+      args: [7n],
+      functionName: "getContentRoundConfig",
+    });
+    expect(insertCalls).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          table: "content",
+          values: expect.objectContaining({
+            roundEpochDuration: 600,
+            roundMaxDuration: 7200,
+            roundMinVoters: 5,
+            roundMaxVoters: 50,
+          }),
+        }),
+      ]),
+    );
+  });
+
+  it("updates content-level round config from ContentRoundConfigSet events", async () => {
+    const { db, updateCalls } = createDb({ id: 7n });
+
+    const registeredHandlers = await loadHandlers();
+    const handler = registeredHandlers.get("ContentRegistry:ContentRoundConfigSet");
+
+    expect(handler).toBeDefined();
+
+    await handler!({
+      event: {
+        args: {
+          contentId: 7n,
+          epochDuration: 600,
+          maxDuration: 7200,
+          minVoters: 5,
+          maxVoters: 50,
+        },
+        block: {
+          number: 42n,
+          timestamp: 999n,
+        },
+      },
+      context: { db },
+    });
+
+    expect(updateCalls).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          table: "content",
+          values: expect.objectContaining({
+            roundEpochDuration: 600,
+            roundMaxDuration: 7200,
+            roundMinVoters: 5,
+            roundMaxVoters: 50,
+          }),
+        }),
+      ]),
+    );
+  });
+
   it("indexes content media rows from ContentMediaSubmitted events", async () => {
     const { db, insertCalls } = createDb();
 
