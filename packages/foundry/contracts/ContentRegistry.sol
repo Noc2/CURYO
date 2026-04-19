@@ -44,32 +44,32 @@ contract ContentRegistry is Initializable, AccessControlUpgradeable, PausableUpg
     bytes32 public constant TREASURY_ADMIN_ROLE = keccak256("TREASURY_ADMIN_ROLE");
 
     // --- Constants ---
-    uint256 public constant REVIVAL_STAKE = 5e6; // 5 cREP (6 decimals)
-    uint256 public constant DORMANCY_PERIOD = 30 days;
-    uint256 public constant SUBMISSION_RESERVATION_PERIOD = 30 minutes;
-    uint256 public constant RESERVED_SUBMISSION_MIN_AGE = 1 seconds;
-    uint256 public constant DORMANT_EXCLUSIVE_REVIVAL_PERIOD = 1 days;
-    uint8 public constant MAX_REVIVALS = 2;
-    uint8 public constant SUBMISSION_REWARD_ASSET_CREP = 0;
-    uint8 public constant SUBMISSION_REWARD_ASSET_USDC = 1;
-    uint256 public constant DEFAULT_MIN_SUBMISSION_REWARD_POOL = 1e6;
-    uint256 public constant MIN_SUBMISSION_REWARD_REQUIRED_VOTERS = 3;
-    uint256 public constant MIN_SUBMISSION_REWARD_SETTLED_ROUNDS = 1;
+    uint256 internal constant REVIVAL_STAKE = 5e6; // 5 cREP (6 decimals)
+    uint256 internal constant DORMANCY_PERIOD = 30 days;
+    uint256 internal constant SUBMISSION_RESERVATION_PERIOD = 30 minutes;
+    uint256 internal constant RESERVED_SUBMISSION_MIN_AGE = 1 seconds;
+    uint256 internal constant DORMANT_EXCLUSIVE_REVIVAL_PERIOD = 1 days;
+    uint8 internal constant MAX_REVIVALS = 2;
+    uint8 internal constant SUBMISSION_REWARD_ASSET_CREP = 0;
+    uint8 internal constant SUBMISSION_REWARD_ASSET_USDC = 1;
+    uint256 internal constant DEFAULT_MIN_SUBMISSION_REWARD_POOL = 1e6;
+    uint256 internal constant MIN_SUBMISSION_REWARD_REQUIRED_VOTERS = 3;
+    uint256 internal constant MIN_SUBMISSION_REWARD_SETTLED_ROUNDS = 1;
 
     // Submitter stake rules
     uint256 public constant SLASH_RATING_THRESHOLD = 25; // Rating below this triggers slash
-    uint16 public constant DEFAULT_SLASH_THRESHOLD_BPS = 2500;
-    uint16 public constant DEFAULT_MIN_SLASH_SETTLED_ROUNDS = 2;
-    uint48 public constant DEFAULT_MIN_SLASH_LOW_DURATION = 7 days;
-    uint256 public constant DEFAULT_MIN_SLASH_EVIDENCE = 200e6;
-    uint256 public constant DEFAULT_CONFIDENCE_MASS_INITIAL = 80e6;
+    uint16 internal constant DEFAULT_SLASH_THRESHOLD_BPS = 2500;
+    uint16 internal constant DEFAULT_MIN_SLASH_SETTLED_ROUNDS = 2;
+    uint48 internal constant DEFAULT_MIN_SLASH_LOW_DURATION = 7 days;
+    uint256 internal constant DEFAULT_MIN_SLASH_EVIDENCE = 200e6;
+    uint256 internal constant DEFAULT_CONFIDENCE_MASS_INITIAL = 80e6;
 
     // String length limits (prevent storage bloat)
-    uint256 public constant MAX_URL_LENGTH = 2048;
+    uint256 internal constant MAX_URL_LENGTH = 2048;
     uint256 public constant MAX_QUESTION_LENGTH = 120;
     uint256 public constant MAX_DESCRIPTION_LENGTH = 280;
-    uint256 public constant MAX_TAGS_LENGTH = 256;
-    uint256 public constant MAX_IMAGE_URLS = 4;
+    uint256 internal constant MAX_TAGS_LENGTH = 256;
+    uint256 internal constant MAX_IMAGE_URLS = 4;
 
     // --- Enums ---
     enum ContentStatus {
@@ -131,16 +131,16 @@ contract ContentRegistry is Initializable, AccessControlUpgradeable, PausableUpg
     address public questionRewardPoolEscrow;
 
     /// @notice Deprecated submitter reward state retained as zeroed compatibility getters.
-    mapping(uint256 => uint256) public submitterParticipationRewardOwed;
-    mapping(uint256 => uint256) public submitterParticipationRewardPaid;
-    mapping(uint256 => uint256) public submitterParticipationRewardReserved;
-    mapping(uint256 => address) public submitterParticipationRewardPool;
-    mapping(uint256 => uint256) public submitterParticipationSnapshotRateBps;
-    mapping(uint256 => address) public submitterParticipationSnapshotPool;
-    mapping(uint256 => bool) public milestoneZeroSubmitterTermsSnapshotted;
-    mapping(uint256 => uint8) public milestoneZeroSubmitterRating;
-    mapping(uint256 => uint256) public milestoneZeroSubmitterParticipationRateBps;
-    mapping(uint256 => address) public milestoneZeroSubmitterParticipationPool;
+    mapping(uint256 => uint256) internal _deprecatedSubmitterParticipationRewardOwed;
+    mapping(uint256 => uint256) internal _deprecatedSubmitterParticipationRewardPaid;
+    mapping(uint256 => uint256) internal _deprecatedSubmitterParticipationRewardReserved;
+    mapping(uint256 => address) internal _deprecatedSubmitterParticipationRewardPool;
+    mapping(uint256 => uint256) internal _deprecatedSubmitterParticipationSnapshotRateBps;
+    mapping(uint256 => address) internal _deprecatedSubmitterParticipationSnapshotPool;
+    mapping(uint256 => bool) internal _deprecatedMilestoneZeroSubmitterTermsSnapshotted;
+    mapping(uint256 => uint8) internal _deprecatedMilestoneZeroSubmitterRating;
+    mapping(uint256 => uint256) internal _deprecatedMilestoneZeroSubmitterParticipationRateBps;
+    mapping(uint256 => address) internal _deprecatedMilestoneZeroSubmitterParticipationPool;
 
     /// @notice Canonical submission key per content ID (for releasing/reserving uniqueness on status changes)
     mapping(uint256 => bytes32) internal contentSubmissionKey;
@@ -463,21 +463,12 @@ contract ContentRegistry is Initializable, AccessControlUpgradeable, PausableUpg
         uint256 categoryId,
         bytes32 salt
     ) external nonReentrant whenNotPaused returns (uint256) {
-        SUBMISSION_MEDIA_VALIDATOR.validateContextUrl(contextUrl);
-        SUBMISSION_MEDIA_VALIDATOR.validateOptionalMediaSet(imageUrls, videoUrl);
-        SubmissionMetadata memory metadata = SubmissionMetadata({
-            url: contextUrl, title: title, description: description, tags: tags, categoryId: categoryId
-        });
-        _validateTextFields(metadata);
-
-        require(address(categoryRegistry) != address(0), "CategoryRegistry not set");
-        uint8 rewardAsset = SUBMISSION_REWARD_ASSET_CREP;
         return _submitValidatedQuestionWithMedia(
-            metadata,
+            _validatedContextSubmissionMetadata(contextUrl, imageUrls, videoUrl, title, description, tags, categoryId),
             imageUrls,
             videoUrl,
             salt,
-            _defaultSubmissionRewardTerms(rewardAsset),
+            _defaultSubmissionRewardTerms(SUBMISSION_REWARD_ASSET_CREP),
             _defaultRoundConfig(),
             false
         );
@@ -494,21 +485,12 @@ contract ContentRegistry is Initializable, AccessControlUpgradeable, PausableUpg
         bytes32 salt,
         RoundLib.RoundConfig calldata roundConfig
     ) external nonReentrant whenNotPaused returns (uint256) {
-        SUBMISSION_MEDIA_VALIDATOR.validateContextUrl(contextUrl);
-        SUBMISSION_MEDIA_VALIDATOR.validateOptionalMediaSet(imageUrls, videoUrl);
-        SubmissionMetadata memory metadata = SubmissionMetadata({
-            url: contextUrl, title: title, description: description, tags: tags, categoryId: categoryId
-        });
-        _validateTextFields(metadata);
-
-        require(address(categoryRegistry) != address(0), "CategoryRegistry not set");
-        uint8 rewardAsset = SUBMISSION_REWARD_ASSET_CREP;
         return _submitValidatedQuestionWithMedia(
-            metadata,
+            _validatedContextSubmissionMetadata(contextUrl, imageUrls, videoUrl, title, description, tags, categoryId),
             imageUrls,
             videoUrl,
             salt,
-            _defaultSubmissionRewardTerms(rewardAsset),
+            _defaultSubmissionRewardTerms(SUBMISSION_REWARD_ASSET_CREP),
             _validatedRoundConfig(roundConfig),
             true
         );
@@ -524,24 +506,12 @@ contract ContentRegistry is Initializable, AccessControlUpgradeable, PausableUpg
         uint256 categoryId,
         bytes32 salt
     ) external nonReentrant whenNotPaused returns (uint256) {
-        SUBMISSION_MEDIA_VALIDATOR.validateMediaSet(imageUrls, videoUrl);
-        SubmissionMetadata memory metadata = SubmissionMetadata({
-            url: bytes(videoUrl).length != 0 ? videoUrl : imageUrls[0],
-            title: title,
-            description: description,
-            tags: tags,
-            categoryId: categoryId
-        });
-        _validateTextFields(metadata);
-
-        require(address(categoryRegistry) != address(0), "CategoryRegistry not set");
-        uint8 rewardAsset = SUBMISSION_REWARD_ASSET_CREP;
         return _submitValidatedQuestionWithMedia(
-            metadata,
+            _validatedMediaSubmissionMetadata(imageUrls, videoUrl, title, description, tags, categoryId),
             imageUrls,
             videoUrl,
             salt,
-            _defaultSubmissionRewardTerms(rewardAsset),
+            _defaultSubmissionRewardTerms(SUBMISSION_REWARD_ASSET_CREP),
             _defaultRoundConfig(),
             false
         );
@@ -557,24 +527,12 @@ contract ContentRegistry is Initializable, AccessControlUpgradeable, PausableUpg
         bytes32 salt,
         RoundLib.RoundConfig calldata roundConfig
     ) external nonReentrant whenNotPaused returns (uint256) {
-        SUBMISSION_MEDIA_VALIDATOR.validateMediaSet(imageUrls, videoUrl);
-        SubmissionMetadata memory metadata = SubmissionMetadata({
-            url: bytes(videoUrl).length != 0 ? videoUrl : imageUrls[0],
-            title: title,
-            description: description,
-            tags: tags,
-            categoryId: categoryId
-        });
-        _validateTextFields(metadata);
-
-        require(address(categoryRegistry) != address(0), "CategoryRegistry not set");
-        uint8 rewardAsset = SUBMISSION_REWARD_ASSET_CREP;
         return _submitValidatedQuestionWithMedia(
-            metadata,
+            _validatedMediaSubmissionMetadata(imageUrls, videoUrl, title, description, tags, categoryId),
             imageUrls,
             videoUrl,
             salt,
-            _defaultSubmissionRewardTerms(rewardAsset),
+            _defaultSubmissionRewardTerms(SUBMISSION_REWARD_ASSET_CREP),
             _validatedRoundConfig(roundConfig),
             true
         );
@@ -1016,14 +974,51 @@ contract ContentRegistry is Initializable, AccessControlUpgradeable, PausableUpg
         return false;
     }
 
-    /// @notice Deprecated; submitter stake resolution has been removed.
-    function resolvePendingSubmitterStake(uint256) external view {
-        require(msg.sender == votingEngine, "Only VotingEngine");
+    function submitterParticipationRewardOwed(uint256) external pure returns (uint256) {
+        return 0;
     }
 
+    function submitterParticipationRewardPaid(uint256) external pure returns (uint256) {
+        return 0;
+    }
+
+    function submitterParticipationRewardReserved(uint256) external pure returns (uint256) {
+        return 0;
+    }
+
+    function submitterParticipationRewardPool(uint256) external pure returns (address) {
+        return address(0);
+    }
+
+    function submitterParticipationSnapshotRateBps(uint256) external pure returns (uint256) {
+        return 0;
+    }
+
+    function submitterParticipationSnapshotPool(uint256) external pure returns (address) {
+        return address(0);
+    }
+
+    function milestoneZeroSubmitterTermsSnapshotted(uint256) external pure returns (bool) {
+        return false;
+    }
+
+    function milestoneZeroSubmitterRating(uint256) external pure returns (uint8) {
+        return 0;
+    }
+
+    function milestoneZeroSubmitterParticipationRateBps(uint256) external pure returns (uint256) {
+        return 0;
+    }
+
+    function milestoneZeroSubmitterParticipationPool(uint256) external pure returns (address) {
+        return address(0);
+    }
+
+    /// @notice Deprecated; submitter stake resolution has been removed.
+    function resolvePendingSubmitterStake(uint256) external pure { }
+
     /// @notice Deprecated; submitter stake slashing has been removed.
-    function slashSubmitterStake(uint256) external view returns (uint256) {
-        require(msg.sender == votingEngine, "Only VotingEngine");
+    function slashSubmitterStake(uint256) external pure returns (uint256) {
         return 0;
     }
 
@@ -1033,14 +1028,10 @@ contract ContentRegistry is Initializable, AccessControlUpgradeable, PausableUpg
     }
 
     /// @notice Deprecated; submitter participation rewards have been removed.
-    function snapshotSubmitterParticipationTerms(uint256, address, uint256) external view {
-        require(msg.sender == votingEngine, "Only VotingEngine");
-    }
+    function snapshotSubmitterParticipationTerms(uint256, address, uint256) external pure { }
 
     /// @notice Deprecated; submitter participation rewards have been removed.
-    function snapshotMilestoneZeroSubmitterTerms(uint256, uint256, address, uint256) external view {
-        require(msg.sender == votingEngine, "Only VotingEngine");
-    }
+    function snapshotMilestoneZeroSubmitterTerms(uint256, uint256, address, uint256) external pure { }
 
     /// @notice Deprecated; submitter participation rewards have been removed.
     function repairMilestoneZeroSubmitterParticipationTerms(uint256, uint256) external pure {
