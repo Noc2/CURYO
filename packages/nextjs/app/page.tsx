@@ -180,7 +180,7 @@ function FeatureBenefitCard({
 function FeaturesBenefitsSection() {
   return (
     <section className="mt-14 w-full sm:mt-16">
-      <WorkflowHeading title="Features and Benefits" />
+      <WorkflowHeading title="Why It Works" />
       <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-6">
         {FEATURE_BENEFITS.map((feature, index) => (
           <FeatureBenefitCard key={feature.title} {...feature} index={index} />
