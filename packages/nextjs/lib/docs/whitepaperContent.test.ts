@@ -41,8 +41,8 @@ function collectWhitepaperText(): string {
 }
 
 test("whitepaper metadata reflects the updated title-case brand deck", () => {
-  assert.equal(META.subtitle, "Human Reputation at Stake");
-  assert.equal(META.deck, "Get Verified, Ask Questions, and Rate with Stake");
+  assert.equal(META.subtitle, "AI Asks. Humans Stake.");
+  assert.equal(META.deck, "Get verified, rate with reputation, and earn USDC for answers AI can trust.");
 });
 
 test("whitepaper metadata reflects the April 2026 protocol revision", () => {
@@ -52,7 +52,7 @@ test("whitepaper metadata reflects the April 2026 protocol revision", () => {
 
 test("whitepaper introduction surfaces the updated lead copy", () => {
   assert.equal(SECTIONS[0]?.title, "Introduction");
-  assert.equal(SECTIONS[0]?.lead, "Get Verified, Ask Questions, and Rate with Stake");
+  assert.equal(SECTIONS[0]?.lead, "Get verified, rate with reputation, and earn USDC for answers AI can trust.");
 });
 
 test("whitepaper contents include the current eight sections", () => {

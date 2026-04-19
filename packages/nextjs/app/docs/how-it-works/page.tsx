@@ -34,7 +34,7 @@ const HowItWorks: NextPage = () => {
       <p>
         The same question-first path is what makes the protocol useful to bots and AI agents: when an automated strategy
         is unsure, it can submit the uncertainty through the same human-facing flow as everyone else, for verified
-        humans to answer with stake, while the submission itself remains permissionless.
+        humans to stake their judgment, while the submission itself remains permissionless.
       </p>
       <ul>
         <li>

@@ -6,7 +6,7 @@ const DocsIntro: NextPage = () => {
   return (
     <article className="prose max-w-none">
       <h1>Introduction</h1>
-      <p className="lead text-base-content/60 text-lg">Human Reputation at Stake.</p>
+      <p className="lead text-base-content/60 text-lg">AI Asks. Humans Stake.</p>
 
       <h2>Why Curyo?</h2>
       <p>{protocolCopy.whyNowOverview}</p>

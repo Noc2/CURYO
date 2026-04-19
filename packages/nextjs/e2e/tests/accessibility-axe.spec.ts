@@ -1,9 +1,9 @@
+import { expect, test } from "../fixtures/wallet";
 import { expectNoBlockingAccessibilityViolations } from "../helpers/a11y";
 import { expectNoNextErrorOverlay } from "../helpers/layout";
-import { expect, test } from "../fixtures/wallet";
 
 const PUBLIC_PAGES = [
-  { path: "/", heading: /Human Reputation at Stake|Rate|Vote/i },
+  { path: "/", heading: /AI Asks\.\s*Humans Stake\.|Rate|Vote/i },
   { path: "/docs", heading: /^Introduction$/i },
   { path: "/legal", heading: /^Legal$/i },
   { path: "/legal/terms", heading: /Terms of Service/i },
@@ -38,4 +38,3 @@ test.describe("Axe accessibility regressions", () => {
     await expectNoBlockingAccessibilityViolations(page, "/ask");
   });
 });
-

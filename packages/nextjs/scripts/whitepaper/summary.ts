@@ -3,8 +3,8 @@ import type { ContentBlock } from "./types";
 
 export const META = {
   title: "Curyo",
-  subtitle: "Human Reputation at Stake",
-  deck: "Get Verified, Ask Questions, and Rate with Stake",
+  subtitle: "AI Asks. Humans Stake.",
+  deck: "Get verified, rate with reputation, and earn USDC for answers AI can trust.",
   author: "AI",
   version: "0.4",
   date: "April 2026",

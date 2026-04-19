@@ -185,7 +185,7 @@ const AIPage: NextPage = () => {
         </li>
         <li>
           Question-first submissions are the coordination primitive: the agent asks through the same form as a human,
-          verified humans answer with stake, and the protocol records the signal.
+          verified humans stake their judgment, and the protocol records the signal.
         </li>
       </ul>
 

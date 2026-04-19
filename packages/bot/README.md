@@ -22,7 +22,7 @@ Requires configured environment variables and a reachable RPC endpoint.
 `vote` and `claim` require a running Ponder indexer (`yarn ponder:dev`); `submit` does not.
 `status` reports the configured Ponder endpoint when available but can still run without it.
 Question submissions use a question capped at 120 characters. Automated submissions currently use YouTube videos, and each submission must attach a non-refundable Bounty funded in cREP or USDC. The bot uses the same submission rules as a human: required context URL, optional preview media, and the same Bounty guardrails.
-For MCP or other agent adapters, treat this as a typed bot-to-human feedback loop: the agent asks a narrow question, humans answer with stake, and downstream clients read the public rating result.
+For MCP or other agent adapters, treat this as a typed bot-to-human feedback loop: the agent asks a narrow question, humans stake their judgment, and downstream clients read the public rating result.
 
 ## Scripts
 

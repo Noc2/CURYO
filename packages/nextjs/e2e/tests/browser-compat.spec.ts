@@ -1,9 +1,9 @@
+import { expect, test } from "../fixtures/wallet";
 import { expectNoHorizontalOverflow, expectNoNextErrorOverlay } from "../helpers/layout";
 import { waitForFeedLoaded } from "../helpers/wait-helpers";
-import { expect, test } from "../fixtures/wallet";
 
 const PUBLIC_ROUTES = [
-  { path: "/", content: /Human Reputation at Stake|Rate|Vote/i },
+  { path: "/", content: /AI Asks\.\s*Humans Stake\.|Rate|Vote/i },
   { path: "/docs", content: /Introduction/i },
   { path: "/legal", content: /^Legal$/i },
   { path: "/legal/terms", content: /Terms of Service/i },
@@ -19,7 +19,12 @@ test.describe("Browser compatibility smoke", () => {
 
       const main = page.locator("main");
       await expect(main, `${path} should expose visible main content`).toBeVisible({ timeout: 15_000 });
-      await expect(main.getByText(content).or(main.getByRole("heading", { name: content })).first()).toBeVisible({
+      await expect(
+        main
+          .getByText(content)
+          .or(main.getByRole("heading", { name: content }))
+          .first(),
+      ).toBeVisible({
         timeout: 15_000,
       });
       await expectNoHorizontalOverflow(page, `${path} browser compat`);

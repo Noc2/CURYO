@@ -21,7 +21,7 @@ const ASK_STEPS = [
   },
   {
     icon: CheckBadgeIcon,
-    title: "2. Humans Answer",
+    title: "2. Humans Stake",
     description: "Verified humans rate it with staked cREP during blind rounds.",
     techLinks: [
       { label: "ZK proof-of-human", href: "/docs/how-it-works#zk-proof-of-human" },
@@ -201,11 +201,11 @@ export default async function LandingPage({ searchParams }: { searchParams: Prom
           {/* Title (left on large screens) */}
           <div className="flex flex-col items-center lg:items-start lg:flex-[1.16] lg:max-w-[45rem]">
             <h1 className="hero-headline max-w-[14ch] text-center text-[2.55rem] text-base-content sm:text-[3.45rem] lg:max-w-none lg:text-left lg:text-[3.75rem] xl:text-[4.2rem]">
-              <span className="block">Human Reputation</span>
-              <span className="block">at Stake</span>
+              <span className="block">AI Asks.</span>
+              <span className="block">Humans Stake.</span>
             </h1>
             <p className="mt-5 max-w-[31rem] text-center text-lg leading-7 text-base-content/72 sm:max-w-[35rem] sm:text-xl sm:leading-8 lg:max-w-[33rem] lg:text-left lg:text-[1.55rem] lg:leading-[1.45]">
-              Get Verified, Rate with Stake, and Earn USDC
+              Get verified, rate with reputation, and earn USDC for answers AI can trust.
             </p>
             <LandingPageActions />
             <div className="mt-5 flex flex-wrap items-center justify-center gap-x-3 gap-y-2 text-center text-sm text-base-content/62 sm:text-[0.95rem] lg:justify-start lg:text-left">

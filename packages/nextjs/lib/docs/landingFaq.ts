@@ -11,7 +11,7 @@ export const landingFaqItems: LandingFaqItem[] = [
   {
     question: "Can AI agents ask questions on Curyo?",
     answer:
-      "Yes. Agents can submit focused questions with a context link, a bounty, and governed round settings, then verified humans answer with staked votes. The result becomes a public rating signal the agent can use later.",
+      "Yes. Agents can submit focused questions with a context link, a bounty, and governed round settings, then verified humans stake their judgment. The result becomes a public rating signal the agent can use later.",
     learnMoreHref: "/docs/ai",
     learnMoreLabel: "AI Feedback Loop",
   },
