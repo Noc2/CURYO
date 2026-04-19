@@ -406,6 +406,7 @@ contract QuestionRewardPoolEscrow is
     {
         require(!rewardPool.refunded, "Already refunded");
         require(rewardPool.qualifiedRounds < rewardPool.requiredSettledRounds, "Bounty complete");
+        _requireNoPendingFinishedRound(rewardPool);
         refundAmount = rewardPool.unallocatedAmount;
         require(refundAmount > 0, "No refund");
         rewardPool.refunded = true;
@@ -520,22 +521,20 @@ contract QuestionRewardPoolEscrow is
         returns (RewardPool storage rewardPool)
     {
         rewardPool = _getExistingRewardPool(rewardPoolId);
-        _requirePoolOpenForQualification(rewardPool);
+        _requirePoolNotRefundedForQualification(rewardPool);
         require(rewardPool.qualifiedRounds < rewardPool.requiredSettledRounds, "Bounty complete");
     }
 
     function _qualifyRoundIfNeeded(uint256 rewardPoolId, RewardPool storage rewardPool, uint256 roundId) internal {
         if (!roundSnapshots[rewardPoolId][roundId].qualified) {
-            _requirePoolOpenForQualification(rewardPool);
+            _requirePoolNotRefundedForQualification(rewardPool);
             require(rewardPool.qualifiedRounds < rewardPool.requiredSettledRounds, "Bounty complete");
             _qualifyRound(rewardPoolId, rewardPool, roundId);
         }
     }
 
-    function _requirePoolOpenForQualification(RewardPool storage rewardPool) internal view {
+    function _requirePoolNotRefundedForQualification(RewardPool storage rewardPool) internal view {
         require(!rewardPool.refunded, "Bounty refunded");
-        require(rewardPool.expiresAt == 0 || block.timestamp <= rewardPool.expiresAt, "Bounty expired");
-        require(registry.isContentActive(rewardPool.contentId), "Content not active");
     }
 
     function _qualifyRound(uint256 rewardPoolId, RewardPool storage rewardPool, uint256 roundId) internal {
@@ -575,8 +574,6 @@ contract QuestionRewardPoolEscrow is
 
     function _canPreviewNewQualification(RewardPool storage rewardPool, uint256 roundId) internal view returns (bool) {
         if (rewardPool.refunded || rewardPool.qualifiedRounds >= rewardPool.requiredSettledRounds) return false;
-        if (rewardPool.expiresAt != 0 && block.timestamp > rewardPool.expiresAt) return false;
-        if (!registry.isContentActive(rewardPool.contentId)) return false;
         return roundId >= rewardPool.startRoundId && roundId == rewardPool.nextRoundToEvaluate;
     }
 
@@ -585,9 +582,10 @@ contract QuestionRewardPoolEscrow is
         view
         returns (bool roundSettled, bool canQualify, uint256 eligibleVoters)
     {
-        (, RoundLib.RoundState state,, uint16 revealedCount,,,,,,,,,,) =
+        (, RoundLib.RoundState state,, uint16 revealedCount,,,,,,, uint48 settledAt,,,) =
             votingEngine.rounds(rewardPool.contentId, roundId);
         if (state != RoundLib.RoundState.Settled) return (false, false, 0);
+        if (!_roundSettledWithinPoolWindow(rewardPool, settledAt)) return (true, false, 0);
 
         roundSettled = true;
         eligibleVoters = revealedCount;
@@ -617,6 +615,24 @@ contract QuestionRewardPoolEscrow is
             canQualify = allocation >= eligibleVoters;
         }
         return (true, canQualify, eligibleVoters);
+    }
+
+    function _requireNoPendingFinishedRound(RewardPool storage rewardPool) internal view {
+        uint256 nextRoundToEvaluate = rewardPool.nextRoundToEvaluate;
+        if (nextRoundToEvaluate > votingEngine.currentRoundId(rewardPool.contentId)) return;
+
+        (bool roundFinished, bool canQualify,) = _roundQualificationStatus(rewardPool, nextRoundToEvaluate);
+        if (!roundFinished) return;
+        if (canQualify) revert("Bounty has qualifying round");
+        revert("Advance qualification cursor");
+    }
+
+    function _roundSettledWithinPoolWindow(RewardPool storage rewardPool, uint48 settledAt)
+        internal
+        view
+        returns (bool)
+    {
+        return settledAt != 0 && (rewardPool.expiresAt == 0 || settledAt <= rewardPool.expiresAt);
     }
 
     function _previewRoundAllocation(RewardPool storage rewardPool) internal view returns (uint256 allocation) {

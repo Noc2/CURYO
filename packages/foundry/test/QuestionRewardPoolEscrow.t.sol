@@ -497,6 +497,47 @@ contract QuestionRewardPoolEscrowTest is VotingTestBase {
         assertEq(reward, REWARD_POOL_AMOUNT / 3);
     }
 
+    function testSettledRoundCanQualifyAfterPoolExpires() public {
+        uint256 contentId = _submitQuestion("");
+        uint256 expiresAt = block.timestamp + EPOCH_DURATION + 10;
+        uint256 rewardPoolId = _createRewardPoolWithExpiry(contentId, REWARD_POOL_AMOUNT, 3, 1, expiresAt);
+
+        address[] memory voters = _threeVoters();
+        bool[] memory directions = _directions(true, true, false);
+        uint256 roundId = _settleRoundWith(voters, contentId, directions);
+
+        vm.warp(expiresAt + 1);
+
+        vm.expectRevert("Bounty has qualifying round");
+        rewardPoolEscrow.refundExpiredRewardPool(rewardPoolId);
+
+        assertEq(rewardPoolEscrow.claimableQuestionReward(rewardPoolId, roundId, voter1), REWARD_POOL_AMOUNT / 3);
+
+        vm.prank(voter1);
+        uint256 reward = rewardPoolEscrow.claimQuestionReward(rewardPoolId, roundId);
+        assertEq(reward, REWARD_POOL_AMOUNT / 3);
+    }
+
+    function testSettledRoundCanQualifyAfterContentDormant() public {
+        uint256 contentId = _submitQuestion("");
+        uint256 rewardPoolId = _createRewardPool(contentId, REWARD_POOL_AMOUNT, 3, 1);
+
+        address[] memory voters = _threeVoters();
+        bool[] memory directions = _directions(true, true, false);
+        uint256 roundId = _settleRoundWith(voters, contentId, directions);
+
+        vm.warp(block.timestamp + 31 days);
+        registry.markDormant(contentId);
+        assertFalse(registry.isContentActive(contentId));
+
+        vm.expectRevert("Bounty has qualifying round");
+        rewardPoolEscrow.refundInactiveRewardPool(rewardPoolId);
+
+        vm.prank(voter1);
+        uint256 reward = rewardPoolEscrow.claimQuestionReward(rewardPoolId, roundId);
+        assertEq(reward, REWARD_POOL_AMOUNT / 3);
+    }
+
     function testExpiredPoolBlocksNewQualificationButLeavesQualifiedClaimsPayable() public {
         uint256 contentId = _submitQuestion("");
         uint256 expiresAt = block.timestamp + 1 days;
@@ -512,8 +553,12 @@ contract QuestionRewardPoolEscrowTest is VotingTestBase {
         uint256 secondRoundId = _settleRoundWith(voters, contentId, directions);
 
         vm.prank(voter1);
-        vm.expectRevert("Bounty expired");
+        vm.expectRevert("Too few eligible voters");
         rewardPoolEscrow.claimQuestionReward(rewardPoolId, secondRoundId);
+
+        (uint256 skipped, uint256 nextRoundToEvaluate) = rewardPoolEscrow.advanceQualificationCursor(rewardPoolId, 1);
+        assertEq(skipped, 1);
+        assertEq(nextRoundToEvaluate, secondRoundId + 1);
 
         uint256 funderBalanceBefore = usdc.balanceOf(funder);
         uint256 refundAmount = rewardPoolEscrow.refundExpiredRewardPool(rewardPoolId);
