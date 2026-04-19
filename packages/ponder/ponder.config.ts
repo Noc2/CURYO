@@ -10,6 +10,7 @@ import {
   HumanFaucetAbi,
   ParticipationPoolAbi,
   ProfileRegistryAbi,
+  QuestionRewardPoolEscrowAbi,
   RoundRewardDistributorAbi,
   RoundVotingEngineAbi,
   VoterIdNFTAbi,
@@ -18,7 +19,6 @@ import {
   getSharedDeploymentAddress as getSharedArtifactAddress,
   getSharedDeploymentStartBlock as getSharedArtifactStartBlock,
 } from "@curyo/contracts/deployments";
-import { QuestionRewardPoolEscrowAbi } from "./src/abis/QuestionRewardPoolEscrowAbi.js";
 
 type PonderNetworkName = "celoSepolia" | "hardhat" | "celo";
 
