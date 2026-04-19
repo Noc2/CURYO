@@ -18,7 +18,6 @@ export interface PonderContentItem {
   roundMaxDuration?: number;
   roundMinVoters?: number;
   roundMaxVoters?: number;
-  submitterStakeReturned: boolean;
 }
 
 interface PonderRoundItem {

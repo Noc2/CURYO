@@ -25,7 +25,6 @@ export const content = onchainTable(
     ratingEffectiveEvidence: t.bigint().notNull(),
     ratingSettledRounds: t.integer().notNull(),
     ratingLowSince: t.bigint().notNull(),
-    submitterStakeReturned: t.boolean().notNull(),
     createdAt: t.bigint().notNull(),
     lastActivityAt: t.bigint().notNull(),
     totalVotes: t.integer().notNull(),

@@ -106,7 +106,6 @@ ponder.on("ContentRegistry:ContentSubmitted", async ({ event, context }) => {
       ratingEffectiveEvidence: 0n,
       ratingSettledRounds: 0,
       ratingLowSince: 0n,
-      submitterStakeReturned: true,
       createdAt: event.block.timestamp,
       lastActivityAt: event.block.timestamp,
       totalVotes: 0,

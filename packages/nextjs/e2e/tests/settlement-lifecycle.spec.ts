@@ -152,9 +152,6 @@ test.describe("Settlement lifecycle", () => {
     expect(ratings.length).toBeGreaterThanOrEqual(1);
     expect(ratings[0]).toHaveProperty("oldRating");
     expect(ratings[0]).toHaveProperty("newRating");
-
-    // Submitter stake tracking is retired; newly indexed content is marked resolved immediately.
-    expect(settledContent.submitterStakeReturned).toBe(true);
   });
 
   test("governance profile shows vote history after voting", async ({ browser }) => {

@@ -193,8 +193,5 @@ test.describe("Unanimous settlement (consensus reserve)", () => {
     expect(data.ratings.length).toBeGreaterThanOrEqual(1);
     const latestRating = data.ratings[data.ratings.length - 1];
     expect(latestRating.newRating).toBeGreaterThan(latestRating.oldRating);
-
-    // Submitter stake tracking is retired; newly indexed content is marked resolved immediately.
-    expect(data.content.submitterStakeReturned).toBe(true);
   });
 });

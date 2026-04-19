@@ -311,11 +311,6 @@ export const ContentRegistryAbi = [
         "internalType": "address"
       },
       {
-        "name": "submitterStakeReturned",
-        "type": "bool",
-        "internalType": "bool"
-      },
-      {
         "name": "rating",
         "type": "uint8",
         "internalType": "uint8"

@@ -2711,11 +2711,6 @@ const deployedContracts: GenericContractsDeclaration = {
               internalType: "address",
             },
             {
-              name: "submitterStakeReturned",
-              type: "bool",
-              internalType: "bool",
-            },
-            {
               name: "rating",
               type: "uint8",
               internalType: "uint8",
@@ -22526,11 +22521,6 @@ const deployedContracts: GenericContractsDeclaration = {
               internalType: "address",
             },
             {
-              name: "submitterStakeReturned",
-              type: "bool",
-              internalType: "bool",
-            },
-            {
               name: "rating",
               type: "uint8",
               internalType: "uint8",
@@ -40971,11 +40961,6 @@ const deployedContracts: GenericContractsDeclaration = {
               name: "reviver",
               type: "address",
               internalType: "address",
-            },
-            {
-              name: "submitterStakeReturned",
-              type: "bool",
-              internalType: "bool",
             },
             {
               name: "rating",

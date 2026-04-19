@@ -30,7 +30,6 @@ export type ContentItem = {
   rating: string;
   totalVotes: string;
   submitter: string;
-  submitterStakeReturned: boolean;
   createdAt: number;
   updatedAt: number;
 };

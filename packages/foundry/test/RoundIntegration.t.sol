@@ -1508,7 +1508,7 @@ contract RoundIntegrationTest is VotingTestBase {
 
         _settleRoundWith(voters, contentId, dirs, 100e6);
 
-        (,,,,,,,,, bool submitterStakeReturned, uint256 rating,) = registry.contents(contentId);
+        (,,,,,,,,, uint256 rating,) = registry.contents(contentId);
         RatingLib.RatingState memory ratingState = registry.getRatingState(contentId);
         assertLt(
             registry.getConservativeRating(contentId),
@@ -1516,14 +1516,12 @@ contract RoundIntegrationTest is VotingTestBase {
             "conservative rating should fall below the tuned threshold"
         );
         assertGt(uint256(ratingState.lowSince), 0, "first low settlement should start the low-rating dwell timer");
-        assertTrue(submitterStakeReturned, "submitter stake compatibility flag starts resolved");
         assertEq(
             crepToken.balanceOf(treasury), treasuryBalanceBefore, "treasury should not be paid before the dwell window"
         );
 
-        (,,,,,,,,, submitterStakeReturned, rating,) = registry.contents(contentId);
+        (,,,,,,,,, rating,) = registry.contents(contentId);
         assertLt(uint256(rating), 40, "display rating should still reflect a low settlement");
-        assertTrue(submitterStakeReturned, "submitter stake should be resolved");
         assertEq(crepToken.balanceOf(submitter), submitterBalanceBefore, "submitter receives no removed stake payout");
         assertEq(crepToken.balanceOf(treasury), treasuryBalanceBefore, "treasury should not receive a removed slash");
     }
@@ -1544,9 +1542,8 @@ contract RoundIntegrationTest is VotingTestBase {
 
         _settleRoundWith(voters, contentId, dirs, 100e6);
 
-        (,,,,,,,,, bool submitterStakeReturned, uint256 rating,) = registry.contents(contentId);
+        (,,,,,,,,, uint256 rating,) = registry.contents(contentId);
         assertGe(rating, registry.SLASH_RATING_THRESHOLD(), "round should not be slashable");
-        assertTrue(submitterStakeReturned, "submitter stake should be resolved");
         assertEq(crepToken.balanceOf(submitter), submitterBalanceBefore, "submitter receives no removed stake payout");
         assertEq(crepToken.balanceOf(treasury), treasuryBalanceBefore, "treasury should not receive a slash");
     }

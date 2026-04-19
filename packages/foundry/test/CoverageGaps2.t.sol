@@ -670,7 +670,7 @@ contract ContentRegistryCoverageTest is VotingTestBase {
             ,,
             address storedSubmitter,
             uint256 submitterStake,,,
-            ContentRegistry.ContentStatus status,,,,
+            ContentRegistry.ContentStatus status,,,
             uint256 rating,
         ) = registry.contents(1);
         assertEq(storedSubmitter, submitter);
@@ -701,7 +701,7 @@ contract ContentRegistryCoverageTest is VotingTestBase {
         vm.stopPrank();
 
         assertEq(id, 1);
-        (, bytes32 contentHash,,,,,,,,,,) = registry.contents(id);
+        (, bytes32 contentHash,,,,,,,,,) = registry.contents(id);
         assertEq(contentHash, expectedHash);
     }
 
@@ -967,7 +967,7 @@ contract ContentRegistryCoverageTest is VotingTestBase {
         vm.prank(submitter);
         registry.cancelContent(id);
 
-        (,,,,,, ContentRegistry.ContentStatus status,,,,,) = registry.contents(id);
+        (,,,,,, ContentRegistry.ContentStatus status,,,,) = registry.contents(id);
         assertEq(uint256(status), uint256(ContentRegistry.ContentStatus.Cancelled));
 
         uint256 balAfter = crep.balanceOf(submitter);
@@ -1040,7 +1040,7 @@ contract ContentRegistryCoverageTest is VotingTestBase {
         registry.markDormant(id);
         uint256 balAfter = crep.balanceOf(submitter);
 
-        (,,,,,, ContentRegistry.ContentStatus status,,,,,) = registry.contents(id);
+        (,,,,,, ContentRegistry.ContentStatus status,,,,) = registry.contents(id);
         assertEq(uint256(status), uint256(ContentRegistry.ContentStatus.Dormant));
         assertEq(balAfter - balBefore, 0);
     }
@@ -1067,7 +1067,7 @@ contract ContentRegistryCoverageTest is VotingTestBase {
         registry.reviveContent(id);
         vm.stopPrank();
 
-        (,,,,,, ContentRegistry.ContentStatus status, uint8 dormantCount, address reviver,,,) = registry.contents(id);
+        (,,,,,, ContentRegistry.ContentStatus status, uint8 dormantCount, address reviver,,) = registry.contents(id);
         assertEq(uint256(status), uint256(ContentRegistry.ContentStatus.Active));
         assertEq(dormantCount, 1);
         assertEq(reviver, submitter);
@@ -1125,28 +1125,28 @@ contract ContentRegistryCoverageTest is VotingTestBase {
 
     function test_IsActive() public {
         uint256 id = _submitContent(submitter, "https://example.com/active");
-        (uint256 existingId,,,,,, ContentRegistry.ContentStatus status,,,,,) = registry.contents(id);
+        (uint256 existingId,,,,,, ContentRegistry.ContentStatus status,,,,) = registry.contents(id);
         assertTrue(existingId != 0 && status == ContentRegistry.ContentStatus.Active);
-        (uint256 missingId,,,,,, ContentRegistry.ContentStatus missingStatus,,,,,) = registry.contents(999);
+        (uint256 missingId,,,,,, ContentRegistry.ContentStatus missingStatus,,,,) = registry.contents(999);
         assertFalse(missingId != 0 && missingStatus == ContentRegistry.ContentStatus.Active); // Non-existent
     }
 
     function test_GetSubmitter() public {
         uint256 id = _submitContent(submitter, "https://example.com/getsub");
-        (,, address storedSubmitter,,,,,,,,,) = registry.contents(id);
+        (,, address storedSubmitter,,,,,,,,) = registry.contents(id);
         assertEq(storedSubmitter, submitter);
     }
 
     function test_GetCreatedAt() public {
         vm.warp(1000);
         uint256 id = _submitContent(submitter, "https://example.com/created");
-        (,,,, uint256 createdAt,,,,,,,) = registry.contents(id);
+        (,,,, uint256 createdAt,,,,,,) = registry.contents(id);
         assertEq(createdAt, 1001);
     }
 
     function test_GetCategoryId() public {
         uint256 id = _submitContent(submitter, "https://example.com/catid");
-        (,,,,,,,,,,, uint256 categoryId) = registry.contents(id);
+        (,,,,,,,,,, uint256 categoryId) = registry.contents(id);
         assertEq(categoryId, 1);
     }
 

@@ -89,7 +89,6 @@ contract ContentRegistry is Initializable, AccessControlUpgradeable, PausableUpg
         ContentStatus status;
         uint8 dormantCount;
         address reviver;
-        bool submitterStakeReturned;
         uint8 rating; // 0-100, starts at 50
         uint64 categoryId; // Reference to seeded discovery category
     }
@@ -698,7 +697,6 @@ contract ContentRegistry is Initializable, AccessControlUpgradeable, PausableUpg
             status: ContentStatus.Active,
             dormantCount: 0,
             reviver: address(0),
-            submitterStakeReturned: true,
             rating: 50,
             categoryId: resolvedCategoryId.toUint64()
         });

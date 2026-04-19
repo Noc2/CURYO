@@ -42,7 +42,6 @@ export interface CuryoContentItem {
   ratingEffectiveEvidence?: string;
   ratingSettledRounds?: number;
   ratingLowSince?: string;
-  submitterStakeReturned: boolean;
   createdAt: string;
   lastActivityAt: string;
   totalVotes: number;
