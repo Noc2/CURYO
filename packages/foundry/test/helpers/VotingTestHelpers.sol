@@ -72,6 +72,7 @@ abstract contract ContentSubmissionTestBase {
         bytes32 revealCommitment = keccak256(
             abi.encode(
                 submissionKey,
+                _submissionMediaHash(imageUrls, ""),
                 title,
                 description,
                 tags,
@@ -115,6 +116,7 @@ abstract contract ContentSubmissionTestBase {
         bytes32 revealCommitment = keccak256(
             abi.encode(
                 submissionKey,
+                _submissionMediaHash(imageUrls, videoUrl),
                 title,
                 description,
                 tags,
@@ -139,6 +141,10 @@ abstract contract ContentSubmissionTestBase {
         }
         IERC20(registry.crepToken()).approve(rewardEscrow, rewardAmount);
         registry.reserveSubmission(revealCommitment);
+    }
+
+    function _submissionMediaHash(string[] memory imageUrls, string memory videoUrl) internal pure returns (bytes32) {
+        return keccak256(abi.encode(imageUrls, videoUrl));
     }
 
     function _submitQuestionImageWithReservation(

@@ -65,6 +65,7 @@ contract GasBudgetTest is RoundIntegrationTest {
         bytes32 revealCommitment = keccak256(
             abi.encode(
                 submissionKey,
+                _submissionMediaHash(imageUrls, ""),
                 "test goal",
                 "test goal",
                 "test",

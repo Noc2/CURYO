@@ -693,6 +693,7 @@ contract QuestionRewardPoolEscrowTest is VotingTestBase {
         bytes32 legacyCommitment = keccak256(
             abi.encode(
                 submissionKey,
+                _submissionMediaHash(imageUrls, ""),
                 QUESTION,
                 DESCRIPTION,
                 TAGS,

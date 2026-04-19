@@ -180,6 +180,7 @@ contract ContentRegistryBranchesTest is VotingTestBase {
         bytes32 revealCommitment = keccak256(
             abi.encode(
                 submissionKey,
+                _submissionMediaHash(imageUrls, videoUrl),
                 title,
                 description,
                 tags,
@@ -215,6 +216,7 @@ contract ContentRegistryBranchesTest is VotingTestBase {
         bytes32 legacyCommitment = keccak256(
             abi.encode(
                 submissionKey,
+                _submissionMediaHash(imageUrls, videoUrl),
                 title,
                 description,
                 tags,
@@ -362,6 +364,7 @@ contract ContentRegistryBranchesTest is VotingTestBase {
         bytes32 revealCommitment = keccak256(
             abi.encode(
                 submissionKey,
+                _submissionMediaHash(imageUrls, ""),
                 title,
                 description,
                 tags,
@@ -384,6 +387,62 @@ contract ContentRegistryBranchesTest is VotingTestBase {
         assertEq(rawSubmitter, submitter);
         assertEq(storedCategoryId, categoryId);
         assertTrue(registry.submissionKeyUsed(submissionKey));
+    }
+
+    function test_SubmitQuestionWithMedia_RevertsWhenReservedMediaChanges() public {
+        string[] memory reservedImageUrls = new string[](2);
+        reservedImageUrls[0] = "https://example.com/reserved-a.jpg";
+        reservedImageUrls[1] = "https://example.com/reserved-b.webp";
+        string[] memory changedImageUrls = new string[](2);
+        changedImageUrls[0] = reservedImageUrls[0];
+        changedImageUrls[1] = "https://example.com/changed-b.webp";
+        string memory title = "Which media set is better?";
+        string memory description = "The reservation should bind every image URL.";
+        string memory tags = "Products,Images";
+        uint256 categoryId = 1;
+        bytes32 salt = keccak256("media-change-question");
+
+        vm.startPrank(submitter);
+        _reserveQuestionMediaSubmission(
+            registry, reservedImageUrls, "", title, description, tags, categoryId, salt, submitter
+        );
+        vm.warp(block.timestamp + 1);
+        vm.expectRevert("Reservation not found");
+        registry.submitQuestionWithMedia(changedImageUrls, "", title, description, tags, categoryId, salt);
+        vm.stopPrank();
+    }
+
+    function test_SubmitQuestion_RevertsWhenReservedOptionalMediaChanges() public {
+        string memory contextUrl = "https://example.com/context";
+        string[] memory reservedImageUrls = _singleImageUrls("https://example.com/reserved-preview.jpg");
+        string[] memory changedImageUrls = _singleImageUrls("https://example.com/changed-preview.jpg");
+        string memory title = "Should this context be trusted?";
+        string memory description = "The reservation should bind optional preview media.";
+        string memory tags = "Context,Images";
+        uint256 categoryId = 1;
+        bytes32 salt = keccak256("context-media-change-question");
+
+        vm.startPrank(submitter);
+        _reserveQuestionSubmissionWithRewardTerms(
+            contextUrl,
+            reservedImageUrls,
+            "",
+            title,
+            description,
+            tags,
+            categoryId,
+            salt,
+            submitter,
+            DEFAULT_SUBMISSION_REWARD_ASSET_CREP,
+            _defaultSubmissionRewardAmount(registry),
+            DEFAULT_SUBMISSION_REWARD_REQUIRED_VOTERS,
+            DEFAULT_SUBMISSION_REWARD_SETTLED_ROUNDS,
+            DEFAULT_SUBMISSION_REWARD_EXPIRES_AT
+        );
+        vm.warp(block.timestamp + 1);
+        vm.expectRevert("Reservation not found");
+        registry.submitQuestion(contextUrl, changedImageUrls, "", title, description, tags, categoryId, salt);
+        vm.stopPrank();
     }
 
     function test_SubmitQuestionWithReward_UsesFlexibleSubmissionBountyTerms() public {
@@ -816,6 +875,7 @@ contract ContentRegistryBranchesTest is VotingTestBase {
         bytes32 revealCommitment = keccak256(
             abi.encode(
                 submissionKey,
+                _submissionMediaHash(imageUrls, ""),
                 title,
                 description,
                 tags,
@@ -857,6 +917,7 @@ contract ContentRegistryBranchesTest is VotingTestBase {
         bytes32 revealCommitment = keccak256(
             abi.encode(
                 submissionKey,
+                _submissionMediaHash(imageUrls, ""),
                 title,
                 description,
                 tags,

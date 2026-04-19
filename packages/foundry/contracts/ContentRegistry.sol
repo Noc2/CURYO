@@ -576,7 +576,9 @@ contract ContentRegistry is Initializable, AccessControlUpgradeable, PausableUpg
         bool includeRoundConfigInCommitment
     ) internal returns (uint256 contentId) {
         (uint256 resolvedCategoryId, bytes32 submissionKey, PendingSubmission memory pending) =
-            _prepareQuestionMediaSubmission(metadata, salt, rewardTerms, roundConfig, includeRoundConfigInCommitment);
+            _prepareQuestionMediaSubmission(
+                metadata, imageUrls, videoUrl, salt, rewardTerms, roundConfig, includeRoundConfigInCommitment
+            );
         bytes32 contentHash = keccak256(
             abi.encode(
                 "curyo-question-context-v1",
@@ -607,6 +609,8 @@ contract ContentRegistry is Initializable, AccessControlUpgradeable, PausableUpg
 
     function _prepareQuestionMediaSubmission(
         SubmissionMetadata memory metadata,
+        string[] memory imageUrls,
+        string memory videoUrl,
         bytes32 salt,
         SubmissionRewardTerms memory rewardTerms,
         RoundLib.RoundConfig memory roundConfig,
@@ -617,9 +621,11 @@ contract ContentRegistry is Initializable, AccessControlUpgradeable, PausableUpg
         require(!submissionKeyUsed[submissionKey], "Question already submitted");
         _validateSubmissionReward(rewardTerms);
 
+        bytes32 mediaHash = _submissionMediaHash(imageUrls, videoUrl);
         bytes32 revealCommitment = includeRoundConfigInCommitment
             ? _computeRevealCommitmentWithRoundConfig(
                 submissionKey,
+                mediaHash,
                 metadata.title,
                 metadata.description,
                 metadata.tags,
@@ -631,6 +637,7 @@ contract ContentRegistry is Initializable, AccessControlUpgradeable, PausableUpg
             )
             : _computeRevealCommitment(
                 submissionKey,
+                mediaHash,
                 metadata.title,
                 metadata.description,
                 metadata.tags,
@@ -646,6 +653,10 @@ contract ContentRegistry is Initializable, AccessControlUpgradeable, PausableUpg
 
         delete pendingSubmissions[revealCommitment];
         submissionKeyUsed[submissionKey] = true;
+    }
+
+    function _submissionMediaHash(string[] memory imageUrls, string memory videoUrl) internal pure returns (bytes32) {
+        return keccak256(abi.encode(imageUrls, videoUrl));
     }
 
     function _resolveQuestionSubmissionCategory(SubmissionMetadata memory metadata)
@@ -959,6 +970,7 @@ contract ContentRegistry is Initializable, AccessControlUpgradeable, PausableUpg
 
     function _computeRevealCommitment(
         bytes32 submissionKey,
+        bytes32 mediaHash,
         string memory title,
         string memory description,
         string memory tags,
@@ -970,6 +982,7 @@ contract ContentRegistry is Initializable, AccessControlUpgradeable, PausableUpg
         return keccak256(
             abi.encode(
                 submissionKey,
+                mediaHash,
                 title,
                 description,
                 tags,
@@ -987,6 +1000,7 @@ contract ContentRegistry is Initializable, AccessControlUpgradeable, PausableUpg
 
     function _computeRevealCommitmentWithRoundConfig(
         bytes32 submissionKey,
+        bytes32 mediaHash,
         string memory title,
         string memory description,
         string memory tags,
@@ -999,7 +1013,7 @@ contract ContentRegistry is Initializable, AccessControlUpgradeable, PausableUpg
         return keccak256(
             abi.encode(
                 _computeRevealCommitment(
-                    submissionKey, title, description, tags, categoryId, salt, submitter, rewardTerms
+                    submissionKey, mediaHash, title, description, tags, categoryId, salt, submitter, rewardTerms
                 ),
                 roundConfig.epochDuration,
                 roundConfig.maxDuration,
