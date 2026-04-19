@@ -53,6 +53,12 @@ contract MockVotingEngine is IRoundVotingEngine {
     function transferReward(address, uint256) external override { }
 }
 
+contract FrontendRegistryHarness is FrontendRegistry {
+    function forceSetFees(address frontend, uint128 amount) external {
+        frontends[frontend].crepFees = amount;
+    }
+}
+
 /// @title FrontendRegistry Test Suite
 contract FrontendRegistryTest is Test {
     FrontendRegistry public registry;
@@ -471,6 +477,35 @@ contract FrontendRegistryTest is Test {
 
         uint256 crepFees = registry.getAccumulatedFees(frontend1);
         assertEq(crepFees, 200e6);
+    }
+
+    function test_CreditFeesAccumulatesAboveLegacyUint64Limit() public {
+        FrontendRegistryHarness impl = new FrontendRegistryHarness();
+        FrontendRegistryHarness largeFeeRegistry = FrontendRegistryHarness(
+            address(
+                new ERC1967Proxy(
+                    address(impl), abi.encodeCall(FrontendRegistry.initialize, (admin, admin, address(crepToken)))
+                )
+            )
+        );
+
+        vm.startPrank(admin);
+        largeFeeRegistry.setVotingEngine(address(votingEngine));
+        largeFeeRegistry.setVoterIdNFT(address(mockVoterIdNFT));
+        largeFeeRegistry.addFeeCreditor(feeCreditor);
+        vm.stopPrank();
+
+        vm.startPrank(frontend1);
+        crepToken.approve(address(largeFeeRegistry), STAKE);
+        largeFeeRegistry.register();
+        vm.stopPrank();
+
+        largeFeeRegistry.forceSetFees(frontend1, type(uint64).max);
+
+        vm.prank(feeCreditor);
+        largeFeeRegistry.creditFees(frontend1, 1);
+
+        assertEq(largeFeeRegistry.getAccumulatedFees(frontend1), uint256(type(uint64).max) + 1);
     }
 
     function test_CreditFeesRevertsForUnregisteredFrontend() public {

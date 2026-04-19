@@ -36,7 +36,7 @@ contract FrontendRegistry is IFrontendRegistry, Initializable, AccessControlUpgr
     struct Frontend {
         address operator;
         uint64 stakedAmount;
-        uint64 crepFees;
+        uint128 crepFees;
         bool slashed;
         uint48 registeredAt;
     }
@@ -236,7 +236,7 @@ contract FrontendRegistry is IFrontendRegistry, Initializable, AccessControlUpgr
         require(f.operator != address(0), "Frontend not registered");
         require(!f.slashed, "Frontend is slashed");
         require(uint256(f.stakedAmount) >= STAKE_AMOUNT, "Frontend is underbonded");
-        f.crepFees = (uint256(f.crepFees) + crepAmount).toUint64();
+        f.crepFees = (uint256(f.crepFees) + crepAmount).toUint128();
         emit FeesCredited(frontend, crepAmount);
     }
 
