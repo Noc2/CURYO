@@ -2,8 +2,7 @@
 
 import { useRecentUserVotes } from "~~/hooks/useRecentUserVotes";
 import { useUnixTime } from "~~/hooks/useUnixTime";
-import { useVotingConfig } from "~~/hooks/useVotingConfig";
-import { deriveVoteDeadlines } from "~~/lib/contracts/roundVotingEngine";
+import { DEFAULT_VOTING_CONFIG, deriveVoteDeadlines } from "~~/lib/contracts/roundVotingEngine";
 
 interface ActiveVoteWithDeadline {
   contentId: string;
@@ -41,7 +40,6 @@ function formatTimeRemaining(seconds: number): string {
 
 export function useActiveVotesWithDeadlines(voter?: string): ActiveVotesWithDeadlines {
   const now = useUnixTime();
-  const { epochDuration, maxDuration } = useVotingConfig();
   const { openVotes, isLoading } = useRecentUserVotes(voter);
 
   const votes: ActiveVoteWithDeadline[] = openVotes
@@ -51,8 +49,8 @@ export function useActiveVotesWithDeadlines(voter?: string): ActiveVotesWithDead
       const deadlines = deriveVoteDeadlines({
         startTime,
         now,
-        epochDuration,
-        maxDuration,
+        epochDuration: v.roundEpochDuration ?? DEFAULT_VOTING_CONFIG.epochDuration,
+        maxDuration: v.roundMaxDuration ?? DEFAULT_VOTING_CONFIG.maxDuration,
       });
 
       return {

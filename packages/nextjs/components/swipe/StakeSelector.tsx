@@ -12,6 +12,7 @@ import { useContentLabel } from "~~/hooks/useCategoryRegistry";
 import { useParticipationRate } from "~~/hooks/useParticipationRate";
 import { useRoundSnapshot } from "~~/hooks/useRoundSnapshot";
 import { useVoterIdNFT, useVoterIdStake } from "~~/hooks/useVoterIdNFT";
+import type { OpenRoundFallbackData, VotingConfig } from "~~/lib/contracts/roundVotingEngine";
 import { estimateVoteReturn, formatCrepAmount } from "~~/lib/vote/voteIncentives";
 
 interface StakeSelectorProps {
@@ -19,6 +20,8 @@ interface StakeSelectorProps {
   isUp: boolean;
   contentId: bigint;
   categoryId?: bigint;
+  openRound?: OpenRoundFallbackData | null;
+  roundConfig?: VotingConfig | null;
   cooldownSecondsRemaining?: number;
   isConfirming?: boolean;
   confirmError?: string | null;
@@ -36,6 +39,8 @@ export function StakeSelector({
   isUp,
   contentId,
   categoryId,
+  openRound,
+  roundConfig,
   cooldownSecondsRemaining = 0,
   isConfirming = false,
   confirmError = null,
@@ -50,7 +55,7 @@ export function StakeSelector({
   const hasVoterId = voterIdData.hasVoterId;
   const tokenId = voterIdData.tokenId as bigint;
 
-  const roundSnapshot = useRoundSnapshot(contentId);
+  const roundSnapshot = useRoundSnapshot(contentId, openRound ?? undefined, roundConfig ?? undefined);
   const { roundId: currentRoundId, phase, isEpoch1, upPool, downPool } = roundSnapshot;
   const effectiveIsBlind = phase !== "voting" || isEpoch1;
 

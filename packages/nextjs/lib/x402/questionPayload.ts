@@ -4,6 +4,11 @@ import {
   getContentTitleValidationError,
 } from "~~/lib/moderation/submissionValidation";
 import { findBlockedContentTags } from "~~/lib/moderation/submissionValidation";
+import {
+  DEFAULT_QUESTION_ROUND_CONFIG,
+  type QuestionRoundConfig,
+  serializeQuestionRoundConfig,
+} from "~~/lib/questionRoundConfig";
 
 export const X402_CELO_USDC_BY_CHAIN_ID: Record<number, `0x${string}`> = {
   42220: "0xcebA9300f2b948710d2653dD7B07f33A8B32118C",
@@ -39,6 +44,7 @@ export type X402QuestionPayload = {
   tags: string;
   tagList: string[];
   categoryId: bigint;
+  roundConfig: QuestionRoundConfig;
   bounty: {
     asset: "USDC";
     amount: bigint;
@@ -228,6 +234,38 @@ function normalizeBounty(value: unknown): X402QuestionPayload["bounty"] {
   };
 }
 
+function normalizeRoundConfig(value: unknown): QuestionRoundConfig {
+  if (value === undefined || value === null) {
+    return DEFAULT_QUESTION_ROUND_CONFIG;
+  }
+  if (!isObject(value)) {
+    throw new X402QuestionInputError("question.roundConfig must be an object.");
+  }
+
+  const epochDuration = parseNonNegativeInteger(
+    value.epochDuration ?? value.blindPhaseSeconds ?? value.blindSeconds,
+    "question.roundConfig.epochDuration",
+  );
+  const maxDuration = parseNonNegativeInteger(
+    value.maxDuration ?? value.maxDurationSeconds ?? value.deadlineSeconds,
+    "question.roundConfig.maxDuration",
+  );
+  const minVoters = parseNonNegativeInteger(value.minVoters, "question.roundConfig.minVoters");
+  const maxVoters = parseNonNegativeInteger(value.maxVoters, "question.roundConfig.maxVoters");
+
+  if (epochDuration <= 0n) {
+    throw new X402QuestionInputError("question.roundConfig.epochDuration must be greater than zero.");
+  }
+  if (maxDuration <= 0n) {
+    throw new X402QuestionInputError("question.roundConfig.maxDuration must be greater than zero.");
+  }
+  if (minVoters <= 0n || maxVoters <= 0n || maxVoters < minVoters) {
+    throw new X402QuestionInputError("question.roundConfig voter values are invalid.");
+  }
+
+  return { epochDuration, maxDuration, minVoters, maxVoters };
+}
+
 export function parseX402QuestionRequest(value: unknown, fallbackChainId?: number): X402QuestionPayload {
   if (!isObject(value)) {
     throw new X402QuestionInputError("Request body must be a JSON object.");
@@ -265,6 +303,7 @@ export function parseX402QuestionRequest(value: unknown, fallbackChainId?: numbe
 
   const { tags, tagList } = normalizeTags(question.tags);
   const categoryId = parseNonNegativeInteger(question.categoryId, "question.categoryId");
+  const roundConfig = normalizeRoundConfig(question.roundConfig);
 
   return {
     clientRequestId,
@@ -277,6 +316,7 @@ export function parseX402QuestionRequest(value: unknown, fallbackChainId?: numbe
     tags,
     tagList,
     categoryId,
+    roundConfig,
     bounty: normalizeBounty(value.bounty),
   };
 }
@@ -300,6 +340,7 @@ export function toCanonicalQuestionPayload(payload: X402QuestionPayload) {
       tags: payload.tagList,
       title: payload.title,
       videoUrl: payload.videoUrl,
+      roundConfig: serializeQuestionRoundConfig(payload.roundConfig),
     },
   };
 }

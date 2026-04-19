@@ -22,6 +22,10 @@ export interface OpenRoundFallbackData {
   upCount?: number;
   downCount?: number;
   startTime: bigint | null;
+  epochDuration?: number;
+  maxDuration?: number;
+  minVoters?: number;
+  maxVoters?: number;
 }
 
 interface OptimisticRoundDelta {
@@ -106,6 +110,11 @@ function toNumber(value: unknown, fallback = 0): number {
   return typeof value === "number" ? value : typeof value === "bigint" ? Number(value) : fallback;
 }
 
+function toPositiveNumber(value: unknown, fallback: number): number {
+  const parsed = toNumber(value, fallback);
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : fallback;
+}
+
 function maxBigInt(left: bigint, right: bigint): bigint {
   return left > right ? left : right;
 }
@@ -129,19 +138,19 @@ export function parseVotingConfig(rawConfig: unknown): VotingConfig {
 
   if (config.epochDuration != null) {
     return {
-      epochDuration: toNumber(config.epochDuration, DEFAULT_VOTING_CONFIG.epochDuration),
-      maxDuration: toNumber(config.maxDuration, DEFAULT_VOTING_CONFIG.maxDuration),
-      minVoters: toNumber(config.minVoters, DEFAULT_VOTING_CONFIG.minVoters),
-      maxVoters: toNumber(config.maxVoters, DEFAULT_VOTING_CONFIG.maxVoters),
+      epochDuration: toPositiveNumber(config.epochDuration, DEFAULT_VOTING_CONFIG.epochDuration),
+      maxDuration: toPositiveNumber(config.maxDuration, DEFAULT_VOTING_CONFIG.maxDuration),
+      minVoters: toPositiveNumber(config.minVoters, DEFAULT_VOTING_CONFIG.minVoters),
+      maxVoters: toPositiveNumber(config.maxVoters, DEFAULT_VOTING_CONFIG.maxVoters),
     };
   }
 
   if (Array.isArray(config) && config.length >= 4) {
     return {
-      epochDuration: toNumber(config[0], DEFAULT_VOTING_CONFIG.epochDuration),
-      maxDuration: toNumber(config[1], DEFAULT_VOTING_CONFIG.maxDuration),
-      minVoters: toNumber(config[2], DEFAULT_VOTING_CONFIG.minVoters),
-      maxVoters: toNumber(config[3], DEFAULT_VOTING_CONFIG.maxVoters),
+      epochDuration: toPositiveNumber(config[0], DEFAULT_VOTING_CONFIG.epochDuration),
+      maxDuration: toPositiveNumber(config[1], DEFAULT_VOTING_CONFIG.maxDuration),
+      minVoters: toPositiveNumber(config[2], DEFAULT_VOTING_CONFIG.minVoters),
+      maxVoters: toPositiveNumber(config[3], DEFAULT_VOTING_CONFIG.maxVoters),
     };
   }
 

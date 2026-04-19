@@ -58,6 +58,12 @@ import {
   parseSubmissionRewardAmount,
 } from "~~/lib/questionRewardPools";
 import {
+  DEFAULT_QUESTION_ROUND_CONFIG,
+  DEFAULT_QUESTION_ROUND_CONFIG_BOUNDS,
+  formatDurationLabel,
+  questionRoundConfigToAbi,
+} from "~~/lib/questionRoundConfig";
+import {
   getGasBalanceErrorMessage,
   isFreeTransactionExhaustedError,
   isInsufficientFundsError,
@@ -159,6 +165,15 @@ export function ContentSubmissionSection() {
   const [rewardRequiredSettledRounds, setRewardRequiredSettledRounds] = useState("1");
   const [rewardExpiryMode, setRewardExpiryMode] = useState<RewardExpiryMode>("none");
   const [rewardExpiryDays, setRewardExpiryDays] = useState("30");
+  const [roundBlindMinutes, setRoundBlindMinutes] = useState(
+    String(Number(DEFAULT_QUESTION_ROUND_CONFIG.epochDuration / 60n)),
+  );
+  const [roundMaxDurationHours, setRoundMaxDurationHours] = useState(
+    String(Number(DEFAULT_QUESTION_ROUND_CONFIG.maxDuration / 3600n)),
+  );
+  const [roundMinVoters, setRoundMinVoters] = useState(String(DEFAULT_QUESTION_ROUND_CONFIG.minVoters));
+  const [roundMaxVoters, setRoundMaxVoters] = useState(String(DEFAULT_QUESTION_ROUND_CONFIG.maxVoters));
+  const [roundConfigTouched, setRoundConfigTouched] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [questionStepAttempted, setQuestionStepAttempted] = useState(false);
   const [bountyStepAttempted, setBountyStepAttempted] = useState(false);
@@ -397,8 +412,104 @@ export function ContentSubmissionSection() {
       staleTime: 300_000,
     },
   } as any);
+  const { data: protocolRoundConfig } = useScaffoldReadContract({
+    contractName: "ProtocolConfig" as any,
+    functionName: "config" as any,
+    watch: false,
+    query: {
+      staleTime: 300_000,
+    },
+  } as any);
+  const { data: protocolRoundConfigBounds } = useScaffoldReadContract({
+    contractName: "ProtocolConfig" as any,
+    functionName: "roundConfigBounds" as any,
+    watch: false,
+    query: {
+      staleTime: 300_000,
+    },
+  } as any);
+  const roundConfigDefaults = useMemo(() => {
+    const value = protocolRoundConfig as any;
+    return {
+      epochDuration: Number(value?.epochDuration ?? value?.[0] ?? DEFAULT_QUESTION_ROUND_CONFIG.epochDuration),
+      maxDuration: Number(value?.maxDuration ?? value?.[1] ?? DEFAULT_QUESTION_ROUND_CONFIG.maxDuration),
+      minVoters: Number(value?.minVoters ?? value?.[2] ?? DEFAULT_QUESTION_ROUND_CONFIG.minVoters),
+      maxVoters: Number(value?.maxVoters ?? value?.[3] ?? DEFAULT_QUESTION_ROUND_CONFIG.maxVoters),
+    };
+  }, [protocolRoundConfig]);
+  const roundConfigBounds = useMemo(() => {
+    const value = protocolRoundConfigBounds as any;
+    return {
+      minEpochDuration: Number(
+        value?.minEpochDuration ?? value?.[0] ?? DEFAULT_QUESTION_ROUND_CONFIG_BOUNDS.minEpochDuration,
+      ),
+      maxEpochDuration: Number(
+        value?.maxEpochDuration ?? value?.[1] ?? DEFAULT_QUESTION_ROUND_CONFIG_BOUNDS.maxEpochDuration,
+      ),
+      minRoundDuration: Number(
+        value?.minRoundDuration ?? value?.[2] ?? DEFAULT_QUESTION_ROUND_CONFIG_BOUNDS.minRoundDuration,
+      ),
+      maxRoundDuration: Number(
+        value?.maxRoundDuration ?? value?.[3] ?? DEFAULT_QUESTION_ROUND_CONFIG_BOUNDS.maxRoundDuration,
+      ),
+      minSettlementVoters: Number(
+        value?.minSettlementVoters ?? value?.[4] ?? DEFAULT_QUESTION_ROUND_CONFIG_BOUNDS.minSettlementVoters,
+      ),
+      maxSettlementVoters: Number(
+        value?.maxSettlementVoters ?? value?.[5] ?? DEFAULT_QUESTION_ROUND_CONFIG_BOUNDS.maxSettlementVoters,
+      ),
+      minVoterCap: Number(value?.minVoterCap ?? value?.[6] ?? DEFAULT_QUESTION_ROUND_CONFIG_BOUNDS.minVoterCap),
+      maxVoterCap: Number(value?.maxVoterCap ?? value?.[7] ?? DEFAULT_QUESTION_ROUND_CONFIG_BOUNDS.maxVoterCap),
+    };
+  }, [protocolRoundConfigBounds]);
+  useEffect(() => {
+    if (roundConfigTouched || !protocolRoundConfig) return;
+    setRoundBlindMinutes(String(Math.max(1, Math.round(roundConfigDefaults.epochDuration / 60))));
+    setRoundMaxDurationHours(String(Math.max(1, Math.round(roundConfigDefaults.maxDuration / 3600))));
+    setRoundMinVoters(String(roundConfigDefaults.minVoters));
+    setRoundMaxVoters(String(roundConfigDefaults.maxVoters));
+  }, [protocolRoundConfig, roundConfigDefaults, roundConfigTouched]);
   const selectedRewardAssetId = rewardAsset === "crep" ? SUBMISSION_REWARD_ASSET_CREP : SUBMISSION_REWARD_ASSET_USDC;
   const selectedRewardAmount = useMemo(() => parseSubmissionRewardAmount(rewardAmount), [rewardAmount]);
+  const parsedRoundBlindMinutes = parseIntegerInput(roundBlindMinutes);
+  const parsedRoundMaxDurationHours = parseIntegerInput(roundMaxDurationHours);
+  const parsedRoundMinVoters = parseIntegerInput(roundMinVoters);
+  const parsedRoundMaxVoters = parseIntegerInput(roundMaxVoters);
+  const selectedRoundConfig = useMemo(
+    () => ({
+      epochDuration: BigInt(Math.max(0, parsedRoundBlindMinutes) * 60),
+      maxDuration: BigInt(Math.max(0, parsedRoundMaxDurationHours) * 3600),
+      minVoters: BigInt(Math.max(0, parsedRoundMinVoters)),
+      maxVoters: BigInt(Math.max(0, parsedRoundMaxVoters)),
+    }),
+    [parsedRoundBlindMinutes, parsedRoundMaxDurationHours, parsedRoundMinVoters, parsedRoundMaxVoters],
+  );
+  const roundConfigValidationError = (() => {
+    const epochDuration = Number(selectedRoundConfig.epochDuration);
+    const maxDuration = Number(selectedRoundConfig.maxDuration);
+    const minVoters = Number(selectedRoundConfig.minVoters);
+    const maxVoters = Number(selectedRoundConfig.maxVoters);
+    if (epochDuration < roundConfigBounds.minEpochDuration || epochDuration > roundConfigBounds.maxEpochDuration) {
+      return `Blind phase must be ${formatDurationLabel(roundConfigBounds.minEpochDuration)}-${formatDurationLabel(
+        roundConfigBounds.maxEpochDuration,
+      )}.`;
+    }
+    if (maxDuration < roundConfigBounds.minRoundDuration || maxDuration > roundConfigBounds.maxRoundDuration) {
+      return `Max duration must be ${formatDurationLabel(roundConfigBounds.minRoundDuration)}-${formatDurationLabel(
+        roundConfigBounds.maxRoundDuration,
+      )}.`;
+    }
+    if (minVoters < roundConfigBounds.minSettlementVoters || minVoters > roundConfigBounds.maxSettlementVoters) {
+      return `Settlement voters must be ${roundConfigBounds.minSettlementVoters}-${roundConfigBounds.maxSettlementVoters}.`;
+    }
+    if (maxVoters < roundConfigBounds.minVoterCap || maxVoters > roundConfigBounds.maxVoterCap) {
+      return `Voter cap must be ${roundConfigBounds.minVoterCap}-${roundConfigBounds.maxVoterCap}.`;
+    }
+    if (maxVoters < minVoters) {
+      return "Voter cap must be at least the settlement voters.";
+    }
+    return null;
+  })();
   const parsedRewardRequiredVoters = parseIntegerInput(rewardRequiredVoters);
   const parsedRewardRequiredSettledRounds = parseIntegerInput(rewardRequiredSettledRounds);
   const selectedRequiredVoters = BigInt(Math.max(MIN_REWARD_POOL_REQUIRED_VOTERS, parsedRewardRequiredVoters));
@@ -430,7 +541,9 @@ export function ContentSubmissionSection() {
   const rewardRequiredVotersValidationError =
     parsedRewardRequiredVoters < MIN_REWARD_POOL_REQUIRED_VOTERS
       ? `Minimum is ${MIN_REWARD_POOL_REQUIRED_VOTERS} voters.`
-      : null;
+      : selectedRequiredVoters > selectedRoundConfig.maxVoters
+        ? "Bounty voters cannot exceed the question voter cap."
+        : null;
   const rewardRequiredVotersError = bountyStepAttempted ? rewardRequiredVotersValidationError : null;
   const rewardRequiredSettledRoundsValidationError =
     parsedRewardRequiredSettledRounds < MIN_REWARD_POOL_SETTLED_ROUNDS
@@ -446,6 +559,7 @@ export function ContentSubmissionSection() {
     rewardRequiredVotersValidationError === null &&
     rewardRequiredSettledRoundsValidationError === null &&
     rewardExpiryValidationError === null &&
+    roundConfigValidationError === null &&
     rewardAmountError === null &&
     selectedRewardAmount !== null;
   const rewardTokenAddress =
@@ -655,6 +769,7 @@ export function ContentSubmissionSection() {
         imageUrls: submittedImageUrls,
         rewardAmount: selectedRewardAmount,
         rewardPoolExpiresAt,
+        roundConfig: selectedRoundConfig,
         rewardAsset: selectedRewardAssetId,
         requiredSettledRounds: selectedRequiredSettledRounds,
         requiredVoters: selectedRequiredVoters,
@@ -780,7 +895,7 @@ export function ContentSubmissionSection() {
       }
 
       // ContentRegistry enforces a minimum reservation age before reveal.
-      // Give the next block timestamp enough room to advance before submitQuestionWithReward.
+      // Give the next block timestamp enough room to advance before the reveal submit.
       await new Promise(resolve => setTimeout(resolve, 1_100));
 
       if (canUseSponsoredSubmitCalls) {
@@ -804,13 +919,16 @@ export function ContentSubmissionSection() {
                 submissionTags,
                 currentCategory.id,
                 activeReservation.salt,
-                selectedRewardAssetId,
-                selectedRewardAmount,
-                selectedRequiredVoters,
-                selectedRequiredSettledRounds,
-                rewardPoolExpiresAt,
+                {
+                  asset: selectedRewardAssetId,
+                  amount: selectedRewardAmount,
+                  requiredVoters: selectedRequiredVoters,
+                  requiredSettledRounds: selectedRequiredSettledRounds,
+                  expiresAt: rewardPoolExpiresAt,
+                },
+                questionRoundConfigToAbi(selectedRoundConfig),
               ],
-              functionName: "submitQuestionWithReward",
+              functionName: "submitQuestionWithRewardAndRoundConfig",
             },
           ],
           {
@@ -838,7 +956,7 @@ export function ContentSubmissionSection() {
         const submitWrite = {
           address: registryAddress,
           abi: QUESTION_SUBMISSION_ABI,
-          functionName: "submitQuestionWithReward",
+          functionName: "submitQuestionWithRewardAndRoundConfig",
           args: [
             submittedContextUrl,
             submittedImageUrls,
@@ -848,11 +966,14 @@ export function ContentSubmissionSection() {
             submissionTags,
             currentCategory.id,
             activeReservation.salt,
-            selectedRewardAssetId,
-            selectedRewardAmount,
-            selectedRequiredVoters,
-            selectedRequiredSettledRounds,
-            rewardPoolExpiresAt,
+            {
+              asset: selectedRewardAssetId,
+              amount: selectedRewardAmount,
+              requiredVoters: selectedRequiredVoters,
+              requiredSettledRounds: selectedRequiredSettledRounds,
+              expiresAt: rewardPoolExpiresAt,
+            },
+            questionRoundConfigToAbi(selectedRoundConfig),
           ],
         } as const;
         const submitTxHash = localE2ETestWalletClient
@@ -901,6 +1022,11 @@ export function ContentSubmissionSection() {
       setRewardRequiredSettledRounds("1");
       setRewardExpiryMode("none");
       setRewardExpiryDays("30");
+      setRoundBlindMinutes(String(Math.max(1, Math.round(roundConfigDefaults.epochDuration / 60))));
+      setRoundMaxDurationHours(String(Math.max(1, Math.round(roundConfigDefaults.maxDuration / 3600))));
+      setRoundMinVoters(String(roundConfigDefaults.minVoters));
+      setRoundMaxVoters(String(roundConfigDefaults.maxVoters));
+      setRoundConfigTouched(false);
       setQuestionStepAttempted(false);
       setBountyStepAttempted(false);
       setSubmissionStep(1);
@@ -1442,6 +1568,100 @@ export function ContentSubmissionSection() {
                 {bountyStepAttempted && rewardRequiredSettledRoundsError ? (
                   <p className="text-base text-error">{rewardRequiredSettledRoundsError}</p>
                 ) : null}
+
+                <div className="space-y-3 border-t border-base-300/70 pt-4">
+                  <div className="flex items-start justify-between gap-3">
+                    <p className="flex items-center gap-1.5 text-base font-medium text-base-content">
+                      Round settings
+                      <InfoTooltip text="Governance sets the allowed range. Choose what this question needs." />
+                    </p>
+                    <span className="text-sm font-semibold text-base-content/50">
+                      Default {formatDurationLabel(roundConfigDefaults.epochDuration)}
+                    </span>
+                  </div>
+
+                  <div className="grid gap-3 sm:grid-cols-2">
+                    <label className="form-control">
+                      <span className="label-text">Blind phase (minutes)</span>
+                      <input
+                        type="number"
+                        min={Math.ceil(roundConfigBounds.minEpochDuration / 60)}
+                        max={Math.floor(roundConfigBounds.maxEpochDuration / 60)}
+                        step={1}
+                        value={roundBlindMinutes}
+                        onChange={e => {
+                          setRoundConfigTouched(true);
+                          setRoundBlindMinutes(e.target.value);
+                        }}
+                        className={`input input-bordered bg-base-100 ${
+                          bountyStepAttempted && roundConfigValidationError ? "input-error" : ""
+                        }`}
+                      />
+                    </label>
+
+                    <label className="form-control">
+                      <span className="label-text">Max duration (hours)</span>
+                      <input
+                        type="number"
+                        min={Math.ceil(roundConfigBounds.minRoundDuration / 3600)}
+                        max={Math.floor(roundConfigBounds.maxRoundDuration / 3600)}
+                        step={1}
+                        value={roundMaxDurationHours}
+                        onChange={e => {
+                          setRoundConfigTouched(true);
+                          setRoundMaxDurationHours(e.target.value);
+                        }}
+                        className={`input input-bordered bg-base-100 ${
+                          bountyStepAttempted && roundConfigValidationError ? "input-error" : ""
+                        }`}
+                      />
+                    </label>
+
+                    <label className="form-control">
+                      <span className="label-text">Settlement voters</span>
+                      <input
+                        type="number"
+                        min={roundConfigBounds.minSettlementVoters}
+                        max={roundConfigBounds.maxSettlementVoters}
+                        step={1}
+                        value={roundMinVoters}
+                        onChange={e => {
+                          setRoundConfigTouched(true);
+                          setRoundMinVoters(e.target.value);
+                        }}
+                        className={`input input-bordered bg-base-100 ${
+                          bountyStepAttempted && roundConfigValidationError ? "input-error" : ""
+                        }`}
+                      />
+                    </label>
+
+                    <label className="form-control">
+                      <span className="label-text">Voter cap</span>
+                      <input
+                        type="number"
+                        min={roundConfigBounds.minVoterCap}
+                        max={roundConfigBounds.maxVoterCap}
+                        step={1}
+                        value={roundMaxVoters}
+                        onChange={e => {
+                          setRoundConfigTouched(true);
+                          setRoundMaxVoters(e.target.value);
+                        }}
+                        className={`input input-bordered bg-base-100 ${
+                          bountyStepAttempted && roundConfigValidationError ? "input-error" : ""
+                        }`}
+                      />
+                    </label>
+                  </div>
+
+                  {bountyStepAttempted && roundConfigValidationError ? (
+                    <p className="text-base text-error">{roundConfigValidationError}</p>
+                  ) : (
+                    <p className="text-sm text-base-content/55">
+                      Urgent bounties can use shorter rounds; broader questions can wait for more voters.
+                    </p>
+                  )}
+                </div>
 
                 <div className="space-y-2">
                   <div className="grid grid-cols-2 gap-2">

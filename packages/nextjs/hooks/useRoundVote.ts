@@ -15,13 +15,13 @@ import { getRecentUserVotesQueryKey } from "~~/hooks/useRecentUserVotes";
 import { useThirdwebSponsoredSubmitCalls } from "~~/hooks/useThirdwebSponsoredSubmitCalls";
 import { getVoteHistoryQueryKey } from "~~/hooks/useVoteHistoryQuery";
 import { useVoterIdNFT } from "~~/hooks/useVoterIdNFT";
-import { useVotingConfig } from "~~/hooks/useVotingConfig";
 import { getVotingStakesQueryKey } from "~~/hooks/useVotingStakes";
 import {
   type WalletDisplaySummary,
   getWalletDisplaySummaryQueryKey,
   persistWalletDisplaySummarySnapshot,
 } from "~~/hooks/useWalletDisplaySummary";
+import { DEFAULT_VOTING_CONFIG, type VotingConfig } from "~~/lib/contracts/roundVotingEngine";
 import { getGasBalanceErrorMessage, isFreeTransactionExhaustedError } from "~~/lib/transactionErrors";
 import { recordLocalVoteCooldown } from "~~/lib/vote/localCooldown";
 import { normalizeRoundVoteError } from "~~/lib/vote/roundVoteErrors";
@@ -35,6 +35,7 @@ interface RoundVoteParams {
   stakeAmount: number; // In whole tokens (e.g., 5 = 5 cREP)
   frontendCode?: `0x${string}`; // Optional frontend operator address for fee distribution
   isOwnContent?: boolean;
+  roundConfig?: VotingConfig | null;
   submitter?: string; // Content submitter address (for self-vote prevention)
 }
 
@@ -56,7 +57,6 @@ export function useRoundVote() {
   const [error, setError] = useState<string | null>(null);
   const { requireAcceptance } = useTermsAcceptance();
   const queryClient = useQueryClient();
-  const { epochDuration } = useVotingConfig();
   const writeTx = useTransactor();
   const wagmiTokenWrite = useWriteContract();
   const {
@@ -82,6 +82,7 @@ export function useRoundVote() {
     stakeAmount,
     frontendCode,
     isOwnContent,
+    roundConfig,
     submitter,
   }: RoundVoteParams) => {
     const accepted = await requireAcceptance("vote");
@@ -141,7 +142,7 @@ export function useRoundVote() {
             publicClient,
             votingEngineAddress: votingEngineInfo.address as `0x${string}`,
             contentId,
-            epochDuration,
+            fallbackEpochDuration: roundConfig?.epochDuration ?? DEFAULT_VOTING_CONFIG.epochDuration,
           });
         } catch (runtimeError) {
           console.warn("[round-vote] failed to anchor tlock target to the active round.", {
@@ -163,7 +164,7 @@ export function useRoundVote() {
           contentId,
           isUp,
           stakeAmount,
-          epochDuration,
+          epochDuration: runtime.epochDuration,
           roundReferenceRatingBps: runtime.roundReferenceRatingBps,
           frontendCode,
           defaultFrontendCode: scaffoldConfig.frontendCode,

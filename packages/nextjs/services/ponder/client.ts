@@ -320,6 +320,10 @@ export interface PonderContentItem {
   lastActivityAt: string;
   totalVotes: number;
   totalRounds: number;
+  roundEpochDuration?: number | string | null;
+  roundMaxDuration?: number | string | null;
+  roundMinVoters?: number | string | null;
+  roundMaxVoters?: number | string | null;
   openRound: PonderContentOpenRoundSummary | null;
   rewardPoolSummary?: PonderRewardPoolSummary | null;
 }
@@ -398,6 +402,10 @@ export interface PonderContentOpenRoundSummary {
   settledRounds?: number;
   lowSince?: string;
   startTime: string | null;
+  epochDuration?: number;
+  maxDuration?: number;
+  minVoters?: number;
+  maxVoters?: number;
   estimatedSettlementTime: string | null;
 }
 
@@ -424,6 +432,10 @@ export interface PonderRoundItem {
   losingPool: string | null;
   startTime: string | null;
   settledAt: string | null;
+  epochDuration?: number;
+  maxDuration?: number;
+  minVoters?: number;
+  maxVoters?: number;
   title: string | null;
   description: string | null;
   url: string | null;
@@ -686,6 +698,10 @@ export interface PonderVoteItem {
   committedAt: string;
   revealedAt: string | null;
   roundStartTime: string | null;
+  roundEpochDuration?: number;
+  roundMaxDuration?: number;
+  roundMinVoters?: number;
+  roundMaxVoters?: number;
   roundState: RoundState | null;
   roundUpWins: boolean | null;
 }

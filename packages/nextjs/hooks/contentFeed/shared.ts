@@ -3,6 +3,7 @@
 import { parseTags } from "~~/constants/categories";
 import { type ContentMediaItem, buildFallbackMediaItems } from "~~/lib/contentMedia";
 import type { ContentMetadataResult } from "~~/lib/contentMetadata/types";
+import { DEFAULT_VOTING_CONFIG, type VotingConfig } from "~~/lib/contracts/roundVotingEngine";
 import { isContentItemBlocked } from "~~/utils/contentFilter";
 
 export const MIN_CONTENT_SEARCH_QUERY_LENGTH = 3;
@@ -26,6 +27,10 @@ export interface ContentOpenRoundSummary {
   settledRounds?: number;
   lowSince?: bigint;
   startTime: bigint | null;
+  epochDuration?: number;
+  maxDuration?: number;
+  minVoters?: number;
+  maxVoters?: number;
   estimatedSettlementTime: bigint | null;
 }
 
@@ -48,6 +53,7 @@ export interface ContentItem {
   lastActivityAt: string | null;
   totalVotes: number;
   totalRounds: number;
+  roundConfig?: VotingConfig | null;
   openRound: ContentOpenRoundSummary | null;
   isValidUrl: boolean | null;
   thumbnailUrl: string | null;
@@ -100,6 +106,11 @@ function buildNormalizedAddressSet(addresses: readonly string[] | undefined, fal
   return values;
 }
 
+function numberOrDefault(value: string | number | null | undefined, fallback: number): number {
+  const parsed = typeof value === "number" ? value : typeof value === "string" ? Number(value) : fallback;
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : fallback;
+}
+
 export function mapContentItem(
   item: {
     id: string;
@@ -126,6 +137,10 @@ export function mapContentItem(
     lastActivityAt?: string | null;
     totalVotes?: number;
     totalRounds?: number;
+    roundEpochDuration?: string | number | null;
+    roundMaxDuration?: string | number | null;
+    roundMinVoters?: string | number | null;
+    roundMaxVoters?: string | number | null;
     openRound?: {
       roundId: string;
       voteCount: number;
@@ -143,6 +158,10 @@ export function mapContentItem(
       settledRounds?: number;
       lowSince?: string;
       startTime: string | null;
+      epochDuration?: number;
+      maxDuration?: number;
+      minVoters?: number;
+      maxVoters?: number;
       estimatedSettlementTime: string | null;
     } | null;
     rewardPoolSummary?: {
@@ -160,6 +179,12 @@ export function mapContentItem(
   ownSubmitterAddresses?: readonly string[],
 ): ContentItem {
   const ownSubmitterAddressSet = buildNormalizedAddressSet(ownSubmitterAddresses, voterAddress);
+  const roundConfig = {
+    epochDuration: numberOrDefault(item.roundEpochDuration, DEFAULT_VOTING_CONFIG.epochDuration),
+    maxDuration: numberOrDefault(item.roundMaxDuration, DEFAULT_VOTING_CONFIG.maxDuration),
+    minVoters: numberOrDefault(item.roundMinVoters, DEFAULT_VOTING_CONFIG.minVoters),
+    maxVoters: numberOrDefault(item.roundMaxVoters, DEFAULT_VOTING_CONFIG.maxVoters),
+  };
   const mappedOpenRound = item.openRound
     ? {
         roundId: BigInt(item.openRound.roundId),
@@ -181,6 +206,10 @@ export function mapContentItem(
         settledRounds: item.openRound.settledRounds,
         lowSince: item.openRound.lowSince !== undefined ? BigInt(item.openRound.lowSince) : undefined,
         startTime: item.openRound.startTime ? BigInt(item.openRound.startTime) : null,
+        epochDuration: numberOrDefault(item.openRound.epochDuration, roundConfig.epochDuration),
+        maxDuration: numberOrDefault(item.openRound.maxDuration, roundConfig.maxDuration),
+        minVoters: numberOrDefault(item.openRound.minVoters, roundConfig.minVoters),
+        maxVoters: numberOrDefault(item.openRound.maxVoters, roundConfig.maxVoters),
         estimatedSettlementTime: item.openRound.estimatedSettlementTime
           ? BigInt(item.openRound.estimatedSettlementTime)
           : null,
@@ -221,6 +250,7 @@ export function mapContentItem(
     lastActivityAt: item.lastActivityAt ?? null,
     totalVotes: item.totalVotes ?? 0,
     totalRounds: item.totalRounds ?? 0,
+    roundConfig,
     openRound: mappedOpenRound,
     isValidUrl: null,
     thumbnailUrl: null,

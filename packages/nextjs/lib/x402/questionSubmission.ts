@@ -28,6 +28,7 @@ import {
   getX402ServiceFeeUsdc,
   getX402UsdcAddressOverride,
 } from "~~/lib/env/server";
+import { questionRoundConfigToAbi, serializeQuestionRoundConfig } from "~~/lib/questionRoundConfig";
 import {
   type X402QuestionOperation,
   type X402QuestionPayload,
@@ -326,13 +327,14 @@ function buildSubmissionRevealCommitment(params: {
   requiredSettledRounds: bigint;
   requiredVoters: bigint;
   rewardPoolExpiresAt: bigint;
+  roundConfig: X402QuestionPayload["roundConfig"];
   salt: Hex;
   submissionKey: Hex;
   submitter: Address;
   tags: string;
   title: string;
 }): Hex {
-  return keccak256(
+  const legacyCommitment = keccak256(
     encodeAbiParameters(
       [
         { type: "bytes32" },
@@ -361,6 +363,19 @@ function buildSubmissionRevealCommitment(params: {
         params.requiredVoters,
         params.requiredSettledRounds,
         params.rewardPoolExpiresAt,
+      ],
+    ),
+  );
+
+  return keccak256(
+    encodeAbiParameters(
+      [{ type: "bytes32" }, { type: "uint32" }, { type: "uint32" }, { type: "uint16" }, { type: "uint16" }],
+      [
+        legacyCommitment,
+        Number(params.roundConfig.epochDuration),
+        Number(params.roundConfig.maxDuration),
+        Number(params.roundConfig.minVoters),
+        Number(params.roundConfig.maxVoters),
       ],
     ),
   );
@@ -399,6 +414,22 @@ async function assertBountyMeetsProtocolMinimum(params: {
       `Bounty is below the on-chain USDC minimum (${minimum.toString()} atomic units).`,
     );
   }
+
+  if (params.payload.bounty.requiredVoters > params.payload.roundConfig.maxVoters) {
+    throw new X402QuestionConflictError("Bounty voter requirement exceeds the selected question voter cap.");
+  }
+
+  await params.publicClient.readContract({
+    address: protocolConfigAddress,
+    abi: ProtocolConfigAbi,
+    functionName: "validateRoundConfig",
+    args: [
+      params.payload.roundConfig.epochDuration,
+      params.payload.roundConfig.maxDuration,
+      params.payload.roundConfig.minVoters,
+      params.payload.roundConfig.maxVoters,
+    ],
+  });
 }
 
 async function ensureUsdcAllowance(params: {
@@ -507,6 +538,7 @@ export async function executeX402QuestionSubmission(params: {
     requiredSettledRounds: params.payload.bounty.requiredSettledRounds,
     requiredVoters: params.payload.bounty.requiredVoters,
     rewardPoolExpiresAt: params.payload.bounty.rewardPoolExpiresAt,
+    roundConfig: params.payload.roundConfig,
     salt,
     submissionKey,
     submitter: account.address,
@@ -546,17 +578,20 @@ export async function executeX402QuestionSubmission(params: {
       params.payload.tags,
       params.payload.categoryId,
       salt,
-      X402_SUBMISSION_REWARD_ASSET_USDC,
-      params.payload.bounty.amount,
-      params.payload.bounty.requiredVoters,
-      params.payload.bounty.requiredSettledRounds,
-      params.payload.bounty.rewardPoolExpiresAt,
+      {
+        asset: X402_SUBMISSION_REWARD_ASSET_USDC,
+        amount: params.payload.bounty.amount,
+        requiredVoters: params.payload.bounty.requiredVoters,
+        requiredSettledRounds: params.payload.bounty.requiredSettledRounds,
+        expiresAt: params.payload.bounty.rewardPoolExpiresAt,
+      },
+      questionRoundConfigToAbi(params.payload.roundConfig),
     ] as const;
     const { request } = await publicClient.simulateContract({
       account,
       address: params.config.contentRegistryAddress,
       abi: ContentRegistryAbi,
-      functionName: "submitQuestionWithReward",
+      functionName: "submitQuestionWithRewardAndRoundConfig",
       args: submitArgs,
     });
     const submitHash = await walletClient.writeContract(request);
@@ -614,6 +649,7 @@ function submissionResponseBody(params: {
     contentId,
     executorAddress: params.config.executorAddress,
     operationKey: params.operation.operationKey,
+    roundConfig: serializeQuestionRoundConfig(params.payload.roundConfig),
     payment: {
       amount: (params.payload.bounty.amount + params.config.serviceFeeAmount).toString(),
       asset: params.config.usdcAddress,

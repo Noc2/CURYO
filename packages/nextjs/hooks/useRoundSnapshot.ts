@@ -7,15 +7,21 @@ import { useUnixTime } from "~~/hooks/useUnixTime";
 import { useVotingConfig } from "~~/hooks/useVotingConfig";
 import {
   type OpenRoundFallbackData,
+  type VotingConfig,
   deriveRoundSnapshot,
   mergeRoundDataWithFallback,
   parseRound,
+  parseVotingConfig,
 } from "~~/lib/contracts/roundVotingEngine";
 
-export function useRoundSnapshot(contentId?: bigint, fallbackOpenRound?: OpenRoundFallbackData) {
+export function useRoundSnapshot(
+  contentId?: bigint,
+  fallbackOpenRound?: OpenRoundFallbackData,
+  fallbackRoundConfig?: VotingConfig | null,
+) {
   const { getOptimisticDelta } = useOptimisticVote();
   const optimisticDelta = contentId !== undefined ? getOptimisticDelta(contentId) : undefined;
-  const config = useVotingConfig();
+  const protocolConfig = useVotingConfig();
   const now = useUnixTime();
   const isPageVisible = usePageVisibility();
   const refetchInterval = isPageVisible ? 10_000 : false;
@@ -43,6 +49,17 @@ export function useRoundSnapshot(contentId?: bigint, fallbackOpenRound?: OpenRou
     },
   } as any);
 
+  const { data: rawRoundConfigSnapshot, isLoading: isRoundConfigLoading } = useScaffoldReadContract({
+    contractName: "RoundVotingEngine" as any,
+    functionName: "roundConfigSnapshot" as any,
+    args: [contentId, currentRoundId] as any,
+    watch: true,
+    query: {
+      enabled: contentId !== undefined && currentRoundId > 0n,
+      refetchInterval,
+    },
+  } as any);
+
   const parsedRound = parseRound(rawRoundData);
   const mergedRound = mergeRoundDataWithFallback({
     roundId: currentRoundId,
@@ -50,6 +67,9 @@ export function useRoundSnapshot(contentId?: bigint, fallbackOpenRound?: OpenRou
     fallback: fallbackOpenRound,
   });
   const roundId = mergedRound.round?.state === 0 ? mergedRound.roundId : 0n;
+  const fallbackConfig =
+    fallbackRoundConfig ?? (fallbackOpenRound ? parseVotingConfig(fallbackOpenRound) : protocolConfig);
+  const config = roundId > 0n ? parseVotingConfig(rawRoundConfigSnapshot ?? fallbackConfig) : fallbackConfig;
 
   const snapshot = deriveRoundSnapshot({
     roundId,
@@ -61,8 +81,9 @@ export function useRoundSnapshot(contentId?: bigint, fallbackOpenRound?: OpenRou
 
   return {
     ...snapshot,
-    isLoading: contentId !== undefined && (isRoundIdLoading || (roundId > 0n && isRoundLoading)),
-    isReady: contentId !== undefined && !isRoundIdLoading && !isRoundLoading,
+    isLoading:
+      contentId !== undefined && (isRoundIdLoading || (roundId > 0n && (isRoundLoading || isRoundConfigLoading))),
+    isReady: contentId !== undefined && !isRoundIdLoading && !isRoundLoading && !isRoundConfigLoading,
   };
 }
 

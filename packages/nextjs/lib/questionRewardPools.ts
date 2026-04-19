@@ -72,6 +72,43 @@ export const QUESTION_SUBMISSION_ABI = [
   },
   {
     type: "function",
+    name: "submitQuestionWithRewardAndRoundConfig",
+    inputs: [
+      { name: "contextUrl", type: "string" },
+      { name: "imageUrls", type: "string[]" },
+      { name: "videoUrl", type: "string" },
+      { name: "title", type: "string" },
+      { name: "description", type: "string" },
+      { name: "tags", type: "string" },
+      { name: "categoryId", type: "uint256" },
+      { name: "salt", type: "bytes32" },
+      {
+        name: "rewardTerms",
+        type: "tuple",
+        components: [
+          { name: "asset", type: "uint8" },
+          { name: "amount", type: "uint256" },
+          { name: "requiredVoters", type: "uint256" },
+          { name: "requiredSettledRounds", type: "uint256" },
+          { name: "expiresAt", type: "uint256" },
+        ],
+      },
+      {
+        name: "roundConfig",
+        type: "tuple",
+        components: [
+          { name: "epochDuration", type: "uint32" },
+          { name: "maxDuration", type: "uint32" },
+          { name: "minVoters", type: "uint16" },
+          { name: "maxVoters", type: "uint16" },
+        ],
+      },
+    ],
+    outputs: [{ name: "", type: "uint256" }],
+    stateMutability: "nonpayable",
+  },
+  {
+    type: "function",
     name: "submitQuestion",
     inputs: [
       { name: "contextUrl", type: "string" },

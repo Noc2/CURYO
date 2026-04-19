@@ -1,7 +1,7 @@
 "use client";
 
-import { DEFAULT_ROUND_CONFIG } from "@curyo/contracts/protocol";
 import type { ContentItem } from "~~/hooks/useContentFeed";
+import { DEFAULT_VOTING_CONFIG } from "~~/lib/contracts/roundVotingEngine";
 
 export type DiscoverFeedMode = "for_you" | "trending" | "highest_rewards" | "contested" | "latest" | "near_settlement";
 
@@ -94,6 +94,14 @@ function getRewardPoolAmount(item: ContentItem) {
   return item.rewardPoolSummary?.totalAvailable ?? item.rewardPoolSummary?.totalFunded ?? 0n;
 }
 
+function getRoundMinVoters(item: ContentItem) {
+  return item.openRound?.minVoters ?? item.roundConfig?.minVoters ?? DEFAULT_VOTING_CONFIG.minVoters;
+}
+
+function getRoundMaxDuration(item: ContentItem) {
+  return item.openRound?.maxDuration ?? item.roundConfig?.maxDuration ?? DEFAULT_VOTING_CONFIG.maxDuration;
+}
+
 function compareRewardPoolAmountDesc(a: ContentItem, b: ContentItem) {
   const aAmount = getRewardPoolAmount(a);
   const bAmount = getRewardPoolAmount(b);
@@ -107,7 +115,7 @@ function getTrendingScore(item: ContentItem, nowSeconds: number): number {
   const voteScore = getLogScore(item.totalVotes, 32);
   const roundScore = getLogScore(item.totalRounds, 10);
   const openRoundBoost = item.openRound
-    ? 0.45 + 0.55 * Math.min(item.openRound.voteCount / Math.max(DEFAULT_ROUND_CONFIG.minVoters, 1), 1)
+    ? 0.45 + 0.55 * Math.min(item.openRound.voteCount / Math.max(getRoundMinVoters(item), 1), 1)
     : 0;
 
   return recency * 1.35 + voteScore * 1.15 + roundScore * 0.55 + openRoundBoost * 0.8;
@@ -118,7 +126,7 @@ function getContestedScore(item: ContentItem, nowSeconds: number): number {
   if (!openRound) return Number.NEGATIVE_INFINITY;
 
   const closeness = getRoundCloseness(item);
-  const participation = Math.min(openRound.voteCount / Math.max(DEFAULT_ROUND_CONFIG.minVoters * 2, 1), 1);
+  const participation = Math.min(openRound.voteCount / Math.max(getRoundMinVoters(item) * 2, 1), 1);
   const revealDepth = Math.min(openRound.revealedCount / Math.max(openRound.voteCount, 1), 1);
   const roundStartSeconds = openRound.startTime ? Number(openRound.startTime) : null;
   const recency = getRecencyScore(roundStartSeconds, nowSeconds, TRENDING_WINDOW_SECONDS);
@@ -133,9 +141,9 @@ function getNearSettlementScore(item: ContentItem, nowSeconds: number): number {
   const estimatedSettlementTime = openRound.estimatedSettlementTime ? Number(openRound.estimatedSettlementTime) : null;
   const secondsUntilSettlement = estimatedSettlementTime
     ? Math.max(estimatedSettlementTime - nowSeconds, 0)
-    : DEFAULT_ROUND_CONFIG.maxDurationSeconds * 2;
+    : getRoundMaxDuration(item) * 2;
   const timingScore = estimatedSettlementTime ? 1 / (1 + secondsUntilSettlement / 3600) : 0;
-  const voteReadiness = Math.min(openRound.voteCount / Math.max(DEFAULT_ROUND_CONFIG.minVoters, 1), 1.5);
+  const voteReadiness = Math.min(openRound.voteCount / Math.max(getRoundMinVoters(item), 1), 1.5);
   const revealProgress = Math.min(openRound.revealedCount / Math.max(openRound.voteCount, 1), 1);
   const contestedBoost = getRoundCloseness(item) * 0.3;
 

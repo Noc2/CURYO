@@ -18,6 +18,12 @@ const DEFAULT_DRAFT = {
   description: "first description",
   imageUrls: ["https://example.com/demo.jpg"],
   rewardPoolExpiresAt: 0n,
+  roundConfig: {
+    epochDuration: 1200n,
+    maxDuration: 604800n,
+    minVoters: 3n,
+    maxVoters: 1000n,
+  },
   rewardAmount: 1_000_000n,
   rewardAsset: 0,
   requiredSettledRounds: 1n,
@@ -84,6 +90,30 @@ test("buildSubmissionRevealCommitment changes when bounty terms change", () => {
   assert.notEqual(initial, edited);
 });
 
+test("buildSubmissionRevealCommitment changes when round config changes", () => {
+  const initial = buildSubmissionRevealCommitment(
+    {
+      ...DEFAULT_DRAFT,
+    },
+    SALT,
+    ADDRESS,
+  );
+
+  const edited = buildSubmissionRevealCommitment(
+    {
+      ...DEFAULT_DRAFT,
+      roundConfig: {
+        ...DEFAULT_DRAFT.roundConfig,
+        maxVoters: 50n,
+      },
+    },
+    SALT,
+    ADDRESS,
+  );
+
+  assert.notEqual(initial, edited);
+});
+
 test("submissionReservationMatchesDraft only reuses reservations for the exact same draft", () => {
   const reservation = createStoredSubmissionReservation(
     {
@@ -119,6 +149,17 @@ test("submissionReservationMatchesDraft only reuses reservations for the exact s
     submissionReservationMatchesDraft(reservation, {
       ...DEFAULT_DRAFT,
       requiredVoters: 4n,
+    }),
+    false,
+  );
+
+  assert.equal(
+    submissionReservationMatchesDraft(reservation, {
+      ...DEFAULT_DRAFT,
+      roundConfig: {
+        ...DEFAULT_DRAFT.roundConfig,
+        minVoters: 5n,
+      },
     }),
     false,
   );

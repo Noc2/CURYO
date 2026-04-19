@@ -646,7 +646,9 @@ const HomeInner = () => {
     isUp: boolean;
     contentId: bigint;
     categoryId: bigint;
-  }>({ isOpen: false, isUp: false, contentId: 0n, categoryId: 0n });
+    roundConfig?: ContentItem["roundConfig"] | null;
+    openRound?: ContentItem["openRound"] | null;
+  }>({ isOpen: false, isUp: false, contentId: 0n, categoryId: 0n, roundConfig: null, openRound: null });
   const { commitVote, isCommitting, error: voteError, clearError: clearVoteError } = useRoundVote();
   // Apply search, category filter, and the selected view before sorting
   const filteredFeed = useMemo(() => {
@@ -1060,7 +1062,14 @@ const HomeInner = () => {
       clearVoteError();
       markPrimaryInteraction(item.id);
       recordRecommendationSignal(item, "vote_intent", { isUp });
-      setStakeModal({ isOpen: true, isUp, contentId: item.id, categoryId: item.categoryId });
+      setStakeModal({
+        isOpen: true,
+        isUp,
+        contentId: item.id,
+        categoryId: item.categoryId,
+        roundConfig: item.roundConfig,
+        openRound: item.openRound,
+      });
     },
     [
       address,
@@ -1192,6 +1201,7 @@ const HomeInner = () => {
         contentId: stakeModal.contentId,
         isUp: stakeModal.isUp,
         isOwnContent: item?.isOwnContent,
+        roundConfig: item?.roundConfig ?? stakeModal.roundConfig,
         stakeAmount,
         submitter: item?.submitter,
       });
@@ -1728,6 +1738,7 @@ const HomeInner = () => {
                 currentRating={primaryItem.rating}
                 rewardPoolSummary={primaryItem.rewardPoolSummary}
                 openRound={primaryItem.openRound}
+                roundConfig={primaryItem.roundConfig}
                 onVote={isUp => handleButtonVote(primaryItem, isUp)}
                 isCommitting={isCommitting}
                 address={address}
@@ -1752,6 +1763,8 @@ const HomeInner = () => {
           isUp={stakeModal.isUp}
           contentId={stakeModal.contentId}
           categoryId={stakeModal.categoryId}
+          openRound={stakeModal.openRound}
+          roundConfig={stakeModal.roundConfig}
           cooldownSecondsRemaining={stakeModalCooldownSeconds}
           isConfirming={isCommitting}
           confirmError={voteError}

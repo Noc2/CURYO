@@ -76,6 +76,45 @@ const submitQuestionWithRewardAbi = [
     stateMutability: "nonpayable",
   },
 ] as const;
+const submitQuestionWithRewardAndRoundConfigAbi = [
+  {
+    type: "function",
+    name: "submitQuestionWithRewardAndRoundConfig",
+    inputs: [
+      { name: "contextUrl", type: "string" },
+      { name: "imageUrls", type: "string[]" },
+      { name: "videoUrl", type: "string" },
+      { name: "title", type: "string" },
+      { name: "description", type: "string" },
+      { name: "tags", type: "string" },
+      { name: "categoryId", type: "uint256" },
+      { name: "salt", type: "bytes32" },
+      {
+        name: "rewardTerms",
+        type: "tuple",
+        components: [
+          { name: "asset", type: "uint8" },
+          { name: "amount", type: "uint256" },
+          { name: "requiredVoters", type: "uint256" },
+          { name: "requiredSettledRounds", type: "uint256" },
+          { name: "expiresAt", type: "uint256" },
+        ],
+      },
+      {
+        name: "roundConfig",
+        type: "tuple",
+        components: [
+          { name: "epochDuration", type: "uint32" },
+          { name: "maxDuration", type: "uint32" },
+          { name: "minVoters", type: "uint16" },
+          { name: "maxVoters", type: "uint16" },
+        ],
+      },
+    ],
+    outputs: [{ name: "", type: "uint256" }],
+    stateMutability: "nonpayable",
+  },
+] as const;
 
 let dbModule: DbModule;
 let dbTestMemory: DbTestMemoryModule;
@@ -462,6 +501,24 @@ test("supported sponsored operation families are allowlisted", async () => {
           3n,
           1n,
           0n,
+        ],
+      ),
+    ],
+    [
+      encodeCall(
+        { address: contentRegistryContract.address, abi: submitQuestionWithRewardAndRoundConfigAbi },
+        "submitQuestionWithRewardAndRoundConfig",
+        [
+          "https://example.com/product",
+          ["https://example.com/question-a.jpg"],
+          "",
+          "Is this product worth recommending?",
+          "Vote based on the image.",
+          "Products,Value",
+          1n,
+          `0x${"5".repeat(64)}`,
+          { asset: 0, amount: 1_000_000n, requiredVoters: 3n, requiredSettledRounds: 1n, expiresAt: 0n },
+          { epochDuration: 1200, maxDuration: 604800, minVoters: 3, maxVoters: 1000 },
         ],
       ),
     ],

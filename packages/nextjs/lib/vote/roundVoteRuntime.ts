@@ -1,4 +1,4 @@
-import { parseRound } from "../contracts/roundVotingEngine";
+import { parseRound, parseVotingConfig } from "../contracts/roundVotingEngine";
 import { deriveCommitVoteRuntimeNowMs } from "./tlockCommitTiming";
 import { RoundVotingEngineAbi } from "@curyo/contracts/abis";
 import { type PublicClient } from "viem";
@@ -7,7 +7,7 @@ export async function resolveRoundVoteRuntime(params: {
   publicClient: PublicClient;
   votingEngineAddress: `0x${string}`;
   contentId: bigint;
-  epochDuration: number;
+  fallbackEpochDuration: number;
 }) {
   const latestBlock = await params.publicClient.getBlock({ blockTag: "latest" });
   const snapshotBlockNumber = latestBlock.number;
@@ -20,15 +20,26 @@ export async function resolveRoundVoteRuntime(params: {
   });
 
   let roundStartTimeSeconds: number | null = null;
+  let epochDuration = params.fallbackEpochDuration;
   if (currentRoundId > 0n) {
-    const round = await params.publicClient.readContract({
-      address: params.votingEngineAddress,
-      abi: RoundVotingEngineAbi,
-      functionName: "rounds",
-      args: [params.contentId, currentRoundId],
-      blockNumber: snapshotBlockNumber,
-    });
+    const [round, roundConfig] = await Promise.all([
+      params.publicClient.readContract({
+        address: params.votingEngineAddress,
+        abi: RoundVotingEngineAbi,
+        functionName: "rounds",
+        args: [params.contentId, currentRoundId],
+        blockNumber: snapshotBlockNumber,
+      }),
+      params.publicClient.readContract({
+        address: params.votingEngineAddress,
+        abi: RoundVotingEngineAbi,
+        functionName: "roundConfigSnapshot",
+        args: [params.contentId, currentRoundId],
+        blockNumber: snapshotBlockNumber,
+      }),
+    ]);
     const parsedRound = parseRound(round);
+    epochDuration = parseVotingConfig(roundConfig).epochDuration;
 
     if (parsedRound?.state === 0 && parsedRound.startTime > 0n) {
       roundStartTimeSeconds = Number(parsedRound.startTime);
@@ -45,11 +56,12 @@ export async function resolveRoundVoteRuntime(params: {
 
   const runtimeNowMs = deriveCommitVoteRuntimeNowMs({
     latestBlockTimestampSeconds: Number(latestBlock.timestamp),
-    epochDurationSeconds: params.epochDuration,
+    epochDurationSeconds: epochDuration,
     roundStartTimeSeconds,
   });
 
   return {
+    epochDuration,
     now: () => runtimeNowMs,
     roundReferenceRatingBps,
   };

@@ -30,12 +30,19 @@ const ANVIL_PRIVATE_KEYS_BY_ADDRESS = new Map(
 
 type SubmissionMedia = { imageUrls: string[]; videoUrl: string };
 type SubmissionMediaInput = { imageUrls?: readonly string[]; videoUrl?: string };
+type SubmissionRoundConfig = { epochDuration: number; maxDuration: number; minVoters: number; maxVoters: number };
 const MAX_SUBMISSION_IMAGE_URLS = 4;
 const DEFAULT_SUBMISSION_REWARD_ASSET_CREP = 0;
 const DEFAULT_SUBMISSION_REWARD_AMOUNT = 1_000_000n;
 const DEFAULT_SUBMISSION_REWARD_REQUIRED_VOTERS = 3n;
 const DEFAULT_SUBMISSION_REWARD_SETTLED_ROUNDS = 1n;
 const DEFAULT_SUBMISSION_REWARD_EXPIRES_AT = 0n;
+const DEFAULT_SUBMISSION_ROUND_CONFIG: SubmissionRoundConfig = {
+  epochDuration: 20 * 60,
+  maxDuration: 7 * 24 * 60 * 60,
+  minVoters: 3,
+  maxVoters: 1000,
+};
 const DIRECT_IMAGE_URL_PATTERN = /^https:\/\/\S+\.(?:avif|gif|jpe?g|png|webp)(?:[?#]\S*)?$/i;
 
 function isSupportedImageUrl(url: string): boolean {
@@ -56,9 +63,7 @@ function isSupportedYouTubeUrl(url: string): boolean {
     }
 
     const isWatchHost =
-      parsed.hostname === "youtube.com" ||
-      parsed.hostname === "www.youtube.com" ||
-      parsed.hostname === "m.youtube.com";
+      parsed.hostname === "youtube.com" || parsed.hostname === "www.youtube.com" || parsed.hostname === "m.youtube.com";
     return isWatchHost && parsed.pathname === "/watch" && parsed.searchParams.has("v");
   } catch {
     return false;
@@ -180,6 +185,7 @@ async function buildSubmissionReservation(
   contractAddress: string,
   media: SubmissionMedia,
   rewardAmount: bigint = DEFAULT_SUBMISSION_REWARD_AMOUNT,
+  roundConfig: SubmissionRoundConfig = DEFAULT_SUBMISSION_ROUND_CONFIG,
 ): Promise<{ revealCommitment: `0x${string}`; salt: `0x${string}` } | null> {
   const { decodeFunctionResult, encodeAbiParameters, encodeFunctionData, keccak256, stringToHex } = await import(
     "viem"
@@ -224,7 +230,7 @@ async function buildSubmissionReservation(
   }) as readonly [bigint, `0x${string}`];
 
   const salt = keccak256(stringToHex(`${fromAddress}:${categoryId}:${JSON.stringify(media)}:${title}:${Date.now()}`));
-  const revealCommitment = keccak256(
+  const legacyCommitment = keccak256(
     encodeAbiParameters(
       [
         { type: "bytes32" },
@@ -253,6 +259,18 @@ async function buildSubmissionReservation(
         DEFAULT_SUBMISSION_REWARD_REQUIRED_VOTERS,
         DEFAULT_SUBMISSION_REWARD_SETTLED_ROUNDS,
         DEFAULT_SUBMISSION_REWARD_EXPIRES_AT,
+      ],
+    ),
+  );
+  const revealCommitment = keccak256(
+    encodeAbiParameters(
+      [{ type: "bytes32" }, { type: "uint32" }, { type: "uint32" }, { type: "uint16" }, { type: "uint16" }],
+      [
+        legacyCommitment,
+        roundConfig.epochDuration,
+        roundConfig.maxDuration,
+        roundConfig.minVoters,
+        roundConfig.maxVoters,
       ],
     ),
   );
@@ -594,6 +612,7 @@ export async function submitContentDirect(
   contractAddress: string,
   mediaInput?: SubmissionMediaInput,
   rewardAmount: bigint = DEFAULT_SUBMISSION_REWARD_AMOUNT,
+  roundConfig: SubmissionRoundConfig = DEFAULT_SUBMISSION_ROUND_CONFIG,
 ): Promise<boolean> {
   const { encodeFunctionData } = await import("viem");
   const resolvedCategoryId = BigInt(categoryId);
@@ -608,6 +627,7 @@ export async function submitContentDirect(
     contractAddress,
     media,
     rewardAmount,
+    roundConfig,
   );
   if (!reservation) return false;
 
@@ -617,12 +637,7 @@ export async function submitContentDirect(
   ]);
   if (!crepTokenAddress || !rewardEscrowAddress) return false;
 
-  const rewardApproved = await approveCREP(
-    rewardEscrowAddress,
-    rewardAmount,
-    fromAddress,
-    crepTokenAddress,
-  );
+  const rewardApproved = await approveCREP(rewardEscrowAddress, rewardAmount, fromAddress, crepTokenAddress);
   if (!rewardApproved) return false;
 
   const reserveData = encodeFunctionData({
@@ -646,7 +661,7 @@ export async function submitContentDirect(
   const data = encodeFunctionData({
     abi: [
       {
-        name: "submitQuestionWithReward",
+        name: "submitQuestionWithRewardAndRoundConfig",
         type: "function",
         inputs: [
           { name: "contextUrl", type: "string" },
@@ -657,17 +672,33 @@ export async function submitContentDirect(
           { name: "tags", type: "string" },
           { name: "categoryId", type: "uint256" },
           { name: "salt", type: "bytes32" },
-          { name: "rewardAsset", type: "uint8" },
-          { name: "rewardAmount", type: "uint256" },
-          { name: "requiredVoters", type: "uint256" },
-          { name: "requiredSettledRounds", type: "uint256" },
-          { name: "rewardPoolExpiresAt", type: "uint256" },
+          {
+            name: "rewardTerms",
+            type: "tuple",
+            components: [
+              { name: "asset", type: "uint8" },
+              { name: "amount", type: "uint256" },
+              { name: "requiredVoters", type: "uint256" },
+              { name: "requiredSettledRounds", type: "uint256" },
+              { name: "expiresAt", type: "uint256" },
+            ],
+          },
+          {
+            name: "roundConfig",
+            type: "tuple",
+            components: [
+              { name: "epochDuration", type: "uint32" },
+              { name: "maxDuration", type: "uint32" },
+              { name: "minVoters", type: "uint16" },
+              { name: "maxVoters", type: "uint16" },
+            ],
+          },
         ],
         outputs: [{ name: "", type: "uint256" }],
         stateMutability: "nonpayable",
       },
     ],
-    functionName: "submitQuestionWithReward",
+    functionName: "submitQuestionWithRewardAndRoundConfig",
     args: [
       url,
       media.imageUrls,
@@ -677,11 +708,14 @@ export async function submitContentDirect(
       tags,
       resolvedCategoryId,
       reservation.salt,
-      DEFAULT_SUBMISSION_REWARD_ASSET_CREP,
-      rewardAmount,
-      DEFAULT_SUBMISSION_REWARD_REQUIRED_VOTERS,
-      DEFAULT_SUBMISSION_REWARD_SETTLED_ROUNDS,
-      DEFAULT_SUBMISSION_REWARD_EXPIRES_AT,
+      {
+        asset: DEFAULT_SUBMISSION_REWARD_ASSET_CREP,
+        amount: rewardAmount,
+        requiredVoters: DEFAULT_SUBMISSION_REWARD_REQUIRED_VOTERS,
+        requiredSettledRounds: DEFAULT_SUBMISSION_REWARD_SETTLED_ROUNDS,
+        expiresAt: DEFAULT_SUBMISSION_REWARD_EXPIRES_AT,
+      },
+      roundConfig,
     ],
   });
   return sendTx(fromAddress, contractAddress, data);

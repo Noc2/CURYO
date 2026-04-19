@@ -1,6 +1,13 @@
 "use client";
 
 import { encodeAbiParameters, keccak256, toHex } from "viem";
+import {
+  type QuestionRoundConfig,
+  type SerializedQuestionRoundConfig,
+  coerceQuestionRoundConfig,
+  questionRoundConfigsEqual,
+  serializeQuestionRoundConfig,
+} from "~~/lib/questionRoundConfig";
 
 const RESERVED_SUBMISSION_STORAGE_PREFIX = "curyo:reserved-submission:";
 const RESERVED_SUBMISSION_SECRET_STORAGE_KEY = `${RESERVED_SUBMISSION_STORAGE_PREFIX}secret`;
@@ -11,6 +18,7 @@ type SubmissionDraft = {
   description: string;
   imageUrls: string[];
   rewardPoolExpiresAt: bigint;
+  roundConfig: QuestionRoundConfig;
   rewardAmount: bigint;
   rewardAsset: number;
   requiredSettledRounds: bigint;
@@ -28,6 +36,7 @@ type StoredSubmissionReservation = {
   description: string;
   imageUrls: string[];
   rewardPoolExpiresAt: string;
+  roundConfig: SerializedQuestionRoundConfig;
   rewardAmount: string;
   rewardAsset: number;
   revealCommitment: `0x${string}`;
@@ -95,6 +104,10 @@ export function deriveSubmissionReservationSalt(
         { type: "uint256" },
         { type: "uint256" },
         { type: "uint256" },
+        { type: "uint32" },
+        { type: "uint32" },
+        { type: "uint16" },
+        { type: "uint16" },
       ],
       [
         getSubmissionReservationSecret(),
@@ -110,6 +123,10 @@ export function deriveSubmissionReservationSalt(
         draft.requiredVoters,
         draft.requiredSettledRounds,
         draft.rewardPoolExpiresAt,
+        Number(draft.roundConfig.epochDuration),
+        Number(draft.roundConfig.maxDuration),
+        Number(draft.roundConfig.minVoters),
+        Number(draft.roundConfig.maxVoters),
       ],
     ),
   );
@@ -120,7 +137,7 @@ export function buildSubmissionRevealCommitment(
   salt: `0x${string}`,
   submitterAddress: `0x${string}`,
 ): `0x${string}` {
-  return keccak256(
+  const legacyCommitment = keccak256(
     encodeAbiParameters(
       [
         { type: "bytes32" },
@@ -152,6 +169,19 @@ export function buildSubmissionRevealCommitment(
       ],
     ),
   );
+
+  return keccak256(
+    encodeAbiParameters(
+      [{ type: "bytes32" }, { type: "uint32" }, { type: "uint32" }, { type: "uint16" }, { type: "uint16" }],
+      [
+        legacyCommitment,
+        Number(draft.roundConfig.epochDuration),
+        Number(draft.roundConfig.maxDuration),
+        Number(draft.roundConfig.minVoters),
+        Number(draft.roundConfig.maxVoters),
+      ],
+    ),
+  );
 }
 
 export function createStoredSubmissionReservation(
@@ -168,6 +198,7 @@ export function createStoredSubmissionReservation(
     imageUrls: draft.imageUrls,
     rewardAmount: draft.rewardAmount.toString(),
     rewardAsset: draft.rewardAsset,
+    roundConfig: serializeQuestionRoundConfig(draft.roundConfig),
     revealCommitment,
     salt,
     requiredSettledRounds: draft.requiredSettledRounds.toString(),
@@ -195,6 +226,7 @@ export function submissionReservationMatchesDraft(
     reservation.rewardAmount === draft.rewardAmount.toString() &&
     reservation.rewardAsset === draft.rewardAsset &&
     reservation.rewardPoolExpiresAt === draft.rewardPoolExpiresAt.toString() &&
+    questionRoundConfigsEqual(coerceQuestionRoundConfig(reservation.roundConfig), draft.roundConfig) &&
     reservation.requiredSettledRounds === draft.requiredSettledRounds.toString() &&
     reservation.requiredVoters === draft.requiredVoters.toString() &&
     reservation.submissionKey === draft.submissionKey &&
@@ -226,6 +258,7 @@ function parseStoredSubmissionReservation(value: unknown): StoredSubmissionReser
     !isHexValue(parsedValue.revealCommitment) ||
     typeof parsedValue.rewardAmount !== "string" ||
     typeof parsedValue.rewardAsset !== "number" ||
+    (parsedValue.roundConfig !== undefined && typeof parsedValue.roundConfig !== "object") ||
     ![0, 1].includes(parsedValue.rewardAsset) ||
     typeof parsedValue.requiredSettledRounds !== "string" ||
     typeof parsedValue.requiredVoters !== "string" ||
@@ -249,6 +282,7 @@ function parseStoredSubmissionReservation(value: unknown): StoredSubmissionReser
       : contextUrl
         ? [contextUrl]
         : [],
+    roundConfig: serializeQuestionRoundConfig(coerceQuestionRoundConfig(parsedValue.roundConfig)),
     videoUrl: typeof parsedValue.videoUrl === "string" ? parsedValue.videoUrl : "",
   } as StoredSubmissionReservation;
 }

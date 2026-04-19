@@ -14,6 +14,7 @@ import type { ContentOpenRoundSummary } from "~~/hooks/contentFeed/shared";
 import { useScaffoldReadContract } from "~~/hooks/scaffold-eth";
 import { useParticipationRate } from "~~/hooks/useParticipationRate";
 import { useRoundSnapshot } from "~~/hooks/useRoundSnapshot";
+import type { VotingConfig } from "~~/lib/contracts/roundVotingEngine";
 import { formatUsdAmount } from "~~/lib/questionRewardPools";
 import { formatVoteCooldownRemaining } from "~~/lib/vote/cooldown";
 import { describeOpenRoundActivity, formatCrepAmount, getRoundProgressMessaging } from "~~/lib/vote/voteIncentives";
@@ -37,6 +38,7 @@ interface VotingQuestionCardProps {
   isVoteEligibilityPending?: boolean;
   isOwnContent?: boolean;
   openRound?: ContentOpenRoundSummary | null;
+  roundConfig?: VotingConfig | null;
   /** When true, removes card background/rounding (parent provides it). */
   embedded?: boolean;
   compact?: boolean;
@@ -473,6 +475,7 @@ export function VotingQuestionCard({
   isVoteEligibilityPending = false,
   isOwnContent,
   openRound,
+  roundConfig,
   embedded,
   compact = false,
   variant = "default",
@@ -483,7 +486,7 @@ export function VotingQuestionCard({
   const hideEmbeddedSignalSurface = Boolean(embedded && isSignalVariant);
 
   // Check if user already voted on this content in the current round
-  const roundSnapshot = useRoundSnapshot(contentId, openRound ?? undefined);
+  const roundSnapshot = useRoundSnapshot(contentId, openRound ?? undefined, roundConfig ?? undefined);
   const { roundId, isRoundFull, phase, voteCount, minVoters } = roundSnapshot;
   const { filled: filledVoteIcons, empty: emptyVoteIcons } = computeVoteProgressIconCounts({ voteCount, minVoters });
   const cooldownActive = cooldownSecondsRemaining > 0;
