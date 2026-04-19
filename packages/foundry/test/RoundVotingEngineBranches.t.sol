@@ -1187,9 +1187,11 @@ contract RoundVotingEngineBranchesTest is VotingTestBase {
         assertEq(engine.roundUnrevealedCleanupRemaining(contentId, roundId), 2);
 
         uint256 voterPoolBefore = engine.roundVoterPool(contentId, roundId);
+        uint256 reserveBefore = engine.consensusReserve();
         engine.processUnrevealedVotes(contentId, roundId, 0, 1);
         assertEq(engine.roundUnrevealedCleanupRemaining(contentId, roundId), 1);
-        assertEq(engine.roundVoterPool(contentId, roundId) - voterPoolBefore, STAKE);
+        assertEq(engine.roundVoterPool(contentId, roundId), voterPoolBefore);
+        assertEq(engine.consensusReserve() - reserveBefore, STAKE);
 
         vm.expectRevert(RoundRewardDistributor.UnrevealedCleanupPending.selector);
         vm.prank(voter3);
@@ -1197,7 +1199,8 @@ contract RoundVotingEngineBranchesTest is VotingTestBase {
 
         engine.processUnrevealedVotes(contentId, roundId, 1, 1);
         assertEq(engine.roundUnrevealedCleanupRemaining(contentId, roundId), 0);
-        assertEq(engine.roundVoterPool(contentId, roundId) - voterPoolBefore, STAKE * 2);
+        assertEq(engine.roundVoterPool(contentId, roundId), voterPoolBefore);
+        assertEq(engine.consensusReserve() - reserveBefore, STAKE * 2);
 
         uint256 voter3Before = crepToken.balanceOf(voter3);
         vm.prank(voter3);
