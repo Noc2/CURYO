@@ -44,6 +44,8 @@ async function loadSubmitCommand(options: SubmitCommandOptions = {}) {
         return options.balance ?? 20_000_000n;
       case "allowance":
         return options.allowance ?? 0n;
+      case "config":
+        return [1_200n, 604_800n, 3n, 1_000n] as const;
       case "minSubmissionUsdcPool":
         return 1_000_000n;
       case "previewQuestionSubmissionKey":
@@ -54,6 +56,8 @@ async function loadSubmitCommand(options: SubmitCommandOptions = {}) {
         return options.submissionKeyUsed ?? false;
       case "usdcToken":
         return USDC_TOKEN;
+      case "validateRoundConfig":
+        return [1_200n, 604_800n, 3n, 1_000n] as const;
       default:
         throw new Error(`Unexpected readContract: ${functionName}`);
     }
@@ -64,7 +68,7 @@ async function loadSubmitCommand(options: SubmitCommandOptions = {}) {
   let submitAttempts = 0;
   const writeContract = vi.fn(async ({ functionName }: { functionName: string }) => {
     if (
-      functionName === "submitQuestionWithReward" &&
+      functionName === "submitQuestionWithRewardAndRoundConfig" &&
       options.submitError &&
       submitAttempts < (options.submitErrorCount ?? 1)
     ) {
@@ -77,7 +81,7 @@ async function loadSubmitCommand(options: SubmitCommandOptions = {}) {
         return "0xapprove";
       case "reserveSubmission":
         return "0xreserve";
-      case "submitQuestionWithReward":
+      case "submitQuestionWithRewardAndRoundConfig":
         return "0xsubmit";
       case "cancelReservedSubmission":
         return "0xcancel";
@@ -151,6 +155,7 @@ async function loadSubmitCommand(options: SubmitCommandOptions = {}) {
       submitRewardRequiredVoters: 3,
       submitRewardRequiredSettledRounds: 1,
       submitRewardPoolExpiresAt: 0n,
+      submitRoundConfig: {},
       maxSubmissionsPerRun: 5,
       maxSubmissionsPerCategory: 3,
       x402: {
@@ -206,7 +211,7 @@ afterEach(() => {
 });
 
 function buildExpectedRevealCommitment(): Hex {
-  return keccak256(
+  const legacyCommitment = keccak256(
     encodeAbiParameters(
       [
         { type: "bytes32" },
@@ -236,6 +241,13 @@ function buildExpectedRevealCommitment(): Hex {
         1n,
         0n,
       ],
+    ),
+  );
+
+  return keccak256(
+    encodeAbiParameters(
+      [{ type: "bytes32" }, { type: "uint32" }, { type: "uint32" }, { type: "uint16" }, { type: "uint16" }],
+      [legacyCommitment, 1_200, 604_800, 3, 1_000],
     ),
   );
 }
@@ -276,7 +288,7 @@ describe("runSubmit", () => {
     expect(submitCommand.mocks.writeContract).toHaveBeenNthCalledWith(
       3,
       expect.objectContaining({
-        functionName: "submitQuestionWithReward",
+        functionName: "submitQuestionWithRewardAndRoundConfig",
         args: [
           ITEM.contextUrl,
           [],
@@ -286,11 +298,19 @@ describe("runSubmit", () => {
           ITEM.tags,
           ITEM.categoryId,
           FIXED_SALT,
-          1,
-          1_000_000n,
-          3n,
-          1n,
-          0n,
+          {
+            asset: 1,
+            amount: 1_000_000n,
+            requiredVoters: 3n,
+            requiredSettledRounds: 1n,
+            expiresAt: 0n,
+          },
+          {
+            epochDuration: 1_200,
+            maxDuration: 604_800,
+            minVoters: 3,
+            maxVoters: 1_000,
+          },
         ],
       }),
     );
@@ -367,7 +387,7 @@ describe("runSubmit", () => {
     );
   });
 
-  it("cancels the reservation when submitQuestionWithReward fails after reserving", async () => {
+  it("cancels the reservation when the round-config submit fails after reserving", async () => {
     const submitCommand = await loadSubmitCommand({ submitError: new Error("submit failed") });
 
     await submitCommand.runSubmit();
@@ -416,7 +436,7 @@ describe("runSubmit", () => {
     expect(submitCommand.mocks.sleep).toHaveBeenNthCalledWith(2, 1_100);
     expect(
       submitCommand.mocks.writeContract.mock.calls.filter(
-        ([call]) => call.functionName === "submitQuestionWithReward",
+        ([call]) => call.functionName === "submitQuestionWithRewardAndRoundConfig",
       ),
     ).toHaveLength(2);
     expect(submitCommand.mocks.writeContract).not.toHaveBeenCalledWith(
@@ -458,7 +478,7 @@ describe("runSubmit", () => {
 
     expect(
       submitCommand.mocks.writeContract.mock.calls.filter(
-        ([call]) => call.functionName === "submitQuestionWithReward",
+        ([call]) => call.functionName === "submitQuestionWithRewardAndRoundConfig",
       ),
     ).toHaveLength(2);
     expect(submitCommand.mocks.log.info).toHaveBeenCalledWith("Category filter: Media");
@@ -496,6 +516,12 @@ describe("runSubmit", () => {
       question: {
         categoryId: "5",
         contextUrl: ITEM.contextUrl,
+        roundConfig: {
+          epochDuration: "1200",
+          maxDuration: "604800",
+          minVoters: "3",
+          maxVoters: "1000",
+        },
         title: ITEM.title,
       },
     });

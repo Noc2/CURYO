@@ -6,36 +6,150 @@ import { publicClient, getWalletClient, getAccount } from "../client.js";
 import { contractConfig } from "../contracts.js";
 import { config, log } from "../config.js";
 import { ponder } from "../ponder.js";
+import { parseRoundConfig, type BotRoundConfig } from "../roundConfig.js";
 import { getStrategy } from "../strategies/index.js";
 
 const ZERO_ADDRESS = "0x0000000000000000000000000000000000000000" as `0x${string}`;
+const ROUND_STATE_OPEN = 0;
+type IndexedRoundConfig = {
+  epochDuration?: bigint | number | string;
+  maxDuration?: bigint | number | string;
+  minVoters?: bigint | number | string;
+  maxVoters?: bigint | number | string;
+};
 
-async function readRoundConfig() {
+function parseRound(value: unknown): { startTime: bigint; state: number } | null {
+  const source = value as { startTime?: bigint; state?: number } & Record<number, unknown>;
+  const startTime = source?.startTime ?? source?.[0];
+  const state = source?.state ?? source?.[1];
+  if (startTime === undefined || state === undefined) {
+    return null;
+  }
+
+  return {
+    startTime: BigInt(startTime as bigint | number | string),
+    state: Number(state),
+  };
+}
+
+function clampNewRoundTargetBufferSeconds(epochDurationSeconds: number, bufferSeconds: number) {
+  const safeEpochDurationSeconds = Math.max(1, Math.floor(epochDurationSeconds));
+  if (safeEpochDurationSeconds <= 1) {
+    return 0;
+  }
+
+  return Math.min(Math.max(1, Math.floor(bufferSeconds)), safeEpochDurationSeconds - 1);
+}
+
+function deriveCommitVoteRuntimeNowMs(params: {
+  latestBlockTimestampSeconds: number;
+  epochDurationSeconds: number;
+  roundStartTimeSeconds?: number | null;
+}) {
+  const latestBlockTimestampSeconds = Math.max(0, Math.floor(params.latestBlockTimestampSeconds));
+  const epochDurationSeconds = Math.max(1, Math.floor(params.epochDurationSeconds));
+  const roundStartTimeSeconds = params.roundStartTimeSeconds != null ? Math.floor(params.roundStartTimeSeconds) : null;
+
+  if (roundStartTimeSeconds != null && roundStartTimeSeconds > 0) {
+    const elapsedSeconds = Math.max(0, latestBlockTimestampSeconds - roundStartTimeSeconds);
+    const currentEpochIndex = Math.floor(elapsedSeconds / epochDurationSeconds);
+    const nextEpochBoundarySeconds = roundStartTimeSeconds + (currentEpochIndex + 1) * epochDurationSeconds;
+    return (nextEpochBoundarySeconds + 1 - epochDurationSeconds) * 1000;
+  }
+
+  const newRoundTargetBufferSeconds = clampNewRoundTargetBufferSeconds(epochDurationSeconds, 60);
+  return (latestBlockTimestampSeconds + newRoundTargetBufferSeconds) * 1000;
+}
+
+async function readProtocolRoundConfig(blockNumber?: bigint): Promise<BotRoundConfig> {
   const protocolConfigAddress = (await publicClient.readContract({
     ...contractConfig.votingEngine,
     functionName: "protocolConfig",
     args: [],
+    blockNumber,
   })) as `0x${string}`;
 
-  return publicClient.readContract({
-    address: protocolConfigAddress,
-    abi: ProtocolConfigAbi,
-    functionName: "config",
-    args: [],
-  });
+  return parseRoundConfig(
+    await publicClient.readContract({
+      address: protocolConfigAddress,
+      abi: ProtocolConfigAbi,
+      functionName: "config",
+      args: [],
+      blockNumber,
+    }),
+  );
 }
 
-async function readRoundReferenceRatingBps(contentId: bigint) {
-  return publicClient.readContract({
+async function resolveVoteRuntime(params: { contentId: bigint; indexedRoundConfig?: IndexedRoundConfig | null }) {
+  const latestBlock = await publicClient.getBlock({ blockTag: "latest" });
+  const snapshotBlockNumber = latestBlock.number;
+  const fallbackRoundConfig = await readProtocolRoundConfig(snapshotBlockNumber);
+  const currentRoundId = (await publicClient.readContract({
     ...contractConfig.votingEngine,
-    functionName: "previewCommitReferenceRatingBps",
-    args: [contentId],
-  });
+    functionName: "currentRoundId",
+    args: [params.contentId],
+    blockNumber: snapshotBlockNumber,
+  })) as bigint;
+
+  let epochDuration = fallbackRoundConfig.epochDuration;
+  let roundStartTimeSeconds: number | null = null;
+  if (currentRoundId > 0n) {
+    const [rawRound, rawRoundConfig] = await Promise.all([
+      publicClient.readContract({
+        ...contractConfig.votingEngine,
+        functionName: "rounds",
+        args: [params.contentId, currentRoundId],
+        blockNumber: snapshotBlockNumber,
+      }),
+      publicClient.readContract({
+        ...contractConfig.votingEngine,
+        functionName: "roundConfigSnapshot",
+        args: [params.contentId, currentRoundId],
+        blockNumber: snapshotBlockNumber,
+      }),
+    ]);
+    const round = parseRound(rawRound);
+    const roundConfig = parseRoundConfig(rawRoundConfig, fallbackRoundConfig);
+    if (round?.state === ROUND_STATE_OPEN && round.startTime > 0n && roundConfig.epochDuration > 0n) {
+      epochDuration = roundConfig.epochDuration;
+      roundStartTimeSeconds = Number(round.startTime);
+    }
+  }
+
+  if (roundStartTimeSeconds === null) {
+    const contentRoundConfig = parseRoundConfig(params.indexedRoundConfig, fallbackRoundConfig);
+    epochDuration = contentRoundConfig.epochDuration;
+  }
+
+  const roundReferenceRatingBps = Number(
+    await publicClient.readContract({
+      ...contractConfig.votingEngine,
+      functionName: "previewCommitReferenceRatingBps",
+      args: [params.contentId],
+      blockNumber: snapshotBlockNumber,
+    }),
+  );
+
+  return {
+    epochDuration: Number(epochDuration),
+    now: () =>
+      deriveCommitVoteRuntimeNowMs({
+        latestBlockTimestampSeconds: Number(latestBlock.timestamp),
+        epochDurationSeconds: Number(epochDuration),
+        roundStartTimeSeconds,
+      }),
+    roundReferenceRatingBps,
+  };
 }
 
 export async function runVote() {
   const account = getAccount(config.rateBot);
   const wallet = getWalletClient(config.rateBot, account);
+  const votingEngineAddress = config.contracts.votingEngine;
+  if (!votingEngineAddress) {
+    log.error("RoundVotingEngine address is not configured.");
+    return;
+  }
   const frontendAddress = config.voteFrontendAddress ?? ZERO_ADDRESS;
   log.info(`Rating bot address: ${account.address}`);
   log.info(
@@ -131,11 +245,19 @@ export async function runVote() {
       continue;
     }
 
-    let roundReferenceRatingBps: number;
+    let voteRuntime: Awaited<ReturnType<typeof resolveVoteRuntime>>;
     try {
-      roundReferenceRatingBps = Number(await readRoundReferenceRatingBps(contentId));
+      voteRuntime = await resolveVoteRuntime({
+        contentId,
+        indexedRoundConfig: {
+          epochDuration: item.roundEpochDuration,
+          maxDuration: item.roundMaxDuration,
+          minVoters: item.roundMinVoters,
+          maxVoters: item.roundMaxVoters,
+        },
+      });
     } catch (err: any) {
-      log.warn(`Skipping content #${item.id} (failed to read round reference rating: ${err.message})`);
+      log.warn(`Skipping content #${item.id} (failed to read round vote runtime: ${err.message})`);
       continue;
     }
 
@@ -158,9 +280,9 @@ export async function runVote() {
     try {
       const approveTx = await ensureCrepAllowance({
         owner: account.address,
-        spender: config.contracts.votingEngine,
+        spender: votingEngineAddress,
         requiredAmount: config.voteStake,
-        wallet,
+        wallet: wallet as never,
       });
       if (approveTx) {
         log.debug(`Approved cREP: ${approveTx}`);
@@ -168,26 +290,37 @@ export async function runVote() {
 
       // tlock commit-reveal: encrypt vote direction to epoch's drand round
       const salt = `0x${randomBytes(32).toString("hex")}` as `0x${string}`;
-      // Read epoch duration from contract config
-      const configResult = (await readRoundConfig()) as readonly [bigint, bigint, bigint, bigint];
-      const epochDuration = Number(configResult[0]);
 
-      const { ciphertext, commitHash, targetRound, drandChainHash } = await createTlockVoteCommit({
-        isUp,
-        salt,
-        contentId,
-        roundReferenceRatingBps,
-        epochDurationSeconds: epochDuration,
-      });
+      const { ciphertext, commitHash, targetRound, drandChainHash } = await createTlockVoteCommit(
+        {
+          isUp,
+          salt,
+          contentId,
+          roundReferenceRatingBps: voteRuntime.roundReferenceRatingBps,
+          epochDurationSeconds: voteRuntime.epochDuration,
+        },
+        { now: voteRuntime.now },
+      );
 
       const voteTx = await wallet.writeContract({
         ...contractConfig.votingEngine,
         abi: contractConfig.votingEngine.abi as any,
         functionName: "commitVote",
-        args: [contentId, roundReferenceRatingBps, targetRound, drandChainHash, commitHash, ciphertext, config.voteStake, frontendAddress],
+        args: [
+          contentId,
+          voteRuntime.roundReferenceRatingBps,
+          targetRound,
+          drandChainHash,
+          commitHash,
+          ciphertext,
+          config.voteStake,
+          frontendAddress,
+        ],
       });
       await publicClient.waitForTransactionReceipt({ hash: voteTx });
-      log.info(`Committed vote on content #${item.id} (${Number(config.voteStake) / 1e6} cREP, ${isUp ? "UP" : "DOWN"} — hidden until epoch ends): ${voteTx}`);
+      log.info(
+        `Committed vote on content #${item.id} (${Number(config.voteStake) / 1e6} cREP, ${isUp ? "UP" : "DOWN"} — hidden until epoch ends): ${voteTx}`,
+      );
       votesPlaced++;
     } catch (err: any) {
       const message = err?.message ?? String(err);

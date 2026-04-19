@@ -1,6 +1,7 @@
 import "dotenv/config";
 import { getSharedDeploymentAddress as getSharedArtifactAddress } from "@curyo/contracts/deployments";
 import { isAddress } from "viem";
+import type { BotRoundConfigOverrides } from "./roundConfig.js";
 
 export type BotRole = "submit" | "rate";
 
@@ -364,6 +365,12 @@ function loadConfig() {
       errors,
     ),
     submitRewardPoolExpiresAt: parseNonNegativeBigIntEnv("SUBMIT_REWARD_POOL_EXPIRES_AT", 0n, errors),
+    submitRoundConfig: {
+      epochDuration: parseOptionalPositiveBigIntEnv("SUBMIT_ROUND_BLIND_PHASE_SECONDS", errors),
+      maxDuration: parseOptionalPositiveBigIntEnv("SUBMIT_ROUND_MAX_DURATION_SECONDS", errors),
+      minVoters: parseOptionalPositiveBigIntEnv("SUBMIT_ROUND_MIN_VOTERS", errors),
+      maxVoters: parseOptionalPositiveBigIntEnv("SUBMIT_ROUND_MAX_VOTERS", errors),
+    } satisfies BotRoundConfigOverrides,
     x402: {
       apiUrl: readOptionalUrlEnv("X402_API_URL", errors),
       maxPaymentUsdc: parseOptionalPositiveBigIntEnv("X402_MAX_PAYMENT_USDC", errors),

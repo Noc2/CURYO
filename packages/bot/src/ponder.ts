@@ -14,6 +14,10 @@ export interface PonderContentItem {
   createdAt: string;
   totalVotes: number;
   totalRounds: number;
+  roundEpochDuration?: number;
+  roundMaxDuration?: number;
+  roundMinVoters?: number;
+  roundMaxVoters?: number;
   submitterStakeReturned: boolean;
 }
 

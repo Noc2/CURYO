@@ -67,6 +67,12 @@ describe("bot config", () => {
     expect(config.submitRewardRequiredVoters).toBe(3);
     expect(config.submitRewardRequiredSettledRounds).toBe(1);
     expect(config.submitRewardPoolExpiresAt).toBe(0n);
+    expect(config.submitRoundConfig).toEqual({
+      epochDuration: undefined,
+      maxDuration: undefined,
+      minVoters: undefined,
+      maxVoters: undefined,
+    });
     expect(config.x402.apiUrl).toBeUndefined();
   });
 
@@ -80,6 +86,10 @@ describe("bot config", () => {
       SUBMIT_REWARD_REQUIRED_VOTERS: "4",
       SUBMIT_REWARD_REQUIRED_SETTLED_ROUNDS: "2",
       SUBMIT_REWARD_POOL_EXPIRES_AT: "1234567890",
+      SUBMIT_ROUND_BLIND_PHASE_SECONDS: "600",
+      SUBMIT_ROUND_MAX_DURATION_SECONDS: "7200",
+      SUBMIT_ROUND_MIN_VOTERS: "5",
+      SUBMIT_ROUND_MAX_VOTERS: "50",
       X402_API_URL: "https://curyo.example/api/x402/questions",
       X402_MAX_PAYMENT_USDC: "1500000",
       THIRDWEB_CLIENT_ID: "thirdweb-client",
@@ -94,6 +104,12 @@ describe("bot config", () => {
     expect(config.submitRewardRequiredVoters).toBe(4);
     expect(config.submitRewardRequiredSettledRounds).toBe(2);
     expect(config.submitRewardPoolExpiresAt).toBe(1234567890n);
+    expect(config.submitRoundConfig).toEqual({
+      epochDuration: 600n,
+      maxDuration: 7_200n,
+      minVoters: 5n,
+      maxVoters: 50n,
+    });
     expect(config.x402).toMatchObject({
       apiUrl: "https://curyo.example/api/x402/questions",
       maxPaymentUsdc: 1_500_000n,
@@ -113,6 +129,10 @@ describe("bot config", () => {
         SUBMIT_REWARD_REQUIRED_VOTERS: "0",
         SUBMIT_REWARD_REQUIRED_SETTLED_ROUNDS: "0",
         SUBMIT_REWARD_POOL_EXPIRES_AT: "-1",
+        SUBMIT_ROUND_BLIND_PHASE_SECONDS: "0",
+        SUBMIT_ROUND_MAX_DURATION_SECONDS: "-1",
+        SUBMIT_ROUND_MIN_VOTERS: "few",
+        SUBMIT_ROUND_MAX_VOTERS: "many",
         X402_MAX_PAYMENT_USDC: "0",
       }),
     ).rejects.toThrow("Invalid bot configuration");
@@ -127,6 +147,10 @@ describe("bot config", () => {
         SUBMIT_REWARD_REQUIRED_VOTERS: "0",
         SUBMIT_REWARD_REQUIRED_SETTLED_ROUNDS: "0",
         SUBMIT_REWARD_POOL_EXPIRES_AT: "-1",
+        SUBMIT_ROUND_BLIND_PHASE_SECONDS: "0",
+        SUBMIT_ROUND_MAX_DURATION_SECONDS: "-1",
+        SUBMIT_ROUND_MIN_VOTERS: "few",
+        SUBMIT_ROUND_MAX_VOTERS: "many",
         X402_MAX_PAYMENT_USDC: "0",
       }),
     ).rejects.toThrow("VOTE_STAKE must be a positive integer");

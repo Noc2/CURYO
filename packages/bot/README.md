@@ -1,6 +1,6 @@
 # Curyo — Bot (CLI Voting & Content Submission)
 
-Command-line tool for automated YouTube question submission and voting. Discovers trending videos, submits question-first entries to the ContentRegistry, and rates YouTube content with the configured strategy. The same question-first path is how bots and AI agents can ask verified humans for feedback when an automated strategy cannot answer with confidence. Submissions use a required context URL plus optional preview media, so bot and human flows stay aligned. Every submission carries a configurable Bounty with minimum voter and settlement thresholds, so operators can keep the on-chain economics aligned with the question they are asking. Votes use **tlock commit-reveal**: the bot encrypts vote directions with timelock encryption, binds the redeployed drand metadata into the commit payload, and commits them on-chain; the keeper-assisted/self-reveal flow reveals votes after each epoch once the on-chain and off-chain checks are satisfied.
+Command-line tool for automated YouTube question submission and voting. Discovers trending videos, submits question-first entries to the ContentRegistry, and rates YouTube content with the configured strategy. The same question-first path is how bots and AI agents can ask verified humans for feedback when an automated strategy cannot answer with confidence. Submissions use a required context URL plus optional preview media, so bot and human flows stay aligned. Every submission carries a configurable Bounty with minimum voter and settlement thresholds, plus governed per-question round settings, so operators can keep the timing and economics aligned with the question they are asking. Votes use **tlock commit-reveal**: the bot encrypts vote directions with timelock encryption using each question's active round settings, binds the redeployed drand metadata into the commit payload, and commits them on-chain; the keeper-assisted/self-reveal flow reveals votes after each epoch once the on-chain and off-chain checks are satisfied.
 
 ## Quick Start
 
@@ -75,6 +75,10 @@ Copy `.env.example` to `.env` in the package directory and fill in the deployed 
 | `SUBMIT_REWARD_REQUIRED_VOTERS` | `3` | Minimum voters required before a submission Bounty can pay out |
 | `SUBMIT_REWARD_REQUIRED_SETTLED_ROUNDS` | `1` | Minimum settled rounds required before a submission Bounty can pay out |
 | `SUBMIT_REWARD_POOL_EXPIRES_AT` | `0` | Optional Unix timestamp for the submission Bounty expiry; `0` keeps it open-ended |
+| `SUBMIT_ROUND_BLIND_PHASE_SECONDS` | Protocol default | Optional per-question blind phase for bot-created questions |
+| `SUBMIT_ROUND_MAX_DURATION_SECONDS` | Protocol default | Optional per-question round deadline for bot-created questions |
+| `SUBMIT_ROUND_MIN_VOTERS` | Protocol default | Optional minimum revealed voters before settlement |
+| `SUBMIT_ROUND_MAX_VOTERS` | Protocol default | Optional voter cap for the question round |
 | `X402_API_URL` | — | Hosted `/api/x402/questions` endpoint for paid submissions |
 | `THIRDWEB_CLIENT_ID` | — | thirdweb client ID used to sign x402 payment headers from the bot wallet |
 | `X402_MAX_PAYMENT_USDC` | Bounty amount | Maximum x402 spend per request in atomic USDC |
@@ -132,7 +136,7 @@ For each `submit` run, the bot:
 2. Checks that the wallet has enough cREP or USDC for the next submission. Direct on-chain submissions need native gas for the approval, reservation, and submit transactions. x402 submissions need enough Celo USDC for the payment ceiling; the hosted API executor pays the on-chain gas.
 3. Chooses the enabled source adapters and fetches trending content. The current bot source reads YouTube's most-popular video feed.
 4. Skips items that do not provide a usable context URL, then checks the context-backed submission key for duplicates before attempting a transaction.
-5. Truncates generated questions to the 120-character on-chain maximum and calls `previewQuestionSubmissionKey(contextUrl, imageUrls, videoUrl, title, description, tags, categoryId)` to verify the canonical category. Direct submissions then reserve the hidden submission commitment, wait a little over one second for the reservation age check, and submit the question with the matching salt and Bounty metadata. x402 submissions send the same normalized question and Bounty metadata to the hosted API, which settles Celo USDC and performs the on-chain submission from its executor wallet.
+5. Truncates generated questions to the 120-character on-chain maximum and calls `previewQuestionSubmissionKey(contextUrl, imageUrls, videoUrl, title, description, tags, categoryId)` to verify the canonical category. Direct submissions then reserve the hidden submission commitment, wait a little over one second for the reservation age check, and submit the question with the matching salt, Bounty metadata, and governed round settings. x402 submissions send the same normalized question, Bounty metadata, and round settings to the hosted API, which settles Celo USDC and performs the on-chain submission from its executor wallet.
 6. Stops when it reaches the configured limit, runs out of the selected funding token, or runs out of fresh items. If a direct reveal transaction fails after reservation, the bot attempts to cancel the reservation.
 
 ## Testing YouTube Questions With A Bot Wallet

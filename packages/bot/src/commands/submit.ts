@@ -11,6 +11,15 @@ import { truncateContentDescription, truncateContentTitle } from "../contentLimi
 import { getAllSources } from "../sources/index.js";
 import type { ContentSource } from "../sources/types.js";
 import type { SubmitRunOptions } from "../submitOptions.js";
+import {
+  applyRoundConfigOverrides,
+  assertRoundConfigShape,
+  formatDuration,
+  parseRoundConfig,
+  roundConfigToAbi,
+  serializeRoundConfig,
+  type BotRoundConfig,
+} from "../roundConfig.js";
 import { sleep } from "../utils.js";
 
 const SUBMISSION_REWARD_ASSET_CREP = 0;
@@ -46,6 +55,12 @@ type X402QuestionRequestPayload = {
     contextUrl: string;
     description: string;
     imageUrls: string[];
+    roundConfig: {
+      epochDuration: string;
+      maxDuration: string;
+      minVoters: string;
+      maxVoters: string;
+    };
     tags: string;
     title: string;
     videoUrl: string;
@@ -121,8 +136,9 @@ function buildSubmissionRevealCommitment(params: {
   requiredVoters: number;
   requiredSettledRounds: number;
   rewardPoolExpiresAt: bigint;
+  roundConfig: BotRoundConfig;
 }): Hex {
-  return keccak256(
+  const legacyCommitment = keccak256(
     encodeAbiParameters(
       [
         { type: "bytes32" },
@@ -154,17 +170,36 @@ function buildSubmissionRevealCommitment(params: {
       ],
     ),
   );
+
+  return keccak256(
+    encodeAbiParameters(
+      [{ type: "bytes32" }, { type: "uint32" }, { type: "uint32" }, { type: "uint16" }, { type: "uint16" }],
+      [
+        legacyCommitment,
+        Number(params.roundConfig.epochDuration),
+        Number(params.roundConfig.maxDuration),
+        Number(params.roundConfig.minVoters),
+        Number(params.roundConfig.maxVoters),
+      ],
+    ),
+  );
 }
 
-async function getSubmissionRewardFunding(assetOverride = config.submitRewardAsset): Promise<SubmissionRewardFunding> {
-  const rewardAsset = assetOverride;
+async function readProtocolConfigAddress(): Promise<Address | null> {
   const protocolConfigAddress = (await publicClient.readContract({
     ...contractConfig.registry,
     functionName: "protocolConfig",
   })) as Address;
+
+  return protocolConfigAddress && isAddress(protocolConfigAddress) ? protocolConfigAddress : null;
+}
+
+async function getSubmissionRewardFunding(assetOverride = config.submitRewardAsset): Promise<SubmissionRewardFunding> {
+  const rewardAsset = assetOverride;
+  const protocolConfigAddress = await readProtocolConfigAddress();
   const minimumFunctionName = rewardAsset === "crep" ? "minSubmissionCrepPool" : "minSubmissionUsdcPool";
   const configuredMinimum =
-    protocolConfigAddress && isAddress(protocolConfigAddress)
+    protocolConfigAddress
       ? ((await publicClient
           .readContract({
             address: protocolConfigAddress,
@@ -195,6 +230,41 @@ async function getSubmissionRewardFunding(assetOverride = config.submitRewardAss
     label: "USDC",
     token: { address: usdcToken, abi: erc20Abi },
   };
+}
+
+async function getSubmissionRoundConfig(): Promise<BotRoundConfig> {
+  const protocolConfigAddress = await readProtocolConfigAddress();
+  const protocolDefault = protocolConfigAddress
+    ? parseRoundConfig(
+        await publicClient.readContract({
+          address: protocolConfigAddress,
+          abi: contractConfig.protocolConfigAbi,
+          functionName: "config",
+        }),
+      )
+    : parseRoundConfig(null);
+  const roundConfig = applyRoundConfigOverrides(protocolDefault, config.submitRoundConfig);
+  assertRoundConfigShape(roundConfig);
+
+  if (BigInt(config.submitRewardRequiredVoters) > roundConfig.maxVoters) {
+    throw new Error("Submission Bounty required voters exceeds the selected round voter cap.");
+  }
+
+  if (protocolConfigAddress) {
+    await publicClient.readContract({
+      address: protocolConfigAddress,
+      abi: contractConfig.protocolConfigAbi,
+      functionName: "validateRoundConfig",
+      args: [
+        roundConfig.epochDuration,
+        roundConfig.maxDuration,
+        roundConfig.minVoters,
+        roundConfig.maxVoters,
+      ],
+    });
+  }
+
+  return roundConfig;
 }
 
 function formatMicroTokenAmount(amount: bigint) {
@@ -258,6 +328,7 @@ function createX402SubmitPayload(params: {
   description: string;
   media: SubmissionMedia;
   rewardFunding: SubmissionRewardFunding;
+  roundConfig: BotRoundConfig;
   sourceName: string;
   tags: string;
   title: string;
@@ -281,6 +352,7 @@ function createX402SubmitPayload(params: {
       contextUrl: params.contextUrl,
       description: params.description,
       imageUrls: params.media.imageUrls,
+      roundConfig: serializeRoundConfig(params.roundConfig),
       tags: params.tags,
       title: params.title,
       videoUrl: params.media.videoUrl,
@@ -421,6 +493,7 @@ export async function runSubmit(options: SubmitRunOptions = {}) {
   const maxSubmissions = options.maxSubmissions ?? config.maxSubmissionsPerRun;
   const transport = options.transport ?? "onchain";
   const rewardFunding = await getSubmissionRewardFunding(transport === "x402" ? "usdc" : undefined);
+  const roundConfig = await getSubmissionRoundConfig();
   log.info(
     `Submission Bounty: ${formatMicroTokenAmount(rewardFunding.amount)} ${rewardFunding.label} per question`,
   );
@@ -431,6 +504,11 @@ export async function runSubmit(options: SubmitRunOptions = {}) {
         ? "no expiry"
         : `expires at ${config.submitRewardPoolExpiresAt}`
     }`,
+  );
+  log.info(
+    `Question round settings: blind ${formatDuration(roundConfig.epochDuration)}, max ${formatDuration(
+      roundConfig.maxDuration,
+    )}, settle ${roundConfig.minVoters} voters, cap ${roundConfig.maxVoters} voters`,
   );
 
   const x402Client = transport === "x402" ? createX402SubmitClient(rewardFunding) : null;
@@ -555,6 +633,7 @@ export async function runSubmit(options: SubmitRunOptions = {}) {
             description,
             media,
             rewardFunding,
+            roundConfig,
             sourceName: source.name,
             tags: item.tags,
             title,
@@ -584,6 +663,7 @@ export async function runSubmit(options: SubmitRunOptions = {}) {
           requiredVoters: config.submitRewardRequiredVoters,
           requiredSettledRounds: config.submitRewardRequiredSettledRounds,
           rewardPoolExpiresAt: config.submitRewardPoolExpiresAt,
+          roundConfig,
         });
 
         const approveTx = await ensureCrepAllowance({
@@ -613,11 +693,19 @@ export async function runSubmit(options: SubmitRunOptions = {}) {
         await sleep(RESERVED_SUBMISSION_WAIT_MS);
 
         // Submit question with the exact metadata used in the reservation commitment.
+        const rewardTerms = {
+          asset: rewardFunding.assetId,
+          amount: rewardFunding.amount,
+          requiredVoters: BigInt(config.submitRewardRequiredVoters),
+          requiredSettledRounds: BigInt(config.submitRewardRequiredSettledRounds),
+          expiresAt: config.submitRewardPoolExpiresAt,
+        };
+        const roundConfigAbi = roundConfigToAbi(roundConfig);
         let submitTx: Hex;
         try {
           submitTx = await wallet.writeContract({
             ...contractConfig.registry,
-            functionName: "submitQuestionWithReward",
+            functionName: "submitQuestionWithRewardAndRoundConfig",
             args: [
               contextUrl,
               media.imageUrls,
@@ -627,11 +715,8 @@ export async function runSubmit(options: SubmitRunOptions = {}) {
               item.tags,
               requestedCategoryId,
               salt,
-              rewardFunding.assetId,
-              rewardFunding.amount,
-              BigInt(config.submitRewardRequiredVoters),
-              BigInt(config.submitRewardRequiredSettledRounds),
-              config.submitRewardPoolExpiresAt,
+              rewardTerms,
+              roundConfigAbi,
             ],
           });
         } catch (error) {
@@ -643,7 +728,7 @@ export async function runSubmit(options: SubmitRunOptions = {}) {
           await sleep(RESERVED_SUBMISSION_WAIT_MS);
           submitTx = await wallet.writeContract({
             ...contractConfig.registry,
-            functionName: "submitQuestionWithReward",
+            functionName: "submitQuestionWithRewardAndRoundConfig",
             args: [
               contextUrl,
               media.imageUrls,
@@ -653,11 +738,8 @@ export async function runSubmit(options: SubmitRunOptions = {}) {
               item.tags,
               requestedCategoryId,
               salt,
-              rewardFunding.assetId,
-              rewardFunding.amount,
-              BigInt(config.submitRewardRequiredVoters),
-              BigInt(config.submitRewardRequiredSettledRounds),
-              config.submitRewardPoolExpiresAt,
+              rewardTerms,
+              roundConfigAbi,
             ],
           });
         }

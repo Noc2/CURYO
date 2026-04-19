@@ -13,6 +13,9 @@ type VoteCommandOptions = {
   allowance?: bigint;
   roundStateError?: Error;
   currentRoundId?: bigint;
+  currentRoundStartTime?: bigint;
+  currentRoundState?: number;
+  roundConfigSnapshot?: readonly [bigint, bigint, bigint, bigint];
   voterCommitHash?: `0x${string}`;
   commitVoteError?: Error;
 };
@@ -38,6 +41,10 @@ async function loadVoteCommand(options: VoteCommandOptions = {}) {
         return PROTOCOL_CONFIG_ADDRESS;
       case "config":
         return [1_200n, 172_800n, 3n, 1_000n] as const;
+      case "roundConfigSnapshot":
+        return options.roundConfigSnapshot ?? ([900n, 7_200n, 5n, 50n] as const);
+      case "rounds":
+        return [options.currentRoundStartTime ?? 1_000n, options.currentRoundState ?? 0] as const;
       case "previewCommitReferenceRatingBps":
         return 5_000;
       default:
@@ -63,23 +70,25 @@ async function loadVoteCommand(options: VoteCommandOptions = {}) {
     debug: vi.fn(),
   };
   const getScore = vi.fn().mockResolvedValue(8.5);
+  const createTlockVoteCommit = vi.fn().mockResolvedValue({
+    ciphertext: CIPHERTEXT,
+    commitHash: COMMIT_HASH,
+    targetRound: 123n,
+    drandChainHash: DRAND_CHAIN_HASH,
+    roundReferenceRatingBps: 5_000,
+  });
 
   vi.doMock("node:crypto", () => ({
     randomBytes: vi.fn(() => Buffer.alloc(32, 0x11)),
   }));
   vi.doMock("@curyo/contracts/voting", () => ({
-    createTlockVoteCommit: vi.fn().mockResolvedValue({
-      ciphertext: CIPHERTEXT,
-      commitHash: COMMIT_HASH,
-      targetRound: 123n,
-      drandChainHash: DRAND_CHAIN_HASH,
-      roundReferenceRatingBps: 5_000,
-    }),
+    createTlockVoteCommit,
   }));
   vi.doMock("../client.js", () => ({
     getAccount: vi.fn(() => ({ address: ADDRESS })),
     getWalletClient: vi.fn(() => ({ writeContract })),
     publicClient: {
+      getBlock: vi.fn().mockResolvedValue({ number: 123n, timestamp: 1_100n }),
       readContract,
       waitForTransactionReceipt,
     },
@@ -113,6 +122,10 @@ async function loadVoteCommand(options: VoteCommandOptions = {}) {
             id: "42",
             submitter: "0x1234567890123456789012345678901234567890",
             url: "https://example.com/content",
+            roundEpochDuration: 600,
+            roundMaxDuration: 7_200,
+            roundMinVoters: 5,
+            roundMaxVoters: 50,
           },
         ],
       }),
@@ -129,6 +142,7 @@ async function loadVoteCommand(options: VoteCommandOptions = {}) {
   return {
     ...voteModule,
     mocks: {
+      createTlockVoteCommit,
       getScore,
       log,
       readContract,
@@ -144,7 +158,7 @@ afterEach(() => {
 });
 
 describe("runVote", () => {
-  it("reads epoch duration from protocol config instead of the voting engine ABI", async () => {
+  it("uses the per-question round config when preparing tlock vote commits", async () => {
     const voteCommand = await loadVoteCommand();
 
     await voteCommand.runVote();
@@ -170,11 +184,46 @@ describe("runVote", () => {
         functionName: "config",
       }),
     );
+    expect(voteCommand.mocks.createTlockVoteCommit).toHaveBeenCalledWith(
+      expect.objectContaining({
+        contentId: 42n,
+        epochDurationSeconds: 600,
+        roundReferenceRatingBps: 5_000,
+      }),
+      expect.objectContaining({
+        now: expect.any(Function),
+      }),
+    );
     expect(voteCommand.mocks.writeContract).toHaveBeenNthCalledWith(
       2,
       expect.objectContaining({
         functionName: "commitVote",
         args: [42n, 5_000, 123n, DRAND_CHAIN_HASH, COMMIT_HASH, CIPHERTEXT, 1_000_000n, expect.any(String)],
+      }),
+    );
+  });
+
+  it("uses the current round snapshot when the question already has an open round", async () => {
+    const voteCommand = await loadVoteCommand({
+      currentRoundId: 7n,
+      currentRoundStartTime: 1_000n,
+      roundConfigSnapshot: [900n, 7_200n, 5n, 50n],
+    });
+
+    await voteCommand.runVote();
+
+    expect(voteCommand.mocks.readContract).toHaveBeenCalledWith(
+      expect.objectContaining({
+        functionName: "roundConfigSnapshot",
+        args: [42n, 7n],
+      }),
+    );
+    expect(voteCommand.mocks.createTlockVoteCommit).toHaveBeenCalledWith(
+      expect.objectContaining({
+        epochDurationSeconds: 900,
+      }),
+      expect.objectContaining({
+        now: expect.any(Function),
       }),
     );
   });
