@@ -112,6 +112,7 @@ contract RoundVotingEngineBranchesTest is VotingTestBase {
         );
 
         registry.setVotingEngine(address(engine));
+        registry.setProtocolConfig(protocolConfigAddress);
         MockCategoryRegistry mockCategoryRegistry = new MockCategoryRegistry();
         mockCategoryRegistry.seedDefaultTestCategories();
         registry.setCategoryRegistry(address(mockCategoryRegistry));
@@ -1114,7 +1115,7 @@ contract RoundVotingEngineBranchesTest is VotingTestBase {
     // 10. processUnrevealedVotes
     // =========================================================================
 
-    function test_ProcessUnrevealed_AddsExpiredSettledUnrevealedVotesToVoterPool() public {
+    function test_ProcessUnrevealed_AddsExpiredSettledUnrevealedVotesToConsensusReserve() public {
         uint256 contentId = _submitContent();
 
         // voter1 commits but never reveals — expired after settlement (old epoch = epoch 1)
@@ -1145,18 +1146,25 @@ contract RoundVotingEngineBranchesTest is VotingTestBase {
 
         uint256 treasuryBefore = crepToken.balanceOf(treasury);
         uint256 voterPoolBefore = engine.roundVoterPool(contentId, roundId);
+        uint256 consensusReserveBefore = engine.consensusReserve();
         engine.processUnrevealedVotes(contentId, roundId, 0, 0);
         uint256 treasuryAfter = crepToken.balanceOf(treasury);
         uint256 voterPoolAfter = engine.roundVoterPool(contentId, roundId);
+        uint256 consensusReserveAfter = engine.consensusReserve();
 
         assertEq(engine.roundUnrevealedCleanupRemaining(contentId, roundId), 0);
         assertEq(treasuryAfter, treasuryBefore, "settled expired unrevealed stake should not go to treasury");
-        assertEq(voterPoolAfter - voterPoolBefore, STAKE, "settled expired unrevealed stake boosts winners");
+        assertEq(voterPoolAfter, voterPoolBefore, "settled expired unrevealed stake should not boost winners");
+        assertEq(
+            consensusReserveAfter - consensusReserveBefore,
+            STAKE,
+            "settled expired unrevealed stake should go to reserve"
+        );
 
         uint256 voter2Before = crepToken.balanceOf(voter2);
         vm.prank(voter2);
         rewardDistributor.claimReward(contentId, roundId);
-        assertGt(crepToken.balanceOf(voter2) - voter2Before, STAKE, "winner can claim stake plus boosted reward");
+        assertGt(crepToken.balanceOf(voter2) - voter2Before, STAKE, "winner can claim stake plus revealed reward");
     }
 
     function test_ProcessUnrevealed_KeepsRewardsLockedUntilAllExpiredSettledVotesProcessed() public {

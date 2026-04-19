@@ -64,7 +64,7 @@ library RoundCleanupLib {
         external
         returns (
             uint256 forfeitedToTreasury,
-            uint256 addedToVoterPool,
+            uint256 addedToConsensusReserve,
             uint256 refundedCrep,
             uint256 processedPastEpochCount,
             uint256 updatedConsensusReserve
@@ -83,7 +83,8 @@ library RoundCleanupLib {
                 if (round.state == RoundLib.RoundState.RevealFailed || commit.revealableAfter <= round.settledAt) {
                     processedPastEpochCount++;
                     if (round.state == RoundLib.RoundState.Settled) {
-                        addedToVoterPool += amount;
+                        addedToConsensusReserve += amount;
+                        updatedConsensusReserve += amount;
                     } else {
                         forfeitedToTreasury += amount;
                     }
@@ -109,6 +110,8 @@ library RoundCleanupLib {
             }
         }
 
-        if (forfeitedToTreasury == 0 && addedToVoterPool == 0 && refundedCrep == 0) revert NothingProcessed();
+        if (forfeitedToTreasury == 0 && addedToConsensusReserve == 0 && refundedCrep == 0) {
+            revert NothingProcessed();
+        }
     }
 }

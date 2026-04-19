@@ -183,7 +183,7 @@ contract RoundVotingEngine is
         uint256 indexed contentId, uint256 indexed roundId, address indexed voter, uint256 amount
     );
     event ForfeitedFundsAddedToTreasury(uint256 indexed contentId, uint256 indexed roundId, uint256 amount);
-    event UnrevealedStakeAddedToVoterPool(uint256 indexed contentId, uint256 indexed roundId, uint256 amount);
+    event UnrevealedStakeAddedToConsensusReserve(uint256 indexed contentId, uint256 indexed roundId, uint256 amount);
     event CurrentEpochRefunded(uint256 indexed contentId, uint256 indexed roundId, uint256 amount);
     event TreasuryFeeDistributed(uint256 indexed contentId, uint256 indexed roundId, uint256 amount);
     event ConsensusReserveFunded(uint256 indexed contentId, uint256 indexed roundId, uint256 amount);
@@ -777,7 +777,7 @@ contract RoundVotingEngine is
     // =========================================================================
 
     /// @notice Process unrevealed votes in batches after settlement. Permissionless.
-    /// @dev For settled rounds: unrevealed votes from past epochs are credited to the winning voter pool.
+    /// @dev For settled rounds: unrevealed votes from past epochs are credited to the consensus reserve.
     ///      For tied rounds: unrevealed votes from past epochs are forfeited to treasury.
     ///      Current/future-epoch votes at settlement/tie time are refunded because they had no chance.
     ///      For reveal-failed rounds: all unrevealed votes are forfeited because the final reveal grace has passed.
@@ -801,7 +801,7 @@ contract RoundVotingEngine is
 
         (
             uint256 forfeitedToTreasury,
-            uint256 addedToVoterPool,
+            uint256 addedToConsensusReserve,
             uint256 refundedCrep,
             uint256 processedPastEpochCount,
             uint256 updatedConsensusReserve
@@ -816,17 +816,19 @@ contract RoundVotingEngine is
             count
         );
 
+        uint256 previousConsensusReserve = consensusReserve;
+        if (updatedConsensusReserve != previousConsensusReserve) {
+            consensusReserve = updatedConsensusReserve;
+        }
+
         if (forfeitedToTreasury > 0) {
-            if (updatedConsensusReserve == consensusReserve) {
+            if (updatedConsensusReserve == previousConsensusReserve + addedToConsensusReserve) {
                 emit ForfeitedFundsAddedToTreasury(contentId, roundId, forfeitedToTreasury);
-            } else {
-                consensusReserve = updatedConsensusReserve;
             }
         }
 
-        if (addedToVoterPool > 0) {
-            roundVoterPool[contentId][roundId] += addedToVoterPool;
-            emit UnrevealedStakeAddedToVoterPool(contentId, roundId, addedToVoterPool);
+        if (addedToConsensusReserve > 0) {
+            emit UnrevealedStakeAddedToConsensusReserve(contentId, roundId, addedToConsensusReserve);
         }
 
         if (processedPastEpochCount > 0) {
