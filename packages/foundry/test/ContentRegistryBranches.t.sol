@@ -1,20 +1,20 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.20;
 
-import { Test, stdStorage, StdStorage } from "forge-std/Test.sol";
-import { ERC1967Proxy } from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
-import { ContentRegistry } from "../contracts/ContentRegistry.sol";
-import { RoundVotingEngine } from "../contracts/RoundVotingEngine.sol";
-import { ProtocolConfig } from "../contracts/ProtocolConfig.sol";
-import { RoundRewardDistributor } from "../contracts/RoundRewardDistributor.sol";
-import { CuryoReputation } from "../contracts/CuryoReputation.sol";
-import { ParticipationPool } from "../contracts/ParticipationPool.sol";
-import { RoundLib } from "../contracts/libraries/RoundLib.sol";
-import { RoundEngineReadHelpers } from "./helpers/RoundEngineReadHelpers.sol";
-import { MockVoterIdNFT } from "./mocks/MockVoterIdNFT.sol";
-import { MockCategoryRegistry } from "../contracts/mocks/MockCategoryRegistry.sol";
-import { MockQuestionRewardPoolEscrow } from "./mocks/MockQuestionRewardPoolEscrow.sol";
-import { VotingTestBase } from "./helpers/VotingTestHelpers.sol";
+import {Test, stdStorage, StdStorage} from "forge-std/Test.sol";
+import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
+import {ContentRegistry} from "../contracts/ContentRegistry.sol";
+import {RoundVotingEngine} from "../contracts/RoundVotingEngine.sol";
+import {ProtocolConfig} from "../contracts/ProtocolConfig.sol";
+import {RoundRewardDistributor} from "../contracts/RoundRewardDistributor.sol";
+import {CuryoReputation} from "../contracts/CuryoReputation.sol";
+import {ParticipationPool} from "../contracts/ParticipationPool.sol";
+import {RoundLib} from "../contracts/libraries/RoundLib.sol";
+import {RoundEngineReadHelpers} from "./helpers/RoundEngineReadHelpers.sol";
+import {MockVoterIdNFT} from "./mocks/MockVoterIdNFT.sol";
+import {MockCategoryRegistry} from "../contracts/mocks/MockCategoryRegistry.sol";
+import {MockQuestionRewardPoolEscrow} from "./mocks/MockQuestionRewardPoolEscrow.sol";
+import {VotingTestBase} from "./helpers/VotingTestHelpers.sol";
 
 // =========================================================================
 // TEST CONTRACT
@@ -262,7 +262,6 @@ contract ContentRegistryBranchesTest is VotingTestBase {
 
     function _configureParticipationPoolSnapshots() internal {
         vm.startPrank(owner);
-        registry.setParticipationPool(address(participationPool));
         ProtocolConfig(address(votingEngine.protocolConfig())).setParticipationPool(address(participationPool));
         vm.stopPrank();
     }
@@ -461,7 +460,7 @@ contract ContentRegistryBranchesTest is VotingTestBase {
             expiresAt: block.timestamp + 14 days
         });
         RoundLib.RoundConfig memory roundConfig =
-            RoundLib.RoundConfig({ epochDuration: 1 hours, maxDuration: 2 hours, minVoters: 4, maxVoters: 5 });
+            RoundLib.RoundConfig({epochDuration: 1 hours, maxDuration: 2 hours, minVoters: 4, maxVoters: 5});
 
         vm.startPrank(submitter);
         crepToken.approve(address(mockQuestionRewardPoolEscrow), rewardTerms.amount);
@@ -506,9 +505,9 @@ contract ContentRegistryBranchesTest is VotingTestBase {
             expiresAt: DEFAULT_SUBMISSION_REWARD_EXPIRES_AT
         });
         RoundLib.RoundConfig memory reservedConfig =
-            RoundLib.RoundConfig({ epochDuration: 1 hours, maxDuration: 2 hours, minVoters: 3, maxVoters: 4 });
+            RoundLib.RoundConfig({epochDuration: 1 hours, maxDuration: 2 hours, minVoters: 3, maxVoters: 4});
         RoundLib.RoundConfig memory alteredConfig =
-            RoundLib.RoundConfig({ epochDuration: 1 hours, maxDuration: 3 hours, minVoters: 3, maxVoters: 4 });
+            RoundLib.RoundConfig({epochDuration: 1 hours, maxDuration: 3 hours, minVoters: 3, maxVoters: 4});
 
         vm.startPrank(submitter);
         crepToken.approve(address(mockQuestionRewardPoolEscrow), rewardTerms.amount);
@@ -888,22 +887,6 @@ contract ContentRegistryBranchesTest is VotingTestBase {
         (,,,,,,,,, bool submitterStakeReturned,,) = registry.contents(1);
         assertEq(balAfter, balBefore, "mock bounty escrow does not pull funds in branch tests");
         assertTrue(submitterStakeReturned, "submitter stake compatibility flag starts resolved");
-        assertEq(registry.submitterParticipationRewardOwed(1), 0);
-        assertEq(registry.submitterParticipationRewardReserved(1), 0);
-    }
-
-    function test_DeprecatedSubmitterParticipationRewardFunctions() public {
-        vm.startPrank(submitter);
-        _submitContentWithReservation(
-            registry, "https://example.com/removed-submitter-rewards", "goal", "goal", "tags", 0
-        );
-        vm.stopPrank();
-
-        vm.expectRevert("Submitter rewards removed");
-        registry.claimSubmitterParticipationReward(1);
-
-        vm.expectRevert("Submitter rewards removed");
-        registry.repairMilestoneZeroSubmitterParticipationTerms(1, 9000);
     }
 
     function test_SubmitContent_UrlTooLong_Reverts() public {
@@ -1317,7 +1300,7 @@ contract ContentRegistryBranchesTest is VotingTestBase {
     }
 
     // =========================================================================
-    // slashSubmitterStake BRANCHES
+    // initializeWithTreasury BRANCHES
     // =========================================================================
 
     function test_InitializeWithTreasury_ConfiguresTreasuryAuthority() public {

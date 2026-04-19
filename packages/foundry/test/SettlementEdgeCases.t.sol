@@ -1,19 +1,19 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.20;
 
-import { Test } from "forge-std/Test.sol";
-import { ERC1967Proxy } from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
-import { ContentRegistry } from "../contracts/ContentRegistry.sol";
-import { RoundVotingEngine } from "../contracts/RoundVotingEngine.sol";
-import { ProtocolConfig } from "../contracts/ProtocolConfig.sol";
-import { RoundRewardDistributor } from "../contracts/RoundRewardDistributor.sol";
-import { RoundLib } from "../contracts/libraries/RoundLib.sol";
-import { RoundEngineReadHelpers } from "./helpers/RoundEngineReadHelpers.sol";
-import { CuryoReputation } from "../contracts/CuryoReputation.sol";
-import { ParticipationPool } from "../contracts/ParticipationPool.sol";
-import { FrontendRegistry } from "../contracts/FrontendRegistry.sol";
-import { VotingTestBase } from "./helpers/VotingTestHelpers.sol";
-import { MockCategoryRegistry } from "../contracts/mocks/MockCategoryRegistry.sol";
+import {Test} from "forge-std/Test.sol";
+import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
+import {ContentRegistry} from "../contracts/ContentRegistry.sol";
+import {RoundVotingEngine} from "../contracts/RoundVotingEngine.sol";
+import {ProtocolConfig} from "../contracts/ProtocolConfig.sol";
+import {RoundRewardDistributor} from "../contracts/RoundRewardDistributor.sol";
+import {RoundLib} from "../contracts/libraries/RoundLib.sol";
+import {RoundEngineReadHelpers} from "./helpers/RoundEngineReadHelpers.sol";
+import {CuryoReputation} from "../contracts/CuryoReputation.sol";
+import {ParticipationPool} from "../contracts/ParticipationPool.sol";
+import {FrontendRegistry} from "../contracts/FrontendRegistry.sol";
+import {VotingTestBase} from "./helpers/VotingTestHelpers.sol";
+import {MockCategoryRegistry} from "../contracts/mocks/MockCategoryRegistry.sol";
 
 // =========================================================================
 // TEST CONTRACT: Settlement Edge Cases
@@ -795,22 +795,6 @@ contract SettlementEdgeCasesTest is VotingTestBase {
         vm.prank(voter1);
         vm.expectRevert("Round not settled");
         rewardDistributor.claimReward(contentId, roundId);
-    }
-
-    // =========================================================================
-    // 23. SUBMITTER REWARD: deprecated compatibility path
-    // =========================================================================
-
-    function test_SubmitterReward_DeprecatedCompatibility() public {
-        (uint256 contentId, uint256 roundId) = _setupThreeVoterRound(true, true, true);
-        engine.settleRound(contentId, roundId);
-
-        assertEq(engine.pendingSubmitterReward(contentId, roundId), 0);
-        assertTrue(rewardDistributor.submitterRewardClaimed(contentId, roundId));
-
-        vm.prank(submitter);
-        vm.expectRevert("Submitter rewards removed");
-        rewardDistributor.claimSubmitterReward(contentId, roundId);
     }
 
     // =========================================================================

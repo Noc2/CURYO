@@ -1,16 +1,16 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.20;
 
-import { VotingTestBase } from "./helpers/VotingTestHelpers.sol";
-import { ERC1967Proxy } from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
-import { ContentRegistry } from "../contracts/ContentRegistry.sol";
-import { RoundVotingEngine } from "../contracts/RoundVotingEngine.sol";
-import { ProtocolConfig } from "../contracts/ProtocolConfig.sol";
-import { RoundRewardDistributor } from "../contracts/RoundRewardDistributor.sol";
-import { RoundLib } from "../contracts/libraries/RoundLib.sol";
-import { RoundEngineReadHelpers } from "./helpers/RoundEngineReadHelpers.sol";
-import { CuryoReputation } from "../contracts/CuryoReputation.sol";
-import { MockCategoryRegistry } from "../contracts/mocks/MockCategoryRegistry.sol";
+import {VotingTestBase} from "./helpers/VotingTestHelpers.sol";
+import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
+import {ContentRegistry} from "../contracts/ContentRegistry.sol";
+import {RoundVotingEngine} from "../contracts/RoundVotingEngine.sol";
+import {ProtocolConfig} from "../contracts/ProtocolConfig.sol";
+import {RoundRewardDistributor} from "../contracts/RoundRewardDistributor.sol";
+import {RoundLib} from "../contracts/libraries/RoundLib.sol";
+import {RoundEngineReadHelpers} from "./helpers/RoundEngineReadHelpers.sol";
+import {CuryoReputation} from "../contracts/CuryoReputation.sol";
+import {MockCategoryRegistry} from "../contracts/mocks/MockCategoryRegistry.sol";
 
 /// @title RoundRewardDistributor branch coverage tests (tlock commit-reveal)
 contract RoundRewardDistributorBranchesTest is VotingTestBase {
@@ -132,7 +132,7 @@ contract RoundRewardDistributorBranchesTest is VotingTestBase {
             RoundLib.Commit memory c = RoundEngineReadHelpers.commit(votingEngine, contentId, roundId, keys[i]);
             if (!c.revealed && c.stakeAmount > 0) {
                 (bool isUp, bytes32 salt) = _decodeTestCiphertext(c.ciphertext);
-                try votingEngine.revealVoteByCommitKey(contentId, roundId, keys[i], isUp, salt) { } catch { }
+                try votingEngine.revealVoteByCommitKey(contentId, roundId, keys[i], isUp, salt) {} catch {}
             }
         }
     }
@@ -147,7 +147,7 @@ contract RoundRewardDistributorBranchesTest is VotingTestBase {
 
         RoundLib.Round memory r2 = RoundEngineReadHelpers.round(votingEngine, contentId, roundId);
         if (r2.thresholdReachedAt > 0) {
-            try votingEngine.settleRound(contentId, roundId) { } catch { }
+            try votingEngine.settleRound(contentId, roundId) {} catch {}
         }
     }
 
@@ -225,23 +225,6 @@ contract RoundRewardDistributorBranchesTest is VotingTestBase {
         uint256 balAfter = crepToken.balanceOf(voter1);
 
         assertGt(balAfter, balBefore); // winner gets stake + reward
-    }
-
-    // =========================================================================
-    // Deprecated submitter reward compatibility
-    // =========================================================================
-
-    function test_ClaimSubmitterReward_RevertsAsRemoved() public {
-        vm.expectRevert("Submitter rewards removed");
-        rewardDistributor.claimSubmitterReward(1, 1);
-    }
-
-    function test_SubmitterRewardClaimed_ReturnsTrueForCompatibility() public view {
-        assertTrue(rewardDistributor.submitterRewardClaimed(1, 1));
-    }
-
-    function test_PendingSubmitterReward_ReturnsZeroForCompatibility() public view {
-        assertEq(votingEngine.pendingSubmitterReward(1, 1), 0);
     }
 
     // =========================================================================

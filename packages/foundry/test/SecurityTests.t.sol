@@ -1,18 +1,18 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.20;
 
-import { Test } from "forge-std/Test.sol";
-import { ERC1967Proxy } from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
-import { IAccessControl } from "@openzeppelin/contracts/access/IAccessControl.sol";
-import { ERC20 } from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
-import { ContentRegistry } from "../contracts/ContentRegistry.sol";
-import { RoundVotingEngine } from "../contracts/RoundVotingEngine.sol";
-import { ProtocolConfig } from "../contracts/ProtocolConfig.sol";
-import { RoundLib } from "../contracts/libraries/RoundLib.sol";
-import { RoundEngineReadHelpers } from "./helpers/RoundEngineReadHelpers.sol";
-import { CuryoReputation } from "../contracts/CuryoReputation.sol";
-import { VotingTestBase, deployInitializedProtocolConfig } from "./helpers/VotingTestHelpers.sol";
-import { MockCategoryRegistry } from "../contracts/mocks/MockCategoryRegistry.sol";
+import {Test} from "forge-std/Test.sol";
+import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
+import {IAccessControl} from "@openzeppelin/contracts/access/IAccessControl.sol";
+import {ERC20} from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
+import {ContentRegistry} from "../contracts/ContentRegistry.sol";
+import {RoundVotingEngine} from "../contracts/RoundVotingEngine.sol";
+import {ProtocolConfig} from "../contracts/ProtocolConfig.sol";
+import {RoundLib} from "../contracts/libraries/RoundLib.sol";
+import {RoundEngineReadHelpers} from "./helpers/RoundEngineReadHelpers.sol";
+import {CuryoReputation} from "../contracts/CuryoReputation.sol";
+import {VotingTestBase, deployInitializedProtocolConfig} from "./helpers/VotingTestHelpers.sol";
+import {MockCategoryRegistry} from "../contracts/mocks/MockCategoryRegistry.sol";
 
 // ============================================================================
 // Section 1 — Reentrancy Tests
@@ -25,7 +25,7 @@ contract MaliciousToken is ERC20 {
     bytes public reentrantCalldata;
     bool public armed;
 
-    constructor() ERC20("Malicious", "MAL") { }
+    constructor() ERC20("Malicious", "MAL") {}
 
     function mint(address to, uint256 amount) external {
         _mint(to, amount);
@@ -68,8 +68,7 @@ abstract contract SecurityHarnessBase is VotingTestBase {
         registry = ContentRegistry(
             address(
                 new ERC1967Proxy(
-                    address(registryImpl),
-                    abi.encodeCall(ContentRegistry.initialize, (owner, owner, address(token)))
+                    address(registryImpl), abi.encodeCall(ContentRegistry.initialize, (owner, owner, address(token)))
                 )
             )
         );
@@ -187,7 +186,16 @@ contract SecurityReentrancyTest is SecurityHarnessBase {
         bytes32 commitHash = _commitHash(isUp, salt, contentId, targetRound, drandChainHash, ciphertext);
         vm.startPrank(voter);
         crepToken.approve(address(votingEngine), STAKE);
-        votingEngine.commitVote(contentId, _defaultRatingReferenceBps(), targetRound, drandChainHash, commitHash, ciphertext, STAKE, address(0));
+        votingEngine.commitVote(
+            contentId,
+            _defaultRatingReferenceBps(),
+            targetRound,
+            drandChainHash,
+            commitHash,
+            ciphertext,
+            STAKE,
+            address(0)
+        );
         vm.stopPrank();
         return keccak256(abi.encodePacked(voter, commitHash));
     }
@@ -336,12 +344,16 @@ contract SecurityTransferAndCallTest is SecurityHarnessBase {
         VotePayloadArtifacts memory artifacts;
         artifacts.targetRound = _tlockCommitTargetRound();
         artifacts.drandChainHash = _tlockDrandChainHash();
-        artifacts.ciphertext =
-            _testCiphertext(true, salt, contentId, artifacts.targetRound, artifacts.drandChainHash);
+        artifacts.ciphertext = _testCiphertext(true, salt, contentId, artifacts.targetRound, artifacts.drandChainHash);
         artifacts.commitHash =
             _commitHash(true, salt, contentId, artifacts.targetRound, artifacts.drandChainHash, artifacts.ciphertext);
         payload = abi.encode(
-            contentId, artifacts.commitHash, artifacts.ciphertext, address(0), artifacts.targetRound, artifacts.drandChainHash
+            contentId,
+            artifacts.commitHash,
+            artifacts.ciphertext,
+            address(0),
+            artifacts.targetRound,
+            artifacts.drandChainHash
         );
         commitHash = artifacts.commitHash;
         ciphertext = artifacts.ciphertext;
@@ -475,7 +487,16 @@ contract SecuritySettlementTimingTest is SecurityHarnessBase {
         bytes32 commitHash = _commitHash(isUp, salt, contentId, targetRound, drandChainHash, ciphertext);
         vm.startPrank(voter);
         crepToken.approve(address(votingEngine), STAKE);
-        votingEngine.commitVote(contentId, _defaultRatingReferenceBps(), targetRound, drandChainHash, commitHash, ciphertext, STAKE, address(0));
+        votingEngine.commitVote(
+            contentId,
+            _defaultRatingReferenceBps(),
+            targetRound,
+            drandChainHash,
+            commitHash,
+            ciphertext,
+            STAKE,
+            address(0)
+        );
         vm.stopPrank();
         return keccak256(abi.encodePacked(voter, commitHash));
     }
@@ -719,12 +740,6 @@ contract SecurityAccessControlTest is Test {
         vm.prank(attacker);
         _expectUnauthorized(attacker, CONFIG_ROLE_REGISTRY);
         registry.setVoterIdNFT(attacker);
-    }
-
-    function test_ACL_Registry_setParticipationPool_Unauthorized() public {
-        vm.prank(attacker);
-        _expectUnauthorized(attacker, CONFIG_ROLE_REGISTRY);
-        registry.setParticipationPool(attacker);
     }
 
     function test_ACL_Registry_setBonusPool_Unauthorized() public {

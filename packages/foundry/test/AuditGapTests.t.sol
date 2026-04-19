@@ -1,19 +1,19 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.20;
 
-import { VotingTestBase } from "./helpers/VotingTestHelpers.sol";
-import { ERC1967Proxy } from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
-import { ContentRegistry } from "../contracts/ContentRegistry.sol";
-import { RoundVotingEngine } from "../contracts/RoundVotingEngine.sol";
-import { ProtocolConfig } from "../contracts/ProtocolConfig.sol";
-import { RoundRewardDistributor } from "../contracts/RoundRewardDistributor.sol";
-import { RoundLib } from "../contracts/libraries/RoundLib.sol";
-import { RoundEngineReadHelpers } from "./helpers/RoundEngineReadHelpers.sol";
-import { CuryoReputation } from "../contracts/CuryoReputation.sol";
-import { ParticipationPool } from "../contracts/ParticipationPool.sol";
-import { FrontendRegistry } from "../contracts/FrontendRegistry.sol";
-import { MockCategoryRegistry } from "../contracts/mocks/MockCategoryRegistry.sol";
-import { MockVoterIdNFT } from "./mocks/MockVoterIdNFT.sol";
+import {VotingTestBase} from "./helpers/VotingTestHelpers.sol";
+import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
+import {ContentRegistry} from "../contracts/ContentRegistry.sol";
+import {RoundVotingEngine} from "../contracts/RoundVotingEngine.sol";
+import {ProtocolConfig} from "../contracts/ProtocolConfig.sol";
+import {RoundRewardDistributor} from "../contracts/RoundRewardDistributor.sol";
+import {RoundLib} from "../contracts/libraries/RoundLib.sol";
+import {RoundEngineReadHelpers} from "./helpers/RoundEngineReadHelpers.sol";
+import {CuryoReputation} from "../contracts/CuryoReputation.sol";
+import {ParticipationPool} from "../contracts/ParticipationPool.sol";
+import {FrontendRegistry} from "../contracts/FrontendRegistry.sol";
+import {MockCategoryRegistry} from "../contracts/mocks/MockCategoryRegistry.sol";
+import {MockVoterIdNFT} from "./mocks/MockVoterIdNFT.sol";
 
 /// @title Audit Gap Tests — Priority-1 test coverage for gaps identified during security audit.
 /// @dev Covers:
@@ -385,12 +385,7 @@ contract AuditGapTests is VotingTestBase {
         assertTrue(v3After > v3Before, "Revealed loser should receive 5% rebate");
         assertEq(v3After - v3Before, STAKE * 500 / 10000, "Rebate should be 5% of stake");
 
-        // 4. Submitter rewards are removed.
-        vm.prank(submitter);
-        vm.expectRevert("Submitter rewards removed");
-        rewardDistributor.claimSubmitterReward(contentId, 1);
-
-        // 5. Frontend fee (credited to FrontendRegistry, then claimed by operator)
+        // 4. Frontend fee (credited to FrontendRegistry, then claimed by operator)
         vm.prank(frontend);
         rewardDistributor.claimFrontendFee(contentId, 1, frontend);
         uint256 feBefore = crepToken.balanceOf(frontend);
@@ -399,7 +394,7 @@ contract AuditGapTests is VotingTestBase {
         uint256 feAfter = crepToken.balanceOf(frontend);
         assertTrue(feAfter > feBefore, "Frontend should receive fee via claimFees");
 
-        // 6. Participation reward (voter1 = winner)
+        // 5. Participation reward (voter1 = winner)
         uint256 v1PartBefore = crepToken.balanceOf(voter1);
         vm.prank(voter1);
         rewardDistributor.claimParticipationReward(contentId, 1);
@@ -410,10 +405,6 @@ contract AuditGapTests is VotingTestBase {
         vm.prank(voter1);
         vm.expectRevert();
         rewardDistributor.claimReward(contentId, 1);
-
-        vm.prank(submitter);
-        vm.expectRevert("Submitter rewards removed");
-        rewardDistributor.claimSubmitterReward(contentId, 1);
 
         vm.prank(voter1);
         vm.expectRevert();
@@ -623,11 +614,6 @@ contract AuditGapTests is VotingTestBase {
         rewardDistributor.claimReward(contentId, 1);
         vm.prank(voter3);
         rewardDistributor.claimReward(contentId, 1);
-
-        // Submitter rewards are removed.
-        vm.prank(submitter);
-        vm.expectRevert("Submitter rewards removed");
-        rewardDistributor.claimSubmitterReward(contentId, 1);
 
         uint256 engineBalAfter = crepToken.balanceOf(address(votingEngine));
 

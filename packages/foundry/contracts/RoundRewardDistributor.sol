@@ -1,19 +1,19 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.24;
 
-import { Initializable } from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
-import { AccessControlUpgradeable } from "@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol";
-import { ReentrancyGuardTransient } from "@openzeppelin/contracts/utils/ReentrancyGuardTransient.sol";
-import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import { SafeERC20 } from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
+import {Initializable} from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
+import {AccessControlUpgradeable} from "@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol";
+import {ReentrancyGuardTransient} from "@openzeppelin/contracts/utils/ReentrancyGuardTransient.sol";
+import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 
-import { RoundVotingEngine } from "./RoundVotingEngine.sol";
-import { ContentRegistry } from "./ContentRegistry.sol";
-import { ProtocolConfig } from "./ProtocolConfig.sol";
-import { IFrontendRegistry } from "./interfaces/IFrontendRegistry.sol";
-import { IParticipationPool } from "./interfaces/IParticipationPool.sol";
-import { RoundLib } from "./libraries/RoundLib.sol";
-import { RewardMath } from "./libraries/RewardMath.sol";
+import {RoundVotingEngine} from "./RoundVotingEngine.sol";
+import {ContentRegistry} from "./ContentRegistry.sol";
+import {ProtocolConfig} from "./ProtocolConfig.sol";
+import {IFrontendRegistry} from "./interfaces/IFrontendRegistry.sol";
+import {IParticipationPool} from "./interfaces/IParticipationPool.sol";
+import {RoundLib} from "./libraries/RoundLib.sol";
+import {RewardMath} from "./libraries/RewardMath.sol";
 
 /// @title RoundRewardDistributor
 /// @notice Pull-based reward claiming for settled rounds.
@@ -236,16 +236,6 @@ contract RoundRewardDistributor is Initializable, AccessControlUpgradeable, Reen
         votingEngine.transferReward(msg.sender, totalPayout);
 
         emit RewardClaimed(contentId, roundId, msg.sender, commit.stakeAmount, reward);
-    }
-
-    /// @notice Deprecated; submitter cREP rewards have been removed.
-    function submitterRewardClaimed(uint256, uint256) external pure returns (bool) {
-        return true;
-    }
-
-    /// @notice Deprecated; submitter cREP rewards have been removed.
-    function claimSubmitterReward(uint256, uint256) external pure {
-        revert("Submitter rewards removed");
     }
 
     // --- Frontend Fee Claims ---

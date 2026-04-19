@@ -1,18 +1,18 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.20;
 
-import { Test } from "forge-std/Test.sol";
-import { ERC1967Proxy } from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
-import { ContentRegistry } from "../contracts/ContentRegistry.sol";
-import { RoundVotingEngine } from "../contracts/RoundVotingEngine.sol";
-import { ProtocolConfig } from "../contracts/ProtocolConfig.sol";
-import { RoundRewardDistributor } from "../contracts/RoundRewardDistributor.sol";
-import { CuryoReputation } from "../contracts/CuryoReputation.sol";
-import { RoundLib } from "../contracts/libraries/RoundLib.sol";
-import { RoundEngineReadHelpers } from "./helpers/RoundEngineReadHelpers.sol";
-import { RewardMath } from "../contracts/libraries/RewardMath.sol";
-import { VotingTestBase } from "./helpers/VotingTestHelpers.sol";
-import { MockCategoryRegistry } from "../contracts/mocks/MockCategoryRegistry.sol";
+import {Test} from "forge-std/Test.sol";
+import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
+import {ContentRegistry} from "../contracts/ContentRegistry.sol";
+import {RoundVotingEngine} from "../contracts/RoundVotingEngine.sol";
+import {ProtocolConfig} from "../contracts/ProtocolConfig.sol";
+import {RoundRewardDistributor} from "../contracts/RoundRewardDistributor.sol";
+import {CuryoReputation} from "../contracts/CuryoReputation.sol";
+import {RoundLib} from "../contracts/libraries/RoundLib.sol";
+import {RoundEngineReadHelpers} from "./helpers/RoundEngineReadHelpers.sol";
+import {RewardMath} from "../contracts/libraries/RewardMath.sol";
+import {VotingTestBase} from "./helpers/VotingTestHelpers.sol";
+import {MockCategoryRegistry} from "../contracts/mocks/MockCategoryRegistry.sol";
 
 /// @title Formal Verification: Parimutuel Game Theory (Public Vote + Random Settlement)
 /// @notice 14 scenarios verifying honest voting profitability, collusion resistance,
@@ -154,12 +154,12 @@ contract FormalVerification_GameTheoryTest is VotingTestBase {
             RoundLib.Commit memory c = RoundEngineReadHelpers.commit(engine, cid, roundId, keys[i]);
             if (!c.revealed && c.stakeAmount > 0) {
                 (bool up, bytes32 s) = _decodeTestCiphertext(c.ciphertext);
-                try engine.revealVoteByCommitKey(cid, roundId, keys[i], up, s) { } catch { }
+                try engine.revealVoteByCommitKey(cid, roundId, keys[i], up, s) {} catch {}
             }
         }
         RoundLib.Round memory r2 = RoundEngineReadHelpers.round(engine, cid, roundId);
         if (r2.thresholdReachedAt > 0) {
-            try engine.settleRound(cid, roundId) { } catch { }
+            try engine.settleRound(cid, roundId) {} catch {}
         }
     }
 
@@ -318,12 +318,7 @@ contract FormalVerification_GameTheoryTest is VotingTestBase {
         uint256 payout = crepToken.balanceOf(v[0]) - bal;
         assertGt(payout, 50e6, "Voter gets stake + subsidy reward");
 
-        // Removed submitter upside: all consensus subsidy is routed to voters.
-        uint256 subBal = crepToken.balanceOf(submitter);
-        vm.prank(submitter);
-        vm.expectRevert("Submitter rewards removed");
-        distributor.claimSubmitterReward(cid, rid);
-        assertEq(crepToken.balanceOf(submitter), subBal, "Submitter balance stays unchanged");
+        assertEq(crepToken.balanceOf(submitter), 0, "Submitter receives no consensus subsidy");
     }
 
     // ==================== Test 6: Share-Proportional ROI (Early Voter Advantage) ====================

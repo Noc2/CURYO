@@ -1,25 +1,25 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.20;
 
-import { Test, Vm } from "forge-std/Test.sol";
-import { ERC1967Proxy } from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
-import { FrontendRegistry } from "../contracts/FrontendRegistry.sol";
-import { HumanFaucet } from "../contracts/HumanFaucet.sol";
-import { MockIdentityVerificationHub } from "../contracts/mocks/MockIdentityVerificationHub.sol";
-import { ISelfVerificationRoot } from "@selfxyz/contracts/contracts/interfaces/ISelfVerificationRoot.sol";
-import { ContentRegistry } from "../contracts/ContentRegistry.sol";
-import { RoundVotingEngine } from "../contracts/RoundVotingEngine.sol";
-import { ProtocolConfig } from "../contracts/ProtocolConfig.sol";
-import { RoundRewardDistributor } from "../contracts/RoundRewardDistributor.sol";
-import { RoundLib } from "../contracts/libraries/RoundLib.sol";
-import { RoundEngineReadHelpers } from "./helpers/RoundEngineReadHelpers.sol";
-import { RewardMath } from "../contracts/libraries/RewardMath.sol";
-import { CuryoReputation } from "../contracts/CuryoReputation.sol";
-import { MockVoterIdNFT } from "./mocks/MockVoterIdNFT.sol";
-import { IRoundVotingEngine } from "../contracts/interfaces/IRoundVotingEngine.sol";
-import { IFrontendRegistry } from "../contracts/interfaces/IFrontendRegistry.sol";
-import { VotingTestBase } from "./helpers/VotingTestHelpers.sol";
-import { MockCategoryRegistry } from "../contracts/mocks/MockCategoryRegistry.sol";
+import {Test, Vm} from "forge-std/Test.sol";
+import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
+import {FrontendRegistry} from "../contracts/FrontendRegistry.sol";
+import {HumanFaucet} from "../contracts/HumanFaucet.sol";
+import {MockIdentityVerificationHub} from "../contracts/mocks/MockIdentityVerificationHub.sol";
+import {ISelfVerificationRoot} from "@selfxyz/contracts/contracts/interfaces/ISelfVerificationRoot.sol";
+import {ContentRegistry} from "../contracts/ContentRegistry.sol";
+import {RoundVotingEngine} from "../contracts/RoundVotingEngine.sol";
+import {ProtocolConfig} from "../contracts/ProtocolConfig.sol";
+import {RoundRewardDistributor} from "../contracts/RoundRewardDistributor.sol";
+import {RoundLib} from "../contracts/libraries/RoundLib.sol";
+import {RoundEngineReadHelpers} from "./helpers/RoundEngineReadHelpers.sol";
+import {RewardMath} from "../contracts/libraries/RewardMath.sol";
+import {CuryoReputation} from "../contracts/CuryoReputation.sol";
+import {MockVoterIdNFT} from "./mocks/MockVoterIdNFT.sol";
+import {IRoundVotingEngine} from "../contracts/interfaces/IRoundVotingEngine.sol";
+import {IFrontendRegistry} from "../contracts/interfaces/IFrontendRegistry.sol";
+import {VotingTestBase} from "./helpers/VotingTestHelpers.sol";
+import {MockCategoryRegistry} from "../contracts/mocks/MockCategoryRegistry.sol";
 
 // =========================================================================
 // MOCKS
@@ -64,7 +64,7 @@ contract MockVotingEngine3 is IRoundVotingEngine {
         return (0, RoundLib.RoundState.Open, 0, 0, 0, 0, 0, 0, 0, false, 0, 0, 0, 0);
     }
 
-    function transferReward(address, uint256) external override { }
+    function transferReward(address, uint256) external override {}
 }
 
 // =========================================================================
@@ -893,25 +893,6 @@ contract RoundSettlementEdgeCase3Test is VotingTestBase {
         assertEq(crep.balanceOf(voter2) - loserBefore, STAKE / 20);
     }
 
-    // --- Submitter rewards are removed ---
-
-    function test_SettledRound_SubmitterRewardCompatibilityRemoved() public {
-        uint256 contentId = _submitContent();
-
-        (bytes32 ck1, bytes32 s1) = _commit(voter1, contentId, true, 100e6);
-        (bytes32 ck2, bytes32 s2) = _commit(voter2, contentId, false, 50e6);
-
-        uint256 roundId = RoundEngineReadHelpers.activeRoundId(engine, contentId);
-        _revealAndSettle(contentId, roundId, ck1, true, s1, ck2, false, s2);
-
-        uint256 pendingReward = engine.pendingSubmitterReward(contentId, roundId);
-        assertEq(pendingReward, 0);
-
-        vm.prank(submitter);
-        vm.expectRevert("Submitter rewards removed");
-        distributor.claimSubmitterReward(contentId, roundId);
-    }
-
     // --- Consensus subsidy pays from reserve ---
 
     function test_ConsensusSettlement_PaysFromReserve() public {
@@ -1278,13 +1259,13 @@ contract RoundSettlementEdgeCase3Test is VotingTestBase {
             RoundLib.Commit memory c = RoundEngineReadHelpers.commit(engine, contentId, roundId, keys[i]);
             if (!c.revealed && c.stakeAmount > 0) {
                 (bool isUp, bytes32 salt) = _decodeTestCiphertext(c.ciphertext);
-                try engine.revealVoteByCommitKey(contentId, roundId, keys[i], isUp, salt) { } catch { }
+                try engine.revealVoteByCommitKey(contentId, roundId, keys[i], isUp, salt) {} catch {}
             }
         }
 
         RoundLib.Round memory r2 = RoundEngineReadHelpers.round(engine, contentId, roundId);
         if (r2.thresholdReachedAt > 0) {
-            try engine.settleRound(contentId, roundId) { } catch { }
+            try engine.settleRound(contentId, roundId) {} catch {}
         }
     }
 

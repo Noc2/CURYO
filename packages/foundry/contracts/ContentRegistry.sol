@@ -1,21 +1,21 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.24;
 
-import { Initializable } from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
-import { AccessControlUpgradeable } from "@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol";
-import { PausableUpgradeable } from "@openzeppelin/contracts-upgradeable/utils/PausableUpgradeable.sol";
-import { ReentrancyGuardTransient } from "@openzeppelin/contracts/utils/ReentrancyGuardTransient.sol";
-import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import { SafeERC20 } from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
-import { SafeCast } from "@openzeppelin/contracts/utils/math/SafeCast.sol";
-import { ICategoryRegistry } from "./interfaces/ICategoryRegistry.sol";
-import { IRoundVotingEngine } from "./interfaces/IRoundVotingEngine.sol";
-import { IVoterIdNFT } from "./interfaces/IVoterIdNFT.sol";
-import { RoundLib } from "./libraries/RoundLib.sol";
-import { RatingLib } from "./libraries/RatingLib.sol";
-import { RatingMath } from "./libraries/RatingMath.sol";
-import { ProtocolConfig } from "./ProtocolConfig.sol";
-import { SubmissionMediaValidator } from "./SubmissionMediaValidator.sol";
+import {Initializable} from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
+import {AccessControlUpgradeable} from "@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol";
+import {PausableUpgradeable} from "@openzeppelin/contracts-upgradeable/utils/PausableUpgradeable.sol";
+import {ReentrancyGuardTransient} from "@openzeppelin/contracts/utils/ReentrancyGuardTransient.sol";
+import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
+import {SafeCast} from "@openzeppelin/contracts/utils/math/SafeCast.sol";
+import {ICategoryRegistry} from "./interfaces/ICategoryRegistry.sol";
+import {IRoundVotingEngine} from "./interfaces/IRoundVotingEngine.sol";
+import {IVoterIdNFT} from "./interfaces/IVoterIdNFT.sol";
+import {RoundLib} from "./libraries/RoundLib.sol";
+import {RatingLib} from "./libraries/RatingLib.sol";
+import {RatingMath} from "./libraries/RatingMath.sol";
+import {ProtocolConfig} from "./ProtocolConfig.sol";
+import {SubmissionMediaValidator} from "./SubmissionMediaValidator.sol";
 
 interface IQuestionRewardPoolEscrow {
     function createSubmissionRewardPoolFromRegistry(
@@ -129,18 +129,6 @@ contract ContentRegistry is Initializable, AccessControlUpgradeable, PausableUpg
 
     /// @notice Escrow that holds mandatory bounties.
     address public questionRewardPoolEscrow;
-
-    /// @notice Deprecated submitter reward state retained as zeroed compatibility getters.
-    mapping(uint256 => uint256) internal _deprecatedSubmitterParticipationRewardOwed;
-    mapping(uint256 => uint256) internal _deprecatedSubmitterParticipationRewardPaid;
-    mapping(uint256 => uint256) internal _deprecatedSubmitterParticipationRewardReserved;
-    mapping(uint256 => address) internal _deprecatedSubmitterParticipationRewardPool;
-    mapping(uint256 => uint256) internal _deprecatedSubmitterParticipationSnapshotRateBps;
-    mapping(uint256 => address) internal _deprecatedSubmitterParticipationSnapshotPool;
-    mapping(uint256 => bool) internal _deprecatedMilestoneZeroSubmitterTermsSnapshotted;
-    mapping(uint256 => uint8) internal _deprecatedMilestoneZeroSubmitterRating;
-    mapping(uint256 => uint256) internal _deprecatedMilestoneZeroSubmitterParticipationRateBps;
-    mapping(uint256 => address) internal _deprecatedMilestoneZeroSubmitterParticipationPool;
 
     /// @notice Canonical submission key per content ID (for releasing/reserving uniqueness on status changes)
     mapping(uint256 => bytes32) internal contentSubmissionKey;
@@ -300,9 +288,6 @@ contract ContentRegistry is Initializable, AccessControlUpgradeable, PausableUpg
         questionRewardPoolEscrow = _questionRewardPoolEscrow;
         emit QuestionRewardPoolEscrowUpdated(_questionRewardPoolEscrow);
     }
-
-    /// @notice Deprecated compatibility hook. Submitter participation rewards have been removed.
-    function setParticipationPool(address) external onlyRole(CONFIG_ROLE) { }
 
     /// @notice Set the cancellation fee sink address (can only be called by TREASURY_ROLE).
     function setBonusPool(address _bonusPool) external onlyRole(TREASURY_ROLE) {
@@ -967,75 +952,6 @@ contract ContentRegistry is Initializable, AccessControlUpgradeable, PausableUpg
         uint16 conservativeRatingBps = ratingState[contentId].conservativeRatingBps;
         if (conservativeRatingBps == 0) return uint16(uint256(contents[contentId].rating) * 100);
         return conservativeRatingBps;
-    }
-
-    /// @notice Deprecated; submitter stake slashing has been removed.
-    function isSubmitterStakeSlashable(uint256) public pure returns (bool) {
-        return false;
-    }
-
-    function submitterParticipationRewardOwed(uint256) external pure returns (uint256) {
-        return 0;
-    }
-
-    function submitterParticipationRewardPaid(uint256) external pure returns (uint256) {
-        return 0;
-    }
-
-    function submitterParticipationRewardReserved(uint256) external pure returns (uint256) {
-        return 0;
-    }
-
-    function submitterParticipationRewardPool(uint256) external pure returns (address) {
-        return address(0);
-    }
-
-    function submitterParticipationSnapshotRateBps(uint256) external pure returns (uint256) {
-        return 0;
-    }
-
-    function submitterParticipationSnapshotPool(uint256) external pure returns (address) {
-        return address(0);
-    }
-
-    function milestoneZeroSubmitterTermsSnapshotted(uint256) external pure returns (bool) {
-        return false;
-    }
-
-    function milestoneZeroSubmitterRating(uint256) external pure returns (uint8) {
-        return 0;
-    }
-
-    function milestoneZeroSubmitterParticipationRateBps(uint256) external pure returns (uint256) {
-        return 0;
-    }
-
-    function milestoneZeroSubmitterParticipationPool(uint256) external pure returns (address) {
-        return address(0);
-    }
-
-    /// @notice Deprecated; submitter stake resolution has been removed.
-    function resolvePendingSubmitterStake(uint256) external pure { }
-
-    /// @notice Deprecated; submitter stake slashing has been removed.
-    function slashSubmitterStake(uint256) external pure returns (uint256) {
-        return 0;
-    }
-
-    /// @notice Deprecated; submitter participation rewards have been removed.
-    function claimSubmitterParticipationReward(uint256) external pure returns (uint256) {
-        revert("Submitter rewards removed");
-    }
-
-    /// @notice Deprecated; submitter participation rewards have been removed.
-    function snapshotSubmitterParticipationTerms(uint256, address, uint256) external pure { }
-
-    /// @notice Deprecated; submitter participation rewards have been removed.
-    function snapshotMilestoneZeroSubmitterTerms(uint256, uint256, address, uint256) external pure { }
-
-    /// @notice Deprecated; submitter participation rewards have been removed.
-    function repairMilestoneZeroSubmitterParticipationTerms(uint256, uint256) external pure {
-        revert("Submitter rewards removed");
     }
 
     function isContentActive(uint256 contentId) external view returns (bool) {

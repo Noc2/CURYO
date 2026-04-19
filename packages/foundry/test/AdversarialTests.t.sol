@@ -1,19 +1,19 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.20;
 
-import { Test } from "forge-std/Test.sol";
-import { ERC1967Proxy } from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
-import { ContentRegistry } from "../contracts/ContentRegistry.sol";
-import { RoundVotingEngine } from "../contracts/RoundVotingEngine.sol";
-import { ProtocolConfig } from "../contracts/ProtocolConfig.sol";
-import { RoundRewardDistributor } from "../contracts/RoundRewardDistributor.sol";
-import { CuryoReputation } from "../contracts/CuryoReputation.sol";
-import { RoundLib } from "../contracts/libraries/RoundLib.sol";
-import { RoundEngineReadHelpers } from "./helpers/RoundEngineReadHelpers.sol";
-import { RewardMath } from "../contracts/libraries/RewardMath.sol";
-import { VotingTestBase } from "./helpers/VotingTestHelpers.sol";
-import { MockVoterIdNFT } from "./mocks/MockVoterIdNFT.sol";
-import { MockCategoryRegistry } from "../contracts/mocks/MockCategoryRegistry.sol";
+import {Test} from "forge-std/Test.sol";
+import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
+import {ContentRegistry} from "../contracts/ContentRegistry.sol";
+import {RoundVotingEngine} from "../contracts/RoundVotingEngine.sol";
+import {ProtocolConfig} from "../contracts/ProtocolConfig.sol";
+import {RoundRewardDistributor} from "../contracts/RoundRewardDistributor.sol";
+import {CuryoReputation} from "../contracts/CuryoReputation.sol";
+import {RoundLib} from "../contracts/libraries/RoundLib.sol";
+import {RoundEngineReadHelpers} from "./helpers/RoundEngineReadHelpers.sol";
+import {RewardMath} from "../contracts/libraries/RewardMath.sol";
+import {VotingTestBase} from "./helpers/VotingTestHelpers.sol";
+import {MockVoterIdNFT} from "./mocks/MockVoterIdNFT.sol";
+import {MockCategoryRegistry} from "../contracts/mocks/MockCategoryRegistry.sol";
 
 /// @title AdversarialTests
 /// @notice Pre-deployment adversarial tests covering reward exhaustion, state transition
@@ -290,25 +290,6 @@ contract AdversarialTests is VotingTestBase {
         vm.prank(voter1);
         vm.expectRevert("Already claimed");
         distributor.claimReward(contentId, roundId);
-    }
-
-    /// @notice Submitter reward claims are removed.
-    function test_SubmitterRewardClaim_RevertsAsRemoved() public {
-        uint256 contentId = _submitContent();
-
-        // Asymmetric stakes to avoid tie
-        (bytes32 ck1,) = _commit(voter1, contentId, true, 15e6);
-        (bytes32 ck2,) = _commit(voter2, contentId, false, 10e6);
-
-        uint256 roundId = RoundEngineReadHelpers.activeRoundId(engine, contentId);
-        bytes32[] memory cks = new bytes32[](2);
-        cks[0] = ck1;
-        cks[1] = ck2;
-        _settleRound(contentId, roundId, cks);
-
-        vm.prank(submitter);
-        vm.expectRevert("Submitter rewards removed");
-        distributor.claimSubmitterReward(contentId, roundId);
     }
 
     /// @notice Voter cannot claim refund twice on cancelled round
@@ -665,11 +646,9 @@ contract AdversarialTests is VotingTestBase {
 
         eng2.settleRound(1, 1);
 
-        // With zero reserve, the voter pool is 0 and submitter rewards remain removed.
+        // With zero reserve, the voter pool is 0.
         uint256 voterPool = eng2.roundVoterPool(1, 1);
-        uint256 subReward = eng2.pendingSubmitterReward(1, 1);
         assertEq(voterPool, 0, "No subsidy means zero voter pool");
-        assertEq(subReward, 0, "Submitter rewards are removed");
     }
 
     // =========================================================================

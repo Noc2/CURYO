@@ -1,24 +1,24 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.20;
 
-import { VotingTestBase } from "./helpers/VotingTestHelpers.sol";
-import { ERC1967Proxy } from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
-import { Vm } from "forge-std/Test.sol";
-import { ContentRegistry } from "../contracts/ContentRegistry.sol";
-import { RoundVotingEngine } from "../contracts/RoundVotingEngine.sol";
-import { ProtocolConfig } from "../contracts/ProtocolConfig.sol";
-import { RoundRewardDistributor } from "../contracts/RoundRewardDistributor.sol";
-import { RoundLib } from "../contracts/libraries/RoundLib.sol";
-import { RatingLib } from "../contracts/libraries/RatingLib.sol";
-import { RoundSettlementSideEffectsLib } from "../contracts/libraries/RoundSettlementSideEffectsLib.sol";
-import { RoundEngineReadHelpers } from "./helpers/RoundEngineReadHelpers.sol";
-import { CuryoReputation } from "../contracts/CuryoReputation.sol";
-import { ParticipationPool } from "../contracts/ParticipationPool.sol";
-import { FrontendRegistry } from "../contracts/FrontendRegistry.sol";
-import { IFrontendRegistry } from "../contracts/interfaces/IFrontendRegistry.sol";
-import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import { MockCategoryRegistry } from "../contracts/mocks/MockCategoryRegistry.sol";
-import { MockVoterIdNFT } from "./mocks/MockVoterIdNFT.sol";
+import {VotingTestBase} from "./helpers/VotingTestHelpers.sol";
+import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
+import {Vm} from "forge-std/Test.sol";
+import {ContentRegistry} from "../contracts/ContentRegistry.sol";
+import {RoundVotingEngine} from "../contracts/RoundVotingEngine.sol";
+import {ProtocolConfig} from "../contracts/ProtocolConfig.sol";
+import {RoundRewardDistributor} from "../contracts/RoundRewardDistributor.sol";
+import {RoundLib} from "../contracts/libraries/RoundLib.sol";
+import {RatingLib} from "../contracts/libraries/RatingLib.sol";
+import {RoundSettlementSideEffectsLib} from "../contracts/libraries/RoundSettlementSideEffectsLib.sol";
+import {RoundEngineReadHelpers} from "./helpers/RoundEngineReadHelpers.sol";
+import {CuryoReputation} from "../contracts/CuryoReputation.sol";
+import {ParticipationPool} from "../contracts/ParticipationPool.sol";
+import {FrontendRegistry} from "../contracts/FrontendRegistry.sol";
+import {IFrontendRegistry} from "../contracts/interfaces/IFrontendRegistry.sol";
+import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import {MockCategoryRegistry} from "../contracts/mocks/MockCategoryRegistry.sol";
+import {MockVoterIdNFT} from "./mocks/MockVoterIdNFT.sol";
 
 contract RevertingParticipationPool {
     IERC20 public immutable token;
@@ -1481,7 +1481,7 @@ contract RoundIntegrationTest is VotingTestBase {
         assertGt(crepToken.balanceOf(voter1), balBefore, "Voter should receive consensus subsidy");
     }
 
-    function test_DeprecatedSubmitterStake_DoesNotSlashLowRatedFirstSettlement() public {
+    function test_LowRatedFirstSettlementDoesNotPayTreasury() public {
         ProtocolConfig protocolConfig = ProtocolConfig(address(votingEngine.protocolConfig()));
         vm.startPrank(owner);
         registry.setTreasury(treasury);
@@ -1521,10 +1521,6 @@ contract RoundIntegrationTest is VotingTestBase {
             crepToken.balanceOf(treasury), treasuryBalanceBefore, "treasury should not be paid before the dwell window"
         );
 
-        vm.warp(block.timestamp + 3 days + 1);
-        assertFalse(registry.isSubmitterStakeSlashable(contentId), "submitter stake slashing is removed");
-        votingEngine.resolveSubmitterStake(contentId);
-
         (,,,,,,,,, submitterStakeReturned, rating,) = registry.contents(contentId);
         assertLt(uint256(rating), 40, "display rating should still reflect a low settlement");
         assertTrue(submitterStakeReturned, "submitter stake should be resolved");
@@ -1532,7 +1528,7 @@ contract RoundIntegrationTest is VotingTestBase {
         assertEq(crepToken.balanceOf(treasury), treasuryBalanceBefore, "treasury should not receive a removed slash");
     }
 
-    function test_DeprecatedSubmitterStake_DoesNotReturnHealthyFirstSettlement() public {
+    function test_HealthyFirstSettlementDoesNotPaySubmitterOrTreasury() public {
         uint256 contentId = _submitContent();
         uint256 submitterBalanceBefore = crepToken.balanceOf(submitter);
         uint256 treasuryBalanceBefore = crepToken.balanceOf(treasury);
@@ -2992,17 +2988,6 @@ contract RoundIntegrationTest is VotingTestBase {
         ProtocolConfig(address(votingEngine.protocolConfig())).setParticipationPool(pool1);
         // Should NOT revert on second call
         ProtocolConfig(address(votingEngine.protocolConfig())).setParticipationPool(pool2);
-        vm.stopPrank();
-    }
-
-    function test_SetParticipationPoolContentRegistryCanBeUpdated() public {
-        address pool1 = address(0xAA);
-        address pool2 = address(0xBB);
-
-        vm.startPrank(owner);
-        registry.setParticipationPool(pool1);
-        // Should NOT revert on second call
-        registry.setParticipationPool(pool2);
         vm.stopPrank();
     }
 }

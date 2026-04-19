@@ -1,30 +1,30 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.24;
 
-import { Initializable } from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
-import { AccessControlUpgradeable } from "@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol";
-import { PausableUpgradeable } from "@openzeppelin/contracts-upgradeable/utils/PausableUpgradeable.sol";
-import { ReentrancyGuardTransient } from "@openzeppelin/contracts/utils/ReentrancyGuardTransient.sol";
-import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import { SafeERC20 } from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
-import { SafeCast } from "@openzeppelin/contracts/utils/math/SafeCast.sol";
-import { IERC1363Receiver } from "@openzeppelin/contracts/interfaces/IERC1363Receiver.sol";
+import {Initializable} from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
+import {AccessControlUpgradeable} from "@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol";
+import {PausableUpgradeable} from "@openzeppelin/contracts-upgradeable/utils/PausableUpgradeable.sol";
+import {ReentrancyGuardTransient} from "@openzeppelin/contracts/utils/ReentrancyGuardTransient.sol";
+import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
+import {SafeCast} from "@openzeppelin/contracts/utils/math/SafeCast.sol";
+import {IERC1363Receiver} from "@openzeppelin/contracts/interfaces/IERC1363Receiver.sol";
 
-import { ContentRegistry } from "./ContentRegistry.sol";
-import { ProtocolConfig } from "./ProtocolConfig.sol";
-import { RoundLib } from "./libraries/RoundLib.sol";
-import { RatingLib } from "./libraries/RatingLib.sol";
-import { RoundSettlementSideEffectsLib } from "./libraries/RoundSettlementSideEffectsLib.sol";
-import { RoundSettlementDistributionLib } from "./libraries/RoundSettlementDistributionLib.sol";
-import { RoundCleanupLib } from "./libraries/RoundCleanupLib.sol";
-import { RoundRevealLib } from "./libraries/RoundRevealLib.sol";
-import { TlockVoteLib } from "./libraries/TlockVoteLib.sol";
-import { VotePreflightLib } from "./libraries/VotePreflightLib.sol";
-import { IFrontendRegistry } from "./interfaces/IFrontendRegistry.sol";
-import { ICategoryRegistry } from "./interfaces/ICategoryRegistry.sol";
-import { IVoterIdNFT } from "./interfaces/IVoterIdNFT.sol";
-import { IRoundVotingEngine } from "./interfaces/IRoundVotingEngine.sol";
-import { IParticipationPool } from "./interfaces/IParticipationPool.sol";
+import {ContentRegistry} from "./ContentRegistry.sol";
+import {ProtocolConfig} from "./ProtocolConfig.sol";
+import {RoundLib} from "./libraries/RoundLib.sol";
+import {RatingLib} from "./libraries/RatingLib.sol";
+import {RoundSettlementSideEffectsLib} from "./libraries/RoundSettlementSideEffectsLib.sol";
+import {RoundSettlementDistributionLib} from "./libraries/RoundSettlementDistributionLib.sol";
+import {RoundCleanupLib} from "./libraries/RoundCleanupLib.sol";
+import {RoundRevealLib} from "./libraries/RoundRevealLib.sol";
+import {TlockVoteLib} from "./libraries/TlockVoteLib.sol";
+import {VotePreflightLib} from "./libraries/VotePreflightLib.sol";
+import {IFrontendRegistry} from "./interfaces/IFrontendRegistry.sol";
+import {ICategoryRegistry} from "./interfaces/ICategoryRegistry.sol";
+import {IVoterIdNFT} from "./interfaces/IVoterIdNFT.sol";
+import {IRoundVotingEngine} from "./interfaces/IRoundVotingEngine.sol";
+import {IParticipationPool} from "./interfaces/IParticipationPool.sol";
 
 /// @title RoundVotingEngine
 /// @notice Per-content round-based parimutuel voting with keeper-assisted/self-reveal and epoch-weighted rewards.
@@ -770,16 +770,6 @@ contract RoundVotingEngine is
         );
 
         emit CancelledRoundRefundClaimed(contentId, roundId, msg.sender, refundAmount);
-    }
-
-    /// @notice Deprecated; submitter stake resolution has been removed.
-    function resolveSubmitterStake(uint256 contentId) external nonReentrant whenNotPaused {
-        contentId;
-    }
-
-    /// @notice Deprecated; submitter reward buckets have been removed.
-    function pendingSubmitterReward(uint256, uint256) external pure returns (uint256) {
-        return 0;
     }
 
     // =========================================================================

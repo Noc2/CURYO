@@ -1,27 +1,27 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.20;
 
-import { Test } from "forge-std/Test.sol";
-import { ERC1967Proxy } from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
-import { FrontendRegistry } from "../contracts/FrontendRegistry.sol";
-import { CuryoReputation } from "../contracts/CuryoReputation.sol";
-import { HumanFaucet } from "../contracts/HumanFaucet.sol";
-import { MockIdentityVerificationHub } from "../contracts/mocks/MockIdentityVerificationHub.sol";
-import { ISelfVerificationRoot } from "@selfxyz/contracts/contracts/interfaces/ISelfVerificationRoot.sol";
-import { ContentRegistry } from "../contracts/ContentRegistry.sol";
-import { RoundVotingEngine } from "../contracts/RoundVotingEngine.sol";
-import { ProtocolConfig } from "../contracts/ProtocolConfig.sol";
-import { RoundRewardDistributor } from "../contracts/RoundRewardDistributor.sol";
-import { ParticipationPool } from "../contracts/ParticipationPool.sol";
-import { RoundLib } from "../contracts/libraries/RoundLib.sol";
-import { RatingLib } from "../contracts/libraries/RatingLib.sol";
-import { RoundEngineReadHelpers } from "./helpers/RoundEngineReadHelpers.sol";
-import { MockVoterIdNFT } from "./mocks/MockVoterIdNFT.sol";
-import { IRoundVotingEngine } from "../contracts/interfaces/IRoundVotingEngine.sol";
-import { IParticipationPool } from "../contracts/interfaces/IParticipationPool.sol";
-import { Pausable } from "@openzeppelin/contracts/utils/Pausable.sol";
-import { VotingTestBase } from "./helpers/VotingTestHelpers.sol";
-import { MockCategoryRegistry } from "../contracts/mocks/MockCategoryRegistry.sol";
+import {Test} from "forge-std/Test.sol";
+import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
+import {FrontendRegistry} from "../contracts/FrontendRegistry.sol";
+import {CuryoReputation} from "../contracts/CuryoReputation.sol";
+import {HumanFaucet} from "../contracts/HumanFaucet.sol";
+import {MockIdentityVerificationHub} from "../contracts/mocks/MockIdentityVerificationHub.sol";
+import {ISelfVerificationRoot} from "@selfxyz/contracts/contracts/interfaces/ISelfVerificationRoot.sol";
+import {ContentRegistry} from "../contracts/ContentRegistry.sol";
+import {RoundVotingEngine} from "../contracts/RoundVotingEngine.sol";
+import {ProtocolConfig} from "../contracts/ProtocolConfig.sol";
+import {RoundRewardDistributor} from "../contracts/RoundRewardDistributor.sol";
+import {ParticipationPool} from "../contracts/ParticipationPool.sol";
+import {RoundLib} from "../contracts/libraries/RoundLib.sol";
+import {RatingLib} from "../contracts/libraries/RatingLib.sol";
+import {RoundEngineReadHelpers} from "./helpers/RoundEngineReadHelpers.sol";
+import {MockVoterIdNFT} from "./mocks/MockVoterIdNFT.sol";
+import {IRoundVotingEngine} from "../contracts/interfaces/IRoundVotingEngine.sol";
+import {IParticipationPool} from "../contracts/interfaces/IParticipationPool.sol";
+import {Pausable} from "@openzeppelin/contracts/utils/Pausable.sol";
+import {VotingTestBase} from "./helpers/VotingTestHelpers.sol";
+import {MockCategoryRegistry} from "../contracts/mocks/MockCategoryRegistry.sol";
 
 // =========================================================================
 // SHARED MOCKS
@@ -66,7 +66,7 @@ contract MockVotingEngineForFR2 is IRoundVotingEngine {
         return (0, RoundLib.RoundState.Open, 0, 0, 0, 0, 0, 0, 0, false, 0, 0, 0, 0);
     }
 
-    function transferReward(address, uint256) external override { }
+    function transferReward(address, uint256) external override {}
 }
 
 // =========================================================================
@@ -1121,97 +1121,6 @@ contract ContentRegistryCoverageTest is VotingTestBase {
         registry.updateActivity(id);
     }
 
-    // --- slashSubmitterStake: deprecated no-op ---
-
-    function test_SlashSubmitterStake_IsDeprecatedNoOp() public {
-        uint256 id = _submitContent(submitter, "https://example.com/slash");
-        vm.prank(admin);
-        registry.setVotingEngine(address(this));
-        vm.warp(block.timestamp + 8 days);
-
-        registry.updateRatingState(
-            id,
-            1,
-            5_000,
-            RatingLib.RatingState({
-                ratingLogitX18: int128(-1e18),
-                confidenceMass: uint128(400e6),
-                effectiveEvidence: uint128(250e6),
-                settledRounds: 2,
-                ratingBps: 1_500,
-                conservativeRatingBps: 1_200,
-                lastUpdatedAt: uint48(block.timestamp),
-                lowSince: uint48(block.timestamp - 7 days - 1)
-            })
-        );
-        assertFalse(registry.isSubmitterStakeSlashable(id), "submitter stake slashing is removed");
-
-        uint256 treasuryBefore = crep.balanceOf(treasury);
-        uint256 slashed = registry.slashSubmitterStake(id);
-
-        assertEq(slashed, 0);
-        assertEq(crep.balanceOf(treasury) - treasuryBefore, 0);
-    }
-
-    // --- slashSubmitterStake: already returned compatibility ---
-
-    function test_SlashSubmitterStakeAlreadyReturned_IsDeprecatedNoOp() public {
-        uint256 id = _submitContent(submitter, "https://example.com/slashret");
-        vm.prank(admin);
-        registry.setVotingEngine(address(this));
-
-        registry.resolvePendingSubmitterStake(id);
-        assertEq(registry.slashSubmitterStake(id), 0);
-    }
-
-    // --- slashSubmitterStake: initialized treasury authority compatibility ---
-
-    function test_SlashSubmitterStakeDoesNotUseInitializedTreasury() public {
-        vm.startPrank(admin);
-        ContentRegistry impl = new ContentRegistry();
-        ContentRegistry reg2 = ContentRegistry(
-            address(
-                new ERC1967Proxy(
-                    address(impl), abi.encodeCall(ContentRegistry.initialize, (admin, admin, address(crep)))
-                )
-            )
-        );
-        MockCategoryRegistry mockCategoryRegistry2 = new MockCategoryRegistry();
-        mockCategoryRegistry2.seedDefaultTestCategories();
-        reg2.setCategoryRegistry(address(mockCategoryRegistry2));
-        reg2.setVotingEngine(address(this));
-        crep.mint(submitter, 100_000e6);
-        vm.stopPrank();
-
-        vm.startPrank(submitter);
-        crep.approve(address(reg2), 10e6);
-        uint256 id = _submitContentWithReservation(reg2, "https://example.com/notreasury", "goal", "goal", "tag1", 0);
-        vm.stopPrank();
-
-        vm.warp(block.timestamp + 8 days);
-        reg2.updateRatingState(
-            id,
-            1,
-            5_000,
-            RatingLib.RatingState({
-                ratingLogitX18: int128(-1e18),
-                confidenceMass: uint128(400e6),
-                effectiveEvidence: uint128(250e6),
-                settledRounds: 2,
-                ratingBps: 1_500,
-                conservativeRatingBps: 1_200,
-                lastUpdatedAt: uint48(block.timestamp),
-                lowSince: uint48(block.timestamp - 7 days - 1)
-            })
-        );
-
-        uint256 treasuryBefore = crep.balanceOf(admin);
-        uint256 slashed = reg2.slashSubmitterStake(id);
-
-        assertEq(slashed, 0);
-        assertEq(crep.balanceOf(admin) - treasuryBefore, 0);
-    }
-
     // --- View functions ---
 
     function test_IsActive() public {
@@ -1274,11 +1183,6 @@ contract ContentRegistryCoverageTest is VotingTestBase {
         vm.prank(admin);
         vm.expectRevert("Invalid address");
         registry.setVoterIdNFT(address(0));
-    }
-
-    function test_SetParticipationPoolZero_IsDeprecatedNoOp() public {
-        vm.prank(admin);
-        registry.setParticipationPool(address(0));
     }
 
     function test_SetBonusPoolZeroReverts() public {
@@ -1826,29 +1730,6 @@ contract RoundSettlementBranchTest is VotingTestBase {
         vm.prank(voter1);
         vm.expectRevert("Already claimed");
         distributor.claimReward(contentId, roundId);
-    }
-
-    // --- Deprecated submitter claim from distributor ---
-
-    function test_SubmitterClaimFromDistributor_RevertsAsRemoved() public {
-        (uint256 contentId, uint256 roundId) = _createAndSettleAsymmetricRound();
-
-        uint256 balBefore = crep.balanceOf(submitter);
-        vm.prank(submitter);
-        vm.expectRevert("Submitter rewards removed");
-        distributor.claimSubmitterReward(contentId, roundId);
-
-        assertEq(crep.balanceOf(submitter), balBefore);
-    }
-
-    // --- Non-submitter claiming submitter reward ---
-
-    function test_NonSubmitterClaim_RevertsAsRemoved() public {
-        (uint256 contentId, uint256 roundId) = _createAndSettleAsymmetricRound();
-
-        vm.prank(voter1);
-        vm.expectRevert("Submitter rewards removed");
-        distributor.claimSubmitterReward(contentId, roundId);
     }
 
     // --- Cooldown passes after 24 hours ---
