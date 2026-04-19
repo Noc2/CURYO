@@ -23,7 +23,7 @@ const ASK_STEPS = [
   {
     icon: BanknotesIcon,
     title: "3. Earn",
-    description: "Winning voters earn reputation, and funded questions can pay USDC rewards.",
+    description: "Win reputation, plus USDC on funded questions.",
   },
 ];
 
