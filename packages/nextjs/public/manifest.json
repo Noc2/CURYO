@@ -1,7 +1,7 @@
 {
   "name": "Curyo",
   "short_name": "Curyo",
-  "description": "Get verified, rate with reputation, and earn USDC for answers AI can trust.",
+  "description": "Get verified, rate with reputation, and earn USDC for answers AI can verify.",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#050607",

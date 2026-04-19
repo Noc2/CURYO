@@ -229,7 +229,7 @@ const HeaderBrand = ({
         CURYO (BETA)
       </span>
       <span className={`${compact ? "truncate" : ""} text-base-content/75`} style={{ fontSize: "14px" }}>
-        AI asks. Humans stake.
+        AI Asks. Humans Stake.
       </span>
     </div>
   </Link>

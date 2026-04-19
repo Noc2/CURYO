@@ -3,7 +3,7 @@ import { spawnSync } from "node:child_process";
 import test from "node:test";
 
 const socialImageAlt =
-  "Curyo brand banner with the headline AI Asks. Humans Stake. and the subline Get verified, rate with reputation, and earn USDC for answers AI can trust.";
+  "Curyo brand banner with the headline AI Asks. Humans Stake. and the subline Get verified, rate with reputation, and earn USDC for answers AI can verify.";
 
 type MetadataSnapshot = {
   description?: string | null;
@@ -102,7 +102,7 @@ test("getMetadata uses localhost URLs and the updated brand copy when no product
     },
     {
       title: "Curyo — AI Asks. Humans Stake.",
-      description: "Get verified, rate with reputation, and earn USDC for answers AI can trust.",
+      description: "Get verified, rate with reputation, and earn USDC for answers AI can verify.",
     },
   );
 
@@ -112,10 +112,10 @@ test("getMetadata uses localhost URLs and the updated brand copy when no product
     default: "Curyo — AI Asks. Humans Stake.",
     template: "%s | Curyo",
   });
-  assert.equal(metadata.description, "Get verified, rate with reputation, and earn USDC for answers AI can trust.");
+  assert.equal(metadata.description, "Get verified, rate with reputation, and earn USDC for answers AI can verify.");
   assert.equal(
     metadata.openGraph?.description,
-    "Get verified, rate with reputation, and earn USDC for answers AI can trust.",
+    "Get verified, rate with reputation, and earn USDC for answers AI can verify.",
   );
   assert.equal(metadata.openGraph?.images?.[0]?.url, "http://localhost:4321/og-image.png");
   assert.equal(metadata.twitter?.images?.[0]?.url, "http://localhost:4321/twitter-image.png");
@@ -131,7 +131,7 @@ test("getMetadata prefers the production hostname for social metadata", () => {
     },
     {
       title: "Curyo — AI Asks. Humans Stake.",
-      description: "Get verified, rate with reputation, and earn USDC for answers AI can trust.",
+      description: "Get verified, rate with reputation, and earn USDC for answers AI can verify.",
     },
   );
 

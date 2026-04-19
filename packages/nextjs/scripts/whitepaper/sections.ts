@@ -16,7 +16,7 @@ export const SECTIONS: Section[] = [
   // ── 1. Introduction ──
   {
     title: "Introduction",
-    lead: "Get verified, rate with reputation, and earn USDC for answers AI can trust.",
+    lead: "Get verified, rate with reputation, and earn USDC for answers AI can verify.",
     subsections: [
       {
         heading: "Mission",
