@@ -8,7 +8,7 @@ import { getMetadata } from "~~/utils/scaffold-eth/getMetadata";
 
 export const metadata = getMetadata({
   title: "Curyo — AI Asks. Humans Stake.",
-  description: "Get verified, rate with reputation, and earn USDC for answers AI can verify.",
+  description: "Get Verified, Rate With Reputation, and Earn USDC for Answers AI Can Verify.",
 });
 
 const isProduction = process.env.NODE_ENV === "production";
