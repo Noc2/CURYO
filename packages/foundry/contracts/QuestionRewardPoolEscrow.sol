@@ -826,4 +826,6 @@ contract QuestionRewardPoolEscrow is
         address snapshot = votingEngine.roundVoterIdNFTSnapshot(contentId, roundId);
         return snapshot == address(0) ? address(voterIdNFT) : snapshot;
     }
+
+    uint256[50] private __gap;
 }
