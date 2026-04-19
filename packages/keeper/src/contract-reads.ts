@@ -143,47 +143,6 @@ export function parseCommitData(rawCommit: unknown): CommitData {
         epochIndex: toNumber(commit[9]),
       };
     }
-
-    if (commit.length >= 10 && typeof commit[5] === "boolean" && typeof commit[8] === "bigint") {
-      return {
-        voter: commit[0] as `0x${string}`,
-        stakeAmount: toBigInt(commit[1]),
-        ciphertext: commit[2] as `0x${string}`,
-        frontend: commit[3] as `0x${string}`,
-        revealableAfter: toBigInt(commit[4]),
-        revealed: Boolean(commit[5]),
-        isUp: Boolean(commit[6]),
-        epochIndex: toNumber(commit[7]),
-        targetRound: toBigInt(commit[8]),
-        drandChainHash: commit[9] as `0x${string}`,
-      };
-    }
-
-    if (commit.length >= 10) {
-      return {
-        voter: commit[0] as `0x${string}`,
-        stakeAmount: toBigInt(commit[1]),
-        ciphertext: commit[2] as `0x${string}`,
-        frontend: commit[3] as `0x${string}`,
-        targetRound: toBigInt(commit[4]),
-        drandChainHash: commit[5] as `0x${string}`,
-        revealableAfter: toBigInt(commit[6]),
-        revealed: Boolean(commit[7]),
-        isUp: Boolean(commit[8]),
-        epochIndex: toNumber(commit[9]),
-      };
-    }
-
-    return {
-      voter: commit[0] as `0x${string}`,
-      stakeAmount: toBigInt(commit[1]),
-      ciphertext: commit[2] as `0x${string}`,
-      frontend: commit[3] as `0x${string}`,
-      revealableAfter: toBigInt(commit[4]),
-      revealed: Boolean(commit[5]),
-      isUp: Boolean(commit[6]),
-      epochIndex: toNumber(commit[7]),
-    };
   }
 
   throw new Error("Unexpected commit payload");
@@ -283,11 +242,11 @@ export async function readRoundConfigForRound(
   });
   const snapshot = parseRoundVotingConfig(rawSnapshot);
 
-  if (snapshot.epochDuration > 0n) {
-    return snapshot;
+  if (snapshot.epochDuration === 0n) {
+    throw new Error(`Missing round config snapshot for content ${contentId} round ${roundId}`);
   }
 
-  return readRoundVotingConfig(publicClient, engineAddr);
+  return snapshot;
 }
 
 export async function readCurrentRoundIds(
@@ -326,23 +285,11 @@ export async function readRoundRevealGracePeriod(
     args: [contentId, roundId],
   })) as bigint;
 
-  if (snapshot > 0n) {
-    return snapshot;
+  if (snapshot === 0n) {
+    throw new Error(`Missing reveal grace period snapshot for content ${contentId} round ${roundId}`);
   }
 
-  const protocolConfig = (await publicClient.readContract({
-    address: engineAddr,
-    abi: RoundVotingEngineAbi,
-    functionName: "protocolConfig",
-    args: [],
-  })) as `0x${string}`;
-
-  return (await publicClient.readContract({
-    address: protocolConfig,
-    abi: ProtocolConfigAbi,
-    functionName: "revealGracePeriod",
-    args: [],
-  })) as bigint;
+  return snapshot;
 }
 
 const RPC_BATCH_SIZE = 50;
