@@ -4,11 +4,11 @@ pragma solidity ^0.8.20;
 import { Test } from "forge-std/Test.sol";
 import { ProtocolConfig } from "../contracts/ProtocolConfig.sol";
 import { RatingLib } from "../contracts/libraries/RatingLib.sol";
+import { RoundLib } from "../contracts/libraries/RoundLib.sol";
 import { deployInitializedProtocolConfig } from "./helpers/VotingTestHelpers.sol";
 
 contract ProtocolConfigBranchesTest is Test {
-    bytes32 internal constant QUICKNET_CHAIN_HASH =
-        0x52db9ba70e0cc0f6eaf7803dd07447a1f5477735fd3f661792ba94600c84e971;
+    bytes32 internal constant QUICKNET_CHAIN_HASH = 0x52db9ba70e0cc0f6eaf7803dd07447a1f5477735fd3f661792ba94600c84e971;
 
     event DrandConfigUpdated(bytes32 drandChainHash, uint64 genesisTime, uint64 period);
     event RewardDistributorUpdated(address rewardDistributor);
@@ -29,6 +29,16 @@ contract ProtocolConfigBranchesTest is Test {
     );
     event SlashConfigUpdated(
         uint16 slashThresholdBps, uint16 minSlashSettledRounds, uint48 minSlashLowDuration, uint256 minSlashEvidence
+    );
+    event RoundConfigBoundsUpdated(
+        uint256 minEpochDuration,
+        uint256 maxEpochDuration,
+        uint256 minRoundDuration,
+        uint256 maxRoundDuration,
+        uint256 minSettlementVoters,
+        uint256 maxSettlementVoters,
+        uint256 minVoterCap,
+        uint256 maxVoterCap
     );
 
     function test_DefaultDrandConfig_UsesQuicknetValues() public {
@@ -181,19 +191,7 @@ contract ProtocolConfigBranchesTest is Test {
 
         vm.expectRevert(ProtocolConfig.InvalidConfig.selector);
         config.setRatingConfig(
-            10e6,
-            10e6,
-            uint256(type(int256).max) + 1,
-            80e6,
-            50e6,
-            500e6,
-            1_500,
-            2_000,
-            8e17,
-            6e17,
-            4e18,
-            1_500,
-            250
+            10e6, 10e6, uint256(type(int256).max) + 1, 80e6, 50e6, 500e6, 1_500, 2_000, 8e17, 6e17, 4e18, 1_500, 250
         );
 
         vm.expectRevert(ProtocolConfig.InvalidConfig.selector);
@@ -250,5 +248,68 @@ contract ProtocolConfigBranchesTest is Test {
 
         vm.expectRevert(ProtocolConfig.InvalidConfig.selector);
         config.setConfig(uint256(type(uint32).max) + 1, 30 days, 3, 1000);
+    }
+
+    function test_DefaultRoundConfigBounds_ExposeCreatorAllowedRange() public {
+        ProtocolConfig config = deployInitializedProtocolConfig(address(this));
+
+        ProtocolConfig.RoundConfigBounds memory bounds = config.getRoundConfigBounds();
+        assertEq(bounds.minEpochDuration, 5 minutes);
+        assertEq(bounds.maxEpochDuration, 60 minutes);
+        assertEq(bounds.minRoundDuration, 1 hours);
+        assertEq(bounds.maxRoundDuration, 30 days);
+        assertEq(bounds.minSettlementVoters, 2);
+        assertEq(bounds.maxSettlementVoters, 100);
+        assertEq(bounds.minVoterCap, 2);
+        assertEq(bounds.maxVoterCap, 10_000);
+    }
+
+    function test_ValidateRoundConfig_AcceptsGovernedCreatorChoice() public {
+        ProtocolConfig config = deployInitializedProtocolConfig(address(this));
+
+        RoundLib.RoundConfig memory roundCfg = config.validateRoundConfig(10 minutes, 2 hours, 4, 25);
+
+        assertEq(roundCfg.epochDuration, 10 minutes);
+        assertEq(roundCfg.maxDuration, 2 hours);
+        assertEq(roundCfg.minVoters, 4);
+        assertEq(roundCfg.maxVoters, 25);
+    }
+
+    function test_ValidateRoundConfig_RejectsOutsideGovernanceBounds() public {
+        ProtocolConfig config = deployInitializedProtocolConfig(address(this));
+
+        vm.expectRevert(ProtocolConfig.InvalidConfig.selector);
+        config.validateRoundConfig(4 minutes, 2 hours, 4, 25);
+
+        vm.expectRevert(ProtocolConfig.InvalidConfig.selector);
+        config.validateRoundConfig(10 minutes, 30 minutes, 4, 25);
+
+        vm.expectRevert(ProtocolConfig.InvalidConfig.selector);
+        config.validateRoundConfig(10 minutes, 2 hours, 1, 25);
+
+        vm.expectRevert(ProtocolConfig.InvalidConfig.selector);
+        config.validateRoundConfig(10 minutes, 2 hours, 4, 3);
+    }
+
+    function test_SetRoundConfigBounds_UpdatesRangeAndRevealGraceFloor() public {
+        ProtocolConfig config = deployInitializedProtocolConfig(address(this));
+
+        vm.expectEmit(true, true, true, true);
+        emit RoundConfigBoundsUpdated(10 minutes, 2 hours, 2 hours, 14 days, 3, 50, 3, 2_000);
+
+        config.setRoundConfigBounds(10 minutes, 2 hours, 2 hours, 14 days, 3, 50, 3, 2_000);
+
+        ProtocolConfig.RoundConfigBounds memory bounds = config.getRoundConfigBounds();
+        assertEq(bounds.minEpochDuration, 10 minutes);
+        assertEq(bounds.maxEpochDuration, 2 hours);
+        assertEq(bounds.maxRoundDuration, 14 days);
+        assertEq(config.revealGracePeriod(), 2 hours);
+    }
+
+    function test_SetRoundConfigBounds_RejectsBoundsThatExcludeCurrentDefault() public {
+        ProtocolConfig config = deployInitializedProtocolConfig(address(this));
+
+        vm.expectRevert(ProtocolConfig.InvalidConfig.selector);
+        config.setRoundConfigBounds(5 minutes, 60 minutes, 1 hours, 1 days, 2, 100, 2, 10_000);
     }
 }

@@ -102,6 +102,7 @@ contract ContentRegistryBranchesTest is VotingTestBase {
         mockCategoryRegistry.seedDefaultTestCategories();
         mockQuestionRewardPoolEscrow = new MockQuestionRewardPoolEscrow();
         registry.setCategoryRegistry(address(mockCategoryRegistry));
+        registry.setProtocolConfig(address(votingEngine.protocolConfig()));
         registry.setQuestionRewardPoolEscrow(address(mockQuestionRewardPoolEscrow));
         ProtocolConfig(address(votingEngine.protocolConfig())).setCategoryRegistry(address(mockCategoryRegistry));
 
@@ -190,6 +191,50 @@ contract ContentRegistryBranchesTest is VotingTestBase {
                 requiredVoters,
                 requiredSettledRounds,
                 rewardPoolExpiresAt
+            )
+        );
+        registry.reserveSubmission(revealCommitment);
+    }
+
+    function _reserveQuestionSubmissionWithRewardTermsAndRoundConfig(
+        string memory contextUrl,
+        string[] memory imageUrls,
+        string memory videoUrl,
+        string memory title,
+        string memory description,
+        string memory tags,
+        uint256 categoryId,
+        bytes32 salt,
+        address submitterAddress,
+        ContentRegistry.SubmissionRewardTerms memory rewardTerms,
+        RoundLib.RoundConfig memory roundConfig
+    ) internal returns (bytes32 submissionKey) {
+        (, submissionKey) = registry.previewQuestionSubmissionKey(
+            contextUrl, imageUrls, videoUrl, title, description, tags, categoryId
+        );
+        bytes32 legacyCommitment = keccak256(
+            abi.encode(
+                submissionKey,
+                title,
+                description,
+                tags,
+                categoryId,
+                salt,
+                submitterAddress,
+                rewardTerms.asset,
+                rewardTerms.amount,
+                rewardTerms.requiredVoters,
+                rewardTerms.requiredSettledRounds,
+                rewardTerms.expiresAt
+            )
+        );
+        bytes32 revealCommitment = keccak256(
+            abi.encode(
+                legacyCommitment,
+                roundConfig.epochDuration,
+                roundConfig.maxDuration,
+                roundConfig.minVoters,
+                roundConfig.maxVoters
             )
         );
         registry.reserveSubmission(revealCommitment);
@@ -398,6 +443,101 @@ contract ContentRegistryBranchesTest is VotingTestBase {
         assertEq(mockQuestionRewardPoolEscrow.lastRequiredVoters(), requiredVoters);
         assertEq(mockQuestionRewardPoolEscrow.lastRequiredSettledRounds(), requiredSettledRounds);
         assertEq(mockQuestionRewardPoolEscrow.lastExpiresAt(), rewardPoolExpiresAt);
+    }
+
+    function test_SubmitQuestionWithRewardAndRoundConfig_StoresConfigAndSnapshotsRound() public {
+        string memory contextUrl = "https://example.com/custom-round";
+        string memory title = "How quickly should this bounty settle?";
+        string memory description = "Check that custom timing sticks to the question.";
+        string memory tags = "Products,Bounty";
+        uint256 categoryId = 1;
+        bytes32 salt = keccak256("custom-round-config");
+        string[] memory imageUrls = _emptyImageUrls();
+        ContentRegistry.SubmissionRewardTerms memory rewardTerms = ContentRegistry.SubmissionRewardTerms({
+            asset: DEFAULT_SUBMISSION_REWARD_ASSET_CREP,
+            amount: _defaultSubmissionRewardAmount(registry),
+            requiredVoters: 5,
+            requiredSettledRounds: 2,
+            expiresAt: block.timestamp + 14 days
+        });
+        RoundLib.RoundConfig memory roundConfig =
+            RoundLib.RoundConfig({ epochDuration: 1 hours, maxDuration: 2 hours, minVoters: 4, maxVoters: 5 });
+
+        vm.startPrank(submitter);
+        crepToken.approve(address(mockQuestionRewardPoolEscrow), rewardTerms.amount);
+        _reserveQuestionSubmissionWithRewardTermsAndRoundConfig(
+            contextUrl, imageUrls, "", title, description, tags, categoryId, salt, submitter, rewardTerms, roundConfig
+        );
+        vm.warp(block.timestamp + 1);
+        uint256 id = registry.submitQuestionWithRewardAndRoundConfig(
+            contextUrl, imageUrls, "", title, description, tags, categoryId, salt, rewardTerms, roundConfig
+        );
+        vm.stopPrank();
+
+        RoundLib.RoundConfig memory storedConfig = registry.getContentRoundConfig(id);
+        assertEq(storedConfig.epochDuration, roundConfig.epochDuration);
+        assertEq(storedConfig.maxDuration, roundConfig.maxDuration);
+        assertEq(storedConfig.minVoters, roundConfig.minVoters);
+        assertEq(storedConfig.maxVoters, roundConfig.maxVoters);
+        assertEq(mockQuestionRewardPoolEscrow.lastRequiredVoters(), rewardTerms.requiredVoters);
+
+        _commit(voter1, id, true);
+        uint256 roundId = RoundEngineReadHelpers.activeRoundId(votingEngine, id);
+        RoundLib.RoundConfig memory snapshottedConfig = RoundEngineReadHelpers.roundConfig(votingEngine, id, roundId);
+        assertEq(snapshottedConfig.epochDuration, roundConfig.epochDuration);
+        assertEq(snapshottedConfig.maxDuration, roundConfig.maxDuration);
+        assertEq(snapshottedConfig.minVoters, roundConfig.minVoters);
+        assertEq(snapshottedConfig.maxVoters, roundConfig.maxVoters);
+    }
+
+    function test_SubmitQuestionWithRoundConfig_BindsReservationToSelectedConfig() public {
+        string memory contextUrl = "https://example.com/round-config-commitment";
+        string memory title = "Should this resolve with a tight cap?";
+        string memory description = "The reservation must bind the selected round settings.";
+        string memory tags = "Products,Bounty";
+        uint256 categoryId = 1;
+        bytes32 salt = keccak256("round-config-commitment");
+        string[] memory imageUrls = _emptyImageUrls();
+        ContentRegistry.SubmissionRewardTerms memory rewardTerms = ContentRegistry.SubmissionRewardTerms({
+            asset: DEFAULT_SUBMISSION_REWARD_ASSET_CREP,
+            amount: _defaultSubmissionRewardAmount(registry),
+            requiredVoters: DEFAULT_SUBMISSION_REWARD_REQUIRED_VOTERS,
+            requiredSettledRounds: DEFAULT_SUBMISSION_REWARD_SETTLED_ROUNDS,
+            expiresAt: DEFAULT_SUBMISSION_REWARD_EXPIRES_AT
+        });
+        RoundLib.RoundConfig memory reservedConfig =
+            RoundLib.RoundConfig({ epochDuration: 1 hours, maxDuration: 2 hours, minVoters: 3, maxVoters: 4 });
+        RoundLib.RoundConfig memory alteredConfig =
+            RoundLib.RoundConfig({ epochDuration: 1 hours, maxDuration: 3 hours, minVoters: 3, maxVoters: 4 });
+
+        vm.startPrank(submitter);
+        crepToken.approve(address(mockQuestionRewardPoolEscrow), rewardTerms.amount);
+        _reserveQuestionSubmissionWithRewardTermsAndRoundConfig(
+            contextUrl,
+            imageUrls,
+            "",
+            title,
+            description,
+            tags,
+            categoryId,
+            salt,
+            submitter,
+            rewardTerms,
+            reservedConfig
+        );
+        vm.warp(block.timestamp + 1);
+        vm.expectRevert("Reservation not found");
+        registry.submitQuestionWithRoundConfig(
+            contextUrl, imageUrls, "", title, description, tags, categoryId, salt, alteredConfig
+        );
+
+        uint256 id = registry.submitQuestionWithRoundConfig(
+            contextUrl, imageUrls, "", title, description, tags, categoryId, salt, reservedConfig
+        );
+        vm.stopPrank();
+
+        RoundLib.RoundConfig memory storedConfig = registry.getContentRoundConfig(id);
+        assertEq(storedConfig.maxDuration, reservedConfig.maxDuration);
     }
 
     function test_SubmitQuestionWithReward_RejectsTooFewSubmissionBountyVoters() public {

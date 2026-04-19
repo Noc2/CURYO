@@ -148,6 +148,9 @@ contract ContentRegistry is Initializable, AccessControlUpgradeable, PausableUpg
     /// @notice Canonical submitter identity snapshot (holder address if submitted through a delegate).
     mapping(uint256 => address) internal contentSubmitterIdentity;
 
+    /// @notice Per-question round settings selected at submission and bounded by governance.
+    mapping(uint256 => RoundLib.RoundConfig) public contentRoundConfig;
+
     /// @notice Meaningful-activity anchor used for dormancy checks.
     /// @dev Vote commits still update `lastActivityAt` for UI/analytics, but only submission, revival,
     ///      and milestone-0 settlement move the dormancy window forward.
@@ -171,7 +174,7 @@ contract ContentRegistry is Initializable, AccessControlUpgradeable, PausableUpg
     SubmissionMediaValidator internal immutable SUBMISSION_MEDIA_VALIDATOR;
 
     /// @dev Reserved storage gap for future upgrades
-    uint256[47] private __gap;
+    uint256[46] private __gap;
 
     // --- Events ---
     event ContentSubmitted(
@@ -214,6 +217,9 @@ contract ContentRegistry is Initializable, AccessControlUpgradeable, PausableUpg
     event VoterIdNFTUpdated(address voterIdNFT);
     event ProtocolConfigUpdated(address protocolConfig);
     event QuestionRewardPoolEscrowUpdated(address rewardPoolEscrow);
+    event ContentRoundConfigSet(
+        uint256 indexed contentId, uint32 epochDuration, uint32 maxDuration, uint16 minVoters, uint16 maxVoters
+    );
 
     /// @custom:oz-upgrades-unsafe-allow constructor state-variable-immutable
     constructor() {
@@ -366,7 +372,31 @@ contract ContentRegistry is Initializable, AccessControlUpgradeable, PausableUpg
             salt,
             _submissionRewardTerms(
                 rewardAsset, rewardAmount, requiredVoters, requiredSettledRounds, rewardPoolExpiresAt
-            )
+            ),
+            _defaultRoundConfig(),
+            false
+        );
+    }
+
+    function submitQuestionWithMediaWithRewardAndRoundConfig(
+        string[] memory imageUrls,
+        string memory videoUrl,
+        string memory title,
+        string memory description,
+        string memory tags,
+        uint256 categoryId,
+        bytes32 salt,
+        SubmissionRewardTerms calldata rewardTerms,
+        RoundLib.RoundConfig calldata roundConfig
+    ) external nonReentrant whenNotPaused returns (uint256) {
+        return _submitValidatedQuestionWithMedia(
+            _validatedMediaSubmissionMetadata(imageUrls, videoUrl, title, description, tags, categoryId),
+            imageUrls,
+            videoUrl,
+            salt,
+            rewardTerms,
+            _validatedRoundConfig(roundConfig),
+            true
         );
     }
 
@@ -392,7 +422,32 @@ contract ContentRegistry is Initializable, AccessControlUpgradeable, PausableUpg
             salt,
             _submissionRewardTerms(
                 rewardAsset, rewardAmount, requiredVoters, requiredSettledRounds, rewardPoolExpiresAt
-            )
+            ),
+            _defaultRoundConfig(),
+            false
+        );
+    }
+
+    function submitQuestionWithRewardAndRoundConfig(
+        string memory contextUrl,
+        string[] memory imageUrls,
+        string memory videoUrl,
+        string memory title,
+        string memory description,
+        string memory tags,
+        uint256 categoryId,
+        bytes32 salt,
+        SubmissionRewardTerms calldata rewardTerms,
+        RoundLib.RoundConfig calldata roundConfig
+    ) external nonReentrant whenNotPaused returns (uint256) {
+        return _submitValidatedQuestionWithMedia(
+            _validatedContextSubmissionMetadata(contextUrl, imageUrls, videoUrl, title, description, tags, categoryId),
+            imageUrls,
+            videoUrl,
+            salt,
+            rewardTerms,
+            _validatedRoundConfig(roundConfig),
+            true
         );
     }
 
@@ -418,7 +473,44 @@ contract ContentRegistry is Initializable, AccessControlUpgradeable, PausableUpg
         require(address(categoryRegistry) != address(0), "CategoryRegistry not set");
         uint8 rewardAsset = SUBMISSION_REWARD_ASSET_CREP;
         return _submitValidatedQuestionWithMedia(
-            metadata, imageUrls, videoUrl, salt, _defaultSubmissionRewardTerms(rewardAsset)
+            metadata,
+            imageUrls,
+            videoUrl,
+            salt,
+            _defaultSubmissionRewardTerms(rewardAsset),
+            _defaultRoundConfig(),
+            false
+        );
+    }
+
+    function submitQuestionWithRoundConfig(
+        string calldata contextUrl,
+        string[] calldata imageUrls,
+        string calldata videoUrl,
+        string calldata title,
+        string calldata description,
+        string calldata tags,
+        uint256 categoryId,
+        bytes32 salt,
+        RoundLib.RoundConfig calldata roundConfig
+    ) external nonReentrant whenNotPaused returns (uint256) {
+        SUBMISSION_MEDIA_VALIDATOR.validateContextUrl(contextUrl);
+        SUBMISSION_MEDIA_VALIDATOR.validateOptionalMediaSet(imageUrls, videoUrl);
+        SubmissionMetadata memory metadata = SubmissionMetadata({
+            url: contextUrl, title: title, description: description, tags: tags, categoryId: categoryId
+        });
+        _validateTextFields(metadata);
+
+        require(address(categoryRegistry) != address(0), "CategoryRegistry not set");
+        uint8 rewardAsset = SUBMISSION_REWARD_ASSET_CREP;
+        return _submitValidatedQuestionWithMedia(
+            metadata,
+            imageUrls,
+            videoUrl,
+            salt,
+            _defaultSubmissionRewardTerms(rewardAsset),
+            _validatedRoundConfig(roundConfig),
+            true
         );
     }
 
@@ -445,8 +537,54 @@ contract ContentRegistry is Initializable, AccessControlUpgradeable, PausableUpg
         require(address(categoryRegistry) != address(0), "CategoryRegistry not set");
         uint8 rewardAsset = SUBMISSION_REWARD_ASSET_CREP;
         return _submitValidatedQuestionWithMedia(
-            metadata, imageUrls, videoUrl, salt, _defaultSubmissionRewardTerms(rewardAsset)
+            metadata,
+            imageUrls,
+            videoUrl,
+            salt,
+            _defaultSubmissionRewardTerms(rewardAsset),
+            _defaultRoundConfig(),
+            false
         );
+    }
+
+    function submitQuestionWithMediaAndRoundConfig(
+        string[] calldata imageUrls,
+        string calldata videoUrl,
+        string calldata title,
+        string calldata description,
+        string calldata tags,
+        uint256 categoryId,
+        bytes32 salt,
+        RoundLib.RoundConfig calldata roundConfig
+    ) external nonReentrant whenNotPaused returns (uint256) {
+        SUBMISSION_MEDIA_VALIDATOR.validateMediaSet(imageUrls, videoUrl);
+        SubmissionMetadata memory metadata = SubmissionMetadata({
+            url: bytes(videoUrl).length != 0 ? videoUrl : imageUrls[0],
+            title: title,
+            description: description,
+            tags: tags,
+            categoryId: categoryId
+        });
+        _validateTextFields(metadata);
+
+        require(address(categoryRegistry) != address(0), "CategoryRegistry not set");
+        uint8 rewardAsset = SUBMISSION_REWARD_ASSET_CREP;
+        return _submitValidatedQuestionWithMedia(
+            metadata,
+            imageUrls,
+            videoUrl,
+            salt,
+            _defaultSubmissionRewardTerms(rewardAsset),
+            _validatedRoundConfig(roundConfig),
+            true
+        );
+    }
+
+    function getContentRoundConfig(uint256 contentId) public view returns (RoundLib.RoundConfig memory cfg) {
+        cfg = contentRoundConfig[contentId];
+        if (cfg.epochDuration == 0) {
+            cfg = _defaultRoundConfig();
+        }
     }
 
     /// @notice Cancel content before any votes. Attached submission bounties stay non-refundable.
@@ -541,10 +679,12 @@ contract ContentRegistry is Initializable, AccessControlUpgradeable, PausableUpg
         string[] memory imageUrls,
         string memory videoUrl,
         bytes32 salt,
-        SubmissionRewardTerms memory rewardTerms
+        SubmissionRewardTerms memory rewardTerms,
+        RoundLib.RoundConfig memory roundConfig,
+        bool includeRoundConfigInCommitment
     ) internal returns (uint256 contentId) {
         (uint256 resolvedCategoryId, bytes32 submissionKey, PendingSubmission memory pending) =
-            _prepareQuestionMediaSubmission(metadata, salt, rewardTerms);
+            _prepareQuestionMediaSubmission(metadata, salt, rewardTerms, roundConfig, includeRoundConfigInCommitment);
         bytes32 contentHash = keccak256(
             abi.encode(
                 "curyo-question-context-v1",
@@ -557,7 +697,7 @@ contract ContentRegistry is Initializable, AccessControlUpgradeable, PausableUpg
                 resolvedCategoryId
             )
         );
-        contentId = _storeSubmittedContent(submissionKey, pending, contentHash, resolvedCategoryId);
+        contentId = _storeSubmittedContent(submissionKey, pending, contentHash, resolvedCategoryId, roundConfig);
         uint256 rewardPoolId = _attachSubmissionRewardPool(contentId, rewardTerms);
         emit ContentSubmitted(
             contentId,
@@ -576,23 +716,37 @@ contract ContentRegistry is Initializable, AccessControlUpgradeable, PausableUpg
     function _prepareQuestionMediaSubmission(
         SubmissionMetadata memory metadata,
         bytes32 salt,
-        SubmissionRewardTerms memory rewardTerms
+        SubmissionRewardTerms memory rewardTerms,
+        RoundLib.RoundConfig memory roundConfig,
+        bool includeRoundConfigInCommitment
     ) internal returns (uint256 resolvedCategoryId, bytes32 submissionKey, PendingSubmission memory pending) {
         resolvedCategoryId = _resolveQuestionSubmissionCategory(metadata);
         submissionKey = _deriveQuestionMediaSubmissionKey(metadata, resolvedCategoryId);
         require(!submissionKeyUsed[submissionKey], "Question already submitted");
         _validateSubmissionReward(rewardTerms);
 
-        bytes32 revealCommitment = _computeRevealCommitment(
-            submissionKey,
-            metadata.title,
-            metadata.description,
-            metadata.tags,
-            metadata.categoryId,
-            salt,
-            msg.sender,
-            rewardTerms
-        );
+        bytes32 revealCommitment = includeRoundConfigInCommitment
+            ? _computeRevealCommitmentWithRoundConfig(
+                submissionKey,
+                metadata.title,
+                metadata.description,
+                metadata.tags,
+                metadata.categoryId,
+                salt,
+                msg.sender,
+                rewardTerms,
+                roundConfig
+            )
+            : _computeRevealCommitment(
+                submissionKey,
+                metadata.title,
+                metadata.description,
+                metadata.tags,
+                metadata.categoryId,
+                salt,
+                msg.sender,
+                rewardTerms
+            );
         pending = pendingSubmissions[revealCommitment];
         require(pending.submitter == msg.sender, "Reservation not found");
         require(block.timestamp <= pending.expiresAt, "Reservation expired");
@@ -633,11 +787,13 @@ contract ContentRegistry is Initializable, AccessControlUpgradeable, PausableUpg
         bytes32 submissionKey,
         PendingSubmission memory pending,
         bytes32 contentHash,
-        uint256 resolvedCategoryId
+        uint256 resolvedCategoryId,
+        RoundLib.RoundConfig memory roundConfig
     ) internal returns (uint256 contentId) {
         contentId = nextContentId++;
         contentSubmissionKey[contentId] = submissionKey;
         contentSubmitterIdentity[contentId] = _resolveSubmitterIdentity(pending.submitter);
+        contentRoundConfig[contentId] = roundConfig;
         contents[contentId] = Content({
             id: contentId.toUint64(),
             contentHash: contentHash,
@@ -652,6 +808,9 @@ contract ContentRegistry is Initializable, AccessControlUpgradeable, PausableUpg
             rating: 50,
             categoryId: resolvedCategoryId.toUint64()
         });
+        emit ContentRoundConfigSet(
+            contentId, roundConfig.epochDuration, roundConfig.maxDuration, roundConfig.minVoters, roundConfig.maxVoters
+        );
         ratingState[contentId] = RatingLib.RatingState({
             ratingLogitX18: int128(RatingLib.DEFAULT_RATING_LOGIT_X18),
             confidenceMass: uint128(_getInitialConfidenceMass()),
@@ -972,6 +1131,30 @@ contract ContentRegistry is Initializable, AccessControlUpgradeable, PausableUpg
         );
     }
 
+    function _computeRevealCommitmentWithRoundConfig(
+        bytes32 submissionKey,
+        string memory title,
+        string memory description,
+        string memory tags,
+        uint256 categoryId,
+        bytes32 salt,
+        address submitter,
+        SubmissionRewardTerms memory rewardTerms,
+        RoundLib.RoundConfig memory roundConfig
+    ) internal pure returns (bytes32) {
+        return keccak256(
+            abi.encode(
+                _computeRevealCommitment(
+                    submissionKey, title, description, tags, categoryId, salt, submitter, rewardTerms
+                ),
+                roundConfig.epochDuration,
+                roundConfig.maxDuration,
+                roundConfig.minVoters,
+                roundConfig.maxVoters
+            )
+        );
+    }
+
     function _validateSubmissionReward(SubmissionRewardTerms memory rewardTerms) internal view {
         require(
             rewardTerms.asset == SUBMISSION_REWARD_ASSET_CREP || rewardTerms.asset == SUBMISSION_REWARD_ASSET_USDC,
@@ -1007,6 +1190,30 @@ contract ContentRegistry is Initializable, AccessControlUpgradeable, PausableUpg
             requiredSettledRounds: MIN_SUBMISSION_REWARD_SETTLED_ROUNDS,
             expiresAt: 0
         });
+    }
+
+    function _defaultRoundConfig() internal view returns (RoundLib.RoundConfig memory cfg) {
+        if (address(protocolConfig) != address(0)) {
+            (cfg.epochDuration, cfg.maxDuration, cfg.minVoters, cfg.maxVoters) = protocolConfig.config();
+            return cfg;
+        }
+        cfg = RoundLib.RoundConfig({
+            epochDuration: uint32(20 minutes),
+            maxDuration: uint32(7 days),
+            minVoters: uint16(3),
+            maxVoters: uint16(1000)
+        });
+    }
+
+    function _validatedRoundConfig(RoundLib.RoundConfig memory roundConfig)
+        internal
+        view
+        returns (RoundLib.RoundConfig memory cfg)
+    {
+        require(address(protocolConfig) != address(0), "ProtocolConfig not set");
+        cfg = protocolConfig.validateRoundConfig(
+            roundConfig.epochDuration, roundConfig.maxDuration, roundConfig.minVoters, roundConfig.maxVoters
+        );
     }
 
     function _resolveSubmitterIdentity(address submitter) internal view returns (address) {

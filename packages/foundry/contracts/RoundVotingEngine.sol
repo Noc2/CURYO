@@ -166,6 +166,14 @@ contract RoundVotingEngine is
         uint256 stake
     );
     event RoundReferenceSnapshotted(uint256 indexed contentId, uint256 indexed roundId, uint16 roundReferenceRatingBps);
+    event RoundConfigSnapshotted(
+        uint256 indexed contentId,
+        uint256 indexed roundId,
+        uint32 epochDuration,
+        uint32 maxDuration,
+        uint16 minVoters,
+        uint16 maxVoters
+    );
     event VoteRevealed(uint256 indexed contentId, uint256 indexed roundId, address indexed voter, bool isUp);
     event RoundSettled(uint256 indexed contentId, uint256 indexed roundId, bool upWins, uint256 losingPool);
     event RoundCancelled(uint256 indexed contentId, uint256 indexed roundId);
@@ -577,8 +585,9 @@ contract RoundVotingEngine is
         rounds[contentId][roundId].startTime = block.timestamp.toUint48();
         rounds[contentId][roundId].state = RoundLib.RoundState.Open;
 
-        // Snapshot config at round creation to prevent mid-round governance changes
-        roundConfigSnapshot[contentId][roundId] = _currentConfig();
+        // Snapshot config at round creation to prevent mid-round governance or question edits from changing semantics.
+        RoundLib.RoundConfig memory roundCfg = registry.getContentRoundConfig(contentId);
+        roundConfigSnapshot[contentId][roundId] = roundCfg;
         roundRatingConfigSnapshot[contentId][roundId] = _currentRatingConfig();
         roundReferenceRatingBpsSnapshot[contentId][roundId] = registry.getRating(contentId);
         roundRevealGracePeriodSnapshot[contentId][roundId] = protocolConfig.revealGracePeriod();
@@ -586,6 +595,9 @@ contract RoundVotingEngine is
         roundDrandGenesisTimeSnapshot[contentId][roundId] = protocolConfig.drandGenesisTime();
         roundDrandPeriodSnapshot[contentId][roundId] = protocolConfig.drandPeriod();
         roundVoterIdNFTSnapshot[contentId][roundId] = protocolConfig.voterIdNFT();
+        emit RoundConfigSnapshotted(
+            contentId, roundId, roundCfg.epochDuration, roundCfg.maxDuration, roundCfg.minVoters, roundCfg.maxVoters
+        );
         emit RoundReferenceSnapshotted(contentId, roundId, roundReferenceRatingBpsSnapshot[contentId][roundId]);
 
         return roundId;

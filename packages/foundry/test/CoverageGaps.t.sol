@@ -610,7 +610,7 @@ contract RoundSettlementEdgeCaseTest is VotingTestBase {
     function test_SetConfigMaxDurationTooShort() public {
         vm.prank(owner);
         vm.expectRevert(ProtocolConfig.InvalidConfig.selector);
-        _setTlockRoundConfig(ProtocolConfig(protocolConfigAddress), 5 minutes, 23 hours, 2, 200);
+        _setTlockRoundConfig(ProtocolConfig(protocolConfigAddress), 5 minutes, 59 minutes, 2, 200);
     }
 
     function test_SetConfigMinVotersTooLow() public {

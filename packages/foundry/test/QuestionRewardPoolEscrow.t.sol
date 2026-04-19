@@ -13,6 +13,7 @@ import { QuestionRewardPoolEscrow } from "../contracts/QuestionRewardPoolEscrow.
 import { RoundRewardDistributor } from "../contracts/RoundRewardDistributor.sol";
 import { RoundVotingEngine } from "../contracts/RoundVotingEngine.sol";
 import { RoundEngineReadHelpers } from "./helpers/RoundEngineReadHelpers.sol";
+import { RoundLib } from "../contracts/libraries/RoundLib.sol";
 import { MockVoterIdNFT } from "./mocks/MockVoterIdNFT.sol";
 
 contract QuestionRewardPoolEscrowTest is VotingTestBase {
@@ -195,6 +196,18 @@ contract QuestionRewardPoolEscrowTest is VotingTestBase {
         assertEq(reward1 + reward2 + reward3, REWARD_POOL_AMOUNT);
         assertEq(usdc.balanceOf(voter1), 1_000e6 + reward1);
         assertEq(usdc.balanceOf(address(rewardPoolEscrow)), 0);
+    }
+
+    function testRefundableRewardPoolAmountUsesQuestionSelectedVoterCap() public {
+        RoundLib.RoundConfig memory roundConfig =
+            RoundLib.RoundConfig({ epochDuration: 10 minutes, maxDuration: 1 hours, minVoters: 3, maxVoters: 4 });
+        uint256 contentId = _submitQuestionWithRoundConfig("https://example.com/small-cap.jpg", roundConfig);
+
+        uint256 rewardPoolId = _createRewardPool(contentId, 4, 3, 1);
+
+        assertEq(rewardPoolId, 2);
+        assertEq(rewardPoolEscrow.nextRewardPoolId(), 3);
+        assertEq(usdc.balanceOf(address(rewardPoolEscrow)), 4);
     }
 
     function testEligibleFrontendReceivesThreePercentFromQuestionRewardClaims() public {
@@ -662,6 +675,54 @@ contract QuestionRewardPoolEscrowTest is VotingTestBase {
         );
         vm.warp(block.timestamp + 1);
         contentId = registry.submitQuestionWithMedia(imageUrls, "", QUESTION, DESCRIPTION, TAGS, CATEGORY_ID, salt);
+        vm.stopPrank();
+    }
+
+    function _submitQuestionWithRoundConfig(string memory url, RoundLib.RoundConfig memory roundConfig)
+        internal
+        returns (uint256 contentId)
+    {
+        string[] memory imageUrls = new string[](1);
+        imageUrls[0] = url;
+        activeTlockContentRegistry = registry;
+        bytes32 salt = keccak256(abi.encode(url, QUESTION, DESCRIPTION, TAGS, CATEGORY_ID, submitter, block.timestamp));
+
+        (, bytes32 submissionKey) =
+            registry.previewQuestionMediaSubmissionKey(imageUrls, "", QUESTION, DESCRIPTION, TAGS, CATEGORY_ID);
+        uint256 rewardAmount = _defaultSubmissionRewardAmount(registry);
+        bytes32 legacyCommitment = keccak256(
+            abi.encode(
+                submissionKey,
+                QUESTION,
+                DESCRIPTION,
+                TAGS,
+                CATEGORY_ID,
+                salt,
+                submitter,
+                DEFAULT_SUBMISSION_REWARD_ASSET_CREP,
+                rewardAmount,
+                DEFAULT_SUBMISSION_REWARD_REQUIRED_VOTERS,
+                DEFAULT_SUBMISSION_REWARD_SETTLED_ROUNDS,
+                DEFAULT_SUBMISSION_REWARD_EXPIRES_AT
+            )
+        );
+        bytes32 revealCommitment = keccak256(
+            abi.encode(
+                legacyCommitment,
+                roundConfig.epochDuration,
+                roundConfig.maxDuration,
+                roundConfig.minVoters,
+                roundConfig.maxVoters
+            )
+        );
+
+        vm.startPrank(submitter);
+        crepToken.approve(address(rewardPoolEscrow), rewardAmount);
+        registry.reserveSubmission(revealCommitment);
+        vm.warp(block.timestamp + 1);
+        contentId = registry.submitQuestionWithMediaAndRoundConfig(
+            imageUrls, "", QUESTION, DESCRIPTION, TAGS, CATEGORY_ID, salt, roundConfig
+        );
         vm.stopPrank();
     }
 

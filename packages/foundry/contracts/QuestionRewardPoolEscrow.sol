@@ -224,8 +224,8 @@ contract QuestionRewardPoolEscrow is
             require(expiresAt > block.timestamp, "Invalid expiry");
         }
         if (!nonRefundable) {
-            (,,, uint16 maxVoters) = votingEngine.protocolConfig().config();
-            require(amount >= requiredSettledRounds * uint256(maxVoters), "Amount too small");
+            RoundLib.RoundConfig memory contentCfg = registry.getContentRoundConfig(contentId);
+            require(amount >= requiredSettledRounds * uint256(contentCfg.maxVoters), "Amount too small");
             require(expiresAt > block.timestamp, "Invalid expiry");
         }
 
