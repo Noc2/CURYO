@@ -195,8 +195,8 @@ export const FrontendRegistryAbi = [
       },
       {
         "name": "crepFees",
-        "type": "uint64",
-        "internalType": "uint64"
+        "type": "uint128",
+        "internalType": "uint128"
       },
       {
         "name": "slashed",

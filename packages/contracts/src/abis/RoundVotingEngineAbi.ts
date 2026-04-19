@@ -1656,7 +1656,7 @@ export const RoundVotingEngineAbi = [
   },
   {
     "type": "event",
-    "name": "UnrevealedStakeAddedToVoterPool",
+    "name": "UnrevealedStakeAddedToConsensusReserve",
     "inputs": [
       {
         "name": "contentId",

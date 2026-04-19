@@ -19,6 +19,19 @@ export const RoundRewardDistributorAbi = [
   },
   {
     "type": "function",
+    "name": "STALE_REWARD_FINALIZATION_DELAY",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
     "name": "backfillParticipationRewards",
     "inputs": [
       {
@@ -166,6 +179,35 @@ export const RoundRewardDistributorAbi = [
   },
   {
     "type": "function",
+    "name": "finalizeFrontendFeeDust",
+    "inputs": [
+      {
+        "name": "contentId",
+        "type": "uint256",
+        "internalType": "uint256"
+      },
+      {
+        "name": "roundId",
+        "type": "uint256",
+        "internalType": "uint256"
+      },
+      {
+        "name": "sortedFrontends",
+        "type": "address[]",
+        "internalType": "address[]"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "releasedDust",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "stateMutability": "nonpayable"
+  },
+  {
+    "type": "function",
     "name": "finalizeParticipationRewards",
     "inputs": [
       {
@@ -177,6 +219,35 @@ export const RoundRewardDistributorAbi = [
         "name": "roundId",
         "type": "uint256",
         "internalType": "uint256"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "releasedDust",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "stateMutability": "nonpayable"
+  },
+  {
+    "type": "function",
+    "name": "finalizeVoterRewardDust",
+    "inputs": [
+      {
+        "name": "contentId",
+        "type": "uint256",
+        "internalType": "uint256"
+      },
+      {
+        "name": "roundId",
+        "type": "uint256",
+        "internalType": "uint256"
+      },
+      {
+        "name": "sortedWinningVoters",
+        "type": "address[]",
+        "internalType": "address[]"
       }
     ],
     "outputs": [
@@ -536,6 +607,30 @@ export const RoundRewardDistributorAbi = [
   },
   {
     "type": "function",
+    "name": "roundFrontendFeeDustFinalized",
+    "inputs": [
+      {
+        "name": "",
+        "type": "uint256",
+        "internalType": "uint256"
+      },
+      {
+        "name": "",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "",
+        "type": "bool",
+        "internalType": "bool"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
     "name": "roundParticipationRewardFinalized",
     "inputs": [
       {
@@ -752,6 +847,30 @@ export const RoundRewardDistributorAbi = [
   },
   {
     "type": "function",
+    "name": "roundVoterRewardDustFinalized",
+    "inputs": [
+      {
+        "name": "",
+        "type": "uint256",
+        "internalType": "uint256"
+      },
+      {
+        "name": "",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "",
+        "type": "bool",
+        "internalType": "bool"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
     "name": "snapshotParticipationRewards",
     "inputs": [
       {
@@ -917,6 +1036,31 @@ export const RoundRewardDistributorAbi = [
         "type": "address",
         "indexed": false,
         "internalType": "address"
+      },
+      {
+        "name": "amount",
+        "type": "uint256",
+        "indexed": false,
+        "internalType": "uint256"
+      }
+    ],
+    "anonymous": false
+  },
+  {
+    "type": "event",
+    "name": "FrontendFeeDustFinalized",
+    "inputs": [
+      {
+        "name": "contentId",
+        "type": "uint256",
+        "indexed": true,
+        "internalType": "uint256"
+      },
+      {
+        "name": "roundId",
+        "type": "uint256",
+        "indexed": true,
+        "internalType": "uint256"
       },
       {
         "name": "amount",
@@ -1313,6 +1457,31 @@ export const RoundRewardDistributorAbi = [
     "anonymous": false
   },
   {
+    "type": "event",
+    "name": "VoterRewardDustFinalized",
+    "inputs": [
+      {
+        "name": "contentId",
+        "type": "uint256",
+        "indexed": true,
+        "internalType": "uint256"
+      },
+      {
+        "name": "roundId",
+        "type": "uint256",
+        "indexed": true,
+        "internalType": "uint256"
+      },
+      {
+        "name": "amount",
+        "type": "uint256",
+        "indexed": false,
+        "internalType": "uint256"
+      }
+    ],
+    "anonymous": false
+  },
+  {
     "type": "error",
     "name": "AccessControlBadConfirmation",
     "inputs": []
@@ -1350,6 +1519,11 @@ export const RoundRewardDistributorAbi = [
   },
   {
     "type": "error",
+    "name": "InvalidFinalizationInput",
+    "inputs": []
+  },
+  {
+    "type": "error",
     "name": "InvalidInitialization",
     "inputs": []
   },
@@ -1376,6 +1550,11 @@ export const RoundRewardDistributorAbi = [
   {
     "type": "error",
     "name": "NoPool",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "NoRewardDust",
     "inputs": []
   },
   {
@@ -1421,6 +1600,16 @@ export const RoundRewardDistributorAbi = [
   {
     "type": "error",
     "name": "ReentrancyGuardReentrantCall",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "RewardDustAlreadyFinalized",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "RewardFinalizationTooEarly",
     "inputs": []
   },
   {
