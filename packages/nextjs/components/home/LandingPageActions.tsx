@@ -65,7 +65,7 @@ export function LandingPageActions() {
   return (
     <div className="mt-6 flex flex-wrap justify-center gap-3 lg:justify-start">
       <Link href={RATE_ROUTE} className={`btn btn-primary ${styles.cta} ${styles.primary}`}>
-        <span>Rate</span>
+        <span>Start Earning</span>
         <span className={styles.arrow} aria-hidden="true">
           <ChevronRightIcon className="h-5 w-5 text-primary-content" />
         </span>
