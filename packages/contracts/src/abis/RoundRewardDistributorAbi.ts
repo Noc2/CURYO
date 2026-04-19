@@ -1498,6 +1498,11 @@ export const RoundRewardDistributorAbi = [
   },
   {
     "type": "error",
+    "name": "UnrevealedCleanupPending",
+    "inputs": []
+  },
+  {
+    "type": "error",
     "name": "VoteNotRevealed",
     "inputs": []
   }

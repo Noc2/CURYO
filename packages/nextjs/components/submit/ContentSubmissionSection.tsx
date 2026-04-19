@@ -23,6 +23,7 @@ import { InfoTooltip } from "~~/components/ui/InfoTooltip";
 import { serializeTags } from "~~/constants/categories";
 import { useTermsAcceptance } from "~~/contexts/TermsAcceptanceContext";
 import { useDeployedContractInfo, useScaffoldReadContract, useScaffoldWriteContract } from "~~/hooks/scaffold-eth";
+import { useLocalE2ETestWalletClient } from "~~/hooks/scaffold-eth/useLocalE2ETestWalletClient";
 import { useTargetNetwork } from "~~/hooks/scaffold-eth/useTargetNetwork";
 import { type Category, useCategoryRegistry } from "~~/hooks/useCategoryRegistry";
 import { useGasBalanceStatus } from "~~/hooks/useGasBalanceStatus";
@@ -128,6 +129,7 @@ export function ContentSubmissionSection() {
   const wagmiConfig = useConfig();
   const { address: connectedAddress } = useAccount();
   const { targetNetwork } = useTargetNetwork();
+  const localE2ETestWalletClient = useLocalE2ETestWalletClient(connectedAddress, targetNetwork.id);
   const { canSponsorTransactions, isMissingGasBalance, nativeTokenSymbol } = useGasBalanceStatus({
     includeExternalSendCalls: true,
   });
@@ -819,18 +821,21 @@ export function ContentSubmissionSection() {
 
         contentId = extractSubmittedContentId((callsResult.receipts ?? []).flatMap(receipt => receipt.logs));
       } else {
-        const approveTxHash = await writeContract(wagmiConfig, {
+        const approveWrite = {
           address: rewardTokenAddress,
           abi: ERC20_APPROVAL_ABI,
           functionName: "approve",
           args: [rewardEscrowAddress, selectedRewardAmount],
-        });
+        } as const;
+        const approveTxHash = localE2ETestWalletClient
+          ? await localE2ETestWalletClient.writeContract(approveWrite as any)
+          : await writeContract(wagmiConfig, approveWrite);
 
         if (approveTxHash) {
           await waitForTransactionReceipt(wagmiConfig, { hash: approveTxHash });
         }
 
-        const submitTxHash = await writeContract(wagmiConfig, {
+        const submitWrite = {
           address: registryAddress,
           abi: QUESTION_SUBMISSION_ABI,
           functionName: "submitQuestionWithReward",
@@ -849,7 +854,10 @@ export function ContentSubmissionSection() {
             selectedRequiredSettledRounds,
             rewardPoolExpiresAt,
           ],
-        });
+        } as const;
+        const submitTxHash = localE2ETestWalletClient
+          ? await localE2ETestWalletClient.writeContract(submitWrite as any)
+          : await writeContract(wagmiConfig, submitWrite);
 
         if (submitTxHash) {
           const submitReceipt = await waitForTransactionReceipt(wagmiConfig, { hash: submitTxHash });
