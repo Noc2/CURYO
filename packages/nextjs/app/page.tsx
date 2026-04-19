@@ -40,7 +40,7 @@ const FEATURE_BENEFITS: {
   {
     title: "Optimized for AI",
     achievedBy:
-      "Achieved by x402 payments for agent-funded questions and MCP-ready tools for asking, quoting, checking status, and reading results.",
+      "Agents can fund questions with x402 and use MCP-ready tools for asking, quoting, checking status, and reading results.",
     links: [
       { label: "x402", href: "/docs/ai#x402-agent-payments" },
       { label: "MCP", href: "/docs/ai#mcp-adapter-shape" },
@@ -49,13 +49,12 @@ const FEATURE_BENEFITS: {
   {
     title: "Verified Humans",
     achievedBy:
-      "Achieved by Voter IDs backed by zero-knowledge passport or biometric ID proofs, without exposing personal documents on-chain.",
+      "Voter IDs use zero-knowledge passport or biometric ID proofs without exposing personal documents on-chain.",
     links: [{ label: "ZK proof-of-human", href: "/docs/how-it-works#zk-proof-of-human" }],
   },
   {
     title: "Honest Rating",
-    achievedBy:
-      "Achieved by commit-reveal voting and cREP staking, where reputation-backed votes can lose stake when they land on the losing side.",
+    achievedBy: "Commit-reveal voting and cREP staking make dishonest or losing votes economically costly.",
     links: [
       { label: "Commit-reveal", href: "/docs/how-it-works#commit-reveal-voting" },
       { label: "cREP", href: "/docs/tokenomics" },
@@ -64,13 +63,12 @@ const FEATURE_BENEFITS: {
   {
     title: "Round-Based Rating",
     achievedBy:
-      "Achieved by binary voting rounds that update a continuous rating, with confidence shaped by stake and repeated settlement.",
+      "Binary voting rounds update a continuous rating, with confidence shaped by stake and repeated settlement.",
     links: [{ label: "On-chain settlement", href: "/docs/how-it-works#on-chain-settlement" }],
   },
   {
     title: "Trustless and Transparent",
-    achievedBy:
-      "Achieved by on-chain settlement and stablecoin bounties, so questions, votes, rewards, and payouts stay auditable.",
+    achievedBy: "On-chain settlement and stablecoin bounties keep questions, votes, rewards, and payouts auditable.",
     links: [
       { label: "On-chain", href: "/docs/how-it-works#on-chain-settlement" },
       { label: "Stablecoins", href: "/docs/how-it-works#stablecoin-bounties" },
@@ -275,7 +273,7 @@ export default async function LandingPage({ searchParams }: { searchParams: Prom
               <span className="block">Humans Stake.</span>
             </h1>
             <p className="mt-5 max-w-[31rem] text-center text-lg leading-7 text-base-content/72 sm:max-w-[35rem] sm:text-xl sm:leading-8 lg:max-w-[33rem] lg:text-left lg:text-[1.55rem] lg:leading-[1.45]">
-              Get Verified, Rate With Reputation, and Earn USDC for Answers AI Can Verify.
+              Get Verified, Rate With Reputation, and Earn USDC.
             </p>
             <LandingPageActions />
             <div className="mt-5 flex flex-wrap items-center justify-center gap-x-3 gap-y-2 text-center text-sm text-base-content/62 sm:text-[0.95rem] lg:justify-start lg:text-left">
