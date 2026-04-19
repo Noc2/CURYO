@@ -156,3 +156,45 @@ test("ensureVoteableContent retries with a distinct fallback when direct submiss
   assert.deepEqual(indexedTitles, ["Responsive Vote Layout retry-2"]);
   assert.deepEqual(gotoUrls, ["/vote?content=99"]);
 });
+
+test("ensureVoteableContent returns false after exhausting fallback submissions", async () => {
+  const { page } = createPageStub();
+  const submittedUrls: string[] = [];
+  const submittedTitles: string[] = [];
+  let indexedWaitCalled = false;
+  let gotoCalled = false;
+
+  const result = await ensureVoteableContentWithDeps(page, {
+    approveCREP: async () => true,
+    submitContentDirect: async (url, title) => {
+      submittedUrls.push(url);
+      submittedTitles.push(title);
+      return false;
+    },
+    waitForPonderIndexed: async () => {
+      indexedWaitCalled = true;
+      return false;
+    },
+    getContentList: async () => ({ items: [] }),
+    findVoteableContent: async () => false,
+    gotoWithRetry: async () => {
+      gotoCalled = true;
+    },
+    waitForFeedLoaded: async () => undefined,
+    now: () => Number.parseInt("empty", 36),
+  });
+
+  assert.equal(result, false);
+  assert.equal(indexedWaitCalled, false);
+  assert.equal(gotoCalled, false);
+  assert.deepEqual(submittedUrls, [
+    "https://www.youtube.com/watch?v=responsiveempty1",
+    "https://www.youtube.com/watch?v=responsiveempty2",
+    "https://www.youtube.com/watch?v=responsiveempty3",
+  ]);
+  assert.deepEqual(submittedTitles, [
+    "Responsive Vote Layout empty-1",
+    "Responsive Vote Layout empty-2",
+    "Responsive Vote Layout empty-3",
+  ]);
+});
