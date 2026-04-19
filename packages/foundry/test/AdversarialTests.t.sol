@@ -323,7 +323,14 @@ contract AdversarialTests is VotingTestBase {
         cks[1] = ck2;
         _settleRound(contentId, roundId, cks);
 
-        // voter3 can't claim reward (not revealed)
+        // Rewards remain blocked until the unrevealed settled stake is cleaned up.
+        vm.prank(voter3);
+        vm.expectRevert(RoundRewardDistributor.UnrevealedCleanupPending.selector);
+        distributor.claimReward(contentId, roundId);
+
+        engine.processUnrevealedVotes(contentId, roundId, 0, 0);
+
+        // After cleanup, voter3 still cannot claim because their vote was never revealed.
         vm.prank(voter3);
         vm.expectRevert("Vote not revealed");
         distributor.claimReward(contentId, roundId);
@@ -337,7 +344,7 @@ contract AdversarialTests is VotingTestBase {
     function test_ProcessUnrevealed_DoubleProcess_NoDoubleForfeit() public {
         uint256 contentId = _submitContent();
 
-        // Asymmetric stakes: UP wins, voter3 unrevealed and epoch passed → forfeited
+        // Asymmetric stakes: UP wins, voter3 unrevealed and epoch passed.
         (bytes32 ck1,) = _commit(voter1, contentId, true, 15e6);
         (bytes32 ck2,) = _commit(voter2, contentId, false, 10e6);
         _commit(voter3, contentId, true, 50e6); // unrevealed, same epoch
@@ -350,14 +357,14 @@ contract AdversarialTests is VotingTestBase {
         cks[1] = ck2;
         _settleRound(contentId, roundId, cks);
 
-        uint256 treasuryBefore = crepToken.balanceOf(treasury);
+        uint256 reserveBefore = engine.consensusReserve();
 
-        // Process unrevealed (voter3's commit epoch has passed → forfeited to treasury)
+        // Process unrevealed (settled-round unrevealed stake is routed to the consensus reserve).
         engine.processUnrevealedVotes(contentId, roundId, 0, 0);
 
-        uint256 treasuryAfter1 = crepToken.balanceOf(treasury);
-        uint256 forfeitAmount = treasuryAfter1 - treasuryBefore;
-        assertGt(forfeitAmount, 0, "Some amount should be forfeited");
+        uint256 reserveAfter1 = engine.consensusReserve();
+        uint256 routedAmount = reserveAfter1 - reserveBefore;
+        assertGt(routedAmount, 0, "Some amount should be routed to reserve");
 
         // Process again — same range, reverts because nothing left to process (stakeAmount zeroed)
         vm.expectRevert(RoundVotingEngine.NothingProcessed.selector);

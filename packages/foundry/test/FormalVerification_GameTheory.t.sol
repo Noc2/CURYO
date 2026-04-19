@@ -295,6 +295,7 @@ contract FormalVerification_GameTheoryTest is VotingTestBase {
     function test_UnanimousRound_ConsensusSubsidy() public {
         uint256 cid = _submit();
         uint256 reserveBefore = engine.consensusReserve();
+        uint256 submitterBefore = crepToken.balanceOf(submitter);
 
         _vote(v[0], cid, true, 50e6);
         _vote(v[1], cid, true, 50e6);
@@ -318,7 +319,7 @@ contract FormalVerification_GameTheoryTest is VotingTestBase {
         uint256 payout = crepToken.balanceOf(v[0]) - bal;
         assertGt(payout, 50e6, "Voter gets stake + subsidy reward");
 
-        assertEq(crepToken.balanceOf(submitter), 0, "Submitter receives no consensus subsidy");
+        assertEq(crepToken.balanceOf(submitter), submitterBefore, "Submitter receives no consensus subsidy");
     }
 
     // ==================== Test 6: Share-Proportional ROI (Early Voter Advantage) ====================

@@ -1,18 +1,18 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.20;
 
-import { Test } from "forge-std/Test.sol";
-import { Vm, VmSafe } from "forge-std/Vm.sol";
-import { Base64 } from "@openzeppelin/contracts/utils/Base64.sol";
-import { Strings } from "@openzeppelin/contracts/utils/Strings.sol";
-import { ERC1967Proxy } from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
-import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import { CuryoReputation } from "../../contracts/CuryoReputation.sol";
-import { ContentRegistry } from "../../contracts/ContentRegistry.sol";
-import { ProtocolConfig } from "../../contracts/ProtocolConfig.sol";
-import { RoundVotingEngine } from "../../contracts/RoundVotingEngine.sol";
-import { RatingLib } from "../../contracts/libraries/RatingLib.sol";
-import { MockQuestionRewardPoolEscrow } from "../mocks/MockQuestionRewardPoolEscrow.sol";
+import {Test} from "forge-std/Test.sol";
+import {Vm, VmSafe} from "forge-std/Vm.sol";
+import {Base64} from "@openzeppelin/contracts/utils/Base64.sol";
+import {Strings} from "@openzeppelin/contracts/utils/Strings.sol";
+import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
+import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import {CuryoReputation} from "../../contracts/CuryoReputation.sol";
+import {ContentRegistry} from "../../contracts/ContentRegistry.sol";
+import {ProtocolConfig} from "../../contracts/ProtocolConfig.sol";
+import {RoundVotingEngine} from "../../contracts/RoundVotingEngine.sol";
+import {RatingLib} from "../../contracts/libraries/RatingLib.sol";
+import {MockQuestionRewardPoolEscrow} from "../mocks/MockQuestionRewardPoolEscrow.sol";
 
 function deployInitializedProtocolConfig(address admin) returns (ProtocolConfig protocolConfig) {
     return deployInitializedProtocolConfig(admin, admin);
@@ -50,6 +50,7 @@ abstract contract ContentSubmissionTestBase {
         if (hasActivePrank) {
             HEVM.stopPrank();
         }
+        _ensureActiveProtocolConfig(registry);
         address rewardEscrow = _ensureDefaultQuestionRewardPoolEscrow(registry);
         bool stopNormalizedPrank = false;
         if (hasActivePrank) {
@@ -135,6 +136,7 @@ abstract contract ContentSubmissionTestBase {
         if (hasActivePrank) {
             HEVM.stopPrank();
         }
+        _ensureActiveProtocolConfig(registry);
         address rewardEscrow = _ensureDefaultQuestionRewardPoolEscrow(registry);
         if (hasActivePrank) {
             HEVM.startPrank(msgSender, txOrigin);
@@ -172,6 +174,29 @@ abstract contract ContentSubmissionTestBase {
             if (configuredMinimum != 0) return configuredMinimum;
         }
         return DEFAULT_SUBMISSION_REWARD_POOL;
+    }
+
+    function _activeSubmissionProtocolConfig() internal view virtual returns (ProtocolConfig) {
+        return ProtocolConfig(address(0));
+    }
+
+    function _ensureActiveProtocolConfig(ContentRegistry registry) internal {
+        ProtocolConfig desiredConfig = _activeSubmissionProtocolConfig();
+        if (address(desiredConfig) == address(0) || address(registry.protocolConfig()) == address(desiredConfig)) {
+            return;
+        }
+
+        bytes32 configRole = registry.CONFIG_ROLE();
+        address[8] memory candidates = [
+            address(this), address(1), address(2), address(0xA), address(0xB), address(0xAA), address(0xBB), address(10)
+        ];
+        for (uint256 i = 0; i < candidates.length; i++) {
+            if (registry.hasRole(configRole, candidates[i])) {
+                HEVM.prank(candidates[i]);
+                registry.setProtocolConfig(address(desiredConfig));
+                return;
+            }
+        }
     }
 
     function _ensureDefaultQuestionRewardPoolEscrow(ContentRegistry registry) internal returns (address rewardEscrow) {
@@ -509,6 +534,10 @@ abstract contract VotingTestBase is Test, ContentSubmissionTestBase {
 
     function _tlockDrandPeriod() internal view virtual returns (uint64) {
         return activeTlockDrandPeriod;
+    }
+
+    function _activeSubmissionProtocolConfig() internal view override returns (ProtocolConfig) {
+        return activeTlockProtocolConfig;
     }
 
     function _tlockEpochDuration() internal view virtual returns (uint256) {

@@ -1,12 +1,12 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.20;
 
-import { Test } from "forge-std/Test.sol";
-import { TimelockController } from "@openzeppelin/contracts/governance/TimelockController.sol";
-import { IVotes } from "@openzeppelin/contracts/governance/utils/IVotes.sol";
-import { IGovernor } from "@openzeppelin/contracts/governance/IGovernor.sol";
-import { CuryoReputation } from "../contracts/CuryoReputation.sol";
-import { CuryoGovernor } from "../contracts/governance/CuryoGovernor.sol";
+import {Test} from "forge-std/Test.sol";
+import {TimelockController} from "@openzeppelin/contracts/governance/TimelockController.sol";
+import {IVotes} from "@openzeppelin/contracts/governance/utils/IVotes.sol";
+import {IGovernor} from "@openzeppelin/contracts/governance/IGovernor.sol";
+import {CuryoReputation} from "../contracts/CuryoReputation.sol";
+import {CuryoGovernor} from "../contracts/governance/CuryoGovernor.sol";
 
 /// @title Formal Verification: Governance Parameter Audit
 /// @notice 10 scenarios verifying early capture resistance, quorum scaling,
@@ -310,13 +310,12 @@ contract FormalVerification_GovernanceTest is Test {
         uint256 pid = _propose(voter, "Lock test");
         vm.roll(block.number + governor.votingDelay() + 1);
 
-        // Vote locks tokens (propose already locked the 10K cREP threshold)
+        // Vote locks the voter's current balance, capping repeated locks at transferable stake.
         vm.prank(voter);
         governor.castVote(pid, 1);
 
         uint256 locked = token.getLockedBalance(voter);
-        // Locked = proposal threshold (10K cREP) + voting power (1M cREP) = 1.01M cREP
-        assertEq(locked, 1_010_000e6, "Proposal threshold + voting power locked");
+        assertEq(locked, 1_000_000e6, "Current balance locked without over-locking");
 
         // Cannot transfer while locked
         vm.prank(voter);
