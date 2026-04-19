@@ -454,6 +454,40 @@ export const ContentRegistryAbi = [
   },
   {
     "type": "function",
+    "name": "contentRoundConfig",
+    "inputs": [
+      {
+        "name": "",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "epochDuration",
+        "type": "uint32",
+        "internalType": "uint32"
+      },
+      {
+        "name": "maxDuration",
+        "type": "uint32",
+        "internalType": "uint32"
+      },
+      {
+        "name": "minVoters",
+        "type": "uint16",
+        "internalType": "uint16"
+      },
+      {
+        "name": "maxVoters",
+        "type": "uint16",
+        "internalType": "uint16"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
     "name": "contentSlashConfigSnapshot",
     "inputs": [
       {
@@ -607,6 +641,47 @@ export const ContentRegistryAbi = [
         "name": "",
         "type": "uint16",
         "internalType": "uint16"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "getContentRoundConfig",
+    "inputs": [
+      {
+        "name": "contentId",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "cfg",
+        "type": "tuple",
+        "internalType": "struct RoundLib.RoundConfig",
+        "components": [
+          {
+            "name": "epochDuration",
+            "type": "uint32",
+            "internalType": "uint32"
+          },
+          {
+            "name": "maxDuration",
+            "type": "uint32",
+            "internalType": "uint32"
+          },
+          {
+            "name": "minVoters",
+            "type": "uint16",
+            "internalType": "uint16"
+          },
+          {
+            "name": "maxVoters",
+            "type": "uint16",
+            "internalType": "uint16"
+          }
+        ]
       }
     ],
     "stateMutability": "view"
@@ -1690,6 +1765,82 @@ export const ContentRegistryAbi = [
   },
   {
     "type": "function",
+    "name": "submitQuestionWithMediaAndRoundConfig",
+    "inputs": [
+      {
+        "name": "imageUrls",
+        "type": "string[]",
+        "internalType": "string[]"
+      },
+      {
+        "name": "videoUrl",
+        "type": "string",
+        "internalType": "string"
+      },
+      {
+        "name": "title",
+        "type": "string",
+        "internalType": "string"
+      },
+      {
+        "name": "description",
+        "type": "string",
+        "internalType": "string"
+      },
+      {
+        "name": "tags",
+        "type": "string",
+        "internalType": "string"
+      },
+      {
+        "name": "categoryId",
+        "type": "uint256",
+        "internalType": "uint256"
+      },
+      {
+        "name": "salt",
+        "type": "bytes32",
+        "internalType": "bytes32"
+      },
+      {
+        "name": "roundConfig",
+        "type": "tuple",
+        "internalType": "struct RoundLib.RoundConfig",
+        "components": [
+          {
+            "name": "epochDuration",
+            "type": "uint32",
+            "internalType": "uint32"
+          },
+          {
+            "name": "maxDuration",
+            "type": "uint32",
+            "internalType": "uint32"
+          },
+          {
+            "name": "minVoters",
+            "type": "uint16",
+            "internalType": "uint16"
+          },
+          {
+            "name": "maxVoters",
+            "type": "uint16",
+            "internalType": "uint16"
+          }
+        ]
+      }
+    ],
+    "outputs": [
+      {
+        "name": "",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "stateMutability": "nonpayable"
+  },
+  {
+    "type": "function",
     "name": "submitQuestionWithMediaWithReward",
     "inputs": [
       {
@@ -1751,6 +1902,114 @@ export const ContentRegistryAbi = [
         "name": "rewardPoolExpiresAt",
         "type": "uint256",
         "internalType": "uint256"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "stateMutability": "nonpayable"
+  },
+  {
+    "type": "function",
+    "name": "submitQuestionWithMediaWithRewardAndRoundConfig",
+    "inputs": [
+      {
+        "name": "imageUrls",
+        "type": "string[]",
+        "internalType": "string[]"
+      },
+      {
+        "name": "videoUrl",
+        "type": "string",
+        "internalType": "string"
+      },
+      {
+        "name": "title",
+        "type": "string",
+        "internalType": "string"
+      },
+      {
+        "name": "description",
+        "type": "string",
+        "internalType": "string"
+      },
+      {
+        "name": "tags",
+        "type": "string",
+        "internalType": "string"
+      },
+      {
+        "name": "categoryId",
+        "type": "uint256",
+        "internalType": "uint256"
+      },
+      {
+        "name": "salt",
+        "type": "bytes32",
+        "internalType": "bytes32"
+      },
+      {
+        "name": "rewardTerms",
+        "type": "tuple",
+        "internalType": "struct ContentRegistry.SubmissionRewardTerms",
+        "components": [
+          {
+            "name": "asset",
+            "type": "uint8",
+            "internalType": "uint8"
+          },
+          {
+            "name": "amount",
+            "type": "uint256",
+            "internalType": "uint256"
+          },
+          {
+            "name": "requiredVoters",
+            "type": "uint256",
+            "internalType": "uint256"
+          },
+          {
+            "name": "requiredSettledRounds",
+            "type": "uint256",
+            "internalType": "uint256"
+          },
+          {
+            "name": "expiresAt",
+            "type": "uint256",
+            "internalType": "uint256"
+          }
+        ]
+      },
+      {
+        "name": "roundConfig",
+        "type": "tuple",
+        "internalType": "struct RoundLib.RoundConfig",
+        "components": [
+          {
+            "name": "epochDuration",
+            "type": "uint32",
+            "internalType": "uint32"
+          },
+          {
+            "name": "maxDuration",
+            "type": "uint32",
+            "internalType": "uint32"
+          },
+          {
+            "name": "minVoters",
+            "type": "uint16",
+            "internalType": "uint16"
+          },
+          {
+            "name": "maxVoters",
+            "type": "uint16",
+            "internalType": "uint16"
+          }
+        ]
       }
     ],
     "outputs": [
@@ -1830,6 +2089,200 @@ export const ContentRegistryAbi = [
         "name": "rewardPoolExpiresAt",
         "type": "uint256",
         "internalType": "uint256"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "stateMutability": "nonpayable"
+  },
+  {
+    "type": "function",
+    "name": "submitQuestionWithRewardAndRoundConfig",
+    "inputs": [
+      {
+        "name": "contextUrl",
+        "type": "string",
+        "internalType": "string"
+      },
+      {
+        "name": "imageUrls",
+        "type": "string[]",
+        "internalType": "string[]"
+      },
+      {
+        "name": "videoUrl",
+        "type": "string",
+        "internalType": "string"
+      },
+      {
+        "name": "title",
+        "type": "string",
+        "internalType": "string"
+      },
+      {
+        "name": "description",
+        "type": "string",
+        "internalType": "string"
+      },
+      {
+        "name": "tags",
+        "type": "string",
+        "internalType": "string"
+      },
+      {
+        "name": "categoryId",
+        "type": "uint256",
+        "internalType": "uint256"
+      },
+      {
+        "name": "salt",
+        "type": "bytes32",
+        "internalType": "bytes32"
+      },
+      {
+        "name": "rewardTerms",
+        "type": "tuple",
+        "internalType": "struct ContentRegistry.SubmissionRewardTerms",
+        "components": [
+          {
+            "name": "asset",
+            "type": "uint8",
+            "internalType": "uint8"
+          },
+          {
+            "name": "amount",
+            "type": "uint256",
+            "internalType": "uint256"
+          },
+          {
+            "name": "requiredVoters",
+            "type": "uint256",
+            "internalType": "uint256"
+          },
+          {
+            "name": "requiredSettledRounds",
+            "type": "uint256",
+            "internalType": "uint256"
+          },
+          {
+            "name": "expiresAt",
+            "type": "uint256",
+            "internalType": "uint256"
+          }
+        ]
+      },
+      {
+        "name": "roundConfig",
+        "type": "tuple",
+        "internalType": "struct RoundLib.RoundConfig",
+        "components": [
+          {
+            "name": "epochDuration",
+            "type": "uint32",
+            "internalType": "uint32"
+          },
+          {
+            "name": "maxDuration",
+            "type": "uint32",
+            "internalType": "uint32"
+          },
+          {
+            "name": "minVoters",
+            "type": "uint16",
+            "internalType": "uint16"
+          },
+          {
+            "name": "maxVoters",
+            "type": "uint16",
+            "internalType": "uint16"
+          }
+        ]
+      }
+    ],
+    "outputs": [
+      {
+        "name": "",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "stateMutability": "nonpayable"
+  },
+  {
+    "type": "function",
+    "name": "submitQuestionWithRoundConfig",
+    "inputs": [
+      {
+        "name": "contextUrl",
+        "type": "string",
+        "internalType": "string"
+      },
+      {
+        "name": "imageUrls",
+        "type": "string[]",
+        "internalType": "string[]"
+      },
+      {
+        "name": "videoUrl",
+        "type": "string",
+        "internalType": "string"
+      },
+      {
+        "name": "title",
+        "type": "string",
+        "internalType": "string"
+      },
+      {
+        "name": "description",
+        "type": "string",
+        "internalType": "string"
+      },
+      {
+        "name": "tags",
+        "type": "string",
+        "internalType": "string"
+      },
+      {
+        "name": "categoryId",
+        "type": "uint256",
+        "internalType": "uint256"
+      },
+      {
+        "name": "salt",
+        "type": "bytes32",
+        "internalType": "bytes32"
+      },
+      {
+        "name": "roundConfig",
+        "type": "tuple",
+        "internalType": "struct RoundLib.RoundConfig",
+        "components": [
+          {
+            "name": "epochDuration",
+            "type": "uint32",
+            "internalType": "uint32"
+          },
+          {
+            "name": "maxDuration",
+            "type": "uint32",
+            "internalType": "uint32"
+          },
+          {
+            "name": "minVoters",
+            "type": "uint16",
+            "internalType": "uint16"
+          },
+          {
+            "name": "maxVoters",
+            "type": "uint16",
+            "internalType": "uint16"
+          }
+        ]
       }
     ],
     "outputs": [
@@ -2169,6 +2622,43 @@ export const ContentRegistryAbi = [
         "type": "address",
         "indexed": true,
         "internalType": "address"
+      }
+    ],
+    "anonymous": false
+  },
+  {
+    "type": "event",
+    "name": "ContentRoundConfigSet",
+    "inputs": [
+      {
+        "name": "contentId",
+        "type": "uint256",
+        "indexed": true,
+        "internalType": "uint256"
+      },
+      {
+        "name": "epochDuration",
+        "type": "uint32",
+        "indexed": false,
+        "internalType": "uint32"
+      },
+      {
+        "name": "maxDuration",
+        "type": "uint32",
+        "indexed": false,
+        "internalType": "uint32"
+      },
+      {
+        "name": "minVoters",
+        "type": "uint16",
+        "indexed": false,
+        "internalType": "uint16"
+      },
+      {
+        "name": "maxVoters",
+        "type": "uint16",
+        "indexed": false,
+        "internalType": "uint16"
       }
     ],
     "anonymous": false

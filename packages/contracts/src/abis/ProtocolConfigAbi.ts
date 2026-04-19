@@ -263,6 +263,61 @@ export const ProtocolConfigAbi = [
   },
   {
     "type": "function",
+    "name": "getRoundConfigBounds",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "bounds",
+        "type": "tuple",
+        "internalType": "struct ProtocolConfig.RoundConfigBounds",
+        "components": [
+          {
+            "name": "minEpochDuration",
+            "type": "uint32",
+            "internalType": "uint32"
+          },
+          {
+            "name": "maxEpochDuration",
+            "type": "uint32",
+            "internalType": "uint32"
+          },
+          {
+            "name": "minRoundDuration",
+            "type": "uint32",
+            "internalType": "uint32"
+          },
+          {
+            "name": "maxRoundDuration",
+            "type": "uint32",
+            "internalType": "uint32"
+          },
+          {
+            "name": "minSettlementVoters",
+            "type": "uint16",
+            "internalType": "uint16"
+          },
+          {
+            "name": "maxSettlementVoters",
+            "type": "uint16",
+            "internalType": "uint16"
+          },
+          {
+            "name": "minVoterCap",
+            "type": "uint16",
+            "internalType": "uint16"
+          },
+          {
+            "name": "maxVoterCap",
+            "type": "uint16",
+            "internalType": "uint16"
+          }
+        ]
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
     "name": "getSlashConfig",
     "inputs": [],
     "outputs": [
@@ -555,6 +610,54 @@ export const ProtocolConfigAbi = [
   },
   {
     "type": "function",
+    "name": "roundConfigBounds",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "minEpochDuration",
+        "type": "uint32",
+        "internalType": "uint32"
+      },
+      {
+        "name": "maxEpochDuration",
+        "type": "uint32",
+        "internalType": "uint32"
+      },
+      {
+        "name": "minRoundDuration",
+        "type": "uint32",
+        "internalType": "uint32"
+      },
+      {
+        "name": "maxRoundDuration",
+        "type": "uint32",
+        "internalType": "uint32"
+      },
+      {
+        "name": "minSettlementVoters",
+        "type": "uint16",
+        "internalType": "uint16"
+      },
+      {
+        "name": "maxSettlementVoters",
+        "type": "uint16",
+        "internalType": "uint16"
+      },
+      {
+        "name": "minVoterCap",
+        "type": "uint16",
+        "internalType": "uint16"
+      },
+      {
+        "name": "maxVoterCap",
+        "type": "uint16",
+        "internalType": "uint16"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
     "name": "setCategoryRegistry",
     "inputs": [
       {
@@ -744,6 +847,54 @@ export const ProtocolConfigAbi = [
   },
   {
     "type": "function",
+    "name": "setRoundConfigBounds",
+    "inputs": [
+      {
+        "name": "minEpochDuration",
+        "type": "uint256",
+        "internalType": "uint256"
+      },
+      {
+        "name": "maxEpochDuration",
+        "type": "uint256",
+        "internalType": "uint256"
+      },
+      {
+        "name": "minRoundDuration",
+        "type": "uint256",
+        "internalType": "uint256"
+      },
+      {
+        "name": "maxRoundDuration",
+        "type": "uint256",
+        "internalType": "uint256"
+      },
+      {
+        "name": "minSettlementVoters",
+        "type": "uint256",
+        "internalType": "uint256"
+      },
+      {
+        "name": "maxSettlementVoters",
+        "type": "uint256",
+        "internalType": "uint256"
+      },
+      {
+        "name": "minVoterCap",
+        "type": "uint256",
+        "internalType": "uint256"
+      },
+      {
+        "name": "maxVoterCap",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "outputs": [],
+    "stateMutability": "nonpayable"
+  },
+  {
+    "type": "function",
     "name": "setSlashConfig",
     "inputs": [
       {
@@ -870,6 +1021,62 @@ export const ProtocolConfigAbi = [
         "name": "",
         "type": "address",
         "internalType": "address"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "validateRoundConfig",
+    "inputs": [
+      {
+        "name": "epochDuration",
+        "type": "uint256",
+        "internalType": "uint256"
+      },
+      {
+        "name": "maxDuration",
+        "type": "uint256",
+        "internalType": "uint256"
+      },
+      {
+        "name": "minVoters",
+        "type": "uint256",
+        "internalType": "uint256"
+      },
+      {
+        "name": "maxVoters",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "cfg",
+        "type": "tuple",
+        "internalType": "struct RoundLib.RoundConfig",
+        "components": [
+          {
+            "name": "epochDuration",
+            "type": "uint32",
+            "internalType": "uint32"
+          },
+          {
+            "name": "maxDuration",
+            "type": "uint32",
+            "internalType": "uint32"
+          },
+          {
+            "name": "minVoters",
+            "type": "uint16",
+            "internalType": "uint16"
+          },
+          {
+            "name": "maxVoters",
+            "type": "uint16",
+            "internalType": "uint16"
+          }
+        ]
       }
     ],
     "stateMutability": "view"
@@ -1177,6 +1384,61 @@ export const ProtocolConfigAbi = [
         "type": "address",
         "indexed": true,
         "internalType": "address"
+      }
+    ],
+    "anonymous": false
+  },
+  {
+    "type": "event",
+    "name": "RoundConfigBoundsUpdated",
+    "inputs": [
+      {
+        "name": "minEpochDuration",
+        "type": "uint256",
+        "indexed": false,
+        "internalType": "uint256"
+      },
+      {
+        "name": "maxEpochDuration",
+        "type": "uint256",
+        "indexed": false,
+        "internalType": "uint256"
+      },
+      {
+        "name": "minRoundDuration",
+        "type": "uint256",
+        "indexed": false,
+        "internalType": "uint256"
+      },
+      {
+        "name": "maxRoundDuration",
+        "type": "uint256",
+        "indexed": false,
+        "internalType": "uint256"
+      },
+      {
+        "name": "minSettlementVoters",
+        "type": "uint256",
+        "indexed": false,
+        "internalType": "uint256"
+      },
+      {
+        "name": "maxSettlementVoters",
+        "type": "uint256",
+        "indexed": false,
+        "internalType": "uint256"
+      },
+      {
+        "name": "minVoterCap",
+        "type": "uint256",
+        "indexed": false,
+        "internalType": "uint256"
+      },
+      {
+        "name": "maxVoterCap",
+        "type": "uint256",
+        "indexed": false,
+        "internalType": "uint256"
       }
     ],
     "anonymous": false
