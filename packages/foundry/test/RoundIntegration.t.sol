@@ -227,6 +227,18 @@ contract RoundIntegrationTest is VotingTestBase {
         internal
         returns (bytes32 ch, bytes32 ck)
     {
+        return _commitWithSaltAndFrontend(voter, contentId, isUp, stakeAmount, salt, address(0));
+    }
+
+    function _commitWithSaltAndFrontend(
+        address voter,
+        uint256 contentId,
+        bool isUp,
+        uint256 stakeAmount,
+        bytes32 salt,
+        address frontend
+    ) internal returns (bytes32 ch, bytes32 ck)
+    {
         ch = _commitHash(isUp, salt, contentId);
         bytes memory ct = _testCiphertext(isUp, salt, contentId);
 
@@ -240,7 +252,7 @@ contract RoundIntegrationTest is VotingTestBase {
             ch,
             ct,
             stakeAmount,
-            address(0)
+            frontend
         );
         vm.stopPrank();
 
@@ -581,6 +593,63 @@ contract RoundIntegrationTest is VotingTestBase {
             votingEngine.consensusReserve(),
             "engine should not retain voter reward dust"
         );
+    }
+
+    function test_FinalizeVoterRewardDust_RoutesOnlyRoundingDustAfterDelay() public {
+        uint256 contentId = _submitContent();
+        uint256 stake1 = 1_000_001;
+        uint256 stake2 = 1_000_000;
+        uint256 stake3 = 1_000_000;
+
+        bytes32 salt1 = keccak256(abi.encodePacked("stale-dust", voter1, contentId));
+        bytes32 salt2 = keccak256(abi.encodePacked("stale-dust", voter2, contentId));
+        bytes32 salt3 = keccak256(abi.encodePacked("stale-dust", voter3, contentId));
+
+        (, bytes32 ck1) = _commitWithSalt(voter1, contentId, true, stake1, salt1);
+        (, bytes32 ck2) = _commitWithSalt(voter2, contentId, true, stake2, salt2);
+        (, bytes32 ck3) = _commitWithSalt(voter3, contentId, false, stake3, salt3);
+
+        uint256 roundId = RoundEngineReadHelpers.activeRoundId(votingEngine, contentId);
+
+        RoundLib.Round memory openRound = RoundEngineReadHelpers.round(votingEngine, contentId, roundId);
+        vm.warp(openRound.startTime + EPOCH_DURATION + 1);
+        votingEngine.revealVoteByCommitKey(contentId, roundId, ck1, true, salt1);
+        votingEngine.revealVoteByCommitKey(contentId, roundId, ck2, true, salt2);
+        votingEngine.revealVoteByCommitKey(contentId, roundId, ck3, false, salt3);
+
+        votingEngine.settleRound(contentId, roundId);
+
+        address[] memory winners = new address[](2);
+        winners[0] = voter1;
+        winners[1] = voter2;
+
+        vm.expectRevert(RoundRewardDistributor.RewardFinalizationTooEarly.selector);
+        rewardDistributor.finalizeVoterRewardDust(contentId, roundId, winners);
+
+        RoundLib.Round memory round = RoundEngineReadHelpers.round(votingEngine, contentId, roundId);
+        vm.warp(uint256(round.settledAt) + rewardDistributor.STALE_REWARD_FINALIZATION_DELAY());
+
+        uint256 voterPool = votingEngine.roundVoterPool(contentId, roundId);
+        uint256 treasuryBefore = crepToken.balanceOf(treasury);
+
+        uint256 releasedDust = rewardDistributor.finalizeVoterRewardDust(contentId, roundId, winners);
+
+        assertEq(releasedDust, 1, "only mathematical voter reward dust should be finalized");
+        assertEq(crepToken.balanceOf(treasury), treasuryBefore + releasedDust, "dust should route to protocol");
+        assertTrue(rewardDistributor.roundVoterRewardDustFinalized(contentId, roundId));
+
+        uint256 bal1Before = crepToken.balanceOf(voter1);
+        vm.prank(voter1);
+        rewardDistributor.claimReward(contentId, roundId);
+        uint256 reward1 = crepToken.balanceOf(voter1) - bal1Before - stake1;
+
+        uint256 bal2Before = crepToken.balanceOf(voter2);
+        vm.prank(voter2);
+        rewardDistributor.claimReward(contentId, roundId);
+        uint256 reward2 = crepToken.balanceOf(voter2) - bal2Before - stake2;
+
+        assertEq(reward1 + reward2 + releasedDust, voterPool, "finalized dust should not reduce base shares");
+        assertEq(rewardDistributor.roundVoterRewardClaimedAmount(contentId, roundId), voterPool);
     }
 
     // =========================================================================
@@ -2014,6 +2083,16 @@ contract RoundIntegrationTest is VotingTestBase {
 
     /// @dev Helper to set up a FrontendRegistry wired to the voting engine.
     function _setupFrontendRegistry() internal returns (FrontendRegistry frontendReg, address frontendOp) {
+        MockVoterIdNFT voterIdNFT;
+        (frontendReg, voterIdNFT) = _setupFrontendRegistryWithVoterId();
+        frontendOp = address(200);
+        _registerFrontend(frontendReg, voterIdNFT, frontendOp);
+    }
+
+    function _setupFrontendRegistryWithVoterId()
+        internal
+        returns (FrontendRegistry frontendReg, MockVoterIdNFT voterIdNFT)
+    {
         vm.startPrank(owner);
         FrontendRegistry frontendRegistryImpl = new FrontendRegistry();
         frontendReg = FrontendRegistry(
@@ -2027,10 +2106,13 @@ contract RoundIntegrationTest is VotingTestBase {
         ProtocolConfig(address(votingEngine.protocolConfig())).setFrontendRegistry(address(frontendReg));
         frontendReg.setVotingEngine(address(votingEngine));
         frontendReg.addFeeCreditor(address(rewardDistributor));
-        MockVoterIdNFT voterIdNFT = new MockVoterIdNFT();
+        voterIdNFT = new MockVoterIdNFT();
         frontendReg.setVoterIdNFT(address(voterIdNFT));
+        vm.stopPrank();
+    }
 
-        frontendOp = address(200);
+    function _registerFrontend(FrontendRegistry frontendReg, MockVoterIdNFT voterIdNFT, address frontendOp) internal {
+        vm.startPrank(owner);
         crepToken.mint(frontendOp, 2000e6);
         voterIdNFT.setHolder(frontendOp);
         vm.stopPrank();
@@ -2115,6 +2197,64 @@ contract RoundIntegrationTest is VotingTestBase {
         _claimFrontendFeeAsOperator(contentId, roundId, frontendOp);
 
         assertGt(frontendReg.getAccumulatedFees(frontendOp) - feesBefore, 0, "Frontend fee should be credited");
+    }
+
+    function test_FinalizeFrontendFeeDust_RoutesOnlyRoundingDustAfterDelay() public {
+        (FrontendRegistry frontendReg, MockVoterIdNFT voterIdNFT) = _setupFrontendRegistryWithVoterId();
+        address frontendA = address(200);
+        address frontendB = address(201);
+        _registerFrontend(frontendReg, voterIdNFT, frontendA);
+        _registerFrontend(frontendReg, voterIdNFT, frontendB);
+
+        uint256 contentId = _submitContent();
+        uint256 stake1 = 1_000_001;
+        uint256 stake2 = 1_000_000;
+        uint256 stake3 = 1_000_000;
+
+        bytes32 salt1 = keccak256(abi.encodePacked("frontend-dust", voter1, contentId));
+        bytes32 salt2 = keccak256(abi.encodePacked("frontend-dust", voter2, contentId));
+        bytes32 salt3 = keccak256(abi.encodePacked("frontend-dust", voter3, contentId));
+
+        (, bytes32 ck1) = _commitWithSaltAndFrontend(voter1, contentId, true, stake1, salt1, frontendA);
+        (, bytes32 ck2) = _commitWithSaltAndFrontend(voter2, contentId, true, stake2, salt2, frontendB);
+        (, bytes32 ck3) = _commitWithSaltAndFrontend(voter3, contentId, false, stake3, salt3, address(0));
+
+        uint256 roundId = RoundEngineReadHelpers.activeRoundId(votingEngine, contentId);
+        RoundLib.Round memory openRound = RoundEngineReadHelpers.round(votingEngine, contentId, roundId);
+        vm.warp(openRound.startTime + EPOCH_DURATION + 1);
+        votingEngine.revealVoteByCommitKey(contentId, roundId, ck1, true, salt1);
+        votingEngine.revealVoteByCommitKey(contentId, roundId, ck2, true, salt2);
+        votingEngine.revealVoteByCommitKey(contentId, roundId, ck3, false, salt3);
+        votingEngine.settleRound(contentId, roundId);
+
+        address[] memory frontends = new address[](2);
+        frontends[0] = frontendA;
+        frontends[1] = frontendB;
+
+        vm.expectRevert(RoundRewardDistributor.RewardFinalizationTooEarly.selector);
+        rewardDistributor.finalizeFrontendFeeDust(contentId, roundId, frontends);
+
+        RoundLib.Round memory round = RoundEngineReadHelpers.round(votingEngine, contentId, roundId);
+        vm.warp(uint256(round.settledAt) + rewardDistributor.STALE_REWARD_FINALIZATION_DELAY());
+
+        uint256 frontendPool = votingEngine.roundFrontendPool(contentId, roundId);
+        uint256 treasuryBefore = crepToken.balanceOf(treasury);
+        uint256 feesABefore = frontendReg.getAccumulatedFees(frontendA);
+        uint256 feesBBefore = frontendReg.getAccumulatedFees(frontendB);
+
+        uint256 releasedDust = rewardDistributor.finalizeFrontendFeeDust(contentId, roundId, frontends);
+
+        assertEq(releasedDust, 1, "only mathematical frontend fee dust should be finalized");
+        assertEq(crepToken.balanceOf(treasury), treasuryBefore + releasedDust, "dust should route to protocol");
+        assertTrue(rewardDistributor.roundFrontendFeeDustFinalized(contentId, roundId));
+
+        _claimFrontendFeeAsOperator(contentId, roundId, frontendA);
+        _claimFrontendFeeAsOperator(contentId, roundId, frontendB);
+
+        uint256 feeA = frontendReg.getAccumulatedFees(frontendA) - feesABefore;
+        uint256 feeB = frontendReg.getAccumulatedFees(frontendB) - feesBBefore;
+        assertEq(feeA + feeB + releasedDust, frontendPool, "finalized dust should not reduce base shares");
+        assertEq(rewardDistributor.roundFrontendClaimedAmount(contentId, roundId), frontendPool);
     }
 
     function test_ClaimFrontendFee_CreditFailureEmitsFallbackEvent() public {
@@ -2792,6 +2932,63 @@ contract RoundIntegrationTest is VotingTestBase {
             rewardDistributor.roundParticipationRewardFinalized(contentId, roundId),
             "round should still be finalizable when the released dust is zero"
         );
+    }
+
+    function test_FinalizeParticipationRewards_ReleasesStaleUnclaimedReservation() public {
+        ParticipationPool pool = new ParticipationPool(address(crepToken), owner);
+        pool.setAuthorizedCaller(address(rewardDistributor), true);
+
+        vm.startPrank(owner);
+        crepToken.mint(owner, 1_000_000e6);
+        crepToken.approve(address(pool), 1_000_000e6);
+        pool.depositPool(1_000_000e6);
+        ProtocolConfig(address(votingEngine.protocolConfig())).setParticipationPool(address(pool));
+        vm.stopPrank();
+
+        uint256 contentId = _submitContent();
+
+        address[] memory voters = new address[](3);
+        voters[0] = voter1;
+        voters[1] = voter2;
+        voters[2] = voter3;
+        bool[] memory dirs = new bool[](3);
+        dirs[0] = true;
+        dirs[1] = true;
+        dirs[2] = false;
+
+        uint256 roundId = _settleRoundWith(voters, contentId, dirs, STAKE);
+
+        vm.prank(voter1);
+        rewardDistributor.claimParticipationReward(contentId, roundId);
+
+        vm.expectRevert(RoundRewardDistributor.ParticipationRewardsOutstanding.selector);
+        rewardDistributor.finalizeParticipationRewards(contentId, roundId);
+
+        RoundLib.Round memory round = RoundEngineReadHelpers.round(votingEngine, contentId, roundId);
+        vm.warp(uint256(round.settledAt) + rewardDistributor.STALE_REWARD_FINALIZATION_DELAY());
+
+        uint256 poolBalanceBeforeFinalize = pool.poolBalance();
+        uint256 totalDistributedBeforeFinalize = pool.totalDistributed();
+
+        uint256 releasedReward = rewardDistributor.finalizeParticipationRewards(contentId, roundId);
+
+        assertEq(releasedReward, 4_500_000, "stale unpaid winner reservation should be released");
+        assertEq(pool.reservedRewards(address(rewardDistributor)), 0, "no reservation should remain live");
+        assertEq(pool.poolBalance(), poolBalanceBeforeFinalize + releasedReward, "released reward returns to pool");
+        assertEq(
+            pool.totalDistributed(),
+            totalDistributedBeforeFinalize - releasedReward,
+            "released reward should no longer count as distributed"
+        );
+        assertEq(
+            rewardDistributor.roundParticipationRewardReserved(contentId, roundId),
+            4_500_000,
+            "round snapshot should retain only the already-paid amount"
+        );
+
+        vm.prank(voter2);
+        vm.expectRevert(RoundRewardDistributor.ParticipationRewardsAlreadyFinalized.selector);
+        rewardDistributor.claimParticipationReward(contentId, roundId);
     }
 
     function test_SettlementSideEffectFailure_InsufficientParticipationLiquidityCanBeBackfilled() public {

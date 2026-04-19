@@ -45,12 +45,18 @@ contract RoundRewardDistributor is Initializable, AccessControlUpgradeable, Reen
     error ParticipationRewardsOutstanding();
     error ParticipationRewardsAlreadyFinalized();
     error UnrevealedCleanupPending();
+    error RewardFinalizationTooEarly();
+    error InvalidFinalizationInput();
+    error RewardDustAlreadyFinalized();
+    error NoRewardDust();
 
     enum FrontendFeeDisposition {
         Direct,
         CreditRegistry,
         Protocol
     }
+
+    uint256 public constant STALE_REWARD_FINALIZATION_DELAY = 30 days;
 
     // --- State ---
     IERC20 public crepToken;
@@ -63,6 +69,7 @@ contract RoundRewardDistributor is Initializable, AccessControlUpgradeable, Reen
     // Track aggregate voter reward claim progress so the final winner receives the dust remainder.
     mapping(uint256 => mapping(uint256 => uint256)) public roundVoterRewardClaimedCount;
     mapping(uint256 => mapping(uint256 => uint256)) public roundVoterRewardClaimedAmount;
+    mapping(uint256 => mapping(uint256 => bool)) public roundVoterRewardDustFinalized;
 
     // Track frontend fee claims: contentId => roundId => frontend => claimed
     mapping(uint256 => mapping(uint256 => mapping(address => bool))) public frontendFeeClaimed;
@@ -70,6 +77,7 @@ contract RoundRewardDistributor is Initializable, AccessControlUpgradeable, Reen
     // Track aggregate frontend fee claim progress so the final claimant receives the dust remainder.
     mapping(uint256 => mapping(uint256 => uint256)) public roundFrontendClaimedCount;
     mapping(uint256 => mapping(uint256 => uint256)) public roundFrontendClaimedAmount;
+    mapping(uint256 => mapping(uint256 => bool)) public roundFrontendFeeDustFinalized;
 
     // Track participation reward claims: contentId => roundId => voter => claimed/paid
     mapping(uint256 => mapping(uint256 => mapping(address => bool))) public participationRewardClaimed;
@@ -125,6 +133,8 @@ contract RoundRewardDistributor is Initializable, AccessControlUpgradeable, Reen
     event ParticipationRewardFinalized(
         uint256 indexed contentId, uint256 indexed roundId, address indexed rewardPool, uint256 releasedDust
     );
+    event VoterRewardDustFinalized(uint256 indexed contentId, uint256 indexed roundId, uint256 amount);
+    event FrontendFeeDustFinalized(uint256 indexed contentId, uint256 indexed roundId, uint256 amount);
     event ParticipationRewardSnapshotFailed(
         uint256 indexed contentId,
         uint256 indexed roundId,
@@ -281,8 +291,96 @@ contract RoundRewardDistributor is Initializable, AccessControlUpgradeable, Reen
         if (disposition != FrontendFeeDisposition.Protocol) revert FrontendFeeNotConfiscatable();
 
         _consumeFrontendFeeClaim(contentId, roundId, frontend, fee);
-        _routeFrontendFeeToProtocol(fee);
+        _routeRewardToProtocol(fee);
         emit FrontendFeeConfiscated(contentId, roundId, frontend, fee);
+    }
+
+    /// @notice Finalize only mathematical voter-reward dust after stale winners have had time to claim.
+    /// @dev `sortedWinningVoters` must contain every revealed winner exactly once, sorted by address ascending.
+    function finalizeVoterRewardDust(uint256 contentId, uint256 roundId, address[] calldata sortedWinningVoters)
+        external
+        nonReentrant
+        returns (uint256 releasedDust)
+    {
+        if (roundVoterRewardDustFinalized[contentId][roundId]) revert RewardDustAlreadyFinalized();
+
+        RoundLib.Round memory round = _readSettledStaleRound(contentId, roundId);
+        if (votingEngine.roundUnrevealedCleanupRemaining(contentId, roundId) > 0) {
+            revert UnrevealedCleanupPending();
+        }
+
+        uint256 totalWinningClaimants = round.upWins ? round.upCount : round.downCount;
+        if (sortedWinningVoters.length != totalWinningClaimants) revert InvalidFinalizationInput();
+
+        uint256 voterPool = votingEngine.roundVoterPool(contentId, roundId);
+        uint256 weightedWinningStake = votingEngine.roundWinningStake(contentId, roundId);
+        if (totalWinningClaimants == 0 || voterPool == 0 || weightedWinningStake == 0) revert NoRewardDust();
+
+        uint256 expectedTotal;
+        address previous;
+        for (uint256 i = 0; i < sortedWinningVoters.length; i++) {
+            address voter = sortedWinningVoters[i];
+            if (voter == address(0) || (i != 0 && voter <= previous)) revert InvalidFinalizationInput();
+            previous = voter;
+
+            RoundLib.Commit memory commit = _findVoterCommit(contentId, roundId, voter);
+            if (commit.voter != voter || !commit.revealed || commit.isUp != round.upWins) {
+                revert InvalidFinalizationInput();
+            }
+
+            uint256 effectiveStake = (commit.stakeAmount * RoundLib.epochWeightBps(commit.epochIndex)) / 10000;
+            expectedTotal += RewardMath.calculateVoterReward(effectiveStake, weightedWinningStake, voterPool);
+        }
+
+        releasedDust =
+            _finalizableDust(voterPool, expectedTotal, roundVoterRewardClaimedAmount[contentId][roundId]);
+        if (releasedDust == 0) revert NoRewardDust();
+
+        roundVoterRewardDustFinalized[contentId][roundId] = true;
+        roundVoterRewardClaimedAmount[contentId][roundId] += releasedDust;
+        _routeRewardToProtocol(releasedDust);
+
+        emit VoterRewardDustFinalized(contentId, roundId, releasedDust);
+    }
+
+    /// @notice Finalize only mathematical frontend-fee dust after stale frontend operators have had time to claim.
+    /// @dev `sortedFrontends` must contain every eligible frontend exactly once, sorted by address ascending.
+    function finalizeFrontendFeeDust(uint256 contentId, uint256 roundId, address[] calldata sortedFrontends)
+        external
+        nonReentrant
+        returns (uint256 releasedDust)
+    {
+        if (roundFrontendFeeDustFinalized[contentId][roundId]) revert RewardDustAlreadyFinalized();
+
+        _readSettledStaleRound(contentId, roundId);
+
+        uint256 totalFrontendPool = votingEngine.roundFrontendPool(contentId, roundId);
+        uint256 totalEligibleStake = votingEngine.roundStakeWithEligibleFrontend(contentId, roundId);
+        uint256 totalFrontendClaimants = votingEngine.roundEligibleFrontendCount(contentId, roundId);
+        if (sortedFrontends.length != totalFrontendClaimants) revert InvalidFinalizationInput();
+        if (totalFrontendPool == 0 || totalEligibleStake == 0 || totalFrontendClaimants == 0) revert NoRewardDust();
+
+        uint256 expectedTotal;
+        address previous;
+        for (uint256 i = 0; i < sortedFrontends.length; i++) {
+            address frontend = sortedFrontends[i];
+            if (frontend == address(0) || (i != 0 && frontend <= previous)) revert InvalidFinalizationInput();
+            previous = frontend;
+
+            uint256 frontendStake = votingEngine.roundPerFrontendStake(contentId, roundId, frontend);
+            if (frontendStake == 0) revert InvalidFinalizationInput();
+            expectedTotal += (totalFrontendPool * frontendStake) / totalEligibleStake;
+        }
+
+        releasedDust =
+            _finalizableDust(totalFrontendPool, expectedTotal, roundFrontendClaimedAmount[contentId][roundId]);
+        if (releasedDust == 0) revert NoRewardDust();
+
+        roundFrontendFeeDustFinalized[contentId][roundId] = true;
+        roundFrontendClaimedAmount[contentId][roundId] += releasedDust;
+        _routeRewardToProtocol(releasedDust);
+
+        emit FrontendFeeDustFinalized(contentId, roundId, releasedDust);
     }
 
     function previewFrontendFee(uint256 contentId, uint256 roundId, address frontend)
@@ -346,6 +444,7 @@ contract RoundRewardDistributor is Initializable, AccessControlUpgradeable, Reen
     {
         address voter = msg.sender;
         if (participationRewardClaimed[contentId][roundId][voter]) revert AlreadyClaimed();
+        if (roundParticipationRewardFinalized[contentId][roundId]) revert ParticipationRewardsAlreadyFinalized();
 
         RoundLib.Round memory round = _readRound(contentId, roundId);
         if (round.state != RoundLib.RoundState.Settled) revert RoundNotSettled();
@@ -395,7 +494,7 @@ contract RoundRewardDistributor is Initializable, AccessControlUpgradeable, Reen
         emit ParticipationRewardClaimed(contentId, roundId, voter, paidReward);
     }
 
-    /// @notice Release any unclaimable participation-reward dust after every winning voter is fully paid.
+    /// @notice Release participation-reward dust, or stale unclaimed reservations after the finalization delay.
     /// @dev Permissionless so old rounds can be cleaned up without admin intervention.
     function finalizeParticipationRewards(uint256 contentId, uint256 roundId)
         external
@@ -410,7 +509,8 @@ contract RoundRewardDistributor is Initializable, AccessControlUpgradeable, Reen
         if (round.state != RoundLib.RoundState.Settled) revert RoundNotSettled();
 
         uint256 winnerCount = round.upWins ? round.upCount : round.downCount;
-        if (roundParticipationRewardFullyClaimedCount[contentId][roundId] != winnerCount) {
+        bool stale = _isStaleRound(round);
+        if (roundParticipationRewardFullyClaimedCount[contentId][roundId] != winnerCount && !stale) {
             revert ParticipationRewardsOutstanding();
         }
 
@@ -570,7 +670,7 @@ contract RoundRewardDistributor is Initializable, AccessControlUpgradeable, Reen
         }
 
         if (disposition == FrontendFeeDisposition.Protocol) {
-            _routeFrontendFeeToProtocol(fee);
+            _routeRewardToProtocol(fee);
             return;
         }
 
@@ -580,11 +680,11 @@ contract RoundRewardDistributor is Initializable, AccessControlUpgradeable, Reen
             votingEngine.transferReward(snapshotRegistryAddress, fee);
         } catch {
             emit FrontendFeeCreditFailed(contentId, roundId, frontend, snapshotRegistryAddress, fee);
-            _routeFrontendFeeToProtocol(fee);
+            _routeRewardToProtocol(fee);
         }
     }
 
-    function _routeFrontendFeeToProtocol(uint256 fee) internal {
+    function _routeRewardToProtocol(uint256 fee) internal {
         address treasury = _protocolTreasury();
         if (treasury != address(0)) {
             votingEngine.transferReward(treasury, fee);
@@ -594,6 +694,32 @@ contract RoundRewardDistributor is Initializable, AccessControlUpgradeable, Reen
         votingEngine.transferReward(address(this), fee);
         crepToken.forceApprove(address(votingEngine), fee);
         votingEngine.addToConsensusReserve(fee);
+    }
+
+    function _readSettledStaleRound(uint256 contentId, uint256 roundId)
+        internal
+        view
+        returns (RoundLib.Round memory round)
+    {
+        round = _readRound(contentId, roundId);
+        if (round.state != RoundLib.RoundState.Settled) revert RoundNotSettled();
+        if (!_isStaleRound(round)) revert RewardFinalizationTooEarly();
+    }
+
+    function _isStaleRound(RoundLib.Round memory round) internal view returns (bool) {
+        return round.settledAt != 0 && block.timestamp >= uint256(round.settledAt) + STALE_REWARD_FINALIZATION_DELAY;
+    }
+
+    function _finalizableDust(uint256 totalPool, uint256 expectedTotal, uint256 claimedAmount)
+        internal
+        pure
+        returns (uint256)
+    {
+        if (expectedTotal >= totalPool) return 0;
+        uint256 totalDust = totalPool - expectedTotal;
+        uint256 alreadyClaimedDust = claimedAmount > expectedTotal ? claimedAmount - expectedTotal : 0;
+        if (alreadyClaimedDust >= totalDust) return 0;
+        return totalDust - alreadyClaimedDust;
     }
 
     function _syncParticipationRewardSnapshot(
@@ -655,5 +781,5 @@ contract RoundRewardDistributor is Initializable, AccessControlUpgradeable, Reen
     }
 
     // --- Storage Gap for Future Upgrades ---
-    uint256[36] private __gap;
+    uint256[34] private __gap;
 }
