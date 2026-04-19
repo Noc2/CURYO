@@ -97,24 +97,33 @@ contract CuryoReputation is ERC20, ERC1363, ERC20Permit, ERC20Votes, AccessContr
 
     /// @notice Lock tokens for governance participation. Called by governor contract.
     /// @dev Uses a single aggregate lock per address (O(1)) instead of unbounded array.
-    ///      If an active lock exists, the new amount is added and unlock time is extended.
+    ///      Locks up to the account's currently held, not-yet-locked balance. Governance voting
+    ///      uses snapshots, so users who moved tokens after the snapshot can still vote, but any
+    ///      balance they still hold is locked.
+    ///      If an active lock exists, the newly lockable amount is added and unlock time is extended.
     ///      If the previous lock expired, a fresh lock is created.
     /// @param account The account whose tokens to lock
     /// @param amount The amount to lock
     function lockForGovernance(address account, uint256 amount) external {
         require(msg.sender == governor, "Only governor");
         require(amount > 0, "Amount must be > 0");
-        require(balanceOf(account) >= amount, "Insufficient current balance for governance lock");
 
         GovernanceLock storage lock = _governanceLock[account];
         uint256 newUnlockTime = block.timestamp + GOVERNANCE_LOCK_DURATION;
+        uint256 currentBalance = balanceOf(account);
 
         if (lock.unlockTime <= block.timestamp) {
             // Previous lock expired or no lock exists — start fresh
-            lock.amount = amount;
+            uint256 lockAmount = amount > currentBalance ? currentBalance : amount;
+            if (lockAmount == 0) return;
+            lock.amount = lockAmount;
         } else {
-            // Active lock — accumulate
-            lock.amount += amount;
+            // Active lock — accumulate only tokens not already covered by the existing lock.
+            uint256 lockableBalance = currentBalance > lock.amount ? currentBalance - lock.amount : 0;
+            uint256 additionalLock = amount > lockableBalance ? lockableBalance : amount;
+            if (additionalLock > 0) {
+                lock.amount += additionalLock;
+            }
         }
         lock.unlockTime = newUnlockTime;
 

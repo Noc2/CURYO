@@ -148,7 +148,7 @@ contract GovernanceTest is Test {
         token.transfer(address(0x123), VOTER_BALANCE);
     }
 
-    function test_GovernanceLocking_ProposeRevertsIfThresholdTransferredAwayAfterSnapshot() public {
+    function test_GovernanceLocking_ProposeLocksRemainingBalanceAfterSnapshotTransfer() public {
         vm.roll(block.number + 1);
 
         vm.prank(voter1);
@@ -160,11 +160,12 @@ contract GovernanceTest is Test {
         bytes[] memory calldatas = new bytes[](1);
 
         vm.prank(voter1);
-        vm.expectRevert("Insufficient current balance for governance lock");
         governor.propose(targets, values, calldatas, "Transferred away threshold");
+
+        assertEq(token.getLockedBalance(voter1), 1, "remaining current balance should be locked");
     }
 
-    function test_GovernanceLocking_VoteRevertsIfVotingPowerTransferredAwayAfterSnapshot() public {
+    function test_GovernanceLocking_VoteCountsSnapshotAndLocksRemainingBalanceAfterTransfer() public {
         vm.roll(block.number + 1);
 
         address[] memory targets = new address[](1);
@@ -181,8 +182,11 @@ contract GovernanceTest is Test {
         token.transfer(address(0x123), VOTER_BALANCE - 1);
 
         vm.prank(voter2);
-        vm.expectRevert("Insufficient current balance for governance lock");
         governor.castVote(proposalId, 1);
+
+        (, uint256 forVotes,) = governor.proposalVotes(proposalId);
+        assertEq(forVotes, VOTER_BALANCE, "snapshot voting power should still count");
+        assertEq(token.getLockedBalance(voter2), 1, "remaining current balance should be locked");
     }
 
     function test_GovernanceLocking_UnlocksAfter7Days() public {

@@ -315,10 +315,12 @@ contract CuryoReputationBranchesTest is Test {
         assertEq(crep.getTransferableBalance(user1), 500e6);
     }
 
-    function test_GetTransferableBalance_OverLockedReverts() public {
+    function test_LockForGovernance_CapsFreshLockToCurrentBalance() public {
         vm.prank(mockGovernor);
-        vm.expectRevert("Insufficient current balance for governance lock");
         crep.lockForGovernance(user1, 2_000e6);
+
+        assertEq(crep.getLockedBalance(user1), 1_000e6);
+        assertEq(crep.getTransferableBalance(user1), 0);
     }
 
     function test_GetGovernanceLock_Expired_ReturnsZero() public {
