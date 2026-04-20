@@ -1,31 +1,32 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.20;
 
-import { ScaffoldETHDeploy } from "./DeployHelpers.s.sol";
-import { console } from "forge-std/console.sol";
-import { TransparentUpgradeableProxy } from "@openzeppelin/contracts/proxy/transparent/TransparentUpgradeableProxy.sol";
-import { ProxyAdmin } from "@openzeppelin/contracts/proxy/transparent/ProxyAdmin.sol";
-import { IAccessControl } from "@openzeppelin/contracts/access/IAccessControl.sol";
-import { TimelockController } from "@openzeppelin/contracts/governance/TimelockController.sol";
-import { IVotes } from "@openzeppelin/contracts/governance/utils/IVotes.sol";
-import { CuryoReputation } from "../contracts/CuryoReputation.sol";
-import { ContentRegistry } from "../contracts/ContentRegistry.sol";
-import { RoundVotingEngine } from "../contracts/RoundVotingEngine.sol";
-import { RoundRewardDistributor } from "../contracts/RoundRewardDistributor.sol";
-import { FrontendRegistry } from "../contracts/FrontendRegistry.sol";
-import { CategoryRegistry } from "../contracts/CategoryRegistry.sol";
-import { ProfileRegistry } from "../contracts/ProfileRegistry.sol";
-import { ProtocolConfig } from "../contracts/ProtocolConfig.sol";
-import { QuestionRewardPoolEscrow } from "../contracts/QuestionRewardPoolEscrow.sol";
-import { VoterIdNFT } from "../contracts/VoterIdNFT.sol";
-import { CuryoGovernor } from "../contracts/governance/CuryoGovernor.sol";
-import { ParticipationPool } from "../contracts/ParticipationPool.sol";
-import { HumanFaucet } from "../contracts/HumanFaucet.sol";
-import { MockERC20 } from "../contracts/mocks/MockERC20.sol";
-import { MockIdentityVerificationHub } from "../contracts/mocks/MockIdentityVerificationHub.sol";
-import { IIdentityVerificationHubV2 } from "@selfxyz/contracts/contracts/interfaces/IIdentityVerificationHubV2.sol";
-import { SelfStructs } from "@selfxyz/contracts/contracts/libraries/SelfStructs.sol";
-import { SelfUtils } from "@selfxyz/contracts/contracts/libraries/SelfUtils.sol";
+import {ScaffoldETHDeploy} from "./DeployHelpers.s.sol";
+import {console} from "forge-std/console.sol";
+import {TransparentUpgradeableProxy} from "@openzeppelin/contracts/proxy/transparent/TransparentUpgradeableProxy.sol";
+import {ProxyAdmin} from "@openzeppelin/contracts/proxy/transparent/ProxyAdmin.sol";
+import {IAccessControl} from "@openzeppelin/contracts/access/IAccessControl.sol";
+import {TimelockController} from "@openzeppelin/contracts/governance/TimelockController.sol";
+import {IVotes} from "@openzeppelin/contracts/governance/utils/IVotes.sol";
+import {CuryoReputation} from "../contracts/CuryoReputation.sol";
+import {ContentRegistry} from "../contracts/ContentRegistry.sol";
+import {RoundVotingEngine} from "../contracts/RoundVotingEngine.sol";
+import {RoundRewardDistributor} from "../contracts/RoundRewardDistributor.sol";
+import {FrontendRegistry} from "../contracts/FrontendRegistry.sol";
+import {CategoryRegistry} from "../contracts/CategoryRegistry.sol";
+import {FeedbackBonusEscrow} from "../contracts/FeedbackBonusEscrow.sol";
+import {ProfileRegistry} from "../contracts/ProfileRegistry.sol";
+import {ProtocolConfig} from "../contracts/ProtocolConfig.sol";
+import {QuestionRewardPoolEscrow} from "../contracts/QuestionRewardPoolEscrow.sol";
+import {VoterIdNFT} from "../contracts/VoterIdNFT.sol";
+import {CuryoGovernor} from "../contracts/governance/CuryoGovernor.sol";
+import {ParticipationPool} from "../contracts/ParticipationPool.sol";
+import {HumanFaucet} from "../contracts/HumanFaucet.sol";
+import {MockERC20} from "../contracts/mocks/MockERC20.sol";
+import {MockIdentityVerificationHub} from "../contracts/mocks/MockIdentityVerificationHub.sol";
+import {IIdentityVerificationHubV2} from "@selfxyz/contracts/contracts/interfaces/IIdentityVerificationHubV2.sol";
+import {SelfStructs} from "@selfxyz/contracts/contracts/libraries/SelfStructs.sol";
+import {SelfUtils} from "@selfxyz/contracts/contracts/libraries/SelfUtils.sol";
 
 /// @notice Deploy script for all Curyo contracts with transparent proxies.
 /// @dev Core protocol voting uses cREP; bounty escrow deployments also wire USDC test collateral.
@@ -138,6 +139,7 @@ contract DeployCuryo is ScaffoldETHDeploy {
         ProfileRegistry profileRegistryImpl = new ProfileRegistry();
         ProtocolConfig protocolConfigImpl = new ProtocolConfig();
         QuestionRewardPoolEscrow questionRewardPoolEscrowImpl = new QuestionRewardPoolEscrow();
+        FeedbackBonusEscrow feedbackBonusEscrowImpl = new FeedbackBonusEscrow();
 
         // 5. Deploy transparent proxies with initialization (governance owns each ProxyAdmin)
         TransparentUpgradeableProxy frontendRegistryProxy = new TransparentUpgradeableProxy(
@@ -222,6 +224,15 @@ contract DeployCuryo is ScaffoldETHDeploy {
         );
         QuestionRewardPoolEscrow questionRewardPoolEscrow =
             QuestionRewardPoolEscrow(address(questionRewardPoolEscrowProxy));
+        TransparentUpgradeableProxy feedbackBonusEscrowProxy = new TransparentUpgradeableProxy(
+            address(feedbackBonusEscrowImpl),
+            governance,
+            abi.encodeCall(
+                FeedbackBonusEscrow.initialize,
+                (governance, usdcTokenAddress, address(registry), address(votingEngine), address(voterIdNFT))
+            )
+        );
+        FeedbackBonusEscrow feedbackBonusEscrow = FeedbackBonusEscrow(address(feedbackBonusEscrowProxy));
 
         // 8. Wire contracts together (deployer uses temporary config/admin roles where needed)
         registry.setVotingEngine(address(votingEngine));
@@ -436,6 +447,7 @@ contract DeployCuryo is ScaffoldETHDeploy {
                 protocolConfig: protocolConfig,
                 rewardDistributor: rewardDistributor,
                 questionRewardPoolEscrow: questionRewardPoolEscrow,
+                feedbackBonusEscrow: feedbackBonusEscrow,
                 frontendRegistry: frontendRegistry,
                 profileRegistry: profileRegistry,
                 categoryRegistry: categoryRegistry,
@@ -464,6 +476,7 @@ contract DeployCuryo is ScaffoldETHDeploy {
         deployments.push(Deployment("ProtocolConfig", address(protocolConfigProxy)));
         deployments.push(Deployment("RoundRewardDistributor", address(rewardDistributorProxy)));
         deployments.push(Deployment("QuestionRewardPoolEscrow", address(questionRewardPoolEscrowProxy)));
+        deployments.push(Deployment("FeedbackBonusEscrow", address(feedbackBonusEscrowProxy)));
         if (isLocalDev && usdcTokenAddress != address(0)) {
             deployments.push(Deployment("MockERC20", usdcTokenAddress));
         }
@@ -484,6 +497,7 @@ contract DeployCuryo is ScaffoldETHDeploy {
         console.log("ProtocolConfig:", address(protocolConfig));
         console.log("RoundRewardDistributor:", address(rewardDistributor));
         console.log("QuestionRewardPoolEscrow:", address(questionRewardPoolEscrow));
+        console.log("FeedbackBonusEscrow:", address(feedbackBonusEscrow));
         console.log("USDC token:", usdcTokenAddress);
         console.log("CategoryRegistry:", address(categoryRegistry));
         console.log("VoterIdNFT:", address(voterIdNFT));
@@ -686,6 +700,7 @@ contract DeployCuryo is ScaffoldETHDeploy {
         ProtocolConfig protocolConfig,
         RoundRewardDistributor rewardDistributor,
         QuestionRewardPoolEscrow questionRewardPoolEscrow,
+        FeedbackBonusEscrow feedbackBonusEscrow,
         FrontendRegistry frontendRegistry,
         ProfileRegistry profileRegistry,
         CategoryRegistry categoryRegistry,
@@ -785,6 +800,26 @@ contract DeployCuryo is ScaffoldETHDeploy {
         );
 
         _requireHasRole(
+            address(feedbackBonusEscrow),
+            feedbackBonusEscrow.DEFAULT_ADMIN_ROLE(),
+            governance,
+            "FeedbackBonusEscrow governance default admin"
+        );
+        _requireHasRole(
+            address(feedbackBonusEscrow),
+            feedbackBonusEscrow.CONFIG_ROLE(),
+            governance,
+            "FeedbackBonusEscrow governance config"
+        );
+        _requireHasRole(
+            address(feedbackBonusEscrow),
+            feedbackBonusEscrow.PAUSER_ROLE(),
+            governance,
+            "FeedbackBonusEscrow governance pauser"
+        );
+        _requireProxyAdminOwner(address(feedbackBonusEscrow), governance, "FeedbackBonusEscrow proxy admin owner");
+
+        _requireHasRole(
             address(frontendRegistry),
             frontendRegistry.DEFAULT_ADMIN_ROLE(),
             governance,
@@ -849,6 +884,12 @@ contract DeployCuryo is ScaffoldETHDeploy {
         _require(
             address(questionRewardPoolEscrow.usdcToken()) == _resolveCeloUsdcAddress(), "QuestionRewardPoolEscrow USDC"
         );
+        _require(address(feedbackBonusEscrow.voterIdNFT()) == address(voterIdNFT), "FeedbackBonusEscrow voterIdNFT");
+        _require(address(feedbackBonusEscrow.registry()) == address(registry), "FeedbackBonusEscrow registry");
+        _require(
+            address(feedbackBonusEscrow.votingEngine()) == address(votingEngine), "FeedbackBonusEscrow voting engine"
+        );
+        _require(address(feedbackBonusEscrow.usdcToken()) == _resolveCeloUsdcAddress(), "FeedbackBonusEscrow USDC");
         _require(voterIdNFT.owner() == governance, "VoterIdNFT governance owner");
         _require(participationPool.owner() == governance, "ParticipationPool governance owner");
         if (address(humanFaucet) != address(0)) {
