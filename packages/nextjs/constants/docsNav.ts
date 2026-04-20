@@ -3,8 +3,8 @@ export const DOCS_NAV = [
     section: "Start Here",
     links: [
       { label: "Introduction", href: "/docs" },
-      { label: "AI Feedback", href: "/docs/ai" },
       { label: "How It Works", href: "/docs/how-it-works" },
+      { label: "AI Feedback", href: "/docs/ai" },
     ],
   },
   {
