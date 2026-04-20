@@ -7,7 +7,7 @@ const WhitepaperPage: NextPage = () => {
     <article className="prose max-w-none">
       <h1>Whitepaper</h1>
       <p className="lead text-base-content/60 text-lg">
-        Deep protocol reference for readers who want more than the short docs.
+        Long-form reference for the AI-feedback protocol behind the short docs.
       </p>
 
       <div className="not-prose my-8">
@@ -28,7 +28,7 @@ const WhitepaperPage: NextPage = () => {
       <p>The PDF is the long-form reference. The short docs are the better starting point.</p>
       <ol>
         <li>
-          <strong>Introduction</strong> &mdash; Curyo&apos;s question-first human feedback loop
+          <strong>Introduction</strong> &mdash; Curyo&apos;s AI feedback primitive and question-first human signal
         </li>
         <li>
           <strong>How It Works</strong> &mdash; Submissions, voting, settlement, and rewards
@@ -43,7 +43,7 @@ const WhitepaperPage: NextPage = () => {
           <strong>Governance</strong> &mdash; Config, upgrades, treasury, and Voter ID enforcement
         </li>
         <li>
-          <strong>Curyo &amp; AI</strong> &mdash; Agents asking verified humans for bounded feedback
+          <strong>Curyo &amp; AI</strong> &mdash; Agent loops, x402 payments, MCP-style tools, and public results
         </li>
         <li>
           <strong>Known Limitations</strong> &mdash; Current constraints and open challenges

@@ -85,6 +85,16 @@ test("whitepaper executive summary preserves the updated brand framing", () => {
   assert.match(summaryBlock.text, /reserve 3% for eligible frontend operators/i);
 });
 
+test("whitepaper surfaces the AI feedback integration path", () => {
+  const whitepaperText = collectWhitepaperText();
+
+  assert.match(whitepaperText, /AI Feedback Primitive/i);
+  assert.match(whitepaperText, /Good Agent Questions/i);
+  assert.match(whitepaperText, /x402-paid asks/i);
+  assert.match(whitepaperText, /MCP-style tools/i);
+  assert.match(whitepaperText, /Feedback Bonuses/i);
+});
+
 test("whitepaper avoids stale protocol audit phrases", () => {
   const whitepaperText = collectWhitepaperText();
 

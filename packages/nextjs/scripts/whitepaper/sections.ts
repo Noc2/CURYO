@@ -1204,10 +1204,97 @@ export const SECTIONS: Section[] = [
   // ── 6. Curyo & AI ──
   {
     title: "Curyo & AI",
-    lead: "How agents can ask verified humans for bounded feedback and reuse the public result.",
+    lead: "How agents ask verified humans for bounded feedback, pay for the work, and reuse the public result.",
     subsections: [
       {
-        heading: "The Model Collapse Problem",
+        heading: "Agent Feedback Loop",
+        blocks: [
+          {
+            type: "paragraph",
+            text: "Curyo incorporates AI primarily as an asker and integrator. An agent can submit the question it cannot answer with confidence, attach the required context URL and bounty, wait for verified humans to stake judgment, read hidden feedback after settlement, then store the settled result URL in its audit trail.",
+          },
+          {
+            type: "paragraph",
+            text: "Submission bots publish the same question-first metadata as humans: short question, required context URL, optional preview media, category, bounty terms, and governed round settings. Keeping that shape identical makes the returned signal easy for both people and machines to read.",
+          },
+          {
+            type: "ordered",
+            items: [
+              "Detect uncertainty or a high-cost decision.",
+              "Submit a short question, source URL, optional media, bounty, and round settings.",
+              "Let verified humans vote with hidden cREP stakes during the blind phase.",
+              "Let voters add hidden feedback for ambiguity, source quality, local context, or vote rationale.",
+              "Read the settled score, revealed votes, unlocked feedback, and reward metadata.",
+              "Store the Curyo result URL alongside the agent's decision record.",
+            ],
+          },
+        ],
+      },
+      {
+        heading: "Good Agent Questions",
+        blocks: [
+          {
+            type: "paragraph",
+            text: "Curyo is most useful when a model's confidence is not enough, when social judgment matters, or when the cost of a wrong answer is higher than the cost of asking.",
+          },
+          {
+            type: "table",
+            data: {
+              headers: ["Use case", "Example question"],
+              rows: [
+                ["Evidence quality", "Does this source support the claim?"],
+                ["Usefulness", "Is this answer helpful for a beginner?"],
+                ["Taste or clarity", "Which generated image better matches the brief?"],
+                ["Local context", "Does this venue look open and trustworthy?"],
+                ["Action review", "Should this agent send this message?"],
+              ],
+            },
+          },
+        ],
+      },
+      {
+        heading: "Payments, Tools, and Result Reads",
+        blocks: [
+          {
+            type: "paragraph",
+            text: "The payment path should feel like an API call, not a crypto workflow. The hosted /api/x402/questions route accepts a normalized question payload, returns an x402 payment challenge, settles Celo USDC, and submits the question plus USDC bounty on-chain from the configured executor wallet.",
+          },
+          {
+            type: "bullets",
+            items: [
+              "Use deterministic client request IDs so retries do not double-submit or double-pay.",
+              "Keep bot spend limits explicit before asking humans.",
+              "Return content IDs, reward-pool IDs, operation keys, transaction hashes, and status URLs to the agent.",
+              "Expose narrow MCP-style tools such as quote, ask_humans, get_status, get_result, list_categories, and get_bot_balance instead of raw transaction access.",
+            ],
+          },
+          {
+            type: "paragraph",
+            text: "The result is a public human judgment signal, not a private approval click and not a claim of absolute truth. Agents should cite the Curyo result URL, preserve the question context, and treat the settled signal as one auditable input to a later decision.",
+          },
+        ],
+      },
+      {
+        heading: "Feedback Bonuses",
+        blocks: [
+          {
+            type: "paragraph",
+            text: "A question can also carry an optional USDC Feedback Bonus. It is separate from the voter bounty and is meant for notes that make the result more useful to an agent, such as source-quality caveats, local context, ambiguity, or a concise vote rationale.",
+          },
+          {
+            type: "bullets",
+            items: [
+              "Only wallets that voted in the active round can submit feedback.",
+              "Feedback stays off-chain and hidden until settlement; the app stores a canonical hash for each note.",
+              "An awarder can pay a revealed, independent voter by awarding that feedback hash on-chain.",
+              "The award transaction pays the voter immediately and sends a 3% share to the vote-attributed frontend when eligible.",
+              "Expired, unawarded USDC goes to treasury.",
+            ],
+          },
+        ],
+      },
+      {
+        heading: "Model Collapse and Public Signals",
         blocks: [
           {
             type: "paragraph",
@@ -1268,23 +1355,6 @@ export const SECTIONS: Section[] = [
         ],
       },
       {
-        heading: "Agent Feedback Loop",
-        blocks: [
-          {
-            type: "paragraph",
-            text: "Curyo incorporates AI primarily as an asker and integrator. An agent can submit the question it cannot answer, attach the required context URL and bounty, wait for verified humans to stake judgment, read hidden feedback after settlement, then store the settled result in its audit trail.",
-          },
-          {
-            type: "paragraph",
-            text: "Submission bots publish the same question-first metadata as humans: short question, required context URL, optional preview media, category, bounty terms, and governed round settings. Keeping that shape identical makes the returned signal easy for both people and machines to read.",
-          },
-          {
-            type: "paragraph",
-            text: "Reference bot tooling can still submit, read, and vote under the same protocol rules, but the product story is narrower: when an autonomous system is uncertain, it can buy human feedback instead of pretending certainty.",
-          },
-        ],
-      },
-      {
         heading: "SDK & Reference Stack",
         blocks: [
           {
@@ -1295,7 +1365,8 @@ export const SECTIONS: Section[] = [
             type: "bullets",
             items: [
               "SDK: @curyo/sdk provides hosted read helpers, vote transaction payload builders, and frontend attribution helpers while staying wallet-agnostic.",
-              "Operator stack: the monorepo includes the Next.js app, Ponder/Postgres API, keeper service, bot CLI, SDK, shared contract metadata, and Solidity contracts. Operators can self-host these pieces or use hosted endpoints where available.",
+              "Bot package: the reference CLI can submit direct on-chain questions or pay the hosted x402 endpoint in Celo USDC.",
+              "Operator stack: the monorepo includes the Next.js app, Ponder/Postgres API, keeper service, bot CLI, SDK, shared contract metadata, Solidity contracts, and the hosted x402 submission route. Operators can self-host these pieces or use hosted endpoints where available.",
             ],
           },
         ],
@@ -1313,7 +1384,7 @@ export const SECTIONS: Section[] = [
               "Cross-platform quality oracle  -- On-chain content ratings can serve as an oracle for other protocols and platforms, creating a shared quality layer across the decentralized web.",
               "Expertise-weighted reputation  -- Domain-specific reputation multipliers could allow voters with demonstrated accuracy in specific categories to earn additional influence, improving signal quality in specialized domains.",
               "Content provenance integration  -- Combining Curyo ratings with content provenance standards (C2PA) would create a two-layered trust system: provenance verifies origin, stake-weighted curation verifies quality.",
-              "Agent feedback templates  -- Common question shapes can help agents ask clear questions and parse settled results without brittle natural-language scraping.",
+              "Agent feedback templates  -- Common question shapes such as yes/no/unsure, pairwise choice, fact check, moderation, authenticity, and action review can help agents ask clear questions and parse settled results without brittle natural-language scraping.",
             ],
           },
         ],
