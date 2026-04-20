@@ -71,6 +71,32 @@ export const watchedContent = pgTable(
   }),
 );
 
+export const contentFeedback = pgTable(
+  "content_feedback",
+  {
+    id: serial("id").primaryKey(),
+    contentId: text("content_id").notNull(),
+    roundId: text("round_id"),
+    authorAddress: text("author_address").notNull(),
+    feedbackType: text("feedback_type").notNull(),
+    body: text("body").notNull(),
+    sourceUrl: text("source_url"),
+    moderationStatus: text("moderation_status").notNull().default("approved"),
+    visibilityStatus: text("visibility_status").notNull().default("hidden_until_settlement"),
+    createdAt: timestamp("created_at", { mode: "date", withTimezone: true }).notNull(),
+    updatedAt: timestamp("updated_at", { mode: "date", withTimezone: true }).notNull(),
+    deletedAt: timestamp("deleted_at", { mode: "date", withTimezone: true }),
+  },
+  table => ({
+    contentCreatedAtIdx: index("content_feedback_content_created_at_idx").on(table.contentId, table.createdAt),
+    contentRoundIdx: index("content_feedback_content_round_idx").on(table.contentId, table.roundId),
+    authorCreatedAtIdx: index("content_feedback_author_created_at_idx").on(table.authorAddress, table.createdAt),
+  }),
+);
+
+export type ContentFeedback = typeof contentFeedback.$inferSelect;
+export type NewContentFeedback = typeof contentFeedback.$inferInsert;
+
 export const profileFollows = pgTable(
   "profile_follows",
   {

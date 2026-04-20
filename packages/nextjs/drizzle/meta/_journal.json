@@ -15,6 +15,13 @@
       "when": 1776433747458,
       "tag": "0001_free_vengeance",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1776665730295,
+      "tag": "0002_parched_wasp",
+      "breakpoints": true
     }
   ]
 }
