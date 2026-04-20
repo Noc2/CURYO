@@ -1148,12 +1148,21 @@ export function ContentSubmissionSection() {
     </div>
   );
 
+  const bountyTooltipText =
+    "Required and non-refundable. Paid from your wallet into escrow when the question is submitted. Set the terms that eligible voters must satisfy before payout.";
+  const requiredVotersTooltipText = `At least ${MIN_REWARD_POOL_REQUIRED_VOTERS} voters are required. This cannot exceed the selected voter cap.`;
+  const requiredRoundsTooltipText = `At least ${MIN_REWARD_POOL_SETTLED_ROUNDS} round is required before the bounty can pay out.`;
+  const roundSettingsTooltipText =
+    "Governance sets the allowed range. Urgent bounties can use shorter rounds; broader questions can wait for more voters.";
+  const bountyExpiryTooltipText =
+    "No expiry keeps the bounty open until it is filled or the contract rules move it along. Duration sets how many days it stays open.";
+
   const bountyDetailsCard = (
     <div className="surface-card-nested rounded-2xl p-4 space-y-4">
       <div className="flex items-start justify-between gap-3">
         <p className="flex items-center gap-1.5 text-base font-medium text-base-content">
           Bounty
-          <InfoTooltip text="Required and non-refundable. Set the terms that eligible voters must satisfy before payout." />
+          <InfoTooltip text={bountyTooltipText} />
         </p>
         <span className="shrink-0 text-sm font-semibold text-base-content/60">
           Min {formatSubmissionRewardAmount(minimumBountyAmount, rewardAsset)}
@@ -1194,17 +1203,14 @@ export function ContentSubmissionSection() {
         />
         <span className="text-sm font-semibold text-base-content/50">{rewardAsset === "crep" ? "cREP" : "USDC"}</span>
       </label>
-      {bountyStepAttempted && rewardAmountError ? (
-        <p className="text-base text-error">{rewardAmountError}</p>
-      ) : (
-        <p className="text-sm text-base-content/55">
-          Paid from your wallet into the escrow when the question is submitted.
-        </p>
-      )}
+      {bountyStepAttempted && rewardAmountError ? <p className="text-base text-error">{rewardAmountError}</p> : null}
 
       <div className="grid gap-3 sm:grid-cols-2">
-        <label className="form-control">
-          <span className="label-text">Minimum voters</span>
+        <div className="form-control">
+          <span className="label-text flex items-center gap-1.5">
+            Minimum voters
+            <InfoTooltip text={requiredVotersTooltipText} />
+          </span>
           <input
             type="number"
             min={MIN_REWARD_POOL_REQUIRED_VOTERS}
@@ -1215,13 +1221,13 @@ export function ContentSubmissionSection() {
               bountyStepAttempted && rewardRequiredVotersError ? "input-error" : ""
             }`}
           />
-          <span className="label-text-alt text-base-content/50">
-            At least {MIN_REWARD_POOL_REQUIRED_VOTERS} voters are required.
-          </span>
-        </label>
+        </div>
 
-        <label className="form-control">
-          <span className="label-text">Settlement rounds</span>
+        <div className="form-control">
+          <span className="label-text flex items-center gap-1.5">
+            Settlement rounds
+            <InfoTooltip text={requiredRoundsTooltipText} />
+          </span>
           <input
             type="number"
             min={MIN_REWARD_POOL_SETTLED_ROUNDS}
@@ -1232,10 +1238,7 @@ export function ContentSubmissionSection() {
               bountyStepAttempted && rewardRequiredSettledRoundsError ? "input-error" : ""
             }`}
           />
-          <span className="label-text-alt text-base-content/50">
-            At least {MIN_REWARD_POOL_SETTLED_ROUNDS} round is required.
-          </span>
-        </label>
+        </div>
       </div>
       {bountyStepAttempted && rewardRequiredVotersError ? (
         <p className="text-base text-error">{rewardRequiredVotersError}</p>
@@ -1248,7 +1251,7 @@ export function ContentSubmissionSection() {
         <div className="flex items-start justify-between gap-3">
           <p className="flex items-center gap-1.5 text-base font-medium text-base-content">
             Round settings
-            <InfoTooltip text="Governance sets the allowed range. Choose what this question needs." />
+            <InfoTooltip text={roundSettingsTooltipText} />
           </p>
           <span className="text-sm font-semibold text-base-content/50">
             Default {formatDurationLabel(roundConfigDefaults.epochDuration)}
@@ -1331,15 +1334,14 @@ export function ContentSubmissionSection() {
 
         {bountyStepAttempted && roundConfigValidationError ? (
           <p className="text-base text-error">{roundConfigValidationError}</p>
-        ) : (
-          <p className="text-sm text-base-content/55">
-            Urgent bounties can use shorter rounds; broader questions can wait for more voters.
-          </p>
-        )}
+        ) : null}
       </div>
 
       <div className="space-y-2">
-        <p className="text-sm font-medium text-base-content/60">Bounty expiry (optional)</p>
+        <p className="flex items-center gap-1.5 text-sm font-medium text-base-content/80">
+          Bounty expiry (optional)
+          <InfoTooltip text={bountyExpiryTooltipText} />
+        </p>
         <div className="grid grid-cols-2 gap-2">
           <button
             type="button"
@@ -1371,13 +1373,8 @@ export function ContentSubmissionSection() {
                 bountyStepAttempted && rewardExpiryError ? "input-error" : ""
               }`}
             />
-            <span className="label-text-alt text-base-content/50">Leave it off to keep the bounty open-ended.</span>
           </label>
-        ) : (
-          <p className="text-sm text-base-content/55">
-            The bounty stays open until it is filled or the contract rules move it along.
-          </p>
-        )}
+        ) : null}
         {bountyStepAttempted && rewardExpiryError ? <p className="text-base text-error">{rewardExpiryError}</p> : null}
       </div>
     </div>
