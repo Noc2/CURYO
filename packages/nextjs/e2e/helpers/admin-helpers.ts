@@ -516,9 +516,9 @@ async function readRoundAtBlock(
 
 /**
  * Add seeded category metadata directly.
- * Calls CategoryRegistry.addApprovedCategory(string, string, string[]).
+ * Calls CategoryRegistry.addCategory(string, string, string[]).
  */
-export async function addApprovedCategory(
+export async function addCategory(
   name: string,
   slug: string,
   subcategories: string[],
@@ -529,7 +529,7 @@ export async function addApprovedCategory(
   const data = encodeFunctionData({
     abi: [
       {
-        name: "addApprovedCategory",
+        name: "addCategory",
         type: "function",
         inputs: [
           { name: "name", type: "string" },
@@ -540,7 +540,7 @@ export async function addApprovedCategory(
         stateMutability: "nonpayable",
       },
     ],
-    functionName: "addApprovedCategory",
+    functionName: "addCategory",
     args: [name, slug, subcategories],
   });
   return sendTx(fromAddress, contractAddress, data);

@@ -52,7 +52,7 @@ afterEach(() => {
 });
 
 describe("CategoryRegistry ponder handlers", () => {
-  it("stores the CategoryAdded slug in the legacy domain column", async () => {
+  it("stores the CategoryAdded slug", async () => {
     const { db, upsertCalls } = createDb();
 
     const registeredHandlers = await loadHandlers();
@@ -80,14 +80,14 @@ describe("CategoryRegistry ponder handlers", () => {
         values: {
           id: 1n,
           name: "Products",
-          domain: "products",
+          slug: "products",
           createdAt: 1_776_351_559n,
           totalVotes: 0,
           totalContent: 0,
         },
         update: {
           name: "Products",
-          domain: "products",
+          slug: "products",
         },
       },
     ]);

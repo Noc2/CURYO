@@ -481,7 +481,7 @@ export interface PonderRatingChange {
 export interface PonderCategory {
   id: string;
   name: string;
-  domain: string;
+  slug: string;
   createdAt: string;
   totalVotes: number;
   totalContent: number;

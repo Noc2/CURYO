@@ -145,7 +145,7 @@ export async function ponderGet(path: string, baseURL = PONDER_URL): Promise<any
 export type CategoryItem = {
   id: string;
   name: string;
-  domain: string; // legacy API field name; stores the seeded category slug
+  slug: string;
   totalVotes: number;
   totalContent: number;
   createdAt: string;

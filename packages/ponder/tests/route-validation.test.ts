@@ -52,9 +52,9 @@ function mockPonderModules<T>(result: T) {
   }));
   vi.doMock("ponder:schema", () => ({
     category: {
-      domain: "category.domain",
       id: "category.id",
       name: "category.name",
+      slug: "category.slug",
       totalVotes: "category.totalVotes",
     },
     content: {
@@ -423,7 +423,7 @@ describe("registerContentRoutes", () => {
     const whereArg = queryBuilder.where.mock.calls[0]?.[0];
     const serialized = serializeExpression(whereArg);
 
-    expect(serialized).toContain("category.domain");
+    expect(serialized).toContain("category.slug");
     expect(serialized).toContain("category.name");
   });
 

@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.24;
 
-import {AccessControl} from "@openzeppelin/contracts/access/AccessControl.sol";
-import {ICategoryRegistry} from "./interfaces/ICategoryRegistry.sol";
+import { AccessControl } from "@openzeppelin/contracts/access/AccessControl.sol";
+import { ICategoryRegistry } from "./interfaces/ICategoryRegistry.sol";
 
 /// @title CategoryRegistry
 /// @notice Seed-only discovery category metadata.
@@ -39,7 +39,7 @@ contract CategoryRegistry is ICategoryRegistry, AccessControl {
     /// @param name Display name, e.g. "Product".
     /// @param slug Stable discovery key, e.g. "product".
     /// @param subcategories Suggested tags shown under this category.
-    function addApprovedCategory(string calldata name, string calldata slug, string[] calldata subcategories)
+    function addCategory(string calldata name, string calldata slug, string[] calldata subcategories)
         external
         onlyRole(ADMIN_ROLE)
         returns (uint256 categoryId)
@@ -63,11 +63,7 @@ contract CategoryRegistry is ICategoryRegistry, AccessControl {
 
         categoryId = nextCategoryId++;
         _categories[categoryId] = Category({
-            id: categoryId,
-            name: name,
-            domain: normalizedSlug,
-            subcategories: subcategories,
-            createdAt: block.timestamp
+            id: categoryId, name: name, slug: normalizedSlug, subcategories: subcategories, createdAt: block.timestamp
         });
 
         _slugToCategoryId[slugHash] = categoryId;
@@ -76,7 +72,7 @@ contract CategoryRegistry is ICategoryRegistry, AccessControl {
         emit CategoryAdded(categoryId, name, normalizedSlug);
     }
 
-    function isApprovedCategory(uint256 categoryId) external view override returns (bool) {
+    function isCategory(uint256 categoryId) external view override returns (bool) {
         return _categories[categoryId].id != 0;
     }
 
@@ -85,15 +81,14 @@ contract CategoryRegistry is ICategoryRegistry, AccessControl {
         return _categories[categoryId];
     }
 
-    /// @dev Legacy name retained for callers migrating from domain-based categories. The argument is a slug now.
-    function getCategoryByDomain(string calldata slug) external view override returns (Category memory) {
+    function getCategoryBySlug(string calldata slug) external view override returns (Category memory) {
         bytes32 slugHash = keccak256(bytes(_normalizeSlug(slug)));
         uint256 categoryId = _slugToCategoryId[slugHash];
         require(categoryId != 0, "Category not registered");
         return _categories[categoryId];
     }
 
-    function getApprovedCategoryIdsPaginated(uint256 offset, uint256 limit)
+    function getCategoryIdsPaginated(uint256 offset, uint256 limit)
         external
         view
         returns (uint256[] memory categoryIds, uint256 total)

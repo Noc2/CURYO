@@ -29,7 +29,7 @@ function readDeployedCategoryCatalog() {
   const deployScriptPath = fileURLToPath(new URL("../../../foundry/script/DeployCuryo.s.sol", import.meta.url));
   const deployScript = readFileSync(deployScriptPath, "utf8");
 
-  return [...deployScript.matchAll(/registry\.addApprovedCategory\("([^"]+)"/g)].map((match, index) => ({
+  return [...deployScript.matchAll(/registry\.addCategory\("([^"]+)"/g)].map((match, index) => ({
     categoryId: BigInt(index + 1),
     categoryName: match[1],
   }));

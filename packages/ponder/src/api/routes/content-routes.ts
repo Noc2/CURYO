@@ -547,7 +547,7 @@ export function registerContentRoutes(app: ApiApp) {
 
   app.get("/categories", async (c) => {
     const where = buildAllowedCategoryCondition({
-      slug: category.domain,
+      slug: category.slug,
       name: category.name,
     });
     const offset = safeOffset(c.req.query("offset"));

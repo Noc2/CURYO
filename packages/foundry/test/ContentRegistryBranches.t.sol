@@ -1,20 +1,20 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.20;
 
-import {Test, stdStorage, StdStorage} from "forge-std/Test.sol";
-import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
-import {ContentRegistry} from "../contracts/ContentRegistry.sol";
-import {RoundVotingEngine} from "../contracts/RoundVotingEngine.sol";
-import {ProtocolConfig} from "../contracts/ProtocolConfig.sol";
-import {RoundRewardDistributor} from "../contracts/RoundRewardDistributor.sol";
-import {CuryoReputation} from "../contracts/CuryoReputation.sol";
-import {ParticipationPool} from "../contracts/ParticipationPool.sol";
-import {RoundLib} from "../contracts/libraries/RoundLib.sol";
-import {RoundEngineReadHelpers} from "./helpers/RoundEngineReadHelpers.sol";
-import {MockVoterIdNFT} from "./mocks/MockVoterIdNFT.sol";
-import {MockCategoryRegistry} from "../contracts/mocks/MockCategoryRegistry.sol";
-import {MockQuestionRewardPoolEscrow} from "./mocks/MockQuestionRewardPoolEscrow.sol";
-import {VotingTestBase} from "./helpers/VotingTestHelpers.sol";
+import { Test, stdStorage, StdStorage } from "forge-std/Test.sol";
+import { ERC1967Proxy } from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
+import { ContentRegistry } from "../contracts/ContentRegistry.sol";
+import { RoundVotingEngine } from "../contracts/RoundVotingEngine.sol";
+import { ProtocolConfig } from "../contracts/ProtocolConfig.sol";
+import { RoundRewardDistributor } from "../contracts/RoundRewardDistributor.sol";
+import { CuryoReputation } from "../contracts/CuryoReputation.sol";
+import { ParticipationPool } from "../contracts/ParticipationPool.sol";
+import { RoundLib } from "../contracts/libraries/RoundLib.sol";
+import { RoundEngineReadHelpers } from "./helpers/RoundEngineReadHelpers.sol";
+import { MockVoterIdNFT } from "./mocks/MockVoterIdNFT.sol";
+import { MockCategoryRegistry } from "../contracts/mocks/MockCategoryRegistry.sol";
+import { MockQuestionRewardPoolEscrow } from "./mocks/MockQuestionRewardPoolEscrow.sol";
+import { VotingTestBase } from "./helpers/VotingTestHelpers.sol";
 
 // =========================================================================
 // TEST CONTRACT
@@ -206,7 +206,7 @@ contract ContentRegistryBranchesTest is VotingTestBase {
             expiresAt: rewardPoolExpiresAt
         });
         reservation.roundConfig =
-            RoundLib.RoundConfig({epochDuration: 1 hours, maxDuration: 7 days, minVoters: 3, maxVoters: 1000});
+            RoundLib.RoundConfig({ epochDuration: 1 hours, maxDuration: 7 days, minVoters: 3, maxVoters: 1000 });
         return _reserveQuestionSubmission(reservation);
     }
 
@@ -304,7 +304,7 @@ contract ContentRegistryBranchesTest is VotingTestBase {
     // submitContent BRANCHES
     // =========================================================================
 
-    function test_SubmitQuestion_AllowsImageUrlWithApprovedCategory() public {
+    function test_SubmitQuestion_AllowsImageUrlWithCategory() public {
         string memory url = "https://unmapped.example/reviews/widget-1.jpg";
         string memory title = "Does this product look useful?";
         string memory description = "A subjective product review question with a required image link.";
@@ -356,7 +356,8 @@ contract ContentRegistryBranchesTest is VotingTestBase {
         vm.startPrank(submitter);
         crepToken.approve(address(registry), 10e6);
         vm.expectRevert("Invalid media URL");
-        registry.submitQuestion("https://example.com/context",
+        registry.submitQuestion(
+            "https://example.com/context",
             _singleImageUrls("https://example.com/reviews/widget-1"),
             "",
             "Question?",
@@ -368,7 +369,7 @@ contract ContentRegistryBranchesTest is VotingTestBase {
         vm.stopPrank();
     }
 
-    function test_SubmitQuestion_AllowsYouTubeVideoWithApprovedCategory() public {
+    function test_SubmitQuestion_AllowsYouTubeVideoWithCategory() public {
         string memory url = "https://www.youtube.com/watch?v=jNQXAC9IVRw";
         string memory title = "Is this video clear?";
         string memory description = "A subjective video review question.";
@@ -380,10 +381,21 @@ contract ContentRegistryBranchesTest is VotingTestBase {
         crepToken.approve(address(registry), 10e6);
         string[] memory imageUrls = _emptyImageUrls();
         bytes32 submissionKey = _reserveQuestionMediaSubmission(
-            registry, "https://example.com/context", imageUrls, url, title, description, tags, categoryId, salt, submitter
+            registry,
+            "https://example.com/context",
+            imageUrls,
+            url,
+            title,
+            description,
+            tags,
+            categoryId,
+            salt,
+            submitter
         );
         vm.warp(block.timestamp + 1);
-        uint256 id = registry.submitQuestion("https://example.com/context", imageUrls, url, title, description, tags, categoryId, salt);
+        uint256 id = registry.submitQuestion(
+            "https://example.com/context", imageUrls, url, title, description, tags, categoryId, salt
+        );
         vm.stopPrank();
 
         (,,,,,,,,, uint256 storedCategoryId) = registry.contents(id);
@@ -420,7 +432,9 @@ contract ContentRegistryBranchesTest is VotingTestBase {
             DEFAULT_SUBMISSION_REWARD_EXPIRES_AT
         );
         vm.warp(block.timestamp + 1);
-        uint256 id = registry.submitQuestion("https://example.com/context", imageUrls, "", title, description, tags, categoryId, salt);
+        uint256 id = registry.submitQuestion(
+            "https://example.com/context", imageUrls, "", title, description, tags, categoryId, salt
+        );
         vm.stopPrank();
 
         (,, address rawSubmitter,,,,,,, uint64 storedCategoryId) = registry.contents(id);
@@ -457,7 +471,9 @@ contract ContentRegistryBranchesTest is VotingTestBase {
         );
         vm.warp(block.timestamp + 1);
         vm.expectRevert("Reservation not found");
-        registry.submitQuestion("https://example.com/context", changedImageUrls, "", title, description, tags, categoryId, salt);
+        registry.submitQuestion(
+            "https://example.com/context", changedImageUrls, "", title, description, tags, categoryId, salt
+        );
         vm.stopPrank();
     }
 
@@ -568,7 +584,7 @@ contract ContentRegistryBranchesTest is VotingTestBase {
             expiresAt: block.timestamp + 14 days
         });
         RoundLib.RoundConfig memory roundConfig =
-            RoundLib.RoundConfig({epochDuration: 1 hours, maxDuration: 2 hours, minVoters: 4, maxVoters: 5});
+            RoundLib.RoundConfig({ epochDuration: 1 hours, maxDuration: 2 hours, minVoters: 4, maxVoters: 5 });
 
         vm.startPrank(submitter);
         crepToken.approve(address(mockQuestionRewardPoolEscrow), rewardTerms.amount);
@@ -613,9 +629,9 @@ contract ContentRegistryBranchesTest is VotingTestBase {
             expiresAt: DEFAULT_SUBMISSION_REWARD_EXPIRES_AT
         });
         RoundLib.RoundConfig memory reservedConfig =
-            RoundLib.RoundConfig({epochDuration: 1 hours, maxDuration: 2 hours, minVoters: 3, maxVoters: 4});
+            RoundLib.RoundConfig({ epochDuration: 1 hours, maxDuration: 2 hours, minVoters: 3, maxVoters: 4 });
         RoundLib.RoundConfig memory alteredConfig =
-            RoundLib.RoundConfig({epochDuration: 1 hours, maxDuration: 3 hours, minVoters: 3, maxVoters: 4});
+            RoundLib.RoundConfig({ epochDuration: 1 hours, maxDuration: 3 hours, minVoters: 3, maxVoters: 4 });
 
         vm.startPrank(submitter);
         crepToken.approve(address(mockQuestionRewardPoolEscrow), rewardTerms.amount);
@@ -795,8 +811,14 @@ contract ContentRegistryBranchesTest is VotingTestBase {
         imageUrls[0] = "https://example.com/a.jpg";
 
         vm.expectRevert("Choose images or video");
-        registry.previewQuestionSubmissionKey("https://example.com/context",
-            imageUrls, "https://www.youtube.com/watch?v=jNQXAC9IVRw", "Question?", "Context", "Media", 5
+        registry.previewQuestionSubmissionKey(
+            "https://example.com/context",
+            imageUrls,
+            "https://www.youtube.com/watch?v=jNQXAC9IVRw",
+            "Question?",
+            "Context",
+            "Media",
+            5
         );
     }
 
@@ -807,7 +829,9 @@ contract ContentRegistryBranchesTest is VotingTestBase {
         }
 
         vm.expectRevert("Too many images");
-        registry.previewQuestionSubmissionKey("https://example.com/context", imageUrls, "", "Question?", "Context", "Media", 5);
+        registry.previewQuestionSubmissionKey(
+            "https://example.com/context", imageUrls, "", "Question?", "Context", "Media", 5
+        );
     }
 
     function test_SubmitContent_VoterIdConfigured_AllowsWithoutId() public {
@@ -865,8 +889,15 @@ contract ContentRegistryBranchesTest is VotingTestBase {
         vm.startPrank(submitter);
         crepToken.approve(address(registry), 10e6);
         vm.expectRevert("Invalid URL");
-        registry.submitQuestion("https://example.com/context",
-            _singleImageUrls("javascript:alert(1)"), "", "goal", "goal", "tags", 1, bytes32(0)
+        registry.submitQuestion(
+            "https://example.com/context",
+            _singleImageUrls("javascript:alert(1)"),
+            "",
+            "goal",
+            "goal",
+            "tags",
+            1,
+            bytes32(0)
         );
         vm.stopPrank();
     }
@@ -875,8 +906,15 @@ contract ContentRegistryBranchesTest is VotingTestBase {
         vm.startPrank(submitter);
         crepToken.approve(address(registry), 10e6);
         vm.expectRevert("Invalid URL");
-        registry.submitQuestion("https://example.com/context",
-            _singleImageUrls("http://example.com/1.jpg"), "", "goal", "goal", "tags", 1, bytes32(0)
+        registry.submitQuestion(
+            "https://example.com/context",
+            _singleImageUrls("http://example.com/1.jpg"),
+            "",
+            "goal",
+            "goal",
+            "tags",
+            1,
+            bytes32(0)
         );
         vm.stopPrank();
     }
@@ -885,8 +923,15 @@ contract ContentRegistryBranchesTest is VotingTestBase {
         vm.startPrank(submitter);
         crepToken.approve(address(registry), 10e6);
         vm.expectRevert("Invalid URL");
-        registry.submitQuestion("https://example.com/context",
-            _singleImageUrls("https://example.com/ bad.jpg"), "", "goal", "goal", "tags", 1, bytes32(0)
+        registry.submitQuestion(
+            "https://example.com/context",
+            _singleImageUrls("https://example.com/ bad.jpg"),
+            "",
+            "goal",
+            "goal",
+            "tags",
+            1,
+            bytes32(0)
         );
         vm.stopPrank();
     }
@@ -894,13 +939,20 @@ contract ContentRegistryBranchesTest is VotingTestBase {
     function test_SubmitContent_CategoryNotRegistered_Reverts() public {
         vm.prank(owner);
         registry.setCategoryRegistry(address(mockCategoryRegistry));
-        mockCategoryRegistry.setDomain(99, "example.com");
+        mockCategoryRegistry.setSlug(99, "example.com");
 
         vm.startPrank(submitter);
         crepToken.approve(address(registry), 10e6);
         vm.expectRevert("Category not registered");
-        registry.submitQuestion("https://example.com/context",
-            _singleImageUrls("https://example.com/1.jpg"), "", "goal", "goal", "tags", 99, bytes32(0)
+        registry.submitQuestion(
+            "https://example.com/context",
+            _singleImageUrls("https://example.com/1.jpg"),
+            "",
+            "goal",
+            "goal",
+            "tags",
+            99,
+            bytes32(0)
         );
         vm.stopPrank();
     }
@@ -942,8 +994,8 @@ contract ContentRegistryBranchesTest is VotingTestBase {
 
     function test_SubmitContent_RevertsWhenResolvedCategoryIdExceedsUint64() public {
         uint256 oversizedCategoryId = uint256(type(uint64).max) + 1;
-        mockCategoryRegistry.setDomain(oversizedCategoryId, "overflow-category.example");
-        mockCategoryRegistry.setApproved(oversizedCategoryId, true);
+        mockCategoryRegistry.setSlug(oversizedCategoryId, "overflow-category.example");
+        mockCategoryRegistry.setCategoryExists(oversizedCategoryId, true);
 
         string memory url = "https://overflow-category.example/item";
         string memory title = "goal";
@@ -973,7 +1025,9 @@ contract ContentRegistryBranchesTest is VotingTestBase {
         );
         vm.warp(block.timestamp + 1);
         vm.expectRevert();
-        registry.submitQuestion("https://example.com/context", imageUrls, "", title, description, tags, oversizedCategoryId, salt);
+        registry.submitQuestion(
+            "https://example.com/context", imageUrls, "", title, description, tags, oversizedCategoryId, salt
+        );
         vm.stopPrank();
     }
 
@@ -996,7 +1050,9 @@ contract ContentRegistryBranchesTest is VotingTestBase {
         vm.startPrank(submitter);
         crepToken.approve(address(registry), 10e6);
         vm.expectRevert("Invalid URL");
-        registry.submitQuestion("https://example.com/context", _singleImageUrls(string(longUrl)), "", "goal", "goal", "tags", 1, bytes32(0));
+        registry.submitQuestion(
+            "https://example.com/context", _singleImageUrls(string(longUrl)), "", "goal", "goal", "tags", 1, bytes32(0)
+        );
         vm.stopPrank();
     }
 
@@ -1010,8 +1066,15 @@ contract ContentRegistryBranchesTest is VotingTestBase {
         vm.startPrank(submitter);
         crepToken.approve(address(registry), 10e6);
         vm.expectRevert("Question too long");
-        registry.submitQuestion("https://example.com/context",
-            _singleImageUrls("https://example.com/1.jpg"), "", string(longGoal), string(longGoal), "tags", 1, bytes32(0)
+        registry.submitQuestion(
+            "https://example.com/context",
+            _singleImageUrls("https://example.com/1.jpg"),
+            "",
+            string(longGoal),
+            string(longGoal),
+            "tags",
+            1,
+            bytes32(0)
         );
         vm.stopPrank();
     }
@@ -1025,8 +1088,15 @@ contract ContentRegistryBranchesTest is VotingTestBase {
         vm.startPrank(submitter);
         crepToken.approve(address(registry), 10e6);
         vm.expectRevert("Tags too long");
-        registry.submitQuestion("https://example.com/context",
-            _singleImageUrls("https://example.com/1.jpg"), "", "goal", "goal", string(longTags), 1, bytes32(0)
+        registry.submitQuestion(
+            "https://example.com/context",
+            _singleImageUrls("https://example.com/1.jpg"),
+            "",
+            "goal",
+            "goal",
+            string(longTags),
+            1,
+            bytes32(0)
         );
         vm.stopPrank();
     }
@@ -1052,8 +1122,15 @@ contract ContentRegistryBranchesTest is VotingTestBase {
         vm.startPrank(submitter);
         crepToken.approve(address(registry), 10e6);
         vm.expectRevert("Question required");
-        registry.submitQuestion("https://example.com/context",
-            _singleImageUrls("https://example.com/1.jpg"), "", "", "", "tags", 1, bytes32(0)
+        registry.submitQuestion(
+            "https://example.com/context",
+            _singleImageUrls("https://example.com/1.jpg"),
+            "",
+            "",
+            "",
+            "tags",
+            1,
+            bytes32(0)
         );
         vm.stopPrank();
     }
@@ -1062,8 +1139,15 @@ contract ContentRegistryBranchesTest is VotingTestBase {
         vm.startPrank(submitter);
         crepToken.approve(address(registry), 10e6);
         vm.expectRevert("Tags required");
-        registry.submitQuestion("https://example.com/context",
-            _singleImageUrls("https://example.com/1.jpg"), "", "goal", "goal", "", 1, bytes32(0)
+        registry.submitQuestion(
+            "https://example.com/context",
+            _singleImageUrls("https://example.com/1.jpg"),
+            "",
+            "goal",
+            "goal",
+            "",
+            1,
+            bytes32(0)
         );
         vm.stopPrank();
     }
@@ -1421,8 +1505,8 @@ contract ContentRegistryBranchesTest is VotingTestBase {
     function test_SubmitContent_SeededCategory_Succeeds() public {
         vm.prank(owner);
         registry.setCategoryRegistry(address(mockCategoryRegistry));
-        mockCategoryRegistry.setDomain(1, "example.com");
-        mockCategoryRegistry.setApproved(1, true);
+        mockCategoryRegistry.setSlug(1, "example.com");
+        mockCategoryRegistry.setCategoryExists(1, true);
 
         vm.startPrank(submitter);
         crepToken.approve(address(registry), 10e6);
@@ -1436,8 +1520,8 @@ contract ContentRegistryBranchesTest is VotingTestBase {
     function test_SubmitContent_CategoryRegistryConfigured_AutoResolvesCategoryFromUrl() public {
         vm.prank(owner);
         registry.setCategoryRegistry(address(mockCategoryRegistry));
-        mockCategoryRegistry.setDomain(7, "example.com");
-        mockCategoryRegistry.setApproved(7, true);
+        mockCategoryRegistry.setSlug(7, "example.com");
+        mockCategoryRegistry.setCategoryExists(7, true);
 
         vm.startPrank(submitter);
         crepToken.approve(address(registry), 10e6);

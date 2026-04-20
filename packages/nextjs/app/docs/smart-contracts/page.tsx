@@ -532,7 +532,7 @@ const SmartContracts: NextPage = () => {
       <h3>Key Functions</h3>
       <ul>
         <li>
-          <code>addApprovedCategory(name, slug, subcategories)</code> &mdash; Add seeded category metadata (ADMIN_ROLE).
+          <code>addCategory(name, slug, subcategories)</code> &mdash; Add seeded category metadata (ADMIN_ROLE).
         </li>
       </ul>
 

@@ -1,4 +1,4 @@
-import { addApprovedCategory, waitForPonderIndexed } from "../helpers/admin-helpers";
+import { addCategory, waitForPonderIndexed } from "../helpers/admin-helpers";
 import { DEPLOYER } from "../helpers/anvil-accounts";
 import { CONTRACT_ADDRESSES } from "../helpers/contracts";
 import { getCategories } from "../helpers/ponder-api";
@@ -31,7 +31,7 @@ test.describe("Seed categories", () => {
     }
 
     // Add category metadata directly (account #0 has ADMIN_ROLE).
-    const success = await addApprovedCategory(
+    const success = await addCategory(
       name,
       slug,
       ["Science", "Technology"],
@@ -54,7 +54,7 @@ test.describe("Seed categories", () => {
     const { items } = await getCategories();
     const added = items.find(c => c.name === name);
     expect(added).toBeTruthy();
-    expect(added!.domain).toBe(slug);
+    expect(added!.slug).toBe(slug);
     expect(initialCategories).not.toContain(added!.id);
   });
 
@@ -69,7 +69,7 @@ test.describe("Seed categories", () => {
 
     // Add both categories
     for (const cat of categories) {
-      const success = await addApprovedCategory(cat.name, cat.slug, ["General"], DEPLOYER.address, CATEGORY_REGISTRY);
+      const success = await addCategory(cat.name, cat.slug, ["General"], DEPLOYER.address, CATEGORY_REGISTRY);
       expect(success).toBe(true);
     }
 
@@ -88,7 +88,7 @@ test.describe("Seed categories", () => {
     for (const cat of categories) {
       const found = items.find(i => i.name === cat.name);
       expect(found).toBeTruthy();
-      expect(found!.domain).toBe(cat.slug);
+      expect(found!.slug).toBe(cat.slug);
     }
   });
 });

@@ -7,26 +7,25 @@ interface ICategoryRegistry {
     struct Category {
         uint256 id;
         string name;
-        string domain; // Legacy field name; now stores the category slug.
+        string slug;
         string[] subcategories;
         uint256 createdAt;
     }
 
     event CategoryAdded(uint256 indexed categoryId, string name, string slug);
 
-    /// @notice Check if a seeded category exists and is active. Legacy approved naming retained for compatibility.
-    function isApprovedCategory(uint256 categoryId) external view returns (bool);
+    /// @notice Check if a seeded category exists.
+    function isCategory(uint256 categoryId) external view returns (bool);
 
     /// @notice Get category details by ID
     function getCategory(uint256 categoryId) external view returns (Category memory);
 
-    /// @notice Get category by slug. Legacy name retained while callers migrate away from domain language.
-    function getCategoryByDomain(string calldata slug) external view returns (Category memory);
+    /// @notice Get category by slug.
+    function getCategoryBySlug(string calldata slug) external view returns (Category memory);
 
-    /// @notice Get seeded category IDs with pagination. Legacy approved naming retained for compatibility.
-    function getApprovedCategoryIdsPaginated(uint256 offset, uint256 limit)
+    /// @notice Get seeded category IDs with pagination.
+    function getCategoryIdsPaginated(uint256 offset, uint256 limit)
         external
         view
         returns (uint256[] memory categoryIds, uint256 total);
-
 }

@@ -95,7 +95,7 @@ export const CategoryRegistryAbi = [
   },
   {
     "type": "function",
-    "name": "addApprovedCategory",
+    "name": "addCategory",
     "inputs": [
       {
         "name": "name",
@@ -124,35 +124,6 @@ export const CategoryRegistryAbi = [
   },
   {
     "type": "function",
-    "name": "getApprovedCategoryIdsPaginated",
-    "inputs": [
-      {
-        "name": "offset",
-        "type": "uint256",
-        "internalType": "uint256"
-      },
-      {
-        "name": "limit",
-        "type": "uint256",
-        "internalType": "uint256"
-      }
-    ],
-    "outputs": [
-      {
-        "name": "categoryIds",
-        "type": "uint256[]",
-        "internalType": "uint256[]"
-      },
-      {
-        "name": "total",
-        "type": "uint256",
-        "internalType": "uint256"
-      }
-    ],
-    "stateMutability": "view"
-  },
-  {
-    "type": "function",
     "name": "getCategory",
     "inputs": [
       {
@@ -178,7 +149,7 @@ export const CategoryRegistryAbi = [
             "internalType": "string"
           },
           {
-            "name": "domain",
+            "name": "slug",
             "type": "string",
             "internalType": "string"
           },
@@ -199,7 +170,7 @@ export const CategoryRegistryAbi = [
   },
   {
     "type": "function",
-    "name": "getCategoryByDomain",
+    "name": "getCategoryBySlug",
     "inputs": [
       {
         "name": "slug",
@@ -224,7 +195,7 @@ export const CategoryRegistryAbi = [
             "internalType": "string"
           },
           {
-            "name": "domain",
+            "name": "slug",
             "type": "string",
             "internalType": "string"
           },
@@ -239,6 +210,35 @@ export const CategoryRegistryAbi = [
             "internalType": "uint256"
           }
         ]
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "getCategoryIdsPaginated",
+    "inputs": [
+      {
+        "name": "offset",
+        "type": "uint256",
+        "internalType": "uint256"
+      },
+      {
+        "name": "limit",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "categoryIds",
+        "type": "uint256[]",
+        "internalType": "uint256[]"
+      },
+      {
+        "name": "total",
+        "type": "uint256",
+        "internalType": "uint256"
       }
     ],
     "stateMutability": "view"
@@ -306,7 +306,7 @@ export const CategoryRegistryAbi = [
   },
   {
     "type": "function",
-    "name": "isApprovedCategory",
+    "name": "isCategory",
     "inputs": [
       {
         "name": "categoryId",

@@ -29,7 +29,7 @@ export function useCategoryRegistry() {
   } = useReadContract({
     address: registryInfo?.address,
     abi: CategoryRegistryAbi,
-    functionName: "getApprovedCategoryIdsPaginated",
+    functionName: "getCategoryIdsPaginated",
     args: [0n, 0n],
     query: {
       enabled: Boolean(registryInfo?.address),
@@ -46,7 +46,7 @@ export function useCategoryRegistry() {
   } = useReadContract({
     address: registryInfo?.address,
     abi: CategoryRegistryAbi,
-    functionName: "getApprovedCategoryIdsPaginated",
+    functionName: "getCategoryIdsPaginated",
     args: [0n, categoryTotal],
     query: {
       enabled: Boolean(registryInfo?.address) && categoryTotal > 0n,
@@ -81,14 +81,14 @@ export function useCategoryRegistry() {
         const cat = result.result as {
           id: bigint;
           name: string;
-          domain: string;
+          slug: string;
           subcategories: readonly string[];
           createdAt: bigint;
         };
         return {
           id: cat.id,
           name: cat.name,
-          slug: cat.domain,
+          slug: cat.slug,
           subcategories: cat.subcategories,
           createdAt: cat.createdAt,
         } as Category;
@@ -106,7 +106,7 @@ export function useCategoryRegistry() {
         (cat): Category => ({
           id: BigInt(cat.id),
           name: cat.name,
-          slug: cat.domain,
+          slug: cat.slug,
           subcategories: [],
           createdAt: BigInt(cat.createdAt),
         }),

@@ -12979,7 +12979,7 @@ const deployedContracts: GenericContractsDeclaration = {
         },
         {
           type: "function",
-          name: "addApprovedCategory",
+          name: "addCategory",
           inputs: [
             {
               name: "name",
@@ -13008,35 +13008,6 @@ const deployedContracts: GenericContractsDeclaration = {
         },
         {
           type: "function",
-          name: "getApprovedCategoryIdsPaginated",
-          inputs: [
-            {
-              name: "offset",
-              type: "uint256",
-              internalType: "uint256",
-            },
-            {
-              name: "limit",
-              type: "uint256",
-              internalType: "uint256",
-            },
-          ],
-          outputs: [
-            {
-              name: "categoryIds",
-              type: "uint256[]",
-              internalType: "uint256[]",
-            },
-            {
-              name: "total",
-              type: "uint256",
-              internalType: "uint256",
-            },
-          ],
-          stateMutability: "view",
-        },
-        {
-          type: "function",
           name: "getCategory",
           inputs: [
             {
@@ -13062,7 +13033,7 @@ const deployedContracts: GenericContractsDeclaration = {
                   internalType: "string",
                 },
                 {
-                  name: "domain",
+                  name: "slug",
                   type: "string",
                   internalType: "string",
                 },
@@ -13083,7 +13054,7 @@ const deployedContracts: GenericContractsDeclaration = {
         },
         {
           type: "function",
-          name: "getCategoryByDomain",
+          name: "getCategoryBySlug",
           inputs: [
             {
               name: "slug",
@@ -13108,7 +13079,7 @@ const deployedContracts: GenericContractsDeclaration = {
                   internalType: "string",
                 },
                 {
-                  name: "domain",
+                  name: "slug",
                   type: "string",
                   internalType: "string",
                 },
@@ -13123,6 +13094,35 @@ const deployedContracts: GenericContractsDeclaration = {
                   internalType: "uint256",
                 },
               ],
+            },
+          ],
+          stateMutability: "view",
+        },
+        {
+          type: "function",
+          name: "getCategoryIdsPaginated",
+          inputs: [
+            {
+              name: "offset",
+              type: "uint256",
+              internalType: "uint256",
+            },
+            {
+              name: "limit",
+              type: "uint256",
+              internalType: "uint256",
+            },
+          ],
+          outputs: [
+            {
+              name: "categoryIds",
+              type: "uint256[]",
+              internalType: "uint256[]",
+            },
+            {
+              name: "total",
+              type: "uint256",
+              internalType: "uint256",
             },
           ],
           stateMutability: "view",
@@ -13190,7 +13190,7 @@ const deployedContracts: GenericContractsDeclaration = {
         },
         {
           type: "function",
-          name: "isApprovedCategory",
+          name: "isCategory",
           inputs: [
             {
               name: "categoryId",
@@ -13398,11 +13398,10 @@ const deployedContracts: GenericContractsDeclaration = {
         },
       ],
       inheritedFunctions: {
-        getApprovedCategoryIdsPaginated:
-          "contracts/interfaces/ICategoryRegistry.sol",
         getCategory: "contracts/interfaces/ICategoryRegistry.sol",
-        getCategoryByDomain: "contracts/interfaces/ICategoryRegistry.sol",
-        isApprovedCategory: "contracts/interfaces/ICategoryRegistry.sol",
+        getCategoryBySlug: "contracts/interfaces/ICategoryRegistry.sol",
+        getCategoryIdsPaginated: "contracts/interfaces/ICategoryRegistry.sol",
+        isCategory: "contracts/interfaces/ICategoryRegistry.sol",
         DEFAULT_ADMIN_ROLE:
           "lib/openzeppelin-contracts/contracts/access/AccessControl.sol",
         getRoleAdmin:
@@ -31403,7 +31402,7 @@ const deployedContracts: GenericContractsDeclaration = {
         },
         {
           type: "function",
-          name: "addApprovedCategory",
+          name: "addCategory",
           inputs: [
             {
               name: "name",
@@ -31432,35 +31431,6 @@ const deployedContracts: GenericContractsDeclaration = {
         },
         {
           type: "function",
-          name: "getApprovedCategoryIdsPaginated",
-          inputs: [
-            {
-              name: "offset",
-              type: "uint256",
-              internalType: "uint256",
-            },
-            {
-              name: "limit",
-              type: "uint256",
-              internalType: "uint256",
-            },
-          ],
-          outputs: [
-            {
-              name: "categoryIds",
-              type: "uint256[]",
-              internalType: "uint256[]",
-            },
-            {
-              name: "total",
-              type: "uint256",
-              internalType: "uint256",
-            },
-          ],
-          stateMutability: "view",
-        },
-        {
-          type: "function",
           name: "getCategory",
           inputs: [
             {
@@ -31486,7 +31456,7 @@ const deployedContracts: GenericContractsDeclaration = {
                   internalType: "string",
                 },
                 {
-                  name: "domain",
+                  name: "slug",
                   type: "string",
                   internalType: "string",
                 },
@@ -31507,7 +31477,7 @@ const deployedContracts: GenericContractsDeclaration = {
         },
         {
           type: "function",
-          name: "getCategoryByDomain",
+          name: "getCategoryBySlug",
           inputs: [
             {
               name: "slug",
@@ -31532,7 +31502,7 @@ const deployedContracts: GenericContractsDeclaration = {
                   internalType: "string",
                 },
                 {
-                  name: "domain",
+                  name: "slug",
                   type: "string",
                   internalType: "string",
                 },
@@ -31547,6 +31517,35 @@ const deployedContracts: GenericContractsDeclaration = {
                   internalType: "uint256",
                 },
               ],
+            },
+          ],
+          stateMutability: "view",
+        },
+        {
+          type: "function",
+          name: "getCategoryIdsPaginated",
+          inputs: [
+            {
+              name: "offset",
+              type: "uint256",
+              internalType: "uint256",
+            },
+            {
+              name: "limit",
+              type: "uint256",
+              internalType: "uint256",
+            },
+          ],
+          outputs: [
+            {
+              name: "categoryIds",
+              type: "uint256[]",
+              internalType: "uint256[]",
+            },
+            {
+              name: "total",
+              type: "uint256",
+              internalType: "uint256",
             },
           ],
           stateMutability: "view",
@@ -31614,7 +31613,7 @@ const deployedContracts: GenericContractsDeclaration = {
         },
         {
           type: "function",
-          name: "isApprovedCategory",
+          name: "isCategory",
           inputs: [
             {
               name: "categoryId",
@@ -31822,11 +31821,10 @@ const deployedContracts: GenericContractsDeclaration = {
         },
       ],
       inheritedFunctions: {
-        getApprovedCategoryIdsPaginated:
-          "contracts/interfaces/ICategoryRegistry.sol",
         getCategory: "contracts/interfaces/ICategoryRegistry.sol",
-        getCategoryByDomain: "contracts/interfaces/ICategoryRegistry.sol",
-        isApprovedCategory: "contracts/interfaces/ICategoryRegistry.sol",
+        getCategoryBySlug: "contracts/interfaces/ICategoryRegistry.sol",
+        getCategoryIdsPaginated: "contracts/interfaces/ICategoryRegistry.sol",
+        isCategory: "contracts/interfaces/ICategoryRegistry.sol",
         DEFAULT_ADMIN_ROLE:
           "lib/openzeppelin-contracts/contracts/access/AccessControl.sol",
         getRoleAdmin:
@@ -49756,7 +49754,7 @@ const deployedContracts: GenericContractsDeclaration = {
         },
         {
           type: "function",
-          name: "addApprovedCategory",
+          name: "addCategory",
           inputs: [
             {
               name: "name",
@@ -49785,35 +49783,6 @@ const deployedContracts: GenericContractsDeclaration = {
         },
         {
           type: "function",
-          name: "getApprovedCategoryIdsPaginated",
-          inputs: [
-            {
-              name: "offset",
-              type: "uint256",
-              internalType: "uint256",
-            },
-            {
-              name: "limit",
-              type: "uint256",
-              internalType: "uint256",
-            },
-          ],
-          outputs: [
-            {
-              name: "categoryIds",
-              type: "uint256[]",
-              internalType: "uint256[]",
-            },
-            {
-              name: "total",
-              type: "uint256",
-              internalType: "uint256",
-            },
-          ],
-          stateMutability: "view",
-        },
-        {
-          type: "function",
           name: "getCategory",
           inputs: [
             {
@@ -49839,7 +49808,7 @@ const deployedContracts: GenericContractsDeclaration = {
                   internalType: "string",
                 },
                 {
-                  name: "domain",
+                  name: "slug",
                   type: "string",
                   internalType: "string",
                 },
@@ -49860,7 +49829,7 @@ const deployedContracts: GenericContractsDeclaration = {
         },
         {
           type: "function",
-          name: "getCategoryByDomain",
+          name: "getCategoryBySlug",
           inputs: [
             {
               name: "slug",
@@ -49885,7 +49854,7 @@ const deployedContracts: GenericContractsDeclaration = {
                   internalType: "string",
                 },
                 {
-                  name: "domain",
+                  name: "slug",
                   type: "string",
                   internalType: "string",
                 },
@@ -49900,6 +49869,35 @@ const deployedContracts: GenericContractsDeclaration = {
                   internalType: "uint256",
                 },
               ],
+            },
+          ],
+          stateMutability: "view",
+        },
+        {
+          type: "function",
+          name: "getCategoryIdsPaginated",
+          inputs: [
+            {
+              name: "offset",
+              type: "uint256",
+              internalType: "uint256",
+            },
+            {
+              name: "limit",
+              type: "uint256",
+              internalType: "uint256",
+            },
+          ],
+          outputs: [
+            {
+              name: "categoryIds",
+              type: "uint256[]",
+              internalType: "uint256[]",
+            },
+            {
+              name: "total",
+              type: "uint256",
+              internalType: "uint256",
             },
           ],
           stateMutability: "view",
@@ -49967,7 +49965,7 @@ const deployedContracts: GenericContractsDeclaration = {
         },
         {
           type: "function",
-          name: "isApprovedCategory",
+          name: "isCategory",
           inputs: [
             {
               name: "categoryId",
@@ -50175,11 +50173,10 @@ const deployedContracts: GenericContractsDeclaration = {
         },
       ],
       inheritedFunctions: {
-        getApprovedCategoryIdsPaginated:
-          "contracts/interfaces/ICategoryRegistry.sol",
         getCategory: "contracts/interfaces/ICategoryRegistry.sol",
-        getCategoryByDomain: "contracts/interfaces/ICategoryRegistry.sol",
-        isApprovedCategory: "contracts/interfaces/ICategoryRegistry.sol",
+        getCategoryBySlug: "contracts/interfaces/ICategoryRegistry.sol",
+        getCategoryIdsPaginated: "contracts/interfaces/ICategoryRegistry.sol",
+        isCategory: "contracts/interfaces/ICategoryRegistry.sol",
         DEFAULT_ADMIN_ROLE:
           "lib/openzeppelin-contracts/contracts/access/AccessControl.sol",
         getRoleAdmin:

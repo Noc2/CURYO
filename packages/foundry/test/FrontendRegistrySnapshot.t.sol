@@ -1,19 +1,19 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.20;
 
-import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
+import { ERC1967Proxy } from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
 
-import {ContentRegistry} from "../contracts/ContentRegistry.sol";
-import {CuryoReputation} from "../contracts/CuryoReputation.sol";
-import {FrontendRegistry} from "../contracts/FrontendRegistry.sol";
-import {ProtocolConfig} from "../contracts/ProtocolConfig.sol";
-import {RoundRewardDistributor} from "../contracts/RoundRewardDistributor.sol";
-import {RoundVotingEngine} from "../contracts/RoundVotingEngine.sol";
-import {MockCategoryRegistry} from "../contracts/mocks/MockCategoryRegistry.sol";
-import {RoundLib} from "../contracts/libraries/RoundLib.sol";
-import {RoundEngineReadHelpers} from "./helpers/RoundEngineReadHelpers.sol";
-import {VotingTestBase} from "./helpers/VotingTestHelpers.sol";
-import {MockVoterIdNFT} from "./mocks/MockVoterIdNFT.sol";
+import { ContentRegistry } from "../contracts/ContentRegistry.sol";
+import { CuryoReputation } from "../contracts/CuryoReputation.sol";
+import { FrontendRegistry } from "../contracts/FrontendRegistry.sol";
+import { ProtocolConfig } from "../contracts/ProtocolConfig.sol";
+import { RoundRewardDistributor } from "../contracts/RoundRewardDistributor.sol";
+import { RoundVotingEngine } from "../contracts/RoundVotingEngine.sol";
+import { MockCategoryRegistry } from "../contracts/mocks/MockCategoryRegistry.sol";
+import { RoundLib } from "../contracts/libraries/RoundLib.sol";
+import { RoundEngineReadHelpers } from "./helpers/RoundEngineReadHelpers.sol";
+import { VotingTestBase } from "./helpers/VotingTestHelpers.sol";
+import { MockVoterIdNFT } from "./mocks/MockVoterIdNFT.sol";
 
 /// @title FrontendRegistrySnapshotTest
 /// @notice Guards the settlement-time snapshot preservation for frontend registry rotations.
@@ -95,7 +95,7 @@ contract FrontendRegistrySnapshotTest is VotingTestBase {
         );
 
         categoryRegistry = new MockCategoryRegistry();
-        categoryRegistry.seedApprovedCategory(1, "example.com");
+        categoryRegistry.seedCategory(1, "example.com");
 
         registry.setVotingEngine(address(votingEngine));
         registry.setCategoryRegistry(address(categoryRegistry));
@@ -179,7 +179,14 @@ contract FrontendRegistrySnapshotTest is VotingTestBase {
         vm.startPrank(voter);
         crepToken.approve(address(votingEngine), STAKE);
         votingEngine.commitVote(
-            contentId, _defaultRatingReferenceBps(), _tlockCommitTargetRound(), _tlockDrandChainHash(), commitHash, ciphertext, STAKE, frontendOp
+            contentId,
+            _defaultRatingReferenceBps(),
+            _tlockCommitTargetRound(),
+            _tlockDrandChainHash(),
+            commitHash,
+            ciphertext,
+            STAKE,
+            frontendOp
         );
         vm.stopPrank();
 

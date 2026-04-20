@@ -10,7 +10,7 @@ const DEFAULT_EPOCH_DURATION_SECONDS = 20 * 60;
 const ZERO_ADDRESS = "0x0000000000000000000000000000000000000000";
 const CATEGORY_REGISTRY_ABI = [
   {
-    name: "getCategoryByDomain",
+    name: "getCategoryBySlug",
     type: "function",
     inputs: [{ name: "slug", type: "string" }],
     outputs: [
@@ -20,7 +20,7 @@ const CATEGORY_REGISTRY_ABI = [
         components: [
           { name: "id", type: "uint256" },
           { name: "name", type: "string" },
-          { name: "domain", type: "string" },
+          { name: "slug", type: "string" },
           { name: "subcategories", type: "string[]" },
           { name: "createdAt", type: "uint256" },
         ],
@@ -40,7 +40,7 @@ async function resolveCategoryIdBySlug(slug: string): Promise<bigint> {
   const category = await publicClient.readContract({
     address: CONTRACT_ADDRESSES.CategoryRegistry as `0x${string}`,
     abi: CATEGORY_REGISTRY_ABI,
-    functionName: "getCategoryByDomain",
+    functionName: "getCategoryBySlug",
     args: [slug],
   });
   const categoryId = "id" in category ? category.id : category[0];

@@ -496,7 +496,7 @@ contract DeployCuryo is ScaffoldETHDeploy {
         if (!isLocalDev) {
             console.log("CuryoGovernor:", governorAddr);
         }
-        (, uint256 seededCategoryCount) = categoryRegistry.getApprovedCategoryIdsPaginated(0, 0);
+        (, uint256 seededCategoryCount) = categoryRegistry.getCategoryIdsPaginated(0, 0);
         console.log("Seeded categories:", seededCategoryCount);
         console.log("Local dev:", isLocalDev);
     }
@@ -950,7 +950,7 @@ contract DeployCuryo is ScaffoldETHDeploy {
         productSubcats[5] = "Support";
         productSubcats[6] = "Safety";
         productSubcats[7] = "Sustainability";
-        registry.addApprovedCategory("Products", "products", productSubcats);
+        registry.addCategory("Products", "products", productSubcats);
 
         string[] memory placesTravelSubcats = new string[](13);
         placesTravelSubcats[0] = "Restaurants";
@@ -966,7 +966,7 @@ contract DeployCuryo is ScaffoldETHDeploy {
         placesTravelSubcats[10] = "Local Tips";
         placesTravelSubcats[11] = "Family";
         placesTravelSubcats[12] = "Solo Travel";
-        registry.addApprovedCategory("Places & Travel", "places-travel", placesTravelSubcats);
+        registry.addCategory("Places & Travel", "places-travel", placesTravelSubcats);
 
         string[] memory softwareSubcats = new string[](12);
         softwareSubcats[0] = "Web Apps";
@@ -981,7 +981,7 @@ contract DeployCuryo is ScaffoldETHDeploy {
         softwareSubcats[9] = "Performance";
         softwareSubcats[10] = "Trust";
         softwareSubcats[11] = "Pricing";
-        registry.addApprovedCategory("Software", "software", softwareSubcats);
+        registry.addCategory("Software", "software", softwareSubcats);
 
         string[] memory mediaSubcats = new string[](8);
         mediaSubcats[0] = "Images";
@@ -992,7 +992,7 @@ contract DeployCuryo is ScaffoldETHDeploy {
         mediaSubcats[5] = "Photography";
         mediaSubcats[6] = "Audio";
         mediaSubcats[7] = "Culture";
-        registry.addApprovedCategory("Media", "media", mediaSubcats);
+        registry.addCategory("Media", "media", mediaSubcats);
 
         string[] memory designSubcats = new string[](8);
         designSubcats[0] = "Visual Design";
@@ -1003,7 +1003,7 @@ contract DeployCuryo is ScaffoldETHDeploy {
         designSubcats[5] = "Photography";
         designSubcats[6] = "Fashion";
         designSubcats[7] = "Architecture";
-        registry.addApprovedCategory("Design", "design", designSubcats);
+        registry.addCategory("Design", "design", designSubcats);
 
         string[] memory aiAnswerSubcats = new string[](8);
         aiAnswerSubcats[0] = "Helpfulness";
@@ -1014,7 +1014,7 @@ contract DeployCuryo is ScaffoldETHDeploy {
         aiAnswerSubcats[5] = "Code";
         aiAnswerSubcats[6] = "Images";
         aiAnswerSubcats[7] = "Research";
-        registry.addApprovedCategory("AI Answers", "ai-answers", aiAnswerSubcats);
+        registry.addCategory("AI Answers", "ai-answers", aiAnswerSubcats);
 
         string[] memory textSubcats = new string[](13);
         textSubcats[0] = "Developer Docs";
@@ -1030,7 +1030,7 @@ contract DeployCuryo is ScaffoldETHDeploy {
         textSubcats[10] = "Readability";
         textSubcats[11] = "Troubleshooting";
         textSubcats[12] = "Examples";
-        registry.addApprovedCategory("Text", "text", textSubcats);
+        registry.addCategory("Text", "text", textSubcats);
 
         string[] memory safetySubcats = new string[](8);
         safetySubcats[0] = "Trust";
@@ -1041,7 +1041,7 @@ contract DeployCuryo is ScaffoldETHDeploy {
         safetySubcats[5] = "Disclosure";
         safetySubcats[6] = "Risk";
         safetySubcats[7] = "Policy";
-        registry.addApprovedCategory("Trust", "trust", safetySubcats);
+        registry.addCategory("Trust", "trust", safetySubcats);
 
         string[] memory opinionSubcats = new string[](8);
         opinionSubcats[0] = "Taste";
@@ -1052,6 +1052,6 @@ contract DeployCuryo is ScaffoldETHDeploy {
         opinionSubcats[5] = "Convincing";
         opinionSubcats[6] = "Worthwhile";
         opinionSubcats[7] = "Other";
-        registry.addApprovedCategory("General", "general", opinionSubcats);
+        registry.addCategory("General", "general", opinionSubcats);
     }
 }
