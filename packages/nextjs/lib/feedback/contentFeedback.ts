@@ -3,6 +3,11 @@ import { and, desc, eq, inArray, isNull } from "drizzle-orm";
 import { db } from "~~/lib/db";
 import { contentFeedback } from "~~/lib/db/schema";
 import {
+  type ContentFeedbackHashInput,
+  type ContentFeedbackHashMetadata,
+  buildContentFeedbackHash,
+} from "~~/lib/feedback/feedbackHash";
+import {
   CONTENT_FEEDBACK_BODY_MAX_LENGTH,
   CONTENT_FEEDBACK_SOURCE_URL_MAX_LENGTH,
   CONTENT_FEEDBACK_TYPES,
@@ -27,6 +32,12 @@ export interface NormalizedContentFeedbackInput {
   sourceUrl: string | null;
 }
 
+export interface ContentFeedbackChallengePayload extends NormalizedContentFeedbackInput, ContentFeedbackHashMetadata {}
+
+export interface PreparedContentFeedbackInput extends ContentFeedbackChallengePayload {
+  payloadSignature: `0x${string}`;
+}
+
 export interface NormalizedContentFeedbackReadInput {
   contentId: string;
   normalizedAddress: `0x${string}` | null;
@@ -45,6 +56,20 @@ export class ContentFeedbackStorageUnavailableError extends Error {
   constructor() {
     super("CONTENT_FEEDBACK_STORAGE_UNAVAILABLE");
     this.name = "ContentFeedbackStorageUnavailableError";
+  }
+}
+
+export class ContentFeedbackDuplicateError extends Error {
+  constructor() {
+    super("CONTENT_FEEDBACK_DUPLICATE");
+    this.name = "ContentFeedbackDuplicateError";
+  }
+}
+
+export class ContentFeedbackVoterEligibilityError extends Error {
+  constructor(message = "CONTENT_FEEDBACK_VOTER_REQUIRED") {
+    super(message);
+    this.name = "ContentFeedbackVoterEligibilityError";
   }
 }
 
@@ -250,6 +275,71 @@ export async function resolveContentFeedbackRoundContext(contentId: string): Pro
   return buildContentFeedbackRoundContext(rounds, contentResponse.content.openRound?.roundId ?? null);
 }
 
+export function buildPreparedContentFeedbackInput(
+  payload: NormalizedContentFeedbackInput,
+  params: Omit<ContentFeedbackHashInput, "contentId" | "authorAddress" | "feedbackType" | "body" | "sourceUrl"> & {
+    feedbackHash?: `0x${string}`;
+    payloadSignature: `0x${string}`;
+  },
+): PreparedContentFeedbackInput {
+  return {
+    ...buildContentFeedbackChallengePayload(payload, params),
+    payloadSignature: params.payloadSignature,
+  };
+}
+
+export function buildContentFeedbackChallengePayload(
+  payload: NormalizedContentFeedbackInput,
+  params: Omit<ContentFeedbackHashInput, "contentId" | "authorAddress" | "feedbackType" | "body" | "sourceUrl"> & {
+    feedbackHash?: `0x${string}`;
+  },
+): ContentFeedbackChallengePayload {
+  const expectedHash = buildContentFeedbackHash({
+    chainId: params.chainId,
+    contentId: payload.contentId,
+    roundId: params.roundId,
+    authorAddress: payload.normalizedAddress,
+    feedbackType: payload.feedbackType,
+    body: payload.body,
+    sourceUrl: payload.sourceUrl,
+    clientNonce: params.clientNonce,
+  });
+  const feedbackHash = (params.feedbackHash ?? expectedHash).toLowerCase() as `0x${string}`;
+  if (feedbackHash !== expectedHash) {
+    throw new Error("CONTENT_FEEDBACK_HASH_MISMATCH");
+  }
+
+  return {
+    ...payload,
+    chainId: params.chainId,
+    roundId: params.roundId,
+    clientNonce: params.clientNonce,
+    feedbackHash,
+  };
+}
+
+export async function assertContentFeedbackVoterEligibility(params: {
+  contentId: string;
+  roundId: string;
+  address: `0x${string}`;
+}): Promise<void> {
+  const votes = await ponderApi.getVotes({
+    voter: params.address,
+    contentId: params.contentId,
+    roundId: params.roundId,
+    limit: "1",
+  });
+  const hasVote = votes.items.some(
+    vote =>
+      String(vote.contentId) === params.contentId &&
+      String(vote.roundId) === params.roundId &&
+      normalizeWalletAddress(vote.voter) === params.address,
+  );
+  if (!hasVote) {
+    throw new ContentFeedbackVoterEligibilityError();
+  }
+}
+
 function isFeedbackPublic(row: Pick<FeedbackRow, "roundId">, context: ContentFeedbackRoundContext) {
   if (!row.roundId) {
     return context.settlementComplete;
@@ -284,11 +374,14 @@ function mapFeedbackRow(
     id: row.id,
     contentId: row.contentId,
     roundId: row.roundId,
+    chainId: row.chainId,
     authorAddress,
     feedbackType,
     feedbackTypeLabel: CONTENT_FEEDBACK_TYPE_LABELS[feedbackType],
     body: row.body,
     sourceUrl: row.sourceUrl,
+    feedbackHash: row.feedbackHash,
+    clientNonce: row.clientNonce,
     moderationStatus: row.moderationStatus,
     visibilityStatus: row.visibilityStatus,
     createdAt: row.createdAt.toISOString(),
@@ -299,25 +392,49 @@ function mapFeedbackRow(
 }
 
 export async function addContentFeedback(
-  payload: NormalizedContentFeedbackInput,
+  payload: PreparedContentFeedbackInput,
   context: ContentFeedbackRoundContext,
 ): Promise<ContentFeedbackItem> {
-  if (!context.currentRoundId) {
+  if (
+    !context.currentRoundId ||
+    context.currentRoundId !== payload.roundId ||
+    context.openRoundId !== payload.roundId
+  ) {
     throw new Error("CONTENT_ROUND_UNAVAILABLE");
   }
 
   const now = createContentFeedbackTimestamp();
   let row: FeedbackRow | undefined;
   try {
+    const [existingFeedback] = await db
+      .select({ id: contentFeedback.id })
+      .from(contentFeedback)
+      .where(
+        and(
+          eq(contentFeedback.contentId, payload.contentId),
+          eq(contentFeedback.roundId, payload.roundId),
+          eq(contentFeedback.authorAddress, payload.normalizedAddress),
+          isNull(contentFeedback.deletedAt),
+        ),
+      )
+      .limit(1);
+    if (existingFeedback) {
+      throw new ContentFeedbackDuplicateError();
+    }
+
     [row] = await db
       .insert(contentFeedback)
       .values({
         contentId: payload.contentId,
-        roundId: context.currentRoundId,
+        roundId: payload.roundId,
+        chainId: payload.chainId,
         authorAddress: payload.normalizedAddress,
         feedbackType: payload.feedbackType,
         body: payload.body,
         sourceUrl: payload.sourceUrl,
+        feedbackHash: payload.feedbackHash,
+        clientNonce: payload.clientNonce,
+        payloadSignature: payload.payloadSignature,
         moderationStatus: APPROVED_MODERATION_STATUS,
         visibilityStatus: HIDDEN_UNTIL_SETTLEMENT_STATUS,
         createdAt: now,

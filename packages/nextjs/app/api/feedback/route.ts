@@ -12,13 +12,19 @@ import {
 } from "~~/lib/auth/signedReadSessions";
 import { verifySignedActionChallenge } from "~~/lib/auth/signedRouteHelpers";
 import {
+  ContentFeedbackDuplicateError,
   ContentFeedbackStorageUnavailableError,
+  ContentFeedbackVoterEligibilityError,
+  type PreparedContentFeedbackInput,
   addContentFeedback,
+  assertContentFeedbackVoterEligibility,
+  buildPreparedContentFeedbackInput,
   listContentFeedback,
   normalizeContentFeedbackInput,
   normalizeContentFeedbackReadInput,
   resolveContentFeedbackRoundContext,
 } from "~~/lib/feedback/contentFeedback";
+import { normalizeContentFeedbackHashMetadata } from "~~/lib/feedback/feedbackHash";
 import { checkRateLimit } from "~~/utils/rateLimit";
 
 const READ_RATE_LIMIT = { limit: 60, windowMs: 60_000 };
@@ -75,6 +81,10 @@ export async function POST(request: NextRequest) {
       feedbackType?: unknown;
       body?: unknown;
       sourceUrl?: unknown;
+      chainId?: unknown;
+      roundId?: unknown;
+      clientNonce?: unknown;
+      feedbackHash?: unknown;
       signature?: `0x${string}`;
       challengeId?: string;
     };
@@ -93,7 +103,29 @@ export async function POST(request: NextRequest) {
     }
 
     const payload = normalized.payload;
-    const payloadHash = hashContentFeedbackPayload(payload);
+    const metadata = normalizeContentFeedbackHashMetadata({
+      chainId: body.chainId,
+      roundId: body.roundId,
+      clientNonce: body.clientNonce,
+      feedbackHash: body.feedbackHash,
+    });
+    if (!metadata.ok) {
+      return NextResponse.json({ error: metadata.error }, { status: 400 });
+    }
+
+    let preparedPayload: PreparedContentFeedbackInput;
+    try {
+      preparedPayload = buildPreparedContentFeedbackInput(payload, {
+        ...metadata.metadata,
+        payloadSignature: body.signature,
+      });
+    } catch (error) {
+      if (error instanceof Error && error.message === "CONTENT_FEEDBACK_HASH_MISMATCH") {
+        return NextResponse.json({ error: "Feedback hash does not match the signed payload" }, { status: 400 });
+      }
+      throw error;
+    }
+    const payloadHash = hashContentFeedbackPayload(preparedPayload);
     const challengeFailure = await verifySignedActionChallenge({
       challengeId: String(body.challengeId),
       action: CREATE_CONTENT_FEEDBACK_ACTION,
@@ -113,11 +145,28 @@ export async function POST(request: NextRequest) {
     }
 
     const context = await resolveContentFeedbackRoundContext(payload.contentId);
-    if (!context.currentRoundId) {
-      return NextResponse.json({ error: "Feedback opens after the first round starts" }, { status: 409 });
+    if (
+      !context.currentRoundId ||
+      context.currentRoundId !== preparedPayload.roundId ||
+      context.openRoundId !== preparedPayload.roundId
+    ) {
+      return NextResponse.json({ error: "Feedback is only open while voting is active" }, { status: 409 });
     }
 
-    const item = await addContentFeedback(payload, context);
+    try {
+      await assertContentFeedbackVoterEligibility({
+        contentId: payload.contentId,
+        roundId: preparedPayload.roundId,
+        address: payload.normalizedAddress,
+      });
+    } catch (error) {
+      if (error instanceof ContentFeedbackVoterEligibilityError) {
+        return NextResponse.json({ error: "Vote on this question before saving feedback" }, { status: 403 });
+      }
+      throw error;
+    }
+
+    const item = await addContentFeedback(preparedPayload, context);
     const session = await issueSignedReadSession(payload.normalizedAddress, "content_feedback");
     const response = NextResponse.json({ ok: true, item });
     response.cookies.set(getSignedReadSessionCookie("content_feedback", session));
@@ -126,6 +175,9 @@ export async function POST(request: NextRequest) {
   } catch (error) {
     if (error instanceof ContentFeedbackStorageUnavailableError) {
       return NextResponse.json({ error: "Feedback storage is not ready yet" }, { status: 503 });
+    }
+    if (error instanceof ContentFeedbackDuplicateError) {
+      return NextResponse.json({ error: "You already saved feedback for this round" }, { status: 409 });
     }
 
     console.error("Error creating feedback:", error);

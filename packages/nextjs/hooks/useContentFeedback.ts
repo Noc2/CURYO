@@ -9,6 +9,10 @@ import { isSignatureRejected } from "~~/utils/signatureErrors";
 interface SignedChallengeResponse {
   challengeId?: string;
   message?: string;
+  chainId?: number;
+  roundId?: string;
+  clientNonce?: string;
+  feedbackHash?: string;
   error?: string;
 }
 
@@ -105,7 +109,14 @@ export function useContentFeedback(contentId: bigint | string | number | null | 
           "Failed to create feedback challenge",
         );
 
-        if (!challenge.message || !challenge.challengeId) {
+        if (
+          !challenge.message ||
+          !challenge.challengeId ||
+          !challenge.chainId ||
+          !challenge.roundId ||
+          !challenge.clientNonce ||
+          !challenge.feedbackHash
+        ) {
           throw new Error("Failed to create feedback challenge");
         }
 
@@ -120,6 +131,10 @@ export function useContentFeedback(contentId: bigint | string | number | null | 
               feedbackType: input.feedbackType,
               body: input.body,
               sourceUrl: input.sourceUrl,
+              chainId: challenge.chainId,
+              roundId: challenge.roundId,
+              clientNonce: challenge.clientNonce,
+              feedbackHash: challenge.feedbackHash,
               signature,
               challengeId: challenge.challengeId,
             }),

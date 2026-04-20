@@ -7,7 +7,16 @@ import {
   hashContentFeedbackReadPayload,
 } from "~~/lib/auth/contentFeedbackChallenge";
 import { issueSignedActionChallenge } from "~~/lib/auth/signedActions";
-import { normalizeContentFeedbackInput, normalizeContentFeedbackReadInput } from "~~/lib/feedback/contentFeedback";
+import { getPrimaryServerTargetNetwork } from "~~/lib/env/server";
+import {
+  ContentFeedbackVoterEligibilityError,
+  assertContentFeedbackVoterEligibility,
+  buildContentFeedbackChallengePayload,
+  normalizeContentFeedbackInput,
+  normalizeContentFeedbackReadInput,
+  resolveContentFeedbackRoundContext,
+} from "~~/lib/feedback/contentFeedback";
+import { createContentFeedbackNonce } from "~~/lib/feedback/feedbackHash";
 import { checkRateLimit } from "~~/utils/rateLimit";
 
 const RATE_LIMIT = { limit: 20, windowMs: 60_000 };
@@ -53,15 +62,50 @@ export async function POST(request: NextRequest) {
     if (!normalized.ok) {
       return NextResponse.json({ error: normalized.error }, { status: 400 });
     }
+    const targetNetwork = getPrimaryServerTargetNetwork();
+    if (!targetNetwork) {
+      return NextResponse.json({ error: "Feedback chain is not configured" }, { status: 503 });
+    }
+
+    const context = await resolveContentFeedbackRoundContext(normalized.payload.contentId);
+    const roundId = context.openRoundId;
+    if (!roundId || context.currentRoundId !== roundId) {
+      return NextResponse.json({ error: "Feedback is only open while voting is active" }, { status: 409 });
+    }
+
+    try {
+      await assertContentFeedbackVoterEligibility({
+        contentId: normalized.payload.contentId,
+        roundId,
+        address: normalized.payload.normalizedAddress,
+      });
+    } catch (error) {
+      if (error instanceof ContentFeedbackVoterEligibilityError) {
+        return NextResponse.json({ error: "Vote on this question before saving feedback" }, { status: 403 });
+      }
+      throw error;
+    }
+
+    const challengePayload = buildContentFeedbackChallengePayload(normalized.payload, {
+      chainId: targetNetwork.id,
+      roundId,
+      clientNonce: createContentFeedbackNonce(),
+    });
 
     const challenge = await issueSignedActionChallenge({
       title: CONTENT_FEEDBACK_CHALLENGE_TITLE,
       action: CREATE_CONTENT_FEEDBACK_ACTION,
       walletAddress: normalized.payload.normalizedAddress,
-      payloadHash: hashContentFeedbackPayload(normalized.payload),
+      payloadHash: hashContentFeedbackPayload(challengePayload),
     });
 
-    return NextResponse.json(challenge);
+    return NextResponse.json({
+      ...challenge,
+      chainId: challengePayload.chainId,
+      roundId: challengePayload.roundId,
+      clientNonce: challengePayload.clientNonce,
+      feedbackHash: challengePayload.feedbackHash,
+    });
   } catch (error) {
     console.error("Error creating feedback challenge:", error);
     return NextResponse.json({ error: "Failed to create feedback challenge" }, { status: 500 });

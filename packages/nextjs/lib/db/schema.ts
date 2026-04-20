@@ -77,10 +77,14 @@ export const contentFeedback = pgTable(
     id: serial("id").primaryKey(),
     contentId: text("content_id").notNull(),
     roundId: text("round_id"),
+    chainId: integer("chain_id"),
     authorAddress: text("author_address").notNull(),
     feedbackType: text("feedback_type").notNull(),
     body: text("body").notNull(),
     sourceUrl: text("source_url"),
+    feedbackHash: text("feedback_hash"),
+    clientNonce: text("client_nonce"),
+    payloadSignature: text("payload_signature"),
     moderationStatus: text("moderation_status").notNull().default("approved"),
     visibilityStatus: text("visibility_status").notNull().default("hidden_until_settlement"),
     createdAt: timestamp("created_at", { mode: "date", withTimezone: true }).notNull(),
@@ -91,6 +95,7 @@ export const contentFeedback = pgTable(
     contentCreatedAtIdx: index("content_feedback_content_created_at_idx").on(table.contentId, table.createdAt),
     contentRoundIdx: index("content_feedback_content_round_idx").on(table.contentId, table.roundId),
     authorCreatedAtIdx: index("content_feedback_author_created_at_idx").on(table.authorAddress, table.createdAt),
+    feedbackHashUnique: uniqueIndex("content_feedback_feedback_hash_unique").on(table.feedbackHash),
   }),
 );
 

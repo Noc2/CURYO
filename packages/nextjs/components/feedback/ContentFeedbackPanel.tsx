@@ -77,7 +77,7 @@ export function ContentFeedbackPanel({ item, variant = "rail", onRequestConnect 
   const canSubmit = Boolean(item && bodyLength >= 4 && bodyLength <= CONTENT_FEEDBACK_BODY_MAX_LENGTH);
   const feedbackStatusCopy = feedback.settlementComplete
     ? "Feedback is unlocked for this question."
-    : "Feedback stays hidden until settlement.";
+    : "Only voters can save feedback. It stays hidden until settlement.";
   const ownHiddenCopy =
     feedback.ownHiddenCount > 0
       ? `${feedback.ownHiddenCount} hidden note${feedback.ownHiddenCount === 1 ? "" : "s"} from you`
@@ -211,9 +211,7 @@ export function ContentFeedbackPanel({ item, variant = "rail", onRequestConnect 
           </ul>
         ) : (
           <p className="rounded-lg border border-dashed border-base-content/12 px-3 py-3 text-sm leading-relaxed text-base-content/48">
-            {feedback.settlementComplete
-              ? "No feedback yet."
-              : "Your saved feedback will appear here. Everyone's feedback unlocks after settlement."}
+            {feedback.settlementComplete ? "No feedback yet." : "Vote first, then save feedback for settlement."}
           </p>
         )}
       </div>

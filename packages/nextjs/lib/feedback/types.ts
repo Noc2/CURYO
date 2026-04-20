@@ -27,11 +27,14 @@ export interface ContentFeedbackItem {
   id: number;
   contentId: string;
   roundId: string | null;
+  chainId: number | null;
   authorAddress: `0x${string}`;
   feedbackType: ContentFeedbackType;
   feedbackTypeLabel: string;
   body: string;
   sourceUrl: string | null;
+  feedbackHash: string | null;
+  clientNonce: string | null;
   moderationStatus: string;
   visibilityStatus: string;
   createdAt: string;

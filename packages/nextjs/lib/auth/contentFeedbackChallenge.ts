@@ -1,6 +1,6 @@
 import { buildSignedActionMessage, hashSignedActionPayload } from "~~/lib/auth/signedActions";
 import type {
-  NormalizedContentFeedbackInput,
+  ContentFeedbackChallengePayload,
   NormalizedContentFeedbackReadInput,
 } from "~~/lib/feedback/contentFeedback";
 
@@ -8,12 +8,17 @@ export const CREATE_CONTENT_FEEDBACK_ACTION = "content-feedback:create";
 export const READ_CONTENT_FEEDBACK_ACTION = "content-feedback:read";
 export const CONTENT_FEEDBACK_CHALLENGE_TITLE = "Curyo feedback authorization";
 
-export function hashContentFeedbackPayload(payload: NormalizedContentFeedbackInput): string {
+export function hashContentFeedbackPayload(payload: ContentFeedbackChallengePayload): string {
   return hashSignedActionPayload([
+    `chainId:${payload.chainId}`,
     `contentId:${payload.contentId}`,
+    `roundId:${payload.roundId}`,
+    `author:${payload.normalizedAddress}`,
     `feedbackType:${payload.feedbackType}`,
     `body:${payload.body}`,
     `sourceUrl:${payload.sourceUrl ?? ""}`,
+    `clientNonce:${payload.clientNonce}`,
+    `feedbackHash:${payload.feedbackHash}`,
   ]);
 }
 
