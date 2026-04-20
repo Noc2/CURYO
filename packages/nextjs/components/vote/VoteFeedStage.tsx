@@ -1203,7 +1203,7 @@ export function VoteFeedStage({
             {!isActiveCard ? (
               <div
                 aria-hidden="true"
-                className="pointer-events-none absolute inset-0 rounded-[1.75rem] bg-[linear-gradient(180deg,rgba(0,0,0,0.18),rgba(0,0,0,0.46))]"
+                className="pointer-events-none absolute inset-0 rounded-lg bg-[linear-gradient(180deg,rgba(0,0,0,0.18),rgba(0,0,0,0.46))]"
               />
             ) : null}
           </article>

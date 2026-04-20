@@ -20,7 +20,7 @@ export function GenericLinkCard({ url, compact, thumbnailUrl }: GenericLinkCardP
   return (
     <SafeExternalLink
       href={url}
-      className={`flex h-full min-h-[8rem] overflow-hidden rounded-xl bg-base-200 embed-surface embed-surface-hover transition-colors ${
+      className={`flex h-full min-h-[8rem] overflow-hidden rounded-lg bg-base-200 embed-surface embed-surface-hover transition-colors ${
         compact ? "text-sm" : ""
       }`}
     >

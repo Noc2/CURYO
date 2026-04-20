@@ -170,7 +170,7 @@ interface ActiveViewSession {
 
 function VoteStageLoading() {
   return (
-    <div className="surface-card rounded-2xl p-6">
+    <div className="surface-card rounded-lg p-6">
       <div className="flex items-center gap-3 text-base-content/50">
         <span className="loading loading-spinner loading-sm text-primary" />
         <span>Loading...</span>

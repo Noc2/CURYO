@@ -186,7 +186,7 @@ export const FeedVoteCard = memo(function FeedVoteCard({
       <div className={contentGridClassName}>
         <div
           data-testid="vote-content-card-shell"
-          className="flex min-w-0 min-h-0 flex-1 flex-col overflow-hidden rounded-2xl bg-base-200"
+          className="flex min-w-0 min-h-0 flex-1 flex-col overflow-hidden rounded-lg bg-base-200"
         >
           <div
             className={`${mediaHeightClassName} relative overflow-hidden`}
@@ -290,7 +290,7 @@ function FeedContentHeader({ item, titleId, compact }: FeedContentHeaderProps) {
   return (
     <div
       data-testid="vote-content-header"
-      className={`rounded-2xl bg-base-200 ${compact ? "px-4 py-3" : "px-5 py-4 xl:px-4 xl:py-3"}`}
+      className={`rounded-lg bg-base-200 ${compact ? "px-4 py-3" : "px-5 py-4 xl:px-4 xl:py-3"}`}
     >
       <h2
         id={titleId}
@@ -410,7 +410,7 @@ function FeedContentMetaCard({
     ? compact
       ? "border-t border-base-content/10 px-3 py-3"
       : "border-t border-base-content/10 p-4"
-    : `rounded-2xl bg-base-200 ${compact ? "p-3" : "p-4 xl:p-3"}`;
+    : `rounded-lg bg-base-200 ${compact ? "p-3" : "p-4 xl:p-3"}`;
   const actionButtons = (
     <div className="ml-auto flex shrink-0 items-center gap-0.5 sm:gap-1">
       {hasFollowButton ? (

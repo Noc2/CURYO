@@ -151,7 +151,7 @@ function LiveRoundActivity({
 
   return (
     <div
-      className={`rounded-[1.3rem] bg-base-content/[0.04] ring-1 ring-base-content/8 ${
+      className={`rounded-lg bg-base-content/[0.04] ring-1 ring-base-content/8 ${
         condensed ? "px-2.5 py-2.5" : compact ? "px-3 py-3" : "px-3.5 py-3.5"
       }`}
     >
@@ -193,7 +193,7 @@ function LiveRoundActivity({
       </div>
 
       <div className={`grid grid-cols-3 ${condensed ? "mt-2.5 gap-1.5" : "mt-3 gap-2"}`}>
-        <div className={`rounded-[1rem] bg-base-content/[0.04] ${condensed ? "px-2 py-1.5" : "px-3 py-2"}`}>
+        <div className={`rounded-lg bg-base-content/[0.04] ${condensed ? "px-2 py-1.5" : "px-3 py-2"}`}>
           <p className="text-[0.64rem] font-semibold uppercase tracking-[0.16em] text-base-content/40">Committed</p>
           <p
             className={`font-semibold tabular-nums text-base-content ${condensed ? "mt-0.5 text-sm" : "mt-1 text-base"}`}
@@ -201,7 +201,7 @@ function LiveRoundActivity({
             {snapshot.voteCount}
           </p>
         </div>
-        <div className={`rounded-[1rem] bg-base-content/[0.04] ${condensed ? "px-2 py-1.5" : "px-3 py-2"}`}>
+        <div className={`rounded-lg bg-base-content/[0.04] ${condensed ? "px-2 py-1.5" : "px-3 py-2"}`}>
           <p className="text-[0.64rem] font-semibold uppercase tracking-[0.16em] text-base-content/40">Revealed</p>
           <p
             className={`font-semibold tabular-nums text-base-content ${condensed ? "mt-0.5 text-sm" : "mt-1 text-base"}`}
@@ -209,7 +209,7 @@ function LiveRoundActivity({
             {snapshot.revealedCount}
           </p>
         </div>
-        <div className={`rounded-[1rem] bg-base-content/[0.04] ${condensed ? "px-2 py-1.5" : "px-3 py-2"}`}>
+        <div className={`rounded-lg bg-base-content/[0.04] ${condensed ? "px-2 py-1.5" : "px-3 py-2"}`}>
           <p className="text-[0.64rem] font-semibold uppercase tracking-[0.16em] text-base-content/40">Staked</p>
           <p
             className={`font-semibold tabular-nums text-base-content ${condensed ? "mt-0.5 text-sm" : "mt-1 text-base"}`}
@@ -571,7 +571,7 @@ export function VotingQuestionCard({
     return (
       <>
         <div
-          className={`relative ${embedded ? "" : "rounded-2xl"} flex min-h-0 flex-col transition-[padding-top] duration-200 ease-out ${dockWrapperTopPaddingClassName}`}
+          className={`relative ${embedded ? "" : "rounded-lg"} flex min-h-0 flex-col transition-[padding-top] duration-200 ease-out ${dockWrapperTopPaddingClassName}`}
         >
           {compact ? (
             <div
@@ -730,7 +730,7 @@ export function VotingQuestionCard({
   return (
     <>
       <div
-        className={`relative ${embedded ? "" : "rounded-2xl"} flex h-full min-h-0 flex-col overflow-hidden ${
+        className={`relative ${embedded ? "" : "rounded-lg"} flex h-full min-h-0 flex-col overflow-hidden ${
           isAttentionActive ? "vote-surface-attention" : ""
         } ${shellClassName}`}
         data-vote-attention={isAttentionActive ? "true" : undefined}

@@ -32,8 +32,8 @@
   --color-warning: #f26426;
   --color-error: #b3341b;
 
-  --radius-field: 0.75rem;
-  --radius-box: 1rem;
+  --radius-field: 0.5rem;
+  --radius-box: 0.5rem;
   --tt-tailw: 6px;
   --tt-bg: var(--color-primary);
 }
@@ -81,6 +81,7 @@
   --curyo-surface-elevated-hover: #1d1c20;
   --curyo-surface-mobile-vote: #26242a;
   --curyo-surface-nested: #090a0c;
+  --curyo-card-radius: 0.5rem;
   --curyo-shell-border: rgb(245 240 235 / 0.08);
   --curyo-shell-border-strong: rgb(245 240 235 / 0.14);
   --curyo-panel-shadow: 0 24px 56px rgb(9 10 12 / 0.34);
@@ -167,6 +168,7 @@ body {
   font-size: 1rem !important; /* Enforce minimum 16px */
   background: rgb(23 22 26 / 0.98);
   border: none;
+  border-radius: var(--curyo-card-radius);
   box-shadow: var(--curyo-panel-shadow);
   backdrop-filter: blur(18px);
 }
@@ -180,6 +182,7 @@ body {
 .input,
 .select,
 .textarea {
+  border-radius: var(--radius-field);
   border-color: transparent !important;
   background: rgb(9 10 12 / 0.96);
   box-shadow:
@@ -392,6 +395,7 @@ body {
 .surface-card {
   position: relative;
   overflow: hidden;
+  border-radius: var(--curyo-card-radius);
   background: rgb(23 22 26 / 0.96);
   border: none;
   box-shadow: var(--curyo-panel-shadow);
@@ -402,12 +406,14 @@ body {
 }
 
 .surface-card-nested {
+  border-radius: var(--curyo-card-radius);
   background: rgb(9 10 12 / 0.98);
   border: none;
   box-shadow: 0 16px 32px rgb(9 10 12 / 0.26);
 }
 
 .surface-card .surface-card {
+  border-radius: var(--curyo-card-radius);
   background: rgb(9 10 12 / 0.98);
   box-shadow: 0 16px 32px rgb(9 10 12 / 0.26);
 }
@@ -422,6 +428,7 @@ body {
 
 .card.bg-base-200,
 .modal-box.bg-base-200 {
+  border-radius: var(--curyo-card-radius) !important;
   background: rgb(23 22 26 / 0.98) !important;
   border: none !important;
 }

@@ -34,7 +34,7 @@ export function VoteSignalRail({
   return (
     <div className="flex w-full min-w-0 flex-col gap-3">
       <aside
-        className={`surface-card flex w-full min-w-0 flex-col rounded-[2rem] p-4 ${attentionToken ? "vote-surface-attention" : ""}`}
+        className={`surface-card flex w-full min-w-0 flex-col rounded-lg p-4 ${attentionToken ? "vote-surface-attention" : ""}`}
         data-vote-attention={attentionToken ? "true" : undefined}
         style={{ background: VOTING_SURFACE_BACKGROUND }}
       >

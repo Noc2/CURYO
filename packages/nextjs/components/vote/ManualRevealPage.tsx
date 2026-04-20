@@ -21,7 +21,7 @@ function RevealVoteCard({
   const stake = (Number(vote.stake) / 1e6).toLocaleString(undefined, { maximumFractionDigits: 0 });
 
   return (
-    <div className="surface-card rounded-2xl p-5 flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+    <div className="surface-card rounded-lg p-5 flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
       <div className="space-y-1">
         <div className="flex items-center gap-2 flex-wrap">
           <Link
@@ -58,7 +58,7 @@ export function ManualRevealPage() {
   if (!isConnected || !address) {
     return (
       <div className="flex flex-col items-center justify-center min-h-[60vh] px-4">
-        <div className="surface-card rounded-3xl p-8 max-w-md text-center space-y-4">
+        <div className="surface-card rounded-lg p-8 max-w-md text-center space-y-4">
           <h1 className="text-3xl font-semibold">Reveal My Vote</h1>
           <p className="text-base-content/75">
             Hidden fallback for manual reveals. Auto-reveal stays the default path.
@@ -94,18 +94,18 @@ export function ManualRevealPage() {
               off-chain check.
             </p>
           </div>
-          <div className="surface-card rounded-2xl px-4 py-3 min-w-44">
+          <div className="surface-card rounded-lg px-4 py-3 min-w-44">
             <div className="text-xs uppercase tracking-[0.2em] text-base-content/60">Ready now</div>
             <div className="text-3xl font-semibold tabular-nums">{readyVotes.length}</div>
           </div>
         </div>
 
         {isLoading ? (
-          <div className="surface-card rounded-3xl p-12 flex justify-center">
+          <div className="surface-card rounded-lg p-12 flex justify-center">
             <span className="loading loading-spinner loading-lg text-primary"></span>
           </div>
         ) : votes.length === 0 ? (
-          <div className="surface-card rounded-3xl p-8 space-y-2">
+          <div className="surface-card rounded-lg p-8 space-y-2">
             <h2 className="text-xl font-semibold">No unrevealed votes</h2>
             <p className="text-base-content/75">Nothing needs manual help right now.</p>
           </div>
@@ -131,7 +131,7 @@ export function ManualRevealPage() {
                   ))}
                 </div>
               ) : (
-                <div className="surface-card rounded-2xl p-5 text-base-content/75">Nothing is revealable yet.</div>
+                <div className="surface-card rounded-lg p-5 text-base-content/75">Nothing is revealable yet.</div>
               )}
             </section>
 
