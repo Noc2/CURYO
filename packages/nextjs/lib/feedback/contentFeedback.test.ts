@@ -154,3 +154,42 @@ test("terminal round feedback becomes public", async () => {
   assert.equal(result.publicCount, 1);
   assert.equal(result.items[0]?.isPublic, true);
 });
+
+test("public counts exclude active round feedback", async () => {
+  const activeContext = contentFeedback.buildContentFeedbackRoundContext([{ roundId: "20", state: ROUND_STATE.Open }]);
+  const settledContext = contentFeedback.buildContentFeedbackRoundContext([
+    { roundId: "21", state: ROUND_STATE.Settled },
+  ]);
+  const hiddenPayload = contentFeedback.normalizeContentFeedbackInput({
+    address: WALLET,
+    contentId: "20",
+    feedbackType: "concern",
+    body: "This active question still needs hidden reviewer context.",
+  });
+  const publicPayload = contentFeedback.normalizeContentFeedbackInput({
+    address: OTHER_WALLET,
+    contentId: "21",
+    feedbackType: "evidence",
+    body: "The settled question has public supporting evidence.",
+  });
+  assert.equal(hiddenPayload.ok, true);
+  assert.equal(publicPayload.ok, true);
+  if (!hiddenPayload.ok || !publicPayload.ok) return;
+
+  await contentFeedback.addContentFeedback(hiddenPayload.payload, activeContext);
+  await contentFeedback.addContentFeedback(publicPayload.payload, settledContext);
+
+  const counts = await contentFeedback.listContentFeedbackCounts({
+    contentIds: ["20", "21", "22"],
+    contextByContentId: new Map([
+      ["20", activeContext],
+      ["21", settledContext],
+    ]),
+  });
+
+  assert.deepEqual(counts, {
+    "20": 0,
+    "21": 1,
+    "22": 0,
+  });
+});
