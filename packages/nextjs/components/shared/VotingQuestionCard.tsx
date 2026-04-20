@@ -5,7 +5,6 @@ import { FundQuestionModal } from "~~/components/reward-pool/FundQuestionModal";
 import { CuryoConnectButton } from "~~/components/scaffold-eth";
 import { CuryoVoteButton } from "~~/components/shared/CuryoVoteButton";
 import { MoreToggleButton } from "~~/components/shared/MoreToggleButton";
-import { RatingHistory } from "~~/components/shared/RatingHistory";
 import { RatingOrb } from "~~/components/shared/RatingOrb";
 import { RoundProgress } from "~~/components/shared/RoundProgress";
 import { RoundRevealedBreakdown, RoundStats } from "~~/components/shared/RoundStats";
@@ -276,7 +275,7 @@ function LiveRoundActivity({
           : describeOpenRoundActivity(snapshot);
   const supportCopy =
     snapshot.phase !== "voting"
-      ? "Check the round details below for the settled breakdown and history."
+      ? "Check the round details below for the settled breakdown."
       : snapshot.isEpoch1
         ? "Votes stay hidden until reveal, so early signal stays private while keeping full weight."
         : "Revealed signal is live now. Open votes use informed weight, but they can still help close the round.";
@@ -634,12 +633,9 @@ export function VotingQuestionCard({
     </TooltipAnchor>
   );
   const addRewardPoolLink = <AddRewardPoolLink onFundQuestion={() => setShowFundQuestionModal(true)} />;
-  const renderRewardPoolDetailsRow = (historyVariant: "default" | "dark") => (
+  const renderRewardPoolDetailsRow = () => (
     <div className="flex min-w-0 flex-col gap-3">
-      <div className="flex min-w-0 flex-col gap-3">
-        <RoundStats categoryId={categoryId} snapshot={roundSnapshot} />
-        <RatingHistory contentId={contentId} variant={historyVariant} fallbackRating={currentRating} />
-      </div>
+      <RoundStats categoryId={categoryId} snapshot={roundSnapshot} />
       {addRewardPoolLink}
     </div>
   );
@@ -865,7 +861,7 @@ export function VotingQuestionCard({
                           {activitySummary}
                           {!showInlineProgress ? <RoundProgress snapshot={roundSnapshot} /> : null}
                           {!showInlineRevealedBreakdown ? <RoundRevealedBreakdown snapshot={roundSnapshot} /> : null}
-                          {renderRewardPoolDetailsRow(embedded ? "dark" : "default")}
+                          {renderRewardPoolDetailsRow()}
                         </div>
                       </div>
                     </div>
@@ -986,7 +982,7 @@ export function VotingQuestionCard({
                 {!isSignalVariant && !showInlineRevealedBreakdown ? (
                   <RoundRevealedBreakdown snapshot={roundSnapshot} stacked={isDesktopSignalRailCard} />
                 ) : null}
-                {renderRewardPoolDetailsRow(embedded || isSignalVariant ? "dark" : "default")}
+                {renderRewardPoolDetailsRow()}
               </div>
             ) : null}
           </div>
