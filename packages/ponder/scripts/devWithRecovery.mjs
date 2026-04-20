@@ -10,13 +10,15 @@ const pgliteDir = join(ponderDir, ".ponder", "pglite");
 const LOCALHOST_HOSTNAMES = new Set(["localhost", "127.0.0.1", "::1"]);
 const DEFAULT_PONDER_URL = "http://127.0.0.1:42069";
 const PONDER_SHUTDOWN_ERROR_MARKER = "PONDER_SHUTDOWN_ERROR_STUCK";
+const PONDER_CLOSED_PGLITE_MARKER = "PONDER_CLOSED_PGLITE_STUCK";
+const PONDER_PORT_FALLBACK_MARKER = "PONDER_CONFIGURED_PORT_FALLBACK_STUCK";
 const SHUTDOWN_STATUS_GRACE_MS = 10_000;
 const SHUTDOWN_STATUS_POLL_MS = 2_000;
 const SHUTDOWN_STATUS_TIMEOUT_MS = 1_500;
 const PONDER_PORT_RELEASE_TIMEOUT_MS = 10_000;
 const PONDER_PORT_RELEASE_POLL_MS = 250;
 const PONDER_PORT_CHECK_TIMEOUT_MS = 500;
-const PONDER_LISTENING_PORT_PATTERN = /\bStarted listening on port (\d{1,5})\b/g;
+const PONDER_PORT_FALLBACK_PATTERN = /\bPort (\d{1,5}) was in use, trying port (\d{1,5})\b/g;
 const PONDER_SERVER_TRANSITION_PATTERN =
   /\b(Hot reload|Using PGlite database at|Port \d{1,5} was in use, trying port \d{1,5}|Started listening on port \d{1,5})\b/;
 
@@ -42,6 +44,12 @@ export function getRecoveryReason(output, env = process.env) {
   if (output.includes(PONDER_SHUTDOWN_ERROR_MARKER)) {
     return "stuck Ponder database shutdown state";
   }
+  if (output.includes(PONDER_CLOSED_PGLITE_MARKER) || output.includes("PGlite is closed")) {
+    return "closed PGlite database handle";
+  }
+  if (output.includes(PONDER_PORT_FALLBACK_MARKER)) {
+    return "Ponder moved off the configured port";
+  }
 
   const hasWalRecovery = output.includes("InitWalRecovery");
   const hasPgliteAbort =
@@ -60,6 +68,8 @@ export function shouldResetPglite(output, env = process.env) {
   return (
     reason === "corrupted PGlite state" ||
     reason === "stuck Ponder database shutdown state" ||
+    reason === "closed PGlite database handle" ||
+    reason === "Ponder moved off the configured port" ||
     reason === "stale local Ponder sync state after the hardhat/anvil chain was reset"
   );
 }
@@ -82,32 +92,26 @@ function resolvePonderStatusUrl(env = process.env) {
   }
 }
 
-export function getLatestPonderListeningPort(output) {
-  let latestPort = null;
-
-  for (const match of output.matchAll(PONDER_LISTENING_PORT_PATTERN)) {
-    const port = Number(match[1]);
-    if (Number.isInteger(port) && port > 0 && port <= 65_535) {
-      latestPort = port;
-    }
-  }
-
-  return latestPort;
-}
-
 export function outputIndicatesPonderServerTransition(output) {
   return PONDER_SERVER_TRANSITION_PATTERN.test(output);
 }
 
-export function resolveStatusUrlForPonderOutput(statusUrl, output) {
-  if (!statusUrl) return null;
+export function outputIndicatesClosedPglite(output) {
+  return output.includes("PGlite is closed");
+}
 
-  const port = getLatestPonderListeningPort(output);
-  if (!port) return null;
+export function outputIndicatesConfiguredPortFallback(output, statusUrl) {
+  if (!statusUrl) return false;
 
-  const nextStatusUrl = new URL(statusUrl.href);
-  nextStatusUrl.port = String(port);
-  return nextStatusUrl;
+  const configuredPort = getLocalPort(statusUrl);
+  if (!configuredPort) return false;
+
+  for (const match of output.matchAll(PONDER_PORT_FALLBACK_PATTERN)) {
+    const attemptedPort = Number(match[1]);
+    if (attemptedPort === configuredPort) return true;
+  }
+
+  return false;
 }
 
 function shouldPollPonderStatus(statusUrl, env = process.env) {
@@ -206,25 +210,54 @@ function runDevRaw() {
 
     const startedAt = Date.now();
     const baseStatusUrl = resolvePonderStatusUrl(process.env);
-    let activeStatusUrl = baseStatusUrl;
     let hasActivePonderServer = false;
     let lastServerTransitionAt = startedAt;
+    let recoveryStopRequested = false;
 
-    const capture = (chunk) => {
-      const text = chunk.toString();
+    const appendOutput = (text) => {
       combinedOutput += text;
       if (combinedOutput.length > 128_000) {
         combinedOutput = combinedOutput.slice(-128_000);
       }
+    };
+
+    const requestRecoveryStop = (message, marker) => {
+      if (recoveryStopRequested || shutdownRequested || child.exitCode !== null || child.signalCode !== null) return;
+
+      recoveryStopRequested = true;
+      appendOutput(`${message}${marker}\n`);
+      process.stderr.write(message);
+
+      stopChild("SIGTERM");
+      setTimeout(() => {
+        if (child.exitCode === null && child.signalCode === null) {
+          stopChild("SIGKILL");
+        }
+      }, 5_000).unref();
+    };
+
+    const capture = (chunk) => {
+      const text = chunk.toString();
+      appendOutput(text);
 
       if (outputIndicatesPonderServerTransition(text)) {
         lastServerTransitionAt = Date.now();
       }
 
-      const nextStatusUrl = resolveStatusUrlForPonderOutput(baseStatusUrl, combinedOutput);
-      if (nextStatusUrl) {
-        activeStatusUrl = nextStatusUrl;
+      if (text.includes("Started listening on port")) {
         hasActivePonderServer = true;
+      }
+
+      if (outputIndicatesConfiguredPortFallback(text, baseStatusUrl)) {
+        requestRecoveryStop(
+          "\nWarning: Ponder moved off the configured port. Stopping it so devWithRecovery can clear the stale server and retry.\n",
+          PONDER_PORT_FALLBACK_MARKER,
+        );
+      } else if (outputIndicatesClosedPglite(text)) {
+        requestRecoveryStop(
+          "\nWarning: Detected closed PGlite database handle. Stopping Ponder so devWithRecovery can reset local state and retry.\n",
+          PONDER_CLOSED_PGLITE_MARKER,
+        );
       }
     };
 
@@ -242,27 +275,20 @@ function runDevRaw() {
     const monitor = shouldPollPonderStatus(baseStatusUrl, process.env)
       ? setInterval(async () => {
           if (monitorInFlight || shutdownRequested || child.exitCode !== null || child.signalCode !== null) return;
-          if (!hasActivePonderServer || !activeStatusUrl) return;
+          if (!hasActivePonderServer || !baseStatusUrl) return;
           if (Date.now() - lastServerTransitionAt < SHUTDOWN_STATUS_GRACE_MS) return;
 
-          const statusUrl = activeStatusUrl;
+          const statusUrl = baseStatusUrl;
 
           monitorInFlight = true;
           try {
             const { ok, text } = await fetchStatusText(statusUrl);
             if (!ok && text.includes("ShutdownError")) {
-              const message =
+              requestRecoveryStop(
                 `\nWarning: Detected Ponder ShutdownError from ${statusUrl.href}. ` +
-                "Stopping the stuck process so devWithRecovery can retry.\n";
-              capture(`${message}${PONDER_SHUTDOWN_ERROR_MARKER}\n`);
-              process.stderr.write(message);
-
-              stopChild("SIGTERM");
-              setTimeout(() => {
-                if (child.exitCode === null && child.signalCode === null) {
-                  stopChild("SIGKILL");
-                }
-              }, 5_000).unref();
+                  "Stopping the stuck process so devWithRecovery can retry.\n",
+                PONDER_SHUTDOWN_ERROR_MARKER,
+              );
             }
           } catch {
             // Ponder is often not listening yet during startup; keep polling.

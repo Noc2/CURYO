@@ -1,8 +1,8 @@
 import {
-  getLatestPonderListeningPort,
   getRecoveryReason,
+  outputIndicatesClosedPglite,
+  outputIndicatesConfiguredPortFallback,
   outputIndicatesPonderServerTransition,
-  resolveStatusUrlForPonderOutput,
   shouldRecover,
   shouldResetPglite,
 } from "./devWithRecovery.mjs";
@@ -64,17 +64,29 @@ describe("devWithRecovery", () => {
     expect(shouldResetPglite(output)).toBe(true);
   });
 
-  test("tracks the latest Ponder port after dev hot reload", () => {
-    const output = [
-      "8:06:54 AM INFO  server     Started listening on port 42069",
-      "8:06:54 AM WARN  server     Port 42069 was in use, trying port 42070",
-      "8:06:54 AM INFO  server     Started listening on port 42070",
-    ].join("\n");
+  test("resets PGlite after the database handle is closed", () => {
+    const output = "[ponder-api] Unhandled error: PGlite is closed";
 
-    const statusUrl = resolveStatusUrlForPonderOutput(new URL("http://127.0.0.1:42069/status"), output);
+    expect(outputIndicatesClosedPglite(output)).toBe(true);
+    expect(shouldRecover(output)).toBe(true);
+    expect(getRecoveryReason(output)).toBe("closed PGlite database handle");
+    expect(shouldResetPglite(output)).toBe(true);
+  });
 
-    expect(getLatestPonderListeningPort(output)).toBe(42070);
-    expect(statusUrl?.href).toBe("http://127.0.0.1:42070/status");
+  test("detects when Ponder moves off the configured port", () => {
+    const output = "8:06:54 AM WARN  server     Port 42069 was in use, trying port 42070";
+    const statusUrl = new URL("http://127.0.0.1:42069/status");
+
+    expect(outputIndicatesConfiguredPortFallback(output, statusUrl)).toBe(true);
+    expect(outputIndicatesConfiguredPortFallback(output, new URL("http://127.0.0.1:42070/status"))).toBe(false);
+  });
+
+  test("resets PGlite after configured port fallback recovery is requested", () => {
+    const output = "PONDER_CONFIGURED_PORT_FALLBACK_STUCK";
+
+    expect(shouldRecover(output)).toBe(true);
+    expect(getRecoveryReason(output)).toBe("Ponder moved off the configured port");
+    expect(shouldResetPglite(output)).toBe(true);
   });
 
   test("treats hot reload and port fallback logs as server transitions", () => {
