@@ -34,7 +34,7 @@ type HeaderMenuLink = {
 const menuLinks: HeaderMenuLink[] = [
   { label: "Discover", href: RATE_ROUTE, icon: GlobeAltIcon },
   { label: "Submit", href: ASK_ROUTE, icon: PlusCircleIcon },
-  { label: "cREP", href: "/governance", icon: IdentificationIcon },
+  { label: "Reputation", href: "/governance", icon: IdentificationIcon },
   { label: "Docs", href: "/docs", icon: BookOpenIcon },
 ];
 
