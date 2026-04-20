@@ -402,11 +402,10 @@ function FeedContentMetaCard({
   const contextUrl = item.url.trim();
   const contextLabel = getSourceLabel(contextUrl);
   const hasContextLink = contextUrl.length > 0 && contextLabel.trim().length > 0;
-  const hasContextDetails = hasDescription || hasContextLink;
   const rewardPoolTotal = item.rewardPoolSummary?.totalAvailable ?? 0n;
   const feedbackBonusTotal = item.feedbackBonusSummary?.totalRemaining ?? 0n;
   const hideDockedActionButtons = isMobileViewport;
-  const actionRowClassName = `flex flex-wrap items-center gap-x-2 gap-y-2 ${compact ? "mt-3" : "mt-4"}`;
+  const actionRowClassName = `flex items-center justify-between gap-3 ${compact ? "mt-3" : "mt-4"}`;
   const wrapperClassName = embedded
     ? compact
       ? "border-t border-base-content/10 px-3 py-3"
@@ -466,34 +465,18 @@ function FeedContentMetaCard({
           />
         </div>
 
-        {hasContextDetails ? (
+        {hasDescription ? (
           <div className={compact ? "mt-3 space-y-2" : "mt-4 space-y-2"}>
-            {hasDescription ? (
-              <QuestionDescription
-                description={description}
-                referencedContentById={referencedContentById}
-                className="text-base leading-relaxed text-base-content/85"
-              />
-            ) : null}
-            {hasContextLink ? (
-              <SafeExternalLink
-                href={contextUrl}
-                allowExternalOpen
-                testId="content-source-link"
-                title={`Open context: ${contextLabel}`}
-                ariaLabel={`Open context: ${contextLabel}`}
-                onClick={() => onSourceOpen?.(item)}
-                className="inline-flex max-w-full items-center gap-1.5 text-base font-semibold leading-snug text-primary underline-offset-4 transition-colors hover:text-primary-focus hover:underline"
-              >
-                <ArrowTopRightOnSquareIcon className="h-4 w-4 shrink-0" />
-                <span className="min-w-0 truncate">Context: {contextLabel}</span>
-              </SafeExternalLink>
-            ) : null}
+            <QuestionDescription
+              description={description}
+              referencedContentById={referencedContentById}
+              className="text-base leading-relaxed text-base-content/85"
+            />
           </div>
         ) : null}
 
         <div className={actionRowClassName}>
-          <div className="min-w-0 flex-[1_1_9rem]">
+          <div className="min-w-0 flex-1">
             <SubmitterBadge
               address={item.submitter}
               username={submitterProfile?.username}
@@ -503,6 +486,20 @@ function FeedContentMetaCard({
               addressMode={submitterProfile?.username ? "inline" : "hidden"}
             />
           </div>
+          {hasContextLink ? (
+            <SafeExternalLink
+              href={contextUrl}
+              allowExternalOpen
+              testId="content-source-link"
+              title={`Open context: ${contextLabel}`}
+              ariaLabel={`Open context: ${contextLabel}`}
+              onClick={() => onSourceOpen?.(item)}
+              className="inline-flex shrink-0 items-center gap-1.5 text-base font-semibold leading-snug text-primary underline-offset-4 transition-colors hover:text-primary-focus hover:underline"
+            >
+              <ArrowTopRightOnSquareIcon className="h-4 w-4 shrink-0" />
+              <span>Context</span>
+            </SafeExternalLink>
+          ) : null}
         </div>
       </div>
 
