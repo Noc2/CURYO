@@ -9,7 +9,7 @@ interface BotCategoryCatalogEntry {
 const CATEGORY_CATALOG: readonly BotCategoryCatalogEntry[] = [
   {
     authRequirement: "requires YOUTUBE_API_KEY",
-    categoryId: 5n,
+    categoryId: 4n,
     categoryName: "Media",
     sourceName: "youtube",
     strategyName: "youtube",

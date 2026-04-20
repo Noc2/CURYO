@@ -103,7 +103,7 @@ Copy `.env.example` to `.env` in the package directory and fill in the deployed 
 
 `submit` also supports one-off CLI overrides:
 
-- `--category <id|name>` to target a specific category such as `5` or `Media`
+- `--category <id|name>` to target a specific category such as `4` or `Media`
 - `--source <name>` to target a specific source adapter such as `youtube`
 - `--max-submissions <count>` to override the per-run cap for that invocation
 - `--transport x402` to pay the hosted x402 API from the submit bot wallet instead of submitting directly on-chain
@@ -126,7 +126,7 @@ Frontend fee sweeping remains a keeper responsibility when the keeper wallet is 
 
 | ID | Category | `--source` | Availability |
 |---|---|---|---|
-| `5` | Media | `youtube` | Requires `YOUTUBE_API_KEY` |
+| `4` | Media | `youtube` | Requires `YOUTUBE_API_KEY` |
 
 ## How Submission Works
 

@@ -1,6 +1,6 @@
 import { expect, type Page } from "@playwright/test";
 
-const SEEDED_CATEGORY_NAMES = ["Media", "General", "Products", "Apps"];
+const SEEDED_CATEGORY_NAMES = ["Media", "General", "Products", "Software"];
 const SEEDED_SUBCATEGORY_NAMES = ["Images", "YouTube", "Education", "Entertainment", "Photography", "Culture"];
 
 function escapeRegExp(value: string) {

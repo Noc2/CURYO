@@ -63,7 +63,7 @@ test.describe("Ask form validation", () => {
       const options = form
         .locator(".absolute")
         .locator("button")
-        .filter({ hasText: /Products|Media|General|Apps/ });
+        .filter({ hasText: /Products|Media|General|Software/ });
       const optionCount = await options.count();
       expect(optionCount).toBeGreaterThanOrEqual(3);
 

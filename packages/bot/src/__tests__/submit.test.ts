@@ -14,7 +14,7 @@ const ITEM = {
   title: "Never Gonna Give You Up",
   description: "A music video with persistent cultural staying power.",
   tags: "Music",
-  categoryId: 5n,
+  categoryId: 4n,
 };
 
 type SubmitCommandOptions = {
@@ -386,7 +386,7 @@ describe("runSubmit", () => {
 
     expect(submitCommand.mocks.writeContract).not.toHaveBeenCalled();
     expect(submitCommand.mocks.log.warn).toHaveBeenCalledWith(
-      `Skipping "${ITEM.title}" (resolved category 9 does not match requested category 5)`,
+      `Skipping "${ITEM.title}" (resolved category 9 does not match requested category 4)`,
     );
   });
 
@@ -464,7 +464,7 @@ describe("runSubmit", () => {
       sources: [
         {
           name: "youtube",
-          categoryId: 5n,
+          categoryId: 4n,
           categoryName: "Media",
           items: [youtubeItem, secondYoutubeItem, thirdYoutubeItem],
         },
@@ -517,7 +517,7 @@ describe("runSubmit", () => {
       chainId: 42220,
       clientRequestId: "youtube:abcdabcdabcdabcdabcdabcdabcdabcd",
       question: {
-        categoryId: "5",
+        categoryId: "4",
         contextUrl: ITEM.contextUrl,
         roundConfig: {
           epochDuration: "1200",

@@ -49,7 +49,7 @@ describe("content sources", () => {
     );
 
     expect(categoryMetadataBySource).toEqual({
-      youtube: { categoryId: 5n, categoryName: "Media" },
+      youtube: { categoryId: 4n, categoryName: "Media" },
     });
   });
 
@@ -62,7 +62,7 @@ describe("content sources", () => {
         categoryName: entry.categoryName,
       })),
     ).toEqual([
-      { categoryId: 5n, categoryName: "Media" },
+      { categoryId: 4n, categoryName: "Media" },
     ]);
   });
 

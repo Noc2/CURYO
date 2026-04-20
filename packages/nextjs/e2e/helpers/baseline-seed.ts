@@ -79,7 +79,7 @@ const BASELINE_CONTENT = [
     description:
       "Judge whether a new developer could complete the first request without missing setup, authentication, or error handling steps.",
     tags: "Getting Started,Readability,Examples",
-    categorySlug: "developer-docs",
+    categorySlug: "text",
     bountyAmount: 5_000_000n,
     submitter: ANVIL_ACCOUNTS.account4.address,
   },
@@ -99,7 +99,7 @@ const BASELINE_CONTENT = [
     description:
       "The review mentions noise, service speed, seating, and price. Vote on whether it is specific enough to guide a nearby visitor.",
     tags: "Local Tips,Service,Value",
-    categorySlug: "local-places",
+    categorySlug: "places-travel",
     bountyAmount: 1_500_000n,
     submitter: ANVIL_ACCOUNTS.account6.address,
   },
@@ -109,7 +109,7 @@ const BASELINE_CONTENT = [
     description:
       "Use the visible room condition and the written context to judge whether the listing earns a higher community rating.",
     tags: "Hotels,Cleanliness,Comfort",
-    categorySlug: "travel",
+    categorySlug: "places-travel",
     bountyAmount: 3_000_000n,
     submitter: ANVIL_ACCOUNTS.account7.address,
   },
@@ -129,7 +129,7 @@ const BASELINE_CONTENT = [
     description:
       "The flow explains wallet connection, Voter ID, and staking in one screen. Judge whether the copy reduces friction or overloads new users.",
     tags: "Onboarding,Trust,Usability",
-    categorySlug: "apps",
+    categorySlug: "software",
     bountyAmount: 6_000_000n,
     submitter: ANVIL_ACCOUNTS.account9.address,
   },
@@ -185,7 +185,7 @@ const BASELINE_CONTENT = [
     description:
       "Use the image as travel context. Vote on whether it would make a neighborhood guide feel inviting and credible.",
     tags: "Location,Photography,Solo Travel",
-    categorySlug: "travel",
+    categorySlug: "places-travel",
     bountyAmount: 7_000_000n,
     submitter: ANVIL_ACCOUNTS.account5.address,
   },
@@ -195,7 +195,7 @@ const BASELINE_CONTENT = [
     description:
       "Review the checklist for keyboard support, focus states, text contrast, reduced motion, and mobile overflow coverage.",
     tags: "Accessibility,Quality,Testing",
-    categorySlug: "apps",
+    categorySlug: "software",
     bountyAmount: 3_500_000n,
     submitter: ANVIL_ACCOUNTS.account6.address,
   },

@@ -172,13 +172,12 @@ export function useCategoryRegistry() {
 /** Category slugs to human-friendly content type labels. */
 const CATEGORY_CONTENT_LABELS: Record<string, string> = {
   products: "product",
-  "local-places": "place",
-  travel: "travel item",
-  apps: "app",
+  "places-travel": "place",
+  software: "software",
   media: "media item",
   design: "design",
   "ai-answers": "AI answer",
-  "developer-docs": "document",
+  text: "text",
   trust: "trust item",
   general: "content",
 };

@@ -47,7 +47,7 @@ export function formatSubmitUsage(): string {
 Discover trending content and submit it to ContentRegistry.
 
 Options:
-  --category <id|name>       Limit submission to one category (for example: 5, "Media")
+  --category <id|name>       Limit submission to one category (for example: 4, "Media")
   --source <name>            Limit submission to one source adapter (for example: youtube)
   --max-submissions <count>  Override the per-run submission cap for this execution
   --transport <onchain|x402> Submit directly on-chain or through the hosted x402 API

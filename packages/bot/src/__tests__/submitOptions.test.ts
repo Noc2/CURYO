@@ -19,11 +19,11 @@ describe("submit options", () => {
     });
     expect(formatSubmitUsage()).toContain("--category <id|name>");
     expect(formatSubmitUsage()).toContain("Available categories:");
-    expect(formatSubmitUsage()).toContain("5  Media");
+    expect(formatSubmitUsage()).toContain("4  Media");
     expect(formatSubmitUsage()).toContain("youtube");
     expect(formatSubmitUsage()).toContain("requires YOUTUBE_API_KEY");
     expect(formatSubmitUsage()).not.toContain("Additional source adapters without automated submit support yet:");
-    expect(formatSubmitUsage()).not.toContain("Developer Docs");
+    expect(formatSubmitUsage()).not.toContain("Text");
   });
 
   it("rejects malformed submit options", () => {

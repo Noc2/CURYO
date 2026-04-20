@@ -71,8 +71,8 @@ KEYS=(
 
 # Example Curyo 2 questions always include a context URL. Preview media is optional.
 # Curyo 2 default categoryIds:
-# 1=Products, 2=Local Places, 3=Travel, 4=Apps, 5=Media,
-# 6=Design, 7=AI Answers, 8=Developer Docs, 9=Trust, 10=General
+# 1=Products, 2=Places & Travel, 3=Software, 4=Media, 5=Design,
+# 6=AI Answers, 7=Text, 8=Trust, 9=General
 CONTEXT_URLS=(
   "https://example.com/curyo-refund-policy"
   "https://picsum.photos/seed/curyo-workspace/1200/800.jpg"
@@ -211,18 +211,18 @@ TAGS=(
 CATEGORY_SLUGS=(
   "trust"           # Trust
   "design"          # Design
-  "developer-docs"  # Developer Docs
+  "text"            # Text
   "products"        # Products
-  "local-places"    # Local Places
-  "travel"          # Travel
+  "places-travel"   # Places & Travel
+  "places-travel"   # Places & Travel
   "media"           # Media
-  "apps"            # Apps
+  "software"        # Software
   "design"          # Design
   "general"         # General
   "media"           # Media
   "media"           # Media
-  "travel"          # Travel
-  "apps"            # Apps
+  "places-travel"   # Places & Travel
+  "software"        # Software
   "trust"           # Trust
   "products"        # Products
 )

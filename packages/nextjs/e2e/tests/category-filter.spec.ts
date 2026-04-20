@@ -23,13 +23,12 @@ test.describe("Category filter", () => {
     // filter assertions don't pick an empty category and stall on a blank feed.
     const knownCategories = [
       "Products",
-      "Local Places",
-      "Travel",
-      "Apps",
+      "Places & Travel",
+      "Software",
       "Media",
       "Design",
       "AI Answers",
-      "Developer Docs",
+      "Text",
       "Trust",
       "General",
     ];

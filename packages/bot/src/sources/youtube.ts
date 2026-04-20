@@ -3,7 +3,7 @@ import { truncateContentDescription, truncateContentTitle } from "../contentLimi
 import { fetchWithTimeout } from "../utils.js";
 import type { ContentSource, ContentItem } from "./types.js";
 
-const CATEGORY_ID = 5n;
+const CATEGORY_ID = 4n;
 
 // Map YouTube video category IDs to on-chain subcategory names
 const YOUTUBE_CATEGORY_MAP: Record<number, string> = {
