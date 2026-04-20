@@ -470,8 +470,12 @@ body {
 }
 
 .vote-btn.vote-feedback .vote-bg {
-  background: var(--curyo-ember);
+  background: var(--curyo-warm-white);
   box-shadow: none;
+}
+
+.vote-btn.vote-feedback .vote-symbol {
+  color: var(--curyo-ember-deep);
 }
 
 .vote-btn.vote-feedback:disabled .vote-bg {
