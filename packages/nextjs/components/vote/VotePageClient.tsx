@@ -36,6 +36,7 @@ import { useVoterIdNFT } from "~~/hooks/useVoterIdNFT";
 import { useWatchedContent } from "~~/hooks/useWatchedContent";
 import { mergeVoteHistoryItems } from "~~/hooks/voteHistory/shared";
 import { FOLLOWED_CURATOR_TOAST_ID } from "~~/lib/notifications/followedActivity";
+import { extractQuestionReferenceIds } from "~~/lib/questionReferences";
 import { formatVoteCooldownRemaining, getVoteCooldownRemainingSeconds } from "~~/lib/vote/cooldown";
 import {
   DISCOVER_ALL_FILTER,
@@ -869,6 +870,36 @@ const HomeInner = () => {
     visibleCount,
     requestedActiveId: effectiveRequestedActiveId,
   });
+  const loadedContentById = useMemo(() => {
+    const map = new Map<string, ContentItem>();
+    for (const item of loadedItems) {
+      map.set(item.id.toString(), item);
+    }
+    return map;
+  }, [loadedItems]);
+  const referencedQuestionIds = useMemo(
+    () => extractQuestionReferenceIds(loadedItems.map(item => item.description)),
+    [loadedItems],
+  );
+  const missingReferencedContentIds = useMemo(
+    () =>
+      referencedQuestionIds.filter(contentId => !loadedContentById.has(contentId)).map(contentId => BigInt(contentId)),
+    [loadedContentById, referencedQuestionIds],
+  );
+  const { feed: referencedContentFeed } = useContentFeed(address, {
+    contentIds: missingReferencedContentIds.length > 0 ? missingReferencedContentIds : undefined,
+    enabled: missingReferencedContentIds.length > 0,
+    keepPrevious: true,
+    limit: missingReferencedContentIds.length || undefined,
+    ownSubmitterAddresses,
+  });
+  const referencedContentById = useMemo(() => {
+    const map = new Map(loadedContentById);
+    for (const item of referencedContentFeed) {
+      map.set(item.id.toString(), item);
+    }
+    return map;
+  }, [loadedContentById, referencedContentFeed]);
   const primaryContentId = primaryItem?.id;
   const voteCooldownContentIds = useMemo(() => {
     const ids = new Map<string, bigint>();
@@ -1679,6 +1710,7 @@ const HomeInner = () => {
                           watchedContentIds={watchedContentIds}
                           followedWallets={followedWallets}
                           normalizedAddress={normalizedAddress}
+                          referencedContentById={referencedContentById}
                           isCommitting={isCommitting}
                           isMetadataPrefetchPending={isMetadataPrefetchPending}
                           navigationLocked={stakeModal.isOpen}

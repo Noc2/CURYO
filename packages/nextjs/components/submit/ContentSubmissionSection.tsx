@@ -45,6 +45,7 @@ import {
   getContentTagValidationError,
   getContentTitleValidationError,
 } from "~~/lib/moderation/submissionValidation";
+import { parseQuestionReferenceInput } from "~~/lib/questionReferences";
 import {
   DEFAULT_SUBMISSION_REWARD_POOL,
   ERC20_APPROVAL_ABI,
@@ -156,6 +157,8 @@ export function ContentSubmissionSection() {
   const [titleError, setTitleError] = useState<string | null>(null);
   const [description, setDescription] = useState("");
   const [descriptionError, setDescriptionError] = useState<string | null>(null);
+  const [referenceInput, setReferenceInput] = useState("");
+  const [referenceInputError, setReferenceInputError] = useState<string | null>(null);
   const [selectedCategory, setSelectedCategory] = useState<Category | null>(null);
   const [selectedSubcategories, setSelectedSubcategories] = useState<string[]>([]);
   const [customSubcategory, setCustomSubcategory] = useState("");
@@ -187,6 +190,7 @@ export function ContentSubmissionSection() {
   const [categorySearch, setCategorySearch] = useState("");
   const [isCategoryDropdownOpen, setIsCategoryDropdownOpen] = useState(false);
   const categoryDropdownRef = useRef<HTMLDivElement>(null);
+  const descriptionTextareaRef = useRef<HTMLTextAreaElement>(null);
 
   const { categories, isLoading: categoriesLoading } = useCategoryRegistry();
 
@@ -601,6 +605,40 @@ export function ContentSubmissionSection() {
   const handleDescriptionChange = (value: string) => {
     setDescription(value);
     setDescriptionError(getContentDescriptionValidationError(value));
+  };
+
+  const handleInsertQuestionReference = () => {
+    const contentId = parseQuestionReferenceInput(referenceInput);
+    if (!contentId) {
+      setReferenceInputError("Enter a question ID or Curyo question link.");
+      return;
+    }
+
+    const token = `[[question:${contentId}]]`;
+    const textarea = descriptionTextareaRef.current;
+    const selectionStart = textarea?.selectionStart ?? description.length;
+    const selectionEnd = textarea?.selectionEnd ?? description.length;
+    const beforeSelection = description.slice(0, selectionStart);
+    const afterSelection = description.slice(selectionEnd);
+    const leadingSpace = beforeSelection.length > 0 && !/\s$/.test(beforeSelection) ? " " : "";
+    const trailingSpace = afterSelection.length > 0 && !/^\s/.test(afterSelection) ? " " : "";
+    const nextDescription = `${beforeSelection}${leadingSpace}${token}${trailingSpace}${afterSelection}`;
+    const nextDescriptionError = getContentDescriptionValidationError(nextDescription);
+
+    if (nextDescriptionError) {
+      setReferenceInputError(nextDescriptionError);
+      return;
+    }
+
+    handleDescriptionChange(nextDescription);
+    setReferenceInput("");
+    setReferenceInputError(null);
+
+    window.requestAnimationFrame(() => {
+      const nextCaretPosition = beforeSelection.length + leadingSpace.length + token.length;
+      descriptionTextareaRef.current?.focus();
+      descriptionTextareaRef.current?.setSelectionRange(nextCaretPosition, nextCaretPosition);
+    });
   };
 
   const validateQuestionSection = () => {
@@ -1119,6 +1157,7 @@ export function ContentSubmissionSection() {
                 Description
               </label>
               <textarea
+                ref={descriptionTextareaRef}
                 placeholder="Add context voters should consider"
                 className={`textarea textarea-bordered h-24 w-full bg-base-100 ${
                   descriptionError || (questionStepAttempted && !description.trim()) ? "textarea-error" : ""
@@ -1127,6 +1166,40 @@ export function ContentSubmissionSection() {
                 onChange={e => handleDescriptionChange(e.target.value)}
                 maxLength={MAX_CONTENT_DESCRIPTION_LENGTH}
               />
+              <div className="mt-2 space-y-1.5">
+                <div className="flex flex-col gap-2 sm:flex-row">
+                  <input
+                    type="text"
+                    aria-label="Related question ID or link"
+                    placeholder="Question ID or /rate link"
+                    className={`input input-bordered input-sm min-w-0 flex-1 bg-base-100 ${
+                      referenceInputError ? "input-error" : ""
+                    }`}
+                    value={referenceInput}
+                    onChange={e => {
+                      setReferenceInput(e.target.value);
+                      setReferenceInputError(null);
+                    }}
+                    onKeyDown={event => {
+                      if (event.key === "Enter") {
+                        event.preventDefault();
+                        handleInsertQuestionReference();
+                      }
+                    }}
+                  />
+                  <button
+                    type="button"
+                    className="btn btn-submit btn-sm shrink-0"
+                    onClick={handleInsertQuestionReference}
+                  >
+                    Insert reference
+                  </button>
+                </div>
+                <p className="text-sm text-base-content/45">
+                  Link another Curyo question when voters should compare both before rating.
+                </p>
+                {referenceInputError ? <p className="text-base text-error">{referenceInputError}</p> : null}
+              </div>
               {questionStepAttempted && !description.trim() ? (
                 <p className="mt-1 text-base text-error">Description is required.</p>
               ) : null}

@@ -71,5 +71,6 @@ test("parseQuestionReferenceInput rejects unsupported values", () => {
   assert.equal(parseQuestionReferenceInput("0"), null);
   assert.equal(parseQuestionReferenceInput("question 42"), null);
   assert.equal(parseQuestionReferenceInput("https://example.com/rate?content=42"), null);
+  assert.equal(parseQuestionReferenceInput("ftp://app.curyo.xyz/rate?content=42"), null);
   assert.equal(parseQuestionReferenceInput("/rate?content=abc"), null);
 });

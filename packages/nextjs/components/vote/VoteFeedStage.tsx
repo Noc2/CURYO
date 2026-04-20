@@ -2,6 +2,7 @@
 
 import { type RefObject, useCallback, useEffect, useId, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
+import type { QuestionReferenceContentSummary } from "~~/components/content/QuestionDescription";
 import { FeedVoteCard } from "~~/components/vote/VoteFeedCards";
 import { useMobileHeaderVisibility } from "~~/contexts/MobileHeaderVisibilityContext";
 import type { ContentItem } from "~~/hooks/useContentFeed";
@@ -21,6 +22,7 @@ interface VoteFeedStageProps {
   watchedContentIds: Set<string>;
   followedWallets: Set<string>;
   normalizedAddress?: string;
+  referencedContentById?: ReadonlyMap<string, QuestionReferenceContentSummary>;
   isCommitting: boolean;
   isMetadataPrefetchPending: boolean;
   navigationLocked: boolean;
@@ -66,6 +68,7 @@ export function VoteFeedStage({
   watchedContentIds,
   followedWallets,
   normalizedAddress,
+  referencedContentById,
   isCommitting,
   isMetadataPrefetchPending,
   navigationLocked,
@@ -1192,6 +1195,7 @@ export function VoteFeedStage({
               following={followedWallets.has(item.submitter.toLowerCase())}
               followPending={isFollowPending(item.submitter)}
               normalizedAddress={normalizedAddress}
+              referencedContentById={referencedContentById}
             />
             {!isActiveCard ? (
               <div

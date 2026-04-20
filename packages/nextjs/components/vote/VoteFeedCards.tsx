@@ -5,6 +5,7 @@ import dynamic from "next/dynamic";
 import { ArrowTopRightOnSquareIcon, ChevronLeftIcon, ChevronRightIcon } from "@heroicons/react/24/outline";
 import { ShareIcon } from "@heroicons/react/24/outline";
 import { ContentEmbed } from "~~/components/content/ContentEmbed";
+import { QuestionDescription, type QuestionReferenceContentSummary } from "~~/components/content/QuestionDescription";
 import { SubmitterBadge } from "~~/components/content/SubmitterBadge";
 import { FollowProfileButton } from "~~/components/shared/FollowProfileButton";
 import { SafeExternalLink } from "~~/components/shared/SafeExternalLink";
@@ -82,6 +83,7 @@ interface FeedVoteCardProps {
   following: boolean;
   followPending: boolean;
   normalizedAddress?: string;
+  referencedContentById?: ReadonlyMap<string, QuestionReferenceContentSummary>;
 }
 
 export const FeedVoteCard = memo(function FeedVoteCard({
@@ -98,6 +100,7 @@ export const FeedVoteCard = memo(function FeedVoteCard({
   following,
   followPending,
   normalizedAddress,
+  referencedContentById,
 }: FeedVoteCardProps) {
   const [isLaptopCompact, setIsLaptopCompact] = useState(false);
   const [isMobileViewport, setIsMobileViewport] = useState(false);
@@ -223,6 +226,7 @@ export const FeedVoteCard = memo(function FeedVoteCard({
             watchPending={watchPending}
             onToggleFollow={onToggleFollow}
             onToggleWatch={onToggleWatch}
+            referencedContentById={referencedContentById}
             compact={useCompactCard}
             embedded
           />
@@ -243,6 +247,7 @@ interface FeedContentMetaCardProps {
   watchPending: boolean;
   onToggleWatch: (id: bigint) => void;
   onToggleFollow: (address: string) => void;
+  referencedContentById?: ReadonlyMap<string, QuestionReferenceContentSummary>;
   compact?: boolean;
   embedded?: boolean;
 }
@@ -365,6 +370,7 @@ function FeedContentMetaCard({
   watchPending,
   onToggleWatch,
   onToggleFollow,
+  referencedContentById,
   compact = false,
   embedded = false,
 }: FeedContentMetaCardProps) {
@@ -390,7 +396,13 @@ function FeedContentMetaCard({
       <div className={wrapperClassName}>
         {hasContextDetails ? (
           <div className="space-y-2">
-            {hasDescription ? <p className="text-base leading-relaxed text-base-content/85">{description}</p> : null}
+            {hasDescription ? (
+              <QuestionDescription
+                description={description}
+                referencedContentById={referencedContentById}
+                className="text-base leading-relaxed text-base-content/85"
+              />
+            ) : null}
             {hasContextLink ? (
               <SafeExternalLink
                 href={contextUrl}

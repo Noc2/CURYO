@@ -108,6 +108,9 @@ export function parseQuestionReferenceInput(value: string): string | null {
   try {
     const isAbsoluteUrl = /^[a-z][a-z\d+\-.]*:/i.test(trimmedValue);
     const url = new URL(trimmedValue, "https://curyo.local");
+    if (isAbsoluteUrl && url.protocol !== "https:" && url.protocol !== "http:") {
+      return null;
+    }
     if (isAbsoluteUrl && !["app.curyo.xyz", "curyo.xyz", "localhost", "127.0.0.1"].includes(url.hostname)) {
       return null;
     }
