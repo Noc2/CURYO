@@ -16,6 +16,9 @@ const SHUTDOWN_STATUS_TIMEOUT_MS = 1_500;
 const PONDER_PORT_RELEASE_TIMEOUT_MS = 10_000;
 const PONDER_PORT_RELEASE_POLL_MS = 250;
 const PONDER_PORT_CHECK_TIMEOUT_MS = 500;
+const PONDER_LISTENING_PORT_PATTERN = /\bStarted listening on port (\d{1,5})\b/g;
+const PONDER_SERVER_TRANSITION_PATTERN =
+  /\b(Hot reload|Using PGlite database at|Port \d{1,5} was in use, trying port \d{1,5}|Started listening on port \d{1,5})\b/;
 
 function isLocalHardhatRpc(env = process.env) {
   const network = env.PONDER_NETWORK ?? "hardhat";
@@ -77,6 +80,34 @@ function resolvePonderStatusUrl(env = process.env) {
   } catch {
     return null;
   }
+}
+
+export function getLatestPonderListeningPort(output) {
+  let latestPort = null;
+
+  for (const match of output.matchAll(PONDER_LISTENING_PORT_PATTERN)) {
+    const port = Number(match[1]);
+    if (Number.isInteger(port) && port > 0 && port <= 65_535) {
+      latestPort = port;
+    }
+  }
+
+  return latestPort;
+}
+
+export function outputIndicatesPonderServerTransition(output) {
+  return PONDER_SERVER_TRANSITION_PATTERN.test(output);
+}
+
+export function resolveStatusUrlForPonderOutput(statusUrl, output) {
+  if (!statusUrl) return null;
+
+  const port = getLatestPonderListeningPort(output);
+  if (!port) return null;
+
+  const nextStatusUrl = new URL(statusUrl.href);
+  nextStatusUrl.port = String(port);
+  return nextStatusUrl;
 }
 
 function shouldPollPonderStatus(statusUrl, env = process.env) {
@@ -173,10 +204,27 @@ function runDevRaw() {
       child.kill(signal);
     };
 
+    const startedAt = Date.now();
+    const baseStatusUrl = resolvePonderStatusUrl(process.env);
+    let activeStatusUrl = baseStatusUrl;
+    let hasActivePonderServer = false;
+    let lastServerTransitionAt = startedAt;
+
     const capture = (chunk) => {
-      combinedOutput += chunk.toString();
+      const text = chunk.toString();
+      combinedOutput += text;
       if (combinedOutput.length > 128_000) {
         combinedOutput = combinedOutput.slice(-128_000);
+      }
+
+      if (outputIndicatesPonderServerTransition(text)) {
+        lastServerTransitionAt = Date.now();
+      }
+
+      const nextStatusUrl = resolveStatusUrlForPonderOutput(baseStatusUrl, combinedOutput);
+      if (nextStatusUrl) {
+        activeStatusUrl = nextStatusUrl;
+        hasActivePonderServer = true;
       }
     };
 
@@ -190,13 +238,14 @@ function runDevRaw() {
       process.stderr.write(chunk);
     });
 
-    const statusUrl = resolvePonderStatusUrl(process.env);
     let monitorInFlight = false;
-    const startedAt = Date.now();
-    const monitor = shouldPollPonderStatus(statusUrl, process.env)
+    const monitor = shouldPollPonderStatus(baseStatusUrl, process.env)
       ? setInterval(async () => {
           if (monitorInFlight || shutdownRequested || child.exitCode !== null || child.signalCode !== null) return;
-          if (Date.now() - startedAt < SHUTDOWN_STATUS_GRACE_MS) return;
+          if (!hasActivePonderServer || !activeStatusUrl) return;
+          if (Date.now() - lastServerTransitionAt < SHUTDOWN_STATUS_GRACE_MS) return;
+
+          const statusUrl = activeStatusUrl;
 
           monitorInFlight = true;
           try {
