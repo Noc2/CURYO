@@ -1,6 +1,7 @@
 "use client";
 
 import { type ReactNode, useEffect, useState } from "react";
+import { ChatBubbleLeftRightIcon, ShareIcon } from "@heroicons/react/24/outline";
 import { FundQuestionModal } from "~~/components/reward-pool/FundQuestionModal";
 import { CuryoConnectButton } from "~~/components/scaffold-eth";
 import { CuryoVoteButton } from "~~/components/shared/CuryoVoteButton";
@@ -24,11 +25,6 @@ interface VotingQuestionCardProps {
   categoryId: bigint;
   questionTitle?: string;
   currentRating: number;
-  rewardPoolSummary?: {
-    totalFunded: bigint;
-    totalAvailable: bigint;
-    activeRewardPoolCount: number;
-  } | null;
   onVote: (isUp: boolean) => void;
   isCommitting: boolean;
   address?: string;
@@ -43,12 +39,16 @@ interface VotingQuestionCardProps {
   compact?: boolean;
   variant?: "default" | "signal" | "dock";
   attentionToken?: number | null;
+  onShareContent?: () => void;
+  onOpenFeedback?: () => void;
 }
 
 const RATING_GUIDANCE_TEXT =
   "The community score runs from 0.0 to 10.0, where higher means better. Vote up when content deserves a better score and vote down when it deserves a worse one. Always vote down illegal, broken, or misdescribed content.";
 const REWARD_POOL_TOOLTIP_TEXT =
   "This question's bounty is shown in USD and backed by USDC on Celo. Eligible revealed voters can claim from it in qualified rounds, with 3% reserved for the eligible frontend operator.";
+const FEEDBACK_BONUS_TOOLTIP_TEXT =
+  "Feedback Bonuses are optional USDC rewards for useful voter feedback. Awarded feedback pays voters after settlement, with 3% reserved for the eligible frontend operator.";
 export const VOTING_SURFACE_BACKGROUND = "var(--curyo-surface-elevated)";
 const STATUS_PILL_CLASS_NAME =
   "inline-flex items-center gap-2 rounded-full border border-base-content/10 bg-base-content/5 px-4 py-2";
@@ -58,7 +58,6 @@ const DOCK_CONTROL_SIZE_PX = 44;
 const DOCK_CONTROL_SIZE = `${DOCK_CONTROL_SIZE_PX / 16}rem`;
 const COMPACT_DOCK_ORB_SIZE_PX = 88;
 const DOCK_CONTROL_CIRCLE_CLASS_NAME = "h-11 w-11 box-border";
-const MOBILE_DOCK_ICON_BUTTON_CLASS_NAME = `${DOCK_CONTROL_CIRCLE_CLASS_NAME} justify-center gap-0 rounded-full border border-base-content/10 bg-base-content/[0.08] p-0 text-base-content/72 hover:bg-base-content/[0.12] hover:text-base-content/90`;
 
 type ActivityTone = "primary" | "warning" | "success" | "neutral";
 
@@ -381,64 +380,71 @@ function LiveRoundActivity({
   );
 }
 
-function RewardPoolAmountDisplay({ amount }: { amount: bigint }) {
+function RewardAmountDisplay({
+  amount,
+  label,
+  tooltip,
+  ariaLabel,
+}: {
+  amount: bigint;
+  label: string;
+  tooltip: string;
+  ariaLabel: string;
+}) {
   const amountLabel = formatUsdAmount(amount);
 
   return (
     <div
       className="inline-flex max-w-full items-center gap-1.5 rounded-full border border-primary/25 bg-primary/12 px-3 py-1.5 text-sm font-semibold leading-none text-primary shadow-[0_0_18px_rgba(242,100,38,0.16)]"
-      aria-label={`${amountLabel} bounty`}
+      aria-label={`${amountLabel} ${ariaLabel}`}
     >
       <span>
-        <span className="tabular-nums">{amountLabel}</span> bounty
+        <span className="tabular-nums">{amountLabel}</span> {label}
       </span>
-      <InfoTooltip
-        text={REWARD_POOL_TOOLTIP_TEXT}
-        position="bottom"
-        className="[&>svg]:text-primary/70 [&>svg]:hover:text-primary"
-      />
+      <InfoTooltip text={tooltip} position="bottom" className="[&>svg]:text-primary/70 [&>svg]:hover:text-primary" />
     </div>
   );
 }
 
-function formatDockRewardPoolAmount(amount: bigint) {
-  const wholeDollars = amount / 1_000_000n;
-
-  if (wholeDollars >= 1_000_000n) {
-    const tenths = (wholeDollars * 10n) / 1_000_000n;
-    const decimal = tenths % 10n;
-    return decimal === 0n ? `$${tenths / 10n}M` : `$${tenths / 10n}.${decimal}M`;
-  }
-
-  if (wholeDollars >= 1_000n) {
-    const tenths = (wholeDollars * 10n) / 1_000n;
-    const decimal = tenths % 10n;
-    return decimal === 0n ? `$${tenths / 10n}K` : `$${tenths / 10n}.${decimal}K`;
-  }
-
-  if (wholeDollars >= 100n) {
-    return `$${wholeDollars}`;
-  }
-
-  return formatUsdAmount(amount);
+export function RewardPoolAmountDisplay({ amount }: { amount: bigint }) {
+  return <RewardAmountDisplay amount={amount} label="bounty" tooltip={REWARD_POOL_TOOLTIP_TEXT} ariaLabel="bounty" />;
 }
 
-function RewardPoolDockBadge({ amount }: { amount: bigint }) {
-  const amountLabel = formatUsdAmount(amount);
-  const compactAmountLabel = formatDockRewardPoolAmount(amount);
-
+export function FeedbackBonusAmountDisplay({ amount }: { amount: bigint }) {
   return (
-    <TooltipAnchor
-      text={REWARD_POOL_TOOLTIP_TEXT}
-      position="top"
-      className={`${DOCK_CONTROL_CIRCLE_CLASS_NAME} shrink-0 rounded-full`}
-    >
-      <span
-        className={`flex ${DOCK_CONTROL_CIRCLE_CLASS_NAME} items-center justify-center rounded-full border border-base-content/10 bg-base-content/[0.08] px-1 text-center text-[0.7rem] font-semibold leading-none text-base-content/72`}
-        aria-label={`Bounty: ${amountLabel}`}
+    <RewardAmountDisplay
+      amount={amount}
+      label="Feedback Bonus"
+      tooltip={FEEDBACK_BONUS_TOOLTIP_TEXT}
+      ariaLabel="Feedback Bonus"
+    />
+  );
+}
+
+function DockCircleIconButton({
+  label,
+  onClick,
+  icon,
+  disabled = false,
+}: {
+  label: string;
+  onClick?: () => void;
+  icon: ReactNode;
+  disabled?: boolean;
+}) {
+  return (
+    <TooltipAnchor text={label} position="top" className={`${DOCK_CONTROL_CIRCLE_CLASS_NAME} shrink-0 rounded-full`}>
+      <button
+        type="button"
+        onClick={onClick}
+        disabled={disabled || !onClick}
+        aria-label={label}
+        title={label}
+        className="vote-btn vote-btn-sm vote-light"
       >
-        {compactAmountLabel}
-      </span>
+        <span className="vote-bg" />
+        <span className="vote-symbol">{icon}</span>
+      </button>
     </TooltipAnchor>
   );
 }
@@ -457,15 +463,61 @@ function AddRewardPoolLink({ onFundQuestion }: { onFundQuestion: () => void }) {
   );
 }
 
+export function VotingQuestionContextDetails({
+  contentId,
+  categoryId,
+  openRound,
+  roundConfig,
+  compact = false,
+  active = true,
+}: {
+  contentId: bigint;
+  categoryId: bigint;
+  openRound?: ContentOpenRoundSummary | null;
+  roundConfig?: VotingConfig | null;
+  compact?: boolean;
+  active?: boolean;
+}) {
+  const roundSnapshot = useRoundSnapshot(
+    active ? contentId : undefined,
+    active ? (openRound ?? undefined) : undefined,
+    active ? (roundConfig ?? undefined) : undefined,
+  );
+  const { voteCount, minVoters } = roundSnapshot;
+  const { filled: filledVoteIcons, empty: emptyVoteIcons } = computeVoteProgressIconCounts({ voteCount, minVoters });
+  const showInlineVotingSummary = roundSnapshot.phase === "voting" || roundSnapshot.round.revealedCount > 0;
+  const { ratePercent } = useParticipationRate();
+  const progressMessaging = getRoundProgressMessaging(roundSnapshot, ratePercent);
+  const showInlineProgress = showInlineVotingSummary && Boolean(progressMessaging);
+  const showInlineRevealedBreakdown = showInlineVotingSummary && roundSnapshot.round.revealedCount > 0;
+
+  return (
+    <div className={`flex min-w-0 flex-col ${compact ? "gap-2" : "gap-2.5"}`}>
+      {showInlineVotingSummary ? (
+        <InlineVotingSummary
+          snapshot={roundSnapshot}
+          filledVoteIcons={filledVoteIcons}
+          emptyVoteIcons={emptyVoteIcons}
+          compact={compact}
+          alignLeft
+          stackForNarrowRail={compact}
+        />
+      ) : null}
+      <LiveRoundActivity snapshot={roundSnapshot} compact={compact} condensed />
+      {!showInlineProgress ? <RoundProgress snapshot={roundSnapshot} /> : null}
+      {!showInlineRevealedBreakdown ? <RoundRevealedBreakdown snapshot={roundSnapshot} stacked={compact} /> : null}
+      <RoundStats categoryId={categoryId} snapshot={roundSnapshot} />
+    </div>
+  );
+}
+
 /**
  * Displays the live rating signal and all voting controls in a separate card.
  */
 export function VotingQuestionCard({
   contentId,
-  categoryId,
   questionTitle,
   currentRating,
-  rewardPoolSummary,
   onVote,
   isCommitting,
   address,
@@ -479,6 +531,8 @@ export function VotingQuestionCard({
   compact = false,
   variant = "default",
   attentionToken,
+  onShareContent,
+  onOpenFeedback,
 }: VotingQuestionCardProps) {
   const isSignalVariant = variant === "signal";
   const isDockVariant = variant === "dock";
@@ -486,8 +540,7 @@ export function VotingQuestionCard({
 
   // Check if user already voted on this content in the current round
   const roundSnapshot = useRoundSnapshot(contentId, openRound ?? undefined, roundConfig ?? undefined);
-  const { roundId, isRoundFull, phase, voteCount, minVoters } = roundSnapshot;
-  const { filled: filledVoteIcons, empty: emptyVoteIcons } = computeVoteProgressIconCounts({ voteCount, minVoters });
+  const { roundId, isRoundFull } = roundSnapshot;
   const cooldownActive = cooldownSecondsRemaining > 0;
   const cooldownLabel = formatVoteCooldownRemaining(cooldownSecondsRemaining);
   const displayError =
@@ -512,7 +565,6 @@ export function VotingQuestionCard({
     myCommitHash != null &&
     (myCommitHash as unknown as string) !== "0x0000000000000000000000000000000000000000000000000000000000000000";
   const usesDockStatusText = isDockVariant;
-  const isDesktopSignalRailCard = compact && isSignalVariant;
 
   const centerStatusContent = address ? (
     hasMyVote ? (
@@ -592,37 +644,11 @@ export function VotingQuestionCard({
         ? 166
         : 190;
   const shellClassName = compact ? "p-3 space-y-2.5" : "p-4 space-y-3 xl:p-3 xl:space-y-2.5 2xl:p-4 2xl:space-y-3";
-  const headingRowClassName = compact ? "mb-2.5" : "mb-3";
   const actionStackClassName = compact ? "mt-2.5 gap-1.5" : "mt-3 gap-2";
   const footerStackClassName = compact ? "mt-2.5 gap-2" : "mt-3 gap-3 xl:mt-2.5 xl:gap-2.5 2xl:mt-3 2xl:gap-3";
-  const activitySummary = <LiveRoundActivity snapshot={roundSnapshot} compact={compact} condensed />;
-  const isLeftAlignedDockDetails = isDockVariant;
-  const showInlineVotingSummary = phase === "voting" || roundSnapshot.round.revealedCount > 0;
-  const { ratePercent } = useParticipationRate();
-  const progressMessaging = getRoundProgressMessaging(roundSnapshot, ratePercent);
-  const showInlineProgress = showInlineVotingSummary && Boolean(progressMessaging);
-  const showInlineRevealedBreakdown = showInlineVotingSummary && roundSnapshot.round.revealedCount > 0;
-  const inlineStatusContent =
-    hasMyVote || (isDesktopSignalRailCard && cooldownActive) ? centerStatusContent : undefined;
-  const inlineVotingSummary = (
-    <InlineVotingSummary
-      snapshot={roundSnapshot}
-      filledVoteIcons={filledVoteIcons}
-      emptyVoteIcons={emptyVoteIcons}
-      compact={compact}
-      stackForNarrowRail={isDesktopSignalRailCard}
-      alignLeft={isLeftAlignedDockDetails}
-      statusContent={inlineStatusContent}
-      statusPlacement={inlineStatusContent ? "beforeProgress" : "afterProgress"}
-    />
-  );
   const showExpandedDetails = isSignalVariant || (isDetailsOpen && !isDockVariant);
-  const inlineSummaryIncludesStatus = Boolean(inlineStatusContent) && showInlineVotingSummary;
   const showVoteAttentionHint = isAttentionActive && !centerStatusContent;
-  const rewardPoolTotal = rewardPoolSummary?.totalAvailable ?? 0n;
   const fundQuestionTitle = questionTitle?.trim() || `Question #${contentId.toString()}`;
-  const rewardPoolAmountDisplay = <RewardPoolAmountDisplay amount={rewardPoolTotal} />;
-  const rewardPoolDockBadge = <RewardPoolDockBadge amount={rewardPoolTotal} />;
   const ratingOrb = (
     <TooltipAnchor
       text={RATING_GUIDANCE_TEXT}
@@ -633,12 +659,7 @@ export function VotingQuestionCard({
     </TooltipAnchor>
   );
   const addRewardPoolLink = <AddRewardPoolLink onFundQuestion={() => setShowFundQuestionModal(true)} />;
-  const renderRewardPoolDetailsRow = () => (
-    <div className="flex min-w-0 flex-col gap-3">
-      <RoundStats categoryId={categoryId} snapshot={roundSnapshot} />
-      {addRewardPoolLink}
-    </div>
-  );
+  const renderRewardPoolDetailsRow = () => <div className="flex min-w-0 flex-col gap-3">{addRewardPoolLink}</div>;
 
   useEffect(() => {
     setIsDetailsOpen(isSignalVariant);
@@ -700,6 +721,20 @@ export function VotingQuestionCard({
     const compactDockControlsGridStyle = {
       gridTemplateColumns: `minmax(0, 1fr) ${DOCK_CONTROL_SIZE} minmax(0, 1fr) ${DOCK_CONTROL_SIZE} ${dockNotchCutout * 2}px ${DOCK_CONTROL_SIZE} minmax(0, 1fr) ${DOCK_CONTROL_SIZE} minmax(0, 1fr)`,
     };
+    const shareDockButton = (
+      <DockCircleIconButton
+        label="Share content"
+        onClick={onShareContent}
+        icon={<ShareIcon className="h-5 w-5 drop-shadow-sm" aria-hidden="true" />}
+      />
+    );
+    const feedbackDockButton = (
+      <DockCircleIconButton
+        label="Open feedback"
+        onClick={onOpenFeedback}
+        icon={<ChatBubbleLeftRightIcon className="h-5 w-5 drop-shadow-sm" aria-hidden="true" />}
+      />
+    );
 
     return (
       <>
@@ -748,10 +783,9 @@ export function VotingQuestionCard({
             >
               <div style={dockContentStyle}>
                 <div className={dockControlsPaddingClassName}>
-                  {compact ? null : <div className="mb-2 flex justify-center">{rewardPoolAmountDisplay}</div>}
                   {compact && !centerStatusContent ? (
                     <div className="grid w-full items-center" style={compactDockControlsGridStyle}>
-                      <div className="col-start-2 justify-self-center">{rewardPoolDockBadge}</div>
+                      <div className="col-start-2 justify-self-center">{shareDockButton}</div>
                       <div className="col-start-4 justify-self-center">
                         <CuryoVoteButton
                           direction="up"
@@ -772,15 +806,7 @@ export function VotingQuestionCard({
                           tooltipPosition="top"
                         />
                       </div>
-                      <div className="col-start-8 justify-self-center">
-                        <MoreToggleButton
-                          expanded={isDetailsOpen}
-                          onClick={() => setIsDetailsOpen(current => !current)}
-                          controlsId={detailsId}
-                          iconOnly
-                          className={MOBILE_DOCK_ICON_BUTTON_CLASS_NAME}
-                        />
-                      </div>
+                      <div className="col-start-8 justify-self-center">{feedbackDockButton}</div>
                     </div>
                   ) : !centerStatusContent ? (
                     <div className="grid grid-cols-[auto_minmax(0,1fr)_auto] items-end gap-3">
@@ -815,17 +841,9 @@ export function VotingQuestionCard({
                     </div>
                   ) : compact ? (
                     <div className="grid grid-cols-[2.75rem_minmax(0,1fr)_2.75rem] items-center gap-3">
-                      <div className="justify-self-start">{rewardPoolDockBadge}</div>
+                      <div className="justify-self-start">{shareDockButton}</div>
                       <div className="min-w-0 justify-self-center [&>button]:max-w-full">{centerStatusContent}</div>
-                      <div className="justify-self-end">
-                        <MoreToggleButton
-                          expanded={isDetailsOpen}
-                          onClick={() => setIsDetailsOpen(current => !current)}
-                          controlsId={detailsId}
-                          iconOnly
-                          className={MOBILE_DOCK_ICON_BUTTON_CLASS_NAME}
-                        />
-                      </div>
+                      <div className="justify-self-end">{feedbackDockButton}</div>
                     </div>
                   ) : (
                     <div className="grid grid-cols-[minmax(0,1fr)_auto_auto] items-center gap-3">
@@ -856,13 +874,7 @@ export function VotingQuestionCard({
                     <div aria-hidden="true" className="mx-4 mb-3 h-px bg-[color:var(--curyo-shell-border-strong)]" />
                     <div className="px-4">
                       <div className="max-h-[34svh] overflow-y-auto [scrollbar-gutter:stable]">
-                        <div className="flex flex-col gap-2.5 pb-1">
-                          {showInlineVotingSummary ? inlineVotingSummary : null}
-                          {activitySummary}
-                          {!showInlineProgress ? <RoundProgress snapshot={roundSnapshot} /> : null}
-                          {!showInlineRevealedBreakdown ? <RoundRevealedBreakdown snapshot={roundSnapshot} /> : null}
-                          {renderRewardPoolDetailsRow()}
-                        </div>
+                        <div className="flex flex-col gap-2.5 pb-1">{renderRewardPoolDetailsRow()}</div>
                       </div>
                     </div>
                   </div>
@@ -901,7 +913,6 @@ export function VotingQuestionCard({
         {/* Content */}
         <div className="relative z-10 flex min-h-0 flex-1 flex-col overflow-hidden">
           <div className="flex shrink-0 flex-col items-center text-center">
-            <div className={headingRowClassName}>{rewardPoolAmountDisplay}</div>
             {ratingOrb}
             {showVoteAttentionHint && isSignalVariant ? (
               <p className="vote-attention-hint mt-3 text-[0.72rem] font-semibold uppercase tracking-[0.16em] text-primary/90">
@@ -925,14 +936,7 @@ export function VotingQuestionCard({
               </div>
             ) : null}
             <div className={`flex w-full shrink-0 flex-col items-center ${actionStackClassName}`}>
-              {phase === "voting" || hasMyVote ? (
-                <div className="flex w-full flex-col items-center gap-2">
-                  {showInlineVotingSummary ? inlineVotingSummary : null}
-                  {!inlineSummaryIncludesStatus ? centerStatusContent : null}
-                </div>
-              ) : centerStatusContent ? (
-                centerStatusContent
-              ) : null}
+              {centerStatusContent}
 
               {/* Vote error message */}
               {displayError && <p className="text-center text-base text-error">{displayError}</p>}
@@ -965,10 +969,6 @@ export function VotingQuestionCard({
 
           <div className={`flex shrink-0 flex-col ${footerStackClassName}`}>
             {!isSignalVariant ? (
-              <LiveRoundActivity snapshot={roundSnapshot} compact={compact} condensed={false} />
-            ) : null}
-            {!isSignalVariant && !showInlineProgress ? <RoundProgress snapshot={roundSnapshot} /> : null}
-            {!isSignalVariant ? (
               <div className={compact ? "pt-0.5" : "pt-1"}>
                 <MoreToggleButton
                   expanded={isDetailsOpen}
@@ -979,9 +979,6 @@ export function VotingQuestionCard({
             ) : null}
             {showExpandedDetails ? (
               <div id={detailsId} className={`flex flex-col ${compact ? "gap-2.5" : "gap-3"}`}>
-                {!isSignalVariant && !showInlineRevealedBreakdown ? (
-                  <RoundRevealedBreakdown snapshot={roundSnapshot} stacked={isDesktopSignalRailCard} />
-                ) : null}
                 {renderRewardPoolDetailsRow()}
               </div>
             ) : null}

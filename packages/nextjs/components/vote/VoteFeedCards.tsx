@@ -14,6 +14,11 @@ import { QuestionDescription, type QuestionReferenceContentSummary } from "~~/co
 import { SubmitterBadge } from "~~/components/content/SubmitterBadge";
 import { FollowProfileButton } from "~~/components/shared/FollowProfileButton";
 import { SafeExternalLink } from "~~/components/shared/SafeExternalLink";
+import {
+  FeedbackBonusAmountDisplay,
+  RewardPoolAmountDisplay,
+  VotingQuestionContextDetails,
+} from "~~/components/shared/VotingQuestionCard";
 import { WatchContentButton } from "~~/components/shared/WatchContentButton";
 import type { ContentItem } from "~~/hooks/useContentFeed";
 import type { SubmitterProfile } from "~~/hooks/useSubmitterProfiles";
@@ -236,6 +241,8 @@ export const FeedVoteCard = memo(function FeedVoteCard({
             onToggleWatch={onToggleWatch}
             referencedContentById={referencedContentById}
             compact={useCompactCard}
+            isMobileViewport={isMobileViewport}
+            isActive={isActive}
             embedded
           />
         </div>
@@ -258,6 +265,8 @@ interface FeedContentMetaCardProps {
   onToggleFollow: (address: string) => void;
   referencedContentById?: ReadonlyMap<string, QuestionReferenceContentSummary>;
   compact?: boolean;
+  isMobileViewport?: boolean;
+  isActive?: boolean;
   embedded?: boolean;
 }
 
@@ -382,6 +391,8 @@ function FeedContentMetaCard({
   onToggleFollow,
   referencedContentById,
   compact = false,
+  isMobileViewport = false,
+  isActive = true,
   embedded = false,
 }: FeedContentMetaCardProps) {
   const [showShare, setShowShare] = useState(false);
@@ -392,9 +403,10 @@ function FeedContentMetaCard({
   const contextLabel = getSourceLabel(contextUrl);
   const hasContextLink = contextUrl.length > 0 && contextLabel.trim().length > 0;
   const hasContextDetails = hasDescription || hasContextLink;
-  const actionRowClassName = `flex flex-wrap items-center gap-x-2 gap-y-2 ${
-    hasContextDetails ? (compact ? "mt-3" : "mt-4") : ""
-  }`;
+  const rewardPoolTotal = item.rewardPoolSummary?.totalAvailable ?? 0n;
+  const feedbackBonusTotal = item.feedbackBonusSummary?.totalRemaining ?? 0n;
+  const hideDockedActionButtons = isMobileViewport;
+  const actionRowClassName = `flex flex-wrap items-center gap-x-2 gap-y-2 ${compact ? "mt-3" : "mt-4"}`;
   const wrapperClassName = embedded
     ? compact
       ? "border-t border-base-content/10 px-3 py-3"
@@ -404,8 +416,23 @@ function FeedContentMetaCard({
   return (
     <>
       <div className={wrapperClassName}>
+        <div className={compact ? "space-y-2.5" : "space-y-3"}>
+          <div className="flex min-w-0 flex-wrap items-center gap-2">
+            <RewardPoolAmountDisplay amount={rewardPoolTotal} />
+            <FeedbackBonusAmountDisplay amount={feedbackBonusTotal} />
+          </div>
+          <VotingQuestionContextDetails
+            contentId={item.id}
+            categoryId={item.categoryId}
+            openRound={item.openRound}
+            roundConfig={item.roundConfig}
+            compact={compact}
+            active={isActive}
+          />
+        </div>
+
         {hasContextDetails ? (
-          <div className="space-y-2">
+          <div className={compact ? "mt-3 space-y-2" : "mt-4 space-y-2"}>
             {hasDescription ? (
               <QuestionDescription
                 description={description}
@@ -450,7 +477,7 @@ function FeedContentMetaCard({
               />
             ) : null}
             <WatchContentButton watched={watched} pending={watchPending} onClick={() => onToggleWatch(item.id)} />
-            {onOpenFeedback ? (
+            {onOpenFeedback && !hideDockedActionButtons ? (
               <button
                 type="button"
                 onClick={() => onOpenFeedback(item)}
@@ -460,14 +487,16 @@ function FeedContentMetaCard({
                 <ChatBubbleLeftRightIcon className="h-4 w-4" />
               </button>
             ) : null}
-            <button
-              type="button"
-              onClick={() => setShowShare(true)}
-              className="btn btn-ghost btn-sm btn-circle text-base-content/70 hover:text-base-content"
-              aria-label="Share content"
-            >
-              <ShareIcon className="h-4 w-4" />
-            </button>
+            {!hideDockedActionButtons ? (
+              <button
+                type="button"
+                onClick={() => setShowShare(true)}
+                className="btn btn-ghost btn-sm btn-circle text-base-content/70 hover:text-base-content"
+                aria-label="Share content"
+              >
+                <ShareIcon className="h-4 w-4" />
+              </button>
+            ) : null}
           </div>
         </div>
       </div>

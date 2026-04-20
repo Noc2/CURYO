@@ -78,6 +78,10 @@ const StakeSelector = dynamic(() => import("~~/components/swipe/StakeSelector").
     </div>
   ),
 });
+const ShareContentModal = dynamic(
+  () => import("~~/components/shared/ShareContentModal").then(m => m.ShareContentModal),
+  { ssr: false },
+);
 
 const ALL_FILTER = DISCOVER_ALL_FILTER;
 const BROKEN_FILTER = DISCOVER_BROKEN_FILTER;
@@ -221,6 +225,7 @@ const HomeInner = () => {
   const [optimisticVotedContentIds, setOptimisticVotedContentIds] = useState<Set<string>>(() => new Set());
   const [localVoteCooldownVersion, setLocalVoteCooldownVersion] = useState(0);
   const [feedbackSheetItem, setFeedbackSheetItem] = useState<ContentItem | null>(null);
+  const [shareSheetItem, setShareSheetItem] = useState<ContentItem | null>(null);
   const desktopScrollContainerRef = useRef<HTMLDivElement | null>(null);
   const mobileDockContainerRef = useRef<HTMLDivElement | null>(null);
   const voteAttentionTimeoutRef = useRef<number | null>(null);
@@ -1383,6 +1388,15 @@ const HomeInner = () => {
     [markPrimaryInteraction, replaceVoteLocation],
   );
 
+  const handleShareContent = useCallback(
+    (item: ContentItem) => {
+      replaceVoteLocation({ contentId: item.id });
+      markPrimaryInteraction(item.id);
+      setShareSheetItem(item);
+    },
+    [markPrimaryInteraction, replaceVoteLocation],
+  );
+
   useEffect(() => {
     return () => {
       if (voteAttentionTimeoutRef.current !== null && typeof window !== "undefined") {
@@ -1781,7 +1795,6 @@ const HomeInner = () => {
                 categoryId={primaryItem.categoryId}
                 questionTitle={primaryItem.question || primaryItem.title}
                 currentRating={primaryItem.rating}
-                rewardPoolSummary={primaryItem.rewardPoolSummary}
                 openRound={primaryItem.openRound}
                 roundConfig={primaryItem.roundConfig}
                 onVote={isUp => handleButtonVote(primaryItem, isUp)}
@@ -1795,6 +1808,8 @@ const HomeInner = () => {
                 compact
                 variant="dock"
                 attentionToken={primaryAttentionToken}
+                onShareContent={() => handleShareContent(primaryItem)}
+                onOpenFeedback={() => handleOpenFeedback(primaryItem)}
               />
             </div>
           </div>
@@ -1836,6 +1851,30 @@ const HomeInner = () => {
             </div>
           </div>
         </div>
+      ) : null}
+
+      {shareSheetItem ? (
+        <ShareContentModal
+          contentId={shareSheetItem.id}
+          title={shareSheetItem.title}
+          description={shareSheetItem.description}
+          rating={shareSheetItem.rating}
+          ratingBps={shareSheetItem.ratingBps !== undefined ? Number(shareSheetItem.ratingBps) : undefined}
+          totalVotes={shareSheetItem.totalVotes}
+          lastActivityAt={shareSheetItem.lastActivityAt}
+          openRound={
+            shareSheetItem.openRound
+              ? {
+                  referenceRatingBps:
+                    shareSheetItem.openRound.referenceRatingBps !== undefined
+                      ? Number(shareSheetItem.openRound.referenceRatingBps)
+                      : undefined,
+                  voteCount: shareSheetItem.openRound.voteCount,
+                }
+              : null
+          }
+          onClose={() => setShareSheetItem(null)}
+        />
       ) : null}
 
       {/* Stake selector modal */}

@@ -474,11 +474,24 @@ body {
   box-shadow: none;
 }
 
+.vote-btn.vote-light .vote-bg {
+  background: var(--curyo-warm-white);
+  box-shadow: none;
+}
+
 .vote-btn.vote-feedback .vote-symbol {
   color: var(--curyo-ember-deep);
 }
 
+.vote-btn.vote-light .vote-symbol {
+  color: var(--curyo-ember-deep);
+}
+
 .vote-btn.vote-feedback:disabled .vote-bg {
+  background: rgb(245 240 235 / 0.22);
+}
+
+.vote-btn.vote-light:disabled .vote-bg {
   background: rgb(245 240 235 / 0.22);
 }
 

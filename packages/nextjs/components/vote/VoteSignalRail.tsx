@@ -44,7 +44,6 @@ export function VoteSignalRail({
             categoryId={primaryItem.categoryId}
             questionTitle={primaryItem.question || primaryItem.title}
             currentRating={primaryItem.rating}
-            rewardPoolSummary={primaryItem.rewardPoolSummary}
             openRound={primaryItem.openRound}
             roundConfig={primaryItem.roundConfig}
             onVote={isUp => onVote(primaryItem, isUp)}
