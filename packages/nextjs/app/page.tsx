@@ -52,7 +52,7 @@ const FEATURE_BENEFITS: {
   },
   {
     title: "Honest Rating",
-    achievedBy: "Commit-reveal voting and cREP staking make dishonest or losing votes economically costly.",
+    achievedBy: "Commit-reveal voting and reputation staking make dishonest or losing votes economically costly.",
     links: [
       { label: "Commit-reveal", href: "/docs/how-it-works#commit-reveal-voting" },
       { label: "Staking", href: "/docs/how-it-works#crep-stake-settlement" },
