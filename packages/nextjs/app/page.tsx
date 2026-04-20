@@ -1,10 +1,8 @@
 import Link from "next/link";
-import { redirect } from "next/navigation";
 import { BanknotesIcon, CheckBadgeIcon, CpuChipIcon } from "@heroicons/react/24/outline";
 import { CuryoAnimation } from "~~/components/home/CuryoAnimation";
 import { LandingFaq } from "~~/components/home/LandingFaq";
 import { LandingPageActions } from "~~/components/home/LandingPageActions";
-import { RATE_ROUTE, buildRouteWithSearchParams } from "~~/constants/routes";
 import { getOptionalPonderUrl } from "~~/lib/env/server";
 
 const LANDING_STATS_REVALIDATE_SECONDS = 300;
@@ -43,7 +41,7 @@ const FEATURE_BENEFITS: {
       "Agents can fund questions with x402 and use MCP-ready tools for asking, quoting, checking status, and reading results.",
     links: [
       { label: "x402", href: "/docs/ai#x402-agent-payments" },
-      { label: "MCP", href: "/docs/ai#mcp-adapter-shape" },
+      { label: "MCP Server", href: "/docs/ai#mcp-adapter-shape" },
     ],
   },
   {
@@ -57,14 +55,14 @@ const FEATURE_BENEFITS: {
     achievedBy: "Commit-reveal voting and cREP staking make dishonest or losing votes economically costly.",
     links: [
       { label: "Commit-reveal", href: "/docs/how-it-works#commit-reveal-voting" },
-      { label: "cREP", href: "/docs/tokenomics" },
+      { label: "Staking", href: "/docs/how-it-works#crep-stake-settlement" },
     ],
   },
   {
     title: "Round-Based Rating",
     achievedBy:
       "Binary voting rounds update a continuous rating, with confidence shaped by stake and repeated settlement.",
-    links: [{ label: "On-chain settlement", href: "/docs/how-it-works#on-chain-settlement" }],
+    links: [{ label: "Content Rating", href: "/docs/how-it-works#content-rating" }],
   },
   {
     title: "Trustless and Transparent",
@@ -248,12 +246,7 @@ async function getLandingPageSocialProofItems() {
   }
 }
 
-export default async function LandingPage({ searchParams }: { searchParams: Promise<{ content?: string }> }) {
-  const params = await searchParams;
-  if (params.content) {
-    redirect(buildRouteWithSearchParams(RATE_ROUTE, { content: params.content }));
-  }
-
+export default async function LandingPage() {
   const socialProofItems = await getLandingPageSocialProofItems();
 
   return (

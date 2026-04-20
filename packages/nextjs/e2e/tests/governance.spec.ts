@@ -91,11 +91,4 @@ test.describe("Governance page", () => {
     await expect(govContent.first()).toBeVisible({ timeout: 15_000 });
   });
 
-  test("legacy operator tab redirects to settings frontend tab", async ({ connectedPage: page }) => {
-    await gotoWithRetry(page, "/governance#operator", { ensureWalletConnected: true });
-
-    await expect(page).toHaveURL(/\/settings#frontend$/);
-    await expect(page.getByRole("button", { name: "Frontend", exact: true })).toHaveClass(/pill-active/);
-    await expect(page.getByRole("heading", { name: "Frontend Registration" })).toBeVisible({ timeout: 15_000 });
-  });
 });

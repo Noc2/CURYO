@@ -111,10 +111,10 @@ export function parseQuestionReferenceInput(value: string): string | null {
     if (isAbsoluteUrl && url.protocol !== "https:" && url.protocol !== "http:") {
       return null;
     }
-    if (isAbsoluteUrl && !["app.curyo.xyz", "curyo.xyz", "localhost", "127.0.0.1"].includes(url.hostname)) {
+    if (isAbsoluteUrl && !["curyo.xyz", "localhost", "127.0.0.1"].includes(url.hostname)) {
       return null;
     }
-    if (url.pathname !== "/rate" && url.pathname !== "/vote") return null;
+    if (url.pathname !== "/rate") return null;
 
     const contentId = url.searchParams.get("content");
     return contentId ? normalizeQuestionReferenceId(contentId) : null;

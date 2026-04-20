@@ -1,13 +1,8 @@
 export const ASK_ROUTE = "/ask";
-export const LEGACY_SUBMIT_ROUTE = "/submit";
 
 export const RATE_ROUTE = "/rate";
-export const LEGACY_DISCOVER_ROUTE = "/discover";
-export const LEGACY_VOTE_ROUTE = "/vote";
-export const VOTE_REVEAL_ROUTE = "/vote/reveal";
 
 export const GOVERNANCE_ROUTE = "/governance";
-export const LEGACY_GOVERNANCE_OPERATOR_HASH = "operator";
 
 export const SETTINGS_ROUTE = "/settings";
 export const SETTINGS_FRONTEND_HASH = "frontend";

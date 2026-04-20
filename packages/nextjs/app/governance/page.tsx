@@ -2,11 +2,10 @@
 
 import { Suspense, useCallback, useEffect, useRef, useState } from "react";
 import dynamic from "next/dynamic";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useSearchParams } from "next/navigation";
 import { useAccount } from "wagmi";
 import { AppPageShell } from "~~/components/shared/AppPageShell";
 import { ConnectWalletCard } from "~~/components/shared/ConnectWalletCard";
-import { LEGACY_GOVERNANCE_OPERATOR_HASH, SETTINGS_FRONTEND_ROUTE } from "~~/constants/routes";
 import { useScaffoldReadContract } from "~~/hooks/scaffold-eth";
 import { useVoterIdNFT } from "~~/hooks/useVoterIdNFT";
 import {
@@ -73,11 +72,9 @@ function normalizeGovernanceHash(hash: string): GovernanceTab | null {
 
 function GovernancePageInner() {
   const { isConnected, address } = useAccount();
-  const router = useRouter();
   const searchParams = useSearchParams();
   const [activeTab, setActiveTab] = useState<GovernanceTab>("profile");
   const [hashInitialized, setHashInitialized] = useState(false);
-  const [isRedirectingLegacyHash, setIsRedirectingLegacyHash] = useState(false);
   const [referrer, setReferrer] = useState<string | null>(null);
   const autoSelectedEntryAddressRef = useRef<string | null>(null);
 
@@ -91,14 +88,6 @@ function GovernancePageInner() {
   useEffect(() => {
     const applyHash = () => {
       const rawHash = window.location.hash.replace(/^#/, "");
-      if (rawHash === LEGACY_GOVERNANCE_OPERATOR_HASH) {
-        setIsRedirectingLegacyHash(true);
-        setHashInitialized(true);
-        router.replace(SETTINGS_FRONTEND_ROUTE);
-        return;
-      }
-
-      setIsRedirectingLegacyHash(false);
       const nextTab = normalizeGovernanceHash(rawHash);
       setHashInitialized(true);
 
@@ -114,7 +103,7 @@ function GovernancePageInner() {
     applyHash();
     window.addEventListener("hashchange", applyHash);
     return () => window.removeEventListener("hashchange", applyHash);
-  }, [router]);
+  }, []);
 
   // Extract and validate referral code from URL, then fall back to stored attribution.
   useEffect(() => {
@@ -142,7 +131,7 @@ function GovernancePageInner() {
   }, [addressKey]);
 
   useEffect(() => {
-    if (isRedirectingLegacyHash || !addressKey || !hashInitialized || !hasResolvedBalance || !voterIdResolved) {
+    if (!addressKey || !hashInitialized || !hasResolvedBalance || !voterIdResolved) {
       return;
     }
 
@@ -162,19 +151,11 @@ function GovernancePageInner() {
     }
 
     autoSelectedEntryAddressRef.current = addressKey;
-  }, [
-    addressKey,
-    faucetOnly,
-    hasResolvedBalance,
-    hashInitialized,
-    isRedirectingLegacyHash,
-    selectTab,
-    voterIdResolved,
-  ]);
+  }, [addressKey, faucetOnly, hasResolvedBalance, hashInitialized, selectTab, voterIdResolved]);
 
   // Update tab when balance changes
   useEffect(() => {
-    if (isRedirectingLegacyHash || !hashInitialized) {
+    if (!hashInitialized) {
       return;
     }
 
@@ -199,16 +180,7 @@ function GovernancePageInner() {
     if (!hasZeroBalance && activeTab === "faucet") {
       selectTab(hashTab && hashTab !== "faucet" ? hashTab : "profile");
     }
-  }, [faucetOnly, hasResolvedBalance, hasZeroBalance, activeTab, hashInitialized, isRedirectingLegacyHash, selectTab]);
-
-  // Keep the legacy settings redirect terminal while the router transition completes.
-  if (isRedirectingLegacyHash) {
-    return (
-      <AppPageShell contentClassName="space-y-6">
-        <GovernanceSectionLoading />
-      </AppPageShell>
-    );
-  }
+  }, [faucetOnly, hasResolvedBalance, hasZeroBalance, activeTab, hashInitialized, selectTab]);
 
   // Show connect wallet prompt if not connected
   if (!isConnected) {

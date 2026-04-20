@@ -26,18 +26,6 @@ test.describe("Documentation pages", () => {
     });
   }
 
-  test("blind voting docs redirect to how it works", async ({ page }) => {
-    await page.goto("/docs/blind-voting");
-    await page.waitForURL(/\/docs\/how-it-works#blind-voting$/);
-    await expect(page.locator("h1").first()).toBeVisible({ timeout: 10_000 });
-  });
-
-  test("transaction costs docs redirect to how it works", async ({ page }) => {
-    await page.goto("/docs/funding-wallet");
-    await page.waitForURL(/\/docs\/how-it-works#transaction-costs$/);
-    await expect(page.locator("h1").first()).toBeVisible({ timeout: 10_000 });
-  });
-
   test("docs sidebar navigation works", async ({ page }) => {
     await page.goto("/docs");
     await page.waitForLoadState("domcontentloaded");
