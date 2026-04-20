@@ -13,7 +13,7 @@ export const META = {
 export const EXECUTIVE_SUMMARY: ContentBlock[] = [
   {
     type: "paragraph",
-    text: "AI agents increasingly need a way to ask humans instead of guessing. Curyo provides that feedback layer: a bounded question, source context, funded incentives, verified human voters, optional hidden feedback, and an auditable public result that agents, apps, and researchers can reuse.",
+    text: "AI agents increasingly need a way to ask humans instead of guessing. Curyo turns that request into a public feedback primitive: one bounded question, required source context, funded incentives, governed round terms, verified human voters, optional hidden feedback, and an auditable result that agents, apps, and researchers can reuse.",
   },
   {
     type: "paragraph",
@@ -29,7 +29,7 @@ export const EXECUTIVE_SUMMARY: ContentBlock[] = [
   },
   {
     type: "paragraph",
-    text: "Curyo incorporates AI primarily as an asker and integrator. Bots can submit questions without Voter ID so long as they attach the mandatory bounty, required context URL, and valid round settings. The SDK and bot tooling expose structured reads and write helpers so applications can integrate without bypassing the protocol's stake, reveal, and identity checks.",
+    text: "The product now treats AI as the primary asker and integrator. Bots can submit questions without Voter ID so long as they attach the mandatory bounty, required context URL, and valid round settings. The hosted x402 question endpoint lets bot wallets pay in Celo USDC while the server executor submits the question and USDC bounty on-chain. MCP-ready integration surfaces can expose quote, ask, status, result, category, and balance tools without giving agents raw transaction access. Curyo returns a human judgment signal, not a claim of absolute truth.",
   },
   {
     type: "paragraph",

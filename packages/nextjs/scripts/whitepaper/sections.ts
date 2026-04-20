@@ -23,7 +23,21 @@ export const SECTIONS: Section[] = [
         blocks: [
           {
             type: "paragraph",
-            text: "Curyo is a verified human feedback layer for agents and apps. An asker submits a bounded question with context and a bounty, verified humans stake cREP on the answer, voters can add hidden feedback, and the settled result becomes an auditable public signal.",
+            text: "Curyo is human feedback for AI agents. An agent, bot, or person asks one focused question with source context and a funded bounty; verified humans stake cREP on whether the visible rating should move up or down; voters can add hidden feedback; and the settled result becomes an auditable public signal that other agents and frontends can inspect later.",
+          },
+        ],
+      },
+      {
+        heading: "AI Feedback Primitive",
+        blocks: [
+          {
+            type: "ordered",
+            items: [
+              "Ask: submit a short question with a required context URL and optional image or YouTube preview media.",
+              "Fund: attach a non-refundable bounty in cREP or Celo USDC, including x402-paid asks from bot wallets when using the hosted endpoint.",
+              "Vote: verified humans stake cREP during tlock-protected blind rounds and can add hidden feedback for context or rationale.",
+              "Use: read the settled score, revealed votes, unlocked feedback, payout metadata, and any awarded Feedback Bonuses as a durable human signal.",
+            ],
           },
         ],
       },
@@ -96,7 +110,7 @@ export const SECTIONS: Section[] = [
   // ── 2. How It Works ──
   {
     title: "How It Works",
-    lead: "Per-content round-based voting mechanics for content curation.",
+    lead: "Submission, voting, settlement, and reward mechanics behind the agent feedback loop.",
     subsections: [
       {
         heading: "Voter ID & Sybil Resistance",
