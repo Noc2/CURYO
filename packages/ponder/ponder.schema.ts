@@ -290,6 +290,67 @@ export const questionRewardPoolClaim = onchainTable(
 );
 
 // ============================================================
+// FEEDBACK BONUS POOLS (USDC)
+// ============================================================
+
+export const feedbackBonusPool = onchainTable(
+  "feedback_bonus_pool",
+  (t) => ({
+    id: t.bigint().primaryKey(),
+    contentId: t.bigint().notNull(),
+    roundId: t.bigint().notNull(),
+    funder: t.hex().notNull(),
+    awarder: t.hex().notNull(),
+    fundedAmount: t.bigint().notNull(),
+    remainingAmount: t.bigint().notNull(),
+    awardedAmount: t.bigint().notNull(),
+    voterAwardedAmount: t.bigint().notNull(),
+    frontendAwardedAmount: t.bigint().notNull(),
+    forfeitedAmount: t.bigint().notNull(),
+    awardCount: t.integer().notNull(),
+    awardDeadline: t.bigint().notNull(),
+    frontendFeeBps: t.integer().notNull(),
+    forfeited: t.boolean().notNull(),
+    createdAt: t.bigint().notNull(),
+    updatedAt: t.bigint().notNull(),
+  }),
+  (table) => ({
+    contentIdx: index().on(table.contentId),
+    roundIdx: index().on(table.contentId, table.roundId),
+    funderIdx: index().on(table.funder),
+    awarderIdx: index().on(table.awarder),
+    forfeitedIdx: index().on(table.forfeited),
+  }),
+);
+
+export const feedbackBonusAward = onchainTable(
+  "feedback_bonus_award",
+  (t) => ({
+    id: t.text().primaryKey(), // `${poolId}-${feedbackHash}`
+    poolId: t.bigint().notNull(),
+    contentId: t.bigint().notNull(),
+    roundId: t.bigint().notNull(),
+    recipient: t.hex().notNull(),
+    voterId: t.bigint().notNull(),
+    feedbackHash: t.hex().notNull(),
+    grossAmount: t.bigint().notNull(),
+    recipientAmount: t.bigint().notNull(),
+    frontend: t.hex().notNull(),
+    frontendRecipient: t.hex().notNull(),
+    frontendFee: t.bigint().notNull(),
+    awardedAt: t.bigint().notNull(),
+  }),
+  (table) => ({
+    poolIdx: index().on(table.poolId),
+    contentIdx: index().on(table.contentId),
+    roundIdx: index().on(table.contentId, table.roundId),
+    recipientIdx: index().on(table.recipient),
+    voterIdIdx: index().on(table.voterId),
+    feedbackHashIdx: index().on(table.feedbackHash),
+  }),
+);
+
+// ============================================================
 // CATEGORY
 // ============================================================
 

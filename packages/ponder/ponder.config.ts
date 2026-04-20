@@ -6,6 +6,7 @@ import {
   CategoryRegistryAbi,
   ContentRegistryAbi,
   CuryoReputationAbi,
+  FeedbackBonusEscrowAbi,
   FrontendRegistryAbi,
   HumanFaucetAbi,
   ParticipationPoolAbi,
@@ -204,6 +205,7 @@ const addresses = {
   humanFaucet: resolveAddress("PONDER_HUMAN_FAUCET_ADDRESS", "HumanFaucet"),
   participationPool: resolveAddress("PONDER_PARTICIPATION_POOL_ADDRESS", "ParticipationPool"),
   questionRewardPoolEscrow: resolveAddress("PONDER_QUESTION_REWARD_POOL_ESCROW_ADDRESS", "QuestionRewardPoolEscrow"),
+  feedbackBonusEscrow: resolveAddress("PONDER_FEEDBACK_BONUS_ESCROW_ADDRESS", "FeedbackBonusEscrow"),
 };
 
 const startBlocks = {
@@ -218,6 +220,7 @@ const startBlocks = {
   humanFaucet: resolveStartBlock("PONDER_HUMAN_FAUCET_START_BLOCK", "HumanFaucet"),
   participationPool: resolveStartBlock("PONDER_PARTICIPATION_POOL_START_BLOCK", "ParticipationPool"),
   questionRewardPoolEscrow: resolveStartBlock("PONDER_QUESTION_REWARD_POOL_ESCROW_START_BLOCK", "QuestionRewardPoolEscrow"),
+  feedbackBonusEscrow: resolveStartBlock("PONDER_FEEDBACK_BONUS_ESCROW_START_BLOCK", "FeedbackBonusEscrow"),
 };
 
 function contractOnActiveNetwork(address: `0x${string}`, startBlock: number) {
@@ -282,6 +285,10 @@ export default createConfig({
     QuestionRewardPoolEscrow: {
       abi: QuestionRewardPoolEscrowAbi,
       network: contractOnActiveNetwork(addresses.questionRewardPoolEscrow, startBlocks.questionRewardPoolEscrow),
+    },
+    FeedbackBonusEscrow: {
+      abi: FeedbackBonusEscrowAbi,
+      network: contractOnActiveNetwork(addresses.feedbackBonusEscrow, startBlocks.feedbackBonusEscrow),
     },
   },
 });

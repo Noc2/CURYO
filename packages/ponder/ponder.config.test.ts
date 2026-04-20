@@ -37,6 +37,8 @@ const VALID_ENV = {
   PONDER_QUESTION_REWARD_POOL_ESCROW_ADDRESS:
     chain11142220?.QuestionRewardPoolEscrow?.address ?? "0xbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
   PONDER_QUESTION_REWARD_POOL_ESCROW_START_BLOCK: String(expectedContentRegistryStartBlock),
+  PONDER_FEEDBACK_BONUS_ESCROW_ADDRESS: "0xcccccccccccccccccccccccccccccccccccccccc",
+  PONDER_FEEDBACK_BONUS_ESCROW_START_BLOCK: String(expectedContentRegistryStartBlock),
   PONDER_CONTENT_REGISTRY_START_BLOCK: String(expectedContentRegistryStartBlock),
 };
 

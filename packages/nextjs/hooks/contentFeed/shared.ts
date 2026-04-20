@@ -66,6 +66,16 @@ export interface ContentItem {
     totalFrontendClaimed?: bigint;
     activeRewardPoolCount: number;
   } | null;
+  feedbackBonusSummary?: {
+    totalFunded: bigint;
+    totalRemaining: bigint;
+    totalAwarded: bigint;
+    totalVoterAwarded?: bigint;
+    totalFrontendAwarded?: bigint;
+    totalForfeited?: bigint;
+    activePoolCount: number;
+    awardCount: number;
+  } | null;
 }
 
 export type FeedSort =
@@ -174,6 +184,19 @@ export function mapContentItem(
       totalFrontendClaimedAmount?: string | number | bigint | null;
       activeRewardPoolCount?: number | null;
     } | null;
+    feedbackBonusSummary?: {
+      totalFunded?: string | number | bigint | null;
+      totalFundedAmount?: string | number | bigint | null;
+      totalRemaining?: string | number | bigint | null;
+      totalRemainingAmount?: string | number | bigint | null;
+      totalAwarded?: string | number | bigint | null;
+      totalAwardedAmount?: string | number | bigint | null;
+      totalVoterAwardedAmount?: string | number | bigint | null;
+      totalFrontendAwardedAmount?: string | number | bigint | null;
+      totalForfeitedAmount?: string | number | bigint | null;
+      activePoolCount?: number | null;
+      awardCount?: number | null;
+    } | null;
   },
   voterAddress?: string,
   ownSubmitterAddresses?: readonly string[],
@@ -266,6 +289,24 @@ export function mapContentItem(
           activeRewardPoolCount: item.rewardPoolSummary.activeRewardPoolCount ?? 0,
         }
       : null,
+    feedbackBonusSummary: item.feedbackBonusSummary
+      ? {
+          totalFunded: BigInt(
+            item.feedbackBonusSummary.totalFunded ?? item.feedbackBonusSummary.totalFundedAmount ?? 0,
+          ),
+          totalRemaining: BigInt(
+            item.feedbackBonusSummary.totalRemaining ?? item.feedbackBonusSummary.totalRemainingAmount ?? 0,
+          ),
+          totalAwarded: BigInt(
+            item.feedbackBonusSummary.totalAwarded ?? item.feedbackBonusSummary.totalAwardedAmount ?? 0,
+          ),
+          totalVoterAwarded: BigInt(item.feedbackBonusSummary.totalVoterAwardedAmount ?? 0),
+          totalFrontendAwarded: BigInt(item.feedbackBonusSummary.totalFrontendAwardedAmount ?? 0),
+          totalForfeited: BigInt(item.feedbackBonusSummary.totalForfeitedAmount ?? 0),
+          activePoolCount: item.feedbackBonusSummary.activePoolCount ?? 0,
+          awardCount: item.feedbackBonusSummary.awardCount ?? 0,
+        }
+      : null,
   };
 }
 
@@ -295,7 +336,10 @@ export function filterModeratedContentItems(feed: ContentItem[]): ContentItem[] 
 }
 
 function getRewardPoolAmount(item: ContentItem) {
-  return item.rewardPoolSummary?.totalAvailable ?? item.rewardPoolSummary?.totalFunded ?? 0n;
+  return (
+    (item.rewardPoolSummary?.totalAvailable ?? item.rewardPoolSummary?.totalFunded ?? 0n) +
+    (item.feedbackBonusSummary?.totalRemaining ?? 0n)
+  );
 }
 
 function getSearchTokens(value: string): string[] {

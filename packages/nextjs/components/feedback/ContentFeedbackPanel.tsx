@@ -13,6 +13,7 @@ import {
   type ContentFeedbackItem,
   type ContentFeedbackType,
 } from "~~/lib/feedback/types";
+import { formatUsdAmount } from "~~/lib/questionRewardPools";
 import { notification } from "~~/utils/scaffold-eth";
 
 interface ContentFeedbackPanelProps {
@@ -78,6 +79,8 @@ export function ContentFeedbackPanel({ item, variant = "rail", onRequestConnect 
   const feedbackStatusCopy = feedback.settlementComplete
     ? "Feedback is unlocked for this question."
     : "Only voters can save feedback. It stays hidden until settlement.";
+  const feedbackBonusRemaining = item?.feedbackBonusSummary?.totalRemaining ?? 0n;
+  const feedbackBonusAwarded = item?.feedbackBonusSummary?.totalAwarded ?? 0n;
   const ownHiddenCopy =
     feedback.ownHiddenCount > 0
       ? `${feedback.ownHiddenCount} hidden note${feedback.ownHiddenCount === 1 ? "" : "s"} from you`
@@ -141,6 +144,19 @@ export function ContentFeedbackPanel({ item, variant = "rail", onRequestConnect 
           <p className="mt-1 text-xs leading-relaxed text-base-content/45">{ownHiddenCopy}</p>
         ) : null}
       </div>
+
+      {feedbackBonusRemaining > 0n || feedbackBonusAwarded > 0n ? (
+        <div className="mt-2 rounded-lg border border-primary/18 bg-primary/[0.06] px-3 py-2">
+          <p className="text-xs font-semibold leading-relaxed text-primary">
+            {feedbackBonusRemaining > 0n
+              ? `${formatUsdAmount(feedbackBonusRemaining)} feedback bonus open`
+              : `${formatUsdAmount(feedbackBonusAwarded)} feedback bonus awarded`}
+          </p>
+          <p className="mt-1 text-xs leading-relaxed text-base-content/52">
+            Awards can go to revealed voters whose notes help judge the question.
+          </p>
+        </div>
+      ) : null}
 
       <form className="mt-3 flex shrink-0 flex-col gap-2.5" onSubmit={handleSubmit}>
         <label className="sr-only" htmlFor={`feedback-type-${item?.id?.toString() ?? "none"}`}>

@@ -37,6 +37,7 @@ function buildItem(
     isValidUrl: true,
     thumbnailUrl: null,
     rewardPoolSummary: null,
+    feedbackBonusSummary: null,
   };
 }
 
@@ -87,6 +88,36 @@ test("sortRpcFeed orders bounty-backed items by available USD bounties", () => {
   assert.deepEqual(
     sorted.map(item => item.id),
     [2n, 1n, 3n],
+  );
+});
+
+test("sortRpcFeed includes open feedback bonuses in reward sorting", () => {
+  const feed = [
+    {
+      ...buildItem(1n, "Feedback funded", "A question with feedback bonus", ["markets"]),
+      feedbackBonusSummary: {
+        totalFunded: 40_000_000n,
+        totalRemaining: 24_000_000n,
+        totalAwarded: 16_000_000n,
+        activePoolCount: 1,
+        awardCount: 1,
+      },
+    },
+    {
+      ...buildItem(2n, "Question funded", "A question with voter bounty", ["markets"]),
+      rewardPoolSummary: {
+        totalFunded: 30_000_000n,
+        totalAvailable: 22_000_000n,
+        activeRewardPoolCount: 1,
+      },
+    },
+  ];
+
+  const sorted = sortRpcFeed(feed, "highest_rewards");
+
+  assert.deepEqual(
+    sorted.map(item => item.id),
+    [1n, 2n],
   );
 });
 
@@ -141,6 +172,16 @@ test("mapContentItem supports text-only questions and Ponder bounty summaries", 
       totalFrontendClaimedAmount: "210000",
       activeRewardPoolCount: 1,
     },
+    feedbackBonusSummary: {
+      totalFundedAmount: "12000000",
+      totalRemainingAmount: "8000000",
+      totalAwardedAmount: "4000000",
+      totalVoterAwardedAmount: "3880000",
+      totalFrontendAwardedAmount: "120000",
+      totalForfeitedAmount: "0",
+      activePoolCount: 1,
+      awardCount: 1,
+    },
   });
 
   assert.equal(item.url, "");
@@ -152,6 +193,13 @@ test("mapContentItem supports text-only questions and Ponder bounty summaries", 
   assert.equal(item.rewardPoolSummary?.totalVoterClaimed, 6_790_000n);
   assert.equal(item.rewardPoolSummary?.totalFrontendClaimed, 210_000n);
   assert.equal(item.rewardPoolSummary?.activeRewardPoolCount, 1);
+  assert.equal(item.feedbackBonusSummary?.totalFunded, 12_000_000n);
+  assert.equal(item.feedbackBonusSummary?.totalRemaining, 8_000_000n);
+  assert.equal(item.feedbackBonusSummary?.totalAwarded, 4_000_000n);
+  assert.equal(item.feedbackBonusSummary?.totalVoterAwarded, 3_880_000n);
+  assert.equal(item.feedbackBonusSummary?.totalFrontendAwarded, 120_000n);
+  assert.equal(item.feedbackBonusSummary?.activePoolCount, 1);
+  assert.equal(item.feedbackBonusSummary?.awardCount, 1);
 });
 
 test("mapContentItem prefers Ponder question text when present", () => {

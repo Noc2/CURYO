@@ -91,7 +91,10 @@ function getRoundCloseness(item: ContentItem): number {
 }
 
 function getRewardPoolAmount(item: ContentItem) {
-  return item.rewardPoolSummary?.totalAvailable ?? item.rewardPoolSummary?.totalFunded ?? 0n;
+  return (
+    (item.rewardPoolSummary?.totalAvailable ?? item.rewardPoolSummary?.totalFunded ?? 0n) +
+    (item.feedbackBonusSummary?.totalRemaining ?? 0n)
+  );
 }
 
 function getRoundMinVoters(item: ContentItem) {

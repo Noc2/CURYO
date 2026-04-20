@@ -1,7 +1,18 @@
 import { ROUND_STATE } from "@curyo/contracts/protocol";
 import { and, asc, desc, eq, inArray, or, sql } from "ponder";
 import { db } from "ponder:api";
-import { category, content, contentMedia, profile, questionRewardPool, ratingChange, rewardClaim, round, vote } from "ponder:schema";
+import {
+  category,
+  content,
+  contentMedia,
+  feedbackBonusPool,
+  profile,
+  questionRewardPool,
+  ratingChange,
+  rewardClaim,
+  round,
+  vote,
+} from "ponder:schema";
 import { buildAllowedCategoryCondition, buildAllowedContentCondition } from "../moderation.js";
 import type { ApiApp } from "../shared.js";
 import { attachOpenRoundSummary, jsonBig, parseBigIntList } from "../shared.js";
@@ -26,11 +37,16 @@ function buildContentSearchExpressions(search: string) {
   };
 }
 
-function getQuestionRewardPoolAvailableAmount() {
+function getRewardAvailableAmount() {
   return sql<bigint>`coalesce((
     select sum(${questionRewardPool.unallocatedAmount} + ${questionRewardPool.allocatedAmount} - ${questionRewardPool.claimedAmount})
     from ${questionRewardPool}
     where ${questionRewardPool.contentId} = ${content.id}
+  ), 0) + coalesce((
+    select sum(${feedbackBonusPool.remainingAmount})
+    from ${feedbackBonusPool}
+    where ${feedbackBonusPool.contentId} = ${content.id}
+      and ${feedbackBonusPool.forfeited} = false
   ), 0)`;
 }
 
@@ -39,7 +55,7 @@ function getContentOrderBy(sortBy: string) {
     case "oldest":
       return [asc(content.createdAt), asc(content.id)];
     case "highest_rewards":
-      return [desc(getQuestionRewardPoolAvailableAmount()), desc(content.createdAt), desc(content.id)];
+      return [desc(getRewardAvailableAmount()), desc(content.createdAt), desc(content.id)];
     case "highest_rated":
       return [desc(content.ratingBps), desc(content.rating), desc(content.createdAt), desc(content.id)];
     case "lowest_rated":
@@ -58,7 +74,7 @@ function getSearchOrderBy(searchRank: ReturnType<typeof sql<number>>, sortBy: st
     case "oldest":
       return [desc(searchRank), asc(content.createdAt), asc(content.id)];
     case "highest_rewards":
-      return [desc(searchRank), desc(getQuestionRewardPoolAvailableAmount()), desc(content.createdAt), desc(content.id)];
+      return [desc(searchRank), desc(getRewardAvailableAmount()), desc(content.createdAt), desc(content.id)];
     case "highest_rated":
       return [desc(searchRank), desc(content.ratingBps), desc(content.rating), desc(content.createdAt), desc(content.id)];
     case "lowest_rated":
@@ -178,7 +194,7 @@ export function registerContentRoutes(app: ApiApp) {
       conditions.push(eq(content.status, parsed));
     }
     if (sortBy === "highest_rewards") {
-      conditions.push(sql<boolean>`${getQuestionRewardPoolAvailableAmount()} > 0`);
+      conditions.push(sql<boolean>`${getRewardAvailableAmount()} > 0`);
     }
     if (categoryId) {
       const parsed = safeBigInt(categoryId);

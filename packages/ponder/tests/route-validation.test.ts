@@ -97,6 +97,18 @@ function mockPonderModules<T>(result: T) {
       totalRewardsClaimed: "profile.totalRewardsClaimed",
       totalVotes: "profile.totalVotes",
     },
+    feedbackBonusAward: {
+      frontendFee: "feedbackBonusAward.frontendFee",
+      grossAmount: "feedbackBonusAward.grossAmount",
+      recipientAmount: "feedbackBonusAward.recipientAmount",
+    },
+    feedbackBonusPool: {
+      contentId: "feedbackBonusPool.contentId",
+      forfeited: "feedbackBonusPool.forfeited",
+      forfeitedAmount: "feedbackBonusPool.forfeitedAmount",
+      fundedAmount: "feedbackBonusPool.fundedAmount",
+      remainingAmount: "feedbackBonusPool.remainingAmount",
+    },
     questionRewardPool: {
       allocatedAmount: "questionRewardPool.allocatedAmount",
       claimedAmount: "questionRewardPool.claimedAmount",
@@ -114,6 +126,8 @@ function mockPonderModules<T>(result: T) {
     },
     questionRewardPoolClaim: {
       amount: "questionRewardPoolClaim.amount",
+      frontendFee: "questionRewardPoolClaim.frontendFee",
+      grossAmount: "questionRewardPoolClaim.grossAmount",
     },
     questionRewardPoolRound: {
       allocation: "questionRewardPoolRound.allocation",
@@ -357,12 +371,14 @@ describe("registerContentRoutes", () => {
     expect(serializedWhere).toContain("questionRewardPool.unallocatedAmount");
     expect(serializedWhere).toContain("questionRewardPool.allocatedAmount");
     expect(serializedWhere).toContain("questionRewardPool.claimedAmount");
+    expect(serializedWhere).toContain("feedbackBonusPool.remainingAmount");
     expect(serializedWhere).toContain("content.id");
 
     const serializedOrderBy = serializeExpression(queryBuilder.orderBy.mock.calls[0] ?? []);
     expect(serializedOrderBy).toContain("questionRewardPool.unallocatedAmount");
     expect(serializedOrderBy).toContain("questionRewardPool.allocatedAmount");
     expect(serializedOrderBy).toContain("questionRewardPool.claimedAmount");
+    expect(serializedOrderBy).toContain("feedbackBonusPool.remainingAmount");
     expect(serializedOrderBy).toContain("content.createdAt");
   });
 
@@ -549,6 +565,11 @@ describe("registerDataRoutes", () => {
         totalQuestionRewardsPaid: 123_450_000n,
         totalQuestionRewardsPaidToVoters: 119_746_500n,
         totalQuestionRewardsPaidToFrontends: 3_703_500n,
+        totalFeedbackBonusesFunded: 40_000_000n,
+        totalFeedbackBonusesPaid: 12_000_000n,
+        totalFeedbackBonusesPaidToVoters: 11_640_000n,
+        totalFeedbackBonusesPaidToFrontends: 360_000n,
+        totalFeedbackBonusesForfeited: 5_000_000n,
       },
     ]);
     const { registerDataRoutes } = await import("../src/api/routes/data-routes.js");
@@ -563,6 +584,11 @@ describe("registerDataRoutes", () => {
       totalQuestionRewardsPaid: "123450000",
       totalQuestionRewardsPaidToVoters: "119746500",
       totalQuestionRewardsPaidToFrontends: "3703500",
+      totalFeedbackBonusesFunded: "40000000",
+      totalFeedbackBonusesPaid: "12000000",
+      totalFeedbackBonusesPaidToVoters: "11640000",
+      totalFeedbackBonusesPaidToFrontends: "360000",
+      totalFeedbackBonusesForfeited: "5000000",
     });
   });
 

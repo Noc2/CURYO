@@ -4,6 +4,8 @@ import { db } from "ponder:api";
 import {
   category,
   content,
+  feedbackBonusAward,
+  feedbackBonusPool,
   frontend,
   globalStats,
   questionRewardPool,
@@ -450,7 +452,7 @@ export function registerDataRoutes(app: ApiApp) {
   });
 
   app.get("/stats", async (c) => {
-    const [[stats], [rewardPoolStats]] = await Promise.all([
+    const [[stats], [rewardPoolStats], [feedbackBonusAwardStats], [feedbackBonusPoolStats]] = await Promise.all([
       db
         .select()
         .from(globalStats)
@@ -463,6 +465,19 @@ export function registerDataRoutes(app: ApiApp) {
           totalQuestionRewardsPaidToFrontends: sql<bigint>`coalesce(sum(${questionRewardPoolClaim.frontendFee}), 0)`,
         })
         .from(questionRewardPoolClaim),
+      db
+        .select({
+          totalFeedbackBonusesPaid: sql<bigint>`coalesce(sum(${feedbackBonusAward.grossAmount}), 0)`,
+          totalFeedbackBonusesPaidToVoters: sql<bigint>`coalesce(sum(${feedbackBonusAward.recipientAmount}), 0)`,
+          totalFeedbackBonusesPaidToFrontends: sql<bigint>`coalesce(sum(${feedbackBonusAward.frontendFee}), 0)`,
+        })
+        .from(feedbackBonusAward),
+      db
+        .select({
+          totalFeedbackBonusesFunded: sql<bigint>`coalesce(sum(${feedbackBonusPool.fundedAmount}), 0)`,
+          totalFeedbackBonusesForfeited: sql<bigint>`coalesce(sum(${feedbackBonusPool.forfeitedAmount}), 0)`,
+        })
+        .from(feedbackBonusPool),
     ]);
 
     const fallbackStats = {
@@ -481,6 +496,11 @@ export function registerDataRoutes(app: ApiApp) {
         totalQuestionRewardsPaid: rewardPoolStats?.totalQuestionRewardsPaid ?? 0n,
         totalQuestionRewardsPaidToVoters: rewardPoolStats?.totalQuestionRewardsPaidToVoters ?? 0n,
         totalQuestionRewardsPaidToFrontends: rewardPoolStats?.totalQuestionRewardsPaidToFrontends ?? 0n,
+        totalFeedbackBonusesFunded: feedbackBonusPoolStats?.totalFeedbackBonusesFunded ?? 0n,
+        totalFeedbackBonusesPaid: feedbackBonusAwardStats?.totalFeedbackBonusesPaid ?? 0n,
+        totalFeedbackBonusesPaidToVoters: feedbackBonusAwardStats?.totalFeedbackBonusesPaidToVoters ?? 0n,
+        totalFeedbackBonusesPaidToFrontends: feedbackBonusAwardStats?.totalFeedbackBonusesPaidToFrontends ?? 0n,
+        totalFeedbackBonusesForfeited: feedbackBonusPoolStats?.totalFeedbackBonusesForfeited ?? 0n,
       },
     );
   });

@@ -130,6 +130,7 @@ export function useContentFeed(voterAddress?: string, options: UseContentFeedOpt
           isValidUrl: null,
           thumbnailUrl: null,
           rewardPoolSummary: null,
+          feedbackBonusSummary: null,
         };
       })
       .filter((item): item is ContentItem => item !== null);

@@ -2,7 +2,7 @@ import { DEFAULT_REVEAL_GRACE_PERIOD_SECONDS, DEFAULT_ROUND_CONFIG, ROUND_STATE 
 import type { Context, Hono } from "hono";
 import { and, desc, eq, inArray, replaceBigInts, sql } from "ponder";
 import { db } from "ponder:api";
-import { questionRewardPool, round } from "ponder:schema";
+import { feedbackBonusPool, questionRewardPool, round } from "ponder:schema";
 import { isValidAddress, safeBigInt } from "./utils.js";
 
 export type ApiApp = Hono;
@@ -85,6 +85,7 @@ export async function attachOpenRoundSummary<T extends { id: bigint }>(items: T[
       question: "title" in item ? item.title : undefined,
       link: "url" in item ? item.url || null : undefined,
       rewardPoolSummary: emptyRewardPoolSummary(),
+      feedbackBonusSummary: emptyFeedbackBonusSummary(),
       openRound: null,
     }));
   }
@@ -111,6 +112,28 @@ export async function attachOpenRoundSummary<T extends { id: bigint }>(items: T[
   const rewardPoolSummaryByContentId = new Map<bigint, ReturnType<typeof formatRewardPoolSummary>>();
   for (const row of rewardPoolRows) {
     rewardPoolSummaryByContentId.set(row.contentId, formatRewardPoolSummary(row));
+  }
+
+  const feedbackBonusRows = await db
+    .select({
+      contentId: feedbackBonusPool.contentId,
+      poolCount: sql<number>`count(*)`,
+      activePoolCount: sql<number>`sum(case when ${feedbackBonusPool.forfeited} = false and ${feedbackBonusPool.remainingAmount} > 0 then 1 else 0 end)`,
+      totalFundedAmount: sql<bigint>`coalesce(sum(${feedbackBonusPool.fundedAmount}), 0)`,
+      totalRemainingAmount: sql<bigint>`coalesce(sum(${feedbackBonusPool.remainingAmount}), 0)`,
+      totalAwardedAmount: sql<bigint>`coalesce(sum(${feedbackBonusPool.awardedAmount}), 0)`,
+      totalVoterAwardedAmount: sql<bigint>`coalesce(sum(${feedbackBonusPool.voterAwardedAmount}), 0)`,
+      totalFrontendAwardedAmount: sql<bigint>`coalesce(sum(${feedbackBonusPool.frontendAwardedAmount}), 0)`,
+      totalForfeitedAmount: sql<bigint>`coalesce(sum(${feedbackBonusPool.forfeitedAmount}), 0)`,
+      awardCount: sql<number>`coalesce(sum(${feedbackBonusPool.awardCount}), 0)`,
+    })
+    .from(feedbackBonusPool)
+    .where(inArray(feedbackBonusPool.contentId, contentIds))
+    .groupBy(feedbackBonusPool.contentId);
+
+  const feedbackBonusSummaryByContentId = new Map<bigint, ReturnType<typeof formatFeedbackBonusSummary>>();
+  for (const row of feedbackBonusRows) {
+    feedbackBonusSummaryByContentId.set(row.contentId, formatFeedbackBonusSummary(row));
   }
 
   const openRounds = await db
@@ -151,6 +174,7 @@ export async function attachOpenRoundSummary<T extends { id: bigint }>(items: T[
   return items.map(item => {
     const openRound = latestOpenRoundByContentId.get(item.id);
     const rewardPoolSummary = rewardPoolSummaryByContentId.get(item.id) ?? emptyRewardPoolSummary();
+    const feedbackBonusSummary = feedbackBonusSummaryByContentId.get(item.id) ?? emptyFeedbackBonusSummary();
 
     return {
       ...item,
@@ -158,6 +182,7 @@ export async function attachOpenRoundSummary<T extends { id: bigint }>(items: T[
       question: "title" in item ? item.title : undefined,
       link: "url" in item ? item.url || null : undefined,
       rewardPoolSummary,
+      feedbackBonusSummary,
       openRound: openRound
         ? {
             roundId: openRound.roundId,
@@ -206,11 +231,55 @@ function emptyRewardPoolSummary() {
   };
 }
 
+function emptyFeedbackBonusSummary() {
+  return {
+    currency: "USDC",
+    displayCurrency: "USD",
+    decimals: 6,
+    poolCount: 0,
+    activePoolCount: 0,
+    totalFundedAmount: 0n,
+    totalRemainingAmount: 0n,
+    totalAwardedAmount: 0n,
+    totalVoterAwardedAmount: 0n,
+    totalFrontendAwardedAmount: 0n,
+    totalForfeitedAmount: 0n,
+    awardCount: 0,
+  };
+}
+
 function toBigIntValue(value: bigint | string | number | null | undefined) {
   if (typeof value === "bigint") return value;
   if (typeof value === "number") return BigInt(value);
   if (typeof value === "string" && value.length > 0) return BigInt(value);
   return 0n;
+}
+
+function formatFeedbackBonusSummary(row: {
+  poolCount: number | string | bigint | null;
+  activePoolCount: number | string | bigint | null;
+  totalFundedAmount: bigint | string | number | null;
+  totalRemainingAmount: bigint | string | number | null;
+  totalAwardedAmount: bigint | string | number | null;
+  totalVoterAwardedAmount: bigint | string | number | null;
+  totalFrontendAwardedAmount: bigint | string | number | null;
+  totalForfeitedAmount: bigint | string | number | null;
+  awardCount: number | string | bigint | null;
+}) {
+  return {
+    currency: "USDC",
+    displayCurrency: "USD",
+    decimals: 6,
+    poolCount: toNumberValue(row.poolCount),
+    activePoolCount: toNumberValue(row.activePoolCount),
+    totalFundedAmount: toBigIntValue(row.totalFundedAmount),
+    totalRemainingAmount: toBigIntValue(row.totalRemainingAmount),
+    totalAwardedAmount: toBigIntValue(row.totalAwardedAmount),
+    totalVoterAwardedAmount: toBigIntValue(row.totalVoterAwardedAmount),
+    totalFrontendAwardedAmount: toBigIntValue(row.totalFrontendAwardedAmount),
+    totalForfeitedAmount: toBigIntValue(row.totalForfeitedAmount),
+    awardCount: toNumberValue(row.awardCount),
+  };
 }
 
 function toNumberValue(value: number | string | bigint | null | undefined) {

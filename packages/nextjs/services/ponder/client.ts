@@ -325,6 +325,7 @@ export interface PonderContentItem {
   roundMaxVoters?: number | string | null;
   openRound: PonderContentOpenRoundSummary | null;
   rewardPoolSummary?: PonderRewardPoolSummary | null;
+  feedbackBonusSummary?: PonderFeedbackBonusSummary | null;
 }
 
 export interface PonderRewardPoolSummary {
@@ -342,6 +343,21 @@ export interface PonderRewardPoolSummary {
   totalRefundedAmount: string;
   qualifiedRoundCount: number;
   currentRewardPoolAmount: string;
+}
+
+export interface PonderFeedbackBonusSummary {
+  currency: "USDC";
+  displayCurrency: "USD";
+  decimals: 6;
+  poolCount: number;
+  activePoolCount: number;
+  totalFundedAmount: string;
+  totalRemainingAmount: string;
+  totalAwardedAmount: string;
+  totalVoterAwardedAmount: string;
+  totalFrontendAwardedAmount: string;
+  totalForfeitedAmount: string;
+  awardCount: number;
 }
 
 export interface PonderQuestionRewardClaimCandidate {
@@ -941,6 +957,11 @@ export const ponderApi = {
       totalQuestionRewardsPaid: string;
       totalQuestionRewardsPaidToVoters: string;
       totalQuestionRewardsPaidToFrontends: string;
+      totalFeedbackBonusesFunded: string;
+      totalFeedbackBonusesPaid: string;
+      totalFeedbackBonusesPaidToVoters: string;
+      totalFeedbackBonusesPaidToFrontends: string;
+      totalFeedbackBonusesForfeited: string;
       totalProfiles: number;
       totalVoterIds: number;
     }>("/stats");
