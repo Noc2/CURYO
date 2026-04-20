@@ -107,7 +107,7 @@ jobs:
         env:
           CURYO_E2E_PRODUCTION_BUILD: "true"
           NEXT_PUBLIC_CURYO_E2E_PRODUCTION_BUILD: "true"
-          DATABASE_URL: file:local.db
+          DATABASE_URL: memory:
           NEXT_PUBLIC_PONDER_URL: http://127.0.0.1:42069
           NEXT_PUBLIC_TARGET_NETWORKS: "31337"
           NEXT_PUBLIC_THIRDWEB_CLIENT_ID: 124332de491a2aa8b7ba8ea6db1ce693
@@ -260,7 +260,7 @@ jobs:
         env:
           CURYO_E2E_PRODUCTION_BUILD: "true"
           NEXT_PUBLIC_CURYO_E2E_PRODUCTION_BUILD: "true"
-          DATABASE_URL: file:local.db
+          DATABASE_URL: memory:
           NEXT_PUBLIC_PONDER_URL: http://127.0.0.1:42069
           NEXT_PUBLIC_TARGET_NETWORKS: "31337"
           NEXT_PUBLIC_THIRDWEB_CLIENT_ID: 124332de491a2aa8b7ba8ea6db1ce693
