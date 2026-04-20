@@ -24,7 +24,6 @@ const config: KnipConfig = {
     "packages/nextjs": {
       entry: [
         "app/**/{page,layout,route,error,loading}.{ts,tsx}",
-        "pages/**/*.tsx",
         "scripts/**/*.{js,mjs,cjs,ts,tsx}",
         "e2e/**/*.{ts,tsx}",
         ...testEntries,
@@ -32,7 +31,6 @@ const config: KnipConfig = {
       ignoreDependencies: ["daisyui", "eslint-config-next", "tailwindcss"],
       project: [
         "app/**/*.{ts,tsx}",
-        "pages/**/*.{ts,tsx}",
         "components/**/*.{ts,tsx}",
         "config/**/*.ts",
         "constants/**/*.ts",
