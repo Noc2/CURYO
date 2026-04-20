@@ -34,7 +34,6 @@
     "e2e:full": "REQUIRE_E2E_KEEPER=1 playwright test --config e2e/playwright.config.ts --project=chromium --project=settlement --project=settlement-keeper --project=round-cancellation --project=content-dormancy --project=responsive-layout --project=mobile-phone --project=mobile-android --project=mobile-tablet",
     "e2e:firefox": "playwright test --config e2e/playwright.config.ts --project=compat-firefox",
     "e2e:webkit": "playwright test --config e2e/playwright.config.ts --project=compat-webkit",
-    "e2e:all-browsers": "playwright test --config e2e/playwright.config.ts --project=compat-chromium --project=compat-firefox --project=compat-webkit",
     "e2e:ui": "playwright test --config e2e/playwright.config.ts --ui",
     "e2e:reset": "bash e2e/scripts/reset-chain.sh"
   },
