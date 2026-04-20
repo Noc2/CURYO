@@ -470,21 +470,21 @@ body {
 }
 
 .vote-btn.vote-feedback .vote-bg {
-  background: var(--curyo-warm-white);
+  background: rgb(126 137 150 / 0.42);
   box-shadow: none;
 }
 
 .vote-btn.vote-light .vote-bg {
-  background: var(--curyo-warm-white);
+  background: rgb(126 137 150 / 0.42);
   box-shadow: none;
 }
 
 .vote-btn.vote-feedback .vote-symbol {
-  color: var(--curyo-surface);
+  color: var(--curyo-warm-white);
 }
 
 .vote-btn.vote-light .vote-symbol {
-  color: var(--curyo-surface);
+  color: var(--curyo-warm-white);
 }
 
 .vote-btn.vote-feedback:disabled .vote-bg {
