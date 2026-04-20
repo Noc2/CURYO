@@ -293,7 +293,7 @@ for ((i = 0; i < TOTAL_ITEMS; i++)); do
 
   # 1. Approve the Bounty escrow to pull the non-refundable cREP submission Bounty
   echo "  Approving cREP Bounty: $BOUNTY_AMOUNT"
-  cast send "$TOKEN" "approve(address,uint256)" "$QUESTION_REWARD_POOL_ESCROW" "$BOUNTY_AMOUNT" --private-key "$KEY" --rpc-url "$RPC" > /dev/null 2>&1
+  cast send "$TOKEN" "approve(address,uint256)" "$QUESTION_REWARD_POOL_ESCROW" "$BOUNTY_AMOUNT" --private-key "$KEY" --rpc-url "$RPC" > /dev/null
 
   # 2. Reserve the hidden submission commitment before revealing the question metadata
   printf -v SALT "%064x" "$((i + 1))"
@@ -302,7 +302,7 @@ for ((i = 0; i < TOTAL_ITEMS; i++)); do
     "0" "$BOUNTY_AMOUNT" "$SUBMISSION_BOUNTY_REQUIRED_VOTERS" "$SUBMISSION_BOUNTY_REQUIRED_SETTLED_ROUNDS" "$SUBMISSION_BOUNTY_EXPIRES_AT")
   echo "  Reserving submission..."
   cast send "$REGISTRY" "reserveSubmission(bytes32)" "$REVEAL_COMMITMENT" \
-    --private-key "$KEY" --rpc-url "$RPC" > /dev/null 2>&1
+    --private-key "$KEY" --rpc-url "$RPC" > /dev/null
 
   # The registry enforces a small reveal delay to make front-running reservations harder.
   sleep 1
@@ -311,7 +311,7 @@ for ((i = 0; i < TOTAL_ITEMS; i++)); do
   echo "  Submitting question: $TITLE ($MEDIA_KIND, bounty: $BOUNTY_AMOUNT, context: $CONTEXT_URL, category: $CATEGORY_SLUG -> $CATEGORY_ID)"
   cast send "$REGISTRY" "submitQuestionWithReward(string,string[],string,string,string,string,uint256,bytes32,uint8,uint256,uint256,uint256,uint256)" \
     "$CONTEXT_URL" "$IMAGE_URLS_ARG" "$VIDEO_URL_ARG" "$TITLE" "$DESCRIPTION" "$TAG" "$CATEGORY_ID" "0x$SALT" "0" "$BOUNTY_AMOUNT" "$SUBMISSION_BOUNTY_REQUIRED_VOTERS" "$SUBMISSION_BOUNTY_REQUIRED_SETTLED_ROUNDS" "$SUBMISSION_BOUNTY_EXPIRES_AT" \
-    --private-key "$KEY" --rpc-url "$RPC" > /dev/null 2>&1
+    --private-key "$KEY" --rpc-url "$RPC" > /dev/null
   echo "  Done!"
   echo ""
 done
@@ -377,7 +377,7 @@ seed_commit() {
   local artifacts
 
   cast send "$TOKEN" "approve(address,uint256)" "$VOTING_ENGINE" "$VOTE_STAKE" \
-    --private-key "$privKey" --rpc-url "$RPC" > /dev/null 2>&1
+    --private-key "$privKey" --rpc-url "$RPC" > /dev/null
 
   artifacts=$(node "$SCRIPT_DIR/../scripts-js/generateTlockCommit.js" \
     "$RPC" "$VOTING_ENGINE" "$contentId" "$isUp" "0x${salt}") || {
@@ -393,7 +393,7 @@ seed_commit() {
   cast send "$VOTING_ENGINE" \
     "commitVote(uint256,uint16,uint64,bytes32,bytes32,bytes,uint256,address)" \
     "$contentId" "$roundReferenceRatingBps" "$targetRound" "$drandChainHash" "$commitHash" "$ciphertext" "$VOTE_STAKE" "$ZERO_ADDR" \
-    --private-key "$privKey" --rpc-url "$RPC" > /dev/null 2>&1 || { echo "  (Commit may have failed)"; return 1; }
+    --private-key "$privKey" --rpc-url "$RPC" > /dev/null || { echo "  (Commit may have failed)"; return 1; }
 }
 
 # Use deterministic salts for reproducibility
