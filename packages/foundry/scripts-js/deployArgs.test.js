@@ -41,13 +41,6 @@ test("parseDeployArgs handles help", () => {
   });
 });
 
-test("parseDeployArgs rejects deprecated --file", () => {
-  assert.throws(
-    () => parseDeployArgs(["--file", "DeployGovernance.s.sol"]),
-    /--file` is no longer supported/
-  );
-});
-
 test("parseDeployArgs rejects unknown options", () => {
   assert.throws(() => parseDeployArgs(["--bogus"]), /Unknown option: --bogus/);
 });

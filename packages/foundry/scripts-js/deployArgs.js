@@ -50,12 +50,6 @@ export function parseDeployArgs(args) {
       continue;
     }
 
-    if (arg === "--file") {
-      throw new Error(
-        "`--file` is no longer supported. `yarn deploy` always uses `script/Deploy.s.sol`."
-      );
-    }
-
     if (arg.startsWith("-")) {
       throw new Error(
         `Unknown option: ${arg}. Run \`yarn deploy --help\` for usage.`

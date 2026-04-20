@@ -137,7 +137,6 @@ The default account (scaffold-eth-default) can only be used for localhost deploy
 }
 
 // Set environment variables for the make command
-process.env.DEPLOY_SCRIPT = "script/Deploy.s.sol";
 const { rpcUrl, overrideEnvKey } = resolveRpcUrl(network);
 process.env.RPC_URL = rpcUrl;
 if (network === "localhost") {
