@@ -203,8 +203,12 @@ const Tokenomics = () => {
         Bounties are separate from cREP bootstrap rewards. They are attached at submission, funded in cREP or USDC on
         Celo, scoped to one question, and split across eligible revealed voters in each qualified bounty round after a
         3% frontend-operator share. If the commit-attributed frontend is not payable, that share stays with the voter
-        claim. Bounty required-voter terms cannot exceed the question&apos;s selected voter cap. There is no stablecoin
-        coherence bonus at launch.
+        claim. Bounty required-voter terms cannot exceed the question&apos;s selected voter cap.
+      </p>
+      <p>
+        Feedback Bonuses are separate, optional USDC pools. They reward revealed voters for useful hidden feedback after
+        settlement, pay immediately in the award transaction, reserve the same 3% eligible frontend share, and send
+        expired unawarded USDC to treasury.
       </p>
 
       <h3>Treasury</h3>
@@ -249,6 +253,11 @@ const Tokenomics = () => {
                 The minimum is non-refundable. It is attached at submission and pays eligible voters if the question
                 qualifies. Bounties can use cREP or USDC.
               </td>
+            </tr>
+            <tr>
+              <td>Fund a Feedback Bonus</td>
+              <td className="font-mono">USDC only</td>
+              <td>Optional; unawarded remainder goes to treasury after the award deadline</td>
             </tr>
             <tr>
               <td>Register as frontend</td>

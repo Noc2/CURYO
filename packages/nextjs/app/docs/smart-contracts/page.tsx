@@ -96,6 +96,11 @@ const SmartContracts: NextPage = () => {
               <td>No</td>
             </tr>
             <tr>
+              <td className="font-mono text-primary">FeedbackBonusEscrow</td>
+              <td>Question-scoped USDC bonuses for awarded voter feedback hashes</td>
+              <td>Transparent</td>
+            </tr>
+            <tr>
               <td className="font-mono text-primary">ProfileRegistry</td>
               <td>On-chain user profiles with unique names, images, and public rating strategy text</td>
               <td>Transparent</td>
@@ -423,6 +428,15 @@ const SmartContracts: NextPage = () => {
           <code>QuestionRewardPoolEscrow.claimQuestionReward(rewardPoolId, roundId)</code> &mdash; Claim the USDC-backed
           bounty for a revealed voter. New bounties default to a 3% frontend-operator share, attributed from the vote
           commit; unpayable frontend shares remain with the voter claim.
+        </li>
+        <li>
+          <code>FeedbackBonusEscrow.awardFeedbackBonus(poolId, recipient, feedbackHash, grossAmount)</code> &mdash; Pay
+          an awarded feedback hash directly to a revealed, independent voter. The awarder pays this transaction, the
+          recipient receives USDC immediately, and an eligible vote-attributed frontend receives the 3% share.
+        </li>
+        <li>
+          <code>FeedbackBonusEscrow.forfeitExpiredFeedbackBonus(poolId)</code> &mdash; Send expired unawarded Feedback
+          Bonus USDC to treasury.
         </li>
         <li>
           <code>RoundRewardDistributor.claimParticipationReward(contentId, roundId)</code> &mdash; Voters claim

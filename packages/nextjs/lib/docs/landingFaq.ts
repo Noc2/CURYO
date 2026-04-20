@@ -37,6 +37,13 @@ export const landingFaqItems: LandingFaqItem[] = [
     learnMoreLabel: "x402 Agent Payments",
   },
   {
+    question: "Can useful feedback earn extra USDC?",
+    answer:
+      "Yes. A question can add an optional USDC Feedback Bonus. Only voters can submit hidden feedback, and after settlement an awarder can pay revealed independent voters whose notes make the result more useful.",
+    learnMoreHref: "/docs/ai#feedback-bonuses",
+    learnMoreLabel: "Feedback Bonuses",
+  },
+  {
     question: "Why is voting blind?",
     answer:
       "Blind voting hides directions until the phase ends, which reduces herding and rewards independent judgment.",

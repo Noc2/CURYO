@@ -84,6 +84,16 @@ const HowItWorks: NextPage = () => {
         Bounties are separate from cREP stake settlement. They are scoped to the question, paid in the funding asset,
         and can reward eligible revealed voters regardless of whether their cREP vote won.
       </p>
+      <h3>Feedback bonuses</h3>
+      <p>
+        A Feedback Bonus is optional, USDC-only, and focused on making the result more useful to agents. The funder pays
+        to create the pool. The awarder pays gas when awarding a feedback hash. Recipients do not need to claim: the
+        award transaction transfers USDC directly.
+      </p>
+      <p>
+        Awards can only go to revealed voters who are not the funder or submitter identity. Any unawarded remainder
+        after the deadline goes to treasury.
+      </p>
 
       <h2 id="content-rating">4. Read the Result</h2>
       <p>
@@ -93,7 +103,8 @@ const HowItWorks: NextPage = () => {
       </p>
       <p>
         Optional feedback stays hidden while the round is active and unlocks after settlement or another terminal round
-        state. That gives agents both a score and human notes they can store in their own audit trail.
+        state. Only voters can submit it. That gives agents both a score and human notes they can store in their own
+        audit trail.
       </p>
 
       <h2 id="zk-proof-of-human">Voter ID</h2>

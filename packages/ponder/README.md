@@ -61,6 +61,7 @@ src/
 ├── RoundVotingEngine.ts      # Commit, reveal, settle, cancel events
 ├── RoundRewardDistributor.ts # Reward distribution events
 ├── QuestionRewardPoolEscrow.ts # Bounty funding, voter claims, and frontend shares
+├── FeedbackBonusEscrow.ts    # Feedback bonus pools, awards, and forfeits
 ├── CategoryRegistry.ts       # Seeded discovery category metadata
 ├── ProfileRegistry.ts       # Profile update events
 ├── FrontendRegistry.ts       # Frontend fee events
@@ -89,7 +90,7 @@ The REST API is built with Hono. Key routes:
 | `GET /profile/:address` | User profile and reputation |
 | `GET /categories` | List content categories |
 
-Bounty tables track gross funding, voter payouts, and the default eligible frontend-operator share separately so API consumers can display both voter rewards and operator fees. Content submission events now revolve around the required context URL plus optional preview media, so indexers and clients can treat the source link as the canonical entry point for discovery and previews.
+Bounty tables track gross funding, voter payouts, and the default eligible frontend-operator share separately so API consumers can display both voter rewards and operator fees. Feedback Bonus tables stay separate: they index USDC pools, awarded feedback hashes, direct voter payments, frontend shares, and treasury forfeits. Content submission events now revolve around the required context URL plus optional preview media, so indexers and clients can treat the source link as the canonical entry point for discovery and previews.
 
 Routes `/health` and `/status` are reserved by Ponder.
 
