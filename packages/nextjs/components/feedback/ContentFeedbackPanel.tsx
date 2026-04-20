@@ -141,8 +141,7 @@ export function ContentFeedbackPanel({ item, variant = "rail", onRequestConnect 
     >
       <div className="flex min-w-0 items-start justify-between gap-3">
         <div className="min-w-0">
-          <p className="text-[0.68rem] font-semibold uppercase tracking-[0.16em] text-base-content/45">Feedback</p>
-          <h3 className="mt-1 text-base font-semibold leading-tight text-base-content">Optional Feedback</h3>
+          <h3 className="text-base font-semibold leading-tight text-base-content">Optional Feedback</h3>
         </div>
         <span className="inline-flex shrink-0 items-center gap-1 rounded-full bg-base-content/[0.07] px-2.5 py-1 text-xs font-semibold leading-none text-base-content/62">
           <LockClosedIcon className="h-3.5 w-3.5" />
