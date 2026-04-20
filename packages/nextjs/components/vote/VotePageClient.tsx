@@ -1814,7 +1814,7 @@ const HomeInner = () => {
             className="absolute inset-0 h-full w-full cursor-default"
             onClick={() => setFeedbackSheetItem(null)}
           />
-          <div className="relative ml-auto mr-auto flex max-h-[86svh] max-w-lg flex-col overflow-hidden rounded-t-[1.5rem] bg-base-100 shadow-2xl ring-1 ring-base-content/10">
+          <div className="relative ml-auto mr-auto flex max-h-[86svh] max-w-lg flex-col overflow-hidden rounded-t-lg bg-base-100 shadow-2xl ring-1 ring-base-content/10">
             <div className="flex shrink-0 items-center justify-between gap-3 border-b border-base-content/10 px-4 py-3">
               <div className="min-w-0">
                 <p className="text-sm font-semibold text-base-content">Feedback</p>

@@ -12,6 +12,7 @@ import {
 } from "~~/lib/auth/signedReadSessions";
 import { verifySignedActionChallenge } from "~~/lib/auth/signedRouteHelpers";
 import {
+  ContentFeedbackStorageUnavailableError,
   addContentFeedback,
   listContentFeedback,
   normalizeContentFeedbackInput,
@@ -123,6 +124,10 @@ export async function POST(request: NextRequest) {
 
     return response;
   } catch (error) {
+    if (error instanceof ContentFeedbackStorageUnavailableError) {
+      return NextResponse.json({ error: "Feedback storage is not ready yet" }, { status: 503 });
+    }
+
     console.error("Error creating feedback:", error);
     return NextResponse.json({ error: "Failed to create feedback" }, { status: 500 });
   }

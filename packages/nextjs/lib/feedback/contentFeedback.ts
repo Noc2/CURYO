@@ -41,6 +41,28 @@ export interface ContentFeedbackRoundContext {
 
 type FeedbackRow = typeof contentFeedback.$inferSelect;
 
+export class ContentFeedbackStorageUnavailableError extends Error {
+  constructor() {
+    super("CONTENT_FEEDBACK_STORAGE_UNAVAILABLE");
+    this.name = "ContentFeedbackStorageUnavailableError";
+  }
+}
+
+function isContentFeedbackStorageUnavailableError(error: unknown, depth = 0): boolean {
+  if (!error || typeof error !== "object") return false;
+  const maybeError = error as { code?: unknown; message?: unknown };
+  if (
+    maybeError.code === "42P01" &&
+    typeof maybeError.message === "string" &&
+    maybeError.message.includes("content_feedback")
+  ) {
+    return true;
+  }
+
+  const cause = (error as { cause?: unknown }).cause;
+  return depth < 3 && cause !== undefined ? isContentFeedbackStorageUnavailableError(cause, depth + 1) : false;
+}
+
 function isContentFeedbackType(value: string): value is ContentFeedbackType {
   return CONTENT_FEEDBACK_TYPES.includes(value as ContentFeedbackType);
 }
@@ -285,22 +307,30 @@ export async function addContentFeedback(
   }
 
   const now = createContentFeedbackTimestamp();
-  const [row] = await db
-    .insert(contentFeedback)
-    .values({
-      contentId: payload.contentId,
-      roundId: context.currentRoundId,
-      authorAddress: payload.normalizedAddress,
-      feedbackType: payload.feedbackType,
-      body: payload.body,
-      sourceUrl: payload.sourceUrl,
-      moderationStatus: APPROVED_MODERATION_STATUS,
-      visibilityStatus: HIDDEN_UNTIL_SETTLEMENT_STATUS,
-      createdAt: now,
-      updatedAt: now,
-      deletedAt: null,
-    })
-    .returning();
+  let row: FeedbackRow | undefined;
+  try {
+    [row] = await db
+      .insert(contentFeedback)
+      .values({
+        contentId: payload.contentId,
+        roundId: context.currentRoundId,
+        authorAddress: payload.normalizedAddress,
+        feedbackType: payload.feedbackType,
+        body: payload.body,
+        sourceUrl: payload.sourceUrl,
+        moderationStatus: APPROVED_MODERATION_STATUS,
+        visibilityStatus: HIDDEN_UNTIL_SETTLEMENT_STATUS,
+        createdAt: now,
+        updatedAt: now,
+        deletedAt: null,
+      })
+      .returning();
+  } catch (error) {
+    if (isContentFeedbackStorageUnavailableError(error)) {
+      throw new ContentFeedbackStorageUnavailableError();
+    }
+    throw error;
+  }
 
   const item = row ? mapFeedbackRow(row, { context, viewerAddress: payload.normalizedAddress }) : null;
   if (!item) {
@@ -315,12 +345,28 @@ export async function listContentFeedback(params: {
   context: ContentFeedbackRoundContext;
   viewerAddress?: `0x${string}` | null;
 }): Promise<ContentFeedbackListResult> {
-  const rows = await db
-    .select()
-    .from(contentFeedback)
-    .where(and(eq(contentFeedback.contentId, params.contentId), isNull(contentFeedback.deletedAt)))
-    .orderBy(desc(contentFeedback.createdAt), desc(contentFeedback.id))
-    .limit(CONTENT_FEEDBACK_LIST_LIMIT);
+  let rows: FeedbackRow[];
+  try {
+    rows = await db
+      .select()
+      .from(contentFeedback)
+      .where(and(eq(contentFeedback.contentId, params.contentId), isNull(contentFeedback.deletedAt)))
+      .orderBy(desc(contentFeedback.createdAt), desc(contentFeedback.id))
+      .limit(CONTENT_FEEDBACK_LIST_LIMIT);
+  } catch (error) {
+    if (!isContentFeedbackStorageUnavailableError(error)) {
+      throw error;
+    }
+
+    return {
+      items: [],
+      count: 0,
+      publicCount: 0,
+      ownHiddenCount: 0,
+      settlementComplete: params.context.settlementComplete,
+      openRoundId: params.context.openRoundId,
+    };
+  }
 
   const publicCount = rows.filter(
     row => row.moderationStatus === APPROVED_MODERATION_STATUS && isFeedbackPublic(row, params.context),
@@ -349,14 +395,26 @@ export async function listContentFeedbackCounts(params: {
     return counts;
   }
 
-  const rows = await db
-    .select({
-      contentId: contentFeedback.contentId,
-      roundId: contentFeedback.roundId,
-      moderationStatus: contentFeedback.moderationStatus,
-    })
-    .from(contentFeedback)
-    .where(and(inArray(contentFeedback.contentId, params.contentIds), isNull(contentFeedback.deletedAt)));
+  let rows: Array<{
+    contentId: string;
+    roundId: string | null;
+    moderationStatus: string;
+  }>;
+  try {
+    rows = await db
+      .select({
+        contentId: contentFeedback.contentId,
+        roundId: contentFeedback.roundId,
+        moderationStatus: contentFeedback.moderationStatus,
+      })
+      .from(contentFeedback)
+      .where(and(inArray(contentFeedback.contentId, params.contentIds), isNull(contentFeedback.deletedAt)));
+  } catch (error) {
+    if (isContentFeedbackStorageUnavailableError(error)) {
+      return counts;
+    }
+    throw error;
+  }
 
   for (const row of rows) {
     if (row.moderationStatus !== APPROVED_MODERATION_STATUS) continue;

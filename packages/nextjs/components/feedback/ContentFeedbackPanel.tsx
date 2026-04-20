@@ -38,7 +38,7 @@ function FeedbackItem({ item }: { item: ContentFeedbackItem }) {
   const visibilityLabel = item.isPublic ? "Unlocked" : "Only you";
 
   return (
-    <li className="rounded-xl border border-base-content/10 bg-base-content/[0.035] p-3">
+    <li className="rounded-lg border border-base-content/10 bg-base-content/[0.035] p-3">
       <div className="flex min-w-0 items-start justify-between gap-2">
         <div className="min-w-0">
           <p className="text-sm font-semibold leading-tight text-base-content">{item.feedbackTypeLabel}</p>
@@ -133,7 +133,7 @@ export function ContentFeedbackPanel({ item, variant = "rail", onRequestConnect 
 
   return (
     <section
-      className={`surface-card flex min-h-0 flex-col overflow-hidden rounded-[1.25rem] ${
+      className={`surface-card flex min-h-0 flex-col overflow-hidden rounded-lg ${
         isSheet ? "max-h-[82svh] p-4" : "max-h-[clamp(24rem,46vh,34rem)] p-3.5"
       }`}
       aria-label="Question feedback"
@@ -153,7 +153,7 @@ export function ContentFeedbackPanel({ item, variant = "rail", onRequestConnect 
         What would help a human or AI judge this question better?
       </p>
 
-      <div className="mt-3 rounded-xl border border-base-content/10 bg-base-content/[0.035] px-3 py-2">
+      <div className="mt-3 rounded-lg border border-base-content/10 bg-base-content/[0.035] px-3 py-2">
         <p className="text-xs font-medium leading-relaxed text-base-content/64">{feedbackStatusCopy}</p>
         {!feedback.settlementComplete ? (
           <p className="mt-1 text-xs leading-relaxed text-base-content/45">{ownHiddenCopy}</p>
@@ -244,7 +244,7 @@ export function ContentFeedbackPanel({ item, variant = "rail", onRequestConnect 
             ))}
           </ul>
         ) : (
-          <p className="rounded-xl border border-dashed border-base-content/12 px-3 py-3 text-sm leading-relaxed text-base-content/48">
+          <p className="rounded-lg border border-dashed border-base-content/12 px-3 py-3 text-sm leading-relaxed text-base-content/48">
             {feedback.settlementComplete
               ? "No feedback yet."
               : "Your saved feedback will appear here. Everyone's feedback unlocks after settlement."}
