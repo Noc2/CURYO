@@ -313,7 +313,7 @@ const deployedContracts: GenericContractsDeclaration = {
       deployedOnBlock: 3,
     },
     RoundCleanupLib: {
-      address: "0x504c359f3fefeda7c132c710a24124a6d5fe3ef5",
+      address: "0x630306b5ffa0af19d6b6b46da5af16cb3c9ddec0",
       abi: [
         {
           type: "error",
