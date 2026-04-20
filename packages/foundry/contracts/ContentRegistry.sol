@@ -357,8 +357,7 @@ contract ContentRegistry is Initializable, AccessControlUpgradeable, PausableUpg
             _submissionRewardTerms(
                 rewardAsset, rewardAmount, requiredVoters, requiredSettledRounds, rewardPoolExpiresAt
             ),
-            _defaultRoundConfig(),
-            false
+            _defaultRoundConfig()
         );
     }
 
@@ -380,8 +379,7 @@ contract ContentRegistry is Initializable, AccessControlUpgradeable, PausableUpg
             videoUrl,
             salt,
             rewardTerms,
-            _validatedRoundConfig(roundConfig),
-            true
+            _validatedRoundConfig(roundConfig)
         );
     }
 
@@ -403,8 +401,7 @@ contract ContentRegistry is Initializable, AccessControlUpgradeable, PausableUpg
             videoUrl,
             salt,
             _defaultSubmissionRewardTerms(SUBMISSION_REWARD_ASSET_CREP),
-            _defaultRoundConfig(),
-            false
+            _defaultRoundConfig()
         );
     }
 
@@ -425,8 +422,7 @@ contract ContentRegistry is Initializable, AccessControlUpgradeable, PausableUpg
             videoUrl,
             salt,
             _defaultSubmissionRewardTerms(SUBMISSION_REWARD_ASSET_CREP),
-            _validatedRoundConfig(roundConfig),
-            true
+            _validatedRoundConfig(roundConfig)
         );
     }
 
@@ -446,8 +442,7 @@ contract ContentRegistry is Initializable, AccessControlUpgradeable, PausableUpg
             videoUrl,
             salt,
             _defaultSubmissionRewardTerms(SUBMISSION_REWARD_ASSET_CREP),
-            _defaultRoundConfig(),
-            false
+            _defaultRoundConfig()
         );
     }
 
@@ -467,8 +462,7 @@ contract ContentRegistry is Initializable, AccessControlUpgradeable, PausableUpg
             videoUrl,
             salt,
             _defaultSubmissionRewardTerms(SUBMISSION_REWARD_ASSET_CREP),
-            _validatedRoundConfig(roundConfig),
-            true
+            _validatedRoundConfig(roundConfig)
         );
     }
 
@@ -572,13 +566,10 @@ contract ContentRegistry is Initializable, AccessControlUpgradeable, PausableUpg
         string memory videoUrl,
         bytes32 salt,
         SubmissionRewardTerms memory rewardTerms,
-        RoundLib.RoundConfig memory roundConfig,
-        bool includeRoundConfigInCommitment
+        RoundLib.RoundConfig memory roundConfig
     ) internal returns (uint256 contentId) {
         (uint256 resolvedCategoryId, bytes32 submissionKey, PendingSubmission memory pending) =
-            _prepareQuestionMediaSubmission(
-                metadata, imageUrls, videoUrl, salt, rewardTerms, roundConfig, includeRoundConfigInCommitment
-            );
+            _prepareQuestionMediaSubmission(metadata, imageUrls, videoUrl, salt, rewardTerms, roundConfig);
         bytes32 contentHash = keccak256(
             abi.encode(
                 "curyo-question-context-v1",
@@ -613,8 +604,7 @@ contract ContentRegistry is Initializable, AccessControlUpgradeable, PausableUpg
         string memory videoUrl,
         bytes32 salt,
         SubmissionRewardTerms memory rewardTerms,
-        RoundLib.RoundConfig memory roundConfig,
-        bool includeRoundConfigInCommitment
+        RoundLib.RoundConfig memory roundConfig
     ) internal returns (uint256 resolvedCategoryId, bytes32 submissionKey, PendingSubmission memory pending) {
         resolvedCategoryId = _resolveQuestionSubmissionCategory(metadata);
         submissionKey = _deriveQuestionMediaSubmissionKey(metadata, resolvedCategoryId);
@@ -622,30 +612,18 @@ contract ContentRegistry is Initializable, AccessControlUpgradeable, PausableUpg
         _validateSubmissionReward(rewardTerms);
 
         bytes32 mediaHash = _submissionMediaHash(imageUrls, videoUrl);
-        bytes32 revealCommitment = includeRoundConfigInCommitment
-            ? _computeRevealCommitmentWithRoundConfig(
-                submissionKey,
-                mediaHash,
-                metadata.title,
-                metadata.description,
-                metadata.tags,
-                metadata.categoryId,
-                salt,
-                msg.sender,
-                rewardTerms,
-                roundConfig
-            )
-            : _computeRevealCommitment(
-                submissionKey,
-                mediaHash,
-                metadata.title,
-                metadata.description,
-                metadata.tags,
-                metadata.categoryId,
-                salt,
-                msg.sender,
-                rewardTerms
-            );
+        bytes32 revealCommitment = _computeRevealCommitment(
+            submissionKey,
+            mediaHash,
+            metadata.title,
+            metadata.description,
+            metadata.tags,
+            metadata.categoryId,
+            salt,
+            msg.sender,
+            rewardTerms,
+            roundConfig
+        );
         pending = pendingSubmissions[revealCommitment];
         require(pending.submitter == msg.sender, "Reservation not found");
         require(block.timestamp <= pending.expiresAt, "Reservation expired");
@@ -977,7 +955,8 @@ contract ContentRegistry is Initializable, AccessControlUpgradeable, PausableUpg
         uint256 categoryId,
         bytes32 salt,
         address submitter,
-        SubmissionRewardTerms memory rewardTerms
+        SubmissionRewardTerms memory rewardTerms,
+        RoundLib.RoundConfig memory roundConfig
     ) internal pure returns (bytes32) {
         return keccak256(
             abi.encode(
@@ -993,28 +972,7 @@ contract ContentRegistry is Initializable, AccessControlUpgradeable, PausableUpg
                 rewardTerms.amount,
                 rewardTerms.requiredVoters,
                 rewardTerms.requiredSettledRounds,
-                rewardTerms.expiresAt
-            )
-        );
-    }
-
-    function _computeRevealCommitmentWithRoundConfig(
-        bytes32 submissionKey,
-        bytes32 mediaHash,
-        string memory title,
-        string memory description,
-        string memory tags,
-        uint256 categoryId,
-        bytes32 salt,
-        address submitter,
-        SubmissionRewardTerms memory rewardTerms,
-        RoundLib.RoundConfig memory roundConfig
-    ) internal pure returns (bytes32) {
-        return keccak256(
-            abi.encode(
-                _computeRevealCommitment(
-                    submissionKey, mediaHash, title, description, tags, categoryId, salt, submitter, rewardTerms
-                ),
+                rewardTerms.expiresAt,
                 roundConfig.epochDuration,
                 roundConfig.maxDuration,
                 roundConfig.minVoters,

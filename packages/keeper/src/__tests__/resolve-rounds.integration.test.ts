@@ -274,6 +274,10 @@ describe("resolveRounds integration", () => {
           { type: "uint256" },
           { type: "uint256" },
           { type: "uint256" },
+          { type: "uint32" },
+          { type: "uint32" },
+          { type: "uint16" },
+          { type: "uint16" },
         ],
         [
           submissionKey,
@@ -289,6 +293,10 @@ describe("resolveRounds integration", () => {
           3n,
           1n,
           0n,
+          1_200,
+          604_800,
+          3,
+          1_000,
         ],
       ),
     );

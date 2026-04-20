@@ -212,7 +212,7 @@ afterEach(() => {
 
 function buildExpectedRevealCommitment(): Hex {
   const mediaHash = keccak256(encodeAbiParameters([{ type: "string[]" }, { type: "string" }], [[], ""]));
-  const legacyCommitment = keccak256(
+  return keccak256(
     encodeAbiParameters(
       [
         { type: "bytes32" },
@@ -228,6 +228,10 @@ function buildExpectedRevealCommitment(): Hex {
         { type: "uint256" },
         { type: "uint256" },
         { type: "uint256" },
+        { type: "uint32" },
+        { type: "uint32" },
+        { type: "uint16" },
+        { type: "uint16" },
       ],
       [
         SUBMISSION_KEY,
@@ -243,14 +247,11 @@ function buildExpectedRevealCommitment(): Hex {
         3n,
         1n,
         0n,
+        1_200,
+        604_800,
+        3,
+        1_000,
       ],
-    ),
-  );
-
-  return keccak256(
-    encodeAbiParameters(
-      [{ type: "bytes32" }, { type: "uint32" }, { type: "uint32" }, { type: "uint16" }, { type: "uint16" }],
-      [legacyCommitment, 1_200, 604_800, 3, 1_000],
     ),
   );
 }

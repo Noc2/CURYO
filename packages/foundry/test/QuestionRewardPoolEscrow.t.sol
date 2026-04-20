@@ -759,7 +759,7 @@ contract QuestionRewardPoolEscrowTest is VotingTestBase {
         (, bytes32 submissionKey) =
             registry.previewQuestionMediaSubmissionKey(imageUrls, "", QUESTION, DESCRIPTION, TAGS, CATEGORY_ID);
         uint256 rewardAmount = _defaultSubmissionRewardAmount(registry);
-        bytes32 legacyCommitment = keccak256(
+        bytes32 revealCommitment = keccak256(
             abi.encode(
                 submissionKey,
                 _submissionMediaHash(imageUrls, ""),
@@ -773,12 +773,7 @@ contract QuestionRewardPoolEscrowTest is VotingTestBase {
                 rewardAmount,
                 DEFAULT_SUBMISSION_REWARD_REQUIRED_VOTERS,
                 DEFAULT_SUBMISSION_REWARD_SETTLED_ROUNDS,
-                DEFAULT_SUBMISSION_REWARD_EXPIRES_AT
-            )
-        );
-        bytes32 revealCommitment = keccak256(
-            abi.encode(
-                legacyCommitment,
+                DEFAULT_SUBMISSION_REWARD_EXPIRES_AT,
                 roundConfig.epochDuration,
                 roundConfig.maxDuration,
                 roundConfig.minVoters,

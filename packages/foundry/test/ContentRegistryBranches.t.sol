@@ -213,7 +213,7 @@ contract ContentRegistryBranchesTest is VotingTestBase {
         (, submissionKey) = registry.previewQuestionSubmissionKey(
             contextUrl, imageUrls, videoUrl, title, description, tags, categoryId
         );
-        bytes32 legacyCommitment = keccak256(
+        bytes32 revealCommitment = keccak256(
             abi.encode(
                 submissionKey,
                 _submissionMediaHash(imageUrls, videoUrl),
@@ -227,12 +227,7 @@ contract ContentRegistryBranchesTest is VotingTestBase {
                 rewardTerms.amount,
                 rewardTerms.requiredVoters,
                 rewardTerms.requiredSettledRounds,
-                rewardTerms.expiresAt
-            )
-        );
-        bytes32 revealCommitment = keccak256(
-            abi.encode(
-                legacyCommitment,
+                rewardTerms.expiresAt,
                 roundConfig.epochDuration,
                 roundConfig.maxDuration,
                 roundConfig.minVoters,

@@ -143,7 +143,7 @@ function buildSubmissionRevealCommitment(params: {
   const mediaHash = keccak256(
     encodeAbiParameters([{ type: "string[]" }, { type: "string" }], [[...params.imageUrls], params.videoUrl]),
   );
-  const legacyCommitment = keccak256(
+  return keccak256(
     encodeAbiParameters(
       [
         { type: "bytes32" },
@@ -159,6 +159,10 @@ function buildSubmissionRevealCommitment(params: {
         { type: "uint256" },
         { type: "uint256" },
         { type: "uint256" },
+        { type: "uint32" },
+        { type: "uint32" },
+        { type: "uint16" },
+        { type: "uint16" },
       ],
       [
         params.submissionKey,
@@ -174,15 +178,6 @@ function buildSubmissionRevealCommitment(params: {
         BigInt(params.requiredVoters),
         BigInt(params.requiredSettledRounds),
         params.rewardPoolExpiresAt,
-      ],
-    ),
-  );
-
-  return keccak256(
-    encodeAbiParameters(
-      [{ type: "bytes32" }, { type: "uint32" }, { type: "uint32" }, { type: "uint16" }, { type: "uint16" }],
-      [
-        legacyCommitment,
         Number(params.roundConfig.epochDuration),
         Number(params.roundConfig.maxDuration),
         Number(params.roundConfig.minVoters),
