@@ -23,7 +23,7 @@ export const SECTIONS: Section[] = [
         blocks: [
           {
             type: "paragraph",
-            text: "Curyo is a verified human feedback layer for agents and apps. An asker submits a bounded question with context and a bounty, verified humans stake cREP on the answer, and the settled result becomes an auditable public signal.",
+            text: "Curyo is a verified human feedback layer for agents and apps. An asker submits a bounded question with context and a bounty, verified humans stake cREP on the answer, voters can add hidden feedback, and the settled result becomes an auditable public signal.",
           },
         ],
       },
@@ -137,7 +137,7 @@ export const SECTIONS: Section[] = [
               "Commit (any time during the round): Choose up or down. The UI encrypts your direction and submits a single transferAndCall transaction carrying (contentId, roundReferenceRatingBps, commitHash, ciphertext, frontend, targetRound, drandChainHash). Your stake is locked; your direction is hidden on-chain until the epoch ends.",
               `Epoch ends (every ${protocolDocFacts.blindPhaseDurationLabel}): The drand beacon publishes a randomness value. The keeper fetches it, validates the stored AGE/tlock stanza against the commit metadata, decrypts eligible ciphertexts off-chain, and calls revealVoteByCommitKey() for unrevealed commits.`,
               `Settlement: After the selected minVoters threshold is revealed (default ${protocolDocFacts.minVotersLabel}) and all past-epoch votes are revealed (or the ${protocolDocFacts.revealGracePeriodLabel} reveal grace period expires), anyone may call settleRound(contentId, roundId). The side with the larger epoch-weighted stake wins. The content rating updates from the round reference score using epoch-weighted revealed stake evidence.`,
-              `Claim: Winners call claimReward(contentId, roundId) to receive their original stake plus an epoch-weighted share of the remaining losing pool. Revealed losers may also call claimReward(contentId, roundId) to recover a fixed ${protocolDocFacts.revealedLoserRefundPercentLabel} rebate. If the question has a qualifying bounty, eligible revealed voters can also claim the voter share of the attached bounty independent of cREP outcome; 3% is reserved for the eligible frontend operator when payable. There is no submitter upside path.`,
+              `Claim: Winners call claimReward(contentId, roundId) to receive their original stake plus an epoch-weighted share of the remaining losing pool. Revealed losers may also call claimReward(contentId, roundId) to recover a fixed ${protocolDocFacts.revealedLoserRefundPercentLabel} rebate. If the question has a qualifying bounty, eligible revealed voters can also claim the voter share of the attached bounty independent of cREP outcome; 3% is reserved for the eligible frontend operator when payable. Optional Feedback Bonuses are awarded separately by feedback hash and transfer USDC immediately. There is no submitter upside path.`,
             ],
           },
         ],
@@ -1258,7 +1258,7 @@ export const SECTIONS: Section[] = [
         blocks: [
           {
             type: "paragraph",
-            text: "Curyo incorporates AI primarily as an asker and integrator. An agent can submit the question it cannot answer, attach the required context URL and bounty, wait for verified humans to stake judgment, then store the settled result in its audit trail.",
+            text: "Curyo incorporates AI primarily as an asker and integrator. An agent can submit the question it cannot answer, attach the required context URL and bounty, wait for verified humans to stake judgment, read hidden feedback after settlement, then store the settled result in its audit trail.",
           },
           {
             type: "paragraph",
