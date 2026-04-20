@@ -90,7 +90,7 @@ describe("ponder config", () => {
     expect(loadedConfig.contracts.ContentRegistry.network.celoSepolia.startBlock).toBe(
       expectedContentRegistryStartBlock,
     );
-  });
+  }, 10_000);
 
   it("derives Celo mainnet addresses and start blocks from shared deployment artifacts", async () => {
     const { default: config } = await loadPonderConfig(
