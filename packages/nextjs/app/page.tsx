@@ -41,7 +41,7 @@ const FEATURE_BENEFITS: {
       "Agents can fund questions with x402 and use MCP-ready tools for asking, quoting, checking status, and reading results.",
     links: [
       { label: "x402", href: "/docs/ai#x402-agent-payments" },
-      { label: "MCP Server", href: "/docs/ai#mcp-adapter-shape" },
+      { label: "MCP Adapter", href: "/docs/ai#mcp-adapter-shape" },
     ],
   },
   {
@@ -266,7 +266,7 @@ export default async function LandingPage() {
               <span className="block">Humans Stake</span>
             </h1>
             <p className="mt-5 max-w-[31rem] text-center text-lg leading-7 text-base-content/72 sm:max-w-[35rem] sm:text-xl sm:leading-8 lg:max-w-[33rem] lg:text-left lg:text-[1.55rem] lg:leading-[1.45]">
-              Get Verified, Rate With Reputation, and Earn USDC
+              Human feedback for AI agents
             </p>
             <LandingPageActions />
             <div className="mt-5 flex flex-wrap items-center justify-center gap-x-3 gap-y-2 text-center text-sm text-base-content/62 sm:text-[0.95rem] lg:justify-start lg:text-left">

@@ -7,7 +7,7 @@ const WhitepaperPage: NextPage = () => {
     <article className="prose max-w-none">
       <h1>Whitepaper</h1>
       <p className="lead text-base-content/60 text-lg">
-        The complete Curyo protocol specification in a single document.
+        Deep protocol reference for readers who want more than the short docs.
       </p>
 
       <div className="not-prose my-8">
@@ -25,35 +25,34 @@ const WhitepaperPage: NextPage = () => {
       </div>
 
       <h2>Contents</h2>
-      <p>The whitepaper opens with an executive summary, followed by {SECTIONS.length} sections:</p>
+      <p>The PDF is the long-form reference. The short docs are the better starting point.</p>
       <ol>
         <li>
-          <strong>Introduction</strong> &mdash; Mission, key principles, and question-first flow overview
+          <strong>Introduction</strong> &mdash; Curyo&apos;s question-first human feedback loop
         </li>
         <li>
-          <strong>How It Works</strong> &mdash; Round mechanics, voter ID, cREP settlement, question submissions
+          <strong>How It Works</strong> &mdash; Submissions, voting, settlement, and rewards
         </li>
         <li>
-          <strong>tlock Commit-Reveal Voting</strong> &mdash; Encrypted voting, phase-weighted rewards, and resolution
+          <strong>tlock Commit-Reveal Voting</strong> &mdash; Hidden votes and epoch-weighted rewards
         </li>
         <li>
-          <strong>Tokenomics</strong> &mdash; Token distribution, faucet tiers, bootstrap rewards, and bounties attached
-          at submission
+          <strong>Tokenomics</strong> &mdash; cREP distribution, bootstrap rewards, and bounties
         </li>
         <li>
-          <strong>Governance</strong> &mdash; Community governance, treasury, and collusion prevention
+          <strong>Governance</strong> &mdash; Config, upgrades, treasury, and Voter ID enforcement
         </li>
         <li>
-          <strong>Curyo &amp; AI</strong> &mdash; Model collapse, stake-weighted curation as AI infrastructure, public
-          ratings as a public good, AI-assisted voting with human oversight, and the human-feedback loop for agents
+          <strong>Curyo &amp; AI</strong> &mdash; Agents asking verified humans for bounded feedback
         </li>
         <li>
           <strong>Known Limitations</strong> &mdash; Current constraints and open challenges
         </li>
         <li>
-          <strong>Rating Research Basis</strong> &mdash; Research references behind the score-relative rating model
+          <strong>Rating Research Basis</strong> &mdash; References behind the score-relative rating model
         </li>
       </ol>
+      <p className="text-sm text-base-content/60">Current source bundle contains {SECTIONS.length} sections.</p>
     </article>
   );
 };

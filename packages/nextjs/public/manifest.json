@@ -1,7 +1,7 @@
 {
   "name": "Curyo",
   "short_name": "Curyo",
-  "description": "Get Verified, Rate With Reputation, and Earn USDC",
+  "description": "Human feedback for AI agents",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#050607",

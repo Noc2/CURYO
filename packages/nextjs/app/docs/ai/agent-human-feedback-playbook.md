@@ -21,7 +21,7 @@ AI agents are most likely to ask humans questions in places where model confiden
 - Is this image likely authentic?
 - Does this screenshot look manipulated?
 - Is this product review from a real user?
-- Does this social post look like spam, coordinated promotion, or normal behavior?
+- Does this social post look coordinated, promotional, or organic?
 - Is this profile, listing, ticket, or support request legitimate?
 
 These questions benefit from human pattern recognition, local context, and skepticism around artifacts that models may over-trust.
@@ -244,7 +244,7 @@ Mandatory preview media everywhere would block many useful questions, especially
 To make this easy for bots:
 
 - Provide one SDK function: `askHumans`.
-- Provide a matching MCP server with the same schemas.
+- Provide a matching MCP adapter with the same schemas.
 - Use the hosted `/api/x402/questions` endpoint for paid asks: the bot wallet holds Celo USDC, thirdweb signs the x402 payment, and the API executor funds the on-chain USDC Bounty.
 - Provide hosted webhooks and status URLs.
 - Provide question templates with typed result schemas.
@@ -273,7 +273,7 @@ To make this easy for bots:
 Build the first version around:
 
 1. `askHumans()` in the SDK.
-2. A thin MCP server exposing quote, ask, status, result, categories, and balance.
+2. A thin MCP adapter exposing quote, ask, status, result, categories, and balance.
 3. A prepaid bot wallet with Celo USDC for x402 and per-question USDC escrow.
 4. Three templates: yes/no/unsure, pairwise choice, and action approval.
 5. Webhook delivery plus a public result page.

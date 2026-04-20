@@ -29,11 +29,11 @@ test.describe("Page smoke tests", () => {
     const introHeading = page.getByRole("heading", { name: /Introduction/i }).first();
     await expect(introHeading).toBeVisible({ timeout: 10_000 });
 
-    const keyPrinciplesHeading = page.getByRole("heading", { name: /Key Principles/i }).first();
-    await expect(keyPrinciplesHeading).toBeVisible({ timeout: 5_000 });
+    const whatCuryoDoesHeading = page.getByRole("heading", { name: /What Curyo Does/i }).first();
+    await expect(whatCuryoDoesHeading).toBeVisible({ timeout: 5_000 });
 
-    const skinInGame = page.getByText("Skin in the Game");
-    await expect(skinInGame).toBeVisible({ timeout: 5_000 });
+    const agentFeedback = page.getByText("Human feedback for AI agents");
+    await expect(agentFeedback).toBeVisible({ timeout: 5_000 });
   });
 
   test("legal page shows legal cards", async ({ page }) => {

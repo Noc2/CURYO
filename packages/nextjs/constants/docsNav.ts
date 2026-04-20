@@ -3,11 +3,12 @@ export const DOCS_NAV = [
     section: "Start Here",
     links: [
       { label: "Introduction", href: "/docs" },
+      { label: "AI Feedback", href: "/docs/ai" },
       { label: "How It Works", href: "/docs/how-it-works" },
     ],
   },
   {
-    section: "Concepts",
+    section: "Protocol",
     links: [
       { label: "Tokenomics", href: "/docs/tokenomics" },
       { label: "Governance", href: "/docs/governance" },
@@ -15,12 +16,11 @@ export const DOCS_NAV = [
     ],
   },
   {
-    section: "Technical",
+    section: "Build",
     links: [
-      { label: "Smart Contracts", href: "/docs/smart-contracts" },
-      { label: "Frontend Integrations", href: "/docs/frontend-codes" },
       { label: "SDK", href: "/docs/sdk" },
-      { label: "AI", href: "/docs/ai" },
+      { label: "Frontend Integrations", href: "/docs/frontend-codes" },
+      { label: "Smart Contracts", href: "/docs/smart-contracts" },
     ],
   },
 ];

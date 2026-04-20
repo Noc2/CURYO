@@ -1,78 +1,77 @@
 import Link from "next/link";
 import type { NextPage } from "next";
-import { protocolCopy } from "~~/lib/docs/protocolCopy";
 
 const DocsIntro: NextPage = () => {
   return (
     <article className="prose max-w-none">
       <h1>Introduction</h1>
-      <p className="lead text-base-content/60 text-lg">AI Asks, Humans Stake</p>
+      <p className="lead text-base-content/60 text-lg">Human feedback for AI agents.</p>
 
-      <h2>Why Curyo?</h2>
-      <p>{protocolCopy.whyNowOverview}</p>
+      <h2>What Curyo Does</h2>
       <p>
-        Curyo&apos;s mission is to make public quality signals harder to fake by tying judgment to verified humans,
-        transparent records, and real economic consequences.
-      </p>
-
-      <h2>What is Curyo?</h2>
-      <p>
-        Curyo is a question-first content curation protocol. People submit a question with a required context URL and
-        optional image or YouTube preview media, and every submission must attach a non-refundable bounty funded in cREP
-        or USDC. Verified voters then use cREP to judge whether the current 0-100 community rating should move up or
-        down.
+        Curyo lets an agent, bot, or person ask a focused question, attach context, fund a bounty, and get back a public
+        signal from verified humans who stake cREP on their judgment.
       </p>
       <p>
-        That shape also gives bots and AI agents a clean fallback when they cannot answer something themselves: ask the
-        same focused question through the same submission path, attach the minimum bounty, let verified humans stake
-        their judgment, and read the public result back as feedback.
-      </p>
-      <p>
-        Bounties are attached at submission, funded in cREP or USDC on Celo, and pay eligible revealed participants in
-        qualified rounds. They remain independent of whether the cREP vote won.
-      </p>
-      <p>
-        Question creators also choose the round shape inside governance bounds: shorter blind phases for urgent bounty
-        questions, longer durations or higher voter thresholds when the answer should wait for more human signal.
+        The result is not a private poll or a comment thread. It is a question, a round, revealed votes, optional
+        feedback, rewards, and a rating history that other agents and frontends can inspect later.
       </p>
 
-      <h2>Key Principles</h2>
-      <div className="not-prose grid sm:grid-cols-2 gap-4 my-6">
+      <h2>Fast Path</h2>
+      <ol>
+        <li>
+          <strong>Ask:</strong> submit one short question with a required context URL and an optional image or YouTube
+          preview.
+        </li>
+        <li>
+          <strong>Fund:</strong> attach a non-refundable bounty in cREP or Celo USDC.
+        </li>
+        <li>
+          <strong>Vote:</strong> verified humans stake cREP on whether the visible rating should move up or down.
+        </li>
+        <li>
+          <strong>Use:</strong> read the settled score, revealed votes, and feedback as an auditable human signal.
+        </li>
+      </ol>
+
+      <h2>Why It Exists</h2>
+      <p>
+        Models are useful, but they still hit questions where local context, taste, evidence quality, or social judgment
+        matters. Curyo gives agents a narrow fallback: ask humans, pay for the work, and keep the answer visible.
+      </p>
+
+      <div className="not-prose my-6 grid gap-4 sm:grid-cols-2">
+        <FeatureCard title="For Agents" description="Turn uncertainty into a paid question with a structured result." />
+        <FeatureCard title="For Humans" description="Stake judgment, add feedback, and earn from useful answers." />
         <FeatureCard
-          title="Skin in the Game"
-          description="Every vote requires cREP. Winning votes can earn from losing cREP stakes; losing votes can lose stake."
+          title="For Builders"
+          description="Use the SDK, bot, API, or indexed data without a closed data silo."
         />
-        <FeatureCard
-          title="Voter ID (One Person, One Vote)"
-          description="Each verified human gets one non-transferable Voter ID that gates claims and per-round influence."
-        />
-        <FeatureCard
-          title="Question-First Submissions"
-          description="Questions are capped at 120 characters, require a context URL, and can optionally include image or YouTube preview media. Every submission carries a non-refundable bounty."
-        />
-        <FeatureCard
-          title="Bounties"
-          description="Bounties fund specific questions in cREP or USDC, pay eligible revealed participants, and support eligible frontend operators."
-        />
-        <FeatureCard
-          title="Governed Round Settings"
-          description="Creators pick blind phase, max duration, settlement voters, and voter cap within bounds set by governance."
-        />
+        <FeatureCard title="For Governance" description="Tune round settings, rewards, and safety limits on-chain." />
       </div>
-      <p>
-        See <Link href="/docs/how-it-works">How It Works</Link> for the full voting lifecycle, content rating rules, and
-        transaction-cost overview. See <Link href="/docs/ai">AI</Link> for the bot-to-human feedback loop, x402-paid
-        question submissions, and MCP adapter guidance.
-      </p>
+
+      <h2>Where To Go Next</h2>
+      <ul>
+        <li>
+          <Link href="/docs/ai">AI Feedback</Link> explains the agent loop and x402-paid asks.
+        </li>
+        <li>
+          <Link href="/docs/how-it-works">How It Works</Link> covers the voting lifecycle in one page.
+        </li>
+        <li>
+          <Link href="/docs/sdk">SDK</Link> and <Link href="/docs/frontend-codes">Frontend Integrations</Link> cover
+          build paths.
+        </li>
+      </ul>
     </article>
   );
 };
 
 function FeatureCard({ title, description }: { title: string; description: string }) {
   return (
-    <div className="surface-card rounded-xl p-4">
-      <h3 className="text-base font-semibold mb-1.5">{title}</h3>
-      <p className="text-base leading-relaxed text-base-content/75">{description}</p>
+    <div className="surface-card rounded-lg p-4">
+      <h3 className="mb-1.5 text-base font-semibold">{title}</h3>
+      <p className="text-base leading-relaxed text-base-content/70">{description}</p>
     </div>
   );
 }

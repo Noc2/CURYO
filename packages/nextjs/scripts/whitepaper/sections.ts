@@ -16,14 +16,14 @@ export const SECTIONS: Section[] = [
   // ── 1. Introduction ──
   {
     title: "Introduction",
-    lead: "Get Verified, Rate With Reputation, and Earn USDC",
+    lead: "AI asks, verified humans stake judgment, and the result becomes public feedback.",
     subsections: [
       {
         heading: "Mission",
         blocks: [
           {
             type: "paragraph",
-            text: "The web is drowning in clickbait and fake engagement. As AI makes it effortless to generate vast amounts of content, the flood of low-effort material will only accelerate -- making trustworthy quality signals more critical than ever. Curyo fights back by tying every vote to a verified reputation. When you stake real tokens on your judgment, low-quality content loses and high-quality content rises  -- no algorithms, no ads, no manipulation.",
+            text: "Curyo is a verified human feedback layer for agents and apps. An asker submits a bounded question with context and a bounty, verified humans stake cREP on the answer, and the settled result becomes an auditable public signal.",
           },
         ],
       },
@@ -1144,67 +1144,6 @@ export const SECTIONS: Section[] = [
         ],
       },
       {
-        heading: "Spam Prevention",
-        blocks: [
-          {
-            type: "paragraph",
-            text: "Curyo already rejects malformed or non-armored vote ciphertexts on-chain. However, the current reveal model does not yet use zero-knowledge proofs that every accepted ciphertext was honestly decryptable. That means a malicious voter could still submit a syntactically valid commit that later cannot be revealed by independent resolution services.",
-          },
-          {
-            type: "paragraph",
-            text: "This is primarily a liveness and operations risk, not a way to smuggle counted votes into the result. A vote only affects settlement once it is successfully revealed. But unrevealable spam commits can waste keeper effort, delay round resolution, and if repeated broadly enough, contribute to reveal-failed rounds that require manual cleanup.",
-          },
-          {
-            type: "sub_heading",
-            text: "Detection",
-          },
-          {
-            type: "paragraph",
-            text: "Community members and independent resolution services can watch for repeated unrevealable commits, failed reveal attempts, or patterns where the same Voter ID repeatedly creates commits that pass the basic on-chain checks but never reveal successfully.",
-          },
-          {
-            type: "sub_heading",
-            text: "Enforcement via Governance Proposals",
-          },
-          {
-            type: "paragraph",
-            text: "When there is credible evidence of repeated spam behavior, governance is encouraged to act:",
-          },
-          {
-            type: "bullets",
-            items: [
-              "Revoke Voter IDs  -- governance can revoke the Voter IDs of accounts that repeatedly submit spam or unrevealable vote commits, removing their ability to keep disrupting rounds unless governance later restores a valid claim path.",
-              "Reward investigators  -- governance is encouraged to use treasury funds to reward operators or community members who document repeated abuse with reproducible evidence from on-chain data and resolution-service observations.",
-            ],
-          },
-          {
-            type: "sub_heading",
-            text: "Deterrence",
-          },
-          {
-            type: "paragraph",
-            text: "Several protocol features already make vote spam costly:",
-          },
-          {
-            type: "bullets",
-            items: [
-              "Stake at risk  -- unrevealed past-epoch votes can be forfeited to treasury during cleanup, and unrevealed commits in reveal-failed rounds are forfeited rather than refunded.",
-              "Sybil resistance  -- 1 eligible 18+ person = 1 Voter ID via Self.xyz passport or biometric ID card verification with sanctions checks.",
-              "Stake caps  -- maximum 100 cREP per content per round limits damage from any one Voter ID.",
-              "Governance revocation  -- losing your Voter ID eliminates future voting ability unless governance later restores a valid claim path.",
-            ],
-          },
-          {
-            type: "sub_heading",
-            text: "Future Hardening",
-          },
-          {
-            type: "paragraph",
-            text: "A stronger long-term hardening path would be zk-based reveal proofs or comparable cryptographic checks that accepted commits are honestly decryptable. Until then, governance oversight and Voter ID revocation remain the main backstop against repeated vote spam.",
-          },
-        ],
-      },
-      {
         heading: "Governance Security",
         blocks: [
           {
@@ -1251,7 +1190,7 @@ export const SECTIONS: Section[] = [
   // ── 6. Curyo & AI ──
   {
     title: "Curyo & AI",
-    lead: "How stake-weighted curation addresses the AI content crisis and produces public quality infrastructure.",
+    lead: "How agents can ask verified humans for bounded feedback and reuse the public result.",
     subsections: [
       {
         heading: "The Model Collapse Problem",
@@ -1282,7 +1221,7 @@ export const SECTIONS: Section[] = [
             items: [
               "Economic commitment  -- Each rating is backed by a token stake, making systematic manipulation expensive relative to the signal produced.",
               `Economic independence  -- tlock encryption hides votes during epoch 1, eliminating herd signals. Epoch-weighted rewards (${protocolDocFacts.earlyVoterAdvantageLabel} ratio) further penalize late followers, incentivizing genuine early assessment over copying.`,
-              "Sybil resistance  -- Self.xyz passport or biometric ID-card verification with 18+ and sanctions checks limits each eligible verified identity's stake per content, preventing bot farms from flooding the signal.",
+              "Sybil resistance  -- Self.xyz passport or biometric ID-card verification with 18+ and sanctions checks limits each eligible verified identity's stake per content.",
               "Verifiability  -- All votes, stakes, and outcomes are recorded on-chain with cryptographic integrity, enabling third-party audit and reproducibility.",
             ],
           },
@@ -1315,35 +1254,19 @@ export const SECTIONS: Section[] = [
         ],
       },
       {
-        heading: "AI-Assisted Voting",
+        heading: "Agent Feedback Loop",
         blocks: [
           {
             type: "paragraph",
-            text: "Curyo incorporates AI as a first-class participant through reference bot tooling that uses pluggable rating strategies. Each strategy can query an external API to obtain a normalized quality score for supported content. The bot votes up or down based on whether the score meets a configurable threshold, but it is a manual or schedulable CLI rather than an always-on protocol daemon.",
+            text: "Curyo incorporates AI primarily as an asker and integrator. An agent can submit the question it cannot answer, attach the required context URL and bounty, wait for verified humans to stake judgment, then store the settled result in its audit trail.",
           },
           {
             type: "paragraph",
-            text: "Submission bots can also publish richer metadata than a single free-form caption. They submit a question-first entry with a required context URL and optional image or YouTube preview media, plus a short title, longer description, and category tags alongside the canonical URL. That keeps downstream discovery interfaces easier to scan while preserving the same shared on-chain event history for every frontend. Coverage is intentionally adapter-based: supported sources can submit or vote today, while other platform categories remain read-only or pending until an adapter exists.",
+            text: "Submission bots publish the same question-first metadata as humans: short question, required context URL, optional preview media, category, bounty terms, and governed round settings. Keeping that shape identical makes the returned signal easy for both people and machines to read.",
           },
           {
             type: "paragraph",
-            text: "Bots participate under the same tlock privacy constraints as human voters  -- their vote direction is hidden until the epoch ends, just like human votes. The current reference bot uses a direct approve + commitVote flow and stakes the minimum amount of cREP per vote by default, while frontends often use the single-transaction transferAndCall path. Voting in epoch 1 (before any results are visible) gives bots the same 100% reward weight as early human voters, rewarding accurate strategies. The parimutuel mechanism provides natural selection pressure: strategies that produce inaccurate ratings lose their stakes, while accurate strategies accumulate reputation.",
-          },
-          {
-            type: "sub_heading",
-            text: "Human Oversight",
-          },
-          {
-            type: "paragraph",
-            text: "Bots and humans share the same protocol-level stake limits and reward rules, so influence ultimately depends on stake and accuracy rather than participant type. In practice, the reference bot stakes conservatively to seed rounds, while human voters can agree or disagree with whatever stake they choose. This creates a hybrid model: AI provides baseline signals and seeding, while humans provide additional oversight and judgment.",
-          },
-          {
-            type: "sub_heading",
-            text: "Cold-Start Mitigation",
-          },
-          {
-            type: "paragraph",
-            text: "AI-assisted voting addresses the cold-start problem inherent in new content platforms. When a bot run or external scheduler picks up newly submitted content, automated strategies can seed an initial quality signal before many human participants engage. This creates early activity and provides a focal point for human voters to agree or disagree with, accelerating convergence toward accurate ratings without giving bots protocol-level privileges.",
+            text: "Reference bot tooling can still submit, read, and vote under the same protocol rules, but the product story is narrower: when an autonomous system is uncertain, it can buy human feedback instead of pretending certainty.",
           },
         ],
       },
@@ -1376,7 +1299,7 @@ export const SECTIONS: Section[] = [
               "Cross-platform quality oracle  -- On-chain content ratings can serve as an oracle for other protocols and platforms, creating a shared quality layer across the decentralized web.",
               "Expertise-weighted reputation  -- Domain-specific reputation multipliers could allow voters with demonstrated accuracy in specific categories to earn additional influence, improving signal quality in specialized domains.",
               "Content provenance integration  -- Combining Curyo ratings with content provenance standards (C2PA) would create a two-layered trust system: provenance verifies origin, stake-weighted curation verifies quality.",
-              "Advanced AI strategies  -- The pluggable strategy interface supports increasingly sophisticated approaches, from API-based lookups to LLM-driven content analysis. The parimutuel mechanism ensures that only strategies producing accurate ratings survive long-term.",
+              "Agent feedback templates  -- Common question shapes can help agents ask clear questions and parse settled results without brittle natural-language scraping.",
             ],
           },
         ],

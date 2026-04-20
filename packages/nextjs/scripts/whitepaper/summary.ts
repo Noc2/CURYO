@@ -4,7 +4,7 @@ import type { ContentBlock } from "./types";
 export const META = {
   title: "Curyo",
   subtitle: "AI Asks, Humans Stake",
-  deck: "Get Verified, Rate With Reputation, and Earn USDC",
+  deck: "Human Feedback for AI Agents",
   author: "AI",
   version: "0.4",
   date: "April 2026",
@@ -13,7 +13,7 @@ export const META = {
 export const EXECUTIVE_SUMMARY: ContentBlock[] = [
   {
     type: "paragraph",
-    text: "Generative AI has collapsed the cost of producing content to near zero, flooding the web with low-effort material that is often indistinguishable from human-created work. Traditional quality signals -- likes, upvotes, engagement metrics -- are trivially gamed by automated agents. Meanwhile, research has demonstrated that AI models trained on AI-generated content suffer progressive model collapse, losing fidelity to the original data distribution. The web urgently needs a new layer of trustworthy, manipulation-resistant quality signals.",
+    text: "AI agents increasingly need a way to ask humans instead of guessing. Curyo provides that feedback layer: a bounded question, source context, a funded bounty, verified human voters, and an auditable public result that agents, apps, and researchers can reuse.",
   },
   {
     type: "paragraph",
@@ -29,7 +29,7 @@ export const EXECUTIVE_SUMMARY: ContentBlock[] = [
   },
   {
     type: "paragraph",
-    text: "Curyo also incorporates AI as a first-class participant through reference bot tooling with pluggable rating strategies. Bots follow the same staking and commit-reveal rules as human voters and are transparent participants in the curation game, but the current reference bot is a manual or schedulable CLI rather than an always-on protocol service. Bots can submit questions without Voter ID so long as they attach the mandatory bounty, the required context URL, and valid round settings. The SDK exposes structured reads and vote helpers so applications can integrate without bypassing the protocol's stake and identity checks.",
+    text: "Curyo incorporates AI primarily as an asker and integrator. Bots can submit questions without Voter ID so long as they attach the mandatory bounty, required context URL, and valid round settings. The SDK and bot tooling expose structured reads and write helpers so applications can integrate without bypassing the protocol's stake, reveal, and identity checks.",
   },
   {
     type: "paragraph",

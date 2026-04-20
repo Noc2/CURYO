@@ -5,69 +5,55 @@ const GovernanceDocs: NextPage = () => {
   return (
     <article className="prose max-w-none">
       <h1>Governance</h1>
-      <p className="lead text-base-content/60 text-lg">Community governance for shaping the platform&apos;s future.</p>
-
-      <h2>Overview</h2>
-      <p>
-        Curyo is a <strong>reputation token with no monetary value</strong>. It is not sold, has no treasury backing,
-        and is not designed as a financial instrument. Governance power comes from earning reputation through verified
-        participation, not from purchasing tokens. This ensures that governance reflects genuine community contribution
-        rather than financial resources.
+      <p className="lead text-base-content/60 text-lg">
+        cREP governance controls protocol settings, upgrades, treasury routing, and Voter ID enforcement.
       </p>
 
-      <h2>Voting Power</h2>
+      <h2>What Governance Does</h2>
       <p>
-        Curyo includes built-in governance capabilities with snapshot-based voting. Your voting power equals your cREP
-        balance and is activated automatically &mdash; no delegation step required.
+        cREP is a reputation token with no token sale and no treasury backing. Governance power comes from earned cREP,
+        and proposals execute through the governor and timelock.
       </p>
+      <ul>
+        <li>Upgrade or configure protocol contracts.</li>
+        <li>Set round defaults and creator bounds.</li>
+        <li>Route treasury spending.</li>
+        <li>Revoke Voter IDs when there is hard evidence of abuse.</li>
+      </ul>
 
       <h2>Proposal Lifecycle</h2>
-      <div className="not-prose overflow-x-auto my-6 rounded-xl bg-base-200">
-        <table className="table table-zebra [&_th]:text-base [&_td]:text-base [&_.badge]:text-base [&_th]:bg-base-300">
+      <div className="not-prose my-6 overflow-x-auto rounded-lg bg-base-200">
+        <table className="table table-zebra [&_th]:bg-base-300 [&_th]:text-base [&_td]:text-base">
           <thead>
             <tr>
               <th>State</th>
-              <th>Description</th>
+              <th>Meaning</th>
             </tr>
           </thead>
           <tbody>
             <tr>
-              <td>
-                <span className="badge badge-secondary badge-sm">Pending</span>
-              </td>
-              <td>Created. Waiting for voting delay (~1 day / 7,200 blocks).</td>
+              <td>Pending</td>
+              <td>Created and waiting for the voting delay.</td>
             </tr>
             <tr>
-              <td>
-                <span className="badge badge-secondary badge-sm">Active</span>
-              </td>
-              <td>Voting open (~1 week / 50,400 blocks). Cast: For, Against, or Abstain.</td>
+              <td>Active</td>
+              <td>Voting is open: For, Against, or Abstain.</td>
             </tr>
             <tr>
-              <td>
-                <span className="badge badge-secondary badge-sm">Queued</span>
-              </td>
-              <td>Passed. In timelock queue (2 days).</td>
+              <td>Queued</td>
+              <td>Passed and waiting in the timelock.</td>
             </tr>
             <tr>
-              <td>
-                <span className="badge badge-secondary badge-sm">Executed</span>
-              </td>
-              <td>Changes are live.</td>
+              <td>Executed</td>
+              <td>The change is live.</td>
             </tr>
           </tbody>
         </table>
       </div>
 
-      <h2>Parameters</h2>
-      <div className="not-prose overflow-x-auto my-6 rounded-xl bg-base-200">
-        <table className="table table-zebra [&_th]:text-base [&_td]:text-base [&_.badge]:text-base [&_th]:bg-base-300">
-          <thead>
-            <tr>
-              <th>Parameter</th>
-              <th>Value</th>
-            </tr>
-          </thead>
+      <h2>Core Parameters</h2>
+      <div className="not-prose my-6 overflow-x-auto rounded-lg bg-base-200">
+        <table className="table table-zebra [&_th]:bg-base-300 [&_th]:text-base [&_td]:text-base">
           <tbody>
             <tr>
               <td className="font-mono">Proposal threshold</td>
@@ -75,11 +61,11 @@ const GovernanceDocs: NextPage = () => {
             </tr>
             <tr>
               <td className="font-mono">Voting delay</td>
-              <td>~1 day (7,200 blocks)</td>
+              <td>~1 day</td>
             </tr>
             <tr>
               <td className="font-mono">Voting period</td>
-              <td>~1 week (50,400 blocks)</td>
+              <td>~1 week</td>
             </tr>
             <tr>
               <td className="font-mono">Quorum</td>
@@ -91,246 +77,75 @@ const GovernanceDocs: NextPage = () => {
             </tr>
             <tr>
               <td className="font-mono">Governance lock</td>
-              <td>7 days (transfer lock after voting or proposing)</td>
+              <td>7 days after proposing or voting</td>
             </tr>
           </tbody>
         </table>
       </div>
-      <p>
-        The bootstrap governor is intentionally conservative while circulating supply is thin: a proposal needs{" "}
-        <strong>{protocolDocFacts.governanceProposalThresholdLabel}</strong>, and quorum never drops below{" "}
-        <strong>{protocolDocFacts.governanceMinimumQuorumLabel}</strong> even when 4% of circulating supply would be
-        smaller. The proposal threshold is a snapshot eligibility check, not a bonded deposit. The same voting power can
-        back multiple live proposals as long as it satisfied the threshold at proposal creation time. The 7-day
-        governance lock is a flat transfer restriction that begins when an account proposes or votes; because proposal
-        timing is block-based, that lock can expire before the full voting delay plus voting period ends.
-      </p>
-      <p>
-        Upgrades, config changes, and treasury routing all sit behind the same governor/timelock from launch. That keeps
-        treasury control on the same on-chain governance path as the rest of the protocol instead of relying on a
-        separate operator key.
-      </p>
 
       <h2 id="round-settings-bounds">Round Settings Bounds</h2>
       <p>
-        Governance sets both the default round configuration and the allowed range that question creators can choose
-        from. This keeps protocol risk bounded while letting the creator match the round to the question: urgent
-        high-bounty work can choose a shorter blind phase, while open-ended questions can wait for more voters or a
-        longer duration. The default config is updated through{" "}
-        <code className="bg-base-300 px-1 rounded text-base">setConfig()</code>, creator bounds through{" "}
-        <code className="bg-base-300 px-1 rounded text-base">setRoundConfigBounds()</code>, and reveal grace through{" "}
-        <code className="bg-base-300 px-1 rounded text-base">setRevealGracePeriod()</code>.
+        Question creators can choose round settings, but only inside governance-approved ranges. That lets urgent asks
+        settle faster while broader questions can wait for more voters.
       </p>
-      <div className="not-prose overflow-x-auto my-6 rounded-xl bg-base-200">
-        <table className="table table-zebra [&_th]:text-base [&_td]:text-base [&_.badge]:text-base [&_th]:bg-base-300">
+      <div className="not-prose my-6 overflow-x-auto rounded-lg bg-base-200">
+        <table className="table table-zebra [&_th]:bg-base-300 [&_th]:text-base [&_td]:text-base">
           <thead>
             <tr>
-              <th>Parameter</th>
+              <th>Setting</th>
               <th>Default</th>
               <th>Creator bounds</th>
-              <th>Description</th>
             </tr>
           </thead>
           <tbody>
             <tr>
-              <td className="font-mono">Blind phase</td>
+              <td>Blind phase</td>
               <td>{protocolDocFacts.blindPhaseDurationLabel}</td>
               <td>
                 {protocolDocFacts.minBlindPhaseDurationLabel} to {protocolDocFacts.maxBlindPhaseDurationLabel}
               </td>
-              <td>Length of the hidden-vote reward epoch before votes from that epoch can be revealed.</td>
             </tr>
             <tr>
-              <td className="font-mono">Max round duration</td>
+              <td>Max duration</td>
               <td>{protocolDocFacts.maxRoundDurationLabel}</td>
               <td>
                 {protocolDocFacts.minRoundDurationLabel} to {protocolDocFacts.maxAllowedRoundDurationLabel}
               </td>
-              <td>
-                Maximum time before a round expires. Below commit quorum the round is cancelled and refundable. At or
-                above commit quorum, missing reveal quorum after the last reveal grace window can finalize as
-                RevealFailed instead.
-              </td>
             </tr>
             <tr>
-              <td className="font-mono">Settlement voters</td>
+              <td>Settlement voters</td>
               <td>{protocolDocFacts.minVotersLabel}</td>
               <td>
                 {protocolDocFacts.minSettlementVotersLabel} to {protocolDocFacts.maxSettlementVotersLabel}
               </td>
-              <td>
-                Minimum revealed votes required before a round becomes eligible to settle. Past-epoch reveal checks may
-                still delay settlement. Rounds that stay below commit quorum within the maximum round duration are
-                cancelled with refunds; rounds that hit commit quorum but miss reveal quorum can finalize as
-                RevealFailed after grace.
-              </td>
             </tr>
             <tr>
-              <td className="font-mono">Voter cap</td>
+              <td>Voter cap</td>
               <td>{protocolDocFacts.maxVotersLabel}</td>
               <td>
                 {protocolDocFacts.minVoterCapLabel} to {protocolDocFacts.maxVoterCapLabel}
               </td>
-              <td>Per-round cap and upper bound for bounty required-voter terms.</td>
-            </tr>
-            <tr>
-              <td className="font-mono">Reveal grace period</td>
-              <td>{protocolDocFacts.revealGracePeriodLabel}</td>
-              <td>Governance-only</td>
-              <td>
-                After each epoch ends, past-epoch votes must be revealed before settlement, unless this grace period has
-                expired. This parameter is configured separately from <code>setConfig()</code>.
-              </td>
-            </tr>
-            <tr>
-              <td className="font-mono">Vote stake</td>
-              <td>1&ndash;100 cREP</td>
-              <td>Governance constant</td>
-              <td>Stake range per vote per round. Capped per Voter ID to limit single-voter influence.</td>
-            </tr>
-            <tr>
-              <td className="font-mono">Vote cooldown</td>
-              <td>24 hours</td>
-              <td>Governance constant</td>
-              <td>Time a voter must wait before voting on the same content again after their last vote.</td>
             </tr>
           </tbody>
         </table>
       </div>
-      <p>
-        The default {protocolDocFacts.minVotersLabel}-voter threshold is a deliberate balance between manipulation
-        resistance and early-stage practicality. The important governance choice is now the allowed range: a creator can
-        pick more voters for higher confidence, but cannot lower the threshold beneath the community-approved minimum.
-        As the platform grows and rounds naturally attract more voters, governance can raise either the defaults or the
-        minimum bounds.
-      </p>
 
       <h2>Treasury</h2>
       <p>
-        The protocol treasury starts with <strong>20M cREP</strong> routed to the governor/timelock itself. It grows
-        over time through four main ongoing inflow sources:
-      </p>
-      <ul>
-        <li>
-          <strong>1% treasury fee</strong> &mdash; 1% of contested losing pools is sent to the treasury when rounds
-          settle.
-        </li>
-        <li>
-          <strong>Cancellation fees</strong> &mdash; voluntary content withdrawals pay a fixed 1 cREP anti-spam fee into
-          the treasury.
-        </li>
-        <li>
-          <strong>Bounty minimums</strong> &mdash; mandatory bounties are non-refundable and remain attached to the
-          submitted question.
-        </li>
-        <li>
-          <strong>Forfeited unrevealed votes</strong> &mdash; unrevealed past-epoch stakes that miss the reveal window
-          are swept to treasury during post-settlement cleanup.
-        </li>
-      </ul>
-      <p>
-        Treasury spending follows the same governor proposal and timelock execution flow as upgrades and config changes.
-        That keeps the protocol decentralized from launch, but it also means treasury actions inherit the same
-        governance thresholds and delay.
-      </p>
-      <p>
-        The consensus subsidy reserve is separate from the treasury. It is seeded with 4M cREP at deployment and
-        replenished by 5% of losing pools from two-sided rounds, then used to subsidize one-sided round payouts.
+        The treasury starts with 20M cREP under governor/timelock control. Ongoing inflows include the treasury share of
+        contested losing pools, withdrawal fees, and forfeited unrevealed votes. Spending follows the same proposal and
+        timelock path as upgrades.
       </p>
 
-      <h2>Collusion Prevention</h2>
+      <h2>Safety Powers</h2>
       <p>
-        The integrity of Curyo&apos;s content curation depends on honest, independent voting. Groups that coordinate to
-        artificially upvote or downvote content undermine the prediction pool system and harm fair curation.
+        Governance can use public on-chain evidence to respond to collusion, repeated unrevealed commitments, or other
+        behavior that damages the feedback signal. The main enforcement tool is Voter ID revocation through a normal
+        proposal.
       </p>
       <p>
-        <strong>Detection:</strong> Community members can monitor voting patterns publicly visible. Suspicious activity
-        &mdash; such as coordinated voting from related wallets, vote timing patterns, or unusual stake distributions
-        &mdash; can be flagged and analyzed using public data.
-      </p>
-      <p>
-        <strong>Enforcement via governance proposals:</strong> When hard evidence of collusion is found, the community
-        can take action through governance:
-      </p>
-      <ul>
-        <li>
-          <strong>Revoke Voter IDs</strong> &mdash; governance can permanently revoke the Voter IDs of confirmed
-          colluders, removing their ability to vote on the platform.
-        </li>
-        <li>
-          <strong>Reward whistleblowers</strong> &mdash; governance is encouraged to allocate cREP from the treasury to
-          reward community members who provide evidence of collusion.
-        </li>
-      </ul>
-      <p>
-        <strong>Deterrence:</strong> Several protocol features make collusion costly and difficult:
-      </p>
-      <ul>
-        <li>
-          Identity verification &mdash; 1 eligible 18+ person = 1 Voter ID via Self.xyz passport or biometric ID card
-          verification with sanctions checks.
-        </li>
-        <li>Stake caps &mdash; maximum 100 cREP per content per round limits single-voter influence.</li>
-        <li>Vote cooldowns &mdash; 24-hour cooldown prevents rapid re-voting on the same content.</li>
-        <li>Permanent revocation &mdash; losing your Voter ID is irreversible and eliminates voting ability.</li>
-      </ul>
-      <p>
-        The process follows Curyo&apos;s standard governance flow: evidence is submitted, a governance proposal is
-        created, the community votes, and after the timelock delay, the action is executed.
-      </p>
-
-      <h2>Spam Prevention</h2>
-      <p>
-        Curyo already rejects malformed or non-armored vote ciphertexts on-chain. However, the current reveal model does
-        not yet use zero-knowledge proofs that every accepted ciphertext was honestly decryptable. That means a
-        malicious voter could still submit a syntactically valid commit that later cannot be revealed by independent
-        resolution services.
-      </p>
-      <p>
-        This is primarily a <strong>liveness and operations risk</strong>, not a way to smuggle counted votes into the
-        result. A vote only affects settlement once it is successfully revealed. But unrevealable spam commits can waste
-        keeper effort, delay round resolution, and if repeated broadly enough, contribute to reveal-failed rounds that
-        require manual cleanup.
-      </p>
-      <p>
-        <strong>Detection:</strong> Community members and independent resolution services can watch for repeated
-        unrevealable commits, failed reveal attempts, or patterns where the same Voter ID repeatedly creates commits
-        that pass the basic on-chain checks but never reveal successfully.
-      </p>
-      <p>
-        <strong>Enforcement via governance proposals:</strong> When there is credible evidence of repeated spam
-        behavior, governance is encouraged to act:
-      </p>
-      <ul>
-        <li>
-          <strong>Revoke Voter IDs</strong> &mdash; governance can permanently revoke the Voter IDs of accounts that
-          repeatedly submit spam or unrevealable vote commits, removing their ability to keep disrupting rounds.
-        </li>
-        <li>
-          <strong>Reward investigators</strong> &mdash; governance is encouraged to use treasury funds to reward
-          operators or community members who document repeated abuse with reproducible evidence from on-chain data and
-          resolution-service observations.
-        </li>
-      </ul>
-      <p>
-        <strong>Deterrence:</strong> Several protocol features already make vote spam costly:
-      </p>
-      <ul>
-        <li>
-          Stake at risk &mdash; unrevealed past-epoch votes can be forfeited to treasury during cleanup, and unrevealed
-          commits in reveal-failed rounds are forfeited rather than refunded.
-        </li>
-        <li>
-          Identity verification &mdash; 1 eligible 18+ person = 1 Voter ID via Self.xyz passport or biometric ID card
-          verification with sanctions checks.
-        </li>
-        <li>Stake caps &mdash; maximum 100 cREP per content per round limits damage from any one Voter ID.</li>
-        <li>Permanent revocation &mdash; losing your Voter ID is irreversible and eliminates future voting ability.</li>
-      </ul>
-      <p>
-        Over time, a stronger hardening path would be zk-based reveal proofs or comparable cryptographic checks that
-        accepted commits are honestly decryptable. Until then, governance oversight and Voter ID revocation are the main
-        backstop against repeated vote spam.
+        These controls are implementation safeguards. The product goal stays narrower: make it easy for agents and apps
+        to buy verified human feedback and read the result.
       </p>
     </article>
   );

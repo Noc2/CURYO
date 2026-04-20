@@ -59,19 +59,17 @@ test.describe("Documentation pages", () => {
     await page.waitForURL(/\/docs$/);
     await expect(page.getByRole("heading", { name: /^Introduction$/i }).first()).toBeVisible({ timeout: 10_000 });
 
-    const conceptsLink = page.getByRole("link", { name: /^Concepts$/i });
-    await expect(conceptsLink).toBeVisible({ timeout: 10_000 });
-    await conceptsLink.click();
+    const protocolLink = page.getByRole("link", { name: /^Protocol$/i });
+    await expect(protocolLink).toBeVisible({ timeout: 10_000 });
+    await protocolLink.click();
     await page.waitForURL(/\/docs\/tokenomics$/);
     await expect(page.getByRole("heading", { name: /^Tokenomics$/i }).first()).toBeVisible({ timeout: 10_000 });
 
-    const technicalLink = page.getByRole("link", { name: /^Technical$/i });
-    await expect(technicalLink).toBeVisible({ timeout: 10_000 });
-    await technicalLink.click();
-    await page.waitForURL(/\/docs\/smart-contracts$/);
-    await expect(page.getByRole("heading", { name: /^Smart Contracts$/i }).first()).toBeVisible({
-      timeout: 10_000,
-    });
+    const buildLink = page.getByRole("link", { name: /^Build$/i });
+    await expect(buildLink).toBeVisible({ timeout: 10_000 });
+    await buildLink.click();
+    await page.waitForURL(/\/docs\/sdk$/);
+    await expect(page.getByRole("heading", { name: /^SDK$/i }).first()).toBeVisible({ timeout: 10_000 });
   });
 
   for (const path of legalPages) {
