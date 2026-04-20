@@ -481,7 +481,7 @@ function FeedContentMetaCard({
               <button
                 type="button"
                 onClick={() => onOpenFeedback(item)}
-                className="btn btn-ghost btn-sm btn-circle text-base-content/70 hover:text-base-content"
+                className="btn btn-ghost btn-sm btn-circle text-base-content/70 hover:text-base-content xl:hidden"
                 aria-label="Open feedback"
               >
                 <ChatBubbleLeftRightIcon className="h-4 w-4" />
