@@ -412,14 +412,49 @@ function FeedContentMetaCard({
       ? "border-t border-base-content/10 px-3 py-3"
       : "border-t border-base-content/10 p-4"
     : `rounded-2xl bg-base-200 ${compact ? "p-3" : "p-4 xl:p-3"}`;
+  const actionButtons = (
+    <div className="ml-auto flex shrink-0 items-center gap-0.5 sm:gap-1">
+      {hasFollowButton ? (
+        <FollowProfileButton
+          following={following}
+          pending={followPending}
+          onClick={() => onToggleFollow(item.submitter)}
+        />
+      ) : null}
+      <WatchContentButton watched={watched} pending={watchPending} onClick={() => onToggleWatch(item.id)} />
+      {onOpenFeedback && !hideDockedActionButtons ? (
+        <button
+          type="button"
+          onClick={() => onOpenFeedback(item)}
+          className="btn btn-ghost btn-sm btn-circle text-base-content/70 hover:text-base-content xl:hidden"
+          aria-label="Open feedback"
+        >
+          <ChatBubbleLeftRightIcon className="h-4 w-4" />
+        </button>
+      ) : null}
+      {!hideDockedActionButtons ? (
+        <button
+          type="button"
+          onClick={() => setShowShare(true)}
+          className="btn btn-ghost btn-sm btn-circle text-base-content/70 hover:text-base-content"
+          aria-label="Share content"
+        >
+          <ShareIcon className="h-4 w-4" />
+        </button>
+      ) : null}
+    </div>
+  );
 
   return (
     <>
       <div className={wrapperClassName}>
         <div className={compact ? "space-y-2.5" : "space-y-3"}>
-          <div className="flex min-w-0 flex-wrap items-center gap-2">
-            <RewardPoolAmountDisplay amount={rewardPoolTotal} />
-            <FeedbackBonusAmountDisplay amount={feedbackBonusTotal} />
+          <div className="flex min-w-0 items-center gap-2">
+            <div className="flex min-w-0 flex-1 flex-wrap items-center gap-2">
+              <RewardPoolAmountDisplay amount={rewardPoolTotal} />
+              <FeedbackBonusAmountDisplay amount={feedbackBonusTotal} />
+            </div>
+            {actionButtons}
           </div>
           <VotingQuestionContextDetails
             contentId={item.id}
@@ -467,36 +502,6 @@ function FeedContentMetaCard({
               size="sm"
               addressMode={submitterProfile?.username ? "inline" : "hidden"}
             />
-          </div>
-          <div className="ml-auto flex shrink-0 items-center gap-0.5 sm:gap-1">
-            {hasFollowButton ? (
-              <FollowProfileButton
-                following={following}
-                pending={followPending}
-                onClick={() => onToggleFollow(item.submitter)}
-              />
-            ) : null}
-            <WatchContentButton watched={watched} pending={watchPending} onClick={() => onToggleWatch(item.id)} />
-            {onOpenFeedback && !hideDockedActionButtons ? (
-              <button
-                type="button"
-                onClick={() => onOpenFeedback(item)}
-                className="btn btn-ghost btn-sm btn-circle text-base-content/70 hover:text-base-content xl:hidden"
-                aria-label="Open feedback"
-              >
-                <ChatBubbleLeftRightIcon className="h-4 w-4" />
-              </button>
-            ) : null}
-            {!hideDockedActionButtons ? (
-              <button
-                type="button"
-                onClick={() => setShowShare(true)}
-                className="btn btn-ghost btn-sm btn-circle text-base-content/70 hover:text-base-content"
-                aria-label="Share content"
-              >
-                <ShareIcon className="h-4 w-4" />
-              </button>
-            ) : null}
           </div>
         </div>
       </div>
