@@ -480,11 +480,11 @@ body {
 }
 
 .vote-btn.vote-feedback .vote-symbol {
-  color: var(--curyo-ember-deep);
+  color: var(--curyo-surface);
 }
 
 .vote-btn.vote-light .vote-symbol {
-  color: var(--curyo-ember-deep);
+  color: var(--curyo-surface);
 }
 
 .vote-btn.vote-feedback:disabled .vote-bg {
