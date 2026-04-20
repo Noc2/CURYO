@@ -230,7 +230,7 @@ function parseStoredSubmissionReservation(value: unknown): StoredSubmissionReser
   if (
     typeof parsedValue.categoryId !== "string" ||
     typeof parsedValue.chainId !== "number" ||
-    (typeof parsedValue.contextUrl !== "string" && typeof (parsedValue as { url?: unknown }).url !== "string") ||
+    typeof parsedValue.contextUrl !== "string" ||
     typeof parsedValue.description !== "string" ||
     !isHexValue(parsedValue.revealCommitment) ||
     typeof parsedValue.rewardAmount !== "string" ||
@@ -248,17 +248,11 @@ function parseStoredSubmissionReservation(value: unknown): StoredSubmissionReser
     return null;
   }
 
-  const legacyUrl = (parsedValue as { url?: unknown }).url;
-  const contextUrl = typeof parsedValue.contextUrl === "string" ? parsedValue.contextUrl : (legacyUrl as string);
-
   return {
     ...parsedValue,
-    contextUrl,
     imageUrls: Array.isArray(parsedValue.imageUrls)
       ? parsedValue.imageUrls.filter((url): url is string => typeof url === "string")
-      : contextUrl
-        ? [contextUrl]
-        : [],
+      : [parsedValue.contextUrl],
     roundConfig: serializeQuestionRoundConfig(coerceQuestionRoundConfig(parsedValue.roundConfig)),
     videoUrl: typeof parsedValue.videoUrl === "string" ? parsedValue.videoUrl : "",
   } as StoredSubmissionReservation;
