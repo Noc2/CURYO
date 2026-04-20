@@ -826,15 +826,15 @@ contract RoundSettlementEdgeCase3Test is VotingTestBase {
     function test_OneSidedConsensus_MultipleVoters() public {
         uint256 contentId = _submitContent();
 
-        (bytes32 ck1, bytes32 s1) = _commit(voter1, contentId, true, STAKE);
-        (bytes32 ck2, bytes32 s2) = _commit(voter2, contentId, true, STAKE);
-        (bytes32 ck3, bytes32 s3) = _commit(voter3, contentId, true, STAKE);
+        bytes32[3] memory commitKeys;
+        bytes32[3] memory salts;
+        (commitKeys[0], salts[0]) = _commit(voter1, contentId, true, STAKE);
+        (commitKeys[1], salts[1]) = _commit(voter2, contentId, true, STAKE);
+        (commitKeys[2], salts[2]) = _commit(voter3, contentId, true, STAKE);
         uint256 roundId = RoundEngineReadHelpers.activeRoundId(engine, contentId);
         RoundLib.Round memory r = RoundEngineReadHelpers.round(engine, contentId, roundId);
         vm.warp(r.startTime + 5 minutes + 1);
-        engine.revealVoteByCommitKey(contentId, roundId, ck1, true, s1);
-        engine.revealVoteByCommitKey(contentId, roundId, ck2, true, s2);
-        engine.revealVoteByCommitKey(contentId, roundId, ck3, true, s3);
+        _revealThreeUpVotes(contentId, roundId, commitKeys, salts);
         engine.settleRound(contentId, roundId);
 
         RoundLib.Round memory round = RoundEngineReadHelpers.round(engine, contentId, roundId);
@@ -1074,15 +1074,15 @@ contract RoundSettlementEdgeCase3Test is VotingTestBase {
     function test_MajorityWins_TwoUpOneDown() public {
         uint256 contentId = _submitContent();
 
-        (bytes32 ck1, bytes32 s1) = _commit(voter1, contentId, true, STAKE);
-        (bytes32 ck2, bytes32 s2) = _commit(voter2, contentId, true, STAKE);
-        (bytes32 ck3, bytes32 s3) = _commit(voter3, contentId, false, STAKE);
+        bytes32[3] memory commitKeys;
+        bytes32[3] memory salts;
+        (commitKeys[0], salts[0]) = _commit(voter1, contentId, true, STAKE);
+        (commitKeys[1], salts[1]) = _commit(voter2, contentId, true, STAKE);
+        (commitKeys[2], salts[2]) = _commit(voter3, contentId, false, STAKE);
         uint256 roundId = RoundEngineReadHelpers.activeRoundId(engine, contentId);
         RoundLib.Round memory r = RoundEngineReadHelpers.round(engine, contentId, roundId);
         vm.warp(r.startTime + 5 minutes + 1);
-        engine.revealVoteByCommitKey(contentId, roundId, ck1, true, s1);
-        engine.revealVoteByCommitKey(contentId, roundId, ck2, true, s2);
-        engine.revealVoteByCommitKey(contentId, roundId, ck3, false, s3);
+        _revealTwoUpOneDown(contentId, roundId, commitKeys, salts);
         engine.settleRound(contentId, roundId);
 
         RoundLib.Round memory round = RoundEngineReadHelpers.round(engine, contentId, roundId);
@@ -1286,5 +1286,27 @@ contract RoundSettlementEdgeCase3Test is VotingTestBase {
         engine.revealVoteByCommitKey(contentId, roundId, ck1, isUp1, s1);
         engine.revealVoteByCommitKey(contentId, roundId, ck2, isUp2, s2);
         engine.settleRound(contentId, roundId);
+    }
+
+    function _revealThreeUpVotes(
+        uint256 contentId,
+        uint256 roundId,
+        bytes32[3] memory commitKeys,
+        bytes32[3] memory salts
+    ) internal {
+        engine.revealVoteByCommitKey(contentId, roundId, commitKeys[0], true, salts[0]);
+        engine.revealVoteByCommitKey(contentId, roundId, commitKeys[1], true, salts[1]);
+        engine.revealVoteByCommitKey(contentId, roundId, commitKeys[2], true, salts[2]);
+    }
+
+    function _revealTwoUpOneDown(
+        uint256 contentId,
+        uint256 roundId,
+        bytes32[3] memory commitKeys,
+        bytes32[3] memory salts
+    ) internal {
+        engine.revealVoteByCommitKey(contentId, roundId, commitKeys[0], true, salts[0]);
+        engine.revealVoteByCommitKey(contentId, roundId, commitKeys[1], true, salts[1]);
+        engine.revealVoteByCommitKey(contentId, roundId, commitKeys[2], false, salts[2]);
     }
 }

@@ -312,26 +312,18 @@ contract RoundVotingEngineBranchesTest is VotingTestBase {
         vm.stopPrank();
     }
 
-    /// @dev Full 3-voter round lifecycle: commit all epoch-1, warp past epoch, reveal all, warp settle delay, settle.
-    /// Returns (contentId, roundId, commitKey1, salt1, commitKey2, salt2, commitKey3, salt3).
+    /// @dev Full 3-voter round lifecycle: commit all epoch-1, warp past epoch, then reveal all.
     function _setupThreeVoterRound(bool v1Up, bool v2Up, bool v3Up)
         internal
-        returns (
-            uint256 contentId,
-            uint256 roundId,
-            bytes32 ck1,
-            bytes32 s1,
-            bytes32 ck2,
-            bytes32 s2,
-            bytes32 ck3,
-            bytes32 s3
-        )
+        returns (uint256 contentId, uint256 roundId)
     {
         contentId = _submitContent();
 
-        (ck1, s1) = _commit(voter1, contentId, v1Up, STAKE);
-        (ck2, s2) = _commit(voter2, contentId, v2Up, STAKE);
-        (ck3, s3) = _commit(voter3, contentId, v3Up, STAKE);
+        bytes32[3] memory commitKeys;
+        bytes32[3] memory salts;
+        (commitKeys[0], salts[0]) = _commit(voter1, contentId, v1Up, STAKE);
+        (commitKeys[1], salts[1]) = _commit(voter2, contentId, v2Up, STAKE);
+        (commitKeys[2], salts[2]) = _commit(voter3, contentId, v3Up, STAKE);
 
         roundId = RoundEngineReadHelpers.activeRoundId(engine, contentId);
 
@@ -339,9 +331,9 @@ contract RoundVotingEngineBranchesTest is VotingTestBase {
         RoundLib.Round memory r0 = RoundEngineReadHelpers.round(engine, contentId, roundId);
         vm.warp(r0.startTime + EPOCH + 1);
 
-        _reveal(contentId, roundId, ck1, v1Up, s1);
-        _reveal(contentId, roundId, ck2, v2Up, s2);
-        _reveal(contentId, roundId, ck3, v3Up, s3);
+        _reveal(contentId, roundId, commitKeys[0], v1Up, salts[0]);
+        _reveal(contentId, roundId, commitKeys[1], v2Up, salts[1]);
+        _reveal(contentId, roundId, commitKeys[2], v3Up, salts[2]);
     }
 
     // =========================================================================
@@ -349,7 +341,7 @@ contract RoundVotingEngineBranchesTest is VotingTestBase {
     // =========================================================================
 
     function test_BasicLifecycle_ThreeVoters_UpWins() public {
-        (uint256 contentId, uint256 roundId,,,,,,) = _setupThreeVoterRound(true, true, false);
+        (uint256 contentId, uint256 roundId) = _setupThreeVoterRound(true, true, false);
 
         engine.settleRound(contentId, roundId);
 
@@ -381,7 +373,7 @@ contract RoundVotingEngineBranchesTest is VotingTestBase {
     }
 
     function test_BasicLifecycle_ThreeVoters_DownWins() public {
-        (uint256 contentId, uint256 roundId,,,,,,) = _setupThreeVoterRound(true, false, false);
+        (uint256 contentId, uint256 roundId) = _setupThreeVoterRound(true, false, false);
 
         engine.settleRound(contentId, roundId);
 
@@ -444,7 +436,7 @@ contract RoundVotingEngineBranchesTest is VotingTestBase {
     }
 
     function test_BasicLifecycle_VoterPoolAndWinningStake() public {
-        (uint256 contentId, uint256 roundId,,,,,,) = _setupThreeVoterRound(true, true, false);
+        (uint256 contentId, uint256 roundId) = _setupThreeVoterRound(true, true, false);
 
         engine.settleRound(contentId, roundId);
 
@@ -455,7 +447,7 @@ contract RoundVotingEngineBranchesTest is VotingTestBase {
     }
 
     function test_BasicLifecycle_SettlementSetsTimestamp() public {
-        (uint256 contentId, uint256 roundId,,,,,,) = _setupThreeVoterRound(true, true, false);
+        (uint256 contentId, uint256 roundId) = _setupThreeVoterRound(true, true, false);
 
         engine.settleRound(contentId, roundId);
 
@@ -535,7 +527,7 @@ contract RoundVotingEngineBranchesTest is VotingTestBase {
     }
 
     function test_CancelExpired_RevertsIfRoundNotOpen() public {
-        (uint256 contentId, uint256 roundId,,,,,,) = _setupThreeVoterRound(true, true, false);
+        (uint256 contentId, uint256 roundId) = _setupThreeVoterRound(true, true, false);
         engine.settleRound(contentId, roundId);
 
         vm.expectRevert(RoundVotingEngine.RoundNotOpen.selector);
@@ -757,7 +749,7 @@ contract RoundVotingEngineBranchesTest is VotingTestBase {
     }
 
     function test_Settle_AfterDelay_Succeeds() public {
-        (uint256 contentId, uint256 roundId,,,,,,) = _setupThreeVoterRound(true, true, false);
+        (uint256 contentId, uint256 roundId) = _setupThreeVoterRound(true, true, false);
 
         // Settlement succeeds immediately after reveals in _setupThreeVoterRound
         engine.settleRound(contentId, roundId);
@@ -786,7 +778,7 @@ contract RoundVotingEngineBranchesTest is VotingTestBase {
     }
 
     function test_Settle_RoundNotOpen_Reverts() public {
-        (uint256 contentId, uint256 roundId,,,,,,) = _setupThreeVoterRound(true, true, false);
+        (uint256 contentId, uint256 roundId) = _setupThreeVoterRound(true, true, false);
         engine.settleRound(contentId, roundId);
 
         // Try to settle again
@@ -1103,7 +1095,7 @@ contract RoundVotingEngineBranchesTest is VotingTestBase {
     }
 
     function test_FrontendFee_ClaimReverts_NoPool() public {
-        (uint256 contentId, uint256 roundId,,,,,,) = _setupThreeVoterRound(true, true, false);
+        (uint256 contentId, uint256 roundId) = _setupThreeVoterRound(true, true, false);
         engine.settleRound(contentId, roundId);
 
         // No frontend pool (no eligible frontends were used)
@@ -1284,7 +1276,7 @@ contract RoundVotingEngineBranchesTest is VotingTestBase {
     }
 
     function test_ProcessUnrevealed_AllRevealed_Reverts() public {
-        (uint256 contentId, uint256 roundId,,,,,,) = _setupThreeVoterRound(true, true, false);
+        (uint256 contentId, uint256 roundId) = _setupThreeVoterRound(true, true, false);
         engine.settleRound(contentId, roundId);
 
         // All votes revealed — NothingProcessed revert prevents no-op keeper reward drain
@@ -1293,7 +1285,7 @@ contract RoundVotingEngineBranchesTest is VotingTestBase {
     }
 
     function test_ProcessUnrevealed_IndexOutOfBounds_Reverts() public {
-        (uint256 contentId, uint256 roundId,,,,,,) = _setupThreeVoterRound(true, true, false);
+        (uint256 contentId, uint256 roundId) = _setupThreeVoterRound(true, true, false);
         engine.settleRound(contentId, roundId);
 
         // startIndex > commitKeys.length
@@ -1765,13 +1757,13 @@ contract RoundVotingEngineBranchesTest is VotingTestBase {
     }
 
     function test_GetActiveRoundId_ReturnsZeroAfterSettlement() public {
-        (uint256 contentId, uint256 roundId,,,,,,) = _setupThreeVoterRound(true, true, false);
+        (uint256 contentId, uint256 roundId) = _setupThreeVoterRound(true, true, false);
         engine.settleRound(contentId, roundId);
         assertEq(RoundEngineReadHelpers.activeRoundId(engine, contentId), 0);
     }
 
     function test_NewRoundCreatedAfterSettlement() public {
-        (uint256 contentId, uint256 roundId,,,,,,) = _setupThreeVoterRound(true, true, false);
+        (uint256 contentId, uint256 roundId) = _setupThreeVoterRound(true, true, false);
         engine.settleRound(contentId, roundId);
 
         // Wait past 24h cooldown then voter1 can commit again
@@ -1894,7 +1886,7 @@ contract RoundVotingEngineBranchesTest is VotingTestBase {
     }
 
     function test_Cooldown_AfterRoundSettles_VoterCanRecommit() public {
-        (uint256 contentId, uint256 roundId,,,,,,) = _setupThreeVoterRound(true, true, false);
+        (uint256 contentId, uint256 roundId) = _setupThreeVoterRound(true, true, false);
         engine.settleRound(contentId, roundId);
 
         // Warp past 24h cooldown
