@@ -68,14 +68,13 @@ function FeedbackItem({ item }: { item: ContentFeedbackItem }) {
 
 export function ContentFeedbackPanel({ item, variant = "rail", onRequestConnect }: ContentFeedbackPanelProps) {
   const { address } = useAccount();
-  const { feedback, items, isLoading, isSubmitting, isUnlocking, submitFeedback, requestReadAccess } =
-    useContentFeedback(item?.id ?? null, address);
+  const { feedback, items, isLoading, isSubmitting, submitFeedback } = useContentFeedback(item?.id ?? null, address);
   const [feedbackType, setFeedbackType] = useState<ContentFeedbackType>("evidence");
   const [body, setBody] = useState("");
   const [sourceUrl, setSourceUrl] = useState("");
   const isSheet = variant === "sheet";
   const bodyLength = body.trim().length;
-  const canSubmit = Boolean(address && item && bodyLength >= 4 && bodyLength <= CONTENT_FEEDBACK_BODY_MAX_LENGTH);
+  const canSubmit = Boolean(item && bodyLength >= 4 && bodyLength <= CONTENT_FEEDBACK_BODY_MAX_LENGTH);
   const feedbackStatusCopy = feedback.settlementComplete
     ? "Feedback is unlocked for this question."
     : "Feedback stays hidden until settlement.";
@@ -93,13 +92,13 @@ export function ContentFeedbackPanel({ item, variant = "rail", onRequestConnect 
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
+    if (!canSubmit) return;
 
     if (!address) {
-      notification.info("Sign in to add feedback.");
+      notification.info("Sign in to save feedback.");
       onRequestConnect?.();
       return;
     }
-    if (!canSubmit) return;
 
     const result = await submitFeedback({
       feedbackType,
@@ -116,19 +115,6 @@ export function ContentFeedbackPanel({ item, variant = "rail", onRequestConnect 
     setBody("");
     setSourceUrl("");
     notification.success(feedback.settlementComplete ? "Feedback published" : "Feedback saved until settlement");
-  };
-
-  const handleUnlock = async () => {
-    const result = await requestReadAccess();
-    if (!result.ok) {
-      if (result.reason === "not_connected") {
-        notification.info("Sign in to unlock your feedback.");
-        onRequestConnect?.();
-        return;
-      }
-      if (result.reason === "rejected") return;
-      notification.error(result.error || "Failed to unlock your feedback");
-    }
   };
 
   return (
@@ -210,22 +196,6 @@ export function ContentFeedbackPanel({ item, variant = "rail", onRequestConnect 
           </button>
         </div>
       </form>
-
-      {!address ? (
-        <button type="button" onClick={onRequestConnect} className="btn btn-ghost btn-sm mt-2 rounded-lg">
-          Sign in to add feedback
-        </button>
-      ) : !feedback.settlementComplete && !feedback.hasReadSession ? (
-        <button
-          type="button"
-          onClick={handleUnlock}
-          className="btn btn-ghost btn-sm mt-2 rounded-lg"
-          disabled={isUnlocking}
-        >
-          {isUnlocking ? <span className="loading loading-spinner loading-xs" /> : null}
-          Unlock mine
-        </button>
-      ) : null}
 
       <div className="mt-3 min-h-0 flex-1 overflow-y-auto">
         {isLoading ? (
