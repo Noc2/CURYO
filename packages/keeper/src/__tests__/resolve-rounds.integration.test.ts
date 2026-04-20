@@ -244,6 +244,7 @@ describe("resolveRounds integration", () => {
     );
 
     const submissionImageUrl = `https://example.com/keeper-integration-${Date.now()}.jpg`;
+    const submissionContextUrl = submissionImageUrl;
     const submissionTitle = "Keeper integration test";
     const submissionDescription = "integration";
     const submissionTags = "keeper,integration";
@@ -252,8 +253,16 @@ describe("resolveRounds integration", () => {
     const [, submissionKey] = (await publicClient.readContract({
       address: CONTRACTS.contentRegistry,
       abi: ContentRegistryAbi,
-      functionName: "previewQuestionMediaSubmissionKey",
-      args: [[submissionImageUrl], "", submissionTitle, submissionDescription, submissionTags, submissionCategoryId],
+      functionName: "previewQuestionSubmissionKey",
+      args: [
+        submissionContextUrl,
+        [submissionImageUrl],
+        "",
+        submissionTitle,
+        submissionDescription,
+        submissionTags,
+        submissionCategoryId,
+      ],
     })) as readonly [bigint, `0x${string}`];
     const submissionMediaHash = keccak256(
       encodeAbiParameters([{ type: "string[]" }, { type: "string" }], [[submissionImageUrl], ""]),
@@ -321,8 +330,9 @@ describe("resolveRounds integration", () => {
         chain: CHAIN,
         address: CONTRACTS.contentRegistry,
         abi: ContentRegistryAbi,
-        functionName: "submitQuestionWithMedia",
+        functionName: "submitQuestion",
         args: [
+          submissionContextUrl,
           [submissionImageUrl],
           "",
           submissionTitle,

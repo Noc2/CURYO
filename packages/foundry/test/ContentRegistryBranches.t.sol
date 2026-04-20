@@ -48,6 +48,20 @@ contract ContentRegistryBranchesTest is VotingTestBase {
     uint256 public constant T0 = 1000;
     uint256 public constant STAKE = 5e6;
 
+    struct QuestionReservation {
+        string contextUrl;
+        string[] imageUrls;
+        string videoUrl;
+        string title;
+        string description;
+        string tags;
+        uint256 categoryId;
+        bytes32 salt;
+        address submitterAddress;
+        ContentRegistry.SubmissionRewardTerms rewardTerms;
+        RoundLib.RoundConfig roundConfig;
+    }
+
     function setUp() public {
         vm.warp(T0);
         vm.startPrank(owner);
@@ -174,27 +188,26 @@ contract ContentRegistryBranchesTest is VotingTestBase {
         uint256 requiredSettledRounds,
         uint256 rewardPoolExpiresAt
     ) internal returns (bytes32 submissionKey) {
-        (, submissionKey) = registry.previewQuestionSubmissionKey(
-            contextUrl, imageUrls, videoUrl, title, description, tags, categoryId
-        );
-        bytes32 revealCommitment = keccak256(
-            abi.encode(
-                submissionKey,
-                _submissionMediaHash(imageUrls, videoUrl),
-                title,
-                description,
-                tags,
-                categoryId,
-                salt,
-                submitterAddress,
-                rewardAsset,
-                rewardAmount,
-                requiredVoters,
-                requiredSettledRounds,
-                rewardPoolExpiresAt
-            )
-        );
-        registry.reserveSubmission(revealCommitment);
+        QuestionReservation memory reservation;
+        reservation.contextUrl = contextUrl;
+        reservation.imageUrls = imageUrls;
+        reservation.videoUrl = videoUrl;
+        reservation.title = title;
+        reservation.description = description;
+        reservation.tags = tags;
+        reservation.categoryId = categoryId;
+        reservation.salt = salt;
+        reservation.submitterAddress = submitterAddress;
+        reservation.rewardTerms = ContentRegistry.SubmissionRewardTerms({
+            asset: rewardAsset,
+            amount: rewardAmount,
+            requiredVoters: requiredVoters,
+            requiredSettledRounds: requiredSettledRounds,
+            expiresAt: rewardPoolExpiresAt
+        });
+        reservation.roundConfig =
+            RoundLib.RoundConfig({epochDuration: 1 hours, maxDuration: 7 days, minVoters: 3, maxVoters: 1000});
+        return _reserveQuestionSubmission(reservation);
     }
 
     function _reserveQuestionSubmissionWithRewardTermsAndRoundConfig(
@@ -210,29 +223,45 @@ contract ContentRegistryBranchesTest is VotingTestBase {
         ContentRegistry.SubmissionRewardTerms memory rewardTerms,
         RoundLib.RoundConfig memory roundConfig
     ) internal returns (bytes32 submissionKey) {
+        QuestionReservation memory reservation;
+        reservation.contextUrl = contextUrl;
+        reservation.imageUrls = imageUrls;
+        reservation.videoUrl = videoUrl;
+        reservation.title = title;
+        reservation.description = description;
+        reservation.tags = tags;
+        reservation.categoryId = categoryId;
+        reservation.salt = salt;
+        reservation.submitterAddress = submitterAddress;
+        reservation.rewardTerms = rewardTerms;
+        reservation.roundConfig = roundConfig;
+        return _reserveQuestionSubmission(reservation);
+    }
+
+    function _reserveQuestionSubmission(QuestionReservation memory reservation)
+        internal
+        returns (bytes32 submissionKey)
+    {
         (, submissionKey) = registry.previewQuestionSubmissionKey(
-            contextUrl, imageUrls, videoUrl, title, description, tags, categoryId
+            reservation.contextUrl,
+            reservation.imageUrls,
+            reservation.videoUrl,
+            reservation.title,
+            reservation.description,
+            reservation.tags,
+            reservation.categoryId
         );
-        bytes32 revealCommitment = keccak256(
-            abi.encode(
-                submissionKey,
-                _submissionMediaHash(imageUrls, videoUrl),
-                title,
-                description,
-                tags,
-                categoryId,
-                salt,
-                submitterAddress,
-                rewardTerms.asset,
-                rewardTerms.amount,
-                rewardTerms.requiredVoters,
-                rewardTerms.requiredSettledRounds,
-                rewardTerms.expiresAt,
-                roundConfig.epochDuration,
-                roundConfig.maxDuration,
-                roundConfig.minVoters,
-                roundConfig.maxVoters
-            )
+        bytes32 revealCommitment = _questionRevealCommitment(
+            submissionKey,
+            _submissionMediaHash(reservation.imageUrls, reservation.videoUrl),
+            reservation.title,
+            reservation.description,
+            reservation.tags,
+            reservation.categoryId,
+            reservation.salt,
+            reservation.submitterAddress,
+            reservation.rewardTerms,
+            reservation.roundConfig
         );
         registry.reserveSubmission(revealCommitment);
     }
@@ -294,19 +323,40 @@ contract ContentRegistryBranchesTest is VotingTestBase {
         assertTrue(registry.submissionKeyUsed(submissionKey));
     }
 
-    function test_SubmitQuestion_EmptyMedia_Reverts() public {
+    function test_SubmitQuestion_AllowsEmptyOptionalMedia() public {
+        string memory contextUrl = "https://example.com/context";
+        string[] memory imageUrls = _emptyImageUrls();
+        bytes32 salt = keccak256("empty-optional-media");
+
         vm.startPrank(submitter);
-        crepToken.approve(address(registry), 10e6);
-        vm.expectRevert("Media required");
-        registry.submitQuestionWithMedia(_emptyImageUrls(), "", "Question?", "Context", "Products", 1, bytes32(0));
+        _reserveQuestionSubmissionWithRewardTerms(
+            contextUrl,
+            imageUrls,
+            "",
+            "Question?",
+            "Context",
+            "Products",
+            1,
+            salt,
+            submitter,
+            DEFAULT_SUBMISSION_REWARD_ASSET_CREP,
+            _defaultSubmissionRewardAmount(registry),
+            DEFAULT_SUBMISSION_REWARD_REQUIRED_VOTERS,
+            DEFAULT_SUBMISSION_REWARD_SETTLED_ROUNDS,
+            DEFAULT_SUBMISSION_REWARD_EXPIRES_AT
+        );
+        vm.warp(block.timestamp + 1);
+        uint256 id = registry.submitQuestion(contextUrl, imageUrls, "", "Question?", "Context", "Products", 1, salt);
         vm.stopPrank();
+
+        assertEq(id, 1);
     }
 
     function test_SubmitQuestion_GenericEvidenceUrl_Reverts() public {
         vm.startPrank(submitter);
         crepToken.approve(address(registry), 10e6);
         vm.expectRevert("Invalid media URL");
-        registry.submitQuestionWithMedia(
+        registry.submitQuestion("https://example.com/context",
             _singleImageUrls("https://example.com/reviews/widget-1"),
             "",
             "Question?",
@@ -330,10 +380,10 @@ contract ContentRegistryBranchesTest is VotingTestBase {
         crepToken.approve(address(registry), 10e6);
         string[] memory imageUrls = _emptyImageUrls();
         bytes32 submissionKey = _reserveQuestionMediaSubmission(
-            registry, imageUrls, url, title, description, tags, categoryId, salt, submitter
+            registry, "https://example.com/context", imageUrls, url, title, description, tags, categoryId, salt, submitter
         );
         vm.warp(block.timestamp + 1);
-        uint256 id = registry.submitQuestionWithMedia(imageUrls, url, title, description, tags, categoryId, salt);
+        uint256 id = registry.submitQuestion("https://example.com/context", imageUrls, url, title, description, tags, categoryId, salt);
         vm.stopPrank();
 
         (,,,,,,,,, uint256 storedCategoryId) = registry.contents(id);
@@ -341,7 +391,7 @@ contract ContentRegistryBranchesTest is VotingTestBase {
         assertTrue(registry.submissionKeyUsed(submissionKey));
     }
 
-    function test_SubmitQuestionWithMedia_AllowsMultipleImages() public {
+    function test_SubmitQuestion_AllowsMultipleOptionalImages() public {
         string[] memory imageUrls = new string[](2);
         imageUrls[0] = "https://example.com/a.jpg";
         imageUrls[1] = "https://example.com/b.webp";
@@ -353,29 +403,24 @@ contract ContentRegistryBranchesTest is VotingTestBase {
 
         vm.startPrank(submitter);
         crepToken.approve(address(registry), 10e6);
-        (, bytes32 submissionKey) =
-            registry.previewQuestionMediaSubmissionKey(imageUrls, "", title, description, tags, categoryId);
-        uint256 rewardAmount = _defaultSubmissionRewardAmount(registry);
-        bytes32 revealCommitment = keccak256(
-            abi.encode(
-                submissionKey,
-                _submissionMediaHash(imageUrls, ""),
-                title,
-                description,
-                tags,
-                categoryId,
-                salt,
-                submitter,
-                DEFAULT_SUBMISSION_REWARD_ASSET_CREP,
-                rewardAmount,
-                DEFAULT_SUBMISSION_REWARD_REQUIRED_VOTERS,
-                DEFAULT_SUBMISSION_REWARD_SETTLED_ROUNDS,
-                DEFAULT_SUBMISSION_REWARD_EXPIRES_AT
-            )
+        bytes32 submissionKey = _reserveQuestionSubmissionWithRewardTerms(
+            "https://example.com/context",
+            imageUrls,
+            "",
+            title,
+            description,
+            tags,
+            categoryId,
+            salt,
+            submitter,
+            DEFAULT_SUBMISSION_REWARD_ASSET_CREP,
+            _defaultSubmissionRewardAmount(registry),
+            DEFAULT_SUBMISSION_REWARD_REQUIRED_VOTERS,
+            DEFAULT_SUBMISSION_REWARD_SETTLED_ROUNDS,
+            DEFAULT_SUBMISSION_REWARD_EXPIRES_AT
         );
-        registry.reserveSubmission(revealCommitment);
         vm.warp(block.timestamp + 1);
-        uint256 id = registry.submitQuestionWithMedia(imageUrls, "", title, description, tags, categoryId, salt);
+        uint256 id = registry.submitQuestion("https://example.com/context", imageUrls, "", title, description, tags, categoryId, salt);
         vm.stopPrank();
 
         (,, address rawSubmitter,,,,,,, uint64 storedCategoryId) = registry.contents(id);
@@ -384,7 +429,7 @@ contract ContentRegistryBranchesTest is VotingTestBase {
         assertTrue(registry.submissionKeyUsed(submissionKey));
     }
 
-    function test_SubmitQuestionWithMedia_RevertsWhenReservedMediaChanges() public {
+    function test_SubmitQuestion_RevertsWhenReservedMediaChanges() public {
         string[] memory reservedImageUrls = new string[](2);
         reservedImageUrls[0] = "https://example.com/reserved-a.jpg";
         reservedImageUrls[1] = "https://example.com/reserved-b.webp";
@@ -399,11 +444,20 @@ contract ContentRegistryBranchesTest is VotingTestBase {
 
         vm.startPrank(submitter);
         _reserveQuestionMediaSubmission(
-            registry, reservedImageUrls, "", title, description, tags, categoryId, salt, submitter
+            registry,
+            "https://example.com/context",
+            reservedImageUrls,
+            "",
+            title,
+            description,
+            tags,
+            categoryId,
+            salt,
+            submitter
         );
         vm.warp(block.timestamp + 1);
         vm.expectRevert("Reservation not found");
-        registry.submitQuestionWithMedia(changedImageUrls, "", title, description, tags, categoryId, salt);
+        registry.submitQuestion("https://example.com/context", changedImageUrls, "", title, description, tags, categoryId, salt);
         vm.stopPrank();
     }
 
@@ -736,24 +790,24 @@ contract ContentRegistryBranchesTest is VotingTestBase {
         vm.stopPrank();
     }
 
-    function test_SubmitQuestionWithMedia_RejectsMixedImagesAndVideo() public {
+    function test_SubmitQuestion_RejectsMixedImagesAndVideo() public {
         string[] memory imageUrls = new string[](1);
         imageUrls[0] = "https://example.com/a.jpg";
 
         vm.expectRevert("Choose images or video");
-        registry.previewQuestionMediaSubmissionKey(
+        registry.previewQuestionSubmissionKey("https://example.com/context",
             imageUrls, "https://www.youtube.com/watch?v=jNQXAC9IVRw", "Question?", "Context", "Media", 5
         );
     }
 
-    function test_SubmitQuestionWithMedia_RejectsTooManyImages() public {
+    function test_SubmitQuestion_RejectsTooManyImages() public {
         string[] memory imageUrls = new string[](5);
         for (uint256 i = 0; i < imageUrls.length; i++) {
             imageUrls[i] = "https://example.com/a.jpg";
         }
 
         vm.expectRevert("Too many images");
-        registry.previewQuestionMediaSubmissionKey(imageUrls, "", "Question?", "Context", "Media", 5);
+        registry.previewQuestionSubmissionKey("https://example.com/context", imageUrls, "", "Question?", "Context", "Media", 5);
     }
 
     function test_SubmitContent_VoterIdConfigured_AllowsWithoutId() public {
@@ -811,7 +865,7 @@ contract ContentRegistryBranchesTest is VotingTestBase {
         vm.startPrank(submitter);
         crepToken.approve(address(registry), 10e6);
         vm.expectRevert("Invalid URL");
-        registry.submitQuestionWithMedia(
+        registry.submitQuestion("https://example.com/context",
             _singleImageUrls("javascript:alert(1)"), "", "goal", "goal", "tags", 1, bytes32(0)
         );
         vm.stopPrank();
@@ -821,7 +875,7 @@ contract ContentRegistryBranchesTest is VotingTestBase {
         vm.startPrank(submitter);
         crepToken.approve(address(registry), 10e6);
         vm.expectRevert("Invalid URL");
-        registry.submitQuestionWithMedia(
+        registry.submitQuestion("https://example.com/context",
             _singleImageUrls("http://example.com/1.jpg"), "", "goal", "goal", "tags", 1, bytes32(0)
         );
         vm.stopPrank();
@@ -831,7 +885,7 @@ contract ContentRegistryBranchesTest is VotingTestBase {
         vm.startPrank(submitter);
         crepToken.approve(address(registry), 10e6);
         vm.expectRevert("Invalid URL");
-        registry.submitQuestionWithMedia(
+        registry.submitQuestion("https://example.com/context",
             _singleImageUrls("https://example.com/ bad.jpg"), "", "goal", "goal", "tags", 1, bytes32(0)
         );
         vm.stopPrank();
@@ -845,7 +899,7 @@ contract ContentRegistryBranchesTest is VotingTestBase {
         vm.startPrank(submitter);
         crepToken.approve(address(registry), 10e6);
         vm.expectRevert("Category not registered");
-        registry.submitQuestionWithMedia(
+        registry.submitQuestion("https://example.com/context",
             _singleImageUrls("https://example.com/1.jpg"), "", "goal", "goal", "tags", 99, bytes32(0)
         );
         vm.stopPrank();
@@ -864,30 +918,25 @@ contract ContentRegistryBranchesTest is VotingTestBase {
         crepToken.approve(address(registry), 10e6);
         string memory imageUrl = _submissionImageUrl(url);
         string[] memory imageUrls = _singleImageUrls(imageUrl);
-        (, bytes32 submissionKey) =
-            registry.previewQuestionMediaSubmissionKey(imageUrls, "", title, description, tags, 1);
-        uint256 rewardAmount = _defaultSubmissionRewardAmount(registry);
-        bytes32 revealCommitment = keccak256(
-            abi.encode(
-                submissionKey,
-                _submissionMediaHash(imageUrls, ""),
-                title,
-                description,
-                tags,
-                uint256(1),
-                salt,
-                submitter,
-                DEFAULT_SUBMISSION_REWARD_ASSET_CREP,
-                rewardAmount,
-                DEFAULT_SUBMISSION_REWARD_REQUIRED_VOTERS,
-                DEFAULT_SUBMISSION_REWARD_SETTLED_ROUNDS,
-                DEFAULT_SUBMISSION_REWARD_EXPIRES_AT
-            )
+        _reserveQuestionSubmissionWithRewardTerms(
+            "https://example.com/context",
+            imageUrls,
+            "",
+            title,
+            description,
+            tags,
+            1,
+            salt,
+            submitter,
+            DEFAULT_SUBMISSION_REWARD_ASSET_CREP,
+            _defaultSubmissionRewardAmount(registry),
+            DEFAULT_SUBMISSION_REWARD_REQUIRED_VOTERS,
+            DEFAULT_SUBMISSION_REWARD_SETTLED_ROUNDS,
+            DEFAULT_SUBMISSION_REWARD_EXPIRES_AT
         );
-        registry.reserveSubmission(revealCommitment);
         vm.warp(block.timestamp + 1);
         vm.expectRevert();
-        registry.submitQuestionWithMedia(imageUrls, "", title, description, tags, 1, salt);
+        registry.submitQuestion("https://example.com/context", imageUrls, "", title, description, tags, 1, salt);
         vm.stopPrank();
     }
 
@@ -906,30 +955,25 @@ contract ContentRegistryBranchesTest is VotingTestBase {
         crepToken.approve(address(registry), 10e6);
         string memory imageUrl = _submissionImageUrl(url);
         string[] memory imageUrls = _singleImageUrls(imageUrl);
-        (, bytes32 submissionKey) =
-            registry.previewQuestionMediaSubmissionKey(imageUrls, "", title, description, tags, oversizedCategoryId);
-        uint256 rewardAmount = _defaultSubmissionRewardAmount(registry);
-        bytes32 revealCommitment = keccak256(
-            abi.encode(
-                submissionKey,
-                _submissionMediaHash(imageUrls, ""),
-                title,
-                description,
-                tags,
-                oversizedCategoryId,
-                salt,
-                submitter,
-                DEFAULT_SUBMISSION_REWARD_ASSET_CREP,
-                rewardAmount,
-                DEFAULT_SUBMISSION_REWARD_REQUIRED_VOTERS,
-                DEFAULT_SUBMISSION_REWARD_SETTLED_ROUNDS,
-                DEFAULT_SUBMISSION_REWARD_EXPIRES_AT
-            )
+        _reserveQuestionSubmissionWithRewardTerms(
+            "https://example.com/context",
+            imageUrls,
+            "",
+            title,
+            description,
+            tags,
+            oversizedCategoryId,
+            salt,
+            submitter,
+            DEFAULT_SUBMISSION_REWARD_ASSET_CREP,
+            _defaultSubmissionRewardAmount(registry),
+            DEFAULT_SUBMISSION_REWARD_REQUIRED_VOTERS,
+            DEFAULT_SUBMISSION_REWARD_SETTLED_ROUNDS,
+            DEFAULT_SUBMISSION_REWARD_EXPIRES_AT
         );
-        registry.reserveSubmission(revealCommitment);
         vm.warp(block.timestamp + 1);
         vm.expectRevert();
-        registry.submitQuestionWithMedia(imageUrls, "", title, description, tags, oversizedCategoryId, salt);
+        registry.submitQuestion("https://example.com/context", imageUrls, "", title, description, tags, oversizedCategoryId, salt);
         vm.stopPrank();
     }
 
@@ -952,7 +996,7 @@ contract ContentRegistryBranchesTest is VotingTestBase {
         vm.startPrank(submitter);
         crepToken.approve(address(registry), 10e6);
         vm.expectRevert("Invalid URL");
-        registry.submitQuestionWithMedia(_singleImageUrls(string(longUrl)), "", "goal", "goal", "tags", 1, bytes32(0));
+        registry.submitQuestion("https://example.com/context", _singleImageUrls(string(longUrl)), "", "goal", "goal", "tags", 1, bytes32(0));
         vm.stopPrank();
     }
 
@@ -966,7 +1010,7 @@ contract ContentRegistryBranchesTest is VotingTestBase {
         vm.startPrank(submitter);
         crepToken.approve(address(registry), 10e6);
         vm.expectRevert("Question too long");
-        registry.submitQuestionWithMedia(
+        registry.submitQuestion("https://example.com/context",
             _singleImageUrls("https://example.com/1.jpg"), "", string(longGoal), string(longGoal), "tags", 1, bytes32(0)
         );
         vm.stopPrank();
@@ -981,7 +1025,7 @@ contract ContentRegistryBranchesTest is VotingTestBase {
         vm.startPrank(submitter);
         crepToken.approve(address(registry), 10e6);
         vm.expectRevert("Tags too long");
-        registry.submitQuestionWithMedia(
+        registry.submitQuestion("https://example.com/context",
             _singleImageUrls("https://example.com/1.jpg"), "", "goal", "goal", string(longTags), 1, bytes32(0)
         );
         vm.stopPrank();
@@ -999,8 +1043,8 @@ contract ContentRegistryBranchesTest is VotingTestBase {
     function test_SubmitContent_EmptyUrl_Reverts() public {
         vm.startPrank(submitter);
         crepToken.approve(address(registry), 10e6);
-        vm.expectRevert("Media required");
-        registry.submitQuestionWithMedia(_emptyImageUrls(), "", "goal", "goal", "tags", 1, bytes32(0));
+        vm.expectRevert("Invalid URL");
+        registry.submitQuestion("", _emptyImageUrls(), "", "goal", "goal", "tags", 1, bytes32(0));
         vm.stopPrank();
     }
 
@@ -1008,7 +1052,7 @@ contract ContentRegistryBranchesTest is VotingTestBase {
         vm.startPrank(submitter);
         crepToken.approve(address(registry), 10e6);
         vm.expectRevert("Question required");
-        registry.submitQuestionWithMedia(
+        registry.submitQuestion("https://example.com/context",
             _singleImageUrls("https://example.com/1.jpg"), "", "", "", "tags", 1, bytes32(0)
         );
         vm.stopPrank();
@@ -1018,7 +1062,7 @@ contract ContentRegistryBranchesTest is VotingTestBase {
         vm.startPrank(submitter);
         crepToken.approve(address(registry), 10e6);
         vm.expectRevert("Tags required");
-        registry.submitQuestionWithMedia(
+        registry.submitQuestion("https://example.com/context",
             _singleImageUrls("https://example.com/1.jpg"), "", "goal", "goal", "", 1, bytes32(0)
         );
         vm.stopPrank();

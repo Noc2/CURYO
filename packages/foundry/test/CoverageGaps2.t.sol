@@ -674,23 +674,24 @@ contract ContentRegistryCoverageTest is VotingTestBase {
 
     function test_SubmitContentSplitMetadataSuccess() public {
         string memory url = "https://example.com/split";
+        string memory contextUrl = "https://example.com/context";
         string memory imageUrl = _submissionImageUrl(url);
         string[] memory imageUrls = _singleImageUrls(imageUrl);
         string memory title = "Ethereum reference client";
         string memory description = "Official Go implementation of Ethereum.";
         string memory tags = "tag1";
         bytes32 expectedHash = keccak256(
-            abi.encode("curyo-question-context-v1", imageUrl, imageUrls, "", title, description, tags, uint256(1))
+            abi.encode("curyo-question-context-v1", contextUrl, imageUrls, "", title, description, tags, uint256(1))
         );
         bytes32 salt = keccak256("split-metadata");
 
         vm.startPrank(submitter);
         crep.approve(address(registry), 10e6);
-        _reserveQuestionMediaSubmission(registry, imageUrls, "", title, description, tags, 1, salt, submitter);
+        _reserveQuestionMediaSubmission(registry, contextUrl, imageUrls, "", title, description, tags, 1, salt, submitter);
         vm.warp(block.timestamp + 1);
         vm.expectEmit(true, true, false, true);
-        emit ContentSubmitted(1, submitter, expectedHash, imageUrl, title, description, tags, 1);
-        uint256 id = registry.submitQuestionWithMedia(imageUrls, "", title, description, tags, 1, salt);
+        emit ContentSubmitted(1, submitter, expectedHash, contextUrl, title, description, tags, 1);
+        uint256 id = registry.submitQuestion(contextUrl, imageUrls, "", title, description, tags, 1, salt);
         vm.stopPrank();
 
         assertEq(id, 1);
@@ -703,8 +704,8 @@ contract ContentRegistryCoverageTest is VotingTestBase {
     function test_SubmitContentEmptyURLReverts() public {
         vm.startPrank(submitter);
         crep.approve(address(registry), 10e6);
-        vm.expectRevert("Media required");
-        registry.submitQuestionWithMedia(_emptyImageUrls(), "", "goal", "goal", "tag1", 1, bytes32(0));
+        vm.expectRevert("Invalid URL");
+        registry.submitQuestion("", _emptyImageUrls(), "", "goal", "goal", "tag1", 1, bytes32(0));
         vm.stopPrank();
     }
 
@@ -718,7 +719,7 @@ contract ContentRegistryCoverageTest is VotingTestBase {
         vm.startPrank(submitter);
         crep.approve(address(registry), 10e6);
         vm.expectRevert("Invalid URL");
-        registry.submitQuestionWithMedia(_singleImageUrls(string(longUrl)), "", "goal", "goal", "tag1", 1, bytes32(0));
+        registry.submitQuestion("https://example.com/context", _singleImageUrls(string(longUrl)), "", "goal", "goal", "tag1", 1, bytes32(0));
         vm.stopPrank();
     }
 
@@ -728,7 +729,7 @@ contract ContentRegistryCoverageTest is VotingTestBase {
         vm.startPrank(submitter);
         crep.approve(address(registry), 10e6);
         vm.expectRevert("Question required");
-        registry.submitQuestionWithMedia(
+        registry.submitQuestion("https://example.com/context",
             _singleImageUrls("https://example.com/test.jpg"), "", "", "", "tag1", 1, bytes32(0)
         );
         vm.stopPrank();
@@ -745,7 +746,7 @@ contract ContentRegistryCoverageTest is VotingTestBase {
         vm.startPrank(submitter);
         crep.approve(address(registry), 10e6);
         vm.expectRevert("Question too long");
-        registry.submitQuestionWithMedia(
+        registry.submitQuestion("https://example.com/context",
             _singleImageUrls("https://example.com/test.jpg"),
             "",
             string(longGoal),
@@ -761,7 +762,7 @@ contract ContentRegistryCoverageTest is VotingTestBase {
         vm.startPrank(submitter);
         crep.approve(address(registry), 10e6);
         vm.expectRevert("Question required");
-        registry.submitQuestionWithMedia(
+        registry.submitQuestion("https://example.com/context",
             _singleImageUrls("https://example.com/test.jpg"), "", "", "description", "tag1", 1, bytes32(0)
         );
         vm.stopPrank();
@@ -771,7 +772,7 @@ contract ContentRegistryCoverageTest is VotingTestBase {
         vm.startPrank(submitter);
         crep.approve(address(registry), 10e6);
         vm.expectRevert("Description required");
-        registry.submitQuestionWithMedia(
+        registry.submitQuestion("https://example.com/context",
             _singleImageUrls("https://example.com/test.jpg"), "", "title", "", "tag1", 1, bytes32(0)
         );
         vm.stopPrank();
@@ -786,7 +787,7 @@ contract ContentRegistryCoverageTest is VotingTestBase {
         vm.startPrank(submitter);
         crep.approve(address(registry), 10e6);
         vm.expectRevert("Question too long");
-        registry.submitQuestionWithMedia(
+        registry.submitQuestion("https://example.com/context",
             _singleImageUrls("https://example.com/test.jpg"),
             "",
             string(longTitle),
@@ -825,7 +826,7 @@ contract ContentRegistryCoverageTest is VotingTestBase {
         vm.startPrank(submitter);
         crep.approve(address(registry), 10e6);
         vm.expectRevert("Question too long");
-        registry.submitQuestionWithMedia(
+        registry.submitQuestion("https://example.com/context",
             _singleImageUrls("https://example.com/over-max-title.jpg"),
             "",
             string(title),
@@ -863,7 +864,7 @@ contract ContentRegistryCoverageTest is VotingTestBase {
         vm.startPrank(submitter);
         crep.approve(address(registry), 10e6);
         vm.expectRevert("Description too long");
-        registry.submitQuestionWithMedia(
+        registry.submitQuestion("https://example.com/context",
             _singleImageUrls("https://example.com/test.jpg"),
             "",
             "title",
@@ -881,7 +882,7 @@ contract ContentRegistryCoverageTest is VotingTestBase {
         vm.startPrank(submitter);
         crep.approve(address(registry), 10e6);
         vm.expectRevert("Tags required");
-        registry.submitQuestionWithMedia(
+        registry.submitQuestion("https://example.com/context",
             _singleImageUrls("https://example.com/test.jpg"), "", "goal", "goal", "", 1, bytes32(0)
         );
         vm.stopPrank();
@@ -897,7 +898,7 @@ contract ContentRegistryCoverageTest is VotingTestBase {
         vm.startPrank(submitter);
         crep.approve(address(registry), 10e6);
         vm.expectRevert("Tags too long");
-        registry.submitQuestionWithMedia(
+        registry.submitQuestion("https://example.com/context",
             _singleImageUrls("https://example.com/test.jpg"), "", "goal", "goal", string(longTags), 1, bytes32(0)
         );
         vm.stopPrank();
@@ -945,7 +946,7 @@ contract ContentRegistryCoverageTest is VotingTestBase {
         vm.startPrank(submitter);
         crep.approve(address(registry), 10e6);
         vm.expectRevert("Category not registered");
-        registry.submitQuestionWithMedia(
+        registry.submitQuestion("https://example.com/context",
             _singleImageUrls("https://example.com/cat.jpg"), "", "goal", "goal", "tag1", 999, bytes32(0)
         );
         vm.stopPrank();
@@ -1152,7 +1153,7 @@ contract ContentRegistryCoverageTest is VotingTestBase {
         vm.startPrank(submitter);
         crep.approve(address(registry), 10e6);
         vm.expectRevert();
-        registry.submitQuestionWithMedia(
+        registry.submitQuestion("https://example.com/context",
             _singleImageUrls("https://example.com/paused.jpg"), "", "goal", "goal", "tag1", 1, bytes32(0)
         );
         vm.stopPrank();

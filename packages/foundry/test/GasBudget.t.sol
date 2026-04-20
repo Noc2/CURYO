@@ -58,26 +58,21 @@ contract GasBudgetTest is RoundIntegrationTest {
         string memory imageUrl = "https://example.com/gas-submit.jpg";
         string[] memory imageUrls = _singleImageUrls(imageUrl);
         (, bytes32 submissionKey) =
-            registry.previewQuestionMediaSubmissionKey(imageUrls, "", "test goal", "test goal", "test", 1);
+            registry.previewQuestionSubmissionKey("https://example.com/context", imageUrls, "", "test goal", "test goal", "test", 1);
         bytes32 salt = keccak256(
             abi.encode(imageUrl, "test goal", "test goal", "test", uint256(1), submitter, block.timestamp, block.number)
         );
-        bytes32 revealCommitment = keccak256(
-            abi.encode(
-                submissionKey,
-                _submissionMediaHash(imageUrls, ""),
-                "test goal",
-                "test goal",
-                "test",
-                uint256(1),
-                salt,
-                submitter,
-                DEFAULT_SUBMISSION_REWARD_ASSET_CREP,
-                rewardAmount,
-                DEFAULT_SUBMISSION_REWARD_REQUIRED_VOTERS,
-                DEFAULT_SUBMISSION_REWARD_SETTLED_ROUNDS,
-                DEFAULT_SUBMISSION_REWARD_EXPIRES_AT
-            )
+        bytes32 revealCommitment = _defaultQuestionRevealCommitment(
+            registry,
+            submissionKey,
+            imageUrls,
+            "",
+            "test goal",
+            "test goal",
+            "test",
+            1,
+            salt,
+            submitter
         );
 
         uint256 reserveGasUsed = _measureCallAs(
@@ -88,7 +83,8 @@ contract GasBudgetTest is RoundIntegrationTest {
             submitter,
             address(registry),
             abi.encodeCall(
-                ContentRegistry.submitQuestionWithMedia, (imageUrls, "", "test goal", "test goal", "test", 1, salt)
+                ContentRegistry.submitQuestion,
+                ("https://example.com/context", imageUrls, "", "test goal", "test goal", "test", 1, salt)
             )
         );
         uint256 gasUsed = reserveGasUsed + revealGasUsed;

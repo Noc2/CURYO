@@ -426,46 +426,6 @@ contract ContentRegistry is Initializable, AccessControlUpgradeable, PausableUpg
         );
     }
 
-    /// @notice Compatibility overload that attaches the governance minimum cREP bounty.
-    function submitQuestionWithMedia(
-        string[] calldata imageUrls,
-        string calldata videoUrl,
-        string calldata title,
-        string calldata description,
-        string calldata tags,
-        uint256 categoryId,
-        bytes32 salt
-    ) external nonReentrant whenNotPaused returns (uint256) {
-        return _submitValidatedQuestionWithMedia(
-            _validatedMediaSubmissionMetadata(imageUrls, videoUrl, title, description, tags, categoryId),
-            imageUrls,
-            videoUrl,
-            salt,
-            _defaultSubmissionRewardTerms(SUBMISSION_REWARD_ASSET_CREP),
-            _defaultRoundConfig()
-        );
-    }
-
-    function submitQuestionWithMediaAndRoundConfig(
-        string[] calldata imageUrls,
-        string calldata videoUrl,
-        string calldata title,
-        string calldata description,
-        string calldata tags,
-        uint256 categoryId,
-        bytes32 salt,
-        RoundLib.RoundConfig calldata roundConfig
-    ) external nonReentrant whenNotPaused returns (uint256) {
-        return _submitValidatedQuestionWithMedia(
-            _validatedMediaSubmissionMetadata(imageUrls, videoUrl, title, description, tags, categoryId),
-            imageUrls,
-            videoUrl,
-            salt,
-            _defaultSubmissionRewardTerms(SUBMISSION_REWARD_ASSET_CREP),
-            _validatedRoundConfig(roundConfig)
-        );
-    }
-
     function getContentRoundConfig(uint256 contentId) public view returns (RoundLib.RoundConfig memory cfg) {
         cfg = contentRoundConfig[contentId];
         if (cfg.epochDuration == 0) {
@@ -519,26 +479,6 @@ contract ContentRegistry is Initializable, AccessControlUpgradeable, PausableUpg
         SUBMISSION_MEDIA_VALIDATOR.validateOptionalMediaSet(imageUrls, videoUrl);
         metadata = SubmissionMetadata({
             url: contextUrl, title: title, description: description, tags: tags, categoryId: categoryId
-        });
-        _validateTextFields(metadata);
-        require(address(categoryRegistry) != address(0), "CategoryRegistry not set");
-    }
-
-    function _validatedMediaSubmissionMetadata(
-        string[] memory imageUrls,
-        string memory videoUrl,
-        string memory title,
-        string memory description,
-        string memory tags,
-        uint256 categoryId
-    ) internal view returns (SubmissionMetadata memory metadata) {
-        SUBMISSION_MEDIA_VALIDATOR.validateMediaSet(imageUrls, videoUrl);
-        metadata = SubmissionMetadata({
-            url: bytes(videoUrl).length != 0 ? videoUrl : imageUrls[0],
-            title: title,
-            description: description,
-            tags: tags,
-            categoryId: categoryId
         });
         _validateTextFields(metadata);
         require(address(categoryRegistry) != address(0), "CategoryRegistry not set");
@@ -916,29 +856,6 @@ contract ContentRegistry is Initializable, AccessControlUpgradeable, PausableUpg
         SUBMISSION_MEDIA_VALIDATOR.validateOptionalMediaSet(imageUrls, videoUrl);
         SubmissionMetadata memory metadata = SubmissionMetadata({
             url: contextUrl, title: title, description: description, tags: tags, categoryId: categoryId
-        });
-        _validateTextFields(metadata);
-        require(address(categoryRegistry) != address(0), "CategoryRegistry not set");
-        resolvedCategoryId = _resolveQuestionSubmissionCategory(metadata);
-        submissionKey = _deriveQuestionMediaSubmissionKey(metadata, resolvedCategoryId);
-    }
-
-    /// @notice Preview the resolved category and question-level submission key for a future media-backed reveal.
-    function previewQuestionMediaSubmissionKey(
-        string[] calldata imageUrls,
-        string calldata videoUrl,
-        string calldata title,
-        string calldata description,
-        string calldata tags,
-        uint256 categoryId
-    ) external view returns (uint256 resolvedCategoryId, bytes32 submissionKey) {
-        SUBMISSION_MEDIA_VALIDATOR.validateMediaSet(imageUrls, videoUrl);
-        SubmissionMetadata memory metadata = SubmissionMetadata({
-            url: bytes(videoUrl).length != 0 ? videoUrl : imageUrls[0],
-            title: title,
-            description: description,
-            tags: tags,
-            categoryId: categoryId
         });
         _validateTextFields(metadata);
         require(address(categoryRegistry) != address(0), "CategoryRegistry not set");

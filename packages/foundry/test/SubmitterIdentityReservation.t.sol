@@ -77,11 +77,12 @@ contract SubmitterIdentityReservationTest is Test, ContentSubmissionTestBase {
         string memory description = "goal";
         string memory tags = "tags";
         bytes32 salt = keccak256("delegate-content-salt");
+        string memory contextUrl = "https://example.com/context";
         string memory imageUrl = _submissionImageUrl(url);
         string[] memory imageUrls = _singleImageUrls(imageUrl);
 
         vm.startPrank(delegate);
-        _reserveQuestionMediaSubmission(registry, imageUrls, "", title, description, tags, 1, salt, delegate);
+        _reserveQuestionMediaSubmission(registry, contextUrl, imageUrls, "", title, description, tags, 1, salt, delegate);
         vm.stopPrank();
 
         vm.prank(submitter);
@@ -93,7 +94,7 @@ contract SubmitterIdentityReservationTest is Test, ContentSubmissionTestBase {
         vm.warp(block.timestamp + 1);
 
         vm.startPrank(delegate);
-        uint256 contentId = registry.submitQuestionWithMedia(imageUrls, "", title, description, tags, 1, salt);
+        uint256 contentId = registry.submitQuestion(contextUrl, imageUrls, "", title, description, tags, 1, salt);
         vm.stopPrank();
 
         assertEq(registry.getSubmitterIdentity(contentId), delegate);
@@ -114,7 +115,7 @@ contract SubmitterIdentityReservationTest is Test, ContentSubmissionTestBase {
         string[] memory imageUrls = _singleImageUrls(url);
 
         vm.startPrank(delegate);
-        _reserveQuestionMediaSubmission(registry, imageUrls, "", title, description, tags, 1, salt, delegate);
+        _reserveQuestionMediaSubmission(registry, url, imageUrls, "", title, description, tags, 1, salt, delegate);
         vm.stopPrank();
 
         vm.prank(submitter);

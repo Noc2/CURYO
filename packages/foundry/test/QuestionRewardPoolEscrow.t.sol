@@ -740,10 +740,19 @@ contract QuestionRewardPoolEscrowTest is VotingTestBase {
 
         vm.startPrank(submitter);
         _reserveQuestionMediaSubmission(
-            registry, imageUrls, "", QUESTION, DESCRIPTION, TAGS, CATEGORY_ID, salt, submitter
+            registry,
+            "https://example.com/context",
+            imageUrls,
+            "",
+            QUESTION,
+            DESCRIPTION,
+            TAGS,
+            CATEGORY_ID,
+            salt,
+            submitter
         );
         vm.warp(block.timestamp + 1);
-        contentId = registry.submitQuestionWithMedia(imageUrls, "", QUESTION, DESCRIPTION, TAGS, CATEGORY_ID, salt);
+        contentId = registry.submitQuestion("https://example.com/context", imageUrls, "", QUESTION, DESCRIPTION, TAGS, CATEGORY_ID, salt);
         vm.stopPrank();
     }
 
@@ -757,7 +766,7 @@ contract QuestionRewardPoolEscrowTest is VotingTestBase {
         bytes32 salt = keccak256(abi.encode(url, QUESTION, DESCRIPTION, TAGS, CATEGORY_ID, submitter, block.timestamp));
 
         (, bytes32 submissionKey) =
-            registry.previewQuestionMediaSubmissionKey(imageUrls, "", QUESTION, DESCRIPTION, TAGS, CATEGORY_ID);
+            registry.previewQuestionSubmissionKey("https://example.com/context", imageUrls, "", QUESTION, DESCRIPTION, TAGS, CATEGORY_ID);
         uint256 rewardAmount = _defaultSubmissionRewardAmount(registry);
         bytes32 revealCommitment = keccak256(
             abi.encode(
@@ -785,7 +794,8 @@ contract QuestionRewardPoolEscrowTest is VotingTestBase {
         crepToken.approve(address(rewardPoolEscrow), rewardAmount);
         registry.reserveSubmission(revealCommitment);
         vm.warp(block.timestamp + 1);
-        contentId = registry.submitQuestionWithMediaAndRoundConfig(
+        contentId = registry.submitQuestionWithRoundConfig(
+            "https://example.com/context",
             imageUrls, "", QUESTION, DESCRIPTION, TAGS, CATEGORY_ID, salt, roundConfig
         );
         vm.stopPrank();

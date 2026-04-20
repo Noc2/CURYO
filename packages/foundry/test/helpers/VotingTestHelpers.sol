@@ -12,6 +12,7 @@ import {ContentRegistry} from "../../contracts/ContentRegistry.sol";
 import {ProtocolConfig} from "../../contracts/ProtocolConfig.sol";
 import {RoundVotingEngine} from "../../contracts/RoundVotingEngine.sol";
 import {RatingLib} from "../../contracts/libraries/RatingLib.sol";
+import {RoundLib} from "../../contracts/libraries/RoundLib.sol";
 import {MockQuestionRewardPoolEscrow} from "../mocks/MockQuestionRewardPoolEscrow.sol";
 
 function deployInitializedProtocolConfig(address admin) returns (ProtocolConfig protocolConfig) {
@@ -70,22 +71,17 @@ abstract contract ContentSubmissionTestBase {
         (, bytes32 submissionKey) =
             registry.previewQuestionSubmissionKey(url, imageUrls, "", title, description, tags, submissionCategoryId);
         uint256 rewardAmount = _defaultSubmissionRewardAmount(registry);
-        bytes32 revealCommitment = keccak256(
-            abi.encode(
-                submissionKey,
-                _submissionMediaHash(imageUrls, ""),
-                title,
-                description,
-                tags,
-                submissionCategoryId,
-                salt,
-                submitter,
-                DEFAULT_SUBMISSION_REWARD_ASSET_CREP,
-                rewardAmount,
-                DEFAULT_SUBMISSION_REWARD_REQUIRED_VOTERS,
-                DEFAULT_SUBMISSION_REWARD_SETTLED_ROUNDS,
-                DEFAULT_SUBMISSION_REWARD_EXPIRES_AT
-            )
+        bytes32 revealCommitment = _defaultQuestionRevealCommitment(
+            registry,
+            submissionKey,
+            imageUrls,
+            "",
+            title,
+            description,
+            tags,
+            submissionCategoryId,
+            salt,
+            submitter
         );
 
         IERC20(registry.crepToken()).approve(rewardEscrow, rewardAmount);
@@ -100,6 +96,7 @@ abstract contract ContentSubmissionTestBase {
 
     function _reserveQuestionMediaSubmission(
         ContentRegistry registry,
+        string memory contextUrl,
         string[] memory imageUrls,
         string memory videoUrl,
         string memory title,
@@ -109,27 +106,21 @@ abstract contract ContentSubmissionTestBase {
         bytes32 salt,
         address submitter
     ) internal returns (bytes32 submissionKey) {
-        string memory contextUrl = bytes(videoUrl).length != 0 ? videoUrl : imageUrls[0];
         (, submissionKey) = registry.previewQuestionSubmissionKey(
             contextUrl, imageUrls, videoUrl, title, description, tags, categoryId
         );
         uint256 rewardAmount = _defaultSubmissionRewardAmount(registry);
-        bytes32 revealCommitment = keccak256(
-            abi.encode(
-                submissionKey,
-                _submissionMediaHash(imageUrls, videoUrl),
-                title,
-                description,
-                tags,
-                categoryId,
-                salt,
-                submitter,
-                DEFAULT_SUBMISSION_REWARD_ASSET_CREP,
-                rewardAmount,
-                DEFAULT_SUBMISSION_REWARD_REQUIRED_VOTERS,
-                DEFAULT_SUBMISSION_REWARD_SETTLED_ROUNDS,
-                DEFAULT_SUBMISSION_REWARD_EXPIRES_AT
-            )
+        bytes32 revealCommitment = _defaultQuestionRevealCommitment(
+            registry,
+            submissionKey,
+            imageUrls,
+            videoUrl,
+            title,
+            description,
+            tags,
+            categoryId,
+            salt,
+            submitter
         );
         (VmSafe.CallerMode mode, address msgSender, address txOrigin) = HEVM.readCallers();
         bool hasActivePrank = mode == VmSafe.CallerMode.Prank || mode == VmSafe.CallerMode.RecurrentPrank;
@@ -143,6 +134,111 @@ abstract contract ContentSubmissionTestBase {
         }
         IERC20(registry.crepToken()).approve(rewardEscrow, rewardAmount);
         registry.reserveSubmission(revealCommitment);
+    }
+
+    function _defaultQuestionRevealCommitment(
+        ContentRegistry registry,
+        bytes32 submissionKey,
+        string[] memory imageUrls,
+        string memory videoUrl,
+        string memory title,
+        string memory description,
+        string memory tags,
+        uint256 categoryId,
+        bytes32 salt,
+        address submitter
+    ) internal view returns (bytes32) {
+        uint256 rewardAmount = _defaultSubmissionRewardAmount(registry);
+        ContentRegistry.SubmissionRewardTerms memory rewardTerms = ContentRegistry.SubmissionRewardTerms({
+            asset: DEFAULT_SUBMISSION_REWARD_ASSET_CREP,
+            amount: rewardAmount,
+            requiredVoters: DEFAULT_SUBMISSION_REWARD_REQUIRED_VOTERS,
+            requiredSettledRounds: DEFAULT_SUBMISSION_REWARD_SETTLED_ROUNDS,
+            expiresAt: DEFAULT_SUBMISSION_REWARD_EXPIRES_AT
+        });
+        return _questionRevealCommitment(
+            submissionKey,
+            _submissionMediaHash(imageUrls, videoUrl),
+            title,
+            description,
+            tags,
+            categoryId,
+            salt,
+            submitter,
+            rewardTerms,
+            _defaultQuestionRoundConfig(registry)
+        );
+    }
+
+    function _questionRevealCommitment(
+        bytes32 submissionKey,
+        bytes32 mediaHash,
+        string memory title,
+        string memory description,
+        string memory tags,
+        uint256 categoryId,
+        bytes32 salt,
+        address submitter,
+        ContentRegistry.SubmissionRewardTerms memory rewardTerms,
+        RoundLib.RoundConfig memory roundConfig
+    ) internal pure returns (bytes32) {
+        uint256 titleOffset = 17 * 32;
+        uint256 descriptionOffset = titleOffset + _encodedStringTailLength(title);
+        uint256 tagsOffset = descriptionOffset + _encodedStringTailLength(description);
+
+        bytes memory encoded = bytes.concat(abi.encode(submissionKey), abi.encode(mediaHash));
+        encoded = bytes.concat(encoded, abi.encode(titleOffset));
+        encoded = bytes.concat(encoded, abi.encode(descriptionOffset));
+        encoded = bytes.concat(encoded, abi.encode(tagsOffset));
+        encoded = bytes.concat(encoded, abi.encode(categoryId));
+        encoded = bytes.concat(encoded, abi.encode(salt));
+        encoded = bytes.concat(encoded, abi.encode(submitter));
+        encoded = bytes.concat(encoded, abi.encode(rewardTerms.asset));
+        encoded = bytes.concat(encoded, abi.encode(rewardTerms.amount));
+        encoded = bytes.concat(encoded, abi.encode(rewardTerms.requiredVoters));
+        encoded = bytes.concat(encoded, abi.encode(rewardTerms.requiredSettledRounds));
+        encoded = bytes.concat(encoded, abi.encode(rewardTerms.expiresAt));
+        encoded = bytes.concat(encoded, abi.encode(roundConfig.epochDuration));
+        encoded = bytes.concat(encoded, abi.encode(roundConfig.maxDuration));
+        encoded = bytes.concat(encoded, abi.encode(roundConfig.minVoters));
+        encoded = bytes.concat(encoded, abi.encode(roundConfig.maxVoters));
+        encoded = bytes.concat(encoded, _encodeStringTail(title));
+        encoded = bytes.concat(encoded, _encodeStringTail(description));
+        encoded = bytes.concat(encoded, _encodeStringTail(tags));
+        return keccak256(encoded);
+    }
+
+    function _encodedStringTailLength(string memory value) internal pure returns (uint256) {
+        return 32 + ((bytes(value).length + 31) / 32) * 32;
+    }
+
+    function _encodeStringTail(string memory value) internal pure returns (bytes memory encoded) {
+        bytes memory raw = bytes(value);
+        encoded = new bytes(_encodedStringTailLength(value));
+        assembly {
+            mstore(add(encoded, 32), mload(raw))
+        }
+        for (uint256 i = 0; i < raw.length; i++) {
+            encoded[32 + i] = raw[i];
+        }
+    }
+
+    function _defaultQuestionRoundConfig(ContentRegistry registry)
+        internal
+        view
+        returns (RoundLib.RoundConfig memory cfg)
+    {
+        ProtocolConfig protocolConfig = registry.protocolConfig();
+        if (address(protocolConfig) != address(0)) {
+            (cfg.epochDuration, cfg.maxDuration, cfg.minVoters, cfg.maxVoters) = protocolConfig.config();
+            return cfg;
+        }
+        cfg = RoundLib.RoundConfig({
+            epochDuration: uint32(20 minutes),
+            maxDuration: uint32(7 days),
+            minVoters: uint16(3),
+            maxVoters: uint16(1000)
+        });
     }
 
     function _submissionMediaHash(string[] memory imageUrls, string memory videoUrl) internal pure returns (bytes32) {
@@ -161,7 +257,7 @@ abstract contract ContentSubmissionTestBase {
     ) internal returns (uint256 contentId, bytes32 submissionKey) {
         string[] memory imageUrls = _singleImageUrls(imageUrl);
         submissionKey = _reserveQuestionMediaSubmission(
-            registry, imageUrls, "", title, description, tags, categoryId, salt, submitter
+            registry, imageUrl, imageUrls, "", title, description, tags, categoryId, salt, submitter
         );
         HEVM.warp(block.timestamp + 1);
         contentId = registry.submitQuestion(imageUrl, imageUrls, "", title, description, tags, categoryId, salt);

@@ -158,21 +158,6 @@ const CONTENT_REGISTRY_SUBMISSION_ABI = [
   },
   {
     type: "function",
-    name: "submitQuestionWithMedia",
-    inputs: [
-      { name: "imageUrls", type: "string[]" },
-      { name: "videoUrl", type: "string" },
-      { name: "title", type: "string" },
-      { name: "description", type: "string" },
-      { name: "tags", type: "string" },
-      { name: "categoryId", type: "uint256" },
-      { name: "salt", type: "bytes32" },
-    ],
-    outputs: [{ name: "", type: "uint256" }],
-    stateMutability: "nonpayable",
-  },
-  {
-    type: "function",
     name: "submitQuestionWithReward",
     inputs: [
       { name: "contextUrl", type: "string" },
@@ -725,8 +710,7 @@ function validateSponsoredCalls(
           functionName === "reserveSubmission" ||
           functionName === "submitQuestion" ||
           functionName === "submitQuestionWithReward" ||
-          functionName === "submitQuestionWithRewardAndRoundConfig" ||
-          functionName === "submitQuestionWithMedia"
+          functionName === "submitQuestionWithRewardAndRoundConfig"
         ) {
           continue;
         }
