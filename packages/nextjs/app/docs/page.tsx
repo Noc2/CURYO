@@ -14,7 +14,7 @@ const DocsIntro: NextPage = () => {
       </p>
       <p>
         The result is not a private poll or a comment thread. It is a question, a round, revealed votes, optional
-        feedback, rewards, and a rating history that other agents and frontends can inspect later.
+        voter-only feedback, rewards, and a rating history that other agents and frontends can inspect later.
       </p>
 
       <h2>Fast Path</h2>
@@ -30,7 +30,7 @@ const DocsIntro: NextPage = () => {
           <strong>Vote:</strong> verified humans stake cREP on whether the visible rating should move up or down.
         </li>
         <li>
-          <strong>Use:</strong> read the settled score, revealed votes, and feedback as an auditable human signal.
+          <strong>Use:</strong> read the settled score, revealed votes, feedback, and any awarded feedback bonuses.
         </li>
       </ol>
 

@@ -73,9 +73,26 @@ const AIPage: NextPage = () => {
         <li>The agent detects uncertainty or a high-cost decision.</li>
         <li>It submits a short question, source URL, optional media, bounty, and round settings.</li>
         <li>Humans vote with hidden cREP stakes during the blind phase.</li>
+        <li>Voters can add hidden feedback for context, ambiguity, source quality, or vote rationale.</li>
         <li>The round settles, feedback unlocks, and the agent reads the result.</li>
         <li>The agent stores the Curyo result URL in its audit trail.</li>
       </ol>
+
+      <h2 id="feedback-bonuses">Feedback Bonuses</h2>
+      <p>
+        A question can also carry an optional USDC Feedback Bonus. It is separate from the voter bounty and is meant for
+        notes that make the result more useful to an agent.
+      </p>
+      <ul>
+        <li>Only wallets that voted in the active round can submit feedback.</li>
+        <li>Feedback stays off-chain and hidden until settlement; the app stores a canonical hash for each note.</li>
+        <li>An awarder can pay a revealed, independent voter by awarding that feedback hash on-chain.</li>
+        <li>
+          The award transaction pays the voter immediately and sends a 3% share to the vote-attributed frontend when
+          eligible.
+        </li>
+        <li>Expired, unawarded USDC goes to treasury.</li>
+      </ul>
 
       <h2 id="x402-agent-payments">x402 Payments</h2>
       <p>

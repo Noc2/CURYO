@@ -1,3 +1,4 @@
+import { Suspense } from "react";
 import Link from "next/link";
 import { BanknotesIcon, CheckBadgeIcon, CpuChipIcon } from "@heroicons/react/24/outline";
 import { CuryoAnimation } from "~~/components/home/CuryoAnimation";
@@ -21,7 +22,7 @@ const ASK_STEPS = [
   {
     icon: BanknotesIcon,
     title: "3. Earn",
-    description: "Humans win reputation, plus USDC on funded questions.",
+    description: "Humans win reputation and can earn USDC from bounties or awarded feedback.",
   },
 ];
 
@@ -78,6 +79,7 @@ const FALLBACK_SOCIAL_PROOF_STATS = {
   totalVotes: 3482,
   totalVoterIds: 287,
   totalQuestionRewardsPaid: "0",
+  totalFeedbackBonusesPaid: "0",
 };
 
 function WorkflowHeading({
@@ -186,6 +188,19 @@ function FeaturesBenefitsSection() {
   );
 }
 
+function LandingPageActionsFallback() {
+  return (
+    <div className="mt-6 flex flex-wrap justify-center gap-3 lg:justify-start">
+      <Link href="/rate" className="btn btn-primary whitespace-nowrap rounded-lg px-6">
+        Start Earning
+      </Link>
+      <Link href="/docs" className="btn whitespace-nowrap rounded-lg px-6">
+        Learn More
+      </Link>
+    </div>
+  );
+}
+
 function formatUsdcPaidOut(rawAmount: unknown) {
   let amount: bigint;
   try {
@@ -207,10 +222,13 @@ function formatUsdcPaidOut(rawAmount: unknown) {
 }
 
 async function getLandingPageSocialProofItems() {
+  const fallbackPaidOut =
+    BigInt(FALLBACK_SOCIAL_PROOF_STATS.totalQuestionRewardsPaid) +
+    BigInt(FALLBACK_SOCIAL_PROOF_STATS.totalFeedbackBonusesPaid);
   const fallbackItems = [
     { value: FALLBACK_SOCIAL_PROOF_STATS.totalVoterIds.toLocaleString("en-US"), label: "verified humans" },
     { value: FALLBACK_SOCIAL_PROOF_STATS.totalVotes.toLocaleString("en-US"), label: "votes" },
-    { value: formatUsdcPaidOut(FALLBACK_SOCIAL_PROOF_STATS.totalQuestionRewardsPaid), label: "paid out" },
+    { value: formatUsdcPaidOut(fallbackPaidOut), label: "paid out" },
   ];
 
   const ponderUrl = getOptionalPonderUrl();
@@ -231,13 +249,16 @@ async function getLandingPageSocialProofItems() {
       totalVotes?: number;
       totalVoterIds?: number;
       totalQuestionRewardsPaid?: string;
+      totalFeedbackBonusesPaid?: string;
     };
+    const paidOut =
+      BigInt(String(stats.totalQuestionRewardsPaid ?? 0)) + BigInt(String(stats.totalFeedbackBonusesPaid ?? 0));
 
     return [
       { value: Math.max(0, Number(stats.totalVoterIds ?? 0)).toLocaleString("en-US"), label: "verified humans" },
       { value: Math.max(0, Number(stats.totalVotes ?? 0)).toLocaleString("en-US"), label: "votes" },
       {
-        value: formatUsdcPaidOut(stats.totalQuestionRewardsPaid),
+        value: formatUsdcPaidOut(paidOut),
         label: "paid out",
       },
     ];
@@ -268,7 +289,9 @@ export default async function LandingPage() {
             <p className="mt-5 max-w-[31rem] text-center text-lg leading-7 text-base-content/72 sm:max-w-[35rem] sm:text-xl sm:leading-8 lg:max-w-[33rem] lg:text-left lg:text-[1.55rem] lg:leading-[1.45]">
               Human feedback for AI agents
             </p>
-            <LandingPageActions />
+            <Suspense fallback={<LandingPageActionsFallback />}>
+              <LandingPageActions />
+            </Suspense>
             <div className="mt-5 flex flex-wrap items-center justify-center gap-x-3 gap-y-2 text-center text-sm text-base-content/62 sm:text-[0.95rem] lg:justify-start lg:text-left">
               {socialProofItems.map(({ value, label }, index) => (
                 <div key={label} className="flex items-center">
