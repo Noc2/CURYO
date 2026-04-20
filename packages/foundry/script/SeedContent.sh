@@ -32,6 +32,8 @@ fi
 TOKEN=$(grep -o '"0x[^"]*": "CuryoReputation"' "$DEPLOY_JSON" | grep -o '0x[^"]*' || true)
 REGISTRY=$(grep -o '"0x[^"]*": "ContentRegistry"' "$DEPLOY_JSON" | grep -o '0x[^"]*' || true)
 QUESTION_REWARD_POOL_ESCROW=$(grep -o '"0x[^"]*": "QuestionRewardPoolEscrow"' "$DEPLOY_JSON" | grep -o '0x[^"]*' || true)
+FEEDBACK_BONUS_ESCROW=$(grep -o '"0x[^"]*": "FeedbackBonusEscrow"' "$DEPLOY_JSON" | grep -o '0x[^"]*' || true)
+USDC_TOKEN=$(grep -o '"0x[^"]*": "MockERC20"' "$DEPLOY_JSON" | grep -o '0x[^"]*' || true)
 VOTING_ENGINE=$(grep -o '"0x[^"]*": "RoundVotingEngine"' "$DEPLOY_JSON" | grep -o '0x[^"]*' || true)
 CATEGORY_REGISTRY=$(grep -o '"0x[^"]*": "CategoryRegistry"' "$DEPLOY_JSON" | grep -o '0x[^"]*' || true)
 
@@ -43,6 +45,8 @@ fi
 echo "CuryoReputation:         $TOKEN"
 echo "ContentRegistry:         $REGISTRY"
 echo "QuestionRewardPoolEscrow: $QUESTION_REWARD_POOL_ESCROW"
+echo "FeedbackBonusEscrow:     $FEEDBACK_BONUS_ESCROW"
+echo "Mock USDC:               $USDC_TOKEN"
 echo "RoundVotingEngine:       $VOTING_ENGINE"
 echo "CategoryRegistry:        $CATEGORY_REGISTRY"
 echo ""
@@ -129,6 +133,17 @@ SUBMISSION_BOUNTY_AMOUNTS=(
   "5500000"
   "9000000"
 )
+
+FEEDBACK_BONUS_CONTENT_IDS=(1 4 7 11)
+FEEDBACK_BONUS_AMOUNTS=(
+  "25000000"  # 25 USDC
+  "50000000"  # 50 USDC
+  "75000000"  # 75 USDC
+  "100000000" # 100 USDC
+)
+FEEDBACK_BONUS_FUNDER_KEY_INDEXES=(1 4 8 7)
+FEEDBACK_BONUS_ROUND_ID="1"
+FEEDBACK_BONUS_DEADLINE_SECONDS=$((30 * 24 * 60 * 60))
 
 VIDEO_URLS=(
   ""
@@ -318,6 +333,46 @@ done
 
 echo "=== Seed complete: $TOTAL_ITEMS question items submitted ==="
 echo ""
+
+# --- Feedback Bonus Section ---
+if [ -z "$FEEDBACK_BONUS_ESCROW" ] || [ -z "$USDC_TOKEN" ]; then
+  echo "Skipping feedback bonuses: FeedbackBonusEscrow or Mock USDC not found"
+  echo ""
+else
+  FEEDBACK_BONUS_COUNT="${#FEEDBACK_BONUS_CONTENT_IDS[@]}"
+  if [ "$FEEDBACK_BONUS_COUNT" -ne "${#FEEDBACK_BONUS_AMOUNTS[@]}" ] ||
+    [ "$FEEDBACK_BONUS_COUNT" -ne "${#FEEDBACK_BONUS_FUNDER_KEY_INDEXES[@]}" ]; then
+    echo "ERROR: Feedback bonus arrays must have the same length"
+    exit 1
+  fi
+
+  CURRENT_BLOCK_TIMESTAMP=$(cast block latest --field timestamp --rpc-url "$RPC" | tr -d '[:space:]')
+  FEEDBACK_BONUS_AWARD_DEADLINE=$((CURRENT_BLOCK_TIMESTAMP + FEEDBACK_BONUS_DEADLINE_SECONDS))
+
+  echo "=== Opening feedback bonus pools for selected questions ==="
+  echo "(Only a subset of seeded questions gets feedback bonuses for local testing)"
+  echo ""
+
+  for ((i = 0; i < FEEDBACK_BONUS_COUNT; i++)); do
+    CONTENT_ID="${FEEDBACK_BONUS_CONTENT_IDS[$i]}"
+    BONUS_AMOUNT="${FEEDBACK_BONUS_AMOUNTS[$i]}"
+    FUNDER_KEY_INDEX="${FEEDBACK_BONUS_FUNDER_KEY_INDEXES[$i]}"
+    FUNDER_KEY="${KEYS[$FUNDER_KEY_INDEX]}"
+    FUNDER_ADDR=$(cast wallet address "$FUNDER_KEY")
+
+    echo "[$((i+1))/$FEEDBACK_BONUS_COUNT] Content $CONTENT_ID: funding feedback bonus of $BONUS_AMOUNT mock USDC from $FUNDER_ADDR"
+    cast send "$USDC_TOKEN" "approve(address,uint256)" "$FEEDBACK_BONUS_ESCROW" "$BONUS_AMOUNT" \
+      --private-key "$FUNDER_KEY" --rpc-url "$RPC" > /dev/null
+    cast send "$FEEDBACK_BONUS_ESCROW" "createFeedbackBonusPool(uint256,uint256,uint256,uint256,address)" \
+      "$CONTENT_ID" "$FEEDBACK_BONUS_ROUND_ID" "$BONUS_AMOUNT" "$FEEDBACK_BONUS_AWARD_DEADLINE" "$FUNDER_ADDR" \
+      --private-key "$FUNDER_KEY" --rpc-url "$RPC" > /dev/null
+    echo "  Done!"
+    echo ""
+  done
+
+  echo "=== Feedback bonus setup complete: $FEEDBACK_BONUS_COUNT pools opened ==="
+  echo ""
+fi
 
 # --- Voting Section ---
 if [ -z "$VOTING_ENGINE" ]; then
