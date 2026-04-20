@@ -240,6 +240,7 @@ contract ContentRegistry is Initializable, AccessControlUpgradeable, PausableUpg
         _grantRole(PAUSER_ROLE, _governance);
         _setRoleAdmin(TREASURY_ROLE, TREASURY_ADMIN_ROLE);
         _setRoleAdmin(TREASURY_ADMIN_ROLE, TREASURY_ADMIN_ROLE);
+        _grantRole(TREASURY_ADMIN_ROLE, _governance);
         _grantRole(TREASURY_ADMIN_ROLE, _treasuryAuthority);
         _grantRole(TREASURY_ROLE, _treasuryAuthority);
 

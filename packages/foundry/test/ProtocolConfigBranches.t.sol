@@ -2,6 +2,7 @@
 pragma solidity ^0.8.20;
 
 import { Test } from "forge-std/Test.sol";
+import { ERC1967Proxy } from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
 import { ProtocolConfig } from "../contracts/ProtocolConfig.sol";
 import { RatingLib } from "../contracts/libraries/RatingLib.sol";
 import { RoundLib } from "../contracts/libraries/RoundLib.sol";
@@ -47,6 +48,35 @@ contract ProtocolConfigBranchesTest is Test {
         assertEq(config.drandChainHash(), QUICKNET_CHAIN_HASH);
         assertEq(config.drandGenesisTime(), 1_692_803_367);
         assertEq(config.drandPeriod(), 3);
+    }
+
+    function test_InitializeWithTreasury_GovernanceCanRecoverTreasuryRoles() public {
+        address admin = address(0xA11CE);
+        address governance = address(0xB0B);
+        address treasuryAuthority = address(0xCAFE);
+        address newTreasuryOperator = address(0xDAD);
+
+        ProtocolConfig configImpl = new ProtocolConfig();
+        ProtocolConfig config = ProtocolConfig(
+            address(
+                new ERC1967Proxy(
+                    address(configImpl),
+                    abi.encodeCall(ProtocolConfig.initializeWithTreasury, (admin, governance, treasuryAuthority))
+                )
+            )
+        );
+
+        assertTrue(config.hasRole(config.DEFAULT_ADMIN_ROLE(), governance));
+        assertTrue(config.hasRole(config.TREASURY_ADMIN_ROLE(), governance));
+        assertTrue(config.hasRole(config.TREASURY_ADMIN_ROLE(), treasuryAuthority));
+        assertTrue(config.hasRole(config.TREASURY_ROLE(), treasuryAuthority));
+        assertFalse(config.hasRole(config.TREASURY_ROLE(), governance));
+
+        bytes32 treasuryRole = config.TREASURY_ROLE();
+        vm.prank(governance);
+        config.grantRole(treasuryRole, newTreasuryOperator);
+
+        assertTrue(config.hasRole(treasuryRole, newTreasuryOperator));
     }
 
     function test_SetDrandConfig_UpdatesStateAndEmits() public {

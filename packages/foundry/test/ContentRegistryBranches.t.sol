@@ -1486,13 +1486,18 @@ contract ContentRegistryBranchesTest is VotingTestBase {
     // =========================================================================
 
     function test_InitializeWithTreasury_ConfiguresTreasuryAuthority() public {
+        address governance = address(0xB0B);
+        address newTreasuryOperator = address(0xBEEF);
+
         vm.startPrank(owner);
         ContentRegistry registryImpl2 = new ContentRegistry();
         ContentRegistry reg2 = ContentRegistry(
             address(
                 new ERC1967Proxy(
                     address(registryImpl2),
-                    abi.encodeCall(ContentRegistry.initializeWithTreasury, (owner, owner, treasury, address(crepToken)))
+                    abi.encodeCall(
+                        ContentRegistry.initializeWithTreasury, (owner, governance, treasury, address(crepToken))
+                    )
                 )
             )
         );
@@ -1500,6 +1505,17 @@ contract ContentRegistryBranchesTest is VotingTestBase {
 
         assertEq(reg2.treasury(), treasury);
         assertEq(reg2.bonusPool(), treasury);
+        assertTrue(reg2.hasRole(reg2.DEFAULT_ADMIN_ROLE(), governance));
+        assertTrue(reg2.hasRole(reg2.TREASURY_ADMIN_ROLE(), governance));
+        assertTrue(reg2.hasRole(reg2.TREASURY_ADMIN_ROLE(), treasury));
+        assertTrue(reg2.hasRole(reg2.TREASURY_ROLE(), treasury));
+        assertFalse(reg2.hasRole(reg2.TREASURY_ROLE(), governance));
+
+        bytes32 treasuryRole = reg2.TREASURY_ROLE();
+        vm.prank(governance);
+        reg2.grantRole(treasuryRole, newTreasuryOperator);
+
+        assertTrue(reg2.hasRole(treasuryRole, newTreasuryOperator));
     }
 
     function test_SubmitContent_SeededCategory_Succeeds() public {
