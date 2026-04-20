@@ -469,6 +469,15 @@ body {
   box-shadow: none;
 }
 
+.vote-btn.vote-feedback .vote-bg {
+  background: var(--curyo-ember);
+  box-shadow: none;
+}
+
+.vote-btn.vote-feedback:disabled .vote-bg {
+  background: rgb(245 240 235 / 0.22);
+}
+
 .vote-btn .vote-symbol {
   position: absolute;
   inset: 0;

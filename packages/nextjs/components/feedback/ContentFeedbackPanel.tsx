@@ -2,8 +2,10 @@
 
 import { FormEvent, useMemo, useState } from "react";
 import { useAccount } from "wagmi";
-import { ArrowTopRightOnSquareIcon, LockClosedIcon } from "@heroicons/react/24/outline";
+import { ArrowTopRightOnSquareIcon, ChatBubbleLeftEllipsisIcon, LockClosedIcon } from "@heroicons/react/24/outline";
 import { SafeExternalLink } from "~~/components/shared/SafeExternalLink";
+import { TooltipAnchor } from "~~/components/ui/InfoTooltip";
+import { useScaffoldReadContract } from "~~/hooks/scaffold-eth";
 import type { ContentItem } from "~~/hooks/useContentFeed";
 import { useContentFeedback } from "~~/hooks/useContentFeedback";
 import {
@@ -75,10 +77,20 @@ export function ContentFeedbackPanel({ item, variant = "rail", onRequestConnect 
   const [sourceUrl, setSourceUrl] = useState("");
   const isSheet = variant === "sheet";
   const bodyLength = body.trim().length;
-  const canSubmit = Boolean(item && bodyLength >= 4 && bodyLength <= CONTENT_FEEDBACK_BODY_MAX_LENGTH);
-  const feedbackStatusCopy = feedback.settlementComplete
-    ? "Feedback is unlocked for this question."
-    : "Only voters can save feedback. It stays hidden until settlement.";
+  const openRoundId = item?.openRound?.roundId ?? 0n;
+  const { data: myCommitHash } = useScaffoldReadContract({
+    contractName: "RoundVotingEngine" as any,
+    functionName: "voterCommitHash" as any,
+    args: [item?.id ?? 0n, openRoundId, address] as any,
+    watch: true,
+    query: { enabled: Boolean(item && address && openRoundId > 0n) },
+  } as any);
+  const hasCurrentRoundVote =
+    myCommitHash != null &&
+    (myCommitHash as unknown as string) !== "0x0000000000000000000000000000000000000000000000000000000000000000";
+  const canSubmitDraft = Boolean(item && bodyLength >= 4 && bodyLength <= CONTENT_FEEDBACK_BODY_MAX_LENGTH);
+  const submitDisabled = !canSubmitDraft || isSubmitting || !hasCurrentRoundVote;
+  const submitTooltip = !hasCurrentRoundVote ? "You need to vote first." : "Add feedback";
   const feedbackBonusRemaining = item?.feedbackBonusSummary?.totalRemaining ?? 0n;
   const feedbackBonusAwarded = item?.feedbackBonusSummary?.totalAwarded ?? 0n;
   const ownHiddenCopy =
@@ -95,10 +107,10 @@ export function ContentFeedbackPanel({ item, variant = "rail", onRequestConnect 
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    if (!canSubmit) return;
+    if (!canSubmitDraft || !hasCurrentRoundVote) return;
 
     if (!address) {
-      notification.info("Sign in to save feedback.");
+      notification.info("Sign in to add feedback.");
       onRequestConnect?.();
       return;
     }
@@ -111,13 +123,13 @@ export function ContentFeedbackPanel({ item, variant = "rail", onRequestConnect 
 
     if (!result.ok) {
       if (result.reason === "rejected") return;
-      notification.error(result.error || "Failed to save feedback");
+      notification.error(result.error || "Failed to add feedback");
       return;
     }
 
     setBody("");
     setSourceUrl("");
-    notification.success(feedback.settlementComplete ? "Feedback published" : "Feedback saved until settlement");
+    notification.success(feedback.settlementComplete ? "Feedback published" : "Feedback added until settlement");
   };
 
   return (
@@ -138,12 +150,18 @@ export function ContentFeedbackPanel({ item, variant = "rail", onRequestConnect 
         </span>
       </div>
 
-      <div className="mt-3 rounded-lg border border-base-content/10 bg-base-content/[0.035] px-3 py-2">
-        <p className="text-xs font-medium leading-relaxed text-base-content/64">{feedbackStatusCopy}</p>
-        {!feedback.settlementComplete && ownHiddenCopy ? (
-          <p className="mt-1 text-xs leading-relaxed text-base-content/45">{ownHiddenCopy}</p>
-        ) : null}
-      </div>
+      {feedback.settlementComplete || ownHiddenCopy ? (
+        <div className="mt-3 rounded-lg border border-base-content/10 bg-base-content/[0.035] px-3 py-2">
+          {feedback.settlementComplete ? (
+            <p className="text-xs font-medium leading-relaxed text-base-content/64">
+              Feedback is unlocked for this question.
+            </p>
+          ) : null}
+          {!feedback.settlementComplete && ownHiddenCopy ? (
+            <p className="text-xs leading-relaxed text-base-content/45">{ownHiddenCopy}</p>
+          ) : null}
+        </div>
+      ) : null}
 
       {feedbackBonusRemaining > 0n || feedbackBonusAwarded > 0n ? (
         <div className="mt-2 rounded-lg border border-primary/18 bg-primary/[0.06] px-3 py-2">
@@ -206,10 +224,24 @@ export function ContentFeedbackPanel({ item, variant = "rail", onRequestConnect 
           <span className="text-xs tabular-nums text-base-content/42">
             {bodyLength}/{CONTENT_FEEDBACK_BODY_MAX_LENGTH}
           </span>
-          <button type="submit" className="btn btn-primary btn-sm rounded-lg" disabled={!canSubmit || isSubmitting}>
-            {isSubmitting ? <span className="loading loading-spinner loading-xs" /> : null}
-            Save
-          </button>
+          <TooltipAnchor text={submitTooltip} position="top" className="rounded-full">
+            <button
+              type="submit"
+              className="vote-btn vote-btn-sm vote-feedback"
+              disabled={submitDisabled}
+              aria-label="Add feedback"
+              title={submitTooltip}
+            >
+              <span className="vote-bg" />
+              <span className="vote-symbol">
+                {isSubmitting ? (
+                  <span className="loading loading-spinner loading-xs" />
+                ) : (
+                  <ChatBubbleLeftEllipsisIcon className="h-5 w-5 drop-shadow-sm" aria-hidden="true" />
+                )}
+              </span>
+            </button>
+          </TooltipAnchor>
         </div>
       </form>
 
@@ -227,7 +259,7 @@ export function ContentFeedbackPanel({ item, variant = "rail", onRequestConnect 
           </ul>
         ) : (
           <p className="rounded-lg border border-dashed border-base-content/12 px-3 py-3 text-sm leading-relaxed text-base-content/48">
-            {feedback.settlementComplete ? "No feedback yet." : "Vote first, then save feedback for settlement."}
+            {feedback.settlementComplete ? "No feedback yet." : "Vote first, then add feedback for settlement."}
           </p>
         )}
       </div>
