@@ -257,11 +257,11 @@ export function ContentFeedbackPanel({ item, variant = "rail", onRequestConnect 
               <FeedbackItem key={feedbackItem.id} item={feedbackItem} />
             ))}
           </ul>
-        ) : (
+        ) : feedback.settlementComplete ? (
           <p className="rounded-lg border border-dashed border-base-content/12 px-3 py-3 text-sm leading-relaxed text-base-content/48">
-            {feedback.settlementComplete ? "No feedback yet." : "Vote first, then add feedback for settlement."}
+            No feedback yet.
           </p>
-        )}
+        ) : null}
       </div>
     </section>
   );
