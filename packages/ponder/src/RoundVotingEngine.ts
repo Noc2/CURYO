@@ -25,6 +25,15 @@ function defaultRoundConfigFields() {
   };
 }
 
+function computeVoteEpochIndex(committedAt: bigint, roundStartTime: bigint, epochDurationSeconds: number): number {
+  const epochDuration = Math.trunc(epochDurationSeconds);
+  if (!Number.isFinite(epochDuration) || epochDuration <= 0 || committedAt <= roundStartTime) {
+    return 0;
+  }
+
+  return committedAt - roundStartTime < BigInt(epochDuration) ? 0 : 1;
+}
+
 ponder.on("RoundVotingEngine:RoundConfigSnapshotted", async ({ event, context }) => {
   const { contentId, roundId, epochDuration, maxDuration, minVoters, maxVoters } = event.args;
   const roundKey = `${contentId}-${roundId}`;
@@ -86,14 +95,16 @@ ponder.on("RoundVotingEngine:VoteCommitted", async ({ event, context }) => {
     ? (contentRecord.ratingBps > 0 ? contentRecord.ratingBps : contentRecord.rating * 100)
     : 5000;
 
-  // Compute epochIndex from round startTime and event timestamp
-  // We'll store it as 0 or 1 based on whether it's in epoch-1
-  // The exact epochIndex is available from on-chain data; for now we track the commit
-  // epochIndex will be updated properly when VoteRevealed fires (from commit.epochIndex)
-  // For now, use a placeholder — actual epochIndex from the Commit struct is known on-chain
-
   // Upsert round record — VoteCommitted is the first event for a new round
   const existingRound = await context.db.find(round, { id: roundKey });
+  const epochIndex = existingRound
+    ? computeVoteEpochIndex(
+        event.block.timestamp,
+        existingRound.startTime ?? event.block.timestamp,
+        existingRound.epochDuration,
+      )
+    : 0;
+
   if (!existingRound) {
     await context.db.insert(round).values({
       id: roundKey,
@@ -140,7 +151,7 @@ ponder.on("RoundVotingEngine:VoteCommitted", async ({ event, context }) => {
       drandChainHash,
       isUp: null,
       stake,
-      epochIndex: 0, // placeholder; updated on VoteRevealed with actual epochIndex
+      epochIndex,
       revealed: false,
       committedAt: event.block.timestamp,
       revealedAt: null,
