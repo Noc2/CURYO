@@ -834,6 +834,12 @@ contract DeployCuryo is ScaffoldETHDeploy {
             governance,
             "FrontendRegistry governance governance-role"
         );
+        _requireHasRole(
+            address(frontendRegistry),
+            frontendRegistry.FEE_CREDITOR_ROLE(),
+            address(rewardDistributor),
+            "FrontendRegistry reward distributor fee creditor"
+        );
         _requireLacksRole(
             address(frontendRegistry), frontendRegistry.ADMIN_ROLE(), deployerAddress, "FrontendRegistry deployer admin"
         );
@@ -866,13 +872,37 @@ contract DeployCuryo is ScaffoldETHDeploy {
             address(categoryRegistry), categoryRegistry.ADMIN_ROLE(), deployerAddress, "CategoryRegistry deployer admin"
         );
 
+        _require(crepToken.governor() == governorAddr, "cREP governor");
+        _require(crepToken.votingEngine() == address(votingEngine), "cREP voting engine");
+        _require(crepToken.contentRegistry() == address(registry), "cREP content registry");
+        _require(address(rewardDistributor.crepToken()) == address(crepToken), "RoundRewardDistributor cREP token");
+        _require(
+            address(rewardDistributor.votingEngine()) == address(votingEngine), "RoundRewardDistributor voting engine"
+        );
+        _require(address(rewardDistributor.registry()) == address(registry), "RoundRewardDistributor registry");
+        _require(address(votingEngine.protocolConfig()) == address(protocolConfig), "RoundVotingEngine protocol config");
+        _require(protocolConfig.rewardDistributor() == address(rewardDistributor), "ProtocolConfig reward distributor");
+        _require(protocolConfig.frontendRegistry() == address(frontendRegistry), "ProtocolConfig frontend registry");
+        _require(protocolConfig.categoryRegistry() == address(categoryRegistry), "ProtocolConfig category registry");
+        _require(protocolConfig.participationPool() == address(participationPool), "ProtocolConfig participation pool");
         _require(protocolConfig.voterIdNFT() == address(voterIdNFT), "ProtocolConfig voterIdNFT");
         _require(protocolConfig.treasury() == governance, "ProtocolConfig treasury");
+        _require(address(registry.crepToken()) == address(crepToken), "ContentRegistry cREP token");
+        _require(registry.votingEngine() == address(votingEngine), "ContentRegistry voting engine");
+        _require(address(registry.categoryRegistry()) == address(categoryRegistry), "ContentRegistry category registry");
+        _require(address(registry.protocolConfig()) == address(protocolConfig), "ContentRegistry protocol config");
+        _require(
+            registry.questionRewardPoolEscrow() == address(questionRewardPoolEscrow),
+            "ContentRegistry question reward pool escrow"
+        );
         _require(address(registry.voterIdNFT()) == address(voterIdNFT), "ContentRegistry voterIdNFT");
         _require(registry.treasury() == governance, "ContentRegistry treasury");
         _require(registry.bonusPool() == governance, "ContentRegistry bonus pool");
+        _require(address(frontendRegistry.crepToken()) == address(crepToken), "FrontendRegistry cREP token");
+        _require(address(frontendRegistry.votingEngine()) == address(votingEngine), "FrontendRegistry voting engine");
         _require(address(frontendRegistry.voterIdNFT()) == address(voterIdNFT), "FrontendRegistry voterIdNFT");
         _require(address(profileRegistry.voterIdNFT()) == address(voterIdNFT), "ProfileRegistry voterIdNFT");
+        _require(address(questionRewardPoolEscrow.crepToken()) == address(crepToken), "QuestionRewardPoolEscrow cREP");
         _require(
             address(questionRewardPoolEscrow.voterIdNFT()) == address(voterIdNFT), "QuestionRewardPoolEscrow voterIdNFT"
         );
@@ -891,15 +921,28 @@ contract DeployCuryo is ScaffoldETHDeploy {
         );
         _require(address(feedbackBonusEscrow.usdcToken()) == _resolveCeloUsdcAddress(), "FeedbackBonusEscrow USDC");
         _require(voterIdNFT.owner() == governance, "VoterIdNFT governance owner");
+        _require(voterIdNFT.governance() == governance, "VoterIdNFT governance");
+        _require(voterIdNFT.stakeRecorder() == address(votingEngine), "VoterIdNFT stake recorder");
         _require(participationPool.owner() == governance, "ParticipationPool governance owner");
+        _require(address(participationPool.crepToken()) == address(crepToken), "ParticipationPool cREP token");
+        _require(participationPool.governance() == governance, "ParticipationPool governance");
+        _require(
+            participationPool.authorizedCallers(address(rewardDistributor)),
+            "ParticipationPool reward distributor authorized"
+        );
         if (address(humanFaucet) != address(0)) {
+            _require(voterIdNFT.authorizedMinters(address(humanFaucet)), "VoterIdNFT HumanFaucet minter");
+            _require(address(humanFaucet.crepToken()) == address(crepToken), "HumanFaucet cREP token");
             _require(address(humanFaucet.voterIdNFT()) == address(voterIdNFT), "HumanFaucet voterIdNFT");
+            _require(humanFaucet.governance() == governance, "HumanFaucet governance");
             _require(humanFaucet.owner() == governance, "HumanFaucet governance owner");
             _require(humanFaucet.migrationBootstrapClosed(), "HumanFaucet migration bootstrap closed");
         }
 
         _require(governorAddr != address(0), "Governor deployed");
         CuryoGovernor governor = CuryoGovernor(payable(governorAddr));
+        _require(address(governor.crepToken()) == address(crepToken), "Governor cREP token");
+        _require(governor.timelock() == governance, "Governor timelock");
         _require(governor.poolsInitialized(), "Governor pools initialized");
         _assertExactExcludedHolders(
             governor,
@@ -915,8 +958,10 @@ contract DeployCuryo is ScaffoldETHDeploy {
             )
         );
         TimelockController timelock = TimelockController(payable(governance));
+        _requireHasRole(address(timelock), timelock.DEFAULT_ADMIN_ROLE(), address(timelock), "Timelock self admin");
         _requireHasRole(address(timelock), timelock.PROPOSER_ROLE(), governorAddr, "Timelock governor proposer");
         _requireHasRole(address(timelock), timelock.CANCELLER_ROLE(), governorAddr, "Timelock governor canceller");
+        _requireHasRole(address(timelock), timelock.EXECUTOR_ROLE(), address(0), "Timelock open executor");
         _requireLacksRole(address(timelock), timelock.PROPOSER_ROLE(), deployerAddress, "Timelock deployer proposer");
         _requireLacksRole(address(timelock), timelock.CANCELLER_ROLE(), deployerAddress, "Timelock deployer canceller");
         _requireLacksRole(
