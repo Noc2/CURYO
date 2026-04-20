@@ -22,7 +22,7 @@ const ASK_STEPS = [
   {
     icon: BanknotesIcon,
     title: "3. Earn",
-    description: "Humans win reputation and can earn USDC from bounties or awarded feedback.",
+    description: "Humans win reputation and can earn USDC from bounties or feedback.",
   },
 ];
 
