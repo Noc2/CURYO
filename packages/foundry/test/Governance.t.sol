@@ -162,7 +162,7 @@ contract GovernanceTest is Test {
         vm.prank(voter1);
         governor.propose(targets, values, calldatas, "Transferred away threshold");
 
-        assertEq(token.getLockedBalance(voter1), 1, "remaining current balance should be locked");
+        assertEq(token.getLockedBalance(voter1), governor.proposalThreshold(), "proposal threshold should be locked");
     }
 
     function test_GovernanceLocking_VoteCountsSnapshotAndLocksRemainingBalanceAfterTransfer() public {
@@ -186,7 +186,7 @@ contract GovernanceTest is Test {
 
         (, uint256 forVotes,) = governor.proposalVotes(proposalId);
         assertEq(forVotes, VOTER_BALANCE, "snapshot voting power should still count");
-        assertEq(token.getLockedBalance(voter2), 1, "remaining current balance should be locked");
+        assertEq(token.getLockedBalance(voter2), VOTER_BALANCE, "snapshot voting power should be locked");
     }
 
     function test_GovernanceLocking_UnlocksAfter7Days() public {

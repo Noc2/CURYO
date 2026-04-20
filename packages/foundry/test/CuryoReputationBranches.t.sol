@@ -315,12 +315,31 @@ contract CuryoReputationBranchesTest is Test {
         assertEq(crep.getTransferableBalance(user1), 500e6);
     }
 
-    function test_LockForGovernance_CapsFreshLockToCurrentBalance() public {
+    function test_LockForGovernance_FreshLockRecordsFullObligation() public {
         vm.prank(mockGovernor);
         crep.lockForGovernance(user1, 2_000e6);
 
-        assertEq(crep.getLockedBalance(user1), 1_000e6);
+        assertEq(crep.getLockedBalance(user1), 2_000e6);
         assertEq(crep.getTransferableBalance(user1), 0);
+    }
+
+    function test_LockForGovernance_PostSnapshotTransferStillLocksFutureBalance() public {
+        vm.prank(user1);
+        crep.transfer(user2, 1_000e6);
+        assertEq(crep.balanceOf(user1), 0);
+
+        vm.prank(mockGovernor);
+        crep.lockForGovernance(user1, 500e6);
+
+        assertEq(crep.getLockedBalance(user1), 500e6);
+        assertEq(crep.getTransferableBalance(user1), 0);
+
+        vm.prank(admin);
+        crep.mint(user1, 100e6);
+
+        vm.prank(user1);
+        vm.expectRevert("Exceeds transferable balance (governance locked)");
+        crep.transfer(user2, 1);
     }
 
     function test_GetGovernanceLock_Expired_ReturnsZero() public {

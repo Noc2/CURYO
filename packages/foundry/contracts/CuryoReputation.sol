@@ -97,9 +97,11 @@ contract CuryoReputation is ERC20, ERC1363, ERC20Permit, ERC20Votes, AccessContr
 
     /// @notice Lock tokens for governance participation. Called by governor contract.
     /// @dev Uses a single aggregate lock per address (O(1)) instead of unbounded array.
-    ///      Locks up to the account's currently held, not-yet-locked balance. Governance voting
-    ///      uses snapshots, so users who moved tokens after the snapshot can still vote, but any
-    ///      balance they still hold is locked.
+    ///      Governance voting uses snapshots, so users who moved tokens after the snapshot can
+    ///      still vote. The lock records that snapshotted voting-power obligation even when it
+    ///      exceeds the current balance, preventing post-snapshot transfers from turning the
+    ///      lock into a no-op. Future outgoing transfers remain blocked until the lock expires
+    ///      unless the account holds more than its active obligation.
     ///      If an active lock exists, the newly lockable amount is added and unlock time is extended.
     ///      If the previous lock expired, a fresh lock is created.
     /// @param account The account whose tokens to lock
@@ -110,16 +112,15 @@ contract CuryoReputation is ERC20, ERC1363, ERC20Permit, ERC20Votes, AccessContr
 
         GovernanceLock storage lock = _governanceLock[account];
         uint256 newUnlockTime = block.timestamp + GOVERNANCE_LOCK_DURATION;
-        uint256 currentBalance = balanceOf(account);
-
         if (lock.unlockTime <= block.timestamp) {
-            // Previous lock expired or no lock exists — start fresh
-            uint256 lockAmount = amount > currentBalance ? currentBalance : amount;
-            if (lockAmount == 0) return;
-            lock.amount = lockAmount;
+            // Previous lock expired or no lock exists — start fresh with the full governance obligation.
+            lock.amount = amount;
         } else {
-            // Active lock — accumulate only tokens not already covered by the existing lock.
-            uint256 lockableBalance = currentBalance > lock.amount ? currentBalance - lock.amount : 0;
+            // Active lock — preserve existing balance-capped accumulation, but include the
+            // requested governance weight so post-snapshot transfers cannot erase the lock.
+            uint256 currentBalance = balanceOf(account);
+            uint256 lockableBase = currentBalance > amount ? currentBalance : amount;
+            uint256 lockableBalance = lockableBase > lock.amount ? lockableBase - lock.amount : 0;
             uint256 additionalLock = amount > lockableBalance ? lockableBalance : amount;
             if (additionalLock > 0) {
                 lock.amount += additionalLock;
