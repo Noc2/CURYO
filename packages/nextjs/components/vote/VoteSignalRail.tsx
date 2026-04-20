@@ -2,8 +2,10 @@
 
 import { useAccount } from "wagmi";
 import { FooterLinks } from "~~/components/FooterLinks";
+import { ContentFeedbackPanel } from "~~/components/feedback/ContentFeedbackPanel";
 import { VOTING_SURFACE_BACKGROUND, VotingQuestionCard } from "~~/components/shared/VotingQuestionCard";
 import type { ContentItem } from "~~/hooks/useContentFeed";
+import { useCuryoConnectModal } from "~~/hooks/useCuryoConnectModal";
 
 interface VoteSignalRailProps {
   primaryItem: ContentItem | null;
@@ -27,6 +29,7 @@ export function VoteSignalRail({
   onVote,
 }: VoteSignalRailProps) {
   const { address } = useAccount();
+  const { openConnectModal } = useCuryoConnectModal();
 
   return (
     <div className="flex w-full min-w-0 flex-col gap-3">
@@ -58,6 +61,8 @@ export function VoteSignalRail({
           />
         ) : null}
       </aside>
+
+      {primaryItem ? <ContentFeedbackPanel item={primaryItem} onRequestConnect={openConnectModal} /> : null}
 
       <FooterLinks
         className="px-1"

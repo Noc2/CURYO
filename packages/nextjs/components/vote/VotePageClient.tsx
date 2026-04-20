@@ -5,7 +5,9 @@ import dynamic from "next/dynamic";
 import { usePathname, useSearchParams } from "next/navigation";
 import type { NextPage } from "next";
 import { useAccount } from "wagmi";
+import { XMarkIcon } from "@heroicons/react/24/outline";
 import { CategoryFilter } from "~~/components/CategoryFilter";
+import { ContentFeedbackPanel } from "~~/components/feedback/ContentFeedbackPanel";
 import { AppPageShell } from "~~/components/shared/AppPageShell";
 import { StreakCounter } from "~~/components/shared/StreakCounter";
 import { VotingQuestionCard } from "~~/components/shared/VotingQuestionCard";
@@ -218,6 +220,7 @@ const HomeInner = () => {
   const [optimisticOwnContentIds, setOptimisticOwnContentIds] = useState<Set<string>>(() => new Set());
   const [optimisticVotedContentIds, setOptimisticVotedContentIds] = useState<Set<string>>(() => new Set());
   const [localVoteCooldownVersion, setLocalVoteCooldownVersion] = useState(0);
+  const [feedbackSheetItem, setFeedbackSheetItem] = useState<ContentItem | null>(null);
   const desktopScrollContainerRef = useRef<HTMLDivElement | null>(null);
   const mobileDockContainerRef = useRef<HTMLDivElement | null>(null);
   const voteAttentionTimeoutRef = useRef<number | null>(null);
@@ -1371,6 +1374,15 @@ const HomeInner = () => {
     [markPrimaryInteraction, recordRecommendationSignal, replaceVoteLocation],
   );
 
+  const handleOpenFeedback = useCallback(
+    (item: ContentItem) => {
+      replaceVoteLocation({ contentId: item.id });
+      markPrimaryInteraction(item.id);
+      setFeedbackSheetItem(item);
+    },
+    [markPrimaryInteraction, replaceVoteLocation],
+  );
+
   useEffect(() => {
     return () => {
       if (voteAttentionTimeoutRef.current !== null && typeof window !== "undefined") {
@@ -1721,6 +1733,7 @@ const HomeInner = () => {
                           onTrackActiveIndex={handleTrackVisibleIndex}
                           onSelectByIndex={handleSelectByIndex}
                           onContentIntent={handleContentIntent}
+                          onOpenFeedback={handleOpenFeedback}
                           onSourceOpen={handleSourceOpen}
                           onToggleWatch={handleToggleWatch}
                           onToggleFollow={handleToggleFollow}
@@ -1783,6 +1796,43 @@ const HomeInner = () => {
                 variant="dock"
                 attentionToken={primaryAttentionToken}
               />
+            </div>
+          </div>
+        </div>
+      ) : null}
+
+      {feedbackSheetItem ? (
+        <div
+          className="fixed inset-0 z-50 bg-black/60 px-3 pb-3 pt-16"
+          role="dialog"
+          aria-modal="true"
+          aria-label="Feedback"
+        >
+          <button
+            type="button"
+            aria-label="Close feedback"
+            className="absolute inset-0 h-full w-full cursor-default"
+            onClick={() => setFeedbackSheetItem(null)}
+          />
+          <div className="relative ml-auto mr-auto flex max-h-[86svh] max-w-lg flex-col overflow-hidden rounded-t-[1.5rem] bg-base-100 shadow-2xl ring-1 ring-base-content/10">
+            <div className="flex shrink-0 items-center justify-between gap-3 border-b border-base-content/10 px-4 py-3">
+              <div className="min-w-0">
+                <p className="text-sm font-semibold text-base-content">Feedback</p>
+                <p className="truncate text-xs text-base-content/50">
+                  {feedbackSheetItem.question || feedbackSheetItem.title}
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setFeedbackSheetItem(null)}
+                className="btn btn-ghost btn-sm btn-circle shrink-0 text-base-content/70 hover:text-base-content"
+                aria-label="Close feedback"
+              >
+                <XMarkIcon className="h-5 w-5" />
+              </button>
+            </div>
+            <div className="min-h-0 overflow-y-auto p-3">
+              <ContentFeedbackPanel item={feedbackSheetItem} variant="sheet" onRequestConnect={openConnectModal} />
             </div>
           </div>
         </div>

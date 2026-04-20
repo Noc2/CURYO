@@ -2,34 +2,19 @@ import { ROUND_STATE, type RoundState } from "@curyo/contracts/protocol";
 import { and, desc, eq, inArray, isNull } from "drizzle-orm";
 import { db } from "~~/lib/db";
 import { contentFeedback } from "~~/lib/db/schema";
+import {
+  CONTENT_FEEDBACK_BODY_MAX_LENGTH,
+  CONTENT_FEEDBACK_SOURCE_URL_MAX_LENGTH,
+  CONTENT_FEEDBACK_TYPES,
+  CONTENT_FEEDBACK_TYPE_LABELS,
+  type ContentFeedbackItem,
+  type ContentFeedbackListResult,
+  type ContentFeedbackType,
+} from "~~/lib/feedback/types";
 import { isValidWalletAddress, normalizeContentId, normalizeWalletAddress } from "~~/lib/watchlist/contentWatch";
 import { ponderApi } from "~~/services/ponder/client";
 import { containsBlockedText, containsBlockedUrl } from "~~/utils/contentFilter";
 
-export const CONTENT_FEEDBACK_TYPES = [
-  "evidence",
-  "clarification",
-  "concern",
-  "counterpoint",
-  "source_quality",
-  "ai_note",
-  "vote_rationale",
-] as const;
-
-export type ContentFeedbackType = (typeof CONTENT_FEEDBACK_TYPES)[number];
-
-export const CONTENT_FEEDBACK_TYPE_LABELS: Record<ContentFeedbackType, string> = {
-  evidence: "Evidence",
-  clarification: "Clarification",
-  concern: "Concern",
-  counterpoint: "Counterpoint",
-  source_quality: "Source quality",
-  ai_note: "AI note",
-  vote_rationale: "Vote rationale",
-};
-
-export const CONTENT_FEEDBACK_BODY_MAX_LENGTH = 800;
-export const CONTENT_FEEDBACK_SOURCE_URL_MAX_LENGTH = 2048;
 const CONTENT_FEEDBACK_LIST_LIMIT = 100;
 const APPROVED_MODERATION_STATUS = "approved";
 const HIDDEN_UNTIL_SETTLEMENT_STATUS = "hidden_until_settlement";
@@ -52,32 +37,6 @@ export interface ContentFeedbackRoundContext {
   currentRoundId: string | null;
   terminalRoundIds: Set<string>;
   settlementComplete: boolean;
-}
-
-export interface ContentFeedbackItem {
-  id: number;
-  contentId: string;
-  roundId: string | null;
-  authorAddress: `0x${string}`;
-  feedbackType: ContentFeedbackType;
-  feedbackTypeLabel: string;
-  body: string;
-  sourceUrl: string | null;
-  moderationStatus: string;
-  visibilityStatus: string;
-  createdAt: string;
-  updatedAt: string;
-  isOwn: boolean;
-  isPublic: boolean;
-}
-
-export interface ContentFeedbackListResult {
-  items: ContentFeedbackItem[];
-  count: number;
-  publicCount: number;
-  ownHiddenCount: number;
-  settlementComplete: boolean;
-  openRoundId: string | null;
 }
 
 type FeedbackRow = typeof contentFeedback.$inferSelect;

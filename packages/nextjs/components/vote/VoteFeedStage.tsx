@@ -33,6 +33,7 @@ interface VoteFeedStageProps {
   onTrackActiveIndex: (targetIndex: number) => boolean;
   onSelectByIndex: (targetIndex: number) => boolean;
   onContentIntent: (item: ContentItem) => void;
+  onOpenFeedback?: (item: ContentItem) => void;
   onSourceOpen: (item: ContentItem) => void;
   onToggleWatch: (contentId: bigint) => void;
   onToggleFollow: (address: string) => void;
@@ -79,6 +80,7 @@ export function VoteFeedStage({
   onTrackActiveIndex,
   onSelectByIndex,
   onContentIntent,
+  onOpenFeedback,
   onSourceOpen,
   onToggleWatch,
   onToggleFollow,
@@ -1187,6 +1189,7 @@ export function VoteFeedStage({
               titleId={titleId}
               isActive={isActiveCard}
               onContentIntent={contentItem => onContentIntent(contentItem)}
+              onOpenFeedback={onOpenFeedback}
               onSourceOpen={contentItem => onSourceOpen(contentItem)}
               onToggleWatch={onToggleWatch}
               onToggleFollow={onToggleFollow}

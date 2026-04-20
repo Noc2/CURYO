@@ -2,7 +2,12 @@
 
 import { type MouseEvent, memo, useEffect, useState } from "react";
 import dynamic from "next/dynamic";
-import { ArrowTopRightOnSquareIcon, ChevronLeftIcon, ChevronRightIcon } from "@heroicons/react/24/outline";
+import {
+  ArrowTopRightOnSquareIcon,
+  ChatBubbleLeftRightIcon,
+  ChevronLeftIcon,
+  ChevronRightIcon,
+} from "@heroicons/react/24/outline";
 import { ShareIcon } from "@heroicons/react/24/outline";
 import { ContentEmbed } from "~~/components/content/ContentEmbed";
 import { QuestionDescription, type QuestionReferenceContentSummary } from "~~/components/content/QuestionDescription";
@@ -75,6 +80,7 @@ interface FeedVoteCardProps {
   titleId?: string;
   isActive?: boolean;
   onContentIntent?: (item: ContentItem) => void;
+  onOpenFeedback?: (item: ContentItem) => void;
   onSourceOpen?: (item: ContentItem) => void;
   onToggleWatch: (id: bigint) => void;
   onToggleFollow: (address: string) => void;
@@ -92,6 +98,7 @@ export const FeedVoteCard = memo(function FeedVoteCard({
   titleId,
   isActive = true,
   onContentIntent,
+  onOpenFeedback,
   onSourceOpen,
   onToggleWatch,
   onToggleFollow,
@@ -218,6 +225,7 @@ export const FeedVoteCard = memo(function FeedVoteCard({
           <FeedContentMetaCard
             item={item}
             submitterProfile={submitterProfile}
+            onOpenFeedback={onOpenFeedback}
             onSourceOpen={onSourceOpen}
             normalizedAddress={normalizedAddress}
             following={following}
@@ -239,6 +247,7 @@ export const FeedVoteCard = memo(function FeedVoteCard({
 interface FeedContentMetaCardProps {
   item: ContentItem;
   submitterProfile?: SubmitterProfile;
+  onOpenFeedback?: (item: ContentItem) => void;
   onSourceOpen?: (item: ContentItem) => void;
   normalizedAddress?: string;
   following: boolean;
@@ -362,6 +371,7 @@ function ContentMediaCarousel({
 function FeedContentMetaCard({
   item,
   submitterProfile,
+  onOpenFeedback,
   onSourceOpen,
   normalizedAddress,
   following,
@@ -440,6 +450,16 @@ function FeedContentMetaCard({
               />
             ) : null}
             <WatchContentButton watched={watched} pending={watchPending} onClick={() => onToggleWatch(item.id)} />
+            {onOpenFeedback ? (
+              <button
+                type="button"
+                onClick={() => onOpenFeedback(item)}
+                className="btn btn-ghost btn-sm btn-circle text-base-content/70 hover:text-base-content"
+                aria-label="Open feedback"
+              >
+                <ChatBubbleLeftRightIcon className="h-4 w-4" />
+              </button>
+            ) : null}
             <button
               type="button"
               onClick={() => setShowShare(true)}
