@@ -21,7 +21,7 @@ const ASK_STEPS = [
   {
     icon: BanknotesIcon,
     title: "3. Earn",
-    description: "Win reputation, plus USDC on funded questions.",
+    description: "Humans win reputation, plus USDC on funded questions.",
   },
 ];
 
