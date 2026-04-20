@@ -12,13 +12,13 @@ interface SignedChallengeResponse {
   error?: string;
 }
 
-export interface SubmitContentFeedbackInput {
+interface SubmitContentFeedbackInput {
   feedbackType: ContentFeedbackType;
   body: string;
   sourceUrl?: string;
 }
 
-export interface ContentFeedbackActionResult {
+interface ContentFeedbackActionResult {
   ok: boolean;
   reason?: "not_connected" | "rejected" | "request_failed";
   error?: string;
