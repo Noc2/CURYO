@@ -1167,6 +1167,7 @@ export function ContentSubmissionSection() {
                 maxLength={MAX_CONTENT_DESCRIPTION_LENGTH}
               />
               <div className="mt-2 space-y-1.5">
+                <p className="text-sm font-medium text-base-content/60">Related question (optional)</p>
                 <div className="flex flex-col gap-2 sm:flex-row">
                   <input
                     type="text"
@@ -1239,7 +1240,7 @@ export function ContentSubmissionSection() {
                   imageMediaMissing || videoMediaMissing ? "text-error" : ""
                 }`}
               >
-                Media
+                Media <span className="font-normal text-base-content/40">(optional)</span>
                 <span className="font-normal text-base-content/40">
                   {mediaMode === "images" ? `(1-${MAX_SUBMISSION_IMAGE_URLS} images)` : "(YouTube)"}
                 </span>
@@ -1465,34 +1466,37 @@ export function ContentSubmissionSection() {
                       </button>
                     ))}
                 </div>
-                <div className="mt-3 flex gap-2">
-                  <input
-                    type="text"
-                    placeholder="Add custom category..."
-                    className={`input input-bordered input-sm flex-1 bg-base-100 ${customSubcategoryError ? "input-error" : ""}`}
-                    value={customSubcategory}
-                    onChange={e => setCustomSubcategory(e.target.value)}
-                    onKeyDown={e => {
-                      if (e.key === "Enter") {
-                        e.preventDefault();
-                        handleAddCustomSubcategory();
+                <div className="mt-3">
+                  <p className="mb-2 text-sm font-medium text-base-content/60">Custom category (optional)</p>
+                  <div className="flex gap-2">
+                    <input
+                      type="text"
+                      placeholder="Add custom category..."
+                      className={`input input-bordered input-sm flex-1 bg-base-100 ${customSubcategoryError ? "input-error" : ""}`}
+                      value={customSubcategory}
+                      onChange={e => setCustomSubcategory(e.target.value)}
+                      onKeyDown={e => {
+                        if (e.key === "Enter") {
+                          e.preventDefault();
+                          handleAddCustomSubcategory();
+                        }
+                      }}
+                      disabled={selectedSubcategories.length >= 3}
+                    />
+                    <button
+                      type="button"
+                      onClick={handleAddCustomSubcategory}
+                      disabled={
+                        !customSubcategory.trim() ||
+                        customSubcategoryError !== null ||
+                        selectedSubcategories.length >= 3 ||
+                        selectedSubcategories.includes(customSubcategory.trim())
                       }
-                    }}
-                    disabled={selectedSubcategories.length >= 3}
-                  />
-                  <button
-                    type="button"
-                    onClick={handleAddCustomSubcategory}
-                    disabled={
-                      !customSubcategory.trim() ||
-                      customSubcategoryError !== null ||
-                      selectedSubcategories.length >= 3 ||
-                      selectedSubcategories.includes(customSubcategory.trim())
-                    }
-                    className="btn btn-outline btn-sm"
-                  >
-                    Add
-                  </button>
+                      className="btn btn-outline btn-sm"
+                    >
+                      Add
+                    </button>
+                  </div>
                 </div>
                 {customSubcategoryError ? <p className="mt-2 text-base text-error">{customSubcategoryError}</p> : null}
                 {questionStepAttempted && selectedSubcategories.length === 0 ? (
@@ -1734,6 +1738,7 @@ export function ContentSubmissionSection() {
                 </div>
 
                 <div className="space-y-2">
+                  <p className="text-sm font-medium text-base-content/60">Bounty expiry (optional)</p>
                   <div className="grid grid-cols-2 gap-2">
                     <button
                       type="button"
