@@ -9,7 +9,7 @@ export type BotRoundConfig = {
 
 export type BotRoundConfigOverrides = Partial<BotRoundConfig>;
 
-export const DEFAULT_BOT_ROUND_CONFIG: BotRoundConfig = {
+const DEFAULT_BOT_ROUND_CONFIG: BotRoundConfig = {
   epochDuration: BigInt(DEFAULT_ROUND_CONFIG.epochDurationSeconds),
   maxDuration: BigInt(DEFAULT_ROUND_CONFIG.maxDurationSeconds),
   minVoters: BigInt(DEFAULT_ROUND_CONFIG.minVoters),

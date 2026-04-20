@@ -17,9 +17,9 @@ export const X402_CELO_USDC_BY_CHAIN_ID: Record<number, `0x${string}`> = {
 
 export const X402_SUBMISSION_REWARD_ASSET_USDC = 1;
 export const X402_USDC_DECIMALS = 6;
-export const X402_DEFAULT_SUBMISSION_BOUNTY_USDC = 1_000_000n;
-export const X402_MIN_REWARD_POOL_REQUIRED_VOTERS = 3n;
-export const X402_MIN_REWARD_POOL_SETTLED_ROUNDS = 1n;
+const X402_DEFAULT_SUBMISSION_BOUNTY_USDC = 1_000_000n;
+const X402_MIN_REWARD_POOL_REQUIRED_VOTERS = 3n;
+const X402_MIN_REWARD_POOL_SETTLED_ROUNDS = 1n;
 
 const DIRECT_IMAGE_URL_PATTERN = /^https:\/\/.+\.(?:avif|gif|jpe?g|png|webp)(?:[?#].*)?$/i;
 const CLIENT_REQUEST_ID_PATTERN = /^[A-Za-z0-9._:-]{4,160}$/;

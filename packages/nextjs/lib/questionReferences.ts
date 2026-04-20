@@ -3,13 +3,13 @@ export const MAX_QUESTION_REFERENCE_COUNT = 3;
 const QUESTION_REFERENCE_PATTERN = /\[\[\s*question\s*:\s*([0-9]+)\s*(?:\|\s*([^\]\r\n]*?)\s*)?\]\]/gi;
 const POSITIVE_INTEGER_PATTERN = /^[0-9]+$/;
 
-export type QuestionReference = {
+type QuestionReference = {
   contentId: string;
   label?: string;
   raw: string;
 };
 
-export type QuestionReferenceSegment =
+type QuestionReferenceSegment =
   | {
       type: "text";
       text: string;
@@ -21,7 +21,7 @@ export type QuestionReferenceSegment =
       raw: string;
     };
 
-export type ParsedQuestionReferences = {
+type ParsedQuestionReferences = {
   segments: QuestionReferenceSegment[];
   references: QuestionReference[];
 };

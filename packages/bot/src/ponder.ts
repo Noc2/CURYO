@@ -1,7 +1,7 @@
 import { config } from "./config.js";
 import { fetchWithTimeout } from "./utils.js";
 
-export interface PonderContentItem {
+interface PonderContentItem {
   id: string;
   submitter: string;
   url: string;

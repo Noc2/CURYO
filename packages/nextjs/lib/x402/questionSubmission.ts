@@ -255,7 +255,7 @@ export function getX402QuestionFallbackChainId(): number | undefined {
   return getPrimaryServerTargetNetwork()?.id;
 }
 
-export function resolveX402QuestionConfig(chainId: number): X402QuestionSubmissionConfig {
+function resolveX402QuestionConfig(chainId: number): X402QuestionSubmissionConfig {
   const targetNetwork = getServerTargetNetworkById(chainId);
   if (!targetNetwork) {
     throw new X402QuestionConfigError(`Chain ${chainId} is not configured for this server.`);
@@ -427,7 +427,7 @@ function readSubmissionResult(receipt: TransactionReceipt): {
   return { contentId, rewardPoolId };
 }
 
-export async function executeX402QuestionSubmission(params: {
+async function executeX402QuestionSubmission(params: {
   config: X402QuestionSubmissionConfig;
   payload: X402QuestionPayload;
 }): Promise<{ contentId: bigint; rewardPoolId: bigint | null; transactionHashes: Hex[] }> {

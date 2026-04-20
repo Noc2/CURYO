@@ -85,7 +85,7 @@ function parseTokenAmount6(value: string): bigint | null {
   }
 }
 
-export function formatTokenAmount6(value: bigint | number | string | undefined | null): string {
+function formatTokenAmount6(value: bigint | number | string | undefined | null): string {
   const raw = typeof value === "bigint" ? value : BigInt(value ?? 0);
   const whole = raw / 1_000_000n;
   const fractional = raw % 1_000_000n;
