@@ -133,6 +133,7 @@ contract ParticipationPool is IParticipationPool, Ownable, ReentrancyGuardTransi
     /// @param amount Amount to withdraw (use type(uint256).max for full tracked pool balance)
     function withdrawRemaining(address to, uint256 amount) external onlyOwner nonReentrant {
         require(to != address(0), "Invalid address");
+        require(owner() == governance, "Governance handoff required");
 
         uint256 withdrawable = poolBalance;
         uint256 withdrawAmount = amount > withdrawable ? withdrawable : amount;

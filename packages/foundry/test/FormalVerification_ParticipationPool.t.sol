@@ -237,6 +237,9 @@ contract FormalVerification_ParticipationPoolTest is Test {
         pool.reserveReward(caller, 7e6);
 
         vm.prank(admin);
+        pool.transferOwnership(governance);
+
+        vm.prank(governance);
         pool.withdrawRemaining(admin, type(uint256).max);
 
         assertEq(pool.poolBalance(), 0, "all unreserved pool funds should be withdrawn");

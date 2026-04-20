@@ -417,11 +417,12 @@ contract ParticipationPoolTest is Test {
         uint256 amount = 1_000_000e6;
         uint256 poolBefore = pool.poolBalance();
         uint256 recipientBefore = crepToken.balanceOf(admin);
+        _handoffToGovernance();
 
         vm.expectEmit(true, false, false, true);
         emit ParticipationPool.PoolWithdrawal(admin, amount);
 
-        vm.prank(admin);
+        vm.prank(governance);
         pool.withdrawRemaining(admin, amount);
 
         assertEq(pool.poolBalance(), poolBefore - amount);
@@ -430,8 +431,9 @@ contract ParticipationPoolTest is Test {
 
     function test_WithdrawRemaining_FullBalance() public {
         uint256 fullBalance = pool.poolBalance();
+        _handoffToGovernance();
 
-        vm.prank(admin);
+        vm.prank(governance);
         pool.withdrawRemaining(admin, type(uint256).max);
 
         assertEq(pool.poolBalance(), 0);
@@ -444,6 +446,12 @@ contract ParticipationPoolTest is Test {
         pool.withdrawRemaining(unauthorized, 1_000e6);
     }
 
+    function test_WithdrawRemaining_RevertBeforeGovernanceHandoff() public {
+        vm.prank(admin);
+        vm.expectRevert("Governance handoff required");
+        pool.withdrawRemaining(admin, 1_000e6);
+    }
+
     function test_WithdrawRemaining_RevertZeroAddress() public {
         vm.prank(admin);
         vm.expectRevert("Invalid address");
@@ -452,7 +460,8 @@ contract ParticipationPoolTest is Test {
 
     function test_WithdrawRemaining_RevertNothingToWithdraw() public {
         _setPoolBalance(0);
-        vm.prank(admin);
+        _handoffToGovernance();
+        vm.prank(governance);
         vm.expectRevert("Nothing to withdraw");
         pool.withdrawRemaining(admin, 1e6);
     }
@@ -463,8 +472,9 @@ contract ParticipationPoolTest is Test {
 
         uint256 contractBalanceBefore = crepToken.balanceOf(address(pool));
         uint256 reservedBefore = pool.reservedBalance();
+        _handoffToGovernance();
 
-        vm.prank(admin);
+        vm.prank(governance);
         pool.withdrawRemaining(admin, type(uint256).max);
 
         assertEq(pool.poolBalance(), 0, "pool balance should be fully withdrawn");
@@ -570,8 +580,9 @@ contract ParticipationPoolTest is Test {
 
     function test_WithdrawRemaining_FunctionalWithNonReentrant() public {
         uint256 amount = 1_000e6;
+        _handoffToGovernance();
 
-        vm.prank(admin);
+        vm.prank(governance);
         pool.withdrawRemaining(admin, amount);
         assertEq(pool.poolBalance(), POOL_AMOUNT - amount);
     }
@@ -585,6 +596,11 @@ contract ParticipationPoolTest is Test {
         uint256 reward = stakeAmount * pool.getCurrentRateBps() / 10000;
         vm.prank(caller);
         return pool.distributeReward(recipient, reward);
+    }
+
+    function _handoffToGovernance() internal {
+        vm.prank(admin);
+        pool.transferOwnership(governance);
     }
 
     /// @dev Directly set totalDistributed for gas-efficient tier testing

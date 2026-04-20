@@ -219,8 +219,9 @@ contract ParticipationPoolBranchesTest is Test {
     function test_WithdrawRemaining_ExceedsBalance_CapsAtBalance() public {
         uint256 amount = pool.poolBalance() + 1_000e6;
         uint256 expected = pool.poolBalance();
+        _handoffToGovernance();
 
-        vm.prank(admin);
+        vm.prank(governance);
         pool.withdrawRemaining(user1, amount);
 
         assertEq(pool.poolBalance(), 0);
@@ -229,8 +230,9 @@ contract ParticipationPoolBranchesTest is Test {
 
     function test_WithdrawRemaining_NothingToWithdraw_Reverts() public {
         _setPoolBalance(0);
+        _handoffToGovernance();
 
-        vm.prank(admin);
+        vm.prank(governance);
         vm.expectRevert("Nothing to withdraw");
         pool.withdrawRemaining(user1, 1e6);
     }
@@ -238,8 +240,9 @@ contract ParticipationPoolBranchesTest is Test {
     function test_WithdrawRemaining_DoesNotTouchReservedFunds() public {
         vm.prank(authorizedCaller);
         pool.reserveReward(authorizedCaller, 5e6);
+        _handoffToGovernance();
 
-        vm.prank(admin);
+        vm.prank(governance);
         pool.withdrawRemaining(user1, type(uint256).max);
 
         assertEq(pool.poolBalance(), 0);
@@ -305,6 +308,11 @@ contract ParticipationPoolBranchesTest is Test {
         uint256 reward = stakeAmount * pool.getCurrentRateBps() / 10000;
         vm.prank(caller);
         return pool.distributeReward(recipient, reward);
+    }
+
+    function _handoffToGovernance() internal {
+        vm.prank(admin);
+        pool.transferOwnership(governance);
     }
 
     /// @dev Use vm.store to set totalDistributed (slot 2 after immutables)
