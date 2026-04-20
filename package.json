@@ -45,7 +45,6 @@
     "generate": "yarn foundry:generate",
     "seed": "bash packages/foundry/script/SeedContent.sh",
     "postinstall": "husky install",
-    "ipfs": "yarn workspace @curyo/nextjs ipfs",
     "lint": "yarn next:lint && yarn foundry:lint",
     "next:test": "yarn workspace @curyo/nextjs test",
     "next:build": "yarn workspace @curyo/nextjs build",

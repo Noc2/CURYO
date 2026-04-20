@@ -146,14 +146,4 @@ const nextConfig: NextConfig = {
   ],
 };
 
-const isIpfs = process.env.NEXT_PUBLIC_IPFS_BUILD === "true";
-
-if (isIpfs) {
-  nextConfig.output = "export";
-  nextConfig.trailingSlash = true;
-  nextConfig.images = {
-    unoptimized: true,
-  };
-}
-
 module.exports = process.env.ANALYZE === "true" ? withBundleAnalyzer({ enabled: true })(nextConfig) : nextConfig;
