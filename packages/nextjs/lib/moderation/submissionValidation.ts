@@ -1,5 +1,6 @@
 import { MAX_CONTENT_DESCRIPTION_LENGTH } from "~~/lib/contentDescription";
 import { MAX_QUESTION_LENGTH } from "~~/lib/contentTitle";
+import { getQuestionReferenceValidationError } from "~~/lib/questionReferences";
 import { containsBlockedText } from "~~/utils/contentFilter";
 
 export function getContentTitleValidationError(value: string): string | null {
@@ -17,7 +18,11 @@ export function getContentDescriptionValidationError(value: string): string | nu
   }
 
   const check = containsBlockedText(value);
-  return check.blocked ? "Your description contains prohibited content" : null;
+  if (check.blocked) {
+    return "Your description contains prohibited content";
+  }
+
+  return getQuestionReferenceValidationError(value);
 }
 
 export function getContentTagValidationError(value: string): string | null {

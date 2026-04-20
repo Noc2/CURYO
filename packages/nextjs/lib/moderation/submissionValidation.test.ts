@@ -18,6 +18,13 @@ test("getContentDescriptionValidationError rejects prohibited terms", () => {
   );
 });
 
+test("getContentDescriptionValidationError limits question references", () => {
+  assert.equal(
+    getContentDescriptionValidationError("[[question:1]] [[question:2]] [[question:3]] [[question:4]]"),
+    "Description can reference up to 3 questions",
+  );
+});
+
 test("getContentTagValidationError rejects prohibited custom tags", () => {
   assert.equal(getContentTagValidationError("rule34"), "This category contains prohibited content");
 });
