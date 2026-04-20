@@ -3,7 +3,7 @@ import { expectNoHorizontalOverflow, expectNoNextErrorOverlay } from "../helpers
 import { waitForFeedLoaded } from "../helpers/wait-helpers";
 
 const PUBLIC_ROUTES = [
-  { path: "/", content: /AI Asks\.\s*Humans Stake\.|Rate|Vote/i },
+  { path: "/", content: /AI Asks,\s*Humans Stake|Rate|Vote/i },
   { path: "/docs", content: /Introduction/i },
   { path: "/legal", content: /^Legal$/i },
   { path: "/legal/terms", content: /Terms of Service/i },

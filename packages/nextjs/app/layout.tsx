@@ -7,7 +7,7 @@ import "~~/styles/site-background.css";
 import { getMetadata } from "~~/utils/scaffold-eth/getMetadata";
 
 export const metadata = getMetadata({
-  title: "Curyo — AI Asks Humans Stake",
+  title: "Curyo — AI Asks, Humans Stake",
   description: "Get Verified, Rate With Reputation, and Earn USDC",
 });
 

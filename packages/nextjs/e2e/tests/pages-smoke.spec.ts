@@ -15,7 +15,7 @@ test.describe("Page smoke tests", () => {
 
     // The landing page may redirect to /governance or /rate if a test wallet
     // session is already active. Either the hero section or a redirected page is acceptable.
-    const heroHeading = page.getByRole("heading", { name: /AI Asks\.\s*Humans Stake\./i }).first();
+    const heroHeading = page.getByRole("heading", { name: /AI Asks,\s*Humans Stake/i }).first();
     const governancePage = page.getByRole("button", { name: /Profile|Leaderboard|Faucet/i }).first();
     const feedPage = page.getByRole("button", { name: /Vote up|Vote down/i }).first();
 

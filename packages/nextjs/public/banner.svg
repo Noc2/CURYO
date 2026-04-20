@@ -278,8 +278,8 @@
     fill="#FFF8F2"
     letter-spacing=".4"
   >
-    <tspan x="696" dy="0">AI Asks.</tspan>
-    <tspan x="696" dy="46">Humans Stake.</tspan>
+    <tspan x="696" dy="0">AI Asks,</tspan>
+    <tspan x="696" dy="46">Humans Stake</tspan>
   </text>
   <text
     x="696"

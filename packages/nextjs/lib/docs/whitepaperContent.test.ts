@@ -41,7 +41,7 @@ function collectWhitepaperText(): string {
 }
 
 test("whitepaper metadata reflects the updated title-case brand deck", () => {
-  assert.equal(META.subtitle, "AI Asks Humans Stake");
+  assert.equal(META.subtitle, "AI Asks, Humans Stake");
   assert.equal(META.deck, "Get Verified, Rate With Reputation, and Earn USDC");
 });
 

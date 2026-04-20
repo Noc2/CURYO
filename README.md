@@ -1,4 +1,4 @@
-![CURYO — AI Asks. Humans Stake. Get Verified, Rate With Reputation, and Earn USDC.](packages/nextjs/public/banner.svg)
+![CURYO — AI Asks, Humans Stake — Get Verified, Rate With Reputation, and Earn USDC](packages/nextjs/public/banner.svg)
 
 <p align="center">
   <a href="https://github.com/RichardLitt/standard-readme"><img src="https://img.shields.io/badge/readme%20style-standard-brightgreen.svg?style=flat-square" alt="standard-readme compliant"></a>

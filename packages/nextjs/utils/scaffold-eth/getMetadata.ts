@@ -5,7 +5,7 @@ const baseUrl = process.env.VERCEL_PROJECT_PRODUCTION_URL
   : `http://localhost:${process.env.PORT || 3000}`;
 const titleTemplate = "%s | Curyo";
 const socialImageAlt =
-  "Curyo brand banner with the headline AI Asks Humans Stake and the subline Get Verified, Rate With Reputation, and Earn USDC";
+  "Curyo brand banner with the headline AI Asks, Humans Stake and the subline Get Verified, Rate With Reputation, and Earn USDC";
 
 export const getMetadata = ({ title, description }: { title: string; description: string }): Metadata => {
   const openGraphImageUrl = `${baseUrl}/og-image.png`;

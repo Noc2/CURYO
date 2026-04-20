@@ -3,7 +3,7 @@ import { spawnSync } from "node:child_process";
 import test from "node:test";
 
 const socialImageAlt =
-  "Curyo brand banner with the headline AI Asks Humans Stake and the subline Get Verified, Rate With Reputation, and Earn USDC";
+  "Curyo brand banner with the headline AI Asks, Humans Stake and the subline Get Verified, Rate With Reputation, and Earn USDC";
 
 type MetadataSnapshot = {
   description?: string | null;
@@ -101,7 +101,7 @@ test("getMetadata uses localhost URLs and the updated brand copy when no product
       VERCEL_PROJECT_PRODUCTION_URL: undefined,
     },
     {
-      title: "Curyo — AI Asks Humans Stake",
+      title: "Curyo — AI Asks, Humans Stake",
       description: "Get Verified, Rate With Reputation, and Earn USDC",
     },
   );
@@ -109,7 +109,7 @@ test("getMetadata uses localhost URLs and the updated brand copy when no product
   assert.equal(metadata.metadataBase, "http://localhost:4321/");
   assert.equal(metadata.manifest, "/manifest.json");
   assert.deepEqual(metadata.title, {
-    default: "Curyo — AI Asks Humans Stake",
+    default: "Curyo — AI Asks, Humans Stake",
     template: "%s | Curyo",
   });
   assert.equal(metadata.description, "Get Verified, Rate With Reputation, and Earn USDC");
@@ -127,7 +127,7 @@ test("getMetadata prefers the production hostname for social metadata", () => {
       VERCEL_PROJECT_PRODUCTION_URL: "curyo.app",
     },
     {
-      title: "Curyo — AI Asks Humans Stake",
+      title: "Curyo — AI Asks, Humans Stake",
       description: "Get Verified, Rate With Reputation, and Earn USDC",
     },
   );
@@ -136,7 +136,7 @@ test("getMetadata prefers the production hostname for social metadata", () => {
   assert.equal(metadata.openGraph?.images?.[0]?.url, "https://curyo.app/og-image.png");
   assert.equal(metadata.twitter?.images?.[0]?.url, "https://curyo.app/twitter-image.png");
   assert.deepEqual(metadata.title, {
-    default: "Curyo — AI Asks Humans Stake",
+    default: "Curyo — AI Asks, Humans Stake",
     template: "%s | Curyo",
   });
 });
