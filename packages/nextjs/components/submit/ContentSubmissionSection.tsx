@@ -1195,9 +1195,6 @@ export function ContentSubmissionSection() {
                     Insert reference
                   </button>
                 </div>
-                <p className="text-sm text-base-content/45">
-                  Link another Curyo question when voters should compare both before rating.
-                </p>
                 {referenceInputError ? <p className="text-base text-error">{referenceInputError}</p> : null}
               </div>
               {questionStepAttempted && !description.trim() ? (
