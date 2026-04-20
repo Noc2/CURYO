@@ -1,18 +1,25 @@
 import { createPublicClient, encodeAbiParameters, http, keccak256, parseAbi } from "viem";
 
 const args = process.argv.slice(2);
-if (args.length < 9 || args.length === 10) {
+if (args.length < 9 || args.length === 10 || args.length > 20 || (args.length > 16 && args.length < 20)) {
   console.error(
-    "Usage: node buildSubmissionReservation.js <rpcUrl> <registry> <submitter> <contextUrl> <imageUrlsJson> <videoUrl> <title> <description> <tags> <categoryId> <salt> [rewardAsset] [rewardAmount] [requiredVoters] [requiredSettledRounds] [rewardPoolExpiresAt]",
+    "Usage: node buildSubmissionReservation.js <rpcUrl> <registry> <submitter> <contextUrl> <imageUrlsJson> <videoUrl> <title> <description> <tags> <categoryId> <salt> [rewardAsset] [rewardAmount] [requiredVoters] [requiredSettledRounds] [rewardPoolExpiresAt] [epochDuration maxDuration minVoters maxVoters]",
   );
   process.exit(1);
 }
 
+const ZERO_ADDRESS = "0x0000000000000000000000000000000000000000";
 const DEFAULT_REWARD_ASSET = 0n;
 const DEFAULT_REWARD_AMOUNT = 1_000_000n;
 const DEFAULT_REQUIRED_VOTERS = 3n;
 const DEFAULT_REQUIRED_SETTLED_ROUNDS = 1n;
 const DEFAULT_REWARD_POOL_EXPIRES_AT = 0n;
+const DEFAULT_ROUND_CONFIG = {
+  epochDuration: 20 * 60,
+  maxDuration: 7 * 24 * 60 * 60,
+  minVoters: 3,
+  maxVoters: 1000,
+};
 
 const MAX_SUBMISSION_IMAGE_URLS = 4;
 const DIRECT_IMAGE_URL_PATTERN = /^https:\/\/\S+\.(?:avif|gif|jpe?g|png|webp)(?:[?#]\S*)?$/i;
@@ -128,6 +135,7 @@ function parseArgs(rawArgs) {
       requiredVoters: DEFAULT_REQUIRED_VOTERS,
       requiredSettledRounds: DEFAULT_REQUIRED_SETTLED_ROUNDS,
       rewardPoolExpiresAt: DEFAULT_REWARD_POOL_EXPIRES_AT,
+      roundConfig: null,
     };
   }
 
@@ -148,6 +156,10 @@ function parseArgs(rawArgs) {
     requiredVoters = DEFAULT_REQUIRED_VOTERS.toString(),
     requiredSettledRounds = DEFAULT_REQUIRED_SETTLED_ROUNDS.toString(),
     rewardPoolExpiresAt = DEFAULT_REWARD_POOL_EXPIRES_AT.toString(),
+    epochDuration,
+    maxDuration,
+    minVoters,
+    maxVoters,
   ] = rawArgs;
   const imageUrls = parseImageUrls(imageUrlsJson, { allowEmpty: true });
   const trimmedVideoUrl = videoUrl.trim();
@@ -175,6 +187,42 @@ function parseArgs(rawArgs) {
     requiredVoters: BigInt(requiredVoters),
     requiredSettledRounds: BigInt(requiredSettledRounds),
     rewardPoolExpiresAt: BigInt(rewardPoolExpiresAt),
+    roundConfig:
+      epochDuration === undefined
+        ? null
+        : {
+            epochDuration: Number(epochDuration),
+            maxDuration: Number(maxDuration),
+            minVoters: Number(minVoters),
+            maxVoters: Number(maxVoters),
+          },
+  };
+}
+
+async function resolveDefaultRoundConfig(publicClient, registry) {
+  const protocolConfig = await publicClient.readContract({
+    address: registry,
+    abi: parseAbi(["function protocolConfig() view returns (address)"]),
+    functionName: "protocolConfig",
+  });
+
+  if (protocolConfig.toLowerCase() === ZERO_ADDRESS) {
+    return DEFAULT_ROUND_CONFIG;
+  }
+
+  const [epochDuration, maxDuration, minVoters, maxVoters] = await publicClient.readContract({
+    address: protocolConfig,
+    abi: parseAbi([
+      "function config() view returns (uint32 epochDuration, uint32 maxDuration, uint16 minVoters, uint16 maxVoters)",
+    ]),
+    functionName: "config",
+  });
+
+  return {
+    epochDuration: Number(epochDuration),
+    maxDuration: Number(maxDuration),
+    minVoters: Number(minVoters),
+    maxVoters: Number(maxVoters),
   };
 }
 
@@ -194,10 +242,12 @@ const {
   requiredVoters,
   requiredSettledRounds,
   rewardPoolExpiresAt,
+  roundConfig: roundConfigOverride,
 } = parseArgs(args);
 const publicClient = createPublicClient({
   transport: http(rpcUrl),
 });
+const roundConfig = roundConfigOverride ?? (await resolveDefaultRoundConfig(publicClient, registry));
 assertHttpsUrl(contextUrl, "Context URL");
 const [, submissionKey] = await publicClient.readContract({
   address: registry,
@@ -227,6 +277,10 @@ const revealCommitment = keccak256(
       { type: "uint256" },
       { type: "uint256" },
       { type: "uint256" },
+      { type: "uint32" },
+      { type: "uint32" },
+      { type: "uint16" },
+      { type: "uint16" },
     ],
     [
       submissionKey,
@@ -242,6 +296,10 @@ const revealCommitment = keccak256(
       requiredVoters,
       requiredSettledRounds,
       rewardPoolExpiresAt,
+      roundConfig.epochDuration,
+      roundConfig.maxDuration,
+      roundConfig.minVoters,
+      roundConfig.maxVoters,
     ],
   ),
 );
