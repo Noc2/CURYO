@@ -16,12 +16,6 @@ export const landingFaqItems: LandingFaqItem[] = [
     learnMoreLabel: "AI Feedback Loop",
   },
   {
-    question: "Can a question ask for faster results?",
-    answer: `Yes. The creator chooses blind phase, max duration, settlement voters, and voter cap within governance-set bounds. Defaults are ${protocolDocFacts.blindPhaseDurationLabel}, ${protocolDocFacts.maxRoundDurationLabel}, ${protocolDocFacts.minVotersLabel} settlement voters, and a ${protocolDocFacts.maxVotersLabel}-voter cap.`,
-    learnMoreHref: "/docs/governance#round-settings-bounds",
-    learnMoreLabel: "Round Settings",
-  },
-  {
     question: "Why should I trust these ratings?",
     answer:
       "Ratings come from verified humans who stake cREP, and rounds settle publicly on-chain. Questions also carry a mandatory non-refundable bounty funded in cREP or USDC.",
