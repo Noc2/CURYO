@@ -1101,720 +1101,733 @@ export function ContentSubmissionSection() {
   const contextMissing = questionStepAttempted && !normalizedContextUrl;
   const imageMediaMissing = false;
   const videoMediaMissing = false;
+  const pageHeading = submissionStep === 1 ? "Ask Question" : "Bounty";
+
+  const submissionStepIndicator = (
+    <div className="flex items-center gap-2 text-sm font-medium text-base-content/55">
+      <span className={submissionStep === 1 ? "text-primary" : ""}>1. Question</span>
+      <span aria-hidden="true">→</span>
+      <span className={submissionStep === 2 ? "text-primary" : ""}>2. Bounty</span>
+    </div>
+  );
+
+  const questionPreviewCard =
+    previewUrl || title || description ? (
+      <div className="surface-card rounded-2xl p-4 space-y-3">
+        <p className="text-base font-medium uppercase tracking-wider text-base-content/40">Preview</p>
+        {title ? <h3 className="line-clamp-2 text-lg font-semibold text-base-content">{title}</h3> : null}
+        {previewUrl ? <ContentEmbed url={previewUrl} title={title} description={description} compact /> : null}
+        {description ? <p className="text-base text-base-content/70">{description}</p> : null}
+        {selectedSubcategories.length > 0 ? (
+          <div className="flex flex-wrap gap-1.5">
+            {selectedSubcategories.map(tag => (
+              <span key={tag} className="rounded-full bg-primary/10 px-2 py-0.5 text-base font-medium text-primary">
+                {tag}
+              </span>
+            ))}
+          </div>
+        ) : null}
+      </div>
+    ) : (
+      <div className="surface-card rounded-2xl p-4 space-y-3">
+        <p className="text-base font-medium uppercase tracking-wider text-base-content/40">Preview</p>
+        <p className="text-base text-base-content/50">
+          Add the question and context link to preview how it will appear.
+        </p>
+      </div>
+    );
+
+  const prohibitedContentNotice = (
+    <div className="rounded-lg bg-error/10 p-4">
+      <p className="mb-2 text-base font-medium text-error">Prohibited Content</p>
+      <p className="text-base text-base-content/70">
+        Do not ask questions with illegal or harmful content. This includes but is not limited to: child exploitation
+        material, non-consensual intimate imagery, content promoting violence or terrorism, doxxing, or
+        copyright-infringing material. Violations may result in removal, blocked access, and potential legal action.
+      </p>
+    </div>
+  );
+
+  const bountyDetailsCard = (
+    <div className="surface-card-nested rounded-2xl p-4 space-y-4">
+      <div className="flex items-start justify-between gap-3">
+        <p className="flex items-center gap-1.5 text-base font-medium text-base-content">
+          Bounty
+          <InfoTooltip text="Required and non-refundable. Set the terms that eligible voters must satisfy before payout." />
+        </p>
+        <span className="shrink-0 text-sm font-semibold text-base-content/60">
+          Min {formatSubmissionRewardAmount(minimumBountyAmount, rewardAsset)}
+        </span>
+      </div>
+
+      <div className="grid grid-cols-2 gap-2">
+        <button
+          type="button"
+          aria-pressed={rewardAsset === "usdc"}
+          onClick={() => setRewardAsset("usdc")}
+          className={`btn btn-sm ${rewardAsset === "usdc" ? "btn-primary" : "btn-outline"}`}
+        >
+          USDC
+        </button>
+        <button
+          type="button"
+          aria-pressed={rewardAsset === "crep"}
+          onClick={() => setRewardAsset("crep")}
+          className={`btn btn-sm ${rewardAsset === "crep" ? "btn-primary" : "btn-outline"}`}
+        >
+          cREP
+        </button>
+      </div>
+
+      <label
+        className={`input input-bordered flex items-center gap-2 bg-base-100 ${
+          bountyStepAttempted && rewardAmountError ? "input-error" : ""
+        }`}
+      >
+        <input
+          type="text"
+          inputMode="decimal"
+          value={rewardAmount}
+          onChange={e => setRewardAmount(e.target.value)}
+          className="grow bg-transparent"
+          aria-label="Bounty amount"
+        />
+        <span className="text-sm font-semibold text-base-content/50">{rewardAsset === "crep" ? "cREP" : "USDC"}</span>
+      </label>
+      {bountyStepAttempted && rewardAmountError ? (
+        <p className="text-base text-error">{rewardAmountError}</p>
+      ) : (
+        <p className="text-sm text-base-content/55">
+          Paid from your wallet into the escrow when the question is submitted.
+        </p>
+      )}
+
+      <div className="grid gap-3 sm:grid-cols-2">
+        <label className="form-control">
+          <span className="label-text">Minimum voters</span>
+          <input
+            type="number"
+            min={MIN_REWARD_POOL_REQUIRED_VOTERS}
+            step={1}
+            value={rewardRequiredVoters}
+            onChange={e => setRewardRequiredVoters(e.target.value)}
+            className={`input input-bordered bg-base-100 ${
+              bountyStepAttempted && rewardRequiredVotersError ? "input-error" : ""
+            }`}
+          />
+          <span className="label-text-alt text-base-content/50">
+            At least {MIN_REWARD_POOL_REQUIRED_VOTERS} voters are required.
+          </span>
+        </label>
+
+        <label className="form-control">
+          <span className="label-text">Settlement rounds</span>
+          <input
+            type="number"
+            min={MIN_REWARD_POOL_SETTLED_ROUNDS}
+            step={1}
+            value={rewardRequiredSettledRounds}
+            onChange={e => setRewardRequiredSettledRounds(e.target.value)}
+            className={`input input-bordered bg-base-100 ${
+              bountyStepAttempted && rewardRequiredSettledRoundsError ? "input-error" : ""
+            }`}
+          />
+          <span className="label-text-alt text-base-content/50">
+            At least {MIN_REWARD_POOL_SETTLED_ROUNDS} round is required.
+          </span>
+        </label>
+      </div>
+      {bountyStepAttempted && rewardRequiredVotersError ? (
+        <p className="text-base text-error">{rewardRequiredVotersError}</p>
+      ) : null}
+      {bountyStepAttempted && rewardRequiredSettledRoundsError ? (
+        <p className="text-base text-error">{rewardRequiredSettledRoundsError}</p>
+      ) : null}
+
+      <div className="space-y-3 border-t border-base-300/70 pt-4">
+        <div className="flex items-start justify-between gap-3">
+          <p className="flex items-center gap-1.5 text-base font-medium text-base-content">
+            Round settings
+            <InfoTooltip text="Governance sets the allowed range. Choose what this question needs." />
+          </p>
+          <span className="text-sm font-semibold text-base-content/50">
+            Default {formatDurationLabel(roundConfigDefaults.epochDuration)}
+          </span>
+        </div>
+
+        <div className="grid gap-3 sm:grid-cols-2">
+          <label className="form-control">
+            <span className="label-text">Blind phase (minutes)</span>
+            <input
+              type="number"
+              min={Math.ceil(roundConfigBounds.minEpochDuration / 60)}
+              max={Math.floor(roundConfigBounds.maxEpochDuration / 60)}
+              step={1}
+              value={roundBlindMinutes}
+              onChange={e => {
+                setRoundConfigTouched(true);
+                setRoundBlindMinutes(e.target.value);
+              }}
+              className={`input input-bordered bg-base-100 ${
+                bountyStepAttempted && roundConfigValidationError ? "input-error" : ""
+              }`}
+            />
+          </label>
+
+          <label className="form-control">
+            <span className="label-text">Max duration (hours)</span>
+            <input
+              type="number"
+              min={Math.ceil(roundConfigBounds.minRoundDuration / 3600)}
+              max={Math.floor(roundConfigBounds.maxRoundDuration / 3600)}
+              step={1}
+              value={roundMaxDurationHours}
+              onChange={e => {
+                setRoundConfigTouched(true);
+                setRoundMaxDurationHours(e.target.value);
+              }}
+              className={`input input-bordered bg-base-100 ${
+                bountyStepAttempted && roundConfigValidationError ? "input-error" : ""
+              }`}
+            />
+          </label>
+
+          <label className="form-control">
+            <span className="label-text">Settlement voters</span>
+            <input
+              type="number"
+              min={roundConfigBounds.minSettlementVoters}
+              max={roundConfigBounds.maxSettlementVoters}
+              step={1}
+              value={roundMinVoters}
+              onChange={e => {
+                setRoundConfigTouched(true);
+                setRoundMinVoters(e.target.value);
+              }}
+              className={`input input-bordered bg-base-100 ${
+                bountyStepAttempted && roundConfigValidationError ? "input-error" : ""
+              }`}
+            />
+          </label>
+
+          <label className="form-control">
+            <span className="label-text">Voter cap</span>
+            <input
+              type="number"
+              min={roundConfigBounds.minVoterCap}
+              max={roundConfigBounds.maxVoterCap}
+              step={1}
+              value={roundMaxVoters}
+              onChange={e => {
+                setRoundConfigTouched(true);
+                setRoundMaxVoters(e.target.value);
+              }}
+              className={`input input-bordered bg-base-100 ${
+                bountyStepAttempted && roundConfigValidationError ? "input-error" : ""
+              }`}
+            />
+          </label>
+        </div>
+
+        {bountyStepAttempted && roundConfigValidationError ? (
+          <p className="text-base text-error">{roundConfigValidationError}</p>
+        ) : (
+          <p className="text-sm text-base-content/55">
+            Urgent bounties can use shorter rounds; broader questions can wait for more voters.
+          </p>
+        )}
+      </div>
+
+      <div className="space-y-2">
+        <p className="text-sm font-medium text-base-content/60">Bounty expiry (optional)</p>
+        <div className="grid grid-cols-2 gap-2">
+          <button
+            type="button"
+            aria-pressed={rewardExpiryMode === "none"}
+            onClick={() => setRewardExpiryMode("none")}
+            className={`btn btn-sm ${rewardExpiryMode === "none" ? "btn-primary" : "btn-outline"}`}
+          >
+            No expiry
+          </button>
+          <button
+            type="button"
+            aria-pressed={rewardExpiryMode === "days"}
+            onClick={() => setRewardExpiryMode("days")}
+            className={`btn btn-sm ${rewardExpiryMode === "days" ? "btn-primary" : "btn-outline"}`}
+          >
+            Duration
+          </button>
+        </div>
+        {rewardExpiryMode === "days" ? (
+          <label className="form-control">
+            <span className="label-text">Expires after (days)</span>
+            <input
+              type="number"
+              min={1}
+              step={1}
+              value={rewardExpiryDays}
+              onChange={e => setRewardExpiryDays(e.target.value)}
+              className={`input input-bordered bg-base-100 ${
+                bountyStepAttempted && rewardExpiryError ? "input-error" : ""
+              }`}
+            />
+            <span className="label-text-alt text-base-content/50">Leave it off to keep the bounty open-ended.</span>
+          </label>
+        ) : (
+          <p className="text-sm text-base-content/55">
+            The bounty stays open until it is filled or the contract rules move it along.
+          </p>
+        )}
+        {bountyStepAttempted && rewardExpiryError ? <p className="text-base text-error">{rewardExpiryError}</p> : null}
+      </div>
+    </div>
+  );
+
+  const bountyActions = (
+    <div className="flex flex-col gap-2 sm:flex-row">
+      <button
+        type="button"
+        onClick={() => {
+          setSubmissionStep(1);
+          setBountyStepAttempted(false);
+        }}
+        className="btn btn-ghost w-full sm:w-auto"
+      >
+        Back
+      </button>
+      <button
+        type="submit"
+        className="btn btn-submit w-full"
+        disabled={isSubmitting || isAwaitingSponsoredSubmitCalls || isMissingGasBalance}
+      >
+        {isSubmitting ? (
+          <span className="flex items-center gap-2">
+            <span className="loading loading-spinner loading-sm"></span>
+            Asking...
+          </span>
+        ) : (
+          "Ask Question"
+        )}
+      </button>
+    </div>
+  );
 
   return (
     <>
       <div className="surface-card rounded-2xl p-6 space-y-5" style={{ overflow: "visible" }}>
-        <h1 className={surfaceSectionHeadingClassName}>Ask Question</h1>
+        <h1 className={surfaceSectionHeadingClassName}>{pageHeading}</h1>
 
-        <form
-          onSubmit={handleSubmit}
-          noValidate
-          className="grid gap-6 xl:grid-cols-[minmax(0,1.5fr)_minmax(18rem,0.9fr)] xl:items-start"
-        >
-          <div className="xl:col-span-2 flex items-center gap-2 text-sm font-medium text-base-content/55">
-            <span className={submissionStep === 1 ? "text-primary" : ""}>1. Question</span>
-            <span aria-hidden="true">→</span>
-            <span className={submissionStep === 2 ? "text-primary" : ""}>2. Bounty</span>
-          </div>
+        <form onSubmit={handleSubmit} noValidate className="space-y-6">
+          {submissionStepIndicator}
 
-          <div className="space-y-5">
-            <div>
-              <label
-                className={`mb-2 flex items-center gap-1.5 text-base font-medium ${
-                  questionStepAttempted && !title.trim() ? "text-error" : ""
-                }`}
-              >
-                Question
-                <InfoTooltip text="Good questions are specific, subjective, and easy to compare. Focus on one clear thing voters can rate, avoid yes/no or factual prompts, and add context below." />
-              </label>
-              <input
-                type="text"
-                placeholder="Ask something subjective that voters can rate"
-                className={`input input-bordered w-full bg-base-100 ${
-                  titleError || (questionStepAttempted && !title.trim()) ? "input-error" : ""
-                }`}
-                value={title}
-                onChange={e => handleTitleChange(e.target.value)}
-                maxLength={MAX_QUESTION_LENGTH}
-              />
-              {questionStepAttempted && !title.trim() ? (
-                <p className="mt-1 text-base text-error">Question is required.</p>
-              ) : null}
-              {titleError ? <p className="mt-1 text-base text-error">{titleError}</p> : null}
-              <div className="mt-1 text-right">
-                <span className="text-base text-base-content/30">
-                  {title.length}/{MAX_QUESTION_LENGTH}
-                </span>
-              </div>
-            </div>
-
-            <div>
-              <label className="mb-2 block text-base font-medium">
-                Description <span className="font-normal text-base-content/40">(optional)</span>
-              </label>
-              <textarea
-                ref={descriptionTextareaRef}
-                placeholder="Add context voters should consider"
-                className={`textarea textarea-bordered h-24 w-full bg-base-100 ${
-                  descriptionError ? "textarea-error" : ""
-                }`}
-                value={description}
-                onChange={e => handleDescriptionChange(e.target.value)}
-                maxLength={MAX_CONTENT_DESCRIPTION_LENGTH}
-              />
-              <div className="mt-2 space-y-1.5">
-                <p className="text-sm font-medium text-base-content/60">Related question (optional)</p>
-                <div className="flex flex-col gap-2 sm:flex-row">
+          {submissionStep === 1 ? (
+            <div className="grid gap-6 xl:grid-cols-[minmax(0,1.5fr)_minmax(18rem,0.9fr)] xl:items-start">
+              <div className="space-y-5">
+                <div>
+                  <label
+                    className={`mb-2 flex items-center gap-1.5 text-base font-medium ${
+                      questionStepAttempted && !title.trim() ? "text-error" : ""
+                    }`}
+                  >
+                    Question
+                    <InfoTooltip text="Good questions are specific, subjective, and easy to compare. Focus on one clear thing voters can rate, avoid yes/no or factual prompts, and add context below." />
+                  </label>
                   <input
                     type="text"
-                    aria-label="Related question ID or link"
-                    placeholder="Question ID or /rate link"
-                    className={`input input-bordered input-sm min-w-0 flex-1 bg-base-100 ${
-                      referenceInputError ? "input-error" : ""
+                    placeholder="Ask something subjective that voters can rate"
+                    className={`input input-bordered w-full bg-base-100 ${
+                      titleError || (questionStepAttempted && !title.trim()) ? "input-error" : ""
                     }`}
-                    value={referenceInput}
-                    onChange={e => {
-                      setReferenceInput(e.target.value);
-                      setReferenceInputError(null);
-                    }}
-                    onKeyDown={event => {
-                      if (event.key === "Enter") {
-                        event.preventDefault();
-                        handleInsertQuestionReference();
-                      }
-                    }}
+                    value={title}
+                    onChange={e => handleTitleChange(e.target.value)}
+                    maxLength={MAX_QUESTION_LENGTH}
                   />
-                  <button
-                    type="button"
-                    className="btn btn-submit btn-sm shrink-0"
-                    onClick={handleInsertQuestionReference}
-                  >
-                    Insert reference
-                  </button>
+                  {questionStepAttempted && !title.trim() ? (
+                    <p className="mt-1 text-base text-error">Question is required.</p>
+                  ) : null}
+                  {titleError ? <p className="mt-1 text-base text-error">{titleError}</p> : null}
+                  <div className="mt-1 text-right">
+                    <span className="text-base text-base-content/30">
+                      {title.length}/{MAX_QUESTION_LENGTH}
+                    </span>
+                  </div>
                 </div>
-                {referenceInputError ? <p className="text-base text-error">{referenceInputError}</p> : null}
-              </div>
-              {descriptionError ? <p className="mt-1 text-base text-error">{descriptionError}</p> : null}
-              <div className="mt-1 text-right">
-                <span className="text-base text-base-content/30">
-                  {description.length}/{MAX_CONTENT_DESCRIPTION_LENGTH}
-                </span>
-              </div>
-            </div>
 
-            <div>
-              <label
-                className={`mb-2 flex items-center gap-1.5 text-base font-medium ${
-                  contextMissing || contextUrlError ? "text-error" : ""
-                }`}
-              >
-                Context Link
-                <InfoTooltip text="Required. Use the canonical source, product page, article, proposal, or other HTTPS link that voters should judge." />
-              </label>
-              <input
-                type="url"
-                placeholder={urlConfig.contextPlaceholder}
-                className={`input input-bordered w-full bg-base-100 ${
-                  contextMissing || contextUrlError ? "input-error" : ""
-                }`}
-                value={contextUrl}
-                onChange={e => handleContextUrlChange(e.target.value)}
-                onBlur={() => setContextUrlError(getContextUrlValidationError(contextUrl))}
-              />
-              {contextMissing && !contextUrlError ? (
-                <p className="mt-1 text-base text-error">Add a context link before asking.</p>
-              ) : null}
-              {contextUrlError ? <p className="mt-1 text-base text-error">{contextUrlError}</p> : null}
-            </div>
-
-            <div>
-              <label
-                className={`mb-2 flex items-center gap-1.5 text-base font-medium ${
-                  imageMediaMissing || videoMediaMissing ? "text-error" : ""
-                }`}
-              >
-                Media <span className="font-normal text-base-content/40">(optional)</span>
-                <span className="font-normal text-base-content/40">
-                  {mediaMode === "images" ? `(1-${MAX_SUBMISSION_IMAGE_URLS} images)` : "(YouTube)"}
-                </span>
-                <InfoTooltip text={urlConfig.urlHint} />
-              </label>
-              <div className="mb-3 grid grid-cols-2 gap-2">
-                <button
-                  type="button"
-                  aria-pressed={mediaMode === "images"}
-                  onClick={() => setMediaMode("images")}
-                  className={`btn btn-sm ${mediaMode === "images" ? "btn-primary" : "btn-outline"}`}
-                >
-                  Images
-                </button>
-                <button
-                  type="button"
-                  aria-pressed={mediaMode === "video"}
-                  onClick={() => setMediaMode("video")}
-                  className={`btn btn-sm ${mediaMode === "video" ? "btn-primary" : "btn-outline"}`}
-                >
-                  YouTube
-                </button>
-              </div>
-
-              {mediaMode === "images" ? (
-                <div className="space-y-2">
-                  {imageUrls.map((imageUrl, index) => (
-                    <div key={index} className="flex gap-2">
+                <div>
+                  <label className="mb-2 block text-base font-medium">
+                    Description <span className="font-normal text-base-content/40">(optional)</span>
+                  </label>
+                  <textarea
+                    ref={descriptionTextareaRef}
+                    placeholder="Add context voters should consider"
+                    className={`textarea textarea-bordered h-24 w-full bg-base-100 ${
+                      descriptionError ? "textarea-error" : ""
+                    }`}
+                    value={description}
+                    onChange={e => handleDescriptionChange(e.target.value)}
+                    maxLength={MAX_CONTENT_DESCRIPTION_LENGTH}
+                  />
+                  <div className="mt-2 space-y-1.5">
+                    <p className="text-sm font-medium text-base-content/60">Related question (optional)</p>
+                    <div className="flex flex-col gap-2 sm:flex-row">
                       <input
-                        type="url"
-                        placeholder={urlConfig.imagePlaceholder}
-                        className={`input input-bordered min-w-0 flex-1 bg-base-100 ${
-                          imageUrlErrors[index] || (imageMediaMissing && index === 0) ? "input-error" : ""
+                        type="text"
+                        aria-label="Related question ID or link"
+                        placeholder="Question ID or /rate link"
+                        className={`input input-bordered input-sm min-w-0 flex-1 bg-base-100 ${
+                          referenceInputError ? "input-error" : ""
                         }`}
-                        value={imageUrl}
-                        onChange={event => handleImageUrlChange(index, event.target.value)}
-                        onBlur={() => validateImageUrl(index, imageUrl, imageMediaMissing && index === 0)}
+                        value={referenceInput}
+                        onChange={e => {
+                          setReferenceInput(e.target.value);
+                          setReferenceInputError(null);
+                        }}
+                        onKeyDown={event => {
+                          if (event.key === "Enter") {
+                            event.preventDefault();
+                            handleInsertQuestionReference();
+                          }
+                        }}
                       />
                       <button
                         type="button"
-                        onClick={() => handleRemoveImageUrl(index)}
-                        className="btn btn-outline btn-square"
-                        aria-label={imageUrls.length === 1 ? "Clear image URL" : "Remove image URL"}
+                        className="btn btn-submit btn-sm shrink-0"
+                        onClick={handleInsertQuestionReference}
                       >
-                        <XMarkIcon className="h-4 w-4" />
+                        Insert reference
                       </button>
                     </div>
-                  ))}
-                  {imageUrlErrors.map((error, index) =>
-                    error ? (
-                      <p key={index} className="text-base text-error">
-                        {error}
-                      </p>
-                    ) : null,
-                  )}
-                  {imageMediaMissing && !imageUrlErrors.some(Boolean) ? (
-                    <p className="text-base text-error">Add at least one image URL before asking.</p>
-                  ) : null}
-                  <button
-                    type="button"
-                    onClick={handleAddImageUrl}
-                    disabled={imageUrls.length >= MAX_SUBMISSION_IMAGE_URLS}
-                    className="btn btn-outline btn-sm"
-                  >
-                    Add image
-                  </button>
+                    {referenceInputError ? <p className="text-base text-error">{referenceInputError}</p> : null}
+                  </div>
+                  {descriptionError ? <p className="mt-1 text-base text-error">{descriptionError}</p> : null}
+                  <div className="mt-1 text-right">
+                    <span className="text-base text-base-content/30">
+                      {description.length}/{MAX_CONTENT_DESCRIPTION_LENGTH}
+                    </span>
+                  </div>
                 </div>
-              ) : (
+
                 <div>
+                  <label
+                    className={`mb-2 flex items-center gap-1.5 text-base font-medium ${
+                      contextMissing || contextUrlError ? "text-error" : ""
+                    }`}
+                  >
+                    Context Link
+                    <InfoTooltip text="Required. Use the canonical source, product page, article, proposal, or other HTTPS link that voters should judge." />
+                  </label>
                   <input
                     type="url"
-                    placeholder={urlConfig.videoPlaceholder}
+                    placeholder={urlConfig.contextPlaceholder}
                     className={`input input-bordered w-full bg-base-100 ${
-                      videoUrlError || videoMediaMissing ? "input-error" : ""
+                      contextMissing || contextUrlError ? "input-error" : ""
                     }`}
-                    value={videoUrl}
-                    onChange={handleVideoUrlChange}
-                    onBlur={() => validateVideoUrl(videoUrl, videoMediaMissing)}
+                    value={contextUrl}
+                    onChange={e => handleContextUrlChange(e.target.value)}
+                    onBlur={() => setContextUrlError(getContextUrlValidationError(contextUrl))}
                   />
-                  {videoUrlError ? <p className="mt-1 text-base text-error">{videoUrlError}</p> : null}
-                  {videoMediaMissing && !videoUrlError ? (
-                    <p className="mt-1 text-base text-error">Add a YouTube URL before asking.</p>
+                  {contextMissing && !contextUrlError ? (
+                    <p className="mt-1 text-base text-error">Add a context link before asking.</p>
                   ) : null}
+                  {contextUrlError ? <p className="mt-1 text-base text-error">{contextUrlError}</p> : null}
                 </div>
-              )}
-            </div>
 
-            <div ref={categoryDropdownRef} className="relative">
-              <label
-                className={`mb-2 block text-base font-medium ${questionStepAttempted && !selectedCategory ? "text-error" : ""}`}
-              >
-                Select Category
-              </label>
-              {categoriesLoading ? (
-                <div className="input input-bordered flex w-full items-center bg-base-100">
-                  <span className="loading loading-spinner loading-sm"></span>
-                </div>
-              ) : categories.length > 0 ? (
-                <>
-                  <button
-                    type="button"
-                    onClick={() => setIsCategoryDropdownOpen(!isCategoryDropdownOpen)}
-                    className={`input input-bordered flex w-full cursor-pointer items-center justify-between bg-base-100 transition-colors hover:bg-base-200 ${
-                      questionStepAttempted && !selectedCategory ? "input-error" : ""
+                <div>
+                  <label
+                    className={`mb-2 flex items-center gap-1.5 text-base font-medium ${
+                      imageMediaMissing || videoMediaMissing ? "text-error" : ""
                     }`}
                   >
-                    {selectedCategory ? (
-                      <div className="flex items-center gap-2">
-                        <CategoryIcon name={selectedCategory.name} />
-                        <span>{selectedCategory.name}</span>
-                      </div>
-                    ) : (
-                      <span className="text-base-content/50">Select a category...</span>
-                    )}
-                    <ChevronDownIcon
-                      className={`h-5 w-5 text-base-content/50 transition-transform ${isCategoryDropdownOpen ? "rotate-180" : ""}`}
-                    />
-                  </button>
-                  {questionStepAttempted && !selectedCategory ? (
-                    <p className="mt-1 text-base text-error">Select a category before asking.</p>
-                  ) : null}
+                    Media <span className="font-normal text-base-content/40">(optional)</span>
+                    <span className="font-normal text-base-content/40">
+                      {mediaMode === "images" ? `(1-${MAX_SUBMISSION_IMAGE_URLS} images)` : "(YouTube)"}
+                    </span>
+                    <InfoTooltip text={urlConfig.urlHint} />
+                  </label>
+                  <div className="mb-3 grid grid-cols-2 gap-2">
+                    <button
+                      type="button"
+                      aria-pressed={mediaMode === "images"}
+                      onClick={() => setMediaMode("images")}
+                      className={`btn btn-sm ${mediaMode === "images" ? "btn-primary" : "btn-outline"}`}
+                    >
+                      Images
+                    </button>
+                    <button
+                      type="button"
+                      aria-pressed={mediaMode === "video"}
+                      onClick={() => setMediaMode("video")}
+                      className={`btn btn-sm ${mediaMode === "video" ? "btn-primary" : "btn-outline"}`}
+                    >
+                      YouTube
+                    </button>
+                  </div>
 
-                  {isCategoryDropdownOpen ? (
-                    <div className="absolute z-50 mt-1 w-full overflow-hidden rounded-lg border border-base-300 bg-base-100 shadow-lg">
-                      <div className="border-b border-base-300 p-2">
-                        <div className="relative">
-                          <MagnifyingGlassIcon className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-base-content/50" />
+                  {mediaMode === "images" ? (
+                    <div className="space-y-2">
+                      {imageUrls.map((imageUrl, index) => (
+                        <div key={index} className="flex gap-2">
                           <input
-                            type="text"
-                            placeholder="Search categories..."
-                            className="input input-sm w-full bg-base-200 pl-9 pr-8"
-                            value={categorySearch}
-                            onChange={e => setCategorySearch(e.target.value)}
-                            autoFocus
+                            type="url"
+                            placeholder={urlConfig.imagePlaceholder}
+                            className={`input input-bordered min-w-0 flex-1 bg-base-100 ${
+                              imageUrlErrors[index] || (imageMediaMissing && index === 0) ? "input-error" : ""
+                            }`}
+                            value={imageUrl}
+                            onChange={event => handleImageUrlChange(index, event.target.value)}
+                            onBlur={() => validateImageUrl(index, imageUrl, imageMediaMissing && index === 0)}
                           />
-                          {categorySearch ? (
-                            <button
-                              type="button"
-                              onClick={() => setCategorySearch("")}
-                              className="absolute right-2 top-1/2 -translate-y-1/2 text-base-content/50 hover:text-base-content"
-                            >
-                              <XMarkIcon className="h-4 w-4" />
-                            </button>
-                          ) : null}
+                          <button
+                            type="button"
+                            onClick={() => handleRemoveImageUrl(index)}
+                            className="btn btn-outline btn-square"
+                            aria-label={imageUrls.length === 1 ? "Clear image URL" : "Remove image URL"}
+                          >
+                            <XMarkIcon className="h-4 w-4" />
+                          </button>
                         </div>
-                      </div>
+                      ))}
+                      {imageUrlErrors.map((error, index) =>
+                        error ? (
+                          <p key={index} className="text-base text-error">
+                            {error}
+                          </p>
+                        ) : null,
+                      )}
+                      {imageMediaMissing && !imageUrlErrors.some(Boolean) ? (
+                        <p className="text-base text-error">Add at least one image URL before asking.</p>
+                      ) : null}
+                      <button
+                        type="button"
+                        onClick={handleAddImageUrl}
+                        disabled={imageUrls.length >= MAX_SUBMISSION_IMAGE_URLS}
+                        className="btn btn-outline btn-sm"
+                      >
+                        Add image
+                      </button>
+                    </div>
+                  ) : (
+                    <div>
+                      <input
+                        type="url"
+                        placeholder={urlConfig.videoPlaceholder}
+                        className={`input input-bordered w-full bg-base-100 ${
+                          videoUrlError || videoMediaMissing ? "input-error" : ""
+                        }`}
+                        value={videoUrl}
+                        onChange={handleVideoUrlChange}
+                        onBlur={() => validateVideoUrl(videoUrl, videoMediaMissing)}
+                      />
+                      {videoUrlError ? <p className="mt-1 text-base text-error">{videoUrlError}</p> : null}
+                      {videoMediaMissing && !videoUrlError ? (
+                        <p className="mt-1 text-base text-error">Add a YouTube URL before asking.</p>
+                      ) : null}
+                    </div>
+                  )}
+                </div>
 
-                      <div className="max-h-60 overflow-y-auto">
-                        {filteredCategories.length > 0 ? (
-                          filteredCategories.map(cat => {
-                            const isSelected = selectedCategory?.id === cat.id;
-                            return (
-                              <button
-                                key={cat.id.toString()}
-                                type="button"
-                                onClick={() => {
-                                  handleCategorySelect(cat);
-                                  setIsCategoryDropdownOpen(false);
-                                  setCategorySearch("");
-                                }}
-                                className={`flex w-full items-center gap-3 px-4 py-2.5 text-left transition-colors ${
-                                  isSelected ? "bg-primary/10 text-primary" : "text-base-content hover:bg-base-200"
-                                }`}
-                              >
-                                <CategoryIcon name={cat.name} />
-                                <div className="flex flex-col">
-                                  <span className="font-medium">{cat.name}</span>
-                                </div>
-                                {isSelected ? <span className="ml-auto text-primary">✓</span> : null}
-                              </button>
-                            );
-                          })
-                        ) : (
-                          <div className="px-4 py-3 text-base text-base-content/50">
-                            No categories found for &quot;{categorySearch}&quot;
+                <div ref={categoryDropdownRef} className="relative">
+                  <label
+                    className={`mb-2 block text-base font-medium ${questionStepAttempted && !selectedCategory ? "text-error" : ""}`}
+                  >
+                    Select Category
+                  </label>
+                  {categoriesLoading ? (
+                    <div className="input input-bordered flex w-full items-center bg-base-100">
+                      <span className="loading loading-spinner loading-sm"></span>
+                    </div>
+                  ) : categories.length > 0 ? (
+                    <>
+                      <button
+                        type="button"
+                        onClick={() => setIsCategoryDropdownOpen(!isCategoryDropdownOpen)}
+                        className={`input input-bordered flex w-full cursor-pointer items-center justify-between bg-base-100 transition-colors hover:bg-base-200 ${
+                          questionStepAttempted && !selectedCategory ? "input-error" : ""
+                        }`}
+                      >
+                        {selectedCategory ? (
+                          <div className="flex items-center gap-2">
+                            <CategoryIcon name={selectedCategory.name} />
+                            <span>{selectedCategory.name}</span>
                           </div>
+                        ) : (
+                          <span className="text-base-content/50">Select a category...</span>
                         )}
+                        <ChevronDownIcon
+                          className={`h-5 w-5 text-base-content/50 transition-transform ${isCategoryDropdownOpen ? "rotate-180" : ""}`}
+                        />
+                      </button>
+                      {questionStepAttempted && !selectedCategory ? (
+                        <p className="mt-1 text-base text-error">Select a category before asking.</p>
+                      ) : null}
+
+                      {isCategoryDropdownOpen ? (
+                        <div className="absolute z-50 mt-1 w-full overflow-hidden rounded-lg border border-base-300 bg-base-100 shadow-lg">
+                          <div className="border-b border-base-300 p-2">
+                            <div className="relative">
+                              <MagnifyingGlassIcon className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-base-content/50" />
+                              <input
+                                type="text"
+                                placeholder="Search categories..."
+                                className="input input-sm w-full bg-base-200 pl-9 pr-8"
+                                value={categorySearch}
+                                onChange={e => setCategorySearch(e.target.value)}
+                                autoFocus
+                              />
+                              {categorySearch ? (
+                                <button
+                                  type="button"
+                                  onClick={() => setCategorySearch("")}
+                                  className="absolute right-2 top-1/2 -translate-y-1/2 text-base-content/50 hover:text-base-content"
+                                >
+                                  <XMarkIcon className="h-4 w-4" />
+                                </button>
+                              ) : null}
+                            </div>
+                          </div>
+
+                          <div className="max-h-60 overflow-y-auto">
+                            {filteredCategories.length > 0 ? (
+                              filteredCategories.map(cat => {
+                                const isSelected = selectedCategory?.id === cat.id;
+                                return (
+                                  <button
+                                    key={cat.id.toString()}
+                                    type="button"
+                                    onClick={() => {
+                                      handleCategorySelect(cat);
+                                      setIsCategoryDropdownOpen(false);
+                                      setCategorySearch("");
+                                    }}
+                                    className={`flex w-full items-center gap-3 px-4 py-2.5 text-left transition-colors ${
+                                      isSelected ? "bg-primary/10 text-primary" : "text-base-content hover:bg-base-200"
+                                    }`}
+                                  >
+                                    <CategoryIcon name={cat.name} />
+                                    <div className="flex flex-col">
+                                      <span className="font-medium">{cat.name}</span>
+                                    </div>
+                                    {isSelected ? <span className="ml-auto text-primary">✓</span> : null}
+                                  </button>
+                                );
+                              })
+                            ) : (
+                              <div className="px-4 py-3 text-base text-base-content/50">
+                                No categories found for &quot;{categorySearch}&quot;
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      ) : null}
+                    </>
+                  ) : (
+                    <p className="text-base text-base-content/50">No categories available.</p>
+                  )}
+                </div>
+
+                {selectedCategory ? (
+                  <div>
+                    <label
+                      className={`mb-2 block text-base font-medium ${
+                        questionStepAttempted && selectedSubcategories.length === 0 ? "text-error" : ""
+                      }`}
+                    >
+                      Select Categories <span className="font-normal text-base-content/40">(1-3)</span>
+                    </label>
+                    <div className="flex flex-wrap gap-2">
+                      {selectedCategory.subcategories.map(subcat => {
+                        const isSelected = selectedSubcategories.includes(subcat);
+                        return (
+                          <button
+                            key={subcat}
+                            type="button"
+                            onClick={() => handleSubcategoryToggle(subcat)}
+                            className={`rounded-full px-3 py-1.5 text-base font-medium transition-colors ${
+                              isSelected ? "pill-active" : "pill-inactive"
+                            }`}
+                          >
+                            {subcat}
+                          </button>
+                        );
+                      })}
+                      {selectedSubcategories
+                        .filter(s => !selectedCategory.subcategories.includes(s))
+                        .map(subcat => (
+                          <button
+                            key={subcat}
+                            type="button"
+                            onClick={() => handleSubcategoryToggle(subcat)}
+                            className="pill-active flex items-center gap-1 rounded-full px-3 py-1.5 text-base font-medium transition-colors"
+                          >
+                            {subcat}
+                            <span className="opacity-70">×</span>
+                          </button>
+                        ))}
+                    </div>
+                    <div className="mt-3">
+                      <p className="mb-2 text-sm font-medium text-base-content/60">Custom category (optional)</p>
+                      <div className="flex gap-2">
+                        <input
+                          type="text"
+                          placeholder="Add custom category..."
+                          className={`input input-bordered input-sm flex-1 bg-base-100 ${customSubcategoryError ? "input-error" : ""}`}
+                          value={customSubcategory}
+                          onChange={e => setCustomSubcategory(e.target.value)}
+                          onKeyDown={e => {
+                            if (e.key === "Enter") {
+                              e.preventDefault();
+                              handleAddCustomSubcategory();
+                            }
+                          }}
+                          disabled={selectedSubcategories.length >= 3}
+                        />
+                        <button
+                          type="button"
+                          onClick={handleAddCustomSubcategory}
+                          disabled={
+                            !customSubcategory.trim() ||
+                            customSubcategoryError !== null ||
+                            selectedSubcategories.length >= 3 ||
+                            selectedSubcategories.includes(customSubcategory.trim())
+                          }
+                          className="btn btn-outline btn-sm"
+                        >
+                          Add
+                        </button>
                       </div>
                     </div>
-                  ) : null}
-                </>
-              ) : (
-                <p className="text-base text-base-content/50">No categories available.</p>
-              )}
-            </div>
-
-            {selectedCategory ? (
-              <div>
-                <label
-                  className={`mb-2 block text-base font-medium ${
-                    questionStepAttempted && selectedSubcategories.length === 0 ? "text-error" : ""
-                  }`}
-                >
-                  Select Categories <span className="font-normal text-base-content/40">(1-3)</span>
-                </label>
-                <div className="flex flex-wrap gap-2">
-                  {selectedCategory.subcategories.map(subcat => {
-                    const isSelected = selectedSubcategories.includes(subcat);
-                    return (
-                      <button
-                        key={subcat}
-                        type="button"
-                        onClick={() => handleSubcategoryToggle(subcat)}
-                        className={`rounded-full px-3 py-1.5 text-base font-medium transition-colors ${
-                          isSelected ? "pill-active" : "pill-inactive"
-                        }`}
-                      >
-                        {subcat}
-                      </button>
-                    );
-                  })}
-                  {selectedSubcategories
-                    .filter(s => !selectedCategory.subcategories.includes(s))
-                    .map(subcat => (
-                      <button
-                        key={subcat}
-                        type="button"
-                        onClick={() => handleSubcategoryToggle(subcat)}
-                        className="pill-active flex items-center gap-1 rounded-full px-3 py-1.5 text-base font-medium transition-colors"
-                      >
-                        {subcat}
-                        <span className="opacity-70">×</span>
-                      </button>
-                    ))}
-                </div>
-                <div className="mt-3">
-                  <p className="mb-2 text-sm font-medium text-base-content/60">Custom category (optional)</p>
-                  <div className="flex gap-2">
-                    <input
-                      type="text"
-                      placeholder="Add custom category..."
-                      className={`input input-bordered input-sm flex-1 bg-base-100 ${customSubcategoryError ? "input-error" : ""}`}
-                      value={customSubcategory}
-                      onChange={e => setCustomSubcategory(e.target.value)}
-                      onKeyDown={e => {
-                        if (e.key === "Enter") {
-                          e.preventDefault();
-                          handleAddCustomSubcategory();
-                        }
-                      }}
-                      disabled={selectedSubcategories.length >= 3}
-                    />
-                    <button
-                      type="button"
-                      onClick={handleAddCustomSubcategory}
-                      disabled={
-                        !customSubcategory.trim() ||
-                        customSubcategoryError !== null ||
-                        selectedSubcategories.length >= 3 ||
-                        selectedSubcategories.includes(customSubcategory.trim())
-                      }
-                      className="btn btn-outline btn-sm"
-                    >
-                      Add
-                    </button>
-                  </div>
-                </div>
-                {customSubcategoryError ? <p className="mt-2 text-base text-error">{customSubcategoryError}</p> : null}
-                {questionStepAttempted && selectedSubcategories.length === 0 ? (
-                  <p className="mt-2 text-base text-error">Pick at least one category before asking.</p>
-                ) : null}
-              </div>
-            ) : null}
-          </div>
-
-          <div className="space-y-4 xl:sticky xl:top-24">
-            {previewUrl || title || description ? (
-              <div className="surface-card rounded-2xl p-4 space-y-3">
-                <p className="text-base font-medium uppercase tracking-wider text-base-content/40">Preview</p>
-                {title ? <h3 className="line-clamp-2 text-lg font-semibold text-base-content">{title}</h3> : null}
-                {previewUrl ? <ContentEmbed url={previewUrl} title={title} description={description} compact /> : null}
-                {description ? <p className="text-base text-base-content/70">{description}</p> : null}
-                {selectedSubcategories.length > 0 ? (
-                  <div className="flex flex-wrap gap-1.5">
-                    {selectedSubcategories.map(tag => (
-                      <span
-                        key={tag}
-                        className="rounded-full bg-primary/10 px-2 py-0.5 text-base font-medium text-primary"
-                      >
-                        {tag}
-                      </span>
-                    ))}
+                    {customSubcategoryError ? (
+                      <p className="mt-2 text-base text-error">{customSubcategoryError}</p>
+                    ) : null}
+                    {questionStepAttempted && selectedSubcategories.length === 0 ? (
+                      <p className="mt-2 text-base text-error">Pick at least one category before asking.</p>
+                    ) : null}
                   </div>
                 ) : null}
               </div>
-            ) : (
-              <div className="surface-card rounded-2xl p-4 space-y-3">
-                <p className="text-base font-medium uppercase tracking-wider text-base-content/40">Preview</p>
-                <p className="text-base text-base-content/50">
-                  Add the question and context link to preview how it will appear.
-                </p>
-              </div>
-            )}
 
-            <div className="rounded-lg bg-error/10 p-4">
-              <p className="mb-2 text-base font-medium text-error">Prohibited Content</p>
-              <p className="text-base text-base-content/70">
-                Do not ask questions with illegal or harmful content. This includes but is not limited to: child
-                exploitation material, non-consensual intimate imagery, content promoting violence or terrorism,
-                doxxing, or copyright-infringing material. Violations may result in removal, blocked access, and
-                potential legal action.
-              </p>
-            </div>
-
-            {submissionStep === 2 ? (
-              <div className="surface-card-nested rounded-2xl p-4 space-y-4">
-                <div className="flex items-start justify-between gap-3">
-                  <p className="flex items-center gap-1.5 text-base font-medium text-base-content">
-                    Bounty
-                    <InfoTooltip text="Required and non-refundable. Set the terms that eligible voters must satisfy before payout." />
-                  </p>
-                  <span className="shrink-0 text-sm font-semibold text-base-content/60">
-                    Min {formatSubmissionRewardAmount(minimumBountyAmount, rewardAsset)}
-                  </span>
-                </div>
-
-                <div className="grid grid-cols-2 gap-2">
-                  <button
-                    type="button"
-                    aria-pressed={rewardAsset === "usdc"}
-                    onClick={() => setRewardAsset("usdc")}
-                    className={`btn btn-sm ${rewardAsset === "usdc" ? "btn-primary" : "btn-outline"}`}
-                  >
-                    USDC
-                  </button>
-                  <button
-                    type="button"
-                    aria-pressed={rewardAsset === "crep"}
-                    onClick={() => setRewardAsset("crep")}
-                    className={`btn btn-sm ${rewardAsset === "crep" ? "btn-primary" : "btn-outline"}`}
-                  >
-                    cREP
-                  </button>
-                </div>
-
-                <label
-                  className={`input input-bordered flex items-center gap-2 bg-base-100 ${
-                    bountyStepAttempted && rewardAmountError ? "input-error" : ""
-                  }`}
-                >
-                  <input
-                    type="text"
-                    inputMode="decimal"
-                    value={rewardAmount}
-                    onChange={e => setRewardAmount(e.target.value)}
-                    className="grow bg-transparent"
-                    aria-label="Bounty amount"
-                  />
-                  <span className="text-sm font-semibold text-base-content/50">
-                    {rewardAsset === "crep" ? "cREP" : "USDC"}
-                  </span>
-                </label>
-                {bountyStepAttempted && rewardAmountError ? (
-                  <p className="text-base text-error">{rewardAmountError}</p>
-                ) : (
-                  <p className="text-sm text-base-content/55">
-                    Paid from your wallet into the escrow when the question is submitted.
-                  </p>
-                )}
-
-                <div className="grid gap-3 sm:grid-cols-2">
-                  <label className="form-control">
-                    <span className="label-text">Minimum voters</span>
-                    <input
-                      type="number"
-                      min={MIN_REWARD_POOL_REQUIRED_VOTERS}
-                      step={1}
-                      value={rewardRequiredVoters}
-                      onChange={e => setRewardRequiredVoters(e.target.value)}
-                      className={`input input-bordered bg-base-100 ${
-                        bountyStepAttempted && rewardRequiredVotersError ? "input-error" : ""
-                      }`}
-                    />
-                    <span className="label-text-alt text-base-content/50">
-                      At least {MIN_REWARD_POOL_REQUIRED_VOTERS} voters are required.
-                    </span>
-                  </label>
-
-                  <label className="form-control">
-                    <span className="label-text">Settlement rounds</span>
-                    <input
-                      type="number"
-                      min={MIN_REWARD_POOL_SETTLED_ROUNDS}
-                      step={1}
-                      value={rewardRequiredSettledRounds}
-                      onChange={e => setRewardRequiredSettledRounds(e.target.value)}
-                      className={`input input-bordered bg-base-100 ${
-                        bountyStepAttempted && rewardRequiredSettledRoundsError ? "input-error" : ""
-                      }`}
-                    />
-                    <span className="label-text-alt text-base-content/50">
-                      At least {MIN_REWARD_POOL_SETTLED_ROUNDS} round is required.
-                    </span>
-                  </label>
-                </div>
-                {bountyStepAttempted && rewardRequiredVotersError ? (
-                  <p className="text-base text-error">{rewardRequiredVotersError}</p>
-                ) : null}
-                {bountyStepAttempted && rewardRequiredSettledRoundsError ? (
-                  <p className="text-base text-error">{rewardRequiredSettledRoundsError}</p>
-                ) : null}
-
-                <div className="space-y-3 border-t border-base-300/70 pt-4">
-                  <div className="flex items-start justify-between gap-3">
-                    <p className="flex items-center gap-1.5 text-base font-medium text-base-content">
-                      Round settings
-                      <InfoTooltip text="Governance sets the allowed range. Choose what this question needs." />
-                    </p>
-                    <span className="text-sm font-semibold text-base-content/50">
-                      Default {formatDurationLabel(roundConfigDefaults.epochDuration)}
-                    </span>
-                  </div>
-
-                  <div className="grid gap-3 sm:grid-cols-2">
-                    <label className="form-control">
-                      <span className="label-text">Blind phase (minutes)</span>
-                      <input
-                        type="number"
-                        min={Math.ceil(roundConfigBounds.minEpochDuration / 60)}
-                        max={Math.floor(roundConfigBounds.maxEpochDuration / 60)}
-                        step={1}
-                        value={roundBlindMinutes}
-                        onChange={e => {
-                          setRoundConfigTouched(true);
-                          setRoundBlindMinutes(e.target.value);
-                        }}
-                        className={`input input-bordered bg-base-100 ${
-                          bountyStepAttempted && roundConfigValidationError ? "input-error" : ""
-                        }`}
-                      />
-                    </label>
-
-                    <label className="form-control">
-                      <span className="label-text">Max duration (hours)</span>
-                      <input
-                        type="number"
-                        min={Math.ceil(roundConfigBounds.minRoundDuration / 3600)}
-                        max={Math.floor(roundConfigBounds.maxRoundDuration / 3600)}
-                        step={1}
-                        value={roundMaxDurationHours}
-                        onChange={e => {
-                          setRoundConfigTouched(true);
-                          setRoundMaxDurationHours(e.target.value);
-                        }}
-                        className={`input input-bordered bg-base-100 ${
-                          bountyStepAttempted && roundConfigValidationError ? "input-error" : ""
-                        }`}
-                      />
-                    </label>
-
-                    <label className="form-control">
-                      <span className="label-text">Settlement voters</span>
-                      <input
-                        type="number"
-                        min={roundConfigBounds.minSettlementVoters}
-                        max={roundConfigBounds.maxSettlementVoters}
-                        step={1}
-                        value={roundMinVoters}
-                        onChange={e => {
-                          setRoundConfigTouched(true);
-                          setRoundMinVoters(e.target.value);
-                        }}
-                        className={`input input-bordered bg-base-100 ${
-                          bountyStepAttempted && roundConfigValidationError ? "input-error" : ""
-                        }`}
-                      />
-                    </label>
-
-                    <label className="form-control">
-                      <span className="label-text">Voter cap</span>
-                      <input
-                        type="number"
-                        min={roundConfigBounds.minVoterCap}
-                        max={roundConfigBounds.maxVoterCap}
-                        step={1}
-                        value={roundMaxVoters}
-                        onChange={e => {
-                          setRoundConfigTouched(true);
-                          setRoundMaxVoters(e.target.value);
-                        }}
-                        className={`input input-bordered bg-base-100 ${
-                          bountyStepAttempted && roundConfigValidationError ? "input-error" : ""
-                        }`}
-                      />
-                    </label>
-                  </div>
-
-                  {bountyStepAttempted && roundConfigValidationError ? (
-                    <p className="text-base text-error">{roundConfigValidationError}</p>
-                  ) : (
-                    <p className="text-sm text-base-content/55">
-                      Urgent bounties can use shorter rounds; broader questions can wait for more voters.
-                    </p>
-                  )}
-                </div>
-
-                <div className="space-y-2">
-                  <p className="text-sm font-medium text-base-content/60">Bounty expiry (optional)</p>
-                  <div className="grid grid-cols-2 gap-2">
-                    <button
-                      type="button"
-                      aria-pressed={rewardExpiryMode === "none"}
-                      onClick={() => setRewardExpiryMode("none")}
-                      className={`btn btn-sm ${rewardExpiryMode === "none" ? "btn-primary" : "btn-outline"}`}
-                    >
-                      No expiry
-                    </button>
-                    <button
-                      type="button"
-                      aria-pressed={rewardExpiryMode === "days"}
-                      onClick={() => setRewardExpiryMode("days")}
-                      className={`btn btn-sm ${rewardExpiryMode === "days" ? "btn-primary" : "btn-outline"}`}
-                    >
-                      Duration
-                    </button>
-                  </div>
-                  {rewardExpiryMode === "days" ? (
-                    <label className="form-control">
-                      <span className="label-text">Expires after (days)</span>
-                      <input
-                        type="number"
-                        min={1}
-                        step={1}
-                        value={rewardExpiryDays}
-                        onChange={e => setRewardExpiryDays(e.target.value)}
-                        className={`input input-bordered bg-base-100 ${
-                          bountyStepAttempted && rewardExpiryError ? "input-error" : ""
-                        }`}
-                      />
-                      <span className="label-text-alt text-base-content/50">
-                        Leave it off to keep the bounty open-ended.
-                      </span>
-                    </label>
-                  ) : (
-                    <p className="text-sm text-base-content/55">
-                      The bounty stays open until it is filled or the contract rules move it along.
-                    </p>
-                  )}
-                  {bountyStepAttempted && rewardExpiryError ? (
-                    <p className="text-base text-error">{rewardExpiryError}</p>
-                  ) : null}
-                </div>
-              </div>
-            ) : null}
-
-            {isMissingGasBalance ? <GasBalanceWarning nativeTokenSymbol={nativeTokenSymbol} /> : null}
-
-            {submissionStep === 1 ? (
-              <button type="button" onClick={handleContinueToBounty} className="btn btn-primary w-full">
-                Continue to bounty
-              </button>
-            ) : (
-              <div className="flex flex-col gap-2 sm:flex-row">
-                <button
-                  type="button"
-                  onClick={() => {
-                    setSubmissionStep(1);
-                    setBountyStepAttempted(false);
-                  }}
-                  className="btn btn-ghost w-full sm:w-auto"
-                >
-                  Back
-                </button>
-                <button
-                  type="submit"
-                  className="btn btn-submit w-full"
-                  disabled={isSubmitting || isAwaitingSponsoredSubmitCalls || isMissingGasBalance}
-                >
-                  {isSubmitting ? (
-                    <span className="flex items-center gap-2">
-                      <span className="loading loading-spinner loading-sm"></span>
-                      Asking...
-                    </span>
-                  ) : (
-                    "Ask Question"
-                  )}
+              <div className="space-y-4 xl:sticky xl:top-24">
+                {questionPreviewCard}
+                {prohibitedContentNotice}
+                {isMissingGasBalance ? <GasBalanceWarning nativeTokenSymbol={nativeTokenSymbol} /> : null}
+                <button type="button" onClick={handleContinueToBounty} className="btn btn-primary w-full">
+                  Continue to bounty
                 </button>
               </div>
-            )}
-          </div>
+            </div>
+          ) : (
+            <div className="grid gap-6 xl:grid-cols-[minmax(0,1.25fr)_minmax(18rem,0.75fr)] xl:items-start">
+              <div className="space-y-4">
+                {bountyDetailsCard}
+                {isMissingGasBalance ? <GasBalanceWarning nativeTokenSymbol={nativeTokenSymbol} /> : null}
+                {bountyActions}
+              </div>
+              <div className="space-y-4 xl:sticky xl:top-24">
+                {questionPreviewCard}
+                {prohibitedContentNotice}
+              </div>
+            </div>
+          )}
         </form>
       </div>
 
