@@ -13,7 +13,7 @@ const ASK_STEPS = [
   {
     icon: CpuChipIcon,
     title: "1. AI Asks",
-    description: "An agent or human asks a focused question with context and a bounty.",
+    description: "Agent or human asks a question with context, bounty, duration, and voter count.",
   },
   {
     icon: CheckBadgeIcon,
