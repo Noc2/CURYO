@@ -110,7 +110,7 @@ export const ponder = {
     ponderGet<PonderPage<PonderVoteItem> & { settledTotal: number }>("/votes", params),
 
   getCategories: () =>
-    ponderGet<{ items: any[] }>("/categories", { status: "1" }),
+    ponderGet<{ items: any[] }>("/categories"),
 
   getAllContent(params?: Record<string, string>) {
     return getAllPages(offset =>

@@ -38,7 +38,7 @@ test.describe("Ponder API endpoints", () => {
 
   test("GET /content with categoryId filter", async () => {
     // First, get categories to find a valid ID
-    const categories = await ponderGet("/categories?status=all");
+    const categories = await ponderGet("/categories");
     expect(categories).toHaveProperty("items");
     expect(categories.items.length).toBeGreaterThan(0);
 

@@ -226,7 +226,6 @@ export interface ListFrontendsParams {
 }
 
 export interface ListCategoriesParams {
-  status?: string;
   limit?: number;
   offset?: number;
 }

@@ -188,26 +188,6 @@ export const CategoryRegistryAbi = [
             "internalType": "string[]"
           },
           {
-            "name": "submitter",
-            "type": "address",
-            "internalType": "address"
-          },
-          {
-            "name": "stakeAmount",
-            "type": "uint256",
-            "internalType": "uint256"
-          },
-          {
-            "name": "status",
-            "type": "uint8",
-            "internalType": "enum ICategoryRegistry.CategoryStatus"
-          },
-          {
-            "name": "proposalId",
-            "type": "uint256",
-            "internalType": "uint256"
-          },
-          {
             "name": "createdAt",
             "type": "uint256",
             "internalType": "uint256"
@@ -254,50 +234,11 @@ export const CategoryRegistryAbi = [
             "internalType": "string[]"
           },
           {
-            "name": "submitter",
-            "type": "address",
-            "internalType": "address"
-          },
-          {
-            "name": "stakeAmount",
-            "type": "uint256",
-            "internalType": "uint256"
-          },
-          {
-            "name": "status",
-            "type": "uint8",
-            "internalType": "enum ICategoryRegistry.CategoryStatus"
-          },
-          {
-            "name": "proposalId",
-            "type": "uint256",
-            "internalType": "uint256"
-          },
-          {
             "name": "createdAt",
             "type": "uint256",
             "internalType": "uint256"
           }
         ]
-      }
-    ],
-    "stateMutability": "view"
-  },
-  {
-    "type": "function",
-    "name": "getCategoryStatus",
-    "inputs": [
-      {
-        "name": "categoryId",
-        "type": "uint256",
-        "internalType": "uint256"
-      }
-    ],
-    "outputs": [
-      {
-        "name": "",
-        "type": "uint8",
-        "internalType": "enum ICategoryRegistry.CategoryStatus"
       }
     ],
     "stateMutability": "view"
@@ -317,25 +258,6 @@ export const CategoryRegistryAbi = [
         "name": "",
         "type": "bytes32",
         "internalType": "bytes32"
-      }
-    ],
-    "stateMutability": "view"
-  },
-  {
-    "type": "function",
-    "name": "getSubcategories",
-    "inputs": [
-      {
-        "name": "categoryId",
-        "type": "uint256",
-        "internalType": "uint256"
-      }
-    ],
-    "outputs": [
-      {
-        "name": "",
-        "type": "string[]",
-        "internalType": "string[]"
       }
     ],
     "stateMutability": "view"
@@ -390,25 +312,6 @@ export const CategoryRegistryAbi = [
         "name": "categoryId",
         "type": "uint256",
         "internalType": "uint256"
-      }
-    ],
-    "outputs": [
-      {
-        "name": "",
-        "type": "bool",
-        "internalType": "bool"
-      }
-    ],
-    "stateMutability": "view"
-  },
-  {
-    "type": "function",
-    "name": "isDomainRegistered",
-    "inputs": [
-      {
-        "name": "slug",
-        "type": "string",
-        "internalType": "string"
       }
     ],
     "outputs": [

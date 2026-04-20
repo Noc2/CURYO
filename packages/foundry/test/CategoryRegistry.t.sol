@@ -38,17 +38,10 @@ contract CategoryRegistryTest is Test {
         assertEq(category.subcategories.length, 2);
         assertEq(category.subcategories[0], "Quality");
         assertEq(category.subcategories[1], "Value");
-        assertEq(category.submitter, address(0));
-        assertEq(category.stakeAmount, 0);
-        assertEq(uint256(category.status), uint256(ICategoryRegistry.CategoryStatus.Approved));
-        assertEq(category.proposalId, 0);
         assertTrue(category.createdAt > 0);
 
         assertTrue(registry.isApprovedCategory(categoryId));
-        assertTrue(registry.isDomainRegistered("PRODUCT tools"));
         assertEq(registry.getCategoryByDomain("PRODUCT_tools").id, categoryId);
-        assertEq(uint256(registry.getCategoryStatus(categoryId)), uint256(ICategoryRegistry.CategoryStatus.Approved));
-        assertEq(registry.getSubcategories(categoryId).length, 2);
         assertEq(registry.nextCategoryId(), categoryId + 1);
     }
 

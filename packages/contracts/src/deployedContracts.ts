@@ -13072,26 +13072,6 @@ const deployedContracts: GenericContractsDeclaration = {
                   internalType: "string[]",
                 },
                 {
-                  name: "submitter",
-                  type: "address",
-                  internalType: "address",
-                },
-                {
-                  name: "stakeAmount",
-                  type: "uint256",
-                  internalType: "uint256",
-                },
-                {
-                  name: "status",
-                  type: "uint8",
-                  internalType: "enum ICategoryRegistry.CategoryStatus",
-                },
-                {
-                  name: "proposalId",
-                  type: "uint256",
-                  internalType: "uint256",
-                },
-                {
                   name: "createdAt",
                   type: "uint256",
                   internalType: "uint256",
@@ -13138,50 +13118,11 @@ const deployedContracts: GenericContractsDeclaration = {
                   internalType: "string[]",
                 },
                 {
-                  name: "submitter",
-                  type: "address",
-                  internalType: "address",
-                },
-                {
-                  name: "stakeAmount",
-                  type: "uint256",
-                  internalType: "uint256",
-                },
-                {
-                  name: "status",
-                  type: "uint8",
-                  internalType: "enum ICategoryRegistry.CategoryStatus",
-                },
-                {
-                  name: "proposalId",
-                  type: "uint256",
-                  internalType: "uint256",
-                },
-                {
                   name: "createdAt",
                   type: "uint256",
                   internalType: "uint256",
                 },
               ],
-            },
-          ],
-          stateMutability: "view",
-        },
-        {
-          type: "function",
-          name: "getCategoryStatus",
-          inputs: [
-            {
-              name: "categoryId",
-              type: "uint256",
-              internalType: "uint256",
-            },
-          ],
-          outputs: [
-            {
-              name: "",
-              type: "uint8",
-              internalType: "enum ICategoryRegistry.CategoryStatus",
             },
           ],
           stateMutability: "view",
@@ -13201,25 +13142,6 @@ const deployedContracts: GenericContractsDeclaration = {
               name: "",
               type: "bytes32",
               internalType: "bytes32",
-            },
-          ],
-          stateMutability: "view",
-        },
-        {
-          type: "function",
-          name: "getSubcategories",
-          inputs: [
-            {
-              name: "categoryId",
-              type: "uint256",
-              internalType: "uint256",
-            },
-          ],
-          outputs: [
-            {
-              name: "",
-              type: "string[]",
-              internalType: "string[]",
             },
           ],
           stateMutability: "view",
@@ -13274,25 +13196,6 @@ const deployedContracts: GenericContractsDeclaration = {
               name: "categoryId",
               type: "uint256",
               internalType: "uint256",
-            },
-          ],
-          outputs: [
-            {
-              name: "",
-              type: "bool",
-              internalType: "bool",
-            },
-          ],
-          stateMutability: "view",
-        },
-        {
-          type: "function",
-          name: "isDomainRegistered",
-          inputs: [
-            {
-              name: "slug",
-              type: "string",
-              internalType: "string",
             },
           ],
           outputs: [
@@ -13499,9 +13402,7 @@ const deployedContracts: GenericContractsDeclaration = {
           "contracts/interfaces/ICategoryRegistry.sol",
         getCategory: "contracts/interfaces/ICategoryRegistry.sol",
         getCategoryByDomain: "contracts/interfaces/ICategoryRegistry.sol",
-        getCategoryStatus: "contracts/interfaces/ICategoryRegistry.sol",
         isApprovedCategory: "contracts/interfaces/ICategoryRegistry.sol",
-        isDomainRegistered: "contracts/interfaces/ICategoryRegistry.sol",
         DEFAULT_ADMIN_ROLE:
           "lib/openzeppelin-contracts/contracts/access/AccessControl.sol",
         getRoleAdmin:
@@ -31595,26 +31496,6 @@ const deployedContracts: GenericContractsDeclaration = {
                   internalType: "string[]",
                 },
                 {
-                  name: "submitter",
-                  type: "address",
-                  internalType: "address",
-                },
-                {
-                  name: "stakeAmount",
-                  type: "uint256",
-                  internalType: "uint256",
-                },
-                {
-                  name: "status",
-                  type: "uint8",
-                  internalType: "enum ICategoryRegistry.CategoryStatus",
-                },
-                {
-                  name: "proposalId",
-                  type: "uint256",
-                  internalType: "uint256",
-                },
-                {
                   name: "createdAt",
                   type: "uint256",
                   internalType: "uint256",
@@ -31661,50 +31542,11 @@ const deployedContracts: GenericContractsDeclaration = {
                   internalType: "string[]",
                 },
                 {
-                  name: "submitter",
-                  type: "address",
-                  internalType: "address",
-                },
-                {
-                  name: "stakeAmount",
-                  type: "uint256",
-                  internalType: "uint256",
-                },
-                {
-                  name: "status",
-                  type: "uint8",
-                  internalType: "enum ICategoryRegistry.CategoryStatus",
-                },
-                {
-                  name: "proposalId",
-                  type: "uint256",
-                  internalType: "uint256",
-                },
-                {
                   name: "createdAt",
                   type: "uint256",
                   internalType: "uint256",
                 },
               ],
-            },
-          ],
-          stateMutability: "view",
-        },
-        {
-          type: "function",
-          name: "getCategoryStatus",
-          inputs: [
-            {
-              name: "categoryId",
-              type: "uint256",
-              internalType: "uint256",
-            },
-          ],
-          outputs: [
-            {
-              name: "",
-              type: "uint8",
-              internalType: "enum ICategoryRegistry.CategoryStatus",
             },
           ],
           stateMutability: "view",
@@ -31724,25 +31566,6 @@ const deployedContracts: GenericContractsDeclaration = {
               name: "",
               type: "bytes32",
               internalType: "bytes32",
-            },
-          ],
-          stateMutability: "view",
-        },
-        {
-          type: "function",
-          name: "getSubcategories",
-          inputs: [
-            {
-              name: "categoryId",
-              type: "uint256",
-              internalType: "uint256",
-            },
-          ],
-          outputs: [
-            {
-              name: "",
-              type: "string[]",
-              internalType: "string[]",
             },
           ],
           stateMutability: "view",
@@ -31797,25 +31620,6 @@ const deployedContracts: GenericContractsDeclaration = {
               name: "categoryId",
               type: "uint256",
               internalType: "uint256",
-            },
-          ],
-          outputs: [
-            {
-              name: "",
-              type: "bool",
-              internalType: "bool",
-            },
-          ],
-          stateMutability: "view",
-        },
-        {
-          type: "function",
-          name: "isDomainRegistered",
-          inputs: [
-            {
-              name: "slug",
-              type: "string",
-              internalType: "string",
             },
           ],
           outputs: [
@@ -32022,9 +31826,7 @@ const deployedContracts: GenericContractsDeclaration = {
           "contracts/interfaces/ICategoryRegistry.sol",
         getCategory: "contracts/interfaces/ICategoryRegistry.sol",
         getCategoryByDomain: "contracts/interfaces/ICategoryRegistry.sol",
-        getCategoryStatus: "contracts/interfaces/ICategoryRegistry.sol",
         isApprovedCategory: "contracts/interfaces/ICategoryRegistry.sol",
-        isDomainRegistered: "contracts/interfaces/ICategoryRegistry.sol",
         DEFAULT_ADMIN_ROLE:
           "lib/openzeppelin-contracts/contracts/access/AccessControl.sol",
         getRoleAdmin:
@@ -50047,26 +49849,6 @@ const deployedContracts: GenericContractsDeclaration = {
                   internalType: "string[]",
                 },
                 {
-                  name: "submitter",
-                  type: "address",
-                  internalType: "address",
-                },
-                {
-                  name: "stakeAmount",
-                  type: "uint256",
-                  internalType: "uint256",
-                },
-                {
-                  name: "status",
-                  type: "uint8",
-                  internalType: "enum ICategoryRegistry.CategoryStatus",
-                },
-                {
-                  name: "proposalId",
-                  type: "uint256",
-                  internalType: "uint256",
-                },
-                {
                   name: "createdAt",
                   type: "uint256",
                   internalType: "uint256",
@@ -50113,50 +49895,11 @@ const deployedContracts: GenericContractsDeclaration = {
                   internalType: "string[]",
                 },
                 {
-                  name: "submitter",
-                  type: "address",
-                  internalType: "address",
-                },
-                {
-                  name: "stakeAmount",
-                  type: "uint256",
-                  internalType: "uint256",
-                },
-                {
-                  name: "status",
-                  type: "uint8",
-                  internalType: "enum ICategoryRegistry.CategoryStatus",
-                },
-                {
-                  name: "proposalId",
-                  type: "uint256",
-                  internalType: "uint256",
-                },
-                {
                   name: "createdAt",
                   type: "uint256",
                   internalType: "uint256",
                 },
               ],
-            },
-          ],
-          stateMutability: "view",
-        },
-        {
-          type: "function",
-          name: "getCategoryStatus",
-          inputs: [
-            {
-              name: "categoryId",
-              type: "uint256",
-              internalType: "uint256",
-            },
-          ],
-          outputs: [
-            {
-              name: "",
-              type: "uint8",
-              internalType: "enum ICategoryRegistry.CategoryStatus",
             },
           ],
           stateMutability: "view",
@@ -50176,25 +49919,6 @@ const deployedContracts: GenericContractsDeclaration = {
               name: "",
               type: "bytes32",
               internalType: "bytes32",
-            },
-          ],
-          stateMutability: "view",
-        },
-        {
-          type: "function",
-          name: "getSubcategories",
-          inputs: [
-            {
-              name: "categoryId",
-              type: "uint256",
-              internalType: "uint256",
-            },
-          ],
-          outputs: [
-            {
-              name: "",
-              type: "string[]",
-              internalType: "string[]",
             },
           ],
           stateMutability: "view",
@@ -50249,25 +49973,6 @@ const deployedContracts: GenericContractsDeclaration = {
               name: "categoryId",
               type: "uint256",
               internalType: "uint256",
-            },
-          ],
-          outputs: [
-            {
-              name: "",
-              type: "bool",
-              internalType: "bool",
-            },
-          ],
-          stateMutability: "view",
-        },
-        {
-          type: "function",
-          name: "isDomainRegistered",
-          inputs: [
-            {
-              name: "slug",
-              type: "string",
-              internalType: "string",
             },
           ],
           outputs: [
@@ -50474,9 +50179,7 @@ const deployedContracts: GenericContractsDeclaration = {
           "contracts/interfaces/ICategoryRegistry.sol",
         getCategory: "contracts/interfaces/ICategoryRegistry.sol",
         getCategoryByDomain: "contracts/interfaces/ICategoryRegistry.sol",
-        getCategoryStatus: "contracts/interfaces/ICategoryRegistry.sol",
         isApprovedCategory: "contracts/interfaces/ICategoryRegistry.sol",
-        isDomainRegistered: "contracts/interfaces/ICategoryRegistry.sol",
         DEFAULT_ADMIN_ROLE:
           "lib/openzeppelin-contracts/contracts/access/AccessControl.sol",
         getRoleAdmin:

@@ -4,22 +4,11 @@ pragma solidity ^0.8.20;
 /// @title ICategoryRegistry Interface
 /// @notice Interface for seed-only discovery category metadata.
 interface ICategoryRegistry {
-    enum CategoryStatus {
-        Pending,
-        Approved,
-        Rejected,
-        Canceled
-    }
-
     struct Category {
         uint256 id;
         string name;
         string domain; // Legacy field name; now stores the category slug.
         string[] subcategories;
-        address submitter; // Always zero for seed-only categories.
-        uint256 stakeAmount; // Always zero for seed-only categories.
-        CategoryStatus status;
-        uint256 proposalId; // Always zero for seed-only categories.
         uint256 createdAt;
     }
 
@@ -40,9 +29,4 @@ interface ICategoryRegistry {
         view
         returns (uint256[] memory categoryIds, uint256 total);
 
-    /// @notice Check if a category slug is already registered. Legacy name retained while callers migrate.
-    function isDomainRegistered(string calldata slug) external view returns (bool);
-
-    /// @notice Get the legacy status for a category. Seed-only categories return Approved.
-    function getCategoryStatus(uint256 categoryId) external view returns (CategoryStatus);
 }

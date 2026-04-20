@@ -416,7 +416,7 @@ describe("registerContentRoutes", () => {
     const app = new Hono();
     registerContentRoutes(app);
 
-    const response = await app.request("http://localhost/categories?status=all");
+    const response = await app.request("http://localhost/categories");
 
     expect(response.status).toBe(200);
 

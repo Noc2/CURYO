@@ -102,15 +102,6 @@ contract MockCategoryRegistry is ICategoryRegistry {
         return (new uint256[](0), 0);
     }
 
-    function isDomainRegistered(string calldata domain) external view override returns (bool) {
-        return domainToId[keccak256(bytes(_normalizeDomain(domain)))] != 0;
-    }
-
-    function getCategoryStatus(uint256 categoryId) external view override returns (CategoryStatus) {
-        require(bytes(domains[categoryId]).length != 0, "Category does not exist");
-        return approved[categoryId] ? CategoryStatus.Approved : CategoryStatus.Pending;
-    }
-
     function _category(uint256 categoryId) internal view returns (Category memory) {
         string[] memory subcategories = new string[](0);
         return Category({
@@ -118,10 +109,6 @@ contract MockCategoryRegistry is ICategoryRegistry {
             name: "",
             domain: domains[categoryId],
             subcategories: subcategories,
-            submitter: address(0),
-            stakeAmount: 0,
-            status: approved[categoryId] ? CategoryStatus.Approved : CategoryStatus.Pending,
-            proposalId: 0,
             createdAt: 0
         });
     }

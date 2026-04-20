@@ -67,10 +67,6 @@ contract CategoryRegistry is ICategoryRegistry, AccessControl {
             name: name,
             domain: normalizedSlug,
             subcategories: subcategories,
-            submitter: address(0),
-            stakeAmount: 0,
-            status: CategoryStatus.Approved,
-            proposalId: 0,
             createdAt: block.timestamp
         });
 
@@ -81,7 +77,7 @@ contract CategoryRegistry is ICategoryRegistry, AccessControl {
     }
 
     function isApprovedCategory(uint256 categoryId) external view override returns (bool) {
-        return _categories[categoryId].status == CategoryStatus.Approved;
+        return _categories[categoryId].id != 0;
     }
 
     function getCategory(uint256 categoryId) external view override returns (Category memory) {
@@ -117,21 +113,6 @@ contract CategoryRegistry is ICategoryRegistry, AccessControl {
         for (uint256 i = 0; i < resultLength; i++) {
             categoryIds[i] = _categoryIds[offset + i];
         }
-    }
-
-    /// @dev Legacy name retained for callers migrating from domain-based categories. The argument is a slug now.
-    function isDomainRegistered(string calldata slug) external view override returns (bool) {
-        return _slugToCategoryId[keccak256(bytes(_normalizeSlug(slug)))] != 0;
-    }
-
-    function getCategoryStatus(uint256 categoryId) external view override returns (CategoryStatus) {
-        require(_categories[categoryId].id != 0, "Category does not exist");
-        return _categories[categoryId].status;
-    }
-
-    function getSubcategories(uint256 categoryId) external view returns (string[] memory) {
-        require(_categories[categoryId].id != 0, "Category does not exist");
-        return _categories[categoryId].subcategories;
     }
 
     function _normalizeSlug(string memory slug) internal pure returns (string memory) {
