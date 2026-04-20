@@ -102,7 +102,7 @@ export function useContentFeed(voterAddress?: string, options: UseContentFeedOpt
           categoryId?: bigint;
         };
 
-        if (!args.contentId || !args.title || !args.description) return null;
+        if (!args.contentId || !args.title || args.description === undefined) return null;
 
         const eventSubmitter = args.submitter || "";
         return {

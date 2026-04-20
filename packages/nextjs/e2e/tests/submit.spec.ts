@@ -27,14 +27,10 @@ test.describe("Ask page", () => {
     await expect(urlInput).toBeVisible({ timeout: 5_000 });
     await urlInput.fill(`https://picsum.photos/seed/e2etest-${uniqueId}/1200/800.jpg`);
 
-    // 3. Enter title/description
+    // 3. Enter title. Description is intentionally left blank because it is optional.
     const titleInput = page.getByPlaceholder("Ask something subjective that voters can rate");
     await expect(titleInput).toBeVisible({ timeout: 3_000 });
     await titleInput.fill(`E2E Test Title ${uniqueId}`);
-
-    const descInput = page.locator("textarea").first();
-    await expect(descInput).toBeVisible({ timeout: 3_000 });
-    await descInput.fill(`E2E Test Content ${uniqueId}`);
 
     // 4. Select at least one subcategory tag
     const hasSubcategory = await selectAskSubcategory(page);

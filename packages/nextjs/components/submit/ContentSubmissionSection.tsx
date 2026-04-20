@@ -677,7 +677,6 @@ export function ContentSubmissionSection() {
     const questionFieldsComplete =
       Boolean(selectedCategory) &&
       Boolean(trimmedTitle) &&
-      Boolean(trimmedDescription) &&
       selectedSubcategories.length > 0 &&
       Boolean(submittedContextUrl);
     const hasQuestionErrors =
@@ -1151,16 +1150,14 @@ export function ContentSubmissionSection() {
             </div>
 
             <div>
-              <label
-                className={`mb-2 block text-base font-medium ${questionStepAttempted && !description.trim() ? "text-error" : ""}`}
-              >
-                Description
+              <label className="mb-2 block text-base font-medium">
+                Description <span className="font-normal text-base-content/40">(optional)</span>
               </label>
               <textarea
                 ref={descriptionTextareaRef}
                 placeholder="Add context voters should consider"
                 className={`textarea textarea-bordered h-24 w-full bg-base-100 ${
-                  descriptionError || (questionStepAttempted && !description.trim()) ? "textarea-error" : ""
+                  descriptionError ? "textarea-error" : ""
                 }`}
                 value={description}
                 onChange={e => handleDescriptionChange(e.target.value)}
@@ -1198,9 +1195,6 @@ export function ContentSubmissionSection() {
                 </div>
                 {referenceInputError ? <p className="text-base text-error">{referenceInputError}</p> : null}
               </div>
-              {questionStepAttempted && !description.trim() ? (
-                <p className="mt-1 text-base text-error">Description is required.</p>
-              ) : null}
               {descriptionError ? <p className="mt-1 text-base text-error">{descriptionError}</p> : null}
               <div className="mt-1 text-right">
                 <span className="text-base text-base-content/30">
