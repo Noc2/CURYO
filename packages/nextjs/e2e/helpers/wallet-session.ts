@@ -4,6 +4,33 @@ import {
   CURYO_E2E_RPC_URL_STORAGE_KEY,
   CURYO_E2E_TEST_WALLET_PRIVATE_KEY_STORAGE_KEY,
 } from "../../services/thirdweb/testWalletStorage";
+import { WALLET_STATE_EXACT_KEYS, WALLET_STATE_PREFIXES } from "../../services/thirdweb/walletStateCleanup";
+
+type WalletSessionStorageEntry = readonly [string, string];
+
+function getWalletSessionStorageEntries(privateKey: string, rpcUrl: string): WalletSessionStorageEntry[] {
+  return [
+    [CURYO_E2E_TEST_WALLET_PRIVATE_KEY_STORAGE_KEY, privateKey],
+    [CURYO_E2E_RPC_URL_STORAGE_KEY, rpcUrl],
+    ["thirdweb:active-chain", JSON.stringify({ id: 31337 })],
+    [
+      "curyo_terms_accepted",
+      JSON.stringify({
+        version: "3.0",
+        timestamp: Date.now(),
+        termsAccepted: true,
+        privacyAcknowledged: true,
+      }),
+    ],
+    [
+      "curyo_onboarding",
+      JSON.stringify({
+        firstVoteCompleted: true,
+        guideShown: true,
+      }),
+    ],
+  ];
+}
 
 /**
  * Build a script that pre-seeds localStorage for the localhost thirdweb test wallet flow.
@@ -16,15 +43,12 @@ import {
  * Must run BEFORE any page navigation (via page.addInitScript).
  */
 function seedWalletSessionScript(privateKey: string, rpcUrl: string): string {
+  const storageEntries = getWalletSessionStorageEntries(privateKey, rpcUrl);
+
   return `
-    const walletStatePrefixes = [
-      "thirdweb:",
-      "thirdwebEwsWallet",
-      "thirdweb_guest_session_id_",
-      "walletToken-",
-      "a-",
-      "wagmi.",
-    ];
+    const walletStateExactKeys = ${JSON.stringify(WALLET_STATE_EXACT_KEYS)};
+    const walletStatePrefixes = ${JSON.stringify(WALLET_STATE_PREFIXES)};
+    const walletSessionStorageEntries = ${JSON.stringify(storageEntries)};
 
     const clearWalletState = storage => {
       if (!storage) return;
@@ -33,7 +57,7 @@ function seedWalletSessionScript(privateKey: string, rpcUrl: string): string {
       for (let index = 0; index < storage.length; index += 1) {
         const key = storage.key(index);
         if (!key) continue;
-        if (walletStatePrefixes.some(prefix => key.startsWith(prefix))) {
+        if (walletStateExactKeys.includes(key) || walletStatePrefixes.some(prefix => key.startsWith(prefix))) {
           keysToRemove.push(key);
         }
       }
@@ -46,66 +70,9 @@ function seedWalletSessionScript(privateKey: string, rpcUrl: string): string {
     clearWalletState(localStorage);
     clearWalletState(sessionStorage);
 
-    localStorage.setItem("${CURYO_E2E_TEST_WALLET_PRIVATE_KEY_STORAGE_KEY}", ${JSON.stringify(privateKey)});
-    localStorage.setItem("${CURYO_E2E_RPC_URL_STORAGE_KEY}", ${JSON.stringify(rpcUrl)});
-    localStorage.setItem("thirdweb:active-chain", JSON.stringify({ id: 31337 }));
-    localStorage.setItem("curyo_terms_accepted", JSON.stringify({
-      version: "3.0",
-      timestamp: Date.now(),
-      termsAccepted: true,
-      privacyAcknowledged: true,
-    }));
-    localStorage.setItem("curyo_onboarding", JSON.stringify({
-      firstVoteCompleted: true,
-      guideShown: true,
-    }));
-  `;
-}
-
-function buildWalletSessionResetScript(privateKey: string, rpcUrl: string): string {
-  return `
-    const walletStatePrefixes = [
-      "thirdweb:",
-      "thirdwebEwsWallet",
-      "thirdweb_guest_session_id_",
-      "walletToken-",
-      "a-",
-      "wagmi.",
-    ];
-
-    const clearWalletState = storage => {
-      if (!storage) return;
-
-      const keysToRemove = [];
-      for (let index = 0; index < storage.length; index += 1) {
-        const key = storage.key(index);
-        if (!key) continue;
-        if (walletStatePrefixes.some(prefix => key.startsWith(prefix))) {
-          keysToRemove.push(key);
-        }
-      }
-
-      for (const key of keysToRemove) {
-        storage.removeItem(key);
-      }
-    };
-
-    clearWalletState(localStorage);
-    clearWalletState(sessionStorage);
-
-    localStorage.setItem("${CURYO_E2E_TEST_WALLET_PRIVATE_KEY_STORAGE_KEY}", ${JSON.stringify(privateKey)});
-    localStorage.setItem("${CURYO_E2E_RPC_URL_STORAGE_KEY}", ${JSON.stringify(rpcUrl)});
-    localStorage.setItem("thirdweb:active-chain", JSON.stringify({ id: 31337 }));
-    localStorage.setItem("curyo_terms_accepted", JSON.stringify({
-      version: "3.0",
-      timestamp: Date.now(),
-      termsAccepted: true,
-      privacyAcknowledged: true,
-    }));
-    localStorage.setItem("curyo_onboarding", JSON.stringify({
-      firstVoteCompleted: true,
-      guideShown: true,
-    }));
+    for (const [key, value] of walletSessionStorageEntries) {
+      localStorage.setItem(key, value);
+    }
   `;
 }
 
@@ -125,7 +92,37 @@ export async function setupWallet(
 
 /** Replace the injected local wallet session after a page has already loaded. */
 export async function swapWalletSession(page: Page, privateKey: string): Promise<void> {
-  await page.evaluate(script => {
-    window.eval(script);
-  }, buildWalletSessionResetScript(privateKey, E2E_RPC_URL));
+  await page.evaluate(
+    ({ exactKeys, prefixes, storageEntries }) => {
+      const exactKeySet = new Set<string>(exactKeys);
+      const clearWalletState = (storage: Storage | null) => {
+        if (!storage) return;
+
+        const keysToRemove: string[] = [];
+        for (let index = 0; index < storage.length; index += 1) {
+          const key = storage.key(index);
+          if (!key) continue;
+          if (exactKeySet.has(key) || prefixes.some(prefix => key.startsWith(prefix))) {
+            keysToRemove.push(key);
+          }
+        }
+
+        for (const key of keysToRemove) {
+          storage.removeItem(key);
+        }
+      };
+
+      clearWalletState(localStorage);
+      clearWalletState(sessionStorage);
+
+      for (const [key, value] of storageEntries) {
+        localStorage.setItem(key, value);
+      }
+    },
+    {
+      exactKeys: [...WALLET_STATE_EXACT_KEYS],
+      prefixes: [...WALLET_STATE_PREFIXES],
+      storageEntries: getWalletSessionStorageEntries(privateKey, E2E_RPC_URL),
+    },
+  );
 }
