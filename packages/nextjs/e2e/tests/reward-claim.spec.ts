@@ -6,8 +6,8 @@ import {
   evmIncreaseTime,
   getActiveRoundId,
   processUnrevealedVotes,
-  readAddress,
   readTokenBalance,
+  readUint256,
   revealVoteDirect,
   setTestConfig,
   settleRoundDirect,
@@ -311,11 +311,11 @@ test.describe("Reward claim lifecycle", () => {
     expect(result, "processUnrevealedVotes should revert with NothingProcessed when all votes revealed").toBe(false);
   });
 
-  test("processUnrevealedVotes forfeits unrevealed past-epoch stakes and pays keeper once", async () => {
+  test("processUnrevealedVotes routes unrevealed settled stakes to reserve once", async () => {
     test.setTimeout(180_000);
 
     // All voters commit in epoch 0. After settlement, unrevealed epoch-0
-    // commits are "past epoch" (revealableAfter <= settledAt) → forfeited.
+    // commits are "past epoch" (revealableAfter <= settledAt) → reserve.
     // The future-epoch refund path is covered by Foundry unit tests
     // (test_ProcessUnrevealed_RefundsCurrentEpochVote) because E2E timing
     // makes it impractical to create true future-epoch commits here.
@@ -410,8 +410,7 @@ test.describe("Reward claim lifecycle", () => {
     const settled = await settleRoundDirect(BigInt(cleanupContentId!), cleanupRoundId, keeper.address, VOTING_ENGINE);
     expect(settled, "Cleanup setup round did not settle").toBe(true);
 
-    const treasuryAddress = await readAddress("treasury", CONTENT_REGISTRY);
-    const treasuryBalanceBefore = await readTokenBalance(treasuryAddress, CREP_TOKEN);
+    const consensusReserveBefore = await readUint256("consensusReserve", VOTING_ENGINE);
 
     const cleanupSuccess = await processUnrevealedVotes(
       BigInt(cleanupContentId!),
@@ -423,10 +422,10 @@ test.describe("Reward claim lifecycle", () => {
     );
     expect(cleanupSuccess, "Cleanup should process unrevealed votes").toBe(true);
 
-    const treasuryBalanceAfter = await readTokenBalance(treasuryAddress, CREP_TOKEN);
+    const consensusReserveAfter = await readUint256("consensusReserve", VOTING_ENGINE);
 
-    // Both unrevealed epoch-0 stakes forfeited to treasury
-    expect(treasuryBalanceAfter - treasuryBalanceBefore).toBe(STAKE * 2n);
+    // Settled-round unrevealed epoch-0 stakes are credited to the consensus reserve.
+    expect(consensusReserveAfter - consensusReserveBefore).toBe(STAKE * 2n);
 
     const secondCleanup = await processUnrevealedVotes(
       BigInt(cleanupContentId!),

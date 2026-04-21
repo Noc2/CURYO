@@ -1664,7 +1664,8 @@ export async function finalizeRevealFailedRound(
 /**
  * Process unrevealed votes after settlement.
  * Calls processUnrevealedVotes(contentId, roundId, startIndex, count).
- * Forfeits past-epoch stakes to treasury, refunds current-epoch stakes.
+ * Routes settled past-epoch stakes to the consensus reserve, forfeits
+ * tied/reveal-failed stakes to treasury, and refunds current/future-epoch stakes.
  */
 export async function processUnrevealedVotes(
   contentId: number | bigint,
