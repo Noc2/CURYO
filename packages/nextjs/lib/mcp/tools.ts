@@ -3,13 +3,14 @@ import { createHash } from "crypto";
 import { getOptionalAppUrl } from "~~/lib/env/server";
 import { MCP_SCOPES, type McpAgentAuth, type McpScope } from "~~/lib/mcp/auth";
 import {
+  McpBudgetError,
   getMcpAgentBudgetSummary,
   getMcpBudgetReservation,
   getMcpBudgetReservationByClientRequest,
   reserveMcpAgentBudget,
   updateMcpBudgetReservation,
 } from "~~/lib/mcp/budget";
-import { type X402QuestionPayload, parseX402QuestionRequest } from "~~/lib/x402/questionPayload";
+import { type X402QuestionPayload, X402_USDC_DECIMALS, parseX402QuestionRequest } from "~~/lib/x402/questionPayload";
 import {
   X402QuestionConfigError,
   X402QuestionConflictError,
@@ -164,6 +165,27 @@ function getPublicQuestionUrl(contentId: string | null) {
   return appUrl && contentId ? `${appUrl}/rate?content=${encodeURIComponent(contentId)}` : null;
 }
 
+function normalizeMcpPayment(value: unknown) {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return value;
+  const payment = value as JsonObject;
+  const asset = typeof payment.asset === "string" ? payment.asset : "";
+  return {
+    ...payment,
+    asset: "USDC",
+    decimals: X402_USDC_DECIMALS,
+    tokenAddress: asset.startsWith("0x") ? asset : payment.tokenAddress,
+  };
+}
+
+function normalizeMcpQuestionBody(value: unknown) {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return value;
+  const body = value as JsonObject;
+  return {
+    ...body,
+    payment: normalizeMcpPayment(body.payment),
+  };
+}
+
 function sha256(value: string) {
   return createHash("sha256").update(value).digest("hex");
 }
@@ -208,14 +230,15 @@ async function lookupQuestionOperation(args: JsonObject, agent: McpAgentAuth) {
   return getX402QuestionSubmissionByOperationKey(reservation.operationKey);
 }
 
-function formatQuoteResult(params: Awaited<ReturnType<typeof preflightX402QuestionSubmission>>) {
+function formatQuoteResult(params: Awaited<ReturnType<typeof preflightX402QuestionSubmission>>, tokenAddress: string) {
   return {
     canSubmit: true,
     operationKey: params.operation.operationKey,
     payment: {
       amount: params.paymentAmount.toString(),
       asset: "USDC",
-      decimals: 6,
+      decimals: X402_USDC_DECIMALS,
+      tokenAddress,
     },
     payloadHash: params.operation.payloadHash,
     resolvedCategoryId: params.resolvedCategoryId.toString(),
@@ -228,7 +251,7 @@ async function quoteQuestion(args: JsonObject, agent: McpAgentAuth) {
   const config = resolveX402QuestionConfig(managedPayload.chainId, { requireThirdwebSecret: false });
   const quote = await preflightX402QuestionSubmission({ config, payload: managedPayload });
   return {
-    ...formatQuoteResult(quote),
+    ...formatQuoteResult(quote, config.usdcAddress),
     clientRequestId: payload.clientRequestId,
   };
 }
@@ -245,7 +268,7 @@ async function buildQuestionResult(args: JsonObject, agent: McpAgentAuth) {
 
   if (!contentId) {
     return {
-      operation: x402QuestionSubmissionRecordBody(record),
+      operation: normalizeMcpQuestionBody(x402QuestionSubmissionRecordBody(record)),
       ready: false,
       result: null,
     };
@@ -257,7 +280,7 @@ async function buildQuestionResult(args: JsonObject, agent: McpAgentAuth) {
   const settled = roundState === ROUND_STATE.Settled;
 
   return {
-    operation: record ? x402QuestionSubmissionRecordBody(record) : null,
+    operation: record ? normalizeMcpQuestionBody(x402QuestionSubmissionRecordBody(record)) : null,
     publicUrl: getPublicQuestionUrl(contentId),
     ready: settled,
     result: {
@@ -333,7 +356,7 @@ export async function callCuryoMcpTool(params: { agent: McpAgentAuth; arguments:
         });
 
         return {
-          ...body,
+          ...(normalizeMcpQuestionBody(body) as JsonObject),
           clientRequestId: payload.clientRequestId,
           managedBudget: await getMcpAgentBudgetSummary(params.agent),
           publicUrl: getPublicQuestionUrl(typeof body.contentId === "string" ? body.contentId : null),
@@ -351,7 +374,7 @@ export async function callCuryoMcpTool(params: { agent: McpAgentAuth; arguments:
     case "curyo_get_question_status": {
       const record = await lookupQuestionOperation(args, params.agent);
       return {
-        ...x402QuestionSubmissionRecordBody(record),
+        ...(normalizeMcpQuestionBody(x402QuestionSubmissionRecordBody(record)) as JsonObject),
         publicUrl: getPublicQuestionUrl(record?.contentId ?? null),
       };
     }
@@ -378,6 +401,7 @@ export function getMcpToolRequiredScope(name: string): McpScope | null {
 export function normalizeToolError(error: unknown) {
   if (
     error instanceof McpToolError ||
+    error instanceof McpBudgetError ||
     error instanceof X402QuestionConfigError ||
     error instanceof X402QuestionConflictError
   ) {
