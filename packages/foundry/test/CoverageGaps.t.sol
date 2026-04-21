@@ -485,11 +485,14 @@ contract HumanFaucetCoverageTest is Test {
         _drainFaucet(crep.balanceOf(address(faucet)));
 
         vm.prank(admin);
+        faucet.transferOwnership(governance);
+
+        vm.prank(governance);
         faucet.pause();
 
-        vm.prank(admin);
+        vm.prank(governance);
         vm.expectRevert("Nothing to withdraw");
-        faucet.withdrawRemaining(admin, 100);
+        faucet.withdrawRemaining(governance, 100);
     }
 
     // --- VoterID minting on claim ---

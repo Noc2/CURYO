@@ -541,9 +541,12 @@ contract HumanFaucetBranchTest is Test {
 
     function test_WithdrawRemainingToZeroAddressReverts() public {
         vm.prank(admin);
+        faucet.transferOwnership(governance);
+
+        vm.prank(governance);
         faucet.pause();
 
-        vm.prank(admin);
+        vm.prank(governance);
         vm.expectRevert("Invalid address");
         faucet.withdrawRemaining(address(0), 100);
     }

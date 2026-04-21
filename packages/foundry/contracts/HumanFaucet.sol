@@ -250,6 +250,7 @@ contract HumanFaucet is SelfVerificationRoot, Ownable, Pausable {
     /// @param to Address to receive the tokens
     /// @param amount Amount to withdraw (use type(uint256).max for full balance)
     function withdrawRemaining(address to, uint256 amount) external onlyOwner {
+        require(owner() == governance, "Governance ownership required");
         require(paused(), "Pause required");
         require(to != address(0), "Invalid address");
 

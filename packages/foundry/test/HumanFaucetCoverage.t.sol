@@ -484,6 +484,28 @@ contract HumanFaucetCoverageTest is Test {
         assertEq(crepToken.balanceOf(address(faucet)), 0);
     }
 
+    function test_WithdrawRemaining_BeforeGovernanceOwnership_Reverts() public {
+        address splitGovernance = address(77);
+
+        vm.startPrank(admin);
+        HumanFaucet splitFaucet = new HumanFaucet(address(crepToken), address(mockHub), splitGovernance);
+        crepToken.grantRole(crepToken.MINTER_ROLE(), admin);
+        crepToken.mint(address(splitFaucet), 1_000e6);
+        crepToken.revokeRole(crepToken.MINTER_ROLE(), admin);
+        splitFaucet.pause();
+
+        vm.expectRevert("Governance ownership required");
+        splitFaucet.withdrawRemaining(admin, 1e6);
+
+        splitFaucet.transferOwnership(splitGovernance);
+        vm.stopPrank();
+
+        vm.prank(splitGovernance);
+        splitFaucet.withdrawRemaining(splitGovernance, 1e6);
+
+        assertEq(crepToken.balanceOf(splitGovernance), 1e6);
+    }
+
     function test_WithdrawRemaining_ZeroBalance_Reverts() public {
         _drainFaucet(crepToken.balanceOf(address(faucet)));
 
