@@ -29,7 +29,9 @@ export type McpBudgetReservationRecord = {
   updatedAt: Date;
 };
 
-function rowToReservation(row: QueryResultRow | Record<string, unknown> | undefined): McpBudgetReservationRecord | null {
+function rowToReservation(
+  row: QueryResultRow | Record<string, unknown> | undefined,
+): McpBudgetReservationRecord | null {
   if (!row) return null;
   return {
     agentId: String(row.agent_id),
@@ -72,6 +74,10 @@ function assertAgentMaySpend(params: { agent: McpAgentAuth; amount: bigint; cate
   if (params.agent.allowedCategoryIds && !params.agent.allowedCategoryIds.has(params.categoryId)) {
     throw new McpBudgetError("This MCP agent is not allowed to ask in the selected category.", 403);
   }
+}
+
+function isReusableBudgetReservation(status: McpBudgetReservationStatus) {
+  return status === "reserved" || status === "submitted";
 }
 
 export async function getMcpBudgetReservation(operationKey: `0x${string}`) {
@@ -251,6 +257,52 @@ async function releaseDailyBudgetCapacity(
   );
 }
 
+async function restoreReservationForRetry(
+  client: PoolClient,
+  params: {
+    agent: McpAgentAuth;
+    amount: bigint;
+    budgetDate: string;
+    existing: McpBudgetReservationRecord;
+    now: Date;
+  },
+) {
+  if (isReusableBudgetReservation(params.existing.status)) {
+    return params.existing;
+  }
+
+  if (params.existing.status !== "failed" && params.existing.status !== "released") {
+    throw new McpBudgetError(`Cannot retry MCP budget reservation with status ${params.existing.status}.`);
+  }
+
+  await reserveDailyBudgetCapacity(client, {
+    agent: params.agent,
+    amount: params.amount,
+    budgetDate: params.budgetDate,
+    now: params.now,
+  });
+
+  const result = await client.query(
+    `
+      UPDATE mcp_agent_budget_reservations
+      SET status = 'reserved',
+          content_id = NULL,
+          error = NULL,
+          updated_at = $2
+      WHERE operation_key = $1
+      RETURNING *
+    `,
+    [params.existing.operationKey, params.now],
+  );
+
+  const restored = rowToReservation(result.rows[0]);
+  if (!restored) {
+    throw new McpBudgetError("Unable to restore MCP budget reservation for retry.", 500);
+  }
+
+  return restored;
+}
+
 export async function reserveMcpAgentBudget(params: {
   agent: McpAgentAuth;
   amount: bigint;
@@ -274,7 +326,13 @@ export async function reserveMcpAgentBudget(params: {
       if (existingByOperation.agentId !== params.agent.id || existingByOperation.payloadHash !== params.payloadHash) {
         throw new McpBudgetError("This MCP operation key is already reserved for a different request.");
       }
-      return existingByOperation;
+      return restoreReservationForRetry(client, {
+        agent: params.agent,
+        amount: params.amount,
+        budgetDate,
+        existing: existingByOperation,
+        now,
+      });
     }
 
     const existingByClientRequest = await getMcpBudgetReservationByClientRequestForUpdate(client, {
@@ -286,7 +344,13 @@ export async function reserveMcpAgentBudget(params: {
       if (existingByClientRequest.payloadHash !== params.payloadHash) {
         throw new McpBudgetError("clientRequestId has already been used for a different question payload.");
       }
-      return existingByClientRequest;
+      return restoreReservationForRetry(client, {
+        agent: params.agent,
+        amount: params.amount,
+        budgetDate,
+        existing: existingByClientRequest,
+        now,
+      });
     }
 
     await reserveDailyBudgetCapacity(client, {
