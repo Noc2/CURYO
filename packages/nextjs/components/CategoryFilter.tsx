@@ -223,7 +223,7 @@ export function CategoryFilter({ categories, activeCategory, onSelect, pillClass
         className="absolute inset-x-0 flex h-0 max-w-full gap-2 overflow-hidden invisible pointer-events-none"
       >
         {categories.map(category => (
-          <span key={category} className="px-3 py-1.5 rounded-full text-base font-medium whitespace-nowrap shrink-0">
+          <span key={category} className="tab-control px-3 py-1.5 text-base font-medium whitespace-nowrap shrink-0">
             {category}
           </span>
         ))}
@@ -237,7 +237,7 @@ export function CategoryFilter({ categories, activeCategory, onSelect, pillClass
             setMobileOpen(prev => !prev);
             setSearch("");
           }}
-          className={`inline-flex items-center gap-1 px-3 py-1.5 rounded-full text-base font-medium whitespace-nowrap transition-colors ${
+          className={`tab-control inline-flex items-center gap-1 px-3 py-1.5 text-base font-medium whitespace-nowrap transition-colors ${
             activeCategory !== categories[0] ? "pill-category" : "pill-inactive"
           }`}
           aria-haspopup="dialog"
@@ -336,7 +336,7 @@ export function CategoryFilter({ categories, activeCategory, onSelect, pillClass
             <button
               key={category}
               onClick={() => handleSelect(category)}
-              className={`px-3 py-1.5 rounded-full text-base font-medium whitespace-nowrap transition-colors shrink-0 ${custom ?? defaultCls}`}
+              className={`tab-control px-3 py-1.5 text-base font-medium whitespace-nowrap transition-colors shrink-0 ${custom ?? defaultCls}`}
             >
               {category}
             </button>
@@ -348,7 +348,7 @@ export function CategoryFilter({ categories, activeCategory, onSelect, pillClass
             <button
               ref={dropdownButtonRef}
               onClick={() => setDropdownOpen(prev => !prev)}
-              className={`px-3 py-1.5 rounded-full text-base font-medium whitespace-nowrap transition-colors flex items-center gap-1 ${
+              className={`tab-control px-3 py-1.5 text-base font-medium whitespace-nowrap transition-colors flex items-center gap-1 ${
                 overflow.includes(activeCategory) ? "pill-category" : "pill-inactive"
               }`}
             >

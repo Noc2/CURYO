@@ -803,6 +803,7 @@ body {
 /* Selected pills and tabs */
 .pill-active,
 .pill-filter-active {
+  border-radius: var(--curyo-radius-control);
   background: var(--curyo-ember);
   background-image: none;
   color: var(--color-primary-content);
@@ -810,6 +811,7 @@ body {
 }
 
 .pill-category {
+  border-radius: var(--curyo-radius-control);
   background: var(--curyo-ember);
   background-image: none;
   color: var(--color-neutral-content);
@@ -818,6 +820,7 @@ body {
 
 .pill-inactive,
 .pill-filter {
+  border-radius: var(--curyo-radius-control);
   background: rgb(23 22 26 / 0.96);
   color: var(--color-base-content);
   border: none;
@@ -830,6 +833,7 @@ body {
 }
 
 .pill-inactive-muted {
+  border-radius: var(--curyo-radius-control);
   background: rgb(23 22 26 / 0.96);
   color: rgb(245 240 235 / 0.6);
   border: none;

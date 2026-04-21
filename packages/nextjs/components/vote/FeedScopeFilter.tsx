@@ -215,7 +215,7 @@ export function FeedScopeFilter({ value, groups, onChange, label = "View" }: Fee
         ref={buttonRef}
         type="button"
         onClick={() => setIsOpen(prev => !prev)}
-        className={`inline-flex items-center rounded-full px-3 py-1.5 text-base font-medium whitespace-nowrap transition-colors ${
+        className={`tab-control inline-flex items-center px-3 py-1.5 text-base font-medium whitespace-nowrap transition-colors ${
           isFiltered ? "pill-filter-active" : "pill-filter"
         }`}
         aria-haspopup="dialog"
