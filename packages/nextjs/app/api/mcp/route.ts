@@ -1,11 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-import { authenticateMcpRequest, buildMcpAuthChallenge, McpAuthError } from "~~/lib/mcp/auth";
-import {
-  MCP_TOOLS,
-  callCuryoMcpTool,
-  getMcpToolRequiredScope,
-  normalizeToolError,
-} from "~~/lib/mcp/tools";
+import { McpAuthError, authenticateMcpRequest, buildMcpAuthChallenge } from "~~/lib/mcp/auth";
+import { MCP_TOOLS, callCuryoMcpTool, getMcpToolRequiredScope, normalizeToolError } from "~~/lib/mcp/tools";
 import { checkRateLimit } from "~~/utils/rateLimit";
 
 export const runtime = "nodejs";
@@ -238,4 +233,3 @@ export async function POST(request: NextRequest) {
     });
   }
 }
-

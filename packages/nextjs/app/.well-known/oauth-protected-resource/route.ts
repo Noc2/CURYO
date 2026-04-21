@@ -13,4 +13,3 @@ export async function GET(request: NextRequest) {
     scopes_supported: [MCP_SCOPES.ask, MCP_SCOPES.balance, MCP_SCOPES.quote, MCP_SCOPES.read],
   });
 }
-

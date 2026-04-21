@@ -1,4 +1,7 @@
 import { ROUND_STATE, ROUND_STATE_LABEL } from "@curyo/contracts/protocol";
+import { getOptionalAppUrl } from "~~/lib/env/server";
+import { MCP_SCOPES, type McpAgentAuth, type McpScope } from "~~/lib/mcp/auth";
+import { getMcpAgentBudgetSummary, reserveMcpAgentBudget, updateMcpBudgetReservation } from "~~/lib/mcp/budget";
 import { parseX402QuestionRequest } from "~~/lib/x402/questionPayload";
 import {
   X402QuestionConfigError,
@@ -10,9 +13,6 @@ import {
   resolveX402QuestionConfig,
   x402QuestionSubmissionRecordBody,
 } from "~~/lib/x402/questionSubmission";
-import { getOptionalAppUrl } from "~~/lib/env/server";
-import { getMcpAgentBudgetSummary, reserveMcpAgentBudget, updateMcpBudgetReservation } from "~~/lib/mcp/budget";
-import { MCP_SCOPES, type McpAgentAuth, type McpScope } from "~~/lib/mcp/auth";
 import { ponderApi } from "~~/services/ponder/client";
 
 type JsonObject = Record<string, unknown>;
@@ -65,7 +65,10 @@ export const MCP_TOOLS: McpToolDefinition[] = [
         bounty: { description: "USDC bounty settings in atomic units.", type: "object" },
         chainId: { type: "integer" },
         clientRequestId: { type: "string" },
-        question: { description: "Question payload with title, description, contextUrl, categoryId, and tags.", type: "object" },
+        question: {
+          description: "Question payload with title, description, contextUrl, categoryId, and tags.",
+          type: "object",
+        },
       },
       required: ["clientRequestId", "question", "bounty"],
       type: "object",
@@ -86,7 +89,10 @@ export const MCP_TOOLS: McpToolDefinition[] = [
           description: "Maximum total managed spend, including bounty and service fee, in atomic USDC.",
           type: "string",
         },
-        question: { description: "Question payload with title, description, contextUrl, categoryId, and tags.", type: "object" },
+        question: {
+          description: "Question payload with title, description, contextUrl, categoryId, and tags.",
+          type: "object",
+        },
       },
       required: ["clientRequestId", "question", "bounty", "maxPaymentAmount"],
       type: "object",
@@ -139,7 +145,8 @@ function asObject(value: unknown): JsonObject {
 }
 
 function parseMaxPaymentAmount(value: unknown): bigint {
-  const rawValue = typeof value === "number" || typeof value === "bigint" || typeof value === "string" ? String(value) : "";
+  const rawValue =
+    typeof value === "number" || typeof value === "bigint" || typeof value === "string" ? String(value) : "";
   if (!/^\d+$/.test(rawValue.trim())) {
     throw new McpToolError("maxPaymentAmount must be a non-negative integer string.");
   }
@@ -349,4 +356,3 @@ export function normalizeToolError(error: unknown) {
     status: 500,
   };
 }
-
