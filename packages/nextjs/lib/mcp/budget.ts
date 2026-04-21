@@ -106,14 +106,14 @@ export async function reserveMcpAgentBudget(params: {
         created_at,
         updated_at
       )
-      SELECT ?, ?, ?, ?, ?, ?, ?, 'reserved', ?, ?
+      SELECT ?, ?, ?, ?, CAST(? AS integer), ?, ?, 'reserved', CAST(? AS timestamp with time zone), CAST(? AS timestamp with time zone)
       WHERE (
         SELECT COALESCE(SUM(payment_amount::numeric), 0)
         FROM mcp_agent_budget_reservations
         WHERE agent_id = ?
           AND status IN ('reserved', 'submitted')
-          AND created_at >= ?
-      ) + ? <= ?
+          AND created_at >= CAST(? AS timestamp with time zone)
+      ) + CAST(? AS numeric) <= CAST(? AS numeric)
       ON CONFLICT(operation_key) DO NOTHING
       RETURNING *
     `,
