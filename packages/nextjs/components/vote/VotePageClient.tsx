@@ -1485,9 +1485,7 @@ const HomeInner = () => {
 
       return (
         <div
-          className={
-            isMobileVariant ? "flex min-h-0 flex-col gap-3 px-4 pb-3 sm:px-6" : "flex min-h-0 flex-col gap-4 px-4"
-          }
+          className={isMobileVariant ? "flex min-h-0 flex-col gap-3 px-4 pb-3 sm:px-6" : "flex min-h-0 flex-col gap-4"}
         >
           <div
             className={`flex shrink-0 flex-wrap items-center gap-2 sm:gap-3 ${
