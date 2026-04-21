@@ -61,35 +61,63 @@ function requireIntEnv(name: string, errors: string[]): number {
     return 0;
   }
 
-  const parsed = Number.parseInt(value, 10);
-  if (!Number.isInteger(parsed) || parsed <= 0) {
-    errors.push(`${name} must be a positive integer`);
-    return 0;
-  }
-
-  return parsed;
+  return parseIntegerEnv(name, value, "positive", 0, errors);
 }
 
 function readPositiveIntEnv(name: string, fallback: string, errors: string[]): number {
   const value = readEnv(name) || fallback;
-  const parsed = Number.parseInt(value, 10);
-  if (!Number.isInteger(parsed) || parsed <= 0) {
-    errors.push(`${name} must be a positive integer`);
-    return Number.parseInt(fallback, 10);
+  return parseIntegerEnv(name, value, "positive", Number(fallback), errors);
+}
+
+function readNonNegativeIntEnv(name: string, fallback: string, errors: string[]): number {
+  const value = readEnv(name) || fallback;
+  return parseIntegerEnv(name, value, "non-negative", Number(fallback), errors);
+}
+
+function parseIntegerEnv(
+  name: string,
+  value: string,
+  kind: "positive" | "non-negative",
+  fallback: number,
+  errors: string[],
+): number {
+  const parsed = Number(value);
+  const isValidInteger = /^\d+$/.test(value) && Number.isSafeInteger(parsed);
+  const isValidRange = kind === "positive" ? parsed > 0 : parsed >= 0;
+
+  if (!isValidInteger || !isValidRange) {
+    errors.push(`${name} must be a ${kind} integer`);
+    return fallback;
   }
 
   return parsed;
 }
 
-function readNonNegativeIntEnv(name: string, fallback: string, errors: string[]): number {
+function readPositiveBigIntEnv(name: string, fallback: string, errors: string[]): bigint {
+  return BigInt(readBigIntStringEnv(name, fallback, "positive", errors));
+}
+
+function readNonNegativeBigIntStringEnv(name: string, fallback: string, errors: string[]): string {
+  return readBigIntStringEnv(name, fallback, "non-negative", errors);
+}
+
+function readBigIntStringEnv(
+  name: string,
+  fallback: string,
+  kind: "positive" | "non-negative",
+  errors: string[],
+): string {
   const value = readEnv(name) || fallback;
-  const parsed = Number.parseInt(value, 10);
-  if (!Number.isInteger(parsed) || parsed < 0) {
-    errors.push(`${name} must be a non-negative integer`);
-    return Number.parseInt(fallback, 10);
+  const isValidInteger = /^\d+$/.test(value);
+  const parsed = isValidInteger ? BigInt(value) : null;
+  const isValidRange = parsed !== null && (kind === "positive" ? parsed > 0n : parsed >= 0n);
+
+  if (!isValidInteger || !isValidRange) {
+    errors.push(`${name} must be a ${kind} integer`);
+    return fallback;
   }
 
-  return parsed;
+  return value;
 }
 
 function requireAddressEnv(name: string, errors: string[]): `0x${string}` {
@@ -220,12 +248,12 @@ function loadConfig() {
     cleanupBatchSize: readPositiveIntEnv("KEEPER_CLEANUP_BATCH_SIZE", "25", errors),
 
     // Tuning
-    dormancyPeriod: BigInt(process.env.DORMANCY_PERIOD || String(30 * 24 * 60 * 60)),
-    minGasBalanceWei: process.env.MIN_GAS_BALANCE_WEI || "10000000000000000", // 0.01 CELO
+    dormancyPeriod: readPositiveBigIntEnv("DORMANCY_PERIOD", String(30 * 24 * 60 * 60), errors),
+    minGasBalanceWei: readNonNegativeBigIntStringEnv("MIN_GAS_BALANCE_WEI", "10000000000000000", errors), // 0.01 CELO
     maxGasPerTx: readPositiveIntEnv("MAX_GAS_PER_TX", "2000000", errors),
 
     // Monitoring
-    metricsPort: Number.parseInt(process.env.METRICS_PORT || "9090", 10),
+    metricsPort: readPositiveIntEnv("METRICS_PORT", "9090", errors),
     metricsBindAddress: readEnv("METRICS_BIND_ADDRESS") || "127.0.0.1",
     metricsEnabled: process.env.METRICS_ENABLED !== "false",
 
