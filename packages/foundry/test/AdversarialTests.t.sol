@@ -382,13 +382,12 @@ contract AdversarialTests is VotingTestBase {
         uint256 roundId = RoundEngineReadHelpers.activeRoundId(engine, contentId);
         RoundLib.Round memory round = RoundEngineReadHelpers.round(engine, contentId, roundId);
 
-        // Reveal epoch 1 voters
+        // Move into epoch 2, add voter3 before the reveal threshold is reached,
+        // then reveal the epoch 1 voters.
         vm.warp(round.startTime + EPOCH_DURATION + 1);
+        _commit(voter3, contentId, true, 25e6);
         _reveal(contentId, roundId, ck1);
         _reveal(contentId, roundId, ck2);
-
-        // New voter in epoch 2 (not yet revealable when we settle)
-        _commit(voter3, contentId, true, 25e6);
 
         // Settle immediately (voter3's epoch hasn't ended)
         engine.settleRound(contentId, roundId);
@@ -952,13 +951,11 @@ contract AdversarialTests is VotingTestBase {
         uint256 roundId = RoundEngineReadHelpers.activeRoundId(engine, contentId);
         RoundLib.Round memory round = RoundEngineReadHelpers.round(engine, contentId, roundId);
 
-        // Wait for epoch 1 to end
+        // Wait for epoch 1 to end and add the epoch-2 voter before threshold is reached.
         vm.warp(round.startTime + EPOCH_DURATION + 1);
+        (bytes32 ck3,) = _commit(voter3, contentId, true, 100e6);
         _reveal(contentId, roundId, ck1);
         _reveal(contentId, roundId, ck2);
-
-        // Epoch 2: voter3 also votes UP with same stake as voter1
-        (bytes32 ck3,) = _commit(voter3, contentId, true, 100e6);
 
         // Wait for epoch 2 to end, reveal voter3
         vm.warp(round.startTime + 2 * EPOCH_DURATION + 1);

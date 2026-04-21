@@ -1212,18 +1212,14 @@ contract RoundVotingEngineBranchesTest is VotingTestBase {
         // Warp past epoch 1 (absolute time) — voter1/2/3 votes become revealable
         RoundLib.Round memory rPU2start = RoundEngineReadHelpers.round(engine, contentId, roundId);
         vm.warp(rPU2start.startTime + EPOCH + 1);
+        // Commit voter4 in epoch 2 before threshold is reached. This keeps the
+        // current-epoch unrevealed path without relying on post-threshold commits.
+        _commit(voter4, contentId, true, STAKE);
         _reveal(contentId, roundId, ck1, true, s1);
         _reveal(contentId, roundId, ck2, true, s2);
         _reveal(contentId, roundId, ck3, false, s3);
-        // thresholdReachedAt is set here = rPU2start.startTime + EPOCH + 1
 
-        // Warp past epoch 2 — voter4 commits in epoch 3
-        // voter4's revealableAfter = rPU2start.startTime + 3 * EPOCH
-        vm.warp(rPU2start.startTime + 2 * EPOCH + 1);
-        _commit(voter4, contentId, true, STAKE);
-
-        // settledAt = rPU2start.startTime + 2 * EPOCH + 1 (current block.timestamp)
-        // voter4 revealableAfter = rPU2start.startTime + 3 * EPOCH > settledAt => REFUNDED
+        // settledAt is in epoch 2 while voter4's revealableAfter is epoch 2 end => REFUNDED
         engine.settleRound(contentId, roundId);
 
         uint256 voter4BalBefore = crepToken.balanceOf(voter4);
