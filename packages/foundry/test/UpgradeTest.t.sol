@@ -361,7 +361,7 @@ contract UpgradeTest is Test {
 
         IProfileRegistry.Profile memory profile = profileRegistry.getProfile(address(10));
         assertEq(profile.name, "testuser");
-        assertEq(profile.strategy, "");
+        assertEq(profile.selfReport, "");
         assertTrue(profile.createdAt > 0);
         assertTrue(profile.updatedAt > 0);
 

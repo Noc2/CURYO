@@ -41,7 +41,7 @@ contract ProfileRegistryTest is Test {
     function test_Initialization() public view {
         assertEq(registry.MIN_NAME_LENGTH(), 3);
         assertEq(registry.MAX_NAME_LENGTH(), 20);
-        assertEq(registry.MAX_STRATEGY_LENGTH(), 560);
+        assertEq(registry.MAX_SELF_REPORT_LENGTH(), 1600);
         (, uint256 total) = registry.getRegisteredAddressesPaginated(0, 10);
         assertEq(total, 0);
     }
@@ -54,7 +54,7 @@ contract ProfileRegistryTest is Test {
 
         IProfileRegistry.Profile memory profile = registry.getProfile(user1);
         assertEq(profile.name, "alice");
-        assertEq(profile.strategy, "");
+        assertEq(profile.selfReport, "");
         assertTrue(profile.createdAt > 0);
         assertTrue(profile.updatedAt > 0);
 
@@ -73,30 +73,30 @@ contract ProfileRegistryTest is Test {
         vm.stopPrank();
 
         IProfileRegistry.Profile memory profile = registry.getProfile(user1);
-        assertEq(profile.strategy, "");
+        assertEq(profile.selfReport, "");
         assertTrue(profile.updatedAt > profile.createdAt);
     }
 
-    function test_SetProfileStoresStrategy() public {
+    function test_SetProfileStoresSelfReport() public {
         vm.prank(user1);
-        registry.setProfile("alice", "I rate highly when content is original, accurate, and genuinely useful.");
+        registry.setProfile("alice", "{\"v\":1,\"ageGroup\":\"25-34\",\"residenceCountry\":\"DE\"}");
 
         IProfileRegistry.Profile memory profile = registry.getProfile(user1);
         assertEq(profile.name, "alice");
-        assertEq(profile.strategy, "I rate highly when content is original, accurate, and genuinely useful.");
+        assertEq(profile.selfReport, "{\"v\":1,\"ageGroup\":\"25-34\",\"residenceCountry\":\"DE\"}");
     }
 
-    function test_SetProfileUpdateStrategy() public {
+    function test_SetProfileUpdateSelfReport() public {
         vm.startPrank(user1);
-        registry.setProfile("alice", "I look for originality and depth.");
+        registry.setProfile("alice", "{\"v\":1,\"ageGroup\":\"25-34\"}");
 
         vm.warp(block.timestamp + 1 days);
 
-        registry.setProfile("alice", "I downvote broken links, low-effort reposts, and misleading descriptions.");
+        registry.setProfile("alice", "{\"v\":1,\"ageGroup\":\"35-44\",\"languages\":[\"en\"]}");
         vm.stopPrank();
 
         IProfileRegistry.Profile memory profile = registry.getProfile(user1);
-        assertEq(profile.strategy, "I downvote broken links, low-effort reposts, and misleading descriptions.");
+        assertEq(profile.selfReport, "{\"v\":1,\"ageGroup\":\"35-44\",\"languages\":[\"en\"]}");
         assertTrue(profile.updatedAt > profile.createdAt);
     }
 
@@ -118,12 +118,12 @@ contract ProfileRegistryTest is Test {
         registry.setProfile("alice", "");
 
         // Should not revert when updating with same name
-        registry.setProfile("alice", "I focus on original and well-sourced content.");
+        registry.setProfile("alice", "{\"v\":1,\"roles\":[\"researcher\"]}");
         vm.stopPrank();
 
         IProfileRegistry.Profile memory profile = registry.getProfile(user1);
         assertEq(profile.name, "alice");
-        assertEq(profile.strategy, "I focus on original and well-sourced content.");
+        assertEq(profile.selfReport, "{\"v\":1,\"roles\":[\"researcher\"]}");
     }
 
     function test_RevertSetProfileNameTooShort() public {
@@ -174,15 +174,15 @@ contract ProfileRegistryTest is Test {
         registry.setProfile("alice", "");
     }
 
-    function test_RevertSetProfileStrategyTooLong() public {
-        bytes memory longStrategy = new bytes(561);
-        for (uint256 i = 0; i < 561; i++) {
-            longStrategy[i] = "a";
+    function test_RevertSetProfileSelfReportTooLong() public {
+        bytes memory longSelfReport = new bytes(1601);
+        for (uint256 i = 0; i < 1601; i++) {
+            longSelfReport[i] = "a";
         }
 
         vm.prank(user1);
-        vm.expectRevert("Strategy too long");
-        registry.setProfile("alice", string(longStrategy));
+        vm.expectRevert("Self-report too long");
+        registry.setProfile("alice", string(longSelfReport));
     }
 
     // --- Name Uniqueness Tests (Case Insensitive) ---
@@ -213,7 +213,7 @@ contract ProfileRegistryTest is Test {
 
         IProfileRegistry.Profile memory profile = registry.getProfile(user1);
         assertEq(profile.name, "alice");
-        assertEq(profile.strategy, "");
+        assertEq(profile.selfReport, "");
     }
 
     function test_GetAvatarAccentDefault() public view {
@@ -254,7 +254,7 @@ contract ProfileRegistryTest is Test {
     function test_GetProfileNonExistent() public view {
         IProfileRegistry.Profile memory profile = registry.getProfile(user1);
         assertEq(profile.name, "");
-        assertEq(profile.strategy, "");
+        assertEq(profile.selfReport, "");
         assertEq(profile.createdAt, 0);
     }
 
@@ -473,13 +473,13 @@ contract ProfileRegistryTest is Test {
 
     function test_AdminCanReleaseNameAfterVoterIdRevocation() public {
         vm.prank(user1);
-        registry.setProfile("alice", "I value careful sourcing.");
+        registry.setProfile("alice", "{\"v\":1,\"expertise\":[\"science\"]}");
 
         voterIdNFT.removeHolder(user1);
 
         vm.prank(user1);
         vm.expectRevert("Voter ID required");
-        registry.setProfile("alice2", "I value careful sourcing.");
+        registry.setProfile("alice2", "{\"v\":1,\"expertise\":[\"science\"]}");
 
         vm.prank(admin);
         vm.expectEmit(true, false, false, true);
@@ -491,7 +491,7 @@ contract ProfileRegistryTest is Test {
 
         IProfileRegistry.Profile memory releasedProfile = registry.getProfile(user1);
         assertEq(releasedProfile.name, "");
-        assertEq(releasedProfile.strategy, "I value careful sourcing.");
+        assertEq(releasedProfile.selfReport, "{\"v\":1,\"expertise\":[\"science\"]}");
         assertTrue(registry.hasProfile(user1));
 
         vm.prank(user2);

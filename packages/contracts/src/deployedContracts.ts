@@ -9381,7 +9381,7 @@ const deployedContracts: GenericContractsDeclaration = {
         },
         {
           type: "function",
-          name: "MAX_STRATEGY_LENGTH",
+          name: "MAX_SELF_REPORT_LENGTH",
           inputs: [],
           outputs: [
             {
@@ -9477,7 +9477,7 @@ const deployedContracts: GenericContractsDeclaration = {
                   internalType: "string",
                 },
                 {
-                  name: "strategy",
+                  name: "selfReport",
                   type: "string",
                   internalType: "string",
                 },
@@ -9701,7 +9701,7 @@ const deployedContracts: GenericContractsDeclaration = {
               internalType: "string",
             },
             {
-              name: "strategy",
+              name: "selfReport",
               type: "string",
               internalType: "string",
             },
@@ -9816,7 +9816,7 @@ const deployedContracts: GenericContractsDeclaration = {
               internalType: "string",
             },
             {
-              name: "strategy",
+              name: "selfReport",
               type: "string",
               indexed: false,
               internalType: "string",
@@ -9841,7 +9841,7 @@ const deployedContracts: GenericContractsDeclaration = {
               internalType: "string",
             },
             {
-              name: "strategy",
+              name: "selfReport",
               type: "string",
               indexed: false,
               internalType: "string",
@@ -30089,7 +30089,7 @@ const deployedContracts: GenericContractsDeclaration = {
         },
         {
           type: "function",
-          name: "MAX_STRATEGY_LENGTH",
+          name: "MAX_SELF_REPORT_LENGTH",
           inputs: [],
           outputs: [
             {
@@ -30185,7 +30185,7 @@ const deployedContracts: GenericContractsDeclaration = {
                   internalType: "string",
                 },
                 {
-                  name: "strategy",
+                  name: "selfReport",
                   type: "string",
                   internalType: "string",
                 },
@@ -30409,7 +30409,7 @@ const deployedContracts: GenericContractsDeclaration = {
               internalType: "string",
             },
             {
-              name: "strategy",
+              name: "selfReport",
               type: "string",
               internalType: "string",
             },
@@ -30524,7 +30524,7 @@ const deployedContracts: GenericContractsDeclaration = {
               internalType: "string",
             },
             {
-              name: "strategy",
+              name: "selfReport",
               type: "string",
               indexed: false,
               internalType: "string",
@@ -30549,7 +30549,7 @@ const deployedContracts: GenericContractsDeclaration = {
               internalType: "string",
             },
             {
-              name: "strategy",
+              name: "selfReport",
               type: "string",
               indexed: false,
               internalType: "string",
@@ -48441,7 +48441,7 @@ const deployedContracts: GenericContractsDeclaration = {
         },
         {
           type: "function",
-          name: "MAX_STRATEGY_LENGTH",
+          name: "MAX_SELF_REPORT_LENGTH",
           inputs: [],
           outputs: [
             {
@@ -48537,7 +48537,7 @@ const deployedContracts: GenericContractsDeclaration = {
                   internalType: "string",
                 },
                 {
-                  name: "strategy",
+                  name: "selfReport",
                   type: "string",
                   internalType: "string",
                 },
@@ -48761,7 +48761,7 @@ const deployedContracts: GenericContractsDeclaration = {
               internalType: "string",
             },
             {
-              name: "strategy",
+              name: "selfReport",
               type: "string",
               internalType: "string",
             },
@@ -48876,7 +48876,7 @@ const deployedContracts: GenericContractsDeclaration = {
               internalType: "string",
             },
             {
-              name: "strategy",
+              name: "selfReport",
               type: "string",
               indexed: false,
               internalType: "string",
@@ -48901,7 +48901,7 @@ const deployedContracts: GenericContractsDeclaration = {
               internalType: "string",
             },
             {
-              name: "strategy",
+              name: "selfReport",
               type: "string",
               indexed: false,
               internalType: "string",
