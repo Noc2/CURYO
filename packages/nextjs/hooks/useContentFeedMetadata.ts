@@ -15,7 +15,7 @@ function chunkItems<T>(items: T[], batchSize: number): T[][] {
   return batches;
 }
 
-async function fetchThumbnailMetadataBatch(batch: string[]): Promise<Record<string, ContentMetadataResult>> {
+export async function fetchThumbnailMetadataBatch(batch: string[]): Promise<Record<string, ContentMetadataResult>> {
   try {
     const response = await fetch("/api/thumbnails", {
       method: "POST",
@@ -46,7 +46,7 @@ function getContentFeedUrls(feed: ContentItem[]): string[] {
   ].sort();
 }
 
-function shouldFetchMetadataUrl(url: string): boolean {
+export function shouldFetchMetadataUrl(url: string): boolean {
   try {
     return new URL(url).protocol === "https:";
   } catch {

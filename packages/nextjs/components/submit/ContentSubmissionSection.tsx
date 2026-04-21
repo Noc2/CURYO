@@ -12,6 +12,7 @@ import {
   setStoredSubmissionReservation,
   submissionReservationMatchesDraft,
 } from "./submissionReservation";
+import { useQuery } from "@tanstack/react-query";
 import { decodeEventLog } from "viem";
 import { useAccount, useConfig } from "wagmi";
 import { readContract, waitForTransactionReceipt, writeContract } from "wagmi/actions";
@@ -26,6 +27,7 @@ import { useDeployedContractInfo, useScaffoldReadContract, useScaffoldWriteContr
 import { useLocalE2ETestWalletClient } from "~~/hooks/scaffold-eth/useLocalE2ETestWalletClient";
 import { useTargetNetwork } from "~~/hooks/scaffold-eth/useTargetNetwork";
 import { type Category, useCategoryRegistry } from "~~/hooks/useCategoryRegistry";
+import { fetchThumbnailMetadataBatch, shouldFetchMetadataUrl } from "~~/hooks/useContentFeedMetadata";
 import { useGasBalanceStatus } from "~~/hooks/useGasBalanceStatus";
 import { useThirdwebSponsoredSubmitCalls } from "~~/hooks/useThirdwebSponsoredSubmitCalls";
 import { useTransactionStatusToast } from "~~/hooks/useTransactionStatusToast";
@@ -365,6 +367,21 @@ export function ContentSubmissionSection() {
       ? !videoUrlError && isYouTubeVideoUrl(previewMediaUrl)
       : !imageUrlErrors.some(Boolean) && isDirectImageUrl(previewMediaUrl));
   const previewUrl = hasValidPreviewMedia ? previewMediaUrl : normalizedContextUrl;
+  const shouldUseContextLinkPreview = Boolean(normalizedContextUrl) && previewUrl === normalizedContextUrl;
+  const shouldFetchContextPreviewMetadata =
+    shouldUseContextLinkPreview &&
+    !isDirectImageUrl(normalizedContextUrl) &&
+    !isYouTubeVideoUrl(normalizedContextUrl) &&
+    shouldFetchMetadataUrl(normalizedContextUrl);
+  const { data: contextPreviewMetadataMap } = useQuery({
+    queryKey: ["submissionContextPreviewMetadata", normalizedContextUrl],
+    enabled: shouldFetchContextPreviewMetadata,
+    staleTime: 60_000,
+    queryFn: async () => fetchThumbnailMetadataBatch([normalizedContextUrl]),
+  });
+  const contextPreviewThumbnailUrl = shouldFetchContextPreviewMetadata
+    ? (contextPreviewMetadataMap?.[normalizedContextUrl]?.thumbnailUrl ?? null)
+    : null;
 
   const handleCategorySelect = (category: Category) => {
     setSelectedCategory(category);
@@ -1168,7 +1185,15 @@ export function ContentSubmissionSection() {
       <div className="surface-card rounded-2xl p-4 space-y-3">
         <p className="text-base font-medium uppercase tracking-wider text-base-content/40">Preview</p>
         {title ? <h3 className="line-clamp-2 text-lg font-semibold text-base-content">{title}</h3> : null}
-        {previewUrl ? <ContentEmbed url={previewUrl} title={title} description={description} compact /> : null}
+        {previewUrl ? (
+          <ContentEmbed
+            url={previewUrl}
+            title={title}
+            description={description}
+            thumbnailUrl={contextPreviewThumbnailUrl}
+            compact
+          />
+        ) : null}
         {description ? <p className="text-base text-base-content/70">{description}</p> : null}
         {selectedSubcategories.length > 0 ? (
           <div className="flex flex-wrap gap-1.5">
