@@ -3,7 +3,7 @@
 import React from "react";
 import dynamic from "next/dynamic";
 import { GenericLinkCard } from "./embeds";
-import { ExternalLinkBehaviorProvider } from "~~/components/shared/SafeExternalLink";
+import { ExternalLinkBehaviorProvider, SafeExternalLink } from "~~/components/shared/SafeExternalLink";
 import { isDirectImageUrl } from "~~/lib/contentMedia";
 import { detectPlatform } from "~~/utils/platforms";
 
@@ -27,6 +27,8 @@ interface ContentEmbedProps {
   isActive?: boolean;
   interactionMode?: "default" | "vote";
   imageFit?: "cover" | "contain";
+  imageLinkUrl?: string | null;
+  onImageLinkClick?: React.MouseEventHandler<HTMLElement>;
 }
 
 /** Error boundary that catches render errors in embed components and falls back to a link card. */
@@ -64,6 +66,8 @@ export function ContentEmbed({
   isActive = true,
   interactionMode = "default",
   imageFit = "cover",
+  imageLinkUrl,
+  onImageLinkClick,
 }: ContentEmbedProps) {
   if (!url?.trim()) {
     return (
@@ -91,7 +95,7 @@ export function ContentEmbed({
   const platformInfo = detectPlatform(url);
 
   if (isDirectImageUrl(url)) {
-    return (
+    const image = (
       <img
         src={url}
         alt={title || "Question media"}
@@ -99,6 +103,23 @@ export function ContentEmbed({
         loading={isActive ? "eager" : "lazy"}
       />
     );
+
+    if (imageLinkUrl?.trim()) {
+      return (
+        <SafeExternalLink
+          href={imageLinkUrl}
+          allowExternalOpen
+          className="block h-full w-full cursor-pointer"
+          title={title ? `Open context for ${title}` : "Open context"}
+          ariaLabel={title ? `Open context for ${title}` : "Open context"}
+          onClick={onImageLinkClick}
+        >
+          {image}
+        </SafeExternalLink>
+      );
+    }
+
+    return image;
   }
 
   let embed: React.ReactNode;

@@ -722,23 +722,19 @@ test.describe("Mobile viewport (phone)", () => {
     await page.keyboard.press("Escape");
   });
 
-  test("preview clicks keep the user on /rate and emphasize the mobile dock", async ({ connectedPage: page }) => {
+  test("image preview clicks open the context link externally", async ({ connectedPage: page }) => {
     await gotoWithRetry(page, "/rate?q=workspace", { ensureWalletConnected: true, timeout: 45_000 });
     await waitForFeedLoaded(page, 30_000);
 
     const activeSurface = page.locator('[aria-current="true"] [data-testid="vote-content-surface"]').first();
     await expect(activeSurface).toBeVisible({ timeout: 10_000 });
 
-    const popupPromise = page
-      .context()
-      .waitForEvent("page", { timeout: 1_000 })
-      .catch(() => null);
+    const popupPromise = page.context().waitForEvent("page");
     await activeSurface.click();
 
     const popup = await popupPromise;
-    expect(popup).toBeNull();
-    await expect(page).toHaveURL(/\/rate\?.*q=workspace.*content=/, { timeout: 10_000 });
-    await expect(page.locator('[data-vote-attention="true"]').first()).toBeVisible({ timeout: 5_000 });
+    await popup.waitForLoadState("domcontentloaded");
+    await expect(popup).toHaveURL(/(?:picsum|fastly\.picsum)\.photos/i);
   });
 
   test("ask page form is usable", async ({ connectedPage: page }) => {

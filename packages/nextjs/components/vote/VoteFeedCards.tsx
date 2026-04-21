@@ -170,7 +170,6 @@ export const FeedVoteCard = memo(function FeedVoteCard({
   const contentStackClassName = useCompactCard ? "gap-2" : "gap-3 xl:gap-2.5";
   const contentGridClassName = "grid min-h-0 flex-1 grid-cols-1 gap-3";
   const usesIntrinsicMediaHeight = platformType === "youtube";
-  const contentIntentEnabled = Boolean(item.url) && platformType !== "youtube";
   const mediaHeightClassName = usesIntrinsicMediaHeight
     ? "w-full"
     : isMobileViewport
@@ -178,6 +177,8 @@ export const FeedVoteCard = memo(function FeedVoteCard({
       : isLaptopCompact
         ? "w-full h-[clamp(18rem,50vh,24rem)]"
         : "w-full h-[clamp(20rem,56vh,32rem)]";
+  const imageContextClickOpensExternally = platformType === "image";
+  const contentIntentEnabled = Boolean(item.url) && platformType !== "youtube" && !imageContextClickOpensExternally;
 
   return (
     <div className={`flex min-h-0 flex-col ${contentStackClassName}`}>
@@ -206,6 +207,7 @@ export const FeedVoteCard = memo(function FeedVoteCard({
 
               const anchor = target.closest<HTMLAnchorElement>("a[href]");
               if (!anchor) return;
+              if (anchor.dataset.allowExternalOpen === "true") return;
 
               const href = anchor.getAttribute("href");
               if (!href || href.startsWith("/") || href.startsWith("#")) return;
@@ -225,6 +227,7 @@ export const FeedVoteCard = memo(function FeedVoteCard({
               compact={useCompactEmbed}
               isActive={isActive}
               interactionMode={contentIntentEnabled ? "vote" : "default"}
+              onSourceOpen={onSourceOpen}
             />
           </div>
           <FeedContentMetaCard
@@ -307,16 +310,20 @@ function ContentMediaCarousel({
   compact,
   isActive,
   interactionMode,
+  onSourceOpen,
 }: {
   item: ContentItem;
   compact: boolean;
   isActive: boolean;
   interactionMode: "default" | "vote";
+  onSourceOpen?: (item: ContentItem) => void;
 }) {
   const mediaItems = getCardMediaItems(item);
   const [activeIndex, setActiveIndex] = useState(0);
   const activeMedia = mediaItems[activeIndex] ?? mediaItems[0] ?? null;
   const hasCarouselControls = mediaItems.length > 1;
+  const contextUrl = item.url.trim();
+  const imageLinkUrl = activeMedia && getMediaPlatformType(activeMedia) === "image" ? contextUrl : null;
 
   useEffect(() => {
     setActiveIndex(0);
@@ -346,6 +353,8 @@ function ContentMediaCarousel({
         isActive={isActive}
         interactionMode={interactionMode}
         imageFit="contain"
+        imageLinkUrl={imageLinkUrl}
+        onImageLinkClick={() => onSourceOpen?.(item)}
       />
       {hasCarouselControls ? (
         <>

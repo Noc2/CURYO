@@ -35,13 +35,32 @@ test.describe("Content feed", () => {
     await expect(filterPill).toBeVisible({ timeout: 10_000 });
   });
 
-  test("clicking a non-video preview keeps users on the vote page and nudges the vote controls", async ({
+  test("clicking an image preview opens the context link externally", async ({
     connectedPage: page,
   }) => {
     await gotoWithRetry(page, "/rate?q=workspace", { ensureWalletConnected: true, timeout: 45_000 });
     await waitForFeedLoaded(page, 30_000);
 
     await expect(page.getByRole("heading", { name: /workspace feel ready/i }).first()).toBeVisible({
+      timeout: 10_000,
+    });
+
+    const activeSurface = page.locator('[aria-current="true"] [data-testid="vote-content-surface"]').first();
+    await expect(activeSurface).toBeVisible({ timeout: 10_000 });
+
+    const popupPromise = page.context().waitForEvent("page");
+    await activeSurface.click();
+
+    const popup = await popupPromise;
+    await popup.waitForLoadState("domcontentloaded");
+    await expect(popup).toHaveURL(/(?:picsum|fastly\.picsum)\.photos/i);
+  });
+
+  test("clicking a video preview stays with the player", async ({ connectedPage: page }) => {
+    await gotoWithRetry(page, "/rate?q=short%20video", { ensureWalletConnected: true, timeout: 45_000 });
+    await waitForFeedLoaded(page, 30_000);
+
+    await expect(page.getByRole("heading", { name: /short video clear enough/i }).first()).toBeVisible({
       timeout: 10_000,
     });
 
@@ -56,8 +75,6 @@ test.describe("Content feed", () => {
 
     const popup = await popupPromise;
     expect(popup).toBeNull();
-    await expect(page).toHaveURL(/\/rate\?.*q=workspace.*content=/, { timeout: 10_000 });
-    await expect(page.locator('[data-vote-attention="true"]').first()).toBeVisible({ timeout: 5_000 });
   });
 
   test("explicit source links still open externally", async ({ connectedPage: page }) => {
