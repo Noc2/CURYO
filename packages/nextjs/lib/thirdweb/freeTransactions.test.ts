@@ -524,7 +524,12 @@ test("supported sponsored operation families are allowlisted", async () => {
     ],
     [encodeCall(frontendRegistryContract, "register")],
     [encodeCall(frontendRegistryContract, "claimFees")],
-    [encodeCall(profileRegistryContract, "setProfile", ["EthHealth", "I check primary sources before rating."])],
+    [
+      encodeCall(profileRegistryContract, "setProfile", [
+        "EthHealth",
+        '{"v":1,"ageGroup":"25-34","residenceCountry":"US"}',
+      ]),
+    ],
     [encodeCall(profileRegistryContract, "setAvatarAccent", [0x76bb40])],
     [encodeCall(profileRegistryContract, "clearAvatarAccent")],
     [encodeCall(votingEngineContract, "claimCancelledRoundRefund", [1n, 1n])],

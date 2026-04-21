@@ -102,7 +102,7 @@ const SmartContracts: NextPage = () => {
             </tr>
             <tr>
               <td className="font-mono text-primary">ProfileRegistry</td>
-              <td>On-chain user profiles with unique names, images, and public rating strategy text</td>
+              <td>On-chain user profiles with unique names, images, and public self-reported audience context</td>
               <td>Transparent</td>
             </tr>
             <tr>
@@ -554,17 +554,17 @@ const SmartContracts: NextPage = () => {
 
       <h2>ProfileRegistry</h2>
       <p>
-        On-chain user profiles with unique names (3&ndash;20 characters) and an optional public rating strategy. Profile
-        settings also support an on-chain generated avatar color override. Requires Voter ID.
+        On-chain user profiles with unique names (3&ndash;20 characters) and optional public self-reported audience
+        context. Profile settings also support an on-chain generated avatar color override. Requires Voter ID.
       </p>
       <h3>Key Functions</h3>
       <ul>
         <li>
-          <code>setProfile(name, strategy)</code> &mdash; Create or update profile. Names are case-insensitive unique,
-          and <code>strategy</code> stores a short public note about how the user rates on Curyo.
+          <code>setProfile(name, selfReport)</code> &mdash; Create or update profile. Names are case-insensitive unique,
+          and <code>selfReport</code> stores public, self-reported, unverified audience context.
         </li>
         <li>
-          <code>getProfile(address)</code> &mdash; Get profile (name, strategy, createdAt, updatedAt).
+          <code>getProfile(address)</code> &mdash; Get profile (name, selfReport, createdAt, updatedAt).
         </li>
         <li>
           <code>getAddressByName(name)</code> &mdash; Reverse lookup: name to owner address.

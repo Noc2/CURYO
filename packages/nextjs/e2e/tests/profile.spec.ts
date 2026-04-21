@@ -16,14 +16,16 @@ test.describe("Profile management", () => {
   const createProfileAccount = ANVIL_ACCOUNTS.account8;
   const updateProfileAccount = ANVIL_ACCOUNTS.account2;
 
-async function openSettingsWithConnectedWallet(page: Parameters<typeof gotoWithRetry>[0]) {
+  async function openSettingsWithConnectedWallet(page: Parameters<typeof gotoWithRetry>[0]) {
     await gotoWithRetry(page, "/settings", { ensureWalletConnected: true });
     await waitForVisibleWithReload(page, () => page.getByRole("button", { name: "Notifications", exact: true }), {
       timeout: 10_000,
     });
   }
 
-  test("settings page stays focused on settings without notification signature prompts on load", async ({ browser }) => {
+  test("settings page stays focused on settings without notification signature prompts on load", async ({
+    browser,
+  }) => {
     test.setTimeout(120_000);
 
     const context = await newE2EContext(browser);
@@ -73,6 +75,9 @@ async function openSettingsWithConnectedWallet(page: Parameters<typeof gotoWithR
     await expect(nameInput).toBeVisible({ timeout: 5_000 });
     await nameInput.clear();
     await nameInput.fill(uniqueName);
+    await page.getByLabel("Age group").selectOption("25-34");
+    await page.getByLabel("Country").selectOption("US");
+    await page.getByLabel("English").check();
 
     const saveBtn = page
       .getByRole("button", { name: /Save profile/i })
@@ -82,6 +87,9 @@ async function openSettingsWithConnectedWallet(page: Parameters<typeof gotoWithR
 
     await expect(page.getByRole("button", { name: "Edit profile", exact: true })).toBeVisible({ timeout: 30_000 });
     await expect(page.getByRole("heading", { name: uniqueName, exact: true })).toBeVisible({ timeout: 30_000 });
+    await expect(page.getByText("Audience context")).toBeVisible({ timeout: 30_000 });
+    await expect(page.getByText("25-34")).toBeVisible({ timeout: 30_000 });
+    await expect(page.getByText("United States")).toBeVisible({ timeout: 30_000 });
 
     await context.close();
   });
@@ -105,6 +113,9 @@ async function openSettingsWithConnectedWallet(page: Parameters<typeof gotoWithR
     await expect(nameInput).toBeVisible({ timeout: 5_000 });
     await nameInput.clear();
     await nameInput.fill(updatedName);
+    await page.getByLabel("Age group").selectOption("35-44");
+    await page.getByLabel("Country").selectOption("DE");
+    await page.getByLabel("Engineer").check();
 
     const saveBtn = page
       .getByRole("button", { name: /Save changes/i })
@@ -114,6 +125,9 @@ async function openSettingsWithConnectedWallet(page: Parameters<typeof gotoWithR
 
     await expect(page.getByRole("button", { name: "Edit profile", exact: true })).toBeVisible({ timeout: 30_000 });
     await expect(page.getByRole("heading", { name: updatedName, exact: true })).toBeVisible({ timeout: 30_000 });
+    await expect(page.getByText("Audience context")).toBeVisible({ timeout: 30_000 });
+    await expect(page.getByText("35-44")).toBeVisible({ timeout: 30_000 });
+    await expect(page.getByText("Germany")).toBeVisible({ timeout: 30_000 });
 
     await context.close();
   });
@@ -147,6 +161,8 @@ async function openSettingsWithConnectedWallet(page: Parameters<typeof gotoWithR
     }
     expect(data.profile.address).toBe(address);
     expect(data.profile.name).toBeTruthy();
+    expect(data.profile.selfReport).toBeTruthy();
+    expect(JSON.parse(data.profile.selfReport)).toMatchObject({ v: 1 });
   });
 
   test("profile update appears in Ponder API", async () => {

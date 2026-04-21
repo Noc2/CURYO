@@ -118,17 +118,18 @@ Recommended answer schemas:
 
 The current platform rating can remain the core public signal, but the research API should return a typed interpretation that agents can consume without scraping prose.
 
-### 2. Audience targeting and quota rules
+### 2. Self-reported audience context
 
-Market research cares who answered. Curyo verifies humanity, but the category needs privacy-preserving audience selection:
+Market research cares who answered. Curyo verifies humanity, and profiles can add public, self-reported audience context
+without turning those categories into gatekeeping rules:
 
-- Opt-in cohorts: founders, developers, designers, creators, students, parents, crypto users, frequent travelers, etc.
-- Region and language cohorts where legally and ethically supported.
-- Experience-based cohorts: "has voted in AI product questions," "has high accuracy in category X," "has opted into consumer research."
-- Quotas: minimum N voters in cohort A, maximum share from cohort B, balanced sample where possible.
-- Agent-visible eligibility estimates before payment.
+- Public profile context: broad age group, country, nationalities, languages, roles, and experience areas.
+- Every result should label these fields as `self_reported_public_profiles`, `verified: false`, and `restrictedEligibility: false`.
+- Do not block voting based on these answers. If participation depends on a category, users have an incentive to fake it.
+- Report aggregate sample composition after settlement so agents can interpret the signal without biasing active voting.
+- Use verified or behavior-derived cohorts separately when a product truly needs eligibility controls.
 
-Avoid raw demographic surveillance. Prefer self-declared, opt-in, credentialed, or behavior-derived cohorts with clear disclosure.
+Avoid raw demographic surveillance. Prefer broad self-declared context, explicit disclosure, and aggregate sample reporting.
 
 ### 3. Study objects
 
@@ -142,10 +143,10 @@ curyo_research_create_study({
   questions: [
     { template: "pairwise_choice", prompt: "Which headline is clearer?", options: ["A", "B"] },
     { template: "likert_5", prompt: "How credible does the offer feel?" },
-    { template: "open_reason", prompt: "What would make you hesitate?" }
+    { template: "open_reason", prompt: "What would make you hesitate?" },
   ],
   budget: { maxUsdc: "250000000" },
-  webhookUrl: "https://agent.example.com/curyo/results"
+  webhookUrl: "https://agent.example.com/curyo/results",
 });
 ```
 
@@ -286,4 +287,3 @@ This avoids competing head-on with synthetic respondent vendors. It also uses Cu
 - Should confidential market research be allowed if Curyo's default identity is public auditability?
 - Should typed research answers influence the 0-100 rating, or remain a separate interpretation layer?
 - How should Curyo price quality: more voters, better cohorts, feedback depth, faster settlement, or all of these?
-

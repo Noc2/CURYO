@@ -10,7 +10,7 @@ const PrivacyPage: NextPage = () => {
 
       <article className="prose legal-prose max-w-none">
         <h1>Privacy Notice</h1>
-        <p className="readability-meta">Last updated: March 2026</p>
+        <p className="readability-meta">Last updated: April 2026</p>
 
         <h2>1. Introduction</h2>
         <p>
@@ -37,6 +37,9 @@ const PrivacyPage: NextPage = () => {
           <li>Your wallet address</li>
           <li>Voting transactions (stakes, votes, claims)</li>
           <li>Content submission transactions</li>
+          <li>
+            Public profile data, including profile names and any self-reported audience context you choose to save
+          </li>
           <li>Transaction timestamps and amounts</li>
           <li>Smart contract interaction history</li>
         </ul>
@@ -44,6 +47,11 @@ const PrivacyPage: NextPage = () => {
           <strong>Important:</strong> Blockchain data is permanent, public, and immutable. Neither this Interface nor
           any other party can modify or delete this data. This data exists independently of this Interface and would
           continue to exist even if this Interface ceased to operate.
+        </p>
+        <p>
+          Profile audience context is self-reported and unverified. It may include broad categories such as age group,
+          country, nationalities, languages, roles, or experience areas, and may be read by humans, AI systems, and
+          public indexing tools. It is not used to restrict voting eligibility.
         </p>
 
         <h3>2.2 Interface Data (Controlled by Us)</h3>
@@ -173,6 +181,10 @@ const PrivacyPage: NextPage = () => {
             <strong>Blockchain data:</strong> Permanent and immutable (not controlled by us)
           </li>
           <li>
+            <strong>Public profile data:</strong> Stored on-chain and therefore permanent, public, and immutable,
+            although you may publish an updated profile value through a later transaction
+          </li>
+          <li>
             <strong>Local and session storage:</strong> Until you clear your browser data or the browser session ends,
             depending on the storage mechanism
           </li>
@@ -209,7 +221,8 @@ const PrivacyPage: NextPage = () => {
           </li>
           <li>
             <strong>Right to Rectification and Update:</strong> You can change watchlists, follows, notification
-            preferences, and email notification settings through the Interface.
+            preferences, email notification settings, and your current profile audience context through the Interface.
+            Prior blockchain transactions remain public and cannot be removed.
           </li>
           <li>
             <strong>Right to Deletion:</strong> Blockchain data cannot be deleted by anyone. Browser storage can be
