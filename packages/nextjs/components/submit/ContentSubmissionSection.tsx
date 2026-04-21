@@ -47,6 +47,7 @@ import {
 } from "~~/lib/moderation/submissionValidation";
 import { parseQuestionReferenceInput } from "~~/lib/questionReferences";
 import {
+  DEFAULT_REWARD_POOL_FRONTEND_FEE_BPS,
   DEFAULT_SUBMISSION_REWARD_POOL,
   ERC20_APPROVAL_ABI,
   MIN_REWARD_POOL_REQUIRED_VOTERS,
@@ -102,6 +103,23 @@ function parseIntegerInput(value: string): number {
     return 0;
   }
   return Math.floor(parsed);
+}
+
+function divideRewardAmount(total: bigint, divisor: bigint): bigint {
+  return divisor > 0n ? total / divisor : 0n;
+}
+
+function applyEstimatedFrontendFee(amount: bigint, frontendFeeBps: number): bigint {
+  const normalizedBps = Math.max(0, Math.min(10_000, Math.floor(frontendFeeBps)));
+  const frontendFee = (amount * BigInt(normalizedBps)) / 10_000n;
+  return amount > frontendFee ? amount - frontendFee : 0n;
+}
+
+function formatFrontendFeePercent(frontendFeeBps: number): string {
+  const normalizedBps = Math.max(0, Math.min(10_000, Math.floor(frontendFeeBps)));
+  const whole = Math.floor(normalizedBps / 100);
+  const fractional = normalizedBps % 100;
+  return fractional === 0 ? `${whole}%` : `${whole}.${String(fractional).padStart(2, "0").replace(/0+$/, "")}%`;
 }
 
 function isReservationExistsError(error: unknown): boolean {
@@ -400,6 +418,14 @@ export function ContentSubmissionSection() {
       staleTime: 300_000,
     },
   } as any);
+  const { data: defaultFrontendFeeBps } = useScaffoldReadContract({
+    contractName: "QuestionRewardPoolEscrow" as any,
+    functionName: "defaultFrontendFeeBps" as any,
+    watch: false,
+    query: {
+      staleTime: 300_000,
+    },
+  } as any);
   const { data: minSubmissionCrepPool } = useScaffoldReadContract({
     contractName: "ProtocolConfig" as any,
     functionName: "minSubmissionCrepPool" as any,
@@ -566,6 +592,32 @@ export function ContentSubmissionSection() {
     roundConfigValidationError === null &&
     rewardAmountError === null &&
     selectedRewardAmount !== null;
+  const frontendFeeBps =
+    typeof defaultFrontendFeeBps === "bigint"
+      ? Number(defaultFrontendFeeBps)
+      : typeof defaultFrontendFeeBps === "number"
+        ? defaultFrontendFeeBps
+        : DEFAULT_REWARD_POOL_FRONTEND_FEE_BPS;
+  const estimatedBountyAmount = selectedRewardAmount ?? minimumBountyAmount;
+  const estimatedPerRoundGrossReward = divideRewardAmount(estimatedBountyAmount, selectedRequiredSettledRounds);
+  const estimatedMinimumVoterGrossReward = divideRewardAmount(estimatedPerRoundGrossReward, selectedRequiredVoters);
+  const estimatedMinimumVoterReward = applyEstimatedFrontendFee(estimatedMinimumVoterGrossReward, frontendFeeBps);
+  const estimatedVoterCap = BigInt(Math.max(0, parsedRoundMaxVoters));
+  const estimatedVoterCapGrossReward = divideRewardAmount(estimatedPerRoundGrossReward, estimatedVoterCap);
+  const estimatedVoterCapReward = applyEstimatedFrontendFee(estimatedVoterCapGrossReward, frontendFeeBps);
+  const oneTokenPerMinimumVoterBounty = selectedRequiredVoters * selectedRequiredSettledRounds * 1_000_000n;
+  const bountyRecommendation = rewardAmountError
+    ? "Increase the bounty until the estimate is valid before submitting."
+    : rewardRequiredVotersValidationError
+      ? "Lower minimum voters or raise the voter cap so the bounty can qualify."
+      : estimatedMinimumVoterReward < 1_000_000n
+        ? `For a stronger signal, consider ${formatSubmissionRewardAmount(
+            oneTokenPerMinimumVoterBounty,
+            rewardAsset,
+          )} or more so the minimum cohort earns about 1 ${rewardAsset === "crep" ? "cREP" : "USDC"} each.`
+        : parsedRoundMaxVoters > Math.max(parsedRewardRequiredVoters, 1) * 3
+          ? "A wide voter cap can dilute the per-voter payout if participation is high; use it when broader input matters more than payout density."
+          : "These settings give a clear payout target for a small qualifying round.";
   const rewardTokenAddress =
     rewardAsset === "crep" ? crepAddress : ((escrowUsdcToken as `0x${string}` | undefined) ?? undefined);
   const { refetch: refetchNextContentId } = useScaffoldReadContract({
@@ -1158,7 +1210,7 @@ export function ContentSubmissionSection() {
     "No expiry keeps the bounty open until it is filled or the contract rules move it along. Duration sets how many days it stays open.";
 
   const bountyDetailsCard = (
-    <div className="surface-card-nested rounded-2xl p-4 space-y-4">
+    <div className="space-y-5">
       <div className="flex items-start justify-between gap-3">
         <p className="flex items-center gap-1.5 text-base font-medium text-base-content">
           Bounty
@@ -1247,7 +1299,7 @@ export function ContentSubmissionSection() {
         <p className="text-base text-error">{rewardRequiredSettledRoundsError}</p>
       ) : null}
 
-      <div className="space-y-3 border-t border-base-300/70 pt-4">
+      <div className="space-y-3 pt-2">
         <div className="flex items-start justify-between gap-3">
           <p className="flex items-center gap-1.5 text-base font-medium text-base-content">
             Round settings
@@ -1380,8 +1432,71 @@ export function ContentSubmissionSection() {
     </div>
   );
 
+  const bountyInsightsCard = (
+    <div className="space-y-4">
+      <div className="surface-card rounded-2xl p-4 space-y-4">
+        <div>
+          <p className="text-base font-medium uppercase tracking-wider text-base-content/40">Bounty estimate</p>
+          <p className="mt-2 text-base text-base-content/65">
+            {selectedRewardAmount === null
+              ? "Using the current minimum until the bounty amount is valid."
+              : `${formatFrontendFeePercent(frontendFeeBps)} may be reserved for an eligible frontend operator.`}
+          </p>
+        </div>
+
+        <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-1 2xl:grid-cols-2">
+          <div className="rounded-lg bg-base-100/70 p-3">
+            <p className="text-sm font-medium uppercase text-base-content/45">Total bounty</p>
+            <p className="mt-1 text-lg font-semibold text-base-content">
+              {formatSubmissionRewardAmount(estimatedBountyAmount, rewardAsset)}
+            </p>
+          </div>
+          <div className="rounded-lg bg-base-100/70 p-3">
+            <p className="text-sm font-medium uppercase text-base-content/45">Per round</p>
+            <p className="mt-1 text-lg font-semibold text-base-content">
+              {formatSubmissionRewardAmount(estimatedPerRoundGrossReward, rewardAsset)}
+            </p>
+          </div>
+          <div className="rounded-lg bg-base-100/70 p-3">
+            <p className="text-sm font-medium uppercase text-base-content/45">Minimum turnout</p>
+            <p className="mt-1 text-lg font-semibold text-base-content">{selectedRequiredVoters.toString()} voters</p>
+          </div>
+          <div className="rounded-lg bg-base-100/70 p-3">
+            <p className="text-sm font-medium uppercase text-base-content/45">Qualified rounds</p>
+            <p className="mt-1 text-lg font-semibold text-base-content">
+              {selectedRequiredSettledRounds.toString()} round{selectedRequiredSettledRounds === 1n ? "" : "s"}
+            </p>
+          </div>
+        </div>
+
+        <div className="rounded-lg bg-primary/10 p-3">
+          <p className="text-sm font-medium uppercase text-primary/80">If only the minimum qualifies</p>
+          <p className="mt-1 text-xl font-semibold text-base-content">
+            {formatSubmissionRewardAmount(estimatedMinimumVoterReward, rewardAsset)}
+          </p>
+          <p className="mt-1 text-sm text-base-content/60">Estimated claim per eligible voter after frontend share.</p>
+        </div>
+
+        <div className="rounded-lg bg-base-100/70 p-3">
+          <p className="text-sm font-medium uppercase text-base-content/45">If the voter cap fills</p>
+          <p className="mt-1 text-lg font-semibold text-base-content">
+            {formatSubmissionRewardAmount(estimatedVoterCapReward, rewardAsset)}
+          </p>
+          <p className="mt-1 text-sm text-base-content/60">
+            Estimated per voter with {Math.max(0, parsedRoundMaxVoters)} eligible voters in a qualified round.
+          </p>
+        </div>
+      </div>
+
+      <div className="rounded-lg bg-primary/10 p-4">
+        <p className="mb-2 text-base font-medium text-primary">Recommendation</p>
+        <p className="text-base text-base-content/70">{bountyRecommendation}</p>
+      </div>
+    </div>
+  );
+
   const bountyActions = (
-    <div className="flex flex-col gap-2 sm:flex-row">
+    <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-end">
       <button
         type="button"
         onClick={() => {
@@ -1394,16 +1509,16 @@ export function ContentSubmissionSection() {
       </button>
       <button
         type="submit"
-        className="btn btn-submit w-full"
+        className="btn btn-submit w-full sm:flex-1"
         disabled={isSubmitting || isAwaitingSponsoredSubmitCalls || isMissingGasBalance}
       >
         {isSubmitting ? (
           <span className="flex items-center gap-2">
             <span className="loading loading-spinner loading-sm"></span>
-            Asking...
+            Submitting...
           </span>
         ) : (
-          "Ask Question"
+          "Submit"
         )}
       </button>
     </div>
@@ -1813,15 +1928,12 @@ export function ContentSubmissionSection() {
               </div>
             </div>
           ) : (
-            <div className="grid gap-6 xl:grid-cols-[minmax(0,1.25fr)_minmax(18rem,0.75fr)] xl:items-start">
-              <div className="space-y-4">
-                {bountyDetailsCard}
+            <div className="grid gap-6 xl:grid-cols-[minmax(0,1.5fr)_minmax(18rem,0.9fr)] xl:items-start">
+              <div className="space-y-4">{bountyDetailsCard}</div>
+              <div className="space-y-4 xl:sticky xl:top-24">
+                {bountyInsightsCard}
                 {isMissingGasBalance ? <GasBalanceWarning nativeTokenSymbol={nativeTokenSymbol} /> : null}
                 {bountyActions}
-              </div>
-              <div className="space-y-4 xl:sticky xl:top-24">
-                {questionPreviewCard}
-                {prohibitedContentNotice}
               </div>
             </div>
           )}

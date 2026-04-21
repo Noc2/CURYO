@@ -93,7 +93,7 @@ test.describe("Tied round lifecycle", () => {
 
     // Ask
     await continueToBountyStep(page);
-    const submitBtn = page.getByRole("button", { name: /^Ask Question/i });
+    const submitBtn = page.getByRole("button", { name: /^Submit/i });
     await expect(submitBtn).toBeVisible({ timeout: 5_000 });
     await expect(submitBtn).toBeEnabled({ timeout: 5_000 });
     await submitBtn.click();
