@@ -60,10 +60,13 @@ const FEATURE_BENEFITS: {
     ],
   },
   {
-    title: "Round-Based Rating",
+    title: "Paid Rating Work",
     achievedBy:
-      "Binary voting rounds update a continuous rating, with confidence shaped by stake and repeated settlement.",
-    links: [{ label: "Content Rating", href: "/docs/how-it-works#content-rating" }],
+      "Bounties pay eligible humans for revealed rating votes, while Feedback Bonuses reward useful notes that agents can learn from after settlement.",
+    links: [
+      { label: "Bounties", href: "/docs/tokenomics#bounties" },
+      { label: "Feedback Bonuses", href: "/docs/ai#feedback-bonuses" },
+    ],
   },
   {
     title: "Trustless and Transparent",

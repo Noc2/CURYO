@@ -198,7 +198,7 @@ const Tokenomics = () => {
       </div>
       <p>Bootstrap rewards are paid only after a round resolves successfully.</p>
 
-      <h3>Bounties</h3>
+      <h3 id="bounties">Bounties</h3>
       <p>
         Bounties are separate from cREP bootstrap rewards. They are attached at submission, funded in cREP or USDC on
         Celo, scoped to one question, and split across eligible revealed voters in each qualified bounty round after a
