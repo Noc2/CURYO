@@ -58,6 +58,19 @@ export const ContentRegistryAbi = [
   },
   {
     "type": "function",
+    "name": "MAX_QUESTION_BUNDLE_COUNT",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
     "name": "MAX_QUESTION_LENGTH",
     "inputs": [],
     "outputs": [
@@ -185,6 +198,44 @@ export const ContentRegistryAbi = [
     ],
     "outputs": [],
     "stateMutability": "nonpayable"
+  },
+  {
+    "type": "function",
+    "name": "contentBundleId",
+    "inputs": [
+      {
+        "name": "",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "contentBundleIndex",
+    "inputs": [
+      {
+        "name": "",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "stateMutability": "view"
   },
   {
     "type": "function",
@@ -425,6 +476,25 @@ export const ContentRegistryAbi = [
         "name": "",
         "type": "address",
         "internalType": "address"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "getQuestionBundleContentIds",
+    "inputs": [
+      {
+        "name": "bundleId",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "",
+        "type": "uint256[]",
+        "internalType": "uint256[]"
       }
     ],
     "stateMutability": "view"
@@ -735,6 +805,19 @@ export const ContentRegistryAbi = [
   {
     "type": "function",
     "name": "nextContentId",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "nextQuestionBundleId",
     "inputs": [],
     "outputs": [
       {
@@ -1176,6 +1259,131 @@ export const ContentRegistryAbi = [
         "name": "",
         "type": "uint256",
         "internalType": "uint256"
+      }
+    ],
+    "stateMutability": "nonpayable"
+  },
+  {
+    "type": "function",
+    "name": "submitQuestionBundleWithRewardAndRoundConfig",
+    "inputs": [
+      {
+        "name": "questions",
+        "type": "tuple[]",
+        "internalType": "struct ContentRegistry.BundleQuestionInput[]",
+        "components": [
+          {
+            "name": "contextUrl",
+            "type": "string",
+            "internalType": "string"
+          },
+          {
+            "name": "imageUrls",
+            "type": "string[]",
+            "internalType": "string[]"
+          },
+          {
+            "name": "videoUrl",
+            "type": "string",
+            "internalType": "string"
+          },
+          {
+            "name": "title",
+            "type": "string",
+            "internalType": "string"
+          },
+          {
+            "name": "description",
+            "type": "string",
+            "internalType": "string"
+          },
+          {
+            "name": "tags",
+            "type": "string",
+            "internalType": "string"
+          },
+          {
+            "name": "categoryId",
+            "type": "uint256",
+            "internalType": "uint256"
+          },
+          {
+            "name": "salt",
+            "type": "bytes32",
+            "internalType": "bytes32"
+          }
+        ]
+      },
+      {
+        "name": "rewardTerms",
+        "type": "tuple",
+        "internalType": "struct ContentRegistry.SubmissionRewardTerms",
+        "components": [
+          {
+            "name": "asset",
+            "type": "uint8",
+            "internalType": "uint8"
+          },
+          {
+            "name": "amount",
+            "type": "uint256",
+            "internalType": "uint256"
+          },
+          {
+            "name": "requiredVoters",
+            "type": "uint256",
+            "internalType": "uint256"
+          },
+          {
+            "name": "requiredSettledRounds",
+            "type": "uint256",
+            "internalType": "uint256"
+          },
+          {
+            "name": "expiresAt",
+            "type": "uint256",
+            "internalType": "uint256"
+          }
+        ]
+      },
+      {
+        "name": "roundConfig",
+        "type": "tuple",
+        "internalType": "struct RoundLib.RoundConfig",
+        "components": [
+          {
+            "name": "epochDuration",
+            "type": "uint32",
+            "internalType": "uint32"
+          },
+          {
+            "name": "maxDuration",
+            "type": "uint32",
+            "internalType": "uint32"
+          },
+          {
+            "name": "minVoters",
+            "type": "uint16",
+            "internalType": "uint16"
+          },
+          {
+            "name": "maxVoters",
+            "type": "uint16",
+            "internalType": "uint16"
+          }
+        ]
+      }
+    ],
+    "outputs": [
+      {
+        "name": "bundleId",
+        "type": "uint256",
+        "internalType": "uint256"
+      },
+      {
+        "name": "contentIds",
+        "type": "uint256[]",
+        "internalType": "uint256[]"
       }
     ],
     "stateMutability": "nonpayable"
@@ -1817,6 +2025,92 @@ export const ContentRegistryAbi = [
         "type": "address",
         "indexed": false,
         "internalType": "address"
+      }
+    ],
+    "anonymous": false
+  },
+  {
+    "type": "event",
+    "name": "QuestionBundleContentLinked",
+    "inputs": [
+      {
+        "name": "bundleId",
+        "type": "uint256",
+        "indexed": true,
+        "internalType": "uint256"
+      },
+      {
+        "name": "contentId",
+        "type": "uint256",
+        "indexed": true,
+        "internalType": "uint256"
+      },
+      {
+        "name": "bundleIndex",
+        "type": "uint256",
+        "indexed": true,
+        "internalType": "uint256"
+      }
+    ],
+    "anonymous": false
+  },
+  {
+    "type": "event",
+    "name": "QuestionBundleSubmitted",
+    "inputs": [
+      {
+        "name": "bundleId",
+        "type": "uint256",
+        "indexed": true,
+        "internalType": "uint256"
+      },
+      {
+        "name": "submitter",
+        "type": "address",
+        "indexed": true,
+        "internalType": "address"
+      },
+      {
+        "name": "questionCount",
+        "type": "uint256",
+        "indexed": false,
+        "internalType": "uint256"
+      },
+      {
+        "name": "rewardAsset",
+        "type": "uint8",
+        "indexed": true,
+        "internalType": "uint8"
+      },
+      {
+        "name": "amount",
+        "type": "uint256",
+        "indexed": false,
+        "internalType": "uint256"
+      },
+      {
+        "name": "requiredCompleters",
+        "type": "uint256",
+        "indexed": false,
+        "internalType": "uint256"
+      },
+      {
+        "name": "expiresAt",
+        "type": "uint256",
+        "indexed": false,
+        "internalType": "uint256"
+      },
+      {
+        "name": "bundleHash",
+        "type": "bytes32",
+        "indexed": false,
+        "internalType": "bytes32"
+      },
+      {
+        "name": "rewardPoolId",
+        "type": "uint256",
+        "indexed": false,
+        "internalType": "uint256"
       }
     ],
     "anonymous": false
