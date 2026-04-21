@@ -288,6 +288,7 @@ contract ProtocolConfigBranchesTest is Test {
         assertEq(bounds.maxEpochDuration, 60 minutes);
         assertEq(bounds.minRoundDuration, 1 hours);
         assertEq(bounds.maxRoundDuration, 30 days);
+        assertEq(config.ABSOLUTE_MAX_ROUND_DURATION(), 30 days);
         assertEq(bounds.minSettlementVoters, 2);
         assertEq(bounds.maxSettlementVoters, 100);
         assertEq(bounds.minVoterCap, 2);
@@ -341,5 +342,12 @@ contract ProtocolConfigBranchesTest is Test {
 
         vm.expectRevert(ProtocolConfig.InvalidConfig.selector);
         config.setRoundConfigBounds(5 minutes, 60 minutes, 1 hours, 1 days, 2, 100, 2, 10_000);
+    }
+
+    function test_SetRoundConfigBounds_RejectsAbsoluteMaxRoundDuration() public {
+        ProtocolConfig config = deployInitializedProtocolConfig(address(this));
+
+        vm.expectRevert(ProtocolConfig.InvalidConfig.selector);
+        config.setRoundConfigBounds(5 minutes, 60 minutes, 1 hours, 30 days + 1, 2, 100, 2, 10_000);
     }
 }

@@ -13,6 +13,7 @@ contract ProtocolConfig is Initializable, AccessControlUpgradeable {
     bytes32 public constant CONFIG_ROLE = keccak256("CONFIG_ROLE");
     bytes32 public constant TREASURY_ROLE = keccak256("TREASURY_ROLE");
     bytes32 public constant TREASURY_ADMIN_ROLE = keccak256("TREASURY_ADMIN_ROLE");
+    uint256 public constant ABSOLUTE_MAX_ROUND_DURATION = 30 days;
 
     error InvalidAddress();
     error InvalidConfig();
@@ -413,7 +414,9 @@ contract ProtocolConfig is Initializable, AccessControlUpgradeable {
         }
         if (maxEpochDuration > type(uint32).max) revert InvalidConfig();
         if (minRoundDuration < maxEpochDuration || maxRoundDuration < minRoundDuration) revert InvalidConfig();
-        if (maxRoundDuration > type(uint32).max) revert InvalidConfig();
+        if (maxRoundDuration > type(uint32).max || maxRoundDuration > ABSOLUTE_MAX_ROUND_DURATION) {
+            revert InvalidConfig();
+        }
         if (minRoundDuration / minEpochDuration > 2016) revert InvalidConfig();
         if (minSettlementVoters < 2 || maxSettlementVoters < minSettlementVoters) revert InvalidConfig();
         if (minVoterCap < minSettlementVoters || maxVoterCap < maxSettlementVoters) revert InvalidConfig();
