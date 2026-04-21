@@ -1,12 +1,18 @@
 import { ROUND_STATE, ROUND_STATE_LABEL } from "@curyo/contracts/protocol";
+import { createHash } from "crypto";
 import { getOptionalAppUrl } from "~~/lib/env/server";
 import { MCP_SCOPES, type McpAgentAuth, type McpScope } from "~~/lib/mcp/auth";
-import { getMcpAgentBudgetSummary, reserveMcpAgentBudget, updateMcpBudgetReservation } from "~~/lib/mcp/budget";
-import { parseX402QuestionRequest } from "~~/lib/x402/questionPayload";
+import {
+  getMcpAgentBudgetSummary,
+  getMcpBudgetReservation,
+  getMcpBudgetReservationByClientRequest,
+  reserveMcpAgentBudget,
+  updateMcpBudgetReservation,
+} from "~~/lib/mcp/budget";
+import { type X402QuestionPayload, parseX402QuestionRequest } from "~~/lib/x402/questionPayload";
 import {
   X402QuestionConfigError,
   X402QuestionConflictError,
-  getX402QuestionSubmissionByClientRequest,
   getX402QuestionSubmissionByOperationKey,
   handleManagedQuestionSubmissionRequest,
   preflightX402QuestionSubmission,
@@ -158,11 +164,30 @@ function getPublicQuestionUrl(contentId: string | null) {
   return appUrl && contentId ? `${appUrl}/rate?content=${encodeURIComponent(contentId)}` : null;
 }
 
-async function lookupQuestionOperation(args: JsonObject) {
+function sha256(value: string) {
+  return createHash("sha256").update(value).digest("hex");
+}
+
+function buildManagedMcpClientRequestId(agent: McpAgentAuth, clientRequestId: string) {
+  return `mcp:${sha256(`${agent.id}:${clientRequestId}`).slice(0, 48)}`;
+}
+
+function toManagedMcpPayload(agent: McpAgentAuth, payload: X402QuestionPayload): X402QuestionPayload {
+  return {
+    ...payload,
+    clientRequestId: buildManagedMcpClientRequestId(agent, payload.clientRequestId),
+  };
+}
+
+async function lookupQuestionOperation(args: JsonObject, agent: McpAgentAuth) {
   const operationKey = typeof args.operationKey === "string" ? args.operationKey.trim() : "";
   if (operationKey) {
     if (!/^0x[a-fA-F0-9]{64}$/.test(operationKey)) {
       throw new McpToolError("operationKey must be a 32-byte hex string.");
+    }
+    const reservation = await getMcpBudgetReservation(operationKey as `0x${string}`);
+    if (reservation && reservation.agentId !== agent.id) {
+      throw new McpToolError("Operation was not submitted by this MCP agent.", 404);
     }
     return getX402QuestionSubmissionByOperationKey(operationKey as `0x${string}`);
   }
@@ -173,7 +198,14 @@ async function lookupQuestionOperation(args: JsonObject) {
     throw new McpToolError("Provide operationKey or both chainId and clientRequestId.");
   }
 
-  return getX402QuestionSubmissionByClientRequest({ chainId, clientRequestId });
+  const reservation = await getMcpBudgetReservationByClientRequest({
+    agentId: agent.id,
+    chainId,
+    clientRequestId,
+  });
+  if (!reservation) return null;
+
+  return getX402QuestionSubmissionByOperationKey(reservation.operationKey);
 }
 
 function formatQuoteResult(params: Awaited<ReturnType<typeof preflightX402QuestionSubmission>>) {
@@ -190,11 +222,15 @@ function formatQuoteResult(params: Awaited<ReturnType<typeof preflightX402Questi
   };
 }
 
-async function quoteQuestion(args: JsonObject) {
+async function quoteQuestion(args: JsonObject, agent: McpAgentAuth) {
   const payload = parseX402QuestionRequest(args);
-  const config = resolveX402QuestionConfig(payload.chainId, { requireThirdwebSecret: false });
-  const quote = await preflightX402QuestionSubmission({ config, payload });
-  return formatQuoteResult(quote);
+  const managedPayload = toManagedMcpPayload(agent, payload);
+  const config = resolveX402QuestionConfig(managedPayload.chainId, { requireThirdwebSecret: false });
+  const quote = await preflightX402QuestionSubmission({ config, payload: managedPayload });
+  return {
+    ...formatQuoteResult(quote),
+    clientRequestId: payload.clientRequestId,
+  };
 }
 
 function latestRoundFromContentResponse(response: Awaited<ReturnType<typeof ponderApi.getContentById>>) {
@@ -202,9 +238,9 @@ function latestRoundFromContentResponse(response: Awaited<ReturnType<typeof pond
   return rounds[0] ?? null;
 }
 
-async function buildQuestionResult(args: JsonObject) {
+async function buildQuestionResult(args: JsonObject, agent: McpAgentAuth) {
   const directContentId = typeof args.contentId === "string" ? args.contentId.trim() : "";
-  const record = directContentId ? null : await lookupQuestionOperation(args);
+  const record = directContentId ? null : await lookupQuestionOperation(args, agent);
   const contentId = directContentId || record?.contentId;
 
   if (!contentId) {
@@ -262,12 +298,13 @@ export async function callCuryoMcpTool(params: { agent: McpAgentAuth; arguments:
       return ponderApi.getCategories();
 
     case "curyo_quote_question":
-      return quoteQuestion(args);
+      return quoteQuestion(args, params.agent);
 
     case "curyo_ask_humans": {
       const payload = parseX402QuestionRequest(args);
-      const config = resolveX402QuestionConfig(payload.chainId, { requireThirdwebSecret: false });
-      const quote = await preflightX402QuestionSubmission({ config, payload });
+      const managedPayload = toManagedMcpPayload(params.agent, payload);
+      const config = resolveX402QuestionConfig(managedPayload.chainId, { requireThirdwebSecret: false });
+      const quote = await preflightX402QuestionSubmission({ config, payload: managedPayload });
       const maxPaymentAmount = parseMaxPaymentAmount(args.maxPaymentAmount);
       if (quote.paymentAmount > maxPaymentAmount) {
         throw new McpToolError("Quoted payment exceeds maxPaymentAmount.");
@@ -286,7 +323,7 @@ export async function callCuryoMcpTool(params: { agent: McpAgentAuth; arguments:
       try {
         const result = await handleManagedQuestionSubmissionRequest({
           agentId: params.agent.id,
-          payload,
+          payload: managedPayload,
         });
         const body = result.body as JsonObject;
         await updateMcpBudgetReservation({
@@ -297,6 +334,7 @@ export async function callCuryoMcpTool(params: { agent: McpAgentAuth; arguments:
 
         return {
           ...body,
+          clientRequestId: payload.clientRequestId,
           managedBudget: await getMcpAgentBudgetSummary(params.agent),
           publicUrl: getPublicQuestionUrl(typeof body.contentId === "string" ? body.contentId : null),
         };
@@ -311,7 +349,7 @@ export async function callCuryoMcpTool(params: { agent: McpAgentAuth; arguments:
     }
 
     case "curyo_get_question_status": {
-      const record = await lookupQuestionOperation(args);
+      const record = await lookupQuestionOperation(args, params.agent);
       return {
         ...x402QuestionSubmissionRecordBody(record),
         publicUrl: getPublicQuestionUrl(record?.contentId ?? null),
@@ -319,7 +357,7 @@ export async function callCuryoMcpTool(params: { agent: McpAgentAuth; arguments:
     }
 
     case "curyo_get_result":
-      return buildQuestionResult(args);
+      return buildQuestionResult(args, params.agent);
 
     case "curyo_get_bot_balance":
       return getMcpAgentBudgetSummary(params.agent);
