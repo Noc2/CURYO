@@ -3,6 +3,7 @@ import { dbClient, dbPool } from "~~/lib/db";
 import type { McpAgentAuth } from "~~/lib/mcp/auth";
 
 export type McpBudgetReservationStatus = "reserved" | "submitted" | "failed" | "released";
+export type McpAskAuditEventType = McpBudgetReservationStatus | "retry_reserved";
 
 export class McpBudgetError extends Error {
   readonly status: number;
@@ -257,6 +258,49 @@ async function releaseDailyBudgetCapacity(
   );
 }
 
+async function insertMcpAskAuditRecord(
+  client: PoolClient,
+  params: {
+    eventType: McpAskAuditEventType;
+    now: Date;
+    reservation: McpBudgetReservationRecord;
+  },
+) {
+  await client.query(
+    `
+      INSERT INTO mcp_agent_ask_audit_records (
+        operation_key,
+        agent_id,
+        client_request_id,
+        payload_hash,
+        chain_id,
+        category_id,
+        payment_amount,
+        event_type,
+        status,
+        content_id,
+        error,
+        created_at
+      )
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
+    `,
+    [
+      params.reservation.operationKey,
+      params.reservation.agentId,
+      params.reservation.clientRequestId,
+      params.reservation.payloadHash,
+      params.reservation.chainId,
+      params.reservation.categoryId,
+      params.reservation.paymentAmount,
+      params.eventType,
+      params.reservation.status,
+      params.reservation.contentId,
+      params.reservation.error,
+      params.now,
+    ],
+  );
+}
+
 async function restoreReservationForRetry(
   client: PoolClient,
   params: {
@@ -299,6 +343,12 @@ async function restoreReservationForRetry(
   if (!restored) {
     throw new McpBudgetError("Unable to restore MCP budget reservation for retry.", 500);
   }
+
+  await insertMcpAskAuditRecord(client, {
+    eventType: "retry_reserved",
+    now: params.now,
+    reservation: restored,
+  });
 
   return restored;
 }
@@ -393,6 +443,11 @@ export async function reserveMcpAgentBudget(params: {
     if (!inserted) {
       throw new McpBudgetError("Unable to reserve MCP agent budget.", 500);
     }
+    await insertMcpAskAuditRecord(client, {
+      eventType: "reserved",
+      now,
+      reservation: inserted,
+    });
     return inserted;
   });
 }
@@ -404,7 +459,7 @@ export async function updateMcpBudgetReservation(params: {
   status: McpBudgetReservationStatus;
 }) {
   const now = new Date();
-  const result = await withBudgetTransaction(async client => {
+  return withBudgetTransaction(async client => {
     const existing = await getMcpBudgetReservationByOperationForUpdate(client, params.operationKey);
     const updateResult = await client.query(
       `
@@ -419,6 +474,15 @@ export async function updateMcpBudgetReservation(params: {
       [params.status, params.contentId ?? null, params.error ?? null, now, params.operationKey],
     );
 
+    const updated = rowToReservation(updateResult.rows[0]);
+    if (updated) {
+      await insertMcpAskAuditRecord(client, {
+        eventType: params.status,
+        now,
+        reservation: updated,
+      });
+    }
+
     if (
       existing &&
       (existing.status === "reserved" || existing.status === "submitted") &&
@@ -432,10 +496,8 @@ export async function updateMcpBudgetReservation(params: {
       });
     }
 
-    return updateResult;
+    return updated;
   });
-
-  return rowToReservation(result.rows[0]);
 }
 
 export async function getMcpAgentBudgetSummary(agent: McpAgentAuth) {

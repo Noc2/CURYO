@@ -43,6 +43,13 @@
       "when": 1776763600000,
       "tag": "0005_mcp_agent_daily_budget_usage",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1776767200000,
+      "tag": "0006_mcp_agent_ask_audit_records",
+      "breakpoints": true
     }
   ]
 }

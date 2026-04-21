@@ -343,6 +343,35 @@ export const mcpAgentBudgetReservations = pgTable(
 export type McpAgentBudgetReservation = typeof mcpAgentBudgetReservations.$inferSelect;
 export type NewMcpAgentBudgetReservation = typeof mcpAgentBudgetReservations.$inferInsert;
 
+export const mcpAgentAskAuditRecords = pgTable(
+  "mcp_agent_ask_audit_records",
+  {
+    id: serial("id").primaryKey(),
+    operationKey: text("operation_key").notNull(),
+    agentId: text("agent_id").notNull(),
+    clientRequestId: text("client_request_id").notNull(),
+    payloadHash: text("payload_hash").notNull(),
+    chainId: integer("chain_id").notNull(),
+    categoryId: text("category_id").notNull(),
+    paymentAmount: text("payment_amount").notNull(),
+    eventType: text("event_type").notNull(),
+    status: text("status").notNull(),
+    contentId: text("content_id"),
+    error: text("error"),
+    createdAt: timestamp("created_at", { mode: "date", withTimezone: true }).notNull(),
+  },
+  table => ({
+    agentCreatedIdx: index("mcp_agent_ask_audit_records_agent_created_idx").on(table.agentId, table.createdAt),
+    operationCreatedIdx: index("mcp_agent_ask_audit_records_operation_created_idx").on(
+      table.operationKey,
+      table.createdAt,
+    ),
+  }),
+);
+
+export type McpAgentAskAuditRecord = typeof mcpAgentAskAuditRecords.$inferSelect;
+export type NewMcpAgentAskAuditRecord = typeof mcpAgentAskAuditRecords.$inferInsert;
+
 export const mcpAgentDailyBudgetUsage = pgTable(
   "mcp_agent_daily_budget_usage",
   {
