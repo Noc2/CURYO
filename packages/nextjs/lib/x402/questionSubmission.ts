@@ -432,7 +432,12 @@ async function preflightX402QuestionSubmissionWithClient(params: {
 export async function preflightX402QuestionSubmission(params: {
   config: X402QuestionSubmissionConfig;
   payload: X402QuestionPayload;
-}): Promise<{ operation: X402QuestionOperation; paymentAmount: bigint; resolvedCategoryId: bigint; submissionKey: Hex }> {
+}): Promise<{
+  operation: X402QuestionOperation;
+  paymentAmount: bigint;
+  resolvedCategoryId: bigint;
+  submissionKey: Hex;
+}> {
   const operation = buildX402QuestionOperation(params.payload);
   const { publicClient } = createViemClients(params.config);
   const preflight = await preflightX402QuestionSubmissionWithClient({

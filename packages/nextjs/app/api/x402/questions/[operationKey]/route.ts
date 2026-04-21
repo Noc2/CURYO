@@ -9,10 +9,7 @@ export const runtime = "nodejs";
 
 const READ_RATE_LIMIT = { limit: 120, windowMs: 60_000 };
 
-export async function GET(
-  request: NextRequest,
-  context: { params: Promise<{ operationKey: string }> },
-) {
+export async function GET(request: NextRequest, context: { params: Promise<{ operationKey: string }> }) {
   const limited = await checkRateLimit(request, READ_RATE_LIMIT, { allowOnStoreUnavailable: true });
   if (limited) return limited;
 
@@ -26,4 +23,3 @@ export async function GET(
     status: record ? 200 : 404,
   });
 }
-

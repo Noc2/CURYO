@@ -29,4 +29,3 @@ export async function GET(request: NextRequest) {
     status: record ? 200 : 404,
   });
 }
-
