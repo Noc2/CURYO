@@ -59,8 +59,8 @@ function quoteOverrides() {
         payloadHash: "payload-hash",
       },
       paymentAmount: 1_000_000n,
-      resolvedCategoryId: 5n,
-      submissionKey: `0x${"2".repeat(64)}` as const,
+      resolvedCategoryIds: [5n],
+      submissionKeys: [`0x${"2".repeat(64)}` as const],
     }),
     reserveMcpAgentBudget: async () => budgetReservation(),
     resolveX402QuestionConfig: () =>

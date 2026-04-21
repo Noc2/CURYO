@@ -112,11 +112,20 @@ export const MCP_TOOLS: McpToolDefinition[] = [
         chainId: { type: "integer" },
         clientRequestId: { type: "string" },
         question: {
-          description: "Question payload with title, description, contextUrl, categoryId, and tags.",
+          description: "Single question payload with title, description, contextUrl, categoryId, and tags.",
+          type: "object",
+        },
+        questions: {
+          description: "Ordered bundle of question payloads. The bounty pays only when every question is answered.",
+          items: { type: "object" },
+          type: "array",
+        },
+        roundConfig: {
+          description: "Shared round configuration for every question in the bundle.",
           type: "object",
         },
       },
-      required: ["clientRequestId", "question", "bounty"],
+      required: ["clientRequestId", "bounty"],
       type: "object",
     },
     name: "curyo_quote_question",
@@ -142,11 +151,20 @@ export const MCP_TOOLS: McpToolDefinition[] = [
           type: "string",
         },
         question: {
-          description: "Question payload with title, description, contextUrl, categoryId, and tags.",
+          description: "Single question payload with title, description, contextUrl, categoryId, and tags.",
+          type: "object",
+        },
+        questions: {
+          description: "Ordered bundle of question payloads. The bounty pays only when every question is answered.",
+          items: { type: "object" },
+          type: "array",
+        },
+        roundConfig: {
+          description: "Shared round configuration for every question in the bundle.",
           type: "object",
         },
       },
-      required: ["clientRequestId", "question", "bounty", "maxPaymentAmount"],
+      required: ["clientRequestId", "bounty", "maxPaymentAmount"],
       type: "object",
     },
     name: "curyo_ask_humans",
@@ -292,7 +310,8 @@ function formatQuoteResult(params: Awaited<ReturnType<typeof preflightX402Questi
       tokenAddress,
     },
     payloadHash: params.operation.payloadHash,
-    resolvedCategoryId: params.resolvedCategoryId.toString(),
+    questionCount: params.resolvedCategoryIds.length,
+    resolvedCategoryIds: params.resolvedCategoryIds.map(categoryId => categoryId.toString()),
   };
 }
 
@@ -401,7 +420,7 @@ export async function callCuryoMcpTool(params: {
       await dependencies.reserveMcpAgentBudget({
         agent: params.agent,
         amount: quote.paymentAmount,
-        categoryId: payload.categoryId.toString(),
+        categoryId: payload.questions[0]?.categoryId.toString() ?? "0",
         chainId: payload.chainId,
         clientRequestId: payload.clientRequestId,
         operationKey: quote.operation.operationKey,

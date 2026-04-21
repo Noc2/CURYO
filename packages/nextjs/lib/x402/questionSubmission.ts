@@ -27,7 +27,7 @@ import {
   getX402UsdcAddressOverride,
 } from "~~/lib/env/server";
 import { questionRoundConfigToAbi, serializeQuestionRoundConfig } from "~~/lib/questionRoundConfig";
-import { buildQuestionSubmissionRevealCommitment } from "~~/lib/questionSubmissionCommitment";
+import { buildQuestionBundleSubmissionRevealCommitment } from "~~/lib/questionSubmissionCommitment";
 import {
   type X402QuestionOperation,
   type X402QuestionPayload,
@@ -54,7 +54,10 @@ export type X402QuestionSubmissionRecord = {
   bountyAmount: string;
   serviceFeeAmount: string;
   status: X402QuestionSubmissionStatus;
+  bundleId: string | null;
   contentId: string | null;
+  contentIds: string | null;
+  questionCount: number;
   rewardPoolId: string | null;
   transactionHashes: string | null;
   paymentReceipt: string | null;
@@ -102,9 +105,11 @@ function rowToRecord(row: Record<string, unknown> | undefined): X402QuestionSubm
   if (!row) return null;
   return {
     bountyAmount: String(row.bounty_amount),
+    bundleId: typeof row.bundle_id === "string" ? row.bundle_id : null,
     chainId: Number(row.chain_id),
     clientRequestId: String(row.client_request_id),
     contentId: typeof row.content_id === "string" ? row.content_id : null,
+    contentIds: typeof row.content_ids === "string" ? row.content_ids : null,
     error: typeof row.error === "string" ? row.error : null,
     operationKey: String(row.operation_key) as `0x${string}`,
     payerAddress: typeof row.payer_address === "string" ? row.payer_address : null,
@@ -112,6 +117,7 @@ function rowToRecord(row: Record<string, unknown> | undefined): X402QuestionSubm
     paymentAmount: String(row.payment_amount),
     paymentAsset: String(row.payment_asset),
     paymentReceipt: typeof row.payment_receipt === "string" ? row.payment_receipt : null,
+    questionCount: Number(row.question_count ?? 1),
     rewardPoolId: typeof row.reward_pool_id === "string" ? row.reward_pool_id : null,
     serviceFeeAmount: String(row.service_fee_amount),
     status: String(row.status) as X402QuestionSubmissionStatus,
@@ -174,6 +180,7 @@ async function recordPaymentSettlement(params: {
         payment_amount,
         bounty_amount,
         service_fee_amount,
+        question_count,
         status,
         payment_receipt,
         created_at,
@@ -202,6 +209,7 @@ async function recordPaymentSettlement(params: {
       params.paymentAmount.toString(),
       params.payload.bounty.amount.toString(),
       params.config.serviceFeeAmount.toString(),
+      params.payload.questions.length,
       "payment_settled",
       JSON.stringify(params.paymentReceipt),
       now,
@@ -213,7 +221,9 @@ async function recordPaymentSettlement(params: {
 async function updateSubmissionStatus(params: {
   operationKey: `0x${string}`;
   status: X402QuestionSubmissionStatus;
+  bundleId?: bigint | null;
   contentId?: bigint | null;
+  contentIds?: bigint[];
   rewardPoolId?: bigint | null;
   transactionHashes?: Hex[];
   error?: string | null;
@@ -223,7 +233,9 @@ async function updateSubmissionStatus(params: {
     sql: `
       UPDATE x402_question_submissions
       SET status = ?,
+          bundle_id = ?,
           content_id = ?,
+          content_ids = ?,
           reward_pool_id = ?,
           transaction_hashes = ?,
           error = ?,
@@ -233,7 +245,9 @@ async function updateSubmissionStatus(params: {
     `,
     args: [
       params.status,
+      params.bundleId === undefined ? null : (params.bundleId?.toString() ?? null),
       params.contentId === undefined ? null : (params.contentId?.toString() ?? null),
+      params.contentIds === undefined ? null : JSON.stringify(params.contentIds.map(contentId => contentId.toString())),
       params.rewardPoolId === undefined ? null : (params.rewardPoolId?.toString() ?? null),
       params.transactionHashes === undefined ? null : JSON.stringify(params.transactionHashes),
       params.error ?? null,
@@ -250,6 +264,16 @@ function parseStoredTransactionHashes(value: string | null): Hex[] {
   try {
     const parsed = JSON.parse(value);
     return Array.isArray(parsed) ? parsed.filter((entry): entry is Hex => typeof entry === "string") : [];
+  } catch {
+    return [];
+  }
+}
+
+function parseStoredContentIds(value: string | null): string[] {
+  if (!value) return [];
+  try {
+    const parsed = JSON.parse(value);
+    return Array.isArray(parsed) ? parsed.filter((entry): entry is string => typeof entry === "string") : [];
   } catch {
     return [];
   }
@@ -393,40 +417,50 @@ async function preflightX402QuestionSubmissionWithClient(params: {
   config: X402QuestionSubmissionConfig;
   payload: X402QuestionPayload;
   publicClient: X402PublicClient;
-}): Promise<{ resolvedCategoryId: bigint; submissionKey: Hex }> {
+}): Promise<{ resolvedCategoryIds: bigint[]; submissionKeys: Hex[] }> {
   await assertBountyMeetsProtocolMinimum(params);
 
-  const [resolvedCategoryId, submissionKey] = (await params.publicClient.readContract({
-    address: params.config.contentRegistryAddress,
-    abi: ContentRegistryAbi,
-    functionName: "previewQuestionSubmissionKey",
-    args: [
-      params.payload.contextUrl,
-      params.payload.imageUrls,
-      params.payload.videoUrl,
-      params.payload.title,
-      params.payload.description,
-      params.payload.tags,
-      params.payload.categoryId,
-    ],
-  })) as readonly [bigint, Hex];
-  if (resolvedCategoryId !== params.payload.categoryId) {
-    throw new X402QuestionConflictError(
-      `Requested category ${params.payload.categoryId.toString()} resolves to ${resolvedCategoryId.toString()}.`,
-    );
+  const resolvedCategoryIds: bigint[] = [];
+  const submissionKeys: Hex[] = [];
+  const seenSubmissionKeys = new Set<Hex>();
+
+  for (const [index, question] of params.payload.questions.entries()) {
+    const [resolvedCategoryId, submissionKey] = (await params.publicClient.readContract({
+      address: params.config.contentRegistryAddress,
+      abi: ContentRegistryAbi,
+      functionName: "previewQuestionSubmissionKey",
+      args: [
+        question.contextUrl,
+        question.imageUrls,
+        question.videoUrl,
+        question.title,
+        question.description,
+        question.tags,
+        question.categoryId,
+      ],
+    })) as readonly [bigint, Hex];
+    if (resolvedCategoryId !== question.categoryId) {
+      throw new X402QuestionConflictError(
+        `Question ${index + 1} category ${question.categoryId.toString()} resolves to ${resolvedCategoryId.toString()}.`,
+      );
+    }
+
+    const submissionKeyUsed = (await params.publicClient.readContract({
+      address: params.config.contentRegistryAddress,
+      abi: ContentRegistryAbi,
+      functionName: "submissionKeyUsed",
+      args: [submissionKey],
+    })) as boolean;
+    if (submissionKeyUsed || seenSubmissionKeys.has(submissionKey)) {
+      throw new X402QuestionConflictError(`Question ${index + 1} has already been submitted.`);
+    }
+
+    resolvedCategoryIds.push(resolvedCategoryId);
+    submissionKeys.push(submissionKey);
+    seenSubmissionKeys.add(submissionKey);
   }
 
-  const submissionKeyUsed = (await params.publicClient.readContract({
-    address: params.config.contentRegistryAddress,
-    abi: ContentRegistryAbi,
-    functionName: "submissionKeyUsed",
-    args: [submissionKey],
-  })) as boolean;
-  if (submissionKeyUsed) {
-    throw new X402QuestionConflictError("This question has already been submitted.");
-  }
-
-  return { resolvedCategoryId, submissionKey };
+  return { resolvedCategoryIds, submissionKeys };
 }
 
 export async function preflightX402QuestionSubmission(params: {
@@ -435,8 +469,8 @@ export async function preflightX402QuestionSubmission(params: {
 }): Promise<{
   operation: X402QuestionOperation;
   paymentAmount: bigint;
-  resolvedCategoryId: bigint;
-  submissionKey: Hex;
+  resolvedCategoryIds: bigint[];
+  submissionKeys: Hex[];
 }> {
   const operation = buildX402QuestionOperation(params.payload);
   const { publicClient } = createViemClients(params.config);
@@ -482,10 +516,12 @@ async function ensureUsdcAllowance(params: {
 }
 
 function readSubmissionResult(receipt: TransactionReceipt): {
-  contentId: bigint | null;
+  bundleId: bigint | null;
+  contentIds: bigint[];
   rewardPoolId: bigint | null;
 } {
-  let contentId: bigint | null = null;
+  let bundleId: bigint | null = null;
+  const contentIds: bigint[] = [];
   let rewardPoolId: bigint | null = null;
 
   for (const log of receipt.logs) {
@@ -497,9 +533,19 @@ function readSubmissionResult(receipt: TransactionReceipt): {
       }) as { eventName: string; args: Record<string, unknown> };
 
       if (decoded.eventName === "ContentSubmitted" && typeof decoded.args.contentId === "bigint") {
-        contentId = decoded.args.contentId;
+        contentIds.push(decoded.args.contentId);
       }
-      if (decoded.eventName === "SubmissionRewardPoolAttached" && typeof decoded.args.rewardPoolId === "bigint") {
+      if (decoded.eventName === "QuestionBundleSubmitted") {
+        if (typeof decoded.args.bundleId === "bigint") {
+          bundleId = decoded.args.bundleId;
+        }
+        if (typeof decoded.args.rewardPoolId === "bigint") {
+          rewardPoolId = decoded.args.rewardPoolId;
+        }
+      } else if (
+        decoded.eventName === "SubmissionRewardPoolAttached" &&
+        typeof decoded.args.rewardPoolId === "bigint"
+      ) {
         rewardPoolId = decoded.args.rewardPoolId;
       }
     } catch {
@@ -507,37 +553,39 @@ function readSubmissionResult(receipt: TransactionReceipt): {
     }
   }
 
-  return { contentId, rewardPoolId };
+  return { bundleId, contentIds, rewardPoolId };
 }
 
 async function executeX402QuestionSubmission(params: {
   config: X402QuestionSubmissionConfig;
   payload: X402QuestionPayload;
-}): Promise<{ contentId: bigint; rewardPoolId: bigint | null; transactionHashes: Hex[] }> {
+}): Promise<{ bundleId: bigint | null; contentIds: bigint[]; rewardPoolId: bigint | null; transactionHashes: Hex[] }> {
   const { account, publicClient, walletClient } = createViemClients(params.config);
-  const { submissionKey } = await preflightX402QuestionSubmissionWithClient({
+  await preflightX402QuestionSubmissionWithClient({
     config: params.config,
     payload: params.payload,
     publicClient,
   });
 
-  const salt = `0x${randomBytes(32).toString("hex")}` as Hex;
-  const revealCommitment = buildQuestionSubmissionRevealCommitment({
-    categoryId: params.payload.categoryId,
-    description: params.payload.description,
-    imageUrls: params.payload.imageUrls,
+  const salts = params.payload.questions.map(() => `0x${randomBytes(32).toString("hex")}` as Hex);
+  const revealCommitment = buildQuestionBundleSubmissionRevealCommitment({
+    questions: params.payload.questions.map((question, index) => ({
+      categoryId: question.categoryId,
+      contextUrl: question.contextUrl,
+      description: question.description,
+      imageUrls: question.imageUrls,
+      salt: salts[index],
+      tags: question.tags,
+      title: question.title,
+      videoUrl: question.videoUrl,
+    })),
     rewardAmount: params.payload.bounty.amount,
     rewardAsset: X402_SUBMISSION_REWARD_ASSET_USDC,
     requiredSettledRounds: params.payload.bounty.requiredSettledRounds,
     requiredVoters: params.payload.bounty.requiredVoters,
     rewardPoolExpiresAt: params.payload.bounty.rewardPoolExpiresAt,
     roundConfig: params.payload.roundConfig,
-    salt,
-    submissionKey,
     submitter: account.address,
-    tags: params.payload.tags,
-    title: params.payload.title,
-    videoUrl: params.payload.videoUrl,
   });
 
   const transactionHashes: Hex[] = [];
@@ -564,14 +612,16 @@ async function executeX402QuestionSubmission(params: {
   try {
     await sleep(RESERVED_SUBMISSION_WAIT_MS);
     const submitArgs = [
-      params.payload.contextUrl,
-      params.payload.imageUrls,
-      params.payload.videoUrl,
-      params.payload.title,
-      params.payload.description,
-      params.payload.tags,
-      params.payload.categoryId,
-      salt,
+      params.payload.questions.map((question, index) => ({
+        contextUrl: question.contextUrl,
+        imageUrls: question.imageUrls,
+        videoUrl: question.videoUrl,
+        title: question.title,
+        description: question.description,
+        tags: question.tags,
+        categoryId: question.categoryId,
+        salt: salts[index],
+      })),
       {
         asset: X402_SUBMISSION_REWARD_ASSET_USDC,
         amount: params.payload.bounty.amount,
@@ -585,19 +635,20 @@ async function executeX402QuestionSubmission(params: {
       account,
       address: params.config.contentRegistryAddress,
       abi: ContentRegistryAbi,
-      functionName: "submitQuestionWithRewardAndRoundConfig",
+      functionName: "submitQuestionBundleWithRewardAndRoundConfig",
       args: submitArgs,
     });
     const submitHash = await walletClient.writeContract(request);
     transactionHashes.push(submitHash);
     const submitReceipt = await waitForSuccessfulReceipt(publicClient, submitHash);
     const result = readSubmissionResult(submitReceipt);
-    if (result.contentId === null) {
+    if (result.contentIds.length === 0) {
       throw new Error("Submission receipt did not include ContentSubmitted.");
     }
 
     return {
-      contentId: result.contentId,
+      bundleId: result.bundleId,
+      contentIds: result.contentIds,
       rewardPoolId: result.rewardPoolId,
       transactionHashes,
     };
@@ -624,9 +675,13 @@ function submissionResponseBody(params: {
   operation: X402QuestionOperation;
   payload: X402QuestionPayload;
   record?: X402QuestionSubmissionRecord | null;
-  result?: { contentId: bigint; rewardPoolId: bigint | null; transactionHashes: Hex[] };
+  result?: { bundleId: bigint | null; contentIds: bigint[]; rewardPoolId: bigint | null; transactionHashes: Hex[] };
 }) {
-  const contentId = params.result?.contentId.toString() ?? params.record?.contentId ?? null;
+  const contentIds =
+    params.result?.contentIds.map(contentId => contentId.toString()) ??
+    (params.record?.contentIds ? parseStoredContentIds(params.record.contentIds) : []);
+  const contentId = contentIds[0] ?? params.record?.contentId ?? null;
+  const bundleId = params.result?.bundleId?.toString() ?? params.record?.bundleId ?? null;
   const rewardPoolId = params.result?.rewardPoolId?.toString() ?? params.record?.rewardPoolId ?? null;
   const transactionHashes =
     params.result?.transactionHashes ?? parseStoredTransactionHashes(params.record?.transactionHashes ?? null);
@@ -640,9 +695,12 @@ function submissionResponseBody(params: {
       rewardPoolExpiresAt: params.payload.bounty.rewardPoolExpiresAt.toString(),
     },
     chainId: params.payload.chainId,
+    bundleId,
     contentId,
+    contentIds,
     executorAddress: params.config.executorAddress,
     operationKey: params.operation.operationKey,
+    questionCount: params.payload.questions.length,
     roundConfig: serializeQuestionRoundConfig(params.payload.roundConfig),
     payment: {
       amount: (params.payload.bounty.amount + params.config.serviceFeeAmount).toString(),
@@ -671,10 +729,13 @@ export function x402QuestionSubmissionStatusBody(params: {
       rewardPoolExpiresAt: params.payload.bounty.rewardPoolExpiresAt.toString(),
     },
     chainId: params.payload.chainId,
+    bundleId: params.record?.bundleId ?? null,
     contentId: params.record?.contentId ?? null,
+    contentIds: params.record?.contentIds ? parseStoredContentIds(params.record.contentIds) : [],
     error: params.record?.error ?? null,
     executorAddress: params.config.executorAddress,
     operationKey: params.operation.operationKey,
+    questionCount: params.payload.questions.length,
     roundConfig: serializeQuestionRoundConfig(params.payload.roundConfig),
     payment: {
       amount: (params.payload.bounty.amount + params.config.serviceFeeAmount).toString(),
@@ -699,9 +760,11 @@ export function x402QuestionSubmissionRecordBody(record: X402QuestionSubmissionR
       amount: record.bountyAmount,
       asset: "USDC",
     },
+    bundleId: record.bundleId,
     chainId: record.chainId,
     clientRequestId: record.clientRequestId,
     contentId: record.contentId,
+    contentIds: record.contentIds ? parseStoredContentIds(record.contentIds) : [],
     error: record.error,
     operationKey: record.operationKey,
     payerAddress: record.payerAddress,
@@ -711,6 +774,7 @@ export function x402QuestionSubmissionRecordBody(record: X402QuestionSubmissionR
       asset: record.paymentAsset,
       serviceFeeAmount: record.serviceFeeAmount,
     },
+    questionCount: record.questionCount,
     rewardPoolId: record.rewardPoolId,
     status: record.status,
     transactionHashes: parseStoredTransactionHashes(record.transactionHashes),
@@ -822,7 +886,9 @@ export async function handleX402QuestionSubmissionRequest(params: {
       payload: params.payload,
     });
     await updateSubmissionStatus({
-      contentId: result.contentId,
+      bundleId: result.bundleId,
+      contentId: result.contentIds[0] ?? null,
+      contentIds: result.contentIds,
       operationKey: operation.operationKey,
       rewardPoolId: result.rewardPoolId,
       status: "submitted",
@@ -969,7 +1035,9 @@ export async function completeManagedQuestionSubmissionRequest(params: {
       payload: params.payload,
     });
     await updateSubmissionStatus({
-      contentId: result.contentId,
+      bundleId: result.bundleId,
+      contentId: result.contentIds[0] ?? null,
+      contentIds: result.contentIds,
       operationKey: operation.operationKey,
       rewardPoolId: result.rewardPoolId,
       status: "submitted",

@@ -20,6 +20,7 @@ export const X402_USDC_DECIMALS = 6;
 const X402_DEFAULT_SUBMISSION_BOUNTY_USDC = 1_000_000n;
 const X402_MIN_REWARD_POOL_REQUIRED_VOTERS = 3n;
 const X402_MIN_REWARD_POOL_SETTLED_ROUNDS = 1n;
+export const X402_MAX_QUESTION_BUNDLE_COUNT = 10;
 
 const DIRECT_IMAGE_URL_PATTERN = /^https:\/\/.+\.(?:avif|gif|jpe?g|png|webp)(?:[?#].*)?$/i;
 const CLIENT_REQUEST_ID_PATTERN = /^[A-Za-z0-9._:-]{4,160}$/;
@@ -36,14 +37,7 @@ export class X402QuestionInputError extends Error {
 export type X402QuestionPayload = {
   clientRequestId: string;
   chainId: number;
-  contextUrl: string;
-  imageUrls: string[];
-  videoUrl: string;
-  title: string;
-  description: string;
-  tags: string;
-  tagList: string[];
-  categoryId: bigint;
+  questions: X402QuestionItemPayload[];
   roundConfig: QuestionRoundConfig;
   bounty: {
     asset: "USDC";
@@ -52,6 +46,17 @@ export type X402QuestionPayload = {
     requiredSettledRounds: bigint;
     rewardPoolExpiresAt: bigint;
   };
+};
+
+export type X402QuestionItemPayload = {
+  contextUrl: string;
+  imageUrls: string[];
+  videoUrl: string;
+  title: string;
+  description: string;
+  tags: string;
+  tagList: string[];
+  categoryId: bigint;
 };
 
 export type X402QuestionOperation = {
@@ -266,6 +271,52 @@ function normalizeRoundConfig(value: unknown): QuestionRoundConfig {
   return { epochDuration, maxDuration, minVoters, maxVoters };
 }
 
+function normalizeQuestion(value: unknown, index: number): X402QuestionItemPayload {
+  if (!isObject(value)) {
+    throw new X402QuestionInputError(`questions[${index}] must be an object.`);
+  }
+
+  const fieldPrefix = `questions[${index}]`;
+  const title = readString(value.title, `${fieldPrefix}.title`);
+  const description = readString(value.description, `${fieldPrefix}.description`);
+  const titleError = getContentTitleValidationError(title);
+  if (titleError) {
+    throw new X402QuestionInputError(titleError);
+  }
+  const descriptionError = getContentDescriptionValidationError(description);
+  if (descriptionError) {
+    throw new X402QuestionInputError(descriptionError);
+  }
+
+  const contextUrl = normalizeHttpsUrl(
+    readString(value.contextUrl, `${fieldPrefix}.contextUrl`),
+    `${fieldPrefix}.contextUrl`,
+  );
+  const imageUrls = normalizeImageUrls(value.imageUrls);
+  const rawVideoUrl = readOptionalString(value.videoUrl);
+  const videoUrl = rawVideoUrl ? normalizeHttpsUrl(rawVideoUrl, `${fieldPrefix}.videoUrl`) : "";
+  if (videoUrl && !isYouTubeVideoUrl(videoUrl)) {
+    throw new X402QuestionInputError(`${fieldPrefix}.videoUrl must be a supported YouTube URL.`);
+  }
+  if (videoUrl && imageUrls.length > 0) {
+    throw new X402QuestionInputError("Use imageUrls or videoUrl, not both.");
+  }
+
+  const { tags, tagList } = normalizeTags(value.tags);
+  const categoryId = parseNonNegativeInteger(value.categoryId, `${fieldPrefix}.categoryId`);
+
+  return {
+    contextUrl,
+    imageUrls,
+    videoUrl,
+    title,
+    description,
+    tags,
+    tagList,
+    categoryId,
+  };
+}
+
 export function parseX402QuestionRequest(value: unknown, fallbackChainId?: number): X402QuestionPayload {
   if (!isObject(value)) {
     throw new X402QuestionInputError("Request body must be a JSON object.");
@@ -278,44 +329,24 @@ export function parseX402QuestionRequest(value: unknown, fallbackChainId?: numbe
     );
   }
 
-  const question = isObject(value.question) ? value.question : value;
-  const title = readString(question.title, "question.title");
-  const description = readString(question.description, "question.description");
-  const titleError = getContentTitleValidationError(title);
-  if (titleError) {
-    throw new X402QuestionInputError(titleError);
+  const rawQuestions = Array.isArray(value.questions)
+    ? value.questions
+    : [isObject(value.question) ? value.question : value];
+  if (rawQuestions.length === 0) {
+    throw new X402QuestionInputError("At least one question is required.");
   }
-  const descriptionError = getContentDescriptionValidationError(description);
-  if (descriptionError) {
-    throw new X402QuestionInputError(descriptionError);
+  if (rawQuestions.length > X402_MAX_QUESTION_BUNDLE_COUNT) {
+    throw new X402QuestionInputError(`At most ${X402_MAX_QUESTION_BUNDLE_COUNT} questions are supported.`);
   }
 
-  const contextUrl = normalizeHttpsUrl(readString(question.contextUrl, "question.contextUrl"), "question.contextUrl");
-  const imageUrls = normalizeImageUrls(question.imageUrls);
-  const rawVideoUrl = readOptionalString(question.videoUrl);
-  const videoUrl = rawVideoUrl ? normalizeHttpsUrl(rawVideoUrl, "question.videoUrl") : "";
-  if (videoUrl && !isYouTubeVideoUrl(videoUrl)) {
-    throw new X402QuestionInputError("question.videoUrl must be a supported YouTube URL.");
-  }
-  if (videoUrl && imageUrls.length > 0) {
-    throw new X402QuestionInputError("Use imageUrls or videoUrl, not both.");
-  }
-
-  const { tags, tagList } = normalizeTags(question.tags);
-  const categoryId = parseNonNegativeInteger(question.categoryId, "question.categoryId");
-  const roundConfig = normalizeRoundConfig(question.roundConfig);
+  const firstQuestion = isObject(rawQuestions[0]) ? rawQuestions[0] : {};
+  const questions = rawQuestions.map((question, index) => normalizeQuestion(question, index));
+  const roundConfig = normalizeRoundConfig(value.roundConfig ?? firstQuestion.roundConfig);
 
   return {
     clientRequestId,
-    chainId: normalizeChainId(value.chainId ?? question.chainId, fallbackChainId),
-    contextUrl,
-    imageUrls,
-    videoUrl,
-    title,
-    description,
-    tags,
-    tagList,
-    categoryId,
+    chainId: normalizeChainId(value.chainId ?? firstQuestion.chainId, fallbackChainId),
+    questions,
     roundConfig,
     bounty: normalizeBounty(value.bounty),
   };
@@ -332,16 +363,16 @@ export function toCanonicalQuestionPayload(payload: X402QuestionPayload) {
     },
     chainId: payload.chainId,
     clientRequestId: payload.clientRequestId,
-    question: {
-      categoryId: payload.categoryId.toString(),
-      contextUrl: payload.contextUrl,
-      description: payload.description,
-      imageUrls: payload.imageUrls,
-      tags: payload.tagList,
-      title: payload.title,
-      videoUrl: payload.videoUrl,
-      roundConfig: serializeQuestionRoundConfig(payload.roundConfig),
-    },
+    questions: payload.questions.map(question => ({
+      categoryId: question.categoryId.toString(),
+      contextUrl: question.contextUrl,
+      description: question.description,
+      imageUrls: question.imageUrls,
+      tags: question.tagList,
+      title: question.title,
+      videoUrl: question.videoUrl,
+    })),
+    roundConfig: serializeQuestionRoundConfig(payload.roundConfig),
   };
 }
 

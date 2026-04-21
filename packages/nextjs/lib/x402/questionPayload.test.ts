@@ -30,12 +30,41 @@ test("parseX402QuestionRequest normalizes a valid paid question payload", () => 
   const payload = parseX402QuestionRequest(VALID_REQUEST);
 
   assert.equal(payload.chainId, 42220);
-  assert.equal(payload.contextUrl, "https://example.com/watch?v=abc123");
+  assert.equal(payload.questions.length, 1);
+  assert.equal(payload.questions[0].contextUrl, "https://example.com/watch?v=abc123");
   assert.equal(payload.bounty.amount, 1_000_000n);
   assert.equal(payload.bounty.requiredVoters, 3n);
   assert.equal(payload.roundConfig.epochDuration, 1200n);
-  assert.equal(payload.tags, "Media,Video");
-  assert.deepEqual(payload.imageUrls, ["https://example.com/preview.jpg"]);
+  assert.equal(payload.questions[0].tags, "Media,Video");
+  assert.deepEqual(payload.questions[0].imageUrls, ["https://example.com/preview.jpg"]);
+});
+
+test("parseX402QuestionRequest accepts ordered question bundles", () => {
+  const payload = parseX402QuestionRequest({
+    ...VALID_REQUEST,
+    question: undefined,
+    questions: [
+      VALID_REQUEST.question,
+      {
+        ...VALID_REQUEST.question,
+        contextUrl: "https://example.com/second",
+        imageUrls: [],
+        tags: ["Market", "Research"],
+        title: "Would you pay for this?",
+      },
+    ],
+    roundConfig: {
+      epochDuration: "600",
+      maxDuration: "7200",
+      minVoters: "5",
+      maxVoters: "50",
+    },
+  });
+
+  assert.equal(payload.questions.length, 2);
+  assert.equal(payload.questions[1].title, "Would you pay for this?");
+  assert.equal(payload.questions[1].tags, "Market,Research");
+  assert.equal(payload.roundConfig.maxVoters, 50n);
 });
 
 test("parseX402QuestionRequest accepts explicit governed round config", () => {
@@ -72,6 +101,32 @@ test("buildX402QuestionOperation binds round config into the payload hash", () =
           maxVoters: "50",
         },
       },
+    }),
+  );
+
+  assert.notEqual(first.operationKey, second.operationKey);
+  assert.notEqual(first.payloadHash, second.payloadHash);
+});
+
+test("buildX402QuestionOperation is sensitive to bundle question order", () => {
+  const first = buildX402QuestionOperation(
+    parseX402QuestionRequest({
+      ...VALID_REQUEST,
+      question: undefined,
+      questions: [
+        VALID_REQUEST.question,
+        { ...VALID_REQUEST.question, contextUrl: "https://example.com/second", title: "Second title" },
+      ],
+    }),
+  );
+  const second = buildX402QuestionOperation(
+    parseX402QuestionRequest({
+      ...VALID_REQUEST,
+      question: undefined,
+      questions: [
+        { ...VALID_REQUEST.question, contextUrl: "https://example.com/second", title: "Second title" },
+        VALID_REQUEST.question,
+      ],
     }),
   );
 

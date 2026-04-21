@@ -2,20 +2,10 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import dynamic from "next/dynamic";
-import {
-  buildSubmissionReservationStorageKey,
-  buildSubmissionRevealCommitment,
-  clearStoredSubmissionReservation,
-  createStoredSubmissionReservation,
-  deriveSubmissionReservationSalt,
-  getStoredSubmissionReservation,
-  setStoredSubmissionReservation,
-  submissionReservationMatchesDraft,
-} from "./submissionReservation";
 import { useQuery } from "@tanstack/react-query";
-import { decodeEventLog } from "viem";
+import { decodeEventLog, toHex } from "viem";
 import { useAccount, useConfig } from "wagmi";
-import { readContract, waitForTransactionReceipt, writeContract } from "wagmi/actions";
+import { waitForTransactionReceipt, writeContract } from "wagmi/actions";
 import { ChevronDownIcon, MagnifyingGlassIcon, XMarkIcon } from "@heroicons/react/24/outline";
 import { ContentEmbed } from "~~/components/content/ContentEmbed";
 import { GasBalanceWarning } from "~~/components/shared/GasBalanceWarning";
@@ -47,7 +37,6 @@ import {
   getContentTagValidationError,
   getContentTitleValidationError,
 } from "~~/lib/moderation/submissionValidation";
-import { parseQuestionReferenceInput } from "~~/lib/questionReferences";
 import {
   DEFAULT_REWARD_POOL_FRONTEND_FEE_BPS,
   DEFAULT_SUBMISSION_REWARD_POOL,
@@ -67,6 +56,7 @@ import {
   formatDurationLabel,
   questionRoundConfigToAbi,
 } from "~~/lib/questionRoundConfig";
+import { buildQuestionBundleSubmissionRevealCommitment } from "~~/lib/questionSubmissionCommitment";
 import {
   getGasBalanceErrorMessage,
   isFreeTransactionExhaustedError,
@@ -88,8 +78,55 @@ const MEDIA_URL_CONFIG = {
   urlHint: "Optional. Add up to four direct image URLs or one YouTube link as a preview.",
 };
 
-type SubmissionStep = 1 | 2;
+type SubmissionStep = "question" | "bounty";
 type RewardExpiryMode = "none" | "days";
+
+const MAX_QUESTION_BUNDLE_COUNT = 10;
+
+type QuestionDraft = {
+  mediaMode: MediaMode;
+  contextUrl: string;
+  imageUrls: string[];
+  videoUrl: string;
+  title: string;
+  description: string;
+  selectedCategory: Category | null;
+  selectedSubcategories: string[];
+  customSubcategory: string;
+};
+
+type ValidatedQuestionDraft = {
+  blockedContentTags: string[];
+  hasMediaError: boolean;
+  hasQuestionErrors: boolean;
+  submittedContextUrl: string;
+  submittedImageUrls: string[];
+  submittedVideoUrl: string;
+  submittedTags: string;
+  trimmedDescription: string;
+  trimmedTitle: string;
+  selectedCategory: Category | null;
+};
+
+function createEmptyQuestionDraft(): QuestionDraft {
+  return {
+    mediaMode: "images",
+    contextUrl: "",
+    imageUrls: [""],
+    videoUrl: "",
+    title: "",
+    description: "",
+    selectedCategory: null,
+    selectedSubcategories: [],
+    customSubcategory: "",
+  };
+}
+
+function createRandomHex32(): `0x${string}` {
+  const bytes = new Uint8Array(32);
+  window.crypto.getRandomValues(bytes);
+  return toHex(bytes);
+}
 
 function getRewardPoolExpiresAt(mode: RewardExpiryMode, daysText: string): bigint {
   if (mode !== "days") return 0n;
@@ -177,11 +214,12 @@ export function ContentSubmissionSection() {
   const [titleError, setTitleError] = useState<string | null>(null);
   const [description, setDescription] = useState("");
   const [descriptionError, setDescriptionError] = useState<string | null>(null);
-  const [referenceInput, setReferenceInput] = useState("");
-  const [referenceInputError, setReferenceInputError] = useState<string | null>(null);
   const [selectedCategory, setSelectedCategory] = useState<Category | null>(null);
   const [selectedSubcategories, setSelectedSubcategories] = useState<string[]>([]);
   const [customSubcategory, setCustomSubcategory] = useState("");
+  const [questionCount, setQuestionCount] = useState(1);
+  const [activeQuestionIndex, setActiveQuestionIndex] = useState(0);
+  const [questionDrafts, setQuestionDrafts] = useState<QuestionDraft[]>([createEmptyQuestionDraft()]);
   const [rewardAsset, setRewardAsset] = useState<SubmissionRewardAsset>("usdc");
   const [rewardAmount, setRewardAmount] = useState("1");
   const [rewardRequiredVoters, setRewardRequiredVoters] = useState("3");
@@ -200,7 +238,7 @@ export function ContentSubmissionSection() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [questionStepAttempted, setQuestionStepAttempted] = useState(false);
   const [bountyStepAttempted, setBountyStepAttempted] = useState(false);
-  const [submissionStep, setSubmissionStep] = useState<SubmissionStep>(1);
+  const [submissionStep, setSubmissionStep] = useState<SubmissionStep>("question");
   const [submittedContent, setSubmittedContent] = useState<{
     id: bigint;
     title: string;
@@ -210,9 +248,53 @@ export function ContentSubmissionSection() {
   const [categorySearch, setCategorySearch] = useState("");
   const [isCategoryDropdownOpen, setIsCategoryDropdownOpen] = useState(false);
   const categoryDropdownRef = useRef<HTMLDivElement>(null);
-  const descriptionTextareaRef = useRef<HTMLTextAreaElement>(null);
 
   const { categories, isLoading: categoriesLoading } = useCategoryRegistry();
+
+  const getActiveQuestionDraft = (): QuestionDraft => ({
+    mediaMode,
+    contextUrl,
+    imageUrls,
+    videoUrl,
+    title,
+    description,
+    selectedCategory,
+    selectedSubcategories,
+    customSubcategory,
+  });
+
+  const patchActiveQuestionDraft = (patch: Partial<QuestionDraft>) => {
+    setQuestionDrafts(prev =>
+      prev.map((draft, index) => (index === activeQuestionIndex ? { ...draft, ...patch } : draft)),
+    );
+  };
+
+  const loadQuestionDraft = (draft: QuestionDraft) => {
+    setMediaMode(draft.mediaMode);
+    setContextUrl(draft.contextUrl);
+    setContextUrlError(null);
+    setImageUrls(draft.imageUrls.length > 0 ? draft.imageUrls : [""]);
+    setImageUrlErrors((draft.imageUrls.length > 0 ? draft.imageUrls : [""]).map(() => null));
+    setVideoUrl(draft.videoUrl);
+    setVideoUrlError(null);
+    setTitle(draft.title);
+    setTitleError(null);
+    setDescription(draft.description);
+    setDescriptionError(null);
+    setSelectedCategory(draft.selectedCategory);
+    setSelectedSubcategories(draft.selectedSubcategories);
+    setCustomSubcategory(draft.customSubcategory);
+    setQuestionStepAttempted(false);
+    setIsCategoryDropdownOpen(false);
+    setCategorySearch("");
+  };
+
+  const setActiveQuestionPage = (index: number, drafts = questionDrafts) => {
+    const nextIndex = Math.max(0, Math.min(index, questionCount - 1));
+    setActiveQuestionIndex(nextIndex);
+    loadQuestionDraft(drafts[nextIndex] ?? createEmptyQuestionDraft());
+    setSubmissionStep("question");
+  };
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -259,6 +341,7 @@ export function ContentSubmissionSection() {
 
   const handleContextUrlChange = (value: string) => {
     setContextUrl(value);
+    patchActiveQuestionDraft({ contextUrl: value });
     setContextUrlError(value.trim() ? getContextUrlValidationError(value) : null);
   };
 
@@ -312,24 +395,37 @@ export function ContentSubmissionSection() {
   };
 
   const handleImageUrlChange = (index: number, value: string) => {
-    setImageUrls(prev => prev.map((url, itemIndex) => (itemIndex === index ? value : url)));
+    setImageUrls(prev => {
+      const next = prev.map((url, itemIndex) => (itemIndex === index ? value : url));
+      patchActiveQuestionDraft({ imageUrls: next });
+      return next;
+    });
     validateImageUrl(index, value);
   };
 
   const handleAddImageUrl = () => {
     if (imageUrls.length >= MAX_SUBMISSION_IMAGE_URLS) return;
-    setImageUrls(prev => [...prev, ""]);
+    setImageUrls(prev => {
+      const next = [...prev, ""];
+      patchActiveQuestionDraft({ imageUrls: next });
+      return next;
+    });
     setImageUrlErrors(prev => [...prev, null]);
   };
 
   const handleRemoveImageUrl = (index: number) => {
     if (imageUrls.length === 1) {
       setImageUrls([""]);
+      patchActiveQuestionDraft({ imageUrls: [""] });
       setImageUrlErrors([null]);
       return;
     }
 
-    setImageUrls(prev => prev.filter((_, itemIndex) => itemIndex !== index));
+    setImageUrls(prev => {
+      const next = prev.filter((_, itemIndex) => itemIndex !== index);
+      patchActiveQuestionDraft({ imageUrls: next });
+      return next;
+    });
     setImageUrlErrors(prev => prev.filter((_, itemIndex) => itemIndex !== index));
   };
 
@@ -340,6 +436,7 @@ export function ContentSubmissionSection() {
   const handleVideoUrlChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value;
     setVideoUrl(value);
+    patchActiveQuestionDraft({ videoUrl: value });
     validateVideoUrl(value);
   };
 
@@ -386,17 +483,19 @@ export function ContentSubmissionSection() {
   const handleCategorySelect = (category: Category) => {
     setSelectedCategory(category);
     setSelectedSubcategories([]);
+    patchActiveQuestionDraft({ selectedCategory: category, selectedSubcategories: [] });
   };
 
   const handleSubcategoryToggle = (subcategory: string) => {
     setSelectedSubcategories(prev => {
+      let next = prev;
       if (prev.includes(subcategory)) {
-        return prev.filter(s => s !== subcategory);
+        next = prev.filter(s => s !== subcategory);
+      } else if (prev.length < 3) {
+        next = [...prev, subcategory];
       }
-      if (prev.length < 3) {
-        return [...prev, subcategory];
-      }
-      return prev;
+      patchActiveQuestionDraft({ selectedSubcategories: next });
+      return next;
     });
   };
 
@@ -408,7 +507,11 @@ export function ContentSubmissionSection() {
       selectedSubcategories.length < 3 &&
       getContentTagValidationError(trimmed) === null
     ) {
-      setSelectedSubcategories(prev => [...prev, trimmed]);
+      setSelectedSubcategories(prev => {
+        const next = [...prev, trimmed];
+        patchActiveQuestionDraft({ selectedSubcategories: next, customSubcategory: "" });
+        return next;
+      });
       setCustomSubcategory("");
     }
   };
@@ -616,11 +719,11 @@ export function ContentSubmissionSection() {
         ? defaultFrontendFeeBps
         : DEFAULT_REWARD_POOL_FRONTEND_FEE_BPS;
   const estimatedBountyAmount = selectedRewardAmount ?? minimumBountyAmount;
-  const estimatedPerRoundGrossReward = divideRewardAmount(estimatedBountyAmount, selectedRequiredSettledRounds);
-  const estimatedMinimumVoterGrossReward = divideRewardAmount(estimatedPerRoundGrossReward, selectedRequiredVoters);
+  const estimatedQuestionShare = divideRewardAmount(estimatedBountyAmount, BigInt(questionCount));
+  const estimatedMinimumVoterGrossReward = divideRewardAmount(estimatedBountyAmount, selectedRequiredVoters);
   const estimatedMinimumVoterReward = applyEstimatedFrontendFee(estimatedMinimumVoterGrossReward, frontendFeeBps);
   const estimatedVoterCap = BigInt(Math.max(0, parsedRoundMaxVoters));
-  const estimatedVoterCapGrossReward = divideRewardAmount(estimatedPerRoundGrossReward, estimatedVoterCap);
+  const estimatedVoterCapGrossReward = divideRewardAmount(estimatedBountyAmount, estimatedVoterCap);
   const estimatedVoterCapReward = applyEstimatedFrontendFee(estimatedVoterCapGrossReward, frontendFeeBps);
   const oneTokenPerMinimumVoterBounty = selectedRequiredVoters * selectedRequiredSettledRounds * 1_000_000n;
   const bountyRecommendation = rewardAmountError
@@ -641,14 +744,15 @@ export function ContentSubmissionSection() {
     contractName: "ContentRegistry",
     functionName: "nextContentId",
   });
-  const extractSubmittedContentId = (logs: { address: string; data: `0x${string}`; topics: `0x${string}`[] }[]) => {
+  const extractSubmittedContentIds = (logs: { address: string; data: `0x${string}`; topics: `0x${string}`[] }[]) => {
     if (!registryInfo) {
-      return null;
+      return [];
     }
 
-    const submittedLog = logs.find(log => {
+    const submittedContentIds: bigint[] = [];
+    for (const log of logs) {
       if (log.address.toLowerCase() !== registryInfo.address.toLowerCase()) {
-        return false;
+        continue;
       }
 
       try {
@@ -657,96 +761,69 @@ export function ContentSubmissionSection() {
           data: log.data,
           topics: log.topics as [`0x${string}`, ...`0x${string}`[]],
         });
-        return decoded.eventName === "ContentSubmitted";
+        const args = decoded.args as { contentId?: unknown } | undefined;
+        if (decoded.eventName === "ContentSubmitted" && typeof args?.contentId === "bigint") {
+          submittedContentIds.push(args.contentId);
+        }
       } catch {
-        return false;
+        continue;
       }
-    });
+    }
 
-    return submittedLog?.topics[1] ? BigInt(submittedLog.topics[1]) : null;
+    return submittedContentIds;
   };
 
   const handleTitleChange = (value: string) => {
     setTitle(value);
+    patchActiveQuestionDraft({ title: value });
     setTitleError(getContentTitleValidationError(value));
   };
 
   const handleDescriptionChange = (value: string) => {
     setDescription(value);
+    patchActiveQuestionDraft({ description: value });
     setDescriptionError(getContentDescriptionValidationError(value));
   };
 
-  const handleInsertQuestionReference = () => {
-    const contentId = parseQuestionReferenceInput(referenceInput);
-    if (!contentId) {
-      setReferenceInputError("Enter a question ID or Curyo question link.");
-      return;
-    }
-
-    const token = `[[question:${contentId}]]`;
-    const textarea = descriptionTextareaRef.current;
-    const selectionStart = textarea?.selectionStart ?? description.length;
-    const selectionEnd = textarea?.selectionEnd ?? description.length;
-    const beforeSelection = description.slice(0, selectionStart);
-    const afterSelection = description.slice(selectionEnd);
-    const leadingSpace = beforeSelection.length > 0 && !/\s$/.test(beforeSelection) ? " " : "";
-    const trailingSpace = afterSelection.length > 0 && !/^\s/.test(afterSelection) ? " " : "";
-    const nextDescription = `${beforeSelection}${leadingSpace}${token}${trailingSpace}${afterSelection}`;
-    const nextDescriptionError = getContentDescriptionValidationError(nextDescription);
-
-    if (nextDescriptionError) {
-      setReferenceInputError(nextDescriptionError);
-      return;
-    }
-
-    handleDescriptionChange(nextDescription);
-    setReferenceInput("");
-    setReferenceInputError(null);
-
-    window.requestAnimationFrame(() => {
-      const nextCaretPosition = beforeSelection.length + leadingSpace.length + token.length;
-      descriptionTextareaRef.current?.focus();
-      descriptionTextareaRef.current?.setSelectionRange(nextCaretPosition, nextCaretPosition);
-    });
-  };
-
-  const validateQuestionSection = () => {
-    const trimmedTitle = title.trim();
-    const trimmedDescription = description.trim();
-    const trimmedContextUrl = contextUrl.trim();
+  const validateQuestionSection = (draft = getActiveQuestionDraft(), applyErrors = true): ValidatedQuestionDraft => {
+    const trimmedTitle = draft.title.trim();
+    const trimmedDescription = draft.description.trim();
+    const trimmedContextUrl = draft.contextUrl.trim();
     const submittedContextUrl = normalizeSubmissionContextUrl(trimmedContextUrl) ?? "";
     const submittedImageUrls =
-      mediaMode === "images"
-        ? imageUrls
+      draft.mediaMode === "images"
+        ? draft.imageUrls
             .map(value => value.trim())
             .filter(Boolean)
             .map(value => normalizeSubmissionMediaUrl(value))
             .filter((value): value is string => Boolean(value))
         : [];
-    const submittedVideoUrl = mediaMode === "video" ? (normalizeSubmissionMediaUrl(videoUrl) ?? "") : "";
-    const nextImageUrlErrors = imageUrls.map(value =>
+    const submittedVideoUrl = draft.mediaMode === "video" ? (normalizeSubmissionMediaUrl(draft.videoUrl) ?? "") : "";
+    const nextImageUrlErrors = draft.imageUrls.map(value =>
       value.trim() ? getMediaUrlValidationError(value, "images") : null,
     );
-    const nextVideoUrlError = getMediaUrlValidationError(videoUrl, "video");
+    const nextVideoUrlError = getMediaUrlValidationError(draft.videoUrl, "video");
     const nextContextUrlError = getContextUrlValidationError(trimmedContextUrl);
     const nextTitleError = trimmedTitle ? getContentTitleValidationError(trimmedTitle) : null;
     const nextDescriptionError = trimmedDescription ? getContentDescriptionValidationError(trimmedDescription) : null;
-    const blockedContentTags = findBlockedContentTags(selectedSubcategories);
+    const blockedContentTags = findBlockedContentTags(draft.selectedSubcategories);
     const hasMediaError =
-      mediaMode === "images"
+      draft.mediaMode === "images"
         ? nextImageUrlErrors.some(Boolean)
-        : Boolean(nextVideoUrlError) || Boolean(videoUrl.trim() && !submittedVideoUrl);
+        : Boolean(nextVideoUrlError) || Boolean(draft.videoUrl.trim() && !submittedVideoUrl);
 
-    setImageUrlErrors(nextImageUrlErrors);
-    setVideoUrlError(nextVideoUrlError);
-    setContextUrlError(nextContextUrlError);
-    setTitleError(nextTitleError);
-    setDescriptionError(nextDescriptionError);
+    if (applyErrors) {
+      setImageUrlErrors(nextImageUrlErrors);
+      setVideoUrlError(nextVideoUrlError);
+      setContextUrlError(nextContextUrlError);
+      setTitleError(nextTitleError);
+      setDescriptionError(nextDescriptionError);
+    }
 
     const questionFieldsComplete =
-      Boolean(selectedCategory) &&
+      Boolean(draft.selectedCategory) &&
       Boolean(trimmedTitle) &&
-      selectedSubcategories.length > 0 &&
+      draft.selectedSubcategories.length > 0 &&
       Boolean(submittedContextUrl);
     const hasQuestionErrors =
       !questionFieldsComplete ||
@@ -760,9 +837,11 @@ export function ContentSubmissionSection() {
       blockedContentTags,
       hasMediaError,
       hasQuestionErrors,
+      selectedCategory: draft.selectedCategory,
       submittedContextUrl,
       submittedImageUrls,
       submittedVideoUrl,
+      submittedTags: serializeTags(draft.selectedSubcategories),
       trimmedDescription,
       trimmedTitle,
     };
@@ -772,12 +851,43 @@ export function ContentSubmissionSection() {
     setQuestionStepAttempted(true);
     const questionValidation = validateQuestionSection();
     if (questionValidation.hasQuestionErrors) {
-      setSubmissionStep(1);
+      setSubmissionStep("question");
       notification.warning("Fill in the highlighted fields before continuing.");
       return;
     }
 
-    setSubmissionStep(2);
+    if (activeQuestionIndex < questionCount - 1) {
+      const nextDrafts = questionDrafts.map((draft, index) =>
+        index === activeQuestionIndex ? getActiveQuestionDraft() : draft,
+      );
+      setQuestionDrafts(nextDrafts);
+      setActiveQuestionPage(activeQuestionIndex + 1, nextDrafts);
+      return;
+    }
+
+    setSubmissionStep("bounty");
+    setBountyStepAttempted(false);
+  };
+
+  const handleQuestionCountChange = (value: string) => {
+    const nextCount = Math.max(1, Math.min(MAX_QUESTION_BUNDLE_COUNT, parseIntegerInput(value)));
+    const syncedDrafts = questionDrafts.map((draft, index) =>
+      index === activeQuestionIndex ? getActiveQuestionDraft() : draft,
+    );
+    const nextDrafts =
+      nextCount > syncedDrafts.length
+        ? [
+            ...syncedDrafts,
+            ...Array.from({ length: nextCount - syncedDrafts.length }, () => createEmptyQuestionDraft()),
+          ]
+        : syncedDrafts.slice(0, nextCount);
+    const nextActiveIndex = Math.min(activeQuestionIndex, nextCount - 1);
+
+    setQuestionCount(nextCount);
+    setQuestionDrafts(nextDrafts);
+    setActiveQuestionIndex(nextActiveIndex);
+    loadQuestionDraft(nextDrafts[nextActiveIndex] ?? createEmptyQuestionDraft());
+    setSubmissionStep("question");
     setBountyStepAttempted(false);
   };
 
@@ -811,32 +921,32 @@ export function ContentSubmissionSection() {
       return;
     }
 
-    const questionValidation = validateQuestionSection();
+    const syncedDrafts = questionDrafts
+      .map((draft, index) => (index === activeQuestionIndex ? getActiveQuestionDraft() : draft))
+      .slice(0, questionCount);
+    const validatedQuestions = syncedDrafts.map(draft => validateQuestionSection(draft, false));
+    const firstInvalidQuestionIndex = validatedQuestions.findIndex(question => question.hasQuestionErrors);
+    if (firstInvalidQuestionIndex >= 0) {
+      const invalidDraft = syncedDrafts[firstInvalidQuestionIndex] ?? createEmptyQuestionDraft();
+      setQuestionDrafts(syncedDrafts);
+      setActiveQuestionIndex(firstInvalidQuestionIndex);
+      loadQuestionDraft(invalidDraft);
+      setQuestionStepAttempted(true);
+      validateQuestionSection(invalidDraft, true);
+      setSubmissionStep("question");
+      notification.warning("Fill in every question page before asking.");
+      return;
+    }
+
+    setQuestionDrafts(syncedDrafts);
     setBountyStepAttempted(true);
-    const { submittedContextUrl, submittedImageUrls, submittedVideoUrl, trimmedDescription, trimmedTitle } =
-      questionValidation;
-    const submittedTitle = trimmedTitle;
-    const submittedDescription = trimmedDescription;
-    const currentCategory = selectedCategory;
-
-    if (questionValidation.hasQuestionErrors) {
-      setSubmissionStep(1);
-      notification.warning("Fill in the highlighted fields before asking.");
-      return;
-    }
-
-    if (!currentCategory) {
-      notification.warning("Select a category before asking.");
-      return;
-    }
-
-    if (!questionValidation.submittedContextUrl || !selectedRewardAmount) {
+    if (!selectedRewardAmount) {
       notification.warning("Please fix the highlighted fields before asking.");
       return;
     }
 
     if (!bountySettingsValid) {
-      setSubmissionStep(2);
+      setSubmissionStep("bounty");
       notification.warning("Please fix the bounty details before asking.");
       return;
     }
@@ -846,53 +956,43 @@ export function ContentSubmissionSection() {
 
     setIsSubmitting(true);
     statusToast.showSubmitting({ action: "content" });
-    let reservationStorageKey: string | null = null;
+    let reservedRevealCommitment: `0x${string}` | null = null;
+    let cancelReservedSubmission: ((revealCommitment: `0x${string}`) => Promise<void>) | null = null;
     try {
-      let contentId: bigint | null = null;
-      const submissionTags = serializeTags(selectedSubcategories);
+      let submittedContentIds: bigint[] = [];
       const submitterAddress = connectedAddress as `0x${string}` | undefined;
       if (!submitterAddress) {
         throw new Error("Wallet not connected");
       }
 
-      const [, submissionKey] = (await readContract(wagmiConfig, {
-        abi: QUESTION_SUBMISSION_ABI,
-        address: registryAddress,
-        functionName: "previewQuestionSubmissionKey",
-        args: [
-          submittedContextUrl,
-          submittedImageUrls,
-          submittedVideoUrl,
-          submittedTitle,
-          submittedDescription,
-          submissionTags,
-          currentCategory.id,
-        ],
-      })) as readonly [bigint, `0x${string}`];
-      const submissionDraft = {
-        categoryId: currentCategory.id,
-        description: submittedDescription,
-        imageUrls: submittedImageUrls,
+      const bundleQuestions = validatedQuestions.map((question, index) => {
+        if (!question.selectedCategory) {
+          throw new Error(`Question ${index + 1} is missing a category.`);
+        }
+
+        return {
+          contextUrl: question.submittedContextUrl,
+          imageUrls: question.submittedImageUrls,
+          videoUrl: question.submittedVideoUrl,
+          title: question.trimmedTitle,
+          description: question.trimmedDescription,
+          tags: question.submittedTags,
+          categoryId: question.selectedCategory.id,
+          salt: createRandomHex32(),
+        };
+      });
+      const revealCommitment = buildQuestionBundleSubmissionRevealCommitment({
+        questions: bundleQuestions,
         rewardAmount: selectedRewardAmount,
-        rewardPoolExpiresAt,
-        roundConfig: selectedRoundConfig,
         rewardAsset: selectedRewardAssetId,
         requiredSettledRounds: selectedRequiredSettledRounds,
         requiredVoters: selectedRequiredVoters,
-        submissionKey,
-        tags: submissionTags,
-        title: submittedTitle,
-        contextUrl: submittedContextUrl,
-        videoUrl: submittedVideoUrl,
-      };
-      const currentReservationStorageKey = buildSubmissionReservationStorageKey(
-        submitterAddress,
-        targetNetwork.id,
-        submissionKey,
-      );
-      reservationStorageKey = currentReservationStorageKey;
+        rewardPoolExpiresAt,
+        roundConfig: selectedRoundConfig,
+        submitter: submitterAddress,
+      });
 
-      const cancelReservedSubmission = async (revealCommitment: `0x${string}`) => {
+      cancelReservedSubmission = async (revealCommitment: `0x${string}`) => {
         if (canUseSponsoredSubmitCalls) {
           await executeSponsoredCalls(
             [
@@ -964,41 +1064,8 @@ export function ContentSubmissionSection() {
         }
       };
 
-      let activeReservation = getStoredSubmissionReservation(currentReservationStorageKey);
-
-      if (activeReservation && !submissionReservationMatchesDraft(activeReservation, submissionDraft)) {
-        try {
-          await cancelReservedSubmission(activeReservation.revealCommitment);
-        } catch (error) {
-          if (!isReservationNotFoundError(error)) {
-            throw error;
-          }
-        }
-
-        clearStoredSubmissionReservation(currentReservationStorageKey);
-        activeReservation = null;
-      }
-
-      if (!activeReservation) {
-        const submissionSalt = deriveSubmissionReservationSalt(submissionDraft, submitterAddress, targetNetwork.id);
-        const revealCommitment = buildSubmissionRevealCommitment(submissionDraft, submissionSalt, submitterAddress);
-
-        try {
-          await reserveSubmission(revealCommitment);
-        } catch (error) {
-          if (!isReservationExistsError(error)) {
-            throw error;
-          }
-        }
-
-        activeReservation = createStoredSubmissionReservation(
-          submissionDraft,
-          submissionSalt,
-          revealCommitment,
-          targetNetwork.id,
-        );
-        setStoredSubmissionReservation(currentReservationStorageKey, activeReservation);
-      }
+      await reserveSubmission(revealCommitment);
+      reservedRevealCommitment = revealCommitment;
 
       // ContentRegistry enforces a minimum reservation age before reveal.
       // Give the next block timestamp enough room to advance before the reveal submit.
@@ -1017,14 +1084,7 @@ export function ContentSubmissionSection() {
               abi: QUESTION_SUBMISSION_ABI,
               address: registryAddress,
               args: [
-                submittedContextUrl,
-                submittedImageUrls,
-                submittedVideoUrl,
-                submittedTitle,
-                submittedDescription,
-                submissionTags,
-                currentCategory.id,
-                activeReservation.salt,
+                bundleQuestions,
                 {
                   asset: selectedRewardAssetId,
                   amount: selectedRewardAmount,
@@ -1034,7 +1094,7 @@ export function ContentSubmissionSection() {
                 },
                 questionRoundConfigToAbi(selectedRoundConfig),
               ],
-              functionName: "submitQuestionWithRewardAndRoundConfig",
+              functionName: "submitQuestionBundleWithRewardAndRoundConfig",
             },
           ],
           {
@@ -1043,7 +1103,7 @@ export function ContentSubmissionSection() {
           },
         );
 
-        contentId = extractSubmittedContentId((callsResult.receipts ?? []).flatMap(receipt => receipt.logs));
+        submittedContentIds = extractSubmittedContentIds((callsResult.receipts ?? []).flatMap(receipt => receipt.logs));
       } else {
         const approveWrite = {
           address: rewardTokenAddress,
@@ -1062,16 +1122,9 @@ export function ContentSubmissionSection() {
         const submitWrite = {
           address: registryAddress,
           abi: QUESTION_SUBMISSION_ABI,
-          functionName: "submitQuestionWithRewardAndRoundConfig",
+          functionName: "submitQuestionBundleWithRewardAndRoundConfig",
           args: [
-            submittedContextUrl,
-            submittedImageUrls,
-            submittedVideoUrl,
-            submittedTitle,
-            submittedDescription,
-            submissionTags,
-            currentCategory.id,
-            activeReservation.salt,
+            bundleQuestions,
             {
               asset: selectedRewardAssetId,
               amount: selectedRewardAmount,
@@ -1088,27 +1141,38 @@ export function ContentSubmissionSection() {
 
         if (submitTxHash) {
           const submitReceipt = await waitForTransactionReceipt(wagmiConfig, { hash: submitTxHash });
-          contentId = extractSubmittedContentId(submitReceipt.logs);
+          submittedContentIds = extractSubmittedContentIds(submitReceipt.logs);
         }
       }
 
       await refetchNextContentId();
-      clearStoredSubmissionReservation(reservationStorageKey);
 
       statusToast.dismiss();
       notification.success(
-        `Question asked with a ${formatSubmissionRewardAmount(selectedRewardAmount, rewardAsset)} voter bounty.`,
+        `${questionCount === 1 ? "Question" : "Question bundle"} asked with a ${formatSubmissionRewardAmount(
+          selectedRewardAmount,
+          rewardAsset,
+        )} voter bounty.`,
       );
+      const primarySubmittedQuestion = validatedQuestions[0];
+      const primaryContentId = submittedContentIds[0] ?? null;
       const submittedQuestion =
-        contentId !== null
+        primaryContentId !== null && primarySubmittedQuestion
           ? {
-              id: contentId,
-              title: submittedTitle,
-              description: submittedDescription,
+              id: primaryContentId,
+              title: primarySubmittedQuestion.trimmedTitle,
+              description:
+                questionCount > 1
+                  ? `${questionCount} question bundle. Answer all questions to qualify for the bounty.`
+                  : primarySubmittedQuestion.trimmedDescription,
               lastActivityAt: new Date().toISOString(),
             }
           : null;
       setSubmittedContent(submittedQuestion);
+      const emptyDraft = createEmptyQuestionDraft();
+      setQuestionCount(1);
+      setActiveQuestionIndex(0);
+      setQuestionDrafts([emptyDraft]);
       setMediaMode("images");
       setContextUrl("");
       setContextUrlError(null);
@@ -1135,18 +1199,24 @@ export function ContentSubmissionSection() {
       setRoundConfigTouched(false);
       setQuestionStepAttempted(false);
       setBountyStepAttempted(false);
-      setSubmissionStep(1);
+      setSubmissionStep("question");
     } catch (e: unknown) {
       console.error("Ask failed:", e);
+      if (reservedRevealCommitment && cancelReservedSubmission) {
+        try {
+          await cancelReservedSubmission(reservedRevealCommitment);
+        } catch (cancelError) {
+          if (!isReservationNotFoundError(cancelError)) {
+            console.warn("Failed to cancel reserved bundle submission:", cancelError);
+          }
+        }
+      }
       statusToast.dismiss();
       if (isFreeTransactionExhaustedError(e) || isInsufficientFundsError(e)) {
         notification.error(getGasBalanceErrorMessage(nativeTokenSymbol, { canSponsorTransactions }));
       } else if (isWalletRpcOverloadedError(e)) {
         showWalletRpcOverloadNotification();
       } else if (isReservationNotFoundError(e)) {
-        if (reservationStorageKey) {
-          clearStoredSubmissionReservation(reservationStorageKey);
-        }
         notification.warning("Reservation expired. Retry asking.");
       } else if (isReservationExistsError(e)) {
         notification.warning("Reservation saved. Retry asking.");
@@ -1170,13 +1240,27 @@ export function ContentSubmissionSection() {
   const contextMissing = questionStepAttempted && !normalizedContextUrl;
   const imageMediaMissing = false;
   const videoMediaMissing = false;
-  const pageHeading = submissionStep === 1 ? "Ask Question" : "Bounty";
+  const pageHeading =
+    submissionStep === "question" ? `Question ${activeQuestionIndex + 1} of ${questionCount}` : "Bundle Bounty";
 
   const submissionStepIndicator = (
-    <div className="flex items-center gap-2 text-sm font-medium text-base-content/55">
-      <span className={submissionStep === 1 ? "text-primary" : ""}>1. Question</span>
+    <div className="flex flex-wrap items-center gap-2 text-sm font-medium text-base-content/55">
+      {Array.from({ length: questionCount }, (_, index) => (
+        <button
+          key={index}
+          type="button"
+          onClick={() => setActiveQuestionPage(index)}
+          className={`rounded-md px-2 py-1 ${
+            submissionStep === "question" && activeQuestionIndex === index
+              ? "bg-primary/10 text-primary"
+              : "hover:bg-base-200"
+          }`}
+        >
+          Q{index + 1}
+        </button>
+      ))}
       <span aria-hidden="true">→</span>
-      <span className={submissionStep === 2 ? "text-primary" : ""}>2. Bounty</span>
+      <span className={submissionStep === "bounty" ? "text-primary" : ""}>Bounty</span>
     </div>
   );
 
@@ -1227,7 +1311,7 @@ export function ContentSubmissionSection() {
 
   const bountyTooltipText =
     "Required and non-refundable. Paid from your wallet into escrow when the question is submitted. Set the terms that eligible voters must satisfy before payout.";
-  const requiredVotersTooltipText = `At least ${MIN_REWARD_POOL_REQUIRED_VOTERS} voters are required. This cannot exceed the selected voter cap.`;
+  const requiredVotersTooltipText = `At least ${MIN_REWARD_POOL_REQUIRED_VOTERS} completers are required. Each paid completer must answer every question in the bundle.`;
   const requiredRoundsTooltipText = `At least ${MIN_REWARD_POOL_SETTLED_ROUNDS} round is required before the bounty can pay out.`;
   const roundSettingsTooltipText =
     "Governance sets the allowed range. Urgent bounties can use shorter rounds; broader questions can wait for more voters.";
@@ -1285,7 +1369,7 @@ export function ContentSubmissionSection() {
       <div className="grid gap-3 sm:grid-cols-2">
         <div className="form-control">
           <span className="label-text flex items-center gap-1.5">
-            Minimum voters
+            Paid completers
             <InfoTooltip text={requiredVotersTooltipText} />
           </span>
           <input
@@ -1477,38 +1561,40 @@ export function ContentSubmissionSection() {
             </p>
           </div>
           <div className="rounded-lg bg-base-100/70 p-3">
-            <p className="text-sm font-medium uppercase text-base-content/45">Per round</p>
+            <p className="text-sm font-medium uppercase text-base-content/45">Per question</p>
             <p className="mt-1 text-lg font-semibold text-base-content">
-              {formatSubmissionRewardAmount(estimatedPerRoundGrossReward, rewardAsset)}
+              {formatSubmissionRewardAmount(estimatedQuestionShare, rewardAsset)}
             </p>
           </div>
           <div className="rounded-lg bg-base-100/70 p-3">
-            <p className="text-sm font-medium uppercase text-base-content/45">Minimum turnout</p>
-            <p className="mt-1 text-lg font-semibold text-base-content">{selectedRequiredVoters.toString()} voters</p>
+            <p className="text-sm font-medium uppercase text-base-content/45">Paid completers</p>
+            <p className="mt-1 text-lg font-semibold text-base-content">
+              {selectedRequiredVoters.toString()} wallet{selectedRequiredVoters === 1n ? "" : "s"}
+            </p>
           </div>
           <div className="rounded-lg bg-base-100/70 p-3">
-            <p className="text-sm font-medium uppercase text-base-content/45">Qualified rounds</p>
-            <p className="mt-1 text-lg font-semibold text-base-content">
-              {selectedRequiredSettledRounds.toString()} round{selectedRequiredSettledRounds === 1n ? "" : "s"}
-            </p>
+            <p className="text-sm font-medium uppercase text-base-content/45">Questions</p>
+            <p className="mt-1 text-lg font-semibold text-base-content">{questionCount}</p>
           </div>
         </div>
 
         <div className="rounded-lg bg-primary/10 p-3">
-          <p className="text-sm font-medium uppercase text-primary/80">If only the minimum qualifies</p>
+          <p className="text-sm font-medium uppercase text-primary/80">Per paid completer</p>
           <p className="mt-1 text-xl font-semibold text-base-content">
             {formatSubmissionRewardAmount(estimatedMinimumVoterReward, rewardAsset)}
           </p>
-          <p className="mt-1 text-sm text-base-content/60">Estimated claim per eligible voter after frontend share.</p>
+          <p className="mt-1 text-sm text-base-content/60">
+            Estimated claim after answering all {questionCount} question{questionCount === 1 ? "" : "s"}.
+          </p>
         </div>
 
         <div className="rounded-lg bg-base-100/70 p-3">
-          <p className="text-sm font-medium uppercase text-base-content/45">If the voter cap fills</p>
+          <p className="text-sm font-medium uppercase text-base-content/45">If every question reaches cap</p>
           <p className="mt-1 text-lg font-semibold text-base-content">
             {formatSubmissionRewardAmount(estimatedVoterCapReward, rewardAsset)}
           </p>
           <p className="mt-1 text-sm text-base-content/60">
-            Estimated per voter with {Math.max(0, parsedRoundMaxVoters)} eligible voters in a qualified round.
+            Estimated per completer if every question fills the selected voter cap.
           </p>
         </div>
       </div>
@@ -1525,7 +1611,7 @@ export function ContentSubmissionSection() {
       <button
         type="button"
         onClick={() => {
-          setSubmissionStep(1);
+          setSubmissionStep("question");
           setBountyStepAttempted(false);
         }}
         className="btn btn-ghost w-full sm:w-auto"
@@ -1552,12 +1638,27 @@ export function ContentSubmissionSection() {
   return (
     <>
       <div className="surface-card rounded-2xl p-6 space-y-5" style={{ overflow: "visible" }}>
-        <h1 className={surfaceSectionHeadingClassName}>{pageHeading}</h1>
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <h1 className={surfaceSectionHeadingClassName}>{pageHeading}</h1>
+          <label className="flex items-center gap-2 text-sm font-medium text-base-content/60">
+            Questions
+            <input
+              type="number"
+              min={1}
+              max={MAX_QUESTION_BUNDLE_COUNT}
+              step={1}
+              value={questionCount}
+              onChange={event => handleQuestionCountChange(event.target.value)}
+              className="input input-bordered input-sm w-20 bg-base-100 text-right"
+              aria-label="Number of questions"
+            />
+          </label>
+        </div>
 
         <form onSubmit={handleSubmit} noValidate className="space-y-6">
           {submissionStepIndicator}
 
-          {submissionStep === 1 ? (
+          {submissionStep === "question" ? (
             <div className="grid gap-6 xl:grid-cols-[minmax(0,1.5fr)_minmax(18rem,0.9fr)] xl:items-start">
               <div className="space-y-5">
                 <div>
@@ -1595,7 +1696,6 @@ export function ContentSubmissionSection() {
                     Description <span className="font-normal text-base-content/40">(optional)</span>
                   </label>
                   <textarea
-                    ref={descriptionTextareaRef}
                     placeholder="Add context voters should consider"
                     className={`textarea textarea-bordered h-24 w-full bg-base-100 ${
                       descriptionError ? "textarea-error" : ""
@@ -1604,38 +1704,6 @@ export function ContentSubmissionSection() {
                     onChange={e => handleDescriptionChange(e.target.value)}
                     maxLength={MAX_CONTENT_DESCRIPTION_LENGTH}
                   />
-                  <div className="mt-2 space-y-1.5">
-                    <p className="text-sm font-medium text-base-content/60">Related question (optional)</p>
-                    <div className="flex flex-col gap-2 sm:flex-row">
-                      <input
-                        type="text"
-                        aria-label="Related question ID or link"
-                        placeholder="Question ID or /rate link"
-                        className={`input input-bordered input-sm min-w-0 flex-1 bg-base-100 ${
-                          referenceInputError ? "input-error" : ""
-                        }`}
-                        value={referenceInput}
-                        onChange={e => {
-                          setReferenceInput(e.target.value);
-                          setReferenceInputError(null);
-                        }}
-                        onKeyDown={event => {
-                          if (event.key === "Enter") {
-                            event.preventDefault();
-                            handleInsertQuestionReference();
-                          }
-                        }}
-                      />
-                      <button
-                        type="button"
-                        className="btn btn-submit btn-sm shrink-0"
-                        onClick={handleInsertQuestionReference}
-                      >
-                        Insert reference
-                      </button>
-                    </div>
-                    {referenceInputError ? <p className="text-base text-error">{referenceInputError}</p> : null}
-                  </div>
                   {descriptionError ? <p className="mt-1 text-base text-error">{descriptionError}</p> : null}
                   <div className="mt-1 text-right">
                     <span className="text-base text-base-content/30">
@@ -1685,7 +1753,10 @@ export function ContentSubmissionSection() {
                     <button
                       type="button"
                       aria-pressed={mediaMode === "images"}
-                      onClick={() => setMediaMode("images")}
+                      onClick={() => {
+                        setMediaMode("images");
+                        patchActiveQuestionDraft({ mediaMode: "images" });
+                      }}
                       className={`btn btn-sm ${mediaMode === "images" ? "btn-primary" : "btn-outline"}`}
                     >
                       Images
@@ -1693,7 +1764,10 @@ export function ContentSubmissionSection() {
                     <button
                       type="button"
                       aria-pressed={mediaMode === "video"}
-                      onClick={() => setMediaMode("video")}
+                      onClick={() => {
+                        setMediaMode("video");
+                        patchActiveQuestionDraft({ mediaMode: "video" });
+                      }}
                       className={`btn btn-sm ${mediaMode === "video" ? "btn-primary" : "btn-outline"}`}
                     >
                       YouTube
@@ -1909,7 +1983,10 @@ export function ContentSubmissionSection() {
                           placeholder="Add custom category..."
                           className={`input input-bordered input-sm flex-1 bg-base-100 ${customSubcategoryError ? "input-error" : ""}`}
                           value={customSubcategory}
-                          onChange={e => setCustomSubcategory(e.target.value)}
+                          onChange={e => {
+                            setCustomSubcategory(e.target.value);
+                            patchActiveQuestionDraft({ customSubcategory: e.target.value });
+                          }}
                           onKeyDown={e => {
                             if (e.key === "Enter") {
                               e.preventDefault();
@@ -1948,7 +2025,9 @@ export function ContentSubmissionSection() {
                 {prohibitedContentNotice}
                 {isMissingGasBalance ? <GasBalanceWarning nativeTokenSymbol={nativeTokenSymbol} /> : null}
                 <button type="button" onClick={handleContinueToBounty} className="btn btn-primary w-full">
-                  Continue to bounty
+                  {activeQuestionIndex < questionCount - 1
+                    ? `Next question (${activeQuestionIndex + 2}/${questionCount})`
+                    : "Continue to bounty"}
                 </button>
               </div>
             </div>
