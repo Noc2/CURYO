@@ -320,6 +320,21 @@ export interface PonderContentItem {
   lastActivityAt: string;
   totalVotes: number;
   totalRounds: number;
+  bundleId?: string | null;
+  bundleIndex?: number | null;
+  bundle?: {
+    id: string;
+    asset: number;
+    fundedAmount: string;
+    claimedAmount: string;
+    refundedAmount: string;
+    requiredCompleters: number;
+    questionCount: number;
+    completedQuestionCount: number;
+    claimedCount: number;
+    failed: boolean;
+    refunded: boolean;
+  } | null;
   roundEpochDuration?: number | string | null;
   roundMaxDuration?: number | string | null;
   roundMinVoters?: number | string | null;

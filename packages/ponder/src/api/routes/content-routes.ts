@@ -162,6 +162,47 @@ async function attachContentMedia<T extends { id: bigint; url?: string; canonica
   });
 }
 
+async function attachQuestionBundleSummaries<T extends { bundleId?: bigint | null }>(items: T[]) {
+  const bundleIds = [
+    ...new Set(
+      items
+        .map(item => item.bundleId)
+        .filter((bundleId): bundleId is bigint => typeof bundleId === "bigint" && bundleId > 0n),
+    ),
+  ];
+  if (bundleIds.length === 0) {
+    return items.map(item => ({ ...item, bundle: null }));
+  }
+
+  const rows = await db
+    .select()
+    .from(questionBundleReward)
+    .where(inArray(questionBundleReward.id, bundleIds));
+  const bundlesById = new Map(rows.map(row => [row.id, row]));
+
+  return items.map(item => {
+    const bundle = typeof item.bundleId === "bigint" ? bundlesById.get(item.bundleId) : null;
+    return {
+      ...item,
+      bundle: bundle
+        ? {
+            id: bundle.id,
+            asset: bundle.asset,
+            fundedAmount: bundle.fundedAmount,
+            claimedAmount: bundle.claimedAmount,
+            refundedAmount: bundle.refundedAmount,
+            requiredCompleters: bundle.requiredCompleters,
+            questionCount: bundle.questionCount,
+            completedQuestionCount: bundle.completedQuestionCount,
+            claimedCount: bundle.claimedCount,
+            failed: bundle.failed,
+            refunded: bundle.refunded,
+          }
+        : null,
+    };
+  });
+}
+
 async function getAudienceContextForContent(contentId: bigint) {
   const rows = await db
     .select({
@@ -270,6 +311,7 @@ export function registerContentRoutes(app: ApiApp) {
     const pageItems = hasMore ? items.slice(0, limit) : items;
     const itemsWithOpenRound = await attachOpenRoundSummary(pageItems);
     const itemsWithMedia = await attachContentMedia(itemsWithOpenRound);
+    const itemsWithBundles = await attachQuestionBundleSummaries(itemsWithMedia);
     const total =
       search === null
         ? (
@@ -281,7 +323,7 @@ export function registerContentRoutes(app: ApiApp) {
         : null;
 
     return jsonBig(c, {
-      items: itemsWithMedia,
+      items: itemsWithBundles,
       total,
       limit,
       offset,
@@ -339,6 +381,7 @@ export function registerContentRoutes(app: ApiApp) {
 
     const [contentWithOpenRound] = await attachOpenRoundSummary([item]);
     const [contentWithMedia] = await attachContentMedia([contentWithOpenRound]);
+    const [contentWithBundle] = await attachQuestionBundleSummaries([contentWithMedia]);
 
     const rounds = await db
       .select()
@@ -356,7 +399,7 @@ export function registerContentRoutes(app: ApiApp) {
     const audienceContext = await getAudienceContextForContent(item.id);
 
     return jsonBig(c, {
-      content: contentWithMedia,
+      content: contentWithBundle,
       rounds,
       ratings,
       audienceContext,
@@ -392,6 +435,7 @@ export function registerContentRoutes(app: ApiApp) {
 
     const [contentWithOpenRound] = await attachOpenRoundSummary([item]);
     const [contentWithMedia] = await attachContentMedia([contentWithOpenRound]);
+    const [contentWithBundle] = await attachQuestionBundleSummaries([contentWithMedia]);
 
     const rounds = await db
       .select()
@@ -408,7 +452,7 @@ export function registerContentRoutes(app: ApiApp) {
       .limit(50);
     const audienceContext = await getAudienceContextForContent(id);
 
-    return jsonBig(c, { content: contentWithMedia, rounds, ratings, audienceContext });
+    return jsonBig(c, { content: contentWithBundle, rounds, ratings, audienceContext });
   });
 
   app.get("/rounds", async (c) => {

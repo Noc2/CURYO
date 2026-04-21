@@ -53,6 +53,20 @@ export interface ContentItem {
   lastActivityAt: string | null;
   totalVotes: number;
   totalRounds: number;
+  bundleId?: bigint | null;
+  bundleIndex?: number | null;
+  bundle?: {
+    id: bigint;
+    questionCount: number;
+    requiredCompleters: number;
+    completedQuestionCount: number;
+    claimedCount: number;
+    fundedAmount: bigint;
+    claimedAmount: bigint;
+    refundedAmount: bigint;
+    failed: boolean;
+    refunded: boolean;
+  } | null;
   roundConfig?: VotingConfig | null;
   openRound: ContentOpenRoundSummary | null;
   isValidUrl: boolean | null;
@@ -147,6 +161,20 @@ export function mapContentItem(
     lastActivityAt?: string | null;
     totalVotes?: number;
     totalRounds?: number;
+    bundleId?: string | number | null;
+    bundleIndex?: number | null;
+    bundle?: {
+      id?: string | number | null;
+      questionCount?: number | null;
+      requiredCompleters?: number | null;
+      completedQuestionCount?: number | null;
+      claimedCount?: number | null;
+      fundedAmount?: string | number | bigint | null;
+      claimedAmount?: string | number | bigint | null;
+      refundedAmount?: string | number | bigint | null;
+      failed?: boolean | null;
+      refunded?: boolean | null;
+    } | null;
     roundEpochDuration?: string | number | null;
     roundMaxDuration?: string | number | null;
     roundMinVoters?: string | number | null;
@@ -273,6 +301,23 @@ export function mapContentItem(
     lastActivityAt: item.lastActivityAt ?? null,
     totalVotes: item.totalVotes ?? 0,
     totalRounds: item.totalRounds ?? 0,
+    bundleId: item.bundleId !== undefined && item.bundleId !== null ? BigInt(item.bundleId) : null,
+    bundleIndex: item.bundleIndex ?? null,
+    bundle:
+      item.bundle && item.bundle.id !== undefined && item.bundle.id !== null
+        ? {
+            id: BigInt(item.bundle.id),
+            questionCount: item.bundle.questionCount ?? 0,
+            requiredCompleters: item.bundle.requiredCompleters ?? 0,
+            completedQuestionCount: item.bundle.completedQuestionCount ?? 0,
+            claimedCount: item.bundle.claimedCount ?? 0,
+            fundedAmount: BigInt(item.bundle.fundedAmount ?? 0),
+            claimedAmount: BigInt(item.bundle.claimedAmount ?? 0),
+            refundedAmount: BigInt(item.bundle.refundedAmount ?? 0),
+            failed: item.bundle.failed ?? false,
+            refunded: item.bundle.refunded ?? false,
+          }
+        : null,
     roundConfig,
     openRound: mappedOpenRound,
     isValidUrl: null,

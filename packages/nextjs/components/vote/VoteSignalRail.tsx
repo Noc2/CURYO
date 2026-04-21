@@ -30,6 +30,10 @@ export function VoteSignalRail({
 }: VoteSignalRailProps) {
   const { address } = useAccount();
   const { openConnectModal } = useCuryoConnectModal();
+  const bundleQuestionNumber =
+    primaryItem?.bundleIndex !== null && primaryItem?.bundleIndex !== undefined ? primaryItem.bundleIndex + 1 : null;
+  const bundleQuestionCount = primaryItem?.bundle?.questionCount ?? null;
+  const isBundleQuestion = Boolean(primaryItem?.bundleId && bundleQuestionNumber && bundleQuestionCount);
 
   return (
     <div className="flex w-full min-w-0 flex-col gap-3">
@@ -38,6 +42,14 @@ export function VoteSignalRail({
         data-vote-attention={attentionToken ? "true" : undefined}
         style={{ background: VOTING_SURFACE_BACKGROUND }}
       >
+        {isBundleQuestion ? (
+          <div className="mb-3 rounded-md border border-primary/20 bg-primary/10 px-3 py-2 text-sm text-base-content/75">
+            <p className="font-semibold text-primary">
+              Question {bundleQuestionNumber} of {bundleQuestionCount}
+            </p>
+            <p className="mt-0.5">Answer every question in this bundle to qualify for the bounty.</p>
+          </div>
+        ) : null}
         {primaryItem ? (
           <VotingQuestionCard
             contentId={primaryItem.id}
