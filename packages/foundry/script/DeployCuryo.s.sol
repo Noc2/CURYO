@@ -68,6 +68,25 @@ contract DeployCuryo is ScaffoldETHDeploy {
         uint256[] referrerRewards;
     }
 
+    struct ProductionDeploymentRoleVerification {
+        address deployerAddress;
+        address governance;
+        address governorAddr;
+        CuryoReputation crepToken;
+        ContentRegistry registry;
+        RoundVotingEngine votingEngine;
+        ProtocolConfig protocolConfig;
+        RoundRewardDistributor rewardDistributor;
+        QuestionRewardPoolEscrow questionRewardPoolEscrow;
+        FeedbackBonusEscrow feedbackBonusEscrow;
+        FrontendRegistry frontendRegistry;
+        ProfileRegistry profileRegistry;
+        CategoryRegistry categoryRegistry;
+        VoterIdNFT voterIdNFT;
+        ParticipationPool participationPool;
+        HumanFaucet humanFaucet;
+    }
+
     function _preBroadcastChecks() internal view override {
         _resolveHumanFaucetConfig(block.chainid == 31337);
         MigrationBootstrapConfig memory migrationConfig = _loadMigrationBootstrapConfig();
@@ -437,24 +456,26 @@ contract DeployCuryo is ScaffoldETHDeploy {
             console.log("Renounced all deployer temporary roles (including Timelock)");
             console.log("VoterIdNFT ownership transferred to governance");
 
-            _verifyProductionDeploymentRoles({
-                deployerAddress: deployer,
-                governance: governance,
-                governorAddr: governorAddr,
-                crepToken: crepToken,
-                registry: registry,
-                votingEngine: votingEngine,
-                protocolConfig: protocolConfig,
-                rewardDistributor: rewardDistributor,
-                questionRewardPoolEscrow: questionRewardPoolEscrow,
-                feedbackBonusEscrow: feedbackBonusEscrow,
-                frontendRegistry: frontendRegistry,
-                profileRegistry: profileRegistry,
-                categoryRegistry: categoryRegistry,
-                voterIdNFT: voterIdNFT,
-                participationPool: participationPool,
-                humanFaucet: humanFaucet
-            });
+            _verifyProductionDeploymentRoles(
+                ProductionDeploymentRoleVerification({
+                    deployerAddress: deployer,
+                    governance: governance,
+                    governorAddr: governorAddr,
+                    crepToken: crepToken,
+                    registry: registry,
+                    votingEngine: votingEngine,
+                    protocolConfig: protocolConfig,
+                    rewardDistributor: rewardDistributor,
+                    questionRewardPoolEscrow: questionRewardPoolEscrow,
+                    feedbackBonusEscrow: feedbackBonusEscrow,
+                    frontendRegistry: frontendRegistry,
+                    profileRegistry: profileRegistry,
+                    categoryRegistry: categoryRegistry,
+                    voterIdNFT: voterIdNFT,
+                    participationPool: participationPool,
+                    humanFaucet: humanFaucet
+                })
+            );
             console.log("Verified governance ownership and deployer role renunciation");
         } else {
             // Local dev: just revoke MINTER_ROLE as before
@@ -690,282 +711,441 @@ contract DeployCuryo is ScaffoldETHDeploy {
         }
     }
 
-    function _verifyProductionDeploymentRoles(
-        address deployerAddress,
-        address governance,
-        address governorAddr,
-        CuryoReputation crepToken,
-        ContentRegistry registry,
-        RoundVotingEngine votingEngine,
-        ProtocolConfig protocolConfig,
-        RoundRewardDistributor rewardDistributor,
-        QuestionRewardPoolEscrow questionRewardPoolEscrow,
-        FeedbackBonusEscrow feedbackBonusEscrow,
-        FrontendRegistry frontendRegistry,
-        ProfileRegistry profileRegistry,
-        CategoryRegistry categoryRegistry,
-        VoterIdNFT voterIdNFT,
-        ParticipationPool participationPool,
-        HumanFaucet humanFaucet
-    ) internal view {
-        _requireHasRole(address(crepToken), crepToken.DEFAULT_ADMIN_ROLE(), governance, "cREP governance default admin");
-        _requireHasRole(address(crepToken), crepToken.CONFIG_ROLE(), governance, "cREP governance config");
-        _requireLacksRole(
-            address(crepToken), crepToken.DEFAULT_ADMIN_ROLE(), deployerAddress, "cREP deployer default admin"
-        );
-        _requireLacksRole(address(crepToken), crepToken.CONFIG_ROLE(), deployerAddress, "cREP deployer config");
-        _requireLacksRole(address(crepToken), crepToken.MINTER_ROLE(), deployerAddress, "cREP deployer minter");
+    function _verifyProductionDeploymentRoles(ProductionDeploymentRoleVerification memory targets) internal view {
+        _verifyProductionTokenRoles(targets);
+        _verifyProductionRegistryRoles(targets);
+        _verifyProductionVotingEngineRoles(targets);
+        _verifyProductionProtocolConfigRoles(targets);
+        _verifyProductionRewardDistributorRoles(targets);
+        _verifyProductionQuestionEscrowRoles(targets);
+        _verifyProductionFeedbackEscrowRoles(targets);
+        _verifyProductionUserRegistryRoles(targets);
+        _verifyProductionCoreWiring(targets);
+        _verifyProductionEscrowWiring(targets);
+        _verifyProductionParticipationAndFaucetWiring(targets);
+        _verifyProductionGovernorAndTimelock(targets);
+    }
 
+    function _verifyProductionTokenRoles(ProductionDeploymentRoleVerification memory targets) internal view {
+        CuryoReputation crepToken = targets.crepToken;
         _requireHasRole(
-            address(registry), registry.DEFAULT_ADMIN_ROLE(), governance, "ContentRegistry governance default admin"
+            address(crepToken), crepToken.DEFAULT_ADMIN_ROLE(), targets.governance, "cREP governance default admin"
         );
-        _requireHasRole(address(registry), registry.ADMIN_ROLE(), governance, "ContentRegistry governance admin");
-        _requireHasRole(address(registry), registry.CONFIG_ROLE(), governance, "ContentRegistry governance config");
-        _requireHasRole(address(registry), registry.PAUSER_ROLE(), governance, "ContentRegistry governance pauser");
-        _requireHasRole(address(registry), registry.TREASURY_ROLE(), governance, "ContentRegistry governance treasury");
-        _requireHasRole(
-            address(registry), registry.TREASURY_ADMIN_ROLE(), governance, "ContentRegistry governance treasury admin"
-        );
-        _requireLacksRole(address(registry), registry.CONFIG_ROLE(), deployerAddress, "ContentRegistry deployer config");
+        _requireHasRole(address(crepToken), crepToken.CONFIG_ROLE(), targets.governance, "cREP governance config");
         _requireLacksRole(
-            address(registry), registry.TREASURY_ROLE(), deployerAddress, "ContentRegistry deployer treasury"
+            address(crepToken), crepToken.DEFAULT_ADMIN_ROLE(), targets.deployerAddress, "cREP deployer default admin"
         );
-        _requireProxyAdminOwner(address(registry), governance, "ContentRegistry proxy admin owner");
+        _requireLacksRole(address(crepToken), crepToken.CONFIG_ROLE(), targets.deployerAddress, "cREP deployer config");
+        _requireLacksRole(address(crepToken), crepToken.MINTER_ROLE(), targets.deployerAddress, "cREP deployer minter");
+    }
 
+    function _verifyProductionRegistryRoles(ProductionDeploymentRoleVerification memory targets) internal view {
+        ContentRegistry registry = targets.registry;
+        _requireHasRole(
+            address(registry),
+            registry.DEFAULT_ADMIN_ROLE(),
+            targets.governance,
+            "ContentRegistry governance default admin"
+        );
+        _requireHasRole(
+            address(registry), registry.ADMIN_ROLE(), targets.governance, "ContentRegistry governance admin"
+        );
+        _requireHasRole(
+            address(registry), registry.CONFIG_ROLE(), targets.governance, "ContentRegistry governance config"
+        );
+        _requireHasRole(
+            address(registry), registry.PAUSER_ROLE(), targets.governance, "ContentRegistry governance pauser"
+        );
+        _requireHasRole(
+            address(registry), registry.TREASURY_ROLE(), targets.governance, "ContentRegistry governance treasury"
+        );
+        _requireHasRole(
+            address(registry),
+            registry.TREASURY_ADMIN_ROLE(),
+            targets.governance,
+            "ContentRegistry governance treasury admin"
+        );
+        _requireLacksRole(
+            address(registry), registry.CONFIG_ROLE(), targets.deployerAddress, "ContentRegistry deployer config"
+        );
+        _requireLacksRole(
+            address(registry), registry.TREASURY_ROLE(), targets.deployerAddress, "ContentRegistry deployer treasury"
+        );
+        _requireProxyAdminOwner(address(registry), targets.governance, "ContentRegistry proxy admin owner");
+    }
+
+    function _verifyProductionVotingEngineRoles(ProductionDeploymentRoleVerification memory targets) internal view {
+        RoundVotingEngine votingEngine = targets.votingEngine;
         _requireHasRole(
             address(votingEngine),
             votingEngine.DEFAULT_ADMIN_ROLE(),
-            governance,
+            targets.governance,
             "RoundVotingEngine governance default admin"
         );
         _requireHasRole(
-            address(votingEngine), votingEngine.PAUSER_ROLE(), governance, "RoundVotingEngine governance pauser"
+            address(votingEngine), votingEngine.PAUSER_ROLE(), targets.governance, "RoundVotingEngine governance pauser"
         );
-        _requireProxyAdminOwner(address(votingEngine), governance, "RoundVotingEngine proxy admin owner");
+        _requireProxyAdminOwner(address(votingEngine), targets.governance, "RoundVotingEngine proxy admin owner");
+    }
 
+    function _verifyProductionProtocolConfigRoles(ProductionDeploymentRoleVerification memory targets) internal view {
+        ProtocolConfig protocolConfig = targets.protocolConfig;
         _requireHasRole(
             address(protocolConfig),
             protocolConfig.DEFAULT_ADMIN_ROLE(),
-            governance,
+            targets.governance,
             "ProtocolConfig governance default admin"
         );
         _requireHasRole(
-            address(protocolConfig), protocolConfig.CONFIG_ROLE(), governance, "ProtocolConfig governance config"
+            address(protocolConfig),
+            protocolConfig.CONFIG_ROLE(),
+            targets.governance,
+            "ProtocolConfig governance config"
         );
         _requireHasRole(
-            address(protocolConfig), protocolConfig.TREASURY_ROLE(), governance, "ProtocolConfig governance treasury"
+            address(protocolConfig),
+            protocolConfig.TREASURY_ROLE(),
+            targets.governance,
+            "ProtocolConfig governance treasury"
         );
         _requireHasRole(
             address(protocolConfig),
             protocolConfig.TREASURY_ADMIN_ROLE(),
-            governance,
+            targets.governance,
             "ProtocolConfig governance treasury admin"
         );
         _requireLacksRole(
-            address(protocolConfig), protocolConfig.CONFIG_ROLE(), deployerAddress, "ProtocolConfig deployer config"
+            address(protocolConfig),
+            protocolConfig.CONFIG_ROLE(),
+            targets.deployerAddress,
+            "ProtocolConfig deployer config"
         );
         _requireLacksRole(
-            address(protocolConfig), protocolConfig.TREASURY_ROLE(), deployerAddress, "ProtocolConfig deployer treasury"
+            address(protocolConfig),
+            protocolConfig.TREASURY_ROLE(),
+            targets.deployerAddress,
+            "ProtocolConfig deployer treasury"
         );
-        _requireProxyAdminOwner(address(protocolConfig), governance, "ProtocolConfig proxy admin owner");
+        _requireProxyAdminOwner(address(protocolConfig), targets.governance, "ProtocolConfig proxy admin owner");
+    }
 
+    function _verifyProductionRewardDistributorRoles(ProductionDeploymentRoleVerification memory targets)
+        internal
+        view
+    {
+        RoundRewardDistributor rewardDistributor = targets.rewardDistributor;
         _requireHasRole(
             address(rewardDistributor),
             rewardDistributor.DEFAULT_ADMIN_ROLE(),
-            governance,
+            targets.governance,
             "RoundRewardDistributor governance default admin"
         );
-        _requireProxyAdminOwner(address(rewardDistributor), governance, "RoundRewardDistributor proxy admin owner");
+        _requireProxyAdminOwner(
+            address(rewardDistributor), targets.governance, "RoundRewardDistributor proxy admin owner"
+        );
+    }
 
+    function _verifyProductionQuestionEscrowRoles(ProductionDeploymentRoleVerification memory targets) internal view {
+        QuestionRewardPoolEscrow questionRewardPoolEscrow = targets.questionRewardPoolEscrow;
         _requireHasRole(
             address(questionRewardPoolEscrow),
             questionRewardPoolEscrow.DEFAULT_ADMIN_ROLE(),
-            governance,
+            targets.governance,
             "QuestionRewardPoolEscrow governance default admin"
         );
         _requireHasRole(
             address(questionRewardPoolEscrow),
             questionRewardPoolEscrow.CONFIG_ROLE(),
-            governance,
+            targets.governance,
             "QuestionRewardPoolEscrow governance config"
         );
         _requireHasRole(
             address(questionRewardPoolEscrow),
             questionRewardPoolEscrow.PAUSER_ROLE(),
-            governance,
+            targets.governance,
             "QuestionRewardPoolEscrow governance pauser"
         );
         _requireProxyAdminOwner(
-            address(questionRewardPoolEscrow), governance, "QuestionRewardPoolEscrow proxy admin owner"
+            address(questionRewardPoolEscrow), targets.governance, "QuestionRewardPoolEscrow proxy admin owner"
         );
+    }
 
+    function _verifyProductionFeedbackEscrowRoles(ProductionDeploymentRoleVerification memory targets) internal view {
+        FeedbackBonusEscrow feedbackBonusEscrow = targets.feedbackBonusEscrow;
         _requireHasRole(
             address(feedbackBonusEscrow),
             feedbackBonusEscrow.DEFAULT_ADMIN_ROLE(),
-            governance,
+            targets.governance,
             "FeedbackBonusEscrow governance default admin"
         );
         _requireHasRole(
             address(feedbackBonusEscrow),
             feedbackBonusEscrow.CONFIG_ROLE(),
-            governance,
+            targets.governance,
             "FeedbackBonusEscrow governance config"
         );
         _requireHasRole(
             address(feedbackBonusEscrow),
             feedbackBonusEscrow.PAUSER_ROLE(),
-            governance,
+            targets.governance,
             "FeedbackBonusEscrow governance pauser"
         );
-        _requireProxyAdminOwner(address(feedbackBonusEscrow), governance, "FeedbackBonusEscrow proxy admin owner");
+        _requireProxyAdminOwner(
+            address(feedbackBonusEscrow), targets.governance, "FeedbackBonusEscrow proxy admin owner"
+        );
+    }
 
+    function _verifyProductionUserRegistryRoles(ProductionDeploymentRoleVerification memory targets) internal view {
+        FrontendRegistry frontendRegistry = targets.frontendRegistry;
         _requireHasRole(
             address(frontendRegistry),
             frontendRegistry.DEFAULT_ADMIN_ROLE(),
-            governance,
+            targets.governance,
             "FrontendRegistry governance default admin"
         );
         _requireHasRole(
-            address(frontendRegistry), frontendRegistry.ADMIN_ROLE(), governance, "FrontendRegistry governance admin"
+            address(frontendRegistry),
+            frontendRegistry.ADMIN_ROLE(),
+            targets.governance,
+            "FrontendRegistry governance admin"
         );
         _requireHasRole(
             address(frontendRegistry),
             frontendRegistry.GOVERNANCE_ROLE(),
-            governance,
+            targets.governance,
             "FrontendRegistry governance governance-role"
         );
         _requireHasRole(
             address(frontendRegistry),
             frontendRegistry.FEE_CREDITOR_ROLE(),
-            address(rewardDistributor),
+            address(targets.rewardDistributor),
             "FrontendRegistry reward distributor fee creditor"
         );
         _requireLacksRole(
-            address(frontendRegistry), frontendRegistry.ADMIN_ROLE(), deployerAddress, "FrontendRegistry deployer admin"
+            address(frontendRegistry),
+            frontendRegistry.ADMIN_ROLE(),
+            targets.deployerAddress,
+            "FrontendRegistry deployer admin"
         );
-        _requireProxyAdminOwner(address(frontendRegistry), governance, "FrontendRegistry proxy admin owner");
+        _requireProxyAdminOwner(address(frontendRegistry), targets.governance, "FrontendRegistry proxy admin owner");
 
+        ProfileRegistry profileRegistry = targets.profileRegistry;
         _requireHasRole(
             address(profileRegistry),
             profileRegistry.DEFAULT_ADMIN_ROLE(),
-            governance,
+            targets.governance,
             "ProfileRegistry governance default admin"
         );
         _requireHasRole(
-            address(profileRegistry), profileRegistry.ADMIN_ROLE(), governance, "ProfileRegistry governance admin"
+            address(profileRegistry),
+            profileRegistry.ADMIN_ROLE(),
+            targets.governance,
+            "ProfileRegistry governance admin"
         );
         _requireLacksRole(
-            address(profileRegistry), profileRegistry.ADMIN_ROLE(), deployerAddress, "ProfileRegistry deployer admin"
+            address(profileRegistry),
+            profileRegistry.ADMIN_ROLE(),
+            targets.deployerAddress,
+            "ProfileRegistry deployer admin"
         );
-        _requireProxyAdminOwner(address(profileRegistry), governance, "ProfileRegistry proxy admin owner");
+        _requireProxyAdminOwner(address(profileRegistry), targets.governance, "ProfileRegistry proxy admin owner");
 
+        CategoryRegistry categoryRegistry = targets.categoryRegistry;
         _requireHasRole(
             address(categoryRegistry),
             categoryRegistry.DEFAULT_ADMIN_ROLE(),
-            governance,
+            targets.governance,
             "CategoryRegistry governance default admin"
         );
         _requireHasRole(
-            address(categoryRegistry), categoryRegistry.ADMIN_ROLE(), governance, "CategoryRegistry governance admin"
+            address(categoryRegistry),
+            categoryRegistry.ADMIN_ROLE(),
+            targets.governance,
+            "CategoryRegistry governance admin"
         );
         _requireLacksRole(
-            address(categoryRegistry), categoryRegistry.ADMIN_ROLE(), deployerAddress, "CategoryRegistry deployer admin"
+            address(categoryRegistry),
+            categoryRegistry.ADMIN_ROLE(),
+            targets.deployerAddress,
+            "CategoryRegistry deployer admin"
         );
+    }
 
-        _require(crepToken.governor() == governorAddr, "cREP governor");
-        _require(crepToken.votingEngine() == address(votingEngine), "cREP voting engine");
-        _require(crepToken.contentRegistry() == address(registry), "cREP content registry");
-        _require(address(rewardDistributor.crepToken()) == address(crepToken), "RoundRewardDistributor cREP token");
+    function _verifyProductionCoreWiring(ProductionDeploymentRoleVerification memory targets) internal view {
+        _require(targets.crepToken.governor() == targets.governorAddr, "cREP governor");
+        _require(targets.crepToken.votingEngine() == address(targets.votingEngine), "cREP voting engine");
+        _require(targets.crepToken.contentRegistry() == address(targets.registry), "cREP content registry");
         _require(
-            address(rewardDistributor.votingEngine()) == address(votingEngine), "RoundRewardDistributor voting engine"
+            address(targets.rewardDistributor.crepToken()) == address(targets.crepToken),
+            "RoundRewardDistributor cREP token"
         );
-        _require(address(rewardDistributor.registry()) == address(registry), "RoundRewardDistributor registry");
-        _require(address(votingEngine.protocolConfig()) == address(protocolConfig), "RoundVotingEngine protocol config");
-        _require(protocolConfig.rewardDistributor() == address(rewardDistributor), "ProtocolConfig reward distributor");
-        _require(protocolConfig.frontendRegistry() == address(frontendRegistry), "ProtocolConfig frontend registry");
-        _require(protocolConfig.categoryRegistry() == address(categoryRegistry), "ProtocolConfig category registry");
-        _require(protocolConfig.participationPool() == address(participationPool), "ProtocolConfig participation pool");
-        _require(protocolConfig.voterIdNFT() == address(voterIdNFT), "ProtocolConfig voterIdNFT");
-        _require(protocolConfig.treasury() == governance, "ProtocolConfig treasury");
-        _require(address(registry.crepToken()) == address(crepToken), "ContentRegistry cREP token");
-        _require(registry.votingEngine() == address(votingEngine), "ContentRegistry voting engine");
-        _require(address(registry.categoryRegistry()) == address(categoryRegistry), "ContentRegistry category registry");
-        _require(address(registry.protocolConfig()) == address(protocolConfig), "ContentRegistry protocol config");
         _require(
-            registry.questionRewardPoolEscrow() == address(questionRewardPoolEscrow),
+            address(targets.rewardDistributor.votingEngine()) == address(targets.votingEngine),
+            "RoundRewardDistributor voting engine"
+        );
+        _require(
+            address(targets.rewardDistributor.registry()) == address(targets.registry),
+            "RoundRewardDistributor registry"
+        );
+        _require(
+            address(targets.votingEngine.protocolConfig()) == address(targets.protocolConfig),
+            "RoundVotingEngine protocol config"
+        );
+        _require(
+            targets.protocolConfig.rewardDistributor() == address(targets.rewardDistributor),
+            "ProtocolConfig reward distributor"
+        );
+        _require(
+            targets.protocolConfig.frontendRegistry() == address(targets.frontendRegistry),
+            "ProtocolConfig frontend registry"
+        );
+        _require(
+            targets.protocolConfig.categoryRegistry() == address(targets.categoryRegistry),
+            "ProtocolConfig category registry"
+        );
+        _require(
+            targets.protocolConfig.participationPool() == address(targets.participationPool),
+            "ProtocolConfig participation pool"
+        );
+        _require(targets.protocolConfig.voterIdNFT() == address(targets.voterIdNFT), "ProtocolConfig voterIdNFT");
+        _require(targets.protocolConfig.treasury() == targets.governance, "ProtocolConfig treasury");
+        _require(address(targets.registry.crepToken()) == address(targets.crepToken), "ContentRegistry cREP token");
+        _require(targets.registry.votingEngine() == address(targets.votingEngine), "ContentRegistry voting engine");
+        _require(
+            address(targets.registry.categoryRegistry()) == address(targets.categoryRegistry),
+            "ContentRegistry category registry"
+        );
+        _require(
+            address(targets.registry.protocolConfig()) == address(targets.protocolConfig),
+            "ContentRegistry protocol config"
+        );
+        _require(
+            targets.registry.questionRewardPoolEscrow() == address(targets.questionRewardPoolEscrow),
             "ContentRegistry question reward pool escrow"
         );
-        _require(address(registry.voterIdNFT()) == address(voterIdNFT), "ContentRegistry voterIdNFT");
-        _require(registry.treasury() == governance, "ContentRegistry treasury");
-        _require(registry.bonusPool() == governance, "ContentRegistry bonus pool");
-        _require(address(frontendRegistry.crepToken()) == address(crepToken), "FrontendRegistry cREP token");
-        _require(address(frontendRegistry.votingEngine()) == address(votingEngine), "FrontendRegistry voting engine");
-        _require(address(frontendRegistry.voterIdNFT()) == address(voterIdNFT), "FrontendRegistry voterIdNFT");
-        _require(address(profileRegistry.voterIdNFT()) == address(voterIdNFT), "ProfileRegistry voterIdNFT");
-        _require(address(questionRewardPoolEscrow.crepToken()) == address(crepToken), "QuestionRewardPoolEscrow cREP");
+        _require(address(targets.registry.voterIdNFT()) == address(targets.voterIdNFT), "ContentRegistry voterIdNFT");
+        _require(targets.registry.treasury() == targets.governance, "ContentRegistry treasury");
+        _require(targets.registry.bonusPool() == targets.governance, "ContentRegistry bonus pool");
         _require(
-            address(questionRewardPoolEscrow.voterIdNFT()) == address(voterIdNFT), "QuestionRewardPoolEscrow voterIdNFT"
+            address(targets.frontendRegistry.crepToken()) == address(targets.crepToken), "FrontendRegistry cREP token"
         );
-        _require(address(questionRewardPoolEscrow.registry()) == address(registry), "QuestionRewardPoolEscrow registry");
         _require(
-            address(questionRewardPoolEscrow.votingEngine()) == address(votingEngine),
+            address(targets.frontendRegistry.votingEngine()) == address(targets.votingEngine),
+            "FrontendRegistry voting engine"
+        );
+        _require(
+            address(targets.frontendRegistry.voterIdNFT()) == address(targets.voterIdNFT), "FrontendRegistry voterIdNFT"
+        );
+        _require(
+            address(targets.profileRegistry.voterIdNFT()) == address(targets.voterIdNFT), "ProfileRegistry voterIdNFT"
+        );
+    }
+
+    function _verifyProductionEscrowWiring(ProductionDeploymentRoleVerification memory targets) internal view {
+        _require(
+            address(targets.questionRewardPoolEscrow.crepToken()) == address(targets.crepToken),
+            "QuestionRewardPoolEscrow cREP"
+        );
+        _require(
+            address(targets.questionRewardPoolEscrow.voterIdNFT()) == address(targets.voterIdNFT),
+            "QuestionRewardPoolEscrow voterIdNFT"
+        );
+        _require(
+            address(targets.questionRewardPoolEscrow.registry()) == address(targets.registry),
+            "QuestionRewardPoolEscrow registry"
+        );
+        _require(
+            address(targets.questionRewardPoolEscrow.votingEngine()) == address(targets.votingEngine),
             "QuestionRewardPoolEscrow voting engine"
         );
         _require(
-            address(questionRewardPoolEscrow.usdcToken()) == _resolveCeloUsdcAddress(), "QuestionRewardPoolEscrow USDC"
+            address(targets.questionRewardPoolEscrow.usdcToken()) == _resolveCeloUsdcAddress(),
+            "QuestionRewardPoolEscrow USDC"
         );
-        _require(address(feedbackBonusEscrow.voterIdNFT()) == address(voterIdNFT), "FeedbackBonusEscrow voterIdNFT");
-        _require(address(feedbackBonusEscrow.registry()) == address(registry), "FeedbackBonusEscrow registry");
         _require(
-            address(feedbackBonusEscrow.votingEngine()) == address(votingEngine), "FeedbackBonusEscrow voting engine"
+            address(targets.feedbackBonusEscrow.voterIdNFT()) == address(targets.voterIdNFT),
+            "FeedbackBonusEscrow voterIdNFT"
         );
-        _require(address(feedbackBonusEscrow.usdcToken()) == _resolveCeloUsdcAddress(), "FeedbackBonusEscrow USDC");
-        _require(voterIdNFT.owner() == governance, "VoterIdNFT governance owner");
-        _require(voterIdNFT.governance() == governance, "VoterIdNFT governance");
-        _require(voterIdNFT.stakeRecorder() == address(votingEngine), "VoterIdNFT stake recorder");
-        _require(participationPool.owner() == governance, "ParticipationPool governance owner");
-        _require(address(participationPool.crepToken()) == address(crepToken), "ParticipationPool cREP token");
-        _require(participationPool.governance() == governance, "ParticipationPool governance");
         _require(
-            participationPool.authorizedCallers(address(rewardDistributor)),
+            address(targets.feedbackBonusEscrow.registry()) == address(targets.registry), "FeedbackBonusEscrow registry"
+        );
+        _require(
+            address(targets.feedbackBonusEscrow.votingEngine()) == address(targets.votingEngine),
+            "FeedbackBonusEscrow voting engine"
+        );
+        _require(
+            address(targets.feedbackBonusEscrow.usdcToken()) == _resolveCeloUsdcAddress(), "FeedbackBonusEscrow USDC"
+        );
+    }
+
+    function _verifyProductionParticipationAndFaucetWiring(ProductionDeploymentRoleVerification memory targets)
+        internal
+        view
+    {
+        _require(targets.voterIdNFT.owner() == targets.governance, "VoterIdNFT governance owner");
+        _require(targets.voterIdNFT.governance() == targets.governance, "VoterIdNFT governance");
+        _require(targets.voterIdNFT.stakeRecorder() == address(targets.votingEngine), "VoterIdNFT stake recorder");
+        _require(targets.participationPool.owner() == targets.governance, "ParticipationPool governance owner");
+        _require(
+            address(targets.participationPool.crepToken()) == address(targets.crepToken), "ParticipationPool cREP token"
+        );
+        _require(targets.participationPool.governance() == targets.governance, "ParticipationPool governance");
+        _require(
+            targets.participationPool.authorizedCallers(address(targets.rewardDistributor)),
             "ParticipationPool reward distributor authorized"
         );
-        if (address(humanFaucet) != address(0)) {
-            _require(voterIdNFT.authorizedMinters(address(humanFaucet)), "VoterIdNFT HumanFaucet minter");
-            _require(address(humanFaucet.crepToken()) == address(crepToken), "HumanFaucet cREP token");
-            _require(address(humanFaucet.voterIdNFT()) == address(voterIdNFT), "HumanFaucet voterIdNFT");
-            _require(humanFaucet.governance() == governance, "HumanFaucet governance");
-            _require(humanFaucet.owner() == governance, "HumanFaucet governance owner");
-            _require(humanFaucet.migrationBootstrapClosed(), "HumanFaucet migration bootstrap closed");
+        if (address(targets.humanFaucet) != address(0)) {
+            _require(
+                targets.voterIdNFT.authorizedMinters(address(targets.humanFaucet)), "VoterIdNFT HumanFaucet minter"
+            );
+            _require(address(targets.humanFaucet.crepToken()) == address(targets.crepToken), "HumanFaucet cREP token");
+            _require(address(targets.humanFaucet.voterIdNFT()) == address(targets.voterIdNFT), "HumanFaucet voterIdNFT");
+            _require(targets.humanFaucet.governance() == targets.governance, "HumanFaucet governance");
+            _require(targets.humanFaucet.owner() == targets.governance, "HumanFaucet governance owner");
+            _require(targets.humanFaucet.migrationBootstrapClosed(), "HumanFaucet migration bootstrap closed");
         }
+    }
 
-        _require(governorAddr != address(0), "Governor deployed");
-        CuryoGovernor governor = CuryoGovernor(payable(governorAddr));
-        _require(address(governor.crepToken()) == address(crepToken), "Governor cREP token");
-        _require(governor.timelock() == governance, "Governor timelock");
+    function _verifyProductionGovernorAndTimelock(ProductionDeploymentRoleVerification memory targets) internal view {
+        _require(targets.governorAddr != address(0), "Governor deployed");
+        CuryoGovernor governor = CuryoGovernor(payable(targets.governorAddr));
+        _require(address(governor.crepToken()) == address(targets.crepToken), "Governor cREP token");
+        _require(governor.timelock() == targets.governance, "Governor timelock");
         _require(governor.poolsInitialized(), "Governor pools initialized");
-        _assertExactExcludedHolders(
-            governor,
-            _buildQuorumExcludedHolders(
-                address(humanFaucet),
-                address(participationPool),
-                address(rewardDistributor),
-                address(votingEngine),
-                governance,
-                address(registry),
-                address(questionRewardPoolEscrow),
-                address(frontendRegistry)
-            )
-        );
-        TimelockController timelock = TimelockController(payable(governance));
+        _assertExactExcludedHolders(governor, _buildProductionQuorumExcludedHolders(targets));
+
+        TimelockController timelock = TimelockController(payable(targets.governance));
         _requireHasRole(address(timelock), timelock.DEFAULT_ADMIN_ROLE(), address(timelock), "Timelock self admin");
-        _requireHasRole(address(timelock), timelock.PROPOSER_ROLE(), governorAddr, "Timelock governor proposer");
-        _requireHasRole(address(timelock), timelock.CANCELLER_ROLE(), governorAddr, "Timelock governor canceller");
+        _requireHasRole(address(timelock), timelock.PROPOSER_ROLE(), targets.governorAddr, "Timelock governor proposer");
+        _requireHasRole(
+            address(timelock), timelock.CANCELLER_ROLE(), targets.governorAddr, "Timelock governor canceller"
+        );
         _requireHasRole(address(timelock), timelock.EXECUTOR_ROLE(), address(0), "Timelock open executor");
-        _requireLacksRole(address(timelock), timelock.PROPOSER_ROLE(), deployerAddress, "Timelock deployer proposer");
-        _requireLacksRole(address(timelock), timelock.CANCELLER_ROLE(), deployerAddress, "Timelock deployer canceller");
         _requireLacksRole(
-            address(timelock), timelock.DEFAULT_ADMIN_ROLE(), deployerAddress, "Timelock deployer default admin"
+            address(timelock), timelock.PROPOSER_ROLE(), targets.deployerAddress, "Timelock deployer proposer"
+        );
+        _requireLacksRole(
+            address(timelock), timelock.CANCELLER_ROLE(), targets.deployerAddress, "Timelock deployer canceller"
+        );
+        _requireLacksRole(
+            address(timelock), timelock.DEFAULT_ADMIN_ROLE(), targets.deployerAddress, "Timelock deployer default admin"
+        );
+    }
+
+    function _buildProductionQuorumExcludedHolders(ProductionDeploymentRoleVerification memory targets)
+        internal
+        pure
+        returns (address[] memory)
+    {
+        return _buildQuorumExcludedHolders(
+            address(targets.humanFaucet),
+            address(targets.participationPool),
+            address(targets.rewardDistributor),
+            address(targets.votingEngine),
+            targets.governance,
+            address(targets.registry),
+            address(targets.questionRewardPoolEscrow),
+            address(targets.frontendRegistry)
         );
     }
 

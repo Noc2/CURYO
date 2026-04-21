@@ -53,29 +53,6 @@ const profileRegistryContract = contractsForChain.ProfileRegistry;
 const rewardEscrowContract = contractsForChain.QuestionRewardPoolEscrow;
 const rewardDistributorContract = contractsForChain.RoundRewardDistributor;
 const votingEngineContract = contractsForChain.RoundVotingEngine;
-const submitQuestionWithRewardAbi = [
-  {
-    type: "function",
-    name: "submitQuestionWithReward",
-    inputs: [
-      { name: "contextUrl", type: "string" },
-      { name: "imageUrls", type: "string[]" },
-      { name: "videoUrl", type: "string" },
-      { name: "title", type: "string" },
-      { name: "description", type: "string" },
-      { name: "tags", type: "string" },
-      { name: "categoryId", type: "uint256" },
-      { name: "salt", type: "bytes32" },
-      { name: "rewardAsset", type: "uint8" },
-      { name: "rewardAmount", type: "uint256" },
-      { name: "requiredVoters", type: "uint256" },
-      { name: "requiredSettledRounds", type: "uint256" },
-      { name: "rewardPoolExpiresAt", type: "uint256" },
-    ],
-    outputs: [{ name: "", type: "uint256" }],
-    stateMutability: "nonpayable",
-  },
-] as const;
 const submitQuestionWithRewardAndRoundConfigAbi = [
   {
     type: "function",
@@ -483,27 +460,6 @@ test("supported sponsored operation families are allowlisted", async () => {
       encodeCall(contentRegistryContract, "reserveSubmission", [`0x${"1".repeat(64)}`]),
     ],
     [encodeCall(contentRegistryContract, "cancelReservedSubmission", [`0x${"2".repeat(64)}`])],
-    [
-      encodeCall(
-        { address: contentRegistryContract.address, abi: submitQuestionWithRewardAbi },
-        "submitQuestionWithReward",
-        [
-          "https://example.com/product",
-          ["https://example.com/question-a.jpg", "https://example.com/question-b.jpg"],
-          "",
-          "Is this product worth recommending?",
-          "Vote based on the images.",
-          "Products,Value",
-          1n,
-          `0x${"4".repeat(64)}`,
-          0,
-          1_000_000n,
-          3n,
-          1n,
-          0n,
-        ],
-      ),
-    ],
     [
       encodeCall(
         { address: contentRegistryContract.address, abi: submitQuestionWithRewardAndRoundConfigAbi },

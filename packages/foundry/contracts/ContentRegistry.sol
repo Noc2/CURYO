@@ -377,56 +377,34 @@ contract ContentRegistry is Initializable, AccessControlUpgradeable, PausableUpg
         emit SubmissionReservationExpired(pending.submitter, revealCommitment);
     }
 
-    function submitQuestionWithReward(
-        string memory contextUrl,
-        string[] memory imageUrls,
-        string memory videoUrl,
-        string memory title,
-        string memory description,
-        string memory tags,
-        uint256 categoryId,
-        bytes32 salt,
-        uint8 rewardAsset,
-        uint256 rewardAmount,
-        uint256 requiredVoters,
-        uint256 requiredSettledRounds,
-        uint256 rewardPoolExpiresAt
-    ) public nonReentrant whenNotPaused returns (uint256) {
-        return _submitValidatedQuestionWithMedia(
-            _validatedContextSubmissionMetadata(contextUrl, imageUrls, videoUrl, title, description, tags, categoryId),
-            imageUrls,
-            videoUrl,
-            salt,
-            _submissionRewardTerms(
-                rewardAsset, rewardAmount, requiredVoters, requiredSettledRounds, rewardPoolExpiresAt
-            ),
-            _defaultRoundConfig(),
-            0,
-            0
-        );
-    }
-
     function submitQuestionWithRewardAndRoundConfig(
-        string memory contextUrl,
-        string[] memory imageUrls,
-        string memory videoUrl,
-        string memory title,
-        string memory description,
-        string memory tags,
+        string calldata contextUrl,
+        string[] calldata imageUrls,
+        string calldata videoUrl,
+        string calldata title,
+        string calldata description,
+        string calldata tags,
         uint256 categoryId,
         bytes32 salt,
         SubmissionRewardTerms calldata rewardTerms,
         RoundLib.RoundConfig calldata roundConfig
-    ) external nonReentrant whenNotPaused returns (uint256) {
+    ) external returns (uint256) {
+        SubmissionMetadata memory metadata = _validatedContextSubmissionMetadata(
+            contextUrl, imageUrls, videoUrl, title, description, tags, categoryId
+        );
+        return _submitQuestionWithRewardAndRoundConfig(metadata, imageUrls, videoUrl, salt, rewardTerms, roundConfig);
+    }
+
+    function _submitQuestionWithRewardAndRoundConfig(
+        SubmissionMetadata memory metadata,
+        string[] calldata imageUrls,
+        string calldata videoUrl,
+        bytes32 salt,
+        SubmissionRewardTerms calldata rewardTerms,
+        RoundLib.RoundConfig calldata roundConfig
+    ) private nonReentrant whenNotPaused returns (uint256) {
         return _submitValidatedQuestionWithMedia(
-            _validatedContextSubmissionMetadata(contextUrl, imageUrls, videoUrl, title, description, tags, categoryId),
-            imageUrls,
-            videoUrl,
-            salt,
-            rewardTerms,
-            _validatedRoundConfig(roundConfig),
-            0,
-            0
+            metadata, imageUrls, videoUrl, salt, rewardTerms, _validatedRoundConfig(roundConfig), 0, 0
         );
     }
 
@@ -643,22 +621,6 @@ contract ContentRegistry is Initializable, AccessControlUpgradeable, PausableUpg
         });
         _validateTextFields(metadata);
         require(address(categoryRegistry) != address(0), "CategoryRegistry not set");
-    }
-
-    function _submissionRewardTerms(
-        uint8 rewardAsset,
-        uint256 rewardAmount,
-        uint256 requiredVoters,
-        uint256 requiredSettledRounds,
-        uint256 rewardPoolExpiresAt
-    ) internal pure returns (SubmissionRewardTerms memory rewardTerms) {
-        rewardTerms = SubmissionRewardTerms({
-            asset: rewardAsset,
-            amount: rewardAmount,
-            requiredVoters: requiredVoters,
-            requiredSettledRounds: requiredSettledRounds,
-            expiresAt: rewardPoolExpiresAt
-        });
     }
 
     function _submitValidatedQuestionWithMedia(
@@ -1046,27 +1008,58 @@ contract ContentRegistry is Initializable, AccessControlUpgradeable, PausableUpg
         SubmissionRewardTerms memory rewardTerms,
         RoundLib.RoundConfig memory roundConfig
     ) internal pure returns (bytes32) {
-        return keccak256(
-            abi.encode(
-                submissionKey,
-                mediaHash,
-                title,
-                description,
-                tags,
-                categoryId,
-                salt,
-                submitter,
-                rewardTerms.asset,
-                rewardTerms.amount,
-                rewardTerms.requiredVoters,
-                rewardTerms.requiredSettledRounds,
-                rewardTerms.expiresAt,
-                roundConfig.epochDuration,
-                roundConfig.maxDuration,
-                roundConfig.minVoters,
-                roundConfig.maxVoters
-            )
-        );
+        uint256 titleTailLength = _encodedStringTailLength(title);
+        uint256 descriptionTailLength = _encodedStringTailLength(description);
+        uint256 titleOffset = 17 * 32;
+        uint256 descriptionOffset = titleOffset + titleTailLength;
+        uint256 tagsOffset = descriptionOffset + descriptionTailLength;
+        bytes memory encoded = new bytes(tagsOffset + _encodedStringTailLength(tags));
+
+        _writeBytes32(encoded, 0, submissionKey);
+        _writeBytes32(encoded, 32, mediaHash);
+        _writeUint(encoded, 2 * 32, titleOffset);
+        _writeUint(encoded, 3 * 32, descriptionOffset);
+        _writeUint(encoded, 4 * 32, tagsOffset);
+        _writeUint(encoded, 5 * 32, categoryId);
+        _writeBytes32(encoded, 6 * 32, salt);
+        _writeUint(encoded, 7 * 32, uint256(uint160(submitter)));
+        _writeUint(encoded, 8 * 32, uint256(rewardTerms.asset));
+        _writeUint(encoded, 9 * 32, rewardTerms.amount);
+        _writeUint(encoded, 10 * 32, rewardTerms.requiredVoters);
+        _writeUint(encoded, 11 * 32, rewardTerms.requiredSettledRounds);
+        _writeUint(encoded, 12 * 32, rewardTerms.expiresAt);
+        _writeUint(encoded, 13 * 32, uint256(roundConfig.epochDuration));
+        _writeUint(encoded, 14 * 32, uint256(roundConfig.maxDuration));
+        _writeUint(encoded, 15 * 32, uint256(roundConfig.minVoters));
+        _writeUint(encoded, 16 * 32, uint256(roundConfig.maxVoters));
+        _writeStringTail(encoded, titleOffset, title);
+        _writeStringTail(encoded, descriptionOffset, description);
+        _writeStringTail(encoded, tagsOffset, tags);
+        return keccak256(encoded);
+    }
+
+    function _encodedStringTailLength(string memory value) internal pure returns (uint256) {
+        return 32 + ((bytes(value).length + 31) / 32) * 32;
+    }
+
+    function _writeBytes32(bytes memory encoded, uint256 offset, bytes32 value) internal pure {
+        assembly ("memory-safe") {
+            mstore(add(add(encoded, 32), offset), value)
+        }
+    }
+
+    function _writeUint(bytes memory encoded, uint256 offset, uint256 value) internal pure {
+        assembly ("memory-safe") {
+            mstore(add(add(encoded, 32), offset), value)
+        }
+    }
+
+    function _writeStringTail(bytes memory encoded, uint256 offset, string memory value) internal pure {
+        bytes memory raw = bytes(value);
+        _writeUint(encoded, offset, raw.length);
+        for (uint256 i = 0; i < raw.length; i++) {
+            encoded[offset + 32 + i] = raw[i];
+        }
     }
 
     function _computeQuestionBundleHash(

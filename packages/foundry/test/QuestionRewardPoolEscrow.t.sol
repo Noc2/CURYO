@@ -768,26 +768,23 @@ contract QuestionRewardPoolEscrowTest is VotingTestBase {
         (, bytes32 submissionKey) =
             registry.previewQuestionSubmissionKey("https://example.com/context", imageUrls, "", QUESTION, DESCRIPTION, TAGS, CATEGORY_ID);
         uint256 rewardAmount = _defaultSubmissionRewardAmount(registry);
-        bytes32 revealCommitment = keccak256(
-            abi.encode(
-                submissionKey,
-                _submissionMediaHash(imageUrls, ""),
-                QUESTION,
-                DESCRIPTION,
-                TAGS,
-                CATEGORY_ID,
-                salt,
-                submitter,
-                DEFAULT_SUBMISSION_REWARD_ASSET_CREP,
-                rewardAmount,
-                DEFAULT_SUBMISSION_REWARD_REQUIRED_VOTERS,
-                DEFAULT_SUBMISSION_REWARD_SETTLED_ROUNDS,
-                DEFAULT_SUBMISSION_REWARD_EXPIRES_AT,
-                roundConfig.epochDuration,
-                roundConfig.maxDuration,
-                roundConfig.minVoters,
-                roundConfig.maxVoters
-            )
+        bytes32 revealCommitment = _questionRevealCommitment(
+            submissionKey,
+            _submissionMediaHash(imageUrls, ""),
+            QUESTION,
+            DESCRIPTION,
+            TAGS,
+            CATEGORY_ID,
+            salt,
+            submitter,
+            ContentRegistry.SubmissionRewardTerms({
+                asset: DEFAULT_SUBMISSION_REWARD_ASSET_CREP,
+                amount: rewardAmount,
+                requiredVoters: DEFAULT_SUBMISSION_REWARD_REQUIRED_VOTERS,
+                requiredSettledRounds: DEFAULT_SUBMISSION_REWARD_SETTLED_ROUNDS,
+                expiresAt: DEFAULT_SUBMISSION_REWARD_EXPIRES_AT
+            }),
+            roundConfig
         );
 
         vm.startPrank(submitter);

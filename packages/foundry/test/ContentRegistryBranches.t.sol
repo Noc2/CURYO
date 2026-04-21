@@ -238,6 +238,26 @@ contract ContentRegistryBranchesTest is VotingTestBase {
         return _reserveQuestionSubmission(reservation);
     }
 
+    function _submissionRewardTerms(
+        uint8 rewardAsset,
+        uint256 rewardAmount,
+        uint256 requiredVoters,
+        uint256 requiredSettledRounds,
+        uint256 rewardPoolExpiresAt
+    ) internal pure returns (ContentRegistry.SubmissionRewardTerms memory) {
+        return ContentRegistry.SubmissionRewardTerms({
+            asset: rewardAsset,
+            amount: rewardAmount,
+            requiredVoters: requiredVoters,
+            requiredSettledRounds: requiredSettledRounds,
+            expiresAt: rewardPoolExpiresAt
+        });
+    }
+
+    function _defaultContentRoundConfig() internal pure returns (RoundLib.RoundConfig memory) {
+        return RoundLib.RoundConfig({ epochDuration: 1 hours, maxDuration: 7 days, minVoters: 3, maxVoters: 1000 });
+    }
+
     function _reserveQuestionSubmission(QuestionReservation memory reservation)
         internal
         returns (bytes32 submissionKey)
@@ -522,6 +542,13 @@ contract ContentRegistryBranchesTest is VotingTestBase {
         uint256 requiredVoters = 5;
         uint256 requiredSettledRounds = 2;
         uint256 rewardPoolExpiresAt = block.timestamp + 14 days;
+        ContentRegistry.SubmissionRewardTerms memory rewardTerms = _submissionRewardTerms(
+            DEFAULT_SUBMISSION_REWARD_ASSET_CREP,
+            rewardAmount,
+            requiredVoters,
+            requiredSettledRounds,
+            rewardPoolExpiresAt
+        );
 
         vm.startPrank(submitter);
         crepToken.approve(address(mockQuestionRewardPoolEscrow), rewardAmount);
@@ -542,7 +569,7 @@ contract ContentRegistryBranchesTest is VotingTestBase {
             rewardPoolExpiresAt
         );
         vm.warp(block.timestamp + 1);
-        uint256 id = registry.submitQuestionWithReward(
+        uint256 id = registry.submitQuestionWithRewardAndRoundConfig(
             contextUrl,
             imageUrls,
             "",
@@ -551,11 +578,8 @@ contract ContentRegistryBranchesTest is VotingTestBase {
             tags,
             categoryId,
             salt,
-            DEFAULT_SUBMISSION_REWARD_ASSET_CREP,
-            rewardAmount,
-            requiredVoters,
-            requiredSettledRounds,
-            rewardPoolExpiresAt
+            rewardTerms,
+            _defaultContentRoundConfig()
         );
         vm.stopPrank();
 
@@ -669,7 +693,7 @@ contract ContentRegistryBranchesTest is VotingTestBase {
 
         vm.startPrank(submitter);
         vm.expectRevert("Too few voters");
-        registry.submitQuestionWithReward(
+        registry.submitQuestionWithRewardAndRoundConfig(
             "https://example.com/too-few-voters",
             imageUrls,
             "",
@@ -678,11 +702,14 @@ contract ContentRegistryBranchesTest is VotingTestBase {
             "Products",
             1,
             keccak256("too-few-voters"),
-            DEFAULT_SUBMISSION_REWARD_ASSET_CREP,
-            rewardAmount,
-            2,
-            DEFAULT_SUBMISSION_REWARD_SETTLED_ROUNDS,
-            DEFAULT_SUBMISSION_REWARD_EXPIRES_AT
+            _submissionRewardTerms(
+                DEFAULT_SUBMISSION_REWARD_ASSET_CREP,
+                rewardAmount,
+                2,
+                DEFAULT_SUBMISSION_REWARD_SETTLED_ROUNDS,
+                DEFAULT_SUBMISSION_REWARD_EXPIRES_AT
+            ),
+            _defaultContentRoundConfig()
         );
         vm.stopPrank();
     }
@@ -693,7 +720,7 @@ contract ContentRegistryBranchesTest is VotingTestBase {
 
         vm.startPrank(submitter);
         vm.expectRevert("Too few rounds");
-        registry.submitQuestionWithReward(
+        registry.submitQuestionWithRewardAndRoundConfig(
             "https://example.com/too-few-rounds",
             imageUrls,
             "",
@@ -702,11 +729,14 @@ contract ContentRegistryBranchesTest is VotingTestBase {
             "Products",
             1,
             keccak256("too-few-rounds"),
-            DEFAULT_SUBMISSION_REWARD_ASSET_CREP,
-            rewardAmount,
-            DEFAULT_SUBMISSION_REWARD_REQUIRED_VOTERS,
-            0,
-            DEFAULT_SUBMISSION_REWARD_EXPIRES_AT
+            _submissionRewardTerms(
+                DEFAULT_SUBMISSION_REWARD_ASSET_CREP,
+                rewardAmount,
+                DEFAULT_SUBMISSION_REWARD_REQUIRED_VOTERS,
+                0,
+                DEFAULT_SUBMISSION_REWARD_EXPIRES_AT
+            ),
+            _defaultContentRoundConfig()
         );
         vm.stopPrank();
     }
@@ -717,7 +747,7 @@ contract ContentRegistryBranchesTest is VotingTestBase {
 
         vm.startPrank(submitter);
         vm.expectRevert("Reward too small");
-        registry.submitQuestionWithReward(
+        registry.submitQuestionWithRewardAndRoundConfig(
             "https://example.com/reward-too-small",
             imageUrls,
             "",
@@ -726,11 +756,14 @@ contract ContentRegistryBranchesTest is VotingTestBase {
             "Products",
             1,
             keccak256("reward-too-small"),
-            DEFAULT_SUBMISSION_REWARD_ASSET_CREP,
-            rewardAmount,
-            rewardAmount + 1,
-            DEFAULT_SUBMISSION_REWARD_SETTLED_ROUNDS,
-            DEFAULT_SUBMISSION_REWARD_EXPIRES_AT
+            _submissionRewardTerms(
+                DEFAULT_SUBMISSION_REWARD_ASSET_CREP,
+                rewardAmount,
+                rewardAmount + 1,
+                DEFAULT_SUBMISSION_REWARD_SETTLED_ROUNDS,
+                DEFAULT_SUBMISSION_REWARD_EXPIRES_AT
+            ),
+            _defaultContentRoundConfig()
         );
         vm.stopPrank();
     }
@@ -741,7 +774,7 @@ contract ContentRegistryBranchesTest is VotingTestBase {
 
         vm.startPrank(submitter);
         vm.expectRevert("Invalid bounty expiry");
-        registry.submitQuestionWithReward(
+        registry.submitQuestionWithRewardAndRoundConfig(
             "https://example.com/expired-bounty",
             imageUrls,
             "",
@@ -750,11 +783,14 @@ contract ContentRegistryBranchesTest is VotingTestBase {
             "Products",
             1,
             keccak256("expired-bounty"),
-            DEFAULT_SUBMISSION_REWARD_ASSET_CREP,
-            rewardAmount,
-            DEFAULT_SUBMISSION_REWARD_REQUIRED_VOTERS,
-            DEFAULT_SUBMISSION_REWARD_SETTLED_ROUNDS,
-            block.timestamp
+            _submissionRewardTerms(
+                DEFAULT_SUBMISSION_REWARD_ASSET_CREP,
+                rewardAmount,
+                DEFAULT_SUBMISSION_REWARD_REQUIRED_VOTERS,
+                DEFAULT_SUBMISSION_REWARD_SETTLED_ROUNDS,
+                block.timestamp
+            ),
+            _defaultContentRoundConfig()
         );
         vm.stopPrank();
     }
@@ -788,7 +824,7 @@ contract ContentRegistryBranchesTest is VotingTestBase {
         );
         vm.warp(block.timestamp + 1);
         vm.expectRevert("Reservation not found");
-        registry.submitQuestionWithReward(
+        registry.submitQuestionWithRewardAndRoundConfig(
             contextUrl,
             imageUrls,
             "",
@@ -797,11 +833,14 @@ contract ContentRegistryBranchesTest is VotingTestBase {
             tags,
             categoryId,
             salt,
-            DEFAULT_SUBMISSION_REWARD_ASSET_CREP,
-            rewardAmount,
-            DEFAULT_SUBMISSION_REWARD_REQUIRED_VOTERS + 1,
-            DEFAULT_SUBMISSION_REWARD_SETTLED_ROUNDS,
-            DEFAULT_SUBMISSION_REWARD_EXPIRES_AT
+            _submissionRewardTerms(
+                DEFAULT_SUBMISSION_REWARD_ASSET_CREP,
+                rewardAmount,
+                DEFAULT_SUBMISSION_REWARD_REQUIRED_VOTERS + 1,
+                DEFAULT_SUBMISSION_REWARD_SETTLED_ROUNDS,
+                DEFAULT_SUBMISSION_REWARD_EXPIRES_AT
+            ),
+            _defaultContentRoundConfig()
         );
         vm.stopPrank();
     }

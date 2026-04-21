@@ -182,29 +182,33 @@ abstract contract ContentSubmissionTestBase {
         ContentRegistry.SubmissionRewardTerms memory rewardTerms,
         RoundLib.RoundConfig memory roundConfig
     ) internal pure returns (bytes32) {
+        uint256 titleTailLength = _encodedStringTailLength(title);
+        uint256 descriptionTailLength = _encodedStringTailLength(description);
         uint256 titleOffset = 17 * 32;
-        uint256 descriptionOffset = titleOffset + _encodedStringTailLength(title);
-        uint256 tagsOffset = descriptionOffset + _encodedStringTailLength(description);
+        uint256 descriptionOffset = titleOffset + titleTailLength;
+        uint256 tagsOffset = descriptionOffset + descriptionTailLength;
+        bytes memory encoded = new bytes(tagsOffset + _encodedStringTailLength(tags));
 
-        bytes memory encoded = bytes.concat(abi.encode(submissionKey), abi.encode(mediaHash));
-        encoded = bytes.concat(encoded, abi.encode(titleOffset));
-        encoded = bytes.concat(encoded, abi.encode(descriptionOffset));
-        encoded = bytes.concat(encoded, abi.encode(tagsOffset));
-        encoded = bytes.concat(encoded, abi.encode(categoryId));
-        encoded = bytes.concat(encoded, abi.encode(salt));
-        encoded = bytes.concat(encoded, abi.encode(submitter));
-        encoded = bytes.concat(encoded, abi.encode(rewardTerms.asset));
-        encoded = bytes.concat(encoded, abi.encode(rewardTerms.amount));
-        encoded = bytes.concat(encoded, abi.encode(rewardTerms.requiredVoters));
-        encoded = bytes.concat(encoded, abi.encode(rewardTerms.requiredSettledRounds));
-        encoded = bytes.concat(encoded, abi.encode(rewardTerms.expiresAt));
-        encoded = bytes.concat(encoded, abi.encode(roundConfig.epochDuration));
-        encoded = bytes.concat(encoded, abi.encode(roundConfig.maxDuration));
-        encoded = bytes.concat(encoded, abi.encode(roundConfig.minVoters));
-        encoded = bytes.concat(encoded, abi.encode(roundConfig.maxVoters));
-        encoded = bytes.concat(encoded, _encodeStringTail(title));
-        encoded = bytes.concat(encoded, _encodeStringTail(description));
-        encoded = bytes.concat(encoded, _encodeStringTail(tags));
+        _writeBytes32(encoded, 0, submissionKey);
+        _writeBytes32(encoded, 32, mediaHash);
+        _writeUint(encoded, 2 * 32, titleOffset);
+        _writeUint(encoded, 3 * 32, descriptionOffset);
+        _writeUint(encoded, 4 * 32, tagsOffset);
+        _writeUint(encoded, 5 * 32, categoryId);
+        _writeBytes32(encoded, 6 * 32, salt);
+        _writeUint(encoded, 7 * 32, uint256(uint160(submitter)));
+        _writeUint(encoded, 8 * 32, uint256(rewardTerms.asset));
+        _writeUint(encoded, 9 * 32, rewardTerms.amount);
+        _writeUint(encoded, 10 * 32, rewardTerms.requiredVoters);
+        _writeUint(encoded, 11 * 32, rewardTerms.requiredSettledRounds);
+        _writeUint(encoded, 12 * 32, rewardTerms.expiresAt);
+        _writeUint(encoded, 13 * 32, uint256(roundConfig.epochDuration));
+        _writeUint(encoded, 14 * 32, uint256(roundConfig.maxDuration));
+        _writeUint(encoded, 15 * 32, uint256(roundConfig.minVoters));
+        _writeUint(encoded, 16 * 32, uint256(roundConfig.maxVoters));
+        _writeStringTail(encoded, titleOffset, title);
+        _writeStringTail(encoded, descriptionOffset, description);
+        _writeStringTail(encoded, tagsOffset, tags);
         return keccak256(encoded);
     }
 
@@ -212,14 +216,23 @@ abstract contract ContentSubmissionTestBase {
         return 32 + ((bytes(value).length + 31) / 32) * 32;
     }
 
-    function _encodeStringTail(string memory value) internal pure returns (bytes memory encoded) {
-        bytes memory raw = bytes(value);
-        encoded = new bytes(_encodedStringTailLength(value));
-        assembly {
-            mstore(add(encoded, 32), mload(raw))
+    function _writeBytes32(bytes memory encoded, uint256 offset, bytes32 value) internal pure {
+        assembly ("memory-safe") {
+            mstore(add(add(encoded, 32), offset), value)
         }
+    }
+
+    function _writeUint(bytes memory encoded, uint256 offset, uint256 value) internal pure {
+        assembly ("memory-safe") {
+            mstore(add(add(encoded, 32), offset), value)
+        }
+    }
+
+    function _writeStringTail(bytes memory encoded, uint256 offset, string memory value) internal pure {
+        bytes memory raw = bytes(value);
+        _writeUint(encoded, offset, raw.length);
         for (uint256 i = 0; i < raw.length; i++) {
-            encoded[32 + i] = raw[i];
+            encoded[offset + 32 + i] = raw[i];
         }
     }
 
