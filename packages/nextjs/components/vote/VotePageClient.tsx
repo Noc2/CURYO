@@ -1702,7 +1702,7 @@ const HomeInner = () => {
             data-testid="vote-desktop-scroll-frame"
             className="flex min-h-0 flex-1 flex-col gap-3 overflow-hidden xl:mx-auto xl:min-h-full xl:w-full xl:max-w-5xl xl:flex-none xl:overflow-visible xl:px-4 xl:pb-4"
           >
-            <div className="flex min-h-0 flex-1 flex-col gap-3 overflow-hidden xl:grid xl:min-h-full xl:w-full xl:flex-none xl:grid-cols-[minmax(0,1fr)_17.25rem] xl:items-start xl:gap-4 xl:overflow-visible">
+            <div className="flex min-h-0 flex-1 flex-col gap-3 overflow-hidden xl:grid xl:min-h-full xl:w-full xl:flex-none xl:grid-cols-[minmax(0,1fr)_17.25rem] xl:items-start xl:gap-3 xl:overflow-visible">
               <div className="min-h-0 flex min-w-0 flex-1 flex-col overflow-hidden xl:min-h-full xl:flex-none xl:overflow-visible">
                 <div className="flex min-w-0 min-h-0 flex-1 flex-col gap-3 xl:min-h-full xl:flex-none xl:gap-0">
                   <div
@@ -1763,7 +1763,7 @@ const HomeInner = () => {
         </div>
 
         <div className="pointer-events-none absolute inset-y-0 left-0 right-0 hidden xl:block">
-          <div className="mx-auto flex h-full w-full max-w-5xl gap-4 px-4">
+          <div className="mx-auto flex h-full w-full max-w-5xl gap-3 px-4">
             <div className="min-w-0 flex-1" />
             <div className="pointer-events-auto w-[17.25rem] shrink-0">
               <VoteSignalRail
