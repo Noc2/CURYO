@@ -298,3 +298,36 @@ export const x402QuestionSubmissions = pgTable(
 
 export type X402QuestionSubmission = typeof x402QuestionSubmissions.$inferSelect;
 export type NewX402QuestionSubmission = typeof x402QuestionSubmissions.$inferInsert;
+
+export const mcpAgentBudgetReservations = pgTable(
+  "mcp_agent_budget_reservations",
+  {
+    operationKey: text("operation_key").primaryKey(),
+    agentId: text("agent_id").notNull(),
+    clientRequestId: text("client_request_id").notNull(),
+    payloadHash: text("payload_hash").notNull(),
+    chainId: integer("chain_id").notNull(),
+    categoryId: text("category_id").notNull(),
+    paymentAmount: text("payment_amount").notNull(),
+    status: text("status").notNull(),
+    contentId: text("content_id"),
+    error: text("error"),
+    createdAt: timestamp("created_at", { mode: "date", withTimezone: true }).notNull(),
+    updatedAt: timestamp("updated_at", { mode: "date", withTimezone: true }).notNull(),
+  },
+  table => ({
+    agentClientRequestUnique: uniqueIndex("mcp_agent_budget_reservations_client_request_unique").on(
+      table.agentId,
+      table.chainId,
+      table.clientRequestId,
+    ),
+    agentStatusCreatedIdx: index("mcp_agent_budget_reservations_agent_status_created_idx").on(
+      table.agentId,
+      table.status,
+      table.createdAt,
+    ),
+  }),
+);
+
+export type McpAgentBudgetReservation = typeof mcpAgentBudgetReservations.$inferSelect;
+export type NewMcpAgentBudgetReservation = typeof mcpAgentBudgetReservations.$inferInsert;
