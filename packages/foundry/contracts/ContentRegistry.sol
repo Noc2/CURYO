@@ -27,6 +27,16 @@ interface IQuestionRewardPoolEscrow {
         uint256 requiredSettledRounds,
         uint256 expiresAt
     ) external returns (uint256 rewardPoolId);
+
+    function createSubmissionBundleFromRegistry(
+        uint256 bundleId,
+        uint256[] calldata contentIds,
+        address funder,
+        uint8 asset,
+        uint256 amount,
+        uint256 requiredCompleters,
+        uint256 expiresAt
+    ) external returns (uint256 rewardPoolId);
 }
 
 /// @title ContentRegistry
@@ -55,6 +65,7 @@ contract ContentRegistry is Initializable, AccessControlUpgradeable, PausableUpg
     uint256 internal constant DEFAULT_MIN_SUBMISSION_REWARD_POOL = 1e6;
     uint256 internal constant MIN_SUBMISSION_REWARD_REQUIRED_VOTERS = 3;
     uint256 internal constant MIN_SUBMISSION_REWARD_SETTLED_ROUNDS = 1;
+    uint256 public constant MAX_QUESTION_BUNDLE_COUNT = 10;
 
     // Rating safety thresholds
     uint256 public constant SLASH_RATING_THRESHOLD = 25; // Rating below this triggers slash
@@ -114,6 +125,17 @@ contract ContentRegistry is Initializable, AccessControlUpgradeable, PausableUpg
         uint256 expiresAt;
     }
 
+    struct BundleQuestionInput {
+        string contextUrl;
+        string[] imageUrls;
+        string videoUrl;
+        string title;
+        string description;
+        string tags;
+        uint256 categoryId;
+        bytes32 salt;
+    }
+
     // --- State ---
     IERC20 public crepToken;
     address public votingEngine;
@@ -121,6 +143,7 @@ contract ContentRegistry is Initializable, AccessControlUpgradeable, PausableUpg
     address public bonusPool; // Cancellation fee sink (anti-spam), typically the treasury
     address public treasury; // Receives 100% of slashed stakes (governance timelock)
     uint256 public nextContentId;
+    uint256 public nextQuestionBundleId;
     mapping(uint256 => Content) public contents;
     mapping(bytes32 => bool) public submissionKeyUsed; // Canonical submission keys prevent duplicate content variants
     IVoterIdNFT public voterIdNFT; // Voter ID NFT for sybil resistance
@@ -136,6 +159,12 @@ contract ContentRegistry is Initializable, AccessControlUpgradeable, PausableUpg
 
     /// @notice Per-question round settings selected at submission and bounded by governance.
     mapping(uint256 => RoundLib.RoundConfig) public contentRoundConfig;
+
+    /// @notice Ordered content IDs for a submitted question bundle.
+    mapping(uint256 => uint256[]) internal questionBundleContentIds;
+
+    mapping(uint256 => uint256) public contentBundleId;
+    mapping(uint256 => uint256) public contentBundleIndex;
 
     /// @notice Meaningful-activity anchor used for dormancy checks.
     /// @dev Vote commits still update `lastActivityAt` for UI/analytics, but only submission, revival,
@@ -185,6 +214,18 @@ contract ContentRegistry is Initializable, AccessControlUpgradeable, PausableUpg
         uint256 amount,
         uint256 rewardPoolId
     );
+    event QuestionBundleSubmitted(
+        uint256 indexed bundleId,
+        address indexed submitter,
+        uint256 questionCount,
+        uint8 indexed rewardAsset,
+        uint256 amount,
+        uint256 requiredCompleters,
+        uint256 expiresAt,
+        bytes32 bundleHash,
+        uint256 rewardPoolId
+    );
+    event QuestionBundleContentLinked(uint256 indexed bundleId, uint256 indexed contentId, uint256 indexed bundleIndex);
     event ContentDormant(uint256 indexed contentId);
     event DormantSubmissionKeyReleased(uint256 indexed contentId, bytes32 indexed submissionKey);
     event ContentRevived(uint256 indexed contentId, address indexed reviver);
@@ -251,6 +292,7 @@ contract ContentRegistry is Initializable, AccessControlUpgradeable, PausableUpg
 
         crepToken = IERC20(_crepToken);
         nextContentId = 1;
+        nextQuestionBundleId = 1;
         treasury = _treasuryAuthority;
         bonusPool = _treasuryAuthority;
     }
@@ -358,7 +400,9 @@ contract ContentRegistry is Initializable, AccessControlUpgradeable, PausableUpg
             _submissionRewardTerms(
                 rewardAsset, rewardAmount, requiredVoters, requiredSettledRounds, rewardPoolExpiresAt
             ),
-            _defaultRoundConfig()
+            _defaultRoundConfig(),
+            0,
+            0
         );
     }
 
@@ -380,7 +424,115 @@ contract ContentRegistry is Initializable, AccessControlUpgradeable, PausableUpg
             videoUrl,
             salt,
             rewardTerms,
-            _validatedRoundConfig(roundConfig)
+            _validatedRoundConfig(roundConfig),
+            0,
+            0
+        );
+    }
+
+    function submitQuestionBundleWithRewardAndRoundConfig(
+        BundleQuestionInput[] calldata questions,
+        SubmissionRewardTerms calldata rewardTerms,
+        RoundLib.RoundConfig calldata roundConfig
+    ) external nonReentrant whenNotPaused returns (uint256 bundleId, uint256[] memory contentIds) {
+        require(questions.length > 0, "No questions");
+        require(questions.length <= MAX_QUESTION_BUNDLE_COUNT, "Too many questions");
+        require(questionRewardPoolEscrow != address(0), "Bounty escrow not set");
+
+        RoundLib.RoundConfig memory validatedRoundConfig = _validatedRoundConfig(roundConfig);
+        _validateSubmissionReward(rewardTerms);
+
+        SubmissionMetadata[] memory metadataList = new SubmissionMetadata[](questions.length);
+        bytes32[] memory submissionKeys = new bytes32[](questions.length);
+        bytes32[] memory mediaHashes = new bytes32[](questions.length);
+        uint256[] memory resolvedCategoryIds = new uint256[](questions.length);
+
+        for (uint256 i = 0; i < questions.length; i++) {
+            BundleQuestionInput calldata question = questions[i];
+            SubmissionMetadata memory metadata = _validatedContextSubmissionMetadata(
+                question.contextUrl,
+                question.imageUrls,
+                question.videoUrl,
+                question.title,
+                question.description,
+                question.tags,
+                question.categoryId
+            );
+            uint256 resolvedCategoryId = _resolveQuestionSubmissionCategory(metadata);
+            bytes32 submissionKey = _deriveQuestionMediaSubmissionKey(metadata, resolvedCategoryId);
+            require(!submissionKeyUsed[submissionKey], "Question already submitted");
+
+            metadataList[i] = metadata;
+            submissionKeys[i] = submissionKey;
+            mediaHashes[i] = _submissionMediaHash(question.imageUrls, question.videoUrl);
+            resolvedCategoryIds[i] = resolvedCategoryId;
+        }
+
+        bytes32 bundleHash = _computeQuestionBundleHash(metadataList, mediaHashes, resolvedCategoryIds, questions);
+        bytes32 revealCommitment =
+            _computeBundleRevealCommitment(bundleHash, msg.sender, rewardTerms, validatedRoundConfig);
+        PendingSubmission memory pending = pendingSubmissions[revealCommitment];
+        require(pending.submitter == msg.sender, "Reservation not found");
+        require(block.timestamp <= pending.expiresAt, "Reservation expired");
+        require(block.timestamp >= pending.reservedAt + RESERVED_SUBMISSION_MIN_AGE, "Reservation too new");
+        delete pendingSubmissions[revealCommitment];
+
+        bundleId = nextQuestionBundleId++;
+        contentIds = new uint256[](questions.length);
+        for (uint256 i = 0; i < questions.length; i++) {
+            submissionKeyUsed[submissionKeys[i]] = true;
+            bytes32 contentHash = keccak256(
+                abi.encode(
+                    "curyo-question-context-v1",
+                    metadataList[i].url,
+                    questions[i].imageUrls,
+                    questions[i].videoUrl,
+                    metadataList[i].title,
+                    metadataList[i].description,
+                    metadataList[i].tags,
+                    resolvedCategoryIds[i]
+                )
+            );
+            uint256 contentId = _storeSubmittedContent(
+                submissionKeys[i], pending, contentHash, resolvedCategoryIds[i], validatedRoundConfig, bundleId, i
+            );
+            contentIds[i] = contentId;
+            questionBundleContentIds[bundleId].push(contentId);
+
+            emit ContentSubmitted(
+                contentId,
+                msg.sender,
+                contentHash,
+                metadataList[i].url,
+                metadataList[i].title,
+                metadataList[i].description,
+                metadataList[i].tags,
+                resolvedCategoryIds[i]
+            );
+            emit ContentMediaSubmitted(contentId, questions[i].imageUrls, questions[i].videoUrl);
+            emit QuestionBundleContentLinked(bundleId, contentId, i);
+        }
+
+        uint256 rewardPoolId = IQuestionRewardPoolEscrow(questionRewardPoolEscrow)
+            .createSubmissionBundleFromRegistry(
+                bundleId,
+                contentIds,
+                msg.sender,
+                rewardTerms.asset,
+                rewardTerms.amount,
+                rewardTerms.requiredVoters,
+                rewardTerms.expiresAt
+            );
+        emit QuestionBundleSubmitted(
+            bundleId,
+            msg.sender,
+            questions.length,
+            rewardTerms.asset,
+            rewardTerms.amount,
+            rewardTerms.requiredVoters,
+            rewardTerms.expiresAt,
+            bundleHash,
+            rewardPoolId
         );
     }
 
@@ -402,7 +554,9 @@ contract ContentRegistry is Initializable, AccessControlUpgradeable, PausableUpg
             videoUrl,
             salt,
             _defaultSubmissionRewardTerms(SUBMISSION_REWARD_ASSET_CREP),
-            _defaultRoundConfig()
+            _defaultRoundConfig(),
+            0,
+            0
         );
     }
 
@@ -423,7 +577,9 @@ contract ContentRegistry is Initializable, AccessControlUpgradeable, PausableUpg
             videoUrl,
             salt,
             _defaultSubmissionRewardTerms(SUBMISSION_REWARD_ASSET_CREP),
-            _validatedRoundConfig(roundConfig)
+            _validatedRoundConfig(roundConfig),
+            0,
+            0
         );
     }
 
@@ -432,6 +588,10 @@ contract ContentRegistry is Initializable, AccessControlUpgradeable, PausableUpg
         if (cfg.epochDuration == 0) {
             cfg = _defaultRoundConfig();
         }
+    }
+
+    function getQuestionBundleContentIds(uint256 bundleId) external view returns (uint256[] memory) {
+        return questionBundleContentIds[bundleId];
     }
 
     /// @notice Cancel content before any votes. Attached submission bounties stay non-refundable.
@@ -507,7 +667,9 @@ contract ContentRegistry is Initializable, AccessControlUpgradeable, PausableUpg
         string memory videoUrl,
         bytes32 salt,
         SubmissionRewardTerms memory rewardTerms,
-        RoundLib.RoundConfig memory roundConfig
+        RoundLib.RoundConfig memory roundConfig,
+        uint256 bundleId,
+        uint256 bundleIndex
     ) internal returns (uint256 contentId) {
         (uint256 resolvedCategoryId, bytes32 submissionKey, PendingSubmission memory pending) =
             _prepareQuestionMediaSubmission(metadata, imageUrls, videoUrl, salt, rewardTerms, roundConfig);
@@ -523,7 +685,9 @@ contract ContentRegistry is Initializable, AccessControlUpgradeable, PausableUpg
                 resolvedCategoryId
             )
         );
-        contentId = _storeSubmittedContent(submissionKey, pending, contentHash, resolvedCategoryId, roundConfig);
+        contentId = _storeSubmittedContent(
+            submissionKey, pending, contentHash, resolvedCategoryId, roundConfig, bundleId, bundleIndex
+        );
         uint256 rewardPoolId = _attachSubmissionRewardPool(contentId, rewardTerms);
         emit ContentSubmitted(
             contentId,
@@ -610,7 +774,9 @@ contract ContentRegistry is Initializable, AccessControlUpgradeable, PausableUpg
         PendingSubmission memory pending,
         bytes32 contentHash,
         uint256 resolvedCategoryId,
-        RoundLib.RoundConfig memory roundConfig
+        RoundLib.RoundConfig memory roundConfig,
+        uint256 bundleId,
+        uint256 bundleIndex
     ) internal returns (uint256 contentId) {
         contentId = nextContentId++;
         contentSubmissionKey[contentId] = submissionKey;
@@ -628,6 +794,10 @@ contract ContentRegistry is Initializable, AccessControlUpgradeable, PausableUpg
             rating: 50,
             categoryId: resolvedCategoryId.toUint64()
         });
+        if (bundleId != 0) {
+            contentBundleId[contentId] = bundleId;
+            contentBundleIndex[contentId] = bundleIndex;
+        }
         emit ContentRoundConfigSet(
             contentId, roundConfig.epochDuration, roundConfig.maxDuration, roundConfig.minVoters, roundConfig.maxVoters
         );
@@ -885,6 +1055,55 @@ contract ContentRegistry is Initializable, AccessControlUpgradeable, PausableUpg
                 tags,
                 categoryId,
                 salt,
+                submitter,
+                rewardTerms.asset,
+                rewardTerms.amount,
+                rewardTerms.requiredVoters,
+                rewardTerms.requiredSettledRounds,
+                rewardTerms.expiresAt,
+                roundConfig.epochDuration,
+                roundConfig.maxDuration,
+                roundConfig.minVoters,
+                roundConfig.maxVoters
+            )
+        );
+    }
+
+    function _computeQuestionBundleHash(
+        SubmissionMetadata[] memory metadataList,
+        bytes32[] memory mediaHashes,
+        uint256[] memory resolvedCategoryIds,
+        BundleQuestionInput[] calldata questions
+    ) internal pure returns (bytes32) {
+        bytes32[] memory questionHashes = new bytes32[](metadataList.length);
+        for (uint256 i = 0; i < metadataList.length; i++) {
+            questionHashes[i] = keccak256(
+                abi.encode(
+                    "curyo-question-bundle-item-v1",
+                    metadataList[i].url,
+                    mediaHashes[i],
+                    metadataList[i].title,
+                    metadataList[i].description,
+                    metadataList[i].tags,
+                    resolvedCategoryIds[i],
+                    questions[i].salt,
+                    i
+                )
+            );
+        }
+        return keccak256(abi.encode("curyo-question-bundle-v1", questionHashes));
+    }
+
+    function _computeBundleRevealCommitment(
+        bytes32 bundleHash,
+        address submitter,
+        SubmissionRewardTerms memory rewardTerms,
+        RoundLib.RoundConfig memory roundConfig
+    ) internal pure returns (bytes32) {
+        return keccak256(
+            abi.encode(
+                "curyo-question-bundle-reveal-v1",
+                bundleHash,
                 submitter,
                 rewardTerms.asset,
                 rewardTerms.amount,

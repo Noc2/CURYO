@@ -1,30 +1,34 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.24;
 
-import {Initializable} from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
-import {AccessControlUpgradeable} from "@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol";
-import {PausableUpgradeable} from "@openzeppelin/contracts-upgradeable/utils/PausableUpgradeable.sol";
-import {ReentrancyGuardTransient} from "@openzeppelin/contracts/utils/ReentrancyGuardTransient.sol";
-import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
-import {SafeCast} from "@openzeppelin/contracts/utils/math/SafeCast.sol";
-import {IERC1363Receiver} from "@openzeppelin/contracts/interfaces/IERC1363Receiver.sol";
+import { Initializable } from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
+import { AccessControlUpgradeable } from "@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol";
+import { PausableUpgradeable } from "@openzeppelin/contracts-upgradeable/utils/PausableUpgradeable.sol";
+import { ReentrancyGuardTransient } from "@openzeppelin/contracts/utils/ReentrancyGuardTransient.sol";
+import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import { SafeERC20 } from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
+import { SafeCast } from "@openzeppelin/contracts/utils/math/SafeCast.sol";
+import { IERC1363Receiver } from "@openzeppelin/contracts/interfaces/IERC1363Receiver.sol";
 
-import {ContentRegistry} from "./ContentRegistry.sol";
-import {ProtocolConfig} from "./ProtocolConfig.sol";
-import {RoundLib} from "./libraries/RoundLib.sol";
-import {RatingLib} from "./libraries/RatingLib.sol";
-import {RoundSettlementSideEffectsLib} from "./libraries/RoundSettlementSideEffectsLib.sol";
-import {RoundSettlementDistributionLib} from "./libraries/RoundSettlementDistributionLib.sol";
-import {RoundCleanupLib} from "./libraries/RoundCleanupLib.sol";
-import {RoundRevealLib} from "./libraries/RoundRevealLib.sol";
-import {TlockVoteLib} from "./libraries/TlockVoteLib.sol";
-import {VotePreflightLib} from "./libraries/VotePreflightLib.sol";
-import {IFrontendRegistry} from "./interfaces/IFrontendRegistry.sol";
-import {ICategoryRegistry} from "./interfaces/ICategoryRegistry.sol";
-import {IVoterIdNFT} from "./interfaces/IVoterIdNFT.sol";
-import {IRoundVotingEngine} from "./interfaces/IRoundVotingEngine.sol";
-import {IParticipationPool} from "./interfaces/IParticipationPool.sol";
+import { ContentRegistry } from "./ContentRegistry.sol";
+import { ProtocolConfig } from "./ProtocolConfig.sol";
+import { RoundLib } from "./libraries/RoundLib.sol";
+import { RatingLib } from "./libraries/RatingLib.sol";
+import { RoundSettlementSideEffectsLib } from "./libraries/RoundSettlementSideEffectsLib.sol";
+import { RoundSettlementDistributionLib } from "./libraries/RoundSettlementDistributionLib.sol";
+import { RoundCleanupLib } from "./libraries/RoundCleanupLib.sol";
+import { RoundRevealLib } from "./libraries/RoundRevealLib.sol";
+import { TlockVoteLib } from "./libraries/TlockVoteLib.sol";
+import { VotePreflightLib } from "./libraries/VotePreflightLib.sol";
+import { IFrontendRegistry } from "./interfaces/IFrontendRegistry.sol";
+import { ICategoryRegistry } from "./interfaces/ICategoryRegistry.sol";
+import { IVoterIdNFT } from "./interfaces/IVoterIdNFT.sol";
+import { IRoundVotingEngine } from "./interfaces/IRoundVotingEngine.sol";
+import { IParticipationPool } from "./interfaces/IParticipationPool.sol";
+
+interface IQuestionBundleRoundObserver {
+    function recordBundleQuestionTerminal(uint256 contentId, uint256 roundId, bool settled) external;
+}
 
 /// @title RoundVotingEngine
 /// @notice Per-content round-based parimutuel voting with keeper-assisted/self-reveal and epoch-weighted rewards.
@@ -607,7 +611,16 @@ contract RoundVotingEngine is
     function _markRoundRevealFailed(uint256 contentId, uint256 roundId, RoundLib.Round storage round) internal {
         round.state = RoundLib.RoundState.RevealFailed;
         round.settledAt = block.timestamp.toUint48();
+        _notifyBundleRoundTerminal(contentId, roundId, false);
         emit RoundRevealFailed(contentId, roundId);
+    }
+
+    function _notifyBundleRoundTerminal(uint256 contentId, uint256 roundId, bool settled) internal {
+        address bundleEscrow = registry.questionRewardPoolEscrow();
+        if (bundleEscrow == address(0)) return;
+
+        try IQuestionBundleRoundObserver(bundleEscrow).recordBundleQuestionTerminal(contentId, roundId, settled) { }
+            catch { }
     }
 
     // =========================================================================
@@ -625,6 +638,7 @@ contract RoundVotingEngine is
 
         round.state = RoundLib.RoundState.Cancelled;
 
+        _notifyBundleRoundTerminal(contentId, roundId, false);
         emit RoundCancelled(contentId, roundId);
     }
 
@@ -698,6 +712,7 @@ contract RoundVotingEngine is
         if (round.weightedUpPool == round.weightedDownPool) {
             round.state = RoundLib.RoundState.Tied;
             round.settledAt = block.timestamp.toUint48();
+            _notifyBundleRoundTerminal(contentId, roundId, false);
             emit RoundTied(contentId, roundId);
             return;
         }
@@ -709,6 +724,7 @@ contract RoundVotingEngine is
         round.settledAt = block.timestamp.toUint48();
         roundUnrevealedCleanupRemaining[contentId][roundId] = unrevealedCleanupRemaining;
         contentHasSettledRound[contentId] = true;
+        _notifyBundleRoundTerminal(contentId, roundId, true);
 
         // Epoch-weighted winning stake — used for proportional reward distribution
         uint256 weightedWinningStake = upWins ? round.weightedUpPool : round.weightedDownPool;
