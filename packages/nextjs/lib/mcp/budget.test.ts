@@ -30,6 +30,7 @@ before(async () => {
 
 beforeEach(async () => {
   await dbModule.dbClient.execute("DELETE FROM mcp_agent_budget_reservations");
+  await dbModule.dbClient.execute("DELETE FROM mcp_agent_daily_budget_usage");
 });
 
 after(() => {
@@ -106,4 +107,48 @@ test("reserveMcpAgentBudget enforces category and spend caps", async () => {
       }),
     /per-ask budget/,
   );
+});
+
+test("reserveMcpAgentBudget enforces daily caps and releases failed reservations", async () => {
+  const first = await budget.reserveMcpAgentBudget({
+    agent: AGENT,
+    amount: 2_000_000n,
+    categoryId: "5",
+    chainId: 42220,
+    clientRequestId: "ask-daily-1",
+    operationKey: `0x${"4".repeat(64)}`,
+    payloadHash: "payload-d",
+  });
+
+  await assert.rejects(
+    () =>
+      budget.reserveMcpAgentBudget({
+        agent: AGENT,
+        amount: 2_000_000n,
+        categoryId: "5",
+        chainId: 42220,
+        clientRequestId: "ask-daily-2",
+        operationKey: `0x${"5".repeat(64)}`,
+        payloadHash: "payload-e",
+      }),
+    /remaining daily budget/,
+  );
+
+  await budget.updateMcpBudgetReservation({
+    error: "submission failed",
+    operationKey: first.operationKey,
+    status: "failed",
+  });
+
+  const second = await budget.reserveMcpAgentBudget({
+    agent: AGENT,
+    amount: 2_000_000n,
+    categoryId: "5",
+    chainId: 42220,
+    clientRequestId: "ask-daily-2",
+    operationKey: `0x${"5".repeat(64)}`,
+    payloadHash: "payload-e",
+  });
+
+  assert.equal(second.clientRequestId, "ask-daily-2");
 });

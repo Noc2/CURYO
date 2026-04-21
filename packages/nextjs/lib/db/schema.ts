@@ -1,4 +1,15 @@
-import { bigint, boolean, index, integer, pgTable, serial, text, timestamp, uniqueIndex } from "drizzle-orm/pg-core";
+import {
+  bigint,
+  boolean,
+  index,
+  integer,
+  numeric,
+  pgTable,
+  serial,
+  text,
+  timestamp,
+  uniqueIndex,
+} from "drizzle-orm/pg-core";
 
 export const signedActionChallenges = pgTable(
   "signed_action_challenges",
@@ -331,3 +342,21 @@ export const mcpAgentBudgetReservations = pgTable(
 
 export type McpAgentBudgetReservation = typeof mcpAgentBudgetReservations.$inferSelect;
 export type NewMcpAgentBudgetReservation = typeof mcpAgentBudgetReservations.$inferInsert;
+
+export const mcpAgentDailyBudgetUsage = pgTable(
+  "mcp_agent_daily_budget_usage",
+  {
+    budgetKey: text("budget_key").primaryKey(),
+    agentId: text("agent_id").notNull(),
+    budgetDate: text("budget_date").notNull(),
+    reservedAmount: numeric("reserved_amount", { precision: 78, scale: 0 }).default("0").notNull(),
+    createdAt: timestamp("created_at", { mode: "date", withTimezone: true }).notNull(),
+    updatedAt: timestamp("updated_at", { mode: "date", withTimezone: true }).notNull(),
+  },
+  table => ({
+    agentDayIdx: index("mcp_agent_daily_budget_usage_agent_day_idx").on(table.agentId, table.budgetDate),
+  }),
+);
+
+export type McpAgentDailyBudgetUsage = typeof mcpAgentDailyBudgetUsage.$inferSelect;
+export type NewMcpAgentDailyBudgetUsage = typeof mcpAgentDailyBudgetUsage.$inferInsert;
