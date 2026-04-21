@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextRequest, NextResponse, after } from "next/server";
 import { McpAuthError, authenticateMcpRequest, buildMcpAuthChallenge } from "~~/lib/mcp/auth";
 import { MCP_TOOLS, callCuryoMcpTool, getMcpToolRequiredScope, normalizeToolError } from "~~/lib/mcp/tools";
 import { checkRateLimit } from "~~/utils/rateLimit";
@@ -267,6 +267,7 @@ export async function POST(request: NextRequest) {
         agent,
         arguments: body.params?.arguments,
         name,
+        scheduleBackgroundTask: after,
       }).then(toolResult, toolErrorResult);
 
       return jsonRpcResult(body.id, result, request);

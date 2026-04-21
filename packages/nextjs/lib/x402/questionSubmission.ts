@@ -848,6 +848,25 @@ export async function handleManagedQuestionSubmissionRequest(params: {
   agentId: string;
   payload: X402QuestionPayload;
 }): Promise<{ body: unknown; status: number }> {
+  const started = await startManagedQuestionSubmissionRequest(params);
+  if (!started.shouldSubmit) {
+    const body = started.body as Record<string, unknown>;
+    if (body.status === "submitted") {
+      return {
+        body: started.body,
+        status: 200,
+      };
+    }
+    throw new X402QuestionConflictError("This managed MCP question submission is already being processed.");
+  }
+
+  return completeManagedQuestionSubmissionRequest(params);
+}
+
+export async function startManagedQuestionSubmissionRequest(params: {
+  agentId: string;
+  payload: X402QuestionPayload;
+}): Promise<{ body: unknown; shouldSubmit: boolean; status: number }> {
   const config = resolveX402QuestionConfig(params.payload.chainId, { requireThirdwebSecret: false });
   const operation = buildX402QuestionOperation(params.payload);
   const existingRecord = await getX402QuestionSubmissionByClientRequest({
@@ -862,6 +881,7 @@ export async function handleManagedQuestionSubmissionRequest(params: {
   if (existingRecord?.status === "submitted") {
     return {
       body: submissionResponseBody({ config, operation, payload: params.payload, record: existingRecord }),
+      shouldSubmit: false,
       status: 200,
     };
   }
@@ -871,7 +891,11 @@ export async function handleManagedQuestionSubmissionRequest(params: {
     Number.isFinite(existingRecord.updatedAt.getTime()) &&
     Date.now() - existingRecord.updatedAt.getTime() < SUBMITTING_STALE_MS
   ) {
-    throw new X402QuestionConflictError("This managed MCP question submission is already being processed.");
+    return {
+      body: x402QuestionSubmissionStatusBody({ config, operation, payload: params.payload, record: existingRecord }),
+      shouldSubmit: false,
+      status: 202,
+    };
   }
 
   const preflight = await preflightX402QuestionSubmission({
@@ -893,6 +917,45 @@ export async function handleManagedQuestionSubmissionRequest(params: {
       },
       payload: params.payload,
     });
+  }
+
+  await updateSubmissionStatus({
+    operationKey: operation.operationKey,
+    status: "submitting",
+  });
+
+  const submittingRecord = await getX402QuestionSubmissionByOperationKey(operation.operationKey);
+  return {
+    body: x402QuestionSubmissionStatusBody({ config, operation, payload: params.payload, record: submittingRecord }),
+    shouldSubmit: true,
+    status: 202,
+  };
+}
+
+export async function completeManagedQuestionSubmissionRequest(params: {
+  agentId: string;
+  payload: X402QuestionPayload;
+}): Promise<{ body: unknown; status: number }> {
+  const config = resolveX402QuestionConfig(params.payload.chainId, { requireThirdwebSecret: false });
+  const operation = buildX402QuestionOperation(params.payload);
+  const existingRecord = await getX402QuestionSubmissionByClientRequest({
+    chainId: params.payload.chainId,
+    clientRequestId: params.payload.clientRequestId,
+  });
+
+  if (existingRecord && existingRecord.payloadHash !== operation.payloadHash) {
+    throw new X402QuestionConflictError("clientRequestId has already been used for a different question payload.");
+  }
+
+  if (existingRecord?.status === "submitted") {
+    return {
+      body: submissionResponseBody({ config, operation, payload: params.payload, record: existingRecord }),
+      status: 200,
+    };
+  }
+
+  if (!existingRecord?.paymentReceipt) {
+    throw new X402QuestionConflictError("This managed MCP question submission has not been started.");
   }
 
   await updateSubmissionStatus({

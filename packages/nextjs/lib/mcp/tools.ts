@@ -14,10 +14,12 @@ import { type X402QuestionPayload, X402_USDC_DECIMALS, parseX402QuestionRequest 
 import {
   X402QuestionConfigError,
   X402QuestionConflictError,
+  completeManagedQuestionSubmissionRequest,
   getX402QuestionSubmissionByOperationKey,
   handleManagedQuestionSubmissionRequest,
   preflightX402QuestionSubmission,
   resolveX402QuestionConfig,
+  startManagedQuestionSubmissionRequest,
   x402QuestionSubmissionRecordBody,
 } from "~~/lib/x402/questionSubmission";
 import { ponderApi } from "~~/services/ponder/client";
@@ -32,12 +34,17 @@ type McpToolDefinition = {
   title: string;
 };
 
+type AskHumansMode = "sync" | "async";
+type BackgroundTaskScheduler = (task: () => Promise<void> | void) => void;
+
 type McpToolDependencies = {
+  completeManagedQuestionSubmissionRequest: typeof completeManagedQuestionSubmissionRequest;
   getMcpAgentBudgetSummary: typeof getMcpAgentBudgetSummary;
   handleManagedQuestionSubmissionRequest: typeof handleManagedQuestionSubmissionRequest;
   preflightX402QuestionSubmission: typeof preflightX402QuestionSubmission;
   reserveMcpAgentBudget: typeof reserveMcpAgentBudget;
   resolveX402QuestionConfig: typeof resolveX402QuestionConfig;
+  startManagedQuestionSubmissionRequest: typeof startManagedQuestionSubmissionRequest;
   updateMcpBudgetReservation: typeof updateMcpBudgetReservation;
 };
 
@@ -45,12 +52,17 @@ let mcpToolTestOverrides: Partial<McpToolDependencies> | null = null;
 
 function getMcpToolDependencies(): McpToolDependencies {
   return {
+    completeManagedQuestionSubmissionRequest:
+      mcpToolTestOverrides?.completeManagedQuestionSubmissionRequest ?? completeManagedQuestionSubmissionRequest,
     getMcpAgentBudgetSummary: mcpToolTestOverrides?.getMcpAgentBudgetSummary ?? getMcpAgentBudgetSummary,
     handleManagedQuestionSubmissionRequest:
       mcpToolTestOverrides?.handleManagedQuestionSubmissionRequest ?? handleManagedQuestionSubmissionRequest,
-    preflightX402QuestionSubmission: mcpToolTestOverrides?.preflightX402QuestionSubmission ?? preflightX402QuestionSubmission,
+    preflightX402QuestionSubmission:
+      mcpToolTestOverrides?.preflightX402QuestionSubmission ?? preflightX402QuestionSubmission,
     reserveMcpAgentBudget: mcpToolTestOverrides?.reserveMcpAgentBudget ?? reserveMcpAgentBudget,
     resolveX402QuestionConfig: mcpToolTestOverrides?.resolveX402QuestionConfig ?? resolveX402QuestionConfig,
+    startManagedQuestionSubmissionRequest:
+      mcpToolTestOverrides?.startManagedQuestionSubmissionRequest ?? startManagedQuestionSubmissionRequest,
     updateMcpBudgetReservation: mcpToolTestOverrides?.updateMcpBudgetReservation ?? updateMcpBudgetReservation,
   };
 }
@@ -123,6 +135,12 @@ export const MCP_TOOLS: McpToolDefinition[] = [
           description: "Maximum total managed spend, including bounty and service fee, in atomic USDC.",
           type: "string",
         },
+        mode: {
+          default: "sync",
+          description: "Use async to return after payment settlement and poll with curyo_get_question_status.",
+          enum: ["sync", "async"],
+          type: "string",
+        },
         question: {
           description: "Question payload with title, description, contextUrl, categoryId, and tags.",
           type: "object",
@@ -185,6 +203,12 @@ function parseMaxPaymentAmount(value: unknown): bigint {
     throw new McpToolError("maxPaymentAmount must be a non-negative integer string.");
   }
   return BigInt(rawValue);
+}
+
+function parseAskHumansMode(value: unknown): AskHumansMode {
+  if (value === undefined || value === null) return "sync";
+  if (value === "sync" || value === "async") return value;
+  throw new McpToolError("mode must be either sync or async.");
 }
 
 function getPublicQuestionUrl(contentId: string | null) {
@@ -341,7 +365,12 @@ async function buildQuestionResult(args: JsonObject, agent: McpAgentAuth) {
   };
 }
 
-export async function callCuryoMcpTool(params: { agent: McpAgentAuth; arguments: unknown; name: string }) {
+export async function callCuryoMcpTool(params: {
+  agent: McpAgentAuth;
+  arguments: unknown;
+  name: string;
+  scheduleBackgroundTask?: BackgroundTaskScheduler;
+}) {
   const dependencies = getMcpToolDependencies();
   const args = asObject(params.arguments ?? {});
 
@@ -353,6 +382,12 @@ export async function callCuryoMcpTool(params: { agent: McpAgentAuth; arguments:
       return quoteQuestion(args, params.agent);
 
     case "curyo_ask_humans": {
+      const mode = parseAskHumansMode(args.mode);
+      const scheduleBackgroundTask = params.scheduleBackgroundTask;
+      if (mode === "async" && !scheduleBackgroundTask) {
+        throw new McpToolError("Async ask_humans requires a background task scheduler.", 503);
+      }
+
       const payload = parseX402QuestionRequest(args);
       const managedPayload = toManagedMcpPayload(params.agent, payload);
       const config = dependencies.resolveX402QuestionConfig(managedPayload.chainId, { requireThirdwebSecret: false });
@@ -371,6 +406,91 @@ export async function callCuryoMcpTool(params: { agent: McpAgentAuth; arguments:
         operationKey: quote.operation.operationKey,
         payloadHash: quote.operation.payloadHash,
       });
+
+      if (mode === "async") {
+        let started: Awaited<ReturnType<typeof startManagedQuestionSubmissionRequest>>;
+        try {
+          started = await dependencies.startManagedQuestionSubmissionRequest({
+            agentId: params.agent.id,
+            payload: managedPayload,
+          });
+        } catch (error) {
+          await dependencies.updateMcpBudgetReservation({
+            error: error instanceof Error ? error.message : String(error),
+            operationKey: quote.operation.operationKey,
+            status: "failed",
+          });
+          throw error;
+        }
+
+        const body = started.body as JsonObject;
+        const warnings: string[] = [];
+        if (started.shouldSubmit) {
+          try {
+            scheduleBackgroundTask!(async () => {
+              try {
+                const completed = await dependencies.completeManagedQuestionSubmissionRequest({
+                  agentId: params.agent.id,
+                  payload: managedPayload,
+                });
+                const completedBody = completed.body as JsonObject;
+                await dependencies.updateMcpBudgetReservation({
+                  contentId: typeof completedBody.contentId === "string" ? completedBody.contentId : null,
+                  operationKey: quote.operation.operationKey,
+                  status: "submitted",
+                });
+              } catch (error) {
+                console.error("[mcp] async ask completion failed", error);
+                try {
+                  await dependencies.updateMcpBudgetReservation({
+                    error: error instanceof Error ? error.message : String(error),
+                    operationKey: quote.operation.operationKey,
+                    status: "failed",
+                  });
+                } catch (budgetError) {
+                  console.error("[mcp] async ask budget failure update failed", budgetError);
+                }
+              }
+            });
+          } catch (error) {
+            await dependencies.updateMcpBudgetReservation({
+              error: error instanceof Error ? error.message : String(error),
+              operationKey: quote.operation.operationKey,
+              status: "failed",
+            });
+            throw error;
+          }
+        } else if (body.status === "submitted") {
+          try {
+            await dependencies.updateMcpBudgetReservation({
+              contentId: typeof body.contentId === "string" ? body.contentId : null,
+              operationKey: quote.operation.operationKey,
+              status: "submitted",
+            });
+          } catch (error) {
+            console.error("[mcp] submitted ask bookkeeping update failed", error);
+            warnings.push("submitted_budget_update_failed");
+          }
+        }
+
+        let managedBudget: Awaited<ReturnType<typeof getMcpAgentBudgetSummary>> | null = null;
+        try {
+          managedBudget = await dependencies.getMcpAgentBudgetSummary(params.agent);
+        } catch (error) {
+          console.error("[mcp] budget summary unavailable after async ask start", error);
+          warnings.push("managed_budget_unavailable");
+        }
+
+        return {
+          ...(normalizeMcpQuestionBody(body) as JsonObject),
+          clientRequestId: payload.clientRequestId,
+          managedBudget,
+          pollAfterMs: 5_000,
+          publicUrl: getPublicQuestionUrl(typeof body.contentId === "string" ? body.contentId : null),
+          statusTool: "curyo_get_question_status",
+          warnings,
+        };
+      }
 
       let result: Awaited<ReturnType<typeof handleManagedQuestionSubmissionRequest>>;
       try {
