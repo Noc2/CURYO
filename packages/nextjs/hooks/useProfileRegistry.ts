@@ -10,7 +10,7 @@ import { getGasBalanceErrorMessage } from "~~/lib/transactionErrors";
 
 interface Profile {
   name: string;
-  strategy: string;
+  selfReport: string;
   createdAt: bigint;
   updatedAt: bigint;
 }
@@ -107,7 +107,7 @@ export function useProfileRegistry(address?: string) {
         const d = profileData as unknown as Record<string, unknown>;
         return {
           name: typeof d.name === "string" ? d.name : "",
-          strategy: typeof d.strategy === "string" ? d.strategy : "",
+          selfReport: typeof d.selfReport === "string" ? d.selfReport : "",
           createdAt: typeof d.createdAt === "bigint" ? d.createdAt : 0n,
           updatedAt: typeof d.updatedAt === "bigint" ? d.updatedAt : 0n,
         };
@@ -149,8 +149,8 @@ export function useIsNameTaken(name: string) {
 export function useSetProfile() {
   const { isPending, writeProfileRegistry } = useProfileRegistryWrite();
 
-  const setProfile = async (name: string, strategy: string) => {
-    await writeProfileRegistry("setProfile", [name, strategy], "profile update");
+  const setProfile = async (name: string, selfReport: string) => {
+    await writeProfileRegistry("setProfile", [name, selfReport], "profile update");
   };
 
   return {

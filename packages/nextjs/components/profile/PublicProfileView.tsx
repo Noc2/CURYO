@@ -3,6 +3,17 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { ROUND_STATE } from "@curyo/contracts/protocol";
+import {
+  type ExpertiseArea,
+  type LanguageCode,
+  PROFILE_SELF_REPORT_NOTICE,
+  type ProfileRole,
+  type ProfileSelfReport,
+  normalizeProfileSelfReport,
+  parseProfileSelfReport,
+  profileSelfReportHasValues,
+  serializeProfileSelfReport,
+} from "@curyo/node-utils/profileSelfReport";
 import { useAccount } from "wagmi";
 import {
   ArrowLeftIcon,
@@ -40,7 +51,15 @@ import { useVoterIdNFT } from "~~/hooks/useVoterIdNFT";
 import { useVoterStreak } from "~~/hooks/useVoterStreak";
 import { avatarAccentHexToRgb, normalizeAvatarAccentHex } from "~~/lib/avatar/avatarAccent";
 import { FOLLOWED_CURATOR_TOAST_ID } from "~~/lib/notifications/followedActivity";
-import { MAX_PROFILE_STRATEGY_LENGTH } from "~~/lib/profile/profileValidation";
+import {
+  PROFILE_AGE_GROUP_OPTIONS,
+  PROFILE_COUNTRY_OPTIONS,
+  PROFILE_EXPERTISE_OPTIONS,
+  PROFILE_LANGUAGE_OPTIONS,
+  PROFILE_ROLE_OPTIONS,
+  getProfileSelfReportDisplayGroups,
+} from "~~/lib/profile/profileSelfReportDisplay";
+import { MAX_PROFILE_SELF_REPORT_LENGTH } from "~~/lib/profile/profileValidation";
 import { AVATAR_WIN_RATE_TOOLTIP } from "~~/lib/profile/winRateTooltip";
 import { formatRatingScoreOutOfTen } from "~~/lib/ui/ratingDisplay";
 import { type PonderProfileDetailResponse, type PonderVoteItem, ponderApi } from "~~/services/ponder/client";
@@ -102,6 +121,37 @@ function getVoteOutcome(vote: PonderVoteItem) {
 
 function getProfileWriteErrorMessage(error: any, fallback: string) {
   return error?.shortMessage || error?.message || fallback;
+}
+
+function emptySelfReport() {
+  return normalizeProfileSelfReport({});
+}
+
+function profileSelfReportFromString(value: string | null | undefined) {
+  return parseProfileSelfReport(value) ?? emptySelfReport();
+}
+
+function getProfileSelfReportLength(value: ProfileSelfReport) {
+  return serializeProfileSelfReport(value).length;
+}
+
+function updateSelfReportArray<T extends string>(
+  report: ProfileSelfReport,
+  key: "expertise" | "languages" | "nationalities" | "roles",
+  value: T,
+  checked: boolean,
+) {
+  const current = new Set((report[key] ?? []) as string[]);
+  if (checked) {
+    current.add(value);
+  } else {
+    current.delete(value);
+  }
+  return normalizeProfileSelfReport({ ...report, [key]: Array.from(current) });
+}
+
+function optionSelected(values: readonly string[] | undefined, value: string) {
+  return values?.includes(value) ?? false;
 }
 
 export function PublicProfileView({ address, embedded = false }: PublicProfileViewProps) {
@@ -169,12 +219,12 @@ export function PublicProfileView({ address, embedded = false }: PublicProfileVi
   const [isAvatarEditorOpen, setIsAvatarEditorOpen] = useState(false);
   const [isReferralModalOpen, setIsReferralModalOpen] = useState(false);
   const [nameInput, setNameInput] = useState("");
-  const [strategyInput, setStrategyInput] = useState("");
+  const [selfReportInput, setSelfReportInput] = useState<ProfileSelfReport>(() => emptySelfReport());
   const [avatarAccentInput, setAvatarAccentInput] = useState("");
   const [profileError, setProfileError] = useState<string | null>(null);
   const [accentError, setAccentError] = useState<string | null>(null);
   const [committedName, setCommittedName] = useState("");
-  const [committedStrategy, setCommittedStrategy] = useState("");
+  const [committedSelfReport, setCommittedSelfReport] = useState<ProfileSelfReport>(() => emptySelfReport());
   const [committedAvatarAccentHex, setCommittedAvatarAccentHex] = useState<string | null>(null);
   const [profileDraftInitialized, setProfileDraftInitialized] = useState(false);
   const [avatarAccentInitialized, setAvatarAccentInitialized] = useState(false);
@@ -182,19 +232,19 @@ export function PublicProfileView({ address, embedded = false }: PublicProfileVi
   const pending = isFollowPending(normalizedAddress);
   const backHref = ownProfile ? "/governance#profile" : "/governance";
   const totalVotes = profileDetail?.summary.totalVotes ?? 0;
-  const ponderStrategy = summary?.strategy?.trim() ?? "";
+  const ponderSelfReport = profileSelfReportFromString(summary?.selfReport);
 
   useEffect(() => {
     setIsEditing(false);
     setIsAvatarEditorOpen(false);
     setIsReferralModalOpen(false);
     setNameInput("");
-    setStrategyInput("");
+    setSelfReportInput(emptySelfReport());
     setAvatarAccentInput("");
     setProfileError(null);
     setAccentError(null);
     setCommittedName("");
-    setCommittedStrategy("");
+    setCommittedSelfReport(emptySelfReport());
     setCommittedAvatarAccentHex(null);
     setProfileDraftInitialized(false);
     setAvatarAccentInitialized(false);
@@ -206,11 +256,11 @@ export function PublicProfileView({ address, embedded = false }: PublicProfileVi
     }
 
     const nextName = liveProfile?.name ?? "";
-    const nextStrategy = liveProfile?.strategy ?? "";
+    const nextSelfReport = profileSelfReportFromString(liveProfile?.selfReport);
     setCommittedName(nextName);
-    setCommittedStrategy(nextStrategy);
+    setCommittedSelfReport(nextSelfReport);
     setNameInput(nextName);
-    setStrategyInput(nextStrategy);
+    setSelfReportInput(nextSelfReport);
     setProfileDraftInitialized(true);
   }, [liveProfile, liveProfileLoading, profileDraftInitialized]);
 
@@ -220,11 +270,11 @@ export function PublicProfileView({ address, embedded = false }: PublicProfileVi
     }
 
     const nextName = liveProfile?.name ?? "";
-    const nextStrategy = liveProfile?.strategy ?? "";
+    const nextSelfReport = profileSelfReportFromString(liveProfile?.selfReport);
     setCommittedName(nextName);
-    setCommittedStrategy(nextStrategy);
+    setCommittedSelfReport(nextSelfReport);
     setNameInput(nextName);
-    setStrategyInput(nextStrategy);
+    setSelfReportInput(nextSelfReport);
   }, [liveProfile, isEditing, liveProfileLoading, profileDraftInitialized]);
 
   useEffect(() => {
@@ -250,9 +300,10 @@ export function PublicProfileView({ address, embedded = false }: PublicProfileVi
 
   const { isTaken: isNameTaken, isLoading: nameCheckLoading } = useIsNameTaken(nameInput);
   const currentName = ownProfile ? committedName || liveProfile?.name || summary?.name || "" : summary?.name || "";
-  const currentStrategy = ownProfile
-    ? committedStrategy || liveProfile?.strategy || summary?.strategy || ""
-    : ponderStrategy;
+  const currentSelfReport = ownProfile ? committedSelfReport : ponderSelfReport;
+  const currentSelfReportGroups = getProfileSelfReportDisplayGroups(currentSelfReport);
+  const hasCurrentSelfReport = currentSelfReportGroups.length > 0;
+  const selfReportInputLength = getProfileSelfReportLength(selfReportInput);
   const displayName = currentName || truncateAddress(normalizedAddress);
   const displayAvatarAccentHex = ownProfile ? (committedAvatarAccentHex ?? avatarAccent?.hex ?? null) : null;
   const fallbackImageUrl =
@@ -310,17 +361,17 @@ export function PublicProfileView({ address, embedded = false }: PublicProfileVi
 
   const openEditMode = useCallback(() => {
     setNameInput(currentName);
-    setStrategyInput(currentStrategy);
+    setSelfReportInput(currentSelfReport);
     setProfileError(null);
     setIsEditing(true);
-  }, [currentName, currentStrategy]);
+  }, [currentName, currentSelfReport]);
 
   const handleCancelEdit = useCallback(() => {
     setNameInput(currentName);
-    setStrategyInput(currentStrategy);
+    setSelfReportInput(currentSelfReport);
     setProfileError(null);
     setIsEditing(false);
-  }, [currentName, currentStrategy]);
+  }, [currentName, currentSelfReport]);
 
   const handleSaveProfile = useCallback(async () => {
     if (!hasVoterId) {
@@ -329,7 +380,7 @@ export function PublicProfileView({ address, embedded = false }: PublicProfileVi
     }
 
     const trimmedName = nameInput.trim();
-    const trimmedStrategy = strategyInput.trim();
+    let serializedSelfReport: string;
 
     if (!trimmedName) {
       setProfileError("Profile name is required");
@@ -346,19 +397,27 @@ export function PublicProfileView({ address, embedded = false }: PublicProfileVi
       return;
     }
 
-    if (trimmedStrategy.length > MAX_PROFILE_STRATEGY_LENGTH) {
-      setProfileError(`How you rate must be ${MAX_PROFILE_STRATEGY_LENGTH} characters or fewer`);
+    try {
+      serializedSelfReport = serializeProfileSelfReport(selfReportInput);
+    } catch (error: any) {
+      setProfileError(error?.message || "Self-reported context is too large");
+      return;
+    }
+
+    if (serializedSelfReport.length > MAX_PROFILE_SELF_REPORT_LENGTH) {
+      setProfileError(`Self-reported context must be ${MAX_PROFILE_SELF_REPORT_LENGTH} characters or fewer`);
       return;
     }
 
     setProfileError(null);
 
     try {
-      await setProfile(trimmedName, trimmedStrategy);
+      await setProfile(trimmedName, serializedSelfReport);
+      const normalizedSelfReport = normalizeProfileSelfReport(selfReportInput);
       setCommittedName(trimmedName);
-      setCommittedStrategy(trimmedStrategy);
+      setCommittedSelfReport(normalizedSelfReport);
       setNameInput(trimmedName);
-      setStrategyInput(trimmedStrategy);
+      setSelfReportInput(normalizedSelfReport);
       setIsEditing(false);
       notification.success(hasLiveProfile ? "Profile updated!" : "Profile created!");
       refetchLiveProfile();
@@ -366,7 +425,7 @@ export function PublicProfileView({ address, embedded = false }: PublicProfileVi
       console.error("Profile update failed:", error);
       setProfileError(getProfileWriteErrorMessage(error, "Failed to update profile"));
     }
-  }, [hasLiveProfile, hasVoterId, isNameTaken, isOwnName, nameInput, refetchLiveProfile, setProfile, strategyInput]);
+  }, [hasLiveProfile, hasVoterId, isNameTaken, isOwnName, nameInput, refetchLiveProfile, selfReportInput, setProfile]);
 
   const openAvatarEditor = useCallback(() => {
     if (!hasVoterId) {
@@ -567,7 +626,7 @@ export function PublicProfileView({ address, embedded = false }: PublicProfileVi
                       isSavingProfile ||
                       !nameInput.trim() ||
                       nameIsUnavailable ||
-                      strategyInput.trim().length > MAX_PROFILE_STRATEGY_LENGTH
+                      selfReportInputLength > MAX_PROFILE_SELF_REPORT_LENGTH
                     }
                   >
                     {isSavingProfile ? "Saving..." : hasLiveProfile ? "Save changes" : "Save profile"}
@@ -637,38 +696,218 @@ export function PublicProfileView({ address, embedded = false }: PublicProfileVi
 
           {ownProfile && isEditing ? (
             <div className="mt-6 rounded-2xl bg-base-content/[0.04] px-5 py-4">
-              <div className="text-sm font-semibold uppercase tracking-[0.18em] text-primary/80">How you rate</div>
-              <textarea
-                value={strategyInput}
-                onChange={event => {
-                  setStrategyInput(event.target.value);
-                  setProfileError(null);
-                }}
-                maxLength={MAX_PROFILE_STRATEGY_LENGTH}
-                rows={5}
-                aria-label="How you rate"
-                placeholder="What you look for when rating."
-                className="textarea textarea-bordered mt-3 min-h-32 w-full bg-base-100"
-                disabled={isSavingProfile}
-              />
-              <div className="mt-2 flex justify-end">
+              <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+                <div>
+                  <div className="text-sm font-semibold uppercase tracking-[0.18em] text-primary/80">
+                    Audience context
+                  </div>
+                  <p className="mt-2 max-w-3xl text-sm leading-6 text-base-content/55">
+                    {PROFILE_SELF_REPORT_NOTICE} AI tools and public readers may use it as context.
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  className="btn btn-ghost btn-sm border border-base-300"
+                  onClick={() => {
+                    setSelfReportInput(emptySelfReport());
+                    setProfileError(null);
+                  }}
+                  disabled={isSavingProfile || !profileSelfReportHasValues(selfReportInput)}
+                >
+                  Clear
+                </button>
+              </div>
+
+              <div className="mt-5 grid gap-4 lg:grid-cols-2">
+                <label className="form-control">
+                  <span className="label-text text-base-content/65">Age group</span>
+                  <select
+                    aria-label="Age group"
+                    className="select select-bordered mt-2 w-full bg-base-100"
+                    value={selfReportInput.ageGroup ?? ""}
+                    onChange={event => {
+                      setSelfReportInput(
+                        normalizeProfileSelfReport({ ...selfReportInput, ageGroup: event.target.value || undefined }),
+                      );
+                      setProfileError(null);
+                    }}
+                    disabled={isSavingProfile}
+                  >
+                    <option value="">Prefer not to say</option>
+                    {PROFILE_AGE_GROUP_OPTIONS.map(option => (
+                      <option key={option.value} value={option.value}>
+                        {option.label}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+
+                <label className="form-control">
+                  <span className="label-text text-base-content/65">Country</span>
+                  <select
+                    aria-label="Country"
+                    className="select select-bordered mt-2 w-full bg-base-100"
+                    value={selfReportInput.residenceCountry ?? ""}
+                    onChange={event => {
+                      setSelfReportInput(
+                        normalizeProfileSelfReport({
+                          ...selfReportInput,
+                          residenceCountry: event.target.value || undefined,
+                        }),
+                      );
+                      setProfileError(null);
+                    }}
+                    disabled={isSavingProfile}
+                  >
+                    <option value="">Prefer not to say</option>
+                    {PROFILE_COUNTRY_OPTIONS.map(option => (
+                      <option key={option.value} value={option.value}>
+                        {option.label}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+
+                <label className="form-control lg:col-span-2">
+                  <span className="label-text text-base-content/65">Nationalities</span>
+                  <select
+                    multiple
+                    size={5}
+                    aria-label="Nationalities"
+                    className="select select-bordered mt-2 h-36 w-full bg-base-100"
+                    value={selfReportInput.nationalities ?? []}
+                    onChange={event => {
+                      const values = Array.from(event.currentTarget.selectedOptions).map(option => option.value);
+                      setSelfReportInput(normalizeProfileSelfReport({ ...selfReportInput, nationalities: values }));
+                      setProfileError(null);
+                    }}
+                    disabled={isSavingProfile}
+                  >
+                    {PROFILE_COUNTRY_OPTIONS.map(option => (
+                      <option key={option.value} value={option.value}>
+                        {option.label}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+
+                <div className="lg:col-span-2">
+                  <div className="label-text text-base-content/65">Languages</div>
+                  <div className="mt-2 grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
+                    {PROFILE_LANGUAGE_OPTIONS.map(option => (
+                      <label key={option.value} className="flex items-center gap-2 text-sm text-base-content/75">
+                        <input
+                          type="checkbox"
+                          className="checkbox checkbox-sm"
+                          checked={optionSelected(selfReportInput.languages, option.value)}
+                          onChange={event => {
+                            setSelfReportInput(
+                              updateSelfReportArray<LanguageCode>(
+                                selfReportInput,
+                                "languages",
+                                option.value,
+                                event.target.checked,
+                              ),
+                            );
+                            setProfileError(null);
+                          }}
+                          disabled={isSavingProfile}
+                        />
+                        <span>{option.label}</span>
+                      </label>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="lg:col-span-2">
+                  <div className="label-text text-base-content/65">Roles</div>
+                  <div className="mt-2 grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
+                    {PROFILE_ROLE_OPTIONS.map(option => (
+                      <label key={option.value} className="flex items-center gap-2 text-sm text-base-content/75">
+                        <input
+                          type="checkbox"
+                          className="checkbox checkbox-sm"
+                          checked={optionSelected(selfReportInput.roles, option.value)}
+                          onChange={event => {
+                            setSelfReportInput(
+                              updateSelfReportArray<ProfileRole>(
+                                selfReportInput,
+                                "roles",
+                                option.value,
+                                event.target.checked,
+                              ),
+                            );
+                            setProfileError(null);
+                          }}
+                          disabled={isSavingProfile}
+                        />
+                        <span>{option.label}</span>
+                      </label>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="lg:col-span-2">
+                  <div className="label-text text-base-content/65">Experience</div>
+                  <div className="mt-2 grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
+                    {PROFILE_EXPERTISE_OPTIONS.map(option => (
+                      <label key={option.value} className="flex items-center gap-2 text-sm text-base-content/75">
+                        <input
+                          type="checkbox"
+                          className="checkbox checkbox-sm"
+                          checked={optionSelected(selfReportInput.expertise, option.value)}
+                          onChange={event => {
+                            setSelfReportInput(
+                              updateSelfReportArray<ExpertiseArea>(
+                                selfReportInput,
+                                "expertise",
+                                option.value,
+                                event.target.checked,
+                              ),
+                            );
+                            setProfileError(null);
+                          }}
+                          disabled={isSavingProfile}
+                        />
+                        <span>{option.label}</span>
+                      </label>
+                    ))}
+                  </div>
+                </div>
+              </div>
+
+              <div className="mt-4 flex justify-end">
                 <span className="text-sm text-base-content/40">
-                  {strategyInput.trim().length}/{MAX_PROFILE_STRATEGY_LENGTH}
+                  {selfReportInputLength}/{MAX_PROFILE_SELF_REPORT_LENGTH}
                 </span>
               </div>
             </div>
-          ) : currentStrategy.trim() ? (
+          ) : hasCurrentSelfReport ? (
             <div className="mt-6 rounded-2xl bg-base-content/[0.04] px-5 py-4">
-              <div className="text-sm font-semibold uppercase tracking-[0.18em] text-primary/80">
-                {ownProfile ? "How you rate" : "How they rate"}
+              <div className="text-sm font-semibold uppercase tracking-[0.18em] text-primary/80">Audience context</div>
+              <p className="mt-2 max-w-3xl text-sm leading-6 text-base-content/55">{PROFILE_SELF_REPORT_NOTICE}</p>
+              <div className="mt-4 grid gap-3 md:grid-cols-2">
+                {currentSelfReportGroups.map(group => (
+                  <div key={group.label} className="rounded-2xl bg-base-content/[0.04] px-4 py-3">
+                    <div className="text-sm font-medium text-base-content/50">{group.label}</div>
+                    <div className="mt-2 flex flex-wrap gap-2">
+                      {group.values.map(value => (
+                        <span
+                          key={value}
+                          className="rounded-full bg-base-content/[0.07] px-3 py-1 text-sm text-base-content/75"
+                        >
+                          {value}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                ))}
               </div>
-              <p className="mt-2 max-w-3xl whitespace-pre-wrap text-base leading-7 text-base-content/75">
-                {currentStrategy.trim()}
-              </p>
             </div>
           ) : ownProfile ? (
             <div className="mt-6 rounded-2xl border border-dashed border-base-content/15 px-5 py-4">
-              <div className="text-sm font-semibold uppercase tracking-[0.18em] text-primary/80">How you rate</div>
+              <div className="text-sm font-semibold uppercase tracking-[0.18em] text-primary/80">Audience context</div>
+              <p className="mt-2 max-w-3xl text-sm leading-6 text-base-content/55">{PROFILE_SELF_REPORT_NOTICE}</p>
               {!hasVoterId ? (
                 <Link
                   href="/governance#faucet"
