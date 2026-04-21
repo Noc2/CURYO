@@ -67,13 +67,13 @@ export function LandingPageActions() {
       <Link href={RATE_ROUTE} className={`btn btn-primary ${styles.cta} ${styles.primary}`}>
         <span>Start Earning</span>
         <span className={styles.arrow} aria-hidden="true">
-          <ChevronRightIcon className="h-5 w-5 text-primary-content" />
+          <ChevronRightIcon className="h-5 w-5 text-current" />
         </span>
       </Link>
       <Link href="/docs" className={`btn whitespace-nowrap ${styles.cta} ${styles.secondary}`}>
         <span>Learn More</span>
         <span className={styles.arrow} aria-hidden="true">
-          <ChevronRightIcon className="h-5 w-5 text-primary-content" />
+          <ChevronRightIcon className="h-5 w-5 text-current" />
         </span>
       </Link>
     </div>
