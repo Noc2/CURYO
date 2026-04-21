@@ -213,7 +213,7 @@ function GovernancePageInner() {
           <>
             <button
               onClick={() => selectTab("profile")}
-              className={`px-4 py-1.5 rounded-full text-base font-medium transition-colors ${
+              className={`tab-control px-4 py-1.5 text-base font-medium transition-colors ${
                 activeTab === "profile" ? "pill-active" : "pill-inactive"
               }`}
             >
@@ -221,7 +221,7 @@ function GovernancePageInner() {
             </button>
             <button
               onClick={() => selectTab("faucet")}
-              className={`px-4 py-1.5 rounded-full text-base font-medium transition-colors ${
+              className={`tab-control px-4 py-1.5 text-base font-medium transition-colors ${
                 activeTab === "faucet" ? "pill-active" : "pill-inactive"
               }`}
             >
@@ -232,7 +232,7 @@ function GovernancePageInner() {
           <>
             <button
               onClick={() => selectTab("profile")}
-              className={`px-4 py-1.5 rounded-full text-base font-medium transition-colors ${
+              className={`tab-control px-4 py-1.5 text-base font-medium transition-colors ${
                 activeTab === "profile" ? "pill-active" : "pill-inactive"
               }`}
             >
@@ -240,7 +240,7 @@ function GovernancePageInner() {
             </button>
             <button
               onClick={() => selectTab("leaderboard")}
-              className={`px-4 py-1.5 rounded-full text-base font-medium transition-colors ${
+              className={`tab-control px-4 py-1.5 text-base font-medium transition-colors ${
                 activeTab === "leaderboard" ? "pill-active" : "pill-inactive"
               }`}
             >
@@ -248,7 +248,7 @@ function GovernancePageInner() {
             </button>
             <button
               onClick={() => selectTab("governance")}
-              className={`px-4 py-1.5 rounded-full text-base font-medium transition-colors ${
+              className={`tab-control px-4 py-1.5 text-base font-medium transition-colors ${
                 activeTab === "governance" ? "pill-active" : "pill-inactive"
               }`}
             >

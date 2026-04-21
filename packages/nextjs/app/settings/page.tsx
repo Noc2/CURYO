@@ -105,7 +105,7 @@ function SettingsPageInner() {
           <button
             key={tab}
             onClick={() => selectTab(tab)}
-            className={`px-4 py-1.5 rounded-full text-base font-medium transition-colors ${
+            className={`tab-control px-4 py-1.5 text-base font-medium transition-colors ${
               activeTab === tab ? "pill-active" : "pill-inactive"
             }`}
           >

@@ -32,6 +32,7 @@
   --color-warning: #f26426;
   --color-error: #b3341b;
 
+  --radius-selector: 0.5rem;
   --radius-field: 0.5rem;
   --radius-box: 0.5rem;
   --tt-tailw: 6px;
@@ -81,7 +82,10 @@
   --curyo-surface-elevated-hover: #1d1c20;
   --curyo-surface-mobile-vote: #26242a;
   --curyo-surface-nested: #090a0c;
-  --curyo-card-radius: 0.5rem;
+  --curyo-radius-card: 0.5rem;
+  --curyo-radius-control: var(--curyo-radius-card);
+  --curyo-radius-pill: 9999px;
+  --curyo-card-radius: var(--curyo-radius-card);
   --curyo-shell-border: rgb(245 240 235 / 0.08);
   --curyo-shell-border-strong: rgb(245 240 235 / 0.14);
   --curyo-panel-shadow: 0 24px 56px rgb(9 10 12 / 0.34);
@@ -128,6 +132,14 @@ body {
     color 0.2s ease,
     box-shadow 0.2s ease,
     transform 0.2s ease;
+}
+
+.btn:not(.btn-circle) {
+  border-radius: var(--curyo-radius-control);
+}
+
+.btn.btn-circle {
+  border-radius: var(--curyo-radius-pill);
 }
 
 /* Override DaisyUI small button font size */
@@ -182,7 +194,7 @@ body {
 .input,
 .select,
 .textarea {
-  border-radius: var(--radius-field);
+  border-radius: var(--curyo-radius-control);
   border-color: transparent !important;
   background: rgb(9 10 12 / 0.96);
   box-shadow:
@@ -827,6 +839,10 @@ body {
 .pill-inactive-muted:hover {
   background: var(--curyo-surface-elevated-hover);
   color: rgb(245 240 235 / 0.8);
+}
+
+.tab-control {
+  border-radius: var(--curyo-radius-control);
 }
 
 /* Hide scrollbar but keep scroll functionality */
