@@ -87,7 +87,7 @@ test.describe("Profile management", () => {
 
     await expect(page.getByRole("button", { name: "Edit profile", exact: true })).toBeVisible({ timeout: 30_000 });
     await expect(page.getByRole("heading", { name: uniqueName, exact: true })).toBeVisible({ timeout: 30_000 });
-    await expect(page.getByText("Audience context")).toBeVisible({ timeout: 30_000 });
+    await expect(page.getByText("Audience context", { exact: true })).toBeVisible({ timeout: 30_000 });
     await expect(page.getByText("25-34")).toBeVisible({ timeout: 30_000 });
     await expect(page.getByText("United States")).toBeVisible({ timeout: 30_000 });
 
@@ -125,7 +125,7 @@ test.describe("Profile management", () => {
 
     await expect(page.getByRole("button", { name: "Edit profile", exact: true })).toBeVisible({ timeout: 30_000 });
     await expect(page.getByRole("heading", { name: updatedName, exact: true })).toBeVisible({ timeout: 30_000 });
-    await expect(page.getByText("Audience context")).toBeVisible({ timeout: 30_000 });
+    await expect(page.getByText("Audience context", { exact: true })).toBeVisible({ timeout: 30_000 });
     await expect(page.getByText("35-44")).toBeVisible({ timeout: 30_000 });
     await expect(page.getByText("Germany")).toBeVisible({ timeout: 30_000 });
 
