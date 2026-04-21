@@ -1240,8 +1240,13 @@ export function ContentSubmissionSection() {
   const contextMissing = questionStepAttempted && !normalizedContextUrl;
   const imageMediaMissing = false;
   const videoMediaMissing = false;
-  const pageHeading =
-    submissionStep === "question" ? `Question ${activeQuestionIndex + 1} of ${questionCount}` : "Bundle Bounty";
+  const pageHeading = submissionStep === "question" ? "Ask Question" : "Bounty";
+  const pageContext =
+    submissionStep === "question"
+      ? `Question ${activeQuestionIndex + 1} of ${questionCount}`
+      : questionCount > 1
+        ? `${questionCount} question bundle`
+        : "Single question bounty";
 
   const submissionStepIndicator = (
     <div className="flex flex-wrap items-center gap-2 text-sm font-medium text-base-content/55">
@@ -1639,7 +1644,10 @@ export function ContentSubmissionSection() {
     <>
       <div className="surface-card rounded-2xl p-6 space-y-5" style={{ overflow: "visible" }}>
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-          <h1 className={surfaceSectionHeadingClassName}>{pageHeading}</h1>
+          <div>
+            <h1 className={surfaceSectionHeadingClassName}>{pageHeading}</h1>
+            <p className="mt-1 text-sm font-medium text-base-content/50">{pageContext}</p>
+          </div>
           <label className="flex items-center gap-2 text-sm font-medium text-base-content/60">
             Questions
             <input
