@@ -158,9 +158,9 @@ contract FormalVerification_GovernanceTest is Test {
         assertEq(q, 2_000_000e6, "Mature quorum = 2M cREP");
     }
 
-    // ==================== Test 5: Proposal Spam at 10K cREP Threshold ====================
+    // ==================== Test 5: Distributed Proposal Creation at 10K cREP Threshold ====================
 
-    /// @notice Anyone with 10K cREP can still create proposals, so threshold hardening is only one layer.
+    /// @notice Distinct voters with 10K cREP can still create proposals; each proposer is rate-limited.
     function test_ProposalSpam_10KCREPThreshold() public {
         // Create 5 different proposers each with exactly 10K cREP (threshold)
         address[5] memory proposers;
@@ -178,8 +178,8 @@ contract FormalVerification_GovernanceTest is Test {
             assertEq(uint256(governor.state(pid)), uint256(IGovernor.ProposalState.Pending), "Proposal is Pending");
         }
 
-        // Document finding: no per-address rate limit on proposals
-        assertEq(governor.proposalThreshold(), 10_000e6, "10K cREP threshold - no rate limit");
+        assertEq(governor.proposalThreshold(), 10_000e6, "10K cREP proposal threshold");
+        assertEq(governor.PROPOSAL_COOLDOWN_BLOCKS(), 7200, "per-proposer cooldown active");
     }
 
     // ==================== Test 6: Whale Unilateral Pass ====================

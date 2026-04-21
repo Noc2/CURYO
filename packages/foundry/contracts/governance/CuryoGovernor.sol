@@ -45,10 +45,15 @@ contract CuryoGovernor is
     uint256 public constant MINIMUM_QUORUM = 100_000 * 1e6;
     /// @notice Hard cap to keep quorum evaluation bounded and proposals cheap to evaluate.
     uint256 public constant MAX_EXCLUDED_HOLDERS = 16;
+    /// @notice Minimum blocks a proposer must wait between successful proposals (~1 day at 12s blocks).
+    uint256 public constant PROPOSAL_COOLDOWN_BLOCKS = 7200;
     /// @notice Block number where each proposal was created.
     mapping(uint256 => uint256) public proposalCreatedBlock;
+    /// @notice Earliest block where each proposer may submit another proposal.
+    mapping(address => uint256) public nextProposalBlock;
 
     error ExcludedHolderCannotGovern(address holder);
+    error ProposalCooldownActive(address proposer, uint256 nextProposalBlock);
 
     /// @notice Deploy the governor with cREP token and timelock
     /// @param _crepToken The cREP voting token address
@@ -205,9 +210,14 @@ contract CuryoGovernor is
         string memory description
     ) public virtual override(Governor) returns (uint256) {
         _requireNonExcludedGovernor(msg.sender);
+        uint256 nextBlock = nextProposalBlock[msg.sender];
+        if (block.number < nextBlock) {
+            revert ProposalCooldownActive(msg.sender, nextBlock);
+        }
 
         uint256 proposalId = super.propose(targets, values, calldatas, description);
         proposalCreatedBlock[proposalId] = block.number;
+        nextProposalBlock[msg.sender] = block.number + PROPOSAL_COOLDOWN_BLOCKS;
 
         // Lock proposal threshold amount for the proposer
         CuryoReputation(address(token())).lockForGovernance(msg.sender, proposalThreshold());

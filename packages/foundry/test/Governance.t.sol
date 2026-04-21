@@ -635,6 +635,35 @@ contract GovernanceTest is Test {
 
         assertTrue(proposalId != 0);
         assertEq(uint256(governor.state(proposalId)), uint256(IGovernor.ProposalState.Pending));
+        assertEq(governor.nextProposalBlock(voter1), block.number + governor.PROPOSAL_COOLDOWN_BLOCKS());
+    }
+
+    function test_ProposerCooldownBlocksRapidRepeat() public {
+        vm.roll(block.number + 1);
+
+        address[] memory targets = new address[](1);
+        targets[0] = address(timelock);
+
+        uint256[] memory values = new uint256[](1);
+        values[0] = 0;
+
+        bytes[] memory calldatas = new bytes[](1);
+        calldatas[0] = "";
+
+        vm.prank(voter1);
+        governor.propose(targets, values, calldatas, "Cooldown proposal #1");
+
+        uint256 nextBlock = governor.nextProposalBlock(voter1);
+        vm.prank(voter1);
+        vm.expectRevert(abi.encodeWithSelector(CuryoGovernor.ProposalCooldownActive.selector, voter1, nextBlock));
+        governor.propose(targets, values, calldatas, "Cooldown proposal #2");
+
+        vm.roll(nextBlock);
+
+        vm.prank(voter1);
+        uint256 proposalId = governor.propose(targets, values, calldatas, "Cooldown proposal #2");
+
+        assertTrue(proposalId != 0);
     }
 
     function test_VoteOnProposal() public {
