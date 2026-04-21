@@ -50,9 +50,10 @@ contract FrontendRegistry is IFrontendRegistry, Initializable, AccessControlUpgr
     mapping(address => uint256) private registeredFrontendIndexPlusOne;
     IVoterIdNFT public voterIdNFT; // Voter ID NFT for sybil resistance
     mapping(address => uint256) public frontendExitAvailableAt;
+    bool public initialFeeCreditorConfigured;
 
     /// @dev Reserved storage gap for future upgrades
-    uint256[49] private __gap;
+    uint256[48] private __gap;
 
     // --- Events ---
     event FrontendRegistered(address indexed frontend, address indexed operator, uint256 stakedAmount);
@@ -323,14 +324,25 @@ contract FrontendRegistry is IFrontendRegistry, Initializable, AccessControlUpgr
 
     /// @notice Grant fee creditor role to a contract (e.g., RoundVotingEngine)
     /// @param creditor The address to grant the role to
-    function addFeeCreditor(address creditor) external onlyRole(ADMIN_ROLE) {
+    function addFeeCreditor(address creditor) external onlyRole(GOVERNANCE_ROLE) {
+        require(creditor != address(0), "Invalid fee creditor");
         _grantRole(FEE_CREDITOR_ROLE, creditor);
     }
 
     /// @notice Revoke fee creditor role
     /// @param creditor The address to revoke the role from
-    function removeFeeCreditor(address creditor) external onlyRole(ADMIN_ROLE) {
+    function removeFeeCreditor(address creditor) external onlyRole(GOVERNANCE_ROLE) {
         _revokeRole(FEE_CREDITOR_ROLE, creditor);
+    }
+
+    /// @notice One-shot deploy-time fee creditor wiring before the registry is connected to VotingEngine.
+    /// @param creditor The initial contract allowed to credit frontend fees.
+    function initializeFeeCreditor(address creditor) external onlyRole(ADMIN_ROLE) {
+        require(!initialFeeCreditorConfigured, "Initial fee creditor set");
+        require(address(votingEngine) == address(0), "Setup complete");
+        require(creditor != address(0), "Invalid fee creditor");
+        initialFeeCreditorConfigured = true;
+        _grantRole(FEE_CREDITOR_ROLE, creditor);
     }
 
     function _requestDeregister(address frontend) internal {

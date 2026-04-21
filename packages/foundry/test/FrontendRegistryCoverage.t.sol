@@ -605,16 +605,75 @@ contract FrontendRegistryCoverageTest is Test {
     // 14. ADD/REMOVE FEE CREDITOR ACCESS CONTROL
     // =========================================================================
 
-    function test_AddFeeCreditor_NonAdmin_Reverts() public {
+    function test_AddFeeCreditor_NonGovernance_Reverts() public {
         vm.prank(nonAdmin);
         vm.expectRevert();
         registry.addFeeCreditor(address(99));
     }
 
-    function test_RemoveFeeCreditor_NonAdmin_Reverts() public {
+    function test_RemoveFeeCreditor_NonGovernance_Reverts() public {
         vm.prank(nonAdmin);
         vm.expectRevert();
         registry.removeFeeCreditor(feeCreditor);
+    }
+
+    function test_AddFeeCreditor_AdminWithoutGovernance_Reverts() public {
+        vm.startPrank(admin);
+        FrontendRegistry impl2 = new FrontendRegistry();
+        FrontendRegistry splitRoleRegistry = FrontendRegistry(
+            address(
+                new ERC1967Proxy(
+                    address(impl2),
+                    abi.encodeCall(FrontendRegistry.initialize, (admin, governance, address(crepToken)))
+                )
+            )
+        );
+
+        vm.expectRevert();
+        splitRoleRegistry.addFeeCreditor(address(99));
+        vm.stopPrank();
+    }
+
+    function test_InitialFeeCreditorSetup_RequiresPreVotingEngine() public {
+        vm.startPrank(admin);
+        FrontendRegistry impl2 = new FrontendRegistry();
+        FrontendRegistry splitRoleRegistry = FrontendRegistry(
+            address(
+                new ERC1967Proxy(
+                    address(impl2),
+                    abi.encodeCall(FrontendRegistry.initialize, (admin, governance, address(crepToken)))
+                )
+            )
+        );
+
+        splitRoleRegistry.initializeFeeCreditor(feeCreditor);
+        assertTrue(splitRoleRegistry.hasRole(splitRoleRegistry.FEE_CREDITOR_ROLE(), feeCreditor));
+
+        vm.expectRevert("Initial fee creditor set");
+        splitRoleRegistry.initializeFeeCreditor(address(99));
+        vm.stopPrank();
+
+        vm.prank(governance);
+        splitRoleRegistry.addFeeCreditor(address(99));
+        assertTrue(splitRoleRegistry.hasRole(splitRoleRegistry.FEE_CREDITOR_ROLE(), address(99)));
+    }
+
+    function test_InitialFeeCreditorSetup_AfterVotingEngine_Reverts() public {
+        vm.startPrank(admin);
+        FrontendRegistry impl2 = new FrontendRegistry();
+        FrontendRegistry splitRoleRegistry = FrontendRegistry(
+            address(
+                new ERC1967Proxy(
+                    address(impl2),
+                    abi.encodeCall(FrontendRegistry.initialize, (admin, governance, address(crepToken)))
+                )
+            )
+        );
+
+        splitRoleRegistry.setVotingEngine(address(votingEngine));
+        vm.expectRevert("Setup complete");
+        splitRoleRegistry.initializeFeeCreditor(feeCreditor);
+        vm.stopPrank();
     }
 
     // =========================================================================
