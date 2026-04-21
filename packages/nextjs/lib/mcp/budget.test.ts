@@ -1,6 +1,6 @@
+import type { McpAgentAuth } from "./auth";
 import assert from "node:assert/strict";
 import { after, before, beforeEach, test } from "node:test";
-import type { McpAgentAuth } from "./auth";
 
 process.env.DATABASE_URL = "memory:";
 
@@ -79,6 +79,38 @@ test("reserveMcpAgentBudget is idempotent for the same operation", async () => {
   assert.deepEqual(second, first);
 });
 
+test("reserveMcpAgentBudget keeps submitted reservations idempotent without re-reserving", async () => {
+  const first = await budget.reserveMcpAgentBudget({
+    agent: AGENT,
+    amount: 1_000_000n,
+    categoryId: "5",
+    chainId: 42220,
+    clientRequestId: "ask-submitted",
+    operationKey: `0x${"a".repeat(64)}`,
+    payloadHash: "payload-submitted",
+  });
+  await budget.updateMcpBudgetReservation({
+    contentId: "42",
+    operationKey: first.operationKey,
+    status: "submitted",
+  });
+
+  const second = await budget.reserveMcpAgentBudget({
+    agent: AGENT,
+    amount: 1_000_000n,
+    categoryId: "5",
+    chainId: 42220,
+    clientRequestId: "ask-submitted",
+    operationKey: first.operationKey,
+    payloadHash: "payload-submitted",
+  });
+
+  assert.equal(second.status, "submitted");
+
+  const summary = await budget.getMcpAgentBudgetSummary(AGENT);
+  assert.equal(summary.spentTodayAtomic, "1000000");
+});
+
 test("reserveMcpAgentBudget enforces category and spend caps", async () => {
   await assert.rejects(
     () =>
@@ -151,4 +183,85 @@ test("reserveMcpAgentBudget enforces daily caps and releases failed reservations
   });
 
   assert.equal(second.clientRequestId, "ask-daily-2");
+});
+
+test("reserveMcpAgentBudget re-reserves failed retries before allowing reuse", async () => {
+  const failed = await budget.reserveMcpAgentBudget({
+    agent: AGENT,
+    amount: 2_000_000n,
+    categoryId: "5",
+    chainId: 42220,
+    clientRequestId: "ask-failed-retry",
+    operationKey: `0x${"6".repeat(64)}`,
+    payloadHash: "payload-f",
+  });
+  await budget.updateMcpBudgetReservation({
+    error: "submission failed",
+    operationKey: failed.operationKey,
+    status: "failed",
+  });
+
+  await budget.reserveMcpAgentBudget({
+    agent: AGENT,
+    amount: 2_000_000n,
+    categoryId: "5",
+    chainId: 42220,
+    clientRequestId: "ask-cap-holder",
+    operationKey: `0x${"7".repeat(64)}`,
+    payloadHash: "payload-g",
+  });
+
+  await assert.rejects(
+    () =>
+      budget.reserveMcpAgentBudget({
+        agent: AGENT,
+        amount: 2_000_000n,
+        categoryId: "5",
+        chainId: 42220,
+        clientRequestId: "ask-failed-retry",
+        operationKey: failed.operationKey,
+        payloadHash: "payload-f",
+      }),
+    /remaining daily budget/,
+  );
+});
+
+test("reserveMcpAgentBudget re-reserves released retries before allowing reuse", async () => {
+  const released = await budget.reserveMcpAgentBudget({
+    agent: AGENT,
+    amount: 2_000_000n,
+    categoryId: "5",
+    chainId: 42220,
+    clientRequestId: "ask-released-retry",
+    operationKey: `0x${"8".repeat(64)}`,
+    payloadHash: "payload-h",
+  });
+  await budget.updateMcpBudgetReservation({
+    operationKey: released.operationKey,
+    status: "released",
+  });
+
+  await budget.reserveMcpAgentBudget({
+    agent: AGENT,
+    amount: 2_000_000n,
+    categoryId: "5",
+    chainId: 42220,
+    clientRequestId: "ask-cap-holder",
+    operationKey: `0x${"9".repeat(64)}`,
+    payloadHash: "payload-i",
+  });
+
+  await assert.rejects(
+    () =>
+      budget.reserveMcpAgentBudget({
+        agent: AGENT,
+        amount: 2_000_000n,
+        categoryId: "5",
+        chainId: 42220,
+        clientRequestId: "ask-released-retry",
+        operationKey: released.operationKey,
+        payloadHash: "payload-h",
+      }),
+    /remaining daily budget/,
+  );
 });
