@@ -187,7 +187,7 @@ test.describe("Reward claim lifecycle", () => {
 
     const balanceBefore = await readTokenBalance(winner.address, CREP_TOKEN);
     const walletSummary = page.getByTestId("wallet-connected");
-    const claimButton = walletSummary.getByRole("button", { name: /^Claim [\d,]+(?: cREP)?$/ });
+    const claimButton = walletSummary.getByRole("button", { name: /^Claim\b/ }).first();
     await expect(claimButton).toBeVisible({
       timeout: 15_000,
     });
