@@ -1,6 +1,7 @@
 import deployedContracts from "@curyo/contracts/deployedContracts";
 import { isAddress } from "viem";
 import { RPC_OVERRIDES } from "~~/config/shared";
+import { listMissingRequiredTargetContracts } from "~~/utils/env/requiredDeployments";
 import { DEFAULT_DEV_TARGET_NETWORKS, resolveTargetNetworks } from "~~/utils/env/targetNetworks";
 import { mergeRpcOverrides, resolveRpcOverrides } from "~~/utils/rpcUrls";
 
@@ -74,12 +75,20 @@ const targetNetworks = resolveTargetNetworks(rawPublicEnv.targetNetworks, {
 });
 const targetNetworkIds = targetNetworks.map(network => network.id);
 
-const deployedContractsByChain = deployedContracts as Record<number, unknown>;
+const deployedContractsByChain = deployedContracts as Record<number, Record<string, unknown> | undefined>;
 const missingDeployments = targetNetworkIds.filter(chainId => deployedContractsByChain[chainId] === undefined);
 
 if (missingDeployments.length > 0) {
   throw new Error(
     `Missing deployed contract definitions for chain IDs: ${missingDeployments.join(", ")}. Run yarn deploy for those chains before enabling them.`,
+  );
+}
+
+const missingRequiredContracts = listMissingRequiredTargetContracts(targetNetworkIds, deployedContractsByChain);
+
+if (missingRequiredContracts.length > 0) {
+  throw new Error(
+    `Missing required deployed contract definitions for target networks: ${missingRequiredContracts.join(", ")}. Run yarn deploy for those chains before enabling them.`,
   );
 }
 

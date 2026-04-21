@@ -2,6 +2,8 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { test } from "node:test";
 
+import { listMissingRequiredTargetContracts } from "./requiredDeployments";
+
 test("browser-facing public env modules avoid computed process.env access", () => {
   const browserEnvModules = [
     new URL("./public.ts", import.meta.url),
@@ -17,4 +19,25 @@ test("browser-facing public env modules avoid computed process.env access", () =
       `${moduleUrl.pathname} should use static process.env access so Next can inline NEXT_PUBLIC variables`,
     );
   }
+});
+
+test("required deployment helper reports missing contract definitions per target chain", () => {
+  const missingContracts = listMissingRequiredTargetContracts(
+    [31337, 42220],
+    {
+      31337: {
+        ContentRegistry: {},
+        CuryoReputation: {},
+        ProtocolConfig: {},
+        QuestionRewardPoolEscrow: {},
+      },
+      42220: {
+        ContentRegistry: {},
+        ProtocolConfig: {},
+      },
+    },
+    ["ContentRegistry", "CuryoReputation", "QuestionRewardPoolEscrow"],
+  );
+
+  assert.deepEqual(missingContracts, ["42220:CuryoReputation", "42220:QuestionRewardPoolEscrow"]);
 });
