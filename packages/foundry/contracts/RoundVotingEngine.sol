@@ -340,6 +340,7 @@ contract RoundVotingEngine is
 
         // Round must be Open and not expired
         if (!RoundLib.acceptsVotes(round, roundCfg.maxDuration)) revert RoundNotAccepting();
+        if (round.thresholdReachedAt != 0) revert ThresholdReached();
 
         IVoterIdNFT roundVoterIdNft = _getRoundVoterIdNft(contentId, roundId);
         (uint256 voterId, bool useTokenIdentity) =

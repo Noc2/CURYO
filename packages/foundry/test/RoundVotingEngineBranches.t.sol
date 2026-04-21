@@ -1798,6 +1798,71 @@ contract RoundVotingEngineBranchesTest is VotingTestBase {
         assertEq(round.thresholdReachedAt, beforeThirdReveal);
     }
 
+    function test_CommitVote_RevertsAfterRevealThresholdReached() public {
+        uint256 contentId = _submitContent();
+
+        (bytes32 ck1, bytes32 s1) = _commit(voter1, contentId, true, STAKE);
+        (bytes32 ck2, bytes32 s2) = _commit(voter2, contentId, true, STAKE);
+        (bytes32 ck3, bytes32 s3) = _commit(voter3, contentId, false, STAKE);
+        uint256 roundId = RoundEngineReadHelpers.activeRoundId(engine, contentId);
+
+        vm.warp(block.timestamp + EPOCH + 1);
+        _reveal(contentId, roundId, ck1, true, s1);
+        _reveal(contentId, roundId, ck2, true, s2);
+        _reveal(contentId, roundId, ck3, false, s3);
+
+        RoundLib.Round memory round = RoundEngineReadHelpers.round(engine, contentId, roundId);
+        assertGt(round.thresholdReachedAt, 0);
+
+        bytes32 salt4 = keccak256(abi.encodePacked(voter4, block.timestamp, "late-direct"));
+        TestCommitArtifacts memory lateCommit = _buildTestCommitArtifacts(voter4, true, salt4, contentId);
+
+        vm.startPrank(voter4);
+        crepToken.approve(address(engine), STAKE);
+        vm.expectRevert(RoundVotingEngine.ThresholdReached.selector);
+        engine.commitVote(
+            contentId,
+            lateCommit.roundReferenceRatingBps,
+            lateCommit.targetRound,
+            lateCommit.drandChainHash,
+            lateCommit.commitHash,
+            lateCommit.ciphertext,
+            STAKE,
+            address(0)
+        );
+        vm.stopPrank();
+    }
+
+    function test_TransferAndCall_RevertsAfterRevealThresholdReached() public {
+        uint256 contentId = _submitContent();
+
+        (bytes32 ck1, bytes32 s1) = _commit(voter1, contentId, true, STAKE);
+        (bytes32 ck2, bytes32 s2) = _commit(voter2, contentId, true, STAKE);
+        (bytes32 ck3, bytes32 s3) = _commit(voter3, contentId, false, STAKE);
+        uint256 roundId = RoundEngineReadHelpers.activeRoundId(engine, contentId);
+
+        vm.warp(block.timestamp + EPOCH + 1);
+        _reveal(contentId, roundId, ck1, true, s1);
+        _reveal(contentId, roundId, ck2, true, s2);
+        _reveal(contentId, roundId, ck3, false, s3);
+
+        bytes32 salt4 = keccak256(abi.encodePacked(voter4, block.timestamp, "late-transfer"));
+        TestCommitArtifacts memory lateCommit = _buildTestCommitArtifacts(voter4, true, salt4, contentId);
+        bytes memory payload = abi.encode(
+            contentId,
+            lateCommit.roundReferenceRatingBps,
+            lateCommit.commitHash,
+            lateCommit.ciphertext,
+            address(0),
+            lateCommit.targetRound,
+            lateCommit.drandChainHash
+        );
+
+        vm.prank(voter4);
+        vm.expectRevert(RoundVotingEngine.ThresholdReached.selector);
+        crepToken.transferAndCall(address(engine), STAKE, payload);
+    }
+
     function test_EpochWeighting_Epoch2Voters_ReducedWeight() public {
         uint256 contentId = _submitContent();
 
