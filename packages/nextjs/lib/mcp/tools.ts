@@ -343,24 +343,12 @@ export async function callCuryoMcpTool(params: { agent: McpAgentAuth; arguments:
         payloadHash: quote.operation.payloadHash,
       });
 
+      let result: Awaited<ReturnType<typeof handleManagedQuestionSubmissionRequest>>;
       try {
-        const result = await handleManagedQuestionSubmissionRequest({
+        result = await handleManagedQuestionSubmissionRequest({
           agentId: params.agent.id,
           payload: managedPayload,
         });
-        const body = result.body as JsonObject;
-        await updateMcpBudgetReservation({
-          contentId: typeof body.contentId === "string" ? body.contentId : null,
-          operationKey: quote.operation.operationKey,
-          status: "submitted",
-        });
-
-        return {
-          ...(normalizeMcpQuestionBody(body) as JsonObject),
-          clientRequestId: payload.clientRequestId,
-          managedBudget: await getMcpAgentBudgetSummary(params.agent),
-          publicUrl: getPublicQuestionUrl(typeof body.contentId === "string" ? body.contentId : null),
-        };
       } catch (error) {
         await updateMcpBudgetReservation({
           error: error instanceof Error ? error.message : String(error),
@@ -369,6 +357,36 @@ export async function callCuryoMcpTool(params: { agent: McpAgentAuth; arguments:
         });
         throw error;
       }
+
+      const body = result.body as JsonObject;
+      const warnings: string[] = [];
+
+      try {
+        await updateMcpBudgetReservation({
+          contentId: typeof body.contentId === "string" ? body.contentId : null,
+          operationKey: quote.operation.operationKey,
+          status: "submitted",
+        });
+      } catch (error) {
+        console.error("[mcp] submitted ask bookkeeping update failed", error);
+        warnings.push("submitted_budget_update_failed");
+      }
+
+      let managedBudget: Awaited<ReturnType<typeof getMcpAgentBudgetSummary>> | null = null;
+      try {
+        managedBudget = await getMcpAgentBudgetSummary(params.agent);
+      } catch (error) {
+        console.error("[mcp] budget summary unavailable after submitted ask", error);
+        warnings.push("managed_budget_unavailable");
+      }
+
+      return {
+        ...(normalizeMcpQuestionBody(body) as JsonObject),
+        clientRequestId: payload.clientRequestId,
+        managedBudget,
+        publicUrl: getPublicQuestionUrl(typeof body.contentId === "string" ? body.contentId : null),
+        warnings,
+      };
     }
 
     case "curyo_get_question_status": {
