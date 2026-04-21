@@ -32,6 +32,33 @@ type McpToolDefinition = {
   title: string;
 };
 
+type McpToolDependencies = {
+  getMcpAgentBudgetSummary: typeof getMcpAgentBudgetSummary;
+  handleManagedQuestionSubmissionRequest: typeof handleManagedQuestionSubmissionRequest;
+  preflightX402QuestionSubmission: typeof preflightX402QuestionSubmission;
+  reserveMcpAgentBudget: typeof reserveMcpAgentBudget;
+  resolveX402QuestionConfig: typeof resolveX402QuestionConfig;
+  updateMcpBudgetReservation: typeof updateMcpBudgetReservation;
+};
+
+let mcpToolTestOverrides: Partial<McpToolDependencies> | null = null;
+
+function getMcpToolDependencies(): McpToolDependencies {
+  return {
+    getMcpAgentBudgetSummary: mcpToolTestOverrides?.getMcpAgentBudgetSummary ?? getMcpAgentBudgetSummary,
+    handleManagedQuestionSubmissionRequest:
+      mcpToolTestOverrides?.handleManagedQuestionSubmissionRequest ?? handleManagedQuestionSubmissionRequest,
+    preflightX402QuestionSubmission: mcpToolTestOverrides?.preflightX402QuestionSubmission ?? preflightX402QuestionSubmission,
+    reserveMcpAgentBudget: mcpToolTestOverrides?.reserveMcpAgentBudget ?? reserveMcpAgentBudget,
+    resolveX402QuestionConfig: mcpToolTestOverrides?.resolveX402QuestionConfig ?? resolveX402QuestionConfig,
+    updateMcpBudgetReservation: mcpToolTestOverrides?.updateMcpBudgetReservation ?? updateMcpBudgetReservation,
+  };
+}
+
+export function __setMcpToolTestOverridesForTests(overrides: Partial<McpToolDependencies> | null) {
+  mcpToolTestOverrides = overrides;
+}
+
 export class McpToolError extends Error {
   readonly status: number;
 
@@ -246,10 +273,11 @@ function formatQuoteResult(params: Awaited<ReturnType<typeof preflightX402Questi
 }
 
 async function quoteQuestion(args: JsonObject, agent: McpAgentAuth) {
+  const dependencies = getMcpToolDependencies();
   const payload = parseX402QuestionRequest(args);
   const managedPayload = toManagedMcpPayload(agent, payload);
-  const config = resolveX402QuestionConfig(managedPayload.chainId, { requireThirdwebSecret: false });
-  const quote = await preflightX402QuestionSubmission({ config, payload: managedPayload });
+  const config = dependencies.resolveX402QuestionConfig(managedPayload.chainId, { requireThirdwebSecret: false });
+  const quote = await dependencies.preflightX402QuestionSubmission({ config, payload: managedPayload });
   return {
     ...formatQuoteResult(quote, config.usdcAddress),
     clientRequestId: payload.clientRequestId,
@@ -314,6 +342,7 @@ async function buildQuestionResult(args: JsonObject, agent: McpAgentAuth) {
 }
 
 export async function callCuryoMcpTool(params: { agent: McpAgentAuth; arguments: unknown; name: string }) {
+  const dependencies = getMcpToolDependencies();
   const args = asObject(params.arguments ?? {});
 
   switch (params.name) {
@@ -326,14 +355,14 @@ export async function callCuryoMcpTool(params: { agent: McpAgentAuth; arguments:
     case "curyo_ask_humans": {
       const payload = parseX402QuestionRequest(args);
       const managedPayload = toManagedMcpPayload(params.agent, payload);
-      const config = resolveX402QuestionConfig(managedPayload.chainId, { requireThirdwebSecret: false });
-      const quote = await preflightX402QuestionSubmission({ config, payload: managedPayload });
+      const config = dependencies.resolveX402QuestionConfig(managedPayload.chainId, { requireThirdwebSecret: false });
+      const quote = await dependencies.preflightX402QuestionSubmission({ config, payload: managedPayload });
       const maxPaymentAmount = parseMaxPaymentAmount(args.maxPaymentAmount);
       if (quote.paymentAmount > maxPaymentAmount) {
         throw new McpToolError("Quoted payment exceeds maxPaymentAmount.");
       }
 
-      await reserveMcpAgentBudget({
+      await dependencies.reserveMcpAgentBudget({
         agent: params.agent,
         amount: quote.paymentAmount,
         categoryId: payload.categoryId.toString(),
@@ -345,12 +374,12 @@ export async function callCuryoMcpTool(params: { agent: McpAgentAuth; arguments:
 
       let result: Awaited<ReturnType<typeof handleManagedQuestionSubmissionRequest>>;
       try {
-        result = await handleManagedQuestionSubmissionRequest({
+        result = await dependencies.handleManagedQuestionSubmissionRequest({
           agentId: params.agent.id,
           payload: managedPayload,
         });
       } catch (error) {
-        await updateMcpBudgetReservation({
+        await dependencies.updateMcpBudgetReservation({
           error: error instanceof Error ? error.message : String(error),
           operationKey: quote.operation.operationKey,
           status: "failed",
@@ -362,7 +391,7 @@ export async function callCuryoMcpTool(params: { agent: McpAgentAuth; arguments:
       const warnings: string[] = [];
 
       try {
-        await updateMcpBudgetReservation({
+        await dependencies.updateMcpBudgetReservation({
           contentId: typeof body.contentId === "string" ? body.contentId : null,
           operationKey: quote.operation.operationKey,
           status: "submitted",
@@ -374,7 +403,7 @@ export async function callCuryoMcpTool(params: { agent: McpAgentAuth; arguments:
 
       let managedBudget: Awaited<ReturnType<typeof getMcpAgentBudgetSummary>> | null = null;
       try {
-        managedBudget = await getMcpAgentBudgetSummary(params.agent);
+        managedBudget = await dependencies.getMcpAgentBudgetSummary(params.agent);
       } catch (error) {
         console.error("[mcp] budget summary unavailable after submitted ask", error);
         warnings.push("managed_budget_unavailable");
