@@ -82,6 +82,9 @@ Key environment variables (see `.env.example` for the full list):
 | `CURYO_X402_SERVICE_FEE_USDC`           | Optional x402 service fee in atomic USDC, added to the requested Bounty                       |
 | `CURYO_X402_PAYMENT_WAIT_UNTIL`         | x402 settlement wait mode; defaults to `confirmed` so the executor has USDC before submitting |
 | `CURYO_X402_USDC_ADDRESS`               | Optional USDC override for x402 payments; Celo and Celo Sepolia default automatically         |
+| `CURYO_MCP_AGENTS`                      | JSON array of paid MCP agents, bearer token hashes, scopes, daily budgets, per-ask caps, and optional category allowlists |
+| `CURYO_MCP_ALLOWED_ORIGINS`             | Comma-separated browser origins allowed to call `/api/mcp`; non-browser agent calls may omit `Origin` |
+| `CURYO_MCP_AUTHORIZATION_SERVER_URL`    | Optional authorization server advertised in MCP protected-resource metadata                   |
 | `FREE_TRANSACTION_LIMIT`                | Free sponsored app transactions per verified wallet or identity-gated flow (defaults to `25`) |
 | `RATE_LIMIT_TRUSTED_IP_HEADERS`         | Comma-separated proxy IP headers to trust for API rate limiting in production                 |
 | `KEYSTORE_ACCOUNT`                      | Optional Foundry keystore name used by the development faucet                                 |
@@ -93,6 +96,7 @@ Notes:
 
 - Browser RPC reads prefer `NEXT_PUBLIC_RPC_URL_<chainId>` overrides first, then `NEXT_PUBLIC_ALCHEMY_API_KEY`, then the chain's default public RPC list.
 - Mainnet is not a supported `NEXT_PUBLIC_TARGET_NETWORKS` entry. The browser can still add mainnet for wallet tooling when you provide a mainnet-capable RPC via `NEXT_PUBLIC_ALCHEMY_API_KEY` or a mainnet RPC override, but the target-network parser only accepts `31337`, `11142220`, and `42220`.
+- `/api/mcp` exposes the paid `curyo_ask_humans` workflow through managed agent budgets. Agents authenticate with bearer tokens configured in `CURYO_MCP_AGENTS`; each paid ask must include `maxPaymentAmount`, `clientRequestId`, a valid question payload, and a USDC Bounty.
 - No contract address env vars are needed for supported chains. The frontend reads deployment metadata from `@curyo/contracts` and fails fast if `NEXT_PUBLIC_TARGET_NETWORKS` includes a chain without it.
 - In production, the intended setup is one Railway Postgres service with separate logical databases for Ponder and Next.js.
 - If your Postgres provider terminates TLS with a private or self-signed chain, append `uselibpqcompat=true&sslmode=require` to `DATABASE_URL` to opt out of the app's default `verify-full` normalization.
