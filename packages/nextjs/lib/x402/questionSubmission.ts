@@ -41,9 +41,9 @@ const RESERVED_SUBMISSION_WAIT_MS = 1_100;
 const TX_RECEIPT_TIMEOUT_MS = 180_000;
 const SUBMITTING_STALE_MS = 5 * 60_000;
 
-type X402QuestionSubmissionStatus = "payment_settled" | "submitting" | "submitted" | "failed";
+export type X402QuestionSubmissionStatus = "payment_settled" | "submitting" | "submitted" | "failed";
 
-type X402QuestionSubmissionRecord = {
+export type X402QuestionSubmissionRecord = {
   operationKey: `0x${string}`;
   clientRequestId: string;
   payloadHash: string;
@@ -71,7 +71,7 @@ type X402QuestionSubmissionConfig = {
   rpcUrl: string;
   serviceFeeAmount: bigint;
   targetNetwork: NonNullable<ReturnType<typeof getPrimaryServerTargetNetwork>>;
-  thirdwebSecretKey: string;
+  thirdwebSecretKey: string | null;
   usdcAddress: Address;
   waitUntil: "simulated" | "submitted" | "confirmed";
 };
@@ -120,7 +120,7 @@ function rowToRecord(row: Record<string, unknown> | undefined): X402QuestionSubm
   };
 }
 
-async function findSubmissionByClientRequest(params: {
+export async function getX402QuestionSubmissionByClientRequest(params: {
   chainId: number;
   clientRequestId: string;
 }): Promise<X402QuestionSubmissionRecord | null> {
@@ -132,6 +132,22 @@ async function findSubmissionByClientRequest(params: {
       LIMIT 1
     `,
     args: [params.chainId, params.clientRequestId],
+  });
+
+  return rowToRecord(result.rows[0]);
+}
+
+export async function getX402QuestionSubmissionByOperationKey(
+  operationKey: `0x${string}`,
+): Promise<X402QuestionSubmissionRecord | null> {
+  const result = await dbClient.execute({
+    sql: `
+      SELECT *
+      FROM x402_question_submissions
+      WHERE operation_key = ?
+      LIMIT 1
+    `,
+    args: [operationKey],
   });
 
   return rowToRecord(result.rows[0]);
@@ -255,7 +271,10 @@ export function getX402QuestionFallbackChainId(): number | undefined {
   return getPrimaryServerTargetNetwork()?.id;
 }
 
-function resolveX402QuestionConfig(chainId: number): X402QuestionSubmissionConfig {
+export function resolveX402QuestionConfig(
+  chainId: number,
+  options: { requireThirdwebSecret?: boolean } = {},
+): X402QuestionSubmissionConfig {
   const targetNetwork = getServerTargetNetworkById(chainId);
   if (!targetNetwork) {
     throw new X402QuestionConfigError(`Chain ${chainId} is not configured for this server.`);
@@ -273,7 +292,7 @@ function resolveX402QuestionConfig(chainId: number): X402QuestionSubmissionConfi
   }
 
   const thirdwebSecretKey = getThirdwebSecretKey();
-  if (!thirdwebSecretKey) {
+  if (!thirdwebSecretKey && options.requireThirdwebSecret !== false) {
     throw new X402QuestionConfigError("THIRDWEB_SECRET_KEY is required for x402 settlement.");
   }
 
@@ -298,7 +317,7 @@ function resolveX402QuestionConfig(chainId: number): X402QuestionSubmissionConfi
     rpcUrl,
     serviceFeeAmount: getX402ServiceFeeUsdc(),
     targetNetwork,
-    thirdwebSecretKey,
+    thirdwebSecretKey: thirdwebSecretKey ?? null,
     usdcAddress,
     waitUntil: getX402PaymentWaitUntil(),
   };
@@ -370,6 +389,65 @@ async function assertBountyMeetsProtocolMinimum(params: {
   });
 }
 
+async function preflightX402QuestionSubmissionWithClient(params: {
+  config: X402QuestionSubmissionConfig;
+  payload: X402QuestionPayload;
+  publicClient: X402PublicClient;
+}): Promise<{ resolvedCategoryId: bigint; submissionKey: Hex }> {
+  await assertBountyMeetsProtocolMinimum(params);
+
+  const [resolvedCategoryId, submissionKey] = (await params.publicClient.readContract({
+    address: params.config.contentRegistryAddress,
+    abi: ContentRegistryAbi,
+    functionName: "previewQuestionSubmissionKey",
+    args: [
+      params.payload.contextUrl,
+      params.payload.imageUrls,
+      params.payload.videoUrl,
+      params.payload.title,
+      params.payload.description,
+      params.payload.tags,
+      params.payload.categoryId,
+    ],
+  })) as readonly [bigint, Hex];
+  if (resolvedCategoryId !== params.payload.categoryId) {
+    throw new X402QuestionConflictError(
+      `Requested category ${params.payload.categoryId.toString()} resolves to ${resolvedCategoryId.toString()}.`,
+    );
+  }
+
+  const submissionKeyUsed = (await params.publicClient.readContract({
+    address: params.config.contentRegistryAddress,
+    abi: ContentRegistryAbi,
+    functionName: "submissionKeyUsed",
+    args: [submissionKey],
+  })) as boolean;
+  if (submissionKeyUsed) {
+    throw new X402QuestionConflictError("This question has already been submitted.");
+  }
+
+  return { resolvedCategoryId, submissionKey };
+}
+
+export async function preflightX402QuestionSubmission(params: {
+  config: X402QuestionSubmissionConfig;
+  payload: X402QuestionPayload;
+}): Promise<{ operation: X402QuestionOperation; paymentAmount: bigint; resolvedCategoryId: bigint; submissionKey: Hex }> {
+  const operation = buildX402QuestionOperation(params.payload);
+  const { publicClient } = createViemClients(params.config);
+  const preflight = await preflightX402QuestionSubmissionWithClient({
+    config: params.config,
+    payload: params.payload,
+    publicClient,
+  });
+
+  return {
+    operation,
+    paymentAmount: params.payload.bounty.amount + params.config.serviceFeeAmount,
+    ...preflight,
+  };
+}
+
 async function ensureUsdcAllowance(params: {
   amount: bigint;
   config: X402QuestionSubmissionConfig;
@@ -432,41 +510,11 @@ async function executeX402QuestionSubmission(params: {
   payload: X402QuestionPayload;
 }): Promise<{ contentId: bigint; rewardPoolId: bigint | null; transactionHashes: Hex[] }> {
   const { account, publicClient, walletClient } = createViemClients(params.config);
-  await assertBountyMeetsProtocolMinimum({
+  const { submissionKey } = await preflightX402QuestionSubmissionWithClient({
     config: params.config,
     payload: params.payload,
     publicClient,
   });
-
-  const [resolvedCategoryId, submissionKey] = (await publicClient.readContract({
-    address: params.config.contentRegistryAddress,
-    abi: ContentRegistryAbi,
-    functionName: "previewQuestionSubmissionKey",
-    args: [
-      params.payload.contextUrl,
-      params.payload.imageUrls,
-      params.payload.videoUrl,
-      params.payload.title,
-      params.payload.description,
-      params.payload.tags,
-      params.payload.categoryId,
-    ],
-  })) as readonly [bigint, Hex];
-  if (resolvedCategoryId !== params.payload.categoryId) {
-    throw new X402QuestionConflictError(
-      `Requested category ${params.payload.categoryId.toString()} resolves to ${resolvedCategoryId.toString()}.`,
-    );
-  }
-
-  const submissionKeyUsed = (await publicClient.readContract({
-    address: params.config.contentRegistryAddress,
-    abi: ContentRegistryAbi,
-    functionName: "submissionKeyUsed",
-    args: [submissionKey],
-  })) as boolean;
-  if (submissionKeyUsed) {
-    throw new X402QuestionConflictError("This question has already been submitted.");
-  }
 
   const salt = `0x${randomBytes(32).toString("hex")}` as Hex;
   const revealCommitment = buildQuestionSubmissionRevealCommitment({
@@ -602,13 +650,76 @@ function submissionResponseBody(params: {
   };
 }
 
+export function x402QuestionSubmissionStatusBody(params: {
+  config: X402QuestionSubmissionConfig;
+  operation: X402QuestionOperation;
+  payload: X402QuestionPayload;
+  record: X402QuestionSubmissionRecord | null;
+}) {
+  const transactionHashes = parseStoredTransactionHashes(params.record?.transactionHashes ?? null);
+  return {
+    bounty: {
+      amount: params.payload.bounty.amount.toString(),
+      asset: params.payload.bounty.asset,
+      requiredSettledRounds: params.payload.bounty.requiredSettledRounds.toString(),
+      requiredVoters: params.payload.bounty.requiredVoters.toString(),
+      rewardPoolExpiresAt: params.payload.bounty.rewardPoolExpiresAt.toString(),
+    },
+    chainId: params.payload.chainId,
+    contentId: params.record?.contentId ?? null,
+    error: params.record?.error ?? null,
+    executorAddress: params.config.executorAddress,
+    operationKey: params.operation.operationKey,
+    roundConfig: serializeQuestionRoundConfig(params.payload.roundConfig),
+    payment: {
+      amount: (params.payload.bounty.amount + params.config.serviceFeeAmount).toString(),
+      asset: params.config.usdcAddress,
+      serviceFeeAmount: params.config.serviceFeeAmount.toString(),
+    },
+    rewardPoolId: params.record?.rewardPoolId ?? null,
+    status: params.record?.status ?? "not_found",
+    transactionHashes,
+  };
+}
+
+export function x402QuestionSubmissionRecordBody(record: X402QuestionSubmissionRecord | null) {
+  if (!record) {
+    return {
+      status: "not_found",
+    };
+  }
+
+  return {
+    bounty: {
+      amount: record.bountyAmount,
+      asset: "USDC",
+    },
+    chainId: record.chainId,
+    clientRequestId: record.clientRequestId,
+    contentId: record.contentId,
+    error: record.error,
+    operationKey: record.operationKey,
+    payerAddress: record.payerAddress,
+    payloadHash: record.payloadHash,
+    payment: {
+      amount: record.paymentAmount,
+      asset: record.paymentAsset,
+      serviceFeeAmount: record.serviceFeeAmount,
+    },
+    rewardPoolId: record.rewardPoolId,
+    status: record.status,
+    transactionHashes: parseStoredTransactionHashes(record.transactionHashes),
+    updatedAt: record.updatedAt.toISOString(),
+  };
+}
+
 export async function handleX402QuestionSubmissionRequest(params: {
   payload: X402QuestionPayload;
   request: Request;
 }): Promise<{ body: unknown; headers?: Record<string, string>; status: number }> {
   const config = resolveX402QuestionConfig(params.payload.chainId);
   const operation = buildX402QuestionOperation(params.payload);
-  const existingRecord = await findSubmissionByClientRequest({
+  const existingRecord = await getX402QuestionSubmissionByClientRequest({
     chainId: params.payload.chainId,
     clientRequestId: params.payload.clientRequestId,
   });
@@ -633,8 +744,16 @@ export async function handleX402QuestionSubmissionRequest(params: {
   }
 
   const totalPaymentAmount = params.payload.bounty.amount + config.serviceFeeAmount;
+  await preflightX402QuestionSubmission({
+    config,
+    payload: params.payload,
+  });
+
   let responseHeaders: Record<string, string> | undefined;
   if (!existingRecord?.paymentReceipt) {
+    if (!config.thirdwebSecretKey) {
+      throw new X402QuestionConfigError("THIRDWEB_SECRET_KEY is required for x402 settlement.");
+    }
     const thirdwebClient = createThirdwebClient({ secretKey: config.thirdwebSecretKey });
     const thirdwebFacilitator = facilitator({
       client: thirdwebClient,
@@ -708,6 +827,89 @@ export async function handleX402QuestionSubmissionRequest(params: {
     return {
       body: submissionResponseBody({ config, operation, payload: params.payload, result }),
       headers: responseHeaders,
+      status: 200,
+    };
+  } catch (error) {
+    await updateSubmissionStatus({
+      error: error instanceof Error ? error.message : String(error),
+      operationKey: operation.operationKey,
+      status: "failed",
+    });
+    throw error;
+  }
+}
+
+export async function handleManagedQuestionSubmissionRequest(params: {
+  agentId: string;
+  payload: X402QuestionPayload;
+}): Promise<{ body: unknown; status: number }> {
+  const config = resolveX402QuestionConfig(params.payload.chainId, { requireThirdwebSecret: false });
+  const operation = buildX402QuestionOperation(params.payload);
+  const existingRecord = await getX402QuestionSubmissionByClientRequest({
+    chainId: params.payload.chainId,
+    clientRequestId: params.payload.clientRequestId,
+  });
+
+  if (existingRecord && existingRecord.payloadHash !== operation.payloadHash) {
+    throw new X402QuestionConflictError("clientRequestId has already been used for a different question payload.");
+  }
+
+  if (existingRecord?.status === "submitted") {
+    return {
+      body: submissionResponseBody({ config, operation, payload: params.payload, record: existingRecord }),
+      status: 200,
+    };
+  }
+
+  if (
+    existingRecord?.status === "submitting" &&
+    Number.isFinite(existingRecord.updatedAt.getTime()) &&
+    Date.now() - existingRecord.updatedAt.getTime() < SUBMITTING_STALE_MS
+  ) {
+    throw new X402QuestionConflictError("This managed MCP question submission is already being processed.");
+  }
+
+  const preflight = await preflightX402QuestionSubmission({
+    config,
+    payload: params.payload,
+  });
+
+  if (!existingRecord?.paymentReceipt) {
+    await recordPaymentSettlement({
+      config,
+      operation,
+      payerAddress: params.agentId,
+      paymentAmount: preflight.paymentAmount,
+      paymentReceipt: {
+        agentId: params.agentId,
+        mode: "mcp-managed",
+        operationKey: operation.operationKey,
+        reservedAt: new Date().toISOString(),
+      },
+      payload: params.payload,
+    });
+  }
+
+  await updateSubmissionStatus({
+    operationKey: operation.operationKey,
+    status: "submitting",
+  });
+
+  try {
+    const result = await executeX402QuestionSubmission({
+      config,
+      payload: params.payload,
+    });
+    await updateSubmissionStatus({
+      contentId: result.contentId,
+      operationKey: operation.operationKey,
+      rewardPoolId: result.rewardPoolId,
+      status: "submitted",
+      transactionHashes: result.transactionHashes,
+    });
+
+    return {
+      body: submissionResponseBody({ config, operation, payload: params.payload, result }),
       status: 200,
     };
   } catch (error) {
