@@ -141,11 +141,40 @@ export interface CuryoCategoryItem {
   [key: string]: unknown;
 }
 
+export interface CuryoSelfReportedAudienceBucket {
+  down: number;
+  total: number;
+  up: number;
+  value: string;
+}
+
+export interface CuryoSelfReportedAudienceContext {
+  fields: {
+    ageGroup: CuryoSelfReportedAudienceBucket[];
+    expertise: CuryoSelfReportedAudienceBucket[];
+    languages: CuryoSelfReportedAudienceBucket[];
+    nationalities: CuryoSelfReportedAudienceBucket[];
+    residenceCountry: CuryoSelfReportedAudienceBucket[];
+    roles: CuryoSelfReportedAudienceBucket[];
+  };
+  missingSelfReportCount: number;
+  note: string;
+  restrictedEligibility: false;
+  selfReportedProfileCount: number;
+  source: "self_reported_public_profiles";
+  totalRevealedVotes: number;
+  verified: false;
+}
+
 export interface CuryoProfileItem {
   address: `0x${string}`;
+  name?: string | null;
+  selfReport?: string | null;
   displayName?: string | null;
   bio?: string | null;
   avatar?: string | null;
+  createdAt?: string;
+  updatedAt?: string;
   totalVotes?: number;
   totalContent?: number;
   totalRewardsClaimed?: string;
@@ -175,6 +204,7 @@ export interface CuryoPaginatedResponse<T> {
 }
 
 export interface CuryoContentDetailsResponse {
+  audienceContext: CuryoSelfReportedAudienceContext;
   content: CuryoContentItem;
   rounds: CuryoRoundItem[];
   ratings: JsonRecord[];

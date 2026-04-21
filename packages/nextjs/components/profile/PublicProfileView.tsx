@@ -132,7 +132,8 @@ function profileSelfReportFromString(value: string | null | undefined) {
 }
 
 function getProfileSelfReportLength(value: ProfileSelfReport) {
-  return serializeProfileSelfReport(value).length;
+  const normalized = normalizeProfileSelfReport(value);
+  return profileSelfReportHasValues(normalized) ? serializeProfileSelfReport(normalized).length : 0;
 }
 
 function updateSelfReportArray<T extends string>(
@@ -381,6 +382,7 @@ export function PublicProfileView({ address, embedded = false }: PublicProfileVi
 
     const trimmedName = nameInput.trim();
     let serializedSelfReport: string;
+    let normalizedSelfReport: ProfileSelfReport;
 
     if (!trimmedName) {
       setProfileError("Profile name is required");
@@ -398,7 +400,10 @@ export function PublicProfileView({ address, embedded = false }: PublicProfileVi
     }
 
     try {
-      serializedSelfReport = serializeProfileSelfReport(selfReportInput);
+      normalizedSelfReport = normalizeProfileSelfReport(selfReportInput);
+      serializedSelfReport = profileSelfReportHasValues(normalizedSelfReport)
+        ? serializeProfileSelfReport(normalizedSelfReport)
+        : "";
     } catch (error: any) {
       setProfileError(error?.message || "Self-reported context is too large");
       return;
@@ -413,7 +418,6 @@ export function PublicProfileView({ address, embedded = false }: PublicProfileVi
 
     try {
       await setProfile(trimmedName, serializedSelfReport);
-      const normalizedSelfReport = normalizeProfileSelfReport(selfReportInput);
       setCommittedName(trimmedName);
       setCommittedSelfReport(normalizedSelfReport);
       setNameInput(trimmedName);
