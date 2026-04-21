@@ -17,7 +17,7 @@
     "db:generate": "drizzle-kit generate",
     "db:push": "drizzle-kit push",
     "db:studio": "drizzle-kit studio",
-    "test": "node ../../scripts/run-node-tests.mjs app hooks lib utils",
+    "test": "node ../../scripts/run-node-tests.mjs app components hooks lib services utils e2e/playwright.config.test.ts",
     "whitepaper": "tsx scripts/whitepaper/generate.tsx",
     "demo:record": "tsx e2e/scripts/record-demo.ts",
     "e2e": "playwright test --config e2e/playwright.config.ts --project=chromium",

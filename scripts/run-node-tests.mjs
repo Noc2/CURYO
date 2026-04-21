@@ -1,4 +1,4 @@
-import { readdirSync } from "node:fs";
+import { readdirSync, statSync } from "node:fs";
 import { spawnSync } from "node:child_process";
 import { dirname, join, resolve, relative } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -8,7 +8,20 @@ const IGNORED_DIRS = new Set(["node_modules", ".next"]);
 const scriptDir = dirname(fileURLToPath(import.meta.url));
 const preloadModule = join(scriptDir, "register-node-test-env.mjs");
 
-function collectTests(dir, results) {
+function collectTests(root, results) {
+  const stats = statSync(root);
+  if (stats.isFile()) {
+    if (TEST_FILE_RE.test(root)) {
+      results.push(relative(process.cwd(), root));
+    }
+    return;
+  }
+
+  if (!stats.isDirectory()) {
+    return;
+  }
+
+  const dir = root;
   for (const entry of readdirSync(dir, { withFileTypes: true })) {
     if (entry.isDirectory()) {
       if (IGNORED_DIRS.has(entry.name)) continue;
@@ -24,7 +37,7 @@ function collectTests(dir, results) {
 
 const roots = process.argv.slice(2);
 if (roots.length === 0) {
-  console.error("Usage: node scripts/run-node-tests.mjs <dir> [dir...]");
+  console.error("Usage: node scripts/run-node-tests.mjs <dir-or-test-file> [dir-or-test-file...]");
   process.exit(1);
 }
 
