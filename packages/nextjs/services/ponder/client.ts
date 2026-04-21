@@ -1,4 +1,5 @@
 import type { RoundState } from "@curyo/contracts/protocol";
+import type { ProfileSelfReportAudienceContext } from "@curyo/node-utils/profileSelfReport";
 import { resolvePonderUrlValue } from "~~/utils/env/ponderUrl";
 
 const isProduction = process.env.NODE_ENV === "production";
@@ -506,7 +507,7 @@ export interface PonderCategory {
 export interface PonderProfile {
   address: string;
   name: string;
-  strategy: string;
+  selfReport: string;
   createdAt: string;
   updatedAt: string;
   totalVotes: number;
@@ -792,6 +793,7 @@ export const ponderApi = {
 
   getContentById(id: string) {
     return ponderGet<{
+      audienceContext: ProfileSelfReportAudienceContext;
       content: PonderContentItem;
       rounds: any[];
       ratings: PonderRatingChange[];

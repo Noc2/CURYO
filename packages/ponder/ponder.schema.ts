@@ -380,7 +380,7 @@ export const categoryRelations = relations(category, ({ many }) => ({
 export const profile = onchainTable("profile", (t) => ({
   address: t.hex().primaryKey(),
   name: t.text().notNull(),
-  strategy: t.text().notNull(),
+  selfReport: t.text().notNull(),
   createdAt: t.bigint().notNull(),
   updatedAt: t.bigint().notNull(),
   totalVotes: t.integer().notNull(),

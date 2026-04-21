@@ -1,4 +1,5 @@
 import { ROUND_STATE } from "@curyo/contracts/protocol";
+import { aggregateProfileSelfReports } from "@curyo/node-utils/profileSelfReport";
 import { and, asc, desc, eq, inArray, or, sql } from "ponder";
 import { db } from "ponder:api";
 import {
@@ -152,6 +153,20 @@ async function attachContentMedia<T extends { id: bigint; url?: string; canonica
         : fallbackMediaForItem(item),
     };
   });
+}
+
+async function getAudienceContextForContent(contentId: bigint) {
+  const rows = await db
+    .select({
+      isUp: vote.isUp,
+      selfReport: profile.selfReport,
+    })
+    .from(vote)
+    .innerJoin(round, and(eq(vote.contentId, round.contentId), eq(vote.roundId, round.roundId)))
+    .leftJoin(profile, eq(vote.voter, profile.address))
+    .where(and(eq(vote.contentId, contentId), eq(round.state, ROUND_STATE.Settled), eq(vote.revealed, true)));
+
+  return aggregateProfileSelfReports(rows);
 }
 
 export function registerContentRoutes(app: ApiApp) {
@@ -331,11 +346,13 @@ export function registerContentRoutes(app: ApiApp) {
       .where(eq(ratingChange.contentId, item.id))
       .orderBy(desc(ratingChange.timestamp))
       .limit(50);
+    const audienceContext = await getAudienceContextForContent(item.id);
 
     return jsonBig(c, {
       content: contentWithMedia,
       rounds,
       ratings,
+      audienceContext,
       matchCount: matches.length,
     });
   });
@@ -382,8 +399,9 @@ export function registerContentRoutes(app: ApiApp) {
       .where(eq(ratingChange.contentId, id))
       .orderBy(desc(ratingChange.timestamp))
       .limit(50);
+    const audienceContext = await getAudienceContextForContent(id);
 
-    return jsonBig(c, { content: contentWithMedia, rounds, ratings });
+    return jsonBig(c, { content: contentWithMedia, rounds, ratings, audienceContext });
   });
 
   app.get("/rounds", async (c) => {

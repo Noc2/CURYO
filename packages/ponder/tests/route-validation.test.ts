@@ -93,6 +93,7 @@ function mockPonderModules<T>(result: T) {
     profile: {
       address: "profile.address",
       name: "profile.name",
+      selfReport: "profile.selfReport",
       totalContent: "profile.totalContent",
       totalRewardsClaimed: "profile.totalRewardsClaimed",
       totalVotes: "profile.totalVotes",

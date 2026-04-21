@@ -336,6 +336,7 @@ async function buildQuestionResult(args: JsonObject, agent: McpAgentAuth) {
     publicUrl: getPublicQuestionUrl(contentId),
     ready: settled,
     result: {
+      audienceContext: response.audienceContext,
       categoryId: response.content.categoryId?.toString?.() ?? String(response.content.categoryId ?? ""),
       confidenceMass: response.content.ratingConfidenceMass ?? latestRound?.confidenceMass ?? null,
       contentId,
