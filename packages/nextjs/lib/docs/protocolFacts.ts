@@ -89,7 +89,7 @@ export const protocolDocFacts = {
   frontendNetSharePercentLabel: formatPercent(percentFromBps(PLATFORM_REWARD_SPLIT_BPS.frontend)),
   treasuryNetSharePercentLabel: formatPercent(percentFromBps(REWARD_SPLIT_BPS.treasury)),
   voterPoolShareLabel: `${formatPercent(percentFromBps(REWARD_SPLIT_BPS.voter))} of the remaining ${formatPercent(percentFromBps(remainingPoolBps))}`,
-  submitterShareLabel: "0% of the remaining 85%",
+  submitterShareLabel: `0% of the remaining ${formatPercent(percentFromBps(remainingPoolBps))}`,
   consensusShareLabel: `${formatPercent(percentFromBps(REWARD_SPLIT_BPS.consensus))} of the remaining ${formatPercent(percentFromBps(remainingPoolBps))}`,
   frontendShareLabel: `${formatPercent(percentFromBps(PLATFORM_REWARD_SPLIT_BPS.frontend))} of the remaining ${formatPercent(percentFromBps(remainingPoolBps))}`,
   treasuryShareLabel: `${formatPercent(percentFromBps(REWARD_SPLIT_BPS.treasury))} of the remaining ${formatPercent(percentFromBps(remainingPoolBps))}`,
