@@ -7,7 +7,8 @@ export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 export const maxDuration = 300;
 
-const MCP_PROTOCOL_VERSION = "2025-06-18";
+const DEFAULT_MCP_PROTOCOL_VERSION = "2025-11-25";
+const SUPPORTED_MCP_PROTOCOL_VERSIONS = new Set(["2025-06-18", DEFAULT_MCP_PROTOCOL_VERSION]);
 const RATE_LIMIT = { limit: 120, windowMs: 60_000 };
 
 type JsonRpcRequest = {
@@ -75,6 +76,48 @@ function jsonRpcError(id: JsonRpcRequest["id"], code: number, message: string, r
     },
     { headers: corsHeaders(request), status: code === -32603 ? 500 : 200 },
   );
+}
+
+function jsonRpcHttpError(
+  id: JsonRpcRequest["id"],
+  code: number,
+  message: string,
+  request: Request,
+  status: number,
+  data?: unknown,
+) {
+  return NextResponse.json(
+    {
+      error: {
+        code,
+        data,
+        message,
+      },
+      id: id ?? null,
+      jsonrpc: "2.0",
+    },
+    { headers: corsHeaders(request), status },
+  );
+}
+
+function negotiateProtocolVersion(body: JsonRpcRequest) {
+  const requestedVersion =
+    body.params && typeof body.params.protocolVersion === "string" ? body.params.protocolVersion : "";
+  return SUPPORTED_MCP_PROTOCOL_VERSIONS.has(requestedVersion) ? requestedVersion : DEFAULT_MCP_PROTOCOL_VERSION;
+}
+
+function validateProtocolVersion(request: Request, body: JsonRpcRequest) {
+  if (body.method === "initialize") return null;
+
+  const protocolVersion = request.headers.get("mcp-protocol-version")?.trim() ?? "";
+  if (!protocolVersion) {
+    return "Missing MCP-Protocol-Version header.";
+  }
+  if (!SUPPORTED_MCP_PROTOCOL_VERSIONS.has(protocolVersion)) {
+    return `Unsupported MCP-Protocol-Version: ${protocolVersion}.`;
+  }
+
+  return null;
 }
 
 function toolResult(structuredContent: unknown) {
@@ -160,6 +203,13 @@ export async function POST(request: NextRequest) {
     return jsonRpcError(body.id, -32600, "Invalid Request", request);
   }
 
+  const protocolVersionError = validateProtocolVersion(request, body);
+  if (protocolVersionError) {
+    return jsonRpcHttpError(body.id, -32000, protocolVersionError, request, 400, {
+      supportedProtocolVersions: Array.from(SUPPORTED_MCP_PROTOCOL_VERSIONS),
+    });
+  }
+
   if (body.id === undefined || body.id === null) {
     return new Response(null, { headers: corsHeaders(request), status: 202 });
   }
@@ -176,7 +226,7 @@ export async function POST(request: NextRequest) {
               listChanged: false,
             },
           },
-          protocolVersion: MCP_PROTOCOL_VERSION,
+          protocolVersion: negotiateProtocolVersion(body),
           serverInfo: {
             name: "curyo",
             version: "0.1.0",
