@@ -724,6 +724,16 @@ contract FrontendRegistryCoverageTest is Test {
         registry.slashFrontend(frontend1, 100e6, "bad behavior");
     }
 
+    function test_Slash_RevertsWhenReasonTooLong() public {
+        _registerFrontend(frontend1);
+
+        string memory reason = new string(registry.MAX_SLASH_REASON_LENGTH() + 1);
+
+        vm.prank(admin);
+        vm.expectRevert("Slash reason too long");
+        registry.slashFrontend(frontend1, 100e6, reason);
+    }
+
     function test_CreditFees_EmitsFeesCredited() public {
         _registerFrontend(frontend1);
 

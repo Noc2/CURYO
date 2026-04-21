@@ -25,6 +25,8 @@ contract FrontendRegistry is IFrontendRegistry, Initializable, AccessControlUpgr
 
     /// @notice Maximum cREP that can be credited in a single creditFees() call (10,000 cREP with 6 decimals)
     uint256 public constant MAX_FEE_CREDIT = 10_000e6;
+    /// @notice Maximum bytes allowed in a slashing reason.
+    uint256 public constant MAX_SLASH_REASON_LENGTH = 280;
 
     /// @notice Fixed cREP stake required for frontend registration (1,000 cREP with 6 decimals)
     uint256 public constant STAKE_AMOUNT = 1000e6;
@@ -270,6 +272,7 @@ contract FrontendRegistry is IFrontendRegistry, Initializable, AccessControlUpgr
         nonReentrant
         onlyRole(GOVERNANCE_ROLE)
     {
+        require(bytes(reason).length <= MAX_SLASH_REASON_LENGTH, "Slash reason too long");
         require(address(votingEngine) != address(0), "VotingEngine not set");
         Frontend storage f = frontends[frontend];
         require(f.operator != address(0), "Frontend not registered");
