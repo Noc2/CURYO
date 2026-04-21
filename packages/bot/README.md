@@ -36,7 +36,7 @@ For MCP or other agent adapters, treat this as a typed bot-to-human feedback loo
 | `yarn bot:claim` | Claim voter rewards for the configured rating bot wallet |
 | `yarn bot:status` | Check wallet balances and voting identity ownership |
 
-The bot is a manual CLI. `yarn dev:stack` starts Ponder, Next.js, and the keeper, but it does not start `submit` or `vote` automatically.
+The bot is a manual CLI. `yarn dev:stack` starts Ponder and Next.js, and starts the keeper only when the keeper environment is configured; it does not start `submit` or `vote` automatically.
 
 ## Configuration
 

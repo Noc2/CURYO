@@ -6,7 +6,7 @@ Full-stack web application built with Next.js 15 and React 19. Provides the UI f
 
 ```bash
 # From the monorepo root:
-yarn dev:stack   # Start local Postgres, apply schema, then run Next.js + Ponder + Keeper
+yarn dev:stack   # Start local Postgres, apply schema, then run Next.js + Ponder, plus Keeper when configured
 ```
 
 Deployment stays separate, so you can point the app stack at either a local chain or a testnet. For local-chain development, keep `yarn chain` and `yarn deploy` separate. Use `yarn dev:db:down` to stop the local Postgres container when you are done.
@@ -21,7 +21,7 @@ Run these from the monorepo root unless noted otherwise:
 | `yarn dev:db`                                   | Start the local Postgres container for the Next app                    |
 | `yarn dev:db:down`                              | Stop the local Postgres container                                      |
 | `yarn dev:db:reset`                             | Reset the local Postgres container and its data volume                 |
-| `yarn dev:stack`                                | Start local Postgres, apply schema, then run Next.js + Ponder + Keeper |
+| `yarn dev:stack`                                | Start local Postgres, apply schema, then run Next.js + Ponder, plus Keeper when configured |
 | `yarn next:build`                               | Production build                                                       |
 | `yarn next:lint`                                | Run ESLint                                                             |
 | `yarn next:check-types`                         | TypeScript type checking                                               |
@@ -82,6 +82,8 @@ Key environment variables (see `.env.example` for the full list):
 | `CURYO_X402_SERVICE_FEE_USDC`           | Optional x402 service fee in atomic USDC, added to the requested Bounty                       |
 | `CURYO_X402_PAYMENT_WAIT_UNTIL`         | x402 settlement wait mode; defaults to `confirmed` so the executor has USDC before submitting |
 | `CURYO_X402_USDC_ADDRESS`               | Optional USDC override for x402 payments; Celo and Celo Sepolia default automatically         |
+| `NEXT_PUBLIC_QUESTION_REWARD_POOL_ESCROW_ADDRESS` | Optional question reward escrow override; supported chains default from `@curyo/contracts` |
+| `NEXT_PUBLIC_CELO_USDC_ADDRESS`         | Optional browser-side Celo USDC override for USDC Bounties                                    |
 | `CURYO_MCP_AGENTS`                      | JSON array of paid MCP agents, bearer token hashes, scopes, daily budgets, per-ask caps, and optional category allowlists |
 | `CURYO_MCP_ALLOWED_ORIGINS`             | Comma-separated browser origins allowed to call `/api/mcp`; non-browser agent calls may omit `Origin` |
 | `CURYO_MCP_AUTHORIZATION_SERVER_URL`    | Optional authorization server advertised in MCP protected-resource metadata                   |
@@ -91,6 +93,8 @@ Key environment variables (see `.env.example` for the full list):
 | `KEYSTORE_PASSWORD`                     | Optional password used to decrypt the development faucet keystore                             |
 | `DEV_FAUCET_ENABLED`                    | Enable the development-only cREP, mock USDC, and Voter ID faucet route                        |
 | `FAUCET_PRIVATE_KEY`                    | Server-side faucet wallet key                                                                 |
+| `CURYO_E2E_PRODUCTION_BUILD`            | Server-side opt-in for local production-style E2E builds                                      |
+| `NEXT_PUBLIC_CURYO_E2E_PRODUCTION_BUILD` | Browser-side opt-in for local production-style E2E builds                                     |
 
 Notes:
 
