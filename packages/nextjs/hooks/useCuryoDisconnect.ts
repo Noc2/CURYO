@@ -4,38 +4,7 @@ import { useCallback } from "react";
 import { useActiveWallet, useDisconnect as useThirdwebDisconnect } from "thirdweb/react";
 import { useDisconnect as useWagmiDisconnect } from "wagmi";
 import { setConnectedThirdwebConnectorWallet } from "~~/services/thirdweb/connectorWalletState";
-
-const WALLET_STATE_PREFIXES = [
-  "thirdweb:",
-  "thirdwebEwsWallet",
-  "thirdweb_guest_session_id_",
-  "walletToken-",
-  "a-",
-  "wagmi.",
-] as const;
-
-function clearWalletState(storage: Storage | null) {
-  if (!storage) {
-    return;
-  }
-
-  const keysToRemove: string[] = [];
-
-  for (let index = 0; index < storage.length; index += 1) {
-    const key = storage.key(index);
-    if (!key) {
-      continue;
-    }
-
-    if (WALLET_STATE_PREFIXES.some(prefix => key.startsWith(prefix))) {
-      keysToRemove.push(key);
-    }
-  }
-
-  for (const key of keysToRemove) {
-    storage.removeItem(key);
-  }
-}
+import { clearWalletState } from "~~/services/thirdweb/walletStateCleanup";
 
 export function useCuryoDisconnect() {
   const activeWallet = useActiveWallet();
