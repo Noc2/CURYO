@@ -94,8 +94,15 @@ const FALLBACK_COUNTRY_CODES = [
 const REGION_CODES_TO_EXCLUDE = new Set(["AC", "CP", "DG", "EA", "EU", "EZ", "IC", "TA", "UN", "XK"]);
 
 function supportedRegionCodes() {
-  const intl = Intl as typeof Intl & { supportedValuesOf?: (key: "region") => string[] };
-  const regions = intl.supportedValuesOf?.("region") ?? [...FALLBACK_COUNTRY_CODES];
+  const intl = Intl as typeof Intl & { supportedValuesOf?: (key: string) => string[] };
+  let regions: readonly string[] = FALLBACK_COUNTRY_CODES;
+
+  try {
+    regions = intl.supportedValuesOf?.("region") ?? FALLBACK_COUNTRY_CODES;
+  } catch {
+    regions = FALLBACK_COUNTRY_CODES;
+  }
+
   return regions.filter(code => /^[A-Z]{2}$/.test(code) && !REGION_CODES_TO_EXCLUDE.has(code));
 }
 
