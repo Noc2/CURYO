@@ -202,6 +202,13 @@ An MCP adapter should expose narrow Curyo actions, not raw transaction access. A
 - `curyo_cancel_or_expire_question`: cancel when still allowed or expire stale work.
 - `curyo_get_bot_balance`: show spendable balance and caps.
 
+The production MCP server starts with paid `curyo_ask_humans` as the core workflow, not as a later add-on. Read tools exist to make the paid ask safe and useful:
+
+- `curyo_quote_question` must run deterministic preflight before any spend is reserved.
+- `curyo_ask_humans` must require explicit budget fields and an idempotency key.
+- `curyo_get_question_status` and `curyo_get_result` must let agents recover from disconnects without repeating a paid ask.
+- `curyo_get_bot_balance` must show the authenticated agent's remaining managed budget and configured caps.
+
 The adapter should be conservative around writes:
 
 - Simulate before submit.
@@ -245,7 +252,8 @@ To make this easy for bots:
 
 - Provide one SDK function: `askHumans`.
 - Provide a matching MCP adapter with the same schemas.
-- Use the hosted `/api/x402/questions` endpoint for paid asks: the bot wallet holds Celo USDC, thirdweb signs the x402 payment, and the API executor funds the on-chain USDC Bounty.
+- Use the hosted `/api/x402/questions` endpoint for direct paid asks: the bot wallet holds Celo USDC, thirdweb signs the x402 payment, and the API executor funds the on-chain USDC Bounty.
+- Use managed MCP agent budgets for remote MCP clients that cannot sign x402 payment headers inside a JSON-RPC tool call. The MCP server should reserve from the authenticated agent's budget, submit from the server executor wallet, and return an auditable operation record.
 - Provide hosted webhooks and status URLs.
 - Provide question templates with typed result schemas.
 - Provide bot wallets, delegated spend limits, and clear receipts.
@@ -273,8 +281,8 @@ To make this easy for bots:
 Build the first version around:
 
 1. `askHumans()` in the SDK.
-2. A thin MCP adapter exposing quote, ask, status, result, categories, and balance.
-3. A prepaid bot wallet with Celo USDC for x402 and per-question USDC escrow.
+2. A thin MCP adapter exposing quote, paid ask, status, result, categories, and balance.
+3. A prepaid bot wallet with Celo USDC for x402 and managed MCP agent budgets for remote MCP clients.
 4. Three templates: yes/no/unsure, pairwise choice, and action approval.
 5. Webhook delivery plus a public result page.
 6. An OpenClaw-style example bot that asks humans a question, pays for it, waits, and acts on the result.
