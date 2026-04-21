@@ -8,6 +8,9 @@ import {
   feedbackBonusPool,
   frontend,
   globalStats,
+  questionBundleClaim,
+  questionBundleQuestion,
+  questionBundleReward,
   questionRewardPool,
   questionRewardPoolClaim,
   questionRewardPoolRound,
@@ -35,6 +38,100 @@ const STREAK_MILESTONES = [
 ];
 
 export function registerDataRoutes(app: ApiApp) {
+  app.get("/question-bundles/:id", async (c) => {
+    const bundleId = safeBigInt(c.req.param("id"));
+    if (bundleId === null) return c.json({ error: "Invalid bundle id" }, 400);
+
+    const [bundle] = await db
+      .select()
+      .from(questionBundleReward)
+      .where(eq(questionBundleReward.id, bundleId))
+      .limit(1);
+
+    if (!bundle) {
+      return c.json({ error: "Bundle not found" }, 404);
+    }
+
+    const questions = await db
+      .select({
+        id: questionBundleQuestion.id,
+        bundleId: questionBundleQuestion.bundleId,
+        contentId: questionBundleQuestion.contentId,
+        bundleIndex: questionBundleQuestion.bundleIndex,
+        roundId: questionBundleQuestion.roundId,
+        settled: questionBundleQuestion.settled,
+        terminal: questionBundleQuestion.terminal,
+        updatedAt: questionBundleQuestion.updatedAt,
+        title: content.title,
+        description: content.description,
+        url: content.url,
+        submitter: content.submitter,
+        categoryId: content.categoryId,
+        status: content.status,
+        rating: content.rating,
+        ratingBps: content.ratingBps,
+        createdAt: content.createdAt,
+      })
+      .from(questionBundleQuestion)
+      .leftJoin(content, eq(questionBundleQuestion.contentId, content.id))
+      .where(eq(questionBundleQuestion.bundleId, bundleId))
+      .orderBy(asc(questionBundleQuestion.bundleIndex));
+
+    return jsonBig(c, { bundle, questions });
+  });
+
+  app.get("/question-bundle-claim-candidates", async (c) => {
+    const voterRaw = c.req.query("voter");
+    const limit = safeLimit(c.req.query("limit"), 100, 200);
+    const offset = safeOffset(c.req.query("offset"));
+    if (Number.isNaN(offset)) return c.json({ error: "Invalid offset" }, 400);
+
+    if (!voterRaw) {
+      return c.json({ error: "voter parameter required" }, 400);
+    }
+    const voterAddrs = parseAddressList(voterRaw);
+    if (voterAddrs.length === 0) {
+      return c.json({ error: "Invalid voter address" }, 400);
+    }
+
+    const items = await db
+      .select({
+        bundleId: questionBundleReward.id,
+        asset: questionBundleReward.asset,
+        fundedAmount: questionBundleReward.fundedAmount,
+        claimedAmount: questionBundleReward.claimedAmount,
+        requiredCompleters: questionBundleReward.requiredCompleters,
+        questionCount: questionBundleReward.questionCount,
+        completedQuestionCount: questionBundleReward.completedQuestionCount,
+        claimedCount: questionBundleReward.claimedCount,
+        expiresAt: questionBundleReward.expiresAt,
+        updatedAt: questionBundleReward.updatedAt,
+      })
+      .from(questionBundleReward)
+      .where(
+        and(
+          eq(questionBundleReward.failed, false),
+          eq(questionBundleReward.refunded, false),
+          sql`${questionBundleReward.completedQuestionCount} >= ${questionBundleReward.questionCount}`,
+          sql`${questionBundleReward.claimedCount} < ${questionBundleReward.requiredCompleters}`,
+        ),
+      )
+      .orderBy(desc(questionBundleReward.updatedAt), desc(questionBundleReward.id))
+      .limit(limit)
+      .offset(offset);
+
+    return jsonBig(c, {
+      items: items.map(item => ({
+        ...item,
+        currency: item.asset === 0 ? "cREP" : "USDC",
+        displayCurrency: item.asset === 0 ? "cREP" : "USD",
+        decimals: 6,
+      })),
+      limit,
+      offset,
+    });
+  });
+
   app.get("/voter-accuracy/:address", async (c) => {
     const address = c.req.param("address").toLowerCase() as `0x${string}`;
     if (!isValidAddress(address)) return c.json({ error: "Invalid address" }, 400);
@@ -452,7 +549,7 @@ export function registerDataRoutes(app: ApiApp) {
   });
 
   app.get("/stats", async (c) => {
-    const [[stats], [rewardPoolStats], [feedbackBonusAwardStats], [feedbackBonusPoolStats]] = await Promise.all([
+    const [[stats], [rewardPoolStats], [bundleRewardStats], [feedbackBonusAwardStats], [feedbackBonusPoolStats]] = await Promise.all([
       db
         .select()
         .from(globalStats)
@@ -465,6 +562,13 @@ export function registerDataRoutes(app: ApiApp) {
           totalQuestionRewardsPaidToFrontends: sql<bigint>`coalesce(sum(${questionRewardPoolClaim.frontendFee}), 0)`,
         })
         .from(questionRewardPoolClaim),
+      db
+        .select({
+          totalQuestionBundleRewardsPaid: sql<bigint>`coalesce(sum(${questionBundleClaim.grossAmount}), 0)`,
+          totalQuestionBundleRewardsPaidToVoters: sql<bigint>`coalesce(sum(${questionBundleClaim.amount}), 0)`,
+          totalQuestionBundleRewardsPaidToFrontends: sql<bigint>`coalesce(sum(${questionBundleClaim.frontendFee}), 0)`,
+        })
+        .from(questionBundleClaim),
       db
         .select({
           totalFeedbackBonusesPaid: sql<bigint>`coalesce(sum(${feedbackBonusAward.grossAmount}), 0)`,
@@ -496,6 +600,9 @@ export function registerDataRoutes(app: ApiApp) {
         totalQuestionRewardsPaid: rewardPoolStats?.totalQuestionRewardsPaid ?? 0n,
         totalQuestionRewardsPaidToVoters: rewardPoolStats?.totalQuestionRewardsPaidToVoters ?? 0n,
         totalQuestionRewardsPaidToFrontends: rewardPoolStats?.totalQuestionRewardsPaidToFrontends ?? 0n,
+        totalQuestionBundleRewardsPaid: bundleRewardStats?.totalQuestionBundleRewardsPaid ?? 0n,
+        totalQuestionBundleRewardsPaidToVoters: bundleRewardStats?.totalQuestionBundleRewardsPaidToVoters ?? 0n,
+        totalQuestionBundleRewardsPaidToFrontends: bundleRewardStats?.totalQuestionBundleRewardsPaidToFrontends ?? 0n,
         totalFeedbackBonusesFunded: feedbackBonusPoolStats?.totalFeedbackBonusesFunded ?? 0n,
         totalFeedbackBonusesPaid: feedbackBonusAwardStats?.totalFeedbackBonusesPaid ?? 0n,
         totalFeedbackBonusesPaidToVoters: feedbackBonusAwardStats?.totalFeedbackBonusesPaidToVoters ?? 0n,

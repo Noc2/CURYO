@@ -8,6 +8,7 @@ import {
   contentMedia,
   feedbackBonusPool,
   profile,
+  questionBundleReward,
   questionRewardPool,
   ratingChange,
   rewardClaim,
@@ -43,6 +44,12 @@ function getRewardAvailableAmount() {
     select sum(${questionRewardPool.unallocatedAmount} + ${questionRewardPool.allocatedAmount} - ${questionRewardPool.claimedAmount})
     from ${questionRewardPool}
     where ${questionRewardPool.contentId} = ${content.id}
+  ), 0) + coalesce((
+    select sum(${questionBundleReward.fundedAmount} - ${questionBundleReward.claimedAmount} - ${questionBundleReward.refundedAmount})
+    from ${questionBundleReward}
+    where ${questionBundleReward.id} = ${content.bundleId}
+      and ${questionBundleReward.failed} = false
+      and ${questionBundleReward.refunded} = false
   ), 0) + coalesce((
     select sum(${feedbackBonusPool.remainingAmount})
     from ${feedbackBonusPool}

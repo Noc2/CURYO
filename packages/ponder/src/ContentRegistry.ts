@@ -1,7 +1,16 @@
 import { ContentRegistryAbi } from "@curyo/contracts/abis";
 import { ROUND_STATE } from "@curyo/contracts/protocol";
 import { ponder } from "ponder:registry";
-import { content, contentMedia, category, profile, globalStats, ratingChange, round } from "ponder:schema";
+import {
+  category,
+  content,
+  contentMedia,
+  globalStats,
+  profile,
+  questionBundleQuestion,
+  ratingChange,
+  round,
+} from "ponder:schema";
 import { getCanonicalUrlParts } from "./urlCanonicalization.js";
 
 function displayRatingFromBps(ratingBps: number) {
@@ -174,6 +183,35 @@ ponder.on("ContentRegistry:ContentMediaSubmitted", async ({ event, context }) =>
   for (let i = 0; i < imageUrls.length; i++) {
     await upsertContentMedia(context, contentId, i, "image", imageUrls[i]);
   }
+});
+
+ponder.on("ContentRegistry:QuestionBundleContentLinked", async ({ event, context }) => {
+  const { bundleId, contentId, bundleIndex } = event.args;
+  const normalizedBundleIndex = Number(bundleIndex);
+
+  await context.db.update(content, { id: contentId }).set({
+    bundleId,
+    bundleIndex: normalizedBundleIndex,
+    lastActivityAt: event.block.timestamp,
+  });
+
+  await context.db
+    .insert(questionBundleQuestion)
+    .values({
+      id: `${bundleId}-${bundleIndex}`,
+      bundleId,
+      contentId,
+      bundleIndex: normalizedBundleIndex,
+      roundId: null,
+      settled: false,
+      terminal: false,
+      updatedAt: event.block.timestamp,
+    })
+    .onConflictDoUpdate(() => ({
+      contentId,
+      bundleIndex: normalizedBundleIndex,
+      updatedAt: event.block.timestamp,
+    }));
 });
 
 ponder.on("ContentRegistry:ContentDormant", async ({ event, context }) => {
