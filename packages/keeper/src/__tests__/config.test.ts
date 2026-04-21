@@ -90,6 +90,33 @@ describe("keeper config", () => {
     ).rejects.toThrow("KEEPER_CLEANUP_BATCH_SIZE must be a positive integer");
   });
 
+  it.each([
+    ["CHAIN_ID", "11142220abc", "CHAIN_ID must be a positive integer"],
+    ["KEEPER_INTERVAL_MS", "30000ms", "KEEPER_INTERVAL_MS must be a positive integer"],
+    ["KEEPER_STARTUP_JITTER_MS", "0ms", "KEEPER_STARTUP_JITTER_MS must be a non-negative integer"],
+    ["KEEPER_CLEANUP_BATCH_SIZE", "25items", "KEEPER_CLEANUP_BATCH_SIZE must be a positive integer"],
+    ["MAX_GAS_PER_TX", "2000000gas", "MAX_GAS_PER_TX must be a positive integer"],
+    ["METRICS_PORT", "9090http", "METRICS_PORT must be a positive integer"],
+    ["DORMANCY_PERIOD", "2592000s", "DORMANCY_PERIOD must be a positive integer"],
+    ["MIN_GAS_BALANCE_WEI", "10000000000000000wei", "MIN_GAS_BALANCE_WEI must be a non-negative integer"],
+  ])("rejects trailing junk in %s", async (name, value, message) => {
+    await expect(
+      loadKeeperConfig({
+        [name]: value,
+      }),
+    ).rejects.toThrow(message);
+  });
+
+  it("accepts zero for non-negative numeric settings", async () => {
+    const { config } = await loadKeeperConfig({
+      KEEPER_STARTUP_JITTER_MS: "0",
+      MIN_GAS_BALANCE_WEI: "0",
+    });
+
+    expect(config.startupJitterMs).toBe(0);
+    expect(config.minGasBalanceWei).toBe("0");
+  });
+
   it("derives local contract addresses from shared deployment artifacts", async () => {
     const { config } = await loadKeeperConfig(
       {
