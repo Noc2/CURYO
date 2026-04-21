@@ -37,6 +37,26 @@ abstract contract ContentSubmissionTestBase {
     uint256 internal constant DEFAULT_SUBMISSION_REWARD_SETTLED_ROUNDS = 1;
     uint256 internal constant DEFAULT_SUBMISSION_REWARD_EXPIRES_AT = 0;
 
+    struct NoMediaQuestionText {
+        string url;
+        string title;
+        string description;
+        string tags;
+    }
+
+    struct MediaQuestionReservation {
+        ContentRegistry registry;
+        string contextUrl;
+        string[] imageUrls;
+        string videoUrl;
+        string title;
+        string description;
+        string tags;
+        uint256 categoryId;
+        bytes32 salt;
+        address submitter;
+    }
+
     function _submitContentWithReservation(
         ContentRegistry registry,
         string memory url,
@@ -46,52 +66,65 @@ abstract contract ContentSubmissionTestBase {
         uint256 categoryId
     ) internal returns (uint256 contentId) {
         activeTlockContentRegistry = registry;
-        (VmSafe.CallerMode mode, address msgSender, address txOrigin) = HEVM.readCallers();
-        bool hasActivePrank = mode == VmSafe.CallerMode.Prank || mode == VmSafe.CallerMode.RecurrentPrank;
-        if (hasActivePrank) {
-            HEVM.stopPrank();
-        }
-        _ensureActiveProtocolConfig(registry);
-        address rewardEscrow = _ensureDefaultQuestionRewardPoolEscrow(registry);
-        bool stopNormalizedPrank = false;
-        if (hasActivePrank) {
-            HEVM.startPrank(msgSender, txOrigin);
-            stopNormalizedPrank = mode == VmSafe.CallerMode.Prank;
-        }
-
-        address submitter =
-            mode == VmSafe.CallerMode.None ? address(this) : (msgSender != address(0) ? msgSender : address(this));
+        (VmSafe.CallerMode mode, address msgSender,) = HEVM.readCallers();
+        bool stopNormalizedPrank = mode == VmSafe.CallerMode.Prank;
+        address submitter = _submissionCallerAddress(mode, msgSender);
         uint256 submissionCategoryId = categoryId == 0 ? 1 : categoryId;
-        string[] memory imageUrls = new string[](0);
-        bytes32 salt = keccak256(
-            abi.encode(
-                url, title, description, tags, submissionCategoryId, submitter, block.timestamp, block.number, gasleft()
-            )
-        );
-        (, bytes32 submissionKey) =
-            registry.previewQuestionSubmissionKey(url, imageUrls, "", title, description, tags, submissionCategoryId);
-        uint256 rewardAmount = _defaultSubmissionRewardAmount(registry);
-        bytes32 revealCommitment = _defaultQuestionRevealCommitment(
-            registry,
-            submissionKey,
-            imageUrls,
-            "",
-            title,
-            description,
-            tags,
-            submissionCategoryId,
-            salt,
-            submitter
-        );
+        bytes32 salt = _contentSubmissionSalt(url, submitter);
+        NoMediaQuestionText memory question;
+        question.url = url;
+        question.title = title;
+        question.description = description;
+        question.tags = tags;
 
-        IERC20(registry.crepToken()).approve(rewardEscrow, rewardAmount);
-        registry.reserveSubmission(revealCommitment);
+        _reserveNoMediaQuestionSubmission(registry, question, submissionCategoryId, salt, submitter);
         HEVM.warp(block.timestamp + 1);
-        contentId = registry.submitQuestion(url, imageUrls, "", title, description, tags, submissionCategoryId, salt);
+        contentId = _submitNoMediaQuestion(registry, question, submissionCategoryId, salt);
 
         if (stopNormalizedPrank) {
             HEVM.stopPrank();
         }
+    }
+
+    function _submissionCallerAddress(VmSafe.CallerMode mode, address msgSender) internal view returns (address) {
+        if (mode == VmSafe.CallerMode.None) return address(this);
+        return msgSender != address(0) ? msgSender : address(this);
+    }
+
+    function _contentSubmissionSalt(string memory url, address submitter) internal view returns (bytes32) {
+        return keccak256(abi.encodePacked(url, submitter, block.timestamp, block.number, gasleft()));
+    }
+
+    function _reserveNoMediaQuestionSubmission(
+        ContentRegistry registry,
+        NoMediaQuestionText memory question,
+        uint256 categoryId,
+        bytes32 salt,
+        address submitter
+    ) internal {
+        _reserveQuestionMediaSubmission(
+            registry,
+            question.url,
+            _emptyImageUrls(),
+            "",
+            question.title,
+            question.description,
+            question.tags,
+            categoryId,
+            salt,
+            submitter
+        );
+    }
+
+    function _submitNoMediaQuestion(
+        ContentRegistry registry,
+        NoMediaQuestionText memory question,
+        uint256 categoryId,
+        bytes32 salt
+    ) internal returns (uint256) {
+        return registry.submitQuestion(
+            question.url, _emptyImageUrls(), "", question.title, question.description, question.tags, categoryId, salt
+        );
     }
 
     function _reserveQuestionMediaSubmission(
@@ -106,34 +139,73 @@ abstract contract ContentSubmissionTestBase {
         bytes32 salt,
         address submitter
     ) internal returns (bytes32 submissionKey) {
-        (, submissionKey) = registry.previewQuestionSubmissionKey(
-            contextUrl, imageUrls, videoUrl, title, description, tags, categoryId
-        );
-        uint256 rewardAmount = _defaultSubmissionRewardAmount(registry);
-        bytes32 revealCommitment = _defaultQuestionRevealCommitment(
-            registry,
-            submissionKey,
-            imageUrls,
-            videoUrl,
-            title,
-            description,
-            tags,
-            categoryId,
-            salt,
-            submitter
-        );
+        MediaQuestionReservation memory reservation;
+        reservation.registry = registry;
+        reservation.contextUrl = contextUrl;
+        reservation.imageUrls = imageUrls;
+        reservation.videoUrl = videoUrl;
+        reservation.title = title;
+        reservation.description = description;
+        reservation.tags = tags;
+        reservation.categoryId = categoryId;
+        reservation.salt = salt;
+        reservation.submitter = submitter;
+        return _reserveQuestionMediaSubmission(reservation);
+    }
+
+    function _reserveQuestionMediaSubmission(MediaQuestionReservation memory reservation)
+        internal
+        returns (bytes32 submissionKey)
+    {
         (VmSafe.CallerMode mode, address msgSender, address txOrigin) = HEVM.readCallers();
         bool hasActivePrank = mode == VmSafe.CallerMode.Prank || mode == VmSafe.CallerMode.RecurrentPrank;
         if (hasActivePrank) {
             HEVM.stopPrank();
         }
-        _ensureActiveProtocolConfig(registry);
-        address rewardEscrow = _ensureDefaultQuestionRewardPoolEscrow(registry);
+        _ensureActiveProtocolConfig(reservation.registry);
+        address rewardEscrow = _ensureDefaultQuestionRewardPoolEscrow(reservation.registry);
         if (hasActivePrank) {
             HEVM.startPrank(msgSender, txOrigin);
         }
-        IERC20(registry.crepToken()).approve(rewardEscrow, rewardAmount);
-        registry.reserveSubmission(revealCommitment);
+        (, submissionKey) = reservation.registry.previewQuestionSubmissionKey(
+            reservation.contextUrl,
+            reservation.imageUrls,
+            reservation.videoUrl,
+            reservation.title,
+            reservation.description,
+            reservation.tags,
+            reservation.categoryId
+        );
+        uint256 rewardAmount = _defaultSubmissionRewardAmount(reservation.registry);
+        bytes32 revealCommitment = _questionReservationRevealCommitment(reservation, submissionKey, rewardAmount);
+        IERC20(reservation.registry.crepToken()).approve(rewardEscrow, rewardAmount);
+        reservation.registry.reserveSubmission(revealCommitment);
+    }
+
+    function _questionReservationRevealCommitment(
+        MediaQuestionReservation memory reservation,
+        bytes32 submissionKey,
+        uint256 rewardAmount
+    ) internal view returns (bytes32) {
+        ContentRegistry.SubmissionRewardTerms memory rewardTerms = ContentRegistry.SubmissionRewardTerms({
+            asset: DEFAULT_SUBMISSION_REWARD_ASSET_CREP,
+            amount: rewardAmount,
+            requiredVoters: DEFAULT_SUBMISSION_REWARD_REQUIRED_VOTERS,
+            requiredSettledRounds: DEFAULT_SUBMISSION_REWARD_SETTLED_ROUNDS,
+            expiresAt: DEFAULT_SUBMISSION_REWARD_EXPIRES_AT
+        });
+        return _questionRevealCommitment(
+            submissionKey,
+            _submissionMediaHash(reservation.imageUrls, reservation.videoUrl),
+            reservation.title,
+            reservation.description,
+            reservation.tags,
+            reservation.categoryId,
+            reservation.salt,
+            reservation.submitter,
+            rewardTerms,
+            _defaultQuestionRoundConfig(reservation.registry)
+        );
     }
 
     function _defaultQuestionRevealCommitment(
