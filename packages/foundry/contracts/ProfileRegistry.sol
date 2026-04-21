@@ -41,6 +41,7 @@ contract ProfileRegistry is IProfileRegistry, Initializable, AccessControlUpgrad
     event AvatarAccentUpdated(address indexed user, uint24 rgb);
     event AvatarAccentCleared(address indexed user);
     event VoterIdNFTUpdated(address voterIdNFT);
+    event ProfileNameReleased(address indexed user, string name);
 
     /// @custom:oz-upgrades-unsafe-allow constructor
     constructor() {
@@ -74,6 +75,27 @@ contract ProfileRegistry is IProfileRegistry, Initializable, AccessControlUpgrad
         require(_voterIdNFT != address(0), "Invalid address");
         voterIdNFT = IVoterIdNFT(_voterIdNFT);
         emit VoterIdNFTUpdated(_voterIdNFT);
+    }
+
+    /// @notice Release a profile name so it can be claimed again after the user loses eligibility.
+    /// @param user The profile owner whose name should be released.
+    function releaseName(address user) external onlyRole(ADMIN_ROLE) {
+        require(user != address(0), "Invalid address");
+
+        StoredProfile storage profile = _profiles[user];
+        require(profile.createdAt != 0 && bytes(profile.name).length > 0, "No name to release");
+
+        string memory releasedName = profile.name;
+        bytes32 nameHash = _normalizeAndHash(releasedName);
+        if (_nameToAddress[nameHash] == user) {
+            delete _nameToAddress[nameHash];
+        }
+
+        profile.name = "";
+        profile.updatedAt = block.timestamp;
+
+        emit ProfileNameReleased(user, releasedName);
+        emit ProfileUpdated(user, "", profile.strategy);
     }
 
     // --- Public Functions ---

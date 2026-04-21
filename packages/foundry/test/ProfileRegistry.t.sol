@@ -470,4 +470,48 @@ contract ProfileRegistryTest is Test {
 
         assertEq(registry.getAddressByName("alice"), user2);
     }
+
+    function test_AdminCanReleaseNameAfterVoterIdRevocation() public {
+        vm.prank(user1);
+        registry.setProfile("alice", "I value careful sourcing.");
+
+        voterIdNFT.removeHolder(user1);
+
+        vm.prank(user1);
+        vm.expectRevert("Voter ID required");
+        registry.setProfile("alice2", "I value careful sourcing.");
+
+        vm.prank(admin);
+        vm.expectEmit(true, false, false, true);
+        emit ProfileRegistry.ProfileNameReleased(user1, "alice");
+        registry.releaseName(user1);
+
+        assertFalse(registry.isNameTaken("alice"));
+        assertEq(registry.getAddressByName("alice"), address(0));
+
+        IProfileRegistry.Profile memory releasedProfile = registry.getProfile(user1);
+        assertEq(releasedProfile.name, "");
+        assertEq(releasedProfile.strategy, "I value careful sourcing.");
+        assertTrue(registry.hasProfile(user1));
+
+        vm.prank(user2);
+        registry.setProfile("alice", "");
+
+        assertEq(registry.getAddressByName("alice"), user2);
+    }
+
+    function test_RevertReleaseNameNonAdmin() public {
+        vm.prank(user1);
+        registry.setProfile("alice", "");
+
+        vm.prank(user2);
+        vm.expectRevert();
+        registry.releaseName(user1);
+    }
+
+    function test_RevertReleaseNameWhenNoName() public {
+        vm.prank(admin);
+        vm.expectRevert("No name to release");
+        registry.releaseName(user1);
+    }
 }
