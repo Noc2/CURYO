@@ -1,7 +1,7 @@
+import { MCP_SCOPES, McpAuthError, authenticateMcpRequest, getConfiguredMcpAgents } from "./auth";
 import assert from "node:assert/strict";
 import { createHash } from "node:crypto";
 import { after, beforeEach, test } from "node:test";
-import { MCP_SCOPES, McpAuthError, authenticateMcpRequest, getConfiguredMcpAgents } from "./auth";
 
 const env = process.env as Record<string, string | undefined>;
 const originalAgents = env.CURYO_MCP_AGENTS;

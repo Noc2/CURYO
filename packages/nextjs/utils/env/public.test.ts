@@ -1,8 +1,7 @@
+import { listMissingRequiredTargetContracts } from "./requiredDeployments";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { test } from "node:test";
-
-import { listMissingRequiredTargetContracts } from "./requiredDeployments";
 
 test("browser-facing public env modules avoid computed process.env access", () => {
   const browserEnvModules = [

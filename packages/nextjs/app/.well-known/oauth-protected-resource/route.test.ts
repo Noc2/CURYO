@@ -1,7 +1,7 @@
 import { NextRequest } from "next/server";
+import { GET } from "./route";
 import assert from "node:assert/strict";
 import { after, beforeEach, test } from "node:test";
-import { GET } from "./route";
 
 const env = process.env as Record<string, string | undefined>;
 const originalAuthorizationServerUrl = env.CURYO_MCP_AUTHORIZATION_SERVER_URL;
