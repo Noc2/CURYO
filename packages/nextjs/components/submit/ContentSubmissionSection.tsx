@@ -823,6 +823,7 @@ export function ContentSubmissionSection() {
     const questionFieldsComplete =
       Boolean(draft.selectedCategory) &&
       Boolean(trimmedTitle) &&
+      Boolean(trimmedDescription) &&
       draft.selectedSubcategories.length > 0 &&
       Boolean(submittedContextUrl);
     const hasQuestionErrors =
@@ -1237,6 +1238,7 @@ export function ContentSubmissionSection() {
     setSubmittedContent(null);
   };
 
+  const descriptionMissing = questionStepAttempted && !description.trim();
   const contextMissing = questionStepAttempted && !normalizedContextUrl;
   const imageMediaMissing = false;
   const videoMediaMissing = false;
@@ -1700,18 +1702,19 @@ export function ContentSubmissionSection() {
                 </div>
 
                 <div>
-                  <label className="mb-2 block text-base font-medium">
-                    Description <span className="font-normal text-base-content/40">(optional)</span>
+                  <label className={`mb-2 block text-base font-medium ${descriptionMissing ? "text-error" : ""}`}>
+                    Description
                   </label>
                   <textarea
                     placeholder="Add context voters should consider"
                     className={`textarea textarea-bordered h-24 w-full bg-base-100 ${
-                      descriptionError ? "textarea-error" : ""
+                      descriptionError || descriptionMissing ? "textarea-error" : ""
                     }`}
                     value={description}
                     onChange={e => handleDescriptionChange(e.target.value)}
                     maxLength={MAX_CONTENT_DESCRIPTION_LENGTH}
                   />
+                  {descriptionMissing ? <p className="mt-1 text-base text-error">Description is required.</p> : null}
                   {descriptionError ? <p className="mt-1 text-base text-error">{descriptionError}</p> : null}
                   <div className="mt-1 text-right">
                     <span className="text-base text-base-content/30">
