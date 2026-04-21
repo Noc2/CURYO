@@ -1,14 +1,53 @@
+import { getSharedDeploymentAddress } from "@curyo/contracts/deployments";
 import { ponder } from "ponder:registry";
 import { tokenHolder, tokenTransfer } from "ponder:schema";
+import { isAddress } from "viem";
 
 const ZERO_ADDRESS = "0x0000000000000000000000000000000000000000";
+const PONDER_NETWORK_CHAIN_IDS: Record<string, number> = {
+  hardhat: 31337,
+  celoSepolia: 11142220,
+  celo: 42220,
+};
 
-// Build exclusion set from all PONDER_*_ADDRESS env vars (deployed contracts + deployer)
-const excludedAddresses = new Set<string>(
-  Object.entries(process.env)
-    .filter(([key, value]) => key.startsWith("PONDER_") && key.endsWith("_ADDRESS") && value !== undefined)
-    .map(([, value]) => value.toLowerCase()),
-);
+const INDEXED_CONTRACT_NAMES = [
+  "ContentRegistry",
+  "RoundVotingEngine",
+  "RoundRewardDistributor",
+  "CategoryRegistry",
+  "ProfileRegistry",
+  "FrontendRegistry",
+  "VoterIdNFT",
+  "CuryoReputation",
+  "HumanFaucet",
+  "ParticipationPool",
+  "QuestionRewardPoolEscrow",
+  "FeedbackBonusEscrow",
+] as const;
+
+function addExcludedAddress(addresses: Set<string>, address: string | undefined) {
+  if (address && isAddress(address)) {
+    addresses.add(address.toLowerCase());
+  }
+}
+
+function buildExcludedAddresses() {
+  const addresses = new Set<string>();
+  const networkName = process.env.PONDER_NETWORK || "hardhat";
+  const chainId = PONDER_NETWORK_CHAIN_IDS[networkName];
+
+  if (chainId !== undefined) {
+    for (const contractName of INDEXED_CONTRACT_NAMES) {
+      addExcludedAddress(addresses, getSharedDeploymentAddress(chainId, contractName));
+    }
+  }
+
+  addExcludedAddress(addresses, process.env.PONDER_DEPLOYER_ADDRESS?.trim());
+
+  return addresses;
+}
+
+const excludedAddresses = buildExcludedAddresses();
 
 ponder.on("CuryoReputation:Transfer", async ({ event, context }) => {
   const { from, to, value } = event.args;
