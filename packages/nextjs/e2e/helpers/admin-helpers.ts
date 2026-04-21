@@ -250,6 +250,27 @@ async function buildSubmissionReservation(
   return { revealCommitment, salt };
 }
 
+async function resolveSubmissionRoundConfig(
+  contractAddress: string,
+  roundConfig?: SubmissionRoundConfig,
+): Promise<SubmissionRoundConfig> {
+  if (roundConfig) {
+    return roundConfig;
+  }
+
+  try {
+    const currentConfig = await readRoundConfig(contractAddress);
+    return {
+      epochDuration: Number(currentConfig.epochDuration),
+      maxDuration: Number(currentConfig.maxDuration),
+      minVoters: Number(currentConfig.minVoters),
+      maxVoters: Number(currentConfig.maxVoters),
+    };
+  } catch {
+    return DEFAULT_SUBMISSION_ROUND_CONFIG;
+  }
+}
+
 function toSubmissionMedia(_url: string, media?: SubmissionMediaInput): SubmissionMedia {
   if (media) {
     return assertSupportedSubmissionMedia({
@@ -584,11 +605,12 @@ export async function submitContentDirect(
   contractAddress: string,
   mediaInput?: SubmissionMediaInput,
   rewardAmount: bigint = DEFAULT_SUBMISSION_REWARD_AMOUNT,
-  roundConfig: SubmissionRoundConfig = DEFAULT_SUBMISSION_ROUND_CONFIG,
+  roundConfig?: SubmissionRoundConfig,
 ): Promise<boolean> {
   const { encodeFunctionData } = await import("viem");
   const resolvedCategoryId = BigInt(categoryId);
   const media = toSubmissionMedia(url, mediaInput);
+  const resolvedRoundConfig = await resolveSubmissionRoundConfig(contractAddress, roundConfig);
   const reservation = await buildSubmissionReservation(
     url,
     title,
@@ -599,7 +621,7 @@ export async function submitContentDirect(
     contractAddress,
     media,
     rewardAmount,
-    roundConfig,
+    resolvedRoundConfig,
   );
   if (!reservation) return false;
 
@@ -687,7 +709,7 @@ export async function submitContentDirect(
         requiredSettledRounds: DEFAULT_SUBMISSION_REWARD_SETTLED_ROUNDS,
         expiresAt: DEFAULT_SUBMISSION_REWARD_EXPIRES_AT,
       },
-      roundConfig,
+      resolvedRoundConfig,
     ],
   });
   return sendTx(fromAddress, contractAddress, data);
@@ -1942,8 +1964,7 @@ export async function waitForPonderIndexed(
 
 /**
  * Read the current round config tuple.
- * Accepts either a RoundVotingEngine address (resolves its ProtocolConfig)
- * or a ProtocolConfig address directly.
+ * Accepts a ProtocolConfig address directly or a contract that exposes protocolConfig().
  */
 export async function readRoundConfig(contractAddress: string): Promise<{
   epochDuration: bigint;
