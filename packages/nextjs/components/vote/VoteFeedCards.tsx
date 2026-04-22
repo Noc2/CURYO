@@ -44,6 +44,66 @@ function getSourceLabel(url: string) {
   }
 }
 
+function formatDeadlineDistance(deadline: bigint) {
+  const nowSeconds = BigInt(Math.floor(Date.now() / 1000));
+  const seconds = Number(deadline - nowSeconds);
+  if (seconds <= 0) return "now";
+  if (seconds < 60 * 60) return `${Math.max(1, Math.ceil(seconds / 60))}m`;
+  if (seconds < 24 * 60 * 60) return `${Math.ceil(seconds / (60 * 60))}h`;
+  if (seconds < 7 * 24 * 60 * 60) return `${Math.ceil(seconds / (24 * 60 * 60))}d`;
+
+  return new Intl.DateTimeFormat(undefined, { day: "numeric", month: "short" }).format(
+    new Date(Number(deadline) * 1000),
+  );
+}
+
+function getDeadlineChipClassName(tone: "active" | "ended") {
+  return tone === "active"
+    ? "border-primary/20 bg-primary/10 text-primary"
+    : "border-base-content/10 bg-base-content/[0.05] text-base-content/62";
+}
+
+function getRewardDeadlineChips(item: ContentItem) {
+  const chips: Array<{ label: string; tone: "active" | "ended" }> = [];
+  const rewardSummary = item.rewardPoolSummary;
+  const feedbackSummary = item.feedbackBonusSummary;
+
+  const hasActiveBounty = Boolean(rewardSummary?.hasActiveBounty || (rewardSummary?.activeRewardPoolCount ?? 0) > 0);
+  const hasActiveFeedback = Boolean(
+    feedbackSummary?.hasActiveFeedbackBonus || (feedbackSummary?.activePoolCount ?? 0) > 0,
+  );
+
+  if (rewardSummary && hasActiveBounty) {
+    chips.push({
+      label: rewardSummary.nextBountyClosesAt
+        ? `Bounty closes in ${formatDeadlineDistance(rewardSummary.nextBountyClosesAt)}`
+        : "Bounty active",
+      tone: "active",
+    });
+  } else if ((rewardSummary?.expiredRewardPoolCount ?? 0) > 0) {
+    chips.push({
+      label:
+        rewardSummary?.totalAvailable && rewardSummary.totalAvailable > 0n
+          ? "Bounty ended; claims remain"
+          : "Bounty ended",
+      tone: "ended",
+    });
+  }
+
+  if (feedbackSummary && hasActiveFeedback) {
+    chips.push({
+      label: feedbackSummary.nextFeedbackClosesAt
+        ? `Feedback closes in ${formatDeadlineDistance(feedbackSummary.nextFeedbackClosesAt)}`
+        : "Feedback active",
+      tone: "active",
+    });
+  } else if ((feedbackSummary?.expiredPoolCount ?? 0) > 0) {
+    chips.push({ label: "Feedback ended", tone: "ended" });
+  }
+
+  return chips;
+}
+
 function isInteractiveTarget(target: EventTarget | null) {
   return target instanceof Element && target.closest(CONTENT_INTENT_INTERACTIVE_SELECTOR) !== null;
 }
@@ -413,6 +473,7 @@ function FeedContentMetaCard({
   const hasContextLink = contextUrl.length > 0 && contextLabel.trim().length > 0;
   const rewardPoolTotal = item.rewardPoolSummary?.totalAvailable ?? 0n;
   const feedbackBonusTotal = item.feedbackBonusSummary?.totalRemaining ?? 0n;
+  const rewardDeadlineChips = getRewardDeadlineChips(item);
   const hideDockedActionButtons = isMobileViewport;
   const actionRowClassName = `flex items-center justify-between gap-3 ${compact ? "mt-3" : "mt-4"}`;
   const wrapperClassName = embedded
@@ -464,6 +525,20 @@ function FeedContentMetaCard({
             </div>
             {actionButtons}
           </div>
+          {rewardDeadlineChips.length > 0 ? (
+            <div className="flex flex-wrap gap-1.5">
+              {rewardDeadlineChips.map(chip => (
+                <span
+                  key={chip.label}
+                  className={`rounded-full border px-2.5 py-1 text-xs font-semibold ${getDeadlineChipClassName(
+                    chip.tone,
+                  )}`}
+                >
+                  {chip.label}
+                </span>
+              ))}
+            </div>
+          ) : null}
           <VotingQuestionContextDetails
             contentId={item.id}
             categoryId={item.categoryId}

@@ -238,6 +238,7 @@ async function buildSubmissionReservation(
     requiredSettledRounds: DEFAULT_SUBMISSION_REWARD_SETTLED_ROUNDS,
     requiredVoters: DEFAULT_SUBMISSION_REWARD_REQUIRED_VOTERS,
     rewardPoolExpiresAt: DEFAULT_SUBMISSION_REWARD_EXPIRES_AT,
+    feedbackClosesAt: DEFAULT_SUBMISSION_REWARD_EXPIRES_AT,
     roundConfig,
     salt,
     submissionKey,

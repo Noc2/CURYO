@@ -6,6 +6,18 @@ import { readContract, waitForTransactionReceipt } from "wagmi/actions";
 import { XMarkIcon } from "@heroicons/react/24/outline";
 import { InfoTooltip } from "~~/components/ui/InfoTooltip";
 import {
+  BOUNTY_WINDOW_PRESETS,
+  type BountyWindowPreset,
+  type BountyWindowUnit,
+  DEFAULT_BOUNTY_WINDOW_PRESET,
+  DEFAULT_CUSTOM_BOUNTY_WINDOW_AMOUNT,
+  DEFAULT_CUSTOM_BOUNTY_WINDOW_UNIT,
+  formatBountyWindowDuration,
+  getBountyClosesAt,
+  getBountyWindowSeconds,
+  parseBountyWindowAmount,
+} from "~~/lib/bountyWindows";
+import {
   DEFAULT_REWARD_POOL_FRONTEND_FEE_BPS,
   ERC20_APPROVAL_ABI,
   MIN_REWARD_POOL_REQUIRED_VOTERS,
@@ -25,18 +37,13 @@ type FundQuestionModalProps = {
   onCreated?: () => void;
 };
 
-function getExpiryTimestamp(days: number): bigint {
-  if (!Number.isFinite(days) || days < 1) return 0n;
-  return BigInt(Math.floor(Date.now() / 1000) + Math.floor(days * 24 * 60 * 60));
-}
-
 const FRONTEND_FEE_PERCENT = DEFAULT_REWARD_POOL_FRONTEND_FEE_BPS / 100;
 const REQUIRED_VOTERS_TOOLTIP =
   "How many eligible revealed voters a round needs before that round can count toward this bounty. This cannot exceed the question's selected voter cap.";
 const SETTLED_ROUNDS_TOOLTIP =
   "How many qualifying settled rounds must complete before the bounty is filled and funds can be paid out.";
-const REFUND_AFTER_TOOLTIP =
-  "Days before unclaimed funds can be refunded. If the bounty has not filled by then, remaining funds can be returned to you.";
+const BOUNTY_WINDOW_TOOLTIP =
+  "Bounty and paid feedback are active only inside this window. The question remains visible after the bounty closes.";
 
 function BountyFieldLabel({ htmlFor, children, tooltip }: { htmlFor: string; children: ReactNode; tooltip?: string }) {
   return (
@@ -56,11 +63,14 @@ export function FundQuestionModal({ contentId, title, onClose, onCreated }: Fund
   const amountInputId = useId();
   const requiredVotersInputId = useId();
   const requiredRoundsInputId = useId();
-  const expiryDaysInputId = useId();
   const [amount, setAmount] = useState("10");
   const [requiredVoters, setRequiredVoters] = useState("5");
   const [requiredRounds, setRequiredRounds] = useState("2");
-  const [expiryDays, setExpiryDays] = useState("30");
+  const [bountyWindowPreset, setBountyWindowPreset] = useState<BountyWindowPreset>(DEFAULT_BOUNTY_WINDOW_PRESET);
+  const [customBountyWindowAmount, setCustomBountyWindowAmount] = useState(DEFAULT_CUSTOM_BOUNTY_WINDOW_AMOUNT);
+  const [customBountyWindowUnit, setCustomBountyWindowUnit] = useState<BountyWindowUnit>(
+    DEFAULT_CUSTOM_BOUNTY_WINDOW_UNIT,
+  );
   const [isFunding, setIsFunding] = useState(false);
 
   const chainId = chain?.id ?? wagmiConfig.chains[0]?.id ?? 0;
@@ -69,14 +79,22 @@ export function FundQuestionModal({ contentId, title, onClose, onCreated }: Fund
   const parsedAmount = useMemo(() => parseUsdRewardPoolAmount(amount), [amount]);
   const voterCount = Math.max(MIN_REWARD_POOL_REQUIRED_VOTERS, Math.floor(Number(requiredVoters) || 0));
   const settledRounds = Math.max(MIN_REWARD_POOL_SETTLED_ROUNDS, Math.floor(Number(requiredRounds) || 0));
-  const expiry = Math.floor(Number(expiryDays) || 0);
+  const bountyWindowSeconds = getBountyWindowSeconds(
+    bountyWindowPreset,
+    customBountyWindowAmount,
+    customBountyWindowUnit,
+  );
+  const bountyWindowAmount = parseBountyWindowAmount(customBountyWindowAmount);
+  const bountyWindowLabel = formatBountyWindowDuration(bountyWindowSeconds);
+  const hasValidBountyWindow =
+    bountyWindowSeconds !== null && bountyWindowAmount >= (bountyWindowPreset === "custom" ? 1 : 0);
   const canSubmit = Boolean(
     address &&
       escrowAddress &&
       parsedAmount &&
       voterCount >= MIN_REWARD_POOL_REQUIRED_VOTERS &&
       settledRounds >= MIN_REWARD_POOL_SETTLED_ROUNDS &&
-      expiry >= 1,
+      hasValidBountyWindow,
   );
 
   const handleFundQuestion = async () => {
@@ -92,8 +110,8 @@ export function FundQuestionModal({ contentId, title, onClose, onCreated }: Fund
       notification.warning("Enter a positive USD amount.");
       return;
     }
-    if (expiry < 1) {
-      notification.warning("Choose at least 1 day before refund.");
+    if (!hasValidBountyWindow) {
+      notification.warning("Choose a bounty window.");
       return;
     }
 
@@ -132,7 +150,7 @@ export function FundQuestionModal({ contentId, title, onClose, onCreated }: Fund
         await waitForTransactionReceipt(wagmiConfig, { hash: approveHash });
       }
 
-      const bountyClosesAt = getExpiryTimestamp(expiry);
+      const bountyClosesAt = getBountyClosesAt(bountyWindowPreset, customBountyWindowAmount, customBountyWindowUnit);
       const rewardPoolHash = await writeContractAsync({
         address: escrowAddress,
         abi: QUESTION_REWARD_POOL_ESCROW_ABI,
@@ -222,19 +240,67 @@ export function FundQuestionModal({ contentId, title, onClose, onCreated }: Fund
             </div>
           </div>
 
-          <div className="form-control">
-            <BountyFieldLabel htmlFor={expiryDaysInputId} tooltip={REFUND_AFTER_TOOLTIP}>
-              Refund if not filled after
-            </BountyFieldLabel>
-            <input
-              id={expiryDaysInputId}
-              type="number"
-              min={1}
-              step={1}
-              value={expiryDays}
-              onChange={event => setExpiryDays(event.target.value)}
-              className="input input-bordered bg-base-100"
-            />
+          <div className="space-y-2">
+            <div className="label justify-start gap-1 px-0 py-0 pb-1">
+              <span className="label-text">Bounty window</span>
+              <InfoTooltip text={BOUNTY_WINDOW_TOOLTIP} position="top" />
+            </div>
+            <div className="grid grid-cols-3 gap-2">
+              {BOUNTY_WINDOW_PRESETS.map(option => (
+                <button
+                  key={option.id}
+                  type="button"
+                  aria-pressed={bountyWindowPreset === option.id}
+                  onClick={() => setBountyWindowPreset(option.id)}
+                  className={`btn btn-sm ${bountyWindowPreset === option.id ? "btn-primary" : "btn-outline"}`}
+                >
+                  {option.label}
+                </button>
+              ))}
+              <button
+                type="button"
+                aria-pressed={bountyWindowPreset === "custom"}
+                onClick={() => setBountyWindowPreset("custom")}
+                className={`btn btn-sm ${bountyWindowPreset === "custom" ? "btn-primary" : "btn-outline"}`}
+              >
+                Custom
+              </button>
+            </div>
+            {bountyWindowPreset === "custom" ? (
+              <div className="grid gap-2 sm:grid-cols-[minmax(0,1fr)_8rem]">
+                <label className="form-control">
+                  <span className="label-text">Window length</span>
+                  <input
+                    type="number"
+                    min={1}
+                    step={1}
+                    value={customBountyWindowAmount}
+                    onChange={event => setCustomBountyWindowAmount(event.target.value)}
+                    className={`input input-bordered bg-base-100 ${hasValidBountyWindow ? "" : "input-error"}`}
+                  />
+                </label>
+                <label className="form-control">
+                  <span className="label-text">Unit</span>
+                  <select
+                    value={customBountyWindowUnit}
+                    onChange={event => setCustomBountyWindowUnit(event.target.value as BountyWindowUnit)}
+                    className="select select-bordered bg-base-100"
+                  >
+                    <option value="hours">Hours</option>
+                    <option value="days">Days</option>
+                  </select>
+                </label>
+              </div>
+            ) : (
+              <label className="form-control">
+                <span className="label-text">Selected window</span>
+                <input
+                  value={bountyWindowLabel}
+                  readOnly
+                  className="input input-bordered bg-base-100 text-base-content/70"
+                />
+              </label>
+            )}
           </div>
 
           {!escrowAddress ? (

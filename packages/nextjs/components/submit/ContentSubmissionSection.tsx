@@ -22,6 +22,18 @@ import { useGasBalanceStatus } from "~~/hooks/useGasBalanceStatus";
 import { useThirdwebSponsoredSubmitCalls } from "~~/hooks/useThirdwebSponsoredSubmitCalls";
 import { useTransactionStatusToast } from "~~/hooks/useTransactionStatusToast";
 import { useWalletRpcRecovery } from "~~/hooks/useWalletRpcRecovery";
+import {
+  BOUNTY_WINDOW_PRESETS,
+  type BountyWindowPreset,
+  type BountyWindowUnit,
+  DEFAULT_BOUNTY_WINDOW_PRESET,
+  DEFAULT_CUSTOM_BOUNTY_WINDOW_AMOUNT,
+  DEFAULT_CUSTOM_BOUNTY_WINDOW_UNIT,
+  formatBountyWindowDuration,
+  getBountyClosesAt,
+  getBountyWindowSeconds,
+  parseBountyWindowAmount,
+} from "~~/lib/bountyWindows";
 import { MAX_CONTENT_DESCRIPTION_LENGTH } from "~~/lib/contentDescription";
 import {
   MAX_SUBMISSION_IMAGE_URLS,
@@ -79,7 +91,6 @@ const MEDIA_URL_CONFIG = {
 };
 
 type SubmissionStep = "question" | "bounty";
-type RewardExpiryMode = "none" | "days";
 
 const MAX_QUESTION_BUNDLE_COUNT = 10;
 
@@ -126,14 +137,6 @@ function createRandomHex32(): `0x${string}` {
   const bytes = new Uint8Array(32);
   window.crypto.getRandomValues(bytes);
   return toHex(bytes);
-}
-
-function getRewardPoolExpiresAt(mode: RewardExpiryMode, daysText: string): bigint {
-  if (mode !== "days") return 0n;
-
-  const parsedDays = Math.floor(Number(daysText) || 0);
-  if (parsedDays < 1) return 0n;
-  return BigInt(Math.floor(Date.now() / 1000) + parsedDays * 24 * 60 * 60);
 }
 
 function parseIntegerInput(value: string): number {
@@ -224,8 +227,11 @@ export function ContentSubmissionSection() {
   const [rewardAmount, setRewardAmount] = useState("1");
   const [rewardRequiredVoters, setRewardRequiredVoters] = useState("3");
   const [rewardRequiredSettledRounds, setRewardRequiredSettledRounds] = useState("1");
-  const [rewardExpiryMode, setRewardExpiryMode] = useState<RewardExpiryMode>("none");
-  const [rewardExpiryDays, setRewardExpiryDays] = useState("30");
+  const [bountyWindowPreset, setBountyWindowPreset] = useState<BountyWindowPreset>(DEFAULT_BOUNTY_WINDOW_PRESET);
+  const [customBountyWindowAmount, setCustomBountyWindowAmount] = useState(DEFAULT_CUSTOM_BOUNTY_WINDOW_AMOUNT);
+  const [customBountyWindowUnit, setCustomBountyWindowUnit] = useState<BountyWindowUnit>(
+    DEFAULT_CUSTOM_BOUNTY_WINDOW_UNIT,
+  );
   const [roundBlindMinutes, setRoundBlindMinutes] = useState(
     String(Number(DEFAULT_QUESTION_ROUND_CONFIG.epochDuration / 60n)),
   );
@@ -700,11 +706,20 @@ export function ContentSubmissionSection() {
       ? `Minimum is ${MIN_REWARD_POOL_SETTLED_ROUNDS} round.`
       : null;
   const rewardRequiredSettledRoundsError = bountyStepAttempted ? rewardRequiredSettledRoundsValidationError : null;
-  const parsedRewardExpiryDays = parseIntegerInput(rewardExpiryDays);
+  const bountyWindowSeconds = getBountyWindowSeconds(
+    bountyWindowPreset,
+    customBountyWindowAmount,
+    customBountyWindowUnit,
+  );
+  const parsedCustomBountyWindowAmount = parseBountyWindowAmount(customBountyWindowAmount);
   const rewardExpiryValidationError =
-    rewardExpiryMode === "days" && parsedRewardExpiryDays < 1 ? "Enter at least 1 day or choose no expiry." : null;
+    bountyWindowPreset === "custom" && parsedCustomBountyWindowAmount < 1
+      ? `Enter at least 1 ${customBountyWindowUnit === "hours" ? "hour" : "day"}.`
+      : bountyWindowSeconds === null
+        ? "Choose a bounty window."
+        : null;
   const rewardExpiryError = bountyStepAttempted ? rewardExpiryValidationError : null;
-  const rewardPoolExpiresAt = getRewardPoolExpiresAt(rewardExpiryMode, rewardExpiryDays);
+  const rewardPoolExpiresAt = getBountyClosesAt(bountyWindowPreset, customBountyWindowAmount, customBountyWindowUnit);
   const feedbackClosesAt = rewardPoolExpiresAt;
   const bountySettingsValid =
     rewardRequiredVotersValidationError === null &&
@@ -726,6 +741,7 @@ export function ContentSubmissionSection() {
   const estimatedVoterCap = BigInt(Math.max(0, parsedRoundMaxVoters));
   const estimatedVoterCapGrossReward = divideRewardAmount(estimatedBountyAmount, estimatedVoterCap);
   const estimatedVoterCapReward = applyEstimatedFrontendFee(estimatedVoterCapGrossReward, frontendFeeBps);
+  const bountyWindowLabel = formatBountyWindowDuration(bountyWindowSeconds);
   const oneTokenPerMinimumVoterBounty = selectedRequiredVoters * selectedRequiredSettledRounds * 1_000_000n;
   const bountyRecommendation = rewardAmountError
     ? "Increase the bounty until the estimate is valid before submitting."
@@ -1195,8 +1211,9 @@ export function ContentSubmissionSection() {
       setRewardAmount("1");
       setRewardRequiredVoters("3");
       setRewardRequiredSettledRounds("1");
-      setRewardExpiryMode("none");
-      setRewardExpiryDays("30");
+      setBountyWindowPreset(DEFAULT_BOUNTY_WINDOW_PRESET);
+      setCustomBountyWindowAmount(DEFAULT_CUSTOM_BOUNTY_WINDOW_AMOUNT);
+      setCustomBountyWindowUnit(DEFAULT_CUSTOM_BOUNTY_WINDOW_UNIT);
       setRoundBlindMinutes(String(Math.max(1, Math.round(roundConfigDefaults.epochDuration / 60))));
       setRoundMaxDurationHours(String(Math.max(1, Math.round(roundConfigDefaults.maxDuration / 3600))));
       setRoundMinVoters(String(roundConfigDefaults.minVoters));
@@ -1327,7 +1344,7 @@ export function ContentSubmissionSection() {
   const roundSettingsTooltipText =
     "Governance sets the allowed range. Urgent bounties can use shorter rounds; broader questions can wait for more voters.";
   const bountyExpiryTooltipText =
-    "No expiry keeps the bounty open until it is filled or the contract rules move it along. Duration sets how many days it stays open.";
+    "Bounty and paid feedback are active only inside this window. The question remains visible after the bounty closes.";
 
   const bountyDetailsCard = (
     <div className="space-y-5">
@@ -1511,42 +1528,67 @@ export function ContentSubmissionSection() {
 
       <div className="space-y-2">
         <p className="flex items-center gap-1.5 text-sm font-medium text-base-content/80">
-          Bounty expiry (optional)
+          Bounty window
           <InfoTooltip text={bountyExpiryTooltipText} />
         </p>
-        <div className="grid grid-cols-2 gap-2">
+        <div className="grid grid-cols-3 gap-2">
+          {BOUNTY_WINDOW_PRESETS.map(option => (
+            <button
+              key={option.id}
+              type="button"
+              aria-pressed={bountyWindowPreset === option.id}
+              onClick={() => setBountyWindowPreset(option.id)}
+              className={`btn btn-sm ${bountyWindowPreset === option.id ? "btn-primary" : "btn-outline"}`}
+            >
+              {option.label}
+            </button>
+          ))}
           <button
             type="button"
-            aria-pressed={rewardExpiryMode === "none"}
-            onClick={() => setRewardExpiryMode("none")}
-            className={`btn btn-sm ${rewardExpiryMode === "none" ? "btn-primary" : "btn-outline"}`}
+            aria-pressed={bountyWindowPreset === "custom"}
+            onClick={() => setBountyWindowPreset("custom")}
+            className={`btn btn-sm ${bountyWindowPreset === "custom" ? "btn-primary" : "btn-outline"}`}
           >
-            No expiry
-          </button>
-          <button
-            type="button"
-            aria-pressed={rewardExpiryMode === "days"}
-            onClick={() => setRewardExpiryMode("days")}
-            className={`btn btn-sm ${rewardExpiryMode === "days" ? "btn-primary" : "btn-outline"}`}
-          >
-            Duration
+            Custom
           </button>
         </div>
-        {rewardExpiryMode === "days" ? (
+        {bountyWindowPreset === "custom" ? (
+          <div className="grid gap-2 sm:grid-cols-[minmax(0,1fr)_8rem]">
+            <label className="form-control">
+              <span className="label-text">Window length</span>
+              <input
+                type="number"
+                min={1}
+                step={1}
+                value={customBountyWindowAmount}
+                onChange={e => setCustomBountyWindowAmount(e.target.value)}
+                className={`input input-bordered bg-base-100 ${
+                  bountyStepAttempted && rewardExpiryError ? "input-error" : ""
+                }`}
+              />
+            </label>
+            <label className="form-control">
+              <span className="label-text">Unit</span>
+              <select
+                value={customBountyWindowUnit}
+                onChange={e => setCustomBountyWindowUnit(e.target.value as BountyWindowUnit)}
+                className="select select-bordered bg-base-100"
+              >
+                <option value="hours">Hours</option>
+                <option value="days">Days</option>
+              </select>
+            </label>
+          </div>
+        ) : (
           <label className="form-control">
-            <span className="label-text">Expires after (days)</span>
+            <span className="label-text">Selected window</span>
             <input
-              type="number"
-              min={1}
-              step={1}
-              value={rewardExpiryDays}
-              onChange={e => setRewardExpiryDays(e.target.value)}
-              className={`input input-bordered bg-base-100 ${
-                bountyStepAttempted && rewardExpiryError ? "input-error" : ""
-              }`}
+              value={bountyWindowLabel}
+              readOnly
+              className="input input-bordered bg-base-100 text-base-content/70"
             />
           </label>
-        ) : null}
+        )}
         {bountyStepAttempted && rewardExpiryError ? <p className="text-base text-error">{rewardExpiryError}</p> : null}
       </div>
     </div>
@@ -1586,6 +1628,10 @@ export function ContentSubmissionSection() {
           <div className="rounded-lg bg-base-100/70 p-3">
             <p className="text-sm font-medium uppercase text-base-content/45">Questions</p>
             <p className="mt-1 text-lg font-semibold text-base-content">{questionCount}</p>
+          </div>
+          <div className="rounded-lg bg-base-100/70 p-3">
+            <p className="text-sm font-medium uppercase text-base-content/45">Bounty window</p>
+            <p className="mt-1 text-lg font-semibold text-base-content">{bountyWindowLabel}</p>
           </div>
         </div>
 
