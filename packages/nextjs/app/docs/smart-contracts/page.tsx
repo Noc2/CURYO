@@ -641,7 +641,7 @@ const SmartContracts: NextPage = () => {
       <h2>ParticipationPool</h2>
       <p>
         Implements the user-facing Bootstrap Pool for voters. Voter rewards are claimed after round settlement using the
-        rate snapshotted at settlement time. Funded with 24M cREP. Uses a halving schedule: starting at 90% reward rate,
+        rate snapshotted at settlement time. Funded with 12M cREP. Uses a halving schedule: starting at 90% reward rate,
         halving each time a tier threshold is reached (1.5M, 4.5M, 10.5M, 22.5M cumulative), with a 1% floor rate.
       </p>
       <p>
@@ -707,7 +707,7 @@ const SmartContracts: NextPage = () => {
         </li>
         <li>
           <strong>Governance-owned access control:</strong> The governor/timelock owns upgrade, config, and treasury
-          roles from launch. The initial 20M treasury allocation also sits there, while the deployer receives only
+          roles from launch. The initial 32M treasury allocation also sits there, while the deployer receives only
           temporary setup roles and renounces them after deployment.
         </li>
       </ul>

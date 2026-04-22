@@ -342,7 +342,7 @@ export const SECTIONS: Section[] = [
           },
           {
             type: "paragraph",
-            text: "Under modeled usage of 1,000 votes per day at an average stake of 50 cREP, the Bootstrap Pool (24M cREP) sustains tier-0 rewards (90%) for approximately 33 days before the first halving. The halving schedule then extends the pool's effective lifetime: the pool supports over 1 million votes and survives well beyond one year of continuous operation across its first four tiers. Worst-case drainage (200 max-stake voters per round) exhausts tier-0 in approximately 83 rounds, but the halving mechanism ensures graceful degradation rather than abrupt depletion. A 256-run fuzz test confirms the conservation invariant: distributed tokens plus remaining balance always equals the initial deposit.",
+            text: "Under modeled usage of 1,000 votes per day at an average stake of 50 cREP, the Bootstrap Pool (12M cREP) sustains tier-0 rewards (90%) for approximately 33 days before the first halving. The halving schedule then extends the pool's effective lifetime: the pool supports nearly 1 million votes and survives well beyond one year of continuous operation across its funded tiers. Worst-case drainage (200 max-stake voters per round) exhausts tier-0 in approximately 83 rounds, but the halving mechanism ensures graceful degradation rather than abrupt depletion. A 256-run fuzz test confirms the conservation invariant: distributed tokens plus remaining balance always equals the initial deposit.",
           },
           {
             type: "sub_heading",
@@ -753,14 +753,13 @@ export const SECTIONS: Section[] = [
                 ["0", "1,500,000", "1,500,000", "90%", "9 cREP", "90 cREP"],
                 ["1", "3,000,000", "4,500,000", "45%", "4.5 cREP", "45 cREP"],
                 ["2", "6,000,000", "10,500,000", "22.5%", "2.25 cREP", "22.5 cREP"],
-                ["3", "12,000,000", "22,500,000", "11.25%", "1.125 cREP", "11.25 cREP"],
-                ["Tail", "1,500,000", "24,000,000", "5.62%", "0.562 cREP", "5.62 cREP"],
+                ["Tail", "1,500,000", "12,000,000", "11.25%", "1.125 cREP", "11.25 cREP"],
               ],
             },
           },
           {
             type: "paragraph",
-            text: "Voter bootstrap rewards are distributed when a round settles  -- deferred from vote time to prevent exploitation where attackers could vote, collect immediate bootstrap rewards, and then have rounds cancel without risk. The pool is funded with 24M cREP and governed by the same timelock as all other protocol contracts.",
+            text: "Voter bootstrap rewards are distributed when a round settles  -- deferred from vote time to prevent exploitation where attackers could vote, collect immediate bootstrap rewards, and then have rounds cancel without risk. The pool is funded with 12M cREP and governed by the same timelock as all other protocol contracts.",
           },
         ],
       },
@@ -1043,7 +1042,7 @@ export const SECTIONS: Section[] = [
         blocks: [
           {
             type: "paragraph",
-            text: "The treasury starts with 20M cREP routed directly to the governance timelock. It grows over time through four primary ongoing inflow sources:",
+            text: "The treasury starts with 32M cREP routed directly to the governance timelock. It grows over time through four primary ongoing inflow sources:",
           },
           {
             type: "bullets",

@@ -19,7 +19,7 @@ contract ParticipationPoolTest is Test {
     address public user2 = address(6);
     address public unauthorized = address(7);
 
-    uint256 public constant POOL_AMOUNT = 24_000_000 * 1e6; // 24M cREP
+    uint256 public constant POOL_AMOUNT = 12_000_000 * 1e6; // 12M cREP
     uint256 public constant INITIAL_RATE_BPS = 9000; // 90%
     uint256 public constant MIN_RATE_BPS = 100; // 1%
     uint256 public constant INITIAL_TIER_AMOUNT = 1_500_000e6; // 1.5M cREP

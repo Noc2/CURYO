@@ -17,7 +17,7 @@ contract FormalVerification_ParticipationPoolTest is Test {
     address caller = address(3); // authorized caller
     address user = address(5);
 
-    uint256 constant POOL_AMOUNT = 24_000_000e6; // 24M cREP
+    uint256 constant POOL_AMOUNT = 12_000_000e6; // 12M cREP
     uint256 constant INITIAL_RATE = 9000; // 90%
     uint256 constant TIER0_BOUNDARY = 1_500_000e6; // 1.5M
     uint256 constant TIER1_BOUNDARY = 4_500_000e6; // 4.5M (1.5M + 3M)
@@ -32,7 +32,7 @@ contract FormalVerification_ParticipationPoolTest is Test {
         pool = new ParticipationPool(address(crepToken), governance);
         pool.setAuthorizedCaller(caller, true);
 
-        // Fund pool with 24M cREP
+        // Fund pool with 12M cREP
         crepToken.mint(admin, POOL_AMOUNT);
         crepToken.approve(address(pool), POOL_AMOUNT);
         pool.depositPool(POOL_AMOUNT);
@@ -119,7 +119,7 @@ contract FormalVerification_ParticipationPoolTest is Test {
 
     // ==================== Test 6: Full Lifecycle Drainage Model ====================
 
-    /// @notice Pool survives > 1M votes total across all tiers.
+    /// @notice Pool survives > 900K votes total across all funded tiers.
     function test_DrainageModel_FullLifecycle() public pure {
         // Model: 1000 votes/day at 50 cREP avg stake across all tiers
         uint256 avgStake = 50e6;
@@ -130,7 +130,7 @@ contract FormalVerification_ParticipationPoolTest is Test {
             uint256(1_500_000e6), // Tier 0: 1.5M
             uint256(3_000_000e6), // Tier 1: 3M
             uint256(6_000_000e6), // Tier 2: 6M
-            uint256(12_000_000e6) // Tier 3: 12M
+            uint256(1_500_000e6) // Tail of tier 3: 1.5M
         ];
         uint256[4] memory tierRates = [
             uint256(9000), // 90%
@@ -150,8 +150,8 @@ contract FormalVerification_ParticipationPoolTest is Test {
             totalDays += daysInTier;
         }
 
-        // Assert pool survives > 1M votes across first 4 tiers
-        assertGt(totalVotes, 1_000_000, "Pool supports > 1M votes across tiers");
+        // Assert pool survives >900K votes across funded tiers
+        assertGt(totalVotes, 900_000, "Pool supports >900K votes across funded tiers");
         // Assert pool lasts > 1 year (365 days)
         assertGt(totalDays, 365, "Pool lasts > 1 year at 1000 votes/day");
     }

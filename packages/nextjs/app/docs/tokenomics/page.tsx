@@ -178,20 +178,12 @@ const Tokenomics = () => {
               <td className="font-mono">22.5 cREP</td>
             </tr>
             <tr>
-              <td>3</td>
+              <td>Tail</td>
+              <td className="font-mono">1,500,000</td>
               <td className="font-mono">12,000,000</td>
-              <td className="font-mono">22,500,000</td>
               <td className="font-mono">11.25%</td>
               <td className="font-mono">1.125 cREP</td>
               <td className="font-mono">11.25 cREP</td>
-            </tr>
-            <tr>
-              <td>Tail</td>
-              <td className="font-mono">1,500,000</td>
-              <td className="font-mono">24,000,000</td>
-              <td className="font-mono">5.62%</td>
-              <td className="font-mono">0.562 cREP</td>
-              <td className="font-mono">5.62 cREP</td>
             </tr>
           </tbody>
         </table>
@@ -213,7 +205,7 @@ const Tokenomics = () => {
 
       <h3>Treasury</h3>
       <p>
-        The protocol treasury starts with <strong>20M cREP</strong> on the governor/timelock from launch. It grows over
+        The protocol treasury starts with <strong>32M cREP</strong> on the governor/timelock from launch. It grows over
         time through three main ongoing inflow sources: a 1% treasury fee on contested losing pools, cancellation fees
         from voluntary content withdrawals, and forfeited unrevealed past-epoch votes swept during settlement cleanup.
         Treasury spending follows the same governance proposal path as upgrades and other governed config changes.

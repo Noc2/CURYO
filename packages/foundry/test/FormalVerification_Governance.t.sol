@@ -26,9 +26,9 @@ contract FormalVerification_GovernanceTest is Test {
 
     // Realistic launch balances excluded from dynamic quorum.
     uint256 constant FAUCET_BAL = 52_000_000e6;
-    uint256 constant BOOTSTRAP_POOL_BAL = 24_000_000e6;
+    uint256 constant BOOTSTRAP_POOL_BAL = 12_000_000e6;
     uint256 constant CONSENSUS_RESERVE_BAL = 4_000_000e6;
-    uint256 constant TREASURY_BAL = 20_000_000e6;
+    uint256 constant TREASURY_BAL = 32_000_000e6;
     // Total excluded at launch = 100M
 
     function setUp() public {
@@ -137,25 +137,25 @@ contract FormalVerification_GovernanceTest is Test {
 
     // ==================== Test 4: Mature Protocol Quorum ====================
 
-    /// @notice At maturity: faucet drained 30M, bootstrap pool drained 20M.
+    /// @notice At maturity: faucet drained 30M, bootstrap pool drained 12M.
     ///         Circulating = total - remaining_pools. Quorum scales with circulating.
     function test_QuorumGrows_MatureProtocol() public {
         // Simulate faucet draining 30M to users (faucet had 52M, now has 22M)
         vm.prank(mockFaucet);
         token.transfer(address(100), 30_000_000e6);
 
-        // Simulate bootstrap pool draining 20M (pool had 24M, now has 4M)
+        // Simulate bootstrap pool draining 12M (pool had 12M, now has 0)
         vm.prank(mockBootstrapPool);
-        token.transfer(address(101), 20_000_000e6);
+        token.transfer(address(101), 12_000_000e6);
 
         vm.roll(block.number + 1);
 
-        // Excluded holders now hold: faucet=22M, bootstrap=4M, consensus=4M, treasury=20M = 50M locked
+        // Excluded holders now hold: faucet=22M, bootstrap=0, consensus=4M, treasury=32M = 58M locked
         // Total supply = 100M
-        // Circulating = 100M - 50M = 50M
-        // Quorum = 4% of 50M = 2M
+        // Circulating = 100M - 58M = 42M
+        // Quorum = 4% of 42M = 1.68M
         uint256 q = governor.quorum(block.number - 1);
-        assertEq(q, 2_000_000e6, "Mature quorum = 2M cREP");
+        assertEq(q, 1_680_000e6, "Mature quorum = 1.68M cREP");
     }
 
     // ==================== Test 5: Distributed Proposal Creation at 10K cREP Threshold ====================

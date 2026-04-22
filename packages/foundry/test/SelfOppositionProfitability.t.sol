@@ -102,10 +102,10 @@ contract SelfOppositionProfitabilityTest is VotingTestBase {
         pool = new ParticipationPool(address(crepToken), owner);
         pool.setAuthorizedCaller(address(distributor), true);
 
-        // Fund participation pool with 24M cREP
-        crepToken.mint(owner, 24_000_000e6);
-        crepToken.approve(address(pool), 24_000_000e6);
-        pool.depositPool(24_000_000e6);
+        // Fund participation pool with 12M cREP
+        crepToken.mint(owner, 12_000_000e6);
+        crepToken.approve(address(pool), 12_000_000e6);
+        pool.depositPool(12_000_000e6);
 
         // Connect pool to engine
         ProtocolConfig(address(engine.protocolConfig())).setParticipationPool(address(pool));

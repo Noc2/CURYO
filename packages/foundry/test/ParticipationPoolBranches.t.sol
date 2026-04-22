@@ -16,7 +16,7 @@ contract ParticipationPoolBranchesTest is Test {
     address public user1 = address(4);
 
     uint256 public constant T0 = 1000;
-    uint256 public constant POOL_AMOUNT = 24_000_000e6;
+    uint256 public constant POOL_AMOUNT = 12_000_000e6;
 
     function setUp() public {
         vm.warp(T0);

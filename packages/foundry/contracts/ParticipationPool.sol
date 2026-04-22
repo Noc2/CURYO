@@ -9,7 +9,7 @@ import {IParticipationPool} from "./interfaces/IParticipationPool.sol";
 
 /// @title ParticipationPool
 /// @notice Distributes cREP rewards proportional to stake for voting and submitting content, with distribution-based halving.
-/// @dev Funded with 24M cREP. Early participants earn more — the reward rate halves as cumulative cREP distributed grows.
+/// @dev Funded with 12M cREP. Early participants earn more — the reward rate halves as cumulative cREP distributed grows.
 ///      Reward = stakeAmount × currentRateBps / 10000. Rate starts at 90% and halves per tier.
 contract ParticipationPool is IParticipationPool, Ownable, ReentrancyGuardTransient {
     using SafeERC20 for IERC20;

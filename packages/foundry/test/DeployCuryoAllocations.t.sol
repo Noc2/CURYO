@@ -16,7 +16,7 @@ contract DeployCuryoAllocationsTest is Test {
         assertEq(deployScript.TOTAL_SUPPLY_CAP(), crepToken.MAX_SUPPLY(), "script cap should match token MAX_SUPPLY");
         assertEq(totalLaunchAllocation, deployScript.TOTAL_SUPPLY_CAP(), "launch allocations should sum to full cap");
         assertEq(deployScript.FAUCET_POOL_AMOUNT(), 52_000_000 * 1e6, "faucet should receive full 52M allocation");
-        assertEq(deployScript.PARTICIPATION_POOL_AMOUNT(), 24_000_000 * 1e6, "bootstrap pool should receive 24M");
-        assertEq(deployScript.TREASURY_AMOUNT(), 20_000_000 * 1e6, "treasury should receive 20M");
+        assertEq(deployScript.PARTICIPATION_POOL_AMOUNT(), 12_000_000 * 1e6, "bootstrap pool should receive 12M");
+        assertEq(deployScript.TREASURY_AMOUNT(), 32_000_000 * 1e6, "treasury should receive 32M");
     }
 }
