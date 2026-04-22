@@ -158,15 +158,15 @@ contract FormalVerification_GovernanceTest is Test {
         assertEq(q, 1_680_000e6, "Mature quorum = 1.68M cREP");
     }
 
-    // ==================== Test 5: Distributed Proposal Creation at 10K cREP Threshold ====================
+    // ==================== Test 5: Distributed Proposal Creation at 1K cREP Threshold ====================
 
-    /// @notice Distinct voters with 10K cREP can still create proposals; each proposer is rate-limited.
-    function test_ProposalSpam_10KCREPThreshold() public {
-        // Create 5 different proposers each with exactly 10K cREP (threshold)
+    /// @notice Distinct voters with 1K cREP can still create proposals; each proposer is rate-limited.
+    function test_ProposalSpam_1KCREPThreshold() public {
+        // Create 5 different proposers each with exactly 1K cREP (threshold)
         address[5] memory proposers;
         for (uint256 i = 0; i < 5; i++) {
             proposers[i] = address(uint160(200 + i));
-            _mintCirculating(proposers[i], 10_000e6);
+            _mintCirculating(proposers[i], 1_000e6);
         }
 
         vm.roll(block.number + 1);
@@ -178,7 +178,7 @@ contract FormalVerification_GovernanceTest is Test {
             assertEq(uint256(governor.state(pid)), uint256(IGovernor.ProposalState.Pending), "Proposal is Pending");
         }
 
-        assertEq(governor.proposalThreshold(), 10_000e6, "10K cREP proposal threshold");
+        assertEq(governor.proposalThreshold(), 1_000e6, "1K cREP proposal threshold");
         assertEq(governor.PROPOSAL_COOLDOWN_BLOCKS(), 7200, "per-proposer cooldown active");
     }
 

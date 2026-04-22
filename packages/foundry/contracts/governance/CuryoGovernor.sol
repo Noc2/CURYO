@@ -39,8 +39,8 @@ contract CuryoGovernor is
     mapping(address => bool) public isExcludedHolder;
     /// @notice Whether excluded holders have been set (one-time initialization)
     bool public poolsInitialized;
-    /// @notice Bootstrap proposal threshold regardless of early faucet claim sizes (10K cREP with 6 decimals)
-    uint256 public constant BOOTSTRAP_PROPOSAL_THRESHOLD = 10_000 * 1e6;
+    /// @notice Bootstrap proposal threshold regardless of early faucet claim sizes (1K cREP with 6 decimals)
+    uint256 public constant BOOTSTRAP_PROPOSAL_THRESHOLD = 1_000 * 1e6;
     /// @notice Minimum quorum regardless of circulating supply (100K cREP with 6 decimals)
     uint256 public constant MINIMUM_QUORUM = 100_000 * 1e6;
     /// @notice Hard cap to keep quorum evaluation bounded and proposals cheap to evaluate.

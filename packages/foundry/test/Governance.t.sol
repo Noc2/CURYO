@@ -249,8 +249,8 @@ contract GovernanceTest is Test {
     }
 
     function test_GovernorProposalThreshold() public view {
-        // Bootstrap proposal threshold should be 10K cREP
-        assertEq(governor.proposalThreshold(), 10_000e6);
+        // Bootstrap proposal threshold should be 1K cREP
+        assertEq(governor.proposalThreshold(), 1_000e6);
     }
 
     function test_GovernorVotingPeriod() public view {

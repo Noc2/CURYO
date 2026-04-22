@@ -55,7 +55,7 @@ function effectiveRawSharePercent(bucketBps: number): number {
 }
 
 export const protocolDocFacts = {
-  governanceProposalThresholdLabel: "10,000 cREP",
+  governanceProposalThresholdLabel: "1,000 cREP",
   governanceQuorumLabel: "4% of circulating supply (min 100,000 cREP)",
   governanceMinimumQuorumLabel: "100,000 cREP",
   governanceTimelockDelayLabel: "2 days",
