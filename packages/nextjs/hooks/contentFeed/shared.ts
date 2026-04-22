@@ -79,6 +79,10 @@ export interface ContentItem {
     totalVoterClaimed?: bigint;
     totalFrontendClaimed?: bigint;
     activeRewardPoolCount: number;
+    expiredRewardPoolCount?: number;
+    hasActiveBounty?: boolean;
+    nextBountyClosesAt?: bigint | null;
+    nextFeedbackClosesAt?: bigint | null;
   } | null;
   feedbackBonusSummary?: {
     totalFunded: bigint;
@@ -88,7 +92,10 @@ export interface ContentItem {
     totalFrontendAwarded?: bigint;
     totalForfeited?: bigint;
     activePoolCount: number;
+    expiredPoolCount?: number;
     awardCount: number;
+    hasActiveFeedbackBonus?: boolean;
+    nextFeedbackClosesAt?: bigint | null;
   } | null;
 }
 
@@ -211,19 +218,27 @@ export function mapContentItem(
       totalVoterClaimedAmount?: string | number | bigint | null;
       totalFrontendClaimedAmount?: string | number | bigint | null;
       activeRewardPoolCount?: number | null;
+      expiredRewardPoolCount?: number | null;
+      hasActiveBounty?: boolean | null;
+      nextBountyClosesAt?: string | number | bigint | null;
+      nextFeedbackClosesAt?: string | number | bigint | null;
     } | null;
     feedbackBonusSummary?: {
       totalFunded?: string | number | bigint | null;
       totalFundedAmount?: string | number | bigint | null;
       totalRemaining?: string | number | bigint | null;
       totalRemainingAmount?: string | number | bigint | null;
+      activeRemainingAmount?: string | number | bigint | null;
       totalAwarded?: string | number | bigint | null;
       totalAwardedAmount?: string | number | bigint | null;
       totalVoterAwardedAmount?: string | number | bigint | null;
       totalFrontendAwardedAmount?: string | number | bigint | null;
       totalForfeitedAmount?: string | number | bigint | null;
       activePoolCount?: number | null;
+      expiredPoolCount?: number | null;
       awardCount?: number | null;
+      hasActiveFeedbackBonus?: boolean | null;
+      nextFeedbackClosesAt?: string | number | bigint | null;
     } | null;
   },
   voterAddress?: string,
@@ -332,6 +347,19 @@ export function mapContentItem(
           totalVoterClaimed: BigInt(item.rewardPoolSummary.totalVoterClaimedAmount ?? 0),
           totalFrontendClaimed: BigInt(item.rewardPoolSummary.totalFrontendClaimedAmount ?? 0),
           activeRewardPoolCount: item.rewardPoolSummary.activeRewardPoolCount ?? 0,
+          expiredRewardPoolCount: item.rewardPoolSummary.expiredRewardPoolCount ?? 0,
+          hasActiveBounty:
+            item.rewardPoolSummary.hasActiveBounty ?? (item.rewardPoolSummary.activeRewardPoolCount ?? 0) > 0,
+          nextBountyClosesAt:
+            item.rewardPoolSummary.nextBountyClosesAt === null ||
+            item.rewardPoolSummary.nextBountyClosesAt === undefined
+              ? null
+              : BigInt(item.rewardPoolSummary.nextBountyClosesAt),
+          nextFeedbackClosesAt:
+            item.rewardPoolSummary.nextFeedbackClosesAt === null ||
+            item.rewardPoolSummary.nextFeedbackClosesAt === undefined
+              ? null
+              : BigInt(item.rewardPoolSummary.nextFeedbackClosesAt),
         }
       : null,
     feedbackBonusSummary: item.feedbackBonusSummary
@@ -340,7 +368,10 @@ export function mapContentItem(
             item.feedbackBonusSummary.totalFunded ?? item.feedbackBonusSummary.totalFundedAmount ?? 0,
           ),
           totalRemaining: BigInt(
-            item.feedbackBonusSummary.totalRemaining ?? item.feedbackBonusSummary.totalRemainingAmount ?? 0,
+            item.feedbackBonusSummary.totalRemaining ??
+              item.feedbackBonusSummary.activeRemainingAmount ??
+              item.feedbackBonusSummary.totalRemainingAmount ??
+              0,
           ),
           totalAwarded: BigInt(
             item.feedbackBonusSummary.totalAwarded ?? item.feedbackBonusSummary.totalAwardedAmount ?? 0,
@@ -349,7 +380,15 @@ export function mapContentItem(
           totalFrontendAwarded: BigInt(item.feedbackBonusSummary.totalFrontendAwardedAmount ?? 0),
           totalForfeited: BigInt(item.feedbackBonusSummary.totalForfeitedAmount ?? 0),
           activePoolCount: item.feedbackBonusSummary.activePoolCount ?? 0,
+          expiredPoolCount: item.feedbackBonusSummary.expiredPoolCount ?? 0,
           awardCount: item.feedbackBonusSummary.awardCount ?? 0,
+          hasActiveFeedbackBonus:
+            item.feedbackBonusSummary.hasActiveFeedbackBonus ?? (item.feedbackBonusSummary.activePoolCount ?? 0) > 0,
+          nextFeedbackClosesAt:
+            item.feedbackBonusSummary.nextFeedbackClosesAt === null ||
+            item.feedbackBonusSummary.nextFeedbackClosesAt === undefined
+              ? null
+              : BigInt(item.feedbackBonusSummary.nextFeedbackClosesAt),
         }
       : null,
   };

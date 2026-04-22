@@ -104,6 +104,8 @@ export function registerDataRoutes(app: ApiApp) {
         questionCount: questionBundleReward.questionCount,
         completedQuestionCount: questionBundleReward.completedQuestionCount,
         claimedCount: questionBundleReward.claimedCount,
+        bountyClosesAt: questionBundleReward.bountyClosesAt,
+        feedbackClosesAt: questionBundleReward.feedbackClosesAt,
         expiresAt: questionBundleReward.expiresAt,
         updatedAt: questionBundleReward.updatedAt,
       })
@@ -485,6 +487,7 @@ export function registerDataRoutes(app: ApiApp) {
               eq(questionRewardPool.refunded, false),
               sql`${questionRewardPool.qualifiedRounds} < ${questionRewardPool.requiredSettledRounds}`,
               sql`${round.revealedCount} >= ${questionRewardPool.requiredVoters}`,
+              sql`(${questionRewardPool.bountyClosesAt} = 0 or ${round.settledAt} <= ${questionRewardPool.bountyClosesAt})`,
             ),
           ),
         ),

@@ -28,6 +28,7 @@ ponder.on("FeedbackBonusEscrow:FeedbackBonusPoolCreated", async ({ event, contex
       frontendAwardedAmount: 0n,
       forfeitedAmount: 0n,
       awardCount: 0,
+      feedbackClosesAt,
       awardDeadline: feedbackClosesAt,
       frontendFeeBps: Number(frontendFeeBps),
       forfeited: false,

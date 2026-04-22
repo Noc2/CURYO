@@ -40,8 +40,22 @@ function buildContentSearchExpressions(search: string) {
 }
 
 function getRewardAvailableAmount() {
+  const nowSeconds = BigInt(Math.floor(Date.now() / 1000));
   return sql<bigint>`coalesce((
-    select sum(${questionRewardPool.unallocatedAmount} + ${questionRewardPool.allocatedAmount} - ${questionRewardPool.claimedAmount})
+    select sum(
+      case
+        when ${questionRewardPool.allocatedAmount} > ${questionRewardPool.claimedAmount}
+          then ${questionRewardPool.allocatedAmount} - ${questionRewardPool.claimedAmount}
+        else 0
+      end
+      + case
+        when ${questionRewardPool.refunded} = false
+          and ${questionRewardPool.qualifiedRounds} < ${questionRewardPool.requiredSettledRounds}
+          and (${questionRewardPool.bountyClosesAt} = 0 or ${questionRewardPool.bountyClosesAt} > ${nowSeconds})
+          then ${questionRewardPool.unallocatedAmount}
+        else 0
+      end
+    )
     from ${questionRewardPool}
     where ${questionRewardPool.contentId} = ${content.id}
   ), 0) + coalesce((
@@ -50,11 +64,17 @@ function getRewardAvailableAmount() {
     where ${questionBundleReward.id} = ${content.bundleId}
       and ${questionBundleReward.failed} = false
       and ${questionBundleReward.refunded} = false
+      and (
+        ${questionBundleReward.completedQuestionCount} = ${questionBundleReward.questionCount}
+        or ${questionBundleReward.bountyClosesAt} = 0
+        or ${questionBundleReward.bountyClosesAt} > ${nowSeconds}
+      )
   ), 0) + coalesce((
     select sum(${feedbackBonusPool.remainingAmount})
     from ${feedbackBonusPool}
     where ${feedbackBonusPool.contentId} = ${content.id}
       and ${feedbackBonusPool.forfeited} = false
+      and ${feedbackBonusPool.feedbackClosesAt} > ${nowSeconds}
   ), 0)`;
 }
 

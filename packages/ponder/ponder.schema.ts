@@ -232,6 +232,9 @@ export const questionRewardPool = onchainTable(
     qualifiedRounds: t.integer().notNull(),
     frontendFeeBps: t.integer().notNull(),
     startRoundId: t.bigint().notNull(),
+    bountyOpensAt: t.bigint().notNull(),
+    bountyClosesAt: t.bigint().notNull(),
+    feedbackClosesAt: t.bigint().notNull(),
     expiresAt: t.bigint().notNull(),
     refunded: t.boolean().notNull(),
     createdAt: t.bigint().notNull(),
@@ -241,6 +244,8 @@ export const questionRewardPool = onchainTable(
     contentIdx: index().on(table.contentId),
     funderIdx: index().on(table.funder),
     refundedIdx: index().on(table.refunded),
+    bountyClosesAtIdx: index().on(table.bountyClosesAt),
+    feedbackClosesAtIdx: index().on(table.feedbackClosesAt),
     createdAtIdx: index().on(table.createdAt),
   }),
 );
@@ -309,6 +314,9 @@ export const questionBundleReward = onchainTable(
     completedQuestionCount: t.integer().notNull(),
     claimedCount: t.integer().notNull(),
     frontendFeeBps: t.integer().notNull(),
+    bountyOpensAt: t.bigint().notNull(),
+    bountyClosesAt: t.bigint().notNull(),
+    feedbackClosesAt: t.bigint().notNull(),
     expiresAt: t.bigint().notNull(),
     failed: t.boolean().notNull(),
     refunded: t.boolean().notNull(),
@@ -320,6 +328,7 @@ export const questionBundleReward = onchainTable(
     assetIdx: index().on(table.asset),
     failedIdx: index().on(table.failed),
     refundedIdx: index().on(table.refunded),
+    bountyClosesAtIdx: index().on(table.bountyClosesAt),
     createdAtIdx: index().on(table.createdAt),
   }),
 );
@@ -384,6 +393,7 @@ export const feedbackBonusPool = onchainTable(
     frontendAwardedAmount: t.bigint().notNull(),
     forfeitedAmount: t.bigint().notNull(),
     awardCount: t.integer().notNull(),
+    feedbackClosesAt: t.bigint().notNull(),
     awardDeadline: t.bigint().notNull(),
     frontendFeeBps: t.integer().notNull(),
     forfeited: t.boolean().notNull(),
@@ -396,6 +406,7 @@ export const feedbackBonusPool = onchainTable(
     funderIdx: index().on(table.funder),
     awarderIdx: index().on(table.awarder),
     forfeitedIdx: index().on(table.forfeited),
+    feedbackClosesAtIdx: index().on(table.feedbackClosesAt),
   }),
 );
 

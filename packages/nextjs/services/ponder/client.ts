@@ -350,15 +350,22 @@ export interface PonderRewardPoolSummary {
   decimals: 6;
   rewardPoolCount: number;
   activeRewardPoolCount: number;
+  expiredRewardPoolCount?: number;
   totalFundedAmount: string;
   totalUnallocatedAmount: string;
+  activeUnallocatedAmount?: string;
+  expiredUnallocatedAmount?: string;
   totalAllocatedAmount: string;
   totalClaimedAmount: string;
+  claimableAllocatedAmount?: string;
   totalVoterClaimedAmount: string;
   totalFrontendClaimedAmount: string;
   totalRefundedAmount: string;
   qualifiedRoundCount: number;
   currentRewardPoolAmount: string;
+  hasActiveBounty?: boolean;
+  nextBountyClosesAt?: string | null;
+  nextFeedbackClosesAt?: string | null;
 }
 
 export interface PonderFeedbackBonusSummary {
@@ -367,13 +374,18 @@ export interface PonderFeedbackBonusSummary {
   decimals: 6;
   poolCount: number;
   activePoolCount: number;
+  expiredPoolCount?: number;
   totalFundedAmount: string;
   totalRemainingAmount: string;
+  activeRemainingAmount?: string;
+  expiredRemainingAmount?: string;
   totalAwardedAmount: string;
   totalVoterAwardedAmount: string;
   totalFrontendAwardedAmount: string;
   totalForfeitedAmount: string;
   awardCount: number;
+  hasActiveFeedbackBonus?: boolean;
+  nextFeedbackClosesAt?: string | null;
 }
 
 export interface PonderQuestionRewardClaimCandidate {
