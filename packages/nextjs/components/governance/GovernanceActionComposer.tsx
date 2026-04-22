@@ -2,7 +2,7 @@
 
 import { type FormEvent, useMemo, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
-import { Address, encodeFunctionData, isAddress, parseUnits } from "viem";
+import { Address, encodeFunctionData, formatUnits, isAddress, parseUnits } from "viem";
 import { useAccount, useConfig } from "wagmi";
 import { waitForTransactionReceipt } from "wagmi/actions";
 import { ArrowsRightLeftIcon } from "@heroicons/react/24/outline";
@@ -41,7 +41,7 @@ type GovernanceActionTemplate = {
   group: string;
   label: string;
   mode: "proposal" | "direct";
-  contractName: "CuryoGovernor" | "FrontendRegistry" | "ContentRegistry";
+  contractName: "CuryoGovernor" | "CuryoReputation" | "FrontendRegistry" | "ContentRegistry";
   functionName: string;
   description: string;
   allowCustomDescription?: boolean;
@@ -55,6 +55,66 @@ type GovernanceActionTemplate = {
   ) => readonly unknown[];
   buildDescription?: (values: Record<string, string>) => string;
 };
+
+const TREASURY_GRANT_ACTION_ID = "treasury-grant";
+
+function cleanDescriptionValue(value: string | undefined, fallback: string) {
+  const cleaned = value?.trim();
+  return cleaned ? cleaned : fallback;
+}
+
+function buildTreasuryGrantDescription(values: Record<string, string>) {
+  const amount = cleanDescriptionValue(values.amount, "0");
+  const recipient = cleanDescriptionValue(values.recipient, "recipient");
+  const recipientType = cleanDescriptionValue(values.recipientType, "Unspecified");
+  const track = cleanDescriptionValue(values.track, "Unspecified");
+  const purpose = cleanDescriptionValue(values.purpose, "Unspecified");
+  const impact = cleanDescriptionValue(values.impact, "Unspecified");
+  const milestones = cleanDescriptionValue(values.milestones, "Unspecified");
+
+  return [
+    `Treasury grant: ${amount} cREP to ${recipient}`,
+    "",
+    `Track: ${track}`,
+    `Recipient type: ${recipientType}`,
+    `Purpose: ${purpose}`,
+    `Expected impact: ${impact}`,
+    `Milestones/reporting: ${milestones}`,
+    "",
+    "This proposal transfers cREP from the governance timelock treasury to the recipient. cREP carries voting power and is intended for protocol-aligned ecosystem participation, not as a protocol-backed payment.",
+  ].join("\n");
+}
+
+function parsePreviewCrepAmount(value: string | undefined) {
+  const trimmed = value?.trim();
+  if (!trimmed) return undefined;
+
+  try {
+    const amount = parseUnits(trimmed, 6);
+    return amount > 0n ? amount : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
+function formatCRepAmount(value: bigint | undefined) {
+  if (value === undefined) return "—";
+
+  const formatted = formatUnits(value, 6);
+  const [whole, fraction = ""] = formatted.split(".");
+  const wholePart = Number(whole).toLocaleString();
+  const trimmedFraction = fraction.replace(/0+$/, "").slice(0, 2);
+
+  return trimmedFraction ? `${wholePart}.${trimmedFraction} cREP` : `${wholePart} cREP`;
+}
+
+function formatPercentOf(value: bigint | undefined, total: bigint | undefined) {
+  if (value === undefined || total === undefined || total === 0n) return "—";
+  if (value > 0n && (value * 10_000n) / total === 0n) return "<0.01%";
+
+  const percentTimes100 = Number((value * 10_000n) / total);
+  return `${(percentTimes100 / 100).toLocaleString(undefined, { maximumFractionDigits: 2 })}%`;
+}
 
 const actionTemplates: readonly GovernanceActionTemplate[] = [
   {
@@ -104,6 +164,73 @@ const actionTemplates: readonly GovernanceActionTemplate[] = [
     fields: [{ key: "quorum", label: "Quorum numerator (%)", type: "uint", required: true }],
     buildArgs: (_, parser) => [parser.uint("quorum", "Quorum numerator")],
     buildDescription: values => `Update governor quorum numerator to ${values.quorum || "0"}%`,
+  },
+  {
+    id: TREASURY_GRANT_ACTION_ID,
+    group: "Treasury",
+    label: "Treasury grant",
+    mode: "proposal",
+    contractName: "CuryoReputation",
+    functionName: "transfer",
+    description: "Create a proposal to send cREP from the governance timelock treasury to a recipient.",
+    allowCustomDescription: false,
+    fields: [
+      {
+        key: "recipient",
+        label: "Recipient address",
+        type: "address",
+        required: true,
+        helperText: "The wallet or multisig that will receive the grant and its voting power.",
+      },
+      {
+        key: "amount",
+        label: "Grant amount (cREP)",
+        type: "crep",
+        required: true,
+        helperText: "Use a narrow amount that matches the requested ecosystem role.",
+      },
+      {
+        key: "track",
+        label: "Grant track",
+        type: "string",
+        required: true,
+        placeholder: "Partner activation, integration support, research/data, community growth, protocol development",
+      },
+      {
+        key: "recipientType",
+        label: "Recipient type",
+        type: "string",
+        required: true,
+        placeholder: "Company, integration partner, researcher, community contributor",
+      },
+      {
+        key: "purpose",
+        label: "Purpose",
+        type: "textarea",
+        required: true,
+        helperText: "Explain why this recipient should hold cREP.",
+      },
+      {
+        key: "impact",
+        label: "Expected impact",
+        type: "textarea",
+        required: true,
+        helperText: "Describe how this helps grow or improve the Curyo feedback network.",
+      },
+      {
+        key: "milestones",
+        label: "Milestones / reporting expectations",
+        type: "textarea",
+        required: true,
+        helperText: "State any deliverables, reporting cadence, or follow-up evidence voters should expect.",
+      },
+    ],
+    buildArgs: (_, parser) => {
+      const amount = parser.crep("amount", "Grant amount");
+      if (amount <= 0n) throw new Error("Grant amount must be greater than 0 cREP.");
+      return [parser.address("recipient", "Recipient address"), amount];
+    },
+    buildDescription: buildTreasuryGrantDescription,
   },
   {
     id: "frontend-slash",
@@ -296,9 +423,9 @@ export function GovernanceActionComposer() {
   const queryClient = useQueryClient();
   const { address } = useAccount();
   const wagmiConfig = useConfig();
-  const { governorAddress, hasGovernorContract, isGovernorContractLoading, knownContractsByName } =
+  const { governorAddress, hasGovernorContract, isGovernorContractLoading, knownContractsByName, timelockAddress } =
     useGovernanceContracts();
-  const { proposalThreshold } = useGovernanceStats();
+  const { currentQuorum, proposalThreshold } = useGovernanceStats();
   const { writeContractAsync, isPending } = useGovernanceWrite();
   const [selectedActionId, setSelectedActionId] = useState("");
   const [showAdvanced, setShowAdvanced] = useState(false);
@@ -321,10 +448,38 @@ export function GovernanceActionComposer() {
   );
 
   const selectedTemplate = visibleTemplates.find(template => template.id === selectedActionId);
+  const isTreasuryGrant = selectedTemplate?.id === TREASURY_GRANT_ACTION_ID;
 
   const defaultDescription = selectedTemplate?.buildDescription?.(formValues) ?? selectedTemplate?.label ?? "";
   const effectiveDescription = customDescription.trim() || defaultDescription;
   const activeProposalThreshold = proposalThreshold;
+
+  const grantAmount = useMemo(
+    () => (isTreasuryGrant ? parsePreviewCrepAmount(formValues.amount) : undefined),
+    [formValues.amount, isTreasuryGrant],
+  );
+
+  const { data: timelockTreasuryBalance } = useScaffoldReadContract({
+    contractName: "CuryoReputation",
+    functionName: "balanceOf" as any,
+    args: [timelockAddress] as any,
+    query: { enabled: isTreasuryGrant && !!timelockAddress },
+  });
+
+  const { data: configuredTreasuryAddress } = useScaffoldReadContract({
+    contractName: "ContentRegistry",
+    functionName: "treasury" as any,
+    query: { enabled: isTreasuryGrant },
+  });
+
+  const treasuryBalance = timelockTreasuryBalance as bigint | undefined;
+  const treasuryAddressMismatch =
+    isTreasuryGrant &&
+    !!timelockAddress &&
+    typeof configuredTreasuryAddress === "string" &&
+    configuredTreasuryAddress.toLowerCase() !== timelockAddress.toLowerCase();
+  const grantExceedsTreasury =
+    isTreasuryGrant && grantAmount !== undefined && treasuryBalance !== undefined && grantAmount > treasuryBalance;
 
   const groupedTemplates = useMemo(() => {
     const grouped = new Map<string, GovernanceActionTemplate[]>();
@@ -594,6 +749,46 @@ export function GovernanceActionComposer() {
                 <p className="text-base text-base-content/50">
                   Description: <span className="text-base-content/80">{effectiveDescription || "—"}</span>
                 </p>
+              )}
+              {isTreasuryGrant && (
+                <div className="space-y-2 pt-2">
+                  <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
+                    <div>
+                      <p className="text-base text-base-content/50">Timelock treasury balance</p>
+                      <p className="font-mono text-base text-base-content/80">{formatCRepAmount(treasuryBalance)}</p>
+                    </div>
+                    <div>
+                      <p className="text-base text-base-content/50">Share of treasury</p>
+                      <p className="font-mono text-base text-base-content/80">
+                        {formatPercentOf(grantAmount, treasuryBalance)}
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-base text-base-content/50">Share of proposal threshold</p>
+                      <p className="font-mono text-base text-base-content/80">
+                        {formatPercentOf(grantAmount, activeProposalThreshold)}
+                      </p>
+                    </div>
+                  </div>
+                  <p className="text-base text-base-content/50">
+                    Current quorum impact:{" "}
+                    <span className="font-mono text-base-content/80">
+                      {formatPercentOf(grantAmount, currentQuorum)}
+                    </span>
+                  </p>
+                  {treasuryAddressMismatch && (
+                    <p className="text-base text-warning">
+                      The ContentRegistry treasury address is not the governor timelock. This proposal spends cREP held
+                      by the timelock treasury.
+                    </p>
+                  )}
+                  {grantExceedsTreasury && (
+                    <p className="text-base text-warning">
+                      The grant amount exceeds the current timelock cREP balance, so execution would fail unless the
+                      treasury receives more cREP before execution.
+                    </p>
+                  )}
+                </div>
               )}
               {selectedTemplate.mode === "proposal" && isGovernorContractLoading && (
                 <p className="text-base text-base-content/50">Checking governance availability...</p>

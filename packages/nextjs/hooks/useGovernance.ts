@@ -45,7 +45,7 @@ export const governorAbi = parseAbi([
 
 const timelockAbi = parseAbi(["function getMinDelay() view returns (uint256)"]);
 
-type GovernanceManagedContractName = "CuryoGovernor" | "FrontendRegistry" | "ContentRegistry";
+type GovernanceManagedContractName = "CuryoGovernor" | "CuryoReputation" | "FrontendRegistry" | "ContentRegistry";
 
 type GovernanceTargetContract = {
   name: GovernanceManagedContractName;
@@ -184,6 +184,13 @@ export function useGovernanceContracts() {
         abi: governorAbi,
       });
     }
+    if (token.data) {
+      items.push({
+        name: "CuryoReputation",
+        address: token.data.address,
+        abi: token.data.abi as Abi,
+      });
+    }
     if (frontendRegistry.data) {
       items.push({
         name: "FrontendRegistry",
@@ -199,7 +206,7 @@ export function useGovernanceContracts() {
       });
     }
     return items;
-  }, [contentRegistry.data, frontendRegistry.data, governorAddress, hasGovernorContract]);
+  }, [contentRegistry.data, frontendRegistry.data, governorAddress, hasGovernorContract, token.data]);
 
   const knownContractsByAddress = useMemo(
     () =>
