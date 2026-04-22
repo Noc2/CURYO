@@ -1,19 +1,19 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.20;
 
-import {Test} from "forge-std/Test.sol";
-import {Vm, VmSafe} from "forge-std/Vm.sol";
-import {Base64} from "@openzeppelin/contracts/utils/Base64.sol";
-import {Strings} from "@openzeppelin/contracts/utils/Strings.sol";
-import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
-import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import {CuryoReputation} from "../../contracts/CuryoReputation.sol";
-import {ContentRegistry} from "../../contracts/ContentRegistry.sol";
-import {ProtocolConfig} from "../../contracts/ProtocolConfig.sol";
-import {RoundVotingEngine} from "../../contracts/RoundVotingEngine.sol";
-import {RatingLib} from "../../contracts/libraries/RatingLib.sol";
-import {RoundLib} from "../../contracts/libraries/RoundLib.sol";
-import {MockQuestionRewardPoolEscrow} from "../mocks/MockQuestionRewardPoolEscrow.sol";
+import { Test } from "forge-std/Test.sol";
+import { Vm, VmSafe } from "forge-std/Vm.sol";
+import { Base64 } from "@openzeppelin/contracts/utils/Base64.sol";
+import { Strings } from "@openzeppelin/contracts/utils/Strings.sol";
+import { ERC1967Proxy } from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
+import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import { CuryoReputation } from "../../contracts/CuryoReputation.sol";
+import { ContentRegistry } from "../../contracts/ContentRegistry.sol";
+import { ProtocolConfig } from "../../contracts/ProtocolConfig.sol";
+import { RoundVotingEngine } from "../../contracts/RoundVotingEngine.sol";
+import { RatingLib } from "../../contracts/libraries/RatingLib.sol";
+import { RoundLib } from "../../contracts/libraries/RoundLib.sol";
+import { MockQuestionRewardPoolEscrow } from "../mocks/MockQuestionRewardPoolEscrow.sol";
 
 function deployInitializedProtocolConfig(address admin) returns (ProtocolConfig protocolConfig) {
     return deployInitializedProtocolConfig(admin, admin);
@@ -38,6 +38,8 @@ abstract contract ContentSubmissionTestBase {
     uint256 internal constant DEFAULT_SUBMISSION_REWARD_BOUNTY_CLOSES_AT = 0;
     uint256 internal constant DEFAULT_SUBMISSION_REWARD_FEEDBACK_CLOSES_AT = 0;
     uint256 internal constant DEFAULT_SUBMISSION_REWARD_EXPIRES_AT = DEFAULT_SUBMISSION_REWARD_BOUNTY_CLOSES_AT;
+    bytes32 internal constant DEFAULT_QUESTION_METADATA_HASH = keccak256("curyo.generic.question.metadata.v1");
+    bytes32 internal constant DEFAULT_RESULT_SPEC_HASH = keccak256("curyo.generic.result.spec.v1");
 
     struct NoMediaQuestionText {
         string url;
@@ -125,7 +127,15 @@ abstract contract ContentSubmissionTestBase {
         bytes32 salt
     ) internal returns (uint256) {
         return registry.submitQuestion(
-            question.url, _emptyImageUrls(), "", question.title, question.description, question.tags, categoryId, salt
+            question.url,
+            _emptyImageUrls(),
+            "",
+            question.title,
+            question.description,
+            question.tags,
+            categoryId,
+            salt,
+            _defaultQuestionSpec()
         );
     }
 
@@ -169,15 +179,16 @@ abstract contract ContentSubmissionTestBase {
         if (hasActivePrank) {
             HEVM.startPrank(msgSender, txOrigin);
         }
-        (, submissionKey) = reservation.registry.previewQuestionSubmissionKey(
-            reservation.contextUrl,
-            reservation.imageUrls,
-            reservation.videoUrl,
-            reservation.title,
-            reservation.description,
-            reservation.tags,
-            reservation.categoryId
-        );
+        (, submissionKey) = reservation.registry
+            .previewQuestionSubmissionKey(
+                reservation.contextUrl,
+                reservation.imageUrls,
+                reservation.videoUrl,
+                reservation.title,
+                reservation.description,
+                reservation.tags,
+                reservation.categoryId
+            );
         uint256 rewardAmount = _defaultSubmissionRewardAmount(reservation.registry);
         bytes32 revealCommitment = _questionReservationRevealCommitment(reservation, submissionKey, rewardAmount);
         IERC20(reservation.registry.crepToken()).approve(rewardEscrow, rewardAmount);
@@ -189,14 +200,15 @@ abstract contract ContentSubmissionTestBase {
         bytes32 submissionKey,
         uint256 rewardAmount
     ) internal view returns (bytes32) {
-        ContentRegistry.SubmissionRewardTerms memory rewardTerms = ContentRegistry.SubmissionRewardTerms({
-            asset: DEFAULT_SUBMISSION_REWARD_ASSET_CREP,
-            amount: rewardAmount,
-            requiredVoters: DEFAULT_SUBMISSION_REWARD_REQUIRED_VOTERS,
-            requiredSettledRounds: DEFAULT_SUBMISSION_REWARD_SETTLED_ROUNDS,
-            bountyClosesAt: DEFAULT_SUBMISSION_REWARD_BOUNTY_CLOSES_AT,
-            feedbackClosesAt: DEFAULT_SUBMISSION_REWARD_FEEDBACK_CLOSES_AT
-        });
+        ContentRegistry.SubmissionRewardTerms memory rewardTerms =
+            ContentRegistry.SubmissionRewardTerms({
+                asset: DEFAULT_SUBMISSION_REWARD_ASSET_CREP,
+                amount: rewardAmount,
+                requiredVoters: DEFAULT_SUBMISSION_REWARD_REQUIRED_VOTERS,
+                requiredSettledRounds: DEFAULT_SUBMISSION_REWARD_SETTLED_ROUNDS,
+                bountyClosesAt: DEFAULT_SUBMISSION_REWARD_BOUNTY_CLOSES_AT,
+                feedbackClosesAt: DEFAULT_SUBMISSION_REWARD_FEEDBACK_CLOSES_AT
+            });
         return _questionRevealCommitment(
             submissionKey,
             _submissionMediaHash(reservation.imageUrls, reservation.videoUrl),
@@ -207,7 +219,8 @@ abstract contract ContentSubmissionTestBase {
             reservation.salt,
             reservation.submitter,
             rewardTerms,
-            _defaultQuestionRoundConfig(reservation.registry)
+            _defaultQuestionRoundConfig(reservation.registry),
+            _defaultQuestionSpec()
         );
     }
 
@@ -242,7 +255,8 @@ abstract contract ContentSubmissionTestBase {
             salt,
             submitter,
             rewardTerms,
-            _defaultQuestionRoundConfig(registry)
+            _defaultQuestionRoundConfig(registry),
+            _defaultQuestionSpec()
         );
     }
 
@@ -256,11 +270,12 @@ abstract contract ContentSubmissionTestBase {
         bytes32 salt,
         address submitter,
         ContentRegistry.SubmissionRewardTerms memory rewardTerms,
-        RoundLib.RoundConfig memory roundConfig
+        RoundLib.RoundConfig memory roundConfig,
+        ContentRegistry.QuestionSpecCommitment memory spec
     ) internal pure returns (bytes32) {
         uint256 titleTailLength = _encodedStringTailLength(title);
         uint256 descriptionTailLength = _encodedStringTailLength(description);
-        uint256 titleOffset = 18 * 32;
+        uint256 titleOffset = 20 * 32;
         uint256 descriptionOffset = titleOffset + titleTailLength;
         uint256 tagsOffset = descriptionOffset + descriptionTailLength;
         bytes memory encoded = new bytes(tagsOffset + _encodedStringTailLength(tags));
@@ -283,10 +298,39 @@ abstract contract ContentSubmissionTestBase {
         _writeUint(encoded, 15 * 32, uint256(roundConfig.maxDuration));
         _writeUint(encoded, 16 * 32, uint256(roundConfig.minVoters));
         _writeUint(encoded, 17 * 32, uint256(roundConfig.maxVoters));
+        _writeBytes32(encoded, 18 * 32, spec.questionMetadataHash);
+        _writeBytes32(encoded, 19 * 32, spec.resultSpecHash);
         _writeStringTail(encoded, titleOffset, title);
         _writeStringTail(encoded, descriptionOffset, description);
         _writeStringTail(encoded, tagsOffset, tags);
         return keccak256(encoded);
+    }
+
+    function _questionRevealCommitment(
+        bytes32 submissionKey,
+        bytes32 mediaHash,
+        string memory title,
+        string memory description,
+        string memory tags,
+        uint256 categoryId,
+        bytes32 salt,
+        address submitter,
+        ContentRegistry.SubmissionRewardTerms memory rewardTerms,
+        RoundLib.RoundConfig memory roundConfig
+    ) internal pure returns (bytes32) {
+        return _questionRevealCommitment(
+            submissionKey,
+            mediaHash,
+            title,
+            description,
+            tags,
+            categoryId,
+            salt,
+            submitter,
+            rewardTerms,
+            roundConfig,
+            _defaultQuestionSpec()
+        );
     }
 
     function _encodedStringTailLength(string memory value) internal pure returns (uint256) {
@@ -350,7 +394,15 @@ abstract contract ContentSubmissionTestBase {
             registry, imageUrl, imageUrls, "", title, description, tags, categoryId, salt, submitter
         );
         HEVM.warp(block.timestamp + 1);
-        contentId = registry.submitQuestion(imageUrl, imageUrls, "", title, description, tags, categoryId, salt);
+        contentId = registry.submitQuestion(
+            imageUrl, imageUrls, "", title, description, tags, categoryId, salt, _defaultQuestionSpec()
+        );
+    }
+
+    function _defaultQuestionSpec() internal pure returns (ContentRegistry.QuestionSpecCommitment memory) {
+        return ContentRegistry.QuestionSpecCommitment({
+            questionMetadataHash: DEFAULT_QUESTION_METADATA_HASH, resultSpecHash: DEFAULT_RESULT_SPEC_HASH
+        });
     }
 
     function _defaultSubmissionRewardAmount(ContentRegistry registry) internal view returns (uint256) {

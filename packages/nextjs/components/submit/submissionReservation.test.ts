@@ -17,6 +17,7 @@ const DEFAULT_DRAFT = {
   contextUrl: "https://example.com/demo.jpg",
   description: "first description",
   imageUrls: ["https://example.com/demo.jpg"],
+  questionMetadataHash: "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa" as const,
   rewardPoolExpiresAt: 0n,
   feedbackClosesAt: 0n,
   roundConfig: {
@@ -27,6 +28,7 @@ const DEFAULT_DRAFT = {
   },
   rewardAmount: 1_000_000n,
   rewardAsset: 0,
+  resultSpecHash: "0xbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb" as const,
   requiredSettledRounds: 1n,
   requiredVoters: 3n,
   submissionKey: SUBMISSION_KEY,

@@ -575,6 +575,10 @@ async function executeX402QuestionSubmission(params: {
       description: question.description,
       imageUrls: question.imageUrls,
       salt: salts[index],
+      spec: {
+        questionMetadataHash: question.questionMetadataHash,
+        resultSpecHash: question.resultSpecHash,
+      },
       tags: question.tags,
       title: question.title,
       videoUrl: question.videoUrl,
@@ -622,6 +626,10 @@ async function executeX402QuestionSubmission(params: {
         tags: question.tags,
         categoryId: question.categoryId,
         salt: salts[index],
+        spec: {
+          questionMetadataHash: question.questionMetadataHash,
+          resultSpecHash: question.resultSpecHash,
+        },
       })),
       {
         asset: X402_SUBMISSION_REWARD_ASSET_USDC,

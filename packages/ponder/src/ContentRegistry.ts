@@ -172,6 +172,18 @@ ponder.on("ContentRegistry:ContentRoundConfigSet", async ({ event, context }) =>
   });
 });
 
+ponder.on("ContentRegistry:QuestionSpecAnchored", async ({ event, context }) => {
+  const { contentId, questionMetadataHash, resultSpecHash } = event.args;
+  const existingContent = await context.db.find(content, { id: contentId });
+  if (!existingContent) return;
+
+  await context.db.update(content, { id: contentId }).set({
+    questionMetadataHash,
+    resultSpecHash,
+    lastActivityAt: event.block.timestamp,
+  });
+});
+
 ponder.on("ContentRegistry:ContentMediaSubmitted", async ({ event, context }) => {
   const { contentId, imageUrls, videoUrl } = event.args;
   const trimmedVideoUrl = videoUrl.trim();

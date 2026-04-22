@@ -1,4 +1,5 @@
 import { createHash } from "crypto";
+import { buildQuestionSpecHashes } from "~~/lib/agent/questionSpecs";
 import {
   getContentDescriptionValidationError,
   getContentTitleValidationError,
@@ -58,6 +59,8 @@ export type X402QuestionItemPayload = {
   tags: string;
   tagList: string[];
   categoryId: bigint;
+  questionMetadataHash: `0x${string}`;
+  resultSpecHash: `0x${string}`;
 };
 
 export type X402QuestionOperation = {
@@ -280,7 +283,9 @@ function normalizeRoundConfig(value: unknown): QuestionRoundConfig {
   return { epochDuration, maxDuration, minVoters, maxVoters };
 }
 
-function normalizeQuestion(value: unknown, index: number): X402QuestionItemPayload {
+type NormalizedQuestionInput = Omit<X402QuestionItemPayload, "questionMetadataHash" | "resultSpecHash">;
+
+function normalizeQuestion(value: unknown, index: number): NormalizedQuestionInput {
   if (!isObject(value)) {
     throw new X402QuestionInputError(`questions[${index}] must be an object.`);
   }
@@ -349,15 +354,43 @@ export function parseX402QuestionRequest(value: unknown, fallbackChainId?: numbe
   }
 
   const firstQuestion = isObject(rawQuestions[0]) ? rawQuestions[0] : {};
-  const questions = rawQuestions.map((question, index) => normalizeQuestion(question, index));
   const roundConfig = normalizeRoundConfig(value.roundConfig ?? firstQuestion.roundConfig);
+  const bounty = normalizeBounty(value.bounty);
+  const questions = rawQuestions.map((question, index) => {
+    const normalizedQuestion = normalizeQuestion(question, index);
+    const spec = buildQuestionSpecHashes({
+      bounty: {
+        amount: bounty.amount,
+        asset: bounty.asset,
+        requiredSettledRounds: bounty.requiredSettledRounds,
+        requiredVoters: bounty.requiredVoters,
+      },
+      categoryId: normalizedQuestion.categoryId,
+      contextUrl: normalizedQuestion.contextUrl,
+      description: normalizedQuestion.description,
+      imageUrls: normalizedQuestion.imageUrls,
+      roundConfig,
+      study: {
+        bundleIndex: index,
+      },
+      tags: normalizedQuestion.tagList,
+      title: normalizedQuestion.title,
+      videoUrl: normalizedQuestion.videoUrl,
+    });
+
+    return {
+      ...normalizedQuestion,
+      questionMetadataHash: spec.questionMetadataHash,
+      resultSpecHash: spec.resultSpecHash,
+    };
+  });
 
   return {
     clientRequestId,
     chainId: normalizeChainId(value.chainId ?? firstQuestion.chainId, fallbackChainId),
     questions,
     roundConfig,
-    bounty: normalizeBounty(value.bounty),
+    bounty,
   };
 }
 
@@ -378,6 +411,8 @@ export function toCanonicalQuestionPayload(payload: X402QuestionPayload) {
       contextUrl: question.contextUrl,
       description: question.description,
       imageUrls: question.imageUrls,
+      questionMetadataHash: question.questionMetadataHash,
+      resultSpecHash: question.resultSpecHash,
       tags: question.tagList,
       title: question.title,
       videoUrl: question.videoUrl,

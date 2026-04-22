@@ -18,11 +18,13 @@ type SubmissionDraft = {
   contextUrl: string;
   description: string;
   imageUrls: string[];
+  questionMetadataHash: `0x${string}`;
   rewardPoolExpiresAt: bigint;
   feedbackClosesAt: bigint;
   roundConfig: QuestionRoundConfig;
   rewardAmount: bigint;
   rewardAsset: number;
+  resultSpecHash: `0x${string}`;
   requiredSettledRounds: bigint;
   requiredVoters: bigint;
   submissionKey: `0x${string}`;
@@ -37,11 +39,13 @@ type StoredSubmissionReservation = {
   contextUrl: string;
   description: string;
   imageUrls: string[];
+  questionMetadataHash: `0x${string}`;
   rewardPoolExpiresAt: string;
   feedbackClosesAt: string;
   roundConfig: SerializedQuestionRoundConfig;
   rewardAmount: string;
   rewardAsset: number;
+  resultSpecHash: `0x${string}`;
   revealCommitment: `0x${string}`;
   salt: `0x${string}`;
   requiredSettledRounds: string;
@@ -114,6 +118,8 @@ export function deriveSubmissionReservationSalt(
         { type: "uint32" },
         { type: "uint16" },
         { type: "uint16" },
+        { type: "bytes32" },
+        { type: "bytes32" },
       ],
       [
         getSubmissionReservationSecret(),
@@ -136,6 +142,8 @@ export function deriveSubmissionReservationSalt(
         Number(draft.roundConfig.maxDuration),
         Number(draft.roundConfig.minVoters),
         Number(draft.roundConfig.maxVoters),
+        draft.questionMetadataHash,
+        draft.resultSpecHash,
       ],
     ),
   );
@@ -150,10 +158,12 @@ export function buildSubmissionRevealCommitment(
     categoryId: draft.categoryId,
     description: draft.description,
     imageUrls: draft.imageUrls,
+    questionMetadataHash: draft.questionMetadataHash,
     rewardAmount: draft.rewardAmount,
     rewardAsset: draft.rewardAsset,
     requiredSettledRounds: draft.requiredSettledRounds,
     requiredVoters: draft.requiredVoters,
+    resultSpecHash: draft.resultSpecHash,
     rewardPoolExpiresAt: draft.rewardPoolExpiresAt,
     feedbackClosesAt: draft.feedbackClosesAt,
     roundConfig: draft.roundConfig,
@@ -178,8 +188,10 @@ export function createStoredSubmissionReservation(
     contextUrl: draft.contextUrl,
     description: draft.description,
     imageUrls: draft.imageUrls,
+    questionMetadataHash: draft.questionMetadataHash,
     rewardAmount: draft.rewardAmount.toString(),
     rewardAsset: draft.rewardAsset,
+    resultSpecHash: draft.resultSpecHash,
     roundConfig: serializeQuestionRoundConfig(draft.roundConfig),
     revealCommitment,
     salt,
@@ -214,6 +226,8 @@ export function submissionReservationMatchesDraft(
     reservation.requiredSettledRounds === draft.requiredSettledRounds.toString() &&
     reservation.requiredVoters === draft.requiredVoters.toString() &&
     reservation.submissionKey === draft.submissionKey &&
+    reservation.questionMetadataHash === draft.questionMetadataHash &&
+    reservation.resultSpecHash === draft.resultSpecHash &&
     reservation.tags === draft.tags &&
     reservation.title === draft.title &&
     reservation.videoUrl === draft.videoUrl &&
@@ -239,9 +253,11 @@ function parseStoredSubmissionReservation(value: unknown): StoredSubmissionReser
     typeof parsedValue.chainId !== "number" ||
     typeof parsedValue.contextUrl !== "string" ||
     typeof parsedValue.description !== "string" ||
+    !isHexValue(parsedValue.questionMetadataHash) ||
     !isHexValue(parsedValue.revealCommitment) ||
     typeof parsedValue.rewardAmount !== "string" ||
     typeof parsedValue.rewardAsset !== "number" ||
+    !isHexValue(parsedValue.resultSpecHash) ||
     (parsedValue.roundConfig !== undefined && typeof parsedValue.roundConfig !== "object") ||
     ![0, 1].includes(parsedValue.rewardAsset) ||
     typeof parsedValue.requiredSettledRounds !== "string" ||

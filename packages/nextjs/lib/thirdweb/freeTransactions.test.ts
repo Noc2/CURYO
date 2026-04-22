@@ -88,6 +88,14 @@ const submitQuestionWithRewardAndRoundConfigAbi = [
           { name: "maxVoters", type: "uint16" },
         ],
       },
+      {
+        name: "spec",
+        type: "tuple",
+        components: [
+          { name: "questionMetadataHash", type: "bytes32" },
+          { name: "resultSpecHash", type: "bytes32" },
+        ],
+      },
     ],
     outputs: [{ name: "", type: "uint256" }],
     stateMutability: "nonpayable",
@@ -483,6 +491,10 @@ test("supported sponsored operation families are allowlisted", async () => {
             feedbackClosesAt: 0n,
           },
           { epochDuration: 1200, maxDuration: 604800, minVoters: 3, maxVoters: 1000 },
+          {
+            questionMetadataHash: `0x${"6".repeat(64)}`,
+            resultSpecHash: `0x${"7".repeat(64)}`,
+          },
         ],
       ),
     ],

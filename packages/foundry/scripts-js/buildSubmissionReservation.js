@@ -14,6 +14,8 @@ const DEFAULT_REWARD_AMOUNT = 1_000_000n;
 const DEFAULT_REQUIRED_VOTERS = 3n;
 const DEFAULT_REQUIRED_SETTLED_ROUNDS = 1n;
 const DEFAULT_REWARD_POOL_EXPIRES_AT = 0n;
+const DEFAULT_QUESTION_METADATA_HASH = "0xed39b36e9ce5c1bfc657909c2f687347be2de998bc871eb8d33df17fdfa0d8cd";
+const DEFAULT_RESULT_SPEC_HASH = "0x8e5f27bc3269c62c92754f76279bd83838462060fc6cd77411b7407027cfa11f";
 const DEFAULT_ROUND_CONFIG = {
   epochDuration: 20 * 60,
   maxDuration: 7 * 24 * 60 * 60,
@@ -277,10 +279,13 @@ const revealCommitment = keccak256(
       { type: "uint256" },
       { type: "uint256" },
       { type: "uint256" },
+      { type: "uint256" },
       { type: "uint32" },
       { type: "uint32" },
       { type: "uint16" },
       { type: "uint16" },
+      { type: "bytes32" },
+      { type: "bytes32" },
     ],
     [
       submissionKey,
@@ -296,10 +301,13 @@ const revealCommitment = keccak256(
       requiredVoters,
       requiredSettledRounds,
       rewardPoolExpiresAt,
+      rewardPoolExpiresAt,
       roundConfig.epochDuration,
       roundConfig.maxDuration,
       roundConfig.minVoters,
       roundConfig.maxVoters,
+      DEFAULT_QUESTION_METADATA_HASH,
+      DEFAULT_RESULT_SPEC_HASH,
     ],
   ),
 );

@@ -128,6 +128,11 @@ contract ContentRegistry is Initializable, AccessControlUpgradeable, PausableUpg
         uint256 feedbackClosesAt;
     }
 
+    struct QuestionSpecCommitment {
+        bytes32 questionMetadataHash;
+        bytes32 resultSpecHash;
+    }
+
     struct BundleQuestionInput {
         string contextUrl;
         string[] imageUrls;
@@ -137,6 +142,7 @@ contract ContentRegistry is Initializable, AccessControlUpgradeable, PausableUpg
         string tags;
         uint256 categoryId;
         bytes32 salt;
+        QuestionSpecCommitment spec;
     }
 
     // --- State ---
@@ -205,6 +211,7 @@ contract ContentRegistry is Initializable, AccessControlUpgradeable, PausableUpg
         string tags,
         uint256 indexed categoryId
     );
+    event QuestionSpecAnchored(uint256 indexed contentId, bytes32 questionMetadataHash, bytes32 resultSpecHash);
     event ContentMediaSubmitted(uint256 indexed contentId, string[] imageUrls, string videoUrl);
     event ContentCancelled(uint256 indexed contentId);
     event SubmissionReserved(address indexed submitter, bytes32 indexed revealCommitment, uint256 expiresAt);
@@ -395,12 +402,13 @@ contract ContentRegistry is Initializable, AccessControlUpgradeable, PausableUpg
         uint256 categoryId,
         bytes32 salt,
         SubmissionRewardTerms calldata rewardTerms,
-        RoundLib.RoundConfig calldata roundConfig
+        RoundLib.RoundConfig calldata roundConfig,
+        QuestionSpecCommitment calldata spec
     ) external returns (uint256) {
-        SubmissionMetadata memory metadata = _validatedContextSubmissionMetadata(
-            contextUrl, imageUrls, videoUrl, title, description, tags, categoryId
-        );
-        return _submitQuestionWithRewardAndRoundConfig(metadata, imageUrls, videoUrl, salt, rewardTerms, roundConfig);
+        SubmissionMetadata memory metadata =
+            _validatedContextSubmissionMetadata(contextUrl, imageUrls, videoUrl, title, description, tags, categoryId);
+        return
+            _submitQuestionWithRewardAndRoundConfig(metadata, imageUrls, videoUrl, salt, rewardTerms, roundConfig, spec);
     }
 
     function _submitQuestionWithRewardAndRoundConfig(
@@ -409,10 +417,31 @@ contract ContentRegistry is Initializable, AccessControlUpgradeable, PausableUpg
         string calldata videoUrl,
         bytes32 salt,
         SubmissionRewardTerms calldata rewardTerms,
-        RoundLib.RoundConfig calldata roundConfig
+        RoundLib.RoundConfig calldata roundConfig,
+        QuestionSpecCommitment memory spec
     ) private nonReentrant whenNotPaused returns (uint256) {
         return _submitValidatedQuestionWithMedia(
-            metadata, imageUrls, videoUrl, salt, rewardTerms, _validatedRoundConfig(roundConfig), 0, 0
+            metadata, imageUrls, videoUrl, salt, rewardTerms, _validatedRoundConfig(roundConfig), 0, 0, spec
+        );
+    }
+
+    function submitQuestionWithRewardAndRoundConfig(
+        string calldata contextUrl,
+        string[] calldata imageUrls,
+        string calldata videoUrl,
+        string calldata title,
+        string calldata description,
+        string calldata tags,
+        uint256 categoryId,
+        bytes32 salt,
+        SubmissionRewardTerms calldata rewardTerms,
+        RoundLib.RoundConfig calldata roundConfig
+    ) external returns (uint256) {
+        SubmissionMetadata memory metadata = _validatedContextSubmissionMetadata(
+            contextUrl, imageUrls, videoUrl, title, description, tags, categoryId
+        );
+        return _submitQuestionWithRewardAndRoundConfig(
+            metadata, imageUrls, videoUrl, salt, rewardTerms, roundConfig, _genericQuestionSpec()
         );
     }
 
@@ -435,6 +464,7 @@ contract ContentRegistry is Initializable, AccessControlUpgradeable, PausableUpg
 
         for (uint256 i = 0; i < questions.length; i++) {
             BundleQuestionInput calldata question = questions[i];
+            _validateQuestionSpec(question.spec);
             SubmissionMetadata memory metadata = _validatedContextSubmissionMetadata(
                 question.contextUrl,
                 question.imageUrls,
@@ -469,14 +499,16 @@ contract ContentRegistry is Initializable, AccessControlUpgradeable, PausableUpg
             submissionKeyUsed[submissionKeys[i]] = true;
             bytes32 contentHash = keccak256(
                 abi.encode(
-                    "curyo-question-context-v1",
+                    "curyo-question-context-v2",
                     metadataList[i].url,
                     questions[i].imageUrls,
                     questions[i].videoUrl,
                     metadataList[i].title,
                     metadataList[i].description,
                     metadataList[i].tags,
-                    resolvedCategoryIds[i]
+                    resolvedCategoryIds[i],
+                    questions[i].spec.questionMetadataHash,
+                    questions[i].spec.resultSpecHash
                 )
             );
             uint256 contentId = _storeSubmittedContent(
@@ -494,6 +526,9 @@ contract ContentRegistry is Initializable, AccessControlUpgradeable, PausableUpg
                 metadataList[i].description,
                 metadataList[i].tags,
                 resolvedCategoryIds[i]
+            );
+            emit QuestionSpecAnchored(
+                contentId, questions[i].spec.questionMetadataHash, questions[i].spec.resultSpecHash
             );
             emit ContentMediaSubmitted(contentId, questions[i].imageUrls, questions[i].videoUrl);
             emit QuestionBundleContentLinked(bundleId, contentId, i);
@@ -534,6 +569,30 @@ contract ContentRegistry is Initializable, AccessControlUpgradeable, PausableUpg
         string calldata description,
         string calldata tags,
         uint256 categoryId,
+        bytes32 salt,
+        QuestionSpecCommitment calldata spec
+    ) external nonReentrant whenNotPaused returns (uint256) {
+        return _submitValidatedQuestionWithMedia(
+            _validatedContextSubmissionMetadata(contextUrl, imageUrls, videoUrl, title, description, tags, categoryId),
+            imageUrls,
+            videoUrl,
+            salt,
+            _defaultSubmissionRewardTerms(SUBMISSION_REWARD_ASSET_CREP),
+            _defaultRoundConfig(),
+            0,
+            0,
+            spec
+        );
+    }
+
+    function submitQuestion(
+        string calldata contextUrl,
+        string[] calldata imageUrls,
+        string calldata videoUrl,
+        string calldata title,
+        string calldata description,
+        string calldata tags,
+        uint256 categoryId,
         bytes32 salt
     ) external nonReentrant whenNotPaused returns (uint256) {
         return _submitValidatedQuestionWithMedia(
@@ -544,7 +603,33 @@ contract ContentRegistry is Initializable, AccessControlUpgradeable, PausableUpg
             _defaultSubmissionRewardTerms(SUBMISSION_REWARD_ASSET_CREP),
             _defaultRoundConfig(),
             0,
-            0
+            0,
+            _genericQuestionSpec()
+        );
+    }
+
+    function submitQuestionWithRoundConfig(
+        string calldata contextUrl,
+        string[] calldata imageUrls,
+        string calldata videoUrl,
+        string calldata title,
+        string calldata description,
+        string calldata tags,
+        uint256 categoryId,
+        bytes32 salt,
+        RoundLib.RoundConfig calldata roundConfig,
+        QuestionSpecCommitment calldata spec
+    ) external nonReentrant whenNotPaused returns (uint256) {
+        return _submitValidatedQuestionWithMedia(
+            _validatedContextSubmissionMetadata(contextUrl, imageUrls, videoUrl, title, description, tags, categoryId),
+            imageUrls,
+            videoUrl,
+            salt,
+            _defaultSubmissionRewardTerms(SUBMISSION_REWARD_ASSET_CREP),
+            _validatedRoundConfig(roundConfig),
+            0,
+            0,
+            spec
         );
     }
 
@@ -567,7 +652,8 @@ contract ContentRegistry is Initializable, AccessControlUpgradeable, PausableUpg
             _defaultSubmissionRewardTerms(SUBMISSION_REWARD_ASSET_CREP),
             _validatedRoundConfig(roundConfig),
             0,
-            0
+            0,
+            _genericQuestionSpec()
         );
     }
 
@@ -641,20 +727,23 @@ contract ContentRegistry is Initializable, AccessControlUpgradeable, PausableUpg
         SubmissionRewardTerms memory rewardTerms,
         RoundLib.RoundConfig memory roundConfig,
         uint256 bundleId,
-        uint256 bundleIndex
+        uint256 bundleIndex,
+        QuestionSpecCommitment memory spec
     ) internal returns (uint256 contentId) {
         (uint256 resolvedCategoryId, bytes32 submissionKey, PendingSubmission memory pending) =
-            _prepareQuestionMediaSubmission(metadata, imageUrls, videoUrl, salt, rewardTerms, roundConfig);
+            _prepareQuestionMediaSubmission(metadata, imageUrls, videoUrl, salt, rewardTerms, roundConfig, spec);
         bytes32 contentHash = keccak256(
             abi.encode(
-                "curyo-question-context-v1",
+                "curyo-question-context-v2",
                 metadata.url,
                 imageUrls,
                 videoUrl,
                 metadata.title,
                 metadata.description,
                 metadata.tags,
-                resolvedCategoryId
+                resolvedCategoryId,
+                spec.questionMetadataHash,
+                spec.resultSpecHash
             )
         );
         contentId = _storeSubmittedContent(
@@ -671,6 +760,7 @@ contract ContentRegistry is Initializable, AccessControlUpgradeable, PausableUpg
             metadata.tags,
             resolvedCategoryId
         );
+        emit QuestionSpecAnchored(contentId, spec.questionMetadataHash, spec.resultSpecHash);
         emit ContentMediaSubmitted(contentId, imageUrls, videoUrl);
         emit SubmissionRewardPoolAttached(
             contentId,
@@ -691,8 +781,10 @@ contract ContentRegistry is Initializable, AccessControlUpgradeable, PausableUpg
         string memory videoUrl,
         bytes32 salt,
         SubmissionRewardTerms memory rewardTerms,
-        RoundLib.RoundConfig memory roundConfig
+        RoundLib.RoundConfig memory roundConfig,
+        QuestionSpecCommitment memory spec
     ) internal returns (uint256 resolvedCategoryId, bytes32 submissionKey, PendingSubmission memory pending) {
+        _validateQuestionSpec(spec);
         resolvedCategoryId = _resolveQuestionSubmissionCategory(metadata);
         submissionKey = _deriveQuestionMediaSubmissionKey(metadata, resolvedCategoryId);
         require(!submissionKeyUsed[submissionKey], "Question already submitted");
@@ -709,7 +801,8 @@ contract ContentRegistry is Initializable, AccessControlUpgradeable, PausableUpg
             salt,
             msg.sender,
             rewardTerms,
-            roundConfig
+            roundConfig,
+            spec
         );
         pending = pendingSubmissions[revealCommitment];
         require(pending.submitter == msg.sender, "Reservation not found");
@@ -722,6 +815,18 @@ contract ContentRegistry is Initializable, AccessControlUpgradeable, PausableUpg
 
     function _submissionMediaHash(string[] memory imageUrls, string memory videoUrl) internal pure returns (bytes32) {
         return keccak256(abi.encode(imageUrls, videoUrl));
+    }
+
+    function _validateQuestionSpec(QuestionSpecCommitment memory spec) internal pure {
+        require(spec.questionMetadataHash != bytes32(0), "Question metadata hash required");
+        require(spec.resultSpecHash != bytes32(0), "Result spec hash required");
+    }
+
+    function _genericQuestionSpec() internal pure returns (QuestionSpecCommitment memory) {
+        return QuestionSpecCommitment({
+            questionMetadataHash: keccak256(bytes("curyo.generic.question.metadata.v1")),
+            resultSpecHash: keccak256(bytes("curyo.generic.result.spec.v1"))
+        });
     }
 
     function _resolveQuestionSubmissionCategory(SubmissionMetadata memory metadata)
@@ -1027,11 +1132,12 @@ contract ContentRegistry is Initializable, AccessControlUpgradeable, PausableUpg
         bytes32 salt,
         address submitter,
         SubmissionRewardTerms memory rewardTerms,
-        RoundLib.RoundConfig memory roundConfig
+        RoundLib.RoundConfig memory roundConfig,
+        QuestionSpecCommitment memory spec
     ) internal pure returns (bytes32) {
         uint256 titleTailLength = _encodedStringTailLength(title);
         uint256 descriptionTailLength = _encodedStringTailLength(description);
-        uint256 titleOffset = 18 * 32;
+        uint256 titleOffset = 20 * 32;
         uint256 descriptionOffset = titleOffset + titleTailLength;
         uint256 tagsOffset = descriptionOffset + descriptionTailLength;
         bytes memory encoded = new bytes(tagsOffset + _encodedStringTailLength(tags));
@@ -1054,6 +1160,8 @@ contract ContentRegistry is Initializable, AccessControlUpgradeable, PausableUpg
         _writeUint(encoded, 15 * 32, uint256(roundConfig.maxDuration));
         _writeUint(encoded, 16 * 32, uint256(roundConfig.minVoters));
         _writeUint(encoded, 17 * 32, uint256(roundConfig.maxVoters));
+        _writeBytes32(encoded, 18 * 32, spec.questionMetadataHash);
+        _writeBytes32(encoded, 19 * 32, spec.resultSpecHash);
         _writeStringTail(encoded, titleOffset, title);
         _writeStringTail(encoded, descriptionOffset, description);
         _writeStringTail(encoded, tagsOffset, tags);
@@ -1094,7 +1202,7 @@ contract ContentRegistry is Initializable, AccessControlUpgradeable, PausableUpg
         for (uint256 i = 0; i < metadataList.length; i++) {
             questionHashes[i] = keccak256(
                 abi.encode(
-                    "curyo-question-bundle-item-v1",
+                    "curyo-question-bundle-item-v2",
                     metadataList[i].url,
                     mediaHashes[i],
                     metadataList[i].title,
@@ -1102,11 +1210,13 @@ contract ContentRegistry is Initializable, AccessControlUpgradeable, PausableUpg
                     metadataList[i].tags,
                     resolvedCategoryIds[i],
                     questions[i].salt,
-                    i
+                    i,
+                    questions[i].spec.questionMetadataHash,
+                    questions[i].spec.resultSpecHash
                 )
             );
         }
-        return keccak256(abi.encode("curyo-question-bundle-v1", questionHashes));
+        return keccak256(abi.encode("curyo-question-bundle-v2", questionHashes));
     }
 
     function _computeBundleRevealCommitment(
@@ -1117,7 +1227,7 @@ contract ContentRegistry is Initializable, AccessControlUpgradeable, PausableUpg
     ) internal pure returns (bytes32) {
         return keccak256(
             abi.encode(
-                "curyo-question-bundle-reveal-v2",
+                "curyo-question-bundle-reveal-v3",
                 bundleHash,
                 submitter,
                 rewardTerms.asset,
@@ -1145,10 +1255,7 @@ contract ContentRegistry is Initializable, AccessControlUpgradeable, PausableUpg
         require(
             rewardTerms.amount >= rewardTerms.requiredSettledRounds * rewardTerms.requiredVoters, "Reward too small"
         );
-        require(
-            rewardTerms.bountyClosesAt == 0 || rewardTerms.bountyClosesAt > block.timestamp,
-            "Invalid bounty close"
-        );
+        require(rewardTerms.bountyClosesAt == 0 || rewardTerms.bountyClosesAt > block.timestamp, "Invalid bounty close");
         require(
             rewardTerms.feedbackClosesAt == 0 || rewardTerms.feedbackClosesAt > block.timestamp,
             "Invalid feedback close"

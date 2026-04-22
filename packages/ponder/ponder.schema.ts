@@ -10,6 +10,8 @@ export const content = onchainTable(
     id: t.bigint().primaryKey(),
     submitter: t.hex().notNull(),
     contentHash: t.hex().notNull(),
+    questionMetadataHash: t.hex(),
+    resultSpecHash: t.hex(),
     url: t.text().notNull(),
     canonicalUrl: t.text().notNull(),
     urlHost: t.text().notNull(),

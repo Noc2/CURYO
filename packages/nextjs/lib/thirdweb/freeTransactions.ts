@@ -190,6 +190,14 @@ const CONTENT_REGISTRY_SUBMISSION_ABI = [
           { name: "maxVoters", type: "uint16" },
         ],
       },
+      {
+        name: "spec",
+        type: "tuple",
+        components: [
+          { name: "questionMetadataHash", type: "bytes32" },
+          { name: "resultSpecHash", type: "bytes32" },
+        ],
+      },
     ],
     outputs: [{ name: "", type: "uint256" }],
     stateMutability: "nonpayable",
@@ -210,6 +218,14 @@ const CONTENT_REGISTRY_SUBMISSION_ABI = [
           { name: "tags", type: "string" },
           { name: "categoryId", type: "uint256" },
           { name: "salt", type: "bytes32" },
+          {
+            name: "spec",
+            type: "tuple",
+            components: [
+              { name: "questionMetadataHash", type: "bytes32" },
+              { name: "resultSpecHash", type: "bytes32" },
+            ],
+          },
         ],
       },
       {

@@ -1252,6 +1252,77 @@ export const ContentRegistryAbi = [
         "name": "salt",
         "type": "bytes32",
         "internalType": "bytes32"
+      },
+      {
+        "name": "spec",
+        "type": "tuple",
+        "internalType": "struct ContentRegistry.QuestionSpecCommitment",
+        "components": [
+          {
+            "name": "questionMetadataHash",
+            "type": "bytes32",
+            "internalType": "bytes32"
+          },
+          {
+            "name": "resultSpecHash",
+            "type": "bytes32",
+            "internalType": "bytes32"
+          }
+        ]
+      }
+    ],
+    "outputs": [
+      {
+        "name": "",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "stateMutability": "nonpayable"
+  },
+  {
+    "type": "function",
+    "name": "submitQuestion",
+    "inputs": [
+      {
+        "name": "contextUrl",
+        "type": "string",
+        "internalType": "string"
+      },
+      {
+        "name": "imageUrls",
+        "type": "string[]",
+        "internalType": "string[]"
+      },
+      {
+        "name": "videoUrl",
+        "type": "string",
+        "internalType": "string"
+      },
+      {
+        "name": "title",
+        "type": "string",
+        "internalType": "string"
+      },
+      {
+        "name": "description",
+        "type": "string",
+        "internalType": "string"
+      },
+      {
+        "name": "tags",
+        "type": "string",
+        "internalType": "string"
+      },
+      {
+        "name": "categoryId",
+        "type": "uint256",
+        "internalType": "uint256"
+      },
+      {
+        "name": "salt",
+        "type": "bytes32",
+        "internalType": "bytes32"
       }
     ],
     "outputs": [
@@ -1311,6 +1382,23 @@ export const ContentRegistryAbi = [
             "name": "salt",
             "type": "bytes32",
             "internalType": "bytes32"
+          },
+          {
+            "name": "spec",
+            "type": "tuple",
+            "internalType": "struct ContentRegistry.QuestionSpecCommitment",
+            "components": [
+              {
+                "name": "questionMetadataHash",
+                "type": "bytes32",
+                "internalType": "bytes32"
+              },
+              {
+                "name": "resultSpecHash",
+                "type": "bytes32",
+                "internalType": "bytes32"
+              }
+            ]
           }
         ]
       },
@@ -1389,6 +1477,141 @@ export const ContentRegistryAbi = [
         "name": "contentIds",
         "type": "uint256[]",
         "internalType": "uint256[]"
+      }
+    ],
+    "stateMutability": "nonpayable"
+  },
+  {
+    "type": "function",
+    "name": "submitQuestionWithRewardAndRoundConfig",
+    "inputs": [
+      {
+        "name": "contextUrl",
+        "type": "string",
+        "internalType": "string"
+      },
+      {
+        "name": "imageUrls",
+        "type": "string[]",
+        "internalType": "string[]"
+      },
+      {
+        "name": "videoUrl",
+        "type": "string",
+        "internalType": "string"
+      },
+      {
+        "name": "title",
+        "type": "string",
+        "internalType": "string"
+      },
+      {
+        "name": "description",
+        "type": "string",
+        "internalType": "string"
+      },
+      {
+        "name": "tags",
+        "type": "string",
+        "internalType": "string"
+      },
+      {
+        "name": "categoryId",
+        "type": "uint256",
+        "internalType": "uint256"
+      },
+      {
+        "name": "salt",
+        "type": "bytes32",
+        "internalType": "bytes32"
+      },
+      {
+        "name": "rewardTerms",
+        "type": "tuple",
+        "internalType": "struct ContentRegistry.SubmissionRewardTerms",
+        "components": [
+          {
+            "name": "asset",
+            "type": "uint8",
+            "internalType": "uint8"
+          },
+          {
+            "name": "amount",
+            "type": "uint256",
+            "internalType": "uint256"
+          },
+          {
+            "name": "requiredVoters",
+            "type": "uint256",
+            "internalType": "uint256"
+          },
+          {
+            "name": "requiredSettledRounds",
+            "type": "uint256",
+            "internalType": "uint256"
+          },
+          {
+            "name": "bountyClosesAt",
+            "type": "uint256",
+            "internalType": "uint256"
+          },
+          {
+            "name": "feedbackClosesAt",
+            "type": "uint256",
+            "internalType": "uint256"
+          }
+        ]
+      },
+      {
+        "name": "roundConfig",
+        "type": "tuple",
+        "internalType": "struct RoundLib.RoundConfig",
+        "components": [
+          {
+            "name": "epochDuration",
+            "type": "uint32",
+            "internalType": "uint32"
+          },
+          {
+            "name": "maxDuration",
+            "type": "uint32",
+            "internalType": "uint32"
+          },
+          {
+            "name": "minVoters",
+            "type": "uint16",
+            "internalType": "uint16"
+          },
+          {
+            "name": "maxVoters",
+            "type": "uint16",
+            "internalType": "uint16"
+          }
+        ]
+      },
+      {
+        "name": "spec",
+        "type": "tuple",
+        "internalType": "struct ContentRegistry.QuestionSpecCommitment",
+        "components": [
+          {
+            "name": "questionMetadataHash",
+            "type": "bytes32",
+            "internalType": "bytes32"
+          },
+          {
+            "name": "resultSpecHash",
+            "type": "bytes32",
+            "internalType": "bytes32"
+          }
+        ]
+      }
+    ],
+    "outputs": [
+      {
+        "name": "",
+        "type": "uint256",
+        "internalType": "uint256"
       }
     ],
     "stateMutability": "nonpayable"
@@ -1579,6 +1802,104 @@ export const ContentRegistryAbi = [
             "name": "maxVoters",
             "type": "uint16",
             "internalType": "uint16"
+          }
+        ]
+      }
+    ],
+    "outputs": [
+      {
+        "name": "",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "stateMutability": "nonpayable"
+  },
+  {
+    "type": "function",
+    "name": "submitQuestionWithRoundConfig",
+    "inputs": [
+      {
+        "name": "contextUrl",
+        "type": "string",
+        "internalType": "string"
+      },
+      {
+        "name": "imageUrls",
+        "type": "string[]",
+        "internalType": "string[]"
+      },
+      {
+        "name": "videoUrl",
+        "type": "string",
+        "internalType": "string"
+      },
+      {
+        "name": "title",
+        "type": "string",
+        "internalType": "string"
+      },
+      {
+        "name": "description",
+        "type": "string",
+        "internalType": "string"
+      },
+      {
+        "name": "tags",
+        "type": "string",
+        "internalType": "string"
+      },
+      {
+        "name": "categoryId",
+        "type": "uint256",
+        "internalType": "uint256"
+      },
+      {
+        "name": "salt",
+        "type": "bytes32",
+        "internalType": "bytes32"
+      },
+      {
+        "name": "roundConfig",
+        "type": "tuple",
+        "internalType": "struct RoundLib.RoundConfig",
+        "components": [
+          {
+            "name": "epochDuration",
+            "type": "uint32",
+            "internalType": "uint32"
+          },
+          {
+            "name": "maxDuration",
+            "type": "uint32",
+            "internalType": "uint32"
+          },
+          {
+            "name": "minVoters",
+            "type": "uint16",
+            "internalType": "uint16"
+          },
+          {
+            "name": "maxVoters",
+            "type": "uint16",
+            "internalType": "uint16"
+          }
+        ]
+      },
+      {
+        "name": "spec",
+        "type": "tuple",
+        "internalType": "struct ContentRegistry.QuestionSpecCommitment",
+        "components": [
+          {
+            "name": "questionMetadataHash",
+            "type": "bytes32",
+            "internalType": "bytes32"
+          },
+          {
+            "name": "resultSpecHash",
+            "type": "bytes32",
+            "internalType": "bytes32"
           }
         ]
       }
@@ -2061,6 +2382,31 @@ export const ContentRegistryAbi = [
         "type": "address",
         "indexed": false,
         "internalType": "address"
+      }
+    ],
+    "anonymous": false
+  },
+  {
+    "type": "event",
+    "name": "QuestionSpecAnchored",
+    "inputs": [
+      {
+        "name": "contentId",
+        "type": "uint256",
+        "indexed": true,
+        "internalType": "uint256"
+      },
+      {
+        "name": "questionMetadataHash",
+        "type": "bytes32",
+        "indexed": false,
+        "internalType": "bytes32"
+      },
+      {
+        "name": "resultSpecHash",
+        "type": "bytes32",
+        "indexed": false,
+        "internalType": "bytes32"
       }
     ],
     "anonymous": false

@@ -22,6 +22,7 @@ import { useGasBalanceStatus } from "~~/hooks/useGasBalanceStatus";
 import { useThirdwebSponsoredSubmitCalls } from "~~/hooks/useThirdwebSponsoredSubmitCalls";
 import { useTransactionStatusToast } from "~~/hooks/useTransactionStatusToast";
 import { useWalletRpcRecovery } from "~~/hooks/useWalletRpcRecovery";
+import { buildQuestionSpecHashes } from "~~/lib/agent/questionSpecs";
 import {
   BOUNTY_WINDOW_PRESETS,
   type BountyWindowPreset,
@@ -988,6 +989,26 @@ export function ContentSubmissionSection() {
           throw new Error(`Question ${index + 1} is missing a category.`);
         }
 
+        const spec = buildQuestionSpecHashes({
+          bounty: {
+            amount: selectedRewardAmount,
+            asset: rewardAsset === "crep" ? "cREP" : "USDC",
+            requiredSettledRounds: selectedRequiredSettledRounds,
+            requiredVoters: selectedRequiredVoters,
+          },
+          categoryId: question.selectedCategory.id,
+          contextUrl: question.submittedContextUrl,
+          description: question.trimmedDescription,
+          imageUrls: question.submittedImageUrls,
+          roundConfig: selectedRoundConfig,
+          study: {
+            bundleIndex: index,
+          },
+          tags: question.submittedTags.split(",").filter(Boolean),
+          title: question.trimmedTitle,
+          videoUrl: question.submittedVideoUrl,
+        });
+
         return {
           contextUrl: question.submittedContextUrl,
           imageUrls: question.submittedImageUrls,
@@ -997,6 +1018,10 @@ export function ContentSubmissionSection() {
           tags: question.submittedTags,
           categoryId: question.selectedCategory.id,
           salt: createRandomHex32(),
+          spec: {
+            questionMetadataHash: spec.questionMetadataHash,
+            resultSpecHash: spec.resultSpecHash,
+          },
         };
       });
       const revealCommitment = buildQuestionBundleSubmissionRevealCommitment({

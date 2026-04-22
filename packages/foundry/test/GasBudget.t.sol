@@ -57,22 +57,14 @@ contract GasBudgetTest is RoundIntegrationTest {
 
         string memory imageUrl = "https://example.com/gas-submit.jpg";
         string[] memory imageUrls = _singleImageUrls(imageUrl);
-        (, bytes32 submissionKey) =
-            registry.previewQuestionSubmissionKey("https://example.com/context", imageUrls, "", "test goal", "test goal", "test", 1);
+        (, bytes32 submissionKey) = registry.previewQuestionSubmissionKey(
+            "https://example.com/context", imageUrls, "", "test goal", "test goal", "test", 1
+        );
         bytes32 salt = keccak256(
             abi.encode(imageUrl, "test goal", "test goal", "test", uint256(1), submitter, block.timestamp, block.number)
         );
         bytes32 revealCommitment = _defaultQuestionRevealCommitment(
-            registry,
-            submissionKey,
-            imageUrls,
-            "",
-            "test goal",
-            "test goal",
-            "test",
-            1,
-            salt,
-            submitter
+            registry, submissionKey, imageUrls, "", "test goal", "test goal", "test", 1, salt, submitter
         );
 
         uint256 reserveGasUsed = _measureCallAs(
@@ -82,9 +74,17 @@ contract GasBudgetTest is RoundIntegrationTest {
         uint256 revealGasUsed = _measureCallAs(
             submitter,
             address(registry),
-            abi.encodeCall(
-                ContentRegistry.submitQuestion,
-                ("https://example.com/context", imageUrls, "", "test goal", "test goal", "test", 1, salt)
+            abi.encodeWithSignature(
+                "submitQuestion(string,string[],string,string,string,string,uint256,bytes32,(bytes32,bytes32))",
+                "https://example.com/context",
+                imageUrls,
+                "",
+                "test goal",
+                "test goal",
+                "test",
+                1,
+                salt,
+                _defaultQuestionSpec()
             )
         );
         uint256 gasUsed = reserveGasUsed + revealGasUsed;

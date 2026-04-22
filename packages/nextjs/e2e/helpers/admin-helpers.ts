@@ -38,6 +38,8 @@ const DEFAULT_SUBMISSION_REWARD_AMOUNT = 1_000_000n;
 const DEFAULT_SUBMISSION_REWARD_REQUIRED_VOTERS = 3n;
 const DEFAULT_SUBMISSION_REWARD_SETTLED_ROUNDS = 1n;
 const DEFAULT_SUBMISSION_REWARD_EXPIRES_AT = 0n;
+const DEFAULT_QUESTION_METADATA_HASH = "0xed39b36e9ce5c1bfc657909c2f687347be2de998bc871eb8d33df17fdfa0d8cd" as const;
+const DEFAULT_RESULT_SPEC_HASH = "0x8e5f27bc3269c62c92754f76279bd83838462060fc6cd77411b7407027cfa11f" as const;
 const DEFAULT_SUBMISSION_ROUND_CONFIG: SubmissionRoundConfig = {
   epochDuration: 20 * 60,
   maxDuration: 7 * 24 * 60 * 60,
@@ -233,10 +235,12 @@ async function buildSubmissionReservation(
     categoryId,
     description,
     imageUrls: media.imageUrls,
+    questionMetadataHash: DEFAULT_QUESTION_METADATA_HASH,
     rewardAmount,
     rewardAsset: DEFAULT_SUBMISSION_REWARD_ASSET_CREP,
     requiredSettledRounds: DEFAULT_SUBMISSION_REWARD_SETTLED_ROUNDS,
     requiredVoters: DEFAULT_SUBMISSION_REWARD_REQUIRED_VOTERS,
+    resultSpecHash: DEFAULT_RESULT_SPEC_HASH,
     rewardPoolExpiresAt: DEFAULT_SUBMISSION_REWARD_EXPIRES_AT,
     feedbackClosesAt: DEFAULT_SUBMISSION_REWARD_EXPIRES_AT,
     roundConfig,
@@ -689,6 +693,14 @@ export async function submitContentDirect(
               { name: "maxVoters", type: "uint16" },
             ],
           },
+          {
+            name: "spec",
+            type: "tuple",
+            components: [
+              { name: "questionMetadataHash", type: "bytes32" },
+              { name: "resultSpecHash", type: "bytes32" },
+            ],
+          },
         ],
         outputs: [{ name: "", type: "uint256" }],
         stateMutability: "nonpayable",
@@ -713,6 +725,10 @@ export async function submitContentDirect(
         feedbackClosesAt: DEFAULT_SUBMISSION_REWARD_EXPIRES_AT,
       },
       resolvedRoundConfig,
+      {
+        questionMetadataHash: DEFAULT_QUESTION_METADATA_HASH,
+        resultSpecHash: DEFAULT_RESULT_SPEC_HASH,
+      },
     ],
   });
   return sendTx(fromAddress, contractAddress, data);

@@ -11,10 +11,12 @@ type QuestionSubmissionRevealCommitmentParams = {
   categoryId: bigint;
   description: string;
   imageUrls: readonly string[];
+  questionMetadataHash: Hex;
   rewardAmount: bigint;
   rewardAsset: number;
   requiredSettledRounds: bigint;
   requiredVoters: bigint;
+  resultSpecHash: Hex;
   rewardPoolExpiresAt: bigint;
   feedbackClosesAt: bigint;
   roundConfig: QuestionSubmissionRoundConfig;
@@ -32,6 +34,10 @@ export type QuestionBundleSubmissionItem = {
   description: string;
   imageUrls: readonly string[];
   salt: Hex;
+  spec: {
+    questionMetadataHash: Hex;
+    resultSpecHash: Hex;
+  };
   tags: string;
   title: string;
   videoUrl: string;
@@ -80,6 +86,8 @@ export function buildQuestionSubmissionRevealCommitment(params: QuestionSubmissi
         { type: "uint32" },
         { type: "uint16" },
         { type: "uint16" },
+        { type: "bytes32" },
+        { type: "bytes32" },
       ],
       [
         params.submissionKey,
@@ -100,6 +108,8 @@ export function buildQuestionSubmissionRevealCommitment(params: QuestionSubmissi
         Number(params.roundConfig.maxDuration),
         Number(params.roundConfig.minVoters),
         Number(params.roundConfig.maxVoters),
+        params.questionMetadataHash,
+        params.resultSpecHash,
       ],
     ),
   );
@@ -119,9 +129,11 @@ export function buildQuestionBundleHash(questions: readonly QuestionBundleSubmis
           { type: "uint256" },
           { type: "bytes32" },
           { type: "uint256" },
+          { type: "bytes32" },
+          { type: "bytes32" },
         ],
         [
-          "curyo-question-bundle-item-v1",
+          "curyo-question-bundle-item-v2",
           question.contextUrl,
           buildSubmissionMediaHash(question.imageUrls, question.videoUrl),
           question.title,
@@ -130,13 +142,15 @@ export function buildQuestionBundleHash(questions: readonly QuestionBundleSubmis
           question.categoryId,
           question.salt,
           BigInt(index),
+          question.spec.questionMetadataHash,
+          question.spec.resultSpecHash,
         ],
       ),
     ),
   );
 
   return keccak256(
-    encodeAbiParameters([{ type: "string" }, { type: "bytes32[]" }], ["curyo-question-bundle-v1", questionHashes]),
+    encodeAbiParameters([{ type: "string" }, { type: "bytes32[]" }], ["curyo-question-bundle-v2", questionHashes]),
   );
 }
 
@@ -159,7 +173,7 @@ export function buildQuestionBundleRevealCommitment(params: QuestionBundleReveal
         { type: "uint16" },
       ],
       [
-        "curyo-question-bundle-reveal-v2",
+        "curyo-question-bundle-reveal-v3",
         params.bundleHash,
         params.submitter,
         params.rewardAsset,
