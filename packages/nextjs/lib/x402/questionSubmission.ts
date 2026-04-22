@@ -584,6 +584,7 @@ async function executeX402QuestionSubmission(params: {
     requiredSettledRounds: params.payload.bounty.requiredSettledRounds,
     requiredVoters: params.payload.bounty.requiredVoters,
     rewardPoolExpiresAt: params.payload.bounty.rewardPoolExpiresAt,
+    feedbackClosesAt: params.payload.bounty.feedbackClosesAt,
     roundConfig: params.payload.roundConfig,
     submitter: account.address,
   });
@@ -627,7 +628,8 @@ async function executeX402QuestionSubmission(params: {
         amount: params.payload.bounty.amount,
         requiredVoters: params.payload.bounty.requiredVoters,
         requiredSettledRounds: params.payload.bounty.requiredSettledRounds,
-        expiresAt: params.payload.bounty.rewardPoolExpiresAt,
+        bountyClosesAt: params.payload.bounty.rewardPoolExpiresAt,
+        feedbackClosesAt: params.payload.bounty.feedbackClosesAt,
       },
       questionRoundConfigToAbi(params.payload.roundConfig),
     ] as const;
@@ -693,6 +695,7 @@ function submissionResponseBody(params: {
       requiredSettledRounds: params.payload.bounty.requiredSettledRounds.toString(),
       requiredVoters: params.payload.bounty.requiredVoters.toString(),
       rewardPoolExpiresAt: params.payload.bounty.rewardPoolExpiresAt.toString(),
+      feedbackClosesAt: params.payload.bounty.feedbackClosesAt.toString(),
     },
     chainId: params.payload.chainId,
     bundleId,
@@ -727,6 +730,7 @@ export function x402QuestionSubmissionStatusBody(params: {
       requiredSettledRounds: params.payload.bounty.requiredSettledRounds.toString(),
       requiredVoters: params.payload.bounty.requiredVoters.toString(),
       rewardPoolExpiresAt: params.payload.bounty.rewardPoolExpiresAt.toString(),
+      feedbackClosesAt: params.payload.bounty.feedbackClosesAt.toString(),
     },
     chainId: params.payload.chainId,
     bundleId: params.record?.bundleId ?? null,

@@ -25,7 +25,8 @@ interface IQuestionRewardPoolEscrow {
         uint256 amount,
         uint256 requiredVoters,
         uint256 requiredSettledRounds,
-        uint256 expiresAt
+        uint256 bountyClosesAt,
+        uint256 feedbackClosesAt
     ) external returns (uint256 rewardPoolId);
 
     function createSubmissionBundleFromRegistry(
@@ -35,7 +36,8 @@ interface IQuestionRewardPoolEscrow {
         uint8 asset,
         uint256 amount,
         uint256 requiredCompleters,
-        uint256 expiresAt
+        uint256 bountyClosesAt,
+        uint256 feedbackClosesAt
     ) external returns (uint256 rewardPoolId);
 }
 
@@ -122,7 +124,8 @@ contract ContentRegistry is Initializable, AccessControlUpgradeable, PausableUpg
         uint256 amount;
         uint256 requiredVoters;
         uint256 requiredSettledRounds;
-        uint256 expiresAt;
+        uint256 bountyClosesAt;
+        uint256 feedbackClosesAt;
     }
 
     struct BundleQuestionInput {
@@ -212,6 +215,10 @@ contract ContentRegistry is Initializable, AccessControlUpgradeable, PausableUpg
         address indexed submitter,
         uint8 indexed rewardAsset,
         uint256 amount,
+        uint256 requiredVoters,
+        uint256 requiredSettledRounds,
+        uint256 bountyClosesAt,
+        uint256 feedbackClosesAt,
         uint256 rewardPoolId
     );
     event QuestionBundleSubmitted(
@@ -221,7 +228,8 @@ contract ContentRegistry is Initializable, AccessControlUpgradeable, PausableUpg
         uint8 indexed rewardAsset,
         uint256 amount,
         uint256 requiredCompleters,
-        uint256 expiresAt,
+        uint256 bountyClosesAt,
+        uint256 feedbackClosesAt,
         bytes32 bundleHash,
         uint256 rewardPoolId
     );
@@ -499,7 +507,8 @@ contract ContentRegistry is Initializable, AccessControlUpgradeable, PausableUpg
                 rewardTerms.asset,
                 rewardTerms.amount,
                 rewardTerms.requiredVoters,
-                rewardTerms.expiresAt
+                rewardTerms.bountyClosesAt,
+                rewardTerms.feedbackClosesAt
             );
         emit QuestionBundleSubmitted(
             bundleId,
@@ -508,7 +517,8 @@ contract ContentRegistry is Initializable, AccessControlUpgradeable, PausableUpg
             rewardTerms.asset,
             rewardTerms.amount,
             rewardTerms.requiredVoters,
-            rewardTerms.expiresAt,
+            rewardTerms.bountyClosesAt,
+            rewardTerms.feedbackClosesAt,
             bundleHash,
             rewardPoolId
         );
@@ -662,7 +672,17 @@ contract ContentRegistry is Initializable, AccessControlUpgradeable, PausableUpg
             resolvedCategoryId
         );
         emit ContentMediaSubmitted(contentId, imageUrls, videoUrl);
-        emit SubmissionRewardPoolAttached(contentId, msg.sender, rewardTerms.asset, rewardTerms.amount, rewardPoolId);
+        emit SubmissionRewardPoolAttached(
+            contentId,
+            msg.sender,
+            rewardTerms.asset,
+            rewardTerms.amount,
+            rewardTerms.requiredVoters,
+            rewardTerms.requiredSettledRounds,
+            rewardTerms.bountyClosesAt,
+            rewardTerms.feedbackClosesAt,
+            rewardPoolId
+        );
     }
 
     function _prepareQuestionMediaSubmission(
@@ -791,7 +811,8 @@ contract ContentRegistry is Initializable, AccessControlUpgradeable, PausableUpg
                 rewardTerms.amount,
                 rewardTerms.requiredVoters,
                 rewardTerms.requiredSettledRounds,
-                rewardTerms.expiresAt
+                rewardTerms.bountyClosesAt,
+                rewardTerms.feedbackClosesAt
             );
     }
 
@@ -1010,7 +1031,7 @@ contract ContentRegistry is Initializable, AccessControlUpgradeable, PausableUpg
     ) internal pure returns (bytes32) {
         uint256 titleTailLength = _encodedStringTailLength(title);
         uint256 descriptionTailLength = _encodedStringTailLength(description);
-        uint256 titleOffset = 17 * 32;
+        uint256 titleOffset = 18 * 32;
         uint256 descriptionOffset = titleOffset + titleTailLength;
         uint256 tagsOffset = descriptionOffset + descriptionTailLength;
         bytes memory encoded = new bytes(tagsOffset + _encodedStringTailLength(tags));
@@ -1027,11 +1048,12 @@ contract ContentRegistry is Initializable, AccessControlUpgradeable, PausableUpg
         _writeUint(encoded, 9 * 32, rewardTerms.amount);
         _writeUint(encoded, 10 * 32, rewardTerms.requiredVoters);
         _writeUint(encoded, 11 * 32, rewardTerms.requiredSettledRounds);
-        _writeUint(encoded, 12 * 32, rewardTerms.expiresAt);
-        _writeUint(encoded, 13 * 32, uint256(roundConfig.epochDuration));
-        _writeUint(encoded, 14 * 32, uint256(roundConfig.maxDuration));
-        _writeUint(encoded, 15 * 32, uint256(roundConfig.minVoters));
-        _writeUint(encoded, 16 * 32, uint256(roundConfig.maxVoters));
+        _writeUint(encoded, 12 * 32, rewardTerms.bountyClosesAt);
+        _writeUint(encoded, 13 * 32, rewardTerms.feedbackClosesAt);
+        _writeUint(encoded, 14 * 32, uint256(roundConfig.epochDuration));
+        _writeUint(encoded, 15 * 32, uint256(roundConfig.maxDuration));
+        _writeUint(encoded, 16 * 32, uint256(roundConfig.minVoters));
+        _writeUint(encoded, 17 * 32, uint256(roundConfig.maxVoters));
         _writeStringTail(encoded, titleOffset, title);
         _writeStringTail(encoded, descriptionOffset, description);
         _writeStringTail(encoded, tagsOffset, tags);
@@ -1095,14 +1117,15 @@ contract ContentRegistry is Initializable, AccessControlUpgradeable, PausableUpg
     ) internal pure returns (bytes32) {
         return keccak256(
             abi.encode(
-                "curyo-question-bundle-reveal-v1",
+                "curyo-question-bundle-reveal-v2",
                 bundleHash,
                 submitter,
                 rewardTerms.asset,
                 rewardTerms.amount,
                 rewardTerms.requiredVoters,
                 rewardTerms.requiredSettledRounds,
-                rewardTerms.expiresAt,
+                rewardTerms.bountyClosesAt,
+                rewardTerms.feedbackClosesAt,
                 roundConfig.epochDuration,
                 roundConfig.maxDuration,
                 roundConfig.minVoters,
@@ -1122,7 +1145,19 @@ contract ContentRegistry is Initializable, AccessControlUpgradeable, PausableUpg
         require(
             rewardTerms.amount >= rewardTerms.requiredSettledRounds * rewardTerms.requiredVoters, "Reward too small"
         );
-        require(rewardTerms.expiresAt == 0 || rewardTerms.expiresAt > block.timestamp, "Invalid bounty expiry");
+        require(
+            rewardTerms.bountyClosesAt == 0 || rewardTerms.bountyClosesAt > block.timestamp,
+            "Invalid bounty close"
+        );
+        require(
+            rewardTerms.feedbackClosesAt == 0 || rewardTerms.feedbackClosesAt > block.timestamp,
+            "Invalid feedback close"
+        );
+        require(
+            rewardTerms.bountyClosesAt == 0 || rewardTerms.feedbackClosesAt == 0
+                || rewardTerms.feedbackClosesAt <= rewardTerms.bountyClosesAt,
+            "Feedback after bounty"
+        );
     }
 
     function _minimumSubmissionReward(uint8 rewardAsset) internal view returns (uint256 minimum) {
@@ -1144,7 +1179,8 @@ contract ContentRegistry is Initializable, AccessControlUpgradeable, PausableUpg
             amount: _minimumSubmissionReward(rewardAsset),
             requiredVoters: MIN_SUBMISSION_REWARD_REQUIRED_VOTERS,
             requiredSettledRounds: MIN_SUBMISSION_REWARD_SETTLED_ROUNDS,
-            expiresAt: 0
+            bountyClosesAt: 0,
+            feedbackClosesAt: 0
         });
     }
 

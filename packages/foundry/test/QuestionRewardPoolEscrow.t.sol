@@ -671,8 +671,8 @@ contract QuestionRewardPoolEscrowTest is VotingTestBase {
 
         vm.startPrank(funder);
         usdc.approve(address(rewardPoolEscrow), REWARD_POOL_AMOUNT);
-        vm.expectRevert("Invalid expiry");
-        rewardPoolEscrow.createRewardPool(contentId, REWARD_POOL_AMOUNT, 3, 1, 0);
+        vm.expectRevert("Invalid bounty close");
+        rewardPoolEscrow.createRewardPool(contentId, REWARD_POOL_AMOUNT, 3, 1, 0, 0);
         vm.stopPrank();
     }
 
@@ -682,7 +682,7 @@ contract QuestionRewardPoolEscrowTest is VotingTestBase {
         vm.startPrank(funder);
         usdc.approve(address(rewardPoolEscrow), 1);
         vm.expectRevert("Amount too small");
-        rewardPoolEscrow.createRewardPool(contentId, 1, 3, 2, block.timestamp + 30 days);
+        rewardPoolEscrow.createRewardPool(contentId, 1, 3, 2, block.timestamp + 30 days, 0);
         vm.stopPrank();
     }
 
@@ -692,7 +692,7 @@ contract QuestionRewardPoolEscrowTest is VotingTestBase {
         vm.startPrank(funder);
         usdc.approve(address(rewardPoolEscrow), 199);
         vm.expectRevert("Amount too small");
-        rewardPoolEscrow.createRewardPool(contentId, 199, 3, 1, block.timestamp + 30 days);
+        rewardPoolEscrow.createRewardPool(contentId, 199, 3, 1, block.timestamp + 30 days, 0);
         vm.stopPrank();
     }
 
@@ -782,7 +782,8 @@ contract QuestionRewardPoolEscrowTest is VotingTestBase {
                 amount: rewardAmount,
                 requiredVoters: DEFAULT_SUBMISSION_REWARD_REQUIRED_VOTERS,
                 requiredSettledRounds: DEFAULT_SUBMISSION_REWARD_SETTLED_ROUNDS,
-                expiresAt: DEFAULT_SUBMISSION_REWARD_EXPIRES_AT
+                bountyClosesAt: DEFAULT_SUBMISSION_REWARD_EXPIRES_AT,
+                feedbackClosesAt: DEFAULT_SUBMISSION_REWARD_EXPIRES_AT
             }),
             roundConfig
         );
@@ -840,7 +841,7 @@ contract QuestionRewardPoolEscrowTest is VotingTestBase {
         vm.startPrank(poolFunder);
         usdc.approve(address(rewardPoolEscrow), amount);
         rewardPoolId =
-            rewardPoolEscrow.createRewardPool(contentId, amount, requiredVoters, requiredSettledRounds, expiresAt);
+            rewardPoolEscrow.createRewardPool(contentId, amount, requiredVoters, requiredSettledRounds, expiresAt, 0);
         vm.stopPrank();
     }
 

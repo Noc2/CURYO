@@ -33,7 +33,7 @@ contract FeedbackBonusEscrow is Initializable, AccessControlUpgradeable, Pausabl
         uint64 id;
         uint64 contentId;
         uint64 roundId;
-        uint48 awardDeadline;
+        uint48 feedbackClosesAt;
         address funder;
         address funderIdentity;
         address awarder;
@@ -65,8 +65,11 @@ contract FeedbackBonusEscrow is Initializable, AccessControlUpgradeable, Pausabl
         address funder,
         address awarder,
         uint256 amount,
-        uint256 awardDeadline,
+        uint256 feedbackClosesAt,
         uint256 frontendFeeBps
+    );
+    event FeedbackWindowCreated(
+        uint256 indexed poolId, uint256 indexed contentId, uint256 indexed roundId, uint256 feedbackClosesAt
     );
     event FeedbackBonusAwarded(
         uint256 indexed poolId,
@@ -122,13 +125,13 @@ contract FeedbackBonusEscrow is Initializable, AccessControlUpgradeable, Pausabl
         uint256 contentId,
         uint256 roundId,
         uint256 amount,
-        uint256 awardDeadline,
+        uint256 feedbackClosesAt,
         address awarder
     ) external nonReentrant whenNotPaused returns (uint256 poolId) {
         require(amount > 0, "Amount required");
         require(roundId > 0, "Round required");
         require(awarder != address(0), "Invalid awarder");
-        require(awardDeadline > block.timestamp, "Invalid deadline");
+        require(feedbackClosesAt > block.timestamp, "Invalid feedback close");
         require(registry.isContentActive(contentId), "Content not active");
         _requireTargetRound(contentId, roundId);
 
@@ -146,7 +149,7 @@ contract FeedbackBonusEscrow is Initializable, AccessControlUpgradeable, Pausabl
             id: poolId.toUint64(),
             contentId: contentId.toUint64(),
             roundId: roundId.toUint64(),
-            awardDeadline: awardDeadline.toUint48(),
+            feedbackClosesAt: feedbackClosesAt.toUint48(),
             funder: msg.sender,
             funderIdentity: funderIdentity,
             awarder: awarder,
@@ -161,8 +164,9 @@ contract FeedbackBonusEscrow is Initializable, AccessControlUpgradeable, Pausabl
         });
 
         emit FeedbackBonusPoolCreated(
-            poolId, contentId, roundId, msg.sender, awarder, receivedAmount, awardDeadline, defaultFrontendFeeBps
+            poolId, contentId, roundId, msg.sender, awarder, receivedAmount, feedbackClosesAt, defaultFrontendFeeBps
         );
+        emit FeedbackWindowCreated(poolId, contentId, roundId, feedbackClosesAt);
     }
 
     function awardFeedbackBonus(uint256 poolId, address recipient, bytes32 feedbackHash, uint256 grossAmount)
@@ -174,7 +178,7 @@ contract FeedbackBonusEscrow is Initializable, AccessControlUpgradeable, Pausabl
         FeedbackBonusPool storage pool = _getExistingPool(poolId);
         require(msg.sender == pool.awarder, "Only awarder");
         require(!pool.forfeited, "Pool forfeited");
-        require(block.timestamp <= pool.awardDeadline, "Award expired");
+        require(block.timestamp <= pool.feedbackClosesAt, "Feedback closed");
         require(feedbackHash != bytes32(0), "Feedback hash required");
         require(grossAmount > 0 && grossAmount <= pool.remainingAmount, "Invalid amount");
         require(!feedbackHashAwarded[poolId][feedbackHash], "Feedback already awarded");
@@ -226,7 +230,7 @@ contract FeedbackBonusEscrow is Initializable, AccessControlUpgradeable, Pausabl
     {
         FeedbackBonusPool storage pool = _getExistingPool(poolId);
         require(!pool.forfeited, "Already forfeited");
-        require(block.timestamp > pool.awardDeadline, "Not expired");
+        require(block.timestamp > pool.feedbackClosesAt, "Not expired");
         forfeitedAmount = pool.remainingAmount;
         require(forfeitedAmount > 0, "No funds");
 

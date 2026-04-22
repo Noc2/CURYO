@@ -346,7 +346,12 @@ export const QuestionRewardPoolEscrowAbi = [
         "internalType": "uint256"
       },
       {
-        "name": "expiresAt",
+        "name": "bountyClosesAt",
+        "type": "uint256",
+        "internalType": "uint256"
+      },
+      {
+        "name": "feedbackClosesAt",
         "type": "uint256",
         "internalType": "uint256"
       }
@@ -390,7 +395,12 @@ export const QuestionRewardPoolEscrowAbi = [
         "internalType": "uint256"
       },
       {
-        "name": "expiresAt",
+        "name": "bountyClosesAt",
+        "type": "uint256",
+        "internalType": "uint256"
+      },
+      {
+        "name": "feedbackClosesAt",
         "type": "uint256",
         "internalType": "uint256"
       }
@@ -439,7 +449,12 @@ export const QuestionRewardPoolEscrowAbi = [
         "internalType": "uint256"
       },
       {
-        "name": "expiresAt",
+        "name": "bountyClosesAt",
+        "type": "uint256",
+        "internalType": "uint256"
+      },
+      {
+        "name": "feedbackClosesAt",
         "type": "uint256",
         "internalType": "uint256"
       }
@@ -488,7 +503,12 @@ export const QuestionRewardPoolEscrowAbi = [
         "internalType": "uint256"
       },
       {
-        "name": "expiresAt",
+        "name": "bountyClosesAt",
+        "type": "uint256",
+        "internalType": "uint256"
+      },
+      {
+        "name": "feedbackClosesAt",
         "type": "uint256",
         "internalType": "uint256"
       }
@@ -988,6 +1008,80 @@ export const QuestionRewardPoolEscrowAbi = [
   },
   {
     "type": "event",
+    "name": "BountyWindowCreated",
+    "inputs": [
+      {
+        "name": "rewardPoolId",
+        "type": "uint256",
+        "indexed": true,
+        "internalType": "uint256"
+      },
+      {
+        "name": "contentId",
+        "type": "uint256",
+        "indexed": true,
+        "internalType": "uint256"
+      },
+      {
+        "name": "bountyOpensAt",
+        "type": "uint256",
+        "indexed": false,
+        "internalType": "uint256"
+      },
+      {
+        "name": "bountyClosesAt",
+        "type": "uint256",
+        "indexed": false,
+        "internalType": "uint256"
+      },
+      {
+        "name": "feedbackClosesAt",
+        "type": "uint256",
+        "indexed": false,
+        "internalType": "uint256"
+      },
+      {
+        "name": "requiredVoters",
+        "type": "uint256",
+        "indexed": false,
+        "internalType": "uint256"
+      },
+      {
+        "name": "requiredSettledRounds",
+        "type": "uint256",
+        "indexed": false,
+        "internalType": "uint256"
+      }
+    ],
+    "anonymous": false
+  },
+  {
+    "type": "event",
+    "name": "BountyWindowExpired",
+    "inputs": [
+      {
+        "name": "rewardPoolId",
+        "type": "uint256",
+        "indexed": true,
+        "internalType": "uint256"
+      },
+      {
+        "name": "contentId",
+        "type": "uint256",
+        "indexed": true,
+        "internalType": "uint256"
+      },
+      {
+        "name": "amount",
+        "type": "uint256",
+        "indexed": false,
+        "internalType": "uint256"
+      }
+    ],
+    "anonymous": false
+  },
+  {
+    "type": "event",
     "name": "DefaultFrontendFeeBpsUpdated",
     "inputs": [
       {
@@ -1152,7 +1246,19 @@ export const QuestionRewardPoolEscrowAbi = [
         "internalType": "uint256"
       },
       {
-        "name": "expiresAt",
+        "name": "bountyOpensAt",
+        "type": "uint256",
+        "indexed": false,
+        "internalType": "uint256"
+      },
+      {
+        "name": "bountyClosesAt",
+        "type": "uint256",
+        "indexed": false,
+        "internalType": "uint256"
+      },
+      {
+        "name": "feedbackClosesAt",
         "type": "uint256",
         "indexed": false,
         "internalType": "uint256"
@@ -1348,7 +1454,19 @@ export const QuestionRewardPoolEscrowAbi = [
         "internalType": "uint256"
       },
       {
-        "name": "expiresAt",
+        "name": "bountyOpensAt",
+        "type": "uint256",
+        "indexed": false,
+        "internalType": "uint256"
+      },
+      {
+        "name": "bountyClosesAt",
+        "type": "uint256",
+        "indexed": false,
+        "internalType": "uint256"
+      },
+      {
+        "name": "feedbackClosesAt",
         "type": "uint256",
         "indexed": false,
         "internalType": "uint256"

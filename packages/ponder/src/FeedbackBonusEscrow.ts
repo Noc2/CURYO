@@ -11,7 +11,7 @@ async function touchContent(context: { db: any }, contentId: bigint, timestamp: 
 }
 
 ponder.on("FeedbackBonusEscrow:FeedbackBonusPoolCreated", async ({ event, context }) => {
-  const { poolId, contentId, roundId, funder, awarder, amount, awardDeadline, frontendFeeBps } = event.args;
+  const { poolId, contentId, roundId, funder, awarder, amount, feedbackClosesAt, frontendFeeBps } = event.args;
 
   await context.db
     .insert(feedbackBonusPool)
@@ -28,7 +28,7 @@ ponder.on("FeedbackBonusEscrow:FeedbackBonusPoolCreated", async ({ event, contex
       frontendAwardedAmount: 0n,
       forfeitedAmount: 0n,
       awardCount: 0,
-      awardDeadline,
+      awardDeadline: feedbackClosesAt,
       frontendFeeBps: Number(frontendFeeBps),
       forfeited: false,
       createdAt: event.block.timestamp,

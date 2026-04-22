@@ -705,6 +705,7 @@ export function ContentSubmissionSection() {
     rewardExpiryMode === "days" && parsedRewardExpiryDays < 1 ? "Enter at least 1 day or choose no expiry." : null;
   const rewardExpiryError = bountyStepAttempted ? rewardExpiryValidationError : null;
   const rewardPoolExpiresAt = getRewardPoolExpiresAt(rewardExpiryMode, rewardExpiryDays);
+  const feedbackClosesAt = rewardPoolExpiresAt;
   const bountySettingsValid =
     rewardRequiredVotersValidationError === null &&
     rewardRequiredSettledRoundsValidationError === null &&
@@ -989,6 +990,7 @@ export function ContentSubmissionSection() {
         requiredSettledRounds: selectedRequiredSettledRounds,
         requiredVoters: selectedRequiredVoters,
         rewardPoolExpiresAt,
+        feedbackClosesAt,
         roundConfig: selectedRoundConfig,
         submitter: submitterAddress,
       });
@@ -1091,7 +1093,8 @@ export function ContentSubmissionSection() {
                   amount: selectedRewardAmount,
                   requiredVoters: selectedRequiredVoters,
                   requiredSettledRounds: selectedRequiredSettledRounds,
-                  expiresAt: rewardPoolExpiresAt,
+                  bountyClosesAt: rewardPoolExpiresAt,
+                  feedbackClosesAt,
                 },
                 questionRoundConfigToAbi(selectedRoundConfig),
               ],
@@ -1131,7 +1134,8 @@ export function ContentSubmissionSection() {
               amount: selectedRewardAmount,
               requiredVoters: selectedRequiredVoters,
               requiredSettledRounds: selectedRequiredSettledRounds,
-              expiresAt: rewardPoolExpiresAt,
+              bountyClosesAt: rewardPoolExpiresAt,
+              feedbackClosesAt,
             },
             questionRoundConfigToAbi(selectedRoundConfig),
           ],

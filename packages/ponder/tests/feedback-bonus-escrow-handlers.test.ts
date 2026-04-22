@@ -95,7 +95,7 @@ describe("FeedbackBonusEscrow ponder handlers", () => {
           funder: "0x0000000000000000000000000000000000000001",
           awarder: "0x0000000000000000000000000000000000000002",
           amount: 100_000_000n,
-          awardDeadline: 2_592_000n,
+          feedbackClosesAt: 2_592_000n,
           frontendFeeBps: 300n,
         },
         block: { number: 10n, timestamp: 1_700n },

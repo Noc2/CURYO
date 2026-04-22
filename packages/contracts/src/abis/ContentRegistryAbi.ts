@@ -1340,7 +1340,12 @@ export const ContentRegistryAbi = [
             "internalType": "uint256"
           },
           {
-            "name": "expiresAt",
+            "name": "bountyClosesAt",
+            "type": "uint256",
+            "internalType": "uint256"
+          },
+          {
+            "name": "feedbackClosesAt",
             "type": "uint256",
             "internalType": "uint256"
           }
@@ -1384,85 +1389,6 @@ export const ContentRegistryAbi = [
         "name": "contentIds",
         "type": "uint256[]",
         "internalType": "uint256[]"
-      }
-    ],
-    "stateMutability": "nonpayable"
-  },
-  {
-    "type": "function",
-    "name": "submitQuestionWithReward",
-    "inputs": [
-      {
-        "name": "contextUrl",
-        "type": "string",
-        "internalType": "string"
-      },
-      {
-        "name": "imageUrls",
-        "type": "string[]",
-        "internalType": "string[]"
-      },
-      {
-        "name": "videoUrl",
-        "type": "string",
-        "internalType": "string"
-      },
-      {
-        "name": "title",
-        "type": "string",
-        "internalType": "string"
-      },
-      {
-        "name": "description",
-        "type": "string",
-        "internalType": "string"
-      },
-      {
-        "name": "tags",
-        "type": "string",
-        "internalType": "string"
-      },
-      {
-        "name": "categoryId",
-        "type": "uint256",
-        "internalType": "uint256"
-      },
-      {
-        "name": "salt",
-        "type": "bytes32",
-        "internalType": "bytes32"
-      },
-      {
-        "name": "rewardAsset",
-        "type": "uint8",
-        "internalType": "uint8"
-      },
-      {
-        "name": "rewardAmount",
-        "type": "uint256",
-        "internalType": "uint256"
-      },
-      {
-        "name": "requiredVoters",
-        "type": "uint256",
-        "internalType": "uint256"
-      },
-      {
-        "name": "requiredSettledRounds",
-        "type": "uint256",
-        "internalType": "uint256"
-      },
-      {
-        "name": "rewardPoolExpiresAt",
-        "type": "uint256",
-        "internalType": "uint256"
-      }
-    ],
-    "outputs": [
-      {
-        "name": "",
-        "type": "uint256",
-        "internalType": "uint256"
       }
     ],
     "stateMutability": "nonpayable"
@@ -1537,7 +1463,12 @@ export const ContentRegistryAbi = [
             "internalType": "uint256"
           },
           {
-            "name": "expiresAt",
+            "name": "bountyClosesAt",
+            "type": "uint256",
+            "internalType": "uint256"
+          },
+          {
+            "name": "feedbackClosesAt",
             "type": "uint256",
             "internalType": "uint256"
           }
@@ -2095,7 +2026,13 @@ export const ContentRegistryAbi = [
         "internalType": "uint256"
       },
       {
-        "name": "expiresAt",
+        "name": "bountyClosesAt",
+        "type": "uint256",
+        "indexed": false,
+        "internalType": "uint256"
+      },
+      {
+        "name": "feedbackClosesAt",
         "type": "uint256",
         "indexed": false,
         "internalType": "uint256"
@@ -2376,6 +2313,30 @@ export const ContentRegistryAbi = [
       },
       {
         "name": "amount",
+        "type": "uint256",
+        "indexed": false,
+        "internalType": "uint256"
+      },
+      {
+        "name": "requiredVoters",
+        "type": "uint256",
+        "indexed": false,
+        "internalType": "uint256"
+      },
+      {
+        "name": "requiredSettledRounds",
+        "type": "uint256",
+        "indexed": false,
+        "internalType": "uint256"
+      },
+      {
+        "name": "bountyClosesAt",
+        "type": "uint256",
+        "indexed": false,
+        "internalType": "uint256"
+      },
+      {
+        "name": "feedbackClosesAt",
         "type": "uint256",
         "indexed": false,
         "internalType": "uint256"

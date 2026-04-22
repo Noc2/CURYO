@@ -176,7 +176,8 @@ const CONTENT_REGISTRY_SUBMISSION_ABI = [
           { name: "amount", type: "uint256" },
           { name: "requiredVoters", type: "uint256" },
           { name: "requiredSettledRounds", type: "uint256" },
-          { name: "expiresAt", type: "uint256" },
+          { name: "bountyClosesAt", type: "uint256" },
+          { name: "feedbackClosesAt", type: "uint256" },
         ],
       },
       {
@@ -219,7 +220,8 @@ const CONTENT_REGISTRY_SUBMISSION_ABI = [
           { name: "amount", type: "uint256" },
           { name: "requiredVoters", type: "uint256" },
           { name: "requiredSettledRounds", type: "uint256" },
-          { name: "expiresAt", type: "uint256" },
+          { name: "bountyClosesAt", type: "uint256" },
+          { name: "feedbackClosesAt", type: "uint256" },
         ],
       },
       {

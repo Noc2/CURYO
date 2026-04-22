@@ -18,6 +18,7 @@ const DEFAULT_DRAFT = {
   description: "first description",
   imageUrls: ["https://example.com/demo.jpg"],
   rewardPoolExpiresAt: 0n,
+  feedbackClosesAt: 0n,
   roundConfig: {
     epochDuration: 1200n,
     maxDuration: 604800n,

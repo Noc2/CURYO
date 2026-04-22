@@ -9,7 +9,8 @@ contract MockQuestionRewardPoolEscrow {
     uint256 public lastAmount;
     uint256 public lastRequiredVoters;
     uint256 public lastRequiredSettledRounds;
-    uint256 public lastExpiresAt;
+    uint256 public lastBountyClosesAt;
+    uint256 public lastFeedbackClosesAt;
 
     event MockSubmissionRewardPoolCreated(
         uint256 indexed rewardPoolId,
@@ -17,7 +18,8 @@ contract MockQuestionRewardPoolEscrow {
         address funder,
         uint256 requiredVoters,
         uint256 requiredSettledRounds,
-        uint256 expiresAt
+        uint256 bountyClosesAt,
+        uint256 feedbackClosesAt
     );
 
     function createSubmissionRewardPoolFromRegistry(
@@ -27,7 +29,8 @@ contract MockQuestionRewardPoolEscrow {
         uint256 amount,
         uint256 requiredVoters,
         uint256 requiredSettledRounds,
-        uint256 expiresAt
+        uint256 bountyClosesAt,
+        uint256 feedbackClosesAt
     ) external returns (uint256 rewardPoolId) {
         rewardPoolId = nextRewardPoolId++;
         lastContentId = contentId;
@@ -36,9 +39,10 @@ contract MockQuestionRewardPoolEscrow {
         lastAmount = amount;
         lastRequiredVoters = requiredVoters;
         lastRequiredSettledRounds = requiredSettledRounds;
-        lastExpiresAt = expiresAt;
+        lastBountyClosesAt = bountyClosesAt;
+        lastFeedbackClosesAt = feedbackClosesAt;
         emit MockSubmissionRewardPoolCreated(
-            rewardPoolId, contentId, funder, requiredVoters, requiredSettledRounds, expiresAt
+            rewardPoolId, contentId, funder, requiredVoters, requiredSettledRounds, bountyClosesAt, feedbackClosesAt
         );
     }
 }

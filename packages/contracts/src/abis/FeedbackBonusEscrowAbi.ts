@@ -136,7 +136,7 @@ export const FeedbackBonusEscrowAbi = [
         "internalType": "uint256"
       },
       {
-        "name": "awardDeadline",
+        "name": "feedbackClosesAt",
         "type": "uint256",
         "internalType": "uint256"
       },
@@ -195,7 +195,7 @@ export const FeedbackBonusEscrowAbi = [
         "internalType": "uint64"
       },
       {
-        "name": "awardDeadline",
+        "name": "feedbackClosesAt",
         "type": "uint48",
         "internalType": "uint48"
       },
@@ -749,13 +749,44 @@ export const FeedbackBonusEscrowAbi = [
         "internalType": "uint256"
       },
       {
-        "name": "awardDeadline",
+        "name": "feedbackClosesAt",
         "type": "uint256",
         "indexed": false,
         "internalType": "uint256"
       },
       {
         "name": "frontendFeeBps",
+        "type": "uint256",
+        "indexed": false,
+        "internalType": "uint256"
+      }
+    ],
+    "anonymous": false
+  },
+  {
+    "type": "event",
+    "name": "FeedbackWindowCreated",
+    "inputs": [
+      {
+        "name": "poolId",
+        "type": "uint256",
+        "indexed": true,
+        "internalType": "uint256"
+      },
+      {
+        "name": "contentId",
+        "type": "uint256",
+        "indexed": true,
+        "internalType": "uint256"
+      },
+      {
+        "name": "roundId",
+        "type": "uint256",
+        "indexed": true,
+        "internalType": "uint256"
+      },
+      {
+        "name": "feedbackClosesAt",
         "type": "uint256",
         "indexed": false,
         "internalType": "uint256"

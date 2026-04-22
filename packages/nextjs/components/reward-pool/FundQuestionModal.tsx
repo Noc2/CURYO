@@ -132,11 +132,12 @@ export function FundQuestionModal({ contentId, title, onClose, onCreated }: Fund
         await waitForTransactionReceipt(wagmiConfig, { hash: approveHash });
       }
 
+      const bountyClosesAt = getExpiryTimestamp(expiry);
       const rewardPoolHash = await writeContractAsync({
         address: escrowAddress,
         abi: QUESTION_REWARD_POOL_ESCROW_ABI,
         functionName: "createRewardPool",
-        args: [contentId, parsedAmount, BigInt(voterCount), BigInt(settledRounds), getExpiryTimestamp(expiry)],
+        args: [contentId, parsedAmount, BigInt(voterCount), BigInt(settledRounds), bountyClosesAt, bountyClosesAt],
       });
       await waitForTransactionReceipt(wagmiConfig, { hash: rewardPoolHash });
 

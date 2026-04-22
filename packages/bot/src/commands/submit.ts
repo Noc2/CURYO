@@ -137,6 +137,7 @@ function buildSubmissionRevealCommitment(params: {
   requiredVoters: number;
   requiredSettledRounds: number;
   rewardPoolExpiresAt: bigint;
+  feedbackClosesAt: bigint;
   roundConfig: BotRoundConfig;
   videoUrl: string;
 }): Hex {
@@ -155,6 +156,7 @@ function buildSubmissionRevealCommitment(params: {
         { type: "bytes32" },
         { type: "address" },
         { type: "uint8" },
+        { type: "uint256" },
         { type: "uint256" },
         { type: "uint256" },
         { type: "uint256" },
@@ -178,6 +180,7 @@ function buildSubmissionRevealCommitment(params: {
         BigInt(params.requiredVoters),
         BigInt(params.requiredSettledRounds),
         params.rewardPoolExpiresAt,
+        params.feedbackClosesAt,
         Number(params.roundConfig.epochDuration),
         Number(params.roundConfig.maxDuration),
         Number(params.roundConfig.minVoters),
@@ -666,6 +669,7 @@ export async function runSubmit(options: SubmitRunOptions = {}) {
           requiredVoters: config.submitRewardRequiredVoters,
           requiredSettledRounds: config.submitRewardRequiredSettledRounds,
           rewardPoolExpiresAt: config.submitRewardPoolExpiresAt,
+          feedbackClosesAt: config.submitRewardPoolExpiresAt,
           roundConfig,
           videoUrl: media.videoUrl,
         });
@@ -702,7 +706,8 @@ export async function runSubmit(options: SubmitRunOptions = {}) {
           amount: rewardFunding.amount,
           requiredVoters: BigInt(config.submitRewardRequiredVoters),
           requiredSettledRounds: BigInt(config.submitRewardRequiredSettledRounds),
-          expiresAt: config.submitRewardPoolExpiresAt,
+          bountyClosesAt: config.submitRewardPoolExpiresAt,
+          feedbackClosesAt: config.submitRewardPoolExpiresAt,
         };
         const roundConfigAbi = roundConfigToAbi(roundConfig);
         let submitTx: Hex;

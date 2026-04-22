@@ -25,7 +25,7 @@ ponder.on("QuestionRewardPoolEscrow:RewardPoolCreated", async ({ event, context 
     requiredVoters,
     requiredSettledRounds,
     startRoundId,
-    expiresAt,
+    bountyClosesAt,
     frontendFeeBps,
   } = event.args;
 
@@ -50,7 +50,7 @@ ponder.on("QuestionRewardPoolEscrow:RewardPoolCreated", async ({ event, context 
       qualifiedRounds: 0,
       frontendFeeBps: Number(frontendFeeBps),
       startRoundId,
-      expiresAt,
+      expiresAt: bountyClosesAt,
       refunded: false,
       createdAt: event.block.timestamp,
       updatedAt: event.block.timestamp,
@@ -197,10 +197,10 @@ ponder.on("QuestionRewardPoolEscrow:QuestionBundleRewardCreated", async ({ event
     funderVoterId,
     amount,
     requiredCompleters,
-    questionCount,
-    expiresAt,
-    frontendFeeBps,
-    asset,
+      questionCount,
+      bountyClosesAt,
+      frontendFeeBps,
+      asset,
   } = event.args;
 
   await context.db
@@ -220,7 +220,7 @@ ponder.on("QuestionRewardPoolEscrow:QuestionBundleRewardCreated", async ({ event
       completedQuestionCount: 0,
       claimedCount: 0,
       frontendFeeBps: Number(frontendFeeBps),
-      expiresAt,
+      expiresAt: bountyClosesAt,
       failed: false,
       refunded: false,
       createdAt: event.block.timestamp,
@@ -234,7 +234,7 @@ ponder.on("QuestionRewardPoolEscrow:QuestionBundleRewardCreated", async ({ event
       requiredCompleters: Number(requiredCompleters),
       questionCount: Number(questionCount),
       frontendFeeBps: Number(frontendFeeBps),
-      expiresAt,
+      expiresAt: bountyClosesAt,
       updatedAt: event.block.timestamp,
       claimedAmount: row.claimedAmount,
       voterClaimedAmount: row.voterClaimedAmount,

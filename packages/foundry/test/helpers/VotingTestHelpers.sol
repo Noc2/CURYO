@@ -35,7 +35,9 @@ abstract contract ContentSubmissionTestBase {
     uint256 internal constant DEFAULT_SUBMISSION_REWARD_POOL = 1e6;
     uint256 internal constant DEFAULT_SUBMISSION_REWARD_REQUIRED_VOTERS = 3;
     uint256 internal constant DEFAULT_SUBMISSION_REWARD_SETTLED_ROUNDS = 1;
-    uint256 internal constant DEFAULT_SUBMISSION_REWARD_EXPIRES_AT = 0;
+    uint256 internal constant DEFAULT_SUBMISSION_REWARD_BOUNTY_CLOSES_AT = 0;
+    uint256 internal constant DEFAULT_SUBMISSION_REWARD_FEEDBACK_CLOSES_AT = 0;
+    uint256 internal constant DEFAULT_SUBMISSION_REWARD_EXPIRES_AT = DEFAULT_SUBMISSION_REWARD_BOUNTY_CLOSES_AT;
 
     struct NoMediaQuestionText {
         string url;
@@ -192,7 +194,8 @@ abstract contract ContentSubmissionTestBase {
             amount: rewardAmount,
             requiredVoters: DEFAULT_SUBMISSION_REWARD_REQUIRED_VOTERS,
             requiredSettledRounds: DEFAULT_SUBMISSION_REWARD_SETTLED_ROUNDS,
-            expiresAt: DEFAULT_SUBMISSION_REWARD_EXPIRES_AT
+            bountyClosesAt: DEFAULT_SUBMISSION_REWARD_BOUNTY_CLOSES_AT,
+            feedbackClosesAt: DEFAULT_SUBMISSION_REWARD_FEEDBACK_CLOSES_AT
         });
         return _questionRevealCommitment(
             submissionKey,
@@ -226,7 +229,8 @@ abstract contract ContentSubmissionTestBase {
             amount: rewardAmount,
             requiredVoters: DEFAULT_SUBMISSION_REWARD_REQUIRED_VOTERS,
             requiredSettledRounds: DEFAULT_SUBMISSION_REWARD_SETTLED_ROUNDS,
-            expiresAt: DEFAULT_SUBMISSION_REWARD_EXPIRES_AT
+            bountyClosesAt: DEFAULT_SUBMISSION_REWARD_BOUNTY_CLOSES_AT,
+            feedbackClosesAt: DEFAULT_SUBMISSION_REWARD_FEEDBACK_CLOSES_AT
         });
         return _questionRevealCommitment(
             submissionKey,
@@ -256,7 +260,7 @@ abstract contract ContentSubmissionTestBase {
     ) internal pure returns (bytes32) {
         uint256 titleTailLength = _encodedStringTailLength(title);
         uint256 descriptionTailLength = _encodedStringTailLength(description);
-        uint256 titleOffset = 17 * 32;
+        uint256 titleOffset = 18 * 32;
         uint256 descriptionOffset = titleOffset + titleTailLength;
         uint256 tagsOffset = descriptionOffset + descriptionTailLength;
         bytes memory encoded = new bytes(tagsOffset + _encodedStringTailLength(tags));
@@ -273,11 +277,12 @@ abstract contract ContentSubmissionTestBase {
         _writeUint(encoded, 9 * 32, rewardTerms.amount);
         _writeUint(encoded, 10 * 32, rewardTerms.requiredVoters);
         _writeUint(encoded, 11 * 32, rewardTerms.requiredSettledRounds);
-        _writeUint(encoded, 12 * 32, rewardTerms.expiresAt);
-        _writeUint(encoded, 13 * 32, uint256(roundConfig.epochDuration));
-        _writeUint(encoded, 14 * 32, uint256(roundConfig.maxDuration));
-        _writeUint(encoded, 15 * 32, uint256(roundConfig.minVoters));
-        _writeUint(encoded, 16 * 32, uint256(roundConfig.maxVoters));
+        _writeUint(encoded, 12 * 32, rewardTerms.bountyClosesAt);
+        _writeUint(encoded, 13 * 32, rewardTerms.feedbackClosesAt);
+        _writeUint(encoded, 14 * 32, uint256(roundConfig.epochDuration));
+        _writeUint(encoded, 15 * 32, uint256(roundConfig.maxDuration));
+        _writeUint(encoded, 16 * 32, uint256(roundConfig.minVoters));
+        _writeUint(encoded, 17 * 32, uint256(roundConfig.maxVoters));
         _writeStringTail(encoded, titleOffset, title);
         _writeStringTail(encoded, descriptionOffset, description);
         _writeStringTail(encoded, tagsOffset, tags);

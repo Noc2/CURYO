@@ -16,6 +16,7 @@ type QuestionSubmissionRevealCommitmentParams = {
   requiredSettledRounds: bigint;
   requiredVoters: bigint;
   rewardPoolExpiresAt: bigint;
+  feedbackClosesAt: bigint;
   roundConfig: QuestionSubmissionRoundConfig;
   salt: Hex;
   submissionKey: Hex;
@@ -43,6 +44,7 @@ type QuestionBundleRevealCommitmentParams = {
   requiredSettledRounds: bigint;
   requiredVoters: bigint;
   rewardPoolExpiresAt: bigint;
+  feedbackClosesAt: bigint;
   roundConfig: QuestionSubmissionRoundConfig;
   submitter: Address;
 };
@@ -73,6 +75,7 @@ export function buildQuestionSubmissionRevealCommitment(params: QuestionSubmissi
         { type: "uint256" },
         { type: "uint256" },
         { type: "uint256" },
+        { type: "uint256" },
         { type: "uint32" },
         { type: "uint32" },
         { type: "uint16" },
@@ -92,6 +95,7 @@ export function buildQuestionSubmissionRevealCommitment(params: QuestionSubmissi
         params.requiredVoters,
         params.requiredSettledRounds,
         params.rewardPoolExpiresAt,
+        params.feedbackClosesAt,
         Number(params.roundConfig.epochDuration),
         Number(params.roundConfig.maxDuration),
         Number(params.roundConfig.minVoters),
@@ -148,13 +152,14 @@ export function buildQuestionBundleRevealCommitment(params: QuestionBundleReveal
         { type: "uint256" },
         { type: "uint256" },
         { type: "uint256" },
+        { type: "uint256" },
         { type: "uint32" },
         { type: "uint32" },
         { type: "uint16" },
         { type: "uint16" },
       ],
       [
-        "curyo-question-bundle-reveal-v1",
+        "curyo-question-bundle-reveal-v2",
         params.bundleHash,
         params.submitter,
         params.rewardAsset,
@@ -162,6 +167,7 @@ export function buildQuestionBundleRevealCommitment(params: QuestionBundleReveal
         params.requiredVoters,
         params.requiredSettledRounds,
         params.rewardPoolExpiresAt,
+        params.feedbackClosesAt,
         Number(params.roundConfig.epochDuration),
         Number(params.roundConfig.maxDuration),
         Number(params.roundConfig.minVoters),

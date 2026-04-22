@@ -45,6 +45,7 @@ export type X402QuestionPayload = {
     requiredVoters: bigint;
     requiredSettledRounds: bigint;
     rewardPoolExpiresAt: bigint;
+    feedbackClosesAt: bigint;
   };
 };
 
@@ -214,6 +215,10 @@ function normalizeBounty(value: unknown): X402QuestionPayload["bounty"] {
     "bounty.requiredSettledRounds",
   );
   const rewardPoolExpiresAt = parseNonNegativeInteger(value.rewardPoolExpiresAt ?? 0n, "bounty.rewardPoolExpiresAt");
+  const feedbackClosesAt = parseNonNegativeInteger(
+    value.feedbackClosesAt ?? value.rewardPoolExpiresAt ?? 0n,
+    "bounty.feedbackClosesAt",
+  );
 
   if (requiredVoters < X402_MIN_REWARD_POOL_REQUIRED_VOTERS) {
     throw new X402QuestionInputError(`bounty.requiredVoters must be at least ${X402_MIN_REWARD_POOL_REQUIRED_VOTERS}.`);
@@ -229,6 +234,9 @@ function normalizeBounty(value: unknown): X402QuestionPayload["bounty"] {
   if (amount < requiredVoters * requiredSettledRounds) {
     throw new X402QuestionInputError("bounty.amount is too small for the selected voter requirements.");
   }
+  if (rewardPoolExpiresAt > 0n && feedbackClosesAt > rewardPoolExpiresAt) {
+    throw new X402QuestionInputError("bounty.feedbackClosesAt cannot be after bounty.rewardPoolExpiresAt.");
+  }
 
   return {
     asset: "USDC",
@@ -236,6 +244,7 @@ function normalizeBounty(value: unknown): X402QuestionPayload["bounty"] {
     requiredVoters,
     requiredSettledRounds,
     rewardPoolExpiresAt,
+    feedbackClosesAt,
   };
 }
 
@@ -360,6 +369,7 @@ export function toCanonicalQuestionPayload(payload: X402QuestionPayload) {
       requiredSettledRounds: payload.bounty.requiredSettledRounds.toString(),
       requiredVoters: payload.bounty.requiredVoters.toString(),
       rewardPoolExpiresAt: payload.bounty.rewardPoolExpiresAt.toString(),
+      feedbackClosesAt: payload.bounty.feedbackClosesAt.toString(),
     },
     chainId: payload.chainId,
     clientRequestId: payload.clientRequestId,

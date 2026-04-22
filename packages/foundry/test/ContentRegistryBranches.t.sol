@@ -203,7 +203,8 @@ contract ContentRegistryBranchesTest is VotingTestBase {
             amount: rewardAmount,
             requiredVoters: requiredVoters,
             requiredSettledRounds: requiredSettledRounds,
-            expiresAt: rewardPoolExpiresAt
+            bountyClosesAt: rewardPoolExpiresAt,
+            feedbackClosesAt: rewardPoolExpiresAt
         });
         reservation.roundConfig =
             RoundLib.RoundConfig({ epochDuration: 1 hours, maxDuration: 7 days, minVoters: 3, maxVoters: 1000 });
@@ -250,7 +251,8 @@ contract ContentRegistryBranchesTest is VotingTestBase {
             amount: rewardAmount,
             requiredVoters: requiredVoters,
             requiredSettledRounds: requiredSettledRounds,
-            expiresAt: rewardPoolExpiresAt
+            bountyClosesAt: rewardPoolExpiresAt,
+            feedbackClosesAt: rewardPoolExpiresAt
         });
     }
 
@@ -589,7 +591,8 @@ contract ContentRegistryBranchesTest is VotingTestBase {
         assertEq(mockQuestionRewardPoolEscrow.lastAmount(), rewardAmount);
         assertEq(mockQuestionRewardPoolEscrow.lastRequiredVoters(), requiredVoters);
         assertEq(mockQuestionRewardPoolEscrow.lastRequiredSettledRounds(), requiredSettledRounds);
-        assertEq(mockQuestionRewardPoolEscrow.lastExpiresAt(), rewardPoolExpiresAt);
+        assertEq(mockQuestionRewardPoolEscrow.lastBountyClosesAt(), rewardPoolExpiresAt);
+        assertEq(mockQuestionRewardPoolEscrow.lastFeedbackClosesAt(), rewardPoolExpiresAt);
     }
 
     function test_SubmitQuestionWithRewardAndRoundConfig_StoresConfigAndSnapshotsRound() public {
@@ -605,7 +608,8 @@ contract ContentRegistryBranchesTest is VotingTestBase {
             amount: _defaultSubmissionRewardAmount(registry),
             requiredVoters: 5,
             requiredSettledRounds: 2,
-            expiresAt: block.timestamp + 14 days
+            bountyClosesAt: block.timestamp + 14 days,
+            feedbackClosesAt: block.timestamp + 14 days
         });
         RoundLib.RoundConfig memory roundConfig =
             RoundLib.RoundConfig({ epochDuration: 1 hours, maxDuration: 2 hours, minVoters: 4, maxVoters: 5 });
@@ -650,7 +654,8 @@ contract ContentRegistryBranchesTest is VotingTestBase {
             amount: _defaultSubmissionRewardAmount(registry),
             requiredVoters: DEFAULT_SUBMISSION_REWARD_REQUIRED_VOTERS,
             requiredSettledRounds: DEFAULT_SUBMISSION_REWARD_SETTLED_ROUNDS,
-            expiresAt: DEFAULT_SUBMISSION_REWARD_EXPIRES_AT
+            bountyClosesAt: DEFAULT_SUBMISSION_REWARD_EXPIRES_AT,
+            feedbackClosesAt: DEFAULT_SUBMISSION_REWARD_EXPIRES_AT
         });
         RoundLib.RoundConfig memory reservedConfig =
             RoundLib.RoundConfig({ epochDuration: 1 hours, maxDuration: 2 hours, minVoters: 3, maxVoters: 4 });
@@ -773,7 +778,7 @@ contract ContentRegistryBranchesTest is VotingTestBase {
         uint256 rewardAmount = _defaultSubmissionRewardAmount(registry);
 
         vm.startPrank(submitter);
-        vm.expectRevert("Invalid bounty expiry");
+        vm.expectRevert("Invalid bounty close");
         registry.submitQuestionWithRewardAndRoundConfig(
             "https://example.com/expired-bounty",
             imageUrls,

@@ -19,6 +19,7 @@ type SubmissionDraft = {
   description: string;
   imageUrls: string[];
   rewardPoolExpiresAt: bigint;
+  feedbackClosesAt: bigint;
   roundConfig: QuestionRoundConfig;
   rewardAmount: bigint;
   rewardAsset: number;
@@ -37,6 +38,7 @@ type StoredSubmissionReservation = {
   description: string;
   imageUrls: string[];
   rewardPoolExpiresAt: string;
+  feedbackClosesAt: string;
   roundConfig: SerializedQuestionRoundConfig;
   rewardAmount: string;
   rewardAsset: number;
@@ -107,6 +109,7 @@ export function deriveSubmissionReservationSalt(
         { type: "uint256" },
         { type: "uint256" },
         { type: "uint256" },
+        { type: "uint256" },
         { type: "uint32" },
         { type: "uint32" },
         { type: "uint16" },
@@ -128,6 +131,7 @@ export function deriveSubmissionReservationSalt(
         draft.requiredVoters,
         draft.requiredSettledRounds,
         draft.rewardPoolExpiresAt,
+        draft.feedbackClosesAt,
         Number(draft.roundConfig.epochDuration),
         Number(draft.roundConfig.maxDuration),
         Number(draft.roundConfig.minVoters),
@@ -151,6 +155,7 @@ export function buildSubmissionRevealCommitment(
     requiredSettledRounds: draft.requiredSettledRounds,
     requiredVoters: draft.requiredVoters,
     rewardPoolExpiresAt: draft.rewardPoolExpiresAt,
+    feedbackClosesAt: draft.feedbackClosesAt,
     roundConfig: draft.roundConfig,
     salt,
     submissionKey: draft.submissionKey,
@@ -181,6 +186,7 @@ export function createStoredSubmissionReservation(
     requiredSettledRounds: draft.requiredSettledRounds.toString(),
     requiredVoters: draft.requiredVoters.toString(),
     rewardPoolExpiresAt: draft.rewardPoolExpiresAt.toString(),
+    feedbackClosesAt: draft.feedbackClosesAt.toString(),
     submissionKey: draft.submissionKey,
     tags: draft.tags,
     title: draft.title,
@@ -203,6 +209,7 @@ export function submissionReservationMatchesDraft(
     reservation.rewardAmount === draft.rewardAmount.toString() &&
     reservation.rewardAsset === draft.rewardAsset &&
     reservation.rewardPoolExpiresAt === draft.rewardPoolExpiresAt.toString() &&
+    reservation.feedbackClosesAt === draft.feedbackClosesAt.toString() &&
     questionRoundConfigsEqual(coerceQuestionRoundConfig(reservation.roundConfig), draft.roundConfig) &&
     reservation.requiredSettledRounds === draft.requiredSettledRounds.toString() &&
     reservation.requiredVoters === draft.requiredVoters.toString() &&
@@ -240,6 +247,7 @@ function parseStoredSubmissionReservation(value: unknown): StoredSubmissionReser
     typeof parsedValue.requiredSettledRounds !== "string" ||
     typeof parsedValue.requiredVoters !== "string" ||
     typeof parsedValue.rewardPoolExpiresAt !== "string" ||
+    (parsedValue.feedbackClosesAt !== undefined && typeof parsedValue.feedbackClosesAt !== "string") ||
     !isHexValue(parsedValue.salt) ||
     !isHexValue(parsedValue.submissionKey) ||
     typeof parsedValue.tags !== "string" ||
@@ -254,6 +262,7 @@ function parseStoredSubmissionReservation(value: unknown): StoredSubmissionReser
       ? parsedValue.imageUrls.filter((url): url is string => typeof url === "string")
       : [parsedValue.contextUrl],
     roundConfig: serializeQuestionRoundConfig(coerceQuestionRoundConfig(parsedValue.roundConfig)),
+    feedbackClosesAt: parsedValue.feedbackClosesAt ?? parsedValue.rewardPoolExpiresAt,
     videoUrl: typeof parsedValue.videoUrl === "string" ? parsedValue.videoUrl : "",
   } as StoredSubmissionReservation;
 }

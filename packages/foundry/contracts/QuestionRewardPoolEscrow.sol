@@ -44,7 +44,9 @@ contract QuestionRewardPoolEscrow is
         uint64 contentId;
         uint64 startRoundId;
         uint64 nextRoundToEvaluate;
-        uint64 expiresAt;
+        uint64 bountyOpensAt;
+        uint64 bountyClosesAt;
+        uint64 feedbackClosesAt;
         address funder;
         address funderIdentity;
         uint256 funderVoterId;
@@ -79,7 +81,9 @@ contract QuestionRewardPoolEscrow is
 
     struct BundleReward {
         uint64 id;
-        uint64 expiresAt;
+        uint64 bountyOpensAt;
+        uint64 bountyClosesAt;
+        uint64 feedbackClosesAt;
         address funder;
         address funderIdentity;
         uint256 funderVoterId;
@@ -131,11 +135,23 @@ contract QuestionRewardPoolEscrow is
         uint256 requiredVoters,
         uint256 requiredSettledRounds,
         uint256 startRoundId,
-        uint256 expiresAt,
+        uint256 bountyOpensAt,
+        uint256 bountyClosesAt,
+        uint256 feedbackClosesAt,
         uint256 frontendFeeBps,
         uint8 asset,
         bool nonRefundable
     );
+    event BountyWindowCreated(
+        uint256 indexed rewardPoolId,
+        uint256 indexed contentId,
+        uint256 bountyOpensAt,
+        uint256 bountyClosesAt,
+        uint256 feedbackClosesAt,
+        uint256 requiredVoters,
+        uint256 requiredSettledRounds
+    );
+    event BountyWindowExpired(uint256 indexed rewardPoolId, uint256 indexed contentId, uint256 amount);
     event RewardPoolRoundQualified(
         uint256 indexed rewardPoolId,
         uint256 indexed contentId,
@@ -169,7 +185,9 @@ contract QuestionRewardPoolEscrow is
         uint256 amount,
         uint256 requiredCompleters,
         uint256 questionCount,
-        uint256 expiresAt,
+        uint256 bountyOpensAt,
+        uint256 bountyClosesAt,
+        uint256 feedbackClosesAt,
         uint256 frontendFeeBps,
         uint8 asset
     );
@@ -230,10 +248,19 @@ contract QuestionRewardPoolEscrow is
         uint256 amount,
         uint256 requiredVoters,
         uint256 requiredSettledRounds,
-        uint256 expiresAt
+        uint256 bountyClosesAt,
+        uint256 feedbackClosesAt
     ) external nonReentrant whenNotPaused returns (uint256 rewardPoolId) {
         rewardPoolId = _createRewardPool(
-            contentId, msg.sender, REWARD_ASSET_USDC, amount, requiredVoters, requiredSettledRounds, expiresAt, false
+            contentId,
+            msg.sender,
+            REWARD_ASSET_USDC,
+            amount,
+            requiredVoters,
+            requiredSettledRounds,
+            bountyClosesAt,
+            feedbackClosesAt,
+            false
         );
     }
 
@@ -243,10 +270,19 @@ contract QuestionRewardPoolEscrow is
         uint256 amount,
         uint256 requiredVoters,
         uint256 requiredSettledRounds,
-        uint256 expiresAt
+        uint256 bountyClosesAt,
+        uint256 feedbackClosesAt
     ) external nonReentrant whenNotPaused returns (uint256 rewardPoolId) {
         rewardPoolId = _createRewardPool(
-            contentId, msg.sender, asset, amount, requiredVoters, requiredSettledRounds, expiresAt, false
+            contentId,
+            msg.sender,
+            asset,
+            amount,
+            requiredVoters,
+            requiredSettledRounds,
+            bountyClosesAt,
+            feedbackClosesAt,
+            false
         );
     }
 
@@ -257,12 +293,21 @@ contract QuestionRewardPoolEscrow is
         uint256 amount,
         uint256 requiredVoters,
         uint256 requiredSettledRounds,
-        uint256 expiresAt
+        uint256 bountyClosesAt,
+        uint256 feedbackClosesAt
     ) external nonReentrant whenNotPaused returns (uint256 rewardPoolId) {
         require(msg.sender == address(registry), "Only registry");
         require(funder != address(0), "Invalid funder");
         rewardPoolId = _createRewardPool(
-            contentId, funder, asset, amount, requiredVoters, requiredSettledRounds, expiresAt, true
+            contentId,
+            funder,
+            asset,
+            amount,
+            requiredVoters,
+            requiredSettledRounds,
+            bountyClosesAt,
+            feedbackClosesAt,
+            true
         );
     }
 
@@ -273,7 +318,8 @@ contract QuestionRewardPoolEscrow is
         uint8 asset,
         uint256 amount,
         uint256 requiredCompleters,
-        uint256 expiresAt
+        uint256 bountyClosesAt,
+        uint256 feedbackClosesAt
     ) external nonReentrant whenNotPaused returns (uint256 rewardPoolId) {
         require(msg.sender == address(registry), "Only registry");
         require(bundleId != 0, "Invalid bundle");
@@ -283,9 +329,8 @@ contract QuestionRewardPoolEscrow is
         require(asset == REWARD_ASSET_CREP || asset == REWARD_ASSET_USDC, "Invalid asset");
         require(requiredCompleters >= MIN_REQUIRED_VOTERS, "Too few voters");
         require(amount >= requiredCompleters, "Amount too small");
-        if (expiresAt != 0) {
-            require(expiresAt > block.timestamp, "Invalid expiry");
-        }
+        _requireFutureBountyWindow(bountyClosesAt);
+        uint256 normalizedFeedbackClosesAt = _normalizeFeedbackClosesAt(bountyClosesAt, feedbackClosesAt);
 
         uint256 fundedAmount = _pullExactToken(funder, asset, amount);
         uint256 funderVoterId = voterIdNFT.getTokenId(funder);
@@ -296,7 +341,9 @@ contract QuestionRewardPoolEscrow is
 
         bundleRewards[bundleId] = BundleReward({
             id: bundleId.toUint64(),
-            expiresAt: expiresAt.toUint64(),
+            bountyOpensAt: block.timestamp.toUint64(),
+            bountyClosesAt: bountyClosesAt.toUint64(),
+            feedbackClosesAt: normalizedFeedbackClosesAt.toUint64(),
             funder: funder,
             funderIdentity: funderIdentity,
             funderVoterId: funderVoterId,
@@ -333,9 +380,14 @@ contract QuestionRewardPoolEscrow is
             fundedAmount,
             requiredCompleters,
             contentIds.length,
-            expiresAt,
+            block.timestamp,
+            bountyClosesAt,
+            normalizedFeedbackClosesAt,
             defaultFrontendFeeBps,
             asset
+        );
+        emit BountyWindowCreated(
+            bundleId, 0, block.timestamp, bountyClosesAt, normalizedFeedbackClosesAt, requiredCompleters, 1
         );
 
         rewardPoolId = bundleId;
@@ -348,7 +400,8 @@ contract QuestionRewardPoolEscrow is
         uint256 amount,
         uint256 requiredVoters,
         uint256 requiredSettledRounds,
-        uint256 expiresAt,
+        uint256 bountyClosesAt,
+        uint256 feedbackClosesAt,
         bool nonRefundable
     ) internal returns (uint256 rewardPoolId) {
         require(amount > 0, "Amount required");
@@ -357,13 +410,12 @@ contract QuestionRewardPoolEscrow is
         require(requiredVoters >= MIN_REQUIRED_VOTERS, "Too few voters");
         require(requiredSettledRounds >= MIN_REQUIRED_SETTLED_ROUNDS, "Too few rounds");
         require(amount >= requiredSettledRounds * requiredVoters, "Amount too small");
-        if (expiresAt != 0) {
-            require(expiresAt > block.timestamp, "Invalid expiry");
-        }
+        _requireFutureBountyWindow(bountyClosesAt);
+        uint256 normalizedFeedbackClosesAt = _normalizeFeedbackClosesAt(bountyClosesAt, feedbackClosesAt);
         if (!nonRefundable) {
             RoundLib.RoundConfig memory contentCfg = registry.getContentRoundConfig(contentId);
             require(amount >= requiredSettledRounds * uint256(contentCfg.maxVoters), "Amount too small");
-            require(expiresAt > block.timestamp, "Invalid expiry");
+            require(bountyClosesAt > block.timestamp, "Invalid bounty close");
         }
 
         uint256 fundedAmount = _pullExactToken(funder, asset, amount);
@@ -384,7 +436,9 @@ contract QuestionRewardPoolEscrow is
             contentId: contentId.toUint64(),
             startRoundId: startRoundId.toUint64(),
             nextRoundToEvaluate: startRoundId.toUint64(),
-            expiresAt: expiresAt.toUint64(),
+            bountyOpensAt: block.timestamp.toUint64(),
+            bountyClosesAt: bountyClosesAt.toUint64(),
+            feedbackClosesAt: normalizedFeedbackClosesAt.toUint64(),
             funder: funder,
             funderIdentity: funderIdentity,
             funderVoterId: funderVoterId,
@@ -415,10 +469,21 @@ contract QuestionRewardPoolEscrow is
             requiredVoters,
             requiredSettledRounds,
             startRoundId,
-            expiresAt,
+            block.timestamp,
+            bountyClosesAt,
+            normalizedFeedbackClosesAt,
             defaultFrontendFeeBps,
             asset,
             nonRefundable
+        );
+        emit BountyWindowCreated(
+            rewardPoolId,
+            contentId,
+            block.timestamp,
+            bountyClosesAt,
+            normalizedFeedbackClosesAt,
+            requiredVoters,
+            requiredSettledRounds
         );
     }
 
@@ -530,8 +595,9 @@ contract QuestionRewardPoolEscrow is
 
         question.roundId = roundId.toUint64();
         question.terminal = true;
-        question.settled = settled;
-        if (settled) {
+        bool settledWithinWindow = settled && _bundleRoundSettledWithinWindow(bundle, contentId, roundId);
+        question.settled = settledWithinWindow;
+        if (settledWithinWindow) {
             bundle.completedQuestionCount++;
             emit QuestionBundleRoundRecorded(bundleId, contentId, roundId, bundleIndex);
         } else {
@@ -620,7 +686,7 @@ contract QuestionRewardPoolEscrow is
         BundleReward storage bundle = _getExistingBundleReward(bundleId);
         require(!bundle.refunded, "Already refunded");
         require(
-            bundle.failed || (bundle.expiresAt != 0 && block.timestamp > bundle.expiresAt)
+            bundle.failed || (bundle.bountyClosesAt != 0 && block.timestamp > bundle.bountyClosesAt)
                 || bundle.claimedCount >= bundle.requiredCompleters,
             "Bundle active"
         );
@@ -640,8 +706,9 @@ contract QuestionRewardPoolEscrow is
         returns (uint256 refundAmount)
     {
         RewardPool storage rewardPool = _getExistingRewardPool(rewardPoolId);
-        require(rewardPool.expiresAt != 0 && block.timestamp > rewardPool.expiresAt, "Not expired");
+        require(rewardPool.bountyClosesAt != 0 && block.timestamp > rewardPool.bountyClosesAt, "Not expired");
         refundAmount = _refundUnallocatedRewardPool(rewardPoolId, rewardPool);
+        emit BountyWindowExpired(rewardPoolId, rewardPool.contentId, refundAmount);
     }
 
     function refundInactiveRewardPool(uint256 rewardPoolId)
@@ -752,6 +819,27 @@ contract QuestionRewardPoolEscrow is
         require(receivedAmount == amount, "Fee token unsupported");
     }
 
+    function _requireFutureBountyWindow(uint256 bountyClosesAt) internal view {
+        if (bountyClosesAt != 0) {
+            require(bountyClosesAt > block.timestamp, "Invalid bounty close");
+        }
+    }
+
+    function _normalizeFeedbackClosesAt(uint256 bountyClosesAt, uint256 feedbackClosesAt)
+        internal
+        view
+        returns (uint256)
+    {
+        if (feedbackClosesAt == 0) {
+            return bountyClosesAt;
+        }
+        require(feedbackClosesAt > block.timestamp, "Invalid feedback close");
+        if (bountyClosesAt != 0) {
+            require(feedbackClosesAt <= bountyClosesAt, "Feedback after bounty");
+        }
+        return feedbackClosesAt;
+    }
+
     function _rewardToken(uint8 asset) internal view returns (IERC20 token) {
         if (asset == REWARD_ASSET_CREP) return crepToken;
         if (asset == REWARD_ASSET_USDC) return usdcToken;
@@ -778,6 +866,16 @@ contract QuestionRewardPoolEscrow is
     function _isBundleClaimOpen(BundleReward storage bundle) internal view returns (bool) {
         return !bundle.failed && !bundle.refunded && bundle.completedQuestionCount == bundle.questionCount
             && bundle.claimedCount < bundle.requiredCompleters;
+    }
+
+    function _bundleRoundSettledWithinWindow(BundleReward storage bundle, uint256 contentId, uint256 roundId)
+        internal
+        view
+        returns (bool)
+    {
+        (, RoundLib.RoundState state,,,,,,,,, uint48 settledAt,,,) = votingEngine.rounds(contentId, roundId);
+        return state == RoundLib.RoundState.Settled && settledAt != 0
+            && (bundle.bountyClosesAt == 0 || settledAt <= bundle.bountyClosesAt);
     }
 
     function _requireCompletedBundle(uint256 bundleId, uint256 voterId)
@@ -1001,7 +1099,7 @@ contract QuestionRewardPoolEscrow is
         view
         returns (bool)
     {
-        return settledAt != 0 && (rewardPool.expiresAt == 0 || settledAt <= rewardPool.expiresAt);
+        return settledAt != 0 && (rewardPool.bountyClosesAt == 0 || settledAt <= rewardPool.bountyClosesAt);
     }
 
     function _previewRoundAllocation(RewardPool storage rewardPool) internal view returns (uint256 allocation) {
