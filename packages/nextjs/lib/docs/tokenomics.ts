@@ -33,7 +33,8 @@ const tokenDistributionEntries: readonly TokenDistributionEntry[] = [
   {
     label: "Treasury",
     amount: 32_000_000,
-    purpose: "Governance-controlled cREP tokens for grants, whistleblower rewards, and protocol development",
+    purpose:
+      "Governance-controlled cREP tokens for ecosystem grants, partner activation, whistleblower rewards, and protocol development",
     color: "#F5F0EB",
   },
   {

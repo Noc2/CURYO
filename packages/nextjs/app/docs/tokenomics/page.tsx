@@ -210,6 +210,12 @@ const Tokenomics = () => {
         from voluntary content withdrawals, and forfeited unrevealed past-epoch votes swept during settlement cleanup.
         Treasury spending follows the same governance proposal path as upgrades and other governed config changes.
       </p>
+      <p>
+        Appropriate treasury uses include ecosystem grants, partner activation, integration support, research and data
+        work, protocol development, security responses, and whistleblower rewards. cREP grants are not protocol-backed
+        payments; they distribute reputation and voting power, so proposals should state why the recipient should hold
+        cREP and what follow-up reporting or milestone evidence voters should expect.
+      </p>
 
       <hr />
 

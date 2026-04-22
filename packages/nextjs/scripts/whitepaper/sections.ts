@@ -1055,7 +1055,7 @@ export const SECTIONS: Section[] = [
           },
           {
             type: "paragraph",
-            text: "Treasury spending follows the same governor proposal and timelock execution flow as upgrades and config changes. That keeps the system decentralized from launch, but it also means governance capture affects both code changes and treasury movements.",
+            text: "Treasury spending follows the same governor proposal and timelock execution flow as upgrades and config changes. That keeps the system decentralized from launch, but it also means governance capture affects both code changes and treasury movements. Appropriate uses include ecosystem grants, partner activation, integration support, research and data work, protocol development, security responses, and whistleblower rewards. Since cREP grants distribute reputation and voting power, proposals should state the recipient, amount, expected impact, and any milestone or reporting expectations.",
           },
         ],
       },

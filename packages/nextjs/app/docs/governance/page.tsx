@@ -17,7 +17,7 @@ const GovernanceDocs: NextPage = () => {
       <ul>
         <li>Upgrade or configure protocol contracts.</li>
         <li>Set round defaults and creator bounds.</li>
-        <li>Route treasury spending.</li>
+        <li>Route treasury spending, including ecosystem and partner activation grants.</li>
         <li>Revoke Voter IDs when there is hard evidence of abuse.</li>
       </ul>
 
@@ -135,6 +135,12 @@ const GovernanceDocs: NextPage = () => {
         The treasury starts with 32M cREP under governor/timelock control. Ongoing inflows include the treasury share of
         contested losing pools, withdrawal fees, and forfeited unrevealed votes. Spending follows the same proposal and
         timelock path as upgrades.
+      </p>
+      <p>
+        Treasury grants can support work that grows the Curyo feedback network: partner activation, integrations,
+        research and data projects, community growth, protocol development, and security or whistleblower rewards.
+        Because cREP also carries governance power, grant proposals should explain the recipient, purpose, amount,
+        expected impact, and any milestone or reporting expectations.
       </p>
 
       <h2>Safety Powers</h2>
