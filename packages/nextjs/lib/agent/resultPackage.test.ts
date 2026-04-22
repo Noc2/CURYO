@@ -1,0 +1,121 @@
+import { buildAgentResultPackage } from "./resultPackage";
+import { listAgentResultTemplates } from "./templates";
+import { ROUND_STATE } from "@curyo/contracts/protocol";
+import assert from "node:assert/strict";
+import test from "node:test";
+import type { ContentFeedbackItem } from "~~/lib/feedback/types";
+import type { PonderContentItem } from "~~/services/ponder/client";
+
+const GENERIC_TEMPLATE = listAgentResultTemplates()[0];
+
+function content(overrides: Partial<PonderContentItem> = {}): PonderContentItem {
+  return {
+    categoryId: "5",
+    conservativeRatingBps: 6200,
+    contentHash: `0x${"1".repeat(64)}`,
+    createdAt: "1",
+    description: "Should the agent proceed with the pricing plan?",
+    id: "123",
+    lastActivityAt: "2",
+    openRound: null,
+    questionMetadataHash: `0x${"2".repeat(64)}`,
+    rating: 72,
+    ratingBps: 7200,
+    ratingConfidenceMass: "100",
+    ratingEffectiveEvidence: "90",
+    ratingLowSince: "0",
+    ratingSettledRounds: 2,
+    resultSpecHash: GENERIC_TEMPLATE.resultSpecHash,
+    roundEpochDuration: 1200,
+    roundMaxDuration: 604800,
+    roundMaxVoters: 1000,
+    roundMinVoters: 3,
+    status: 0,
+    submitter: `0x${"3".repeat(40)}`,
+    tags: "pricing,agent",
+    title: "Pricing plan",
+    totalRounds: 2,
+    totalVotes: 8,
+    url: "https://example.com/pricing",
+    ...overrides,
+  };
+}
+
+function feedback(overrides: Partial<ContentFeedbackItem> = {}): ContentFeedbackItem {
+  return {
+    authorAddress: `0x${"4".repeat(40)}`,
+    body: "Humans liked the problem, but the proposed pricing is too high for small teams.",
+    chainId: 42220,
+    clientNonce: null,
+    contentId: "123",
+    createdAt: "2026-01-01T00:00:00.000Z",
+    feedbackHash: `0x${"5".repeat(64)}`,
+    feedbackType: "concern",
+    feedbackTypeLabel: "Concern",
+    id: 1,
+    isOwn: false,
+    isPublic: true,
+    moderationStatus: "approved",
+    roundId: "2",
+    sourceUrl: null,
+    updatedAt: "2026-01-01T00:00:00.000Z",
+    visibilityStatus: "hidden_until_settlement",
+    ...overrides,
+  };
+}
+
+test("buildAgentResultPackage turns a settled rating into an agent decision", () => {
+  const result = buildAgentResultPackage({
+    audienceContext: null,
+    content: content(),
+    feedback: [feedback()],
+    latestRound: {
+      downCount: 2,
+      downPool: "300",
+      revealedCount: 8,
+      roundId: "2",
+      settledAt: "100",
+      state: ROUND_STATE.Settled,
+      totalStake: "1000",
+      upCount: 6,
+      upPool: "700",
+      upWins: true,
+      voteCount: 8,
+    },
+    publicUrl: "https://curyo.xyz/rate?content=123",
+  });
+
+  assert.equal(result.ready, true);
+  assert.equal(result.answer, "proceed");
+  assert.equal(result.recommendedNextAction, "proceed_after_addressing_objections");
+  assert.equal(result.distribution.up.share, 0.7);
+  assert.equal(result.majorObjections[0]?.type, "concern");
+  assert.match(result.rationaleSummary, /72\/100/);
+  assert.equal(result.methodology.templateId, "generic_rating");
+});
+
+test("buildAgentResultPackage keeps open rounds pending", () => {
+  const result = buildAgentResultPackage({
+    audienceContext: null,
+    content: content({ rating: 50, ratingBps: 5000, ratingSettledRounds: 0 }),
+    feedback: [],
+    latestRound: {
+      downCount: 0,
+      downPool: "0",
+      revealedCount: 0,
+      roundId: "1",
+      state: ROUND_STATE.Open,
+      totalStake: "0",
+      upCount: 0,
+      upPool: "0",
+      voteCount: 0,
+    },
+    publicUrl: null,
+  });
+
+  assert.equal(result.ready, false);
+  assert.equal(result.answer, "pending");
+  assert.equal(result.recommendedNextAction, "wait_for_settlement");
+  assert.equal(result.confidence.level, "none");
+  assert.ok(result.limitations.some(item => item.includes("not settled")));
+});

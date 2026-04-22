@@ -194,10 +194,14 @@ test("tools/list accepts supported MCP-Protocol-Version", async () => {
     { "mcp-protocol-version": "2025-11-25" },
   );
 
-  const result = body.result as { tools: Array<{ name: string }> };
+  const result = body.result as { tools: Array<{ name: string; outputSchema?: unknown }> };
   assert.equal(response.status, 200);
   assert.equal(
     result.tools.some(tool => tool.name === "curyo_ask_humans"),
+    true,
+  );
+  assert.equal(
+    result.tools.some(tool => tool.name === "curyo_get_result" && tool.outputSchema),
     true,
   );
 });

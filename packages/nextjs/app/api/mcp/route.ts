@@ -248,6 +248,7 @@ export async function POST(request: NextRequest) {
             description: tool.description,
             inputSchema: tool.inputSchema,
             name: tool.name,
+            ...(tool.outputSchema ? { outputSchema: tool.outputSchema } : {}),
             title: tool.title,
           })),
         },

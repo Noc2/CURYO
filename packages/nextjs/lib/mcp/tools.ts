@@ -1,6 +1,8 @@
-import { ROUND_STATE, ROUND_STATE_LABEL } from "@curyo/contracts/protocol";
 import { createHash } from "crypto";
+import { buildAgentResultPackage } from "~~/lib/agent/resultPackage";
+import { listAgentResultTemplates } from "~~/lib/agent/templates";
 import { getOptionalAppUrl } from "~~/lib/env/server";
+import { buildContentFeedbackRoundContext, listContentFeedback } from "~~/lib/feedback/contentFeedback";
 import { MCP_SCOPES, type McpAgentAuth, type McpScope } from "~~/lib/mcp/auth";
 import {
   McpBudgetError,
@@ -30,6 +32,7 @@ type McpToolDefinition = {
   description: string;
   inputSchema: JsonObject;
   name: string;
+  outputSchema?: JsonObject;
   requiredScope: McpScope;
   title: string;
 };
@@ -91,6 +94,76 @@ const operationLookupSchema = {
   type: "object",
 };
 
+const templateListOutputSchema = {
+  additionalProperties: false,
+  properties: {
+    templates: {
+      items: {
+        additionalProperties: true,
+        properties: {
+          description: { type: "string" },
+          id: { type: "string" },
+          interpretation: { type: "object" },
+          ratingSystem: { type: "string" },
+          recommendedUse: { items: { type: "string" }, type: "array" },
+          resultSpecHash: { type: "string" },
+          title: { type: "string" },
+          version: { type: "integer" },
+          voteSemantics: { type: "object" },
+        },
+        required: ["id", "version", "ratingSystem", "interpretation", "resultSpecHash"],
+        type: "object",
+      },
+      type: "array",
+    },
+  },
+  required: ["templates"],
+  type: "object",
+};
+
+const resultPackageOutputSchema = {
+  additionalProperties: true,
+  properties: {
+    answer: { type: "string" },
+    confidence: {
+      additionalProperties: false,
+      properties: {
+        level: { enum: ["none", "low", "medium", "high"], type: "string" },
+        score: { type: "number" },
+      },
+      required: ["level", "score"],
+      type: "object",
+    },
+    distribution: { type: "object" },
+    dissentingView: { type: ["string", "null"] },
+    limitations: { items: { type: "string" }, type: "array" },
+    majorObjections: { items: { type: "object" }, type: "array" },
+    methodology: { type: "object" },
+    publicUrl: { type: ["string", "null"] },
+    rationaleSummary: { type: "string" },
+    ready: { type: "boolean" },
+    recommendedNextAction: { type: "string" },
+    stakeMass: { type: "object" },
+    voteCount: { type: "number" },
+  },
+  required: [
+    "ready",
+    "answer",
+    "confidence",
+    "distribution",
+    "voteCount",
+    "stakeMass",
+    "rationaleSummary",
+    "majorObjections",
+    "dissentingView",
+    "recommendedNextAction",
+    "publicUrl",
+    "methodology",
+    "limitations",
+  ],
+  type: "object",
+};
+
 export const MCP_TOOLS: McpToolDefinition[] = [
   {
     description: "List Curyo categories that paid asks can target.",
@@ -102,6 +175,18 @@ export const MCP_TOOLS: McpToolDefinition[] = [
     name: "curyo_list_categories",
     requiredScope: MCP_SCOPES.read,
     title: "List Curyo Categories",
+  },
+  {
+    description: "List off-chain result interpretation templates used by Curyo agent asks.",
+    inputSchema: {
+      additionalProperties: false,
+      properties: {},
+      type: "object",
+    },
+    name: "curyo_list_result_templates",
+    outputSchema: templateListOutputSchema,
+    requiredScope: MCP_SCOPES.read,
+    title: "List Result Templates",
   },
   {
     description: "Preflight and price a paid question before reserving spend.",
@@ -191,6 +276,7 @@ export const MCP_TOOLS: McpToolDefinition[] = [
       type: "object",
     },
     name: "curyo_get_result",
+    outputSchema: resultPackageOutputSchema,
     requiredScope: MCP_SCOPES.read,
     title: "Get Human Result",
   },
@@ -347,41 +433,22 @@ async function buildQuestionResult(args: JsonObject, agent: McpAgentAuth) {
 
   const response = await ponderApi.getContentById(contentId);
   const latestRound = latestRoundFromContentResponse(response);
-  const roundState = typeof latestRound?.state === "number" ? latestRound.state : null;
-  const settled = roundState === ROUND_STATE.Settled;
+  const feedbackContext = buildContentFeedbackRoundContext(
+    Array.isArray(response.rounds) ? response.rounds : [],
+    response.content.openRound?.roundId ?? null,
+  );
+  const feedback = await listContentFeedback({ contentId, context: feedbackContext });
+  const resultPackage = buildAgentResultPackage({
+    audienceContext: response.audienceContext,
+    content: response.content,
+    feedback: feedback.items,
+    latestRound,
+    publicUrl: getPublicQuestionUrl(contentId),
+  });
 
   return {
     operation: record ? normalizeMcpQuestionBody(x402QuestionSubmissionRecordBody(record)) : null,
-    publicUrl: getPublicQuestionUrl(contentId),
-    ready: settled,
-    result: {
-      audienceContext: response.audienceContext,
-      categoryId: response.content.categoryId?.toString?.() ?? String(response.content.categoryId ?? ""),
-      confidenceMass: response.content.ratingConfidenceMass ?? latestRound?.confidenceMass ?? null,
-      contentId,
-      currentRating: response.content.rating,
-      currentRatingBps: response.content.ratingBps,
-      effectiveEvidence: response.content.ratingEffectiveEvidence ?? latestRound?.effectiveEvidence ?? null,
-      latestRound: latestRound
-        ? {
-            downCount: latestRound.downCount,
-            downPool: latestRound.downPool?.toString?.() ?? latestRound.downPool ?? null,
-            revealedCount: latestRound.revealedCount,
-            roundId: latestRound.roundId?.toString?.() ?? String(latestRound.roundId ?? ""),
-            settledAt: latestRound.settledAt?.toString?.() ?? latestRound.settledAt ?? null,
-            state: roundState,
-            stateLabel: roundState === null ? null : ROUND_STATE_LABEL[roundState as keyof typeof ROUND_STATE_LABEL],
-            totalStake: latestRound.totalStake?.toString?.() ?? latestRound.totalStake ?? null,
-            upCount: latestRound.upCount,
-            upPool: latestRound.upPool?.toString?.() ?? latestRound.upPool ?? null,
-            upWins: latestRound.upWins ?? null,
-            voteCount: latestRound.voteCount,
-          }
-        : null,
-      question: response.content.question ?? response.content.title,
-      ratingSettledRounds: response.content.ratingSettledRounds,
-      status: response.content.status,
-    },
+    ...resultPackage,
   };
 }
 
@@ -397,6 +464,9 @@ export async function callCuryoMcpTool(params: {
   switch (params.name) {
     case "curyo_list_categories":
       return ponderApi.getCategories();
+
+    case "curyo_list_result_templates":
+      return { templates: listAgentResultTemplates() };
 
     case "curyo_quote_question":
       return quoteQuestion(args, params.agent);
