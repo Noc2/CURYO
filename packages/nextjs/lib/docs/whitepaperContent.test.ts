@@ -50,6 +50,22 @@ test("whitepaper metadata reflects the April 2026 protocol revision", () => {
   assert.equal(META.date, "April 2026");
 });
 
+test("whitepaper reflects current launch allocations and governance threshold", () => {
+  const whitepaperText = collectWhitepaperText();
+
+  assert.match(whitepaperText, /Bootstrap Pool \(12M cREP\)/i);
+  assert.match(whitepaperText, /pool is funded with 12M cREP/i);
+  assert.match(whitepaperText, /treasury starts with 32M cREP/i);
+  assert.match(whitepaperText, /1,000 cREP proposal threshold/i);
+  assert.match(whitepaperText, /bootstrap proposal threshold is 1,000 cREP/i);
+
+  assert.doesNotMatch(whitepaperText, /Bootstrap Pool \(24M cREP\)/i);
+  assert.doesNotMatch(whitepaperText, /pool is funded with 24M cREP/i);
+  assert.doesNotMatch(whitepaperText, /treasury starts with 20M cREP/i);
+  assert.doesNotMatch(whitepaperText, /10,000 cREP proposal threshold/i);
+  assert.doesNotMatch(whitepaperText, /bootstrap proposal threshold is 10,000 cREP/i);
+});
+
 test("whitepaper introduction surfaces the updated lead copy", () => {
   assert.equal(SECTIONS[0]?.title, "Introduction");
   assert.equal(SECTIONS[0]?.lead, "AI asks, verified humans stake judgment, and the result becomes public feedback.");
