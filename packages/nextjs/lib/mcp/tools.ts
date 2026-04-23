@@ -6,6 +6,7 @@ import {
   listAgentCallbackEventsByEventIdPrefix,
   upsertAgentCallbackSubscription,
 } from "~~/lib/agent-callbacks";
+import { buildAgentCallbackPayload, callbackEventId, getAgentPublicQuestionUrl } from "~~/lib/agent-callbacks/payload";
 import { buildAgentFastLaneGuidance } from "~~/lib/agent/fastLane";
 import { buildAgentLiveAskGuidance } from "~~/lib/agent/liveAskGuidance";
 import { buildAgentResultPackage } from "~~/lib/agent/resultPackage";
@@ -21,7 +22,6 @@ import {
   templateListOutputSchema,
 } from "~~/lib/agent/schemas";
 import { listAgentResultTemplates } from "~~/lib/agent/templates";
-import { getOptionalAppUrl } from "~~/lib/env/server";
 import { buildContentFeedbackRoundContext, listContentFeedback } from "~~/lib/feedback/contentFeedback";
 import { MCP_SCOPES, type McpAgentAuth, type McpScope } from "~~/lib/mcp/auth";
 import {
@@ -293,6 +293,8 @@ function parseWebhookOptions(args: JsonObject): {
       : ([
           "question.submitting",
           "question.submitted",
+          "question.open",
+          "question.settling",
           "question.failed",
           "question.settled",
           "feedback.unlocked",
@@ -308,11 +310,6 @@ function parseWebhookOptions(args: JsonObject): {
     secret,
     url,
   };
-}
-
-function getPublicQuestionUrl(contentId: string | null) {
-  const appUrl = getOptionalAppUrl();
-  return appUrl && contentId ? `${appUrl}/rate?content=${encodeURIComponent(contentId)}` : null;
 }
 
 function normalizeMcpPayment(value: unknown) {
@@ -336,10 +333,6 @@ function normalizeMcpQuestionBody(value: unknown) {
   };
 }
 
-function callbackEventId(operationKey: `0x${string}`, eventType: AgentCallbackEventType) {
-  return `${operationKey}:${eventType}`;
-}
-
 function normalizeCallbackDeliveries(
   deliveries: Awaited<ReturnType<typeof listAgentCallbackEventsByEventIdPrefix>>,
 ): Array<Record<string, unknown>> {
@@ -354,30 +347,6 @@ function normalizeCallbackDeliveries(
     status: delivery.status,
     subscriptionId: delivery.subscriptionId,
   }));
-}
-
-function callbackPayload(params: {
-  body: JsonObject;
-  chainId: number;
-  clientRequestId: string;
-  eventType: AgentCallbackEventType;
-  operationKey: `0x${string}`;
-}) {
-  const contentId = typeof params.body.contentId === "string" ? params.body.contentId : null;
-  const contentIds = Array.isArray(params.body.contentIds)
-    ? params.body.contentIds.filter((id): id is string => typeof id === "string")
-    : [];
-  return {
-    chainId: params.chainId,
-    clientRequestId: params.clientRequestId,
-    contentId,
-    contentIds,
-    error: typeof params.body.error === "string" ? params.body.error : null,
-    eventType: params.eventType,
-    operationKey: params.operationKey,
-    publicUrl: getPublicQuestionUrl(contentId),
-    status: typeof params.body.status === "string" ? params.body.status : null,
-  };
 }
 
 function agentStatusHints(body: JsonObject) {
@@ -503,10 +472,10 @@ async function buildQuestionResult(args: JsonObject, agent: McpAgentAuth) {
   if (!contentId) {
     const operation = normalizeMcpQuestionBody(x402QuestionSubmissionRecordBody(record));
     const status = operation && typeof operation === "object" ? String((operation as JsonObject).status ?? "") : "";
-      return {
-        answer: status === "failed" ? "failed" : "pending",
-        confidence: {
-          level: "none",
+    return {
+      answer: status === "failed" ? "failed" : "pending",
+      confidence: {
+        level: "none",
         score: 0,
       },
       distribution: {
@@ -520,15 +489,15 @@ async function buildQuestionResult(args: JsonObject, agent: McpAgentAuth) {
         up: { count: 0, share: null, stake: "0" },
       },
       dissentingView: null,
-        feedbackQuality: {
-          actionability: "none",
-          objectionCount: 0,
-          publicNoteCount: 0,
-          sourceUrlCount: 0,
-        },
-        liveAskGuidance: null,
-        limitations: ["The question has not reached a public Curyo result page yet."],
-        majorObjections: [],
+      feedbackQuality: {
+        actionability: "none",
+        objectionCount: 0,
+        publicNoteCount: 0,
+        sourceUrlCount: 0,
+      },
+      liveAskGuidance: null,
+      limitations: ["The question has not reached a public Curyo result page yet."],
+      majorObjections: [],
       methodology: {
         ratingSystem: "curyo.binary_staked_rating.v1",
         sources: ["x402.question_submission"],
@@ -576,7 +545,7 @@ async function buildQuestionResult(args: JsonObject, agent: McpAgentAuth) {
     content: response.content,
     feedback: feedback.items,
     latestRound,
-    publicUrl: getPublicQuestionUrl(contentId),
+    publicUrl: getAgentPublicQuestionUrl(contentId),
   });
 
   return {
@@ -653,7 +622,7 @@ export async function callCuryoMcpTool(params: {
             agentId: params.agent.id,
             eventId: callbackEventId(quote.operation.operationKey, eventType),
             eventType,
-            payload: callbackPayload({
+            payload: buildAgentCallbackPayload({
               body,
               chainId: payload.chainId,
               clientRequestId: payload.clientRequestId,
@@ -772,7 +741,7 @@ export async function callCuryoMcpTool(params: {
           fastLane,
           managedBudget,
           pollAfterMs: 5_000,
-          publicUrl: getPublicQuestionUrl(typeof body.contentId === "string" ? body.contentId : null),
+          publicUrl: getAgentPublicQuestionUrl(typeof body.contentId === "string" ? body.contentId : null),
           statusTool: "curyo_get_question_status",
           webhook: webhookInfo,
           warnings: [...warnings, ...callbackWarnings],
@@ -826,7 +795,7 @@ export async function callCuryoMcpTool(params: {
         clientRequestId: payload.clientRequestId,
         fastLane,
         managedBudget,
-        publicUrl: getPublicQuestionUrl(typeof body.contentId === "string" ? body.contentId : null),
+        publicUrl: getAgentPublicQuestionUrl(typeof body.contentId === "string" ? body.contentId : null),
         webhook: webhookInfo,
         warnings: [...warnings, ...callbackWarnings],
       };
@@ -848,7 +817,7 @@ export async function callCuryoMcpTool(params: {
         ...(normalizeMcpQuestionBody(x402QuestionSubmissionRecordBody(record)) as JsonObject),
         callbackDeliveries: operationKey ? await loadCallbackDeliveryStatus(operationKey, params.agent.id) : [],
         liveAskGuidance,
-        publicUrl: getPublicQuestionUrl(record?.contentId ?? null),
+        publicUrl: getAgentPublicQuestionUrl(record?.contentId ?? null),
       };
       return {
         ...body,
