@@ -481,6 +481,7 @@ contract ContentRegistry is Initializable, AccessControlUpgradeable, PausableUpg
             rewardTerms.requiredSettledRounds == MIN_SUBMISSION_REWARD_SETTLED_ROUNDS,
             "Bundle settled rounds unsupported"
         );
+        require(rewardTerms.bountyClosesAt != 0, "Bundle bounty close required");
 
         SubmissionMetadata[] memory metadataList = new SubmissionMetadata[](questions.length);
         bytes32[] memory submissionKeys = new bytes32[](questions.length);

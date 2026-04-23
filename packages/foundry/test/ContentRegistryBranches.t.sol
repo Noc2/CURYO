@@ -869,6 +869,46 @@ contract ContentRegistryBranchesTest is VotingTestBase {
         vm.stopPrank();
     }
 
+    function test_SubmitQuestionBundleWithReward_RequiresBountyClose() public {
+        ContentRegistry.BundleQuestionInput[] memory questions = new ContentRegistry.BundleQuestionInput[](2);
+        questions[0] = ContentRegistry.BundleQuestionInput({
+            contextUrl: "https://example.com/bundle-expiry-a",
+            imageUrls: _emptyImageUrls(),
+            videoUrl: "",
+            title: "Question A?",
+            description: "Context voters should consider",
+            tags: "Products",
+            categoryId: 1,
+            salt: keccak256("bundle-expiry-a"),
+            spec: _defaultQuestionSpec()
+        });
+        questions[1] = ContentRegistry.BundleQuestionInput({
+            contextUrl: "https://example.com/bundle-expiry-b",
+            imageUrls: _emptyImageUrls(),
+            videoUrl: "",
+            title: "Question B?",
+            description: "Context voters should consider",
+            tags: "Products",
+            categoryId: 1,
+            salt: keccak256("bundle-expiry-b"),
+            spec: _defaultQuestionSpec()
+        });
+        ContentRegistry.SubmissionRewardTerms memory rewardTerms = _submissionRewardTerms(
+            DEFAULT_SUBMISSION_REWARD_ASSET_CREP,
+            _defaultSubmissionRewardAmount(registry) * 2,
+            DEFAULT_SUBMISSION_REWARD_REQUIRED_VOTERS,
+            DEFAULT_SUBMISSION_REWARD_SETTLED_ROUNDS,
+            0
+        );
+
+        vm.startPrank(submitter);
+        vm.expectRevert("Bundle bounty close required");
+        registry.submitQuestionBundleWithRewardAndRoundConfig(
+            questions, rewardTerms, _defaultContentRoundConfig()
+        );
+        vm.stopPrank();
+    }
+
     function test_SubmitQuestionWithReward_RequiresReservationForMatchingBountyTerms() public {
         string memory contextUrl = "https://example.com/bounty-terms-mismatch";
         string memory title = "Question?";
