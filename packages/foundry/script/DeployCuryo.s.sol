@@ -748,9 +748,6 @@ contract DeployCuryo is ScaffoldETHDeploy {
             "ContentRegistry governance default admin"
         );
         _requireHasRole(
-            address(registry), registry.ADMIN_ROLE(), targets.governance, "ContentRegistry governance admin"
-        );
-        _requireHasRole(
             address(registry), registry.CONFIG_ROLE(), targets.governance, "ContentRegistry governance config"
         );
         _requireHasRole(

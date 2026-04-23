@@ -51,7 +51,6 @@ contract ContentRegistry is Initializable, AccessControlUpgradeable, PausableUpg
     using TransientSlot for *;
 
     // --- Access Control Roles ---
-    bytes32 public constant ADMIN_ROLE = keccak256("ADMIN_ROLE");
     bytes32 public constant CONFIG_ROLE = keccak256("CONFIG_ROLE");
     bytes32 public constant PAUSER_ROLE = keccak256("PAUSER_ROLE");
     bytes32 public constant TREASURY_ROLE = keccak256("TREASURY_ROLE");
@@ -293,7 +292,6 @@ contract ContentRegistry is Initializable, AccessControlUpgradeable, PausableUpg
 
         // Governance gets all permanent roles
         _grantRole(DEFAULT_ADMIN_ROLE, _governance);
-        _grantRole(ADMIN_ROLE, _governance);
         _grantRole(CONFIG_ROLE, _governance);
         _grantRole(PAUSER_ROLE, _governance);
         _setRoleAdmin(TREASURY_ROLE, TREASURY_ADMIN_ROLE);
