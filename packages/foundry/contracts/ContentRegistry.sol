@@ -147,16 +147,6 @@ contract ContentRegistry is Initializable, AccessControlUpgradeable, PausableUpg
         QuestionSpecCommitment spec;
     }
 
-    struct RewardedQuestionSubmissionInput {
-        SubmissionMetadata metadata;
-        string[] imageUrls;
-        string videoUrl;
-        bytes32 salt;
-        SubmissionRewardTerms rewardTerms;
-        RoundLib.RoundConfig roundConfig;
-        QuestionSpecCommitment spec;
-    }
-
     // --- State ---
     IERC20 public crepToken;
     address public votingEngine;
@@ -417,46 +407,32 @@ contract ContentRegistry is Initializable, AccessControlUpgradeable, PausableUpg
         RoundLib.RoundConfig memory roundConfig,
         QuestionSpecCommitment memory spec
     ) public returns (uint256) {
-        RewardedQuestionSubmissionInput memory input = _buildRewardedQuestionSubmissionInput(
-            contextUrl, imageUrls, videoUrl, title, description, tags, categoryId, salt, rewardTerms, roundConfig, spec
+        SubmissionMetadata memory metadata =
+            _validatedContextSubmissionMetadata(contextUrl, imageUrls, videoUrl, title, description, tags, categoryId);
+        return _submitQuestionWithRewardAndRoundConfig(
+            metadata, imageUrls, videoUrl, salt, rewardTerms, _validatedRoundConfig(roundConfig), spec
         );
-        return _submitQuestionWithRewardAndRoundConfig(input);
     }
 
-    function _submitQuestionWithRewardAndRoundConfig(RewardedQuestionSubmissionInput memory input)
+    function _submitQuestionWithRewardAndRoundConfig(
+        SubmissionMetadata memory metadata,
+        string[] memory imageUrls,
+        string memory videoUrl,
+        bytes32 salt,
+        SubmissionRewardTerms memory rewardTerms,
+        RoundLib.RoundConfig memory roundConfig,
+        QuestionSpecCommitment memory spec
+    )
         private
         returns (uint256)
     {
         _enterQuestionSubmissionGuard();
         _requireNotPaused();
         uint256 contentId = _submitValidatedQuestionWithMedia(
-            input.metadata, input.imageUrls, input.videoUrl, input.salt, input.rewardTerms, input.roundConfig, 0, 0, input.spec
+            metadata, imageUrls, videoUrl, salt, rewardTerms, roundConfig, 0, 0, spec
         );
         _exitQuestionSubmissionGuard();
         return contentId;
-    }
-
-    function _buildRewardedQuestionSubmissionInput(
-        string memory contextUrl,
-        string[] memory imageUrls,
-        string memory videoUrl,
-        string memory title,
-        string memory description,
-        string memory tags,
-        uint256 categoryId,
-        bytes32 salt,
-        SubmissionRewardTerms memory rewardTerms,
-        RoundLib.RoundConfig memory roundConfig,
-        QuestionSpecCommitment memory spec
-    ) private view returns (RewardedQuestionSubmissionInput memory input) {
-        input.metadata =
-            _validatedContextSubmissionMetadata(contextUrl, imageUrls, videoUrl, title, description, tags, categoryId);
-        input.imageUrls = imageUrls;
-        input.videoUrl = videoUrl;
-        input.salt = salt;
-        input.rewardTerms = rewardTerms;
-        input.roundConfig = _validatedRoundConfig(roundConfig);
-        input.spec = spec;
     }
 
     function submitQuestionWithRewardAndRoundConfig(
@@ -471,20 +447,11 @@ contract ContentRegistry is Initializable, AccessControlUpgradeable, PausableUpg
         SubmissionRewardTerms memory rewardTerms,
         RoundLib.RoundConfig memory roundConfig
     ) public returns (uint256) {
-        RewardedQuestionSubmissionInput memory input = _buildRewardedQuestionSubmissionInput(
-            contextUrl,
-            imageUrls,
-            videoUrl,
-            title,
-            description,
-            tags,
-            categoryId,
-            salt,
-            rewardTerms,
-            roundConfig,
-            _genericQuestionSpec()
+        SubmissionMetadata memory metadata =
+            _validatedContextSubmissionMetadata(contextUrl, imageUrls, videoUrl, title, description, tags, categoryId);
+        return _submitQuestionWithRewardAndRoundConfig(
+            metadata, imageUrls, videoUrl, salt, rewardTerms, _validatedRoundConfig(roundConfig), _genericQuestionSpec()
         );
-        return _submitQuestionWithRewardAndRoundConfig(input);
     }
 
     function submitQuestionBundleWithRewardAndRoundConfig(
@@ -641,21 +608,17 @@ contract ContentRegistry is Initializable, AccessControlUpgradeable, PausableUpg
         uint256 categoryId,
         bytes32 salt
     ) public returns (uint256) {
-        _enterQuestionSubmissionGuard();
-        _requireNotPaused();
-        uint256 contentId = _submitValidatedQuestionWithMedia(
-            _validatedContextSubmissionMetadata(contextUrl, imageUrls, videoUrl, title, description, tags, categoryId),
+        return submitQuestion(
+            contextUrl,
             imageUrls,
             videoUrl,
+            title,
+            description,
+            tags,
+            categoryId,
             salt,
-            _defaultSubmissionRewardTerms(SUBMISSION_REWARD_ASSET_CREP),
-            _defaultRoundConfig(),
-            0,
-            0,
             _genericQuestionSpec()
         );
-        _exitQuestionSubmissionGuard();
-        return contentId;
     }
 
     function submitQuestionWithRoundConfig(
@@ -698,21 +661,18 @@ contract ContentRegistry is Initializable, AccessControlUpgradeable, PausableUpg
         bytes32 salt,
         RoundLib.RoundConfig memory roundConfig
     ) public returns (uint256) {
-        _enterQuestionSubmissionGuard();
-        _requireNotPaused();
-        uint256 contentId = _submitValidatedQuestionWithMedia(
-            _validatedContextSubmissionMetadata(contextUrl, imageUrls, videoUrl, title, description, tags, categoryId),
+        return submitQuestionWithRoundConfig(
+            contextUrl,
             imageUrls,
             videoUrl,
+            title,
+            description,
+            tags,
+            categoryId,
             salt,
-            _defaultSubmissionRewardTerms(SUBMISSION_REWARD_ASSET_CREP),
-            _validatedRoundConfig(roundConfig),
-            0,
-            0,
+            roundConfig,
             _genericQuestionSpec()
         );
-        _exitQuestionSubmissionGuard();
-        return contentId;
     }
 
     function getContentRoundConfig(uint256 contentId) public view returns (RoundLib.RoundConfig memory cfg) {
