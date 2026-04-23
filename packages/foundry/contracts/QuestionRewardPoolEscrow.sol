@@ -36,6 +36,9 @@ contract QuestionRewardPoolEscrow is
     uint256 public constant BPS_SCALE = 10_000;
     uint256 public constant DEFAULT_FRONTEND_FEE_BPS = 300;
     uint256 public constant MAX_FRONTEND_FEE_BPS = 500;
+    /// @notice Grace period voters have after bountyClosesAt to claim on a still-claimable bundle
+    ///         before a third party can sweep the remainder back to the funder.
+    uint256 public constant BUNDLE_CLAIM_GRACE = 7 days;
     uint8 public constant REWARD_ASSET_CREP = 0;
     uint8 public constant REWARD_ASSET_USDC = 1;
 
@@ -680,11 +683,21 @@ contract QuestionRewardPoolEscrow is
     {
         BundleReward storage bundle = _getExistingBundleReward(bundleId);
         require(!bundle.refunded, "Already refunded");
+        // Refund conditions: bundle failed, bounty window expired, or all voters claimed.
         require(
             bundle.failed || (bundle.bountyClosesAt != 0 && block.timestamp > bundle.bountyClosesAt)
                 || bundle.claimedCount >= bundle.requiredCompleters,
             "Bundle active"
         );
+        // If claims are still open (bundle is claim-complete but not fully claimed) and the
+        // bounty-window-expiry branch triggered the refund, voters who haven't yet claimed
+        // would have their earned share swept back to the funder. Give them an explicit
+        // grace window to finish claiming before anyone can race them.
+        if (_isBundleClaimOpen(bundle) && !bundle.failed) {
+            require(
+                block.timestamp > uint256(bundle.bountyClosesAt) + BUNDLE_CLAIM_GRACE, "Claim grace active"
+            );
+        }
         refundAmount = bundle.fundedAmount - bundle.claimedAmount;
         require(refundAmount > 0, "No refund");
 
