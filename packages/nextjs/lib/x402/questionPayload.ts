@@ -27,6 +27,7 @@ export const X402_USDC_DECIMALS = 6;
 const X402_DEFAULT_SUBMISSION_BOUNTY_USDC = 1_000_000n;
 const X402_MIN_REWARD_POOL_REQUIRED_VOTERS = 3n;
 const X402_MIN_REWARD_POOL_SETTLED_ROUNDS = 1n;
+export const X402_BUNDLE_REQUIRED_SETTLED_ROUNDS = 1n;
 export const X402_MAX_QUESTION_BUNDLE_COUNT = 10;
 
 const DIRECT_IMAGE_URL_PATTERN = /^https:\/\/.+\.(?:avif|gif|jpe?g|png|webp)(?:[?#].*)?$/i;
@@ -78,6 +79,20 @@ export type X402QuestionOperation = {
   payloadHash: string;
   canonicalPayload: ReturnType<typeof toCanonicalQuestionPayload>;
 };
+
+export function assertSupportedX402BundleBounty(
+  bounty: Pick<X402QuestionPayload["bounty"], "requiredSettledRounds" | "rewardPoolExpiresAt">,
+) {
+  if (bounty.requiredSettledRounds !== X402_BUNDLE_REQUIRED_SETTLED_ROUNDS) {
+    throw new X402QuestionInputError(
+      `bounty.requiredSettledRounds must equal ${X402_BUNDLE_REQUIRED_SETTLED_ROUNDS} for bundle submissions.`,
+    );
+  }
+
+  if (bounty.rewardPoolExpiresAt <= 0n) {
+    throw new X402QuestionInputError("bounty.rewardPoolExpiresAt must be greater than zero for bundle submissions.");
+  }
+}
 
 function isObject(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
@@ -317,6 +332,10 @@ function normalizeBounty(value: unknown): X402QuestionPayload["bounty"] {
   if (rewardPoolExpiresAt > 0n && feedbackClosesAt > rewardPoolExpiresAt) {
     throw new X402QuestionInputError("bounty.feedbackClosesAt cannot be after bounty.rewardPoolExpiresAt.");
   }
+  assertSupportedX402BundleBounty({
+    requiredSettledRounds,
+    rewardPoolExpiresAt,
+  });
 
   return {
     asset: "USDC",
@@ -546,6 +565,7 @@ export function toCanonicalQuestionPayload(payload: X402QuestionPayload) {
 }
 
 export function buildX402QuestionOperation(payload: X402QuestionPayload): X402QuestionOperation {
+  assertSupportedX402BundleBounty(payload.bounty);
   const canonicalPayload = toCanonicalQuestionPayload(payload);
   const payloadHash = createHash("sha256").update(JSON.stringify(canonicalPayload)).digest("hex");
   const operationKey = `0x${createHash("sha256").update(`curyo:x402-question:${payloadHash}`).digest("hex")}` as const;

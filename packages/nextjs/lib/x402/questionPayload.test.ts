@@ -12,7 +12,7 @@ const VALID_REQUEST = {
     asset: "USDC",
     requiredSettledRounds: "1",
     requiredVoters: "3",
-    rewardPoolExpiresAt: "0",
+    rewardPoolExpiresAt: "1762000000",
   },
   chainId: 42220,
   clientRequestId: "youtube:abc123",
@@ -33,6 +33,7 @@ test("parseX402QuestionRequest normalizes a valid paid question payload", () => 
   assert.equal(payload.questions.length, 1);
   assert.equal(payload.questions[0].contextUrl, "https://example.com/watch?v=abc123");
   assert.equal(payload.bounty.amount, 1_000_000n);
+  assert.equal(payload.bounty.rewardPoolExpiresAt, 1_762_000_000n);
   assert.equal(payload.bounty.requiredVoters, 3n);
   assert.equal(payload.roundConfig.epochDuration, 1200n);
   assert.equal(payload.questions[0].tags, "Media,Video");
@@ -247,6 +248,28 @@ test("parseX402QuestionRequest rejects non-USDC x402 bounties", () => {
         bounty: { ...VALID_REQUEST.bounty, asset: "cREP" },
       }),
     X402QuestionInputError,
+  );
+});
+
+test("parseX402QuestionRequest rejects bundle payouts with more than one settled round", () => {
+  assert.throws(
+    () =>
+      parseX402QuestionRequest({
+        ...VALID_REQUEST,
+        bounty: { ...VALID_REQUEST.bounty, requiredSettledRounds: "2" },
+      }),
+    /must equal 1/,
+  );
+});
+
+test("parseX402QuestionRequest rejects bundle payouts without a bounty close", () => {
+  assert.throws(
+    () =>
+      parseX402QuestionRequest({
+        ...VALID_REQUEST,
+        bounty: { ...VALID_REQUEST.bounty, rewardPoolExpiresAt: "0" },
+      }),
+    /must be greater than zero/,
   );
 });
 

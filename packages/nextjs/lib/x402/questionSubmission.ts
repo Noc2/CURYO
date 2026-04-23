@@ -29,6 +29,7 @@ import {
 import { questionRoundConfigToAbi, serializeQuestionRoundConfig } from "~~/lib/questionRoundConfig";
 import { buildQuestionBundleSubmissionRevealCommitment } from "~~/lib/questionSubmissionCommitment";
 import {
+  assertSupportedX402BundleBounty,
   type X402QuestionOperation,
   type X402QuestionPayload,
   X402_CELO_USDC_BY_CHAIN_ID,
@@ -483,6 +484,8 @@ async function assertBountyMeetsProtocolMinimum(params: {
   payload: X402QuestionPayload;
   publicClient: X402PublicClient;
 }) {
+  assertSupportedX402BundleBounty(params.payload.bounty);
+
   const protocolConfigAddress = (await params.publicClient.readContract({
     address: params.config.contentRegistryAddress,
     abi: ContentRegistryAbi,

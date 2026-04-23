@@ -194,3 +194,25 @@ test("completeManagedQuestionSubmissionRequest consumes the execution token befo
   assert.equal(record?.contentId, "999");
   assert.equal(record?.submissionToken, null);
 });
+
+test("startManagedQuestionSubmissionRequest rejects unsupported bundle bounty terms", async () => {
+  const unsupportedRoundsPayload = buildPayload("unsupported-rounds");
+  unsupportedRoundsPayload.bounty = {
+    ...unsupportedRoundsPayload.bounty,
+    requiredSettledRounds: 2n,
+  };
+  await assert.rejects(
+    () => startManagedQuestionSubmissionRequest({ agentId: "agent-1", payload: unsupportedRoundsPayload }),
+    /must equal 1/,
+  );
+
+  const missingClosePayload = buildPayload("missing-close");
+  missingClosePayload.bounty = {
+    ...missingClosePayload.bounty,
+    rewardPoolExpiresAt: 0n,
+  };
+  await assert.rejects(
+    () => startManagedQuestionSubmissionRequest({ agentId: "agent-1", payload: missingClosePayload }),
+    /must be greater than zero/,
+  );
+});
