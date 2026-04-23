@@ -306,9 +306,21 @@ test("agent results route returns the pending result package before settlement",
 
 test("agent templates route returns supported result templates", async () => {
   const response = await templatesRoute.GET(makeGet("https://curyo.xyz/api/agent/templates"));
-  const body = (await response.json()) as { templates: Array<{ id: string }> };
+  const body = (await response.json()) as {
+    templates: Array<{
+      bundleStrategy: string;
+      id: string;
+      submissionPattern: string;
+      templateInputsExample: Record<string, unknown> | null;
+      templateInputsSchema: Record<string, unknown>;
+    }>;
+  };
 
   assert.equal(response.status, 200);
   assert.ok(body.templates.length > 0);
   assert.equal(body.templates[0]?.id, "generic_rating");
+  assert.equal(body.templates[0]?.submissionPattern, "single_question");
+  assert.equal(body.templates[0]?.bundleStrategy, "independent");
+  assert.equal(body.templates[0]?.templateInputsExample?.goal, "quick human interest check");
+  assert.equal(body.templates[0]?.templateInputsSchema.type, "object");
 });

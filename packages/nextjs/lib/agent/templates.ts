@@ -1,5 +1,8 @@
 import { buildDefaultResultSpec, hashCanonicalJson } from "~~/lib/agent/questionSpecs";
 
+type JsonValue = string | number | boolean | null | JsonValue[] | { [key: string]: JsonValue };
+type JsonSchema = Record<string, unknown>;
+
 export type AgentDecisionAnswer =
   | "pending"
   | "proceed"
@@ -10,6 +13,7 @@ export type AgentDecisionAnswer =
   | "failed";
 
 export type AgentResultTemplate = {
+  bundleStrategy: "independent" | "rank_by_rating";
   id: string;
   version: number;
   title: string;
@@ -27,6 +31,9 @@ export type AgentResultTemplate = {
   };
   recommendedUse: string[];
   resultSpecHash: `0x${string}`;
+  submissionPattern: "bundle_member" | "single_question";
+  templateInputsExample: JsonValue | null;
+  templateInputsSchema: JsonSchema;
 };
 
 const TEMPLATE_VERSION = 1;
@@ -47,6 +54,22 @@ const TEMPLATE_DEFINITIONS = [
       reviseRatingBps: 4000,
     },
     recommendedUse: ["default_agent_feedback", "quality_check", "market_interest"],
+    submissionPattern: "single_question",
+    bundleStrategy: "independent",
+    templateInputsSchema: {
+      additionalProperties: true,
+      properties: {
+        audience: { type: "string" },
+        goal: { type: "string" },
+        successSignal: { type: "string" },
+      },
+      type: "object",
+    },
+    templateInputsExample: {
+      audience: "new visitors",
+      goal: "quick human interest check",
+      successSignal: "Would this make you want to learn more?",
+    },
   },
   {
     id: "go_no_go",
@@ -63,6 +86,25 @@ const TEMPLATE_DEFINITIONS = [
       reviseRatingBps: 4500,
     },
     recommendedUse: ["deployment_gate", "purchase_gate", "autonomous_action_gate"],
+    submissionPattern: "single_question",
+    bundleStrategy: "independent",
+    templateInputsSchema: {
+      additionalProperties: true,
+      properties: {
+        action: { type: "string" },
+        blockCondition: { type: "string" },
+        riskLevel: {
+          enum: ["low", "medium", "high"],
+          type: "string",
+        },
+      },
+      type: "object",
+    },
+    templateInputsExample: {
+      action: "send_outreach",
+      blockCondition: "Stop if the message feels misleading or pushy.",
+      riskLevel: "medium",
+    },
   },
   {
     id: "ranked_option_member",
@@ -79,6 +121,22 @@ const TEMPLATE_DEFINITIONS = [
       reviseRatingBps: 4000,
     },
     recommendedUse: ["multi_option_ranking", "pairwise_like_bundle", "preference_poll"],
+    submissionPattern: "bundle_member",
+    bundleStrategy: "rank_by_rating",
+    templateInputsSchema: {
+      additionalProperties: true,
+      properties: {
+        comparisonSetId: { type: "string" },
+        optionId: { type: "string" },
+        optionLabel: { type: "string" },
+      },
+      type: "object",
+    },
+    templateInputsExample: {
+      comparisonSetId: "headline-test-1",
+      optionId: "variant-a",
+      optionLabel: "Hero variant A",
+    },
   },
 ] as const;
 

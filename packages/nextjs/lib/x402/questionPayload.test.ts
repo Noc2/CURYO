@@ -124,6 +124,11 @@ test("parseX402QuestionRequest supports per-question template overrides in bundl
         imageUrls: [],
         tags: ["Market", "Research"],
         templateId: "ranked_option_member",
+        templateInputs: {
+          comparisonSetId: "headline-test-1",
+          optionId: "variant-a",
+          optionLabel: "Hero variant A",
+        },
         title: "Would you pay for this?",
       },
     ],
@@ -131,6 +136,11 @@ test("parseX402QuestionRequest supports per-question template overrides in bundl
 
   assert.equal(payload.questions[0].templateId, "go_no_go");
   assert.equal(payload.questions[1].templateId, "ranked_option_member");
+  assert.deepEqual(payload.questions[1].templateInputs, {
+    comparisonSetId: "headline-test-1",
+    optionId: "variant-a",
+    optionLabel: "Hero variant A",
+  });
 });
 
 test("parseX402QuestionRequest rejects unknown or unsupported template versions", () => {
