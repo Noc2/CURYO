@@ -84,6 +84,30 @@ test("parseX402QuestionRequest preserves selected agent templates in hashes", ()
   assert.notEqual(goNoGo.questions[0].resultSpecHash, generic.questions[0].resultSpecHash);
 });
 
+test("parseX402QuestionRequest binds public target audience metadata into the payload", () => {
+  const withoutAudience = parseX402QuestionRequest(VALID_REQUEST);
+  const withAudience = parseX402QuestionRequest({
+    ...VALID_REQUEST,
+    question: {
+      ...VALID_REQUEST.question,
+      targetAudience: {
+        expertise: ["developer", "founder"],
+        roles: ["operator"],
+      },
+    },
+  });
+
+  assert.deepEqual(withAudience.questions[0].targetAudience, {
+    expertise: ["developer", "founder"],
+    roles: ["operator"],
+  });
+  assert.notEqual(withAudience.questions[0].questionMetadataHash, withoutAudience.questions[0].questionMetadataHash);
+  assert.notEqual(
+    buildX402QuestionOperation(withAudience).payloadHash,
+    buildX402QuestionOperation(withoutAudience).payloadHash,
+  );
+});
+
 test("parseX402QuestionRequest supports per-question template overrides in bundles", () => {
   const payload = parseX402QuestionRequest({
     ...VALID_REQUEST,

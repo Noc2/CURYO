@@ -65,6 +65,7 @@ export type X402QuestionItemPayload = {
   tags: string;
   tagList: string[];
   categoryId: bigint;
+  targetAudience: AgentQuestionSpecInput["targetAudience"];
   templateId: string;
   templateInputs: AgentQuestionSpecInput["templateInputs"];
   templateVersion: number;
@@ -205,6 +206,19 @@ function normalizeTemplateInputs(value: unknown, fieldName: string): AgentQuesti
 
   try {
     return JSON.parse(JSON.stringify(value)) as AgentQuestionSpecInput["templateInputs"];
+  } catch {
+    throw new X402QuestionInputError(`${fieldName} must be JSON serializable.`);
+  }
+}
+
+function normalizeJsonObject(value: unknown, fieldName: string): AgentQuestionSpecInput["targetAudience"] {
+  if (value === undefined || value === null) return null;
+  if (!isObject(value)) {
+    throw new X402QuestionInputError(`${fieldName} must be an object when provided.`);
+  }
+
+  try {
+    return JSON.parse(JSON.stringify(value)) as AgentQuestionSpecInput["targetAudience"];
   } catch {
     throw new X402QuestionInputError(`${fieldName} must be JSON serializable.`);
   }
@@ -391,6 +405,7 @@ function normalizeQuestion(
 
   const { tags, tagList } = normalizeTags(value.tags);
   const categoryId = parseNonNegativeInteger(value.categoryId, `${fieldPrefix}.categoryId`);
+  const targetAudience = normalizeJsonObject(value.targetAudience, `${fieldPrefix}.targetAudience`);
   const templateSelection = normalizeTemplateSelection(value, fieldPrefix, defaults);
 
   return {
@@ -400,6 +415,7 @@ function normalizeQuestion(
     imageUrls,
     tags,
     tagList,
+    targetAudience,
     template: templateSelection.template,
     templateId: templateSelection.templateId,
     templateInputs: templateSelection.templateInputs,
@@ -462,6 +478,7 @@ export function parseX402QuestionRequest(value: unknown, fallbackChainId?: numbe
         bundleIndex: index,
       },
       tags: normalizedQuestion.tagList,
+      targetAudience: normalizedQuestion.targetAudience,
       templateId: normalizedQuestion.templateId,
       templateInputs: normalizedQuestion.templateInputs,
       templateVersion: normalizedQuestion.templateVersion,
@@ -479,6 +496,7 @@ export function parseX402QuestionRequest(value: unknown, fallbackChainId?: numbe
       resultSpecHash: spec.resultSpecHash,
       tags: normalizedQuestion.tags,
       tagList: normalizedQuestion.tagList,
+      targetAudience: normalizedQuestion.targetAudience,
       templateId: normalizedQuestion.templateId,
       templateInputs: normalizedQuestion.templateInputs,
       templateVersion: normalizedQuestion.templateVersion,
@@ -516,6 +534,7 @@ export function toCanonicalQuestionPayload(payload: X402QuestionPayload) {
       questionMetadataHash: question.questionMetadataHash,
       resultSpecHash: question.resultSpecHash,
       tags: question.tagList,
+      targetAudience: question.targetAudience,
       templateId: question.templateId,
       templateInputs: question.templateInputs,
       templateVersion: question.templateVersion,

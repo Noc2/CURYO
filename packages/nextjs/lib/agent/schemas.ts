@@ -49,6 +49,17 @@ export const agentQuestionInputSchema = {
       items: { type: "string" },
       type: ["array", "string"],
     },
+    targetAudience: {
+      additionalProperties: true,
+      description: "Optional public self-reported audience hints. Advisory only; it does not hard-gate voters.",
+      properties: {
+        countries: { items: { type: "string" }, type: "array" },
+        expertise: { items: { type: "string" }, type: "array" },
+        languages: { items: { type: "string" }, type: "array" },
+        roles: { items: { type: "string" }, type: "array" },
+      },
+      type: "object",
+    },
     title: { description: "Question title shown to voters.", type: "string" },
     videoUrl: { description: "Optional YouTube URL.", type: "string" },
     ...templateSelectorSchema.properties,

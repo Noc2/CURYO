@@ -22,6 +22,7 @@ export type AgentQuestionSpecInput = {
     bundleIndex?: number;
     studyId?: string;
   } | null;
+  targetAudience?: JsonValue;
   tags: readonly string[];
   templateInputs?: JsonValue;
   templateId?: string;
@@ -70,6 +71,7 @@ export function buildQuestionMetadata(input: AgentQuestionSpecInput): JsonValue 
     roundConfig: input.roundConfig ? serializeQuestionRoundConfig(input.roundConfig) : null,
     schemaVersion: "curyo.question.v1",
     study: input.study ?? null,
+    targetAudience: input.targetAudience ?? null,
     tags: [...input.tags],
     templateInputs: input.templateInputs ?? null,
     templateId: input.templateId ?? DEFAULT_AGENT_TEMPLATE_ID,
