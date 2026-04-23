@@ -477,6 +477,10 @@ contract ContentRegistry is Initializable, AccessControlUpgradeable, PausableUpg
 
         RoundLib.RoundConfig memory validatedRoundConfig = _validatedRoundConfig(roundConfig);
         _validateSubmissionReward(rewardTerms);
+        require(
+            rewardTerms.requiredSettledRounds == MIN_SUBMISSION_REWARD_SETTLED_ROUNDS,
+            "Bundle settled rounds unsupported"
+        );
 
         SubmissionMetadata[] memory metadataList = new SubmissionMetadata[](questions.length);
         bytes32[] memory submissionKeys = new bytes32[](questions.length);
