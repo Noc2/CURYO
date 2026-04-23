@@ -718,6 +718,12 @@ contract ContentRegistry is Initializable, AccessControlUpgradeable, PausableUpg
         if (votingEngine != address(0)) {
             require(!IRoundVotingEngine(votingEngine).hasCommits(contentId), "Content has votes");
         }
+        // Cancelling a bundle member would permanently pin completedQuestionCount below
+        // questionCount and force _isBundleClaimOpen to false, which skips the voter
+        // claim-grace window in refundQuestionBundleReward -- the submitter could then
+        // reclaim the bundle stake at bountyClosesAt without giving voters on OTHER bundle
+        // questions a chance to claim their earned share.
+        require(contentBundleId[contentId] == 0, "Bundled content");
 
         c.status = ContentStatus.Cancelled;
 
