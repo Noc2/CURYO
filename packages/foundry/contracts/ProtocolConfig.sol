@@ -507,13 +507,26 @@ contract ProtocolConfig is Initializable, AccessControlUpgradeable {
         ) {
             revert InvalidConfig();
         }
-        if (observationBetaX18 == 0) revert InvalidConfig();
+        // Lower-bound WAD-scaled parameters to prevent governance from passing degenerate
+        // values that would cause PRBMath SD59x18 overflow in RatingMath.applySettlement
+        // and permanently brick any future round created after the bad config is set
+        // (ratingConfig is snapshotted per-round at creation time).
+        // 1e16 = 0.01 in WAD, two orders of magnitude below the launch defaults
+        // (observationBetaX18=2e18, surpriseReferenceX18=8e17, maxDeltaLogitX18=6e17),
+        // which gives governance ample room to tune while keeping the logit pipeline stable.
+        uint256 minWadLowerBound = 1e16;
+        if (observationBetaX18 < minWadLowerBound) revert InvalidConfig();
         if (observationBetaX18 > uint256(type(int256).max)) revert InvalidConfig();
         if (confidenceGainBps > 10_000 || confidenceReopenBps > 10_000) revert InvalidConfig();
-        if (surpriseReferenceX18 == 0) revert InvalidConfig();
+        if (surpriseReferenceX18 < minWadLowerBound) revert InvalidConfig();
         if (maxAbsLogitX18 > uint256(uint128(type(int128).max))) revert InvalidConfig();
-        if (maxDeltaLogitX18 == 0 || maxAbsLogitX18 == 0 || maxDeltaLogitX18 > maxAbsLogitX18) revert InvalidConfig();
-        if (conservativePenaltyMaxBps > RatingLib.BPS_SCALE || conservativePenaltyMinBps > conservativePenaltyMaxBps) {
+        if (maxDeltaLogitX18 < minWadLowerBound || maxAbsLogitX18 < minWadLowerBound) revert InvalidConfig();
+        if (maxDeltaLogitX18 > maxAbsLogitX18) revert InvalidConfig();
+        // Conservative penalty is capped at 50% (5000 BPS); governance could previously
+        // choose 100%, which zeroes out every conservative rating -- not useful and a
+        // needless foot-gun.
+        uint16 conservativePenaltyMaxBpsCap = 5_000;
+        if (conservativePenaltyMaxBps > conservativePenaltyMaxBpsCap || conservativePenaltyMinBps > conservativePenaltyMaxBps) {
             revert InvalidConfig();
         }
 
