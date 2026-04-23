@@ -187,8 +187,10 @@ contract FeedbackBonusEscrow is Initializable, AccessControlUpgradeable, Pausabl
         require(!voterIdAwarded[poolId][voterId], "Voter already awarded");
 
         bytes32 commitKey = votingEngine.voterIdCommitKey(pool.contentId, pool.roundId, voterId);
-        (address commitVoter,,,,, address frontend,, bool commitRevealed,,) =
-            votingEngine.commits(pool.contentId, pool.roundId, commitKey);
+        // Use the narrow commitCore getter so we don't pay memory expansion for the
+        // unused `bytes ciphertext` blob on every award call.
+        (address commitVoter,, address frontend,, bool commitRevealed,,) =
+            votingEngine.commitCore(pool.contentId, pool.roundId, commitKey);
         commitVoter;
         commitRevealed;
 
@@ -305,8 +307,8 @@ contract FeedbackBonusEscrow is Initializable, AccessControlUpgradeable, Pausabl
         require(commitKey != bytes32(0), "No commit");
         require(votingEngine.commitVoterId(pool.contentId, pool.roundId, commitKey) == voterId, "Wrong Voter ID");
 
-        (address voter,,,,, address commitFrontend,, bool revealed,,) =
-            votingEngine.commits(pool.contentId, pool.roundId, commitKey);
+        (address voter,, address commitFrontend,, bool revealed,,) =
+            votingEngine.commitCore(pool.contentId, pool.roundId, commitKey);
         commitFrontend;
         require(voter != address(0) && revealed, "Vote not revealed");
     }

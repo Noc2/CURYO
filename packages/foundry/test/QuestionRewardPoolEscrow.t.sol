@@ -1048,6 +1048,13 @@ contract QuestionRewardPoolEscrowTest is VotingTestBase {
                 uint8(0)
             )
         );
+        // Escrow reads via the narrow commitCore getter for gas; mock it too so tests
+        // that rely on synthetic reveals behave identically to the legacy commits() path.
+        vm.mockCall(
+            address(votingEngine),
+            abi.encodeWithSignature("commitCore(uint256,uint256,bytes32)", contentId, roundId, commitKey),
+            abi.encode(voter, uint64(STAKE), address(0), uint48(0), true, true, uint8(0))
+        );
     }
 
     function _registerFrontend(address frontend) internal {
