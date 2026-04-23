@@ -1,15 +1,27 @@
 import type { Metadata } from "next";
 
-const baseUrl = process.env.VERCEL_PROJECT_PRODUCTION_URL
-  ? `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}`
-  : `http://localhost:${process.env.PORT || 3000}`;
+function resolveMetadataBaseUrl() {
+  const productionHost = process.env.VERCEL_PROJECT_PRODUCTION_URL?.trim();
+  if (productionHost) {
+    return `https://${productionHost}`;
+  }
+
+  const previewHost = process.env.VERCEL_URL?.trim();
+  if (previewHost) {
+    return `https://${previewHost}`;
+  }
+
+  return `http://localhost:${process.env.PORT || 3000}`;
+}
+
 const titleTemplate = "%s | Curyo";
 const socialImageAlt =
-  "Curyo brand banner with the headline AI Asks, Humans Stake and the subline Verified Human Feedback for AI Agents";
+  "Curyo poster-style brand image with the headline AI Asks, Humans Stake and the subline Verified Human Feedback for AI Agents";
 
 export const getMetadata = ({ title, description }: { title: string; description: string }): Metadata => {
-  const openGraphImageUrl = `${baseUrl}/og-image.png`;
-  const twitterImageUrl = `${baseUrl}/twitter-image.png`;
+  const baseUrl = resolveMetadataBaseUrl();
+  const openGraphImageUrl = `${baseUrl}/og-image.jpg`;
+  const twitterImageUrl = `${baseUrl}/twitter-image.jpg`;
 
   return {
     metadataBase: new URL(baseUrl),
@@ -53,20 +65,16 @@ export const getMetadata = ({ title, description }: { title: string; description
     icons: {
       icon: [
         {
-          url: "/favicon.svg",
-          type: "image/svg+xml",
-        },
-        {
           url: "/favicon.png",
           type: "image/png",
-          sizes: "64x64",
+          sizes: "512x512",
         },
       ],
       apple: [
         {
           url: "/favicon.png",
           type: "image/png",
-          sizes: "64x64",
+          sizes: "512x512",
         },
       ],
     },

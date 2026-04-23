@@ -1,8 +1,12 @@
-import { CuryoBrandMark } from "~~/components/brand/CuryoBrandMark";
+import Image from "next/image";
 
 /**
  * Shared Curyo logo wrapper.
  */
 export function CuryoLogo({ className = "h-8 w-8", idPrefix }: { className?: string; idPrefix?: string }) {
-  return <CuryoBrandMark className={className} idPrefix={idPrefix} title="Curyo logo" variant="compact" />;
+  void idPrefix;
+
+  return (
+    <Image src="/favicon.png" alt="" aria-hidden="true" width={512} height={512} className={className} sizes="36px" />
+  );
 }
