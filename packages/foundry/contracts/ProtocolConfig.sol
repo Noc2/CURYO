@@ -392,6 +392,15 @@ contract ProtocolConfig is Initializable, AccessControlUpgradeable {
             revealGracePeriod = maxEpochDuration;
             emit RevealGracePeriodUpdated(maxEpochDuration);
         }
+        // Symmetric clamp on the other side: _setRevealGracePeriod caps values at
+        // maxRoundDuration + 1 day. If governance shrinks maxRoundDuration here without
+        // re-pushing revealGracePeriod, the stored value can silently exceed that cap
+        // and get snapshotted into new rounds. Clamp down to keep the invariant.
+        uint256 maxRevealGrace = maxRoundDuration + 1 days;
+        if (revealGracePeriod > maxRevealGrace) {
+            revealGracePeriod = maxRevealGrace;
+            emit RevealGracePeriodUpdated(maxRevealGrace);
+        }
 
         emit RoundConfigBoundsUpdated(
             minEpochDuration,
