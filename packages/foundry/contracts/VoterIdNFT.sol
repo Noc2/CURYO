@@ -168,12 +168,22 @@ contract VoterIdNFT is ERC721, Ownable, IVoterIdNFT {
         uint256 tokenId = holderToTokenId[holder];
         require(tokenId != 0, "No Voter ID");
 
-        // Clear delegation if any
+        // Clear outbound delegation (holder → delegate)
         address delegate = delegateTo[holder];
         if (delegate != address(0)) {
             delete delegateOf[delegate];
             delete delegateTo[holder];
             emit DelegateRemoved(holder, delegate);
+        }
+
+        // Clear inbound delegation if revoked holder was acting as someone else's delegate.
+        // Without this scrub, hasVoterId(holder) would still return true via the inbound
+        // delegator, leaking sybil-resistance privileges to a revoked identity.
+        address inboundDelegator = delegateOf[holder];
+        if (inboundDelegator != address(0)) {
+            delete delegateOf[holder];
+            delete delegateTo[inboundDelegator];
+            emit DelegateRemoved(inboundDelegator, holder);
         }
 
         // Clear bidirectional mappings

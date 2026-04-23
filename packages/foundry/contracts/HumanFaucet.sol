@@ -441,8 +441,9 @@ contract HumanFaucet is SelfVerificationRoot, Ownable, Pausable {
     function isValidReferrer(address referrer) external view returns (bool) {
         // Referrer must have claimed
         if (!addressClaimed[referrer]) return false;
-        // If Voter ID NFT is set, referrer must also have a Voter ID
-        if (address(voterIdNFT) != address(0) && !voterIdNFT.hasVoterId(referrer)) return false;
+        // Referrer must be a direct Voter ID holder, not a delegate. Using resolveHolder ensures
+        // a revoked user who was later made someone's delegate cannot keep earning referral rewards.
+        if (address(voterIdNFT) != address(0) && voterIdNFT.resolveHolder(referrer) != referrer) return false;
         return true;
     }
 
@@ -538,7 +539,7 @@ contract HumanFaucet is SelfVerificationRoot, Ownable, Pausable {
         // This is a protocol-level limitation of pseudonymous identity, not fixable on-chain.
         if (
             referrer != address(0) && referrer != user && addressClaimed[referrer]
-                && (address(voterIdNFT) == address(0) || voterIdNFT.hasVoterId(referrer))
+                && (address(voterIdNFT) == address(0) || voterIdNFT.resolveHolder(referrer) == referrer)
         ) {
             (claimantBonus, referrerReward) = getCurrentReferralAmounts();
             claimAmount += claimantBonus;
