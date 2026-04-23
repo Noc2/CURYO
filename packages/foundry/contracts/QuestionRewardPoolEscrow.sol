@@ -333,11 +333,7 @@ contract QuestionRewardPoolEscrow is
         uint256 normalizedFeedbackClosesAt = _normalizeFeedbackClosesAt(bountyClosesAt, feedbackClosesAt);
 
         uint256 fundedAmount = _pullExactToken(funder, asset, amount);
-        uint256 funderVoterId = voterIdNFT.getTokenId(funder);
-        address funderIdentity = funderVoterId == 0 ? address(0) : voterIdNFT.getHolder(funderVoterId);
-        if (funderVoterId != 0 && funderIdentity == address(0)) {
-            funderIdentity = funder;
-        }
+        (uint256 funderVoterId, address funderIdentity) = _resolveFunderIdentity(funder);
 
         bundleRewards[bundleId] = BundleReward({
             id: bundleId.toUint64(),
@@ -422,11 +418,7 @@ contract QuestionRewardPoolEscrow is
 
         uint256 currentRoundId = votingEngine.currentRoundId(contentId);
         uint256 startRoundId = currentRoundId == 0 ? 1 : currentRoundId + 1;
-        uint256 funderVoterId = voterIdNFT.getTokenId(funder);
-        address funderIdentity = funderVoterId == 0 ? address(0) : voterIdNFT.getHolder(funderVoterId);
-        if (funderVoterId != 0 && funderIdentity == address(0)) {
-            funderIdentity = funder;
-        }
+        (uint256 funderVoterId, address funderIdentity) = _resolveFunderIdentity(funder);
         address submitterIdentity = registry.getSubmitterIdentity(contentId);
         uint256 submitterVoterId = submitterIdentity == address(0) ? 0 : voterIdNFT.getTokenId(submitterIdentity);
 
@@ -811,6 +803,19 @@ contract QuestionRewardPoolEscrow is
         _unpause();
     }
 
+    function _resolveFunderIdentity(address funder)
+        internal
+        view
+        returns (uint256 funderVoterId, address funderIdentity)
+    {
+        funderVoterId = voterIdNFT.getTokenId(funder);
+        if (funderVoterId == 0) return (0, address(0));
+        funderIdentity = voterIdNFT.getHolder(funderVoterId);
+        if (funderIdentity == address(0)) {
+            funderIdentity = funder;
+        }
+    }
+
     function _pullExactToken(address funder, uint8 asset, uint256 amount) internal returns (uint256 receivedAmount) {
         IERC20 token = _rewardToken(asset);
         uint256 balanceBefore = token.balanceOf(address(this));
@@ -942,15 +947,7 @@ contract QuestionRewardPoolEscrow is
         view
         returns (uint256)
     {
-        uint256 funderVoterId = _voterIdForRound(contentId, roundId, bundle.funder);
-        if (funderVoterId != 0) return funderVoterId;
-
-        if (bundle.funderIdentity != address(0)) {
-            uint256 identityVoterId = _voterIdForRound(contentId, roundId, bundle.funderIdentity);
-            if (identityVoterId != 0) return identityVoterId;
-        }
-
-        return bundle.funderVoterId;
+        return _resolveFunderVoterId(contentId, roundId, bundle.funder, bundle.funderIdentity, bundle.funderVoterId);
     }
 
     function _splitBundleClaimAmounts(
@@ -962,24 +959,9 @@ contract QuestionRewardPoolEscrow is
         uint256 grossAmount,
         uint256 reservedFrontendFee
     ) internal view returns (uint256 voterReward, uint256 frontendFee, address frontendRecipient) {
-        if (
-            reservedFrontendFee == 0 || bundle.frontendFeeBps == 0 || frontend == address(0)
-                || !votingEngine.frontendEligibleAtCommit(contentId, roundId, commitKey)
-        ) {
-            return (grossAmount, 0, address(0));
-        }
-
-        if (reservedFrontendFee > grossAmount) {
-            reservedFrontendFee = grossAmount;
-        }
-
-        frontendRecipient = _resolveFrontendRewardRecipient(contentId, roundId, frontend);
-        if (frontendRecipient == address(0)) {
-            return (grossAmount, 0, address(0));
-        }
-
-        frontendFee = reservedFrontendFee;
-        voterReward = grossAmount - frontendFee;
+        return _computeClaimSplit(
+            contentId, roundId, commitKey, frontend, bundle.frontendFeeBps, grossAmount, reservedFrontendFee
+        );
     }
 
     function _getIncompleteRewardPoolForQualification(uint256 rewardPoolId)
@@ -988,20 +970,19 @@ contract QuestionRewardPoolEscrow is
         returns (RewardPool storage rewardPool)
     {
         rewardPool = _getExistingRewardPool(rewardPoolId);
-        _requirePoolNotRefundedForQualification(rewardPool);
-        require(rewardPool.qualifiedRounds < rewardPool.requiredSettledRounds, "Bounty complete");
+        _requireIncompleteRewardPool(rewardPool);
     }
 
     function _qualifyRoundIfNeeded(uint256 rewardPoolId, RewardPool storage rewardPool, uint256 roundId) internal {
         if (!roundSnapshots[rewardPoolId][roundId].qualified) {
-            _requirePoolNotRefundedForQualification(rewardPool);
-            require(rewardPool.qualifiedRounds < rewardPool.requiredSettledRounds, "Bounty complete");
+            _requireIncompleteRewardPool(rewardPool);
             _qualifyRound(rewardPoolId, rewardPool, roundId);
         }
     }
 
-    function _requirePoolNotRefundedForQualification(RewardPool storage rewardPool) internal view {
+    function _requireIncompleteRewardPool(RewardPool storage rewardPool) internal view {
         require(!rewardPool.refunded, "Bounty refunded");
+        require(rewardPool.qualifiedRounds < rewardPool.requiredSettledRounds, "Bounty complete");
     }
 
     function _qualifyRound(uint256 rewardPoolId, RewardPool storage rewardPool, uint256 roundId) internal {
@@ -1154,9 +1135,29 @@ contract QuestionRewardPoolEscrow is
         uint256 grossAmount,
         uint256 reservedFrontendFee
     ) internal view returns (uint256 voterReward, uint256 frontendFee, address frontendRecipient) {
+        return _computeClaimSplit(
+            rewardPool.contentId,
+            roundId,
+            commitKey,
+            frontend,
+            rewardPool.frontendFeeBps,
+            grossAmount,
+            reservedFrontendFee
+        );
+    }
+
+    function _computeClaimSplit(
+        uint256 contentId,
+        uint256 roundId,
+        bytes32 commitKey,
+        address frontend,
+        uint16 frontendFeeBps,
+        uint256 grossAmount,
+        uint256 reservedFrontendFee
+    ) internal view returns (uint256 voterReward, uint256 frontendFee, address frontendRecipient) {
         if (
-            reservedFrontendFee == 0 || rewardPool.frontendFeeBps == 0 || frontend == address(0)
-                || !votingEngine.frontendEligibleAtCommit(rewardPool.contentId, roundId, commitKey)
+            reservedFrontendFee == 0 || frontendFeeBps == 0 || frontend == address(0)
+                || !votingEngine.frontendEligibleAtCommit(contentId, roundId, commitKey)
         ) {
             return (grossAmount, 0, address(0));
         }
@@ -1165,7 +1166,7 @@ contract QuestionRewardPoolEscrow is
             reservedFrontendFee = grossAmount;
         }
 
-        frontendRecipient = _resolveFrontendRewardRecipient(rewardPool.contentId, roundId, frontend);
+        frontendRecipient = _resolveFrontendRewardRecipient(contentId, roundId, frontend);
         if (frontendRecipient == address(0)) {
             return (grossAmount, 0, address(0));
         }
@@ -1211,15 +1212,27 @@ contract QuestionRewardPoolEscrow is
     }
 
     function _funderVoterIdForRound(RewardPool storage rewardPool, uint256 roundId) internal view returns (uint256) {
-        uint256 funderVoterId = _voterIdForRound(rewardPool.contentId, roundId, rewardPool.funder);
+        return _resolveFunderVoterId(
+            rewardPool.contentId, roundId, rewardPool.funder, rewardPool.funderIdentity, rewardPool.funderVoterId
+        );
+    }
+
+    function _resolveFunderVoterId(
+        uint256 contentId,
+        uint256 roundId,
+        address funder,
+        address funderIdentity,
+        uint256 fallbackVoterId
+    ) internal view returns (uint256) {
+        uint256 funderVoterId = _voterIdForRound(contentId, roundId, funder);
         if (funderVoterId != 0) return funderVoterId;
 
-        if (rewardPool.funderIdentity != address(0)) {
-            uint256 identityVoterId = _voterIdForRound(rewardPool.contentId, roundId, rewardPool.funderIdentity);
+        if (funderIdentity != address(0)) {
+            uint256 identityVoterId = _voterIdForRound(contentId, roundId, funderIdentity);
             if (identityVoterId != 0) return identityVoterId;
         }
 
-        return rewardPool.funderVoterId;
+        return fallbackVoterId;
     }
 
     function _submitterHasRevealedCommit(RewardPool storage rewardPool, uint256 roundId, uint256 funderVoterId)

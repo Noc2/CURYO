@@ -329,9 +329,9 @@ for ((i = 0; i < TOTAL_ITEMS; i++)); do
 
   # 3. Reveal the submission with the same deterministic salt used for the reservation
   echo "  Submitting question: $TITLE ($MEDIA_KIND, bounty: $BOUNTY_AMOUNT, context: $CONTEXT_URL, category: $CATEGORY_SLUG -> $CATEGORY_ID)"
-  cast send "$REGISTRY" "submitQuestionWithRewardAndRoundConfig(string,string[],string,string,string,string,uint256,bytes32,(uint8,uint256,uint256,uint256,uint256),(uint32,uint32,uint16,uint16))" \
+  cast send "$REGISTRY" "submitQuestionWithRewardAndRoundConfig(string,string[],string,string,string,string,uint256,bytes32,(uint8,uint256,uint256,uint256,uint256,uint256),(uint32,uint32,uint16,uint16))" \
     "$CONTEXT_URL" "$IMAGE_URLS_ARG" "$VIDEO_URL_ARG" "$TITLE" "$DESCRIPTION" "$TAG" "$CATEGORY_ID" "0x$SALT" \
-    "(0,$BOUNTY_AMOUNT,$SUBMISSION_BOUNTY_REQUIRED_VOTERS,$SUBMISSION_BOUNTY_REQUIRED_SETTLED_ROUNDS,$SUBMISSION_BOUNTY_EXPIRES_AT)" \
+    "(0,$BOUNTY_AMOUNT,$SUBMISSION_BOUNTY_REQUIRED_VOTERS,$SUBMISSION_BOUNTY_REQUIRED_SETTLED_ROUNDS,$SUBMISSION_BOUNTY_EXPIRES_AT,$SUBMISSION_BOUNTY_EXPIRES_AT)" \
     "($SUBMISSION_ROUND_EPOCH_DURATION,$SUBMISSION_ROUND_MAX_DURATION,$SUBMISSION_ROUND_MIN_VOTERS,$SUBMISSION_ROUND_MAX_VOTERS)" \
     --private-key "$KEY" --rpc-url "$RPC" > /dev/null
   echo "  Done!"
