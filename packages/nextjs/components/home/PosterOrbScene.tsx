@@ -59,6 +59,13 @@ export function PosterOrbScene({
           position: absolute;
           inset: 0;
           transform-origin: 50% 45%;
+          mask-image: linear-gradient(to right, rgba(0, 0, 0, 1) 0 84%, rgba(0, 0, 0, 0.9) 90%, transparent 100%);
+          -webkit-mask-image: linear-gradient(
+            to right,
+            rgba(0, 0, 0, 1) 0 84%,
+            rgba(0, 0, 0, 0.9) 90%,
+            transparent 100%
+          );
         }
 
         .poster-orb-scene__image {
@@ -278,6 +285,12 @@ export function PosterOrbScene({
           .poster-orb-scene--animated .poster-orb-scene__core-glow,
           .poster-orb-scene--animated .poster-orb-scene__sheen {
             animation: none;
+          }
+        }
+
+        @media (max-width: 639px) {
+          .poster-orb-scene__canvas {
+            inset: -2% -12% -10%;
           }
         }
       `}</style>
