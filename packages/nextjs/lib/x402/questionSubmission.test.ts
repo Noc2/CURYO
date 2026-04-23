@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { after, before, beforeEach, test } from "node:test";
 import { __setDatabaseResourcesForTests, dbClient } from "~~/lib/db";
 import { createMemoryDatabaseResources } from "~~/lib/db/testMemory";
+import type { X402QuestionPayload } from "~~/lib/x402/questionPayload";
 import {
   __setX402QuestionSubmissionTestOverridesForTests,
   completeManagedQuestionSubmissionRequest,
@@ -12,7 +13,7 @@ import {
 const env = process.env as Record<string, string | undefined>;
 const originalDatabaseUrl = env.DATABASE_URL;
 
-function buildPayload(clientRequestId: string) {
+function buildPayload(clientRequestId: string): X402QuestionPayload {
   return {
     bounty: {
       amount: 1_000_000n,
@@ -32,7 +33,12 @@ function buildPayload(clientRequestId: string) {
         imageUrls: [] as string[],
         questionMetadataHash: `0x${"2".repeat(64)}` as const,
         resultSpecHash: `0x${"3".repeat(64)}` as const,
-        tags: ["agents"],
+        tagList: ["agents"],
+        tags: "agents",
+        targetAudience: null,
+        templateId: "generic_rating",
+        templateInputs: null,
+        templateVersion: 1,
         title: "Agent action approval",
         videoUrl: "",
       },
@@ -48,15 +54,15 @@ function buildPayload(clientRequestId: string) {
 
 const TEST_CONFIG = {
   chainId: 42220,
-  contentRegistryAddress: "0x0000000000000000000000000000000000000011",
-  executorAddress: "0x0000000000000000000000000000000000000012",
-  executorPrivateKey: `0x${"1".repeat(64)}`,
-  questionRewardPoolEscrowAddress: "0x0000000000000000000000000000000000000013",
+  contentRegistryAddress: "0x0000000000000000000000000000000000000011" as const,
+  executorAddress: "0x0000000000000000000000000000000000000012" as const,
+  executorPrivateKey: `0x${"1".repeat(64)}` as `0x${string}`,
+  questionRewardPoolEscrowAddress: "0x0000000000000000000000000000000000000013" as const,
   rpcUrl: "http://localhost:8545",
   serviceFeeAmount: 0n,
   targetNetwork: { id: 42220 } as never,
   thirdwebSecretKey: null,
-  usdcAddress: "0x0000000000000000000000000000000000000014",
+  usdcAddress: "0x0000000000000000000000000000000000000014" as const,
   waitUntil: "submitted" as const,
 };
 
@@ -126,7 +132,7 @@ test("startManagedQuestionSubmissionRequest only grants one live execution token
 test("completeManagedQuestionSubmissionRequest consumes the execution token before submit", async () => {
   const payload = buildPayload("token-consume");
   let executeCalls = 0;
-  let releaseExecution: (() => void) | null = null;
+  let releaseExecution: (() => void) | undefined;
   const executionGate = new Promise<void>(resolve => {
     releaseExecution = resolve;
   });
@@ -182,7 +188,8 @@ test("completeManagedQuestionSubmissionRequest consumes the execution token befo
   );
   assert.equal(executeCalls, 1);
 
-  releaseExecution?.();
+  assert.ok(releaseExecution);
+  releaseExecution();
   const completed = await firstCompletion;
   assert.equal(completed.status, 200);
 

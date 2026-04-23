@@ -2,6 +2,7 @@ import { NextRequest } from "next/server";
 import { buildUnavailableFreeTransactionSummary, isFreeTransactionStoreUnavailableError } from "./fallback";
 import assert from "node:assert/strict";
 import { after, test } from "node:test";
+import type { QueryResult, QueryResultRow } from "pg";
 import { __setRateLimitStoreForTests } from "~~/utils/rateLimit";
 
 const env = process.env as Record<string, string | undefined>;
@@ -9,6 +10,16 @@ const originalNodeEnv = env.NODE_ENV;
 const originalTargetNetworks = env.NEXT_PUBLIC_TARGET_NETWORKS;
 
 env.NODE_ENV = "test";
+
+function queryResult<Row extends QueryResultRow>(rows: Row[]): QueryResult<Row> {
+  return {
+    command: "SELECT",
+    fields: [],
+    oid: 0,
+    rowCount: rows.length,
+    rows,
+  };
+}
 
 after(() => {
   __setRateLimitStoreForTests(null);
@@ -73,14 +84,14 @@ test("free transaction session route rejects unsupported numeric chain ids", asy
     execute: async input => {
       const sql = typeof input === "string" ? input : input.sql;
       if (sql.includes("api_rate_limit_maintenance")) {
-        return { rows: [] };
+        return queryResult([]);
       }
 
       if (sql.includes("api_rate_limits")) {
-        return { rows: [{ request_count: 1 }] };
+        return queryResult([{ request_count: 1 }]);
       }
 
-      return { rows: [] };
+      return queryResult([]);
     },
   });
 
