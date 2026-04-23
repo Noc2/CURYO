@@ -684,7 +684,18 @@ contract ContentRegistryCoverageTest is VotingTestBase {
         string memory description = "Official Go implementation of Ethereum.";
         string memory tags = "tag1";
         bytes32 expectedHash = keccak256(
-            abi.encode("curyo-question-context-v1", contextUrl, imageUrls, "", title, description, tags, uint256(1))
+            abi.encode(
+                "curyo-question-context-v2",
+                contextUrl,
+                imageUrls,
+                "",
+                title,
+                description,
+                tags,
+                uint256(1),
+                DEFAULT_QUESTION_METADATA_HASH,
+                DEFAULT_RESULT_SPEC_HASH
+            )
         );
         bytes32 salt = keccak256("split-metadata");
 
