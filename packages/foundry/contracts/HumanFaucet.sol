@@ -123,7 +123,8 @@ contract HumanFaucet is SelfVerificationRoot, Ownable, Pausable {
     event GovernanceUpdated(address indexed governance);
 
     /// @notice Emitted when Voter ID minting fails (claim still succeeds)
-    event VoterIdMintFailed(address indexed user, uint256 nullifier);
+    // Note: VoterIdMintFailed was removed. Voter ID mint failures now revert the whole
+    // claim atomically in customVerificationHook, so the failure state is never reached.
 
     /// @notice Emitted when the claim tier changes due to reaching a threshold
     event TierChanged(uint256 newTier, uint256 newClaimAmount, uint256 totalClaimantsCount);
