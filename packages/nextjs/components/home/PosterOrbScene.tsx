@@ -235,8 +235,6 @@ export function PosterOrbScene({
           </clipPath>
         </defs>
 
-        <rect width="1500" height="1500" fill="#040405" />
-
         <g className={animated ? "poster-orb-scene__haze poster-orb-scene__haze--top" : undefined}>
           <ellipse
             cx="788"
