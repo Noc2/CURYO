@@ -703,6 +703,7 @@ export async function callCuryoMcpTool(params: {
                 const completed = await dependencies.completeManagedQuestionSubmissionRequest({
                   agentId: params.agent.id,
                   payload: managedPayload,
+                  submissionToken: started.submissionToken,
                 });
                 const completedBody = completed.body as JsonObject;
                 await recordManagedSubmission(completedBody);

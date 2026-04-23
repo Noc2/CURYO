@@ -61,8 +61,15 @@ export type X402QuestionSubmissionRecord = {
   rewardPoolId: string | null;
   transactionHashes: string | null;
   paymentReceipt: string | null;
+  submissionToken: string | null;
   error: string | null;
   updatedAt: Date;
+};
+
+type X402QuestionSubmissionTestOverrides = {
+  executeX402QuestionSubmission?: typeof executeX402QuestionSubmission;
+  preflightX402QuestionSubmission?: typeof preflightX402QuestionSubmission;
+  resolveX402QuestionConfig?: typeof resolveX402QuestionConfig;
 };
 
 type X402QuestionSubmissionConfig = {
@@ -97,6 +104,8 @@ export class X402QuestionConflictError extends Error {
   }
 }
 
+let x402QuestionSubmissionTestOverrides: X402QuestionSubmissionTestOverrides | null = null;
+
 function sleep(ms: number) {
   return new Promise(resolve => setTimeout(resolve, ms));
 }
@@ -120,6 +129,7 @@ function rowToRecord(row: Record<string, unknown> | undefined): X402QuestionSubm
     questionCount: Number(row.question_count ?? 1),
     rewardPoolId: typeof row.reward_pool_id === "string" ? row.reward_pool_id : null,
     serviceFeeAmount: String(row.service_fee_amount),
+    submissionToken: typeof row.submission_token === "string" ? row.submission_token : null,
     status: String(row.status) as X402QuestionSubmissionStatus,
     transactionHashes: typeof row.transaction_hashes === "string" ? row.transaction_hashes : null,
     updatedAt: row.updated_at instanceof Date ? row.updated_at : new Date(String(row.updated_at)),
@@ -168,54 +178,138 @@ async function recordPaymentSettlement(params: {
   paymentReceipt: unknown;
 }) {
   const now = new Date();
-  await dbClient.execute({
+  try {
+    await dbClient.execute({
+      sql: `
+        INSERT INTO x402_question_submissions (
+          operation_key,
+          client_request_id,
+          payload_hash,
+          chain_id,
+          payer_address,
+          payment_asset,
+          payment_amount,
+          bounty_amount,
+          service_fee_amount,
+          question_count,
+          status,
+          payment_receipt,
+          created_at,
+          updated_at
+        )
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      `,
+      args: [
+        params.operation.operationKey,
+        params.payload.clientRequestId,
+        params.operation.payloadHash,
+        params.payload.chainId,
+        params.payerAddress,
+        params.config.usdcAddress,
+        params.paymentAmount.toString(),
+        params.payload.bounty.amount.toString(),
+        params.config.serviceFeeAmount.toString(),
+        params.payload.questions.length,
+        "payment_settled",
+        JSON.stringify(params.paymentReceipt),
+        now,
+        now,
+      ],
+    });
+  } catch (error) {
+    const code = typeof error === "object" && error && "code" in error ? String(error.code) : "";
+    if (code !== "23505") {
+      throw error;
+    }
+
+    await dbClient.execute({
+      sql: `
+        UPDATE x402_question_submissions
+        SET payer_address = ?,
+            payment_receipt = ?,
+            payment_amount = ?,
+            payment_asset = ?,
+            status = CASE
+              WHEN status IN ('submitted', 'submitting') THEN status
+              ELSE ?
+            END,
+            submission_token = CASE
+              WHEN status = 'submitting' THEN submission_token
+              ELSE NULL
+            END,
+            error = CASE
+              WHEN status = 'submitting' THEN error
+              ELSE NULL
+            END,
+            updated_at = ?
+        WHERE operation_key = ?
+      `,
+      args: [
+        params.payerAddress,
+        JSON.stringify(params.paymentReceipt),
+        params.paymentAmount.toString(),
+        params.config.usdcAddress,
+        "payment_settled",
+        now,
+        params.operation.operationKey,
+      ],
+    });
+  }
+}
+
+async function claimManagedSubmissionExecution(params: {
+  now?: Date;
+  operationKey: `0x${string}`;
+}): Promise<{ record: X402QuestionSubmissionRecord | null; submissionToken: string | null }> {
+  const now = params.now ?? new Date();
+  const staleBefore = new Date(now.getTime() - SUBMITTING_STALE_MS);
+  const submissionToken = randomBytes(16).toString("hex");
+  const result = await dbClient.execute({
     sql: `
-      INSERT INTO x402_question_submissions (
-        operation_key,
-        client_request_id,
-        payload_hash,
-        chain_id,
-        payer_address,
-        payment_asset,
-        payment_amount,
-        bounty_amount,
-        service_fee_amount,
-        question_count,
-        status,
-        payment_receipt,
-        created_at,
-        updated_at
-      )
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-      ON CONFLICT(operation_key) DO UPDATE SET
-        payer_address = excluded.payer_address,
-        payment_receipt = excluded.payment_receipt,
-        payment_amount = excluded.payment_amount,
-        payment_asset = excluded.payment_asset,
-        status = CASE
-          WHEN x402_question_submissions.status = 'submitted' THEN x402_question_submissions.status
-          ELSE excluded.status
-        END,
-        error = NULL,
-        updated_at = excluded.updated_at
+      UPDATE x402_question_submissions
+      SET status = 'submitting',
+          submission_token = ?,
+          error = NULL,
+          updated_at = ?
+      WHERE operation_key = ?
+        AND status <> 'submitted'
+        AND (
+          status = 'payment_settled'
+          OR status = 'failed'
+          OR (status = 'submitting' AND updated_at <= ?)
+        )
+      RETURNING *
     `,
-    args: [
-      params.operation.operationKey,
-      params.payload.clientRequestId,
-      params.operation.payloadHash,
-      params.payload.chainId,
-      params.payerAddress,
-      params.config.usdcAddress,
-      params.paymentAmount.toString(),
-      params.payload.bounty.amount.toString(),
-      params.config.serviceFeeAmount.toString(),
-      params.payload.questions.length,
-      "payment_settled",
-      JSON.stringify(params.paymentReceipt),
-      now,
-      now,
-    ],
+    args: [submissionToken, now, params.operationKey, staleBefore],
   });
+
+  const record = rowToRecord(result.rows[0]);
+  return {
+    record,
+    submissionToken: record ? submissionToken : null,
+  };
+}
+
+async function consumeManagedSubmissionExecution(params: {
+  now?: Date;
+  operationKey: `0x${string}`;
+  submissionToken: string;
+}) {
+  const now = params.now ?? new Date();
+  const result = await dbClient.execute({
+    sql: `
+      UPDATE x402_question_submissions
+      SET submission_token = NULL,
+          updated_at = ?
+      WHERE operation_key = ?
+        AND status = 'submitting'
+        AND submission_token = ?
+      RETURNING *
+    `,
+    args: [now, params.operationKey, params.submissionToken],
+  });
+
+  return rowToRecord(result.rows[0]);
 }
 
 async function updateSubmissionStatus(params: {
@@ -344,6 +438,16 @@ export function resolveX402QuestionConfig(
     thirdwebSecretKey: thirdwebSecretKey ?? null,
     usdcAddress,
     waitUntil: getX402PaymentWaitUntil(),
+  };
+}
+
+function getQuestionSubmissionDependencies() {
+  return {
+    executeX402QuestionSubmission:
+      x402QuestionSubmissionTestOverrides?.executeX402QuestionSubmission ?? executeX402QuestionSubmission,
+    preflightX402QuestionSubmission:
+      x402QuestionSubmissionTestOverrides?.preflightX402QuestionSubmission ?? preflightX402QuestionSubmission,
+    resolveX402QuestionConfig: x402QuestionSubmissionTestOverrides?.resolveX402QuestionConfig ?? resolveX402QuestionConfig,
   };
 }
 
@@ -798,7 +902,8 @@ export async function handleX402QuestionSubmissionRequest(params: {
   payload: X402QuestionPayload;
   request: Request;
 }): Promise<{ body: unknown; headers?: Record<string, string>; status: number }> {
-  const config = resolveX402QuestionConfig(params.payload.chainId);
+  const dependencies = getQuestionSubmissionDependencies();
+  const config = dependencies.resolveX402QuestionConfig(params.payload.chainId);
   const operation = buildX402QuestionOperation(params.payload);
   const existingRecord = await getX402QuestionSubmissionByClientRequest({
     chainId: params.payload.chainId,
@@ -825,7 +930,7 @@ export async function handleX402QuestionSubmissionRequest(params: {
   }
 
   const totalPaymentAmount = params.payload.bounty.amount + config.serviceFeeAmount;
-  await preflightX402QuestionSubmission({
+  await dependencies.preflightX402QuestionSubmission({
     config,
     payload: params.payload,
   });
@@ -893,7 +998,7 @@ export async function handleX402QuestionSubmissionRequest(params: {
   });
 
   try {
-    const result = await executeX402QuestionSubmission({
+    const result = await dependencies.executeX402QuestionSubmission({
       config,
       payload: params.payload,
     });
@@ -938,14 +1043,18 @@ export async function handleManagedQuestionSubmissionRequest(params: {
     throw new X402QuestionConflictError("This managed MCP question submission is already being processed.");
   }
 
-  return completeManagedQuestionSubmissionRequest(params);
+  return completeManagedQuestionSubmissionRequest({
+    ...params,
+    submissionToken: started.submissionToken,
+  });
 }
 
 export async function startManagedQuestionSubmissionRequest(params: {
   agentId: string;
   payload: X402QuestionPayload;
-}): Promise<{ body: unknown; shouldSubmit: boolean; status: number }> {
-  const config = resolveX402QuestionConfig(params.payload.chainId, { requireThirdwebSecret: false });
+}): Promise<{ body: unknown; shouldSubmit: boolean; status: number; submissionToken?: string | null }> {
+  const dependencies = getQuestionSubmissionDependencies();
+  const config = dependencies.resolveX402QuestionConfig(params.payload.chainId, { requireThirdwebSecret: false });
   const operation = buildX402QuestionOperation(params.payload);
   const existingRecord = await getX402QuestionSubmissionByClientRequest({
     chainId: params.payload.chainId,
@@ -976,7 +1085,7 @@ export async function startManagedQuestionSubmissionRequest(params: {
     };
   }
 
-  const preflight = await preflightX402QuestionSubmission({
+  const preflight = await dependencies.preflightX402QuestionSubmission({
     config,
     payload: params.payload,
   });
@@ -997,24 +1106,25 @@ export async function startManagedQuestionSubmissionRequest(params: {
     });
   }
 
-  await updateSubmissionStatus({
+  const claimed = await claimManagedSubmissionExecution({
     operationKey: operation.operationKey,
-    status: "submitting",
   });
-
-  const submittingRecord = await getX402QuestionSubmissionByOperationKey(operation.operationKey);
+  const submittingRecord = claimed.record ?? (await getX402QuestionSubmissionByOperationKey(operation.operationKey));
   return {
     body: x402QuestionSubmissionStatusBody({ config, operation, payload: params.payload, record: submittingRecord }),
-    shouldSubmit: true,
-    status: 202,
+    shouldSubmit: !!claimed.submissionToken,
+    status: submittingRecord?.status === "submitted" ? 200 : 202,
+    submissionToken: claimed.submissionToken,
   };
 }
 
 export async function completeManagedQuestionSubmissionRequest(params: {
   agentId: string;
   payload: X402QuestionPayload;
+  submissionToken?: string | null;
 }): Promise<{ body: unknown; status: number }> {
-  const config = resolveX402QuestionConfig(params.payload.chainId, { requireThirdwebSecret: false });
+  const dependencies = getQuestionSubmissionDependencies();
+  const config = dependencies.resolveX402QuestionConfig(params.payload.chainId, { requireThirdwebSecret: false });
   const operation = buildX402QuestionOperation(params.payload);
   const existingRecord = await getX402QuestionSubmissionByClientRequest({
     chainId: params.payload.chainId,
@@ -1036,13 +1146,27 @@ export async function completeManagedQuestionSubmissionRequest(params: {
     throw new X402QuestionConflictError("This managed MCP question submission has not been started.");
   }
 
-  await updateSubmissionStatus({
+  if (!params.submissionToken) {
+    throw new X402QuestionConflictError("This managed MCP question submission is already being processed.");
+  }
+
+  const claimedRecord = await consumeManagedSubmissionExecution({
     operationKey: operation.operationKey,
-    status: "submitting",
+    submissionToken: params.submissionToken,
   });
+  if (!claimedRecord) {
+    const currentRecord = await getX402QuestionSubmissionByOperationKey(operation.operationKey);
+    if (currentRecord?.status === "submitted") {
+      return {
+        body: submissionResponseBody({ config, operation, payload: params.payload, record: currentRecord }),
+        status: 200,
+      };
+    }
+    throw new X402QuestionConflictError("This managed MCP question submission is already being processed.");
+  }
 
   try {
-    const result = await executeX402QuestionSubmission({
+    const result = await dependencies.executeX402QuestionSubmission({
       config,
       payload: params.payload,
     });
@@ -1068,4 +1192,8 @@ export async function completeManagedQuestionSubmissionRequest(params: {
     });
     throw error;
   }
+}
+
+export function __setX402QuestionSubmissionTestOverridesForTests(value: X402QuestionSubmissionTestOverrides | null) {
+  x402QuestionSubmissionTestOverrides = value;
 }

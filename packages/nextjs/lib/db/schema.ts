@@ -296,6 +296,7 @@ export const x402QuestionSubmissions = pgTable(
     rewardPoolId: text("reward_pool_id"),
     transactionHashes: text("transaction_hashes"),
     paymentReceipt: text("payment_receipt"),
+    submissionToken: text("submission_token"),
     error: text("error"),
     createdAt: timestamp("created_at", { mode: "date", withTimezone: true }).notNull(),
     updatedAt: timestamp("updated_at", { mode: "date", withTimezone: true }).notNull(),
