@@ -103,6 +103,10 @@ contract QuestionRewardPoolEscrow is
         uint256 refundedAmount;
         bool failed;
         bool refunded;
+        // When set, unclaimed residue is forfeited to the protocol treasury instead of
+        // refunded to the funder. Mirrors RewardPool.nonRefundable for the mandatory-
+        // bounty anti-spam model on registry-initiated submissions.
+        bool nonRefundable;
     }
 
     struct BundleQuestion {
@@ -209,6 +213,7 @@ contract QuestionRewardPoolEscrow is
         uint256 grossAmount
     );
     event QuestionBundleRewardRefunded(uint256 indexed bundleId, address indexed funder, uint256 amount);
+    event QuestionBundleRewardForfeited(uint256 indexed bundleId, address indexed treasury, uint256 amount);
 
     /// @custom:oz-upgrades-unsafe-allow constructor
     constructor() {
@@ -358,7 +363,11 @@ contract QuestionRewardPoolEscrow is
             frontendClaimedAmount: 0,
             refundedAmount: 0,
             failed: false,
-            refunded: false
+            refunded: false,
+            // Registry-initiated submissions carry the mandatory-bounty anti-spam model:
+            // unclaimed residue is forfeited to treasury rather than refunded, matching
+            // the single-pool path (`createSubmissionRewardPoolFromRegistry`).
+            nonRefundable: true
         });
 
         for (uint256 i = 0; i < contentIds.length; i++) {
@@ -700,8 +709,15 @@ contract QuestionRewardPoolEscrow is
 
         bundle.refunded = true;
         bundle.refundedAmount = refundAmount;
-        _rewardToken(bundle.asset).safeTransfer(bundle.funder, refundAmount);
-        emit QuestionBundleRewardRefunded(bundleId, bundle.funder, refundAmount);
+        if (bundle.nonRefundable) {
+            address treasury = _protocolTreasury();
+            require(treasury != address(0), "Treasury not set");
+            _rewardToken(bundle.asset).safeTransfer(treasury, refundAmount);
+            emit QuestionBundleRewardForfeited(bundleId, treasury, refundAmount);
+        } else {
+            _rewardToken(bundle.asset).safeTransfer(bundle.funder, refundAmount);
+            emit QuestionBundleRewardRefunded(bundleId, bundle.funder, refundAmount);
+        }
     }
 
     function refundExpiredRewardPool(uint256 rewardPoolId)
