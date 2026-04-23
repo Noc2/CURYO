@@ -31,7 +31,7 @@ function toOptionalUnixSeconds(value: unknown): number | null {
 export function buildAgentLiveAskGuidance(params: {
   content: Pick<
     PonderContentItem,
-    "openRound" | "rewardPoolSummary" | "roundEpochDuration" | "roundMaxDuration" | "roundMaxVoters" | "roundMinVoters"
+    "bundle" | "openRound" | "rewardPoolSummary" | "roundEpochDuration" | "roundMaxDuration" | "roundMaxVoters" | "roundMinVoters"
   >;
   nowSeconds?: number;
 }): AgentLiveAskGuidance | null {
@@ -42,6 +42,7 @@ export function buildAgentLiveAskGuidance(params: {
   const currentBounty = toBigIntValue(rewardPoolSummary.currentRewardPoolAmount);
   const minVoters = toBigIntValue(openRound.minVoters ?? params.content.roundMinVoters ?? 3, 3n);
   const maxVoters = toBigIntValue(openRound.maxVoters ?? params.content.roundMaxVoters ?? minVoters, minVoters);
+  const questionCount = Math.max(1, params.content.bundle?.questionCount ?? 1);
   const guidanceTarget = buildAgentFastLaneGuidance({
     bounty: {
       amount: currentBounty,
@@ -52,7 +53,7 @@ export function buildAgentLiveAskGuidance(params: {
       rewardPoolExpiresAt: 0n,
     },
     nowSeconds: params.nowSeconds,
-    questionCount: 1,
+    questionCount,
     roundConfig: {
       epochDuration: toBigIntValue(openRound.epochDuration ?? params.content.roundEpochDuration ?? 0, 0n),
       maxDuration: toBigIntValue(openRound.maxDuration ?? params.content.roundMaxDuration ?? 0, 0n),

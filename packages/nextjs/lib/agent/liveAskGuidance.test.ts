@@ -193,3 +193,39 @@ test("buildAgentLiveAskGuidance ignores zero lowSince sentinels", () => {
     suggestedTopUpAtomic: null,
   });
 });
+
+test("buildAgentLiveAskGuidance scales bundled asks by the bundle question count", () => {
+  const guidance = buildAgentLiveAskGuidance({
+    content: content({
+      bundle: {
+        asset: 1,
+        claimedAmount: "0",
+        claimedCount: 0,
+        completedQuestionCount: 0,
+        failed: false,
+        fundedAmount: "2000000",
+        id: "bundle-1",
+        questionCount: 3,
+        refunded: false,
+        refundedAmount: "0",
+        requiredCompleters: 3,
+      },
+      openRound: {
+        ...content().openRound!,
+        voteCount: 4,
+      },
+      rewardPoolSummary: {
+        ...content().rewardPoolSummary!,
+        currentRewardPoolAmount: "2000000",
+      },
+    }),
+    nowSeconds: 1_700_000_100,
+  });
+
+  assert.deepEqual(guidance, {
+    lowResponseRisk: "high",
+    reasonCodes: ["bounty_below_conservative_start", "bounty_below_healthy_target"],
+    recommendedAction: "top_up",
+    suggestedTopUpAtomic: "2500000",
+  });
+});
