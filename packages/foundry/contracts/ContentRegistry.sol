@@ -502,7 +502,12 @@ contract ContentRegistry is Initializable, AccessControlUpgradeable, PausableUpg
             );
             uint256 resolvedCategoryId = _resolveQuestionSubmissionCategory(metadata);
             bytes32 submissionKey = _deriveQuestionMediaSubmissionKey(metadata, resolvedCategoryId);
+            // Eager write in this loop also catches duplicates WITHIN the same bundle --
+            // without it, two identical questions in one bundle would both pass the
+            // check here and later point at the same submissionKey, so releasing one
+            // in Dormant state would brick the sibling forever ("Dormant key released").
             require(!submissionKeyUsed[submissionKey], "Question already submitted");
+            submissionKeyUsed[submissionKey] = true;
             // A zero salt collapses the reveal commitment's entropy and lets a front-runner
             // pre-reserve the same (metadata, ..., salt=0) tuple. Force non-zero salt per
             // question so every reveal hash carries caller-supplied randomness.
@@ -527,7 +532,8 @@ contract ContentRegistry is Initializable, AccessControlUpgradeable, PausableUpg
         bundleId = nextQuestionBundleId++;
         contentIds = new uint256[](questions.length);
         for (uint256 i = 0; i < questions.length; i++) {
-            submissionKeyUsed[submissionKeys[i]] = true;
+            // submissionKeyUsed is already set in the preparation loop above to catch
+            // duplicates within the same bundle.
             bytes32 contentHash = keccak256(
                 abi.encode(
                     "curyo-question-context-v2",
