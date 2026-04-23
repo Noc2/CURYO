@@ -614,9 +614,9 @@ contract QuestionRewardPoolEscrow is
         IVoterIdNFT roundVoterIdNft = _roundVoterIdNft(firstQuestion.contentId, firstQuestion.roundId);
         uint256 voterId = _requireVoterId(roundVoterIdNft, msg.sender);
         require(!bundleRewardClaimed[bundleId][voterId], "Already claimed");
-        require(!_isBundleExcludedVoter(bundle, bundleId, voterId), "Excluded voter");
+        require(!_isBundleExcludedVoter(bundle, bundleId, msg.sender), "Excluded voter");
 
-        (address frontend, bytes32 firstCommitKey) = _requireCompletedBundle(bundleId, voterId);
+        (address frontend, bytes32 firstCommitKey) = _requireCompletedBundle(bundleId, msg.sender);
         uint256 grossAmount = _nextEqualShare(bundle.fundedAmount, bundle.requiredCompleters, bundle.claimedCount);
         require(grossAmount > 0, "No reward");
 
@@ -661,11 +661,11 @@ contract QuestionRewardPoolEscrow is
 
         BundleQuestion storage firstQuestion = bundleQuestions[bundleId][0];
         uint256 voterId = _roundVoterIdNft(firstQuestion.contentId, firstQuestion.roundId).getTokenId(account);
-        if (voterId == 0 || bundleRewardClaimed[bundleId][voterId] || _isBundleExcludedVoter(bundle, bundleId, voterId))
+        if (voterId == 0 || bundleRewardClaimed[bundleId][voterId] || _isBundleExcludedVoter(bundle, bundleId, account))
         {
             return 0;
         }
-        if (!_hasCompletedBundle(bundleId, voterId)) return 0;
+        if (!_hasCompletedBundle(bundleId, account)) return 0;
 
         uint256 grossAmount = _nextEqualShare(bundle.fundedAmount, bundle.requiredCompleters, bundle.claimedCount);
         uint256 reservedFrontendFee = (grossAmount * bundle.frontendFeeBps) / BPS_SCALE;
@@ -904,7 +904,7 @@ contract QuestionRewardPoolEscrow is
             && (bundle.bountyClosesAt == 0 || settledAt <= bundle.bountyClosesAt);
     }
 
-    function _requireCompletedBundle(uint256 bundleId, uint256 voterId)
+    function _requireCompletedBundle(uint256 bundleId, address account)
         internal
         view
         returns (address frontend, bytes32 firstCommitKey)
@@ -914,6 +914,8 @@ contract QuestionRewardPoolEscrow is
         for (uint256 i = 0; i < questions.length; i++) {
             BundleQuestion storage question = questions[i];
             require(question.terminal && question.settled, "Question not settled");
+            uint256 voterId = _voterIdForRound(question.contentId, question.roundId, account);
+            require(voterId != 0, "Voter ID required");
             bytes32 commitKey = votingEngine.voterIdCommitKey(question.contentId, question.roundId, voterId);
             require(commitKey != bytes32(0), "No commit");
             require(
@@ -929,12 +931,14 @@ contract QuestionRewardPoolEscrow is
         }
     }
 
-    function _hasCompletedBundle(uint256 bundleId, uint256 voterId) internal view returns (bool) {
+    function _hasCompletedBundle(uint256 bundleId, address account) internal view returns (bool) {
         BundleQuestion[] storage questions = bundleQuestions[bundleId];
         if (questions.length == 0) return false;
         for (uint256 i = 0; i < questions.length; i++) {
             BundleQuestion storage question = questions[i];
             if (!question.terminal || !question.settled) return false;
+            uint256 voterId = _voterIdForRound(question.contentId, question.roundId, account);
+            if (voterId == 0) return false;
             bytes32 commitKey = votingEngine.voterIdCommitKey(question.contentId, question.roundId, voterId);
             if (commitKey == bytes32(0)) return false;
             (bool revealed,) = _revealedCommitFrontend(question.contentId, question.roundId, commitKey);
@@ -943,7 +947,7 @@ contract QuestionRewardPoolEscrow is
         return true;
     }
 
-    function _isBundleExcludedVoter(BundleReward storage bundle, uint256 bundleId, uint256 voterId)
+    function _isBundleExcludedVoter(BundleReward storage bundle, uint256 bundleId, address account)
         internal
         view
         returns (bool)
@@ -951,6 +955,8 @@ contract QuestionRewardPoolEscrow is
         BundleQuestion[] storage questions = bundleQuestions[bundleId];
         for (uint256 i = 0; i < questions.length; i++) {
             BundleQuestion storage question = questions[i];
+            uint256 voterId = _voterIdForRound(question.contentId, question.roundId, account);
+            if (voterId == 0) continue;
             uint256 funderVoterId = _funderVoterIdForBundleQuestion(bundle, question.contentId, question.roundId);
             if (voterId == funderVoterId) return true;
 

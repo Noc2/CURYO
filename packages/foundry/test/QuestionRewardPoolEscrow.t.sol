@@ -376,6 +376,36 @@ contract QuestionRewardPoolEscrowTest is VotingTestBase {
         rewardPoolEscrow.claimQuestionReward(rewardPoolId, roundId);
     }
 
+    function testBundleClaimUsesRoundSpecificVoterIdsAfterMigration() public {
+        uint256[] memory contentIds = _submitBundleQuestions();
+        uint256 bundleId =
+            _createSubmissionBundle(contentIds, funder, rewardPoolEscrow.REWARD_ASSET_USDC(), REWARD_POOL_AMOUNT, 3);
+
+        address[] memory voters = new address[](3);
+        voters[0] = voter2;
+        voters[1] = voter3;
+        voters[2] = voter4;
+        bool[] memory directions = _directions(true, true, false);
+
+        uint256 firstRoundId = _settleRoundWith(voters, contentIds[0], directions);
+        assertEq(votingEngine.roundVoterIdNFTSnapshot(contentIds[0], firstRoundId), address(voterIdNFT));
+
+        MockVoterIdNFT migratedVoterIdNFT = _migrateVoterIdsWithDifferentIds();
+        assertNotEq(migratedVoterIdNFT.getTokenId(voter2), voterIdNFT.getTokenId(voter2));
+
+        uint256 secondRoundId = _settleRoundWith(voters, contentIds[1], directions);
+        assertEq(votingEngine.roundVoterIdNFTSnapshot(contentIds[1], secondRoundId), address(migratedVoterIdNFT));
+
+        assertGt(rewardPoolEscrow.claimableQuestionBundleReward(bundleId, voter2), 0);
+
+        vm.prank(voter2);
+        uint256 reward = rewardPoolEscrow.claimQuestionBundleReward(bundleId);
+
+        assertEq(reward, REWARD_POOL_AMOUNT / 3);
+        assertEq(usdc.balanceOf(voter2), 1_000e6 + reward);
+        assertEq(rewardPoolEscrow.claimableQuestionBundleReward(bundleId, voter2), 0);
+    }
+
     function testFunderAndSubmitterVoterIdsAreExcludedFromRewardPoolClaims() public {
         uint256 contentId = _submitQuestion("");
         uint256 rewardPoolId = _createRewardPool(contentId, REWARD_POOL_AMOUNT, 3, 1);
@@ -765,6 +795,44 @@ contract QuestionRewardPoolEscrowTest is VotingTestBase {
         vm.prank(voter1);
         uint256 reward = rewardPoolEscrow.claimQuestionReward(rewardPoolId, eligibleRoundId);
         assertEq(reward, 1);
+    }
+
+    function _submitBundleQuestions() internal returns (uint256[] memory contentIds) {
+        contentIds = new uint256[](2);
+        contentIds[0] =
+            _submitQuestionWithContext("https://example.com/bundle-a", "https://example.com/bundle-a.jpg");
+        contentIds[1] =
+            _submitQuestionWithContext("https://example.com/bundle-b", "https://example.com/bundle-b.jpg");
+    }
+
+    function _createSubmissionBundle(
+        uint256[] memory contentIds,
+        address bundleFunder,
+        uint8 asset,
+        uint256 amount,
+        uint256 requiredCompleters
+    ) internal returns (uint256 bundleId) {
+        bundleId = 1;
+        vm.startPrank(bundleFunder);
+        if (asset == rewardPoolEscrow.REWARD_ASSET_CREP()) {
+            crepToken.approve(address(rewardPoolEscrow), amount);
+        } else {
+            usdc.approve(address(rewardPoolEscrow), amount);
+        }
+        vm.stopPrank();
+
+        uint256 bountyClosesAt = block.timestamp + 30 days;
+        vm.prank(address(registry));
+        rewardPoolEscrow.createSubmissionBundleFromRegistry(
+            bundleId,
+            contentIds,
+            bundleFunder,
+            asset,
+            amount,
+            requiredCompleters,
+            bountyClosesAt,
+            bountyClosesAt
+        );
     }
 
     function _submitQuestion(string memory url) internal returns (uint256 contentId) {
