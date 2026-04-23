@@ -572,8 +572,11 @@ contract QuestionRewardPoolEscrow is
     function recordBundleQuestionTerminal(uint256 contentId, uint256 roundId, bool settled)
         external
         nonReentrant
-        whenNotPaused
     {
+        // Intentionally NOT gated by whenNotPaused: the voting engine invokes this inside a
+        // try/catch during settlement, so a paused escrow would silently swallow the terminal
+        // signal with no retry path, permanently locking bundle claims. Caller is restricted
+        // to the voting engine, which is already a trusted state machine.
         require(msg.sender == address(votingEngine), "Only engine");
         uint256 bundleId = contentBundleId[contentId];
         if (bundleId == 0) return;
