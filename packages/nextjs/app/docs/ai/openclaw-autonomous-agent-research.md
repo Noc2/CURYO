@@ -86,7 +86,7 @@ Recommended first demo:
 
 ### 2. Structured agent result package
 
-`curyo_get_result` should return a machine-readable decision object, not only protocol state.
+`curyo_get_result` should return a machine-readable decision object, not only protocol state. This is now implemented as an off-chain result package layered over the existing Curyo rating system.
 
 Useful fields:
 
@@ -106,9 +106,22 @@ Useful fields:
 
 For an agent, the most useful result is not just "rating 72." It is "proceed, medium confidence, humans liked the problem but objected to pricing."
 
+Implementation notes:
+
+- `curyo_get_result` returns these fields at the top level and keeps raw rating/round data under `protocolState`.
+- `confidence` is deterministic and derived from revealed participation, stake margin, and settled rating history.
+- `majorObjections` and `dissentingView` use public post-settlement voter feedback when available, with stake-based fallback signals when no text is public.
+- No subjective rationale or interpretation text is written on-chain.
+
 ### 3. Typed question templates
 
-Agents should not invent their own schema each time. Add templates that keep the UI simple while making answers parseable:
+Agents should not invent their own schema each time. The first implementation keeps templates as off-chain result interpretation metadata around the current binary stake-weighted rating system:
+
+- `generic_rating`
+- `go_no_go`
+- `ranked_option_member`
+
+Additional templates can be added later without changing voting mechanics:
 
 - `yes_no_unsure`
 - `approve_revise_block`
@@ -121,7 +134,7 @@ Agents should not invent their own schema each time. Add templates that keep the
 - `purchase_intent`
 - `market_need`
 
-These templates can remain metadata around the existing question-first flow, at least initially.
+Pairwise and ranked-choice behavior can be approximated today by submitting multiple questions under one bounty and ranking each option by settled rating and confidence. The redeployed contract anchors only `questionMetadataHash` and `resultSpecHash`; the template definitions and interpretation logic stay off-chain.
 
 ### 4. Webhooks and durable callbacks
 
@@ -230,9 +243,9 @@ The latter competes with agent runtimes and overpromises. The former makes Curyo
 
 - Remote MCP compatibility and docs.
 - OpenClaw config example.
-- Three templates: `yes_no_unsure`, `approve_revise_block`, `pairwise_choice`.
-- Structured result payload.
-- Feedback notes included in settled results.
+- Three initial rating-system templates: `generic_rating`, `go_no_go`, `ranked_option_member`.
+- Structured result payload with protocol state, objections, methodology, and limitations.
+- Public feedback notes included in settled results.
 - Signed webhook for settled questions.
 
 ### Phase 2: Business-agent workflows

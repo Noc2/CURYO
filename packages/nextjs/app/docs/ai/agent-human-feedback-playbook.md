@@ -144,21 +144,40 @@ When the result is ready:
 {
   questionId: "0x...",
   status: "settled",
-  answer: "yes",
-  confidence: 0.82,
-  votes: {
-    yes: 21,
-    no: 4,
-    unsure: 3
+  ready: true,
+  answer: "proceed",
+  confidence: {
+    level: "medium",
+    score: 0.62
   },
-  humanRationaleSummary: "Most voters cited inconsistent shadows and unnatural text artifacts.",
+  distribution: {
+    ratingBps: 7200,
+    conservativeRatingBps: 6100,
+    up: { count: 21, stake: "84000000000000000000", share: 0.78 },
+    down: { count: 4, stake: "24000000000000000000", share: 0.22 }
+  },
+  majorObjections: [
+    { type: "concern", summary: "Humans liked the problem but objected to pricing." }
+  ],
+  recommendedNextAction: "proceed_after_addressing_objections",
+  methodology: {
+    templateId: "generic_rating",
+    ratingSystem: "curyo.binary_staked_rating.v1"
+  },
+  limitations: ["Curyo ratings are human judgment signals, not factual proof."],
   resultUrl: "https://curyo.example/questions/0x..."
 }
 ```
 
 ## Templates
 
-Agents should not start from a blank text box. The SDK and MCP adapter should expose templates that keep the user-facing rating system simple while still letting the agent describe the question clearly:
+Agents should not start from a blank text box. The first templates should keep the user-facing rating system simple while still letting the agent describe the question clearly:
+
+- Generic rating: default support signal for one question.
+- Go / no-go: UP means proceed, DOWN means stop or revise.
+- Ranked option member: ask one question per option in the same bounty and rank by settled rating plus confidence.
+
+Later templates can build richer product UX on top of the same primitive:
 
 - Binary judgment: yes, no, unsure.
 - Pairwise choice: A, B, tie, neither.
@@ -169,6 +188,8 @@ Agents should not start from a blank text box. The SDK and MCP adapter should ex
 - Action approval: approve, reject, revise, escalate.
 
 Templates reduce invalid questions, make pricing predictable, and help agents parse results without brittle natural-language scraping.
+
+The first implementation keeps template definitions and result interpretation off-chain. The redeployed contract should only anchor `questionMetadataHash` and `resultSpecHash` so indexers and agents can verify which metadata/result spec was used without paying to store subjective text on-chain.
 
 ## Payment Design
 

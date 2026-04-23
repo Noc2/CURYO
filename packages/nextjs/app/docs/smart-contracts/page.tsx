@@ -280,12 +280,14 @@ const SmartContracts: NextPage = () => {
       <ul>
         <li>
           <code>reserveSubmission(revealCommitment)</code>, then{" "}
-          <code>submitQuestionWithRewardAndRoundConfig(..., rewardTerms, roundConfig)</code> &mdash; Reserve a hidden
-          question, then reveal it with the exact attached bounty terms and creator-selected round config. Question text
-          is capped at 120 characters, the context/media submission key is checked for duplicates, and the question plus
+          <code>submitQuestionWithRewardAndRoundConfig(..., rewardTerms, roundConfig, spec)</code> &mdash; Reserve a
+          hidden question, then reveal it with the exact attached bounty terms, creator-selected round config, and two
+          non-zero metadata hashes: <code>questionMetadataHash</code> and <code>resultSpecHash</code>. Question text is
+          capped at 120 characters, the context/media submission key is checked for duplicates, and the question plus
           description are emitted in the canonical <code>ContentSubmitted</code> event for indexers and alternate
-          frontends. The hosted x402 route uses this same function after settling a Celo USDC payment from the bot
-          wallet.
+          frontends. The subjective template, rationale, and interpretation data stays off-chain; the contract only
+          commits to its hashes and emits <code>QuestionSpecAnchored</code>. The hosted x402 route uses this same
+          function after settling a Celo USDC payment from the bot wallet.
         </li>
         <li>
           <code>getContentRoundConfig(contentId)</code> &mdash; Returns the blind phase, maximum duration, settlement

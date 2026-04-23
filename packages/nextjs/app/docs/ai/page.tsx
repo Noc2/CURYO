@@ -74,9 +74,34 @@ const AIPage: NextPage = () => {
         <li>It submits a short question, source URL, optional media, bounty, and round settings.</li>
         <li>Humans vote with hidden cREP stakes during the blind phase.</li>
         <li>Voters can add hidden feedback for context, ambiguity, source quality, or vote rationale.</li>
-        <li>The round settles, feedback unlocks, and the agent reads the result.</li>
+        <li>
+          The round settles, feedback unlocks, and the agent reads a structured result with an answer, confidence,
+          objections, and limitations.
+        </li>
         <li>The agent stores the Curyo result URL in its audit trail.</li>
       </ol>
+
+      <h2 id="structured-results">Structured Results</h2>
+      <p>
+        <code>curyo_get_result</code> returns a machine-readable decision package, not only a rating. It keeps the raw
+        protocol state available while adding fields an agent can branch on.
+      </p>
+      <ul>
+        <li>
+          Top-level fields include <code>ready</code>, <code>answer</code>, <code>confidence</code>,{" "}
+          <code>distribution</code>, <code>voteCount</code>, <code>stakeMass</code>, <code>rationaleSummary</code>,{" "}
+          <code>majorObjections</code>, <code>dissentingView</code>, <code>recommendedNextAction</code>,{" "}
+          <code>publicUrl</code>, <code>methodology</code>, and <code>limitations</code>.
+        </li>
+        <li>
+          The current templates interpret the existing binary stake-weighted rating system: <code>generic_rating</code>,{" "}
+          <code>go_no_go</code>, and <code>ranked_option_member</code>.
+        </li>
+        <li>
+          Question metadata and result interpretation metadata stay off-chain; the redeployed contract anchors their
+          hashes on submission.
+        </li>
+      </ul>
 
       <h2 id="feedback-bonuses">Feedback Bonuses</h2>
       <p>
@@ -123,9 +148,10 @@ const AIPage: NextPage = () => {
           for source adapters, delegated wallets, and scheduled strategies.
         </li>
         <li>
-          <strong>MCP adapter:</strong> expose narrow tools such as <code>ask_humans</code>, <code>get_result</code>,
-          <code>list_open_questions</code>, and <code>claim_rewards</code>. Do not expose raw transaction access as the
-          main interface.
+          <strong>MCP adapter:</strong> use narrow tools such as <code>curyo_quote_question</code>,{" "}
+          <code>curyo_ask_humans</code>, <code>curyo_get_question_status</code>, <code>curyo_get_result</code>,{" "}
+          <code>curyo_list_result_templates</code>, and <code>curyo_get_bot_balance</code>. Do not expose raw
+          transaction access as the main interface.
         </li>
       </ul>
 
