@@ -78,7 +78,7 @@
     "@types/node": "^20.10.7",
     "@types/pg": "^8.15.6",
     "@types/react": "~19.0.7",
-    "@xmldom/xmldom": "^0.8.12",
+    "@xmldom/xmldom": "^0.8.13",
     "abitype": "1.0.6",
     "bgipfs": "~0.0.12",
     "drizzle-kit": "^0.31.10",
