@@ -442,7 +442,7 @@ export async function getQuestionStatus(
     );
   }
 
-  const response = await requestJson<QuestionStatusResponse>(
+  const response = await requestJson<JsonRecord>(
     config,
     x402StatusUrl(config, params),
     {
@@ -452,7 +452,23 @@ export async function getQuestionStatus(
       method: "GET",
     },
   );
-  return decorateX402QuestionState(response, config) as QuestionStatusResponse;
+  const contentId =
+    typeof response.contentId === "string" ? response.contentId.trim() : "";
+  let latestRoundState: number | null = null;
+
+  if (contentId) {
+    try {
+      latestRoundState = await loadPublicRoundState(config, contentId);
+    } catch {
+      latestRoundState = null;
+    }
+  }
+
+  return decorateX402QuestionState(
+    response,
+    config,
+    latestRoundState,
+  ) as QuestionStatusResponse;
 }
 
 export async function getResult(
@@ -833,7 +849,11 @@ function formatPublicAgentResult(params: {
   };
 }
 
-function decorateX402QuestionState<T>(value: T, config: NormalizedAgentConfig): T {
+function decorateX402QuestionState<T>(
+  value: T,
+  config: NormalizedAgentConfig,
+  latestRoundState: number | null = null,
+): T {
   if (!isJsonRecord(value)) return value;
 
   const decorated: JsonRecord = { ...value };
@@ -843,19 +863,20 @@ function decorateX402QuestionState<T>(value: T, config: NormalizedAgentConfig): 
   if (publicUrl && typeof decorated.publicUrl !== "string") {
     decorated.publicUrl = publicUrl;
   }
+  if (typeof decorated.statusTool !== "string") {
+    decorated.statusTool = "curyo_get_question_status";
+  }
 
   return {
     ...decorated,
-    ...agentStatusHints(decorated),
+    ...agentStatusHints(decorated, latestRoundState),
   } as T;
 }
 
-function agentStatusHints(body: JsonRecord) {
+function agentStatusHints(body: JsonRecord, latestRoundState: number | null = null) {
   const status = typeof body.status === "string" ? body.status : "not_found";
-  const contentId = typeof body.contentId === "string" ? body.contentId : null;
-  const terminal =
-    status === "submitted" || status === "failed" || status === "not_found";
-  const ready = status === "submitted" && Boolean(contentId);
+  const ready = isTerminalRoundState(latestRoundState);
+  const terminal = ready || status === "failed" || status === "not_found";
 
   return {
     nextAction:
@@ -864,7 +885,7 @@ function agentStatusHints(body: JsonRecord) {
         : ready
           ? "call_curyo_get_result"
           : "poll_curyo_get_question_status",
-    pollAfterMs: terminal && !ready ? null : 5_000,
+    pollAfterMs: terminal ? null : 5_000,
     ready,
     resultTool: ready ? "curyo_get_result" : null,
     terminal,
@@ -1215,6 +1236,22 @@ function latestRoundFromContentDetails(response: CuryoContentDetailsResponse) {
     : null;
 }
 
+async function loadPublicRoundState(
+  config: NormalizedAgentConfig,
+  contentId: string,
+) {
+  const read = createCuryoReadClient({
+    apiBaseUrl: config.apiBaseUrl,
+    fetchImpl: config.fetchImpl,
+    timeoutMs: config.timeoutMs,
+  });
+  const contentResponse = await read.getContent(contentId);
+  return toNumberValue(
+    latestRoundFromContentDetails(contentResponse)?.state,
+    null,
+  );
+}
+
 function toNumberValue(value: unknown, fallback: number | null = null): number | null {
   if (typeof value === "number" && Number.isFinite(value)) return value;
   if (typeof value === "bigint") return Number(value);
@@ -1293,6 +1330,15 @@ function classifyPublicAnswer(params: {
     return "revise_and_resubmit";
   }
   return "do_not_proceed";
+}
+
+function isTerminalRoundState(roundState: number | null) {
+  return (
+    roundState === ROUND_STATE.Settled ||
+    roundState === ROUND_STATE.Cancelled ||
+    roundState === ROUND_STATE.Tied ||
+    roundState === ROUND_STATE.RevealFailed
+  );
 }
 
 function recommendedNextAction(
@@ -1637,8 +1683,7 @@ function inferResultReady(value: JsonRecord): boolean {
   if (isJsonRecord(value.result) && typeof value.result.ready === "boolean")
     return value.result.ready;
   if (value.result === null) return false;
-  if (typeof value.status === "string")
-    return value.status === "settled" || value.status === "submitted";
+  if (typeof value.answer === "string") return value.answer !== "pending";
   return false;
 }
 

@@ -1,6 +1,7 @@
 import { NextRequest } from "next/server";
 import assert from "node:assert/strict";
 import { after, before, beforeEach, test } from "node:test";
+import { ROUND_STATE } from "@curyo/contracts/protocol";
 
 const env = process.env as Record<string, string | undefined>;
 const originalAgents = env.CURYO_MCP_AGENTS;
@@ -508,4 +509,130 @@ test("failed submissions return a terminal pending result package without a retr
     code: "failed_submission",
     recoverWith: "inspect_status_error",
   });
+});
+
+test("submitted status stays non-terminal until the latest round reaches a final state", async () => {
+  const operationKey = `0x${"8".repeat(64)}`;
+  const now = new Date("2026-04-23T12:00:00.000Z");
+
+  await dbModule.dbClient.execute({
+    args: [
+      operationKey,
+      "route-agent",
+      "open-status",
+      "payload-hash",
+      42220,
+      "5",
+      "1000000",
+      "submitted",
+      "42",
+      null,
+      now,
+      now,
+    ],
+    sql: `
+      INSERT INTO mcp_agent_budget_reservations (
+        operation_key,
+        agent_id,
+        client_request_id,
+        payload_hash,
+        chain_id,
+        category_id,
+        payment_amount,
+        status,
+        content_id,
+        error,
+        created_at,
+        updated_at
+      )
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `,
+  });
+
+  await dbModule.dbClient.execute({
+    args: [
+      operationKey,
+      "open-status",
+      "payload-hash",
+      42220,
+      "0x0000000000000000000000000000000000000001",
+      "1000000",
+      "1000000",
+      "0",
+      1,
+      "submitted",
+      "42",
+      now,
+      now,
+    ],
+    sql: `
+      INSERT INTO x402_question_submissions (
+        operation_key,
+        client_request_id,
+        payload_hash,
+        chain_id,
+        payment_asset,
+        payment_amount,
+        bounty_amount,
+        service_fee_amount,
+        question_count,
+        status,
+        content_id,
+        created_at,
+        updated_at
+      )
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `,
+  });
+
+  mcpToolsModule.__setMcpToolTestOverridesForTests({
+    getContentById: async () =>
+      ({
+        audienceContext: null,
+        content: {
+          categoryId: "5",
+          id: "42",
+          openRound: null,
+          question: "Would this pitch make you want to learn more?",
+          rating: 50,
+          status: 0,
+          title: "Pitch interest",
+          totalVotes: 0,
+        },
+        ratings: [],
+        rounds: [
+          {
+            contentId: "42",
+            id: "round-1",
+            roundId: "1",
+            state: ROUND_STATE.Open,
+          },
+        ],
+      }) as never,
+  });
+
+  const { body } = await postJson(
+    {
+      id: 9,
+      jsonrpc: "2.0",
+      method: "tools/call",
+      params: {
+        arguments: {
+          chainId: 42220,
+          clientRequestId: "open-status",
+        },
+        name: "curyo_get_question_status",
+      },
+    },
+    { "mcp-protocol-version": "2025-11-25" },
+  );
+
+  const result = body.result as Record<string, unknown>;
+  const structured = result.structuredContent as Record<string, unknown>;
+  assert.equal(result.isError, false);
+  assert.equal(structured.ready, false);
+  assert.equal(structured.terminal, false);
+  assert.equal(structured.pollAfterMs, 5_000);
+  assert.equal(structured.resultTool, null);
+  assert.equal(structured.nextAction, "poll_curyo_get_question_status");
 });

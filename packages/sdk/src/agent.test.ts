@@ -225,8 +225,10 @@ test("askHumans defaults to the x402 question endpoint without wallet assumption
   assert.equal(response.status, "submitted");
   assert.equal(response.contentId, "42");
   assert.equal(response.publicUrl, "https://curyo.example/rate?content=42");
-  assert.equal(response.ready, true);
-  assert.equal(response.resultTool, "curyo_get_result");
+  assert.equal(response.ready, false);
+  assert.equal(response.resultTool, null);
+  assert.equal(response.statusTool, "curyo_get_question_status");
+  assert.equal(response.terminal, false);
 });
 
 test("askHumans prefers direct authenticated agent HTTP before MCP framing", async () => {
@@ -267,17 +269,47 @@ test("askHumans prefers direct authenticated agent HTTP before MCP framing", asy
   assert.equal(requestedBody.maxPaymentAmount, "1250000");
 });
 
-test("getQuestionStatus can use x402 operation and client request lookups", async () => {
+test("getQuestionStatus decorates x402 lookups with transport-independent readiness hints", async () => {
   const requestedUrls: string[] = [];
   const agent = createCuryoAgentClient({
     apiBaseUrl: API_BASE_URL,
     fetchImpl: async (input: URL | RequestInfo) => {
-      requestedUrls.push(String(input));
-      return jsonResponse({
-        contentId: "42",
-        operationKey: `0x${"33".repeat(32)}`,
-        status: "submitted",
-      });
+      const url = String(input);
+      requestedUrls.push(url);
+      if (url.includes("/api/x402/questions/0x")) {
+        return jsonResponse({
+          contentId: "42",
+          operationKey: `0x${"33".repeat(32)}`,
+          status: "submitted",
+        });
+      }
+      if (url.includes("/content/42")) {
+        return jsonResponse({
+          audienceContext: null,
+          content: {
+            categoryId: "5",
+            id: "42",
+            openRound: null,
+            question: "Would this pitch make you want to learn more?",
+            rating: 72,
+            ratingBps: 7200,
+            ratingSettledRounds: 1,
+            status: 1,
+            title: "Pitch interest",
+            totalVotes: 12,
+          },
+          ratings: [],
+          rounds: [
+            {
+              contentId: "42",
+              id: "round-1",
+              roundId: "1",
+              state: ROUND_STATE.Settled,
+            },
+          ],
+        });
+      }
+      return jsonResponse({ status: "submitting" });
     },
   });
 
@@ -292,12 +324,18 @@ test("getQuestionStatus can use x402 operation and client request lookups", asyn
   );
   assert.equal(
     requestedUrls[1],
+    "https://curyo.example/content/42",
+  );
+  assert.equal(
+    requestedUrls[2],
     "https://curyo.example/api/x402/questions/by-client-request?chainId=42220&clientRequestId=ask-3",
   );
   assert.equal(byOperation.publicUrl, "https://curyo.example/rate?content=42");
   assert.equal(byOperation.ready, true);
   assert.equal(byOperation.nextAction, "call_curyo_get_result");
   assert.equal(byOperation.resultTool, "curyo_get_result");
+  assert.equal(byOperation.statusTool, "curyo_get_question_status");
+  assert.equal(byOperation.terminal, true);
 });
 
 test("authenticated status, result, and templates use direct agent HTTP endpoints", async () => {

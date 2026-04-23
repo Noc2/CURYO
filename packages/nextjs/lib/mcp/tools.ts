@@ -1,4 +1,5 @@
 import { createHash } from "crypto";
+import { ROUND_STATE } from "@curyo/contracts/protocol";
 import {
   AGENT_CALLBACK_EVENT_TYPES,
   type AgentCallbackEventType,
@@ -349,16 +350,19 @@ function normalizeCallbackDeliveries(
   }));
 }
 
-function agentStatusHints(body: JsonObject) {
+function agentStatusHints(body: JsonObject, latestRoundState: number | null = null) {
   const status = typeof body.status === "string" ? body.status : "not_found";
-  const contentId = typeof body.contentId === "string" ? body.contentId : null;
-  const terminal = status === "submitted" || status === "failed" || status === "not_found";
-  const ready = status === "submitted" && !!contentId;
+  const ready =
+    latestRoundState === ROUND_STATE.Settled ||
+    latestRoundState === ROUND_STATE.Cancelled ||
+    latestRoundState === ROUND_STATE.Tied ||
+    latestRoundState === ROUND_STATE.RevealFailed;
+  const terminal = ready || status === "failed" || status === "not_found";
 
   return {
     nextAction:
       status === "failed" ? "manual_review" : ready ? "call_curyo_get_result" : "poll_curyo_get_question_status",
-    pollAfterMs: terminal && !ready ? null : 5_000,
+    pollAfterMs: terminal ? null : 5_000,
     ready,
     resultTool: ready ? "curyo_get_result" : null,
     terminal,
@@ -825,9 +829,15 @@ export async function callCuryoMcpTool(params: {
       const operationKey = await resolveManagedOperationKey(args, params.agent);
       const record = await lookupQuestionOperation(args, params.agent);
       let liveAskGuidance: ReturnType<typeof buildAgentLiveAskGuidance> = null;
+      let latestRoundState: number | null = null;
       if (record?.contentId) {
         try {
           const contentResponse = await dependencies.getContentById(record.contentId);
+          const rawLatestRoundState = latestRoundFromContentResponse(contentResponse)?.state;
+          latestRoundState =
+            typeof rawLatestRoundState === "number" && Number.isFinite(rawLatestRoundState)
+              ? rawLatestRoundState
+              : null;
           liveAskGuidance = buildAgentLiveAskGuidance({ content: contentResponse.content });
         } catch (error) {
           console.error("[mcp] live ask guidance unavailable", error);
@@ -841,7 +851,7 @@ export async function callCuryoMcpTool(params: {
       };
       return {
         ...body,
-        ...agentStatusHints(body),
+        ...agentStatusHints(body, latestRoundState),
       };
     }
 
