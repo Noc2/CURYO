@@ -229,7 +229,7 @@ test("buildAgentResultPackage keeps open rounds pending", () => {
   });
   assert.equal(result.recommendedNextAction, "wait_for_settlement");
   assert.equal(result.confidence.level, "none");
-  assert.ok(result.limitations.some(item => item.includes("not settled")));
+  assert.ok(result.limitations.some(item => item.includes("not final")));
 });
 
 test("buildAgentResultPackage prefers the latest round rating over stale content aggregates", () => {
@@ -265,4 +265,63 @@ test("buildAgentResultPackage prefers the latest round rating over stale content
   assert.equal(result.distribution.conservativeRatingBps, 3900);
   assert.equal(result.recommendedNextAction, "do_not_proceed");
   assert.match(result.rationaleSummary, /39\/100/);
+});
+
+test("buildAgentResultPackage treats tied rounds as ready inconclusive results", () => {
+  const result = buildAgentResultPackage({
+    audienceContext: null,
+    content: content({
+      rating: 50,
+      ratingBps: 5000,
+      ratingSettledRounds: 1,
+    }),
+    feedback: [],
+    latestRound: {
+      conservativeRatingBps: 5000,
+      downCount: 4,
+      downPool: "500",
+      ratingBps: 5000,
+      revealedCount: 8,
+      roundId: "3",
+      settledAt: "100",
+      state: ROUND_STATE.Tied,
+      totalStake: "1000",
+      upCount: 4,
+      upPool: "500",
+      upWins: false,
+      voteCount: 8,
+    },
+    publicUrl: "https://curyo.xyz/rate?content=123",
+  });
+
+  assert.equal(result.ready, true);
+  assert.equal(result.answer, "inconclusive");
+  assert.equal(result.recommendedNextAction, "collect_more_votes");
+  assert.ok(!result.limitations.some(item => item.includes("not final")));
+});
+
+test("buildAgentResultPackage treats reveal-failed rounds as ready failures", () => {
+  const result = buildAgentResultPackage({
+    audienceContext: null,
+    content: content({
+      ratingSettledRounds: 1,
+    }),
+    feedback: [],
+    latestRound: {
+      downCount: 0,
+      downPool: "0",
+      revealedCount: 1,
+      roundId: "4",
+      state: ROUND_STATE.RevealFailed,
+      totalStake: "300",
+      upCount: 1,
+      upPool: "300",
+      voteCount: 3,
+    },
+    publicUrl: "https://curyo.xyz/rate?content=123",
+  });
+
+  assert.equal(result.ready, true);
+  assert.equal(result.answer, "failed");
+  assert.equal(result.recommendedNextAction, "manual_review");
 });

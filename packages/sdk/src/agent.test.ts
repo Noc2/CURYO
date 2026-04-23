@@ -531,6 +531,68 @@ test("getResult keeps tokenless x402 asks in a pending state until a public cont
   );
 });
 
+test("getResult treats terminal non-settled tokenless rounds as ready results", async () => {
+  const agent = createCuryoAgentClient({
+    apiBaseUrl: API_BASE_URL,
+    fetchImpl: async (input: URL | RequestInfo) => {
+      const url = String(input);
+      if (url.includes("/content/42")) {
+        return jsonResponse({
+          audienceContext: null,
+          content: {
+            categoryId: "5",
+            id: "42",
+            question: "Would this pitch make you want to learn more?",
+            rating: 50,
+            ratingBps: 5000,
+            ratingSettledRounds: 1,
+            status: 1,
+            title: "Pitch interest",
+            totalVotes: 8,
+          },
+          ratings: [],
+          rounds: [
+            {
+              contentId: "42",
+              conservativeRatingBps: 5000,
+              downCount: 4,
+              downPool: "500",
+              id: "round-2",
+              ratingBps: 5000,
+              revealedCount: 8,
+              roundId: "2",
+              settledAt: "2026-04-23T12:00:00.000Z",
+              startTime: "2026-04-23T11:00:00.000Z",
+              state: ROUND_STATE.Tied,
+              totalStake: "1000",
+              upCount: 4,
+              upPool: "500",
+              voteCount: 8,
+            },
+          ],
+        });
+      }
+      if (url.includes("/api/feedback?contentId=42")) {
+        return jsonResponse({
+          count: 0,
+          items: [],
+          publicCount: 0,
+        });
+      }
+      throw new Error(`Unexpected request: ${url}`);
+    },
+  });
+
+  const result = await agent.getResult({
+    contentId: "42",
+  });
+
+  assert.equal(result.ready, true);
+  assert.equal(result.answer, "inconclusive");
+  assert.equal(result.recommendedNextAction, "collect_more_votes");
+  assert.ok(!result.limitations?.some(item => item.includes("not final")));
+});
+
 test("parseAgentResult unwraps MCP tool content and preserves top-level fields", () => {
   const parsed = parseAgentResult({
     content: [

@@ -227,6 +227,15 @@ function classifyAnswer(params: {
   return "do_not_proceed";
 }
 
+function isTerminalResultRoundState(roundState: number | null) {
+  return (
+    roundState === ROUND_STATE.Settled ||
+    roundState === ROUND_STATE.Cancelled ||
+    roundState === ROUND_STATE.Tied ||
+    roundState === ROUND_STATE.RevealFailed
+  );
+}
+
 function recommendedNextAction(
   answer: AgentDecisionAnswer,
   confidence: AgentResultPackage["confidence"]["level"],
@@ -298,7 +307,7 @@ export function buildAgentResultPackage(params: {
     feedbackTypes.length > 0
       ? `Public feedback includes ${feedbackTypes.join(", ")}.`
       : "No public voter feedback is available.";
-  const ready = roundState === ROUND_STATE.Settled;
+  const ready = isTerminalResultRoundState(roundState);
   const liveAskGuidance = buildAgentLiveAskGuidance({ content: params.content });
   const dissentingView =
     downShare !== null && downShare >= 0.15
@@ -309,7 +318,7 @@ export function buildAgentResultPackage(params: {
     "Confidence is derived from revealed participation, stake margin, and settled history.",
   ];
 
-  if (!ready) limitations.push("The latest round is not settled, so the result can change.");
+  if (!ready) limitations.push("The latest round is not final, so the result can change.");
   if (params.feedback.length === 0) limitations.push("No public feedback text is available for rationale extraction.");
   if (revealedCount < Math.max(Number(params.content.roundMinVoters ?? 3), 3)) {
     limitations.push("The revealed vote count is low.");

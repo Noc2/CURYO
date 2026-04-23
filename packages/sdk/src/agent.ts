@@ -731,7 +731,7 @@ function formatPublicAgentResult(params: {
   };
   const majorObjections = buildMajorObjections(params.feedback, downShare);
   const feedbackQuality = buildFeedbackQuality(params.feedback, majorObjections);
-  const ready = roundState === ROUND_STATE.Settled;
+  const ready = isTerminalRoundState(roundState);
   const stateLabel =
     roundState === null
       ? null
@@ -750,7 +750,7 @@ function formatPublicAgentResult(params: {
   ];
 
   if (!ready)
-    limitations.push("The latest round is not settled, so the result can change.");
+    limitations.push("The latest round is not final, so the result can change.");
   if (params.feedback.length === 0)
     limitations.push("No public feedback text is available for rationale extraction.");
   if (revealedCount < Math.max(toNumberValue(content.roundMinVoters, 3) ?? 3, 3)) {
