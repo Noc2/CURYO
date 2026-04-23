@@ -188,8 +188,7 @@ test("sweepAgentLifecycleCallbacks pages past the first batch without starving n
           if (!after) return true;
           return (
             candidate.sortAt.getTime() > after.sortAt.getTime() ||
-            (candidate.sortAt.getTime() === after.sortAt.getTime() &&
-              candidate.operationKey > after.operationKey)
+            (candidate.sortAt.getTime() === after.sortAt.getTime() && candidate.operationKey > after.operationKey)
           );
         })
         .slice(0, limit);

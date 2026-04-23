@@ -1,8 +1,8 @@
 import { NextRequest } from "next/server";
 import { buildUnavailableFreeTransactionSummary, isFreeTransactionStoreUnavailableError } from "./fallback";
-import { __setRateLimitStoreForTests } from "~~/utils/rateLimit";
 import assert from "node:assert/strict";
 import { after, test } from "node:test";
+import { __setRateLimitStoreForTests } from "~~/utils/rateLimit";
 
 const env = process.env as Record<string, string | undefined>;
 const originalNodeEnv = env.NODE_ENV;
@@ -86,7 +86,9 @@ test("free transaction session route rejects unsupported numeric chain ids", asy
 
   const route = await import("./route");
   const response = await route.GET(
-    new NextRequest("https://curyo.xyz/api/transactions/free/session?address=0xfa9605a2c38a0b4f16f689fdd07b63f295b86d1c&chainId=1"),
+    new NextRequest(
+      "https://curyo.xyz/api/transactions/free/session?address=0xfa9605a2c38a0b4f16f689fdd07b63f295b86d1c&chainId=1",
+    ),
   );
   const body = (await response.json()) as { error: string };
 

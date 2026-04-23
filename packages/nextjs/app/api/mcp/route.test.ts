@@ -1,7 +1,7 @@
 import { NextRequest } from "next/server";
+import { ROUND_STATE } from "@curyo/contracts/protocol";
 import assert from "node:assert/strict";
 import { after, before, beforeEach, test } from "node:test";
-import { ROUND_STATE } from "@curyo/contracts/protocol";
 
 const env = process.env as Record<string, string | undefined>;
 const originalAgents = env.CURYO_MCP_AGENTS;

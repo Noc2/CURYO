@@ -29,12 +29,12 @@ import {
 import { questionRoundConfigToAbi, serializeQuestionRoundConfig } from "~~/lib/questionRoundConfig";
 import { buildQuestionBundleSubmissionRevealCommitment } from "~~/lib/questionSubmissionCommitment";
 import {
-  assertSupportedX402BundleBounty,
   type X402QuestionOperation,
   type X402QuestionPayload,
   X402_CELO_USDC_BY_CHAIN_ID,
   X402_SUBMISSION_REWARD_ASSET_USDC,
   X402_USDC_DECIMALS,
+  assertSupportedX402BundleBounty,
   buildX402QuestionOperation,
 } from "~~/lib/x402/questionPayload";
 
@@ -448,7 +448,8 @@ function getQuestionSubmissionDependencies() {
       x402QuestionSubmissionTestOverrides?.executeX402QuestionSubmission ?? executeX402QuestionSubmission,
     preflightX402QuestionSubmission:
       x402QuestionSubmissionTestOverrides?.preflightX402QuestionSubmission ?? preflightX402QuestionSubmission,
-    resolveX402QuestionConfig: x402QuestionSubmissionTestOverrides?.resolveX402QuestionConfig ?? resolveX402QuestionConfig,
+    resolveX402QuestionConfig:
+      x402QuestionSubmissionTestOverrides?.resolveX402QuestionConfig ?? resolveX402QuestionConfig,
   };
 }
 

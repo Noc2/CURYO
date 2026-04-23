@@ -114,11 +114,7 @@ test("buildAgentLiveAskGuidance flags asks below the conservative starting bount
 
   assert.deepEqual(guidance, {
     lowResponseRisk: "high",
-    reasonCodes: [
-      "quorum_not_reached",
-      "bounty_below_conservative_start",
-      "bounty_below_healthy_target",
-    ],
+    reasonCodes: ["quorum_not_reached", "bounty_below_conservative_start", "bounty_below_healthy_target"],
     recommendedAction: "top_up",
     suggestedTopUpAtomic: "1000000",
   });

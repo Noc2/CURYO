@@ -31,7 +31,13 @@ function toOptionalUnixSeconds(value: unknown): number | null {
 export function buildAgentLiveAskGuidance(params: {
   content: Pick<
     PonderContentItem,
-    "bundle" | "openRound" | "rewardPoolSummary" | "roundEpochDuration" | "roundMaxDuration" | "roundMaxVoters" | "roundMinVoters"
+    | "bundle"
+    | "openRound"
+    | "rewardPoolSummary"
+    | "roundEpochDuration"
+    | "roundMaxDuration"
+    | "roundMaxVoters"
+    | "roundMinVoters"
   >;
   nowSeconds?: number;
 }): AgentLiveAskGuidance | null {

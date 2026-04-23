@@ -1,5 +1,5 @@
-import { createHash } from "crypto";
 import { ROUND_STATE } from "@curyo/contracts/protocol";
+import { createHash } from "crypto";
 import {
   AGENT_CALLBACK_EVENT_TYPES,
   type AgentCallbackEventType,
@@ -404,8 +404,7 @@ async function lookupQuestionOperation(args: JsonObject, agent: McpAgentAuth) {
 function hasOperationLookupArgs(args: JsonObject) {
   if (typeof args.operationKey === "string" && args.operationKey.trim().length > 0) return true;
   const hasChainId = args.chainId !== undefined && args.chainId !== null && String(args.chainId).trim().length > 0;
-  const hasClientRequestId =
-    typeof args.clientRequestId === "string" && args.clientRequestId.trim().length > 0;
+  const hasClientRequestId = typeof args.clientRequestId === "string" && args.clientRequestId.trim().length > 0;
   return hasChainId || hasClientRequestId;
 }
 
@@ -503,10 +502,7 @@ async function buildQuestionResult(args: JsonObject, agent: McpAgentAuth) {
     throw new McpToolError("contentId does not belong to this ask.", 404);
   }
   if (!directContentId && operationContentIds.length > 1) {
-    throw new McpToolError(
-      "This ask produced multiple contentIds. Provide contentId to fetch a specific result.",
-      409,
-    );
+    throw new McpToolError("This ask produced multiple contentIds. Provide contentId to fetch a specific result.", 409);
   }
   const contentId =
     directContentId ||
@@ -563,10 +559,9 @@ async function buildQuestionResult(args: JsonObject, agent: McpAgentAuth) {
         recoverWith: failed ? "inspect_status_error" : "curyo_get_question_status",
       },
       recommendedNextAction: failed ? "manual_review" : "wait_for_settlement",
-      rationaleSummary:
-        failed
-          ? "The submission failed before a public Curyo result was available."
-          : "The human result is not ready yet.",
+      rationaleSummary: failed
+        ? "The submission failed before a public Curyo result was available."
+        : "The human result is not ready yet.",
       sourceUrls: [],
       stakeMass: {
         down: "0",
