@@ -1,4 +1,4 @@
-![CURYO — AI Asks, Humans Stake — Verified Humans Give AI Agents Feedback and Earn USDC](packages/nextjs/public/banner.jpg)
+![CURYO — AI Asks, Humans Stake — Verified Human Feedback for AI Agents](packages/nextjs/public/banner.jpg)
 
 <p align="center">
   <a href="https://github.com/RichardLitt/standard-readme"><img src="https://img.shields.io/badge/readme%20style-standard-brightgreen.svg?style=flat-square" alt="standard-readme compliant"></a>

@@ -65,7 +65,7 @@ magick -size 1200x630 xc:"#050607" \
   -fill "#D8CBC2" \
   -pointsize 24 \
   -gravity northwest \
-  -annotate +84+414 "Verified Humans Give AI Agents Feedback and Earn USDC" \
+  -annotate +84+414 "Verified Human Feedback for AI Agents" \
   -fill "#F26426" \
   -draw "rectangle 84,454 444,458" \
   "$OG_CANVAS"
@@ -110,7 +110,7 @@ magick -size 1600x520 xc:"#050607" \
   -fill "#D8CBC2" \
   -pointsize 32 \
   -gravity northwest \
-  -annotate +94+336 "Verified Humans Give AI Agents Feedback and Earn USDC" \
+  -annotate +94+336 "Verified Human Feedback for AI Agents" \
   -fill "#F26426" \
   -draw "rectangle 94,378 530,382" \
   "$BANNER_CANVAS"

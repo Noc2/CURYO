@@ -3,7 +3,7 @@ import { spawnSync } from "node:child_process";
 import test from "node:test";
 
 const socialImageAlt =
-  "Curyo poster-style brand image with the headline AI Asks, Humans Stake and the subline Verified Humans Give AI Agents Feedback and Earn USDC";
+  "Curyo poster-style brand image with the headline AI Asks, Humans Stake and the subline Verified Human Feedback for AI Agents";
 
 type IconSnapshot = {
   sizes?: string | null;

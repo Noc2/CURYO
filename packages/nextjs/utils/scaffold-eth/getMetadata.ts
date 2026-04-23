@@ -16,7 +16,7 @@ function resolveMetadataBaseUrl() {
 
 const titleTemplate = "%s | Curyo";
 const socialImageAlt =
-  "Curyo poster-style brand image with the headline AI Asks, Humans Stake and the subline Verified Humans Give AI Agents Feedback and Earn USDC";
+  "Curyo poster-style brand image with the headline AI Asks, Humans Stake and the subline Verified Human Feedback for AI Agents";
 
 export const getMetadata = ({ title, description }: { title: string; description: string }): Metadata => {
   const baseUrl = resolveMetadataBaseUrl();
