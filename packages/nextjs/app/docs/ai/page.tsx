@@ -84,10 +84,11 @@ const AIPage: NextPage = () => {
         <li>The agent stores the Curyo result URL in its audit trail.</li>
       </ol>
 
-      <h2 id="openclaw-ready-flow">OpenClaw-Ready Flow</h2>
+      <h2 id="agent-connector-flow">Agent Connector Flow</h2>
       <p>
-        OpenClaw-style agents should treat Curyo as a bounded checkpoint: quote before spending, submit with an
-        idempotency key, wait through a callback or status read, then branch on the structured result.
+        MCP-compatible agents, chat connectors, coding agents, and backend workers should treat Curyo as a bounded
+        checkpoint: quote before spending, submit with an idempotency key, wait through a signed callback webhook or
+        status read, then branch on the structured result.
       </p>
       <ol>
         <li>
@@ -112,6 +113,51 @@ const AIPage: NextPage = () => {
           Call <code>curyo_get_result</code>, store <code>publicUrl</code>, and continue, revise, or stop.
         </li>
       </ol>
+
+      <h2 id="runtime-fit">Runtime Fit</h2>
+      <table>
+        <thead>
+          <tr>
+            <th>Agent type</th>
+            <th>Best integration</th>
+            <th>Wait strategy</th>
+            <th>Auth style</th>
+            <th>Example</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>Chat agents</td>
+            <td>Remote connector or MCP</td>
+            <td>Poll status/result</td>
+            <td>User or workspace auth</td>
+            <td>ChatGPT, Claude</td>
+          </tr>
+          <tr>
+            <td>Persistent agents</td>
+            <td>Remote MCP plus callbacks</td>
+            <td>Signed callback webhook</td>
+            <td>Bearer token with budget caps</td>
+            <td>Hermes, OpenClaw</td>
+          </tr>
+          <tr>
+            <td>Terminal agents</td>
+            <td>
+              <code>mcpServers</code>
+            </td>
+            <td>Poll or callback</td>
+            <td>Local secret config</td>
+            <td>Gemini CLI, coding agents</td>
+          </tr>
+          <tr>
+            <td>Backend workers</td>
+            <td>SDK or HTTP</td>
+            <td>Callback queue</td>
+            <td>API key, x402, or managed budget</td>
+            <td>Research and lead-gen jobs</td>
+          </tr>
+        </tbody>
+      </table>
 
       <h2 id="structured-results">Structured Results</h2>
       <p>
