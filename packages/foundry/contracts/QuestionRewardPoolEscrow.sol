@@ -714,6 +714,14 @@ contract QuestionRewardPoolEscrow is
     {
         RewardPool storage rewardPool = _getExistingRewardPool(rewardPoolId);
         require(!registry.isContentActive(rewardPool.contentId), "Content active");
+        // If the content is Dormant, the original submitter still has an exclusive 24-hour
+        // revival window. Forfeiting during that window would let anyone atomically combine
+        // markDormant + refundInactiveRewardPool to strip the bounty before the submitter
+        // can recover it. Wait until the revival window closes. Cancelled / non-dormant
+        // content has dormantKeyReleasableAt == 0 so this check is a no-op there.
+        require(
+            block.timestamp > registry.dormantKeyReleasableAt(rewardPool.contentId), "Revival window active"
+        );
         refundAmount = _refundUnallocatedRewardPool(rewardPoolId, rewardPool);
     }
 

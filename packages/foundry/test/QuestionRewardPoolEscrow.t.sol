@@ -530,6 +530,11 @@ contract QuestionRewardPoolEscrowTest is VotingTestBase {
         registry.markDormant(contentId);
         assertFalse(registry.isContentActive(contentId));
 
+        // Submitter has a 24h exclusive revival window after markDormant; the inactive-pool
+        // refund is gated on it. Forfeit attempts during the window revert early, so warp
+        // past it to reach the "pending qualifying round" check this test is asserting.
+        vm.warp(block.timestamp + 2 days);
+
         vm.expectRevert("Bounty has qualifying round");
         rewardPoolEscrow.refundInactiveRewardPool(rewardPoolId);
 
