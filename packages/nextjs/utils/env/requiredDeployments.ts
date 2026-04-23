@@ -1,10 +1,6 @@
 export type DeploymentDefinitions = Record<number, Record<string, unknown> | undefined>;
 
-export const REQUIRED_TARGET_CONTRACTS = [
-  "ContentRegistry",
-  "CuryoReputation",
-  "ProtocolConfig",
-] as const;
+export const REQUIRED_TARGET_CONTRACTS = ["ContentRegistry", "CuryoReputation", "ProtocolConfig"] as const;
 
 export function listMissingRequiredTargetContracts(
   chainIds: readonly number[],
