@@ -1,8 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import { useAccount, useConfig, useWriteContract } from "wagmi";
-import { waitForTransactionReceipt } from "wagmi/actions";
 import { useTermsAcceptance } from "~~/contexts/TermsAcceptanceContext";
 import { type ClaimableRewardItem, sortClaimableRewardItems } from "~~/hooks/claimableRewards";
 import { useScaffoldWriteContract } from "~~/hooks/scaffold-eth";
@@ -13,12 +11,7 @@ import {
   getClaimPreflightErrorMessage,
   isClaimGasShortageError,
 } from "~~/lib/claimTransactionFeedback";
-import {
-  QUESTION_REWARD_POOL_ESCROW_ABI,
-  getConfiguredQuestionRewardPoolEscrowAddress,
-} from "~~/lib/questionRewardPools";
 import { isWalletRpcOverloadedError } from "~~/lib/transactionErrors";
-import { notification } from "~~/utils/scaffold-eth";
 
 /**
  * Hook for claiming all outstanding rewards in sequence.
@@ -40,9 +33,6 @@ function getClaimableRewardLabel(item: ClaimableRewardItem) {
 }
 
 export function useClaimAll() {
-  const { chain } = useAccount();
-  const wagmiConfig = useConfig();
-  const { writeContractAsync: writeDirectContractAsync } = useWriteContract();
   const [isClaiming, setIsClaiming] = useState(false);
   const [progress, setProgress] = useState({ current: 0, total: 0 });
   const { requireAcceptance } = useTermsAcceptance();
@@ -72,6 +62,9 @@ export function useClaimAll() {
 
   const { writeContractAsync: writeFrontendRegistry } = useScaffoldWriteContract({
     contractName: "FrontendRegistry",
+  } as any);
+  const { writeContractAsync: writeQuestionRewardPoolEscrow } = useScaffoldWriteContract({
+    contractName: "QuestionRewardPoolEscrow",
   } as any);
 
   const claimAll = async (items: ClaimableRewardItem[], onComplete?: () => void) => {
@@ -159,21 +152,13 @@ export function useClaimAll() {
               { getErrorMessage: getTransactionErrorMessage },
             );
           } else if (item.claimType === "question_reward") {
-            const escrowAddress = getConfiguredQuestionRewardPoolEscrowAddress(
-              chain?.id ?? wagmiConfig.chains[0]?.id ?? 0,
+            await (writeQuestionRewardPoolEscrow as any)(
+              {
+                functionName: "claimQuestionReward",
+                args: [item.rewardPoolId, item.roundId],
+              },
+              { getErrorMessage: getTransactionErrorMessage },
             );
-            if (!escrowAddress) {
-              notification.error("Bounties are not deployed on this network yet.");
-              continue;
-            }
-
-            const hash = await writeDirectContractAsync({
-              address: escrowAddress,
-              abi: QUESTION_REWARD_POOL_ESCROW_ABI,
-              functionName: "claimQuestionReward",
-              args: [item.rewardPoolId, item.roundId],
-            });
-            await waitForTransactionReceipt(wagmiConfig, { hash });
           } else {
             await (writeDistributor as any)(
               {
