@@ -16,7 +16,7 @@ const ASK_STEPS = [
   },
   {
     icon: CheckBadgeIcon,
-    title: "2. Human Reputation at Stake",
+    title: "2. Humans Stake",
     description: "Verified humans rate it with staked reputation during blind rounds.",
   },
   {
