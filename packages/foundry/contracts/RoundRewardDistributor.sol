@@ -570,18 +570,19 @@ contract RoundRewardDistributor is Initializable, AccessControlUpgradeable, Reen
         view
         returns (RoundLib.Commit memory commit)
     {
+        // Use the narrow getter that skips `ciphertext` / `targetRound` / `drandChainHash`.
+        // The full public `commits()` accessor copies the ~2 KB `bytes ciphertext` field
+        // per call, which blows out memory expansion when iterating many commits during
+        // dust finalization at bounds-limit maxVoters.
         (
             commit.voter,
             commit.stakeAmount,
-            commit.ciphertext,
-            commit.targetRound,
-            commit.drandChainHash,
             commit.frontend,
             commit.revealableAfter,
             commit.revealed,
             commit.isUp,
             commit.epochIndex
-        ) = votingEngine.commits(contentId, roundId, commitKey);
+        ) = votingEngine.commitCore(contentId, roundId, commitKey);
     }
 
     function _quoteFrontendFee(uint256 contentId, uint256 roundId, address frontend)

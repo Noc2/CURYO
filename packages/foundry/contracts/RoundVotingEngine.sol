@@ -238,6 +238,28 @@ contract RoundVotingEngine is
     // COMMIT PHASE
     // =========================================================================
 
+    /// @notice Narrow view of a commit that omits `ciphertext`, `targetRound`, and
+    ///         `drandChainHash`. Used by off-chain iterators and by the reward distributor's
+    ///         dust-finalization paths, which read many commits in a single call and would
+    ///         otherwise pay ~2 KB of memory expansion per commit for the full public getter.
+    /// @dev Returned fields mirror RoundLib.Commit but skip the blob data.
+    function commitCore(uint256 contentId, uint256 roundId, bytes32 commitKey)
+        external
+        view
+        returns (
+            address voter,
+            uint64 stakeAmount,
+            address frontend,
+            uint48 revealableAfter,
+            bool revealed,
+            bool isUp,
+            uint8 epochIndex
+        )
+    {
+        RoundLib.Commit storage c = commits[contentId][roundId][commitKey];
+        return (c.voter, c.stakeAmount, c.frontend, c.revealableAfter, c.revealed, c.isUp, c.epochIndex);
+    }
+
     /// @notice Commit a blind vote on content. Direction is hidden via tlock encryption.
     /// @param contentId The content being voted on.
     /// @param roundReferenceRatingBps Canonical round score the voter is judging against.
