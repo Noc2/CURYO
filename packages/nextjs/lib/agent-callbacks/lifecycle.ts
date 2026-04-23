@@ -13,12 +13,15 @@ type ManagedLifecycleCandidate = {
   clientRequestId: string;
   contentId: string;
   operationKey: `0x${string}`;
+  sortAt: Date;
 };
+
+type ManagedLifecycleCursor = Pick<ManagedLifecycleCandidate, "operationKey" | "sortAt">;
 
 type AgentLifecycleDependencies = {
   enqueueAgentCallbackEvent: typeof enqueueAgentCallbackEvent;
   getContentById: typeof ponderApi.getContentById;
-  listCandidates: (limit: number) => Promise<ManagedLifecycleCandidate[]>;
+  listCandidates: (params: { after?: ManagedLifecycleCursor | null; limit: number }) => Promise<ManagedLifecycleCandidate[]>;
   listContentFeedback: typeof listContentFeedback;
 };
 
@@ -86,21 +89,35 @@ function lifecycleEventsForContent(params: {
   return events;
 }
 
-async function listManagedLifecycleCandidates(limit: number) {
+async function listManagedLifecycleCandidates(params: { after?: ManagedLifecycleCursor | null; limit: number }) {
+  const sortExpression = "COALESCE(submissions.submitted_at, submissions.updated_at, reservations.updated_at)";
   const result = await dbClient.execute({
-    args: [limit],
+    args: [
+      params.after?.sortAt ?? null,
+      params.after?.sortAt ?? null,
+      params.after?.sortAt ?? null,
+      params.after?.operationKey ?? null,
+      params.limit,
+    ],
     sql: `
       SELECT
         reservations.agent_id,
         reservations.chain_id,
         reservations.client_request_id,
         submissions.content_id,
-        reservations.operation_key
+        reservations.operation_key,
+        ${sortExpression} AS sort_at
       FROM mcp_agent_budget_reservations AS reservations
       INNER JOIN x402_question_submissions AS submissions
         ON submissions.operation_key = reservations.operation_key
-      WHERE submissions.status = 'submitted' AND submissions.content_id IS NOT NULL
-      ORDER BY COALESCE(submissions.submitted_at, submissions.updated_at, reservations.updated_at) ASC, reservations.operation_key ASC
+      WHERE submissions.status = 'submitted'
+        AND submissions.content_id IS NOT NULL
+        AND (
+          ? IS NULL
+          OR ${sortExpression} > ?
+          OR (${sortExpression} = ? AND reservations.operation_key > ?)
+        )
+      ORDER BY sort_at ASC, reservations.operation_key ASC
       LIMIT ?
     `,
   });
@@ -111,15 +128,15 @@ async function listManagedLifecycleCandidates(limit: number) {
     clientRequestId: String(row.client_request_id),
     contentId: String(row.content_id),
     operationKey: String(row.operation_key) as `0x${string}`,
+    sortAt: row.sort_at instanceof Date ? row.sort_at : new Date(String(row.sort_at)),
   }));
 }
 
 export async function sweepAgentLifecycleCallbacks(params: { limit?: number; now?: Date } = {}) {
-  const limit = Math.max(1, Math.min(params.limit ?? 25, 100));
+  const pageSize = Math.max(1, Math.min(params.limit ?? 25, 100));
   const now = params.now ?? new Date();
   const nowSeconds = Math.floor(now.getTime() / 1000);
   const dependencies = getLifecycleDependencies();
-  const candidates = await dependencies.listCandidates(limit);
   const emitted = {
     bountyLowResponse: 0,
     feedbackUnlocked: 0,
@@ -127,79 +144,106 @@ export async function sweepAgentLifecycleCallbacks(params: { limit?: number; now
     questionSettled: 0,
     questionSettling: 0,
   };
+  let scanned = 0;
+  let cursor: ManagedLifecycleCursor | null = null;
 
-  for (const candidate of candidates) {
-    const response = await dependencies.getContentById(candidate.contentId);
-    const feedbackContext = buildContentFeedbackRoundContext(
-      Array.isArray(response.rounds) ? response.rounds : [],
-      response.content.openRound?.roundId ?? null,
-    );
-    const feedback = await dependencies.listContentFeedback({
-      contentId: candidate.contentId,
-      context: feedbackContext,
+  while (true) {
+    const candidates = await dependencies.listCandidates({
+      after: cursor,
+      limit: pageSize,
     });
-    const liveAskGuidance = buildAgentLiveAskGuidance({
-      content: response.content,
-      nowSeconds,
-    });
+    if (candidates.length === 0) break;
 
-    for (const eventType of lifecycleEventsForContent({
-      feedbackPublicCount: feedback.items.length,
-      nowSeconds,
-      response,
-    })) {
-      await dependencies.enqueueAgentCallbackEvent({
-        agentId: candidate.agentId,
-        eventId: callbackEventId(candidate.operationKey, eventType),
-        eventType,
-        payload: buildAgentCallbackPayload({
-          body: {
-            contentId: candidate.contentId,
-            status:
-              eventType === "question.open"
-                ? "open"
-                : eventType === "question.settling"
-                  ? "settling"
-                  : eventType === "question.settled"
-                    ? "settled"
-                    : "feedback_unlocked",
-          },
-          chainId: candidate.chainId,
-          clientRequestId: candidate.clientRequestId,
+    for (const candidate of candidates) {
+      const response = await dependencies.getContentById(candidate.contentId);
+      const feedbackContext = buildContentFeedbackRoundContext(
+        Array.isArray(response.rounds) ? response.rounds : [],
+        response.content.openRound?.roundId ?? null,
+      );
+      const feedback = await dependencies.listContentFeedback({
+        contentId: candidate.contentId,
+        context: feedbackContext,
+      });
+      const liveAskGuidance = buildAgentLiveAskGuidance({
+        content: response.content,
+        nowSeconds,
+      });
+
+      for (const eventType of lifecycleEventsForContent({
+        feedbackPublicCount: feedback.items.length,
+        nowSeconds,
+        response,
+      })) {
+        await dependencies.enqueueAgentCallbackEvent({
+          agentId: candidate.agentId,
+          eventId: callbackEventId(candidate.operationKey, eventType),
           eventType,
-          operationKey: candidate.operationKey,
-        }),
-      });
+          payload: buildAgentCallbackPayload({
+            body: {
+              contentId: candidate.contentId,
+              status:
+                eventType === "question.open"
+                  ? "open"
+                  : eventType === "question.settling"
+                    ? "settling"
+                    : eventType === "question.settled"
+                      ? "settled"
+                      : "feedback_unlocked",
+            },
+            chainId: candidate.chainId,
+            clientRequestId: candidate.clientRequestId,
+            eventType,
+            operationKey: candidate.operationKey,
+          }),
+        });
 
-      if (eventType === "question.open") emitted.questionOpen += 1;
-      if (eventType === "question.settling") emitted.questionSettling += 1;
-      if (eventType === "question.settled") emitted.questionSettled += 1;
-      if (eventType === "feedback.unlocked") emitted.feedbackUnlocked += 1;
-    }
+        if (eventType === "question.open") emitted.questionOpen += 1;
+        if (eventType === "question.settling") emitted.questionSettling += 1;
+        if (eventType === "question.settled") emitted.questionSettled += 1;
+        if (eventType === "feedback.unlocked") emitted.feedbackUnlocked += 1;
+      }
 
-    if (liveAskGuidance && liveAskGuidance.lowResponseRisk === "high" && liveAskGuidance.recommendedAction !== "wait") {
-      await dependencies.enqueueAgentCallbackEvent({
-        agentId: candidate.agentId,
-        eventId: callbackEventId(candidate.operationKey, "bounty.low_response"),
-        eventType: "bounty.low_response",
-        payload: buildAgentCallbackPayload({
-          body: {
-            contentId: candidate.contentId,
-            liveAskGuidance,
-            status: "low_response",
-          },
-          chainId: candidate.chainId,
-          clientRequestId: candidate.clientRequestId,
+      if (liveAskGuidance && liveAskGuidance.lowResponseRisk === "high" && liveAskGuidance.recommendedAction !== "wait") {
+        await dependencies.enqueueAgentCallbackEvent({
+          agentId: candidate.agentId,
+          eventId: callbackEventId(candidate.operationKey, "bounty.low_response"),
           eventType: "bounty.low_response",
-          operationKey: candidate.operationKey,
-        }),
-      });
-      emitted.bountyLowResponse += 1;
+          payload: buildAgentCallbackPayload({
+            body: {
+              contentId: candidate.contentId,
+              liveAskGuidance,
+              status: "low_response",
+            },
+            chainId: candidate.chainId,
+            clientRequestId: candidate.clientRequestId,
+            eventType: "bounty.low_response",
+            operationKey: candidate.operationKey,
+          }),
+        });
+        emitted.bountyLowResponse += 1;
+      }
+
+      scanned += 1;
     }
+
+    const lastCandidate = candidates.at(-1);
+    if (!lastCandidate) break;
+    if (
+      cursor &&
+      lastCandidate.operationKey === cursor.operationKey &&
+      lastCandidate.sortAt.getTime() === cursor.sortAt.getTime()
+    ) {
+      break;
+    }
+    cursor = {
+      operationKey: lastCandidate.operationKey,
+      sortAt: lastCandidate.sortAt,
+    };
+    if (candidates.length < pageSize) break;
   }
 
   return {
     emitted,
-    scanned: candidates.length,
+    scanned,
   };
 }
