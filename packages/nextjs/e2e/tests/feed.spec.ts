@@ -35,13 +35,11 @@ test.describe("Content feed", () => {
     await expect(filterPill).toBeVisible({ timeout: 10_000 });
   });
 
-  test("clicking an image preview opens the context link externally", async ({
-    connectedPage: page,
-  }) => {
+  test("clicking an image preview opens the context link externally", async ({ connectedPage: page }) => {
     await gotoWithRetry(page, "/rate?q=workspace", { ensureWalletConnected: true, timeout: 45_000 });
     await waitForFeedLoaded(page, 30_000);
 
-    await expect(page.getByRole("heading", { name: /workspace feel ready/i }).first()).toBeVisible({
+    await expect(page.getByRole("heading", { name: /agent trust this workspace photo/i }).first()).toBeVisible({
       timeout: 10_000,
     });
 
@@ -60,7 +58,7 @@ test.describe("Content feed", () => {
     await gotoWithRetry(page, "/rate?q=short%20video", { ensureWalletConnected: true, timeout: 45_000 });
     await waitForFeedLoaded(page, 30_000);
 
-    await expect(page.getByRole("heading", { name: /short video clear enough/i }).first()).toBeVisible({
+    await expect(page.getByRole("heading", { name: /agent share this short video/i }).first()).toBeVisible({
       timeout: 10_000,
     });
 

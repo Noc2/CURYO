@@ -75,6 +75,7 @@ KEYS=(
   "0x92db14e403b83dfe3df233f83dfa3a0d7096f21ca9b0d6d6b8d88b2b4ec1564e"  # Account 6 (reused)
   "0x4bbbf85ce3377467afe5d46f804f221813b2bb87f24d81f60f1fcdbf7cbf4356"  # Account 7 (reused)
   "0xdbda1821b80551c9d65939329250298aa3472ba22feea921c0cf5d620ea67b97"  # Account 8 (reused)
+  "0x2a871d0798f97d79848a013d4936a73bf4cc922c825d33c1cf7073dff6d409c6"  # Account 9 (reused)
 )
 
 # Example Curyo 2 questions always include a context URL. Preview media is optional.
@@ -98,6 +99,7 @@ CONTEXT_URLS=(
   "https://www.w3.org/WAI/standards-guidelines/wcag/"
   "https://example.com/curyo-moderation-rules"
   "https://picsum.photos/seed/curyo-product-photo/1200/800.jpg"
+  "https://www.qualtrics.com/articles/strategy-research/synthetic-data-market-research/"
 )
 
 IMAGE_URLS=(
@@ -117,6 +119,7 @@ IMAGE_URLS=(
   "[]"
   "[]"
   '["https://picsum.photos/seed/curyo-product-photo/1200/800.jpg","https://picsum.photos/seed/curyo-product-photo-detail/1200/800.jpg"]'
+  "[]"
 )
 
 SUBMISSION_BOUNTY_AMOUNTS=(
@@ -136,6 +139,7 @@ SUBMISSION_BOUNTY_AMOUNTS=(
   "3500000"
   "5500000"
   "9000000"
+  "15000000"
 )
 
 FEEDBACK_BONUS_CONTENT_IDS=(1 4 7 11)
@@ -166,84 +170,89 @@ VIDEO_URLS=(
   ""
   ""
   ""
+  ""
 )
 
 TITLES=(
-  "Is this refund policy easy to understand?"
-  "Does this workspace feel ready for deep work?"
-  "Is this API quickstart beginner friendly?"
-  "Is this product label readable on mobile?"
-  "Would this cafe review help locals choose?"
-  "Does this hotel room look clean and comfortable?"
-  "Is this short video clear enough to share?"
-  "Should this app onboarding copy be shorter?"
-  "Does this poster make the event easy to grasp?"
-  "Is this dinner plan practical for a weeknight?"
-  "Does this image set work as a hero gallery?"
-  "Does this animated clip hold attention?"
-  "Does this street scene feel welcoming?"
-  "Is this accessibility checklist launch ready?"
-  "Does this moderation rule set clear voter expectations?"
-  "Is this product photo useful enough to compare?"
+  "Should this support agent approve the refund?"
+  "Can an agent trust this workspace photo?"
+  "Does this source answer the agent's API question?"
+  "Would an agent overrate this product label on mobile?"
+  "Would this review help a travel agent recommend the cafe?"
+  "Does this hotel photo look trustworthy enough to book?"
+  "Should an agent share this short video?"
+  "Does this onboarding explain managed budgets clearly?"
+  "Would founders understand this launch poster at a glance?"
+  "Is this answer actually useful for a busy household?"
+  "Does this image set make the landing page feel credible?"
+  "Does this demo clip make the product feel real?"
+  "Does this street view help an agent judge the neighborhood?"
+  "Is this accessibility checklist ready for an AI coding agent?"
+  "Should this moderation policy block agent-submitted spam?"
+  "Does this product photo make the offer feel trustworthy?"
+  "Do these synthetic insights need human validation?"
 )
 
 DESCRIPTIONS=(
-  "Voters should judge whether the plain-language summary explains refunds, timelines, and exceptions clearly enough for a first-time buyer."
-  "Rate the image and context as a calm workspace for focused technical writing, not as a luxury interior shot."
-  "Judge whether a new developer could complete the first request without missing setup, authentication, or error handling steps."
-  "Focus on whether the label hierarchy, contrast, and key details would still be clear in a small shopping card."
-  "The review mentions noise, service speed, seating, and price. Vote on whether it is specific enough to guide a nearby visitor."
-  "Use the visible room condition and the written context to judge whether the listing earns a higher community rating."
-  "Judge whether the clip has enough context, pacing, and visual clarity for a viewer to understand it without extra explanation."
-  "The flow explains wallet connection, Voter ID, and staking in one screen. Judge whether the copy reduces friction or overloads new users."
-  "Voters should judge hierarchy, contrast, and whether date, place, and purpose are legible at a glance."
-  "Rate whether the plan balances prep time, nutrition, cleanup, and ingredient availability for a busy household."
-  "Judge whether the image set has enough focus, contrast, variety, and mobile-safe composition to support a hero gallery."
-  "Vote on whether the movement, pacing, and visual focus make the clip engaging enough for a general audience."
-  "Use the image as travel context. Vote on whether it would make a neighborhood guide feel inviting and credible."
-  "Review the checklist for keyboard support, focus states, text contrast, reduced motion, and mobile overflow coverage."
-  "Judge whether the rule tells voters when to downvote illegal, unsafe, misleading, or mismatched submissions."
-  "Focus on scale, detail, lighting, and whether the photo helps a buyer compare the item without extra marketing claims."
+  "Use the policy summary to judge whether an automated support agent should approve the request without escalation."
+  "Judge whether the image gives enough visual evidence for an agent to rate a remote-work listing as calm and credible."
+  "Judge whether a new agent or developer could use this guide to make a first request without missing setup, auth, or error handling."
+  "Focus on whether hierarchy, contrast, and key details stay readable enough for a shopping agent to recommend the item on mobile."
+  "Judge whether the evidence about noise, service, seating, and price is specific enough for a local recommendation agent."
+  "Use the visible room condition and context to judge whether a booking agent should treat this listing as clean, credible, and comfortable."
+  "Judge whether the clip has enough context, pacing, and clarity for an agent to include it in a digest or recommendation."
+  "The flow should help agents and operators understand wallet setup, spend caps, and when to ask humans instead of guessing."
+  "Judge whether the headline, date, and purpose are clear enough for rapid launch-page or event validation."
+  "Treat the plan like an AI-generated recommendation and judge whether it balances prep time, nutrition, cleanup, and ingredient availability."
+  "Judge whether the gallery gives a product agent enough focus, contrast, and variety to support a trustworthy launch page."
+  "Vote on whether the motion, pacing, and focal points make the launch clip feel believable rather than synthetic filler."
+  "Use the image as local context and judge whether it makes a neighborhood guide feel welcoming, safe, and credible."
+  "Judge whether the checklist is concrete enough for an agent to ship keyboard support, focus states, contrast, reduced motion, and mobile overflow safely."
+  "Judge whether the rule gives clear guidance for unsafe, misleading, mismatched, or synthetic spammy submissions."
+  "Focus on scale, detail, lighting, and whether the photo gives a shopping or research agent enough signal to compare the offer."
+  "Use the research context to judge whether an AI-generated takeaway should be validated with verified humans before a product decision."
 )
 
 TAGS=(
-  "Policy,Clarity,Trust"
-  "Photography,Usefulness,Atmosphere"
-  "Getting Started,Readability,Examples"
-  "Design,Usability,Quality"
-  "Local Tips,Service,Value"
-  "Hotels,Cleanliness,Comfort"
-  "Video,Clarity,Context"
-  "Onboarding,Trust,Usability"
-  "Visual Design,Typography,Layout"
-  "Usefulness,Clear,Worthwhile"
-  "Images,Gallery,Photography"
-  "Video,Animation,Engagement"
-  "Location,Photography,Solo Travel"
-  "Accessibility,Quality,Testing"
-  "Moderation,Policy,Risk"
-  "Quality,Design,Value"
+  "Agent Review,Policy,Trust"
+  "Workspace,Authenticity,Trust"
+  "Evidence Quality,API,Docs"
+  "Products,Mobile,Clarity"
+  "Local Context,Travel Agent,Usefulness"
+  "Booking,Travel,Trust"
+  "Agent Share,Video,Clarity"
+  "Onboarding,Agents,Budgets"
+  "Message Test,Launch,Design"
+  "AI Answer,Usefulness,Household"
+  "Landing Page,Credibility,Images"
+  "Demo Video,Authenticity,Launch"
+  "Neighborhood,Local Context,Trust"
+  "Accessibility,Coding Agent,Quality"
+  "Moderation,Agents,Policy"
+  "Products,Trust,Research"
+  "Synthetic Research,Validation,AI Agents"
 )
 
 # Stable category slugs for each seeded question. The deployed category names/ids may differ
 # between local branches, so resolve IDs from slugs instead of assuming deploy order.
 CATEGORY_SLUGS=(
   "trust"           # Trust
-  "design"          # Design
-  "text"            # Text
+  "trust"           # Trust
+  "ai-answers"      # AI Answers
   "products"        # Products
   "places-travel"   # Places & Travel
   "places-travel"   # Places & Travel
   "media"           # Media
   "software"        # Software
   "design"          # Design
-  "general"         # General
-  "media"           # Media
+  "ai-answers"      # AI Answers
+  "design"          # Design
   "media"           # Media
   "places-travel"   # Places & Travel
   "software"        # Software
   "trust"           # Trust
   "products"        # Products
+  "ai-answers"      # AI Answers
 )
 
 resolve_category_id() {
@@ -260,7 +269,7 @@ for CATEGORY_SLUG in "${CATEGORY_SLUGS[@]}"; do
   CATEGORY_IDS+=("$(resolve_category_id "$CATEGORY_SLUG")")
 done
 
-echo "=== Seeding example image, multi-image, and video questions ==="
+echo "=== Seeding example AI agent and research questions ==="
 echo "(Test accounts were pre-funded with cREP during deployment; seeded Bounties use varied cREP amounts)"
 echo ""
 

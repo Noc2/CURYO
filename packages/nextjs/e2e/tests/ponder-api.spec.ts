@@ -1,7 +1,7 @@
 import { ANVIL_ACCOUNTS } from "../helpers/anvil-accounts";
 import "../helpers/fetch-shim";
-import { PONDER_URL } from "../helpers/ponder-url";
 import { getContentById, getContentList, getStats, ponderGet } from "../helpers/ponder-api";
+import { PONDER_URL } from "../helpers/ponder-url";
 import { expect, test } from "@playwright/test";
 
 /**
@@ -54,13 +54,13 @@ test.describe("Ponder API endpoints", () => {
   test("GET /content search returns relevance-ranked matches", async () => {
     const data = await getContentList({
       status: "all",
-      search: "radioactivity research",
+      search: "synthetic insights",
       sortBy: "relevance",
       limit: 5,
     });
 
     expect(data.items.length).toBeGreaterThan(0);
-    expect(data.items[0]?.title).toContain("Marie Curie");
+    expect(data.items[0]?.title).toContain("synthetic insights");
     expect(data).toHaveProperty("hasMore");
   });
 
