@@ -72,7 +72,7 @@ interface PublicProfileViewProps {
 }
 
 const NAME_REGEX = /^[a-zA-Z0-9_]{3,20}$/;
-const DEFAULT_AVATAR_ACCENT_HEX = "#f26426";
+const DEFAULT_AVATAR_ACCENT_HEX = "#d56a3e";
 
 function truncateAddress(address: string) {
   return `${address.slice(0, 6)}...${address.slice(-4)}`;
@@ -469,13 +469,13 @@ export function PublicProfileView({ address, embedded = false }: PublicProfileVi
   const handleSaveAvatarAccent = useCallback(async () => {
     const normalizedAccentHex = normalizeAvatarAccentHex(avatarAccentInput);
     if (!normalizedAccentHex) {
-      setAccentError("Use a valid 6-digit hex color like #f26426.");
+      setAccentError(`Use a valid 6-digit hex color like ${DEFAULT_AVATAR_ACCENT_HEX}.`);
       return;
     }
 
     const rgbValue = avatarAccentHexToRgb(normalizedAccentHex);
     if (rgbValue === null) {
-      setAccentError("Use a valid 6-digit hex color like #f26426.");
+      setAccentError(`Use a valid 6-digit hex color like ${DEFAULT_AVATAR_ACCENT_HEX}.`);
       return;
     }
 
@@ -1162,7 +1162,7 @@ export function PublicProfileView({ address, embedded = false }: PublicProfileVi
                 <input
                   type="text"
                   aria-label="Avatar accent hex"
-                  placeholder="#f26426"
+                  placeholder={DEFAULT_AVATAR_ACCENT_HEX}
                   className={`input input-bordered w-full bg-base-100 ${avatarAccentInputError ? "input-error" : ""}`}
                   value={avatarAccentInput}
                   onChange={event => {
@@ -1175,7 +1175,7 @@ export function PublicProfileView({ address, embedded = false }: PublicProfileVi
 
               <div className="mt-3 min-h-6 text-sm">
                 {avatarAccentInputError ? (
-                  <p className="text-error">Use a valid 6-digit hex color like #f26426.</p>
+                  <p className="text-error">Use a valid 6-digit hex color like {DEFAULT_AVATAR_ACCENT_HEX}.</p>
                 ) : accentError ? (
                   <p className="text-error">{accentError}</p>
                 ) : null}

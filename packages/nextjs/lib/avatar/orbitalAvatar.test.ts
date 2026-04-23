@@ -87,7 +87,7 @@ test("same avatar accent keeps address-based composition differences", () => {
   const modelA = buildOrbitalAvatarModel(
     buildPayload({
       address: "0x0000000000000000000000000000000000111111",
-      avatarAccentHex: "#f26426",
+      avatarAccentHex: "#d56a3e",
     }),
     {
       nowSeconds: NOW_SECONDS,
@@ -96,7 +96,7 @@ test("same avatar accent keeps address-based composition differences", () => {
   const modelB = buildOrbitalAvatarModel(
     buildPayload({
       address: "0x0000000000000000000000000000000000222222",
-      avatarAccentHex: "#f26426",
+      avatarAccentHex: "#d56a3e",
     }),
     {
       nowSeconds: NOW_SECONDS,

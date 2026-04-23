@@ -24,12 +24,12 @@
 }
 
 .primary {
-  box-shadow: 0 14px 28px rgb(242 100 38 / 0.18);
+  box-shadow: 0 14px 28px rgb(var(--curyo-ember-rgb) / 0.18);
 }
 
 .secondary {
   color: var(--color-base-content);
-  background: rgb(23 22 26 / 0.98);
+  background: rgb(var(--curyo-surface-elevated-rgb) / 0.98);
   box-shadow:
     inset 0 1px 0 rgb(245 240 235 / 0.03),
     0 14px 28px rgb(9 10 12 / 0.2);
