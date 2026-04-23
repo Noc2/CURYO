@@ -480,10 +480,26 @@ async function buildQuestionResult(args: JsonObject, agent: McpAgentAuth) {
   const dependencies = getMcpToolDependencies();
   const directContentId = typeof args.contentId === "string" ? args.contentId.trim() : "";
   const record = directContentId ? null : await lookupQuestionOperation(args, agent);
-  const contentId = directContentId || record?.contentId;
+  const operation = normalizeMcpQuestionBody(x402QuestionSubmissionRecordBody(record));
+  const operationContentIds =
+    operation && typeof operation === "object" && Array.isArray((operation as JsonObject).contentIds)
+      ? ((operation as JsonObject).contentIds as unknown[]).filter(
+          (contentId): contentId is string => typeof contentId === "string" && contentId.length > 0,
+        )
+      : [];
+  if (!directContentId && operationContentIds.length > 1) {
+    throw new McpToolError(
+      "This ask produced multiple contentIds. Provide contentId to fetch a specific result.",
+      409,
+    );
+  }
+  const contentId =
+    directContentId ||
+    (operation && typeof operation === "object" && typeof (operation as JsonObject).contentId === "string"
+      ? ((operation as JsonObject).contentId as string)
+      : null);
 
   if (!contentId) {
-    const operation = normalizeMcpQuestionBody(x402QuestionSubmissionRecordBody(record));
     const status = operation && typeof operation === "object" ? String((operation as JsonObject).status ?? "") : "";
     const failed = status === "failed";
     return {
@@ -892,6 +908,10 @@ function classifyToolError(error: unknown): {
       return { code: "insufficient_budget", recoverWith: "reduce_bounty_or_raise_agent_budget", retryable: false };
     }
     return { code: "failed_submission", recoverWith: "inspect_budget_reservation", retryable: false };
+  }
+
+  if (error instanceof McpToolError && message.includes("not allowed to ask in category")) {
+    return { code: "category_disallowed", recoverWith: "choose_allowed_category_or_update_agent", retryable: false };
   }
 
   if (error instanceof X402QuestionConflictError) {
