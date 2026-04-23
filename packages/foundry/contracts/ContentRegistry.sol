@@ -950,7 +950,7 @@ contract ContentRegistry is Initializable, AccessControlUpgradeable, PausableUpg
 
     /// @notice Mark content as dormant if it hasn't reached milestone 0 within DORMANCY_PERIOD.
     /// @dev Anyone can call this. The mandatory submission bounty is not refunded.
-    function markDormant(uint256 contentId) external nonReentrant {
+    function markDormant(uint256 contentId) external nonReentrant whenNotPaused {
         Content storage c = contents[contentId];
         require(c.id != 0, "Content does not exist");
         require(c.status == ContentStatus.Active, "Not active");
@@ -1004,7 +1004,7 @@ contract ContentRegistry is Initializable, AccessControlUpgradeable, PausableUpg
     }
 
     /// @notice Release a dormant content key after the exclusive revival window expires.
-    function releaseDormantSubmissionKey(uint256 contentId) external nonReentrant {
+    function releaseDormantSubmissionKey(uint256 contentId) external nonReentrant whenNotPaused {
         Content storage c = contents[contentId];
         require(c.id != 0, "Content does not exist");
         require(c.status == ContentStatus.Dormant, "Not dormant");
