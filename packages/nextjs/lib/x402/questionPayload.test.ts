@@ -67,6 +67,69 @@ test("parseX402QuestionRequest accepts ordered question bundles", () => {
   assert.equal(payload.roundConfig.maxVoters, 50n);
 });
 
+test("parseX402QuestionRequest preserves selected agent templates in hashes", () => {
+  const generic = parseX402QuestionRequest(VALID_REQUEST);
+  const goNoGo = parseX402QuestionRequest({
+    ...VALID_REQUEST,
+    templateId: "go_no_go",
+    templateInputs: {
+      action: "send_outreach",
+    },
+  });
+
+  assert.equal(goNoGo.questions[0].templateId, "go_no_go");
+  assert.equal(goNoGo.questions[0].templateVersion, 1);
+  assert.deepEqual(goNoGo.questions[0].templateInputs, { action: "send_outreach" });
+  assert.notEqual(goNoGo.questions[0].questionMetadataHash, generic.questions[0].questionMetadataHash);
+  assert.notEqual(goNoGo.questions[0].resultSpecHash, generic.questions[0].resultSpecHash);
+});
+
+test("parseX402QuestionRequest supports per-question template overrides in bundles", () => {
+  const payload = parseX402QuestionRequest({
+    ...VALID_REQUEST,
+    question: undefined,
+    templateId: "generic_rating",
+    questions: [
+      {
+        ...VALID_REQUEST.question,
+        templateId: "go_no_go",
+      },
+      {
+        ...VALID_REQUEST.question,
+        contextUrl: "https://example.com/second",
+        imageUrls: [],
+        tags: ["Market", "Research"],
+        templateId: "ranked_option_member",
+        title: "Would you pay for this?",
+      },
+    ],
+  });
+
+  assert.equal(payload.questions[0].templateId, "go_no_go");
+  assert.equal(payload.questions[1].templateId, "ranked_option_member");
+});
+
+test("parseX402QuestionRequest rejects unknown or unsupported template versions", () => {
+  assert.throws(
+    () =>
+      parseX402QuestionRequest({
+        ...VALID_REQUEST,
+        templateId: "mystery_template",
+      }),
+    /templateId is not supported/,
+  );
+
+  assert.throws(
+    () =>
+      parseX402QuestionRequest({
+        ...VALID_REQUEST,
+        templateId: "go_no_go",
+        templateVersion: 2,
+      }),
+    /templateVersion 2 is not supported/,
+  );
+});
+
 test("parseX402QuestionRequest accepts explicit governed round config", () => {
   const payload = parseX402QuestionRequest({
     ...VALID_REQUEST,

@@ -86,7 +86,7 @@ export const AGENT_RESULT_TEMPLATES: AgentResultTemplate[] = TEMPLATE_DEFINITION
   ...template,
   ratingSystem: "curyo.binary_staked_rating.v1",
   recommendedUse: [...template.recommendedUse],
-  resultSpecHash: hashCanonicalJson(buildDefaultResultSpec(template.id)),
+  resultSpecHash: hashCanonicalJson(buildDefaultResultSpec(template.id, TEMPLATE_VERSION, template.voteSemantics)),
   version: TEMPLATE_VERSION,
 }));
 
@@ -97,6 +97,10 @@ const templateByResultSpecHash = new Map(
 
 export function listAgentResultTemplates(): AgentResultTemplate[] {
   return AGENT_RESULT_TEMPLATES;
+}
+
+export function findAgentResultTemplate(templateId: string | null | undefined): AgentResultTemplate | null {
+  return templateById.get(templateId ?? "") ?? null;
 }
 
 export function getAgentResultTemplate(templateId: string | null | undefined): AgentResultTemplate {

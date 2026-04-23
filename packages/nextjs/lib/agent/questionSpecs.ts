@@ -23,10 +23,15 @@ export type AgentQuestionSpecInput = {
     studyId?: string;
   } | null;
   tags: readonly string[];
+  templateInputs?: JsonValue;
   templateId?: string;
   templateVersion?: number;
   title: string;
   videoUrl: string;
+  voteSemantics?: {
+    down: string;
+    up: string;
+  };
 };
 
 function stableJson(value: JsonValue): string {
@@ -66,6 +71,7 @@ export function buildQuestionMetadata(input: AgentQuestionSpecInput): JsonValue 
     schemaVersion: "curyo.question.v1",
     study: input.study ?? null,
     tags: [...input.tags],
+    templateInputs: input.templateInputs ?? null,
     templateId: input.templateId ?? DEFAULT_AGENT_TEMPLATE_ID,
     templateVersion: input.templateVersion ?? DEFAULT_AGENT_TEMPLATE_VERSION,
     title: input.title,
@@ -73,7 +79,14 @@ export function buildQuestionMetadata(input: AgentQuestionSpecInput): JsonValue 
   };
 }
 
-export function buildDefaultResultSpec(templateId = DEFAULT_AGENT_TEMPLATE_ID): JsonValue {
+export function buildDefaultResultSpec(
+  templateId = DEFAULT_AGENT_TEMPLATE_ID,
+  templateVersion = DEFAULT_AGENT_TEMPLATE_VERSION,
+  voteSemantics: AgentQuestionSpecInput["voteSemantics"] = {
+    down: "negative signal for the submitted question",
+    up: "positive signal for the submitted question",
+  },
+): JsonValue {
   return {
     confidenceInputs: [
       "revealedCount",
@@ -86,17 +99,14 @@ export function buildDefaultResultSpec(templateId = DEFAULT_AGENT_TEMPLATE_ID): 
     ratingSystem: "curyo.binary_staked_rating.v1",
     schemaVersion: "curyo.result_spec.v1",
     templateId,
-    templateVersion: DEFAULT_AGENT_TEMPLATE_VERSION,
-    voteSemantics: {
-      down: "negative signal for the submitted question",
-      up: "positive signal for the submitted question",
-    },
+    templateVersion,
+    voteSemantics,
   };
 }
 
 export function buildQuestionSpecHashes(input: AgentQuestionSpecInput) {
   const questionMetadata = buildQuestionMetadata(input);
-  const resultSpec = buildDefaultResultSpec(input.templateId);
+  const resultSpec = buildDefaultResultSpec(input.templateId, input.templateVersion, input.voteSemantics);
 
   return {
     questionMetadata,

@@ -1,6 +1,12 @@
 import { createHash } from "crypto";
 import { buildQuestionSpecHashes } from "~~/lib/agent/questionSpecs";
 import {
+  type AgentQuestionSpecInput,
+  DEFAULT_AGENT_TEMPLATE_ID,
+  DEFAULT_AGENT_TEMPLATE_VERSION,
+} from "~~/lib/agent/questionSpecs";
+import { findAgentResultTemplate } from "~~/lib/agent/templates";
+import {
   getContentDescriptionValidationError,
   getContentTitleValidationError,
 } from "~~/lib/moderation/submissionValidation";
@@ -59,6 +65,9 @@ export type X402QuestionItemPayload = {
   tags: string;
   tagList: string[];
   categoryId: bigint;
+  templateId: string;
+  templateInputs: AgentQuestionSpecInput["templateInputs"];
+  templateVersion: number;
   questionMetadataHash: `0x${string}`;
   resultSpecHash: `0x${string}`;
 };
@@ -188,6 +197,60 @@ function normalizeTags(value: unknown): { tags: string; tagList: string[] } {
   };
 }
 
+function normalizeTemplateInputs(value: unknown, fieldName: string): AgentQuestionSpecInput["templateInputs"] {
+  if (value === undefined || value === null) return null;
+  if (!isObject(value)) {
+    throw new X402QuestionInputError(`${fieldName} must be an object when provided.`);
+  }
+
+  try {
+    return JSON.parse(JSON.stringify(value)) as AgentQuestionSpecInput["templateInputs"];
+  } catch {
+    throw new X402QuestionInputError(`${fieldName} must be JSON serializable.`);
+  }
+}
+
+function normalizeTemplateSelection(
+  value: Record<string, unknown>,
+  fieldPrefix: string,
+  defaults: {
+    templateId?: string;
+    templateInputs?: AgentQuestionSpecInput["templateInputs"];
+    templateVersion?: number;
+  },
+) {
+  const rawTemplateId = readOptionalString(value.templateId) || defaults.templateId || DEFAULT_AGENT_TEMPLATE_ID;
+  const template = findAgentResultTemplate(rawTemplateId);
+  if (!template) {
+    throw new X402QuestionInputError(`${fieldPrefix}.templateId is not supported.`);
+  }
+
+  const templateVersion =
+    value.templateVersion === undefined || value.templateVersion === null
+      ? (defaults.templateVersion ?? template.version)
+      : Number.parseInt(String(value.templateVersion), 10);
+  if (!Number.isSafeInteger(templateVersion) || templateVersion <= 0) {
+    throw new X402QuestionInputError(`${fieldPrefix}.templateVersion must be a positive integer.`);
+  }
+  if (templateVersion !== template.version) {
+    throw new X402QuestionInputError(
+      `${fieldPrefix}.templateVersion ${templateVersion} is not supported for ${template.id}.`,
+    );
+  }
+
+  const templateInputs =
+    value.templateInputs === undefined
+      ? (defaults.templateInputs ?? null)
+      : normalizeTemplateInputs(value.templateInputs, `${fieldPrefix}.templateInputs`);
+
+  return {
+    template,
+    templateId: template.id,
+    templateInputs,
+    templateVersion,
+  };
+}
+
 function normalizeChainId(value: unknown, fallbackChainId?: number): number {
   const rawValue = value ?? fallbackChainId;
   const chainId = typeof rawValue === "number" ? rawValue : Number.parseInt(String(rawValue ?? ""), 10);
@@ -283,9 +346,19 @@ function normalizeRoundConfig(value: unknown): QuestionRoundConfig {
   return { epochDuration, maxDuration, minVoters, maxVoters };
 }
 
-type NormalizedQuestionInput = Omit<X402QuestionItemPayload, "questionMetadataHash" | "resultSpecHash">;
+type NormalizedQuestionInput = Omit<X402QuestionItemPayload, "questionMetadataHash" | "resultSpecHash"> & {
+  template: NonNullable<ReturnType<typeof findAgentResultTemplate>>;
+};
 
-function normalizeQuestion(value: unknown, index: number): NormalizedQuestionInput {
+function normalizeQuestion(
+  value: unknown,
+  index: number,
+  defaults: {
+    templateId?: string;
+    templateInputs?: AgentQuestionSpecInput["templateInputs"];
+    templateVersion?: number;
+  },
+): NormalizedQuestionInput {
   if (!isObject(value)) {
     throw new X402QuestionInputError(`questions[${index}] must be an object.`);
   }
@@ -318,16 +391,21 @@ function normalizeQuestion(value: unknown, index: number): NormalizedQuestionInp
 
   const { tags, tagList } = normalizeTags(value.tags);
   const categoryId = parseNonNegativeInteger(value.categoryId, `${fieldPrefix}.categoryId`);
+  const templateSelection = normalizeTemplateSelection(value, fieldPrefix, defaults);
 
   return {
+    categoryId,
     contextUrl,
-    imageUrls,
-    videoUrl,
-    title,
     description,
+    imageUrls,
     tags,
     tagList,
-    categoryId,
+    template: templateSelection.template,
+    templateId: templateSelection.templateId,
+    templateInputs: templateSelection.templateInputs,
+    templateVersion: templateSelection.templateVersion,
+    title,
+    videoUrl,
   };
 }
 
@@ -356,8 +434,18 @@ export function parseX402QuestionRequest(value: unknown, fallbackChainId?: numbe
   const firstQuestion = isObject(rawQuestions[0]) ? rawQuestions[0] : {};
   const roundConfig = normalizeRoundConfig(value.roundConfig ?? firstQuestion.roundConfig);
   const bounty = normalizeBounty(value.bounty);
+  const topLevelTemplateInputs = normalizeTemplateInputs(value.templateInputs, "templateInputs");
+  const topLevelTemplateVersion =
+    value.templateVersion === undefined || value.templateVersion === null
+      ? DEFAULT_AGENT_TEMPLATE_VERSION
+      : Number.parseInt(String(value.templateVersion), 10);
+  const templateDefaults = {
+    templateId: readOptionalString(value.templateId) || DEFAULT_AGENT_TEMPLATE_ID,
+    templateInputs: topLevelTemplateInputs,
+    templateVersion: topLevelTemplateVersion,
+  };
   const questions = rawQuestions.map((question, index) => {
-    const normalizedQuestion = normalizeQuestion(question, index);
+    const normalizedQuestion = normalizeQuestion(question, index, templateDefaults);
     const spec = buildQuestionSpecHashes({
       bounty: {
         amount: bounty.amount,
@@ -374,14 +462,28 @@ export function parseX402QuestionRequest(value: unknown, fallbackChainId?: numbe
         bundleIndex: index,
       },
       tags: normalizedQuestion.tagList,
+      templateId: normalizedQuestion.templateId,
+      templateInputs: normalizedQuestion.templateInputs,
+      templateVersion: normalizedQuestion.templateVersion,
       title: normalizedQuestion.title,
       videoUrl: normalizedQuestion.videoUrl,
+      voteSemantics: normalizedQuestion.template.voteSemantics,
     });
 
     return {
-      ...normalizedQuestion,
+      categoryId: normalizedQuestion.categoryId,
+      contextUrl: normalizedQuestion.contextUrl,
+      description: normalizedQuestion.description,
+      imageUrls: normalizedQuestion.imageUrls,
       questionMetadataHash: spec.questionMetadataHash,
       resultSpecHash: spec.resultSpecHash,
+      tags: normalizedQuestion.tags,
+      tagList: normalizedQuestion.tagList,
+      templateId: normalizedQuestion.templateId,
+      templateInputs: normalizedQuestion.templateInputs,
+      templateVersion: normalizedQuestion.templateVersion,
+      title: normalizedQuestion.title,
+      videoUrl: normalizedQuestion.videoUrl,
     };
   });
 
@@ -414,6 +516,9 @@ export function toCanonicalQuestionPayload(payload: X402QuestionPayload) {
       questionMetadataHash: question.questionMetadataHash,
       resultSpecHash: question.resultSpecHash,
       tags: question.tagList,
+      templateId: question.templateId,
+      templateInputs: question.templateInputs,
+      templateVersion: question.templateVersion,
       title: question.title,
       videoUrl: question.videoUrl,
     })),
