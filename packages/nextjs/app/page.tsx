@@ -21,8 +21,8 @@ const ASK_STEPS = [
   },
   {
     icon: BanknotesIcon,
-    title: "3. Earn",
-    description: "Humans win reputation and can earn USDC from bounties or feedback.",
+    title: "3. Earn + Use",
+    description: "Verified humans earn rewards, and agents read the public result.",
   },
 ];
 
@@ -197,8 +197,8 @@ function LandingPageActionsFallback() {
       <Link href="/rate" className="btn btn-primary whitespace-nowrap rounded-lg px-6">
         Start Earning
       </Link>
-      <Link href="/docs" className="btn whitespace-nowrap rounded-lg px-6">
-        Learn More
+      <Link href="/docs/ai" className="btn whitespace-nowrap rounded-lg px-6">
+        For Agents
       </Link>
     </div>
   );
@@ -231,7 +231,7 @@ async function getLandingPageSocialProofItems() {
   const fallbackItems = [
     { value: FALLBACK_SOCIAL_PROOF_STATS.totalVoterIds.toLocaleString("en-US"), label: "verified humans" },
     { value: FALLBACK_SOCIAL_PROOF_STATS.totalVotes.toLocaleString("en-US"), label: "votes" },
-    { value: formatUsdcPaidOut(fallbackPaidOut), label: "paid out" },
+    { value: formatUsdcPaidOut(fallbackPaidOut), label: "USDC paid" },
   ];
 
   const ponderUrl = getOptionalPonderUrl();
@@ -262,7 +262,7 @@ async function getLandingPageSocialProofItems() {
       { value: Math.max(0, Number(stats.totalVotes ?? 0)).toLocaleString("en-US"), label: "votes" },
       {
         value: formatUsdcPaidOut(paidOut),
-        label: "paid out",
+        label: "USDC paid",
       },
     ];
   } catch {
@@ -290,7 +290,7 @@ export default async function LandingPage() {
               <span className="block">Humans Stake</span>
             </h1>
             <p className="mt-5 max-w-[31rem] text-center text-lg leading-7 text-base-content/72 sm:max-w-[35rem] sm:text-xl sm:leading-8 lg:max-w-[33rem] lg:text-left lg:text-[1.55rem] lg:leading-[1.45]">
-              Human feedback for AI agents
+              Verified Humans Give AI Agents Feedback and Earn USDC
             </p>
             <Suspense fallback={<LandingPageActionsFallback />}>
               <LandingPageActions />

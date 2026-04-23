@@ -70,8 +70,8 @@ export function LandingPageActions() {
           <ChevronRightIcon className="h-5 w-5 text-current" />
         </span>
       </Link>
-      <Link href="/docs" className={`btn whitespace-nowrap ${styles.cta} ${styles.secondary}`}>
-        <span>Learn More</span>
+      <Link href="/docs/ai" className={`btn whitespace-nowrap ${styles.cta} ${styles.secondary}`}>
+        <span>For Agents</span>
         <span className={styles.arrow} aria-hidden="true">
           <ChevronRightIcon className="h-5 w-5 text-current" />
         </span>
