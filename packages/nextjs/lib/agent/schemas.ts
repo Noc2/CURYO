@@ -152,6 +152,15 @@ export const agentAskHumansInputSchema = {
       description: "Optional HTTPS callback URL for lifecycle events.",
       type: "string",
     },
+    webhookEvents: {
+      description: "Optional lifecycle event names to deliver to webhookUrl.",
+      items: { type: "string" },
+      type: "array",
+    },
+    webhookSecret: {
+      description: "Shared HMAC secret used to sign callback deliveries.",
+      type: "string",
+    },
   },
   required: ["clientRequestId", "bounty", "maxPaymentAmount"],
   type: "object",

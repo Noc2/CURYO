@@ -44,14 +44,14 @@ test("upsertAgentCallbackSubscription registers and updates a callback", async (
   const second = await registry.upsertAgentCallbackSubscription({
     agentId: "agent-a",
     callbackUrl: "https://agent.example/callback",
-    eventTypes: ["question.resolved"],
+    eventTypes: ["question.settled"],
     now: new Date("2026-04-23T12:05:00.000Z"),
     secret: "secret-b",
   });
 
   assert.equal(second?.id, "sub-a");
   assert.equal(second?.secret, "secret-b");
-  assert.deepEqual(second?.eventTypes, ["question.resolved"]);
+  assert.deepEqual(second?.eventTypes, ["question.settled"]);
 });
 
 test("disableAgentCallbackSubscription removes it from active listings", async () => {

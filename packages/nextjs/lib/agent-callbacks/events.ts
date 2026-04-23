@@ -1,5 +1,6 @@
 import { listActiveAgentCallbackSubscriptions } from "./registry";
 import { canonicalJson } from "./signing";
+import type { AgentCallbackEventType } from "./types";
 import { randomUUID } from "node:crypto";
 import { dbClient } from "~~/lib/db";
 
@@ -30,7 +31,7 @@ export type AgentCallbackEventRecord = {
 export type EnqueueAgentCallbackEventInput = {
   agentId: string;
   eventId?: string;
-  eventType: string;
+  eventType: AgentCallbackEventType;
   now?: Date;
   payload: unknown;
 };

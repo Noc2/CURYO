@@ -8,6 +8,7 @@ type DbTestMemoryModule = typeof import("../db/testMemory");
 type RegistryModule = typeof import("./registry");
 type EventsModule = typeof import("./events");
 type DeliveryModule = typeof import("./delivery");
+type AgentCallbackEventType = import("./types").AgentCallbackEventType;
 
 let dbModule: DbModule;
 let dbTestMemory: DbTestMemoryModule;
@@ -33,7 +34,7 @@ after(() => {
   dbModule.__setDatabaseResourcesForTests(null);
 });
 
-async function registerSubscription(id = "sub-a", eventTypes = ["question.submitted"]) {
+async function registerSubscription(id = "sub-a", eventTypes: AgentCallbackEventType[] = ["question.submitted"]) {
   await registry.upsertAgentCallbackSubscription({
     agentId: "agent-a",
     callbackUrl: `https://agent.example/${id}`,

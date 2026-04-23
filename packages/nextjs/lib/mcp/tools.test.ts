@@ -272,3 +272,73 @@ test("curyo_ask_humans async does not schedule duplicate active submissions", as
   assert.equal((result as unknown as { status: string }).status, "submitting");
   assert.equal(scheduled, false);
 });
+
+test("curyo_ask_humans registers webhooks and enqueues submitted callbacks", async () => {
+  const registered: unknown[] = [];
+  const enqueued: unknown[] = [];
+
+  __setMcpToolTestOverridesForTests({
+    enqueueAgentCallbackEvent: async params => {
+      enqueued.push(params);
+      return [];
+    },
+    getMcpAgentBudgetSummary: async () => managedBudgetSummary(),
+    handleManagedQuestionSubmissionRequest: async () => ({
+      body: {
+        contentId: "123",
+        contentIds: ["123"],
+        operationKey: OPERATION_KEY,
+        status: "submitted",
+      },
+      status: 200,
+    }),
+    ...quoteOverrides(),
+    updateMcpBudgetReservation: async () => null,
+    upsertAgentCallbackSubscription: async params => {
+      registered.push(params);
+      return null;
+    },
+  });
+
+  const result = await callCuryoMcpTool({
+    agent: AGENT,
+    arguments: askArguments({
+      webhookEvents: ["question.submitted"],
+      webhookSecret: "webhook-secret",
+      webhookUrl: "https://agent.example/curyo",
+    }),
+    name: "curyo_ask_humans",
+  });
+
+  const body = result as unknown as {
+    webhook: { events: string[]; registered: boolean; signatureHeaders: string[] };
+  };
+
+  assert.equal(body.webhook.registered, true);
+  assert.deepEqual(body.webhook.events, ["question.submitted"]);
+  assert.ok(body.webhook.signatureHeaders.includes("x-curyo-callback-signature"));
+  assert.equal(registered.length, 1);
+  assert.deepEqual(registered[0], {
+    agentId: AGENT.id,
+    callbackUrl: "https://agent.example/curyo",
+    eventTypes: ["question.submitted"],
+    secret: "webhook-secret",
+  });
+  assert.equal(enqueued.length, 1);
+  assert.deepEqual(enqueued[0], {
+    agentId: AGENT.id,
+    eventId: `${OPERATION_KEY}:question.submitted`,
+    eventType: "question.submitted",
+    payload: {
+      chainId: 42220,
+      clientRequestId: "ask-bookkeeping-failure",
+      contentId: "123",
+      contentIds: ["123"],
+      error: null,
+      eventType: "question.submitted",
+      operationKey: OPERATION_KEY,
+      publicUrl: "http://localhost:3000/rate?content=123",
+      status: "submitted",
+    },
+  });
+});

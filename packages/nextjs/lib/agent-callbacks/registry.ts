@@ -1,4 +1,5 @@
 import { randomUUID } from "node:crypto";
+import { type AgentCallbackEventType, isAgentCallbackEventType } from "~~/lib/agent-callbacks/types";
 import { dbClient } from "~~/lib/db";
 
 export type AgentCallbackSubscriptionStatus = "active" | "disabled";
@@ -7,7 +8,7 @@ export type AgentCallbackSubscriptionRecord = {
   agentId: string;
   callbackUrl: string;
   createdAt: Date;
-  eventTypes: string[];
+  eventTypes: AgentCallbackEventType[];
   id: string;
   secret: string;
   status: AgentCallbackSubscriptionStatus;
@@ -17,7 +18,7 @@ export type AgentCallbackSubscriptionRecord = {
 export type UpsertAgentCallbackSubscriptionInput = {
   agentId: string;
   callbackUrl: string;
-  eventTypes: string[];
+  eventTypes: AgentCallbackEventType[];
   id?: string;
   now?: Date;
   secret: string;
@@ -27,10 +28,14 @@ function parseDate(value: unknown): Date {
   return value instanceof Date ? value : new Date(String(value));
 }
 
-function parseEventTypes(value: unknown): string[] {
+function parseEventTypes(value: unknown): AgentCallbackEventType[] {
   if (typeof value !== "string") return [];
   const parsed = JSON.parse(value) as unknown;
-  return Array.isArray(parsed) ? parsed.filter(item => typeof item === "string") : [];
+  return Array.isArray(parsed)
+    ? parsed.filter(
+        (item): item is AgentCallbackEventType => typeof item === "string" && isAgentCallbackEventType(item),
+      )
+    : [];
 }
 
 export function rowToCallbackSubscription(
@@ -49,8 +54,8 @@ export function rowToCallbackSubscription(
   };
 }
 
-function normalizeEventTypes(eventTypes: string[]) {
-  return [...new Set(eventTypes.map(type => type.trim()).filter(Boolean))].sort();
+function normalizeEventTypes(eventTypes: string[]): AgentCallbackEventType[] {
+  return [...new Set(eventTypes.map(type => type.trim()).filter(isAgentCallbackEventType))].sort();
 }
 
 function assertSubscriptionInput(input: UpsertAgentCallbackSubscriptionInput) {
