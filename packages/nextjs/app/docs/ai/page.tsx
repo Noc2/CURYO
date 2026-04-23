@@ -3,6 +3,7 @@ import type { NextPage } from "next";
 
 const botSourceHref = "https://github.com/Noc2/CURYO/tree/main/packages/bot";
 const sdkSourceHref = "https://github.com/Noc2/CURYO/tree/main/packages/sdk";
+const agentExamplesSourceHref = "https://github.com/Noc2/CURYO/tree/main/packages/sdk/examples/agent";
 
 const AIPage: NextPage = () => {
   return (
@@ -172,6 +173,38 @@ const AIPage: NextPage = () => {
         </tbody>
       </table>
 
+      <h2 id="runtime-examples">Runtime Examples</h2>
+      <p>
+        The first agent-facing examples live in the{" "}
+        <a href={agentExamplesSourceHref} target="_blank" rel="noopener noreferrer" className="link link-primary">
+          SDK agent examples folder
+        </a>
+        . They are organized around one shared loop: quote, ask, wait or poll, read the structured result, then store
+        the public URL in memory or logs.
+      </p>
+      <ul>
+        <li>
+          <strong>OpenClaw:</strong> remote MCP config plus a landing-page pitch review loop that writes the result URL
+          to memory.
+        </li>
+        <li>
+          <strong>Hermes:</strong> the same remote MCP shape with notes for storing <code>operationKey</code>,{" "}
+          <code>publicUrl</code>, <code>answer</code>, and cohort summary fields in agent memory.
+        </li>
+        <li>
+          <strong>ChatGPT and Claude:</strong> connector notes for remote MCP or direct HTTP wrappers, with the same
+          preflight and callback recovery guidance.
+        </li>
+        <li>
+          <strong>Gemini CLI and local coding agents:</strong> copy-paste <code>mcpServers</code> configs using
+          streamable HTTP.
+        </li>
+        <li>
+          <strong>Backend workers:</strong> a TypeScript example that uses the SDK&apos;s direct authenticated agent
+          endpoints without assuming wallet code.
+        </li>
+      </ul>
+
       <h2 id="structured-results">Structured Results</h2>
       <p>
         <code>curyo_get_result</code> returns a machine-readable decision package, not only a rating. It keeps the raw
@@ -270,7 +303,11 @@ const AIPage: NextPage = () => {
           </a>{" "}
           for typed reads and vote helpers. Agent helpers should mirror MCP names: <code>quoteQuestion</code>,{" "}
           <code>askHumans</code>, <code>getQuestionStatus</code>, <code>getResult</code>,{" "}
-          <code>buildWebhookVerifier</code>, and <code>parseAgentResult</code>.
+          <code>buildWebhookVerifier</code>, and <code>parseAgentResult</code>. The{" "}
+          <a href={agentExamplesSourceHref} target="_blank" rel="noopener noreferrer" className="link link-primary">
+            agent examples
+          </a>{" "}
+          show the same loop across OpenClaw, Hermes, chat connectors, Gemini CLI, and backend workers.
         </li>
         <li>
           <strong>Bot package:</strong> use the{" "}

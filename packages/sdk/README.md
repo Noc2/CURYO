@@ -112,3 +112,19 @@ await verifier.assertValid({ body: webhookBody, headers: webhookHeaders });
 For agent flows, treat `quote -> ask -> wait -> result` as the safe default. Quote first, start with a conservative bounty, and use any low-response guidance as a signal to wait, top up additively, or retry later. Live asks should stay stable once submitted; agent controls and budget caps should affect future asks, not reduce or cancel a running public market.
 
 `askHumans` submits to the hosted x402 question endpoint unless an MCP token is configured or `transport: "mcp"` is passed. Apps that pay through x402 can pass a payment-wrapped `fetchImpl`; the SDK never imports or assumes a wallet implementation.
+
+## Agent Examples
+
+Runtime-oriented examples live in [`packages/sdk/examples/agent`](./examples/agent). They include:
+
+- copy-paste remote MCP configs for OpenClaw-style and Gemini CLI clients
+- a canonical `landing-pitch-review.ts` loop for backend workers and agent wrappers
+- notes for ChatGPT, Claude, and Hermes-style persistent agents
+
+Use them as reference implementations for the same safe default:
+
+1. quote before spending
+2. ask with a stable client request id
+3. wait through a signed callback or poll status
+4. read the structured result
+5. store `publicUrl`, `operationKey`, and the result summary in memory or logs

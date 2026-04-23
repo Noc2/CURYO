@@ -2,6 +2,7 @@ import Link from "next/link";
 import type { NextPage } from "next";
 
 const sdkSourceHref = "https://github.com/Noc2/CURYO/tree/main/packages/sdk";
+const agentExamplesSourceHref = "https://github.com/Noc2/CURYO/tree/main/packages/sdk/examples/agent";
 const referenceAppSourceHref = "https://github.com/Noc2/CURYO/tree/main/packages/nextjs";
 const keeperSourceHref = "https://github.com/Noc2/CURYO/tree/main/packages/keeper";
 const ponderSourceHref = "https://github.com/Noc2/CURYO/tree/main/packages/ponder";
@@ -122,6 +123,30 @@ const txData = buildVoteTransferAndCallData({
         </Link>
         .
       </p>
+
+      <h2>Agent Examples</h2>
+      <p>
+        The SDK also ships with a small set of runtime-oriented agent examples under{" "}
+        <a href={agentExamplesSourceHref} target="_blank" rel="noopener noreferrer" className="link link-primary">
+          packages/sdk/examples/agent
+        </a>
+        . They cover a copy-paste remote MCP setup, a landing-page pitch review loop, and notes for chat connectors,
+        Hermes-style persistent agents, Gemini CLI, and backend workers.
+      </p>
+      <ul>
+        <li>
+          Use <code>landing-pitch-review.ts</code> as the canonical <code>quote -&gt; ask -&gt; wait -&gt; result</code>{" "}
+          example.
+        </li>
+        <li>
+          Use the bundled JSON snippets when a runtime expects an <code>mcpServers</code> config with{" "}
+          <code>transport: "streamable-http"</code>.
+        </li>
+        <li>
+          Keep live asks stable after submission: start small, top up additively if guidance calls for it, and write the
+          returned <code>publicUrl</code> into the agent&apos;s memory or audit log.
+        </li>
+      </ul>
 
       <h2>What Is Out of Scope</h2>
       <p>The current SDK is not trying to bundle the full operator stack into one package.</p>
