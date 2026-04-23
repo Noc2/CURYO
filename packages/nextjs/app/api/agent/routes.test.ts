@@ -10,6 +10,9 @@ const originalNodeEnv = env.NODE_ENV;
 env.DATABASE_URL = "memory:";
 
 type AgentAsksByClientRouteModule = typeof import("./asks/by-client-request/route");
+type AgentAsksByClientAuditRouteModule = typeof import("./asks/by-client-request/audit/route");
+type AgentAsksAuditRouteModule = typeof import("./asks/[operationKey]/audit/route");
+type AgentAsksExportRouteModule = typeof import("./asks/export/route");
 type AgentAsksOperationRouteModule = typeof import("./asks/[operationKey]/route");
 type AgentAsksRouteModule = typeof import("./asks/route");
 type AgentQuoteRouteModule = typeof import("./quote/route");
@@ -26,6 +29,9 @@ type McpToolsModule = typeof import("~~/lib/mcp/tools");
 const OPERATION_KEY = `0x${"1".repeat(64)}` as const;
 
 let asksByClientRoute: AgentAsksByClientRouteModule;
+let asksByClientAuditRoute: AgentAsksByClientAuditRouteModule;
+let asksAuditRoute: AgentAsksAuditRouteModule;
+let asksExportRoute: AgentAsksExportRouteModule;
 let asksOperationRoute: AgentAsksOperationRouteModule;
 let asksRoute: AgentAsksRouteModule;
 let callbackDeliveryModule: CallbackDeliveryModule;
@@ -97,6 +103,139 @@ function questionPayload(clientRequestId: string) {
       title: "Pitch interest",
     },
   };
+}
+
+async function seedManagedAskAudit(params: {
+  chainId?: number;
+  clientRequestId: string;
+  contentId?: string | null;
+  operationKey?: `0x${string}`;
+}) {
+  const operationKey = params.operationKey ?? OPERATION_KEY;
+  const chainId = params.chainId ?? 42220;
+  const now = new Date("2026-04-23T12:00:00.000Z");
+  const contentId = params.contentId ?? null;
+
+  await dbModule.dbClient.execute({
+    args: [
+      operationKey,
+      "route-agent",
+      params.clientRequestId,
+      "payload-hash",
+      chainId,
+      "5",
+      "1000000",
+      "submitted",
+      contentId,
+      null,
+      now,
+      now,
+    ],
+    sql: `
+      INSERT INTO mcp_agent_budget_reservations (
+        operation_key,
+        agent_id,
+        client_request_id,
+        payload_hash,
+        chain_id,
+        category_id,
+        payment_amount,
+        status,
+        content_id,
+        error,
+        created_at,
+        updated_at
+      )
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `,
+  });
+
+  await dbModule.dbClient.execute({
+    args: [
+      operationKey,
+      params.clientRequestId,
+      "payload-hash",
+      chainId,
+      "0x0000000000000000000000000000000000000001",
+      "1000000",
+      "1000000",
+      "0",
+      1,
+      "submitted",
+      contentId,
+      now,
+      now,
+    ],
+    sql: `
+      INSERT INTO x402_question_submissions (
+        operation_key,
+        client_request_id,
+        payload_hash,
+        chain_id,
+        payment_asset,
+        payment_amount,
+        bounty_amount,
+        service_fee_amount,
+        question_count,
+        status,
+        content_id,
+        created_at,
+        updated_at
+      )
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `,
+  });
+
+  await dbModule.dbClient.execute({
+    args: [operationKey, "route-agent", params.clientRequestId, "payload-hash", chainId, "5", "1000000", "reserved", now],
+    sql: `
+      INSERT INTO mcp_agent_ask_audit_records (
+        operation_key,
+        agent_id,
+        client_request_id,
+        payload_hash,
+        chain_id,
+        category_id,
+        payment_amount,
+        event_type,
+        status,
+        created_at
+      )
+      VALUES (?, ?, ?, ?, ?, ?, ?, 'reserved', ?, ?)
+    `,
+  });
+
+  await dbModule.dbClient.execute({
+    args: [
+      operationKey,
+      "route-agent",
+      params.clientRequestId,
+      "payload-hash",
+      chainId,
+      "5",
+      "1000000",
+      "submitted",
+      "submitted",
+      contentId,
+      now,
+    ],
+    sql: `
+      INSERT INTO mcp_agent_ask_audit_records (
+        operation_key,
+        agent_id,
+        client_request_id,
+        payload_hash,
+        chain_id,
+        category_id,
+        payment_amount,
+        event_type,
+        status,
+        content_id,
+        created_at
+      )
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `,
+  });
 }
 
 function installQuoteOverrides() {
@@ -183,7 +322,10 @@ before(async () => {
   dbModule.__setDatabaseResourcesForTests(dbTestMemory.createMemoryDatabaseResources());
   mcpBudgetModule = await import("~~/lib/mcp/budget");
   mcpToolsModule = await import("~~/lib/mcp/tools");
+  asksByClientAuditRoute = await import("./asks/by-client-request/audit/route");
   asksByClientRoute = await import("./asks/by-client-request/route");
+  asksAuditRoute = await import("./asks/[operationKey]/audit/route");
+  asksExportRoute = await import("./asks/export/route");
   asksOperationRoute = await import("./asks/[operationKey]/route");
   asksRoute = await import("./asks/route");
   callbackDeliveryModule = await import("~~/lib/agent-callbacks/delivery");
@@ -202,6 +344,9 @@ beforeEach(async () => {
   await dbModule.dbClient.execute("DELETE FROM agent_callback_subscriptions");
   await dbModule.dbClient.execute("DELETE FROM api_rate_limits");
   await dbModule.dbClient.execute("DELETE FROM api_rate_limit_maintenance");
+  await dbModule.dbClient.execute("DELETE FROM mcp_agent_ask_audit_records");
+  await dbModule.dbClient.execute("DELETE FROM mcp_agent_budget_reservations");
+  await dbModule.dbClient.execute("DELETE FROM x402_question_submissions");
 });
 
 after(() => {
@@ -302,6 +447,81 @@ test("agent status route returns not_found without treating it as a transport er
   assert.equal(body.status, "not_found");
   assert.equal(body.ready, false);
   assert.equal(body.terminal, true);
+});
+
+test("agent audit route returns ask-centric audit details", async () => {
+  await seedManagedAskAudit({ clientRequestId: "audit-http" });
+  await callbackRegistryModule.upsertAgentCallbackSubscription({
+    agentId: "route-agent",
+    callbackUrl: "https://agent.example/curyo",
+    eventTypes: ["question.submitted"],
+    id: "sub-a",
+    secret: "callback-secret",
+  });
+  await callbackEventsModule.enqueueAgentCallbackEvent({
+    agentId: "route-agent",
+    eventId: `${OPERATION_KEY}:question.submitted`,
+    eventType: "question.submitted",
+    now: new Date("2026-04-23T12:00:01.000Z"),
+    payload: {
+      operationKey: OPERATION_KEY,
+      status: "submitted",
+    },
+  });
+
+  const response = await asksAuditRoute.GET(makeGet(`https://curyo.xyz/api/agent/asks/${OPERATION_KEY}/audit`), {
+    params: Promise.resolve({ operationKey: OPERATION_KEY }),
+  });
+  const body = (await response.json()) as {
+    auditEvents: Array<Record<string, unknown>>;
+    callbackDeliveries: Array<Record<string, unknown>>;
+    operationKey: string;
+    reservation: Record<string, unknown>;
+    status: string;
+    submission: Record<string, unknown> | null;
+  };
+
+  assert.equal(response.status, 200);
+  assert.equal(body.operationKey, OPERATION_KEY);
+  assert.equal(body.status, "submitted");
+  assert.equal(body.reservation.clientRequestId, "audit-http");
+  assert.equal(body.submission?.status, "submitted");
+  assert.equal(body.auditEvents.length, 2);
+  assert.equal(body.auditEvents[0]?.eventType, "reserved");
+  assert.equal(body.callbackDeliveries.length, 1);
+});
+
+test("agent audit by client request route resolves the same managed ask", async () => {
+  await seedManagedAskAudit({ clientRequestId: "audit-client-http" });
+
+  const response = await asksByClientAuditRoute.GET(
+    makeGet("https://curyo.xyz/api/agent/asks/by-client-request/audit?chainId=42220&clientRequestId=audit-client-http"),
+  );
+  const body = (await response.json()) as {
+    clientRequestId: string;
+    operationKey: string;
+    status: string;
+  };
+
+  assert.equal(response.status, 200);
+  assert.equal(body.clientRequestId, "audit-client-http");
+  assert.equal(body.operationKey, OPERATION_KEY);
+  assert.equal(body.status, "submitted");
+});
+
+test("agent audit export route returns csv rows for the authenticated agent", async () => {
+  await seedManagedAskAudit({ clientRequestId: "audit-export-http" });
+
+  const response = await asksExportRoute.GET(
+    makeGet("https://curyo.xyz/api/agent/asks/export?format=csv&eventType=submitted&limit=10"),
+  );
+  const body = await response.text();
+
+  assert.equal(response.status, 200);
+  assert.match(response.headers.get("content-type") ?? "", /text\/csv/);
+  assert.match(body, /operationKey,clientRequestId,chainId/);
+  assert.match(body, /audit-export-http/);
+  assert.match(body, /submitted/);
 });
 
 test("agent status route surfaces callback delivery state for missed webhooks", async () => {

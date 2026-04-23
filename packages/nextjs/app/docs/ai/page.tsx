@@ -251,6 +251,30 @@ const AIPage: NextPage = () => {
         </li>
       </ul>
 
+      <h2 id="errors-and-exports">Errors And Exports</h2>
+      <p>
+        Agent integrations should not have to reverse-engineer failures. Curyo now documents the stable machine-readable
+        error codes and exposes read-only audit/export endpoints for ask history, callback recovery, and operator logs.
+      </p>
+      <ul>
+        <li>
+          Review the{" "}
+          <Link href="/docs/ai/errors" className="link link-primary">
+            AI agent error cookbook
+          </Link>{" "}
+          for duplicate asks, budget failures, invalid media, disallowed categories, still-submitting conflicts, and
+          failed submissions.
+        </li>
+        <li>
+          Use <code>/api/agent/asks/[operationKey]/audit</code> or{" "}
+          <code>/api/agent/asks/by-client-request/audit</code> to inspect one managed ask end to end.
+        </li>
+        <li>
+          Use <code>/api/agent/asks/export?format=json</code> or <code>format=csv</code> to export the authenticated
+          agent&apos;s audit history with filters for status, event type, chain, and time window.
+        </li>
+      </ul>
+
       <h2 id="operator-settings">Operator Settings</h2>
       <p>
         Operator controls belong under <code>/settings?tab=agents</code>. That surface should become the place an

@@ -21,7 +21,7 @@ type AgentRouteContext = {
 
 type AgentRouteOptions = {
   allowOnStoreUnavailable?: boolean;
-  handler: (context: AgentRouteContext) => Promise<unknown>;
+  handler: (context: AgentRouteContext) => Promise<Response | unknown>;
   rateLimit: AgentRouteRateLimit;
   request: NextRequest;
   requiredScope: McpScope;
@@ -76,13 +76,17 @@ export async function handleAgentRoute(params: AgentRouteOptions) {
   }
 
   try {
+    const result = await params.handler({
+      agent,
+      scheduleBackgroundTask: task => {
+        after(task);
+      },
+    });
+    if (result instanceof Response) {
+      return result;
+    }
     return NextResponse.json(
-      await params.handler({
-        agent,
-        scheduleBackgroundTask: task => {
-          after(task);
-        },
-      }),
+      result,
     );
   } catch (error) {
     const normalized = normalizeToolError(error);
