@@ -349,13 +349,15 @@ contract VoterIdNFTTest is Test {
         vm.prank(minterAddr);
         voterIdNFT.mint(user1, NULLIFIER_1);
 
-        // Record more than max (the contract doesn't enforce cap in recordStake itself)
+        // recordStake now enforces MAX_STAKE_PER_VOTER defense-in-depth; a second call that
+        // would push past the cap reverts rather than silently exceeding the tracked value.
         vm.startPrank(recorderAddr);
         voterIdNFT.recordStake(1, 100, 1, 80e6);
-        voterIdNFT.recordStake(1, 100, 1, 40e6); // Total: 120e6, exceeds max
+        vm.expectRevert(bytes("Stake cap exceeded"));
+        voterIdNFT.recordStake(1, 100, 1, 40e6); // Would total 120e6, over MAX_STAKE_PER_VOTER.
         vm.stopPrank();
 
-        assertEq(voterIdNFT.getRemainingStakeCapacity(1, 100, 1), 0);
+        assertEq(voterIdNFT.getRemainingStakeCapacity(1, 100, 1), uint256(20e6));
     }
 
     function test_StakeIndependentPerContentAndEpoch() public {

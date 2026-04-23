@@ -298,9 +298,17 @@ contract VoterIdNFT is ERC721, Ownable, IVoterIdNFT {
         if (msg.sender != stakeRecorder) revert OnlyStakeRecorder();
         require(tokenIdToHolder[tokenId] != address(0), "Token not active"); // L-10: defense-in-depth
 
-        _epochContentStake[contentId][epochId][tokenId] += amount;
+        // Defense-in-depth: also enforce MAX_STAKE_PER_VOTER here, not just on the voting
+        // engine side. If a future engine bug ever lets a voter slip past the cap, this
+        // reverts the bookkeeping update so the cap invariant still holds.
+        uint256 tokenStakeAfter = _epochContentStake[contentId][epochId][tokenId] + amount;
+        require(tokenStakeAfter <= MAX_STAKE_PER_VOTER, "Stake cap exceeded");
+        _epochContentStake[contentId][epochId][tokenId] = tokenStakeAfter;
         if (_tokenIdHasNullifier[tokenId]) {
-            _nullifierEpochContentStake[contentId][epochId][_tokenIdToNullifier[tokenId]] += amount;
+            uint256 nullifier = _tokenIdToNullifier[tokenId];
+            uint256 nullifierStakeAfter = _nullifierEpochContentStake[contentId][epochId][nullifier] + amount;
+            require(nullifierStakeAfter <= MAX_STAKE_PER_VOTER, "Stake cap exceeded");
+            _nullifierEpochContentStake[contentId][epochId][nullifier] = nullifierStakeAfter;
         }
 
         emit StakeRecorded(contentId, epochId, tokenId, amount);
