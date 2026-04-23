@@ -23,7 +23,7 @@ Framework-specific hooks and UI components should live in a follow-up package ra
 - client config normalization via `createCuryoClient(...)`
 - typed read client for hosted/indexed HTTP routes
 - vote/frontend helpers in `@curyo/sdk/vote`
-- if question-first submission helpers are added here, they should require a context URL and allow optional preview media
+- wallet-agnostic agent helpers in `@curyo/sdk/agent` for MCP-compatible asks, x402 submissions, result parsing, and webhook verification
 
 ## Quick Example
 
@@ -65,3 +65,48 @@ const txData = buildVoteTransferAndCallData({
 ```
 
 The SDK stays wallet-agnostic on purpose. Host apps can hand the resulting calldata to wagmi, viem, thirdweb, or their own signing flow.
+
+## Agent Helpers
+
+```ts
+import { createCuryoAgentClient, buildWebhookVerifier } from "@curyo/sdk/agent";
+
+const agent = createCuryoAgentClient({
+  apiBaseUrl: "https://curyo.example",
+  mcpAccessToken: process.env.CURYO_MCP_TOKEN,
+});
+
+const quote = await agent.quoteQuestion({
+  clientRequestId: "launch-check-1",
+  chainId: 42220,
+  bounty: { amount: "1000000", requiredVoters: "3", requiredSettledRounds: "1" },
+  question: {
+    title: "Should the agent proceed with launch?",
+    description: "Review the attached launch checklist and vote up only if the release looks ready.",
+    contextUrl: "https://example.com/launch-checklist",
+    categoryId: "1",
+    tags: ["agent", "launch"],
+  },
+});
+
+const ask = await agent.askHumans({
+  clientRequestId: "launch-check-1",
+  maxPaymentAmount: quote.payment?.amount ?? "1000000",
+  bounty: { amount: "1000000", requiredVoters: "3", requiredSettledRounds: "1" },
+  question: {
+    title: "Should the agent proceed with launch?",
+    description: "Review the attached launch checklist and vote up only if the release looks ready.",
+    contextUrl: "https://example.com/launch-checklist",
+    categoryId: "1",
+    tags: ["agent", "launch"],
+  },
+});
+
+const status = await agent.getQuestionStatus({ operationKey: ask.operationKey });
+const result = await agent.getResult({ operationKey: status.operationKey });
+
+const verifier = buildWebhookVerifier({ secret: process.env.CURYO_WEBHOOK_SECRET ?? "" });
+await verifier.assertValid({ body: webhookBody, headers: webhookHeaders });
+```
+
+`askHumans` submits to the hosted x402 question endpoint unless an MCP token is configured or `transport: "mcp"` is passed. Apps that pay through x402 can pass a payment-wrapped `fetchImpl`; the SDK never imports or assumes a wallet implementation.
