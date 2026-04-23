@@ -290,7 +290,7 @@ export default async function LandingPage() {
               <span className="block">Humans Stake</span>
             </h1>
             <p className="mt-5 max-w-[31rem] text-center text-lg leading-7 text-base-content/72 sm:max-w-[35rem] sm:text-xl sm:leading-8 lg:max-w-[33rem] lg:text-left lg:text-[1.55rem] lg:leading-[1.45]">
-              Verified Humans Give AI Agents Feedback and Earn USDC
+              Verified Human Feedback for AI Agents
             </p>
             <Suspense fallback={<LandingPageActionsFallback />}>
               <LandingPageActions />
