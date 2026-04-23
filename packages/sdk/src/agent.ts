@@ -1,4 +1,10 @@
+import { ROUND_STATE, ROUND_STATE_LABEL } from "@curyo/contracts/protocol";
 import { CuryoApiError, CuryoSdkError } from "./errors";
+import {
+  createCuryoReadClient,
+  type CuryoContentDetailsResponse,
+  type CuryoRoundItem,
+} from "./read";
 import type { CuryoFetch } from "./types";
 
 type JsonPrimitive = string | number | boolean | null;
@@ -17,6 +23,7 @@ export interface CuryoAgentClientOptions {
   mcpApiUrl?: string;
   mcpAccessToken?: string;
   fetchImpl?: CuryoFetch;
+  quoteFetchImpl?: CuryoFetch;
   timeoutMs?: number;
   mcpProtocolVersion?: string;
   x402QuestionsPath?: string;
@@ -293,10 +300,52 @@ interface NormalizedAgentConfig {
   mcpApiUrl?: string;
   mcpAccessToken?: string;
   fetchImpl: CuryoFetch;
+  quoteFetchImpl: CuryoFetch;
   timeoutMs: number;
   mcpProtocolVersion: string;
   x402QuestionsPath: string;
 }
+
+type X402PaymentRequirement = {
+  amount?: string;
+  asset?: string;
+  payTo?: string;
+  maxAmountRequired?: string;
+  extra?: JsonRecord;
+  [key: string]: unknown;
+};
+
+type X402PaymentChallenge = {
+  accepts?: X402PaymentRequirement[];
+  error?: string;
+  x402Version?: number;
+  [key: string]: unknown;
+};
+
+type PublicFeedbackItem = {
+  body?: string;
+  feedbackType?: string;
+  roundId?: string | null;
+  sourceUrl?: string | null;
+  [key: string]: unknown;
+};
+
+type PublicFeedbackListResponse = {
+  items?: PublicFeedbackItem[];
+  [key: string]: unknown;
+};
+
+const DEFAULT_AGENT_RESULT_TEMPLATE = {
+  id: "generic_rating",
+  interpretation: {
+    cautionRatingBps: 5500,
+    proceedConservativeRatingBps: 5500,
+    proceedRatingBps: 6500,
+    reviseRatingBps: 4000,
+  },
+  ratingSystem: "curyo.binary_staked_rating.v1",
+  version: 1,
+} as const;
 
 export function createCuryoAgentClient(
   options: CuryoAgentClientOptions = {},
@@ -323,6 +372,10 @@ export function quoteQuestion(
       headers: jsonAgentHeaders(config),
       method: "POST",
     });
+  }
+
+  if (config.apiBaseUrl && !config.mcpAccessToken) {
+    return requestX402Quote(config, params);
   }
 
   return callMcpTool<QuoteQuestionResponse>(
@@ -354,7 +407,7 @@ export async function askHumans(
     return callMcpTool<AskHumansResponse>(config, "curyo_ask_humans", body);
   }
 
-  return requestJson<AskHumansResponse>(config, x402QuestionsUrl(config), {
+  const response = await requestJson<AskHumansResponse>(config, x402QuestionsUrl(config), {
     body: stringifyJson(body),
     headers: {
       accept: "application/json",
@@ -362,6 +415,7 @@ export async function askHumans(
     },
     method: "POST",
   });
+  return decorateX402QuestionState(response, config) as AskHumansResponse;
 }
 
 export async function getQuestionStatus(
@@ -388,7 +442,7 @@ export async function getQuestionStatus(
     );
   }
 
-  return requestJson<QuestionStatusResponse>(
+  const response = await requestJson<QuestionStatusResponse>(
     config,
     x402StatusUrl(config, params),
     {
@@ -398,6 +452,7 @@ export async function getQuestionStatus(
       method: "GET",
     },
   );
+  return decorateX402QuestionState(response, config) as QuestionStatusResponse;
 }
 
 export async function getResult(
@@ -414,6 +469,10 @@ export async function getResult(
         method: "GET",
       },
     );
+  }
+
+  if (config.apiBaseUrl && !config.mcpAccessToken) {
+    return getX402Result(config, params);
   }
 
   const result = await callMcpTool<unknown>(config, "curyo_get_result", {
@@ -444,6 +503,439 @@ export async function listResultTemplates(
     "curyo_list_result_templates",
     {},
   );
+}
+
+async function requestX402Quote(
+  config: NormalizedAgentConfig,
+  params: QuoteQuestionRequest,
+): Promise<QuoteQuestionResponse> {
+  const response = await fetchWithTimeout(
+    config.quoteFetchImpl,
+    config.timeoutMs,
+    x402QuestionsUrl(config),
+    {
+      body: stringifyJson(params),
+      headers: {
+        accept: "application/json",
+        "content-type": "application/json",
+      },
+      method: "POST",
+    },
+  );
+  const body = await response.text();
+  const parsed = body.length === 0 ? null : parseJson(body);
+
+  if (response.status === 402) {
+    return buildQuoteFromX402Challenge(
+      params,
+      parseX402PaymentChallenge(response, parsed),
+    );
+  }
+
+  if (response.ok && isJsonRecord(parsed)) {
+    return {
+      canSubmit: true,
+      clientRequestId: params.clientRequestId,
+      operationKey:
+        typeof parsed.operationKey === "string" ? parsed.operationKey : undefined,
+      payment: normalizeQuotedPayment(parsed.payment),
+      questionCount: questionCountFromRequest(params),
+    };
+  }
+
+  const message =
+    isJsonRecord(parsed) && typeof parsed.error === "string"
+      ? parsed.error
+      : isJsonRecord(parsed) && typeof parsed.message === "string"
+        ? parsed.message
+        : `Curyo request failed with status ${response.status}`;
+  throw new CuryoApiError(message, response.status);
+}
+
+async function getX402Result(
+  config: NormalizedAgentConfig,
+  params: QuestionStatusLookup & { contentId?: string | bigint },
+): Promise<CuryoAgentResult> {
+  const contentId =
+    params.contentId === undefined ? "" : String(params.contentId).trim();
+  if (contentId) {
+    return buildPublicAgentResult(config, contentId, null);
+  }
+
+  const operation = decorateX402QuestionState(
+    await requestJson<JsonRecord>(config, x402StatusUrl(config, params), {
+      headers: {
+        accept: "application/json",
+      },
+      method: "GET",
+    }),
+    config,
+  );
+  const operationContentId =
+    typeof operation.contentId === "string" ? operation.contentId.trim() : "";
+
+  if (!operationContentId) {
+    return buildPendingAgentResult(operation);
+  }
+
+  return buildPublicAgentResult(config, operationContentId, operation);
+}
+
+async function buildPublicAgentResult(
+  config: NormalizedAgentConfig,
+  contentId: string,
+  operation: JsonRecord | null,
+): Promise<CuryoAgentResult> {
+  const read = createCuryoReadClient({
+    apiBaseUrl: config.apiBaseUrl,
+    fetchImpl: config.fetchImpl,
+    timeoutMs: config.timeoutMs,
+  });
+
+  const [contentResponse, feedbackResponse] = await Promise.all([
+    read.getContent(contentId),
+    requestJson<PublicFeedbackListResponse>(config, feedbackUrl(config, contentId), {
+      headers: {
+        accept: "application/json",
+      },
+      method: "GET",
+    }),
+  ]);
+
+  return formatPublicAgentResult({
+    contentId,
+    contentResponse,
+    feedback: Array.isArray(feedbackResponse.items) ? feedbackResponse.items : [],
+    operation,
+    publicUrl: publicQuestionUrl(config, contentId),
+  });
+}
+
+function buildQuoteFromX402Challenge(
+  params: QuoteQuestionRequest,
+  challenge: X402PaymentChallenge,
+): QuoteQuestionResponse {
+  const acceptable = Array.isArray(challenge.accepts) ? challenge.accepts[0] : null;
+  if (!acceptable) {
+    throw new CuryoSdkError(
+      "x402 quote challenge did not include any payment requirements",
+    );
+  }
+
+  const amount =
+    typeof acceptable.amount === "string"
+      ? acceptable.amount
+      : typeof acceptable.maxAmountRequired === "string"
+        ? acceptable.maxAmountRequired
+        : null;
+  if (!amount) {
+    throw new CuryoSdkError(
+      "x402 quote challenge did not include a payment amount",
+    );
+  }
+
+  const extra = isJsonRecord(acceptable.extra) ? acceptable.extra : null;
+  const decimals =
+    typeof extra?.decimals === "number"
+      ? extra.decimals
+      : typeof extra?.decimals === "string" && Number.isFinite(Number(extra.decimals))
+        ? Number(extra.decimals)
+        : undefined;
+  const asset =
+    typeof extra?.name === "string"
+      ? extra.name
+      : typeof acceptable.asset === "string"
+        ? acceptable.asset
+        : undefined;
+
+  return {
+    canSubmit: true,
+    clientRequestId: params.clientRequestId,
+    payment: {
+      amount,
+      asset,
+      decimals,
+      tokenAddress:
+        typeof acceptable.asset === "string" ? acceptable.asset : undefined,
+    },
+    questionCount: questionCountFromRequest(params),
+  };
+}
+
+function formatPublicAgentResult(params: {
+  contentId: string;
+  contentResponse: CuryoContentDetailsResponse;
+  feedback: PublicFeedbackItem[];
+  operation: JsonRecord | null;
+  publicUrl: string | null;
+}): CuryoAgentResult {
+  const latestRound = latestRoundFromContentDetails(params.contentResponse);
+  const content = params.contentResponse.content as JsonRecord;
+  const roundState = toNumberValue(latestRound?.state, null);
+  const ratingBps =
+    toNumberValue(content.ratingBps, null) ??
+    toNumberValue(latestRound?.ratingBps, null);
+  const conservativeRatingBps =
+    toNumberValue(content.conservativeRatingBps, null) ??
+    toNumberValue(latestRound?.conservativeRatingBps, ratingBps) ??
+    ratingBps;
+  const rating = toNumberValue(content.rating, null);
+  const upStake = toBigIntValue(latestRound?.upPool);
+  const downStake = toBigIntValue(latestRound?.downPool);
+  const roundStake = toBigIntValue(latestRound?.totalStake);
+  const totalStake = roundStake > 0n ? roundStake : upStake + downStake;
+  const upShare = bigintShare(upStake, totalStake);
+  const downShare = bigintShare(downStake, totalStake);
+  const revealedCount = toNumberValue(latestRound?.revealedCount, 0) ?? 0;
+  const voteCount =
+    toNumberValue(latestRound?.voteCount, toNumberValue(content.totalVotes, 0)) ?? 0;
+  const settledRounds = toNumberValue(content.ratingSettledRounds, 0) ?? 0;
+  const answer = classifyPublicAnswer({
+    conservativeRatingBps,
+    ratingBps,
+    roundState,
+  });
+  const participationTarget =
+    Math.max(toNumberValue(content.roundMinVoters, 3) ?? 3, 1) * 2;
+  const participationScore = clamp01(revealedCount / participationTarget);
+  const marginScore =
+    upShare !== null && downShare !== null
+      ? Math.abs(upShare - downShare)
+      : ratingBps !== null
+        ? Math.abs(ratingBps - 5000) / 5000
+        : 0;
+  const historyScore = clamp01(settledRounds / 3);
+  const confidenceScore =
+    roundState === ROUND_STATE.Settled
+      ? roundScore(0.5 * participationScore + 0.3 * marginScore + 0.2 * historyScore)
+      : 0;
+  const confidence: NonNullable<CuryoAgentResult["confidence"]> = {
+    level: confidenceLevel(confidenceScore),
+    score: confidenceScore,
+  };
+  const majorObjections = buildMajorObjections(params.feedback, downShare);
+  const feedbackQuality = buildFeedbackQuality(params.feedback, majorObjections);
+  const ready = roundState === ROUND_STATE.Settled;
+  const stateLabel =
+    roundState === null
+      ? null
+      : ROUND_STATE_LABEL[roundState as keyof typeof ROUND_STATE_LABEL];
+  const sourceUrls = [
+    ...new Set(
+      params.feedback
+        .map((item) => (typeof item.sourceUrl === "string" ? item.sourceUrl : null))
+        .filter((value): value is string => Boolean(value)),
+    ),
+  ];
+  const feedbackTypes = summarizeFeedbackTypes(params.feedback);
+  const limitations = [
+    "Curyo ratings are human judgment signals, not factual proof.",
+    "Confidence is derived from revealed participation, stake margin, and settled history.",
+  ];
+
+  if (!ready)
+    limitations.push("The latest round is not settled, so the result can change.");
+  if (params.feedback.length === 0)
+    limitations.push("No public feedback text is available for rationale extraction.");
+  if (revealedCount < Math.max(toNumberValue(content.roundMinVoters, 3) ?? 3, 3)) {
+    limitations.push("The revealed vote count is low.");
+  }
+
+  return {
+    answer,
+    confidence,
+    cohortSummary: null,
+    dissentingView:
+      downShare !== null && downShare >= 0.15
+        ? `Minority down signal: ${Math.round(downShare * 100)}% of revealed stake and ${latestRound?.downCount ?? 0} revealed down votes.`
+        : null,
+    distribution: {
+      conservativeRatingBps,
+      down: {
+        count: toNumberValue(latestRound?.downCount, 0) ?? 0,
+        share: downShare,
+        stake: downStake.toString(),
+      },
+      rating,
+      ratingBps,
+      revealedCount,
+      state: roundState,
+      stateLabel,
+      up: {
+        count: toNumberValue(latestRound?.upCount, 0) ?? 0,
+        share: upShare,
+        stake: upStake.toString(),
+      },
+    },
+    feedbackQuality,
+    limitations,
+    liveAskGuidance: null,
+    majorObjections,
+    methodology: {
+      questionMetadataHash:
+        typeof content.questionMetadataHash === "string"
+          ? content.questionMetadataHash
+          : null,
+      ratingSystem: DEFAULT_AGENT_RESULT_TEMPLATE.ratingSystem,
+      resultSpecHash:
+        typeof content.resultSpecHash === "string" ? content.resultSpecHash : null,
+      sources: ["ponder.content", "ponder.rounds", "public.content_feedback"],
+      templateId: DEFAULT_AGENT_RESULT_TEMPLATE.id,
+      templateVersion: DEFAULT_AGENT_RESULT_TEMPLATE.version,
+      thresholds: DEFAULT_AGENT_RESULT_TEMPLATE.interpretation,
+    },
+    operation: params.operation,
+    protocolState: {
+      audienceContext: params.contentResponse.audienceContext,
+      categoryId:
+        typeof content.categoryId === "string"
+          ? content.categoryId
+          : String(content.categoryId ?? ""),
+      contentId: params.contentId,
+      currentRating: rating,
+      currentRatingBps: ratingBps,
+      effectiveEvidence:
+        typeof content.ratingEffectiveEvidence === "string"
+          ? content.ratingEffectiveEvidence
+          : typeof latestRound?.effectiveEvidence === "string"
+            ? latestRound.effectiveEvidence
+            : valueToString(latestRound?.effectiveEvidence),
+      latestRound,
+      question:
+        typeof content.question === "string"
+          ? content.question
+          : params.contentResponse.content.title,
+      ratingSettledRounds: settledRounds,
+      status: toNumberValue(content.status, null),
+    },
+    publicUrl: params.publicUrl,
+    rationaleSummary: buildRationaleSummary({
+      feedbackTypes,
+      ratingBps,
+      revealedCount,
+      stateLabel,
+      totalStake,
+    }),
+    ready,
+    recommendedNextAction: recommendedNextAction(
+      answer,
+      confidence.level,
+      majorObjections.length,
+    ),
+    sourceUrls,
+    stakeMass: {
+      down: downStake.toString(),
+      total: totalStake.toString(),
+      unit: "raw_staked_voting_power",
+      up: upStake.toString(),
+    },
+    voteCount,
+  };
+}
+
+function decorateX402QuestionState<T>(value: T, config: NormalizedAgentConfig): T {
+  if (!isJsonRecord(value)) return value;
+
+  const decorated: JsonRecord = { ...value };
+  const contentId =
+    typeof decorated.contentId === "string" ? decorated.contentId : null;
+  const publicUrl = publicQuestionUrl(config, contentId);
+  if (publicUrl && typeof decorated.publicUrl !== "string") {
+    decorated.publicUrl = publicUrl;
+  }
+
+  return {
+    ...decorated,
+    ...agentStatusHints(decorated),
+  } as T;
+}
+
+function agentStatusHints(body: JsonRecord) {
+  const status = typeof body.status === "string" ? body.status : "not_found";
+  const contentId = typeof body.contentId === "string" ? body.contentId : null;
+  const terminal =
+    status === "submitted" || status === "failed" || status === "not_found";
+  const ready = status === "submitted" && Boolean(contentId);
+
+  return {
+    nextAction:
+      status === "failed"
+        ? "manual_review"
+        : ready
+          ? "call_curyo_get_result"
+          : "poll_curyo_get_question_status",
+    pollAfterMs: terminal && !ready ? null : 5_000,
+    ready,
+    resultTool: ready ? "curyo_get_result" : null,
+    terminal,
+  };
+}
+
+function buildPendingAgentResult(operation: JsonRecord): CuryoAgentResult {
+  const status = typeof operation.status === "string" ? operation.status : "not_found";
+  return {
+    answer: status === "failed" ? "failed" : "pending",
+    confidence: {
+      level: "none",
+      score: 0,
+    },
+    distribution: {
+      conservativeRatingBps: null,
+      down: { count: 0, share: null, stake: "0" },
+      rating: null,
+      ratingBps: null,
+      revealedCount: 0,
+      state: null,
+      stateLabel: null,
+      up: { count: 0, share: null, stake: "0" },
+    },
+    dissentingView: null,
+    feedbackQuality: {
+      actionability: "none",
+      objectionCount: 0,
+      publicNoteCount: 0,
+      sourceUrlCount: 0,
+    },
+    limitations: ["The question has not reached a public Curyo result page yet."],
+    liveAskGuidance: null,
+    majorObjections: [],
+    methodology: {
+      ratingSystem: DEFAULT_AGENT_RESULT_TEMPLATE.ratingSystem,
+      sources: ["x402.question_submission"],
+      templateId: DEFAULT_AGENT_RESULT_TEMPLATE.id,
+      templateVersion: DEFAULT_AGENT_RESULT_TEMPLATE.version,
+      thresholds: DEFAULT_AGENT_RESULT_TEMPLATE.interpretation,
+    },
+    operation,
+    pollAfterMs: 5_000,
+    protocolState: {
+      latestRound: null,
+      status,
+    },
+    publicUrl:
+      typeof operation.publicUrl === "string" ? operation.publicUrl : null,
+    ready: false,
+    result: null,
+    wait: {
+      code: status === "failed" ? "failed_submission" : "still_settling",
+      recoverWith:
+        status === "failed" ? "inspect_status_error" : "curyo_get_question_status",
+    },
+    recommendedNextAction:
+      status === "failed" ? "manual_review" : "wait_for_settlement",
+    rationaleSummary:
+      status === "failed"
+        ? "The submission failed before a public Curyo result was available."
+        : "The human result is not ready yet.",
+    sourceUrls: [],
+    stakeMass: {
+      down: "0",
+      total: "0",
+      unit: "raw_staked_voting_power",
+      up: "0",
+    },
+    voteCount: 0,
+  };
 }
 
 export function parseAgentResult(value: unknown): CuryoAgentResult {
@@ -592,29 +1084,12 @@ async function requestJson<T>(
   url: string,
   init: RequestInit,
 ): Promise<T> {
-  const controller = new AbortController();
-  const timeoutHandle = setTimeout(() => controller.abort(), config.timeoutMs);
-
-  let response: Response;
-  try {
-    response = await config.fetchImpl(url, {
-      ...init,
-      signal: controller.signal,
-    });
-  } catch (error) {
-    if (error instanceof Error && error.name === "AbortError") {
-      throw new CuryoApiError(
-        `Curyo request timed out after ${config.timeoutMs}ms`,
-        504,
-      );
-    }
-
-    const message =
-      error instanceof Error ? error.message : "Unknown fetch error";
-    throw new CuryoApiError(`Curyo request failed: ${message}`, 502);
-  } finally {
-    clearTimeout(timeoutHandle);
-  }
+  const response = await fetchWithTimeout(
+    config.fetchImpl,
+    config.timeoutMs,
+    url,
+    init,
+  );
 
   const body = await response.text();
   const parsed = body.length === 0 ? null : parseJson(body);
@@ -632,14 +1107,310 @@ async function requestJson<T>(
   return parsed as T;
 }
 
+async function fetchWithTimeout(
+  fetchImpl: CuryoFetch,
+  timeoutMs: number,
+  url: string,
+  init: RequestInit,
+): Promise<Response> {
+  const controller = new AbortController();
+  const timeoutHandle = setTimeout(() => controller.abort(), timeoutMs);
+
+  try {
+    return await fetchImpl(url, {
+      ...init,
+      signal: controller.signal,
+    });
+  } catch (error) {
+    if (error instanceof Error && error.name === "AbortError") {
+      throw new CuryoApiError(`Curyo request timed out after ${timeoutMs}ms`, 504);
+    }
+
+    const message = error instanceof Error ? error.message : "Unknown fetch error";
+    throw new CuryoApiError(`Curyo request failed: ${message}`, 502);
+  } finally {
+    clearTimeout(timeoutHandle);
+  }
+}
+
+function parseX402PaymentChallenge(
+  response: Response,
+  parsedBody: unknown,
+): X402PaymentChallenge {
+  const headerValue = response.headers.get("payment-required");
+  if (headerValue) {
+    return parseJson(decodeBase64(headerValue)) as X402PaymentChallenge;
+  }
+
+  if (isJsonRecord(parsedBody)) {
+    return parsedBody as X402PaymentChallenge;
+  }
+
+  throw new CuryoSdkError(
+    "x402 quote challenge did not include a PAYMENT-REQUIRED header",
+  );
+}
+
+function decodeBase64(value: string) {
+  const trimmed = value.trim();
+  if (typeof globalThis.atob === "function") {
+    return globalThis.atob(trimmed);
+  }
+  return Buffer.from(trimmed, "base64").toString("utf8");
+}
+
+function normalizeQuotedPayment(value: unknown): CuryoAgentPayment | undefined {
+  if (!isJsonRecord(value)) return undefined;
+  return {
+    amount: typeof value.amount === "string" ? value.amount : undefined,
+    asset: typeof value.asset === "string" ? value.asset : undefined,
+    decimals:
+      typeof value.decimals === "number"
+        ? value.decimals
+        : typeof value.decimals === "string" && Number.isFinite(Number(value.decimals))
+          ? Number(value.decimals)
+          : undefined,
+    serviceFeeAmount:
+      typeof value.serviceFeeAmount === "string"
+        ? value.serviceFeeAmount
+        : undefined,
+    tokenAddress:
+      typeof value.tokenAddress === "string" ? value.tokenAddress : undefined,
+  };
+}
+
+function questionCountFromRequest(params: CuryoAgentQuestionRequest) {
+  return Array.isArray(params.questions) ? params.questions.length : params.question ? 1 : 0;
+}
+
+function feedbackUrl(config: NormalizedAgentConfig, contentId: string) {
+  if (!config.apiBaseUrl) {
+    throw new CuryoSdkError(
+      "apiBaseUrl is required for public agent feedback reads",
+    );
+  }
+
+  const url = new URL("/api/feedback", `${config.apiBaseUrl}/`);
+  url.searchParams.set("contentId", contentId);
+  return url.toString();
+}
+
+function publicQuestionUrl(
+  config: Pick<NormalizedAgentConfig, "apiBaseUrl">,
+  contentId: string | null,
+) {
+  if (!config.apiBaseUrl || !contentId) return null;
+  const url = new URL("/rate", `${config.apiBaseUrl}/`);
+  url.searchParams.set("content", contentId);
+  return url.toString();
+}
+
+function latestRoundFromContentDetails(response: CuryoContentDetailsResponse) {
+  if (Array.isArray(response.rounds) && response.rounds.length > 0) {
+    return response.rounds[0] ?? null;
+  }
+
+  return isJsonRecord(response.content.openRound)
+    ? (response.content.openRound as unknown as CuryoRoundItem)
+    : null;
+}
+
+function toNumberValue(value: unknown, fallback: number | null = null): number | null {
+  if (typeof value === "number" && Number.isFinite(value)) return value;
+  if (typeof value === "bigint") return Number(value);
+  if (typeof value === "string" && value.trim() !== "" && Number.isFinite(Number(value))) {
+    return Number(value);
+  }
+  return fallback;
+}
+
+function toBigIntValue(value: unknown): bigint {
+  if (typeof value === "bigint") return value;
+  if (typeof value === "number" && Number.isFinite(value)) {
+    return BigInt(Math.max(0, Math.floor(value)));
+  }
+  if (typeof value === "string" && /^\d+$/.test(value)) return BigInt(value);
+  return 0n;
+}
+
+function bigintShare(numerator: bigint, denominator: bigint): number | null {
+  if (denominator <= 0n) return null;
+  return Number((numerator * 10_000n) / denominator) / 10_000;
+}
+
+function roundScore(value: number) {
+  return Math.round(value * 100) / 100;
+}
+
+function clamp01(value: number) {
+  return Math.max(0, Math.min(1, value));
+}
+
+function valueToString(value: unknown) {
+  if (typeof value === "string") return value;
+  if (typeof value === "number" || typeof value === "bigint") {
+    return value.toString();
+  }
+  return null;
+}
+
+function confidenceLevel(score: number): "none" | "low" | "medium" | "high" {
+  if (score <= 0) return "none";
+  if (score < 0.4) return "low";
+  if (score < 0.7) return "medium";
+  return "high";
+}
+
+function classifyPublicAnswer(params: {
+  conservativeRatingBps: number | null;
+  ratingBps: number | null;
+  roundState: number | null;
+}): CuryoAgentAnswer {
+  if (params.roundState === ROUND_STATE.Open || params.roundState === null) return "pending";
+  if (params.roundState === ROUND_STATE.Tied) return "inconclusive";
+  if (
+    params.roundState === ROUND_STATE.Cancelled ||
+    params.roundState === ROUND_STATE.RevealFailed
+  ) {
+    return "failed";
+  }
+  if (params.roundState !== ROUND_STATE.Settled) return "inconclusive";
+
+  const ratingBps = params.ratingBps ?? 5000;
+  const conservativeRatingBps =
+    params.conservativeRatingBps ?? params.ratingBps ?? 5000;
+  if (
+    ratingBps >= DEFAULT_AGENT_RESULT_TEMPLATE.interpretation.proceedRatingBps &&
+    conservativeRatingBps >=
+      DEFAULT_AGENT_RESULT_TEMPLATE.interpretation.proceedConservativeRatingBps
+  ) {
+    return "proceed";
+  }
+  if (ratingBps >= DEFAULT_AGENT_RESULT_TEMPLATE.interpretation.cautionRatingBps) {
+    return "proceed_with_caution";
+  }
+  if (ratingBps >= DEFAULT_AGENT_RESULT_TEMPLATE.interpretation.reviseRatingBps) {
+    return "revise_and_resubmit";
+  }
+  return "do_not_proceed";
+}
+
+function recommendedNextAction(
+  answer: CuryoAgentAnswer,
+  confidence: NonNullable<CuryoAgentResult["confidence"]>["level"],
+  objectionCount: number,
+): string {
+  if (answer === "pending") return "wait_for_settlement";
+  if (answer === "inconclusive") return "collect_more_votes";
+  if (answer === "failed") return "manual_review";
+  if (answer === "do_not_proceed") return "do_not_proceed";
+  if (answer === "revise_and_resubmit") return "revise_and_resubmit";
+  if (confidence === "low") return "collect_more_votes";
+  if (objectionCount > 0) return "proceed_after_addressing_objections";
+  return "proceed";
+}
+
+function summarizeFeedbackTypes(feedback: readonly PublicFeedbackItem[]) {
+  const counts = new Map<string, number>();
+  for (const item of feedback) {
+    if (typeof item.feedbackType !== "string" || item.feedbackType.length === 0) {
+      continue;
+    }
+    counts.set(item.feedbackType, (counts.get(item.feedbackType) ?? 0) + 1);
+  }
+  return Array.from(counts.entries())
+    .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))
+    .map(([type, count]) => `${count} ${type}`);
+}
+
+function summarizeObjectionBody(body: string) {
+  const normalized = body.replace(/\s+/g, " ").trim();
+  return normalized.length > 220 ? `${normalized.slice(0, 217)}...` : normalized;
+}
+
+function buildMajorObjections(
+  feedback: readonly PublicFeedbackItem[],
+  downShare: number | null,
+) {
+  const objections = feedback
+    .filter(
+      (item) =>
+        typeof item.feedbackType === "string" &&
+        ["concern", "counterpoint", "source_quality"].includes(item.feedbackType) &&
+        typeof item.body === "string",
+    )
+    .slice(0, 5)
+    .map((item) => ({
+      roundId: typeof item.roundId === "string" ? item.roundId : null,
+      sourceUrl: typeof item.sourceUrl === "string" ? item.sourceUrl : null,
+      summary: summarizeObjectionBody(item.body as string),
+      type: item.feedbackType as string,
+    }));
+
+  if (objections.length === 0 && downShare !== null && downShare >= 0.25) {
+    objections.push({
+      roundId: null,
+      sourceUrl: null,
+      summary: `${Math.round(downShare * 100)}% of revealed stake voted down, but no public objection text is available.`,
+      type: "down_vote_signal",
+    });
+  }
+
+  return objections;
+}
+
+function buildFeedbackQuality(
+  feedback: readonly PublicFeedbackItem[],
+  objections: readonly unknown[],
+) {
+  const sourceUrlCount = new Set(
+    feedback
+      .map((item) => (typeof item.sourceUrl === "string" ? item.sourceUrl : null))
+      .filter(Boolean),
+  ).size;
+  const publicNoteCount = feedback.length;
+  let actionability: "none" | "low" | "medium" | "high" = "none";
+  if (publicNoteCount > 0) actionability = "low";
+  if (objections.length > 0 || sourceUrlCount > 0 || publicNoteCount >= 3) {
+    actionability = "medium";
+  }
+  if (objections.length >= 2 && (sourceUrlCount > 0 || publicNoteCount >= 5)) {
+    actionability = "high";
+  }
+
+  return {
+    actionability,
+    objectionCount: objections.length,
+    publicNoteCount,
+    sourceUrlCount,
+  };
+}
+
+function buildRationaleSummary(params: {
+  feedbackTypes: string[];
+  ratingBps: number | null;
+  revealedCount: number;
+  stateLabel: string | null;
+  totalStake: bigint;
+}) {
+  const ratingText =
+    params.ratingBps === null ? "no rating yet" : `${Math.round(params.ratingBps / 100)}/100`;
+  const feedbackText =
+    params.feedbackTypes.length > 0
+      ? `Public feedback includes ${params.feedbackTypes.join(", ")}.`
+      : "No public voter feedback is available.";
+  return `Latest ${params.stateLabel ?? "unknown"} round has ${ratingText}, ${params.revealedCount} revealed votes, and ${params.totalStake.toString()} raw stake. ${feedbackText}`;
+}
+
 function normalizeAgentConfig(
   options: CuryoAgentClientOptions,
 ): NormalizedAgentConfig {
   const apiBaseUrl = normalizeUrl(options.apiBaseUrl);
+  const fetchImpl = options.fetchImpl ?? fetch;
   return {
     agentApiPath: options.agentApiPath ?? DEFAULT_AGENT_API_PATH,
     apiBaseUrl,
-    fetchImpl: options.fetchImpl ?? fetch,
+    fetchImpl,
     mcpAccessToken: options.mcpAccessToken,
     mcpApiUrl:
       normalizeUrl(options.mcpApiUrl) ??
@@ -648,6 +1419,7 @@ function normalizeAgentConfig(
         : undefined),
     mcpProtocolVersion:
       options.mcpProtocolVersion ?? DEFAULT_MCP_PROTOCOL_VERSION,
+    quoteFetchImpl: options.quoteFetchImpl ?? fetchImpl,
     timeoutMs: options.timeoutMs ?? DEFAULT_TIMEOUT_MS,
     x402QuestionsPath: options.x402QuestionsPath ?? DEFAULT_X402_QUESTIONS_PATH,
   };

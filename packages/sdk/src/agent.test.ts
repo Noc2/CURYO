@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { createHmac } from "node:crypto";
+import { ROUND_STATE } from "@curyo/contracts/protocol";
 import {
   buildWebhookVerifier,
   createCuryoAgentClient,
@@ -16,6 +17,17 @@ function jsonResponse(body: unknown, status = 200) {
   return new Response(JSON.stringify(body), {
     headers: { "content-type": "application/json" },
     status,
+  });
+}
+
+function x402QuoteChallengeResponse(body: unknown) {
+  const encoded = Buffer.from(JSON.stringify(body), "utf8").toString("base64");
+  return new Response(null, {
+    headers: {
+      "content-type": "application/json",
+      "payment-required": encoded,
+    },
+    status: 402,
   });
 }
 
@@ -117,6 +129,63 @@ test("quoteQuestion uses direct authenticated agent HTTP when apiBaseUrl and tok
   assert.equal(response.fastLane?.pricingConfidence, "medium");
 });
 
+test("quoteQuestion can read a tokenless x402 payment challenge without spending", async () => {
+  let requestedUrl = "";
+  let requestedBody: any;
+  const agent = createCuryoAgentClient({
+    apiBaseUrl: API_BASE_URL,
+    fetchImpl: async () => {
+      throw new Error("ask fetch should not be used for tokenless quotes");
+    },
+    quoteFetchImpl: async (input: URL | RequestInfo, init?: RequestInit) => {
+      requestedUrl = String(input);
+      requestedBody = JSON.parse(String(init?.body));
+      return x402QuoteChallengeResponse({
+        accepts: [
+          {
+            amount: "1250000",
+            asset: "0x765DE816845861e75A25fCA122bb6898B8B1282a",
+            extra: {
+              decimals: 6,
+              name: "USDC",
+            },
+            payTo: "0x0000000000000000000000000000000000000001",
+            scheme: "exact",
+          },
+        ],
+        error: "Payment required",
+        x402Version: 2,
+      });
+    },
+  });
+
+  const quote = await agent.quoteQuestion({
+    bounty: { amount: 1_000_000n, requiredVoters: 3n },
+    chainId: 42220,
+    clientRequestId: "ask-x402-quote",
+    question: {
+      categoryId: 7n,
+      contextUrl: "https://example.com/context",
+      description: "Does this look ready for launch?",
+      tags: ["launch", "agent"],
+      title: "Launch readiness?",
+    },
+  });
+
+  assert.equal(requestedUrl, "https://curyo.example/api/x402/questions");
+  assert.equal(requestedBody.clientRequestId, "ask-x402-quote");
+  assert.equal(quote.canSubmit, true);
+  assert.equal(quote.clientRequestId, "ask-x402-quote");
+  assert.equal(quote.payment?.amount, "1250000");
+  assert.equal(quote.payment?.asset, "USDC");
+  assert.equal(quote.payment?.decimals, 6);
+  assert.equal(
+    quote.payment?.tokenAddress,
+    "0x765DE816845861e75A25fCA122bb6898B8B1282a",
+  );
+  assert.equal(quote.questionCount, 1);
+});
+
 test("askHumans defaults to the x402 question endpoint without wallet assumptions", async () => {
   let requestedUrl = "";
   let requestedBody: any;
@@ -155,6 +224,9 @@ test("askHumans defaults to the x402 question endpoint without wallet assumption
   assert.equal(requestedBody.bounty.requiredVoters, "3");
   assert.equal(response.status, "submitted");
   assert.equal(response.contentId, "42");
+  assert.equal(response.publicUrl, "https://curyo.example/rate?content=42");
+  assert.equal(response.ready, true);
+  assert.equal(response.resultTool, "curyo_get_result");
 });
 
 test("askHumans prefers direct authenticated agent HTTP before MCP framing", async () => {
@@ -201,11 +273,17 @@ test("getQuestionStatus can use x402 operation and client request lookups", asyn
     apiBaseUrl: API_BASE_URL,
     fetchImpl: async (input: URL | RequestInfo) => {
       requestedUrls.push(String(input));
-      return jsonResponse({ status: "submitted" });
+      return jsonResponse({
+        contentId: "42",
+        operationKey: `0x${"33".repeat(32)}`,
+        status: "submitted",
+      });
     },
   });
 
-  await agent.getQuestionStatus({ operationKey: `0x${"33".repeat(32)}` });
+  const byOperation = await agent.getQuestionStatus({
+    operationKey: `0x${"33".repeat(32)}`,
+  });
   await agent.getQuestionStatus({ chainId: 42220, clientRequestId: "ask-3" });
 
   assert.equal(
@@ -216,6 +294,10 @@ test("getQuestionStatus can use x402 operation and client request lookups", asyn
     requestedUrls[1],
     "https://curyo.example/api/x402/questions/by-client-request?chainId=42220&clientRequestId=ask-3",
   );
+  assert.equal(byOperation.publicUrl, "https://curyo.example/rate?content=42");
+  assert.equal(byOperation.ready, true);
+  assert.equal(byOperation.nextAction, "call_curyo_get_result");
+  assert.equal(byOperation.resultTool, "curyo_get_result");
 });
 
 test("authenticated status, result, and templates use direct agent HTTP endpoints", async () => {
@@ -293,6 +375,122 @@ test("authenticated status, result, and templates use direct agent HTTP endpoint
   assert.equal(status.terminal, false);
   assert.equal(templateMode, "single_question");
   assert.equal(templates.templates[0]?.bundleStrategy, "independent");
+});
+
+test("getResult can build a tokenless public result after an x402 submit", async () => {
+  const requestedUrls: string[] = [];
+  const agent = createCuryoAgentClient({
+    apiBaseUrl: API_BASE_URL,
+    fetchImpl: async (input: URL | RequestInfo) => {
+      const url = String(input);
+      requestedUrls.push(url);
+      if (url.includes("/api/x402/questions/")) {
+        return jsonResponse({
+          chainId: 42220,
+          clientRequestId: "ask-x402-result",
+          contentId: "42",
+          operationKey: `0x${"88".repeat(32)}`,
+          status: "submitted",
+        });
+      }
+      if (url.includes("/content/42")) {
+        return jsonResponse({
+          audienceContext: null,
+          content: {
+            categoryId: "5",
+            id: "42",
+            question: "Would this pitch make you want to learn more?",
+            rating: 72,
+            ratingBps: 7200,
+            ratingSettledRounds: 1,
+            status: 1,
+            title: "Pitch interest",
+            totalVotes: 12,
+          },
+          ratings: [],
+          rounds: [
+            {
+              contentId: "42",
+              conservativeRatingBps: 6100,
+              downCount: 2,
+              downPool: "150",
+              id: "round-1",
+              ratingBps: 7200,
+              revealedCount: 12,
+              roundId: "1",
+              settledAt: "2026-04-23T12:00:00.000Z",
+              startTime: "2026-04-23T11:00:00.000Z",
+              state: ROUND_STATE.Settled,
+              totalStake: "500",
+              upCount: 10,
+              upPool: "350",
+              voteCount: 12,
+            },
+          ],
+        });
+      }
+      if (url.includes("/api/feedback?contentId=42")) {
+        return jsonResponse({
+          count: 1,
+          items: [
+            {
+              body: "People liked the value proposition but wanted clearer pricing.",
+              contentId: "42",
+              feedbackType: "concern",
+              id: 1,
+              isPublic: true,
+              roundId: "1",
+              sourceUrl: "https://example.com/pricing-note",
+            },
+          ],
+          publicCount: 1,
+        });
+      }
+      throw new Error(`Unexpected request: ${url}`);
+    },
+  });
+
+  const result = await agent.getResult({
+    operationKey: `0x${"88".repeat(32)}`,
+  });
+
+  assert.deepEqual(requestedUrls, [
+    `https://curyo.example/api/x402/questions/0x${"88".repeat(32)}`,
+    "https://curyo.example/content/42",
+    "https://curyo.example/api/feedback?contentId=42",
+  ]);
+  assert.equal(result.ready, true);
+  assert.equal(result.answer, "proceed");
+  assert.equal(result.publicUrl, "https://curyo.example/rate?content=42");
+  assert.equal(result.recommendedNextAction, "proceed_after_addressing_objections");
+  assert.equal(result.methodology?.templateId, "generic_rating");
+  assert.equal(result.operation?.status, "submitted");
+  assert.deepEqual(result.sourceUrls, ["https://example.com/pricing-note"]);
+});
+
+test("getResult keeps tokenless x402 asks in a pending state until a public content id exists", async () => {
+  const agent = createCuryoAgentClient({
+    apiBaseUrl: API_BASE_URL,
+    fetchImpl: async () =>
+      jsonResponse({
+        chainId: 42220,
+        clientRequestId: "ask-x402-pending",
+        operationKey: `0x${"99".repeat(32)}`,
+        status: "submitting",
+      }),
+  });
+
+  const result = await agent.getResult({
+    operationKey: `0x${"99".repeat(32)}`,
+  });
+
+  assert.equal(result.ready, false);
+  assert.equal(result.answer, "pending");
+  assert.equal(result.operation?.status, "submitting");
+  assert.equal(
+    (result.wait as { recoverWith?: string } | undefined)?.recoverWith,
+    "curyo_get_question_status",
+  );
 });
 
 test("parseAgentResult unwraps MCP tool content and preserves top-level fields", () => {

@@ -62,4 +62,5 @@ That keeps the integration narrow while still exercising quote, ask, wait, resul
 
 - Start from `landing-pitch-review.ts`.
 - If you need x402 funding instead of a managed MCP token, provide a payment-aware `fetchImpl`.
+- Keep `quoteQuestion()` on a non-paying fetch when you use x402. Pass `quoteFetchImpl: fetch` and reserve the payment-wrapped `fetchImpl` for `askHumans()`.
 - Keep live asks stable after submission. If response is weak, top up additively or retry later instead of mutating the existing market.
