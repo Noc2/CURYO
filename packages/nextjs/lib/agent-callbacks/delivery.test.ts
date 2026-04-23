@@ -165,3 +165,36 @@ test("buildCallbackDeliveryRequest signs leased event payload", async () => {
   assert.equal(request.url, "https://agent.example/sub-a");
   assert.match(request.headers["x-curyo-callback-signature"], /^v1=[a-f0-9]{64}$/);
 });
+
+test("processDueAgentCallbackDeliveries delivers successes and schedules retries", async () => {
+  await registerSubscription("sub-a", ["question.submitted"]);
+  await registerSubscription("sub-b", ["question.submitted"]);
+  await events.enqueueAgentCallbackEvent({
+    agentId: "agent-a",
+    eventId: "event-a",
+    eventType: "question.submitted",
+    now: new Date("2026-04-23T12:00:00.000Z"),
+    payload: { contentId: "42" },
+  });
+
+  const result = await delivery.processDueAgentCallbackDeliveries({
+    fetchImpl: async url =>
+      new Response(null, {
+        status: String(url).endsWith("/sub-a") ? 204 : 503,
+        statusText: String(url).endsWith("/sub-a") ? "No Content" : "Service Unavailable",
+      }),
+    now: new Date("2026-04-23T12:00:01.000Z"),
+    workerId: "worker-a",
+  });
+
+  assert.deepEqual(result, {
+    dead: 0,
+    delivered: 1,
+    leased: 2,
+    released: 0,
+    retrying: 1,
+  });
+
+  assert.equal((await events.getAgentCallbackEvent("sub-a:event-a"))?.status, "delivered");
+  assert.equal((await events.getAgentCallbackEvent("sub-b:event-a"))?.status, "retrying");
+});

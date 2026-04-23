@@ -25,6 +25,17 @@ export type DeliverLeasedCallbackEventInput = {
   now?: Date;
 };
 
+export type ProcessAgentCallbackDeliveriesInput = {
+  baseDelayMs?: number;
+  fetchImpl?: typeof fetch;
+  leaseMs?: number;
+  limit?: number;
+  maxAttempts?: number;
+  maxDelayMs?: number;
+  now?: Date;
+  workerId: string;
+};
+
 function retryDelayMs(attemptCount: number, baseDelayMs: number, maxDelayMs: number) {
   return Math.min(maxDelayMs, baseDelayMs * 2 ** Math.max(0, attemptCount - 1));
 }
@@ -176,5 +187,69 @@ export async function deliverLeasedAgentCallbackEvent(input: DeliverLeasedCallba
     ok: response.ok,
     status: response.status,
     statusText: response.statusText,
+  };
+}
+
+export async function processDueAgentCallbackDeliveries(input: ProcessAgentCallbackDeliveriesInput) {
+  const now = input.now ?? new Date();
+  const released = await releaseExpiredAgentCallbackLeases({ now });
+  const leased = await leaseDueAgentCallbackEvents({
+    leaseMs: input.leaseMs,
+    limit: input.limit,
+    now,
+    workerId: input.workerId,
+  });
+  let delivered = 0;
+  let retrying = 0;
+  let dead = 0;
+
+  for (const event of leased) {
+    try {
+      const result = await deliverLeasedAgentCallbackEvent({
+        event,
+        fetchImpl: input.fetchImpl,
+        now,
+      });
+      if (result.ok) {
+        await completeAgentCallbackDelivery({
+          eventKey: event.eventKey,
+          now,
+          workerId: input.workerId,
+        });
+        delivered += 1;
+      } else {
+        const failed = await failAgentCallbackDelivery({
+          baseDelayMs: input.baseDelayMs,
+          error: `${result.status} ${result.statusText}`.trim(),
+          eventKey: event.eventKey,
+          maxAttempts: input.maxAttempts,
+          maxDelayMs: input.maxDelayMs,
+          now,
+          workerId: input.workerId,
+        });
+        if (failed?.status === "dead") dead += 1;
+        else retrying += 1;
+      }
+    } catch (error) {
+      const failed = await failAgentCallbackDelivery({
+        baseDelayMs: input.baseDelayMs,
+        error: error instanceof Error ? error.message : String(error),
+        eventKey: event.eventKey,
+        maxAttempts: input.maxAttempts,
+        maxDelayMs: input.maxDelayMs,
+        now,
+        workerId: input.workerId,
+      });
+      if (failed?.status === "dead") dead += 1;
+      else retrying += 1;
+    }
+  }
+
+  return {
+    dead,
+    delivered,
+    leased: leased.length,
+    released: released.length,
+    retrying,
   };
 }
