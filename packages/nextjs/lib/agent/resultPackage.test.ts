@@ -90,8 +90,44 @@ test("buildAgentResultPackage turns a settled rating into an agent decision", ()
   assert.equal(result.recommendedNextAction, "proceed_after_addressing_objections");
   assert.equal(result.distribution.up.share, 0.7);
   assert.equal(result.majorObjections[0]?.type, "concern");
+  assert.deepEqual(result.feedbackQuality, {
+    actionability: "medium",
+    objectionCount: 1,
+    publicNoteCount: 1,
+    sourceUrlCount: 0,
+  });
   assert.match(result.rationaleSummary, /72\/100/);
   assert.equal(result.methodology.templateId, "generic_rating");
+});
+
+test("buildAgentResultPackage exposes feedback source URLs for agents", () => {
+  const result = buildAgentResultPackage({
+    audienceContext: null,
+    content: content(),
+    feedback: [
+      feedback({ feedbackType: "source_quality", sourceUrl: "https://example.com/source-a" }),
+      feedback({ feedbackType: "counterpoint", id: 2, sourceUrl: "https://example.com/source-a" }),
+      feedback({ feedbackType: "concern", id: 3, sourceUrl: "https://example.com/source-b" }),
+    ],
+    latestRound: {
+      downCount: 3,
+      downPool: "400",
+      revealedCount: 8,
+      roundId: "2",
+      settledAt: "100",
+      state: ROUND_STATE.Settled,
+      totalStake: "1000",
+      upCount: 5,
+      upPool: "600",
+      upWins: true,
+      voteCount: 8,
+    },
+    publicUrl: "https://curyo.xyz/rate?content=123",
+  });
+
+  assert.equal(result.feedbackQuality.actionability, "high");
+  assert.equal(result.feedbackQuality.sourceUrlCount, 2);
+  assert.deepEqual(result.sourceUrls, ["https://example.com/source-a", "https://example.com/source-b"]);
 });
 
 test("buildAgentResultPackage keeps open rounds pending", () => {

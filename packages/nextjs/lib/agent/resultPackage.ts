@@ -66,6 +66,12 @@ export type AgentResultPackage = {
     roundId: string | null;
   }>;
   dissentingView: string | null;
+  feedbackQuality: {
+    actionability: "none" | "low" | "medium" | "high";
+    objectionCount: number;
+    publicNoteCount: number;
+    sourceUrlCount: number;
+  };
   recommendedNextAction:
     | "wait_for_settlement"
     | "proceed"
@@ -75,6 +81,7 @@ export type AgentResultPackage = {
     | "collect_more_votes"
     | "manual_review";
   publicUrl: string | null;
+  sourceUrls: string[];
   methodology: {
     templateId: string;
     templateVersion: number;
@@ -104,6 +111,25 @@ function toBigIntValue(value: unknown): bigint {
   if (typeof value === "number" && Number.isFinite(value)) return BigInt(Math.max(0, Math.floor(value)));
   if (typeof value === "string" && /^\d+$/.test(value)) return BigInt(value);
   return 0n;
+}
+
+function buildFeedbackQuality(
+  feedback: readonly ContentFeedbackItem[],
+  objections: AgentResultPackage["majorObjections"],
+): AgentResultPackage["feedbackQuality"] {
+  const sourceUrlCount = new Set(feedback.map(item => item.sourceUrl).filter(Boolean)).size;
+  const publicNoteCount = feedback.length;
+  let actionability: AgentResultPackage["feedbackQuality"]["actionability"] = "none";
+  if (publicNoteCount > 0) actionability = "low";
+  if (objections.length > 0 || sourceUrlCount > 0 || publicNoteCount >= 3) actionability = "medium";
+  if (objections.length >= 2 && (sourceUrlCount > 0 || publicNoteCount >= 5)) actionability = "high";
+
+  return {
+    actionability,
+    objectionCount: objections.length,
+    publicNoteCount,
+    sourceUrlCount,
+  };
 }
 
 function toNumberValue(value: unknown, fallback: number | null = null): number | null {
@@ -257,6 +283,7 @@ export function buildAgentResultPackage(params: {
     score: confidenceScore,
   };
   const majorObjections = buildMajorObjections(params.feedback, downShare);
+  const feedbackQuality = buildFeedbackQuality(params.feedback, majorObjections);
   const action = recommendedNextAction(answer, confidence.level, majorObjections.length);
   const feedbackTypes = summarizeFeedbackTypes(params.feedback);
   const stateLabel = roundState === null ? null : ROUND_STATE_LABEL[roundState as keyof typeof ROUND_STATE_LABEL];
@@ -303,6 +330,7 @@ export function buildAgentResultPackage(params: {
       },
     },
     dissentingView,
+    feedbackQuality,
     limitations,
     majorObjections,
     methodology: {
@@ -330,6 +358,7 @@ export function buildAgentResultPackage(params: {
     rationaleSummary: `Latest ${stateLabel ?? "unknown"} round has ${ratingText}, ${revealedCount} revealed votes, and ${stakeTotal.toString()} raw stake. ${feedbackText}`,
     ready,
     recommendedNextAction: action,
+    sourceUrls: [...new Set(params.feedback.map(item => item.sourceUrl).filter((url): url is string => !!url))],
     stakeMass: {
       down: downStake.toString(),
       total: stakeTotal.toString(),
