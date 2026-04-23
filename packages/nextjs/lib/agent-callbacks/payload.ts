@@ -30,6 +30,9 @@ export function buildAgentCallbackPayload(params: {
     contentIds,
     error: typeof params.body.error === "string" ? params.body.error : null,
     eventType: params.eventType,
+    ...(params.body.liveAskGuidance && typeof params.body.liveAskGuidance === "object"
+      ? { liveAskGuidance: params.body.liveAskGuidance }
+      : {}),
     operationKey: params.operationKey,
     publicUrl: getAgentPublicQuestionUrl(contentId),
     status: typeof params.body.status === "string" ? params.body.status : null,

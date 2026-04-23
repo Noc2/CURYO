@@ -342,3 +342,50 @@ test("curyo_ask_humans registers webhooks and enqueues submitted callbacks", asy
     },
   });
 });
+
+test("curyo_ask_humans registers the default lifecycle webhook events", async () => {
+  const registered: unknown[] = [];
+
+  __setMcpToolTestOverridesForTests({
+    getMcpAgentBudgetSummary: async () => managedBudgetSummary(),
+    handleManagedQuestionSubmissionRequest: async () => ({
+      body: {
+        contentId: "123",
+        operationKey: OPERATION_KEY,
+        status: "submitted",
+      },
+      status: 200,
+    }),
+    ...quoteOverrides(),
+    updateMcpBudgetReservation: async () => null,
+    upsertAgentCallbackSubscription: async params => {
+      registered.push(params);
+      return null;
+    },
+  });
+
+  await callCuryoMcpTool({
+    agent: AGENT,
+    arguments: askArguments({
+      webhookSecret: "webhook-secret",
+      webhookUrl: "https://agent.example/curyo",
+    }),
+    name: "curyo_ask_humans",
+  });
+
+  assert.deepEqual(registered[0], {
+    agentId: AGENT.id,
+    callbackUrl: "https://agent.example/curyo",
+    eventTypes: [
+      "question.submitting",
+      "question.submitted",
+      "question.open",
+      "question.settling",
+      "question.failed",
+      "question.settled",
+      "feedback.unlocked",
+      "bounty.low_response",
+    ],
+    secret: "webhook-secret",
+  });
+});

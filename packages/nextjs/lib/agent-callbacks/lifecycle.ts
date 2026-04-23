@@ -3,6 +3,7 @@ import { enqueueAgentCallbackEvent } from "./events";
 import type { AgentCallbackEventType } from "./types";
 import { ROUND_STATE } from "@curyo/contracts/protocol";
 import { dbClient } from "~~/lib/db";
+import { buildAgentLiveAskGuidance } from "~~/lib/agent/liveAskGuidance";
 import { buildContentFeedbackRoundContext, listContentFeedback } from "~~/lib/feedback/contentFeedback";
 import { ponderApi } from "~~/services/ponder/client";
 
@@ -113,6 +114,7 @@ export async function sweepAgentLifecycleCallbacks(params: { limit?: number; now
   const dependencies = getLifecycleDependencies();
   const candidates = await dependencies.listCandidates(limit);
   const emitted = {
+    bountyLowResponse: 0,
     feedbackUnlocked: 0,
     questionOpen: 0,
     questionSettled: 0,
@@ -128,6 +130,10 @@ export async function sweepAgentLifecycleCallbacks(params: { limit?: number; now
     const feedback = await dependencies.listContentFeedback({
       contentId: candidate.contentId,
       context: feedbackContext,
+    });
+    const liveAskGuidance = buildAgentLiveAskGuidance({
+      content: response.content,
+      nowSeconds,
     });
 
     for (const eventType of lifecycleEventsForContent({
@@ -162,6 +168,26 @@ export async function sweepAgentLifecycleCallbacks(params: { limit?: number; now
       if (eventType === "question.settling") emitted.questionSettling += 1;
       if (eventType === "question.settled") emitted.questionSettled += 1;
       if (eventType === "feedback.unlocked") emitted.feedbackUnlocked += 1;
+    }
+
+    if (liveAskGuidance && liveAskGuidance.lowResponseRisk === "high" && liveAskGuidance.recommendedAction !== "wait") {
+      await dependencies.enqueueAgentCallbackEvent({
+        agentId: candidate.agentId,
+        eventId: callbackEventId(candidate.operationKey, "bounty.low_response"),
+        eventType: "bounty.low_response",
+        payload: buildAgentCallbackPayload({
+          body: {
+            contentId: candidate.contentId,
+            liveAskGuidance,
+            status: "low_response",
+          },
+          chainId: candidate.chainId,
+          clientRequestId: candidate.clientRequestId,
+          eventType: "bounty.low_response",
+          operationKey: candidate.operationKey,
+        }),
+      });
+      emitted.bountyLowResponse += 1;
     }
   }
 

@@ -56,6 +56,7 @@ test("sweepAgentLifecycleCallbacks emits open and settling for overdue open roun
   });
 
   assert.deepEqual(result.emitted, {
+    bountyLowResponse: 0,
     feedbackUnlocked: 0,
     questionOpen: 1,
     questionSettled: 0,
@@ -90,6 +91,7 @@ test("sweepAgentLifecycleCallbacks emits settled and feedback unlocked for termi
   const result = await sweepAgentLifecycleCallbacks();
 
   assert.deepEqual(result.emitted, {
+    bountyLowResponse: 0,
     feedbackUnlocked: 1,
     questionOpen: 0,
     questionSettled: 1,
@@ -134,4 +136,67 @@ test("sweepAgentLifecycleCallbacks stays idempotent through stable event ids", a
 
   assert.equal(seen.size, 2);
   assert.equal(duplicateCount, 2);
+});
+
+test("sweepAgentLifecycleCallbacks emits bounty.low_response with live ask guidance", async () => {
+  const enqueued: Array<{ eventType: string; payload: Record<string, unknown> }> = [];
+
+  __setAgentLifecycleTestOverridesForTests({
+    enqueueAgentCallbackEvent: async params => {
+      enqueued.push({
+        eventType: params.eventType,
+        payload: params.payload as Record<string, unknown>,
+      });
+      return [];
+    },
+    getContentById: async () =>
+      ({
+        ...contentResponse({
+          openRound: {
+            epochDuration: 1200,
+            estimatedSettlementTime: "1700000400",
+            lowSince: "1700000100",
+            maxDuration: 7200,
+            maxVoters: 50,
+            minVoters: 3,
+            roundId: "7",
+            voteCount: 1,
+          },
+          rewardPoolSummary: {
+            currentRewardPoolAmount: "1000000",
+            hasActiveBounty: true,
+            nextBountyClosesAt: "1700000600",
+          },
+          roundEpochDuration: 1200,
+          roundMaxDuration: 7200,
+          roundMaxVoters: 50,
+          roundMinVoters: 3,
+        }),
+        rounds: [],
+      }) as never,
+    listCandidates: async () => [CANDIDATE],
+    listContentFeedback: async () =>
+      ({
+        items: [],
+      }) as never,
+  });
+
+  const result = await sweepAgentLifecycleCallbacks({
+    now: new Date("2023-11-14T22:13:40.000Z"),
+  });
+
+  assert.equal(result.emitted.bountyLowResponse, 1);
+  assert.equal(enqueued.at(-1)?.eventType, "bounty.low_response");
+  assert.deepEqual(enqueued.at(-1)?.payload.liveAskGuidance, {
+    lowResponseRisk: "high",
+    reasonCodes: [
+      "quorum_not_reached",
+      "low_response_persisting",
+      "bounty_below_healthy_target",
+      "bounty_closing_soon",
+      "settlement_near_with_quorum_gap",
+    ],
+    recommendedAction: "retry_later",
+    suggestedTopUpAtomic: "500000",
+  });
 });
