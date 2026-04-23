@@ -14,6 +14,7 @@ BOLD_FONT="/System/Library/Fonts/Supplemental/Arial Bold.ttf"
 REGULAR_FONT="/System/Library/Fonts/Supplemental/Arial.ttf"
 
 ICON_SOURCE="$TMP_DIR/icon-source.png"
+ICON_MASK="$TMP_DIR/icon-mask.png"
 SOCIAL_SOURCE="$TMP_DIR/social-source.png"
 BANNER_SOURCE="$TMP_DIR/banner-source.png"
 OG_CANVAS="$TMP_DIR/og-image.png"
@@ -30,13 +31,21 @@ if ! command -v magick >/dev/null 2>&1; then
 fi
 
 magick "$POSTER_ORB" \
-  -gravity center \
-  -crop 820x820+0-24 \
+  -crop 540x540+130+8 \
   +repage \
   -resize 512x512 \
   "$ICON_SOURCE"
 
-magick "$ICON_SOURCE" "$PUBLIC_DIR/favicon.png"
+magick -size 512x512 xc:none \
+  -fill white \
+  -draw "circle 256,256 256,16" \
+  -blur 0x2 \
+  "$ICON_MASK"
+
+magick "$ICON_SOURCE" "$ICON_MASK" \
+  -compose copyopacity \
+  -composite \
+  "$PUBLIC_DIR/favicon.png"
 
 magick "$POSTER_ORB" \
   -resize 660x660 \
