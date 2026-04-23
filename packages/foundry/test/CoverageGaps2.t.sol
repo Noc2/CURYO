@@ -925,7 +925,9 @@ contract ContentRegistryCoverageTest is VotingTestBase {
         crep.approve(address(registry), 20e6);
         _submitContentWithReservation(registry, "https://example.com/dup", "goal", "goal", "tag1", 0);
         vm.expectRevert("Question already submitted");
-        registry.submitQuestion("https://example.com/dup", _emptyImageUrls(), "", "goal", "goal", "tag1", 1, bytes32(0));
+        registry.submitQuestion(
+            "https://example.com/dup", _emptyImageUrls(), "", "goal", "goal", "tag1", 1, keccak256("dup-salt")
+        );
         vm.stopPrank();
     }
 

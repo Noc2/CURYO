@@ -484,6 +484,10 @@ contract ContentRegistry is Initializable, AccessControlUpgradeable, PausableUpg
             uint256 resolvedCategoryId = _resolveQuestionSubmissionCategory(metadata);
             bytes32 submissionKey = _deriveQuestionMediaSubmissionKey(metadata, resolvedCategoryId);
             require(!submissionKeyUsed[submissionKey], "Question already submitted");
+            // A zero salt collapses the reveal commitment's entropy and lets a front-runner
+            // pre-reserve the same (metadata, ..., salt=0) tuple. Force non-zero salt per
+            // question so every reveal hash carries caller-supplied randomness.
+            require(question.salt != bytes32(0), "Salt required");
 
             metadataList[i] = metadata;
             submissionKeys[i] = submissionKey;
@@ -804,6 +808,10 @@ contract ContentRegistry is Initializable, AccessControlUpgradeable, PausableUpg
         resolvedCategoryId = _resolveQuestionSubmissionCategory(metadata);
         submissionKey = _deriveQuestionMediaSubmissionKey(metadata, resolvedCategoryId);
         require(!submissionKeyUsed[submissionKey], "Question already submitted");
+        // A zero salt collapses the reveal commitment's entropy and lets a front-runner
+        // pre-reserve the same (metadata, ..., salt=0) tuple. Force non-zero salt so every
+        // reveal hash carries caller-supplied randomness.
+        require(salt != bytes32(0), "Salt required");
         _validateSubmissionReward(rewardTerms);
 
         bytes32 mediaHash = _submissionMediaHash(imageUrls, videoUrl);

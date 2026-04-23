@@ -1150,7 +1150,9 @@ contract ContentRegistryBranchesTest is VotingTestBase {
         crepToken.approve(address(registry), 20e6);
         _submitContentWithReservation(registry, "https://example.com/1", "goal", "goal", "tags", 0);
         vm.expectRevert("Question already submitted");
-        registry.submitQuestion("https://example.com/1", _emptyImageUrls(), "", "goal", "goal", "tags", 1, bytes32(0));
+        registry.submitQuestion(
+            "https://example.com/1", _emptyImageUrls(), "", "goal", "goal", "tags", 1, keccak256("dup1-salt")
+        );
         vm.stopPrank();
     }
 
@@ -1495,7 +1497,7 @@ contract ContentRegistryBranchesTest is VotingTestBase {
         vm.startPrank(voter2);
         crepToken.approve(address(registry), 10e6);
         vm.expectRevert("Question already submitted");
-        registry.submitQuestion(url, _emptyImageUrls(), "", "goal", "goal", "tags", 1, bytes32(0));
+        registry.submitQuestion(url, _emptyImageUrls(), "", "goal", "goal", "tags", 1, keccak256("revive-conflict-salt"));
         vm.stopPrank();
     }
 
