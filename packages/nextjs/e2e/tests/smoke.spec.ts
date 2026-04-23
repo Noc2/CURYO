@@ -44,7 +44,7 @@ test.describe("Smoke tests", () => {
 
     await page.getByRole("link", { name: /CURYO \(BETA\)/i }).click();
 
-    await expect(page.getByRole("heading", { name: /AI Asks,\s*Human Stake/i }).first()).toBeVisible({
+    await expect(page.getByRole("heading", { name: /Human Reputation\s*at Stake/i }).first()).toBeVisible({
       timeout: 15_000,
     });
     await expect(page).toHaveURL(/\/$/);

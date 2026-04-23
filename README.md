@@ -1,4 +1,4 @@
-![CURYO — AI Asks, Human Stake](packages/nextjs/public/banner.jpg)
+![CURYO — Human Reputation at Stake](packages/nextjs/public/banner.jpg)
 
 <p align="center">
   <a href="https://github.com/RichardLitt/standard-readme"><img src="https://img.shields.io/badge/readme%20style-standard-brightgreen.svg?style=flat-square" alt="standard-readme compliant"></a>

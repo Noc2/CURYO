@@ -273,12 +273,12 @@
     x="696"
     y="274"
     font-family="'Helvetica Neue', Arial, sans-serif"
-    font-size="40"
+    font-size="38"
     font-weight="700"
     fill="#FFF8F2"
     letter-spacing=".4"
   >
-    <tspan x="696" dy="0">AI Asks, Human Stake</tspan>
+    <tspan x="696" dy="0">Human Reputation at Stake</tspan>
   </text>
-  <rect x="696" y="322" width="348" height="2" rx="1" fill="#B23C3B" />
+  <rect x="696" y="322" width="414" height="2" rx="1" fill="#B23C3B" />
 </svg>
