@@ -101,6 +101,9 @@ contract QuestionRewardPoolEscrow is
         uint256 voterClaimedAmount;
         uint256 frontendClaimedAmount;
         uint256 refundedAmount;
+        // Legacy flag: no code path writes this after the "keep bundles retryable after
+        // failed rounds" refactor. Kept in the struct to preserve storage layout of the
+        // unreleased proxy state; read as always-false.
         bool failed;
         bool refunded;
         // When set, unclaimed residue is forfeited to the protocol treasury instead of
@@ -201,7 +204,9 @@ contract QuestionRewardPoolEscrow is
     event QuestionBundleRoundRecorded(
         uint256 indexed bundleId, uint256 indexed contentId, uint256 indexed roundId, uint256 bundleIndex
     );
-    event QuestionBundleFailed(uint256 indexed bundleId, uint256 indexed contentId, uint256 indexed roundId);
+    /// @dev Removed: QuestionBundleFailed is no longer emitted after the retry-after-
+    ///      failed-round refactor. The bundle.failed flag is never set, so subscribing
+    ///      to this event is a no-op on current deployments.
     event QuestionBundleRewardClaimed(
         uint256 indexed bundleId,
         address indexed claimant,
@@ -689,9 +694,9 @@ contract QuestionRewardPoolEscrow is
     {
         BundleReward storage bundle = _getExistingBundleReward(bundleId);
         require(!bundle.refunded, "Already refunded");
-        // Refund conditions: bundle failed, bounty window expired, or all voters claimed.
+        // Refund conditions: bounty window expired, or all voters claimed.
         require(
-            bundle.failed || (bundle.bountyClosesAt != 0 && block.timestamp > bundle.bountyClosesAt)
+            (bundle.bountyClosesAt != 0 && block.timestamp > bundle.bountyClosesAt)
                 || bundle.claimedCount >= bundle.requiredCompleters,
             "Bundle active"
         );
@@ -699,7 +704,7 @@ contract QuestionRewardPoolEscrow is
         // bounty-window-expiry branch triggered the refund, voters who haven't yet claimed
         // would have their earned share swept back to the funder. Give them an explicit
         // grace window to finish claiming before anyone can race them.
-        if (_isBundleClaimOpen(bundle) && !bundle.failed) {
+        if (_isBundleClaimOpen(bundle)) {
             require(
                 block.timestamp > uint256(bundle.bountyClosesAt) + BUNDLE_CLAIM_GRACE, "Claim grace active"
             );
@@ -906,7 +911,7 @@ contract QuestionRewardPoolEscrow is
     }
 
     function _isBundleClaimOpen(BundleReward storage bundle) internal view returns (bool) {
-        return !bundle.failed && !bundle.refunded && bundle.completedQuestionCount == bundle.questionCount
+        return !bundle.refunded && bundle.completedQuestionCount == bundle.questionCount
             && bundle.claimedCount < bundle.requiredCompleters;
     }
 
