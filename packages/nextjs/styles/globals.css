@@ -15,22 +15,22 @@
 @plugin "daisyui/theme" {
   name: "dark";
 
-  --color-primary: #f26426;
-  --color-primary-content: #f5f0eb;
-  --color-secondary: #7e8996;
-  --color-secondary-content: #090a0c;
-  --color-accent: #b3341b;
-  --color-accent-content: #f5f0eb;
-  --color-neutral: #7e8996;
-  --color-neutral-content: #090a0c;
+  --color-primary: #d56a3e;
+  --color-primary-content: #f8f2ed;
+  --color-secondary: #8b858e;
+  --color-secondary-content: #f8f2ed;
+  --color-accent: #7a4561;
+  --color-accent-content: #f8f2ed;
+  --color-neutral: #1d181e;
+  --color-neutral-content: #f5f0eb;
   --color-base-100: #090a0c;
-  --color-base-200: #17161a;
-  --color-base-300: #090a0c;
+  --color-base-200: #151217;
+  --color-base-300: #0d0a0f;
   --color-base-content: #f5f0eb;
-  --color-info: #7e8996;
-  --color-success: #f26426;
-  --color-warning: #f26426;
-  --color-error: #b3341b;
+  --color-info: #8b858e;
+  --color-success: #d56a3e;
+  --color-warning: #d89a63;
+  --color-error: #bc5a52;
 
   --radius-selector: 0.5rem;
   --radius-field: 0.5rem;
@@ -73,22 +73,31 @@
 
 :root {
   background: var(--color-base-100);
-  --curyo-ember: #f26426;
-  --curyo-ember-deep: #b3341b;
+  --curyo-ember: #d56a3e;
+  --curyo-ember-hover: #e07a4e;
+  --curyo-ember-deep: #7a4561;
   --curyo-warm-white: #f5f0eb;
-  --curyo-steel: #7e8996;
+  --curyo-steel: #8b858e;
   --curyo-surface: #090a0c;
-  --curyo-surface-elevated: #17161a;
-  --curyo-surface-elevated-hover: #1d1c20;
-  --curyo-surface-mobile-vote: #26242a;
-  --curyo-surface-nested: #090a0c;
+  --curyo-surface-elevated: #151217;
+  --curyo-surface-elevated-hover: #1c181e;
+  --curyo-surface-mobile-vote: #221d24;
+  --curyo-surface-nested: #0d0a0f;
+  --curyo-ember-rgb: 213 106 62;
+  --curyo-ember-hover-rgb: 224 122 78;
+  --curyo-ember-deep-rgb: 122 69 97;
+  --curyo-warm-white-rgb: 245 240 235;
+  --curyo-steel-rgb: 139 133 142;
+  --curyo-surface-rgb: 9 10 12;
+  --curyo-surface-elevated-rgb: 21 18 23;
+  --curyo-surface-nested-rgb: 13 10 15;
   --curyo-radius-card: 0.5rem;
   --curyo-radius-control: var(--curyo-radius-card);
   --curyo-radius-pill: 9999px;
   --curyo-card-radius: var(--curyo-radius-card);
   --curyo-shell-border: rgb(245 240 235 / 0.08);
   --curyo-shell-border-strong: rgb(245 240 235 / 0.14);
-  --curyo-panel-shadow: 0 24px 56px rgb(9 10 12 / 0.34);
+  --curyo-panel-shadow: 0 24px 56px rgb(5 4 8 / 0.4);
 }
 
 body {
@@ -178,7 +187,7 @@ body {
 /* Override DaisyUI dropdown content */
 .dropdown-content {
   font-size: 1rem !important; /* Enforce minimum 16px */
-  background: rgb(23 22 26 / 0.98);
+  background: rgb(var(--curyo-surface-elevated-rgb) / 0.98);
   border: none;
   border-radius: var(--curyo-card-radius);
   box-shadow: var(--curyo-panel-shadow);
@@ -196,7 +205,7 @@ body {
 .textarea {
   border-radius: var(--curyo-radius-control);
   border-color: transparent !important;
-  background: rgb(9 10 12 / 0.96);
+  background: rgb(var(--curyo-surface-nested-rgb) / 0.96);
   box-shadow:
     inset 0 1px 0 rgb(245 240 235 / 0.03),
     0 0 0 1px rgb(245 240 235 / 0.04);
@@ -221,7 +230,7 @@ body {
   border-color: transparent !important;
   box-shadow:
     inset 0 1px 0 rgb(245 240 235 / 0.04),
-    0 0 0 1.5px rgb(242 100 38 / 0.32);
+    0 0 0 1.5px rgb(var(--curyo-ember-rgb) / 0.32);
 }
 
 .header-search-input {
@@ -246,7 +255,7 @@ body {
 .header-search-input:focus-within {
   box-shadow:
     inset 0 1px 0 rgb(245 240 235 / 0.04),
-    0 0 0 1.5px rgb(242 100 38 / 0.32),
+    0 0 0 1.5px rgb(var(--curyo-ember-rgb) / 0.32),
     0 14px 28px rgb(0 0 0 / 0.22);
 }
 
@@ -267,12 +276,12 @@ body {
   color: var(--color-primary-content);
   background: var(--curyo-ember);
   border: none;
-  box-shadow: 0 14px 30px rgb(242 100 38 / 0.18);
+  box-shadow: 0 14px 30px rgb(var(--curyo-ember-rgb) / 0.18);
 }
 
 .btn-primary:hover {
-  background: var(--curyo-ember);
-  box-shadow: 0 18px 34px rgb(242 100 38 / 0.24);
+  background: var(--curyo-ember-hover);
+  box-shadow: 0 18px 34px rgb(var(--curyo-ember-hover-rgb) / 0.24);
 }
 
 .btn-submit {
@@ -280,12 +289,12 @@ body {
   color: var(--color-primary-content);
   background: var(--curyo-ember);
   border: none;
-  box-shadow: 0 14px 30px rgb(242 100 38 / 0.18);
+  box-shadow: 0 14px 30px rgb(var(--curyo-ember-rgb) / 0.18);
 }
 
 .btn-submit:hover {
-  background: var(--curyo-ember);
-  box-shadow: 0 18px 34px rgb(242 100 38 / 0.24);
+  background: var(--curyo-ember-hover);
+  box-shadow: 0 18px 34px rgb(var(--curyo-ember-hover-rgb) / 0.24);
 }
 
 .btn-curyo {
@@ -293,12 +302,12 @@ body {
   color: var(--color-base-100);
   background: var(--curyo-warm-white);
   border: none;
-  box-shadow: 0 12px 26px rgb(244 240 235 / 0.14);
+  box-shadow: 0 12px 26px rgb(var(--curyo-warm-white-rgb) / 0.14);
 }
 
 .btn-curyo:hover {
   background: var(--curyo-warm-white);
-  box-shadow: 0 16px 30px rgb(245 240 235 / 0.18);
+  box-shadow: 0 16px 30px rgb(var(--curyo-warm-white-rgb) / 0.18);
 }
 
 .btn.btn-ghost {
@@ -335,23 +344,23 @@ body {
   }
 
   .bg-black\/40 {
-    background-color: rgb(9 10 12 / 0.4) !important;
+    background-color: rgb(var(--curyo-surface-rgb) / 0.4) !important;
   }
 
   .bg-black\/45 {
-    background-color: rgb(9 10 12 / 0.45) !important;
+    background-color: rgb(var(--curyo-surface-rgb) / 0.45) !important;
   }
 
   .bg-black\/60 {
-    background-color: rgb(9 10 12 / 0.6) !important;
+    background-color: rgb(var(--curyo-surface-rgb) / 0.6) !important;
   }
 
   .bg-black\/70 {
-    background-color: rgb(9 10 12 / 0.7) !important;
+    background-color: rgb(var(--curyo-surface-rgb) / 0.7) !important;
   }
 
   .bg-black\/80 {
-    background-color: rgb(9 10 12 / 0.8) !important;
+    background-color: rgb(var(--curyo-surface-rgb) / 0.8) !important;
   }
 
   .bg-white {
@@ -408,7 +417,7 @@ body {
   position: relative;
   overflow: hidden;
   border-radius: var(--curyo-card-radius);
-  background: rgb(23 22 26 / 0.96);
+  background: rgb(var(--curyo-surface-elevated-rgb) / 0.96);
   border: none;
   box-shadow: var(--curyo-panel-shadow);
 }
@@ -419,15 +428,15 @@ body {
 
 .surface-card-nested {
   border-radius: var(--curyo-card-radius);
-  background: rgb(9 10 12 / 0.98);
+  background: rgb(var(--curyo-surface-nested-rgb) / 0.98);
   border: none;
-  box-shadow: 0 16px 32px rgb(9 10 12 / 0.26);
+  box-shadow: 0 16px 32px rgb(var(--curyo-surface-rgb) / 0.26);
 }
 
 .surface-card .surface-card {
   border-radius: var(--curyo-card-radius);
-  background: rgb(9 10 12 / 0.98);
-  box-shadow: 0 16px 32px rgb(9 10 12 / 0.26);
+  background: rgb(var(--curyo-surface-nested-rgb) / 0.98);
+  box-shadow: 0 16px 32px rgb(var(--curyo-surface-rgb) / 0.26);
 }
 
 .embed-surface {
@@ -441,7 +450,7 @@ body {
 .card.bg-base-200,
 .modal-box.bg-base-200 {
   border-radius: var(--curyo-card-radius) !important;
-  background: rgb(23 22 26 / 0.98) !important;
+  background: rgb(var(--curyo-surface-elevated-rgb) / 0.98) !important;
   border: none !important;
 }
 
@@ -489,12 +498,12 @@ body {
 }
 
 .vote-btn.vote-feedback .vote-bg {
-  background: rgb(126 137 150 / 0.42);
+  background: rgb(var(--curyo-steel-rgb) / 0.42);
   box-shadow: none;
 }
 
 .vote-btn.vote-light .vote-bg {
-  background: rgb(126 137 150 / 0.42);
+  background: rgb(var(--curyo-steel-rgb) / 0.42);
   box-shadow: none;
 }
 
@@ -547,19 +556,19 @@ body {
 @keyframes vote-surface-attention {
   0% {
     box-shadow:
-      0 0 0 0 rgb(242 100 38 / 0),
+      0 0 0 0 rgb(var(--curyo-ember-rgb) / 0),
       var(--curyo-panel-shadow);
   }
 
   35% {
     box-shadow:
-      0 0 0 1px rgb(242 100 38 / 0.24),
-      0 20px 42px rgb(242 100 38 / 0.18);
+      0 0 0 1px rgb(var(--curyo-ember-rgb) / 0.24),
+      0 20px 42px rgb(var(--curyo-ember-hover-rgb) / 0.16);
   }
 
   100% {
     box-shadow:
-      0 0 0 0 rgb(242 100 38 / 0),
+      0 0 0 0 rgb(var(--curyo-ember-rgb) / 0),
       var(--curyo-panel-shadow);
   }
 }
@@ -584,14 +593,14 @@ body {
   0%,
   100% {
     box-shadow:
-      0 0 0 0 rgb(242 100 38 / 0),
+      0 0 0 0 rgb(var(--curyo-ember-rgb) / 0),
       var(--curyo-panel-shadow);
   }
 
   50% {
     box-shadow:
-      0 0 0 1px rgb(242 100 38 / 0.3),
-      0 18px 36px rgb(242 100 38 / 0.16);
+      0 0 0 1px rgb(var(--curyo-ember-rgb) / 0.3),
+      0 18px 36px rgb(var(--curyo-ember-hover-rgb) / 0.14);
   }
 }
 
@@ -807,7 +816,7 @@ body {
   background: var(--curyo-ember);
   background-image: none;
   color: var(--color-primary-content);
-  box-shadow: 0 10px 24px rgb(242 100 38 / 0.22);
+  box-shadow: 0 10px 24px rgb(var(--curyo-ember-rgb) / 0.2);
 }
 
 .pill-category {
@@ -815,13 +824,13 @@ body {
   background: var(--curyo-ember);
   background-image: none;
   color: var(--color-neutral-content);
-  box-shadow: 0 10px 24px rgb(242 100 38 / 0.22);
+  box-shadow: 0 10px 24px rgb(var(--curyo-ember-rgb) / 0.2);
 }
 
 .pill-inactive,
 .pill-filter {
   border-radius: var(--curyo-radius-control);
-  background: rgb(23 22 26 / 0.96);
+  background: rgb(var(--curyo-surface-elevated-rgb) / 0.96);
   color: var(--color-base-content);
   border: none;
   box-shadow: none;
@@ -834,7 +843,7 @@ body {
 
 .pill-inactive-muted {
   border-radius: var(--curyo-radius-control);
-  background: rgb(23 22 26 / 0.96);
+  background: rgb(var(--curyo-surface-elevated-rgb) / 0.96);
   color: rgb(245 240 235 / 0.6);
   border: none;
   box-shadow: none;
@@ -862,7 +871,7 @@ body {
 .scrollbar-subtle {
   scrollbar-gutter: stable;
   scrollbar-width: auto;
-  scrollbar-color: rgb(242 100 38 / 0.9) rgb(255 255 255 / 0.08);
+  scrollbar-color: rgb(var(--curyo-ember-rgb) / 0.88) rgb(255 255 255 / 0.08);
 }
 
 .scrollbar-subtle::-webkit-scrollbar {
@@ -878,12 +887,12 @@ body {
   min-height: 3rem;
   border: 3px solid transparent;
   border-radius: 9999px;
-  background: rgb(242 100 38 / 0.88);
+  background: rgb(var(--curyo-ember-rgb) / 0.88);
   background-clip: padding-box;
 }
 
 .scrollbar-subtle::-webkit-scrollbar-thumb:hover {
-  background: rgb(255 132 76 / 0.98);
+  background: rgb(var(--curyo-ember-hover-rgb) / 0.98);
   background-clip: padding-box;
 }
 
