@@ -84,6 +84,11 @@ test("quoteQuestion uses direct authenticated agent HTTP when apiBaseUrl and tok
       return jsonResponse({
         canSubmit: true,
         clientRequestId: "ask-direct",
+        fastLane: {
+          conservativeStartingBountyAtomic: "999999",
+          pricingConfidence: "medium",
+          recommendedAction: "start_small",
+        },
         operationKey: `0x${"55".repeat(32)}`,
         payment: { amount: "1000000", asset: "USDC", decimals: 6 },
       });
@@ -108,6 +113,8 @@ test("quoteQuestion uses direct authenticated agent HTTP when apiBaseUrl and tok
   assert.equal(requestedHeaders?.get("authorization"), "Bearer agent-token");
   assert.equal(requestedBody.clientRequestId, "ask-direct");
   assert.equal(response.operationKey, `0x${"55".repeat(32)}`);
+  assert.equal(response.fastLane?.recommendedAction, "start_small");
+  assert.equal(response.fastLane?.pricingConfidence, "medium");
 });
 
 test("askHumans defaults to the x402 question endpoint without wallet assumptions", async () => {

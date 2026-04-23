@@ -88,9 +88,33 @@ export interface CuryoAgentPayment {
   [key: string]: unknown;
 }
 
+export interface CuryoAgentFastLaneGuidance {
+  conservativeStartingBountyAtomic?: string;
+  estimatedResultAt?: number;
+  estimatedTimeToResultSeconds?: number;
+  expectedResponse?: {
+    healthyTargetVoters?: string;
+    likelyOutcome?: "thin" | "healthy" | "broad" | string;
+    minimumExpectedVoters?: string;
+    [key: string]: unknown;
+  };
+  guidance?: string[];
+  minimumViableQuorum?: string;
+  perRequiredSignalUnitAtomic?: string;
+  pricingConfidence?: "low" | "medium" | "high" | string;
+  recommendedAction?: "start_small" | "raise_before_submit" | "adjust_round_window" | string;
+  requiredSignalUnits?: string;
+  speed?: "fast" | "standard" | "slow" | string;
+  stretchBountyAmountAtomic?: string;
+  suggestedBountyAmountAtomic?: string;
+  warnings?: string[];
+  [key: string]: unknown;
+}
+
 export interface QuoteQuestionResponse {
   canSubmit?: boolean;
   clientRequestId?: string;
+  fastLane?: CuryoAgentFastLaneGuidance;
   operationKey?: `0x${string}` | string;
   payloadHash?: string;
   payment?: CuryoAgentPayment;
@@ -104,7 +128,7 @@ export interface AskHumansResponse {
   operationKey?: `0x${string}` | string;
   contentId?: string | null;
   contentIds?: string[];
-  fastLane?: JsonRecord;
+  fastLane?: CuryoAgentFastLaneGuidance;
   managedBudget?: JsonRecord | null;
   nextAction?: string | null;
   pollAfterMs?: number | null;

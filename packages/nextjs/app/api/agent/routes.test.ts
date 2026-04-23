@@ -236,6 +236,8 @@ test("agent quote route returns a direct authenticated quote response", async ()
   assert.equal(body.clientRequestId, "quote-http");
   assert.equal(body.operationKey, OPERATION_KEY);
   assert.deepEqual(body.resolvedCategoryIds, ["5"]);
+  assert.equal((body.fastLane as Record<string, unknown>).recommendedAction, "adjust_round_window");
+  assert.equal((body.fastLane as Record<string, unknown>).pricingConfidence, "medium");
 });
 
 test("agent asks route returns the managed submission response", async () => {
