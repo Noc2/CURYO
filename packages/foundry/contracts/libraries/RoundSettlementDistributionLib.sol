@@ -15,6 +15,12 @@ library RoundSettlementDistributionLib {
     event TreasuryFeeDistributed(uint256 indexed contentId, uint256 indexed roundId, uint256 amount);
     event ConsensusReserveFunded(uint256 indexed contentId, uint256 indexed roundId, uint256 amount);
     event ConsensusSubsidyDistributed(uint256 indexed contentId, uint256 indexed roundId, uint256 amount);
+    /// @notice Emitted when the 1% treasury fee could not be delivered (treasury unset or
+    ///         transfer reverted) and the amount was rerouted into the voter pool instead.
+    ///         Lets indexers reconcile voter-reward accounting with expected fee splits.
+    event TreasuryFeeFallbackToVoterPool(
+        uint256 indexed contentId, uint256 indexed roundId, uint256 amount
+    );
 
     function distribute(
         IERC20 crepToken,
@@ -116,9 +122,11 @@ library RoundSettlementDistributionLib {
                 emit TreasuryFeeDistributed(contentId, roundId, treasuryShare);
             } catch {
                 roundVoterPool[contentId][roundId] += treasuryShare;
+                emit TreasuryFeeFallbackToVoterPool(contentId, roundId, treasuryShare);
             }
         } else {
             roundVoterPool[contentId][roundId] += treasuryShare;
+            emit TreasuryFeeFallbackToVoterPool(contentId, roundId, treasuryShare);
         }
     }
 }
