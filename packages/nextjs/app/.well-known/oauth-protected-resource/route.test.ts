@@ -1,44 +1,38 @@
 import { NextRequest } from "next/server";
 import { GET } from "./route";
 import assert from "node:assert/strict";
-import { after, beforeEach, test } from "node:test";
+import { afterEach, test } from "node:test";
 
 const env = process.env as Record<string, string | undefined>;
-const originalAuthorizationServerUrl = env.CURYO_MCP_AUTHORIZATION_SERVER_URL;
+const originalAuthorizationServer = env.CURYO_MCP_AUTHORIZATION_SERVER_URL;
 
-function request() {
-  return new NextRequest("https://curyo.xyz/.well-known/oauth-protected-resource");
-}
-
-beforeEach(() => {
-  delete env.CURYO_MCP_AUTHORIZATION_SERVER_URL;
-});
-
-after(() => {
-  if (originalAuthorizationServerUrl === undefined) {
+afterEach(() => {
+  if (originalAuthorizationServer === undefined) {
     delete env.CURYO_MCP_AUTHORIZATION_SERVER_URL;
   } else {
-    env.CURYO_MCP_AUTHORIZATION_SERVER_URL = originalAuthorizationServerUrl;
+    env.CURYO_MCP_AUTHORIZATION_SERVER_URL = originalAuthorizationServer;
   }
 });
 
-test("protected resource metadata defaults to pre-registered bearer token mode", async () => {
-  const response = await GET(request());
-  const body = await response.json();
+test("protected resource metadata describes the MCP endpoint", async () => {
+  delete env.CURYO_MCP_AUTHORIZATION_SERVER_URL;
+
+  const response = await GET(new NextRequest("https://curyo.xyz/.well-known/oauth-protected-resource"));
+  const body = (await response.json()) as Record<string, unknown>;
 
   assert.equal(response.status, 200);
   assert.equal(body.resource, "https://curyo.xyz/api/mcp");
-  assert.equal(body.authorization_servers, undefined);
-  assert.deepEqual(body.bearer_token_authentication, {
-    mode: "pre_registered",
-  });
+  assert.equal(body.resource_name, "Curyo MCP");
+  assert.deepEqual(body.bearer_methods_supported, ["header"]);
+  assert.deepEqual(body.scopes_supported, ["curyo:ask", "curyo:balance", "curyo:quote", "curyo:read"]);
+  assert.equal("authorization_servers" in body, false);
 });
 
-test("protected resource metadata advertises configured authorization server", async () => {
-  env.CURYO_MCP_AUTHORIZATION_SERVER_URL = "https://auth.example.com";
+test("protected resource metadata includes external authorization server when configured", async () => {
+  env.CURYO_MCP_AUTHORIZATION_SERVER_URL = "https://auth.example";
 
-  const response = await GET(request());
-  const body = await response.json();
+  const response = await GET(new NextRequest("https://curyo.xyz/.well-known/oauth-protected-resource"));
+  const body = (await response.json()) as Record<string, unknown>;
 
-  assert.deepEqual(body.authorization_servers, ["https://auth.example.com"]);
+  assert.deepEqual(body.authorization_servers, ["https://auth.example"]);
 });
