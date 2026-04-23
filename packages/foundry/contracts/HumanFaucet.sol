@@ -620,8 +620,12 @@ contract HumanFaucet is SelfVerificationRoot, Ownable, Pausable {
             }
         } else if (
             referrer == user || claimantBonus == 0 || referrerReward == 0 || !addressClaimed[referrer]
-                || !voterIdNFT.hasVoterId(referrer)
+                || voterIdNFT.resolveHolder(referrer) != referrer
         ) {
+            // Require the referrer to be a direct Voter ID holder (not a delegate), mirroring
+            // the live claim path in `customVerificationHook`. Bootstrap is owner-only and
+            // closed before handoff, so the risk is low; this keeps the two paths consistent
+            // so future refactors can't quietly diverge.
             revert InvalidMigrationReferrer();
         }
 
