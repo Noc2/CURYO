@@ -1,3 +1,4 @@
+import { buildAgentLiveAskGuidance, type AgentLiveAskGuidance } from "./liveAskGuidance";
 import { ROUND_STATE, ROUND_STATE_LABEL } from "@curyo/contracts/protocol";
 import {
   type AgentDecisionAnswer,
@@ -72,6 +73,7 @@ export type AgentResultPackage = {
     publicNoteCount: number;
     sourceUrlCount: number;
   };
+  liveAskGuidance: AgentLiveAskGuidance | null;
   recommendedNextAction:
     | "wait_for_settlement"
     | "proceed"
@@ -293,6 +295,7 @@ export function buildAgentResultPackage(params: {
       ? `Public feedback includes ${feedbackTypes.join(", ")}.`
       : "No public voter feedback is available.";
   const ready = roundState === ROUND_STATE.Settled;
+  const liveAskGuidance = buildAgentLiveAskGuidance({ content: params.content });
   const dissentingView =
     downShare !== null && downShare >= 0.15
       ? `Minority down signal: ${Math.round(downShare * 100)}% of revealed stake and ${latestRound?.downCount ?? 0} revealed down votes.`
@@ -331,6 +334,7 @@ export function buildAgentResultPackage(params: {
     },
     dissentingView,
     feedbackQuality,
+    liveAskGuidance,
     limitations,
     majorObjections,
     methodology: {

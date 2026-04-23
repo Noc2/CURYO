@@ -7,6 +7,7 @@ import {
   upsertAgentCallbackSubscription,
 } from "~~/lib/agent-callbacks";
 import { buildAgentFastLaneGuidance } from "~~/lib/agent/fastLane";
+import { buildAgentLiveAskGuidance } from "~~/lib/agent/liveAskGuidance";
 import { buildAgentResultPackage } from "~~/lib/agent/resultPackage";
 import {
   agentAskHumansInputSchema,
@@ -73,6 +74,7 @@ type BackgroundTaskScheduler = (task: () => Promise<void> | void) => void;
 type McpToolDependencies = {
   completeManagedQuestionSubmissionRequest: typeof completeManagedQuestionSubmissionRequest;
   enqueueAgentCallbackEvent: typeof enqueueAgentCallbackEvent;
+  getContentById: typeof ponderApi.getContentById;
   getMcpAgentBudgetSummary: typeof getMcpAgentBudgetSummary;
   handleManagedQuestionSubmissionRequest: typeof handleManagedQuestionSubmissionRequest;
   preflightX402QuestionSubmission: typeof preflightX402QuestionSubmission;
@@ -90,6 +92,7 @@ function getMcpToolDependencies(): McpToolDependencies {
     completeManagedQuestionSubmissionRequest:
       mcpToolTestOverrides?.completeManagedQuestionSubmissionRequest ?? completeManagedQuestionSubmissionRequest,
     enqueueAgentCallbackEvent: mcpToolTestOverrides?.enqueueAgentCallbackEvent ?? enqueueAgentCallbackEvent,
+    getContentById: mcpToolTestOverrides?.getContentById ?? ponderApi.getContentById,
     getMcpAgentBudgetSummary: mcpToolTestOverrides?.getMcpAgentBudgetSummary ?? getMcpAgentBudgetSummary,
     handleManagedQuestionSubmissionRequest:
       mcpToolTestOverrides?.handleManagedQuestionSubmissionRequest ?? handleManagedQuestionSubmissionRequest,
@@ -500,10 +503,10 @@ async function buildQuestionResult(args: JsonObject, agent: McpAgentAuth) {
   if (!contentId) {
     const operation = normalizeMcpQuestionBody(x402QuestionSubmissionRecordBody(record));
     const status = operation && typeof operation === "object" ? String((operation as JsonObject).status ?? "") : "";
-    return {
-      answer: status === "failed" ? "failed" : "pending",
-      confidence: {
-        level: "none",
+      return {
+        answer: status === "failed" ? "failed" : "pending",
+        confidence: {
+          level: "none",
         score: 0,
       },
       distribution: {
@@ -517,14 +520,15 @@ async function buildQuestionResult(args: JsonObject, agent: McpAgentAuth) {
         up: { count: 0, share: null, stake: "0" },
       },
       dissentingView: null,
-      feedbackQuality: {
-        actionability: "none",
-        objectionCount: 0,
-        publicNoteCount: 0,
-        sourceUrlCount: 0,
-      },
-      limitations: ["The question has not reached a public Curyo result page yet."],
-      majorObjections: [],
+        feedbackQuality: {
+          actionability: "none",
+          objectionCount: 0,
+          publicNoteCount: 0,
+          sourceUrlCount: 0,
+        },
+        liveAskGuidance: null,
+        limitations: ["The question has not reached a public Curyo result page yet."],
+        majorObjections: [],
       methodology: {
         ratingSystem: "curyo.binary_staked_rating.v1",
         sources: ["x402.question_submission"],
@@ -560,7 +564,7 @@ async function buildQuestionResult(args: JsonObject, agent: McpAgentAuth) {
     };
   }
 
-  const response = await ponderApi.getContentById(contentId);
+  const response = await dependencies.getContentById(contentId);
   const latestRound = latestRoundFromContentResponse(response);
   const feedbackContext = buildContentFeedbackRoundContext(
     Array.isArray(response.rounds) ? response.rounds : [],
@@ -831,9 +835,19 @@ export async function callCuryoMcpTool(params: {
     case "curyo_get_question_status": {
       const operationKey = await resolveManagedOperationKey(args, params.agent);
       const record = await lookupQuestionOperation(args, params.agent);
+      let liveAskGuidance: ReturnType<typeof buildAgentLiveAskGuidance> = null;
+      if (record?.contentId) {
+        try {
+          const contentResponse = await dependencies.getContentById(record.contentId);
+          liveAskGuidance = buildAgentLiveAskGuidance({ content: contentResponse.content });
+        } catch (error) {
+          console.error("[mcp] live ask guidance unavailable", error);
+        }
+      }
       const body = {
         ...(normalizeMcpQuestionBody(x402QuestionSubmissionRecordBody(record)) as JsonObject),
         callbackDeliveries: operationKey ? await loadCallbackDeliveryStatus(operationKey, params.agent.id) : [],
+        liveAskGuidance,
         publicUrl: getPublicQuestionUrl(record?.contentId ?? null),
       };
       return {

@@ -111,6 +111,14 @@ export interface CuryoAgentFastLaneGuidance {
   [key: string]: unknown;
 }
 
+export interface CuryoAgentLiveAskGuidance {
+  lowResponseRisk?: "low" | "medium" | "high" | string;
+  reasonCodes?: string[];
+  recommendedAction?: "wait" | "top_up" | "retry_later" | string;
+  suggestedTopUpAtomic?: string | null;
+  [key: string]: unknown;
+}
+
 export interface QuoteQuestionResponse {
   canSubmit?: boolean;
   clientRequestId?: string;
@@ -177,6 +185,7 @@ export interface QuestionStatusResponse {
   publicUrl?: string | null;
   questionCount?: number;
   ready?: boolean;
+  liveAskGuidance?: CuryoAgentLiveAskGuidance | null;
   rewardPoolId?: string | null;
   resultTool?: string | null;
   status: string;
@@ -212,6 +221,7 @@ export interface CuryoAgentResult {
   rationaleSummary?: string;
   majorObjections?: JsonRecord[];
   dissentingView?: string | null;
+  liveAskGuidance?: CuryoAgentLiveAskGuidance | null;
   recommendedNextAction?: string;
   publicUrl?: string | null;
   methodology?: JsonRecord;

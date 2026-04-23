@@ -283,6 +283,7 @@ export const agentQuestionStatusOutputSchema = {
     publicUrl: { type: ["string", "null"] },
     questionCount: { type: "integer" },
     ready: { type: "boolean" },
+    liveAskGuidance: { type: ["object", "null"] },
     rewardPoolId: { type: ["string", "null"] },
     resultTool: { type: ["string", "null"] },
     status: {
@@ -328,6 +329,7 @@ export const resultPackageOutputSchema = {
     distribution: { type: "object" },
     dissentingView: { type: ["string", "null"] },
     feedbackQuality: { type: "object" },
+    liveAskGuidance: { type: ["object", "null"] },
     limitations: { items: { type: "string" }, type: "array" },
     majorObjections: { items: { type: "object" }, type: "array" },
     methodology: { type: "object" },
@@ -360,6 +362,7 @@ export const resultPackageOutputSchema = {
     "majorObjections",
     "dissentingView",
     "feedbackQuality",
+    "liveAskGuidance",
     "recommendedNextAction",
     "publicUrl",
     "sourceUrls",

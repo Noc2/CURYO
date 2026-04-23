@@ -358,6 +358,152 @@ test("agent status route surfaces callback delivery state for missed webhooks", 
   ]);
 });
 
+test("agent status route includes live ask guidance for underfunded open markets", async () => {
+  await dbModule.dbClient.execute({
+    args: [
+      OPERATION_KEY,
+      "status-guidance",
+      "payload-hash",
+      42220,
+      "0x0000000000000000000000000000000000000001",
+      "1000000",
+      "1000000",
+      "0",
+      1,
+      "submitted",
+      "42",
+      new Date("2026-04-23T12:00:00.000Z"),
+      new Date("2026-04-23T12:00:00.000Z"),
+    ],
+    sql: `
+      INSERT INTO x402_question_submissions (
+        operation_key,
+        client_request_id,
+        payload_hash,
+        chain_id,
+        payment_asset,
+        payment_amount,
+        bounty_amount,
+        service_fee_amount,
+        question_count,
+        status,
+        content_id,
+        created_at,
+        updated_at
+      )
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `,
+  });
+
+  mcpToolsModule.__setMcpToolTestOverridesForTests({
+    getContentById: async () =>
+      ({
+        audienceContext: null,
+        content: {
+          categoryId: "5",
+          conservativeRatingBps: 5000,
+          contentHash: `0x${"1".repeat(64)}`,
+          createdAt: "1",
+          description: "Would this make you want to learn more?",
+          id: "42",
+          lastActivityAt: "2",
+          openRound: {
+            confidenceMass: "0",
+            conservativeRatingBps: 5000,
+            downCount: 0,
+            downPool: "0",
+            effectiveEvidence: "0",
+            epochDuration: 1200,
+            estimatedSettlementTime: "4700000500",
+            lowSince: "1700000100",
+            maxDuration: 7200,
+            maxVoters: 50,
+            minVoters: 3,
+            ratingBps: 5000,
+            referenceRatingBps: 5000,
+            revealedCount: 1,
+            roundId: "1",
+            settledRounds: 0,
+            startTime: "1699998800",
+            totalStake: "1000",
+            upCount: 1,
+            upPool: "1000",
+            voteCount: 1,
+          },
+          questionMetadataHash: `0x${"2".repeat(64)}`,
+          rating: 50,
+          ratingBps: 5000,
+          ratingConfidenceMass: "0",
+          ratingEffectiveEvidence: "0",
+          ratingLowSince: "0",
+          ratingSettledRounds: 0,
+          resultSpecHash: null,
+          rewardPoolSummary: {
+            activeRewardPoolCount: 1,
+            activeUnallocatedAmount: "1000000",
+            claimableAllocatedAmount: "0",
+            currentRewardPoolAmount: "1000000",
+            currency: "USDC",
+            decimals: 6,
+            displayCurrency: "USD",
+            expiredRewardPoolCount: 0,
+            expiredUnallocatedAmount: "0",
+            hasActiveBounty: true,
+            nextBountyClosesAt: "4700001800",
+            nextFeedbackClosesAt: null,
+            qualifiedRoundCount: 0,
+            rewardPoolCount: 1,
+            totalAllocatedAmount: "0",
+            totalClaimedAmount: "0",
+            totalFrontendClaimedAmount: "0",
+            totalFundedAmount: "1000000",
+            totalRefundedAmount: "0",
+            totalUnallocatedAmount: "1000000",
+            totalVoterClaimedAmount: "0",
+          },
+          roundEpochDuration: 1200,
+          roundMaxDuration: 7200,
+          roundMaxVoters: 50,
+          roundMinVoters: 3,
+          status: 0,
+          submitter: `0x${"3".repeat(40)}`,
+          tags: "agent,pitch",
+          title: "Pitch interest",
+          totalRounds: 1,
+          totalVotes: 1,
+          url: "https://example.com/pitch",
+        },
+        ratings: [],
+        rounds: [],
+      }) as never,
+  });
+
+  const response = await asksOperationRoute.GET(makeGet(`https://curyo.xyz/api/agent/asks/${OPERATION_KEY}`), {
+    params: Promise.resolve({ operationKey: OPERATION_KEY }),
+  });
+  const body = (await response.json()) as {
+    liveAskGuidance: {
+      lowResponseRisk: string;
+      recommendedAction: string;
+      suggestedTopUpAtomic: string | null;
+    } | null;
+    status: string;
+  };
+
+  assert.equal(response.status, 200);
+  assert.equal(body.status, "submitted");
+  assert.deepEqual(body.liveAskGuidance, {
+    lowResponseRisk: "high",
+    reasonCodes: [
+      "quorum_not_reached",
+      "low_response_persisting",
+      "bounty_below_healthy_target",
+    ],
+    recommendedAction: "top_up",
+    suggestedTopUpAtomic: "500000",
+  });
+});
+
 test("agent results route returns the pending result package before settlement", async () => {
   const response = await resultsByClientRoute.GET(
     makeGet("https://curyo.xyz/api/agent/results/by-client-request?chainId=42220&clientRequestId=missing"),
@@ -367,6 +513,7 @@ test("agent results route returns the pending result package before settlement",
   assert.equal(response.status, 200);
   assert.equal(body.ready, false);
   assert.equal(body.answer, "pending");
+  assert.equal(body.liveAskGuidance, null);
   assert.equal(body.recommendedNextAction, "wait_for_settlement");
   assert.deepEqual(body.wait, {
     code: "still_settling",

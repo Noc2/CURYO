@@ -133,7 +133,57 @@ test("buildAgentResultPackage exposes feedback source URLs for agents", () => {
 test("buildAgentResultPackage keeps open rounds pending", () => {
   const result = buildAgentResultPackage({
     audienceContext: null,
-    content: content({ rating: 50, ratingBps: 5000, ratingSettledRounds: 0 }),
+    content: content({
+      openRound: {
+        confidenceMass: "0",
+        conservativeRatingBps: 5000,
+        downCount: 0,
+        downPool: "0",
+        effectiveEvidence: "0",
+        epochDuration: 1200,
+        estimatedSettlementTime: "4700002400",
+        lowSince: "1700000100",
+        maxDuration: 7200,
+        maxVoters: 50,
+        minVoters: 3,
+        ratingBps: 5000,
+        referenceRatingBps: 5000,
+        revealedCount: 0,
+        roundId: "1",
+        settledRounds: 0,
+        startTime: "1699998800",
+        totalStake: "0",
+        upCount: 0,
+        upPool: "0",
+        voteCount: 0,
+      },
+      rating: 50,
+      ratingBps: 5000,
+      ratingSettledRounds: 0,
+      rewardPoolSummary: {
+        activeRewardPoolCount: 1,
+        activeUnallocatedAmount: "1000000",
+        claimableAllocatedAmount: "0",
+        currentRewardPoolAmount: "1000000",
+        currency: "USDC",
+        decimals: 6,
+        displayCurrency: "USD",
+        expiredRewardPoolCount: 0,
+        expiredUnallocatedAmount: "0",
+        hasActiveBounty: true,
+        nextBountyClosesAt: "4700007200",
+        nextFeedbackClosesAt: null,
+        qualifiedRoundCount: 0,
+        rewardPoolCount: 1,
+        totalAllocatedAmount: "0",
+        totalClaimedAmount: "0",
+        totalFrontendClaimedAmount: "0",
+        totalFundedAmount: "1000000",
+        totalRefundedAmount: "0",
+        totalUnallocatedAmount: "1000000",
+        totalVoterClaimedAmount: "0",
+      },
+    }),
     feedback: [],
     latestRound: {
       downCount: 0,
@@ -151,6 +201,16 @@ test("buildAgentResultPackage keeps open rounds pending", () => {
 
   assert.equal(result.ready, false);
   assert.equal(result.answer, "pending");
+  assert.deepEqual(result.liveAskGuidance, {
+    lowResponseRisk: "high",
+    reasonCodes: [
+      "quorum_not_reached",
+      "low_response_persisting",
+      "bounty_below_healthy_target",
+    ],
+    recommendedAction: "top_up",
+    suggestedTopUpAtomic: "500000",
+  });
   assert.equal(result.recommendedNextAction, "wait_for_settlement");
   assert.equal(result.confidence.level, "none");
   assert.ok(result.limitations.some(item => item.includes("not settled")));
