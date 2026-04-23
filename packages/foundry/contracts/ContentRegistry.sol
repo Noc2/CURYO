@@ -5,6 +5,7 @@ import { Initializable } from "@openzeppelin/contracts-upgradeable/proxy/utils/I
 import { AccessControlUpgradeable } from "@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol";
 import { PausableUpgradeable } from "@openzeppelin/contracts-upgradeable/utils/PausableUpgradeable.sol";
 import { ReentrancyGuardTransient } from "@openzeppelin/contracts/utils/ReentrancyGuardTransient.sol";
+import { TransientSlot } from "@openzeppelin/contracts/utils/TransientSlot.sol";
 import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import { SafeERC20 } from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import { SafeCast } from "@openzeppelin/contracts/utils/math/SafeCast.sol";
@@ -47,6 +48,7 @@ interface IQuestionRewardPoolEscrow {
 contract ContentRegistry is Initializable, AccessControlUpgradeable, PausableUpgradeable, ReentrancyGuardTransient {
     using SafeERC20 for IERC20;
     using SafeCast for uint256;
+    using TransientSlot for *;
 
     // --- Access Control Roles ---
     bytes32 public constant ADMIN_ROLE = keccak256("ADMIN_ROLE");
@@ -142,6 +144,16 @@ contract ContentRegistry is Initializable, AccessControlUpgradeable, PausableUpg
         string tags;
         uint256 categoryId;
         bytes32 salt;
+        QuestionSpecCommitment spec;
+    }
+
+    struct RewardedQuestionSubmissionInput {
+        SubmissionMetadata metadata;
+        string[] imageUrls;
+        string videoUrl;
+        bytes32 salt;
+        SubmissionRewardTerms rewardTerms;
+        RoundLib.RoundConfig roundConfig;
         QuestionSpecCommitment spec;
     }
 
@@ -393,56 +405,86 @@ contract ContentRegistry is Initializable, AccessControlUpgradeable, PausableUpg
     }
 
     function submitQuestionWithRewardAndRoundConfig(
-        string calldata contextUrl,
-        string[] calldata imageUrls,
-        string calldata videoUrl,
-        string calldata title,
-        string calldata description,
-        string calldata tags,
+        string memory contextUrl,
+        string[] memory imageUrls,
+        string memory videoUrl,
+        string memory title,
+        string memory description,
+        string memory tags,
         uint256 categoryId,
         bytes32 salt,
-        SubmissionRewardTerms calldata rewardTerms,
-        RoundLib.RoundConfig calldata roundConfig,
-        QuestionSpecCommitment calldata spec
-    ) external returns (uint256) {
-        SubmissionMetadata memory metadata =
-            _validatedContextSubmissionMetadata(contextUrl, imageUrls, videoUrl, title, description, tags, categoryId);
-        return
-            _submitQuestionWithRewardAndRoundConfig(metadata, imageUrls, videoUrl, salt, rewardTerms, roundConfig, spec);
+        SubmissionRewardTerms memory rewardTerms,
+        RoundLib.RoundConfig memory roundConfig,
+        QuestionSpecCommitment memory spec
+    ) public returns (uint256) {
+        RewardedQuestionSubmissionInput memory input = _buildRewardedQuestionSubmissionInput(
+            contextUrl, imageUrls, videoUrl, title, description, tags, categoryId, salt, rewardTerms, roundConfig, spec
+        );
+        return _submitQuestionWithRewardAndRoundConfig(input);
     }
 
-    function _submitQuestionWithRewardAndRoundConfig(
-        SubmissionMetadata memory metadata,
-        string[] calldata imageUrls,
-        string calldata videoUrl,
-        bytes32 salt,
-        SubmissionRewardTerms calldata rewardTerms,
-        RoundLib.RoundConfig calldata roundConfig,
-        QuestionSpecCommitment memory spec
-    ) private nonReentrant whenNotPaused returns (uint256) {
-        return _submitValidatedQuestionWithMedia(
-            metadata, imageUrls, videoUrl, salt, rewardTerms, _validatedRoundConfig(roundConfig), 0, 0, spec
+    function _submitQuestionWithRewardAndRoundConfig(RewardedQuestionSubmissionInput memory input)
+        private
+        returns (uint256)
+    {
+        _enterQuestionSubmissionGuard();
+        _requireNotPaused();
+        uint256 contentId = _submitValidatedQuestionWithMedia(
+            input.metadata, input.imageUrls, input.videoUrl, input.salt, input.rewardTerms, input.roundConfig, 0, 0, input.spec
         );
+        _exitQuestionSubmissionGuard();
+        return contentId;
+    }
+
+    function _buildRewardedQuestionSubmissionInput(
+        string memory contextUrl,
+        string[] memory imageUrls,
+        string memory videoUrl,
+        string memory title,
+        string memory description,
+        string memory tags,
+        uint256 categoryId,
+        bytes32 salt,
+        SubmissionRewardTerms memory rewardTerms,
+        RoundLib.RoundConfig memory roundConfig,
+        QuestionSpecCommitment memory spec
+    ) private view returns (RewardedQuestionSubmissionInput memory input) {
+        input.metadata =
+            _validatedContextSubmissionMetadata(contextUrl, imageUrls, videoUrl, title, description, tags, categoryId);
+        input.imageUrls = imageUrls;
+        input.videoUrl = videoUrl;
+        input.salt = salt;
+        input.rewardTerms = rewardTerms;
+        input.roundConfig = _validatedRoundConfig(roundConfig);
+        input.spec = spec;
     }
 
     function submitQuestionWithRewardAndRoundConfig(
-        string calldata contextUrl,
-        string[] calldata imageUrls,
-        string calldata videoUrl,
-        string calldata title,
-        string calldata description,
-        string calldata tags,
+        string memory contextUrl,
+        string[] memory imageUrls,
+        string memory videoUrl,
+        string memory title,
+        string memory description,
+        string memory tags,
         uint256 categoryId,
         bytes32 salt,
-        SubmissionRewardTerms calldata rewardTerms,
-        RoundLib.RoundConfig calldata roundConfig
-    ) external returns (uint256) {
-        SubmissionMetadata memory metadata = _validatedContextSubmissionMetadata(
-            contextUrl, imageUrls, videoUrl, title, description, tags, categoryId
+        SubmissionRewardTerms memory rewardTerms,
+        RoundLib.RoundConfig memory roundConfig
+    ) public returns (uint256) {
+        RewardedQuestionSubmissionInput memory input = _buildRewardedQuestionSubmissionInput(
+            contextUrl,
+            imageUrls,
+            videoUrl,
+            title,
+            description,
+            tags,
+            categoryId,
+            salt,
+            rewardTerms,
+            roundConfig,
+            _genericQuestionSpec()
         );
-        return _submitQuestionWithRewardAndRoundConfig(
-            metadata, imageUrls, videoUrl, salt, rewardTerms, roundConfig, _genericQuestionSpec()
-        );
+        return _submitQuestionWithRewardAndRoundConfig(input);
     }
 
     function submitQuestionBundleWithRewardAndRoundConfig(
@@ -562,17 +604,19 @@ contract ContentRegistry is Initializable, AccessControlUpgradeable, PausableUpg
     /// @notice Submit a question with a required context link and optional preview media.
     /// @dev Attaches the governance minimum cREP bounty.
     function submitQuestion(
-        string calldata contextUrl,
-        string[] calldata imageUrls,
-        string calldata videoUrl,
-        string calldata title,
-        string calldata description,
-        string calldata tags,
+        string memory contextUrl,
+        string[] memory imageUrls,
+        string memory videoUrl,
+        string memory title,
+        string memory description,
+        string memory tags,
         uint256 categoryId,
         bytes32 salt,
-        QuestionSpecCommitment calldata spec
-    ) external nonReentrant whenNotPaused returns (uint256) {
-        return _submitValidatedQuestionWithMedia(
+        QuestionSpecCommitment memory spec
+    ) public returns (uint256) {
+        _enterQuestionSubmissionGuard();
+        _requireNotPaused();
+        uint256 contentId = _submitValidatedQuestionWithMedia(
             _validatedContextSubmissionMetadata(contextUrl, imageUrls, videoUrl, title, description, tags, categoryId),
             imageUrls,
             videoUrl,
@@ -583,19 +627,23 @@ contract ContentRegistry is Initializable, AccessControlUpgradeable, PausableUpg
             0,
             spec
         );
+        _exitQuestionSubmissionGuard();
+        return contentId;
     }
 
     function submitQuestion(
-        string calldata contextUrl,
-        string[] calldata imageUrls,
-        string calldata videoUrl,
-        string calldata title,
-        string calldata description,
-        string calldata tags,
+        string memory contextUrl,
+        string[] memory imageUrls,
+        string memory videoUrl,
+        string memory title,
+        string memory description,
+        string memory tags,
         uint256 categoryId,
         bytes32 salt
-    ) external nonReentrant whenNotPaused returns (uint256) {
-        return _submitValidatedQuestionWithMedia(
+    ) public returns (uint256) {
+        _enterQuestionSubmissionGuard();
+        _requireNotPaused();
+        uint256 contentId = _submitValidatedQuestionWithMedia(
             _validatedContextSubmissionMetadata(contextUrl, imageUrls, videoUrl, title, description, tags, categoryId),
             imageUrls,
             videoUrl,
@@ -606,21 +654,25 @@ contract ContentRegistry is Initializable, AccessControlUpgradeable, PausableUpg
             0,
             _genericQuestionSpec()
         );
+        _exitQuestionSubmissionGuard();
+        return contentId;
     }
 
     function submitQuestionWithRoundConfig(
-        string calldata contextUrl,
-        string[] calldata imageUrls,
-        string calldata videoUrl,
-        string calldata title,
-        string calldata description,
-        string calldata tags,
+        string memory contextUrl,
+        string[] memory imageUrls,
+        string memory videoUrl,
+        string memory title,
+        string memory description,
+        string memory tags,
         uint256 categoryId,
         bytes32 salt,
-        RoundLib.RoundConfig calldata roundConfig,
-        QuestionSpecCommitment calldata spec
-    ) external nonReentrant whenNotPaused returns (uint256) {
-        return _submitValidatedQuestionWithMedia(
+        RoundLib.RoundConfig memory roundConfig,
+        QuestionSpecCommitment memory spec
+    ) public returns (uint256) {
+        _enterQuestionSubmissionGuard();
+        _requireNotPaused();
+        uint256 contentId = _submitValidatedQuestionWithMedia(
             _validatedContextSubmissionMetadata(contextUrl, imageUrls, videoUrl, title, description, tags, categoryId),
             imageUrls,
             videoUrl,
@@ -631,20 +683,24 @@ contract ContentRegistry is Initializable, AccessControlUpgradeable, PausableUpg
             0,
             spec
         );
+        _exitQuestionSubmissionGuard();
+        return contentId;
     }
 
     function submitQuestionWithRoundConfig(
-        string calldata contextUrl,
-        string[] calldata imageUrls,
-        string calldata videoUrl,
-        string calldata title,
-        string calldata description,
-        string calldata tags,
+        string memory contextUrl,
+        string[] memory imageUrls,
+        string memory videoUrl,
+        string memory title,
+        string memory description,
+        string memory tags,
         uint256 categoryId,
         bytes32 salt,
-        RoundLib.RoundConfig calldata roundConfig
-    ) external nonReentrant whenNotPaused returns (uint256) {
-        return _submitValidatedQuestionWithMedia(
+        RoundLib.RoundConfig memory roundConfig
+    ) public returns (uint256) {
+        _enterQuestionSubmissionGuard();
+        _requireNotPaused();
+        uint256 contentId = _submitValidatedQuestionWithMedia(
             _validatedContextSubmissionMetadata(contextUrl, imageUrls, videoUrl, title, description, tags, categoryId),
             imageUrls,
             videoUrl,
@@ -655,6 +711,8 @@ contract ContentRegistry is Initializable, AccessControlUpgradeable, PausableUpg
             0,
             _genericQuestionSpec()
         );
+        _exitQuestionSubmissionGuard();
+        return contentId;
     }
 
     function getContentRoundConfig(uint256 contentId) public view returns (RoundLib.RoundConfig memory cfg) {
@@ -815,6 +873,17 @@ contract ContentRegistry is Initializable, AccessControlUpgradeable, PausableUpg
 
     function _submissionMediaHash(string[] memory imageUrls, string memory videoUrl) internal pure returns (bytes32) {
         return keccak256(abi.encode(imageUrls, videoUrl));
+    }
+
+    function _enterQuestionSubmissionGuard() private {
+        if (_reentrancyGuardEntered()) {
+            revert ReentrancyGuardReentrantCall();
+        }
+        _reentrancyGuardStorageSlot().asBoolean().tstore(true);
+    }
+
+    function _exitQuestionSubmissionGuard() private {
+        _reentrancyGuardStorageSlot().asBoolean().tstore(false);
     }
 
     function _validateQuestionSpec(QuestionSpecCommitment memory spec) internal pure {
@@ -1130,33 +1199,61 @@ contract ContentRegistry is Initializable, AccessControlUpgradeable, PausableUpg
         RoundLib.RoundConfig memory roundConfig,
         QuestionSpecCommitment memory spec
     ) internal pure returns (bytes32) {
-        // The standard ABI encoding of this flat tuple is byte-identical to the prior
-        // hand-rolled layout: 20 static head slots (with offsets for the three strings)
-        // followed by length-prefixed, 32-byte-padded string tails.
-        return keccak256(
-            abi.encode(
-                submissionKey,
-                mediaHash,
-                title,
-                description,
-                tags,
-                categoryId,
-                salt,
-                submitter,
-                rewardTerms.asset,
-                rewardTerms.amount,
-                rewardTerms.requiredVoters,
-                rewardTerms.requiredSettledRounds,
-                rewardTerms.bountyClosesAt,
-                rewardTerms.feedbackClosesAt,
-                roundConfig.epochDuration,
-                roundConfig.maxDuration,
-                roundConfig.minVoters,
-                roundConfig.maxVoters,
-                spec.questionMetadataHash,
-                spec.resultSpecHash
-            )
-        );
+        uint256 titleTailLength = _encodedStringTailLength(title);
+        uint256 descriptionTailLength = _encodedStringTailLength(description);
+        uint256 titleOffset = 20 * 32;
+        uint256 descriptionOffset = titleOffset + titleTailLength;
+        uint256 tagsOffset = descriptionOffset + descriptionTailLength;
+        bytes memory encoded = new bytes(tagsOffset + _encodedStringTailLength(tags));
+
+        _writeBytes32(encoded, 0, submissionKey);
+        _writeBytes32(encoded, 32, mediaHash);
+        _writeUint(encoded, 2 * 32, titleOffset);
+        _writeUint(encoded, 3 * 32, descriptionOffset);
+        _writeUint(encoded, 4 * 32, tagsOffset);
+        _writeUint(encoded, 5 * 32, categoryId);
+        _writeBytes32(encoded, 6 * 32, salt);
+        _writeUint(encoded, 7 * 32, uint256(uint160(submitter)));
+        _writeUint(encoded, 8 * 32, uint256(rewardTerms.asset));
+        _writeUint(encoded, 9 * 32, rewardTerms.amount);
+        _writeUint(encoded, 10 * 32, rewardTerms.requiredVoters);
+        _writeUint(encoded, 11 * 32, rewardTerms.requiredSettledRounds);
+        _writeUint(encoded, 12 * 32, rewardTerms.bountyClosesAt);
+        _writeUint(encoded, 13 * 32, rewardTerms.feedbackClosesAt);
+        _writeUint(encoded, 14 * 32, uint256(roundConfig.epochDuration));
+        _writeUint(encoded, 15 * 32, uint256(roundConfig.maxDuration));
+        _writeUint(encoded, 16 * 32, uint256(roundConfig.minVoters));
+        _writeUint(encoded, 17 * 32, uint256(roundConfig.maxVoters));
+        _writeBytes32(encoded, 18 * 32, spec.questionMetadataHash);
+        _writeBytes32(encoded, 19 * 32, spec.resultSpecHash);
+        _writeStringTail(encoded, titleOffset, title);
+        _writeStringTail(encoded, descriptionOffset, description);
+        _writeStringTail(encoded, tagsOffset, tags);
+        return keccak256(encoded);
+    }
+
+    function _encodedStringTailLength(string memory value) internal pure returns (uint256) {
+        return 32 + ((bytes(value).length + 31) / 32) * 32;
+    }
+
+    function _writeBytes32(bytes memory encoded, uint256 offset, bytes32 value) internal pure {
+        assembly ("memory-safe") {
+            mstore(add(add(encoded, 32), offset), value)
+        }
+    }
+
+    function _writeUint(bytes memory encoded, uint256 offset, uint256 value) internal pure {
+        assembly ("memory-safe") {
+            mstore(add(add(encoded, 32), offset), value)
+        }
+    }
+
+    function _writeStringTail(bytes memory encoded, uint256 offset, string memory value) internal pure {
+        bytes memory raw = bytes(value);
+        _writeUint(encoded, offset, raw.length);
+        for (uint256 i = 0; i < raw.length; i++) {
+            encoded[offset + 32 + i] = raw[i];
+        }
     }
 
     function _computeQuestionBundleHash(
