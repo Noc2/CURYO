@@ -101,6 +101,29 @@ test("buildAgentLiveAskGuidance recommends topping up weak live asks", () => {
   });
 });
 
+test("buildAgentLiveAskGuidance flags asks below the conservative starting bounty before lowSince is set", () => {
+  const guidance = buildAgentLiveAskGuidance({
+    content: content({
+      rewardPoolSummary: {
+        ...content().rewardPoolSummary!,
+        currentRewardPoolAmount: "500000",
+      },
+    }),
+    nowSeconds: 1_700_000_300,
+  });
+
+  assert.deepEqual(guidance, {
+    lowResponseRisk: "high",
+    reasonCodes: [
+      "quorum_not_reached",
+      "bounty_below_conservative_start",
+      "bounty_below_healthy_target",
+    ],
+    recommendedAction: "top_up",
+    suggestedTopUpAtomic: "1000000",
+  });
+});
+
 test("buildAgentLiveAskGuidance recommends retry_later when a weak bounty is about to close", () => {
   const guidance = buildAgentLiveAskGuidance({
     content: content({

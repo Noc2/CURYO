@@ -77,10 +77,7 @@ export function buildAgentFastLaneGuidance(params: {
         : "start_small";
 
   return {
-    conservativeStartingBountyAtomic:
-      params.bounty.amount <= conservativeStartingBounty
-        ? params.bounty.amount.toString()
-        : conservativeStartingBounty.toString(),
+    conservativeStartingBountyAtomic: conservativeStartingBounty.toString(),
     estimatedTimeToResultSeconds,
     estimatedResultAt,
     expectedResponse: {

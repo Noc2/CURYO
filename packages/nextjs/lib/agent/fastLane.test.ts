@@ -61,7 +61,7 @@ test("buildAgentFastLaneGuidance warns on slow underfunded asks", () => {
   assert.equal(guidance.speed, "slow");
   assert.equal(guidance.pricingConfidence, "low");
   assert.equal(guidance.requiredSignalUnits, "20");
-  assert.equal(guidance.conservativeStartingBountyAtomic, "1000000");
+  assert.equal(guidance.conservativeStartingBountyAtomic, "6666660");
   assert.equal(guidance.estimatedResultAt, 1_700_087_900);
   assert.equal(guidance.expectedResponse.minimumExpectedVoters, "5");
   assert.equal(guidance.expectedResponse.healthyTargetVoters, "7");
