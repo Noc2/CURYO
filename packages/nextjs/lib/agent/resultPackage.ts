@@ -251,13 +251,13 @@ export function buildAgentResultPackage(params: {
 }): AgentResultPackage {
   const latestRound = params.latestRound;
   const roundState = toNumberValue(latestRound?.state, null);
-  const ratingBps =
-    toNumberValue(params.content.ratingBps, null) ?? toNumberValue(latestRound?.ratingBps, null) ?? null;
+  const latestRoundRatingBps = toNumberValue(latestRound?.ratingBps, null);
+  const ratingBps = latestRoundRatingBps ?? toNumberValue(params.content.ratingBps, null) ?? null;
   const conservativeRatingBps =
-    toNumberValue(params.content.conservativeRatingBps, null) ??
     toNumberValue(latestRound?.conservativeRatingBps, null) ??
+    toNumberValue(params.content.conservativeRatingBps, null) ??
     ratingBps;
-  const rating = toNumberValue(params.content.rating, null);
+  const rating = latestRoundRatingBps !== null ? latestRoundRatingBps / 100 : toNumberValue(params.content.rating, null);
   const upStake = toBigIntValue(latestRound?.upPool);
   const downStake = toBigIntValue(latestRound?.downPool);
   const totalStakeFromRound = toBigIntValue(latestRound?.totalStake);

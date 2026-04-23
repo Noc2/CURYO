@@ -16,9 +16,15 @@ function toBigIntValue(value: unknown, fallback = 0n) {
 }
 
 function toOptionalUnixSeconds(value: unknown): number | null {
-  if (typeof value === "number" && Number.isFinite(value)) return Math.max(0, Math.floor(value));
-  if (typeof value === "bigint") return Number(value >= 0n ? value : 0n);
-  if (typeof value === "string" && /^\d+$/.test(value)) return Number.parseInt(value, 10);
+  if (typeof value === "number" && Number.isFinite(value)) {
+    const normalized = Math.floor(value);
+    return normalized > 0 ? normalized : null;
+  }
+  if (typeof value === "bigint") return value > 0n ? Number(value) : null;
+  if (typeof value === "string" && /^\d+$/.test(value)) {
+    const normalized = Number.parseInt(value, 10);
+    return normalized > 0 ? normalized : null;
+  }
   return null;
 }
 

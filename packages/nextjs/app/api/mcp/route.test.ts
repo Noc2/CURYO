@@ -406,3 +406,106 @@ test("pending result returns a full pending result package", async () => {
     recoverWith: "curyo_get_question_status",
   });
 });
+
+test("failed submissions return a terminal pending result package without a retry delay", async () => {
+  const operationKey = `0x${"3".repeat(64)}`;
+  const now = new Date("2026-04-23T12:00:00.000Z");
+
+  await dbModule.dbClient.execute({
+    args: [
+      operationKey,
+      "route-agent",
+      "failed-result",
+      "payload-hash",
+      42220,
+      "5",
+      "1000000",
+      "failed",
+      null,
+      "submission failed",
+      now,
+      now,
+    ],
+    sql: `
+      INSERT INTO mcp_agent_budget_reservations (
+        operation_key,
+        agent_id,
+        client_request_id,
+        payload_hash,
+        chain_id,
+        category_id,
+        payment_amount,
+        status,
+        content_id,
+        error,
+        created_at,
+        updated_at
+      )
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `,
+  });
+
+  await dbModule.dbClient.execute({
+    args: [
+      operationKey,
+      "failed-result",
+      "payload-hash",
+      42220,
+      "0x0000000000000000000000000000000000000001",
+      "1000000",
+      "1000000",
+      "0",
+      1,
+      "failed",
+      null,
+      now,
+      now,
+    ],
+    sql: `
+      INSERT INTO x402_question_submissions (
+        operation_key,
+        client_request_id,
+        payload_hash,
+        chain_id,
+        payment_asset,
+        payment_amount,
+        bounty_amount,
+        service_fee_amount,
+        question_count,
+        status,
+        content_id,
+        created_at,
+        updated_at
+      )
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `,
+  });
+
+  const { body } = await postJson(
+    {
+      id: 8,
+      jsonrpc: "2.0",
+      method: "tools/call",
+      params: {
+        arguments: {
+          chainId: 42220,
+          clientRequestId: "failed-result",
+        },
+        name: "curyo_get_result",
+      },
+    },
+    { "mcp-protocol-version": "2025-11-25" },
+  );
+
+  const result = body.result as Record<string, unknown>;
+  const structured = result.structuredContent as Record<string, unknown>;
+  assert.equal(result.isError, false);
+  assert.equal(structured.ready, false);
+  assert.equal(structured.answer, "failed");
+  assert.equal(structured.pollAfterMs, null);
+  assert.equal(structured.recommendedNextAction, "manual_review");
+  assert.deepEqual(structured.wait, {
+    code: "failed_submission",
+    recoverWith: "inspect_status_error",
+  });
+});

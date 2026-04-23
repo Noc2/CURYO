@@ -373,6 +373,17 @@ function buildManagedMcpClientRequestId(agent: McpAgentAuth, clientRequestId: st
   return `mcp:${sha256(`${agent.id}:${clientRequestId}`).slice(0, 48)}`;
 }
 
+function assertManagedQuestionCategoriesAllowed(agent: McpAgentAuth, payload: X402QuestionPayload) {
+  if (!agent.allowedCategoryIds) return;
+
+  for (const question of payload.questions) {
+    const categoryId = question.categoryId.toString();
+    if (!agent.allowedCategoryIds.has(categoryId)) {
+      throw new McpToolError(`This MCP agent is not allowed to ask in category ${categoryId}.`, 403);
+    }
+  }
+}
+
 function toManagedMcpPayload(agent: McpAgentAuth, payload: X402QuestionPayload): X402QuestionPayload {
   return {
     ...payload,
@@ -450,6 +461,7 @@ function formatQuoteResult(
 async function quoteQuestion(args: JsonObject, agent: McpAgentAuth) {
   const dependencies = getMcpToolDependencies();
   const payload = parseX402QuestionRequest(args);
+  assertManagedQuestionCategoriesAllowed(agent, payload);
   const managedPayload = toManagedMcpPayload(agent, payload);
   const config = dependencies.resolveX402QuestionConfig(managedPayload.chainId, { requireThirdwebSecret: false });
   const quote = await dependencies.preflightX402QuestionSubmission({ config, payload: managedPayload });
@@ -473,8 +485,9 @@ async function buildQuestionResult(args: JsonObject, agent: McpAgentAuth) {
   if (!contentId) {
     const operation = normalizeMcpQuestionBody(x402QuestionSubmissionRecordBody(record));
     const status = operation && typeof operation === "object" ? String((operation as JsonObject).status ?? "") : "";
+    const failed = status === "failed";
     return {
-      answer: status === "failed" ? "failed" : "pending",
+      answer: failed ? "failed" : "pending",
       confidence: {
         level: "none",
         score: 0,
@@ -506,7 +519,7 @@ async function buildQuestionResult(args: JsonObject, agent: McpAgentAuth) {
         templateVersion: 1,
       },
       operation,
-      pollAfterMs: 5_000,
+      pollAfterMs: failed ? null : 5_000,
       protocolState: {
         latestRound: null,
         status: status || "not_found",
@@ -515,12 +528,12 @@ async function buildQuestionResult(args: JsonObject, agent: McpAgentAuth) {
       ready: false,
       result: null,
       wait: {
-        code: status === "failed" ? "failed_submission" : "still_settling",
-        recoverWith: status === "failed" ? "inspect_status_error" : "curyo_get_question_status",
+        code: failed ? "failed_submission" : "still_settling",
+        recoverWith: failed ? "inspect_status_error" : "curyo_get_question_status",
       },
-      recommendedNextAction: status === "failed" ? "manual_review" : "wait_for_settlement",
+      recommendedNextAction: failed ? "manual_review" : "wait_for_settlement",
       rationaleSummary:
-        status === "failed"
+        failed
           ? "The submission failed before a public Curyo result was available."
           : "The human result is not ready yet.",
       sourceUrls: [],
@@ -582,6 +595,7 @@ export async function callCuryoMcpTool(params: {
       }
 
       const payload = parseX402QuestionRequest(args);
+      assertManagedQuestionCategoriesAllowed(params.agent, payload);
       const webhook = parseWebhookOptions(args);
       const managedPayload = toManagedMcpPayload(params.agent, payload);
       const config = dependencies.resolveX402QuestionConfig(managedPayload.chainId, { requireThirdwebSecret: false });

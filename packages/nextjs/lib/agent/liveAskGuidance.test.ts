@@ -146,3 +146,27 @@ test("buildAgentLiveAskGuidance returns low-risk guidance for healthy open asks"
     suggestedTopUpAtomic: null,
   });
 });
+
+test("buildAgentLiveAskGuidance ignores zero lowSince sentinels", () => {
+  const guidance = buildAgentLiveAskGuidance({
+    content: content({
+      openRound: {
+        ...content().openRound!,
+        lowSince: "0",
+        voteCount: 4,
+      },
+      rewardPoolSummary: {
+        ...content().rewardPoolSummary!,
+        currentRewardPoolAmount: "2000000",
+      },
+    }),
+    nowSeconds: 1_700_000_100,
+  });
+
+  assert.deepEqual(guidance, {
+    lowResponseRisk: "low",
+    reasonCodes: [],
+    recommendedAction: "wait",
+    suggestedTopUpAtomic: null,
+  });
+});

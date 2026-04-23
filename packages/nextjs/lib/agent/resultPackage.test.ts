@@ -235,3 +235,38 @@ test("buildAgentResultPackage keeps open rounds pending", () => {
   assert.equal(result.confidence.level, "none");
   assert.ok(result.limitations.some(item => item.includes("not settled")));
 });
+
+test("buildAgentResultPackage prefers the latest round rating over stale content aggregates", () => {
+  const result = buildAgentResultPackage({
+    audienceContext: null,
+    content: content({
+      conservativeRatingBps: 7200,
+      rating: 72,
+      ratingBps: 7200,
+    }),
+    feedback: [],
+    latestRound: {
+      conservativeRatingBps: 3900,
+      downCount: 5,
+      downPool: "610",
+      ratingBps: 3900,
+      revealedCount: 8,
+      roundId: "3",
+      settledAt: "100",
+      state: ROUND_STATE.Settled,
+      totalStake: "1000",
+      upCount: 3,
+      upPool: "390",
+      upWins: false,
+      voteCount: 8,
+    },
+    publicUrl: "https://curyo.xyz/rate?content=123",
+  });
+
+  assert.equal(result.answer, "do_not_proceed");
+  assert.equal(result.distribution.rating, 39);
+  assert.equal(result.distribution.ratingBps, 3900);
+  assert.equal(result.distribution.conservativeRatingBps, 3900);
+  assert.equal(result.recommendedNextAction, "do_not_proceed");
+  assert.match(result.rationaleSummary, /39\/100/);
+});
