@@ -1241,7 +1241,6 @@ export function ContentSubmissionSection() {
       setCustomSubcategory("");
       setRewardAmount("1");
       setRewardRequiredVoters("3");
-      setRewardRequiredSettledRounds("1");
       setBountyWindowPreset(DEFAULT_BOUNTY_WINDOW_PRESET);
       setCustomBountyWindowAmount(DEFAULT_CUSTOM_BOUNTY_WINDOW_AMOUNT);
       setCustomBountyWindowUnit(DEFAULT_CUSTOM_BOUNTY_WINDOW_UNIT);
