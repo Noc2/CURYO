@@ -1709,4 +1709,43 @@ contract ContentRegistryBranchesTest is VotingTestBase {
         vm.expectRevert("Content does not exist");
         registry.markDormant(999999);
     }
+
+    // --- Security fix: salt != 0 required on submissions ---
+
+    function test_SubmitQuestion_RequiresNonZeroSalt() public {
+        vm.startPrank(submitter);
+        crepToken.approve(address(registry), 10e6);
+        // All other inputs valid; salt=0 should revert with "Salt required" now that
+        // the check runs after URL/category/submissionKey validation.
+        vm.expectRevert("Salt required");
+        registry.submitQuestion(
+            "https://example.com/salt-required",
+            _emptyImageUrls(),
+            "",
+            "Question?",
+            "Context.",
+            "tag",
+            1,
+            bytes32(0)
+        );
+        vm.stopPrank();
+    }
+
+    // --- Security fix: reservations are scoped by submitter ---
+
+    function test_ReserveSubmission_SameHashDifferentSubmittersBothSucceed() public {
+        bytes32 hash = keccak256("front-run-demo");
+        // First submitter reserves the hash.
+        vm.prank(submitter);
+        registry.reserveSubmission(hash);
+        // A different submitter should NOT collide on the same hash -- the mapping is
+        // keyed by (hash, msg.sender) so each caller has their own namespace.
+        vm.prank(voter1);
+        registry.reserveSubmission(hash);
+        // Both submitters can cancel their own reservation without affecting the other.
+        vm.prank(submitter);
+        registry.cancelReservedSubmission(hash);
+        vm.prank(voter1);
+        registry.cancelReservedSubmission(hash);
+    }
 }

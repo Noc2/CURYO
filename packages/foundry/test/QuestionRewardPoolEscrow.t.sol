@@ -1115,4 +1115,40 @@ contract QuestionRewardPoolEscrowTest is VotingTestBase {
         directions[2] = c;
         directions[3] = d;
     }
+
+    // --- Security fix: BUNDLE_CLAIM_GRACE ---
+
+    function testBundleRefund_ClaimGraceBlocksRaceAtBountyClose() public {
+        uint256[] memory contentIds = _submitBundleQuestions();
+        uint256 bundleId =
+            _createSubmissionBundle(contentIds, funder, rewardPoolEscrow.REWARD_ASSET_USDC(), REWARD_POOL_AMOUNT, 3);
+
+        address[] memory voters = new address[](3);
+        voters[0] = voter2;
+        voters[1] = voter3;
+        voters[2] = voter4;
+        bool[] memory directions = _directions(true, true, false);
+
+        _settleRoundWith(voters, contentIds[0], directions);
+        _settleRoundWith(voters, contentIds[1], directions);
+
+        // Voter2 claims their bundle reward; voter3 has not yet claimed, so the bundle
+        // is still claim-open and BUNDLE_CLAIM_GRACE should apply.
+        vm.prank(voter2);
+        rewardPoolEscrow.claimQuestionBundleReward(bundleId);
+        assertGt(rewardPoolEscrow.claimableQuestionBundleReward(bundleId, voter3), 0);
+
+        // Jump past bountyClosesAt (helper sets +30 days).
+        vm.warp(block.timestamp + 31 days);
+        vm.expectRevert("Claim grace active");
+        rewardPoolEscrow.refundQuestionBundleReward(bundleId);
+
+        // Jump past the 7-day grace; refund now allowed (forfeits to treasury since
+        // registry-initiated bundles are nonRefundable).
+        vm.warp(block.timestamp + 7 days + 1);
+        uint256 treasuryBalanceBefore = usdc.balanceOf(treasury);
+        uint256 refundAmount = rewardPoolEscrow.refundQuestionBundleReward(bundleId);
+        assertGt(refundAmount, 0);
+        assertEq(usdc.balanceOf(treasury), treasuryBalanceBefore + refundAmount);
+    }
 }
