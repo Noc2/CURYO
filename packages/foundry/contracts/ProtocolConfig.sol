@@ -329,6 +329,12 @@ contract ProtocolConfig is Initializable, AccessControlUpgradeable {
             ? uint256(config.epochDuration)
             : uint256(roundConfigBounds.maxEpochDuration);
         if (value < minRevealGrace) revert InvalidConfig();
+        // Upper bound: without it, an extreme value (e.g. type(uint256).max) would make
+        // RevealFailed finalization unreachable and lock every in-flight stake indefinitely.
+        // Bounding to the configured maxRoundDuration + 1 day leaves keepers ample headroom
+        // while still keeping the grace period within an order of magnitude of a round.
+        uint256 maxRevealGrace = uint256(roundConfigBounds.maxRoundDuration) + 1 days;
+        if (value > maxRevealGrace) revert InvalidConfig();
         revealGracePeriod = value;
         emit RevealGracePeriodUpdated(value);
     }
