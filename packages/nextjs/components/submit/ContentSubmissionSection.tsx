@@ -5,7 +5,7 @@ import dynamic from "next/dynamic";
 import { useQuery } from "@tanstack/react-query";
 import { decodeEventLog, toHex } from "viem";
 import { useAccount, useConfig } from "wagmi";
-import { waitForTransactionReceipt, writeContract } from "wagmi/actions";
+import { getPublicClient, waitForTransactionReceipt, writeContract } from "wagmi/actions";
 import { ChevronDownIcon, MagnifyingGlassIcon, XMarkIcon } from "@heroicons/react/24/outline";
 import { ContentEmbed } from "~~/components/content/ContentEmbed";
 import { GasBalanceWarning } from "~~/components/shared/GasBalanceWarning";
@@ -34,6 +34,7 @@ import {
   getBountyClosesAt,
   getBountyWindowSeconds,
   parseBountyWindowAmount,
+  resolveBountyReferenceNowSeconds,
 } from "~~/lib/bountyWindows";
 import { MAX_CONTENT_DESCRIPTION_LENGTH } from "~~/lib/contentDescription";
 import {
@@ -720,8 +721,6 @@ export function ContentSubmissionSection() {
         ? "Choose a bounty window."
         : null;
   const rewardExpiryError = bountyStepAttempted ? rewardExpiryValidationError : null;
-  const rewardPoolExpiresAt = getBountyClosesAt(bountyWindowPreset, customBountyWindowAmount, customBountyWindowUnit);
-  const feedbackClosesAt = rewardPoolExpiresAt;
   const bountySettingsValid =
     rewardRequiredVotersValidationError === null &&
     rewardRequiredSettledRoundsValidationError === null &&
@@ -983,6 +982,18 @@ export function ContentSubmissionSection() {
       if (!submitterAddress) {
         throw new Error("Wallet not connected");
       }
+      const publicClient = getPublicClient(wagmiConfig, { chainId: targetNetwork.id as any });
+      const latestBlockTimestamp = await publicClient
+        ?.getBlock({ blockTag: "latest" })
+        .then(block => block.timestamp)
+        .catch(() => undefined);
+      const rewardPoolExpiresAt = getBountyClosesAt(
+        bountyWindowPreset,
+        customBountyWindowAmount,
+        customBountyWindowUnit,
+        resolveBountyReferenceNowSeconds(latestBlockTimestamp),
+      );
+      const feedbackClosesAt = rewardPoolExpiresAt;
 
       const bundleQuestions = validatedQuestions.map((question, index) => {
         if (!question.selectedCategory) {

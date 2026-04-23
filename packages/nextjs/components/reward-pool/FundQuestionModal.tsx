@@ -2,7 +2,7 @@
 
 import { type ReactNode, useId, useMemo, useState } from "react";
 import { useAccount, useConfig, useWriteContract } from "wagmi";
-import { readContract, waitForTransactionReceipt } from "wagmi/actions";
+import { getPublicClient, readContract, waitForTransactionReceipt } from "wagmi/actions";
 import { XMarkIcon } from "@heroicons/react/24/outline";
 import { InfoTooltip } from "~~/components/ui/InfoTooltip";
 import {
@@ -16,6 +16,7 @@ import {
   getBountyClosesAt,
   getBountyWindowSeconds,
   parseBountyWindowAmount,
+  resolveBountyReferenceNowSeconds,
 } from "~~/lib/bountyWindows";
 import {
   DEFAULT_REWARD_POOL_FRONTEND_FEE_BPS,
@@ -150,7 +151,17 @@ export function FundQuestionModal({ contentId, title, onClose, onCreated }: Fund
         await waitForTransactionReceipt(wagmiConfig, { hash: approveHash });
       }
 
-      const bountyClosesAt = getBountyClosesAt(bountyWindowPreset, customBountyWindowAmount, customBountyWindowUnit);
+      const publicClient = getPublicClient(wagmiConfig, { chainId: chainId as any });
+      const latestBlockTimestamp = await publicClient
+        ?.getBlock({ blockTag: "latest" })
+        .then(block => block.timestamp)
+        .catch(() => undefined);
+      const bountyClosesAt = getBountyClosesAt(
+        bountyWindowPreset,
+        customBountyWindowAmount,
+        customBountyWindowUnit,
+        resolveBountyReferenceNowSeconds(latestBlockTimestamp),
+      );
       const rewardPoolHash = await writeContractAsync({
         address: escrowAddress,
         abi: QUESTION_REWARD_POOL_ESCROW_ABI,

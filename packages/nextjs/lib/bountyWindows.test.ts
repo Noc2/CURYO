@@ -5,6 +5,7 @@ import {
   getBountyClosesAt,
   getBountyWindowSeconds,
   parseBountyWindowAmount,
+  resolveBountyReferenceNowSeconds,
 } from "~~/lib/bountyWindows";
 
 test("getBountyWindowSeconds returns preset and custom durations", () => {
@@ -25,6 +26,12 @@ test("getBountyClosesAt resolves windows from an explicit timestamp", () => {
   assert.equal(getBountyClosesAt("6h", "1", "days", 1_000), 22_600n);
   assert.equal(getBountyClosesAt("custom", "3", "days", 1_000), 260_200n);
   assert.equal(getBountyClosesAt("custom", "0", "days", 1_000), 0n);
+});
+
+test("resolveBountyReferenceNowSeconds prefers the chain timestamp when available", () => {
+  assert.equal(resolveBountyReferenceNowSeconds(12_345n, 1_000), 12_345);
+  assert.equal(resolveBountyReferenceNowSeconds(54_321, 1_000), 54_321);
+  assert.equal(resolveBountyReferenceNowSeconds(undefined, 1_000), 1_000);
 });
 
 test("formatBountyWindowDuration keeps compact human labels", () => {

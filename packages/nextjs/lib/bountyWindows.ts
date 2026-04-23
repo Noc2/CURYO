@@ -47,6 +47,24 @@ export function getBountyClosesAt(
   return windowSeconds === null ? 0n : BigInt(nowSeconds + windowSeconds);
 }
 
+export function resolveBountyReferenceNowSeconds(
+  latestBlockTimestamp: bigint | number | null | undefined,
+  fallbackNowSeconds = Math.floor(Date.now() / 1000),
+): number {
+  if (typeof latestBlockTimestamp === "bigint") {
+    const normalized = Number(latestBlockTimestamp);
+    if (Number.isFinite(normalized)) {
+      return normalized;
+    }
+  }
+
+  if (typeof latestBlockTimestamp === "number" && Number.isFinite(latestBlockTimestamp)) {
+    return Math.floor(latestBlockTimestamp);
+  }
+
+  return fallbackNowSeconds;
+}
+
 export function formatBountyWindowDuration(seconds: number | null): string {
   if (seconds === null) return "Custom";
 
