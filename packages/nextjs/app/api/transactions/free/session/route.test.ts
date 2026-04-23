@@ -1,17 +1,26 @@
+import { NextRequest } from "next/server";
 import { buildUnavailableFreeTransactionSummary, isFreeTransactionStoreUnavailableError } from "./fallback";
+import { __setRateLimitStoreForTests } from "~~/utils/rateLimit";
 import assert from "node:assert/strict";
 import { after, test } from "node:test";
 
 const env = process.env as Record<string, string | undefined>;
 const originalNodeEnv = env.NODE_ENV;
+const originalTargetNetworks = env.NEXT_PUBLIC_TARGET_NETWORKS;
 
 env.NODE_ENV = "test";
 
 after(() => {
+  __setRateLimitStoreForTests(null);
   if (originalNodeEnv === undefined) {
     delete env.NODE_ENV;
   } else {
     env.NODE_ENV = originalNodeEnv;
+  }
+  if (originalTargetNetworks === undefined) {
+    delete env.NEXT_PUBLIC_TARGET_NETWORKS;
+  } else {
+    env.NEXT_PUBLIC_TARGET_NETWORKS = originalTargetNetworks;
   }
 });
 
@@ -56,4 +65,31 @@ test("builds a self-funded fallback summary when the free transaction store is u
     walletAddress: "0xfa9605A2c38a0B4f16f689FDD07B63F295b86d1C",
     voterIdTokenId: null,
   });
+});
+
+test("free transaction session route rejects unsupported numeric chain ids", async () => {
+  env.NEXT_PUBLIC_TARGET_NETWORKS = "11142220";
+  __setRateLimitStoreForTests({
+    execute: async input => {
+      const sql = typeof input === "string" ? input : input.sql;
+      if (sql.includes("api_rate_limit_maintenance")) {
+        return { rows: [] };
+      }
+
+      if (sql.includes("api_rate_limits")) {
+        return { rows: [{ request_count: 1 }] };
+      }
+
+      return { rows: [] };
+    },
+  });
+
+  const route = await import("./route");
+  const response = await route.GET(
+    new NextRequest("https://curyo.xyz/api/transactions/free/session?address=0xfa9605a2c38a0b4f16f689fdd07b63f295b86d1c&chainId=1"),
+  );
+  const body = (await response.json()) as { error: string };
+
+  assert.equal(response.status, 400);
+  assert.equal(body.error, "Unsupported chain");
 });
