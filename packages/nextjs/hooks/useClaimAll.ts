@@ -12,6 +12,7 @@ import {
   isClaimGasShortageError,
 } from "~~/lib/claimTransactionFeedback";
 import { isWalletRpcOverloadedError } from "~~/lib/transactionErrors";
+import { notification } from "~~/utils/scaffold-eth";
 
 /**
  * Hook for claiming all outstanding rewards in sequence.
