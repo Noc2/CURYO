@@ -1,5 +1,5 @@
-import { buildAgentCohortSummary, type AgentCohortSummary } from "./cohortSummary";
-import { buildAgentLiveAskGuidance, type AgentLiveAskGuidance } from "./liveAskGuidance";
+import { type AgentCohortSummary, buildAgentCohortSummary } from "./cohortSummary";
+import { type AgentLiveAskGuidance, buildAgentLiveAskGuidance } from "./liveAskGuidance";
 import { ROUND_STATE, ROUND_STATE_LABEL } from "@curyo/contracts/protocol";
 import {
   type AgentDecisionAnswer,
@@ -257,7 +257,8 @@ export function buildAgentResultPackage(params: {
     toNumberValue(latestRound?.conservativeRatingBps, null) ??
     toNumberValue(params.content.conservativeRatingBps, null) ??
     ratingBps;
-  const rating = latestRoundRatingBps !== null ? latestRoundRatingBps / 100 : toNumberValue(params.content.rating, null);
+  const rating =
+    latestRoundRatingBps !== null ? latestRoundRatingBps / 100 : toNumberValue(params.content.rating, null);
   const upStake = toBigIntValue(latestRound?.upPool);
   const downStake = toBigIntValue(latestRound?.downPool);
   const totalStakeFromRound = toBigIntValue(latestRound?.totalStake);

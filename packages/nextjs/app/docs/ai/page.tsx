@@ -266,8 +266,8 @@ const AIPage: NextPage = () => {
           failed submissions.
         </li>
         <li>
-          Use <code>/api/agent/asks/[operationKey]/audit</code> or{" "}
-          <code>/api/agent/asks/by-client-request/audit</code> to inspect one managed ask end to end.
+          Use <code>/api/agent/asks/[operationKey]/audit</code> or <code>/api/agent/asks/by-client-request/audit</code>{" "}
+          to inspect one managed ask end to end.
         </li>
         <li>
           Use <code>/api/agent/asks/export?format=json</code> or <code>format=csv</code> to export the authenticated

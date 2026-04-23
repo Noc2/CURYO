@@ -140,7 +140,7 @@ const txData = buildVoteTransferAndCallData({
         </li>
         <li>
           Use the bundled JSON snippets when a runtime expects an <code>mcpServers</code> config with{" "}
-          <code>transport: "streamable-http"</code>.
+          <code>{'transport: "streamable-http"'}</code>.
         </li>
         <li>
           Keep live asks stable after submission: start small, top up additively if guidance calls for it, and write the

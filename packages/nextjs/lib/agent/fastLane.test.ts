@@ -69,6 +69,11 @@ test("buildAgentFastLaneGuidance warns on slow underfunded asks", () => {
   assert.equal(guidance.recommendedAction, "raise_before_submit");
   assert.equal(guidance.suggestedBountyAmountAtomic, "10000000");
   assert.equal(guidance.stretchBountyAmountAtomic, "15000000");
-  assert.deepEqual(guidance.guidance, ["quote_first", "start_small_then_top_up", "increase_bounty_before_submit", "expect_slow_result"]);
+  assert.deepEqual(guidance.guidance, [
+    "quote_first",
+    "start_small_then_top_up",
+    "increase_bounty_before_submit",
+    "expect_slow_result",
+  ]);
   assert.deepEqual(guidance.warnings, ["bounty_per_required_vote_is_low", "round_window_is_not_fast_lane"]);
 });

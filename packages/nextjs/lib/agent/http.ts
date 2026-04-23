@@ -85,9 +85,7 @@ export async function handleAgentRoute(params: AgentRouteOptions) {
     if (result instanceof Response) {
       return result;
     }
-    return NextResponse.json(
-      result,
-    );
+    return NextResponse.json(result);
   } catch (error) {
     const normalized = normalizeToolError(error);
     return NextResponse.json(normalized, { status: normalized.status });

@@ -6,10 +6,7 @@ import { McpToolError } from "~~/lib/mcp/tools";
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-export async function GET(
-  request: NextRequest,
-  context: { params: Promise<{ operationKey: string }> },
-) {
+export async function GET(request: NextRequest, context: { params: Promise<{ operationKey: string }> }) {
   const { operationKey } = await context.params;
 
   return handleAgentRoute({

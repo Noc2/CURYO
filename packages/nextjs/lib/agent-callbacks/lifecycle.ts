@@ -21,7 +21,10 @@ type ManagedLifecycleCursor = Pick<ManagedLifecycleCandidate, "operationKey" | "
 type AgentLifecycleDependencies = {
   enqueueAgentCallbackEvent: typeof enqueueAgentCallbackEvent;
   getContentById: typeof ponderApi.getContentById;
-  listCandidates: (params: { after?: ManagedLifecycleCursor | null; limit: number }) => Promise<ManagedLifecycleCandidate[]>;
+  listCandidates: (params: {
+    after?: ManagedLifecycleCursor | null;
+    limit: number;
+  }) => Promise<ManagedLifecycleCandidate[]>;
   listContentFeedback: typeof listContentFeedback;
 };
 
@@ -203,7 +206,11 @@ export async function sweepAgentLifecycleCallbacks(params: { limit?: number; now
         if (eventType === "feedback.unlocked") emitted.feedbackUnlocked += 1;
       }
 
-      if (liveAskGuidance && liveAskGuidance.lowResponseRisk === "high" && liveAskGuidance.recommendedAction !== "wait") {
+      if (
+        liveAskGuidance &&
+        liveAskGuidance.lowResponseRisk === "high" &&
+        liveAskGuidance.recommendedAction !== "wait"
+      ) {
         await dependencies.enqueueAgentCallbackEvent({
           agentId: candidate.agentId,
           eventId: callbackEventId(candidate.operationKey, "bounty.low_response"),

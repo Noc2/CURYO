@@ -51,13 +51,10 @@ function toCsv(rows: Array<Record<string, unknown>>) {
   ];
   const escape = (value: unknown) => {
     const text = value == null ? "" : String(value);
-    return `"${text.replaceAll("\"", "\"\"")}"`;
+    return `"${text.replaceAll('"', '""')}"`;
   };
 
-  return [
-    headers.join(","),
-    ...rows.map(row => headers.map(header => escape(row[header])).join(",")),
-  ].join("\n");
+  return [headers.join(","), ...rows.map(row => headers.map(header => escape(row[header])).join(","))].join("\n");
 }
 
 export async function GET(request: NextRequest) {

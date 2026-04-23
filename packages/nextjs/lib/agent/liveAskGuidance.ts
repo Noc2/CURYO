@@ -29,7 +29,10 @@ function toOptionalUnixSeconds(value: unknown): number | null {
 }
 
 export function buildAgentLiveAskGuidance(params: {
-  content: Pick<PonderContentItem, "openRound" | "rewardPoolSummary" | "roundEpochDuration" | "roundMaxDuration" | "roundMaxVoters" | "roundMinVoters">;
+  content: Pick<
+    PonderContentItem,
+    "openRound" | "rewardPoolSummary" | "roundEpochDuration" | "roundMaxDuration" | "roundMaxVoters" | "roundMinVoters"
+  >;
   nowSeconds?: number;
 }): AgentLiveAskGuidance | null {
   const openRound = params.content.openRound;
