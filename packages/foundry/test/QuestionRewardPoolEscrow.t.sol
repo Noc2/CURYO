@@ -671,6 +671,38 @@ contract QuestionRewardPoolEscrowTest is VotingTestBase {
         assertEq(usdc.balanceOf(funder), funderBalanceBefore + REWARD_POOL_AMOUNT);
     }
 
+    function testBundleDoesNotFailOnUnsettledTerminalRound() public {
+        uint256[] memory contentIds = new uint256[](2);
+        contentIds[0] =
+            _submitQuestionWithContext("https://example.com/bundle-a", "https://example.com/bundle-a.jpg");
+        contentIds[1] =
+            _submitQuestionWithContext("https://example.com/bundle-b", "https://example.com/bundle-b.jpg");
+        uint256 bundleId = 1;
+        uint8 rewardAsset = rewardPoolEscrow.REWARD_ASSET_CREP();
+        uint256 bountyClosesAt = block.timestamp + 30 days;
+
+        vm.prank(submitter);
+        crepToken.approve(address(rewardPoolEscrow), REWARD_POOL_AMOUNT);
+
+        vm.prank(address(registry));
+        rewardPoolEscrow.createSubmissionBundleFromRegistry(
+            bundleId,
+            contentIds,
+            submitter,
+            rewardAsset,
+            REWARD_POOL_AMOUNT,
+            3,
+            bountyClosesAt,
+            bountyClosesAt
+        );
+
+        vm.prank(address(votingEngine));
+        rewardPoolEscrow.recordBundleQuestionTerminal(contentIds[0], 1, false);
+
+        vm.expectRevert("Bundle active");
+        rewardPoolEscrow.refundQuestionBundleReward(bundleId);
+    }
+
     function testRewardPoolRequiresExpiry() public {
         uint256 contentId = _submitQuestion("");
 
@@ -737,16 +769,24 @@ contract QuestionRewardPoolEscrowTest is VotingTestBase {
 
     function _submitQuestion(string memory url) internal returns (uint256 contentId) {
         string memory mediaUrl = bytes(url).length == 0 ? DEFAULT_MEDIA_URL : url;
+        return _submitQuestionWithContext("https://example.com/context", mediaUrl);
+    }
+
+    function _submitQuestionWithContext(string memory contextUrl, string memory mediaUrl)
+        internal
+        returns (uint256 contentId)
+    {
         string[] memory imageUrls = new string[](1);
         imageUrls[0] = mediaUrl;
         activeTlockContentRegistry = registry;
-        bytes32 salt =
-            keccak256(abi.encode(mediaUrl, QUESTION, DESCRIPTION, TAGS, CATEGORY_ID, submitter, block.timestamp));
+        bytes32 salt = keccak256(
+            abi.encode(contextUrl, mediaUrl, QUESTION, DESCRIPTION, TAGS, CATEGORY_ID, submitter, block.timestamp)
+        );
 
         vm.startPrank(submitter);
         _reserveQuestionMediaSubmission(
             registry,
-            "https://example.com/context",
+            contextUrl,
             imageUrls,
             "",
             QUESTION,
@@ -757,7 +797,7 @@ contract QuestionRewardPoolEscrowTest is VotingTestBase {
             submitter
         );
         vm.warp(block.timestamp + 1);
-        contentId = registry.submitQuestion("https://example.com/context", imageUrls, "", QUESTION, DESCRIPTION, TAGS, CATEGORY_ID, salt);
+        contentId = registry.submitQuestion(contextUrl, imageUrls, "", QUESTION, DESCRIPTION, TAGS, CATEGORY_ID, salt);
         vm.stopPrank();
     }
 

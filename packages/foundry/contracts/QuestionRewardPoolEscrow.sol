@@ -591,17 +591,14 @@ contract QuestionRewardPoolEscrow is
         BundleQuestion storage question = bundleQuestions[bundleId][bundleIndex];
         if (question.terminal) return;
 
+        bool settledWithinWindow = settled && _bundleRoundSettledWithinWindow(bundle, contentId, roundId);
+        if (!settledWithinWindow) return;
+
         question.roundId = roundId.toUint64();
         question.terminal = true;
-        bool settledWithinWindow = settled && _bundleRoundSettledWithinWindow(bundle, contentId, roundId);
-        question.settled = settledWithinWindow;
-        if (settledWithinWindow) {
-            bundle.completedQuestionCount++;
-            emit QuestionBundleRoundRecorded(bundleId, contentId, roundId, bundleIndex);
-        } else {
-            bundle.failed = true;
-            emit QuestionBundleFailed(bundleId, contentId, roundId);
-        }
+        question.settled = true;
+        bundle.completedQuestionCount++;
+        emit QuestionBundleRoundRecorded(bundleId, contentId, roundId, bundleIndex);
     }
 
     function claimQuestionBundleReward(uint256 bundleId)
