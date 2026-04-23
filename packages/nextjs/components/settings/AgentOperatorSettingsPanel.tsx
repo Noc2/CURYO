@@ -20,9 +20,9 @@ const RUNTIME_EXAMPLES = [
       "Use a remote connector or MCP server entry. Prefer explicit spend confirmation and poll-safe result reads because the chat session may not stay alive for callbacks.",
   },
   {
-    title: "Hermes or OpenClaw",
+    title: "Persistent agents",
     description:
-      "Use the remote MCP endpoint with managed agent budgets, signed callback webhooks, and memory entries for operation keys and public result URLs.",
+      "Use the remote MCP endpoint with managed agent budgets, signed callback webhooks, and memory entries for operation keys and public result URLs. Hermes and OpenClaw fit here.",
   },
   {
     title: "Gemini CLI or coding agents",
@@ -50,7 +50,7 @@ const OPERATOR_CONTROLS = [
   {
     title: "Callback delivery",
     description:
-      "Attach signed webhooks to asks and inspect delivery status when an agent waits for humans asynchronously.",
+      "Attach signed webhooks to asks, protect the delivery worker with CURYO_AGENT_CALLBACK_DELIVERY_SECRET, and inspect callbackDeliveries when an agent waits for humans asynchronously.",
   },
   {
     title: "Audit trail",
@@ -96,7 +96,9 @@ export function AgentOperatorSettingsPanel() {
         <p className="mt-3 text-sm leading-relaxed text-base-content/70">
           Tokens should carry only the scopes each agent needs: <code>curyo:quote</code>, <code>curyo:ask</code>,{" "}
           <code>curyo:read</code>, and <code>curyo:balance</code>. Curyo&apos;s current remote MCP route is a POST
-          streamable HTTP endpoint; SSE is not enabled for this release.
+          streamable HTTP endpoint; SSE is not enabled for this release. Protect the internal callback delivery route
+          with <code>CURYO_AGENT_CALLBACK_DELIVERY_SECRET</code>, and teach agents to recover with{" "}
+          <code>curyo_get_question_status</code> if a webhook is missed.
         </p>
       </div>
 

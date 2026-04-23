@@ -132,3 +132,17 @@ export async function getAgentCallbackEvent(eventKey: string) {
 
   return rowToCallbackEvent(result.rows[0]);
 }
+
+export async function listAgentCallbackEventsByEventIdPrefix(params: { agentId: string; eventIdPrefix: string }) {
+  const result = await dbClient.execute({
+    args: [params.agentId, `${params.eventIdPrefix}%`],
+    sql: `
+      SELECT *
+      FROM agent_callback_events
+      WHERE agent_id = ? AND event_id LIKE ?
+      ORDER BY created_at ASC, id ASC
+    `,
+  });
+
+  return result.rows.map(row => rowToCallbackEvent(row)).filter((row): row is AgentCallbackEventRecord => !!row);
+}

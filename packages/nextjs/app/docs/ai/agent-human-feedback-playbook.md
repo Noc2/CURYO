@@ -12,7 +12,7 @@ Agents already have tool calls, memory, search, wallets, and workflow runners. W
 
 This is different from generic human-in-the-loop approval. Approval asks a single operator whether an agent may continue. Curyo can ask a market of verified humans what is true, useful, safe, interesting, locally relevant, or worth acting on.
 
-For the general agent connector MVP, keep the product surface narrow: configure an agent token, choose a template, quote the ask, submit with an idempotency key, wait through a signed callback webhook or status read, then consume the structured result. Private or embargoed context is intentionally deferred; the first flow assumes public context URLs and public settled result pages.
+For the general agent connector MVP, keep the product surface narrow: configure an agent token, choose a template, quote the ask, submit with an idempotency key, wait through a signed callback webhook or status read, then consume the structured result. If the callback path misses or retries, the agent should recover through `curyo_get_question_status` instead of re-submitting the ask. Private or embargoed context is intentionally deferred; the first flow assumes public context URLs and public settled result pages.
 
 ## Questions Agents Would Ask Humans
 
@@ -214,6 +214,7 @@ Recommended layers:
 - Idempotency keys: retries must not double-pay.
 - Expiry handling: limited-time bounty and feedback windows should be explicit, but current public question bounties are not a generic refund promise.
 - Webhooks: agents should not need to poll constantly; signed callbacks should wake the agent when the ask is submitted, open, settling, settled, failed, feedback unlocked, or under-responding.
+- Callback recovery: the agent-facing webhook uses the per-ask signing secret, while the internal delivery worker should be protected with `CURYO_AGENT_CALLBACK_DELIVERY_SECRET`; missed deliveries should still be visible through `curyo_get_question_status` and its `callbackDeliveries` field.
 - Receipts: every paid question returns transaction hashes, protocol fees, reward distribution, and final settlement metadata.
 
 The user-facing rating system should stay the same everywhere: one 0-100 community rating, with templates used to describe the question rather than to introduce multiple scoring models.
@@ -246,7 +247,7 @@ Agent integration docs should present the same flow every time:
 2. Read `curyo_list_result_templates`.
 3. Quote with `curyo_quote_question`.
 4. Submit with `curyo_ask_humans`, `clientRequestId`, `maxPaymentAmount`, and optional callback URL.
-5. Recover with `curyo_get_question_status`.
+5. Recover with `curyo_get_question_status`, including `callbackDeliveries` retry state when the webhook path is delayed.
 6. Finish with `curyo_get_result` and persist the result URL.
 
 The adapter should be conservative around writes:
@@ -259,7 +260,7 @@ The adapter should be conservative around writes:
 
 ## Generic Agent Flow
 
-A ChatGPT connector, Claude connector, Hermes daemon, OpenClaw agent, Gemini CLI workflow, or backend worker can use the same core flow:
+A ChatGPT connector, Claude connector, persistent agent such as Hermes or OpenClaw, Gemini CLI workflow, or backend worker can use the same core flow:
 
 1. The operator reviews agent setup in `/settings?tab=agents`; while static registration remains active, Curyo provisions the bearer token through `CURYO_MCP_AGENTS` with scopes, daily budget, per-ask cap, and category allowlist.
 2. The agent runtime points at Curyo's remote MCP endpoint, SDK, or HTTP API with the appropriate credential.
@@ -268,7 +269,7 @@ A ChatGPT connector, Claude connector, Hermes daemon, OpenClaw agent, Gemini CLI
 5. It calls `curyo_quote_question` with category, deadline, budget, and desired voter count.
 6. It submits through `curyo_ask_humans`, funding the bounty from a managed agent budget or delegated bot wallet.
 7. It receives a `questionId`, `publicUrl`, `operationKey`, and payment or escrow metadata.
-8. It waits for a signed callback or polls `curyo_get_question_status`.
+8. It waits for a signed callback or polls `curyo_get_question_status`, using `callbackDeliveries` to understand retry and dead-letter state if the callback path stalls.
 9. It calls `curyo_get_result` and maps the result into its own policy.
 10. It stores the result URL in its audit log so humans can inspect why the bot acted.
 
@@ -277,7 +278,7 @@ The whole experience should fit in one or two tool calls from the agent's perspe
 Runtime examples:
 
 - ChatGPT or Claude connector: ask humans whether a generated pitch is clear, then poll for the result in the same conversation.
-- Hermes or OpenClaw daemon: ask humans during a long-running workflow, receive a signed callback webhook, and write the result URL to memory.
+- Persistent agent such as Hermes or OpenClaw: ask humans during a long-running workflow, receive a signed callback webhook, and write the result URL to memory.
 - Gemini CLI or coding agent: ask humans which README opening or UI copy is clearer from a local `mcpServers` config.
 - Backend worker: submit a trust check through SDK or HTTP helpers and process the callback in a queue.
 

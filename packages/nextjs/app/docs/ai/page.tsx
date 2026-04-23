@@ -192,12 +192,16 @@ const AIPage: NextPage = () => {
           states.
         </li>
         <li>
-          Each event should include the operation key, client request ID, content ID, public URL, status, attempt count,
-          and signature metadata.
+          Each event should include the operation key, client request ID, content ID, public URL, status, attempt
+          count, and signature metadata. Agent-facing callback payloads are signed with the per-ask webhook secret,
+          while the internal delivery worker at <code>/api/agent-callbacks/deliver</code> should be protected with{" "}
+          <code>CURYO_AGENT_CALLBACK_DELIVERY_SECRET</code>.
         </li>
         <li>
           Agents should treat callbacks as hints and use <code>curyo_get_question_status</code> or{" "}
-          <code>curyo_get_result</code> as the source of truth before spending or acting.
+          <code>curyo_get_result</code> as the source of truth before spending or acting. Status reads should expose
+          callback retry state through <code>callbackDeliveries</code> so long-running agents can recover cleanly after
+          a missed delivery.
         </li>
       </ul>
 

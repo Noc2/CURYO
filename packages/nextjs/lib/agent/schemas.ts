@@ -252,6 +252,25 @@ export const agentQuestionStatusOutputSchema = {
   additionalProperties: true,
   properties: {
     bundleId: { type: ["string", "null"] },
+    callbackDeliveries: {
+      items: {
+        additionalProperties: false,
+        properties: {
+          attemptCount: { type: "integer" },
+          callbackUrl: { type: "string" },
+          deliveredAt: { type: ["string", "null"] },
+          eventId: { type: "string" },
+          eventType: { type: "string" },
+          lastError: { type: ["string", "null"] },
+          nextAttemptAt: { type: "string" },
+          status: { enum: ["dead", "delivered", "delivering", "pending", "retrying"], type: "string" },
+          subscriptionId: { type: "string" },
+        },
+        required: ["eventId", "eventType", "status", "attemptCount", "callbackUrl", "nextAttemptAt", "subscriptionId"],
+        type: "object",
+      },
+      type: "array",
+    },
     chainId: { type: "integer" },
     clientRequestId: { type: "string" },
     contentId: { type: ["string", "null"] },

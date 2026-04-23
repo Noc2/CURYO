@@ -10,10 +10,14 @@ const originalNodeEnv = env.NODE_ENV;
 env.DATABASE_URL = "memory:";
 
 type AgentAsksByClientRouteModule = typeof import("./asks/by-client-request/route");
+type AgentAsksOperationRouteModule = typeof import("./asks/[operationKey]/route");
 type AgentAsksRouteModule = typeof import("./asks/route");
 type AgentQuoteRouteModule = typeof import("./quote/route");
 type AgentResultsByClientRouteModule = typeof import("./results/by-client-request/route");
 type AgentTemplatesRouteModule = typeof import("./templates/route");
+type CallbackDeliveryModule = typeof import("~~/lib/agent-callbacks/delivery");
+type CallbackEventsModule = typeof import("~~/lib/agent-callbacks/events");
+type CallbackRegistryModule = typeof import("~~/lib/agent-callbacks/registry");
 type DbModule = typeof import("../../../lib/db");
 type DbTestMemoryModule = typeof import("../../../lib/db/testMemory");
 type McpBudgetModule = typeof import("~~/lib/mcp/budget");
@@ -22,7 +26,11 @@ type McpToolsModule = typeof import("~~/lib/mcp/tools");
 const OPERATION_KEY = `0x${"1".repeat(64)}` as const;
 
 let asksByClientRoute: AgentAsksByClientRouteModule;
+let asksOperationRoute: AgentAsksOperationRouteModule;
 let asksRoute: AgentAsksRouteModule;
+let callbackDeliveryModule: CallbackDeliveryModule;
+let callbackEventsModule: CallbackEventsModule;
+let callbackRegistryModule: CallbackRegistryModule;
 let dbModule: DbModule;
 let dbTestMemory: DbTestMemoryModule;
 let mcpBudgetModule: McpBudgetModule;
@@ -176,7 +184,11 @@ before(async () => {
   mcpBudgetModule = await import("~~/lib/mcp/budget");
   mcpToolsModule = await import("~~/lib/mcp/tools");
   asksByClientRoute = await import("./asks/by-client-request/route");
+  asksOperationRoute = await import("./asks/[operationKey]/route");
   asksRoute = await import("./asks/route");
+  callbackDeliveryModule = await import("~~/lib/agent-callbacks/delivery");
+  callbackEventsModule = await import("~~/lib/agent-callbacks/events");
+  callbackRegistryModule = await import("~~/lib/agent-callbacks/registry");
   quoteRoute = await import("./quote/route");
   resultsByClientRoute = await import("./results/by-client-request/route");
   templatesRoute = await import("./templates/route");
@@ -186,6 +198,8 @@ beforeEach(async () => {
   env.NODE_ENV = "development";
   configureAgent();
   mcpToolsModule.__setMcpToolTestOverridesForTests(null);
+  await dbModule.dbClient.execute("DELETE FROM agent_callback_events");
+  await dbModule.dbClient.execute("DELETE FROM agent_callback_subscriptions");
   await dbModule.dbClient.execute("DELETE FROM api_rate_limits");
   await dbModule.dbClient.execute("DELETE FROM api_rate_limit_maintenance");
 });
@@ -286,6 +300,60 @@ test("agent status route returns not_found without treating it as a transport er
   assert.equal(body.status, "not_found");
   assert.equal(body.ready, false);
   assert.equal(body.terminal, true);
+});
+
+test("agent status route surfaces callback delivery state for missed webhooks", async () => {
+  await callbackRegistryModule.upsertAgentCallbackSubscription({
+    agentId: "route-agent",
+    callbackUrl: "https://agent.example/curyo",
+    eventTypes: ["question.submitted"],
+    id: "sub-a",
+    secret: "callback-secret",
+  });
+  await callbackEventsModule.enqueueAgentCallbackEvent({
+    agentId: "route-agent",
+    eventId: `${OPERATION_KEY}:question.submitted`,
+    eventType: "question.submitted",
+    now: new Date("2026-04-23T12:00:00.000Z"),
+    payload: {
+      operationKey: OPERATION_KEY,
+      status: "submitted",
+    },
+  });
+  await callbackDeliveryModule.leaseDueAgentCallbackEvents({
+    now: new Date("2026-04-23T12:00:01.000Z"),
+    workerId: "worker-a",
+  });
+  await callbackDeliveryModule.failAgentCallbackDelivery({
+    error: "503",
+    eventKey: `sub-a:${OPERATION_KEY}:question.submitted`,
+    now: new Date("2026-04-23T12:00:02.000Z"),
+    workerId: "worker-a",
+  });
+
+  const response = await asksOperationRoute.GET(makeGet(`https://curyo.xyz/api/agent/asks/${OPERATION_KEY}`), {
+    params: Promise.resolve({ operationKey: OPERATION_KEY }),
+  });
+  const body = (await response.json()) as {
+    callbackDeliveries: Array<Record<string, unknown>>;
+    status: string;
+  };
+
+  assert.equal(response.status, 200);
+  assert.equal(body.status, "not_found");
+  assert.deepEqual(body.callbackDeliveries, [
+    {
+      attemptCount: 1,
+      callbackUrl: "https://agent.example/curyo",
+      deliveredAt: null,
+      eventId: `${OPERATION_KEY}:question.submitted`,
+      eventType: "question.submitted",
+      lastError: "503",
+      nextAttemptAt: "2026-04-23T12:00:03.000Z",
+      status: "retrying",
+      subscriptionId: "sub-a",
+    },
+  ]);
 });
 
 test("agent results route returns the pending result package before settlement", async () => {

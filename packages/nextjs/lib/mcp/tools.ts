@@ -3,6 +3,7 @@ import {
   AGENT_CALLBACK_EVENT_TYPES,
   type AgentCallbackEventType,
   enqueueAgentCallbackEvent,
+  listAgentCallbackEventsByEventIdPrefix,
   upsertAgentCallbackSubscription,
 } from "~~/lib/agent-callbacks";
 import { buildAgentFastLaneGuidance } from "~~/lib/agent/fastLane";
@@ -336,6 +337,22 @@ function callbackEventId(operationKey: `0x${string}`, eventType: AgentCallbackEv
   return `${operationKey}:${eventType}`;
 }
 
+function normalizeCallbackDeliveries(
+  deliveries: Awaited<ReturnType<typeof listAgentCallbackEventsByEventIdPrefix>>,
+): Array<Record<string, unknown>> {
+  return deliveries.map(delivery => ({
+    attemptCount: delivery.attemptCount,
+    callbackUrl: delivery.callbackUrl,
+    deliveredAt: delivery.deliveredAt ? delivery.deliveredAt.toISOString() : null,
+    eventId: delivery.eventId,
+    eventType: delivery.eventType,
+    lastError: delivery.lastError,
+    nextAttemptAt: delivery.nextAttemptAt.toISOString(),
+    status: delivery.status,
+    subscriptionId: delivery.subscriptionId,
+  }));
+}
+
 function callbackPayload(params: {
   body: JsonObject;
   chainId: number;
@@ -392,6 +409,12 @@ function toManagedMcpPayload(agent: McpAgentAuth, payload: X402QuestionPayload):
 }
 
 async function lookupQuestionOperation(args: JsonObject, agent: McpAgentAuth) {
+  const operationKey = await resolveManagedOperationKey(args, agent);
+  if (!operationKey) return null;
+  return getX402QuestionSubmissionByOperationKey(operationKey);
+}
+
+async function resolveManagedOperationKey(args: JsonObject, agent: McpAgentAuth): Promise<`0x${string}` | null> {
   const operationKey = typeof args.operationKey === "string" ? args.operationKey.trim() : "";
   if (operationKey) {
     if (!/^0x[a-fA-F0-9]{64}$/.test(operationKey)) {
@@ -401,7 +424,7 @@ async function lookupQuestionOperation(args: JsonObject, agent: McpAgentAuth) {
     if (reservation && reservation.agentId !== agent.id) {
       throw new McpToolError("Operation was not submitted by this MCP agent.", 404);
     }
-    return getX402QuestionSubmissionByOperationKey(operationKey as `0x${string}`);
+    return operationKey as `0x${string}`;
   }
 
   const chainId = Number.parseInt(String(args.chainId ?? ""), 10);
@@ -415,9 +438,16 @@ async function lookupQuestionOperation(args: JsonObject, agent: McpAgentAuth) {
     chainId,
     clientRequestId,
   });
-  if (!reservation) return null;
+  return reservation?.operationKey ?? null;
+}
 
-  return getX402QuestionSubmissionByOperationKey(reservation.operationKey);
+async function loadCallbackDeliveryStatus(operationKey: `0x${string}`, agentId: string) {
+  return normalizeCallbackDeliveries(
+    await listAgentCallbackEventsByEventIdPrefix({
+      agentId,
+      eventIdPrefix: `${operationKey}:`,
+    }),
+  );
 }
 
 function formatQuoteResult(
@@ -799,9 +829,11 @@ export async function callCuryoMcpTool(params: {
     }
 
     case "curyo_get_question_status": {
+      const operationKey = await resolveManagedOperationKey(args, params.agent);
       const record = await lookupQuestionOperation(args, params.agent);
       const body = {
         ...(normalizeMcpQuestionBody(x402QuestionSubmissionRecordBody(record)) as JsonObject),
+        callbackDeliveries: operationKey ? await loadCallbackDeliveryStatus(operationKey, params.agent.id) : [],
         publicUrl: getPublicQuestionUrl(record?.contentId ?? null),
       };
       return {
