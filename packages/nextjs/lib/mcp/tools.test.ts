@@ -11,6 +11,11 @@ const AGENT: McpAgentAuth = {
   scopes: new Set(["curyo:ask"]),
   tokenHash: "a".repeat(64),
 };
+const RESTRICTED_AGENT: McpAgentAuth = {
+  ...AGENT,
+  allowedCategoryIds: new Set(["5"]),
+  id: "restricted-agent",
+};
 const OPERATION_KEY = `0x${"1".repeat(64)}` as const;
 
 function askArguments(overrides: Record<string, unknown> = {}) {
@@ -193,6 +198,36 @@ test("curyo_ask_humans still enqueues question.submitted when submitted bookkeep
       status: "submitted",
     },
   });
+});
+
+test("curyo_ask_humans rejects bundle members outside the agent category allowlist", async () => {
+  await assert.rejects(
+    () =>
+      callCuryoMcpTool({
+        agent: RESTRICTED_AGENT,
+        arguments: askArguments({
+          questions: [
+            {
+              categoryId: "5",
+              contextUrl: "https://example.com/context",
+              description: "Should this autonomous action continue?",
+              tags: ["agents"],
+              title: "Agent action approval",
+            },
+            {
+              categoryId: "6",
+              contextUrl: "https://example.com/alternate",
+              description: "Should this alternate action continue?",
+              tags: ["agents"],
+              title: "Agent action approval follow-up",
+            },
+          ],
+          question: undefined,
+        }),
+        name: "curyo_ask_humans",
+      }),
+    /not allowed to ask in category 6/i,
+  );
 });
 
 test("curyo_ask_humans async returns submitting and scheduled completion marks budget submitted", async () => {
