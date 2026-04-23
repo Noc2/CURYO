@@ -172,8 +172,12 @@ export async function OPTIONS(request: NextRequest) {
 
 export async function GET(request: NextRequest) {
   return NextResponse.json(
-    { error: "SSE streams are not enabled for the first Curyo MCP release. Use POST JSON-RPC calls." },
-    { headers: corsHeaders(request), status: 405 },
+    {
+      allowedMethods: ["POST", "OPTIONS"],
+      error: "SSE streams are not enabled for this Curyo MCP release. Use POST JSON-RPC calls over streamable HTTP.",
+      supportedTransports: ["streamable-http"],
+    },
+    { headers: { ...corsHeaders(request), Allow: "POST, OPTIONS" }, status: 405 },
   );
 }
 
@@ -245,6 +249,7 @@ export async function POST(request: NextRequest) {
         body.id,
         {
           tools: MCP_TOOLS.map(tool => ({
+            ...(tool.annotations ? { annotations: tool.annotations } : {}),
             description: tool.description,
             inputSchema: tool.inputSchema,
             name: tool.name,

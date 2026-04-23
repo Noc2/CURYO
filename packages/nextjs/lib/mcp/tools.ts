@@ -30,7 +30,12 @@ import {
   reserveMcpAgentBudget,
   updateMcpBudgetReservation,
 } from "~~/lib/mcp/budget";
-import { type X402QuestionPayload, X402_USDC_DECIMALS, parseX402QuestionRequest } from "~~/lib/x402/questionPayload";
+import {
+  X402QuestionInputError,
+  type X402QuestionPayload,
+  X402_USDC_DECIMALS,
+  parseX402QuestionRequest,
+} from "~~/lib/x402/questionPayload";
 import {
   X402QuestionConfigError,
   X402QuestionConflictError,
@@ -47,6 +52,12 @@ import { ponderApi } from "~~/services/ponder/client";
 type JsonObject = Record<string, unknown>;
 
 type McpToolDefinition = {
+  annotations?: {
+    destructiveHint?: boolean;
+    idempotentHint?: boolean;
+    openWorldHint?: boolean;
+    readOnlyHint?: boolean;
+  };
   description: string;
   inputSchema: JsonObject;
   name: string;
@@ -109,6 +120,11 @@ export class McpToolError extends Error {
 
 export const MCP_TOOLS: McpToolDefinition[] = [
   {
+    annotations: {
+      idempotentHint: true,
+      openWorldHint: true,
+      readOnlyHint: true,
+    },
     description: "List Curyo categories that paid asks can target.",
     inputSchema: {
       additionalProperties: false,
@@ -120,6 +136,11 @@ export const MCP_TOOLS: McpToolDefinition[] = [
     title: "List Curyo Categories",
   },
   {
+    annotations: {
+      idempotentHint: true,
+      openWorldHint: false,
+      readOnlyHint: true,
+    },
     description: "List off-chain result interpretation templates used by Curyo agent asks.",
     inputSchema: {
       additionalProperties: false,
@@ -132,6 +153,11 @@ export const MCP_TOOLS: McpToolDefinition[] = [
     title: "List Result Templates",
   },
   {
+    annotations: {
+      idempotentHint: true,
+      openWorldHint: true,
+      readOnlyHint: true,
+    },
     description: "Preflight and price a paid question before reserving spend.",
     inputSchema: agentQuoteInputSchema,
     name: "curyo_quote_question",
@@ -140,7 +166,14 @@ export const MCP_TOOLS: McpToolDefinition[] = [
     title: "Quote Human Ask",
   },
   {
-    description: "Reserve managed MCP budget and submit a paid question for verified humans to rate.",
+    annotations: {
+      destructiveHint: true,
+      idempotentHint: false,
+      openWorldHint: true,
+      readOnlyHint: false,
+    },
+    description:
+      "Reserve managed MCP budget and submit a paid public question for verified humans to rate. This spends configured agent budget.",
     inputSchema: agentAskHumansInputSchema,
     name: "curyo_ask_humans",
     outputSchema: agentAskHumansOutputSchema,
@@ -148,6 +181,11 @@ export const MCP_TOOLS: McpToolDefinition[] = [
     title: "Ask Humans",
   },
   {
+    annotations: {
+      idempotentHint: true,
+      openWorldHint: true,
+      readOnlyHint: true,
+    },
     description: "Get paid ask operation status by operationKey or chainId plus clientRequestId.",
     inputSchema: agentOperationLookupInputSchema,
     name: "curyo_get_question_status",
@@ -156,6 +194,11 @@ export const MCP_TOOLS: McpToolDefinition[] = [
     title: "Get Question Status",
   },
   {
+    annotations: {
+      idempotentHint: true,
+      openWorldHint: true,
+      readOnlyHint: true,
+    },
     description: "Fetch the public human signal for a submitted question.",
     inputSchema: {
       additionalProperties: false,
@@ -173,6 +216,11 @@ export const MCP_TOOLS: McpToolDefinition[] = [
     title: "Get Human Result",
   },
   {
+    annotations: {
+      idempotentHint: true,
+      openWorldHint: false,
+      readOnlyHint: true,
+    },
     description: "Show this authenticated agent's managed MCP budget and caps.",
     inputSchema: {
       additionalProperties: false,
@@ -312,6 +360,22 @@ function callbackPayload(params: {
   };
 }
 
+function agentStatusHints(body: JsonObject) {
+  const status = typeof body.status === "string" ? body.status : "not_found";
+  const contentId = typeof body.contentId === "string" ? body.contentId : null;
+  const terminal = status === "submitted" || status === "failed" || status === "not_found";
+  const ready = status === "submitted" && !!contentId;
+
+  return {
+    nextAction:
+      status === "failed" ? "manual_review" : ready ? "call_curyo_get_result" : "poll_curyo_get_question_status",
+    pollAfterMs: terminal && !ready ? null : 5_000,
+    ready,
+    resultTool: ready ? "curyo_get_result" : null,
+    terminal,
+  };
+}
+
 function sha256(value: string) {
   return createHash("sha256").update(value).digest("hex");
 }
@@ -404,10 +468,65 @@ async function buildQuestionResult(args: JsonObject, agent: McpAgentAuth) {
   const contentId = directContentId || record?.contentId;
 
   if (!contentId) {
+    const operation = normalizeMcpQuestionBody(x402QuestionSubmissionRecordBody(record));
+    const status = operation && typeof operation === "object" ? String((operation as JsonObject).status ?? "") : "";
     return {
-      operation: normalizeMcpQuestionBody(x402QuestionSubmissionRecordBody(record)),
+      answer: status === "failed" ? "failed" : "pending",
+      confidence: {
+        level: "none",
+        score: 0,
+      },
+      distribution: {
+        conservativeRatingBps: null,
+        down: { count: 0, share: null, stake: "0" },
+        rating: null,
+        ratingBps: null,
+        revealedCount: 0,
+        state: null,
+        stateLabel: null,
+        up: { count: 0, share: null, stake: "0" },
+      },
+      dissentingView: null,
+      feedbackQuality: {
+        actionability: "none",
+        objectionCount: 0,
+        publicNoteCount: 0,
+        sourceUrlCount: 0,
+      },
+      limitations: ["The question has not reached a public Curyo result page yet."],
+      majorObjections: [],
+      methodology: {
+        ratingSystem: "curyo.binary_staked_rating.v1",
+        sources: ["x402.question_submission"],
+        templateId: "generic_rating",
+        templateVersion: 1,
+      },
+      operation,
+      pollAfterMs: 5_000,
+      protocolState: {
+        latestRound: null,
+        status: status || "not_found",
+      },
+      publicUrl: null,
       ready: false,
       result: null,
+      wait: {
+        code: status === "failed" ? "failed_submission" : "still_settling",
+        recoverWith: status === "failed" ? "inspect_status_error" : "curyo_get_question_status",
+      },
+      recommendedNextAction: status === "failed" ? "manual_review" : "wait_for_settlement",
+      rationaleSummary:
+        status === "failed"
+          ? "The submission failed before a public Curyo result was available."
+          : "The human result is not ready yet.",
+      sourceUrls: [],
+      stakeMass: {
+        down: "0",
+        total: "0",
+        unit: "raw_staked_voting_power",
+        up: "0",
+      },
+      voteCount: 0,
     };
   }
 
@@ -681,9 +800,13 @@ export async function callCuryoMcpTool(params: {
 
     case "curyo_get_question_status": {
       const record = await lookupQuestionOperation(args, params.agent);
-      return {
+      const body = {
         ...(normalizeMcpQuestionBody(x402QuestionSubmissionRecordBody(record)) as JsonObject),
         publicUrl: getPublicQuestionUrl(record?.contentId ?? null),
+      };
+      return {
+        ...body,
+        ...agentStatusHints(body),
       };
     }
 
@@ -706,23 +829,102 @@ export function getMcpToolRequiredScope(name: string): McpScope | null {
   return getMcpToolDefinition(name)?.requiredScope ?? null;
 }
 
+type AgentToolErrorCode =
+  | "category_disallowed"
+  | "duplicate_ask"
+  | "failed_submission"
+  | "insufficient_budget"
+  | "invalid_arguments"
+  | "invalid_media"
+  | "max_payment_exceeded"
+  | "service_unavailable"
+  | "still_submitting"
+  | "unsupported_template";
+
+function classifyToolError(error: unknown): {
+  code: AgentToolErrorCode;
+  recoverWith: string;
+  retryable: boolean;
+} {
+  const message = error instanceof Error ? error.message.toLowerCase() : "";
+
+  if (error instanceof X402QuestionInputError) {
+    if (message.includes("imageurls") || message.includes("videourl") || message.includes("media")) {
+      return { code: "invalid_media", recoverWith: "fix_media_urls", retryable: false };
+    }
+    if (message.includes("template")) {
+      return { code: "unsupported_template", recoverWith: "call_curyo_list_result_templates", retryable: false };
+    }
+    return { code: "invalid_arguments", recoverWith: "fix_tool_arguments", retryable: false };
+  }
+
+  if (error instanceof McpBudgetError) {
+    if (message.includes("category")) {
+      return { code: "category_disallowed", recoverWith: "choose_allowed_category_or_update_agent", retryable: false };
+    }
+    if (message.includes("different question payload") || message.includes("operation key")) {
+      return {
+        code: "duplicate_ask",
+        recoverWith: "reuse_original_request_or_change_clientRequestId",
+        retryable: false,
+      };
+    }
+    if (message.includes("budget") || message.includes("remaining daily") || message.includes("per-ask")) {
+      return { code: "insufficient_budget", recoverWith: "reduce_bounty_or_raise_agent_budget", retryable: false };
+    }
+    return { code: "failed_submission", recoverWith: "inspect_budget_reservation", retryable: false };
+  }
+
+  if (error instanceof X402QuestionConflictError) {
+    if (message.includes("already being processed")) {
+      return { code: "still_submitting", recoverWith: "poll_curyo_get_question_status", retryable: true };
+    }
+    return { code: "duplicate_ask", recoverWith: "reuse_original_request_or_change_clientRequestId", retryable: false };
+  }
+
+  if (error instanceof X402QuestionConfigError) {
+    return {
+      code: "service_unavailable",
+      recoverWith: "check_server_chain_and_payment_configuration",
+      retryable: true,
+    };
+  }
+
+  if (error instanceof McpToolError) {
+    if (message.includes("quoted payment exceeds") || message.includes("maxpaymentamount")) {
+      return { code: "max_payment_exceeded", recoverWith: "increase_maxPaymentAmount_or_requote", retryable: false };
+    }
+    return { code: "invalid_arguments", recoverWith: "fix_tool_arguments", retryable: false };
+  }
+
+  return { code: "failed_submission", recoverWith: "retry_or_contact_operator", retryable: true };
+}
+
 export function normalizeToolError(error: unknown) {
   if (
     error instanceof McpToolError ||
     error instanceof McpBudgetError ||
     error instanceof X402QuestionConfigError ||
-    error instanceof X402QuestionConflictError
+    error instanceof X402QuestionConflictError ||
+    error instanceof X402QuestionInputError
   ) {
+    const classified = classifyToolError(error);
     return {
-      code: error.name,
+      code: classified.code,
+      originalCode: error.name,
       message: error.message,
+      recoverWith: classified.recoverWith,
+      retryable: classified.retryable,
       status: "status" in error && typeof error.status === "number" ? error.status : 400,
     };
   }
 
+  const classified = classifyToolError(error);
   return {
-    code: "InternalError",
+    code: classified.code,
     message: error instanceof Error ? error.message : "Unknown MCP tool error",
+    recoverWith: classified.recoverWith,
+    retryable: classified.retryable,
     status: 500,
   };
 }

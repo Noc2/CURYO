@@ -16,10 +16,14 @@ env.DATABASE_URL = "memory:";
 type RouteModule = typeof import("./route");
 type DbModule = typeof import("../../../lib/db");
 type DbTestMemoryModule = typeof import("../../../lib/db/testMemory");
+type McpBudgetModule = typeof import("~~/lib/mcp/budget");
+type McpToolsModule = typeof import("~~/lib/mcp/tools");
 
 let route: RouteModule;
 let dbModule: DbModule;
 let dbTestMemory: DbTestMemoryModule;
+let mcpBudgetModule: McpBudgetModule;
+let mcpToolsModule: McpToolsModule;
 
 function restoreEnv(name: keyof NodeJS.ProcessEnv, value: string | undefined) {
   if (value === undefined) {
@@ -61,12 +65,21 @@ async function postJson(body: unknown, headers: Record<string, string> = {}) {
   };
 }
 
+function makeGet(headers: Record<string, string> = {}) {
+  return new NextRequest("https://curyo.xyz/api/mcp", {
+    headers: new Headers(headers),
+    method: "GET",
+  });
+}
+
 before(async () => {
   env.NODE_ENV = "development";
   configureAgent();
   dbModule = await import("../../../lib/db");
   dbTestMemory = await import("../../../lib/db/testMemory");
   dbModule.__setDatabaseResourcesForTests(dbTestMemory.createMemoryDatabaseResources());
+  mcpBudgetModule = await import("~~/lib/mcp/budget");
+  mcpToolsModule = await import("~~/lib/mcp/tools");
   route = await import("./route");
 });
 
@@ -77,11 +90,13 @@ beforeEach(async () => {
   delete env.RATE_LIMIT_TRUSTED_IP_HEADERS;
   delete env.VERCEL;
   configureAgent();
+  mcpToolsModule.__setMcpToolTestOverridesForTests(null);
   await dbModule.dbClient.execute("DELETE FROM api_rate_limits");
   await dbModule.dbClient.execute("DELETE FROM api_rate_limit_maintenance");
 });
 
 after(() => {
+  mcpToolsModule.__setMcpToolTestOverridesForTests(null);
   dbModule.__setDatabaseResourcesForTests(null);
   restoreEnv("CURYO_MCP_AGENTS", originalAgents);
   restoreEnv("CURYO_MCP_ALLOWED_ORIGINS", originalAllowedOrigins);
@@ -183,7 +198,7 @@ test("post-initialize methods reject unsupported MCP-Protocol-Version", async ()
   });
 });
 
-test("tools/list accepts supported MCP-Protocol-Version", async () => {
+test("tools/list accepts supported MCP-Protocol-Version and returns tool annotations", async () => {
   const { body, response } = await postJson(
     {
       id: 4,
@@ -194,9 +209,27 @@ test("tools/list accepts supported MCP-Protocol-Version", async () => {
     { "mcp-protocol-version": "2025-11-25" },
   );
 
-  const result = body.result as { tools: Array<{ inputSchema?: unknown; name: string; outputSchema?: unknown }> };
+  const result = body.result as {
+    tools: Array<{
+      annotations?: Record<string, unknown>;
+      inputSchema?: unknown;
+      name: string;
+      outputSchema?: unknown;
+    }>;
+  };
   const toolByName = new Map(result.tools.map(tool => [tool.name, tool]));
   assert.equal(response.status, 200);
+  assert.deepEqual(toolByName.get("curyo_quote_question")?.annotations, {
+    idempotentHint: true,
+    openWorldHint: true,
+    readOnlyHint: true,
+  });
+  assert.deepEqual(toolByName.get("curyo_ask_humans")?.annotations, {
+    destructiveHint: true,
+    idempotentHint: false,
+    openWorldHint: true,
+    readOnlyHint: false,
+  });
   assert.ok(toolByName.get("curyo_quote_question")?.inputSchema);
   assert.ok(toolByName.get("curyo_quote_question")?.outputSchema);
   assert.ok(toolByName.get("curyo_ask_humans")?.inputSchema);
@@ -231,4 +264,145 @@ test("notifications with MCP-Protocol-Version receive accepted status", async ()
   );
 
   assert.equal(response.status, 202);
+});
+
+test("GET documents supported transport and disabled SSE", async () => {
+  const response = await route.GET(makeGet());
+  const body = (await response.json()) as Record<string, unknown>;
+
+  assert.equal(response.status, 405);
+  assert.equal(response.headers.get("allow"), "POST, OPTIONS");
+  assert.deepEqual(body.supportedTransports, ["streamable-http"]);
+});
+
+test("invalid media returns a stable MCP tool error code", async () => {
+  const { body, response } = await postJson(
+    {
+      id: 5,
+      jsonrpc: "2.0",
+      method: "tools/call",
+      params: {
+        arguments: {
+          bounty: {
+            amount: "1000000",
+            asset: "USDC",
+          },
+          chainId: 42220,
+          clientRequestId: "invalid-media-check",
+          question: {
+            categoryId: "5",
+            contextUrl: "https://example.com/context",
+            description: "Check media handling",
+            imageUrls: ["https://example.com/not-an-image"],
+            tags: ["agents"],
+            title: "Invalid media",
+          },
+        },
+        name: "curyo_quote_question",
+      },
+    },
+    { "mcp-protocol-version": "2025-11-25" },
+  );
+
+  const result = body.result as Record<string, unknown>;
+  const structured = result.structuredContent as Record<string, unknown>;
+  assert.equal(response.status, 200);
+  assert.equal(result.isError, true);
+  assert.equal(structured.code, "invalid_media");
+  assert.equal(structured.originalCode, "X402QuestionInputError");
+});
+
+test("category disallowed returns a stable MCP tool error code", async () => {
+  env.CURYO_MCP_AGENTS = JSON.stringify([
+    {
+      categories: ["6"],
+      dailyBudgetAtomic: "5000000",
+      id: "route-agent",
+      perAskLimitAtomic: "1000000",
+      scopes: ["curyo:ask", "curyo:balance", "curyo:quote", "curyo:read"],
+      token: "secret-token",
+    },
+  ]);
+  mcpToolsModule.__setMcpToolTestOverridesForTests({
+    preflightX402QuestionSubmission: async () => ({
+      operation: {
+        canonicalPayload: {} as never,
+        operationKey: `0x${"1".repeat(64)}` as const,
+        payloadHash: "payload-hash",
+      },
+      paymentAmount: 1_000_000n,
+      resolvedCategoryIds: [5n],
+      submissionKeys: [`0x${"2".repeat(64)}` as const],
+    }),
+    reserveMcpAgentBudget: async () => {
+      throw new mcpBudgetModule.McpBudgetError("This MCP agent is not allowed to ask in the selected category.", 403);
+    },
+    resolveX402QuestionConfig: () =>
+      ({
+        usdcAddress: "0x0000000000000000000000000000000000000001",
+      }) as never,
+  });
+
+  const { body } = await postJson(
+    {
+      id: 6,
+      jsonrpc: "2.0",
+      method: "tools/call",
+      params: {
+        arguments: {
+          bounty: {
+            amount: "1000000",
+            asset: "USDC",
+          },
+          chainId: 42220,
+          clientRequestId: "category-check",
+          maxPaymentAmount: "1500000",
+          question: {
+            categoryId: "5",
+            contextUrl: "https://example.com/context",
+            description: "Should this ask be blocked?",
+            tags: ["agents"],
+            title: "Category mismatch",
+          },
+        },
+        name: "curyo_ask_humans",
+      },
+    },
+    { "mcp-protocol-version": "2025-11-25" },
+  );
+
+  const result = body.result as Record<string, unknown>;
+  const structured = result.structuredContent as Record<string, unknown>;
+  assert.equal(result.isError, true);
+  assert.equal(structured.code, "category_disallowed");
+  assert.equal(structured.originalCode, "McpBudgetError");
+});
+
+test("pending result returns a full pending result package", async () => {
+  const { body } = await postJson(
+    {
+      id: 7,
+      jsonrpc: "2.0",
+      method: "tools/call",
+      params: {
+        arguments: {
+          chainId: 42220,
+          clientRequestId: "missing-result",
+        },
+        name: "curyo_get_result",
+      },
+    },
+    { "mcp-protocol-version": "2025-11-25" },
+  );
+
+  const result = body.result as Record<string, unknown>;
+  const structured = result.structuredContent as Record<string, unknown>;
+  assert.equal(result.isError, false);
+  assert.equal(structured.ready, false);
+  assert.equal(structured.answer, "pending");
+  assert.equal(structured.recommendedNextAction, "wait_for_settlement");
+  assert.deepEqual(structured.wait, {
+    code: "still_settling",
+    recoverWith: "curyo_get_question_status",
+  });
 });
