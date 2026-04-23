@@ -188,6 +188,13 @@ contract RoundVotingEngine is
     );
     event ForfeitedFundsAddedToTreasury(uint256 indexed contentId, uint256 indexed roundId, uint256 amount);
     event UnrevealedStakeAddedToConsensusReserve(uint256 indexed contentId, uint256 indexed roundId, uint256 amount);
+    /// @notice Emitted when the treasury transfer branch of `processUnrevealedVotes` falls
+    ///         back to the consensus reserve -- either because the treasury address is
+    ///         unset or because the transfer reverted. Gives indexers a distinct signal
+    ///         from the settled-round replenishment path (`UnrevealedStakeAddedToConsensusReserve`).
+    event ForfeitedFundsFallbackToConsensusReserve(
+        uint256 indexed contentId, uint256 indexed roundId, uint256 amount
+    );
     event CurrentEpochRefunded(uint256 indexed contentId, uint256 indexed roundId, uint256 amount);
     event TreasuryFeeDistributed(uint256 indexed contentId, uint256 indexed roundId, uint256 amount);
     event ConsensusReserveFunded(uint256 indexed contentId, uint256 indexed roundId, uint256 amount);
@@ -863,6 +870,12 @@ contract RoundVotingEngine is
         if (forfeitedToTreasury > 0) {
             if (updatedConsensusReserve == previousConsensusReserve + addedToConsensusReserve) {
                 emit ForfeitedFundsAddedToTreasury(contentId, roundId, forfeitedToTreasury);
+            } else {
+                // Treasury transfer failed or treasury was unset; the cleanup lib added
+                // `forfeitedToTreasury` to the consensus reserve instead. Emit a dedicated
+                // event so indexers can distinguish this fallback from the regular
+                // UnrevealedStakeAddedToConsensusReserve path.
+                emit ForfeitedFundsFallbackToConsensusReserve(contentId, roundId, forfeitedToTreasury);
             }
         }
 
