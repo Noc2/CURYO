@@ -800,6 +800,35 @@ contract ContentRegistryBranchesTest is VotingTestBase {
         vm.stopPrank();
     }
 
+    function test_SubmitQuestionBundleWithReward_RejectsSingleQuestionBundle() public {
+        ContentRegistry.BundleQuestionInput[] memory questions = new ContentRegistry.BundleQuestionInput[](1);
+        questions[0] = ContentRegistry.BundleQuestionInput({
+            contextUrl: "https://example.com/single-bundle",
+            imageUrls: _emptyImageUrls(),
+            videoUrl: "",
+            title: "Question?",
+            description: "Context voters should consider",
+            tags: "Products",
+            categoryId: 1,
+            salt: keccak256("single-bundle"),
+            spec: _defaultQuestionSpec()
+        });
+        ContentRegistry.SubmissionRewardTerms memory rewardTerms = _submissionRewardTerms(
+            DEFAULT_SUBMISSION_REWARD_ASSET_CREP,
+            _defaultSubmissionRewardAmount(registry),
+            DEFAULT_SUBMISSION_REWARD_REQUIRED_VOTERS,
+            DEFAULT_SUBMISSION_REWARD_SETTLED_ROUNDS,
+            DEFAULT_SUBMISSION_REWARD_EXPIRES_AT
+        );
+
+        vm.startPrank(submitter);
+        vm.expectRevert("Bundle needs multiple questions");
+        registry.submitQuestionBundleWithRewardAndRoundConfig(
+            questions, rewardTerms, _defaultContentRoundConfig()
+        );
+        vm.stopPrank();
+    }
+
     function test_SubmitQuestionWithReward_RequiresReservationForMatchingBountyTerms() public {
         string memory contextUrl = "https://example.com/bounty-terms-mismatch";
         string memory title = "Question?";

@@ -471,6 +471,7 @@ contract ContentRegistry is Initializable, AccessControlUpgradeable, PausableUpg
         RoundLib.RoundConfig calldata roundConfig
     ) external nonReentrant whenNotPaused returns (uint256 bundleId, uint256[] memory contentIds) {
         require(questions.length > 0, "No questions");
+        require(questions.length > 1, "Bundle needs multiple questions");
         require(questions.length <= MAX_QUESTION_BUNDLE_COUNT, "Too many questions");
         require(questionRewardPoolEscrow != address(0), "Bounty escrow not set");
 
