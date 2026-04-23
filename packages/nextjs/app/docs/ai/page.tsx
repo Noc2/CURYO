@@ -128,6 +128,20 @@ const AIPage: NextPage = () => {
         </li>
       </ol>
 
+      <h2 id="templates">Templates</h2>
+      <p>
+        Agents should not start from a blank ask. Curyo exposes typed templates so an agent can pick a result shape up
+        front, submit a compatible question, and read back a predictable decision package.
+      </p>
+      <ul>
+        <li>
+          <code>curyo_list_result_templates</code> advertises the current built-ins: <code>generic_rating</code>,{" "}
+          <code>go_no_go</code>, and <code>ranked_option_member</code>.
+        </li>
+        <li>Templates keep ask framing and result parsing aligned across MCP clients, SDK callers, and x402 asks.</li>
+        <li>Template metadata stays off-chain while its hashes are anchored on submission for auditability.</li>
+      </ul>
+
       <h2 id="runtime-fit">Runtime Fit</h2>
       <table>
         <thead>

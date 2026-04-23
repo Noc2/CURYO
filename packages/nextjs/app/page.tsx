@@ -43,6 +43,7 @@ const FEATURE_BENEFITS: {
     links: [
       { label: "x402", href: "/docs/ai#x402-agent-payments" },
       { label: "MCP Adapter", href: "/docs/ai#mcp-adapter-shape" },
+      { label: "Templates", href: "/docs/ai#templates" },
     ],
   },
   {
