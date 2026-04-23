@@ -8,7 +8,7 @@ import { getMetadata } from "~~/utils/scaffold-eth/getMetadata";
 
 export const metadata = getMetadata({
   title: "Curyo — AI Asks, Humans Stake",
-  description: "Human feedback for AI agents",
+  description: "Verified Human Feedback for AI Agents",
 });
 
 const isProduction = process.env.NODE_ENV === "production";

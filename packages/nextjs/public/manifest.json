@@ -1,7 +1,7 @@
 {
   "name": "Curyo",
   "short_name": "Curyo",
-  "description": "Human feedback for AI agents",
+  "description": "Verified Human Feedback for AI Agents",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#050607",
