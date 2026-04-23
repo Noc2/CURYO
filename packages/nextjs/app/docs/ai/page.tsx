@@ -84,6 +84,19 @@ const AIPage: NextPage = () => {
         <li>The agent stores the Curyo result URL in its audit trail.</li>
       </ol>
 
+      <h2 id="immutable-live-asks">Immutable Live Asks</h2>
+      <p>
+        Agents should be constrained before they create a market, not allowed to rewrite it afterward. Once an ask is
+        submitted, the public bounty and timing terms should stay stable enough that voters can trust the market they
+        joined.
+      </p>
+      <ul>
+        <li>Quote before spending, start with a conservative bounty, and use low default caps.</li>
+        <li>Low-response or stale-market guidance should recommend waiting, topping up, or retrying later.</li>
+        <li>Top-ups are additive; they should not claw back or reduce rewards from a live ask.</li>
+        <li>Operator controls apply to future asks and agent credentials, not to mutating a live market.</li>
+      </ul>
+
       <h2 id="agent-connector-flow">Agent Connector Flow</h2>
       <p>
         MCP-compatible agents, chat connectors, coding agents, and backend workers should treat Curyo as a bounded
@@ -215,7 +228,8 @@ const AIPage: NextPage = () => {
         <li>Configure per-agent scopes, daily budgets, per-ask caps, and category allowlists.</li>
         <li>Review asks by client request ID, payload hash, payment, result URL, and error state.</li>
         <li>
-          Pause an agent immediately when it loops, exceeds expected spend, or starts asking in the wrong category.
+          Pause or tighten an agent before its next ask when it loops, exceeds expected spend, or starts asking in the
+          wrong category.
         </li>
       </ul>
 

@@ -14,6 +14,8 @@ This is different from generic human-in-the-loop approval. Approval asks a singl
 
 For the general agent connector MVP, keep the product surface narrow: configure an agent token, choose a template, quote the ask, submit with an idempotency key, wait through a signed callback webhook or status read, then consume the structured result. If the callback path misses or retries, the agent should recover through `curyo_get_question_status` instead of re-submitting the ask. Private or embargoed context is intentionally deferred; the first flow assumes public context URLs and public settled result pages.
 
+One rule should stay explicit across the whole product surface: once an ask is submitted, its live bounty and public timing terms should not be reduced or cancelled in ways that harm voters. Risk management belongs before submission. Agents should quote first, start with small bounties, and treat low-response guidance as a signal to wait, top up additively, or retry later, not as permission to rewrite a live market.
+
 ## Questions Agents Would Ask Humans
 
 AI agents are most likely to ask humans questions in places where model confidence is not enough, where social judgment matters, or where the cost of a wrong answer is higher than the cost of asking.
@@ -231,7 +233,6 @@ An MCP adapter should expose narrow Curyo actions, not raw transaction access. A
 - `curyo_get_result`: fetch the settled human signal.
 - `curyo_list_categories`: discover supported categories and templates.
 - `curyo_estimate_budget`: ask "what budget gets me N voters in T minutes?"
-- `curyo_cancel_or_expire_question`: cancel when still allowed or expire stale work.
 - `curyo_get_bot_balance`: show spendable balance and caps.
 
 The production MCP server starts with paid `curyo_ask_humans` as the core workflow, not as a later add-on. Read tools exist to make the paid ask safe and useful:
@@ -312,6 +313,7 @@ To make this easy for bots:
 - Provide `quote -> submit -> wait -> result` as the golden path.
 - Provide examples for common agent frameworks.
 - Provide operator settings at `/settings?tab=agents` for token lifecycle, scopes, budgets, category allowlists, pauses, audit logs, and ask history; keep `CURYO_MCP_AGENTS` as the source of truth until that UI is wired to persistent token management.
+- Keep live asks stable after submission; operator controls should affect future asks, not reduce a running bounty.
 - Make all writes idempotent.
 - Support media uploads, source links, and screenshots.
 - Expose public result pages for auditability.

@@ -173,7 +173,7 @@ Business agents often need quick feedback. Curyo should expose:
 - Estimated time to result.
 - Quote by desired speed and voter count.
 - Dynamic bounty suggestions.
-- "Raise bounty if stale" behavior.
+- Additive top-up recommendations when a live ask looks underfunded or stale.
 - Minimum viable quorum for fast checks.
 
 This makes Curyo usable inside a 24/7 agent loop instead of only as a slow public rating market.
@@ -203,7 +203,7 @@ Autonomous-agent operators need controls:
 - View every ask, payload hash, payment, result URL, and error.
 - Export audit logs.
 
-The operator UX should live at `/settings?tab=agents`, alongside account settings, so routine token rotation and budget changes eventually do not require editing `CURYO_MCP_AGENTS` by hand. The backend already has parts of this in MCP auth and budget storage. The first layer is operator visibility and documentation; self-serve token CRUD can replace static registration later.
+The operator UX should live at `/settings?tab=agents`, alongside account settings, so routine token rotation and budget changes eventually do not require editing `CURYO_MCP_AGENTS` by hand. The backend already has parts of this in MCP auth and budget storage. The first layer is operator visibility and documentation; self-serve token CRUD can replace static registration later. These controls should apply to future asks and credentials, not mutate the bounty or timing of a live market after voters have joined it.
 
 ### 8. Private or embargoed context
 

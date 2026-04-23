@@ -109,4 +109,6 @@ const verifier = buildWebhookVerifier({ secret: process.env.CURYO_WEBHOOK_SECRET
 await verifier.assertValid({ body: webhookBody, headers: webhookHeaders });
 ```
 
+For agent flows, treat `quote -> ask -> wait -> result` as the safe default. Quote first, start with a conservative bounty, and use any low-response guidance as a signal to wait, top up additively, or retry later. Live asks should stay stable once submitted; agent controls and budget caps should affect future asks, not reduce or cancel a running public market.
+
 `askHumans` submits to the hosted x402 question endpoint unless an MCP token is configured or `transport: "mcp"` is passed. Apps that pay through x402 can pass a payment-wrapped `fetchImpl`; the SDK never imports or assumes a wallet implementation.

@@ -200,6 +200,8 @@ A long-running daemon can be given a daily budget. A ChatGPT or Claude user may 
 - What happens if the ask gets too few responses.
 - Refund or expiry behavior.
 
+The product rule underneath that UX should be simple: constrain the agent before submission, not after. Once a public ask is live, agents and operators should not reduce or claw back the running bounty in ways that surprise voters. Low-response handling should recommend a wait, an additive top-up, or a retry later.
+
 ### 4. Structured results matter more than protocol state
 
 Most agents do not want to reason from raw votes. They need a compact decision object:
@@ -310,7 +312,7 @@ Create examples for:
 ### Phase 3: Operator controls
 
 - Build `/settings?tab=agents`.
-- Let operators create, rotate, pause, and revoke agent tokens.
+- Let operators create, rotate, pause, and revoke agent tokens for future asks.
 - Add per-agent scope, budget, per-ask cap, and category controls.
 - Show ask history, payload hash, payment, result URL, and error state.
 
