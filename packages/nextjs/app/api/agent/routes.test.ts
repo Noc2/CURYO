@@ -20,6 +20,7 @@ type AgentResultsByClientRouteModule = typeof import("./results/by-client-reques
 type AgentTemplatesRouteModule = typeof import("./templates/route");
 type CallbackDeliveryModule = typeof import("~~/lib/agent-callbacks/delivery");
 type CallbackEventsModule = typeof import("~~/lib/agent-callbacks/events");
+type CallbackLifecycleModule = typeof import("~~/lib/agent-callbacks/lifecycle");
 type CallbackRegistryModule = typeof import("~~/lib/agent-callbacks/registry");
 type DbModule = typeof import("../../../lib/db");
 type DbTestMemoryModule = typeof import("../../../lib/db/testMemory");
@@ -36,6 +37,7 @@ let asksOperationRoute: AgentAsksOperationRouteModule;
 let asksRoute: AgentAsksRouteModule;
 let callbackDeliveryModule: CallbackDeliveryModule;
 let callbackEventsModule: CallbackEventsModule;
+let callbackLifecycleModule: CallbackLifecycleModule;
 let callbackRegistryModule: CallbackRegistryModule;
 let dbModule: DbModule;
 let dbTestMemory: DbTestMemoryModule;
@@ -187,7 +189,17 @@ async function seedManagedAskAudit(params: {
   });
 
   await dbModule.dbClient.execute({
-    args: [operationKey, "route-agent", params.clientRequestId, "payload-hash", chainId, "5", "1000000", "reserved", now],
+    args: [
+      operationKey,
+      "route-agent",
+      params.clientRequestId,
+      "payload-hash",
+      chainId,
+      "5",
+      "1000000",
+      "reserved",
+      now,
+    ],
     sql: `
       INSERT INTO mcp_agent_ask_audit_records (
         operation_key,
@@ -330,6 +342,7 @@ before(async () => {
   asksRoute = await import("./asks/route");
   callbackDeliveryModule = await import("~~/lib/agent-callbacks/delivery");
   callbackEventsModule = await import("~~/lib/agent-callbacks/events");
+  callbackLifecycleModule = await import("~~/lib/agent-callbacks/lifecycle");
   callbackRegistryModule = await import("~~/lib/agent-callbacks/registry");
   quoteRoute = await import("./quote/route");
   resultsByClientRoute = await import("./results/by-client-request/route");
@@ -340,6 +353,7 @@ beforeEach(async () => {
   env.NODE_ENV = "development";
   configureAgent();
   mcpToolsModule.__setMcpToolTestOverridesForTests(null);
+  callbackLifecycleModule.__setAgentLifecycleTestOverridesForTests(null);
   await dbModule.dbClient.execute("DELETE FROM agent_callback_events");
   await dbModule.dbClient.execute("DELETE FROM agent_callback_subscriptions");
   await dbModule.dbClient.execute("DELETE FROM api_rate_limits");
@@ -447,6 +461,118 @@ test("agent status route returns not_found without treating it as a transport er
   assert.equal(body.status, "not_found");
   assert.equal(body.ready, false);
   assert.equal(body.terminal, true);
+});
+
+test("lifecycle sweep uses submitted x402 state even when reservation bookkeeping is stale", async () => {
+  await dbModule.dbClient.execute({
+    args: [
+      OPERATION_KEY,
+      "route-agent",
+      "stale-reservation",
+      "payload-hash",
+      42220,
+      "5",
+      "1000000",
+      "reserved",
+      null,
+      null,
+      new Date("2026-04-23T12:00:00.000Z"),
+      new Date("2026-04-23T12:00:00.000Z"),
+    ],
+    sql: `
+      INSERT INTO mcp_agent_budget_reservations (
+        operation_key,
+        agent_id,
+        client_request_id,
+        payload_hash,
+        chain_id,
+        category_id,
+        payment_amount,
+        status,
+        content_id,
+        error,
+        created_at,
+        updated_at
+      )
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `,
+  });
+  await dbModule.dbClient.execute({
+    args: [
+      OPERATION_KEY,
+      "mcp:stale-reservation",
+      "payload-hash",
+      42220,
+      "0x0000000000000000000000000000000000000001",
+      "1000000",
+      "1000000",
+      "0",
+      1,
+      "submitted",
+      "42",
+      new Date("2026-04-23T12:00:00.000Z"),
+      new Date("2026-04-23T12:00:00.000Z"),
+      new Date("2026-04-23T12:05:00.000Z"),
+    ],
+    sql: `
+      INSERT INTO x402_question_submissions (
+        operation_key,
+        client_request_id,
+        payload_hash,
+        chain_id,
+        payment_asset,
+        payment_amount,
+        bounty_amount,
+        service_fee_amount,
+        question_count,
+        status,
+        content_id,
+        created_at,
+        updated_at,
+        submitted_at
+      )
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `,
+  });
+  await callbackRegistryModule.upsertAgentCallbackSubscription({
+    agentId: "route-agent",
+    callbackUrl: "https://agent.example/curyo",
+    eventTypes: ["question.open"],
+    id: "sub-open",
+    secret: "callback-secret",
+  });
+  callbackLifecycleModule.__setAgentLifecycleTestOverridesForTests({
+    getContentById: async () =>
+      ({
+        audienceContext: null,
+        content: {
+          openRound: {
+            estimatedSettlementTime: "4700000500",
+            roundId: "7",
+          },
+        },
+        ratings: [],
+        rounds: [],
+      }) as never,
+    listContentFeedback: async () =>
+      ({
+        items: [],
+      }) as never,
+  });
+
+  const result = await callbackLifecycleModule.sweepAgentLifecycleCallbacks({
+    now: new Date("2026-04-23T12:06:00.000Z"),
+  });
+  const deliveries = await callbackEventsModule.listAgentCallbackEventsByEventIdPrefix({
+    agentId: "route-agent",
+    eventIdPrefix: `${OPERATION_KEY}:`,
+  });
+
+  assert.equal(result.emitted.questionOpen, 1);
+  assert.deepEqual(
+    deliveries.map(delivery => delivery.eventType),
+    ["question.open"],
+  );
 });
 
 test("agent audit route returns ask-centric audit details", async () => {
@@ -714,11 +840,7 @@ test("agent status route includes live ask guidance for underfunded open markets
   assert.equal(body.status, "submitted");
   assert.deepEqual(body.liveAskGuidance, {
     lowResponseRisk: "high",
-    reasonCodes: [
-      "quorum_not_reached",
-      "low_response_persisting",
-      "bounty_below_healthy_target",
-    ],
+    reasonCodes: ["quorum_not_reached", "low_response_persisting", "bounty_below_healthy_target"],
     recommendedAction: "top_up",
     suggestedTopUpAtomic: "500000",
   });

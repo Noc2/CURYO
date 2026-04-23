@@ -129,6 +129,72 @@ test("curyo_ask_humans does not mark failed after submitted ask bookkeeping fail
   assert.deepEqual(body.warnings, ["submitted_budget_update_failed", "managed_budget_unavailable"]);
 });
 
+test("curyo_ask_humans still enqueues question.submitted when submitted bookkeeping fails", async () => {
+  mock.method(console, "error", () => {});
+  const enqueued: unknown[] = [];
+
+  __setMcpToolTestOverridesForTests({
+    enqueueAgentCallbackEvent: async params => {
+      enqueued.push(params);
+      return [];
+    },
+    getMcpAgentBudgetSummary: async () => managedBudgetSummary(),
+    handleManagedQuestionSubmissionRequest: async () => ({
+      body: {
+        contentId: "123",
+        contentIds: ["123"],
+        operationKey: OPERATION_KEY,
+        payment: {
+          amount: "1000000",
+          asset: "0x0000000000000000000000000000000000000001",
+          serviceFeeAmount: "0",
+        },
+        status: "submitted",
+      },
+      status: 200,
+    }),
+    ...quoteOverrides(),
+    updateMcpBudgetReservation: async params => {
+      if (params.status === "submitted") {
+        throw new Error("budget write failed after submit");
+      }
+      return null;
+    },
+    upsertAgentCallbackSubscription: async () => null,
+  });
+
+  const result = await callCuryoMcpTool({
+    agent: AGENT,
+    arguments: askArguments({
+      webhookEvents: ["question.submitted"],
+      webhookSecret: "webhook-secret",
+      webhookUrl: "https://agent.example/curyo",
+    }),
+    name: "curyo_ask_humans",
+  });
+
+  const body = result as unknown as { warnings: string[] };
+
+  assert.deepEqual(body.warnings, ["submitted_budget_update_failed"]);
+  assert.equal(enqueued.length, 1);
+  assert.deepEqual(enqueued[0], {
+    agentId: AGENT.id,
+    eventId: `${OPERATION_KEY}:question.submitted`,
+    eventType: "question.submitted",
+    payload: {
+      chainId: 42220,
+      clientRequestId: "ask-bookkeeping-failure",
+      contentId: "123",
+      contentIds: ["123"],
+      error: null,
+      eventType: "question.submitted",
+      operationKey: OPERATION_KEY,
+      publicUrl: "http://localhost:3000/rate?content=123",
+      status: "submitted",
+    },
+  });
+});
+
 test("curyo_ask_humans async returns submitting and scheduled completion marks budget submitted", async () => {
   const scheduledTasks: Array<() => Promise<void> | void> = [];
   const reservationUpdates: Array<{ contentId?: string | null; status: string }> = [];

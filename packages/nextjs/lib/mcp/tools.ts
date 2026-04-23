@@ -646,6 +646,20 @@ export async function callCuryoMcpTool(params: {
           }
         : null;
 
+      const recordManagedSubmission = async (body: JsonObject, warnings?: string[]) => {
+        try {
+          await dependencies.updateMcpBudgetReservation({
+            contentId: typeof body.contentId === "string" ? body.contentId : null,
+            operationKey: quote.operation.operationKey,
+            status: "submitted",
+          });
+        } catch (error) {
+          console.error("[mcp] submitted ask bookkeeping update failed", error);
+          warnings?.push("submitted_budget_update_failed");
+        }
+        await enqueueCallbackEvent("question.submitted", body);
+      };
+
       if (mode === "async") {
         let started: Awaited<ReturnType<typeof startManagedQuestionSubmissionRequest>>;
         try {
@@ -677,12 +691,7 @@ export async function callCuryoMcpTool(params: {
                   payload: managedPayload,
                 });
                 const completedBody = completed.body as JsonObject;
-                await dependencies.updateMcpBudgetReservation({
-                  contentId: typeof completedBody.contentId === "string" ? completedBody.contentId : null,
-                  operationKey: quote.operation.operationKey,
-                  status: "submitted",
-                });
-                await enqueueCallbackEvent("question.submitted", completedBody);
+                await recordManagedSubmission(completedBody);
               } catch (error) {
                 console.error("[mcp] async ask completion failed", error);
                 try {
@@ -713,17 +722,7 @@ export async function callCuryoMcpTool(params: {
             throw error;
           }
         } else if (body.status === "submitted") {
-          try {
-            await dependencies.updateMcpBudgetReservation({
-              contentId: typeof body.contentId === "string" ? body.contentId : null,
-              operationKey: quote.operation.operationKey,
-              status: "submitted",
-            });
-            await enqueueCallbackEvent("question.submitted", body);
-          } catch (error) {
-            console.error("[mcp] submitted ask bookkeeping update failed", error);
-            warnings.push("submitted_budget_update_failed");
-          }
+          await recordManagedSubmission(body, warnings);
         } else {
           await enqueueCallbackEvent("question.submitting", body);
         }
@@ -770,18 +769,7 @@ export async function callCuryoMcpTool(params: {
 
       const body = result.body as JsonObject;
       const warnings: string[] = [];
-
-      try {
-        await dependencies.updateMcpBudgetReservation({
-          contentId: typeof body.contentId === "string" ? body.contentId : null,
-          operationKey: quote.operation.operationKey,
-          status: "submitted",
-        });
-        await enqueueCallbackEvent("question.submitted", body);
-      } catch (error) {
-        console.error("[mcp] submitted ask bookkeeping update failed", error);
-        warnings.push("submitted_budget_update_failed");
-      }
+      await recordManagedSubmission(body, warnings);
 
       let managedBudget: Awaited<ReturnType<typeof getMcpAgentBudgetSummary>> | null = null;
       try {

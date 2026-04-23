@@ -4,7 +4,6 @@ export const REQUIRED_TARGET_CONTRACTS = [
   "ContentRegistry",
   "CuryoReputation",
   "ProtocolConfig",
-  "QuestionRewardPoolEscrow",
 ] as const;
 
 export function listMissingRequiredTargetContracts(

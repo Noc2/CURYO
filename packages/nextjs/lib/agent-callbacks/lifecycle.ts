@@ -1,9 +1,9 @@
-import { buildAgentCallbackPayload, callbackEventId } from "./payload";
 import { enqueueAgentCallbackEvent } from "./events";
+import { buildAgentCallbackPayload, callbackEventId } from "./payload";
 import type { AgentCallbackEventType } from "./types";
 import { ROUND_STATE } from "@curyo/contracts/protocol";
-import { dbClient } from "~~/lib/db";
 import { buildAgentLiveAskGuidance } from "~~/lib/agent/liveAskGuidance";
+import { dbClient } from "~~/lib/db";
 import { buildContentFeedbackRoundContext, listContentFeedback } from "~~/lib/feedback/contentFeedback";
 import { ponderApi } from "~~/services/ponder/client";
 
@@ -45,7 +45,7 @@ function toOptionalUnixSeconds(value: unknown): number | null {
 }
 
 function latestRound(rounds: unknown[]) {
-  return Array.isArray(rounds) ? (rounds[0] as Record<string, unknown> | null | undefined) ?? null : null;
+  return Array.isArray(rounds) ? ((rounds[0] as Record<string, unknown> | null | undefined) ?? null) : null;
 }
 
 function isTerminalRoundState(state: unknown) {
@@ -90,10 +90,17 @@ async function listManagedLifecycleCandidates(limit: number) {
   const result = await dbClient.execute({
     args: [limit],
     sql: `
-      SELECT agent_id, chain_id, client_request_id, content_id, operation_key
-      FROM mcp_agent_budget_reservations
-      WHERE status = 'submitted' AND content_id IS NOT NULL
-      ORDER BY updated_at ASC, operation_key ASC
+      SELECT
+        reservations.agent_id,
+        reservations.chain_id,
+        reservations.client_request_id,
+        submissions.content_id,
+        reservations.operation_key
+      FROM mcp_agent_budget_reservations AS reservations
+      INNER JOIN x402_question_submissions AS submissions
+        ON submissions.operation_key = reservations.operation_key
+      WHERE submissions.status = 'submitted' AND submissions.content_id IS NOT NULL
+      ORDER BY COALESCE(submissions.submitted_at, submissions.updated_at, reservations.updated_at) ASC, reservations.operation_key ASC
       LIMIT ?
     `,
   });

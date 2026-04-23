@@ -28,15 +28,14 @@ test("required deployment helper reports missing contract definitions per target
         ContentRegistry: {},
         CuryoReputation: {},
         ProtocolConfig: {},
-        QuestionRewardPoolEscrow: {},
       },
       42220: {
         ContentRegistry: {},
         ProtocolConfig: {},
       },
     },
-    ["ContentRegistry", "CuryoReputation", "QuestionRewardPoolEscrow"],
+    ["ContentRegistry", "CuryoReputation"],
   );
 
-  assert.deepEqual(missingContracts, ["42220:CuryoReputation", "42220:QuestionRewardPoolEscrow"]);
+  assert.deepEqual(missingContracts, ["42220:CuryoReputation"]);
 });
