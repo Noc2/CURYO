@@ -1,5 +1,16 @@
 import { createHash } from "crypto";
 import { buildAgentResultPackage } from "~~/lib/agent/resultPackage";
+import {
+  agentAskHumansInputSchema,
+  agentAskHumansOutputSchema,
+  agentBotBalanceOutputSchema,
+  agentOperationLookupInputSchema,
+  agentQuestionStatusOutputSchema,
+  agentQuoteInputSchema,
+  agentQuoteOutputSchema,
+  resultPackageOutputSchema,
+  templateListOutputSchema,
+} from "~~/lib/agent/schemas";
 import { listAgentResultTemplates } from "~~/lib/agent/templates";
 import { getOptionalAppUrl } from "~~/lib/env/server";
 import { buildContentFeedbackRoundContext, listContentFeedback } from "~~/lib/feedback/contentFeedback";
@@ -84,86 +95,6 @@ export class McpToolError extends Error {
   }
 }
 
-const operationLookupSchema = {
-  additionalProperties: false,
-  properties: {
-    chainId: { description: "Chain id used with clientRequestId lookup.", type: "integer" },
-    clientRequestId: { description: "Client idempotency key returned by curyo_ask_humans.", type: "string" },
-    operationKey: { description: "Curyo operation key returned by quote or ask.", type: "string" },
-  },
-  type: "object",
-};
-
-const templateListOutputSchema = {
-  additionalProperties: false,
-  properties: {
-    templates: {
-      items: {
-        additionalProperties: true,
-        properties: {
-          description: { type: "string" },
-          id: { type: "string" },
-          interpretation: { type: "object" },
-          ratingSystem: { type: "string" },
-          recommendedUse: { items: { type: "string" }, type: "array" },
-          resultSpecHash: { type: "string" },
-          title: { type: "string" },
-          version: { type: "integer" },
-          voteSemantics: { type: "object" },
-        },
-        required: ["id", "version", "ratingSystem", "interpretation", "resultSpecHash"],
-        type: "object",
-      },
-      type: "array",
-    },
-  },
-  required: ["templates"],
-  type: "object",
-};
-
-const resultPackageOutputSchema = {
-  additionalProperties: true,
-  properties: {
-    answer: { type: "string" },
-    confidence: {
-      additionalProperties: false,
-      properties: {
-        level: { enum: ["none", "low", "medium", "high"], type: "string" },
-        score: { type: "number" },
-      },
-      required: ["level", "score"],
-      type: "object",
-    },
-    distribution: { type: "object" },
-    dissentingView: { type: ["string", "null"] },
-    limitations: { items: { type: "string" }, type: "array" },
-    majorObjections: { items: { type: "object" }, type: "array" },
-    methodology: { type: "object" },
-    publicUrl: { type: ["string", "null"] },
-    rationaleSummary: { type: "string" },
-    ready: { type: "boolean" },
-    recommendedNextAction: { type: "string" },
-    stakeMass: { type: "object" },
-    voteCount: { type: "number" },
-  },
-  required: [
-    "ready",
-    "answer",
-    "confidence",
-    "distribution",
-    "voteCount",
-    "stakeMass",
-    "rationaleSummary",
-    "majorObjections",
-    "dissentingView",
-    "recommendedNextAction",
-    "publicUrl",
-    "methodology",
-    "limitations",
-  ],
-  type: "object",
-};
-
 export const MCP_TOOLS: McpToolDefinition[] = [
   {
     description: "List Curyo categories that paid asks can target.",
@@ -190,76 +121,25 @@ export const MCP_TOOLS: McpToolDefinition[] = [
   },
   {
     description: "Preflight and price a paid question before reserving spend.",
-    inputSchema: {
-      additionalProperties: true,
-      properties: {
-        bounty: { description: "USDC bounty settings in atomic units.", type: "object" },
-        chainId: { type: "integer" },
-        clientRequestId: { type: "string" },
-        question: {
-          description: "Single question payload with title, description, contextUrl, categoryId, and tags.",
-          type: "object",
-        },
-        questions: {
-          description: "Ordered bundle of question payloads. The bounty pays only when every question is answered.",
-          items: { type: "object" },
-          type: "array",
-        },
-        roundConfig: {
-          description: "Shared round configuration for every question in the bundle.",
-          type: "object",
-        },
-      },
-      required: ["clientRequestId", "bounty"],
-      type: "object",
-    },
+    inputSchema: agentQuoteInputSchema,
     name: "curyo_quote_question",
+    outputSchema: agentQuoteOutputSchema,
     requiredScope: MCP_SCOPES.quote,
     title: "Quote Human Ask",
   },
   {
     description: "Reserve managed MCP budget and submit a paid question for verified humans to rate.",
-    inputSchema: {
-      additionalProperties: true,
-      properties: {
-        bounty: { description: "USDC bounty settings in atomic units.", type: "object" },
-        chainId: { type: "integer" },
-        clientRequestId: { type: "string" },
-        maxPaymentAmount: {
-          description: "Maximum total managed spend, including bounty and service fee, in atomic USDC.",
-          type: "string",
-        },
-        mode: {
-          default: "sync",
-          description: "Use async to return after payment settlement and poll with curyo_get_question_status.",
-          enum: ["sync", "async"],
-          type: "string",
-        },
-        question: {
-          description: "Single question payload with title, description, contextUrl, categoryId, and tags.",
-          type: "object",
-        },
-        questions: {
-          description: "Ordered bundle of question payloads. The bounty pays only when every question is answered.",
-          items: { type: "object" },
-          type: "array",
-        },
-        roundConfig: {
-          description: "Shared round configuration for every question in the bundle.",
-          type: "object",
-        },
-      },
-      required: ["clientRequestId", "bounty", "maxPaymentAmount"],
-      type: "object",
-    },
+    inputSchema: agentAskHumansInputSchema,
     name: "curyo_ask_humans",
+    outputSchema: agentAskHumansOutputSchema,
     requiredScope: MCP_SCOPES.ask,
     title: "Ask Humans",
   },
   {
     description: "Get paid ask operation status by operationKey or chainId plus clientRequestId.",
-    inputSchema: operationLookupSchema,
+    inputSchema: agentOperationLookupInputSchema,
     name: "curyo_get_question_status",
+    outputSchema: agentQuestionStatusOutputSchema,
     requiredScope: MCP_SCOPES.read,
     title: "Get Question Status",
   },
@@ -288,6 +168,7 @@ export const MCP_TOOLS: McpToolDefinition[] = [
       type: "object",
     },
     name: "curyo_get_bot_balance",
+    outputSchema: agentBotBalanceOutputSchema,
     requiredScope: MCP_SCOPES.balance,
     title: "Get Bot Balance",
   },

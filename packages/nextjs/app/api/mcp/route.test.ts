@@ -194,16 +194,16 @@ test("tools/list accepts supported MCP-Protocol-Version", async () => {
     { "mcp-protocol-version": "2025-11-25" },
   );
 
-  const result = body.result as { tools: Array<{ name: string; outputSchema?: unknown }> };
+  const result = body.result as { tools: Array<{ inputSchema?: unknown; name: string; outputSchema?: unknown }> };
+  const toolByName = new Map(result.tools.map(tool => [tool.name, tool]));
   assert.equal(response.status, 200);
-  assert.equal(
-    result.tools.some(tool => tool.name === "curyo_ask_humans"),
-    true,
-  );
-  assert.equal(
-    result.tools.some(tool => tool.name === "curyo_get_result" && tool.outputSchema),
-    true,
-  );
+  assert.ok(toolByName.get("curyo_quote_question")?.inputSchema);
+  assert.ok(toolByName.get("curyo_quote_question")?.outputSchema);
+  assert.ok(toolByName.get("curyo_ask_humans")?.inputSchema);
+  assert.ok(toolByName.get("curyo_ask_humans")?.outputSchema);
+  assert.ok(toolByName.get("curyo_get_question_status")?.outputSchema);
+  assert.ok(toolByName.get("curyo_get_result")?.outputSchema);
+  assert.ok(toolByName.get("curyo_get_bot_balance")?.outputSchema);
 });
 
 test("notifications require MCP-Protocol-Version after initialize", async () => {
