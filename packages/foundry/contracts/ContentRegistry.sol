@@ -359,14 +359,23 @@ contract ContentRegistry is Initializable, AccessControlUpgradeable, PausableUpg
 
     // --- Content Lifecycle ---
 
+    /// @notice Compute the internal storage key for a reservation.
+    /// @dev Scoping the mapping key by `submitter` prevents a front-runner from copying a
+    ///      victim's revealCommitment out of the mempool and squatting the reservation slot.
+    ///      Each submitter has their own namespace, so collisions are impossible.
+    function _reservationKey(bytes32 revealCommitment, address submitter) internal pure returns (bytes32) {
+        return keccak256(abi.encode(revealCommitment, submitter));
+    }
+
     /// @notice Reserve a hidden submission commitment before revealing the public content metadata.
     /// @param revealCommitment Keccak-256 hash of the future submission reveal payload.
     function reserveSubmission(bytes32 revealCommitment) external nonReentrant whenNotPaused {
         require(revealCommitment != bytes32(0), "Invalid commitment");
-        PendingSubmission storage pending = pendingSubmissions[revealCommitment];
+        bytes32 key = _reservationKey(revealCommitment, msg.sender);
+        PendingSubmission storage pending = pendingSubmissions[key];
         require(pending.submitter == address(0), "Reservation exists");
 
-        pendingSubmissions[revealCommitment] = PendingSubmission({
+        pendingSubmissions[key] = PendingSubmission({
             submitter: msg.sender,
             reservedAt: block.timestamp.toUint48(),
             expiresAt: (block.timestamp + SUBMISSION_RESERVATION_PERIOD).toUint48()
@@ -376,18 +385,22 @@ contract ContentRegistry is Initializable, AccessControlUpgradeable, PausableUpg
     }
 
     function cancelReservedSubmission(bytes32 revealCommitment) external nonReentrant whenNotPaused {
-        PendingSubmission memory pending = pendingSubmissions[revealCommitment];
+        bytes32 key = _reservationKey(revealCommitment, msg.sender);
+        PendingSubmission memory pending = pendingSubmissions[key];
         require(pending.submitter == msg.sender, "Not submitter");
-        delete pendingSubmissions[revealCommitment];
+        delete pendingSubmissions[key];
 
         emit SubmissionReservationCancelled(msg.sender, revealCommitment);
     }
 
     function clearExpiredReservedSubmission(bytes32 revealCommitment) external nonReentrant whenNotPaused {
-        PendingSubmission memory pending = pendingSubmissions[revealCommitment];
+        // Caller sweeps their own expired reservation. Because keys are scoped by submitter,
+        // other users cannot accidentally interfere with each other's expirations.
+        bytes32 key = _reservationKey(revealCommitment, msg.sender);
+        PendingSubmission memory pending = pendingSubmissions[key];
         require(pending.submitter != address(0), "Reservation not found");
         require(block.timestamp > pending.expiresAt, "Reservation active");
-        delete pendingSubmissions[revealCommitment];
+        delete pendingSubmissions[key];
 
         emit SubmissionReservationExpired(pending.submitter, revealCommitment);
     }
@@ -498,11 +511,12 @@ contract ContentRegistry is Initializable, AccessControlUpgradeable, PausableUpg
         bytes32 bundleHash = _computeQuestionBundleHash(metadataList, mediaHashes, resolvedCategoryIds, questions);
         bytes32 revealCommitment =
             _computeBundleRevealCommitment(bundleHash, msg.sender, rewardTerms, validatedRoundConfig);
-        PendingSubmission memory pending = pendingSubmissions[revealCommitment];
+        bytes32 reservationKey = _reservationKey(revealCommitment, msg.sender);
+        PendingSubmission memory pending = pendingSubmissions[reservationKey];
         require(pending.submitter == msg.sender, "Reservation not found");
         require(block.timestamp <= pending.expiresAt, "Reservation expired");
         require(block.timestamp >= pending.reservedAt + RESERVED_SUBMISSION_MIN_AGE, "Reservation too new");
-        delete pendingSubmissions[revealCommitment];
+        delete pendingSubmissions[reservationKey];
 
         bundleId = nextQuestionBundleId++;
         contentIds = new uint256[](questions.length);
@@ -828,12 +842,13 @@ contract ContentRegistry is Initializable, AccessControlUpgradeable, PausableUpg
             roundConfig,
             spec
         );
-        pending = pendingSubmissions[revealCommitment];
+        bytes32 reservationKey = _reservationKey(revealCommitment, msg.sender);
+        pending = pendingSubmissions[reservationKey];
         require(pending.submitter == msg.sender, "Reservation not found");
         require(block.timestamp <= pending.expiresAt, "Reservation expired");
         require(block.timestamp >= pending.reservedAt + RESERVED_SUBMISSION_MIN_AGE, "Reservation too new");
 
-        delete pendingSubmissions[revealCommitment];
+        delete pendingSubmissions[reservationKey];
         submissionKeyUsed[submissionKey] = true;
     }
 
