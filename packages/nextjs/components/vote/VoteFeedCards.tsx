@@ -19,8 +19,8 @@ import {
   RewardPoolAmountDisplay,
   VotingQuestionContextDetails,
 } from "~~/components/shared/VotingQuestionCard";
-import { InfoTooltip } from "~~/components/ui/InfoTooltip";
 import { WatchContentButton } from "~~/components/shared/WatchContentButton";
+import { InfoTooltip } from "~~/components/ui/InfoTooltip";
 import type { ContentItem } from "~~/hooks/useContentFeed";
 import type { SubmitterProfile } from "~~/hooks/useSubmitterProfiles";
 import { type ContentMediaItem, buildFallbackMediaItems, isDirectImageUrl } from "~~/lib/contentMedia";

@@ -192,9 +192,9 @@ const AIPage: NextPage = () => {
           states.
         </li>
         <li>
-          Each event should include the operation key, client request ID, content ID, public URL, status, attempt
-          count, and signature metadata. Agent-facing callback payloads are signed with the per-ask webhook secret,
-          while the internal delivery worker at <code>/api/agent-callbacks/deliver</code> should be protected with{" "}
+          Each event should include the operation key, client request ID, content ID, public URL, status, attempt count,
+          and signature metadata. Agent-facing callback payloads are signed with the per-ask webhook secret, while the
+          internal delivery worker at <code>/api/agent-callbacks/deliver</code> should be protected with{" "}
           <code>CURYO_AGENT_CALLBACK_DELIVERY_SECRET</code>.
         </li>
         <li>
