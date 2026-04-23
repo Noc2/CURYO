@@ -12,6 +12,8 @@ Agents already have tool calls, memory, search, wallets, and workflow runners. W
 
 This is different from generic human-in-the-loop approval. Approval asks a single operator whether an agent may continue. Curyo can ask a market of verified humans what is true, useful, safe, interesting, locally relevant, or worth acting on.
 
+For the OpenClaw-ready version, keep the product surface narrow: configure an agent token, choose a template, quote the ask, submit with an idempotency key, wait through a callback or status read, then consume the structured result. Private or embargoed context is intentionally deferred; the first flow assumes public context URLs and public settled result pages.
+
 ## Questions Agents Would Ask Humans
 
 AI agents are most likely to ask humans questions in places where model confidence is not enough, where social judgment matters, or where the cost of a wrong answer is higher than the cost of asking.
@@ -126,6 +128,8 @@ const request = await curyo.askHumans({
 });
 ```
 
+The SDK helper should hide transport differences while preserving the protocol record. `askHumans()` can use hosted x402 for wallet-funded agents or managed MCP budgets for remote MCP clients, but the returned object should always include the client request ID, operation key, public URL, payment metadata, status URL, and later the same structured result shape returned by `curyo_get_result`.
+
 The response should be immediately useful:
 
 ```ts
@@ -191,6 +195,12 @@ Templates reduce invalid questions, make pricing predictable, and help agents pa
 
 The first implementation keeps template definitions and result interpretation off-chain. The redeployed contract should only anchor `questionMetadataHash` and `resultSpecHash` so indexers and agents can verify which metadata/result spec was used without paying to store subjective text on-chain.
 
+Template docs should be machine-readable enough for agents:
+
+- `curyo_list_result_templates` returns the current IDs, display names, expected metadata fields, and result interpretation notes.
+- `generic_rating`, `go_no_go`, and `ranked_option_member` are the first stable OpenClaw-ready templates.
+- Later templates can be added without changing voting mechanics as long as they remain off-chain result interpretation metadata.
+
 ## Payment Design
 
 The payment flow should feel like an API call, not a crypto workflow.
@@ -203,7 +213,7 @@ Recommended layers:
 - Budget caps: per-question, daily, weekly, and per-category limits.
 - Idempotency keys: retries must not double-pay.
 - Refund or rollover: unused funds return to the bot wallet or roll into the next question.
-- Webhooks: agents should not need to poll constantly.
+- Webhooks: agents should not need to poll constantly; signed callbacks should wake the agent when the ask is submitted, open, settling, settled, failed, feedback unlocked, or under-responding.
 - Receipts: every paid question returns transaction hashes, protocol fees, reward distribution, and final settlement metadata.
 
 The user-facing rating system should stay the same everywhere: one 0-100 community rating, with templates used to describe the question rather than to introduce multiple scoring models.
@@ -230,6 +240,15 @@ The production MCP server starts with paid `curyo_ask_humans` as the core workfl
 - `curyo_get_question_status` and `curyo_get_result` must let agents recover from disconnects without repeating a paid ask.
 - `curyo_get_bot_balance` must show the authenticated agent's remaining managed budget and configured caps.
 
+OpenClaw integration docs should present the same flow every time:
+
+1. Configure the remote MCP endpoint and bearer token.
+2. Read `curyo_list_result_templates`.
+3. Quote with `curyo_quote_question`.
+4. Submit with `curyo_ask_humans`, `clientRequestId`, `maxPaymentAmount`, and optional callback URL.
+5. Recover with `curyo_get_question_status`.
+6. Finish with `curyo_get_result` and persist the result URL.
+
 The adapter should be conservative around writes:
 
 - Simulate before submit.
@@ -242,13 +261,16 @@ The adapter should be conservative around writes:
 
 An OpenClaw-style agent could use Curyo like this:
 
-1. The bot detects uncertainty in a task, such as suspicious media, unclear instructions, or a risky autonomous action.
-2. It calls `curyo_quote_question` with category, deadline, and desired voter count.
-3. It submits through `curyo_ask_humans`, funding the bounty from a delegated bot wallet.
-4. It receives a `questionId`, `publicUrl`, and `escrowTxHash`.
-5. It waits for a webhook or polls `curyo_get_question_status`.
-6. It calls `curyo_get_result` and maps the result into its own policy.
-7. It stores the result URL in its audit log so humans can inspect why the bot acted.
+1. The operator reviews agent setup in `/settings?tab=agents`; while static registration remains active, Curyo provisions the bearer token through `CURYO_MCP_AGENTS` with scopes, daily budget, per-ask cap, and category allowlist.
+2. The OpenClaw config points at Curyo's remote MCP endpoint with that bearer token.
+3. The bot detects uncertainty in a task, such as suspicious media, unclear instructions, or a risky autonomous action.
+4. It calls `curyo_list_result_templates` and picks the closest template.
+5. It calls `curyo_quote_question` with category, deadline, budget, and desired voter count.
+6. It submits through `curyo_ask_humans`, funding the bounty from a managed agent budget or delegated bot wallet.
+7. It receives a `questionId`, `publicUrl`, `operationKey`, and payment or escrow metadata.
+8. It waits for a signed callback or polls `curyo_get_question_status`.
+9. It calls `curyo_get_result` and maps the result into its own policy.
+10. It stores the result URL in its audit log so humans can inspect why the bot acted.
 
 The whole experience should fit in one or two tool calls from the agent's perspective.
 
@@ -272,6 +294,7 @@ Mandatory preview media everywhere would block many useful questions, especially
 To make this easy for bots:
 
 - Provide one SDK function: `askHumans`.
+- Provide SDK helpers for `quoteQuestion`, `getQuestionStatus`, `getResult`, `buildWebhookVerifier`, and `parseAgentResult`.
 - Provide a matching MCP adapter with the same schemas.
 - Use the hosted `/api/x402/questions` endpoint for direct paid asks: the bot wallet holds Celo USDC, thirdweb signs the x402 payment, and the API executor funds the on-chain USDC Bounty.
 - Use managed MCP agent budgets for remote MCP clients that cannot sign x402 payment headers inside a JSON-RPC tool call. The MCP server should reserve from the authenticated agent's budget, submit from the server executor wallet, and return an auditable operation record.
@@ -280,10 +303,12 @@ To make this easy for bots:
 - Provide bot wallets, delegated spend limits, and clear receipts.
 - Provide `quote -> submit -> wait -> result` as the golden path.
 - Provide examples for common agent frameworks.
+- Provide operator settings at `/settings?tab=agents` for token lifecycle, scopes, budgets, category allowlists, pauses, audit logs, and ask history; keep `CURYO_MCP_AGENTS` as the source of truth until that UI is wired to persistent token management.
 - Make all writes idempotent.
 - Support media uploads, source links, and screenshots.
 - Expose public result pages for auditability.
 - Keep the question submission rules identical for humans and bots.
+- Defer private artifacts, embargoed asks, restricted voter-only context, and delayed disclosure until the security and disclosure model is explicit.
 
 ## Research Anchors
 
@@ -301,11 +326,12 @@ To make this easy for bots:
 
 Build the first version around:
 
-1. `askHumans()` in the SDK.
+1. `askHumans()` in the SDK, with companion helpers for quote, status, result, callback verification, and result parsing.
 2. A thin MCP adapter exposing quote, paid ask, status, result, categories, and balance.
 3. A prepaid bot wallet with Celo USDC for x402 and managed MCP agent budgets for remote MCP clients.
-4. Three templates: yes/no/unsure, pairwise choice, and action approval.
+4. Three OpenClaw-ready templates: `generic_rating`, `go_no_go`, and `ranked_option_member`.
 5. Webhook delivery plus a public result page.
-6. An OpenClaw-style example bot that asks humans a question, pays for it, waits, and acts on the result.
+6. `/settings?tab=agents` operator setup for token lifecycle, scopes, budgets, and audit records, backed initially by `CURYO_MCP_AGENTS`.
+7. An OpenClaw-style example bot that asks humans a question, pays for it, waits, and acts on the result.
 
 That would make the protocol legible to AI agents: when uncertain, ask humans, pay fairly, and consume a structured signal.

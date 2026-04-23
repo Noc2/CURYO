@@ -24,17 +24,21 @@ Requires configured environment variables and a reachable RPC endpoint.
 Question submissions use a question capped at 120 characters. Automated submissions currently use YouTube videos, and each submission must attach a non-refundable Bounty funded in cREP or USDC. The bot uses the same submission rules as a human: required context URL, optional preview media, and the same Bounty guardrails.
 For MCP or other agent adapters, treat this as a typed bot-to-human feedback loop: the agent asks a narrow question, humans stake their judgment, and downstream clients read the public rating result.
 
+OpenClaw-ready agent integrations should use the hosted agent path rather than adding raw transaction tools to the agent. Configure the operator token and budget in the web app at `/settings?tab=agents` when the UI is available, or through `CURYO_MCP_AGENTS` while static config remains the registration source. The agent should list templates, quote, submit with a stable `clientRequestId`, wait for a callback or status read, fetch the structured result, and store the public result URL in its audit log.
+
+Private artifacts, embargoed asks, restricted voter-only context, and delayed disclosure are deferred. Current bot and agent submissions should assume public context URLs and public settled result pages.
+
 ## Scripts
 
-| Command | Description |
-|---|---|
-| `yarn bot:submit` | Discover trending content from platforms and submit question-first entries to registry |
-| `yarn bot:submit:x402` | Discover trending content and submit through the hosted x402 question API |
-| `yarn workspace @curyo/bot submit --category "Media" --max-submissions 5` | Submit up to 5 items from the `Media` category |
-| `yarn workspace @curyo/bot submit --source youtube --max-submissions 2` | Submit up to 2 items from the YouTube source |
-| `yarn bot:vote` | Rate content and commit encrypted votes via tlock commit-reveal |
-| `yarn bot:claim` | Claim voter rewards for the configured rating bot wallet |
-| `yarn bot:status` | Check wallet balances and voting identity ownership |
+| Command                                                                   | Description                                                                            |
+| ------------------------------------------------------------------------- | -------------------------------------------------------------------------------------- |
+| `yarn bot:submit`                                                         | Discover trending content from platforms and submit question-first entries to registry |
+| `yarn bot:submit:x402`                                                    | Discover trending content and submit through the hosted x402 question API              |
+| `yarn workspace @curyo/bot submit --category "Media" --max-submissions 5` | Submit up to 5 items from the `Media` category                                         |
+| `yarn workspace @curyo/bot submit --source youtube --max-submissions 2`   | Submit up to 2 items from the YouTube source                                           |
+| `yarn bot:vote`                                                           | Rate content and commit encrypted votes via tlock commit-reveal                        |
+| `yarn bot:claim`                                                          | Claim voter rewards for the configured rating bot wallet                               |
+| `yarn bot:status`                                                         | Check wallet balances and voting identity ownership                                    |
 
 The bot is a manual CLI. `yarn dev:stack` starts Ponder and Next.js, and starts the keeper only when the keeper environment is configured; it does not start `submit` or `vote` automatically.
 
@@ -48,58 +52,60 @@ Copy `.env.example` to `.env` in the package directory and fill in the deployed 
 
 **Wallet (one of):**
 
-| Variable | Description |
-|---|---|
-| `SUBMIT_KEYSTORE_ACCOUNT` | Foundry keystore account for submissions |
-| `SUBMIT_KEYSTORE_PASSWORD` | Password used to decrypt the submission keystore |
-| `SUBMIT_PRIVATE_KEY` | Raw private key for submissions (not recommended) |
-| `RATE_KEYSTORE_ACCOUNT` | Foundry keystore account for voting |
-| `RATE_KEYSTORE_PASSWORD` | Password used to decrypt the rating keystore |
-| `RATE_PRIVATE_KEY` | Raw private key for voting (not recommended) |
+| Variable                   | Description                                       |
+| -------------------------- | ------------------------------------------------- |
+| `SUBMIT_KEYSTORE_ACCOUNT`  | Foundry keystore account for submissions          |
+| `SUBMIT_KEYSTORE_PASSWORD` | Password used to decrypt the submission keystore  |
+| `SUBMIT_PRIVATE_KEY`       | Raw private key for submissions (not recommended) |
+| `RATE_KEYSTORE_ACCOUNT`    | Foundry keystore account for voting               |
+| `RATE_KEYSTORE_PASSWORD`   | Password used to decrypt the rating keystore      |
+| `RATE_PRIVATE_KEY`         | Raw private key for voting (not recommended)      |
 
 **Network & Services:**
 
-| Variable | Default | Description |
-|---|---|---|
-| `RPC_URL` | — | Blockchain RPC endpoint |
-| `CHAIN_ID` | — | Network chain ID |
-| `CREP_TOKEN_ADDRESS` | Auto-derived for supported chains | Fallback cREP token address |
-| `CONTENT_REGISTRY_ADDRESS` | Auto-derived for supported chains | Fallback ContentRegistry address |
-| `QUESTION_REWARD_POOL_ESCROW_ADDRESS` | Auto-derived for supported chains | Fallback QuestionRewardPoolEscrow address |
-| `VOTING_ENGINE_ADDRESS` | Auto-derived for supported chains | Fallback RoundVotingEngine address |
-| `ROUND_REWARD_DISTRIBUTOR_ADDRESS` | Auto-derived for supported chains | Fallback RoundRewardDistributor address |
-| `VOTER_ID_NFT_ADDRESS` | Auto-derived for supported chains | Fallback VoterIdNFT address |
-| `CATEGORY_REGISTRY_ADDRESS` | Auto-derived for supported chains | Fallback CategoryRegistry address |
-| `PONDER_URL` | — | Ponder indexer URL |
-| `RATE_FRONTEND_ADDRESS` | — | Optional frontend code/operator address attributed on `commitVote()` calls |
-| `SUBMIT_REWARD_REQUIRED_VOTERS` | `3` | Minimum voters required before a submission Bounty can pay out |
-| `SUBMIT_REWARD_REQUIRED_SETTLED_ROUNDS` | `1` | Minimum settled rounds required before a submission Bounty can pay out |
-| `SUBMIT_REWARD_POOL_EXPIRES_AT` | `0` | Optional Unix timestamp for the submission Bounty expiry; `0` keeps it open-ended |
-| `SUBMIT_ROUND_BLIND_PHASE_SECONDS` | Protocol default | Optional per-question blind phase for bot-created questions |
-| `SUBMIT_ROUND_MAX_DURATION_SECONDS` | Protocol default | Optional per-question round deadline for bot-created questions |
-| `SUBMIT_ROUND_MIN_VOTERS` | Protocol default | Optional minimum revealed voters before settlement |
-| `SUBMIT_ROUND_MAX_VOTERS` | Protocol default | Optional voter cap for the question round |
-| `X402_API_URL` | — | Hosted `/api/x402/questions` endpoint for paid submissions |
-| `THIRDWEB_CLIENT_ID` | — | thirdweb client ID used to sign x402 payment headers from the bot wallet |
-| `X402_MAX_PAYMENT_USDC` | Bounty amount | Maximum x402 spend per request in atomic USDC |
-| `X402_USDC_TOKEN_ADDRESS` | — | Optional Celo USDC token override for operator checks |
+| Variable                                | Default                           | Description                                                                       |
+| --------------------------------------- | --------------------------------- | --------------------------------------------------------------------------------- |
+| `RPC_URL`                               | —                                 | Blockchain RPC endpoint                                                           |
+| `CHAIN_ID`                              | —                                 | Network chain ID                                                                  |
+| `CREP_TOKEN_ADDRESS`                    | Auto-derived for supported chains | Fallback cREP token address                                                       |
+| `CONTENT_REGISTRY_ADDRESS`              | Auto-derived for supported chains | Fallback ContentRegistry address                                                  |
+| `QUESTION_REWARD_POOL_ESCROW_ADDRESS`   | Auto-derived for supported chains | Fallback QuestionRewardPoolEscrow address                                         |
+| `VOTING_ENGINE_ADDRESS`                 | Auto-derived for supported chains | Fallback RoundVotingEngine address                                                |
+| `ROUND_REWARD_DISTRIBUTOR_ADDRESS`      | Auto-derived for supported chains | Fallback RoundRewardDistributor address                                           |
+| `VOTER_ID_NFT_ADDRESS`                  | Auto-derived for supported chains | Fallback VoterIdNFT address                                                       |
+| `CATEGORY_REGISTRY_ADDRESS`             | Auto-derived for supported chains | Fallback CategoryRegistry address                                                 |
+| `PONDER_URL`                            | —                                 | Ponder indexer URL                                                                |
+| `RATE_FRONTEND_ADDRESS`                 | —                                 | Optional frontend code/operator address attributed on `commitVote()` calls        |
+| `SUBMIT_REWARD_REQUIRED_VOTERS`         | `3`                               | Minimum voters required before a submission Bounty can pay out                    |
+| `SUBMIT_REWARD_REQUIRED_SETTLED_ROUNDS` | `1`                               | Minimum settled rounds required before a submission Bounty can pay out            |
+| `SUBMIT_REWARD_POOL_EXPIRES_AT`         | `0`                               | Optional Unix timestamp for the submission Bounty expiry; `0` keeps it open-ended |
+| `SUBMIT_ROUND_BLIND_PHASE_SECONDS`      | Protocol default                  | Optional per-question blind phase for bot-created questions                       |
+| `SUBMIT_ROUND_MAX_DURATION_SECONDS`     | Protocol default                  | Optional per-question round deadline for bot-created questions                    |
+| `SUBMIT_ROUND_MIN_VOTERS`               | Protocol default                  | Optional minimum revealed voters before settlement                                |
+| `SUBMIT_ROUND_MAX_VOTERS`               | Protocol default                  | Optional voter cap for the question round                                         |
+| `X402_API_URL`                          | —                                 | Hosted `/api/x402/questions` endpoint for paid submissions                        |
+| `THIRDWEB_CLIENT_ID`                    | —                                 | thirdweb client ID used to sign x402 payment headers from the bot wallet          |
+| `X402_MAX_PAYMENT_USDC`                 | Bounty amount                     | Maximum x402 spend per request in atomic USDC                                     |
+| `X402_USDC_TOKEN_ADDRESS`               | —                                 | Optional Celo USDC token override for operator checks                             |
+
+Managed MCP/OpenClaw agents are configured in the Next.js app, not in the bot package. Use the bot package for direct CLI submissions and voting, and use `/api/mcp` plus `/settings?tab=agents` for bearer-token agents with scopes, daily budgets, per-ask caps, category allowlists, pause controls, and audit records.
 
 **Optional External API Key:**
 
-| Variable | Description |
-|---|---|
+| Variable          | Description          |
+| ----------------- | -------------------- |
 | `YOUTUBE_API_KEY` | YouTube Data API key |
 
 **Tuning (optional):**
 
-| Variable | Default | Description |
-|---|---|---|
-| `VOTE_STAKE` | — | cREP stake per vote |
-| `VOTE_THRESHOLD` | — | Minimum confidence to cast a vote |
-| `MAX_VOTES_PER_RUN` | — | Limit votes per execution |
-| `MAX_SUBMISSIONS_PER_RUN` | — | Limit submissions per execution |
-| `MAX_SUBMISSIONS_PER_CATEGORY` | — | Per-source cap during submission runs |
-| `SUBMIT_REWARD_ASSET` | `usdc` | Reward-pool asset for submissions: `usdc` or `crep` |
+| Variable                       | Default | Description                                         |
+| ------------------------------ | ------- | --------------------------------------------------- |
+| `VOTE_STAKE`                   | —       | cREP stake per vote                                 |
+| `VOTE_THRESHOLD`               | —       | Minimum confidence to cast a vote                   |
+| `MAX_VOTES_PER_RUN`            | —       | Limit votes per execution                           |
+| `MAX_SUBMISSIONS_PER_RUN`      | —       | Limit submissions per execution                     |
+| `MAX_SUBMISSIONS_PER_CATEGORY` | —       | Per-source cap during submission runs               |
+| `SUBMIT_REWARD_ASSET`          | `usdc`  | Reward-pool asset for submissions: `usdc` or `crep` |
 
 `submit` also supports one-off CLI overrides:
 
@@ -124,9 +130,9 @@ Frontend fee sweeping remains a keeper responsibility when the keeper wallet is 
 
 `--category` accepts either the numeric ID or the category name. `--source` accepts the source adapter name.
 
-| ID | Category | `--source` | Availability |
-|---|---|---|---|
-| `4` | Media | `youtube` | Requires `YOUTUBE_API_KEY` |
+| ID  | Category | `--source` | Availability               |
+| --- | -------- | ---------- | -------------------------- |
+| `4` | Media    | `youtube`  | Requires `YOUTUBE_API_KEY` |
 
 ## How Submission Works
 

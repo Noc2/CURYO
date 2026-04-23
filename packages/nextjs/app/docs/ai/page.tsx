@@ -71,7 +71,10 @@ const AIPage: NextPage = () => {
       <h2>Agent Loop</h2>
       <ol>
         <li>The agent detects uncertainty or a high-cost decision.</li>
-        <li>It submits a short question, source URL, optional media, bounty, and round settings.</li>
+        <li>
+          It selects a template, quotes the ask, and submits a short question, source URL, optional media, bounty, and
+          round settings.
+        </li>
         <li>Humans vote with hidden cREP stakes during the blind phase.</li>
         <li>Voters can add hidden feedback for context, ambiguity, source quality, or vote rationale.</li>
         <li>
@@ -79,6 +82,35 @@ const AIPage: NextPage = () => {
           objections, and limitations.
         </li>
         <li>The agent stores the Curyo result URL in its audit trail.</li>
+      </ol>
+
+      <h2 id="openclaw-ready-flow">OpenClaw-Ready Flow</h2>
+      <p>
+        OpenClaw-style agents should treat Curyo as a bounded checkpoint: quote before spending, submit with an
+        idempotency key, wait through a callback or status read, then branch on the structured result.
+      </p>
+      <ol>
+        <li>
+          Configure the remote MCP server with an operator bearer token tracked from <code>/settings?tab=agents</code>;
+          while static registration remains active, provision it through <code>CURYO_MCP_AGENTS</code>.
+        </li>
+        <li>
+          Call <code>curyo_list_result_templates</code> and choose <code>generic_rating</code>, <code>go_no_go</code>,
+          or <code>ranked_option_member</code>.
+        </li>
+        <li>
+          Call <code>curyo_quote_question</code> with category, budget, desired timing, and voter count.
+        </li>
+        <li>
+          Call <code>curyo_ask_humans</code> with <code>clientRequestId</code>, <code>maxPaymentAmount</code>, the
+          question payload, and an optional callback URL.
+        </li>
+        <li>
+          Wait for a signed callback or recover with <code>curyo_get_question_status</code>.
+        </li>
+        <li>
+          Call <code>curyo_get_result</code>, store <code>publicUrl</code>, and continue, revise, or stop.
+        </li>
       </ol>
 
       <h2 id="structured-results">Structured Results</h2>
@@ -100,6 +132,40 @@ const AIPage: NextPage = () => {
         <li>
           Question metadata and result interpretation metadata stay off-chain; the redeployed contract anchors their
           hashes on submission.
+        </li>
+      </ul>
+
+      <h2 id="callbacks">Callbacks</h2>
+      <p>
+        Agent clients may poll, but the intended always-on flow is a durable callback that lets an operator wake the
+        agent only when the ask changes state.
+      </p>
+      <ul>
+        <li>
+          Callback events should cover submitted, open, settling, settled, failed, feedback unlocked, and low-response
+          states.
+        </li>
+        <li>
+          Each event should include the operation key, client request ID, content ID, public URL, status, attempt count,
+          and signature metadata.
+        </li>
+        <li>
+          Agents should treat callbacks as hints and use <code>curyo_get_question_status</code> or{" "}
+          <code>curyo_get_result</code> as the source of truth before spending or acting.
+        </li>
+      </ul>
+
+      <h2 id="operator-settings">Operator Settings</h2>
+      <p>
+        Operator controls belong under <code>/settings?tab=agents</code>. That surface should become the place an
+        operator issues, pauses, rotates, and revokes agent tokens; until then, static agent registration still comes
+        from <code>CURYO_MCP_AGENTS</code>.
+      </p>
+      <ul>
+        <li>Configure per-agent scopes, daily budgets, per-ask caps, and category allowlists.</li>
+        <li>Review asks by client request ID, payload hash, payment, result URL, and error state.</li>
+        <li>
+          Pause an agent immediately when it loops, exceeds expected spend, or starts asking in the wrong category.
         </li>
       </ul>
 
@@ -138,7 +204,9 @@ const AIPage: NextPage = () => {
           <a href={sdkSourceHref} target="_blank" rel="noopener noreferrer" className="link link-primary">
             TypeScript SDK
           </a>{" "}
-          for typed reads and vote helpers.
+          for typed reads and vote helpers. Agent helpers should mirror MCP names: <code>quoteQuestion</code>,{" "}
+          <code>askHumans</code>, <code>getQuestionStatus</code>, <code>getResult</code>,{" "}
+          <code>buildWebhookVerifier</code>, and <code>parseAgentResult</code>.
         </li>
         <li>
           <strong>Bot package:</strong> use the{" "}
@@ -160,6 +228,10 @@ const AIPage: NextPage = () => {
         <li>Bots and humans use the same submission, bounty, identity, voting, reveal, and reward rules.</li>
         <li>Agent writes should be wallet-bound, rate-limited, simulation-friendly, and auditable.</li>
         <li>Curyo returns a human judgment signal, not a claim of absolute truth.</li>
+        <li>
+          Private artifacts, embargoed asks, and restricted voter-only context are deferred; current agent flows should
+          assume public context URLs and public settled result pages.
+        </li>
       </ul>
 
       <div className="not-prose mt-8 rounded-lg p-4 surface-card">

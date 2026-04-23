@@ -15,7 +15,7 @@ The important nuance is that Curyo already has much of the raw infrastructure:
 - Agent bearer tokens, scopes, daily budgets, per-ask caps, and category allowlists.
 - Verified voters, cREP stake, hidden voting, public results, and optional hidden feedback notes.
 
-The missing work is mostly productization for autonomous agents, not a new protocol primitive. Agents need simple templates, structured results, callbacks, fast turnaround, audience targeting, and operational controls.
+The missing work is mostly productization for autonomous agents, not a new protocol primitive. Agents need an OpenClaw-ready flow, simple templates, structured results, callbacks, SDK helpers, fast turnaround, audience targeting, and operational controls. Private or embargoed context remains deferred until the access model is designed carefully.
 
 ## Double-Check Findings
 
@@ -23,7 +23,7 @@ The missing work is mostly productization for autonomous agents, not a new proto
 
 OpenClaw's MCP documentation describes MCP as the bridge between the CLI and external tools, and it supports local `stdio` servers plus remote `sse` and `streamable-http` transports. That makes Curyo's MCP direction relevant, but the current Curyo MCP route is still a first-release JSON-RPC POST server and explicitly says SSE streams are not enabled.
 
-Implication: Curyo should provide an OpenClaw-ready MCP setup, including remote transport support, copy-paste config, bearer-token auth examples, and a working "ask humans, wait, read result" recipe.
+Implication: Curyo should provide an OpenClaw-ready MCP setup, including remote transport support, copy-paste config, bearer-token auth examples, and a working "quote, ask humans, wait, read result" recipe.
 
 Sources:
 
@@ -73,9 +73,19 @@ Current Curyo MCP tools are close to the needed shape, but OpenClaw users need a
 
 - Remote MCP transport compatible with OpenClaw's supported modes.
 - Example `mcpServers` config.
-- Example bearer-token setup with scopes and budget caps.
-- A small OpenClaw loop: quote, ask, poll or wait, get result, write result URL to memory.
+- Example bearer-token setup with scopes and budget caps surfaced from `/settings?tab=agents`, backed initially by `CURYO_MCP_AGENTS`.
+- A small OpenClaw loop: list templates, quote, ask, poll or wait for callback, get result, write result URL to memory.
 - Error examples for duplicate ask, insufficient budget, invalid media, category disallowed, still settling, and failed submission.
+
+Golden path:
+
+1. Operator reviews agent setup in `/settings?tab=agents`; while static registration remains active, Curyo provisions the bearer token through `CURYO_MCP_AGENTS` with scopes, a daily budget, a per-ask cap, and category allowlists.
+2. OpenClaw config points to Curyo's remote MCP endpoint with that bearer token.
+3. Agent calls `curyo_list_result_templates` and chooses `generic_rating`, `go_no_go`, or `ranked_option_member`.
+4. Agent calls `curyo_quote_question` before any budget is reserved.
+5. Agent calls `curyo_ask_humans` with `clientRequestId`, `maxPaymentAmount`, a valid question payload, and an optional callback URL.
+6. Agent waits for a signed callback or polls `curyo_get_question_status`.
+7. Agent calls `curyo_get_result`, stores `publicUrl` in memory, and continues, revises, or stops.
 
 Recommended first demo:
 
@@ -136,6 +146,12 @@ Additional templates can be added later without changing voting mechanics:
 
 Pairwise and ranked-choice behavior can be approximated today by submitting multiple questions under one bounty and ranking each option by settled rating and confidence. The redeployed contract anchors only `questionMetadataHash` and `resultSpecHash`; the template definitions and interpretation logic stay off-chain.
 
+Template guidance for OpenClaw docs:
+
+- Document template IDs, allowed input fields, and result interpretation in the same shape returned by `curyo_list_result_templates`.
+- Keep templates stable enough that agents can branch on them without scraping prose.
+- Treat template selection as metadata around the existing rating mechanics, not as a new voting contract mode.
+
 ### 4. Webhooks and durable callbacks
 
 Always-on agents should not poll forever. Add signed callbacks for:
@@ -148,7 +164,7 @@ Always-on agents should not poll forever. Add signed callbacks for:
 - `feedback.unlocked`
 - `bounty.low_response`
 
-Each callback should include operation key, client request ID, content ID, public URL, status, and retry metadata.
+Each callback should include operation key, client request ID, content ID, public URL, status, attempt count, next retry time, and signature metadata. Callbacks should be treated as wake-up hints; agents should still read `curyo_get_question_status` or `curyo_get_result` before acting.
 
 ### 5. Fast-lane feedback market
 
@@ -187,7 +203,7 @@ Autonomous-agent operators need controls:
 - View every ask, payload hash, payment, result URL, and error.
 - Export audit logs.
 
-The backend already has parts of this in MCP auth and budget storage. The missing layer is operator UX and documentation.
+The operator UX should live at `/settings?tab=agents`, alongside account settings, so routine token rotation and budget changes eventually do not require editing `CURYO_MCP_AGENTS` by hand. The backend already has parts of this in MCP auth and budget storage. The first layer is operator visibility and documentation; self-serve token CRUD can replace static registration later.
 
 ### 8. Private or embargoed context
 
@@ -198,7 +214,7 @@ Business creation often involves unreleased ideas, customer segments, pricing, a
 - Embargoed result disclosure.
 - Limited-time access to sensitive screenshots or drafts.
 
-This needs careful design because it changes the default public nature of Curyo questions.
+Deferred: do not promise this in the OpenClaw-ready MVP. Current docs should explicitly state that agents use public context URLs and public settled result pages. Private artifacts, embargoed asks, restricted voter-only context, and delayed disclosure need careful design because they change the default public nature of Curyo questions.
 
 ### 9. Feedback notes inside agent reads
 
@@ -223,7 +239,7 @@ The SDK currently focuses on hosted reads and vote helpers. Add wallet-agnostic 
 - `buildWebhookVerifier`
 - `parseAgentResult`
 
-The SDK should mirror the MCP schema so OpenClaw, server apps, and custom agents all use the same data shape.
+The SDK should mirror the MCP schema so OpenClaw, server apps, and custom agents all use the same data shape. Helper return values should preserve `clientRequestId`, `operationKey`, `publicUrl`, payment metadata, and the structured result fields returned by `curyo_get_result`.
 
 ## Recommended Product Positioning
 
@@ -247,6 +263,8 @@ The latter competes with agent runtimes and overpromises. The former makes Curyo
 - Structured result payload with protocol state, objections, methodology, and limitations.
 - Public feedback notes included in settled results.
 - Signed webhook for settled questions.
+- SDK helper docs for `quoteQuestion`, `askHumans`, `getQuestionStatus`, `getResult`, `buildWebhookVerifier`, and `parseAgentResult`.
+- Operator setup docs for `/settings?tab=agents`.
 
 ### Phase 2: Business-agent workflows
 
@@ -270,7 +288,7 @@ The latter competes with agent runtimes and overpromises. The former makes Curyo
 
 - Study objects.
 - Audience routing.
-- Embargoed/private artifacts.
+- Embargoed/private artifacts, explicitly deferred until access control and disclosure semantics are designed.
 - JSON/CSV export.
 - Methodology receipts.
 
