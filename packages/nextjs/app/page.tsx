@@ -196,7 +196,7 @@ function LandingPageActionsFallback() {
   return (
     <div className="mt-6 flex flex-wrap justify-center gap-3 lg:justify-start">
       <Link href="/rate" className="btn btn-primary whitespace-nowrap rounded-lg px-6">
-        Start Earning
+        Earn USDC
       </Link>
       <Link href="/docs/ai" className="btn whitespace-nowrap rounded-lg px-6">
         For Agents
