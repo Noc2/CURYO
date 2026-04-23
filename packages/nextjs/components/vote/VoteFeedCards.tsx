@@ -19,6 +19,7 @@ import {
   RewardPoolAmountDisplay,
   VotingQuestionContextDetails,
 } from "~~/components/shared/VotingQuestionCard";
+import { InfoTooltip } from "~~/components/ui/InfoTooltip";
 import { WatchContentButton } from "~~/components/shared/WatchContentButton";
 import type { ContentItem } from "~~/hooks/useContentFeed";
 import type { SubmitterProfile } from "~~/hooks/useSubmitterProfiles";
@@ -34,6 +35,10 @@ const LAPTOP_VOTE_CARD_MEDIA_QUERY = "(min-width: 1024px) and (max-width: 1535px
 const MOBILE_VOTE_CARD_MEDIA_QUERY = "(max-width: 767px)";
 const CONTENT_INTENT_INTERACTIVE_SELECTOR =
   "a[href],button,input,select,textarea,summary,iframe,[role='button'],[role='link']";
+const BOUNTY_DEADLINE_TOOLTIP_TEXT =
+  "Bounty and paid feedback are active only inside this window. The question remains visible after the bounty closes.";
+const FEEDBACK_DEADLINE_TOOLTIP_TEXT =
+  "Paid feedback is only active inside this window. The question remains visible after feedback closes.";
 
 function getSourceLabel(url: string) {
   if (!url) return "";
@@ -63,8 +68,14 @@ function getDeadlineChipClassName(tone: "active" | "ended") {
     : "border-base-content/10 bg-base-content/[0.05] text-base-content/62";
 }
 
+function getDeadlineTooltipClassName(tone: "active" | "ended") {
+  return tone === "active"
+    ? "[&>svg]:text-primary/70 [&>svg]:hover:text-primary"
+    : "[&>svg]:text-base-content/50 [&>svg]:hover:text-base-content/75";
+}
+
 function getRewardDeadlineChips(item: ContentItem) {
-  const chips: Array<{ label: string; tone: "active" | "ended" }> = [];
+  const chips: Array<{ label: string; tone: "active" | "ended"; tooltip?: string }> = [];
   const rewardSummary = item.rewardPoolSummary;
   const feedbackSummary = item.feedbackBonusSummary;
 
@@ -79,6 +90,7 @@ function getRewardDeadlineChips(item: ContentItem) {
         ? `Bounty closes in ${formatDeadlineDistance(rewardSummary.nextBountyClosesAt)}`
         : "Bounty active",
       tone: "active",
+      tooltip: BOUNTY_DEADLINE_TOOLTIP_TEXT,
     });
   } else if ((rewardSummary?.expiredRewardPoolCount ?? 0) > 0) {
     chips.push({
@@ -96,6 +108,7 @@ function getRewardDeadlineChips(item: ContentItem) {
         ? `Feedback closes in ${formatDeadlineDistance(feedbackSummary.nextFeedbackClosesAt)}`
         : "Feedback active",
       tone: "active",
+      tooltip: FEEDBACK_DEADLINE_TOOLTIP_TEXT,
     });
   } else if ((feedbackSummary?.expiredPoolCount ?? 0) > 0) {
     chips.push({ label: "Feedback ended", tone: "ended" });
@@ -528,14 +541,21 @@ function FeedContentMetaCard({
           {rewardDeadlineChips.length > 0 ? (
             <div className="flex flex-wrap gap-1.5">
               {rewardDeadlineChips.map(chip => (
-                <span
+                <div
                   key={chip.label}
-                  className={`rounded-full border px-2.5 py-1 text-xs font-semibold ${getDeadlineChipClassName(
+                  className={`inline-flex max-w-full items-center gap-1.5 rounded-full border px-3 py-1.5 text-sm font-semibold leading-none ${getDeadlineChipClassName(
                     chip.tone,
                   )}`}
                 >
-                  {chip.label}
-                </span>
+                  <span className="inline-flex max-w-full flex-wrap items-center gap-x-1 gap-y-0.5">{chip.label}</span>
+                  {chip.tooltip ? (
+                    <InfoTooltip
+                      text={chip.tooltip}
+                      position="bottom"
+                      className={getDeadlineTooltipClassName(chip.tone)}
+                    />
+                  ) : null}
+                </div>
               ))}
             </div>
           ) : null}
