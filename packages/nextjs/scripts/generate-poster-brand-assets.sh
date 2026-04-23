@@ -48,13 +48,13 @@ magick "$ICON_SOURCE" "$ICON_MASK" \
   "$PUBLIC_DIR/favicon.png"
 
 magick "$POSTER_ORB" \
-  -resize 660x660 \
+  -resize 600x600 \
   "$SOCIAL_SOURCE"
 
 magick -size 1200x630 xc:"#050607" \
   \( "$SOCIAL_SOURCE" \) \
   -gravity east \
-  -geometry +16+14 \
+  -geometry -48+92 \
   -compose over \
   -composite \
   -font "$BOLD_FONT" \
@@ -89,7 +89,7 @@ magick "$POSTER_ORB" \
 magick -size 1600x520 xc:"#050607" \
   \( "$BANNER_SOURCE" \) \
   -gravity east \
-  -geometry +36+18 \
+  -geometry +36+110 \
   -compose over \
   -composite \
   -font "$BOLD_FONT" \
