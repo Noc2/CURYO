@@ -5,6 +5,7 @@ import {
   enqueueAgentCallbackEvent,
   upsertAgentCallbackSubscription,
 } from "~~/lib/agent-callbacks";
+import { buildAgentFastLaneGuidance } from "~~/lib/agent/fastLane";
 import { buildAgentResultPackage } from "~~/lib/agent/resultPackage";
 import {
   agentAskHumansInputSchema,
@@ -355,9 +356,18 @@ async function lookupQuestionOperation(args: JsonObject, agent: McpAgentAuth) {
   return getX402QuestionSubmissionByOperationKey(reservation.operationKey);
 }
 
-function formatQuoteResult(params: Awaited<ReturnType<typeof preflightX402QuestionSubmission>>, tokenAddress: string) {
+function formatQuoteResult(
+  params: Awaited<ReturnType<typeof preflightX402QuestionSubmission>>,
+  payload: X402QuestionPayload,
+  tokenAddress: string,
+) {
   return {
     canSubmit: true,
+    fastLane: buildAgentFastLaneGuidance({
+      bounty: payload.bounty,
+      questionCount: payload.questions.length,
+      roundConfig: payload.roundConfig,
+    }),
     operationKey: params.operation.operationKey,
     payment: {
       amount: params.paymentAmount.toString(),
@@ -378,7 +388,7 @@ async function quoteQuestion(args: JsonObject, agent: McpAgentAuth) {
   const config = dependencies.resolveX402QuestionConfig(managedPayload.chainId, { requireThirdwebSecret: false });
   const quote = await dependencies.preflightX402QuestionSubmission({ config, payload: managedPayload });
   return {
-    ...formatQuoteResult(quote, config.usdcAddress),
+    ...formatQuoteResult(quote, payload, config.usdcAddress),
     clientRequestId: payload.clientRequestId,
   };
 }
@@ -453,6 +463,11 @@ export async function callCuryoMcpTool(params: {
       const managedPayload = toManagedMcpPayload(params.agent, payload);
       const config = dependencies.resolveX402QuestionConfig(managedPayload.chainId, { requireThirdwebSecret: false });
       const quote = await dependencies.preflightX402QuestionSubmission({ config, payload: managedPayload });
+      const fastLane = buildAgentFastLaneGuidance({
+        bounty: payload.bounty,
+        questionCount: payload.questions.length,
+        roundConfig: payload.roundConfig,
+      });
       const maxPaymentAmount = parseMaxPaymentAmount(args.maxPaymentAmount);
       if (quote.paymentAmount > maxPaymentAmount) {
         throw new McpToolError("Quoted payment exceeds maxPaymentAmount.");
@@ -601,6 +616,7 @@ export async function callCuryoMcpTool(params: {
         return {
           ...(normalizeMcpQuestionBody(body) as JsonObject),
           clientRequestId: payload.clientRequestId,
+          fastLane,
           managedBudget,
           pollAfterMs: 5_000,
           publicUrl: getPublicQuestionUrl(typeof body.contentId === "string" ? body.contentId : null),
@@ -655,6 +671,7 @@ export async function callCuryoMcpTool(params: {
       return {
         ...(normalizeMcpQuestionBody(body) as JsonObject),
         clientRequestId: payload.clientRequestId,
+        fastLane,
         managedBudget,
         publicUrl: getPublicQuestionUrl(typeof body.contentId === "string" ? body.contentId : null),
         webhook: webhookInfo,

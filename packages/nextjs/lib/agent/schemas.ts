@@ -210,6 +210,7 @@ export const agentQuoteOutputSchema = {
   properties: {
     canSubmit: { type: "boolean" },
     clientRequestId: { type: "string" },
+    fastLane: { type: "object" },
     operationKey: { type: "string" },
     payment: agentPaymentOutputSchema,
     payloadHash: { type: "string" },
@@ -251,6 +252,7 @@ export const agentAskHumansOutputSchema = {
   properties: {
     ...agentQuestionStatusOutputSchema.properties,
     bounty: { type: "object" },
+    fastLane: { type: "object" },
     managedBudget: { type: ["object", "null"] },
     pollAfterMs: { type: "integer" },
     statusTool: { type: "string" },
