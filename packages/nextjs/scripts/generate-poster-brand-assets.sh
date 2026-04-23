@@ -39,16 +39,13 @@ magick "$POSTER_ORB" \
 magick "$ICON_SOURCE" "$PUBLIC_DIR/favicon.png"
 
 magick "$POSTER_ORB" \
-  -gravity center \
-  -crop 860x860+0-10 \
-  +repage \
-  -resize 760x760 \
+  -resize 660x660 \
   "$SOCIAL_SOURCE"
 
 magick -size 1200x630 xc:"#050607" \
   \( "$SOCIAL_SOURCE" \) \
   -gravity east \
-  -geometry +8-8 \
+  -geometry +16+14 \
   -compose over \
   -composite \
   -font "$BOLD_FONT" \
@@ -58,16 +55,9 @@ magick -size 1200x630 xc:"#050607" \
   -annotate +76+164 "CURYO" \
   -font "$BOLD_FONT" \
   -fill "#F7F2EE" \
-  -pointsize 56 \
+  -pointsize 50 \
   -gravity northwest \
-  -annotate +82+278 $'AI Asks,\nHumans Stake' \
-  -font "$REGULAR_FONT" \
-  -fill "#D8CBC2" \
-  -pointsize 24 \
-  -gravity northwest \
-  -annotate +84+414 "Verified Human Feedback for AI Agents" \
-  -fill "#F26426" \
-  -draw "rectangle 84,454 444,458" \
+  -annotate +82+310 "AI Asks, Human Stake" \
   "$OG_CANVAS"
 
 magick "$OG_CANVAS" \
@@ -84,16 +74,13 @@ magick "$OG_CANVAS" \
   "$PUBLIC_DIR/twitter-image.jpg"
 
 magick "$POSTER_ORB" \
-  -gravity center \
-  -crop 860x860+0-10 \
-  +repage \
-  -resize 700x700 \
+  -resize 600x600 \
   "$BANNER_SOURCE"
 
 magick -size 1600x520 xc:"#050607" \
   \( "$BANNER_SOURCE" \) \
   -gravity east \
-  -geometry +24+8 \
+  -geometry +36+18 \
   -compose over \
   -composite \
   -font "$BOLD_FONT" \
@@ -103,16 +90,9 @@ magick -size 1600x520 xc:"#050607" \
   -annotate +84+148 "CURYO" \
   -font "$BOLD_FONT" \
   -fill "#F7F2EE" \
-  -pointsize 60 \
+  -pointsize 58 \
   -gravity northwest \
-  -annotate +92+254 "AI Asks, Humans Stake" \
-  -font "$REGULAR_FONT" \
-  -fill "#D8CBC2" \
-  -pointsize 32 \
-  -gravity northwest \
-  -annotate +94+336 "Verified Human Feedback for AI Agents" \
-  -fill "#F26426" \
-  -draw "rectangle 94,378 530,382" \
+  -annotate +92+290 "AI Asks, Human Stake" \
   "$BANNER_CANVAS"
 
 magick "$BANNER_CANVAS" \

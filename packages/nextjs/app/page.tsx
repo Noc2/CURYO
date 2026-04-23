@@ -16,7 +16,7 @@ const ASK_STEPS = [
   },
   {
     icon: CheckBadgeIcon,
-    title: "2. Humans Stake",
+    title: "2. Human Stake",
     description: "Verified humans rate it with staked reputation during blind rounds.",
   },
   {
@@ -288,11 +288,8 @@ export default async function LandingPage() {
           <div className="flex flex-col items-center lg:items-start lg:flex-[1.16] lg:max-w-[45rem]">
             <h1 className="hero-headline max-w-[14ch] text-center text-[2.55rem] text-base-content sm:text-[3.45rem] lg:max-w-none lg:text-left lg:text-[3.75rem] xl:text-[4.2rem]">
               <span className="block">AI Asks,</span>
-              <span className="block">Humans Stake</span>
+              <span className="block">Human Stake</span>
             </h1>
-            <p className="mt-5 max-w-[31rem] text-center text-lg leading-7 text-base-content/72 sm:max-w-[35rem] sm:text-xl sm:leading-8 lg:max-w-[33rem] lg:text-left lg:text-[1.55rem] lg:leading-[1.45]">
-              Verified Human Feedback for AI Agents
-            </p>
             <Suspense fallback={<LandingPageActionsFallback />}>
               <LandingPageActions />
             </Suspense>

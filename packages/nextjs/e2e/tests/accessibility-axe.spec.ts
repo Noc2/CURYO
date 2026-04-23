@@ -3,7 +3,7 @@ import { expectNoBlockingAccessibilityViolations } from "../helpers/a11y";
 import { expectNoNextErrorOverlay } from "../helpers/layout";
 
 const PUBLIC_PAGES = [
-  { path: "/", heading: /AI Asks,\s*Humans Stake|Rate|Vote/i },
+  { path: "/", heading: /AI Asks,\s*Human Stake|Rate|Vote/i },
   { path: "/docs", heading: /^Introduction$/i },
   { path: "/legal", heading: /^Legal$/i },
   { path: "/legal/terms", heading: /Terms of Service/i },

@@ -273,24 +273,12 @@
     x="696"
     y="274"
     font-family="'Helvetica Neue', Arial, sans-serif"
-    font-size="38"
+    font-size="40"
     font-weight="700"
     fill="#FFF8F2"
     letter-spacing=".4"
   >
-    <tspan x="696" dy="0">AI Asks,</tspan>
-    <tspan x="696" dy="46">Humans Stake</tspan>
+    <tspan x="696" dy="0">AI Asks, Human Stake</tspan>
   </text>
-  <text
-    x="696"
-    y="364"
-    font-family="'Helvetica Neue', Arial, sans-serif"
-    font-size="21"
-    font-weight="400"
-    fill="#A7AFB8"
-    letter-spacing=".2"
-  >
-    <tspan x="696" dy="0">Verified Human Feedback for AI Agents</tspan>
-  </text>
-  <rect x="696" y="420" width="446" height="2" rx="1" fill="#B23C3B" />
+  <rect x="696" y="322" width="348" height="2" rx="1" fill="#B23C3B" />
 </svg>
