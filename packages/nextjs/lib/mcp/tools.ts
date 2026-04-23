@@ -465,6 +465,7 @@ function latestRoundFromContentResponse(response: Awaited<ReturnType<typeof pond
 }
 
 async function buildQuestionResult(args: JsonObject, agent: McpAgentAuth) {
+  const dependencies = getMcpToolDependencies();
   const directContentId = typeof args.contentId === "string" ? args.contentId.trim() : "";
   const record = directContentId ? null : await lookupQuestionOperation(args, agent);
   const contentId = directContentId || record?.contentId;

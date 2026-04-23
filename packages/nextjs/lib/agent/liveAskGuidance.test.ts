@@ -20,7 +20,7 @@ function content(overrides: Partial<PonderContentItem> = {}): PonderContentItem 
       effectiveEvidence: "0",
       epochDuration: 1200,
       estimatedSettlementTime: "1700002400",
-      lowSince: null,
+      lowSince: undefined,
       maxDuration: 7200,
       maxVoters: 50,
       minVoters: 3,
