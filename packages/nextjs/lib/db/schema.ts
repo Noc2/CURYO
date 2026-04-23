@@ -392,3 +392,62 @@ export const mcpAgentDailyBudgetUsage = pgTable(
 
 export type McpAgentDailyBudgetUsage = typeof mcpAgentDailyBudgetUsage.$inferSelect;
 export type NewMcpAgentDailyBudgetUsage = typeof mcpAgentDailyBudgetUsage.$inferInsert;
+
+export const agentCallbackSubscriptions = pgTable(
+  "agent_callback_subscriptions",
+  {
+    id: text("id").primaryKey(),
+    agentId: text("agent_id").notNull(),
+    callbackUrl: text("callback_url").notNull(),
+    secret: text("secret").notNull(),
+    eventTypes: text("event_types").notNull(),
+    status: text("status").notNull(),
+    createdAt: timestamp("created_at", { mode: "date", withTimezone: true }).notNull(),
+    updatedAt: timestamp("updated_at", { mode: "date", withTimezone: true }).notNull(),
+  },
+  table => ({
+    agentUrlUnique: uniqueIndex("agent_callback_subscriptions_agent_url_unique").on(table.agentId, table.callbackUrl),
+    agentStatusIdx: index("agent_callback_subscriptions_agent_status_idx").on(table.agentId, table.status),
+  }),
+);
+
+export type AgentCallbackSubscription = typeof agentCallbackSubscriptions.$inferSelect;
+export type NewAgentCallbackSubscription = typeof agentCallbackSubscriptions.$inferInsert;
+
+export const agentCallbackEvents = pgTable(
+  "agent_callback_events",
+  {
+    id: serial("id").primaryKey(),
+    eventKey: text("event_key").notNull(),
+    eventId: text("event_id").notNull(),
+    subscriptionId: text("subscription_id").notNull(),
+    agentId: text("agent_id").notNull(),
+    eventType: text("event_type").notNull(),
+    callbackUrl: text("callback_url").notNull(),
+    secret: text("secret").notNull(),
+    payload: text("payload").notNull(),
+    status: text("status").notNull().default("pending"),
+    attemptCount: integer("attempt_count").notNull().default(0),
+    nextAttemptAt: timestamp("next_attempt_at", { mode: "date", withTimezone: true }).notNull(),
+    leaseOwner: text("lease_owner"),
+    leaseExpiresAt: timestamp("lease_expires_at", { mode: "date", withTimezone: true }),
+    lastAttemptAt: timestamp("last_attempt_at", { mode: "date", withTimezone: true }),
+    deliveredAt: timestamp("delivered_at", { mode: "date", withTimezone: true }),
+    lastError: text("last_error"),
+    createdAt: timestamp("created_at", { mode: "date", withTimezone: true }).notNull(),
+    updatedAt: timestamp("updated_at", { mode: "date", withTimezone: true }).notNull(),
+  },
+  table => ({
+    eventKeyUnique: uniqueIndex("agent_callback_events_event_key_unique").on(table.eventKey),
+    subscriptionEventUnique: uniqueIndex("agent_callback_events_subscription_event_unique").on(
+      table.subscriptionId,
+      table.eventId,
+    ),
+    statusNextAttemptIdx: index("agent_callback_events_status_next_attempt_idx").on(table.status, table.nextAttemptAt),
+    leaseExpiresIdx: index("agent_callback_events_lease_expires_idx").on(table.leaseExpiresAt),
+    agentEventIdx: index("agent_callback_events_agent_event_idx").on(table.agentId, table.eventType),
+  }),
+);
+
+export type AgentCallbackEvent = typeof agentCallbackEvents.$inferSelect;
+export type NewAgentCallbackEvent = typeof agentCallbackEvents.$inferInsert;
