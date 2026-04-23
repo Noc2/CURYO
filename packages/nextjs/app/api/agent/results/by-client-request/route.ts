@@ -9,13 +9,18 @@ export async function GET(request: NextRequest) {
   const searchParams = request.nextUrl.searchParams;
   const chainId = Number.parseInt(searchParams.get("chainId") ?? "", 10);
   const clientRequestId = searchParams.get("clientRequestId")?.trim() ?? "";
+  const contentId = searchParams.get("contentId")?.trim() ?? "";
 
   return handleAgentRoute({
     allowOnStoreUnavailable: true,
     handler: ({ agent }) =>
       callCuryoMcpTool({
         agent,
-        arguments: { chainId, clientRequestId },
+        arguments: {
+          chainId,
+          clientRequestId,
+          ...(contentId ? { contentId } : {}),
+        },
         name: "curyo_get_result",
       }),
     rateLimit: AGENT_READ_RATE_LIMIT,

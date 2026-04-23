@@ -401,6 +401,14 @@ async function lookupQuestionOperation(args: JsonObject, agent: McpAgentAuth) {
   return getX402QuestionSubmissionByOperationKey(operationKey);
 }
 
+function hasOperationLookupArgs(args: JsonObject) {
+  if (typeof args.operationKey === "string" && args.operationKey.trim().length > 0) return true;
+  const hasChainId = args.chainId !== undefined && args.chainId !== null && String(args.chainId).trim().length > 0;
+  const hasClientRequestId =
+    typeof args.clientRequestId === "string" && args.clientRequestId.trim().length > 0;
+  return hasChainId || hasClientRequestId;
+}
+
 async function resolveManagedOperationKey(args: JsonObject, agent: McpAgentAuth): Promise<`0x${string}` | null> {
   const operationKey = typeof args.operationKey === "string" ? args.operationKey.trim() : "";
   if (operationKey) {
@@ -483,7 +491,7 @@ function latestRoundFromContentResponse(response: Awaited<ReturnType<typeof pond
 async function buildQuestionResult(args: JsonObject, agent: McpAgentAuth) {
   const dependencies = getMcpToolDependencies();
   const directContentId = typeof args.contentId === "string" ? args.contentId.trim() : "";
-  const record = directContentId ? null : await lookupQuestionOperation(args, agent);
+  const record = hasOperationLookupArgs(args) ? await lookupQuestionOperation(args, agent) : null;
   const operation = normalizeMcpQuestionBody(x402QuestionSubmissionRecordBody(record));
   const operationContentIds =
     operation && typeof operation === "object" && Array.isArray((operation as JsonObject).contentIds)
@@ -491,6 +499,9 @@ async function buildQuestionResult(args: JsonObject, agent: McpAgentAuth) {
           (contentId): contentId is string => typeof contentId === "string" && contentId.length > 0,
         )
       : [];
+  if (directContentId && operationContentIds.length > 0 && !operationContentIds.includes(directContentId)) {
+    throw new McpToolError("contentId does not belong to this ask.", 404);
+  }
   if (!directContentId && operationContentIds.length > 1) {
     throw new McpToolError(
       "This ask produced multiple contentIds. Provide contentId to fetch a specific result.",

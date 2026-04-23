@@ -17,6 +17,7 @@ type AgentAsksOperationRouteModule = typeof import("./asks/[operationKey]/route"
 type AgentAsksRouteModule = typeof import("./asks/route");
 type AgentQuoteRouteModule = typeof import("./quote/route");
 type AgentResultsByClientRouteModule = typeof import("./results/by-client-request/route");
+type AgentResultsOperationRouteModule = typeof import("./results/[operationKey]/route");
 type AgentTemplatesRouteModule = typeof import("./templates/route");
 type CallbackDeliveryModule = typeof import("~~/lib/agent-callbacks/delivery");
 type CallbackEventsModule = typeof import("~~/lib/agent-callbacks/events");
@@ -45,6 +46,7 @@ let mcpBudgetModule: McpBudgetModule;
 let mcpToolsModule: McpToolsModule;
 let quoteRoute: AgentQuoteRouteModule;
 let resultsByClientRoute: AgentResultsByClientRouteModule;
+let resultsOperationRoute: AgentResultsOperationRouteModule;
 let templatesRoute: AgentTemplatesRouteModule;
 
 function restoreEnv(name: keyof NodeJS.ProcessEnv, value: string | undefined) {
@@ -346,6 +348,7 @@ before(async () => {
   callbackRegistryModule = await import("~~/lib/agent-callbacks/registry");
   quoteRoute = await import("./quote/route");
   resultsByClientRoute = await import("./results/by-client-request/route");
+  resultsOperationRoute = await import("./results/[operationKey]/route");
   templatesRoute = await import("./templates/route");
 });
 
@@ -861,6 +864,77 @@ test("agent results route returns the pending result package before settlement",
     code: "still_settling",
     recoverWith: "curyo_get_question_status",
   });
+});
+
+test("agent results routes accept contentId for bundle lookups", async () => {
+  await seedManagedAskAudit({ clientRequestId: "bundle-result-http", contentId: "42" });
+  await dbModule.dbClient.execute({
+    args: [JSON.stringify(["42", "99"]), "bundle-result-http"],
+    sql: `
+      UPDATE x402_question_submissions
+      SET content_ids = ?
+      WHERE client_request_id = ?
+    `,
+  });
+
+  mcpToolsModule.__setMcpToolTestOverridesForTests({
+    getContentById: async contentId =>
+      ({
+        audienceContext: null,
+        content: {
+          categoryId: "5",
+          conservativeRatingBps: 5000,
+          contentHash: `0x${"1".repeat(64)}`,
+          createdAt: "1",
+          description: "Would this make you want to learn more?",
+          id: contentId,
+          lastActivityAt: "2",
+          openRound: null,
+          questionMetadataHash: `0x${"2".repeat(64)}`,
+          rating: 50,
+          resultSpecHash: null,
+          rewardPoolSummary: null,
+          status: 0,
+          submitter: `0x${"3".repeat(40)}`,
+          tags: "agent,pitch",
+          title: "Pitch interest",
+          totalRounds: 1,
+          totalVotes: 1,
+          url: "https://example.com/pitch",
+        },
+        ratings: [],
+        rounds: [],
+      }) as never,
+  });
+
+  const byClientResponse = await resultsByClientRoute.GET(
+    makeGet(
+      "https://curyo.xyz/api/agent/results/by-client-request?chainId=42220&clientRequestId=bundle-result-http&contentId=99",
+    ),
+  );
+  const byClientBody = (await byClientResponse.json()) as {
+    operation: {
+      contentIds: string[];
+    } | null;
+    publicUrl: string | null;
+  };
+
+  assert.equal(byClientResponse.status, 200);
+  assert.equal(byClientBody.publicUrl, "http://localhost:3000/rate?content=99");
+  assert.deepEqual(byClientBody.operation?.contentIds, ["42", "99"]);
+
+  const byOperationResponse = await resultsOperationRoute.GET(
+    makeGet(`https://curyo.xyz/api/agent/results/${OPERATION_KEY}?contentId=99`),
+    {
+      params: Promise.resolve({ operationKey: OPERATION_KEY }),
+    },
+  );
+  const byOperationBody = (await byOperationResponse.json()) as {
+    publicUrl: string | null;
+  };
+
+  assert.equal(byOperationResponse.status, 200);
+  assert.equal(byOperationBody.publicUrl, "http://localhost:3000/rate?content=99");
 });
 
 test("agent templates route returns supported result templates", async () => {
