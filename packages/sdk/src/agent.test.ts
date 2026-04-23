@@ -6,6 +6,8 @@ import {
   createCuryoAgentClient,
   parseAgentResult,
   type AskHumansRequest,
+  type ListResultTemplatesResponse,
+  type QuestionStatusResponse,
 } from "./agent";
 
 const API_BASE_URL = "https://curyo.example";
@@ -217,21 +219,54 @@ test("authenticated status, result, and templates use direct agent HTTP endpoint
       requestedUrls.push(String(input));
       if (String(input).includes("/templates")) {
         return jsonResponse({
-          templates: [{ id: "generic_rating", version: 1 }],
+          templates: [
+            {
+              bundleStrategy: "independent",
+              id: "generic_rating",
+              submissionPattern: "single_question",
+              templateInputsSchema: { type: "object" },
+              version: 1,
+            },
+          ],
         });
       }
       if (String(input).includes("/results/")) {
         return jsonResponse({ answer: "pending", ready: false });
       }
-      return jsonResponse({ ready: false, status: "submitted" });
+      return jsonResponse({
+        callbackDeliveries: [
+          {
+            attemptCount: 1,
+            callbackUrl: "https://agent.example/curyo",
+            eventId: "event-1",
+            eventType: "question.submitted",
+            nextAttemptAt: "2026-04-23T12:00:03.000Z",
+            status: "retrying",
+            subscriptionId: "sub-1",
+          },
+        ],
+        ready: false,
+        resultTool: "curyo_get_result",
+        status: "submitted",
+        terminal: false,
+      });
     },
     mcpAccessToken: "agent-token",
   });
 
-  await agent.getQuestionStatus({ operationKey: `0x${"77".repeat(32)}` });
+  const status = await agent.getQuestionStatus({
+    operationKey: `0x${"77".repeat(32)}`,
+  });
   await agent.getResult({ chainId: 42220, clientRequestId: "ask-http" });
   await agent.getResult({ contentId: "123" });
-  await agent.listResultTemplates();
+  const templates = await agent.listResultTemplates();
+
+  const callbackStatus:
+    | NonNullable<QuestionStatusResponse["callbackDeliveries"]>[number]["status"]
+    | undefined = status.callbackDeliveries?.[0]?.status;
+  const templateMode:
+    | NonNullable<ListResultTemplatesResponse["templates"]>[number]["submissionPattern"]
+    | undefined = templates.templates[0]?.submissionPattern;
 
   assert.equal(
     requestedUrls[0],
@@ -246,6 +281,11 @@ test("authenticated status, result, and templates use direct agent HTTP endpoint
     "https://curyo.example/api/agent/results/by-content/123",
   );
   assert.equal(requestedUrls[3], "https://curyo.example/api/agent/templates");
+  assert.equal(callbackStatus, "retrying");
+  assert.equal(status.resultTool, "curyo_get_result");
+  assert.equal(status.terminal, false);
+  assert.equal(templateMode, "single_question");
+  assert.equal(templates.templates[0]?.bundleStrategy, "independent");
 });
 
 test("parseAgentResult unwraps MCP tool content and preserves top-level fields", () => {

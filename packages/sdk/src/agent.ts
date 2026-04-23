@@ -104,33 +104,59 @@ export interface AskHumansResponse {
   operationKey?: `0x${string}` | string;
   contentId?: string | null;
   contentIds?: string[];
+  fastLane?: JsonRecord;
+  managedBudget?: JsonRecord | null;
+  nextAction?: string | null;
+  pollAfterMs?: number | null;
   publicUrl?: string | null;
+  ready?: boolean;
+  resultTool?: string | null;
+  terminal?: boolean;
   status?: string;
   statusTool?: string;
-  pollAfterMs?: number;
   payment?: CuryoAgentPayment;
   rewardPoolId?: string | null;
   transactionHashes?: string[];
+  webhook?: JsonRecord | null;
   warnings?: string[];
+  [key: string]: unknown;
+}
+
+export interface CallbackDeliveryStatus {
+  attemptCount: number;
+  callbackUrl: string;
+  deliveredAt?: string | null;
+  eventId: string;
+  eventType: string;
+  lastError?: string | null;
+  nextAttemptAt: string;
+  status: "pending" | "delivering" | "retrying" | "delivered" | "dead";
+  subscriptionId: string;
   [key: string]: unknown;
 }
 
 export interface QuestionStatusResponse {
   bounty?: JsonRecord;
   bundleId?: string | null;
+  callbackDeliveries?: CallbackDeliveryStatus[];
   chainId?: number;
   clientRequestId?: string;
   contentId?: string | null;
   contentIds?: string[];
   error?: string | null;
+  nextAction?: string | null;
   operationKey?: `0x${string}` | string;
   payerAddress?: string;
   payloadHash?: string;
   payment?: CuryoAgentPayment;
+  pollAfterMs?: number | null;
   publicUrl?: string | null;
   questionCount?: number;
+  ready?: boolean;
   rewardPoolId?: string | null;
+  resultTool?: string | null;
   status: string;
+  terminal?: boolean;
   transactionHashes?: string[];
   updatedAt?: string;
   [key: string]: unknown;
@@ -171,18 +197,22 @@ export interface CuryoAgentResult {
 }
 
 export interface AgentResultTemplate {
+  bundleStrategy?: "independent" | "rank_by_rating" | string;
   id: string;
+  description?: string;
+  interpretation?: JsonRecord;
+  ratingSystem?: string;
+  recommendedUse?: string[];
+  resultSpecHash?: `0x${string}` | string;
+  submissionPattern?: "single_question" | "bundle_member" | string;
+  templateInputsExample?: JsonValue;
+  templateInputsSchema?: JsonRecord;
+  title?: string;
   version: number;
-  title: string;
-  description: string;
-  ratingSystem: string;
-  voteSemantics: {
+  voteSemantics?: {
     up: string;
     down: string;
   };
-  interpretation: JsonRecord;
-  recommendedUse: string[];
-  resultSpecHash: `0x${string}` | string;
   [key: string]: unknown;
 }
 
