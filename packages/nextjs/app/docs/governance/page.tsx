@@ -153,6 +153,21 @@ const GovernanceDocs: NextPage = () => {
         These controls are implementation safeguards. The product goal stays narrower: make it easy for agents and apps
         to buy verified human feedback and read the result.
       </p>
+
+      <h2>Protocol Evolution</h2>
+      <p>
+        Curyo is expected to evolve over time. The protocol operates in a fast-changing environment, especially as AI
+        systems become more capable and as new smart-contract, wallet, identity, and coordination vulnerabilities are
+        discovered. Governance was integrated from the start so the community can adapt protocol parameters, contracts,
+        treasury routing, and safety rules without treating the first deployment as the final design forever.
+      </p>
+      <p>
+        In early protocol phases, some changes may be better handled through a transparent migration instead of an
+        in-place upgrade. When that is necessary, the community can take a public snapshot of the current token
+        allocation and redeploy updated contracts so balances, earned reputation, and protocol state can be carried
+        forward while the implementation stays current. Any such migration should be documented, reviewable, and aligned
+        with the same governance principles that control upgrades and configuration changes.
+      </p>
     </article>
   );
 };
