@@ -66,7 +66,25 @@ function feedback(overrides: Partial<ContentFeedbackItem> = {}): ContentFeedback
 
 test("buildAgentResultPackage turns a settled rating into an agent decision", () => {
   const result = buildAgentResultPackage({
-    audienceContext: null,
+    audienceContext: {
+      fields: {
+        ageGroup: [],
+        expertise: [{ down: 0, total: 2, up: 2, value: "ai" }],
+        languages: [{ down: 0, total: 2, up: 2, value: "en" }],
+        nationalities: [],
+        residenceCountry: [{ down: 0, total: 2, up: 2, value: "DE" }],
+        roles: [
+          { down: 0, total: 1, up: 1, value: "founder" },
+          { down: 0, total: 2, up: 2, value: "engineer" },
+        ],
+      },
+      note: "Audience context is public, self-reported, unverified, and not used for vote eligibility.",
+      restrictedEligibility: false,
+      selfReportedProfileCount: 2,
+      source: "self_reported_public_profiles",
+      totalRevealedVotes: 8,
+      verified: false,
+    },
     content: content(),
     feedback: [feedback()],
     latestRound: {
@@ -87,6 +105,8 @@ test("buildAgentResultPackage turns a settled rating into an agent decision", ()
 
   assert.equal(result.ready, true);
   assert.equal(result.answer, "proceed");
+  assert.equal(result.cohortSummary?.coverageShare, 0.25);
+  assert.equal(result.cohortSummary?.topSignals.roles[0]?.value, "engineer");
   assert.equal(result.recommendedNextAction, "proceed_after_addressing_objections");
   assert.equal(result.distribution.up.share, 0.7);
   assert.equal(result.majorObjections[0]?.type, "concern");

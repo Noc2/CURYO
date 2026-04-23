@@ -1,3 +1,4 @@
+import { buildAgentCohortSummary, type AgentCohortSummary } from "./cohortSummary";
 import { buildAgentLiveAskGuidance, type AgentLiveAskGuidance } from "./liveAskGuidance";
 import { ROUND_STATE, ROUND_STATE_LABEL } from "@curyo/contracts/protocol";
 import {
@@ -52,6 +53,7 @@ export type AgentResultPackage = {
     state: number | null;
     stateLabel: string | null;
   };
+  cohortSummary: AgentCohortSummary | null;
   voteCount: number;
   stakeMass: {
     total: string;
@@ -287,6 +289,7 @@ export function buildAgentResultPackage(params: {
   const majorObjections = buildMajorObjections(params.feedback, downShare);
   const feedbackQuality = buildFeedbackQuality(params.feedback, majorObjections);
   const action = recommendedNextAction(answer, confidence.level, majorObjections.length);
+  const cohortSummary = buildAgentCohortSummary(params.audienceContext);
   const feedbackTypes = summarizeFeedbackTypes(params.feedback);
   const stateLabel = roundState === null ? null : ROUND_STATE_LABEL[roundState as keyof typeof ROUND_STATE_LABEL];
   const ratingText = ratingBps === null ? "no rating yet" : `${Math.round(ratingBps / 100)}/100`;
@@ -313,6 +316,7 @@ export function buildAgentResultPackage(params: {
 
   return {
     answer,
+    cohortSummary,
     confidence,
     distribution: {
       conservativeRatingBps,

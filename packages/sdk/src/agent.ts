@@ -215,6 +215,7 @@ export interface CuryoAgentResult {
     score?: number;
     [key: string]: unknown;
   };
+  cohortSummary?: JsonRecord | null;
   distribution?: JsonRecord;
   voteCount?: number;
   stakeMass?: JsonRecord;

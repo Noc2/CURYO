@@ -317,6 +317,7 @@ export const resultPackageOutputSchema = {
   additionalProperties: true,
   properties: {
     answer: { type: "string" },
+    cohortSummary: { type: ["object", "null"] },
     confidence: {
       additionalProperties: false,
       properties: {
@@ -354,6 +355,7 @@ export const resultPackageOutputSchema = {
   required: [
     "ready",
     "answer",
+    "cohortSummary",
     "confidence",
     "distribution",
     "voteCount",
