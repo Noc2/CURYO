@@ -809,7 +809,6 @@ export function ContentSubmissionSection() {
         ? defaultFrontendFeeBps
         : DEFAULT_REWARD_POOL_FRONTEND_FEE_BPS;
   const estimatedBountyAmount = selectedRewardAmount ?? minimumBountyAmount;
-  const estimatedQuestionShare = divideRewardAmount(estimatedBountyAmount, BigInt(questionCount));
   const estimatedMinimumVoterGrossReward = divideRewardAmount(estimatedBountyAmount, selectedRequiredVoters);
   const estimatedMinimumVoterReward = applyEstimatedFrontendFee(estimatedMinimumVoterGrossReward, frontendFeeBps);
   const estimatedVoterCap = BigInt(Math.max(0, parsedRoundMaxVoters));
@@ -1559,6 +1558,13 @@ export function ContentSubmissionSection() {
     "Governance sets the allowed range. Urgent bounties can use shorter rounds; broader questions can wait for more voters.";
   const bountyExpiryTooltipText =
     "Bounty and paid feedback are active only inside this window. The question remains visible after the bounty closes.";
+  const bountyEstimateTooltipText =
+    selectedRewardAmount === null
+      ? `Using the current minimum until the bounty amount is valid. ${formatFrontendFeePercent(frontendFeeBps)} may be reserved for an eligible frontend operator.`
+      : `${formatFrontendFeePercent(frontendFeeBps)} may be reserved for an eligible frontend operator.`;
+  const perPaidCompleterTooltipText = `Estimated claim after answering all ${questionCount} question${questionCount === 1 ? "" : "s"}.`;
+  const voterCapEstimateTooltipText =
+    "Estimated per completer if every question fills the selected voter cap.";
 
   const bountyDetailsCard = (
     <div className="space-y-5">
@@ -1809,60 +1815,29 @@ export function ContentSubmissionSection() {
     <div className="space-y-4">
       <div className="surface-card rounded-2xl p-4 space-y-4">
         <div>
-          <p className="text-base font-medium uppercase tracking-wider text-base-content/40">Bounty estimate</p>
-          <p className="mt-2 text-base text-base-content/65">
-            {selectedRewardAmount === null
-              ? "Using the current minimum until the bounty amount is valid."
-              : `${formatFrontendFeePercent(frontendFeeBps)} may be reserved for an eligible frontend operator.`}
+          <p className="flex items-center gap-1.5 text-base font-medium uppercase tracking-wider text-base-content/40">
+            Bounty estimate
+            <InfoTooltip text={bountyEstimateTooltipText} />
           </p>
-        </div>
-
-        <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-1 2xl:grid-cols-2">
-          <div className="rounded-lg bg-base-100/70 p-3">
-            <p className="text-sm font-medium uppercase text-base-content/45">Total bounty</p>
-            <p className="mt-1 text-lg font-semibold text-base-content">
-              {formatSubmissionRewardAmount(estimatedBountyAmount, rewardAsset)}
-            </p>
-          </div>
-          <div className="rounded-lg bg-base-100/70 p-3">
-            <p className="text-sm font-medium uppercase text-base-content/45">Per question</p>
-            <p className="mt-1 text-lg font-semibold text-base-content">
-              {formatSubmissionRewardAmount(estimatedQuestionShare, rewardAsset)}
-            </p>
-          </div>
-          <div className="rounded-lg bg-base-100/70 p-3">
-            <p className="text-sm font-medium uppercase text-base-content/45">Paid completers</p>
-            <p className="mt-1 text-lg font-semibold text-base-content">
-              {selectedRequiredVoters.toString()} wallet{selectedRequiredVoters === 1n ? "" : "s"}
-            </p>
-          </div>
-          <div className="rounded-lg bg-base-100/70 p-3">
-            <p className="text-sm font-medium uppercase text-base-content/45">Questions</p>
-            <p className="mt-1 text-lg font-semibold text-base-content">{questionCount}</p>
-          </div>
-          <div className="rounded-lg bg-base-100/70 p-3">
-            <p className="text-sm font-medium uppercase text-base-content/45">Bounty window</p>
-            <p className="mt-1 text-lg font-semibold text-base-content">{bountyWindowLabel}</p>
-          </div>
         </div>
 
         <div className="rounded-lg bg-primary/10 p-3">
-          <p className="text-sm font-medium uppercase text-primary/80">Per paid completer</p>
+          <p className="flex items-center gap-1.5 text-sm font-medium uppercase text-primary/80">
+            Per paid completer
+            <InfoTooltip text={perPaidCompleterTooltipText} />
+          </p>
           <p className="mt-1 text-xl font-semibold text-base-content">
             {formatSubmissionRewardAmount(estimatedMinimumVoterReward, rewardAsset)}
-          </p>
-          <p className="mt-1 text-sm text-base-content/60">
-            Estimated claim after answering all {questionCount} question{questionCount === 1 ? "" : "s"}.
           </p>
         </div>
 
         <div className="rounded-lg bg-base-100/70 p-3">
-          <p className="text-sm font-medium uppercase text-base-content/45">If every question reaches cap</p>
+          <p className="flex items-center gap-1.5 text-sm font-medium uppercase text-base-content/45">
+            If every question reaches cap
+            <InfoTooltip text={voterCapEstimateTooltipText} />
+          </p>
           <p className="mt-1 text-lg font-semibold text-base-content">
             {formatSubmissionRewardAmount(estimatedVoterCapReward, rewardAsset)}
-          </p>
-          <p className="mt-1 text-sm text-base-content/60">
-            Estimated per completer if every question fills the selected voter cap.
           </p>
         </div>
       </div>
