@@ -1,6 +1,6 @@
 "use client";
 
-import { type MouseEventHandler, type ReactNode, createContext, useContext } from "react";
+import React, { type MouseEventHandler, type ReactNode, createContext, useContext } from "react";
 import { sanitizeExternalUrl } from "~~/utils/externalUrl";
 
 const ExternalLinkBehaviorContext = createContext({ disableNavigation: false });

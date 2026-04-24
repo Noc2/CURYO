@@ -396,6 +396,7 @@ function ContentMediaCarousel({
   const activeMedia = mediaItems[activeIndex] ?? mediaItems[0] ?? null;
   const hasCarouselControls = mediaItems.length > 1;
   const contextUrl = item.url.trim();
+  const embedUrl = activeMedia?.url.trim() || contextUrl;
   const imageLinkUrl = activeMedia && getMediaPlatformType(activeMedia) === "image" ? contextUrl : null;
 
   useEffect(() => {
@@ -417,7 +418,7 @@ function ContentMediaCarousel({
   return (
     <>
       <ContentEmbed
-        url={activeMedia?.url ?? ""}
+        url={embedUrl}
         thumbnailUrl={item.thumbnailUrl}
         title={item.title}
         description={item.description}
