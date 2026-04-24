@@ -632,7 +632,7 @@ test.describe("Mobile viewport (phone)", () => {
     connectedPage: page,
   }) => {
     await page.goto("/?landing=1");
-    await expect(page.getByText(/Human Reputation\s*at Stake/i)).toBeVisible({ timeout: 10_000 });
+    await expect(page.getByText(/AI asks,\s*Humans Earn/i)).toBeVisible({ timeout: 10_000 });
 
     const mobileHeader = page.locator('[data-mobile-header="true"]');
     await expect(mobileHeader).toHaveAttribute("data-visible", "true");

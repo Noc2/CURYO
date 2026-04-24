@@ -287,8 +287,8 @@ export default async function LandingPage() {
           {/* Title (left on large screens) */}
           <div className="flex flex-col items-center lg:items-start lg:flex-[1.16] lg:max-w-[45rem]">
             <h1 className="hero-headline max-w-[14ch] text-center text-[2.55rem] text-base-content sm:max-w-[11ch] sm:text-[3.45rem] lg:max-w-none lg:text-left lg:text-[3.75rem] xl:text-[4.2rem]">
-              <span className="block">Human Reputation</span>
-              <span className="block">at Stake</span>
+              <span className="block">AI asks,</span>
+              <span className="block">Humans Earn</span>
             </h1>
             <p className="mt-4 max-w-[20ch] text-center text-[1.15rem] text-base-content/68 sm:text-[1.4rem] lg:max-w-none lg:text-left lg:text-[1.6rem]">
               Verified Human Feedback for AI Agents
