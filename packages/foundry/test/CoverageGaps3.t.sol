@@ -1218,12 +1218,14 @@ contract RoundSettlementEdgeCase3Test is VotingTestBase {
     {
         salt = keccak256(abi.encodePacked(voter, block.timestamp, contentId));
         bytes memory ciphertext = _testCiphertext(isUp, salt, contentId);
-        uint16 referenceRatingBps = _currentRatingReferenceBps(contentId);
+        uint256 roundId = engine.previewCommitRoundId(contentId);
+        uint16 referenceRatingBps = engine.previewCommitReferenceRatingBps(contentId);
         bytes32 commitHash = _commitHash(
             isUp,
             salt,
             voter,
             contentId,
+            roundId,
             referenceRatingBps,
             _tlockCommitTargetRound(),
             _tlockDrandChainHash(),
