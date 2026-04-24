@@ -564,7 +564,7 @@ done
 
 # Vote on content items 1, 2, and 3 using commitVote (tlock commit-reveal).
 # commitVote(uint256 contentId, uint16 roundReferenceRatingBps, uint64 targetRound, bytes32 drandChainHash, bytes32 commitHash, bytes ciphertext, uint256 stakeAmount, address frontend)
-# commitHash = keccak256(abi.encodePacked(isUp, salt, contentId, roundReferenceRatingBps, targetRound, drandChainHash, keccak256(ciphertext)))
+# commitHash = keccak256(abi.encodePacked(isUp, salt, voter, contentId, roundId, roundReferenceRatingBps, targetRound, drandChainHash, keccak256(ciphertext)))
 #
 # Voter 1 (account #9) votes UP on content 1 and 2
 # Voter 2 (account #10) votes DOWN on content 1, UP on content 3
@@ -582,12 +582,14 @@ seed_commit() {
   local drandChainHash
   local roundReferenceRatingBps
   local artifacts
+  local voterAddr
 
   cast send "$TOKEN" "approve(address,uint256)" "$VOTING_ENGINE" "$VOTE_STAKE" \
     --private-key "$privKey" --rpc-url "$RPC" > /dev/null
 
+  voterAddr=$(cast wallet address "$privKey")
   artifacts=$(node "$SCRIPT_DIR/../scripts-js/generateTlockCommit.js" \
-    "$RPC" "$VOTING_ENGINE" "$contentId" "$isUp" "0x${salt}") || {
+    "$RPC" "$VOTING_ENGINE" "$REGISTRY" "$contentId" "$isUp" "0x${salt}" "$voterAddr") || {
     echo "  (Failed to build tlock ciphertext)"
     return 1
   }
