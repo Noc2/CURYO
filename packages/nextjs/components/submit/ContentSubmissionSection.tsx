@@ -1791,7 +1791,7 @@ export function ContentSubmissionSection() {
               step={1}
               value={questionCount}
               onChange={event => handleQuestionCountChange(event.target.value)}
-              className="h-10 w-14 rounded-lg border border-base-content/25 bg-base-100 px-2 text-center text-2xl font-semibold leading-none text-base-content shadow-inner outline-none transition-colors [appearance:textfield] hover:border-base-content/40 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/25 [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
+              className="h-10 w-14 rounded-lg border border-base-content/25 bg-base-100 px-2 text-center text-2xl font-semibold leading-none text-base-content shadow-inner outline-none transition-colors hover:border-base-content/40 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/25"
               aria-label="Number of questions"
             />
           </label>
