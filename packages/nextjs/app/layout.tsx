@@ -3,7 +3,6 @@ import Script from "next/script";
 import "@scaffold-ui/components/styles.css";
 import { ScaffoldEthAppWithProviders } from "~~/components/ScaffoldEthAppWithProviders";
 import "~~/styles/globals.css";
-import "~~/styles/site-background.css";
 import { getMetadata } from "~~/utils/scaffold-eth/getMetadata";
 
 export const metadata = getMetadata({
