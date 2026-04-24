@@ -198,13 +198,17 @@ contract FrontendRegistry is IFrontendRegistry, Initializable, AccessControlUpgr
         delete frontendExitAvailableAt[msg.sender];
         _removeRegisteredFrontend(msg.sender);
 
-        uint256 total = refund + pendingFees;
+        bool activeOperatorVoterId = _hasActiveOperatorVoterId(msg.sender);
+        uint256 payoutFees = activeOperatorVoterId ? pendingFees : 0;
+        uint256 total = refund + payoutFees;
         if (total > 0) {
             crepToken.safeTransfer(msg.sender, total);
         }
 
-        if (pendingFees > 0) {
-            emit FeesClaimed(msg.sender, pendingFees);
+        if (payoutFees > 0) {
+            emit FeesClaimed(msg.sender, payoutFees);
+        } else if (pendingFees > 0) {
+            _routeFeesToConsensusReserve(msg.sender, pendingFees);
         }
         emit FrontendDeregistered(msg.sender);
     }
@@ -216,6 +220,7 @@ contract FrontendRegistry is IFrontendRegistry, Initializable, AccessControlUpgr
         require(!f.slashed, "Frontend is slashed");
         if (frontendExitAvailableAt[msg.sender] != 0) revert FrontendExitPending();
         require(uint256(f.stakedAmount) >= STAKE_AMOUNT, "Frontend is underbonded");
+        require(_hasActiveOperatorVoterId(msg.sender), "Voter ID required");
 
         uint256 crepAmount = uint256(f.crepFees);
 
@@ -239,6 +244,7 @@ contract FrontendRegistry is IFrontendRegistry, Initializable, AccessControlUpgr
         require(f.operator != address(0), "Frontend not registered");
         require(!f.slashed, "Frontend is slashed");
         require(uint256(f.stakedAmount) >= STAKE_AMOUNT, "Frontend is underbonded");
+        require(_hasActiveOperatorVoterId(frontend), "Voter ID required");
         f.crepFees = (uint256(f.crepFees) + crepAmount).toUint128();
         emit FeesCredited(frontend, crepAmount);
     }
@@ -381,6 +387,18 @@ contract FrontendRegistry is IFrontendRegistry, Initializable, AccessControlUpgr
 
     function _isEligible(address frontend, Frontend storage f) internal view returns (bool) {
         return f.operator != address(0) && !f.slashed && uint256(f.stakedAmount) >= STAKE_AMOUNT
-            && frontendExitAvailableAt[frontend] == 0;
+            && frontendExitAvailableAt[frontend] == 0 && _hasActiveOperatorVoterId(frontend);
+    }
+
+    function _hasActiveOperatorVoterId(address frontend) internal view returns (bool) {
+        if (address(voterIdNFT) == address(0)) return false;
+        return voterIdNFT.hasVoterId(frontend) && voterIdNFT.resolveHolder(frontend) == frontend;
+    }
+
+    function _routeFeesToConsensusReserve(address frontend, uint256 amount) internal {
+        require(address(votingEngine) != address(0), "VotingEngine not set");
+        crepToken.forceApprove(address(votingEngine), amount);
+        votingEngine.addToConsensusReserve(amount);
+        emit FeesConfiscated(frontend, amount);
     }
 }

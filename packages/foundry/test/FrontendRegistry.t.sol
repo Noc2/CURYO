@@ -381,6 +381,19 @@ contract FrontendRegistryTest is Test {
         assertFalse(registry.isEligible(frontend1));
     }
 
+    function test_RevokedVoterIdFrontendIsNotEligible() public {
+        vm.startPrank(frontend1);
+        crepToken.approve(address(registry), STAKE);
+        registry.register();
+        vm.stopPrank();
+
+        mockVoterIdNFT.removeHolder(frontend1);
+
+        assertFalse(registry.isEligible(frontend1));
+        (,, bool eligible,) = registry.getFrontendInfo(frontend1);
+        assertFalse(eligible);
+    }
+
     function test_UnderbondedFrontendIsNotEligibleAfterUnslash() public {
         vm.startPrank(frontend1);
         crepToken.approve(address(registry), STAKE);
@@ -515,6 +528,19 @@ contract FrontendRegistryTest is Test {
         registry.creditFees(frontend1, 100e6);
     }
 
+    function test_CreditFeesRevertsAfterVoterIdRevocation() public {
+        vm.startPrank(frontend1);
+        crepToken.approve(address(registry), STAKE);
+        registry.register();
+        vm.stopPrank();
+
+        mockVoterIdNFT.removeHolder(frontend1);
+
+        vm.prank(feeCreditor);
+        vm.expectRevert("Voter ID required");
+        registry.creditFees(frontend1, 100e6);
+    }
+
     function test_RevertCreditFeesNonCreditor() public {
         vm.prank(frontend1);
         vm.expectRevert();
@@ -594,6 +620,45 @@ contract FrontendRegistryTest is Test {
         vm.expectRevert("No fees to claim");
         registry.claimFees();
         vm.stopPrank();
+    }
+
+    function test_ClaimFeesRevertsAfterVoterIdRevocation() public {
+        vm.startPrank(frontend1);
+        crepToken.approve(address(registry), STAKE);
+        registry.register();
+        vm.stopPrank();
+
+        vm.prank(feeCreditor);
+        registry.creditFees(frontend1, 100e6);
+
+        mockVoterIdNFT.removeHolder(frontend1);
+
+        vm.prank(frontend1);
+        vm.expectRevert("Voter ID required");
+        registry.claimFees();
+    }
+
+    function test_DeregisterAfterVoterIdRevocationConfiscatesPendingFees() public {
+        vm.startPrank(frontend1);
+        crepToken.approve(address(registry), STAKE);
+        registry.register();
+        vm.stopPrank();
+
+        vm.prank(feeCreditor);
+        registry.creditFees(frontend1, 200e6);
+
+        mockVoterIdNFT.removeHolder(frontend1);
+
+        vm.prank(frontend1);
+        registry.requestDeregister();
+
+        uint256 balanceBefore = crepToken.balanceOf(frontend1);
+        uint256 reserveBefore = votingEngine.totalAddedToReserve();
+        _completeDeregister(frontend1);
+
+        assertEq(crepToken.balanceOf(frontend1) - balanceBefore, STAKE);
+        assertEq(registry.getAccumulatedFees(frontend1), 0);
+        assertEq(votingEngine.totalAddedToReserve(), reserveBefore + 200e6);
     }
 
     // --- Eligibility Tests ---
