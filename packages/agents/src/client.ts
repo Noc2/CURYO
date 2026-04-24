@@ -58,7 +58,7 @@ export const publicClient = createPublicClient({
 const CONTRACT_DISPLAY_NAMES: Record<BotContractKey, string> = {
   categoryRegistry: "CategoryRegistry",
   contentRegistry: "ContentRegistry",
-  crepToken: "CuryoReputation",
+  hrepToken: "HumanReputation",
   questionRewardPoolEscrow: "QuestionRewardPoolEscrow",
   roundRewardDistributor: "RoundRewardDistributor",
   voterIdNFT: "VoterIdNFT",

@@ -1,7 +1,7 @@
 import { config, getContractEnvName, type BotContractKey } from "./config.js";
 import {
   ContentRegistryAbi,
-  CuryoReputationAbi,
+  HumanReputationAbi,
   ProtocolConfigAbi,
   QuestionRewardPoolEscrowAbi,
   RoundRewardDistributorAbi,
@@ -20,7 +20,7 @@ function requireContractAddress(contractKey: BotContractKey): `0x${string}` {
 
 export const contractConfig = {
   get token() {
-    return { address: requireContractAddress("crepToken"), abi: CuryoReputationAbi };
+    return { address: requireContractAddress("hrepToken"), abi: HumanReputationAbi };
   },
   get registry() {
     return { address: requireContractAddress("contentRegistry"), abi: ContentRegistryAbi };

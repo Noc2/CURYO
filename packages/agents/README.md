@@ -21,7 +21,7 @@ yarn workspace @curyo/bot submit --transport x402 --source youtube --max-submiss
 Requires configured environment variables and a reachable RPC endpoint.
 `vote` and `claim` require a running Ponder indexer (`yarn ponder:dev`); `submit` does not.
 `status` reports the configured Ponder endpoint when available but can still run without it.
-Question submissions use a question capped at 120 characters. Automated submissions currently use YouTube videos, and each submission must attach a non-refundable Bounty funded in cREP or USDC. The bot uses the same submission rules as a human: required context URL, optional preview media, and the same Bounty guardrails.
+Question submissions use a question capped at 120 characters. Automated submissions currently use YouTube videos, and each submission must attach a non-refundable Bounty funded in HREP or USDC. The bot uses the same submission rules as a human: required context URL, optional preview media, and the same Bounty guardrails.
 For MCP or other agent adapters, treat this as a typed bot-to-human feedback loop: the agent asks a narrow question, humans stake their judgment, and downstream clients read the public rating result.
 
 OpenClaw-ready agent integrations should use the hosted agent path rather than adding raw transaction tools to the agent. Configure the operator token and budget in the web app at `/settings?tab=agents` when the UI is available, or through `CURYO_MCP_AGENTS` while static config remains the registration source. The agent should list templates, quote, submit with a stable `clientRequestId`, wait for a callback or status read, fetch the structured result, and store the public result URL in its audit log.
@@ -67,7 +67,7 @@ Copy `.env.example` to `.env` in the package directory and fill in the deployed 
 | --------------------------------------- | --------------------------------- | --------------------------------------------------------------------------------- |
 | `RPC_URL`                               | —                                 | Blockchain RPC endpoint                                                           |
 | `CHAIN_ID`                              | —                                 | Network chain ID                                                                  |
-| `CREP_TOKEN_ADDRESS`                    | Auto-derived for supported chains | Fallback cREP token address                                                       |
+| `HREP_TOKEN_ADDRESS`                    | Auto-derived for supported chains | Fallback HREP token address                                                       |
 | `CONTENT_REGISTRY_ADDRESS`              | Auto-derived for supported chains | Fallback ContentRegistry address                                                  |
 | `QUESTION_REWARD_POOL_ESCROW_ADDRESS`   | Auto-derived for supported chains | Fallback QuestionRewardPoolEscrow address                                         |
 | `VOTING_ENGINE_ADDRESS`                 | Auto-derived for supported chains | Fallback RoundVotingEngine address                                                |
@@ -100,12 +100,12 @@ Managed MCP/OpenClaw agents are configured in the Next.js app, not in the bot pa
 
 | Variable                       | Default | Description                                         |
 | ------------------------------ | ------- | --------------------------------------------------- |
-| `VOTE_STAKE`                   | —       | cREP stake per vote                                 |
+| `VOTE_STAKE`                   | —       | HREP stake per vote                                 |
 | `VOTE_THRESHOLD`               | —       | Minimum confidence to cast a vote                   |
 | `MAX_VOTES_PER_RUN`            | —       | Limit votes per execution                           |
 | `MAX_SUBMISSIONS_PER_RUN`      | —       | Limit submissions per execution                     |
 | `MAX_SUBMISSIONS_PER_CATEGORY` | —       | Per-source cap during submission runs               |
-| `SUBMIT_REWARD_ASSET`          | `usdc`  | Reward-pool asset for submissions: `usdc` or `crep` |
+| `SUBMIT_REWARD_ASSET`          | `usdc`  | Reward-pool asset for submissions: `usdc` or `hrep` |
 
 `submit` also supports one-off CLI overrides:
 
@@ -139,7 +139,7 @@ Frontend fee sweeping remains a keeper responsibility when the keeper wallet is 
 For each `submit` run, the bot:
 
 1. Loads the wallet configured in `SUBMIT_*` and checks that it can submit. Submission no longer requires `hasVoterId(address)`, so a bot wallet can ask questions directly without a human identity gate.
-2. Checks that the wallet has enough cREP or USDC for the next submission. Direct on-chain submissions need native gas for the approval, reservation, and submit transactions. x402 submissions need enough Celo USDC for the payment ceiling; the hosted API executor pays the on-chain gas.
+2. Checks that the wallet has enough HREP or USDC for the next submission. Direct on-chain submissions need native gas for the approval, reservation, and submit transactions. x402 submissions need enough Celo USDC for the payment ceiling; the hosted API executor pays the on-chain gas.
 3. Chooses the enabled source adapters and fetches trending content. The current bot source reads YouTube's most-popular video feed.
 4. Skips items that do not provide a usable context URL, then checks the context-backed submission key for duplicates before attempting a transaction.
 5. Truncates generated questions to the 120-character on-chain maximum and calls `previewQuestionSubmissionKey(contextUrl, imageUrls, videoUrl, title, description, tags, categoryId)` to verify the canonical category. Direct submissions then reserve the hidden submission commitment, wait a little over one second for the reservation age check, and submit the question with the matching salt, Bounty metadata, and governed round settings. x402 submissions send the same normalized question, Bounty metadata, and round settings to the hosted API, which settles Celo USDC and performs the on-chain submission from its executor wallet.
@@ -183,7 +183,7 @@ yarn bot:status
 
 4. Fund the bot wallet.
 
-- Send enough cREP or USDC for the batch you want to test. Each successful question submission must attach at least the governance minimum Bounty.
+- Send enough HREP or USDC for the batch you want to test. Each successful question submission must attach at least the governance minimum Bounty.
 - Send enough native gas token as well so the bot can pay for approvals and submission transactions.
 - Delegation is only needed if you also want the bot wallet to vote on behalf of a Voter ID holder.
 
@@ -195,7 +195,7 @@ yarn bot:status
 
 You want to see:
 
-- enough `USDC` or `cREP` for the configured `SUBMIT_REWARD_ASSET`
+- enough `USDC` or `HREP` for the configured `SUBMIT_REWARD_ASSET`
 - enough native gas for the target chain
 
 6. Run a focused YouTube submission.
@@ -215,7 +215,7 @@ Expected behavior:
 - The bot fetches YouTube's current popular videos.
 - Already-submitted context URLs are skipped automatically.
 - Only fresh items are submitted, so the run may submit fewer than the requested max if duplicates are common.
-- Each successful submission must attach the minimum non-refundable Bounty in cREP or USDC.
+- Each successful submission must attach the minimum non-refundable Bounty in HREP or USDC.
 - If `YOUTUBE_API_KEY` is missing, the YouTube source will return no items.
 
 ## Project Structure

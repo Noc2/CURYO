@@ -6,7 +6,7 @@ type AllowanceWallet = {
   writeContract: (parameters: Record<string, unknown>) => Promise<Hex>;
 };
 
-export async function ensureCrepAllowance(params: {
+export async function ensureHrepAllowance(params: {
   owner: `0x${string}`;
   spender: `0x${string}`;
   requiredAmount: bigint;

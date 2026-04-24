@@ -1,7 +1,7 @@
 import { randomBytes } from "crypto";
 import { ProtocolConfigAbi } from "@curyo/contracts/abis";
 import { createTlockVoteCommit } from "@curyo/contracts/voting";
-import { ensureCrepAllowance } from "../allowance.js";
+import { ensureHrepAllowance } from "../allowance.js";
 import { publicClient, getWalletClient, getAccount } from "../client.js";
 import { contractConfig } from "../contracts.js";
 import { config, log } from "../config.js";
@@ -170,16 +170,16 @@ export async function runVote() {
   }
   log.info("Voter ID: confirmed");
 
-  // 2. Check cREP balance
+  // 2. Check HREP balance
   const balance = (await publicClient.readContract({
     ...contractConfig.token,
     functionName: "balanceOf",
     args: [account.address],
   })) as bigint;
-  log.info(`cREP balance: ${Number(balance) / 1e6} cREP`);
+  log.info(`HREP balance: ${Number(balance) / 1e6} HREP`);
 
   if (balance < config.voteStake) {
-    log.error(`Insufficient cREP. Need ${Number(config.voteStake) / 1e6}, have ${Number(balance) / 1e6}`);
+    log.error(`Insufficient HREP. Need ${Number(config.voteStake) / 1e6}, have ${Number(balance) / 1e6}`);
     return;
   }
 
@@ -278,14 +278,14 @@ export async function runVote() {
     log.info(`Content #${item.id}: ${strategy.name} score=${score.toFixed(1)} -> vote ${isUp ? "UP" : "DOWN"}`);
 
     try {
-      const approveTx = await ensureCrepAllowance({
+      const approveTx = await ensureHrepAllowance({
         owner: account.address,
         spender: votingEngineAddress,
         requiredAmount: config.voteStake,
         wallet: wallet as never,
       });
       if (approveTx) {
-        log.debug(`Approved cREP: ${approveTx}`);
+        log.debug(`Approved HREP: ${approveTx}`);
       }
 
       // tlock commit-reveal: encrypt vote direction to epoch's drand round
@@ -320,7 +320,7 @@ export async function runVote() {
       });
       await publicClient.waitForTransactionReceipt({ hash: voteTx });
       log.info(
-        `Committed vote on content #${item.id} (${Number(config.voteStake) / 1e6} cREP, ${isUp ? "UP" : "DOWN"} — hidden until epoch ends): ${voteTx}`,
+        `Committed vote on content #${item.id} (${Number(config.voteStake) / 1e6} HREP, ${isUp ? "UP" : "DOWN"} — hidden until epoch ends): ${voteTx}`,
       );
       votesPlaced++;
     } catch (err: any) {
@@ -337,5 +337,5 @@ export async function runVote() {
     }
   }
 
-  log.info(`Vote run complete: ${votesPlaced} votes placed (${Number(config.voteStake) / 1e6} cREP each)`);
+  log.info(`Vote run complete: ${votesPlaced} votes placed (${Number(config.voteStake) / 1e6} HREP each)`);
 }

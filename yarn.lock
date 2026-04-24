@@ -380,9 +380,9 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@curyo/bot@workspace:packages/bot":
+"@curyo/agents@workspace:packages/agents":
   version: 0.0.0-use.local
-  resolution: "@curyo/bot@workspace:packages/bot"
+  resolution: "@curyo/agents@workspace:packages/agents"
   dependencies:
     "@curyo/contracts": "workspace:*"
     "@curyo/node-utils": "workspace:*"

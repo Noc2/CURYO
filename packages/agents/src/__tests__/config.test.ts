@@ -7,7 +7,7 @@ const VALID_ENV = {
   RPC_URL: "https://rpc.example.com",
   CHAIN_ID: "31337",
   PONDER_URL: "https://ponder.example.com",
-  CREP_TOKEN_ADDRESS: chain31337?.CuryoReputation?.address ?? "0x1111111111111111111111111111111111111111",
+  HREP_TOKEN_ADDRESS: chain31337?.HumanReputation?.address ?? "0x1111111111111111111111111111111111111111",
   CONTENT_REGISTRY_ADDRESS: chain31337?.ContentRegistry?.address ?? "0x2222222222222222222222222222222222222222",
   QUESTION_REWARD_POOL_ESCROW_ADDRESS:
     chain31337?.QuestionRewardPoolEscrow?.address ?? "0x7777777777777777777777777777777777777777",
@@ -223,7 +223,7 @@ describe("bot config", () => {
     const { config } = await loadBotConfig(
       {},
       [
-        "CREP_TOKEN_ADDRESS",
+        "HREP_TOKEN_ADDRESS",
         "CONTENT_REGISTRY_ADDRESS",
         "QUESTION_REWARD_POOL_ESCROW_ADDRESS",
         "VOTING_ENGINE_ADDRESS",
@@ -233,7 +233,7 @@ describe("bot config", () => {
       ],
     );
 
-    expect(config.contracts.crepToken).toBe(chain31337.CuryoReputation.address);
+    expect(config.contracts.hrepToken).toBe(chain31337.HumanReputation.address);
     expect(config.contracts.contentRegistry).toBe(chain31337.ContentRegistry.address);
     expect(config.contracts.questionRewardPoolEscrow).toBe(chain31337.QuestionRewardPoolEscrow.address);
     expect(config.contracts.votingEngine).toBe(chain31337.RoundVotingEngine.address);
@@ -245,7 +245,7 @@ describe("bot config", () => {
   it("ignores stale contract env values in favor of shared deployment artifacts", async () => {
     const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
     const { config } = await loadBotConfig({
-      CREP_TOKEN_ADDRESS: "0x1111111111111111111111111111111111111111",
+      HREP_TOKEN_ADDRESS: "0x1111111111111111111111111111111111111111",
       CONTENT_REGISTRY_ADDRESS: "0x2222222222222222222222222222222222222222",
       QUESTION_REWARD_POOL_ESCROW_ADDRESS: "0x7777777777777777777777777777777777777777",
       VOTING_ENGINE_ADDRESS: "0x3333333333333333333333333333333333333333",
@@ -254,14 +254,14 @@ describe("bot config", () => {
       CATEGORY_REGISTRY_ADDRESS: "0x5555555555555555555555555555555555555555",
     });
 
-    expect(config.contracts.crepToken).toBe(chain31337.CuryoReputation.address);
+    expect(config.contracts.hrepToken).toBe(chain31337.HumanReputation.address);
     expect(config.contracts.contentRegistry).toBe(chain31337.ContentRegistry.address);
     expect(config.contracts.questionRewardPoolEscrow).toBe(chain31337.QuestionRewardPoolEscrow.address);
     expect(config.contracts.votingEngine).toBe(chain31337.RoundVotingEngine.address);
     expect(config.contracts.roundRewardDistributor).toBe(chain31337.RoundRewardDistributor.address);
     expect(config.contracts.voterIdNFT).toBe(chain31337.VoterIdNFT.address);
     expect(config.contracts.categoryRegistry).toBe(chain31337.CategoryRegistry.address);
-    expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining("Ignoring CREP_TOKEN_ADDRESS"));
+    expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining("Ignoring HREP_TOKEN_ADDRESS"));
     expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining("Ignoring CONTENT_REGISTRY_ADDRESS"));
     expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining("Ignoring QUESTION_REWARD_POOL_ESCROW_ADDRESS"));
     expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining("Ignoring VOTING_ENGINE_ADDRESS"));
@@ -281,7 +281,7 @@ describe("bot config", () => {
         SUBMIT_PRIVATE_KEY: `0x${"22".repeat(32)}`,
       },
       [
-        "CREP_TOKEN_ADDRESS",
+        "HREP_TOKEN_ADDRESS",
         "CONTENT_REGISTRY_ADDRESS",
         "QUESTION_REWARD_POOL_ESCROW_ADDRESS",
         "VOTING_ENGINE_ADDRESS",
@@ -291,7 +291,7 @@ describe("bot config", () => {
     );
 
     expect(() => botModule.validateConfig("submit")).toThrow("process.exit:1");
-    expect(errorSpy).toHaveBeenCalledWith("[Bot] ERROR: CREP_TOKEN_ADDRESS is required");
+    expect(errorSpy).toHaveBeenCalledWith("[Bot] ERROR: HREP_TOKEN_ADDRESS is required");
     expect(errorSpy).toHaveBeenCalledWith("[Bot] ERROR: CONTENT_REGISTRY_ADDRESS is required");
     expect(errorSpy).toHaveBeenCalledWith("[Bot] ERROR: QUESTION_REWARD_POOL_ESCROW_ADDRESS is required");
     expect(errorSpy).not.toHaveBeenCalledWith("[Bot] ERROR: VOTER_ID_NFT_ADDRESS is required");
@@ -309,7 +309,7 @@ describe("bot config", () => {
         CHAIN_ID: "999999",
       },
       [
-        "CREP_TOKEN_ADDRESS",
+        "HREP_TOKEN_ADDRESS",
         "CONTENT_REGISTRY_ADDRESS",
         "VOTING_ENGINE_ADDRESS",
         "VOTER_ID_NFT_ADDRESS",
@@ -318,7 +318,7 @@ describe("bot config", () => {
     );
 
     expect(() => botModule.validateConfig("rate")).toThrow("process.exit:1");
-    expect(errorSpy).toHaveBeenCalledWith("[Bot] ERROR: CREP_TOKEN_ADDRESS is required");
+    expect(errorSpy).toHaveBeenCalledWith("[Bot] ERROR: HREP_TOKEN_ADDRESS is required");
     expect(errorSpy).toHaveBeenCalledWith("[Bot] ERROR: VOTING_ENGINE_ADDRESS is required");
     expect(errorSpy).toHaveBeenCalledWith("[Bot] ERROR: VOTER_ID_NFT_ADDRESS is required");
     expect(errorSpy).not.toHaveBeenCalledWith("[Bot] ERROR: CONTENT_REGISTRY_ADDRESS is required");

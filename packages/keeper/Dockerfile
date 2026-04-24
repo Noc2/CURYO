@@ -6,7 +6,7 @@ ENV HUSKY=0
 
 COPY .yarn/ ./.yarn/
 COPY .yarnrc.yml package.json yarn.lock ./
-COPY packages/bot/package.json ./packages/bot/package.json
+COPY packages/agents/package.json ./packages/agents/package.json
 COPY packages/contracts/package.json ./packages/contracts/package.json
 COPY packages/contracts/tsconfig.json ./packages/contracts/tsconfig.json
 COPY packages/foundry/package.json ./packages/foundry/package.json

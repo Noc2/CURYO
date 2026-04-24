@@ -3,7 +3,7 @@ import { encodeAbiParameters, erc20Abi, isAddress, keccak256, type Address, type
 import { createThirdwebClient, defineChain, type Chain, type ThirdwebClient } from "thirdweb";
 import { type Account as ThirdwebAccount, type Wallet, privateKeyToAccount as thirdwebPrivateKeyToAccount } from "thirdweb/wallets";
 import { wrapFetchWithPayment } from "thirdweb/x402";
-import { ensureCrepAllowance } from "../allowance.js";
+import { ensureHrepAllowance } from "../allowance.js";
 import { publicClient, getWalletClient, getAccount, getIdentityPrivateKey } from "../client.js";
 import { contractConfig } from "../contracts.js";
 import { config, log } from "../config.js";
@@ -22,7 +22,7 @@ import {
 } from "../roundConfig.js";
 import { sleep } from "../utils.js";
 
-const SUBMISSION_REWARD_ASSET_CREP = 0;
+const SUBMISSION_REWARD_ASSET_HREP = 0;
 const SUBMISSION_REWARD_ASSET_USDC = 1;
 const DEFAULT_MIN_SUBMISSION_REWARD_POOL = 1_000_000n; // 1 token with 6 decimals
 const RESERVED_SUBMISSION_WAIT_MS = 1_100;
@@ -202,7 +202,7 @@ async function readProtocolConfigAddress(): Promise<Address | null> {
 async function getSubmissionRewardFunding(assetOverride = config.submitRewardAsset): Promise<SubmissionRewardFunding> {
   const rewardAsset = assetOverride;
   const protocolConfigAddress = await readProtocolConfigAddress();
-  const minimumFunctionName = rewardAsset === "crep" ? "minSubmissionCrepPool" : "minSubmissionUsdcPool";
+  const minimumFunctionName = rewardAsset === "hrep" ? "minSubmissionHrepPool" : "minSubmissionUsdcPool";
   const configuredMinimum =
     protocolConfigAddress
       ? ((await publicClient
@@ -215,11 +215,11 @@ async function getSubmissionRewardFunding(assetOverride = config.submitRewardAss
       : 0n;
   const amount = configuredMinimum > 0n ? configuredMinimum : DEFAULT_MIN_SUBMISSION_REWARD_POOL;
 
-  if (rewardAsset === "crep") {
+  if (rewardAsset === "hrep") {
     return {
-      assetId: SUBMISSION_REWARD_ASSET_CREP,
+      assetId: SUBMISSION_REWARD_ASSET_HREP,
       amount,
-      label: "cREP",
+      label: "HREP",
       token: { address: contractConfig.token.address, abi: erc20Abi },
     };
   }
@@ -674,7 +674,7 @@ export async function runSubmit(options: SubmitRunOptions = {}) {
           videoUrl: media.videoUrl,
         });
 
-        const approveTx = await ensureCrepAllowance({
+        const approveTx = await ensureHrepAllowance({
           owner: account.address,
           spender: rewardEscrowAddress,
           requiredAmount: rewardFunding.amount,

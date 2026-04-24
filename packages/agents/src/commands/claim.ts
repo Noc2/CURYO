@@ -30,8 +30,8 @@ function safeBigInt(value: string | number | bigint | null | undefined): bigint 
   }
 }
 
-function formatCrepAmount(value: bigint) {
-  return `${(Number(value) / 1e6).toFixed(2)} cREP`;
+function formatHrepAmount(value: bigint) {
+  return `${(Number(value) / 1e6).toFixed(2)} HREP`;
 }
 
 function epochWeightBps(epochIndex: number): number {
@@ -284,14 +284,14 @@ async function executeClaimPlan(
   }
 
   const estimatedTotal = items.reduce((sum, item) => sum + item.estimatedReward, 0n);
-  log.info(`Found ${items.length} claim(s) for ${roleLabel} worth about ${formatCrepAmount(estimatedTotal)}.`);
+  log.info(`Found ${items.length} claim(s) for ${roleLabel} worth about ${formatHrepAmount(estimatedTotal)}.`);
 
   let claimedCount = 0;
   let claimedEstimate = 0n;
 
   for (const item of items) {
     try {
-      log.info(`Claiming ${item.label} (${formatCrepAmount(item.estimatedReward)})...`);
+      log.info(`Claiming ${item.label} (${formatHrepAmount(item.estimatedReward)})...`);
       const hash = await wallet.writeContract(item.write as any);
       await waitForClaimReceipt(hash, item.label);
       claimedCount += 1;
@@ -309,7 +309,7 @@ async function executeClaimPlan(
   }
 
   log.info(
-    `Claim run complete for ${roleLabel}: ${claimedCount}/${items.length} claim(s) succeeded, about ${formatCrepAmount(claimedEstimate)} requested.`,
+    `Claim run complete for ${roleLabel}: ${claimedCount}/${items.length} claim(s) succeeded, about ${formatHrepAmount(claimedEstimate)} requested.`,
   );
 }
 

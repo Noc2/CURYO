@@ -217,7 +217,7 @@ describe("runClaim", () => {
       }),
     );
     expect(claimCommand.mocks.log.info).toHaveBeenCalledWith(
-      "Found 4 claim(s) for rating bot worth about 14.55 cREP.",
+      "Found 4 claim(s) for rating bot worth about 14.55 HREP.",
     );
   });
 });

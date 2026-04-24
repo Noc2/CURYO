@@ -18,7 +18,7 @@ async function showIdentity(label: string, identity: BotIdentityConfig) {
   if (!account) {
     console.log(`  Address:  NOT CONFIGURED`);
     console.log(`  Voter ID: —`);
-    console.log(`  cREP:     —`);
+    console.log(`  HREP:     —`);
     console.log(`  CELO:     —`);
     console.log("");
     return;
@@ -38,14 +38,14 @@ async function showIdentity(label: string, identity: BotIdentityConfig) {
   }
 
   try {
-    const curyoBalance = await publicClient.readContract({
+    const hrepBalance = await publicClient.readContract({
       ...contractConfig.token,
       functionName: "balanceOf",
       args: [account.address],
     });
-    console.log(`  cREP:     ${Number(curyoBalance) / 1e6} cREP`);
+    console.log(`  HREP:     ${Number(hrepBalance) / 1e6} HREP`);
   } catch (err: any) {
-    console.log(`  cREP:     ERROR (${err.message})`);
+    console.log(`  HREP:     ERROR (${err.message})`);
   }
 
   try {
@@ -104,7 +104,7 @@ export async function runStatus() {
   // Config summary
   console.log("");
   console.log(`=== Config ===`);
-  console.log(`Vote stake:      ${Number(config.voteStake) / 1e6} cREP`);
+  console.log(`Vote stake:      ${Number(config.voteStake) / 1e6} HREP`);
   console.log(`Vote threshold:  ${config.voteThreshold}`);
   console.log(`Max votes/run:   ${config.maxVotesPerRun}`);
   console.log(`Max submit/run:  ${config.maxSubmissionsPerRun}`);

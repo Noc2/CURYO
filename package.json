@@ -64,11 +64,11 @@
     "ponder:dev:ui": "yarn workspace @curyo/ponder dev:ui",
     "ponder:start": "yarn workspace @curyo/ponder start",
     "ponder:codegen": "yarn workspace @curyo/ponder codegen",
-    "bot:vote": "yarn workspace @curyo/bot vote",
-    "bot:submit": "yarn workspace @curyo/bot submit",
-    "bot:submit:x402": "yarn workspace @curyo/bot submit:x402",
-    "bot:claim": "yarn workspace @curyo/bot claim",
-    "bot:status": "yarn workspace @curyo/bot status",
+    "agents:vote": "yarn workspace @curyo/agents vote",
+    "agents:submit": "yarn workspace @curyo/agents submit",
+    "agents:submit:x402": "yarn workspace @curyo/agents submit:x402",
+    "agents:claim": "yarn workspace @curyo/agents claim",
+    "agents:status": "yarn workspace @curyo/agents status",
     "keeper:start": "yarn workspace @curyo/keeper start",
     "keeper:dev": "yarn workspace @curyo/keeper dev",
     "node-utils:check-types": "yarn workspace @curyo/node-utils check-types",
@@ -77,7 +77,7 @@
     "e2e": "yarn workspace @curyo/nextjs e2e",
     "e2e:ci:full": "yarn workspace @curyo/nextjs e2e:ci:full",
     "e2e:ui": "yarn workspace @curyo/nextjs e2e:ui",
-    "test:ts": "yarn contracts:check-types && yarn node-utils:check-types && yarn sdk:check-types && yarn contracts:test && yarn sdk:test && yarn next:test && yarn workspace @curyo/keeper test && yarn workspace @curyo/bot test && yarn workspace @curyo/ponder test"
+    "test:ts": "yarn contracts:check-types && yarn node-utils:check-types && yarn sdk:check-types && yarn contracts:test && yarn sdk:test && yarn next:test && yarn workspace @curyo/keeper test && yarn workspace @curyo/agents test && yarn workspace @curyo/ponder test"
   },
   "devDependencies": {
     "husky": "~9.1.6",

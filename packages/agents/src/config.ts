@@ -11,7 +11,7 @@ export interface BotIdentityConfig {
   privateKey?: `0x${string}`;
 }
 
-export type SubmissionRewardAsset = "crep" | "usdc";
+export type SubmissionRewardAsset = "hrep" | "usdc";
 
 export interface BotX402Config {
   apiUrl?: string;
@@ -23,7 +23,7 @@ export interface BotX402Config {
 const CONTRACT_ENV_NAMES = {
   categoryRegistry: "CATEGORY_REGISTRY_ADDRESS",
   contentRegistry: "CONTENT_REGISTRY_ADDRESS",
-  crepToken: "CREP_TOKEN_ADDRESS",
+  hrepToken: "HREP_TOKEN_ADDRESS",
   questionRewardPoolEscrow: "QUESTION_REWARD_POOL_ESCROW_ADDRESS",
   roundRewardDistributor: "ROUND_REWARD_DISTRIBUTOR_ADDRESS",
   voterIdNFT: "VOTER_ID_NFT_ADDRESS",
@@ -33,8 +33,8 @@ const CONTRACT_ENV_NAMES = {
 export type BotContractKey = keyof typeof CONTRACT_ENV_NAMES;
 
 const REQUIRED_CONTRACTS_BY_ROLE: Record<BotRole, BotContractKey[]> = {
-  submit: ["crepToken", "contentRegistry", "questionRewardPoolEscrow"],
-  rate: ["crepToken", "votingEngine", "voterIdNFT"],
+  submit: ["hrepToken", "contentRegistry", "questionRewardPoolEscrow"],
+  rate: ["hrepToken", "votingEngine", "voterIdNFT"],
 };
 
 const isProduction = process.env.NODE_ENV === "production";
@@ -213,8 +213,8 @@ function parseSubmissionRewardAssetEnv(name: string, fallback: SubmissionRewardA
     return fallback;
   }
 
-  if (value !== "crep" && value !== "usdc") {
-    errors.push(`${name} must be either "crep" or "usdc"`);
+  if (value !== "hrep" && value !== "usdc") {
+    errors.push(`${name} must be either "hrep" or "usdc"`);
     return fallback;
   }
 
@@ -279,10 +279,10 @@ function loadConfig() {
 
     // Contracts
     contracts: {
-      crepToken: resolveOptionalContractAddress({
+      hrepToken: resolveOptionalContractAddress({
         chainId,
-        envName: "CREP_TOKEN_ADDRESS",
-        contractName: "CuryoReputation",
+        envName: "HREP_TOKEN_ADDRESS",
+        contractName: "HumanReputation",
         errors,
         warnings,
       }),
