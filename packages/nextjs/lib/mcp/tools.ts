@@ -8,6 +8,7 @@ import {
   upsertAgentCallbackSubscription,
 } from "~~/lib/agent-callbacks";
 import { buildAgentCallbackPayload, callbackEventId, getAgentPublicQuestionUrl } from "~~/lib/agent-callbacks/payload";
+import { assertSafeAgentCallbackUrl } from "~~/lib/agent-callbacks/urlSafety";
 import { buildAgentFastLaneGuidance } from "~~/lib/agent/fastLane";
 import { buildAgentLiveAskGuidance } from "~~/lib/agent/liveAskGuidance";
 import { buildAgentResultPackage } from "~~/lib/agent/resultPackage";
@@ -261,11 +262,11 @@ function parseAskHumansMode(value: unknown): AskHumansMode {
   throw new McpToolError("mode must be either sync or async.");
 }
 
-function parseWebhookOptions(args: JsonObject): {
+async function parseWebhookOptions(args: JsonObject): Promise<{
   events: AgentCallbackEventType[];
   secret: string;
   url: string;
-} | null {
+} | null> {
   const url = typeof args.webhookUrl === "string" ? args.webhookUrl.trim() : "";
   if (!url) return null;
   const secret = typeof args.webhookSecret === "string" ? args.webhookSecret.trim() : "";
@@ -273,14 +274,11 @@ function parseWebhookOptions(args: JsonObject): {
     throw new McpToolError("webhookSecret is required when webhookUrl is provided.");
   }
 
+  let callbackUrl: string;
   try {
-    const parsed = new URL(url);
-    if (parsed.protocol !== "https:" && parsed.hostname !== "localhost" && parsed.hostname !== "127.0.0.1") {
-      throw new McpToolError("webhookUrl must use https outside local development.");
-    }
+    callbackUrl = await assertSafeAgentCallbackUrl(url, "webhookUrl");
   } catch (error) {
-    if (error instanceof McpToolError) throw error;
-    throw new McpToolError("webhookUrl must be a valid URL.");
+    throw new McpToolError(error instanceof Error ? error.message : "webhookUrl must be a valid URL.");
   }
 
   const rawEvents = Array.isArray(args.webhookEvents)
@@ -309,7 +307,7 @@ function parseWebhookOptions(args: JsonObject): {
   return {
     events,
     secret,
-    url,
+    url: callbackUrl,
   };
 }
 
@@ -622,7 +620,7 @@ export async function callCuryoMcpTool(params: {
 
       const payload = parseX402QuestionRequest(args);
       assertManagedQuestionCategoriesAllowed(params.agent, payload);
-      const webhook = parseWebhookOptions(args);
+      const webhook = await parseWebhookOptions(args);
       const managedPayload = toManagedMcpPayload(params.agent, payload);
       const config = dependencies.resolveX402QuestionConfig(managedPayload.chainId, { requireThirdwebSecret: false });
       const quote = await dependencies.preflightX402QuestionSubmission({ config, payload: managedPayload });

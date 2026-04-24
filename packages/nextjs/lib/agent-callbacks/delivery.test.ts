@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import { after, before, beforeEach, test } from "node:test";
+import { __setUrlSafetyDnsResolversForTests } from "~~/utils/urlSafety";
 
 process.env.DATABASE_URL = "memory:";
 
@@ -26,11 +27,16 @@ before(async () => {
 });
 
 beforeEach(async () => {
+  __setUrlSafetyDnsResolversForTests({
+    resolve4: async () => ["93.184.216.34"],
+    resolve6: async () => [],
+  });
   await dbModule.dbClient.execute("DELETE FROM agent_callback_events");
   await dbModule.dbClient.execute("DELETE FROM agent_callback_subscriptions");
 });
 
 after(() => {
+  __setUrlSafetyDnsResolversForTests(null);
   dbModule.__setDatabaseResourcesForTests(null);
 });
 
@@ -166,6 +172,58 @@ test("buildCallbackDeliveryRequest signs leased event payload", async () => {
   assert.match(request.headers["x-curyo-callback-signature"], /^v1=[a-f0-9]{64}$/);
 });
 
+test("deliverLeasedAgentCallbackEvent disables redirects and sets a timeout", async () => {
+  await registerSubscription();
+  const [event] = await events.enqueueAgentCallbackEvent({
+    agentId: "agent-a",
+    eventId: "event-a",
+    eventType: "question.submitted",
+    payload: { contentId: "42" },
+  });
+  assert.ok(event);
+
+  const result = await delivery.deliverLeasedAgentCallbackEvent({
+    event,
+    fetchImpl: async (_url, init) => {
+      assert.equal(init?.redirect, "manual");
+      assert.ok(init?.signal instanceof AbortSignal);
+      return new Response(null, { status: 204, statusText: "No Content" });
+    },
+    now: new Date("2026-04-23T12:00:00.000Z"),
+  });
+
+  assert.deepEqual(result, {
+    ok: true,
+    status: 204,
+    statusText: "No Content",
+  });
+});
+
+test("deliverLeasedAgentCallbackEvent rejects unsafe stored URLs without fetching", async () => {
+  await registerSubscription();
+  const [event] = await events.enqueueAgentCallbackEvent({
+    agentId: "agent-a",
+    eventId: "event-a",
+    eventType: "question.submitted",
+    payload: { contentId: "42" },
+  });
+  assert.ok(event);
+
+  let fetched = false;
+  await assert.rejects(
+    () =>
+      delivery.deliverLeasedAgentCallbackEvent({
+        event: { ...event, callbackUrl: "http://127.0.0.1:3000/callback" },
+        fetchImpl: async () => {
+          fetched = true;
+          return new Response(null, { status: 204 });
+        },
+      }),
+    /Callback URL must be a public HTTPS URL/,
+  );
+  assert.equal(fetched, false);
+});
+
 test("processDueAgentCallbackDeliveries delivers successes and schedules retries", async () => {
   await registerSubscription("sub-a", ["question.submitted"]);
   await registerSubscription("sub-b", ["question.submitted"]);
@@ -178,11 +236,14 @@ test("processDueAgentCallbackDeliveries delivers successes and schedules retries
   });
 
   const result = await delivery.processDueAgentCallbackDeliveries({
-    fetchImpl: async url =>
-      new Response(null, {
+    fetchImpl: async (url, init) => {
+      assert.equal(init?.redirect, "manual");
+      assert.ok(init?.signal instanceof AbortSignal);
+      return new Response(null, {
         status: String(url).endsWith("/sub-a") ? 204 : 503,
         statusText: String(url).endsWith("/sub-a") ? "No Content" : "Service Unavailable",
-      }),
+      });
+    },
     now: new Date("2026-04-23T12:00:01.000Z"),
     workerId: "worker-a",
   });

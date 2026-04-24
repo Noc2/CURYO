@@ -27,6 +27,7 @@ type DbModule = typeof import("../../../lib/db");
 type DbTestMemoryModule = typeof import("../../../lib/db/testMemory");
 type McpBudgetModule = typeof import("~~/lib/mcp/budget");
 type McpToolsModule = typeof import("~~/lib/mcp/tools");
+type UrlSafetyModule = typeof import("~~/utils/urlSafety");
 
 const OPERATION_KEY = `0x${"1".repeat(64)}` as const;
 
@@ -48,6 +49,7 @@ let quoteRoute: AgentQuoteRouteModule;
 let resultsByClientRoute: AgentResultsByClientRouteModule;
 let resultsOperationRoute: AgentResultsOperationRouteModule;
 let templatesRoute: AgentTemplatesRouteModule;
+let urlSafetyModule: UrlSafetyModule;
 
 function restoreEnv(name: keyof NodeJS.ProcessEnv, value: string | undefined) {
   if (value === undefined) {
@@ -337,6 +339,7 @@ before(async () => {
   dbModule.__setDatabaseResourcesForTests(dbTestMemory.createMemoryDatabaseResources());
   mcpBudgetModule = await import("~~/lib/mcp/budget");
   mcpToolsModule = await import("~~/lib/mcp/tools");
+  urlSafetyModule = await import("~~/utils/urlSafety");
   asksByClientAuditRoute = await import("./asks/by-client-request/audit/route");
   asksByClientRoute = await import("./asks/by-client-request/route");
   asksAuditRoute = await import("./asks/[operationKey]/audit/route");
@@ -356,6 +359,10 @@ before(async () => {
 beforeEach(async () => {
   env.NODE_ENV = "development";
   configureAgent();
+  urlSafetyModule.__setUrlSafetyDnsResolversForTests({
+    resolve4: async () => ["93.184.216.34"],
+    resolve6: async () => [],
+  });
   mcpToolsModule.__setMcpToolTestOverridesForTests(null);
   callbackLifecycleModule.__setAgentLifecycleTestOverridesForTests(null);
   await dbModule.dbClient.execute("DELETE FROM agent_callback_events");
@@ -368,6 +375,7 @@ beforeEach(async () => {
 });
 
 after(() => {
+  urlSafetyModule.__setUrlSafetyDnsResolversForTests(null);
   mcpToolsModule.__setMcpToolTestOverridesForTests(null);
   dbModule.__setDatabaseResourcesForTests(null);
   restoreEnv("CURYO_MCP_AGENTS", originalAgents);

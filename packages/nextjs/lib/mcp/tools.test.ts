@@ -1,7 +1,8 @@
 import type { McpAgentAuth } from "./auth";
 import { __setMcpToolTestOverridesForTests, callCuryoMcpTool } from "./tools";
 import assert from "node:assert/strict";
-import { afterEach, mock, test } from "node:test";
+import { afterEach, beforeEach, mock, test } from "node:test";
+import { __setUrlSafetyDnsResolversForTests } from "~~/utils/urlSafety";
 
 const AGENT: McpAgentAuth = {
   allowedCategoryIds: null,
@@ -86,8 +87,16 @@ function managedBudgetSummary() {
   };
 }
 
+beforeEach(() => {
+  __setUrlSafetyDnsResolversForTests({
+    resolve4: async () => ["93.184.216.34"],
+    resolve6: async () => [],
+  });
+});
+
 afterEach(() => {
   mock.reset();
+  __setUrlSafetyDnsResolversForTests(null);
   __setMcpToolTestOverridesForTests(null);
 });
 
@@ -449,6 +458,7 @@ test("curyo_ask_humans registers the default lifecycle webhook events", async ()
   const registered: unknown[] = [];
 
   __setMcpToolTestOverridesForTests({
+    enqueueAgentCallbackEvent: async () => [],
     getMcpAgentBudgetSummary: async () => managedBudgetSummary(),
     handleManagedQuestionSubmissionRequest: async () => ({
       body: {
@@ -490,4 +500,38 @@ test("curyo_ask_humans registers the default lifecycle webhook events", async ()
     ],
     secret: "webhook-secret",
   });
+});
+
+test("curyo_ask_humans rejects unsafe webhook URLs before submission side effects", async () => {
+  let submitted = false;
+  let budgetReserved = false;
+
+  __setMcpToolTestOverridesForTests({
+    getMcpAgentBudgetSummary: async () => managedBudgetSummary(),
+    handleManagedQuestionSubmissionRequest: async () => {
+      submitted = true;
+      return { body: { status: "submitted" }, status: 200 };
+    },
+    ...quoteOverrides(),
+    reserveMcpAgentBudget: async () => {
+      budgetReserved = true;
+      return budgetReservation();
+    },
+  });
+
+  await assert.rejects(
+    () =>
+      callCuryoMcpTool({
+        agent: AGENT,
+        arguments: askArguments({
+          webhookSecret: "webhook-secret",
+          webhookUrl: "http://127.0.0.1:3000/curyo",
+        }),
+        name: "curyo_ask_humans",
+      }),
+    /webhookUrl must be a public HTTPS URL/,
+  );
+
+  assert.equal(budgetReserved, false);
+  assert.equal(submitted, false);
 });

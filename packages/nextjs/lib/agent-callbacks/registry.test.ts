@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import { after, before, beforeEach, test } from "node:test";
+import { __setUrlSafetyDnsResolversForTests } from "~~/utils/urlSafety";
 
 process.env.DATABASE_URL = "memory:";
 
@@ -19,11 +20,16 @@ before(async () => {
 });
 
 beforeEach(async () => {
+  __setUrlSafetyDnsResolversForTests({
+    resolve4: async () => ["93.184.216.34"],
+    resolve6: async () => [],
+  });
   await dbModule.dbClient.execute("DELETE FROM agent_callback_events");
   await dbModule.dbClient.execute("DELETE FROM agent_callback_subscriptions");
 });
 
 after(() => {
+  __setUrlSafetyDnsResolversForTests(null);
   dbModule.__setDatabaseResourcesForTests(null);
 });
 
@@ -66,4 +72,18 @@ test("disableAgentCallbackSubscription removes it from active listings", async (
   await registry.disableAgentCallbackSubscription({ id: "sub-a" });
 
   assert.deepEqual(await registry.listActiveAgentCallbackSubscriptions("agent-a"), []);
+});
+
+test("upsertAgentCallbackSubscription rejects unsafe callback URLs", async () => {
+  await assert.rejects(
+    () =>
+      registry.upsertAgentCallbackSubscription({
+        agentId: "agent-a",
+        callbackUrl: "http://127.0.0.1:3000/callback",
+        eventTypes: ["question.submitted"],
+        id: "sub-a",
+        secret: "secret-a",
+      }),
+    /Callback URL must be a public HTTPS URL/,
+  );
 });

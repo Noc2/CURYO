@@ -1,5 +1,6 @@
 import { randomUUID } from "node:crypto";
 import { type AgentCallbackEventType, isAgentCallbackEventType } from "~~/lib/agent-callbacks/types";
+import { assertSafeAgentCallbackUrl } from "~~/lib/agent-callbacks/urlSafety";
 import { dbClient } from "~~/lib/db";
 
 export type AgentCallbackSubscriptionStatus = "active" | "disabled";
@@ -58,30 +59,29 @@ function normalizeEventTypes(eventTypes: string[]): AgentCallbackEventType[] {
   return [...new Set(eventTypes.map(type => type.trim()).filter(isAgentCallbackEventType))].sort();
 }
 
-function assertSubscriptionInput(input: UpsertAgentCallbackSubscriptionInput) {
+async function prepareSubscriptionInput(input: UpsertAgentCallbackSubscriptionInput) {
   if (!input.agentId.trim()) throw new Error("Callback agentId is required.");
   if (!input.secret.trim()) throw new Error("Callback secret is required.");
-  if (normalizeEventTypes(input.eventTypes).length === 0)
-    throw new Error("At least one callback event type is required.");
+  const eventTypes = normalizeEventTypes(input.eventTypes);
+  if (eventTypes.length === 0) throw new Error("At least one callback event type is required.");
 
-  const url = new URL(input.callbackUrl);
-  if (url.protocol !== "https:" && url.hostname !== "localhost" && url.hostname !== "127.0.0.1") {
-    throw new Error("Callback URL must use https outside local development.");
-  }
+  return {
+    callbackUrl: await assertSafeAgentCallbackUrl(input.callbackUrl),
+    eventTypes,
+  };
 }
 
 export async function upsertAgentCallbackSubscription(input: UpsertAgentCallbackSubscriptionInput) {
-  assertSubscriptionInput(input);
+  const prepared = await prepareSubscriptionInput(input);
 
   const now = input.now ?? new Date();
-  const eventTypes = normalizeEventTypes(input.eventTypes);
   const result = await dbClient.execute({
     args: [
       input.id ?? randomUUID(),
       input.agentId,
-      input.callbackUrl,
+      prepared.callbackUrl,
       input.secret,
-      JSON.stringify(eventTypes),
+      JSON.stringify(prepared.eventTypes),
       now,
       now,
     ],

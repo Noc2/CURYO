@@ -1,6 +1,9 @@
 import { type AgentCallbackEventRecord, rowToCallbackEvent } from "./events";
 import { buildCallbackHeaders } from "./signing";
+import { assertSafeAgentCallbackUrl } from "./urlSafety";
 import { dbClient } from "~~/lib/db";
+
+const CALLBACK_DELIVERY_TIMEOUT_MS = 10_000;
 
 export type LeaseAgentCallbackEventsInput = {
   leaseMs?: number;
@@ -176,11 +179,14 @@ export function buildCallbackDeliveryRequest(input: { event: AgentCallbackEventR
 
 export async function deliverLeasedAgentCallbackEvent(input: DeliverLeasedCallbackEventInput) {
   const request = buildCallbackDeliveryRequest({ event: input.event, now: input.now });
+  const url = await assertSafeAgentCallbackUrl(request.url);
   const fetchImpl = input.fetchImpl ?? fetch;
-  const response = await fetchImpl(request.url, {
+  const response = await fetchImpl(url, {
     body: request.body,
     headers: request.headers,
     method: request.method,
+    redirect: "manual",
+    signal: AbortSignal.timeout(CALLBACK_DELIVERY_TIMEOUT_MS),
   });
 
   return {
