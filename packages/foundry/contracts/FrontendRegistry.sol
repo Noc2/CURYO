@@ -54,9 +54,10 @@ contract FrontendRegistry is IFrontendRegistry, Initializable, AccessControlUpgr
     IVoterIdNFT public voterIdNFT; // Voter ID NFT for sybil resistance
     mapping(address => uint256) public frontendExitAvailableAt;
     bool public initialFeeCreditorConfigured;
+    address public feeCreditor;
 
     /// @dev Reserved storage gap for future upgrades
-    uint256[48] private __gap;
+    uint256[47] private __gap;
 
     // --- Events ---
     event FrontendRegistered(address indexed frontend, address indexed operator, uint256 stakedAmount);
@@ -70,6 +71,7 @@ contract FrontendRegistry is IFrontendRegistry, Initializable, AccessControlUpgr
     event FeesConfiscated(address indexed frontend, uint256 hrepAmount);
     event VotingEngineUpdated(address votingEngine);
     event VoterIdNFTUpdated(address voterIdNFT);
+    event FeeCreditorUpdated(address indexed oldCreditor, address indexed newCreditor);
 
     /// @custom:oz-upgrades-unsafe-allow constructor
     constructor() {
@@ -240,6 +242,7 @@ contract FrontendRegistry is IFrontendRegistry, Initializable, AccessControlUpgr
     /// @dev No eligibility check here — commit-time eligibility is snapshotted in RoundVotingEngine.
     ///      Slashed or underbonded frontends cannot accrue newly claimed historical fees.
     function creditFees(address frontend, uint256 hrepAmount) external override onlyRole(FEE_CREDITOR_ROLE) {
+        require(msg.sender == feeCreditor, "Unauthorized fee creditor");
         require(hrepAmount <= MAX_FEE_CREDIT, "Fee credit too large");
         Frontend storage f = frontends[frontend];
         require(f.operator != address(0), "Frontend not registered");
@@ -336,12 +339,22 @@ contract FrontendRegistry is IFrontendRegistry, Initializable, AccessControlUpgr
     /// @param creditor The address to grant the role to
     function addFeeCreditor(address creditor) external onlyRole(GOVERNANCE_ROLE) {
         require(creditor != address(0), "Invalid fee creditor");
+        address oldCreditor = feeCreditor;
+        if (oldCreditor != address(0) && oldCreditor != creditor) {
+            _revokeRole(FEE_CREDITOR_ROLE, oldCreditor);
+        }
+        feeCreditor = creditor;
         _grantRole(FEE_CREDITOR_ROLE, creditor);
+        emit FeeCreditorUpdated(oldCreditor, creditor);
     }
 
     /// @notice Revoke fee creditor role
     /// @param creditor The address to revoke the role from
     function removeFeeCreditor(address creditor) external onlyRole(GOVERNANCE_ROLE) {
+        if (creditor == feeCreditor) {
+            feeCreditor = address(0);
+            emit FeeCreditorUpdated(creditor, address(0));
+        }
         _revokeRole(FEE_CREDITOR_ROLE, creditor);
     }
 
@@ -352,7 +365,9 @@ contract FrontendRegistry is IFrontendRegistry, Initializable, AccessControlUpgr
         require(address(votingEngine) == address(0), "Setup complete");
         require(creditor != address(0), "Invalid fee creditor");
         initialFeeCreditorConfigured = true;
+        feeCreditor = creditor;
         _grantRole(FEE_CREDITOR_ROLE, creditor);
+        emit FeeCreditorUpdated(address(0), creditor);
     }
 
     function _requestDeregister(address frontend) internal {

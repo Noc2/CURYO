@@ -627,6 +627,29 @@ contract FrontendRegistryCoverageTest is Test {
         registry.removeFeeCreditor(feeCreditor);
     }
 
+    function test_RemoveFeeCreditor_ClearsSingleton() public {
+        vm.prank(admin);
+        registry.removeFeeCreditor(feeCreditor);
+
+        assertFalse(registry.hasRole(registry.FEE_CREDITOR_ROLE(), feeCreditor));
+        assertEq(registry.feeCreditor(), address(0));
+    }
+
+    function test_GrantRoleExtraFeeCreditor_CannotCreditFees() public {
+        _registerFrontend(frontend1);
+        address extraCreditor = address(99);
+        bytes32 feeCreditorRole = registry.FEE_CREDITOR_ROLE();
+
+        vm.prank(admin);
+        registry.grantRole(feeCreditorRole, extraCreditor);
+        assertTrue(registry.hasRole(feeCreditorRole, extraCreditor));
+        assertEq(registry.feeCreditor(), feeCreditor);
+
+        vm.prank(extraCreditor);
+        vm.expectRevert("Unauthorized fee creditor");
+        registry.creditFees(frontend1, 100e6);
+    }
+
     function test_AddFeeCreditor_AdminWithoutGovernance_Reverts() public {
         vm.startPrank(admin);
         FrontendRegistry impl2 = new FrontendRegistry();
@@ -656,6 +679,7 @@ contract FrontendRegistryCoverageTest is Test {
 
         splitRoleRegistry.initializeFeeCreditor(feeCreditor);
         assertTrue(splitRoleRegistry.hasRole(splitRoleRegistry.FEE_CREDITOR_ROLE(), feeCreditor));
+        assertEq(splitRoleRegistry.feeCreditor(), feeCreditor);
 
         vm.expectRevert("Initial fee creditor set");
         splitRoleRegistry.initializeFeeCreditor(address(99));
@@ -663,7 +687,9 @@ contract FrontendRegistryCoverageTest is Test {
 
         vm.prank(governance);
         splitRoleRegistry.addFeeCreditor(address(99));
+        assertFalse(splitRoleRegistry.hasRole(splitRoleRegistry.FEE_CREDITOR_ROLE(), feeCreditor));
         assertTrue(splitRoleRegistry.hasRole(splitRoleRegistry.FEE_CREDITOR_ROLE(), address(99)));
+        assertEq(splitRoleRegistry.feeCreditor(), address(99));
     }
 
     function test_InitialFeeCreditorSetup_AfterVotingEngine_Reverts() public {
