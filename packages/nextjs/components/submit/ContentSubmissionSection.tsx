@@ -1728,7 +1728,10 @@ export function ContentSubmissionSection() {
             <p className="mt-1 text-sm font-medium text-base-content/50">{pageContext}</p>
           </div>
           <label className="flex items-center gap-2 text-sm font-medium text-base-content/60">
-            Questions
+            <span className="flex items-center gap-1.5">
+              Questions
+              <InfoTooltip text="Choose how many separate questions voters must answer in this ask. The bounty is split across all questions." />
+            </span>
             <input
               type="number"
               min={1}
@@ -1736,7 +1739,13 @@ export function ContentSubmissionSection() {
               step={1}
               value={questionCount}
               onChange={event => handleQuestionCountChange(event.target.value)}
-              className="input input-bordered input-sm w-20 bg-base-100 text-right"
+              className="input input-bordered h-14 w-24 bg-base-100 text-right text-xl font-semibold text-primary"
+              style={{
+                background: "rgb(var(--curyo-ember-rgb) / 0.1)",
+                boxShadow:
+                  "inset 0 1px 0 rgb(var(--curyo-warm-white-rgb) / 0.04), 0 0 0 1px rgb(var(--curyo-ember-rgb) / 0.28), 0 14px 28px rgb(var(--curyo-ember-rgb) / 0.12)",
+                color: "var(--curyo-ember)",
+              }}
               aria-label="Number of questions"
             />
           </label>
