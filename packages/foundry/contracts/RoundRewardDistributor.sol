@@ -78,6 +78,9 @@ contract RoundRewardDistributor is Initializable, AccessControlUpgradeable, Reen
     mapping(uint256 => mapping(uint256 => uint256)) public roundFrontendClaimedCount;
     mapping(uint256 => mapping(uint256 => uint256)) public roundFrontendClaimedAmount;
     mapping(uint256 => mapping(uint256 => bool)) public roundFrontendFeeDustFinalized;
+    mapping(uint256 => mapping(uint256 => uint256)) public roundFrontendFeeDustProcessedCount;
+    mapping(uint256 => mapping(uint256 => uint256)) public roundFrontendFeeDustExpectedTotal;
+    mapping(uint256 => mapping(uint256 => address)) public roundFrontendFeeDustLastFrontend;
 
     // Track participation reward claims: contentId => roundId => voter => claimed/paid
     mapping(uint256 => mapping(uint256 => mapping(address => bool))) public participationRewardClaimed;
@@ -135,6 +138,9 @@ contract RoundRewardDistributor is Initializable, AccessControlUpgradeable, Reen
     );
     event VoterRewardDustFinalized(uint256 indexed contentId, uint256 indexed roundId, uint256 amount);
     event FrontendFeeDustFinalized(uint256 indexed contentId, uint256 indexed roundId, uint256 amount);
+    event FrontendFeeDustBatchProcessed(
+        uint256 indexed contentId, uint256 indexed roundId, uint256 processedCount, uint256 expectedTotal
+    );
     event ParticipationRewardSnapshotFailed(
         uint256 indexed contentId,
         uint256 indexed roundId,
@@ -345,38 +351,28 @@ contract RoundRewardDistributor is Initializable, AccessControlUpgradeable, Reen
         nonReentrant
         returns (uint256 releasedDust)
     {
-        if (roundFrontendFeeDustFinalized[contentId][roundId]) revert RewardDustAlreadyFinalized();
+        _processFrontendFeeDustBatch(contentId, roundId, sortedFrontends);
+        releasedDust = _finalizeProcessedFrontendFeeDust(contentId, roundId);
+    }
 
-        _readSettledStaleRound(contentId, roundId);
-        _requireNoPendingUnrevealedCleanup(contentId, roundId);
+    /// @notice Process a globally sorted slice of eligible frontends for later dust finalization.
+    function processFrontendFeeDustBatch(uint256 contentId, uint256 roundId, address[] calldata sortedFrontends)
+        external
+        onlyRole(DEFAULT_ADMIN_ROLE)
+        nonReentrant
+        returns (uint256 processedCount, uint256 expectedTotal)
+    {
+        (processedCount, expectedTotal) = _processFrontendFeeDustBatch(contentId, roundId, sortedFrontends);
+    }
 
-        uint256 totalFrontendPool = votingEngine.roundFrontendPool(contentId, roundId);
-        uint256 totalEligibleStake = votingEngine.roundStakeWithEligibleFrontend(contentId, roundId);
-        uint256 totalFrontendClaimants = votingEngine.roundEligibleFrontendCount(contentId, roundId);
-        if (sortedFrontends.length != totalFrontendClaimants) revert InvalidFinalizationInput();
-        if (totalFrontendPool == 0 || totalEligibleStake == 0 || totalFrontendClaimants == 0) revert NoRewardDust();
-
-        uint256 expectedTotal;
-        address previous;
-        for (uint256 i = 0; i < sortedFrontends.length; i++) {
-            address frontend = sortedFrontends[i];
-            if (frontend == address(0) || (i != 0 && frontend <= previous)) revert InvalidFinalizationInput();
-            previous = frontend;
-
-            uint256 frontendStake = votingEngine.roundPerFrontendStake(contentId, roundId, frontend);
-            if (frontendStake == 0) revert InvalidFinalizationInput();
-            expectedTotal += (totalFrontendPool * frontendStake) / totalEligibleStake;
-        }
-
-        releasedDust =
-            _finalizableDust(totalFrontendPool, expectedTotal, roundFrontendClaimedAmount[contentId][roundId]);
-        if (releasedDust == 0) revert NoRewardDust();
-
-        roundFrontendFeeDustFinalized[contentId][roundId] = true;
-        roundFrontendClaimedAmount[contentId][roundId] += releasedDust;
-        _routeRewardToProtocol(releasedDust);
-
-        emit FrontendFeeDustFinalized(contentId, roundId, releasedDust);
+    /// @notice Finalize frontend-fee dust after all eligible frontend batches have been processed.
+    function finalizeProcessedFrontendFeeDust(uint256 contentId, uint256 roundId)
+        external
+        onlyRole(DEFAULT_ADMIN_ROLE)
+        nonReentrant
+        returns (uint256 releasedDust)
+    {
+        releasedDust = _finalizeProcessedFrontendFeeDust(contentId, roundId);
     }
 
     function previewFrontendFee(uint256 contentId, uint256 roundId, address frontend)
@@ -715,6 +711,74 @@ contract RoundRewardDistributor is Initializable, AccessControlUpgradeable, Reen
 
     function _isStaleRound(RoundLib.Round memory round) internal view returns (bool) {
         return round.settledAt != 0 && block.timestamp >= uint256(round.settledAt) + STALE_REWARD_FINALIZATION_DELAY;
+    }
+
+    function _processFrontendFeeDustBatch(uint256 contentId, uint256 roundId, address[] calldata sortedFrontends)
+        internal
+        returns (uint256 processedCount, uint256 expectedTotal)
+    {
+        if (roundFrontendFeeDustFinalized[contentId][roundId]) revert RewardDustAlreadyFinalized();
+        if (sortedFrontends.length == 0) revert InvalidFinalizationInput();
+
+        _readSettledStaleRound(contentId, roundId);
+        _requireNoPendingUnrevealedCleanup(contentId, roundId);
+
+        uint256 totalFrontendPool = votingEngine.roundFrontendPool(contentId, roundId);
+        uint256 totalEligibleStake = votingEngine.roundStakeWithEligibleFrontend(contentId, roundId);
+        uint256 totalFrontendClaimants = votingEngine.roundEligibleFrontendCount(contentId, roundId);
+        if (totalFrontendPool == 0 || totalEligibleStake == 0 || totalFrontendClaimants == 0) revert NoRewardDust();
+
+        processedCount = roundFrontendFeeDustProcessedCount[contentId][roundId];
+        expectedTotal = roundFrontendFeeDustExpectedTotal[contentId][roundId];
+        address previous = roundFrontendFeeDustLastFrontend[contentId][roundId];
+
+        for (uint256 i = 0; i < sortedFrontends.length; i++) {
+            address frontend = sortedFrontends[i];
+            if (frontend == address(0) || frontend <= previous) revert InvalidFinalizationInput();
+            previous = frontend;
+
+            uint256 frontendStake = votingEngine.roundPerFrontendStake(contentId, roundId, frontend);
+            if (frontendStake == 0) revert InvalidFinalizationInput();
+            expectedTotal += (totalFrontendPool * frontendStake) / totalEligibleStake;
+        }
+
+        processedCount += sortedFrontends.length;
+        if (processedCount > totalFrontendClaimants) revert InvalidFinalizationInput();
+
+        roundFrontendFeeDustProcessedCount[contentId][roundId] = processedCount;
+        roundFrontendFeeDustExpectedTotal[contentId][roundId] = expectedTotal;
+        roundFrontendFeeDustLastFrontend[contentId][roundId] = previous;
+
+        emit FrontendFeeDustBatchProcessed(contentId, roundId, processedCount, expectedTotal);
+    }
+
+    function _finalizeProcessedFrontendFeeDust(uint256 contentId, uint256 roundId)
+        internal
+        returns (uint256 releasedDust)
+    {
+        if (roundFrontendFeeDustFinalized[contentId][roundId]) revert RewardDustAlreadyFinalized();
+
+        _readSettledStaleRound(contentId, roundId);
+        _requireNoPendingUnrevealedCleanup(contentId, roundId);
+
+        uint256 totalFrontendClaimants = votingEngine.roundEligibleFrontendCount(contentId, roundId);
+        if (
+            totalFrontendClaimants == 0
+                || roundFrontendFeeDustProcessedCount[contentId][roundId] != totalFrontendClaimants
+        ) {
+            revert InvalidFinalizationInput();
+        }
+
+        uint256 totalFrontendPool = votingEngine.roundFrontendPool(contentId, roundId);
+        uint256 expectedTotal = roundFrontendFeeDustExpectedTotal[contentId][roundId];
+        releasedDust = _finalizableDust(totalFrontendPool, expectedTotal, roundFrontendClaimedAmount[contentId][roundId]);
+        if (releasedDust == 0) revert NoRewardDust();
+
+        roundFrontendFeeDustFinalized[contentId][roundId] = true;
+        roundFrontendClaimedAmount[contentId][roundId] += releasedDust;
+        _routeRewardToProtocol(releasedDust);
+
+        emit FrontendFeeDustFinalized(contentId, roundId, releasedDust);
     }
 
     function _finalizableDust(uint256 totalPool, uint256 expectedTotal, uint256 claimedAmount)

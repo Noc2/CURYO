@@ -2220,7 +2220,7 @@ contract RoundIntegrationTest is VotingTestBase {
 
         uint256 roundId = RoundEngineReadHelpers.activeRoundId(votingEngine, contentId);
         RoundLib.Round memory openRound = RoundEngineReadHelpers.round(votingEngine, contentId, roundId);
-        vm.warp(openRound.startTime + EPOCH_DURATION + 1);
+        vm.warp(openRound.startTime + EPOCH_DURATION + _tlockDrandPeriod() + 1);
         votingEngine.revealVoteByCommitKey(contentId, roundId, ck1, true, salt1);
         votingEngine.revealVoteByCommitKey(contentId, roundId, ck2, true, salt2);
         votingEngine.revealVoteByCommitKey(contentId, roundId, ck3, false, salt3);
@@ -2241,7 +2241,28 @@ contract RoundIntegrationTest is VotingTestBase {
         uint256 feesABefore = frontendReg.getAccumulatedFees(frontendA);
         uint256 feesBBefore = frontendReg.getAccumulatedFees(frontendB);
 
-        uint256 releasedDust = rewardDistributor.finalizeFrontendFeeDust(contentId, roundId, frontends);
+        address[] memory firstBatch = new address[](1);
+        firstBatch[0] = frontendA;
+        vm.expectRevert();
+        vm.prank(address(0xD00D));
+        rewardDistributor.processFrontendFeeDustBatch(contentId, roundId, firstBatch);
+
+        vm.prank(owner);
+        (uint256 processedCount,) = rewardDistributor.processFrontendFeeDustBatch(contentId, roundId, firstBatch);
+        assertEq(processedCount, 1, "first batch should process one frontend");
+
+        vm.expectRevert(RoundRewardDistributor.InvalidFinalizationInput.selector);
+        vm.prank(owner);
+        rewardDistributor.finalizeProcessedFrontendFeeDust(contentId, roundId);
+
+        address[] memory secondBatch = new address[](1);
+        secondBatch[0] = frontendB;
+        vm.prank(owner);
+        (processedCount,) = rewardDistributor.processFrontendFeeDustBatch(contentId, roundId, secondBatch);
+        assertEq(processedCount, 2, "second batch should complete processing");
+
+        vm.prank(owner);
+        uint256 releasedDust = rewardDistributor.finalizeProcessedFrontendFeeDust(contentId, roundId);
 
         assertEq(releasedDust, 1, "only mathematical frontend fee dust should be finalized");
         assertEq(hrepToken.balanceOf(treasury), treasuryBefore + releasedDust, "dust should route to protocol");
