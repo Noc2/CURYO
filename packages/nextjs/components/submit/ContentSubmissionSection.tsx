@@ -960,6 +960,42 @@ export function ContentSubmissionSection() {
     setBountyStepAttempted(false);
   };
 
+  const handleGoToPreviousQuestion = () => {
+    if (activeQuestionIndex <= 0) return;
+
+    const nextDrafts = questionDrafts.map((draft, index) =>
+      index === activeQuestionIndex ? getActiveQuestionDraft() : draft,
+    );
+    setQuestionDrafts(nextDrafts);
+    setActiveQuestionPage(activeQuestionIndex - 1, nextDrafts);
+    setBountyStepAttempted(false);
+  };
+
+  const handleGoToBountyStep = () => {
+    if (submissionStep === "bounty") return;
+
+    const syncedDrafts = questionDrafts
+      .map((draft, index) => (index === activeQuestionIndex ? getActiveQuestionDraft() : draft))
+      .slice(0, questionCount);
+    const validatedQuestions = syncedDrafts.map(draft => validateQuestionSection(draft, false));
+    const firstInvalidQuestionIndex = validatedQuestions.findIndex(question => question.hasQuestionErrors);
+    if (firstInvalidQuestionIndex >= 0) {
+      const invalidDraft = syncedDrafts[firstInvalidQuestionIndex] ?? createEmptyQuestionDraft();
+      setQuestionDrafts(syncedDrafts);
+      setActiveQuestionIndex(firstInvalidQuestionIndex);
+      loadQuestionDraft(invalidDraft);
+      setQuestionStepAttempted(true);
+      validateQuestionSection(invalidDraft, true);
+      setSubmissionStep("question");
+      notification.warning("Fill in every question page before opening bounty details.");
+      return;
+    }
+
+    setQuestionDrafts(syncedDrafts);
+    setSubmissionStep("bounty");
+    setBountyStepAttempted(false);
+  };
+
   const handleQuestionCountChange = (value: string) => {
     const nextCount = Math.max(1, Math.min(MAX_QUESTION_BUNDLE_COUNT, parseIntegerInput(value)));
     const syncedDrafts = questionDrafts.map((draft, index) =>
@@ -1439,18 +1475,34 @@ export function ContentSubmissionSection() {
         <button
           key={index}
           type="button"
+          aria-current={submissionStep === "question" && activeQuestionIndex === index ? "step" : undefined}
+          aria-label={`Go to question ${index + 1}`}
           onClick={() => setActiveQuestionPage(index)}
-          className={`rounded-md px-2 py-1 ${
+          title={`Go to question ${index + 1}`}
+          className={`cursor-pointer rounded-md border px-2 py-1 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 ${
             submissionStep === "question" && activeQuestionIndex === index
-              ? "bg-primary/10 text-primary"
-              : "hover:bg-base-200"
+              ? "border-primary/40 bg-primary/10 text-primary hover:bg-primary/15"
+              : "border-transparent hover:border-base-content/25 hover:bg-base-200 hover:text-base-content"
           }`}
         >
           Q{index + 1}
         </button>
       ))}
       <span aria-hidden="true">→</span>
-      <span className={submissionStep === "bounty" ? "text-primary" : ""}>Bounty</span>
+      <button
+        type="button"
+        aria-current={submissionStep === "bounty" ? "step" : undefined}
+        aria-label="Go to bounty details"
+        onClick={handleGoToBountyStep}
+        title="Go to bounty details"
+        className={`cursor-pointer rounded-md border px-2 py-1 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 ${
+          submissionStep === "bounty"
+            ? "border-primary/40 bg-primary/10 text-primary hover:bg-primary/15"
+            : "border-transparent hover:border-base-content/25 hover:bg-base-200 hover:text-base-content"
+        }`}
+      >
+        Bounty
+      </button>
     </div>
   );
 
@@ -2248,10 +2300,15 @@ export function ContentSubmissionSection() {
                 {questionPreviewCard}
                 {prohibitedContentNotice}
                 {isMissingGasBalance ? <GasBalanceWarning nativeTokenSymbol={nativeTokenSymbol} /> : null}
+                {activeQuestionIndex > 0 ? (
+                  <button type="button" onClick={handleGoToPreviousQuestion} className="btn btn-ghost w-full">
+                    Back to Q{activeQuestionIndex}
+                  </button>
+                ) : null}
                 <button type="button" onClick={handleContinueToBounty} className="btn btn-primary w-full">
                   {activeQuestionIndex < questionCount - 1
-                    ? `Next question (${activeQuestionIndex + 2}/${questionCount})`
-                    : "Continue to bounty"}
+                    ? `Next Question (${activeQuestionIndex + 2}/${questionCount})`
+                    : "Continue to Bounty"}
                 </button>
               </div>
             </div>
