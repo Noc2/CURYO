@@ -375,7 +375,7 @@ contract QuestionRewardPoolEscrow is
             nonRefundable: true
         });
 
-        for (uint256 i = 0; i < contentIds.length; i++) {
+        for (uint256 i = 0; i < contentIds.length;) {
             uint256 contentId = contentIds[i];
             require(registry.isContentActive(contentId), "Content not active");
             require(contentBundleId[contentId] == 0, "Content bundled");
@@ -384,6 +384,9 @@ contract QuestionRewardPoolEscrow is
             bundleQuestions[bundleId].push(
                 BundleQuestion({ contentId: contentId.toUint64(), roundId: 0, settled: false, terminal: false })
             );
+            unchecked {
+                ++i;
+            }
         }
 
         emit QuestionBundleRewardCreated(
@@ -542,7 +545,6 @@ contract QuestionRewardPoolEscrow is
 
         bytes32 commitKey = votingEngine.voterIdCommitKey(rewardPool.contentId, roundId, voterId);
         require(commitKey != bytes32(0), "No commit");
-        require(votingEngine.commitVoterId(rewardPool.contentId, roundId, commitKey) == voterId, "Wrong Voter ID");
 
         (bool revealed, address frontend) = _revealedCommitFrontend(rewardPool.contentId, roundId, commitKey);
         require(revealed, "Vote not revealed");
@@ -554,11 +556,13 @@ contract QuestionRewardPoolEscrow is
         uint256 frontendFee;
         address frontendRecipient;
         (rewardAmount, frontendFee, frontendRecipient) =
-            _splitClaimAmounts(rewardPool, roundId, commitKey, frontend, grossAmount, reservedFrontendFee);
+            _computeClaimSplit(rewardPool.contentId, roundId, commitKey, frontend, grossAmount, reservedFrontendFee);
         require(grossAmount > 0, "No reward");
 
         rewardClaimed[rewardPoolId][roundId][voterId] = true;
-        snapshot.claimedCount++;
+        unchecked {
+            snapshot.claimedCount++;
+        }
         snapshot.claimedAmount += grossAmount;
         snapshot.voterClaimedAmount += rewardAmount;
         snapshot.frontendClaimedAmount += frontendFee;
@@ -609,7 +613,9 @@ contract QuestionRewardPoolEscrow is
         question.roundId = roundId.toUint64();
         question.terminal = true;
         question.settled = true;
-        bundle.completedQuestionCount++;
+        unchecked {
+            bundle.completedQuestionCount++;
+        }
         emit QuestionBundleRoundRecorded(bundleId, contentId, roundId, bundleIndex);
     }
 
@@ -634,18 +640,14 @@ contract QuestionRewardPoolEscrow is
 
         uint256 reservedFrontendFee = (grossAmount * bundle.frontendFeeBps) / BPS_SCALE;
         address frontendRecipient;
-        (rewardAmount, reservedFrontendFee, frontendRecipient) = _splitBundleClaimAmounts(
-            bundle,
-            firstQuestion.contentId,
-            firstQuestion.roundId,
-            firstCommitKey,
-            frontend,
-            grossAmount,
-            reservedFrontendFee
+        (rewardAmount, reservedFrontendFee, frontendRecipient) = _computeClaimSplit(
+            firstQuestion.contentId, firstQuestion.roundId, firstCommitKey, frontend, grossAmount, reservedFrontendFee
         );
 
         bundleRewardClaimed[bundleId][voterId] = true;
-        bundle.claimedCount++;
+        unchecked {
+            bundle.claimedCount++;
+        }
         bundle.claimedAmount += grossAmount;
         bundle.voterClaimedAmount += rewardAmount;
         bundle.frontendClaimedAmount += reservedFrontendFee;
@@ -807,8 +809,8 @@ contract QuestionRewardPoolEscrow is
             uint256 previewGrossAmount = _nextEqualShare(allocation, eligibleVoters, 0);
             uint256 previewReservedFrontendFee =
                 _nextEqualShare(_frontendFeeAllocation(rewardPool, allocation), eligibleVoters, 0);
-            (claimableAmount,,) = _splitClaimAmounts(
-                rewardPool, roundId, commitKey, frontend, previewGrossAmount, previewReservedFrontendFee
+            (claimableAmount,,) = _computeClaimSplit(
+                rewardPool.contentId, roundId, commitKey, frontend, previewGrossAmount, previewReservedFrontendFee
             );
             return claimableAmount;
         }
@@ -817,7 +819,7 @@ contract QuestionRewardPoolEscrow is
         uint256 reservedFrontendFee =
             _nextEqualShare(snapshot.frontendFeeAllocation, snapshot.eligibleVoters, snapshot.claimedCount);
         (claimableAmount,,) =
-            _splitClaimAmounts(rewardPool, roundId, commitKey, frontend, grossAmount, reservedFrontendFee);
+            _computeClaimSplit(rewardPool.contentId, roundId, commitKey, frontend, grossAmount, reservedFrontendFee);
     }
 
     function setVoterIdNFT(address voterIdNFT_) external onlyRole(CONFIG_ROLE) {
@@ -926,10 +928,9 @@ contract QuestionRewardPoolEscrow is
         returns (address frontend, bytes32 firstCommitKey)
     {
         BundleQuestion[] storage questions = bundleQuestions[bundleId];
-        require(questions.length > 0, "No questions");
-        for (uint256 i = 0; i < questions.length; i++) {
+        for (uint256 i = 0; i < questions.length;) {
             BundleQuestion storage question = questions[i];
-            require(question.terminal && question.settled, "Question not settled");
+            require(question.terminal, "Question not settled");
             require(
                 votingEngine.roundUnrevealedCleanupRemaining(question.contentId, question.roundId) == 0,
                 "Cleanup pending"
@@ -938,9 +939,6 @@ contract QuestionRewardPoolEscrow is
             require(voterId != 0, "Voter ID required");
             bytes32 commitKey = votingEngine.voterIdCommitKey(question.contentId, question.roundId, voterId);
             require(commitKey != bytes32(0), "No commit");
-            require(
-                votingEngine.commitVoterId(question.contentId, question.roundId, commitKey) == voterId, "Wrong Voter ID"
-            );
             (bool revealed, address questionFrontend) =
                 _revealedCommitFrontend(question.contentId, question.roundId, commitKey);
             require(revealed, "Vote not revealed");
@@ -948,15 +946,17 @@ contract QuestionRewardPoolEscrow is
                 frontend = questionFrontend;
                 firstCommitKey = commitKey;
             }
+            unchecked {
+                ++i;
+            }
         }
     }
 
     function _hasCompletedBundle(uint256 bundleId, address account) internal view returns (bool) {
         BundleQuestion[] storage questions = bundleQuestions[bundleId];
-        if (questions.length == 0) return false;
-        for (uint256 i = 0; i < questions.length; i++) {
+        for (uint256 i = 0; i < questions.length;) {
             BundleQuestion storage question = questions[i];
-            if (!question.terminal || !question.settled) return false;
+            if (!question.terminal) return false;
             if (votingEngine.roundUnrevealedCleanupRemaining(question.contentId, question.roundId) > 0) return false;
             uint256 voterId = _voterIdForRound(question.contentId, question.roundId, account);
             if (voterId == 0) return false;
@@ -964,6 +964,9 @@ contract QuestionRewardPoolEscrow is
             if (commitKey == bytes32(0)) return false;
             (bool revealed,) = _revealedCommitFrontend(question.contentId, question.roundId, commitKey);
             if (!revealed) return false;
+            unchecked {
+                ++i;
+            }
         }
         return true;
     }
@@ -974,17 +977,21 @@ contract QuestionRewardPoolEscrow is
         returns (bool)
     {
         BundleQuestion[] storage questions = bundleQuestions[bundleId];
-        for (uint256 i = 0; i < questions.length; i++) {
+        for (uint256 i = 0; i < questions.length;) {
             BundleQuestion storage question = questions[i];
             uint256 voterId = _voterIdForRound(question.contentId, question.roundId, account);
-            if (voterId == 0) continue;
-            uint256 funderVoterId = _funderVoterIdForBundleQuestion(bundle, question.contentId, question.roundId);
-            if (voterId == funderVoterId) return true;
+            if (voterId != 0) {
+                uint256 funderVoterId = _funderVoterIdForBundleQuestion(bundle, question.contentId, question.roundId);
+                if (voterId == funderVoterId) return true;
 
-            address submitterIdentity = registry.getSubmitterIdentity(question.contentId);
-            if (submitterIdentity != address(0)) {
-                uint256 submitterVoterId = _voterIdForRound(question.contentId, question.roundId, submitterIdentity);
-                if (voterId == submitterVoterId) return true;
+                address submitterIdentity = registry.getSubmitterIdentity(question.contentId);
+                if (submitterIdentity != address(0)) {
+                    uint256 submitterVoterId = _voterIdForRound(question.contentId, question.roundId, submitterIdentity);
+                    if (voterId == submitterVoterId) return true;
+                }
+            }
+            unchecked {
+                ++i;
             }
         }
         return false;
@@ -996,20 +1003,6 @@ contract QuestionRewardPoolEscrow is
         returns (uint256)
     {
         return _resolveFunderVoterId(contentId, roundId, bundle.funder, bundle.funderIdentity, bundle.funderVoterId);
-    }
-
-    function _splitBundleClaimAmounts(
-        BundleReward storage bundle,
-        uint256 contentId,
-        uint256 roundId,
-        bytes32 commitKey,
-        address frontend,
-        uint256 grossAmount,
-        uint256 reservedFrontendFee
-    ) internal view returns (uint256 voterReward, uint256 frontendFee, address frontendRecipient) {
-        return _computeClaimSplit(
-            contentId, roundId, commitKey, frontend, bundle.frontendFeeBps, grossAmount, reservedFrontendFee
-        );
     }
 
     function _getIncompleteRewardPoolForQualification(uint256 rewardPoolId)
@@ -1047,7 +1040,9 @@ contract QuestionRewardPoolEscrow is
         require(allocation >= eligibleVoters, "Reward allocation too small");
         uint256 frontendFeeAllocation = _frontendFeeAllocation(rewardPool, allocation);
 
-        rewardPool.qualifiedRounds++;
+        unchecked {
+            rewardPool.qualifiedRounds++;
+        }
         rewardPool.nextRoundToEvaluate = (roundId + 1).toUint64();
         rewardPool.unallocatedAmount -= allocation;
         rewardPool.allocatedAmount += allocation;
@@ -1179,36 +1174,16 @@ contract QuestionRewardPoolEscrow is
         return baseShare;
     }
 
-    function _splitClaimAmounts(
-        RewardPool storage rewardPool,
-        uint256 roundId,
-        bytes32 commitKey,
-        address frontend,
-        uint256 grossAmount,
-        uint256 reservedFrontendFee
-    ) internal view returns (uint256 voterReward, uint256 frontendFee, address frontendRecipient) {
-        return _computeClaimSplit(
-            rewardPool.contentId,
-            roundId,
-            commitKey,
-            frontend,
-            rewardPool.frontendFeeBps,
-            grossAmount,
-            reservedFrontendFee
-        );
-    }
-
     function _computeClaimSplit(
         uint256 contentId,
         uint256 roundId,
         bytes32 commitKey,
         address frontend,
-        uint16 frontendFeeBps,
         uint256 grossAmount,
         uint256 reservedFrontendFee
     ) internal view returns (uint256 voterReward, uint256 frontendFee, address frontendRecipient) {
         if (
-            reservedFrontendFee == 0 || frontendFeeBps == 0 || frontend == address(0)
+            reservedFrontendFee == 0 || frontend == address(0)
                 || !votingEngine.frontendEligibleAtCommit(contentId, roundId, commitKey)
         ) {
             return (grossAmount, 0, address(0));
@@ -1333,10 +1308,6 @@ contract QuestionRewardPoolEscrow is
         }
         if (submitterIdentity == address(0)) return 0;
         return _voterIdForRound(rewardPool.contentId, roundId, submitterIdentity);
-    }
-
-    function _requireVoterId(address account) internal view returns (uint256 voterId) {
-        return _requireVoterId(voterIdNFT, account);
     }
 
     function _requireVoterId(IVoterIdNFT voterIdNft_, address account) internal view returns (uint256 voterId) {
