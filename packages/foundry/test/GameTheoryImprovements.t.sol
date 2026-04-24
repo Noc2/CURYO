@@ -219,6 +219,7 @@ contract GameTheoryImprovementsTest is VotingTestBase {
         RoundLib.Round memory settled = RoundEngineReadHelpers.round(engine, cid, roundId);
         assertEq(uint256(settled.state), uint256(RoundLib.RoundState.Settled), "Round settled");
         assertFalse(settled.upWins, "DOWN wins despite raw UP majority - epoch weighting prevails");
+        assertGt(registry.getRating(cid), 5_000, "rating should follow raw revealed UP majority");
     }
 
     // =========================================================================

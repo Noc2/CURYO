@@ -776,8 +776,6 @@ contract RoundVotingEngine is
             contentId,
             roundId,
             _getRoundReferenceRatingBps(contentId, roundId),
-            round.weightedUpPool,
-            round.weightedDownPool,
             upWins,
             round.upPool,
             round.downPool

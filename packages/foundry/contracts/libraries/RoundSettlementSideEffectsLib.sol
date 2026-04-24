@@ -29,8 +29,6 @@ library RoundSettlementSideEffectsLib {
         uint256 contentId,
         uint256 roundId,
         uint16 referenceRatingBps,
-        uint64 weightedUpPool,
-        uint64 weightedDownPool,
         bool upWins,
         uint64 upPool,
         uint64 downPool
@@ -39,8 +37,8 @@ library RoundSettlementSideEffectsLib {
         RatingLib.SlashConfig memory slashConfig = registry.getSlashConfigForContent(contentId);
         (RatingLib.RatingState memory nextState,,) = RatingMath.applySettlement(
             referenceRatingBps,
-            weightedUpPool,
-            weightedDownPool,
+            upPool,
+            downPool,
             previousState,
             ratingConfig,
             slashConfig,
