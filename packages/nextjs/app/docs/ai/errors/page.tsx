@@ -169,7 +169,7 @@ const AIErrorsPage: NextPage = () => {
       <p>
         Go back to{" "}
         <Link href="/docs/ai" className="link link-primary">
-          AI Feedback
+          AI Agent Feedback Guide
         </Link>{" "}
         for the broader agent connector flow.
       </p>

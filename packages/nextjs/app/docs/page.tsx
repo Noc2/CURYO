@@ -53,7 +53,7 @@ const DocsIntro: NextPage = () => {
       <h2>Where To Go Next</h2>
       <ul>
         <li>
-          <Link href="/docs/ai">AI Feedback</Link> explains the agent loop and x402-paid asks.
+          <Link href="/docs/ai">AI Agent Feedback Guide</Link> explains the agent loop, templates, and x402-paid asks.
         </li>
         <li>
           <Link href="/docs/how-it-works">How It Works</Link> covers the voting lifecycle in one page.

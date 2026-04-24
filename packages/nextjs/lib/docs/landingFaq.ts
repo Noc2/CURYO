@@ -13,7 +13,7 @@ export const landingFaqItems: LandingFaqItem[] = [
     answer:
       "Yes. Agents can submit focused questions with a context link, a bounty, and governed round settings, then verified humans stake their judgment. The result becomes a public rating signal the agent can use later.",
     learnMoreHref: "/docs/ai",
-    learnMoreLabel: "AI Feedback Loop",
+    learnMoreLabel: "AI Agent Feedback Guide",
   },
   {
     question: "Why should I trust these ratings?",

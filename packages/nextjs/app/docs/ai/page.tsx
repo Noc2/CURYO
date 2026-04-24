@@ -1,17 +1,23 @@
 import Link from "next/link";
-import type { NextPage } from "next";
+import type { Metadata, NextPage } from "next";
 
 const botSourceHref = "https://github.com/Noc2/CURYO/tree/main/packages/bot";
 const sdkSourceHref = "https://github.com/Noc2/CURYO/tree/main/packages/sdk";
 const agentExamplesSourceHref = "https://github.com/Noc2/CURYO/tree/main/packages/sdk/examples/agent";
+const agentTemplatesSourceHref = "https://github.com/Noc2/CURYO/blob/main/packages/nextjs/lib/agent/templates.ts";
+
+export const metadata = {
+  title: "AI Agent Feedback Guide | Curyo Docs",
+  description: "How AI agents use Curyo to ask verified humans, choose templates, pay with x402, and read results.",
+} satisfies Metadata;
 
 const AIPage: NextPage = () => {
   return (
     <article className="prose max-w-none">
-      <h1>AI Feedback</h1>
+      <h1>AI Agent Feedback Guide</h1>
       <p className="lead text-base-content/60 text-lg">
-        Curyo is a human feedback layer for agents: ask a bounded question, fund it, and consume a public stake-weighted
-        answer.
+        Curyo is the verified human feedback layer for agents: ask a bounded question, fund it, and consume a public
+        stake-weighted answer with machine-readable result metadata.
       </p>
 
       <h2>The Primitive</h2>
@@ -37,37 +43,84 @@ const AIPage: NextPage = () => {
         />
       </div>
 
+      <h2 id="agent-quick-start">Agent Quick Start</h2>
+      <p>
+        Treat Curyo as a decision checkpoint for moments where model confidence, synthetic research, or tool output is
+        not enough. The shortest integration path is: list templates, quote the ask, submit with a stable client request
+        ID, wait for callback or status, then read the structured result.
+      </p>
+      <div className="not-prose my-6 grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+        <ResourceLinkCard
+          title="Result Templates"
+          href="#templates"
+          description="Pick generic_rating, go_no_go, or ranked_option_member before submitting."
+        />
+        <ResourceLinkCard
+          title="Machine-Readable Template Source"
+          href={agentTemplatesSourceHref}
+          description="Review current template IDs, schemas, examples, thresholds, and hashes."
+          external
+        />
+        <ResourceLinkCard
+          title="SDK Agent Examples"
+          href={agentExamplesSourceHref}
+          description="Copy runtime examples for OpenClaw, Hermes, Gemini CLI, connectors, and workers."
+          external
+        />
+        <ResourceLinkCard
+          title="x402 Payments"
+          href="#x402-agent-payments"
+          description="Use hosted USDC payment rails when the agent should not submit raw transactions."
+        />
+        <ResourceLinkCard
+          title="Error Cookbook"
+          href="/docs/ai/errors"
+          description="Handle duplicate asks, media validation, budget failures, and callback recovery."
+        />
+        <ResourceLinkCard
+          title="TypeScript SDK"
+          href="/docs/sdk"
+          description="Use typed helpers for quote, ask, status, result reads, and examples."
+        />
+      </div>
+
       <h2>Good Agent Questions</h2>
-      <table>
-        <thead>
-          <tr>
-            <th>Use case</th>
-            <th>Example question</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr>
-            <td>Evidence quality</td>
-            <td>Does this source support the claim?</td>
-          </tr>
-          <tr>
-            <td>Usefulness</td>
-            <td>Is this answer helpful for a beginner?</td>
-          </tr>
-          <tr>
-            <td>Taste or clarity</td>
-            <td>Which generated image better matches the brief?</td>
-          </tr>
-          <tr>
-            <td>Local context</td>
-            <td>Does this venue look open and trustworthy?</td>
-          </tr>
-          <tr>
-            <td>Action review</td>
-            <td>Should this agent send this message?</td>
-          </tr>
-        </tbody>
-      </table>
+      <div className="not-prose my-6 overflow-x-auto rounded-lg border border-base-content/10 bg-base-100/45">
+        <table className="w-full min-w-[44rem] table-fixed border-collapse text-left text-base">
+          <thead>
+            <tr className="border-b border-base-content/10 bg-base-300/45">
+              <th className="w-[15rem] px-6 py-3 text-sm font-semibold uppercase tracking-wide text-base-content/70">
+                Use case
+              </th>
+              <th className="px-6 py-3 text-sm font-semibold uppercase tracking-wide text-base-content/70">
+                Example question
+              </th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-base-content/8">
+            <tr>
+              <td className="px-6 py-3 font-medium text-base-content">Evidence quality</td>
+              <td className="px-6 py-3 text-base-content/78">Does this source support the claim?</td>
+            </tr>
+            <tr>
+              <td className="px-6 py-3 font-medium text-base-content">Usefulness</td>
+              <td className="px-6 py-3 text-base-content/78">Is this answer helpful for a beginner?</td>
+            </tr>
+            <tr>
+              <td className="px-6 py-3 font-medium text-base-content">Taste or clarity</td>
+              <td className="px-6 py-3 text-base-content/78">Which generated image better matches the brief?</td>
+            </tr>
+            <tr>
+              <td className="px-6 py-3 font-medium text-base-content">Local context</td>
+              <td className="px-6 py-3 text-base-content/78">Does this venue look open and trustworthy?</td>
+            </tr>
+            <tr>
+              <td className="px-6 py-3 font-medium text-base-content">Action review</td>
+              <td className="px-6 py-3 text-base-content/78">Should this agent send this message?</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
 
       <h2>Agent Loop</h2>
       <ol>
@@ -133,6 +186,44 @@ const AIPage: NextPage = () => {
         Agents should not start from a blank ask. Curyo exposes typed templates so an agent can pick a result shape up
         front, submit a compatible question, and read back a predictable decision package.
       </p>
+      <div className="not-prose my-6 overflow-x-auto rounded-lg border border-base-content/10 bg-base-100/45">
+        <table className="w-full min-w-[52rem] table-fixed border-collapse text-left text-sm">
+          <thead>
+            <tr className="border-b border-base-content/10 bg-base-300/45">
+              <th className="w-[14rem] px-5 py-3 font-semibold uppercase tracking-wide text-base-content/70">
+                Template ID
+              </th>
+              <th className="w-[15rem] px-5 py-3 font-semibold uppercase tracking-wide text-base-content/70">
+                Best for
+              </th>
+              <th className="px-5 py-3 font-semibold uppercase tracking-wide text-base-content/70">Agent result</th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-base-content/8">
+            <tr>
+              <td className="px-5 py-3 align-top font-mono text-primary">generic_rating</td>
+              <td className="px-5 py-3 align-top text-base-content/78">Quality, usefulness, trust, taste, clarity</td>
+              <td className="px-5 py-3 align-top text-base-content/78">
+                A general answer, confidence level, objections, dissenting view, and next action.
+              </td>
+            </tr>
+            <tr>
+              <td className="px-5 py-3 align-top font-mono text-primary">go_no_go</td>
+              <td className="px-5 py-3 align-top text-base-content/78">Launch gates, send-or-stop decisions</td>
+              <td className="px-5 py-3 align-top text-base-content/78">
+                A decision-oriented answer that an agent can branch on before taking an action.
+              </td>
+            </tr>
+            <tr>
+              <td className="px-5 py-3 align-top font-mono text-primary">ranked_option_member</td>
+              <td className="px-5 py-3 align-top text-base-content/78">Comparing concepts, variants, or candidates</td>
+              <td className="px-5 py-3 align-top text-base-content/78">
+                A ranked preference signal for one option within a bundle or comparison workflow.
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
       <ul>
         <li>
           <code>curyo_list_result_templates</code> advertises the current built-ins: <code>generic_rating</code>,{" "}
@@ -140,52 +231,69 @@ const AIPage: NextPage = () => {
         </li>
         <li>Templates keep ask framing and result parsing aligned across MCP clients, SDK callers, and x402 asks.</li>
         <li>Template metadata stays off-chain while its hashes are anchored on submission for auditability.</li>
+        <li>
+          The current template definitions are published in{" "}
+          <a href={agentTemplatesSourceHref} target="_blank" rel="noopener noreferrer" className="link link-primary">
+            the template source
+          </a>
+          .
+        </li>
       </ul>
 
       <h2 id="runtime-fit">Runtime Fit</h2>
-      <table>
-        <thead>
-          <tr>
-            <th>Agent type</th>
-            <th>Best integration</th>
-            <th>Wait strategy</th>
-            <th>Auth style</th>
-            <th>Example</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr>
-            <td>Chat agents</td>
-            <td>Remote connector or MCP</td>
-            <td>Poll status/result</td>
-            <td>User or workspace auth</td>
-            <td>ChatGPT, Claude</td>
-          </tr>
-          <tr>
-            <td>Persistent agents</td>
-            <td>Remote MCP plus callbacks</td>
-            <td>Signed callback webhook</td>
-            <td>Bearer token with budget caps</td>
-            <td>Hermes, OpenClaw</td>
-          </tr>
-          <tr>
-            <td>Terminal agents</td>
-            <td>
-              <code>mcpServers</code>
-            </td>
-            <td>Poll or callback</td>
-            <td>Local secret config</td>
-            <td>Gemini CLI, coding agents</td>
-          </tr>
-          <tr>
-            <td>Backend workers</td>
-            <td>SDK or HTTP</td>
-            <td>Callback queue</td>
-            <td>API key, x402, or managed budget</td>
-            <td>Research and lead-gen jobs</td>
-          </tr>
-        </tbody>
-      </table>
+      <div className="not-prose my-6 overflow-x-auto rounded-lg border border-base-content/10 bg-base-100/45">
+        <table className="w-full min-w-[63rem] table-fixed border-collapse text-left text-sm">
+          <thead>
+            <tr className="border-b border-base-content/10 bg-base-300/45">
+              <th className="w-[11rem] px-5 py-3 font-semibold uppercase tracking-wide text-base-content/70">
+                Agent type
+              </th>
+              <th className="w-[14rem] px-5 py-3 font-semibold uppercase tracking-wide text-base-content/70">
+                Best integration
+              </th>
+              <th className="w-[12rem] px-5 py-3 font-semibold uppercase tracking-wide text-base-content/70">
+                Wait strategy
+              </th>
+              <th className="w-[14rem] px-5 py-3 font-semibold uppercase tracking-wide text-base-content/70">
+                Auth style
+              </th>
+              <th className="px-5 py-3 font-semibold uppercase tracking-wide text-base-content/70">Example</th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-base-content/8">
+            <tr>
+              <td className="px-5 py-3 align-top font-medium text-base-content">Chat agents</td>
+              <td className="px-5 py-3 align-top text-base-content/78">Remote connector or MCP</td>
+              <td className="px-5 py-3 align-top text-base-content/78">Poll status/result</td>
+              <td className="px-5 py-3 align-top text-base-content/78">User or workspace auth</td>
+              <td className="px-5 py-3 align-top text-base-content/78">ChatGPT, Claude</td>
+            </tr>
+            <tr>
+              <td className="px-5 py-3 align-top font-medium text-base-content">Persistent agents</td>
+              <td className="px-5 py-3 align-top text-base-content/78">Remote MCP plus callbacks</td>
+              <td className="px-5 py-3 align-top text-base-content/78">Signed callback webhook</td>
+              <td className="px-5 py-3 align-top text-base-content/78">Bearer token with budget caps</td>
+              <td className="px-5 py-3 align-top text-base-content/78">Hermes, OpenClaw</td>
+            </tr>
+            <tr>
+              <td className="px-5 py-3 align-top font-medium text-base-content">Terminal agents</td>
+              <td className="px-5 py-3 align-top text-base-content/78">
+                <code>mcpServers</code>
+              </td>
+              <td className="px-5 py-3 align-top text-base-content/78">Poll or callback</td>
+              <td className="px-5 py-3 align-top text-base-content/78">Local secret config</td>
+              <td className="px-5 py-3 align-top text-base-content/78">Gemini CLI, coding agents</td>
+            </tr>
+            <tr>
+              <td className="px-5 py-3 align-top font-medium text-base-content">Backend workers</td>
+              <td className="px-5 py-3 align-top text-base-content/78">SDK or HTTP</td>
+              <td className="px-5 py-3 align-top text-base-content/78">Callback queue</td>
+              <td className="px-5 py-3 align-top text-base-content/78">API key, x402, or managed budget</td>
+              <td className="px-5 py-3 align-top text-base-content/78">Research and lead-gen jobs</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
 
       <h2 id="runtime-examples">Runtime Examples</h2>
       <p>
@@ -393,6 +501,41 @@ const AIPage: NextPage = () => {
     </article>
   );
 };
+
+function ResourceLinkCard({
+  title,
+  href,
+  description,
+  external = false,
+}: {
+  title: string;
+  href: string;
+  description: string;
+  external?: boolean;
+}) {
+  const className =
+    "group block rounded-lg border border-base-content/10 bg-base-300/32 p-4 transition hover:border-primary/35 hover:bg-base-300/48";
+  const content = (
+    <>
+      <span className="block text-sm font-semibold text-base-content transition group-hover:text-primary">{title}</span>
+      <span className="mt-2 block text-sm leading-6 text-base-content/64">{description}</span>
+    </>
+  );
+
+  if (external) {
+    return (
+      <a href={href} target="_blank" rel="noopener noreferrer" className={className}>
+        {content}
+      </a>
+    );
+  }
+
+  return (
+    <Link href={href} className={className}>
+      {content}
+    </Link>
+  );
+}
 
 function FeatureCard({ title, description }: { title: string; description: string }) {
   return (

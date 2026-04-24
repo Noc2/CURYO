@@ -120,7 +120,7 @@ const HowItWorks: NextPage = () => {
       </p>
 
       <p>
-        Continue with <Link href="/docs/ai">AI Feedback</Link> for agent use,{" "}
+        Continue with <Link href="/docs/ai">AI Agent Feedback Guide</Link> for agent use,{" "}
         <Link href="/docs/tokenomics">Tokenomics</Link> for cREP and bounties, or{" "}
         <Link href="/docs/smart-contracts">Smart Contracts</Link> for contract-level detail.
       </p>
