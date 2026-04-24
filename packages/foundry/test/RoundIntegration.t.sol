@@ -2243,20 +2243,33 @@ contract RoundIntegrationTest is VotingTestBase {
 
         address[] memory firstBatch = new address[](1);
         firstBatch[0] = frontendA;
+        address[] memory secondBatch = new address[](1);
+        secondBatch[0] = frontendB;
+
         vm.expectRevert();
         vm.prank(address(0xD00D));
         rewardDistributor.processFrontendFeeDustBatch(contentId, roundId, firstBatch);
 
         vm.prank(owner);
-        (uint256 processedCount,) = rewardDistributor.processFrontendFeeDustBatch(contentId, roundId, firstBatch);
+        (uint256 processedCount,) = rewardDistributor.processFrontendFeeDustBatch(contentId, roundId, secondBatch);
+        assertEq(processedCount, 1, "suffix batch should process one frontend");
+
+        vm.expectRevert(RoundRewardDistributor.InvalidFinalizationInput.selector);
+        vm.prank(owner);
+        rewardDistributor.processFrontendFeeDustBatch(contentId, roundId, firstBatch);
+
+        vm.prank(owner);
+        rewardDistributor.resetFrontendFeeDustBatch(contentId, roundId);
+        assertEq(rewardDistributor.roundFrontendFeeDustProcessedCount(contentId, roundId), 0);
+
+        vm.prank(owner);
+        (processedCount,) = rewardDistributor.processFrontendFeeDustBatch(contentId, roundId, firstBatch);
         assertEq(processedCount, 1, "first batch should process one frontend");
 
         vm.expectRevert(RoundRewardDistributor.InvalidFinalizationInput.selector);
         vm.prank(owner);
         rewardDistributor.finalizeProcessedFrontendFeeDust(contentId, roundId);
 
-        address[] memory secondBatch = new address[](1);
-        secondBatch[0] = frontendB;
         vm.prank(owner);
         (processedCount,) = rewardDistributor.processFrontendFeeDustBatch(contentId, roundId, secondBatch);
         assertEq(processedCount, 2, "second batch should complete processing");

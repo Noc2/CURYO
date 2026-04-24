@@ -78,9 +78,6 @@ contract RoundRewardDistributor is Initializable, AccessControlUpgradeable, Reen
     mapping(uint256 => mapping(uint256 => uint256)) public roundFrontendClaimedCount;
     mapping(uint256 => mapping(uint256 => uint256)) public roundFrontendClaimedAmount;
     mapping(uint256 => mapping(uint256 => bool)) public roundFrontendFeeDustFinalized;
-    mapping(uint256 => mapping(uint256 => uint256)) public roundFrontendFeeDustProcessedCount;
-    mapping(uint256 => mapping(uint256 => uint256)) public roundFrontendFeeDustExpectedTotal;
-    mapping(uint256 => mapping(uint256 => address)) public roundFrontendFeeDustLastFrontend;
 
     // Track participation reward claims: contentId => roundId => voter => claimed/paid
     mapping(uint256 => mapping(uint256 => mapping(address => bool))) public participationRewardClaimed;
@@ -141,6 +138,7 @@ contract RoundRewardDistributor is Initializable, AccessControlUpgradeable, Reen
     event FrontendFeeDustBatchProcessed(
         uint256 indexed contentId, uint256 indexed roundId, uint256 processedCount, uint256 expectedTotal
     );
+    event FrontendFeeDustBatchReset(uint256 indexed contentId, uint256 indexed roundId);
     event ParticipationRewardSnapshotFailed(
         uint256 indexed contentId,
         uint256 indexed roundId,
@@ -373,6 +371,17 @@ contract RoundRewardDistributor is Initializable, AccessControlUpgradeable, Reen
         returns (uint256 releasedDust)
     {
         releasedDust = _finalizeProcessedFrontendFeeDust(contentId, roundId);
+    }
+
+    /// @notice Reset in-progress frontend-fee dust batch accounting so governance can restart a bad cursor.
+    function resetFrontendFeeDustBatch(uint256 contentId, uint256 roundId) external onlyRole(DEFAULT_ADMIN_ROLE) {
+        if (roundFrontendFeeDustFinalized[contentId][roundId]) revert RewardDustAlreadyFinalized();
+
+        delete roundFrontendFeeDustProcessedCount[contentId][roundId];
+        delete roundFrontendFeeDustExpectedTotal[contentId][roundId];
+        delete roundFrontendFeeDustLastFrontend[contentId][roundId];
+
+        emit FrontendFeeDustBatchReset(contentId, roundId);
     }
 
     function previewFrontendFee(uint256 contentId, uint256 roundId, address frontend)
@@ -851,6 +860,11 @@ contract RoundRewardDistributor is Initializable, AccessControlUpgradeable, Reen
         return ProtocolConfig(votingEngine.protocolConfig()).treasury();
     }
 
+    // Appended state for batched frontend fee dust finalization.
+    mapping(uint256 => mapping(uint256 => uint256)) public roundFrontendFeeDustProcessedCount;
+    mapping(uint256 => mapping(uint256 => uint256)) public roundFrontendFeeDustExpectedTotal;
+    mapping(uint256 => mapping(uint256 => address)) public roundFrontendFeeDustLastFrontend;
+
     // --- Storage Gap for Future Upgrades ---
-    uint256[34] private __gap;
+    uint256[31] private __gap;
 }
