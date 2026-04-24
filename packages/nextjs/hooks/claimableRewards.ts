@@ -30,11 +30,20 @@ export interface QuestionRewardPoolClaimableRewardItem {
   claimType: "question_reward";
 }
 
+export interface QuestionBundleRewardClaimableRewardItem {
+  bundleId: bigint;
+  roundSetIndex: bigint;
+  reward: bigint;
+  title: string;
+  claimType: "question_bundle_reward";
+}
+
 export type ClaimableRewardItem =
   | RoundClaimableRewardItem
   | FrontendRoundFeeClaimableRewardItem
   | FrontendRegistryClaimableRewardItem
-  | QuestionRewardPoolClaimableRewardItem;
+  | QuestionRewardPoolClaimableRewardItem
+  | QuestionBundleRewardClaimableRewardItem;
 
 interface VoterParticipationRewardClaimCandidate {
   contentId: bigint;
@@ -83,6 +92,9 @@ export function getClaimableRoundKey(item: ClaimableRewardItem) {
   if (item.claimType === "question_reward") {
     return `question-reward:${item.rewardPoolId.toString()}-${item.roundId.toString()}`;
   }
+  if (item.claimType === "question_bundle_reward") {
+    return `question-bundle-reward:${item.bundleId.toString()}-${item.roundSetIndex.toString()}`;
+  }
   return "roundId" in item ? `${item.contentId.toString()}-${item.roundId.toString()}` : null;
 }
 
@@ -96,10 +108,12 @@ function claimExecutionPriority(item: ClaimableRewardItem) {
       return 2;
     case "question_reward":
       return 3;
-    case "frontend_round_fee":
+    case "question_bundle_reward":
       return 4;
-    case "frontend_registry_fee":
+    case "frontend_round_fee":
       return 5;
+    case "frontend_registry_fee":
+      return 6;
   }
 }
 

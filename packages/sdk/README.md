@@ -29,7 +29,11 @@ Framework-specific hooks and UI components should live in a follow-up package ra
 
 ```ts
 import { createCuryoClient } from "@curyo/sdk";
-import { buildCommitVoteParams, buildVoteTransferPayload, buildVoteTransferAndCallData } from "@curyo/sdk/vote";
+import {
+  buildCommitVoteParams,
+  buildVoteTransferPayload,
+  buildVoteTransferAndCallData,
+} from "@curyo/sdk/vote";
 
 const curyo = createCuryoClient({
   apiBaseUrl: "https://api.curyo.xyz",
@@ -44,7 +48,8 @@ const commit = await buildCommitVoteParams({
   isUp: true,
   stakeAmount: 2.5,
   epochDuration: 20 * 60,
-  roundReferenceRatingBps: content.openRound?.referenceRatingBps ?? content.ratingBps ?? 5000,
+  roundReferenceRatingBps:
+    content.openRound?.referenceRatingBps ?? content.ratingBps ?? 5000,
   defaultFrontendCode: curyo.config.frontendCode,
 });
 
@@ -80,10 +85,15 @@ const agent = createCuryoAgentClient({
 const quote = await agent.quoteQuestion({
   clientRequestId: "launch-check-1",
   chainId: 42220,
-  bounty: { amount: "1000000", requiredVoters: "3", requiredSettledRounds: "1" },
+  bounty: {
+    amount: "1000000",
+    requiredVoters: "3",
+    requiredSettledRounds: "1",
+  },
   question: {
     title: "Should the agent proceed with launch?",
-    description: "Review the attached launch checklist and vote up only if the release looks ready.",
+    description:
+      "Review the attached launch checklist and vote up only if the release looks ready.",
     contextUrl: "https://example.com/launch-checklist",
     categoryId: "1",
     tags: ["agent", "launch"],
@@ -93,24 +103,35 @@ const quote = await agent.quoteQuestion({
 const ask = await agent.askHumans({
   clientRequestId: "launch-check-1",
   maxPaymentAmount: quote.payment?.amount ?? "1000000",
-  bounty: { amount: "1000000", requiredVoters: "3", requiredSettledRounds: "1" },
+  bounty: {
+    amount: "1000000",
+    requiredVoters: "3",
+    requiredSettledRounds: "1",
+  },
   question: {
     title: "Should the agent proceed with launch?",
-    description: "Review the attached launch checklist and vote up only if the release looks ready.",
+    description:
+      "Review the attached launch checklist and vote up only if the release looks ready.",
     contextUrl: "https://example.com/launch-checklist",
     categoryId: "1",
     tags: ["agent", "launch"],
   },
 });
 
-const status = await agent.getQuestionStatus({ operationKey: ask.operationKey });
+const status = await agent.getQuestionStatus({
+  operationKey: ask.operationKey,
+});
 const result = await agent.getResult({ operationKey: status.operationKey });
 
-const verifier = buildWebhookVerifier({ secret: process.env.CURYO_WEBHOOK_SECRET ?? "" });
+const verifier = buildWebhookVerifier({
+  secret: process.env.CURYO_WEBHOOK_SECRET ?? "",
+});
 await verifier.assertValid({ body: webhookBody, headers: webhookHeaders });
 ```
 
 Question `description` is optional. When omitted, hosted submission endpoints normalize it to an empty string before hashing and submitting.
+
+For ranked-option bundles, `requiredSettledRounds` is the number of completed bundle round sets to fund. Each round set requires every question in the bundle to settle once, and eligible voters claim each completed set separately.
 
 For agent flows, treat `quote -> ask -> wait -> result` as the safe default. Quote first, start with a conservative bounty, and use any low-response guidance as a signal to wait, top up additively, or retry later. Live asks should stay stable once submitted; agent controls and budget caps should affect future asks, not reduce or cancel a running public market.
 

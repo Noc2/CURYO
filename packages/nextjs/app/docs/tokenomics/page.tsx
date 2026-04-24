@@ -197,9 +197,11 @@ const Tokenomics = () => {
       <h3 id="bounties">Bounties</h3>
       <p>
         Bounties are separate from HREP bootstrap rewards. They are attached at submission, funded in HREP or USDC on
-        Celo, scoped to one question, and split across eligible revealed voters in each qualified bounty round after a
-        3% frontend-operator share. If the commit-attributed frontend is not payable, that share stays with the voter
-        claim. Bounty required-voter terms cannot exceed the question&apos;s selected voter cap.
+        Celo, scoped to one question or a question bundle, and split across eligible revealed voters in each qualified
+        bounty round after a 3% frontend-operator share. Bundle bounties can require multiple settlement round sets;
+        each set requires every bundled question to settle once and is claimed independently. If the commit-attributed
+        frontend is not payable, that share stays with the voter claim. Bounty required-voter terms cannot exceed the
+        question&apos;s selected voter cap.
       </p>
       <p>
         Feedback Bonuses are separate, optional USDC pools. They reward revealed voters for useful hidden feedback after

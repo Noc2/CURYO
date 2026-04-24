@@ -19,7 +19,8 @@ const HowItWorks: NextPage = () => {
       <p>
         Every submission starts with one question, a required context URL, and an optional image or YouTube preview. A
         non-refundable bounty in HREP or Celo USDC is attached at submission. The bounty pays eligible revealed voters
-        after qualified rounds.
+        after qualified rounds; bundled questions can require multiple settlement round sets, where each set means every
+        question in the bundle has settled once.
       </p>
       <p>
         The asker also chooses the round shape inside governance bounds: blind phase, maximum duration, settlement
@@ -81,8 +82,9 @@ const HowItWorks: NextPage = () => {
       </div>
       <h3 id="stablecoin-bounties">Stablecoin bounties</h3>
       <p>
-        Bounties are separate from HREP stake settlement. They are scoped to the question, paid in the funding asset,
-        and can reward eligible revealed voters regardless of whether their HREP vote won.
+        Bounties are separate from HREP stake settlement. They are scoped to the question or bundle, paid in the funding
+        asset, and can reward eligible revealed voters regardless of whether their HREP vote won. A bundle payout is
+        claimed per round set, so a voter must reveal on every bundled question in that set.
       </p>
       <h3>Feedback bonuses</h3>
       <p>

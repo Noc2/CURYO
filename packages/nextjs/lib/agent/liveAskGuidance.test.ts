@@ -197,7 +197,7 @@ test("buildAgentLiveAskGuidance scales bundled asks by the bundle question count
         asset: 1,
         claimedAmount: "0",
         claimedCount: 0,
-        completedQuestionCount: 0,
+        completedRoundSetCount: 0,
         failed: false,
         fundedAmount: "2000000",
         id: "bundle-1",
@@ -205,6 +205,8 @@ test("buildAgentLiveAskGuidance scales bundled asks by the bundle question count
         refunded: false,
         refundedAmount: "0",
         requiredCompleters: 3,
+        requiredSettledRounds: 1,
+        totalRecordedQuestionRounds: 0,
       },
       openRound: {
         ...content().openRound!,

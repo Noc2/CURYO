@@ -113,8 +113,66 @@ export const QuestionRewardPoolEscrowAbi = [
   },
   {
     "type": "function",
-    "name": "bundleRewardClaimed",
+    "name": "bundleQuestionRecordedRounds",
     "inputs": [
+      {
+        "name": "",
+        "type": "uint256",
+        "internalType": "uint256"
+      },
+      {
+        "name": "",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "",
+        "type": "uint32",
+        "internalType": "uint32"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "bundleRoundIds",
+    "inputs": [
+      {
+        "name": "",
+        "type": "uint256",
+        "internalType": "uint256"
+      },
+      {
+        "name": "",
+        "type": "uint256",
+        "internalType": "uint256"
+      },
+      {
+        "name": "",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "",
+        "type": "uint64",
+        "internalType": "uint64"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "bundleRoundSetRewardClaimed",
+    "inputs": [
+      {
+        "name": "",
+        "type": "uint256",
+        "internalType": "uint256"
+      },
       {
         "name": "",
         "type": "uint256",
@@ -137,10 +195,69 @@ export const QuestionRewardPoolEscrowAbi = [
   },
   {
     "type": "function",
+    "name": "bundleRoundSetSnapshots",
+    "inputs": [
+      {
+        "name": "",
+        "type": "uint256",
+        "internalType": "uint256"
+      },
+      {
+        "name": "",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "qualified",
+        "type": "bool",
+        "internalType": "bool"
+      },
+      {
+        "name": "claimedCount",
+        "type": "uint32",
+        "internalType": "uint32"
+      },
+      {
+        "name": "allocation",
+        "type": "uint256",
+        "internalType": "uint256"
+      },
+      {
+        "name": "claimedAmount",
+        "type": "uint256",
+        "internalType": "uint256"
+      },
+      {
+        "name": "frontendFeeAllocation",
+        "type": "uint256",
+        "internalType": "uint256"
+      },
+      {
+        "name": "voterClaimedAmount",
+        "type": "uint256",
+        "internalType": "uint256"
+      },
+      {
+        "name": "frontendClaimedAmount",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
     "name": "claimQuestionBundleReward",
     "inputs": [
       {
         "name": "bundleId",
+        "type": "uint256",
+        "internalType": "uint256"
+      },
+      {
+        "name": "roundSetIndex",
         "type": "uint256",
         "internalType": "uint256"
       }
@@ -184,6 +301,11 @@ export const QuestionRewardPoolEscrowAbi = [
     "inputs": [
       {
         "name": "bundleId",
+        "type": "uint256",
+        "internalType": "uint256"
+      },
+      {
+        "name": "roundSetIndex",
         "type": "uint256",
         "internalType": "uint256"
       },
@@ -393,6 +515,11 @@ export const QuestionRewardPoolEscrowAbi = [
       },
       {
         "name": "requiredCompleters",
+        "type": "uint256",
+        "internalType": "uint256"
+      },
+      {
+        "name": "requiredSettledRounds",
         "type": "uint256",
         "internalType": "uint256"
       },
@@ -1097,6 +1224,12 @@ export const QuestionRewardPoolEscrowAbi = [
         "internalType": "uint256"
       },
       {
+        "name": "roundSetIndex",
+        "type": "uint256",
+        "indexed": true,
+        "internalType": "uint256"
+      },
+      {
         "name": "claimant",
         "type": "address",
         "indexed": true,
@@ -1177,6 +1310,12 @@ export const QuestionRewardPoolEscrowAbi = [
       },
       {
         "name": "questionCount",
+        "type": "uint256",
+        "indexed": false,
+        "internalType": "uint256"
+      },
+      {
+        "name": "requiredSettledRounds",
         "type": "uint256",
         "indexed": false,
         "internalType": "uint256"
@@ -1288,6 +1427,43 @@ export const QuestionRewardPoolEscrowAbi = [
       },
       {
         "name": "bundleIndex",
+        "type": "uint256",
+        "indexed": false,
+        "internalType": "uint256"
+      },
+      {
+        "name": "roundSetIndex",
+        "type": "uint256",
+        "indexed": false,
+        "internalType": "uint256"
+      }
+    ],
+    "anonymous": false
+  },
+  {
+    "type": "event",
+    "name": "QuestionBundleRoundSetQualified",
+    "inputs": [
+      {
+        "name": "bundleId",
+        "type": "uint256",
+        "indexed": true,
+        "internalType": "uint256"
+      },
+      {
+        "name": "roundSetIndex",
+        "type": "uint256",
+        "indexed": true,
+        "internalType": "uint256"
+      },
+      {
+        "name": "allocation",
+        "type": "uint256",
+        "indexed": false,
+        "internalType": "uint256"
+      },
+      {
+        "name": "frontendFeeAllocation",
         "type": "uint256",
         "indexed": false,
         "internalType": "uint256"

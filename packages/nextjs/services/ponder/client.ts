@@ -330,9 +330,13 @@ export interface PonderContentItem {
     fundedAmount: string;
     claimedAmount: string;
     refundedAmount: string;
+    unallocatedAmount?: string;
+    allocatedAmount?: string;
     requiredCompleters: number;
+    requiredSettledRounds: number;
     questionCount: number;
-    completedQuestionCount: number;
+    completedRoundSetCount: number;
+    totalRecordedQuestionRounds: number;
     claimedCount: number;
     bountyClosesAt?: string;
     feedbackClosesAt?: string;
@@ -408,6 +412,36 @@ export interface PonderQuestionRewardClaimCandidate {
 
 export interface PonderQuestionRewardClaimCandidatesResponse {
   items: PonderQuestionRewardClaimCandidate[];
+  limit: number;
+  offset: number;
+}
+
+export interface PonderQuestionBundleRewardClaimCandidate {
+  bundleId: string;
+  roundSetIndex: number;
+  asset: number;
+  fundedAmount: string;
+  claimedAmount: string;
+  allocation: string;
+  roundSetClaimedAmount: string;
+  requiredCompleters: number;
+  requiredSettledRounds: number;
+  questionCount: number;
+  completedRoundSetCount: number;
+  totalRecordedQuestionRounds: number;
+  claimedCount: number;
+  roundSetClaimedCount: number;
+  bountyClosesAt: string;
+  feedbackClosesAt: string;
+  expiresAt: string;
+  updatedAt: string;
+  currency: "HREP" | "USDC";
+  displayCurrency: "HREP" | "USD";
+  decimals: 6;
+}
+
+export interface PonderQuestionBundleRewardClaimCandidatesResponse {
+  items: PonderQuestionBundleRewardClaimCandidate[];
   limit: number;
   offset: number;
 }
@@ -1041,6 +1075,13 @@ export const ponderApi = {
 
   getQuestionRewardClaimCandidates(voter: string, params?: { limit?: string; offset?: string }) {
     return ponderGet<PonderQuestionRewardClaimCandidatesResponse>("/question-reward-claim-candidates", {
+      ...params,
+      voter,
+    });
+  },
+
+  getQuestionBundleRewardClaimCandidates(voter: string, params?: { limit?: string; offset?: string }) {
+    return ponderGet<PonderQuestionBundleRewardClaimCandidatesResponse>("/question-bundle-claim-candidates", {
       ...params,
       voter,
     });

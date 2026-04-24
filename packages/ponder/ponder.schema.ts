@@ -104,10 +104,10 @@ export const round = onchainTable(
     contentId: t.bigint().notNull(),
     roundId: t.bigint().notNull(),
     state: t.integer().notNull(), // 0=Open, 1=Settled, 2=Cancelled, 3=Tied, 4=RevealFailed
-    voteCount: t.integer().notNull(),   // total commits
+    voteCount: t.integer().notNull(), // total commits
     revealedCount: t.integer().notNull().default(0), // revealed votes
     totalStake: t.bigint().notNull(),
-    upPool: t.bigint().notNull(),   // raw UP stake (from revealed votes)
+    upPool: t.bigint().notNull(), // raw UP stake (from revealed votes)
     downPool: t.bigint().notNull(), // raw DOWN stake (from revealed votes)
     upCount: t.integer().notNull(),
     downCount: t.integer().notNull(),
@@ -169,7 +169,11 @@ export const vote = onchainTable(
     contentIdx: index().on(table.contentId),
     roundIdx: index().on(table.roundId),
     contentRoundIdx: index().on(table.contentId, table.roundId),
-    voterContentCommittedAtIdx: index().on(table.voter, table.contentId, table.committedAt),
+    voterContentCommittedAtIdx: index().on(
+      table.voter,
+      table.contentId,
+      table.committedAt,
+    ),
     commitHashIdx: index().on(table.commitHash),
     revealedIdx: index().on(table.revealed),
   }),
@@ -311,9 +315,13 @@ export const questionBundleReward = onchainTable(
     voterClaimedAmount: t.bigint().notNull(),
     frontendClaimedAmount: t.bigint().notNull(),
     refundedAmount: t.bigint().notNull(),
+    unallocatedAmount: t.bigint().notNull(),
+    allocatedAmount: t.bigint().notNull(),
     requiredCompleters: t.integer().notNull(),
+    requiredSettledRounds: t.integer().notNull(),
     questionCount: t.integer().notNull(),
-    completedQuestionCount: t.integer().notNull(),
+    completedRoundSetCount: t.integer().notNull(),
+    totalRecordedQuestionRounds: t.integer().notNull(),
     claimedCount: t.integer().notNull(),
     frontendFeeBps: t.integer().notNull(),
     bountyOpensAt: t.bigint().notNull(),
@@ -331,6 +339,10 @@ export const questionBundleReward = onchainTable(
     failedIdx: index().on(table.failed),
     refundedIdx: index().on(table.refunded),
     bountyClosesAtIdx: index().on(table.bountyClosesAt),
+    completedRoundSetIdx: index().on(
+      table.completedRoundSetCount,
+      table.requiredSettledRounds,
+    ),
     createdAtIdx: index().on(table.createdAt),
   }),
 );
@@ -342,24 +354,62 @@ export const questionBundleQuestion = onchainTable(
     bundleId: t.bigint().notNull(),
     contentId: t.bigint().notNull(),
     bundleIndex: t.integer().notNull(),
-    roundId: t.bigint(),
-    settled: t.boolean().notNull(),
-    terminal: t.boolean().notNull(),
     updatedAt: t.bigint().notNull(),
   }),
   (table) => ({
     bundleIdx: index().on(table.bundleId),
     contentIdx: index().on(table.contentId),
     bundleIndexIdx: index().on(table.bundleId, table.bundleIndex),
-    terminalIdx: index().on(table.terminal),
+  }),
+);
+
+export const questionBundleRound = onchainTable(
+  "question_bundle_round",
+  (t) => ({
+    id: t.text().primaryKey(), // `${bundleId}-${roundSetIndex}-${bundleIndex}`
+    bundleId: t.bigint().notNull(),
+    contentId: t.bigint().notNull(),
+    bundleIndex: t.integer().notNull(),
+    roundSetIndex: t.integer().notNull(),
+    roundId: t.bigint().notNull(),
+    settled: t.boolean().notNull(),
+    updatedAt: t.bigint().notNull(),
+  }),
+  (table) => ({
+    bundleIdx: index().on(table.bundleId),
+    contentIdx: index().on(table.contentId),
+    roundSetIdx: index().on(table.bundleId, table.roundSetIndex),
+    bundleIndexIdx: index().on(table.bundleId, table.bundleIndex),
+  }),
+);
+
+export const questionBundleRoundSet = onchainTable(
+  "question_bundle_round_set",
+  (t) => ({
+    id: t.text().primaryKey(), // `${bundleId}-${roundSetIndex}`
+    bundleId: t.bigint().notNull(),
+    roundSetIndex: t.integer().notNull(),
+    allocation: t.bigint().notNull(),
+    frontendFeeAllocation: t.bigint().notNull(),
+    claimedAmount: t.bigint().notNull(),
+    voterClaimedAmount: t.bigint().notNull(),
+    frontendClaimedAmount: t.bigint().notNull(),
+    claimedCount: t.integer().notNull(),
+    qualifiedAt: t.bigint().notNull(),
+    updatedAt: t.bigint().notNull(),
+  }),
+  (table) => ({
+    bundleIdx: index().on(table.bundleId),
+    roundSetIdx: index().on(table.bundleId, table.roundSetIndex),
   }),
 );
 
 export const questionBundleClaim = onchainTable(
   "question_bundle_claim",
   (t) => ({
-    id: t.text().primaryKey(), // `${bundleId}-${voterId}`
+    id: t.text().primaryKey(), // `${bundleId}-${roundSetIndex}-${voterId}`
     bundleId: t.bigint().notNull(),
+    roundSetIndex: t.integer().notNull(),
     claimant: t.hex().notNull(),
     voterId: t.bigint().notNull(),
     amount: t.bigint().notNull(),
@@ -371,6 +421,7 @@ export const questionBundleClaim = onchainTable(
   }),
   (table) => ({
     bundleIdx: index().on(table.bundleId),
+    roundSetIdx: index().on(table.bundleId, table.roundSetIndex),
     claimantIdx: index().on(table.claimant),
     voterIdIdx: index().on(table.voterId),
   }),

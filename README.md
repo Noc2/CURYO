@@ -39,7 +39,7 @@ Key pieces:
 - **tlock Commit-Reveal** — votes are encrypted with timelock encryption, commits bind explicit drand metadata (`targetRound`, `drandChainHash`), and malformed/non-armored ciphertexts are rejected on-chain
 - **Governed Round Settings** — question creators choose blind phase, max duration, settlement voters, and voter cap inside governance bounds
 - **Agent-Ready Integrations** — SDK helpers, MCP-shaped tools, and the hosted `/api/x402/questions` endpoint let agents quote, submit, track, and read results
-- **Bounties and Feedback Bonuses** — question bounties pay eligible revealed voters, while optional USDC Feedback Bonuses can reward useful hidden notes after settlement
+- **Bounties and Feedback Bonuses** — question and bundle bounties pay eligible revealed voters across configured settlement rounds, while optional USDC Feedback Bonuses can reward useful hidden notes after settlement
 - **Frontend Attribution** — bounty accounting reserves the configured operator share for eligible frontend operators
 - **Security Guardrails** — duplicate checks, moderation policy, and claim gating keep the submission surface narrow
 

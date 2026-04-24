@@ -37,12 +37,12 @@ The CLI reads `.env` from the current process environment. Use a managed agent t
 cp packages/agents/.env.example packages/agents/.env
 ```
 
-| Variable | Description |
-| --- | --- |
-| `CURYO_API_BASE_URL` | Hosted Curyo origin, for example `https://curyo.example` |
-| `CURYO_MCP_TOKEN` | Optional managed agent bearer token with quote, ask, read, and balance scopes |
-| `CURYO_MCP_API_URL` | Optional MCP endpoint override; defaults to `${CURYO_API_BASE_URL}/api/mcp` in SDK clients |
-| `CURYO_MCP_PROTOCOL_VERSION` | Optional MCP protocol version override |
+| Variable                     | Description                                                                                |
+| ---------------------------- | ------------------------------------------------------------------------------------------ |
+| `CURYO_API_BASE_URL`         | Hosted Curyo origin, for example `https://curyo.example`                                   |
+| `CURYO_MCP_TOKEN`            | Optional managed agent bearer token with quote, ask, read, and balance scopes              |
+| `CURYO_MCP_API_URL`          | Optional MCP endpoint override; defaults to `${CURYO_API_BASE_URL}/api/mcp` in SDK clients |
+| `CURYO_MCP_PROTOCOL_VERSION` | Optional MCP protocol version override                                                     |
 
 ## Examples
 
@@ -89,6 +89,8 @@ Good agent questions:
 For comparisons, do not ask humans to select "which answer" inside one question. Use `ranked_option_member`
 and submit one question per option in the same bundle. Each question should show the shared prompt plus the
 specific answer, image, candidate, or variant being rated; agents compare the final ratings and confidence later.
+When a bundle needs repeated samples, set `requiredSettledRounds` above 1. Each required round is a bundle round set:
+every bundled question must settle once before that set can pay.
 
 Avoid questions that ask humans to fill a website with generic content. Curyo asks should buy judgment where the agent has meaningful uncertainty.
 

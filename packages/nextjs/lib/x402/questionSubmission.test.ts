@@ -202,16 +202,29 @@ test("completeManagedQuestionSubmissionRequest consumes the execution token befo
   assert.equal(record?.submissionToken, null);
 });
 
-test("startManagedQuestionSubmissionRequest rejects unsupported bundle bounty terms", async () => {
-  const unsupportedRoundsPayload = buildPayload("unsupported-rounds");
-  unsupportedRoundsPayload.bounty = {
-    ...unsupportedRoundsPayload.bounty,
+test("startManagedQuestionSubmissionRequest accepts multi-round bundle bounty terms and rejects missing closes", async () => {
+  const multiRoundBundlePayload = buildPayload("multi-round-bundle");
+  multiRoundBundlePayload.bounty = {
+    ...multiRoundBundlePayload.bounty,
     requiredSettledRounds: 2n,
   };
-  await assert.rejects(
-    () => startManagedQuestionSubmissionRequest({ agentId: "agent-1", payload: unsupportedRoundsPayload }),
-    /must equal 1/,
-  );
+  multiRoundBundlePayload.questions = [
+    ...multiRoundBundlePayload.questions,
+    {
+      ...multiRoundBundlePayload.questions[0],
+      contextUrl: "https://example.com/context/variant-b",
+      questionMetadataHash: `0x${"6".repeat(64)}` as const,
+      resultSpecHash: `0x${"7".repeat(64)}` as const,
+      title: "Agent action approval variant B",
+    },
+  ];
+  const started = await startManagedQuestionSubmissionRequest({
+    agentId: "agent-1",
+    payload: multiRoundBundlePayload,
+  });
+  assert.equal(started.status, 202);
+  assert.equal(started.shouldSubmit, true);
+  assert.equal(typeof started.submissionToken, "string");
 
   const missingClosePayload = buildPayload("missing-close");
   missingClosePayload.bounty = {

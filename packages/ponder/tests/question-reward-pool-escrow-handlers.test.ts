@@ -22,22 +22,30 @@ vi.mock("ponder:schema", () => ({
   content: "content",
   questionBundleClaim: "questionBundleClaim",
   questionBundleQuestion: "questionBundleQuestion",
+  questionBundleRound: "questionBundleRound",
+  questionBundleRoundSet: "questionBundleRoundSet",
   questionBundleReward: "questionBundleReward",
   questionRewardPool: "questionRewardPool",
   questionRewardPoolClaim: "questionRewardPoolClaim",
   questionRewardPoolRound: "questionRewardPoolRound",
 }));
 
-function resolveSetter(valuesOrUpdater: Record<string, unknown> | ((row: any) => Record<string, unknown>)) {
+function resolveSetter(
+  valuesOrUpdater:
+    | Record<string, unknown>
+    | ((row: any) => Record<string, unknown>),
+) {
   if (typeof valuesOrUpdater !== "function") return valuesOrUpdater;
 
   return valuesOrUpdater({
     allocatedAmount: 0n,
     claimedAmount: 0n,
     claimedCount: 0,
+    completedRoundSetCount: 0,
     frontendClaimedAmount: 0n,
     qualifiedRounds: 0,
     refundedAmount: 0n,
+    totalRecordedQuestionRounds: 0,
     unallocatedAmount: 100_000_000n,
     voterClaimedAmount: 0n,
   });
@@ -45,7 +53,11 @@ function resolveSetter(valuesOrUpdater: Record<string, unknown> | ((row: any) =>
 
 function createDb(findResults: Record<string, unknown> = {}) {
   const inserts: Array<{ table: string; values: Record<string, unknown> }> = [];
-  const updates: Array<{ table: string; key: Record<string, unknown>; values: Record<string, unknown> }> = [];
+  const updates: Array<{
+    table: string;
+    key: Record<string, unknown>;
+    values: Record<string, unknown>;
+  }> = [];
 
   const db = {
     find: vi.fn(async (table: string, key: Record<string, unknown>) => {
@@ -59,13 +71,20 @@ function createDb(findResults: Record<string, unknown> = {}) {
         inserts.push({ table, values });
         return {
           onConflictDoNothing: vi.fn(async () => undefined),
+          onConflictDoUpdate: vi.fn(async () => undefined),
         };
       }),
     })),
     update: vi.fn((table: string, key: Record<string, unknown>) => ({
-      set: vi.fn(async (valuesOrUpdater: Record<string, unknown> | ((row: any) => Record<string, unknown>)) => {
-        updates.push({ table, key, values: resolveSetter(valuesOrUpdater) });
-      }),
+      set: vi.fn(
+        async (
+          valuesOrUpdater:
+            | Record<string, unknown>
+            | ((row: any) => Record<string, unknown>),
+        ) => {
+          updates.push({ table, key, values: resolveSetter(valuesOrUpdater) });
+        },
+      ),
     })),
   };
 
@@ -88,7 +107,9 @@ describe("QuestionRewardPoolEscrow ponder handlers", () => {
   it("indexes created bounties with USDC accounting fields", async () => {
     const { db, inserts, updates } = createDb({ content: { id: 1n } });
     const registeredHandlers = await loadHandlers();
-    const handler = registeredHandlers.get("QuestionRewardPoolEscrow:RewardPoolCreated");
+    const handler = registeredHandlers.get(
+      "QuestionRewardPoolEscrow:RewardPoolCreated",
+    );
 
     expect(handler).toBeDefined();
 
@@ -126,7 +147,9 @@ describe("QuestionRewardPoolEscrow ponder handlers", () => {
         startRoundId: 3n,
       }),
     });
-    expect(updates).toContainEqual(expect.objectContaining({ table: "content" }));
+    expect(updates).toContainEqual(
+      expect.objectContaining({ table: "content" }),
+    );
   });
 
   it("updates bounty and round accounting for qualifications, claims, and refunds", async () => {
@@ -136,7 +159,9 @@ describe("QuestionRewardPoolEscrow ponder handlers", () => {
     });
     const registeredHandlers = await loadHandlers();
 
-    await registeredHandlers.get("QuestionRewardPoolEscrow:RewardPoolRoundQualified")!({
+    await registeredHandlers.get(
+      "QuestionRewardPoolEscrow:RewardPoolRoundQualified",
+    )!({
       event: {
         args: {
           rewardPoolId: 7n,
@@ -151,7 +176,9 @@ describe("QuestionRewardPoolEscrow ponder handlers", () => {
       context: { db },
     });
 
-    await registeredHandlers.get("QuestionRewardPoolEscrow:QuestionRewardClaimed")!({
+    await registeredHandlers.get(
+      "QuestionRewardPoolEscrow:QuestionRewardClaimed",
+    )!({
       event: {
         args: {
           rewardPoolId: 7n,
@@ -170,7 +197,9 @@ describe("QuestionRewardPoolEscrow ponder handlers", () => {
       context: { db },
     });
 
-    await registeredHandlers.get("QuestionRewardPoolEscrow:RewardPoolRefunded")!({
+    await registeredHandlers.get(
+      "QuestionRewardPoolEscrow:RewardPoolRefunded",
+    )!({
       event: {
         args: {
           rewardPoolId: 7n,
@@ -208,7 +237,10 @@ describe("QuestionRewardPoolEscrow ponder handlers", () => {
       expect.arrayContaining([
         expect.objectContaining({
           table: "questionRewardPool",
-          values: expect.objectContaining({ allocatedAmount: 50_000_000n, qualifiedRounds: 1 }),
+          values: expect.objectContaining({
+            allocatedAmount: 50_000_000n,
+            qualifiedRounds: 1,
+          }),
         }),
         expect.objectContaining({
           table: "questionRewardPoolRound",
@@ -229,7 +261,156 @@ describe("QuestionRewardPoolEscrow ponder handlers", () => {
         }),
         expect.objectContaining({
           table: "questionRewardPool",
-          values: expect.objectContaining({ refunded: true, refundedAmount: 50_000_000n }),
+          values: expect.objectContaining({
+            refunded: true,
+            refundedAmount: 50_000_000n,
+          }),
+        }),
+      ]),
+    );
+  });
+
+  it("indexes multi-round bundle reward round sets and claims", async () => {
+    const { db, inserts, updates } = createDb();
+    const registeredHandlers = await loadHandlers();
+
+    await registeredHandlers.get(
+      "QuestionRewardPoolEscrow:QuestionBundleRewardCreated",
+    )!({
+      event: {
+        args: {
+          bundleId: 9n,
+          funder: "0x0000000000000000000000000000000000000001",
+          funderVoterId: 11n,
+          amount: 120_000_000n,
+          requiredCompleters: 3n,
+          questionCount: 2n,
+          requiredSettledRounds: 2n,
+          bountyOpensAt: 1_700n,
+          bountyClosesAt: 2_592_000n,
+          feedbackClosesAt: 2_592_000n,
+          frontendFeeBps: 300n,
+          asset: 1n,
+        },
+        block: { number: 20n, timestamp: 1_700n },
+      },
+      context: { db },
+    });
+
+    await registeredHandlers.get(
+      "QuestionRewardPoolEscrow:QuestionBundleRoundRecorded",
+    )!({
+      event: {
+        args: {
+          bundleId: 9n,
+          contentId: 101n,
+          roundId: 4n,
+          bundleIndex: 0n,
+          roundSetIndex: 1n,
+        },
+        block: { number: 21n, timestamp: 1_800n },
+      },
+      context: { db },
+    });
+
+    await registeredHandlers.get(
+      "QuestionRewardPoolEscrow:QuestionBundleRoundSetQualified",
+    )!({
+      event: {
+        args: {
+          bundleId: 9n,
+          roundSetIndex: 1n,
+          allocation: 60_000_000n,
+          frontendFeeAllocation: 1_800_000n,
+        },
+        block: { number: 22n, timestamp: 1_900n },
+      },
+      context: { db },
+    });
+
+    await registeredHandlers.get(
+      "QuestionRewardPoolEscrow:QuestionBundleRewardClaimed",
+    )!({
+      event: {
+        args: {
+          bundleId: 9n,
+          roundSetIndex: 1n,
+          claimant: "0x0000000000000000000000000000000000000002",
+          voterId: 12n,
+          amount: 19_400_000n,
+          frontend: "0x00000000000000000000000000000000000000f1",
+          frontendRecipient: "0x00000000000000000000000000000000000000f1",
+          frontendFee: 600_000n,
+          grossAmount: 20_000_000n,
+        },
+        block: { number: 23n, timestamp: 2_000n },
+      },
+      context: { db },
+    });
+
+    expect(inserts).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          table: "questionBundleReward",
+          values: expect.objectContaining({
+            id: 9n,
+            fundedAmount: 120_000_000n,
+            unallocatedAmount: 120_000_000n,
+            requiredCompleters: 3,
+            requiredSettledRounds: 2,
+            questionCount: 2,
+          }),
+        }),
+        expect.objectContaining({
+          table: "questionBundleRound",
+          values: expect.objectContaining({
+            id: "9-1-0",
+            bundleId: 9n,
+            roundSetIndex: 1,
+            roundId: 4n,
+          }),
+        }),
+        expect.objectContaining({
+          table: "questionBundleRoundSet",
+          values: expect.objectContaining({
+            id: "9-1",
+            allocation: 60_000_000n,
+            frontendFeeAllocation: 1_800_000n,
+          }),
+        }),
+        expect.objectContaining({
+          table: "questionBundleClaim",
+          values: expect.objectContaining({
+            id: "9-1-12",
+            roundSetIndex: 1,
+            amount: 19_400_000n,
+            frontendFee: 600_000n,
+          }),
+        }),
+      ]),
+    );
+    expect(updates).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          table: "questionBundleReward",
+          values: expect.objectContaining({ totalRecordedQuestionRounds: 1 }),
+        }),
+        expect.objectContaining({
+          table: "questionBundleReward",
+          values: expect.objectContaining({
+            unallocatedAmount: 40_000_000n,
+            allocatedAmount: 60_000_000n,
+            completedRoundSetCount: 1,
+          }),
+        }),
+        expect.objectContaining({
+          table: "questionBundleRoundSet",
+          values: expect.objectContaining({
+            claimedAmount: 20_000_000n,
+            voterClaimedAmount: 19_400_000n,
+            frontendClaimedAmount: 600_000n,
+            claimedCount: 1,
+          }),
         }),
       ]),
     );
@@ -239,9 +420,13 @@ describe("QuestionRewardPoolEscrow ponder handlers", () => {
     const { db, updates } = createDb();
     const registeredHandlers = await loadHandlers();
 
-    expect(registeredHandlers.has("QuestionRewardPoolEscrow:QuestionBundleFailed")).toBe(false);
+    expect(
+      registeredHandlers.has("QuestionRewardPoolEscrow:QuestionBundleFailed"),
+    ).toBe(false);
 
-    await registeredHandlers.get("QuestionRewardPoolEscrow:QuestionBundleRewardRefunded")!({
+    await registeredHandlers.get(
+      "QuestionRewardPoolEscrow:QuestionBundleRewardRefunded",
+    )!({
       event: {
         args: {
           bundleId: 9n,
@@ -253,7 +438,9 @@ describe("QuestionRewardPoolEscrow ponder handlers", () => {
       context: { db },
     });
 
-    await registeredHandlers.get("QuestionRewardPoolEscrow:QuestionBundleRewardForfeited")!({
+    await registeredHandlers.get(
+      "QuestionRewardPoolEscrow:QuestionBundleRewardForfeited",
+    )!({
       event: {
         args: {
           bundleId: 10n,
@@ -270,12 +457,18 @@ describe("QuestionRewardPoolEscrow ponder handlers", () => {
         expect.objectContaining({
           table: "questionBundleReward",
           key: { id: 9n },
-          values: expect.objectContaining({ refunded: true, refundedAmount: 30_000_000n }),
+          values: expect.objectContaining({
+            refunded: true,
+            refundedAmount: 30_000_000n,
+          }),
         }),
         expect.objectContaining({
           table: "questionBundleReward",
           key: { id: 10n },
-          values: expect.objectContaining({ refunded: true, refundedAmount: 20_000_000n }),
+          values: expect.objectContaining({
+            refunded: true,
+            refundedAmount: 20_000_000n,
+          }),
         }),
       ]),
     );

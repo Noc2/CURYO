@@ -2,7 +2,9 @@ import { Hono } from "hono";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 function serializeExpression(value: unknown) {
-  return JSON.stringify(value, (_key, current) => (typeof current === "bigint" ? current.toString() : current));
+  return JSON.stringify(value, (_key, current) =>
+    typeof current === "bigint" ? current.toString() : current,
+  );
 }
 
 function createQueryBuilder<T>(result: T) {
@@ -16,8 +18,10 @@ function createQueryBuilder<T>(result: T) {
     orderBy: vi.fn(() => builder),
     limit: vi.fn(() => builder),
     offset: vi.fn(() => builder),
-    then: (resolve: (value: T) => unknown, reject?: (reason: unknown) => unknown) =>
-      Promise.resolve(result).then(resolve, reject),
+    then: (
+      resolve: (value: T) => unknown,
+      reject?: (reason: unknown) => unknown,
+    ) => Promise.resolve(result).then(resolve, reject),
   };
 
   return builder;
@@ -42,7 +46,9 @@ function mockPonderModules<T>(result: T) {
     or: (...args: unknown[]) => ({ kind: "or", args }),
     replaceBigInts: (data: unknown, replacer: (value: bigint) => unknown) =>
       JSON.parse(
-        JSON.stringify(data, (_key, value) => (typeof value === "bigint" ? replacer(value) : value)),
+        JSON.stringify(data, (_key, value) =>
+          typeof value === "bigint" ? replacer(value) : value,
+        ),
       ),
     sql: (strings: TemplateStringsArray, ...values: unknown[]) => ({
       kind: "sql",
@@ -131,22 +137,40 @@ function mockPonderModules<T>(result: T) {
       amount: "questionBundleClaim.amount",
       frontendFee: "questionBundleClaim.frontendFee",
       grossAmount: "questionBundleClaim.grossAmount",
+      roundSetIndex: "questionBundleClaim.roundSetIndex",
     },
     questionBundleQuestion: {
       bundleId: "questionBundleQuestion.bundleId",
       bundleIndex: "questionBundleQuestion.bundleIndex",
       contentId: "questionBundleQuestion.contentId",
       id: "questionBundleQuestion.id",
-      roundId: "questionBundleQuestion.roundId",
-      settled: "questionBundleQuestion.settled",
-      terminal: "questionBundleQuestion.terminal",
       updatedAt: "questionBundleQuestion.updatedAt",
     },
+    questionBundleRound: {
+      bundleId: "questionBundleRound.bundleId",
+      bundleIndex: "questionBundleRound.bundleIndex",
+      contentId: "questionBundleRound.contentId",
+      id: "questionBundleRound.id",
+      roundId: "questionBundleRound.roundId",
+      roundSetIndex: "questionBundleRound.roundSetIndex",
+      settled: "questionBundleRound.settled",
+      updatedAt: "questionBundleRound.updatedAt",
+    },
+    questionBundleRoundSet: {
+      allocation: "questionBundleRoundSet.allocation",
+      bundleId: "questionBundleRoundSet.bundleId",
+      claimedAmount: "questionBundleRoundSet.claimedAmount",
+      claimedCount: "questionBundleRoundSet.claimedCount",
+      frontendFeeAllocation: "questionBundleRoundSet.frontendFeeAllocation",
+      id: "questionBundleRoundSet.id",
+      roundSetIndex: "questionBundleRoundSet.roundSetIndex",
+    },
     questionBundleReward: {
+      allocatedAmount: "questionBundleReward.allocatedAmount",
       asset: "questionBundleReward.asset",
       claimedAmount: "questionBundleReward.claimedAmount",
       claimedCount: "questionBundleReward.claimedCount",
-      completedQuestionCount: "questionBundleReward.completedQuestionCount",
+      completedRoundSetCount: "questionBundleReward.completedRoundSetCount",
       createdAt: "questionBundleReward.createdAt",
       expiresAt: "questionBundleReward.expiresAt",
       failed: "questionBundleReward.failed",
@@ -156,6 +180,10 @@ function mockPonderModules<T>(result: T) {
       refunded: "questionBundleReward.refunded",
       refundedAmount: "questionBundleReward.refundedAmount",
       requiredCompleters: "questionBundleReward.requiredCompleters",
+      requiredSettledRounds: "questionBundleReward.requiredSettledRounds",
+      totalRecordedQuestionRounds:
+        "questionBundleReward.totalRecordedQuestionRounds",
+      unallocatedAmount: "questionBundleReward.unallocatedAmount",
       updatedAt: "questionBundleReward.updatedAt",
     },
     questionRewardPoolClaim: {
@@ -260,7 +288,9 @@ function mockSharedModule() {
 describe("registerContentRoutes", () => {
   it("rejects invalid content status filters before querying the database", async () => {
     const { db } = mockPonderModules([]);
-    const { registerContentRoutes } = await import("../src/api/routes/content-routes.js");
+    const { registerContentRoutes } = await import(
+      "../src/api/routes/content-routes.js"
+    );
 
     const app = new Hono();
     registerContentRoutes(app);
@@ -275,7 +305,9 @@ describe("registerContentRoutes", () => {
   it("returns empty results for short generic searches without querying the database", async () => {
     const { db } = mockPonderModules([]);
     mockSharedModule();
-    const { registerContentRoutes } = await import("../src/api/routes/content-routes.js");
+    const { registerContentRoutes } = await import(
+      "../src/api/routes/content-routes.js"
+    );
 
     const app = new Hono();
     registerContentRoutes(app);
@@ -296,27 +328,37 @@ describe("registerContentRoutes", () => {
   it("rejects invalid multi-submitter filters before querying the database", async () => {
     const { db } = mockPonderModules([]);
     mockSharedModule();
-    const { registerContentRoutes } = await import("../src/api/routes/content-routes.js");
+    const { registerContentRoutes } = await import(
+      "../src/api/routes/content-routes.js"
+    );
 
     const app = new Hono();
     registerContentRoutes(app);
 
-    const response = await app.request("http://localhost/content?submitters=0x123,not-an-address");
+    const response = await app.request(
+      "http://localhost/content?submitters=0x123,not-an-address",
+    );
 
     expect(response.status).toBe(400);
-    expect(await response.json()).toEqual({ error: "Invalid submitters filter" });
+    expect(await response.json()).toEqual({
+      error: "Invalid submitters filter",
+    });
     expect(db.select).not.toHaveBeenCalled();
   });
 
   it("uses bounded search pagination without running an exact count", async () => {
     const { db, queryBuilder } = mockPonderModules([{ id: 1n }]);
     mockSharedModule();
-    const { registerContentRoutes } = await import("../src/api/routes/content-routes.js");
+    const { registerContentRoutes } = await import(
+      "../src/api/routes/content-routes.js"
+    );
 
     const app = new Hono();
     registerContentRoutes(app);
 
-    const response = await app.request("http://localhost/content?search=curyo&limit=5&offset=10");
+    const response = await app.request(
+      "http://localhost/content?search=curyo&limit=5&offset=10",
+    );
     const body = await response.json();
 
     expect(response.status).toBe(200);
@@ -333,12 +375,16 @@ describe("registerContentRoutes", () => {
   it("uses full-text search conditions and relevance-first ordering", async () => {
     const { queryBuilder } = mockPonderModules([{ id: 1n }]);
     mockSharedModule();
-    const { registerContentRoutes } = await import("../src/api/routes/content-routes.js");
+    const { registerContentRoutes } = await import(
+      "../src/api/routes/content-routes.js"
+    );
 
     const app = new Hono();
     registerContentRoutes(app);
 
-    const response = await app.request("http://localhost/content?search=radioactivity%20research&sortBy=relevance");
+    const response = await app.request(
+      "http://localhost/content?search=radioactivity%20research&sortBy=relevance",
+    );
 
     expect(response.status).toBe(200);
 
@@ -352,12 +398,16 @@ describe("registerContentRoutes", () => {
   it("uses canonical url candidates for exact url searches", async () => {
     const { queryBuilder } = mockPonderModules([{ id: 1n }]);
     mockSharedModule();
-    const { registerContentRoutes } = await import("../src/api/routes/content-routes.js");
+    const { registerContentRoutes } = await import(
+      "../src/api/routes/content-routes.js"
+    );
 
     const app = new Hono();
     registerContentRoutes(app);
 
-    const response = await app.request("http://localhost/content?search=https://Example.com:443/path?q=1#frag");
+    const response = await app.request(
+      "http://localhost/content?search=https://Example.com:443/path?q=1#frag",
+    );
 
     expect(response.status).toBe(200);
 
@@ -370,7 +420,9 @@ describe("registerContentRoutes", () => {
   it("adds moderation predicates to content list queries before pagination", async () => {
     const { queryBuilder } = mockPonderModules([{ id: 1n }]);
     mockSharedModule();
-    const { registerContentRoutes } = await import("../src/api/routes/content-routes.js");
+    const { registerContentRoutes } = await import(
+      "../src/api/routes/content-routes.js"
+    );
 
     const app = new Hono();
     registerContentRoutes(app);
@@ -392,23 +444,31 @@ describe("registerContentRoutes", () => {
   it("orders highest reward content by available bounty amount", async () => {
     const { queryBuilder } = mockPonderModules([{ id: 1n }]);
     mockSharedModule();
-    const { registerContentRoutes } = await import("../src/api/routes/content-routes.js");
+    const { registerContentRoutes } = await import(
+      "../src/api/routes/content-routes.js"
+    );
 
     const app = new Hono();
     registerContentRoutes(app);
 
-    const response = await app.request("http://localhost/content?sortBy=highest_rewards");
+    const response = await app.request(
+      "http://localhost/content?sortBy=highest_rewards",
+    );
 
     expect(response.status).toBe(200);
 
-    const serializedWhere = serializeExpression(queryBuilder.where.mock.calls[0]?.[0]);
+    const serializedWhere = serializeExpression(
+      queryBuilder.where.mock.calls[0]?.[0],
+    );
     expect(serializedWhere).toContain("questionRewardPool.unallocatedAmount");
     expect(serializedWhere).toContain("questionRewardPool.allocatedAmount");
     expect(serializedWhere).toContain("questionRewardPool.claimedAmount");
     expect(serializedWhere).toContain("feedbackBonusPool.remainingAmount");
     expect(serializedWhere).toContain("content.id");
 
-    const serializedOrderBy = serializeExpression(queryBuilder.orderBy.mock.calls[0] ?? []);
+    const serializedOrderBy = serializeExpression(
+      queryBuilder.orderBy.mock.calls[0] ?? [],
+    );
     expect(serializedOrderBy).toContain("questionRewardPool.unallocatedAmount");
     expect(serializedOrderBy).toContain("questionRewardPool.allocatedAmount");
     expect(serializedOrderBy).toContain("questionRewardPool.claimedAmount");
@@ -419,7 +479,9 @@ describe("registerContentRoutes", () => {
   it("supports filtering content by multiple raw submitter wallets", async () => {
     const { queryBuilder } = mockPonderModules([{ id: 1n }]);
     mockSharedModule();
-    const { registerContentRoutes } = await import("../src/api/routes/content-routes.js");
+    const { registerContentRoutes } = await import(
+      "../src/api/routes/content-routes.js"
+    );
 
     const app = new Hono();
     registerContentRoutes(app);
@@ -441,7 +503,9 @@ describe("registerContentRoutes", () => {
   it("adds moderation predicates to direct content lookups", async () => {
     const { queryBuilder } = mockPonderModules([{ id: 1n }]);
     mockSharedModule();
-    const { registerContentRoutes } = await import("../src/api/routes/content-routes.js");
+    const { registerContentRoutes } = await import(
+      "../src/api/routes/content-routes.js"
+    );
 
     const app = new Hono();
     registerContentRoutes(app);
@@ -461,7 +525,9 @@ describe("registerContentRoutes", () => {
   it("filters seed categories with the moderation predicate", async () => {
     const { queryBuilder } = mockPonderModules([{ id: 1n }]);
     mockSharedModule();
-    const { registerContentRoutes } = await import("../src/api/routes/content-routes.js");
+    const { registerContentRoutes } = await import(
+      "../src/api/routes/content-routes.js"
+    );
 
     const app = new Hono();
     registerContentRoutes(app);
@@ -479,21 +545,29 @@ describe("registerContentRoutes", () => {
 
   it("rejects invalid round submitter filters before querying the database", async () => {
     const { db } = mockPonderModules([]);
-    const { registerContentRoutes } = await import("../src/api/routes/content-routes.js");
+    const { registerContentRoutes } = await import(
+      "../src/api/routes/content-routes.js"
+    );
 
     const app = new Hono();
     registerContentRoutes(app);
 
-    const response = await app.request("http://localhost/rounds?submitter=not-an-address");
+    const response = await app.request(
+      "http://localhost/rounds?submitter=not-an-address",
+    );
 
     expect(response.status).toBe(400);
-    expect(await response.json()).toEqual({ error: "Invalid submitter address" });
+    expect(await response.json()).toEqual({
+      error: "Invalid submitter address",
+    });
     expect(db.select).not.toHaveBeenCalled();
   });
 
   it("filters rounds by submitter in the database query", async () => {
     const { queryBuilder } = mockPonderModules([{ id: "1-1" }]);
-    const { registerContentRoutes } = await import("../src/api/routes/content-routes.js");
+    const { registerContentRoutes } = await import(
+      "../src/api/routes/content-routes.js"
+    );
 
     const app = new Hono();
     registerContentRoutes(app);
@@ -514,24 +588,38 @@ describe("registerContentRoutes", () => {
 
   it("rejects submitter settled round requests without a valid submitter", async () => {
     const { db } = mockPonderModules([]);
-    const { registerContentRoutes } = await import("../src/api/routes/content-routes.js");
+    const { registerContentRoutes } = await import(
+      "../src/api/routes/content-routes.js"
+    );
 
     const app = new Hono();
     registerContentRoutes(app);
 
-    const missingResponse = await app.request("http://localhost/submitter-settled-rounds");
-    const invalidResponse = await app.request("http://localhost/submitter-settled-rounds?submitter=not-an-address");
+    const missingResponse = await app.request(
+      "http://localhost/submitter-settled-rounds",
+    );
+    const invalidResponse = await app.request(
+      "http://localhost/submitter-settled-rounds?submitter=not-an-address",
+    );
 
     expect(missingResponse.status).toBe(400);
-    expect(await missingResponse.json()).toEqual({ error: "submitter parameter required" });
+    expect(await missingResponse.json()).toEqual({
+      error: "submitter parameter required",
+    });
     expect(invalidResponse.status).toBe(400);
-    expect(await invalidResponse.json()).toEqual({ error: "Invalid submitter address" });
+    expect(await invalidResponse.json()).toEqual({
+      error: "Invalid submitter address",
+    });
     expect(db.select).not.toHaveBeenCalled();
   });
 
   it("queries settled rounds through the dedicated submitter endpoint", async () => {
-    const { queryBuilder } = mockPonderModules([{ contentId: 1n, roundId: 2n }]);
-    const { registerContentRoutes } = await import("../src/api/routes/content-routes.js");
+    const { queryBuilder } = mockPonderModules([
+      { contentId: 1n, roundId: 2n },
+    ]);
+    const { registerContentRoutes } = await import(
+      "../src/api/routes/content-routes.js"
+    );
 
     const app = new Hono();
     registerContentRoutes(app);
@@ -557,12 +645,16 @@ describe("registerContentRoutes", () => {
 describe("registerLeaderboardRoutes", () => {
   it("pages bounded-window accuracy leaderboards at the database layer", async () => {
     const { queryBuilder } = mockPonderModules([]);
-    const { registerLeaderboardRoutes } = await import("../src/api/routes/leaderboard-routes.js");
+    const { registerLeaderboardRoutes } = await import(
+      "../src/api/routes/leaderboard-routes.js"
+    );
 
     const app = new Hono();
     registerLeaderboardRoutes(app);
 
-    const response = await app.request("http://localhost/accuracy-leaderboard?window=7d&limit=50&offset=25");
+    const response = await app.request(
+      "http://localhost/accuracy-leaderboard?window=7d&limit=50&offset=25",
+    );
 
     expect(response.status).toBe(200);
     expect(queryBuilder.orderBy).toHaveBeenCalled();
@@ -573,12 +665,16 @@ describe("registerLeaderboardRoutes", () => {
 
   it("rejects oversized offsets before querying the database", async () => {
     const { db } = mockPonderModules([]);
-    const { registerLeaderboardRoutes } = await import("../src/api/routes/leaderboard-routes.js");
+    const { registerLeaderboardRoutes } = await import(
+      "../src/api/routes/leaderboard-routes.js"
+    );
 
     const app = new Hono();
     registerLeaderboardRoutes(app);
 
-    const response = await app.request("http://localhost/token-holders?offset=50001");
+    const response = await app.request(
+      "http://localhost/token-holders?offset=50001",
+    );
 
     expect(response.status).toBe(400);
     expect(await response.json()).toEqual({ error: "Invalid offset" });
@@ -606,7 +702,9 @@ describe("registerDataRoutes", () => {
         totalFeedbackBonusesForfeited: 5_000_000n,
       },
     ]);
-    const { registerDataRoutes } = await import("../src/api/routes/data-routes.js");
+    const { registerDataRoutes } = await import(
+      "../src/api/routes/data-routes.js"
+    );
 
     const app = new Hono();
     registerDataRoutes(app);
@@ -628,21 +726,29 @@ describe("registerDataRoutes", () => {
 
   it("rejects vote cooldown requests without valid voters before querying the database", async () => {
     const { db } = mockPonderModules([]);
-    const { registerDataRoutes } = await import("../src/api/routes/data-routes.js");
+    const { registerDataRoutes } = await import(
+      "../src/api/routes/data-routes.js"
+    );
 
     const app = new Hono();
     registerDataRoutes(app);
 
-    const response = await app.request("http://localhost/vote-cooldowns?contentIds=1,2");
+    const response = await app.request(
+      "http://localhost/vote-cooldowns?contentIds=1,2",
+    );
 
     expect(response.status).toBe(400);
-    expect(await response.json()).toEqual({ error: "voters parameter required" });
+    expect(await response.json()).toEqual({
+      error: "voters parameter required",
+    });
     expect(db.select).not.toHaveBeenCalled();
   });
 
   it("rejects vote cooldown requests without valid content ids before querying the database", async () => {
     const { db } = mockPonderModules([]);
-    const { registerDataRoutes } = await import("../src/api/routes/data-routes.js");
+    const { registerDataRoutes } = await import(
+      "../src/api/routes/data-routes.js"
+    );
 
     const app = new Hono();
     registerDataRoutes(app);
@@ -652,13 +758,19 @@ describe("registerDataRoutes", () => {
     );
 
     expect(response.status).toBe(400);
-    expect(await response.json()).toEqual({ error: "contentIds parameter required" });
+    expect(await response.json()).toEqual({
+      error: "contentIds parameter required",
+    });
     expect(db.select).not.toHaveBeenCalled();
   });
 
   it("groups vote cooldown requests by content id", async () => {
-    const { queryBuilder } = mockPonderModules([{ contentId: 1n, latestCommittedAt: 1000n }]);
-    const { registerDataRoutes } = await import("../src/api/routes/data-routes.js");
+    const { queryBuilder } = mockPonderModules([
+      { contentId: 1n, latestCommittedAt: 1000n },
+    ]);
+    const { registerDataRoutes } = await import(
+      "../src/api/routes/data-routes.js"
+    );
 
     const app = new Hono();
     registerDataRoutes(app);
@@ -682,24 +794,38 @@ describe("registerDataRoutes", () => {
 
   it("rejects bounty claim candidate requests without a valid voter", async () => {
     const { db } = mockPonderModules([]);
-    const { registerDataRoutes } = await import("../src/api/routes/data-routes.js");
+    const { registerDataRoutes } = await import(
+      "../src/api/routes/data-routes.js"
+    );
 
     const app = new Hono();
     registerDataRoutes(app);
 
-    const missingResponse = await app.request("http://localhost/question-reward-claim-candidates");
-    const invalidResponse = await app.request("http://localhost/question-reward-claim-candidates?voter=not-an-address");
+    const missingResponse = await app.request(
+      "http://localhost/question-reward-claim-candidates",
+    );
+    const invalidResponse = await app.request(
+      "http://localhost/question-reward-claim-candidates?voter=not-an-address",
+    );
 
     expect(missingResponse.status).toBe(400);
-    expect(await missingResponse.json()).toEqual({ error: "voter parameter required" });
+    expect(await missingResponse.json()).toEqual({
+      error: "voter parameter required",
+    });
     expect(invalidResponse.status).toBe(400);
-    expect(await invalidResponse.json()).toEqual({ error: "Invalid voter address" });
+    expect(await invalidResponse.json()).toEqual({
+      error: "Invalid voter address",
+    });
     expect(db.select).not.toHaveBeenCalled();
   });
 
   it("queries bounty claim candidates across linked voter identities", async () => {
-    const { queryBuilder } = mockPonderModules([{ rewardPoolId: 1n, contentId: 2n, roundId: 3n }]);
-    const { registerDataRoutes } = await import("../src/api/routes/data-routes.js");
+    const { queryBuilder } = mockPonderModules([
+      { rewardPoolId: 1n, contentId: 2n, roundId: 3n },
+    ]);
+    const { registerDataRoutes } = await import(
+      "../src/api/routes/data-routes.js"
+    );
 
     const app = new Hono();
     registerDataRoutes(app);
@@ -728,7 +854,9 @@ describe("registerDataRoutes", () => {
 describe("registerDiscoveryRoutes", () => {
   it("adds moderation predicates to discover signals queries", async () => {
     const { queryBuilder } = mockPonderModules([]);
-    const { registerDiscoveryRoutes } = await import("../src/api/routes/discovery-routes.js");
+    const { registerDiscoveryRoutes } = await import(
+      "../src/api/routes/discovery-routes.js"
+    );
 
     const app = new Hono();
     registerDiscoveryRoutes(app);
@@ -739,18 +867,36 @@ describe("registerDiscoveryRoutes", () => {
 
     expect(response.status).toBe(200);
 
-    const serializedWhereCalls = queryBuilder.where.mock.calls.map(([value]) => serializeExpression(value));
+    const serializedWhereCalls = queryBuilder.where.mock.calls.map(([value]) =>
+      serializeExpression(value),
+    );
     expect(serializedWhereCalls.length).toBeGreaterThanOrEqual(4);
-    expect(serializedWhereCalls.every(value => value.includes("content.title"))).toBe(true);
-    expect(serializedWhereCalls.every(value => value.includes("content.description"))).toBe(true);
-    expect(serializedWhereCalls.every(value => value.includes("content.urlHost"))).toBe(true);
-    expect(serializedWhereCalls.every(value => value.includes("content.canonicalUrl"))).toBe(true);
-    expect(serializedWhereCalls.every(value => value.includes("content.tags"))).toBe(true);
+    expect(
+      serializedWhereCalls.every((value) => value.includes("content.title")),
+    ).toBe(true);
+    expect(
+      serializedWhereCalls.every((value) =>
+        value.includes("content.description"),
+      ),
+    ).toBe(true);
+    expect(
+      serializedWhereCalls.every((value) => value.includes("content.urlHost")),
+    ).toBe(true);
+    expect(
+      serializedWhereCalls.every((value) =>
+        value.includes("content.canonicalUrl"),
+      ),
+    ).toBe(true);
+    expect(
+      serializedWhereCalls.every((value) => value.includes("content.tags")),
+    ).toBe(true);
   });
 
   it("adds moderation predicates to notification event queries", async () => {
     const { queryBuilder } = mockPonderModules([]);
-    const { registerDiscoveryRoutes } = await import("../src/api/routes/discovery-routes.js");
+    const { registerDiscoveryRoutes } = await import(
+      "../src/api/routes/discovery-routes.js"
+    );
 
     const app = new Hono();
     registerDiscoveryRoutes(app);
@@ -761,32 +907,68 @@ describe("registerDiscoveryRoutes", () => {
 
     expect(response.status).toBe(200);
 
-    const serializedWhereCalls = queryBuilder.where.mock.calls.map(([value]) => serializeExpression(value));
+    const serializedWhereCalls = queryBuilder.where.mock.calls.map(([value]) =>
+      serializeExpression(value),
+    );
     expect(serializedWhereCalls.length).toBeGreaterThanOrEqual(6);
-    expect(serializedWhereCalls.every(value => value.includes("content.title"))).toBe(true);
-    expect(serializedWhereCalls.every(value => value.includes("content.description"))).toBe(true);
-    expect(serializedWhereCalls.every(value => value.includes("content.urlHost"))).toBe(true);
-    expect(serializedWhereCalls.every(value => value.includes("content.canonicalUrl"))).toBe(true);
-    expect(serializedWhereCalls.every(value => value.includes("content.tags"))).toBe(true);
+    expect(
+      serializedWhereCalls.every((value) => value.includes("content.title")),
+    ).toBe(true);
+    expect(
+      serializedWhereCalls.every((value) =>
+        value.includes("content.description"),
+      ),
+    ).toBe(true);
+    expect(
+      serializedWhereCalls.every((value) => value.includes("content.urlHost")),
+    ).toBe(true);
+    expect(
+      serializedWhereCalls.every((value) =>
+        value.includes("content.canonicalUrl"),
+      ),
+    ).toBe(true);
+    expect(
+      serializedWhereCalls.every((value) => value.includes("content.tags")),
+    ).toBe(true);
   });
 
   it("adds moderation predicates to featured content queries", async () => {
     const { queryBuilder } = mockPonderModules([]);
-    const { registerDiscoveryRoutes } = await import("../src/api/routes/discovery-routes.js");
+    const { registerDiscoveryRoutes } = await import(
+      "../src/api/routes/discovery-routes.js"
+    );
 
     const app = new Hono();
     registerDiscoveryRoutes(app);
 
-    const response = await app.request("http://localhost/featured-today?limit=6");
+    const response = await app.request(
+      "http://localhost/featured-today?limit=6",
+    );
 
     expect(response.status).toBe(200);
 
-    const serializedWhereCalls = queryBuilder.where.mock.calls.map(([value]) => serializeExpression(value));
+    const serializedWhereCalls = queryBuilder.where.mock.calls.map(([value]) =>
+      serializeExpression(value),
+    );
     expect(serializedWhereCalls.length).toBe(2);
-    expect(serializedWhereCalls.every(value => value.includes("content.title"))).toBe(true);
-    expect(serializedWhereCalls.every(value => value.includes("content.description"))).toBe(true);
-    expect(serializedWhereCalls.every(value => value.includes("content.urlHost"))).toBe(true);
-    expect(serializedWhereCalls.every(value => value.includes("content.canonicalUrl"))).toBe(true);
-    expect(serializedWhereCalls.every(value => value.includes("content.tags"))).toBe(true);
+    expect(
+      serializedWhereCalls.every((value) => value.includes("content.title")),
+    ).toBe(true);
+    expect(
+      serializedWhereCalls.every((value) =>
+        value.includes("content.description"),
+      ),
+    ).toBe(true);
+    expect(
+      serializedWhereCalls.every((value) => value.includes("content.urlHost")),
+    ).toBe(true);
+    expect(
+      serializedWhereCalls.every((value) =>
+        value.includes("content.canonicalUrl"),
+      ),
+    ).toBe(true);
+    expect(
+      serializedWhereCalls.every((value) => value.includes("content.tags")),
+    ).toBe(true);
   });
 });

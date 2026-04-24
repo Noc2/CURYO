@@ -59,9 +59,13 @@ export interface ContentItem {
     id: bigint;
     questionCount: number;
     requiredCompleters: number;
-    completedQuestionCount: number;
+    requiredSettledRounds: number;
+    completedRoundSetCount: number;
+    totalRecordedQuestionRounds: number;
     claimedCount: number;
     fundedAmount: bigint;
+    unallocatedAmount: bigint;
+    allocatedAmount: bigint;
     claimedAmount: bigint;
     refundedAmount: bigint;
     bountyClosesAt?: bigint;
@@ -177,9 +181,13 @@ export function mapContentItem(
       id?: string | number | null;
       questionCount?: number | null;
       requiredCompleters?: number | null;
-      completedQuestionCount?: number | null;
+      requiredSettledRounds?: number | null;
+      completedRoundSetCount?: number | null;
+      totalRecordedQuestionRounds?: number | null;
       claimedCount?: number | null;
       fundedAmount?: string | number | bigint | null;
+      unallocatedAmount?: string | number | bigint | null;
+      allocatedAmount?: string | number | bigint | null;
       claimedAmount?: string | number | bigint | null;
       refundedAmount?: string | number | bigint | null;
       bountyClosesAt?: string | number | bigint | null;
@@ -330,9 +338,13 @@ export function mapContentItem(
             id: BigInt(item.bundle.id),
             questionCount: item.bundle.questionCount ?? 0,
             requiredCompleters: item.bundle.requiredCompleters ?? 0,
-            completedQuestionCount: item.bundle.completedQuestionCount ?? 0,
+            requiredSettledRounds: item.bundle.requiredSettledRounds ?? 1,
+            completedRoundSetCount: item.bundle.completedRoundSetCount ?? 0,
+            totalRecordedQuestionRounds: item.bundle.totalRecordedQuestionRounds ?? 0,
             claimedCount: item.bundle.claimedCount ?? 0,
             fundedAmount: BigInt(item.bundle.fundedAmount ?? 0),
+            unallocatedAmount: BigInt(item.bundle.unallocatedAmount ?? 0),
+            allocatedAmount: BigInt(item.bundle.allocatedAmount ?? 0),
             claimedAmount: BigInt(item.bundle.claimedAmount ?? 0),
             refundedAmount: BigInt(item.bundle.refundedAmount ?? 0),
             bountyClosesAt: BigInt(item.bundle.bountyClosesAt ?? 0),

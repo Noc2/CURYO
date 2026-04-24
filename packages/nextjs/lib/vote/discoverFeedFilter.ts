@@ -14,9 +14,9 @@ function hasActiveBounty(item: ContentItem, nowSeconds: number) {
 
   const bundle = item.bundle;
   if (!bundle || bundle.failed || bundle.refunded) return false;
-  if (bundle.completedQuestionCount >= bundle.questionCount) return false;
+  if (bundle.completedRoundSetCount >= bundle.requiredSettledRounds) return false;
 
-  const remainingAmount = bundle.fundedAmount - bundle.claimedAmount - bundle.refundedAmount;
+  const remainingAmount = bundle.unallocatedAmount + bundle.allocatedAmount - bundle.claimedAmount;
   if (remainingAmount <= 0n) return false;
 
   const bountyClosesAt = bundle.bountyClosesAt ?? 0n;
@@ -31,9 +31,9 @@ export function getActiveBountyClosesAt(item: ContentItem, nowSeconds = Math.flo
 
   const bundle = item.bundle;
   if (!bundle || bundle.failed || bundle.refunded) return null;
-  if (bundle.completedQuestionCount >= bundle.questionCount) return null;
+  if (bundle.completedRoundSetCount >= bundle.requiredSettledRounds) return null;
 
-  const remainingAmount = bundle.fundedAmount - bundle.claimedAmount - bundle.refundedAmount;
+  const remainingAmount = bundle.unallocatedAmount + bundle.allocatedAmount - bundle.claimedAmount;
   if (remainingAmount <= 0n) return null;
   const bountyClosesAt = bundle.bountyClosesAt ?? 0n;
   if (bountyClosesAt <= 0n || bountyClosesAt <= BigInt(nowSeconds)) return null;
@@ -49,8 +49,8 @@ export function isExpiredBountyItem(item: ContentItem, nowSeconds = Math.floor(D
     bundle &&
       !bundle.failed &&
       !bundle.refunded &&
-      bundle.completedQuestionCount < bundle.questionCount &&
-      bundle.fundedAmount - bundle.claimedAmount - bundle.refundedAmount > 0n &&
+      bundle.completedRoundSetCount < bundle.requiredSettledRounds &&
+      bundle.unallocatedAmount + bundle.allocatedAmount - bundle.claimedAmount > 0n &&
       (bundle.bountyClosesAt ?? 0n) > 0n &&
       (bundle.bountyClosesAt ?? 0n) <= BigInt(nowSeconds),
   );

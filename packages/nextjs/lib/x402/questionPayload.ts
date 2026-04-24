@@ -27,7 +27,6 @@ export const X402_USDC_DECIMALS = 6;
 const X402_DEFAULT_SUBMISSION_BOUNTY_USDC = 1_000_000n;
 const X402_MIN_REWARD_POOL_REQUIRED_VOTERS = 3n;
 const X402_MIN_REWARD_POOL_SETTLED_ROUNDS = 1n;
-export const X402_BUNDLE_REQUIRED_SETTLED_ROUNDS = 1n;
 export const X402_MAX_QUESTION_BUNDLE_COUNT = 10;
 
 const DIRECT_IMAGE_URL_PATTERN = /^https:\/\/.+\.(?:avif|gif|jpe?g|png|webp)(?:[?#].*)?$/i;
@@ -80,15 +79,7 @@ export type X402QuestionOperation = {
   canonicalPayload: ReturnType<typeof toCanonicalQuestionPayload>;
 };
 
-export function assertSupportedX402BundleBounty(
-  bounty: Pick<X402QuestionPayload["bounty"], "requiredSettledRounds" | "rewardPoolExpiresAt">,
-) {
-  if (bounty.requiredSettledRounds !== X402_BUNDLE_REQUIRED_SETTLED_ROUNDS) {
-    throw new X402QuestionInputError(
-      `bounty.requiredSettledRounds must equal ${X402_BUNDLE_REQUIRED_SETTLED_ROUNDS} for bundle submissions.`,
-    );
-  }
-
+export function assertSupportedX402BundleBounty(bounty: Pick<X402QuestionPayload["bounty"], "rewardPoolExpiresAt">) {
   if (bounty.rewardPoolExpiresAt <= 0n) {
     throw new X402QuestionInputError("bounty.rewardPoolExpiresAt must be greater than zero for bundle submissions.");
   }
@@ -333,7 +324,6 @@ function normalizeBounty(value: unknown): X402QuestionPayload["bounty"] {
     throw new X402QuestionInputError("bounty.feedbackClosesAt cannot be after bounty.rewardPoolExpiresAt.");
   }
   assertSupportedX402BundleBounty({
-    requiredSettledRounds,
     rewardPoolExpiresAt,
   });
 

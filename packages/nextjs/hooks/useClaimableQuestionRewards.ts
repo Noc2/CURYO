@@ -17,6 +17,10 @@ export function getClaimableQuestionRewardsQueryKey(addresses?: readonly string[
   return ["claimableQuestionRewards", addresses?.join(",") ?? null, chainId ?? null] as const;
 }
 
+export function getClaimableQuestionBundleRewardsQueryKey(addresses?: readonly string[], chainId?: number) {
+  return ["claimableQuestionBundleRewards", addresses?.join(",") ?? null, chainId ?? null] as const;
+}
+
 export function buildClaimableQuestionRewardCandidateVoters(params: {
   address?: string | null;
   delegateTo?: string | null;
@@ -73,7 +77,24 @@ export function useClaimableQuestionRewards() {
     staleTime: 30_000,
   });
 
+  const {
+    data: bundleResult,
+    isLoading: bundleCandidatesLoading,
+    refetch: refetchBundleCandidates,
+  } = usePonderQuery({
+    queryKey: getClaimableQuestionBundleRewardsQueryKey(candidateVoters, targetNetwork.id),
+    ponderFn: async () => {
+      if (!voterQuery) return [];
+      const response = await ponderApi.getQuestionBundleRewardClaimCandidates(voterQuery, { limit: "200" });
+      return response.items;
+    },
+    rpcFn: async () => [],
+    enabled: candidateVoters.length > 0 && !delegationLoading,
+    staleTime: 30_000,
+  });
+
   const candidates = useMemo(() => result?.data ?? [], [result?.data]);
+  const bundleCandidates = useMemo(() => bundleResult?.data ?? [], [bundleResult?.data]);
   const claimableContracts = useMemo(() => {
     if (!address || !escrowAddress || candidates.length === 0) return [];
     return candidates.map(candidate => ({
@@ -83,6 +104,15 @@ export function useClaimableQuestionRewards() {
       args: [safeBigInt(candidate.rewardPoolId), safeBigInt(candidate.roundId), address],
     }));
   }, [address, candidates, escrowAddress]);
+  const bundleClaimableContracts = useMemo(() => {
+    if (!address || !escrowAddress || bundleCandidates.length === 0) return [];
+    return bundleCandidates.map(candidate => ({
+      address: escrowAddress,
+      abi: QUESTION_REWARD_POOL_ESCROW_ABI,
+      functionName: "claimableQuestionBundleReward" as const,
+      args: [safeBigInt(candidate.bundleId), BigInt(candidate.roundSetIndex ?? 0), address],
+    }));
+  }, [address, bundleCandidates, escrowAddress]);
 
   const {
     data: claimableResults,
@@ -91,6 +121,14 @@ export function useClaimableQuestionRewards() {
   } = useReadContracts({
     contracts: claimableContracts,
     query: { enabled: claimableContracts.length > 0 },
+  });
+  const {
+    data: bundleClaimableResults,
+    isLoading: bundleClaimablesLoading,
+    refetch: refetchBundleClaimables,
+  } = useReadContracts({
+    contracts: bundleClaimableContracts,
+    query: { enabled: bundleClaimableContracts.length > 0 },
   });
 
   const claimableItems = useMemo<ClaimableRewardItem[]>(() => {
@@ -112,15 +150,46 @@ export function useClaimableQuestionRewards() {
     });
   }, [candidates, claimableResults]);
 
-  const totalClaimable = useMemo(() => claimableItems.reduce((sum, item) => sum + item.reward, 0n), [claimableItems]);
+  const bundleClaimableItems = useMemo<ClaimableRewardItem[]>(() => {
+    if (!bundleClaimableResults || bundleClaimableResults.length !== bundleCandidates.length) return [];
+    return bundleCandidates.flatMap((candidate, index) => {
+      const resultItem = bundleClaimableResults[index];
+      const reward = resultItem?.status === "success" ? safeBigInt(resultItem.result) : 0n;
+      if (reward <= 0n) return [];
+      const bundleId = safeBigInt(candidate.bundleId);
+      const roundSetIndex = BigInt(candidate.roundSetIndex ?? 0);
+      return [
+        {
+          bundleId,
+          roundSetIndex,
+          reward,
+          title: `Bundle #${bundleId.toString()} round set ${roundSetIndex + 1n}`,
+          claimType: "question_bundle_reward" as const,
+        },
+      ];
+    });
+  }, [bundleCandidates, bundleClaimableResults]);
+
+  const allClaimableItems = useMemo(
+    () => [...claimableItems, ...bundleClaimableItems],
+    [bundleClaimableItems, claimableItems],
+  );
+
+  const totalClaimable = useMemo(
+    () => allClaimableItems.reduce((sum, item) => sum + item.reward, 0n),
+    [allClaimableItems],
+  );
 
   return {
-    claimableItems,
+    claimableItems: allClaimableItems,
     totalClaimable,
-    isLoading: candidatesLoading || claimablesLoading || delegationLoading,
+    isLoading:
+      candidatesLoading || claimablesLoading || bundleCandidatesLoading || bundleClaimablesLoading || delegationLoading,
     refetch: () => {
       refetchCandidates();
       refetchClaimables();
+      refetchBundleCandidates();
+      refetchBundleClaimables();
     },
   };
 }

@@ -290,6 +290,12 @@ const SmartContracts: NextPage = () => {
           function after settling a Celo USDC payment from the bot wallet.
         </li>
         <li>
+          <code>submitQuestionBundleWithRewardAndRoundConfig(..., rewardTerms, roundConfig)</code> &mdash; Submit a
+          ranked-option bundle with one bounty shared across sibling questions. <code>requiredSettledRounds</code> now
+          applies to bundle round sets, where each set is complete only after every bundled question has one settled
+          round.
+        </li>
+        <li>
           <code>getContentRoundConfig(contentId)</code> &mdash; Returns the blind phase, maximum duration, settlement
           voters, and voter cap selected for that question. Existing submit functions without an explicit round config
           still use the governed default.
@@ -430,6 +436,11 @@ const SmartContracts: NextPage = () => {
           <code>QuestionRewardPoolEscrow.claimQuestionReward(rewardPoolId, roundId)</code> &mdash; Claim the USDC-backed
           bounty for a revealed voter. New bounties default to a 3% frontend-operator share, attributed from the vote
           commit; unpayable frontend shares remain with the voter claim.
+        </li>
+        <li>
+          <code>QuestionRewardPoolEscrow.claimQuestionBundleReward(bundleId, roundSetIndex)</code> &mdash; Claim a
+          bundle bounty round set after the voter revealed on every bundled question in that set. Multi-round bundles
+          create one claimable allocation per completed round set.
         </li>
         <li>
           <code>FeedbackBonusEscrow.awardFeedbackBonus(poolId, recipient, feedbackHash, grossAmount)</code> &mdash; Pay

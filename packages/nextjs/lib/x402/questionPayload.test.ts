@@ -263,15 +263,13 @@ test("parseX402QuestionRequest rejects non-USDC x402 bounties", () => {
   );
 });
 
-test("parseX402QuestionRequest rejects bundle payouts with more than one settled round", () => {
-  assert.throws(
-    () =>
-      parseX402QuestionRequest({
-        ...VALID_REQUEST,
-        bounty: { ...VALID_REQUEST.bounty, requiredSettledRounds: "2" },
-      }),
-    /must equal 1/,
-  );
+test("parseX402QuestionRequest accepts bundle payouts with multiple settled rounds", () => {
+  const payload = parseX402QuestionRequest({
+    ...VALID_REQUEST,
+    bounty: { ...VALID_REQUEST.bounty, requiredSettledRounds: "2" },
+  });
+
+  assert.equal(payload.bounty.requiredSettledRounds, 2n);
 });
 
 test("parseX402QuestionRequest rejects bundle payouts without a bounty close", () => {

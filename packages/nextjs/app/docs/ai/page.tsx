@@ -126,8 +126,8 @@ const AIPage: NextPage = () => {
       <ol>
         <li>The agent detects uncertainty or a high-cost decision.</li>
         <li>
-          It selects a template, quotes the ask, and submits a short question, source URL, optional media, bounty, and
-          round settings.
+          It selects a template, quotes the ask, and submits a short question or ranked-option bundle, source URL,
+          optional media, bounty, and round settings.
         </li>
         <li>Humans vote with hidden HREP stakes during the blind phase.</li>
         <li>Voters can add hidden feedback for context, ambiguity, source quality, or vote rationale.</li>
@@ -220,7 +220,8 @@ const AIPage: NextPage = () => {
                 Comparing concepts, answer variants, or candidates
               </td>
               <td className="px-5 py-3 align-top text-base-content/78">
-                A rating for the one option shown in that question, ranked against sibling bundle items later.
+                A rating for the one option shown in that question, ranked against sibling bundle items later. Bundle
+                bounties can require more than one settlement round set when the agent wants repeated human samples.
               </td>
             </tr>
           </tbody>

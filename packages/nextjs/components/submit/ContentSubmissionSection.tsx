@@ -100,7 +100,7 @@ const MEDIA_URL_CONFIG = {
 type SubmissionStep = "question" | "bounty";
 
 const MAX_QUESTION_BUNDLE_COUNT = 10;
-const BUNDLE_REQUIRED_SETTLED_ROUNDS = 1;
+const MIN_BUNDLE_REQUIRED_SETTLED_ROUNDS = 1;
 
 type QuestionDraft = {
   mediaMode: MediaMode;
@@ -286,6 +286,7 @@ export function ContentSubmissionSection() {
   const [rewardAsset, setRewardAsset] = useState<SubmissionRewardAsset>("usdc");
   const [rewardAmount, setRewardAmount] = useState("1");
   const [rewardRequiredVoters, setRewardRequiredVoters] = useState("3");
+  const [rewardRequiredRounds, setRewardRequiredRounds] = useState("1");
   const [bountyWindowPreset, setBountyWindowPreset] = useState<BountyWindowPreset>(DEFAULT_BOUNTY_WINDOW_PRESET);
   const [customBountyWindowAmount, setCustomBountyWindowAmount] = useState(DEFAULT_CUSTOM_BOUNTY_WINDOW_AMOUNT);
   const [customBountyWindowUnit, setCustomBountyWindowUnit] = useState<BountyWindowUnit>(
@@ -752,8 +753,11 @@ export function ContentSubmissionSection() {
     return null;
   })();
   const parsedRewardRequiredVoters = parseIntegerInput(rewardRequiredVoters);
+  const parsedRewardRequiredRounds = parseIntegerInput(rewardRequiredRounds);
   const selectedRequiredVoters = BigInt(Math.max(MIN_REWARD_POOL_REQUIRED_VOTERS, parsedRewardRequiredVoters));
-  const selectedRequiredSettledRounds = BigInt(BUNDLE_REQUIRED_SETTLED_ROUNDS);
+  const selectedRequiredSettledRounds = BigInt(
+    Math.max(MIN_BUNDLE_REQUIRED_SETTLED_ROUNDS, parsedRewardRequiredRounds),
+  );
   const bountyMinimumCoverageAmount = selectedRequiredVoters * selectedRequiredSettledRounds;
   const minimumRewardAmount =
     rewardAsset === "hrep"
@@ -783,6 +787,11 @@ export function ContentSubmissionSection() {
         ? "Bounty voters cannot exceed the question voter cap."
         : null;
   const rewardRequiredVotersError = bountyStepAttempted ? rewardRequiredVotersValidationError : null;
+  const rewardRequiredRoundsValidationError =
+    parsedRewardRequiredRounds < MIN_BUNDLE_REQUIRED_SETTLED_ROUNDS
+      ? `Minimum is ${MIN_BUNDLE_REQUIRED_SETTLED_ROUNDS} round.`
+      : null;
+  const rewardRequiredRoundsError = bountyStepAttempted ? rewardRequiredRoundsValidationError : null;
   const bountyWindowSeconds = getBountyWindowSeconds(
     bountyWindowPreset,
     customBountyWindowAmount,
@@ -798,6 +807,7 @@ export function ContentSubmissionSection() {
   const rewardExpiryError = bountyStepAttempted ? rewardExpiryValidationError : null;
   const bountySettingsValid =
     rewardRequiredVotersValidationError === null &&
+    rewardRequiredRoundsValidationError === null &&
     rewardExpiryValidationError === null &&
     roundConfigValidationError === null &&
     rewardAmountError === null &&
@@ -1553,7 +1563,8 @@ export function ContentSubmissionSection() {
   const bountyTooltipText =
     "Required and non-refundable. Paid from your wallet into escrow when the question is submitted. Set the terms that eligible voters must satisfy before payout.";
   const requiredVotersTooltipText = `At least ${MIN_REWARD_POOL_REQUIRED_VOTERS} completers are required. Each paid completer must answer every question in the bundle.`;
-  const requiredRoundsTooltipText = `Bundle rewards currently require exactly ${BUNDLE_REQUIRED_SETTLED_ROUNDS} settled round before payout.`;
+  const requiredRoundsTooltipText =
+    "Each settlement round set requires every bundled question to settle once. Paid completers can claim a reward for each completed set they fully answered.";
   const roundSettingsTooltipText =
     "Governance sets the allowed range. Urgent bounties can use shorter rounds; broader questions can wait for more voters.";
   const bountyExpiryTooltipText =
@@ -1562,9 +1573,12 @@ export function ContentSubmissionSection() {
     selectedRewardAmount === null
       ? `Using the current minimum until the bounty amount is valid. ${formatFrontendFeePercent(frontendFeeBps)} may be reserved for an eligible frontend operator.`
       : `${formatFrontendFeePercent(frontendFeeBps)} may be reserved for an eligible frontend operator.`;
-  const perPaidCompleterTooltipText = `Estimated claim after answering all ${questionCount} question${questionCount === 1 ? "" : "s"}.`;
-  const voterCapEstimateTooltipText =
-    "Estimated per completer if every question fills the selected voter cap.";
+  const perPaidCompleterTooltipText = `Estimated total claim after answering all ${questionCount} question${
+    questionCount === 1 ? "" : "s"
+  } across ${selectedRequiredSettledRounds.toString()} settlement round${
+    selectedRequiredSettledRounds === 1n ? "" : "s"
+  }.`;
+  const voterCapEstimateTooltipText = "Estimated per completer if every question fills the selected voter cap.";
 
   const bountyDetailsCard = (
     <div className="space-y-5">
@@ -1639,18 +1653,21 @@ export function ContentSubmissionSection() {
           </span>
           <input
             type="number"
-            min={BUNDLE_REQUIRED_SETTLED_ROUNDS}
-            max={BUNDLE_REQUIRED_SETTLED_ROUNDS}
+            min={MIN_BUNDLE_REQUIRED_SETTLED_ROUNDS}
             step={1}
-            value={BUNDLE_REQUIRED_SETTLED_ROUNDS}
-            readOnly
-            aria-readonly="true"
-            className="input input-bordered bg-base-100"
+            value={rewardRequiredRounds}
+            onChange={e => setRewardRequiredRounds(e.target.value)}
+            className={`input input-bordered bg-base-100 ${
+              bountyStepAttempted && rewardRequiredRoundsError ? "input-error" : ""
+            }`}
           />
         </div>
       </div>
       {bountyStepAttempted && rewardRequiredVotersError ? (
         <p className="text-base text-error">{rewardRequiredVotersError}</p>
+      ) : null}
+      {bountyStepAttempted && rewardRequiredRoundsError ? (
+        <p className="text-base text-error">{rewardRequiredRoundsError}</p>
       ) : null}
 
       <div className="space-y-3 pt-2">

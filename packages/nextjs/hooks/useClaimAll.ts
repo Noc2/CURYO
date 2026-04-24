@@ -23,6 +23,8 @@ function getClaimableRewardLabel(item: ClaimableRewardItem) {
       return `bootstrap reward for content #${item.contentId} round ${item.roundId}`;
     case "question_reward":
       return `bounty for content #${item.contentId} round ${item.roundId}`;
+    case "question_bundle_reward":
+      return `bundle bounty #${item.bundleId} round set ${item.roundSetIndex + 1n}`;
     case "frontend_registry_fee":
       return `frontend registry fees for ${item.frontend}`;
     case "frontend_round_fee":
@@ -157,6 +159,14 @@ export function useClaimAll() {
               {
                 functionName: "claimQuestionReward",
                 args: [item.rewardPoolId, item.roundId],
+              },
+              { getErrorMessage: getTransactionErrorMessage },
+            );
+          } else if (item.claimType === "question_bundle_reward") {
+            await (writeQuestionRewardPoolEscrow as any)(
+              {
+                functionName: "claimQuestionBundleReward",
+                args: [item.bundleId, item.roundSetIndex],
               },
               { getErrorMessage: getTransactionErrorMessage },
             );

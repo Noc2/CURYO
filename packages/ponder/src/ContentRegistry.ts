@@ -21,7 +21,9 @@ async function readRatingStateAtEventBlock(
   context: Parameters<Parameters<typeof ponder.on>[1]>[0]["context"],
   contentId: bigint,
 ) {
-  const contentRegistryAddress = Array.isArray(context.contracts.ContentRegistry.address)
+  const contentRegistryAddress = Array.isArray(
+    context.contracts.ContentRegistry.address,
+  )
     ? context.contracts.ContentRegistry.address[0]
     : context.contracts.ContentRegistry.address;
 
@@ -41,7 +43,9 @@ async function readContentRoundConfigAtEventBlock(
   context: Parameters<Parameters<typeof ponder.on>[1]>[0]["context"],
   contentId: bigint,
 ) {
-  const contentRegistryAddress = Array.isArray(context.contracts.ContentRegistry.address)
+  const contentRegistryAddress = Array.isArray(
+    context.contracts.ContentRegistry.address,
+  )
     ? context.contracts.ContentRegistry.address[0]
     : context.contracts.ContentRegistry.address;
 
@@ -89,10 +93,21 @@ async function upsertContentMedia(
 }
 
 ponder.on("ContentRegistry:ContentSubmitted", async ({ event, context }) => {
-  const { contentId, submitter, contentHash, url, title, description, tags, categoryId } =
-    event.args;
+  const {
+    contentId,
+    submitter,
+    contentHash,
+    url,
+    title,
+    description,
+    tags,
+    categoryId,
+  } = event.args;
   const canonicalUrl = getCanonicalUrlParts(url);
-  const roundConfig = await readContentRoundConfigAtEventBlock(context, contentId);
+  const roundConfig = await readContentRoundConfigAtEventBlock(
+    context,
+    contentId,
+  );
 
   await context.db
     .insert(content)
@@ -135,7 +150,9 @@ ponder.on("ContentRegistry:ContentSubmitted", async ({ event, context }) => {
   }
 
   // Increment profile content count (skip if profile not yet indexed)
-  const existingProfile = await context.db.find(profile, { address: submitter });
+  const existingProfile = await context.db.find(profile, {
+    address: submitter,
+  });
   if (existingProfile) {
     await context.db
       .update(profile, { address: submitter })
@@ -159,72 +176,82 @@ ponder.on("ContentRegistry:ContentSubmitted", async ({ event, context }) => {
     }));
 });
 
-ponder.on("ContentRegistry:ContentRoundConfigSet", async ({ event, context }) => {
-  const { contentId, epochDuration, maxDuration, minVoters, maxVoters } = event.args;
-  const existingContent = await context.db.find(content, { id: contentId });
-  if (!existingContent) return;
+ponder.on(
+  "ContentRegistry:ContentRoundConfigSet",
+  async ({ event, context }) => {
+    const { contentId, epochDuration, maxDuration, minVoters, maxVoters } =
+      event.args;
+    const existingContent = await context.db.find(content, { id: contentId });
+    if (!existingContent) return;
 
-  await context.db.update(content, { id: contentId }).set({
-    roundEpochDuration: Number(epochDuration),
-    roundMaxDuration: Number(maxDuration),
-    roundMinVoters: Number(minVoters),
-    roundMaxVoters: Number(maxVoters),
-  });
-});
+    await context.db.update(content, { id: contentId }).set({
+      roundEpochDuration: Number(epochDuration),
+      roundMaxDuration: Number(maxDuration),
+      roundMinVoters: Number(minVoters),
+      roundMaxVoters: Number(maxVoters),
+    });
+  },
+);
 
-ponder.on("ContentRegistry:QuestionSpecAnchored", async ({ event, context }) => {
-  const { contentId, questionMetadataHash, resultSpecHash } = event.args;
-  const existingContent = await context.db.find(content, { id: contentId });
-  if (!existingContent) return;
+ponder.on(
+  "ContentRegistry:QuestionSpecAnchored",
+  async ({ event, context }) => {
+    const { contentId, questionMetadataHash, resultSpecHash } = event.args;
+    const existingContent = await context.db.find(content, { id: contentId });
+    if (!existingContent) return;
 
-  await context.db.update(content, { id: contentId }).set({
-    questionMetadataHash,
-    resultSpecHash,
-    lastActivityAt: event.block.timestamp,
-  });
-});
+    await context.db.update(content, { id: contentId }).set({
+      questionMetadataHash,
+      resultSpecHash,
+      lastActivityAt: event.block.timestamp,
+    });
+  },
+);
 
-ponder.on("ContentRegistry:ContentMediaSubmitted", async ({ event, context }) => {
-  const { contentId, imageUrls, videoUrl } = event.args;
-  const trimmedVideoUrl = videoUrl.trim();
-  if (trimmedVideoUrl) {
-    await upsertContentMedia(context, contentId, 0, "video", trimmedVideoUrl);
-    return;
-  }
+ponder.on(
+  "ContentRegistry:ContentMediaSubmitted",
+  async ({ event, context }) => {
+    const { contentId, imageUrls, videoUrl } = event.args;
+    const trimmedVideoUrl = videoUrl.trim();
+    if (trimmedVideoUrl) {
+      await upsertContentMedia(context, contentId, 0, "video", trimmedVideoUrl);
+      return;
+    }
 
-  for (let i = 0; i < imageUrls.length; i++) {
-    await upsertContentMedia(context, contentId, i, "image", imageUrls[i]);
-  }
-});
+    for (let i = 0; i < imageUrls.length; i++) {
+      await upsertContentMedia(context, contentId, i, "image", imageUrls[i]);
+    }
+  },
+);
 
-ponder.on("ContentRegistry:QuestionBundleContentLinked", async ({ event, context }) => {
-  const { bundleId, contentId, bundleIndex } = event.args;
-  const normalizedBundleIndex = Number(bundleIndex);
+ponder.on(
+  "ContentRegistry:QuestionBundleContentLinked",
+  async ({ event, context }) => {
+    const { bundleId, contentId, bundleIndex } = event.args;
+    const normalizedBundleIndex = Number(bundleIndex);
 
-  await context.db.update(content, { id: contentId }).set({
-    bundleId,
-    bundleIndex: normalizedBundleIndex,
-    lastActivityAt: event.block.timestamp,
-  });
-
-  await context.db
-    .insert(questionBundleQuestion)
-    .values({
-      id: `${bundleId}-${bundleIndex}`,
+    await context.db.update(content, { id: contentId }).set({
       bundleId,
-      contentId,
       bundleIndex: normalizedBundleIndex,
-      roundId: null,
-      settled: false,
-      terminal: false,
-      updatedAt: event.block.timestamp,
-    })
-    .onConflictDoUpdate(() => ({
-      contentId,
-      bundleIndex: normalizedBundleIndex,
-      updatedAt: event.block.timestamp,
-    }));
-});
+      lastActivityAt: event.block.timestamp,
+    });
+
+    await context.db
+      .insert(questionBundleQuestion)
+      .values({
+        id: `${bundleId}-${bundleIndex}`,
+        bundleId,
+        contentId,
+        bundleIndex: normalizedBundleIndex,
+        updatedAt: event.block.timestamp,
+      })
+      .onConflictDoUpdate(() => ({
+        contentId,
+        bundleIndex: normalizedBundleIndex,
+        updatedAt: event.block.timestamp,
+      }));
+  },
+);
 
 ponder.on("ContentRegistry:ContentDormant", async ({ event, context }) => {
   const { contentId } = event.args;
@@ -289,7 +316,9 @@ ponder.on("ContentRegistry:RatingStateUpdated", async ({ event, context }) => {
     lastActivityAt: event.block.timestamp,
   });
 
-  const existingRound = await context.db.find(round, { id: `${contentId}-${roundId}` });
+  const existingRound = await context.db.find(round, {
+    id: `${contentId}-${roundId}`,
+  });
   if (existingRound) {
     await context.db.update(round, { id: `${contentId}-${roundId}` }).set({
       referenceRatingBps: Number(referenceRatingBps),
