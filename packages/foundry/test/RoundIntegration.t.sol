@@ -300,8 +300,8 @@ contract RoundIntegrationTest is VotingTestBase {
             }
         }
 
-        // Advance past epoch boundary so all commits are revealable
-        vm.warp(block.timestamp + EPOCH_DURATION + 1);
+        // Advance past the epoch boundary and the selected drand target round.
+        vm.warp(block.timestamp + EPOCH_DURATION + _tlockDrandPeriod() + 1);
 
         for (uint256 i = 0; i < voters.length; i++) {
             votingEngine.revealVoteByCommitKey(contentId, roundId, commitKeys[i], directions[i], salts[i]);
@@ -3167,6 +3167,27 @@ contract RoundIntegrationTest is VotingTestBase {
         uint256 balAfter = hrepToken.balanceOf(voter1);
 
         assertEq(balAfter - balBefore, 4_500_000, "backfill should repair rate snapshot failures");
+    }
+
+    function test_Settlement_RevertsIfRegistryVotingEngineRotatedBeforeSettlement() public {
+        uint256 contentId = _submitContent();
+        address[] memory voters = new address[](3);
+        voters[0] = voter1;
+        voters[1] = voter2;
+        voters[2] = voter3;
+        bool[] memory dirs = new bool[](3);
+        dirs[0] = true;
+        dirs[1] = true;
+        dirs[2] = false;
+
+        _commitAllThenReveal(voters, contentId, dirs, STAKE);
+        uint256 roundId = _getActiveOrLatestRoundId(contentId);
+
+        vm.prank(owner);
+        registry.setVotingEngine(address(0xBEEF));
+
+        vm.expectRevert("Only VotingEngine");
+        votingEngine.settleRound(contentId, roundId);
     }
 
     // =========================================================================
