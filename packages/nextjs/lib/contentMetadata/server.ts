@@ -74,6 +74,7 @@ async function resolveGenericPageThumbnail(url: string): Promise<string | null> 
         accept: "text/html,application/xhtml+xml",
         "user-agent": "CuryoBot/1.0 (+https://curyo.xyz)",
       },
+      redirect: "manual",
       signal: AbortSignal.timeout(METADATA_TIMEOUT_MS),
     });
     if (!response.ok) return null;
