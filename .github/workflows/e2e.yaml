@@ -132,7 +132,7 @@ jobs:
           echo "✓ Next.js ready"
 
           # Wait for Ponder
-          timeout 120 bash -c 'until curl -sf http://127.0.0.1:42069/ready > /dev/null 2>&1; do sleep 2; done'
+          timeout 120 bash -c 'until curl -sf http://127.0.0.1:42069/status > /dev/null 2>&1; do sleep 2; done'
           echo "✓ Ponder ready"
 
       - name: Warm critical Next.js routes
@@ -285,7 +285,7 @@ jobs:
           echo "✓ Next.js ready"
 
           # Wait for Ponder
-          timeout 120 bash -c 'until curl -sf http://127.0.0.1:42069/ready > /dev/null 2>&1; do sleep 2; done'
+          timeout 120 bash -c 'until curl -sf http://127.0.0.1:42069/status > /dev/null 2>&1; do sleep 2; done'
           echo "✓ Ponder ready"
 
       - name: Warm critical Next.js routes
