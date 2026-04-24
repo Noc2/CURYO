@@ -59,6 +59,7 @@ Question payload examples live in `examples/questions/`:
 - `landing-pitch-review.json`
 - `source-credibility-check.json`
 - `action-go-no-go.json`
+- `answer-variant-safety-review.json`
 - `generated-image-choice.json`
 - `local-context-check.json`
 
@@ -84,6 +85,10 @@ Good agent questions:
 - choose a result template before submission
 - use a stable `clientRequestId` so retries do not duplicate spend
 - fund enough bounty for the expected voter count and timing
+
+For comparisons, do not ask humans to select "which answer" inside one question. Use `ranked_option_member`
+and submit one question per option in the same bundle. Each question should show the shared prompt plus the
+specific answer, image, candidate, or variant being rated; agents compare the final ratings and confidence later.
 
 Avoid questions that ask humans to fill a website with generic content. Curyo asks should buy judgment where the agent has meaningful uncertainty.
 

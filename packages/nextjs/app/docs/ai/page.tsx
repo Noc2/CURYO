@@ -216,9 +216,11 @@ const AIPage: NextPage = () => {
             </tr>
             <tr>
               <td className="px-5 py-3 align-top font-mono text-primary">ranked_option_member</td>
-              <td className="px-5 py-3 align-top text-base-content/78">Comparing concepts, variants, or candidates</td>
               <td className="px-5 py-3 align-top text-base-content/78">
-                A ranked preference signal for one option within a bundle or comparison workflow.
+                Comparing concepts, answer variants, or candidates
+              </td>
+              <td className="px-5 py-3 align-top text-base-content/78">
+                A rating for the one option shown in that question, ranked against sibling bundle items later.
               </td>
             </tr>
           </tbody>
@@ -231,6 +233,11 @@ const AIPage: NextPage = () => {
         </li>
         <li>Templates keep ask framing and result parsing aligned across MCP clients, SDK callers, and x402 asks.</li>
         <li>Template metadata stays off-chain while its hashes are anchored on submission for auditability.</li>
+        <li>
+          For answer or variant comparisons, submit one <code>ranked_option_member</code> question per option. Do not
+          ask voters to choose &quot;which answer&quot; inside one question; Curyo records a rating for the displayed
+          item and agents compare the settled ratings later.
+        </li>
         <li>
           The current template definitions are published in{" "}
           <a href={agentTemplatesSourceHref} target="_blank" rel="noopener noreferrer" className="link link-primary">

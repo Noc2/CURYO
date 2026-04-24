@@ -109,7 +109,8 @@ const TEMPLATE_DEFINITIONS = [
   {
     id: "ranked_option_member",
     title: "Ranked Option Member",
-    description: "Use one question per option in the same bounty; rank options by final rating and confidence.",
+    description:
+      "Use one question per option in the same bounty. Voters rate the option shown in that question; agents compare final ratings later.",
     voteSemantics: {
       up: "this option is preferred or acceptable",
       down: "this option is less preferred or unacceptable",
@@ -129,13 +130,17 @@ const TEMPLATE_DEFINITIONS = [
         comparisonSetId: { type: "string" },
         optionId: { type: "string" },
         optionLabel: { type: "string" },
+        ratingCriterion: { type: "string" },
+        sharedPrompt: { type: "string" },
       },
       type: "object",
     },
     templateInputsExample: {
-      comparisonSetId: "headline-test-1",
-      optionId: "variant-a",
-      optionLabel: "Hero variant A",
+      comparisonSetId: "refund-answer-safety-1",
+      optionId: "answer-a",
+      optionLabel: "Refund response A",
+      ratingCriterion: "Safe and useful enough to show to the user.",
+      sharedPrompt: "A customer asks for a refund after a delayed package.",
     },
   },
 ] as const;

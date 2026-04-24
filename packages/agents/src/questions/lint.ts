@@ -47,10 +47,12 @@ function pushFinding(
 export function lintAgentQuestion(
   question: Partial<AgentQuestionExample>,
   path = "question",
+  inheritedTemplateId?: string,
 ): QuestionLintFinding[] {
   const findings: QuestionLintFinding[] = [];
   const title = typeof question.title === "string" ? question.title.trim() : "";
   const description = typeof question.description === "string" ? question.description.trim() : "";
+  const templateId = question.templateId ?? inheritedTemplateId;
 
   if (!title) pushFinding(findings, "error", `${path}.title`, "Question title is required.");
   if (title.length > 120) pushFinding(findings, "error", `${path}.title`, "Question title must fit the 120 character on-chain limit.");
@@ -79,6 +81,14 @@ export function lintAgentQuestion(
   }
   if (question.templateId && !findAgentResultTemplate(question.templateId)) {
     pushFinding(findings, "error", `${path}.templateId`, `Unknown result template: ${question.templateId}.`);
+  }
+  if (templateId === "ranked_option_member" && /\bwhich\s+(answer|option|variant|candidate|response)\b/i.test(title)) {
+    pushFinding(
+      findings,
+      "warning",
+      `${path}.title`,
+      "Ranked option members should ask voters to rate one shown option, then compare ratings later.",
+    );
   }
   if (question.imageUrls !== undefined && hasInvalidHttpsUrlList(question.imageUrls)) {
     pushFinding(findings, "error", `${path}.imageUrls`, "Image URLs must be an array of public HTTPS URLs.");
@@ -122,7 +132,9 @@ export function lintAgentAskRequest(input: unknown): QuestionLintFinding[] {
     pushFinding(findings, "error", "questions", "Use either question or questions, not both.");
   }
   questions.forEach((question, index) => {
-    findings.push(...lintAgentQuestion(question, request.question ? "question" : `questions.${index}`));
+    findings.push(
+      ...lintAgentQuestion(question, request.question ? "question" : `questions.${index}`, request.templateId),
+    );
   });
 
   if (findings.length === 0 && questions.length > 1 && request.templateId !== "ranked_option_member") {

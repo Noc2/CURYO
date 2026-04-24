@@ -69,4 +69,33 @@ describe("agent question linting", () => {
       ]),
     );
   });
+
+  it("warns when ranked option questions imply hidden selectable answers", () => {
+    const findings = lintAgentAskRequest({
+      ...VALID_REQUEST,
+      question: undefined,
+      questions: [
+        {
+          ...VALID_REQUEST.question,
+          templateInputs: {
+            comparisonSetId: "answer-review-1",
+            optionId: "answer-a",
+            optionLabel: "Answer A",
+          },
+          templateId: "ranked_option_member",
+          title: "Which answer gives the safest recommendation?",
+        },
+      ],
+      templateId: "ranked_option_member",
+    });
+
+    expect(findings).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          level: "warning",
+          path: "questions.0.title",
+        }),
+      ]),
+    );
+  });
 });
