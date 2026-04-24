@@ -116,7 +116,7 @@ For agent flows, treat `quote -> ask -> wait -> result` as the safe default. Quo
 
 ## Agent Examples
 
-Runtime-oriented examples live in [`packages/sdk/examples/agent`](./examples/agent). They include:
+Runtime-oriented examples live in [`packages/agents/examples`](../agents/examples). They include:
 
 - copy-paste remote MCP configs for OpenClaw-style and Gemini CLI clients
 - a canonical `landing-pitch-review.ts` loop for backend workers and agent wrappers

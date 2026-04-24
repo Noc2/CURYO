@@ -2,7 +2,7 @@ import Link from "next/link";
 import type { NextPage } from "next";
 
 const sdkSourceHref = "https://github.com/Noc2/CURYO/tree/main/packages/sdk";
-const agentExamplesSourceHref = "https://github.com/Noc2/CURYO/tree/main/packages/sdk/examples/agent";
+const agentExamplesSourceHref = "https://github.com/Noc2/CURYO/tree/main/packages/agents/examples";
 const referenceAppSourceHref = "https://github.com/Noc2/CURYO/tree/main/packages/nextjs";
 const keeperSourceHref = "https://github.com/Noc2/CURYO/tree/main/packages/keeper";
 const ponderSourceHref = "https://github.com/Noc2/CURYO/tree/main/packages/ponder";
@@ -127,9 +127,9 @@ const txData = buildVoteTransferAndCallData({
 
       <h2>Agent Examples</h2>
       <p>
-        The SDK also ships with a small set of runtime-oriented agent examples under{" "}
+        Runtime-oriented agent examples live under{" "}
         <a href={agentExamplesSourceHref} target="_blank" rel="noopener noreferrer" className="link link-primary">
-          packages/sdk/examples/agent
+          packages/agents/examples
         </a>
         . They cover a copy-paste remote MCP setup, a landing-page pitch review loop, and notes for chat connectors,
         Hermes-style persistent agents, Gemini CLI, and backend workers.

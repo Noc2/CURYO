@@ -10,7 +10,7 @@ const config: KnipConfig = {
       entry: ["scripts/**/*.{js,mjs,cjs,ts,tsx}"],
       project: ["scripts/**/*.{js,mjs,cjs,ts,tsx}"],
     },
-    "packages/bot": {
+    "packages/agents": {
       project: ["src/**/*.ts"],
     },
     "packages/contracts": {
