@@ -39,6 +39,7 @@ import { useWatchedContent } from "~~/hooks/useWatchedContent";
 import { mergeVoteHistoryItems } from "~~/hooks/voteHistory/shared";
 import { FOLLOWED_CURATOR_TOAST_ID } from "~~/lib/notifications/followedActivity";
 import { extractQuestionReferenceIds } from "~~/lib/questionReferences";
+import { orderBundleMembersInFeed } from "~~/lib/vote/bundleFeedOrder";
 import { formatVoteCooldownRemaining, getVoteCooldownRemainingSeconds } from "~~/lib/vote/cooldown";
 import {
   DISCOVER_ALL_FILTER,
@@ -800,6 +801,7 @@ const HomeInner = () => {
   const feedSessionKey = useMemo(
     () =>
       [
+        "bundle-order:v1",
         targetNetwork.id,
         normalizedAddress ?? "anonymous",
         activeCategory,
@@ -821,7 +823,8 @@ const HomeInner = () => {
     () => (effectiveRequestedActiveId !== null ? [effectiveRequestedActiveId.toString()] : []),
     [effectiveRequestedActiveId],
   );
-  const rankedDisplayFeedIds = useMemo(() => rankedDisplayFeed.map(item => item.id.toString()), [rankedDisplayFeed]);
+  const orderedDisplayFeed = useMemo(() => orderBundleMembersInFeed(rankedDisplayFeed), [rankedDisplayFeed]);
+  const rankedDisplayFeedIds = useMemo(() => orderedDisplayFeed.map(item => item.id.toString()), [orderedDisplayFeed]);
   const [stableDisplayFeedState, setStableDisplayFeedState] = useState<{ sessionKey: string; ids: string[] }>(() => ({
     sessionKey: feedSessionKey,
     ids: rankedDisplayFeedIds,
@@ -866,9 +869,9 @@ const HomeInner = () => {
   }, [feedSessionKey, prioritizedFeedIds, rankedDisplayFeedIds]);
 
   const displayFeed = useMemo(() => {
-    const itemById = new Map(rankedDisplayFeed.map(item => [item.id.toString(), item]));
+    const itemById = new Map(orderedDisplayFeed.map(item => [item.id.toString(), item]));
     return stableDisplayFeedIds.map(id => itemById.get(id)).filter((item): item is ContentItem => item !== undefined);
-  }, [rankedDisplayFeed, stableDisplayFeedIds]);
+  }, [orderedDisplayFeed, stableDisplayFeedIds]);
   displayFeedRef.current = displayFeed;
 
   const {
