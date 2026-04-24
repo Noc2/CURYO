@@ -1779,9 +1779,11 @@ export function ContentSubmissionSection() {
             <h1 className={surfaceSectionHeadingClassName}>{pageHeading}</h1>
             <p className="mt-1 text-sm font-medium text-base-content/50">{pageContext}</p>
           </div>
-          <label className="flex items-center gap-2 text-sm font-medium text-base-content/60">
-            <span className="flex items-center gap-1.5">
-              Questions
+          <label
+            className={`flex flex-wrap items-center gap-x-3 gap-y-1 sm:justify-end ${surfaceSectionHeadingClassName}`}
+          >
+            <span className="flex items-center gap-2">
+              Number of Questions
               <InfoTooltip text="Choose how many separate questions voters must answer in this ask. The bounty is split across all questions." />
             </span>
             <input
@@ -1791,13 +1793,7 @@ export function ContentSubmissionSection() {
               step={1}
               value={questionCount}
               onChange={event => handleQuestionCountChange(event.target.value)}
-              className="input input-bordered h-14 w-24 bg-base-100 text-right text-xl font-semibold text-primary"
-              style={{
-                background: "rgb(var(--curyo-ember-rgb) / 0.1)",
-                boxShadow:
-                  "inset 0 1px 0 rgb(var(--curyo-warm-white-rgb) / 0.04), 0 0 0 1px rgb(var(--curyo-ember-rgb) / 0.28), 0 14px 28px rgb(var(--curyo-ember-rgb) / 0.12)",
-                color: "var(--curyo-ember)",
-              }}
+              className="w-10 border-0 bg-transparent p-0 text-right text-2xl font-semibold leading-tight tracking-tight text-base-content outline-none [appearance:textfield] focus:outline-none focus:ring-0 [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
               aria-label="Number of questions"
             />
           </label>
