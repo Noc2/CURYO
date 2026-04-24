@@ -31,11 +31,11 @@ contract QuestionRewardPoolEscrow is
     bytes32 public constant CONFIG_ROLE = keccak256("CONFIG_ROLE");
     bytes32 public constant PAUSER_ROLE = keccak256("PAUSER_ROLE");
 
-    uint256 public constant MIN_REQUIRED_VOTERS = 3;
-    uint256 public constant MIN_REQUIRED_SETTLED_ROUNDS = 1;
-    uint256 public constant BPS_SCALE = 10_000;
-    uint256 public constant DEFAULT_FRONTEND_FEE_BPS = 300;
-    uint256 public constant MAX_FRONTEND_FEE_BPS = 500;
+    uint256 internal constant MIN_REQUIRED_VOTERS = 3;
+    uint256 internal constant MIN_REQUIRED_SETTLED_ROUNDS = 1;
+    uint256 internal constant BPS_SCALE = 10_000;
+    uint256 internal constant DEFAULT_FRONTEND_FEE_BPS = 300;
+    uint256 internal constant MAX_FRONTEND_FEE_BPS = 500;
     /// @notice Grace period voters have after bountyClosesAt to claim on a still-claimable bundle
     ///         before a third party can sweep the remainder back to the funder.
     uint256 public constant BUNDLE_CLAIM_GRACE = 7 days;
@@ -612,7 +612,6 @@ contract QuestionRewardPoolEscrow is
 
         question.roundId = roundId.toUint64();
         question.terminal = true;
-        question.settled = true;
         unchecked {
             bundle.completedQuestionCount++;
         }
