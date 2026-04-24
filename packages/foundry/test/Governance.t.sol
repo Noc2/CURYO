@@ -40,7 +40,7 @@ contract GovernanceTest is Test {
     uint256 public constant FRONTEND_REGISTRY_BALANCE = 10_000 * 1e6;
     uint256 public constant QUESTION_REWARD_ESCROW_BALANCE = 1_000_000 * 1e6;
 
-    // Voter balances — circulating supply is 6M after excluded protocol balances are removed.
+    // Voter balances plus user-funded reward escrow are circulating supply for quorum.
     uint256 public constant VOTER_BALANCE = 2_000_000 * 1e6; // 2M tokens each
     uint256 public constant TOTAL_MINTED = FAUCET_BALANCE + PARTICIPATION_BALANCE + REWARD_BALANCE + ENGINE_BALANCE
         + TREASURY_BALANCE + CONTENT_REGISTRY_BALANCE + FRONTEND_REGISTRY_BALANCE + QUESTION_REWARD_ESCROW_BALANCE
@@ -264,35 +264,35 @@ contract GovernanceTest is Test {
     }
 
     function test_GovernorQuorum() public {
-        // Quorum is 4% of circulating supply after excluding all configured protocol-controlled holders.
+        // Quorum is 4% of circulating supply after excluding only protocol-controlled holders.
         vm.roll(block.number + 1);
 
         uint256 circulatingSupply = TOTAL_MINTED - FAUCET_BALANCE - PARTICIPATION_BALANCE - REWARD_BALANCE
-            - ENGINE_BALANCE - TREASURY_BALANCE - CONTENT_REGISTRY_BALANCE - FRONTEND_REGISTRY_BALANCE
-            - QUESTION_REWARD_ESCROW_BALANCE;
-        uint256 expectedDynamicQuorum = (circulatingSupply * 4) / 100; // 4% of 6M = 240K
-        assertEq(expectedDynamicQuorum, 240_000 * 1e6);
+            - ENGINE_BALANCE - TREASURY_BALANCE - CONTENT_REGISTRY_BALANCE - FRONTEND_REGISTRY_BALANCE;
+        uint256 expectedDynamicQuorum = (circulatingSupply * 4) / 100; // 4% of 7M = 280K
+        assertEq(expectedDynamicQuorum, 280_000 * 1e6);
         assertEq(governor.quorum(block.number - 1), expectedDynamicQuorum);
     }
 
     function test_GovernorQuorum_ExcludesEngineAndTreasuryBalances() public {
         vm.roll(block.number + 1);
 
-        uint256 expectedQuorum = 240_000 * 1e6;
-        uint256 brokenQuorum = ((6_000_000 * 1e6 + ENGINE_BALANCE + TREASURY_BALANCE) * 4) / 100;
+        uint256 expectedQuorum = 280_000 * 1e6;
+        uint256 brokenQuorum = ((7_000_000 * 1e6 + ENGINE_BALANCE + TREASURY_BALANCE) * 4) / 100;
 
         assertEq(governor.quorum(block.number - 1), expectedQuorum);
         assertEq(brokenQuorum - expectedQuorum, 564_000 * 1e6);
     }
 
-    function test_GovernorQuorum_ExcludesQuestionRewardEscrowBalance() public {
+    function test_GovernorQuorum_IncludesQuestionRewardEscrowBalance() public {
         vm.roll(block.number + 1);
 
-        uint256 expectedQuorum = 240_000 * 1e6;
-        uint256 brokenQuorum = ((6_000_000 * 1e6 + QUESTION_REWARD_ESCROW_BALANCE) * 4) / 100;
+        uint256 expectedQuorum = 280_000 * 1e6;
+        uint256 brokenQuorum = ((7_000_000 * 1e6 - QUESTION_REWARD_ESCROW_BALANCE) * 4) / 100;
 
         assertEq(governor.quorum(block.number - 1), expectedQuorum);
-        assertEq(brokenQuorum - expectedQuorum, 40_000 * 1e6);
+        assertFalse(governor.isExcludedHolder(mockQuestionRewardEscrow));
+        assertEq(expectedQuorum - brokenQuorum, 40_000 * 1e6);
     }
 
     function test_GovernorQuorumMinimumFloor() public {
@@ -328,7 +328,7 @@ contract GovernanceTest is Test {
         uint256 transferBlock = vm.getBlockNumber();
         uint256 beforeSnapshotBlock = transferBlock - 1;
         uint256 quorumBefore = governor.quorum(beforeSnapshotBlock);
-        assertEq(quorumBefore, 240_000 * 1e6);
+        assertEq(quorumBefore, 280_000 * 1e6);
 
         // Simulate faucet distributing enough tokens to move past the bootstrap floor.
         vm.prank(mockFaucet);
@@ -337,8 +337,8 @@ contract GovernanceTest is Test {
         vm.roll(transferBlock + 1);
         uint256 quorumAfter = governor.quorum(transferBlock);
 
-        // Circulating supply rises from 6M to 16M, so 4% becomes 640K and beats the floor.
-        assertEq(quorumAfter, 640_000 * 1e6);
+        // Circulating supply rises from 7M to 17M, so 4% becomes 680K and beats the floor.
+        assertEq(quorumAfter, 680_000 * 1e6);
         assertGt(quorumAfter, quorumBefore);
     }
 
@@ -471,15 +471,14 @@ contract GovernanceTest is Test {
 
     function test_GovernorGetExcludedHolders() public view {
         address[] memory holders = governor.getExcludedHolders();
-        assertEq(holders.length, 8);
+        assertEq(holders.length, 7);
         assertEq(holders[0], mockFaucet);
         assertEq(holders[1], mockParticipationPool);
         assertEq(holders[2], mockRewardDistributor);
         assertEq(holders[3], mockVotingEngine);
         assertEq(holders[4], mockTreasury);
         assertEq(holders[5], mockContentRegistry);
-        assertEq(holders[6], mockQuestionRewardEscrow);
-        assertEq(holders[7], mockFrontendRegistry);
+        assertEq(holders[6], mockFrontendRegistry);
     }
 
     function test_GovernorExcludedHolderCannotPropose() public {
@@ -562,15 +561,14 @@ contract GovernanceTest is Test {
     }
 
     function _excludedHolders() internal view returns (address[] memory holders) {
-        holders = new address[](8);
+        holders = new address[](7);
         holders[0] = mockFaucet;
         holders[1] = mockParticipationPool;
         holders[2] = mockRewardDistributor;
         holders[3] = mockVotingEngine;
         holders[4] = mockTreasury;
         holders[5] = mockContentRegistry;
-        holders[6] = mockQuestionRewardEscrow;
-        holders[7] = mockFrontendRegistry;
+        holders[6] = mockFrontendRegistry;
     }
 
     function _executeSingleCallProposal(
