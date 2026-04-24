@@ -3,6 +3,11 @@
   "version": "0.0.1",
   "private": true,
   "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./question-specs": "./src/questionSpecs.ts",
+    "./templates": "./src/templates.ts"
+  },
   "scripts": {
     "vote": "tsx src/index.ts vote",
     "submit": "tsx src/index.ts submit",

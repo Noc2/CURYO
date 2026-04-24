@@ -380,7 +380,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@curyo/agents@workspace:packages/agents":
+"@curyo/agents@workspace:*, @curyo/agents@workspace:packages/agents":
   version: 0.0.0-use.local
   resolution: "@curyo/agents@workspace:packages/agents"
   dependencies:
@@ -443,6 +443,7 @@ __metadata:
   resolution: "@curyo/nextjs@workspace:packages/nextjs"
   dependencies:
     "@axe-core/playwright": ^4.11.1
+    "@curyo/agents": "workspace:*"
     "@curyo/contracts": "workspace:*"
     "@curyo/node-utils": "workspace:*"
     "@curyo/sdk": "workspace:*"
