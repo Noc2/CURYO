@@ -92,7 +92,9 @@ const MEDIA_URL_CONFIG = {
   contextPlaceholder: "Paste the source or context link voters should judge",
   imagePlaceholder: "Paste a direct image URL, e.g. https://example.com/image.jpg",
   videoPlaceholder: "Paste a YouTube URL, e.g. https://youtube.com/watch?v=...",
-  urlHint: "Optional. Add up to four direct image URLs or one YouTube link as a preview.",
+  imageHint:
+    "Optional. Add up to four direct image URLs. Landscape images fit the voting content area best; aim for 16:9 and at least 1280x720 px. Tall or square images may show extra padding.",
+  videoHint: "Optional. Add one YouTube link as a preview; standard landscape videos fit the content area best.",
 };
 
 type SubmissionStep = "question" | "bounty";
@@ -1969,7 +1971,7 @@ export function ContentSubmissionSection() {
                     <span className="font-normal text-base-content/40">
                       {mediaMode === "images" ? `(1-${MAX_SUBMISSION_IMAGE_URLS} images)` : "(YouTube)"}
                     </span>
-                    <InfoTooltip text={urlConfig.urlHint} />
+                    <InfoTooltip text={mediaMode === "images" ? urlConfig.imageHint : urlConfig.videoHint} />
                   </label>
                   <div className="mb-3 grid grid-cols-2 gap-2">
                     <button
