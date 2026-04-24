@@ -7,6 +7,7 @@ import {ContentRegistry} from "../contracts/ContentRegistry.sol";
 import {CuryoReputation} from "../contracts/CuryoReputation.sol";
 import {FeedbackBonusEscrow} from "../contracts/FeedbackBonusEscrow.sol";
 import {FrontendRegistry} from "../contracts/FrontendRegistry.sol";
+import {IFrontendRegistry} from "../contracts/interfaces/IFrontendRegistry.sol";
 import {MockCategoryRegistry} from "../contracts/mocks/MockCategoryRegistry.sol";
 import {MockERC20} from "../contracts/mocks/MockERC20.sol";
 import {ProtocolConfig} from "../contracts/ProtocolConfig.sol";
@@ -15,6 +16,39 @@ import {RoundRewardDistributor} from "../contracts/RoundRewardDistributor.sol";
 import {RoundVotingEngine} from "../contracts/RoundVotingEngine.sol";
 import {RoundEngineReadHelpers} from "./helpers/RoundEngineReadHelpers.sol";
 import {MockVoterIdNFT} from "./mocks/MockVoterIdNFT.sol";
+
+contract SlashedFrontendRegistryMock is IFrontendRegistry {
+    address public immutable frontend;
+
+    constructor(address frontend_) {
+        frontend = frontend_;
+    }
+
+    function STAKE_AMOUNT() external pure returns (uint256) {
+        return 1;
+    }
+
+    function isEligible(address frontend_) external view returns (bool) {
+        return frontend_ == frontend;
+    }
+
+    function creditFees(address, uint256) external {}
+
+    function getAccumulatedFees(address) external pure returns (uint256 crepFees) {
+        return 0;
+    }
+
+    function getFrontendInfo(address frontend_)
+        external
+        view
+        returns (address operator, uint256 stakedAmount, bool eligible, bool slashed)
+    {
+        if (frontend_ == frontend) {
+            return (frontend, 1, true, true);
+        }
+        return (address(0), 0, false, false);
+    }
+}
 
 contract FeedbackBonusEscrowTest is VotingTestBase {
     CuryoReputation public crepToken;
@@ -210,6 +244,23 @@ contract FeedbackBonusEscrowTest is VotingTestBase {
         uint256 poolId = _createFeedbackBonusPool(contentId);
         _settleRoundWithFrontend(_threeVoters(), contentId, _directions(true, true, false), frontend1);
         _registerFrontend(frontend1);
+
+        vm.prank(funder);
+        uint256 recipientAmount = feedbackBonusEscrow.awardFeedbackBonus(poolId, voter1, FEEDBACK_HASH, 10e6);
+
+        assertEq(recipientAmount, 10e6);
+        assertEq(usdc.balanceOf(voter1), 1_010e6);
+        assertEq(usdc.balanceOf(frontend1), 1_000e6);
+    }
+
+    function testAwardFallsBackToVoterWhenSnapshotFrontendIsSlashed() public {
+        SlashedFrontendRegistryMock slashedFrontendRegistry = new SlashedFrontendRegistryMock(frontend1);
+        vm.prank(owner);
+        protocolConfig.setFrontendRegistry(address(slashedFrontendRegistry));
+
+        uint256 contentId = _submitQuestion("");
+        uint256 poolId = _createFeedbackBonusPool(contentId);
+        _settleRoundWithFrontend(_threeVoters(), contentId, _directions(true, true, false), frontend1);
 
         vm.prank(funder);
         uint256 recipientAmount = feedbackBonusEscrow.awardFeedbackBonus(poolId, voter1, FEEDBACK_HASH, 10e6);

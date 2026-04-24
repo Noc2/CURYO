@@ -373,9 +373,9 @@ contract FeedbackBonusEscrow is Initializable, AccessControlUpgradeable, Pausabl
         }
 
         try IFrontendRegistry(frontendRegistry).getFrontendInfo(frontend) returns (
-            address operator, uint256, bool eligible, bool
+            address operator, uint256 stakedAmount, bool eligible, bool slashed
         ) {
-            if (eligible && operator != address(0)) {
+            if (eligible && !slashed && stakedAmount > 0 && operator != address(0)) {
                 frontendRecipient = operator;
             }
         } catch {

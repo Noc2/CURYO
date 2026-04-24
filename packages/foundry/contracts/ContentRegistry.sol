@@ -1232,7 +1232,8 @@ contract ContentRegistry is Initializable, AccessControlUpgradeable, PausableUpg
     }
 
     function _encodedStringTailLength(string memory value) internal pure returns (uint256) {
-        return 32 + ((bytes(value).length + 31) / 32) * 32;
+        uint256 roundedDataLength = (bytes(value).length + 31) & ~uint256(31);
+        return 32 + roundedDataLength;
     }
 
     function _writeBytes32(bytes memory encoded, uint256 offset, bytes32 value) internal pure {
