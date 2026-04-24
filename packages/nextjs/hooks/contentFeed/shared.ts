@@ -64,6 +64,9 @@ export interface ContentItem {
     fundedAmount: bigint;
     claimedAmount: bigint;
     refundedAmount: bigint;
+    bountyClosesAt?: bigint;
+    feedbackClosesAt?: bigint;
+    expiresAt?: bigint;
     failed: boolean;
     refunded: boolean;
   } | null;
@@ -179,6 +182,9 @@ export function mapContentItem(
       fundedAmount?: string | number | bigint | null;
       claimedAmount?: string | number | bigint | null;
       refundedAmount?: string | number | bigint | null;
+      bountyClosesAt?: string | number | bigint | null;
+      feedbackClosesAt?: string | number | bigint | null;
+      expiresAt?: string | number | bigint | null;
       failed?: boolean | null;
       refunded?: boolean | null;
     } | null;
@@ -329,6 +335,9 @@ export function mapContentItem(
             fundedAmount: BigInt(item.bundle.fundedAmount ?? 0),
             claimedAmount: BigInt(item.bundle.claimedAmount ?? 0),
             refundedAmount: BigInt(item.bundle.refundedAmount ?? 0),
+            bountyClosesAt: BigInt(item.bundle.bountyClosesAt ?? 0),
+            feedbackClosesAt: BigInt(item.bundle.feedbackClosesAt ?? 0),
+            expiresAt: BigInt(item.bundle.expiresAt ?? 0),
             failed: item.bundle.failed ?? false,
             refunded: item.bundle.refunded ?? false,
           }

@@ -334,6 +334,9 @@ export interface PonderContentItem {
     questionCount: number;
     completedQuestionCount: number;
     claimedCount: number;
+    bountyClosesAt?: string;
+    feedbackClosesAt?: string;
+    expiresAt?: string;
     failed: boolean;
     refunded: boolean;
   } | null;

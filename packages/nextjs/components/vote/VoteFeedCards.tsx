@@ -24,6 +24,7 @@ import { InfoTooltip } from "~~/components/ui/InfoTooltip";
 import type { ContentItem } from "~~/hooks/useContentFeed";
 import type { SubmitterProfile } from "~~/hooks/useSubmitterProfiles";
 import { type ContentMediaItem, buildFallbackMediaItems, isDirectImageUrl } from "~~/lib/contentMedia";
+import { getActiveBountyClosesAt, isExpiredBountyItem } from "~~/lib/vote/discoverFeedFilter";
 import { detectPlatform } from "~~/utils/platforms";
 
 const ShareContentModal = dynamic(
@@ -36,7 +37,7 @@ const MOBILE_VOTE_CARD_MEDIA_QUERY = "(max-width: 767px)";
 const CONTENT_INTENT_INTERACTIVE_SELECTOR =
   "a[href],button,input,select,textarea,summary,iframe,[role='button'],[role='link']";
 const BOUNTY_DEADLINE_TOOLTIP_TEXT =
-  "Bounty and paid feedback are active only inside this window. The question remains visible after the bounty closes.";
+  "Bounty eligibility ends at this time. Expired bounties move to the Expired filter.";
 const FEEDBACK_DEADLINE_TOOLTIP_TEXT =
   "Paid feedback is only active inside this window. The question remains visible after feedback closes.";
 
@@ -79,25 +80,25 @@ function getRewardDeadlineChips(item: ContentItem) {
   const rewardSummary = item.rewardPoolSummary;
   const feedbackSummary = item.feedbackBonusSummary;
 
-  const hasActiveBounty = Boolean(rewardSummary?.hasActiveBounty || (rewardSummary?.activeRewardPoolCount ?? 0) > 0);
+  const activeBountyClosesAt = getActiveBountyClosesAt(item);
+  const hasActiveBounty = Boolean(
+    rewardSummary?.hasActiveBounty || (rewardSummary?.activeRewardPoolCount ?? 0) > 0 || activeBountyClosesAt,
+  );
   const hasActiveFeedback = Boolean(
     feedbackSummary?.hasActiveFeedbackBonus || (feedbackSummary?.activePoolCount ?? 0) > 0,
   );
 
-  if (rewardSummary && hasActiveBounty) {
+  if (hasActiveBounty) {
+    if (activeBountyClosesAt) {
+      chips.push({
+        label: `Bounty expires in ${formatDeadlineDistance(activeBountyClosesAt)}`,
+        tone: "active",
+        tooltip: BOUNTY_DEADLINE_TOOLTIP_TEXT,
+      });
+    }
+  } else if (isExpiredBountyItem(item)) {
     chips.push({
-      label: rewardSummary.nextBountyClosesAt
-        ? `Bounty closes in ${formatDeadlineDistance(rewardSummary.nextBountyClosesAt)}`
-        : "Bounty active",
-      tone: "active",
-      tooltip: BOUNTY_DEADLINE_TOOLTIP_TEXT,
-    });
-  } else if ((rewardSummary?.expiredRewardPoolCount ?? 0) > 0) {
-    chips.push({
-      label:
-        rewardSummary?.totalAvailable && rewardSummary.totalAvailable > 0n
-          ? "Bounty ended; claims remain"
-          : "Bounty ended",
+      label: "Bounty expired",
       tone: "ended",
     });
   }
@@ -536,11 +537,6 @@ function FeedContentMetaCard({
             <div className="flex min-w-0 flex-1 flex-wrap items-center gap-2">
               <RewardPoolAmountDisplay amount={rewardPoolTotal} />
               <FeedbackBonusAmountDisplay amount={feedbackBonusTotal} />
-            </div>
-            {actionButtons}
-          </div>
-          {rewardDeadlineChips.length > 0 ? (
-            <div className="flex flex-wrap gap-1.5">
               {rewardDeadlineChips.map(chip => (
                 <div
                   key={chip.label}
@@ -559,7 +555,8 @@ function FeedContentMetaCard({
                 </div>
               ))}
             </div>
-          ) : null}
+            {actionButtons}
+          </div>
           <VotingQuestionContextDetails
             contentId={item.id}
             categoryId={item.categoryId}

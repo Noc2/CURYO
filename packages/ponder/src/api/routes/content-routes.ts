@@ -215,6 +215,9 @@ async function attachQuestionBundleSummaries<T extends { bundleId?: bigint | nul
             questionCount: bundle.questionCount,
             completedQuestionCount: bundle.completedQuestionCount,
             claimedCount: bundle.claimedCount,
+            bountyClosesAt: bundle.bountyClosesAt,
+            feedbackClosesAt: bundle.feedbackClosesAt,
+            expiresAt: bundle.expiresAt,
             failed: bundle.failed,
             refunded: bundle.refunded,
           }

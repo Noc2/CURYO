@@ -43,6 +43,7 @@ import { formatVoteCooldownRemaining, getVoteCooldownRemainingSeconds } from "~~
 import {
   DISCOVER_ALL_FILTER,
   DISCOVER_BROKEN_FILTER,
+  DISCOVER_EXPIRED_BOUNTY_FILTER,
   filterDiscoverCategoryItems,
 } from "~~/lib/vote/discoverFeedFilter";
 import {
@@ -85,6 +86,7 @@ const ShareContentModal = dynamic(
 
 const ALL_FILTER = DISCOVER_ALL_FILTER;
 const BROKEN_FILTER = DISCOVER_BROKEN_FILTER;
+const EXPIRED_BOUNTY_FILTER = DISCOVER_EXPIRED_BOUNTY_FILTER;
 const slugify = (name: string) => name.toLowerCase().replace(/\s+/g, "-");
 type SortOption = "for_you" | "relevance" | "newest" | "oldest" | "highest_rated" | "lowest_rated";
 type SearchSortOption = Exclude<SortOption, "for_you">;
@@ -347,7 +349,7 @@ const HomeInner = () => {
   }, [discoverSignals.followedSubmissions]);
 
   const activeCategoryId = useMemo(() => {
-    if (activeCategory === ALL_FILTER || activeCategory === BROKEN_FILTER) {
+    if (activeCategory === ALL_FILTER || activeCategory === BROKEN_FILTER || activeCategory === EXPIRED_BOUNTY_FILTER) {
       return undefined;
     }
     return categoryNameToId.get(activeCategory);
@@ -661,7 +663,7 @@ const HomeInner = () => {
   const { commitVote, isCommitting, error: voteError, clearError: clearVoteError } = useRoundVote();
   // Apply search, category filter, and the selected view before sorting
   const filteredFeed = useMemo(() => {
-    let items = filterDiscoverCategoryItems(feed, activeCategory, activeCategoryId);
+    let items = filterDiscoverCategoryItems(feed, activeCategory, activeCategoryId, nowSeconds);
 
     switch (activeScope) {
       case "watched":
@@ -689,6 +691,7 @@ const HomeInner = () => {
     activeCategory,
     activeCategoryId,
     activeScope,
+    nowSeconds,
     watchedContentIds,
     votedContentIds,
     settlingSoonContentIds,
@@ -1464,8 +1467,12 @@ const HomeInner = () => {
 
   // Count broken URLs for the filter pill
   const brokenCount = useMemo(() => {
-    return filterDiscoverCategoryItems(feed, BROKEN_FILTER).length;
-  }, [feed]);
+    return filterDiscoverCategoryItems(feed, BROKEN_FILTER, undefined, nowSeconds).length;
+  }, [feed, nowSeconds]);
+
+  const expiredBountyCount = useMemo(() => {
+    return filterDiscoverCategoryItems(feed, EXPIRED_BOUNTY_FILTER, undefined, nowSeconds).length;
+  }, [feed, nowSeconds]);
 
   // Build category filter list sorted by popularity (vote count)
   const categories = useMemo(() => {
@@ -1476,8 +1483,9 @@ const HomeInner = () => {
     });
     const cats = [ALL_FILTER, ...sorted.map(cat => cat.name)];
     if (brokenCount > 0) cats.push(BROKEN_FILTER);
+    if (expiredBountyCount > 0) cats.push(EXPIRED_BOUNTY_FILTER);
     return cats;
-  }, [discoveryCategories, voteCounts, brokenCount]);
+  }, [discoveryCategories, voteCounts, brokenCount, expiredBountyCount]);
   const renderVoteTopControls = useCallback(
     (variant: "mobile" | "desktop") => {
       const isMobileVariant = variant === "mobile";
@@ -1498,10 +1506,17 @@ const HomeInner = () => {
               activeCategory={activeCategory}
               onSelect={selectCategory}
               pillClassName={(cat, isActive) => {
-                if (cat !== BROKEN_FILTER) return undefined;
-                return isActive
-                  ? "bg-warning/20 text-warning border border-warning/40"
-                  : "pill-inactive text-warning/70 hover:bg-warning/10";
+                if (cat === BROKEN_FILTER) {
+                  return isActive
+                    ? "bg-warning/20 text-warning border border-warning/40"
+                    : "pill-inactive text-warning/70 hover:bg-warning/10";
+                }
+                if (cat === EXPIRED_BOUNTY_FILTER) {
+                  return isActive
+                    ? "border border-base-content/20 bg-base-content/10 text-base-content/80"
+                    : "pill-inactive text-base-content/55 hover:bg-base-content/10";
+                }
+                return undefined;
               }}
             />
             <FeedScopeFilter
@@ -1655,6 +1670,10 @@ const HomeInner = () => {
 
     if (activeCategory === BROKEN_FILTER) {
       return "No broken URLs detected.";
+    }
+
+    if (activeCategory === EXPIRED_BOUNTY_FILTER) {
+      return "No expired bounties.";
     }
 
     if (activeCategory === ALL_FILTER) {
