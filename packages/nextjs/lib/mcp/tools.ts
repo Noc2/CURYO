@@ -15,7 +15,7 @@ import { buildAgentResultPackage } from "~~/lib/agent/resultPackage";
 import {
   agentAskHumansInputSchema,
   agentAskHumansOutputSchema,
-  agentBotBalanceOutputSchema,
+  agentBalanceOutputSchema,
   agentOperationLookupInputSchema,
   agentQuestionStatusOutputSchema,
   agentQuoteInputSchema,
@@ -233,10 +233,10 @@ export const MCP_TOOLS: McpToolDefinition[] = [
       properties: {},
       type: "object",
     },
-    name: "curyo_get_bot_balance",
-    outputSchema: agentBotBalanceOutputSchema,
+    name: "curyo_get_agent_balance",
+    outputSchema: agentBalanceOutputSchema,
     requiredScope: MCP_SCOPES.balance,
-    title: "Get Bot Balance",
+    title: "Get Agent Balance",
   },
 ];
 
@@ -862,7 +862,7 @@ export async function callCuryoMcpTool(params: {
     case "curyo_get_result":
       return buildQuestionResult(args, params.agent);
 
-    case "curyo_get_bot_balance":
+    case "curyo_get_agent_balance":
       return getMcpAgentBudgetSummary(params.agent);
 
     default:

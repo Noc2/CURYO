@@ -1,238 +1,100 @@
-# Curyo — Bot (CLI Voting & Content Submission)
+# Curyo Agents
 
-Command-line tool for automated YouTube question submission and voting. Discovers trending videos, submits question-first entries to the ContentRegistry, and rates YouTube content with the configured strategy. The same question-first path is how bots and AI agents can ask verified humans for feedback when an automated strategy cannot answer with confidence. Submissions use a required context URL plus optional preview media, so bot and human flows stay aligned. Every submission carries a configurable Bounty with minimum voter and settlement thresholds, plus governed per-question round settings, so operators can keep the timing and economics aligned with the question they are asking. Votes use **tlock commit-reveal**: the bot encrypts vote directions with timelock encryption using each question's active round settings, binds the redeployed drand metadata into the commit payload, and commits them on-chain; the keeper-assisted/self-reveal flow reveals votes after each epoch once the on-chain and off-chain checks are satisfied.
+Agent-facing examples, templates, question guidance, and CLI helpers for asking verified humans through Curyo.
+
+This package is for the moment an agent should ask instead of guess. The core loop is:
+
+1. choose a result template
+2. lint the question
+3. quote before spending
+4. ask humans with a stable `clientRequestId`
+5. poll status or wait for a callback
+6. read the structured result and store the public URL
 
 ## Quick Start
 
 ```bash
-# From the monorepo root:
-yarn bot:submit   # Discover and submit trending content
-yarn bot:submit:x402 # Pay the hosted x402 API in Celo USDC, then submit
-yarn bot:vote     # Rate content and place votes on-chain
-yarn bot:claim    # Claim voter rewards earned by the configured rating bot wallet
-yarn bot:status   # Check bot account balances and voting identity status
+# Show built-in result templates.
+yarn agents:templates
 
-# Target a single category/source with an explicit cap:
-yarn workspace @curyo/bot submit --category "Media" --max-submissions 5
-yarn workspace @curyo/bot submit --source youtube --max-submissions 2
-yarn workspace @curyo/bot submit --transport x402 --source youtube --max-submissions 2
+# Validate a focused example ask.
+yarn agents:lint --file packages/agents/examples/questions/landing-pitch-review.json
+
+# Quote and submit through the configured hosted agent surface.
+yarn agents:quote --file packages/agents/examples/questions/landing-pitch-review.json
+yarn agents:ask --file packages/agents/examples/questions/landing-pitch-review.json
+
+# Recover later without resubmitting.
+yarn agents:status --operation-key 0x...
+yarn agents:result --operation-key 0x...
 ```
 
-Requires configured environment variables and a reachable RPC endpoint.
-`vote` and `claim` require a running Ponder indexer (`yarn ponder:dev`); `submit` does not.
-`status` reports the configured Ponder endpoint when available but can still run without it.
-Question submissions use a question capped at 120 characters. Automated submissions currently use YouTube videos, and each submission must attach a non-refundable Bounty funded in HREP or USDC. The bot uses the same submission rules as a human: required context URL, optional preview media, and the same Bounty guardrails.
-For MCP or other agent adapters, treat this as a typed bot-to-human feedback loop: the agent asks a narrow question, humans stake their judgment, and downstream clients read the public rating result.
-
-OpenClaw-ready agent integrations should use the hosted agent path rather than adding raw transaction tools to the agent. Configure the operator token and budget in the web app at `/settings?tab=agents` when the UI is available, or through `CURYO_MCP_AGENTS` while static config remains the registration source. The agent should list templates, quote, submit with a stable `clientRequestId`, wait for a callback or status read, fetch the structured result, and store the public result URL in its audit log.
-
-Private artifacts, embargoed asks, restricted voter-only context, and delayed disclosure are deferred. Current bot and agent submissions should assume public context URLs and public settled result pages.
-
-## Scripts
-
-| Command                                                                   | Description                                                                            |
-| ------------------------------------------------------------------------- | -------------------------------------------------------------------------------------- |
-| `yarn bot:submit`                                                         | Discover trending content from platforms and submit question-first entries to registry |
-| `yarn bot:submit:x402`                                                    | Discover trending content and submit through the hosted x402 question API              |
-| `yarn workspace @curyo/bot submit --category "Media" --max-submissions 5` | Submit up to 5 items from the `Media` category                                         |
-| `yarn workspace @curyo/bot submit --source youtube --max-submissions 2`   | Submit up to 2 items from the YouTube source                                           |
-| `yarn bot:vote`                                                           | Rate content and commit encrypted votes via tlock commit-reveal                        |
-| `yarn bot:claim`                                                          | Claim voter rewards for the configured rating bot wallet                               |
-| `yarn bot:status`                                                         | Check wallet balances and voting identity ownership                                    |
-
-The bot is a manual CLI. `yarn dev:stack` starts Ponder and Next.js, and starts the keeper only when the keeper environment is configured; it does not start `submit` or `vote` automatically.
+The CLI reads `.env` from the current process environment. Use a managed agent token for authenticated HTTP or MCP flows, or use `CURYO_API_BASE_URL` alone when calling the hosted x402 question endpoint with a payment-aware fetch wrapper in your runtime.
 
 ## Configuration
 
-Copy `.env.example` to `.env` in the package directory and fill in the deployed network details. The required minimum is:
-
-- one wallet for the role you want to run
-- `RPC_URL`, `CHAIN_ID`, and the deployed contract addresses if your chain is not present in `@curyo/contracts`
-- `PONDER_URL` for `vote` and optional `status` checks
-
-**Wallet (one of):**
-
-| Variable                   | Description                                       |
-| -------------------------- | ------------------------------------------------- |
-| `SUBMIT_KEYSTORE_ACCOUNT`  | Foundry keystore account for submissions          |
-| `SUBMIT_KEYSTORE_PASSWORD` | Password used to decrypt the submission keystore  |
-| `SUBMIT_PRIVATE_KEY`       | Raw private key for submissions (not recommended) |
-| `RATE_KEYSTORE_ACCOUNT`    | Foundry keystore account for voting               |
-| `RATE_KEYSTORE_PASSWORD`   | Password used to decrypt the rating keystore      |
-| `RATE_PRIVATE_KEY`         | Raw private key for voting (not recommended)      |
-
-**Network & Services:**
-
-| Variable                                | Default                           | Description                                                                       |
-| --------------------------------------- | --------------------------------- | --------------------------------------------------------------------------------- |
-| `RPC_URL`                               | —                                 | Blockchain RPC endpoint                                                           |
-| `CHAIN_ID`                              | —                                 | Network chain ID                                                                  |
-| `HREP_TOKEN_ADDRESS`                    | Auto-derived for supported chains | Fallback HREP token address                                                       |
-| `CONTENT_REGISTRY_ADDRESS`              | Auto-derived for supported chains | Fallback ContentRegistry address                                                  |
-| `QUESTION_REWARD_POOL_ESCROW_ADDRESS`   | Auto-derived for supported chains | Fallback QuestionRewardPoolEscrow address                                         |
-| `VOTING_ENGINE_ADDRESS`                 | Auto-derived for supported chains | Fallback RoundVotingEngine address                                                |
-| `ROUND_REWARD_DISTRIBUTOR_ADDRESS`      | Auto-derived for supported chains | Fallback RoundRewardDistributor address                                           |
-| `VOTER_ID_NFT_ADDRESS`                  | Auto-derived for supported chains | Fallback VoterIdNFT address                                                       |
-| `CATEGORY_REGISTRY_ADDRESS`             | Auto-derived for supported chains | Fallback CategoryRegistry address                                                 |
-| `PONDER_URL`                            | —                                 | Ponder indexer URL                                                                |
-| `RATE_FRONTEND_ADDRESS`                 | —                                 | Optional frontend code/operator address attributed on `commitVote()` calls        |
-| `SUBMIT_REWARD_REQUIRED_VOTERS`         | `3`                               | Minimum voters required before a submission Bounty can pay out                    |
-| `SUBMIT_REWARD_REQUIRED_SETTLED_ROUNDS` | `1`                               | Minimum settled rounds required before a submission Bounty can pay out            |
-| `SUBMIT_REWARD_POOL_EXPIRES_AT`         | `0`                               | Optional Unix timestamp for the submission Bounty expiry; `0` keeps it open-ended |
-| `SUBMIT_ROUND_BLIND_PHASE_SECONDS`      | Protocol default                  | Optional per-question blind phase for bot-created questions                       |
-| `SUBMIT_ROUND_MAX_DURATION_SECONDS`     | Protocol default                  | Optional per-question round deadline for bot-created questions                    |
-| `SUBMIT_ROUND_MIN_VOTERS`               | Protocol default                  | Optional minimum revealed voters before settlement                                |
-| `SUBMIT_ROUND_MAX_VOTERS`               | Protocol default                  | Optional voter cap for the question round                                         |
-| `X402_API_URL`                          | —                                 | Hosted `/api/x402/questions` endpoint for paid submissions                        |
-| `THIRDWEB_CLIENT_ID`                    | —                                 | thirdweb client ID used to sign x402 payment headers from the bot wallet          |
-| `X402_MAX_PAYMENT_USDC`                 | Bounty amount                     | Maximum x402 spend per request in atomic USDC                                     |
-| `X402_USDC_TOKEN_ADDRESS`               | —                                 | Optional Celo USDC token override for operator checks                             |
-
-Managed MCP/OpenClaw agents are configured in the Next.js app, not in the bot package. Use the bot package for direct CLI submissions and voting, and use `/api/mcp` plus `/settings?tab=agents` for bearer-token agents with scopes, daily budgets, per-ask caps, category allowlists, pause controls, and audit records.
-
-**Optional External API Key:**
-
-| Variable          | Description          |
-| ----------------- | -------------------- |
-| `YOUTUBE_API_KEY` | YouTube Data API key |
-
-**Tuning (optional):**
-
-| Variable                       | Default | Description                                         |
-| ------------------------------ | ------- | --------------------------------------------------- |
-| `VOTE_STAKE`                   | —       | HREP stake per vote                                 |
-| `VOTE_THRESHOLD`               | —       | Minimum confidence to cast a vote                   |
-| `MAX_VOTES_PER_RUN`            | —       | Limit votes per execution                           |
-| `MAX_SUBMISSIONS_PER_RUN`      | —       | Limit submissions per execution                     |
-| `MAX_SUBMISSIONS_PER_CATEGORY` | —       | Per-source cap during submission runs               |
-| `SUBMIT_REWARD_ASSET`          | `usdc`  | Reward-pool asset for submissions: `usdc` or `hrep` |
-
-`submit` also supports one-off CLI overrides:
-
-- `--category <id|name>` to target a specific category such as `4` or `Media`
-- `--source <name>` to target a specific source adapter such as `youtube`
-- `--max-submissions <count>` to override the per-run cap for that invocation
-- `--transport x402` to pay the hosted x402 API from the submit bot wallet instead of submitting directly on-chain
-- `--help` to print the submit-specific usage text, including the full category/source catalog below
-
-## How Claiming Works
-
-`yarn bot:claim` scans Ponder history plus current on-chain claim state, then submits only the claims that are still outstanding for the configured bot wallets.
-
-- Rating bot claims:
-  - `RoundVotingEngine.claimCancelledRoundRefund(contentId, roundId)`
-  - `RoundRewardDistributor.claimReward(contentId, roundId)`
-  - `RoundRewardDistributor.claimParticipationReward(contentId, roundId)`
-
-Frontend fee sweeping remains a keeper responsibility when the keeper wallet is also the frontend operator.
-
-## Available Categories
-
-`--category` accepts either the numeric ID or the category name. `--source` accepts the source adapter name.
-
-| ID  | Category | `--source` | Availability               |
-| --- | -------- | ---------- | -------------------------- |
-| `4` | Media    | `youtube`  | Requires `YOUTUBE_API_KEY` |
-
-## How Submission Works
-
-For each `submit` run, the bot:
-
-1. Loads the wallet configured in `SUBMIT_*` and checks that it can submit. Submission no longer requires `hasVoterId(address)`, so a bot wallet can ask questions directly without a human identity gate.
-2. Checks that the wallet has enough HREP or USDC for the next submission. Direct on-chain submissions need native gas for the approval, reservation, and submit transactions. x402 submissions need enough Celo USDC for the payment ceiling; the hosted API executor pays the on-chain gas.
-3. Chooses the enabled source adapters and fetches trending content. The current bot source reads YouTube's most-popular video feed.
-4. Skips items that do not provide a usable context URL, then checks the context-backed submission key for duplicates before attempting a transaction.
-5. Truncates generated questions to the 120-character on-chain maximum and calls `previewQuestionSubmissionKey(contextUrl, imageUrls, videoUrl, title, description, tags, categoryId)` to verify the canonical category. Direct submissions then reserve the hidden submission commitment, wait a little over one second for the reservation age check, and submit the question with the matching salt, Bounty metadata, and governed round settings. x402 submissions send the same normalized question, Bounty metadata, and round settings to the hosted API, which settles Celo USDC and performs the on-chain submission from its executor wallet.
-6. Stops when it reaches the configured limit, runs out of the selected funding token, or runs out of fresh items. If a direct reveal transaction fails after reservation, the bot attempts to cancel the reservation.
-
-## Testing YouTube Questions With A Bot Wallet
-
-This is the quickest way to test the bot against the current YouTube popular videos feed, submitted under the broad `Media` review category. The submit wallet does not need a Voter ID or delegation.
-
-1. Configure the bot wallet in `packages/bot/.env`.
-
 ```bash
-cp packages/bot/.env.example packages/bot/.env
+cp packages/agents/.env.example packages/agents/.env
 ```
 
-At minimum, set:
+| Variable | Description |
+| --- | --- |
+| `CURYO_API_BASE_URL` | Hosted Curyo origin, for example `https://curyo.example` |
+| `CURYO_MCP_TOKEN` | Optional managed agent bearer token with quote, ask, read, and balance scopes |
+| `CURYO_MCP_API_URL` | Optional MCP endpoint override; defaults to `${CURYO_API_BASE_URL}/api/mcp` in SDK clients |
+| `CURYO_MCP_PROTOCOL_VERSION` | Optional MCP protocol version override |
 
-```bash
-SUBMIT_PRIVATE_KEY=0x...
-RPC_URL=...
-CHAIN_ID=...
-PONDER_URL=...
-YOUTUBE_API_KEY=...
-```
+## Examples
 
-You can use a Foundry keystore instead of `SUBMIT_PRIVATE_KEY` if you prefer.
+Runtime setup examples live in `examples/`:
 
-2. Start the services the bot depends on. For `submit`, the bot only needs a reachable RPC on the same deployment.
+- `openclaw.md` and `openclaw.mcpServers.json`
+- `hermes-agent.md`
+- `gemini-cli.md` and `gemini-cli.mcpServers.json`
+- `chat-connectors.md`
+- `landing-pitch-review.ts`
 
-```bash
-yarn ponder:dev # optional for submit, required for vote
-```
+Question payload examples live in `examples/questions/`:
 
-If you are testing locally through the web app as well, run the app and Ponder against the same chain so indexed content appears in the UI.
+- `landing-pitch-review.json`
+- `source-credibility-check.json`
+- `action-go-no-go.json`
+- `generated-image-choice.json`
+- `local-context-check.json`
 
-3. Print the submit bot wallet address.
+These are intentionally narrow. They show questions worth a bounty because the answer depends on human judgment: clarity, trust, taste, local context, or whether an agent should proceed with an action.
 
-```bash
-yarn bot:status
-```
+## Templates
 
-4. Fund the bot wallet.
+The canonical built-in result templates are exported from `@curyo/agents/templates`:
 
-- Send enough HREP or USDC for the batch you want to test. Each successful question submission must attach at least the governance minimum Bounty.
-- Send enough native gas token as well so the bot can pay for approvals and submission transactions.
-- Delegation is only needed if you also want the bot wallet to vote on behalf of a Voter ID holder.
+- `generic_rating`
+- `go_no_go`
+- `ranked_option_member`
 
-5. Re-run the status command and confirm the bot wallet is ready.
+Next.js, MCP tools, x402 submission parsing, and SDK examples should consume these definitions rather than duplicating template metadata.
 
-```bash
-yarn bot:status
-```
+## Question Design
 
-You want to see:
+Good agent questions:
 
-- enough `USDC` or `HREP` for the configured `SUBMIT_REWARD_ASSET`
-- enough native gas for the target chain
+- ask one bounded question
+- include a public HTTPS context URL
+- make the UP/DOWN vote meaning clear
+- choose a result template before submission
+- use a stable `clientRequestId` so retries do not duplicate spend
+- fund enough bounty for the expected voter count and timing
 
-6. Run a focused YouTube submission.
-
-```bash
-yarn workspace @curyo/bot submit --source youtube --category "Media" --max-submissions 1
-```
-
-Once the one-item smoke test looks good, increase the cap:
-
-```bash
-yarn workspace @curyo/bot submit --source youtube --category "Media" --max-submissions 5
-```
-
-Expected behavior:
-
-- The bot fetches YouTube's current popular videos.
-- Already-submitted context URLs are skipped automatically.
-- Only fresh items are submitted, so the run may submit fewer than the requested max if duplicates are common.
-- Each successful submission must attach the minimum non-refundable Bounty in HREP or USDC.
-- If `YOUTUBE_API_KEY` is missing, the YouTube source will return no items.
+Avoid questions that ask humans to fill a website with generic content. Curyo asks should buy judgment where the agent has meaningful uncertainty.
 
 ## Project Structure
 
-```
+```text
 src/
-├── index.ts         # CLI entry point & command router
-├── config.ts        # Configuration from environment
-├── sourceCatalog.ts # Shared bot coverage manifest (submit + vote)
-├── client.ts        # viem public & wallet clients
-├── keystore.ts      # Foundry keystore handling
-├── contracts.ts     # Contract ABI imports
-├── commands/
-│   ├── submit.ts    # Discover trending content, submit to ContentRegistry
-│   ├── vote.ts      # Rate content, place votes on-chain
-│   ├── claim.ts     # Claim bot voter rewards
-│   └── status.ts    # Check balances and Voter ID
-├── sources/         # Content platform adapters (public + API-backed)
-└── strategies/      # Platform-specific rating strategies
+├── cli.ts             # templates/lint/quote/ask/status/result CLI
+├── config.ts          # hosted agent runtime environment
+├── index.ts           # public package exports
+├── questionSpecs.ts   # canonical question/result spec hashing
+├── templates.ts       # canonical result template definitions
+└── questions/         # example payload types and linting
 ```

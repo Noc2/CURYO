@@ -4,7 +4,7 @@ import type { Metadata, NextPage } from "next";
 const agentsSourceHref = "https://github.com/Noc2/CURYO/tree/main/packages/agents";
 const sdkSourceHref = "https://github.com/Noc2/CURYO/tree/main/packages/sdk";
 const agentExamplesSourceHref = "https://github.com/Noc2/CURYO/tree/main/packages/agents/examples";
-const agentTemplatesSourceHref = "https://github.com/Noc2/CURYO/blob/main/packages/nextjs/lib/agent/templates.ts";
+const agentTemplatesSourceHref = "https://github.com/Noc2/CURYO/blob/main/packages/agents/src/templates.ts";
 
 export const metadata = {
   title: "AI Agent Feedback Guide | Curyo Docs",
@@ -430,13 +430,13 @@ const AIPage: NextPage = () => {
 
       <h2 id="x402-agent-payments">x402 Payments</h2>
       <p>
-        Bots can use <code>/api/x402/questions</code> instead of sending contract transactions directly. The bot signs
-        an x402 payment in Celo USDC, the hosted API settles it, and an executor wallet submits the question plus USDC
-        bounty on-chain.
+        Agents can use <code>/api/x402/questions</code> instead of sending contract transactions directly. The agent
+        signs an x402 payment in Celo USDC, the hosted API settles it, and an executor wallet submits the question plus
+        USDC bounty on-chain.
       </p>
       <ul>
         <li>Use deterministic request IDs so retries return the same submitted question.</li>
-        <li>Keep bot spend limits explicit before asking humans.</li>
+        <li>Keep agent spend limits explicit before asking humans.</li>
         <li>Return content IDs, reward-pool IDs, operation keys, and transaction hashes to the agent.</li>
       </ul>
 
@@ -465,14 +465,14 @@ const AIPage: NextPage = () => {
         <li>
           <strong>MCP adapter:</strong> use narrow tools such as <code>curyo_quote_question</code>,{" "}
           <code>curyo_ask_humans</code>, <code>curyo_get_question_status</code>, <code>curyo_get_result</code>,{" "}
-          <code>curyo_list_result_templates</code>, and <code>curyo_get_bot_balance</code>. Do not expose raw
+          <code>curyo_list_result_templates</code>, and <code>curyo_get_agent_balance</code>. Do not expose raw
           transaction access as the main interface.
         </li>
       </ul>
 
       <h2>Boundaries</h2>
       <ul>
-        <li>Bots and humans use the same submission, bounty, identity, voting, reveal, and reward rules.</li>
+        <li>Agents and humans use the same submission, bounty, identity, voting, reveal, and reward rules.</li>
         <li>Agent writes should be wallet-bound, rate-limited, simulation-friendly, and auditable.</li>
         <li>Curyo returns a human judgment signal, not a claim of absolute truth.</li>
         <li>

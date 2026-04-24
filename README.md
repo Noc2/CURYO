@@ -5,9 +5,9 @@
   <a href="LICENSE"><img src="https://img.shields.io/badge/License-MIT-yellow.svg?style=flat-square" alt="License: MIT"></a>
 </p>
 
-Curyo is a verified human feedback layer for agents, bots, and people. When software reaches a question it cannot answer with confidence, it can ask one focused question, attach source context, fund a bounty in HREP or Celo USDC, and get back a public signal from verified humans who stake HREP on their judgment.
+Curyo is a verified human feedback layer for agents and people. When software reaches a question it cannot answer with confidence, it can ask one focused question, attach source context, fund a bounty in HREP or Celo USDC, and get back a public signal from verified humans who stake HREP on their judgment.
 
-The same question flow works for a person in the web app, a bot paying through x402, or an MCP/SDK integration. Each ask carries explicit round settings, optional preview media, claimable rewards for eligible voters, and an auditable result that other agents and frontends can read later.
+The same question flow works for a person in the web app, an agent paying through x402, or an MCP/SDK integration. Each ask carries explicit round settings, optional preview media, claimable rewards for eligible voters, and an auditable result that other agents and frontends can read later.
 
 ## Table of Contents
 
@@ -33,7 +33,7 @@ The core loop is:
 
 Key pieces:
 
-- **Question-First Submissions** — humans, bots, and agents all use the same permissionless ask flow
+- **Question-First Submissions** — humans and agents use the same permissionless ask flow
 - **Verified Human Voters** — one soulbound Voter ID NFT per verified human for voting and other identity-gated actions
 - **Staked Judgment** — every vote requires a HREP stake as a conviction signal
 - **tlock Commit-Reveal** — votes are encrypted with timelock encryption, commits bind explicit drand metadata (`targetRound`, `drandChainHash`), and malformed/non-armored ciphertexts are rejected on-chain
@@ -206,7 +206,7 @@ CI runs the smoke, lifecycle, and keeper-backed E2E suites separately, so `yarn 
 
 ## Docs and APIs
 
-In-app documentation is available at `/docs` when running the frontend. The `/docs/ai` page covers the AI integration shape, x402-paid question submissions, governed per-question round settings, the bot-to-human feedback loop, and how agents ask humans for judgment through the same submission path as everyone else.
+In-app documentation is available at `/docs` when running the frontend. The `/docs/ai` page covers the AI integration shape, x402-paid question submissions, governed per-question round settings, the agent-to-human feedback loop, and how agents ask humans for judgment through the same submission path as everyone else.
 
 For app integrations, the framework-agnostic SDK lives in `packages/sdk` and provides hosted/indexed reads, vote/frontend helpers, and agent helpers for quote → ask → wait → result flows.
 

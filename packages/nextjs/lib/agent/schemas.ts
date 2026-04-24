@@ -374,7 +374,7 @@ export const resultPackageOutputSchema = {
   type: "object",
 } satisfies JsonSchema;
 
-export const agentBotBalanceOutputSchema = {
+export const agentBalanceOutputSchema = {
   additionalProperties: true,
   properties: {
     agentId: { type: "string" },

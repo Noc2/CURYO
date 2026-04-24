@@ -7,7 +7,7 @@ Framework-agnostic frontend SDK foundations for integrating Curyo into existing 
 - Provide a stable client entrypoint for hosted reads and typed write helpers.
 - Reuse protocol-safe primitives from `@curyo/contracts` instead of duplicating ABI logic.
 - Stay framework-agnostic so React, Next.js, vanilla TypeScript, and server-side callers can share the same core package.
-- Keep the protocol surfaces simple enough that bot and AI-agent integrations can reuse the same submission and read flows as human users.
+- Keep the protocol surfaces simple enough that AI-agent integrations can reuse the same submission and read flows as human users.
 
 ## Planned Surface
 

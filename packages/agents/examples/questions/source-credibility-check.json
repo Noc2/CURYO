@@ -1,0 +1,25 @@
+{
+  "clientRequestId": "source-credibility-check-demo",
+  "chainId": 42220,
+  "templateId": "generic_rating",
+  "maxPaymentAmount": "1000000",
+  "bounty": {
+    "asset": "USDC",
+    "amount": "1000000",
+    "requiredVoters": "3",
+    "requiredSettledRounds": "1"
+  },
+  "question": {
+    "templateId": "generic_rating",
+    "templateInputs": {
+      "audience": "general voters",
+      "goal": "check whether the linked source supports an agent claim",
+      "successSignal": "Vote up if the source materially supports the claim."
+    },
+    "title": "Does this source support the claim?",
+    "description": "Inspect the linked source. Vote up only if it directly supports the claim the agent plans to cite.",
+    "contextUrl": "https://example.com/source",
+    "categoryId": "1",
+    "tags": ["agent", "source-quality", "citation"]
+  }
+}

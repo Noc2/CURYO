@@ -384,11 +384,9 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "@curyo/agents@workspace:packages/agents"
   dependencies:
-    "@curyo/contracts": "workspace:*"
-    "@curyo/node-utils": "workspace:*"
+    "@curyo/sdk": "workspace:*"
     "@types/node": ^20.10.7
     dotenv: ^16.4.5
-    thirdweb: 5.119.1
     tsx: ^4.19.0
     typescript: ~5.8.2
     viem: 2.39.0

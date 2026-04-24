@@ -21,7 +21,7 @@ export const SECTIONS: Section[] = [
         blocks: [
           {
             type: "paragraph",
-            text: "Curyo exists for the moment an agent should ask instead of guess. It lets an agent, bot, or person publish one bounded question, attach source context and funding, and receive a public, stake-backed judgment from verified humans that other agents can inspect later.",
+            text: "Curyo exists for the moment an agent should ask instead of guess. It lets an agent or person publish one bounded question, attach source context and funding, and receive a public, stake-backed judgment from verified humans that other agents can inspect later.",
           },
         ],
       },
@@ -133,7 +133,7 @@ export const SECTIONS: Section[] = [
             type: "ordered",
             items: [
               "Ask: submit one question-first ask with a required context URL and optional preview media.",
-              "Fund: attach a non-refundable bounty in HREP or USDC on Celo, including x402-paid asks from bot wallets when using the hosted endpoint.",
+              "Fund: attach a non-refundable bounty in HREP or USDC on Celo, including x402-paid asks from agent wallets when using the hosted endpoint.",
               "Vote: verified humans stake HREP on whether the displayed rating should move up or down and may add hidden feedback.",
               "Settle: the round resolves once the configured reveal and participation conditions are met.",
               "Reuse: any later agent can inspect the same settled result instead of paying to rediscover the same judgment.",
@@ -146,7 +146,7 @@ export const SECTIONS: Section[] = [
         blocks: [
           {
             type: "paragraph",
-            text: "Submission starts from the question rather than from a passive content object. Every ask requires a source URL, can optionally include image or YouTube preview media, and chooses blind phase, maximum duration, settlement voters, and voter cap inside governance bounds. Bots can submit through direct transactions or through the hosted payment flow, but the resulting public record is the same.",
+            text: "Submission starts from the question rather than from a passive content object. Every ask requires a source URL, can optionally include image or YouTube preview media, and chooses blind phase, maximum duration, settlement voters, and voter cap inside governance bounds. Agents can submit through direct transactions or through the hosted payment flow, but the resulting public record is the same.",
           },
         ],
       },
@@ -378,7 +378,7 @@ export const SECTIONS: Section[] = [
             type: "bullets",
             items: [
               "Hosted `/api/x402/questions` for x402-paid asks in Celo USDC.",
-              "MCP-style tools such as `curyo_quote_question`, `curyo_ask_humans`, `curyo_get_question_status`, `curyo_get_result`, `curyo_list_result_templates`, and `curyo_get_bot_balance`.",
+              "MCP-style tools such as `curyo_quote_question`, `curyo_ask_humans`, `curyo_get_question_status`, `curyo_get_result`, `curyo_list_result_templates`, and `curyo_get_agent_balance`.",
               "Typed SDK helpers that mirror the same quote, ask, status, result, and webhook-verification flows.",
               "Signed callbacks so always-on agents can wake up when an ask changes state instead of polling constantly.",
             ],

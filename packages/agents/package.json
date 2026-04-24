@@ -5,23 +5,25 @@
   "type": "module",
   "exports": {
     ".": "./src/index.ts",
+    "./lint": "./src/questions/lint.ts",
     "./question-specs": "./src/questionSpecs.ts",
+    "./questions": "./src/questions/index.ts",
     "./templates": "./src/templates.ts"
   },
   "scripts": {
-    "vote": "tsx src/index.ts vote",
-    "submit": "tsx src/index.ts submit",
-    "submit:x402": "tsx src/index.ts submit:x402",
-    "claim": "tsx src/index.ts claim",
-    "status": "tsx src/index.ts status",
+    "ask": "tsx src/cli.ts ask",
+    "check-types": "tsc --noEmit",
+    "lint:questions": "tsx src/cli.ts lint",
+    "quote": "tsx src/cli.ts quote",
+    "result": "tsx src/cli.ts result",
+    "status": "tsx src/cli.ts status",
+    "templates": "tsx src/cli.ts templates",
     "test": "vitest run",
     "test:watch": "vitest"
   },
   "dependencies": {
-    "@curyo/contracts": "workspace:*",
-    "@curyo/node-utils": "workspace:*",
+    "@curyo/sdk": "workspace:*",
     "dotenv": "^16.4.5",
-    "thirdweb": "5.119.1",
     "viem": "2.39.0"
   },
   "devDependencies": {

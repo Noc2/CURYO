@@ -237,7 +237,7 @@ test("tools/list accepts supported MCP-Protocol-Version and returns tool annotat
   assert.ok(toolByName.get("curyo_ask_humans")?.outputSchema);
   assert.ok(toolByName.get("curyo_get_question_status")?.outputSchema);
   assert.ok(toolByName.get("curyo_get_result")?.outputSchema);
-  assert.ok(toolByName.get("curyo_get_bot_balance")?.outputSchema);
+  assert.ok(toolByName.get("curyo_get_agent_balance")?.outputSchema);
 });
 
 test("notifications require MCP-Protocol-Version after initialize", async () => {
