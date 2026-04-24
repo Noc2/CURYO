@@ -142,7 +142,7 @@ contract RoundRewardDistributorBranchesTest is VotingTestBase {
         if (roundId == 0) return;
 
         RoundLib.Round memory r = RoundEngineReadHelpers.round(votingEngine, contentId, roundId);
-        vm.warp(r.startTime + EPOCH_DURATION + 1);
+        _warpPastTlockRevealTime(uint256(r.startTime) + EPOCH_DURATION);
         _revealAll(contentId, roundId);
 
         RoundLib.Round memory r2 = RoundEngineReadHelpers.round(votingEngine, contentId, roundId);

@@ -166,7 +166,7 @@ contract SelfOppositionProfitabilityTest is VotingTestBase {
         uint256 roundId = RoundEngineReadHelpers.activeRoundId(engine, cid);
         if (roundId == 0) return;
         RoundLib.Round memory r = RoundEngineReadHelpers.round(engine, cid, roundId);
-        vm.warp(r.startTime + 1 hours + 1);
+        _warpPastTlockRevealTime(uint256(r.startTime) + 1 hours);
         bytes32[] memory keys = RoundEngineReadHelpers.commitKeys(engine, cid, roundId);
         for (uint256 i = 0; i < keys.length; i++) {
             RoundLib.Commit memory c = RoundEngineReadHelpers.commit(engine, cid, roundId, keys[i]);

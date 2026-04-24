@@ -786,6 +786,14 @@ abstract contract VotingTestBase is Test, ContentSubmissionTestBase {
         return uint256(_tlockDrandGenesisTime()) + (uint256(targetRound) - 1) * uint256(_tlockDrandPeriod());
     }
 
+    function _warpPastTlockRevealTime(uint256 revealableAfter) internal {
+        uint64 targetRound = _tlockTargetRoundAt(revealableAfter);
+        uint256 revealableAt = _tlockRoundTimestamp(targetRound);
+        if (block.timestamp <= revealableAt) {
+            vm.warp(revealableAt + 1);
+        }
+    }
+
     function _tlockDrandChainHash() internal view virtual returns (bytes32) {
         return activeTlockDrandChainHash;
     }

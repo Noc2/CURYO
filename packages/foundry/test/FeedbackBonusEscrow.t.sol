@@ -431,7 +431,7 @@ contract FeedbackBonusEscrowTest is VotingTestBase {
         }
 
         roundId = RoundEngineReadHelpers.activeRoundId(votingEngine, contentId);
-        vm.warp(block.timestamp + EPOCH_DURATION + 1);
+        _warpPastTlockRevealTime(block.timestamp + EPOCH_DURATION);
 
         for (uint256 i = 0; i < voters.length; i++) {
             votingEngine.revealVoteByCommitKey(contentId, roundId, commitKeys[i], directions[i], salts[i]);

@@ -329,7 +329,7 @@ contract RoundVotingEngineBranchesTest is VotingTestBase {
 
         // Warp past epoch end so votes become revealable
         RoundLib.Round memory r0 = RoundEngineReadHelpers.round(engine, contentId, roundId);
-        vm.warp(r0.startTime + EPOCH + 1);
+        _warpPastTlockRevealTime(uint256(r0.startTime) + EPOCH);
 
         _reveal(contentId, roundId, commitKeys[0], v1Up, salts[0]);
         _reveal(contentId, roundId, commitKeys[1], v2Up, salts[1]);
@@ -394,7 +394,7 @@ contract RoundVotingEngineBranchesTest is VotingTestBase {
         assertEq(round.totalStake, STAKE * 2);
 
         // Warp past epoch and reveal
-        vm.warp(block.timestamp + EPOCH + 1);
+        _warpPastTlockRevealTime(block.timestamp + EPOCH);
         _reveal(contentId, roundId, ck1, true, s1);
         _reveal(contentId, roundId, ck2, false, s2);
 
@@ -508,7 +508,7 @@ contract RoundVotingEngineBranchesTest is VotingTestBase {
         uint256 roundId = RoundEngineReadHelpers.activeRoundId(engine, contentId);
 
         // Warp past epoch and reveal all (threshold reached)
-        vm.warp(block.timestamp + EPOCH + 1);
+        _warpPastTlockRevealTime(block.timestamp + EPOCH);
         _reveal(contentId, roundId, ck1, true, s1);
         _reveal(contentId, roundId, ck2, true, s2);
         _reveal(contentId, roundId, ck3, false, s3);
@@ -623,7 +623,7 @@ contract RoundVotingEngineBranchesTest is VotingTestBase {
         uint256 roundId = RoundEngineReadHelpers.activeRoundId(engine, contentId);
 
         // Warp to exactly one second after epoch end
-        vm.warp(block.timestamp + EPOCH + 1);
+        _warpPastTlockRevealTime(block.timestamp + EPOCH);
 
         // Should not revert
         engine.revealVoteByCommitKey(contentId, roundId, commitKey, true, salt);
@@ -643,7 +643,7 @@ contract RoundVotingEngineBranchesTest is VotingTestBase {
         (bytes32 commitKey, bytes32 salt) = _commit(voter1, contentId, true, STAKE);
         uint256 roundId = RoundEngineReadHelpers.activeRoundId(engine, contentId);
 
-        vm.warp(block.timestamp + EPOCH + 1);
+        _warpPastTlockRevealTime(block.timestamp + EPOCH);
 
         // Reveal with isUp=false (wrong direction — hash won't match)
         vm.expectRevert(RoundVotingEngine.HashMismatch.selector);
@@ -656,7 +656,7 @@ contract RoundVotingEngineBranchesTest is VotingTestBase {
         (bytes32 commitKey,) = _commit(voter1, contentId, true, STAKE);
         uint256 roundId = RoundEngineReadHelpers.activeRoundId(engine, contentId);
 
-        vm.warp(block.timestamp + EPOCH + 1);
+        _warpPastTlockRevealTime(block.timestamp + EPOCH);
 
         bytes32 wrongSalt = keccak256("wrong");
         vm.expectRevert(RoundVotingEngine.HashMismatch.selector);
@@ -688,7 +688,7 @@ contract RoundVotingEngineBranchesTest is VotingTestBase {
         uint256 roundId = RoundEngineReadHelpers.activeRoundId(engine, contentId);
         bytes32 commitKey = keccak256(abi.encodePacked(voter1, commitHash));
 
-        vm.warp(block.timestamp + EPOCH + 1);
+        _warpPastTlockRevealTime(block.timestamp + EPOCH);
 
         vm.expectRevert(RoundVotingEngine.HashMismatch.selector);
         engine.revealVoteByCommitKey(contentId, roundId, commitKey, true, salt);
@@ -725,7 +725,7 @@ contract RoundVotingEngineBranchesTest is VotingTestBase {
             targetRoundRevealableAt
         );
 
-        vm.warp(block.timestamp + EPOCH + 1);
+        _warpPastTlockRevealTime(block.timestamp + EPOCH);
         vm.expectRevert(RoundVotingEngine.EpochNotEnded.selector);
         engine.revealVoteByCommitKey(contentId, roundId, commitKey, true, salt);
 
@@ -738,7 +738,7 @@ contract RoundVotingEngineBranchesTest is VotingTestBase {
         _commit(voter1, contentId, true, STAKE);
         uint256 roundId = RoundEngineReadHelpers.activeRoundId(engine, contentId);
 
-        vm.warp(block.timestamp + EPOCH + 1);
+        _warpPastTlockRevealTime(block.timestamp + EPOCH);
 
         bytes32 badKey = keccak256("bogus");
         vm.expectRevert(RoundVotingEngine.TargetRoundOutOfWindow.selector);
@@ -751,7 +751,7 @@ contract RoundVotingEngineBranchesTest is VotingTestBase {
         (bytes32 commitKey, bytes32 salt) = _commit(voter1, contentId, true, STAKE);
         uint256 roundId = RoundEngineReadHelpers.activeRoundId(engine, contentId);
 
-        vm.warp(block.timestamp + EPOCH + 1);
+        _warpPastTlockRevealTime(block.timestamp + EPOCH);
         _reveal(contentId, roundId, commitKey, true, salt);
 
         // Try to reveal again
@@ -773,7 +773,7 @@ contract RoundVotingEngineBranchesTest is VotingTestBase {
         uint256 roundId = RoundEngineReadHelpers.activeRoundId(engine, contentId);
 
         // Warp past epoch and reveal all
-        vm.warp(block.timestamp + EPOCH + 1);
+        _warpPastTlockRevealTime(block.timestamp + EPOCH);
         _reveal(contentId, roundId, ck1, true, s1);
         _reveal(contentId, roundId, ck2, true, s2);
         _reveal(contentId, roundId, ck3, false, s3);
@@ -804,11 +804,11 @@ contract RoundVotingEngineBranchesTest is VotingTestBase {
 
         uint256 roundId = RoundEngineReadHelpers.activeRoundId(engine, contentId);
 
-        vm.warp(block.timestamp + EPOCH + 1);
+        _warpPastTlockRevealTime(block.timestamp + EPOCH);
         _reveal(contentId, roundId, ck1, true, s1);
         _reveal(contentId, roundId, ck2, false, s2);
 
-        vm.warp(block.timestamp + EPOCH + 1);
+        _warpPastTlockRevealTime(block.timestamp + EPOCH);
 
         vm.expectRevert(RoundVotingEngine.NotEnoughVotes.selector);
         engine.settleRound(contentId, roundId);
@@ -851,7 +851,7 @@ contract RoundVotingEngineBranchesTest is VotingTestBase {
 
         uint256 roundId = RoundEngineReadHelpers.activeRoundId(engine, contentId);
 
-        vm.warp(block.timestamp + EPOCH + 1);
+        _warpPastTlockRevealTime(block.timestamp + EPOCH);
         _reveal(contentId, roundId, ck1, true, salt1);
         _reveal(contentId, roundId, ck2, false, salt2);
         _reveal(contentId, roundId, ck3, true, salt3);
@@ -875,7 +875,7 @@ contract RoundVotingEngineBranchesTest is VotingTestBase {
 
         uint256 roundId = RoundEngineReadHelpers.activeRoundId(engine, contentId);
 
-        vm.warp(block.timestamp + EPOCH + 1);
+        _warpPastTlockRevealTime(block.timestamp + EPOCH);
         _reveal(contentId, roundId, ck1, true, salt1);
         _reveal(contentId, roundId, ck2, false, salt2);
         _reveal(contentId, roundId, ck3, false, salt3);
@@ -994,7 +994,7 @@ contract RoundVotingEngineBranchesTest is VotingTestBase {
 
         uint256 xRoundId = RoundEngineReadHelpers.activeRoundId(engine, cid3);
 
-        vm.warp(block.timestamp + EPOCH + 1);
+        _warpPastTlockRevealTime(block.timestamp + EPOCH);
         _reveal(cid3, xRoundId, xck1, true, xs1);
         _reveal(cid3, xRoundId, xck2, false, xs2);
         _reveal(cid3, xRoundId, xck3, true, xs3);
@@ -1029,7 +1029,7 @@ contract RoundVotingEngineBranchesTest is VotingTestBase {
         uint256 roundId = RoundEngineReadHelpers.activeRoundId(engine, contentId);
 
         // Reveal after epoch
-        vm.warp(block.timestamp + EPOCH + 1);
+        _warpPastTlockRevealTime(block.timestamp + EPOCH);
         _reveal(contentId, roundId, ck1, true, s1);
         _reveal(contentId, roundId, ck2, true, s2);
         _reveal(contentId, roundId, ck3, false, s3);
@@ -1054,7 +1054,7 @@ contract RoundVotingEngineBranchesTest is VotingTestBase {
 
         uint256 roundId = RoundEngineReadHelpers.activeRoundId(engine, contentId);
 
-        vm.warp(block.timestamp + EPOCH + 1);
+        _warpPastTlockRevealTime(block.timestamp + EPOCH);
         _reveal(contentId, roundId, ck1, true, s1);
         _reveal(contentId, roundId, ck2, true, s2);
         _reveal(contentId, roundId, ck3, false, s3);
@@ -1080,7 +1080,7 @@ contract RoundVotingEngineBranchesTest is VotingTestBase {
 
         uint256 roundId = RoundEngineReadHelpers.activeRoundId(engine, contentId);
 
-        vm.warp(block.timestamp + EPOCH + 1);
+        _warpPastTlockRevealTime(block.timestamp + EPOCH);
         _reveal(contentId, roundId, ck1, true, s1);
         _reveal(contentId, roundId, ck2, true, s2);
         _reveal(contentId, roundId, ck3, false, s3);
@@ -1110,7 +1110,7 @@ contract RoundVotingEngineBranchesTest is VotingTestBase {
         (bytes32 ck3, bytes32 s3) = _commit(voter3, contentId, false, STAKE);
         uint256 roundId = RoundEngineReadHelpers.activeRoundId(engine, contentId);
 
-        vm.warp(block.timestamp + EPOCH + 1);
+        _warpPastTlockRevealTime(block.timestamp + EPOCH);
         _reveal(contentId, roundId, ck1, true, s1);
         _reveal(contentId, roundId, ck2, true, s2);
         _reveal(contentId, roundId, ck3, false, s3);
@@ -1257,7 +1257,7 @@ contract RoundVotingEngineBranchesTest is VotingTestBase {
 
         // Warp past epoch 1 (absolute time) — voter1/2/3 votes become revealable
         RoundLib.Round memory rPU2start = RoundEngineReadHelpers.round(engine, contentId, roundId);
-        vm.warp(rPU2start.startTime + EPOCH + 1);
+        _warpPastTlockRevealTime(uint256(rPU2start.startTime) + EPOCH);
         // Commit voter4 in epoch 2 before threshold is reached. This keeps the
         // current-epoch unrevealed path without relying on post-threshold commits.
         _commit(voter4, contentId, true, STAKE);
@@ -1353,7 +1353,7 @@ contract RoundVotingEngineBranchesTest is VotingTestBase {
 
         // Warp past epoch 1 and add voter4 in epoch 2 before revealing.
         RoundLib.Round memory rTied = RoundEngineReadHelpers.round(engine, contentId, roundId);
-        vm.warp(rTied.startTime + EPOCH + 1);
+        _warpPastTlockRevealTime(uint256(rTied.startTime) + EPOCH);
         _commit(voter4, contentId, true, STAKE);
         _reveal(contentId, roundId, ck1, true, s1);
         _reveal(contentId, roundId, ck2, false, s2);
@@ -1412,7 +1412,7 @@ contract RoundVotingEngineBranchesTest is VotingTestBase {
 
         uint256 roundId = RoundEngineReadHelpers.activeRoundId(engine, contentId);
         RoundLib.Round memory round = RoundEngineReadHelpers.round(engine, contentId, roundId);
-        vm.warp(round.startTime + EPOCH + 1);
+        _warpPastTlockRevealTime(uint256(round.startTime) + EPOCH);
         _reveal(contentId, roundId, ck1, true, s1);
 
         uint256 finalDeadline = round.startTime + 7 days + ProtocolConfig(protocolConfigAddress).revealGracePeriod() + 1;
@@ -2045,7 +2045,7 @@ contract RoundVotingEngineBranchesTest is VotingTestBase {
 
         uint256 roundId = RoundEngineReadHelpers.activeRoundId(engine, contentId);
 
-        vm.warp(block.timestamp + EPOCH + 1);
+        _warpPastTlockRevealTime(block.timestamp + EPOCH);
         _reveal(contentId, roundId, ck1, true, s1);
         _reveal(contentId, roundId, ck2, true, s2);
 
@@ -2068,7 +2068,7 @@ contract RoundVotingEngineBranchesTest is VotingTestBase {
         (bytes32 ck3, bytes32 s3) = _commit(voter3, contentId, false, STAKE);
         uint256 roundId = RoundEngineReadHelpers.activeRoundId(engine, contentId);
 
-        vm.warp(block.timestamp + EPOCH + 1);
+        _warpPastTlockRevealTime(block.timestamp + EPOCH);
         _reveal(contentId, roundId, ck1, true, s1);
         _reveal(contentId, roundId, ck2, true, s2);
         _reveal(contentId, roundId, ck3, false, s3);
@@ -2103,7 +2103,7 @@ contract RoundVotingEngineBranchesTest is VotingTestBase {
         (bytes32 ck3, bytes32 s3) = _commit(voter3, contentId, false, STAKE);
         uint256 roundId = RoundEngineReadHelpers.activeRoundId(engine, contentId);
 
-        vm.warp(block.timestamp + EPOCH + 1);
+        _warpPastTlockRevealTime(block.timestamp + EPOCH);
         _reveal(contentId, roundId, ck1, true, s1);
         _reveal(contentId, roundId, ck2, true, s2);
         _reveal(contentId, roundId, ck3, false, s3);
@@ -2135,13 +2135,13 @@ contract RoundVotingEngineBranchesTest is VotingTestBase {
 
         // Warp past first epoch — voter2 commits in epoch 2
         RoundLib.Round memory rEW0 = RoundEngineReadHelpers.round(engine, contentId, roundId);
-        vm.warp(rEW0.startTime + EPOCH + 1);
+        _warpPastTlockRevealTime(uint256(rEW0.startTime) + EPOCH);
 
         (bytes32 ck2, bytes32 s2) = _commit(voter2, contentId, true, STAKE);
         (bytes32 ck3, bytes32 s3) = _commit(voter3, contentId, true, STAKE);
 
         // Warp past epoch 2: voter2/voter3 committed at T0+EPOCH+1 so their epoch ends at T0+2*EPOCH
-        vm.warp(rEW0.startTime + 2 * EPOCH + 2);
+        _warpPastTlockRevealTime(uint256(rEW0.startTime) + 2 * EPOCH);
 
         _reveal(contentId, roundId, ck1, false, s1);
         _reveal(contentId, roundId, ck2, true, s2);
@@ -2170,7 +2170,7 @@ contract RoundVotingEngineBranchesTest is VotingTestBase {
 
         uint256 roundId = RoundEngineReadHelpers.activeRoundId(engine, contentId);
 
-        vm.warp(block.timestamp + EPOCH + 1);
+        _warpPastTlockRevealTime(block.timestamp + EPOCH);
         _reveal(contentId, roundId, ck1, true, s1);
         _reveal(contentId, roundId, ck2, true, s2);
         _reveal(contentId, roundId, ck3, true, s3);
@@ -2283,7 +2283,7 @@ contract RoundVotingEngineBranchesTest is VotingTestBase {
 
         uint256 roundId = RoundEngineReadHelpers.activeRoundId(engine, contentId);
 
-        vm.warp(block.timestamp + EPOCH + 1);
+        _warpPastTlockRevealTime(block.timestamp + EPOCH);
         _reveal(contentId, roundId, ck1, true, s1);
 
         RoundLib.Round memory round = RoundEngineReadHelpers.round(engine, contentId, roundId);
@@ -2327,7 +2327,7 @@ contract RoundVotingEngineBranchesTest is VotingTestBase {
         (bytes32 ck1, bytes32 s1) = _commit(voter1, contentId, true, STAKE);
         uint256 roundId = RoundEngineReadHelpers.activeRoundId(engine, contentId);
 
-        vm.warp(block.timestamp + EPOCH + 1);
+        _warpPastTlockRevealTime(block.timestamp + EPOCH);
         _reveal(contentId, roundId, ck1, true, s1);
 
         assertFalse(_hasUnrevealedVotes(contentId));

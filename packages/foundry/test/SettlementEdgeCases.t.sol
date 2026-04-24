@@ -325,7 +325,7 @@ contract SettlementEdgeCasesTest is VotingTestBase {
         roundId = RoundEngineReadHelpers.activeRoundId(engine, contentId);
 
         RoundLib.Round memory r0 = RoundEngineReadHelpers.round(engine, contentId, roundId);
-        vm.warp(r0.startTime + EPOCH + 1);
+        _warpPastTlockRevealTime(uint256(r0.startTime) + EPOCH);
 
         _reveal(contentId, roundId, ck1, v1Up, s1);
         _reveal(contentId, roundId, ck2, v2Up, s2);
@@ -366,7 +366,7 @@ contract SettlementEdgeCasesTest is VotingTestBase {
 
         uint256 roundId = RoundEngineReadHelpers.activeRoundId(engine, contentId);
         RoundLib.Round memory r0 = RoundEngineReadHelpers.round(engine, contentId, roundId);
-        vm.warp(r0.startTime + EPOCH + 1);
+        _warpPastTlockRevealTime(uint256(r0.startTime) + EPOCH);
 
         _reveal(contentId, roundId, ck1, true, s1);
         _reveal(contentId, roundId, ck2, false, s2);
@@ -440,7 +440,7 @@ contract SettlementEdgeCasesTest is VotingTestBase {
 
         uint256 roundId = RoundEngineReadHelpers.activeRoundId(engine, contentId);
         RoundLib.Round memory r0 = RoundEngineReadHelpers.round(engine, contentId, roundId);
-        vm.warp(r0.startTime + EPOCH + 1);
+        _warpPastTlockRevealTime(uint256(r0.startTime) + EPOCH);
 
         // Reveal all 3 — threshold reached
         _reveal(contentId, roundId, ck1, true, s1);
@@ -481,7 +481,7 @@ contract SettlementEdgeCasesTest is VotingTestBase {
 
         uint256 roundId = RoundEngineReadHelpers.activeRoundId(engine, contentId);
         RoundLib.Round memory r0 = RoundEngineReadHelpers.round(engine, contentId, roundId);
-        vm.warp(r0.startTime + EPOCH + 1);
+        _warpPastTlockRevealTime(uint256(r0.startTime) + EPOCH);
 
         _reveal(contentId, roundId, ck1, true, s1);
         _reveal(contentId, roundId, ck2, false, s2);
@@ -544,7 +544,7 @@ contract SettlementEdgeCasesTest is VotingTestBase {
 
         uint256 roundId = RoundEngineReadHelpers.activeRoundId(engine, contentId);
         RoundLib.Round memory r0 = RoundEngineReadHelpers.round(engine, contentId, roundId);
-        vm.warp(r0.startTime + EPOCH + 1);
+        _warpPastTlockRevealTime(uint256(r0.startTime) + EPOCH);
 
         _reveal(contentId, roundId, ck1, true, s1);
         _reveal(contentId, roundId, ck2, true, s2);
@@ -706,7 +706,7 @@ contract SettlementEdgeCasesTest is VotingTestBase {
 
         uint256 roundId = RoundEngineReadHelpers.activeRoundId(engine, contentId);
         RoundLib.Round memory r0 = RoundEngineReadHelpers.round(engine, contentId, roundId);
-        vm.warp(r0.startTime + EPOCH + 1);
+        _warpPastTlockRevealTime(uint256(r0.startTime) + EPOCH);
 
         _reveal(contentId, roundId, ck1, true, s1);
         _reveal(contentId, roundId, ck2, false, s2);
@@ -818,7 +818,7 @@ contract SettlementEdgeCasesTest is VotingTestBase {
 
         uint256 roundId = RoundEngineReadHelpers.activeRoundId(engine, contentId);
         RoundLib.Round memory r0 = RoundEngineReadHelpers.round(engine, contentId, roundId);
-        vm.warp(r0.startTime + EPOCH + 1);
+        _warpPastTlockRevealTime(uint256(r0.startTime) + EPOCH);
 
         _reveal(contentId, roundId, ck1, true, s1);
         _reveal(contentId, roundId, ck2, false, s2);
@@ -868,7 +868,7 @@ contract SettlementEdgeCasesTest is VotingTestBase {
 
         uint256 roundId = RoundEngineReadHelpers.activeRoundId(engine, contentId);
         RoundLib.Round memory r0 = RoundEngineReadHelpers.round(engine, contentId, roundId);
-        vm.warp(r0.startTime + EPOCH + 1);
+        _warpPastTlockRevealTime(uint256(r0.startTime) + EPOCH);
 
         _reveal(contentId, roundId, ck1, true, s1);
         _reveal(contentId, roundId, ck2, true, s2);

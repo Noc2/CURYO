@@ -187,7 +187,7 @@ contract SelectiveRevelationTest is VotingTestBase {
         RoundLib.Round memory r = RoundEngineReadHelpers.round(engine, contentId, roundId);
 
         // Warp past epoch end
-        vm.warp(r.startTime + EPOCH + 1);
+        _warpPastTlockRevealTime(uint256(r.startTime) + EPOCH);
 
         // Attacker selectively reveals only 3 votes: 2 UP + 1 DOWN
         _reveal(contentId, roundId, commitKeys[0], true, salts[0]);
@@ -214,7 +214,7 @@ contract SelectiveRevelationTest is VotingTestBase {
         uint256 roundId = RoundEngineReadHelpers.activeRoundId(engine, contentId);
         RoundLib.Round memory r = RoundEngineReadHelpers.round(engine, contentId, roundId);
 
-        vm.warp(r.startTime + EPOCH + 1);
+        _warpPastTlockRevealTime(uint256(r.startTime) + EPOCH);
 
         // Reveal ALL 10 votes
         for (uint256 i = 0; i < 10; i++) {
@@ -247,7 +247,7 @@ contract SelectiveRevelationTest is VotingTestBase {
         RoundLib.Round memory r = RoundEngineReadHelpers.round(engine, contentId, roundId);
 
         // Warp to epoch 2 (past epoch-1 end, within epoch-2)
-        vm.warp(r.startTime + EPOCH + 1);
+        _warpPastTlockRevealTime(uint256(r.startTime) + EPOCH);
 
         // 2 more voters in epoch 2 (current epoch — not yet revealable)
         _commit(voters[3], contentId, false, STAKE);
@@ -360,7 +360,7 @@ contract SelectiveRevelationTest is VotingTestBase {
         assertEq(r.voteCount, 3);
         assertEq(r.revealedCount, 0);
 
-        vm.warp(epochEnd + 1);
+        _warpPastTlockRevealTime(epochEnd);
 
         _reveal(contentId, roundId, ck1, true, s1);
         assertEq(RoundEngineReadHelpers.round(engine, contentId, roundId).revealedCount, 1);
@@ -494,7 +494,7 @@ contract SelectiveRevelationTest is VotingTestBase {
         RoundLib.Round memory r = RoundEngineReadHelpers.round(engine, contentId, roundId);
 
         // Warp to epoch 2
-        vm.warp(r.startTime + EPOCH + 1);
+        _warpPastTlockRevealTime(uint256(r.startTime) + EPOCH);
 
         // 1 voter in epoch 2
         _commit(voters[3], contentId, false, STAKE);
@@ -505,7 +505,7 @@ contract SelectiveRevelationTest is VotingTestBase {
         _reveal(contentId, roundId, ck3, false, s3);
 
         // Warp past epoch-2 end but within epoch-2 grace period
-        vm.warp(r.startTime + 2 * EPOCH + 1);
+        _warpPastTlockRevealTime(uint256(r.startTime) + 2 * EPOCH);
 
         // Settlement blocked — epoch-2 has unrevealed vote within grace period
         vm.expectRevert(RoundVotingEngine.UnrevealedPastEpochVotes.selector);

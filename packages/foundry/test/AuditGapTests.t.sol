@@ -222,7 +222,7 @@ contract AuditGapTests is VotingTestBase {
         (bytes32 s2, bytes32 ck2) = _commit(voter2, contentId, true, STAKE, address(0));
         (bytes32 s3, bytes32 ck3) = _commit(voter3, contentId, false, STAKE, address(0));
 
-        vm.warp(block.timestamp + EPOCH_DURATION);
+        _warpPastTlockRevealTime(block.timestamp + EPOCH_DURATION);
 
         _reveal(voter1, contentId, 1, ck1, true, s1);
         _reveal(voter2, contentId, 1, ck2, true, s2);
@@ -272,7 +272,7 @@ contract AuditGapTests is VotingTestBase {
         (bytes32 s3, bytes32 ck3) = _commit(voter3, contentId, false, STAKE, address(0));
         _commit(voter4, contentId, true, STAKE, address(0)); // unrevealed
 
-        vm.warp(block.timestamp + EPOCH_DURATION);
+        _warpPastTlockRevealTime(block.timestamp + EPOCH_DURATION);
         _reveal(voter1, contentId, 1, ck1, true, s1);
         _reveal(voter2, contentId, 1, ck2, true, s2);
         _reveal(voter3, contentId, 1, ck3, false, s3);
@@ -354,7 +354,7 @@ contract AuditGapTests is VotingTestBase {
         (bytes32 s3, bytes32 ck3) = _commit(voter3, contentId, false, STAKE, frontend);
 
         // Advance past epoch, reveal all
-        vm.warp(block.timestamp + EPOCH_DURATION);
+        _warpPastTlockRevealTime(block.timestamp + EPOCH_DURATION);
         _reveal(voter1, contentId, 1, ck1, true, s1);
         _reveal(voter2, contentId, 1, ck2, true, s2);
         _reveal(voter3, contentId, 1, ck3, false, s3);
@@ -437,7 +437,7 @@ contract AuditGapTests is VotingTestBase {
         hrepToken.mint(voter5, 100_000e6);
         _commit(voter5, contentId, false, STAKE, address(0)); // unrevealed
 
-        vm.warp(block.timestamp + EPOCH_DURATION);
+        _warpPastTlockRevealTime(block.timestamp + EPOCH_DURATION);
         _reveal(voter1, contentId, 1, ck1, true, s1);
         _reveal(voter2, contentId, 1, ck2, true, s2);
         _reveal(voter3, contentId, 1, ck3, false, s3);
@@ -458,7 +458,7 @@ contract AuditGapTests is VotingTestBase {
         (bytes32 s3, bytes32 ck3) = _commit(voter3, contentId, false, STAKE, address(0));
         _commit(voter4, contentId, true, STAKE, address(0)); // unrevealed
 
-        vm.warp(block.timestamp + EPOCH_DURATION);
+        _warpPastTlockRevealTime(block.timestamp + EPOCH_DURATION);
         _reveal(voter1, contentId, 1, ck1, true, s1);
         _reveal(voter2, contentId, 1, ck2, true, s2);
         _reveal(voter3, contentId, 1, ck3, false, s3);
@@ -479,7 +479,7 @@ contract AuditGapTests is VotingTestBase {
         (bytes32 s3, bytes32 ck3) = _commit(voter3, contentId, false, STAKE, address(0));
         _commit(voter4, contentId, true, STAKE, address(0));
 
-        vm.warp(block.timestamp + EPOCH_DURATION);
+        _warpPastTlockRevealTime(block.timestamp + EPOCH_DURATION);
         _reveal(voter1, contentId, 1, ck1, true, s1);
         _reveal(voter2, contentId, 1, ck2, true, s2);
         _reveal(voter3, contentId, 1, ck3, false, s3);
@@ -501,7 +501,7 @@ contract AuditGapTests is VotingTestBase {
         (bytes32 s3, bytes32 ck3) = _commit(voter3, contentId, false, STAKE, address(0));
         _commit(voter4, contentId, true, STAKE, address(0)); // unrevealed
 
-        vm.warp(block.timestamp + EPOCH_DURATION);
+        _warpPastTlockRevealTime(block.timestamp + EPOCH_DURATION);
         _reveal(voter1, contentId, 1, ck1, true, s1);
         _reveal(voter2, contentId, 1, ck2, true, s2);
         _reveal(voter3, contentId, 1, ck3, false, s3);
@@ -569,7 +569,7 @@ contract AuditGapTests is VotingTestBase {
         (bytes32 s2, bytes32 ck2) = _commit(voter2, contentId, true, STAKE, address(0));
         (bytes32 s3, bytes32 ck3) = _commit(voter3, contentId, true, STAKE, address(0));
 
-        vm.warp(block.timestamp + EPOCH_DURATION);
+        _warpPastTlockRevealTime(block.timestamp + EPOCH_DURATION);
         _reveal(voter1, contentId, 1, ck1, true, s1);
         _reveal(voter2, contentId, 1, ck2, true, s2);
         _reveal(voter3, contentId, 1, ck3, true, s3);
@@ -606,7 +606,7 @@ contract AuditGapTests is VotingTestBase {
         (bytes32 s2, bytes32 ck2) = _commit(voter2, contentId, true, STAKE, address(0));
         (bytes32 s3, bytes32 ck3) = _commit(voter3, contentId, false, STAKE, address(0));
 
-        vm.warp(block.timestamp + EPOCH_DURATION);
+        _warpPastTlockRevealTime(block.timestamp + EPOCH_DURATION);
         _reveal(voter1, contentId, 1, ck1, true, s1);
         _reveal(voter2, contentId, 1, ck2, true, s2);
         _reveal(voter3, contentId, 1, ck3, false, s3);

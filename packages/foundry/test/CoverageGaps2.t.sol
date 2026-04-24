@@ -1958,7 +1958,7 @@ contract RoundSettlementBranchTest is VotingTestBase {
         bytes32 s2
     ) internal {
         RoundLib.Round memory r = RoundEngineReadHelpers.round(engine, contentId, roundId);
-        vm.warp(r.startTime + 5 minutes + 1);
+        _warpPastTlockRevealTime(uint256(r.startTime) + 5 minutes);
         engine.revealVoteByCommitKey(contentId, roundId, ck1, isUp1, s1);
         engine.revealVoteByCommitKey(contentId, roundId, ck2, isUp2, s2);
         RoundLib.Round memory r2 = RoundEngineReadHelpers.round(engine, contentId, roundId);

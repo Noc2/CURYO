@@ -196,7 +196,7 @@ contract UserTransactionGasEstimatesTest is RoundIntegrationTest {
         );
 
         uint256 roundId = votingEngine.currentRoundId(contentId);
-        vm.warp(block.timestamp + EPOCH_DURATION + 1);
+        _warpPastTlockRevealTime(block.timestamp + EPOCH_DURATION);
 
         uint256 gasUsed = _measureCall(
             address(votingEngine),

@@ -833,7 +833,7 @@ contract RoundSettlementEdgeCase3Test is VotingTestBase {
         (commitKeys[2], salts[2]) = _commit(voter3, contentId, true, STAKE);
         uint256 roundId = RoundEngineReadHelpers.activeRoundId(engine, contentId);
         RoundLib.Round memory r = RoundEngineReadHelpers.round(engine, contentId, roundId);
-        vm.warp(r.startTime + 5 minutes + 1);
+        _warpPastTlockRevealTime(uint256(r.startTime) + 5 minutes);
         _revealThreeUpVotes(contentId, roundId, commitKeys, salts);
         engine.settleRound(contentId, roundId);
 
@@ -852,7 +852,7 @@ contract RoundSettlementEdgeCase3Test is VotingTestBase {
         (bytes32 ck2, bytes32 s2) = _commit(voter2, contentId, false, STAKE);
         uint256 roundId = RoundEngineReadHelpers.activeRoundId(engine, contentId);
         RoundLib.Round memory r = RoundEngineReadHelpers.round(engine, contentId, roundId);
-        vm.warp(r.startTime + 5 minutes + 1);
+        _warpPastTlockRevealTime(uint256(r.startTime) + 5 minutes);
         engine.revealVoteByCommitKey(contentId, roundId, ck1, false, s1);
         engine.revealVoteByCommitKey(contentId, roundId, ck2, false, s2);
         engine.settleRound(contentId, roundId);
@@ -904,7 +904,7 @@ contract RoundSettlementEdgeCase3Test is VotingTestBase {
         (bytes32 ck2, bytes32 s2) = _commit(voter2, contentId, true, STAKE);
         uint256 roundId = RoundEngineReadHelpers.activeRoundId(engine, contentId);
         RoundLib.Round memory r = RoundEngineReadHelpers.round(engine, contentId, roundId);
-        vm.warp(r.startTime + 5 minutes + 1);
+        _warpPastTlockRevealTime(uint256(r.startTime) + 5 minutes);
         engine.revealVoteByCommitKey(contentId, roundId, ck1, true, s1);
         engine.revealVoteByCommitKey(contentId, roundId, ck2, true, s2);
         engine.settleRound(contentId, roundId);
@@ -1081,7 +1081,7 @@ contract RoundSettlementEdgeCase3Test is VotingTestBase {
         (commitKeys[2], salts[2]) = _commit(voter3, contentId, false, STAKE);
         uint256 roundId = RoundEngineReadHelpers.activeRoundId(engine, contentId);
         RoundLib.Round memory r = RoundEngineReadHelpers.round(engine, contentId, roundId);
-        vm.warp(r.startTime + 5 minutes + 1);
+        _warpPastTlockRevealTime(uint256(r.startTime) + 5 minutes);
         _revealTwoUpOneDown(contentId, roundId, commitKeys, salts);
         engine.settleRound(contentId, roundId);
 
@@ -1260,7 +1260,7 @@ contract RoundSettlementEdgeCase3Test is VotingTestBase {
 
         RoundLib.Round memory r = RoundEngineReadHelpers.round(engine, contentId, roundId);
         // Warp well past epoch so all commits are revealable
-        vm.warp(r.startTime + 5 minutes + 1);
+        _warpPastTlockRevealTime(uint256(r.startTime) + 5 minutes);
 
         // Reveal all commits
         bytes32[] memory keys = RoundEngineReadHelpers.commitKeys(engine, contentId, roundId);
@@ -1291,7 +1291,7 @@ contract RoundSettlementEdgeCase3Test is VotingTestBase {
     ) internal {
         RoundLib.Round memory r = RoundEngineReadHelpers.round(engine, contentId, roundId);
         // Warp past epoch end so votes are revealable
-        vm.warp(r.startTime + 5 minutes + 1);
+        _warpPastTlockRevealTime(uint256(r.startTime) + 5 minutes);
         engine.revealVoteByCommitKey(contentId, roundId, ck1, isUp1, s1);
         engine.revealVoteByCommitKey(contentId, roundId, ck2, isUp2, s2);
         engine.settleRound(contentId, roundId);

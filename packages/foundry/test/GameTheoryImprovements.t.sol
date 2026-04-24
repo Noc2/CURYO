@@ -185,7 +185,7 @@ contract GameTheoryImprovementsTest is VotingTestBase {
         _commit(alice, cid, false, 100e6); // DOWN, epoch-1
 
         // --- Epoch-2 commits (informed, after epoch-1 ends) ---
-        vm.warp(roundStart + EPOCH_DURATION + 1);
+        _warpPastTlockRevealTime(roundStart + EPOCH_DURATION);
         _commit(bob, cid, true, 100e6); // UP, epoch-2
         _commit(carol, cid, true, 100e6); // UP, epoch-2
         _commit(dave, cid, true, 100e6); // UP, epoch-2
@@ -195,7 +195,7 @@ contract GameTheoryImprovementsTest is VotingTestBase {
         // Reveal all votes. Epoch-1 commits are revealable after roundStart + EPOCH_DURATION.
         // Epoch-2 commits are revealable after roundStart + 2 * EPOCH_DURATION.
         // Warp past epoch-2 end so all can be revealed.
-        vm.warp(roundStart + 2 * EPOCH_DURATION + 1);
+        _warpPastTlockRevealTime(roundStart + 2 * EPOCH_DURATION);
 
         _reveal(alice, cid, roundId, false);
         _reveal(bob, cid, roundId, true);
@@ -244,13 +244,13 @@ contract GameTheoryImprovementsTest is VotingTestBase {
         _commit(bob, cid, false, 100e6); // DOWN, epoch-1
 
         // --- Epoch-2 commit ---
-        vm.warp(roundStart + EPOCH_DURATION + 1);
+        _warpPastTlockRevealTime(roundStart + EPOCH_DURATION);
         _commit(carol, cid, true, 100e6); // UP, epoch-2
 
         uint256 roundId = engine.currentRoundId(cid);
 
         // Warp past epoch-2 end to allow all reveals
-        vm.warp(roundStart + 2 * EPOCH_DURATION + 1);
+        _warpPastTlockRevealTime(roundStart + 2 * EPOCH_DURATION);
 
         _reveal(alice, cid, roundId, true);
         _reveal(bob, cid, roundId, false);
@@ -328,7 +328,7 @@ contract GameTheoryImprovementsTest is VotingTestBase {
         uint256 roundId = engine.currentRoundId(cid);
 
         // Warp past epoch-1 end to make commits revealable
-        vm.warp(roundStart + EPOCH_DURATION + 1);
+        _warpPastTlockRevealTime(roundStart + EPOCH_DURATION);
 
         _reveal(alice, cid, roundId, true);
         _reveal(bob, cid, roundId, true);
@@ -406,7 +406,7 @@ contract GameTheoryImprovementsTest is VotingTestBase {
         uint256 roundId = engine.currentRoundId(cid);
 
         // Warp past epoch-1 end
-        vm.warp(roundStart + EPOCH_DURATION + 1);
+        _warpPastTlockRevealTime(roundStart + EPOCH_DURATION);
 
         _reveal(alice, cid, roundId, true);
         _reveal(bob, cid, roundId, true);

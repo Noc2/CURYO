@@ -186,7 +186,7 @@ contract AdversarialTests is VotingTestBase {
         RoundLib.Round memory round = RoundEngineReadHelpers.round(engine, contentId, roundId);
         // Warp past the epoch so every committed vote is revealable, then reveal all
         // supplied commits. Settlement still requires no past-epoch unrevealed votes.
-        vm.warp(round.startTime + EPOCH_DURATION + 1);
+        _warpPastTlockRevealTime(uint256(round.startTime) + EPOCH_DURATION);
         for (uint256 i = 0; i < commitKeys.length; i++) {
             _reveal(contentId, roundId, commitKeys[i]);
         }
@@ -391,7 +391,7 @@ contract AdversarialTests is VotingTestBase {
 
         // Move into epoch 2, add voter3 before the reveal threshold is reached,
         // then reveal the epoch 1 voters.
-        vm.warp(round.startTime + EPOCH_DURATION + 1);
+        _warpPastTlockRevealTime(uint256(round.startTime) + EPOCH_DURATION);
         _commit(voter3, contentId, true, 25e6);
         _reveal(contentId, roundId, ck1);
         _reveal(contentId, roundId, ck2);
@@ -457,7 +457,7 @@ contract AdversarialTests is VotingTestBase {
         RoundLib.Round memory round = RoundEngineReadHelpers.round(engine, contentId, roundId);
 
         // Reveal to reach threshold
-        vm.warp(round.startTime + EPOCH_DURATION + 1);
+        _warpPastTlockRevealTime(uint256(round.startTime) + EPOCH_DURATION);
         _reveal(contentId, roundId, ck1);
         _reveal(contentId, roundId, ck2);
 
@@ -651,7 +651,7 @@ contract AdversarialTests is VotingTestBase {
         bytes32 ck2 = _commitKey(voter2, ch2);
 
         RoundLib.Round memory round = RoundEngineReadHelpers.round(eng2, 1, 1);
-        vm.warp(round.startTime + EPOCH_DURATION + 1);
+        _warpPastTlockRevealTime(uint256(round.startTime) + EPOCH_DURATION);
 
         // Reveal
         eng2.revealVoteByCommitKey(1, 1, ck1, true, salt1);
@@ -927,7 +927,7 @@ contract AdversarialTests is VotingTestBase {
         cks[1] = ck2;
 
         RoundLib.Round memory round = RoundEngineReadHelpers.round(engine, contentId, roundId);
-        vm.warp(round.startTime + EPOCH_DURATION + 1);
+        _warpPastTlockRevealTime(uint256(round.startTime) + EPOCH_DURATION);
         _reveal(contentId, roundId, ck1);
         _reveal(contentId, roundId, ck2);
 
@@ -966,13 +966,14 @@ contract AdversarialTests is VotingTestBase {
         RoundLib.Round memory round = RoundEngineReadHelpers.round(engine, contentId, roundId);
 
         // Wait for epoch 1 to end and add the epoch-2 voter before threshold is reached.
-        vm.warp(round.startTime + EPOCH_DURATION + 1);
+        _warpPastTlockRevealTime(uint256(round.startTime) + EPOCH_DURATION);
         (bytes32 ck3,) = _commit(voter3, contentId, true, 100e6);
+        uint256 voter3RevealableAfter = block.timestamp + EPOCH_DURATION;
         _reveal(contentId, roundId, ck1);
         _reveal(contentId, roundId, ck2);
 
         // Wait for epoch 2 to end, reveal voter3
-        vm.warp(round.startTime + 2 * EPOCH_DURATION + 1);
+        _warpPastTlockRevealTime(voter3RevealableAfter);
         _reveal(contentId, roundId, ck3);
 
         // Settle
@@ -1058,7 +1059,7 @@ contract AdversarialTests is VotingTestBase {
         bytes32 commitKey = _commitKey(voter1, commitHash);
 
         RoundLib.Round memory round = RoundEngineReadHelpers.round(engine, contentId, roundId);
-        vm.warp(round.startTime + EPOCH_DURATION + 1);
+        _warpPastTlockRevealTime(uint256(round.startTime) + EPOCH_DURATION);
 
         bytes32 wrongSalt = keccak256("wrong");
         vm.expectRevert(RoundVotingEngine.HashMismatch.selector);
@@ -1091,7 +1092,7 @@ contract AdversarialTests is VotingTestBase {
         bytes32 commitKey = _commitKey(voter1, commitHash);
 
         RoundLib.Round memory round = RoundEngineReadHelpers.round(engine, contentId, roundId);
-        vm.warp(round.startTime + EPOCH_DURATION + 1);
+        _warpPastTlockRevealTime(uint256(round.startTime) + EPOCH_DURATION);
 
         vm.expectRevert(RoundVotingEngine.HashMismatch.selector);
         engine.revealVoteByCommitKey(contentId, roundId, commitKey, false, salt); // wrong direction

@@ -308,7 +308,7 @@ contract ContentRegistryBranchesTest is VotingTestBase {
         (bytes32 ck3, bytes32 salt3) = _commit(downVoter, contentId, false);
 
         roundId = RoundEngineReadHelpers.activeRoundId(votingEngine, contentId);
-        vm.warp(block.timestamp + 1 hours + 1);
+        _warpPastTlockRevealTime(block.timestamp + 1 hours);
         votingEngine.revealVoteByCommitKey(contentId, roundId, ck1, true, salt1);
         votingEngine.revealVoteByCommitKey(contentId, roundId, ck2, true, salt2);
         votingEngine.revealVoteByCommitKey(contentId, roundId, ck3, false, salt3);
@@ -1543,7 +1543,7 @@ contract ContentRegistryBranchesTest is VotingTestBase {
         (bytes32 commitKey, bytes32 salt) = _commit(voter1, 1, true);
         uint256 roundId = RoundEngineReadHelpers.activeRoundId(votingEngine, 1);
 
-        vm.warp(T0 + 1 hours + 1);
+        _warpPastTlockRevealTime(block.timestamp + 1 hours);
         votingEngine.revealVoteByCommitKey(1, roundId, commitKey, true, salt);
 
         assertEq(RoundEngineReadHelpers.activeRoundId(votingEngine, 1), roundId, "Round should still be open");
@@ -1564,7 +1564,7 @@ contract ContentRegistryBranchesTest is VotingTestBase {
         (bytes32 commitKey, bytes32 salt) = _commit(voter1, 1, true);
         uint256 roundId = RoundEngineReadHelpers.activeRoundId(votingEngine, 1);
 
-        vm.warp(T0 + 1 hours + 1);
+        _warpPastTlockRevealTime(block.timestamp + 1 hours);
         votingEngine.revealVoteByCommitKey(1, roundId, commitKey, true, salt);
 
         vm.warp(T0 + 31 days);

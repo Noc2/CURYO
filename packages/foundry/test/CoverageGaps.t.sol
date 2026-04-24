@@ -896,7 +896,7 @@ contract RoundSettlementEdgeCaseTest is VotingTestBase {
         RoundLib.Round memory roundBefore = RoundEngineReadHelpers.round(engine2, contentId, roundId);
 
         // Warp past epochDuration to reveal
-        vm.warp(roundBefore.startTime + 5 minutes + 1);
+        _warpPastTlockRevealTime(uint256(roundBefore.startTime) + 5 minutes);
 
         bytes32 commitKey1 = keccak256(abi.encodePacked(voter1, commitHash1));
         bytes32 commitKey2 = keccak256(abi.encodePacked(voter2, commitHash2));
@@ -1015,7 +1015,7 @@ contract RoundSettlementEdgeCaseTest is VotingTestBase {
         RoundLib.Round memory r0 = RoundEngineReadHelpers.round(engine, contentId, roundId);
 
         // Reveal after epochDuration
-        vm.warp(r0.startTime + 5 minutes + 1);
+        _warpPastTlockRevealTime(uint256(r0.startTime) + 5 minutes);
         engine.revealVoteByCommitKey(contentId, roundId, ck1, true, salt1);
         engine.revealVoteByCommitKey(contentId, roundId, ck2, false, salt2);
 
@@ -1086,7 +1086,7 @@ contract RoundSettlementEdgeCaseTest is VotingTestBase {
 
         RoundLib.Round memory r0 = RoundEngineReadHelpers.round(engine, contentId, roundId);
         // Reveal the vote (need epoch to end first)
-        vm.warp(r0.startTime + 5 minutes + 1);
+        _warpPastTlockRevealTime(uint256(r0.startTime) + 5 minutes);
         engine.revealVoteByCommitKey(contentId, roundId, ck1, true, salt1);
 
         // Not enough votes to settle (only 1 revealed, minVoters=2)
@@ -1232,7 +1232,7 @@ contract RoundSettlementEdgeCaseTest is VotingTestBase {
         RoundLib.Round memory r = RoundEngineReadHelpers.round(engine, contentId, roundId);
 
         // Warp past epochDuration to reveal
-        vm.warp(r.startTime + 5 minutes + 1);
+        _warpPastTlockRevealTime(uint256(r.startTime) + 5 minutes);
         engine.revealVoteByCommitKey(contentId, roundId, ck1, true, s1);
         engine.revealVoteByCommitKey(contentId, roundId, ck2, false, s2);
 

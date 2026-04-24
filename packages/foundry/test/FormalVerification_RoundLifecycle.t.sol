@@ -150,7 +150,7 @@ contract FormalVerification_RoundLifecycleTest is VotingTestBase {
         uint256 roundId = RoundEngineReadHelpers.activeRoundId(engine, cid);
         if (roundId == 0) return;
         RoundLib.Round memory r = RoundEngineReadHelpers.round(engine, cid, roundId);
-        vm.warp(r.startTime + EPOCH_DURATION + 1);
+        _warpPastTlockRevealTime(uint256(r.startTime) + EPOCH_DURATION);
         bytes32[] memory keys = RoundEngineReadHelpers.commitKeys(engine, cid, roundId);
         for (uint256 i = 0; i < keys.length; i++) {
             RoundLib.Commit memory c = RoundEngineReadHelpers.commit(engine, cid, roundId, keys[i]);
@@ -197,7 +197,7 @@ contract FormalVerification_RoundLifecycleTest is VotingTestBase {
         _vote(v[0], cid, true, 10e6);
 
         // Advance time past first epoch boundary
-        vm.warp(block.timestamp + EPOCH_DURATION + 1);
+        _warpPastTlockRevealTime(block.timestamp + EPOCH_DURATION);
 
         // Second vote is in epoch 2
         (bytes32 ck1,) = _vote(v[1], cid, false, 10e6);
@@ -342,7 +342,7 @@ contract FormalVerification_RoundLifecycleTest is VotingTestBase {
         engine.revealVoteByCommitKey(cid, rid, ck0, true, s0);
 
         // After epoch ends: reveal succeeds
-        vm.warp(round.startTime + EPOCH_DURATION + 1);
+        _warpPastTlockRevealTime(uint256(round.startTime) + EPOCH_DURATION);
         engine.revealVoteByCommitKey(cid, rid, ck0, true, s0);
         engine.revealVoteByCommitKey(cid, rid, ck1, false, s1);
 
@@ -372,7 +372,7 @@ contract FormalVerification_RoundLifecycleTest is VotingTestBase {
         RoundLib.Round memory round = RoundEngineReadHelpers.round(engine, cid, rid);
 
         // Reveal all after epoch ends
-        vm.warp(round.startTime + EPOCH_DURATION + 1);
+        _warpPastTlockRevealTime(uint256(round.startTime) + EPOCH_DURATION);
         engine.revealVoteByCommitKey(cid, rid, ck0, true, s0);
         engine.revealVoteByCommitKey(cid, rid, ck1, true, s1);
         engine.revealVoteByCommitKey(cid, rid, ck2, true, s2);
@@ -402,7 +402,7 @@ contract FormalVerification_RoundLifecycleTest is VotingTestBase {
         RoundLib.Round memory round = RoundEngineReadHelpers.round(engine, cid, rid);
 
         // Reveal all after epoch ends
-        vm.warp(round.startTime + EPOCH_DURATION + 1);
+        _warpPastTlockRevealTime(uint256(round.startTime) + EPOCH_DURATION);
         engine.revealVoteByCommitKey(cid, rid, ck0, true, s0);
         engine.revealVoteByCommitKey(cid, rid, ck1, false, s1);
 
@@ -459,7 +459,7 @@ contract FormalVerification_RoundLifecycleTest is VotingTestBase {
         uint256 rid = RoundEngineReadHelpers.activeRoundId(engine, cid);
         RoundLib.Round memory round = RoundEngineReadHelpers.round(engine, cid, rid);
 
-        vm.warp(round.startTime + EPOCH_DURATION + 1);
+        _warpPastTlockRevealTime(uint256(round.startTime) + EPOCH_DURATION);
         engine.revealVoteByCommitKey(cid, rid, ck0, true, s0);
 
         vm.warp(round.startTime + MAX_DURATION + ProtocolConfig(address(engine.protocolConfig())).revealGracePeriod());

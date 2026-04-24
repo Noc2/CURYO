@@ -145,7 +145,7 @@ contract GasBudgetTest is RoundIntegrationTest {
         vm.stopPrank();
 
         uint256 roundId = RoundEngineReadHelpers.activeRoundId(votingEngine, contentId);
-        vm.warp(block.timestamp + EPOCH_DURATION + 1);
+        _warpPastTlockRevealTime(block.timestamp + EPOCH_DURATION);
 
         uint256 gasUsed = _measureCall(
             address(votingEngine),
@@ -185,7 +185,7 @@ contract GasBudgetTest is RoundIntegrationTest {
 
         ProtocolConfig config = ProtocolConfig(address(votingEngine.protocolConfig()));
         vm.startPrank(owner);
-        config.setConfig(5 minutes, 7 days, 2, 200);
+        _setTlockRoundConfig(config, 5 minutes, 7 days, 2, 200);
         vm.stopPrank();
 
         uint256 contentId = _submitContent();
@@ -266,7 +266,7 @@ contract GasBudgetTest is RoundIntegrationTest {
         uint256 roundId = RoundEngineReadHelpers.activeRoundId(votingEngine, contentId);
         RoundLib.Round memory round = RoundEngineReadHelpers.round(votingEngine, contentId, roundId);
 
-        vm.warp(round.startTime + EPOCH_DURATION + 1);
+        _warpPastTlockRevealTime(uint256(round.startTime) + EPOCH_DURATION);
         votingEngine.revealVoteByCommitKey(contentId, roundId, _commitKey(voter1, ch1), true, s1);
         votingEngine.revealVoteByCommitKey(contentId, roundId, _commitKey(voter2, ch2), true, s2);
 

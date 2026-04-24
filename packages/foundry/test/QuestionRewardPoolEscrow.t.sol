@@ -384,7 +384,7 @@ contract QuestionRewardPoolEscrowTest is VotingTestBase {
             })
         );
 
-        vm.warp(block.timestamp + EPOCH_DURATION + 1);
+        _warpPastTlockRevealTime(block.timestamp + EPOCH_DURATION);
         votingEngine.revealVoteByCommitKey(contentId, roundId, commitKey1, true, salt1);
         votingEngine.revealVoteByCommitKey(contentId, roundId, commitKey2, true, salt2);
         votingEngine.revealVoteByCommitKey(contentId, roundId, commitKey3, false, salt3);
@@ -1000,7 +1000,7 @@ contract QuestionRewardPoolEscrowTest is VotingTestBase {
         }
 
         roundId = RoundEngineReadHelpers.activeRoundId(votingEngine, contentId);
-        vm.warp(block.timestamp + EPOCH_DURATION + 1);
+        _warpPastTlockRevealTime(block.timestamp + EPOCH_DURATION);
 
         for (uint256 i = 0; i < voters.length; i++) {
             votingEngine.revealVoteByCommitKey(contentId, roundId, commitKeys[i], directions[i], salts[i]);
@@ -1033,7 +1033,7 @@ contract QuestionRewardPoolEscrowTest is VotingTestBase {
 
         roundId = RoundEngineReadHelpers.activeRoundId(votingEngine, contentId);
         RoundLib.Round memory round = RoundEngineReadHelpers.round(votingEngine, contentId, roundId);
-        vm.warp(round.startTime + EPOCH_DURATION + 1);
+        _warpPastTlockRevealTime(uint256(round.startTime) + EPOCH_DURATION);
 
         for (uint256 i = 0; i < voters.length - 1; i++) {
             votingEngine.revealVoteByCommitKey(contentId, roundId, commitKeys[i], directions[i], salts[i]);

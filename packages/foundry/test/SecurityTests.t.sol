@@ -247,7 +247,7 @@ contract SecurityReentrancyTest is SecurityHarnessBase {
         RoundLib.Round memory round = RoundEngineReadHelpers.round(votingEngine, contentId, roundId);
 
         // Reveal after epoch ends
-        vm.warp(round.startTime + EPOCH_DURATION + 1);
+        _warpPastTlockRevealTime(uint256(round.startTime) + EPOCH_DURATION);
         _revealFromCiphertext(contentId, roundId, ck1);
         _revealFromCiphertext(contentId, roundId, ck2);
 
@@ -542,7 +542,7 @@ contract SecuritySettlementTimingTest is SecurityHarnessBase {
         uint256 roundId = RoundEngineReadHelpers.activeRoundId(votingEngine, contentId);
         RoundLib.Round memory round = RoundEngineReadHelpers.round(votingEngine, contentId, roundId);
 
-        vm.warp(round.startTime + EPOCH_DURATION + 1);
+        _warpPastTlockRevealTime(uint256(round.startTime) + EPOCH_DURATION);
         _revealFromCiphertext(contentId, roundId, ck1);
         _revealFromCiphertext(contentId, roundId, ck2);
 
@@ -566,7 +566,7 @@ contract SecuritySettlementTimingTest is SecurityHarnessBase {
         uint256 roundId = RoundEngineReadHelpers.activeRoundId(votingEngine, contentId);
         RoundLib.Round memory round = RoundEngineReadHelpers.round(votingEngine, contentId, roundId);
 
-        vm.warp(round.startTime + EPOCH_DURATION + 1);
+        _warpPastTlockRevealTime(uint256(round.startTime) + EPOCH_DURATION);
         _revealFromCiphertext(contentId, roundId, ck1);
         _revealFromCiphertext(contentId, roundId, ck2);
 

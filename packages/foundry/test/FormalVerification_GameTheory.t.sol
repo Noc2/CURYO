@@ -148,7 +148,7 @@ contract FormalVerification_GameTheoryTest is VotingTestBase {
         uint256 roundId = RoundEngineReadHelpers.activeRoundId(engine, cid);
         if (roundId == 0) return;
         RoundLib.Round memory r = RoundEngineReadHelpers.round(engine, cid, roundId);
-        vm.warp(r.startTime + 1 hours + 1);
+        _warpPastTlockRevealTime(uint256(r.startTime) + 1 hours);
         bytes32[] memory keys = RoundEngineReadHelpers.commitKeys(engine, cid, roundId);
         for (uint256 i = 0; i < keys.length; i++) {
             RoundLib.Commit memory c = RoundEngineReadHelpers.commit(engine, cid, roundId, keys[i]);
@@ -564,7 +564,7 @@ contract FormalVerification_GameTheoryTest is VotingTestBase {
         RoundLib.Round memory round = RoundEngineReadHelpers.round(engine, cid, rid);
 
         // Reveal all after epoch ends
-        vm.warp(round.startTime + 1 hours + 1);
+        _warpPastTlockRevealTime(uint256(round.startTime) + 1 hours);
         bytes32[] memory keys = RoundEngineReadHelpers.commitKeys(engine, cid, rid);
         for (uint256 i = 0; i < keys.length; i++) {
             RoundLib.Commit memory c = RoundEngineReadHelpers.commit(engine, cid, rid, keys[i]);
@@ -591,7 +591,7 @@ contract FormalVerification_GameTheoryTest is VotingTestBase {
         uint256 rid = RoundEngineReadHelpers.activeRoundId(engine, cid);
         RoundLib.Round memory r = RoundEngineReadHelpers.round(engine, cid, rid);
 
-        vm.warp(r.startTime + 1 hours + 1);
+        _warpPastTlockRevealTime(uint256(r.startTime) + 1 hours);
         engine.revealVoteByCommitKey(cid, rid, ck1, true, s1);
 
         vm.warp(block.timestamp + 1 hours + 1);
