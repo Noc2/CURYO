@@ -105,7 +105,9 @@ export function ShareContentModal({
 
         <h3 className="text-lg font-semibold text-center mb-1">Share this content</h3>
         <p className="mb-2 text-center text-base font-medium text-base-content line-clamp-2">{title}</p>
-        <p className="mb-5 text-center text-sm text-base-content/75 line-clamp-2">{description}</p>
+        {description ? (
+          <p className="mb-5 text-center text-sm text-base-content/75 line-clamp-2">{description}</p>
+        ) : null}
 
         {/* Share buttons */}
         <div className="space-y-2.5">

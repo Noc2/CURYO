@@ -398,7 +398,7 @@ function normalizeQuestion(
 
   const fieldPrefix = `questions[${index}]`;
   const title = readString(value.title, `${fieldPrefix}.title`);
-  const description = readString(value.description, `${fieldPrefix}.description`);
+  const description = readOptionalString(value.description);
   const titleError = getContentTitleValidationError(title);
   if (titleError) {
     throw new X402QuestionInputError(titleError);

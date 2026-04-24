@@ -801,21 +801,14 @@ contract ContentRegistryCoverageTest is VotingTestBase {
         vm.stopPrank();
     }
 
-    function test_SubmitContentEmptyDescriptionReverts() public {
+    function test_SubmitContentEmptyDescriptionAllowed() public {
         vm.startPrank(submitter);
         hrep.approve(address(registry), 10e6);
-        vm.expectRevert("Description required");
-        registry.submitQuestion(
-            "https://example.com/context",
-            _singleImageUrls("https://example.com/test.jpg"),
-            "",
-            "title",
-            "",
-            "tag1",
-            1,
-            bytes32(0)
-        );
+        uint256 id =
+            _submitContentWithReservation(registry, "https://example.com/empty-description", "title", "", "tag1", 1);
         vm.stopPrank();
+
+        assertEq(id, 1);
     }
 
     function test_SubmitContentTitleTooLongReverts() public {

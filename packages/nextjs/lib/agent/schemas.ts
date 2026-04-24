@@ -38,7 +38,7 @@ export const agentQuestionInputSchema = {
   properties: {
     categoryId: { description: "Curyo category id.", type: ["integer", "string"] },
     contextUrl: { description: "HTTPS context URL voters should inspect.", type: "string" },
-    description: { description: "Question details shown to voters.", type: "string" },
+    description: { description: "Optional question details shown to voters.", type: "string" },
     imageUrls: {
       description: "Optional direct HTTPS image URLs.",
       items: { type: "string" },
@@ -64,7 +64,7 @@ export const agentQuestionInputSchema = {
     videoUrl: { description: "Optional YouTube URL.", type: "string" },
     ...templateSelectorSchema.properties,
   },
-  required: ["title", "description", "contextUrl", "categoryId", "tags"],
+  required: ["title", "contextUrl", "categoryId", "tags"],
   type: "object",
 } satisfies JsonSchema;
 

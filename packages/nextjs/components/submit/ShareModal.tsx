@@ -87,7 +87,7 @@ export function ShareModal({
 
         <h3 className="text-xl font-semibold text-center mb-2">Question Asked!</h3>
         <p className="mb-2 text-center text-lg font-medium text-base-content line-clamp-2">{title}</p>
-        <p className="text-base text-base-content/60 text-center mb-6">{description}</p>
+        {description ? <p className="text-base text-base-content/60 text-center mb-6">{description}</p> : null}
 
         {/* Share buttons */}
         <div className="space-y-3">

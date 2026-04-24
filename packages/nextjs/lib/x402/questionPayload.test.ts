@@ -40,6 +40,18 @@ test("parseX402QuestionRequest normalizes a valid paid question payload", () => 
   assert.deepEqual(payload.questions[0].imageUrls, ["https://example.com/preview.jpg"]);
 });
 
+test("parseX402QuestionRequest accepts an omitted description", () => {
+  const payload = parseX402QuestionRequest({
+    ...VALID_REQUEST,
+    question: {
+      ...VALID_REQUEST.question,
+      description: undefined,
+    },
+  });
+
+  assert.equal(payload.questions[0].description, "");
+});
+
 test("parseX402QuestionRequest accepts ordered question bundles", () => {
   const payload = parseX402QuestionRequest({
     ...VALID_REQUEST,

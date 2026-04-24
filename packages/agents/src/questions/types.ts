@@ -4,7 +4,7 @@ export type JsonObject = Record<string, unknown>;
 
 export type AgentQuestionExample = {
   title: string;
-  description: string;
+  description?: string;
   contextUrl: string;
   categoryId: string | number | bigint;
   tags: string[] | string;

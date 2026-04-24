@@ -738,7 +738,6 @@ contract ContentRegistry is Initializable, AccessControlUpgradeable, PausableUpg
         require(bytes(metadata.url).length <= MAX_URL_LENGTH, "URL too long");
         require(bytes(metadata.title).length > 0, "Question required");
         require(bytes(metadata.title).length <= MAX_QUESTION_LENGTH, "Question too long");
-        require(bytes(metadata.description).length > 0, "Description required");
         require(bytes(metadata.description).length <= MAX_DESCRIPTION_LENGTH, "Description too long");
         require(bytes(metadata.tags).length > 0, "Tags required");
         require(bytes(metadata.tags).length <= MAX_TAGS_LENGTH, "Tags too long");

@@ -63,7 +63,6 @@ export function lintAgentQuestion(
     pushFinding(findings, "warning", `${path}.title`, "Long titles with conjunctions often hide multiple decisions.");
   }
 
-  if (!description) pushFinding(findings, "error", `${path}.description`, "Description is required.");
   if (description.length > 280) {
     pushFinding(findings, "warning", `${path}.description`, "Keep descriptions concise enough for voters to scan quickly.");
   }

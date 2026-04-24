@@ -24,7 +24,7 @@ function fail(message) {
 
 function usage() {
   fail(
-    "Usage: node buildQuestionBundleReservation.js <submitter> <rewardAsset> <rewardAmount> <requiredVoters> <requiredSettledRounds> <bountyClosesAt> <feedbackClosesAt> <epochDuration> <maxDuration> <minVoters> <maxVoters> -- <contextUrl> <imageUrlsJson> <videoUrl> <title> <description> <tags> <categoryId> <salt> [question args...]"
+    "Usage: node buildQuestionBundleReservation.js <submitter> <rewardAsset> <rewardAmount> <requiredVoters> <requiredSettledRounds> <bountyClosesAt> <feedbackClosesAt> <epochDuration> <maxDuration> <minVoters> <maxVoters> -- <contextUrl> <imageUrlsJson> <videoUrl> <title> <description|empty> <tags> <categoryId> <salt> [question args...]"
   );
 }
 

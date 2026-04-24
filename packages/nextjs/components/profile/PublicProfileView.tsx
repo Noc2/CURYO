@@ -1023,7 +1023,9 @@ export function PublicProfileView({ address, embedded = false }: PublicProfileVi
                           {categoryName}
                         </div>
                         <div className="mt-1 line-clamp-2 text-lg font-semibold leading-7">{submission.title}</div>
-                        <p className="mt-1 line-clamp-2 text-sm text-base-content/65">{submission.description}</p>
+                        {submission.description ? (
+                          <p className="mt-1 line-clamp-2 text-sm text-base-content/65">{submission.description}</p>
+                        ) : null}
                       </div>
                       <div className="rounded-full bg-base-content/[0.06] px-2.5 py-1 text-sm font-mono text-base-content/70">
                         <span className="font-semibold tabular-nums text-base-content/85">{ratingScore}</span>

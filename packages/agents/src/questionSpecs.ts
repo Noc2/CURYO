@@ -21,7 +21,7 @@ export type AgentQuestionSpecInput = {
   };
   categoryId: bigint | string;
   contextUrl: string;
-  description: string;
+  description?: string;
   imageUrls: readonly string[];
   roundConfig?: AgentQuestionRoundConfig;
   study?: {
@@ -81,7 +81,7 @@ export function buildQuestionMetadata(input: AgentQuestionSpecInput): JsonValue 
       : null,
     categoryId: input.categoryId.toString(),
     contextUrl: input.contextUrl,
-    description: input.description,
+    description: input.description ?? "",
     imageUrls: [...input.imageUrls],
     roundConfig: input.roundConfig ? serializeRoundConfig(input.roundConfig) : null,
     schemaVersion: "curyo.question.v1",
