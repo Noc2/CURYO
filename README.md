@@ -5,7 +5,9 @@
   <a href="LICENSE"><img src="https://img.shields.io/badge/License-MIT-yellow.svg?style=flat-square" alt="License: MIT"></a>
 </p>
 
-The web is drowning in clickbait and fake engagement. As AI makes it effortless to generate vast amounts of content, the flood of low-effort material will only accelerate — making trustworthy quality signals more critical than ever. Curyo fights back by tying every vote to a verified human and making every question submission carry a non-refundable Bounty funded in cREP or USDC. Every submission starts from a required context URL, optional preview media, governed per-question round settings, and the same public question flow for humans, bots, and AI agents when they need verified feedback instead of a guess.
+Curyo is a verified human feedback layer for agents, bots, and people. When software reaches a question it cannot answer with confidence, it can ask one focused question, attach source context, fund a bounty in cREP or Celo USDC, and get back a public signal from verified humans who stake cREP on their judgment.
+
+The same question flow works for a person in the web app, a bot paying through x402, or an MCP/SDK integration. Each ask carries explicit round settings, optional preview media, claimable rewards for eligible voters, and an auditable result that other agents and frontends can read later.
 
 ## Table of Contents
 
@@ -19,18 +21,26 @@ The web is drowning in clickbait and fake engagement. As AI makes it effortless 
 
 ## Background
 
-Voters predict whether content's rating will go up or down and back their predictions with cREP token stakes. Submissions start as questions, and every question must attach a non-refundable Bounty funded in cREP or USDC. The creator can select blind phase, maximum duration, settlement voters, and voter cap within governance-set bounds. Bounty terms can set minimum voter and settlement thresholds before payout, and Bounty payouts go to eligible voters with frontend fees handled separately from the Bounty itself.
+AI agents are increasingly good at drafting, searching, and planning, but they still hit questions where local context, taste, evidence quality, or social judgment matters. Curyo turns those moments into public, paid feedback rounds instead of private polls or unstructured comment threads.
 
-- **Skin in the Game** — every vote requires a token stake as a conviction signal
-- **Sybil Resistant** — one soulbound Voter ID NFT per verified human for voting and other identity-gated actions
-- **Per-Content Rounds** — each content item accumulates votes; rounds settle once the revealed-vote threshold is reached and past-epoch reveal constraints are satisfied
-- **tlock Commit-Reveal** — votes are encrypted with timelock encryption, commits bind explicit drand metadata (`targetRound`, `drandChainHash`), and malformed/non-armored ciphertexts are rejected on-chain; the keeper-assisted/self-reveal path still hides vote directions until reveal and keeps zk-style proofing as a future hardening path
-- **Question-First Submissions** — content starts as a short question capped at 120 characters, with a required context URL and optional image/YouTube preview media
-- **Governed Round Settings** — creators choose blind phase, max duration, settlement voters, and voter cap inside governance bounds
-- **Bot-to-Human Feedback** — bots and AI agents submit the same way humans do, then read the stake-backed human signal that comes back
-- **x402 Agent Payments** — bots can call the hosted `/api/x402/questions` endpoint, pay in Celo USDC from their bot wallet, and let the server executor submit the question plus USDC Bounty on-chain
-- **Bounties** — fund specific questions, pay in USDC on Celo, show users USD amounts, and reserve 3% for eligible frontend operators
-- **Bounty Payouts** — eligible revealed voters claim the voter share within a qualified question round once the Bounty terms are satisfied
+The core loop is:
+
+1. **Ask** — submit a short question with a required context URL and optional image or YouTube preview.
+2. **Fund** — attach a non-refundable bounty in cREP or Celo USDC.
+3. **Vote** — verified humans stake cREP on whether the question's visible rating should move up or down.
+4. **Settle** — commit-reveal voting keeps directions hidden through the blind phase, then the round resolves once the selected reveal and voter thresholds are met.
+5. **Use** — agents and frontends read the settled score, revealed votes, optional feedback, and reward state from the public protocol surface.
+
+Key pieces:
+
+- **Question-First Submissions** — humans, bots, and agents all use the same permissionless ask flow
+- **Verified Human Voters** — one soulbound Voter ID NFT per verified human for voting and other identity-gated actions
+- **Staked Judgment** — every vote requires a cREP stake as a conviction signal
+- **tlock Commit-Reveal** — votes are encrypted with timelock encryption, commits bind explicit drand metadata (`targetRound`, `drandChainHash`), and malformed/non-armored ciphertexts are rejected on-chain
+- **Governed Round Settings** — question creators choose blind phase, max duration, settlement voters, and voter cap inside governance bounds
+- **Agent-Ready Integrations** — SDK helpers, MCP-shaped tools, and the hosted `/api/x402/questions` endpoint let agents quote, submit, track, and read results
+- **Bounties and Feedback Bonuses** — question bounties pay eligible revealed voters, while optional USDC Feedback Bonuses can reward useful hidden notes after settlement
+- **Frontend Attribution** — bounty accounting reserves the configured operator share for eligible frontend operators
 - **Security Guardrails** — duplicate checks, moderation policy, and claim gating keep the submission surface narrow
 
 See the in-app documentation at `/docs` for detailed game theory analysis and security information.
@@ -47,7 +57,7 @@ Curyo is a monorepo with eight packages:
 | `packages/sdk`        | Framework-agnostic frontend SDK for hosted reads, vote helpers, and frontend attribution |
 | `packages/ponder`     | Ponder indexer for on-chain event processing and API                                     |
 | `packages/keeper`     | Standalone keeper service for keeper-assisted round settlement                           |
-| `packages/bot`        | Manual CLI bot for content submission and voting                                         |
+| `packages/bot`        | Manual CLI bot for question submission and voting                                        |
 | `packages/node-utils` | Shared Node.js utilities used by services and scripts                                    |
 
 ```
@@ -57,7 +67,7 @@ node-utils (shared)  → keystore and other reusable Node helpers
 sdk        (shared)  → hosted read client + vote/frontend integration helpers
 ponder     (index)   → REST API at localhost:42069
 nextjs     (frontend)→ reads contracts via thirdweb, wagmi, and the Ponder API
-keeper     (service) → settles rounds, finalizes reveal failures, cleans up unrevealed votes, marks dormant content
+keeper     (service) → settles question rounds, finalizes reveal failures, cleans up unrevealed votes, marks dormant asks
 ```
 
 Built with Next.js, Foundry, Ponder, thirdweb, wagmi, viem, Drizzle ORM, and PostgreSQL.
@@ -198,8 +208,7 @@ CI runs the smoke, lifecycle, and keeper-backed E2E suites separately, so `yarn 
 
 In-app documentation is available at `/docs` when running the frontend. The `/docs/ai` page covers the AI integration shape, x402-paid question submissions, governed per-question round settings, the bot-to-human feedback loop, and how agents ask humans for judgment through the same submission path as everyone else.
 
-For app integrations, the framework-agnostic SDK lives in `packages/sdk` and provides hosted/indexed reads plus
-vote/frontend helpers for existing websites and apps.
+For app integrations, the framework-agnostic SDK lives in `packages/sdk` and provides hosted/indexed reads, vote/frontend helpers, and agent helpers for quote → ask → wait → result flows.
 
 Additional local interface:
 
