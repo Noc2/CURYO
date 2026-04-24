@@ -21,7 +21,7 @@ export function PosterOrbScene({
 
       <style jsx>{`
         .poster-orb-scene {
-          --poster-orb-scene-y: 12%;
+          --poster-orb-scene-y: 8%;
           --poster-orb-scene-scale: 0.98;
 
           position: relative;
