@@ -126,7 +126,7 @@ contract FormalVerification_RoundLifecycleTest is VotingTestBase {
         bytes memory ciphertext = _testCiphertext(up, salt, cid);
         uint16 referenceRatingBps = _currentRatingReferenceBps(cid);
         bytes32 commitHash = _commitHash(
-            up, salt, cid, referenceRatingBps, _tlockCommitTargetRound(), _tlockDrandChainHash(), ciphertext
+            up, salt, voter, cid, referenceRatingBps, _tlockCommitTargetRound(), _tlockDrandChainHash(), ciphertext
         );
         vm.prank(voter);
         crepToken.approve(address(engine), stake);

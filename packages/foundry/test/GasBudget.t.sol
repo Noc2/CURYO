@@ -97,7 +97,7 @@ contract GasBudgetTest is RoundIntegrationTest {
         uint256 contentId = _submitContent();
         uint16 roundReferenceRatingBps = votingEngine.previewCommitReferenceRatingBps(contentId);
         bytes32 salt = keccak256(abi.encodePacked(voter1, contentId, true, uint256(1)));
-        bytes32 commitHash = _commitHash(true, salt, contentId);
+        bytes32 commitHash = _commitHash(true, salt, voter1, contentId);
         bytes memory ciphertext = _testCiphertext(true, salt, contentId);
 
         vm.startPrank(voter1);
@@ -127,7 +127,7 @@ contract GasBudgetTest is RoundIntegrationTest {
         vm.pauseGasMetering();
         uint256 contentId = _submitContent();
         bytes32 salt = keccak256(abi.encodePacked(voter1, contentId, true, uint256(2)));
-        bytes32 commitHash = _commitHash(true, salt, contentId);
+        bytes32 commitHash = _commitHash(true, salt, voter1, contentId);
         bytes memory ciphertext = _testCiphertext(true, salt, contentId);
 
         vm.startPrank(voter1);
@@ -217,9 +217,9 @@ contract GasBudgetTest is RoundIntegrationTest {
         bytes32 s1 = keccak256(abi.encodePacked(voter1, contentId, true, uint256(1)));
         bytes32 s2 = keccak256(abi.encodePacked(voter2, contentId, true, uint256(2)));
         bytes32 s3 = keccak256(abi.encodePacked(voter3, contentId, false, uint256(3)));
-        bytes32 ch1 = _commitHash(true, s1, contentId);
-        bytes32 ch2 = _commitHash(true, s2, contentId);
-        bytes32 ch3 = _commitHash(false, s3, contentId);
+        bytes32 ch1 = _commitHash(true, s1, voter1, contentId);
+        bytes32 ch2 = _commitHash(true, s2, voter2, contentId);
+        bytes32 ch3 = _commitHash(false, s3, voter3, contentId);
 
         vm.startPrank(voter1);
         crepToken.approve(address(votingEngine), STAKE);
@@ -271,10 +271,10 @@ contract GasBudgetTest is RoundIntegrationTest {
         votingEngine.revealVoteByCommitKey(contentId, roundId, _commitKey(voter2, ch2), true, s2);
 
         vm.warp(
-            round.startTime + EPOCH_DURATION
+            round.startTime + 7 days
                 + ProtocolConfig(address(votingEngine.protocolConfig())).revealGracePeriod() + 1
         );
-        votingEngine.settleRound(contentId, roundId);
+        votingEngine.finalizeRevealFailedRound(contentId, roundId);
 
         uint256 gasUsed = _measureCall(
             address(votingEngine), abi.encodeCall(RoundVotingEngine.processUnrevealedVotes, (contentId, roundId, 0, 10))
@@ -287,7 +287,7 @@ contract GasBudgetTest is RoundIntegrationTest {
         vm.pauseGasMetering();
         uint256 contentId = _submitContent();
         bytes32 salt = keccak256(abi.encodePacked(voter1, contentId, true, uint256(4)));
-        bytes32 commitHash = _commitHash(true, salt, contentId);
+        bytes32 commitHash = _commitHash(true, salt, voter1, contentId);
 
         vm.startPrank(voter1);
         crepToken.approve(address(votingEngine), STAKE);

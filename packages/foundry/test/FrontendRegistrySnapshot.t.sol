@@ -173,7 +173,7 @@ contract FrontendRegistrySnapshotTest is VotingTestBase {
 
     function _commit(address voter, uint256 contentId, bool isUp) internal returns (bytes32 commitKey, bytes32 salt) {
         salt = keccak256(abi.encodePacked(voter, contentId, isUp, block.timestamp));
-        bytes32 commitHash = _commitHash(isUp, salt, contentId);
+        bytes32 commitHash = _commitHash(isUp, salt, voter, contentId);
         bytes memory ciphertext = _testCiphertext(isUp, salt, contentId);
 
         vm.startPrank(voter);

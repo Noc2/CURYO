@@ -664,7 +664,7 @@ contract RoundVotingEngineBranchesTest is VotingTestBase {
         bytes32 salt = keccak256(abi.encodePacked(voter1, block.timestamp));
         uint64 targetRound = _tlockCommitTargetRound() + 1;
         bytes memory ciphertext = _testCiphertext(true, salt, contentId, targetRound, _tlockDrandChainHash());
-        bytes32 commitHash = _commitHash(true, salt, contentId, targetRound, _tlockDrandChainHash(), ciphertext);
+        bytes32 commitHash = _commitHash(true, salt, voter1, contentId, targetRound, _tlockDrandChainHash(), ciphertext);
 
         vm.prank(voter1);
         crepToken.approve(address(engine), STAKE);
@@ -1107,10 +1107,10 @@ contract RoundVotingEngineBranchesTest is VotingTestBase {
     // 10. processUnrevealedVotes
     // =========================================================================
 
-    function test_ProcessUnrevealed_AddsExpiredSettledUnrevealedVotesToConsensusReserve() public {
+    function test_ProcessUnrevealed_RevealFailedForfeitsExpiredUnrevealedVotes() public {
         uint256 contentId = _submitContent();
 
-        // voter1 commits but never reveals — expired after settlement (old epoch = epoch 1)
+        // voter1 commits but never reveals — the round must fail instead of settling selectively.
         _commit(voter1, contentId, true, STAKE);
 
         // voter2, voter3, voter4 commit and reveal (3 = minVoters)
@@ -1120,7 +1120,7 @@ contract RoundVotingEngineBranchesTest is VotingTestBase {
 
         uint256 roundId = RoundEngineReadHelpers.activeRoundId(engine, contentId);
 
-        // Warp past epoch + reveal grace period (voter1's unrevealed vote no longer blocks settlement)
+        // Warp past epoch + reveal grace period.
         RoundLib.Round memory rPU1start = RoundEngineReadHelpers.round(engine, contentId, roundId);
         vm.warp(rPU1start.startTime + EPOCH + ProtocolConfig(protocolConfigAddress).revealGracePeriod() + 1);
 
@@ -1128,38 +1128,29 @@ contract RoundVotingEngineBranchesTest is VotingTestBase {
         _reveal(contentId, roundId, ck3, false, s3);
         _reveal(contentId, roundId, ck4, true, s4);
 
-        // voter1's revealableAfter is in the past relative to settlement.
+        vm.expectRevert(RoundVotingEngine.UnrevealedPastEpochVotes.selector);
         engine.settleRound(contentId, roundId);
-        assertEq(engine.roundUnrevealedCleanupRemaining(contentId, roundId), 1);
 
-        vm.expectRevert(RoundRewardDistributor.UnrevealedCleanupPending.selector);
-        vm.prank(voter2);
-        rewardDistributor.claimReward(contentId, roundId);
+        vm.warp(rPU1start.startTime + 7 days + ProtocolConfig(protocolConfigAddress).revealGracePeriod() + 1);
+        engine.finalizeRevealFailedRound(contentId, roundId);
 
         uint256 treasuryBefore = crepToken.balanceOf(treasury);
-        uint256 voterPoolBefore = engine.roundVoterPool(contentId, roundId);
         uint256 consensusReserveBefore = engine.consensusReserve();
         engine.processUnrevealedVotes(contentId, roundId, 0, 0);
         uint256 treasuryAfter = crepToken.balanceOf(treasury);
-        uint256 voterPoolAfter = engine.roundVoterPool(contentId, roundId);
         uint256 consensusReserveAfter = engine.consensusReserve();
 
         assertEq(engine.roundUnrevealedCleanupRemaining(contentId, roundId), 0);
-        assertEq(treasuryAfter, treasuryBefore, "settled expired unrevealed stake should not go to treasury");
-        assertEq(voterPoolAfter, voterPoolBefore, "settled expired unrevealed stake should not boost winners");
-        assertEq(
-            consensusReserveAfter - consensusReserveBefore,
-            STAKE,
-            "settled expired unrevealed stake should go to reserve"
-        );
+        assertEq(treasuryAfter - treasuryBefore, STAKE, "reveal-failed unrevealed stake should go to treasury");
+        assertEq(consensusReserveAfter, consensusReserveBefore, "reveal-failed forfeits should not boost reserve");
 
         uint256 voter2Before = crepToken.balanceOf(voter2);
         vm.prank(voter2);
-        rewardDistributor.claimReward(contentId, roundId);
-        assertGt(crepToken.balanceOf(voter2) - voter2Before, STAKE, "winner can claim stake plus revealed reward");
+        engine.claimCancelledRoundRefund(contentId, roundId);
+        assertEq(crepToken.balanceOf(voter2) - voter2Before, STAKE, "revealed voters recover stake");
     }
 
-    function test_ProcessUnrevealed_KeepsRewardsLockedUntilAllExpiredSettledVotesProcessed() public {
+    function test_ProcessUnrevealed_RevealFailedProcessesExpiredVotesInBatches() public {
         uint256 contentId = _submitContent();
 
         _commit(voter1, contentId, true, STAKE);
@@ -1175,29 +1166,23 @@ contract RoundVotingEngineBranchesTest is VotingTestBase {
         _reveal(contentId, roundId, ck4, true, s4);
         _reveal(contentId, roundId, ck5, false, s5);
 
+        vm.expectRevert(RoundVotingEngine.UnrevealedPastEpochVotes.selector);
         engine.settleRound(contentId, roundId);
-        assertEq(engine.roundUnrevealedCleanupRemaining(contentId, roundId), 2);
 
-        uint256 voterPoolBefore = engine.roundVoterPool(contentId, roundId);
-        uint256 reserveBefore = engine.consensusReserve();
+        vm.warp(roundStart.startTime + 7 days + ProtocolConfig(protocolConfigAddress).revealGracePeriod() + 1);
+        engine.finalizeRevealFailedRound(contentId, roundId);
+
+        uint256 treasuryBefore = crepToken.balanceOf(treasury);
         engine.processUnrevealedVotes(contentId, roundId, 0, 1);
-        assertEq(engine.roundUnrevealedCleanupRemaining(contentId, roundId), 1);
-        assertEq(engine.roundVoterPool(contentId, roundId), voterPoolBefore);
-        assertEq(engine.consensusReserve() - reserveBefore, STAKE);
-
-        vm.expectRevert(RoundRewardDistributor.UnrevealedCleanupPending.selector);
-        vm.prank(voter3);
-        rewardDistributor.claimReward(contentId, roundId);
+        assertEq(crepToken.balanceOf(treasury) - treasuryBefore, STAKE);
 
         engine.processUnrevealedVotes(contentId, roundId, 1, 1);
-        assertEq(engine.roundUnrevealedCleanupRemaining(contentId, roundId), 0);
-        assertEq(engine.roundVoterPool(contentId, roundId), voterPoolBefore);
-        assertEq(engine.consensusReserve() - reserveBefore, STAKE * 2);
+        assertEq(crepToken.balanceOf(treasury) - treasuryBefore, STAKE * 2);
 
         uint256 voter3Before = crepToken.balanceOf(voter3);
         vm.prank(voter3);
-        rewardDistributor.claimReward(contentId, roundId);
-        assertGt(crepToken.balanceOf(voter3) - voter3Before, STAKE, "winner can claim after full cleanup");
+        engine.claimCancelledRoundRefund(contentId, roundId);
+        assertEq(crepToken.balanceOf(voter3) - voter3Before, STAKE, "revealed voters recover stake");
     }
 
     function test_ProcessUnrevealed_RefundsCurrentEpochVotes() public {
@@ -1246,7 +1231,12 @@ contract RoundVotingEngineBranchesTest is VotingTestBase {
         _reveal(contentId, roundId, ck3, true, s3);
         _reveal(contentId, roundId, ck4, true, s4);
         _reveal(contentId, roundId, ck5, false, s5);
+
+        vm.expectRevert(RoundVotingEngine.UnrevealedPastEpochVotes.selector);
         engine.settleRound(contentId, roundId);
+
+        vm.warp(round.startTime + 7 days + ProtocolConfig(protocolConfigAddress).revealGracePeriod() + 1);
+        engine.finalizeRevealFailedRound(contentId, roundId);
 
         uint256 keeperBalBefore = crepToken.balanceOf(keeper);
 
@@ -1289,12 +1279,9 @@ contract RoundVotingEngineBranchesTest is VotingTestBase {
         engine.processUnrevealedVotes(contentId, roundId, 999, 1);
     }
 
-    function test_ProcessUnrevealed_TiedRound_ForfeitsExpiredUnrevealed() public {
-        // Set up a tied round; unrevealed votes from past epochs should now forfeit.
+    function test_ProcessUnrevealed_TiedRound_RefundsCurrentEpochUnrevealed() public {
+        // Set up a tied round with a current-epoch unrevealed vote.
         uint256 contentId = _submitContent();
-
-        // voter4 will commit but NOT reveal
-        _commit(voter4, contentId, true, STAKE);
 
         // 3-voter tie: up=2e6, down=3e6, up=1e6
         (bytes32 ck1, bytes32 s1) = _commit(voter1, contentId, true, 2e6);
@@ -1303,9 +1290,10 @@ contract RoundVotingEngineBranchesTest is VotingTestBase {
 
         uint256 roundId = RoundEngineReadHelpers.activeRoundId(engine, contentId);
 
-        // Warp past epoch + reveal grace period (voter4's unrevealed vote no longer blocks settlement)
+        // Warp past epoch 1 and add voter4 in epoch 2 before revealing.
         RoundLib.Round memory rTied = RoundEngineReadHelpers.round(engine, contentId, roundId);
-        vm.warp(rTied.startTime + EPOCH + ProtocolConfig(protocolConfigAddress).revealGracePeriod() + 1);
+        vm.warp(rTied.startTime + EPOCH + 1);
+        _commit(voter4, contentId, true, STAKE);
         _reveal(contentId, roundId, ck1, true, s1);
         _reveal(contentId, roundId, ck2, false, s2);
         _reveal(contentId, roundId, ck3, true, s3);
@@ -1316,11 +1304,11 @@ contract RoundVotingEngineBranchesTest is VotingTestBase {
         RoundLib.Round memory round = RoundEngineReadHelpers.round(engine, contentId, roundId);
         assertEq(uint256(round.state), uint256(RoundLib.RoundState.Tied));
 
-        uint256 treasuryBefore = crepToken.balanceOf(treasury);
+        uint256 voter4Before = crepToken.balanceOf(voter4);
         engine.processUnrevealedVotes(contentId, roundId, 0, 0);
-        uint256 treasuryAfter = crepToken.balanceOf(treasury);
+        uint256 voter4After = crepToken.balanceOf(voter4);
 
-        assertEq(treasuryAfter - treasuryBefore, STAKE, "expired unrevealed tied-round stake forfeits");
+        assertEq(voter4After - voter4Before, STAKE, "current-epoch tied-round stake refunds");
     }
 
     function test_FinalizeRevealFailedRound_SucceedsAfterFinalRevealGrace() public {

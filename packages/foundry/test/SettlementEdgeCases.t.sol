@@ -145,7 +145,7 @@ contract SettlementEdgeCasesTest is VotingTestBase {
         bytes memory ciphertext = _testCiphertext(isUp, salt, contentId);
         uint16 referenceRatingBps = _currentRatingReferenceBps(contentId);
         bytes32 commitHash = _commitHash(
-            isUp, salt, contentId, referenceRatingBps, _tlockCommitTargetRound(), _tlockDrandChainHash(), ciphertext
+            isUp, salt, voter, contentId, referenceRatingBps, _tlockCommitTargetRound(), _tlockDrandChainHash(), ciphertext
         );
         vm.prank(voter);
         crepToken.approve(address(engine), stakeAmt);
@@ -198,7 +198,7 @@ contract SettlementEdgeCasesTest is VotingTestBase {
         bytes memory ciphertext = _testCiphertext(isUp, salt, contentId, targetRound, drandChainHash);
         uint16 referenceRatingBps = _currentRatingReferenceBps(contentId);
         bytes32 commitHash =
-            _commitHash(isUp, salt, contentId, referenceRatingBps, targetRound, drandChainHash, ciphertext);
+            _commitHash(isUp, salt, voter, contentId, referenceRatingBps, targetRound, drandChainHash, ciphertext);
         vm.prank(voter);
         token.approve(address(votingEngine), stakeAmt);
         vm.prank(voter);

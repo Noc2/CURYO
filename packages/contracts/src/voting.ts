@@ -146,6 +146,7 @@ export function decodeVotePlaintext(plaintext: Uint8Array): { isUp: boolean; sal
 export function buildCommitHash(
   isUp: boolean,
   salt: VoteSalt,
+  voter: Address,
   contentId: bigint,
   roundReferenceRatingBps: number,
   targetRound: bigint,
@@ -154,8 +155,8 @@ export function buildCommitHash(
 ): VoteCommitHash {
   return keccak256(
     encodePacked(
-      ["bool", "bytes32", "uint256", "uint16", "uint64", "bytes32", "bytes32"],
-      [isUp, salt, contentId, roundReferenceRatingBps, targetRound, drandChainHash, keccak256(ciphertext)],
+      ["bool", "bytes32", "address", "uint256", "uint16", "uint64", "bytes32", "bytes32"],
+      [isUp, salt, voter, contentId, roundReferenceRatingBps, targetRound, drandChainHash, keccak256(ciphertext)],
     ),
   );
 }
@@ -376,7 +377,7 @@ export async function decryptTlockCiphertext(
 }
 
 export async function createTlockVoteCommit(params: {
-  voter?: Address;
+  voter: Address;
   isUp: boolean;
   salt: VoteSalt;
   contentId: bigint;
@@ -388,7 +389,7 @@ export async function createTlockVoteCommit(params: {
   targetRound: bigint;
   drandChainHash: VoteDrandChainHash;
   roundReferenceRatingBps: number;
-  commitKey?: `0x${string}`;
+  commitKey: `0x${string}`;
 }> {
   const { ciphertext, targetRound, drandChainHash } = await createTlockVoteArtifacts(
     params.isUp,
@@ -399,6 +400,7 @@ export async function createTlockVoteCommit(params: {
   const commitHash = buildCommitHash(
     params.isUp,
     params.salt,
+    params.voter,
     params.contentId,
     params.roundReferenceRatingBps,
     targetRound,
@@ -412,6 +414,6 @@ export async function createTlockVoteCommit(params: {
     targetRound,
     drandChainHash,
     roundReferenceRatingBps: params.roundReferenceRatingBps,
-    commitKey: params.voter ? buildCommitKey(params.voter, commitHash) : undefined,
+    commitKey: buildCommitKey(params.voter, commitHash),
   };
 }

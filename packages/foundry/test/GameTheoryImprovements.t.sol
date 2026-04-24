@@ -131,7 +131,7 @@ contract GameTheoryImprovementsTest is VotingTestBase {
     /// @dev Commit a vote for a voter in the current round. Approves and calls commitVote.
     function _commit(address voter, uint256 contentId, bool isUp, uint256 stake) internal {
         bytes32 salt = bytes32(uint256(uint160(voter)) ^ uint256(contentId));
-        bytes32 ch = _commitHash(isUp, salt, contentId);
+        bytes32 ch = _commitHash(isUp, salt, voter, contentId);
         bytes memory ct = _testCiphertext(isUp, salt, contentId);
 
         vm.startPrank(voter);

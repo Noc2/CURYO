@@ -182,12 +182,13 @@ test("buildCommitHash includes the tlock round metadata", () => {
   const ciphertext = "0x1234" as `0x${string}`;
   const drandChainHash = ("0x" + "33".repeat(32)) as `0x${string}`;
   const roundReferenceRatingBps = 5_000;
+  const voter = "0x2222222222222222222222222222222222222222";
 
-  const commitHash = buildCommitHash(false, salt, 42n, roundReferenceRatingBps, 123n, drandChainHash, ciphertext);
+  const commitHash = buildCommitHash(false, salt, voter, 42n, roundReferenceRatingBps, 123n, drandChainHash, ciphertext);
 
   assert.equal(
     commitHash,
-    buildCommitHash(false, salt, 42n, roundReferenceRatingBps, 123n, drandChainHash, ciphertext),
+    buildCommitHash(false, salt, voter, 42n, roundReferenceRatingBps, 123n, drandChainHash, ciphertext),
   );
 });
 
@@ -214,9 +215,10 @@ test("encodeVoteTransferPayload round-trips the redeployed vote shape", () => {
 });
 
 test("createTlockVoteCommit returns the tlock metadata used in the commit hash", async () => {
+  const voter = "0x2222222222222222222222222222222222222222";
   const commit = await createTlockVoteCommit(
     {
-      voter: "0x2222222222222222222222222222222222222222",
+      voter,
       isUp: true,
       salt: ("0x" + "33".repeat(32)) as `0x${string}`,
       contentId: 7n,
@@ -246,6 +248,7 @@ test("createTlockVoteCommit returns the tlock metadata used in the commit hash",
     buildCommitHash(
       true,
       ("0x" + "33".repeat(32)) as `0x${string}`,
+      voter,
       7n,
       5_000,
       commit.targetRound,

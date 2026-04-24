@@ -653,12 +653,13 @@ abstract contract VotingTestBase is Test, ContentSubmissionTestBase {
         );
     }
 
-    /// @dev Build commit hash bound to the exact ciphertext bytes used at commit time.
-    function _commitHash(bool isUp, bytes32 salt, uint256 contentId) internal view returns (bytes32) {
+    /// @dev Build commit hash bound to the exact voter and ciphertext bytes used at commit time.
+    function _commitHash(bool isUp, bytes32 salt, address voter, uint256 contentId) internal view returns (bytes32) {
         bytes memory ciphertext = _testCiphertext(isUp, salt, contentId);
         return _commitHash(
             isUp,
             salt,
+            voter,
             contentId,
             _currentRatingReferenceBps(contentId),
             _tlockCommitTargetRound(),
@@ -667,8 +668,13 @@ abstract contract VotingTestBase is Test, ContentSubmissionTestBase {
         );
     }
 
+    /// @dev Legacy helper for tests that do not submit/reveal the commit.
+    function _commitHash(bool isUp, bytes32 salt, uint256 contentId) internal view returns (bytes32) {
+        return _commitHash(isUp, salt, address(this), contentId);
+    }
+
     /// @dev Build commit hash for a caller-supplied ciphertext.
-    function _commitHash(bool isUp, bytes32 salt, uint256 contentId, bytes memory ciphertext)
+    function _commitHash(bool isUp, bytes32 salt, address voter, uint256 contentId, bytes memory ciphertext)
         internal
         view
         returns (bytes32)
@@ -676,12 +682,22 @@ abstract contract VotingTestBase is Test, ContentSubmissionTestBase {
         return _commitHash(
             isUp,
             salt,
+            voter,
             contentId,
             _currentRatingReferenceBps(contentId),
             _tlockCommitTargetRound(),
             _tlockDrandChainHash(),
             ciphertext
         );
+    }
+
+    /// @dev Legacy helper for tests that do not submit/reveal the commit.
+    function _commitHash(bool isUp, bytes32 salt, uint256 contentId, bytes memory ciphertext)
+        internal
+        view
+        returns (bytes32)
+    {
+        return _commitHash(isUp, salt, address(this), contentId, ciphertext);
     }
 
     function _buildTestCommitArtifacts(address voter, bool isUp, bytes32 salt, uint256 contentId)
@@ -696,6 +712,7 @@ abstract contract VotingTestBase is Test, ContentSubmissionTestBase {
         artifacts.commitHash = _commitHash(
             isUp,
             salt,
+            voter,
             contentId,
             artifacts.roundReferenceRatingBps,
             artifacts.targetRound,
@@ -790,16 +807,61 @@ abstract contract VotingTestBase is Test, ContentSubmissionTestBase {
     function _commitHash(
         bool isUp,
         bytes32 salt,
+        address voter,
         uint256 contentId,
         uint64 targetRound,
         bytes32 drandChainHash,
         bytes memory ciphertext
     ) internal view returns (bytes32) {
         return _commitHash(
-            isUp, salt, contentId, _currentRatingReferenceBps(contentId), targetRound, drandChainHash, ciphertext
+            isUp,
+            salt,
+            voter,
+            contentId,
+            _currentRatingReferenceBps(contentId),
+            targetRound,
+            drandChainHash,
+            ciphertext
         );
     }
 
+    /// @dev Legacy helper for tests that do not submit/reveal the commit.
+    function _commitHash(
+        bool isUp,
+        bytes32 salt,
+        uint256 contentId,
+        uint64 targetRound,
+        bytes32 drandChainHash,
+        bytes memory ciphertext
+    ) internal view returns (bytes32) {
+        return _commitHash(isUp, salt, address(this), contentId, targetRound, drandChainHash, ciphertext);
+    }
+
+    function _commitHash(
+        bool isUp,
+        bytes32 salt,
+        address voter,
+        uint256 contentId,
+        uint16 roundReferenceRatingBps,
+        uint64 targetRound,
+        bytes32 drandChainHash,
+        bytes memory ciphertext
+    ) internal pure returns (bytes32) {
+        return keccak256(
+            abi.encodePacked(
+                isUp,
+                salt,
+                voter,
+                contentId,
+                roundReferenceRatingBps,
+                targetRound,
+                drandChainHash,
+                keccak256(ciphertext)
+            )
+        );
+    }
+
+    /// @dev Legacy helper for tests that do not submit/reveal the commit.
     function _commitHash(
         bool isUp,
         bytes32 salt,
@@ -809,10 +871,8 @@ abstract contract VotingTestBase is Test, ContentSubmissionTestBase {
         bytes32 drandChainHash,
         bytes memory ciphertext
     ) internal pure returns (bytes32) {
-        return keccak256(
-            abi.encodePacked(
-                isUp, salt, contentId, roundReferenceRatingBps, targetRound, drandChainHash, keccak256(ciphertext)
-            )
+        return _commitHash(
+            isUp, salt, address(0), contentId, roundReferenceRatingBps, targetRound, drandChainHash, ciphertext
         );
     }
 

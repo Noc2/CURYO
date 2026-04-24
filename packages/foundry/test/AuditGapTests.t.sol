@@ -161,7 +161,7 @@ contract AuditGapTests is VotingTestBase {
     {
         salt = keccak256(abi.encodePacked(voter, block.timestamp, contentId, isUp));
         bytes memory ciphertext = _testCiphertext(isUp, salt, contentId);
-        bytes32 hash = _commitHash(isUp, salt, contentId, ciphertext);
+        bytes32 hash = _commitHash(isUp, salt, voter, contentId, ciphertext);
         vm.startPrank(voter);
         crepToken.approve(address(votingEngine), stakeAmt);
         votingEngine.commitVote(
@@ -195,7 +195,7 @@ contract AuditGapTests is VotingTestBase {
 
         bytes32 salt = keccak256("salt");
         bytes memory ct = _testCiphertext(true, salt, contentId);
-        bytes32 hash = _commitHash(true, salt, contentId, ct);
+        bytes32 hash = _commitHash(true, salt, voter1, contentId, ct);
 
         vm.startPrank(voter1);
         crepToken.approve(address(votingEngine), STAKE);
@@ -277,9 +277,9 @@ contract AuditGapTests is VotingTestBase {
         _reveal(voter2, contentId, 1, ck2, true, s2);
         _reveal(voter3, contentId, 1, ck3, false, s3);
 
-        // Warp past reveal grace
-        vm.warp(block.timestamp + 60 minutes + 1);
-        votingEngine.settleRound(contentId, 1);
+        // Warp past final reveal-failed grace so unrevealed votes are processable.
+        vm.warp(block.timestamp + 7 days + 60 minutes + 1);
+        votingEngine.finalizeRevealFailedRound(contentId, 1);
 
         vm.prank(owner);
         votingEngine.pause();
@@ -436,8 +436,8 @@ contract AuditGapTests is VotingTestBase {
         _reveal(voter2, contentId, 1, ck2, true, s2);
         _reveal(voter3, contentId, 1, ck3, false, s3);
 
-        vm.warp(block.timestamp + 60 minutes + 1);
-        votingEngine.settleRound(contentId, 1);
+        vm.warp(block.timestamp + 7 days + 60 minutes + 1);
+        votingEngine.finalizeRevealFailedRound(contentId, 1);
 
         // count=0 should process all
         votingEngine.processUnrevealedVotes(contentId, 1, 0, 0);
@@ -457,8 +457,8 @@ contract AuditGapTests is VotingTestBase {
         _reveal(voter2, contentId, 1, ck2, true, s2);
         _reveal(voter3, contentId, 1, ck3, false, s3);
 
-        vm.warp(block.timestamp + 60 minutes + 1);
-        votingEngine.settleRound(contentId, 1);
+        vm.warp(block.timestamp + 7 days + 60 minutes + 1);
+        votingEngine.finalizeRevealFailedRound(contentId, 1);
 
         // count=999 should clamp to array length and still succeed
         votingEngine.processUnrevealedVotes(contentId, 1, 0, 999);
@@ -478,8 +478,8 @@ contract AuditGapTests is VotingTestBase {
         _reveal(voter2, contentId, 1, ck2, true, s2);
         _reveal(voter3, contentId, 1, ck3, false, s3);
 
-        vm.warp(block.timestamp + 60 minutes + 1);
-        votingEngine.settleRound(contentId, 1);
+        vm.warp(block.timestamp + 7 days + 60 minutes + 1);
+        votingEngine.finalizeRevealFailedRound(contentId, 1);
 
         // startIndex == array.length should revert
         vm.expectRevert(RoundVotingEngine.IndexOutOfBounds.selector);
@@ -500,8 +500,8 @@ contract AuditGapTests is VotingTestBase {
         _reveal(voter2, contentId, 1, ck2, true, s2);
         _reveal(voter3, contentId, 1, ck3, false, s3);
 
-        vm.warp(block.timestamp + 60 minutes + 1);
-        votingEngine.settleRound(contentId, 1);
+        vm.warp(block.timestamp + 7 days + 60 minutes + 1);
+        votingEngine.finalizeRevealFailedRound(contentId, 1);
 
         // Process first 2 (both revealed, nothing to process)
         // Process last 2 (one revealed, one unrevealed)
@@ -528,7 +528,7 @@ contract AuditGapTests is VotingTestBase {
         vm.warp(voteTime + 24 hours - 1);
         bytes32 salt = keccak256(abi.encodePacked(voter1, block.timestamp, contentId));
         bytes memory ct = _testCiphertext(true, salt, contentId);
-        bytes32 hash = _commitHash(true, salt, contentId, ct);
+        bytes32 hash = _commitHash(true, salt, voter1, contentId, ct);
         vm.startPrank(voter1);
         crepToken.approve(address(votingEngine), STAKE);
         vm.expectRevert(RoundVotingEngine.CooldownActive.selector);

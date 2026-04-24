@@ -64,6 +64,7 @@ library TlockVoteLib {
     function buildExpectedCommitHash(
         bool isUp,
         bytes32 salt,
+        address voter,
         uint256 contentId,
         uint16 roundReferenceRatingBps,
         uint64 targetRound,
@@ -72,7 +73,7 @@ library TlockVoteLib {
     ) external pure returns (bytes32) {
         bytes32 ciphertextHash = keccak256(ciphertext);
         return keccak256(
-            abi.encodePacked(isUp, salt, contentId, roundReferenceRatingBps, targetRound, drandChainHash, ciphertextHash)
+            abi.encodePacked(isUp, salt, voter, contentId, roundReferenceRatingBps, targetRound, drandChainHash, ciphertextHash)
         );
     }
 

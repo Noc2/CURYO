@@ -161,6 +161,7 @@ export function useRoundVote() {
 
       const { ciphertext, commitHash, roundReferenceRatingBps, targetRound, drandChainHash, frontend, stakeWei } =
         await buildCommitVoteParams({
+          voter: address as `0x${string}`,
           contentId,
           isUp,
           stakeAmount,

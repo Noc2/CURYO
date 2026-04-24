@@ -49,6 +49,7 @@ library RoundRevealLib {
         bytes32 expectedHash = TlockVoteLib.buildExpectedCommitHash(
             isUp,
             salt,
+            commit.voter,
             contentId,
             roundReferenceRatingBps,
             commit.targetRound,

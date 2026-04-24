@@ -104,7 +104,7 @@ contract RoundRewardDistributorBranchesTest is VotingTestBase {
         returns (bytes32 ck, bytes32 salt)
     {
         salt = keccak256(abi.encodePacked(voter, contentId));
-        bytes32 ch = _commitHash(isUp, salt, contentId);
+        bytes32 ch = _commitHash(isUp, salt, voter, contentId);
         bytes memory ct = _testCiphertext(isUp, salt, contentId);
         vm.prank(voter);
         crepToken.approve(address(votingEngine), stake);

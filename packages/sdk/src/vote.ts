@@ -46,6 +46,7 @@ export function generateVoteSalt(randomValues?: (bytes: Uint8Array) => Uint8Arra
 }
 
 export async function buildCommitVoteParams(params: {
+  voter: Address;
   contentId: bigint;
   isUp: boolean;
   stakeAmount: number;
@@ -62,6 +63,7 @@ export async function buildCommitVoteParams(params: {
   const { ciphertext, commitHash, roundReferenceRatingBps, targetRound, drandChainHash } =
     await createTlockVoteCommit(
       {
+        voter: params.voter,
         isUp: params.isUp,
         salt,
         contentId: params.contentId,

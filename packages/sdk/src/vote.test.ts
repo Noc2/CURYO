@@ -64,6 +64,7 @@ test("buildCommitVoteParams returns the tlock metadata needed for commitVote", a
   };
 
   const result = await buildCommitVoteParams({
+    voter: "0x1111111111111111111111111111111111111111",
     contentId: 42n,
     isUp: true,
     stakeAmount: 2.5,

@@ -40,7 +40,7 @@ interface IQuestionBundleRoundObserver {
 ///      The contract enforces lightweight tlock metadata guardrails on chain but does not prove on-chain that the
 ///      ciphertext itself was honestly decryptable.
 ///      If 1 week passes below commit quorum the round cancels with refunds; once commit quorum exists,
-///      missing reveal quorum can finalize as RevealFailed only after the round stops accepting votes
+///      any unrevealed vote can finalize as RevealFailed only after the round stops accepting votes
 ///      and the final reveal grace deadline has passed.
 ///      Epoch-weighting: epoch-1 (blind) = 100% reward weight; epoch-2+ (informed) = 25%.
 ///      Win condition uses weighted pools, not raw stake, preventing late-voter herding.
@@ -272,7 +272,7 @@ contract RoundVotingEngine is
     /// @param roundReferenceRatingBps Canonical round score the voter is judging against.
     /// @param targetRound drand round targeted by the ciphertext.
     /// @param drandChainHash drand chain hash bound into the commitment.
-    /// @param commitHash keccak256(abi.encodePacked(isUp, salt, contentId, roundReferenceRatingBps, targetRound, drandChainHash, keccak256(ciphertext))).
+    /// @param commitHash keccak256(abi.encodePacked(isUp, salt, voter, contentId, roundReferenceRatingBps, targetRound, drandChainHash, keccak256(ciphertext))).
     /// @param ciphertext Tlock-encrypted payload (decryptable after epoch end via drand).
     /// @param stakeAmount Amount of cREP tokens to stake (1-100).
     /// @param frontend Address of frontend operator for fee distribution.
@@ -677,7 +677,7 @@ contract RoundVotingEngine is
         if (round.state != RoundLib.RoundState.Open) revert RoundNotOpen();
         RoundLib.RoundConfig memory roundCfg = _getRoundConfig(contentId, roundId);
         if (round.voteCount < roundCfg.minVoters) revert NotEnoughVotes();
-        if (round.revealedCount >= roundCfg.minVoters) revert ThresholdReached();
+        if (round.revealedCount == round.voteCount) revert ThresholdReached();
         if (!_canFinalizeRevealFailedRound(contentId, roundId, round)) revert RevealGraceActive();
 
         _markRoundRevealFailed(contentId, roundId, round);
@@ -690,7 +690,8 @@ contract RoundVotingEngine is
     /// @notice Reveal a specific commit by commit key. Any caller that knows the plaintext may call.
     /// @dev In normal operation a keeper decrypts the tlock ciphertext off-chain using drand and submits the plaintext
     ///      `(isUp, salt)` here. Voters can also self-reveal. The contract verifies consistency against the stored
-    ///      ciphertext hash, but not that the ciphertext was honestly decryptable.
+    ///      ciphertext hash. If any past-epoch ciphertext is not revealed, settlement remains blocked and the
+    ///      round can be finalized as reveal-failed after the final reveal grace window.
     function revealVoteByCommitKey(uint256 contentId, uint256 roundId, bytes32 commitKey, bool isUp, bytes32 salt)
         external
         nonReentrant
@@ -717,21 +718,17 @@ contract RoundVotingEngine is
         if (round.revealedCount < roundCfg.minVoters) revert NotEnoughVotes();
 
         // Prevent selective revelation: all past-epoch commits must be revealed
-        // (or their grace period must have expired) before settlement is allowed.
+        // before settlement is allowed. A round with expired unrevealed commits
+        // can be finalized as reveal-failed after the final reveal grace window.
         // Loop is bounded: votes can only be committed during maxDuration, so no
         // epochUnrevealedCount entries exist beyond startTime + maxDuration + epochDuration.
-        uint256 unrevealedCleanupRemaining;
         {
-            uint256 _gracePeriod = _getRoundRevealGracePeriod(contentId, roundId);
             uint256 epochEnd = round.startTime + roundCfg.epochDuration;
             uint256 maxEpochEnd = round.startTime + roundCfg.maxDuration + roundCfg.epochDuration;
             while (epochEnd <= block.timestamp && epochEnd <= maxEpochEnd) {
                 uint256 unrevealedCount = epochUnrevealedCount[contentId][roundId][epochEnd];
                 if (unrevealedCount > 0) {
-                    if (block.timestamp < epochEnd + _gracePeriod) {
-                        revert UnrevealedPastEpochVotes();
-                    }
-                    unrevealedCleanupRemaining += unrevealedCount;
+                    revert UnrevealedPastEpochVotes();
                 }
                 epochEnd += roundCfg.epochDuration;
             }
@@ -751,7 +748,6 @@ contract RoundVotingEngine is
         round.upWins = upWins;
         round.state = RoundLib.RoundState.Settled;
         round.settledAt = block.timestamp.toUint48();
-        roundUnrevealedCleanupRemaining[contentId][roundId] = unrevealedCleanupRemaining;
         contentHasSettledRound[contentId] = true;
         _notifyBundleRoundTerminal(contentId, roundId, true);
 
@@ -1033,7 +1029,7 @@ contract RoundVotingEngine is
 
         RoundLib.RoundConfig memory roundCfg = _getRoundConfig(contentId, roundId);
         if (round.voteCount < roundCfg.minVoters) return false;
-        if (round.revealedCount >= roundCfg.minVoters) return false;
+        if (round.revealedCount == round.voteCount) return false;
 
         uint256 finalizationTime = _getRevealFailedFinalizationTime(contentId, roundId, round);
         if (finalizationTime == 0) return false;

@@ -117,16 +117,18 @@ describe("shared voting helpers", () => {
     const salt = ("0x" + "22".repeat(32)) as `0x${string}`;
     const ciphertext = "0x1234" as `0x${string}`;
     const roundReferenceRatingBps = 5_000;
+    const voter = "0x1111111111111111111111111111111111111111";
     const commitHash = buildCommitHash(
       false,
       salt,
+      voter,
       42n,
       roundReferenceRatingBps,
       123n,
       ("0x" + "ab".repeat(32)) as `0x${string}`,
       ciphertext,
     );
-    const commitKey = buildCommitKey("0x1111111111111111111111111111111111111111", commitHash);
+    const commitKey = buildCommitKey(voter, commitHash);
 
     expect(commitHash).toMatch(/^0x[0-9a-f]{64}$/);
     expect(commitKey).toMatch(/^0x[0-9a-f]{64}$/);
@@ -134,6 +136,7 @@ describe("shared voting helpers", () => {
       buildCommitHash(
         false,
         salt,
+        voter,
         42n,
         roundReferenceRatingBps,
         123n,
@@ -141,7 +144,7 @@ describe("shared voting helpers", () => {
         ciphertext,
       ),
     ).toBe(commitHash);
-    expect(buildCommitKey("0x1111111111111111111111111111111111111111", commitHash)).toBe(commitKey);
+    expect(buildCommitKey(voter, commitHash)).toBe(commitKey);
   });
 
   it("creates matching commit artifacts", async () => {
@@ -166,6 +169,7 @@ describe("shared voting helpers", () => {
       buildCommitHash(
         true,
         salt,
+        voter,
         7n,
         commit.roundReferenceRatingBps,
         commit.targetRound,

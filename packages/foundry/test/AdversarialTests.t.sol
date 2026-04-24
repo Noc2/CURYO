@@ -162,7 +162,7 @@ contract AdversarialTests is VotingTestBase {
         bytes32 drandChainHash = _tlockDrandChainHash();
         uint16 referenceRatingBps = _currentRatingReferenceBps(contentId);
         bytes32 commitHash =
-            _commitHash(isUp, salt, contentId, referenceRatingBps, targetRound, drandChainHash, ciphertext);
+            _commitHash(isUp, salt, voter, contentId, referenceRatingBps, targetRound, drandChainHash, ciphertext);
         vm.startPrank(voter);
         crepToken.approve(address(engine), stake);
         engine.commitVote(
@@ -184,14 +184,24 @@ contract AdversarialTests is VotingTestBase {
 
     function _settleRound(uint256 contentId, uint256 roundId, bytes32[] memory commitKeys) internal {
         RoundLib.Round memory round = RoundEngineReadHelpers.round(engine, contentId, roundId);
-        // Warp past epoch + reveal grace period so unrevealed votes don't block settlement
-        vm.warp(
-            round.startTime + EPOCH_DURATION + ProtocolConfig(address(engine.protocolConfig())).revealGracePeriod() + 1
-        );
+        // Warp past the epoch so every committed vote is revealable, then reveal all
+        // supplied commits. Settlement still requires no past-epoch unrevealed votes.
+        vm.warp(round.startTime + EPOCH_DURATION + 1);
         for (uint256 i = 0; i < commitKeys.length; i++) {
             _reveal(contentId, roundId, commitKeys[i]);
         }
         engine.settleRound(contentId, roundId);
+    }
+
+    function _finalizeRevealFailedRound(uint256 contentId, uint256 roundId, bytes32[] memory commitKeys) internal {
+        RoundLib.Round memory round = RoundEngineReadHelpers.round(engine, contentId, roundId);
+        vm.warp(
+            round.startTime + 7 days + ProtocolConfig(address(engine.protocolConfig())).revealGracePeriod() + 1
+        );
+        for (uint256 i = 0; i < commitKeys.length; i++) {
+            _reveal(contentId, roundId, commitKeys[i]);
+        }
+        engine.finalizeRevealFailedRound(contentId, roundId);
     }
 
     // =========================================================================
@@ -321,18 +331,17 @@ contract AdversarialTests is VotingTestBase {
         bytes32[] memory cks = new bytes32[](2);
         cks[0] = ck1;
         cks[1] = ck2;
-        _settleRound(contentId, roundId, cks);
+        _finalizeRevealFailedRound(contentId, roundId, cks);
 
-        // Rewards remain blocked until the unrevealed settled stake is cleaned up.
         vm.prank(voter3);
-        vm.expectRevert(RoundRewardDistributor.UnrevealedCleanupPending.selector);
+        vm.expectRevert("Round not settled");
         distributor.claimReward(contentId, roundId);
 
         engine.processUnrevealedVotes(contentId, roundId, 0, 0);
 
-        // After cleanup, voter3 still cannot claim because their vote was never revealed.
+        // Reveal-failed rounds never pay winner rewards, even after unrevealed cleanup.
         vm.prank(voter3);
-        vm.expectRevert("Vote not revealed");
+        vm.expectRevert("Round not settled");
         distributor.claimReward(contentId, roundId);
     }
 
@@ -351,20 +360,20 @@ contract AdversarialTests is VotingTestBase {
 
         uint256 roundId = RoundEngineReadHelpers.activeRoundId(engine, contentId);
 
-        // Only reveal first two, settle
+        // Only reveal first two, then finalize as reveal-failed after the final grace window.
         bytes32[] memory cks = new bytes32[](2);
         cks[0] = ck1;
         cks[1] = ck2;
-        _settleRound(contentId, roundId, cks);
+        _finalizeRevealFailedRound(contentId, roundId, cks);
 
-        uint256 reserveBefore = engine.consensusReserve();
+        uint256 treasuryBefore = crepToken.balanceOf(treasury);
 
-        // Process unrevealed (settled-round unrevealed stake is routed to the consensus reserve).
+        // Process unrevealed (reveal-failed unrevealed stake is forfeited to treasury).
         engine.processUnrevealedVotes(contentId, roundId, 0, 0);
 
-        uint256 reserveAfter1 = engine.consensusReserve();
-        uint256 routedAmount = reserveAfter1 - reserveBefore;
-        assertGt(routedAmount, 0, "Some amount should be routed to reserve");
+        uint256 treasuryAfter1 = crepToken.balanceOf(treasury);
+        uint256 routedAmount = treasuryAfter1 - treasuryBefore;
+        assertGt(routedAmount, 0, "Some amount should be routed to treasury");
 
         // Process again — same range, reverts because nothing left to process (stakeAmount zeroed)
         vm.expectRevert(RoundVotingEngine.NothingProcessed.selector);
@@ -606,7 +615,7 @@ contract AdversarialTests is VotingTestBase {
         // Unanimous votes
         bytes32 salt1 = keccak256(abi.encodePacked(voter1, block.timestamp, uint256(1)));
         bytes memory ct1 = _testCiphertext(true, salt1, 1);
-        bytes32 ch1 = _commitHash(true, salt1, 1, ct1);
+        bytes32 ch1 = _commitHash(true, salt1, voter1, 1, ct1);
 
         vm.startPrank(voter1);
         token2.approve(address(eng2), STAKE);
@@ -624,7 +633,7 @@ contract AdversarialTests is VotingTestBase {
 
         bytes32 salt2 = keccak256(abi.encodePacked(voter2, block.timestamp, uint256(1)));
         bytes memory ct2 = _testCiphertext(true, salt2, 1);
-        bytes32 ch2 = _commitHash(true, salt2, 1, ct2);
+        bytes32 ch2 = _commitHash(true, salt2, voter2, 1, ct2);
 
         vm.startPrank(voter2);
         token2.approve(address(eng2), STAKE);
@@ -785,7 +794,7 @@ contract AdversarialTests is VotingTestBase {
 
         // Holder votes (uses token 1)
         bytes32 salt = keccak256(abi.encodePacked(holder, block.timestamp, contentId));
-        bytes32 commitHash = _commitHash(true, salt, contentId);
+        bytes32 commitHash = _commitHash(true, salt, holder, contentId);
         bytes memory ciphertext = _testCiphertext(true, salt, contentId);
         vm.startPrank(holder);
         crepToken.approve(address(engine), STAKE);
@@ -811,7 +820,7 @@ contract AdversarialTests is VotingTestBase {
 
         // Delegate tries to vote on SAME content — blocked by CooldownActive (checked before IdentityAlreadyCommitted)
         bytes32 salt3 = keccak256(abi.encodePacked(delegate, block.timestamp, contentId));
-        bytes32 commitHash3 = _commitHash(false, salt3, contentId);
+        bytes32 commitHash3 = _commitHash(false, salt3, delegate, contentId);
         bytes memory ciphertext3 = _testCiphertext(false, salt3, contentId);
         vm.startPrank(delegate);
         crepToken.approve(address(engine), STAKE);
@@ -878,7 +887,14 @@ contract AdversarialTests is VotingTestBase {
         bytes memory ciphertext2 = _testCiphertext(false, salt2, contentId);
         uint16 referenceRatingBps2 = _currentRatingReferenceBps(contentId);
         bytes32 commitHash2 = _commitHash(
-            false, salt2, contentId, referenceRatingBps2, _tlockCommitTargetRound(), _tlockDrandChainHash(), ciphertext2
+            false,
+            salt2,
+            delegate,
+            contentId,
+            referenceRatingBps2,
+            _tlockCommitTargetRound(),
+            _tlockDrandChainHash(),
+            ciphertext2
         );
         vm.startPrank(delegate);
         crepToken.approve(address(engine), STAKE);
@@ -993,7 +1009,7 @@ contract AdversarialTests is VotingTestBase {
         uint256 contentId = _submitContent();
 
         bytes32 salt = keccak256(abi.encodePacked(voter1, block.timestamp, contentId, true));
-        bytes32 commitHash = _commitHash(true, salt, contentId);
+        bytes32 commitHash = _commitHash(true, salt, voter1, contentId);
         bytes memory ciphertext = _testCiphertext(true, salt, contentId);
 
         vm.startPrank(voter1);
@@ -1023,7 +1039,7 @@ contract AdversarialTests is VotingTestBase {
         uint256 contentId = _submitContent();
 
         bytes32 salt = keccak256(abi.encodePacked(voter1, block.timestamp, contentId, true));
-        bytes32 commitHash = _commitHash(true, salt, contentId);
+        bytes32 commitHash = _commitHash(true, salt, voter1, contentId);
         bytes memory ciphertext = _testCiphertext(true, salt, contentId);
 
         vm.startPrank(voter1);
@@ -1056,7 +1072,7 @@ contract AdversarialTests is VotingTestBase {
         uint256 contentId = _submitContent();
 
         bytes32 salt = keccak256(abi.encodePacked(voter1, block.timestamp, contentId, true));
-        bytes32 commitHash = _commitHash(true, salt, contentId);
+        bytes32 commitHash = _commitHash(true, salt, voter1, contentId);
         bytes memory ciphertext = _testCiphertext(true, salt, contentId);
 
         vm.startPrank(voter1);
@@ -1093,7 +1109,7 @@ contract AdversarialTests is VotingTestBase {
         );
         uint64 targetRound = _tlockCommitTargetRound();
         bytes32 drandChainHash = _tlockDrandChainHash();
-        bytes32 commitHash = _commitHash(true, salt, contentId, targetRound, drandChainHash, opaqueCiphertext);
+        bytes32 commitHash = _commitHash(true, salt, voter1, contentId, targetRound, drandChainHash, opaqueCiphertext);
 
         vm.startPrank(voter1);
         crepToken.approve(address(engine), STAKE);
@@ -1156,7 +1172,7 @@ contract AdversarialTests is VotingTestBase {
         uint256 contentId = _submitContent();
 
         bytes32 salt = keccak256(abi.encodePacked(submitter, block.timestamp, contentId, true));
-        bytes32 commitHash = _commitHash(true, salt, contentId);
+        bytes32 commitHash = _commitHash(true, salt, submitter, contentId);
         bytes memory ciphertext = _testCiphertext(true, salt, contentId);
 
         vm.startPrank(submitter);
@@ -1184,7 +1200,7 @@ contract AdversarialTests is VotingTestBase {
         uint256 contentId = _submitContent();
 
         bytes32 salt = keccak256(abi.encodePacked(voter1, block.timestamp, contentId));
-        bytes32 commitHash = _commitHash(true, salt, contentId);
+        bytes32 commitHash = _commitHash(true, salt, voter1, contentId);
         bytes memory ciphertext = _testCiphertext(true, salt, contentId);
 
         vm.startPrank(voter1);
@@ -1209,7 +1225,7 @@ contract AdversarialTests is VotingTestBase {
 
         uint256 tooMuch = 200e6 + 1; // MAX_STAKE = 200e6
         bytes32 salt = keccak256(abi.encodePacked(voter1, block.timestamp, contentId));
-        bytes32 commitHash = _commitHash(true, salt, contentId);
+        bytes32 commitHash = _commitHash(true, salt, voter1, contentId);
         bytes memory ciphertext = _testCiphertext(true, salt, contentId);
 
         vm.startPrank(voter1);

@@ -39,6 +39,7 @@ const curyo = createCuryoClient({
 const { content } = await curyo.read.getContent("42");
 
 const commit = await buildCommitVoteParams({
+  voter: "0xYourWalletAddress",
   contentId: 42n,
   isUp: true,
   stakeAmount: 2.5,

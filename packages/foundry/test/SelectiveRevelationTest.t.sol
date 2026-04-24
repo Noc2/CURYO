@@ -125,8 +125,9 @@ contract SelectiveRevelationTest is VotingTestBase {
         artifacts.targetRound = _tlockCommitTargetRound();
         artifacts.drandChainHash = _tlockDrandChainHash();
         artifacts.ciphertext = _testCiphertext(isUp, salt, contentId, artifacts.targetRound, artifacts.drandChainHash);
-        artifacts.commitHash =
-            _commitHash(isUp, salt, contentId, artifacts.targetRound, artifacts.drandChainHash, artifacts.ciphertext);
+        artifacts.commitHash = _commitHash(
+            isUp, salt, voter, contentId, artifacts.targetRound, artifacts.drandChainHash, artifacts.ciphertext
+        );
         artifacts.commitKey = keccak256(abi.encodePacked(voter, artifacts.commitHash));
     }
 
@@ -267,9 +268,9 @@ contract SelectiveRevelationTest is VotingTestBase {
     // GRACE PERIOD EXPIRY
     // =========================================================================
 
-    /// @notice Unrevealed past-epoch votes exist but grace period has expired.
-    ///         Settlement should succeed (unrevealed votes handled post-settlement).
-    function test_GracePeriodExpiry_SettlementSucceeds() public {
+    /// @notice Unrevealed past-epoch votes continue to block settlement after grace.
+    ///         The round can be finalized as reveal-failed after the final reveal grace window.
+    function test_GracePeriodExpiry_BlocksSettlementAndAllowsRevealFailedFinalization() public {
         uint256 contentId = _submitContent();
 
         bytes32[4] memory commitKeys;
@@ -291,11 +292,14 @@ contract SelectiveRevelationTest is VotingTestBase {
         _reveal(contentId, roundId, commitKeys[1], true, salts[1]);
         _reveal(contentId, roundId, commitKeys[2], false, salts[2]);
 
-        // Settlement succeeds — grace period expired, unrevealed vote doesn't block
+        vm.expectRevert(RoundVotingEngine.UnrevealedPastEpochVotes.selector);
         engine.settleRound(contentId, roundId);
 
+        vm.warp(r.startTime + 7 days + GRACE_PERIOD + 1);
+        engine.finalizeRevealFailedRound(contentId, roundId);
+
         RoundLib.Round memory round = RoundEngineReadHelpers.round(engine, contentId, roundId);
-        assertEq(uint256(round.state), uint256(RoundLib.RoundState.Settled));
+        assertEq(uint256(round.state), uint256(RoundLib.RoundState.RevealFailed));
     }
 
     /// @notice Within grace period, unrevealed votes still block settlement.
@@ -414,10 +418,14 @@ contract SelectiveRevelationTest is VotingTestBase {
         _reveal(contentId, roundId, commitKeys[1], true, salts[1]);
         _reveal(contentId, roundId, commitKeys[2], false, salts[2]);
 
+        vm.expectRevert(RoundVotingEngine.UnrevealedPastEpochVotes.selector);
         engine.settleRound(contentId, roundId);
 
+        vm.warp(r.startTime + 7 days + GRACE_PERIOD + 1);
+        engine.finalizeRevealFailedRound(contentId, roundId);
+
         RoundLib.Round memory round = RoundEngineReadHelpers.round(engine, contentId, roundId);
-        assertEq(uint256(round.state), uint256(RoundLib.RoundState.Settled));
+        assertEq(uint256(round.state), uint256(RoundLib.RoundState.RevealFailed));
     }
 
     function test_RevealGracePeriodSnapshot_NewRoundUsesUpdatedValue() public {
@@ -448,11 +456,11 @@ contract SelectiveRevelationTest is VotingTestBase {
         vm.expectRevert(RoundVotingEngine.UnrevealedPastEpochVotes.selector);
         engine.settleRound(contentId, roundId);
 
-        vm.warp(r.startTime + EPOCH + 2 hours + 1);
-        engine.settleRound(contentId, roundId);
+        vm.warp(r.startTime + 7 days + 2 hours + 1);
+        engine.finalizeRevealFailedRound(contentId, roundId);
 
         RoundLib.Round memory round = RoundEngineReadHelpers.round(engine, contentId, roundId);
-        assertEq(uint256(round.state), uint256(RoundLib.RoundState.Settled));
+        assertEq(uint256(round.state), uint256(RoundLib.RoundState.RevealFailed));
     }
 
     // =========================================================================

@@ -88,6 +88,7 @@ const epochDuration =
   content.openRound?.epochDuration ?? content.roundConfig?.epochDuration ?? 20 * 60;
 
 const commit = await buildCommitVoteParams({
+  voter: "0xYourWalletAddress",
   contentId: 42n,
   isUp: true,
   stakeAmount: 2.5,

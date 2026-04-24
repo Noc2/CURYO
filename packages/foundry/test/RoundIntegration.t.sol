@@ -189,7 +189,7 @@ contract RoundIntegrationTest is VotingTestBase {
     ///      The commit is recorded, then time advances past EPOCH_DURATION, then the vote is revealed.
     function _commitAndReveal(address voter, uint256 contentId, bool isUp, uint256 stakeAmount) internal {
         bytes32 salt = keccak256(abi.encodePacked(voter, contentId, isUp));
-        bytes32 ch = _commitHash(isUp, salt, contentId);
+        bytes32 ch = _commitHash(isUp, salt, voter, contentId);
         bytes memory ct = _testCiphertext(isUp, salt, contentId);
 
         vm.startPrank(voter);
@@ -239,7 +239,7 @@ contract RoundIntegrationTest is VotingTestBase {
         address frontend
     ) internal returns (bytes32 ch, bytes32 ck)
     {
-        ch = _commitHash(isUp, salt, contentId);
+        ch = _commitHash(isUp, salt, voter, contentId);
         bytes memory ct = _testCiphertext(isUp, salt, contentId);
 
         vm.startPrank(voter);
@@ -277,7 +277,7 @@ contract RoundIntegrationTest is VotingTestBase {
 
         for (uint256 i = 0; i < voters.length; i++) {
             salts[i] = keccak256(abi.encodePacked(voters[i], contentId, directions[i], i));
-            commitHashes[i] = _commitHash(directions[i], salts[i], contentId);
+            commitHashes[i] = _commitHash(directions[i], salts[i], voters[i], contentId);
             bytes memory ct = _testCiphertext(directions[i], salts[i], contentId);
 
             vm.startPrank(voters[i]);
@@ -358,7 +358,7 @@ contract RoundIntegrationTest is VotingTestBase {
 
         for (uint256 i = 0; i < 3; i++) {
             salts[i] = keccak256(abi.encodePacked(voters[i], contentId, dirs[i], i));
-            commitHashes[i] = _commitHash(dirs[i], salts[i], contentId);
+            commitHashes[i] = _commitHash(dirs[i], salts[i], voters[i], contentId);
             bytes memory ct = _testCiphertext(dirs[i], salts[i], contentId);
 
             vm.startPrank(voters[i]);
@@ -464,9 +464,9 @@ contract RoundIntegrationTest is VotingTestBase {
         bytes32 salt2 = keccak256(abi.encodePacked(voter2, contentId, true, uint256(1)));
         bytes32 salt3 = keccak256(abi.encodePacked(voter3, contentId, false, uint256(2)));
 
-        bytes32 ch1 = _commitHash(true, salt1, contentId);
-        bytes32 ch2 = _commitHash(true, salt2, contentId);
-        bytes32 ch3 = _commitHash(false, salt3, contentId);
+        bytes32 ch1 = _commitHash(true, salt1, voter1, contentId);
+        bytes32 ch2 = _commitHash(true, salt2, voter2, contentId);
+        bytes32 ch3 = _commitHash(false, salt3, voter3, contentId);
 
         vm.startPrank(voter1);
         crepToken.approve(address(votingEngine), 10e6);
@@ -663,8 +663,8 @@ contract RoundIntegrationTest is VotingTestBase {
         // Commit on content 1
         bytes32 s1a = keccak256(abi.encodePacked(voter1, contentId1, true, uint256(0)));
         bytes32 s1b = keccak256(abi.encodePacked(voter2, contentId1, false, uint256(1)));
-        bytes32 ch1a = _commitHash(true, s1a, contentId1);
-        bytes32 ch1b = _commitHash(false, s1b, contentId1);
+        bytes32 ch1a = _commitHash(true, s1a, voter1, contentId1);
+        bytes32 ch1b = _commitHash(false, s1b, voter2, contentId1);
 
         vm.startPrank(voter1);
         crepToken.approve(address(votingEngine), STAKE);
@@ -697,8 +697,8 @@ contract RoundIntegrationTest is VotingTestBase {
         // Commit on content 2
         bytes32 s2a = keccak256(abi.encodePacked(voter3, contentId2, true, uint256(2)));
         bytes32 s2b = keccak256(abi.encodePacked(voter4, contentId2, false, uint256(3)));
-        bytes32 ch2a = _commitHash(true, s2a, contentId2);
-        bytes32 ch2b = _commitHash(false, s2b, contentId2);
+        bytes32 ch2a = _commitHash(true, s2a, voter3, contentId2);
+        bytes32 ch2b = _commitHash(false, s2b, voter4, contentId2);
 
         vm.startPrank(voter3);
         crepToken.approve(address(votingEngine), STAKE);
@@ -759,9 +759,9 @@ contract RoundIntegrationTest is VotingTestBase {
         bytes32 s1a = keccak256(abi.encodePacked(voter1, contentId1, true, uint256(0)));
         bytes32 s1b = keccak256(abi.encodePacked(voter2, contentId1, false, uint256(1)));
         bytes32 s1c = keccak256(abi.encodePacked(voter3, contentId1, true, uint256(2)));
-        bytes32 ch1a = _commitHash(true, s1a, contentId1);
-        bytes32 ch1b = _commitHash(false, s1b, contentId1);
-        bytes32 ch1c = _commitHash(true, s1c, contentId1);
+        bytes32 ch1a = _commitHash(true, s1a, voter1, contentId1);
+        bytes32 ch1b = _commitHash(false, s1b, voter2, contentId1);
+        bytes32 ch1c = _commitHash(true, s1c, voter3, contentId1);
 
         vm.startPrank(voter1);
         crepToken.approve(address(votingEngine), STAKE);
@@ -811,8 +811,8 @@ contract RoundIntegrationTest is VotingTestBase {
 
         bytes32 s2a = keccak256(abi.encodePacked(voter4, contentId2, true, uint256(3)));
         bytes32 s2b = keccak256(abi.encodePacked(voter5, contentId2, false, uint256(4)));
-        bytes32 ch2a = _commitHash(true, s2a, contentId2);
-        bytes32 ch2b = _commitHash(false, s2b, contentId2);
+        bytes32 ch2a = _commitHash(true, s2a, voter4, contentId2);
+        bytes32 ch2b = _commitHash(false, s2b, voter5, contentId2);
 
         vm.startPrank(voter4);
         crepToken.approve(address(votingEngine), STAKE);
@@ -880,10 +880,10 @@ contract RoundIntegrationTest is VotingTestBase {
         bytes32 s3 = keccak256(abi.encodePacked(voter1, contentId2, false, uint256(2)));
         bytes32 s4 = keccak256(abi.encodePacked(voter3, contentId2, true, uint256(3)));
 
-        bytes32 ch1 = _commitHash(true, s1, contentId1);
-        bytes32 ch2 = _commitHash(false, s2, contentId1);
-        bytes32 ch3 = _commitHash(false, s3, contentId2);
-        bytes32 ch4 = _commitHash(true, s4, contentId2);
+        bytes32 ch1 = _commitHash(true, s1, voter1, contentId1);
+        bytes32 ch2 = _commitHash(false, s2, voter2, contentId1);
+        bytes32 ch3 = _commitHash(false, s3, voter1, contentId2);
+        bytes32 ch4 = _commitHash(true, s4, voter3, contentId2);
 
         // voter1 votes UP on content 1
         vm.startPrank(voter1);
@@ -986,7 +986,7 @@ contract RoundIntegrationTest is VotingTestBase {
         uint256 contentId = _submitContent();
 
         bytes32 salt = keccak256(abi.encodePacked(voter1, contentId, true, uint256(0)));
-        bytes32 ch = _commitHash(true, salt, contentId);
+        bytes32 ch = _commitHash(true, salt, voter1, contentId);
 
         vm.startPrank(voter1);
         crepToken.approve(address(votingEngine), STAKE);
@@ -1027,8 +1027,8 @@ contract RoundIntegrationTest is VotingTestBase {
 
         bytes32 s1 = keccak256(abi.encodePacked(voter1, contentId, true, uint256(0)));
         bytes32 s2 = keccak256(abi.encodePacked(voter2, contentId, false, uint256(1)));
-        bytes32 ch1 = _commitHash(true, s1, contentId);
-        bytes32 ch2 = _commitHash(false, s2, contentId);
+        bytes32 ch1 = _commitHash(true, s1, voter1, contentId);
+        bytes32 ch2 = _commitHash(false, s2, voter2, contentId);
 
         vm.startPrank(voter1);
         crepToken.approve(address(votingEngine), STAKE);
@@ -1069,7 +1069,7 @@ contract RoundIntegrationTest is VotingTestBase {
         uint256 contentId = _submitContent();
 
         bytes32 salt = keccak256(abi.encodePacked(voter1, contentId, true, uint256(0)));
-        bytes32 ch = _commitHash(true, salt, contentId);
+        bytes32 ch = _commitHash(true, salt, voter1, contentId);
 
         vm.startPrank(voter1);
         crepToken.approve(address(votingEngine), STAKE);
@@ -1102,7 +1102,7 @@ contract RoundIntegrationTest is VotingTestBase {
         uint256 contentId = _submitContent();
 
         bytes32 salt = keccak256(abi.encodePacked(voter1, contentId, true, uint256(0)));
-        bytes32 ch = _commitHash(true, salt, contentId);
+        bytes32 ch = _commitHash(true, salt, voter1, contentId);
 
         vm.startPrank(voter1);
         crepToken.approve(address(votingEngine), STAKE);
@@ -1130,7 +1130,7 @@ contract RoundIntegrationTest is VotingTestBase {
         // New commit after cooldown creates round 2
         vm.warp(block.timestamp + 25 hours);
         bytes32 salt2 = keccak256(abi.encodePacked(voter2, contentId, false, uint256(1)));
-        bytes32 ch2 = _commitHash(false, salt2, contentId);
+        bytes32 ch2 = _commitHash(false, salt2, voter2, contentId);
 
         vm.startPrank(voter2);
         crepToken.approve(address(votingEngine), STAKE);
@@ -1211,7 +1211,7 @@ contract RoundIntegrationTest is VotingTestBase {
         // New commit after cooldown creates round 2
         vm.warp(block.timestamp + 25 hours);
         bytes32 salt = keccak256(abi.encodePacked(voter3, contentId, true, uint256(99)));
-        bytes32 ch = _commitHash(true, salt, contentId);
+        bytes32 ch = _commitHash(true, salt, voter3, contentId);
 
         vm.startPrank(voter3);
         crepToken.approve(address(votingEngine), STAKE);
@@ -1240,8 +1240,8 @@ contract RoundIntegrationTest is VotingTestBase {
         // Only UP voters, no DOWN — still need ≥minVoters revealed
         bytes32 s1 = keccak256(abi.encodePacked(voter1, contentId, true, uint256(0)));
         bytes32 s2 = keccak256(abi.encodePacked(voter2, contentId, true, uint256(1)));
-        bytes32 ch1 = _commitHash(true, s1, contentId);
-        bytes32 ch2 = _commitHash(true, s2, contentId);
+        bytes32 ch1 = _commitHash(true, s1, voter1, contentId);
+        bytes32 ch2 = _commitHash(true, s2, voter2, contentId);
 
         vm.startPrank(voter1);
         crepToken.approve(address(votingEngine), STAKE);
@@ -1301,8 +1301,8 @@ contract RoundIntegrationTest is VotingTestBase {
 
         bytes32 s1 = keccak256(abi.encodePacked(voter1, contentId, false, uint256(0)));
         bytes32 s2 = keccak256(abi.encodePacked(voter2, contentId, false, uint256(1)));
-        bytes32 ch1 = _commitHash(false, s1, contentId);
-        bytes32 ch2 = _commitHash(false, s2, contentId);
+        bytes32 ch1 = _commitHash(false, s1, voter1, contentId);
+        bytes32 ch2 = _commitHash(false, s2, voter2, contentId);
 
         vm.startPrank(voter1);
         crepToken.approve(address(votingEngine), STAKE);
@@ -1369,7 +1369,7 @@ contract RoundIntegrationTest is VotingTestBase {
         // New commit after cooldown creates round 2
         vm.warp(block.timestamp + 25 hours);
         bytes32 salt = keccak256(abi.encodePacked(voter4, contentId, false, uint256(99)));
-        bytes32 ch = _commitHash(false, salt, contentId);
+        bytes32 ch = _commitHash(false, salt, voter4, contentId);
 
         vm.startPrank(voter4);
         crepToken.approve(address(votingEngine), STAKE);
@@ -1396,7 +1396,7 @@ contract RoundIntegrationTest is VotingTestBase {
         uint256 contentId = _submitContent();
 
         bytes32 salt1 = keccak256(abi.encodePacked(voter1, contentId, true, uint256(0)));
-        bytes32 ch1 = _commitHash(true, salt1, contentId);
+        bytes32 ch1 = _commitHash(true, salt1, voter1, contentId);
 
         vm.startPrank(voter1);
         crepToken.approve(address(votingEngine), STAKE);
@@ -1417,7 +1417,7 @@ contract RoundIntegrationTest is VotingTestBase {
 
         // Same voter, same round — second commit reverts with AlreadyCommitted (cooldown cleared)
         bytes32 salt2 = keccak256(abi.encodePacked(voter1, contentId, false, uint256(1)));
-        bytes32 ch2 = _commitHash(false, salt2, contentId);
+        bytes32 ch2 = _commitHash(false, salt2, voter2, contentId);
         uint16 referenceRatingBps = _currentRatingReferenceBps(contentId);
 
         vm.startPrank(voter1);
@@ -1454,7 +1454,7 @@ contract RoundIntegrationTest is VotingTestBase {
 
         // Try immediately — cooldown active (voter1 last voted < 24h ago)
         bytes32 salt = keccak256(abi.encodePacked(voter1, contentId, true, uint256(99)));
-        bytes32 ch = _commitHash(true, salt, contentId);
+        bytes32 ch = _commitHash(true, salt, voter1, contentId);
         uint16 referenceRatingBps = _currentRatingReferenceBps(contentId);
 
         vm.startPrank(voter1);
@@ -1501,8 +1501,8 @@ contract RoundIntegrationTest is VotingTestBase {
         // All voters same direction — unanimous UP
         bytes32 s1 = keccak256(abi.encodePacked(voter1, contentId, true, uint256(0)));
         bytes32 s2 = keccak256(abi.encodePacked(voter2, contentId, true, uint256(1)));
-        bytes32 ch1 = _commitHash(true, s1, contentId);
-        bytes32 ch2 = _commitHash(true, s2, contentId);
+        bytes32 ch1 = _commitHash(true, s1, voter1, contentId);
+        bytes32 ch2 = _commitHash(true, s2, voter2, contentId);
 
         vm.startPrank(voter1);
         crepToken.approve(address(votingEngine), STAKE);
@@ -1626,8 +1626,8 @@ contract RoundIntegrationTest is VotingTestBase {
 
         bytes32 s1 = keccak256(abi.encodePacked(voter1, contentId, true, uint256(0)));
         bytes32 s2 = keccak256(abi.encodePacked(voter2, contentId, true, uint256(1)));
-        bytes32 ch1 = _commitHash(true, s1, contentId);
-        bytes32 ch2 = _commitHash(true, s2, contentId);
+        bytes32 ch1 = _commitHash(true, s1, voter1, contentId);
+        bytes32 ch2 = _commitHash(true, s2, voter2, contentId);
 
         vm.startPrank(voter1);
         crepToken.approve(address(votingEngine), STAKE);
@@ -1699,7 +1699,7 @@ contract RoundIntegrationTest is VotingTestBase {
         assertEq(votingEngine.voterCommitHash(contentId, 1, voter1), bytes32(0), "Should not have committed yet");
 
         bytes32 salt = keccak256(abi.encodePacked(voter1, contentId, true, uint256(0)));
-        bytes32 ch = _commitHash(true, salt, contentId);
+        bytes32 ch = _commitHash(true, salt, voter1, contentId);
 
         vm.startPrank(voter1);
         crepToken.approve(address(votingEngine), STAKE);
@@ -1726,7 +1726,7 @@ contract RoundIntegrationTest is VotingTestBase {
         uint256 contentId = _submitContent();
 
         bytes32 s1 = keccak256(abi.encodePacked(voter1, contentId, true, uint256(0)));
-        bytes32 ch1 = _commitHash(true, s1, contentId);
+        bytes32 ch1 = _commitHash(true, s1, voter1, contentId);
 
         vm.startPrank(voter1);
         crepToken.approve(address(votingEngine), STAKE);
@@ -1745,7 +1745,7 @@ contract RoundIntegrationTest is VotingTestBase {
         assertTrue(votingEngine.hasCommits(contentId), "Content should show commit history after first vote");
 
         bytes32 s2 = keccak256(abi.encodePacked(voter2, contentId, false, uint256(1)));
-        bytes32 ch2 = _commitHash(false, s2, contentId);
+        bytes32 ch2 = _commitHash(false, s2, voter2, contentId);
 
         vm.startPrank(voter2);
         crepToken.approve(address(votingEngine), STAKE);
@@ -1770,9 +1770,9 @@ contract RoundIntegrationTest is VotingTestBase {
         bytes32 s1 = keccak256(abi.encodePacked(voter1, contentId, true, uint256(0)));
         bytes32 s2 = keccak256(abi.encodePacked(voter2, contentId, false, uint256(1)));
         bytes32 s3 = keccak256(abi.encodePacked(voter3, contentId, true, uint256(2)));
-        bytes32 ch1 = _commitHash(true, s1, contentId);
-        bytes32 ch2 = _commitHash(false, s2, contentId);
-        bytes32 ch3 = _commitHash(true, s3, contentId);
+        bytes32 ch1 = _commitHash(true, s1, voter1, contentId);
+        bytes32 ch2 = _commitHash(false, s2, voter2, contentId);
+        bytes32 ch3 = _commitHash(true, s3, voter3, contentId);
 
         vm.startPrank(voter1);
         crepToken.approve(address(votingEngine), STAKE);
@@ -1843,7 +1843,7 @@ contract RoundIntegrationTest is VotingTestBase {
         uint256 contentId = _submitContent();
 
         bytes32 salt = keccak256(abi.encodePacked(voter1, contentId, true, uint256(0)));
-        bytes32 ch = _commitHash(true, salt, contentId);
+        bytes32 ch = _commitHash(true, salt, voter1, contentId);
         uint16 referenceRatingBps = _currentRatingReferenceBps(contentId);
 
         // Below minimum (1 cREP)
@@ -1864,7 +1864,7 @@ contract RoundIntegrationTest is VotingTestBase {
 
         // Above maximum (100 cREP)
         bytes32 salt2 = keccak256(abi.encodePacked(voter1, contentId, true, uint256(1)));
-        bytes32 ch2 = _commitHash(true, salt2, contentId);
+        bytes32 ch2 = _commitHash(true, salt2, voter2, contentId);
 
         vm.startPrank(voter1);
         crepToken.approve(address(votingEngine), 101e6);
@@ -1891,7 +1891,7 @@ contract RoundIntegrationTest is VotingTestBase {
 
         // voter1 commits in epoch-1 (epochIndex=0 → 100% weight)
         bytes32 s1 = keccak256(abi.encodePacked(voter1, contentId, true, uint256(0)));
-        bytes32 ch1 = _commitHash(true, s1, contentId);
+        bytes32 ch1 = _commitHash(true, s1, voter1, contentId);
 
         vm.startPrank(voter1);
         crepToken.approve(address(votingEngine), STAKE);
@@ -1929,7 +1929,7 @@ contract RoundIntegrationTest is VotingTestBase {
 
         // voter1 commits in epoch-1 (blind)
         bytes32 s1 = keccak256(abi.encodePacked(voter1, contentId, true, uint256(0)));
-        bytes32 ch1 = _commitHash(true, s1, contentId);
+        bytes32 ch1 = _commitHash(true, s1, voter1, contentId);
 
         vm.startPrank(voter1);
         crepToken.approve(address(votingEngine), STAKE);
@@ -1956,7 +1956,7 @@ contract RoundIntegrationTest is VotingTestBase {
 
         // voter2 commits in epoch-2 (informed, epochIndex=1 → 25% weight)
         bytes32 s2 = keccak256(abi.encodePacked(voter2, contentId, false, uint256(1)));
-        bytes32 ch2 = _commitHash(false, s2, contentId);
+        bytes32 ch2 = _commitHash(false, s2, voter2, contentId);
 
         vm.startPrank(voter2);
         crepToken.approve(address(votingEngine), STAKE);
@@ -2003,8 +2003,8 @@ contract RoundIntegrationTest is VotingTestBase {
 
         bytes32 s1 = keccak256(abi.encodePacked(voter1, contentId, true, uint256(0)));
         bytes32 s2 = keccak256(abi.encodePacked(voter2, contentId, false, uint256(1)));
-        bytes32 ch1 = _commitHash(true, s1, contentId);
-        bytes32 ch2 = _commitHash(false, s2, contentId);
+        bytes32 ch1 = _commitHash(true, s1, voter1, contentId);
+        bytes32 ch2 = _commitHash(false, s2, voter2, contentId);
 
         vm.startPrank(voter1);
         crepToken.approve(address(votingEngine), STAKE);
@@ -2130,9 +2130,9 @@ contract RoundIntegrationTest is VotingTestBase {
         bytes32 s1 = keccak256(abi.encodePacked(voter1, contentId, true, uint256(0)));
         bytes32 s2 = keccak256(abi.encodePacked(voter2, contentId, true, uint256(1)));
         bytes32 s3 = keccak256(abi.encodePacked(voter3, contentId, false, uint256(2)));
-        bytes32 ch1 = _commitHash(true, s1, contentId);
-        bytes32 ch2 = _commitHash(true, s2, contentId);
-        bytes32 ch3 = _commitHash(false, s3, contentId);
+        bytes32 ch1 = _commitHash(true, s1, voter1, contentId);
+        bytes32 ch2 = _commitHash(true, s2, voter2, contentId);
+        bytes32 ch3 = _commitHash(false, s3, voter3, contentId);
 
         vm.startPrank(voter1);
         crepToken.approve(address(votingEngine), STAKE);
@@ -2384,9 +2384,9 @@ contract RoundIntegrationTest is VotingTestBase {
         bytes32 s1 = keccak256(abi.encodePacked(voter1, contentId, true, uint256(0)));
         bytes32 s2 = keccak256(abi.encodePacked(voter2, contentId, true, uint256(1)));
         bytes32 s3 = keccak256(abi.encodePacked(voter3, contentId, false, uint256(2)));
-        bytes32 ch1 = _commitHash(true, s1, contentId);
-        bytes32 ch2 = _commitHash(true, s2, contentId);
-        bytes32 ch3 = _commitHash(false, s3, contentId);
+        bytes32 ch1 = _commitHash(true, s1, voter1, contentId);
+        bytes32 ch2 = _commitHash(true, s2, voter2, contentId);
+        bytes32 ch3 = _commitHash(false, s3, voter3, contentId);
 
         vm.startPrank(voter1);
         crepToken.approve(address(votingEngine), STAKE);
@@ -2458,9 +2458,9 @@ contract RoundIntegrationTest is VotingTestBase {
         bytes32 s1 = keccak256(abi.encodePacked(voter1, contentId, true, uint256(0)));
         bytes32 s2 = keccak256(abi.encodePacked(voter2, contentId, true, uint256(1)));
         bytes32 s3 = keccak256(abi.encodePacked(voter3, contentId, false, uint256(2)));
-        bytes32 ch1 = _commitHash(true, s1, contentId);
-        bytes32 ch2 = _commitHash(true, s2, contentId);
-        bytes32 ch3 = _commitHash(false, s3, contentId);
+        bytes32 ch1 = _commitHash(true, s1, voter1, contentId);
+        bytes32 ch2 = _commitHash(true, s2, voter2, contentId);
+        bytes32 ch3 = _commitHash(false, s3, voter3, contentId);
 
         vm.startPrank(voter1);
         crepToken.approve(address(votingEngine), STAKE);
@@ -3099,7 +3099,7 @@ contract RoundIntegrationTest is VotingTestBase {
         uint256 contentId = _submitContent();
 
         bytes32 salt = keccak256(abi.encodePacked(voter1, contentId, true, uint256(0)));
-        bytes32 ch = _commitHash(true, salt, contentId);
+        bytes32 ch = _commitHash(true, salt, voter1, contentId);
 
         vm.startPrank(voter1);
         crepToken.approve(address(votingEngine), STAKE);

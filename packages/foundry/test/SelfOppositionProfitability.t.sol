@@ -145,7 +145,7 @@ contract SelfOppositionProfitabilityTest is VotingTestBase {
     {
         salt = keccak256(abi.encodePacked(voter, block.timestamp, cid));
         bytes memory ciphertext = _testCiphertext(up, salt, cid);
-        bytes32 commitHash = _commitHash(up, salt, cid, ciphertext);
+        bytes32 commitHash = _commitHash(up, salt, voter, cid, ciphertext);
         vm.prank(voter);
         crepToken.approve(address(engine), stake);
         vm.prank(voter);

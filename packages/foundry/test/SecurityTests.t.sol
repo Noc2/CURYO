@@ -183,7 +183,7 @@ contract SecurityReentrancyTest is SecurityHarnessBase {
         bytes memory ciphertext = _testCiphertext(isUp, salt, contentId);
         uint64 targetRound = _tlockCommitTargetRound();
         bytes32 drandChainHash = _tlockDrandChainHash();
-        bytes32 commitHash = _commitHash(isUp, salt, contentId, targetRound, drandChainHash, ciphertext);
+        bytes32 commitHash = _commitHash(isUp, salt, voter, contentId, targetRound, drandChainHash, ciphertext);
         vm.startPrank(voter);
         crepToken.approve(address(votingEngine), STAKE);
         votingEngine.commitVote(
@@ -345,8 +345,9 @@ contract SecurityTransferAndCallTest is SecurityHarnessBase {
         artifacts.targetRound = _tlockCommitTargetRound();
         artifacts.drandChainHash = _tlockDrandChainHash();
         artifacts.ciphertext = _testCiphertext(true, salt, contentId, artifacts.targetRound, artifacts.drandChainHash);
-        artifacts.commitHash =
-            _commitHash(true, salt, contentId, artifacts.targetRound, artifacts.drandChainHash, artifacts.ciphertext);
+        artifacts.commitHash = _commitHash(
+            true, salt, voter, contentId, artifacts.targetRound, artifacts.drandChainHash, artifacts.ciphertext
+        );
         payload = abi.encode(
             contentId,
             artifacts.commitHash,
@@ -484,7 +485,7 @@ contract SecuritySettlementTimingTest is SecurityHarnessBase {
         bytes memory ciphertext = _testCiphertext(isUp, salt, contentId);
         uint64 targetRound = _tlockCommitTargetRound();
         bytes32 drandChainHash = _tlockDrandChainHash();
-        bytes32 commitHash = _commitHash(isUp, salt, contentId, targetRound, drandChainHash, ciphertext);
+        bytes32 commitHash = _commitHash(isUp, salt, voter, contentId, targetRound, drandChainHash, ciphertext);
         vm.startPrank(voter);
         crepToken.approve(address(votingEngine), STAKE);
         votingEngine.commitVote(

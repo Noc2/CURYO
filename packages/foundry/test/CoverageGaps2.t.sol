@@ -1864,7 +1864,7 @@ contract RoundSettlementBranchTest is VotingTestBase {
         bytes memory ciphertext = _testCiphertext(isUp, salt, contentId);
         uint16 referenceRatingBps = _currentRatingReferenceBps(contentId);
         bytes32 commitHash = _commitHash(
-            isUp, salt, contentId, referenceRatingBps, _tlockCommitTargetRound(), _tlockDrandChainHash(), ciphertext
+            isUp, salt, voter, contentId, referenceRatingBps, _tlockCommitTargetRound(), _tlockDrandChainHash(), ciphertext
         );
         vm.prank(voter);
         crep.approve(address(engine), amount);

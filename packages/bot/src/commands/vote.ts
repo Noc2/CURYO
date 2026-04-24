@@ -293,6 +293,7 @@ export async function runVote() {
 
       const { ciphertext, commitHash, targetRound, drandChainHash } = await createTlockVoteCommit(
         {
+          voter: account.address,
           isUp,
           salt,
           contentId,
