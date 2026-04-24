@@ -2137,11 +2137,12 @@ contract RoundVotingEngineBranchesTest is VotingTestBase {
         RoundLib.Round memory rEW0 = RoundEngineReadHelpers.round(engine, contentId, roundId);
         _warpPastTlockRevealTime(uint256(rEW0.startTime) + EPOCH);
 
+        uint256 epoch2RevealableAfter = block.timestamp + EPOCH;
         (bytes32 ck2, bytes32 s2) = _commit(voter2, contentId, true, STAKE);
         (bytes32 ck3, bytes32 s3) = _commit(voter3, contentId, true, STAKE);
 
-        // Warp past epoch 2: voter2/voter3 committed at T0+EPOCH+1 so their epoch ends at T0+2*EPOCH
-        _warpPastTlockRevealTime(uint256(rEW0.startTime) + 2 * EPOCH);
+        // Warp past the epoch-2 commits' ceil tlock target.
+        _warpPastTlockRevealTime(epoch2RevealableAfter);
 
         _reveal(contentId, roundId, ck1, false, s1);
         _reveal(contentId, roundId, ck2, true, s2);
