@@ -219,7 +219,6 @@ contract QuestionRewardPoolEscrow is
     );
     event QuestionBundleRewardRefunded(uint256 indexed bundleId, address indexed funder, uint256 amount);
     event QuestionBundleRewardForfeited(uint256 indexed bundleId, address indexed treasury, uint256 amount);
-    event VotingEngineUpdated(address votingEngine);
 
     /// @custom:oz-upgrades-unsafe-allow constructor
     constructor() {
@@ -500,14 +499,13 @@ contract QuestionRewardPoolEscrow is
         );
     }
 
-    function qualifyRound(uint256 rewardPoolId, uint256 roundId) external nonReentrant whenNotPaused {
+    function qualifyRound(uint256 rewardPoolId, uint256 roundId) external whenNotPaused {
         RewardPool storage rewardPool = _getIncompleteRewardPoolForQualification(rewardPoolId);
         _qualifyRound(rewardPoolId, rewardPool, roundId);
     }
 
     function advanceQualificationCursor(uint256 rewardPoolId, uint256 maxRounds)
         external
-        nonReentrant
         whenNotPaused
         returns (uint256 skipped, uint256 nextRoundToEvaluate)
     {
@@ -592,7 +590,7 @@ contract QuestionRewardPoolEscrow is
         );
     }
 
-    function recordBundleQuestionTerminal(uint256 contentId, uint256 roundId, bool settled) external nonReentrant {
+    function recordBundleQuestionTerminal(uint256 contentId, uint256 roundId, bool settled) external {
         // Intentionally NOT gated by whenNotPaused: the voting engine invokes this inside a
         // try/catch during settlement, so a paused escrow would silently swallow the terminal
         // signal with no retry path, permanently locking bundle claims. Caller is restricted
@@ -831,7 +829,6 @@ contract QuestionRewardPoolEscrow is
     function setVotingEngine(address votingEngine_) external onlyRole(CONFIG_ROLE) {
         require(votingEngine_ != address(0), "Invalid engine");
         votingEngine = RoundVotingEngine(votingEngine_);
-        emit VotingEngineUpdated(votingEngine_);
     }
 
     function setDefaultFrontendFeeBps(uint256 frontendFeeBps_) external onlyRole(CONFIG_ROLE) {

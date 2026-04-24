@@ -295,8 +295,6 @@ contract QuestionRewardPoolEscrowTest is VotingTestBase {
         address newEngine = address(0xBEEF);
 
         vm.prank(owner);
-        vm.expectEmit(false, false, false, true);
-        emit QuestionRewardPoolEscrow.VotingEngineUpdated(newEngine);
         rewardPoolEscrow.setVotingEngine(newEngine);
 
         assertEq(address(rewardPoolEscrow.votingEngine()), newEngine);
