@@ -1196,18 +1196,52 @@ contract ContentRegistryBranchesTest is VotingTestBase {
     }
 
     function test_SubmitContent_UrlTooLong_Reverts() public {
-        bytes memory longUrl = new bytes(2049);
-        for (uint256 i = 0; i < longUrl.length; i++) {
-            longUrl[i] = "a";
-        }
+        string memory longUrl = _validLengthUrl(2049, bytes("https://example.com/"), bytes(".jpg"));
 
         vm.startPrank(submitter);
         hrepToken.approve(address(registry), 10e6);
         vm.expectRevert("Invalid URL");
         registry.submitQuestion(
-            "https://example.com/context", _singleImageUrls(string(longUrl)), "", "goal", "goal", "tags", 1, bytes32(0)
+            "https://example.com/context", _singleImageUrls(longUrl), "", "goal", "goal", "tags", 1, bytes32(0)
         );
         vm.stopPrank();
+    }
+
+    function test_SubmitQuestion_AllowsMaxLengthImageUrl() public view {
+        string memory maxUrl = _validLengthUrl(2048, bytes("https://example.com/"), bytes(".jpg"));
+
+        registry.previewQuestionSubmissionKey(
+            "https://example.com/context", _singleImageUrls(maxUrl), "", "Question?", "Context.", "tags", 1
+        );
+    }
+
+    function test_SubmitQuestion_VideoUrlTooLong_Reverts() public {
+        string memory longVideoUrl = _validLengthUrl(2049, bytes("https://youtu.be/"), bytes("a"));
+
+        vm.expectRevert("Invalid URL");
+        registry.previewQuestionSubmissionKey(
+            "https://example.com/context", _emptyImageUrls(), longVideoUrl, "Question?", "Context.", "tags", 1
+        );
+    }
+
+    function _validLengthUrl(uint256 length, bytes memory prefix, bytes memory suffix)
+        internal
+        pure
+        returns (string memory)
+    {
+        require(length >= prefix.length + suffix.length, "Invalid test URL length");
+        bytes memory out = new bytes(length);
+        for (uint256 i = 0; i < prefix.length; i++) {
+            out[i] = prefix[i];
+        }
+        uint256 suffixOffset = length - suffix.length;
+        for (uint256 i = prefix.length; i < suffixOffset; i++) {
+            out[i] = "a";
+        }
+        for (uint256 i = 0; i < suffix.length; i++) {
+            out[suffixOffset + i] = suffix[i];
+        }
+        return string(out);
     }
 
     function test_SubmitContent_TitleTooLong_Reverts() public {

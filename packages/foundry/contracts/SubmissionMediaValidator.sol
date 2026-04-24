@@ -6,6 +6,7 @@ pragma solidity ^0.8.24;
 /// @dev Kept outside ContentRegistry to avoid bloating the upgradeable registry runtime.
 contract SubmissionMediaValidator {
     uint256 public constant MAX_IMAGE_URLS = 4;
+    uint256 public constant MAX_URL_LENGTH = 2048;
 
     function validateSingleMediaUrl(string calldata url) external pure {
         require(_isValidSubmissionUrl(url), "Invalid URL");
@@ -76,7 +77,7 @@ contract SubmissionMediaValidator {
     function _isValidSubmissionUrl(string memory url) internal pure returns (bool) {
         bytes memory urlBytes = bytes(url);
         bytes memory prefix = bytes("https://");
-        if (urlBytes.length < prefix.length) {
+        if (urlBytes.length < prefix.length || urlBytes.length > MAX_URL_LENGTH) {
             return false;
         }
 
