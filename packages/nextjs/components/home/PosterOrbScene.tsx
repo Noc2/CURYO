@@ -42,6 +42,8 @@ export function PosterOrbScene({
 
       <style jsx>{`
         .poster-orb-scene {
+          --poster-orb-scene-y: 14%;
+
           position: relative;
           display: block;
           height: 100%;
@@ -59,7 +61,7 @@ export function PosterOrbScene({
         .poster-orb-scene__image-shell {
           position: absolute;
           inset: 0;
-          transform: translateY(8%);
+          transform: translateY(var(--poster-orb-scene-y));
           transform-origin: 50% 52%;
           mask-image: linear-gradient(to right, rgba(0, 0, 0, 1) 0 84%, rgba(0, 0, 0, 0.9) 90%, transparent 100%);
           -webkit-mask-image: linear-gradient(
@@ -211,11 +213,11 @@ export function PosterOrbScene({
         @keyframes poster-orb-scene-float {
           0%,
           100% {
-            transform: translateY(8%) scale(1.01);
+            transform: translateY(var(--poster-orb-scene-y)) scale(1.01);
           }
 
           50% {
-            transform: translateY(calc(8% - 12px)) scale(1.03);
+            transform: translateY(calc(var(--poster-orb-scene-y) - 12px)) scale(1.03);
           }
         }
 
