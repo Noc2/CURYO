@@ -619,7 +619,7 @@ export function FaucetSection({ referrer }: FaucetSectionProps) {
       {/* Header */}
       <div className="flex items-center gap-2">
         <GiftIcon className="w-6 h-6 text-primary" />
-        <h2 className={surfaceSectionHeadingClassName}>HREP Faucet</h2>
+        <h2 className={surfaceSectionHeadingClassName}>Human Reputation (HREP) Faucet</h2>
         <InfoTooltip
           text={`Claim free HREP after proving you are ${FAUCET_MINIMUM_AGE}+, human, and sanctions eligible with Self.xyz.`}
         />

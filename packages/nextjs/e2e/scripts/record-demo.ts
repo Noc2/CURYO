@@ -178,7 +178,9 @@ async function recordFaucetIntro(page: Page): Promise<void> {
   await gotoWithRetry(page, "/governance#faucet", { ensureWalletConnected: true, timeout: 60_000 });
   await ensureWalletVisible(page, ANVIL_ACCOUNTS.account1.address);
 
-  await page.getByRole("heading", { name: "HREP Faucet" }).waitFor({ state: "visible", timeout: 30_000 });
+  await page
+    .getByRole("heading", { name: "Human Reputation (HREP) Faucet" })
+    .waitFor({ state: "visible", timeout: 30_000 });
   await page.getByRole("heading", { name: "How it works" }).waitFor({ state: "visible", timeout: 30_000 });
   await page.waitForLoadState("networkidle").catch(() => undefined);
 
