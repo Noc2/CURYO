@@ -181,9 +181,9 @@ contract SelfOppositionProfitabilityTest is VotingTestBase {
         }
     }
 
-    /// @dev Set totalDistributed on ParticipationPool via vm.store (slot 1) to simulate tier transitions.
+    /// @dev Set totalDistributed on ParticipationPool via vm.store (slot 2) to simulate tier transitions.
     function _setPoolTotalDistributed(uint256 n) internal {
-        vm.store(address(pool), bytes32(uint256(1)), bytes32(n));
+        vm.store(address(pool), bytes32(uint256(2)), bytes32(n));
     }
 
     function _resetParticipationPool(uint256 distributed) internal {

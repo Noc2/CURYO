@@ -315,24 +315,16 @@ contract ParticipationPoolBranchesTest is Test {
         pool.transferOwnership(governance);
     }
 
-    /// @dev Use vm.store to set totalDistributed (slot 2 after immutables)
+    /// @dev Use vm.store to set totalDistributed.
     function _setTotalDistributed(uint256 value) internal {
-        // ParticipationPool storage: hrepToken (immutable), governance (immutable), totalDistributed, poolBalance, authorizedCallers
-        // For non-upgradeable Ownable: slot 0 = _owner, slot 1 = totalDistributed, slot 2 = poolBalance
-        // Actually Ownable stores owner at a specific slot. Let's find the right slot.
-        // OZ5 Ownable: slot 0 = _owner (address)
-        // ParticipationPool: immutables don't use storage. So:
-        // slot 0 = Ownable._owner
-        // slot 1 = totalDistributed
-        // slot 2 = poolBalance
-        // slot 3+ = authorizedCallers mapping
-        vm.store(address(pool), bytes32(uint256(1)), bytes32(value));
+        // slot 0 = Ownable._owner, slot 1 = governance, slot 2 = totalDistributed
+        vm.store(address(pool), bytes32(uint256(2)), bytes32(value));
         assertEq(pool.totalDistributed(), value);
     }
 
     /// @dev Set pool balance via vm.store
     function _setPoolBalance(uint256 value) internal {
-        vm.store(address(pool), bytes32(uint256(2)), bytes32(value));
+        vm.store(address(pool), bytes32(uint256(3)), bytes32(value));
         assertEq(pool.poolBalance(), value);
     }
 }

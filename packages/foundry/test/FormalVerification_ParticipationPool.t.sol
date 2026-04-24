@@ -42,14 +42,14 @@ contract FormalVerification_ParticipationPoolTest is Test {
 
     // ==================== Helpers ====================
 
-    /// @dev Directly set totalDistributed via vm.store (slot 1 in ParticipationPool storage)
+    /// @dev Directly set totalDistributed via vm.store (slot 2 in ParticipationPool storage)
     function _setTotalDistributed(uint256 n) internal {
-        vm.store(address(pool), bytes32(uint256(1)), bytes32(n));
+        vm.store(address(pool), bytes32(uint256(2)), bytes32(n));
     }
 
-    /// @dev Set poolBalance via vm.store (slot 2 in ParticipationPool storage)
+    /// @dev Set poolBalance via vm.store (slot 3 in ParticipationPool storage)
     function _setPoolBalance(uint256 n) internal {
-        vm.store(address(pool), bytes32(uint256(2)), bytes32(n));
+        vm.store(address(pool), bytes32(uint256(3)), bytes32(n));
     }
 
     // ==================== Test 1: Tier 0 -> 1 Transition at 1.5M ====================

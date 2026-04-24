@@ -495,6 +495,34 @@ contract ParticipationPoolTest is Test {
         assertEq(pool.owner(), governance);
     }
 
+    function test_SetGovernance_AllowsMigration() public {
+        address newGovernance = address(99);
+
+        vm.prank(admin);
+        vm.expectEmit(true, false, false, false);
+        emit ParticipationPool.GovernanceUpdated(newGovernance);
+        pool.setGovernance(newGovernance);
+
+        assertEq(pool.governance(), newGovernance);
+
+        vm.prank(admin);
+        pool.transferOwnership(newGovernance);
+
+        assertEq(pool.owner(), newGovernance);
+    }
+
+    function test_SetGovernance_RevertZeroAddress() public {
+        vm.prank(admin);
+        vm.expectRevert("Invalid governance");
+        pool.setGovernance(address(0));
+    }
+
+    function test_SetGovernance_OnlyOwner() public {
+        vm.prank(unauthorized);
+        vm.expectRevert(abi.encodeWithSelector(Ownable.OwnableUnauthorizedAccount.selector, unauthorized));
+        pool.setGovernance(address(99));
+    }
+
     function test_TransferOwnership_RevertNotGovernance() public {
         vm.prank(admin);
         vm.expectRevert("Can only transfer to governance");
@@ -605,13 +633,13 @@ contract ParticipationPoolTest is Test {
 
     /// @dev Directly set totalDistributed for gas-efficient tier testing
     function _setTotalDistributed(uint256 n) internal {
-        // Storage layout: Ownable._owner = slot 0, totalDistributed = slot 1, poolBalance = slot 2, reservedBalance = slot 3
-        vm.store(address(pool), bytes32(uint256(1)), bytes32(n));
+        // Storage layout: Ownable._owner = slot 0, governance = slot 1, totalDistributed = slot 2.
+        vm.store(address(pool), bytes32(uint256(2)), bytes32(n));
         assertEq(pool.totalDistributed(), n);
     }
 
     function _setPoolBalance(uint256 n) internal {
-        vm.store(address(pool), bytes32(uint256(2)), bytes32(n));
+        vm.store(address(pool), bytes32(uint256(3)), bytes32(n));
         assertEq(pool.poolBalance(), n);
     }
 }

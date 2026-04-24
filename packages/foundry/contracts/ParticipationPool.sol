@@ -31,7 +31,7 @@ contract ParticipationPool is IParticipationPool, Ownable, ReentrancyGuardTransi
     IERC20 public immutable hrepToken;
 
     /// @notice The governance address — ownership can only be transferred here
-    address public immutable governance;
+    address public governance;
 
     /// @notice Cumulative HREP distributed from the pool (drives halving schedule)
     uint256 public totalDistributed;
@@ -77,6 +77,9 @@ contract ParticipationPool is IParticipationPool, Ownable, ReentrancyGuardTransi
     /// @notice Emitted when reserved rewards are released back into the pool.
     event ReservedRewardReleased(address indexed beneficiary, uint256 amount, uint256 totalDistributedAfter);
 
+    /// @notice Emitted when the governance migration target is updated.
+    event GovernanceUpdated(address indexed governance);
+
     // --- Modifiers ---
 
     modifier onlyAuthorized() {
@@ -107,6 +110,14 @@ contract ParticipationPool is IParticipationPool, Ownable, ReentrancyGuardTransi
     }
 
     // --- Admin Functions ---
+
+    /// @notice Update the governance address that ownership may migrate to.
+    /// @dev Current owner can retarget this before a governance timelock migration.
+    function setGovernance(address newGovernance) external onlyOwner {
+        require(newGovernance != address(0), "Invalid governance");
+        governance = newGovernance;
+        emit GovernanceUpdated(newGovernance);
+    }
 
     /// @notice Add or remove an authorized caller
     /// @param caller The address to authorize/deauthorize
