@@ -1322,6 +1322,31 @@ contract ContentRegistryBranchesTest is VotingTestBase {
         registry.cancelContent(1);
     }
 
+    function test_CancelContent_UsesCurrentCanonicalSubmitterIdentity() public {
+        vm.prank(owner);
+        registry.setVoterIdNFT(address(mockVoterIdNFT));
+
+        mockVoterIdNFT.setHolder(submitter);
+        vm.prank(submitter);
+        mockVoterIdNFT.setDelegate(delegate);
+
+        vm.startPrank(delegate);
+        crepToken.approve(address(registry), 10e6);
+        uint256 contentId =
+            _submitContentWithReservation(registry, "https://example.com/delegated-cancel", "goal", "goal", "tags", 0);
+        vm.stopPrank();
+
+        vm.prank(submitter);
+        mockVoterIdNFT.removeDelegate();
+
+        vm.prank(delegate);
+        vm.expectRevert("Not submitter");
+        registry.cancelContent(contentId);
+
+        vm.prank(submitter);
+        registry.cancelContent(contentId);
+    }
+
     function test_CancelContent_NotActive_Reverts() public {
         vm.startPrank(submitter);
         crepToken.approve(address(registry), 10e6);

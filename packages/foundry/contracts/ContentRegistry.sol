@@ -719,7 +719,7 @@ contract ContentRegistry is Initializable, AccessControlUpgradeable, PausableUpg
     function cancelContent(uint256 contentId) external nonReentrant whenNotPaused {
         require(bonusPool != address(0), "Bonus pool not set");
         Content storage c = contents[contentId];
-        require(c.submitter == msg.sender, "Not submitter");
+        require(contentSubmitterIdentity[contentId] == _resolveSubmitterIdentity(msg.sender), "Not submitter");
         require(c.status == ContentStatus.Active, "Not active");
         if (votingEngine != address(0)) {
             require(!IRoundVotingEngine(votingEngine).hasCommits(contentId), "Content has votes");
