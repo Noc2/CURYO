@@ -35,6 +35,9 @@ contract VoterIdNFT is ERC721, Ownable, IVoterIdNFT {
     /// @notice Mapping to track used nullifiers (prevents double minting)
     mapping(uint256 => bool) public nullifierUsed;
 
+    /// @notice Nullifiers that can be reset because their token was revoked.
+    mapping(uint256 => bool) public nullifierResettable;
+
     /// @notice Mapping from token ID to the nullifier used to mint it
     mapping(uint256 => uint256) private _tokenIdToNullifier;
 
@@ -186,6 +189,10 @@ contract VoterIdNFT is ERC721, Ownable, IVoterIdNFT {
             emit DelegateRemoved(inboundDelegator, holder);
         }
 
+        if (_tokenIdHasNullifier[tokenId]) {
+            nullifierResettable[_tokenIdToNullifier[tokenId]] = true;
+        }
+
         // Clear bidirectional mappings
         delete holderToTokenId[holder];
         delete tokenIdToHolder[tokenId];
@@ -201,7 +208,10 @@ contract VoterIdNFT is ERC721, Ownable, IVoterIdNFT {
     /// @notice Reset a nullifier to allow re-verification after revocation.
     /// @param nullifier The nullifier to reset
     function resetNullifier(uint256 nullifier) external onlyOwner {
+        require(nullifierUsed[nullifier], "Nullifier not used");
+        require(nullifierResettable[nullifier], "Nullifier not revoked");
         nullifierUsed[nullifier] = false;
+        nullifierResettable[nullifier] = false;
         emit NullifierReset(nullifier);
     }
 
@@ -234,6 +244,7 @@ contract VoterIdNFT is ERC721, Ownable, IVoterIdNFT {
 
         // Mark nullifier as used
         nullifierUsed[nullifier] = true;
+        nullifierResettable[nullifier] = false;
         _tokenIdToNullifier[tokenId] = nullifier;
         _tokenIdHasNullifier[tokenId] = true;
 

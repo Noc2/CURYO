@@ -762,12 +762,14 @@ contract VoterIdNFTTest is Test {
 
         // Nullifier still used — cannot mint
         assertTrue(voterIdNFT.nullifierUsed(NULLIFIER_1));
+        assertTrue(voterIdNFT.nullifierResettable(NULLIFIER_1));
 
         // Reset nullifier
         vm.prank(admin);
         voterIdNFT.resetNullifier(NULLIFIER_1);
 
         assertFalse(voterIdNFT.nullifierUsed(NULLIFIER_1));
+        assertFalse(voterIdNFT.nullifierResettable(NULLIFIER_1));
 
         // Now can mint with same nullifier to new address
         vm.prank(minterAddr);
@@ -775,6 +777,37 @@ contract VoterIdNFTTest is Test {
 
         assertTrue(voterIdNFT.hasVoterId(user2));
         assertEq(newTokenId, 2);
+        assertFalse(voterIdNFT.nullifierResettable(NULLIFIER_1));
+    }
+
+    function test_ResetNullifier_RevertsForActiveNullifier() public {
+        vm.prank(minterAddr);
+        voterIdNFT.mint(user1, NULLIFIER_1);
+
+        vm.prank(admin);
+        vm.expectRevert("Nullifier not revoked");
+        voterIdNFT.resetNullifier(NULLIFIER_1);
+    }
+
+    function test_ResetNullifier_RevertsForNeverUsedNullifier() public {
+        vm.prank(admin);
+        vm.expectRevert("Nullifier not used");
+        voterIdNFT.resetNullifier(NULLIFIER_1);
+    }
+
+    function test_ResetNullifier_RevertsAfterAlreadyReset() public {
+        vm.prank(minterAddr);
+        voterIdNFT.mint(user1, NULLIFIER_1);
+
+        vm.prank(admin);
+        voterIdNFT.revokeVoterId(user1);
+
+        vm.prank(admin);
+        voterIdNFT.resetNullifier(NULLIFIER_1);
+
+        vm.prank(admin);
+        vm.expectRevert("Nullifier not used");
+        voterIdNFT.resetNullifier(NULLIFIER_1);
     }
 
     function test_ResetNullifier_DoesNotBypassStakeCap() public {
@@ -827,6 +860,9 @@ contract VoterIdNFTTest is Test {
     function test_ResetNullifier_EmitsEvent() public {
         vm.prank(minterAddr);
         voterIdNFT.mint(user1, NULLIFIER_1);
+
+        vm.prank(admin);
+        voterIdNFT.revokeVoterId(user1);
 
         vm.prank(admin);
         vm.expectEmit(true, true, true, true);
