@@ -71,6 +71,19 @@ export const FrontendRegistryAbi = [
   },
   {
     "type": "function",
+    "name": "MAX_SLASH_REASON_LENGTH",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
     "name": "STAKE_AMOUNT",
     "inputs": [],
     "outputs": [
@@ -142,13 +155,13 @@ export const FrontendRegistryAbi = [
   },
   {
     "type": "function",
-    "name": "hrepToken",
+    "name": "feeCreditor",
     "inputs": [],
     "outputs": [
       {
         "name": "",
         "type": "address",
-        "internalType": "contract IERC20"
+        "internalType": "address"
       }
     ],
     "stateMutability": "view"
@@ -356,6 +369,32 @@ export const FrontendRegistryAbi = [
   },
   {
     "type": "function",
+    "name": "hrepToken",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "address",
+        "internalType": "contract IERC20"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "initialFeeCreditorConfigured",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "bool",
+        "internalType": "bool"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
     "name": "initialize",
     "inputs": [
       {
@@ -370,6 +409,19 @@ export const FrontendRegistryAbi = [
       },
       {
         "name": "_hrepToken",
+        "type": "address",
+        "internalType": "address"
+      }
+    ],
+    "outputs": [],
+    "stateMutability": "nonpayable"
+  },
+  {
+    "type": "function",
+    "name": "initializeFeeCreditor",
+    "inputs": [
+      {
+        "name": "creditor",
         "type": "address",
         "internalType": "address"
       }
@@ -597,6 +649,25 @@ export const FrontendRegistryAbi = [
       }
     ],
     "stateMutability": "view"
+  },
+  {
+    "type": "event",
+    "name": "FeeCreditorUpdated",
+    "inputs": [
+      {
+        "name": "oldCreditor",
+        "type": "address",
+        "indexed": true,
+        "internalType": "address"
+      },
+      {
+        "name": "newCreditor",
+        "type": "address",
+        "indexed": true,
+        "internalType": "address"
+      }
+    ],
+    "anonymous": false
   },
   {
     "type": "event",

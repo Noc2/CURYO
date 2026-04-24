@@ -6,6 +6,19 @@ export const ProtocolConfigAbi = [
   },
   {
     "type": "function",
+    "name": "ABSOLUTE_MAX_ROUND_DURATION",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
     "name": "CONFIG_ROLE",
     "inputs": [],
     "outputs": [

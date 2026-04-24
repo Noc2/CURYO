@@ -504,6 +504,19 @@ export const FeedbackBonusEscrowAbi = [
   },
   {
     "type": "function",
+    "name": "setVotingEngine",
+    "inputs": [
+      {
+        "name": "votingEngine_",
+        "type": "address",
+        "internalType": "address"
+      }
+    ],
+    "outputs": [],
+    "stateMutability": "nonpayable"
+  },
+  {
+    "type": "function",
     "name": "supportsInterface",
     "inputs": [
       {
@@ -914,6 +927,19 @@ export const FeedbackBonusEscrowAbi = [
     "inputs": [
       {
         "name": "voterIdNFT",
+        "type": "address",
+        "indexed": false,
+        "internalType": "address"
+      }
+    ],
+    "anonymous": false
+  },
+  {
+    "type": "event",
+    "name": "VotingEngineUpdated",
+    "inputs": [
+      {
+        "name": "votingEngine",
         "type": "address",
         "indexed": false,
         "internalType": "address"

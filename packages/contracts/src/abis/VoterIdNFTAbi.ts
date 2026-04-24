@@ -43,6 +43,13 @@ export const VoterIdNFTAbi = [
   },
   {
     "type": "function",
+    "name": "acceptDelegate",
+    "inputs": [],
+    "outputs": [],
+    "stateMutability": "nonpayable"
+  },
+  {
+    "type": "function",
     "name": "addMinter",
     "inputs": [
       {
@@ -396,6 +403,25 @@ export const VoterIdNFTAbi = [
   },
   {
     "type": "function",
+    "name": "nullifierResettable",
+    "inputs": [
+      {
+        "name": "",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "",
+        "type": "bool",
+        "internalType": "bool"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
     "name": "nullifierUsed",
     "inputs": [
       {
@@ -434,6 +460,44 @@ export const VoterIdNFTAbi = [
         "name": "tokenId",
         "type": "uint256",
         "internalType": "uint256"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "",
+        "type": "address",
+        "internalType": "address"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "pendingDelegateOf",
+    "inputs": [
+      {
+        "name": "",
+        "type": "address",
+        "internalType": "address"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "",
+        "type": "address",
+        "internalType": "address"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "pendingDelegateTo",
+    "inputs": [
+      {
+        "name": "",
+        "type": "address",
+        "internalType": "address"
       }
     ],
     "outputs": [
@@ -843,6 +907,25 @@ export const VoterIdNFTAbi = [
   },
   {
     "type": "event",
+    "name": "DelegateRequested",
+    "inputs": [
+      {
+        "name": "holder",
+        "type": "address",
+        "indexed": true,
+        "internalType": "address"
+      },
+      {
+        "name": "delegate",
+        "type": "address",
+        "indexed": true,
+        "internalType": "address"
+      }
+    ],
+    "anonymous": false
+  },
+  {
+    "type": "event",
     "name": "DelegateSet",
     "inputs": [
       {
@@ -1195,6 +1278,11 @@ export const VoterIdNFTAbi = [
   {
     "type": "error",
     "name": "NoDelegateSet",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "NoPendingDelegate",
     "inputs": []
   },
   {
