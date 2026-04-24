@@ -45,8 +45,8 @@ contract CuryoGovernor is
     uint256 public constant MINIMUM_QUORUM = 100_000 * 1e6;
     /// @notice Hard cap to keep quorum evaluation bounded and proposals cheap to evaluate.
     uint256 public constant MAX_EXCLUDED_HOLDERS = 16;
-    /// @notice Minimum blocks a proposer must wait between successful proposals (~1 day at 12s blocks).
-    uint256 public constant PROPOSAL_COOLDOWN_BLOCKS = 7200;
+    /// @notice Minimum blocks a proposer must wait between successful proposals (~1 day on 1s Celo blocks).
+    uint256 public constant PROPOSAL_COOLDOWN_BLOCKS = 86_400;
     /// @notice Block number where each proposal was created.
     mapping(uint256 => uint256) public proposalCreatedBlock;
     /// @notice Earliest block where each proposer may submit another proposal.
@@ -61,8 +61,8 @@ contract CuryoGovernor is
     constructor(IVotes _crepToken, TimelockController _timelock)
         Governor("CuryoGovernor")
         GovernorSettings(
-            7200, // Voting delay: ~1 day (assuming 12s blocks)
-            50400, // Voting period: ~1 week
+            86_400, // Voting delay: ~1 day on 1s Celo blocks
+            604_800, // Voting period: ~1 week on 1s Celo blocks
             BOOTSTRAP_PROPOSAL_THRESHOLD
         )
         GovernorVotes(_crepToken)

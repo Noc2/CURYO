@@ -254,13 +254,13 @@ contract GovernanceTest is Test {
     }
 
     function test_GovernorVotingPeriod() public view {
-        // Voting period should be ~1 week (50400 blocks)
-        assertEq(governor.votingPeriod(), 50400);
+        // Voting period should be ~1 week on Celo's 1s block clock.
+        assertEq(governor.votingPeriod(), 604_800);
     }
 
     function test_GovernorVotingDelay() public view {
-        // Voting delay should be ~1 day (7200 blocks)
-        assertEq(governor.votingDelay(), 7200);
+        // Voting delay should be ~1 day on Celo's 1s block clock.
+        assertEq(governor.votingDelay(), 86_400);
     }
 
     function test_GovernorQuorum() public {

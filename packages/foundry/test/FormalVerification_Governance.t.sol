@@ -179,7 +179,7 @@ contract FormalVerification_GovernanceTest is Test {
         }
 
         assertEq(governor.proposalThreshold(), 1_000e6, "1K cREP proposal threshold");
-        assertEq(governor.PROPOSAL_COOLDOWN_BLOCKS(), 7200, "per-proposer cooldown active");
+        assertEq(governor.PROPOSAL_COOLDOWN_BLOCKS(), 86_400, "per-proposer cooldown active");
     }
 
     // ==================== Test 6: Whale Unilateral Pass ====================
