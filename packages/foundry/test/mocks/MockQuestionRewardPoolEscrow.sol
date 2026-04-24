@@ -22,6 +22,16 @@ contract MockQuestionRewardPoolEscrow {
         uint256 feedbackClosesAt
     );
 
+    event MockSubmissionBundleCreated(
+        uint256 indexed rewardPoolId,
+        uint256 indexed bundleId,
+        address funder,
+        uint256 requiredCompleters,
+        uint256 requiredSettledRounds,
+        uint256 bountyClosesAt,
+        uint256 feedbackClosesAt
+    );
+
     function createSubmissionRewardPoolFromRegistry(
         uint256 contentId,
         address funder,
@@ -43,6 +53,31 @@ contract MockQuestionRewardPoolEscrow {
         lastFeedbackClosesAt = feedbackClosesAt;
         emit MockSubmissionRewardPoolCreated(
             rewardPoolId, contentId, funder, requiredVoters, requiredSettledRounds, bountyClosesAt, feedbackClosesAt
+        );
+    }
+
+    function createSubmissionBundleFromRegistry(
+        uint256 bundleId,
+        uint256[] calldata,
+        address funder,
+        uint8 asset,
+        uint256 amount,
+        uint256 requiredCompleters,
+        uint256 requiredSettledRounds,
+        uint256 bountyClosesAt,
+        uint256 feedbackClosesAt
+    ) external returns (uint256 rewardPoolId) {
+        rewardPoolId = nextRewardPoolId++;
+        lastContentId = bundleId;
+        lastFunder = funder;
+        lastAsset = asset;
+        lastAmount = amount;
+        lastRequiredVoters = requiredCompleters;
+        lastRequiredSettledRounds = requiredSettledRounds;
+        lastBountyClosesAt = bountyClosesAt;
+        lastFeedbackClosesAt = feedbackClosesAt;
+        emit MockSubmissionBundleCreated(
+            rewardPoolId, bundleId, funder, requiredCompleters, requiredSettledRounds, bountyClosesAt, feedbackClosesAt
         );
     }
 }

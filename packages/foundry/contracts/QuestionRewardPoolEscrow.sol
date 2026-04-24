@@ -93,10 +93,14 @@ contract QuestionRewardPoolEscrow is
         uint8 asset;
         uint32 questionCount;
         uint32 requiredCompleters;
-        uint32 completedQuestionCount;
+        uint32 requiredSettledRounds;
+        uint32 completedRoundSets;
+        uint32 totalRecordedQuestionRounds;
         uint32 claimedCount;
         uint16 frontendFeeBps;
         uint256 fundedAmount;
+        uint256 unallocatedAmount;
+        uint256 allocatedAmount;
         uint256 claimedAmount;
         uint256 voterClaimedAmount;
         uint256 frontendClaimedAmount;
@@ -114,9 +118,16 @@ contract QuestionRewardPoolEscrow is
 
     struct BundleQuestion {
         uint64 contentId;
-        uint64 roundId;
-        bool settled;
-        bool terminal;
+    }
+
+    struct BundleRoundSetSnapshot {
+        bool qualified;
+        uint32 claimedCount;
+        uint256 allocation;
+        uint256 claimedAmount;
+        uint256 frontendFeeAllocation;
+        uint256 voterClaimedAmount;
+        uint256 frontendClaimedAmount;
     }
 
     IERC20 public hrepToken;
@@ -131,9 +142,12 @@ contract QuestionRewardPoolEscrow is
     mapping(uint256 => mapping(uint256 => mapping(uint256 => bool))) public rewardClaimed;
     mapping(uint256 => BundleReward) private bundleRewards;
     mapping(uint256 => BundleQuestion[]) private bundleQuestions;
+    mapping(uint256 => mapping(uint256 => uint32)) public bundleQuestionRecordedRounds;
+    mapping(uint256 => mapping(uint256 => mapping(uint256 => uint64))) public bundleRoundIds;
+    mapping(uint256 => mapping(uint256 => BundleRoundSetSnapshot)) public bundleRoundSetSnapshots;
+    mapping(uint256 => mapping(uint256 => mapping(uint256 => bool))) public bundleRoundSetRewardClaimed;
     mapping(uint256 => uint256) public contentBundleId;
     mapping(uint256 => uint256) public contentBundleIndex;
-    mapping(uint256 => mapping(uint256 => bool)) public bundleRewardClaimed;
     uint16 public defaultFrontendFeeBps;
 
     event RewardPoolCreated(
@@ -195,6 +209,7 @@ contract QuestionRewardPoolEscrow is
         uint256 amount,
         uint256 requiredCompleters,
         uint256 questionCount,
+        uint256 requiredSettledRounds,
         uint256 bountyOpensAt,
         uint256 bountyClosesAt,
         uint256 feedbackClosesAt,
@@ -202,13 +217,21 @@ contract QuestionRewardPoolEscrow is
         uint8 asset
     );
     event QuestionBundleRoundRecorded(
-        uint256 indexed bundleId, uint256 indexed contentId, uint256 indexed roundId, uint256 bundleIndex
+        uint256 indexed bundleId,
+        uint256 indexed contentId,
+        uint256 indexed roundId,
+        uint256 bundleIndex,
+        uint256 roundSetIndex
+    );
+    event QuestionBundleRoundSetQualified(
+        uint256 indexed bundleId, uint256 indexed roundSetIndex, uint256 allocation, uint256 frontendFeeAllocation
     );
     /// @dev Removed: QuestionBundleFailed is no longer emitted after the retry-after-
     ///      failed-round refactor. The bundle.failed flag is never set, so subscribing
     ///      to this event is a no-op on current deployments.
     event QuestionBundleRewardClaimed(
         uint256 indexed bundleId,
+        uint256 indexed roundSetIndex,
         address indexed claimant,
         uint256 voterId,
         uint256 amount,
@@ -331,6 +354,7 @@ contract QuestionRewardPoolEscrow is
         uint8 asset,
         uint256 amount,
         uint256 requiredCompleters,
+        uint256 requiredSettledRounds,
         uint256 bountyClosesAt,
         uint256 feedbackClosesAt
     ) external nonReentrant whenNotPaused returns (uint256 rewardPoolId) {
@@ -341,7 +365,8 @@ contract QuestionRewardPoolEscrow is
         require(funder != address(0), "Invalid funder");
         require(asset == REWARD_ASSET_HREP || asset == REWARD_ASSET_USDC, "Invalid asset");
         require(requiredCompleters >= MIN_REQUIRED_VOTERS, "Too few voters");
-        require(amount >= requiredCompleters, "Amount too small");
+        require(requiredSettledRounds >= MIN_REQUIRED_SETTLED_ROUNDS, "Too few rounds");
+        require(amount >= requiredCompleters * requiredSettledRounds, "Amount too small");
         _requireFutureBountyWindow(bountyClosesAt);
         uint256 normalizedFeedbackClosesAt = _normalizeFeedbackClosesAt(bountyClosesAt, feedbackClosesAt);
 
@@ -359,10 +384,14 @@ contract QuestionRewardPoolEscrow is
             asset: asset,
             questionCount: contentIds.length.toUint32(),
             requiredCompleters: requiredCompleters.toUint32(),
-            completedQuestionCount: 0,
+            requiredSettledRounds: requiredSettledRounds.toUint32(),
+            completedRoundSets: 0,
+            totalRecordedQuestionRounds: 0,
             claimedCount: 0,
             frontendFeeBps: defaultFrontendFeeBps,
             fundedAmount: fundedAmount,
+            unallocatedAmount: fundedAmount,
+            allocatedAmount: 0,
             claimedAmount: 0,
             voterClaimedAmount: 0,
             frontendClaimedAmount: 0,
@@ -381,9 +410,7 @@ contract QuestionRewardPoolEscrow is
             require(contentBundleId[contentId] == 0, "Content bundled");
             contentBundleId[contentId] = bundleId;
             contentBundleIndex[contentId] = i;
-            bundleQuestions[bundleId].push(
-                BundleQuestion({ contentId: contentId.toUint64(), roundId: 0, settled: false, terminal: false })
-            );
+            bundleQuestions[bundleId].push(BundleQuestion({ contentId: contentId.toUint64() }));
             unchecked {
                 ++i;
             }
@@ -396,6 +423,7 @@ contract QuestionRewardPoolEscrow is
             fundedAmount,
             requiredCompleters,
             contentIds.length,
+            requiredSettledRounds,
             block.timestamp,
             bountyClosesAt,
             normalizedFeedbackClosesAt,
@@ -403,7 +431,13 @@ contract QuestionRewardPoolEscrow is
             asset
         );
         emit BountyWindowCreated(
-            bundleId, 0, block.timestamp, bountyClosesAt, normalizedFeedbackClosesAt, requiredCompleters, 1
+            bundleId,
+            0,
+            block.timestamp,
+            bountyClosesAt,
+            normalizedFeedbackClosesAt,
+            requiredCompleters,
+            requiredSettledRounds
         );
 
         rewardPoolId = bundleId;
@@ -603,49 +637,61 @@ contract QuestionRewardPoolEscrow is
         if (bundle.refunded) return;
 
         uint256 bundleIndex = contentBundleIndex[contentId];
-        BundleQuestion storage question = bundleQuestions[bundleId][bundleIndex];
-        if (question.terminal) return;
+        uint256 roundSetIndex = bundleQuestionRecordedRounds[bundleId][bundleIndex];
+        if (roundSetIndex >= bundle.requiredSettledRounds) return;
 
         bool settledWithinWindow = settled && _bundleRoundSettledWithinWindow(bundle, contentId, roundId);
         if (!settledWithinWindow) return;
 
-        question.roundId = roundId.toUint64();
-        question.terminal = true;
+        bundleRoundIds[bundleId][bundleIndex][roundSetIndex] = roundId.toUint64();
+        bundleQuestionRecordedRounds[bundleId][bundleIndex] = (roundSetIndex + 1).toUint32();
         unchecked {
-            bundle.completedQuestionCount++;
+            bundle.totalRecordedQuestionRounds++;
         }
-        emit QuestionBundleRoundRecorded(bundleId, contentId, roundId, bundleIndex);
+        emit QuestionBundleRoundRecorded(bundleId, contentId, roundId, bundleIndex, roundSetIndex);
+
+        if (_isBundleRoundSetComplete(bundleId, roundSetIndex)) {
+            _qualifyBundleRoundSet(bundleId, bundle, roundSetIndex);
+        }
     }
 
-    function claimQuestionBundleReward(uint256 bundleId)
+    function claimQuestionBundleReward(uint256 bundleId, uint256 roundSetIndex)
         external
         nonReentrant
         whenNotPaused
         returns (uint256 rewardAmount)
     {
         BundleReward storage bundle = _getExistingBundleReward(bundleId);
-        require(_isBundleClaimOpen(bundle), "Bundle not claimable");
+        require(_isBundleRoundSetClaimOpen(bundle, bundleId, roundSetIndex), "Bundle not claimable");
 
         BundleQuestion storage firstQuestion = bundleQuestions[bundleId][0];
-        IVoterIdNFT roundVoterIdNft = _roundVoterIdNft(firstQuestion.contentId, firstQuestion.roundId);
+        uint256 firstRoundId = bundleRoundIds[bundleId][0][roundSetIndex];
+        IVoterIdNFT roundVoterIdNft = _roundVoterIdNft(firstQuestion.contentId, firstRoundId);
         uint256 voterId = _requireVoterId(roundVoterIdNft, msg.sender);
-        require(!bundleRewardClaimed[bundleId][voterId], "Already claimed");
-        require(!_isBundleExcludedVoter(bundle, bundleId, msg.sender), "Excluded voter");
+        require(!bundleRoundSetRewardClaimed[bundleId][roundSetIndex][voterId], "Already claimed");
+        require(!_isBundleExcludedVoter(bundle, bundleId, roundSetIndex, msg.sender), "Excluded voter");
 
-        (address frontend, bytes32 firstCommitKey) = _requireCompletedBundle(bundleId, msg.sender);
-        uint256 grossAmount = _nextEqualShare(bundle.fundedAmount, bundle.requiredCompleters, bundle.claimedCount);
+        (address frontend, bytes32 firstCommitKey) =
+            _requireCompletedBundleRoundSet(bundleId, roundSetIndex, msg.sender);
+        BundleRoundSetSnapshot storage snapshot = bundleRoundSetSnapshots[bundleId][roundSetIndex];
+        uint256 grossAmount = _nextEqualShare(snapshot.allocation, bundle.requiredCompleters, snapshot.claimedCount);
         require(grossAmount > 0, "No reward");
 
-        uint256 reservedFrontendFee = (grossAmount * bundle.frontendFeeBps) / BPS_SCALE;
+        uint256 reservedFrontendFee =
+            _nextEqualShare(snapshot.frontendFeeAllocation, bundle.requiredCompleters, snapshot.claimedCount);
         address frontendRecipient;
         (rewardAmount, reservedFrontendFee, frontendRecipient) = _computeClaimSplit(
-            firstQuestion.contentId, firstQuestion.roundId, firstCommitKey, frontend, grossAmount, reservedFrontendFee
+            firstQuestion.contentId, firstRoundId, firstCommitKey, frontend, grossAmount, reservedFrontendFee
         );
 
-        bundleRewardClaimed[bundleId][voterId] = true;
+        bundleRoundSetRewardClaimed[bundleId][roundSetIndex][voterId] = true;
         unchecked {
+            snapshot.claimedCount++;
             bundle.claimedCount++;
         }
+        snapshot.claimedAmount += grossAmount;
+        snapshot.voterClaimedAmount += rewardAmount;
+        snapshot.frontendClaimedAmount += reservedFrontendFee;
         bundle.claimedAmount += grossAmount;
         bundle.voterClaimedAmount += rewardAmount;
         bundle.frontendClaimedAmount += reservedFrontendFee;
@@ -659,29 +705,46 @@ contract QuestionRewardPoolEscrow is
         }
 
         emit QuestionBundleRewardClaimed(
-            bundleId, msg.sender, voterId, rewardAmount, frontend, frontendRecipient, reservedFrontendFee, grossAmount
+            bundleId,
+            roundSetIndex,
+            msg.sender,
+            voterId,
+            rewardAmount,
+            frontend,
+            frontendRecipient,
+            reservedFrontendFee,
+            grossAmount
         );
     }
 
-    function claimableQuestionBundleReward(uint256 bundleId, address account)
+    function claimableQuestionBundleReward(uint256 bundleId, uint256 roundSetIndex, address account)
         external
         view
         returns (uint256 claimableAmount)
     {
         BundleReward storage bundle = bundleRewards[bundleId];
-        if (bundle.id == 0 || !_isBundleClaimOpen(bundle)) return 0;
+        if (bundle.id == 0 || !_isBundleRoundSetClaimOpen(bundle, bundleId, roundSetIndex)) return 0;
 
         BundleQuestion storage firstQuestion = bundleQuestions[bundleId][0];
-        uint256 voterId = _roundVoterIdNft(firstQuestion.contentId, firstQuestion.roundId).getTokenId(account);
-        if (voterId == 0 || bundleRewardClaimed[bundleId][voterId] || _isBundleExcludedVoter(bundle, bundleId, account))
-        {
+        uint256 firstRoundId = bundleRoundIds[bundleId][0][roundSetIndex];
+        uint256 voterId = _roundVoterIdNft(firstQuestion.contentId, firstRoundId).getTokenId(account);
+        if (
+            voterId == 0 || bundleRoundSetRewardClaimed[bundleId][roundSetIndex][voterId]
+                || _isBundleExcludedVoter(bundle, bundleId, roundSetIndex, account)
+        ) {
             return 0;
         }
-        if (!_hasCompletedBundle(bundleId, account)) return 0;
+        (bool completed, address frontend, bytes32 firstCommitKey) =
+            _completedBundleRoundSetCommit(bundleId, roundSetIndex, account);
+        if (!completed) return 0;
 
-        uint256 grossAmount = _nextEqualShare(bundle.fundedAmount, bundle.requiredCompleters, bundle.claimedCount);
-        uint256 reservedFrontendFee = (grossAmount * bundle.frontendFeeBps) / BPS_SCALE;
-        return grossAmount - reservedFrontendFee;
+        BundleRoundSetSnapshot storage snapshot = bundleRoundSetSnapshots[bundleId][roundSetIndex];
+        uint256 grossAmount = _nextEqualShare(snapshot.allocation, bundle.requiredCompleters, snapshot.claimedCount);
+        uint256 reservedFrontendFee =
+            _nextEqualShare(snapshot.frontendFeeAllocation, bundle.requiredCompleters, snapshot.claimedCount);
+        (claimableAmount,,) = _computeClaimSplit(
+            firstQuestion.contentId, firstRoundId, firstCommitKey, frontend, grossAmount, reservedFrontendFee
+        );
     }
 
     function refundQuestionBundleReward(uint256 bundleId)
@@ -692,10 +755,11 @@ contract QuestionRewardPoolEscrow is
     {
         BundleReward storage bundle = _getExistingBundleReward(bundleId);
         require(!bundle.refunded, "Already refunded");
-        // Refund conditions: bounty window expired, or all voters claimed.
+        // Refund conditions: bounty window expired, or all configured round sets were fully claimed.
         require(
             (bundle.bountyClosesAt != 0 && block.timestamp > bundle.bountyClosesAt)
-                || bundle.claimedCount >= bundle.requiredCompleters,
+                || (bundle.completedRoundSets >= bundle.requiredSettledRounds
+                    && bundle.claimedCount >= uint256(bundle.requiredSettledRounds) * bundle.requiredCompleters),
             "Bundle active"
         );
         // If claims are still open (bundle is claim-complete but not fully claimed) and the
@@ -912,20 +976,35 @@ contract QuestionRewardPoolEscrow is
     }
 
     function _isBundleClaimOpen(BundleReward storage bundle) internal view returns (bool) {
-        return !bundle.refunded && bundle.completedQuestionCount == bundle.questionCount
-            && bundle.claimedCount < bundle.requiredCompleters;
+        return !bundle.refunded && bundle.claimedCount < uint256(bundle.completedRoundSets) * bundle.requiredCompleters;
+    }
+
+    function _isBundleRoundSetClaimOpen(BundleReward storage bundle, uint256 bundleId, uint256 roundSetIndex)
+        internal
+        view
+        returns (bool)
+    {
+        if (bundle.refunded || roundSetIndex >= bundle.requiredSettledRounds) return false;
+        BundleRoundSetSnapshot storage snapshot = bundleRoundSetSnapshots[bundleId][roundSetIndex];
+        return snapshot.qualified && snapshot.claimedCount < bundle.requiredCompleters;
     }
 
     function _requireBundleCleanupComplete(uint256 bundleId) internal view {
         BundleQuestion[] storage questions = bundleQuestions[bundleId];
-        for (uint256 i = 0; i < questions.length;) {
-            BundleQuestion storage question = questions[i];
-            require(
-                votingEngine.roundUnrevealedCleanupRemaining(question.contentId, question.roundId) == 0,
-                "Cleanup pending"
-            );
+        BundleReward storage bundle = bundleRewards[bundleId];
+        for (uint256 roundSetIndex = 0; roundSetIndex < bundle.completedRoundSets;) {
+            for (uint256 i = 0; i < questions.length;) {
+                uint256 roundId = bundleRoundIds[bundleId][i][roundSetIndex];
+                require(
+                    votingEngine.roundUnrevealedCleanupRemaining(questions[i].contentId, roundId) == 0,
+                    "Cleanup pending"
+                );
+                unchecked {
+                    ++i;
+                }
+            }
             unchecked {
-                ++i;
+                ++roundSetIndex;
             }
         }
     }
@@ -940,26 +1019,36 @@ contract QuestionRewardPoolEscrow is
             && (bundle.bountyClosesAt == 0 || settledAt <= bundle.bountyClosesAt);
     }
 
-    function _requireCompletedBundle(uint256 bundleId, address account)
+    function _requireCompletedBundleRoundSet(uint256 bundleId, uint256 roundSetIndex, address account)
         internal
         view
         returns (address frontend, bytes32 firstCommitKey)
     {
+        (bool completed, address completedFrontend, bytes32 completedFirstCommitKey) =
+            _completedBundleRoundSetCommit(bundleId, roundSetIndex, account);
+        require(completed, "Bundle incomplete");
+        return (completedFrontend, completedFirstCommitKey);
+    }
+
+    function _completedBundleRoundSetCommit(uint256 bundleId, uint256 roundSetIndex, address account)
+        internal
+        view
+        returns (bool completed, address frontend, bytes32 firstCommitKey)
+    {
         BundleQuestion[] storage questions = bundleQuestions[bundleId];
         for (uint256 i = 0; i < questions.length;) {
             BundleQuestion storage question = questions[i];
-            require(question.terminal, "Question not settled");
-            require(
-                votingEngine.roundUnrevealedCleanupRemaining(question.contentId, question.roundId) == 0,
-                "Cleanup pending"
-            );
-            uint256 voterId = _voterIdForRound(question.contentId, question.roundId, account);
-            require(voterId != 0, "Voter ID required");
-            bytes32 commitKey = votingEngine.voterIdCommitKey(question.contentId, question.roundId, voterId);
-            require(commitKey != bytes32(0), "No commit");
-            (bool revealed, address questionFrontend) =
-                _revealedCommitFrontend(question.contentId, question.roundId, commitKey);
-            require(revealed, "Vote not revealed");
+            uint256 roundId = bundleRoundIds[bundleId][i][roundSetIndex];
+            if (roundId == 0) return (false, address(0), bytes32(0));
+            if (votingEngine.roundUnrevealedCleanupRemaining(question.contentId, roundId) > 0) {
+                return (false, address(0), bytes32(0));
+            }
+            uint256 voterId = _voterIdForRound(question.contentId, roundId, account);
+            if (voterId == 0) return (false, address(0), bytes32(0));
+            bytes32 commitKey = votingEngine.voterIdCommitKey(question.contentId, roundId, voterId);
+            if (commitKey == bytes32(0)) return (false, address(0), bytes32(0));
+            (bool revealed, address questionFrontend) = _revealedCommitFrontend(question.contentId, roundId, commitKey);
+            if (!revealed) return (false, address(0), bytes32(0));
             if (i == 0) {
                 frontend = questionFrontend;
                 firstCommitKey = commitKey;
@@ -968,20 +1057,13 @@ contract QuestionRewardPoolEscrow is
                 ++i;
             }
         }
+        return (true, frontend, firstCommitKey);
     }
 
-    function _hasCompletedBundle(uint256 bundleId, address account) internal view returns (bool) {
+    function _isBundleRoundSetComplete(uint256 bundleId, uint256 roundSetIndex) internal view returns (bool) {
         BundleQuestion[] storage questions = bundleQuestions[bundleId];
         for (uint256 i = 0; i < questions.length;) {
-            BundleQuestion storage question = questions[i];
-            if (!question.terminal) return false;
-            if (votingEngine.roundUnrevealedCleanupRemaining(question.contentId, question.roundId) > 0) return false;
-            uint256 voterId = _voterIdForRound(question.contentId, question.roundId, account);
-            if (voterId == 0) return false;
-            bytes32 commitKey = votingEngine.voterIdCommitKey(question.contentId, question.roundId, voterId);
-            if (commitKey == bytes32(0)) return false;
-            (bool revealed,) = _revealedCommitFrontend(question.contentId, question.roundId, commitKey);
-            if (!revealed) return false;
+            if (bundleRoundIds[bundleId][i][roundSetIndex] == 0) return false;
             unchecked {
                 ++i;
             }
@@ -989,22 +1071,60 @@ contract QuestionRewardPoolEscrow is
         return true;
     }
 
-    function _isBundleExcludedVoter(BundleReward storage bundle, uint256 bundleId, address account)
-        internal
-        view
-        returns (bool)
-    {
+    function _qualifyBundleRoundSet(uint256 bundleId, BundleReward storage bundle, uint256 roundSetIndex) internal {
+        if (bundleRoundSetSnapshots[bundleId][roundSetIndex].qualified) return;
+        require(roundSetIndex == bundle.completedRoundSets, "Round set out of order");
+
+        uint256 allocation = _previewBundleRoundSetAllocation(bundle);
+        require(allocation > 0 && allocation <= bundle.unallocatedAmount, "No allocation");
+        require(allocation >= bundle.requiredCompleters, "Reward allocation too small");
+        uint256 frontendFeeAllocation = (allocation * bundle.frontendFeeBps) / BPS_SCALE;
+
+        unchecked {
+            bundle.completedRoundSets++;
+        }
+        bundle.unallocatedAmount -= allocation;
+        bundle.allocatedAmount += allocation;
+
+        bundleRoundSetSnapshots[bundleId][roundSetIndex] = BundleRoundSetSnapshot({
+            qualified: true,
+            claimedCount: 0,
+            allocation: allocation,
+            claimedAmount: 0,
+            frontendFeeAllocation: frontendFeeAllocation,
+            voterClaimedAmount: 0,
+            frontendClaimedAmount: 0
+        });
+
+        emit QuestionBundleRoundSetQualified(bundleId, roundSetIndex, allocation, frontendFeeAllocation);
+    }
+
+    function _previewBundleRoundSetAllocation(BundleReward storage bundle) internal view returns (uint256 allocation) {
+        if (bundle.completedRoundSets >= bundle.requiredSettledRounds) return 0;
+        uint256 remainingRoundSets = uint256(bundle.requiredSettledRounds) - bundle.completedRoundSets;
+        allocation =
+            remainingRoundSets == 1 ? bundle.unallocatedAmount : bundle.fundedAmount / bundle.requiredSettledRounds;
+        if (allocation > bundle.unallocatedAmount) return 0;
+    }
+
+    function _isBundleExcludedVoter(
+        BundleReward storage bundle,
+        uint256 bundleId,
+        uint256 roundSetIndex,
+        address account
+    ) internal view returns (bool) {
         BundleQuestion[] storage questions = bundleQuestions[bundleId];
         for (uint256 i = 0; i < questions.length;) {
             BundleQuestion storage question = questions[i];
-            uint256 voterId = _voterIdForRound(question.contentId, question.roundId, account);
+            uint256 roundId = bundleRoundIds[bundleId][i][roundSetIndex];
+            uint256 voterId = _voterIdForRound(question.contentId, roundId, account);
             if (voterId != 0) {
-                uint256 funderVoterId = _funderVoterIdForBundleQuestion(bundle, question.contentId, question.roundId);
+                uint256 funderVoterId = _funderVoterIdForBundleQuestion(bundle, question.contentId, roundId);
                 if (voterId == funderVoterId) return true;
 
                 address submitterIdentity = registry.getSubmitterIdentity(question.contentId);
                 if (submitterIdentity != address(0)) {
-                    uint256 submitterVoterId = _voterIdForRound(question.contentId, question.roundId, submitterIdentity);
+                    uint256 submitterVoterId = _voterIdForRound(question.contentId, roundId, submitterIdentity);
                     if (voterId == submitterVoterId) return true;
                 }
             }

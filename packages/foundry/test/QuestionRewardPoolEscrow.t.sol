@@ -434,14 +434,51 @@ contract QuestionRewardPoolEscrowTest is VotingTestBase {
         uint256 secondRoundId = _settleRoundWith(voters, contentIds[1], directions);
         assertEq(votingEngine.roundVoterIdNFTSnapshot(contentIds[1], secondRoundId), address(migratedVoterIdNFT));
 
-        assertGt(rewardPoolEscrow.claimableQuestionBundleReward(bundleId, voter2), 0);
+        assertGt(rewardPoolEscrow.claimableQuestionBundleReward(bundleId, 0, voter2), 0);
 
         vm.prank(voter2);
-        uint256 reward = rewardPoolEscrow.claimQuestionBundleReward(bundleId);
+        uint256 reward = rewardPoolEscrow.claimQuestionBundleReward(bundleId, 0);
 
         assertEq(reward, REWARD_POOL_AMOUNT / 3);
         assertEq(usdc.balanceOf(voter2), 1_000e6 + reward);
-        assertEq(rewardPoolEscrow.claimableQuestionBundleReward(bundleId, voter2), 0);
+        assertEq(rewardPoolEscrow.claimableQuestionBundleReward(bundleId, 0, voter2), 0);
+    }
+
+    function testBundleClaimSupportsMultipleRoundSets() public {
+        uint256[] memory contentIds = _submitBundleQuestions();
+        uint256 bundleAmount = 120e6;
+        uint256 bundleId =
+            _createSubmissionBundle(contentIds, funder, rewardPoolEscrow.REWARD_ASSET_USDC(), bundleAmount, 3, 2);
+
+        address[] memory voters = new address[](3);
+        voters[0] = voter2;
+        voters[1] = voter3;
+        voters[2] = voter4;
+        bool[] memory directions = _directions(true, true, false);
+
+        uint256 firstQuestionFirstRound = _settleRoundWith(voters, contentIds[0], directions);
+        uint256 secondQuestionFirstRound = _settleRoundWith(voters, contentIds[1], directions);
+
+        assertEq(rewardPoolEscrow.bundleRoundIds(bundleId, 0, 0), firstQuestionFirstRound);
+        assertEq(rewardPoolEscrow.bundleRoundIds(bundleId, 1, 0), secondQuestionFirstRound);
+        assertGt(rewardPoolEscrow.claimableQuestionBundleReward(bundleId, 0, voter2), 0);
+        assertEq(rewardPoolEscrow.claimableQuestionBundleReward(bundleId, 1, voter2), 0);
+
+        vm.warp(block.timestamp + 25 hours);
+        _settleRoundWith(voters, contentIds[0], directions);
+        assertEq(rewardPoolEscrow.claimableQuestionBundleReward(bundleId, 1, voter2), 0);
+
+        _settleRoundWith(voters, contentIds[1], directions);
+        assertEq(rewardPoolEscrow.claimableQuestionBundleReward(bundleId, 1, voter2), 20e6);
+
+        vm.prank(voter2);
+        uint256 firstReward = rewardPoolEscrow.claimQuestionBundleReward(bundleId, 0);
+        vm.prank(voter2);
+        uint256 secondReward = rewardPoolEscrow.claimQuestionBundleReward(bundleId, 1);
+
+        assertEq(firstReward, 20e6);
+        assertEq(secondReward, 20e6);
+        assertEq(usdc.balanceOf(voter2), 1_000e6 + firstReward + secondReward);
     }
 
     function testFunderAndSubmitterVoterIdsAreExcludedFromRewardPoolClaims() public {
@@ -752,7 +789,7 @@ contract QuestionRewardPoolEscrowTest is VotingTestBase {
 
         vm.prank(address(registry));
         rewardPoolEscrow.createSubmissionBundleFromRegistry(
-            bundleId, contentIds, submitter, rewardAsset, REWARD_POOL_AMOUNT, 3, bountyClosesAt, bountyClosesAt
+            bundleId, contentIds, submitter, rewardAsset, REWARD_POOL_AMOUNT, 3, 1, bountyClosesAt, bountyClosesAt
         );
 
         vm.prank(address(votingEngine));
@@ -835,6 +872,17 @@ contract QuestionRewardPoolEscrowTest is VotingTestBase {
         uint256 amount,
         uint256 requiredCompleters
     ) internal returns (uint256 bundleId) {
+        return _createSubmissionBundle(contentIds, bundleFunder, asset, amount, requiredCompleters, 1);
+    }
+
+    function _createSubmissionBundle(
+        uint256[] memory contentIds,
+        address bundleFunder,
+        uint8 asset,
+        uint256 amount,
+        uint256 requiredCompleters,
+        uint256 requiredSettledRounds
+    ) internal returns (uint256 bundleId) {
         bundleId = 1;
         vm.startPrank(bundleFunder);
         if (asset == rewardPoolEscrow.REWARD_ASSET_HREP()) {
@@ -847,7 +895,15 @@ contract QuestionRewardPoolEscrowTest is VotingTestBase {
         uint256 bountyClosesAt = block.timestamp + 30 days;
         vm.prank(address(registry));
         rewardPoolEscrow.createSubmissionBundleFromRegistry(
-            bundleId, contentIds, bundleFunder, asset, amount, requiredCompleters, bountyClosesAt, bountyClosesAt
+            bundleId,
+            contentIds,
+            bundleFunder,
+            asset,
+            amount,
+            requiredCompleters,
+            requiredSettledRounds,
+            bountyClosesAt,
+            bountyClosesAt
         );
     }
 
@@ -1168,8 +1224,8 @@ contract QuestionRewardPoolEscrowTest is VotingTestBase {
         // Voter2 claims their bundle reward; voter3 has not yet claimed, so the bundle
         // is still claim-open and BUNDLE_CLAIM_GRACE should apply.
         vm.prank(voter2);
-        rewardPoolEscrow.claimQuestionBundleReward(bundleId);
-        assertGt(rewardPoolEscrow.claimableQuestionBundleReward(bundleId, voter3), 0);
+        rewardPoolEscrow.claimQuestionBundleReward(bundleId, 0);
+        assertGt(rewardPoolEscrow.claimableQuestionBundleReward(bundleId, 0, voter3), 0);
 
         // Jump past bountyClosesAt (helper sets +30 days).
         vm.warp(block.timestamp + 31 days);

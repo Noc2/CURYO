@@ -37,6 +37,7 @@ interface IQuestionRewardPoolEscrow {
         uint8 asset,
         uint256 amount,
         uint256 requiredCompleters,
+        uint256 requiredSettledRounds,
         uint256 bountyClosesAt,
         uint256 feedbackClosesAt
     ) external returns (uint256 rewardPoolId);
@@ -476,10 +477,6 @@ contract ContentRegistry is Initializable, AccessControlUpgradeable, PausableUpg
 
         RoundLib.RoundConfig memory validatedRoundConfig = _validatedRoundConfig(roundConfig);
         _validateSubmissionReward(rewardTerms);
-        require(
-            rewardTerms.requiredSettledRounds == MIN_SUBMISSION_REWARD_SETTLED_ROUNDS,
-            "Bundle settled rounds unsupported"
-        );
         require(rewardTerms.bountyClosesAt != 0, "Bundle bounty close required");
 
         SubmissionMetadata[] memory metadataList = new SubmissionMetadata[](questions.length);
@@ -578,6 +575,7 @@ contract ContentRegistry is Initializable, AccessControlUpgradeable, PausableUpg
                 rewardTerms.asset,
                 rewardTerms.amount,
                 rewardTerms.requiredVoters,
+                rewardTerms.requiredSettledRounds,
                 rewardTerms.bountyClosesAt,
                 rewardTerms.feedbackClosesAt
             );
@@ -715,11 +713,8 @@ contract ContentRegistry is Initializable, AccessControlUpgradeable, PausableUpg
         if (votingEngine != address(0)) {
             require(!IRoundVotingEngine(votingEngine).hasCommits(contentId), "Content has votes");
         }
-        // Cancelling a bundle member would permanently pin completedQuestionCount below
-        // questionCount and force _isBundleClaimOpen to false, which skips the voter
-        // claim-grace window in refundQuestionBundleReward -- the submitter could then
-        // reclaim the bundle stake at bountyClosesAt without giving voters on OTHER bundle
-        // questions a chance to claim their earned share.
+        // Cancelling a bundle member would permanently prevent the bundle escrow from
+        // completing all configured round sets. Treat bundles as atomic once submitted.
         require(contentBundleId[contentId] == 0, "Bundled content");
 
         c.status = ContentStatus.Cancelled;

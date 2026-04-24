@@ -834,7 +834,7 @@ contract ContentRegistryBranchesTest is VotingTestBase {
         vm.stopPrank();
     }
 
-    function test_SubmitQuestionBundleWithReward_RejectsMultipleSettledRounds() public {
+    function test_SubmitQuestionBundleWithReward_AllowsMultipleSettledRounds() public {
         ContentRegistry.BundleQuestionInput[] memory questions = new ContentRegistry.BundleQuestionInput[](2);
         questions[0] = ContentRegistry.BundleQuestionInput({
             contextUrl: "https://example.com/bundle-rounds-a",
@@ -863,11 +863,11 @@ contract ContentRegistryBranchesTest is VotingTestBase {
             _defaultSubmissionRewardAmount(registry) * 2,
             DEFAULT_SUBMISSION_REWARD_REQUIRED_VOTERS,
             DEFAULT_SUBMISSION_REWARD_SETTLED_ROUNDS + 1,
-            DEFAULT_SUBMISSION_REWARD_EXPIRES_AT
+            block.timestamp + 30 days
         );
 
         vm.startPrank(submitter);
-        vm.expectRevert("Bundle settled rounds unsupported");
+        vm.expectRevert("Reservation not found");
         registry.submitQuestionBundleWithRewardAndRoundConfig(questions, rewardTerms, _defaultContentRoundConfig());
         vm.stopPrank();
     }
