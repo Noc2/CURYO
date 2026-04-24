@@ -1,7 +1,5 @@
 import { expect, test } from "../fixtures/wallet";
-import { continueToBountyStep, selectAskCategory, selectAskSubcategory } from "../helpers/ask-form";
-import { ANVIL_ACCOUNTS } from "../helpers/anvil-accounts";
-import { mintMockUsdc } from "../helpers/dev-faucet";
+import { continueToBountyStep, selectAskCategory, selectAskSubcategory, selectBountyRewardAsset } from "../helpers/ask-form";
 import { gotoWithRetry } from "../helpers/wait-helpers";
 
 test.describe("Ask page", () => {
@@ -11,9 +9,7 @@ test.describe("Ask page", () => {
     await expect(page.getByRole("heading", { name: "Ask Question" })).toBeVisible({ timeout: 15_000 });
   });
 
-  test("can ask a question", async ({ connectedPage: page, request }) => {
-    await mintMockUsdc(request, ANVIL_ACCOUNTS.account2.address);
-
+  test("can ask a question", async ({ connectedPage: page }) => {
     await gotoWithRetry(page, "/ask", { ensureWalletConnected: true });
 
     // Wait for the form to appear (requires wallet + VoterID)
@@ -45,6 +41,7 @@ test.describe("Ask page", () => {
     await continueToBountyStep(page);
     await expect(page.getByRole("heading", { name: "Bounty" })).toBeVisible({ timeout: 5_000 });
     await expect(page.getByPlaceholder("Ask something subjective that voters can rate")).toBeHidden();
+    await selectBountyRewardAsset(page, "crep");
 
     const submitBtn = page.getByRole("button", { name: /^Submit/i });
     await expect(submitBtn).toBeVisible({ timeout: 5_000 });

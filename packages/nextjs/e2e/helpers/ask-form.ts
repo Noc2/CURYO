@@ -61,3 +61,12 @@ export async function continueToBountyStep(page: Page): Promise<void> {
   await expect(continueButton).toBeEnabled();
   await continueButton.click();
 }
+
+export async function selectBountyRewardAsset(page: Page, asset: "crep" | "usdc"): Promise<void> {
+  const buttonLabel = asset === "crep" ? "cREP" : "USDC";
+  const assetButton = page.getByRole("button", { name: new RegExp(`^${escapeRegExp(buttonLabel)}$`, "i") });
+
+  await expect(assetButton).toBeVisible({ timeout: 5_000 });
+  await assetButton.click();
+  await expect(assetButton).toHaveAttribute("aria-pressed", "true");
+}

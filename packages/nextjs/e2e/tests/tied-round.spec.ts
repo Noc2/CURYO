@@ -7,10 +7,9 @@ import {
   waitForPonderSync,
 } from "../helpers/admin-helpers";
 import { ANVIL_ACCOUNTS, DEPLOYER } from "../helpers/anvil-accounts";
-import { continueToBountyStep, selectAskCategory, selectAskSubcategory } from "../helpers/ask-form";
+import { continueToBountyStep, selectAskCategory, selectAskSubcategory, selectBountyRewardAsset } from "../helpers/ask-form";
 import { newE2EContext } from "../helpers/browser-context";
 import { CONTRACT_ADDRESSES } from "../helpers/contracts";
-import { mintMockUsdc } from "../helpers/dev-faucet";
 import { waitForSettlementIndexed } from "../helpers/keeper";
 import { getContentById, getContentList } from "../helpers/ponder-api";
 import { PONDER_URL } from "../helpers/ponder-url";
@@ -52,10 +51,8 @@ test.describe("Tied round lifecycle", () => {
 
   let newContentId: string | null = null;
 
-  test("ask a fresh question for tie test", async ({ browser, request }) => {
+  test("ask a fresh question for tie test", async ({ browser }) => {
     test.setTimeout(120_000);
-
-    await mintMockUsdc(request, ANVIL_ACCOUNTS.account2.address);
 
     const context = await newE2EContext(browser);
     const page = await context.newPage();
@@ -96,6 +93,7 @@ test.describe("Tied round lifecycle", () => {
 
     // Ask
     await continueToBountyStep(page);
+    await selectBountyRewardAsset(page, "crep");
     const submitBtn = page.getByRole("button", { name: /^Submit/i });
     await expect(submitBtn).toBeVisible({ timeout: 5_000 });
     await expect(submitBtn).toBeEnabled({ timeout: 5_000 });
