@@ -1,5 +1,7 @@
 import { expect, test } from "../fixtures/wallet";
 import { continueToBountyStep, selectAskCategory, selectAskSubcategory } from "../helpers/ask-form";
+import { ANVIL_ACCOUNTS } from "../helpers/anvil-accounts";
+import { mintMockUsdc } from "../helpers/dev-faucet";
 import { gotoWithRetry } from "../helpers/wait-helpers";
 
 test.describe("Ask page", () => {
@@ -9,7 +11,9 @@ test.describe("Ask page", () => {
     await expect(page.getByRole("heading", { name: "Ask Question" })).toBeVisible({ timeout: 15_000 });
   });
 
-  test("can ask a question", async ({ connectedPage: page }) => {
+  test("can ask a question", async ({ connectedPage: page, request }) => {
+    await mintMockUsdc(request, ANVIL_ACCOUNTS.account2.address);
+
     await gotoWithRetry(page, "/ask", { ensureWalletConnected: true });
 
     // Wait for the form to appear (requires wallet + VoterID)
