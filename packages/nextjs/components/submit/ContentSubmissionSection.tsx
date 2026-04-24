@@ -69,7 +69,11 @@ import {
   formatDurationLabel,
   questionRoundConfigToAbi,
 } from "~~/lib/questionRoundConfig";
-import { buildQuestionBundleSubmissionRevealCommitment } from "~~/lib/questionSubmissionCommitment";
+import {
+  buildQuestionBundleSubmissionRevealCommitment,
+  buildQuestionSubmissionKey,
+  buildQuestionSubmissionRevealCommitment,
+} from "~~/lib/questionSubmissionCommitment";
 import {
   getGasBalanceErrorMessage,
   isFreeTransactionExhaustedError,
@@ -1030,17 +1034,52 @@ export function ContentSubmissionSection() {
           },
         };
       });
-      const revealCommitment = buildQuestionBundleSubmissionRevealCommitment({
-        questions: bundleQuestions,
-        rewardAmount: selectedRewardAmount,
-        rewardAsset: selectedRewardAssetId,
-        requiredSettledRounds: selectedRequiredSettledRounds,
+      const rewardTerms = {
+        asset: selectedRewardAssetId,
+        amount: selectedRewardAmount,
         requiredVoters: selectedRequiredVoters,
-        rewardPoolExpiresAt,
+        requiredSettledRounds: selectedRequiredSettledRounds,
+        bountyClosesAt: rewardPoolExpiresAt,
         feedbackClosesAt,
-        roundConfig: selectedRoundConfig,
-        submitter: submitterAddress,
-      });
+      } as const;
+      const roundConfigAbi = questionRoundConfigToAbi(selectedRoundConfig);
+      const isBundleSubmission = bundleQuestions.length > 1;
+      const primaryQuestion = bundleQuestions[0];
+      if (!primaryQuestion) {
+        throw new Error("Question is missing.");
+      }
+      const revealCommitment = isBundleSubmission
+        ? buildQuestionBundleSubmissionRevealCommitment({
+            questions: bundleQuestions,
+            rewardAmount: selectedRewardAmount,
+            rewardAsset: selectedRewardAssetId,
+            requiredSettledRounds: selectedRequiredSettledRounds,
+            requiredVoters: selectedRequiredVoters,
+            rewardPoolExpiresAt,
+            feedbackClosesAt,
+            roundConfig: selectedRoundConfig,
+            submitter: submitterAddress,
+          })
+        : buildQuestionSubmissionRevealCommitment({
+            categoryId: primaryQuestion.categoryId,
+            description: primaryQuestion.description,
+            imageUrls: primaryQuestion.imageUrls,
+            questionMetadataHash: primaryQuestion.spec.questionMetadataHash,
+            rewardAmount: selectedRewardAmount,
+            rewardAsset: selectedRewardAssetId,
+            requiredSettledRounds: selectedRequiredSettledRounds,
+            requiredVoters: selectedRequiredVoters,
+            resultSpecHash: primaryQuestion.spec.resultSpecHash,
+            rewardPoolExpiresAt,
+            feedbackClosesAt,
+            roundConfig: selectedRoundConfig,
+            salt: primaryQuestion.salt,
+            submissionKey: buildQuestionSubmissionKey(primaryQuestion),
+            submitter: submitterAddress,
+            tags: primaryQuestion.tags,
+            title: primaryQuestion.title,
+            videoUrl: primaryQuestion.videoUrl,
+          });
 
       cancelReservedSubmission = async (revealCommitment: `0x${string}`) => {
         if (canUseSponsoredSubmitCalls) {
@@ -1133,19 +1172,24 @@ export function ContentSubmissionSection() {
             {
               abi: QUESTION_SUBMISSION_ABI,
               address: registryAddress,
-              args: [
-                bundleQuestions,
-                {
-                  asset: selectedRewardAssetId,
-                  amount: selectedRewardAmount,
-                  requiredVoters: selectedRequiredVoters,
-                  requiredSettledRounds: selectedRequiredSettledRounds,
-                  bountyClosesAt: rewardPoolExpiresAt,
-                  feedbackClosesAt,
-                },
-                questionRoundConfigToAbi(selectedRoundConfig),
-              ],
-              functionName: "submitQuestionBundleWithRewardAndRoundConfig",
+              args: isBundleSubmission
+                ? [bundleQuestions, rewardTerms, roundConfigAbi]
+                : [
+                    primaryQuestion.contextUrl,
+                    primaryQuestion.imageUrls,
+                    primaryQuestion.videoUrl,
+                    primaryQuestion.title,
+                    primaryQuestion.description,
+                    primaryQuestion.tags,
+                    primaryQuestion.categoryId,
+                    primaryQuestion.salt,
+                    rewardTerms,
+                    roundConfigAbi,
+                    primaryQuestion.spec,
+                  ],
+              functionName: isBundleSubmission
+                ? "submitQuestionBundleWithRewardAndRoundConfig"
+                : "submitQuestionWithRewardAndRoundConfig",
             },
           ],
           {
@@ -1170,26 +1214,34 @@ export function ContentSubmissionSection() {
           await waitForTransactionReceipt(wagmiConfig, { hash: approveTxHash });
         }
 
-        const submitWrite = {
-          address: registryAddress,
-          abi: QUESTION_SUBMISSION_ABI,
-          functionName: "submitQuestionBundleWithRewardAndRoundConfig",
-          args: [
-            bundleQuestions,
-            {
-              asset: selectedRewardAssetId,
-              amount: selectedRewardAmount,
-              requiredVoters: selectedRequiredVoters,
-              requiredSettledRounds: selectedRequiredSettledRounds,
-              bountyClosesAt: rewardPoolExpiresAt,
-              feedbackClosesAt,
-            },
-            questionRoundConfigToAbi(selectedRoundConfig),
-          ],
-        } as const;
+        const submitWrite = isBundleSubmission
+          ? ({
+              address: registryAddress,
+              abi: QUESTION_SUBMISSION_ABI,
+              functionName: "submitQuestionBundleWithRewardAndRoundConfig",
+              args: [bundleQuestions, rewardTerms, roundConfigAbi],
+            } as const)
+          : ({
+              address: registryAddress,
+              abi: QUESTION_SUBMISSION_ABI,
+              functionName: "submitQuestionWithRewardAndRoundConfig",
+              args: [
+                primaryQuestion.contextUrl,
+                primaryQuestion.imageUrls,
+                primaryQuestion.videoUrl,
+                primaryQuestion.title,
+                primaryQuestion.description,
+                primaryQuestion.tags,
+                primaryQuestion.categoryId,
+                primaryQuestion.salt,
+                rewardTerms,
+                roundConfigAbi,
+                primaryQuestion.spec,
+              ],
+            } as const);
         const submitTxHash = localE2ETestWalletClient
           ? await localE2ETestWalletClient.writeContract(submitWrite as any)
-          : await writeContract(wagmiConfig, submitWrite);
+          : await writeContract(wagmiConfig, submitWrite as any);
 
         if (submitTxHash) {
           const submitReceipt = await waitForTransactionReceipt(wagmiConfig, { hash: submitTxHash });

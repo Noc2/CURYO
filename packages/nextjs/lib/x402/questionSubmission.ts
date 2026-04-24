@@ -27,7 +27,10 @@ import {
   getX402UsdcAddressOverride,
 } from "~~/lib/env/server";
 import { questionRoundConfigToAbi, serializeQuestionRoundConfig } from "~~/lib/questionRoundConfig";
-import { buildQuestionBundleSubmissionRevealCommitment } from "~~/lib/questionSubmissionCommitment";
+import {
+  buildQuestionBundleSubmissionRevealCommitment,
+  buildQuestionSubmissionRevealCommitment,
+} from "~~/lib/questionSubmissionCommitment";
 import {
   type X402QuestionOperation,
   type X402QuestionPayload,
@@ -669,37 +672,74 @@ async function executeX402QuestionSubmission(params: {
   payload: X402QuestionPayload;
 }): Promise<{ bundleId: bigint | null; contentIds: bigint[]; rewardPoolId: bigint | null; transactionHashes: Hex[] }> {
   const { account, publicClient, walletClient } = createViemClients(params.config);
-  await preflightX402QuestionSubmissionWithClient({
+  const preflight = await preflightX402QuestionSubmissionWithClient({
     config: params.config,
     payload: params.payload,
     publicClient,
   });
 
   const salts = params.payload.questions.map(() => `0x${randomBytes(32).toString("hex")}` as Hex);
-  const revealCommitment = buildQuestionBundleSubmissionRevealCommitment({
-    questions: params.payload.questions.map((question, index) => ({
-      categoryId: question.categoryId,
-      contextUrl: question.contextUrl,
-      description: question.description,
-      imageUrls: question.imageUrls,
-      salt: salts[index],
-      spec: {
-        questionMetadataHash: question.questionMetadataHash,
-        resultSpecHash: question.resultSpecHash,
-      },
-      tags: question.tags,
-      title: question.title,
-      videoUrl: question.videoUrl,
-    })),
-    rewardAmount: params.payload.bounty.amount,
-    rewardAsset: X402_SUBMISSION_REWARD_ASSET_USDC,
-    requiredSettledRounds: params.payload.bounty.requiredSettledRounds,
+  const questions = params.payload.questions.map((question, index) => ({
+    categoryId: question.categoryId,
+    contextUrl: question.contextUrl,
+    description: question.description,
+    imageUrls: question.imageUrls,
+    salt: salts[index],
+    spec: {
+      questionMetadataHash: question.questionMetadataHash,
+      resultSpecHash: question.resultSpecHash,
+    },
+    tags: question.tags,
+    title: question.title,
+    videoUrl: question.videoUrl,
+  }));
+  const rewardTerms = {
+    asset: X402_SUBMISSION_REWARD_ASSET_USDC,
+    amount: params.payload.bounty.amount,
     requiredVoters: params.payload.bounty.requiredVoters,
-    rewardPoolExpiresAt: params.payload.bounty.rewardPoolExpiresAt,
+    requiredSettledRounds: params.payload.bounty.requiredSettledRounds,
+    bountyClosesAt: params.payload.bounty.rewardPoolExpiresAt,
     feedbackClosesAt: params.payload.bounty.feedbackClosesAt,
-    roundConfig: params.payload.roundConfig,
-    submitter: account.address,
-  });
+  } as const;
+  const roundConfigAbi = questionRoundConfigToAbi(params.payload.roundConfig);
+  const isBundleSubmission = questions.length > 1;
+  const primaryQuestion = questions[0];
+  const primarySubmissionKey = preflight.submissionKeys[0];
+  if (!primaryQuestion || !primarySubmissionKey) {
+    throw new Error("Question payload is empty.");
+  }
+  const revealCommitment = isBundleSubmission
+    ? buildQuestionBundleSubmissionRevealCommitment({
+        questions,
+        rewardAmount: params.payload.bounty.amount,
+        rewardAsset: X402_SUBMISSION_REWARD_ASSET_USDC,
+        requiredSettledRounds: params.payload.bounty.requiredSettledRounds,
+        requiredVoters: params.payload.bounty.requiredVoters,
+        rewardPoolExpiresAt: params.payload.bounty.rewardPoolExpiresAt,
+        feedbackClosesAt: params.payload.bounty.feedbackClosesAt,
+        roundConfig: params.payload.roundConfig,
+        submitter: account.address,
+      })
+    : buildQuestionSubmissionRevealCommitment({
+        categoryId: primaryQuestion.categoryId,
+        description: primaryQuestion.description,
+        imageUrls: primaryQuestion.imageUrls,
+        questionMetadataHash: primaryQuestion.spec.questionMetadataHash,
+        rewardAmount: params.payload.bounty.amount,
+        rewardAsset: X402_SUBMISSION_REWARD_ASSET_USDC,
+        requiredSettledRounds: params.payload.bounty.requiredSettledRounds,
+        requiredVoters: params.payload.bounty.requiredVoters,
+        resultSpecHash: primaryQuestion.spec.resultSpecHash,
+        rewardPoolExpiresAt: params.payload.bounty.rewardPoolExpiresAt,
+        feedbackClosesAt: params.payload.bounty.feedbackClosesAt,
+        roundConfig: params.payload.roundConfig,
+        salt: primaryQuestion.salt,
+        submissionKey: primarySubmissionKey,
+        submitter: account.address,
+        tags: primaryQuestion.tags,
+        title: primaryQuestion.title,
+        videoUrl: primaryQuestion.videoUrl,
+      });
 
   const transactionHashes: Hex[] = [];
   const approvalHash = await ensureUsdcAllowance({
@@ -724,37 +764,29 @@ async function executeX402QuestionSubmission(params: {
 
   try {
     await sleep(RESERVED_SUBMISSION_WAIT_MS);
-    const submitArgs = [
-      params.payload.questions.map((question, index) => ({
-        contextUrl: question.contextUrl,
-        imageUrls: question.imageUrls,
-        videoUrl: question.videoUrl,
-        title: question.title,
-        description: question.description,
-        tags: question.tags,
-        categoryId: question.categoryId,
-        salt: salts[index],
-        spec: {
-          questionMetadataHash: question.questionMetadataHash,
-          resultSpecHash: question.resultSpecHash,
-        },
-      })),
-      {
-        asset: X402_SUBMISSION_REWARD_ASSET_USDC,
-        amount: params.payload.bounty.amount,
-        requiredVoters: params.payload.bounty.requiredVoters,
-        requiredSettledRounds: params.payload.bounty.requiredSettledRounds,
-        bountyClosesAt: params.payload.bounty.rewardPoolExpiresAt,
-        feedbackClosesAt: params.payload.bounty.feedbackClosesAt,
-      },
-      questionRoundConfigToAbi(params.payload.roundConfig),
-    ] as const;
+    const submitArgs = isBundleSubmission
+      ? ([questions, rewardTerms, roundConfigAbi] as const)
+      : ([
+          primaryQuestion.contextUrl,
+          primaryQuestion.imageUrls,
+          primaryQuestion.videoUrl,
+          primaryQuestion.title,
+          primaryQuestion.description,
+          primaryQuestion.tags,
+          primaryQuestion.categoryId,
+          primaryQuestion.salt,
+          rewardTerms,
+          roundConfigAbi,
+          primaryQuestion.spec,
+        ] as const);
     const { request } = await publicClient.simulateContract({
       account,
       address: params.config.contentRegistryAddress,
       abi: ContentRegistryAbi,
-      functionName: "submitQuestionBundleWithRewardAndRoundConfig",
-      args: submitArgs,
+      functionName: isBundleSubmission
+        ? "submitQuestionBundleWithRewardAndRoundConfig"
+        : "submitQuestionWithRewardAndRoundConfig",
+      args: submitArgs as never,
     });
     const submitHash = await walletClient.writeContract(request);
     transactionHashes.push(submitHash);

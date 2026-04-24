@@ -63,6 +63,31 @@ function buildSubmissionMediaHash(imageUrls: readonly string[], videoUrl: string
   return keccak256(encodeAbiParameters([{ type: "string[]" }, { type: "string" }], [[...imageUrls], videoUrl]));
 }
 
+export function buildQuestionSubmissionKey(
+  params: Pick<QuestionBundleSubmissionItem, "categoryId" | "contextUrl" | "description" | "tags" | "title">,
+): Hex {
+  return keccak256(
+    encodeAbiParameters(
+      [
+        { type: "string" },
+        { type: "uint256" },
+        { type: "string" },
+        { type: "string" },
+        { type: "string" },
+        { type: "string" },
+      ],
+      [
+        "curyo-question-context-v1",
+        params.categoryId,
+        params.contextUrl,
+        params.title,
+        params.description,
+        params.tags,
+      ],
+    ),
+  );
+}
+
 export function buildQuestionSubmissionRevealCommitment(params: QuestionSubmissionRevealCommitmentParams): Hex {
   const mediaHash = buildSubmissionMediaHash(params.imageUrls, params.videoUrl);
   return keccak256(
