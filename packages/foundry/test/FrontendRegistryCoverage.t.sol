@@ -78,7 +78,7 @@ contract FrontendRegistryCoverageTest is Test {
     address public nonAdmin = address(7);
 
     uint256 public constant STAKE = 1000e6;
-    uint256 public constant MAX_FEE_CREDIT = 10_000e6;
+    uint256 public constant MAX_FEE_CREDIT = 50_000e6;
 
     function setUp() public {
         vm.startPrank(admin);
@@ -297,6 +297,16 @@ contract FrontendRegistryCoverageTest is Test {
         registry.creditFees(frontend1, MAX_FEE_CREDIT);
 
         assertEq(registry.getAccumulatedFees(frontend1), MAX_FEE_CREDIT);
+    }
+
+    function test_CreditFees_MaxLaunchRoundFrontendFee_Succeeds() public {
+        _registerFrontend(frontend1);
+
+        uint256 maxLaunchRoundFrontendFee = 38_000e6;
+        vm.prank(feeCreditor);
+        registry.creditFees(frontend1, maxLaunchRoundFrontendFee);
+
+        assertEq(registry.getAccumulatedFees(frontend1), maxLaunchRoundFrontendFee);
     }
 
     function test_CreditFees_ExceedsMax_Reverts() public {

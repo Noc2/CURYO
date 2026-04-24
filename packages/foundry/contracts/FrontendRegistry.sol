@@ -23,8 +23,9 @@ contract FrontendRegistry is IFrontendRegistry, Initializable, AccessControlUpgr
     bytes32 public constant GOVERNANCE_ROLE = keccak256("GOVERNANCE_ROLE");
     bytes32 public constant FEE_CREDITOR_ROLE = keccak256("FEE_CREDITOR_ROLE");
 
-    /// @notice Maximum HREP that can be credited in a single creditFees() call (10,000 HREP with 6 decimals)
-    uint256 public constant MAX_FEE_CREDIT = 10_000e6;
+    /// @notice Maximum HREP that can be credited in a single creditFees() call (50,000 HREP with 6 decimals)
+    /// @dev Launch round caps allow at most about 38,000 HREP of frontend fees in one round.
+    uint256 public constant MAX_FEE_CREDIT = 50_000e6;
     /// @notice Maximum bytes allowed in a slashing reason.
     uint256 public constant MAX_SLASH_REASON_LENGTH = 280;
 
