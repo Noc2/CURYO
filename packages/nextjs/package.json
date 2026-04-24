@@ -5,7 +5,7 @@
   "scripts": {
     "analyze": "ANALYZE=true yarn build",
     "build": "rm -rf .next && next build",
-    "check-types": "next typegen && tsc --noEmit --incremental",
+    "check-types": "CURYO_E2E_PRODUCTION_BUILD=true NEXT_PUBLIC_CURYO_E2E_PRODUCTION_BUILD=true next typegen && tsc --noEmit --incremental",
     "dev": "node scripts/dev-preflight.mjs",
     "format": "prettier --write . '!(node_modules|.next|contracts)/**/*'",
     "lint": "eslint . --ext .js,.jsx,.ts,.tsx,.mjs --ignore-pattern public --ignore-pattern .next --ignore-pattern out --ignore-pattern contracts",
