@@ -1,4 +1,4 @@
-import { buildDefaultResultSpec, hashCanonicalJson } from "./questionSpecs.js";
+import { buildDefaultResultSpec, hashCanonicalJson } from "./questionSpecs";
 
 type JsonValue = string | number | boolean | null | JsonValue[] | { [key: string]: JsonValue };
 type JsonSchema = Record<string, unknown>;

@@ -1,5 +1,5 @@
-import { findAgentResultTemplate } from "../templates.js";
-import type { AgentAskExample, AgentQuestionExample, JsonObject, QuestionLintFinding } from "./types.js";
+import { findAgentResultTemplate } from "../templates";
+import type { AgentAskExample, AgentQuestionExample, JsonObject, QuestionLintFinding } from "./types";
 
 const CLIENT_REQUEST_ID_PATTERN = /^[A-Za-z0-9._:-]{4,160}$/;
 

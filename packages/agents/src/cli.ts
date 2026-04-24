@@ -2,9 +2,9 @@ import { readFile } from "node:fs/promises";
 import { resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { createCuryoAgentClient } from "@curyo/sdk/agent";
-import { loadAgentsRuntimeConfig } from "./config.js";
-import { listAgentResultTemplates } from "./templates.js";
-import { lintAgentAskRequest, summarizeLintFindings } from "./questions/lint.js";
+import { loadAgentsRuntimeConfig } from "./config";
+import { listAgentResultTemplates } from "./templates";
+import { lintAgentAskRequest, summarizeLintFindings } from "./questions/lint";
 
 type CliOptions = Record<string, string | boolean>;
 
