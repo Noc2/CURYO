@@ -61,7 +61,7 @@ magick "$POSTER_ORB" \
 magick -size 1200x630 xc:"#050607" \
   \( "$SOCIAL_SOURCE" \) \
   -gravity east \
-  -geometry -48+92 \
+  -geometry -48+128 \
   -compose over \
   -composite \
   -font "$BOLD_FONT" \
@@ -96,7 +96,7 @@ magick "$POSTER_ORB" \
 magick -size 1600x520 xc:"#050607" \
   \( "$BANNER_SOURCE" \) \
   -gravity east \
-  -geometry +36+110 \
+  -geometry +36+138 \
   -compose over \
   -composite \
   -font "$BOLD_FONT" \
