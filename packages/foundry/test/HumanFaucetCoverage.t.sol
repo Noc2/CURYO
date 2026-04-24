@@ -135,6 +135,8 @@ contract HumanFaucetCoverageTest is Test {
 
         vm.prank(user1);
         realVoterIdNFT.setDelegate(user2);
+        vm.prank(user2);
+        realVoterIdNFT.acceptDelegate();
 
         assertEq(realVoterIdNFT.resolveHolder(user2), user1);
 
@@ -161,6 +163,8 @@ contract HumanFaucetCoverageTest is Test {
 
         vm.prank(user1);
         realVoterIdNFT.setDelegate(user2);
+        vm.prank(user2);
+        realVoterIdNFT.acceptDelegate();
 
         assertEq(realVoterIdNFT.resolveHolder(user2), user1);
 

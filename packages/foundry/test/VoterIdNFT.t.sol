@@ -43,6 +43,14 @@ contract VoterIdNFTTest is Test {
         nonReceiverContract = new NonERC721Receiver();
     }
 
+    function _requestAndAcceptDelegate(address holder, address delegate) internal {
+        vm.prank(holder);
+        voterIdNFT.setDelegate(delegate);
+
+        vm.prank(delegate);
+        voterIdNFT.acceptDelegate();
+    }
+
     // ====================================================
     // Initialization Tests
     // ====================================================
@@ -533,11 +541,23 @@ contract VoterIdNFTTest is Test {
         vm.prank(user1);
         voterIdNFT.setDelegate(user2);
 
+        assertEq(voterIdNFT.pendingDelegateTo(user1), user2);
+        assertEq(voterIdNFT.pendingDelegateOf(user2), user1);
+        assertEq(voterIdNFT.delegateTo(user1), address(0));
+        assertEq(voterIdNFT.delegateOf(user2), address(0));
+        assertFalse(voterIdNFT.hasVoterId(user2));
+        assertEq(voterIdNFT.resolveHolder(user2), address(0));
+
+        vm.prank(user2);
+        voterIdNFT.acceptDelegate();
+
         assertEq(voterIdNFT.delegateTo(user1), user2);
         assertEq(voterIdNFT.delegateOf(user2), user1);
         assertTrue(voterIdNFT.hasVoterId(user2));
         assertEq(voterIdNFT.getTokenId(user2), 1);
         assertEq(voterIdNFT.resolveHolder(user2), user1);
+        assertEq(voterIdNFT.pendingDelegateTo(user1), address(0));
+        assertEq(voterIdNFT.pendingDelegateOf(user2), address(0));
     }
 
     function test_SetDelegate_EmitsEvent() public {
@@ -546,18 +566,39 @@ contract VoterIdNFTTest is Test {
 
         vm.prank(user1);
         vm.expectEmit(true, true, true, true);
-        emit VoterIdNFT.DelegateSet(user1, user2);
+        emit VoterIdNFT.DelegateRequested(user1, user2);
         voterIdNFT.setDelegate(user2);
+    }
+
+    function test_AcceptDelegate_EmitsEvent() public {
+        vm.prank(minterAddr);
+        voterIdNFT.mint(user1, NULLIFIER_1);
+
+        vm.prank(user1);
+        voterIdNFT.setDelegate(user2);
+
+        vm.prank(user2);
+        vm.expectEmit(true, true, true, true);
+        emit VoterIdNFT.DelegateSet(user1, user2);
+        voterIdNFT.acceptDelegate();
     }
 
     function test_SetDelegate_ReplacesExisting() public {
         vm.prank(minterAddr);
         voterIdNFT.mint(user1, NULLIFIER_1);
 
-        vm.startPrank(user1);
-        voterIdNFT.setDelegate(user2);
+        _requestAndAcceptDelegate(user1, user2);
+
+        vm.prank(user1);
         voterIdNFT.setDelegate(user3);
-        vm.stopPrank();
+
+        // Existing delegate remains active until the replacement accepts.
+        assertEq(voterIdNFT.delegateTo(user1), user2);
+        assertEq(voterIdNFT.delegateOf(user2), user1);
+        assertTrue(voterIdNFT.hasVoterId(user2));
+
+        vm.prank(user3);
+        voterIdNFT.acceptDelegate();
 
         // Old delegate cleared
         assertEq(voterIdNFT.delegateOf(user2), address(0));
@@ -573,16 +614,18 @@ contract VoterIdNFTTest is Test {
         vm.prank(minterAddr);
         voterIdNFT.mint(user1, NULLIFIER_1);
 
-        vm.startPrank(user1);
-        voterIdNFT.setDelegate(user2);
+        _requestAndAcceptDelegate(user1, user2);
 
         // Replacing should emit DelegateRemoved for old, then DelegateSet for new
+        vm.prank(user1);
+        voterIdNFT.setDelegate(user3);
+
+        vm.prank(user3);
         vm.expectEmit(true, true, true, true);
         emit VoterIdNFT.DelegateRemoved(user1, user2);
         vm.expectEmit(true, true, true, true);
         emit VoterIdNFT.DelegateSet(user1, user3);
-        voterIdNFT.setDelegate(user3);
-        vm.stopPrank();
+        voterIdNFT.acceptDelegate();
     }
 
     function test_SetDelegate_RevertNonHolder() public {
@@ -642,8 +685,9 @@ contract VoterIdNFTTest is Test {
         vm.prank(minterAddr);
         voterIdNFT.mint(user1, NULLIFIER_1);
 
+        _requestAndAcceptDelegate(user1, user2);
+
         vm.startPrank(user1);
-        voterIdNFT.setDelegate(user2);
         voterIdNFT.removeDelegate();
         vm.stopPrank();
 
@@ -657,13 +701,28 @@ contract VoterIdNFTTest is Test {
         vm.prank(minterAddr);
         voterIdNFT.mint(user1, NULLIFIER_1);
 
-        vm.startPrank(user1);
-        voterIdNFT.setDelegate(user2);
+        _requestAndAcceptDelegate(user1, user2);
 
+        vm.startPrank(user1);
         vm.expectEmit(true, true, true, true);
         emit VoterIdNFT.DelegateRemoved(user1, user2);
         voterIdNFT.removeDelegate();
         vm.stopPrank();
+    }
+
+    function test_RemoveDelegate_CancelsPendingRequest() public {
+        vm.prank(minterAddr);
+        voterIdNFT.mint(user1, NULLIFIER_1);
+
+        vm.prank(user1);
+        voterIdNFT.setDelegate(user2);
+
+        vm.prank(user1);
+        voterIdNFT.removeDelegate();
+
+        assertEq(voterIdNFT.pendingDelegateTo(user1), address(0));
+        assertEq(voterIdNFT.pendingDelegateOf(user2), address(0));
+        assertEq(voterIdNFT.resolveHolder(user2), address(0));
     }
 
     function test_RemoveDelegate_RevertNoDelegateSet() public {
@@ -679,8 +738,7 @@ contract VoterIdNFTTest is Test {
         vm.prank(minterAddr);
         voterIdNFT.mint(user1, NULLIFIER_1);
 
-        vm.prank(user1);
-        voterIdNFT.setDelegate(user2);
+        _requestAndAcceptDelegate(user1, user2);
 
         // Verify delegate works
         assertTrue(voterIdNFT.hasVoterId(user2));
@@ -700,8 +758,7 @@ contract VoterIdNFTTest is Test {
         vm.prank(minterAddr);
         uint256 tokenId = voterIdNFT.mint(user1, NULLIFIER_1);
 
-        vm.prank(user1);
-        voterIdNFT.setDelegate(user2);
+        _requestAndAcceptDelegate(user1, user2);
 
         // Delegate returns the holder's token ID
         assertEq(voterIdNFT.getTokenId(user2), tokenId);
@@ -719,8 +776,7 @@ contract VoterIdNFTTest is Test {
         vm.prank(minterAddr);
         voterIdNFT.mint(user1, NULLIFIER_1);
 
-        vm.prank(user1);
-        voterIdNFT.setDelegate(user2);
+        _requestAndAcceptDelegate(user1, user2);
 
         assertEq(voterIdNFT.resolveHolder(user2), user1);
     }
@@ -734,8 +790,7 @@ contract VoterIdNFTTest is Test {
         voterIdNFT.mint(user1, NULLIFIER_1);
 
         // user2 is now a delegate for user1
-        vm.prank(user1);
-        voterIdNFT.setDelegate(user2);
+        _requestAndAcceptDelegate(user1, user2);
 
         vm.prank(minterAddr);
         vm.expectEmit(true, true, true, true);
@@ -874,8 +929,7 @@ contract VoterIdNFTTest is Test {
         vm.prank(minterAddr);
         voterIdNFT.mint(user1, NULLIFIER_1);
 
-        vm.prank(user1);
-        voterIdNFT.setDelegate(user2);
+        _requestAndAcceptDelegate(user1, user2);
 
         // Holder still has their Voter ID
         assertTrue(voterIdNFT.hasVoterId(user1));

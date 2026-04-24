@@ -62,6 +62,12 @@ contract VoterIdNFT is ERC721, Ownable, IVoterIdNFT {
     /// @notice Mapping from delegate address to the holder they represent (address(0) if none)
     mapping(address => address) public delegateOf;
 
+    /// @notice Pending delegate request by holder (address(0) if none)
+    mapping(address => address) public pendingDelegateTo;
+
+    /// @notice Pending holder request by delegate candidate (address(0) if none)
+    mapping(address => address) public pendingDelegateOf;
+
     // ====================================================
     // Events
     // ====================================================
@@ -72,6 +78,7 @@ contract VoterIdNFT is ERC721, Ownable, IVoterIdNFT {
     event MinterRemoved(address indexed minter);
     event StakeRecorderSet(address indexed stakeRecorder);
     event StakeRecorded(uint256 indexed contentId, uint256 indexed epochId, uint256 indexed tokenId, uint256 amount);
+    event DelegateRequested(address indexed holder, address indexed delegate);
     event DelegateSet(address indexed holder, address indexed delegate);
     event DelegateRemoved(address indexed holder, address indexed previousDelegate);
     event GovernanceUpdated(address indexed governance);
@@ -94,6 +101,7 @@ contract VoterIdNFT is ERC721, Ownable, IVoterIdNFT {
     error CannotDelegateSelf();
     error CallerNotHolder();
     error CallerIsDelegate();
+    error NoPendingDelegate();
     error MaxSupplyReached();
 
     // ====================================================
@@ -178,6 +186,7 @@ contract VoterIdNFT is ERC721, Ownable, IVoterIdNFT {
             delete delegateTo[holder];
             emit DelegateRemoved(holder, delegate);
         }
+        _clearPendingDelegateRequest(holder);
 
         // Clear inbound delegation if revoked holder was acting as someone else's delegate.
         // Without this scrub, hasVoterId(holder) would still return true via the inbound
@@ -187,6 +196,11 @@ contract VoterIdNFT is ERC721, Ownable, IVoterIdNFT {
             delete delegateOf[holder];
             delete delegateTo[inboundDelegator];
             emit DelegateRemoved(inboundDelegator, holder);
+        }
+        address inboundPendingDelegator = pendingDelegateOf[holder];
+        if (inboundPendingDelegator != address(0)) {
+            delete pendingDelegateOf[holder];
+            delete pendingDelegateTo[inboundPendingDelegator];
         }
 
         if (_tokenIdHasNullifier[tokenId]) {
@@ -237,6 +251,11 @@ contract VoterIdNFT is ERC721, Ownable, IVoterIdNFT {
             delete delegateOf[to];
             delete delegateTo[delegator];
             emit DelegateRemoved(delegator, to);
+        }
+        address pendingDelegator = pendingDelegateOf[to];
+        if (pendingDelegator != address(0)) {
+            delete pendingDelegateOf[to];
+            delete pendingDelegateTo[pendingDelegator];
         }
 
         tokenId = _tokenIdCounter++;
@@ -358,9 +377,9 @@ contract VoterIdNFT is ERC721, Ownable, IVoterIdNFT {
     // Delegation Functions
     // ====================================================
 
-    /// @notice Authorize a delegate address to act on behalf of the caller's Voter ID
-    /// @dev Only the SBT holder can set a delegate. Replaces any existing delegate.
-    ///      The delegate can then pass hasVoterId() and getTokenId() checks transparently.
+    /// @notice Request a delegate address to act on behalf of the caller's Voter ID
+    /// @dev Only the SBT holder can request a delegate. The delegate must accept before
+    ///      hasVoterId(), getTokenId(), and resolveHolder() treat it as active.
     ///      AUDIT NOTE (H-2): A holder who is also acting as a delegate for someone else cannot
     ///      set their own delegate. This prevents identity chaining (A→B→C) that could obscure
     ///      the true number of unique identities behind a set of addresses.
@@ -373,32 +392,58 @@ contract VoterIdNFT is ERC721, Ownable, IVoterIdNFT {
         if (delegateOf[msg.sender] != address(0)) revert CallerIsDelegate();
         if (holderToTokenId[delegate] != 0) revert DelegateIsHolder();
         if (delegateOf[delegate] != address(0)) revert DelegateAlreadyAssigned();
+        if (pendingDelegateOf[delegate] != address(0)) revert DelegateAlreadyAssigned();
         // Prevent delegating to an address that has delegated out to someone else
         if (delegateTo[delegate] != address(0)) revert DelegateAlreadyAssigned();
 
-        // Remove existing delegate if any
-        address oldDelegate = delegateTo[msg.sender];
+        _clearPendingDelegateRequest(msg.sender);
+
+        pendingDelegateTo[msg.sender] = delegate;
+        pendingDelegateOf[delegate] = msg.sender;
+
+        emit DelegateRequested(msg.sender, delegate);
+    }
+
+    /// @notice Accept a pending delegate request and activate delegation
+    function acceptDelegate() external {
+        address holder = pendingDelegateOf[msg.sender];
+        if (holder == address(0)) revert NoPendingDelegate();
+        if (holderToTokenId[holder] == 0) revert CallerNotHolder();
+        if (holderToTokenId[msg.sender] != 0) revert DelegateIsHolder();
+        if (delegateOf[msg.sender] != address(0)) revert DelegateAlreadyAssigned();
+        if (delegateTo[msg.sender] != address(0)) revert DelegateAlreadyAssigned();
+
+        address oldDelegate = delegateTo[holder];
         if (oldDelegate != address(0)) {
             delete delegateOf[oldDelegate];
-            emit DelegateRemoved(msg.sender, oldDelegate);
+            emit DelegateRemoved(holder, oldDelegate);
         }
 
-        // Set new delegate
-        delegateTo[msg.sender] = delegate;
-        delegateOf[delegate] = msg.sender;
+        delete pendingDelegateTo[holder];
+        delete pendingDelegateOf[msg.sender];
 
-        emit DelegateSet(msg.sender, delegate);
+        delegateTo[holder] = msg.sender;
+        delegateOf[msg.sender] = holder;
+
+        emit DelegateSet(holder, msg.sender);
     }
 
     /// @notice Remove the current delegate authorization
     function removeDelegate() external {
         address oldDelegate = delegateTo[msg.sender];
-        if (oldDelegate == address(0)) revert NoDelegateSet();
+        address pendingDelegate = pendingDelegateTo[msg.sender];
+        if (oldDelegate == address(0) && pendingDelegate == address(0)) revert NoDelegateSet();
 
-        delete delegateTo[msg.sender];
-        delete delegateOf[oldDelegate];
+        if (oldDelegate != address(0)) {
+            delete delegateTo[msg.sender];
+            delete delegateOf[oldDelegate];
+            emit DelegateRemoved(msg.sender, oldDelegate);
+        }
 
-        emit DelegateRemoved(msg.sender, oldDelegate);
+        if (pendingDelegate != address(0)) {
+            delete pendingDelegateTo[msg.sender];
+            delete pendingDelegateOf[pendingDelegate];
+        }
     }
 
     /// @notice Resolve an address to the effective SBT holder
@@ -408,6 +453,14 @@ contract VoterIdNFT is ERC721, Ownable, IVoterIdNFT {
     function resolveHolder(address addr) external view returns (address) {
         if (holderToTokenId[addr] != 0) return addr;
         return delegateOf[addr];
+    }
+
+    function _clearPendingDelegateRequest(address holder) internal {
+        address pendingDelegate = pendingDelegateTo[holder];
+        if (pendingDelegate != address(0)) {
+            delete pendingDelegateTo[holder];
+            delete pendingDelegateOf[pendingDelegate];
+        }
     }
 
     function _effectiveStake(uint256 contentId, uint256 epochId, uint256 tokenId) internal view returns (uint256) {
