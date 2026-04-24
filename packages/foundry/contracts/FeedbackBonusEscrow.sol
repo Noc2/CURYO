@@ -196,7 +196,7 @@ contract FeedbackBonusEscrow is Initializable, AccessControlUpgradeable, Pausabl
 
         uint256 frontendFee;
         address frontendRecipient;
-        (recipientAmount, frontendFee, frontendRecipient) = _splitAward(pool, frontend, grossAmount);
+        (recipientAmount, frontendFee, frontendRecipient) = _splitAward(pool, commitKey, frontend, grossAmount);
 
         pool.remainingAmount -= grossAmount;
         voterIdAwarded[poolId][voterId] = true;
@@ -335,7 +335,7 @@ contract FeedbackBonusEscrow is Initializable, AccessControlUpgradeable, Pausabl
             && voterId == _voterIdForRound(pool.contentId, pool.roundId, currentSubmitterIdentity);
     }
 
-    function _splitAward(FeedbackBonusPool storage pool, address frontend, uint256 grossAmount)
+    function _splitAward(FeedbackBonusPool storage pool, bytes32 commitKey, address frontend, uint256 grossAmount)
         internal
         view
         returns (uint256 recipientAmount, uint256 frontendFee, address frontendRecipient)
@@ -350,7 +350,7 @@ contract FeedbackBonusEscrow is Initializable, AccessControlUpgradeable, Pausabl
             return (recipientAmount, 0, address(0));
         }
 
-        frontendRecipient = _resolveFrontendRewardRecipient(pool.contentId, pool.roundId, frontend);
+        frontendRecipient = _resolveFrontendRewardRecipient(pool.contentId, pool.roundId, commitKey, frontend);
         if (frontendRecipient == address(0)) {
             return (recipientAmount, 0, address(0));
         }
@@ -358,11 +358,15 @@ contract FeedbackBonusEscrow is Initializable, AccessControlUpgradeable, Pausabl
         recipientAmount = grossAmount - frontendFee;
     }
 
-    function _resolveFrontendRewardRecipient(uint256 contentId, uint256 roundId, address frontend)
+    function _resolveFrontendRewardRecipient(uint256 contentId, uint256 roundId, bytes32 commitKey, address frontend)
         internal
         view
         returns (address frontendRecipient)
     {
+        if (!votingEngine.frontendEligibleAtCommit(contentId, roundId, commitKey)) {
+            return address(0);
+        }
+
         address frontendRegistry = votingEngine.roundFrontendRegistrySnapshot(contentId, roundId);
         if (frontendRegistry == address(0)) {
             return address(0);

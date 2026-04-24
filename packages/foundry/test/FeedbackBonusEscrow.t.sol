@@ -205,10 +205,11 @@ contract FeedbackBonusEscrowTest is VotingTestBase {
         assertEq(remainingAmount, 90e6);
     }
 
-    function testAwardFallsBackToVoterWhenFrontendIsNotEligible() public {
+    function testAwardFallsBackToVoterWhenFrontendWasNotEligibleAtCommit() public {
         uint256 contentId = _submitQuestion("");
         uint256 poolId = _createFeedbackBonusPool(contentId);
         _settleRoundWithFrontend(_threeVoters(), contentId, _directions(true, true, false), frontend1);
+        _registerFrontend(frontend1);
 
         vm.prank(funder);
         uint256 recipientAmount = feedbackBonusEscrow.awardFeedbackBonus(poolId, voter1, FEEDBACK_HASH, 10e6);
