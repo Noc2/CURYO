@@ -125,6 +125,8 @@ type ValidatedQuestionDraft = {
   selectedCategory: Category | null;
 };
 
+type QuestionTaxonomySelection = Pick<QuestionDraft, "selectedCategory" | "selectedSubcategories">;
+
 function createEmptyQuestionDraft(): QuestionDraft {
   return {
     mediaMode: "images",
@@ -137,6 +139,56 @@ function createEmptyQuestionDraft(): QuestionDraft {
     selectedSubcategories: [],
     customSubcategory: "",
   };
+}
+
+function createQuestionDraftWithTaxonomy(source: QuestionTaxonomySelection): QuestionDraft {
+  return {
+    ...createEmptyQuestionDraft(),
+    selectedCategory: source.selectedCategory,
+    selectedSubcategories: [...source.selectedSubcategories],
+  };
+}
+
+function areSubcategorySelectionsEqual(left: readonly string[], right: readonly string[]): boolean {
+  return left.length === right.length && left.every((value, index) => value === right[index]);
+}
+
+function areTaxonomySelectionsEqual(left: QuestionTaxonomySelection, right: QuestionTaxonomySelection): boolean {
+  const leftCategoryId = left.selectedCategory?.id.toString() ?? null;
+  const rightCategoryId = right.selectedCategory?.id.toString() ?? null;
+  return (
+    leftCategoryId === rightCategoryId &&
+    areSubcategorySelectionsEqual(left.selectedSubcategories, right.selectedSubcategories)
+  );
+}
+
+function shouldInheritFirstQuestionTaxonomy(
+  draft: QuestionDraft,
+  previousSelection: QuestionTaxonomySelection,
+): boolean {
+  if (!draft.selectedCategory && draft.selectedSubcategories.length === 0) {
+    return true;
+  }
+
+  return areTaxonomySelectionsEqual(draft, previousSelection);
+}
+
+function syncFirstQuestionTaxonomy(
+  drafts: QuestionDraft[],
+  previousSelection: QuestionTaxonomySelection,
+  nextSelection: QuestionTaxonomySelection,
+): QuestionDraft[] {
+  return drafts.map((draft, index) => {
+    if (index !== 0 && !shouldInheritFirstQuestionTaxonomy(draft, previousSelection)) {
+      return draft;
+    }
+
+    return {
+      ...draft,
+      selectedCategory: nextSelection.selectedCategory,
+      selectedSubcategories: [...nextSelection.selectedSubcategories],
+    };
+  });
 }
 
 function createRandomHex32(): `0x${string}` {
@@ -492,9 +544,15 @@ export function ContentSubmissionSection() {
     : null;
 
   const handleCategorySelect = (category: Category) => {
+    const previousSelection = { selectedCategory, selectedSubcategories };
+    const nextSelection: QuestionTaxonomySelection = { selectedCategory: category, selectedSubcategories: [] };
     setSelectedCategory(category);
     setSelectedSubcategories([]);
-    patchActiveQuestionDraft({ selectedCategory: category, selectedSubcategories: [] });
+    if (activeQuestionIndex === 0) {
+      setQuestionDrafts(prev => syncFirstQuestionTaxonomy(prev, previousSelection, nextSelection));
+    } else {
+      patchActiveQuestionDraft(nextSelection);
+    }
   };
 
   const handleSubcategoryToggle = (subcategory: string) => {
@@ -505,7 +563,17 @@ export function ContentSubmissionSection() {
       } else if (prev.length < 3) {
         next = [...prev, subcategory];
       }
-      patchActiveQuestionDraft({ selectedSubcategories: next });
+      if (activeQuestionIndex === 0) {
+        setQuestionDrafts(prevDrafts =>
+          syncFirstQuestionTaxonomy(
+            prevDrafts,
+            { selectedCategory, selectedSubcategories: prev },
+            { selectedCategory, selectedSubcategories: next },
+          ),
+        );
+      } else {
+        patchActiveQuestionDraft({ selectedSubcategories: next });
+      }
       return next;
     });
   };
@@ -520,7 +588,17 @@ export function ContentSubmissionSection() {
     ) {
       setSelectedSubcategories(prev => {
         const next = [...prev, trimmed];
-        patchActiveQuestionDraft({ selectedSubcategories: next, customSubcategory: "" });
+        if (activeQuestionIndex === 0) {
+          setQuestionDrafts(prevDrafts =>
+            syncFirstQuestionTaxonomy(
+              prevDrafts,
+              { selectedCategory, selectedSubcategories: prev },
+              { selectedCategory, selectedSubcategories: next },
+            ).map((draft, index) => (index === activeQuestionIndex ? { ...draft, customSubcategory: "" } : draft)),
+          );
+        } else {
+          patchActiveQuestionDraft({ selectedSubcategories: next, customSubcategory: "" });
+        }
         return next;
       });
       setCustomSubcategory("");
@@ -889,7 +967,9 @@ export function ContentSubmissionSection() {
       nextCount > syncedDrafts.length
         ? [
             ...syncedDrafts,
-            ...Array.from({ length: nextCount - syncedDrafts.length }, () => createEmptyQuestionDraft()),
+            ...Array.from({ length: nextCount - syncedDrafts.length }, () =>
+              createQuestionDraftWithTaxonomy(syncedDrafts[0] ?? createEmptyQuestionDraft()),
+            ),
           ]
         : syncedDrafts.slice(0, nextCount);
     const nextActiveIndex = Math.min(activeQuestionIndex, nextCount - 1);
