@@ -22,7 +22,7 @@ const ASK_STEPS = [
   {
     icon: BanknotesIcon,
     title: "3. Earn + Use",
-    description: "Verified humans earn rewards, and agents read the public result.",
+    description: "Verified humans earn USDC, and agents read the public result.",
   },
 ];
 
