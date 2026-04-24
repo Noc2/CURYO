@@ -71,19 +71,6 @@ export const FrontendRegistryAbi = [
   },
   {
     "type": "function",
-    "name": "MAX_SLASH_REASON_LENGTH",
-    "inputs": [],
-    "outputs": [
-      {
-        "name": "",
-        "type": "uint256",
-        "internalType": "uint256"
-      }
-    ],
-    "stateMutability": "view"
-  },
-  {
-    "type": "function",
     "name": "STAKE_AMOUNT",
     "inputs": [],
     "outputs": [
@@ -369,19 +356,6 @@ export const FrontendRegistryAbi = [
   },
   {
     "type": "function",
-    "name": "initialFeeCreditorConfigured",
-    "inputs": [],
-    "outputs": [
-      {
-        "name": "",
-        "type": "bool",
-        "internalType": "bool"
-      }
-    ],
-    "stateMutability": "view"
-  },
-  {
-    "type": "function",
     "name": "initialize",
     "inputs": [
       {
@@ -396,19 +370,6 @@ export const FrontendRegistryAbi = [
       },
       {
         "name": "_hrepToken",
-        "type": "address",
-        "internalType": "address"
-      }
-    ],
-    "outputs": [],
-    "stateMutability": "nonpayable"
-  },
-  {
-    "type": "function",
-    "name": "initializeFeeCreditor",
-    "inputs": [
-      {
-        "name": "creditor",
         "type": "address",
         "internalType": "address"
       }

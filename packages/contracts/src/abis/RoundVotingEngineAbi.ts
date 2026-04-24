@@ -110,65 +110,6 @@ export const RoundVotingEngineAbi = [
   },
   {
     "type": "function",
-    "name": "commitCore",
-    "inputs": [
-      {
-        "name": "contentId",
-        "type": "uint256",
-        "internalType": "uint256"
-      },
-      {
-        "name": "roundId",
-        "type": "uint256",
-        "internalType": "uint256"
-      },
-      {
-        "name": "commitKey",
-        "type": "bytes32",
-        "internalType": "bytes32"
-      }
-    ],
-    "outputs": [
-      {
-        "name": "voter",
-        "type": "address",
-        "internalType": "address"
-      },
-      {
-        "name": "stakeAmount",
-        "type": "uint64",
-        "internalType": "uint64"
-      },
-      {
-        "name": "frontend",
-        "type": "address",
-        "internalType": "address"
-      },
-      {
-        "name": "revealableAfter",
-        "type": "uint48",
-        "internalType": "uint48"
-      },
-      {
-        "name": "revealed",
-        "type": "bool",
-        "internalType": "bool"
-      },
-      {
-        "name": "isUp",
-        "type": "bool",
-        "internalType": "bool"
-      },
-      {
-        "name": "epochIndex",
-        "type": "uint8",
-        "internalType": "uint8"
-      }
-    ],
-    "stateMutability": "view"
-  },
-  {
-    "type": "function",
     "name": "commitVote",
     "inputs": [
       {
@@ -1396,31 +1337,6 @@ export const RoundVotingEngineAbi = [
   {
     "type": "event",
     "name": "ForfeitedFundsAddedToTreasury",
-    "inputs": [
-      {
-        "name": "contentId",
-        "type": "uint256",
-        "indexed": true,
-        "internalType": "uint256"
-      },
-      {
-        "name": "roundId",
-        "type": "uint256",
-        "indexed": true,
-        "internalType": "uint256"
-      },
-      {
-        "name": "amount",
-        "type": "uint256",
-        "indexed": false,
-        "internalType": "uint256"
-      }
-    ],
-    "anonymous": false
-  },
-  {
-    "type": "event",
-    "name": "ForfeitedFundsFallbackToConsensusReserve",
     "inputs": [
       {
         "name": "contentId",

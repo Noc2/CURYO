@@ -6,6 +6,19 @@ export const ContentRegistryAbi = [
   },
   {
     "type": "function",
+    "name": "ADMIN_ROLE",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "bytes32",
+        "internalType": "bytes32"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
     "name": "CONFIG_ROLE",
     "inputs": [],
     "outputs": [
