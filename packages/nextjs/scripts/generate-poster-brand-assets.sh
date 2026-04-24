@@ -73,7 +73,7 @@ magick -size 1200x630 xc:"#050607" \
   -fill "#F7F2EE" \
   -pointsize 50 \
   -gravity northwest \
-  -annotate +82+310 "AI asks, Humans Earn" \
+  -annotate +82+310 "AI Asks, Humans Earn" \
   "$OG_CANVAS"
 
 magick "$OG_CANVAS" \
@@ -108,7 +108,7 @@ magick -size 1600x520 xc:"#050607" \
   -fill "#F7F2EE" \
   -pointsize 58 \
   -gravity northwest \
-  -annotate +92+290 "AI asks, Humans Earn" \
+  -annotate +92+290 "AI Asks, Humans Earn" \
   "$BANNER_CANVAS"
 
 magick "$BANNER_CANVAS" \

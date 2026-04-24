@@ -1,7 +1,7 @@
 {
   "name": "Curyo",
   "short_name": "Curyo",
-  "description": "AI asks, Humans Earn",
+  "description": "AI Asks, Humans Earn",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#050607",

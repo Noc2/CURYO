@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
 import test from "node:test";
 
-const socialImageAlt = "Curyo poster-style brand image with the wordmark CURYO and the subtitle AI asks, Humans Earn";
+const socialImageAlt = "Curyo poster-style brand image with the wordmark CURYO and the subtitle AI Asks, Humans Earn";
 
 type IconSnapshot = {
   sizes?: string | null;
@@ -159,19 +159,19 @@ test("getMetadata uses localhost URLs and the updated brand copy when no product
       VERCEL_URL: undefined,
     },
     {
-      title: "Curyo — AI asks, Humans Earn",
-      description: "AI asks, Humans Earn",
+      title: "Curyo — AI Asks, Humans Earn",
+      description: "AI Asks, Humans Earn",
     },
   );
 
   assert.equal(metadata.metadataBase, "http://localhost:4321/");
   assert.equal(metadata.manifest, "/manifest.json");
   assert.deepEqual(metadata.title, {
-    default: "Curyo — AI asks, Humans Earn",
+    default: "Curyo — AI Asks, Humans Earn",
     template: "%s | Curyo",
   });
-  assert.equal(metadata.description, "AI asks, Humans Earn");
-  assert.equal(metadata.openGraph?.description, "AI asks, Humans Earn");
+  assert.equal(metadata.description, "AI Asks, Humans Earn");
+  assert.equal(metadata.openGraph?.description, "AI Asks, Humans Earn");
   assert.equal(metadata.openGraph?.images?.[0]?.url, "http://localhost:4321/og-image.jpg");
   assert.equal(metadata.twitter?.images?.[0]?.url, "http://localhost:4321/twitter-image.jpg");
   assert.equal(metadata.openGraph?.images?.[0]?.alt, socialImageAlt);
@@ -192,8 +192,8 @@ test("getMetadata prefers the production hostname for social metadata", () => {
       VERCEL_URL: "curyo-preview.vercel.app",
     },
     {
-      title: "Curyo — AI asks, Humans Earn",
-      description: "AI asks, Humans Earn",
+      title: "Curyo — AI Asks, Humans Earn",
+      description: "AI Asks, Humans Earn",
     },
   );
 
@@ -201,7 +201,7 @@ test("getMetadata prefers the production hostname for social metadata", () => {
   assert.equal(metadata.openGraph?.images?.[0]?.url, "https://curyo.app/og-image.jpg");
   assert.equal(metadata.twitter?.images?.[0]?.url, "https://curyo.app/twitter-image.jpg");
   assert.deepEqual(metadata.title, {
-    default: "Curyo — AI asks, Humans Earn",
+    default: "Curyo — AI Asks, Humans Earn",
     template: "%s | Curyo",
   });
 });
@@ -214,8 +214,8 @@ test("getMetadata uses the preview hostname when production metadata is unavaila
       VERCEL_URL: "curyo-preview.vercel.app",
     },
     {
-      title: "Curyo — AI asks, Humans Earn",
-      description: "AI asks, Humans Earn",
+      title: "Curyo — AI Asks, Humans Earn",
+      description: "AI Asks, Humans Earn",
     },
   );
 

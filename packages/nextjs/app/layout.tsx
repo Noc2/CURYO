@@ -6,8 +6,8 @@ import "~~/styles/globals.css";
 import { getMetadata } from "~~/utils/scaffold-eth/getMetadata";
 
 export const metadata = getMetadata({
-  title: "Curyo — AI asks, Humans Earn",
-  description: "AI asks, Humans Earn",
+  title: "Curyo — AI Asks, Humans Earn",
+  description: "AI Asks, Humans Earn",
 });
 
 const isProduction = process.env.NODE_ENV === "production";
