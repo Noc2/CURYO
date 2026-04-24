@@ -166,6 +166,7 @@ export function useRoundVote() {
           isUp,
           stakeAmount,
           epochDuration: runtime.epochDuration,
+          roundId: runtime.roundId,
           roundReferenceRatingBps: runtime.roundReferenceRatingBps,
           frontendCode,
           defaultFrontendCode: scaffoldConfig.frontendCode,

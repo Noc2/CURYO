@@ -270,7 +270,7 @@ contract RoundVotingEngine is
     /// @param roundReferenceRatingBps Canonical round score the voter is judging against.
     /// @param targetRound drand round targeted by the ciphertext.
     /// @param drandChainHash drand chain hash bound into the commitment.
-    /// @param commitHash keccak256(abi.encodePacked(isUp, salt, voter, contentId, roundReferenceRatingBps, targetRound, drandChainHash, keccak256(ciphertext))).
+    /// @param commitHash keccak256(abi.encodePacked(isUp, salt, voter, contentId, roundId, roundReferenceRatingBps, targetRound, drandChainHash, keccak256(ciphertext))).
     /// @param ciphertext Tlock-encrypted payload (decryptable after epoch end via drand).
     /// @param stakeAmount Amount of HREP tokens to stake (1-100).
     /// @param frontend Address of frontend operator for fee distribution.
@@ -957,17 +957,24 @@ contract RoundVotingEngine is
     }
 
     function _previewCommitReferenceRatingBps(uint256 contentId) internal view returns (uint16) {
-        uint256 openRoundId = currentRoundId[contentId];
-        if (openRoundId == 0) {
-            return registry.getRating(contentId);
-        }
-
-        RoundLib.Round storage round = rounds[contentId][openRoundId];
-        if (RoundLib.isTerminal(round) || _canFinalizeRevealFailedRound(contentId, openRoundId, round)) {
+        uint256 openRoundId = _previewCommitRoundId(contentId);
+        if (openRoundId == nextRoundId[contentId] + 1) {
             return registry.getRating(contentId);
         }
 
         return _getRoundReferenceRatingBps(contentId, openRoundId);
+    }
+
+    function _previewCommitRoundId(uint256 contentId) internal view returns (uint256) {
+        uint256 openRoundId = currentRoundId[contentId];
+        if (openRoundId != 0) {
+            RoundLib.Round storage round = rounds[contentId][openRoundId];
+            if (!RoundLib.isTerminal(round) && !_canFinalizeRevealFailedRound(contentId, openRoundId, round)) {
+                return openRoundId;
+            }
+        }
+
+        return nextRoundId[contentId] + 1;
     }
 
     function _getFrontendRegistry() internal view returns (IFrontendRegistry) {
@@ -1072,6 +1079,7 @@ contract RoundVotingEngine is
             roundStakeWithEligibleFrontend[contentId][roundId],
             roundEligibleFrontendCount[contentId][roundId],
             contentId,
+            roundId,
             commitKey,
             isUp,
             salt,
@@ -1098,6 +1106,10 @@ contract RoundVotingEngine is
 
     function previewCommitReferenceRatingBps(uint256 contentId) external view returns (uint16) {
         return _previewCommitReferenceRatingBps(contentId);
+    }
+
+    function previewCommitRoundId(uint256 contentId) external view returns (uint256) {
+        return _previewCommitRoundId(contentId);
     }
 
     function getRoundCommitCount(uint256 contentId, uint256 roundId) external view returns (uint256) {

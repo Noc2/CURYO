@@ -51,6 +51,7 @@ export async function buildCommitVoteParams(params: {
   isUp: boolean;
   stakeAmount: number;
   epochDuration: number;
+  roundId: bigint;
   roundReferenceRatingBps: number;
   frontendCode?: `0x${string}`;
   defaultFrontendCode?: `0x${string}`;
@@ -67,6 +68,7 @@ export async function buildCommitVoteParams(params: {
         isUp: params.isUp,
         salt,
         contentId: params.contentId,
+        roundId: params.roundId,
         roundReferenceRatingBps: params.roundReferenceRatingBps,
         epochDurationSeconds: params.epochDuration,
       },

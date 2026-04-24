@@ -3,6 +3,16 @@ import { deriveCommitVoteRuntimeNowMs } from "./tlockCommitTiming";
 import { RoundVotingEngineAbi } from "@curyo/contracts/abis";
 import { type PublicClient } from "viem";
 
+const roundCommitPreviewAbi = [
+  {
+    type: "function",
+    name: "previewCommitRoundId",
+    stateMutability: "view",
+    inputs: [{ name: "contentId", type: "uint256" }],
+    outputs: [{ name: "", type: "uint256" }],
+  },
+] as const;
+
 export async function resolveRoundVoteRuntime(params: {
   publicClient: PublicClient;
   votingEngineAddress: `0x${string}`;
@@ -46,13 +56,22 @@ export async function resolveRoundVoteRuntime(params: {
     }
   }
 
-  const roundReferenceRatingBps = (await params.publicClient.readContract({
-    address: params.votingEngineAddress,
-    abi: RoundVotingEngineAbi,
-    functionName: "previewCommitReferenceRatingBps",
-    args: [params.contentId],
-    blockNumber: snapshotBlockNumber,
-  })) as number;
+  const [roundId, roundReferenceRatingBps] = await Promise.all([
+    params.publicClient.readContract({
+      address: params.votingEngineAddress,
+      abi: roundCommitPreviewAbi,
+      functionName: "previewCommitRoundId",
+      args: [params.contentId],
+      blockNumber: snapshotBlockNumber,
+    }),
+    params.publicClient.readContract({
+      address: params.votingEngineAddress,
+      abi: RoundVotingEngineAbi,
+      functionName: "previewCommitReferenceRatingBps",
+      args: [params.contentId],
+      blockNumber: snapshotBlockNumber,
+    }),
+  ]);
 
   const runtimeNowMs = deriveCommitVoteRuntimeNowMs({
     latestBlockTimestampSeconds: Number(latestBlock.timestamp),
@@ -63,6 +82,7 @@ export async function resolveRoundVoteRuntime(params: {
   return {
     epochDuration,
     now: () => runtimeNowMs,
-    roundReferenceRatingBps,
+    roundId,
+    roundReferenceRatingBps: roundReferenceRatingBps as number,
   };
 }

@@ -69,6 +69,7 @@ test("buildCommitVoteParams returns the tlock metadata needed for commitVote", a
     isUp: true,
     stakeAmount: 2.5,
     epochDuration: 1200,
+    roundId: 1n,
     roundReferenceRatingBps: 5_000,
     runtime,
   });

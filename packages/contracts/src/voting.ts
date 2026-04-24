@@ -148,6 +148,7 @@ export function buildCommitHash(
   salt: VoteSalt,
   voter: Address,
   contentId: bigint,
+  roundId: bigint,
   roundReferenceRatingBps: number,
   targetRound: bigint,
   drandChainHash: VoteDrandChainHash,
@@ -155,8 +156,8 @@ export function buildCommitHash(
 ): VoteCommitHash {
   return keccak256(
     encodePacked(
-      ["bool", "bytes32", "address", "uint256", "uint16", "uint64", "bytes32", "bytes32"],
-      [isUp, salt, voter, contentId, roundReferenceRatingBps, targetRound, drandChainHash, keccak256(ciphertext)],
+      ["bool", "bytes32", "address", "uint256", "uint256", "uint16", "uint64", "bytes32", "bytes32"],
+      [isUp, salt, voter, contentId, roundId, roundReferenceRatingBps, targetRound, drandChainHash, keccak256(ciphertext)],
     ),
   );
 }
@@ -381,6 +382,7 @@ export async function createTlockVoteCommit(params: {
   isUp: boolean;
   salt: VoteSalt;
   contentId: bigint;
+  roundId: bigint;
   roundReferenceRatingBps: number;
   epochDurationSeconds: number;
 }, runtime: VoteTlockRuntime = {}): Promise<{
@@ -402,6 +404,7 @@ export async function createTlockVoteCommit(params: {
     params.salt,
     params.voter,
     params.contentId,
+    params.roundId,
     params.roundReferenceRatingBps,
     targetRound,
     drandChainHash,

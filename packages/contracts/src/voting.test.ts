@@ -184,11 +184,15 @@ test("buildCommitHash includes the tlock round metadata", () => {
   const roundReferenceRatingBps = 5_000;
   const voter = "0x2222222222222222222222222222222222222222";
 
-  const commitHash = buildCommitHash(false, salt, voter, 42n, roundReferenceRatingBps, 123n, drandChainHash, ciphertext);
+  const commitHash = buildCommitHash(false, salt, voter, 42n, 4n, roundReferenceRatingBps, 123n, drandChainHash, ciphertext);
 
   assert.equal(
     commitHash,
-    buildCommitHash(false, salt, voter, 42n, roundReferenceRatingBps, 123n, drandChainHash, ciphertext),
+    buildCommitHash(false, salt, voter, 42n, 4n, roundReferenceRatingBps, 123n, drandChainHash, ciphertext),
+  );
+  assert.notEqual(
+    commitHash,
+    buildCommitHash(false, salt, voter, 42n, 5n, roundReferenceRatingBps, 123n, drandChainHash, ciphertext),
   );
 });
 
@@ -222,6 +226,7 @@ test("createTlockVoteCommit returns the tlock metadata used in the commit hash",
       isUp: true,
       salt: ("0x" + "33".repeat(32)) as `0x${string}`,
       contentId: 7n,
+      roundId: 3n,
       roundReferenceRatingBps: 5_000,
       epochDurationSeconds: 1200,
     },
@@ -250,6 +255,7 @@ test("createTlockVoteCommit returns the tlock metadata used in the commit hash",
       ("0x" + "33".repeat(32)) as `0x${string}`,
       voter,
       7n,
+      3n,
       5_000,
       commit.targetRound,
       commit.drandChainHash,

@@ -498,6 +498,7 @@ abstract contract ContentSubmissionTestBase {
 abstract contract VotingTestBase is Test, ContentSubmissionTestBase {
     struct TestCommitArtifacts {
         bytes ciphertext;
+        uint256 roundId;
         uint16 roundReferenceRatingBps;
         uint64 targetRound;
         bytes32 drandChainHash;
@@ -661,6 +662,7 @@ abstract contract VotingTestBase is Test, ContentSubmissionTestBase {
             salt,
             voter,
             contentId,
+            _defaultTestCommitRoundId(contentId),
             _currentRatingReferenceBps(contentId),
             _tlockCommitTargetRound(),
             _tlockDrandChainHash(),
@@ -684,6 +686,7 @@ abstract contract VotingTestBase is Test, ContentSubmissionTestBase {
             salt,
             voter,
             contentId,
+            _defaultTestCommitRoundId(contentId),
             _currentRatingReferenceBps(contentId),
             _tlockCommitTargetRound(),
             _tlockDrandChainHash(),
@@ -706,6 +709,7 @@ abstract contract VotingTestBase is Test, ContentSubmissionTestBase {
         returns (TestCommitArtifacts memory artifacts)
     {
         artifacts.ciphertext = _testCiphertext(isUp, salt, contentId);
+        artifacts.roundId = _defaultTestCommitRoundId(contentId);
         artifacts.roundReferenceRatingBps = _currentRatingReferenceBps(contentId);
         artifacts.targetRound = _tlockCommitTargetRound();
         artifacts.drandChainHash = _tlockDrandChainHash();
@@ -714,6 +718,7 @@ abstract contract VotingTestBase is Test, ContentSubmissionTestBase {
             salt,
             voter,
             contentId,
+            artifacts.roundId,
             artifacts.roundReferenceRatingBps,
             artifacts.targetRound,
             artifacts.drandChainHash,
@@ -723,8 +728,9 @@ abstract contract VotingTestBase is Test, ContentSubmissionTestBase {
     }
 
     function _commitTestVote(DirectTestCommitRequest memory request) internal returns (bytes32 commitKey) {
-        TestCommitArtifacts memory artifacts =
-            _buildTestCommitArtifacts(request.voter, request.isUp, request.salt, request.contentId);
+        TestCommitArtifacts memory artifacts = _buildTestCommitArtifacts(
+            address(request.engine), request.voter, request.isUp, request.salt, request.contentId
+        );
 
         vm.startPrank(request.voter);
         request.hrepToken.approve(address(request.engine), request.stake);
@@ -748,8 +754,9 @@ abstract contract VotingTestBase is Test, ContentSubmissionTestBase {
         internal
         returns (bytes32 commitKey)
     {
-        TestCommitArtifacts memory artifacts =
-            _buildTestCommitArtifacts(request.voter, request.isUp, request.salt, request.contentId);
+        TestCommitArtifacts memory artifacts = _buildTestCommitArtifacts(
+            address(request.engine), request.voter, request.isUp, request.salt, request.contentId
+        );
         bytes memory payload = abi.encode(
             request.contentId,
             artifacts.roundReferenceRatingBps,
@@ -814,7 +821,15 @@ abstract contract VotingTestBase is Test, ContentSubmissionTestBase {
         bytes memory ciphertext
     ) internal view returns (bytes32) {
         return _commitHash(
-            isUp, salt, voter, contentId, _currentRatingReferenceBps(contentId), targetRound, drandChainHash, ciphertext
+            isUp,
+            salt,
+            voter,
+            contentId,
+            _defaultTestCommitRoundId(contentId),
+            _currentRatingReferenceBps(contentId),
+            targetRound,
+            drandChainHash,
+            ciphertext
         );
     }
 
@@ -840,12 +855,29 @@ abstract contract VotingTestBase is Test, ContentSubmissionTestBase {
         bytes32 drandChainHash,
         bytes memory ciphertext
     ) internal pure returns (bytes32) {
+        return _commitHash(
+            isUp, salt, voter, contentId, 1, roundReferenceRatingBps, targetRound, drandChainHash, ciphertext
+        );
+    }
+
+    function _commitHash(
+        bool isUp,
+        bytes32 salt,
+        address voter,
+        uint256 contentId,
+        uint256 roundId,
+        uint16 roundReferenceRatingBps,
+        uint64 targetRound,
+        bytes32 drandChainHash,
+        bytes memory ciphertext
+    ) internal pure returns (bytes32) {
         return keccak256(
             abi.encodePacked(
                 isUp,
                 salt,
                 voter,
                 contentId,
+                roundId,
                 roundReferenceRatingBps,
                 targetRound,
                 drandChainHash,
@@ -865,8 +897,43 @@ abstract contract VotingTestBase is Test, ContentSubmissionTestBase {
         bytes memory ciphertext
     ) internal pure returns (bytes32) {
         return _commitHash(
-            isUp, salt, address(0), contentId, roundReferenceRatingBps, targetRound, drandChainHash, ciphertext
+            isUp, salt, address(0), contentId, 1, roundReferenceRatingBps, targetRound, drandChainHash, ciphertext
         );
+    }
+
+    function _buildTestCommitArtifacts(
+        address engine,
+        address voter,
+        bool isUp,
+        bytes32 salt,
+        uint256 contentId
+    ) internal view returns (TestCommitArtifacts memory artifacts) {
+        artifacts = _buildTestCommitArtifacts(voter, isUp, salt, contentId);
+        artifacts.roundId = _previewTestCommitRoundId(engine, contentId);
+        artifacts.commitHash = _commitHash(
+            isUp,
+            salt,
+            voter,
+            contentId,
+            artifacts.roundId,
+            artifacts.roundReferenceRatingBps,
+            artifacts.targetRound,
+            artifacts.drandChainHash,
+            artifacts.ciphertext
+        );
+        artifacts.commitKey = _commitKey(voter, artifacts.commitHash);
+    }
+
+    function _previewTestCommitRoundId(address engine, uint256 contentId) internal view returns (uint256) {
+        if (engine != address(0)) {
+            return RoundVotingEngine(engine).previewCommitRoundId(contentId);
+        }
+
+        return _defaultTestCommitRoundId(contentId);
+    }
+
+    function _defaultTestCommitRoundId(uint256) internal pure returns (uint256) {
+        return 1;
     }
 
     function _currentRatingReferenceBps(uint256 contentId) internal view returns (uint16) {

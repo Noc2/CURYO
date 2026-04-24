@@ -13,6 +13,16 @@ import { ContentRegistryAbi, HumanReputationAbi, ProtocolConfigAbi, RoundVotingE
 import deployedContracts from "@curyo/contracts/deployedContracts";
 import { buildCommitHash } from "@curyo/contracts/voting";
 
+const roundCommitPreviewAbi = [
+  {
+    type: "function",
+    name: "previewCommitRoundId",
+    stateMutability: "view",
+    inputs: [{ name: "contentId", type: "uint256" }],
+    outputs: [{ name: "", type: "uint256" }],
+  },
+] as const;
+
 const LOCAL_RPC_URL = process.env.KEEPER_INTEGRATION_RPC_URL || "http://127.0.0.1:8545";
 const CHAIN = defineChain({
   id: 31337,
@@ -398,6 +408,12 @@ describe("resolveRounds integration", () => {
         args: [contentId],
       }),
     );
+    const roundId = (await publicClient.readContract({
+      address: CONTRACTS.roundVotingEngine,
+      abi: roundCommitPreviewAbi,
+      functionName: "previewCommitRoundId",
+      args: [contentId],
+    })) as bigint;
     const voters = [
       {
         client: voter1Client,
@@ -443,7 +459,9 @@ describe("resolveRounds integration", () => {
       const commitHash = buildCommitHash(
         voter.isUp,
         voter.salt,
+        voter.account,
         contentId,
+        roundId,
         roundReferenceRatingBps,
         targetRound,
         drandChainHash,
@@ -480,13 +498,13 @@ describe("resolveRounds integration", () => {
       );
     }
 
-    const roundId = (await publicClient.readContract({
+    const currentRoundId = (await publicClient.readContract({
       address: CONTRACTS.roundVotingEngine,
       abi: RoundVotingEngineAbi,
       functionName: "currentRoundId",
       args: [contentId],
     })) as bigint;
-    expect(roundId).toBeGreaterThan(0n);
+    expect(currentRoundId).toBe(roundId);
 
     await increaseTime(publicClient, epochDurationSeconds + Number(drandPeriod) + 5);
 

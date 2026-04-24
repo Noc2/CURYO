@@ -20,6 +20,10 @@ test("resolveRoundVoteRuntime pins round reads to the block used for timestamp a
         return 5_000;
       }
 
+      if (args.functionName === "previewCommitRoundId") {
+        return 2n;
+      }
+
       if (args.functionName === "roundConfigSnapshot") {
         return [100, 3_600, 3, 1_000];
       }
@@ -35,11 +39,12 @@ test("resolveRoundVoteRuntime pins round reads to the block used for timestamp a
     fallbackEpochDuration: 1200,
   });
 
-  assert.equal(readCalls.length, 4);
+  assert.equal(readCalls.length, 5);
   for (const call of readCalls) {
     assert.equal(call.blockNumber, 123n);
   }
   assert.equal(runtime.now(), 1_001_000);
   assert.equal(runtime.epochDuration, 100);
+  assert.equal(runtime.roundId, 2n);
   assert.equal(runtime.roundReferenceRatingBps, 5_000);
 });
