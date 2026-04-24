@@ -774,11 +774,11 @@ abstract contract VotingTestBase is Test, ContentSubmissionTestBase {
     }
 
     function _tlockCommitTargetRound() internal view returns (uint64) {
-        return _roundAt(block.timestamp + _tlockEpochDuration(), _tlockDrandGenesisTime(), _tlockDrandPeriod());
+        return _roundAtOrAfter(block.timestamp + _tlockEpochDuration(), _tlockDrandGenesisTime(), _tlockDrandPeriod());
     }
 
     function _tlockTargetRoundAt(uint256 revealableAfter) internal view returns (uint64) {
-        return _roundAt(revealableAfter, _tlockDrandGenesisTime(), _tlockDrandPeriod());
+        return _roundAtOrAfter(revealableAfter, _tlockDrandGenesisTime(), _tlockDrandPeriod());
     }
 
     function _tlockRoundTimestamp(uint64 targetRound) internal view returns (uint256) {
@@ -809,6 +809,12 @@ abstract contract VotingTestBase is Test, ContentSubmissionTestBase {
     function _roundAt(uint256 timestamp, uint64 genesisTime, uint64 period) internal pure returns (uint64) {
         if (period == 0 || timestamp < genesisTime) return 0;
         return uint64(((timestamp - genesisTime) / period) + 1);
+    }
+
+    function _roundAtOrAfter(uint256 timestamp, uint64 genesisTime, uint64 period) internal pure returns (uint64) {
+        if (period == 0 || timestamp < genesisTime) return 0;
+        uint256 elapsed = timestamp - genesisTime;
+        return uint64(((elapsed + uint256(period) - 1) / uint256(period)) + 1);
     }
 
     function _commitHash(

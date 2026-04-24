@@ -1896,6 +1896,61 @@ contract RoundVotingEngineBranchesTest is VotingTestBase {
         );
     }
 
+    function test_Commit_TargetRoundBeforeCeilWindow_Reverts() public {
+        uint64 customPeriod = 7;
+        vm.prank(owner);
+        _setTlockDrandConfig(
+            ProtocolConfig(protocolConfigAddress), DEFAULT_DRAND_CHAIN_HASH, DEFAULT_DRAND_GENESIS_TIME, customPeriod
+        );
+        uint256 contentId = _submitContent();
+        uint256 revealableAfter = block.timestamp + EPOCH;
+        bytes32 drandChainHash = DEFAULT_DRAND_CHAIN_HASH;
+
+        uint64 floorTargetRound = _roundAt(revealableAfter, DEFAULT_DRAND_GENESIS_TIME, customPeriod);
+        uint256 floorTargetRoundTimestamp =
+            uint256(DEFAULT_DRAND_GENESIS_TIME) + (uint256(floorTargetRound) - 1) * uint256(customPeriod);
+        assertLt(floorTargetRoundTimestamp, revealableAfter, "floor target would decrypt before epoch end");
+
+        bytes32 badSalt = keccak256(abi.encodePacked(voter1, block.timestamp, "floor target"));
+        bytes memory badCiphertext = _testCiphertext(true, badSalt, contentId, floorTargetRound, drandChainHash);
+        bytes32 badCommitHash = _commitHash(true, badSalt, voter1, contentId, floorTargetRound, drandChainHash, badCiphertext);
+
+        vm.startPrank(voter1);
+        hrepToken.approve(address(engine), STAKE);
+        vm.expectRevert(RoundVotingEngine.TargetRoundOutOfWindow.selector);
+        engine.commitVote(
+            contentId,
+            _defaultRatingReferenceBps(),
+            floorTargetRound,
+            drandChainHash,
+            badCommitHash,
+            badCiphertext,
+            STAKE,
+            address(0)
+        );
+
+        uint64 ceilTargetRound = floorTargetRound + 1;
+        uint256 ceilTargetRoundTimestamp =
+            uint256(DEFAULT_DRAND_GENESIS_TIME) + (uint256(ceilTargetRound) - 1) * uint256(customPeriod);
+        assertGe(ceilTargetRoundTimestamp, revealableAfter, "ceil target preserves blind epoch");
+
+        bytes32 goodSalt = keccak256(abi.encodePacked(voter1, block.timestamp, "ceil target"));
+        bytes memory goodCiphertext = _testCiphertext(true, goodSalt, contentId, ceilTargetRound, drandChainHash);
+        bytes32 goodCommitHash =
+            _commitHash(true, goodSalt, voter1, contentId, ceilTargetRound, drandChainHash, goodCiphertext);
+        engine.commitVote(
+            contentId,
+            _defaultRatingReferenceBps(),
+            ceilTargetRound,
+            drandChainHash,
+            goodCommitHash,
+            goodCiphertext,
+            STAKE,
+            address(0)
+        );
+        vm.stopPrank();
+    }
+
     function test_Commit_TargetRoundAfterWindow_Reverts() public {
         uint256 contentId = _submitContent();
 

@@ -122,7 +122,7 @@ library TlockVoteLib {
         if (period == 0 || targetRound == 0) revert TargetRoundOutOfWindow();
         if (revealableAfter < genesisTime) revert TargetRoundOutOfWindow();
 
-        uint64 minTargetRound = _roundAt(revealableAfter, genesisTime, period);
+        uint64 minTargetRound = _roundAtOrAfter(revealableAfter, genesisTime, period);
         uint64 maxTargetRound = _roundAt(revealableAfter + epochDuration, genesisTime, period);
         if (targetRound < minTargetRound || targetRound > maxTargetRound) revert TargetRoundOutOfWindow();
     }
@@ -165,6 +165,12 @@ library TlockVoteLib {
     function _roundAt(uint256 timestamp, uint64 genesisTime, uint64 period) private pure returns (uint64) {
         if (period == 0 || timestamp < genesisTime) return 0;
         return uint64(((timestamp - genesisTime) / period) + 1);
+    }
+
+    function _roundAtOrAfter(uint256 timestamp, uint64 genesisTime, uint64 period) private pure returns (uint64) {
+        if (period == 0 || timestamp < genesisTime) return 0;
+        uint256 elapsed = timestamp - genesisTime;
+        return uint64(((elapsed + uint256(period) - 1) / uint256(period)) + 1);
     }
 
     function _decodeBase64Payload(bytes memory data, uint256 start, uint256 end) private pure returns (bytes memory out) {
