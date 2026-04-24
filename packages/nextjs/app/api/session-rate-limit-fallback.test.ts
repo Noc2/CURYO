@@ -5,6 +5,7 @@ import { after, before, beforeEach, test } from "node:test";
 const env = process.env as Record<string, string | undefined>;
 const originalDatabaseUrl = env.DATABASE_URL;
 const originalNodeEnv = env.NODE_ENV;
+const originalTargetNetworks = env.NEXT_PUBLIC_TARGET_NETWORKS;
 const originalTrustedHeaders = env.RATE_LIMIT_TRUSTED_IP_HEADERS;
 
 const TEST_ADDRESS = "0x63cada40E8AcF7A1d47229af5Be35b78b16035fa";
@@ -12,6 +13,7 @@ const TEST_IP = "203.0.113.77";
 
 env.DATABASE_URL = "memory:";
 env.NODE_ENV = "production";
+env.NEXT_PUBLIC_TARGET_NETWORKS = "42220";
 env.RATE_LIMIT_TRUSTED_IP_HEADERS = "x-forwarded-for";
 
 type RateLimitModule = typeof import("../../utils/rateLimit");
@@ -51,6 +53,7 @@ before(async () => {
 beforeEach(() => {
   env.DATABASE_URL = "memory:";
   env.NODE_ENV = "production";
+  env.NEXT_PUBLIC_TARGET_NETWORKS = "42220";
   env.RATE_LIMIT_TRUSTED_IP_HEADERS = "x-forwarded-for";
 
   rateLimit.__setRateLimitStoreForTests({
@@ -75,6 +78,12 @@ after(() => {
     delete env.NODE_ENV;
   } else {
     env.NODE_ENV = originalNodeEnv;
+  }
+
+  if (originalTargetNetworks === undefined) {
+    delete env.NEXT_PUBLIC_TARGET_NETWORKS;
+  } else {
+    env.NEXT_PUBLIC_TARGET_NETWORKS = originalTargetNetworks;
   }
 
   if (originalTrustedHeaders === undefined) {

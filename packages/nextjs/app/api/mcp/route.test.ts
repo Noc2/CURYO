@@ -287,6 +287,7 @@ test("invalid media returns a stable MCP tool error code", async () => {
           bounty: {
             amount: "1000000",
             asset: "USDC",
+            rewardPoolExpiresAt: "1762000000",
           },
           chainId: 42220,
           clientRequestId: "invalid-media-check",
@@ -354,6 +355,7 @@ test("category disallowed returns a stable MCP tool error code", async () => {
           bounty: {
             amount: "1000000",
             asset: "USDC",
+            rewardPoolExpiresAt: "1762000000",
           },
           chainId: 42220,
           clientRequestId: "category-check",
@@ -376,7 +378,7 @@ test("category disallowed returns a stable MCP tool error code", async () => {
   const structured = result.structuredContent as Record<string, unknown>;
   assert.equal(result.isError, true);
   assert.equal(structured.code, "category_disallowed");
-  assert.equal(structured.originalCode, "McpBudgetError");
+  assert.equal(structured.originalCode, "McpToolError");
 });
 
 test("pending result returns a full pending result package", async () => {

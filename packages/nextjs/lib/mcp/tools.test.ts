@@ -23,6 +23,7 @@ function askArguments(overrides: Record<string, unknown> = {}) {
     bounty: {
       amount: "1000000",
       asset: "USDC",
+      rewardPoolExpiresAt: "1762000000",
     },
     chainId: 42220,
     clientRequestId: "ask-bookkeeping-failure",
