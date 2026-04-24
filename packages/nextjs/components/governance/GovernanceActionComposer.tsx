@@ -41,7 +41,7 @@ type GovernanceActionTemplate = {
   group: string;
   label: string;
   mode: "proposal" | "direct";
-  contractName: "CuryoGovernor" | "HumanReputation" | "FrontendRegistry" | "ContentRegistry";
+  contractName: "CuryoGovernor" | "HumanReputation" | "FrontendRegistry" | "ContentRegistry" | "ProtocolConfig";
   functionName: string;
   description: string;
   allowCustomDescription?: boolean;
@@ -379,16 +379,16 @@ const actionTemplates: readonly GovernanceActionTemplate[] = [
   },
   {
     id: "content-set-participation-pool",
-    group: "Content Registry",
+    group: "Protocol Config",
     label: "Set participation pool",
     mode: "proposal",
-    contractName: "ContentRegistry",
+    contractName: "ProtocolConfig",
     functionName: "setParticipationPool",
-    description: "Create a proposal to update the ParticipationPool used by ContentRegistry.",
+    description: "Create a proposal to update the ParticipationPool used by protocol settlement.",
     advanced: true,
     fields: [{ key: "participationPool", label: "ParticipationPool address", type: "address", required: true }],
     buildArgs: (_, parser) => [parser.address("participationPool", "ParticipationPool address")],
-    buildDescription: values => `Set ContentRegistry ParticipationPool to ${values.participationPool || "address"}`,
+    buildDescription: values => `Set ProtocolConfig ParticipationPool to ${values.participationPool || "address"}`,
   },
   {
     id: "content-set-bonus-pool",

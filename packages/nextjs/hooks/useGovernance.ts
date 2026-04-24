@@ -45,7 +45,12 @@ export const governorAbi = parseAbi([
 
 const timelockAbi = parseAbi(["function getMinDelay() view returns (uint256)"]);
 
-type GovernanceManagedContractName = "CuryoGovernor" | "HumanReputation" | "FrontendRegistry" | "ContentRegistry";
+type GovernanceManagedContractName =
+  | "CuryoGovernor"
+  | "HumanReputation"
+  | "FrontendRegistry"
+  | "ContentRegistry"
+  | "ProtocolConfig";
 
 type GovernanceTargetContract = {
   name: GovernanceManagedContractName;
@@ -127,6 +132,7 @@ export function useGovernanceContracts() {
   const token = useDeployedContractInfo({ contractName: "HumanReputation" });
   const frontendRegistry = useDeployedContractInfo({ contractName: "FrontendRegistry" });
   const contentRegistry = useDeployedContractInfo({ contractName: "ContentRegistry" });
+  const protocolConfig = useDeployedContractInfo({ contractName: "ProtocolConfig" });
 
   const {
     data: governorRaw,
@@ -205,8 +211,22 @@ export function useGovernanceContracts() {
         abi: contentRegistry.data.abi as Abi,
       });
     }
+    if (protocolConfig.data) {
+      items.push({
+        name: "ProtocolConfig",
+        address: protocolConfig.data.address,
+        abi: protocolConfig.data.abi as Abi,
+      });
+    }
     return items;
-  }, [contentRegistry.data, frontendRegistry.data, governorAddress, hasGovernorContract, token.data]);
+  }, [
+    contentRegistry.data,
+    frontendRegistry.data,
+    governorAddress,
+    hasGovernorContract,
+    protocolConfig.data,
+    token.data,
+  ]);
 
   const knownContractsByAddress = useMemo(
     () =>
@@ -230,6 +250,7 @@ export function useGovernanceContracts() {
     token,
     frontendRegistry,
     contentRegistry,
+    protocolConfig,
     governorAddress,
     isGovernorContractLoading,
     hasGovernorContract,
