@@ -6,6 +6,7 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "$SCRIPT_DIR/../../.." && pwd)"
 PUBLIC_DIR="$REPO_ROOT/packages/nextjs/public"
 POSTER_ORB="$PUBLIC_DIR/launch/curyo-v2-orb-hero-alpha.png"
+POSTER_ORB_WEBP="$PUBLIC_DIR/launch/curyo-v2-orb-hero-alpha.webp"
 TMP_DIR="$(mktemp -d)"
 
 trap 'rm -rf "$TMP_DIR"' EXIT
@@ -28,6 +29,12 @@ fi
 if ! command -v magick >/dev/null 2>&1; then
   echo "ImageMagick 'magick' binary is required to generate poster brand assets." >&2
   exit 1
+fi
+
+if command -v cwebp >/dev/null 2>&1; then
+  cwebp -q 90 -m 6 -alpha_q 98 "$POSTER_ORB" -o "$POSTER_ORB_WEBP" >/dev/null
+else
+  magick "$POSTER_ORB" -strip -quality 90 "$POSTER_ORB_WEBP"
 fi
 
 magick "$POSTER_ORB" \

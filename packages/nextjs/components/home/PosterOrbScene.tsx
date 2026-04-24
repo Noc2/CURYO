@@ -26,10 +26,11 @@ export function PosterOrbScene({
 
         <div className="poster-orb-scene__image-shell">
           <Image
-            src="/launch/curyo-v2-orb-hero-alpha.png"
+            src="/launch/curyo-v2-orb-hero-alpha.webp"
             alt=""
             fill
             priority
+            unoptimized
             sizes="(min-width: 1280px) 36rem, (min-width: 1024px) 31rem, (min-width: 640px) 27rem, 21rem"
             className="poster-orb-scene__image"
           />
