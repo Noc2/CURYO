@@ -311,14 +311,12 @@ test.describe("Reward claim lifecycle", () => {
     expect(result, "processUnrevealedVotes should revert with NothingProcessed when all votes revealed").toBe(false);
   });
 
-  test("processUnrevealedVotes routes unrevealed settled stakes to reserve once", async () => {
+  test("processUnrevealedVotes refunds current-epoch settled stakes once", async () => {
     test.setTimeout(180_000);
 
-    // All voters commit in epoch 0. After settlement, unrevealed epoch-0
-    // commits are "past epoch" (revealableAfter <= settledAt) → reserve.
-    // The future-epoch refund path is covered by Foundry unit tests
-    // (test_ProcessUnrevealed_RefundsCurrentEpochVote) because E2E timing
-    // makes it impractical to create true future-epoch commits here.
+    // Settlement is intentionally blocked while past-epoch votes remain
+    // unrevealed. This test keeps the unrevealed commits in the current
+    // settlement epoch so the round can settle and cleanup can refund them.
     const submitter = ANVIL_ACCOUNTS.account10;
     const keeper = ANVIL_ACCOUNTS.account1;
     const unrevealed1 = ANVIL_ACCOUNTS.account5;
@@ -352,13 +350,16 @@ test.describe("Reward claim lifecycle", () => {
     expect(indexedContent, "Ponder did not index the cleanup test content").toBe(true);
     expect(cleanupContentId).toBeTruthy();
 
-    const voters = [
+    const revealedVoters = [
       { account: ANVIL_ACCOUNTS.account3, isUp: true },
       { account: ANVIL_ACCOUNTS.account4, isUp: true },
       { account: ANVIL_ACCOUNTS.account7, isUp: false },
+    ];
+    const unrevealedVoters = [
       { account: unrevealed1, isUp: true },
       { account: unrevealed2, isUp: false },
     ];
+    const voters = [...revealedVoters, ...unrevealedVoters];
 
     const commits: {
       account: (typeof voters)[number]["account"];
@@ -367,7 +368,7 @@ test.describe("Reward claim lifecycle", () => {
       salt: `0x${string}`;
     }[] = [];
 
-    for (const voter of voters) {
+    for (const voter of revealedVoters) {
       const approved = await approveCREP(VOTING_ENGINE, STAKE, voter.account.address, CREP_TOKEN);
       expect(approved, `Vote approval failed for ${voter.account.address}`).toBe(true);
 
@@ -388,6 +389,22 @@ test.describe("Reward claim lifecycle", () => {
 
     await evmIncreaseTime(EPOCH_DURATION + 1);
 
+    for (const voter of unrevealedVoters) {
+      const approved = await approveCREP(VOTING_ENGINE, STAKE, voter.account.address, CREP_TOKEN);
+      expect(approved, `Vote approval failed for ${voter.account.address}`).toBe(true);
+
+      const commit = await commitVoteDirect(
+        BigInt(cleanupContentId!),
+        voter.isUp,
+        STAKE,
+        ZERO_ADDRESS,
+        voter.account.address,
+        VOTING_ENGINE,
+      );
+      expect(commit.success, `Vote commit failed for ${voter.account.address}`).toBe(true);
+      commits.push({ account: voter.account, commitKey: commit.commitKey, isUp: commit.isUp, salt: commit.salt });
+    }
+
     for (const commit of commits.slice(0, 3)) {
       const revealed = await revealVoteDirect(
         BigInt(cleanupContentId!),
@@ -401,16 +418,14 @@ test.describe("Reward claim lifecycle", () => {
       expect(revealed, `Reveal failed for ${commit.account.address}`).toBe(true);
     }
 
-    // Advance past the reveal grace period (60 min default) so unrevealed
-    // past-epoch commits don't block settlement via UnrevealedPastEpochVotes.
-    const REVEAL_GRACE_PERIOD = 3600;
-    await evmIncreaseTime(EPOCH_DURATION + REVEAL_GRACE_PERIOD + 1);
     await waitForPonderSync();
 
     const settled = await settleRoundDirect(BigInt(cleanupContentId!), cleanupRoundId, keeper.address, VOTING_ENGINE);
     expect(settled, "Cleanup setup round did not settle").toBe(true);
 
     const consensusReserveBefore = await readUint256("consensusReserve", VOTING_ENGINE);
+    const unrevealed1Before = await readTokenBalance(unrevealed1.address, CREP_TOKEN);
+    const unrevealed2Before = await readTokenBalance(unrevealed2.address, CREP_TOKEN);
 
     const cleanupSuccess = await processUnrevealedVotes(
       BigInt(cleanupContentId!),
@@ -423,9 +438,13 @@ test.describe("Reward claim lifecycle", () => {
     expect(cleanupSuccess, "Cleanup should process unrevealed votes").toBe(true);
 
     const consensusReserveAfter = await readUint256("consensusReserve", VOTING_ENGINE);
+    const unrevealed1After = await readTokenBalance(unrevealed1.address, CREP_TOKEN);
+    const unrevealed2After = await readTokenBalance(unrevealed2.address, CREP_TOKEN);
 
-    // Settled-round unrevealed epoch-0 stakes are credited to the consensus reserve.
-    expect(consensusReserveAfter - consensusReserveBefore).toBe(STAKE * 2n);
+    // Current-epoch unrevealed stakes had no chance to reveal before settlement, so they are refunded.
+    expect(unrevealed1After - unrevealed1Before).toBe(STAKE);
+    expect(unrevealed2After - unrevealed2Before).toBe(STAKE);
+    expect(consensusReserveAfter).toBe(consensusReserveBefore);
 
     const secondCleanup = await processUnrevealedVotes(
       BigInt(cleanupContentId!),
