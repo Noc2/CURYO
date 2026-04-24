@@ -23,26 +23,27 @@ export function PosterOrbScene({
         <div className="poster-orb-scene__nebula poster-orb-scene__nebula--left" />
         <div className="poster-orb-scene__nebula poster-orb-scene__nebula--right" />
         <div className="poster-orb-scene__nebula poster-orb-scene__nebula--bottom" />
+      </div>
 
-        <div className="poster-orb-scene__image-shell">
-          <Image
-            src="/launch/curyo-v2-orb-hero-alpha.webp"
-            alt=""
-            fill
-            priority
-            unoptimized
-            sizes="(min-width: 1280px) 36rem, (min-width: 1024px) 31rem, (min-width: 640px) 27rem, 21rem"
-            className="poster-orb-scene__image"
-          />
-          <div className="poster-orb-scene__core-glow" />
-          <div className="poster-orb-scene__sheen" />
-          <div className="poster-orb-scene__grain" />
-        </div>
+      <div className="poster-orb-scene__image-shell" aria-hidden="true">
+        <Image
+          src="/launch/curyo-v2-orb-hero-alpha.webp"
+          alt=""
+          fill
+          priority
+          unoptimized
+          sizes="(min-width: 1280px) 44rem, (min-width: 1024px) 39rem, (min-width: 640px) 34rem, 26rem"
+          className="poster-orb-scene__image"
+        />
+        <div className="poster-orb-scene__core-glow" />
+        <div className="poster-orb-scene__sheen" />
+        <div className="poster-orb-scene__grain" />
       </div>
 
       <style jsx>{`
         .poster-orb-scene {
-          --poster-orb-scene-y: 14%;
+          --poster-orb-scene-y: 8%;
+          --poster-orb-scene-scale: 0.98;
 
           position: relative;
           display: block;
@@ -54,20 +55,28 @@ export function PosterOrbScene({
 
         .poster-orb-scene__canvas {
           position: absolute;
-          inset: -9% -10% -8%;
+          inset: -24% -34% -34%;
           overflow: visible;
         }
 
         .poster-orb-scene__image-shell {
           position: absolute;
-          inset: 0;
-          transform: translateY(var(--poster-orb-scene-y));
+          z-index: 1;
+          inset: -18%;
+          transform: translateY(var(--poster-orb-scene-y)) scale(var(--poster-orb-scene-scale));
           transform-origin: 50% 52%;
-          mask-image: linear-gradient(to right, rgba(0, 0, 0, 1) 0 84%, rgba(0, 0, 0, 0.9) 90%, transparent 100%);
-          -webkit-mask-image: linear-gradient(
-            to right,
-            rgba(0, 0, 0, 1) 0 84%,
-            rgba(0, 0, 0, 0.9) 90%,
+          mask-image: radial-gradient(
+            ellipse 80% 74% at 53% 48%,
+            rgba(0, 0, 0, 1) 0 58%,
+            rgba(0, 0, 0, 0.8) 68%,
+            rgba(0, 0, 0, 0.28) 82%,
+            transparent 100%
+          );
+          -webkit-mask-image: radial-gradient(
+            ellipse 80% 74% at 53% 48%,
+            rgba(0, 0, 0, 1) 0 58%,
+            rgba(0, 0, 0, 0.8) 68%,
+            rgba(0, 0, 0, 0.28) 82%,
             transparent 100%
           );
         }
@@ -87,6 +96,7 @@ export function PosterOrbScene({
         }
 
         .poster-orb-scene__nebula {
+          z-index: 0;
           mix-blend-mode: screen;
           filter: blur(40px);
           opacity: 0.56;
@@ -293,8 +303,13 @@ export function PosterOrbScene({
         }
 
         @media (max-width: 639px) {
+          .poster-orb-scene {
+            --poster-orb-scene-y: 12%;
+            --poster-orb-scene-scale: 0.96;
+          }
+
           .poster-orb-scene__canvas {
-            inset: -2% -12% -10%;
+            inset: -16% -28% -22%;
           }
         }
       `}</style>
