@@ -87,6 +87,7 @@ contract FeedbackBonusEscrow is Initializable, AccessControlUpgradeable, Pausabl
     event FeedbackBonusForfeited(uint256 indexed poolId, address indexed treasury, uint256 amount);
     event DefaultFrontendFeeBpsUpdated(uint256 previousFrontendFeeBps, uint256 newFrontendFeeBps);
     event VoterIdNFTUpdated(address voterIdNFT);
+    event VotingEngineUpdated(address votingEngine);
 
     /// @custom:oz-upgrades-unsafe-allow constructor
     constructor() {
@@ -249,6 +250,12 @@ contract FeedbackBonusEscrow is Initializable, AccessControlUpgradeable, Pausabl
         require(voterIdNFT_ != address(0), "Invalid Voter ID");
         voterIdNFT = IVoterIdNFT(voterIdNFT_);
         emit VoterIdNFTUpdated(voterIdNFT_);
+    }
+
+    function setVotingEngine(address votingEngine_) external onlyRole(CONFIG_ROLE) {
+        require(votingEngine_ != address(0), "Invalid engine");
+        votingEngine = RoundVotingEngine(votingEngine_);
+        emit VotingEngineUpdated(votingEngine_);
     }
 
     function setDefaultFrontendFeeBps(uint256 frontendFeeBps_) external onlyRole(CONFIG_ROLE) {

@@ -222,6 +222,29 @@ contract FeedbackBonusEscrowTest is VotingTestBase {
         vm.stopPrank();
     }
 
+    function testVotingEngineCanBeUpdatedByConfigRole() public {
+        address newEngine = address(0xBEEF);
+
+        vm.prank(owner);
+        vm.expectEmit(false, false, false, true);
+        emit FeedbackBonusEscrow.VotingEngineUpdated(newEngine);
+        feedbackBonusEscrow.setVotingEngine(newEngine);
+
+        assertEq(address(feedbackBonusEscrow.votingEngine()), newEngine);
+    }
+
+    function testSetVotingEngineRejectsZeroAddress() public {
+        vm.prank(owner);
+        vm.expectRevert("Invalid engine");
+        feedbackBonusEscrow.setVotingEngine(address(0));
+    }
+
+    function testSetVotingEngineRequiresConfigRole() public {
+        vm.prank(voter1);
+        vm.expectRevert();
+        feedbackBonusEscrow.setVotingEngine(address(0xBEEF));
+    }
+
     function testAwardPaysRevealedVoterAndVoteAttributedFrontend() public {
         _registerFrontend(frontend1);
         uint256 contentId = _submitQuestion("");

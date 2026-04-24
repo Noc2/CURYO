@@ -276,6 +276,29 @@ contract RoundRewardDistributorBranchesTest is VotingTestBase {
         );
     }
 
+    function test_SetVotingEngine_UpdatesEngine() public {
+        address newEngine = address(0xBEEF);
+
+        vm.prank(owner);
+        vm.expectEmit(false, false, false, true);
+        emit RoundRewardDistributor.VotingEngineUpdated(newEngine);
+        rewardDistributor.setVotingEngine(newEngine);
+
+        assertEq(address(rewardDistributor.votingEngine()), newEngine);
+    }
+
+    function test_SetVotingEngine_ZeroAddressReverts() public {
+        vm.prank(owner);
+        vm.expectRevert("Invalid voting engine");
+        rewardDistributor.setVotingEngine(address(0));
+    }
+
+    function test_SetVotingEngine_OnlyAdmin() public {
+        vm.prank(voter1);
+        vm.expectRevert();
+        rewardDistributor.setVotingEngine(address(0xBEEF));
+    }
+
     // =========================================================================
     // stranded HREP recovery
     // =========================================================================

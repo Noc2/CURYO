@@ -133,6 +133,7 @@ contract RoundRewardDistributor is Initializable, AccessControlUpgradeable, Reen
     event ParticipationRewardFinalized(
         uint256 indexed contentId, uint256 indexed roundId, address indexed rewardPool, uint256 releasedDust
     );
+    event VotingEngineUpdated(address votingEngine);
     event VoterRewardDustFinalized(uint256 indexed contentId, uint256 indexed roundId, uint256 amount);
     event FrontendFeeDustFinalized(uint256 indexed contentId, uint256 indexed roundId, uint256 amount);
     event FrontendFeeDustBatchProcessed(
@@ -183,6 +184,13 @@ contract RoundRewardDistributor is Initializable, AccessControlUpgradeable, Reen
 
         hrepToken.safeTransfer(treasury, amount);
         emit StrandedHrepSwept(treasury, amount);
+    }
+
+    /// @notice Update the voting engine used for future rounds after old-engine rewards have been drained.
+    function setVotingEngine(address _votingEngine) external onlyRole(DEFAULT_ADMIN_ROLE) {
+        require(_votingEngine != address(0), "Invalid voting engine");
+        votingEngine = RoundVotingEngine(_votingEngine);
+        emit VotingEngineUpdated(_votingEngine);
     }
 
     // --- Voter Reward Claiming ---

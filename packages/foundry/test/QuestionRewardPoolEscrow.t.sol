@@ -291,6 +291,29 @@ contract QuestionRewardPoolEscrowTest is VotingTestBase {
         rewardPoolEscrow.setDefaultFrontendFeeBps(501);
     }
 
+    function testVotingEngineCanBeUpdatedByConfigRole() public {
+        address newEngine = address(0xBEEF);
+
+        vm.prank(owner);
+        vm.expectEmit(false, false, false, true);
+        emit QuestionRewardPoolEscrow.VotingEngineUpdated(newEngine);
+        rewardPoolEscrow.setVotingEngine(newEngine);
+
+        assertEq(address(rewardPoolEscrow.votingEngine()), newEngine);
+    }
+
+    function testSetVotingEngineRejectsZeroAddress() public {
+        vm.prank(owner);
+        vm.expectRevert("Invalid engine");
+        rewardPoolEscrow.setVotingEngine(address(0));
+    }
+
+    function testSetVotingEngineRequiresConfigRole() public {
+        vm.prank(voter1);
+        vm.expectRevert();
+        rewardPoolEscrow.setVotingEngine(address(0xBEEF));
+    }
+
     function testDelegateCanClaimByUnderlyingVoterIdOnlyOnce() public {
         uint256 contentId = _submitQuestion("");
         uint256 rewardPoolId = _createRewardPool(contentId, REWARD_POOL_AMOUNT, 3, 1);

@@ -219,6 +219,7 @@ contract QuestionRewardPoolEscrow is
     );
     event QuestionBundleRewardRefunded(uint256 indexed bundleId, address indexed funder, uint256 amount);
     event QuestionBundleRewardForfeited(uint256 indexed bundleId, address indexed treasury, uint256 amount);
+    event VotingEngineUpdated(address votingEngine);
 
     /// @custom:oz-upgrades-unsafe-allow constructor
     constructor() {
@@ -825,6 +826,12 @@ contract QuestionRewardPoolEscrow is
     function setVoterIdNFT(address voterIdNFT_) external onlyRole(CONFIG_ROLE) {
         require(voterIdNFT_ != address(0), "Invalid Voter ID");
         voterIdNFT = IVoterIdNFT(voterIdNFT_);
+    }
+
+    function setVotingEngine(address votingEngine_) external onlyRole(CONFIG_ROLE) {
+        require(votingEngine_ != address(0), "Invalid engine");
+        votingEngine = RoundVotingEngine(votingEngine_);
+        emit VotingEngineUpdated(votingEngine_);
     }
 
     function setDefaultFrontendFeeBps(uint256 frontendFeeBps_) external onlyRole(CONFIG_ROLE) {
