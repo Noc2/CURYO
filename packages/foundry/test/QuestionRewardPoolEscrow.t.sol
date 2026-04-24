@@ -1163,4 +1163,29 @@ contract QuestionRewardPoolEscrowTest is VotingTestBase {
         assertGt(refundAmount, 0);
         assertEq(usdc.balanceOf(treasury), treasuryBalanceBefore + refundAmount);
     }
+
+    function testBundleRefund_WaitsForUnrevealedCleanupAfterGrace() public {
+        uint256[] memory contentIds = _submitBundleQuestions();
+        uint256 bundleId =
+            _createSubmissionBundle(contentIds, funder, rewardPoolEscrow.REWARD_ASSET_USDC(), REWARD_POOL_AMOUNT, 3);
+
+        uint256 cleanupRoundId = _settleRoundWithOneUnrevealed(contentIds[0]);
+
+        address[] memory voters = new address[](3);
+        voters[0] = voter1;
+        voters[1] = voter2;
+        voters[2] = voter3;
+        bool[] memory directions = _directions(true, true, false);
+        _settleRoundWith(voters, contentIds[1], directions);
+
+        vm.warp(block.timestamp + 31 days + rewardPoolEscrow.BUNDLE_CLAIM_GRACE() + 1);
+        vm.expectRevert("Cleanup pending");
+        rewardPoolEscrow.refundQuestionBundleReward(bundleId);
+
+        votingEngine.processUnrevealedVotes(contentIds[0], cleanupRoundId, 0, 0);
+        uint256 treasuryBalanceBefore = usdc.balanceOf(treasury);
+        uint256 refundAmount = rewardPoolEscrow.refundQuestionBundleReward(bundleId);
+        assertGt(refundAmount, 0);
+        assertEq(usdc.balanceOf(treasury), treasuryBalanceBefore + refundAmount);
+    }
 }

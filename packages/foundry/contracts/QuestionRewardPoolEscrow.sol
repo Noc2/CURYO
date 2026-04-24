@@ -706,6 +706,7 @@ contract QuestionRewardPoolEscrow is
         // grace window to finish claiming before anyone can race them.
         if (_isBundleClaimOpen(bundle)) {
             require(block.timestamp > uint256(bundle.bountyClosesAt) + BUNDLE_CLAIM_GRACE, "Claim grace active");
+            _requireBundleCleanupComplete(bundleId);
         }
         refundAmount = bundle.fundedAmount - bundle.claimedAmount;
         require(refundAmount > 0, "No refund");
@@ -910,6 +911,20 @@ contract QuestionRewardPoolEscrow is
     function _isBundleClaimOpen(BundleReward storage bundle) internal view returns (bool) {
         return !bundle.refunded && bundle.completedQuestionCount == bundle.questionCount
             && bundle.claimedCount < bundle.requiredCompleters;
+    }
+
+    function _requireBundleCleanupComplete(uint256 bundleId) internal view {
+        BundleQuestion[] storage questions = bundleQuestions[bundleId];
+        for (uint256 i = 0; i < questions.length;) {
+            BundleQuestion storage question = questions[i];
+            require(
+                votingEngine.roundUnrevealedCleanupRemaining(question.contentId, question.roundId) == 0,
+                "Cleanup pending"
+            );
+            unchecked {
+                ++i;
+            }
+        }
     }
 
     function _bundleRoundSettledWithinWindow(BundleReward storage bundle, uint256 contentId, uint256 roundId)
