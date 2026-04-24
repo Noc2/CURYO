@@ -59,7 +59,8 @@ export function PosterOrbScene({
         .poster-orb-scene__image-shell {
           position: absolute;
           inset: 0;
-          transform-origin: 50% 45%;
+          transform: translateY(8%);
+          transform-origin: 50% 52%;
           mask-image: linear-gradient(to right, rgba(0, 0, 0, 1) 0 84%, rgba(0, 0, 0, 0.9) 90%, transparent 100%);
           -webkit-mask-image: linear-gradient(
             to right,
@@ -210,11 +211,11 @@ export function PosterOrbScene({
         @keyframes poster-orb-scene-float {
           0%,
           100% {
-            transform: translateY(0) scale(1.01);
+            transform: translateY(8%) scale(1.01);
           }
 
           50% {
-            transform: translateY(-12px) scale(1.03);
+            transform: translateY(calc(8% - 12px)) scale(1.03);
           }
         }
 

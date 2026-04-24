@@ -55,13 +55,13 @@ magick "$ICON_SOURCE" "$ICON_MASK" \
   "$PUBLIC_DIR/favicon.png"
 
 magick "$POSTER_ORB" \
-  -resize 600x600 \
+  -resize 560x560 \
   "$SOCIAL_SOURCE"
 
 magick -size 1200x630 xc:"#050607" \
   \( "$SOCIAL_SOURCE" \) \
   -gravity east \
-  -geometry -48+128 \
+  -geometry -48+98 \
   -compose over \
   -composite \
   -font "$BOLD_FONT" \
@@ -90,13 +90,13 @@ magick "$OG_CANVAS" \
   "$PUBLIC_DIR/twitter-image.jpg"
 
 magick "$POSTER_ORB" \
-  -resize 600x600 \
+  -resize 560x560 \
   "$BANNER_SOURCE"
 
 magick -size 1600x520 xc:"#050607" \
   \( "$BANNER_SOURCE" \) \
   -gravity east \
-  -geometry +36+138 \
+  -geometry +36+100 \
   -compose over \
   -composite \
   -font "$BOLD_FONT" \
